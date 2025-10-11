@@ -7,52 +7,9 @@
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-<script src="https://code.jquery.com/jquery-3.7.1.min.js">
-/* === Nudge: sincroniza porcentaje y tareas sugeridas === */
-(function(){
-  var secciones = window.mxm_sec || { datos:58, prof:88, serv:0, enf:100, consul:50 };
-  var vals = Object.values(secciones);
-  var total = Math.round(vals.reduce((a,b)=>a+b,0) / vals.length);
-
-  var CIRC = 2 * Math.PI * 42;
-  var p = document.getElementById('nudgeProgress');
-  if(p){
-    p.setAttribute('stroke-dasharray', CIRC.toFixed(2));
-    var off = CIRC * (1 - total/100);
-    p.setAttribute('stroke-dashoffset', off.toFixed(2));
-  }
-  var lbl = document.getElementById('nudgeLabel');
-  if(lbl){ lbl.textContent = total + '%'; }
-
-  var list = document.getElementById('nudgeList');
-  if(list){
-    var items = [];
-    if(secciones.consul < 100) items.push('Especificar consultorio');
-    if(secciones.prof < 100) items.push('Indicar especialidades');
-    if(secciones.serv < 100) items.push('Agregar servicios principales');
-    if(secciones.datos < 100) items.push('Completar datos generales');
-    list.innerHTML = items.slice(0,3).map(t => '<li>'+t+'</li>').join('');
-  }
-
-  var cta = document.getElementById('nudgeCTA');
-  if(cta){
-    cta.addEventListener('click', function(e){
-      e.preventDefault();
-      var minKey = Object.keys(secciones).sort((a,b)=>secciones[a]-secciones[b])[0];
-      if(minKey === 'serv'){ openGroup('perfil'); jumpTo('p-info'); selectInfoTab('#t-servicios'); }
-      else if(minKey === 'consul'){ openGroup('perfil'); jumpTo('p-consultorio'); }
-      else { openGroup('perfil'); jumpTo('p-info'); selectInfoTab('#t-datos'); }
-      window.scrollTo({top:0, behavior:'smooth'});
-    });
-  }
-
-  var cls = document.getElementById('nudgeClose');
-  if(cls){
-    cls.addEventListener('click', function(){ this.closest('.nudge-card').remove(); });
-  }
-})();
-</script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
 /* === Nudge: sincroniza porcentaje y tareas sugeridas === */
 (function(){
   var secciones = window.mxm_sec || { datos:58, prof:88, serv:0, enf:100, consul:50 };
@@ -100,7 +57,6 @@
 
 <!-- Tipografía: IBM Plex Sans -->
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-
 
 
 <link rel="stylesheet" href="assets/css/style.css" />
@@ -250,7 +206,7 @@
       <div id="viewport">
 
         <!-- ===== RESUMEN “PRO” ===== -->
-        
+
 <section class="mm-card" id="p-resumen">
   <div class="head"><h5>Resumen General del Perfil</h5></div>
   <div class="body">
@@ -357,7 +313,7 @@
             <div class="tab-content" id="tabs-infoContent">
               <!-- DATOS GENERALES -->
               <div class="tab-pane fade" id="t-datos" role="tabpanel">
-                
+
 <div class="mf-upload-grid">
   <div class="mf-upload square" data-type="foto">
     <svg class="mf-illus" viewBox="0 0 64 64" aria-hidden="true">
@@ -701,7 +657,7 @@
             <ul class="nav nav-pills mm-tabs mb-3" role="tablist">
               <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#cfdi-crear">Crear Factura</button></li>
               <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#cfdi-listar">Listar Facturas</button></li>
-              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#cfdi-pacientes">Pacientes</button></li>
+              <li es="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#cfdi-pacientes">Pacientes</button></li>
               <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#cfdi-canceladas">Facturas Canceladas</button></li>
             </ul>
             <div class="tab-content">
@@ -799,8 +755,6 @@
 
 
 
-
-
 <!-- Modal: QR cámara móvil (mock) -->
 <div class="modal fade" id="modalQR" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -833,6 +787,20 @@
 
 
 
+<footer class="mm-footer">
+  <div class="wrap page">
+    <div class="mm-footer__content">
+      <div class="mm-footer__brand">Todos los derechos reservados México Médico</div>
+      <nav class="mm-footer__nav" aria-label="Enlaces legales">
+        <ul class="mm-footer__links">
+          <li><a href="#">Nosotros</a></li>
+          <li><a href="#">Términos y Condiciones</a></li>
+          <li><a href="#">Aviso de Privacidad</a></li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</footer>
 
 <script src="assets/js/app.js"></script>
 </body>
