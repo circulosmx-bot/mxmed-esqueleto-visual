@@ -1,5 +1,3 @@
-
-
 /* ===== Extracted CSS blocks from base HTML ===== */
 
 
@@ -57,7 +55,7 @@
 }
 
 html,body{
-  font-family:'IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-family:'Carlito','IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   font-weight:400;
 }
 body{background:var(--mm-fondo-base);}
@@ -109,18 +107,72 @@ body{background:var(--mm-fondo-base);}
   padding:var(--btn-pad-v) var(--btn-pad-h);
   display:flex; align-items:center; justify-content:space-between; gap:var(--btn-gap);
   cursor:pointer; color:#fff;
-  box-shadow:var(--shadow-out);
-  transition: box-shadow var(--mm-transition), filter var(--mm-transition), background-color var(--mm-transition);
+  transition: background-color var(--mm-transition);
+  font-family:'Carlito','IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;
+  background:transparent;
 }
-.menu-main{background:var(--mm-acc-contraido);}
-.menu-sub-btn{background:var(--mm-fondo-base);}
-.menu-sub-btn.active{background:var(--mm-acc-activo);}
+.menu-main{
+  --btn-bg:var(--mm-acc-contraido);
+  --btn-gradient:linear-gradient(120deg,#2CBDCE 0%,#00B0C5 52%,#003152 100%);
+}
+.menu-sub-btn{
+  --btn-bg:var(--mm-fondo-base);
+  --btn-gradient:linear-gradient(120deg,#2CBDCE 0%,#00C1CE 45%,#005684 100%);
+}
+.menu-sub-btn.active{
+  --btn-bg:var(--mm-acc-activo);
+  --btn-gradient:linear-gradient(120deg,#5FE0D6 0%,#00A7BA 40%,#004C63 100%);
+}
+.menu-main::after,
+.menu-sub-btn::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  background-color:var(--btn-bg);
+  transition:background-color var(--mm-transition);
+  z-index:0;
+}
+.menu-main::before,
+.menu-sub-btn::before{
+  content:"";
+  position:absolute;
+  inset:-1px;
+  border-radius:inherit;
+  background:var(--btn-gradient);
+  transform:translateX(-100%);
+  opacity:0;
+  transition:transform .42s cubic-bezier(.18,.9,.2,1), opacity .42s ease;
+  z-index:1;
+}
+.menu-main:hover::before,
+.menu-main:focus-visible::before,
+.menu-sub-btn:hover::before,
+.menu-sub-btn:focus-visible::before{
+  transform:translateX(0);
+  opacity:1;
+}
 
 /* Texto dentro de botones */
 .menu-main .txt{display:flex;flex-direction:column;row-gap:var(--row-gap);padding-left:.35rem;min-width:0;}
-.menu-main .ttl{font-weight:700;font-size:var(--ttl-main);}
-.menu-main .sub{font-weight:600;font-size:.8rem;}
+.menu-main .ttl{
+  font-family:'Asap','Carlito','IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-weight:600;
+  font-style:normal;
+  font-size:var(--ttl-main);
+}
+.menu-main .sub{
+  font-family:'Asap','Carlito','IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-weight:400;
+  font-style:normal;
+  font-size:.8rem;
+}
 .menu-main .ico{font-size:var(--ico-main);line-height:1;flex:0 0 auto;}
+.menu-main .txt,
+.menu-main .ico,
+.menu-sub-btn .block,
+.menu-sub-btn .ico-right{position:relative;z-index:2;}
 
 .menu-sub{ display:none; flex-direction:column; gap:0; padding-top:6px; padding-bottom:6px; }
 .menu-sub.open{display:flex;}
@@ -133,20 +185,30 @@ body{background:var(--mm-fondo-base);}
 }
 
 .menu-sub-btn .block{display:flex;flex-direction:column;row-gap:var(--row-gap);padding-left:.35rem;min-width:0;}
-.menu-sub-btn .l1{font-weight:700;font-size:var(--l1-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.menu-sub-btn .l2{font-weight:600;font-size:var(--l2-sub);opacity:.95;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.menu-sub-btn .l1{
+  font-family:'Asap','Carlito','IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-weight:600;
+  font-style:normal;
+  font-size:var(--l1-sub);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.menu-sub-btn .l2{
+  font-family:'Asap','Carlito','IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-weight:400;
+  font-style:normal;
+  font-size:var(--l2-sub);
+  opacity:.95;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
 .menu-sub-btn .ico-right{font-size:var(--ico-sub);line-height:1;flex:0 0 auto;}
-
-/* Hover/Active (sin cambiar tamaño) */
-.menu-main:hover{ box-shadow: var(--shadow-in-hover); filter:saturate(1.02) brightness(1.01); }
-.menu-sub-btn:hover{ box-shadow: var(--shadow-in-hover), var(--inner-glow); filter:saturate(1.03) brightness(1.02); }
-.menu-sub-btn.active:hover{ box-shadow: var(--shadow-in-hover), var(--inner-glow); }
-.menu-main:active, .menu-sub-btn:active{ box-shadow: var(--shadow-in-active); filter: brightness(0.99); }
 
 /* Focus accesible */
 .menu-main:focus-visible, .menu-sub-btn:focus-visible{
   outline:2px solid rgba(255,255,255,.9); outline-offset:2px;
-  box-shadow: var(--shadow-in-hover), 0 0 0 4px rgba(255,255,255,.28);
 }
 
 /* ================== ÁREA DERECHA ================== */
@@ -215,6 +277,10 @@ body{background:var(--mm-fondo-base);}
 }
 @media (prefers-reduced-motion: reduce){
   .menu-main,.menu-sub-btn,.progress-bar::after{transition:none!important;animation:none!important;}
+  .menu-main::before,
+  .menu-main::after,
+  .menu-sub-btn::before,
+  .menu-sub-btn::after{transition:none!important;}
 }
 
 /* === Tarjeta dinámica "Completa tu perfil" === */
