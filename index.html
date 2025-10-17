@@ -59,6 +59,8 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Carlito:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Asap:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0" rel="stylesheet">
 
 
 <link rel="stylesheet" href="assets/css/style.css" />
@@ -112,93 +114,93 @@
       <!-- RESUMEN (botón principal sin submenú) -->
       <button class="menu-main" data-panel="p-resumen">
         <span class="txt">
-          <span class="ttl">Resumen</span>
-          <span class="sub">Estado y accesos rápidos</span>
+          <span class="ttl">Actividad</span>
+          <span class="sub">vista general</span>
         </span>
-        <i class="bi bi-speedometer2 ico" aria-hidden="true"></i>
+        <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">search_activity</span></span>
       </button>
 
       <!-- Mi Perfil (acordeón) -->
       <button class="menu-main" data-group="perfil">
-        <span class="txt"><span class="ttl">Mi Perfil</span><span class="sub">Información personal</span></span>
-        <i class="bi bi-gear ico" aria-hidden="true"></i>
+        <span class="txt"><span class="ttl">Mi Perfil</span><span class="sub">info / admin</span></span>
+        <span class="ico" aria-hidden="true"><i class="bi bi-person-badge"></i></span>
       </button>
       <div class="menu-sub" data-group="perfil">
         <button class="menu-sub-btn active" data-panel="p-info">
-          <span class="block"><span class="l1">Información</span><span class="l2">Mi Perfil</span></span>
+          <span class="block"><span class="l1">Mi Perfil</span><span class="l2">datos personales</span></span>
           <i class="bi bi-person-badge ico-right"></i>
         </button>
         <div class="menu-sep"></div>
         <button class="menu-sub-btn" data-panel="p-consultorio">
-          <span class="block"><span class="l1">Información</span><span class="l2">Consultorio</span></span>
+          <span class="block"><span class="l1">Consultorio</span><span class="l2">datos y contacto</span></span>
           <i class="bi bi-building ico-right"></i>
         </button>
         <div class="menu-sep"></div>
         <button class="menu-sub-btn" data-panel="p-opiniones">
-          <span class="block"><span class="l1">Supervisión</span><span class="l2">de Opiniones</span></span>
+          <span class="block"><span class="l1">Opiniones</span><span class="l2">supervisión de comentarios</span></span>
           <i class="bi bi-chat-quote ico-right"></i>
         </button>
         <div class="menu-sep"></div>
         <button class="menu-sub-btn" data-panel="p-seguridad">
-          <span class="block"><span class="l1">Seguridad</span><span class="l2">Acceso y 2FA</span></span>
-          <i class="bi bi-shield-lock ico-right"></i>
+          <span class="block"><span class="l1">Seguridad</span><span class="l2">acceso y autenticación</span></span>
+          <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">vpn_key</span></span>
         </button>
         <div class="menu-sep"></div>
         <button class="menu-sub-btn" data-panel="p-suscripcion">
-          <span class="block"><span class="l1">Mi Suscripción</span><span class="l2">Planes y vigencia</span></span>
-          <i class="bi bi-card-checklist ico-right"></i>
+          <span class="block"><span class="l1">Suscripción</span><span class="l2">plan contratado</span></span>
+          <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">license</span></span>
         </button>
       </div>
 
       <!-- Mi Agenda (acordeón) -->
       <button class="menu-main" data-group="agenda">
-        <span class="txt"><span class="ttl">Mi Agenda</span><span class="sub">Citas y operadores</span></span>
-        <i class="bi bi-calendar-event ico"></i>
+        <span class="txt"><span class="ttl">Agenda</span><span class="sub">configuración</span></span>
+        <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">calendar_month</span></span>
       </button>
       <div class="menu-sub" data-group="agenda">
         <button class="menu-sub-btn" data-panel="p-ag-ajustes">
-          <span class="block"><span class="l1">Configuración</span><span class="l2">de Agenda</span></span>
-          <i class="bi bi-sliders ico-right"></i>
+          <span class="block"><span class="l1">Agenda</span><span class="l2">configuración</span></span>
+          <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">manage_history</span></span>
         </button>
         <div class="menu-sep"></div>
         <button class="menu-sub-btn" data-panel="p-ag-operadores">
-          <span class="block"><span class="l1">Administrar</span><span class="l2">Operadores</span></span>
-          <i class="bi bi-people ico-right"></i>
+          <span class="block"><span class="l1">Operadores</span><span class="l2">asistentes de consultorio</span></span>
+          <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">support_agent</span></span>
         </button>
         <div class="menu-sep"></div>
         <button class="menu-sub-btn" data-panel="p-ag-admin">
-          <span class="block"><span class="l1">Administración</span><span class="l2">de Citas</span></span>
-          <i class="bi bi-calendar-check ico-right"></i>
+          <span class="block"><span class="l1">Citas</span><span class="l2">control de agenda</span></span>
+          <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">edit_calendar</span></span>
         </button>
       </div>
 
       <!-- Mis Pacientes (acordeón) -->
       <button class="menu-main" data-group="pacientes">
-        <span class="txt"><span class="ttl">Mis Pacientes</span><span class="sub">Archivo y expediente</span></span>
-        <i class="bi bi-person-video3 ico"></i>
+        <span class="txt"><span class="ttl">Pacientes</span><span class="sub">registro y búsqueda</span></span>
+        <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">group_search</span></span>
       </button>
       <div class="menu-sub" data-group="pacientes">
         <button class="menu-sub-btn" data-panel="p-pac-archivo">
-          <span class="block"><span class="l1">Archivo</span><span class="l2">de Pacientes</span></span>
-          <i class="bi bi-folder ico-right"></i>
+          <span class="block"><span class="l1">Buscar</span><span class="l2">por nombre o apellido</span></span>
+          <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">person_search</span></span>
         </button>
         <div class="menu-sep"></div>
         <button class="menu-sub-btn" data-panel="p-expediente">
-          <span class="block"><span class="l1">Expediente</span><span class="l2">Médico</span></span>
-          <i class="bi bi-journal-text ico-right"></i>
+          <span class="block"><span class="l1">Nuevo</span><span class="l2">registrar paciente</span></span>
+          <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">person_add</span></span>
         </button>
       </div>
 
       <!-- Facturación (botón principal sin submenú) -->
       <button class="menu-main" data-panel="p-facturacion">
-        <span class="txt"><span class="ttl">Facturación</span><span class="sub">CFDI y control</span></span>
-        <i class="bi bi-receipt ico"></i>
+        <span class="txt"><span class="ttl">Facturar</span><span class="sub">recibos y facturación</span></span>
+        <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">receipt_long</span></span>
       </button>
 
       <!-- Paquetes y Promociones (botón principal sin submenú) -->
       <button class="menu-main" data-panel="p-paquetes">
-        <span class="txt"><span class="ttl">Paquetes / Promociones</span><span class="sub">Publicar en mi perfil</span></span>
-        <i class="bi bi-bag-heart ico"></i>
+        <span class="txt"><span class="ttl">Promoción</span><span class="sub">administrar paquetes</span></span>
+        <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">campaign</span></span>
       </button>
 
     </aside>
@@ -654,7 +656,7 @@
 
         <!-- FACTURACIÓN (tabs) -->
         <section class="mm-card d-none" id="p-facturacion">
-          <div class="head"><h5>Facturación</h5></div>
+          <div class="head"><h5><span class="material-symbols-rounded align-middle me-1" aria-hidden="true">receipt_long</span>Facturación</h5></div>
           <div class="body">
             <ul class="nav nav-pills mm-tabs mb-3" role="tablist">
               <li class="nav-item"><button la="" class="nav-link active" data-bs-toggle="pill" data-bs-target="#cfdi-crear">Crear Factura</button></li>
