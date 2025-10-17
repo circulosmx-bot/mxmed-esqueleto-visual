@@ -1,7 +1,5 @@
 /* ===== Extracted CSS blocks from base HTML ===== */
 
-
-
 /* ================== DESIGN TOKENS ================== */
 :root{
   /* Colores corporativos */
@@ -29,7 +27,7 @@
 
   /* Botonera (uniformidad) */
   --ttl-main:1.08rem;
-  --ico-main:2.0rem;      /* iconos con presencia sin tocar alturas */
+  --ico-main:2.5rem;      /* iconos con presencia sin tocar alturas */
   --btn-h:72px;
   --btn-pad-v:0.74rem;
   --btn-pad-h:0.8rem;
@@ -60,6 +58,16 @@ html,body{
 }
 body{background:var(--mm-fondo-base);}
 .page{max-width:var(--page-max);margin-inline:auto;padding-inline:var(--page-pad);width:100%;}
+
+.material-symbols-outlined,
+.material-symbols-rounded{
+  font-variation-settings:'FILL' 0,'wght' 200,'GRAD' 0,'opsz' 24;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  line-height:1;
+  font-size:1em;
+}
 
 /* ================== HEADER ================== */
 .header-top{background:var(--mm-header-top);}
@@ -105,7 +113,7 @@ body{background:var(--mm-fondo-base);}
   position:relative; border:0; border-radius:.55rem;
   min-height:var(--btn-h);
   padding:var(--btn-pad-v) var(--btn-pad-h);
-  display:flex; align-items:center; justify-content:space-between; gap:var(--btn-gap);
+  display:flex; align-items:center; justify-content:flex-start; gap:var(--btn-gap);
   cursor:pointer; color:#fff;
   transition: background-color var(--mm-transition);
   font-family:'Carlito','IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
@@ -155,7 +163,16 @@ body{background:var(--mm-fondo-base);}
 }
 
 /* Texto dentro de botones */
-.menu-main .txt{display:flex;flex-direction:column;row-gap:var(--row-gap);padding-left:.35rem;min-width:0;}
+.menu-main .txt{
+  display:flex;
+  flex-direction:column;
+  row-gap:var(--row-gap);
+  padding-left:.35rem;
+  min-width:0;
+  flex:1 1 auto;
+  align-items:center;
+  text-align:center;
+}
 .menu-main .ttl{
   font-family:'Asap','Carlito','IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   font-weight:600;
@@ -168,7 +185,17 @@ body{background:var(--mm-fondo-base);}
   font-style:normal;
   font-size:.8rem;
 }
-.menu-main .ico{font-size:var(--ico-main);line-height:1;flex:0 0 auto;}
+.menu-main .ico{
+  font-size:var(--ico-main);
+  line-height:1;
+  flex:0 0 auto;
+  margin-left:auto;
+  width:var(--ico-main);
+  height:var(--ico-main);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
 .menu-main .txt,
 .menu-main .ico,
 .menu-sub-btn .block,
@@ -184,7 +211,16 @@ body{background:var(--mm-fondo-base);}
   margin:0;
 }
 
-.menu-sub-btn .block{display:flex;flex-direction:column;row-gap:var(--row-gap);padding-left:.35rem;min-width:0;}
+.menu-sub-btn .block{
+  display:flex;
+  flex-direction:column;
+  row-gap:var(--row-gap);
+  padding-left:.35rem;
+  min-width:0;
+  flex:1 1 auto;
+  align-items:center;
+  text-align:center;
+}
 .menu-sub-btn .l1{
   font-family:'Asap','Carlito','IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   font-weight:600;
@@ -204,7 +240,23 @@ body{background:var(--mm-fondo-base);}
   overflow:hidden;
   text-overflow:ellipsis;
 }
-.menu-sub-btn .ico-right{font-size:var(--ico-sub);line-height:1;flex:0 0 auto;}
+.menu-sub-btn .ico-right{
+  font-size:var(--ico-sub);
+  line-height:1;
+  flex:0 0 auto;
+  margin-left:auto;
+  width:var(--ico-sub);
+  height:var(--ico-sub);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.menu-main .ico > *,
+.menu-sub-btn .ico-right > *{font-size:1em;line-height:1;}
+
+.menu-main .ico i,
+.menu-sub-btn .ico-right i{font-size:1em;line-height:1;}
 
 /* Focus accesible */
 .menu-main:focus-visible, .menu-sub-btn:focus-visible{
