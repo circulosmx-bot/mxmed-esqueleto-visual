@@ -272,12 +272,22 @@ body{background:var(--mm-fondo-base);}
 .form-control:focus,.form-select:focus{border-color:#00738F;box-shadow:0 0 0 .2rem rgba(0,115,143,.2);}
 
 /* Pestañas corporativas */
-.mm-tabs .nav-link{color:#fff;margin-right:.25rem;font-weight:700;}
-.mm-tabs .nav-link:nth-child(1){background:#003152;}
-.mm-tabs .nav-link:nth-child(2){background:#00B0C5;}
-.mm-tabs .nav-link:nth-child(3){background:#2CBDCE;}
-.mm-tabs .nav-link:nth-child(4){background:#00A7BA;}
-.mm-tabs .nav-link.active{filter:brightness(.92);}
+.mm-tabs{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.mm-tabs .nav-item{margin:0;}
+.mm-tabs .nav-link{
+  background:#00ADC1;
+  color:#fff;
+  font-weight:700;
+  border-radius:.75rem;
+}
+.mm-tabs .nav-link.active{
+  color:#fff;
+  box-shadow:0 0 0 2px rgba(255,255,255,.3);
+}
 
 /* ===== Resumen: barra de completitud animada ===== */
 .progress-outer{
@@ -288,13 +298,13 @@ body{background:var(--mm-fondo-base);}
 }
 .progress{
   height:16px;
-  background: #e9f9fd;
+  background: rgba(0,173,193,.3);
   border-radius:999px;
   overflow:hidden;
   box-shadow: inset 0 2px 6px rgba(0,0,0,.06);
 }
 .progress-bar{
-  background: linear-gradient(90deg, #00A7BA, #00738F);
+  background: linear-gradient(90deg, rgba(0,173,193,.3), rgba(0,86,132,.3));
   position: relative;
 }
 .progress-bar::after{
@@ -354,8 +364,8 @@ body{background:var(--mm-fondo-base);}
 /* Donut azul dentro de la tarjeta */
 .nudge-donut-wrap{ position:relative; width:120px; height:120px; }
 .nudge-donut{ width:100%; height:100%; display:block; transform:rotate(-90deg); }
-.nudge-track{ fill:none; stroke:rgba(47,109,246,.18); stroke-width:10; }
-.nudge-progress{ fill:none; stroke:#2f6df6; stroke-width:10; stroke-linecap:round; transition:stroke-dashoffset .6s ease; }
+.nudge-track{ fill:none; stroke:#00ADC1; stroke-width:10; }
+.nudge-progress{ fill:none; stroke:#005684; stroke-width:10; stroke-linecap:round; transition:stroke-dashoffset .6s ease; }
 .nudge-center{
   position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(90deg);
   font-weight:800; font-size:1.6rem; color:#000;
@@ -371,30 +381,30 @@ body{background:var(--mm-fondo-base);}
 .resumen-title{font-weight:800;font-size:40px;line-height:1.2;color:#111;margin:0 0 18px}
 .resumen-list{margin:0 0 22px 20px}
 .resumen-list li{margin:8px 0;font-size:18px}
-.resumen-cta{background:#2f6df6;border:0;padding:14px 24px;border-radius:12px;font-weight:700;color:#fff;font-size:18px}
+.resumen-cta{background:#00ADC1;border:0;padding:14px 24px;border-radius:12px;font-weight:700;color:#fff;font-size:18px}
 .resumen-donut-wrap{position:relative;width:220px;height:220px;margin:0 auto;cursor:pointer}
 .resumen-donut-center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:38px;color:#111}
 .resumen-donut-caption-title{font-weight:700;font-size:18px;color:#111;margin-top:10px}
 .resumen-donut-caption-sub{font-size:15px;color:#4d5965}
 /* barra estilo donut */
-.progress{height:16px;background:rgba(53,183,127,.18)!important;border-radius:999px!important}
-.progress-bar{background:#35b77f!important;border-radius:999px!important}
+.progress{height:16px;background:rgba(0,173,193,.3)!important;border-radius:999px!important}
+.progress-bar{background:linear-gradient(90deg,rgba(0,173,193,.3),rgba(0,86,132,.3))!important;border-radius:999px!important}
 /* KPIs con icono en bloque */
 .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:22px}
 .kpi-card{background:#fff;border-radius:16px;border:1px solid #e5eaef;padding:18px 20px;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto auto;column-gap:14px;row-gap:2px;text-align:left;box-shadow:0 6px 18px rgba(0,0,0,.05)}
-.kpi-card .icon-box{width:68px;height:68px;border-radius:16px;background:#E6F4EC;display:flex;align-items:center;justify-content:center}
-.kpi-card .icon-box svg{width:36px;height:36px;fill:#2c6b4e}
+.kpi-card .icon-box{width:68px;height:68px;border-radius:16px;background:#00ADC1;display:flex;align-items:center;justify-content:center}
+.kpi-card .icon-box svg{width:36px;height:36px;fill:#fff}
 .kpi-card .num{grid-column:2;align-self:center;font-weight:900;font-size:36px;letter-spacing:-.5px;color:#111}
 .kpi-card .title{grid-column:1 / span 2;font-weight:800;font-size:20px;margin-top:8px;color:#111}
-.kpi-card .link{grid-column:1 / span 2;color:#1f50db;font-weight:600;text-decoration:none;margin-top:2px}
+.kpi-card .link{grid-column:1 / span 2;color:#00ADC1;font-weight:600;text-decoration:none;margin-top:2px}
 .kpi-card .link:hover{text-decoration:underline}
 @media(max-width: 992px){.resumen-hero{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}}
 @media(max-width: 600px){.kpi-row{grid-template-columns:1fr}}
 
 
 /* === KPI Icon enlarge & modern === */
-.kpi-card .icon-box{width:80px;height:80px;border-radius:18px;background:#E6F4EC;display:flex;align-items:center;justify-content:center}
-.kpi-card .icon-box i{font-size:58px;line-height:1;color:#2c6b4e;display:inline-block}
+.kpi-card .icon-box{width:80px;height:80px;border-radius:18px;background:#00ADC1;display:flex;align-items:center;justify-content:center}
+.kpi-card .icon-box i{font-size:58px;line-height:1;color:#fff;display:inline-block}
 
 
 /* === Mi Perfil · Carga de imágenes (minimal, no impact to global layout) === */
