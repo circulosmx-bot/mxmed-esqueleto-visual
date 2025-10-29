@@ -290,6 +290,27 @@ body{background:var(--mm-fondo-base);}
   box-shadow:0 0 0 2px rgba(255,255,255,.3);
 }
 
+/* Botones principales en paneles específicos */
+#p-ag-admin .btn-primary,
+#cfdi-crear .btn-primary{
+  background:#005684;
+  border-color:#005684;
+  color:#fff;
+}
+#p-ag-admin .btn-primary:hover,
+#cfdi-crear .btn-primary:hover{
+  filter:brightness(.92);
+  color:#fff;
+}
+#p-ag-admin .btn-primary:focus,
+#cfdi-crear .btn-primary:focus,
+#p-ag-admin .btn-primary:active,
+#cfdi-crear .btn-primary:active{
+  background:#004b73;
+  border-color:#004b73;
+  color:#fff;
+}
+
 /* ===== Resumen: barra de completitud animada ===== */
 .progress-outer{
   background: #f7fdff;
