@@ -158,8 +158,9 @@ body{background:var(--mm-fondo-base);}
 .menu-main:focus-visible::before,
 .menu-sub-btn:hover::before,
 .menu-sub-btn:focus-visible::before{
-  transform:translateX(0);
-  opacity:1;
+  /* Simplificar hover: sin animación/gradiente */
+  transform:none;
+  opacity:0;
 }
 
 /* Texto dentro de botones */
@@ -172,6 +173,16 @@ body{background:var(--mm-fondo-base);}
   flex:1 1 auto;
   align-items:center;
   text-align:center;
+}
+
+/* Tono en hover igual al activo (usa --mm-acc-activo) */
+.menu-sub-btn:hover,
+.menu-sub-btn:focus-visible{
+  --btn-bg: var(--mm-acc-activo);
+}
+.menu-main:hover,
+.menu-main:focus-visible{
+  --btn-bg: var(--mm-acc-activo);
 }
 .menu-main .ttl{
   font-family:'Asap','Carlito','IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
@@ -290,6 +301,11 @@ body{background:var(--mm-fondo-base);}
   box-shadow:0 0 0 2px rgba(255,255,255,.3);
 }
 
+.mm-tabs .nav-link:hover{
+  background:#00738F;
+  color:#fff;
+}
+
 /* Botones principales en paneles específicos */
 #p-ag-admin .btn-primary,
 #cfdi-crear .btn-primary{
@@ -299,7 +315,8 @@ body{background:var(--mm-fondo-base);}
 }
 #p-ag-admin .btn-primary:hover,
 #cfdi-crear .btn-primary:hover{
-  filter:brightness(.92);
+  background:#00738F;
+  border-color:#00738F;
   color:#fff;
 }
 #p-ag-admin .btn-primary:focus,
