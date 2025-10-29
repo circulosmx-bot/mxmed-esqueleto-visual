@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>MXMed 2025 · Perfil Médico</title>
+<title>MXMed 2025 Â· Perfil MÃ©dico</title>
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
@@ -55,7 +55,7 @@
 })();
 </script>
 
-<!-- Tipografía: IBM Plex Sans -->
+<!-- TipografÃ­a: IBM Plex Sans -->
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Carlito:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Asap:wght@400;600&display=swap" rel="stylesheet">
@@ -63,14 +63,44 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0" rel="stylesheet">
 
 
-<link rel="stylesheet" href="assets/css/style.css" />
+<link rel="stylesheet" href="assets/css/style.css?v=codex-2" />
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script>
+(function(){
+  var isLocal = /^(localhost|127\.0\.0\.1)$/i.test(location.hostname);
+  if(!isLocal) return;
+  var v = 'dev-' + Date.now();
+  // CSS assets
+  document.querySelectorAll('link[rel="stylesheet"]').forEach(function(link){
+    var href = link.getAttribute('href');
+    if(!href) return;
+    if(href.indexOf('assets/') === 0) {
+      var nh = href.replace(/([?&])v=[^&]*/, '$1v=' + v);
+      if(nh === href) nh += (href.indexOf('?')===-1?'?':'&') + 'v=' + v;
+      link.href = nh;
+    }
+  });
+  // JS assets
+  document.querySelectorAll('script[src]').forEach(function(s){
+    var src = s.getAttribute('src');
+    if(!src) return;
+    if(src.indexOf('assets/') === 0) {
+      var ns = src.replace(/([?&])v=[^&]*/, '$1v=' + v);
+      if(ns === src) ns += (src.indexOf('?')===-1?'?':'&') + 'v=' + v;
+      s.src = ns;
+    }
+  });
+})();
+</script>
 </head>
 <body>
 
 <!-- ================== HEADER ================== -->
 <div class="header-top">
   <div class="wrap page">
-    <img src="assets/mexico-medico.svg" alt="México Médico">
+    <img src="assets/mexico-medico.svg" alt="MÃ©xico MÃ©dico">
   </div>
 </div>
 
@@ -79,7 +109,7 @@
     <div class="hm-left">
       <span class="activo">activo</span>
       <span class="modo">modo</span>
-      <span class="optimo">Óptimo</span>
+      <span class="optimo">Ã“ptimo</span>
     </div>
     <div class="user-id">
       <span class="chk" aria-hidden="true">
@@ -87,7 +117,7 @@
           <path d="M5 12.5l4.8 4.8L19 8" fill="none" stroke="white" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </span>
-      <span class="name">Leticia Muñoz Alfaro</span>
+      <span class="name">Leticia MuÃ±oz Alfaro</span>
     </div>
   </div>
 </div>
@@ -99,7 +129,7 @@
       <a class="incrementar" href="#"><i class="bi bi-plus-circle"></i> INCREMENTAR VIGENCIA</a>
     </div>
     <div class="hb-right">
-      <a class="logout" href="#"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
+      <a class="logout" href="#"><i class="bi bi-box-arrow-right"></i> Cerrar sesiÃ³n</a>
     </div>
   </div>
 </div>
@@ -108,10 +138,10 @@
 <div class="mm-wrap">
   <div class="mm-grid page">
 
-    <!-- ===== LATERAL: Menú ===== -->
+    <!-- ===== LATERAL: MenÃº ===== -->
     <aside class="mm-sidebar" id="mmSidebar">
 
-      <!-- RESUMEN (botón principal sin submenú) -->
+      <!-- RESUMEN (botÃ³n principal sin submenÃº) -->
       <button class="menu-main" data-panel="p-resumen">
         <span class="txt">
           <span class="ttl">Actividad</span>
@@ -120,7 +150,7 @@
         <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">search_activity</span></span>
       </button>
 
-      <!-- Mi Perfil (acordeón) -->
+      <!-- Mi Perfil (acordeÃ³n) -->
       <button class="menu-main" data-group="perfil">
         <span class="txt"><span class="ttl">Mi Perfil</span><span class="sub">info / admin</span></span>
         <span class="ico" aria-hidden="true"><i class="bi bi-person-badge"></i></span>
@@ -137,29 +167,29 @@
         </button>
         <div class="menu-sep"></div>
         <button class="menu-sub-btn" data-panel="p-opiniones">
-          <span class="block"><span class="l1">Opiniones</span><span class="l2">supervisión de comentarios</span></span>
+          <span class="block"><span class="l1">Opiniones</span><span class="l2">supervisiÃ³n de comentarios</span></span>
           <i class="bi bi-chat-quote ico-right"></i>
         </button>
         <div class="menu-sep"></div>
         <button class="menu-sub-btn" data-panel="p-seguridad">
-          <span class="block"><span class="l1">Seguridad</span><span class="l2">acceso y autenticación</span></span>
+          <span class="block"><span class="l1">Seguridad</span><span class="l2">acceso y autenticaciÃ³n</span></span>
           <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">vpn_key</span></span>
         </button>
         <div class="menu-sep"></div>
         <button class="menu-sub-btn" data-panel="p-suscripcion">
-          <span class="block"><span class="l1">Suscripción</span><span class="l2">plan contratado</span></span>
+          <span class="block"><span class="l1">SuscripciÃ³n</span><span class="l2">plan contratado</span></span>
           <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">license</span></span>
         </button>
       </div>
 
-      <!-- Mi Agenda (acordeón) -->
+      <!-- Mi Agenda (acordeÃ³n) -->
       <button class="menu-main" data-group="agenda">
-        <span class="txt"><span class="ttl">Agenda</span><span class="sub">configuración</span></span>
+        <span class="txt"><span class="ttl">Agenda</span><span class="sub">configuraciÃ³n</span></span>
         <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">calendar_month</span></span>
       </button>
       <div class="menu-sub" data-group="agenda">
         <button class="menu-sub-btn" data-panel="p-ag-ajustes">
-          <span class="block"><span class="l1">Agenda</span><span class="l2">configuración</span></span>
+          <span class="block"><span class="l1">Agenda</span><span class="l2">configuraciÃ³n</span></span>
           <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">manage_history</span></span>
         </button>
         <div class="menu-sep"></div>
@@ -174,9 +204,9 @@
         </button>
       </div>
 
-      <!-- Mis Pacientes (acordeón) -->
+      <!-- Mis Pacientes (acordeÃ³n) -->
       <button class="menu-main" data-group="pacientes">
-        <span class="txt"><span class="ttl">Pacientes</span><span class="sub">registro y búsqueda</span></span>
+        <span class="txt"><span class="ttl">Pacientes</span><span class="sub">registro y bÃºsqueda</span></span>
         <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">group_search</span></span>
       </button>
       <div class="menu-sub" data-group="pacientes">
@@ -191,25 +221,25 @@
         </button>
       </div>
 
-      <!-- Facturación (botón principal sin submenú) -->
+      <!-- FacturaciÃ³n (botÃ³n principal sin submenÃº) -->
       <button class="menu-main" data-panel="p-facturacion">
-        <span class="txt"><span class="ttl">Facturar</span><span class="sub">recibos y facturación</span></span>
+        <span class="txt"><span class="ttl">Facturar</span><span class="sub">recibos y facturaciÃ³n</span></span>
         <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">receipt_long</span></span>
       </button>
 
-      <!-- Paquetes y Promociones (botón principal sin submenú) -->
+      <!-- Paquetes y Promociones (botÃ³n principal sin submenÃº) -->
       <button class="menu-main" data-panel="p-paquetes">
-        <span class="txt"><span class="ttl">Promoción</span><span class="sub">administrar paquetes</span></span>
+        <span class="txt"><span class="ttl">PromociÃ³n</span><span class="sub">administrar paquetes</span></span>
         <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">campaign</span></span>
       </button>
 
     </aside>
 
-    <!-- ===== Área de interacción ===== -->
+    <!-- ===== Ãrea de interacciÃ³n ===== -->
     <main class="mm-main">
       <div id="viewport">
 
-        <!-- ===== RESUMEN “PRO” ===== -->
+        <!-- ===== RESUMEN â€œPROâ€ ===== -->
 
 <section class="mm-card" id="p-resumen">
   <div class="head"><h5>Resumen General del Perfil</h5></div>
@@ -221,7 +251,7 @@
         <ul class="resumen-list">
           <li>Especifica detalles de tu consultorio</li>
           <li>Indica cuales son tus principales</li>
-          <li>Agrega tu fotografía</li>
+          <li>Agrega tu fotografÃ­a</li>
         </ul>
         <button class="resumen-cta" id="btnCompletar">Ir a completar perfil</button>
       </div>
@@ -229,8 +259,8 @@
       <div class="text-center">
         <div class="resumen-donut-wrap" id="donutTrigger" title="Ver detalles de completitud">
           <svg viewBox="0 0 100 100" width="220" height="220" aria-label="Completitud del perfil">
-            <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(53,183,127,.18)" stroke-width="10"></circle>
-            <circle id="ringProgress" cx="50" cy="50" r="42" fill="none" stroke="#35b77f" stroke-width="10"
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#00ADC1" stroke-width="10"></circle>
+            <circle id="ringProgress" cx="50" cy="50" r="42" fill="none" stroke="#005684" stroke-width="10"
                     transform="rotate(-90 50 50)" stroke-dasharray="264" stroke-dashoffset="264" stroke-linecap="round"></circle>
           </svg>
           <div class="resumen-donut-center" id="donutLabel">59%</div>
@@ -264,8 +294,8 @@
           <i class="bi bi-chat-left-quote-fill"></i>
         </div>
         <div class="num">4</div>
-        <div class="title">Nuevas reseñas</div>
-        <a class="link" href="#">Ver reseñas</a>
+        <div class="title">Nuevas reseÃ±as</div>
+        <a class="link" href="#">Ver reseÃ±as</a>
       </div>
 
       <div class="kpi-card">
@@ -274,7 +304,7 @@
         </div>
         <div class="num">35</div>
         <div class="title">Visitas al perfil</div>
-        <a class="link" href="#">Ver estadísticas</a>
+        <a class="link" href="#">Ver estadÃ­sticas</a>
       </div>
     </div>
 
@@ -292,10 +322,10 @@
       <div class="modal-body">
         <div class="row g-2">
           <div class="col-12"><div class="d-flex justify-content-between small fw-semibold"><span>Datos generales</span><span>58%</span></div><div class="progress"><div class="progress-bar" style="width:58%"></div></div></div>
-          <div class="col-12"><div class="d-flex justify-content-between small fw-semibold"><span>Mi Información profesional</span><span>88%</span></div><div class="progress"><div class="progress-bar" style="width:88%"></div></div></div>
+          <div class="col-12"><div class="d-flex justify-content-between small fw-semibold"><span>Mi InformaciÃ³n profesional</span><span>88%</span></div><div class="progress"><div class="progress-bar" style="width:88%"></div></div></div>
           <div class="col-12"><div class="d-flex justify-content-between small fw-semibold"><span>Servicios principales</span><span>0%</span></div><div class="progress"><div class="progress-bar" style="width:0%"></div></div></div>
           <div class="col-12"><div class="d-flex justify-content-between small fw-semibold"><span>Enfermedades / Tratamientos</span><span>100%</span></div><div class="progress"><div class="progress-bar" style="width:100%"></div></div></div>
-          <div class="col-12"><div class="d-flex justify-content-between small fw-semibold"><span>Información de Consultorio</span><span>50%</span></div><div class="progress"><div class="progress-bar" style="width:50%"></div></div></div>
+          <div class="col-12"><div class="d-flex justify-content-between small fw-semibold"><span>InformaciÃ³n de Consultorio</span><span>50%</span></div><div class="progress"><div class="progress-bar" style="width:50%"></div></div></div>
         </div>
       </div>
     </div>
@@ -303,15 +333,15 @@
 </div>
 
 
-        <!-- ===== INFORMACIÓN · MI PERFIL ===== -->
+        <!-- ===== INFORMACIÃ“N Â· MI PERFIL ===== -->
         <section class="mm-card d-none" id="p-info">
-          <div class="head"><h5>INFORMACIÓN · MI PERFIL</h5></div>
+          <div class="head"><h5>INFORMACIÃ“N Â· MI PERFIL</h5></div>
           <div class="body">
             <ul class="nav nav-pills mm-tabs mb-3" id="tabs-info" role="tablist">
               <li class="nav-item"><button class="nav-link" id="t-datos-tab" data-bs-toggle="pill" data-bs-target="#t-datos" type="button">Datos Generales</button></li>
               <li class="nav-item"><button class="nav-link" id="t-servicios-tab" data-bs-toggle="pill" data-bs-target="#t-servicios" type="button">Servicios Principales</button></li>
               <li class="nav-item"><button class="nav-link" id="t-enfermedades-tab" data-bs-toggle="pill" data-bs-target="#t-enfermedades" type="button">Enfermedades y Tratamientos</button></li>
-              <li class="nav-item"><button class="nav-link" id="t-formacion-tab" data-bs-toggle="pill" data-bs-target="#t-formacion" type="button">Mi Formación Profesional</button></li>
+              <li class="nav-item"><button class="nav-link" id="t-formacion-tab" data-bs-toggle="pill" data-bs-target="#t-formacion" type="button">Mi FormaciÃ³n Profesional</button></li>
             </ul>
 
             <div class="tab-content" id="tabs-infoContent">
@@ -325,11 +355,11 @@
       <rect x="16" y="36" width="32" height="18" rx="9" fill="#c7dbe4"/>
       <rect x="6" y="8" width="52" height="48" rx="8" fill="none" stroke="#99bfd0" stroke-width="2"/>
     </svg>
-    <div class="mf-title">Arrastra aquí tu fotografía</div>
+    <div class="mf-title">Arrastra aquÃ­ tu fotografÃ­a</div>
     <div class="mf-sub">o haz clic para subirla</div>
     <div class="mf-actions">
       <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
-      <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cámara</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cÃ¡mara</button>
     </div>
     <input type="file" accept="image/*" class="d-none mf-input">
     <div class="mf-prev"><img alt="preview foto"></div>
@@ -341,11 +371,11 @@
       <path d="M32 10v44M10 32h44" stroke="#99bfd0" stroke-width="2" stroke-linecap="round"/>
       <rect x="6" y="8" width="52" height="48" rx="8" fill="none" stroke="#99bfd0" stroke-width="2"/>
     </svg>
-    <div class="mf-title">Arrastra aquí tu logotipo</div>
+    <div class="mf-title">Arrastra aquÃ­ tu logotipo</div>
     <div class="mf-sub">o haz clic para subirlo</div>
     <div class="mf-actions">
       <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
-      <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cámara</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cÃ¡mara</button>
     </div>
     <input type="file" accept="image/*" class="d-none mf-input">
     <div class="mf-prev"><img alt="preview logo"></div>
@@ -353,23 +383,23 @@
 </div>
 <div class="row g-3">
                   <div class="col-md-3"><label class="form-label">Nombre</label><input class="form-control" value="Leticia"></div>
-                  <div class="col-md-3"><label class="form-label">Apellido Paterno</label><input class="form-control" value="Muñoz"></div>
+                  <div class="col-md-3"><label class="form-label">Apellido Paterno</label><input class="form-control" value="MuÃ±oz"></div>
                   <div class="col-md-3"><label class="form-label">Apellido Materno</label><input class="form-control"></div>
-                  <div class="col-md-3"><label class="form-label">Género</label><select class="form-select"><option>—</option><option>Femenino</option><option>Masculino</option><option>Otro</option></select></div>
+                  <div class="col-md-3"><label class="form-label">GÃ©nero</label><select class="form-select"><option>â€”</option><option>Femenino</option><option>Masculino</option><option>Otro</option></select></div>
 
-                  <div class="col-md-4"><label class="form-label">Especialidad</label><input class="form-control" value="Cirugía Oncológica"></div>
-                  <div class="col-md-4"><label class="form-label">Cédula Profesional</label><input class="form-control" value="012345678"></div>
-                  <div class="col-md-4"><label class="form-label">Cédula de Especialidad</label><input class="form-control"></div>
+                  <div class="col-md-4"><label class="form-label">Especialidad</label><input class="form-control" value="CirugÃ­a OncolÃ³gica"></div>
+                  <div class="col-md-4"><label class="form-label">CÃ©dula Profesional</label><input class="form-control" value="012345678"></div>
+                  <div class="col-md-4"><label class="form-label">CÃ©dula de Especialidad</label><input class="form-control"></div>
 
-                  <div class="col-12"><label class="form-label">Domicilio (visible según plan)</label><input class="form-control" placeholder="Calle, número, colonia, ciudad, estado"></div>
+                  <div class="col-12"><label class="form-label">Domicilio (visible segÃºn plan)</label><input class="form-control" placeholder="Calle, nÃºmero, colonia, ciudad, estado"></div>
                   <div class="col-md-6"><label class="form-label">Ciudad</label><input class="form-control" value="Guadalajara"></div>
-                  <div class="col-md-6"><label class="form-label">País</label><input class="form-control" value="México"></div>
+                  <div class="col-md-6"><label class="form-label">PaÃ­s</label><input class="form-control" value="MÃ©xico"></div>
 
-                  <div la="" class="col-md-6"><label class="form-label">Teléfono (según plan)</label><input class="form-control" placeholder="+52 .."></div>
-                  <div class="col-md-6"><label class="form-label">Correo (según plan)</label><input class="form-control" placeholder="nombre@correo.com"></div>
+                  <div la="" class="col-md-6"><label class="form-label">TelÃ©fono (segÃºn plan)</label><input class="form-control" placeholder="+52 .."></div>
+                  <div class="col-md-6"><label class="form-label">Correo (segÃºn plan)</label><input class="form-control" placeholder="nombre@correo.com"></div>
 
                   <div class="col-md-6"><label class="form-label">Foto/Avatar</label><input type="file" class="form-control"></div>
-                  <div class="col-md-6"><label class="form-label">URL sitio personal (según plan)</label><input class="form-control" placeholder="https://..."></div>
+                  <div class="col-md-6"><label class="form-label">URL sitio personal (segÃºn plan)</label><input class="form-control" placeholder="https://..."></div>
                 </div>
               </div>
 
@@ -377,9 +407,9 @@
               <div class="tab-pane fade" id="t-servicios" role="tabpanel">
                 <div class="row g-3">
                   <div class="col-12"><small class="text-muted">Describe de 2 a 4 servicios, cada uno con texto corto.</small></div>
-                  <div class="col-md-6"><label class="form-label">Servicio 1</label><input class="form-control" placeholder="p.ej. Diagnóstico"></div>
-                  <div class="col-md-6"><label class="form-label">Servicio 2</label><input class="form-control" placeholder="p.ej. Tratamiento Quirúrgico"></div>
-                  <div class="col-md-6"><label class="form-label">Servicio 3</label><input class="form-control" placeholder="p.ej. Rehabilitación Intestinal pediátrica"></div>
+                  <div class="col-md-6"><label class="form-label">Servicio 1</label><input class="form-control" placeholder="p.ej. DiagnÃ³stico"></div>
+                  <div class="col-md-6"><label class="form-label">Servicio 2</label><input class="form-control" placeholder="p.ej. Tratamiento QuirÃºrgico"></div>
+                  <div class="col-md-6"><label class="form-label">Servicio 3</label><input class="form-control" placeholder="p.ej. RehabilitaciÃ³n Intestinal pediÃ¡trica"></div>
                   <div class="col-md-6"><label class="form-label">Servicio 4 (opcional)</label><input class="form-control"></div>
                 </div>
               </div>
@@ -389,20 +419,20 @@
                 <div class="row g-3">
                   <div class="col-12">
                     <label class="form-label">Listado</label>
-                    <textarea class="form-control" rows="8" placeholder="Ej.: Cáncer de mama, Cáncer de pulmón, Carcinoma hepatocelular, ..."></textarea>
-                    <small class="text-muted">Más adelante: chips, búsqueda y orden manual.</small>
+                    <textarea class="form-control" rows="8" placeholder="Ej.: CÃ¡ncer de mama, CÃ¡ncer de pulmÃ³n, Carcinoma hepatocelular, ..."></textarea>
+                    <small class="text-muted">MÃ¡s adelante: chips, bÃºsqueda y orden manual.</small>
                   </div>
                 </div>
               </div>
 
-              <!-- MI FORMACIÓN PROFESIONAL -->
+              <!-- MI FORMACIÃ“N PROFESIONAL -->
               <div class="tab-pane fade" id="t-formacion" role="tabpanel">
                 <div class="row g-3">
-                  <div class="col-md-6"><label class="form-label">Título / Especialidad</label><input class="form-control" placeholder="p.ej. Cirugía Oncológica"></div>
-                  <div class="col-md-6"><label class="form-label">Universidad / Institución</label><input class="form-control" placeholder="p.ej. UNAM"></div>
-                  <div class="col-md-4"><label class="form-label">Año de obtención</label><input class="form-control" placeholder="p.ej. 2016"></div>
+                  <div class="col-md-6"><label class="form-label">TÃ­tulo / Especialidad</label><input class="form-control" placeholder="p.ej. CirugÃ­a OncolÃ³gica"></div>
+                  <div class="col-md-6"><label class="form-label">Universidad / InstituciÃ³n</label><input class="form-control" placeholder="p.ej. UNAM"></div>
+                  <div class="col-md-4"><label class="form-label">AÃ±o de obtenciÃ³n</label><input class="form-control" placeholder="p.ej. 2016"></div>
                   <div class="col-md-8"><label class="form-label">Certificaciones</label><input class="form-control" placeholder="Consejo Mexicano..., etc."></div>
-                  <div class="col-12"><label class="form-label">Cursos y diplomados</label><textarea class="form-control" rows="4" placeholder="Separa por renglón o coma"></textarea></div>
+                  <div class="col-12"><label class="form-label">Cursos y diplomados</label><textarea class="form-control" rows="4" placeholder="Separa por renglÃ³n o coma"></textarea></div>
                 </div>
               </div>
             </div>
@@ -411,7 +441,7 @@
 
         <!-- CONSULTORIO -->
         <section class="mm-card d-none" id="p-consultorio">
-          <div class="head"><h5>Información · Consultorio (Sedes)</h5></div>
+          <div class="head"><h5>InformaciÃ³n Â· Consultorio (Sedes)</h5></div>
           <div class="body">
             <ul class="nav nav-pills mm-tabs mb-3" role="tablist">
               <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#sede1" type="button">Sede 1</button></li>
@@ -422,35 +452,35 @@
               <div class="tab-pane fade show active" id="sede1">
                 <div class="row g-3">
                   <div class="col-md-6"><label class="form-label">Nombre de la sede</label><input class="form-control"/></div>
-                  <div class="col-md-6"><label class="form-label">Teléfono (planes de pago)</label><input class="form-control"/></div>
-                  <div class="col-12"><label class="form-label">Dirección</label><input class="form-control" placeholder="Calle, número, colonia, ciudad, estado"/></div>
+                  <div class="col-md-6"><label class="form-label">TelÃ©fono (planes de pago)</label><input class="form-control"/></div>
+                  <div class="col-12"><label class="form-label">DirecciÃ³n</label><input class="form-control" placeholder="Calle, nÃºmero, colonia, ciudad, estado"/></div>
                   <div class="col-md-6"><label class="form-label">Horario</label><input class="form-control" placeholder="Lun-Vie 9:00-14:00, 16:00-19:00"/></div>
                   <div class="col-md-6"><label class="form-label">Notas</label><input class="form-control" placeholder="Accesibilidad, estacionamiento, etc."/></div>
                   <div class="col-12"><label class="form-label">Mapa</label>
                     <div class="ratio ratio-16x9 rounded border" style="border-color:var(--mm-borde-input)!important;">
                       <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d12057.337!2d-102.296!3d21.882" loading="lazy"></iframe>
                     </div>
-                    <small class="text-muted">En plan gratuito el mapa no usa GPS; en planes de pago sí.</small>
+                    <small class="text-muted">En plan gratuito el mapa no usa GPS; en planes de pago sÃ­.</small>
                   </div>
                 </div>
               </div>
-              <div class="tab-pane fade" id="sede2"><div class="alert alert-info">Configura esta sede…</div></div>
-              <div class="tab-pane fade" id="sede-add"><div class="alert alert-info">Formulario para agregar nueva sede…</div></div>
+              <div class="tab-pane fade" id="sede2"><div class="alert alert-info">Configura esta sedeâ€¦</div></div>
+              <div class="tab-pane fade" id="sede-add"><div class="alert alert-info">Formulario para agregar nueva sedeâ€¦</div></div>
             </div>
           </div>
         </section>
 
         <!-- OPINIONES -->
         <section class="mm-card d-none" id="p-opiniones">
-          <div class="head"><h5>Supervisión de Opiniones</h5></div>
+          <div class="head"><h5>SupervisiÃ³n de Opiniones</h5></div>
           <div class="body">
             <div class="row g-3">
               <div class="col-md-4">
-                <label class="form-label">Alertas por nueva opinión</label>
+                <label class="form-label">Alertas por nueva opiniÃ³n</label>
                 <select class="form-select"><option>Correo</option><option>App</option><option>Ninguna</option></select>
               </div>
               <div class="col-md-4">
-                <label class="form-label">Moderación automática</label>
+                <label class="form-label">ModeraciÃ³n automÃ¡tica</label>
                 <select class="form-select"><option>Filtrar lenguaje inapropiado</option><option>Manual</option></select>
               </div>
               <div class="col-md-4">
@@ -459,7 +489,7 @@
               </div>
               <div class="col-12">
                 <label class="form-label">Plantillas de respuesta</label>
-                <textarea class="form-control" rows="3" placeholder="Gracias por tu opinión…"></textarea>
+                <textarea class="form-control" rows="3" placeholder="Gracias por tu opiniÃ³nâ€¦"></textarea>
               </div>
             </div>
           </div>
@@ -478,8 +508,8 @@
               <div class="tab-pane fade show active" id="seg-cred">
                 <div class="row g-3">
                   <div class="col-md-4"><label class="form-label">Email</label><input class="form-control" value="leticia@example.com"></div>
-                  <div class="col-md-4"><label class="form-label">Nueva contraseña</label><input type="password" class="form-control"></div>
-                  <div class="col-md-4"><label class="form-label">Repetir contraseña</label><input type="password" class="form-control"></div>
+                  <div class="col-md-4"><label class="form-label">Nueva contraseÃ±a</label><input type="password" class="form-control"></div>
+                  <div class="col-md-4"><label class="form-label">Repetir contraseÃ±a</label><input type="password" class="form-control"></div>
                 </div>
               </div>
               <div class="tab-pane fade" id="seg-2fa">
@@ -487,15 +517,15 @@
                   <input class="form-check-input" type="checkbox" id="en_2fa">
                   <label class="form-check-label" for="en_2fa">Activar 2FA por app autenticadora</label>
                 </div>
-                <div class="mt-3 alert alert-info">Al activar, se mostrará código QR y claves de recuperación.</div>
+                <div class="mt-3 alert alert-info">Al activar, se mostrarÃ¡ cÃ³digo QR y claves de recuperaciÃ³n.</div>
               </div>
               <div class="tab-pane fade" id="seg-ses">
                 <div class="table-responsive">
                   <table class="table table-sm">
-                    <thead><tr><th>Dispositivo</th><th>Ubicación aprox.</th><th>Último acceso</th><th></th></tr></thead>
+                    <thead><tr><th>Dispositivo</th><th>UbicaciÃ³n aprox.</th><th>Ãšltimo acceso</th><th></th></tr></thead>
                     <tbody>
-                      <tr><td>Windows · Edge</td><td>GDL, MX</td><td>2025-09-16 20:12</td><td><button class="btn btn-outline-danger btn-sm">Cerrar</button></td></tr>
-                      <tr><td>iPhone · Safari</td><td>GDL, MX</td><td>2025-09-15 09:41</td><td><button class="btn btn-outline-danger btn-sm">Cerrar</button></td></tr>
+                      <tr><td>Windows Â· Edge</td><td>GDL, MX</td><td>2025-09-16 20:12</td><td><button class="btn btn-outline-danger btn-sm">Cerrar</button></td></tr>
+                      <tr><td>iPhone Â· Safari</td><td>GDL, MX</td><td>2025-09-15 09:41</td><td><button class="btn btn-outline-danger btn-sm">Cerrar</button></td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -504,14 +534,14 @@
           </div>
         </section>
 
-        <!-- SUSCRIPCIÓN -->
+        <!-- SUSCRIPCIÃ“N -->
         <section class="mm-card d-none" id="p-suscripcion">
-          <div class="head"><h5>Mi suscripción</h5></div>
+          <div class="head"><h5>Mi suscripciÃ³n</h5></div>
           <div class="body">
             <div class="row g-3">
               <div class="col-md-4">
                 <div class="kpi">
-                  <div><strong>Plan actual</strong>: Óptimo</div>
+                  <div><strong>Plan actual</strong>: Ã“ptimo</div>
                   <div><strong>Vigencia</strong>: 22 Dic 2024</div>
                   <div><strong>Estatus</strong>: Activo</div>
                   <button class="btn btn-primary btn-sm mt-2">Cambiar/Mejorar plan</button>
@@ -523,43 +553,43 @@
                   <table class="table table-sm">
                     <thead><tr><th>Fecha</th><th>Plan</th><th>Movimiento</th><th>Vigencia</th></tr></thead>
                     <tbody>
-                      <tr><td>2025-06-01</td><td>Óptimo</td><td>Renovación</td><td>22 Dic 2024</td></tr>
-                      <tr><td>2024-12-22</td><td>Estándar</td><td>Upgrade</td><td>22 Jun 2025</td></tr>
+                      <tr><td>2025-06-01</td><td>Ã“ptimo</td><td>RenovaciÃ³n</td><td>22 Dic 2024</td></tr>
+                      <tr><td>2024-12-22</td><td>EstÃ¡ndar</td><td>Upgrade</td><td>22 Jun 2025</td></tr>
                     </tbody>
                   </table>
                 </div>
                 <div class="form-check mt-2">
                   <input class="form-check-input" type="checkbox" id="auto_ren">
-                  <label class="form-check-label" for="auto_ren">Activar renovación automática</label>
+                  <label class="form-check-label" for="auto_ren">Activar renovaciÃ³n automÃ¡tica</label>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        <!-- AGENDA · CONFIGURACIÓN -->
+        <!-- AGENDA Â· CONFIGURACIÃ“N -->
         <section class="mm-card d-none" id="p-ag-ajustes">
-          <div class="head"><h5>Mi Agenda · Configuración</h5></div>
+          <div class="head"><h5>Mi Agenda Â· ConfiguraciÃ³n</h5></div>
           <div class="body">
             <div class="row g-3">
-              <div class="col-md-3"><label class="form-label">Duración de cita</label><select class="form-select"><option>20 min</option><option>30 min</option><option>40 min</option></select></div>
+              <div class="col-md-3"><label class="form-label">DuraciÃ³n de cita</label><select class="form-select"><option>20 min</option><option>30 min</option><option>40 min</option></select></div>
               <div class="col-md-3"><label class="form-label">Tiempo entre citas</label><select class="form-select"><option>0 min</option><option>10 min</option><option>15 min</option></select></div>
               <div class="col-md-3"><label class="form-label">Canales</label><select class="form-select" multiple><option>Presencial</option><option>Telemedicina</option></select></div>
-              <div class="col-md-3"><label class="form-label">Política de cancelación</label><select class="form-select"><option>24h</option><option>48h</option></select></div>
+              <div class="col-md-3"><label class="form-label">PolÃ­tica de cancelaciÃ³n</label><select class="form-select"><option>24h</option><option>48h</option></select></div>
 
-              <div class="col-md-6"><label class="form-label">Horario (L-V)</label><input class="form-control" placeholder="09:00–14:00, 16:00–19:00"></div>
-              <div class="col-md-6"><label class="form-label">Horario (Sáb)</label><input class="form-control" placeholder="09:00–13:00"></div>
+              <div class="col-md-6"><label class="form-label">Horario (L-V)</label><input class="form-control" placeholder="09:00â€“14:00, 16:00â€“19:00"></div>
+              <div class="col-md-6"><label class="form-label">Horario (SÃ¡b)</label><input class="form-control" placeholder="09:00â€“13:00"></div>
 
               <div class="col-12"><label class="form-label">Recordatorios</label>
-                <textarea class="form-control" rows="3" placeholder="Plantilla SMS/Email de recordatorio…"></textarea>
+                <textarea class="form-control" rows="3" placeholder="Plantilla SMS/Email de recordatorioâ€¦"></textarea>
               </div>
             </div>
           </div>
         </section>
 
-        <!-- AGENDA · OPERADORES -->
+        <!-- AGENDA Â· OPERADORES -->
         <section class="mm-card d-none" id="p-ag-operadores">
-          <div class="head"><h5>Mi Agenda · Administrar Operadores</h5></div>
+          <div class="head"><h5>Mi Agenda Â· Administrar Operadores</h5></div>
           <div class="body">
             <div class="row g-3">
               <div class="col-md-6">
@@ -573,8 +603,8 @@
                   <table class="table table-sm">
                     <thead><tr><th>Nombre</th><th>Rol</th><th>Permisos</th><th>Estatus</th><th>Acciones</th></tr></thead>
                     <tbody>
-                      <tr><td>María López</td><td>Operador</td><td>Agenda, Pacientes</td><td>Activo</td><td><button class="btn btn-outline-secondary btn-sm">Editar</button></td></tr>
-                      <tr><td>C. Ramírez</td><td>Asistente</td><td>Agenda</td><td>Invitado</td><td><button class="btn btn-outline-secondary btn-sm">Reenviar</button></td></tr>
+                      <tr><td>MarÃ­a LÃ³pez</td><td>Operador</td><td>Agenda, Pacientes</td><td>Activo</td><td><button class="btn btn-outline-secondary btn-sm">Editar</button></td></tr>
+                      <tr><td>C. RamÃ­rez</td><td>Asistente</td><td>Agenda</td><td>Invitado</td><td><button class="btn btn-outline-secondary btn-sm">Reenviar</button></td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -583,13 +613,13 @@
           </div>
         </section>
 
-        <!-- AGENDA · ADMINISTRACIÓN -->
+        <!-- AGENDA Â· ADMINISTRACIÃ“N -->
         <section class="mm-card d-none" id="p-ag-admin">
-          <div class="head"><h5>Mi Agenda · Administración de Citas</h5></div>
+          <div class="head"><h5>Mi Agenda Â· AdministraciÃ³n de Citas</h5></div>
           <div class="body">
             <div class="row g-3">
               <div class="col-md-3"><input class="form-control" placeholder="Buscar paciente/cita"></div>
-              <div class="col-md-3"><select class="form-select"><option>Hoy</option><option>Mañana</option><option>Esta semana</option></select></div>
+              <div class="col-md-3"><select class="form-select"><option>Hoy</option><option>MaÃ±ana</option><option>Esta semana</option></select></div>
               <div class="col-md-3"><select class="form-select"><option>Todos</option><option>Confirmadas</option><option>Pendientes</option><option>Canceladas</option></select></div>
               <div class="col-md-3 text-end"><button class="btn btn-primary"><i class="bi bi-plus-lg"></i> Nueva cita</button></div>
               <div class="col-12">
@@ -597,8 +627,8 @@
                   <table class="table table-sm">
                     <thead><tr><th>Hora</th><th>Paciente</th><th>Tipo</th><th>Estatus</th><th>Acciones</th></tr></thead>
                     <tbody>
-                      <tr><td>09:00</td><td>J. Pérez</td><td>Consulta</td><td>Pendiente</td><td><button class="btn btn-success btn-sm">Confirmar</button></td></tr>
-                      <tr><td>10:00</td><td>M. Díaz</td><td>Seguimiento</td><td>Confirmada</td><td><button class="btn btn-outline-danger btn-sm">Cancelar</button></td></tr>
+                      <tr><td>09:00</td><td>J. PÃ©rez</td><td>Consulta</td><td>Pendiente</td><td><button class="btn btn-success btn-sm">Confirmar</button></td></tr>
+                      <tr><td>10:00</td><td>M. DÃ­az</td><td>Seguimiento</td><td>Confirmada</td><td><button class="btn btn-outline-danger btn-sm">Cancelar</button></td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -607,29 +637,29 @@
           </div>
         </section>
 
-        <!-- PACIENTES · ARCHIVO -->
+        <!-- PACIENTES Â· ARCHIVO -->
         <section class="mm-card d-none" id="p-pac-archivo">
-          <div class="head"><h5>Mis Pacientes · Archivo</h5></div>
+          <div class="head"><h5>Mis Pacientes Â· Archivo</h5></div>
           <div class="body">
             <div class="row g-3">
-              <div class="col-md-4"><input class="form-control" placeholder="Buscar por nombre, CURP…"></div>
+              <div class="col-md-4"><input class="form-control" placeholder="Buscar por nombre, CURPâ€¦"></div>
               <div class="col-md-4"><select class="form-select"><option>Todos</option><option>Con citas recientes</option><option>Inactivos</option></select></div>
               <div class="col-md-4"><button class="btn btn-primary"><i class="bi bi-person-plus"></i> Nuevo paciente</button></div>
             </div>
           </div>
         </section>
 
-        <!-- PACIENTES · EXPEDIENTE -->
+        <!-- PACIENTES Â· EXPEDIENTE -->
         <section class="mm-card d-none" id="p-expediente">
-          <div class="head"><h5>Mis Pacientes · Expediente Médico</h5></div>
+          <div class="head"><h5>Mis Pacientes Â· Expediente MÃ©dico</h5></div>
           <div class="body">
             <ul class="nav nav-pills mm-tabs mb-3" role="tablist">
-              <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-historia">Historia Clínica</button></li>
-              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-gineco">Antecedentes ginecoobstétricos</button></li>
-              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-exploracion">Exploración Física</button></li>
-              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-estudios">Estudios Diagnóstico</button></li>
+              <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-historia">Historia ClÃ­nica</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-gineco">Antecedentes ginecoobstÃ©tricos</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-exploracion">ExploraciÃ³n FÃ­sica</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-estudios">Estudios DiagnÃ³stico</button></li>
               <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-tratamiento">Tratamiento Recetas</button></li>
-              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-notas">Notas Evolución</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-notas">Notas EvoluciÃ³n</button></li>
               <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-manejo">Manejo Hospitalario</button></li>
               <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-consent">Consentimiento Informado</button></li>
               <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-archivo">Archivo</button></li>
@@ -642,21 +672,21 @@
                   <div class="col-md-12"><label class="form-label">Interrogatorio por aparatos</label><textarea class="form-control" rows="3"></textarea></div>
                 </div>
               </div>
-              <div class="tab-pane fade" id="t-gineco"><div class="alert alert-info">Campos ginecoobstétricos…</div></div>
-              <div class="tab-pane fade" id="t-exploracion"><div class="alert alert-info">Signos vitales, exploración…</div></div>
-              <div class="tab-pane fade" id="t-estudios"><div class="alert alert-info">Laboratorio, imagenología…</div></div>
-              <div class="tab-pane fade" id="t-tratamiento"><div class="alert alert-info">Recetas, indicaciones…</div></div>
-              <div class="tab-pane fade" id="t-notas"><div la="" class="alert alert-info">Notas de evolución…</div></div>
-              <div class="tab-pane fade" id="t-manejo"><div class="alert alert-info">Manejo hospitalario…</div></div>
-              <div class="tab-pane fade" id="t-consent"><div class="alert alert-info">Consentimientos informados…</div></div>
-              <div class="tab-pane fade" id="t-archivo"><div class="alert alert-info">Adjuntos del expediente…</div></div>
+              <div class="tab-pane fade" id="t-gineco"><div class="alert alert-info">Campos ginecoobstÃ©tricosâ€¦</div></div>
+              <div class="tab-pane fade" id="t-exploracion"><div class="alert alert-info">Signos vitales, exploraciÃ³nâ€¦</div></div>
+              <div class="tab-pane fade" id="t-estudios"><div class="alert alert-info">Laboratorio, imagenologÃ­aâ€¦</div></div>
+              <div class="tab-pane fade" id="t-tratamiento"><div class="alert alert-info">Recetas, indicacionesâ€¦</div></div>
+              <div class="tab-pane fade" id="t-notas"><div la="" class="alert alert-info">Notas de evoluciÃ³nâ€¦</div></div>
+              <div class="tab-pane fade" id="t-manejo"><div class="alert alert-info">Manejo hospitalarioâ€¦</div></div>
+              <div class="tab-pane fade" id="t-consent"><div class="alert alert-info">Consentimientos informadosâ€¦</div></div>
+              <div class="tab-pane fade" id="t-archivo"><div class="alert alert-info">Adjuntos del expedienteâ€¦</div></div>
             </div>
           </div>
         </section>
 
-        <!-- FACTURACIÓN (tabs) -->
+        <!-- FACTURACIÃ“N (tabs) -->
         <section class="mm-card d-none" id="p-facturacion">
-          <div class="head"><h5><span class="material-symbols-rounded align-middle me-1" aria-hidden="true">receipt_long</span>Facturación</h5></div>
+          <div class="head"><h5><span class="material-symbols-rounded align-middle me-1" aria-hidden="true">receipt_long</span>FacturaciÃ³n</h5></div>
           <div class="body">
             <ul class="nav nav-pills mm-tabs mb-3" role="tablist">
               <li class="nav-item"><button la="" class="nav-link active" data-bs-toggle="pill" data-bs-target="#cfdi-crear">Crear Factura</button></li>
@@ -668,7 +698,7 @@
               <div class="tab-pane fade show active" id="cfdi-crear">
                 <div class="row g-3">
                   <div class="col-md-4"><label class="form-label">Paciente</label><input class="form-control" placeholder="Buscar/seleccionar"></div>
-                  <div class="col-md-4"><label class="form-label">Uso CFDI</label><select class="form-select"><option>Gastos médicos</option></select></div>
+                  <div class="col-md-4"><label class="form-label">Uso CFDI</label><select class="form-select"><option>Gastos mÃ©dicos</option></select></div>
                   <div class="col-md-4"><label class="form-label">Forma de pago</label><select class="form-select"><option>Transferencia</option><option>Tarjeta</option></select></div>
                   <div class="col-12"><label class="form-label">Conceptos</label><textarea class="form-control" rows="3" placeholder="Consulta, estudios, etc."></textarea></div>
                   <div class="col-md-3"><label class="form-label">Subtotal</label><input class="form-control" placeholder="$0.00"></div>
@@ -682,14 +712,14 @@
                   <table class="table table-sm">
                     <thead><tr><th>Folio</th><th>Fecha</th><th>Paciente</th><th>Importe</th><th>Estatus</th><th></th></tr></thead>
                     <tbody>
-                      <tr><td>A-1023</td><td>2025-09-12</td><td>J. Pérez</td><td>$1,200</td><td>Timbrada</td><td><button class="btn btn-outline-secondary btn-sm">Descargar</button></td></tr>
-                      <tr><td>A-1018</td><td>2025-09-02</td><td>M. Díaz</td><td>$900</td><td>Timbrada</td><td><button class="btn btn-outline-secondary btn-sm">Descargar</button></td></tr>
+                      <tr><td>A-1023</td><td>2025-09-12</td><td>J. PÃ©rez</td><td>$1,200</td><td>Timbrada</td><td><button class="btn btn-outline-secondary btn-sm">Descargar</button></td></tr>
+                      <tr><td>A-1018</td><td>2025-09-02</td><td>M. DÃ­az</td><td>$900</td><td>Timbrada</td><td><button class="btn btn-outline-secondary btn-sm">Descargar</button></td></tr>
                     </tbody>
                   </table>
                 </div>
               </div>
-              <div class="tab-pane fade" id="cfdi-pacientes"><div class="alert alert-info">Directorio fiscal de pacientes…</div></div>
-              <div class="tab-pane fade" id="cfdi-canceladas"><div class="alert alert-warning">Listado de canceladas y motivo…</div></div>
+              <div class="tab-pane fade" id="cfdi-pacientes"><div class="alert alert-info">Directorio fiscal de pacientesâ€¦</div></div>
+              <div class="tab-pane fade" id="cfdi-canceladas"><div class="alert alert-warning">Listado de canceladas y motivoâ€¦</div></div>
             </div>
           </div>
         </section>
@@ -720,13 +750,13 @@
                   <div class="col-md-6"><label la="" class="form-label">Nombre del paquete</label><input class="form-control" placeholder="p.ej. Paquete Maternidad"></div>
                   <div class="col-md-3"><label class="form-label">Precio</label><input class="form-control" placeholder="$25,000"></div>
                   <div class="col-md-3"><label class="form-label">Vigencia</label><input class="form-control" placeholder="Octubre 2025"></div>
-                  <div class="col-12"><label class="form-label">Descripción</label><textarea class="form-control" rows="3" placeholder="Incluye..."></textarea></div>
+                  <div class="col-12"><label class="form-label">DescripciÃ³n</label><textarea class="form-control" rows="3" placeholder="Incluye..."></textarea></div>
                   <div class="col-md-6">
                     <label class="form-label">Imagen</label>
                     <input type="file" class="form-control">
                     <button class="btn btn-primary mt-2" disabled><i class="bi bi-stars"></i> Generar imagen con IA (Plan Profesional)</button>
                   </div>
-                  <div class="col-md-3"><label class="form-label">Visibilidad</label><select class="form-select"><option>Público en perfil</option><option>Oculto</option></select></div>
+                  <div class="col-md-3"><label class="form-label">Visibilidad</label><select class="form-select"><option>PÃºblico en perfil</option><option>Oculto</option></select></div>
                   <div class="col-md-3"><label class="form-label">Estatus</label><select class="form-select"><option>Borrador</option><option>Publicado</option></select></div>
                   <div class="col-12 d-flex gap-2">
                     <button class="btn btn-success"><i class="bi bi-check2-circle"></i> Guardar</button>
@@ -739,13 +769,13 @@
                   <table class="table table-sm">
                     <thead><tr><th>Nombre</th><th>Precio</th><th>Periodo</th><th>Resultado</th></tr></thead>
                     <tbody>
-                      <tr><td>Promo verano</td><td>$1,800</td><td>Jun–Ago 2025</td><td>Finalizada</td></tr>
+                      <tr><td>Promo verano</td><td>$1,800</td><td>Junâ€“Ago 2025</td><td>Finalizada</td></tr>
                     </tbody>
                   </table>
                 </div>
               </div>
             </div>
-            <div class="alert alert-info mt-3 mb-0">Este módulo se muestra según plan contratado.</div>
+            <div class="alert alert-info mt-3 mb-0">Este mÃ³dulo se muestra segÃºn plan contratado.</div>
           </div>
         </section>
 
@@ -758,12 +788,12 @@
 
 
 
-<!-- Modal: QR cámara móvil (mock) -->
+<!-- Modal: QR cÃ¡mara mÃ³vil (mock) -->
 <div class="modal fade" id="modalQR" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Tomar con cámara del teléfono</h5>
+        <h5 class="modal-title">Tomar con cÃ¡mara del telÃ©fono</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
       <div class="modal-body">
@@ -777,11 +807,11 @@
           </svg>
         </div>
         <ol class="mb-1">
-          <li>Escanea el código con tu teléfono.</li>
-          <li>Se vinculará tu sesión y se abrirá la cámara del dispositivo.</li>
-          <li>Toma la foto y se enviará automáticamente a esta pantalla.</li>
+          <li>Escanea el cÃ³digo con tu telÃ©fono.</li>
+          <li>Se vincularÃ¡ tu sesiÃ³n y se abrirÃ¡ la cÃ¡mara del dispositivo.</li>
+          <li>Toma la foto y se enviarÃ¡ automÃ¡ticamente a esta pantalla.</li>
         </ol>
-        <div class="small text-muted text-center">* Demostración visual (mock). Requiere backend para funcionar.</div>
+        <div class="small text-muted text-center">* DemostraciÃ³n visual (mock). Requiere backend para funcionar.</div>
       </div>
     </div>
   </div>
@@ -793,11 +823,11 @@
 <footer class="mm-footer">
   <div class="wrap page">
     <div class="mm-footer__content">
-      <div class="mm-footer__brand">Todos los derechos reservados México Médico</div>
+      <div class="mm-footer__brand">Todos los derechos reservados MÃ©xico MÃ©dico</div>
       <nav class="mm-footer__nav" aria-label="Enlaces legales">
         <ul class="mm-footer__links">
           <li><a href="#">Nosotros</a></li>
-          <li><a href="#">Términos y Condiciones</a></li>
+          <li><a href="#">TÃ©rminos y Condiciones</a></li>
           <li><a href="#">Aviso de Privacidad</a></li>
         </ul>
       </nav>
