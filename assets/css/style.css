@@ -285,6 +285,7 @@ body{background:var(--mm-fondo-base);}
   border-radius:.75rem;
 }
 .mm-tabs .nav-link.active{
+  background:#005684;
   color:#fff;
   box-shadow:0 0 0 2px rgba(255,255,255,.3);
 }
