@@ -293,7 +293,7 @@ body{background:var(--mm-fondo-base);}
   background:#00ADC1;
   color:#fff;
   font-family:'Open Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-  font-weight:400;
+  font-weight:600; /* Semibold para todas */
   font-size:0.9em; /* -10% */
   text-transform:uppercase;
   border-radius:.75rem;
@@ -301,7 +301,7 @@ body{background:var(--mm-fondo-base);}
 .mm-tabs .nav-link.active{
   background:#005684;
   color:#fff;
-  font-weight:600; /* Semibold */
+  font-weight:700; /* Bold en activa */
   box-shadow:0 0 0 2px rgba(255,255,255,.3);
 }
 
