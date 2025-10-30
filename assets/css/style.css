@@ -282,7 +282,7 @@ body{background:var(--mm-fondo-base);}
 
 /* Icono en títulos (30% más grande) */
 .mm-card .head .title-ico{
-  font-size:1.3em;
+  font-size:2.6em; /* 2x del tamaño anterior */
   line-height:1;
   vertical-align:middle;
   margin-right:.35rem;
