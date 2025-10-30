@@ -61,7 +61,7 @@ body{background:var(--mm-fondo-base);}
 
 .material-symbols-outlined,
 .material-symbols-rounded{
-  font-variation-settings:'FILL' 0,'wght' 100,'GRAD' -25,'opsz' 24;
+  font-variation-settings:'FILL' 0,'wght' 100,'GRAD' -50,'opsz' 24;
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -275,10 +275,18 @@ body{background:var(--mm-fondo-base);}
 }
 
 /* ================== ÁREA DERECHA ================== */
-.mm-card{background:#fff;border-radius:.9rem;border:1px solid rgba(0,0,0,.08);box-shadow:0 12px 28px rgba(0,0,0,.08);overflow:hidden;}
+.mm-card{background:#fff;border-radius:.9rem;border:1px solid #00ADC1;box-shadow:0 12px 28px rgba(0,0,0,.08);overflow:hidden;}
 .mm-card .head{background:#00ADC1;border-bottom:1px solid #00ADC1;padding:.75rem .9rem;}
 .mm-card .head h5{margin:0;font-weight:700;color:#FFFFFF;}
 .mm-card .body{padding:.9rem .9rem 1.05rem;}
+
+/* Icono en títulos (30% más grande) */
+.mm-card .head .title-ico{
+  font-size:1.3em;
+  line-height:1;
+  vertical-align:middle;
+  margin-right:.35rem;
+}
 .form-control,.form-select{border-color:var(--mm-borde-input);border-radius:.7rem;}
 .form-control:focus,.form-select:focus{border-color:#00738F;box-shadow:0 0 0 .2rem rgba(0,115,143,.2);}
 
