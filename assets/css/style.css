@@ -56,7 +56,7 @@ html,body{
   font-family:'Carlito','IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   font-weight:400;
 }
-body{background:var(--mm-fondo-base);}
+body{margin:0;background:var(--mm-fondo-base);}
 .page{max-width:var(--page-max);margin-inline:auto;padding-inline:var(--page-pad);width:100%;}
 
 .material-symbols-outlined,
@@ -86,7 +86,7 @@ body{background:var(--mm-fondo-base);}
 .user-id .name{font-weight:700;font-size:var(--fz-nombre);color:#fff;line-height:1;}
 
 .header-bottom{background:var(--mm-barra-vigencia);color:#cfe8f2;}
-.header-bottom .wrap{height:23px;display:flex;align-items:center;justify-content:space-between;}
+.header-bottom .wrap{height:26px;display:flex;align-items:center;justify-content:space-between;}
 .hb-left{display:flex;align-items:center;gap:1rem;}
 .hb-left .vigencia strong{color:#fff;font-weight:700;}
 .hb-left .incrementar{font-size:var(--fz-incrementar);font-weight:700;text-transform:uppercase;color:#8fe3ff;text-decoration:none;}
