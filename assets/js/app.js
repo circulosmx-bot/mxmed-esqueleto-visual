@@ -169,7 +169,8 @@ $(function(){
       if(e.target.closest('.mf-qr') || e.target.closest('.mf-choose')) return;
       if(!e.target.closest('input[type=file]')) input.click();
     });
-    box.querySelector('.mf-choose').addEventListener('click', ()=>input.click());
+    const chooseBtn = box.querySelector('.mf-choose');
+    if(chooseBtn){ chooseBtn.addEventListener('click', ()=>input.click()); }
 
     // drag & drop
     ['dragenter','dragover'].forEach(evt=>{
@@ -192,10 +193,11 @@ $(function(){
     }
 
     // QR (mock)
-    box.querySelector('.mf-qr').addEventListener('click', ()=>{
+    const qrBtn = box.querySelector('.mf-qr');
+    if(qrBtn){ qrBtn.addEventListener('click', ()=>{
       const el = document.getElementById('modalQR');
       if(window.bootstrap && el){ new bootstrap.Modal(el).show(); }
-    });
+    }); }
   });
 })();
 
@@ -215,6 +217,8 @@ $(function(){
     const selects = Array.from(document.querySelectorAll('.esp-select'));
     const vals = selects.map(s=>s.value).filter(v=>v && !v.startsWith('Otra'));
     selects.forEach(s=>{
+      // Resalte visual de seleccionados
+      if(s.value){ s.classList.add('picked'); } else { s.classList.remove('picked'); }
       Array.from(s.options).forEach(o=>{
         if(!o.value || o.value.startsWith('Otra')) return o.disabled=false;
         o.disabled = vals.includes(o.value) && s.value !== o.value;
@@ -249,7 +253,7 @@ $(function(){
     const inp = document.createElement('input'); inp.className='form-control'; inp.id='esp-otra'; inp.placeholder='Escribe la especialidad';
     wrap.appendChild(lab); wrap.appendChild(inp);
     row.insertBefore(wrap, correo.closest('.col-md-6'));
-    syncDuplicates();
+    syncDuplicates(); toggleOtra();
   }
 
   // Género: reemplaza "Otro" por "No Específico"
@@ -263,6 +267,35 @@ $(function(){
     });
   }
   ['Domicilio','Ciudad','País','Foto/Avatar','URL sitio personal'].forEach(removeByLabel);
+
+  // Envolver WhatsApp con prefijo 🇲🇽 +52
+  const w = document.getElementById('dp-whatsapp');
+  if(w && !w.closest('.input-group')){
+    const wrap = document.createElement('div'); wrap.className='input-group';
+    const span = document.createElement('span'); span.className='input-group-text'; span.textContent='🇲🇽 +52';
+    const col = w.closest('[class^="col-"]');
+    col.replaceChildren();
+    const lab = document.createElement('label'); lab.className='form-label'; lab.textContent='Teléfono Whatsapp';
+    col.appendChild(lab);
+    col.appendChild(wrap);
+    wrap.appendChild(span);
+    w.placeholder='10 dígitos'; w.maxLength=14; wrap.appendChild(w);
+  }
+
+  // Validación de correo y teléfono (básica)
+  const email = document.getElementById('dp-correo');
+  if(email){ email.type='email'; email.addEventListener('blur', ()=>{
+    const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim());
+    email.classList.toggle('is-invalid', !!email.value && !ok);
+    email.classList.toggle('is-valid', !!email.value && ok);
+  }); }
+  if(w){ w.addEventListener('input', ()=>{
+    const digits = (w.value||'').replace(/\D+/g,'');
+    // Valid: 10 digits, or starts with 52 + 10 = 12
+    const ok = digits.length===10 || (digits.startsWith('52') && digits.length===12);
+    w.classList.toggle('is-invalid', !!w.value && !ok);
+    w.classList.toggle('is-valid', !!w.value && ok);
+  }); }
 })();
 
 // ===== Correcciones rápidas de acentos en header (muestra) =====
