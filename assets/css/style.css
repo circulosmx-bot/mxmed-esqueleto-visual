@@ -482,11 +482,12 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* Marca de guardado OK en campos */
 .save-wrap{position:relative}
-.save-wrap .save-ok{
+.save-field{position:relative}
+.save-field > .save-ok{
   position:absolute;
   right:.5rem;
-  top:.2rem; /* coloca el check en la esquina superior derecha, dentro del campo */
-  transform:none;
+  top:50%;
+  transform:translateY(-50%);
   color:#00ADC1;
   display:none;
   pointer-events:none;
@@ -496,8 +497,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 .save-wrap.saved .save-ok{display:inline-flex}
 /* Ajuste de padding para que el icono quepa dentro del campo */
-.save-wrap.saved input.form-control{padding-right:3rem}
-.save-wrap.saved select.form-select{padding-right:3rem;background-position: right 3rem center !important}
+.save-wrap.saved input.form-control{padding-right:3.2rem}
+.save-wrap.saved select.form-select{padding-right:3.2rem;background-position: right 3.2rem center !important}
 /* Forzar peso 600 solo para el icono de confirmación */
 .save-wrap .save-ok .material-symbols-outlined{
   font-variation-settings:'FILL' 0,'wght' 600,'GRAD' 0,'opsz' 24;

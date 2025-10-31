@@ -323,12 +323,25 @@ $(function(){
     const col = ctrl.closest('[class^="col-"]') || ctrl.parentElement;
     if(!col) return null;
     col.classList.add('save-wrap');
-    let mark = col.querySelector(':scope > .save-ok');
+    // Determinar host (input-group o el propio input) para posicionar dentro del campo
+    let host = ctrl.closest('.input-group');
+    if(!host){
+      if(!ctrl.parentElement.classList.contains('save-field')){
+        const field = document.createElement('div'); field.className='save-field';
+        ctrl.parentElement.insertBefore(field, ctrl);
+        field.appendChild(ctrl);
+        host = field;
+      } else { host = ctrl.parentElement; }
+    } else {
+      host.classList.add('save-field');
+    }
+    // Crear/ubicar marca dentro del host
+    let mark = host.querySelector(':scope > .save-ok');
     if(!mark){
       mark = document.createElement('span');
       mark.className = 'save-ok';
       mark.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">check_small</span>';
-      col.appendChild(mark);
+      host.appendChild(mark);
     }
     return col;
   }
