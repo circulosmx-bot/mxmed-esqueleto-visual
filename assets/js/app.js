@@ -284,22 +284,23 @@ $(function(){
 
   // Validación de correo y teléfono (básica) + tooltips
   const email = document.getElementById('dp-correo');
-  if(window.bootstrap){ new bootstrap.Tooltip(document.body, { selector:'.has-error-tooltip', trigger:'hover focus', customClass:'mm-errtip', placement:'right', boundary:'viewport', fallbackPlacements:['right','left','top','bottom'], offset:[0,10] }); }
+  // No usamos tooltip Bootstrap; renderizamos una burbuja propia dentro de save-wrap
 
   function setErrorTooltip(el, msg, isError){
+    const col = el.closest('.save-wrap') || ensureSaveMark(el);
+    if(!col) return;
+    let bub = col.querySelector(':scope > .err-bubble');
     if(isError){
-      el.classList.add('is-invalid','has-error-tooltip');
+      el.classList.add('is-invalid');
       el.classList.remove('is-valid');
-      el.setAttribute('title', msg);
-      el.setAttribute('data-bs-toggle','tooltip');
-      // si hay error, ocultar marca de guardado
-      const col = el.closest('.save-wrap');
-      if(col){ col.classList.remove('saved'); }
+      col.classList.add('has-error');
+      if(!bub){ bub = document.createElement('div'); bub.className='err-bubble'; col.appendChild(bub); }
+      bub.textContent = msg;
     } else {
-      el.classList.remove('is-invalid','has-error-tooltip');
-      el.classList.toggle('is-valid', !!el.value);
-      el.removeAttribute('title');
-      el.removeAttribute('data-bs-toggle');
+      el.classList.remove('is-invalid');
+      el.classList.remove('is-valid');
+      col.classList.remove('has-error');
+      if(bub){ bub.remove(); }
     }
   }
 
