@@ -217,11 +217,15 @@ $(function(){
     const selects = Array.from(document.querySelectorAll('.esp-select'));
     const vals = selects.map(s=>s.value).filter(v=>v && !v.startsWith('Otra'));
     selects.forEach(s=>{
-      // Resalte visual solo en la elegida
+      // Resalte visual en el select que tiene valor
       if(s.value){ s.classList.add('picked'); } else { s.classList.remove('picked'); }
       Array.from(s.options).forEach(o=>{
-        if(!o.value || o.value.startsWith('Otra')) return o.disabled=false;
-        o.disabled = vals.includes(o.value) && s.value !== o.value;
+        if(!o.value || o.value.startsWith('Otra')){ o.disabled=false; o.classList.remove('taken'); return; }
+        const isTaken = vals.includes(o.value);
+        // La opción tomada se marca en todas las persianas
+        o.classList.toggle('taken', isTaken);
+        // Deshabilitar en persianas distintas a la que la tiene seleccionada
+        o.disabled = isTaken && s.value !== o.value;
       });
     });
   }

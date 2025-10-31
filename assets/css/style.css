@@ -467,7 +467,9 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mf-illus{width:76px;height:76px;opacity:.9;margin-bottom:6px}
 .mf-title{font-weight:700;margin-bottom:2px;color:#0b3242;text-align:center}
 .mf-sub{font-size:.9rem;color:#597482;text-align:center;margin-bottom:4px}
-.mf-actions{display:none}
+/* Mostrar solo el botón de cámara; centrar acciones */
+.mf-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.mf-actions .mf-choose{display:none}
 .mf-actions .btn{border-radius:10px}
 .mf-prev{position:absolute;inset:10px;border-radius:10px;overflow:hidden;display:none}
 .mf-prev img{width:100%;height:100%;object-fit:cover}
@@ -489,7 +491,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .err-bubble{
   position:absolute;
   right:0;
-  bottom:calc(100% + 8px);
+  bottom:calc(100% + 2px); /* más cerca del borde superior del input */
   background:rgba(0,173,193,.65);
   color:#fff;
   padding:6px 8px;
@@ -513,6 +515,10 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-style:solid;
   border-color:rgba(0,173,193,.65) transparent transparent transparent;
 }
+
+/* Opciones de especialidad ya tomadas (en otras persianas) */
+.esp-select option.taken{background:rgba(0,173,193,.35);}
+.esp-select option:disabled.taken{background:rgba(0,173,193,.35);color:#063843}
 
 /* ================== FOOTER ================== */
 .mm-footer{
