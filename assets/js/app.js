@@ -216,11 +216,9 @@ $(function(){
   function syncDuplicates(){
     const selects = Array.from(document.querySelectorAll('.esp-select'));
     const vals = selects.map(s=>s.value).filter(v=>v && !v.startsWith('Otra'));
-    const anySelected = selects.some(s=>!!s.value);
     selects.forEach(s=>{
-      // Resalte visual
+      // Resalte visual solo en la elegida
       if(s.value){ s.classList.add('picked'); } else { s.classList.remove('picked'); }
-      if(anySelected){ s.classList.add('peer'); } else { s.classList.remove('peer'); }
       Array.from(s.options).forEach(o=>{
         if(!o.value || o.value.startsWith('Otra')) return o.disabled=false;
         o.disabled = vals.includes(o.value) && s.value !== o.value;
@@ -286,7 +284,7 @@ $(function(){
 
   // Validación de correo y teléfono (básica) + tooltips
   const email = document.getElementById('dp-correo');
-  if(window.bootstrap){ new bootstrap.Tooltip(document.body, { selector:'.has-error-tooltip', trigger:'hover focus', customClass:'mm-errtip' }); }
+  if(window.bootstrap){ new bootstrap.Tooltip(document.body, { selector:'.has-error-tooltip', trigger:'hover focus', customClass:'mm-errtip', placement:'right', boundary:'viewport', fallbackPlacements:['right','left','top','bottom'], offset:[0,10] }); }
 
   function setErrorTooltip(el, msg, isError){
     if(isError){
@@ -339,8 +337,16 @@ $(function(){
       const saved = localStorage.getItem(key);
       if(saved!==null) ctrl.value = saved;
       const maybeMark = ()=>{
-        const invalid = ctrl.classList.contains('is-invalid');
-        const hasVal = (ctrl.value||'').trim() !== '';
+        const val = (ctrl.value||'').trim();
+        let validByType = true;
+        if(ctrl.id==='dp-correo'){
+          validByType = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+        } else if(ctrl.id==='dp-whatsapp'){
+          const digits = val.replace(/\D+/g,'');
+          validByType = digits.length===10 || (digits.startsWith('52') && digits.length===12);
+        }
+        const invalid = ctrl.classList.contains('is-invalid') || !validByType;
+        const hasVal = val !== '';
         if(col){ col.classList.toggle('saved', hasVal && !invalid); }
       };
       maybeMark();
