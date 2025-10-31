@@ -327,7 +327,7 @@ $(function(){
     if(!mark){
       mark = document.createElement('span');
       mark.className = 'save-ok';
-      mark.innerHTML = '<i class="bi bi-check2-circle"></i>';
+      mark.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">check_small</span>';
       col.appendChild(mark);
     }
     return col;
