@@ -491,7 +491,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   color:#00ADC1;
   display:none;
   pointer-events:none;
-  font-size:3rem; /* +50% respecto a 2rem */
+  font-size:2.7rem; /* -10% desde 3rem */
   line-height:1;
   z-index:3
 }
@@ -510,7 +510,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .err-bubble{
   position:absolute;
   right:0;
-  bottom:calc(100% + 2px); /* más cerca del borde superior del input */
+  bottom:calc(100% - 28px); /* baja 30px respecto a +2px anterior */
   background:rgba(0,173,193,.65);
   color:#fff;
   padding:6px 8px;
