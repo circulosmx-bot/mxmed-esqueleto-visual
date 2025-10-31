@@ -198,3 +198,77 @@ $(function(){
     });
   });
 })();
+
+// ===== Datos Personales: especialidades y validaciones =====
+(function(){
+  const T = [
+    'Alergología','Análisis Clínicos','Anestesiología','Angiología y Cirugía Vascular','Audiología','Cardiología','Cirugía Bariátrica','Cirugía Cabeza y Cuello','Cirugía Cardiovascular','Cirugía de Columna','Cirugía de Mano','Cirugía de Pie','Cirugía Gastrointestinal','Cirugía General','Cirugía Laparoscópica','Cirugía Maxilofacial','Cirugía Oncológica Pediátrica','Cirugía Pediátrica','Cirugía Plástica','Cirugía Torácica','Coloproctología','Colposcopía','Cuidados Paliativos','Dentista','Dermatología','Diabetología','Endocrinología','Endodoncia','Estudios de Diagnóstico','Gastroenterología','Geriatría','Ginecología y Obstetricia','Hematología','Implantología Dental','Kinesiología','Medicina Crítica','Medicina del Trabajo','Medicina Estética','Medicina Familiar','Medicina Física y Rehabilitación','Medicina General','Medicina Integrada','Medicina Interna','Medicina Nuclear','Nefrología','Nefrología Pediátrica','Neumología','Neumología Pediátrica','Neurocirugía','Neurología','Neurología Pediátrica','Nutriología','Odontología','Odontopediatría','Oftalmología','Oncología','Optometría','Ortodoncia','Ortopedia Dental','Ortopedia y Traumatología','Otorrinolaringología','Patología','Pediatría','Podología','Proctología','Psicología','Psiquiatría','Radiología e Imagen','Reumatología','Urología','Otra (especificar)'
+  ];
+
+  function buildSelect(el){
+    el.innerHTML = '';
+    const optEmpty = document.createElement('option'); optEmpty.value=''; optEmpty.textContent='—'; el.appendChild(optEmpty);
+    for(const t of T){ const o=document.createElement('option'); o.value=t; o.textContent=t; el.appendChild(o); }
+  }
+
+  function syncDuplicates(){
+    const selects = Array.from(document.querySelectorAll('.esp-select'));
+    const vals = selects.map(s=>s.value).filter(v=>v && !v.startsWith('Otra'));
+    selects.forEach(s=>{
+      Array.from(s.options).forEach(o=>{
+        if(!o.value || o.value.startsWith('Otra')) return o.disabled=false;
+        o.disabled = vals.includes(o.value) && s.value !== o.value;
+      });
+    });
+  }
+
+  function toggleOtra(){
+    const wrap = document.getElementById('esp-otra-wrap');
+    const s3 = document.getElementById('esp-3');
+    if(!wrap || !s3) return;
+    if(s3.value && s3.value.startsWith('Otra')) wrap.classList.remove('d-none');
+    else wrap.classList.add('d-none');
+  }
+
+  // Insertar selects si existen anclas de correo en la vista de Datos
+  const correo = document.getElementById('dp-correo');
+  const row = correo?.closest('.row');
+  if(row){
+    ['esp-1','esp-2','esp-3'].forEach(id=>{
+      const col = document.createElement('div'); col.className='col-md-4';
+      const lab = document.createElement('label'); lab.className='form-label';
+      lab.textContent = id==='esp-1' ? 'Especialidad Principal' : id==='esp-2' ? 'Especialidad Secundaria' : 'Otra Especialidad';
+      const sel = document.createElement('select'); sel.className='form-select esp-select'; sel.id=id;
+      col.appendChild(lab); col.appendChild(sel);
+      row.insertBefore(col, correo.closest('.col-md-6'));
+      buildSelect(sel);
+      sel.addEventListener('change', ()=>{ syncDuplicates(); toggleOtra(); });
+    });
+    const wrap = document.createElement('div'); wrap.className='col-md-12 d-none'; wrap.id='esp-otra-wrap';
+    const lab = document.createElement('label'); lab.className='form-label'; lab.textContent='Especifica otra especialidad';
+    const inp = document.createElement('input'); inp.className='form-control'; inp.id='esp-otra'; inp.placeholder='Escribe la especialidad';
+    wrap.appendChild(lab); wrap.appendChild(inp);
+    row.insertBefore(wrap, correo.closest('.col-md-6'));
+    syncDuplicates();
+  }
+
+  // Género: reemplaza "Otro" por "No Específico"
+  const gen = document.getElementById('dp-genero');
+  if(gen){ Array.from(gen.options).forEach(o=>{ if(/^otro$/i.test(o.textContent.trim())) o.textContent='No Específico'; }); }
+
+  // Remueve campos no requeridos si quedaron (por contenido de etiqueta)
+  function removeByLabel(text){
+    document.querySelectorAll('.row .form-label').forEach(l=>{
+      if(l.textContent && l.textContent.indexOf(text) >= 0){ const col = l.closest('[class^="col-"]'); col?.remove(); }
+    });
+  }
+  ['Domicilio','Ciudad','País','Foto/Avatar','URL sitio personal'].forEach(removeByLabel);
+})();
+
+// ===== Correcciones rápidas de acentos en header (muestra) =====
+(function(){
+  const t = document.querySelector('.optimo'); if(t) t.textContent = 'Óptimo';
+  const n = document.querySelector('.name'); if(n && /Mu�oz|Muñoz/.test(n.textContent)) n.textContent = 'Leticia Muñoz Alfaro';
+  const img = document.querySelector('.header-top img'); if(img) img.alt = 'México Médico';
+  if(document.title && document.title.indexOf('MXMed')>=0) document.title = 'MXMed 2025 · Perfil Médico';
+})();
