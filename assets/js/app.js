@@ -216,9 +216,11 @@ $(function(){
   function syncDuplicates(){
     const selects = Array.from(document.querySelectorAll('.esp-select'));
     const vals = selects.map(s=>s.value).filter(v=>v && !v.startsWith('Otra'));
+    const anySelected = selects.some(s=>!!s.value);
     selects.forEach(s=>{
-      // Resalte visual de seleccionados
+      // Resalte visual
       if(s.value){ s.classList.add('picked'); } else { s.classList.remove('picked'); }
+      if(anySelected){ s.classList.add('peer'); } else { s.classList.remove('peer'); }
       Array.from(s.options).forEach(o=>{
         if(!o.value || o.value.startsWith('Otra')) return o.disabled=false;
         o.disabled = vals.includes(o.value) && s.value !== o.value;
@@ -282,20 +284,71 @@ $(function(){
     w.placeholder='10 dígitos'; w.maxLength=14; wrap.appendChild(w);
   }
 
-  // Validación de correo y teléfono (básica)
+  // Validación de correo y teléfono (básica) + tooltips
   const email = document.getElementById('dp-correo');
+  if(window.bootstrap){ new bootstrap.Tooltip(document.body, { selector:'.has-error-tooltip', trigger:'hover focus', customClass:'mm-errtip' }); }
+
+  function setErrorTooltip(el, msg, isError){
+    if(isError){
+      el.classList.add('is-invalid','has-error-tooltip');
+      el.classList.remove('is-valid');
+      el.setAttribute('title', msg);
+      el.setAttribute('data-bs-toggle','tooltip');
+      // si hay error, ocultar marca de guardado
+      const col = el.closest('.save-wrap');
+      if(col){ col.classList.remove('saved'); }
+    } else {
+      el.classList.remove('is-invalid','has-error-tooltip');
+      el.classList.toggle('is-valid', !!el.value);
+      el.removeAttribute('title');
+      el.removeAttribute('data-bs-toggle');
+    }
+  }
+
   if(email){ email.type='email'; email.addEventListener('blur', ()=>{
     const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim());
-    email.classList.toggle('is-invalid', !!email.value && !ok);
-    email.classList.toggle('is-valid', !!email.value && ok);
+    setErrorTooltip(email, 'Ingresa un correo electrónico válido', (!!email.value && !ok));
   }); }
   if(w){ w.addEventListener('input', ()=>{
     const digits = (w.value||'').replace(/\D+/g,'');
-    // Valid: 10 digits, or starts with 52 + 10 = 12
     const ok = digits.length===10 || (digits.startsWith('52') && digits.length===12);
-    w.classList.toggle('is-invalid', !!w.value && !ok);
-    w.classList.toggle('is-valid', !!w.value && ok);
+    setErrorTooltip(w, 'Ingresa un número de teléfono válido', (!!w.value && !ok));
   }); }
+
+  // Autosave + check verde
+  function ensureSaveMark(ctrl){
+    const col = ctrl.closest('[class^="col-"]') || ctrl.parentElement;
+    if(!col) return null;
+    col.classList.add('save-wrap');
+    let mark = col.querySelector(':scope > .save-ok');
+    if(!mark){
+      mark = document.createElement('span');
+      mark.className = 'save-ok';
+      mark.innerHTML = '<i class="bi bi-check2-circle"></i>';
+      col.appendChild(mark);
+    }
+    return col;
+  }
+
+  function initAutosave(){
+    document.querySelectorAll('#t-datos input.form-control, #t-datos select.form-select').forEach(ctrl=>{
+      if(ctrl.type==='file') return;
+      if(!ctrl.id){ ctrl.id = 'dp_auto_' + Math.random().toString(36).slice(2,8); }
+      const col = ensureSaveMark(ctrl);
+      const key = 'dp:'+ctrl.id;
+      const saved = localStorage.getItem(key);
+      if(saved!==null) ctrl.value = saved;
+      const maybeMark = ()=>{
+        const invalid = ctrl.classList.contains('is-invalid');
+        const hasVal = (ctrl.value||'').trim() !== '';
+        if(col){ col.classList.toggle('saved', hasVal && !invalid); }
+      };
+      maybeMark();
+      ctrl.addEventListener('change', ()=>{ localStorage.setItem(key, ctrl.value); maybeMark(); });
+      ctrl.addEventListener('blur', ()=>{ localStorage.setItem(key, ctrl.value); maybeMark(); });
+    });
+  }
+  initAutosave();
 })();
 
 // ===== Correcciones rápidas de acentos en header (muestra) =====

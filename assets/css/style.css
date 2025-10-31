@@ -474,6 +474,18 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* Resaltado de especialidades seleccionadas */
 .esp-select.picked{background:rgba(0,173,193,.5)}
+.esp-select.peer{background:rgba(0,173,193,.5)}
+
+/* Placeholders más claros en campos de muestra */
+.form-control::placeholder{color:#CCCCCC}
+
+/* Marca de guardado OK en campos */
+.save-wrap{position:relative}
+.save-wrap .save-ok{position:absolute; right:.6rem; top:50%; transform:translateY(-50%); color:#1fbf75; display:none; pointer-events:none; font-size:1.25rem}
+.save-wrap.saved .save-ok{display:inline-flex}
+
+/* Tooltip de error personalizado */
+.tooltip.mm-errtip{ --bs-tooltip-bg: rgba(0,173,193,.65); --bs-tooltip-color:#fff }
 
 /* ================== FOOTER ================== */
 .mm-footer{
