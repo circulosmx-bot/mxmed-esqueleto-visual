@@ -608,3 +608,6 @@ body{margin:0;background:var(--mm-fondo-base);}
     display:none;
   }
 }
+/* Nota destacada en Servicios Principales */
+.sp-note{ font-size:1.6rem; font-weight:600; color:#4d5965; }
+@media(max-width: 576px){ .sp-note{ font-size:1.35rem; } }
