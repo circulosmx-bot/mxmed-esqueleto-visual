@@ -672,8 +672,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 .chip-add.disabled{
   cursor:not-allowed;
   transform:none;
-  opacity:1 !important; /* evitar desvanecido de Bootstrap */
-  color:#fff !important; /* texto blanco incluso inactivo */
+  opacity:.5 !important; /* inactivo con alfa 50% */
+  color:#fff !important; /* tono base blanco, será atenuado por la opacidad */
   filter:none;
 }
 @media (prefers-reduced-motion:reduce){
