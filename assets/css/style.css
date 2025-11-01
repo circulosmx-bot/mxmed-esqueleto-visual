@@ -642,15 +642,25 @@ body{margin:0;background:var(--mm-fondo-base);}
   position:relative;
   display:inline-flex; align-items:center; justify-content:center;
   margin-left:30px;
-  padding:.78rem 1.6rem; /* proporciones más "pill" */
+  padding:.62rem 1.4rem; /* ajusta tamaño más compacto */
   border-radius:999px;
-  background:#005684; color:#fff; border:2px solid #00ADC1;
-  font-weight:800; font-size:1.5rem; letter-spacing:.02em;
-  box-shadow:0 8px 0 #003d5a, 0 6px 16px rgba(0,0,0,.18);
-  transition:transform .12s ease, box-shadow .12s ease, filter .2s ease;
+  color:#fff; background:linear-gradient(180deg,#00739b 0%, #005684 100%);
+  border:2px solid #00ADC1;
+  font-weight:800; font-size:1.25rem; letter-spacing:.02em;
+  box-shadow:0 6px 0 #003d5a, 0 10px 20px rgba(0,0,0,.22), inset 0 2px 0 rgba(255,255,255,.18);
+  overflow:hidden;
+  transition:transform .12s ease, box-shadow .12s ease;
 }
-.chip-add:hover{ filter:brightness(1.05); transform:translateY(-2px); box-shadow:0 10px 0 #003d5a, 0 10px 22px rgba(0,0,0,.22); }
-.chip-add:active{ transform:translateY(0); box-shadow:0 5px 0 #003d5a, 0 4px 12px rgba(0,0,0,.18); }
+.chip-add::after{
+  content:"";
+  position:absolute; inset:0; left:-150%;
+  background:linear-gradient(90deg, transparent 0 30%, rgba(255,255,255,.28) 50%, transparent 70%);
+  transform:skewX(-20deg);
+  transition:left .45s ease;
+}
+.chip-add:hover{ transform:translateY(-2px); box-shadow:0 8px 0 #003d5a, 0 14px 26px rgba(0,0,0,.26); }
+.chip-add:hover::after{ left:150%; }
+.chip-add:active{ transform:translateY(0); box-shadow:0 5px 0 #003d5a, 0 8px 18px rgba(0,0,0,.2); }
  
 .chips-section-second{ margin-top:100px }
 
