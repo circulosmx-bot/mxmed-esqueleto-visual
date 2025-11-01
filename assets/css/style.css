@@ -619,7 +619,8 @@ body{margin:0;background:var(--mm-fondo-base);}
   background:#00ADC1;
   color:#fff;
   border-radius:14px;
-  padding:6px 28px 6px 10px;
+  /* reduce espacio entre texto y el círculo de cierre a la mitad */
+  padding:6px 14px 6px 10px;
   font-weight:600;
   font-size:.95rem;
 }
@@ -637,8 +638,19 @@ body{margin:0;background:var(--mm-fondo-base);}
 .chips-row{ display:flex; align-items:center; gap:0; flex-wrap:wrap; }
 .chip-input{ width:40ch; max-width:100%; }
 .chip-count{ margin-left:10px; color:#00ADC1; font-weight:700; min-width:5ch; text-align:right }
-.chip-add{ background:#005684; border-color:#005684; color:#fff; font-weight:700; border-radius:10px; padding:.55rem 1.1rem; font-size:1.5rem; margin-left:30px }
-.chip-add:hover, .chip-add:focus{ background:#006898; border-color:#006898; color:#fff }
+.chip-add{
+  position:relative;
+  display:inline-flex; align-items:center; justify-content:center;
+  margin-left:30px;
+  padding:.78rem 1.6rem; /* proporciones más "pill" */
+  border-radius:999px;
+  background:#005684; color:#fff; border:2px solid #00ADC1;
+  font-weight:800; font-size:1.5rem; letter-spacing:.02em;
+  box-shadow:0 8px 0 #003d5a, 0 6px 16px rgba(0,0,0,.18);
+  transition:transform .12s ease, box-shadow .12s ease, filter .2s ease;
+}
+.chip-add:hover{ filter:brightness(1.05); transform:translateY(-2px); box-shadow:0 10px 0 #003d5a, 0 10px 22px rgba(0,0,0,.22); }
+.chip-add:active{ transform:translateY(0); box-shadow:0 5px 0 #003d5a, 0 4px 12px rgba(0,0,0,.18); }
  
 .chips-section-second{ margin-top:100px }
 
