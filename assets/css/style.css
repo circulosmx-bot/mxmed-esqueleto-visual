@@ -637,30 +637,39 @@ body{margin:0;background:var(--mm-fondo-base);}
 /* Fila de input + botÃ³n para chips */
 .chips-row{ display:flex; align-items:center; gap:0; flex-wrap:wrap; }
 .chip-input{ width:40ch; max-width:100%; }
-.chip-count{ margin-left:10px; color:#00ADC1; font-weight:700; min-width:5ch; text-align:right }
+.chip-count{ margin-left:10px; color:rgba(0,173,193,.5); font-weight:700; min-width:5ch; text-align:right }
 .chip-add{
+  --btn-bg1:#00ADC1;
+  --btn-bg2:#005684;
   position:relative;
-  display:inline-flex; align-items:center; justify-content:center;
-  margin-left:30px;
-  padding:.62rem 1.4rem; /* ajusta tamaño más compacto */
-  border-radius:999px;
-  color:#fff; background:linear-gradient(180deg,#00739b 0%, #005684 100%);
-  border:2px solid #00ADC1;
+  display:inline-flex; align-items:center; justify-content:center; gap:.4rem;
+  margin-left:12px;
+  padding:.56rem 1.28rem;
+  border:0; border-radius:9999px;
+  background:linear-gradient(135deg,var(--btn-bg1),var(--btn-bg2));
+  background-size:200% 200%; background-position:0% 50%;
+  color:#fff;
   font-weight:800; font-size:1.25rem; letter-spacing:.02em;
-  box-shadow:0 6px 0 #003d5a, 0 10px 20px rgba(0,0,0,.22), inset 0 2px 0 rgba(255,255,255,.18);
-  overflow:hidden;
-  transition:transform .12s ease, box-shadow .12s ease;
+  transform:translateY(0);
+  transition:transform .15s ease, background-position .3s ease;
 }
-.chip-add::after{
-  content:"";
-  position:absolute; inset:0; left:-150%;
-  background:linear-gradient(90deg, transparent 0 30%, rgba(255,255,255,.28) 50%, transparent 70%);
-  transform:skewX(-20deg);
-  transition:left .45s ease;
+.chip-add:hover{
+  transform:translateY(-2px);
+  background-position:100% 50%;
 }
-.chip-add:hover{ transform:translateY(-2px); box-shadow:0 8px 0 #003d5a, 0 14px 26px rgba(0,0,0,.26); }
-.chip-add:hover::after{ left:150%; }
-.chip-add:active{ transform:translateY(0); box-shadow:0 5px 0 #003d5a, 0 8px 18px rgba(0,0,0,.2); }
+.chip-add:active{
+  transform:translateY(0);
+}
+.chip-add:focus-visible{
+  outline:0;
+  outline:2px solid rgba(0,173,193,.5);
+}
+.chip-add[disabled]{ cursor:not-allowed; transform:none; }
+@media (prefers-reduced-motion:reduce){
+  .chip-add{ transition:none }
+  .chip-add:hover,.chip-add:active{ transform:none }
+}
  
 .chips-section-second{ margin-top:100px }
+
 
