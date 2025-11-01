@@ -644,11 +644,12 @@ body{margin:0;background:var(--mm-fondo-base);}
   position:relative;
   display:inline-flex; align-items:center; justify-content:center; gap:.4rem;
   margin-left:12px;
-  padding:.56rem 1.28rem;
+  height:2.5rem; /* igual que input Bootstrap aprox. */
+  padding:0 1.1rem; /* solo horizontal, para igualar altura */
   border:0; border-radius:9999px;
   background:linear-gradient(135deg,var(--btn-bg1),var(--btn-bg2));
   background-size:200% 200%; background-position:0% 50%;
-  color:#fff;
+  color:rgba(255,255,255,.98);
   font-weight:800; font-size:1.25rem; letter-spacing:.02em;
   transform:translateY(0);
   transition:transform .15s ease, background-position .3s ease;
@@ -656,9 +657,11 @@ body{margin:0;background:var(--mm-fondo-base);}
 .chip-add:hover{
   transform:translateY(-2px);
   background-position:100% 50%;
+  color:rgba(255,255,255,.98);
 }
 .chip-add:active{
   transform:translateY(0);
+  color:rgba(255,255,255,.98);
 }
 .chip-add:focus-visible{
   outline:0;
