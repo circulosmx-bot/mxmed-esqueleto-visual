@@ -347,7 +347,7 @@ $(function(){
   }
 
   function initAutosave(){
-    document.querySelectorAll('#t-datos input.form-control, #t-datos select.form-select').forEach(ctrl=>{
+    document.querySelectorAll('#viewport input.form-control, #viewport select.form-select, #viewport textarea.form-control').forEach(ctrl=>{
       if(ctrl.type==='file') return;
       if(!ctrl.id){ ctrl.id = 'dp_auto_' + Math.random().toString(36).slice(2,8); }
       const col = ensureSaveMark(ctrl);
