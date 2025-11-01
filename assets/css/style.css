@@ -667,7 +667,15 @@ body{margin:0;background:var(--mm-fondo-base);}
   outline:0;
   outline:2px solid rgba(0,173,193,.5);
 }
-.chip-add[disabled]{ cursor:not-allowed; transform:none; }
+.chip-add[disabled],
+.chip-add:disabled,
+.chip-add.disabled{
+  cursor:not-allowed;
+  transform:none;
+  opacity:1 !important; /* evitar desvanecido de Bootstrap */
+  color:#fff !important; /* texto blanco incluso inactivo */
+  filter:none;
+}
 @media (prefers-reduced-motion:reduce){
   .chip-add{ transition:none }
   .chip-add:hover,.chip-add:active{ transform:none }
