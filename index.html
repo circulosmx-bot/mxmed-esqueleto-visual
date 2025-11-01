@@ -428,10 +428,28 @@
               <!-- ENFERMEDADES Y TRATAMIENTOS -->
               <div class="tab-pane fade" id="t-enfermedades" role="tabpanel">
                 <div class="row g-3">
+                  <!-- Enfermedades: nota + input + agregar + chips -->
+                  <div class="col-12"><div class="sp-note text-muted">¿Qué tipo de enfermedades atiendes? Agrégalas una por una.</div></div>
                   <div class="col-12">
-                    <label class="form-label">Listado</label>
-                    <textarea class="form-control" rows="8" placeholder="Ej.: Cáncer de mama, Cáncer de pulmón, Carcinoma hepatocelular, ..."></textarea>
-                    <small class="text-muted">Más adelante: chips, búsqueda y orden manual.</small>
+                    <label class="form-label" for="enf-input">Enfermedad</label>
+                    <div class="input-group">
+                      <input id="enf-input" class="form-control" maxlength="40" placeholder="Ej.: Cáncer de mama">
+                      <button id="enf-add" class="btn btn-primary" type="button">Agregar</button>
+                    </div>
+                    <div class="d-flex justify-content-end"><small id="enf-count" class="text-muted">40/40</small></div>
+                    <div id="enf-list" class="chip-list mt-2" aria-live="polite"></div>
+                  </div>
+
+                  <!-- Tratamientos/servicios: nota + input + agregar + chips -->
+                  <div class="col-12"><div class="sp-note text-muted">Agrega uno a uno los servicios, terapias o procedimientos que realizas regularmente</div></div>
+                  <div class="col-12">
+                    <label class="form-label" for="trt-input">Tratamiento / Procedimiento</label>
+                    <div class="input-group">
+                      <input id="trt-input" class="form-control" maxlength="40" placeholder="Ej.: Quimioterapia">
+                      <button id="trt-add" class="btn btn-primary" type="button">Agregar</button>
+                    </div>
+                    <div class="d-flex justify-content-end"><small id="trt-count" class="text-muted">40/40</small></div>
+                    <div id="trt-list" class="chip-list mt-2" aria-live="polite"></div>
                   </div>
                 </div>
               </div>

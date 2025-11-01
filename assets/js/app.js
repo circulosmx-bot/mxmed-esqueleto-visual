@@ -349,6 +349,8 @@ $(function(){
   function initAutosave(){
     document.querySelectorAll('#viewport input.form-control, #viewport select.form-select, #viewport textarea.form-control').forEach(ctrl=>{
       if(ctrl.type==='file') return;
+      // excluir campos de búsqueda u opt-out manual
+      if(ctrl.type==='search' || ctrl.classList.contains('no-check') || ctrl.dataset.noCheck==='1') return;
       if(!ctrl.id){ ctrl.id = 'dp_auto_' + Math.random().toString(36).slice(2,8); }
       const col = ensureSaveMark(ctrl);
       const key = 'dp:'+ctrl.id;
@@ -373,6 +375,72 @@ $(function(){
     });
   }
   initAutosave();
+})();
+
+// ===== Enfermedades y Tratamientos: inputs con chips (máx. 40) =====
+(function(){
+  const LIM = 40;
+  function setup(scope){
+    const input = document.getElementById(scope+'-input');
+    const btn   = document.getElementById(scope+'-add');
+    const cnt   = document.getElementById(scope+'-count');
+    const list  = document.getElementById(scope+'-list');
+    if(!input || !btn || !cnt || !list) return;
+
+    // carga previa
+    const key = 'chips:'+scope;
+    let items = [];
+    try { items = JSON.parse(localStorage.getItem(key)||'[]'); } catch(e){ items=[]; }
+    render();
+
+    function updateCount(){
+      const used = (input.value||'').length;
+      const left = Math.max(0, LIM - used);
+      cnt.textContent = left+"/"+LIM;
+      const tooLong = used> LIM;
+      setError(tooLong ? 'Máximo 40 caracteres. Ej.: "Cáncer de mama"' : '', tooLong);
+      btn.disabled = tooLong || used===0;
+    }
+
+    function setError(msg, isErr){
+      // reusa burbuja propia
+      let col = input.closest('.save-wrap');
+      if(!col){ col = input.parentElement; }
+      let bub = col.querySelector(':scope > .err-bubble');
+      if(isErr){
+        if(!bub){ bub = document.createElement('div'); bub.className='err-bubble'; col.appendChild(bub); }
+        bub.textContent = msg;
+        input.classList.add('is-invalid'); col.classList.add('has-error');
+      }else{
+        if(bub) bub.remove(); input.classList.remove('is-invalid'); col.classList.remove('has-error');
+      }
+    }
+
+    function render(){
+      list.innerHTML='';
+      items.forEach((txt, i)=>{
+        const chip = document.createElement('span'); chip.className='chip'; chip.textContent = txt;
+        const x = document.createElement('button'); x.type='button'; x.className='chip-x'; x.setAttribute('aria-label','Eliminar'); x.textContent='×';
+        x.addEventListener('click', ()=>{ items.splice(i,1); save(); render(); });
+        chip.appendChild(x); list.appendChild(chip);
+      });
+    }
+
+    function save(){ localStorage.setItem(key, JSON.stringify(items)); }
+
+    btn.addEventListener('click', ()=>{
+      const val = (input.value||'').trim();
+      if(!val || val.length> LIM){ updateCount(); return; }
+      items.push(val); save(); render();
+      input.value=''; updateCount();
+    });
+    input.addEventListener('input', updateCount);
+    input.addEventListener('blur', updateCount);
+    updateCount();
+  }
+
+  setup('enf');
+  setup('trt');
 })();
 
 // ===== Correcciones rápidas de acentos en header (muestra) =====

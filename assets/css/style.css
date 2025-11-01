@@ -611,3 +611,24 @@ body{margin:0;background:var(--mm-fondo-base);}
 /* Nota destacada en Servicios Principales */
 .sp-note{ font-size:1.6rem; font-weight:600; color:#4d5965; }
 @media(max-width: 576px){ .sp-note{ font-size:1.35rem; } }
+
+/* Chips de listas dinámicas (enfermedades/tratamientos) */
+.chip-list{ display:flex; flex-wrap:wrap; gap:8px; }
+.chip{
+  position:relative;
+  background:#00ADC1;
+  color:#fff;
+  border-radius:14px;
+  padding:6px 28px 6px 10px;
+  font-weight:600;
+  font-size:.95rem;
+}
+.chip .chip-x{
+  position:absolute;
+  top:-6px; right:-6px;
+  width:18px; height:18px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:#fff; color:#005684; border:1px solid #00ADC1; border-radius:50%;
+  cursor:pointer; line-height:1; font-size:12px;
+}
+.count-muted{ color:#6c7b85; }
