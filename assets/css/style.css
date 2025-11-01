@@ -626,9 +626,15 @@ body{margin:0;background:var(--mm-fondo-base);}
 .chip .chip-x{
   position:absolute;
   top:-6px; right:-6px;
-  width:18px; height:18px;
+  width:20px; height:20px;
   display:inline-flex; align-items:center; justify-content:center;
-  background:#fff; color:#005684; border:1px solid #00ADC1; border-radius:50%;
-  cursor:pointer; line-height:1; font-size:12px;
+  background:#fff; color:#EF5070; border:0; border-radius:50%;
+  cursor:pointer; line-height:1; font-size:19px; font-weight:700;
 }
 .count-muted{ color:#6c7b85; }
+
+/* Fila de input + botón para chips */
+.chips-row{ display:flex; align-items:center; gap:30px; flex-wrap:wrap; }
+.chip-input{ width:40ch; max-width:100%; }
+.chip-add{ background:#005684; border-color:#005684; color:#fff; font-weight:700; border-radius:10px; padding:.55rem 1.1rem }
+.chip-add:hover, .chip-add:focus{ background:#006898; border-color:#006898; color:#fff }
