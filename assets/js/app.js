@@ -380,6 +380,8 @@ $(function(){
 // ===== Enfermedades y Tratamientos: inputs con chips (máx. 40) =====
 (function(){
   const LIM = 40;
+  function load(scope){ try { return JSON.parse(localStorage.getItem('chips:'+scope)||'[]'); } catch(e){ return []; } }
+  function save(scope, arr){ localStorage.setItem('chips:'+scope, JSON.stringify(arr)); document.dispatchEvent(new CustomEvent('chips:refresh', {detail:{scope}})); }
   function setup(scope){
     const input = document.getElementById(scope+'-input');
     const btn   = document.getElementById(scope+'-add');
@@ -387,10 +389,6 @@ $(function(){
     const list  = document.getElementById(scope+'-list');
     if(!input || !btn || !cnt || !list) return;
 
-    // carga previa
-    const key = 'chips:'+scope;
-    let items = [];
-    try { items = JSON.parse(localStorage.getItem(key)||'[]'); } catch(e){ items=[]; }
     render();
 
     function updateCount(){
@@ -417,21 +415,20 @@ $(function(){
     }
 
     function render(){
+      const items = load(scope);
       list.innerHTML='';
       items.forEach((txt, i)=>{
         const chip = document.createElement('span'); chip.className='chip'; chip.textContent = txt;
         const x = document.createElement('button'); x.type='button'; x.className='chip-x'; x.setAttribute('aria-label','Eliminar'); x.textContent='×';
-        x.addEventListener('click', ()=>{ items.splice(i,1); save(); render(); });
+        x.addEventListener('click', ()=>{ const a=load(scope); a.splice(i,1); save(scope,a); render(); });
         chip.appendChild(x); list.appendChild(chip);
       });
     }
 
-    function save(){ localStorage.setItem(key, JSON.stringify(items)); }
-
     btn.addEventListener('click', ()=>{
       const val = (input.value||'').trim();
       if(!val || val.length> LIM){ updateCount(); return; }
-      items.push(val); save(); render();
+      const a = load(scope); a.push(val); save(scope,a); render();
       input.value=''; updateCount();
     });
     input.addEventListener('input', updateCount);
@@ -441,6 +438,49 @@ $(function(){
 
   setup('enf');
   setup('trt');
+
+  // Modal de ordenamiento
+  const sortModalEl = document.getElementById('modalSortChips');
+  const sortListEl = document.getElementById('sort-list');
+  const sortSaveBtn = document.getElementById('sort-save');
+  let sortScope = null; let temp = [];
+
+  function renderSort(){
+    sortListEl.innerHTML='';
+    temp.forEach((t,i)=>{
+      const li = document.createElement('li'); li.className='sort-item'; li.draggable=true; li.dataset.index=i;
+      const h = document.createElement('span'); h.className='material-symbols-outlined sort-handle'; h.textContent='drag_indicator';
+      const tx = document.createElement('span'); tx.textContent = t; tx.style.flex='1 1 auto';
+      li.appendChild(h); li.appendChild(tx); sortListEl.appendChild(li);
+    });
+  }
+
+  function bindDnD(){
+    let dragIdx=null;
+    sortListEl.addEventListener('dragstart', e=>{ const li=e.target.closest('.sort-item'); if(li){ dragIdx=+li.dataset.index; e.dataTransfer.effectAllowed='move'; }});
+    sortListEl.addEventListener('dragover', e=>{ e.preventDefault(); });
+    sortListEl.addEventListener('drop', e=>{ e.preventDefault(); const li=e.target.closest('.sort-item'); if(li&& dragIdx!=null){ const dropIdx=+li.dataset.index; const it=temp.splice(dragIdx,1)[0]; temp.splice(dropIdx,0,it); renderSort(); bindDnD(); }});
+  }
+
+  document.querySelectorAll('.chip-sort').forEach(a=>{
+    a.addEventListener('click', e=>{
+      e.preventDefault();
+      sortScope = a.dataset.scope;
+      temp = load(sortScope).slice();
+      renderSort(); bindDnD();
+      if(window.bootstrap && sortModalEl){ new bootstrap.Modal(sortModalEl).show(); }
+    });
+  });
+
+  sortSaveBtn?.addEventListener('click', ()=>{
+    if(sortScope){ save(sortScope, temp); renderSort(); document.dispatchEvent(new Event('chips:refresh')); }
+    const m = bootstrap.Modal.getInstance(sortModalEl); m?.hide();
+  });
+
+  document.addEventListener('chips:refresh', (ev)=>{
+    // refrescar ambas listas al cambiar orden
+    setup('enf'); setup('trt');
+  });
 })();
 
 // ===== Correcciones rápidas de acentos en header (muestra) =====

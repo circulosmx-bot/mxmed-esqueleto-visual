@@ -355,7 +355,7 @@
               <li class="nav-item"><button class="nav-link" id="t-formacion-tab" data-bs-toggle="pill" data-bs-target="#t-formacion" type="button">Mi Formación Profesional</button></li>
             </ul>
 
-            <div class="tab-content" id="tabs-infoContent">
+              <div class="tab-content" id="tabs-infoContent">
               <!-- DATOS GENERALES -->
               <div class="tab-pane fade" id="t-datos" role="tabpanel">
 
@@ -435,6 +435,7 @@
                     <div class="chips-row">
                       <input id="enf-input" class="form-control no-check chip-input" maxlength="40" placeholder="Ej.: Cáncer de mama">
                       <small id="enf-count" class="chip-count">40/40</small>
+                      <a href="#" class="chip-sort" data-scope="enf">cambia el orden</a>
                       <button id="enf-add" class="btn chip-add" type="button">+ agregar</button>
                     </div>
                     <div id="enf-list" class="chip-list mt-2" aria-live="polite"></div>
@@ -447,9 +448,30 @@
                     <div class="chips-row">
                       <input id="trt-input" class="form-control no-check chip-input" maxlength="40" placeholder="Ej.: Quimioterapia">
                       <small id="trt-count" class="chip-count">40/40</small>
+                      <a href="#" class="chip-sort" data-scope="trt">cambia el orden</a>
                       <button id="trt-add" class="btn chip-add" type="button">+ agregar</button>
                     </div>
                     <div id="trt-list" class="chip-list mt-2" aria-live="polite"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Modal: Reordenar chips -->
+              <div class="modal fade" id="modalSortChips" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title">Cambiar orden</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                      <p class="text-muted mb-2">Arrastra para reordenar:</p>
+                      <ul id="sort-list" class="sort-list" aria-live="polite"></ul>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                      <button type="button" class="btn btn-primary" id="sort-save">Guardar</button>
+                    </div>
                   </div>
                 </div>
               </div>
