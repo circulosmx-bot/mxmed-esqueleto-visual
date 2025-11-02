@@ -423,6 +423,14 @@ $(function(){
         x.addEventListener('click', ()=>{ const a=load(scope); a.splice(i,1); save(scope,a); render(); });
         chip.appendChild(x); list.appendChild(chip);
       });
+      if(items.length>2){
+        const link = document.createElement('a');
+        link.href = '#';
+        link.className = 'chip-sort-link';
+        link.dataset.scope = scope;
+        link.textContent = 'cambia el orden';
+        list.appendChild(link);
+      }
     }
 
     btn.addEventListener('click', ()=>{
@@ -457,19 +465,20 @@ $(function(){
 
   function bindDnD(){
     let dragIdx=null;
-    sortListEl.addEventListener('dragstart', e=>{ const li=e.target.closest('.sort-item'); if(li){ dragIdx=+li.dataset.index; e.dataTransfer.effectAllowed='move'; }});
+    sortListEl.addEventListener('dragstart', e=>{ const li=e.target.closest('.sort-item'); if(li){ dragIdx=+li.dataset.index; li.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; }});
     sortListEl.addEventListener('dragover', e=>{ e.preventDefault(); });
     sortListEl.addEventListener('drop', e=>{ e.preventDefault(); const li=e.target.closest('.sort-item'); if(li&& dragIdx!=null){ const dropIdx=+li.dataset.index; const it=temp.splice(dragIdx,1)[0]; temp.splice(dropIdx,0,it); renderSort(); bindDnD(); }});
+    sortListEl.addEventListener('dragend', ()=>{ Array.from(sortListEl.children).forEach(el=>el.classList.remove('dragging')); });
   }
 
-  document.querySelectorAll('.chip-sort').forEach(a=>{
-    a.addEventListener('click', e=>{
-      e.preventDefault();
-      sortScope = a.dataset.scope;
-      temp = load(sortScope).slice();
-      renderSort(); bindDnD();
-      if(window.bootstrap && sortModalEl){ new bootstrap.Modal(sortModalEl).show(); }
-    });
+  document.addEventListener('click', (e)=>{
+    const a = e.target.closest('.chip-sort-link');
+    if(!a) return;
+    e.preventDefault();
+    sortScope = a.dataset.scope;
+    temp = load(sortScope).slice();
+    renderSort(); bindDnD();
+    if(window.bootstrap && sortModalEl){ new bootstrap.Modal(sortModalEl).show(); }
   });
 
   sortSaveBtn?.addEventListener('click', ()=>{
