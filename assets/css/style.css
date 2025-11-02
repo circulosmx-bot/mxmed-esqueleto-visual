@@ -640,6 +640,11 @@ body{margin:0;background:var(--mm-fondo-base);}
 .chip-count{ margin-left:10px; color:rgba(0,173,193,.5); font-weight:700; min-width:5ch; text-align:right }
 .srv-row{ display:flex; align-items:center; gap:10px; }
 .srv-input{ width:50ch; max-width:100%; }
+
+/* Resumen formación */
+.fs-summary{ background:#f7fdff; border:1px solid #d5f1f7; border-radius:10px; padding:.6rem .8rem; margin-bottom:.5rem }
+.fs-summary .fs-line{ font-weight:700; color:#0b3242; }
+.fs-summary .fs-line small{ font-weight:600; color:#4d5965 }
 .tight-top{ margin-top: calc(var(--bs-gutter-y) - 12px) !important }
 .chip-sort-link{ margin-left:8px; color:rgba(0,173,193,.5); text-decoration:none; font-weight:700; cursor:pointer; align-self:flex-end; margin-top:6px }
 .chip-sort-link:hover{ color:rgba(0,173,193,.85) }
