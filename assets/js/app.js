@@ -492,6 +492,24 @@ $(function(){
   });
 })();
 
+// ===== Servicios Principales: contador 50/50 por campo =====
+(function(){
+  const LIM = 50;
+  ['srv1','srv2','srv3','srv4'].forEach(id=>{
+    const input = document.getElementById(id);
+    const cnt = document.getElementById(id+'-count');
+    if(!input || !cnt) return;
+    function update(){
+      const used = (input.value||'').length;
+      const left = Math.max(0, LIM - used);
+      cnt.textContent = left + '/' + LIM;
+    }
+    input.addEventListener('input', update);
+    input.addEventListener('blur', update);
+    update();
+  });
+})();
+
 // ===== Correcciones rápidas de acentos en header (muestra) =====
 (function(){
   const t = document.querySelector('.optimo'); if(t) t.textContent = 'Óptimo';

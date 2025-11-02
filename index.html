@@ -350,9 +350,9 @@
           <div class="body">
             <ul class="nav nav-pills mm-tabs mb-3" id="tabs-info" role="tablist">
               <li class="nav-item"><button class="nav-link" id="t-datos-tab" data-bs-toggle="pill" data-bs-target="#t-datos" type="button">Datos Generales</button></li>
-              <li class="nav-item"><button class="nav-link" id="t-servicios-tab" data-bs-toggle="pill" data-bs-target="#t-servicios" type="button">Servicios Principales</button></li>
-              <li class="nav-item"><button class="nav-link" id="t-enfermedades-tab" data-bs-toggle="pill" data-bs-target="#t-enfermedades" type="button">Enfermedades y Tratamientos</button></li>
               <li class="nav-item"><button class="nav-link" id="t-formacion-tab" data-bs-toggle="pill" data-bs-target="#t-formacion" type="button">Mi Formación Profesional</button></li>
+              <li class="nav-item"><button class="nav-link" id="t-servicios-tab" data-bs-toggle="pill" data-bs-target="#t-servicios" type="button">Principales Servicios</button></li>
+              <li class="nav-item"><button class="nav-link" id="t-enfermedades-tab" data-bs-toggle="pill" data-bs-target="#t-enfermedades" type="button">Enfermedades y Tratamientos</button></li>
             </ul>
 
               <div class="tab-content" id="tabs-infoContent">
@@ -418,10 +418,34 @@
               <div class="tab-pane fade" id="t-servicios" role="tabpanel">
                 <div class="row g-3">
                   <div class="col-12"><div class="sp-note text-muted">Describe de 2 a 4 servicios, cada uno con texto corto.</div></div>
-                  <div class="col-12"><label class="form-label">Servicio principal 1</label><input class="form-control" placeholder="p.ej. Diagnóstico"></div>
-                  <div class="col-12"><label class="form-label">Servicio principal 2</label><input class="form-control" placeholder="p.ej. Tratamiento Quirúrgico"></div>
-                  <div class="col-12"><label class="form-label">Servicio principal 3</label><input class="form-control" placeholder="p.ej. Rehabilitación Intestinal pediátrica"></div>
-                  <div class="col-12"><label class="form-label">Servicio principal 4 (opcional)</label><input class="form-control"></div>
+                  <div class="col-12">
+                    <label class="form-label" for="srv1">Servicio principal 1</label>
+                    <div class="srv-row">
+                      <input id="srv1" class="form-control srv-input" maxlength="50" placeholder="p.ej. Diagnóstico">
+                      <small id="srv1-count" class="chip-count">50/50</small>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label" for="srv2">Servicio principal 2</label>
+                    <div class="srv-row">
+                      <input id="srv2" class="form-control srv-input" maxlength="50" placeholder="p.ej. Tratamiento Quirúrgico">
+                      <small id="srv2-count" class="chip-count">50/50</small>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label" for="srv3">Servicio principal 3</label>
+                    <div class="srv-row">
+                      <input id="srv3" class="form-control srv-input" maxlength="50" placeholder="p.ej. Rehabilitación Intestinal pediátrica">
+                      <small id="srv3-count" class="chip-count">50/50</small>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label" for="srv4">Servicio principal 4 (opcional)</label>
+                    <div class="srv-row">
+                      <input id="srv4" class="form-control srv-input" maxlength="50" placeholder="">
+                      <small id="srv4-count" class="chip-count">50/50</small>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -430,7 +454,7 @@
                 <div class="row g-3">
                   <!-- Enfermedades: nota + input + agregar + chips -->
                   <div class="col-12"><div class="sp-note text-muted">¿Qué tipo de enfermedades atiendes? Agrégalas una por una.</div></div>
-                  <div class="col-12 tight-top">`n                    <label class="form-label" for="enf-input">Enfermedad</label>
+                  <div class="col-12 tight-top">                    <label class="form-label" for="enf-input">Enfermedad</label>
                     <div class="chips-row">
                       <input id="enf-input" class="form-control no-check chip-input" maxlength="40" placeholder="Ej.: Cáncer de mama">
                       <small id="enf-count" class="chip-count">40/40</small>
@@ -441,7 +465,7 @@
 
                   <!-- Tratamientos/servicios: nota + input + agregar + chips -->
                   <div class="col-12 chips-section-second"><div class="sp-note text-muted">Agrega uno a uno tratamientos procedimientos o terapias que realizas regularmente</div></div>
-                  <div class="col-12 tight-top">`n                    <label class="form-label" for="trt-input">Tratamiento / Procedimiento</label>
+                  <div class="col-12 tight-top">                    <label class="form-label" for="trt-input">Tratamiento / Procedimiento</label>
                     <div class="chips-row">
                       <input id="trt-input" class="form-control no-check chip-input" maxlength="40" placeholder="Ej.: Quimioterapia">
                       <small id="trt-count" class="chip-count">40/40</small>
@@ -885,6 +909,7 @@
 <script src="assets/js/app.js"></script>
 </body>
 </html>
+
 
 
 

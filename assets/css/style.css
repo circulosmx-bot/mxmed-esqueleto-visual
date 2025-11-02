@@ -638,6 +638,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 .chips-row{ display:flex; align-items:center; gap:0; flex-wrap:wrap; }
 .chip-input{ width:40ch; max-width:100%; }
 .chip-count{ margin-left:10px; color:rgba(0,173,193,.5); font-weight:700; min-width:5ch; text-align:right }
+.srv-row{ display:flex; align-items:center; gap:10px; }
+.srv-input{ width:50ch; max-width:100%; }
 .tight-top{ margin-top: calc(var(--bs-gutter-y) - 12px) !important }
 .chip-sort-link{ margin-left:8px; color:rgba(0,173,193,.5); text-decoration:none; font-weight:700; cursor:pointer; align-self:flex-end; margin-top:6px }
 .chip-sort-link:hover{ color:rgba(0,173,193,.85) }
