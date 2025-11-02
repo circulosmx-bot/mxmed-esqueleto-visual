@@ -653,7 +653,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   --btn-bg2:#005684;
   position:relative;
   display:inline-flex; align-items:center; justify-content:center; gap:.4rem;
-  margin-left:12px;
+  margin-left:8px;
   height:2.5rem; /* igual que input Bootstrap aprox. */
   padding:0 1.1rem; /* solo horizontal, para igualar altura */
   border:0; border-radius:9999px;
@@ -705,3 +705,14 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* Mayor separación entre inputs y chips */
 #enf-list, #trt-list{ margin-top: calc(0.5rem + 25px) !important }
+
+/* Fila de input + botón para chips (posicionado) */
+.chips-row{ position:relative; display:flex; align-items:center; gap:0; flex-wrap:wrap }
+.chip-input{ width:46ch; max-width:100%; padding-right:4.2rem }
+.chip-count{ visibility:hidden }
+.chips-row .chip-count{ position:absolute; right:.75rem; top:50%; transform:translateY(-50%); margin-left:0; pointer-events:none }
+
+/* Servicios Principales: input + contador embebido */
+.srv-row{ position:relative; display:flex; align-items:center; gap:8px }
+.srv-input{ width:56ch; max-width:100%; padding-right:4.2rem }
+.srv-row .chip-count{ position:absolute; right:.75rem; top:50%; transform:translateY(-50%); margin-left:0; pointer-events:none }
