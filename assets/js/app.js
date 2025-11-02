@@ -465,10 +465,10 @@ $(function(){
 
   function bindDnD(){
     let dragIdx=null;
-    sortListEl.addEventListener('dragstart', e=>{ const li=e.target.closest('.sort-item'); if(li){ dragIdx=+li.dataset.index; li.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; }});
+    sortListEl.addEventListener('dragstart', e=>{ const li=e.target.closest('.sort-item'); if(li){ dragIdx=+li.dataset.index; li.classList.add('dragging'); Array.from(sortListEl.querySelectorAll('.sort-item')).forEach(el=>{ if(el!==li) el.classList.add('dimmed'); }); e.dataTransfer.effectAllowed='move'; }});
     sortListEl.addEventListener('dragover', e=>{ e.preventDefault(); });
     sortListEl.addEventListener('drop', e=>{ e.preventDefault(); const li=e.target.closest('.sort-item'); if(li&& dragIdx!=null){ const dropIdx=+li.dataset.index; const it=temp.splice(dragIdx,1)[0]; temp.splice(dropIdx,0,it); renderSort(); bindDnD(); }});
-    sortListEl.addEventListener('dragend', ()=>{ Array.from(sortListEl.children).forEach(el=>el.classList.remove('dragging')); });
+    sortListEl.addEventListener('dragend', ()=>{ Array.from(sortListEl.children).forEach(el=>{ el.classList.remove('dragging'); el.classList.remove('dimmed'); }); });
   }
 
   document.addEventListener('click', (e)=>{
