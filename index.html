@@ -498,9 +498,19 @@
 
               <!-- MI FORMACIÓN PROFESIONAL -->
               <div class="tab-pane fade" id="t-formacion" role="tabpanel">
-                <div class="row g-3">
-                  <div class="col-md-6"><label class="form-label">Título / Especialidad</label><input class="form-control" placeholder="p.ej. Cirugía Oncológica"></div>
-                  <div class="col-md-6"><label class="form-label">Universidad / Institución</label><input class="form-control" placeholder="p.ej. UNAM"></div>
+  <div class="fs-summary">
+    <div class="fs-line"><span id="fs-titulo">Médico Cirujano</span></div>
+    <div class="fs-line">por la <small id="fs-uni">Universidad Autónoma de Aguascalientes</small></div>
+    <div class="fs-line">Especialista en <small id="fs-esp">Otorrinolaringología</small></div>
+  </div>
+  <div class="row g-3">
+    <div class="col-12"><label class="form-label" for="cert-input">Certificaciones</label><div class="chips-row"><input id="cert-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Consejo Mexicano..."><small id="cert-count" class="chip-count">50/50</small><button id="cert-add" class="btn chip-add" type="button">+ agregar</button></div><div id="cert-list" class="chip-list mt-2" aria-live="polite"></div></div>
+    <div class="col-12"><label class="form-label" for="cursos-input">Cursos</label><div class="chips-row"><input id="cursos-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Curso avanzado ..."><small id="cursos-count" class="chip-count">50/50</small><button id="cursos-add" class="btn chip-add" type="button">+ agregar</button></div><div id="cursos-list" class="chip-list mt-2" aria-live="polite"></div></div>
+    <div class="col-12"><label class="form-label" for="dipl-input">Diplomados</label><div class="chips-row"><input id="dipl-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Diplomado en ..."><small id="dipl-count" class="chip-count">50/50</small><button id="dipl-add" class="btn chip-add" type="button">+ agregar</button></div><div id="dipl-list" class="chip-list mt-2" aria-live="polite"></div></div>
+    <div class="col-12"><label class="form-label" for="miem-input">Miembro de</label><div class="chips-row"><input id="miem-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Asociación ..."><small id="miem-count" class="chip-count">50/50</small><button id="miem-add" class="btn chip-add" type="button">+ agregar</button></div><div id="miem-list" class="chip-list mt-2" aria-live="polite"></div></div>
+    <div class="col-12"><label class="form-label">*Texto libre para mostrar a los pacientes*</label><textarea class="form-control" rows="5" placeholder="(puedes describir aqui tu trayectoria profesional, tus áreas de especialización, filosofía y vocación de servicio. tu enfoque de atención al paciente, y los valores que guían su práctica médica)"></textarea></div>
+  </div>
+</div>
                   <div class="col-md-4"><label class="form-label">Año de obtención</label><input class="form-control" placeholder="p.ej. 2016"></div>
                   <div class="col-md-8"><label class="form-label">Certificaciones</label><input class="form-control" placeholder="Consejo Mexicano..., etc."></div>
                   <div class="col-12"><label class="form-label">Cursos y diplomados</label><textarea class="form-control" rows="4" placeholder="Separa por renglón o coma"></textarea></div>
@@ -909,6 +919,7 @@
 <script src="assets/js/app.js"></script>
 </body>
 </html>
+
 
 
 
