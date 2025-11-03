@@ -659,9 +659,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   --btn-bg2:#005684;
   position:relative;
   display:inline-flex; align-items:center; justify-content:center; gap:.4rem;
-  margin-left:12px;
-  height:2.25rem; /* -10% aprox vs 2.5rem; no afecta tamaño de texto */
-  padding:0 1rem; /* -10% horizontal; mantiene legibilidad del texto */
+  margin-left:7px;
+  height:2.03rem; /* -10% aprox vs 2.5rem; no afecta tamaño de texto */
+  padding:0 .9rem; /* -10% horizontal; mantiene legibilidad del texto */
   border:0; border-radius:9999px;
   background:linear-gradient(135deg,var(--btn-bg1),var(--btn-bg2));
   background-size:200% 200%; background-position:0% 50%;
@@ -714,4 +714,5 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* Fallback: asegurar ocultar elementos con .d-none */
 .d-none{ display:none !important; }
+
 
