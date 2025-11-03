@@ -497,14 +497,52 @@
               </div>
 
               <!-- MI FORMACIÓN PROFESIONAL -->
-              <div class="tab-pane fade" id="t-formacion" role="tabpanel">
+                            <div class="tab-pane fade" id="t-formacion" role="tabpanel">
                 <div class="row g-3">
-                  <div class="col-md-6"><label class="form-label">Título / Especialidad</label><input class="form-control" placeholder="p.ej. Cirugía Oncológica"></div>
-                  <div class="col-md-6"><label class="form-label">Universidad / Institución</label><input class="form-control" placeholder="p.ej. UNAM"></div>
-                  <div class="col-md-4"><label class="form-label">Año de obtención</label><input class="form-control" placeholder="p.ej. 2016"></div>
-                  <div class="col-md-8"><label class="form-label">Certificaciones</label><input class="form-control" placeholder="Consejo Mexicano..., etc."></div>
-                  <div class="col-12"><label class="form-label">Cursos y diplomados</label><textarea class="form-control" rows="4" placeholder="Separa por renglón o coma"></textarea></div>
+                  <div class="col-12">
+                    <div class="fs-summary">
+                      <div class="fs-line"><span id="fs-titulo">Médico</span> <small>Cirujano/Especialista</small></div>
+                      <div><small>por la</small> <strong id="fs-uni">Universidad</strong></div>
+                      <div><small>Especialista en</small> <strong id="fs-esp">Especialidad</strong></div>
+                    </div>
+                  </div>
+                  <div class="col-12 tight-top"><label class="form-label">Certificaciones</label>
+                    <div class="chips-row">
+                      <input id="cert-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Consejo Mexicano...">
+                      <small id="cert-count" class="chip-count">50/50</small>
+                      <button id="cert-add" class="btn chip-add" type="button">+ agregar</button>
+                    </div>
+                    <div id="cert-list" class="chip-list mt-2" aria-live="polite"></div>
+                  </div>
+                  <div class="col-12"><label class="form-label">Cursos</label>
+                    <div class="chips-row">
+                      <input id="cursos-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Curso avanzado ...">
+                      <small id="cursos-count" class="chip-count">50/50</small>
+                      <button id="cursos-add" class="btn chip-add" type="button">+ agregar</button>
+                    </div>
+                    <div id="cursos-list" class="chip-list mt-2" aria-live="polite"></div>
+                  </div>
+                  <div class="col-12"><label class="form-label">Diplomados</label>
+                    <div class="chips-row">
+                      <input id="dipl-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Diplomado en ...">
+                      <small id="dipl-count" class="chip-count">50/50</small>
+                      <button id="dipl-add" class="btn chip-add" type="button">+ agregar</button>
+                    </div>
+                    <div id="dipl-list" class="chip-list mt-2" aria-live="polite"></div>
+                  </div>
+                  <div class="col-12"><label class="form-label">Miembro de</label>
+                    <div class="chips-row">
+                      <input id="miem-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Asociación ...">
+                      <small id="miem-count" class="chip-count">50/50</small>
+                      <button id="miem-add" class="btn chip-add" type="button">+ agregar</button>
+                    </div>
+                    <div id="miem-list" class="chip-list mt-2" aria-live="polite"></div>
+                  </div>
+                  <div class="col-12"><label class="form-label">*Texto libre para mostrar a los pacientes*</label>
+                    <textarea class="form-control" rows="4" placeholder="(puedes describir aquí tu trayectoria profesional, tus áreas de especialización, filosofía y vocación de servicio. tu enfoque de atención al paciente, y los valores que guían su práctica médica)"></textarea>
+                  </div>
                 </div>
+              </div>
               </div>
             </div>
           </div>
@@ -529,7 +567,8 @@
                   <div class="col-md-6"><label class="form-label">Notas</label><input class="form-control" placeholder="Accesibilidad, estacionamiento, etc."/></div>
                   <div class="col-12"><label class="form-label">Mapa</label>
                     <div class="ratio ratio-16x9 rounded border" style="border-color:var(--mm-borde-input)!important;">
-                      <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d12057.337!2d-102.296!3d21.882" loading="lazy"></iframe>
+                      <!-- Mapa embebido sin API key usando coordenadas (evita 400 de pb incompleto) -->
+                      <iframe src="https://www.google.com/maps?q=21.882,-102.296&z=13&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Ubicación de la sede"></iframe>
                     </div>
                     <small class="text-muted">En plan gratuito el mapa no usa GPS; en planes de pago sí.</small>
                   </div>
@@ -717,6 +756,13 @@
               <div class="col-md-4"><select class="form-select"><option>Todos</option><option>Con citas recientes</option><option>Inactivos</option></select></div>
               <div class="col-md-4"><button class="btn btn-primary"><i class="bi bi-person-plus"></i> Nuevo paciente</button></div>
             </div>
+          </div>
+        </section>
+        <!-- PACIENTES · RECETAS (placeholder) -->
+        <section class="mm-card d-none" id="p-pac-recetas">
+          <div class="head"><h5><span class="material-symbols-outlined title-ico" aria-hidden="true">prescriptions</span>Recetas</h5></div>
+          <div class="body">
+            <div class="alert alert-info">Generar nueva receta o buscar recetas previas (placeholder).</div>
           </div>
         </section>
 
@@ -909,6 +955,8 @@
 <script src="assets/js/app.js"></script>
 </body>
 </html>
+
+
 
 
 

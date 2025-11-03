@@ -705,3 +705,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* Mayor separación entre inputs y chips */
 #enf-list, #trt-list{ margin-top: calc(0.5rem + 25px) !important }
+
+/* Fallback: asegurar ocultar elementos con .d-none */
+.d-none{ display:none !important; }
+

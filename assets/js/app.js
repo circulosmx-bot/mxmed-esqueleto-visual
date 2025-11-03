@@ -49,7 +49,9 @@ $('.menu-main').on('click', function(){
 
 /* Activación de subbotones y panel derecho */
 function showPanel(id){
-  $('#viewport > section').addClass('d-none');
+  // Oculta todos los paneles, estén o no dentro de #viewport
+  $('section[id^="p-"]').addClass('d-none');
+  // Muestra el panel solicitado
   $('#'+id).removeClass('d-none');
 }
 $('.menu-sub-btn').on('click', function(){
