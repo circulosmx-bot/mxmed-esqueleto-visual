@@ -421,29 +421,37 @@
                   <div class="col-12">
                     <label class="form-label" for="srv1">Servicio principal 1</label>
                     <div class="srv-row">
-                      <input id="srv1" class="form-control srv-input" maxlength="50" placeholder="p.ej. Diagnóstico">
-                      <small id="srv1-count" class="chip-count">50/50</small>
+                      <div class="srv-input-wrap">
+                        <input id="srv1" class="form-control srv-input" maxlength="50" placeholder="p.ej. Diagnóstico">
+                        <small id="srv1-count" class="chip-count">50/50</small>
+                      </div>
                     </div>
                   </div>
                   <div class="col-12">
                     <label class="form-label" for="srv2">Servicio principal 2</label>
                     <div class="srv-row">
-                      <input id="srv2" class="form-control srv-input" maxlength="50" placeholder="p.ej. Tratamiento Quirúrgico">
-                      <small id="srv2-count" class="chip-count">50/50</small>
+                      <div class="srv-input-wrap">
+                        <input id="srv2" class="form-control srv-input" maxlength="50" placeholder="p.ej. Tratamiento Quirúrgico">
+                        <small id="srv2-count" class="chip-count">50/50</small>
+                      </div>
                     </div>
                   </div>
                   <div class="col-12">
                     <label class="form-label" for="srv3">Servicio principal 3</label>
                     <div class="srv-row">
-                      <input id="srv3" class="form-control srv-input" maxlength="50" placeholder="p.ej. Rehabilitación Intestinal pediátrica">
-                      <small id="srv3-count" class="chip-count">50/50</small>
+                      <div class="srv-input-wrap">
+                        <input id="srv3" class="form-control srv-input" maxlength="50" placeholder="p.ej. Rehabilitación Intestinal pediátrica">
+                        <small id="srv3-count" class="chip-count">50/50</small>
+                      </div>
                     </div>
                   </div>
                   <div class="col-12">
                     <label class="form-label" for="srv4">Servicio principal 4 (opcional)</label>
                     <div class="srv-row">
-                      <input id="srv4" class="form-control srv-input" maxlength="50" placeholder="">
-                      <small id="srv4-count" class="chip-count">50/50</small>
+                      <div class="srv-input-wrap">
+                        <input id="srv4" class="form-control srv-input" maxlength="50" placeholder="">
+                        <small id="srv4-count" class="chip-count">50/50</small>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -456,8 +464,10 @@
                   <div class="col-12"><div class="sp-note text-muted">¿Qué tipo de enfermedades atiendes? Agrégalas una por una.</div></div>
                   <div class="col-12 tight-top">                    <label class="form-label" for="enf-input">Enfermedad</label>
                     <div class="chips-row">
-                      <input id="enf-input" class="form-control no-check chip-input" maxlength="40" placeholder="Ej.: Cáncer de mama">
-                      <small id="enf-count" class="chip-count">40/40</small>
+                      <div class="chip-input-wrap">
+                        <input id="enf-input" class="form-control no-check chip-input" maxlength="40" placeholder="Ej.: Cáncer de mama">
+                        <small id="enf-count" class="chip-count">40/40</small>
+                      </div>
                       <button id="enf-add" class="btn chip-add" type="button">+ agregar</button>
                     </div>
                     <div id="enf-list" class="chip-list mt-2" aria-live="polite"></div>
@@ -467,8 +477,10 @@
                   <div class="col-12 chips-section-second"><div class="sp-note text-muted">Agrega uno a uno tratamientos procedimientos o terapias que realizas regularmente</div></div>
                   <div class="col-12 tight-top">                    <label class="form-label" for="trt-input">Tratamiento / Procedimiento</label>
                     <div class="chips-row">
-                      <input id="trt-input" class="form-control no-check chip-input" maxlength="40" placeholder="Ej.: Quimioterapia">
-                      <small id="trt-count" class="chip-count">40/40</small>
+                      <div class="chip-input-wrap">
+                        <input id="trt-input" class="form-control no-check chip-input" maxlength="40" placeholder="Ej.: Quimioterapia">
+                        <small id="trt-count" class="chip-count">40/40</small>
+                      </div>
                       <button id="trt-add" class="btn chip-add" type="button">+ agregar</button>
                     </div>
                     <div id="trt-list" class="chip-list mt-2" aria-live="polite"></div>
@@ -508,32 +520,40 @@
                   </div>
                   <div class="col-12 tight-top"><label class="form-label">Certificaciones</label>
                     <div class="chips-row">
-                      <input id="cert-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Consejo Mexicano...">
-                      <small id="cert-count" class="chip-count">50/50</small>
+                      <div class="chip-input-wrap">
+                        <input id="cert-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Consejo Mexicano...">
+                        <small id="cert-count" class="chip-count">50/50</small>
+                      </div>
                       <button id="cert-add" class="btn chip-add" type="button">+ agregar</button>
                     </div>
                     <div id="cert-list" class="chip-list mt-2" aria-live="polite"></div>
                   </div>
                   <div class="col-12"><label class="form-label">Cursos</label>
                     <div class="chips-row">
-                      <input id="cursos-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Curso avanzado ...">
-                      <small id="cursos-count" class="chip-count">50/50</small>
+                      <div class="chip-input-wrap">
+                        <input id="cursos-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Curso avanzado ...">
+                        <small id="cursos-count" class="chip-count">50/50</small>
+                      </div>
                       <button id="cursos-add" class="btn chip-add" type="button">+ agregar</button>
                     </div>
                     <div id="cursos-list" class="chip-list mt-2" aria-live="polite"></div>
                   </div>
                   <div class="col-12"><label class="form-label">Diplomados</label>
                     <div class="chips-row">
-                      <input id="dipl-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Diplomado en ...">
-                      <small id="dipl-count" class="chip-count">50/50</small>
+                      <div class="chip-input-wrap">
+                        <input id="dipl-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Diplomado en ...">
+                        <small id="dipl-count" class="chip-count">50/50</small>
+                      </div>
                       <button id="dipl-add" class="btn chip-add" type="button">+ agregar</button>
                     </div>
                     <div id="dipl-list" class="chip-list mt-2" aria-live="polite"></div>
                   </div>
                   <div class="col-12"><label class="form-label">Miembro de</label>
                     <div class="chips-row">
-                      <input id="miem-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Asociación ...">
-                      <small id="miem-count" class="chip-count">50/50</small>
+                      <div class="chip-input-wrap">
+                        <input id="miem-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Asociación ...">
+                        <small id="miem-count" class="chip-count">50/50</small>
+                      </div>
                       <button id="miem-add" class="btn chip-add" type="button">+ agregar</button>
                     </div>
                     <div id="miem-list" class="chip-list mt-2" aria-live="polite"></div>

@@ -635,11 +635,17 @@ body{margin:0;background:var(--mm-fondo-base);}
 .count-muted{ color:#6c7b85; }
 
 /* Fila de input + botÃ³n para chips */
-.chips-row{ display:flex; align-items:center; gap:0; flex-wrap:wrap; }
-.chip-input{ width:40ch; max-width:100%; }
-.chip-count{ margin-left:10px; color:rgba(0,173,193,.5); font-weight:700; min-width:5ch; text-align:right }
+.chips-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.chip-input{ width:44ch; max-width:100%; padding-right:7ch; }
+.chip-count{ color:rgba(0,173,193,.6); font-weight:700; min-width:5ch; text-align:right }
 .srv-row{ display:flex; align-items:center; gap:10px; }
-.srv-input{ width:50ch; max-width:100%; }
+.srv-input{ width:54ch; max-width:100%; padding-right:7ch; }
+/* Embebidos dentro del input */
+.chip-input-wrap, .srv-input-wrap{ position:relative; display:inline-block; }
+.chip-input-wrap .chip-count, .srv-input-wrap .chip-count{
+  position:absolute; right:10px; top:50%; transform:translateY(-50%);
+  margin:0; pointer-events:none;
+}
 
 /* Resumen formación */
 .fs-summary{ background:#f7fdff; border:1px solid #d5f1f7; border-radius:10px; padding:.6rem .8rem; margin-bottom:.5rem }
