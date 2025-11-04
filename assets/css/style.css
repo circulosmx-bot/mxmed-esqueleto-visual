@@ -710,4 +710,9 @@ body{margin:0;background:var(--mm-fondo-base);}
 .dpf-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px }
 .dpf-item{ position:relative; border:1px solid #e5eaef; border-radius:10px; overflow:hidden; background:#fff }
 .dpf-item img{ width:100%; height:140px; object-fit:cover; display:block }
+/* DP Fotos: acciones y estados */
+.dpf-del{ position:absolute; top:6px; right:6px; width:22px; height:22px; border-radius:50%; background:#EF5070; color:#fff; border:0; display:inline-flex; align-items:center; justify-content:center; font-weight:700; cursor:pointer }
+.dpf-item.dragging{ opacity:.85; filter:brightness(.95) }
+.dpf-item.dimmed{ opacity:.6 }
+.dpf-grid.dragover{ outline:2px dashed #00ADC1; outline-offset:4px }
 

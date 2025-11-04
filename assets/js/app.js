@@ -89,6 +89,62 @@ $(function(){
   if(tabTrigger){ new bootstrap.Tab(tabTrigger).show(); }
 });
 
+// ===== Datos Personales · Fotos (hasta 20) =====
+(function(){
+  const MAX = 20;
+  const storeKey = 'dp:fotos';
+  const grid = document.getElementById('dpf-grid');
+  const addBtn = document.getElementById('dpf-add');
+  const input = document.getElementById('dpf-input');
+  const counter = document.getElementById('dpf-count');
+  if(!grid || !addBtn || !input){ return; }
+
+  function load(){ try{ return JSON.parse(localStorage.getItem(storeKey)||'[]'); }catch(e){ return []; } }
+  function save(arr){ localStorage.setItem(storeKey, JSON.stringify(arr)); render(); }
+
+  function render(){
+    const arr = load();
+    grid.innerHTML = '';
+    if(counter) counter.textContent = `${arr.length} / ${MAX}`;
+    arr.forEach((src, i)=>{
+      const item = document.createElement('div'); item.className='dpf-item'; item.draggable=true; item.dataset.index=i;
+      const img = document.createElement('img'); img.src = src; img.alt = `Foto ${i+1}`;
+      const del = document.createElement('button'); del.type='button'; del.className='dpf-del'; del.textContent='×'; del.setAttribute('aria-label','Eliminar');
+      del.addEventListener('click', ()=>{ const a=load(); a.splice(i,1); save(a); });
+      item.appendChild(img); item.appendChild(del); grid.appendChild(item);
+    });
+    bindDnD();
+  }
+
+  function bindDnD(){
+    let dragIdx=null;
+    grid.querySelectorAll('.dpf-item').forEach(it=>{
+      it.addEventListener('dragstart', e=>{ dragIdx=+it.dataset.index; it.classList.add('dragging'); grid.querySelectorAll('.dpf-item').forEach(x=>{ if(x!==it) x.classList.add('dimmed'); }); e.dataTransfer.effectAllowed='move'; });
+      it.addEventListener('dragover', e=>{ e.preventDefault(); });
+      it.addEventListener('drop', e=>{ e.preventDefault(); const dropIdx=+it.dataset.index; if(dragIdx==null || dropIdx===dragIdx) return; const a=load(); const item=a.splice(dragIdx,1)[0]; a.splice(dropIdx,0,item); save(a); });
+      it.addEventListener('dragend', ()=>{ grid.querySelectorAll('.dpf-item').forEach(x=>{ x.classList.remove('dragging','dimmed'); }); dragIdx=null; });
+    });
+  }
+
+  function handleFiles(files){
+    const a = load();
+    const remain = MAX - a.length; if(remain<=0) return;
+    const imgs = Array.from(files||[]).filter(f=>f.type.startsWith('image/')).slice(0, remain);
+    if(!imgs.length) return;
+    let pending = imgs.length;
+    imgs.forEach(f=>{ const r=new FileReader(); r.onload = ev=>{ a.push(ev.target.result); if(--pending===0) save(a); }; r.readAsDataURL(f); });
+  }
+
+  addBtn.addEventListener('click', ()=> input.click());
+  input.addEventListener('change', ()=> handleFiles(input.files));
+
+  ;['dragenter','dragover'].forEach(evt=>{ grid.addEventListener(evt, e=>{ e.preventDefault(); grid.classList.add('dragover'); }); });
+  ;['dragleave','drop'].forEach(evt=>{ grid.addEventListener(evt, e=>{ e.preventDefault(); grid.classList.remove('dragover'); }); });
+  grid.addEventListener('drop', e=>{ const f = e.dataTransfer?.files; if(f && f.length) handleFiles(f); });
+
+  render();
+})();
+
 /* === Nudge: sincroniza porcentaje y tareas sugeridas === */
 (function(){
   var secciones = window.mxm_sec || { datos:58, prof:88, serv:0, enf:100, consul:50 };
