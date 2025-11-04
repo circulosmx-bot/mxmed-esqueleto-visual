@@ -94,10 +94,10 @@ $(function(){
   const MAX = 20;
   const storeKey = 'dp:fotos';
   const grid = document.getElementById('dpf-grid');
-  const addBtn = document.getElementById('dpf-add');
+  const addBtn = null;
   const input = document.getElementById('dpf-input');
-  const counter = document.getElementById('dpf-count'); const empty = document.getElementById('dpf-empty'); const emptyAdd = document.getElementById('dpf-empty-add');
-  if(!grid || !addBtn || !input){ return; } if(emptyAdd){ emptyAdd.addEventListener('click', ()=> input.click()); }
+  const counter = document.getElementById('dpf-badge'); const empty = document.getElementById('dpf-empty'); const emptyAdd = document.getElementById('dpf-empty-add'); const empty = document.getElementById('dpf-empty'); const emptyAdd = document.getElementById('dpf-empty-add');
+  if(!grid || !input){ return; } if(emptyAdd){ emptyAdd.addEventListener('click', ()=> input.click()); } if(emptyAdd){ emptyAdd.addEventListener('click', ()=> input.click()); }
 
   function load(){ try{ return JSON.parse(localStorage.getItem(storeKey)||'[]'); }catch(e){ return []; } }
   function save(arr){ localStorage.setItem(storeKey, JSON.stringify(arr)); render(); }
@@ -610,4 +610,5 @@ $(function(){
   const img = document.querySelector('.header-top img'); if(img) img.alt = 'MÃ©xico MÃ©dico';
   if(document.title && document.title.indexOf('MXMed')>=0) document.title = 'MXMed 2025 Â· Perfil MÃ©dico';
 })();
+
 

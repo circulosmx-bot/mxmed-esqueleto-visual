@@ -722,3 +722,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .dpf-empty-ico{ font-size:42px; color:#00ADC1; margin-bottom:6px }
 .dpf-empty .btn{ pointer-events:auto }
 
+
+.dpf-wrap{ position:relative }
+.dpf-badge{ position:absolute; right:6px; top:6px; background:#00ADC1; color:#fff; border-radius:999px; padding:2px 8px; font-weight:700; font-size:.8rem }
+
