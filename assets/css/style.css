@@ -716,3 +716,9 @@ body{margin:0;background:var(--mm-fondo-base);}
 .dpf-item.dimmed{ opacity:.6 }
 .dpf-grid.dragover{ outline:2px dashed #00ADC1; outline-offset:4px }
 
+
+/* Estado vacío DP Fotos */
+.dpf-empty{ display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:260px; border:1.2px dashed #99bfd0; border-radius:12px; background:#fff; color:#597482; text-align:center; }
+.dpf-empty-ico{ font-size:42px; color:#00ADC1; margin-bottom:6px }
+.dpf-empty .btn{ pointer-events:auto }
+
