@@ -732,4 +732,13 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* Titulares: duplica tamaño del texto (icono igual) */
 .mm-card .head h5{ font-size:2em; }
+/* Mantener tamaño de iconos del título sin escalar con el texto */
+.mm-card .head h5 .title-ico,
+.mm-card .head h5 .bi.title-ico,
+.mm-card .head h5 .material-symbols-rounded.title-ico,
+.mm-card .head h5 .material-symbols-outlined.title-ico{
+  font-size:3.25rem !important;
+  line-height:1;
+  vertical-align:middle;
+}
 
