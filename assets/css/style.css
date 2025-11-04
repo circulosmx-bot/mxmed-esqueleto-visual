@@ -716,3 +716,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .d-none{ display:none !important; }
 
 
+
+.chip-add .chip-word{ position:relative; top:-3px; display:inline-block; }
+.chip-add .chip-plus{ font-weight:800; line-height:1; }
+
