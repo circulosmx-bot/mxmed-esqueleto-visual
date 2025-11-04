@@ -705,3 +705,9 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* Mayor separación entre inputs y chips */
 #enf-list, #trt-list{ margin-top: calc(0.5rem + 25px) !important }
+
+/* DP Fotos step1: minimal grid style */
+.dpf-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px }
+.dpf-item{ position:relative; border:1px solid #e5eaef; border-radius:10px; overflow:hidden; background:#fff }
+.dpf-item img{ width:100%; height:140px; object-fit:cover; display:block }
+

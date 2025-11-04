@@ -263,7 +263,7 @@
           <li>Especifica detalles de tu consultorio</li>
           <li>Indica cuales son tus principales</li>
           <li>Agrega tu fotografía</li>
-        </ul>
+          <li class="nav-item"><button class="nav-link" id="t-fotos-tab" data-bs-toggle="pill" data-bs-target="#t-fotos" type="button">Fotos</button></li>`r`n</ul>
         <button class="resumen-cta" id="btnCompletar">Ir a completar perfil</button>
       </div>
 
@@ -353,7 +353,7 @@
               <li class="nav-item"><button class="nav-link" id="t-formacion-tab" data-bs-toggle="pill" data-bs-target="#t-formacion" type="button">Mi Formación Profesional</button></li>
               <li class="nav-item"><button class="nav-link" id="t-servicios-tab" data-bs-toggle="pill" data-bs-target="#t-servicios" type="button">Principales Servicios</button></li>
               <li class="nav-item"><button class="nav-link" id="t-enfermedades-tab" data-bs-toggle="pill" data-bs-target="#t-enfermedades" type="button">Enfermedades y Tratamientos</button></li>
-            </ul>
+              <li class="nav-item"><button class="nav-link" id="t-fotos-tab" data-bs-toggle="pill" data-bs-target="#t-fotos" type="button">Fotos</button></li>`r`n</ul>
 
               <div class="tab-content" id="tabs-infoContent">
               <!-- DATOS GENERALES -->
@@ -486,7 +486,7 @@
                     </div>
                     <div class="modal-body">
                       <p class="text-muted mb-2">Arrastra para reordenar:</p>
-                      <ul id="sort-list" class="sort-list" aria-live="polite"></ul>
+                      <ul id="sort-list" class="sort-list" aria-live="polite">  <li class="nav-item"><button class="nav-link" id="t-fotos-tab" data-bs-toggle="pill" data-bs-target="#t-fotos" type="button">Fotos</button></li>`r`n</ul>
                     </div>
                     <div class="modal-footer">
                       <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -518,7 +518,7 @@
               <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#sede1" type="button">Sede 1</button></li>
               <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#sede2" type="button">Sede 2</button></li>
               <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#sede-add" type="button">+ Nueva Sede</button></li>
-            </ul>
+              <li class="nav-item"><button class="nav-link" id="t-fotos-tab" data-bs-toggle="pill" data-bs-target="#t-fotos" type="button">Fotos</button></li>`r`n</ul>
             <div class="tab-content">
               <div class="tab-pane fade show active" id="sede1">
                 <div class="row g-3">
@@ -536,6 +536,21 @@
                 </div>
               </div>
               <div class="tab-pane fade" id="sede2"><div class="alert alert-info">Configura esta sede…</div></div>
+              
+              <!-- FOTOS -->
+              <div class="tab-pane fade" id="t-fotos" role="tabpanel">
+                <div class="row g-3">
+                  <div class="col-12">
+                    <div class="small text-muted mb-1">Hasta 20 imágenes. Arrastra para ordenar. Haz clic en la X para eliminar.</div>
+                    <div class="dpf-toolbar d-flex align-items-center gap-2 mb-2">
+                      <button class="btn btn-primary btn-sm" id="dpf-add" type="button">Agregar fotos</button>
+                      <span class="text-muted small" id="dpf-count">0 / 20</span>
+                      <input type="file" id="dpf-input" accept="image/*" multiple class="d-none">
+                    </div>
+                    <div class="dpf-grid" id="dpf-grid" aria-live="polite" aria-label="Galería de fotos"></div>
+                  </div>
+                </div>
+              </div>
               <div class="tab-pane fade" id="sede-add"><div class="alert alert-info">Formulario para agregar nueva sede…</div></div>
             </div>
           </div>
@@ -574,7 +589,7 @@
               <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#seg-cred">Credenciales</button></li>
               <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#seg-2fa">Doble Factor (2FA)</button></li>
               <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#seg-ses">Sesiones/Dispositivos</button></li>
-            </ul>
+              <li class="nav-item"><button class="nav-link" id="t-fotos-tab" data-bs-toggle="pill" data-bs-target="#t-fotos" type="button">Fotos</button></li>`r`n</ul>
             <div class="tab-content">
               <div class="tab-pane fade show active" id="seg-cred">
                 <div class="row g-3">
@@ -734,7 +749,7 @@
               <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-manejo">Manejo Hospitalario</button></li>
               <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-consent">Consentimiento Informado</button></li>
               <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-archivo">Archivo</button></li>
-            </ul>
+              <li class="nav-item"><button class="nav-link" id="t-fotos-tab" data-bs-toggle="pill" data-bs-target="#t-fotos" type="button">Fotos</button></li>`r`n</ul>
             <div class="tab-content">
               <div class="tab-pane fade show active" id="t-historia">
                 <div class="row g-3">
@@ -764,7 +779,7 @@
               <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#cfdi-listar">Listar Facturas</button></li>
               <li es="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#cfdi-pacientes">Pacientes</button></li>
               <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#cfdi-canceladas">Facturas Canceladas</button></li>
-            </ul>
+              <li class="nav-item"><button class="nav-link" id="t-fotos-tab" data-bs-toggle="pill" data-bs-target="#t-fotos" type="button">Fotos</button></li>`r`n</ul>
             <div class="tab-content">
               <div class="tab-pane fade show active" id="cfdi-crear">
                 <div class="row g-3">
@@ -803,7 +818,7 @@
               <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#paq-activos">Activos</button></li>
               <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#paq-crear">Crear/Editar</button></li>
               <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#paq-historial">Historial</button></li>
-            </ul>
+              <li class="nav-item"><button class="nav-link" id="t-fotos-tab" data-bs-toggle="pill" data-bs-target="#t-fotos" type="button">Fotos</button></li>`r`n</ul>
             <div class="tab-content">
               <div class="tab-pane fade show active" id="paq-activos">
                 <div class="table-responsive">
@@ -900,7 +915,7 @@
           <li><a href="#">Nosotros</a></li>
           <li><a href="#">Términos y Condiciones</a></li>
           <li><a href="#">Aviso de Privacidad</a></li>
-        </ul>
+          <li class="nav-item"><button class="nav-link" id="t-fotos-tab" data-bs-toggle="pill" data-bs-target="#t-fotos" type="button">Fotos</button></li>`r`n</ul>
       </nav>
     </div>
   </div>
@@ -909,6 +924,7 @@
 <script src="assets/js/app.js"></script>
 </body>
 </html>
+
 
 
 
