@@ -504,6 +504,14 @@
                   <div class="col-md-8"><label class="form-label">Certificaciones</label><input class="form-control" placeholder="Consejo Mexicano..., etc."></div>
                   <div class="col-12"><label class="form-label">Cursos y diplomados</label><textarea class="form-control" rows="4" placeholder="Separa por renglón o coma"></textarea></div>
                 </div>
+              </div><div class="dpf-toolbar d-flex align-items-center gap-2 mb-2">
+                      <button class="btn btn-primary btn-sm" id="dpf-add" type="button">Agregar fotos</button>
+                      <span class="text-muted small" id="dpf-count">0 / 20</span>
+                      <input type="file" id="dpf-input" accept="image/*" multiple class="d-none">
+                    </div>
+                    <div class="dpf-grid" id="dpf-grid" aria-live="polite" aria-label="Galería de fotos"></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -533,14 +541,7 @@
                   </div>
                 </div>
               </div>
-              <div class="tab-pane fade" id="sede2"><div class="alert alert-info">Configura esta sede…</div></div>
-              
-              <!-- FOTOS -->
-              <div class="tab-pane fade" id="t-fotos" role="tabpanel">
-                <div class="row g-3">
-                  <div class="col-12">
-                    <div class="small text-muted mb-1">Hasta 20 imágenes. Arrastra para ordenar. Haz clic en la X para eliminar.</div>
-                    <div class="dpf-toolbar d-flex align-items-center gap-2 mb-2">
+              <div class="tab-pane fade" id="sede2"><div class="alert alert-info">Configura esta sede…</div></div><div class="dpf-toolbar d-flex align-items-center gap-2 mb-2">
                       <button class="btn btn-primary btn-sm" id="dpf-add" type="button">Agregar fotos</button>
                       <span class="text-muted small" id="dpf-count">0 / 20</span>
                       <input type="file" id="dpf-input" accept="image/*" multiple class="d-none">
@@ -917,6 +918,7 @@
 <script src="assets/js/app.js"></script>
 </body>
 </html>
+
 
 
 
