@@ -507,6 +507,21 @@
                   <div class="col-12"><label class="form-label">Cursos y diplomados</label><textarea class="form-control" rows="4" placeholder="Separa por renglón o coma"></textarea></div>
                 </div>
               </div>
+
+              <!-- FOTOS (safe minimal) -->
+              <div class="tab-pane fade" id="t-fotos" role="tabpanel">
+                <div class="row g-3">
+                  <div class="col-12">
+                    <div class="dpf-empty" role="region" aria-label="Estado vacío de fotos">
+                      <div class="dpf-empty-ico"><i class="bi bi-images"></i></div>
+                      <div class="dpf-empty-text">Arrastra aquí tus fotografías o usa el botón para seleccionarlas.</div>
+                      <input type="file" id="dpf-input" accept="image/*" multiple class="d-none">
+                      <button class="btn btn-outline-primary btn-sm mt-2" id="dpf-empty-add" type="button">Agregar fotos</button>
+                    </div>
+                    <div class="dpf-grid" id="dpf-grid" aria-live="polite" aria-label="Galería de fotos"></div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
