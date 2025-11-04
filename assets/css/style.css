@@ -745,6 +745,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 
 /* Colocación del check dentro del input sin invadir contador */
-.srv-input-wrap .save-field > .save-ok, .chip-input-wrap .save-field > .save-ok{ right:calc(5ch + 16px); font-size:1.2rem; background:#00ADC1; color:#fff; width:22px; height:22px; border-radius:50%; display:flex !important; align-items:center; justify-content:center }
+.srv-input-wrap .save-field > .save-ok, .chip-input-wrap .save-field > .save-ok{ left: calc(100% + 8px); right: auto; font-size:1.2rem; background:#00ADC1; color:#fff; width:22px; height:22px; border-radius:50%; display:flex !important; align-items:center; justify-content:center }
 .srv-input-wrap .save-wrap.saved input.form-control, .chip-input-wrap .save-wrap.saved input.form-control{ padding-right:10ch !important }
+
 
