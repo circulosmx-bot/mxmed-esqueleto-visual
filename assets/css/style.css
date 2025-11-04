@@ -636,10 +636,10 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* Fila de input + botÃ³n para chips */
 .chips-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.chip-input{ width:44ch; max-width:100%; padding-right:7ch; }
+.chip-input{ width:44ch; max-width:100%; padding-right:10ch; }
 .chip-count{ color:rgba(0,173,193,.6); font-weight:700; min-width:5ch; text-align:right }
 .srv-row{ display:flex; align-items:center; gap:10px; }
-.srv-input{ width:54ch; max-width:100%; padding-right:7ch; }
+.srv-input{ width:54ch; max-width:100%; padding-right:10ch; }
 /* Embebidos dentro del input */
 .chip-input-wrap, .srv-input-wrap{ position:relative; display:inline-block; }
 .chip-input-wrap .chip-count, .srv-input-wrap .chip-count{
@@ -741,4 +741,10 @@ body{margin:0;background:var(--mm-fondo-base);}
   line-height:1;
   vertical-align:middle;
 }
+
+
+
+/* Colocación del check dentro del input sin invadir contador */
+.srv-input-wrap .save-field > .save-ok, .chip-input-wrap .save-field > .save-ok{ right:calc(5ch + 16px); font-size:1.2rem; background:#00ADC1; color:#fff; width:22px; height:22px; border-radius:50%; display:flex !important; align-items:center; justify-content:center }
+.srv-input-wrap .save-wrap.saved input.form-control, .chip-input-wrap .save-wrap.saved input.form-control{ padding-right:10ch !important }
 
