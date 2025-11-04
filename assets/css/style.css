@@ -729,3 +729,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 /* Si el cuerpo contiene tabs, quitar padding-top para pegarlas arriba */
 .mm-card .body:has(.mm-tabs){ padding-top:0 }
 
+
+/* Titulares: duplica tamaño del texto (icono igual) */
+.mm-card .head h5{ font-size:2em; }
+
