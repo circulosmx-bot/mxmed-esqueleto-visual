@@ -720,3 +720,12 @@ body{margin:0;background:var(--mm-fondo-base);}
 .chip-add .chip-word{ position:relative; top:-3px; display:inline-block; }
 .chip-add .chip-plus{ font-weight:800; line-height:1; }
 
+
+/* Panel layout: título fuera de la caja */
+.mm-card{ background:transparent; border:0; box-shadow:none; overflow:visible; }
+.mm-card .head{ background:transparent; border:0; padding:.75rem .9rem .4rem; }
+.mm-card .head h5{ margin:0; font-weight:700; color:#FFFFFF; }
+.mm-card .body{ background:#fff; border:1px solid #00ADC1; border-radius:.9rem; box-shadow:0 12px 28px rgba(0,0,0,.08); padding:.9rem .9rem 1.05rem; margin-top:0; }
+/* Si el cuerpo contiene tabs, quitar padding-top para pegarlas arriba */
+.mm-card .body:has(.mm-tabs){ padding-top:0 }
+
