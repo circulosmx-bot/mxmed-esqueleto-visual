@@ -501,7 +501,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .save-wrap.saved select.form-select{padding-right:3.2rem;background-position: right 3.2rem center !important}
 /* Forzar peso 600 solo para el icono de confirmaciÃ³n */
 .save-wrap .save-ok .material-symbols-outlined{
-  font-variation-settings:'FILL' 0,'wght' 800,'GRAD' 0,'opsz' 24; /* más bold */
+  font-variation-settings:'FILL' 0,'wght' 900,'GRAD' 0,'opsz' 24; /* más bold */
   line-height:1;
   font-size:16px; /* centrado dentro del círculo de 22px */
   vertical-align:middle;
@@ -750,6 +750,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 /* Colocación del check dentro del input sin invadir contador */
 .srv-input-wrap .save-field > .save-ok, .chip-input-wrap .save-field > .save-ok{ left: calc(100% + 8px); right: auto; font-size:1.2rem; background:#00ADC1; color:#fff; width:22px; height:22px; border-radius:50%;  }
 .srv-input-wrap .save-wrap.saved input.form-control, .chip-input-wrap .save-wrap.saved input.form-control{ padding-right:10ch !important }
+
 
 
 
