@@ -705,3 +705,13 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* Mayor separación entre inputs y chips */
 #enf-list, #trt-list{ margin-top: calc(0.5rem + 25px) !important }
+
+/* DP Fotos safe: estilos mínimos */
+.dpf-empty{ display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:260px; border:1.2px dashed #99bfd0; border-radius:12px; background:#fff; color:#597482; text-align:center; }
+.dpf-empty-ico{ font-size:42px; color:#00ADC1; margin-bottom:6px }
+.dpf-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px }
+.dpf-item{ position:relative; border:1px solid #e5eaef; border-radius:10px; overflow:hidden; background:#fff }
+.dpf-item img{ width:100%; height:140px; object-fit:cover; display:block }
+.dpf-del{ position:absolute; top:6px; right:6px; width:22px; height:22px; border-radius:50%; background:#EF5070; color:#fff; border:0; display:inline-flex; align-items:center; justify-content:center; font-weight:700; cursor:pointer }
+.dpf-grid.dragover, .dpf-empty.dragover{ outline:2px dashed #00ADC1; outline-offset:4px }
+

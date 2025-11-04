@@ -554,3 +554,57 @@ $(function(){
   const img = document.querySelector('.header-top img'); if(img) img.alt = 'México Médico';
   if(document.title && document.title.indexOf('MXMed')>=0) document.title = 'MXMed 2025 · Perfil Médico';
 })();
+// DP Fotos safe (encapsulado)
+(function(){
+  const MAX = 20;
+  const key = 'dp:fotos';
+  const grid = document.getElementById('dpf-grid');
+  const empty = document.getElementById('dpf-empty');
+  const input = document.getElementById('dpf-input');
+  const emptyAdd = document.getElementById('dpf-empty-add');
+  if(!grid || !empty || !input) return;
+
+  function load(){ try{ return JSON.parse(localStorage.getItem(key)||'[]'); }catch(e){ return []; } }
+  function save(a){ localStorage.setItem(key, JSON.stringify(a)); render(); }
+
+  function render(){
+    const a = load();
+    grid.innerHTML = '';
+    empty.hidden = a.length>0;
+    a.forEach((src,i)=>{
+      const it = document.createElement('div'); it.className='dpf-item'; it.draggable=true; it.dataset.index=i;
+      const img = document.createElement('img'); img.src=src; img.alt=`Foto ${i+1}`;
+      const del = document.createElement('button'); del.type='button'; del.className='dpf-del'; del.textContent='×'; del.setAttribute('aria-label','Eliminar');
+      del.addEventListener('click', ()=>{ const b=load(); b.splice(i,1); save(b); });
+      it.appendChild(img); it.appendChild(del); grid.appendChild(it);
+    });
+    bindDnD();
+  }
+
+  function bindDnD(){
+    let dragIdx=null;
+    grid.querySelectorAll('.dpf-item').forEach(it=>{
+      it.addEventListener('dragstart', e=>{ dragIdx=+it.dataset.index; it.classList.add('dragging'); grid.querySelectorAll('.dpf-item').forEach(x=>{ if(x!==it) x.classList.add('dimmed'); }); e.dataTransfer.effectAllowed='move'; });
+      it.addEventListener('dragover', e=>{ e.preventDefault(); });
+      it.addEventListener('drop', e=>{ e.preventDefault(); const dropIdx=+it.dataset.index; if(dragIdx==null || dropIdx===dragIdx) return; const a=load(); const item=a.splice(dragIdx,1)[0]; a.splice(dropIdx,0,item); save(a); });
+      it.addEventListener('dragend', ()=>{ grid.querySelectorAll('.dpf-item').forEach(x=>{ x.classList.remove('dragging','dimmed'); }); dragIdx=null; });
+    });
+  }
+
+  function handleFiles(files){
+    const a=load(); const remain = MAX - a.length; if(remain<=0) return;
+    const imgs = Array.from(files||[]).filter(f=>f.type.startsWith('image/')).slice(0, remain);
+    if(!imgs.length) return;
+    let pending = imgs.length; imgs.forEach(f=>{ const r=new FileReader(); r.onload = ev=>{ a.push(ev.target.result); if(--pending===0) save(a); }; r.readAsDataURL(f); });
+  }
+
+  emptyAdd?.addEventListener('click', ()=> input.click());
+  input.addEventListener('change', ()=> handleFiles(input.files));
+
+  ;['dragenter','dragover'].forEach(evt=>{ grid.addEventListener(evt, e=>{ e.preventDefault(); grid.classList.add('dragover'); }); empty.addEventListener(evt, e=>{ e.preventDefault(); empty.classList.add('dragover'); });});
+  ;['dragleave','drop'].forEach(evt=>{ grid.addEventListener(evt, e=>{ e.preventDefault(); grid.classList.remove('dragover'); }); empty.addEventListener(evt, e=>{ e.preventDefault(); empty.classList.remove('dragover'); });});
+  grid.addEventListener('drop', e=>{ const f=e.dataTransfer?.files; if(f&&f.length) handleFiles(f); });
+  empty.addEventListener('drop', e=>{ const f=e.dataTransfer?.files; if(f&&f.length) handleFiles(f); });
+
+  render();
+})();

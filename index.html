@@ -353,6 +353,7 @@
               <li class="nav-item"><button class="nav-link" id="t-formacion-tab" data-bs-toggle="pill" data-bs-target="#t-formacion" type="button">Mi Formación Profesional</button></li>
               <li class="nav-item"><button class="nav-link" id="t-servicios-tab" data-bs-toggle="pill" data-bs-target="#t-servicios" type="button">Principales Servicios</button></li>
               <li class="nav-item"><button class="nav-link" id="t-enfermedades-tab" data-bs-toggle="pill" data-bs-target="#t-enfermedades" type="button">Enfermedades y Tratamientos</button></li>
+              <li class="nav-item"><button class="nav-link" id="t-fotos-tab" data-bs-toggle="pill" data-bs-target="#t-fotos" type="button">Fotos</button></li>
             </ul>
 
               <div class="tab-content" id="tabs-infoContent">
@@ -536,6 +537,21 @@
                 </div>
               </div>
               <div class="tab-pane fade" id="sede2"><div class="alert alert-info">Configura esta sede…</div></div>
+              
+              <!-- FOTOS (safe minimal) -->
+              <div class="tab-pane fade" id="t-fotos" role="tabpanel">
+                <div class="row g-3">
+                  <div class="col-12">
+                    <div class="dpf-empty" role="region" aria-label="Estado vacío de fotos">
+                      <div class="dpf-empty-ico"><i class="bi bi-images"></i></div>
+                      <div class="dpf-empty-text">Arrastra aquí tus fotografías o usa el botón para seleccionarlas.</div>
+                      <input type="file" id="dpf-input" accept="image/*" multiple class="d-none">
+                      <button class="btn btn-outline-primary btn-sm mt-2" id="dpf-empty-add" type="button">Agregar fotos</button>
+                    </div>
+                    <div class="dpf-grid" id="dpf-grid" aria-live="polite" aria-label="Galería de fotos"></div>
+                  </div>
+                </div>
+              </div>
               <div class="tab-pane fade" id="sede-add"><div class="alert alert-info">Formulario para agregar nueva sede…</div></div>
             </div>
           </div>
