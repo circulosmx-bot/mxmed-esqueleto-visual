@@ -207,10 +207,10 @@ body{margin:0;background:var(--mm-fondo-base);}
   align-items:center;
   justify-content:center;
 }
-.menu-main .txt,
-.menu-main .ico,
-.menu-sub-btn .block,
-.menu-sub-btn .ico-right{position:relative;z-index:2;}
+  .menu-main .txt,
+  .menu-main .ico,
+  .menu-sub-btn .block,
+  .menu-sub-btn .ico-right{position:relative;z-index:2;}
 
 .menu-sub{ display:none; flex-direction:column; gap:0; padding-top:6px; padding-bottom:6px; }
 .menu-sub.open{display:flex;}
@@ -754,3 +754,26 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 
 
+/* ===== MENSAJES: badge y tarjetas ===== */
+.badge-msg{
+  display:none;
+  background:#E53935; /* rojo */
+  color:#fff;
+  border-radius:999px;
+  min-width:22px; height:22px;
+  padding:0 6px;
+  font-weight:700; font-size:.75rem; line-height:22px;
+  flex:0 0 auto;
+  margin-left:auto; margin-right:.5rem;
+}
+.badge-msg.show{ display:inline-flex; align-items:center; justify-content:center; }
+
+.msg-list{ display:flex; flex-direction:column; gap:12px; }
+.msg-card{ border:1px solid #00ADC1; border-radius:.75rem; padding:.75rem .85rem; background:#fff; }
+.msg-card.unread{ border-color:#E53935; box-shadow:0 0 0 2px rgba(229,57,53,.08) inset; }
+.msg-head{ display:flex; align-items:center; gap:.5rem; font-weight:700; }
+.msg-text{ margin-top:.25rem; }
+.msg-media{ margin-top:.5rem; border-radius:.5rem; overflow:hidden; background:#f4f7fa; border:1px solid #d9e5ec; }
+.msg-media img{ display:block; max-width:100%; height:auto; }
+.msg-actions{ margin-top:.6rem; display:flex; flex-wrap:wrap; gap:.5rem; }
+.msg-actions .btn{ padding:.25rem .6rem; font-size:.875rem; }

@@ -244,7 +244,14 @@
         <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">campaign</span></span>
       </button>
 
-    </aside>
+      <!-- Mensajes (botón principal sin submenú) -->
+      <button class="menu-main" data-panel="p-mensajes">
+        <span class="txt"><span class="ttl">Mensajes</span><span class="sub">avisos y triggers</span></span>
+        <span class="badge-msg" id="badgeMensajes">0</span>
+        <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">notifications</span></span>
+      </button>
+
+      </aside>
 
     <!-- ===== Área de interacción ===== -->
     <main class="mm-main">
@@ -916,6 +923,14 @@
           </div>
         </section>
 
+        <!-- MENSAJES -->
+        <section class="mm-card d-none" id="p-mensajes">
+          <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">notifications</span>Mensajes</h5></div>
+          <div class="body">
+            <div id="msgList" class="msg-list"></div>
+          </div>
+        </section>
+
       </div>
     </main>
 
@@ -973,6 +988,7 @@
 </footer>
 
 <script src="assets/js/app.js"></script>
+<script src="assets/js/messages.js"></script>
 </body>
 </html>
 
