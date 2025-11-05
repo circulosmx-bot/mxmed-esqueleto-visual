@@ -298,11 +298,11 @@ body{margin:0;background:var(--mm-fondo-base);}
 .menu-sub{ display:none; flex-direction:column; gap:0; padding-top:6px; padding-bottom:6px; }
 .menu-sub.open{
   display:flex;
-  /* Fondo de grupo para transmitir pertenencia */
-  background: rgba(0,176,197,.20); /* 20% alfa de #00B0C5 */
-  border: 1px solid rgba(0,86,132,.15);
-  border-radius: .65rem;
-  padding: 8px 6px; /* un poco más de aire al grupo */
+  /* Quitar fondo/borde del bloque para no encoger botones y dejar ancho completo */
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding-top:6px; padding-bottom:6px; padding-left:0; padding-right:0;
 }
 
 /* Separador SÃ“LO entre subbotones (blanco con alta opacidad) */
