@@ -918,7 +918,12 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* ===== Tabs incrustados en Datos Personales ===== */
 #p-info .mm-tabs-embed{ display:flex; flex-wrap:nowrap; gap:3px; padding:0; margin:0 -0.9rem 0 -0.9rem; }
-#p-info .mm-tabs-embed .nav-item{ flex:1 1 auto; }
+#p-info .mm-tabs-embed .nav-item{ flex:1 1 0; }
+/* Balancear ancho relativo por tab: dar más espacio a Enfermedades y Fotos */
+#p-info .mm-tabs-embed .nav-item:nth-child(2){ flex:0.9 1 0; } /* FORMACIÓN PROFESIONAL un poco más compacto */
+#p-info .mm-tabs-embed .nav-item:nth-child(3){ flex:1.05 1 0; } /* PRINCIPALES SERVICIOS leve extra */
+#p-info .mm-tabs-embed .nav-item:nth-child(4),
+#p-info .mm-tabs-embed .nav-item:nth-child(5){ flex:1.2 1 0; } /* ENFERMEDADES y FOTOS más espacio */
 #p-info .mm-tabs-embed .nav-link{ 
   display:flex; align-items:center; gap:.6rem; justify-content:flex-start;
   width:100%; height:100%;
