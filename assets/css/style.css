@@ -318,6 +318,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   border: 0;
   border-radius: 0;
   padding-top:6px; padding-bottom:6px; padding-left:0; padding-right:0;
+  /* Empatar separación con subbotones internos (6px), compensando gap del contenedor */
+  margin-top:-10px;  /* anula gap de .mm-sidebar arriba */
+  margin-bottom:-10px; /* anula gap de .mm-sidebar abajo */
 }
 
 /* Separador SÃ“LO entre subbotones (blanco con alta opacidad) */
