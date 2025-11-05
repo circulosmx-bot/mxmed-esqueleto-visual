@@ -238,13 +238,16 @@ body{margin:0;background:var(--mm-fondo-base);}
   position:absolute;
   left:0; top:0; bottom:0;
   width:10px;
-  background:#003152;
+  background:#003251; /* ceja principal seleccionada */
   transform:none;
   opacity:1;
   z-index:1;
   border-top-left-radius:.55rem;
   border-bottom-left-radius:.55rem;
 }
+
+/* Ajuste: ceja para submenú seleccionado */
+.menu-sub-btn.active::before{ background:#3D647D; }
 
 /* Hover: barra previa sutil para no seleccionados */
 .menu-main:not(.active):hover::before,
@@ -278,7 +281,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   position:absolute;
   left:0; top:0; bottom:0;
   width:10px;
-  background:#7FD5E4; /* misma ceja que secundarios inactivos */
+  background:#003251; /* ceja principal cuando grupo está abierto */
   transform:none;
   opacity:1;
   z-index:1;
