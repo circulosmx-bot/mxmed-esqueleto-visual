@@ -7,6 +7,10 @@ function jumpTo(panelId){
   // marca activo el subbotón correspondiente, si existe
   $('.menu-sub-btn').removeClass('active');
   $('.menu-sub-btn[data-panel="'+panelId+'"]').addClass('active');
+  // marcar activo el botón principal si es un panel directo
+  $('.menu-main').removeClass('active');
+  var $main = $('.menu-main[data-panel="'+panelId+'"]');
+  if($main.length){ $main.addClass('active'); }
   localStorage.setItem('mxmed_last_panel', panelId);
 }
 function selectInfoTab(selector){
@@ -34,6 +38,9 @@ $('.menu-main').on('click', function(){
   if(panel){ // sin submenú: abrir panel directo
     $('.menu-sub').removeClass('open').slideUp(100);
     showPanel(panel);
+    // activar este botón principal y desactivar los demás
+    $('.menu-main').removeClass('active');
+    $(this).addClass('active');
     localStorage.setItem('mxmed_last_panel', panel);
     localStorage.removeItem('mxmed_menu_group'); // ningún grupo abierto
   }else if(grp){ // con submenú (acordeón)
@@ -44,6 +51,8 @@ $('.menu-main').on('click', function(){
     }else{
       openGroup(grp);
     }
+    // al trabajar con submenús, ningún botón principal queda activo
+    $('.menu-main').removeClass('active');
   }
 });
 
@@ -57,6 +66,8 @@ function showPanel(id){
 $('.menu-sub-btn').on('click', function(){
   $('.menu-sub-btn').removeClass('active');
   $(this).addClass('active');
+  // limpiar activos en botones principales cuando se usa submenú
+  $('.menu-main').removeClass('active');
   const id = $(this).data('panel');
   if(id) showPanel(id);
   const grp = $(this).closest('.menu-sub').data('group');
@@ -86,6 +97,10 @@ $(function(){
   if(!opened){
     $('.menu-sub').removeClass('open').hide();
   }
+
+  // Si el último panel coincide con un botón principal directo, marcarlo activo
+  const $mainMatch = $('.menu-main[data-panel="'+lastPanel+'"]');
+  if($mainMatch.length){ $('.menu-main').removeClass('active'); $mainMatch.addClass('active'); }
 
   // Restaurar pestaña interna de Información · Mi Perfil
   const lastInfoTab = localStorage.getItem('mxmed_info_tab') || '#t-datos';
