@@ -67,7 +67,9 @@ $('.menu-sub-btn').on('click', function(){
 /* ===== Restaurar estado previo ===== */
 $(function(){
   // Por defecto, mostrar RESUMEN
-  const lastPanel = localStorage.getItem('mxmed_last_panel') || 'p-resumen';
+  let lastPanel = localStorage.getItem('mxmed_last_panel') || 'p-resumen';
+  // Migración: renombrar p-mensajes -> p-notificaciones si viene de estado previo
+  if(lastPanel === 'p-mensajes'){ lastPanel = 'p-notificaciones'; localStorage.setItem('mxmed_last_panel', lastPanel); }
   showPanel(lastPanel);
 
   // Si último panel pertenece a un grupo, abrirlo
