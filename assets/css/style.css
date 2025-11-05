@@ -322,7 +322,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 .menu-sub.open .menu-sub-btn:not(.active):hover::before{
   width:12px; /* leve crecimiento de la ceja */
-  background:#7FD5E4; /* mantiene paleta */
+  background:#003152; /* replica el azul de hover en principales */
 }
 
 .menu-sub{ display:none; flex-direction:column; gap:0; padding-top:6px; padding-bottom:6px; }
