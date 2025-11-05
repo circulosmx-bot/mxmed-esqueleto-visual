@@ -268,20 +268,21 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* Grupo abierto: el botón principal usa el estilo de secundarios inactivos */
 .menu-main:has(+ .menu-sub.open){
-  --btn-bg:#B6E8EF; /* mismo fondo que secundarios inactivos */
-  color:#004465;    /* mismo color de texto/ícono */
+  /* Nuevo esquema para botón principal con acordeón desplegado */
+  --btn-bg:#3D647D; /* fondo del botón principal */
+  color:#FFFFFF;    /* texto blanco */
 }
 .menu-main:has(+ .menu-sub.open) .ico,
 .menu-main:has(+ .menu-sub.open) .ico > *,
 .menu-main:has(+ .menu-sub.open) .ico i{
-  color:#003B59; /* icono ligeramente más oscuro para mejor contraste */
+  color:#FFFFFF; /* icono en blanco */
 }
 .menu-main:has(+ .menu-sub.open)::before{
   content:"";
   position:absolute;
   left:0; top:0; bottom:0;
   width:10px;
-  background:#003251; /* ceja principal cuando grupo está abierto */
+  background:#FFFFFF; /* ceja blanca */
   transform:none;
   opacity:1;
   z-index:1;
@@ -291,8 +292,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 /* Mantener estos colores también en hover/focus del botón principal cuando el grupo está abierto */
 .menu-main:has(+ .menu-sub.open):hover,
 .menu-main:has(+ .menu-sub.open):focus-visible{
-  --btn-bg:#B6E8EF;
-  color:#004465;
+  --btn-bg:#3D647D;
+  color:#FFFFFF;
 }
 
 /* Submenú expandido: dar tinte de grupo a los no seleccionados */
