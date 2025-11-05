@@ -263,22 +263,28 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-bottom-left-radius:.55rem;
 }
 
-/* Considerar activo el botón principal si su submenú está abierto */
+/* Grupo abierto: el botón principal usa el estilo de secundarios inactivos */
 .menu-main:has(+ .menu-sub.open){
-  --btn-bg:#F2FBFC;
-  color:#003152;
+  --btn-bg:#B6E8EF; /* mismo fondo que secundarios inactivos */
+  color:#004465;    /* mismo color de texto/ícono */
 }
 .menu-main:has(+ .menu-sub.open)::before{
   content:"";
   position:absolute;
   left:0; top:0; bottom:0;
   width:10px;
-  background:#003152;
+  background:#7FD5E4; /* misma ceja que secundarios inactivos */
   transform:none;
   opacity:1;
   z-index:1;
   border-top-left-radius:.55rem;
   border-bottom-left-radius:.55rem;
+}
+/* Mantener estos colores también en hover/focus del botón principal cuando el grupo está abierto */
+.menu-main:has(+ .menu-sub.open):hover,
+.menu-main:has(+ .menu-sub.open):focus-visible{
+  --btn-bg:#B6E8EF;
+  color:#004465;
 }
 
 /* Submenú expandido: dar tinte de grupo a los no seleccionados */
