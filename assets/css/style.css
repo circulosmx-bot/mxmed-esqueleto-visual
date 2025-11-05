@@ -339,11 +339,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 
 /* Separador SÃ“LO entre subbotones (blanco con alta opacidad) */
-.menu-sep{
-  height:6px; border-radius:6px;
-  background:rgba(255,255,255,.85);
-  margin:0;
-}
+.menu-sep{ display:none; }
 
 .menu-sub-btn .block{
   display:flex;
