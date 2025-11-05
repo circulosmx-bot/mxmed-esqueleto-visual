@@ -293,6 +293,21 @@ body{margin:0;background:var(--mm-fondo-base);}
   position:absolute; left:0; top:0; bottom:0;
   width:10px; background:#7FD5E4; opacity:1; transform:none; z-index:1;
   border-top-left-radius:.55rem; border-bottom-left-radius:.55rem;
+  transition: width var(--mm-transition), background-color var(--mm-transition), opacity var(--mm-transition);
+}
+
+/* Animación de hover en submenús (inactivos dentro del grupo) */
+.menu-sub.open .menu-sub-btn:not(.active){
+  transition: background-color var(--mm-transition), color var(--mm-transition), box-shadow var(--mm-transition);
+}
+.menu-sub.open .menu-sub-btn:not(.active):hover{
+  --btn-bg:#F2FBFC; /* anticipa seleccionado */
+  color:#003152;
+  box-shadow:0 2px 6px rgba(0,0,0,.08);
+}
+.menu-sub.open .menu-sub-btn:not(.active):hover::before{
+  width:12px; /* leve crecimiento de la ceja */
+  background:#7FD5E4; /* mantiene paleta */
 }
 
 .menu-sub{ display:none; flex-direction:column; gap:0; padding-top:6px; padding-bottom:6px; }
