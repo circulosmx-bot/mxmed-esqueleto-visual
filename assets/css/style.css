@@ -283,8 +283,16 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* Submenú expandido: dar tinte de grupo a los no seleccionados */
 .menu-sub.open .menu-sub-btn:not(.active){
-  /* #00B0C5 con alfa ~22% */
-  --btn-bg: rgba(0,176,197,.22);
+  /* Fondo según muestra: #B6E8EF */
+  --btn-bg: #B6E8EF;
+  color:#004465; /* Texto/ícono inactivo */
+}
+/* Ceja lateral para inactivos dentro del grupo */
+.menu-sub.open .menu-sub-btn:not(.active)::before{
+  content:"";
+  position:absolute; left:0; top:0; bottom:0;
+  width:10px; background:#7FD5E4; opacity:1; transform:none; z-index:1;
+  border-top-left-radius:.55rem; border-bottom-left-radius:.55rem;
 }
 
 .menu-sub{ display:none; flex-direction:column; gap:0; padding-top:6px; padding-bottom:6px; }
