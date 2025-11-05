@@ -268,6 +268,11 @@ body{margin:0;background:var(--mm-fondo-base);}
   --btn-bg:#B6E8EF; /* mismo fondo que secundarios inactivos */
   color:#004465;    /* mismo color de texto/ícono */
 }
+.menu-main:has(+ .menu-sub.open) .ico,
+.menu-main:has(+ .menu-sub.open) .ico > *,
+.menu-main:has(+ .menu-sub.open) .ico i{
+  color:#003B59; /* icono ligeramente más oscuro para mejor contraste */
+}
 .menu-main:has(+ .menu-sub.open)::before{
   content:"";
   position:absolute;
