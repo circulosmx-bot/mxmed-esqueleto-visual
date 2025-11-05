@@ -291,7 +291,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .menu-sub.open{
   display:flex;
   /* Fondo de grupo para transmitir pertenencia */
-  background: rgba(0,176,197,.12); /* tinte suave de #00B0C5 */
+  background: rgba(0,176,197,.20); /* 20% alfa de #00B0C5 */
   border: 1px solid rgba(0,86,132,.15);
   border-radius: .65rem;
   padding: 8px 6px; /* un poco más de aire al grupo */
