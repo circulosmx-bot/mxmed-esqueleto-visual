@@ -934,3 +934,11 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* Pegarlas a la parte superior de la caja */
 .mm-card .body:has(#tabs-info){ padding-top:0 }
+
+/* Profundidad alternada: niveles de alfa en tabs no activos */
+#p-info .mm-tabs-embed .nav-item:nth-child(1) .nav-link:not(.active){ background: rgba(0,176,197,.90); color:#fff }
+#p-info .mm-tabs-embed .nav-item:nth-child(2) .nav-link:not(.active){ background: rgba(0,176,197,.82); color:#fff }
+#p-info .mm-tabs-embed .nav-item:nth-child(3) .nav-link:not(.active){ background: rgba(0,176,197,.74); color:#fff }
+#p-info .mm-tabs-embed .nav-item:nth-child(4) .nav-link:not(.active){ background: rgba(0,176,197,.66); color:#fff }
+#p-info .mm-tabs-embed .nav-item:nth-child(5) .nav-link:not(.active){ background: rgba(0,176,197,.58); color:#fff }
+#p-info .mm-tabs-embed .nav-item .nav-link:not(.active) .tab-ico{ color:#fff }
