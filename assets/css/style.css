@@ -927,7 +927,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   padding:.55rem .8rem; min-height:60px;
 }
 #p-info .mm-tabs-embed .nav-link .tab-lbl{ text-transform:uppercase; font-weight:700; line-height:1.1; white-space:normal; }
-#p-info .mm-tabs-embed .nav-link .tab-ico{ font-size:1.5rem; line-height:1; }
+#p-info .mm-tabs-embed .nav-link .tab-ico{ font-size:3rem; line-height:1; }
 #p-info .mm-tabs-embed .nav-link:hover{ filter:brightness(1.06); background:#00ADC1; color:#fff; }
 #p-info .mm-tabs-embed .nav-link.active{ background:#F2FBFC; color:#003152; }
 #p-info .mm-tabs-embed .nav-link.active .tab-ico{ color:#003152; }
