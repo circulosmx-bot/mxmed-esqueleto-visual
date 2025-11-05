@@ -935,13 +935,14 @@ body{margin:0;background:var(--mm-fondo-base);}
   text-transform:uppercase; font-weight:700; line-height:1.1; white-space:normal; 
   flex:1 1 auto; text-align:center; display:block;
 }
+#p-info .mm-tabs-embed .nav-link .tab-ico{ flex:0 0 3.2rem; min-width:3.2rem; text-align:left; }
 #p-info .mm-tabs-embed .nav-link .tab-ico{ font-size:3rem; line-height:1; }
 #p-info .mm-tabs-embed .nav-link:hover{ filter:brightness(1.06); background:#00ADC1; color:#fff; }
 #p-info .mm-tabs-embed .nav-link.active{ background:#F2FBFC; color:#003152; }
 #p-info .mm-tabs-embed .nav-link.active .tab-ico{ color:#003152; }
 
 /* Pegarlas a la parte superior de la caja */
-.mm-card .body:has(#tabs-info){ padding-top:0 }
+.mm-card .body:has(#tabs-info){ padding-top:0; overflow:hidden }
 
 /* Profundidad alternada: niveles de alfa en tabs no activos */
 #p-info .mm-tabs-embed .nav-item:nth-child(1) .nav-link:not(.active){ background: rgba(0,176,197,.90); color:#fff }
