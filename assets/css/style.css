@@ -121,7 +121,8 @@ body{margin:0;background:var(--mm-fondo-base);}
   background:transparent;
 }
 .menu-main{
-  --btn-bg:var(--mm-acc-contraido);
+  /* Base no seleccionado: color de fondo #00B0C5 */
+  --btn-bg:var(--mm-fondo-base);
   --btn-gradient:linear-gradient(120deg,#2CBDCE 0%,#00B0C5 52%,#003152 100%);
 }
 .menu-sub-btn{
@@ -180,9 +181,13 @@ body{margin:0;background:var(--mm-fondo-base);}
 .menu-sub-btn:focus-visible{
   --btn-bg: var(--mm-acc-activo);
 }
-.menu-main:hover,
-.menu-main:focus-visible{
-  --btn-bg: var(--mm-acc-activo);
+/* Hover previo (no seleccionado): anticipa estilo seleccionado */
+.menu-main:not(.active):hover,
+.menu-main:not(.active):focus-visible,
+.menu-sub-btn:not(.active):hover,
+.menu-sub-btn:not(.active):focus-visible{
+  --btn-bg:#F2FBFC;
+  color:#003152;
 }
 .menu-main .ttl{
   font-family:'Asap','Carlito','IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
@@ -207,10 +212,80 @@ body{margin:0;background:var(--mm-fondo-base);}
   align-items:center;
   justify-content:center;
 }
-  .menu-main .txt,
-  .menu-main .ico,
-  .menu-sub-btn .block,
-  .menu-sub-btn .ico-right{position:relative;z-index:2;}
+.menu-main .txt,
+.menu-main .ico,
+.menu-sub-btn .block,
+.menu-sub-btn .ico-right{position:relative;z-index:2;}
+
+/* Estado seleccionado: fondo claro y contenidos en azul oscuro */
+.menu-main.active,
+.menu-sub-btn.active{
+  --btn-bg:#F2FBFC;
+  color:#003152;
+}
+/* Mantener estilo seleccionado incluso al hacer hover/focus */
+.menu-main.active:hover,
+.menu-main.active:focus-visible,
+.menu-sub-btn.active:hover,
+.menu-sub-btn.active:focus-visible{
+  --btn-bg:#F2FBFC;
+  color:#003152;
+}
+/* Barra lateral izquierda en seleccionado */
+.menu-main.active::before,
+.menu-sub-btn.active::before{
+  content:"";
+  position:absolute;
+  left:0; top:0; bottom:0;
+  width:10px;
+  background:#003152;
+  transform:none;
+  opacity:1;
+  z-index:1;
+  border-top-left-radius:.55rem;
+  border-bottom-left-radius:.55rem;
+}
+
+/* Hover: barra previa sutil para no seleccionados */
+.menu-main:not(.active):hover::before,
+.menu-main:not(.active):focus-visible::before,
+.menu-sub-btn:not(.active):hover::before,
+.menu-sub-btn:not(.active):focus-visible::before{
+  content:"";
+  position:absolute;
+  left:0; top:0; bottom:0;
+  width:8px;
+  background:#003152;
+  opacity:.75;
+  transform:none;
+  z-index:1;
+  border-top-left-radius:.55rem;
+  border-bottom-left-radius:.55rem;
+}
+
+/* Considerar activo el botón principal si su submenú está abierto */
+.menu-main:has(+ .menu-sub.open){
+  --btn-bg:#F2FBFC;
+  color:#003152;
+}
+.menu-main:has(+ .menu-sub.open)::before{
+  content:"";
+  position:absolute;
+  left:0; top:0; bottom:0;
+  width:10px;
+  background:#003152;
+  transform:none;
+  opacity:1;
+  z-index:1;
+  border-top-left-radius:.55rem;
+  border-bottom-left-radius:.55rem;
+}
+
+/* Submenú expandido: dar tinte de grupo a los no seleccionados */
+.menu-sub.open .menu-sub-btn:not(.active){
+  /* #00B0C5 con alfa ~22% */
+  --btn-bg: rgba(0,176,197,.22);
+}
 
 .menu-sub{ display:none; flex-direction:column; gap:0; padding-top:6px; padding-bottom:6px; }
 .menu-sub.open{display:flex;}
