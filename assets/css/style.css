@@ -943,6 +943,27 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* Pegarlas a la parte superior de la caja */
 .mm-card .body:has(#tabs-info){ padding-top:0; overflow:hidden }
+.mm-card .body:has(.mm-tabs-embed){ padding-top:0; overflow:hidden }
+
+/* ===== Tabs incrustados: base reutilizable para otras secciones ===== */
+.mm-tabs-embed{ display:flex; flex-wrap:nowrap; gap:3px; padding:0; margin:0 -0.9rem 0 -0.9rem; }
+.mm-tabs-embed .nav-item{ flex:1 1 0; }
+.mm-tabs-embed .nav-link{
+  display:flex; align-items:center; gap:.6rem; justify-content:flex-start;
+  width:100%; height:100%; border:0; border-radius:0;
+  background:#00B0C5; color:#FFFFFF; text-align:left;
+  padding:.55rem .8rem; min-height:60px;
+}
+.mm-tabs-embed .nav-link .tab-lbl{ text-transform:uppercase; font-weight:700; line-height:1.1; white-space:normal; flex:1 1 auto; text-align:center; display:block; }
+.mm-tabs-embed .nav-link .tab-ico{ flex:0 0 3.2rem; min-width:3.2rem; text-align:left; font-size:3rem; line-height:1; }
+.mm-tabs-embed .nav-link:hover{ filter:brightness(1.06); background:#00ADC1; color:#fff; }
+.mm-tabs-embed .nav-link.active{ background:#F2FBFC; color:#003152; }
+.mm-tabs-embed .nav-link.active .tab-ico{ color:#003152; }
+
+/* Secciones con pocos tabs: dejar espacio a la derecha */
+#p-consultorio .mm-tabs-embed .nav-item,
+#p-seguridad .mm-tabs-embed .nav-item,
+#p-paquetes .mm-tabs-embed .nav-item{ flex:0 0 240px; }
 
 /* Profundidad alternada: niveles de alfa en tabs no activos */
 #p-info .mm-tabs-embed .nav-item:nth-child(1) .nav-link:not(.active){ background: rgba(0,176,197,.90); color:#fff }
