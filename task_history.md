@@ -86,3 +86,9 @@ Formato sugerido por entrada:
   Descripción: Cuando hay alerta de límite, la dropzone cambia a borde rojo temporalmente; además el contador adopta estilo destacado al llegar al máximo (`.max`).  
   Archivos/Refs: `assets/css/style.css` (`.fotos-drop.error`, `.fotos-counter.max`), `assets/js/fotos.js` (toggle de clases en `showMsg` y `updateCount`).  
   Estado: completado
+
+- Fecha: 2025-11-06  
+  Tarea: Versionar SVGs de sección Fotos  
+  Descripción: Se añaden al repositorio los SVGs provistos para el icono y el botón de carga de imágenes en la sección Fotos.  
+  Archivos/Refs: `assets/icons/carga-de-imagenes.svg`, `assets/icons/boton-carga-de-imagenes.svg`  
+  Estado: completado
