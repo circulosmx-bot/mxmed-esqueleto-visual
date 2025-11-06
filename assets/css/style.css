@@ -977,10 +977,11 @@ body{margin:0;background:var(--mm-fondo-base);}
 .fotos-drop{ border:4px dashed #00ADC1; border-radius:20px; background:#fff; padding:28px; text-align:center; color:#003152; transition:border-color .2s ease, background-color .2s ease }
 .fotos-drop.dragover{ background:#F2FBFC; border-color:#00B0C5 }
 .fotos-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; margin-top:12px }
-.foto-item{ position:relative; border:1px solid #d9e5ec; border-radius:10px; overflow:hidden; background:#fff }
+.foto-item{ position:relative; border:1px solid #d9e5ec; border-radius:10px; overflow:visible; background:#fff }
 .foto-item img{ display:block; width:100%; height:100%; object-fit:cover; aspect-ratio:1/1 }
-.foto-x{ position:absolute; top:6px; right:6px; width:26px; height:26px; border-radius:50%; border:0; background:#003152; color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; line-height:1; opacity:.9 }
-.foto-x:hover{ opacity:1; filter:brightness(1.1) }
+/* Botón de eliminar de miniatura: replica estilo de las X de chips */
+.foto-x{ position:absolute; top:-6px; right:-6px; width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; background:#EF5070; color:#fff; border:0; border-radius:50%; cursor:pointer; line-height:1; font-size:19px; font-weight:700 }
+.foto-x:hover{ filter:brightness(1.05) }
 `n/* Tab-content fallback: asegurar visibilidad del activo */`n.tab-content > .tab-pane{ display:none; }`n.tab-content > .active{ display:block; width:100%; }`n`n/* Altura mínima para panel fotos vacío */`n#t-fotos .fotos-drop{ min-height:160px }`n
 #t-fotos{ min-height:520px }
 #t-fotos .fotos-drop{ min-height:420px; margin-bottom:12px }

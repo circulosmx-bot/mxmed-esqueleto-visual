@@ -68,3 +68,9 @@ Formato sugerido por entrada:
   Descripción: Se ajusta el límite máximo de imágenes permitidas a 21 y se actualiza el texto del UI.  
   Archivos/Refs: `assets/js/fotos.js` (`MAX = 21`), `index.html:451, 461` ("Hasta 21 imágenes", "0 / 21").  
   Estado: completado
+
+- Fecha: 2025-11-06  
+  Tarea: Miniaturas con botón X estilo chips  
+  Descripción: La cuadrícula debajo del dropzone muestra miniaturas; el botón de eliminar en cada miniatura replica color, tamaño y forma de las X de chips (20x20, fondo #EF5070, borde redondo).  
+  Archivos/Refs: `assets/css/style.css` (`.foto-item`, `.foto-x`)  
+  Estado: completado
