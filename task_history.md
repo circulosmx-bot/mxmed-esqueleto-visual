@@ -80,3 +80,9 @@ Formato sugerido por entrada:
   Descripción: Se agrega contenedor de mensajes en el drop y lógica JS para mostrar alerta accesible (ARIA `role="alert"`) cuando se supera el máximo. Indica cuántas se pueden agregar y cuántas se omiten. Auto-oculta en ~3.2s.  
   Archivos/Refs: `index.html` (`#fotos-msg`), `assets/css/style.css` (`.fotos-msg`), `assets/js/fotos.js` (`showMsg`, validación en `addFiles`)  
   Estado: completado
+
+- Fecha: 2025-11-06  
+  Tarea: Señal visual de límite (borde rojo y contador)  
+  Descripción: Cuando hay alerta de límite, la dropzone cambia a borde rojo temporalmente; además el contador adopta estilo destacado al llegar al máximo (`.max`).  
+  Archivos/Refs: `assets/css/style.css` (`.fotos-drop.error`, `.fotos-counter.max`), `assets/js/fotos.js` (toggle de clases en `showMsg` y `updateCount`).  
+  Estado: completado

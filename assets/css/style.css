@@ -1015,10 +1015,15 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* Contador bajo el botón */
 .fotos-counter{ color:#97DAE4; font-weight:700; font-size:2rem }
+.fotos-counter.max{ color:#EF5070 }
 
 /* Mensajes del drop (alerta de límite, etc.) */
 .fotos-msg{ display:none; margin-top:4px; color:#EF5070; font-weight:700 }
 .fotos-msg.show{ display:block }
+
+/* Estado de error (límite excedido) en dropzone */
+.fotos-drop.error{ border-color:#EF5070; background:#FFF7F9 }
+.fotos-drop.error.dragover{ border-color:#EF5070 }
 
 
 /* Fotos: botón primario color marca */

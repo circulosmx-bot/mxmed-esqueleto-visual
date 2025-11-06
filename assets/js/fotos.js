@@ -9,7 +9,12 @@
 
   function load(){ try { return JSON.parse(localStorage.getItem('mxmed_fotos')||'[]'); } catch(e){ return []; } }
   function save(arr){ localStorage.setItem('mxmed_fotos', JSON.stringify(arr)); updateCount(arr); }
-  function updateCount(arr){ countEl.textContent = (arr||load()).length; }
+  function updateCount(arr){
+    const n = (arr||load()).length;
+    countEl.textContent = n;
+    if(n >= MAX) countEl.parentElement?.classList.add('max');
+    else countEl.parentElement?.classList.remove('max');
+  }
 
   let hideMsgTimer = null;
 
@@ -17,8 +22,9 @@
     if(!msgEl) return;
     msgEl.textContent = text;
     msgEl.classList.add('show');
+    drop.classList.add('error');
     if(hideMsgTimer) clearTimeout(hideMsgTimer);
-    hideMsgTimer = setTimeout(()=>{ msgEl.classList.remove('show'); }, 3200);
+    hideMsgTimer = setTimeout(()=>{ msgEl.classList.remove('show'); drop.classList.remove('error'); }, 3200);
   }
 
   function render(){
