@@ -1,6 +1,6 @@
 ﻿(function(){
-    const btn = e.target.closest('.fotos-browse, .fotos-upload');\r
-    if(btn){ input.click(); }\r
+  const MAX = 20;
+  const drop = document.getElementById('fotos-drop');
   const grid = document.getElementById('fotos-grid');
   const input = document.getElementById('fotos-input');
   const countEl = document.getElementById('fotos-count');
@@ -39,7 +39,7 @@
   }
 
   drop.addEventListener('click', (e)=>{
-    const btn = e.target.closest('.fotos-browse, .fotos-upload');
+    const btn = e.target.closest('.fotos-browse');
     if(btn){ input.click(); }
   });
   input.addEventListener('change', (e)=>{ addFiles(Array.from(e.target.files||[])); input.value=''; });
@@ -50,5 +50,4 @@
 
   render();
 })();
-
 
