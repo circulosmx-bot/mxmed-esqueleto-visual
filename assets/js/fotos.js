@@ -1,4 +1,4 @@
-(function(){
+﻿(function(){
   const MAX = 20;
   const drop = document.getElementById('fotos-drop');
   const grid = document.getElementById('fotos-grid');
@@ -11,7 +11,7 @@
   function updateCount(arr){ countEl.textContent = (arr||load()).length; }
 
   function render(){
-    const items = load(); grid.innerHTML='';
+    const items = load(); grid.innerHTML=''; drop.classList.toggle('has-items', items.length>0); document.getElementById('t-fotos')?.classList.toggle('has-items', items.length>0);
     items.forEach((it,idx)=>{
       const wrap = document.createElement('div'); wrap.className='foto-item';
       const img = document.createElement('img'); img.src = it.data; img.alt = 'foto '+(idx+1);
