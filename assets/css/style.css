@@ -988,18 +988,21 @@ body{margin:0;background:var(--mm-fondo-base);}
 #t-fotos .fotos-drop.has-items{ min-height:140px }
 
 
-.fotos-drop .fotos-drop-inner{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; text-align:center }
+.fotos-drop .fotos-drop-inner{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; text-align:center }
 
-/* Icono central (usando Material Symbols como fallback) */
-.fotos-ico{ position:relative; width:64px; height:64px; display:inline-flex; align-items:center; justify-content:center; }
+/* Icono central: usar SVG provisto; fallback Material Symbols queda disponible si se requiere */
+.fotos-ico{ position:relative; width:64px; height:64px; display:inline-flex; align-items:center; justify-content:center }
 .fotos-ico .base{ font-size:52px; color:#003152 }
 .fotos-ico .up{ position:absolute; left:-2px; top:-4px; width:24px; height:24px; line-height:24px; font-size:18px; background:#00B0C5; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center }
+.fotos-ico-img{ width:58px; height:auto; display:block }
 
-.fotos-title{ font-size:1.25rem; color:#2E4A5A }
+.fotos-title{ font-size:1.375rem; color:#2E4A5A }
 
 /* Botón primario estilo marca dentro de drop */
-.fotos-drop .btn-primary{ background:#00B0C5; border-color:#00A7BB; color:#fff; border-radius:12px; padding:.5rem 1rem; box-shadow:0 2px 0 rgba(0,0,0,.12) }
-.fotos-drop .btn-primary:hover{ filter:brightness(1.06) }
+/* Botón como imagen SVG provista */
+.fotos-btn-img{ background:none; border:0; padding:0; line-height:0; display:inline-flex; align-items:center; justify-content:center }
+.fotos-btn-img img{ width:210px; height:auto; display:block }
+.fotos-btn-img:hover{ filter:brightness(1.06) }
 
 /* Contador bajo el botón */
 .fotos-counter{ color:#97DAE4; font-weight:700 }

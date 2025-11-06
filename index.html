@@ -451,12 +451,13 @@
                 <div class="mb-2"><strong>Publica fotografías alusivas a tu práctica médica</strong> <small class="text-muted">(Hasta 20 imágenes)</small></div>
                 <div id="fotos-drop" class="fotos-drop" role="region" aria-label="Cargar fotos">
                   <div class="fotos-drop-inner">
-                    <div class="fotos-ico" aria-hidden="true">
-                      <span class="material-symbols-rounded base">image</span>
-                      <span class="material-symbols-rounded up">arrow_upward</span>
-                    </div>
+                    <img class="fotos-ico-img" src="assets/icons/carga-de-imagenes.svg" alt="Icono carga de imágenes" aria-hidden="true">
                     <div class="fotos-title">Arrastra y suelta tus imágenes aquí</div>
-                    <div><button type="button" class="btn btn-primary fotos-browse"><span class="material-symbols-rounded" aria-hidden="true">add_photo_alternate</span> cargar imágenes</button></div>
+                    <div>
+                      <button type="button" class="fotos-browse fotos-btn-img" aria-label="Cargar imágenes">
+                        <img src="assets/icons/boton-carga-de-imagenes.svg" alt="cargar imágenes">
+                      </button>
+                    </div>
                     <div class="fotos-counter"><span id="fotos-count">0</span> / 20</div>
                   </div>
                   <input id="fotos-input" class="d-none" type="file" accept="image/*" multiple>
