@@ -32,3 +32,9 @@ Formato sugerido por entrada:
   Descripción: Se añade la primera versión de `task_history.md` y se realiza commit y push en la rama actual para que quede disponible en remoto.  
   Archivos/Refs: `task_history.md`, rama `feature/sidebar-acordeon-paleta-sutil`  
   Estado: completado
+
+- Fecha: 2025-11-06  
+  Tarea: Definir carpeta para íconos e imágenes  
+  Descripción: Se crea la estructura para assets gráficos estáticos: `assets/icons/` (SVGs de íconos UI) y `assets/img/` (imágenes/raster u otros gráficos). Se agregan `.gitkeep` para versionado.  
+  Archivos/Refs: `assets/icons/.gitkeep`, `assets/img/.gitkeep`  
+  Estado: completado
