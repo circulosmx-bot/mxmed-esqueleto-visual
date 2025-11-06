@@ -62,3 +62,9 @@ Formato sugerido por entrada:
   Descripción: Al pasar el mouse o arrastrar (dragover) sobre la caja `.fotos-drop`, solo el icono central reduce su opacidad a ~0.5 con transición suave. Aplica a SVG (`.fotos-ico-img`) y fallback de Material (`.fotos-ico`).  
   Archivos/Refs: `assets/css/style.css` (reglas de hover/dragover y `transition`)  
   Estado: completado
+
+- Fecha: 2025-11-06  
+  Tarea: Aumentar límite de fotos a 21  
+  Descripción: Se ajusta el límite máximo de imágenes permitidas a 21 y se actualiza el texto del UI.  
+  Archivos/Refs: `assets/js/fotos.js` (`MAX = 21`), `index.html:451, 461` ("Hasta 21 imágenes", "0 / 21").  
+  Estado: completado
