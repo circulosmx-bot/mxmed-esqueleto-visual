@@ -56,3 +56,9 @@ Formato sugerido por entrada:
   Descripción: Reducido botón -25% (210px → 158px), icono central +20% (58px → 70px) y contador duplicado (font-size 2rem).  
   Archivos/Refs: `assets/css/style.css` (`.fotos-btn-img img`, `.fotos-ico-img`, `.fotos-counter`)  
   Estado: completado
+
+- Fecha: 2025-11-06  
+  Tarea: Efecto hover en dropzone (icono a 50% alfa)  
+  Descripción: Al pasar el mouse o arrastrar (dragover) sobre la caja `.fotos-drop`, solo el icono central reduce su opacidad a ~0.5 con transición suave. Aplica a SVG (`.fotos-ico-img`) y fallback de Material (`.fotos-ico`).  
+  Archivos/Refs: `assets/css/style.css` (reglas de hover/dragover y `transition`)  
+  Estado: completado

@@ -995,6 +995,14 @@ body{margin:0;background:var(--mm-fondo-base);}
 .fotos-ico .base{ font-size:52px; color:#003152 }
 .fotos-ico .up{ position:absolute; left:-2px; top:-4px; width:24px; height:24px; line-height:24px; font-size:18px; background:#00B0C5; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center }
 .fotos-ico-img{ width:70px; height:auto; display:block }
+/* Hover/dragover: solo el icono baja a ~50% de opacidad */
+.fotos-ico-img{ transition:opacity .2s ease }
+.fotos-drop:hover .fotos-ico-img,
+.fotos-drop.dragover .fotos-ico-img{ opacity:.5 }
+/* Fallback para icono compuesto con Material Symbols */
+.fotos-ico{ transition:opacity .2s ease }
+.fotos-drop:hover .fotos-ico,
+.fotos-drop.dragover .fotos-ico{ opacity:.5 }
 
 .fotos-title{ font-size:1.375rem; color:#2E4A5A }
 
