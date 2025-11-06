@@ -38,3 +38,9 @@ Formato sugerido por entrada:
   Descripción: Se crea la estructura para assets gráficos estáticos: `assets/icons/` (SVGs de íconos UI) y `assets/img/` (imágenes/raster u otros gráficos). Se agregan `.gitkeep` para versionado.  
   Archivos/Refs: `assets/icons/.gitkeep`, `assets/img/.gitkeep`  
   Estado: completado
+
+- Fecha: 2025-11-06  
+  Tarea: Ajuste UI del tab de Fotos (layout)  
+  Descripción: Se replica el layout proporcionado: borde punteado grueso y redondeado, icono central con flecha de carga, texto guía, botón primario “cargar imágenes” y contador debajo. Se centra vertical/horizontalmente y se afinan tamaños/colores.  
+  Archivos/Refs: `index.html:451-460`, `assets/css/style.css` (bloques `.fotos-drop`, `.fotos-ico`, `.fotos-title`, `.fotos-counter`, `.btn-primary`), `assets/js/fotos.js` (sin cambios funcionales).  
+  Estado: completado

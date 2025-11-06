@@ -974,10 +974,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-info .mm-tabs-embed .nav-item .nav-link:not(.active) .tab-ico{ color:#fff }
 
 /* ===== FOTOS: dropzone + grid ===== */
-.fotos-drop{ border:2px dashed #99bfd0; border-radius:12px; background:#fff; padding:18px; text-align:center; color:#003152; transition:border-color .2s ease, background-color .2s ease }
-.fotos-drop .material-symbols-rounded{ font-size:28px; vertical-align:middle; color:#00ADC1; }
-.fotos-drop .fotos-browse{ color:#00738F; text-decoration:underline; }
-.fotos-drop.dragover{ background:#F2FBFC; border-color:#00ADC1 }
+.fotos-drop{ border:4px dashed #00ADC1; border-radius:20px; background:#fff; padding:28px; text-align:center; color:#003152; transition:border-color .2s ease, background-color .2s ease }
+.fotos-drop.dragover{ background:#F2FBFC; border-color:#00B0C5 }
 .fotos-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; margin-top:12px }
 .foto-item{ position:relative; border:1px solid #d9e5ec; border-radius:10px; overflow:hidden; background:#fff }
 .foto-item img{ display:block; width:100%; height:100%; object-fit:cover; aspect-ratio:1/1 }
@@ -990,10 +988,23 @@ body{margin:0;background:var(--mm-fondo-base);}
 #t-fotos .fotos-drop.has-items{ min-height:140px }
 
 
-.fotos-drop .fotos-drop-inner{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; text-align:center }
+.fotos-drop .fotos-drop-inner{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; text-align:center }
+
+/* Icono central (usando Material Symbols como fallback) */
+.fotos-ico{ position:relative; width:64px; height:64px; display:inline-flex; align-items:center; justify-content:center; }
+.fotos-ico .base{ font-size:52px; color:#003152 }
+.fotos-ico .up{ position:absolute; left:-2px; top:-4px; width:24px; height:24px; line-height:24px; font-size:18px; background:#00B0C5; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center }
+
+.fotos-title{ font-size:1.25rem; color:#2E4A5A }
+
+/* Botón primario estilo marca dentro de drop */
+.fotos-drop .btn-primary{ background:#00B0C5; border-color:#00A7BB; color:#fff; border-radius:12px; padding:.5rem 1rem; box-shadow:0 2px 0 rgba(0,0,0,.12) }
+.fotos-drop .btn-primary:hover{ filter:brightness(1.06) }
+
+/* Contador bajo el botón */
+.fotos-counter{ color:#97DAE4; font-weight:700 }
 
 
 /* Fotos: botón primario color marca */
-.fotos-drop .btn-primary{ background:#005684; border-color:#005684 }
-.fotos-drop .btn-primary:hover{ filter:brightness(1.06) }
+/* override previo (mantener último) */
 
