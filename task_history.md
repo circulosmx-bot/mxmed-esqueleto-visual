@@ -74,3 +74,9 @@ Formato sugerido por entrada:
   Descripción: La cuadrícula debajo del dropzone muestra miniaturas; el botón de eliminar en cada miniatura replica color, tamaño y forma de las X de chips (20x20, fondo #EF5070, borde redondo).  
   Archivos/Refs: `assets/css/style.css` (`.foto-item`, `.foto-x`)  
   Estado: completado
+
+- Fecha: 2025-11-06  
+  Tarea: Alerta de límite al intentar subir >21 fotos  
+  Descripción: Se agrega contenedor de mensajes en el drop y lógica JS para mostrar alerta accesible (ARIA `role="alert"`) cuando se supera el máximo. Indica cuántas se pueden agregar y cuántas se omiten. Auto-oculta en ~3.2s.  
+  Archivos/Refs: `index.html` (`#fotos-msg`), `assets/css/style.css` (`.fotos-msg`), `assets/js/fotos.js` (`showMsg`, validación en `addFiles`)  
+  Estado: completado

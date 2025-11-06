@@ -1016,6 +1016,10 @@ body{margin:0;background:var(--mm-fondo-base);}
 /* Contador bajo el botón */
 .fotos-counter{ color:#97DAE4; font-weight:700; font-size:2rem }
 
+/* Mensajes del drop (alerta de límite, etc.) */
+.fotos-msg{ display:none; margin-top:4px; color:#EF5070; font-weight:700 }
+.fotos-msg.show{ display:block }
+
 
 /* Fotos: botón primario color marca */
 /* override previo (mantener último) */

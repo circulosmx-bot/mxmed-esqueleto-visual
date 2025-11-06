@@ -4,11 +4,22 @@
   const grid = document.getElementById('fotos-grid');
   const input = document.getElementById('fotos-input');
   const countEl = document.getElementById('fotos-count');
+  const msgEl = document.getElementById('fotos-msg');
   if(!drop || !grid || !input || !countEl) return;
 
   function load(){ try { return JSON.parse(localStorage.getItem('mxmed_fotos')||'[]'); } catch(e){ return []; } }
   function save(arr){ localStorage.setItem('mxmed_fotos', JSON.stringify(arr)); updateCount(arr); }
   function updateCount(arr){ countEl.textContent = (arr||load()).length; }
+
+  let hideMsgTimer = null;
+
+  function showMsg(text){
+    if(!msgEl) return;
+    msgEl.textContent = text;
+    msgEl.classList.add('show');
+    if(hideMsgTimer) clearTimeout(hideMsgTimer);
+    hideMsgTimer = setTimeout(()=>{ msgEl.classList.remove('show'); }, 3200);
+  }
 
   function render(){
     const items = load(); grid.innerHTML=''; drop.classList.toggle('has-items', items.length>0); document.getElementById('t-fotos')?.classList.toggle('has-items', items.length>0);
@@ -24,17 +35,21 @@
 
   function addFiles(files){
     const arr = load();
-    let added = 0;
+    const remaining = Math.max(0, MAX - arr.length);
+    if((files?.length||0) > remaining){
+      const extra = (files?.length||0) - remaining;
+      showMsg(`Límite ${MAX} alcanzado. Solo puedes agregar ${remaining} más (omitidas ${extra}).`);
+    }
     for(const f of files){
       if(!f || !f.type || !f.type.startsWith('image/')) continue;
-      if(arr.length >= MAX) break;
+      if(arr.length >= MAX){ updateCount(arr); break; }
       const reader = new FileReader();
       reader.onload = (e)=>{
-        if(arr.length >= MAX) { updateCount(arr); return; }
+        if(arr.length >= MAX){ updateCount(arr); showMsg(`Límite ${MAX} alcanzado.`); return; }
         arr.push({ data: e.target.result });
         save(arr); render();
       };
-      reader.readAsDataURL(f); added++;
+      reader.readAsDataURL(f);
     }
   }
 
