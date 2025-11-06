@@ -992,3 +992,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 .fotos-drop .fotos-drop-inner{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; text-align:center }
 
+
+/* Fotos: botón primario color marca */
+.fotos-drop .btn-primary{ background:#005684; border-color:#005684 }
+.fotos-drop .btn-primary:hover{ filter:brightness(1.06) }
+
