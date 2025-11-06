@@ -44,3 +44,9 @@ Formato sugerido por entrada:
   Descripción: Se replica el layout proporcionado: borde punteado grueso y redondeado, icono central con flecha de carga, texto guía, botón primario “cargar imágenes” y contador debajo. Se centra vertical/horizontalmente y se afinan tamaños/colores.  
   Archivos/Refs: `index.html:451-460`, `assets/css/style.css` (bloques `.fotos-drop`, `.fotos-ico`, `.fotos-title`, `.fotos-counter`, `.btn-primary`), `assets/js/fotos.js` (sin cambios funcionales).  
   Estado: completado
+
+- Fecha: 2025-11-06  
+  Tarea: Usar SVGs provistos en sección Fotos  
+  Descripción: Se reemplazan íconos de Material por SVGs del proyecto: `carga-de-imagenes.svg` como icono central y `boton-carga-de-imagenes.svg` como botón gráfico clicable (manteniendo funcionalidad de abrir el file picker). Se fijan tamaños y centrado.  
+  Archivos/Refs: `index.html:451-460`, `assets/css/style.css` (bloques `.fotos-ico-img`, `.fotos-btn-img`)  
+  Estado: completado
