@@ -445,6 +445,19 @@
 
                   
                 </div>
+              <!-- FOTOS -->
+              <div class="tab-pane fade" id="t-fotos" role="tabpanel">
+                <div class="mb-2"><strong>Publica fotografías alusivas a tu práctica médica</strong> <small class="text-muted">(Hasta 20 imágenes)</small></div>
+                <div id="fotos-drop" class="fotos-drop" role="region" aria-label="Cargar fotos">
+                  <div class="fotos-drop-inner">
+                    <span class="material-symbols-rounded" aria-hidden="true">file_upload</span>
+                    <div>Arrastra y suelta tus imágenes aquí o <button type="button" class="btn btn-link p-0 fotos-browse">explorar</button></div>
+                    <div class="small text-muted"><span id="fotos-count">0</span> / 20</div>
+                  </div>
+                  <input id="fotos-input" class="d-none" type="file" accept="image/*" multiple>
+                </div>
+                <div id="fotos-grid" class="fotos-grid" aria-live="polite"></div>
+              </div>
               </div>
 
               <!-- SERVICIOS PRINCIPALES -->
@@ -1015,7 +1028,7 @@
 
 <script src="assets/js/app.js"></script>
 <script src="assets/js/messages.js"></script>
-</body>
+<script src="assets/js/fotos.js"></script>`n</body>
 </html>
 
 

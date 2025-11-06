@@ -973,3 +973,13 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-info .mm-tabs-embed .nav-item:nth-child(5) .nav-link:not(.active){ background: rgba(0,176,197,.58); color:#fff }
 #p-info .mm-tabs-embed .nav-item .nav-link:not(.active) .tab-ico{ color:#fff }
 
+/* ===== FOTOS: dropzone + grid ===== */
+.fotos-drop{ border:2px dashed #99bfd0; border-radius:12px; background:#fff; padding:18px; text-align:center; color:#003152; transition:border-color .2s ease, background-color .2s ease }
+.fotos-drop .material-symbols-rounded{ font-size:28px; vertical-align:middle; color:#00ADC1; }
+.fotos-drop .fotos-browse{ color:#00738F; text-decoration:underline; }
+.fotos-drop.dragover{ background:#F2FBFC; border-color:#00ADC1 }
+.fotos-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; margin-top:12px }
+.foto-item{ position:relative; border:1px solid #d9e5ec; border-radius:10px; overflow:hidden; background:#fff }
+.foto-item img{ display:block; width:100%; height:100%; object-fit:cover; aspect-ratio:1/1 }
+.foto-x{ position:absolute; top:6px; right:6px; width:26px; height:26px; border-radius:50%; border:0; background:#003152; color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; line-height:1; opacity:.9 }
+.foto-x:hover{ opacity:1; filter:brightness(1.1) }
