@@ -50,3 +50,9 @@ Formato sugerido por entrada:
   Descripción: Se reemplazan íconos de Material por SVGs del proyecto: `carga-de-imagenes.svg` como icono central y `boton-carga-de-imagenes.svg` como botón gráfico clicable (manteniendo funcionalidad de abrir el file picker). Se fijan tamaños y centrado.  
   Archivos/Refs: `index.html:451-460`, `assets/css/style.css` (bloques `.fotos-ico-img`, `.fotos-btn-img`)  
   Estado: completado
+
+- Fecha: 2025-11-06  
+  Tarea: Ajuste fino de tamaños en Fotos  
+  Descripción: Reducido botón -25% (210px → 158px), icono central +20% (58px → 70px) y contador duplicado (font-size 2rem).  
+  Archivos/Refs: `assets/css/style.css` (`.fotos-btn-img img`, `.fotos-ico-img`, `.fotos-counter`)  
+  Estado: completado
