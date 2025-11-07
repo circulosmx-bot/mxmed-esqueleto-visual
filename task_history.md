@@ -88,6 +88,12 @@ Formato sugerido por entrada:
   Estado: completado
 
 - Fecha: 2025-11-06  
+  Tarea: Igualar subtítulo en Fotos al de Servicios  
+  Descripción: Se cambia el texto y estilo del subtítulo en el tab de Fotos para usar el mismo tamaño de letra que el de “Principales Servicios”, dejando el texto exactamente: “Publica fotografías de tu práctica médica”.  
+  Archivos/Refs: `index.html` (usa clase `sp-note` en el subtítulo de Fotos)  
+  Estado: completado
+
+- Fecha: 2025-11-06  
   Tarea: Versionar SVGs de sección Fotos  
   Descripción: Se añaden al repositorio los SVGs provistos para el icono y el botón de carga de imágenes en la sección Fotos.  
   Archivos/Refs: `assets/icons/carga-de-imagenes.svg`, `assets/icons/boton-carga-de-imagenes.svg`  
