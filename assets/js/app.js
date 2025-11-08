@@ -244,39 +244,47 @@ $(function(){
     }
 
     function fillSelect(options){
-      sel.innerHTML = '<option value="">Selecciona…</option>';
+      sel.innerHTML = '';
+      const base = document.createElement('option'); base.value=''; base.textContent='Selecciona…'; sel.appendChild(base);
       (options||[]).forEach(name=>{
         const opt = document.createElement('option'); opt.value = name; opt.textContent = name; sel.appendChild(opt);
       });
       sel.disabled = !options || options.length === 0;
+      if(!sel.disabled && sel.options.length>1) sel.selectedIndex = 1;
     }
 
     async function fetchSepomex(cpVal){
-      // Llama a API SEPOMEX; maneja variaciones de respuesta
-      const url = `https://api-sepomex.hckdrk.mx/query/info_cp/${cpVal}?type=simplified`;
-      try{
-        const res = await fetch(url, { cache:'no-store' });
+      // Llama a API SEPOMEX; intenta directo y con fallback CORS proxy
+      const direct = `https://api-sepomex.hckdrk.mx/query/info_cp/${cpVal}?type=simplified`;
+      const fallback = `https://api.allorigins.win/raw?url=${encodeURIComponent(direct)}`;
+
+      async function doFetch(url, raw){
+        const res = await fetch(url, { cache:'no-store', mode:'cors' });
         if(!res.ok) throw new Error('HTTP '+res.status);
-        const data = await res.json();
+        const data = raw ? JSON.parse(await res.text()) : await res.json();
         const r = (data && (data.response || data)) || {};
-        // La API documentada expone data.response.settlement
+        // La API documentada expone data.response.settlement (array de strings)
         let colonias = r.settlement || r.settlements || r.colonias || r.asentamientos || r.asentamiento || r.neighborhoods || [];
-        // Normaliza a arreglo de strings
         let list = [];
         if(Array.isArray(colonias)){
           list = colonias.map(x=> (typeof x === 'string' ? x : (x.nombre || x.name || x.asentamiento || x.settlement || ''))).filter(Boolean);
         }else if(typeof colonias === 'object' && colonias){
           list = Object.values(colonias).map(v=> typeof v === 'string' ? v : (v?.nombre || v?.name || v?.asentamiento || v?.settlement || '')).filter(Boolean);
         }
-        // Municipios/estado posibles
-        const municipio = r.municipio || r.municipality || r.ciudad || r.city || '';
-        const estado = r.estado || r.state || r.entidad || r.entity || '';
-        // Log de depuración no intrusivo
-        try{ console.debug('[SEPOMEX]', cpVal, {count:list.length, municipio, estado}); }catch(_){ }
+        // Municipios/estado posibles (top-level o en primer asentamiento)
+        const municipio = r.municipio || r.municipality || r.ciudad || r.city || (Array.isArray(colonias) && typeof colonias[0] === 'object' ? (colonias[0].municipio || colonias[0].city || '') : '');
+        const estado = r.estado || r.state || r.entidad || r.entity || (Array.isArray(colonias) && typeof colonias[0] === 'object' ? (colonias[0].estado || colonias[0].state || '') : '');
         return { list, municipio, estado };
-      }catch(e){
-        try{ console.warn('[SEPOMEX] error', e); }catch(_){ }
-        return { list:[], municipio:'', estado:'' };
+      }
+
+      try{
+        return await doFetch(direct, false);
+      }catch(e1){
+        try{ console.warn('[SEPOMEX] directo falló, intentando fallback', e1?.message||e1); }catch(_){ }
+        try{ return await doFetch(fallback, true); }
+        catch(e2){ try{ console.error('[SEPOMEX] fallback también falló', e2?.message||e2); }catch(_){ }
+          return { list:[], municipio:'', estado:'' };
+        }
       }
     }
 
@@ -298,8 +306,14 @@ $(function(){
     }
 
     cp.addEventListener('change', onCpChange);
-    cp.addEventListener('input', ()=>{ if(cp.value && cp.value.length === 5) onCpChange(); });
-  }
+    cp.addEventListener('input', ()=>{
+      // mostrar estado de carga antes de llamar
+      const v = (cp.value||'').trim();
+      if(/^\d{5}$/.test(v)){
+        sel.innerHTML = '<option value="">Buscando colonias…</option>'; sel.disabled = true; onCpChange();
+      }
+    });
+    }
 
   // Activar en el primer consultorio (IDs base)
   setupCpAuto({ cp:'cp', colonia:'colonia', msg:'mensaje-cp', mun:'municipio', est:'estado' });
