@@ -124,6 +124,12 @@ Formato sugerido por entrada:
   Estado: completado
 
 - Fecha: 2025-11-06  
+  Tarea: Fix parse SEPOMEX (settlement)  
+  Descripción: Se ajusta el parser para usar `data.response.settlement` como fuente principal de colonias y se mantienen alias (colonias/asentamientos). Mejora robustez y logging de depuración.  
+  Archivos/Refs: `assets/js/app.js` (`fetchSepomex`)  
+  Estado: completado
+
+- Fecha: 2025-11-06  
   Tarea: Alineación de campos y etiqueta CP en dos líneas  
   Descripción: “PRIMERO” aparece arriba de “ingresa aquí tu código postal”, sin desalinear los inputs de la fila. Se usa `.cp-label` con `PRIMERO` posicionado de forma absoluta para que las casillas queden alineadas.  
   Archivos/Refs: `index.html` (estructura de label), `assets/css/style.css` (`.cp-label`, `.cp-over`, `.cp-title`).  

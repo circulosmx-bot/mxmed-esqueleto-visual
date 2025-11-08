@@ -252,23 +252,32 @@ $(function(){
     }
 
     async function fetchSepomex(cpVal){
-      // Llama a API SEPOMEX; maneja forma flexible de respuesta
+      // Llama a API SEPOMEX; maneja variaciones de respuesta
       const url = `https://api-sepomex.hckdrk.mx/query/info_cp/${cpVal}?type=simplified`;
       try{
         const res = await fetch(url, { cache:'no-store' });
         if(!res.ok) throw new Error('HTTP '+res.status);
         const data = await res.json();
         const r = (data && (data.response || data)) || {};
-        const colonias = r.colonias || r.asentamientos || r.asentamiento || r.settlements || r.neighborhoods || [];
+        // La API documentada expone data.response.settlement
+        let colonias = r.settlement || r.settlements || r.colonias || r.asentamientos || r.asentamiento || r.neighborhoods || [];
         // Normaliza a arreglo de strings
         let list = [];
-        if(Array.isArray(colonias)) list = colonias.map(x=> (typeof x === 'string' ? x : (x.nombre || x.name || x.asentamiento || ''))).filter(Boolean);
-        else if(typeof colonias === 'object'){ list = Object.values(colonias).map(String); }
+        if(Array.isArray(colonias)){
+          list = colonias.map(x=> (typeof x === 'string' ? x : (x.nombre || x.name || x.asentamiento || x.settlement || ''))).filter(Boolean);
+        }else if(typeof colonias === 'object' && colonias){
+          list = Object.values(colonias).map(v=> typeof v === 'string' ? v : (v?.nombre || v?.name || v?.asentamiento || v?.settlement || '')).filter(Boolean);
+        }
         // Municipios/estado posibles
-        const municipio = r.municipio || r.municipality || r.ciudad || '';
-        const estado = r.estado || r.state || r.entidad || '';
+        const municipio = r.municipio || r.municipality || r.ciudad || r.city || '';
+        const estado = r.estado || r.state || r.entidad || r.entity || '';
+        // Log de depuración no intrusivo
+        try{ console.debug('[SEPOMEX]', cpVal, {count:list.length, municipio, estado}); }catch(_){ }
         return { list, municipio, estado };
-      }catch(e){ return { list:[], municipio:'', estado:'' }; }
+      }catch(e){
+        try{ console.warn('[SEPOMEX] error', e); }catch(_){ }
+        return { list:[], municipio:'', estado:'' };
+      }
     }
 
     async function onCpChange(){
