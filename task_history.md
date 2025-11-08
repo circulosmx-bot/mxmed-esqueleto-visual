@@ -118,6 +118,12 @@ Formato sugerido por entrada:
   Estado: completado
 
 - Fecha: 2025-11-06  
+  Tarea: CP → Colonias con API SEPOMEX  
+  Descripción: Se pide primero el CP; al ingresar 5 dígitos, se consulta la API pública SEPOMEX y se llenan colonias en `<select id="colonia">`, además de municipio y estado. Si no hay resultados, muestra “Código postal no válido” en `#mensaje-cp`. Vanilla JS con comentarios y manejo de errores.  
+  Archivos/Refs: `index.html` (inputs `cp`, `colonia`, `municipio`, `estado`, `mensaje-cp`), `assets/js/app.js` (funciones `setupCpAuto` y fetch).  
+  Estado: completado
+
+- Fecha: 2025-11-06  
   Tarea: Versionar SVGs de sección Fotos  
   Descripción: Se añaden al repositorio los SVGs provistos para el icono y el botón de carga de imágenes en la sección Fotos.  
   Archivos/Refs: `assets/icons/carga-de-imagenes.svg`, `assets/icons/boton-carga-de-imagenes.svg`  

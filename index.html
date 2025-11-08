@@ -642,6 +642,25 @@
             <div class="tab-content">
               <div class="tab-pane fade show active" id="sede1">
                 <div class="row g-3">
+                  <div class="col-md-3">
+                    <label class="form-label" for="cp"><strong>PRIMERO</strong> ingresa aquí tu código postal</label>
+                    <input class="form-control" id="cp" inputmode="numeric" pattern="\d{5}" maxlength="5" placeholder="#####">
+                    <div id="mensaje-cp" class="form-text text-danger d-none"></div>
+                  </div>
+                  <div class="col-md-5">
+                    <label class="form-label" for="colonia">Colonia</label>
+                    <select class="form-select" id="colonia" disabled>
+                      <option value="">Selecciona…</option>
+                    </select>
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label" for="municipio">Municipio</label>
+                    <input class="form-control" id="municipio" readonly>
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label" for="estado">Estado</label>
+                    <input class="form-control" id="estado" readonly>
+                  </div>
                   <div class="col-md-6"><label class="form-label">Nombre de la sede</label><input class="form-control"/></div>
                   <div class="col-md-6"><label class="form-label">Teléfono (planes de pago)</label><input class="form-control"/></div>
                   <div class="col-12"><label class="form-label">Dirección</label><input class="form-control" placeholder="Calle, Número, colonia, ciudad, estado"/></div>

@@ -227,6 +227,88 @@ $(function(){
     createSede2IfNeeded();
   });
 
+  // ====== CP -> Colonias (SEPOMEX) ======
+  // Inicializa auto-llenado para un conjunto de controles
+  function setupCpAuto(ids){
+    const cp = document.getElementById(ids.cp);
+    const sel = document.getElementById(ids.colonia);
+    const msg = document.getElementById(ids.msg);
+    const mun = document.getElementById(ids.mun);
+    const est = document.getElementById(ids.est);
+    if(!cp || !sel) return;
+
+    function setMsg(text){
+      if(!msg) return;
+      if(text){ msg.textContent = text; msg.classList.remove('d-none'); }
+      else { msg.textContent = ''; msg.classList.add('d-none'); }
+    }
+
+    function fillSelect(options){
+      sel.innerHTML = '<option value="">Selecciona…</option>';
+      (options||[]).forEach(name=>{
+        const opt = document.createElement('option'); opt.value = name; opt.textContent = name; sel.appendChild(opt);
+      });
+      sel.disabled = !options || options.length === 0;
+    }
+
+    async function fetchSepomex(cpVal){
+      // Llama a API SEPOMEX; maneja forma flexible de respuesta
+      const url = `https://api-sepomex.hckdrk.mx/query/info_cp/${cpVal}?type=simplified`;
+      try{
+        const res = await fetch(url, { cache:'no-store' });
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        const data = await res.json();
+        const r = (data && (data.response || data)) || {};
+        const colonias = r.colonias || r.asentamientos || r.asentamiento || r.settlements || r.neighborhoods || [];
+        // Normaliza a arreglo de strings
+        let list = [];
+        if(Array.isArray(colonias)) list = colonias.map(x=> (typeof x === 'string' ? x : (x.nombre || x.name || x.asentamiento || ''))).filter(Boolean);
+        else if(typeof colonias === 'object'){ list = Object.values(colonias).map(String); }
+        // Municipios/estado posibles
+        const municipio = r.municipio || r.municipality || r.ciudad || '';
+        const estado = r.estado || r.state || r.entidad || '';
+        return { list, municipio, estado };
+      }catch(e){ return { list:[], municipio:'', estado:'' }; }
+    }
+
+    async function onCpChange(){
+      const val = (cp.value||'').trim();
+      // valida 5 dígitos
+      if(!/^\d{5}$/.test(val)){
+        fillSelect([]); setMsg(''); if(mun) mun.value=''; if(est) est.value=''; return;
+      }
+      setMsg('');
+      fillSelect([]); sel.disabled = true;
+      const { list, municipio, estado } = await fetchSepomex(val);
+      if(list && list.length){
+        const uniq = Array.from(new Set(list)).sort((a,b)=>a.localeCompare(b,'es'));
+        fillSelect(uniq); setMsg(''); if(mun) mun.value = municipio||''; if(est) est.value = estado||'';
+      }else{
+        fillSelect([]); setMsg('Código postal no válido'); if(mun) mun.value=''; if(est) est.value='';
+      }
+    }
+
+    cp.addEventListener('change', onCpChange);
+    cp.addEventListener('input', ()=>{ if(cp.value && cp.value.length === 5) onCpChange(); });
+  }
+
+  // Activar en el primer consultorio (IDs base)
+  setupCpAuto({ cp:'cp', colonia:'colonia', msg:'mensaje-cp', mun:'municipio', est:'estado' });
+
+  // Si se crea Consultorio 2 dinámicamente, renombrar IDs y activar allí también
+  const origCreate = createSede2IfNeeded;
+  createSede2IfNeeded = function(){
+    const ret = origCreate();
+    if(!ret) return ret;
+    const pane2 = ret.pane2;
+    // Renombrar IDs para evitar duplicados
+    const map = [ ['cp','cp2'], ['colonia','colonia2'], ['mensaje-cp','mensaje-cp2'], ['municipio','municipio2'], ['estado','estado2'] ];
+    map.forEach(([from,to])=>{ const el = pane2.querySelector('#'+from); if(el){ el.id = to; const label = pane2.querySelector('label[for="'+from+'"]'); if(label) label.setAttribute('for', to); } });
+    // Inicializar listeners en el nuevo set
+    setupCpAuto({ cp:'cp2', colonia:'colonia2', msg:'mensaje-cp2', mun:'municipio2', est:'estado2' });
+    return ret;
+  };
+
   const $$ = (s,c=document)=>Array.from(c.querySelectorAll(s));
   $$('.mf-upload').forEach(box=>{
     const input = box.querySelector('.mf-input');
