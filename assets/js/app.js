@@ -834,10 +834,22 @@ $(function(){
     });
   }
 
+  // Utilidad: construir texto de dirección
+  function buildAddress(){
+    const cp = (document.getElementById('cp')?.value||'').trim();
+    const col = (document.getElementById('colonia')?.value||'').trim();
+    const mun = (document.getElementById('municipio')?.value||'').trim();
+    const edo = (document.getElementById('estado')?.value||'').trim();
+    const calle = (document.getElementById('cons-calle')?.value||'').trim();
+    const num = (document.getElementById('cons-numext')?.value||'').trim();
+    return [calle && (calle + (num? ' ' + num : '')), col, cp, mun, edo, 'México'].filter(Boolean).join(', ');
+  }
+
   (function initMap(){
-    const mapBox = document.getElementById('cons-map'); if(!mapBox) return;
+    const mapBox = document.getElementById('cons-map');
     if(window.L && typeof L.map === 'function'){
       try{
+        if(!mapBox){ return; }
         const map = L.map(mapBox).setView([21.882, -102.296], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
         const marker = L.marker([21.882, -102.296], { draggable:true }).addTo(map);
@@ -850,13 +862,7 @@ $(function(){
 
         // Geocodificar desde datos del formulario
         async function geocode(){
-          const cp = (document.getElementById('cp')?.value||'').trim();
-          const col = (document.getElementById('colonia')?.value||'').trim();
-          const mun = (document.getElementById('municipio')?.value||'').trim();
-          const edo = (document.getElementById('estado')?.value||'').trim();
-          const calle = (document.getElementById('cons-calle')?.value||'').trim();
-          const num = (document.getElementById('cons-numext')?.value||'').trim();
-          const q = [calle && (calle + (num? ' ' + num : '')), col, cp, mun, edo, 'México'].filter(Boolean).join(', ');
+          const q = buildAddress();
           if(!q){ return; }
           try{
             const r = await fetch('./geocode-proxy.php?q='+encodeURIComponent(q));
@@ -885,9 +891,24 @@ $(function(){
           el.addEventListener('input', tryGeo);
         });
       }catch(_){ document.getElementById('cons-map-fallback')?.style?.setProperty('display','block'); }
-    }else{
-      document.getElementById('cons-map-fallback')?.style?.setProperty('display','block');
     }
+  })();
+
+  // Fallback automático: actualizar iframe de Google Maps con la dirección
+  (function autoFrameUpdate(){
+    const frame = document.getElementById('cons-map-frame');
+    if(!frame) return;
+    const debounce = (fn, ms)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn.apply(null,a), ms); } };
+    const update = debounce(()=>{
+      const addr = buildAddress();
+      if(!addr) return;
+      const url = 'https://www.google.com/maps?q='+encodeURIComponent(addr)+'&z=17&output=embed';
+      if(frame.src !== url){ frame.src = url; }
+    }, 600);
+    ['cp','colonia','cons-calle','cons-numext'].forEach(id=>{
+      const el = document.getElementById(id); if(!el) return;
+      el.addEventListener('input', update); el.addEventListener('change', update);
+    });
   })();
 
   // Grupo médico: habilitar/deshabilitar campo según radios
