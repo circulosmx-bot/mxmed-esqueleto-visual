@@ -671,8 +671,21 @@
                   <div class="col-md-6"><label class="form-label">Horario</label><input class="form-control" placeholder="Lun-Vie 9:00-14:00, 16:00-19:00"/></div>
                   <div class="col-md-6"><label class="form-label">Notas</label><input class="form-control" placeholder="Accesibilidad, estacionamiento, etc."/></div>
                   <!-- NUEVOS CAMPOS DE CONSULTORIO (A) -->
+                  <!-- Grupo médico: pregunta y radios -->
+                  <div class="col-12">
+                    <label class="form-label d-block">¿Tu consultorio está en un Grupo Médico?</label>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="radio" name="cons-grupo" id="cons-grupo-si" value="si">
+                      <label class="form-check-label" for="cons-grupo-si">Sí</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="radio" name="cons-grupo" id="cons-grupo-no" value="no" checked>
+                      <label class="form-check-label" for="cons-grupo-no">No</label>
+                    </div>
+                  </div>
+                  <!-- Línea: nombre del grupo + título del consultorio -->
+                  <div class="col-12 col-md-6"><label class="form-label" for="cons-grupo-nombre">Nombre del grupo médico</label><input id="cons-grupo-nombre" class="form-control" placeholder="Ejemplo Grupo Médico Central" disabled/></div>
                   <div class="col-12 col-md-6"><label class="form-label" for="cons-titulo">Dale un título a este consultorio</label><input id="cons-titulo" class="form-control" placeholder="Ejemplo Consultorio Hospital Central"/></div>
-                  <div class="col-md-6"></div>
                   <div class="col-md-7"><label class="form-label" for="cons-calle">Calle</label><input id="cons-calle" class="form-control"/></div>
                   <div class="col-md-2"><label class="form-label" for="cons-numint">Número Int.</label><input id="cons-numint" class="form-control" maxlength="5"/></div>
                   <div class="col-md-2"><label class="form-label" for="cons-numext">Número Ext.</label><input id="cons-numext" class="form-control" maxlength="6"/></div>

@@ -204,3 +204,9 @@ Formato sugerido por entrada:
   Descripción: Se reorganizan los campos en una línea con mayor ancho a “Calle”; “Número Int.” y “Número Ext.” abreviados y con `maxlength` (5 y 6 respectivamente), “Piso” `maxlength` 3.  
   Archivos/Refs: `index.html` (layout y atributos de inputs).  
   Estado: completado
+
+- Fecha: 2025-11-06  
+  Tarea: Grupo médico — radios y campo condicional  
+  Descripción: Se agrega la pregunta “¿Tu consultorio está en un Grupo Médico?” con radios Sí/No; si elige Sí, se habilita el input “Nombre del grupo médico” y, en la misma línea, queda el campo “Dale un título a este consultorio”.  
+  Archivos/Refs: `index.html` (radios y campos), `assets/js/app.js` (toggle habilitado).  
+  Estado: completado

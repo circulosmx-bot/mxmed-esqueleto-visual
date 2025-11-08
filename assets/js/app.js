@@ -851,6 +851,17 @@ $(function(){
     }
   })();
 
+  // Grupo médico: habilitar/deshabilitar campo según radios
+  (function setupGrupoMedico(){
+    const rSi = document.getElementById('cons-grupo-si');
+    const rNo = document.getElementById('cons-grupo-no');
+    const grp = document.getElementById('cons-grupo-nombre');
+    if(!rSi || !rNo || !grp) return;
+    function sync(){ if(rSi.checked){ grp.removeAttribute('disabled'); grp.focus(); } else { grp.value=''; grp.setAttribute('disabled','disabled'); } }
+    rSi.addEventListener('change', sync); rNo.addEventListener('change', sync);
+    sync();
+  })();
+
   // Ocultar campos antiguos del consultorio para evitar duplicados
   (function hideLegacyFields(){
     const root = document.querySelector('#sede1'); if(!root) return;
