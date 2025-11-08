@@ -776,6 +776,82 @@ $(function(){
   setupChips('miem', 50);
 })();
 
+// ====== Consultorio: horarios, foto preview, mapa (fallback) ======
+(function(){
+  const body = document.getElementById('sched-body');
+  if(body){
+    const dias = [
+      {k:'mon', lbl:'Lunes'}, {k:'tue', lbl:'Martes'}, {k:'wed', lbl:'Miércoles'},
+      {k:'thu', lbl:'Jueves'}, {k:'fri', lbl:'Viernes'}, {k:'sat', lbl:'Sábado'}, {k:'sun', lbl:'Domingo'}
+    ];
+    const key = 'mxmed_cons_schedules';
+    function load(){ try { return JSON.parse(localStorage.getItem(key)||'{}'); } catch(e){ return {}; } }
+    function save(v){ localStorage.setItem(key, JSON.stringify(v)); }
+    const state = load();
+    dias.forEach(d=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${d.lbl}</td>
+      <td><input type="checkbox" class="form-check-input" id="sch-act-${d.k}"></td>
+      <td>
+        <div class="d-flex align-items-center gap-1">
+          <input type="time" class="form-control form-control-sm" id="sch-a1-${d.k}">
+          <span>–</span>
+          <input type="time" class="form-control form-control-sm" id="sch-b1-${d.k}">
+        </div>
+      </td>
+      <td>
+        <div class="d-flex align-items-center gap-1">
+          <input type="time" class="form-control form-control-sm" id="sch-a2-${d.k}">
+          <span>–</span>
+          <input type="time" class="form-control form-control-sm" id="sch-b2-${d.k}">
+        </div>
+      </td>`;
+      body.appendChild(tr);
+      const act = tr.querySelector(`#sch-act-${d.k}`);
+      const a1 = tr.querySelector(`#sch-a1-${d.k}`);
+      const b1 = tr.querySelector(`#sch-b1-${d.k}`);
+      const a2 = tr.querySelector(`#sch-a2-${d.k}`);
+      const b2 = tr.querySelector(`#sch-b2-${d.k}`);
+      const sv = state[d.k] || {};
+      act.checked = !!sv.act; a1.value = sv.a1||''; b1.value = sv.b1||''; a2.value = sv.a2||''; b2.value = sv.b2||'';
+      function sync(){ state[d.k] = { act:act.checked, a1:a1.value, b1:b1.value, a2:a2.value, b2:b2.value }; save(state); }
+      [act,a1,b1,a2,b2].forEach(el=> el.addEventListener('change', sync));
+    });
+    document.getElementById('sched-copy-mon')?.addEventListener('click', ()=>{
+      const m = state.mon || {}; ['tue','wed','thu','fri','sat','sun'].forEach(k=>{ state[k] = {...m}; }); save(state); location.reload();
+    });
+    document.getElementById('sched-clear')?.addEventListener('click', ()=>{ localStorage.removeItem(key); location.reload(); });
+  }
+
+  const file = document.getElementById('cons-foto');
+  if(file){
+    file.addEventListener('change', (e)=>{
+      const f = e.target.files && e.target.files[0]; if(!f) return;
+      const rd = new FileReader(); rd.onload = ev => {
+        const img = document.getElementById('cons-foto-img'); const box = document.getElementById('cons-foto-prev');
+        if(img && box){ img.src = ev.target.result; box.style.display='block'; }
+      }; rd.readAsDataURL(f);
+    });
+  }
+
+  (function initMap(){
+    const mapBox = document.getElementById('cons-map'); if(!mapBox) return;
+    if(window.L && typeof L.map === 'function'){
+      try{
+        const map = L.map(mapBox).setView([21.882, -102.296], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+        const marker = L.marker([21.882, -102.296], { draggable:true }).addTo(map);
+        const latI = document.getElementById('cons-lat'); const lngI = document.getElementById('cons-lng');
+        function setLL(latlng){ if(latI) latI.value = latlng.lat.toFixed(6); if(lngI) lngI.value = latlng.lng.toFixed(6); }
+        setLL(marker.getLatLng());
+        marker.on('moveend', (e)=> setLL(e.target.getLatLng()));
+      }catch(_){ document.getElementById('cons-map-fallback')?.style?.setProperty('display','block'); }
+    }else{
+      document.getElementById('cons-map-fallback')?.style?.setProperty('display','block');
+    }
+  })();
+})();
+
 // ===== Correcciones rápidas de acentos en header (muestra) =====
 (function(){
   const t = document.querySelector('.optimo'); if(t) t.textContent = 'Óptimo';

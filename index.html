@@ -445,6 +445,53 @@
 
                   
                 </div>
+                <!-- Bloque adicional: nuevos campos de Consultorio -->
+                <div class="row g-3 mt-2">
+                  <div class="col-12 col-md-6"><label class="form-label" for="cons-titulo">Dale un título a este consultorio</label><input id="cons-titulo" class="form-control" placeholder="Ejemplo Consultorio Hospital Central"/></div>
+                  <div class="col-md-6"></div>
+                  <div class="col-md-6"><label class="form-label" for="cons-calle">Calle</label><input id="cons-calle" class="form-control"/></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-numext">Número exterior</label><input id="cons-numext" class="form-control"/></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-numint">Número interior</label><input id="cons-numint" class="form-control"/></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-piso">Piso (si aplica)</label><input id="cons-piso" class="form-control"/></div>
+
+                  <div class="col-12"><strong>Teléfonos del consultorio</strong></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-tel1">Teléfono consultorio 01</label><input id="cons-tel1" class="form-control" inputmode="tel" placeholder="(###) ### ####"/></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-tel2">Teléfono consultorio 02</label><input id="cons-tel2" class="form-control" inputmode="tel"/></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-tel3">Teléfono consultorio 03</label><input id="cons-tel3" class="form-control" inputmode="tel"/></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-wa">Whatsapp consultorio</label><input id="cons-wa" class="form-control" inputmode="tel" placeholder="+52 ..."/></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-urg1">Teléfono Urgencias 01</label><input id="cons-urg1" class="form-control" inputmode="tel"/></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-urg2">Teléfono Urgencias 02</label><input id="cons-urg2" class="form-control" inputmode="tel"/></div>
+
+                  <div class="col-12 d-flex gap-4 align-items-center">
+                    <div class="form-check"><input class="form-check-input" type="checkbox" id="cons-estac"/><label class="form-check-label" for="cons-estac">Cuenta con estacionamiento propio</label></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" id="cons-acces"/><label class="form-check-label" for="cons-acces">Accesibilidad para discapacitados</label></div>
+                  </div>
+
+                  <div class="col-12">
+                    <label class="form-label">Horario de atención</label>
+                    <div class="card p-3 sched-card">
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-muted">Activa días y define uno o dos turnos por día.</small>
+                        <div class="d-flex gap-2">
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="sched-copy-mon">Copiar lunes a todos</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="sched-clear">Limpiar</button>
+                        </div>
+                      </div>
+                      <div class="table-responsive">
+                        <table class="table table-sm align-middle sched-table">
+                          <thead><tr><th style="width:110px;">Día</th><th>Activo</th><th>Turno 1</th><th>Turno 2 (opcional)</th></tr></thead>
+                          <tbody id="sched-body"></tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-12">
+                    <label class="form-label" for="cons-foto">Fotografía del consultorio</label>
+                    <input id="cons-foto" class="form-control" type="file" accept="image/*"/>
+                    <div class="mt-2" id="cons-foto-prev" style="display:none;"><img id="cons-foto-img" alt="Previsualización consultorio" style="max-width:260px; border-radius:10px; border:1px solid #d9e5ec;"/></div>
+                  </div>
+                </div>
               </div>
               <!-- FOTOS -->
               <div class="tab-pane fade" id="t-fotos" role="tabpanel">

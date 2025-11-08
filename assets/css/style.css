@@ -1040,3 +1040,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 /* Fotos: botón primario color marca */
 /* override previo (mantener último) */
 
+/* ===== Consultorio: horarios ===== */
+.sched-card{ background:#f8fcfe; border:1px solid #d5f1f7; border-radius:10px }
+.sched-table input[type=time]{ max-width: 10.5rem }
+.sched-table .form-check-input{ transform: scale(1.1) }
+

@@ -193,3 +193,8 @@ Formato sugerido por entrada:
   Descripción: Se configura `sepomex-db.config.php` para usar el usuario `mxmed` con la contraseña provista y la base `sepomex`.  
   Archivos/Refs: `sepomex-db.config.php`  
   Estado: completado
+- Fecha: 2025-11-06  
+  Tarea: Consultorio — nuevos campos, horarios y foto  
+  Descripción: Se añaden campos de título, dirección detallada (calle, número ext/int, piso), teléfonos (3 consultorio, WhatsApp, 2 urgencias), facilidades (estacionamiento, accesibilidad), widget de horarios por día (dos turnos) con copy/clear y previsualización de foto. Se mantiene mapa embebido como fallback y se deja hook para Leaflet si está disponible.  
+  Archivos/Refs: `index.html` (bloque adicional en #sede1), `assets/js/app.js` (sched/foto/map), `assets/css/style.css` (estilos de horarios).  
+  Estado: completado
