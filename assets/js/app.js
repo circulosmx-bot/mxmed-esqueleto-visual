@@ -928,18 +928,22 @@ $(function(){
     function closeSelectList(){ sel.removeAttribute('size'); sel.classList.remove('select-open'); }
     function isOpen(){ return sel.hasAttribute('size'); }
 
-    // Al tabular desde CP, enfocar colonia y abrir cuando haya opciones
-    cp.addEventListener('keydown', (e)=>{
-      if(e.key === 'Tab' && !e.shiftKey){
-        const pollMs = 100; let waited = 0;
-        e.preventDefault(); sel.focus();
-        const poll = ()=>{
-          if((sel.options?.length||0) > 1 && !sel.disabled){ openSelectList(); return; }
-          waited += pollMs; if(waited >= 1500) return; // 1.5s máx
-          setTimeout(poll, pollMs);
-        };
-        poll();
-      }
+    // Al tabular desde CP, forzar foco en "Colonia" en blur para ganar a la navegación natural
+    let cpTabbing = false;
+    cp.addEventListener('keydown', (e)=>{ if(e.key === 'Tab' && !e.shiftKey){ cpTabbing = true; } });
+    cp.addEventListener('keyup', ()=>{ cpTabbing = false; });
+    cp.addEventListener('blur', ()=>{
+      if(!cpTabbing) return;
+      cpTabbing = false;
+      const pollMs = 100; let waited = 0;
+      // Redirigir foco y abrir lista cuando existan opciones
+      const poll = ()=>{
+        sel.focus();
+        if((sel.options?.length||0) > 1 && !sel.disabled){ openSelectList(); return; }
+        waited += pollMs; if(waited >= 1500) return; // 1.5s máx
+        setTimeout(poll, pollMs);
+      };
+      setTimeout(poll, 0);
     });
     // Navegación con flechas sin desplazar la página y cierre con Enter/Escape
     sel.addEventListener('keydown', (e)=>{
