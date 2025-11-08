@@ -182,3 +182,8 @@ Formato sugerido por entrada:
   Descripción: Se añaden al repositorio los SVGs provistos para el icono y el botón de carga de imágenes en la sección Fotos.  
   Archivos/Refs: `assets/icons/carga-de-imagenes.svg`, `assets/icons/boton-carga-de-imagenes.svg`  
   Estado: completado
+- Fecha: 2025-11-06  
+  Tarea: Actualizar credenciales MySQL para SEPOMEX  
+  Descripción: Se configura `sepomex-db.config.php` para usar el usuario `mxmed` con la contraseña provista y la base `sepomex`.  
+  Archivos/Refs: `sepomex-db.config.php`  
+  Estado: completado
