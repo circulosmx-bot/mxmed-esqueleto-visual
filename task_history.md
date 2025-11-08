@@ -106,6 +106,12 @@ Formato sugerido por entrada:
   Estado: completado
 
 - Fecha: 2025-11-06  
+  Tarea: Consultorio — modal Bootstrap y iconos en tabs  
+  Descripción: Se cambia a modal Bootstrap para confirmar “¿Deseas agregar otro consultorio?” y se agregan iconos en tabs (edificio para Consultorio y “+” grande para Agregar). Tamaños replican los de tabs de Datos Personales.  
+  Archivos/Refs: `index.html` (markup de tabs y modal `#modalConsulAdd`), `assets/css/style.css` (`.ico-plus`), `assets/js/app.js` (abrir/cerrar modal).  
+  Estado: completado
+
+- Fecha: 2025-11-06  
   Tarea: Versionar SVGs de sección Fotos  
   Descripción: Se añaden al repositorio los SVGs provistos para el icono y el botón de carga de imágenes en la sección Fotos.  
   Archivos/Refs: `assets/icons/carga-de-imagenes.svg`, `assets/icons/boton-carga-de-imagenes.svg`  

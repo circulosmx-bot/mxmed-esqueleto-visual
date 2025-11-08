@@ -177,12 +177,17 @@ $(function(){
 
 
 (function(){
-  // Consultorio: confirmar al intentar agregar otro consultorio
+  // Consultorio: modal para confirmar agregar otro consultorio
   document.getElementById('btn-consul-add')?.addEventListener('click', function(e){
     e.preventDefault();
-    const ok = window.confirm('¿Deseas agregar otro consultorio?');
-    // Por ahora solo preguntamos; más adelante podemos clonar/crear pestaña
-    if(ok){ /* noop: reservado para creación dinámica de sede */ }
+    const el = document.getElementById('modalConsulAdd');
+    if(window.bootstrap && el){ new bootstrap.Modal(el).show(); }
+    else { if(window.confirm('¿Deseas agregar otro consultorio?')) {/* fallback */} }
+  });
+  document.getElementById('modalConsulAddYes')?.addEventListener('click', function(){
+    const el = document.getElementById('modalConsulAdd');
+    if(window.bootstrap && el){ bootstrap.Modal.getInstance(el)?.hide(); }
+    // Aquí podríamos crear dinámicamente una nueva pestaña/forma
   });
 
   const $$ = (s,c=document)=>Array.from(c.querySelectorAll(s));

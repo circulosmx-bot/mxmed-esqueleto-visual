@@ -626,8 +626,18 @@
           <div class="head"><h5><i class="bi bi-building title-ico" aria-hidden="true"></i>Información · Consultorio</h5></div>
           <div class="body">
             <ul class="nav nav-pills mm-tabs mm-tabs-embed mb-3" role="tablist">
-              <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#sede1" type="button">Consultorio</button></li>
-              <li class="nav-item"><button class="nav-link" id="btn-consul-add" type="button">Agregar Consultorio</button></li>
+              <li class="nav-item">
+                <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#sede1" type="button">
+                  <span class="tab-ico material-symbols-rounded" aria-hidden="true">apartment</span>
+                  <span class="tab-lbl">CONSULTORIO</span>
+                </button>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link" id="btn-consul-add" type="button">
+                  <span class="tab-ico material-symbols-rounded ico-plus" aria-hidden="true">add</span>
+                  <span class="tab-lbl">AGREGAR CONSULTORIO</span>
+                </button>
+              </li>
             </ul>
             <div class="tab-content">
               <div class="tab-pane fade show active" id="sede1">
@@ -651,6 +661,23 @@
             </div>
           </div>
         </section>
+
+        <!-- Modal: Agregar consultorio -->
+        <div class="modal fade" id="modalConsulAdd" tabindex="-1" aria-labelledby="modalConsulAddLabel" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="modalConsulAddLabel">Agregar consultorio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+              </div>
+              <div class="modal-body">¿Deseas agregar otro consultorio?</div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                <button type="button" class="btn btn-primary" id="modalConsulAddYes">Sí</button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- OPINIONES -->
         <section class="mm-card d-none" id="p-opiniones">
