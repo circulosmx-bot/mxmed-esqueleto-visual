@@ -136,6 +136,12 @@ Formato sugerido por entrada:
   Estado: completado
 
 - Fecha: 2025-11-06  
+  Tarea: Proxy PHP para SEPOMEX (evitar CORS)  
+  Descripción: Se agrega `sepomex-proxy.php` para consultar SEPOMEX desde el servidor (WAMP) y evitar errores de CORS/red desde el navegador. JS intenta primero el proxy local, luego directo y por último AllOrigins.  
+  Archivos/Refs: `sepomex-proxy.php`, `assets/js/app.js` (orden de intentos).  
+  Estado: completado
+
+- Fecha: 2025-11-06  
   Tarea: Alineación de campos y etiqueta CP en dos líneas  
   Descripción: “PRIMERO” aparece arriba de “ingresa aquí tu código postal”, sin desalinear los inputs de la fila. Se usa `.cp-label` con `PRIMERO` posicionado de forma absoluta para que las casillas queden alineadas.  
   Archivos/Refs: `index.html` (estructura de label), `assets/css/style.css` (`.cp-label`, `.cp-over`, `.cp-title`).  

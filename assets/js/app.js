@@ -254,7 +254,8 @@ $(function(){
     }
 
     async function fetchSepomex(cpVal){
-      // Llama a API SEPOMEX; intenta directo y con fallback CORS proxy
+      // Llama a API SEPOMEX; intenta proxy local (PHP), luego directo y luego fallback CORS
+      const proxyLocal = `./sepomex-proxy.php?cp=${cpVal}`;
       const direct = `https://api-sepomex.hckdrk.mx/query/info_cp/${cpVal}?type=simplified`;
       const fallback = `https://api.allorigins.win/raw?url=${encodeURIComponent(direct)}`;
 
@@ -278,12 +279,21 @@ $(function(){
       }
 
       try{
-        return await doFetch(direct, false);
+        // 1) Proxy local (evita CORS y oculta token si aplica)
+        return await doFetch(proxyLocal, false);
       }catch(e1){
-        try{ console.warn('[SEPOMEX] directo falló, intentando fallback', e1?.message||e1); }catch(_){ }
-        try{ return await doFetch(fallback, true); }
-        catch(e2){ try{ console.error('[SEPOMEX] fallback también falló', e2?.message||e2); }catch(_){ }
-          return { list:[], municipio:'', estado:'' };
+        try{ console.warn('[SEPOMEX] proxy local falló, probando directo', e1?.message||e1); }catch(_){ }
+        try{
+          // 2) Directo
+          return await doFetch(direct, false);
+        }catch(e2){
+          try{ console.warn('[SEPOMEX] directo falló, intentando fallback', e2?.message||e2); }catch(_){ }
+          try{ // 3) AllOrigins
+            return await doFetch(fallback, true);
+          }catch(e3){
+            try{ console.error('[SEPOMEX] fallback también falló', e3?.message||e3); }catch(_){ }
+            return { list:[], municipio:'', estado:'' };
+          }
         }
       }
     }
