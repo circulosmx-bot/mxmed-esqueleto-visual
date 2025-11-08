@@ -208,7 +208,7 @@ $(function(){
       const li = document.createElement('li'); li.className='nav-item';
       const btn = document.createElement('button'); btn.className='nav-link'; btn.type='button';
       btn.setAttribute('data-bs-toggle','pill'); btn.setAttribute('data-bs-target','#sede2');
-      btn.innerHTML = '<span class="tab-ico material-symbols-rounded" aria-hidden="true">apartment</span><span class="tab-lbl">CONSULTORIO 2</span>';
+      btn.innerHTML = '<span class="tab-ico material-symbols-rounded" aria-hidden="true">apartment</span><span class="tab-lbl">SEGUNDO<br>CONSULTORIO</span>';
       const addLi = document.getElementById('btn-consul-add')?.closest('li');
       if(addLi){ nav.insertBefore(li, addLi); } else { nav.appendChild(li); }
       li.appendChild(btn); btn2 = btn;
