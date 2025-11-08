@@ -898,7 +898,7 @@ $(function(){
       } else {
         wa.removeAttribute('disabled');
         wa.value = '';
-        wa.placeholder = 'otro numero wsp';
+        wa.placeholder = 'otro numero Whatsapp';
         wa.focus();
       }
     }

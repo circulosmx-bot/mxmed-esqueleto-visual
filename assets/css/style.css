@@ -968,6 +968,16 @@ body{margin:0;background:var(--mm-fondo-base);}
 /* Consultorio: plus ligeramente más grande */
 #p-consultorio .mm-tabs-embed .nav-link .ico-plus{ font-size:2.9rem }
 
+/* Consultorio: tono más bajo para el tab de "Agregar Otro Consultorio" */
+#p-consultorio .mm-tabs-embed .nav-item:nth-child(2) .nav-link{
+  background: rgba(0,176,197,.58);
+  color:#fff;
+}
+#p-consultorio .mm-tabs-embed .nav-item:nth-child(2) .nav-link:hover{
+  filter:brightness(1.06);
+  background: rgba(0,176,197,.66);
+}
+
 /* Consultorio: etiqueta CP en dos líneas con 'PRIMERO' flotando arriba */
 #p-consultorio .cp-label{ position:relative; display:block }
 #p-consultorio .cp-label .cp-over{
