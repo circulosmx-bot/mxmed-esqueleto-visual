@@ -160,6 +160,12 @@ Formato sugerido por entrada:
   Estado: completado
 
 - Fecha: 2025-11-06  
+  Tarea: Endpoint local de BD (MySQL/SQLite) para SEPOMEX  
+  Descripción: Se agrega `sepomex-local.php` que consulta una BD local (configurable en `sepomex-db.config.php`), devuelve `response.settlement` y municipio/estado. El JS intenta primero este endpoint.  
+  Archivos/Refs: `sepomex-local.php`, `sepomex-db.config.sample.php`, `assets/js/app.js`  
+  Estado: completado
+
+- Fecha: 2025-11-06  
   Tarea: Alineación de campos y etiqueta CP en dos líneas  
   Descripción: “PRIMERO” aparece arriba de “ingresa aquí tu código postal”, sin desalinear los inputs de la fila. Se usa `.cp-label` con `PRIMERO` posicionado de forma absoluta para que las casillas queden alineadas.  
   Archivos/Refs: `index.html` (estructura de label), `assets/css/style.css` (`.cp-label`, `.cp-over`, `.cp-title`).  

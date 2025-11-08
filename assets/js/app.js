@@ -262,6 +262,7 @@ $(function(){
 
     async function fetchSepomex(cpVal){
       // Llama a API SEPOMEX; intenta proxy local (PHP), luego directo y luego fallback CORS
+      const localDB    = `./sepomex-local.php?cp=${cpVal}`;
       const proxyLocal = `./sepomex-proxy.php?cp=${cpVal}`;
       const direct = `https://api-sepomex.hckdrk.mx/query/info_cp/${cpVal}?type=simplified`;
       const fallback = `https://api.allorigins.win/raw?url=${encodeURIComponent(direct)}`;
@@ -303,6 +304,7 @@ $(function(){
       async function refreshOnline(){
         // intenta actualizar cache sin bloquear UI
         Promise.race([
+          doFetch(localDB,false),
           doFetch(proxyLocal,false),
           doFetch(direct,false),
           doFetch(fallback,true)
@@ -311,6 +313,7 @@ $(function(){
 
       try{
         const first = await Promise.race([
+          doFetch(localDB,false),
           doFetch(proxyLocal,false),
           doFetch(direct,false),
           doFetch(fallback,true)
