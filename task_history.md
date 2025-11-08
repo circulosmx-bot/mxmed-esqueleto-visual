@@ -216,3 +216,9 @@ Formato sugerido por entrada:
   Descripción: Validación genérica para teléfonos (7–15 dígitos, admite +()- y espacios) con feedback visual; agrega checkbox “Usar WhatsApp de Datos Generales” que sincroniza por defecto y permite override al desmarcar.  
   Archivos/Refs: `index.html` (data-validate, invalid-feedback, checkbox), `assets/js/app.js` (setupPhoneValidation, setupWhatsAppSync).  
   Estado: completado
+
+- Fecha: 2025-11-06  
+  Tarea: UX WhatsApp — placeholder dinámico al desmarcar  
+  Descripción: Si el usuario desmarca la casilla de sincronización, el campo de WhatsApp se habilita, se limpia y muestra el placeholder “otro numero wsp”; al marcar, se rellena desde Datos Generales y vuelve a “+52 ...”.  
+  Archivos/Refs: `assets/js/app.js` (setupWhatsAppSync toggle).  
+  Estado: completado

@@ -890,7 +890,17 @@ $(function(){
     const dg = document.getElementById('dp-whatsapp');
     if(!wa || !syncCb) return;
     function fillFromDG(){ if(dg){ wa.value = dg.value || ''; wa.dispatchEvent(new Event('input')); } }
-    function toggle(){ if(syncCb.checked){ wa.setAttribute('disabled','disabled'); fillFromDG(); } else { wa.removeAttribute('disabled'); }
+    function toggle(){
+      if(syncCb.checked){
+        wa.setAttribute('disabled','disabled');
+        wa.placeholder = '+52 ...';
+        fillFromDG();
+      } else {
+        wa.removeAttribute('disabled');
+        wa.value = '';
+        wa.placeholder = 'otro numero wsp';
+        wa.focus();
+      }
     }
     syncCb.addEventListener('change', toggle);
     if(dg){ dg.addEventListener('input', ()=>{ if(syncCb.checked) fillFromDG(); }); }
