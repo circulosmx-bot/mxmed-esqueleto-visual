@@ -202,6 +202,17 @@ $(function(){
         else if(el.type === 'checkbox' || el.type === 'radio'){ el.checked = false; }
         else { el.value = ''; }
       });
+      // renombrar IDs para evitar duplicados
+      const idMap = [
+        ['cp','cp2'],['colonia','colonia2'],['mensaje-cp','mensaje-cp2'],['municipio','municipio2'],['estado','estado2'],
+        ['cons-grupo-si','cons-grupo-si2'],['cons-grupo-no','cons-grupo-no2'],['cons-grupo-nombre','cons-grupo-nombre2'],['cons-titulo','cons-titulo2'],
+        ['cons-calle','cons-calle2'],['cons-numext','cons-numext2'],['cons-numint','cons-numint2'],['cons-piso','cons-piso2'],
+        ['cons-tel1','cons-tel12'],['cons-tel2','cons-tel22'],['cons-tel3','cons-tel32'],['cons-wa','cons-wa2'],['cons-wa-sync','cons-wa-sync2'],['cons-urg1','cons-urg12'],['cons-urg2','cons-urg22'],
+        ['sched-body','sched-body-2'],['sched-copy-mon','sched-copy-mon-2'],['sched-clear','sched-clear-2'],
+        ['cons-foto','cons-foto2'],['cons-foto-prev','cons-foto-prev2'],['cons-foto-img','cons-foto-img2'],
+        ['cons-map','cons-map2'],['cons-map-frame','cons-map-frame2'],['cons-lat','cons-lat2'],['cons-lng','cons-lng2']
+      ];
+      idMap.forEach(([from,to])=>{ const el = pane2.querySelector('#'+from); if(el){ el.id = to; const lab = pane2.querySelector('label[for="'+from+'"]'); if(lab){ lab.setAttribute('for', to);} } });
       tabContent.appendChild(pane2);
     }
     if(!btn2){
@@ -219,6 +230,13 @@ $(function(){
     pane2.classList.add('show','active');
     btn2.classList.add('active');
     if(window.bootstrap){ new bootstrap.Tab(btn2).show(); }
+    // inicializar en pane2
+    try{ setupCpAuto({ cp:'cp2', colonia:'colonia2', msg:'mensaje-cp2', mun:'municipio2', est:'estado2' }); }catch(_){ }
+    try{ const cp2=document.getElementById('cp2'), col2=document.getElementById('colonia2'); if(cp2&&col2){ cp2.addEventListener('blur', ()=>{ col2.focus(); }); } }catch(_){ }
+    try{ const cont=pane2; const phones=cont.querySelectorAll('[data-validate="phone"]'); const okp=v=>{const d=(v||'').replace(/[^0-9]/g,''); return d.length>=7&&d.length<=15;}; phones.forEach(el=>{ const apply=()=>{ const ok=okp(el.value); el.classList.toggle('is-invalid',!ok); el.setCustomValidity(ok?'':'Teléfono inválido'); }; el.addEventListener('input',apply); el.addEventListener('blur',apply); apply(); }); }catch(_){ }
+    try{ const wa=document.getElementById('cons-wa2'), cb=document.getElementById('cons-wa-sync2'), dg=document.getElementById('dp-whatsapp'); if(cb&&wa){ const fill=()=>{ if(dg){ wa.value=dg.value||''; wa.dispatchEvent(new Event('input')); } }; const toggle=()=>{ if(cb.checked){ wa.disabled=true; wa.placeholder='+52 ...'; fill(); } else { wa.disabled=false; wa.value=''; wa.placeholder='otro numero Whatsapp'; } }; cb.addEventListener('change',toggle); if(dg) dg.addEventListener('input',()=>{ if(cb.checked) fill(); }); toggle(); } }catch(_){ }
+    try{ if(window._mx_setupSchedulesFor){ window._mx_setupSchedulesFor(pane2,'-2'); } }catch(_){ }
+    try{ const frame=document.getElementById('cons-map-frame2'); if(frame){ const addr=()=>{ const cp=(document.getElementById('cp2')?.value||'').trim(); const col=(document.getElementById('colonia2')?.value||'').trim(); const mun=(document.getElementById('municipio2')?.value||'').trim(); const edo=(document.getElementById('estado2')?.value||'').trim(); const calle=(document.getElementById('cons-calle2')?.value||'').trim(); const num=(document.getElementById('cons-numext2')?.value||'').trim(); const a=[calle&&(calle+(num?' '+num:'')),col,cp,mun,edo,'México'].filter(Boolean).join(', '); return a; }; const upd=()=>{ const a=addr(); if(!a) return; const url='https://www.google.com/maps?q='+encodeURIComponent(a)+'&z=17&output=embed'; if(frame.src!==url) frame.src=url; }; ['cp2','colonia2','cons-calle2','cons-numext2'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',upd); el.addEventListener('change',upd);} }); } }catch(_){ }
     return {pane2, btn2};
   }
   document.getElementById('modalConsulAddYes')?.addEventListener('click', function(){
@@ -909,6 +927,39 @@ $(function(){
       const el = document.getElementById(id); if(!el) return;
       el.addEventListener('input', update); el.addEventListener('change', update);
     });
+  })();
+
+  // Helper opcional: construir horarios en un contenedor clonado (pane2)
+  (function(){
+    if(window._mx_setupSchedulesFor) return;
+    window._mx_setupSchedulesFor = function(container, keySuffix){
+      const body = container.querySelector('#sched-body-2');
+      if(!body) return;
+      body.innerHTML='';
+      const dias=[{k:'mon',lbl:'Lunes'},{k:'tue',lbl:'Martes'},{k:'wed',lbl:'Miércoles'},{k:'thu',lbl:'Jueves'},{k:'fri',lbl:'Viernes'},{k:'sat',lbl:'Sábado'},{k:'sun',lbl:'Domingo'}];
+      const key='mxmed_cons_schedules'+(keySuffix||'');
+      const load=()=>{ try{return JSON.parse(localStorage.getItem(key)||'{}');}catch(e){return{}} };
+      const save=v=>localStorage.setItem(key,JSON.stringify(v));
+      const state=load();
+      dias.forEach(d=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${d.lbl}</td><td><input type=\"checkbox\" class=\"form-check-input\" id=\"sch-act-${d.k}${keySuffix||''}\"></td><td><div class=\"d-flex align-items-center gap-1\"><input type=\"time\" class=\"form-control form-control-sm\" id=\"sch-a1-${d.k}${keySuffix||''}\"><span>–</span><input type=\"time\" class=\"form-control form-control-sm\" id=\"sch-b1-${d.k}${keySuffix||''}\"></div></td><td><div class=\"d-flex align-items-center gap-1\"><input type=\"time\" class=\"form-control form-control-sm\" id=\"sch-a2-${d.k}${keySuffix||''}\"><span>–</span><input type=\"time\" class=\"form-control form-control-sm\" id=\"sch-b2-${d.k}${keySuffix||''}\"></div></td>`;
+        body.appendChild(tr);
+        const act=tr.querySelector(`#sch-act-${d.k}${keySuffix||''}`);
+        const a1=tr.querySelector(`#sch-a1-${d.k}${keySuffix||''}`);
+        const b1=tr.querySelector(`#sch-b1-${d.k}${keySuffix||''}`);
+        const a2=tr.querySelector(`#sch-a2-${d.k}${keySuffix||''}`);
+        const b2=tr.querySelector(`#sch-b2-${d.k}${keySuffix||''}`);
+        const sv=state[d.k]||{};
+        act.checked=!!sv.act; a1.value=sv.a1||''; b1.value=sv.b1||''; a2.value=sv.a2||''; b2.value=sv.b2||'';
+        const sync=()=>{ state[d.k]={act:act.checked,a1:a1.value,b1:b1.value,a2:a2.value,b2:b2.value}; save(state); };
+        [act,a1,b1,a2,b2].forEach(el=> el.addEventListener('change', sync));
+      });
+      const copyBtn = container.querySelector('#sched-copy-mon-2');
+      const clearBtn= container.querySelector('#sched-clear-2');
+      copyBtn?.addEventListener('click', ()=>{ const st=load(); const m=st.mon||{}; ['tue','wed','thu','fri','sat','sun'].forEach(k=>{ st[k]={...m}; }); save(st); location.reload(); });
+      clearBtn?.addEventListener('click', ()=>{ localStorage.removeItem(key); location.reload(); });
+    };
   })();
 
   // Auto abrir colonias al tabular desde CP y permitir selección con flechas
