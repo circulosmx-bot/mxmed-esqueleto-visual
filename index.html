@@ -671,16 +671,18 @@
                   <div class="col-md-6"><label class="form-label">Horario</label><input class="form-control" placeholder="Lun-Vie 9:00-14:00, 16:00-19:00"/></div>
                   <div class="col-md-6"><label class="form-label">Notas</label><input class="form-control" placeholder="Accesibilidad, estacionamiento, etc."/></div>
                   <!-- NUEVOS CAMPOS DE CONSULTORIO (A) -->
-                  <!-- Grupo médico: pregunta y radios -->
+                  <!-- Grupo médico: pregunta y radios alineados en la misma línea -->
                   <div class="col-12">
-                    <label class="form-label d-block">¿Tu consultorio está en un Grupo Médico?</label>
-                    <div class="form-check form-check-inline">
-                      <input class="form-check-input" type="radio" name="cons-grupo" id="cons-grupo-si" value="si">
-                      <label class="form-check-label" for="cons-grupo-si">Sí</label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                      <input class="form-check-input" type="radio" name="cons-grupo" id="cons-grupo-no" value="no" checked>
-                      <label class="form-check-label" for="cons-grupo-no">No</label>
+                    <div class="d-flex align-items-center flex-wrap gap-3">
+                      <span class="form-label m-0">¿Tu consultorio está en un Grupo Médico?</span>
+                      <div class="form-check form-check-inline mb-0">
+                        <input class="form-check-input" type="radio" name="cons-grupo" id="cons-grupo-si" value="si">
+                        <label class="form-check-label" for="cons-grupo-si">Sí</label>
+                      </div>
+                      <div class="form-check form-check-inline mb-0">
+                        <input class="form-check-input" type="radio" name="cons-grupo" id="cons-grupo-no" value="no" checked>
+                        <label class="form-check-label" for="cons-grupo-no">No</label>
+                      </div>
                     </div>
                   </div>
                   <!-- Línea: nombre del grupo + título del consultorio -->
@@ -691,12 +693,12 @@
                   <div class="col-md-2"><label class="form-label" for="cons-numext">Número Ext.</label><input id="cons-numext" class="form-control" maxlength="6"/></div>
                   <div class="col-md-1"><label class="form-label" for="cons-piso">Piso</label><input id="cons-piso" class="form-control" maxlength="3"/></div>
                   <div class="col-12"><strong>Teléfonos del consultorio</strong></div>
-                  <div class="col-md-3"><label class="form-label" for="cons-tel1">Teléfono consultorio 01</label><input id="cons-tel1" class="form-control" inputmode="tel" placeholder="(###) ### ####"/></div>
-                  <div class="col-md-3"><label class="form-label" for="cons-tel2">Teléfono consultorio 02</label><input id="cons-tel2" class="form-control" inputmode="tel"/></div>
-                  <div class="col-md-3"><label class="form-label" for="cons-tel3">Teléfono consultorio 03</label><input id="cons-tel3" class="form-control" inputmode="tel"/></div>
-                  <div class="col-md-3"><label class="form-label" for="cons-wa">Whatsapp consultorio</label><input id="cons-wa" class="form-control" inputmode="tel" placeholder="+52 ..."/></div>
-                  <div class="col-md-3"><label class="form-label" for="cons-urg1">Teléfono Urgencias 01</label><input id="cons-urg1" class="form-control" inputmode="tel"/></div>
-                  <div class="col-md-3"><label class="form-label" for="cons-urg2">Teléfono Urgencias 02</label><input id="cons-urg2" class="form-control" inputmode="tel"/></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-tel1">Teléfono consultorio 01</label><input id="cons-tel1" class="form-control" inputmode="tel" data-validate="phone" placeholder="(###) ### ####"/><div class="invalid-feedback">Ingresa un teléfono válido (7–15 dígitos).</div></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-tel2">Teléfono consultorio 02</label><input id="cons-tel2" class="form-control" inputmode="tel" data-validate="phone"/><div class="invalid-feedback">Ingresa un teléfono válido (7–15 dígitos).</div></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-tel3">Teléfono consultorio 03</label><input id="cons-tel3" class="form-control" inputmode="tel" data-validate="phone"/><div class="invalid-feedback">Ingresa un teléfono válido (7–15 dígitos).</div></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-wa">Whatsapp consultorio</label><input id="cons-wa" class="form-control" inputmode="tel" data-validate="phone" placeholder="+52 ..."/><div class="form-check mt-1"><input class="form-check-input" type="checkbox" id="cons-wa-sync" checked><label class="form-check-label" for="cons-wa-sync">Usar WhatsApp de Datos Generales</label></div><div class="invalid-feedback">Ingresa un número válido (7–15 dígitos).</div></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-urg1">Teléfono Urgencias 01</label><input id="cons-urg1" class="form-control" inputmode="tel" data-validate="phone"/><div class="invalid-feedback">Ingresa un teléfono válido (7–15 dígitos).</div></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-urg2">Teléfono Urgencias 02</label><input id="cons-urg2" class="form-control" inputmode="tel" data-validate="phone"/><div class="invalid-feedback">Ingresa un teléfono válido (7–15 dígitos).</div></div>
                   <div class="col-12 d-flex gap-4 align-items-center">
                     <div class="form-check"><input class="form-check-input" type="checkbox" id="cons-estac"/><label class="form-check-label" for="cons-estac">Cuenta con estacionamiento propio</label></div>
                     <div class="form-check"><input class="form-check-input" type="checkbox" id="cons-acces"/><label class="form-check-label" for="cons-acces">Accesibilidad para discapacitados</label></div>

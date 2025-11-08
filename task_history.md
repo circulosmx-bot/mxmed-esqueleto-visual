@@ -210,3 +210,9 @@ Formato sugerido por entrada:
   Descripción: Se agrega la pregunta “¿Tu consultorio está en un Grupo Médico?” con radios Sí/No; si elige Sí, se habilita el input “Nombre del grupo médico” y, en la misma línea, queda el campo “Dale un título a este consultorio”.  
   Archivos/Refs: `index.html` (radios y campos), `assets/js/app.js` (toggle habilitado).  
   Estado: completado
+
+- Fecha: 2025-11-06  
+  Tarea: Validación de teléfonos y sincronización de WhatsApp  
+  Descripción: Validación genérica para teléfonos (7–15 dígitos, admite +()- y espacios) con feedback visual; agrega checkbox “Usar WhatsApp de Datos Generales” que sincroniza por defecto y permite override al desmarcar.  
+  Archivos/Refs: `index.html` (data-validate, invalid-feedback, checkbox), `assets/js/app.js` (setupPhoneValidation, setupWhatsAppSync).  
+  Estado: completado

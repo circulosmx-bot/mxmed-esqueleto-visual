@@ -862,6 +862,42 @@ $(function(){
     sync();
   })();
 
+  // Validación de teléfonos (genérica: 7–15 dígitos, admite +()- y espacios)
+  (function setupPhoneValidation(){
+    const all = Array.from(document.querySelectorAll('[data-validate="phone"]'));
+    function validPhone(val){
+      const s = (val||'').trim();
+      if(!s) return true; // permitir vacío si no es requerido
+      const digits = s.replace(/[^0-9]/g,'');
+      return digits.length >= 7 && digits.length <= 15;
+    }
+    function applyState(el){
+      const ok = validPhone(el.value);
+      el.classList.toggle('is-invalid', !ok);
+      el.setCustomValidity(ok ? '' : 'Teléfono inválido');
+    }
+    all.forEach(el=>{
+      el.addEventListener('input', ()=>applyState(el));
+      el.addEventListener('blur', ()=>applyState(el));
+      applyState(el);
+    });
+  })();
+
+  // WhatsApp consultorio: sincronizar con Datos Generales si se marca la casilla
+  (function setupWhatsAppSync(){
+    const wa = document.getElementById('cons-wa');
+    const syncCb = document.getElementById('cons-wa-sync');
+    const dg = document.getElementById('dp-whatsapp');
+    if(!wa || !syncCb) return;
+    function fillFromDG(){ if(dg){ wa.value = dg.value || ''; wa.dispatchEvent(new Event('input')); } }
+    function toggle(){ if(syncCb.checked){ wa.setAttribute('disabled','disabled'); fillFromDG(); } else { wa.removeAttribute('disabled'); }
+    }
+    syncCb.addEventListener('change', toggle);
+    if(dg){ dg.addEventListener('input', ()=>{ if(syncCb.checked) fillFromDG(); }); }
+    // inicial
+    toggle();
+  })();
+
   // Ocultar campos antiguos del consultorio para evitar duplicados
   (function hideLegacyFields(){
     const root = document.querySelector('#sede1'); if(!root) return;
