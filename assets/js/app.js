@@ -271,6 +271,17 @@ $(function(){
       const addLi = document.getElementById('btn-consul-add')?.closest('li'); if(addLi){ nav.insertBefore(li, addLi); } else { nav.appendChild(li); }
       li.appendChild(btn);
     }
+    // insertar barra de eliminar en pane secundario
+    try{
+      if(n>1 && !pane.querySelector('.cons-delbar')){
+        const bar = document.createElement('div'); bar.className='cons-delbar';
+        const btnDel = document.createElement('button'); btnDel.type='button'; btnDel.className='btn btn-outline-danger btn-sm'; btnDel.id = 'cons-del-'+n; btnDel.textContent='Eliminar este consultorio';
+        bar.appendChild(btnDel);
+        const firstRow = pane.querySelector('.row.g-3'); if(firstRow) firstRow.prepend(bar); else pane.prepend(bar);
+        btnDel.addEventListener('click', ()=>{ openDeleteModal(n); });
+      }
+    }catch(_){ }
+
     // activar
     document.querySelectorAll('#p-consultorio .mm-tabs-embed .nav-link').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('#p-consultorio .tab-pane').forEach(p=>p.classList.remove('show','active'));
@@ -289,6 +300,43 @@ $(function(){
     return {pane, btn};
   }
   window._mx_createConsultorio = createConsultorio;
+
+  // Eliminar consultorio con confirmación (demo: acepta código 123456 o pass 'codex')
+  function openDeleteModal(n){
+    const modalEl = document.getElementById('modalConsulDel'); if(!modalEl) return;
+    modalEl.setAttribute('data-target-n', String(n));
+    // reset inputs
+    const code = document.getElementById('del-code'); const pass = document.getElementById('del-pass'); const err = document.getElementById('del-error');
+    if(code) code.value=''; if(pass) pass.value=''; if(err) err.style.display='none';
+    const rCode = document.getElementById('del-auth-code'); const rPass = document.getElementById('del-auth-pass');
+    const divCode = document.getElementById('del-input-code'); const divPass = document.getElementById('del-input-pass');
+    function sync(){ if(rPass.checked){ divPass.style.display='block'; divCode.style.display='none'; } else { divPass.style.display='none'; divCode.style.display='block'; } }
+    rCode?.addEventListener('change', sync); rPass?.addEventListener('change', sync); sync();
+    if(window.bootstrap){ new bootstrap.Modal(modalEl).show(); }
+  }
+  document.getElementById('modalConsulDelYes')?.addEventListener('click', ()=>{
+    const modalEl = document.getElementById('modalConsulDel'); if(!modalEl) return;
+    const n = parseInt(modalEl.getAttribute('data-target-n')||'0',10); if(!n || n===1) return;
+    const usePass = document.getElementById('del-auth-pass')?.checked;
+    const pass = document.getElementById('del-pass')?.value||'';
+    const code = document.getElementById('del-code')?.value||'';
+    const err = document.getElementById('del-error');
+    const ok = usePass ? (pass==='codex') : (code==='123456');
+    if(!ok){ if(err){ err.style.display='block'; } return; }
+    // cerrar modal
+    if(window.bootstrap){ bootstrap.Modal.getInstance(modalEl)?.hide(); }
+    // eliminar pane y tab
+    const pane = document.getElementById('sede'+n);
+    const btn = document.querySelector(`#p-consultorio [data-bs-target="#sede${n}"]`);
+    const li = btn?.closest('li');
+    pane?.remove(); li?.remove();
+    // reactivar principal
+    const btn1 = document.querySelector('#p-consultorio [data-bs-target="#sede1"]');
+    const pane1 = document.getElementById('sede1');
+    if(btn1 && pane1){ btn1.classList.add('active'); pane1.classList.add('show','active'); if(window.bootstrap){ new bootstrap.Tab(btn1).show(); } }
+    // re-habilitar botón agregar si estaba bloqueado
+    const addBtn=document.getElementById('btn-consul-add'); if(addBtn){ addBtn.classList.remove('disabled'); addBtn.removeAttribute('aria-disabled'); addBtn.title=''; }
+  });
   function nextConsultorioIndex(){
     const panes = Array.from(document.querySelectorAll('#p-consultorio .tab-pane[id^="sede"]'));
     let max = 0; panes.forEach(p=>{ const m = /sede(\d+)/.exec(p.id); const n = m? parseInt(m[1],10) : 0; if(n>max) max=n; });

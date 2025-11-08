@@ -1056,6 +1056,9 @@ body{margin:0;background:var(--mm-fondo-base);}
 .sched-table input[type=time]{ max-width: 10.5rem }
 .sched-table .form-check-input{ transform: scale(1.1) }
 
+/* Botón eliminar consultorio en pane secundario */
+.cons-delbar{ display:flex; justify-content:flex-end; margin-bottom:.5rem }
+
 /* Radios/checkbox en Consultorio: color de marca */
 #p-consultorio .form-check-input{ accent-color:#00ADC1; }
 #p-consultorio .form-check-input:checked{ background-color:#00ADC1; border-color:#00ADC1; box-shadow:0 0 0 .2rem rgba(0,173,193,.25); }

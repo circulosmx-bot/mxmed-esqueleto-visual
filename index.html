@@ -755,6 +755,44 @@
           </div>
         </div>
 
+        <!-- Modal: Eliminar consultorio -->
+        <div class="modal fade" id="modalConsulDel" tabindex="-1" aria-labelledby="modalConsulDelLabel" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="modalConsulDelLabel">Eliminar consultorio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+              </div>
+              <div class="modal-body">
+                <p class="mb-2">¿Estás seguro de eliminar este consultorio? Esta acción no se puede deshacer.</p>
+                <div class="mb-2">
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="del-auth" id="del-auth-code" value="code" checked>
+                    <label class="form-check-label" for="del-auth-code">Código SMS</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="del-auth" id="del-auth-pass" value="pass">
+                    <label class="form-check-label" for="del-auth-pass">Contraseña</label>
+                  </div>
+                </div>
+                <div id="del-input-code" class="mb-2">
+                  <label class="form-label" for="del-code">Ingresa el código enviado al móvil</label>
+                  <input id="del-code" class="form-control" placeholder="p.ej. 123456">
+                </div>
+                <div id="del-input-pass" class="mb-2" style="display:none;">
+                  <label class="form-label" for="del-pass">Ingresa tu contraseña</label>
+                  <input id="del-pass" type="password" class="form-control" placeholder="••••••••">
+                </div>
+                <div id="del-error" class="text-danger small" style="display:none;">Código/contraseña incorrectos.</div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="modalConsulDelYes">Eliminar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- OPINIONES -->
         <section class="mm-card d-none" id="p-opiniones">
           <div class="head"><h5><i class="bi bi-chat-quote title-ico" aria-hidden="true"></i>Opiniones recibidas en mi perfil</h5></div>
