@@ -244,13 +244,20 @@ $(function(){
     }
 
     function fillSelect(options){
+      // Limpia y coloca placeholder
       sel.innerHTML = '';
       const base = document.createElement('option'); base.value=''; base.textContent='Selecciona…'; sel.appendChild(base);
+      // Agrega colonias
       (options||[]).forEach(name=>{
         const opt = document.createElement('option'); opt.value = name; opt.textContent = name; sel.appendChild(opt);
       });
-      sel.disabled = !options || options.length === 0;
-      if(!sel.disabled && sel.options.length>1) sel.selectedIndex = 1;
+      const has = !!options && options.length > 0;
+      // Habilita/deshabilita de forma explícita (prop y atributo)
+      if(has){ sel.disabled = false; sel.removeAttribute('disabled'); sel.selectedIndex = 0; }
+      else { sel.disabled = true; sel.setAttribute('disabled','disabled'); }
+      try{ console.debug('[SEPOMEX] opciones en #'+ids.colonia+':', sel.options.length-1); }catch(_){ }
+      // Dispara change por si hay listeners posteriores
+      sel.dispatchEvent(new Event('change'));
     }
 
     async function fetchSepomex(cpVal){
@@ -323,7 +330,10 @@ $(function(){
         const uniq = Array.from(new Set(list)).sort((a,b)=>a.localeCompare(b,'es'));
         // Mostrar aviso si proviene de datos locales
         const fromLocal = (await fetch('assets/data/sepomex-fallback.json', {cache:'no-store'}).then(r=>r.json()).then(j=> !!(j && j[val])).catch(()=>false));
-        fillSelect(uniq); setMsg(fromLocal ? 'Usando datos locales de prueba' : ''); if(mun) mun.value = municipio||''; if(est) est.value = estado||'';
+        fillSelect(uniq);
+        setMsg(fromLocal ? 'Usando datos locales de prueba' : '');
+        if(mun) mun.value = municipio||''; if(est) est.value = estado||'';
+        try{ console.debug('[SEPOMEX] colonias:', uniq); }catch(_){ }
       }else{
         fillSelect([]); setMsg('Código postal no válido'); if(mun) mun.value=''; if(est) est.value='';
       }

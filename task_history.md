@@ -154,6 +154,12 @@ Formato sugerido por entrada:
   Estado: completado
 
 - Fecha: 2025-11-06  
+  Tarea: Habilitar select de colonias con seguridad  
+  Descripción: Se asegura que el `<select id="colonia">` se habilite quitando también el atributo `disabled` y manteniendo “Selecciona…” como primera opción sin autoselect, para que el cambio sea visible.  
+  Archivos/Refs: `assets/js/app.js` (`fillSelect`)  
+  Estado: completado
+
+- Fecha: 2025-11-06  
   Tarea: Alineación de campos y etiqueta CP en dos líneas  
   Descripción: “PRIMERO” aparece arriba de “ingresa aquí tu código postal”, sin desalinear los inputs de la fila. Se usa `.cp-label` con `PRIMERO` posicionado de forma absoluta para que las casillas queden alineadas.  
   Archivos/Refs: `index.html` (estructura de label), `assets/css/style.css` (`.cp-label`, `.cp-over`, `.cp-title`).  
