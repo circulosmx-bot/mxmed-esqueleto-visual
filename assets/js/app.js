@@ -184,10 +184,47 @@ $(function(){
     if(window.bootstrap && el){ new bootstrap.Modal(el).show(); }
     else { if(window.confirm('¿Deseas agregar otro consultorio?')) {/* fallback */} }
   });
+  function createSede2IfNeeded(){
+    const nav = document.querySelector('#p-consultorio .mm-tabs-embed');
+    const tabContent = document.querySelector('#p-consultorio .tab-content');
+    if(!nav || !tabContent) return null;
+    let pane2 = document.getElementById('sede2');
+    let btn2 = document.querySelector('#p-consultorio [data-bs-target="#sede2"]');
+    if(!pane2){
+      const pane1 = document.getElementById('sede1');
+      if(!pane1) return null;
+      pane2 = pane1.cloneNode(true);
+      pane2.id = 'sede2';
+      pane2.classList.remove('show','active');
+      // limpiar campos de formulario clonados
+      pane2.querySelectorAll('input, textarea, select').forEach(el=>{
+        if(el.tagName === 'SELECT'){ el.selectedIndex = 0; }
+        else if(el.type === 'checkbox' || el.type === 'radio'){ el.checked = false; }
+        else { el.value = ''; }
+      });
+      tabContent.appendChild(pane2);
+    }
+    if(!btn2){
+      const li = document.createElement('li'); li.className='nav-item';
+      const btn = document.createElement('button'); btn.className='nav-link'; btn.type='button';
+      btn.setAttribute('data-bs-toggle','pill'); btn.setAttribute('data-bs-target','#sede2');
+      btn.innerHTML = '<span class="tab-ico material-symbols-rounded" aria-hidden="true">apartment</span><span class="tab-lbl">CONSULTORIO 2</span>';
+      const addLi = document.getElementById('btn-consul-add')?.closest('li');
+      if(addLi){ nav.insertBefore(li, addLi); } else { nav.appendChild(li); }
+      li.appendChild(btn); btn2 = btn;
+    }
+    // activar pestaña 2
+    document.querySelectorAll('#p-consultorio .mm-tabs-embed .nav-link').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('#p-consultorio .tab-pane').forEach(p=>p.classList.remove('show','active'));
+    pane2.classList.add('show','active');
+    btn2.classList.add('active');
+    if(window.bootstrap){ new bootstrap.Tab(btn2).show(); }
+    return {pane2, btn2};
+  }
   document.getElementById('modalConsulAddYes')?.addEventListener('click', function(){
     const el = document.getElementById('modalConsulAdd');
     if(window.bootstrap && el){ bootstrap.Modal.getInstance(el)?.hide(); }
-    // Aquí podríamos crear dinámicamente una nueva pestaña/forma
+    createSede2IfNeeded();
   });
 
   const $$ = (s,c=document)=>Array.from(c.querySelectorAll(s));

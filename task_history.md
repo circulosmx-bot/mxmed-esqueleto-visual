@@ -112,6 +112,12 @@ Formato sugerido por entrada:
   Estado: completado
 
 - Fecha: 2025-11-06  
+  Tarea: Consultorio — ajustar tamaño del + y habilitar tab 2  
+  Descripción: Se reduce el icono “+” ~15% (3.4rem → 2.9rem). Si el usuario confirma en el modal, se crea/activa dinámicamente el tab “Consultorio 2” clonando el formulario base y limpiando sus campos.  
+  Archivos/Refs: `assets/css/style.css` (`.ico-plus`), `assets/js/app.js` (`createSede2IfNeeded`)  
+  Estado: completado
+
+- Fecha: 2025-11-06  
   Tarea: Versionar SVGs de sección Fotos  
   Descripción: Se añaden al repositorio los SVGs provistos para el icono y el botón de carga de imágenes en la sección Fotos.  
   Archivos/Refs: `assets/icons/carga-de-imagenes.svg`, `assets/icons/boton-carga-de-imagenes.svg`  
