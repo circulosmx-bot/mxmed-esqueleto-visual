@@ -123,11 +123,29 @@ if ($method === 'load' && $driver !== 'sqlite') {
     $pdo->exec("SET GLOBAL local_infile = 1");
   } catch(Exception $e) { /* puede requerir permisos */ }
   $stmt = $pdo->prepare(
-    "LOAD DATA LOCAL INFILE :path INTO TABLE sepomex
-     CHARACTER SET utf8
-     FIELDS TERMINATED BY '|' LINES TERMINATED BY '\n'
+    "LOAD DATA LOCAL INFILE :path
+     INTO TABLE sepomex
+     CHARACTER SET latin1
+     FIELDS TERMINATED BY '|' 
+     LINES TERMINATED BY '\r\n'
      IGNORE 1 LINES
-     (d_codigo,d_asenta,d_tipo_asenta,d_mnpio,d_estado,d_ciudad,d_cp,c_estado,c_oficina,c_tipo_asenta,c_mnpio,id_asenta_cpcons,d_zona,c_cve_ciudad)"
+     (
+       d_codigo,
+       d_asenta,
+       d_tipo_asenta,
+       d_mnpio,
+       d_estado,
+       d_ciudad,
+       d_cp,
+       c_estado,
+       c_oficina,
+       @c_cp,             -- saltar columna c_CP del archivo fuente
+       c_tipo_asenta,
+       c_mnpio,
+       id_asenta_cpcons,
+       d_zona,
+       c_cve_ciudad
+     )"
   );
   $stmt->bindValue(':path', $TXT);
   try {
@@ -140,15 +158,38 @@ if ($method === 'load' && $driver !== 'sqlite') {
   echo "Importando por inserciones (puede tardar, usa ?limit= para probar)...\n";
   $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 0; // 0 = todo
   $pdo->beginTransaction();
-  $ins = $pdo->prepare("INSERT INTO sepomex (d_codigo,d_asenta,d_tipo_asenta,d_mnpio,d_estado,d_ciudad,d_cp,c_estado,c_oficina,c_tipo_asenta,c_mnpio,id_asenta_cpcons,d_zona,c_cve_ciudad) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+  $ins = $pdo->prepare(
+    "INSERT INTO sepomex
+     (d_codigo,d_asenta,d_tipo_asenta,d_mnpio,d_estado,d_ciudad,d_cp,c_estado,c_oficina,c_tipo_asenta,c_mnpio,id_asenta_cpcons,d_zona,c_cve_ciudad)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+  );
   $fh = fopen($TXT, 'r');
   // saltar encabezado
   fgets($fh);
   $n = 0; $batch = 0;
   while (($line = fgets($fh)) !== false) {
     $parts = array_map('trim', explode('|', rtrim($line, "\r\n")));
-    if (count($parts) < 14) continue;
-    $ins->execute($parts);
+    if (count($parts) < 15) continue; // el archivo trae 15 columnas; omitiremos c_CP (índice 9)
+    // Normalizar a UTF-8 desde latin1 para evitar errores de codificación
+    $parts = array_map(function($s){ return iconv('ISO-8859-1','UTF-8//TRANSLIT',$s); }, $parts);
+    // Remapear a 14 columnas sin c_CP
+    $vals = [
+      $parts[0],  // d_codigo
+      $parts[1],  // d_asenta
+      $parts[2],  // d_tipo_asenta
+      $parts[3],  // d_mnpio
+      $parts[4],  // d_estado
+      $parts[5],  // d_ciudad
+      $parts[6],  // d_cp
+      $parts[7],  // c_estado
+      $parts[8],  // c_oficina
+      $parts[10], // c_tipo_asenta (saltamos [9] c_CP)
+      $parts[11], // c_mnpio
+      $parts[12], // id_asenta_cpcons
+      $parts[13], // d_zona
+      $parts[14], // c_cve_ciudad
+    ];
+    $ins->execute($vals);
     $n++; $batch++;
     if ($batch >= 2000) { $pdo->commit(); $pdo->beginTransaction(); $batch = 0; echo "."; }
     if ($limit && $n >= $limit) break;

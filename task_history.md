@@ -172,6 +172,12 @@ Formato sugerido por entrada:
   Estado: completado
 
 - Fecha: 2025-11-06  
+  Tarea: Fix importador SEPOMEX (latin1 y 15 columnas)  
+  Descripción: Ajuste de `LOAD DATA` a `CHARACTER SET latin1`, `LINES TERMINATED BY '\r\n'` y omitir columna `c_CP` con variable `@c_cp`. En inserciones, mapeo explícito 15→14 columnas y conversión a UTF‑8 para evitar HY093 y errores de codificación.  
+  Archivos/Refs: `sepomex-import.php`  
+  Estado: completado
+
+- Fecha: 2025-11-06  
   Tarea: Alineación de campos y etiqueta CP en dos líneas  
   Descripción: “PRIMERO” aparece arriba de “ingresa aquí tu código postal”, sin desalinear los inputs de la fila. Se usa `.cp-label` con `PRIMERO` posicionado de forma absoluta para que las casillas queden alineadas.  
   Archivos/Refs: `index.html` (estructura de label), `assets/css/style.css` (`.cp-label`, `.cp-over`, `.cp-title`).  
