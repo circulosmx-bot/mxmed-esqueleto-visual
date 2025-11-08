@@ -291,7 +291,19 @@ $(function(){
           try{ // 3) AllOrigins
             return await doFetch(fallback, true);
           }catch(e3){
-            try{ console.error('[SEPOMEX] fallback también falló', e3?.message||e3); }catch(_){ }
+          try{ console.error('[SEPOMEX] fallback también falló', e3?.message||e3); }catch(_){ }
+            // 4) Fallback local (archivo estático para demo)
+            try{
+              const local = await (await fetch('assets/data/sepomex-fallback.json', {cache:'no-store'})).json();
+              const entry = local && local[cpVal];
+              if(entry){
+                const list = (entry.settlement || entry.colonias || entry.asentamientos || []).slice();
+                const municipio = entry.municipio || '';
+                const estado = entry.estado || '';
+                try{ console.info('[SEPOMEX] usando datos locales de prueba para', cpVal); }catch(_){ }
+                return { list, municipio, estado };
+              }
+            }catch(_e4){ /* sin fallback local */ }
             return { list:[], municipio:'', estado:'' };
           }
         }
@@ -309,7 +321,9 @@ $(function(){
       const { list, municipio, estado } = await fetchSepomex(val);
       if(list && list.length){
         const uniq = Array.from(new Set(list)).sort((a,b)=>a.localeCompare(b,'es'));
-        fillSelect(uniq); setMsg(''); if(mun) mun.value = municipio||''; if(est) est.value = estado||'';
+        // Mostrar aviso si proviene de datos locales
+        const fromLocal = (await fetch('assets/data/sepomex-fallback.json', {cache:'no-store'}).then(r=>r.json()).then(j=> !!(j && j[val])).catch(()=>false));
+        fillSelect(uniq); setMsg(fromLocal ? 'Usando datos locales de prueba' : ''); if(mun) mun.value = municipio||''; if(est) est.value = estado||'';
       }else{
         fillSelect([]); setMsg('Código postal no válido'); if(mun) mun.value=''; if(est) est.value='';
       }

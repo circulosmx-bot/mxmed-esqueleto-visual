@@ -148,6 +148,12 @@ Formato sugerido por entrada:
   Estado: completado
 
 - Fecha: 2025-11-06  
+  Tarea: Fallback local para CP (demo sin conexión)  
+  Descripción: Se agrega `assets/data/sepomex-fallback.json` con ejemplo para 20230; el JS usa este dataset si todos los intentos de red fallan y muestra aviso “Usando datos locales de prueba”.  
+  Archivos/Refs: `assets/data/sepomex-fallback.json`, `assets/js/app.js`  
+  Estado: completado
+
+- Fecha: 2025-11-06  
   Tarea: Alineación de campos y etiqueta CP en dos líneas  
   Descripción: “PRIMERO” aparece arriba de “ingresa aquí tu código postal”, sin desalinear los inputs de la fila. Se usa `.cp-label` con `PRIMERO` posicionado de forma absoluta para que las casillas queden alineadas.  
   Archivos/Refs: `index.html` (estructura de label), `assets/css/style.css` (`.cp-label`, `.cp-over`, `.cp-title`).  
