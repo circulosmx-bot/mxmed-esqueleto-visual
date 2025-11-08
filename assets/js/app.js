@@ -289,11 +289,16 @@ $(function(){
     return {pane, btn};
   }
   window._mx_createConsultorio = createConsultorio;
+  function nextConsultorioIndex(){
+    const panes = Array.from(document.querySelectorAll('#p-consultorio .tab-pane[id^="sede"]'));
+    let max = 0; panes.forEach(p=>{ const m = /sede(\d+)/.exec(p.id); const n = m? parseInt(m[1],10) : 0; if(n>max) max=n; });
+    return max ? max+1 : 2;
+  }
   document.getElementById('modalConsulAddYes')?.addEventListener('click', function(){
     const el = document.getElementById('modalConsulAdd');
     if(window.bootstrap && el){ bootstrap.Modal.getInstance(el)?.hide(); }
-    const count = document.querySelectorAll('#p-consultorio .tab-pane[id^="sede"]').length;
-    const next = count + 1; if(window._mx_createConsultorio) window._mx_createConsultorio(next); else createSede2IfNeeded();
+    const next = nextConsultorioIndex();
+    if(window._mx_createConsultorio) window._mx_createConsultorio(next); else createSede2IfNeeded();
   });
 
   // ====== CP -> Colonias (SEPOMEX) ======
