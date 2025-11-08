@@ -926,6 +926,7 @@ $(function(){
       }
     }
     function closeSelectList(){ sel.removeAttribute('size'); sel.classList.remove('select-open'); }
+    function isOpen(){ return sel.hasAttribute('size'); }
 
     // Al tabular desde CP, enfocar colonia y abrir cuando haya opciones
     cp.addEventListener('keydown', (e)=>{
@@ -940,9 +941,31 @@ $(function(){
         poll();
       }
     });
-    // Cerrar al perder foco, Enter o Escape
+    // Navegación con flechas sin desplazar la página y cierre con Enter/Escape
+    sel.addEventListener('keydown', (e)=>{
+      if(document.activeElement !== sel || !isOpen()) return;
+      const total = sel.options?.length || 0; if(total === 0) return;
+      let i = sel.selectedIndex < 0 ? 0 : sel.selectedIndex;
+      switch(e.key){
+        case 'ArrowDown': e.preventDefault(); sel.selectedIndex = Math.min(total-1, i+1); break;
+        case 'ArrowUp': e.preventDefault(); sel.selectedIndex = Math.max(0, i-1); break;
+        case 'PageDown': e.preventDefault(); sel.selectedIndex = Math.min(total-1, i+5); break;
+        case 'PageUp': e.preventDefault(); sel.selectedIndex = Math.max(0, i-5); break;
+        case 'Home': e.preventDefault(); sel.selectedIndex = 0; break;
+        case 'End': e.preventDefault(); sel.selectedIndex = total-1; break;
+        case 'Enter':
+          e.preventDefault();
+          closeSelectList();
+          sel.dispatchEvent(new Event('change'));
+          document.getElementById('cons-calle')?.focus();
+          break;
+        case 'Escape': e.preventDefault(); closeSelectList(); break;
+      }
+    });
+    // Cerrar al perder foco
     sel.addEventListener('blur', closeSelectList);
-    sel.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === 'Escape'){ closeSelectList(); } });
+    // Al cambiar colonia, pasar a Calle
+    sel.addEventListener('change', ()=>{ document.getElementById('cons-calle')?.focus(); });
   })();
 
   // Grupo médico: habilitar/deshabilitar campo según radios
