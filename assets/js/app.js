@@ -911,6 +911,40 @@ $(function(){
     });
   })();
 
+  // Auto abrir colonias al tabular desde CP y permitir selección con flechas
+  (function setupColoniaAutoOpen(){
+    const cp = document.getElementById('cp');
+    const sel = document.getElementById('colonia');
+    if(!cp || !sel) return;
+
+    function openSelectList(){
+      const total = sel.options ? sel.options.length : 0;
+      if(total > 1 && !sel.disabled){
+        const n = Math.min(Math.max(6, total), 10); // entre 6 y 10 visibles
+        sel.setAttribute('size', n);
+        sel.classList.add('select-open');
+      }
+    }
+    function closeSelectList(){ sel.removeAttribute('size'); sel.classList.remove('select-open'); }
+
+    // Al tabular desde CP, enfocar colonia y abrir cuando haya opciones
+    cp.addEventListener('keydown', (e)=>{
+      if(e.key === 'Tab' && !e.shiftKey){
+        const pollMs = 100; let waited = 0;
+        e.preventDefault(); sel.focus();
+        const poll = ()=>{
+          if((sel.options?.length||0) > 1 && !sel.disabled){ openSelectList(); return; }
+          waited += pollMs; if(waited >= 1500) return; // 1.5s máx
+          setTimeout(poll, pollMs);
+        };
+        poll();
+      }
+    });
+    // Cerrar al perder foco, Enter o Escape
+    sel.addEventListener('blur', closeSelectList);
+    sel.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === 'Escape'){ closeSelectList(); } });
+  })();
+
   // Grupo médico: habilitar/deshabilitar campo según radios
   (function setupGrupoMedico(){
     const rSi = document.getElementById('cons-grupo-si');

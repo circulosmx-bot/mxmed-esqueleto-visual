@@ -222,3 +222,9 @@ Formato sugerido por entrada:
   Descripción: Si el usuario desmarca la casilla de sincronización, el campo de WhatsApp se habilita, se limpia y muestra el placeholder “otro numero wsp”; al marcar, se rellena desde Datos Generales y vuelve a “+52 ...”.  
   Archivos/Refs: `assets/js/app.js` (setupWhatsAppSync toggle).  
   Estado: completado
+
+- Fecha: 2025-11-06  
+  Tarea: Auto abrir colonias al tabular desde CP  
+  Descripción: Al presionar Tab en el campo CP, el foco pasa a “Colonia” y se despliega la lista (usando `size` temporal) cuando hay opciones disponibles; se cierra en blur/Enter/Escape.  
+  Archivos/Refs: `assets/js/app.js` (setupColoniaAutoOpen).  
+  Estado: completado
