@@ -80,8 +80,14 @@ try {
   } else {
     $h = $cfg['mysql']['host']; $p = (int)$cfg['mysql']['port']; $db = $cfg['mysql']['dbname'];
     $u = $cfg['mysql']['user']; $pw = $cfg['mysql']['pass']; $ch = $cfg['mysql']['charset'] ?? 'utf8mb4';
+    // Intentar crear la BD si no existe
+    try {
+      $dsn0 = "mysql:host={$h};port={$p};charset={$ch}";
+      $pdo0 = new PDO($dsn0, $u, $pw, [ PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION ]);
+      $pdo0->exec("CREATE DATABASE IF NOT EXISTS `{$db}` DEFAULT CHARACTER SET {$ch}");
+    } catch (Throwable $e) { /* continuar aunque falle la creación */ }
     $dsn = "mysql:host={$h};port={$p};dbname={$db};charset={$ch}";
-    $pdo = new PDO($dsn, $u, $pw, [ PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION ]);
+    $pdo = new PDO($dsn, $u, $pw, [ PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::MYSQL_ATTR_LOCAL_INFILE => true ]);
   }
 } catch (Throwable $e) {
   echo "Error de conexión BD: ".$e->getMessage()."\n";
@@ -153,4 +159,3 @@ if ($method === 'load' && $driver !== 'sqlite') {
 }
 
 echo "\nPrueba ahora: /sepomex-local.php?cp=20230\n";
-

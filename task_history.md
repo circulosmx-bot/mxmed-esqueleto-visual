@@ -166,6 +166,12 @@ Formato sugerido por entrada:
   Estado: completado
 
 - Fecha: 2025-11-06  
+  Tarea: Crear config por defecto y mejorar importador  
+  Descripción: Se agrega `sepomex-db.config.php` con valores por defecto (MySQL root sin contraseña, DB `sepomex`) y se mejora `sepomex-import.php` para crear la base si no existe y habilitar `LOAD DATA LOCAL INFILE` (PDO `MYSQL_ATTR_LOCAL_INFILE`).  
+  Archivos/Refs: `sepomex-db.config.php`, `sepomex-import.php`  
+  Estado: completado
+
+- Fecha: 2025-11-06  
   Tarea: Alineación de campos y etiqueta CP en dos líneas  
   Descripción: “PRIMERO” aparece arriba de “ingresa aquí tu código postal”, sin desalinear los inputs de la fila. Se usa `.cp-label` con `PRIMERO` posicionado de forma absoluta para que las casillas queden alineadas.  
   Archivos/Refs: `index.html` (estructura de label), `assets/css/style.css` (`.cp-label`, `.cp-over`, `.cp-title`).  
