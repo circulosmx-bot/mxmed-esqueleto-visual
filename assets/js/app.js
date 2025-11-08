@@ -848,7 +848,7 @@ $(function(){
         // Click en mapa para mover marcador
         map.on('click', (e)=>{ marker.setLatLng(e.latlng); setLL(e.latlng); });
 
-        // Geocodificar desde inputs
+        // Geocodificar desde datos del formulario
         async function geocode(){
           const cp = (document.getElementById('cp')?.value||'').trim();
           const col = (document.getElementById('colonia')?.value||'').trim();
@@ -869,7 +869,21 @@ $(function(){
             }
           }catch(_){ /* silencioso */ }
         }
-        document.getElementById('cons-geocode')?.addEventListener('click', geocode);
+        // Disparar automáticamente cuando estén listos: CP válido, colonia, calle y número ext.
+        const debounce = (fn, ms)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn.apply(null,a), ms); } };
+        const tryGeo = debounce(()=>{
+          const cp = (document.getElementById('cp')?.value||'').trim();
+          const col = (document.getElementById('colonia')?.value||'').trim();
+          const calle = (document.getElementById('cons-calle')?.value||'').trim();
+          const num = (document.getElementById('cons-numext')?.value||'').trim();
+          if(/^\d{5}$/.test(cp) && col && calle && num){ geocode(); }
+        }, 500);
+        ['cp','colonia','cons-calle','cons-numext'].forEach(id=>{
+          const el = document.getElementById(id);
+          if(!el) return;
+          el.addEventListener('change', tryGeo);
+          el.addEventListener('input', tryGeo);
+        });
       }catch(_){ document.getElementById('cons-map-fallback')?.style?.setProperty('display','block'); }
     }else{
       document.getElementById('cons-map-fallback')?.style?.setProperty('display','block');
