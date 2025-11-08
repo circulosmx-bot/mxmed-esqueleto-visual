@@ -845,6 +845,31 @@ $(function(){
         function setLL(latlng){ if(latI) latI.value = latlng.lat.toFixed(6); if(lngI) lngI.value = latlng.lng.toFixed(6); }
         setLL(marker.getLatLng());
         marker.on('moveend', (e)=> setLL(e.target.getLatLng()));
+        // Click en mapa para mover marcador
+        map.on('click', (e)=>{ marker.setLatLng(e.latlng); setLL(e.latlng); });
+
+        // Geocodificar desde inputs
+        async function geocode(){
+          const cp = (document.getElementById('cp')?.value||'').trim();
+          const col = (document.getElementById('colonia')?.value||'').trim();
+          const mun = (document.getElementById('municipio')?.value||'').trim();
+          const edo = (document.getElementById('estado')?.value||'').trim();
+          const calle = (document.getElementById('cons-calle')?.value||'').trim();
+          const num = (document.getElementById('cons-numext')?.value||'').trim();
+          const q = [calle && (calle + (num? ' ' + num : '')), col, cp, mun, edo, 'México'].filter(Boolean).join(', ');
+          if(!q){ return; }
+          try{
+            const r = await fetch('./geocode-proxy.php?q='+encodeURIComponent(q));
+            if(!r.ok) throw new Error('HTTP '+r.status);
+            const json = await r.json();
+            const item = Array.isArray(json) ? json[0] : null;
+            if(item && item.lat && item.lon){
+              const latlng = { lat: parseFloat(item.lat), lng: parseFloat(item.lon) };
+              map.setView(latlng, 17); marker.setLatLng(latlng); setLL(latlng);
+            }
+          }catch(_){ /* silencioso */ }
+        }
+        document.getElementById('cons-geocode')?.addEventListener('click', geocode);
       }catch(_){ document.getElementById('cons-map-fallback')?.style?.setProperty('display','block'); }
     }else{
       document.getElementById('cons-map-fallback')?.style?.setProperty('display','block');
