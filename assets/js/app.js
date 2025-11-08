@@ -864,24 +864,35 @@ $(function(){
   }
 
   (function initMap(){
-    const mapBox = document.getElementById('cons-map');
-    if(window.L && typeof L.map === 'function'){
+    if(!(window.L && typeof L.map === 'function')) return; // si no hay Leaflet, usamos iframe fallback más abajo
+    // Configs para ambos panes
+    const panes = [
+      { mapId:'cons-map', latId:'cons-lat', lngId:'cons-lng', cp:'cp', col:'colonia', calle:'cons-calle', num:'cons-numext' },
+      { mapId:'cons-map2', latId:'cons-lat2', lngId:'cons-lng2', cp:'cp2', col:'colonia2', calle:'cons-calle2', num:'cons-numext2' },
+    ];
+    const debounce = (fn, ms)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn.apply(null,a), ms); } };
+    panes.forEach(cfg=>{
+      const mapBox = document.getElementById(cfg.mapId);
+      if(!mapBox) return;
       try{
-        if(!mapBox){ return; }
         const map = L.map(mapBox).setView([21.882, -102.296], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
         const marker = L.marker([21.882, -102.296], { draggable:true }).addTo(map);
-        const latI = document.getElementById('cons-lat'); const lngI = document.getElementById('cons-lng');
-        function setLL(latlng){ if(latI) latI.value = latlng.lat.toFixed(6); if(lngI) lngI.value = latlng.lng.toFixed(6); }
+        const latI = document.getElementById(cfg.latId); const lngI = document.getElementById(cfg.lngId);
+        const setLL = (latlng)=>{ if(latI) latI.value = latlng.lat.toFixed(6); if(lngI) lngI.value = latlng.lng.toFixed(6); };
         setLL(marker.getLatLng());
         marker.on('moveend', (e)=> setLL(e.target.getLatLng()));
-        // Click en mapa para mover marcador
         map.on('click', (e)=>{ marker.setLatLng(e.latlng); setLL(e.latlng); });
 
-        // Geocodificar desde datos del formulario
         async function geocode(){
-          const q = buildAddress();
-          if(!q){ return; }
+          const cp = (document.getElementById(cfg.cp)?.value||'').trim();
+          const col = (document.getElementById(cfg.col)?.value||'').trim();
+          const calle = (document.getElementById(cfg.calle)?.value||'').trim();
+          const num = (document.getElementById(cfg.num)?.value||'').trim();
+          const mun = (document.getElementById(cfg.col==='colonia'?'municipio':'municipio2')?.value||'').trim();
+          const edo = (document.getElementById(cfg.col==='colonia'?'estado':'estado2')?.value||'').trim();
+          const q = [calle && (calle + (num? ' ' + num : '')), col, cp, mun, edo, 'México'].filter(Boolean).join(', ');
+          if(!q) return;
           try{
             const r = await fetch('./geocode-proxy.php?q='+encodeURIComponent(q));
             if(!r.ok) throw new Error('HTTP '+r.status);
@@ -893,23 +904,21 @@ $(function(){
             }
           }catch(_){ /* silencioso */ }
         }
-        // Disparar automáticamente cuando estén listos: CP válido, colonia, calle y número ext.
-        const debounce = (fn, ms)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn.apply(null,a), ms); } };
         const tryGeo = debounce(()=>{
-          const cp = (document.getElementById('cp')?.value||'').trim();
-          const col = (document.getElementById('colonia')?.value||'').trim();
-          const calle = (document.getElementById('cons-calle')?.value||'').trim();
-          const num = (document.getElementById('cons-numext')?.value||'').trim();
+          const cp = (document.getElementById(cfg.cp)?.value||'').trim();
+          const col = (document.getElementById(cfg.col)?.value||'').trim();
+          const calle = (document.getElementById(cfg.calle)?.value||'').trim();
+          const num = (document.getElementById(cfg.num)?.value||'').trim();
           if(/^\d{5}$/.test(cp) && col && calle && num){ geocode(); }
         }, 500);
-        ['cp','colonia','cons-calle','cons-numext'].forEach(id=>{
+        [cfg.cp,cfg.col,cfg.calle,cfg.num].forEach(id=>{
           const el = document.getElementById(id);
           if(!el) return;
           el.addEventListener('change', tryGeo);
           el.addEventListener('input', tryGeo);
         });
-      }catch(_){ document.getElementById('cons-map-fallback')?.style?.setProperty('display','block'); }
-    }
+      }catch(_){ /* si falla Leaflet en este pane, el iframe fallback lo cubrirá */ }
+    });
   })();
 
   // Fallback automático: actualizar iframe de Google Maps con la dirección
