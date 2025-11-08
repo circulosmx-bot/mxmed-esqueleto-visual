@@ -198,3 +198,9 @@ Formato sugerido por entrada:
   Descripción: Se añaden campos de título, dirección detallada (calle, número ext/int, piso), teléfonos (3 consultorio, WhatsApp, 2 urgencias), facilidades (estacionamiento, accesibilidad), widget de horarios por día (dos turnos) con copy/clear y previsualización de foto. Se mantiene mapa embebido como fallback y se deja hook para Leaflet si está disponible.  
   Archivos/Refs: `index.html` (bloque adicional en #sede1), `assets/js/app.js` (sched/foto/map), `assets/css/style.css` (estilos de horarios).  
   Estado: completado
+
+- Fecha: 2025-11-06  
+  Tarea: Ajuste de columna y longitudes (dirección)  
+  Descripción: Se reorganizan los campos en una línea con mayor ancho a “Calle”; “Número Int.” y “Número Ext.” abreviados y con `maxlength` (5 y 6 respectivamente), “Piso” `maxlength` 3.  
+  Archivos/Refs: `index.html` (layout y atributos de inputs).  
+  Estado: completado
