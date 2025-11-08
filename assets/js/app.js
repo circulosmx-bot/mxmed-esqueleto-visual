@@ -267,7 +267,10 @@ $(function(){
       const fallback = `https://api.allorigins.win/raw?url=${encodeURIComponent(direct)}`;
 
       async function doFetch(url, raw){
-        const res = await fetch(url, { cache:'no-store', mode:'cors' });
+        // fetch con timeout para no bloquear la UI
+        const ctrl = new AbortController();
+        const t = setTimeout(()=>ctrl.abort(), 5000); // 5s
+        const res = await fetch(url, { cache:'no-store', mode:'cors', signal: ctrl.signal }).finally(()=>clearTimeout(t));
         if(!res.ok) throw new Error('HTTP '+res.status);
         const data = raw ? JSON.parse(await res.text()) : await res.json();
         const r = (data && (data.response || data)) || {};
@@ -285,35 +288,50 @@ $(function(){
         return { list, municipio, estado };
       }
 
+      // 1) Si hay cache localStorage, úsalo de inmediato y refresca en background
+      const cacheKey = 'sepomex_cp_'+cpVal;
       try{
-        // 1) Proxy local (evita CORS y oculta token si aplica)
-        return await doFetch(proxyLocal, false);
-      }catch(e1){
-        try{ console.warn('[SEPOMEX] proxy local falló, probando directo', e1?.message||e1); }catch(_){ }
-        try{
-          // 2) Directo
-          return await doFetch(direct, false);
-        }catch(e2){
-          try{ console.warn('[SEPOMEX] directo falló, intentando fallback', e2?.message||e2); }catch(_){ }
-          try{ // 3) AllOrigins
-            return await doFetch(fallback, true);
-          }catch(e3){
-          try{ console.error('[SEPOMEX] fallback también falló', e3?.message||e3); }catch(_){ }
-            // 4) Fallback local (archivo estático para demo)
-            try{
-              const local = await (await fetch('assets/data/sepomex-fallback.json', {cache:'no-store'})).json();
-              const entry = local && local[cpVal];
-              if(entry){
-                const list = (entry.settlement || entry.colonias || entry.asentamientos || []).slice();
-                const municipio = entry.municipio || '';
-                const estado = entry.estado || '';
-                try{ console.info('[SEPOMEX] usando datos locales de prueba para', cpVal); }catch(_){ }
-                return { list, municipio, estado };
-              }
-            }catch(_e4){ /* sin fallback local */ }
-            return { list:[], municipio:'', estado:'' };
-          }
+        const cached = JSON.parse(localStorage.getItem(cacheKey)||'null');
+        if(cached && Array.isArray(cached.list) && cached.list.length){
+          // Disparar refresh en background pero devolver rápido
+          refreshOnline();
+          return cached;
         }
+      }catch(_){ }
+
+      // 2) Para primera respuesta más rápida: hacer intentos en paralelo y tomar el primero
+      async function refreshOnline(){
+        // intenta actualizar cache sin bloquear UI
+        Promise.race([
+          doFetch(proxyLocal,false),
+          doFetch(direct,false),
+          doFetch(fallback,true)
+        ]).then(r=>{ try{ localStorage.setItem(cacheKey, JSON.stringify(r)); }catch(_){ } }).catch(()=>{});
+      }
+
+      try{
+        const first = await Promise.race([
+          doFetch(proxyLocal,false),
+          doFetch(direct,false),
+          doFetch(fallback,true)
+        ]);
+        try{ localStorage.setItem(cacheKey, JSON.stringify(first)); }catch(_){ }
+        return first;
+      }catch(e3){
+        try{ console.error('[SEPOMEX] todos los intentos en cliente fallaron', e3?.message||e3); }catch(_){ }
+        // 3) Fallback local (archivo estático para demo)
+        try{
+          const local = await (await fetch('assets/data/sepomex-fallback.json', {cache:'no-store'})).json();
+          const entry = local && local[cpVal];
+          if(entry){
+            const list = (entry.settlement || entry.colonias || entry.asentamientos || []).slice();
+            const municipio = entry.municipio || '';
+            const estado = entry.estado || '';
+            try{ console.info('[SEPOMEX] usando datos locales de prueba para', cpVal); }catch(_){ }
+            return { list, municipio, estado };
+          }
+        }catch(_e4){ /* sin fallback local */ }
+        return { list:[], municipio:'', estado:'' };
       }
     }
 

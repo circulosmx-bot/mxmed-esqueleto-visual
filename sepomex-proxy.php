@@ -13,6 +13,12 @@ if (strlen($cp) !== 5) {
 $url_https = "https://api-sepomex.hckdrk.mx/query/info_cp/{$cp}?type=simplified";
 $url_http  = "http://api-sepomex.hckdrk.mx/query/info_cp/{$cp}?type=simplified";
 
+// Config opcional de proxy corporativo
+$cfg = @include __DIR__ . '/sepomex-proxy.config.php';
+$proxy = null;
+if (is_array($cfg) && !empty($cfg['proxy'])) { $proxy = $cfg['proxy']; }
+if (!$proxy) { $proxy = getenv('HTTP_PROXY') ?: getenv('http_proxy') ?: null; }
+
 // Intentar con cURL si está disponible
 if (function_exists('curl_init')) {
   $ch = curl_init($url_https);
@@ -25,6 +31,7 @@ if (function_exists('curl_init')) {
   curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
   curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
   curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/json']);
+  if ($proxy) { curl_setopt($ch, CURLOPT_PROXY, $proxy); }
   $body = curl_exec($ch);
   $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
   $err  = curl_error($ch);
@@ -37,6 +44,7 @@ if (function_exists('curl_init')) {
   curl_setopt($ch, CURLOPT_TIMEOUT, 15);
   curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
   curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/json']);
+  if ($proxy) { curl_setopt($ch, CURLOPT_PROXY, $proxy); }
   $body = curl_exec($ch);
   $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
   $err2 = curl_error($ch);
@@ -49,6 +57,7 @@ if (function_exists('curl_init')) {
   curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
   curl_setopt($ch, CURLOPT_TIMEOUT, 15);
   curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+  if ($proxy) { curl_setopt($ch, CURLOPT_PROXY, $proxy); }
   $body = curl_exec($ch);
   $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
   $err3 = curl_error($ch);
