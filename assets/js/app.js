@@ -850,6 +850,16 @@ $(function(){
       document.getElementById('cons-map-fallback')?.style?.setProperty('display','block');
     }
   })();
+
+  // Ocultar campos antiguos del consultorio para evitar duplicados
+  (function hideLegacyFields(){
+    const root = document.querySelector('#sede1'); if(!root) return;
+    const labels = ['Nombre de la sede','Teléfono (planes de pago)','Dirección','Horario','Notas'];
+    labels.forEach(txt=>{
+      const el = Array.from(root.querySelectorAll('label.form-label')).find(l=> (l.textContent||'').trim().indexOf(txt)===0);
+      if(el){ const wrap = el.closest('[class*="col-"]'); if(wrap) wrap.style.display='none'; }
+    });
+  })();
 })();
 
 // ===== Correcciones rápidas de acentos en header (muestra) =====
