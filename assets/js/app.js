@@ -177,6 +177,14 @@ $(function(){
 
 
 (function(){
+  // Consultorio: confirmar al intentar agregar otro consultorio
+  document.getElementById('btn-consul-add')?.addEventListener('click', function(e){
+    e.preventDefault();
+    const ok = window.confirm('¿Deseas agregar otro consultorio?');
+    // Por ahora solo preguntamos; más adelante podemos clonar/crear pestaña
+    if(ok){ /* noop: reservado para creación dinámica de sede */ }
+  });
+
   const $$ = (s,c=document)=>Array.from(c.querySelectorAll(s));
   $$('.mf-upload').forEach(box=>{
     const input = box.querySelector('.mf-input');

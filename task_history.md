@@ -100,6 +100,12 @@ Formato sugerido por entrada:
   Estado: completado
 
 - Fecha: 2025-11-06  
+  Tarea: Consultorio — tabs y confirmación para agregar  
+  Descripción: En la sección Consultorio se muestran solo 2 tabs: “Consultorio” (activo) y “Agregar Consultorio”. Al hacer clic en “Agregar Consultorio” se muestra una ventana de confirmación: “¿Deseas agregar otro consultorio?” (sí/no).  
+  Archivos/Refs: `index.html` (tabs de Consultorio), `assets/js/app.js` (handler `#btn-consul-add`)  
+  Estado: completado
+
+- Fecha: 2025-11-06  
   Tarea: Versionar SVGs de sección Fotos  
   Descripción: Se añaden al repositorio los SVGs provistos para el icono y el botón de carga de imágenes en la sección Fotos.  
   Archivos/Refs: `assets/icons/carga-de-imagenes.svg`, `assets/icons/boton-carga-de-imagenes.svg`  
