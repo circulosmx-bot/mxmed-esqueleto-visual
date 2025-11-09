@@ -1172,7 +1172,13 @@ $(function(){
     }
     function applyState(el){
       const ok = validPhone(el.value);
-      el.classList.toggle('is-invalid', !ok);
+      const wrap = el.closest('.save-wrap');
+      if(wrap){
+        wrap.classList.toggle('has-error', !ok);
+        const b = wrap.querySelector('.err-bubble'); if(b) b.style.opacity = ok ? '0' : '1';
+      } else {
+        el.classList.toggle('is-invalid', !ok);
+      }
       el.setCustomValidity(ok ? '' : 'Teléfono inválido');
     }
     all.forEach(el=>{
