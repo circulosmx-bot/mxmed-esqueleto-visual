@@ -619,7 +619,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .form-control::placeholder{color:#CCCCCC}
 
 /* Marca de guardado OK en campos */
-.save-wrap{position:relative}
+.save-wrap{position:relative; overflow:visible}
 .save-field{position:relative}
 .save-field > .save-ok{
   position:absolute;
@@ -651,7 +651,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .err-bubble{
   position:absolute;
   right:0;
-  bottom:calc(100% - 28px); /* baja 30px respecto a +2px anterior */
+  bottom:calc(100% + 6px); /* fuera del input, sobre la línea superior */
   background:rgba(0,173,193,.65);
   color:#fff;
   padding:6px 8px;
