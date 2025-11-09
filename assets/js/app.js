@@ -289,7 +289,7 @@ $(function(){
     // inicializaciones
     try{ setupCpAuto({ cp:'cp'+n, colonia:'colonia'+n, msg:'mensaje-cp'+n, mun:'municipio'+n, est:'estado'+n }); }catch(_){ }
     try{ const cp=document.getElementById('cp'+n), col=document.getElementById('colonia'+n); if(cp&&col){ cp.addEventListener('blur', ()=>{ col.focus(); }); } }catch(_){ }
-    try{ const cont=pane; const phones=cont.querySelectorAll('[data-validate="phone"]'); const okp=v=>{const d=(v||'').replace(/[^0-9]/g,''); return d.length>=7&&d.length<=15;}; phones.forEach(el=>{ const apply=()=>{ const ok=okp(el.value); el.classList.toggle('is-invalid',!ok); el.setCustomValidity(ok?'':'Teléfono inválido'); }; el.addEventListener('input',apply); el.addEventListener('blur',apply); apply(); }); }catch(_){ }
+    try{ if(window._mx_phone_bind){ window._mx_phone_bind(pane); } }catch(_){ }
     try{ const wa=document.getElementById('cons-wa'+n), cb=document.getElementById('cons-wa-sync'+n), dg=document.getElementById('dp-whatsapp'); if(cb&&wa){ const fill=()=>{ if(dg){ wa.value=dg.value||''; wa.dispatchEvent(new Event('input')); } }; const toggle=()=>{ if(cb.checked){ wa.disabled=true; wa.placeholder='+52 ...'; fill(); } else { wa.disabled=false; wa.value=''; wa.placeholder='otro numero Whatsapp'; } }; cb.addEventListener('change',toggle); if(dg) dg.addEventListener('input',()=>{ if(cb.checked) fill(); }); toggle(); } }catch(_){ }
     try{ if(window._mx_setupSchedulesFor){ window._mx_setupSchedulesFor(pane,'-'+n); } }catch(_){ }
     try{ const frame=document.getElementById('cons-map-frame'+n); if(frame){ const addr=()=>{ const cp=(document.getElementById('cp'+n)?.value||'').trim(); const col=(document.getElementById('colonia'+n)?.value||'').trim(); const mun=(document.getElementById('municipio'+n)?.value||'').trim(); const edo=(document.getElementById('estado'+n)?.value||'').trim(); const calle=(document.getElementById('cons-calle'+n)?.value||'').trim(); const num=(document.getElementById('cons-numext'+n)?.value||'').trim(); const a=[calle&&(calle+(num?' '+num:'')),col,cp,mun,edo,'México'].filter(Boolean).join(', '); return a; }; const upd=()=>{ const a=addr(); if(!a) return; const url='https://www.google.com/maps?q='+encodeURIComponent(a)+'&z=17&output=embed'; if(frame.src!==url) frame.src=url; }; ['cp'+n,'colonia'+n,'cons-calle'+n,'cons-numext'+n].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',upd); el.addEventListener('change',upd);} }); } }catch(_){ }
@@ -1161,31 +1161,65 @@ $(function(){
     sync();
   })();
 
-  // Validación de teléfonos (genérica: 7–15 dígitos, admite +()- y espacios)
+  // Validación de teléfonos (MX/E.164): 10 dígitos nacionales o +52 + 10 dígitos
   (function setupPhoneValidation(){
-    const all = Array.from(document.querySelectorAll('[data-validate="phone"]'));
-    function validPhone(val){
+    function analyzePhone(val, isLive){
       const s = (val||'').trim();
-      if(!s) return true; // permitir vacío si no es requerido
-      const digits = s.replace(/[^0-9]/g,'');
-      return digits.length >= 7 && digits.length <= 15;
-    }
-    function applyState(el){
-      const ok = validPhone(el.value);
-      const wrap = el.closest('.save-wrap');
-      if(wrap){
-        wrap.classList.toggle('has-error', !ok);
-        const b = wrap.querySelector('.err-bubble'); if(b) b.style.opacity = ok ? '0' : '1';
+      if(s === '') return { ok:true };
+      // Solo caracteres permitidos durante edición
+      if(/[^0-9()+\-\s+]/.test(s)) return { ok:false, reason:'invalid_char' };
+      // '+' solo al inicio y máximo 1
+      if((s.match(/\+/g)||[]).length > 1 || (s.includes('+') && !s.startsWith('+'))) return { ok:false, reason:'invalid_char' };
+      const digits = s.replace(/\D/g,'');
+      // Si empieza con +52, objetivo 12 dígitos (52 + 10 nacionales)
+      const hasPlus52 = s.startsWith('+') && digits.startsWith('52');
+      const target = hasPlus52 ? 12 : 10;
+      if(isLive){
+        if(digits.length > target) return { ok:false, reason:'too_long' };
+        if(/[^0-9()+\-\s]/.test(s)) return { ok:false, reason:'invalid_char' };
+        // Mientras escribe, no marcar corto aún
+        return { ok:true };
       } else {
-        el.classList.toggle('is-invalid', !ok);
+        if(digits.length !== target) return { ok:false, reason: digits.length < target ? 'too_short' : 'too_long' };
+        return { ok:true };
       }
-      el.setCustomValidity(ok ? '' : 'Teléfono inválido');
     }
-    all.forEach(el=>{
-      el.addEventListener('input', ()=>applyState(el));
-      el.addEventListener('blur', ()=>applyState(el));
-      applyState(el);
-    });
+    function messageFor(reason){
+      switch(reason){
+        case 'invalid_char': return 'Solo números y + ( ) -';
+        case 'too_short': return 'Número incompleto (se requieren 10 dígitos)';
+        case 'too_long': return 'Demasiados dígitos (máximo 10 o +52 + 10)';
+        default: return 'Teléfono inválido';
+      }
+    }
+    function applyState(el, isLive){
+      const res = analyzePhone(el.value, !!isLive);
+      const wrap = el.closest('.save-wrap');
+      const b = wrap?.querySelector('.err-bubble');
+      if(res.ok){
+        if(wrap){ wrap.classList.remove('has-error'); if(b) b.style.opacity='0'; }
+        else { el.classList.remove('is-invalid'); }
+        el.setCustomValidity('');
+      }else{
+        const msg = messageFor(res.reason);
+        if(b) b.textContent = msg;
+        if(wrap){ wrap.classList.add('has-error'); if(b) b.style.opacity = '1'; }
+        else { el.classList.add('is-invalid'); }
+        el.setCustomValidity('Teléfono inválido');
+      }
+    }
+    // Exponer para panes clonados
+    window._mx_phone_bind = function(container){
+      const scope = container || document;
+      const all = Array.from(scope.querySelectorAll('[data-validate="phone"]'));
+      all.forEach(el=>{
+        el.addEventListener('input', ()=>applyState(el, true));
+        el.addEventListener('blur', ()=>applyState(el, false));
+        // Estado inicial: no marcar error hasta blur; limpiar residuales
+        applyState(el, true);
+      });
+    };
+    window._mx_phone_bind(document);
   })();
 
   // WhatsApp consultorio: sincronizar con Datos Generales si se marca la casilla
