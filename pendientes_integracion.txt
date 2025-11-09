@@ -1,0 +1,29 @@
+PENDIENTES DE INTEGRACIÓN (WIP)
+
+Autenticación y seguridad
+- Reemplazar stubs de verify-password.php y verify-sms.php por validación real (hash Argon2id en BD y proveedor SMS/2FA).
+- Mover secretos/credenciales a config/.env.local.php (no versionado) y ajustar loaders.
+- CSRF tokens para endpoints POST/DELETE y CORS restringido a dominio.
+
+Consultorios (persistencia)
+- Definir esquema MySQL para consultorios (1..3 por médico) y grupos médicos; crear migraciones.
+- Endpoints CRUD: crear/actualizar/eliminar consultorio (incluye horarios, teléfonos, WhatsApp y coordenadas).
+- Subida de foto: endpoint seguro, validación MIME/tamaño, storage con nombres aleatorios y registro en BD.
+
+Mapas/Geocoding
+- Consolidar uso de Leaflet + Nominatim con manejo de errores y límites; cache local de resultados.
+- Permitir manual override de lat/lng y guardar en BD.
+
+Grupos médicos (sugerencias)
+- Endpoint de suggest groups por CP/colonia/calle/teléfono; modal de consentimiento y vínculo en BD.
+- Desvinculación/edición de grupo por consultorio.
+
+UI/UX
+- Botón “Eliminar consultorio” con server-side verification y logs.
+- Máscaras/normalizadores de teléfonos por país y formato.
+- Validaciones accesibles (ARIA, roles) y mensajes consistentes.
+
+Infraestructura
+- Registrar logs de auditoría (acciones CRUD, IP, user_id) y rotación de logs.
+- Tests básicos para endpoints (PHP) y comportamientos críticos (JS).
+

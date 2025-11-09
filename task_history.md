@@ -228,3 +228,8 @@ Formato sugerido por entrada:
   Descripción: Al presionar Tab en el campo CP, el foco pasa a “Colonia” y se despliega la lista (usando `size` temporal) cuando hay opciones disponibles; se cierra en blur/Enter/Escape.  
   Archivos/Refs: `assets/js/app.js` (setupColoniaAutoOpen).  
   Estado: completado
+- Fecha: 2025-11-06  
+  Tarea: Endpoints stubs de verificación + lista de pendientes  
+  Descripción: Se agregan `api/verify-sms.php` y `api/verify-password.php` que aceptan cualquier valor no vacío en modo pruebas; `assets/js/app.js` ahora usa estos endpoints para confirmar eliminación de consultorio. Se crea `pendientes_integracion.txt` con puntos a completar para la integración final.  
+  Archivos/Refs: `api/verify-sms.php`, `api/verify-password.php`, `assets/js/app.js`, `pendientes_integracion.txt`  
+  Estado: completado

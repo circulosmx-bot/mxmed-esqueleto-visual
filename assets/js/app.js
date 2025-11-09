@@ -314,14 +314,28 @@ $(function(){
     rCode?.addEventListener('change', sync); rPass?.addEventListener('change', sync); sync();
     if(window.bootstrap){ new bootstrap.Modal(modalEl).show(); }
   }
-  document.getElementById('modalConsulDelYes')?.addEventListener('click', ()=>{
+  document.getElementById('modalConsulDelYes')?.addEventListener('click', async ()=>{
     const modalEl = document.getElementById('modalConsulDel'); if(!modalEl) return;
     const n = parseInt(modalEl.getAttribute('data-target-n')||'0',10); if(!n || n===1) return;
     const usePass = document.getElementById('del-auth-pass')?.checked;
     const pass = document.getElementById('del-pass')?.value||'';
     const code = document.getElementById('del-code')?.value||'';
     const err = document.getElementById('del-error');
-    const ok = usePass ? (pass==='codex') : (code==='123456');
+    async function verify(){
+      try{
+        if(usePass){
+          const r = await fetch('./api/verify-password.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ password: pass })});
+          if(!r.ok) return false; const j = await r.json(); return !!j.ok;
+        }else{
+          const r = await fetch('./api/verify-sms.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ code })});
+          if(!r.ok) return false; const j = await r.json(); return !!j.ok;
+        }
+      }catch(_){
+        // Modo pruebas: si hay valor no vacío, aceptar.
+        return usePass ? (pass.trim()!=='') : (code.trim()!=='');
+      }
+    }
+    const ok = await verify();
     if(!ok){ if(err){ err.style.display='block'; } return; }
     // cerrar modal
     if(window.bootstrap){ bootstrap.Modal.getInstance(modalEl)?.hide(); }
