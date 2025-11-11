@@ -1069,3 +1069,14 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-consultorio .form-check-input{ accent-color:#00ADC1; }
 #p-consultorio .form-check-input:checked{ background-color:#00ADC1; border-color:#00ADC1; box-shadow:0 0 0 .2rem rgba(0,173,193,.25); }
 
+/* ===== Ajuste: autosave check con círculo 50% alfa ===== */
+.save-field > .save-ok{
+  background: rgba(0,173,193,.5) !important; /* círculo turquesa semi-transparente */
+  color: #fff; /* palomita 100% */
+}
+.srv-input-wrap .save-field > .save-ok,
+.chip-input-wrap .save-field > .save-ok{
+  background: rgba(0,173,193,.5) !important; /* mismo modelo en servicios/chips */
+  color: #fff;
+}
+

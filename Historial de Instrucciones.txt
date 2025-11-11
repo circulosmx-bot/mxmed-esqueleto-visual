@@ -6,3 +6,5 @@
 [2025-11-10 21:39] Realizar commit y push de los cambios y continuar.
 
 [2025-11-10 21:45] Unificar icono de autosave: usar palomita blanca dentro de círculo turquesa #00ADC1 en todos los checks; replicar modelo de 'Principales servicios' sin mover ubicación.
+
+[2025-11-10 21:50] Aplicar alfa 50% al círculo turquesa (#00ADC1) del check de autosave; mantener la palomita blanca al 100%.
