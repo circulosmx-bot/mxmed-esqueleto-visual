@@ -1,0 +1,2 @@
+
+[2025-11-10 21:33] Reflejar el commit 4373ab8 en local y continuar trabajando en mxmed-esqueleto-visual.
