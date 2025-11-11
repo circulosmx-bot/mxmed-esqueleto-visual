@@ -1208,14 +1208,75 @@ $(function(){
         el.setCustomValidity('Teléfono inválido');
       }
     }
+    // Reglas adicionales en vivo: tope de 3 letras y tope de dígitos
+    const _state = new WeakMap(); // { value, letters, digits }
+
+    function countLetters(s){
+      const m = (s||'').match(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g);
+      return m ? m.length : 0;
+    }
+
+    function digitsTargetFor(val){
+      const s = (val||'').trim();
+      const digits = s.replace(/\D/g,'');
+      const hasPlus52 = s.startsWith('+') && digits.startsWith('52');
+      return hasPlus52 ? 12 : 10;
+    }
+
+    function onLiveInput(el){
+      const prev = _state.get(el) || { value: '', letters: 0, digits: 0 };
+      const wrap = el.closest('.save-wrap');
+      const b = wrap?.querySelector('.err-bubble');
+
+      const val = el.value || '';
+      const letters = countLetters(val);
+      const digits = (val.match(/\d/g)||[]).length;
+      const target = digitsTargetFor(val);
+
+      // 1) Aviso cuando llega a 3 letras y bloqueo a partir de la 4ª
+      if(letters >= 3){
+        if(b) b.textContent = 'Ingresa solo números';
+        if(wrap){ wrap.classList.add('has-error'); if(b) b.style.opacity = '1'; }
+        // Si intenta exceder 3 letras, revertir a valor previo
+        if(letters > 3){
+          el.value = prev.value || '';
+          try{ el.setSelectionRange(el.value.length, el.value.length); }catch(_){ }
+          _state.set(el, { value: el.value, letters: countLetters(el.value), digits: (el.value.match(/\d/g)||[]).length });
+          return; // no continuar, ya mostramos burbuja y revertimos
+        }
+      }
+
+      // 2) Limitar cantidad de dígitos en vivo (10 o +52+10)
+      if(digits > target){
+        if(b) b.textContent = (target === 12 ? 'Demasiados dígitos (máximo +52 + 10)' : 'Demasiados dígitos (máximo 10)');
+        if(wrap){ wrap.classList.add('has-error'); if(b) b.style.opacity = '1'; }
+        el.value = prev.value || '';
+        try{ el.setSelectionRange(el.value.length, el.value.length); }catch(_){ }
+        _state.set(el, { value: el.value, letters: countLetters(el.value), digits: (el.value.match(/\d/g)||[]).length });
+        return;
+      }
+
+      // 3) Si comienza a escribir números, ocultar burbuja de letras
+      if(letters < 3){
+        if(wrap){ wrap.classList.remove('has-error'); if(b) b.style.opacity = '0'; }
+      }
+
+      // 4) Aplicar validación estándar en vivo (caracteres permitidos y overflow)
+      applyState(el, true);
+
+      // 5) Guardar estado actual
+      _state.set(el, { value: el.value, letters, digits });
+    }
+
     // Exponer para panes clonados
     window._mx_phone_bind = function(container){
       const scope = container || document;
-      const all = Array.from(scope.querySelectorAll('[data-validate="phone"]'));
+      const all = Array.from(scope.querySelectorAll('[data-validate="phone"], input[type="tel"]'));
       all.forEach(el=>{
-        el.addEventListener('input', ()=>applyState(el, true));
+        el.addEventListener('input', ()=>onLiveInput(el));
         el.addEventListener('blur', ()=>applyState(el, false));
-        // Estado inicial: no marcar error hasta blur; limpiar residuales
+        // Estado inicial
+        _state.set(el, { value: el.value||'', letters: countLetters(el.value), digits: (el.value||'').replace(/\D/g,'').length });
         applyState(el, true);
       });
     };
