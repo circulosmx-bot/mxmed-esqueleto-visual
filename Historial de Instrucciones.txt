@@ -4,3 +4,5 @@
 [2025-11-10 21:38] Establecer límites de teléfonos: máximo 10 dígitos (o +52 + 10), permitir hasta 3 letras y mostrar burbuja avisando 'Ingresa solo números' antes de la 4ª; ocultar burbuja al escribir números; aplicar a todos los inputs de teléfono/WhatsApp.
 
 [2025-11-10 21:39] Realizar commit y push de los cambios y continuar.
+
+[2025-11-10 21:45] Unificar icono de autosave: usar palomita blanca dentro de círculo turquesa #00ADC1 en todos los checks; replicar modelo de 'Principales servicios' sin mover ubicación.
