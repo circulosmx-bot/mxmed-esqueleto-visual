@@ -1,0 +1,11 @@
+Historial de Instrucciones (cronolÃ³gico)
+Formato: [YYYY-MM-DD HH:MM] InstrucciÃ³n literal
+
+[2025-11-11 12:00] Genera un archivo .TXT que se llame Historial de Instrucciones. Cada que te escriba una instruccion guardala cronologciamente dentro de este archivo textualmente con fecha y hora
+
+[2025-11-10 20:48] Establece un limite de caracteres al ingresar telefonos... (validación reforzada)
+[2025-11-10 20:56] Establecer textos Teléfono 01/02/03, mover Urgencias 01 a la misma franja y eliminar Urgencias 02; ajustar disposición de inputs.
+[2025-11-10 21:10] Corregir mojibake en textos (configurar UTF-8 en servidor y normalizar acentos).
+[2025-11-10 21:15] Corregir codificación: agregar .htaccess UTF-8 y utf8-fix.js para normalizar mojibake en tiempo de ejecución.
+
+[2025-11-10 21:31] Establecer flujo: trabajar desde HEAD 4373ab8; yo ejecuto cambios y tú verificas con Ctrl+F5; commit después de cada cambio; dejar listo para revertir; registrar cada instrucción en este archivo.
