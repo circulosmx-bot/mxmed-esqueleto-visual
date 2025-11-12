@@ -1370,9 +1370,24 @@ $(function(){
     const el = document.getElementById('modalGrupoSuggest'); if(!el) return;
     el.querySelector('#grp-name').textContent = s.nombre || 'Grupo Médico';
     el.querySelector('#grp-addr').textContent = s.addr || '';
-    const m = new bootstrap.Modal(el);
-    document.getElementById('modalGrupoSi').onclick = ()=>accept(s, m);
-    document.getElementById('modalGrupoNo').onclick = ()=>decline(s, m);
+    const m = (window.bootstrap && bootstrap.Modal && bootstrap.Modal.getOrCreateInstance) ? bootstrap.Modal.getOrCreateInstance(el) : new bootstrap.Modal(el);
+    // Evitar reentradas mientras el modal est visible
+    window._mx_suggestBusy = true;
+    const onHidden = ()=>{
+      el.removeEventListener('hidden.bs.modal', onHidden);
+      window._mx_suggestBusy = false;
+      try{
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.removeProperty('padding-right');
+        document.querySelectorAll('.modal-backdrop').forEach(b=>b.parentNode && b.parentNode.removeChild(b));
+      }catch(_){ }
+    };
+    el.addEventListener('hidden.bs.modal', onHidden);
+    const btnSi = document.getElementById('modalGrupoSi');
+    const btnNo = document.getElementById('modalGrupoNo');
+    if(btnSi) btnSi.onclick = ()=>{ accept(s, m); setTimeout(onHidden, 120); };
+    if(btnNo) btnNo.onclick = ()=>{ decline(s, m); setTimeout(onHidden, 120); };
     m.show();
   }
 
@@ -1431,7 +1446,7 @@ $(function(){
   function onInputsChange(){
     clearTimeout(debounceT);
     debounceT = setTimeout(()=>{
-      if(typeof suggestBusy !== 'undefined' && suggestBusy) return;
+      if(window._mx_suggestBusy) return;
       const a = getAddr();
       const s = suggestGroup(a);
       if(!s) return;
