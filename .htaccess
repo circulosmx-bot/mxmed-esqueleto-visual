@@ -3,3 +3,4 @@ AddDefaultCharset UTF-8
 AddType 'text/html; charset=UTF-8' .html
 AddType 'text/css; charset=UTF-8' .css
 AddType 'application/javascript; charset=UTF-8' .js
+php_value default_charset "UTF-8"

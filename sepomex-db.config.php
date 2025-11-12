@@ -9,6 +9,7 @@ return [
     'user' => 'mxmed',
     'pass' => 'Decaf321*', // usuario propio para la app
     'charset' => 'utf8mb4',
+    'collation' => 'utf8mb4_unicode_ci',
   ],
   'sqlite' => [
     'path' => __DIR__ . '/assets/data/sepomex.sqlite'

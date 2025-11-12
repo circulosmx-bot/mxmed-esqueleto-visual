@@ -30,6 +30,7 @@ try {
     $u = $cfg['mysql']['user']; $pw = $cfg['mysql']['pass']; $ch = $cfg['mysql']['charset'] ?? 'utf8mb4';
     $dsn = "mysql:host={$h};port={$p};dbname={$db};charset={$ch}";
     $pdo = new PDO($dsn, $u, $pw, [ PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION ]);
+    try { $pdo->exec("SET NAMES {$ch} COLLATE " . ($cfg['mysql']['collation'] ?? 'utf8mb4_unicode_ci')); } catch (Throwable $e) { }
     $sql = 'SELECT d_asenta, d_mnpio, d_estado FROM sepomex WHERE d_codigo = :cp ORDER BY d_asenta';
   }
 
@@ -60,4 +61,3 @@ try {
   http_response_code(500);
   echo json_encode(['error' => 'db_error', 'detail' => $e->getMessage()]);
 }
-

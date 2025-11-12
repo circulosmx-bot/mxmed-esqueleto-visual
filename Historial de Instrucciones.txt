@@ -71,3 +71,4 @@
 [2025-11-12] Agregado reinicio de asociación desde botón 'Cambiar' del logotipo: limpia localStorage (aceptado/declinado), re-habilita campos de dirección y radios para poder repetir el flujo desde cero.
 [2025-11-12] Agregado widget flotante magenta 'Reiniciar estado' (limpia claves locales de grupo y horarios; restaura campos y radios) para facilitar pruebas; se puede retirar luego.
 [2025-11-12] Widget 'Reiniciar estado' limitado a entorno local (localhost/127.0.0.1/::1 o file:) para uso temporal de revisión.
+[2025-11-12] Unificación UTF-8: proyecto configurado para UTF‑8 (DB utf8mb4, headers PHP, meta charset, .htaccess con AddDefaultCharset y default_charset). Verificación de PHP sin BOM y guía WAMP agregada.
