@@ -751,6 +751,10 @@
                         </div>
                         <input id="cons-logo" type="file" accept="image/*" class="d-none mf-input">
                         <div id="cons-logo-prev" class="mf-prev"><img id="cons-logo-img" alt="preview logotipo"></div>
+                        <div id="cons-logo-sync" class="mt-1" style="display:none;">
+                          <span class="badge text-bg-info">Sincronizado con grupo</span>
+                          <button type="button" class="btn btn-link btn-sm p-0 ms-2" id="cons-logo-unsync">Cambiar</button>
+                        </div>
                       </div>
 
                       <!-- Fotografía principal del consultorio -->
@@ -829,6 +833,26 @@
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-danger" id="modalConsulDelYes">Eliminar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal: Sugerencia de Grupo Médico -->
+        <div class="modal fade" id="modalGrupoSuggest" tabindex="-1" aria-labelledby="modalGrupoSuggestLabel" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="modalGrupoSuggestLabel">¿Pertenece a este Grupo Médico?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-2"><strong id="grp-name">Grupo Médico</strong></div>
+                <div class="text-muted small" id="grp-addr"></div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="modalGrupoNo" data-bs-dismiss="modal">No</button>
+                <button type="button" class="btn btn-primary" id="modalGrupoSi">Sí, es mi grupo</button>
               </div>
             </div>
           </div>

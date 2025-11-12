@@ -1334,3 +1334,102 @@ $(function(){
   const img = document.querySelector('.header-top img'); if(img) img.alt = 'MÃ©xico MÃ©dico';
   if(document.title && document.title.indexOf('MXMed')>=0) document.title = 'MXMed 2025 Â· Perfil MÃ©dico';
 })();
+
+// ===== Sugerencia de Grupo Médico y sincronización de logotipo (demo) =====
+(function setupGrupoMedicoSuggest(){
+  const keyAssoc = 'grupo_medico_assoc';
+
+  function getAddr(){
+    return {
+      cp: (document.getElementById('cp')?.value||'').trim(),
+      col: (document.getElementById('colonia')?.value||'').trim(),
+      mun: (document.getElementById('municipio')?.value||'').trim(),
+      edo: (document.getElementById('estado')?.value||'').trim(),
+      calle: (document.getElementById('cons-calle')?.value||'').trim(),
+      numext: (document.getElementById('cons-numext')?.value||'').trim()
+    };
+  }
+
+  function suggestGroup(addr){
+    const hasCore = addr.cp && addr.col && addr.mun && addr.edo;
+    if(!hasCore) return null;
+    const logo = 'data:image/svg+xml;utf8,'+
+      '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240">'+
+      '<rect width="100%" height="100%" fill="%2300ADC1"/>'+
+      '<text x="50%" y="55%" font-size="96" text-anchor="middle" fill="white" font-family="Arial">GM</text>'+
+      '</svg>';
+    return {
+      id: 'demo-123',
+      nombre: 'Grupo Médico Central',
+      addr: [addr.col, addr.mun, addr.edo].filter(Boolean).join(', '),
+      logo_url: logo
+    };
+  }
+
+  function showModal(s){
+    const el = document.getElementById('modalGrupoSuggest'); if(!el) return;
+    el.querySelector('#grp-name').textContent = s.nombre || 'Grupo Médico';
+    el.querySelector('#grp-addr').textContent = s.addr || '';
+    const m = new bootstrap.Modal(el);
+    document.getElementById('modalGrupoSi').onclick = ()=>accept(s, m);
+    document.getElementById('modalGrupoNo').onclick = ()=>decline(s, m);
+    m.show();
+  }
+
+  function accept(s, modal){
+    try{ localStorage.setItem(keyAssoc, JSON.stringify(s)); }catch(_){ }
+    applyAssocUI(s);
+    modal?.hide();
+    const rSi = document.getElementById('cons-grupo-si');
+    const grp = document.getElementById('cons-grupo-nombre');
+    if(rSi){ rSi.checked = true; rSi.dispatchEvent(new Event('change')); }
+    if(grp){ grp.value = s.nombre || ''; grp.dispatchEvent(new Event('input')); }
+  }
+
+  function decline(_s, modal){
+    try{ localStorage.setItem(keyAssoc+':decline', JSON.stringify({ when: Date.now(), addr: getAddr() })); }catch(_){ }
+    modal?.hide();
+  }
+
+  function applyAssocUI(s){
+    const img = document.getElementById('cons-logo-img');
+    const prev = document.getElementById('cons-logo-prev');
+    if(img && prev && s.logo_url){ img.src = s.logo_url; prev.style.display = 'block'; }
+    const sync = document.getElementById('cons-logo-sync'); if(sync) sync.style.display = 'block';
+    const file = document.getElementById('cons-logo'); if(file) file.setAttribute('disabled','disabled');
+    const uns = document.getElementById('cons-logo-unsync');
+    if(uns){ uns.onclick = ()=>{ removeAssocUI(); localStorage.removeItem(keyAssoc); }; }
+  }
+
+  function removeAssocUI(){
+    const sync = document.getElementById('cons-logo-sync'); if(sync) sync.style.display = 'none';
+    const file = document.getElementById('cons-logo'); if(file) file.removeAttribute('disabled');
+  }
+
+  let debounceT = null;
+  function onInputsChange(){
+    clearTimeout(debounceT);
+    debounceT = setTimeout(()=>{
+      const s = suggestGroup(getAddr());
+      if(!s) return;
+      const saved = JSON.parse(localStorage.getItem(keyAssoc)||'null');
+      if(saved && saved.id === s.id){ applyAssocUI(saved); return; }
+      showModal(s);
+    }, 400);
+  }
+
+  function init(){
+    try{
+      const saved = JSON.parse(localStorage.getItem(keyAssoc)||'null');
+      if(saved) applyAssocUI(saved);
+    }catch(_){ }
+    ;['cp','colonia','municipio','estado','cons-calle','cons-numext'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el){ el.addEventListener('change', onInputsChange); el.addEventListener('blur', onInputsChange); }
+    });
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  }else{ init(); }
+})();

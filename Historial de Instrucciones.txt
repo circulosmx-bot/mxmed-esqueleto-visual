@@ -54,3 +54,5 @@
 [2025-11-11 21:37] CONSULTORIO PRINCIPAL: bajar 10px el bloque de Estacionamiento/Accesible (clase .cons-flags con margin-top:10px).
 
 [2025-11-11 21:38] Solicitud: realizar commit y push (sin cambios adicionales).
+
+[2025-11-11 22:01] CONSULTORIO PRINCIPAL: agregar modal de sugerencia de Grupo Médico y lógica para asociar/mostrar logotipo del grupo en dropzone de logotipo.
