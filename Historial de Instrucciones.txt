@@ -12,3 +12,5 @@
 [2025-11-10 21:51] Realizar commit y push de los cambios.
 
 [2025-11-11 19:11] Género: no mostrar icono de autosave si no hay selección (placeholder ‘—’). Solo mostrar palomita cuando hay una opción válida seleccionada.
+
+[2025-11-11 19:21] Consultorio: nombrar pestañas como SEGUNDO/TERCER CONSULTORIO; ocultar (no solo deshabilitar) el tab AGREGAR CONSULTORIO cuando exista el tercer consultorio (máximo 3).

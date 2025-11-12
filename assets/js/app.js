@@ -296,7 +296,15 @@ $(function(){
     try{ if(window.L && typeof L.map==='function'){ (function(){ const mapBox=document.getElementById('cons-map'+n); if(!mapBox) return; const map=L.map(mapBox).setView([21.882,-102.296],13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map); const marker=L.marker([21.882,-102.296],{draggable:true}).addTo(map); const latI=document.getElementById('cons-lat'+n), lngI=document.getElementById('cons-lng'+n); const setLL=(ll)=>{ if(latI) latI.value=ll.lat.toFixed(6); if(lngI) lngI.value=ll.lng.toFixed(6); }; setLL(marker.getLatLng()); marker.on('moveend',(e)=>setLL(e.target.getLatLng())); map.on('click',(e)=>{ marker.setLatLng(e.latlng); setLL(e.latlng); }); })(); } }catch(_){ }
     // deshabilitar botón agregar si ya existen 3
     const count = document.querySelectorAll('#p-consultorio .tab-pane[id^="sede"]').length;
-    if(count >= 3){ const addBtn=document.getElementById('btn-consul-add'); if(addBtn){ addBtn.classList.add('disabled'); addBtn.setAttribute('aria-disabled','true'); addBtn.title='Máximo 3 consultorios'; } }
+    if(count >= 3){
+      const addBtn = document.getElementById('btn-consul-add');
+      if(addBtn){
+        addBtn.classList.add('disabled');
+        addBtn.setAttribute('aria-disabled','true');
+        addBtn.title='Máximo 3 consultorios';
+        const addLi = addBtn.closest('li'); if(addLi){ addLi.style.display = 'none'; }
+      }
+    }
     return {pane, btn};
   }
   window._mx_createConsultorio = createConsultorio;
@@ -349,7 +357,7 @@ $(function(){
     const pane1 = document.getElementById('sede1');
     if(btn1 && pane1){ btn1.classList.add('active'); pane1.classList.add('show','active'); if(window.bootstrap){ new bootstrap.Tab(btn1).show(); } }
     // re-habilitar botón agregar si estaba bloqueado
-    const addBtn=document.getElementById('btn-consul-add'); if(addBtn){ addBtn.classList.remove('disabled'); addBtn.removeAttribute('aria-disabled'); addBtn.title=''; }
+    const addBtn=document.getElementById('btn-consul-add'); if(addBtn){ addBtn.classList.remove('disabled'); addBtn.removeAttribute('aria-disabled'); addBtn.title=''; const addLi = addBtn.closest('li'); if(addLi){ addLi.style.display=''; } }
   });
   function nextConsultorioIndex(){
     const panes = Array.from(document.querySelectorAll('#p-consultorio .tab-pane[id^="sede"]'));
