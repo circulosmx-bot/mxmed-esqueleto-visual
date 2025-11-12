@@ -40,3 +40,5 @@
 [2025-11-11 20:14] Renombrar etiquetas: 'Teléfono consultorio 01/02/03' a 'Teléfono 01/02/03' en Consultorio.
 
 [2025-11-11 21:06] Crear rama de trabajo para la sección Consultorio: 'seccion-consultorio' y publicar (commit + push).
+
+[2025-11-11 21:12] CONSULTORIO PRINCIPAL: eliminar etiqueta/checkbox bajo WhatsApp ('Mensajes a mi numero personal') y ajustar distancia (mb-2 en la columna).
