@@ -1434,4 +1434,33 @@ $(function(){
   }else{ init(); }
 })();
 
+// ===== Ajustes puntuales de textos (sólo secciones específicas) =====
+(function fixMxmedTextos(){
+  try{
+    // 1) Header: "Óptimo"
+    const t = document.querySelector('.optimo');
+    if(t) t.textContent = '\u00D3ptimo';
+
+    // 2) Horarios: normalizar separadores y días con acentos
+    ['#sched-body','#sched-body-2'].forEach(sel=>{
+      const cont = document.querySelector(sel);
+      if(!cont) return;
+      // Separador entre horas
+      cont.querySelectorAll('span').forEach(sp=>{
+        const s = (sp.textContent||'').trim();
+        if(s && s !== '-' && /[^0-9A-Za-z:\-]/.test(s)) sp.textContent = '-';
+      });
+      // Días con acentos correctos
+      const mapDias = {
+        'MiǸrcoles':'Mi\u00E9rcoles', 'MiÃ©rcoles':'Mi\u00E9rcoles',
+        'Sǭbado':'S\u00E1bado', 'SÃ¡bado':'S\u00E1bado'
+      };
+      cont.querySelectorAll('tr td:first-child').forEach(td=>{
+        const raw = (td.textContent||'').trim();
+        if(mapDias[raw]) td.textContent = mapDias[raw];
+      });
+    });
+  }catch(_){ }
+})();
+
 
