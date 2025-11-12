@@ -67,3 +67,4 @@
 
 [2025-11-12 14:10] Revertir fixes de mojibake amplios que afectaron horarios (mantener correcciones puntuales previas).
 [2025-11-12] Corrección puntual de codificación: 'Óptimo' en header y placeholders de Horarios (reemplazo de ‘–’ por '-'); normalización de separadores y días en tablas de horarios sin tocar otros paneles.
+[2025-11-12] Grupo Médico: al responder 'No' ya no se congela la pantalla: se guarda firma de dirección para no re-preguntar; se asegura limpieza del overlay/backdrop del modal y no se reabre en el mismo estado.

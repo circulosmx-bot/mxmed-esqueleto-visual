@@ -1410,8 +1410,16 @@ $(function(){
   function onInputsChange(){
     clearTimeout(debounceT);
     debounceT = setTimeout(()=>{
-      const s = suggestGroup(getAddr());
+      if(typeof suggestBusy !== 'undefined' && suggestBusy) return;
+      const a = getAddr();
+      const s = suggestGroup(a);
       if(!s) return;
+      try{
+        const d = JSON.parse(localStorage.getItem(keyAssoc+':decline')||'null');
+        const sig = [a.cp,a.col,a.mun,a.edo].join('|');
+        const ds = d && (d.sig || (d.addr && [d.addr.cp,d.addr.col,d.addr.mun,d.addr.edo].join('|')));
+        if(ds === sig) return;
+      }catch(_){ }
       const saved = JSON.parse(localStorage.getItem(keyAssoc)||'null');
       if(saved && saved.id === s.id){ applyAssocUI(saved); return; }
       showModal(s);
@@ -1461,6 +1469,25 @@ $(function(){
       });
     });
   }catch(_){ }
+})();
+
+
+// ===== Grupo Médico: asegurarnos de limpieza de overlay al cerrar =====
+(function ensureGrupoModalCleanup(){
+  function cleanup(){
+    try{
+      document.body.classList.remove('modal-open');
+      document.querySelectorAll('.modal-backdrop').forEach(b=>b.parentNode?.removeChild(b));
+    }catch(_){ }
+  }
+  const el = document.getElementById('modalGrupoSuggest');
+  if(!el) return;
+  el.addEventListener('hidden.bs.modal', cleanup);
+  document.getElementById('modalGrupoNo')?.addEventListener('click', ()=>{
+    const inst = window.bootstrap?.Modal?.getInstance ? window.bootstrap.Modal.getInstance(el) : null;
+    inst?.hide();
+    setTimeout(cleanup, 50);
+  });
 })();
 
 
