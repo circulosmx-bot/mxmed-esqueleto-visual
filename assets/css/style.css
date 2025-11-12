@@ -1080,3 +1080,6 @@ body{margin:0;background:var(--mm-fondo-base);}
   color: #fff;
 }
 
+
+/* Consultorio: flags (estacionamiento/accesible) – bajar 10px */
+.cons-flags{ margin-top:10px; }

@@ -50,3 +50,5 @@
 [2025-11-11 21:21] CONSULTORIO PRINCIPAL: mover etiquetas Estacionamiento/Accesible a la derecha en la misma fila de Teléfono Urgencias (col-md-6 alineado a la derecha).
 
 [2025-11-11 21:35] CONSULTORIO PRINCIPAL: restaurar textos largos — 'Cuenta con Estacionamiento' y 'Accesibilidad para discapacitados'; alinear a la izquierda y equilibrar distancia.
+
+[2025-11-11 21:37] CONSULTORIO PRINCIPAL: bajar 10px el bloque de Estacionamiento/Accesible (clase .cons-flags con margin-top:10px).
