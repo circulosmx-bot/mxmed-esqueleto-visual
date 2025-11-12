@@ -34,3 +34,5 @@
 [2025-11-11 20:00] Consultorio: agregar dos dropzones debajo de Horarios — izquierda logotipo de grupo médico (cons-logo) y derecha fotografía principal del consultorio (cons-foto).
 
 [2025-11-11 20:04] Reubicar dropzones de Consultorio al final del panel (después de Horarios), manteniendo orden e IDs.
+
+[2025-11-11 20:10] Realizar commit de los cambios (sin push).
