@@ -649,7 +649,7 @@ $(function(){
     col.appendChild(lab);
     col.appendChild(wrap);
     wrap.appendChild(span);
-    w.placeholder='10 dígitos'; w.maxLength=14; wrap.appendChild(w);
+    w.placeholder='10 dÃ­gitos'; w.maxLength=14; wrap.appendChild(w);
   }
 
   // ValidaciÃ³n de correo y telÃ©fono (bÃ¡sica) + tooltips
@@ -1169,7 +1169,7 @@ $(function(){
     sync();
   })();
 
-  // ValidaciÃ³n de telÃ©fonos (MX/E.164): 10 dígitos nacionales o +52 + 10 dígitos
+  // ValidaciÃ³n de telÃ©fonos (MX/E.164): 10 dÃ­gitos nacionales o +52 + 10 dÃ­gitos
   (function setupPhoneValidation(){
     function analyzePhone(val, isLive){
       const s = (val||'').trim();
@@ -1195,7 +1195,7 @@ $(function(){
     function messageFor(reason){
       switch(reason){
         case 'invalid_char': return 'Solo nÃºmeros y + ( ) -';
-        case 'too_short': return 'NÃºmero incompleto (se requieren 10 dígitos)';
+        case 'too_short': return 'NÃºmero incompleto (se requieren 10 dÃ­gitos)';
         case 'too_long': return 'Demasiados dÃ­gitos (mÃ¡ximo 10 o +52 + 10)';
         default: return 'TelÃ©fono invÃ¡lido';
       }
@@ -1457,15 +1457,7 @@ $(function(){
     try{
       const header = document.querySelector('.header-mid'); if(header) walkAndFix(header);
       const panel = document.getElementById('p-consultorio'); if(panel) walkAndFix(panel);
-  // Correcciones adicionales de comillas y guiones largos en placeholders/inputs
-  try{
-    panel.querySelectorAll('input, select, textarea, th, td, label, option').forEach(el=>{
-      const fix = s=> s.replace(/â€“/g,'–').replace(/â€”/g,'—').replace(/â€œ/g,'“').replace(/â€�/g,'”').replace(/â€˜/g,'‘').replace(/â€™/g,'’').replace(/â€¦/g,'…');
-      if(el.placeholder){ const r=fix(el.placeholder); if(r!==el.placeholder) el.placeholder=r; }
-      if(el.textContent){ const r=fix(el.textContent); if(r!==el.textContent) el.textContent=r; }
-      if(el.value && el.tagName==='OPTION'){ const r=fix(el.value); if(r!==el.value) el.value=r; }
-    });
-  }catch(e){ }  // Título Óptimo explícito
+      // Título Óptimo explícito
       const t = document.querySelector('.optimo'); if(t) t.textContent = 'Óptimo';
       // Placeholder de Colonia si hubo mojibake
       const col = document.getElementById('colonia'); if(col && col.options && col.options.length){
@@ -1477,4 +1469,3 @@ $(function(){
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', run); else run();
 })();
-
