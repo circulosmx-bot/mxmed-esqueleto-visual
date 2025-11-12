@@ -236,7 +236,7 @@ $(function(){
     try{ const cont=pane2; const phones=cont.querySelectorAll('[data-validate="phone"]'); const okp=v=>{const d=(v||'').replace(/[^0-9]/g,''); return d.length>=7&&d.length<=15;}; phones.forEach(el=>{ const apply=()=>{ const ok=okp(el.value); el.classList.toggle('is-invalid',!ok); el.setCustomValidity(ok?'':'TelÃ©fono invÃ¡lido'); }; el.addEventListener('input',apply); el.addEventListener('blur',apply); apply(); }); }catch(_){ }
     try{ const wa=document.getElementById('cons-wa2'), cb=document.getElementById('cons-wa-sync2'), dg=document.getElementById('dp-whatsapp'); if(cb&&wa){ const fill=()=>{ if(dg){ wa.value=dg.value||''; wa.dispatchEvent(new Event('input')); } }; const toggle=()=>{ if(cb.checked){ wa.disabled=true; wa.placeholder='+52 ...'; fill(); } else { wa.disabled=false; wa.value=''; wa.placeholder='otro numero Whatsapp'; } }; cb.addEventListener('change',toggle); if(dg) dg.addEventListener('input',()=>{ if(cb.checked) fill(); }); toggle(); } }catch(_){ }
     try{ if(window._mx_setupSchedulesFor){ window._mx_setupSchedulesFor(pane2,'-2'); } }catch(_){ }
-    try{ const frame=document.getElementById('cons-map-frame2'); if(frame){ const addr=()=>{ const cp=(document.getElementById('cp2')?.value||'').trim(); const col=(document.getElementById('colonia2')?.value||'').trim(); const mun=(document.getElementById('municipio2')?.value||'').trim(); const edo=(document.getElementById('estado2')?.value||'').trim(); const calle=(document.getElementById('cons-calle2')?.value||'').trim(); const num=(document.getElementById('cons-numext2')?.value||'').trim(); const a=[calle&&(calle+(num?' '+num:'')),col,cp,mun,edo,'MÃ©xico'].filter(Boolean).join(', '); return a; }; const upd=()=>{ const a=addr(); if(!a) return; const url='https://www.google.com/maps?q='+encodeURIComponent(a)+'&z=17&output=embed'; if(frame.src!==url) frame.src=url; }; ['cp2','colonia2','cons-calle2','cons-numext2'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',upd); el.addEventListener('change',upd);} }); } }catch(_){ }
+    try{ const frame=document.getElementById('cons-map-frame2'); if(frame){ const addr=()=>{ const cp=(document.getElementById('cp2')?.value||'').trim(); const col=(document.getElementById('colonia2')?.value||'').trim(); const mun=(document.getElementById('municipio2')?.value||'').trim(); const edo=(document.getElementById('estado2')?.value||'').trim(); const calle=(document.getElementById('cons-calle2')?.value||'').trim(); const num=(document.getElementById('cons-numext2')?.value||'').trim(); const a=[calle&&(calle+(num?' '+num:'')),col,cp,mun,edo,'M\u00E9xico'].filter(Boolean).join(', '); return a; }; const upd=()=>{ const a=addr(); if(!a) return; const url='https://www.google.com/maps?q='+encodeURIComponent(a)+'&z=17&output=embed'; if(frame.src!==url) frame.src=url; }; ['cp2','colonia2','cons-calle2','cons-numext2'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',upd); el.addEventListener('change',upd);} }); } }catch(_){ }
     return {pane2, btn2};
   }
 
@@ -292,7 +292,7 @@ $(function(){
     try{ if(window._mx_phone_bind){ window._mx_phone_bind(pane); } }catch(_){ }
     try{ const wa=document.getElementById('cons-wa'+n), cb=document.getElementById('cons-wa-sync'+n), dg=document.getElementById('dp-whatsapp'); if(cb&&wa){ const fill=()=>{ if(dg){ wa.value=dg.value||''; wa.dispatchEvent(new Event('input')); } }; const toggle=()=>{ if(cb.checked){ wa.disabled=true; wa.placeholder='+52 ...'; fill(); } else { wa.disabled=false; wa.value=''; wa.placeholder='otro numero Whatsapp'; } }; cb.addEventListener('change',toggle); if(dg) dg.addEventListener('input',()=>{ if(cb.checked) fill(); }); toggle(); } }catch(_){ }
     try{ if(window._mx_setupSchedulesFor){ window._mx_setupSchedulesFor(pane,'-'+n); } }catch(_){ }
-    try{ const frame=document.getElementById('cons-map-frame'+n); if(frame){ const addr=()=>{ const cp=(document.getElementById('cp'+n)?.value||'').trim(); const col=(document.getElementById('colonia'+n)?.value||'').trim(); const mun=(document.getElementById('municipio'+n)?.value||'').trim(); const edo=(document.getElementById('estado'+n)?.value||'').trim(); const calle=(document.getElementById('cons-calle'+n)?.value||'').trim(); const num=(document.getElementById('cons-numext'+n)?.value||'').trim(); const a=[calle&&(calle+(num?' '+num:'')),col,cp,mun,edo,'MÃ©xico'].filter(Boolean).join(', '); return a; }; const upd=()=>{ const a=addr(); if(!a) return; const url='https://www.google.com/maps?q='+encodeURIComponent(a)+'&z=17&output=embed'; if(frame.src!==url) frame.src=url; }; ['cp'+n,'colonia'+n,'cons-calle'+n,'cons-numext'+n].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',upd); el.addEventListener('change',upd);} }); } }catch(_){ }
+    try{ const frame=document.getElementById('cons-map-frame'+n); if(frame){ const addr=()=>{ const cp=(document.getElementById('cp'+n)?.value||'').trim(); const col=(document.getElementById('colonia'+n)?.value||'').trim(); const mun=(document.getElementById('municipio'+n)?.value||'').trim(); const edo=(document.getElementById('estado'+n)?.value||'').trim(); const calle=(document.getElementById('cons-calle'+n)?.value||'').trim(); const num=(document.getElementById('cons-numext'+n)?.value||'').trim(); const a=[calle&&(calle+(num?' '+num:'')),col,cp,mun,edo,'M\u00E9xico'].filter(Boolean).join(', '); return a; }; const upd=()=>{ const a=addr(); if(!a) return; const url='https://www.google.com/maps?q='+encodeURIComponent(a)+'&z=17&output=embed'; if(frame.src!==url) frame.src=url; }; ['cp'+n,'colonia'+n,'cons-calle'+n,'cons-numext'+n].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',upd); el.addEventListener('change',upd);} }); } }catch(_){ }
     try{ if(window.L && typeof L.map==='function'){ (function(){ const mapBox=document.getElementById('cons-map'+n); if(!mapBox) return; const map=L.map(mapBox).setView([21.882,-102.296],13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map); const marker=L.marker([21.882,-102.296],{draggable:true}).addTo(map); const latI=document.getElementById('cons-lat'+n), lngI=document.getElementById('cons-lng'+n); const setLL=(ll)=>{ if(latI) latI.value=ll.lat.toFixed(6); if(lngI) lngI.value=ll.lng.toFixed(6); }; setLL(marker.getLatLng()); marker.on('moveend',(e)=>setLL(e.target.getLatLng())); map.on('click',(e)=>{ marker.setLatLng(e.latlng); setLL(e.latlng); }); })(); } }catch(_){ }
     // deshabilitar botÃ³n agregar si ya existen 3
     const count = document.querySelectorAll('#p-consultorio .tab-pane[id^="sede"]').length;
@@ -383,7 +383,7 @@ $(function(){
     function fillSelect(options){
       // Limpia y coloca placeholder
       sel.innerHTML = '';
-      const base = document.createElement('option'); base.value=''; base.textContent='Seleccionaâ€¦'; sel.appendChild(base);
+      const base = document.createElement('option'); base.value=''; base.textContent='Selecciona\u2026'; sel.appendChild(base);
       // Agrega colonias
       (options||[]).forEach(name=>{
         const opt = document.createElement('option'); opt.value = name; opt.textContent = name; sel.appendChild(opt);
@@ -493,7 +493,7 @@ $(function(){
         if(mun) mun.value = municipio||''; if(est) est.value = estado||'';
         try{ console.debug('[SEPOMEX] colonias:', uniq); }catch(_){ }
       }else{
-        fillSelect([]); setMsg('CÃ³digo postal no vÃ¡lido'); if(mun) mun.value=''; if(est) est.value='';
+        fillSelect([]); setMsg('C\u00F3digo postal no v\u00E1lido'); if(mun) mun.value=''; if(est) est.value='';
       }
     }
 
@@ -986,7 +986,7 @@ $(function(){
     const edo = (document.getElementById('estado')?.value||'').trim();
     const calle = (document.getElementById('cons-calle')?.value||'').trim();
     const num = (document.getElementById('cons-numext')?.value||'').trim();
-    return [calle && (calle + (num? ' ' + num : '')), col, cp, mun, edo, 'MÃ©xico'].filter(Boolean).join(', ');
+    return [calle && (calle + (num? ' ' + num : '')), col, cp, mun, edo, 'M\u00E9xico'].filter(Boolean).join(', ');
   }
 
   (function initMap(){
@@ -1017,7 +1017,7 @@ $(function(){
           const num = (document.getElementById(cfg.num)?.value||'').trim();
           const mun = (document.getElementById(cfg.col==='colonia'?'municipio':'municipio2')?.value||'').trim();
           const edo = (document.getElementById(cfg.col==='colonia'?'estado':'estado2')?.value||'').trim();
-          const q = [calle && (calle + (num? ' ' + num : '')), col, cp, mun, edo, 'MÃ©xico'].filter(Boolean).join(', ');
+          const q = [calle && (calle + (num? ' ' + num : '')), col, cp, mun, edo, 'M\u00E9xico'].filter(Boolean).join(', ');
           if(!q) return;
           try{
             const r = await fetch('./geocode-proxy.php?q='+encodeURIComponent(q));
@@ -1331,7 +1331,7 @@ $(function(){
 (function(){
   const t = document.querySelector('.optimo'); if(t) t.textContent = 'Ã“ptimo';
   const n = document.querySelector('.name'); if(n && /Muï¿½oz|MuÃ±oz/.test(n.textContent)) n.textContent = 'Leticia MuÃ±oz Alfaro';
-  const img = document.querySelector('.header-top img'); if(img) img.alt = 'MÃ©xico MÃ©dico';
+  const img = document.querySelector('.header-top img'); if(img) img.alt = 'M\u00E9xico MÃ©dico';
   if(document.title && document.title.indexOf('MXMed')>=0) document.title = 'MXMed 2025 Â· Perfil MÃ©dico';
 })();
 
@@ -1433,4 +1433,5 @@ $(function(){
     document.addEventListener('DOMContentLoaded', init);
   }else{ init(); }
 })();
+
 

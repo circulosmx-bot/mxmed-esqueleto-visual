@@ -60,3 +60,5 @@
 [2025-11-12 13:44] Reposicionar rama 'seccion-consultorio' al estado estable 958c731 y crear commit 'integracion a grupo medico' como baseline para continuar.
 
 [2025-11-12 13:49] Fix encoding: normalizar 'Médico' en modal y nombre del grupo para evitar caracteres rotos.
+
+[2025-11-12 13:52] Fix encoding: placeholder de Colonia ('Selecciona…'), mensaje de CP inválido y literal 'México' normalizados.
