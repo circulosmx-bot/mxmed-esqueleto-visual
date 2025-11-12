@@ -27,3 +27,19 @@ Infraestructura
 - Registrar logs de auditorÃ­a (acciones CRUD, IP, user_id) y rotaciÃ³n de logs.
 - Tests bÃ¡sicos para endpoints (PHP) y comportamientos crÃ­ticos (JS).
 
+Grupos médicos — integración completa
+- Backend (BD + API):
+  - Tablas: groups (id, nombre, slug, domicilio_normalizado, logo_url, created_at, updated_at) y group_members (group_id, consultorio_id, joined_at, joined_by).
+  - Normalización server-side de dirección/teléfonos; índices por CP/Colonia/Municipio/Estado; búsqueda fuzzy opcional por nombre/calle.
+  - Endpoints: GET /api/groups/suggest (cp, colonia, mun, edo, calle, num, tel) ? [{id,nombre,addr,score,logo_url}]; POST /api/groups/join {consultorio_id, group_id}; POST /api/groups/leave {consultorio_id}; GET /api/groups/:id/logo (CDN + cache headers).
+  - Privacidad: no exponer PII de usuarios; registrar consentimiento (timestamp, user_id, ip, snapshot de datos) en auditoría.
+- Frontend:
+  - Sustituir stub JS por consumo real de suggest (debounce + manejo de errores) y mostrar modal de confirmación.
+  - Al aceptar: POST /groups/join; reflejar radio “Sí”, nombre del grupo; bloquear dropzone de logo con toggle “Usar logo del grupo”.
+  - En “Cambiar” o cambio de dirección: POST /groups/leave; reactivar dropzone.
+  - Multi-consultorios: extender lógica a sede 2/3 (IDs con sufijos; asociación independiente por sede).
+  - Rate-limit y “no sugerir de nuevo” por dataset; reset al cambiar campos clave.
+- Seguridad y calidad:
+  - Permisos: solo admins del grupo pueden cambiar logo; miembros lo heredan por defecto.
+  - Logs/auditoría de joins/leaves y rechazos de sugerencia.
+  - Tests unitarios (PHP) y e2e (front) para suggest/join/leave y flujo de modal.
