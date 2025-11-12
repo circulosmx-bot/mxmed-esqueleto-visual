@@ -14,3 +14,5 @@
 [2025-11-11 19:11] Género: no mostrar icono de autosave si no hay selección (placeholder ‘—’). Solo mostrar palomita cuando hay una opción válida seleccionada.
 
 [2025-11-11 19:27] Revertir el último cambio de tabs en Consultorio (volver al estado anterior).
+
+[2025-11-11 19:35] Consultorio: replicar icono check autosave en todos los campos; enlazar el autosave también tras agregar nuevas pestañas de consultorio.

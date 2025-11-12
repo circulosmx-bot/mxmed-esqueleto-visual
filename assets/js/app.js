@@ -361,6 +361,7 @@ $(function(){
     if(window.bootstrap && el){ bootstrap.Modal.getInstance(el)?.hide(); }
     const next = nextConsultorioIndex();
     if(window._mx_createConsultorio) window._mx_createConsultorio(next); else createSede2IfNeeded();
+    try{ initAutosave(); }catch(_){ }
   });
 
   // ====== CP -> Colonias (SEPOMEX) ======
