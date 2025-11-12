@@ -237,9 +237,30 @@ $(function(){
     try{ const wa=document.getElementById('cons-wa2'), cb=document.getElementById('cons-wa-sync2'), dg=document.getElementById('dp-whatsapp'); if(cb&&wa){ const fill=()=>{ if(dg){ wa.value=dg.value||''; wa.dispatchEvent(new Event('input')); } }; const toggle=()=>{ if(cb.checked){ wa.disabled=true; wa.placeholder='+52 ...'; fill(); } else { wa.disabled=false; wa.value=''; wa.placeholder='otro numero Whatsapp'; } }; cb.addEventListener('change',toggle); if(dg) dg.addEventListener('input',()=>{ if(cb.checked) fill(); }); toggle(); } }catch(_){ }
     try{ if(window._mx_setupSchedulesFor){ window._mx_setupSchedulesFor(pane2,'-2'); } }catch(_){ }
     try{ const frame=document.getElementById('cons-map-frame2'); if(frame){ const addr=()=>{ const cp=(document.getElementById('cp2')?.value||'').trim(); const col=(document.getElementById('colonia2')?.value||'').trim(); const mun=(document.getElementById('municipio2')?.value||'').trim(); const edo=(document.getElementById('estado2')?.value||'').trim(); const calle=(document.getElementById('cons-calle2')?.value||'').trim(); const num=(document.getElementById('cons-numext2')?.value||'').trim(); const a=[calle&&(calle+(num?' '+num:'')),col,cp,mun,edo,'México'].filter(Boolean).join(', '); return a; }; const upd=()=>{ const a=addr(); if(!a) return; const url='https://www.google.com/maps?q='+encodeURIComponent(a)+'&z=17&output=embed'; if(frame.src!==url) frame.src=url; }; ['cp2','colonia2','cons-calle2','cons-numext2'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',upd); el.addEventListener('change',upd);} }); } }catch(_){ }
+    try{ updateAddTabVisibility(); }catch(_){ }
     return {pane2, btn2};
   }
 
+  // Visibilidad de tab Agregar según límite
+  function updateAddTabVisibility(){
+    try{
+      const count = document.querySelectorAll('#p-consultorio .tab-pane[id^="sede"]').length;
+      const addBtn = document.getElementById('btn-consul-add');
+      if(!addBtn) return;
+      const addLi = addBtn.closest('li');
+      if(count >= 3){
+        addBtn.classList.add('disabled');
+        addBtn.setAttribute('aria-disabled','true');
+        addBtn.title = 'Máximo 3 consultorios';
+        if(addLi) addLi.style.display = 'none';
+      } else {
+        addBtn.classList.remove('disabled');
+        addBtn.removeAttribute('aria-disabled');
+        addBtn.title = '';
+        if(addLi) addLi.style.display = '';
+      }
+    }catch(_){ }
+  }
   // Generalizado: crear consultorio N (2..3)
   function createConsultorio(n){
     if(n < 2) return null; if(n > 3){ alert('Puedes registrar hasta 3 consultorios.'); return null; }
@@ -294,10 +315,7 @@ $(function(){
     try{ if(window._mx_setupSchedulesFor){ window._mx_setupSchedulesFor(pane,'-'+n); } }catch(_){ }
     try{ const frame=document.getElementById('cons-map-frame'+n); if(frame){ const addr=()=>{ const cp=(document.getElementById('cp'+n)?.value||'').trim(); const col=(document.getElementById('colonia'+n)?.value||'').trim(); const mun=(document.getElementById('municipio'+n)?.value||'').trim(); const edo=(document.getElementById('estado'+n)?.value||'').trim(); const calle=(document.getElementById('cons-calle'+n)?.value||'').trim(); const num=(document.getElementById('cons-numext'+n)?.value||'').trim(); const a=[calle&&(calle+(num?' '+num:'')),col,cp,mun,edo,'México'].filter(Boolean).join(', '); return a; }; const upd=()=>{ const a=addr(); if(!a) return; const url='https://www.google.com/maps?q='+encodeURIComponent(a)+'&z=17&output=embed'; if(frame.src!==url) frame.src=url; }; ['cp'+n,'colonia'+n,'cons-calle'+n,'cons-numext'+n].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',upd); el.addEventListener('change',upd);} }); } }catch(_){ }
     try{ if(window.L && typeof L.map==='function'){ (function(){ const mapBox=document.getElementById('cons-map'+n); if(!mapBox) return; const map=L.map(mapBox).setView([21.882,-102.296],13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map); const marker=L.marker([21.882,-102.296],{draggable:true}).addTo(map); const latI=document.getElementById('cons-lat'+n), lngI=document.getElementById('cons-lng'+n); const setLL=(ll)=>{ if(latI) latI.value=ll.lat.toFixed(6); if(lngI) lngI.value=ll.lng.toFixed(6); }; setLL(marker.getLatLng()); marker.on('moveend',(e)=>setLL(e.target.getLatLng())); map.on('click',(e)=>{ marker.setLatLng(e.latlng); setLL(e.latlng); }); })(); } }catch(_){ }
-    // deshabilitar botón agregar si ya existen 3
-    const count = document.querySelectorAll('#p-consultorio .tab-pane[id^="sede"]').length;
-    if(count >= 3){ const addBtn=document.getElementById('btn-consul-add'); if(addBtn){ addBtn.classList.add('disabled'); addBtn.setAttribute('aria-disabled','true'); addBtn.title='Máximo 3 consultorios'; } }
-    return {pane, btn};
+    // Actualizar visibilidad del tab Agregar seg�n l�mite\n    try{ updateAddTabVisibility(); }catch(_){ }\n    return {pane, btn};
   }
   window._mx_createConsultorio = createConsultorio;
 
@@ -1334,3 +1352,4 @@ $(function(){
   const img = document.querySelector('.header-top img'); if(img) img.alt = 'México Médico';
   if(document.title && document.title.indexOf('MXMed')>=0) document.title = 'MXMed 2025 · Perfil Médico';
 })();
+
