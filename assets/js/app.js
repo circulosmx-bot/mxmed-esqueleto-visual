@@ -1398,7 +1398,28 @@ $(function(){
     const sync = document.getElementById('cons-logo-sync'); if(sync) sync.style.display = 'block';
     const file = document.getElementById('cons-logo'); if(file) file.setAttribute('disabled','disabled');
     const uns = document.getElementById('cons-logo-unsync');
-    if(uns){ uns.onclick = ()=>{ removeAssocUI(); localStorage.removeItem(keyAssoc); }; }
+    if(uns){ uns.onclick = ()=>{
+      // Quitar asociación y permitir repetir el flujo desde cero
+      try{
+        localStorage.removeItem(keyAssoc);
+        localStorage.removeItem(keyAssoc+':decline');
+      }catch(_){ }
+      removeAssocUI();
+      // Restablecer radios/entrada de nombre de grupo
+      const rNo = document.getElementById('cons-grupo-no');
+      const rSi = document.getElementById('cons-grupo-si');
+      const grp = document.getElementById('cons-grupo-nombre');
+      if(rNo){ rNo.checked = true; rNo.dispatchEvent(new Event('change')); }
+      if(rSi){ rSi.checked = false; }
+      if(grp){ grp.value=''; grp.setAttribute('disabled','disabled'); }
+      // Rehabilitar campos de dirección clave por si estaban bloqueados
+      ['cp','colonia','municipio','estado','cons-calle','cons-numext'].forEach(id=>{
+        const el = document.getElementById(id); if(!el) return;
+        el.removeAttribute('disabled');
+        if('disabled' in el) try{ el.disabled = false; }catch(_){ }
+        if(id==='colonia'){ el.classList.remove('select-open'); el.removeAttribute('size'); }
+      });
+    }; }
   }
 
   function removeAssocUI(){
