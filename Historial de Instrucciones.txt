@@ -32,3 +32,5 @@
 [2025-11-11 19:56] Confirmar: Ubicación (mapa) colocada enseguida de la franja Calle/Número Ext./Número Int./Piso, manteniendo ancho y altura al 50%.
 
 [2025-11-11 20:00] Consultorio: agregar dos dropzones debajo de Horarios — izquierda logotipo de grupo médico (cons-logo) y derecha fotografía principal del consultorio (cons-foto).
+
+[2025-11-11 20:04] Reubicar dropzones de Consultorio al final del panel (después de Horarios), manteniendo orden e IDs.
