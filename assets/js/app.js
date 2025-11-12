@@ -1435,37 +1435,3 @@ $(function(){
 })();
 
 
-
-// ===== Fix de codificación (mojibake) en header y panel Consultorio =====
-(function utf8MojibakeFix(){
-  const map = {
-    'Ã¡':'á','Ã©':'é','Ã­':'í','Ã³':'ó','Ãº':'ú','Ã±':'ñ','Ã':'Ñ','Ã¼':'ü','Ãœ':'Ü',
-    'Ã':'Á','Ã‰':'É','Ã':'Í','Ã“':'Ó','Ãš':'Ú','Â·':'·','Â¿':'¿','Â¡':'¡','Âº':'º','Âª':'ª',
-    'MÃ©xico':'México','CÃ³digo':'Código','invÃ¡lido':'inválido','Seleccionaâ€¦':'Selecciona…'
-  };
-  function fixText(s){
-    let out = s; for(const [k,v] of Object.entries(map)){ out = out.split(k).join(v); } return out;
-  }
-  function walkAndFix(root){
-    try{
-      const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
-      const nodes = []; while(tw.nextNode()) nodes.push(tw.currentNode);
-      nodes.forEach(n=>{ const t=n.nodeValue; const r=fixText(t); if(r!==t) n.nodeValue=r; });
-    }catch(e){ console.warn('utf8MojibakeFix walk error', e); }
-  }
-  function run(){
-    try{
-      const header = document.querySelector('.header-mid'); if(header) walkAndFix(header);
-      const panel = document.getElementById('p-consultorio'); if(panel) walkAndFix(panel);
-      // Título Óptimo explícito
-      const t = document.querySelector('.optimo'); if(t) t.textContent = 'Óptimo';
-      // Placeholder de Colonia si hubo mojibake
-      const col = document.getElementById('colonia'); if(col && col.options && col.options.length){
-        const o0 = col.options[0]; if(o0 && /Selecciona/.test(o0.text)) o0.text = 'Selecciona…';
-      }
-      // Header de tabla de horarios: 'Día'
-      const thDia = document.querySelector('#p-consultorio .sched-table thead th'); if(thDia){ thDia.textContent = 'Día'; }
-    }catch(e){ console.warn('utf8MojibakeFix run error', e); }
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', run); else run();
-})();
