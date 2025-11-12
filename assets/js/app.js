@@ -731,7 +731,13 @@ $(function(){
           validByType = digits.length===10 || (digits.startsWith('52') && digits.length===12);
         }
         const invalid = ctrl.classList.contains('is-invalid') || !validByType;
-        const hasVal = val !== '';
+        let hasVal = val !== '';
+        // Género: no mostrar check si está sin seleccionar (opción placeholder)
+        if(ctrl.id==='dp-genero'){
+          try{
+            hasVal = (ctrl.selectedIndex > 0) && (val !== '—');
+          }catch(_){ hasVal = val !== '' && val !== '—'; }
+        }
         if(col){ col.classList.toggle('saved', hasVal && !invalid); }
       };
       maybeMark();
