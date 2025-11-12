@@ -56,3 +56,5 @@
 [2025-11-11 21:38] Solicitud: realizar commit y push (sin cambios adicionales).
 
 [2025-11-11 22:01] CONSULTORIO PRINCIPAL: agregar modal de sugerencia de Grupo Médico y lógica para asociar/mostrar logotipo del grupo en dropzone de logotipo.
+
+[2025-11-12 13:44] Reposicionar rama 'seccion-consultorio' al estado estable 958c731 y crear commit 'integracion a grupo medico' como baseline para continuar.
