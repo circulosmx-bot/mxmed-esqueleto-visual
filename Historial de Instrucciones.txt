@@ -20,3 +20,5 @@
 [2025-11-11 19:38] Corregir visibilidad del icono check: enlazar autosave global (sin prefijo #viewport) y mostrar la palomita en tiempo real (evento input).
 
 [2025-11-11 19:39] Realizar commit y push de los cambios.
+
+[2025-11-11 19:49] Revertir al estado del commit previo (deshacer el último cambio).
