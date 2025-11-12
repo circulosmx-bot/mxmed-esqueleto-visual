@@ -24,3 +24,5 @@
 [2025-11-11 19:49] Revertir al estado del commit previo (deshacer el último cambio).
 
 [2025-11-11 19:52] Consultorio: mover el mapa justo después de la franja de ‘Calle’ y reducir su altura al 50% (manteniendo ancho).
+
+[2025-11-11 19:53] Realizar commit de los cambios (sin push).
