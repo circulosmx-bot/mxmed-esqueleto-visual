@@ -1511,4 +1511,70 @@ $(function(){
   });
 })();
 
+// ===== Widget flotante: Reiniciar estado (demo local) =====
+(function addResetWidget(){
+  try{
+    // Crear botón flotante sólo una vez
+    if(document.getElementById('mx-dev-reset')) return;
+    const btn = document.createElement('button');
+    btn.id = 'mx-dev-reset';
+    btn.type = 'button';
+    btn.textContent = 'Reiniciar estado';
+    btn.setAttribute('aria-label','Reiniciar estado local');
+    Object.assign(btn.style, {
+      position:'fixed', top:'10px', right:'12px',
+      background:'#d81b60', color:'#fff', border:'none',
+      padding:'8px 14px', borderRadius:'18px', fontWeight:'600',
+      boxShadow:'0 2px 8px rgba(0,0,0,0.2)', cursor:'pointer',
+      zIndex:'1080', letterSpacing:'0.2px'
+    });
+
+    const reset = ()=>{
+      try{
+        // Limpiar claves principales usadas en esta sección
+        localStorage.removeItem('grupo_medico_assoc');
+        localStorage.removeItem('grupo_medico_assoc:decline');
+        localStorage.removeItem('mxmed_cons_schedules');
+        localStorage.removeItem('mxmed_cons_schedules2');
+        // Preferencias de navegación (para evitar estados atascados)
+        localStorage.removeItem('mxmed_menu_group');
+        localStorage.removeItem('mxmed_last_panel');
+        localStorage.removeItem('mxmed_info_tab');
+      }catch(_){ }
+
+      // Restablecer UI de asociación de grupo
+      try{
+        const prev = document.getElementById('cons-logo-prev');
+        const img  = document.getElementById('cons-logo-img');
+        if(prev){ prev.style.display = 'none'; }
+        if(img){ img.src = ''; }
+        const file = document.getElementById('cons-logo'); if(file){ file.removeAttribute('disabled'); file.value=''; }
+        const sync = document.getElementById('cons-logo-sync'); if(sync) sync.style.display = 'none';
+        const rNo = document.getElementById('cons-grupo-no');
+        const rSi = document.getElementById('cons-grupo-si');
+        const grp = document.getElementById('cons-grupo-nombre');
+        if(rNo){ rNo.checked = true; rNo.dispatchEvent(new Event('change')); }
+        if(rSi){ rSi.checked = false; }
+        if(grp){ grp.value=''; grp.setAttribute('disabled','disabled'); }
+        // Rehabilitar campos clave de dirección
+        ['cp','colonia','municipio','estado','cons-calle','cons-numext'].forEach(id=>{
+          const el = document.getElementById(id); if(!el) return;
+          el.removeAttribute('disabled');
+          try{ el.disabled = false; }catch(_){ }
+          if(id==='colonia'){ el.classList.remove('select-open'); el.removeAttribute('size'); }
+        });
+      }catch(_){ }
+
+      // Intentar re-disparar la lógica de sugerencia si ya hay dirección
+      try{
+        const ev = new Event('change');
+        ['cp','colonia','municipio','estado','cons-calle','cons-numext'].forEach(id=> document.getElementById(id)?.dispatchEvent(ev));
+      }catch(_){ }
+    };
+
+    btn.addEventListener('click', reset);
+    document.body.appendChild(btn);
+  }catch(_){ }
+})();
+
 
