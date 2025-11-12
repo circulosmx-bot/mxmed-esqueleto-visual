@@ -64,3 +64,5 @@
 [2025-11-12 13:52] Fix encoding: placeholder de Colonia ('Selecciona…'), mensaje de CP inválido y literal 'México' normalizados.
 
 [2025-11-12 13:54] Marcar estado estable: b8fa242cd7b85cf8c755d21a57bbfffec0bac4cd (tag consultorio-stable-20251112-1354) y rama seccion-consultorio-stable.
+
+[2025-11-12 14:10] Revertir fixes de mojibake amplios que afectaron horarios (mantener correcciones puntuales previas).
