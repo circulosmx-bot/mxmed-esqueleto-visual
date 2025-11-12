@@ -702,6 +702,45 @@
                     </div>
                     <small class="text-muted">En plan gratuito el mapa no usa GPS; en planes de pago sí.</small>
                   </div>
+                  
+                  <!-- Archivos: Logotipo de grupo médico y Fotografía del consultorio -->
+                  <div class="col-12">
+                    <div class="mf-upload-grid">
+                      <!-- Logotipo del grupo médico -->
+                      <div class="mf-upload square" data-type="logo">
+                        <svg class="mf-illus" viewBox="0 0 64 64" aria-hidden="true">
+                          <rect x="12" y="26" width="40" height="12" rx="6" fill="#c7dbe4"/>
+                          <path d="M32 10v44M10 32h44" stroke="#99bfd0" stroke-width="2" stroke-linecap="round"/>
+                          <rect x="6" y="8" width="52" height="48" rx="8" fill="none" stroke="#99bfd0" stroke-width="2"/>
+                        </svg>
+                        <div class="mf-title">Logotipo del grupo médico</div>
+                        <div class="mf-sub">Arrastra aquí o haz clic para subirlo</div>
+                        <div class="mf-actions">
+                          <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cámara</button>
+                        </div>
+                        <input id="cons-logo" type="file" accept="image/*" class="d-none mf-input">
+                        <div id="cons-logo-prev" class="mf-prev"><img id="cons-logo-img" alt="preview logotipo"></div>
+                      </div>
+
+                      <!-- Fotografía principal del consultorio -->
+                      <div class="mf-upload square" data-type="foto">
+                        <svg class="mf-illus" viewBox="0 0 64 64" aria-hidden="true">
+                          <circle cx="32" cy="22" r="12" fill="#c7dbe4"/>
+                          <rect x="16" y="36" width="32" height="18" rx="9" fill="#c7dbe4"/>
+                          <rect x="6" y="8" width="52" height="48" rx="8" fill="none" stroke="#99bfd0" stroke-width="2"/>
+                        </svg>
+                        <div class="mf-title">Fotografía principal del consultorio</div>
+                        <div class="mf-sub">Arrastra aquí o haz clic para subirla</div>
+                        <div class="mf-actions">
+                          <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cámara</button>
+                        </div>
+                        <input id="cons-foto" type="file" accept="image/*" class="d-none mf-input">
+                        <div id="cons-foto-prev" class="mf-prev"><img id="cons-foto-img" alt="preview fotografía"></div>
+                      </div>
+                    </div>
+                  </div>
                   <div class="col-12"><strong>Teléfonos del consultorio</strong></div>
                   <div class="col-md-3"><label class="form-label" for="cons-tel1">Teléfono consultorio 01</label><div class="save-wrap"><input id="cons-tel1" class="form-control" inputmode="tel" data-validate="phone" placeholder="(###) ### ####"/><div class="err-bubble">Ingresa un teléfono válido (7–15 dígitos).</div></div></div>
                   <div class="col-md-3"><label class="form-label" for="cons-tel2">Teléfono consultorio 02</label><div class="save-wrap"><input id="cons-tel2" class="form-control" inputmode="tel" data-validate="phone"/><div class="err-bubble">Ingresa un teléfono válido (7–15 dígitos).</div></div></div>
