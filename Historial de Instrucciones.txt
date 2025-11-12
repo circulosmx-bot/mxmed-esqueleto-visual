@@ -26,3 +26,5 @@
 [2025-11-11 19:52] Consultorio: mover el mapa justo después de la franja de ‘Calle’ y reducir su altura al 50% (manteniendo ancho).
 
 [2025-11-11 19:53] Realizar commit de los cambios (sin push).
+
+[2025-11-11 19:54] Renombrar etiqueta 'Mapa' a 'Ubicación' en Consultorio.
