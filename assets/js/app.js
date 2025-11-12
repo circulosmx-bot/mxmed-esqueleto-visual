@@ -1514,6 +1514,9 @@ $(function(){
 // ===== Widget flotante: Reiniciar estado (demo local) =====
 (function addResetWidget(){
   try{
+    // Mostrar solo en entorno local (localhost/127.0.0.1/::1 o file:)
+    const isLocal = (location.protocol === 'file:') || /^(localhost|127\.0\.0\.1|::1)$/i.test(location.hostname||'');
+    if(!isLocal) return;
     // Crear botón flotante sólo una vez
     if(document.getElementById('mx-dev-reset')) return;
     const btn = document.createElement('button');

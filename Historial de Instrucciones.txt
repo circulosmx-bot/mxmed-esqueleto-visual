@@ -70,3 +70,4 @@
 [2025-11-12] Grupo Médico: al responder 'No' ya no se congela la pantalla: se guarda firma de dirección para no re-preguntar; se asegura limpieza del overlay/backdrop del modal y no se reabre en el mismo estado.
 [2025-11-12] Agregado reinicio de asociación desde botón 'Cambiar' del logotipo: limpia localStorage (aceptado/declinado), re-habilita campos de dirección y radios para poder repetir el flujo desde cero.
 [2025-11-12] Agregado widget flotante magenta 'Reiniciar estado' (limpia claves locales de grupo y horarios; restaura campos y radios) para facilitar pruebas; se puede retirar luego.
+[2025-11-12] Widget 'Reiniciar estado' limitado a entorno local (localhost/127.0.0.1/::1 o file:) para uso temporal de revisión.
