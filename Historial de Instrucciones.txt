@@ -46,3 +46,5 @@
 [2025-11-11 21:17] CONSULTORIO PRINCIPAL: acortar etiquetas — 'Cuenta con estacionamiento propio' -> 'Estacionamiento' (con ícono) y 'Accesibilidad para discapacitados' -> 'Accesible' (con ícono).
 
 [2025-11-11 21:20] Reemplazar íconos de Estacionamiento/Accesible a Material Symbols (local_parking, accessible).
+
+[2025-11-11 21:21] CONSULTORIO PRINCIPAL: mover etiquetas Estacionamiento/Accesible a la derecha en la misma fila de Teléfono Urgencias (col-md-6 alineado a la derecha).
