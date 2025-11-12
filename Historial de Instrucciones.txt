@@ -58,3 +58,5 @@
 [2025-11-11 22:01] CONSULTORIO PRINCIPAL: agregar modal de sugerencia de Grupo Médico y lógica para asociar/mostrar logotipo del grupo en dropzone de logotipo.
 
 [2025-11-12 13:44] Reposicionar rama 'seccion-consultorio' al estado estable 958c731 y crear commit 'integracion a grupo medico' como baseline para continuar.
+
+[2025-11-12 13:49] Fix encoding: normalizar 'Médico' en modal y nombre del grupo para evitar caracteres rotos.
