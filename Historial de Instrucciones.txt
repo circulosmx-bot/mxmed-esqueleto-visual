@@ -20,5 +20,3 @@
 [2025-11-11 19:38] Corregir visibilidad del icono check: enlazar autosave global (sin prefijo #viewport) y mostrar la palomita en tiempo real (evento input).
 
 [2025-11-11 19:39] Realizar commit y push de los cambios.
-
-[2025-11-11 19:46] Consultorio: crear tabs SEGUNDO/TERCER CONSULTORIO; ocultar tab Agregar al llegar a 3; re-mostrar si se eliminan y hay cupo. Ajuste robusto de visibilidad y orden.
