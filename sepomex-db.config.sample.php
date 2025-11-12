@@ -11,10 +11,10 @@ return [
     'user' => 'root',
     'pass' => '',
     'charset' => 'utf8mb4',
+    'collation' => 'utf8mb4_unicode_ci',
   ],
   // Para SQLite (si prefieres un archivo local)
   'sqlite' => [
     'path' => __DIR__ . '/assets/data/sepomex.sqlite'
   ],
 ];
-
