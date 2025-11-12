@@ -58,3 +58,5 @@
 [2025-11-11 22:01] CONSULTORIO PRINCIPAL: agregar modal de sugerencia de Grupo Médico y lógica para asociar/mostrar logotipo del grupo en dropzone de logotipo.
 
 [2025-11-11 22:08] Agregar tareas de integración de 'Grupos médicos' (backend, frontend, seguridad/tests) a pendientes_integracion.txt.
+
+[2025-11-12 12:59] Fix modal grupo: evitar re-apertura en bucle, respetar rechazo por misma dirección, limpiar backdrop al cerrar.

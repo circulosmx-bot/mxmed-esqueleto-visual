@@ -1,13 +1,13 @@
-// ===== Extracted JS blocks from base HTML =====
+﻿// ===== Extracted JS blocks from base HTML =====
 
 
-/* ===== Helpers de navegación rápida ===== */
+/* ===== Helpers de navegaciÃ³n rÃ¡pida ===== */
 function jumpTo(panelId){
   showPanel(panelId);
-  // marca activo el subbotón correspondiente, si existe
+  // marca activo el subbotÃ³n correspondiente, si existe
   $('.menu-sub-btn').removeClass('active');
   $('.menu-sub-btn[data-panel="'+panelId+'"]').addClass('active');
-  // marcar activo el botón principal si es un panel directo
+  // marcar activo el botÃ³n principal si es un panel directo
   $('.menu-main').removeClass('active');
   var $main = $('.menu-main[data-panel="'+panelId+'"]');
   if($main.length){ $main.addClass('active'); }
@@ -22,7 +22,7 @@ function selectPaqTab(selector){
   if(btn){ new bootstrap.Tab(btn).show(); }
 }
 
-/* ===== Acordeón exclusivo (sólo en grupos con submenú) ===== */
+/* ===== AcordeÃ³n exclusivo (sÃ³lo en grupos con submenÃº) ===== */
 function openGroup(group){
   $('.menu-sub').removeClass('open').slideUp(100);
   const $t = $('.menu-sub[data-group="'+group+'"]');
@@ -30,20 +30,20 @@ function openGroup(group){
   localStorage.setItem('mxmed_menu_group', group);
 }
 
-/* Click en menú principal */
+/* Click en menÃº principal */
 $('.menu-main').on('click', function(){
   const panel = $(this).data('panel');   // panel directo
-  const grp   = $(this).data('group');   // grupo acordeón
+  const grp   = $(this).data('group');   // grupo acordeÃ³n
 
-  if(panel){ // sin submenú: abrir panel directo
+  if(panel){ // sin submenÃº: abrir panel directo
     $('.menu-sub').removeClass('open').slideUp(100);
     showPanel(panel);
-    // activar este botón principal y desactivar los demás
+    // activar este botÃ³n principal y desactivar los demÃ¡s
     $('.menu-main').removeClass('active');
     $(this).addClass('active');
     localStorage.setItem('mxmed_last_panel', panel);
-    localStorage.removeItem('mxmed_menu_group'); // ningún grupo abierto
-  }else if(grp){ // con submenú (acordeón)
+    localStorage.removeItem('mxmed_menu_group'); // ningÃºn grupo abierto
+  }else if(grp){ // con submenÃº (acordeÃ³n)
     const $pane = $('.menu-sub[data-group="'+grp+'"]');
     if($pane.hasClass('open')){
       $pane.removeClass('open').slideUp(100);
@@ -51,14 +51,14 @@ $('.menu-main').on('click', function(){
     }else{
       openGroup(grp);
     }
-    // al trabajar con submenús, ningún botón principal queda activo
+    // al trabajar con submenÃºs, ningÃºn botÃ³n principal queda activo
     $('.menu-main').removeClass('active');
   }
 });
 
-/* Activación de subbotones y panel derecho */
+/* ActivaciÃ³n de subbotones y panel derecho */
 function showPanel(id){
-  // Oculta todos los paneles, estén o no dentro de #viewport
+  // Oculta todos los paneles, estÃ©n o no dentro de #viewport
   $('section[id^="p-"]').addClass('d-none');
   // Muestra el panel solicitado
   $('#'+id).removeClass('d-none');
@@ -66,7 +66,7 @@ function showPanel(id){
 $('.menu-sub-btn').on('click', function(){
   $('.menu-sub-btn').removeClass('active');
   $(this).addClass('active');
-  // limpiar activos en botones principales cuando se usa submenú
+  // limpiar activos en botones principales cuando se usa submenÃº
   $('.menu-main').removeClass('active');
   const id = $(this).data('panel');
   if(id) showPanel(id);
@@ -79,11 +79,11 @@ $('.menu-sub-btn').on('click', function(){
 $(function(){
   // Por defecto, mostrar RESUMEN
   let lastPanel = localStorage.getItem('mxmed_last_panel') || 'p-resumen';
-  // Migración: renombrar p-mensajes -> p-notificaciones si viene de estado previo
+  // MigraciÃ³n: renombrar p-mensajes -> p-notificaciones si viene de estado previo
   if(lastPanel === 'p-mensajes'){ lastPanel = 'p-notificaciones'; localStorage.setItem('mxmed_last_panel', lastPanel); }
   showPanel(lastPanel);
 
-  // Si último panel pertenece a un grupo, abrirlo
+  // Si Ãºltimo panel pertenece a un grupo, abrirlo
   const groups = ['perfil','agenda','pacientes'];
   let opened = false;
   for(const g of groups){
@@ -98,11 +98,11 @@ $(function(){
     $('.menu-sub').removeClass('open').hide();
   }
 
-  // Si el último panel coincide con un botón principal directo, marcarlo activo
+  // Si el Ãºltimo panel coincide con un botÃ³n principal directo, marcarlo activo
   const $mainMatch = $('.menu-main[data-panel="'+lastPanel+'"]');
   if($mainMatch.length){ $('.menu-main').removeClass('active'); $mainMatch.addClass('active'); }
 
-  // Restaurar pestaña interna de Información · Mi Perfil
+  // Restaurar pestaÃ±a interna de InformaciÃ³n Â· Mi Perfil
   const lastInfoTab = localStorage.getItem('mxmed_info_tab') || '#t-datos';
   const tabTrigger = document.querySelector(`[data-bs-target="${lastInfoTab}"]`);
   if(tabTrigger){ new bootstrap.Tab(tabTrigger).show(); }
@@ -182,7 +182,7 @@ $(function(){
     e.preventDefault();
     const el = document.getElementById('modalConsulAdd');
     if(window.bootstrap && el){ new bootstrap.Modal(el).show(); }
-    else { if(window.confirm('¿Deseas agregar otro consultorio?')) {/* fallback */} }
+    else { if(window.confirm('Â¿Deseas agregar otro consultorio?')) {/* fallback */} }
   });
   function createSede2IfNeeded(){
     const nav = document.querySelector('#p-consultorio .mm-tabs-embed');
@@ -224,7 +224,7 @@ $(function(){
       if(addLi){ nav.insertBefore(li, addLi); } else { nav.appendChild(li); }
       li.appendChild(btn); btn2 = btn;
     }
-    // activar pestaña 2
+    // activar pestaÃ±a 2
     document.querySelectorAll('#p-consultorio .mm-tabs-embed .nav-link').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('#p-consultorio .tab-pane').forEach(p=>p.classList.remove('show','active'));
     pane2.classList.add('show','active');
@@ -233,10 +233,10 @@ $(function(){
     // inicializar en pane2
     try{ setupCpAuto({ cp:'cp2', colonia:'colonia2', msg:'mensaje-cp2', mun:'municipio2', est:'estado2' }); }catch(_){ }
     try{ const cp2=document.getElementById('cp2'), col2=document.getElementById('colonia2'); if(cp2&&col2){ cp2.addEventListener('blur', ()=>{ col2.focus(); }); } }catch(_){ }
-    try{ const cont=pane2; const phones=cont.querySelectorAll('[data-validate="phone"]'); const okp=v=>{const d=(v||'').replace(/[^0-9]/g,''); return d.length>=7&&d.length<=15;}; phones.forEach(el=>{ const apply=()=>{ const ok=okp(el.value); el.classList.toggle('is-invalid',!ok); el.setCustomValidity(ok?'':'Teléfono inválido'); }; el.addEventListener('input',apply); el.addEventListener('blur',apply); apply(); }); }catch(_){ }
+    try{ const cont=pane2; const phones=cont.querySelectorAll('[data-validate="phone"]'); const okp=v=>{const d=(v||'').replace(/[^0-9]/g,''); return d.length>=7&&d.length<=15;}; phones.forEach(el=>{ const apply=()=>{ const ok=okp(el.value); el.classList.toggle('is-invalid',!ok); el.setCustomValidity(ok?'':'TelÃ©fono invÃ¡lido'); }; el.addEventListener('input',apply); el.addEventListener('blur',apply); apply(); }); }catch(_){ }
     try{ const wa=document.getElementById('cons-wa2'), cb=document.getElementById('cons-wa-sync2'), dg=document.getElementById('dp-whatsapp'); if(cb&&wa){ const fill=()=>{ if(dg){ wa.value=dg.value||''; wa.dispatchEvent(new Event('input')); } }; const toggle=()=>{ if(cb.checked){ wa.disabled=true; wa.placeholder='+52 ...'; fill(); } else { wa.disabled=false; wa.value=''; wa.placeholder='otro numero Whatsapp'; } }; cb.addEventListener('change',toggle); if(dg) dg.addEventListener('input',()=>{ if(cb.checked) fill(); }); toggle(); } }catch(_){ }
     try{ if(window._mx_setupSchedulesFor){ window._mx_setupSchedulesFor(pane2,'-2'); } }catch(_){ }
-    try{ const frame=document.getElementById('cons-map-frame2'); if(frame){ const addr=()=>{ const cp=(document.getElementById('cp2')?.value||'').trim(); const col=(document.getElementById('colonia2')?.value||'').trim(); const mun=(document.getElementById('municipio2')?.value||'').trim(); const edo=(document.getElementById('estado2')?.value||'').trim(); const calle=(document.getElementById('cons-calle2')?.value||'').trim(); const num=(document.getElementById('cons-numext2')?.value||'').trim(); const a=[calle&&(calle+(num?' '+num:'')),col,cp,mun,edo,'México'].filter(Boolean).join(', '); return a; }; const upd=()=>{ const a=addr(); if(!a) return; const url='https://www.google.com/maps?q='+encodeURIComponent(a)+'&z=17&output=embed'; if(frame.src!==url) frame.src=url; }; ['cp2','colonia2','cons-calle2','cons-numext2'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',upd); el.addEventListener('change',upd);} }); } }catch(_){ }
+    try{ const frame=document.getElementById('cons-map-frame2'); if(frame){ const addr=()=>{ const cp=(document.getElementById('cp2')?.value||'').trim(); const col=(document.getElementById('colonia2')?.value||'').trim(); const mun=(document.getElementById('municipio2')?.value||'').trim(); const edo=(document.getElementById('estado2')?.value||'').trim(); const calle=(document.getElementById('cons-calle2')?.value||'').trim(); const num=(document.getElementById('cons-numext2')?.value||'').trim(); const a=[calle&&(calle+(num?' '+num:'')),col,cp,mun,edo,'MÃ©xico'].filter(Boolean).join(', '); return a; }; const upd=()=>{ const a=addr(); if(!a) return; const url='https://www.google.com/maps?q='+encodeURIComponent(a)+'&z=17&output=embed'; if(frame.src!==url) frame.src=url; }; ['cp2','colonia2','cons-calle2','cons-numext2'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',upd); el.addEventListener('change',upd);} }); } }catch(_){ }
     return {pane2, btn2};
   }
 
@@ -292,16 +292,16 @@ $(function(){
     try{ if(window._mx_phone_bind){ window._mx_phone_bind(pane); } }catch(_){ }
     try{ const wa=document.getElementById('cons-wa'+n), cb=document.getElementById('cons-wa-sync'+n), dg=document.getElementById('dp-whatsapp'); if(cb&&wa){ const fill=()=>{ if(dg){ wa.value=dg.value||''; wa.dispatchEvent(new Event('input')); } }; const toggle=()=>{ if(cb.checked){ wa.disabled=true; wa.placeholder='+52 ...'; fill(); } else { wa.disabled=false; wa.value=''; wa.placeholder='otro numero Whatsapp'; } }; cb.addEventListener('change',toggle); if(dg) dg.addEventListener('input',()=>{ if(cb.checked) fill(); }); toggle(); } }catch(_){ }
     try{ if(window._mx_setupSchedulesFor){ window._mx_setupSchedulesFor(pane,'-'+n); } }catch(_){ }
-    try{ const frame=document.getElementById('cons-map-frame'+n); if(frame){ const addr=()=>{ const cp=(document.getElementById('cp'+n)?.value||'').trim(); const col=(document.getElementById('colonia'+n)?.value||'').trim(); const mun=(document.getElementById('municipio'+n)?.value||'').trim(); const edo=(document.getElementById('estado'+n)?.value||'').trim(); const calle=(document.getElementById('cons-calle'+n)?.value||'').trim(); const num=(document.getElementById('cons-numext'+n)?.value||'').trim(); const a=[calle&&(calle+(num?' '+num:'')),col,cp,mun,edo,'México'].filter(Boolean).join(', '); return a; }; const upd=()=>{ const a=addr(); if(!a) return; const url='https://www.google.com/maps?q='+encodeURIComponent(a)+'&z=17&output=embed'; if(frame.src!==url) frame.src=url; }; ['cp'+n,'colonia'+n,'cons-calle'+n,'cons-numext'+n].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',upd); el.addEventListener('change',upd);} }); } }catch(_){ }
+    try{ const frame=document.getElementById('cons-map-frame'+n); if(frame){ const addr=()=>{ const cp=(document.getElementById('cp'+n)?.value||'').trim(); const col=(document.getElementById('colonia'+n)?.value||'').trim(); const mun=(document.getElementById('municipio'+n)?.value||'').trim(); const edo=(document.getElementById('estado'+n)?.value||'').trim(); const calle=(document.getElementById('cons-calle'+n)?.value||'').trim(); const num=(document.getElementById('cons-numext'+n)?.value||'').trim(); const a=[calle&&(calle+(num?' '+num:'')),col,cp,mun,edo,'MÃ©xico'].filter(Boolean).join(', '); return a; }; const upd=()=>{ const a=addr(); if(!a) return; const url='https://www.google.com/maps?q='+encodeURIComponent(a)+'&z=17&output=embed'; if(frame.src!==url) frame.src=url; }; ['cp'+n,'colonia'+n,'cons-calle'+n,'cons-numext'+n].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',upd); el.addEventListener('change',upd);} }); } }catch(_){ }
     try{ if(window.L && typeof L.map==='function'){ (function(){ const mapBox=document.getElementById('cons-map'+n); if(!mapBox) return; const map=L.map(mapBox).setView([21.882,-102.296],13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map); const marker=L.marker([21.882,-102.296],{draggable:true}).addTo(map); const latI=document.getElementById('cons-lat'+n), lngI=document.getElementById('cons-lng'+n); const setLL=(ll)=>{ if(latI) latI.value=ll.lat.toFixed(6); if(lngI) lngI.value=ll.lng.toFixed(6); }; setLL(marker.getLatLng()); marker.on('moveend',(e)=>setLL(e.target.getLatLng())); map.on('click',(e)=>{ marker.setLatLng(e.latlng); setLL(e.latlng); }); })(); } }catch(_){ }
-    // deshabilitar botón agregar si ya existen 3
+    // deshabilitar botÃ³n agregar si ya existen 3
     const count = document.querySelectorAll('#p-consultorio .tab-pane[id^="sede"]').length;
-    if(count >= 3){ const addBtn=document.getElementById('btn-consul-add'); if(addBtn){ addBtn.classList.add('disabled'); addBtn.setAttribute('aria-disabled','true'); addBtn.title='Máximo 3 consultorios'; } }
+    if(count >= 3){ const addBtn=document.getElementById('btn-consul-add'); if(addBtn){ addBtn.classList.add('disabled'); addBtn.setAttribute('aria-disabled','true'); addBtn.title='MÃ¡ximo 3 consultorios'; } }
     return {pane, btn};
   }
   window._mx_createConsultorio = createConsultorio;
 
-  // Eliminar consultorio con confirmación (demo: acepta código 123456 o pass 'codex')
+  // Eliminar consultorio con confirmaciÃ³n (demo: acepta cÃ³digo 123456 o pass 'codex')
   function openDeleteModal(n){
     const modalEl = document.getElementById('modalConsulDel'); if(!modalEl) return;
     modalEl.setAttribute('data-target-n', String(n));
@@ -331,7 +331,7 @@ $(function(){
           if(!r.ok) return false; const j = await r.json(); return !!j.ok;
         }
       }catch(_){
-        // Modo pruebas: si hay valor no vacío, aceptar.
+        // Modo pruebas: si hay valor no vacÃ­o, aceptar.
         return usePass ? (pass.trim()!=='') : (code.trim()!=='');
       }
     }
@@ -348,7 +348,7 @@ $(function(){
     const btn1 = document.querySelector('#p-consultorio [data-bs-target="#sede1"]');
     const pane1 = document.getElementById('sede1');
     if(btn1 && pane1){ btn1.classList.add('active'); pane1.classList.add('show','active'); if(window.bootstrap){ new bootstrap.Tab(btn1).show(); } }
-    // re-habilitar botón agregar si estaba bloqueado
+    // re-habilitar botÃ³n agregar si estaba bloqueado
     const addBtn=document.getElementById('btn-consul-add'); if(addBtn){ addBtn.classList.remove('disabled'); addBtn.removeAttribute('aria-disabled'); addBtn.title=''; }
   });
   function nextConsultorioIndex(){
@@ -383,13 +383,13 @@ $(function(){
     function fillSelect(options){
       // Limpia y coloca placeholder
       sel.innerHTML = '';
-      const base = document.createElement('option'); base.value=''; base.textContent='Selecciona…'; sel.appendChild(base);
+      const base = document.createElement('option'); base.value=''; base.textContent='Seleccionaâ€¦'; sel.appendChild(base);
       // Agrega colonias
       (options||[]).forEach(name=>{
         const opt = document.createElement('option'); opt.value = name; opt.textContent = name; sel.appendChild(opt);
       });
       const has = !!options && options.length > 0;
-      // Habilita/deshabilita de forma explícita (prop y atributo)
+      // Habilita/deshabilita de forma explÃ­cita (prop y atributo)
       if(has){ sel.disabled = false; sel.removeAttribute('disabled'); sel.selectedIndex = 0; }
       else { sel.disabled = true; sel.setAttribute('disabled','disabled'); }
       try{ console.debug('[SEPOMEX] opciones en #'+ids.colonia+':', sel.options.length-1); }catch(_){ }
@@ -426,18 +426,18 @@ $(function(){
         return { list, municipio, estado };
       }
 
-      // 1) Si hay cache localStorage, úsalo de inmediato y refresca en background
+      // 1) Si hay cache localStorage, Ãºsalo de inmediato y refresca en background
       const cacheKey = 'sepomex_cp_'+cpVal;
       try{
         const cached = JSON.parse(localStorage.getItem(cacheKey)||'null');
         if(cached && Array.isArray(cached.list) && cached.list.length){
-          // Disparar refresh en background pero devolver rápido
+          // Disparar refresh en background pero devolver rÃ¡pido
           refreshOnline();
           return cached;
         }
       }catch(_){ }
 
-      // 2) Para primera respuesta más rápida: hacer intentos en paralelo y tomar el primero
+      // 2) Para primera respuesta mÃ¡s rÃ¡pida: hacer intentos en paralelo y tomar el primero
       async function refreshOnline(){
         // intenta actualizar cache sin bloquear UI
         Promise.race([
@@ -459,7 +459,7 @@ $(function(){
         return first;
       }catch(e3){
         try{ console.error('[SEPOMEX] todos los intentos en cliente fallaron', e3?.message||e3); }catch(_){ }
-        // 3) Fallback local (archivo estático para demo)
+        // 3) Fallback local (archivo estÃ¡tico para demo)
         try{
           const local = await (await fetch('assets/data/sepomex-fallback.json', {cache:'no-store'})).json();
           const entry = local && local[cpVal];
@@ -477,7 +477,7 @@ $(function(){
 
     async function onCpChange(){
       const val = (cp.value||'').trim();
-      // valida 5 dígitos
+      // valida 5 dÃ­gitos
       if(!/^\d{5}$/.test(val)){
         fillSelect([]); setMsg(''); if(mun) mun.value=''; if(est) est.value=''; return;
       }
@@ -493,7 +493,7 @@ $(function(){
         if(mun) mun.value = municipio||''; if(est) est.value = estado||'';
         try{ console.debug('[SEPOMEX] colonias:', uniq); }catch(_){ }
       }else{
-        fillSelect([]); setMsg('Código postal no válido'); if(mun) mun.value=''; if(est) est.value='';
+        fillSelect([]); setMsg('CÃ³digo postal no vÃ¡lido'); if(mun) mun.value=''; if(est) est.value='';
       }
     }
 
@@ -502,7 +502,7 @@ $(function(){
       // mostrar estado de carga antes de llamar
       const v = (cp.value||'').trim();
       if(/^\d{5}$/.test(v)){
-        sel.innerHTML = '<option value="">Buscando colonias…</option>'; sel.disabled = true; onCpChange();
+        sel.innerHTML = '<option value="">Buscando coloniasâ€¦</option>'; sel.disabled = true; onCpChange();
       }
     });
     }
@@ -510,7 +510,7 @@ $(function(){
   // Activar en el primer consultorio (IDs base)
   setupCpAuto({ cp:'cp', colonia:'colonia', msg:'mensaje-cp', mun:'municipio', est:'estado' });
 
-  // Si se crea Consultorio 2 dinámicamente, renombrar IDs y activar allí también
+  // Si se crea Consultorio 2 dinÃ¡micamente, renombrar IDs y activar allÃ­ tambiÃ©n
   const origCreate = createSede2IfNeeded;
   createSede2IfNeeded = function(){
     const ret = origCreate();
@@ -570,12 +570,12 @@ $(function(){
 // ===== Datos Personales: especialidades y validaciones =====
 (function(){
   const T = [
-    'Alergología','Análisis Clínicos','Anestesiología','Angiología y Cirugía Vascular','Audiología','Cardiología','Cirugía Bariátrica','Cirugía Cabeza y Cuello','Cirugía Cardiovascular','Cirugía de Columna','Cirugía de Mano','Cirugía de Pie','Cirugía Gastrointestinal','Cirugía General','Cirugía Laparoscópica','Cirugía Maxilofacial','Cirugía Oncológica Pediátrica','Cirugía Pediátrica','Cirugía Plástica','Cirugía Torácica','Coloproctología','Colposcopía','Cuidados Paliativos','Dentista','Dermatología','Diabetología','Endocrinología','Endodoncia','Estudios de Diagnóstico','Gastroenterología','Geriatría','Ginecología y Obstetricia','Hematología','Implantología Dental','Kinesiología','Medicina Crítica','Medicina del Trabajo','Medicina Estética','Medicina Familiar','Medicina Física y Rehabilitación','Medicina General','Medicina Integrada','Medicina Interna','Medicina Nuclear','Nefrología','Nefrología Pediátrica','Neumología','Neumología Pediátrica','Neurocirugía','Neurología','Neurología Pediátrica','Nutriología','Odontología','Odontopediatría','Oftalmología','Oncología','Optometría','Ortodoncia','Ortopedia Dental','Ortopedia y Traumatología','Otorrinolaringología','Patología','Pediatría','Podología','Proctología','Psicología','Psiquiatría','Radiología e Imagen','Reumatología','Urología','Otra (especificar)'
+    'AlergologÃ­a','AnÃ¡lisis ClÃ­nicos','AnestesiologÃ­a','AngiologÃ­a y CirugÃ­a Vascular','AudiologÃ­a','CardiologÃ­a','CirugÃ­a BariÃ¡trica','CirugÃ­a Cabeza y Cuello','CirugÃ­a Cardiovascular','CirugÃ­a de Columna','CirugÃ­a de Mano','CirugÃ­a de Pie','CirugÃ­a Gastrointestinal','CirugÃ­a General','CirugÃ­a LaparoscÃ³pica','CirugÃ­a Maxilofacial','CirugÃ­a OncolÃ³gica PediÃ¡trica','CirugÃ­a PediÃ¡trica','CirugÃ­a PlÃ¡stica','CirugÃ­a TorÃ¡cica','ColoproctologÃ­a','ColposcopÃ­a','Cuidados Paliativos','Dentista','DermatologÃ­a','DiabetologÃ­a','EndocrinologÃ­a','Endodoncia','Estudios de DiagnÃ³stico','GastroenterologÃ­a','GeriatrÃ­a','GinecologÃ­a y Obstetricia','HematologÃ­a','ImplantologÃ­a Dental','KinesiologÃ­a','Medicina CrÃ­tica','Medicina del Trabajo','Medicina EstÃ©tica','Medicina Familiar','Medicina FÃ­sica y RehabilitaciÃ³n','Medicina General','Medicina Integrada','Medicina Interna','Medicina Nuclear','NefrologÃ­a','NefrologÃ­a PediÃ¡trica','NeumologÃ­a','NeumologÃ­a PediÃ¡trica','NeurocirugÃ­a','NeurologÃ­a','NeurologÃ­a PediÃ¡trica','NutriologÃ­a','OdontologÃ­a','OdontopediatrÃ­a','OftalmologÃ­a','OncologÃ­a','OptometrÃ­a','Ortodoncia','Ortopedia Dental','Ortopedia y TraumatologÃ­a','OtorrinolaringologÃ­a','PatologÃ­a','PediatrÃ­a','PodologÃ­a','ProctologÃ­a','PsicologÃ­a','PsiquiatrÃ­a','RadiologÃ­a e Imagen','ReumatologÃ­a','UrologÃ­a','Otra (especificar)'
   ];
 
   function buildSelect(el){
     el.innerHTML = '';
-    const optEmpty = document.createElement('option'); optEmpty.value=''; optEmpty.textContent='—'; el.appendChild(optEmpty);
+    const optEmpty = document.createElement('option'); optEmpty.value=''; optEmpty.textContent='â€”'; el.appendChild(optEmpty);
     for(const t of T){ const o=document.createElement('option'); o.value=t; o.textContent=t; el.appendChild(o); }
   }
 
@@ -588,7 +588,7 @@ $(function(){
       Array.from(s.options).forEach(o=>{
         if(!o.value || o.value.startsWith('Otra')){ o.disabled=false; o.classList.remove('taken'); return; }
         const isTaken = vals.includes(o.value);
-        // La opción tomada se marca en todas las persianas
+        // La opciÃ³n tomada se marca en todas las persianas
         o.classList.toggle('taken', isTaken);
         // Deshabilitar en persianas distintas a la que la tiene seleccionada
         o.disabled = isTaken && s.value !== o.value;
@@ -626,9 +626,9 @@ $(function(){
     syncDuplicates(); toggleOtra();
   }
 
-  // Género: reemplaza "Otro" por "No Específico"
+  // GÃ©nero: reemplaza "Otro" por "No EspecÃ­fico"
   const gen = document.getElementById('dp-genero');
-  if(gen){ Array.from(gen.options).forEach(o=>{ if(/^otro$/i.test(o.textContent.trim())) o.textContent='No Específico'; }); }
+  if(gen){ Array.from(gen.options).forEach(o=>{ if(/^otro$/i.test(o.textContent.trim())) o.textContent='No EspecÃ­fico'; }); }
 
   // Remueve campos no requeridos si quedaron (por contenido de etiqueta)
   function removeByLabel(text){
@@ -636,23 +636,23 @@ $(function(){
       if(l.textContent && l.textContent.indexOf(text) >= 0){ const col = l.closest('[class^="col-"]'); col?.remove(); }
     });
   }
-  ['Domicilio','Ciudad','País','Foto/Avatar','URL sitio personal'].forEach(removeByLabel);
+  ['Domicilio','Ciudad','PaÃ­s','Foto/Avatar','URL sitio personal'].forEach(removeByLabel);
 
-  // Envolver WhatsApp con prefijo 🇲🇽 +52
+  // Envolver WhatsApp con prefijo ðŸ‡²ðŸ‡½ +52
   const w = document.getElementById('dp-whatsapp');
   if(w && !w.closest('.input-group')){
     const wrap = document.createElement('div'); wrap.className='input-group';
-    const span = document.createElement('span'); span.className='input-group-text'; span.textContent='🇲🇽 +52';
+    const span = document.createElement('span'); span.className='input-group-text'; span.textContent='ðŸ‡²ðŸ‡½ +52';
     const col = w.closest('[class^="col-"]');
     col.replaceChildren();
-    const lab = document.createElement('label'); lab.className='form-label'; lab.textContent='Teléfono Whatsapp';
+    const lab = document.createElement('label'); lab.className='form-label'; lab.textContent='TelÃ©fono Whatsapp';
     col.appendChild(lab);
     col.appendChild(wrap);
     wrap.appendChild(span);
-    w.placeholder='10 dígitos'; w.maxLength=14; wrap.appendChild(w);
+    w.placeholder='10 dÃ­gitos'; w.maxLength=14; wrap.appendChild(w);
   }
 
-  // Validación de correo y teléfono (básica) + tooltips
+  // ValidaciÃ³n de correo y telÃ©fono (bÃ¡sica) + tooltips
   const email = document.getElementById('dp-correo');
   // No usamos tooltip Bootstrap; renderizamos una burbuja propia dentro de save-wrap
 
@@ -676,12 +676,12 @@ $(function(){
 
   if(email){ email.type='email'; email.addEventListener('blur', ()=>{
     const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim());
-    setErrorTooltip(email, 'Ingresa un correo electrónico válido', (!!email.value && !ok));
+    setErrorTooltip(email, 'Ingresa un correo electrÃ³nico vÃ¡lido', (!!email.value && !ok));
   }); }
   if(w){ w.addEventListener('input', ()=>{
     const digits = (w.value||'').replace(/\D+/g,'');
     const ok = digits.length===10 || (digits.startsWith('52') && digits.length===12);
-    setErrorTooltip(w, 'Ingresa un número de teléfono válido', (!!w.value && !ok));
+    setErrorTooltip(w, 'Ingresa un nÃºmero de telÃ©fono vÃ¡lido', (!!w.value && !ok));
   }); }
 
   // Autosave + check verde
@@ -715,7 +715,7 @@ $(function(){
   function initAutosave(){
     document.querySelectorAll('input.form-control, select.form-select, textarea.form-control').forEach(ctrl=>{
       if(ctrl.type==='file') return;
-      // excluir campos de búsqueda u opt-out manual
+      // excluir campos de bÃºsqueda u opt-out manual
       if(ctrl.type==='search' || ctrl.classList.contains('no-check') || ctrl.dataset.noCheck==='1') return;
       if(!ctrl.id){ ctrl.id = 'dp_auto_' + Math.random().toString(36).slice(2,8); }
       const col = ensureSaveMark(ctrl);
@@ -733,11 +733,11 @@ $(function(){
         }
         const invalid = ctrl.classList.contains('is-invalid') || !validByType;
         let hasVal = val !== '';
-        // Género: no mostrar check si está sin seleccionar (opción placeholder)
+        // GÃ©nero: no mostrar check si estÃ¡ sin seleccionar (opciÃ³n placeholder)
         if(ctrl.id==='dp-genero'){
           try{
-            hasVal = (ctrl.selectedIndex > 0) && (val !== '—');
-          }catch(_){ hasVal = val !== '' && val !== '—'; }
+            hasVal = (ctrl.selectedIndex > 0) && (val !== 'â€”');
+          }catch(_){ hasVal = val !== '' && val !== 'â€”'; }
         }
         if(col){ col.classList.toggle('saved', hasVal && !invalid); }
       };
@@ -750,7 +750,7 @@ $(function(){
   initAutosave();
 })();
 
-// ===== Enfermedades y Tratamientos: inputs con chips (máx. 40) =====
+// ===== Enfermedades y Tratamientos: inputs con chips (mÃ¡x. 40) =====
 (function(){
   const LIM = 40;
   function load(scope){ try { return JSON.parse(localStorage.getItem('chips:'+scope)||'[]'); } catch(e){ return []; } }
@@ -769,7 +769,7 @@ $(function(){
       const left = Math.max(0, LIM - used);
       cnt.textContent = left+"/"+LIM;
       const tooLong = used> LIM;
-      setError(tooLong ? 'Máximo 40 caracteres. Ej.: "Cáncer de mama"' : '', tooLong);
+      setError(tooLong ? 'MÃ¡ximo 40 caracteres. Ej.: "CÃ¡ncer de mama"' : '', tooLong);
       btn.disabled = tooLong || used===0;
       cnt.style.visibility = left < 10 ? 'visible' : 'hidden';
     }
@@ -793,7 +793,7 @@ $(function(){
       list.innerHTML='';
       items.forEach((txt, i)=>{
         const chip = document.createElement('span'); chip.className='chip'; chip.textContent = txt;
-        const x = document.createElement('button'); x.type='button'; x.className='chip-x'; x.setAttribute('aria-label','Eliminar'); x.textContent='×';
+        const x = document.createElement('button'); x.type='button'; x.className='chip-x'; x.setAttribute('aria-label','Eliminar'); x.textContent='Ã—';
         x.addEventListener('click', ()=>{ const a=load(scope); a.splice(i,1); save(scope,a); render(); });
         chip.appendChild(x); list.appendChild(chip);
       });
@@ -885,7 +885,7 @@ $(function(){
   });
 })();
 
-// ===== Mi Formación Profesional: resumen + chips (cert, cursos, diplomas, miembro) =====
+// ===== Mi FormaciÃ³n Profesional: resumen + chips (cert, cursos, diplomas, miembro) =====
 (function(){
   // Poblar resumen desde localStorage (Datos Generales)
   const fsTitulo = document.getElementById('fs-titulo');
@@ -894,12 +894,12 @@ $(function(){
   if(fsTitulo || fsUni || fsEsp){
     const esp1 = localStorage.getItem('dp:esp-1') || '';
     const uni = localStorage.getItem('dp:uni-prof') || localStorage.getItem('dp:uni-esp') || '';
-    if(fsTitulo && esp1){ fsTitulo.textContent = 'Médico ' + (esp1.includes('Cirugía') ? 'Cirujano' : 'Especialista'); }
+    if(fsTitulo && esp1){ fsTitulo.textContent = 'MÃ©dico ' + (esp1.includes('CirugÃ­a') ? 'Cirujano' : 'Especialista'); }
     if(fsUni && uni){ fsUni.textContent = uni; }
     if(fsEsp && esp1){ fsEsp.textContent = esp1; }
   }
 
-  // Reutilizar lógica de chips para múltiples scopes
+  // Reutilizar lÃ³gica de chips para mÃºltiples scopes
   function setupChips(scope, lim){
     const input = document.getElementById(scope+'-input');
     const btn   = document.getElementById(scope+'-add');
@@ -909,7 +909,7 @@ $(function(){
     function load(){ try { return JSON.parse(localStorage.getItem('chips:'+scope)||'[]'); } catch(e){ return []; } }
     function save(arr){ localStorage.setItem('chips:'+scope, JSON.stringify(arr)); render(); }
     function update(){ const used=(input.value||'').length; const left=Math.max(0, lim-used); cnt.textContent=left+'/'+lim; cnt.style.visibility = left<10 ? 'visible':'hidden'; btn.disabled= used===0 || used>lim; }
-    function render(){ list.innerHTML=''; load().forEach((txt,i)=>{ const chip=document.createElement('span'); chip.className='chip'; chip.textContent=txt; const x=document.createElement('button'); x.type='button'; x.className='chip-x'; x.textContent='×'; x.addEventListener('click',()=>{ const a=load(); a.splice(i,1); save(a); }); chip.appendChild(x); list.appendChild(chip); }); }
+    function render(){ list.innerHTML=''; load().forEach((txt,i)=>{ const chip=document.createElement('span'); chip.className='chip'; chip.textContent=txt; const x=document.createElement('button'); x.type='button'; x.className='chip-x'; x.textContent='Ã—'; x.addEventListener('click',()=>{ const a=load(); a.splice(i,1); save(a); }); chip.appendChild(x); list.appendChild(chip); }); }
     btn.addEventListener('click', ()=>{ const v=(input.value||'').trim(); if(!v|| v.length>lim) return; const a=load(); a.push(v); save(a); input.value=''; update(); });
     input.addEventListener('input', update); input.addEventListener('blur', update);
     render(); update();
@@ -925,8 +925,8 @@ $(function(){
   const body = document.getElementById('sched-body');
   if(body){
     const dias = [
-      {k:'mon', lbl:'Lunes'}, {k:'tue', lbl:'Martes'}, {k:'wed', lbl:'Miércoles'},
-      {k:'thu', lbl:'Jueves'}, {k:'fri', lbl:'Viernes'}, {k:'sat', lbl:'Sábado'}, {k:'sun', lbl:'Domingo'}
+      {k:'mon', lbl:'Lunes'}, {k:'tue', lbl:'Martes'}, {k:'wed', lbl:'MiÃ©rcoles'},
+      {k:'thu', lbl:'Jueves'}, {k:'fri', lbl:'Viernes'}, {k:'sat', lbl:'SÃ¡bado'}, {k:'sun', lbl:'Domingo'}
     ];
     const key = 'mxmed_cons_schedules';
     function load(){ try { return JSON.parse(localStorage.getItem(key)||'{}'); } catch(e){ return {}; } }
@@ -939,14 +939,14 @@ $(function(){
       <td>
         <div class="d-flex align-items-center gap-1">
           <input type="time" class="form-control form-control-sm" id="sch-a1-${d.k}">
-          <span>–</span>
+          <span>â€“</span>
           <input type="time" class="form-control form-control-sm" id="sch-b1-${d.k}">
         </div>
       </td>
       <td>
         <div class="d-flex align-items-center gap-1">
           <input type="time" class="form-control form-control-sm" id="sch-a2-${d.k}">
-          <span>–</span>
+          <span>â€“</span>
           <input type="time" class="form-control form-control-sm" id="sch-b2-${d.k}">
         </div>
       </td>`;
@@ -978,7 +978,7 @@ $(function(){
     });
   }
 
-  // Utilidad: construir texto de dirección
+  // Utilidad: construir texto de direcciÃ³n
   function buildAddress(){
     const cp = (document.getElementById('cp')?.value||'').trim();
     const col = (document.getElementById('colonia')?.value||'').trim();
@@ -986,11 +986,11 @@ $(function(){
     const edo = (document.getElementById('estado')?.value||'').trim();
     const calle = (document.getElementById('cons-calle')?.value||'').trim();
     const num = (document.getElementById('cons-numext')?.value||'').trim();
-    return [calle && (calle + (num? ' ' + num : '')), col, cp, mun, edo, 'México'].filter(Boolean).join(', ');
+    return [calle && (calle + (num? ' ' + num : '')), col, cp, mun, edo, 'MÃ©xico'].filter(Boolean).join(', ');
   }
 
   (function initMap(){
-    if(!(window.L && typeof L.map === 'function')) return; // si no hay Leaflet, usamos iframe fallback más abajo
+    if(!(window.L && typeof L.map === 'function')) return; // si no hay Leaflet, usamos iframe fallback mÃ¡s abajo
     // Configs para ambos panes
     const panes = [
       { mapId:'cons-map', latId:'cons-lat', lngId:'cons-lng', cp:'cp', col:'colonia', calle:'cons-calle', num:'cons-numext' },
@@ -1017,7 +1017,7 @@ $(function(){
           const num = (document.getElementById(cfg.num)?.value||'').trim();
           const mun = (document.getElementById(cfg.col==='colonia'?'municipio':'municipio2')?.value||'').trim();
           const edo = (document.getElementById(cfg.col==='colonia'?'estado':'estado2')?.value||'').trim();
-          const q = [calle && (calle + (num? ' ' + num : '')), col, cp, mun, edo, 'México'].filter(Boolean).join(', ');
+          const q = [calle && (calle + (num? ' ' + num : '')), col, cp, mun, edo, 'MÃ©xico'].filter(Boolean).join(', ');
           if(!q) return;
           try{
             const r = await fetch('./geocode-proxy.php?q='+encodeURIComponent(q));
@@ -1043,11 +1043,11 @@ $(function(){
           el.addEventListener('change', tryGeo);
           el.addEventListener('input', tryGeo);
         });
-      }catch(_){ /* si falla Leaflet en este pane, el iframe fallback lo cubrirá */ }
+      }catch(_){ /* si falla Leaflet en este pane, el iframe fallback lo cubrirÃ¡ */ }
     });
   })();
 
-  // Fallback automático: actualizar iframe de Google Maps con la dirección
+  // Fallback automÃ¡tico: actualizar iframe de Google Maps con la direcciÃ³n
   (function autoFrameUpdate(){
     const frame = document.getElementById('cons-map-frame');
     if(!frame) return;
@@ -1071,14 +1071,14 @@ $(function(){
       const body = container.querySelector('#sched-body-2');
       if(!body) return;
       body.innerHTML='';
-      const dias=[{k:'mon',lbl:'Lunes'},{k:'tue',lbl:'Martes'},{k:'wed',lbl:'Miércoles'},{k:'thu',lbl:'Jueves'},{k:'fri',lbl:'Viernes'},{k:'sat',lbl:'Sábado'},{k:'sun',lbl:'Domingo'}];
+      const dias=[{k:'mon',lbl:'Lunes'},{k:'tue',lbl:'Martes'},{k:'wed',lbl:'MiÃ©rcoles'},{k:'thu',lbl:'Jueves'},{k:'fri',lbl:'Viernes'},{k:'sat',lbl:'SÃ¡bado'},{k:'sun',lbl:'Domingo'}];
       const key='mxmed_cons_schedules'+(keySuffix||'');
       const load=()=>{ try{return JSON.parse(localStorage.getItem(key)||'{}');}catch(e){return{}} };
       const save=v=>localStorage.setItem(key,JSON.stringify(v));
       const state=load();
       dias.forEach(d=>{
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${d.lbl}</td><td><input type=\"checkbox\" class=\"form-check-input\" id=\"sch-act-${d.k}${keySuffix||''}\"></td><td><div class=\"d-flex align-items-center gap-1\"><input type=\"time\" class=\"form-control form-control-sm\" id=\"sch-a1-${d.k}${keySuffix||''}\"><span>–</span><input type=\"time\" class=\"form-control form-control-sm\" id=\"sch-b1-${d.k}${keySuffix||''}\"></div></td><td><div class=\"d-flex align-items-center gap-1\"><input type=\"time\" class=\"form-control form-control-sm\" id=\"sch-a2-${d.k}${keySuffix||''}\"><span>–</span><input type=\"time\" class=\"form-control form-control-sm\" id=\"sch-b2-${d.k}${keySuffix||''}\"></div></td>`;
+        tr.innerHTML=`<td>${d.lbl}</td><td><input type=\"checkbox\" class=\"form-check-input\" id=\"sch-act-${d.k}${keySuffix||''}\"></td><td><div class=\"d-flex align-items-center gap-1\"><input type=\"time\" class=\"form-control form-control-sm\" id=\"sch-a1-${d.k}${keySuffix||''}\"><span>â€“</span><input type=\"time\" class=\"form-control form-control-sm\" id=\"sch-b1-${d.k}${keySuffix||''}\"></div></td><td><div class=\"d-flex align-items-center gap-1\"><input type=\"time\" class=\"form-control form-control-sm\" id=\"sch-a2-${d.k}${keySuffix||''}\"><span>â€“</span><input type=\"time\" class=\"form-control form-control-sm\" id=\"sch-b2-${d.k}${keySuffix||''}\"></div></td>`;
         body.appendChild(tr);
         const act=tr.querySelector(`#sch-act-${d.k}${keySuffix||''}`);
         const a1=tr.querySelector(`#sch-a1-${d.k}${keySuffix||''}`);
@@ -1097,7 +1097,7 @@ $(function(){
     };
   })();
 
-  // Auto abrir colonias al tabular desde CP y permitir selección con flechas
+  // Auto abrir colonias al tabular desde CP y permitir selecciÃ³n con flechas
   (function setupColoniaAutoOpen(){
     const cp = document.getElementById('cp');
     const sel = document.getElementById('colonia');
@@ -1114,7 +1114,7 @@ $(function(){
     function closeSelectList(){ sel.removeAttribute('size'); sel.classList.remove('select-open'); }
     function isOpen(){ return sel.hasAttribute('size'); }
 
-    // Al tabular desde CP, forzar foco en "Colonia" en blur para ganar a la navegación natural
+    // Al tabular desde CP, forzar foco en "Colonia" en blur para ganar a la navegaciÃ³n natural
     let cpTabbing = false;
     cp.addEventListener('keydown', (e)=>{ if(e.key === 'Tab' && !e.shiftKey){ cpTabbing = true; } });
     cp.addEventListener('keyup', ()=>{ cpTabbing = false; });
@@ -1126,12 +1126,12 @@ $(function(){
       const poll = ()=>{
         sel.focus();
         if((sel.options?.length||0) > 1 && !sel.disabled){ openSelectList(); return; }
-        waited += pollMs; if(waited >= 1500) return; // 1.5s máx
+        waited += pollMs; if(waited >= 1500) return; // 1.5s mÃ¡x
         setTimeout(poll, pollMs);
       };
       setTimeout(poll, 0);
     });
-    // Navegación con flechas sin desplazar la página y cierre con Enter/Escape
+    // NavegaciÃ³n con flechas sin desplazar la pÃ¡gina y cierre con Enter/Escape
     sel.addEventListener('keydown', (e)=>{
       if(document.activeElement !== sel || !isOpen()) return;
       const total = sel.options?.length || 0; if(total === 0) return;
@@ -1158,7 +1158,7 @@ $(function(){
     sel.addEventListener('change', ()=>{ document.getElementById('cons-calle')?.focus(); });
   })();
 
-  // Grupo médico: habilitar/deshabilitar campo según radios
+  // Grupo mÃ©dico: habilitar/deshabilitar campo segÃºn radios
   (function setupGrupoMedico(){
     const rSi = document.getElementById('cons-grupo-si');
     const rNo = document.getElementById('cons-grupo-no');
@@ -1169,23 +1169,23 @@ $(function(){
     sync();
   })();
 
-  // Validación de teléfonos (MX/E.164): 10 dígitos nacionales o +52 + 10 dígitos
+  // ValidaciÃ³n de telÃ©fonos (MX/E.164): 10 dÃ­gitos nacionales o +52 + 10 dÃ­gitos
   (function setupPhoneValidation(){
     function analyzePhone(val, isLive){
       const s = (val||'').trim();
       if(s === '') return { ok:true };
-      // Solo caracteres permitidos durante edición
+      // Solo caracteres permitidos durante ediciÃ³n
       if(/[^0-9()+\-\s+]/.test(s)) return { ok:false, reason:'invalid_char' };
-      // '+' solo al inicio y máximo 1
+      // '+' solo al inicio y mÃ¡ximo 1
       if((s.match(/\+/g)||[]).length > 1 || (s.includes('+') && !s.startsWith('+'))) return { ok:false, reason:'invalid_char' };
       const digits = s.replace(/\D/g,'');
-      // Si empieza con +52, objetivo 12 dígitos (52 + 10 nacionales)
+      // Si empieza con +52, objetivo 12 dÃ­gitos (52 + 10 nacionales)
       const hasPlus52 = s.startsWith('+') && digits.startsWith('52');
       const target = hasPlus52 ? 12 : 10;
       if(isLive){
         if(digits.length > target) return { ok:false, reason:'too_long' };
         if(/[^0-9()+\-\s]/.test(s)) return { ok:false, reason:'invalid_char' };
-        // Mientras escribe, no marcar corto aún
+        // Mientras escribe, no marcar corto aÃºn
         return { ok:true };
       } else {
         if(digits.length !== target) return { ok:false, reason: digits.length < target ? 'too_short' : 'too_long' };
@@ -1194,10 +1194,10 @@ $(function(){
     }
     function messageFor(reason){
       switch(reason){
-        case 'invalid_char': return 'Solo números y + ( ) -';
-        case 'too_short': return 'Número incompleto (se requieren 10 dígitos)';
-        case 'too_long': return 'Demasiados dígitos (máximo 10 o +52 + 10)';
-        default: return 'Teléfono inválido';
+        case 'invalid_char': return 'Solo nÃºmeros y + ( ) -';
+        case 'too_short': return 'NÃºmero incompleto (se requieren 10 dÃ­gitos)';
+        case 'too_long': return 'Demasiados dÃ­gitos (mÃ¡ximo 10 o +52 + 10)';
+        default: return 'TelÃ©fono invÃ¡lido';
       }
     }
     function applyState(el, isLive){
@@ -1213,14 +1213,14 @@ $(function(){
         if(b) b.textContent = msg;
         if(wrap){ wrap.classList.add('has-error'); if(b) b.style.opacity = '1'; }
         else { el.classList.add('is-invalid'); }
-        el.setCustomValidity('Teléfono inválido');
+        el.setCustomValidity('TelÃ©fono invÃ¡lido');
       }
     }
-    // Reglas adicionales en vivo: tope de 3 letras y tope de dígitos
+    // Reglas adicionales en vivo: tope de 3 letras y tope de dÃ­gitos
     const _state = new WeakMap(); // { value, letters, digits }
 
     function countLetters(s){
-      const m = (s||'').match(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g);
+      const m = (s||'').match(/[A-Za-zÃÃ‰ÃÃ“ÃšÃœÃ‘Ã¡Ã©Ã­Ã³ÃºÃ¼Ã±]/g);
       return m ? m.length : 0;
     }
 
@@ -1241,9 +1241,9 @@ $(function(){
       const digits = (val.match(/\d/g)||[]).length;
       const target = digitsTargetFor(val);
 
-      // 1) Aviso cuando llega a 3 letras y bloqueo a partir de la 4ª
+      // 1) Aviso cuando llega a 3 letras y bloqueo a partir de la 4Âª
       if(letters >= 3){
-        if(b) b.textContent = 'Ingresa solo números';
+        if(b) b.textContent = 'Ingresa solo nÃºmeros';
         if(wrap){ wrap.classList.add('has-error'); if(b) b.style.opacity = '1'; }
         // Si intenta exceder 3 letras, revertir a valor previo
         if(letters > 3){
@@ -1254,9 +1254,9 @@ $(function(){
         }
       }
 
-      // 2) Limitar cantidad de dígitos en vivo (10 o +52+10)
+      // 2) Limitar cantidad de dÃ­gitos en vivo (10 o +52+10)
       if(digits > target){
-        if(b) b.textContent = (target === 12 ? 'Demasiados dígitos (máximo +52 + 10)' : 'Demasiados dígitos (máximo 10)');
+        if(b) b.textContent = (target === 12 ? 'Demasiados dÃ­gitos (mÃ¡ximo +52 + 10)' : 'Demasiados dÃ­gitos (mÃ¡ximo 10)');
         if(wrap){ wrap.classList.add('has-error'); if(b) b.style.opacity = '1'; }
         el.value = prev.value || '';
         try{ el.setSelectionRange(el.value.length, el.value.length); }catch(_){ }
@@ -1264,12 +1264,12 @@ $(function(){
         return;
       }
 
-      // 3) Si comienza a escribir números, ocultar burbuja de letras
+      // 3) Si comienza a escribir nÃºmeros, ocultar burbuja de letras
       if(letters < 3){
         if(wrap){ wrap.classList.remove('has-error'); if(b) b.style.opacity = '0'; }
       }
 
-      // 4) Aplicar validación estándar en vivo (caracteres permitidos y overflow)
+      // 4) Aplicar validaciÃ³n estÃ¡ndar en vivo (caracteres permitidos y overflow)
       applyState(el, true);
 
       // 5) Guardar estado actual
@@ -1319,7 +1319,7 @@ $(function(){
   // Ocultar campos antiguos del consultorio para evitar duplicados
   (function hideLegacyFields(){
     const root = document.querySelector('#sede1'); if(!root) return;
-    const labels = ['Nombre de la sede','Teléfono (planes de pago)','Dirección','Horario','Notas'];
+    const labels = ['Nombre de la sede','TelÃ©fono (planes de pago)','DirecciÃ³n','Horario','Notas'];
     labels.forEach(txt=>{
       const el = Array.from(root.querySelectorAll('label.form-label')).find(l=> (l.textContent||'').trim().indexOf(txt)===0);
       if(el){ const wrap = el.closest('[class*="col-"]'); if(wrap) wrap.style.display='none'; }
@@ -1327,17 +1327,17 @@ $(function(){
   })();
 })();
 
-// ===== Correcciones rápidas de acentos en header (muestra) =====
+// ===== Correcciones rÃ¡pidas de acentos en header (muestra) =====
 (function(){
-  const t = document.querySelector('.optimo'); if(t) t.textContent = 'Óptimo';
-  const n = document.querySelector('.name'); if(n && /Mu�oz|Muñoz/.test(n.textContent)) n.textContent = 'Leticia Muñoz Alfaro';
-  const img = document.querySelector('.header-top img'); if(img) img.alt = 'México Médico';
-  if(document.title && document.title.indexOf('MXMed')>=0) document.title = 'MXMed 2025 · Perfil Médico';
+  const t = document.querySelector('.optimo'); if(t) t.textContent = 'Ã“ptimo';
+  const n = document.querySelector('.name'); if(n && /Muï¿½oz|MuÃ±oz/.test(n.textContent)) n.textContent = 'Leticia MuÃ±oz Alfaro';
+  const img = document.querySelector('.header-top img'); if(img) img.alt = 'MÃ©xico MÃ©dico';
+  if(document.title && document.title.indexOf('MXMed')>=0) document.title = 'MXMed 2025 Â· Perfil MÃ©dico';
 })();
 
-// ===== Sugerencia de Grupo M�dico y sincronizaci�n de logotipo (demo) =====
+// ===== Sugerencia de Grupo Médico y sincronización de logotipo (demo) =====
 (function setupGrupoMedicoSuggest(){
-  const keyAssoc = 'grupo_medico_assoc';
+  const keyAssoc = 'grupo_medico_assoc';\n  const keyDecl  = keyAssoc+':decline';\n  let grpModalOpen = false;
 
   function getAddr(){
     return {
@@ -1347,10 +1347,7 @@ $(function(){
       edo: (document.getElementById('estado')?.value||'').trim(),
       calle: (document.getElementById('cons-calle')?.value||'').trim(),
       numext: (document.getElementById('cons-numext')?.value||'').trim()
-    };
-  }
-
-  function suggestGroup(addr){
+    };\n  }\n  function addrSig(a){ try{ return [a.cp,a.col,a.mun,a.edo,a.calle,a.numext].join('|').toLowerCase(); }catch(_){ return ''; } }\n\n  function suggestGroup(addr){
     const hasCore = addr.cp && addr.col && addr.mun && addr.edo;
     if(!hasCore) return null;
     const logo = 'data:image/svg+xml;utf8,'+
@@ -1360,7 +1357,7 @@ $(function(){
       '</svg>';
     return {
       id: 'demo-123',
-      nombre: 'Grupo M�dico Central',
+      nombre: 'Grupo Médico Central',
       addr: [addr.col, addr.mun, addr.edo].filter(Boolean).join(', '),
       logo_url: logo
     };
@@ -1368,27 +1365,24 @@ $(function(){
 
   function showModal(s){
     const el = document.getElementById('modalGrupoSuggest'); if(!el) return;
-    el.querySelector('#grp-name').textContent = s.nombre || 'Grupo M�dico';
+    el.querySelector('#grp-name').textContent = s.nombre || 'Grupo Médico';
     el.querySelector('#grp-addr').textContent = s.addr || '';
-    const m = new bootstrap.Modal(el);
-    document.getElementById('modalGrupoSi').onclick = ()=>accept(s, m);
-    document.getElementById('modalGrupoNo').onclick = ()=>decline(s, m);
-    m.show();
+    if(grpModalOpen) return; const m = bootstrap.Modal.getOrCreateInstance(el); const onHidden = ()=>{ grpModalOpen=false; try{ document.body.classList.remove('modal-open'); }catch(_){}; document.querySelectorAll('.modal-backdrop').forEach(b=>b.remove()); el.removeEventListener('hidden.bs.modal', onHidden); }; el.addEventListener('hidden.bs.modal', onHidden); document.getElementById('modalGrupoSi').onclick = ()=>accept(s, m, el); document.getElementById('modalGrupoNo').onclick = ()=>decline(s, m, el); grpModalOpen = true; m.show();
   }
 
-  function accept(s, modal){
+  function accept(s, modal, el){
     try{ localStorage.setItem(keyAssoc, JSON.stringify(s)); }catch(_){ }
     applyAssocUI(s);
-    modal?.hide();
+    try{ modal?.hide(); }catch(_){}; grpModalOpen=false; try{ document.body.classList.remove('modal-open'); }catch(_){}; document.querySelectorAll('.modal-backdrop').forEach(b=>b.remove());
     const rSi = document.getElementById('cons-grupo-si');
     const grp = document.getElementById('cons-grupo-nombre');
     if(rSi){ rSi.checked = true; rSi.dispatchEvent(new Event('change')); }
     if(grp){ grp.value = s.nombre || ''; grp.dispatchEvent(new Event('input')); }
   }
 
-  function decline(_s, modal){
+  function decline(_s, modal, el){
     try{ localStorage.setItem(keyAssoc+':decline', JSON.stringify({ when: Date.now(), addr: getAddr() })); }catch(_){ }
-    modal?.hide();
+    try{ modal?.hide(); }catch(_){}; grpModalOpen=false; try{ document.body.classList.remove('modal-open'); }catch(_){}; document.querySelectorAll('.modal-backdrop').forEach(b=>b.remove());
   }
 
   function applyAssocUI(s){
@@ -1410,7 +1404,7 @@ $(function(){
   function onInputsChange(){
     clearTimeout(debounceT);
     debounceT = setTimeout(()=>{
-      const s = suggestGroup(getAddr());
+      const a = getAddr(); try{ const d=JSON.parse(localStorage.getItem(keyDecl)||'null'); if(d && d.sig && d.sig===addrSig(a)) return; }catch(_){}; const s = suggestGroup(a);
       if(!s) return;
       const saved = JSON.parse(localStorage.getItem(keyAssoc)||'null');
       if(saved && saved.id === s.id){ applyAssocUI(saved); return; }
@@ -1433,3 +1427,4 @@ $(function(){
     document.addEventListener('DOMContentLoaded', init);
   }else{ init(); }
 })();
+
