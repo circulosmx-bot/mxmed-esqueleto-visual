@@ -42,3 +42,5 @@
 [2025-11-11 21:06] Crear rama de trabajo para la sección Consultorio: 'seccion-consultorio' y publicar (commit + push).
 
 [2025-11-11 21:12] CONSULTORIO PRINCIPAL: eliminar etiqueta/checkbox bajo WhatsApp ('Mensajes a mi numero personal') y ajustar distancia (mb-2 en la columna).
+
+[2025-11-11 21:17] CONSULTORIO PRINCIPAL: acortar etiquetas — 'Cuenta con estacionamiento propio' -> 'Estacionamiento' (con ícono) y 'Accesibilidad para discapacitados' -> 'Accesible' (con ícono).
