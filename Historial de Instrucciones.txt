@@ -16,3 +16,5 @@
 [2025-11-11 19:27] Revertir el último cambio de tabs en Consultorio (volver al estado anterior).
 
 [2025-11-11 19:35] Consultorio: replicar icono check autosave en todos los campos; enlazar el autosave también tras agregar nuevas pestañas de consultorio.
+
+[2025-11-11 19:38] Corregir visibilidad del icono check: enlazar autosave global (sin prefijo #viewport) y mostrar la palomita en tiempo real (evento input).

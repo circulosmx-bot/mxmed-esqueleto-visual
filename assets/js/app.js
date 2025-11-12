@@ -713,7 +713,7 @@ $(function(){
   }
 
   function initAutosave(){
-    document.querySelectorAll('#viewport input.form-control, #viewport select.form-select, #viewport textarea.form-control').forEach(ctrl=>{
+    document.querySelectorAll('input.form-control, select.form-select, textarea.form-control').forEach(ctrl=>{
       if(ctrl.type==='file') return;
       // excluir campos de búsqueda u opt-out manual
       if(ctrl.type==='search' || ctrl.classList.contains('no-check') || ctrl.dataset.noCheck==='1') return;
@@ -742,6 +742,7 @@ $(function(){
         if(col){ col.classList.toggle('saved', hasVal && !invalid); }
       };
       maybeMark();
+      ctrl.addEventListener('input', ()=>{ maybeMark(); });
       ctrl.addEventListener('change', ()=>{ localStorage.setItem(key, ctrl.value); maybeMark(); });
       ctrl.addEventListener('blur', ()=>{ localStorage.setItem(key, ctrl.value); maybeMark(); });
     });
