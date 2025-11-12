@@ -52,3 +52,5 @@
 [2025-11-11 21:35] CONSULTORIO PRINCIPAL: restaurar textos largos — 'Cuenta con Estacionamiento' y 'Accesibilidad para discapacitados'; alinear a la izquierda y equilibrar distancia.
 
 [2025-11-11 21:37] CONSULTORIO PRINCIPAL: bajar 10px el bloque de Estacionamiento/Accesible (clase .cons-flags con margin-top:10px).
+
+[2025-11-11 21:38] Solicitud: realizar commit y push (sin cambios adicionales).
