@@ -38,3 +38,5 @@
 [2025-11-11 20:10] Realizar commit de los cambios (sin push).
 
 [2025-11-11 20:14] Renombrar etiquetas: 'Teléfono consultorio 01/02/03' a 'Teléfono 01/02/03' en Consultorio.
+
+[2025-11-11 21:06] Crear rama de trabajo para la sección Consultorio: 'seccion-consultorio' y publicar (commit + push).
