@@ -1543,20 +1543,31 @@ $(function(){
     document.addEventListener('keydown', inlineKeyHandler, true);
   }
 
+  function buildDemoLogo(text, color){
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240">`+
+      `<rect width="100%" height="100%" rx="28" fill="${color}"/>`+
+      `<text x="50%" y="55%" font-size="72" text-anchor="middle" fill="white" font-family="Arial,Helvetica,sans-serif">${text}</text>`+
+      `</svg>`;
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  }
+
   const DEMO_GROUPS = [
     {
       id:'grp-aguas',
       nombre:'Grupo Aguascalientes Centro',
       calle:'Av. Aguascalientes',
       numext:'1420',
-      addr:'Aguascalientes Centro'
+      addr:'Aguascalientes Centro',
+      logo_url: buildDemoLogo('AC', '#00ADC1')
     },
     {
       id:'grp-central',
       nombre:'Grupo Médico Central',
       calle:'Adolfo López Mateos',
       numext:'892',
-      addr:'Zona Centro'
+      addr:'Zona Centro',
+      logo_url: buildDemoLogo('MC', '#007BA7')
     }
   ];
 
