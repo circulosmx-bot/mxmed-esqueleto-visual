@@ -1559,20 +1559,20 @@ $(function(){
 
   const DEMO_GROUPS = [
     {
-      id:'grp-aguas',
-      nombre:'Grupo Aguascalientes Centro',
+      id:'grp-star',
+      nombre:'Star Médica',
       calle:'Av. Aguascalientes',
       numext:'1420',
       addr:'Aguascalientes Centro',
-      logo_url: buildDemoLogo('AC', '#00ADC1')
+      logo_url: buildDemoLogo('SM', '#00ADC1')
     },
     {
-      id:'grp-central',
-      nombre:'Grupo Médico Central',
+      id:'grp-san-juan',
+      nombre:'Médica San Juan',
       calle:'Adolfo López Mateos',
       numext:'892',
       addr:'Zona Centro',
-      logo_url: buildDemoLogo('MC', '#007BA7')
+      logo_url: buildDemoLogo('SJ', '#007BA7')
     }
   ];
 
