@@ -1096,3 +1096,4 @@ body{margin:0;background:var(--mm-fondo-base);}
 .cons-flags{ margin-top:10px; }
 /* Ajuste de botón X en preview de logotipo del grupo */
 #cons-logo-prev .foto-x{ top:6px; right:6px; }
+\n.grupo-medico-bar{background:rgba(0,173,193,0.25); border-radius:16px; padding:12px 16px;}

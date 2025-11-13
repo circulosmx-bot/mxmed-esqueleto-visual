@@ -93,3 +93,4 @@
 [2025-11-12] Grupo Médico: restaurada carga de logotipo desde datos ficticios (Aguascalientes Centro, Médico Central).
 [2025-11-12] Eliminación de logotipo: usa modal centrado (mismo estilo que confirmación de 'No') en lugar de confirm() nativo.
 [2025-11-12] Modal logotipo: texto dinámico usa #grp-unlink-logo-name para mostrar nombre y mantener confirmación centrada.
+[2025-11-12] Destacado: etiqueta '¿Tu consultorio está en un Grupo Médico?' ahora va sobre barra con fondo #00ADC1 al 25% y esquinas redondeadas.
