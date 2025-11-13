@@ -604,12 +604,12 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mf-upload.dragover{background:#f0f8fb;border-color:#2c6b4e}
 .mf-illus{width:76px;height:76px;opacity:.9;margin-bottom:6px}
 .mf-upload[data-type="foto"] .mf-illus{
-  width:304px;
-  height:304px;
+  width:152px;
+  height:152px;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:240px;
+  font-size:120px;
   color:#99bfd0;
 }
 .mf-title{font-weight:700;margin-bottom:2px;color:#0b3242;text-align:center}
