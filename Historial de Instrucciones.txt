@@ -105,3 +105,4 @@
 [2025-11-12] Dropzone Foto: icono add_a_photo escalado 400% (304px) para igualar tamaño solicitado.
 [2025-11-12] Icono dropzone Fotografía: sólo el panel derecho (data-type='foto') usa 304px; los demás regresan a 76px.
 [2025-11-12] Icono dropzone Fotografía: reducido a la mitad (152px, font-size 120px).
+[2025-11-12] Icono dropzone Logotipo: ahora usa attach_file al mismo tamaño que fotografía (regla CSS nueva).
