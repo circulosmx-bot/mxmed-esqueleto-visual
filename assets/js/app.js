@@ -1397,7 +1397,7 @@ $(function(){
     modal?.hide();
     const rSi = document.getElementById('cons-grupo-si');
     const grp = document.getElementById('cons-grupo-nombre');
-    if(rSi){ rSi.checked = true; rSi.dispatchEvent(new Event('change')); }
+    if(rSi){ rSi.checked = true; }
     if(grp){ grp.removeAttribute('disabled'); try{ grp.disabled=false; }catch(_){}
       grp.value = s.nombre || ''; grp.classList.add('grp-selected'); grp.dispatchEvent(new Event('input')); }
     // 2b) Actualizar el título del consultorio con "Consultorio <Grupo>"
@@ -1501,12 +1501,13 @@ $(function(){
       const ad = document.createElement('div'); ad.className='addr'; ad.textContent = g.addr||'';
       it.appendChild(nm); it.appendChild(ad);
       it.addEventListener('click', ()=>{
-        // 1) Activar "Sí" y asegurar que el input esté habilitado inmediatamente
+        hideInline();
+        // 1) Activar "Sí" (sin disparar eventos que vuelven a mostrar la lista)
         const rSi = document.getElementById('cons-grupo-si');
-        if(rSi){ rSi.checked = true; rSi.dispatchEvent(new Event('change')); }
+        if(rSi){ rSi.checked = true; }
         const grp = document.getElementById('cons-grupo-nombre');
-        if(grp){ grp.removeAttribute('disabled'); try{ grp.disabled = false; }catch(_){}
-          // 2) Escribir el nombre en bold y disparar autosave al primer clic
+        if(grp){
+          grp.removeAttribute('disabled'); try{ grp.disabled = false; }catch(_){}
           grp.value = g.nombre || '';
           grp.classList.add('grp-selected');
           grp.dispatchEvent(new Event('input'));
@@ -1531,7 +1532,6 @@ $(function(){
         // 3) Guardar asociación y reflejar logotipo/bloqueos
         try{ localStorage.setItem(keyAssoc, JSON.stringify(g)); }catch(_){ }
         applyAssocUI(g);
-        hideInline();
       });
       box.appendChild(it);
     });
