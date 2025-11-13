@@ -1412,6 +1412,11 @@ $(function(){
     if(img && prev && s.logo_url){ img.src = s.logo_url; prev.style.display = 'block'; }
     const sync = document.getElementById('cons-logo-sync'); if(sync) sync.style.display = 'block';
     const file = document.getElementById('cons-logo'); if(file) file.setAttribute('disabled','disabled');
+    // Bloquear campos clave de dirección cuando hay asociación
+    ;['cp','colonia','municipio','estado','cons-calle','cons-numext'].forEach(id=>{
+      const el = document.getElementById(id); if(!el) return;
+      try{ el.setAttribute('disabled','disabled'); el.disabled = true; }catch(_){ }
+    });
     // Control de borrado (X en esquina)
     const del = document.getElementById('cons-logo-del');
     if(del){ del.onclick = ()=>{
@@ -1466,10 +1471,29 @@ $(function(){
         try{ localStorage.setItem(keyAssoc, JSON.stringify(g)); }catch(_){ }
         applyAssocUI(g);
         const grp = document.getElementById('cons-grupo-nombre'); if(grp){ grp.value = g.nombre; }
+        const rSi = document.getElementById('cons-grupo-si'); if(rSi){ rSi.checked = true; rSi.dispatchEvent(new Event('change')); }
         hideInline();
       });
       box.appendChild(it);
     });
+    // Opción: ver sugerencia destacada en modal (fallback)
+    const top = arr[0];
+    const itModal = document.createElement('div'); itModal.className = 'item';
+    const nmM = document.createElement('div'); nmM.className='name'; nmM.textContent = 'Ver sugerencia destacada…';
+    const adM = document.createElement('div'); adM.className='addr'; adM.textContent = (top && top.addr) ? top.addr : '';
+    itModal.appendChild(nmM); itModal.appendChild(adM);
+    itModal.addEventListener('click', ()=>{ hideInline(); if(top){ showModal(top); } });
+    box.appendChild(itModal);
+    // Opción: continuar sin seleccionar (registrar declinación para esta dirección)
+    const itNone = document.createElement('div'); itNone.className = 'item';
+    const nmN = document.createElement('div'); nmN.className='name'; nmN.textContent = 'Continuar sin seleccionar';
+    const adN = document.createElement('div'); adN.className='addr'; adN.textContent = 'Ingresaré el grupo manualmente';
+    itNone.appendChild(nmN); itNone.appendChild(adN);
+    itNone.addEventListener('click', ()=>{
+      try{ const a=getAddr(); localStorage.setItem(keyAssoc+':decline', JSON.stringify({ when: Date.now(), addr: a })); }catch(_){ }
+      hideInline(); anchor.focus();
+    });
+    box.appendChild(itNone);
     document.body.appendChild(box); inlineLayer = box;
     const handler = (ev)=>{ if(!box.contains(ev.target) && ev.target!==anchor){ hideInline(); document.removeEventListener('mousedown', handler, true); } };
     document.addEventListener('mousedown', handler, true);
