@@ -1022,7 +1022,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 /* Sugerencias inline para Grupo Médico (popup bajo input) */
 .grp-suggest{ position:absolute; background:#fff; border:1px solid #d9e5ec; border-radius:10px; box-shadow:0 10px 26px rgba(0,0,0,.12); padding:4px; z-index:2000; max-height:240px; overflow:auto; min-width:220px }
 .grp-suggest .item{ display:flex; flex-direction:column; padding:8px 10px; cursor:pointer; border-radius:8px }
-.grp-suggest .item:hover{ background:#F2FBFC }
+.grp-suggest .item:hover,
+.grp-suggest .item.active{ background:#F2FBFC }
 .grp-suggest .name{ font-weight:700; color:#0b3242 }
 .grp-suggest .addr{ font-size:.85rem; color:#597482 }
 

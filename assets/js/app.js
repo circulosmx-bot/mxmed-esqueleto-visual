@@ -1461,9 +1461,36 @@ $(function(){
 
   let debounceT = null;
   let suppressGroupChange = false;
-  // Inline suggestions layer helpers
   let inlineLayer = null;
-  function hideInline(){ if(inlineLayer){ inlineLayer.remove(); inlineLayer=null; } }
+  let inlineItems = [];
+  let inlineIndex = -1;
+  let inlineKeyHandler = null;
+
+  function highlightInline(idx){
+    inlineIndex = idx;
+    inlineItems.forEach((item, i)=>{
+      if(item.node){
+        item.node.classList.toggle('active', i === inlineIndex);
+        if(i === inlineIndex){
+          try{ item.node.scrollIntoView({block:'nearest'}); }catch(_){}
+        }
+      }
+    });
+  }
+
+  function hideInline(){
+    if(inlineLayer){
+      inlineLayer.remove();
+      inlineLayer = null;
+    }
+    inlineItems = [];
+    inlineIndex = -1;
+    if(inlineKeyHandler){
+      document.removeEventListener('keydown', inlineKeyHandler, true);
+      inlineKeyHandler = null;
+    }
+  }
+
   function showInline(arr, anchor){
     hideInline();
     if(!arr || !arr.length || !anchor) return;
@@ -1473,6 +1500,7 @@ $(function(){
     box.style.left = (window.scrollX + rect.left) + 'px';
     box.style.top  = (window.scrollY + rect.bottom + 4) + 'px';
     box.style.width= rect.width + 'px';
+    inlineItems = [];
     arr.forEach(g=>{
       const it = document.createElement('div'); it.className='item';
       const nm = document.createElement('div'); nm.className='name'; nm.textContent = g.nombre;
@@ -1483,11 +1511,38 @@ $(function(){
         applyGroupSelection(g);
       });
       box.appendChild(it);
+      inlineItems.push({ data:g, node:it });
     });
-    document.body.appendChild(box); inlineLayer = box;
+    document.body.appendChild(box);
+    inlineLayer = box;
+    highlightInline(0);
     const handler = (ev)=>{ if(!box.contains(ev.target) && ev.target!==anchor){ hideInline(); document.removeEventListener('mousedown', handler, true); } };
     document.addEventListener('mousedown', handler, true);
+    inlineKeyHandler = (ev)=>{
+      if(!inlineLayer || !inlineItems.length) return;
+      if(ev.key === 'ArrowDown'){
+        ev.preventDefault();
+        const next = (inlineIndex + 1) % inlineItems.length;
+        highlightInline(next);
+      }else if(ev.key === 'ArrowUp'){
+        ev.preventDefault();
+        const next = (inlineIndex - 1 + inlineItems.length) % inlineItems.length;
+        highlightInline(next);
+      }else if(ev.key === 'Enter'){
+        ev.preventDefault();
+        const item = inlineItems[inlineIndex];
+        if(item){
+          hideInline();
+          applyGroupSelection(item.data);
+        }
+      }else if(ev.key === 'Escape'){
+        ev.preventDefault();
+        hideInline();
+      }
+    };
+    document.addEventListener('keydown', inlineKeyHandler, true);
   }
+
   function listMatches(addr){ const s = suggestGroup(addr); if(!s) return []; const alt={ id:'demo-124', nombre:'Grupo '+(addr.col||'Médico Norte'), addr:[addr.col,addr.mun,addr.edo].filter(Boolean).join(', '), logo_url:s.logo_url}; return [s,alt]; }
 
   function fillConsultorioTitle(name){
@@ -1510,6 +1565,7 @@ $(function(){
 
   function applyGroupSelection(group){
     if(!group) return;
+    hideInline();
     const rSi = document.getElementById('cons-grupo-si');
     if(rSi){
       suppressGroupChange = true;
