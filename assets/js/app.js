@@ -1392,31 +1392,8 @@ $(function(){
   }
 
   function accept(s, modal){
-    try{ localStorage.setItem(keyAssoc, JSON.stringify(s)); }catch(_){ }
-    applyAssocUI(s);
+    applyGroupSelection(s);
     modal?.hide();
-    const rSi = document.getElementById('cons-grupo-si');
-    const grp = document.getElementById('cons-grupo-nombre');
-    if(rSi){ rSi.checked = true; }
-    if(grp){ grp.removeAttribute('disabled'); try{ grp.disabled=false; }catch(_){}
-      grp.value = s.nombre || ''; grp.classList.add('grp-selected'); grp.dispatchEvent(new Event('input')); }
-    // 2b) Actualizar el título del consultorio con "Consultorio <Grupo>"
-    const tit = document.getElementById('cons-titulo');
-    if(tit){
-      tit.value = 'Consultorio ' + (s.nombre || '');
-      tit.dataset.autofill = '1';
-      tit.dispatchEvent(new Event('input'));
-      tit.dispatchEvent(new Event('change'));
-      requestAnimationFrame(()=>{
-        try{
-          tit.focus();
-          if(typeof tit.setSelectionRange === 'function'){
-            const L = tit.value.length; tit.setSelectionRange(L, L);
-          }
-        }catch(_){ }
-        setTimeout(()=>{ try{ if(document.activeElement === tit) tit.blur(); }catch(_){ } }, 1200);
-      });
-    }
   }
 
   function decline(_s, modal){
@@ -1483,6 +1460,7 @@ $(function(){
   }
 
   let debounceT = null;
+  let suppressGroupChange = false;
   // Inline suggestions layer helpers
   let inlineLayer = null;
   function hideInline(){ if(inlineLayer){ inlineLayer.remove(); inlineLayer=null; } }
@@ -1502,36 +1480,7 @@ $(function(){
       it.appendChild(nm); it.appendChild(ad);
       it.addEventListener('click', ()=>{
         hideInline();
-        // 1) Activar "Sí" (sin disparar eventos que vuelven a mostrar la lista)
-        const rSi = document.getElementById('cons-grupo-si');
-        if(rSi){ rSi.checked = true; }
-        const grp = document.getElementById('cons-grupo-nombre');
-        if(grp){
-          grp.removeAttribute('disabled'); try{ grp.disabled = false; }catch(_){}
-          grp.value = g.nombre || '';
-          grp.classList.add('grp-selected');
-          grp.dispatchEvent(new Event('input'));
-        }
-        // 2b) Actualizar el título del consultorio con "Consultorio <Grupo>"
-        const tit = document.getElementById('cons-titulo');
-        if(tit){
-          tit.value = 'Consultorio ' + (g.nombre || '');
-          tit.dataset.autofill = '1';
-          tit.dispatchEvent(new Event('input'));
-          tit.dispatchEvent(new Event('change'));
-          requestAnimationFrame(()=>{
-            try{
-              tit.focus();
-              if(typeof tit.setSelectionRange === 'function'){
-                const L = tit.value.length; tit.setSelectionRange(L, L);
-              }
-            }catch(_){ }
-            setTimeout(()=>{ try{ if(document.activeElement === tit) tit.blur(); }catch(_){ } }, 1200);
-          });
-        }
-        // 3) Guardar asociación y reflejar logotipo/bloqueos
-        try{ localStorage.setItem(keyAssoc, JSON.stringify(g)); }catch(_){ }
-        applyAssocUI(g);
+        applyGroupSelection(g);
       });
       box.appendChild(it);
     });
@@ -1540,6 +1489,45 @@ $(function(){
     document.addEventListener('mousedown', handler, true);
   }
   function listMatches(addr){ const s = suggestGroup(addr); if(!s) return []; const alt={ id:'demo-124', nombre:'Grupo '+(addr.col||'Médico Norte'), addr:[addr.col,addr.mun,addr.edo].filter(Boolean).join(', '), logo_url:s.logo_url}; return [s,alt]; }
+
+  function fillConsultorioTitle(name){
+    const tit = document.getElementById('cons-titulo');
+    if(!tit) return;
+    tit.value = 'Consultorio ' + (name || '');
+    tit.dataset.autofill = '1';
+    tit.dispatchEvent(new Event('input'));
+    tit.dispatchEvent(new Event('change'));
+    requestAnimationFrame(()=>{
+      try{
+        tit.focus();
+        if(typeof tit.setSelectionRange === 'function'){
+          const L = tit.value.length; tit.setSelectionRange(L, L);
+        }
+      }catch(_){ }
+      setTimeout(()=>{ try{ if(document.activeElement === tit) tit.blur(); }catch(_){ } }, 1200);
+    });
+  }
+
+  function applyGroupSelection(group){
+    if(!group) return;
+    const rSi = document.getElementById('cons-grupo-si');
+    if(rSi){
+      suppressGroupChange = true;
+      rSi.checked = true;
+      rSi.dispatchEvent(new Event('change'));
+      suppressGroupChange = false;
+    }
+    const grp = document.getElementById('cons-grupo-nombre');
+    if(grp){
+      grp.removeAttribute('disabled'); try{ grp.disabled = false; }catch(_){}
+      grp.value = group.nombre || '';
+      grp.classList.add('grp-selected');
+      grp.dispatchEvent(new Event('input'));
+    }
+    fillConsultorioTitle(group.nombre);
+    try{ localStorage.setItem(keyAssoc, JSON.stringify(group)); }catch(_){ }
+    applyAssocUI(group);
+  }
   function onInputsChange(){
     clearTimeout(debounceT);
     debounceT = setTimeout(()=>{
@@ -1570,7 +1558,7 @@ $(function(){
       grp.addEventListener('input', ()=> hideInline());
       grp.addEventListener('blur', ()=> setTimeout(hideInline, 150));
     }
-    if(rSi){ rSi.addEventListener('change', ()=>{ if(rSi.checked && grp){ const a=getAddr(); const m=listMatches(a); if(m && m.length){ showInline(m, grp); grp.focus(); } }}); }
+    if(rSi){ rSi.addEventListener('change', ()=>{ if(suppressGroupChange) return; if(rSi.checked && grp){ const a=getAddr(); const m=listMatches(a); if(m && m.length){ showInline(m, grp); grp.focus(); } }}); }
     // Si el usuario teclea en el título, deja de ser autogenerado
     const tit = document.getElementById('cons-titulo');
     if(tit){ tit.addEventListener('input', (e)=>{ if(e.isTrusted){ try{ delete tit.dataset.autofill; }catch(_){ tit.removeAttribute('data-autofill'); } } }); }
