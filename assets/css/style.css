@@ -621,6 +621,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-size:84px;
   color:#99bfd0;
 }
+.mf-upload[data-type="logo"] .mf-prev img{
+  object-fit:contain;
+}
 .mf-upload[data-type="logo"].has-logo{
   border:none;
   background:transparent;
@@ -638,6 +641,12 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mf-upload[data-type="logo"].has-logo .mf-title,
 .mf-upload[data-type="logo"].has-logo .mf-sub,
 .mf-upload[data-type="logo"].has-logo .mf-actions{display:none}
+.mf-upload[data-type="logo"].has-logo{
+  border:none;
+  background:transparent;
+  padding:0;
+  min-height:auto;
+}
 #cons-logo-prev .foto-x{
   display:inline-flex;
   width:24px;

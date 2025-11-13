@@ -113,3 +113,4 @@
 [2025-11-12] Dropzone logotipo: imagen con border y X estilo panel fotos; logotipo ocupa todo el área al hacer match.
 [2025-11-12] Dropzone logo: removidos marcos y fondo; logotipo queda flotando con transparencia.
 [2025-11-12] Dropzone logotipo: clase has-logo oculta elementos y quita borde; reset la limpia.
+[2025-11-12] Dropzone logotipo: modo has-logo ahora quita bordes/padding y el logo usa object-fit:contain.
