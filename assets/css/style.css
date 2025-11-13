@@ -602,7 +602,16 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mf-upload{position:relative;border:1.2px dashed #99bfd0;border-radius:12px;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;transition:.2s;background:#fff}
 .mf-upload.square{aspect-ratio:1/1;max-width:280px;margin-inline:auto}
 .mf-upload.dragover{background:#f0f8fb;border-color:#2c6b4e}
-.mf-illus{width:304px;height:304px;opacity:.9;margin-bottom:6px}
+.mf-illus{width:76px;height:76px;opacity:.9;margin-bottom:6px}
+.mf-upload[data-type="foto"] .mf-illus{
+  width:304px;
+  height:304px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:240px;
+  color:#99bfd0;
+}
 .mf-title{font-weight:700;margin-bottom:2px;color:#0b3242;text-align:center}
 .mf-sub{font-size:.9rem;color:#597482;text-align:center;margin-bottom:4px}
 /* Mostrar solo el botÃ³n de cÃ¡mara; centrar acciones */
