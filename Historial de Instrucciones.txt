@@ -99,3 +99,4 @@
 [2025-11-12] Barra grupo médico: alfa al 65% y radios alineados a la derecha en la misma fila.
 [2025-11-12] Radios de grupo médico convertidos en botones cuadrados (estilo clickable como en otras secciones).
 [2025-11-12] Radios de grupo médico convertidos a cuadrados estilo check (como Estacionamiento).
+[2025-11-12] Ajuste: texto '¿Tu consultorio está en un Grupo Médico?' aumentado 15% (1.15rem).

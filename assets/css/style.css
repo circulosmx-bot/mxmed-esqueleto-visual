@@ -1108,6 +1108,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   margin:0;
   color:#fff;
   font-weight:700;
+  font-size:1.15rem;
 }
 .grupo-medico-options{
   display:inline-flex;
