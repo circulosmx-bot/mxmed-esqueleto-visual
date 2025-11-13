@@ -1097,20 +1097,18 @@ body{margin:0;background:var(--mm-fondo-base);}
 /* Ajuste de botón X en preview de logotipo del grupo */
 #cons-logo-prev .foto-x{ top:6px; right:6px; }
 .grupo-medico-bar{
-  display:inline-flex;
-  align-items:center;
-  gap:14px;
-  background:rgba(0,173,193,0.8);
+  display:inline-block;
+  background:rgba(0,173,193,0.25);
   border-radius:18px;
-  padding:8px 18px;
+  padding:6px 18px;
   color:#fff;
-  font-weight:600;
+  font-weight:700;
 }
 .grupo-medico-bar .form-label{
   margin:0;
   color:#fff;
   font-weight:700;
 }
-.grupo-medico-bar .form-check-input{
-  margin-top:0;
+.grupo-medico-options .form-check-label{
+  font-weight:600;
 }
