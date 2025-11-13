@@ -107,3 +107,4 @@
 [2025-11-12] Icono dropzone Fotografía: reducido a la mitad (152px, font-size 120px).
 [2025-11-12] Icono dropzone Logotipo: ahora usa attach_file al mismo tamaño que fotografía (regla CSS nueva).
 [2025-11-12] Icono dropzone Logotipo: escalado y color igual al de Fotografía (152px, #99bfd0).
+[2025-11-12] Iconos de dropzone (logo/foto) reducidos 30% (ahora 106px, font-size 84px).
