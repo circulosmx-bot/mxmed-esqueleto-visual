@@ -1362,9 +1362,7 @@ $(function(){
       id: 'demo-123',
       nombre: 'Grupo M\u00E9dico Central',
       addr: [addr.col, addr.mun, addr.edo].filter(Boolean).join(', '),
-      logo_url: logo,
-      calle: 'Av. Salud',
-      numext: '123'
+      logo_url: logo
     };
   }
 
@@ -1483,7 +1481,13 @@ $(function(){
       const nm = document.createElement('div'); nm.className='name'; nm.textContent = g.nombre;
       const ad = document.createElement('div'); ad.className='addr'; ad.textContent = g.addr||'';
       it.appendChild(nm); it.appendChild(ad);
-      it.addEventListener('click', ()=>{ const grp = document.getElementById('cons-grupo-nombre'); if(grp){ grp.value = g.nombre || ''; grp.classList.add('grp-selected'); grp.dispatchEvent(new Event('input')); } const calle = document.getElementById('cons-calle'); const numex = document.getElementById('cons-numext'); if(calle && (!calle.value || calle.value.trim()==='')){ calle.value = g.calle || 'Av. Salud'; calle.dispatchEvent(new Event('input')); calle.dispatchEvent(new Event('change')); } if(numex && (!numex.value || numex.value.trim()==='')){ numex.value = g.numext || '123'; numex.dispatchEvent(new Event('input')); numex.dispatchEvent(new Event('change')); } try{ localStorage.setItem(keyAssoc, JSON.stringify(g)); }catch(_){ } applyAssocUI(g); const rSi = document.getElementById('cons-grupo-si'); if(rSi){ rSi.checked = true; rSi.dispatchEvent(new Event('change')); } hideInline(); });
+      it.addEventListener('click', ()=>{
+        try{ localStorage.setItem(keyAssoc, JSON.stringify(g)); }catch(_){ }
+        applyAssocUI(g);
+        const grp = document.getElementById('cons-grupo-nombre'); if(grp){ grp.value = g.nombre; }
+        const rSi = document.getElementById('cons-grupo-si'); if(rSi){ rSi.checked = true; rSi.dispatchEvent(new Event('change')); }
+        hideInline();
+      });
       box.appendChild(it);
     });
     // Opción: ver sugerencia destacada en modal (fallback)
@@ -1508,7 +1512,7 @@ $(function(){
     const handler = (ev)=>{ if(!box.contains(ev.target) && ev.target!==anchor){ hideInline(); document.removeEventListener('mousedown', handler, true); } };
     document.addEventListener('mousedown', handler, true);
   }
-  function listMatches(addr){ const s = suggestGroup(addr); if(!s) return []; const alt={ id:'demo-124', nombre:'Grupo '+(addr.col||'Médico Norte'), addr:[addr.col,addr.mun,addr.edo].filter(Boolean).join(', '), logo_url:s.logo_url, calle:'Av. Bienestar', numext:'245' }; return [s,alt]; }; return [s,alt]; }
+  function listMatches(addr){ const s = suggestGroup(addr); if(!s) return []; const alt={ id:'demo-124', nombre:'Grupo '+(addr.col||'Médico Norte'), addr:[addr.col,addr.mun,addr.edo].filter(Boolean).join(', '), logo_url:s.logo_url}; return [s,alt]; }
   function onInputsChange(){
     clearTimeout(debounceT);
     debounceT = setTimeout(()=>{
@@ -1681,7 +1685,5 @@ $(function(){
     document.body.appendChild(btn);
   }catch(_){ }
 })();
-
-
 
 

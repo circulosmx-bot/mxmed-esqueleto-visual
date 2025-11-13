@@ -1026,9 +1026,6 @@ body{margin:0;background:var(--mm-fondo-base);}
 .grp-suggest .name{ font-weight:700; color:#0b3242 }
 .grp-suggest .addr{ font-size:.85rem; color:#597482 }
 
-/* Cuando el usuario selecciona un grupo, resaltar el valor del input */
-#cons-grupo-nombre.grp-selected{ font-weight:700 }
-
 /* Icono central: usar SVG provisto; fallback Material Symbols queda disponible si se requiere */
 .fotos-ico{ position:relative; width:64px; height:64px; display:inline-flex; align-items:center; justify-content:center }
 .fotos-ico .base{ font-size:52px; color:#003152 }
