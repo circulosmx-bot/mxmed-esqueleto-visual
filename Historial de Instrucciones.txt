@@ -97,3 +97,4 @@
 [2025-11-12] Barra de pregunta Grupo Médico ajustada: fondo turquesa sólido, texto blanco en negritas y radios alineados.
 [2025-11-12] Barra grupo médico: radios fuera del recuadro aliado (#00ADC1 al 25%), texto blanco en bold dentro de la barra.
 [2025-11-12] Barra grupo médico: alfa al 65% y radios alineados a la derecha en la misma fila.
+[2025-11-12] Radios de grupo médico convertidos en botones cuadrados (estilo clickable como en otras secciones).
