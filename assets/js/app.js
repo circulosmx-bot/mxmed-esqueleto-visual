@@ -1406,6 +1406,15 @@ $(function(){
       tit.value = 'Consultorio ' + (s.nombre || '');
       tit.dispatchEvent(new Event('input'));
       tit.dispatchEvent(new Event('change'));
+      requestAnimationFrame(()=>{
+        try{
+          tit.focus();
+          if(typeof tit.setSelectionRange === 'function'){
+            const L = tit.value.length; tit.setSelectionRange(L, L);
+          }
+        }catch(_){ }
+        setTimeout(()=>{ try{ if(document.activeElement === tit) tit.blur(); }catch(_){ } }, 1200);
+      });
     }
   }
 
