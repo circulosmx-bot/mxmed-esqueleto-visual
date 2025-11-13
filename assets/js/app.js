@@ -1543,7 +1543,32 @@ $(function(){
     document.addEventListener('keydown', inlineKeyHandler, true);
   }
 
-  function listMatches(addr){ const s = suggestGroup(addr); if(!s) return []; const alt={ id:'demo-124', nombre:'Grupo '+(addr.col||'Médico Norte'), addr:[addr.col,addr.mun,addr.edo].filter(Boolean).join(', '), logo_url:s.logo_url}; return [s,alt]; }
+  const DEMO_GROUPS = [
+    {
+      id:'grp-aguas',
+      nombre:'Grupo Aguascalientes Centro',
+      calle:'Av. Aguascalientes',
+      numext:'1420',
+      addr:'Aguascalientes Centro'
+    },
+    {
+      id:'grp-central',
+      nombre:'Grupo Médico Central',
+      calle:'Adolfo López Mateos',
+      numext:'892',
+      addr:'Zona Centro'
+    }
+  ];
+
+  function listMatches(addr){
+    if(addr && addr.col){
+      // Priorizar grupo dependiendo de la colonia (demostración simple)
+      if(/centro/i.test(addr.col)){
+        return DEMO_GROUPS;
+      }
+    }
+    return DEMO_GROUPS;
+  }
 
   function fillConsultorioTitle(name){
     const tit = document.getElementById('cons-titulo');
@@ -1579,6 +1604,18 @@ $(function(){
       grp.value = group.nombre || '';
       grp.classList.add('grp-selected');
       grp.dispatchEvent(new Event('input'));
+    }
+    const calle = document.getElementById('cons-calle');
+    if(calle){
+      calle.value = group.calle || '';
+      calle.dispatchEvent(new Event('input'));
+      calle.dispatchEvent(new Event('change'));
+    }
+    const numext = document.getElementById('cons-numext');
+    if(numext){
+      numext.value = group.numext || '';
+      numext.dispatchEvent(new Event('input'));
+      numext.dispatchEvent(new Event('change'));
     }
     fillConsultorioTitle(group.nombre);
     try{ localStorage.setItem(keyAssoc, JSON.stringify(group)); }catch(_){ }
