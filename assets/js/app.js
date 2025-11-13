@@ -1398,7 +1398,8 @@ $(function(){
     const rSi = document.getElementById('cons-grupo-si');
     const grp = document.getElementById('cons-grupo-nombre');
     if(rSi){ rSi.checked = true; rSi.dispatchEvent(new Event('change')); }
-    if(grp){ grp.value = s.nombre || ''; grp.classList.add('grp-selected'); grp.dispatchEvent(new Event('input')); }
+    if(grp){ grp.removeAttribute('disabled'); try{ grp.disabled=false; }catch(_){}
+      grp.value = s.nombre || ''; grp.classList.add('grp-selected'); grp.dispatchEvent(new Event('input')); }
   }
 
   function decline(_s, modal){
@@ -1483,13 +1484,17 @@ $(function(){
       const ad = document.createElement('div'); ad.className='addr'; ad.textContent = g.addr||'';
       it.appendChild(nm); it.appendChild(ad);
       it.addEventListener('click', ()=>{
-        // Primero activar "Sí" para habilitar el input
+        // 1) Activar "Sí" y asegurar que el input esté habilitado inmediatamente
         const rSi = document.getElementById('cons-grupo-si');
         if(rSi){ rSi.checked = true; rSi.dispatchEvent(new Event('change')); }
-        // Luego escribir el nombre (bold) como si lo hubiera tecleado
         const grp = document.getElementById('cons-grupo-nombre');
-        if(grp){ grp.value = g.nombre || ''; grp.classList.add('grp-selected'); grp.dispatchEvent(new Event('input')); }
-        // Guardar asociación y reflejar logotipo/bloqueos
+        if(grp){ grp.removeAttribute('disabled'); try{ grp.disabled = false; }catch(_){}
+          // 2) Escribir el nombre en bold y disparar autosave al primer clic
+          grp.value = g.nombre || '';
+          grp.classList.add('grp-selected');
+          grp.dispatchEvent(new Event('input'));
+        }
+        // 3) Guardar asociación y reflejar logotipo/bloqueos
         try{ localStorage.setItem(keyAssoc, JSON.stringify(g)); }catch(_){ }
         applyAssocUI(g);
         hideInline();

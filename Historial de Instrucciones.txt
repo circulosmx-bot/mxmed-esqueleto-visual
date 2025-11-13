@@ -79,3 +79,4 @@
 [2025-11-12] Grupo Médico: al elegir de la lista, el nombre queda en el input y en negritas (clase grp-selected); se remueve la marca al desvincular.
 [2025-11-12] Grupo Médico: al aceptar desde modal también se deja el nombre en input y en negritas y se dispara autosave para mostrar el check.
 [2025-11-12] Grupo Médico: corregido orden para aplicar negritas inmediatamente (activar “Sí” antes de setear valor) y retiradas opciones “Ver sugerencia destacada” y “Continuar sin seleccionar”.
+[2025-11-12] Grupo Médico: corregido primer clic (enable inmediato del input y seteo del valor tanto en lista como en modal).
