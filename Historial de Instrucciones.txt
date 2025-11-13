@@ -84,3 +84,4 @@
 [2025-11-12] Grupo Médico: al prellenar título, enfocar por ~1s (focus y luego blur si el usuario no escribió) para invitar a personalizar.
 [2025-11-12] Grupo Médico: si cambia la selección, también se actualiza el título si fue autogenerado (se marca data-autofill y se limpia al teclear).
 [2025-11-12] Grupo Médico: al cambiar selección siempre actualiza el título (Consultorio <Grupo>) y re-enfoca; flag auto se restablece al escribir manualmente.
+[2025-11-12] Botón Reiniciar estado: ahora también limpia 'Dale un título a este consultorio' (valor y flag autofill).

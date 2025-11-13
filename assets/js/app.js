@@ -1694,7 +1694,14 @@ $(function(){
         const grp = document.getElementById('cons-grupo-nombre');
         if(rNo){ rNo.checked = true; rNo.dispatchEvent(new Event('change')); }
         if(rSi){ rSi.checked = false; }
-        if(grp){ grp.value=''; grp.setAttribute('disabled','disabled'); }
+        if(grp){ grp.value=''; grp.classList.remove('grp-selected'); grp.setAttribute('disabled','disabled'); }
+        const tit = document.getElementById('cons-titulo');
+        if(tit){
+          tit.value = '';
+          tit.removeAttribute('data-autofill');
+          tit.dispatchEvent(new Event('input'));
+          tit.dispatchEvent(new Event('change'));
+        }
         // Rehabilitar campos clave de dirección
         ['cp','colonia','municipio','estado','cons-calle','cons-numext'].forEach(id=>{
           const el = document.getElementById(id); if(!el) return;
