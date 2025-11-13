@@ -1408,7 +1408,7 @@ $(function(){
     const sync = document.getElementById('cons-logo-sync'); if(sync) sync.style.display = 'block';
     const file = document.getElementById('cons-logo'); if(file) file.setAttribute('disabled','disabled');
     // Bloquear campos clave de dirección cuando hay asociación
-    ;['cp','colonia','municipio','estado','cons-calle','cons-numext'].forEach(id=>{
+    ;['cp','colonia','municipio','estado'].forEach(id=>{
       const el = document.getElementById(id); if(!el) return;
       try{ el.setAttribute('disabled','disabled'); el.disabled = true; }catch(_){ }
     });

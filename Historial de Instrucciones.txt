@@ -89,3 +89,4 @@
 [2025-11-12] Grupo Médico: nueva rutina applyGroupSelection para aplicar selección al primer clic (lista y modal) y sincronizar título siempre.
 [2025-11-12] Grupo Médico: lista con navegación por teclado (flechas/Enter/Escape), helper applyGroupSelection, y actualización inmediata al primer clic.
 [2025-11-12] Grupo Médico: asignados datos ficticios (Grupo Aguascalientes Centro, Grupo Médico Central) y al elegirlos se rellenan Calle/No.Ext y título automáticamente.
+[2025-11-12] Grupo Médico: Calle y Número Ext. quedan editables aunque haya match (ya no se deshabilitan al asociar).
