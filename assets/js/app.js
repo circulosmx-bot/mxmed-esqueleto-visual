@@ -1447,11 +1447,11 @@ $(function(){
 
   // Modal para desvincular grupo (con botones centrados y "Sí desvincular")
   function openUnlinkModal(saved, onConfirm, onCancel){
-    const el = document.getElementById('modalGrupoUnlink');
+    const el = document.getElementById('modalGrupoUnlinkLogo');
     if(!el){ const ok = confirm('¿Está seguro que desea desvincular su consultorio?'); if(ok) onConfirm?.(); else onCancel?.(); return; }
     const nameEl = el.querySelector('#grp-unlink-name');
     if(nameEl) nameEl.textContent = saved?.nombre || 'este grupo';
-    const yesBtn = document.getElementById('modalGrupoUnlinkYes');
+    const yesBtn = document.getElementById('modalGrupoUnlinkLogoYes');
     const m = (window.bootstrap && bootstrap.Modal && bootstrap.Modal.getOrCreateInstance) ? bootstrap.Modal.getOrCreateInstance(el) : new bootstrap.Modal(el);
     const cleanup = ()=>{ try{ yesBtn.onclick = null; }catch(_){ } };
     el.addEventListener('hidden.bs.modal', function onHidden(){ el.removeEventListener('hidden.bs.modal', onHidden); cleanup(); onCancel?.(); }, { once:true });

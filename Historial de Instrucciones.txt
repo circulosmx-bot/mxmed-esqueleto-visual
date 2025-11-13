@@ -91,3 +91,4 @@
 [2025-11-12] Grupo Médico: asignados datos ficticios (Grupo Aguascalientes Centro, Grupo Médico Central) y al elegirlos se rellenan Calle/No.Ext y título automáticamente.
 [2025-11-12] Grupo Médico: Calle y Número Ext. quedan editables aunque haya match (ya no se deshabilitan al asociar).
 [2025-11-12] Grupo Médico: restaurada carga de logotipo desde datos ficticios (Aguascalientes Centro, Médico Central).
+[2025-11-12] Eliminación de logotipo: usa modal centrado (mismo estilo que confirmación de 'No') en lugar de confirm() nativo.
