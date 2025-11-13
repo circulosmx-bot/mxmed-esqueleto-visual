@@ -1398,7 +1398,7 @@ $(function(){
     const rSi = document.getElementById('cons-grupo-si');
     const grp = document.getElementById('cons-grupo-nombre');
     if(rSi){ rSi.checked = true; rSi.dispatchEvent(new Event('change')); }
-    if(grp){ grp.value = s.nombre || ''; grp.dispatchEvent(new Event('input')); }
+    if(grp){ grp.value = s.nombre || ''; grp.classList.add('grp-selected'); grp.dispatchEvent(new Event('input')); }
   }
 
   function decline(_s, modal){

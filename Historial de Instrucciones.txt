@@ -77,3 +77,4 @@
 [2025-11-12] Reversión: deshacer último cambio de autocompletar nombre (bold) y Calle/NoExt al elegir grupo (rollback por falla en pruebas).
 [2025-11-12] Checkpoint solicitado: commit + push estado actual en seccion-consultorio.
 [2025-11-12] Grupo Médico: al elegir de la lista, el nombre queda en el input y en negritas (clase grp-selected); se remueve la marca al desvincular.
+[2025-11-12] Grupo Médico: al aceptar desde modal también se deja el nombre en input y en negritas y se dispara autosave para mostrar el check.
