@@ -1414,24 +1414,29 @@ $(function(){
     });
     // Control de borrado (X en esquina)
     const del = document.getElementById('cons-logo-del');
-    if(del){ del.onclick = ()=>{
-      let nombre = 'este grupo';
-      try { const cur = JSON.parse(localStorage.getItem(keyAssoc)||'null'); if(cur && cur.nombre) nombre = '"'+cur.nombre+'"'; }catch(_){ }
-      if(!confirm('¿Está seguro que desea eliminar este logotipo que vincula su consultorio al '+nombre+'?')) return;
-      try{ localStorage.removeItem(keyAssoc); localStorage.removeItem(keyAssoc+':decline'); }catch(_){ }
-      removeAssocUI();
-      const rNo = document.getElementById('cons-grupo-no');
-      const rSi = document.getElementById('cons-grupo-si');
-      const grp = document.getElementById('cons-grupo-nombre');
-      if(rNo){ rNo.checked = true; rNo.dispatchEvent(new Event('change')); }
-      if(rSi){ rSi.checked = false; }
-      if(grp){ grp.value=''; grp.setAttribute('disabled','disabled'); }
-      ['cp','colonia','municipio','estado','cons-calle','cons-numext'].forEach(id=>{
-        const el = document.getElementById(id); if(!el) return;
-        el.removeAttribute('disabled');
-        if('disabled' in el) try{ el.disabled = false; }catch(_){ }
-        if(id==='colonia'){ el.classList.remove('select-open'); el.removeAttribute('size'); }
-      });
+    if(del){ del.onclick = (ev)=>{
+      ev.stopPropagation();
+      let current = s;
+      try{
+        const stored = JSON.parse(localStorage.getItem(keyAssoc)||'null');
+        if(stored) current = stored;
+      }catch(_){ }
+      openUnlinkModal(current, ()=>{
+        try{ localStorage.removeItem(keyAssoc); localStorage.removeItem(keyAssoc+':decline'); }catch(_){ }
+        removeAssocUI();
+        const rNo = document.getElementById('cons-grupo-no');
+        const rSi = document.getElementById('cons-grupo-si');
+        const grp = document.getElementById('cons-grupo-nombre');
+        if(rNo){ rNo.checked = true; rNo.dispatchEvent(new Event('change')); }
+        if(rSi){ rSi.checked = false; }
+        if(grp){ grp.value=''; grp.setAttribute('disabled','disabled'); }
+        ['cp','colonia','municipio','estado','cons-calle','cons-numext'].forEach(id=>{
+          const el = document.getElementById(id); if(!el) return;
+          el.removeAttribute('disabled');
+          if('disabled' in el) try{ el.disabled = false; }catch(_){ }
+          if(id==='colonia'){ el.classList.remove('select-open'); el.removeAttribute('size'); }
+        });
+      }, ()=>{});
     }; }
   }
 
