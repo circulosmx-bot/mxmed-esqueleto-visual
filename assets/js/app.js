@@ -1404,7 +1404,12 @@ $(function(){
   function applyAssocUI(s){
     const img = document.getElementById('cons-logo-img');
     const prev = document.getElementById('cons-logo-prev');
-    if(img && prev && s.logo_url){ img.src = s.logo_url; prev.style.display = 'block'; }
+    const uploadLogo = document.querySelector('.mf-upload[data-type="logo"]');
+    if(img && prev && s.logo_url){
+      img.src = s.logo_url;
+      prev.style.display = 'block';
+      uploadLogo?.classList.add('has-logo');
+    }
     const sync = document.getElementById('cons-logo-sync'); if(sync) sync.style.display = 'block';
     const file = document.getElementById('cons-logo'); if(file) file.setAttribute('disabled','disabled');
     // Bloquear campos clave de dirección cuando hay asociación
@@ -1448,6 +1453,7 @@ $(function(){
     if(prev){ prev.style.display = 'none'; }
     if(img){ img.src=''; }
     const grp = document.getElementById('cons-grupo-nombre'); if(grp){ grp.classList.remove('grp-selected'); }
+    const uploadLogo = document.querySelector('.mf-upload[data-type="logo"]'); if(uploadLogo){ uploadLogo.classList.remove('has-logo'); }
   }
 
   // Modal para desvincular grupo (con botones centrados y "Sí desvincular")
@@ -1784,6 +1790,8 @@ $(function(){
         const img  = document.getElementById('cons-logo-img');
         if(prev){ prev.style.display = 'none'; }
         if(img){ img.src = ''; }
+        const uploadLogo = document.querySelector('.mf-upload[data-type="logo"]');
+        if(uploadLogo){ uploadLogo.classList.remove('has-logo'); }
         const file = document.getElementById('cons-logo'); if(file){ file.removeAttribute('disabled'); file.value=''; }
         const sync = document.getElementById('cons-logo-sync'); if(sync) sync.style.display = 'none';
         const rNo = document.getElementById('cons-grupo-no');
