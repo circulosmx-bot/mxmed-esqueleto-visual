@@ -1083,3 +1083,5 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* Consultorio: flags (estacionamiento/accesible) – bajar 10px */
 .cons-flags{ margin-top:10px; }
+/* Ajuste de botón X en preview de logotipo del grupo */
+#cons-logo-prev .foto-x{ top:6px; right:6px; }

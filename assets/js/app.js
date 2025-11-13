@@ -1412,22 +1412,20 @@ $(function(){
     if(img && prev && s.logo_url){ img.src = s.logo_url; prev.style.display = 'block'; }
     const sync = document.getElementById('cons-logo-sync'); if(sync) sync.style.display = 'block';
     const file = document.getElementById('cons-logo'); if(file) file.setAttribute('disabled','disabled');
-    const uns = document.getElementById('cons-logo-unsync');
-    if(uns){ uns.onclick = ()=>{
-      // Quitar asociación y permitir repetir el flujo desde cero
-      try{
-        localStorage.removeItem(keyAssoc);
-        localStorage.removeItem(keyAssoc+':decline');
-      }catch(_){ }
+    // Control de borrado (X en esquina)
+    const del = document.getElementById('cons-logo-del');
+    if(del){ del.onclick = ()=>{
+      let nombre = 'este grupo';
+      try { const cur = JSON.parse(localStorage.getItem(keyAssoc)||'null'); if(cur && cur.nombre) nombre = '"'+cur.nombre+'"'; }catch(_){ }
+      if(!confirm('¿Está seguro que desea eliminar este logotipo que vincula su consultorio al '+nombre+'?')) return;
+      try{ localStorage.removeItem(keyAssoc); localStorage.removeItem(keyAssoc+':decline'); }catch(_){ }
       removeAssocUI();
-      // Restablecer radios/entrada de nombre de grupo
       const rNo = document.getElementById('cons-grupo-no');
       const rSi = document.getElementById('cons-grupo-si');
       const grp = document.getElementById('cons-grupo-nombre');
       if(rNo){ rNo.checked = true; rNo.dispatchEvent(new Event('change')); }
       if(rSi){ rSi.checked = false; }
       if(grp){ grp.value=''; grp.setAttribute('disabled','disabled'); }
-      // Rehabilitar campos de dirección clave por si estaban bloqueados
       ['cp','colonia','municipio','estado','cons-calle','cons-numext'].forEach(id=>{
         const el = document.getElementById(id); if(!el) return;
         el.removeAttribute('disabled');
@@ -1440,6 +1438,10 @@ $(function(){
   function removeAssocUI(){
     const sync = document.getElementById('cons-logo-sync'); if(sync) sync.style.display = 'none';
     const file = document.getElementById('cons-logo'); if(file) file.removeAttribute('disabled');
+    const prev = document.getElementById('cons-logo-prev');
+    const img  = document.getElementById('cons-logo-img');
+    if(prev){ prev.style.display = 'none'; }
+    if(img){ img.src=''; }
   }
 
   let debounceT = null;

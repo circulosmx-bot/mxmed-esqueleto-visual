@@ -748,11 +748,13 @@
                           <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cámara</button>
                         </div>
                         <input id="cons-logo" type="file" accept="image/*" class="d-none mf-input">
-                        <div id="cons-logo-prev" class="mf-prev"><img id="cons-logo-img" alt="preview logotipo"></div>
-                        <div id="cons-logo-sync" class="mt-1" style="display:none;">
-                          <span class="badge text-bg-info">Sincronizado con grupo</span>
-                          <button type="button" class="btn btn-link btn-sm p-0 ms-2" id="cons-logo-unsync">Cambiar</button>
-                        </div>
+                         <div id="cons-logo-prev" class="mf-prev">
+                           <button type="button" class="foto-x" id="cons-logo-del" title="Eliminar logotipo">&times;</button>
+                           <img id="cons-logo-img" alt="preview logotipo">
+                         </div>
+                         <div id="cons-logo-sync" class="mt-1" style="display:none;">
+                           <span class="badge text-bg-info">Sincronizado con grupo</span>
+                         </div>
                       </div>
 
                       <!-- Fotografía principal del consultorio -->
