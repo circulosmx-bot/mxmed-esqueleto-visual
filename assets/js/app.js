@@ -1447,6 +1447,7 @@ $(function(){
     const img  = document.getElementById('cons-logo-img');
     if(prev){ prev.style.display = 'none'; }
     if(img){ img.src=''; }
+    const grp = document.getElementById('cons-grupo-nombre'); if(grp){ grp.classList.remove('grp-selected'); }
   }
 
   // Modal para desvincular grupo (con botones centrados y "Sí desvincular")
@@ -1484,7 +1485,7 @@ $(function(){
       it.addEventListener('click', ()=>{
         try{ localStorage.setItem(keyAssoc, JSON.stringify(g)); }catch(_){ }
         applyAssocUI(g);
-        const grp = document.getElementById('cons-grupo-nombre'); if(grp){ grp.value = g.nombre; }
+        const grp = document.getElementById('cons-grupo-nombre'); if(grp){ grp.value = g.nombre || ''; grp.classList.add('grp-selected'); grp.dispatchEvent(new Event('input')); }
         const rSi = document.getElementById('cons-grupo-si'); if(rSi){ rSi.checked = true; rSi.dispatchEvent(new Event('change')); }
         hideInline();
       });
@@ -1685,5 +1686,6 @@ $(function(){
     document.body.appendChild(btn);
   }catch(_){ }
 })();
+
 
 
