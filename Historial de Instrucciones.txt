@@ -110,3 +110,4 @@
 [2025-11-12] Iconos de dropzone (logo/foto) reducidos 30% (ahora 106px, font-size 84px).
 [2025-11-12] Grupos demo renombrados a 'Star Médica' y 'Médica San Juan'.
 [2025-11-12] Grupos demo ahora usan logotipos reales (assets/img/star medica.svg, medica san juan.png).
+[2025-11-12] Dropzone logotipo: imagen con border y X estilo panel fotos; logotipo ocupa todo el área al hacer match.
