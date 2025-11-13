@@ -792,9 +792,28 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
               </div>
               <div class="modal-body">¿Deseas agregar otro consultorio?</div>
-              <div class="modal-footer">
+              <div class="modal-footer justify-content-center">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
                 <button type="button" class="btn btn-primary" id="modalConsulAddYes">Sí</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal: Confirmar desvincular Grupo Médico -->
+        <div class="modal fade" id="modalGrupoUnlink" tabindex="-1" aria-labelledby="modalGrupoUnlinkLabel" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="modalGrupoUnlinkLabel">Desvincular del grupo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+              </div>
+              <div class="modal-body">
+                ¿Está seguro que desea desvincular su consultorio del grupo <strong id="grp-unlink-name">este grupo</strong>?
+              </div>
+              <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="modalGrupoUnlinkYes">Sí desvincular</button>
               </div>
             </div>
           </div>
@@ -830,8 +849,8 @@
                 </div>
                 <div id="del-error" class="text-danger small" style="display:none;">Código/contraseña incorrectos.</div>
               </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+              <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-danger" id="modalConsulDelYes">Eliminar</button>
               </div>
             </div>
@@ -850,7 +869,7 @@
                 <div class="mb-2"><strong id="grp-name">Grupo Médico</strong></div>
                 <div class="text-muted small" id="grp-addr"></div>
               </div>
-              <div class="modal-footer">
+              <div class="modal-footer justify-content-center">
                 <button type="button" class="btn btn-secondary" id="modalGrupoNo" data-bs-dismiss="modal">No</button>
                 <button type="button" class="btn btn-primary" id="modalGrupoSi">Sí, es mi grupo</button>
               </div>

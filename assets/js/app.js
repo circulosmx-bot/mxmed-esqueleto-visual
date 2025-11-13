@@ -1164,7 +1164,7 @@ $(function(){
     const rNo = document.getElementById('cons-grupo-no');
     const grp = document.getElementById('cons-grupo-nombre');
     if(!rSi || !rNo || !grp) return;
-    function sync(){ if(rSi.checked){ grp.removeAttribute('disabled'); grp.focus(); } else { grp.value=''; grp.setAttribute('disabled','disabled'); } }
+    function sync(){ if(rSi.checked){ grp.removeAttribute('disabled'); grp.focus(); } else { /* no limpiar valor para evitar confusión */ grp.setAttribute('disabled','disabled'); } }
     rSi.addEventListener('change', sync); rNo.addEventListener('change', sync);
     sync();
   })();
@@ -1449,6 +1449,20 @@ $(function(){
     if(img){ img.src=''; }
   }
 
+  // Modal para desvincular grupo (con botones centrados y "Sí desvincular")
+  function openUnlinkModal(saved, onConfirm, onCancel){
+    const el = document.getElementById('modalGrupoUnlink');
+    if(!el){ const ok = confirm('¿Está seguro que desea desvincular su consultorio?'); if(ok) onConfirm?.(); else onCancel?.(); return; }
+    const nameEl = el.querySelector('#grp-unlink-name');
+    if(nameEl) nameEl.textContent = saved?.nombre || 'este grupo';
+    const yesBtn = document.getElementById('modalGrupoUnlinkYes');
+    const m = (window.bootstrap && bootstrap.Modal && bootstrap.Modal.getOrCreateInstance) ? bootstrap.Modal.getOrCreateInstance(el) : new bootstrap.Modal(el);
+    const cleanup = ()=>{ try{ yesBtn.onclick = null; }catch(_){ } };
+    el.addEventListener('hidden.bs.modal', function onHidden(){ el.removeEventListener('hidden.bs.modal', onHidden); cleanup(); onCancel?.(); }, { once:true });
+    yesBtn.onclick = ()=>{ cleanup(); onConfirm?.(); m.hide(); };
+    m.show();
+  }
+
   let debounceT = null;
   // Inline suggestions layer helpers
   let inlineLayer = null;
@@ -1536,21 +1550,16 @@ $(function(){
       // Si hay asociación vigente, confirmar desvincular
       let saved=null; try{ saved = JSON.parse(localStorage.getItem(keyAssoc)||'null'); }catch(_){ saved=null; }
       if(saved){
-        const nombre = saved.nombre ? ('"'+saved.nombre+'"') : 'este grupo';
-        const ok = confirm('¿Está seguro que desea desvincular su consultorio del '+nombre+'?');
-        if(!ok){
-          // Revertir selección a "Sí"
-          rSi.checked = true; rSi.dispatchEvent(new Event('change'));
-          return;
-        }
-        // Proceder a desvincular
-        try{ localStorage.removeItem(keyAssoc); localStorage.removeItem(keyAssoc+':decline'); }catch(_){ }
-        removeAssocUI();
-        if(grp){ grp.value=''; grp.setAttribute('disabled','disabled'); }
-        ['cp','colonia','municipio','estado','cons-calle','cons-numext'].forEach(id=>{
-          const el=document.getElementById(id); if(!el) return; el.removeAttribute('disabled'); try{ el.disabled=false; }catch(_){ }
-          if(id==='colonia'){ el.classList.remove('select-open'); el.removeAttribute('size'); }
-        });
+        openUnlinkModal(saved, ()=>{
+          try{ localStorage.removeItem(keyAssoc); localStorage.removeItem(keyAssoc+':decline'); }catch(_){ }
+          removeAssocUI();
+          if(grp){ grp.value=''; grp.setAttribute('disabled','disabled'); }
+          ['cp','colonia','municipio','estado','cons-calle','cons-numext'].forEach(id=>{
+            const el=document.getElementById(id); if(!el) return; el.removeAttribute('disabled'); try{ el.disabled=false; }catch(_){ }
+            if(id==='colonia'){ el.classList.remove('select-open'); el.removeAttribute('size'); }
+          });
+        }, ()=>{ rSi.checked=true; rSi.dispatchEvent(new Event('change')); });
+        return;
       }
     }); }
   }
