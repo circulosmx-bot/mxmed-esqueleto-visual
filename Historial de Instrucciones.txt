@@ -102,3 +102,4 @@
 [2025-11-12] Ajuste: texto '¿Tu consultorio está en un Grupo Médico?' aumentado 15% (1.15rem).
 [2025-11-12] Dropzone Fotografía: icono interno reemplazado por 'add_a_photo' (mismo tamaño/color).
 [2025-11-12] Dropzone Foto: icono add_a_photo ajustado a 76px y peso 600 como el logo original.
+[2025-11-12] Dropzone Foto: icono add_a_photo escalado 400% (304px) para igualar tamaño solicitado.
