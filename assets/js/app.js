@@ -1400,9 +1400,9 @@ $(function(){
     if(rSi){ rSi.checked = true; rSi.dispatchEvent(new Event('change')); }
     if(grp){ grp.removeAttribute('disabled'); try{ grp.disabled=false; }catch(_){}
       grp.value = s.nombre || ''; grp.classList.add('grp-selected'); grp.dispatchEvent(new Event('input')); }
-    // 2b) Si el título del consultorio está vacío, prellenarlo como "Consultorio <Grupo>"
+    // 2b) Actualizar el título del consultorio con "Consultorio <Grupo>"
     const tit = document.getElementById('cons-titulo');
-    if(tit && ( !(tit.value||'').trim() || tit.dataset.autofill==='1' )){
+    if(tit){
       tit.value = 'Consultorio ' + (s.nombre || '');
       tit.dataset.autofill = '1';
       tit.dispatchEvent(new Event('input'));
@@ -1511,9 +1511,9 @@ $(function(){
           grp.classList.add('grp-selected');
           grp.dispatchEvent(new Event('input'));
         }
-        // 2b) Si el título del consultorio está vacío, prellenarlo como "Consultorio <Grupo>"
+        // 2b) Actualizar el título del consultorio con "Consultorio <Grupo>"
         const tit = document.getElementById('cons-titulo');
-        if(tit && ( !(tit.value||'').trim() || tit.dataset.autofill==='1' )){
+        if(tit){
           tit.value = 'Consultorio ' + (g.nombre || '');
           tit.dataset.autofill = '1';
           tit.dispatchEvent(new Event('input'));
