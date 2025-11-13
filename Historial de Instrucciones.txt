@@ -96,3 +96,4 @@
 [2025-11-12] Destacado: etiqueta '¿Tu consultorio está en un Grupo Médico?' ahora va sobre barra con fondo #00ADC1 al 25% y esquinas redondeadas.
 [2025-11-12] Barra de pregunta Grupo Médico ajustada: fondo turquesa sólido, texto blanco en negritas y radios alineados.
 [2025-11-12] Barra grupo médico: radios fuera del recuadro aliado (#00ADC1 al 25%), texto blanco en bold dentro de la barra.
+[2025-11-12] Barra grupo médico: alfa al 65% y radios alineados a la derecha en la misma fila.
