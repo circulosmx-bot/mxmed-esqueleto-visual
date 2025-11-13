@@ -1019,6 +1019,13 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 .fotos-drop .fotos-drop-inner{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; text-align:center }
 
+/* Sugerencias inline para Grupo Médico (popup bajo input) */
+.grp-suggest{ position:absolute; background:#fff; border:1px solid #d9e5ec; border-radius:10px; box-shadow:0 10px 26px rgba(0,0,0,.12); padding:4px; z-index:2000; max-height:240px; overflow:auto; min-width:220px }
+.grp-suggest .item{ display:flex; flex-direction:column; padding:8px 10px; cursor:pointer; border-radius:8px }
+.grp-suggest .item:hover{ background:#F2FBFC }
+.grp-suggest .name{ font-weight:700; color:#0b3242 }
+.grp-suggest .addr{ font-size:.85rem; color:#597482 }
+
 /* Icono central: usar SVG provisto; fallback Material Symbols queda disponible si se requiere */
 .fotos-ico{ position:relative; width:64px; height:64px; display:inline-flex; align-items:center; justify-content:center }
 .fotos-ico .base{ font-size:52px; color:#003152 }

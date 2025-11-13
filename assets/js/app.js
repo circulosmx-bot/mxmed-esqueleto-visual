@@ -1445,22 +1445,46 @@ $(function(){
   }
 
   let debounceT = null;
+  // Inline suggestions layer helpers
+  let inlineLayer = null;
+  function hideInline(){ if(inlineLayer){ inlineLayer.remove(); inlineLayer=null; } }
+  function showInline(arr, anchor){
+    hideInline();
+    if(!arr || !arr.length || !anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const box = document.createElement('div');
+    box.className = 'grp-suggest';
+    box.style.left = (window.scrollX + rect.left) + 'px';
+    box.style.top  = (window.scrollY + rect.bottom + 4) + 'px';
+    box.style.width= rect.width + 'px';
+    arr.forEach(g=>{
+      const it = document.createElement('div'); it.className='item';
+      const nm = document.createElement('div'); nm.className='name'; nm.textContent = g.nombre;
+      const ad = document.createElement('div'); ad.className='addr'; ad.textContent = g.addr||'';
+      it.appendChild(nm); it.appendChild(ad);
+      it.addEventListener('click', ()=>{
+        try{ localStorage.setItem(keyAssoc, JSON.stringify(g)); }catch(_){ }
+        applyAssocUI(g);
+        const grp = document.getElementById('cons-grupo-nombre'); if(grp){ grp.value = g.nombre; }
+        hideInline();
+      });
+      box.appendChild(it);
+    });
+    document.body.appendChild(box); inlineLayer = box;
+    const handler = (ev)=>{ if(!box.contains(ev.target) && ev.target!==anchor){ hideInline(); document.removeEventListener('mousedown', handler, true); } };
+    document.addEventListener('mousedown', handler, true);
+  }
+  function listMatches(addr){ const s = suggestGroup(addr); if(!s) return []; const alt={ id:'demo-124', nombre:'Grupo '+(addr.col||'Médico Norte'), addr:[addr.col,addr.mun,addr.edo].filter(Boolean).join(', '), logo_url:s.logo_url}; return [s,alt]; }
   function onInputsChange(){
     clearTimeout(debounceT);
     debounceT = setTimeout(()=>{
       if(window._mx_suggestBusy) return;
       const a = getAddr();
-      const s = suggestGroup(a);
-      if(!s) return;
-      try{
-        const d = JSON.parse(localStorage.getItem(keyAssoc+':decline')||'null');
-        const sig = [a.cp,a.col,a.mun,a.edo].join('|');
-        const ds = d && (d.sig || (d.addr && [d.addr.cp,d.addr.col,d.addr.mun,d.addr.edo].join('|')));
-        if(ds === sig) return;
-      }catch(_){ }
-      const saved = JSON.parse(localStorage.getItem(keyAssoc)||'null');
-      if(saved && saved.id === s.id){ applyAssocUI(saved); return; }
-      showModal(s);
+      const matches = listMatches(a);
+      try{ window._mx_lastGroupMatches = matches; }catch(_){ }
+      const rSi = document.getElementById('cons-grupo-si');
+      const grp = document.getElementById('cons-grupo-nombre');
+      if(rSi && rSi.checked && grp === document.activeElement){ if(matches && matches.length){ showInline(matches, grp); } }
     }, 400);
   }
 
@@ -1473,6 +1497,16 @@ $(function(){
       const el = document.getElementById(id);
       if(el){ el.addEventListener('change', onInputsChange); el.addEventListener('blur', onInputsChange); }
     });
+    const rSi = document.getElementById('cons-grupo-si');
+    const rNo = document.getElementById('cons-grupo-no');
+    const grp = document.getElementById('cons-grupo-nombre');
+    if(grp){
+      grp.addEventListener('focus', ()=>{ if(!(rSi && rSi.checked)) return; const a=getAddr(); const m=listMatches(a); if(m && m.length){ showInline(m, grp); } });
+      grp.addEventListener('input', ()=> hideInline());
+      grp.addEventListener('blur', ()=> setTimeout(hideInline, 150));
+    }
+    if(rSi){ rSi.addEventListener('change', ()=>{ if(rSi.checked && grp){ const a=getAddr(); const m=listMatches(a); if(m && m.length){ showInline(m, grp); grp.focus(); } }}); }
+    if(rNo){ rNo.addEventListener('change', ()=> hideInline()); }
   }
 
   if(document.readyState === 'loading'){
