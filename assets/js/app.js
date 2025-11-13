@@ -1564,7 +1564,7 @@ $(function(){
       calle:'Av. Aguascalientes',
       numext:'1420',
       addr:'Aguascalientes Centro',
-      logo_url: buildDemoLogo('SM', '#00ADC1')
+      logo_url: 'assets/img/star medica.svg'
     },
     {
       id:'grp-san-juan',
@@ -1572,7 +1572,7 @@ $(function(){
       calle:'Adolfo López Mateos',
       numext:'892',
       addr:'Zona Centro',
-      logo_url: buildDemoLogo('SJ', '#007BA7')
+      logo_url: 'assets/img/medica san juan.png'
     }
   ];
 
