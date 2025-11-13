@@ -1402,8 +1402,9 @@ $(function(){
       grp.value = s.nombre || ''; grp.classList.add('grp-selected'); grp.dispatchEvent(new Event('input')); }
     // 2b) Si el título del consultorio está vacío, prellenarlo como "Consultorio <Grupo>"
     const tit = document.getElementById('cons-titulo');
-    if(tit && !(tit.value||'').trim()){
+    if(tit && ( !(tit.value||'').trim() || tit.dataset.autofill==='1' )){
       tit.value = 'Consultorio ' + (s.nombre || '');
+      tit.dataset.autofill = '1';
       tit.dispatchEvent(new Event('input'));
       tit.dispatchEvent(new Event('change'));
       requestAnimationFrame(()=>{
@@ -1512,10 +1513,20 @@ $(function(){
         }
         // 2b) Si el título del consultorio está vacío, prellenarlo como "Consultorio <Grupo>"
         const tit = document.getElementById('cons-titulo');
-        if(tit && !(tit.value||'').trim()){
+        if(tit && ( !(tit.value||'').trim() || tit.dataset.autofill==='1' )){
           tit.value = 'Consultorio ' + (g.nombre || '');
+          tit.dataset.autofill = '1';
           tit.dispatchEvent(new Event('input'));
           tit.dispatchEvent(new Event('change'));
+          requestAnimationFrame(()=>{
+            try{
+              tit.focus();
+              if(typeof tit.setSelectionRange === 'function'){
+                const L = tit.value.length; tit.setSelectionRange(L, L);
+              }
+            }catch(_){ }
+            setTimeout(()=>{ try{ if(document.activeElement === tit) tit.blur(); }catch(_){ } }, 1200);
+          });
         }
         // 3) Guardar asociación y reflejar logotipo/bloqueos
         try{ localStorage.setItem(keyAssoc, JSON.stringify(g)); }catch(_){ }
@@ -1560,6 +1571,9 @@ $(function(){
       grp.addEventListener('blur', ()=> setTimeout(hideInline, 150));
     }
     if(rSi){ rSi.addEventListener('change', ()=>{ if(rSi.checked && grp){ const a=getAddr(); const m=listMatches(a); if(m && m.length){ showInline(m, grp); grp.focus(); } }}); }
+    // Si el usuario teclea en el título, deja de ser autogenerado
+    const tit = document.getElementById('cons-titulo');
+    if(tit){ tit.addEventListener('input', (e)=>{ if(e.isTrusted){ try{ delete tit.dataset.autofill; }catch(_){ tit.removeAttribute('data-autofill'); } } }); }
     if(rNo){ rNo.addEventListener('change', ()=>{
       hideInline();
       if(!rNo.checked) return;

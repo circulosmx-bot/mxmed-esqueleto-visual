@@ -82,3 +82,4 @@
 [2025-11-12] Grupo Médico: corregido primer clic (enable inmediato del input y seteo del valor tanto en lista como en modal).
 [2025-11-12] Grupo Médico: al seleccionar/aceptar grupo, prellenar título con "Consultorio <Grupo>" si está vacío (campo editable).
 [2025-11-12] Grupo Médico: al prellenar título, enfocar por ~1s (focus y luego blur si el usuario no escribió) para invitar a personalizar.
+[2025-11-12] Grupo Médico: si cambia la selección, también se actualiza el título si fue autogenerado (se marca data-autofill y se limpia al teclear).
