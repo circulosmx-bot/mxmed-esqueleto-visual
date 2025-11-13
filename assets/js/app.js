@@ -1400,6 +1400,13 @@ $(function(){
     if(rSi){ rSi.checked = true; rSi.dispatchEvent(new Event('change')); }
     if(grp){ grp.removeAttribute('disabled'); try{ grp.disabled=false; }catch(_){}
       grp.value = s.nombre || ''; grp.classList.add('grp-selected'); grp.dispatchEvent(new Event('input')); }
+    // 2b) Si el título del consultorio está vacío, prellenarlo como "Consultorio <Grupo>"
+    const tit = document.getElementById('cons-titulo');
+    if(tit && !(tit.value||'').trim()){
+      tit.value = 'Consultorio ' + (s.nombre || '');
+      tit.dispatchEvent(new Event('input'));
+      tit.dispatchEvent(new Event('change'));
+    }
   }
 
   function decline(_s, modal){
@@ -1493,6 +1500,13 @@ $(function(){
           grp.value = g.nombre || '';
           grp.classList.add('grp-selected');
           grp.dispatchEvent(new Event('input'));
+        }
+        // 2b) Si el título del consultorio está vacío, prellenarlo como "Consultorio <Grupo>"
+        const tit = document.getElementById('cons-titulo');
+        if(tit && !(tit.value||'').trim()){
+          tit.value = 'Consultorio ' + (g.nombre || '');
+          tit.dispatchEvent(new Event('input'));
+          tit.dispatchEvent(new Event('change'));
         }
         // 3) Guardar asociación y reflejar logotipo/bloqueos
         try{ localStorage.setItem(keyAssoc, JSON.stringify(g)); }catch(_){ }
