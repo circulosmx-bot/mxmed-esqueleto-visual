@@ -1530,7 +1530,29 @@ $(function(){
       grp.addEventListener('blur', ()=> setTimeout(hideInline, 150));
     }
     if(rSi){ rSi.addEventListener('change', ()=>{ if(rSi.checked && grp){ const a=getAddr(); const m=listMatches(a); if(m && m.length){ showInline(m, grp); grp.focus(); } }}); }
-    if(rNo){ rNo.addEventListener('change', ()=> hideInline()); }
+    if(rNo){ rNo.addEventListener('change', ()=>{
+      hideInline();
+      if(!rNo.checked) return;
+      // Si hay asociación vigente, confirmar desvincular
+      let saved=null; try{ saved = JSON.parse(localStorage.getItem(keyAssoc)||'null'); }catch(_){ saved=null; }
+      if(saved){
+        const nombre = saved.nombre ? ('"'+saved.nombre+'"') : 'este grupo';
+        const ok = confirm('¿Está seguro que desea desvincular su consultorio del '+nombre+'?');
+        if(!ok){
+          // Revertir selección a "Sí"
+          rSi.checked = true; rSi.dispatchEvent(new Event('change'));
+          return;
+        }
+        // Proceder a desvincular
+        try{ localStorage.removeItem(keyAssoc); localStorage.removeItem(keyAssoc+':decline'); }catch(_){ }
+        removeAssocUI();
+        if(grp){ grp.value=''; grp.setAttribute('disabled','disabled'); }
+        ['cp','colonia','municipio','estado','cons-calle','cons-numext'].forEach(id=>{
+          const el=document.getElementById(id); if(!el) return; el.removeAttribute('disabled'); try{ el.disabled=false; }catch(_){ }
+          if(id==='colonia'){ el.classList.remove('select-open'); el.removeAttribute('size'); }
+        });
+      }
+    }); }
   }
 
   if(document.readyState === 'loading'){
