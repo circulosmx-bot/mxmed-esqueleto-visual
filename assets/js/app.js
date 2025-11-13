@@ -1449,7 +1449,7 @@ $(function(){
   function openUnlinkModal(saved, onConfirm, onCancel){
     const el = document.getElementById('modalGrupoUnlinkLogo');
     if(!el){ const ok = confirm('¿Está seguro que desea desvincular su consultorio?'); if(ok) onConfirm?.(); else onCancel?.(); return; }
-    const nameEl = el.querySelector('#grp-unlink-name');
+    const nameEl = el.querySelector('#grp-unlink-logo-name');
     if(nameEl) nameEl.textContent = saved?.nombre || 'este grupo';
     const yesBtn = document.getElementById('modalGrupoUnlinkLogoYes');
     const m = (window.bootstrap && bootstrap.Modal && bootstrap.Modal.getOrCreateInstance) ? bootstrap.Modal.getOrCreateInstance(el) : new bootstrap.Modal(el);
