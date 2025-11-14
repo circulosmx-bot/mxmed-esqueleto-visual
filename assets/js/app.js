@@ -537,6 +537,7 @@ $(function(){
     if(!prev) return;
     const img   = prev.querySelector('img');
     if(!img) return;
+    const inputId = input.id || '';
 
     // click-to-upload
     box.addEventListener('click', e=>{
@@ -571,6 +572,18 @@ $(function(){
         if(box.dataset.type === 'logo'){ box.classList.add('has-logo'); }
       };
       r.readAsDataURL(file);
+    }
+
+    const delBtn = prev.querySelector('.foto-x');
+    if(delBtn && inputId === 'cons-foto'){
+      delBtn.addEventListener('click', ev=>{
+        ev.preventDefault();
+        ev.stopPropagation();
+        img.src = '';
+        prev.style.display = 'none';
+        prev.setAttribute('hidden','hidden');
+        input.value = '';
+      });
     }
 
     // QR (mock)

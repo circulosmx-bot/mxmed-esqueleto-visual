@@ -1189,6 +1189,15 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-size:18px;
   z-index:2;
 }
+#cons-foto-prev{ position:absolute; inset:10px; }
+#cons-foto-prev .foto-x{
+  top:8px;
+  right:8px;
+  width:28px;
+  height:28px;
+  font-size:18px;
+  z-index:2;
+}
 .grupo-medico-bar{
   display:inline-block;
   background:rgba(0,173,193,0.65);

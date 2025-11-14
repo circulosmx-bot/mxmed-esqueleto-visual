@@ -771,7 +771,10 @@
                           <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cámara</button>
                         </div>
                         <input id="cons-foto" type="file" accept="image/*" class="d-none mf-input">
-                        <div id="cons-foto-prev" class="mf-prev"><img id="cons-foto-img" alt="preview fotografía"></div>
+                        <div id="cons-foto-prev" class="mf-prev" hidden>
+                          <button type="button" class="foto-x" id="cons-foto-del" title="Eliminar fotografía">&times;</button>
+                          <img id="cons-foto-img" alt="preview fotografía">
+                        </div>
                       </div>
                     </div>
                   </div>
