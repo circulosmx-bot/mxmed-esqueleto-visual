@@ -114,3 +114,4 @@
 [2025-11-12] Dropzone logo: removidos marcos y fondo; logotipo queda flotando con transparencia.
 [2025-11-12] Dropzone logotipo: clase has-logo oculta elementos y quita borde; reset la limpia.
 [2025-11-12] Dropzone logotipo: modo has-logo ahora quita bordes/padding y el logo usa object-fit:contain.
+[2025-11-12] Dropzone logo: contenido original envuelto en .mf-ghost y oculto cuando hay logotipo.
