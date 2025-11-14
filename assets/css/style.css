@@ -1198,6 +1198,20 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-size:18px;
   z-index:2;
 }
+.modal-footer #modalGrupoUnlinkLogoYes,
+.modal-footer #modalFotoPrincipalRemoveYes{
+  background:#EF5070;
+  border-color:#EF5070;
+  color:#fff;
+}
+.modal-footer #modalGrupoUnlinkLogoYes:hover,
+.modal-footer #modalGrupoUnlinkLogoYes:focus,
+.modal-footer #modalFotoPrincipalRemoveYes:hover,
+.modal-footer #modalFotoPrincipalRemoveYes:focus{
+  background:#d8435f;
+  border-color:#d8435f;
+  color:#fff;
+}
 .grupo-medico-bar{
   display:inline-block;
   background:rgba(0,173,193,0.65);

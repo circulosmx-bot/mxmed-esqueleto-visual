@@ -124,3 +124,4 @@
 [2025-11-12] Mensaje de sincronización: alfa subido al 60% para mejor legibilidad.
 [2025-11-12] Dropzone foto principal: se agregó botón X para eliminar la imagen y restablecer el campo.
 [2025-11-12] Foto principal: botón X ahora pregunta “¿Deseas quitar esta imagen como foto principal del consultorio?” antes de eliminarla.
+[2025-11-12] Botones "Sí desvincular" y "Sí, quitar" ahora usan fondo #EF5070 para mantener la identidad visual.
