@@ -1103,12 +1103,29 @@ $(function(){
       a2.value = sv.a2 || '';
       b2.value = sv.b2 || '';
       const mark = ()=> tr.classList.toggle('sched-defined', rowDefined(act, inputs));
+      const clearInputs = ()=>{
+        inputs.forEach(inp=>{
+          if(!inp) return;
+          if((inp.value||'').trim()){
+            inp.value = '';
+            try{
+              inp.dispatchEvent(new Event('input'));
+              inp.dispatchEvent(new Event('change'));
+            }catch(_){ }
+          }
+        });
+      };
       function sync(){
         state[d.k] = { act:act.checked, a1:a1.value, b1:b1.value, a2:a2.value, b2:b2.value };
         save(state);
         mark();
       }
-      act.addEventListener('change', sync);
+      act.addEventListener('change', ()=>{
+        if(!act.checked){
+          clearInputs();
+        }
+        sync();
+      });
       inputs.forEach(inp=>{
         inp.addEventListener('change', sync);
         inp.addEventListener('input', ()=>{

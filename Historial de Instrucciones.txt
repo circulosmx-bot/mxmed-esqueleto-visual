@@ -139,3 +139,4 @@
 [2025-11-13] Horarios: copiar lunes sólo a viernes, autoactiva botones al capturar horas, indicador visual de día listo y reinicio desde el widget.
 [2025-11-13] Horarios: inputs arrancan con 09:00/14:00/16:00/20:00 como valores iniciales por día.
 [2025-11-13] Horarios: valores base 09/14/16/20 sólo se insertan al enfocar cada campo (placeholders).
+[2025-11-13] Horarios: al desactivar un día se limpian los campos para que el usuario vuelva a elegirlos.
