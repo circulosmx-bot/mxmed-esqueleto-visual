@@ -1,6 +1,4 @@
-﻿// ===== Extracted JS blocks from base HTML =====
-
-
+﻿// ===== Extracted JS blocks from base HTML =====\r\n\r\nconst MX_HORARIO_DEFAULTS = { a1:'09:00', b1:'14:00', a2:'16:00', b2:'20:00' };\r\nfunction mxApplyHorarioDefault(input, slot){\r\n  if(!input) return;\r\n  const def = MX_HORARIO_DEFAULTS[slot];\r\n  if(!def) return;\r\n  try{ input.setAttribute('placeholder', def); }catch(_){ }\r\n  input.addEventListener('focus', ()=>{\r\n    if(!(input.value||'').trim()){\r\n      input.value = def;\r\n      try{\r\n        input.dispatchEvent(new Event('input'));\r\n        input.dispatchEvent(new Event('change'));\r\n      }catch(_){ }\r\n    }\r\n  });\r\n}\r\n\r\n
 /* ===== Helpers de navegaciÃ³n rÃ¡pida ===== */
 function jumpTo(panelId){
   showPanel(panelId);
@@ -1051,9 +1049,25 @@ $(function(){
     function load(){ try { return JSON.parse(localStorage.getItem(key)||'{}'); } catch(e){ return {}; } }
     function save(v){ localStorage.setItem(key, JSON.stringify(v)); }
     const state = load();
+    const defaultTimes = { a1:'09:00', b1:'14:00', a2:'16:00', b2:'20:00' };
     function rowDefined(act, inputs){
       if(act?.checked) return true;
       return inputs.some(inp=> (inp.value||'').trim().length>0);
+    }
+    function hookDefault(input, key){
+      if(!input) return;
+      const def = defaultTimes[key];
+      if(!def) return;
+      try{ input.setAttribute('placeholder', def); }catch(_){}
+      input.addEventListener('focus', ()=>{
+        if(!(input.value||'').trim()){
+          input.value = def;
+          try{
+            input.dispatchEvent(new Event('input'));
+            input.dispatchEvent(new Event('change'));
+          }catch(_){ }
+        }
+      });
     }
 
     dias.forEach(d=>{
@@ -1082,11 +1096,12 @@ $(function(){
       const b2 = tr.querySelector(`#sch-b2-${d.k}`);
       const inputs = [a1,b1,a2,b2];
       const sv = state[d.k] || {};
+      hookDefault(a1,'a1'); hookDefault(b1,'b1'); hookDefault(a2,'a2'); hookDefault(b2,'b2');
       act.checked = !!sv.act;
-      a1.value = sv.a1 || '09:00';
-      b1.value = sv.b1 || '14:00';
-      a2.value = sv.a2 || '16:00';
-      b2.value = sv.b2 || '20:00';
+      a1.value = sv.a1 || '';
+      b1.value = sv.b1 || '';
+      a2.value = sv.a2 || '';
+      b2.value = sv.b2 || '';
       const mark = ()=> tr.classList.toggle('sched-defined', rowDefined(act, inputs));
       function sync(){
         state[d.k] = { act:act.checked, a1:a1.value, b1:b1.value, a2:a2.value, b2:b2.value };
@@ -2141,4 +2156,7 @@ function mxResetLogoPreview(){
   }
   mxSetLogoSource('');
 }
+
+
+
 
