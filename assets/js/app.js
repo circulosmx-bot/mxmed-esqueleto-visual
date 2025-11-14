@@ -665,6 +665,7 @@ $(function(){
           const slot = mxGetLogoSlot();
           const uploadLogo = document.querySelector('.mf-upload[data-type="logo"]');
           const inputLogo = document.getElementById('cons-logo');
+          const drop = slot?.querySelector('.logo-slot-drop');
           if(prevBox){
             prevBox.style.display = 'none';
             prevBox.setAttribute('hidden','hidden');
@@ -674,6 +675,9 @@ $(function(){
             slot.classList.remove('show-preview');
             slot.classList.remove('has-logo');
           }
+          if(drop){
+            drop.style.removeProperty('display');
+          }
           if(uploadLogo){
             uploadLogo.classList.remove('has-logo');
             const ghost = uploadLogo.querySelector('.mf-ghost');
@@ -682,7 +686,11 @@ $(function(){
               ghost.removeAttribute('aria-hidden');
             }
           }
-          if(inputLogo){ inputLogo.value = ''; }
+          if(inputLogo){
+            inputLogo.value = '';
+            inputLogo.removeAttribute('disabled');
+            inputLogo.disabled = false;
+          }
           mxToggleLogoManualMsg(false);
           mxSetLogoSource('');
         };
