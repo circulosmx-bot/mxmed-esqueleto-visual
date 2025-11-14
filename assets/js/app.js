@@ -527,8 +527,16 @@ $(function(){
   const $$ = (s,c=document)=>Array.from(c.querySelectorAll(s));
   $$('.mf-upload').forEach(box=>{
     const input = box.querySelector('.mf-input');
-    const prev  = box.querySelector('.mf-prev');
+    if(!input) return;
+    let prev  = box.querySelector('.mf-prev');
+    const previewTarget = box.dataset.previewTarget;
+    if((!prev || !prev.querySelector) && previewTarget){
+      const external = document.getElementById(previewTarget);
+      if(external) prev = external;
+    }
+    if(!prev) return;
     const img   = prev.querySelector('img');
+    if(!img) return;
 
     // click-to-upload
     box.addEventListener('click', e=>{
@@ -554,7 +562,14 @@ $(function(){
     function handle(file){
       if(!file.type.startsWith('image/')) return;
       const r = new FileReader();
-      r.onload = ev => { img.src = ev.target.result; prev.style.display='block'; };
+      r.onload = ev => {
+        img.src = ev.target.result;
+        prev.removeAttribute('hidden');
+        prev.style.display = previewTarget ? 'flex' : 'block';
+        const slot = box.closest('.logo-slot');
+        if(slot){ slot.classList.add('show-preview'); }
+        if(box.dataset.type === 'logo'){ box.classList.add('has-logo'); }
+      };
       r.readAsDataURL(file);
     }
 
@@ -1404,17 +1419,25 @@ $(function(){
   function applyAssocUI(s){
     const img = document.getElementById('cons-logo-img');
     const prev = document.getElementById('cons-logo-prev');
+    const slot = document.getElementById('cons-logo-slot');
     const uploadLogo = document.querySelector('.mf-upload[data-type="logo"]');
-    if(img && prev && s.logo_url){
+    if(img && s.logo_url){
       img.src = s.logo_url;
-      prev.style.display = 'block';
-      if(uploadLogo){
-        uploadLogo.classList.add('has-logo');
-        const ghost = uploadLogo.querySelector('.mf-ghost');
-        if(ghost){
-          ghost.style.display = 'none';
-          ghost.setAttribute('aria-hidden','true');
-        }
+    }
+    if(prev){
+      prev.removeAttribute('hidden');
+      prev.style.display = 'flex';
+    }
+    if(slot){
+      slot.classList.add('show-preview');
+      slot.classList.add('has-logo');
+    }
+    if(uploadLogo){
+      uploadLogo.classList.add('has-logo');
+      const ghost = uploadLogo.querySelector('.mf-ghost');
+      if(ghost){
+        ghost.style.display = 'none';
+        ghost.setAttribute('aria-hidden','true');
       }
     }
     const sync = document.getElementById('cons-logo-sync'); if(sync) sync.style.display = 'block';
@@ -1457,8 +1480,16 @@ $(function(){
     const file = document.getElementById('cons-logo'); if(file) file.removeAttribute('disabled');
     const prev = document.getElementById('cons-logo-prev');
     const img  = document.getElementById('cons-logo-img');
-    if(prev){ prev.style.display = 'none'; }
+    const slot = document.getElementById('cons-logo-slot');
+    if(prev){
+      prev.style.display = 'none';
+      prev.setAttribute('hidden','hidden');
+    }
     if(img){ img.src=''; }
+    if(slot){
+      slot.classList.remove('show-preview');
+      slot.classList.remove('has-logo');
+    }
     const grp = document.getElementById('cons-grupo-nombre'); if(grp){ grp.classList.remove('grp-selected'); }
     const uploadLogo = document.querySelector('.mf-upload[data-type="logo"]');
     if(uploadLogo){
@@ -1803,8 +1834,16 @@ $(function(){
       try{
         const prev = document.getElementById('cons-logo-prev');
         const img  = document.getElementById('cons-logo-img');
-        if(prev){ prev.style.display = 'none'; }
+        const slot = document.getElementById('cons-logo-slot');
+        if(prev){
+          prev.style.display = 'none';
+          prev.setAttribute('hidden','hidden');
+        }
         if(img){ img.src = ''; }
+        if(slot){
+          slot.classList.remove('show-preview');
+          slot.classList.remove('has-logo');
+        }
         const uploadLogo = document.querySelector('.mf-upload[data-type="logo"]');
         if(uploadLogo){ uploadLogo.classList.remove('has-logo'); }
         const file = document.getElementById('cons-logo'); if(file){ file.removeAttribute('disabled'); file.value=''; }

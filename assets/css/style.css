@@ -601,6 +601,27 @@ body{margin:0;background:var(--mm-fondo-base);}
 @media(max-width:900px){.mf-upload-grid{grid-template-columns:1fr}}
 .mf-upload{position:relative;border:1.2px dashed #99bfd0;border-radius:12px;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;transition:.2s;background:#fff}
 .mf-upload.square{aspect-ratio:1/1;max-width:280px;margin-inline:auto}
+.logo-slot{display:flex;flex-direction:column;align-items:center;gap:6px}
+.logo-slot-preview{
+  position:relative;
+  width:100%;
+  max-width:280px;
+  aspect-ratio:1/1;
+  margin-inline:auto;
+  border-radius:12px;
+  overflow:hidden;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background:transparent;
+}
+.logo-slot-preview img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+.logo-slot.show-preview .logo-slot-drop{display:none}
+.logo-slot.show-preview .logo-slot-preview{display:flex}
 .mf-upload.dragover{background:#f0f8fb;border-color:#2c6b4e}
 .mf-illus{width:76px;height:76px;opacity:.9;margin-bottom:6px}
 .mf-upload[data-type="foto"] .mf-illus{
@@ -644,19 +665,6 @@ body{margin:0;background:var(--mm-fondo-base);}
   background:transparent;
   padding:0;
   min-height:auto;
-}
-#cons-logo-prev .foto-x{
-  display:inline-flex;
-  width:24px;
-  height:24px;
-  align-items:center;
-  justify-content:center;
-  background:#EF5070;
-  color:#fff;
-  border-radius:50%;
-  font-size:16px;
-  border:none;
-  cursor:pointer;
 }
 
 /* Resaltado de especialidad seleccionada (solo la elegida) */
@@ -1142,7 +1150,15 @@ body{margin:0;background:var(--mm-fondo-base);}
 /* Consultorio: flags (estacionamiento/accesible) – bajar 10px */
 .cons-flags{ margin-top:10px; }
 /* Ajuste de botón X en preview de logotipo del grupo */
-#cons-logo-prev .foto-x{ top:6px; right:6px; }
+#cons-logo-prev{ position:relative; }
+#cons-logo-prev .foto-x{
+  top:8px;
+  right:8px;
+  width:28px;
+  height:28px;
+  font-size:18px;
+  z-index:2;
+}
 .grupo-medico-bar{
   display:inline-block;
   background:rgba(0,173,193,0.65);

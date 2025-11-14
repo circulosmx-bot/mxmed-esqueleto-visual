@@ -116,3 +116,4 @@
 [2025-11-12] Dropzone logotipo: modo has-logo ahora quita bordes/padding y el logo usa object-fit:contain.
 [2025-11-12] Dropzone logo: contenido original envuelto en .mf-ghost y oculto cuando hay logotipo.
 [2025-11-12] Dropzone logo: JS oculta/rehabilita .mf-ghost al asociar o limpiar para evitar empalmes.
+[2025-11-12] Dropzone logotipo: logo-slot alterna entre drop y vista de logotipo, ocultando completamente elementos originales cuando hay match.
