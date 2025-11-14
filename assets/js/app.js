@@ -662,7 +662,7 @@ $(function(){
         const clearLogo = ()=>{
           const prevBox = document.getElementById('cons-logo-prev');
           const imgEl = document.getElementById('cons-logo-img');
-          const slot = getLogoSlot();
+          const slot = mxGetLogoSlot();
           const uploadLogo = document.querySelector('.mf-upload[data-type="logo"]');
           const inputLogo = document.getElementById('cons-logo');
           if(prevBox){

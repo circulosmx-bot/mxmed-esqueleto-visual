@@ -129,3 +129,4 @@
 [2025-11-12] Fotografía principal: mensaje movido fuera de la dropzone y alineado como el del logotipo para que sea visible bajo la tarjeta.
 [2025-11-12] Dropzones de logotipo/foto alineadas: ambos contenedores usan el mismo ancho y aspecto para que queden simétricos.
 [2025-11-12] Dropzone logotipo: soporte para carga manual con mensaje "Logotipo del grupo médico asociado a tu consultorio" y confirmación dedicada para eliminarlo.
+[2025-11-12] Fix: al confirmar “Sí, quitar” en logotipo manual el drop vuelve a mostrarse porque se restauró el helper correcto.
