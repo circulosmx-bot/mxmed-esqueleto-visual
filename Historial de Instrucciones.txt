@@ -117,3 +117,4 @@
 [2025-11-12] Dropzone logo: contenido original envuelto en .mf-ghost y oculto cuando hay logotipo.
 [2025-11-12] Dropzone logo: JS oculta/rehabilita .mf-ghost al asociar o limpiar para evitar empalmes.
 [2025-11-12] Dropzone logotipo: logo-slot alterna entre drop y vista de logotipo, ocultando completamente elementos originales cuando hay match.
+[2025-11-12] Dropzone logotipo: ghost interno vuelve a una columna centrada para igualar estilo del drop derecho.
