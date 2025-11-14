@@ -601,7 +601,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 @media(max-width:900px){.mf-upload-grid{grid-template-columns:1fr}}
 .mf-upload{position:relative;border:1.2px dashed #99bfd0;border-radius:12px;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;transition:.2s;background:#fff}
 .mf-upload.square{aspect-ratio:1/1;max-width:280px;margin-inline:auto}
-.logo-slot{
+.logo-slot,
+.foto-slot{
   display:flex;
   flex-direction:column;
   align-items:center;

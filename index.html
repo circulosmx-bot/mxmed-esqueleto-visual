@@ -762,18 +762,20 @@
                       </div>
 
                       <!-- Fotografía principal del consultorio -->
-                      <div class="mf-upload square" data-type="foto">
-                        <span class="mf-illus material-symbols-outlined" aria-hidden="true">add_a_photo</span>
-                        <div class="mf-title">Fotografía principal del consultorio</div>
-                        <div class="mf-sub">Arrastra aquí o haz clic para subirla</div>
-                        <div class="mf-actions">
-                          <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
-                          <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cámara</button>
-                        </div>
-                        <input id="cons-foto" type="file" accept="image/*" class="d-none mf-input">
-                        <div id="cons-foto-prev" class="mf-prev" hidden>
-                          <button type="button" class="foto-x" id="cons-foto-del" title="Eliminar fotografía">&times;</button>
-                          <img id="cons-foto-img" alt="preview fotografía">
+                      <div class="foto-slot" id="cons-foto-slot">
+                        <div class="mf-upload square" data-type="foto">
+                          <span class="mf-illus material-symbols-outlined" aria-hidden="true">add_a_photo</span>
+                          <div class="mf-title">Fotografía principal del consultorio</div>
+                          <div class="mf-sub">Arrastra aquí o haz clic para subirla</div>
+                          <div class="mf-actions">
+                            <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cámara</button>
+                          </div>
+                          <input id="cons-foto" type="file" accept="image/*" class="d-none mf-input">
+                          <div id="cons-foto-prev" class="mf-prev" hidden>
+                            <button type="button" class="foto-x" id="cons-foto-del" title="Eliminar fotografía">&times;</button>
+                            <img id="cons-foto-img" alt="preview fotografía">
+                          </div>
                         </div>
                         <div id="cons-foto-sync" class="mt-1" style="display:none;">
                           <span class="cons-logo-sync-msg">Fotografía principal asignada a tu consultorio</span>
