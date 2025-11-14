@@ -128,3 +128,4 @@
 [2025-11-12] Fotografía principal: tras cargar se muestra texto “Fotografía principal asignada a tu consultorio” y se oculta al eliminar o reiniciar.
 [2025-11-12] Fotografía principal: mensaje movido fuera de la dropzone y alineado como el del logotipo para que sea visible bajo la tarjeta.
 [2025-11-12] Dropzones de logotipo/foto alineadas: ambos contenedores usan el mismo ancho y aspecto para que queden simétricos.
+[2025-11-12] Dropzone logotipo: soporte para carga manual con mensaje "Logotipo del grupo médico asociado a tu consultorio" y confirmación dedicada para eliminarlo.

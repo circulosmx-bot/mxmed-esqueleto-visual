@@ -759,6 +759,9 @@
                         <div id="cons-logo-sync" class="mt-1" style="display:none;">
                           <span class="cons-logo-sync-msg">Tu consultorio está vinculado a este grupo</span>
                         </div>
+                        <div id="cons-logo-manual" class="mt-1" style="display:none;">
+                          <span class="cons-logo-sync-msg">Logotipo del grupo médico asociado a tu consultorio</span>
+                        </div>
                       </div>
 
                       <!-- Fotografía principal del consultorio -->
@@ -839,6 +842,23 @@
               <div class="modal-footer justify-content-center">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-primary" id="modalFotoPrincipalRemoveYes">Sí, quitar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal: Quitar logotipo manual -->
+        <div class="modal fade" id="modalLogoManualRemove" tabindex="-1" aria-labelledby="modalLogoManualRemoveLabel" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="modalLogoManualRemoveLabel">Quitar logotipo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+              </div>
+              <div class="modal-body text-center">¿Deseas quitar esta imagen como Logotipo del grupo médico asociado a tu consultorio?</div>
+              <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="modalLogoManualRemoveYes">Sí, quitar</button>
               </div>
             </div>
           </div>

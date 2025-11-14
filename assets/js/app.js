@@ -556,6 +556,31 @@ $(function(){
     }
     modal.show();
   }
+
+  function confirmLogoManualRemoval(onConfirm, onCancel){
+    const modalEl = document.getElementById('modalLogoManualRemove');
+    if(!modalEl){
+      const ok = confirm('¿Deseas quitar esta imagen como Logotipo del grupo médico asociado a tu consultorio?');
+      if(ok) onConfirm?.(); else onCancel?.();
+      return;
+    }
+    const yesBtn = document.getElementById('modalLogoManualRemoveYes');
+    const modal = window.bootstrap?.Modal?.getOrCreateInstance ? window.bootstrap.Modal.getOrCreateInstance(modalEl) : new bootstrap.Modal(modalEl);
+    const cleanup = ()=>{ if(yesBtn) yesBtn.onclick = null; };
+    modalEl.addEventListener('hidden.bs.modal', function handler(){
+      modalEl.removeEventListener('hidden.bs.modal', handler);
+      cleanup();
+      onCancel?.();
+    }, { once:true });
+    if(yesBtn){
+      yesBtn.onclick = ()=>{
+        cleanup();
+        onConfirm?.();
+        modal.hide();
+      };
+    }
+    modal.show();
+  }
   $$('.mf-upload').forEach(box=>{
     const input = box.querySelector('.mf-input');
     if(!input) return;
@@ -599,8 +624,16 @@ $(function(){
         prev.removeAttribute('hidden');
         prev.style.display = previewTarget ? 'flex' : 'block';
         const slot = box.closest('.logo-slot');
-        if(slot){ slot.classList.add('show-preview'); }
+        if(slot){
+          slot.classList.add('show-preview');
+          slot.classList.add('has-logo');
+        }
         if(box.dataset.type === 'logo'){ box.classList.add('has-logo'); }
+        if(inputId === 'cons-logo'){
+          mxSetLogoSource('manual');
+          mxToggleLogoManualMsg(true);
+          mxToggleLogoSyncMsg(false);
+        }
         if(inputId === 'cons-foto'){ toggleFotoPrincipalMsg(true); }
       };
       r.readAsDataURL(file);
@@ -619,6 +652,41 @@ $(function(){
           toggleFotoPrincipalMsg(false);
         };
         confirmFotoPrincipalRemoval(clearFoto);
+      });
+    }
+    if(delBtn && inputId === 'cons-logo'){
+      delBtn.addEventListener('click', ev=>{
+        if(mxGetLogoSource() !== 'manual') return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        const clearLogo = ()=>{
+          const prevBox = document.getElementById('cons-logo-prev');
+          const imgEl = document.getElementById('cons-logo-img');
+          const slot = getLogoSlot();
+          const uploadLogo = document.querySelector('.mf-upload[data-type="logo"]');
+          const inputLogo = document.getElementById('cons-logo');
+          if(prevBox){
+            prevBox.style.display = 'none';
+            prevBox.setAttribute('hidden','hidden');
+          }
+          if(imgEl){ imgEl.src = ''; }
+          if(slot){
+            slot.classList.remove('show-preview');
+            slot.classList.remove('has-logo');
+          }
+          if(uploadLogo){
+            uploadLogo.classList.remove('has-logo');
+            const ghost = uploadLogo.querySelector('.mf-ghost');
+            if(ghost){
+              ghost.style.display = '';
+              ghost.removeAttribute('aria-hidden');
+            }
+          }
+          if(inputLogo){ inputLogo.value = ''; }
+          mxToggleLogoManualMsg(false);
+          mxSetLogoSource('');
+        };
+        confirmLogoManualRemoval(clearLogo);
       });
     }
 
@@ -1485,6 +1553,7 @@ $(function(){
     if(slot){
       slot.classList.add('show-preview');
       slot.classList.add('has-logo');
+      mxSetLogoSource('assoc');
     }
     if(uploadLogo){
       uploadLogo.classList.add('has-logo');
@@ -1494,7 +1563,8 @@ $(function(){
         ghost.setAttribute('aria-hidden','true');
       }
     }
-    const sync = document.getElementById('cons-logo-sync'); if(sync) sync.style.display = 'block';
+    mxToggleLogoSyncMsg(true);
+    mxToggleLogoManualMsg(false);
     const file = document.getElementById('cons-logo'); if(file) file.setAttribute('disabled','disabled');
     // Bloquear campos clave de dirección cuando hay asociación
     ;['cp','colonia','municipio','estado'].forEach(id=>{
@@ -1530,7 +1600,9 @@ $(function(){
   }
 
   function removeAssocUI(){
-    const sync = document.getElementById('cons-logo-sync'); if(sync) sync.style.display = 'none';
+    mxToggleLogoSyncMsg(false);
+    mxToggleLogoManualMsg(false);
+    mxSetLogoSource('');
     const file = document.getElementById('cons-logo'); if(file) file.removeAttribute('disabled');
     const prev = document.getElementById('cons-logo-prev');
     const img  = document.getElementById('cons-logo-img');
@@ -1897,11 +1969,13 @@ $(function(){
         if(slot){
           slot.classList.remove('show-preview');
           slot.classList.remove('has-logo');
+          delete slot.dataset.logoSource;
         }
         const uploadLogo = document.querySelector('.mf-upload[data-type="logo"]');
         if(uploadLogo){ uploadLogo.classList.remove('has-logo'); }
         const file = document.getElementById('cons-logo'); if(file){ file.removeAttribute('disabled'); file.value=''; }
         const sync = document.getElementById('cons-logo-sync'); if(sync) sync.style.display = 'none';
+        const manualMsg = document.getElementById('cons-logo-manual'); if(manualMsg) manualMsg.style.display = 'none';
         const fotoPrev = document.getElementById('cons-foto-prev');
         const fotoImg = document.getElementById('cons-foto-img');
         const fotoInput = document.getElementById('cons-foto');
@@ -1949,3 +2023,28 @@ $(function(){
 
 
 
+function mxGetLogoSlot(){
+  return document.getElementById('cons-logo-slot');
+}
+function mxSetLogoSource(mode){
+  const slot = mxGetLogoSlot();
+  if(!slot){
+    return;
+  }
+  if(mode){
+    slot.dataset.logoSource = mode;
+  }else{
+    delete slot.dataset.logoSource;
+  }
+}
+function mxGetLogoSource(){
+  return mxGetLogoSlot()?.dataset.logoSource || '';
+}
+function mxToggleLogoSyncMsg(show){
+  const msg = document.getElementById('cons-logo-sync');
+  if(msg) msg.style.display = show ? 'block' : 'none';
+}
+function mxToggleLogoManualMsg(show){
+  const msg = document.getElementById('cons-logo-manual');
+  if(msg) msg.style.display = show ? 'block' : 'none';
+}
