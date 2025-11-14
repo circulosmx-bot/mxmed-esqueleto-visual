@@ -131,3 +131,4 @@
 [2025-11-12] Dropzone logotipo: soporte para carga manual con mensaje "Logotipo del grupo médico asociado a tu consultorio" y confirmación dedicada para eliminarlo.
 [2025-11-12] Fix: al confirmar “Sí, quitar” en logotipo manual el drop vuelve a mostrarse porque se restauró el helper correcto.
 [2025-11-12] Ajuste: tras "Sí, quitar" de logotipo manual se restablece explícitamente la dropzone original (display default e input habilitado).
+[2025-11-12] Dropzone logotipo manual: se añadió helper de reseteo compartido para que la tarjeta reaparezca igual que en la fotografía al quitar la imagen.

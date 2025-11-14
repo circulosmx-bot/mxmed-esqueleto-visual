@@ -660,39 +660,9 @@ $(function(){
         ev.preventDefault();
         ev.stopPropagation();
         const clearLogo = ()=>{
-          const prevBox = document.getElementById('cons-logo-prev');
-          const imgEl = document.getElementById('cons-logo-img');
-          const slot = mxGetLogoSlot();
-          const uploadLogo = document.querySelector('.mf-upload[data-type="logo"]');
-          const inputLogo = document.getElementById('cons-logo');
-          const drop = slot?.querySelector('.logo-slot-drop');
-          if(prevBox){
-            prevBox.style.display = 'none';
-            prevBox.setAttribute('hidden','hidden');
-          }
-          if(imgEl){ imgEl.src = ''; }
-          if(slot){
-            slot.classList.remove('show-preview');
-            slot.classList.remove('has-logo');
-          }
-          if(drop){
-            drop.style.removeProperty('display');
-          }
-          if(uploadLogo){
-            uploadLogo.classList.remove('has-logo');
-            const ghost = uploadLogo.querySelector('.mf-ghost');
-            if(ghost){
-              ghost.style.display = '';
-              ghost.removeAttribute('aria-hidden');
-            }
-          }
-          if(inputLogo){
-            inputLogo.value = '';
-            inputLogo.removeAttribute('disabled');
-            inputLogo.disabled = false;
-          }
+          mxResetLogoPreview();
           mxToggleLogoManualMsg(false);
-          mxSetLogoSource('');
+          mxToggleLogoSyncMsg(false);
         };
         confirmLogoManualRemoval(clearLogo);
       });
@@ -1608,32 +1578,10 @@ $(function(){
   }
 
   function removeAssocUI(){
+    mxResetLogoPreview();
     mxToggleLogoSyncMsg(false);
     mxToggleLogoManualMsg(false);
-    mxSetLogoSource('');
-    const file = document.getElementById('cons-logo'); if(file) file.removeAttribute('disabled');
-    const prev = document.getElementById('cons-logo-prev');
-    const img  = document.getElementById('cons-logo-img');
-    const slot = document.getElementById('cons-logo-slot');
-    if(prev){
-      prev.style.display = 'none';
-      prev.setAttribute('hidden','hidden');
-    }
-    if(img){ img.src=''; }
-    if(slot){
-      slot.classList.remove('show-preview');
-      slot.classList.remove('has-logo');
-    }
     const grp = document.getElementById('cons-grupo-nombre'); if(grp){ grp.classList.remove('grp-selected'); }
-    const uploadLogo = document.querySelector('.mf-upload[data-type="logo"]');
-    if(uploadLogo){
-      uploadLogo.classList.remove('has-logo');
-      const ghost = uploadLogo.querySelector('.mf-ghost');
-      if(ghost){
-        ghost.style.display = '';
-        ghost.removeAttribute('aria-hidden');
-      }
-    }
   }
 
   // Modal para desvincular grupo (con botones centrados y "Sí desvincular")
@@ -1966,24 +1914,9 @@ $(function(){
 
       // Restablecer UI de asociación de grupo
       try{
-        const prev = document.getElementById('cons-logo-prev');
-        const img  = document.getElementById('cons-logo-img');
-        const slot = document.getElementById('cons-logo-slot');
-        if(prev){
-          prev.style.display = 'none';
-          prev.setAttribute('hidden','hidden');
-        }
-        if(img){ img.src = ''; }
-        if(slot){
-          slot.classList.remove('show-preview');
-          slot.classList.remove('has-logo');
-          delete slot.dataset.logoSource;
-        }
-        const uploadLogo = document.querySelector('.mf-upload[data-type="logo"]');
-        if(uploadLogo){ uploadLogo.classList.remove('has-logo'); }
-        const file = document.getElementById('cons-logo'); if(file){ file.removeAttribute('disabled'); file.value=''; }
-        const sync = document.getElementById('cons-logo-sync'); if(sync) sync.style.display = 'none';
-        const manualMsg = document.getElementById('cons-logo-manual'); if(manualMsg) manualMsg.style.display = 'none';
+        mxResetLogoPreview();
+        mxToggleLogoSyncMsg(false);
+        mxToggleLogoManualMsg(false);
         const fotoPrev = document.getElementById('cons-foto-prev');
         const fotoImg = document.getElementById('cons-foto-img');
         const fotoInput = document.getElementById('cons-foto');
@@ -2055,4 +1988,39 @@ function mxToggleLogoSyncMsg(show){
 function mxToggleLogoManualMsg(show){
   const msg = document.getElementById('cons-logo-manual');
   if(msg) msg.style.display = show ? 'block' : 'none';
+}
+
+function mxResetLogoPreview(){
+  const prev = document.getElementById('cons-logo-prev');
+  const img  = document.getElementById('cons-logo-img');
+  const slot = mxGetLogoSlot();
+  const drop = slot?.querySelector('.logo-slot-drop');
+  if(prev){
+    prev.style.display = 'none';
+    prev.setAttribute('hidden','hidden');
+  }
+  if(img){ img.src = ''; }
+  if(slot){
+    slot.classList.remove('show-preview');
+    slot.classList.remove('has-logo');
+  }
+  if(drop){
+    drop.style.removeProperty('display');
+  }
+  const uploadLogo = document.querySelector('.mf-upload[data-type="logo"]');
+  if(uploadLogo){
+    uploadLogo.classList.remove('has-logo');
+    const ghost = uploadLogo.querySelector('.mf-ghost');
+    if(ghost){
+      ghost.style.display = '';
+      ghost.removeAttribute('aria-hidden');
+    }
+  }
+  const file = document.getElementById('cons-logo');
+  if(file){
+    file.removeAttribute('disabled');
+    file.disabled = false;
+    file.value = '';
+  }
+  mxSetLogoSource('');
 }
