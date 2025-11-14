@@ -1051,6 +1051,11 @@ $(function(){
     function load(){ try { return JSON.parse(localStorage.getItem(key)||'{}'); } catch(e){ return {}; } }
     function save(v){ localStorage.setItem(key, JSON.stringify(v)); }
     const state = load();
+    function rowDefined(act, inputs){
+      if(act?.checked) return true;
+      return inputs.some(inp=> (inp.value||'').trim().length>0);
+    }
+
     dias.forEach(d=>{
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${d.lbl}</td>
@@ -1075,13 +1080,36 @@ $(function(){
       const b1 = tr.querySelector(`#sch-b1-${d.k}`);
       const a2 = tr.querySelector(`#sch-a2-${d.k}`);
       const b2 = tr.querySelector(`#sch-b2-${d.k}`);
+      const inputs = [a1,b1,a2,b2];
       const sv = state[d.k] || {};
       act.checked = !!sv.act; a1.value = sv.a1||''; b1.value = sv.b1||''; a2.value = sv.a2||''; b2.value = sv.b2||'';
-      function sync(){ state[d.k] = { act:act.checked, a1:a1.value, b1:b1.value, a2:a2.value, b2:b2.value }; save(state); }
-      [act,a1,b1,a2,b2].forEach(el=> el.addEventListener('change', sync));
+      const mark = ()=> tr.classList.toggle('sched-defined', rowDefined(act, inputs));
+      function sync(){
+        state[d.k] = { act:act.checked, a1:a1.value, b1:b1.value, a2:a2.value, b2:b2.value };
+        save(state);
+        mark();
+      }
+      act.addEventListener('change', sync);
+      inputs.forEach(inp=>{
+        inp.addEventListener('change', sync);
+        inp.addEventListener('input', ()=>{
+          if((inp.value||'').trim().length && !act.checked){
+            act.checked = true;
+          }
+          sync();
+        });
+      });
+      if(rowDefined(act, inputs) && !act.checked){
+        act.checked = true;
+        sync();
+      }else{
+        mark();
+      }
     });
     document.getElementById('sched-copy-mon')?.addEventListener('click', ()=>{
-      const m = state.mon || {}; ['tue','wed','thu','fri','sat','sun'].forEach(k=>{ state[k] = {...m}; }); save(state); location.reload();
+      const m = state.mon || {};
+      ['tue','wed','thu','fri'].forEach(k=>{ state[k] = {...m}; });
+      save(state); location.reload();
     });
     document.getElementById('sched-clear')?.addEventListener('click', ()=>{ localStorage.removeItem(key); location.reload(); });
   }
@@ -1195,28 +1223,47 @@ $(function(){
       const body = container.querySelector('#sched-body-2');
       if(!body) return;
       body.innerHTML='';
-      const dias=[{k:'mon',lbl:'Lunes'},{k:'tue',lbl:'Martes'},{k:'wed',lbl:'MiÃ©rcoles'},{k:'thu',lbl:'Jueves'},{k:'fri',lbl:'Viernes'},{k:'sat',lbl:'SÃ¡bado'},{k:'sun',lbl:'Domingo'}];
+      const dias=[{k:'mon',lbl:'Lunes'},{k:'tue',lbl:'Martes'},{k:'wed',lbl:'MiǸrcoles'},{k:'thu',lbl:'Jueves'},{k:'fri',lbl:'Viernes'},{k:'sat',lbl:'Sǭbado'},{k:'sun',lbl:'Domingo'}];
       const key='mxmed_cons_schedules'+(keySuffix||'');
       const load=()=>{ try{return JSON.parse(localStorage.getItem(key)||'{}');}catch(e){return{}} };
       const save=v=>localStorage.setItem(key,JSON.stringify(v));
       const state=load();
+      const rowDefined = (act, inputs)=> act?.checked || inputs.some(inp=> (inp.value||'').trim());
       dias.forEach(d=>{
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${d.lbl}</td><td><input type=\"checkbox\" class=\"form-check-input\" id=\"sch-act-${d.k}${keySuffix||''}\"></td><td><div class=\"d-flex align-items-center gap-1\"><input type=\"time\" class=\"form-control form-control-sm\" id=\"sch-a1-${d.k}${keySuffix||''}\"><span>â€“</span><input type=\"time\" class=\"form-control form-control-sm\" id=\"sch-b1-${d.k}${keySuffix||''}\"></div></td><td><div class=\"d-flex align-items-center gap-1\"><input type=\"time\" class=\"form-control form-control-sm\" id=\"sch-a2-${d.k}${keySuffix||''}\"><span>â€“</span><input type=\"time\" class=\"form-control form-control-sm\" id=\"sch-b2-${d.k}${keySuffix||''}\"></div></td>`;
+        tr.innerHTML=`<td>${d.lbl}</td><td><input type="checkbox" class="form-check-input" id="sch-act-${d.k}${keySuffix||''}"></td><td><div class="d-flex align-items-center gap-1"><input type="time" class="form-control form-control-sm" id="sch-a1-${d.k}${keySuffix||''}"><span>�?"</span><input type="time" class="form-control form-control-sm" id="sch-b1-${d.k}${keySuffix||''}"></div></td><td><div class="d-flex align-items-center gap-1"><input type="time" class="form-control form-control-sm" id="sch-a2-${d.k}${keySuffix||''}"><span>�?"</span><input type="time" class="form-control form-control-sm" id="sch-b2-${d.k}${keySuffix||''}"></div></td>`;
         body.appendChild(tr);
         const act=tr.querySelector(`#sch-act-${d.k}${keySuffix||''}`);
         const a1=tr.querySelector(`#sch-a1-${d.k}${keySuffix||''}`);
         const b1=tr.querySelector(`#sch-b1-${d.k}${keySuffix||''}`);
         const a2=tr.querySelector(`#sch-a2-${d.k}${keySuffix||''}`);
         const b2=tr.querySelector(`#sch-b2-${d.k}${keySuffix||''}`);
+        const inputs=[a1,b1,a2,b2];
         const sv=state[d.k]||{};
         act.checked=!!sv.act; a1.value=sv.a1||''; b1.value=sv.b1||''; a2.value=sv.a2||''; b2.value=sv.b2||'';
-        const sync=()=>{ state[d.k]={act:act.checked,a1:a1.value,b1:b1.value,a2:a2.value,b2:b2.value}; save(state); };
-        [act,a1,b1,a2,b2].forEach(el=> el.addEventListener('change', sync));
+        const sync=()=>{
+          state[d.k]={act:act.checked,a1:a1.value,b1:b1.value,a2:a2.value,b2:b2.value};
+          save(state);
+          tr.classList.toggle('sched-defined', rowDefined(act, inputs));
+        };
+        act.addEventListener('change', sync);
+        inputs.forEach(el=>{
+          el.addEventListener('change', sync);
+          el.addEventListener('input', ()=>{
+            if((el.value||'').trim() && !act.checked){
+              act.checked = true;
+            }
+            sync();
+          });
+        });
+        if(rowDefined(act, inputs) && !act.checked){
+          act.checked = true;
+        }
+        sync();
       });
       const copyBtn = container.querySelector('#sched-copy-mon-2');
       const clearBtn= container.querySelector('#sched-clear-2');
-      copyBtn?.addEventListener('click', ()=>{ const st=load(); const m=st.mon||{}; ['tue','wed','thu','fri','sat','sun'].forEach(k=>{ st[k]={...m}; }); save(st); location.reload(); });
+      copyBtn?.addEventListener('click', ()=>{ const st=load(); const m=st.mon||{}; ['tue','wed','thu','fri'].forEach(k=>{ st[k]={...m}; }); save(st); location.reload(); });
       clearBtn?.addEventListener('click', ()=>{ localStorage.removeItem(key); location.reload(); });
     };
   })();
@@ -1925,6 +1972,25 @@ $(function(){
 
       // Restablecer UI de asociación de grupo
       try{
+        const resetHorariosCampos = ()=>{
+          try{
+            document.querySelectorAll('.sched-table tr').forEach(tr=> tr.classList.remove('sched-defined'));
+            document.querySelectorAll('input[id^="sch-act-"]').forEach(el=>{
+              el.checked = false;
+              try{ el.dispatchEvent(new Event('change')); }catch(_){ }
+            });
+            ['a1','b1','a2','b2'].forEach(slot=>{
+              document.querySelectorAll(`input[id^="sch-${slot}-"]`).forEach(inp=>{
+                inp.value = '';
+                try{
+                  inp.dispatchEvent(new Event('input'));
+                  inp.dispatchEvent(new Event('change'));
+                }catch(_){ }
+              });
+            });
+          }catch(_){ }
+        };
+        resetHorariosCampos();
         mxResetLogoPreview();
         mxToggleLogoSyncMsg(false);
         mxToggleLogoManualMsg(false);
@@ -2067,3 +2133,4 @@ function mxResetLogoPreview(){
   }
   mxSetLogoSource('');
 }
+
