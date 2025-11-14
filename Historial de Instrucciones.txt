@@ -119,3 +119,4 @@
 [2025-11-12] Dropzone logotipo: logo-slot alterna entre drop y vista de logotipo, ocultando completamente elementos originales cuando hay match.
 [2025-11-12] Dropzone logotipo: ghost interno vuelve a una columna centrada para igualar estilo del drop derecho.
 [2025-11-12] Dropzones: wrapper logo-slot fuerza mismas dimensiones que la drop derecha (width/height full y centrado).
+[2025-11-12] Mensaje de sincronización actualizado: nuevo texto doble línea sin badge y color #00ADC1.

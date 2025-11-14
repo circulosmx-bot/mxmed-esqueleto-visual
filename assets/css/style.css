@@ -636,6 +636,13 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 .logo-slot.show-preview .logo-slot-drop{display:none}
 .logo-slot.show-preview .logo-slot-preview{display:flex}
+.cons-logo-sync-msg{
+  display:inline-block;
+  color:#00ADC1;
+  font-weight:600;
+  text-align:center;
+  line-height:1.3;
+}
 .mf-upload.dragover{background:#f0f8fb;border-color:#2c6b4e}
 .mf-illus{width:76px;height:76px;opacity:.9;margin-bottom:6px}
 .mf-upload[data-type="foto"] .mf-illus{
