@@ -135,3 +135,4 @@
 [2025-11-12] Dropzone logotipo: se forzó display:flex por defecto y el helper limpia data-logoSource para que la tarjeta vuelva a ser visible al quitar.
 [2025-11-12] Dropzone logotipo: ahora se oculta/rehabilita con atributo hidden sobre .logo-slot-drop para evitar que desaparezca tras quitar.
 [2025-11-12] Dropzone logotipo: al eliminar se recrea un contenedor clonado y se reinyecta la lógica de carga para garantizar que reaparezca visualmente.
+[2025-11-13] Título: script separado assets/js/title-fix.js fija "MXMed 2025 · Perfil Médico" después de cargar app.js.
