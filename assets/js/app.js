@@ -526,6 +526,12 @@ $(function(){
 
   const $$ = (s,c=document)=>Array.from(c.querySelectorAll(s));
 
+  function toggleFotoPrincipalMsg(show){
+    const msg = document.getElementById('cons-foto-sync');
+    if(!msg) return;
+    msg.style.display = show ? 'block' : 'none';
+  }
+
   function confirmFotoPrincipalRemoval(onConfirm, onCancel){
     const modalEl = document.getElementById('modalFotoPrincipalRemove');
     if(!modalEl){
@@ -595,6 +601,7 @@ $(function(){
         const slot = box.closest('.logo-slot');
         if(slot){ slot.classList.add('show-preview'); }
         if(box.dataset.type === 'logo'){ box.classList.add('has-logo'); }
+        if(inputId === 'cons-foto'){ toggleFotoPrincipalMsg(true); }
       };
       r.readAsDataURL(file);
     }
@@ -609,6 +616,7 @@ $(function(){
           prev.style.display = 'none';
           prev.setAttribute('hidden','hidden');
           input.value = '';
+          toggleFotoPrincipalMsg(false);
         };
         confirmFotoPrincipalRemoval(clearFoto);
       });
@@ -1029,7 +1037,12 @@ $(function(){
       const f = e.target.files && e.target.files[0]; if(!f) return;
       const rd = new FileReader(); rd.onload = ev => {
         const img = document.getElementById('cons-foto-img'); const box = document.getElementById('cons-foto-prev');
-        if(img && box){ img.src = ev.target.result; box.style.display='block'; }
+        if(img && box){
+          img.src = ev.target.result;
+          box.style.display='block';
+          box.removeAttribute('hidden');
+          toggleFotoPrincipalMsg(true);
+        }
       }; rd.readAsDataURL(f);
     });
   }
@@ -1889,6 +1902,17 @@ $(function(){
         if(uploadLogo){ uploadLogo.classList.remove('has-logo'); }
         const file = document.getElementById('cons-logo'); if(file){ file.removeAttribute('disabled'); file.value=''; }
         const sync = document.getElementById('cons-logo-sync'); if(sync) sync.style.display = 'none';
+        const fotoPrev = document.getElementById('cons-foto-prev');
+        const fotoImg = document.getElementById('cons-foto-img');
+        const fotoInput = document.getElementById('cons-foto');
+        const fotoMsg = document.getElementById('cons-foto-sync');
+        if(fotoPrev){
+          fotoPrev.style.display = 'none';
+          fotoPrev.setAttribute('hidden','hidden');
+        }
+        if(fotoImg){ fotoImg.src = ''; }
+        if(fotoInput){ fotoInput.value = ''; }
+        if(fotoMsg){ fotoMsg.style.display = 'none'; }
         const rNo = document.getElementById('cons-grupo-no');
         const rSi = document.getElementById('cons-grupo-si');
         const grp = document.getElementById('cons-grupo-nombre');
