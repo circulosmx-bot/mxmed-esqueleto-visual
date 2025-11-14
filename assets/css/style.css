@@ -618,6 +618,11 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 .logo-slot-drop{
   width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  height:100%;
 }
 .foto-slot .mf-upload{
   width:100%;

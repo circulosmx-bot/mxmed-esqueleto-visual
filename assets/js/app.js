@@ -2003,6 +2003,7 @@ function mxResetLogoPreview(){
   if(slot){
     slot.classList.remove('show-preview');
     slot.classList.remove('has-logo');
+    delete slot.dataset.logoSource;
   }
   if(drop){
     drop.style.removeProperty('display');
