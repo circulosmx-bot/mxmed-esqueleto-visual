@@ -134,3 +134,4 @@
 [2025-11-12] Dropzone logotipo manual: se añadió helper de reseteo compartido para que la tarjeta reaparezca igual que en la fotografía al quitar la imagen.
 [2025-11-12] Dropzone logotipo: se forzó display:flex por defecto y el helper limpia data-logoSource para que la tarjeta vuelva a ser visible al quitar.
 [2025-11-12] Dropzone logotipo: ahora se oculta/rehabilita con atributo hidden sobre .logo-slot-drop para evitar que desaparezca tras quitar.
+[2025-11-12] Dropzone logotipo: al eliminar se recrea un contenedor clonado y se reinyecta la lógica de carga para garantizar que reaparezca visualmente.

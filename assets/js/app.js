@@ -581,7 +581,7 @@ $(function(){
     }
     modal.show();
   }
-  $$('.mf-upload').forEach(box=>{
+  function setupUploadBox(box){
     const input = box.querySelector('.mf-input');
     if(!input) return;
     let prev  = box.querySelector('.mf-prev');
@@ -676,7 +676,14 @@ $(function(){
       const el = document.getElementById('modalQR');
       if(window.bootstrap && el){ new bootstrap.Modal(el).show(); }
     }); }
-  });
+  }
+
+  window.mxSetupUploadBox = setupUploadBox;
+  $$('.mf-upload').forEach(setupUploadBox);
+  const logoDrop = document.querySelector('#cons-logo-slot .logo-slot-drop');
+  if(logoDrop){
+    window._mx_logoDropTemplate = logoDrop.outerHTML;
+  }
 })();
 
 // ===== Datos Personales: especialidades y validaciones =====
@@ -1971,6 +1978,7 @@ $(function(){
 function mxGetLogoSlot(){
   return document.getElementById('cons-logo-slot');
 }
+window._mx_logoDropTemplate = window._mx_logoDropTemplate || '';
 function mxSetLogoSource(mode){
   const slot = mxGetLogoSlot();
   if(!slot){
@@ -1994,11 +2002,35 @@ function mxToggleLogoManualMsg(show){
   if(msg) msg.style.display = show ? 'block' : 'none';
 }
 
+function mxRebuildLogoDrop(){
+  const slot = mxGetLogoSlot();
+  if(!slot) return null;
+  let tpl = window._mx_logoDropTemplate;
+  if(!tpl){
+    const existing = slot.querySelector('.logo-slot-drop');
+    if(existing) return existing;
+    return null;
+  }
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = tpl.trim();
+  const fresh = wrapper.firstElementChild;
+  const prev = document.getElementById('cons-logo-prev');
+  if(prev){
+    slot.insertBefore(fresh, prev);
+  }else{
+    slot.appendChild(fresh);
+  }
+  if(typeof window.mxSetupUploadBox === 'function'){
+    window.mxSetupUploadBox(fresh);
+  }
+  return fresh;
+}
+
 function mxResetLogoPreview(){
   const prev = document.getElementById('cons-logo-prev');
   const img  = document.getElementById('cons-logo-img');
   const slot = mxGetLogoSlot();
-  const drop = slot?.querySelector('.logo-slot-drop');
+  let drop = slot?.querySelector('.logo-slot-drop');
   if(prev){
     prev.style.display = 'none';
     prev.setAttribute('hidden','hidden');
@@ -2009,6 +2041,11 @@ function mxResetLogoPreview(){
     slot.classList.remove('has-logo');
     delete slot.dataset.logoSource;
   }
+  if(drop){
+    drop.remove();
+    drop = null;
+  }
+  drop = drop || mxRebuildLogoDrop();
   if(drop){
     drop.removeAttribute('hidden');
     drop.style.removeProperty('display');
