@@ -638,7 +638,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .logo-slot.show-preview .logo-slot-preview{display:flex}
 .cons-logo-sync-msg{
   display:inline-block;
-  color:rgba(0,173,193,0.3);
+  color:rgba(0,173,193,0.6);
   font-weight:600;
   text-align:center;
   line-height:1.3;

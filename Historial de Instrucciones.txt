@@ -121,3 +121,4 @@
 [2025-11-12] Dropzones: wrapper logo-slot fuerza mismas dimensiones que la drop derecha (width/height full y centrado).
 [2025-11-12] Mensaje de sincronización actualizado: nuevo texto doble línea sin badge y color #00ADC1.
 [2025-11-12] Mensaje de sincronización: se dejó una sola línea y el texto ahora usa alfa 30% sobre #00ADC1.
+[2025-11-12] Mensaje de sincronización: alfa subido al 60% para mejor legibilidad.
