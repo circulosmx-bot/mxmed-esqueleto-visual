@@ -137,3 +137,4 @@
 [2025-11-12] Dropzone logotipo: al eliminar se recrea un contenedor clonado y se reinyecta la lógica de carga para garantizar que reaparezca visualmente.
 [2025-11-13] Título: script separado assets/js/title-fix.js fija "MXMed 2025 · Perfil Médico" después de cargar app.js.
 [2025-11-13] Horarios: copiar lunes sólo a viernes, autoactiva botones al capturar horas, indicador visual de día listo y reinicio desde el widget.
+[2025-11-13] Horarios: inputs arrancan con 09:00/14:00/16:00/20:00 como valores iniciales por día.

@@ -1082,7 +1082,11 @@ $(function(){
       const b2 = tr.querySelector(`#sch-b2-${d.k}`);
       const inputs = [a1,b1,a2,b2];
       const sv = state[d.k] || {};
-      act.checked = !!sv.act; a1.value = sv.a1||''; b1.value = sv.b1||''; a2.value = sv.a2||''; b2.value = sv.b2||'';
+      act.checked = !!sv.act;
+      a1.value = sv.a1 || '09:00';
+      b1.value = sv.b1 || '14:00';
+      a2.value = sv.a2 || '16:00';
+      b2.value = sv.b2 || '20:00';
       const mark = ()=> tr.classList.toggle('sched-defined', rowDefined(act, inputs));
       function sync(){
         state[d.k] = { act:act.checked, a1:a1.value, b1:b1.value, a2:a2.value, b2:b2.value };
@@ -1240,7 +1244,11 @@ $(function(){
         const b2=tr.querySelector(`#sch-b2-${d.k}${keySuffix||''}`);
         const inputs=[a1,b1,a2,b2];
         const sv=state[d.k]||{};
-        act.checked=!!sv.act; a1.value=sv.a1||''; b1.value=sv.b1||''; a2.value=sv.a2||''; b2.value=sv.b2||'';
+        act.checked=!!sv.act;
+        a1.value=sv.a1||'09:00';
+        b1.value=sv.b1||'14:00';
+        a2.value=sv.a2||'16:00';
+        b2.value=sv.b2||'20:00';
         const sync=()=>{
           state[d.k]={act:act.checked,a1:a1.value,b1:b1.value,a2:a2.value,b2:b2.value};
           save(state);
