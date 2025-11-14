@@ -525,6 +525,31 @@ $(function(){
   };
 
   const $$ = (s,c=document)=>Array.from(c.querySelectorAll(s));
+
+  function confirmFotoPrincipalRemoval(onConfirm, onCancel){
+    const modalEl = document.getElementById('modalFotoPrincipalRemove');
+    if(!modalEl){
+      const ok = confirm('¿Deseas quitar esta imagen como foto principal del consultorio?');
+      if(ok) onConfirm?.(); else onCancel?.();
+      return;
+    }
+    const yesBtn = document.getElementById('modalFotoPrincipalRemoveYes');
+    const modal = window.bootstrap?.Modal?.getOrCreateInstance ? window.bootstrap.Modal.getOrCreateInstance(modalEl) : new bootstrap.Modal(modalEl);
+    const cleanup = ()=>{ if(yesBtn) yesBtn.onclick = null; };
+    modalEl.addEventListener('hidden.bs.modal', function handler(){
+      modalEl.removeEventListener('hidden.bs.modal', handler);
+      cleanup();
+      onCancel?.();
+    }, { once:true });
+    if(yesBtn){
+      yesBtn.onclick = ()=>{
+        cleanup();
+        onConfirm?.();
+        modal.hide();
+      };
+    }
+    modal.show();
+  }
   $$('.mf-upload').forEach(box=>{
     const input = box.querySelector('.mf-input');
     if(!input) return;
@@ -579,10 +604,13 @@ $(function(){
       delBtn.addEventListener('click', ev=>{
         ev.preventDefault();
         ev.stopPropagation();
-        img.src = '';
-        prev.style.display = 'none';
-        prev.setAttribute('hidden','hidden');
-        input.value = '';
+        const clearFoto = ()=>{
+          img.src = '';
+          prev.style.display = 'none';
+          prev.setAttribute('hidden','hidden');
+          input.value = '';
+        };
+        confirmFotoPrincipalRemoval(clearFoto);
       });
     }
 
