@@ -630,6 +630,8 @@ $(function(){
         }
         if(box.dataset.type === 'logo'){ box.classList.add('has-logo'); }
         if(inputId === 'cons-logo'){
+          const drop = slot?.querySelector('.logo-slot-drop');
+          if(drop){ drop.setAttribute('hidden','hidden'); }
           mxSetLogoSource('manual');
           mxToggleLogoManualMsg(true);
           mxToggleLogoSyncMsg(false);
@@ -1532,6 +1534,8 @@ $(function(){
       slot.classList.add('show-preview');
       slot.classList.add('has-logo');
       mxSetLogoSource('assoc');
+      const drop = slot.querySelector('.logo-slot-drop');
+      if(drop){ drop.setAttribute('hidden','hidden'); }
     }
     if(uploadLogo){
       uploadLogo.classList.add('has-logo');
@@ -2006,6 +2010,7 @@ function mxResetLogoPreview(){
     delete slot.dataset.logoSource;
   }
   if(drop){
+    drop.removeAttribute('hidden');
     drop.style.removeProperty('display');
   }
   const uploadLogo = document.querySelector('.mf-upload[data-type="logo"]');

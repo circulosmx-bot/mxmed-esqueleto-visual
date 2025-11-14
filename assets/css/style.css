@@ -648,7 +648,6 @@ body{margin:0;background:var(--mm-fondo-base);}
   height:100%;
   object-fit:contain;
 }
-.logo-slot.show-preview .logo-slot-drop{display:none}
 .logo-slot.show-preview .logo-slot-preview{display:flex}
 .cons-logo-sync-msg{
   display:inline-block;
