@@ -1,4 +1,4 @@
-﻿// ===== Extracted JS blocks from base HTML =====
+// ===== Extracted JS blocks from base HTML =====
 
 const MX_HORARIO_DEFAULTS = { a1:'09:00', b1:'14:00', a2:'16:00', b2:'20:00' };
 const MX_HORARIO_SLOTS = ['a1','b1','a2','b2'];
@@ -228,59 +228,41 @@ $(function(){
     else { if(window.confirm('Â¿Deseas agregar otro consultorio?')) {/* fallback */} }
   });
   function createSede2IfNeeded(){
-    const nav = document.querySelector('#p-consultorio .mm-tabs-embed');
-    const tabContent = document.querySelector('#p-consultorio .tab-content');
-    if(!nav || !tabContent) return null;
-    let pane2 = document.getElementById('sede2');
-    let btn2 = document.querySelector('#p-consultorio [data-bs-target="#sede2"]');
-    if(!pane2){
-      const pane1 = document.getElementById('sede1');
-      if(!pane1) return null;
-      pane2 = pane1.cloneNode(true);
-      pane2.id = 'sede2';
-      pane2.classList.remove('show','active');
-      // limpiar campos de formulario clonados
-      pane2.querySelectorAll('input, textarea, select').forEach(el=>{
-        if(el.tagName === 'SELECT'){ el.selectedIndex = 0; }
-        else if(el.type === 'checkbox' || el.type === 'radio'){ el.checked = false; }
-        else { el.value = ''; }
-      });
-      // renombrar IDs para evitar duplicados
-      const idMap = [
-        ['cp','cp2'],['colonia','colonia2'],['mensaje-cp','mensaje-cp2'],['municipio','municipio2'],['estado','estado2'],
-        ['cons-grupo-si','cons-grupo-si2'],['cons-grupo-no','cons-grupo-no2'],['cons-grupo-nombre','cons-grupo-nombre2'],['cons-titulo','cons-titulo2'],
-        ['cons-calle','cons-calle2'],['cons-numext','cons-numext2'],['cons-numint','cons-numint2'],['cons-piso','cons-piso2'],
-        ['cons-tel1','cons-tel12'],['cons-tel2','cons-tel22'],['cons-tel3','cons-tel32'],['cons-wa','cons-wa2'],['cons-wa-sync','cons-wa-sync2'],['cons-urg1','cons-urg12'],['cons-urg2','cons-urg22'],
-        ['sched-body','sched-body-2'],['sched-copy-mon','sched-copy-mon-2'],['sched-clear','sched-clear-2'],
-        ['cons-foto','cons-foto2'],['cons-foto-prev','cons-foto-prev2'],['cons-foto-img','cons-foto-img2'],
-        ['cons-map','cons-map2'],['cons-map-frame','cons-map-frame2'],['cons-lat','cons-lat2'],['cons-lng','cons-lng2']
-      ];
-      idMap.forEach(([from,to])=>{ const el = pane2.querySelector('#'+from); if(el){ el.id = to; const lab = pane2.querySelector('label[for="'+from+'"]'); if(lab){ lab.setAttribute('for', to);} } });
-      tabContent.appendChild(pane2);
+    return createConsultorio(2);
+  }
+
+  function getConsultorioSlots(){
+    const panes = Array.from(document.querySelectorAll('#p-consultorio .tab-pane[id^="sede"]'));
+    const ids = [];
+    panes.forEach(p=>{
+      if(p.dataset.consulPlaceholder === 'true') return;
+      const match = /^sede(\d+)$/.exec(p.id);
+      if(!match) return;
+      const n = parseInt(match[1],10);
+      if(!n) return;
+      ids.push(n);
+    });
+    return ids;
+  }
+
+  function syncAddTabVisibility(){
+    const addBtn = document.getElementById('btn-consul-add');
+    if(!addBtn) return;
+    const addLi = addBtn.closest('li');
+    if(!addLi) return;
+    const ids = getConsultorioSlots();
+    const atLimit = ids.filter(n=>n>=1).length >= 3;
+    addLi.classList.toggle('d-none', atLimit);
+    if(atLimit){
+      addBtn.setAttribute('aria-hidden','true');
+      addBtn.setAttribute('tabindex','-1');
+    }else{
+      addBtn.removeAttribute('aria-hidden');
+      addBtn.removeAttribute('tabindex');
     }
-    if(!btn2){
-      const li = document.createElement('li'); li.className='nav-item';
-      const btn = document.createElement('button'); btn.className='nav-link'; btn.type='button';
-      btn.setAttribute('data-bs-toggle','pill'); btn.setAttribute('data-bs-target','#sede2');
-      btn.innerHTML = '<span class="tab-ico material-symbols-rounded" aria-hidden="true">apartment</span><span class="tab-lbl">SEGUNDO<br>CONSULTORIO</span>';
-      const addLi = document.getElementById('btn-consul-add')?.closest('li');
-      if(addLi){ nav.insertBefore(li, addLi); } else { nav.appendChild(li); }
-      li.appendChild(btn); btn2 = btn;
-    }
-    // activar pestaÃ±a 2
-    document.querySelectorAll('#p-consultorio .mm-tabs-embed .nav-link').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('#p-consultorio .tab-pane').forEach(p=>p.classList.remove('show','active'));
-    pane2.classList.add('show','active');
-    btn2.classList.add('active');
-    if(window.bootstrap){ new bootstrap.Tab(btn2).show(); }
-    // inicializar en pane2
-    try{ setupCpAuto({ cp:'cp2', colonia:'colonia2', msg:'mensaje-cp2', mun:'municipio2', est:'estado2' }); }catch(_){ }
-    try{ const cp2=document.getElementById('cp2'), col2=document.getElementById('colonia2'); if(cp2&&col2){ cp2.addEventListener('blur', ()=>{ col2.focus(); }); } }catch(_){ }
-    try{ const cont=pane2; const phones=cont.querySelectorAll('[data-validate="phone"]'); const okp=v=>{const d=(v||'').replace(/[^0-9]/g,''); return d.length>=7&&d.length<=15;}; phones.forEach(el=>{ const apply=()=>{ const ok=okp(el.value); el.classList.toggle('is-invalid',!ok); el.setCustomValidity(ok?'':'TelÃ©fono invÃ¡lido'); }; el.addEventListener('input',apply); el.addEventListener('blur',apply); apply(); }); }catch(_){ }
-    try{ const wa=document.getElementById('cons-wa2'), cb=document.getElementById('cons-wa-sync2'), dg=document.getElementById('dp-whatsapp'); if(cb&&wa){ const fill=()=>{ if(dg){ wa.value=dg.value||''; wa.dispatchEvent(new Event('input')); } }; const toggle=()=>{ if(cb.checked){ wa.disabled=true; wa.placeholder='+52 ...'; fill(); } else { wa.disabled=false; wa.value=''; wa.placeholder='otro numero Whatsapp'; } }; cb.addEventListener('change',toggle); if(dg) dg.addEventListener('input',()=>{ if(cb.checked) fill(); }); toggle(); } }catch(_){ }
-    try{ if(window._mx_setupSchedulesFor){ window._mx_setupSchedulesFor(pane2,'-2'); } }catch(_){ }
-    try{ const frame=document.getElementById('cons-map-frame2'); if(frame){ const addr=()=>{ const cp=(document.getElementById('cp2')?.value||'').trim(); const col=(document.getElementById('colonia2')?.value||'').trim(); const mun=(document.getElementById('municipio2')?.value||'').trim(); const edo=(document.getElementById('estado2')?.value||'').trim(); const calle=(document.getElementById('cons-calle2')?.value||'').trim(); const num=(document.getElementById('cons-numext2')?.value||'').trim(); const a=[calle&&(calle+(num?' '+num:'')),col,cp,mun,edo,'M\u00E9xico'].filter(Boolean).join(', '); return a; }; const upd=()=>{ const a=addr(); if(!a) return; const url='https://www.google.com/maps?q='+encodeURIComponent(a)+'&z=17&output=embed'; if(frame.src!==url) frame.src=url; }; ['cp2','colonia2','cons-calle2','cons-numext2'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',upd); el.addEventListener('change',upd);} }); } }catch(_){ }
-    return {pane2, btn2};
+    addBtn.classList.remove('disabled');
+    addBtn.removeAttribute('aria-disabled');
+    addBtn.title = '';
   }
 
   // Generalizado: crear consultorio N (2..3)
@@ -290,11 +272,16 @@ $(function(){
     const tabContent = document.querySelector('#p-consultorio .tab-content');
     if(!nav || !tabContent) return null;
     let pane = document.getElementById('sede'+n);
+    const isPlaceholder = pane?.dataset?.consulPlaceholder === 'true';
+    const placeholderRef = isPlaceholder ? pane : null;
     let btn  = document.querySelector(`#p-consultorio [data-bs-target="#sede${n}"]`);
-    if(!pane){
+    if(!pane || isPlaceholder){
       const tpl = document.getElementById('sede1'); if(!tpl) return null;
-      pane = tpl.cloneNode(true); pane.id = 'sede'+n; pane.classList.remove('show','active');
-      // limpiar inputs
+      pane = tpl.cloneNode(true);
+      pane.id = 'sede'+n;
+      pane.classList.remove('show','active');
+      pane.dataset.consulClone = 'true';
+      // limpiar inputs solo al clonar
       pane.querySelectorAll('input, textarea, select').forEach(el=>{
         if(el.tagName === 'SELECT'){ el.selectedIndex = 0; }
         else if(el.type === 'checkbox' || el.type === 'radio'){ el.checked = false; }
@@ -304,7 +291,8 @@ $(function(){
       const sfx = String(n);
       const ids = ['cp','colonia','mensaje-cp','municipio','estado','cons-grupo-si','cons-grupo-no','cons-grupo-nombre','cons-titulo','cons-calle','cons-numext','cons-numint','cons-piso','cons-tel1','cons-tel2','cons-tel3','cons-wa','cons-wa-sync','cons-urg1','cons-urg2','sched-body','sched-copy-mon','sched-clear','cons-foto','cons-foto-prev','cons-foto-img','cons-map','cons-map-frame','cons-lat','cons-lng'];
       ids.forEach(base=>{ const el = pane.querySelector('#'+base); if(el){ el.id = base + (base==='sched-body'||base==='sched-copy-mon'||base==='sched-clear' ? '-'+sfx : sfx); const lab = pane.querySelector(`label[for="${base}"]`); if(lab) lab.setAttribute('for', el.id); } });
-      tabContent.appendChild(pane);
+      if(placeholderRef){ placeholderRef.replaceWith(pane); }
+      else { tabContent.appendChild(pane); }
     }
     if(!btn){
       const li = document.createElement('li'); li.className='nav-item';
@@ -337,9 +325,7 @@ $(function(){
     try{ if(window._mx_setupSchedulesFor){ window._mx_setupSchedulesFor(pane,'-'+n); } }catch(_){ }
     try{ const frame=document.getElementById('cons-map-frame'+n); if(frame){ const addr=()=>{ const cp=(document.getElementById('cp'+n)?.value||'').trim(); const col=(document.getElementById('colonia'+n)?.value||'').trim(); const mun=(document.getElementById('municipio'+n)?.value||'').trim(); const edo=(document.getElementById('estado'+n)?.value||'').trim(); const calle=(document.getElementById('cons-calle'+n)?.value||'').trim(); const num=(document.getElementById('cons-numext'+n)?.value||'').trim(); const a=[calle&&(calle+(num?' '+num:'')),col,cp,mun,edo,'M\u00E9xico'].filter(Boolean).join(', '); return a; }; const upd=()=>{ const a=addr(); if(!a) return; const url='https://www.google.com/maps?q='+encodeURIComponent(a)+'&z=17&output=embed'; if(frame.src!==url) frame.src=url; }; ['cp'+n,'colonia'+n,'cons-calle'+n,'cons-numext'+n].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',upd); el.addEventListener('change',upd);} }); } }catch(_){ }
     try{ if(window.L && typeof L.map==='function'){ (function(){ const mapBox=document.getElementById('cons-map'+n); if(!mapBox) return; const map=L.map(mapBox).setView([21.882,-102.296],13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map); const marker=L.marker([21.882,-102.296],{draggable:true}).addTo(map); const latI=document.getElementById('cons-lat'+n), lngI=document.getElementById('cons-lng'+n); const setLL=(ll)=>{ if(latI) latI.value=ll.lat.toFixed(6); if(lngI) lngI.value=ll.lng.toFixed(6); }; setLL(marker.getLatLng()); marker.on('moveend',(e)=>setLL(e.target.getLatLng())); map.on('click',(e)=>{ marker.setLatLng(e.latlng); setLL(e.latlng); }); })(); } }catch(_){ }
-    // deshabilitar botÃ³n agregar si ya existen 3
-    const count = document.querySelectorAll('#p-consultorio .tab-pane[id^="sede"]').length;
-    if(count >= 3){ const addBtn=document.getElementById('btn-consul-add'); if(addBtn){ addBtn.classList.add('disabled'); addBtn.setAttribute('aria-disabled','true'); addBtn.title='MÃ¡ximo 3 consultorios'; } }
+    syncAddTabVisibility();
     return {pane, btn};
   }
   window._mx_createConsultorio = createConsultorio;
@@ -393,19 +379,25 @@ $(function(){
     if(btn1 && pane1){ btn1.classList.add('active'); pane1.classList.add('show','active'); if(window.bootstrap){ new bootstrap.Tab(btn1).show(); } }
     // re-habilitar botÃ³n agregar si estaba bloqueado
     const addBtn=document.getElementById('btn-consul-add'); if(addBtn){ addBtn.classList.remove('disabled'); addBtn.removeAttribute('aria-disabled'); addBtn.title=''; }
+    syncAddTabVisibility();
   });
   function nextConsultorioIndex(){
-    const panes = Array.from(document.querySelectorAll('#p-consultorio .tab-pane[id^="sede"]'));
-    let max = 0; panes.forEach(p=>{ const m = /sede(\d+)/.exec(p.id); const n = m? parseInt(m[1],10) : 0; if(n>max) max=n; });
-    return max ? max+1 : 2;
+    const ids = getConsultorioSlots();
+    for(let i=2;i<=3;i++){
+      if(!ids.includes(i)) return i;
+    }
+    return null;
   }
   document.getElementById('modalConsulAddYes')?.addEventListener('click', function(){
     const el = document.getElementById('modalConsulAdd');
     if(window.bootstrap && el){ bootstrap.Modal.getInstance(el)?.hide(); }
     const next = nextConsultorioIndex();
+    if(!next){ syncAddTabVisibility(); return; }
     if(window._mx_createConsultorio) window._mx_createConsultorio(next); else createSede2IfNeeded();
     try{ initAutosave(); }catch(_){ }
   });
+
+  syncAddTabVisibility();
 
   // ====== CP -> Colonias (SEPOMEX) ======
   // Inicializa auto-llenado para un conjunto de controles
@@ -2278,4 +2270,3 @@ function mxResetLogoPreview(){
   });
   update();
 })();
-
