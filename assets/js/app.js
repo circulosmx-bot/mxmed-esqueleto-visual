@@ -2258,3 +2258,24 @@ function mxResetLogoPreview(){
 
 
 
+
+// Controlar visibilidad de 'Copiar lunes a todos'
+(function(){
+  function update(){
+    const start=document.getElementById('sch-a1-mon');
+    const end=document.getElementById('sch-b1-mon');
+    const ready=!!((start?.value||'').trim() && (end?.value||'').trim());
+    ['sched-copy-mon','sched-copy-mon-2'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(!el) return;
+      el.classList.toggle('d-none', !ready);
+    });
+  }
+  ['input','change'].forEach(evt=>{
+    document.addEventListener(evt, e=>{
+      if(e.target && (e.target.id==='sch-a1-mon' || e.target.id==='sch-b1-mon')) update();
+    }, true);
+  });
+  update();
+})();
+
