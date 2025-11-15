@@ -141,3 +141,4 @@
 [2025-11-13] Horarios: valores base 09/14/16/20 sólo se insertan al enfocar cada campo (placeholders).
 [2025-11-13] Horarios: al desactivar un día se limpian los campos para que el usuario vuelva a elegirlos.
 [2025-11-13] Horarios: marcar activo precarga horarios sugeridos y al desmarcar limpia la franja (pane principal).
+[2025-11-13] Horarios: copiar/limpiar marca desplazamiento y tras recargar se hace scroll automático a la tarjeta de horarios.

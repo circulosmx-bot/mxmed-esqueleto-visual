@@ -1,4 +1,49 @@
-﻿// ===== Extracted JS blocks from base HTML =====\r\n\r\nconst MX_HORARIO_DEFAULTS = { a1:'09:00', b1:'14:00', a2:'16:00', b2:'20:00' };\r\nfunction mxApplyHorarioDefault(input, slot){\r\n  if(!input) return;\r\n  const def = MX_HORARIO_DEFAULTS[slot];\r\n  if(!def) return;\r\n  try{ input.setAttribute('placeholder', def); }catch(_){ }\r\n  input.addEventListener('focus', ()=>{\r\n    if(!(input.value||'').trim()){\r\n      input.value = def;\r\n      try{\r\n        input.dispatchEvent(new Event('input'));\r\n        input.dispatchEvent(new Event('change'));\r\n      }catch(_){ }\r\n    }\r\n  });\r\n}\r\n\r\n
+﻿// ===== Extracted JS blocks from base HTML =====
+
+const MX_HORARIO_DEFAULTS = { a1:'09:00', b1:'14:00', a2:'16:00', b2:'20:00' };
+const MX_HORARIO_SLOTS = ['a1','b1','a2','b2'];
+function mxApplyHorarioDefault(input, slot){
+  if(!input) return;
+  const def = MX_HORARIO_DEFAULTS[slot];
+  if(!def) return;
+  try{ input.setAttribute('placeholder', def); }catch(_){}
+  input.addEventListener('focus', ()=>{
+    if(!(input.value||'').trim()){
+      input.value = def;
+      try{
+        input.dispatchEvent(new Event('input'));
+        input.dispatchEvent(new Event('change'));
+      }catch(_){ }
+    }
+  });
+}
+function mxFillHorarioDefaults(inputs){
+  inputs?.forEach((inp, idx)=>{
+    if(!inp) return;
+    const slot = MX_HORARIO_SLOTS[idx];
+    const def = MX_HORARIO_DEFAULTS[slot];
+    if(def && !(inp.value||'').trim()){
+      inp.value = def;
+      try{
+        inp.dispatchEvent(new Event('input'));
+        inp.dispatchEvent(new Event('change'));
+      }catch(_){ }
+    }
+  });
+}
+function mxClearHorarioInputs(inputs){
+  inputs?.forEach(inp=>{
+    if(!inp) return;
+    if((inp.value||'').trim()){
+      inp.value = '';
+      try{
+        inp.dispatchEvent(new Event('input'));
+        inp.dispatchEvent(new Event('change'));
+      }catch(_){ }
+    }
+  });
+}
+
 /* ===== Helpers de navegaciÃ³n rÃ¡pida ===== */
 function jumpTo(panelId){
   showPanel(panelId);
@@ -1046,9 +1091,21 @@ $(function(){
       {k:'thu', lbl:'Jueves'}, {k:'fri', lbl:'Viernes'}, {k:'sat', lbl:'SÃ¡bado'}, {k:'sun', lbl:'Domingo'}
     ];
     const key = 'mxmed_cons_schedules';
+    const scrollKey = 'mxmed_scroll_sched';
     function load(){ try { return JSON.parse(localStorage.getItem(key)||'{}'); } catch(e){ return {}; } }
     function save(v){ localStorage.setItem(key, JSON.stringify(v)); }
     const state = load();
+    const markScroll = ()=>{ try{ localStorage.setItem(scrollKey,'1'); }catch(_){ } };
+    const scrollAfterReload = ()=>{
+      try{
+        if(localStorage.getItem(scrollKey)){
+          localStorage.removeItem(scrollKey);
+          setTimeout(()=> document.querySelector('.sched-card')?.scrollIntoView({behavior:'smooth', block:'start'}), 200);
+        }
+      }catch(_){ }
+    };
+    scrollAfterReload();
+    try{ window.mxMarkHorarioScroll = markScroll; }catch(_){ }
     const defaultTimes = { a1:'09:00', b1:'14:00', a2:'16:00', b2:'20:00' };
     function rowDefined(act, inputs){
       if(act?.checked) return true;
@@ -1161,9 +1218,9 @@ $(function(){
     document.getElementById('sched-copy-mon')?.addEventListener('click', ()=>{
       const m = state.mon || {};
       ['tue','wed','thu','fri'].forEach(k=>{ state[k] = {...m}; });
-      save(state); location.reload();
+      save(state); markScroll(); location.reload();
     });
-    document.getElementById('sched-clear')?.addEventListener('click', ()=>{ localStorage.removeItem(key); location.reload(); });
+    document.getElementById('sched-clear')?.addEventListener('click', ()=>{ localStorage.removeItem(key); markScroll(); location.reload(); });
   }
 
   const file = document.getElementById('cons-foto');
@@ -1319,8 +1376,8 @@ $(function(){
       });
       const copyBtn = container.querySelector('#sched-copy-mon-2');
       const clearBtn= container.querySelector('#sched-clear-2');
-      copyBtn?.addEventListener('click', ()=>{ const st=load(); const m=st.mon||{}; ['tue','wed','thu','fri'].forEach(k=>{ st[k]={...m}; }); save(st); location.reload(); });
-      clearBtn?.addEventListener('click', ()=>{ localStorage.removeItem(key); location.reload(); });
+      copyBtn?.addEventListener('click', ()=>{ const st=load(); const m=st.mon||{}; ['tue','wed','thu','fri'].forEach(k=>{ st[k]={...m}; }); save(st); try{ window.mxMarkHorarioScroll?.(); }catch(_){ } location.reload(); });
+      clearBtn?.addEventListener('click', ()=>{ localStorage.removeItem(key); (window.mxMarkHorarioScroll||markScroll)(); location.reload(); });
     };
   })();
 
@@ -2189,6 +2246,14 @@ function mxResetLogoPreview(){
   }
   mxSetLogoSource('');
 }
+
+
+
+
+
+
+
+
 
 
 
