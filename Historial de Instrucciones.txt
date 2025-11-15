@@ -142,3 +142,4 @@
 [2025-11-13] Horarios: al desactivar un día se limpian los campos para que el usuario vuelva a elegirlos.
 [2025-11-13] Horarios: marcar activo precarga horarios sugeridos y al desmarcar limpia la franja (pane principal).
 [2025-11-13] Horarios: copiar/limpiar marca desplazamiento y tras recargar se hace scroll automático a la tarjeta de horarios.
+[2025-11-13] Horarios: subtítulo usa el mismo estilo que “Teléfonos del consultorio”.
