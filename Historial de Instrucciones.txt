@@ -140,3 +140,4 @@
 [2025-11-13] Horarios: inputs arrancan con 09:00/14:00/16:00/20:00 como valores iniciales por día.
 [2025-11-13] Horarios: valores base 09/14/16/20 sólo se insertan al enfocar cada campo (placeholders).
 [2025-11-13] Horarios: al desactivar un día se limpian los campos para que el usuario vuelva a elegirlos.
+[2025-11-13] Horarios: marcar activo precarga horarios sugeridos y al desmarcar limpia la franja (pane principal).

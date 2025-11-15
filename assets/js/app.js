@@ -1103,6 +1103,20 @@ $(function(){
       a2.value = sv.a2 || '';
       b2.value = sv.b2 || '';
       const mark = ()=> tr.classList.toggle('sched-defined', rowDefined(act, inputs));
+      const fillDefaults = ()=>{
+        inputs.forEach((inp, idx)=>{
+          if(!inp) return;
+          const slot = ['a1','b1','a2','b2'][idx];
+          const def = defaultTimes[slot];
+          if(def && !(inp.value||'').trim()){
+            inp.value = def;
+            try{
+              inp.dispatchEvent(new Event('input'));
+              inp.dispatchEvent(new Event('change'));
+            }catch(_){ }
+          }
+        });
+      };
       const clearInputs = ()=>{
         inputs.forEach(inp=>{
           if(!inp) return;
@@ -1121,7 +1135,9 @@ $(function(){
         mark();
       }
       act.addEventListener('change', ()=>{
-        if(!act.checked){
+        if(act.checked){
+          fillDefaults();
+        }else{
           clearInputs();
         }
         sync();
