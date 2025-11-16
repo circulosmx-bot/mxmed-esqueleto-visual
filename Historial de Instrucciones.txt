@@ -146,3 +146,4 @@
 [2025-11-13] Horarios: botón "Copiar lunes a todos" sólo aparece cuando Lunes tiene horario definido.
 
 [2025-11-14 19:28] Consultorio: tabs adicionales limitados a tres (Segundo/Tercer), ocultar boton + al llegar al limite y restaurarlo al eliminar; la sede 2 placeholder ahora se sustituye por el panel real y se reutilizan indices disponibles.
+[2025-11-15] Limpieza mojibake manual en assets/js/app.js (confirmaciones, textos horarios, grupo médico) dejando el archivo íntegro en UTF-8.

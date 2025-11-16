@@ -1,4 +1,4 @@
-// ===== Extracted JS blocks from base HTML =====
+﻿// ===== Extracted JS blocks from base HTML =====
 
 const MX_HORARIO_DEFAULTS = { a1:'09:00', b1:'14:00', a2:'16:00', b2:'20:00' };
 const MX_HORARIO_SLOTS = ['a1','b1','a2','b2'];
@@ -44,13 +44,13 @@ function mxClearHorarioInputs(inputs){
   });
 }
 
-/* ===== Helpers de navegaciÃ³n rÃ¡pida ===== */
+/* ===== Helpers de navegación rápida ===== */
 function jumpTo(panelId){
   showPanel(panelId);
-  // marca activo el subbotÃ³n correspondiente, si existe
+  // marca activo el subbotón correspondiente, si existe
   $('.menu-sub-btn').removeClass('active');
   $('.menu-sub-btn[data-panel="'+panelId+'"]').addClass('active');
-  // marcar activo el botÃ³n principal si es un panel directo
+  // marcar activo el botón principal si es un panel directo
   $('.menu-main').removeClass('active');
   var $main = $('.menu-main[data-panel="'+panelId+'"]');
   if($main.length){ $main.addClass('active'); }
@@ -65,7 +65,7 @@ function selectPaqTab(selector){
   if(btn){ new bootstrap.Tab(btn).show(); }
 }
 
-/* ===== AcordeÃ³n exclusivo (sÃ³lo en grupos con submenÃº) ===== */
+/* ===== Acordeón exclusivo (sólo en grupos con submenú) ===== */
 function openGroup(group){
   $('.menu-sub').removeClass('open').slideUp(100);
   const $t = $('.menu-sub[data-group="'+group+'"]');
@@ -73,20 +73,20 @@ function openGroup(group){
   localStorage.setItem('mxmed_menu_group', group);
 }
 
-/* Click en menÃº principal */
+/* Click en menú principal */
 $('.menu-main').on('click', function(){
   const panel = $(this).data('panel');   // panel directo
-  const grp   = $(this).data('group');   // grupo acordeÃ³n
+  const grp   = $(this).data('group');   // grupo acordeón
 
-  if(panel){ // sin submenÃº: abrir panel directo
+  if(panel){ // sin submenú: abrir panel directo
     $('.menu-sub').removeClass('open').slideUp(100);
     showPanel(panel);
-    // activar este botÃ³n principal y desactivar los demÃ¡s
+    // activar este botón principal y desactivar los demás
     $('.menu-main').removeClass('active');
     $(this).addClass('active');
     localStorage.setItem('mxmed_last_panel', panel);
-    localStorage.removeItem('mxmed_menu_group'); // ningÃºn grupo abierto
-  }else if(grp){ // con submenÃº (acordeÃ³n)
+    localStorage.removeItem('mxmed_menu_group'); // ningún grupo abierto
+  }else if(grp){ // con submenú (acordeón)
     const $pane = $('.menu-sub[data-group="'+grp+'"]');
     if($pane.hasClass('open')){
       $pane.removeClass('open').slideUp(100);
@@ -94,14 +94,14 @@ $('.menu-main').on('click', function(){
     }else{
       openGroup(grp);
     }
-    // al trabajar con submenÃºs, ningÃºn botÃ³n principal queda activo
+    // al trabajar con submenús, ningún botón principal queda activo
     $('.menu-main').removeClass('active');
   }
 });
 
-/* ActivaciÃ³n de subbotones y panel derecho */
+/* Activación de subbotones y panel derecho */
 function showPanel(id){
-  // Oculta todos los paneles, estÃ©n o no dentro de #viewport
+  // Oculta todos los paneles, estén o no dentro de #viewport
   $('section[id^="p-"]').addClass('d-none');
   // Muestra el panel solicitado
   $('#'+id).removeClass('d-none');
@@ -109,7 +109,7 @@ function showPanel(id){
 $('.menu-sub-btn').on('click', function(){
   $('.menu-sub-btn').removeClass('active');
   $(this).addClass('active');
-  // limpiar activos en botones principales cuando se usa submenÃº
+  // limpiar activos en botones principales cuando se usa submenú
   $('.menu-main').removeClass('active');
   const id = $(this).data('panel');
   if(id) showPanel(id);
@@ -122,11 +122,11 @@ $('.menu-sub-btn').on('click', function(){
 $(function(){
   // Por defecto, mostrar RESUMEN
   let lastPanel = localStorage.getItem('mxmed_last_panel') || 'p-resumen';
-  // MigraciÃ³n: renombrar p-mensajes -> p-notificaciones si viene de estado previo
+  // Migración: renombrar p-mensajes -> p-notificaciones si viene de estado previo
   if(lastPanel === 'p-mensajes'){ lastPanel = 'p-notificaciones'; localStorage.setItem('mxmed_last_panel', lastPanel); }
   showPanel(lastPanel);
 
-  // Si Ãºltimo panel pertenece a un grupo, abrirlo
+  // Si último panel pertenece a un grupo, abrirlo
   const groups = ['perfil','agenda','pacientes'];
   let opened = false;
   for(const g of groups){
@@ -141,11 +141,11 @@ $(function(){
     $('.menu-sub').removeClass('open').hide();
   }
 
-  // Si el Ãºltimo panel coincide con un botÃ³n principal directo, marcarlo activo
+  // Si el último panel coincide con un botón principal directo, marcarlo activo
   const $mainMatch = $('.menu-main[data-panel="'+lastPanel+'"]');
   if($mainMatch.length){ $('.menu-main').removeClass('active'); $mainMatch.addClass('active'); }
 
-  // Restaurar pestaÃ±a interna de InformaciÃ³n Â· Mi Perfil
+  // Restaurar pestaña interna de Información · Mi Perfil
   const lastInfoTab = localStorage.getItem('mxmed_info_tab') || '#t-datos';
   const tabTrigger = document.querySelector(`[data-bs-target="${lastInfoTab}"]`);
   if(tabTrigger){ new bootstrap.Tab(tabTrigger).show(); }
@@ -225,7 +225,7 @@ $(function(){
     e.preventDefault();
     const el = document.getElementById('modalConsulAdd');
     if(window.bootstrap && el){ new bootstrap.Modal(el).show(); }
-    else { if(window.confirm('Â¿Deseas agregar otro consultorio?')) {/* fallback */} }
+    else { if(window.confirm('¿Deseas agregar otro consultorio?')) {/* fallback */} }
   });
   function createSede2IfNeeded(){
     return createConsultorio(2);
@@ -330,7 +330,7 @@ $(function(){
   }
   window._mx_createConsultorio = createConsultorio;
 
-  // Eliminar consultorio con confirmaciÃ³n (demo: acepta cÃ³digo 123456 o pass 'codex')
+  // Eliminar consultorio con confirmación (demo: acepta código 123456 o pass 'codex')
   function openDeleteModal(n){
     const modalEl = document.getElementById('modalConsulDel'); if(!modalEl) return;
     modalEl.setAttribute('data-target-n', String(n));
@@ -360,7 +360,7 @@ $(function(){
           if(!r.ok) return false; const j = await r.json(); return !!j.ok;
         }
       }catch(_){
-        // Modo pruebas: si hay valor no vacÃ­o, aceptar.
+        // Modo pruebas: si hay valor no vacío, aceptar.
         return usePass ? (pass.trim()!=='') : (code.trim()!=='');
       }
     }
@@ -377,7 +377,7 @@ $(function(){
     const btn1 = document.querySelector('#p-consultorio [data-bs-target="#sede1"]');
     const pane1 = document.getElementById('sede1');
     if(btn1 && pane1){ btn1.classList.add('active'); pane1.classList.add('show','active'); if(window.bootstrap){ new bootstrap.Tab(btn1).show(); } }
-    // re-habilitar botÃ³n agregar si estaba bloqueado
+    // re-habilitar botón agregar si estaba bloqueado
     const addBtn=document.getElementById('btn-consul-add'); if(addBtn){ addBtn.classList.remove('disabled'); addBtn.removeAttribute('aria-disabled'); addBtn.title=''; }
     syncAddTabVisibility();
   });
@@ -424,7 +424,7 @@ $(function(){
         const opt = document.createElement('option'); opt.value = name; opt.textContent = name; sel.appendChild(opt);
       });
       const has = !!options && options.length > 0;
-      // Habilita/deshabilita de forma explÃ­cita (prop y atributo)
+      // Habilita/deshabilita de forma explícita (prop y atributo)
       if(has){ sel.disabled = false; sel.removeAttribute('disabled'); sel.selectedIndex = 0; }
       else { sel.disabled = true; sel.setAttribute('disabled','disabled'); }
       try{ console.debug('[SEPOMEX] opciones en #'+ids.colonia+':', sel.options.length-1); }catch(_){ }
@@ -461,18 +461,18 @@ $(function(){
         return { list, municipio, estado };
       }
 
-      // 1) Si hay cache localStorage, Ãºsalo de inmediato y refresca en background
+      // 1) Si hay cache localStorage, úsalo de inmediato y refresca en background
       const cacheKey = 'sepomex_cp_'+cpVal;
       try{
         const cached = JSON.parse(localStorage.getItem(cacheKey)||'null');
         if(cached && Array.isArray(cached.list) && cached.list.length){
-          // Disparar refresh en background pero devolver rÃ¡pido
+          // Disparar refresh en background pero devolver rápido
           refreshOnline();
           return cached;
         }
       }catch(_){ }
 
-      // 2) Para primera respuesta mÃ¡s rÃ¡pida: hacer intentos en paralelo y tomar el primero
+      // 2) Para primera respuesta más rápida: hacer intentos en paralelo y tomar el primero
       async function refreshOnline(){
         // intenta actualizar cache sin bloquear UI
         Promise.race([
@@ -494,7 +494,7 @@ $(function(){
         return first;
       }catch(e3){
         try{ console.error('[SEPOMEX] todos los intentos en cliente fallaron', e3?.message||e3); }catch(_){ }
-        // 3) Fallback local (archivo estÃ¡tico para demo)
+        // 3) Fallback local (archivo estático para demo)
         try{
           const local = await (await fetch('assets/data/sepomex-fallback.json', {cache:'no-store'})).json();
           const entry = local && local[cpVal];
@@ -512,7 +512,7 @@ $(function(){
 
     async function onCpChange(){
       const val = (cp.value||'').trim();
-      // valida 5 dÃ­gitos
+      // valida 5 dígitos
       if(!/^\d{5}$/.test(val)){
         fillSelect([]); setMsg(''); if(mun) mun.value=''; if(est) est.value=''; return;
       }
@@ -537,7 +537,7 @@ $(function(){
       // mostrar estado de carga antes de llamar
       const v = (cp.value||'').trim();
       if(/^\d{5}$/.test(v)){
-        sel.innerHTML = '<option value="">Buscando coloniasâ€¦</option>'; sel.disabled = true; onCpChange();
+        sel.innerHTML = '<option value="">Buscando colonias…</option>'; sel.disabled = true; onCpChange();
       }
     });
     }
@@ -545,7 +545,7 @@ $(function(){
   // Activar en el primer consultorio (IDs base)
   setupCpAuto({ cp:'cp', colonia:'colonia', msg:'mensaje-cp', mun:'municipio', est:'estado' });
 
-  // Si se crea Consultorio 2 dinÃ¡micamente, renombrar IDs y activar allÃ­ tambiÃ©n
+  // Si se crea Consultorio 2 dinámicamente, renombrar IDs y activar allí también
   const origCreate = createSede2IfNeeded;
   createSede2IfNeeded = function(){
     const ret = origCreate();
@@ -724,12 +724,12 @@ $(function(){
 // ===== Datos Personales: especialidades y validaciones =====
 (function(){
   const T = [
-    'AlergologÃ­a','AnÃ¡lisis ClÃ­nicos','AnestesiologÃ­a','AngiologÃ­a y CirugÃ­a Vascular','AudiologÃ­a','CardiologÃ­a','CirugÃ­a BariÃ¡trica','CirugÃ­a Cabeza y Cuello','CirugÃ­a Cardiovascular','CirugÃ­a de Columna','CirugÃ­a de Mano','CirugÃ­a de Pie','CirugÃ­a Gastrointestinal','CirugÃ­a General','CirugÃ­a LaparoscÃ³pica','CirugÃ­a Maxilofacial','CirugÃ­a OncolÃ³gica PediÃ¡trica','CirugÃ­a PediÃ¡trica','CirugÃ­a PlÃ¡stica','CirugÃ­a TorÃ¡cica','ColoproctologÃ­a','ColposcopÃ­a','Cuidados Paliativos','Dentista','DermatologÃ­a','DiabetologÃ­a','EndocrinologÃ­a','Endodoncia','Estudios de DiagnÃ³stico','GastroenterologÃ­a','GeriatrÃ­a','GinecologÃ­a y Obstetricia','HematologÃ­a','ImplantologÃ­a Dental','KinesiologÃ­a','Medicina CrÃ­tica','Medicina del Trabajo','Medicina EstÃ©tica','Medicina Familiar','Medicina FÃ­sica y RehabilitaciÃ³n','Medicina General','Medicina Integrada','Medicina Interna','Medicina Nuclear','NefrologÃ­a','NefrologÃ­a PediÃ¡trica','NeumologÃ­a','NeumologÃ­a PediÃ¡trica','NeurocirugÃ­a','NeurologÃ­a','NeurologÃ­a PediÃ¡trica','NutriologÃ­a','OdontologÃ­a','OdontopediatrÃ­a','OftalmologÃ­a','OncologÃ­a','OptometrÃ­a','Ortodoncia','Ortopedia Dental','Ortopedia y TraumatologÃ­a','OtorrinolaringologÃ­a','PatologÃ­a','PediatrÃ­a','PodologÃ­a','ProctologÃ­a','PsicologÃ­a','PsiquiatrÃ­a','RadiologÃ­a e Imagen','ReumatologÃ­a','UrologÃ­a','Otra (especificar)'
+    'Alergología','Análisis Clínicos','Anestesiología','Angiología y Cirugía Vascular','Audiología','Cardiología','Cirugía Bariátrica','Cirugía Cabeza y Cuello','Cirugía Cardiovascular','Cirugía de Columna','Cirugía de Mano','Cirugía de Pie','Cirugía Gastrointestinal','Cirugía General','Cirugía Laparoscópica','Cirugía Maxilofacial','Cirugía Oncológica Pediátrica','Cirugía Pediátrica','Cirugía Plástica','Cirugía Torácica','Coloproctología','Colposcopía','Cuidados Paliativos','Dentista','Dermatología','Diabetología','Endocrinología','Endodoncia','Estudios de Diagnóstico','Gastroenterología','Geriatría','Ginecología y Obstetricia','Hematología','Implantología Dental','Kinesiología','Medicina Crítica','Medicina del Trabajo','Medicina Estética','Medicina Familiar','Medicina Física y Rehabilitación','Medicina General','Medicina Integrada','Medicina Interna','Medicina Nuclear','Nefrología','Nefrología Pediátrica','Neumología','Neumología Pediátrica','Neurocirugía','Neurología','Neurología Pediátrica','Nutriología','Odontología','Odontopediatría','Oftalmología','Oncología','Optometría','Ortodoncia','Ortopedia Dental','Ortopedia y Traumatología','Otorrinolaringología','Patología','Pediatría','Podología','Proctología','Psicología','Psiquiatría','Radiología e Imagen','Reumatología','Urología','Otra (especificar)'
   ];
 
   function buildSelect(el){
     el.innerHTML = '';
-    const optEmpty = document.createElement('option'); optEmpty.value=''; optEmpty.textContent='â€”'; el.appendChild(optEmpty);
+    const optEmpty = document.createElement('option'); optEmpty.value=''; optEmpty.textContent='—'; el.appendChild(optEmpty);
     for(const t of T){ const o=document.createElement('option'); o.value=t; o.textContent=t; el.appendChild(o); }
   }
 
@@ -742,7 +742,7 @@ $(function(){
       Array.from(s.options).forEach(o=>{
         if(!o.value || o.value.startsWith('Otra')){ o.disabled=false; o.classList.remove('taken'); return; }
         const isTaken = vals.includes(o.value);
-        // La opciÃ³n tomada se marca en todas las persianas
+        // La opción tomada se marca en todas las persianas
         o.classList.toggle('taken', isTaken);
         // Deshabilitar en persianas distintas a la que la tiene seleccionada
         o.disabled = isTaken && s.value !== o.value;
@@ -780,9 +780,9 @@ $(function(){
     syncDuplicates(); toggleOtra();
   }
 
-  // GÃ©nero: reemplaza "Otro" por "No EspecÃ­fico"
+  // Género: reemplaza "Otro" por "No Específico"
   const gen = document.getElementById('dp-genero');
-  if(gen){ Array.from(gen.options).forEach(o=>{ if(/^otro$/i.test(o.textContent.trim())) o.textContent='No EspecÃ­fico'; }); }
+  if(gen){ Array.from(gen.options).forEach(o=>{ if(/^otro$/i.test(o.textContent.trim())) o.textContent='No Específico'; }); }
 
   // Remueve campos no requeridos si quedaron (por contenido de etiqueta)
   function removeByLabel(text){
@@ -790,23 +790,23 @@ $(function(){
       if(l.textContent && l.textContent.indexOf(text) >= 0){ const col = l.closest('[class^="col-"]'); col?.remove(); }
     });
   }
-  ['Domicilio','Ciudad','PaÃ­s','Foto/Avatar','URL sitio personal'].forEach(removeByLabel);
+  ['Domicilio','Ciudad','País','Foto/Avatar','URL sitio personal'].forEach(removeByLabel);
 
-  // Envolver WhatsApp con prefijo ðŸ‡²ðŸ‡½ +52
+  // Envolver WhatsApp con prefijo 🇲🇽 +52
   const w = document.getElementById('dp-whatsapp');
   if(w && !w.closest('.input-group')){
     const wrap = document.createElement('div'); wrap.className='input-group';
-    const span = document.createElement('span'); span.className='input-group-text'; span.textContent='ðŸ‡²ðŸ‡½ +52';
+    const span = document.createElement('span'); span.className='input-group-text'; span.textContent='🇲🇽 +52';
     const col = w.closest('[class^="col-"]');
     col.replaceChildren();
-    const lab = document.createElement('label'); lab.className='form-label'; lab.textContent='TelÃ©fono Whatsapp';
+    const lab = document.createElement('label'); lab.className='form-label'; lab.textContent='Teléfono Whatsapp';
     col.appendChild(lab);
     col.appendChild(wrap);
     wrap.appendChild(span);
-    w.placeholder='10 dÃ­gitos'; w.maxLength=14; wrap.appendChild(w);
+    w.placeholder='10 dígitos'; w.maxLength=14; wrap.appendChild(w);
   }
 
-  // ValidaciÃ³n de correo y telÃ©fono (bÃ¡sica) + tooltips
+  // Validación de correo y teléfono (básica) + tooltips
   const email = document.getElementById('dp-correo');
   // No usamos tooltip Bootstrap; renderizamos una burbuja propia dentro de save-wrap
 
@@ -830,12 +830,12 @@ $(function(){
 
   if(email){ email.type='email'; email.addEventListener('blur', ()=>{
     const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim());
-    setErrorTooltip(email, 'Ingresa un correo electrÃ³nico vÃ¡lido', (!!email.value && !ok));
+    setErrorTooltip(email, 'Ingresa un correo electrónico válido', (!!email.value && !ok));
   }); }
   if(w){ w.addEventListener('input', ()=>{
     const digits = (w.value||'').replace(/\D+/g,'');
     const ok = digits.length===10 || (digits.startsWith('52') && digits.length===12);
-    setErrorTooltip(w, 'Ingresa un nÃºmero de telÃ©fono vÃ¡lido', (!!w.value && !ok));
+    setErrorTooltip(w, 'Ingresa un número de teléfono válido', (!!w.value && !ok));
   }); }
 
   // Autosave + check verde
@@ -869,7 +869,7 @@ $(function(){
   function initAutosave(){
     document.querySelectorAll('input.form-control, select.form-select, textarea.form-control').forEach(ctrl=>{
       if(ctrl.type==='file') return;
-      // excluir campos de bÃºsqueda u opt-out manual
+      // excluir campos de búsqueda u opt-out manual
       if(ctrl.type==='search' || ctrl.classList.contains('no-check') || ctrl.dataset.noCheck==='1') return;
       if(!ctrl.id){ ctrl.id = 'dp_auto_' + Math.random().toString(36).slice(2,8); }
       const col = ensureSaveMark(ctrl);
@@ -887,11 +887,11 @@ $(function(){
         }
         const invalid = ctrl.classList.contains('is-invalid') || !validByType;
         let hasVal = val !== '';
-        // GÃ©nero: no mostrar check si estÃ¡ sin seleccionar (opciÃ³n placeholder)
+        // Género: no mostrar check si está sin seleccionar (opción placeholder)
         if(ctrl.id==='dp-genero'){
           try{
-            hasVal = (ctrl.selectedIndex > 0) && (val !== 'â€”');
-          }catch(_){ hasVal = val !== '' && val !== 'â€”'; }
+            hasVal = (ctrl.selectedIndex > 0) && (val !== '—');
+          }catch(_){ hasVal = val !== '' && val !== '—'; }
         }
         if(col){ col.classList.toggle('saved', hasVal && !invalid); }
       };
@@ -904,7 +904,7 @@ $(function(){
   initAutosave();
 })();
 
-// ===== Enfermedades y Tratamientos: inputs con chips (mÃ¡x. 40) =====
+// ===== Enfermedades y Tratamientos: inputs con chips (máx. 40) =====
 (function(){
   const LIM = 40;
   function load(scope){ try { return JSON.parse(localStorage.getItem('chips:'+scope)||'[]'); } catch(e){ return []; } }
@@ -923,7 +923,7 @@ $(function(){
       const left = Math.max(0, LIM - used);
       cnt.textContent = left+"/"+LIM;
       const tooLong = used> LIM;
-      setError(tooLong ? 'MÃ¡ximo 40 caracteres. Ej.: "CÃ¡ncer de mama"' : '', tooLong);
+      setError(tooLong ? 'Máximo 40 caracteres. Ej.: "Cáncer de mama"' : '', tooLong);
       btn.disabled = tooLong || used===0;
       cnt.style.visibility = left < 10 ? 'visible' : 'hidden';
     }
@@ -947,7 +947,7 @@ $(function(){
       list.innerHTML='';
       items.forEach((txt, i)=>{
         const chip = document.createElement('span'); chip.className='chip'; chip.textContent = txt;
-        const x = document.createElement('button'); x.type='button'; x.className='chip-x'; x.setAttribute('aria-label','Eliminar'); x.textContent='Ã—';
+        const x = document.createElement('button'); x.type='button'; x.className='chip-x'; x.setAttribute('aria-label','Eliminar'); x.textContent='×';
         x.addEventListener('click', ()=>{ const a=load(scope); a.splice(i,1); save(scope,a); render(); });
         chip.appendChild(x); list.appendChild(chip);
       });
@@ -1039,7 +1039,7 @@ $(function(){
   });
 })();
 
-// ===== Mi FormaciÃ³n Profesional: resumen + chips (cert, cursos, diplomas, miembro) =====
+// ===== Mi Formación Profesional: resumen + chips (cert, cursos, diplomas, miembro) =====
 (function(){
   // Poblar resumen desde localStorage (Datos Generales)
   const fsTitulo = document.getElementById('fs-titulo');
@@ -1048,12 +1048,12 @@ $(function(){
   if(fsTitulo || fsUni || fsEsp){
     const esp1 = localStorage.getItem('dp:esp-1') || '';
     const uni = localStorage.getItem('dp:uni-prof') || localStorage.getItem('dp:uni-esp') || '';
-    if(fsTitulo && esp1){ fsTitulo.textContent = 'MÃ©dico ' + (esp1.includes('CirugÃ­a') ? 'Cirujano' : 'Especialista'); }
+    if(fsTitulo && esp1){ fsTitulo.textContent = 'Médico ' + (esp1.includes('Cirugía') ? 'Cirujano' : 'Especialista'); }
     if(fsUni && uni){ fsUni.textContent = uni; }
     if(fsEsp && esp1){ fsEsp.textContent = esp1; }
   }
 
-  // Reutilizar lÃ³gica de chips para mÃºltiples scopes
+  // Reutilizar lógica de chips para múltiples scopes
   function setupChips(scope, lim){
     const input = document.getElementById(scope+'-input');
     const btn   = document.getElementById(scope+'-add');
@@ -1063,7 +1063,7 @@ $(function(){
     function load(){ try { return JSON.parse(localStorage.getItem('chips:'+scope)||'[]'); } catch(e){ return []; } }
     function save(arr){ localStorage.setItem('chips:'+scope, JSON.stringify(arr)); render(); }
     function update(){ const used=(input.value||'').length; const left=Math.max(0, lim-used); cnt.textContent=left+'/'+lim; cnt.style.visibility = left<10 ? 'visible':'hidden'; btn.disabled= used===0 || used>lim; }
-    function render(){ list.innerHTML=''; load().forEach((txt,i)=>{ const chip=document.createElement('span'); chip.className='chip'; chip.textContent=txt; const x=document.createElement('button'); x.type='button'; x.className='chip-x'; x.textContent='Ã—'; x.addEventListener('click',()=>{ const a=load(); a.splice(i,1); save(a); }); chip.appendChild(x); list.appendChild(chip); }); }
+    function render(){ list.innerHTML=''; load().forEach((txt,i)=>{ const chip=document.createElement('span'); chip.className='chip'; chip.textContent=txt; const x=document.createElement('button'); x.type='button'; x.className='chip-x'; x.textContent='×'; x.addEventListener('click',()=>{ const a=load(); a.splice(i,1); save(a); }); chip.appendChild(x); list.appendChild(chip); }); }
     btn.addEventListener('click', ()=>{ const v=(input.value||'').trim(); if(!v|| v.length>lim) return; const a=load(); a.push(v); save(a); input.value=''; update(); });
     input.addEventListener('input', update); input.addEventListener('blur', update);
     render(); update();
@@ -1079,8 +1079,8 @@ $(function(){
   const body = document.getElementById('sched-body');
   if(body){
     const dias = [
-      {k:'mon', lbl:'Lunes'}, {k:'tue', lbl:'Martes'}, {k:'wed', lbl:'MiÃ©rcoles'},
-      {k:'thu', lbl:'Jueves'}, {k:'fri', lbl:'Viernes'}, {k:'sat', lbl:'SÃ¡bado'}, {k:'sun', lbl:'Domingo'}
+      {k:'mon', lbl:'Lunes'}, {k:'tue', lbl:'Martes'}, {k:'wed', lbl:'Miércoles'},
+      {k:'thu', lbl:'Jueves'}, {k:'fri', lbl:'Viernes'}, {k:'sat', lbl:'Sábado'}, {k:'sun', lbl:'Domingo'}
     ];
     const key = 'mxmed_cons_schedules';
     const scrollKey = 'mxmed_scroll_sched';
@@ -1126,14 +1126,14 @@ $(function(){
       <td>
         <div class="d-flex align-items-center gap-1">
           <input type="time" class="form-control form-control-sm" id="sch-a1-${d.k}">
-          <span>â€“</span>
+          <span>–</span>
           <input type="time" class="form-control form-control-sm" id="sch-b1-${d.k}">
         </div>
       </td>
       <td>
         <div class="d-flex align-items-center gap-1">
           <input type="time" class="form-control form-control-sm" id="sch-a2-${d.k}">
-          <span>â€“</span>
+          <span>–</span>
           <input type="time" class="form-control form-control-sm" id="sch-b2-${d.k}">
         </div>
       </td>`;
@@ -1231,7 +1231,7 @@ $(function(){
     });
   }
 
-  // Utilidad: construir texto de direcciÃ³n
+  // Utilidad: construir texto de dirección
   function buildAddress(){
     const cp = (document.getElementById('cp')?.value||'').trim();
     const col = (document.getElementById('colonia')?.value||'').trim();
@@ -1243,7 +1243,7 @@ $(function(){
   }
 
   (function initMap(){
-    if(!(window.L && typeof L.map === 'function')) return; // si no hay Leaflet, usamos iframe fallback mÃ¡s abajo
+    if(!(window.L && typeof L.map === 'function')) return; // si no hay Leaflet, usamos iframe fallback más abajo
     // Configs para ambos panes
     const panes = [
       { mapId:'cons-map', latId:'cons-lat', lngId:'cons-lng', cp:'cp', col:'colonia', calle:'cons-calle', num:'cons-numext' },
@@ -1296,11 +1296,11 @@ $(function(){
           el.addEventListener('change', tryGeo);
           el.addEventListener('input', tryGeo);
         });
-      }catch(_){ /* si falla Leaflet en este pane, el iframe fallback lo cubrirÃ¡ */ }
+      }catch(_){ /* si falla Leaflet en este pane, el iframe fallback lo cubrirá */ }
     });
   })();
 
-  // Fallback automÃ¡tico: actualizar iframe de Google Maps con la direcciÃ³n
+  // Fallback automático: actualizar iframe de Google Maps con la dirección
   (function autoFrameUpdate(){
     const frame = document.getElementById('cons-map-frame');
     if(!frame) return;
@@ -1332,7 +1332,7 @@ $(function(){
       const rowDefined = (act, inputs)=> act?.checked || inputs.some(inp=> (inp.value||'').trim());
       dias.forEach(d=>{
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${d.lbl}</td><td><input type="checkbox" class="form-check-input" id="sch-act-${d.k}${keySuffix||''}"></td><td><div class="d-flex align-items-center gap-1"><input type="time" class="form-control form-control-sm" id="sch-a1-${d.k}${keySuffix||''}"><span>�?"</span><input type="time" class="form-control form-control-sm" id="sch-b1-${d.k}${keySuffix||''}"></div></td><td><div class="d-flex align-items-center gap-1"><input type="time" class="form-control form-control-sm" id="sch-a2-${d.k}${keySuffix||''}"><span>�?"</span><input type="time" class="form-control form-control-sm" id="sch-b2-${d.k}${keySuffix||''}"></div></td>`;
+        tr.innerHTML=`<td>${d.lbl}</td><td><input type="checkbox" class="form-check-input" id="sch-act-${d.k}${keySuffix||''}"></td><td><div class="d-flex align-items-center gap-1"><input type="time" class="form-control form-control-sm" id="sch-a1-${d.k}${keySuffix||''}"><span>a</span><input type="time" class="form-control form-control-sm" id="sch-b1-${d.k}${keySuffix||''}"></div></td><td><div class="d-flex align-items-center gap-1"><input type="time" class="form-control form-control-sm" id="sch-a2-${d.k}${keySuffix||''}"><span>a</span><input type="time" class="form-control form-control-sm" id="sch-b2-${d.k}${keySuffix||''}"></div></td>`;
         body.appendChild(tr);
         const act=tr.querySelector(`#sch-act-${d.k}${keySuffix||''}`);
         const a1=tr.querySelector(`#sch-a1-${d.k}${keySuffix||''}`);
@@ -1373,7 +1373,7 @@ $(function(){
     };
   })();
 
-  // Auto abrir colonias al tabular desde CP y permitir selecciÃ³n con flechas
+  // Auto abrir colonias al tabular desde CP y permitir selección con flechas
   (function setupColoniaAutoOpen(){
     const cp = document.getElementById('cp');
     const sel = document.getElementById('colonia');
@@ -1390,7 +1390,7 @@ $(function(){
     function closeSelectList(){ sel.removeAttribute('size'); sel.classList.remove('select-open'); }
     function isOpen(){ return sel.hasAttribute('size'); }
 
-    // Al tabular desde CP, forzar foco en "Colonia" en blur para ganar a la navegaciÃ³n natural
+    // Al tabular desde CP, forzar foco en "Colonia" en blur para ganar a la navegación natural
     let cpTabbing = false;
     cp.addEventListener('keydown', (e)=>{ if(e.key === 'Tab' && !e.shiftKey){ cpTabbing = true; } });
     cp.addEventListener('keyup', ()=>{ cpTabbing = false; });
@@ -1402,12 +1402,12 @@ $(function(){
       const poll = ()=>{
         sel.focus();
         if((sel.options?.length||0) > 1 && !sel.disabled){ openSelectList(); return; }
-        waited += pollMs; if(waited >= 1500) return; // 1.5s mÃ¡x
+        waited += pollMs; if(waited >= 1500) return; // 1.5s máx
         setTimeout(poll, pollMs);
       };
       setTimeout(poll, 0);
     });
-    // NavegaciÃ³n con flechas sin desplazar la pÃ¡gina y cierre con Enter/Escape
+    // Navegación con flechas sin desplazar la página y cierre con Enter/Escape
     sel.addEventListener('keydown', (e)=>{
       if(document.activeElement !== sel || !isOpen()) return;
       const total = sel.options?.length || 0; if(total === 0) return;
@@ -1434,7 +1434,7 @@ $(function(){
     sel.addEventListener('change', ()=>{ document.getElementById('cons-calle')?.focus(); });
   })();
 
-  // Grupo mÃ©dico: habilitar/deshabilitar campo segÃºn radios
+  // Grupo médico: habilitar/deshabilitar campo según radios
   (function setupGrupoMedico(){
     const rSi = document.getElementById('cons-grupo-si');
     const rNo = document.getElementById('cons-grupo-no');
@@ -1445,23 +1445,23 @@ $(function(){
     sync();
   })();
 
-  // ValidaciÃ³n de telÃ©fonos (MX/E.164): 10 dÃ­gitos nacionales o +52 + 10 dÃ­gitos
+  // Validación de teléfonos (MX/E.164): 10 dígitos nacionales o +52 + 10 dígitos
   (function setupPhoneValidation(){
     function analyzePhone(val, isLive){
       const s = (val||'').trim();
       if(s === '') return { ok:true };
-      // Solo caracteres permitidos durante ediciÃ³n
+      // Solo caracteres permitidos durante edición
       if(/[^0-9()+\-\s+]/.test(s)) return { ok:false, reason:'invalid_char' };
-      // '+' solo al inicio y mÃ¡ximo 1
+      // '+' solo al inicio y máximo 1
       if((s.match(/\+/g)||[]).length > 1 || (s.includes('+') && !s.startsWith('+'))) return { ok:false, reason:'invalid_char' };
       const digits = s.replace(/\D/g,'');
-      // Si empieza con +52, objetivo 12 dÃ­gitos (52 + 10 nacionales)
+      // Si empieza con +52, objetivo 12 dígitos (52 + 10 nacionales)
       const hasPlus52 = s.startsWith('+') && digits.startsWith('52');
       const target = hasPlus52 ? 12 : 10;
       if(isLive){
         if(digits.length > target) return { ok:false, reason:'too_long' };
         if(/[^0-9()+\-\s]/.test(s)) return { ok:false, reason:'invalid_char' };
-        // Mientras escribe, no marcar corto aÃºn
+        // Mientras escribe, no marcar corto aún
         return { ok:true };
       } else {
         if(digits.length !== target) return { ok:false, reason: digits.length < target ? 'too_short' : 'too_long' };
@@ -1470,10 +1470,10 @@ $(function(){
     }
     function messageFor(reason){
       switch(reason){
-        case 'invalid_char': return 'Solo nÃºmeros y + ( ) -';
-        case 'too_short': return 'NÃºmero incompleto (se requieren 10 dÃ­gitos)';
-        case 'too_long': return 'Demasiados dÃ­gitos (mÃ¡ximo 10 o +52 + 10)';
-        default: return 'TelÃ©fono invÃ¡lido';
+        case 'invalid_char': return 'Solo números y + ( ) -';
+        case 'too_short': return 'Número incompleto (se requieren 10 dígitos)';
+        case 'too_long': return 'Demasiados dígitos (máximo 10 o +52 + 10)';
+        default: return 'Teléfono inválido';
       }
     }
     function applyState(el, isLive){
@@ -1489,14 +1489,14 @@ $(function(){
         if(b) b.textContent = msg;
         if(wrap){ wrap.classList.add('has-error'); if(b) b.style.opacity = '1'; }
         else { el.classList.add('is-invalid'); }
-        el.setCustomValidity('TelÃ©fono invÃ¡lido');
+        el.setCustomValidity('Teléfono inválido');
       }
     }
-    // Reglas adicionales en vivo: tope de 3 letras y tope de dÃ­gitos
+    // Reglas adicionales en vivo: tope de 3 letras y tope de dígitos
     const _state = new WeakMap(); // { value, letters, digits }
 
     function countLetters(s){
-      const m = (s||'').match(/[A-Za-zÃÃ‰ÃÃ“ÃšÃœÃ‘Ã¡Ã©Ã­Ã³ÃºÃ¼Ã±]/g);
+      const m = (s||'').match(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g);
       return m ? m.length : 0;
     }
 
@@ -1517,9 +1517,9 @@ $(function(){
       const digits = (val.match(/\d/g)||[]).length;
       const target = digitsTargetFor(val);
 
-      // 1) Aviso cuando llega a 3 letras y bloqueo a partir de la 4Âª
+      // 1) Aviso cuando llega a 3 letras y bloqueo a partir de la 4ª
       if(letters >= 3){
-        if(b) b.textContent = 'Ingresa solo nÃºmeros';
+        if(b) b.textContent = 'Ingresa solo números';
         if(wrap){ wrap.classList.add('has-error'); if(b) b.style.opacity = '1'; }
         // Si intenta exceder 3 letras, revertir a valor previo
         if(letters > 3){
@@ -1530,9 +1530,9 @@ $(function(){
         }
       }
 
-      // 2) Limitar cantidad de dÃ­gitos en vivo (10 o +52+10)
+      // 2) Limitar cantidad de dígitos en vivo (10 o +52+10)
       if(digits > target){
-        if(b) b.textContent = (target === 12 ? 'Demasiados dÃ­gitos (mÃ¡ximo +52 + 10)' : 'Demasiados dÃ­gitos (mÃ¡ximo 10)');
+        if(b) b.textContent = (target === 12 ? 'Demasiados dígitos (máximo +52 + 10)' : 'Demasiados dígitos (máximo 10)');
         if(wrap){ wrap.classList.add('has-error'); if(b) b.style.opacity = '1'; }
         el.value = prev.value || '';
         try{ el.setSelectionRange(el.value.length, el.value.length); }catch(_){ }
@@ -1540,12 +1540,12 @@ $(function(){
         return;
       }
 
-      // 3) Si comienza a escribir nÃºmeros, ocultar burbuja de letras
+      // 3) Si comienza a escribir números, ocultar burbuja de letras
       if(letters < 3){
         if(wrap){ wrap.classList.remove('has-error'); if(b) b.style.opacity = '0'; }
       }
 
-      // 4) Aplicar validaciÃ³n estÃ¡ndar en vivo (caracteres permitidos y overflow)
+      // 4) Aplicar validación estándar en vivo (caracteres permitidos y overflow)
       applyState(el, true);
 
       // 5) Guardar estado actual
@@ -1595,7 +1595,7 @@ $(function(){
   // Ocultar campos antiguos del consultorio para evitar duplicados
   (function hideLegacyFields(){
     const root = document.querySelector('#sede1'); if(!root) return;
-    const labels = ['Nombre de la sede','TelÃ©fono (planes de pago)','DirecciÃ³n','Horario','Notas'];
+    const labels = ['Nombre de la sede','Teléfono (planes de pago)','Dirección','Horario','Notas'];
     labels.forEach(txt=>{
       const el = Array.from(root.querySelectorAll('label.form-label')).find(l=> (l.textContent||'').trim().indexOf(txt)===0);
       if(el){ const wrap = el.closest('[class*="col-"]'); if(wrap) wrap.style.display='none'; }
@@ -1603,12 +1603,12 @@ $(function(){
   })();
 })();
 
-// ===== Correcciones rÃ¡pidas de acentos en header (muestra) =====
+// ===== Correcciones rápidas de acentos en header (muestra) =====
 (function(){
-  const t = document.querySelector('.optimo'); if(t) t.textContent = 'Ã“ptimo';
-  const n = document.querySelector('.name'); if(n && /Muï¿½oz|MuÃ±oz/.test(n.textContent)) n.textContent = 'Leticia MuÃ±oz Alfaro';
-  const img = document.querySelector('.header-top img'); if(img) img.alt = 'M\u00E9xico MÃ©dico';
-  if(document.title && document.title.indexOf('MXMed')>=0) document.title = 'MXMed 2025 Â· Perfil MÃ©dico';
+  const t = document.querySelector('.optimo'); if(t) t.textContent = 'Óptimo';
+  const n = document.querySelector('.name'); if(n && /Muñoz|Muñoz/.test(n.textContent)) n.textContent = 'Leticia Muñoz Alfaro';
+  const img = document.querySelector('.header-top img'); if(img) img.alt = 'M\u00E9xico Médico';
+  if(document.title && document.title.indexOf('MXMed')>=0) document.title = 'MXMed 2025 · Perfil Médico';
 })();
 
 // ===== Sugerencia de Grupo Médico y sincronización de logotipo (demo) =====
@@ -2011,8 +2011,8 @@ $(function(){
       });
       // Días con acentos correctos
       const mapDias = {
-        'MiǸrcoles':'Mi\u00E9rcoles', 'MiÃ©rcoles':'Mi\u00E9rcoles',
-        'Sǭbado':'S\u00E1bado', 'SÃ¡bado':'S\u00E1bado'
+        'MiǸrcoles':'Mi\u00E9rcoles', 'Miércoles':'Mi\u00E9rcoles',
+        'Sǭbado':'S\u00E1bado', 'Sábado':'S\u00E1bado'
       };
       cont.querySelectorAll('tr td:first-child').forEach(td=>{
         const raw = (td.textContent||'').trim();
@@ -2270,3 +2270,14 @@ function mxResetLogoPreview(){
   });
   update();
 })();
+
+
+
+
+
+
+
+
+
+
+
