@@ -1,4 +1,4 @@
-// MENSAJES: render, badge y acciones mínimas (aislado)
+﻿// MENSAJES: render, badge y acciones mínimas (aislado)
 (function(){
   const elBadge = document.getElementById('badgeMensajes');
   const listEl  = document.getElementById('msgList');
@@ -75,3 +75,4 @@
   render();
   updateBadge();
 })();
+
