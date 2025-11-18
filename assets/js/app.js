@@ -1,39 +1,4 @@
-﻿// ===== Secci?n Mi Perfil =====
-
-(function(){
-  // Poblar resumen desde localStorage (Datos Generales)
-  const fsTitulo = document.getElementById('fs-titulo');
-  const fsUni = document.getElementById('fs-uni');
-  const fsEsp = document.getElementById('fs-esp');
-  if(fsTitulo || fsUni || fsEsp){
-    const esp1 = localStorage.getItem('dp:esp-1') || '';
-    const uni = localStorage.getItem('dp:uni-prof') || localStorage.getItem('dp:uni-esp') || '';
-    if(fsTitulo && esp1){ fsTitulo.textContent = 'M?dico ' + (esp1.includes('Cirug?a') ? 'Cirujano' : 'Especialista'); }
-    if(fsUni && uni){ fsUni.textContent = uni; }
-    if(fsEsp && esp1){ fsEsp.textContent = esp1; }
-  }
-
-  // Reutilizar l?gica de chips para m?ltiples scopes
-  function setupChips(scope, lim){
-    const input = document.getElementById(scope+'-input');
-    const btn   = document.getElementById(scope+'-add');
-    const cnt   = document.getElementById(scope+'-count');
-    const list  = document.getElementById(scope+'-list');
-    if(!input || !btn || !cnt || !list) return;
-    function load(){ try { return JSON.parse(localStorage.getItem('chips:'+scope)||'[]'); } catch(e){ return []; } }
-    function save(arr){ localStorage.setItem('chips:'+scope, JSON.stringify(arr)); render(); }
-    function update(){ const used=(input.value||'').length; const left=Math.max(0, lim-used); cnt.textContent=left+'/'+lim; cnt.style.visibility = left<10 ? 'visible':'hidden'; btn.disabled= used===0 || used>lim; }
-    function render(){ list.innerHTML=''; load().forEach((txt,i)=>{ const chip=document.createElement('span'); chip.className='chip'; chip.textContent=txt; const x=document.createElement('button'); x.type='button'; x.className='chip-x'; x.textContent='×'; x.addEventListener('click',()=>{ const a=load(); a.splice(i,1); save(a); }); chip.appendChild(x); list.appendChild(chip); }); }
-    btn.addEventListener('click', ()=>{ const v=(input.value||'').trim(); if(!v|| v.length>lim) return; const a=load(); a.push(v); save(a); input.value=''; update(); });
-    input.addEventListener('input', update); input.addEventListener('blur', update);
-    render(); update();
-  }
-  setupChips('cert', 50);
-  setupChips('cursos', 50);
-  setupChips('dipl', 50);
-  setupChips('miem', 50);
-})();
-
+﻿
 // ====== Consultorio: horarios, foto preview, mapa (fallback) ======
 (function(){
   const body = document.getElementById('sched-body');
@@ -394,8 +359,8 @@
     sel.addEventListener('change', ()=>{ document.getElementById('cons-calle')?.focus(); });
   })();
 
-  // Grupo m?dico: habilitar/deshabilitar campo seg?n radios
-  (function setupGrupoMedico(){
+  // Grupo Médico: habilitar/deshabilitar campo seg?n radios
+  (function setupGrupoMédico(){
     const rSi = document.getElementById('cons-grupo-si');
     const rNo = document.getElementById('cons-grupo-no');
     const grp = document.getElementById('cons-grupo-nombre');
@@ -554,26 +519,26 @@
 
   // Ocultar campos antiguos del consultorio para evitar duplicados
   (function hideLegacyFields(){
-    const root = document.querySelector('#sede1'); if(!root) return;
-    const labels = ['Nombre de la sede','Teléfono (planes de pago)','Dirección','Horario','Notas'];
+    const root = document.querySelector("#sede1"); if(!root) return;
+    const labels = ["Nombre de la sede","Teléfono (planes de pago)","Dirección","Horario","Notas"];
     labels.forEach(txt=>{
-      const el = Array.from(root.querySelectorAll('label.form-label')).find(l=> (l.textContent||'').trim().indexOf(txt)===0);
-      if(el){ const wrap = el.closest('[class*="col-"]'); if(wrap) wrap.style.display='none'; }
+      const el = Array.from(root.querySelectorAll("label.form-label")).find(l=> (l.textContent||"").trim().indexOf(txt)===0);
+      if(el){ const wrap = el.closest("[class*='col-']"); if(wrap) wrap.style.display='none'; }
     });
   })();
 })();
 
-// ===== Correcciones r?pidas de acentos en header (muestra) =====
+// ===== Correcciones rápidas de acentos en header (muestra) =====
 (function(){
-  const t = document.querySelector('.optimo'); if(t) t.textContent = '?ptimo';
-  const n = document.querySelector('.name'); if(n && /Mu?oz|Mu?oz/.test(n.textContent)) n.textContent = 'Leticia Mu?oz Alfaro';
-  const img = document.querySelector('.header-top img'); if(img) img.alt = 'M\u00E9xico M?dico';
-  if(document.title && document.title.indexOf('MXMed')>=0) document.title = 'MXMed 2025 ? Perfil M?dico';
+  const t = document.querySelector('.optimo'); if(t) t.textContent = 'Óptimo';
+  const n = document.querySelector('.name'); if(n && /Muñoz|Mu�oz/.test(n.textContent)) n.textContent = 'Leticia Muñoz Alfaro';
+  const img = document.querySelector('.header-top img'); if(img) img.alt = 'México Médico';
+  if(document.title && document.title.indexOf('MXMed')>=0) document.title = 'MXMed 2025 · Perfil Médico';
 })();
 
-// ===== Sugerencia de Grupo M?dico y sincronizaci?n de logotipo (demo) =====
-(function setupGrupoMedicoSuggest(){
-  const keyAssoc = 'grupo_medico_assoc';
+// ===== Sugerencia de Grupo Médico y sincronización de logotipo (demo) =====
+(function setupGrupoMédicoSuggest(){
+  const keyAssoc = 'grupo_Médico_assoc';
 
   function getAddr(){
     return {
@@ -604,7 +569,7 @@
 
   function showModal(s){
     const el = document.getElementById('modalGrupoSuggest'); if(!el) return;
-    el.querySelector('#grp-name').textContent = s.nombre || 'Grupo M?dico';
+    el.querySelector('#grp-name').textContent = s.nombre || 'Grupo Médico';
     el.querySelector('#grp-addr').textContent = s.addr || '';
     const m = (window.bootstrap && bootstrap.Modal && bootstrap.Modal.getOrCreateInstance) ? bootstrap.Modal.getOrCreateInstance(el) : new bootstrap.Modal(el);
     // Evitar reentradas mientras el modal est visible
@@ -813,11 +778,10 @@
       `</svg>`;
     return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
   }
-
   const DEMO_GROUPS = [
     {
       id:'grp-star',
-      nombre:'Star M?dica',
+      nombre:'Star M\u00e9dica',
       calle:'Av. Aguascalientes',
       numext:'1420',
       addr:'Aguascalientes Centro',
@@ -825,8 +789,8 @@
     },
     {
       id:'grp-san-juan',
-      nombre:'M?dica San Juan',
-      calle:'Adolfo L?pez Mateos',
+      nombre:'M\u00e9dica San Juan',
+      calle:'Adolfo L\u00f3pez Mateos',
       numext:'892',
       addr:'Zona Centro',
       logo_url: 'assets/img/medica san juan.png'
@@ -956,7 +920,7 @@
 // ===== Ajustes puntuales de textos (s?lo secciones espec?ficas) =====
 (function fixMxmedTextos(){
   try{
-    // 1) Header: "?ptimo"
+    // 1) Header: "Óptimo"
     const t = document.querySelector('.optimo');
     if(t) t.textContent = '\u00D3ptimo';
 
@@ -983,7 +947,7 @@
 })();
 
 
-// ===== Grupo M?dico: asegurarnos de limpieza de overlay al cerrar =====
+// ===== Grupo Médico: asegurarnos de limpieza de overlay al cerrar =====
 (function ensureGrupoModalCleanup(){
   function cleanup(){
     try{
@@ -1025,8 +989,8 @@
     const reset = ()=>{
       try{
         // Limpiar claves principales usadas en esta secci?n
-        localStorage.removeItem('grupo_medico_assoc');
-        localStorage.removeItem('grupo_medico_assoc:decline');
+        localStorage.removeItem('grupo_Médico_assoc');
+        localStorage.removeItem('grupo_Médico_assoc:decline');
         localStorage.removeItem('mxmed_cons_schedules');
         localStorage.removeItem('mxmed_cons_schedules2');
         // Preferencias de navegaci?n (para evitar estados atascados)
@@ -1230,6 +1194,16 @@ function mxResetLogoPreview(){
   });
   update();
 })();
+
+
+
+
+
+
+
+
+
+
 
 
 

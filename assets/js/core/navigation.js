@@ -27,6 +27,17 @@ function openGroup(group){
   localStorage.setItem('mxmed_menu_group', group);
 }
 
+function activateFirstSub(group){
+  const first = document.querySelector(`.menu-sub[data-group="${group}"] .menu-sub-btn[data-panel]`);
+  if(!first) return;
+  const panelId = first.getAttribute('data-panel');
+  $('.menu-sub-btn').removeClass('active');
+  first.classList.add('active');
+  showPanel(panelId);
+  localStorage.setItem('mxmed_btn_'+group, panelId);
+  localStorage.setItem('mxmed_last_panel', panelId);
+}
+
 /* Click en men? principal */
 $('.menu-main').on('click', function(){
   const panel = $(this).data('panel');   // panel directo
@@ -44,12 +55,14 @@ $('.menu-main').on('click', function(){
     const $pane = $('.menu-sub[data-group="'+grp+'"]');
     if($pane.hasClass('open')){
       $pane.removeClass('open').slideUp(100);
+      $('.menu-main').removeClass('active');
       localStorage.removeItem('mxmed_menu_group');
     }else{
       openGroup(grp);
+      activateFirstSub(grp);
+      $('.menu-main').removeClass('active');
+      $(this).addClass('active');
     }
-    // al trabajar con submen?s, ning?n bot?n principal queda activo
-    $('.menu-main').removeClass('active');
   }
 });
 
@@ -58,7 +71,17 @@ function showPanel(id){
   // Oculta todos los paneles, est?n o no dentro de #viewport
   $('section[id^="p-"]').addClass('d-none');
   // Muestra el panel solicitado
-  $('#'+id).removeClass('d-none');
+  const pane = document.getElementById(id);
+  if(pane){
+    pane.classList.remove('d-none');
+    const tabs = pane.querySelectorAll('.nav-tabs [data-bs-toggle="tab"]');
+    const activeTab = pane.querySelector('.nav-tabs .active');
+    if(tabs.length && !activeTab){
+      try{ new bootstrap.Tab(tabs[0]).show(); }catch(_){}
+    }
+  }else{
+    $('#'+id).removeClass('d-none');
+  }
 }
 $('.menu-sub-btn').on('click', function(){
   $('.menu-sub-btn').removeClass('active');
@@ -74,10 +97,10 @@ $('.menu-sub-btn').on('click', function(){
 
 /* ===== Restaurar estado previo ===== */
 $(function(){
-  // Por defecto, mostrar RESUMEN
-  let lastPanel = localStorage.getItem('mxmed_last_panel') || 'p-resumen';
-  // Migraci?n: renombrar p-mensajes -> p-notificaciones si viene de estado previo
-  if(lastPanel === 'p-mensajes'){ lastPanel = 'p-notificaciones'; localStorage.setItem('mxmed_last_panel', lastPanel); }
+  // Forzar mostrar Actividad (RESUMEN) al recargar
+  let lastPanel = 'p-resumen';
+  localStorage.setItem('mxmed_last_panel', lastPanel);
+  localStorage.removeItem('mxmed_menu_group');
   showPanel(lastPanel);
 
   // Si ?ltimo panel pertenece a un grupo, abrirlo

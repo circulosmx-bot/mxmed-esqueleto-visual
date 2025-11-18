@@ -31,6 +31,18 @@ function mxFillHorarioDefaults(inputs){
 }
 function mxClearHorarioInputs(inputs){
   inputs?.forEach(inp=>{
+    if(!inp) return;
+    if((inp.value||'').trim()){
+      inp.value = '';
+      try{
+        inp.dispatchEvent(new Event('input'));
+        inp.dispatchEvent(new Event('change'));
+      }catch(_){ }
+    }
+  });
+}
+
+(function(){
 
   // Consultorio: modal para confirmar agregar otro consultorio
   document.getElementById('btn-consul-add')?.addEventListener('click', function(e){
