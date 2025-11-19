@@ -244,16 +244,16 @@
         <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">campaign</span></span>
       </button>
 
-      <!-- Notificaciones (botón principal sin submenú) -->
-      <button class="menu-main" data-panel="p-notificaciones">
-        <span class="txt"><span class="ttl">Notificaciones</span><span class="sub">centro de avisos</span></span>
+      <!-- Notificaciónes (botón principal sin submenú) -->
+      <button class="menu-main" data-panel="p-Notificaciónes">
+        <span class="txt"><span class="ttl">Notificaciónes</span><span class="sub">centro de avisos</span></span>
         <span class="badge-msg" id="badgeMensajes">0</span>
         <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">notifications</span></span>
       </button>
 
       </aside>
 
-    <!-- ===== Área de interacción ===== -->
+    <!-- ===== Área de interAcción ===== -->
     <main class="mm-main">
       <div id="viewport">
 
@@ -294,8 +294,8 @@
           <i class="bi bi-bell-fill"></i>
         </div>
         <div class="num">7</div>
-        <div class="title">Notificaciones</div>
-        <a class="link" href="#">Ver notificaciones</a>
+        <div class="title">Notificaciónes</div>
+        <a class="link" href="#">Ver Notificaciónes</a>
       </div>
 
       <div class="kpi-card">
@@ -697,10 +697,10 @@
                   <div class="col-md-2"><label class="form-label" for="cons-numint">Número Int.</label><input id="cons-numint" class="form-control" maxlength="5"/></div>
                   <div class="col-md-1"><label class="form-label" for="cons-piso">Piso</label><input id="cons-piso" class="form-control" maxlength="3"/></div>
                   <!-- Mapa: mover justo después de la franja de Calle y reducir altura al 50% -->
-                  <div class="col-12"><label class="form-label">Ubicación</label>
+                  <div class="col-12"><label class="form-label">ubicación</label>
                     <div class="ratio ratio-16x9 rounded border" style="--bs-aspect-ratio:28.125%; border-color:var(--mm-borde-input)!important;">
                       <!-- Mapa embebido sin API key usando coordenadas (evita 400 de pb incompleto) -->
-                      <iframe id="cons-map-frame" src="https://www.google.com/maps?q=21.882,-102.296&z=13&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Ubicación de la sede"></iframe>
+                      <iframe id="cons-map-frame" src="https://www.google.com/maps?q=21.882,-102.296&z=13&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="ubicación de la sede"></iframe>
                     </div>
                     <small class="text-muted">En plan gratuito el mapa no usa GPS; en planes de pago sí.</small>
                   </div>
@@ -873,7 +873,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
               </div>
               <div class="modal-body">
-                <p class="mb-2">¿Estás seguro de eliminar este consultorio? Esta acción no se puede deshacer.</p>
+                <p class="mb-2">¿Estás seguro de eliminar este consultorio? Esta Acción no se puede deshacer.</p>
                 <div class="mb-2">
                   <div class="form-check form-check-inline">
                     <input class="form-check-input" type="radio" name="del-auth" id="del-auth-code" value="code" checked>
@@ -889,10 +889,10 @@
                   <input id="del-code" class="form-control" placeholder="p.ej. 123456">
                 </div>
                 <div id="del-input-pass" class="mb-2" style="display:none;">
-                  <label class="form-label" for="del-pass">Ingresa tu contraseña</label>
+                  <label class="form-label" for="del-pass">Ingresa tu Contraseña</label>
                   <input id="del-pass" type="password" class="form-control" placeholder="••••••••">
                 </div>
-                <div id="del-error" class="text-danger small" style="display:none;">Código/contraseña incorrectos.</div>
+                <div id="del-error" class="text-danger small" style="display:none;">Código/Contraseña incorrectos.</div>
               </div>
               <div class="modal-footer justify-content-center">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -947,41 +947,129 @@
           </div>
         </section>
 
+                                                                                
+        
         <!-- SEGURIDAD -->
         <section class="mm-card d-none" id="p-seguridad">
-          <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">vpn_key</span>Seguridad (Acceso y 2FA)</h5></div>
+          <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">shield_lock</span>Seguridad</h5></div>
           <div class="body">
-            <ul class="nav nav-pills mm-tabs mm-tabs-embed mb-3" role="tablist">
-              <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#seg-cred">Credenciales</button></li>
-              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#seg-2fa">Doble Factor (2FA)</button></li>
-              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#seg-ses">Sesiones/Dispositivos</button></li>
-            </ul>
-            <div class="tab-content">
-              <div class="tab-pane fade show active" id="seg-cred">
-                <div class="row g-3">
-                  <div class="col-md-4"><label class="form-label">Email</label><input class="form-control" value="leticia@example.com"></div>
-                  <div class="col-md-4"><label class="form-label">Nueva contraseña</label><input type="password" class="form-control"></div>
-                  <div class="col-md-4"><label class="form-label">Repetir contraseña</label><input type="password" class="form-control"></div>
+            <div class="mb-4">
+              <h6 class="d-flex align-items-center gap-2"><span class="material-symbols-rounded" aria-hidden="true">verified_user</span>Métodos de verificación</h6>
+              <p class="text-muted mb-2">Activa los métodos de verificación necesarios para proteger tu cuenta.</p>
+              <div class="list-group">
+                <div class="list-group-item">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div><strong>Teléfono</strong></div>
+                  </div>
+                  <input class="form-control mt-2" type="tel" placeholder="+52 000 000 0000">
+                </div>
+                <div class="list-group-item">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div><strong>Contraseña</strong></div>
+                    <button class="btn btn-link btn-sm">Cambiar</button>
+                  </div>
+                  <small class="text-muted">Tu contraseña venció, modifícala para volver a usarla.</small>
+                </div>
+                <div class="list-group-item">
+                  <div><strong>E-mail</strong></div>
+                  <input class="form-control mt-2" type="email" placeholder="correo@gmail.com">
+                </div>
+                <div class="list-group-item">
+                  <div><strong>Reconocimiento facial</strong></div>
+                  <input class="form-control mt-2" placeholder="Nombre del usuario y apellidos">
+                </div>
+                <div class="list-group-item">
+                  <div><strong>Código QR</strong></div>
+                  <small class="text-muted d-block mb-1">Escanea códigos QR.</small>
+                  <small class="text-muted">Agregar teléfonos y tablets autorizados desde “Dispositivos vinculados”.</small>
+                </div>
+                <div class="list-group-item">
+                  <div><strong>Google Authenticator</strong></div>
+                  <small class="text-muted d-block">Activa Google Authenticator para usar códigos de verificación temporales.</small>
                 </div>
               </div>
-              <div class="tab-pane fade" id="seg-2fa">
-                <div class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="en_2fa">
-                  <label class="form-check-label" for="en_2fa">Activar 2FA por app autenticadora</label>
-                </div>
-                <div class="mt-3 alert alert-info">Al activar, se mostrará código QR y claves de recuperación.</div>
+            </div>
+            <hr>
+            <div class="mb-4">
+              <h6 class="d-flex align-items-center gap-2"><span class="material-symbols-rounded" aria-hidden="true">devices</span>Dispositivos vinculados</h6>
+              <p class="text-muted mb-2">Gestiona los dispositivos donde iniciaste sesión.</p>
+              <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                  <thead><tr><th>Dispositivo</th><th>Ubicación aprox.</th><th>Último acceso</th><th class="text-end">Acción</th></tr></thead>
+                  <tbody>
+                    <tr><td>Windows · Edge</td><td>Guadalajara, MX</td><td>2025-09-16 20:12</td><td class="text-end"><button class="btn btn-outline-danger btn-sm">Cerrar sesión</button></td></tr>
+                    <tr><td>iPhone · Safari</td><td>CDMX, MX</td><td>2025-09-15 09:41</td><td class="text-end"><button class="btn btn-outline-danger btn-sm">Cerrar sesión</button></td></tr>
+                  </tbody>
+                </table>
               </div>
-              <div class="tab-pane fade" id="seg-ses">
-                <div class="table-responsive">
-                  <table class="table table-sm">
-                    <thead><tr><th>Dispositivo</th><th>Ubicación aprox.</th><th>Último acceso</th><th></th></tr></thead>
-                    <tbody>
-                      <tr><td>Windows · Edge</td><td>GDL, MX</td><td>2025-09-16 20:12</td><td><button class="btn btn-outline-danger btn-sm">Cerrar</button></td></tr>
-                      <tr><td>iPhone · Safari</td><td>GDL, MX</td><td>2025-09-15 09:41</td><td><button class="btn btn-outline-danger btn-sm">Cerrar</button></td></tr>
-                    </tbody>
-                  </table>
+            </div>
+            <hr>
+            <div class="mb-4">
+              <h6 class="d-flex align-items-center gap-2"><span class="material-symbols-rounded" aria-hidden="true">group_add</span>Personas de confianza</h6>
+              <p class="text-muted mb-2">Agrega personas para que reporten tus problemas de seguridad.</p>
+              <div class="row g-2 align-items-end">
+                <div class="col-md-5"><label class="form-label">Nombre</label><input class="form-control" placeholder="Ej. Ana López"></div>
+                <div class="col-md-5"><label class="form-label">Contacto</label><input class="form-control" placeholder="Correo o teléfono"></div>
+                <div class="col-md-2"><button class="btn btn-primary w-100">Agregar</button></div>
+              </div>
+              <div class="mt-3">
+                <ul class="list-group">
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Ana López · ana@example.com
+                    <button class="btn btn-link text-danger btn-sm">Quitar</button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <hr>
+            <div class="mb-4">
+              <h6 class="d-flex align-items-center gap-2"><span class="material-symbols-rounded" aria-hidden="true">notifications_active</span>Alertas de seguridad</h6>
+              <p class="text-muted mb-2">Revisa tus alertas y los canales donde las recibes.</p>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="alert-login" checked>
+                    <label class="form-check-label" for="alert-login">Inicio de sesión en nuevo dispositivo</label>
+                  </div>
+                  <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="alert-pass">
+                    <label class="form-check-label" for="alert-pass">Cambio de contraseña</label>
+                  </div>
+                  <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="alert-2fa">
+                    <label class="form-check-label" for="alert-2fa">Desactivación de 2FA</label>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Canales</label>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="alert-email" checked>
+                    <label class="form-check-label" for="alert-email">Email</label>
+                  </div>
+                  <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="alert-sms">
+                    <label class="form-check-label" for="alert-sms">SMS</label>
+                  </div>
+                  <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="alert-wa">
+                    <label class="form-check-label" for="alert-wa">WhatsApp</label>
+                  </div>
+                  <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="alert-push" checked>
+                    <label class="form-check-label" for="alert-push">Notificación push</label>
+                  </div>
                 </div>
               </div>
+            </div>
+            <hr>
+            <div class="mb-2">
+              <h6 class="d-flex align-items-center gap-2"><span class="material-symbols-rounded" aria-hidden="true">location_on</span>Permiso de ubicación</h6>
+              <p class="text-muted mb-2">Mantén activa tu ubicación para prevenir riesgos.</p>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="seg-geo">
+                <label class="form-check-label" for="seg-geo">Activar verificación por ubicación</label>
+              </div>
+              <small class="text-muted">Usaremos tu ubicación aproximada para detectar accesos inusuales.</small>
             </div>
           </div>
         </section>
@@ -1053,7 +1141,7 @@
               <div class="col-12">
                 <div class="table-responsive">
                   <table class="table table-sm">
-                    <thead><tr><th>Nombre</th><th>Rol</th><th>Permisos</th><th>Estatus</th><th>Acciones</th></tr></thead>
+                    <thead><tr><th>Nombre</th><th>Rol</th><th>Permisos</th><th>Estatus</th><th>Acciónes</th></tr></thead>
                     <tbody>
                       <tr><td>María López</td><td>Operador</td><td>Agenda, Pacientes</td><td>Activo</td><td><button class="btn btn-outline-secondary btn-sm">Editar</button></td></tr>
                       <tr><td>C. Ramírez</td><td>Asistente</td><td>Agenda</td><td>Invitado</td><td><button class="btn btn-outline-secondary btn-sm">Reenviar</button></td></tr>
@@ -1077,7 +1165,7 @@
               <div class="col-12">
                 <div class="table-responsive">
                   <table class="table table-sm">
-                    <thead><tr><th>Hora</th><th>Paciente</th><th>Tipo</th><th>Estatus</th><th>Acciones</th></tr></thead>
+                    <thead><tr><th>Hora</th><th>Paciente</th><th>Tipo</th><th>Estatus</th><th>Acciónes</th></tr></thead>
                     <tbody>
                       <tr><td>09:00</td><td>J. Pérez</td><td>Consulta</td><td>Pendiente</td><td><button class="btn btn-success btn-sm">Confirmar</button></td></tr>
                       <tr><td>10:00</td><td>M. Díaz</td><td>Seguimiento</td><td>Confirmada</td><td><button class="btn btn-outline-danger btn-sm">Cancelar</button></td></tr>
@@ -1238,9 +1326,9 @@
           </div>
         </section>
 
-        <!-- NOTIFICACIONES -->
-        <section class="mm-card d-none" id="p-notificaciones">
-          <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">notifications</span>Notificaciones</h5></div>
+        <!-- NotificaciónES -->
+        <section class="mm-card d-none" id="p-Notificaciónes">
+          <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">notifications</span>Notificaciónes</h5></div>
           <div class="body">
             <div id="msgList" class="msg-list"></div>
           </div>
@@ -1313,6 +1401,20 @@
 <script src="assets/js/messages.js"></script>
 <script src="assets/js/fotos.js"></script></body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
