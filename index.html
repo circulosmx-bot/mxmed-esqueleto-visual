@@ -949,6 +949,8 @@
 
                                                                                 
         
+        
+                
         <!-- SEGURIDAD -->
         <section class="mm-card d-none" id="p-seguridad">
           <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">shield_lock</span>Seguridad</h5></div>
@@ -960,19 +962,32 @@
                 <div class="list-group-item">
                   <div class="d-flex justify-content-between align-items-center">
                     <div><strong>Teléfono</strong></div>
+                    <span class="text-warning fw-semibold">⚠️ No validado</span>
                   </div>
                   <input class="form-control mt-2" type="tel" placeholder="+52 000 000 0000">
+                  <div class="d-flex justify-content-between align-items-center mt-2">
+                    <small class="text-muted mb-0">¡Aún no has validado tu teléfono! Protege tu cuenta, confirma tu número.</small>
+                    <button class="btn btn-link btn-sm">Validar ahora</button>
+                  </div>
                 </div>
                 <div class="list-group-item">
                   <div class="d-flex justify-content-between align-items-center">
                     <div><strong>Contraseña</strong></div>
-                    <button class="btn btn-link btn-sm">Cambiar</button>
+                    <span class="text-warning fw-semibold">⚠️ No validada</span>
                   </div>
                   <small class="text-muted">Tu contraseña venció, modifícala para volver a usarla.</small>
+                  <button class="btn btn-link btn-sm ps-0">Cambiar</button>
                 </div>
                 <div class="list-group-item">
-                  <div><strong>E-mail</strong></div>
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div><strong>E-mail</strong></div>
+                    <span class="text-warning fw-semibold">⚠️ No validado</span>
+                  </div>
                   <input class="form-control mt-2" type="email" placeholder="correo@gmail.com">
+                  <div class="d-flex justify-content-between align-items-center mt-2">
+                    <small class="text-muted mb-0">Aún no has validado tu correo. Protege tu cuenta confirmándolo.</small>
+                    <button class="btn btn-link btn-sm">Validar ahora</button>
+                  </div>
                 </div>
                 <div class="list-group-item">
                   <div><strong>Reconocimiento facial</strong></div>
@@ -1401,6 +1416,7 @@
 <script src="assets/js/messages.js"></script>
 <script src="assets/js/fotos.js"></script></body>
 </html>
+
 
 
 
