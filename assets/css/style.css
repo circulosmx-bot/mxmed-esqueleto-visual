@@ -1320,3 +1320,6 @@ body{margin:0;background:var(--mm-fondo-base);}
   flex:0 0 auto;
   min-width:auto;
 }
+#p-seguridad .verif-field{
+  flex:0 0 auto;
+}
