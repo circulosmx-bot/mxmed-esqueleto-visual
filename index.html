@@ -992,12 +992,19 @@
                       <small class="text-muted d-block mt-2">¡Aún no has validado tu teléfono! Protege tu cuenta, confirma tu número.</small>
                     </div>
                     <div class="list-group-item">
-                      <div class="d-flex justify-content-between align-items-center">
-                        <div><strong>Contraseña</strong></div>
-                        <span class="text-warning fw-semibold">⚠️ No validada</span>
+                      <div class="verif-row">
+                        <div class="verif-field">
+                          <label class="form-label mb-1"><strong>Contraseña</strong></label>
+                          <div class="save-wrap needs-verify">
+                            <input class="form-control" type="password" placeholder="••••••••" style="max-width:240px;"/>
+                            <div class="err-bubble">Tu contraseña venció, modifícala para volver a usarla.</div>
+                          </div>
+                        </div>
+                        <div class="verif-status d-flex align-items-center gap-2">
+                          <div class="text-warning fw-semibold mb-0">⚠️ No validada</div>
+                          <button class="btn btn-link btn-sm p-0">Cambiar ahora</button>
+                        </div>
                       </div>
-                      <small class="text-muted">Tu contraseña venció, modifícala para volver a usarla.</small>
-                      <button class="btn btn-link btn-sm ps-0">Cambiar</button>
                     </div>
                     <div class="list-group-item">
                       <label class="form-label mb-1"><strong>E-mail</strong></label>
