@@ -976,13 +976,15 @@
                   <p class="text-muted mb-2">Activa los métodos de verificación necesarios para proteger tu cuenta.</p>
                   <div class="list-group">
                     <div class="list-group-item">
-                      <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
-                        <div class="flex-grow-1">
+                      <div class="d-flex align-items-center flex-wrap">
+                        <div>
                           <label class="form-label mb-1"><strong>Teléfono</strong></label>
-                          <input class="form-control" type="tel" placeholder="+52 000 000 0000" style="max-width: 260px;">
-                          <small class="text-muted d-block mt-2">¡Aún no has validado tu teléfono! Protege tu cuenta, confirma tu número.</small>
+                          <div class="save-wrap">
+                            <input class="form-control" type="tel" inputmode="tel" data-validate="phone" placeholder="+52 000 000 0000" style="max-width:260px;"/>
+                            <div class="err-bubble">Ingresa un teléfono válido (7815 dígitos).</div>
+                          </div>
                         </div>
-                        <div class="text-end">
+                        <div style="margin-left:30px; min-width:160px">
                           <div class="text-warning fw-semibold">⚠️ No validado</div>
                           <button class="btn btn-link btn-sm p-0 mt-1">Validar ahora</button>
                         </div>
