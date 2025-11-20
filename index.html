@@ -979,9 +979,13 @@
                       <div class="d-flex align-items-center flex-wrap">
                         <div>
                           <label class="form-label mb-1"><strong>Tel?fono</strong></label>
-                          <div class="save-wrap">
-                            <input class="form-control" type="tel" inputmode="tel" data-validate="phone" placeholder="+52 000 000 0000" style="max-width:260px;"/>
+                          <div class="save-wrap needs-verify">
+                            <div class="save-field">
+                              <input class="form-control" type="tel" inputmode="tel" data-validate="phone" placeholder="+52 000 000 0000" style="max-width:260px;"/>
+                              <span class="save-warn"><span class="material-symbols-outlined" aria-hidden="true">error</span></span>
+                            </div>
                             <div class="err-bubble">Ingresa un tel?fono v?lido (7?15 d?gitos).</div>
+                          </div>
                           </div>
                           <small class="text-muted d-block mt-2">?A?n no has validado tu tel?fono! Protege tu cuenta, confirma tu n?mero.</small>
                         </div>
@@ -1003,9 +1007,13 @@
                       <div class="d-flex align-items-start flex-wrap">
                         <div class="flex-grow-1">
                           <label class="form-label mb-1"><strong>E-mail</strong></label>
-                          <div class="save-wrap">
-                            <input class="form-control" type="email" placeholder="correo@gmail.com" style="max-width:320px;"/>
+                          <div class="save-wrap needs-verify">
+                            <div class="save-field">
+                              <input class="form-control" type="email" placeholder="correo@gmail.com" style="max-width:320px;"/>
+                              <span class="save-warn"><span class="material-symbols-outlined" aria-hidden="true">error</span></span>
+                            </div>
                             <div class="err-bubble">Ingresa un correo v?lido.</div>
+                          </div>
                           </div>
                           <small class="text-muted d-block mt-2">A?n no has validado tu correo. Protege tu cuenta confirm?ndolo.</small>
                         </div>
