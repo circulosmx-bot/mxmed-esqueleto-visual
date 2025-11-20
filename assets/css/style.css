@@ -1327,3 +1327,39 @@ body{margin:0;background:var(--mm-fondo-base);}
   flex:0 0 auto;
 }
 
+#p-seguridad .verif-row.verif-row-actions{
+  align-items:stretch;
+}
+#p-seguridad .verif-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  flex:0 0 auto;
+}
+#p-seguridad .verif-action{
+  background:#f4fbff;
+  border:1px solid #d9eefb;
+  border-radius:12px;
+  padding:.55rem .85rem;
+  display:flex;
+  align-items:center;
+  gap:.6rem;
+  min-width:220px;
+}
+#p-seguridad .verif-action .action-info{
+  min-width:160px;
+}
+#p-seguridad .verif-action button{
+  white-space:nowrap;
+}
+#p-seguridad .verif-ico{
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:#e0f3ff;
+  color:#0b6391;
+  font-size:20px;
+}
