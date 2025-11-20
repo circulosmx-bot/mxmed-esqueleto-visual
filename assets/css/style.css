@@ -1306,3 +1306,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 /* Seguridad: contenedores ceñidos al ancho del input para ubicar el check adentro */
 #p-seguridad .save-field,
 #p-seguridad .save-wrap{ display:inline-block; }
+#p-seguridad .verif-status{
+  margin-left:25px !important;
+  flex:0 0 auto;
+  min-width:0;
+}
