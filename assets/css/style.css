@@ -1306,18 +1306,17 @@ body{margin:0;background:var(--mm-fondo-base);}
 /* Seguridad: contenedores ceñidos al ancho del input para ubicar el check adentro */
 #p-seguridad .save-field,
 #p-seguridad .save-wrap{ display:inline-block; }
-#p-seguridad .verif-status{
-  margin-left:25px !important;
-  flex:0 0 auto;
-  min-width:0;
-}
-#p-seguridad .verif-row > div:first-child{
-  flex:0 0 auto;
-}
 #p-seguridad .verif-row{
-  display:inline-flex !important;
+  display:flex !important;
   flex-wrap:wrap;
+  column-gap:25px;
+  row-gap:6px;
+  align-items:center;
 }
 #p-seguridad .verif-row > div:first-child{
-  display:inline-block;
+  flex:0 0 auto;
+}
+#p-seguridad .verif-status{
+  flex:0 0 auto;
+  min-width:auto;
 }
