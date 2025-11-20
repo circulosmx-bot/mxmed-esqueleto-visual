@@ -1299,3 +1299,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .save-wrap.needs-verify.saved .save-warn{ display:none; }
 /* Seguridad: forzar el check dentro del input */
 #p-seguridad .save-field > .save-ok{ left:auto !important; right:.5rem !important; }
+/* Seguridad: fallback si el check quedó como hijo directo de .save-wrap */
+#p-seguridad .save-wrap > .save-ok{
+  position:absolute; right:.5rem; left:auto; top:50%; transform:translateY(-50%);
+}
