@@ -1313,8 +1313,11 @@ body{margin:0;background:var(--mm-fondo-base);}
   row-gap:6px;
   align-items:center;
 }
-#p-seguridad .verif-row > div:first-child{
+#p-seguridad .verif-field{
   flex:0 0 auto;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
 }
 #p-seguridad .verif-status{
   flex:0 0 auto;
@@ -1323,3 +1326,4 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-seguridad .verif-field{
   flex:0 0 auto;
 }
+
