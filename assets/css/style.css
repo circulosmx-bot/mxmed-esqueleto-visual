@@ -1364,8 +1364,62 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-size:20px;
 }
 #p-seguridad .verif-tip{
-  font-size:1.15em;
-  font-weight:700;
+  font-size:1.05em;
+  font-weight:400;
   color:#00ADC1;
   line-height:1.4;
+}
+#p-seguridad .verif-tip > span{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+#p-seguridad .verif-tip-ico{
+  font-size:1.35em;
+  line-height:1;
+  color:#005684;
+  display:inline-flex;
+}
+#p-seguridad .verif-tip-link{
+  color:#00ADC1;
+  text-decoration:underline;
+}
+#p-seguridad .pwd-change-card{
+  background:#f8fbff;
+  position:relative;
+}
+#p-seguridad .pwd-change-card .btn-close{
+  background-color:#fff;
+  border-radius:50%;
+  opacity:.65;
+}
+#p-seguridad .pwd-change-card .btn-close:hover{
+  opacity:1;
+}
+#p-seguridad .pwd-checklist{
+  display:flex;
+  flex-wrap:wrap;
+  gap:0.5rem;
+}
+#p-seguridad .pwd-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  border:1px dashed #9eb6c7;
+  border-radius:999px;
+  padding:4px 12px;
+  font-size:0.85rem;
+  color:#577189;
+  transition:all .2s ease;
+}
+#p-seguridad .pwd-chip .material-symbols-rounded{
+  font-size:1.15rem;
+}
+#p-seguridad .pwd-chip.met{
+  border-color:#00adc1;
+  background:rgba(0,173,193,.1);
+  color:#006977;
+}
+#p-seguridad .pwd-chip.met .material-symbols-rounded{
+  color:#00adc1;
 }

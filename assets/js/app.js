@@ -167,7 +167,7 @@
     return [calle && (calle + (num? ' ' + num : '')), col, cp, mun, edo, 'M\u00E9xico'].filter(Boolean).join(', ');
   }
 
-  (function initMap(){
+(function initMap(){
     if(!(window.L && typeof L.map === 'function')) return; // si no hay Leaflet, usamos iframe fallback m?s abajo
     // Configs para ambos panes
     const panes = [
@@ -526,6 +526,87 @@
       if(el){ const wrap = el.closest("[class*='col-']"); if(wrap) wrap.style.display='none'; }
     });
   })();
+})();
+
+// ====== Seguridad: checklist compacto de contraseña ======
+(function(){
+  const panel = document.getElementById('pwd-change-panel');
+  if(!panel) return;
+  const summary = document.getElementById('pwd-summary');
+  const newInput = panel.querySelector('[data-pwd-new]');
+  const confirmInput = panel.querySelector('[data-pwd-confirm]');
+  const submitBtn = panel.querySelector('[data-pwd-submit]');
+  const matchHint = panel.querySelector('[data-pwd-match-hint]');
+  const dismissBtns = panel.querySelectorAll('[data-pwd-dismiss]');
+  if(summary){
+    panel.addEventListener('show.bs.collapse', ()=> summary.classList.add('d-none'));
+    panel.addEventListener('hidden.bs.collapse', ()=>{
+      summary.classList.remove('d-none');
+      resetForm();
+    });
+  }
+  if(!newInput) return;
+  const iconFor = (chip, met)=>{
+    const ico = chip.querySelector('.material-symbols-rounded');
+    if(ico) ico.textContent = met ? 'check_circle' : 'cancel';
+  };
+  const tests = {
+    length: (val)=> val.length >= 8,
+    upper: (val)=> /[A-ZÁÉÍÓÚÜÑ]/.test(val),
+    number: (val)=> /\d/.test(val),
+    symbol: (val)=> /[^A-Za-z0-9]/.test(val),
+  };
+  const runChecks = (val)=>{
+    let allMet = true;
+    Object.entries(tests).forEach(([key, fn])=>{
+      const chip = panel.querySelector(`.pwd-chip[data-check="${key}"]`);
+      if(!chip) return;
+      const met = fn(val);
+      chip.classList.toggle('met', met);
+      iconFor(chip, met);
+      if(!met) allMet = false;
+    });
+    return allMet;
+  };
+  const resetForm = ()=>{
+    newInput.value = '';
+    if(confirmInput) confirmInput.value = '';
+    runChecks('');
+    if(matchHint) matchHint.classList.add('d-none');
+    if(submitBtn) submitBtn.disabled = true;
+  };
+  const syncState = ()=>{
+    const pwd = newInput.value || '';
+    const confirm = confirmInput?.value || '';
+    const checksOk = runChecks(pwd);
+    const match = confirmInput ? (pwd.length > 0 && pwd === confirm) : true;
+    if(matchHint){
+      matchHint.classList.toggle('d-none', match || confirm.length===0);
+    }
+    if(submitBtn){
+      submitBtn.disabled = !(checksOk && match);
+    }
+  };
+  const hidePanel = ()=>{
+    const collapse = window.bootstrap && window.bootstrap.Collapse ? window.bootstrap.Collapse.getOrCreateInstance(panel) : null;
+    if(collapse){
+      collapse.hide();
+    }else{
+      panel.classList.remove('show');
+      if(summary) summary.classList.remove('d-none');
+      resetForm();
+    }
+  };
+  dismissBtns.forEach(btn=>{
+    btn.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      hidePanel();
+    });
+  });
+  newInput.addEventListener('input', syncState);
+  confirmInput?.addEventListener('input', syncState);
+  panel.addEventListener('shown.bs.collapse', syncState);
+  syncState();
 })();
 
 // ===== Correcciones rápidas de acentos en header (muestra) =====
