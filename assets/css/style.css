@@ -1384,17 +1384,49 @@ body{margin:0;background:var(--mm-fondo-base);}
   color:#00ADC1;
   text-decoration:underline;
 }
+#p-seguridad .verify-card,
 #p-seguridad .pwd-change-card{
   background:#f8fbff;
   position:relative;
 }
+#p-seguridad .verify-card .btn-close,
 #p-seguridad .pwd-change-card .btn-close{
   background-color:#fff;
   border-radius:50%;
   opacity:.65;
 }
+#p-seguridad .verify-card .btn-close:hover,
 #p-seguridad .pwd-change-card .btn-close:hover{
   opacity:1;
+}
+#p-seguridad .verify-step{
+  padding:0.5rem 0;
+  border-bottom:1px dashed rgba(0,0,0,.08);
+}
+#p-seguridad .verify-step:last-of-type{
+  border-bottom:0;
+}
+#p-seguridad .step-title{
+  font-size:0.85rem;
+  text-transform:uppercase;
+  color:#4b6478;
+  letter-spacing:.04em;
+  margin-bottom:0.3rem;
+}
+#p-seguridad .otp-inputs{
+  display:flex;
+  gap:0.4rem;
+  max-width:320px;
+}
+#p-seguridad .otp-inputs .form-control.otp{
+  text-align:center;
+  font-weight:600;
+  font-size:1.2rem;
+  padding:0.4rem;
+}
+#p-seguridad .otp-inputs .form-control.otp:focus{
+  border-color:#00adc1;
+  box-shadow:0 0 0 0.1rem rgba(0,173,193,.25);
 }
 #p-seguridad .pwd-checklist{
   display:flex;

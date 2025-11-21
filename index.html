@@ -977,19 +977,76 @@
                   <div class="list-group">
                     <div class="list-group-item">
                       <label class="form-label mb-1"><strong>Teléfono</strong></label>
-                      <div class="verif-row">
-                        <div class="verif-field">
-                          <div class="save-wrap needs-verify">
-                            <input class="form-control" type="tel" inputmode="tel" data-validate="phone" placeholder="+52 000 000 0000" style="max-width:260px;"/>
-                            <div class="err-bubble">Ingresa un teléfono válido (7–15 dígitos).</div>
+                      <div id="phone-summary">
+                        <div class="verif-row">
+                          <div class="verif-field">
+                            <div class="save-wrap needs-verify">
+                              <input class="form-control" type="tel" inputmode="tel" data-validate="phone" placeholder="+52 000 000 0000" style="max-width:260px;" id="verify-phone-input"/>
+                              <div class="err-bubble">Ingresa un teléfono válido (7–15 dígitos).</div>
+                            </div>
+                          </div>
+                          <div class="verif-status d-flex align-items-center gap-2">
+                            <div class="text-warning fw-semibold mb-0">⚠️ No validado</div>
+                            <button class="btn btn-link btn-sm p-0" type="button" data-verify-trigger="#phone-verify-panel" data-verify-input="#verify-phone-input" data-verify-hint="#phone-verify-hint" data-verify-type="phone">Validar ahora</button>
                           </div>
                         </div>
-                        <div class="verif-status d-flex align-items-center gap-2">
-                          <div class="text-warning fw-semibold mb-0">⚠️ No validado</div>
-                          <button class="btn btn-link btn-sm p-0">Validar ahora</button>
+                        <small class="text-muted d-block mt-2">¡Aún no has validado tu teléfono! Protege tu cuenta, confirma tu número.</small>
+                        <div class="text-danger small mt-2 d-none" id="phone-verify-hint">Ingresa un teléfono de 10 dígitos para continuar.</div>
+                      </div>
+                      <div class="collapse mt-3" id="phone-verify-panel" data-verify-panel data-summary="#phone-summary">
+                        <div class="verify-card border rounded-3 p-3 position-relative">
+                          <button type="button" class="btn-close btn-sm position-absolute top-0 end-0 mt-2 me-2" aria-label="Cerrar" data-verify-dismiss="#phone-verify-panel"></button>
+                          <h6 class="mb-2 d-flex align-items-center gap-2"><span class="material-symbols-rounded text-primary" aria-hidden="true">sms</span>Validar teléfono</h6>
+                          <p class="text-muted mb-3">Te enviaremos un código de un solo uso para confirmar que tienes acceso a este número.</p>
+                          <div class="verify-step">
+                            <div class="step-title">1. Confirma tu número</div>
+                            <div class="row g-2 align-items-center">
+                              <div class="col-md-6">
+                                <div class="input-group">
+                                  <span class="input-group-text">+52</span>
+                                  <input type="tel" class="form-control" value="000 000 0000" data-verify-value="phone">
+                                </div>
+                              </div>
+                              <div class="col-md-3">
+                                <button class="btn btn-outline-secondary btn-sm w-100" type="button">Editar</button>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="verify-step mt-3">
+                            <div class="step-title">2. ¿Cómo quieres recibir el código?</div>
+                            <div class="btn-group" role="group" aria-label="Método de envío">
+                              <input type="radio" class="btn-check" name="phone-method" id="phone-method-sms" autocomplete="off" checked>
+                              <label class="btn btn-outline-primary btn-sm" for="phone-method-sms">SMS</label>
+                              <input type="radio" class="btn-check" name="phone-method" id="phone-method-whatsapp" autocomplete="off">
+                              <label class="btn btn-outline-primary btn-sm" for="phone-method-whatsapp">WhatsApp</label>
+                              <input type="radio" class="btn-check" name="phone-method" id="phone-method-call" autocomplete="off">
+                              <label class="btn btn-outline-primary btn-sm" for="phone-method-call">Llamada</label>
+                            </div>
+                          </div>
+                          <div class="verify-step mt-3">
+                            <div class="step-title">3. Ingresa el código de 6 dígitos</div>
+                            <div class="otp-inputs" data-otp-group>
+                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                            </div>
+                            <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 mt-2">
+                              <div class="text-muted small">Código expira en <span data-otp-countdown>01:00</span>.</div>
+                              <button class="btn btn-link btn-sm p-0" type="button" data-otp-resend>Reenviar código</button>
+                            </div>
+                          </div>
+                          <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mt-3">
+                            <div class="text-muted small">Asegúrate de que tu línea pueda recibir SMS o llamadas internacionales.</div>
+                            <div class="d-flex gap-2">
+                              <button class="btn btn-outline-secondary btn-sm" type="button" data-verify-dismiss="#phone-verify-panel">Cancelar</button>
+                              <button class="btn btn-primary btn-sm" type="button" data-otp-submit disabled>Confirmar código</button>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <small class="text-muted d-block mt-2">¡Aún no has validado tu teléfono! Protege tu cuenta, confirma tu número.</small>
                     </div>
                     <div class="list-group-item">
                       <label class="form-label mb-1"><strong>Contraseña</strong></label>
@@ -1027,7 +1084,7 @@
                       </div>
                       <div class="collapse mt-3" id="pwd-change-panel" data-pwd-panel>
                         <div class="pwd-change-card border rounded-3 p-3 position-relative">
-                          <button type="button" class="btn-close btn-sm position-absolute top-0 end-0 mt-2 me-2" aria-label="Cerrar" data-pwd-dismiss></button>
+                          <button type="button" class="btn-close btn-sm position-absolute top-0 end-0 mt-2 me-2" aria-label="Cerrar" data-verify-dismiss></button>
                           <div class="row g-3">
                             <div class="col-md-4">
                               <label class="form-label small text-uppercase text-muted">Contraseña actual</label>
@@ -1067,7 +1124,7 @@
                               Protegemos tus cambios solicitando verificación adicional.
                             </div>
                             <div class="d-flex gap-2">
-                              <button class="btn btn-outline-secondary btn-sm" type="button" data-pwd-dismiss>Cancelar</button>
+                              <button class="btn btn-outline-secondary btn-sm" type="button" data-verify-dismiss>Cancelar</button>
                               <button class="btn btn-primary btn-sm" type="button" data-pwd-submit disabled>Guardar nueva contraseña</button>
                             </div>
                           </div>
@@ -1076,19 +1133,61 @@
                     </div>
                     <div class="list-group-item">
                       <label class="form-label mb-1"><strong>E-mail</strong></label>
-                      <div class="verif-row">
-                        <div class="verif-field">
-                          <div class="save-wrap needs-verify">
-                            <input class="form-control" type="email" placeholder="correo@gmail.com" style="max-width:320px;"/>
-                            <div class="err-bubble">Ingresa un correo válido.</div>
+                      <div id="email-summary">
+                        <div class="verif-row">
+                          <div class="verif-field">
+                            <div class="save-wrap needs-verify">
+                              <input class="form-control" type="email" placeholder="correo@gmail.com" style="max-width:320px;"/>
+                              <div class="err-bubble">Ingresa un correo válido.</div>
+                            </div>
+                          </div>
+                          <div class="verif-status d-flex align-items-center gap-2">
+                            <div class="text-warning fw-semibold mb-0">⚠️ No validado</div>
+                            <button class="btn btn-link btn-sm p-0" type="button" data-bs-toggle="collapse" data-bs-target="#email-verify-panel" aria-expanded="false" aria-controls="email-verify-panel">Validar ahora</button>
                           </div>
                         </div>
-                        <div class="verif-status d-flex align-items-center gap-2">
-                          <div class="text-warning fw-semibold mb-0">⚠️ No validado</div>
-                          <button class="btn btn-link btn-sm p-0">Validar ahora</button>
+                        <small class="text-muted d-block mt-2">Aún no has validado tu correo. Protege tu cuenta confirmándolo.</small>
+                      </div>
+                      <div class="collapse mt-3" id="email-verify-panel" data-verify-panel data-summary="#email-summary">
+                        <div class="verify-card border rounded-3 p-3 position-relative">
+                          <button type="button" class="btn-close btn-sm position-absolute top-0 end-0 mt-2 me-2" aria-label="Cerrar" data-verify-dismiss="#email-verify-panel"></button>
+                          <h6 class="mb-2 d-flex align-items-center gap-2"><span class="material-symbols-rounded text-primary" aria-hidden="true">mark_email_unread</span>Validar correo</h6>
+                          <p class="text-muted mb-3">Enviaremos un código a tu bandeja para comprobar que puedes acceder a este correo.</p>
+                          <div class="verify-step">
+                            <div class="step-title">1. Revisa que el correo sea correcto</div>
+                            <div class="row g-2 align-items-center">
+                              <div class="col-md-7">
+                                <input type="email" class="form-control" value="correo@gmail.com" data-verify-value="email">
+                              </div>
+                              <div class="col-md-3">
+                                <button class="btn btn-outline-secondary btn-sm w-100" type="button">Editar</button>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="verify-step mt-3">
+                            <div class="step-title">2. Ingresa el código enviado</div>
+                            <div class="otp-inputs" data-otp-group>
+                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                            </div>
+                            <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 mt-2">
+                              <div class="text-muted small">¿No lo ves? Busca en correo no deseado o promociones.</div>
+                              <button class="btn btn-link btn-sm p-0" type="button" data-otp-resend>Reenviar código</button>
+                            </div>
+                          </div>
+                          <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mt-3">
+                            <div class="text-muted small">Si ya no usas este correo, actualízalo antes de confirmar.</div>
+                            <div class="d-flex gap-2">
+                              <button class="btn btn-outline-secondary btn-sm" type="button" data-verify-dismiss="#email-verify-panel">Cancelar</button>
+                              <button class="btn btn-primary btn-sm" type="button" data-otp-submit disabled>Confirmar correo</button>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <small class="text-muted d-block mt-2">Aún no has validado tu correo. Protege tu cuenta confirmándolo.</small>
                     </div>
                     <div class="list-group-item">
                       <div><strong>Reconocimiento facial</strong></div>

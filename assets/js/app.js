@@ -537,7 +537,7 @@
   const confirmInput = panel.querySelector('[data-pwd-confirm]');
   const submitBtn = panel.querySelector('[data-pwd-submit]');
   const matchHint = panel.querySelector('[data-pwd-match-hint]');
-  const dismissBtns = panel.querySelectorAll('[data-pwd-dismiss]');
+  const dismissBtns = panel.querySelectorAll('[data-verify-dismiss]');
   if(summary){
     panel.addEventListener('show.bs.collapse', ()=> summary.classList.add('d-none'));
     panel.addEventListener('hidden.bs.collapse', ()=>{
@@ -607,6 +607,170 @@
   confirmInput?.addEventListener('input', syncState);
   panel.addEventListener('shown.bs.collapse', syncState);
   syncState();
+})();
+
+// ====== Seguridad: validación Teléfono/E-mail ======
+(function(){
+  const panels = document.querySelectorAll('[data-verify-panel]');
+  if(!panels.length) return;
+
+  const getCollapse = (panel)=>{
+    if(window.bootstrap && window.bootstrap.Collapse){
+      return window.bootstrap.Collapse.getOrCreateInstance(panel);
+    }
+    return null;
+  };
+
+  const formatTime = (secs)=>{
+    const m = String(Math.floor(secs/60)).padStart(2,'0');
+    const s = String(secs%60).padStart(2,'0');
+    return `${m}:${s}`;
+  };
+
+  panels.forEach(panel=>{
+    const summarySelector = panel.getAttribute('data-summary');
+    const summary = summarySelector ? document.querySelector(summarySelector) : null;
+    const otpInputs = panel.querySelectorAll('[data-otp-input]');
+    const submitBtn = panel.querySelector('[data-otp-submit]');
+    const resendBtn = panel.querySelector('[data-otp-resend]');
+    const countdown = panel.querySelector('[data-otp-countdown]');
+    const dismissBtns = panel.querySelectorAll('[data-verify-dismiss]');
+    let timer=null;
+
+    const clearTimer = ()=>{ if(timer){ clearInterval(timer); timer=null; } };
+    const resetPanel = ()=>{
+      otpInputs.forEach(inp=> inp.value='');
+      if(submitBtn) submitBtn.disabled = true;
+      if(resendBtn){
+        resendBtn.disabled = false;
+        resendBtn.classList.remove('disabled');
+      }
+      clearTimer();
+      if(countdown) countdown.textContent = '01:00';
+    };
+    const onShow = ()=> summary?.classList.add('d-none');
+    const onHidden = ()=>{
+      summary?.classList.remove('d-none');
+      resetPanel();
+    };
+    const onShown = ()=>{
+      otpInputs[0]?.focus();
+      startTimer();
+      updateOtpState();
+    };
+    const hidePanel = ()=>{
+      const collapse = getCollapse(panel);
+      if(collapse){
+        collapse.hide();
+      }else{
+        onHidden();
+        panel.classList.remove('show');
+      }
+    };
+    const showPanel = ()=>{
+      const collapse = getCollapse(panel);
+      if(collapse){
+        collapse.show();
+      }else{
+        onShow();
+        panel.classList.add('show');
+        onShown();
+      }
+    };
+    const startTimer = ()=>{
+      if(!countdown) return;
+      clearTimer();
+      let remaining = 60;
+      countdown.textContent = formatTime(remaining);
+      timer = setInterval(()=>{
+        remaining -=1;
+        countdown.textContent = formatTime(Math.max(remaining,0));
+        if(remaining <= 0){
+          clearTimer();
+        }
+      },1000);
+    };
+    const updateOtpState = ()=>{
+      const code = Array.from(otpInputs).map(inp=> (inp.value||'').trim()).join('');
+      if(submitBtn) submitBtn.disabled = code.length !== otpInputs.length;
+    };
+
+    if(summary){
+      panel.addEventListener('show.bs.collapse', onShow);
+      panel.addEventListener('hidden.bs.collapse', onHidden);
+    }
+
+    otpInputs.forEach((inp, idx)=>{
+      inp.addEventListener('input', ()=>{
+        inp.value = inp.value.replace(/[^0-9]/g,'').slice(0,1);
+        if(inp.value && otpInputs[idx+1]){
+          otpInputs[idx+1].focus();
+        }
+        updateOtpState();
+      });
+      inp.addEventListener('keydown', (ev)=>{
+        if(ev.key === 'Backspace' && !inp.value && otpInputs[idx-1]){
+          otpInputs[idx-1].focus();
+        }
+      });
+    });
+
+    resendBtn?.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      resendBtn.disabled = true;
+      resendBtn.classList.add('disabled');
+      startTimer();
+      setTimeout(()=>{
+        resendBtn.disabled = false;
+        resendBtn.classList.remove('disabled');
+      }, 60000);
+    });
+
+    dismissBtns.forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{
+        ev.preventDefault();
+        hidePanel();
+      });
+    });
+
+    panel.addEventListener('shown.bs.collapse', onShown);
+    panel.__verifyShow = showPanel;
+  });
+
+  const triggers = document.querySelectorAll('[data-verify-trigger]');
+  const validateTriggerValue = (btn)=>{
+    const inputSel = btn.getAttribute('data-verify-input');
+    const type = btn.getAttribute('data-verify-type');
+    const hintSel = btn.getAttribute('data-verify-hint');
+    const inputEl = inputSel ? document.querySelector(inputSel) : null;
+    const hintEl = hintSel ? document.querySelector(hintSel) : null;
+    let ok = true;
+    const value = (inputEl?.value || '').trim();
+    if(type === 'phone'){
+      const digits = value.replace(/\D/g,'');
+      ok = digits.length === 10;
+    }
+    if(hintEl){
+      hintEl.classList.toggle('d-none', ok);
+    }
+    if(!ok){
+      inputEl?.focus();
+    }
+    return ok;
+  };
+
+  triggers.forEach(btn=>{
+    btn.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      if(!validateTriggerValue(btn)) return;
+      const targetSel = btn.getAttribute('data-verify-trigger');
+      const panel = targetSel ? document.querySelector(targetSel) : null;
+      if(!panel) return;
+      if(typeof panel.__verifyShow === 'function'){
+        panel.__verifyShow();
+      }
+    });
+  });
 })();
 
 // ===== Correcciones rápidas de acentos en header (muestra) =====
