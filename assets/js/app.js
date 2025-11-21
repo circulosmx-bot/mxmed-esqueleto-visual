@@ -635,7 +635,19 @@
     const resendBtn = panel.querySelector('[data-otp-resend]');
     const countdown = panel.querySelector('[data-otp-countdown]');
     const dismissBtns = panel.querySelectorAll('[data-verify-dismiss]');
+    const stepsRoot = panel.querySelector('[data-verify-steps]');
+    const stepBlocks = stepsRoot ? stepsRoot.querySelectorAll('[data-step]') : [];
     let timer=null;
+
+    const syncValueFromSummary = ()=>{
+      if(!summary) return;
+      const src = summary.querySelector('input[type="tel"], input[type="email"]');
+      const target = panel.querySelector('[data-verify-value]');
+      if(src && target){
+        target.value = src.value || '';
+        target.placeholder = src.getAttribute('placeholder') || target.placeholder;
+      }
+    };
 
     const clearTimer = ()=>{ if(timer){ clearInterval(timer); timer=null; } };
     const resetPanel = ()=>{
@@ -647,6 +659,21 @@
       }
       clearTimer();
       if(countdown) countdown.textContent = '01:00';
+      if(stepBlocks.length) setStep('method');
+    };
+    const setStep = (name)=>{
+      if(!stepBlocks.length) return;
+      stepBlocks.forEach(block=>{
+        block.classList.toggle('d-none', block.getAttribute('data-step') !== name);
+      });
+      if(name === 'otp'){
+        otpInputs[0]?.focus();
+        startTimer();
+        updateOtpState();
+      }else{
+        clearTimer();
+        if(countdown) countdown.textContent = '01:00';
+      }
     };
     const onShow = ()=> summary?.classList.add('d-none');
     const onHidden = ()=>{
@@ -670,9 +697,11 @@
     const showPanel = ()=>{
       const collapse = getCollapse(panel);
       if(collapse){
+        syncValueFromSummary();
         collapse.show();
       }else{
         onShow();
+        syncValueFromSummary();
         panel.classList.add('show');
         onShown();
       }
@@ -698,11 +727,13 @@
     if(summary){
       panel.addEventListener('show.bs.collapse', onShow);
       panel.addEventListener('hidden.bs.collapse', onHidden);
+      panel.addEventListener('show.bs.collapse', syncValueFromSummary);
     }
 
     otpInputs.forEach((inp, idx)=>{
       inp.addEventListener('input', ()=>{
         inp.value = inp.value.replace(/[^0-9]/g,'').slice(0,1);
+        inp.classList.toggle('filled', !!inp.value);
         if(inp.value && otpInputs[idx+1]){
           otpInputs[idx+1].focus();
         }
@@ -735,6 +766,26 @@
 
     panel.addEventListener('shown.bs.collapse', onShown);
     panel.__verifyShow = showPanel;
+
+    // Step navigation
+    panel.querySelectorAll('[data-verify-next]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{
+        ev.preventDefault();
+        const target = btn.getAttribute('data-verify-next');
+        if(target === 'done' && submitBtn && submitBtn.disabled) return;
+        setStep(target || 'method');
+      });
+    });
+    panel.querySelectorAll('[data-verify-set]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{
+        ev.preventDefault();
+        const target = btn.getAttribute('data-verify-set') || 'method';
+        setStep(target);
+      });
+    });
+
+    // Initialize default step
+    setStep('method');
   });
 
   const triggers = document.querySelectorAll('[data-verify-trigger]');

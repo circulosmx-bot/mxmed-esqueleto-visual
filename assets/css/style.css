@@ -1417,16 +1417,30 @@ body{margin:0;background:var(--mm-fondo-base);}
   display:flex;
   gap:0.4rem;
   max-width:320px;
+  align-items:center;
 }
 #p-seguridad .otp-inputs .form-control.otp{
   text-align:center;
   font-weight:600;
-  font-size:1.2rem;
-  padding:0.4rem;
+  font-size:1.25rem;
+  width:52px;
+  height:52px;
+  padding:0;
+  line-height:1;
+  border:2px solid #9eb6c7;
+  border-radius:12px;
+  background:none;
 }
 #p-seguridad .otp-inputs .form-control.otp:focus{
   border-color:#00adc1;
-  box-shadow:0 0 0 0.1rem rgba(0,173,193,.25);
+  box-shadow:0 0 0 0.12rem rgba(0,173,193,.2);
+}
+#p-seguridad .otp-inputs .form-control.otp.filled{
+  border-color:#1f9d55;
+  box-shadow:0 0 0 0.12rem rgba(31,157,85,.3);
+}
+#p-seguridad .otp-inputs .form-control.otp::placeholder{
+  color:transparent;
 }
 #p-seguridad .pwd-checklist{
   display:flex;

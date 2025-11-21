@@ -997,52 +997,65 @@
                         <div class="verify-card border rounded-3 p-3 position-relative">
                           <button type="button" class="btn-close btn-sm position-absolute top-0 end-0 mt-2 me-2" aria-label="Cerrar" data-verify-dismiss="#phone-verify-panel"></button>
                           <h6 class="mb-2 d-flex align-items-center gap-2"><span class="material-symbols-rounded text-primary" aria-hidden="true">sms</span>Validar teléfono</h6>
-                          <p class="text-muted mb-3">Te enviaremos un código de un solo uso para confirmar que tienes acceso a este número.</p>
-                          <div class="verify-step">
-                            <div class="step-title">1. Confirma tu número</div>
-                            <div class="row g-2 align-items-center">
-                              <div class="col-md-6">
-                                <div class="input-group">
-                                  <span class="input-group-text">+52</span>
-                                  <input type="tel" class="form-control" value="000 000 0000" data-verify-value="phone">
+                          <div class="verify-steps" data-verify-steps>
+                            <div class="verify-step" data-step="method">
+                              <div class="step-title">1. Enviar código</div>
+                              <p class="text-muted">Verificaremos tu número enviando un código de un solo uso.</p>
+                              <div class="row g-2 align-items-center mb-3">
+                                <div class="col-md-6">
+                                  <input type="tel" class="form-control" placeholder="+52 000 000 0000" style="max-width:260px;" data-verify-value="phone">
+                                </div>
+                                <div class="col-md-3">
+                                  <button class="btn btn-link btn-sm" type="button">Editar número</button>
                                 </div>
                               </div>
-                              <div class="col-md-3">
-                                <button class="btn btn-outline-secondary btn-sm w-100" type="button">Editar</button>
+                              <div class="mb-3">
+                                <div class="step-title">Método</div>
+                                <div class="btn-group" role="group" aria-label="Método de envío">
+                                  <input type="radio" class="btn-check" name="phone-method" id="phone-method-sms" autocomplete="off" checked>
+                                  <label class="btn btn-outline-primary btn-sm" for="phone-method-sms">SMS</label>
+                                  <input type="radio" class="btn-check" name="phone-method" id="phone-method-whatsapp" autocomplete="off">
+                                  <label class="btn btn-outline-primary btn-sm" for="phone-method-whatsapp">WhatsApp</label>
+                                  <input type="radio" class="btn-check" name="phone-method" id="phone-method-call" autocomplete="off">
+                                  <label class="btn btn-outline-primary btn-sm" for="phone-method-call">Llamada</label>
+                                </div>
+                              </div>
+                              <div class="d-flex justify-content-end gap-2">
+                                <button class="btn btn-outline-secondary btn-sm" type="button" data-verify-dismiss="#phone-verify-panel">Cancelar</button>
+                                <button class="btn btn-primary btn-sm" type="button" data-verify-next="otp">Enviar código</button>
                               </div>
                             </div>
-                          </div>
-                          <div class="verify-step mt-3">
-                            <div class="step-title">2. ¿Cómo quieres recibir el código?</div>
-                            <div class="btn-group" role="group" aria-label="Método de envío">
-                              <input type="radio" class="btn-check" name="phone-method" id="phone-method-sms" autocomplete="off" checked>
-                              <label class="btn btn-outline-primary btn-sm" for="phone-method-sms">SMS</label>
-                              <input type="radio" class="btn-check" name="phone-method" id="phone-method-whatsapp" autocomplete="off">
-                              <label class="btn btn-outline-primary btn-sm" for="phone-method-whatsapp">WhatsApp</label>
-                              <input type="radio" class="btn-check" name="phone-method" id="phone-method-call" autocomplete="off">
-                              <label class="btn btn-outline-primary btn-sm" for="phone-method-call">Llamada</label>
+                            <div class="verify-step d-none" data-step="otp">
+                              <div class="step-title">2. Ingresa el código</div>
+                              <div class="otp-inputs" data-otp-group>
+                                <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                                <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                                <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                                <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                                <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                                <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
+                              </div>
+                              <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 mt-2">
+                                <div class="text-muted small">Código expira en <span data-otp-countdown>01:00</span>.</div>
+                                <button class="btn btn-link btn-sm p-0" type="button" data-otp-resend>Reenviar código</button>
+                              </div>
+                              <div class="d-flex justify-content-between flex-column flex-md-row gap-2 mt-3">
+                                <button class="btn btn-link btn-sm p-0" type="button" data-verify-set="method">Cambiar número o método</button>
+                                <div class="d-flex gap-2">
+                                  <button class="btn btn-outline-secondary btn-sm" type="button" data-verify-dismiss="#phone-verify-panel">Cancelar</button>
+                                  <button class="btn btn-primary btn-sm" type="button" data-otp-submit disabled data-verify-next="done">Confirmar código</button>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <div class="verify-step mt-3">
-                            <div class="step-title">3. Ingresa el código de 6 dígitos</div>
-                            <div class="otp-inputs" data-otp-group>
-                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
-                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
-                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
-                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
-                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
-                              <input type="text" inputmode="numeric" maxlength="1" class="form-control otp" data-otp-input>
-                            </div>
-                            <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 mt-2">
-                              <div class="text-muted small">Código expira en <span data-otp-countdown>01:00</span>.</div>
-                              <button class="btn btn-link btn-sm p-0" type="button" data-otp-resend>Reenviar código</button>
-                            </div>
-                          </div>
-                          <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mt-3">
-                            <div class="text-muted small">Asegúrate de que tu línea pueda recibir SMS o llamadas internacionales.</div>
-                            <div class="d-flex gap-2">
-                              <button class="btn btn-outline-secondary btn-sm" type="button" data-verify-dismiss="#phone-verify-panel">Cancelar</button>
-                              <button class="btn btn-primary btn-sm" type="button" data-otp-submit disabled>Confirmar código</button>
+                            <div class="verify-step d-none" data-step="done">
+                              <div class="d-flex align-items-center gap-2 text-success mb-2">
+                                <span class="material-symbols-rounded" aria-hidden="true">check_circle</span>
+                                <strong>Teléfono verificado</strong>
+                              </div>
+                              <p class="text-muted mb-3">Tu número quedó protegido. Usaremos este canal para recuperar tu cuenta o avisarte de inicios sospechosos.</p>
+                              <div class="d-flex justify-content-end gap-2">
+                                <button class="btn btn-primary btn-sm" type="button" data-verify-dismiss="#phone-verify-panel">Listo</button>
+                              </div>
                             </div>
                           </div>
                         </div>
