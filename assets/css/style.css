@@ -1363,3 +1363,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   color:#0b6391;
   font-size:20px;
 }
+#p-seguridad .verif-tip{
+  font-size:1.15em;
+  font-weight:700;
+  color:#00ADC1;
+  line-height:1.4;
+}
