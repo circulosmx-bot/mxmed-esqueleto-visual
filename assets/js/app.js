@@ -1407,6 +1407,25 @@ console.info('app.js loaded :: 20251123a');
   });
 })();
 
+(function(){
+  const closers = document.querySelectorAll('[data-sec-close]');
+  if(!closers.length) return;
+  closers.forEach(btn=>{
+    btn.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      const sel = btn.getAttribute('data-sec-close');
+      const panel = sel ? document.querySelector(sel) : btn.closest('.collapse');
+      if(!panel) return;
+      if(window.bootstrap && window.bootstrap.Collapse){
+        window.bootstrap.Collapse.getOrCreateInstance(panel).hide();
+      }else{
+        panel.classList.remove('show');
+        panel.style.display = 'none';
+      }
+    });
+  });
+})();
+
 // ===== Correcciones rÃ¡pidas de acentos en header (muestra) =====
 (function(){
   const t = document.querySelector('.optimo'); if(t) t.textContent = 'Ãptimo';
