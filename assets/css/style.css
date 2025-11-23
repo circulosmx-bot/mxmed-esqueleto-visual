@@ -1352,6 +1352,28 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-seguridad .verif-action button{
   white-space:nowrap;
 }
+#p-seguridad .btn-link,
+#p-seguridad .btn-link.text-primary,
+#p-seguridad .text-primary{
+  color:#00ADC1 !important;
+}
+#p-seguridad .btn-link:hover,
+#p-seguridad .text-primary:hover{
+  color:#008a9a !important;
+  text-decoration:underline;
+}
+#p-seguridad .btn-outline-primary{
+  color:#00ADC1;
+  border-color:#00ADC1;
+}
+#p-seguridad .btn-outline-primary:hover,
+#p-seguridad .btn-outline-primary:focus,
+#p-seguridad .btn-outline-primary:active,
+#p-seguridad .btn-check:checked + .btn-outline-primary{
+  color:#fff;
+  background-color:#00ADC1;
+  border-color:#00ADC1;
+}
 #p-seguridad .verif-ico{
   width:32px;
   height:32px;

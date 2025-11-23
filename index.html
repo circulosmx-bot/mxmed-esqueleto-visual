@@ -1946,9 +1946,9 @@
 
                 <div class="mb-4">
 
-                  <h6 class="d-flex align-items-center gap-2"><span class="material-symbols-rounded" aria-hidden="true">verified_user</span>Métodos de verificación</h6>
+                  <h6 class="d-flex align-items-center gap-2" style="font-size:1.15em;"><span class="material-symbols-rounded" aria-hidden="true" style="font-size:1.15em;">verified_user</span>Activa los metodos de verificacion necesarios para proteger tu cuenta.</h6>
 
-                  <p class="text-muted mb-2">Activa los métodos de verificación necesarios para proteger tu cuenta.</p>
+                  
 
                   <div class="list-group">
 
@@ -1964,7 +1964,7 @@
                           </div>
                           <div class="verif-status d-flex align-items-center gap-2">
                             <div class="text-warning fw-semibold mb-0">⚠️ No validado</div>
-                            <button class="btn btn-link btn-sm p-0" type="button" data-verify-trigger="#phone-verify-panel" data-verify-input="#verify-phone-input" data-verify-hint="#phone-verify-hint" data-verify-type="phone">Validar ahora</button>
+                            <button class="btn btn-link btn-sm p-0 text-primary" type="button" data-verify-trigger="#phone-verify-panel" data-verify-input="#verify-phone-input" data-verify-hint="#phone-verify-hint" data-verify-type="phone">Validar ahora</button>
                           </div>
                         </div>
                         <small class="text-muted d-block mt-2">¡Aún no has validado tu teléfono! Protege tu cuenta, confirma tu número.</small>
@@ -1983,7 +1983,7 @@
                                   <input type="tel" class="form-control" placeholder="+52 000 000 0000" style="max-width:260px;" data-verify-value="phone">
                                 </div>
                                 <div class="col-md-3">
-                                  <button class="btn btn-link btn-sm" type="button">Editar número</button>
+                                  <button class="btn btn-link btn-sm text-primary" type="button">Editar número</button>
                                 </div>
                               </div>
                               <div class="mb-3">
@@ -1999,7 +1999,7 @@
                               </div>
                               <div class="d-flex justify-content-end gap-2">
                                 <button class="btn btn-outline-secondary btn-sm" type="button" data-verify-dismiss="#phone-verify-panel">Cancelar</button>
-                                <button class="btn btn-primary btn-sm" type="button" data-verify-next="otp">Enviar código</button>
+                                <button class="btn btn-primary btn-sm btn-verify-primary" type="button" data-verify-next="otp">Enviar código</button>
                               </div>
                             </div>
                             <div class="verify-step d-none" data-step="otp">
@@ -2014,13 +2014,13 @@
                               </div>
                               <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 mt-2">
                                 <div class="text-muted small">Código expira en <span data-otp-countdown>01:00</span>.</div>
-                                <button class="btn btn-link btn-sm p-0" type="button" data-otp-resend>Reenviar código</button>
+                                <button class="btn btn-link btn-sm p-0 text-primary" type="button" data-otp-resend>Reenviar código</button>
                               </div>
                               <div class="d-flex justify-content-between flex-column flex-md-row gap-2 mt-3">
                                 <button class="btn btn-link btn-sm p-0" type="button" data-verify-set="method">Cambiar número o método</button>
                                 <div class="d-flex gap-2">
                                   <button class="btn btn-outline-secondary btn-sm" type="button" data-verify-dismiss="#phone-verify-panel">Cancelar</button>
-                                  <button class="btn btn-primary btn-sm" type="button" data-otp-submit disabled data-verify-next="done">Confirmar código</button>
+                                  <button class="btn btn-primary btn-sm btn-verify-primary" type="button" data-otp-submit disabled data-verify-next="done">Confirmar código</button>
                                 </div>
                               </div>
                             </div>
@@ -2055,7 +2055,7 @@
                                 <div class="fw-semibold">Cambiar contraseña</div>
                                 <small class="text-muted">Última actualización: 03/10/2018</small>
                               </div>
-                              <button class="btn btn-link btn-sm p-0" type="button" data-bs-toggle="collapse" data-bs-target="#pwd-change-panel" aria-expanded="false" aria-controls="pwd-change-panel">Cambiar</button>
+                              <button class="btn btn-link btn-sm p-0 text-primary" type="button" data-bs-toggle="collapse" data-bs-target="#pwd-change-panel" aria-expanded="false" aria-controls="pwd-change-panel">Cambiar</button>
                             </div>
                             <div class="verif-action d-flex align-items-center gap-2">
                               <span class="verif-ico material-symbols-rounded" aria-hidden="true">verified_user</span>
@@ -2063,13 +2063,13 @@
                                 <div class="fw-semibold">Verificación en dos pasos</div>
                                 <small class="text-muted">Activa protección adicional</small>
                               </div>
-                              <button class="btn btn-link btn-sm p-0" data-bs-toggle="pill" data-bs-target="#seg-2fa">Activar</button>
+                              <button class="btn btn-link btn-sm p-0 text-primary" data-bs-toggle="collapse" data-bs-target="#seg-2fa-panel" aria-expanded="false" aria-controls="seg-2fa-panel">Activar</button>
                             </div>
                           </div>
                         </div>
                         <div class="verif-tip mt-2">
                           <span><span class="verif-tip-ico material-symbols-rounded" aria-hidden="true">key</span>No pierdas el acceso a tu cuenta / Cambia tu contraseña periódicamente.</span><br>
-                          <span><span class="verif-tip-ico material-symbols-rounded" aria-hidden="true">verified_user</span>Activa el método de verificación en 2 pasos. <a href="#" class="verif-tip-link" data-bs-toggle="pill" data-bs-target="#seg-2fa">Activar ahora</a></span>
+                          <span><span class="verif-tip-ico material-symbols-rounded" aria-hidden="true">verified_user</span>Activa el método de verificación en 2 pasos. <a href="#" class="verif-tip-link" data-bs-toggle="collapse" data-bs-target="#seg-2fa-panel" aria-expanded="false" aria-controls="seg-2fa-panel">Activar ahora</a></span>
                         </div>
                       </div>
                       <div class="collapse mt-3" id="pwd-change-panel" data-pwd-panel>
@@ -2115,7 +2115,7 @@
                             </div>
                             <div class="d-flex gap-2">
                               <button class="btn btn-outline-secondary btn-sm" type="button" data-verify-dismiss>Cancelar</button>
-                              <button class="btn btn-primary btn-sm" type="button" data-pwd-submit disabled>Guardar nueva contraseña</button>
+                              <button class="btn btn-primary btn-sm btn-verify-primary" type="button" data-pwd-submit disabled>Guardar nueva contraseña</button>
                             </div>
                           </div>
                         </div>
@@ -2133,7 +2133,7 @@
                           </div>
                           <div class="verif-status d-flex align-items-center gap-2">
                             <div class="text-warning fw-semibold mb-0">⚠️ No validado</div>
-                            <button class="btn btn-link btn-sm p-0" type="button" data-bs-toggle="collapse" data-bs-target="#email-verify-panel" aria-expanded="false" aria-controls="email-verify-panel">Validar ahora</button>
+                            <button class="btn btn-link btn-sm p-0 text-primary" type="button" data-bs-toggle="collapse" data-bs-target="#email-verify-panel" aria-expanded="false" aria-controls="email-verify-panel">Validar ahora</button>
                           </div>
                         </div>
                         <small class="text-muted d-block mt-2">Aún no has validado tu correo. Protege tu cuenta confirmándolo.</small>
@@ -2166,14 +2166,14 @@
                             </div>
                             <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 mt-2">
                               <div class="text-muted small">¿No lo ves? Busca en correo no deseado o promociones.</div>
-                              <button class="btn btn-link btn-sm p-0" type="button" data-otp-resend>Reenviar código</button>
+                              <button class="btn btn-link btn-sm p-0 text-primary" type="button" data-otp-resend>Reenviar código</button>
                             </div>
                           </div>
                           <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mt-3">
                             <div class="text-muted small">Si ya no usas este correo, actualízalo antes de confirmar.</div>
                             <div class="d-flex gap-2">
                               <button class="btn btn-outline-secondary btn-sm" type="button" data-verify-dismiss="#email-verify-panel">Cancelar</button>
-                              <button class="btn btn-primary btn-sm" type="button" data-otp-submit disabled>Confirmar correo</button>
+                              <button class="btn btn-primary btn-sm btn-verify-primary" type="button" data-otp-submit disabled>Confirmar correo</button>
                             </div>
                           </div>
                         </div>
