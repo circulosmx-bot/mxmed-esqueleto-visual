@@ -1127,6 +1127,28 @@ console.info('app.js loaded :: 20251123a');
   syncState();
 })();
 
+// Fallback para cierres con data-sec-close (ej. Cambiar contraseña)
+(function(){
+  const closers = document.querySelectorAll('[data-sec-close]');
+  if(!closers.length) return;
+  closers.forEach(btn=>{
+    btn.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      const sel = btn.getAttribute('data-sec-close');
+      const panel = sel ? document.querySelector(sel) : btn.closest('.collapse');
+      if(!panel) return;
+      // intenta colapsar con Bootstrap si está disponible
+      const inst = window.bootstrap?.Collapse?.getOrCreateInstance(panel);
+      if(inst){
+        inst.hide();
+      }else{
+        panel.classList.remove('show');
+        panel.style.display = 'none';
+      }
+    });
+  });
+})();
+
 // ====== Seguridad: validaciÃ³n TelÃ©fono/E-mail ======
 (function(){
   const panels = document.querySelectorAll('[data-verify-panel]');
