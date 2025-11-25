@@ -2747,6 +2747,12 @@ body{margin:0;background:var(--mm-fondo-base);}
   inset:-12px;
   pointer-events:auto;
 }
+
+#p-seguridad .btn-primary{
+  background:#00ADC1 !important;
+  border-color:#00ADC1 !important;
+  color:#fff !important;
+}
 #p-seguridad .btn-verify-primary{
   background:#00ADC1 !important;
   border-color:#00ADC1 !important;
