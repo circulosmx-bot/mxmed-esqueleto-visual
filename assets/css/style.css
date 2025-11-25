@@ -2775,6 +2775,18 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-color:#00ADC1 !important;
   color:#fff !important;
 }
+#p-seguridad .btn-link,
+#p-seguridad .btn-link.text-primary,
+#p-seguridad .text-primary,
+#p-seguridad .verif-tip-link{
+  color:#00ADC1 !important;
+}
+#p-seguridad .btn-link:hover,
+#p-seguridad .text-primary:hover,
+#p-seguridad .verif-tip-link:hover{
+  color:#008a9a !important;
+  text-decoration:underline;
+}
 
 #p-seguridad .verify-card .btn-close,
 #p-seguridad .pwd-change-card .btn-close{
