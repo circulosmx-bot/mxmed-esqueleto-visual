@@ -2860,3 +2860,14 @@ body{margin:0;background:var(--mm-fondo-base);}
   background-image:none !important;
   padding-right:0;
 }
+
+#p-seguridad .seg-block-title{
+  display:inline-block;
+  background:#00ADC1;
+  color:#fff;
+  padding:8px 14px;
+  border-radius:12px;
+  font-weight:700;
+  line-height:1.2;
+}
+
