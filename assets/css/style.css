@@ -2861,16 +2861,24 @@ body{margin:0;background:var(--mm-fondo-base);}
   padding-right:0;
 }
 
+
+
+
+
+
+
 #p-seguridad .seg-block-title{
   display:inline-block;
-  background:#00ADC1;
+  background:rgba(0,173,193,0.65);
   color:#fff;
-  padding:8px 14px;
-  border-radius:12px;
+  padding:6px 18px;
+  border-radius:18px;
   font-weight:700;
   line-height:1.2;
 }
 
 
-#p-seguridad .seg-block-title{display:inline-block;background:#00ADC1;color:#fff;padding:8px 14px;border-radius:12px;font-weight:700;line-height:1.2;}
+/* 2FA OTP row: align button to the right */
+#p-seguridad .twofa-otp-row{display:flex;flex-wrap:wrap;align-items:center;gap:0.5rem;}#p-seguridad .twofa-otp-row > .btn{min-width:130px;margin-left:30px;}
 
+#p-seguridad [data-twofa-status].bg-success{background-color:#00ADC1 !important;border-color:#00ADC1 !important;}

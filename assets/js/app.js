@@ -1,4 +1,4 @@
-// MXMed app bundle
+﻿// MXMed app bundle
 console.info('app.js loaded :: 20251123a');
 
 // ====== Consultorio: horarios, foto preview, mapa (fallback) ======
@@ -791,13 +791,13 @@ console.info('app.js loaded :: 20251123a');
 
       switch(reason){
 
-        case 'invalid_char': return 'Solo nÃºmeros y + ( ) -';
+        case 'invalid_char': return 'Solo nÃƒÂºmeros y + ( ) -';
 
-        case 'too_short': return 'NÃºmero incompleto (se requieren 10 dÃ­gitos)';
+        case 'too_short': return 'NÃƒÂºmero incompleto (se requieren 10 dÃƒÂ­gitos)';
 
-        case 'too_long': return 'Demasiados dÃ­gitos (mÃ¡ximo 10 o +52 + 10)';
+        case 'too_long': return 'Demasiados dÃƒÂ­gitos (mÃƒÂ¡ximo 10 o +52 + 10)';
 
-        default: return 'TelÃ©fono invÃ¡lido';
+        default: return 'TelÃƒÂ©fono invÃƒÂ¡lido';
 
       }
 
@@ -829,13 +829,13 @@ console.info('app.js loaded :: 20251123a');
 
         else { el.classList.add('is-invalid'); }
 
-        el.setCustomValidity('TelÃ©fono invÃ¡lido');
+        el.setCustomValidity('TelÃƒÂ©fono invÃƒÂ¡lido');
 
       }
 
     }
 
-    // Reglas adicionales en vivo: tope de 3 letras y tope de dÃ­gitos
+    // Reglas adicionales en vivo: tope de 3 letras y tope de dÃƒÂ­gitos
 
     const _state = new WeakMap(); // { value, letters, digits }
 
@@ -843,7 +843,7 @@ console.info('app.js loaded :: 20251123a');
 
     function countLetters(s){
 
-      const m = (s||'').match(/[A-Za-zÃÃÃÃÃÃÃÃ¡Ã©Ã­Ã³ÃºÃ¼Ã±]/g);
+      const m = (s||'').match(/[A-Za-zÃƒÂÃƒÂ‰ÃƒÂÃƒÂ“ÃƒÂšÃƒÂœÃƒÂ‘ÃƒÂ¡ÃƒÂ©ÃƒÂ­ÃƒÂ³ÃƒÂºÃƒÂ¼ÃƒÂ±]/g);
 
       return m ? m.length : 0;
 
@@ -1038,7 +1038,7 @@ console.info('app.js loaded :: 20251123a');
   // Ocultar campos antiguos del consultorio para evitar duplicados
   (function hideLegacyFields(){
     const root = document.querySelector("#sede1"); if(!root) return;
-    const labels = ["Nombre de la sede","TelÃ©fono (planes de pago)","DirecciÃ³n","Horario","Notas"];
+    const labels = ["Nombre de la sede","TelÃƒÂ©fono (planes de pago)","DirecciÃƒÂ³n","Horario","Notas"];
     labels.forEach(txt=>{
       const el = Array.from(root.querySelectorAll("label.form-label")).find(l=> (l.textContent||"").trim().indexOf(txt)===0);
       if(el){ const wrap = el.closest("[class*='col-']"); if(wrap) wrap.style.display='none'; }
@@ -1046,7 +1046,7 @@ console.info('app.js loaded :: 20251123a');
   })();
 })();
 
-// ====== Seguridad: checklist compacto de contraseÃ±a ======
+// ====== Seguridad: checklist compacto de contraseÃƒÂ±a ======
 (function(){
   const panel = document.getElementById('pwd-change-panel');
   if(!panel) return;
@@ -1070,7 +1070,7 @@ console.info('app.js loaded :: 20251123a');
   };
   const tests = {
     length: (val)=> val.length >= 8,
-    upper: (val)=> /[A-ZÃÃÃÃÃÃÃ]/.test(val),
+    upper: (val)=> /[A-ZÃƒÂÃƒÂ‰ÃƒÂÃƒÂ“ÃƒÂšÃƒÂœÃƒÂ‘]/.test(val),
     number: (val)=> /\d/.test(val),
     symbol: (val)=> /[^A-Za-z0-9]/.test(val),
   };
@@ -1158,7 +1158,7 @@ console.info('app.js loaded :: 20251123a');
   }
 })();
 
-// ====== Seguridad: validaciÃ³n TelÃ©fono/E-mail ======
+// ====== Seguridad: validaciÃƒÂ³n TelÃƒÂ©fono/E-mail ======
 (function(){
   const panels = document.querySelectorAll('[data-verify-panel]');
   if(!panels.length) return;
@@ -1438,19 +1438,19 @@ console.info('app.js loaded :: 20251123a');
   });
 })();
 
-// ===== Correcciones rÃ¡pidas de acentos en header (muestra) =====
+// ===== Correcciones rÃƒÂ¡pidas de acentos en header (muestra) =====
 (function(){
-  const t = document.querySelector('.optimo'); if(t) t.textContent = 'Ãptimo';
-  const n = document.querySelector('.name'); if(n && /MuÃ±oz|Muï¿½oz/.test(n.textContent)) n.textContent = 'Leticia MuÃ±oz Alfaro';
-  const img = document.querySelector('.header-top img'); if(img) img.alt = 'MÃ©xico MÃ©dico';
-  if(document.title && document.title.indexOf('MXMed')>=0) document.title = 'MXMed 2025 Â· Perfil MÃ©dico';
+  const t = document.querySelector('.optimo'); if(t) t.textContent = 'ÃƒÂ“ptimo';
+  const n = document.querySelector('.name'); if(n && /MuÃƒÂ±oz|MuÃ¯Â¿Â½oz/.test(n.textContent)) n.textContent = 'Leticia MuÃƒÂ±oz Alfaro';
+  const img = document.querySelector('.header-top img'); if(img) img.alt = 'MÃƒÂ©xico MÃƒÂ©dico';
+  if(document.title && document.title.indexOf('MXMed')>=0) document.title = 'MXMed 2025 Ã‚Â· Perfil MÃƒÂ©dico';
 })();
 
 // ===== Sugerencia de Grupo Medico y sincronizacion de logotipo (demo) =====
 
 (function setupGrupoMedicoSuggest(){
 
-  const keyAssoc = 'grupo_MÃ©dico_assoc';
+  const keyAssoc = 'grupo_MÃƒÂ©dico_assoc';
 
 
 
@@ -1512,7 +1512,7 @@ console.info('app.js loaded :: 20251123a');
 
     const el = document.getElementById('modalGrupoSuggest'); if(!el) return;
 
-    el.querySelector('#grp-name').textContent = s.nombre || 'Grupo MÃ©dico';
+    el.querySelector('#grp-name').textContent = s.nombre || 'Grupo MÃƒÂ©dico';
 
     el.querySelector('#grp-addr').textContent = s.addr || '';
 
@@ -2193,7 +2193,7 @@ console.info('app.js loaded :: 20251123a');
 
   try{
 
-    // 1) Header: "Ãptimo"
+    // 1) Header: "ÃƒÂ“ptimo"
 
     const t = document.querySelector('.optimo');
 
@@ -2247,7 +2247,7 @@ console.info('app.js loaded :: 20251123a');
 
 
 
-// ===== Grupo MÃ©dico: asegurarnos de limpieza de overlay al cerrar =====
+// ===== Grupo MÃƒÂ©dico: asegurarnos de limpieza de overlay al cerrar =====
 
 (function ensureGrupoModalCleanup(){
 
@@ -2292,7 +2292,7 @@ console.info('app.js loaded :: 20251123a');
     // Mostrar siempre (antes solo en localhost); se puede desactivar con window.mxHideResetWidget = true;
     if(window.mxHideResetWidget) return;
 
-    // Crear botón flotante solo una vez
+    // Crear botÃ³n flotante solo una vez
     if(document.getElementById('mx-dev-reset')) return;
 
     const btn = document.createElement('button');
@@ -2301,7 +2301,7 @@ console.info('app.js loaded :: 20251123a');
     btn.textContent = 'Restablecer';
     btn.setAttribute('aria-label','Restablecer estado');
     Object.assign(btn.style, {
-      position:'fixed', top:'auto', bottom:'16px', right:'16px',
+      position:'fixed', top:'16px', bottom:'auto', right:'16px',
       background:'#d81b60', color:'#fff', border:'none',
       padding:'8px 14px', borderRadius:'18px', fontWeight:'600',
       boxShadow:'0 2px 8px rgba(0,0,0,0.2)', cursor:'pointer',
@@ -2317,9 +2317,9 @@ console.info('app.js loaded :: 20251123a');
 
         // Limpiar claves principales usadas en esta secci?n
 
-        localStorage.removeItem('grupo_MÃ©dico_assoc');
+        localStorage.removeItem('grupo_MÃƒÂ©dico_assoc');
 
-        localStorage.removeItem('grupo_MÃ©dico_assoc:decline');
+        localStorage.removeItem('grupo_MÃƒÂ©dico_assoc:decline');
 
         localStorage.removeItem('mxmed_cons_schedules');
 
@@ -2485,6 +2485,62 @@ console.info('app.js loaded :: 20251123a');
         document.querySelectorAll('[data-otp-input]').forEach(inp=> inp.classList.remove('filled','is-valid'));
         document.querySelectorAll('.chip-list').forEach(list=> list.innerHTML='');
         document.querySelectorAll('.save-ok').forEach(ok=> ok.style.display='none');
+      }catch(_){ }
+      // Reset Seguridad 2FA (UI)
+      try{
+        const panel = document.getElementById('seg-2fa-panel');
+        if(panel){
+          panel.classList.remove('show');
+          panel.style.display = 'none';
+          panel.setAttribute('aria-hidden','true');
+        }
+        document.querySelectorAll('[data-bs-target=\"#seg-2fa-panel\"]').forEach(btn=>{
+          btn.setAttribute('aria-expanded','false');
+        });
+        const summary = document.querySelector('[data-twofa-summary]');
+        if(summary){
+          const badge = summary.querySelector('[data-twofa-status]');
+          const lbl = summary.querySelector('[data-twofa-method-label]');
+          const btnAct = summary.querySelector('[data-twofa-activate]');
+          const btnChg = summary.querySelector('[data-twofa-change]');
+          const btnOff = summary.querySelector('[data-twofa-disable]');
+          if(badge){
+            badge.textContent = '2FA inactivo';
+            badge.classList.remove('bg-success');
+            badge.classList.add('bg-secondary');
+          }
+          if(lbl) lbl.textContent = 'Selecciona un mÃ©todo para activarlo.';
+          if(btnAct) btnAct.classList.remove('d-none');
+          if(btnChg) btnChg.classList.add('d-none');
+          if(btnOff) btnOff.classList.add('d-none');
+        }
+        // radio a app y panes
+        const radios = document.querySelectorAll('input[name=\"twofa-method\"]');
+        radios.forEach(r=> r.checked = r.getAttribute('data-twofa-method') === 'app');
+        const panes = document.querySelectorAll('.twofa-pane');
+        panes.forEach(p=> p.classList.toggle('d-none', p.getAttribute('data-twofa-view') !== 'app'));
+        // limpiar OTPs y botones
+        document.querySelectorAll('[data-otp-group]').forEach(g=>{
+          g.querySelectorAll('[data-otp-input]').forEach(inp=>{
+            inp.value = '';
+            inp.classList.remove('filled','is-valid');
+          });
+        });
+        [
+          '[data-twofa-confirm-app]',
+          '[data-twofa-confirm-sms]',
+          '[data-twofa-confirm-wa]',
+          '[data-twofa-confirm-call]'
+        ].forEach(sel=>{
+          const b = document.querySelector(sel);
+          if(!b) return;
+          b.textContent = 'Confirmar 2FA';
+          b.classList.remove('btn-success');
+          b.classList.add('btn-primary');
+          b.disabled = true;
+        });
+        const backups = document.querySelector('[data-twofa-backups]');
+        if(backups) backups.innerHTML = '';
       }catch(_){ }
 
     };
@@ -2888,6 +2944,298 @@ function mxResetLogoPreview(){
 
 
 
+
+
+
+
+
+
+
+
+// ===== Seguridad: VerificaciÃ³n en dos pasos (2FA) =====
+(function(){
+  function initTwofa(){
+    const panel = document.getElementById('seg-2fa-panel');
+    if(!panel || panel.__twofaInit) return;
+    panel.__twofaInit = true;
+
+    const methodInputs = panel.querySelectorAll('input[name="twofa-method"]');
+    const panes = panel.querySelectorAll('.twofa-pane');
+    const secretEl = panel.querySelector('[data-twofa-secret]');
+    const qrEl = panel.querySelector('[data-twofa-qr]');
+    const backupsEl = panel.querySelector('[data-twofa-backups]');
+    const generateBtn = panel.querySelector('[data-twofa-generate]');
+    const otpApp = panel.querySelector('[data-twofa-otp-app]');
+    const otpSms = panel.querySelector('[data-twofa-otp-sms]');
+    const otpWa = panel.querySelector('[data-twofa-otp-wa]');
+    const otpCall = panel.querySelector('[data-twofa-otp-call]');
+    const confirmAppBtn = panel.querySelector('[data-twofa-confirm-app]');
+    const confirmSmsBtn = panel.querySelector('[data-twofa-confirm-sms]');
+    const confirmWaBtn = panel.querySelector('[data-twofa-confirm-wa]');
+    const confirmCallBtn = panel.querySelector('[data-twofa-confirm-call]');
+    const phoneInput = panel.querySelector('[data-twofa-phone]');
+    const phoneWa = panel.querySelector('[data-twofa-phone-wa]');
+    const phoneCall = panel.querySelector('[data-twofa-phone-call]');
+    const sendBtn = panel.querySelector('[data-twofa-send]');
+    const sendBtnWa = panel.querySelector('[data-twofa-send-wa]');
+    const sendBtnCall = panel.querySelector('[data-twofa-send-call]');
+    const sentMsg = panel.querySelector('[data-twofa-sent]');
+    const sentMsgWa = panel.querySelector('[data-twofa-sent-wa]');
+    const sentMsgCall = panel.querySelector('[data-twofa-sent-call]');
+    const triggers = document.querySelectorAll('[data-bs-target="#seg-2fa-panel"]');
+    const summary = document.querySelector('[data-twofa-summary]');
+    const statusBadge = summary?.querySelector('[data-twofa-status]');
+    const methodLabel = summary?.querySelector('[data-twofa-method-label]');
+    const btnActivate = summary?.querySelector('[data-twofa-activate]');
+    const btnChange = summary?.querySelector('[data-twofa-change]');
+    const btnDisable = summary?.querySelector('[data-twofa-disable]');
+    let backups = [];
+    let twofaActive = false;
+    let currentMethod = 'app';
+    const methodName = { app:'App autenticadora', sms:'SMS', whatsapp:'WhatsApp', call:'Llamada' };
+    const getSelectedMethod = ()=>{
+      const checked = Array.from(methodInputs).find(r=> r.checked);
+      return checked?.getAttribute('data-twofa-method') || 'app';
+    };
+        const updateSummary = ()=>{
+      if(!summary) return;
+      const isOn = !!twofaActive;
+      if(statusBadge){
+        statusBadge.textContent = isOn ? '2FA activo' : '2FA inactivo';
+        statusBadge.classList.toggle('bg-success', isOn);
+        statusBadge.classList.toggle('bg-secondary', !isOn);
+      }
+      if(methodLabel){
+        const pretty = methodName[currentMethod] || currentMethod;
+        methodLabel.textContent = isOn ? "Metodo: " + pretty : "Selecciona un metodo para activarlo.";
+      }
+      if(btnActivate) btnActivate.classList.toggle('d-none', isOn);
+      if(btnChange) btnChange.classList.toggle('d-none', !isOn);
+      if(btnDisable) btnDisable.classList.toggle('d-none', !isOn);
+    };
+
+    const randGroup = (len=4)=>{
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let out = '';
+      for(let i=0;i<len;i+=1){
+        out += chars.charAt(Math.floor(Math.random()*chars.length));
+      }
+      return out;
+    };
+    const newSecret = ()=> `${randGroup()}-${randGroup()}-${randGroup()}`;
+    const generateBackups = (n=6)=> Array.from({length:n}, ()=> `${randGroup(4)}-${randGroup(4)}`);
+
+    const renderBackups = ()=>{
+      backups = generateBackups();
+      if(!backupsEl) return;
+      backupsEl.innerHTML = backups.map(code=>`<span class="badge bg-light text-muted border">${code}</span>`).join(' ');
+    };
+
+    const setSecret = ()=>{
+      const secret = newSecret();
+      if(secretEl) secretEl.textContent = secret;
+      if(qrEl) qrEl.textContent = 'QR';
+    };
+
+    const setMethod = (method)=>{
+      const target = method || 'app';
+      methodInputs.forEach(r=>{ r.checked = (r.getAttribute('data-twofa-method') === target); });
+      panes.forEach(p=>{
+        p.classList.toggle('d-none', p.getAttribute('data-twofa-view') !== target);
+      });
+      const focusOtp = (group)=>{
+        const first = group?.querySelector('[data-otp-input]');
+        if(first) first.focus();
+      };
+      if(target === 'app'){
+        focusOtp(otpApp);
+      }else if(target === 'sms'){
+        phoneInput?.focus();
+      }else if(target === 'whatsapp'){
+        phoneWa?.focus();
+      }else if(target === 'call'){
+        phoneCall?.focus();
+      }
+    };
+
+    const getDigits = (group)=>{
+      if(!group) return '';
+      const boxes = group.querySelectorAll('[data-otp-input]');
+      return Array.from(boxes).map(b=> (b.value||'').replace(/\D/g,'')).join('').slice(0,6);
+    };
+
+    const syncButtons = ()=>{
+      if(confirmAppBtn) confirmAppBtn.disabled = getDigits(otpApp).length !== 6;
+      if(confirmSmsBtn) confirmSmsBtn.disabled = getDigits(otpSms).length !== 6;
+      if(confirmWaBtn) confirmWaBtn.disabled = getDigits(otpWa).length !== 6;
+      if(confirmCallBtn) confirmCallBtn.disabled = getDigits(otpCall).length !== 6;
+    };
+
+    [otpApp, otpSms, otpWa, otpCall].forEach(group=>{
+      if(!group) return;
+      group.addEventListener('input', ()=> setTimeout(syncButtons, 0));
+      group.addEventListener('paste', ()=> setTimeout(syncButtons, 30));
+    });
+
+    methodInputs.forEach(radio=>{
+      radio.addEventListener('change', ()=>{
+        const method = radio.getAttribute('data-twofa-method') || 'app';
+        setMethod(method);
+      });
+    });
+
+    generateBtn?.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      setSecret();
+      renderBackups();
+    });
+
+    const bindSender = (btn, phone, msg)=>{
+      if(!btn || !phone) return;
+      btn.addEventListener('click', (ev)=>{
+        ev.preventDefault();
+        const val = (phone.value || '').trim();
+        if(!val){
+          phone.focus();
+          return;
+        }
+        msg?.classList.remove('d-none');
+        msg?.classList.add('text-success');
+        if(btn.classList.contains('disabled')) return;
+        btn.classList.add('disabled');
+        btn.setAttribute('aria-disabled','true');
+        setTimeout(()=> btn.classList.remove('disabled'), 5000);
+      });
+    };
+
+    bindSender(sendBtn, phoneInput, sentMsg);
+    bindSender(sendBtnWa, phoneWa, sentMsgWa);
+    bindSender(sendBtnCall, phoneCall, sentMsgCall);
+
+    const markConfirmed = (btn)=>{
+      if(!btn) return;
+      btn.textContent = 'Confirmado';
+      btn.classList.remove('btn-primary');
+      btn.classList.add('btn-success');
+      btn.disabled = true;
+    };
+
+    confirmAppBtn?.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      if(getDigits(otpApp).length !== 6) return;
+      markConfirmed(confirmAppBtn);
+    });
+
+    confirmAppBtn?.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      if(getDigits(otpApp).length !== 6) return;
+      markConfirmed(confirmAppBtn);
+      currentMethod = getSelectedMethod();
+      twofaActive = true;
+      updateSummary();
+      closePanel();
+    });
+
+    confirmSmsBtn?.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      if(getDigits(otpSms).length !== 6) return;
+      markConfirmed(confirmSmsBtn);
+      currentMethod = getSelectedMethod();
+      twofaActive = true;
+      updateSummary();
+      closePanel();
+    });
+
+    confirmWaBtn?.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      if(getDigits(otpWa).length !== 6) return;
+      markConfirmed(confirmWaBtn);
+      currentMethod = getSelectedMethod();
+      twofaActive = true;
+      updateSummary();
+      closePanel();
+    });
+
+    confirmCallBtn?.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      if(getDigits(otpCall).length !== 6) return;
+      markConfirmed(confirmCallBtn);
+      currentMethod = getSelectedMethod();
+      twofaActive = true;
+      updateSummary();
+      closePanel();
+    });
+
+    const openPanel = ()=>{
+      panel.classList.add('show');
+      panel.style.display = 'block';
+      panel.removeAttribute('aria-hidden');
+      triggers.forEach(btn=> btn.setAttribute('aria-expanded','true'));
+      setMethod(twofaActive ? currentMethod : 'app');
+      syncButtons();
+    };
+    const closePanel = ()=>{
+      panel.classList.remove('show');
+      panel.style.display = 'none';
+      panel.setAttribute('aria-hidden','true');
+      triggers.forEach(btn=> btn.setAttribute('aria-expanded','false'));
+    };
+
+    triggers.forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{
+        ev.preventDefault();
+        openPanel();
+      });
+    });
+
+    document.addEventListener('click', (ev)=>{
+      const btn = ev.target.closest('[data-bs-target="#seg-2fa-panel"]');
+      if(!btn) return;
+      ev.preventDefault();
+      openPanel();
+    });
+
+    panel.querySelectorAll('[data-sec-close]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{
+        ev.preventDefault();
+        closePanel();
+      });
+    });
+
+    btnActivate?.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      currentMethod = 'app';
+      setMethod('app');
+      openPanel();
+    });
+
+    btnChange?.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      setMethod(currentMethod || 'app');
+      openPanel();
+    });
+
+    btnDisable?.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      twofaActive = false;
+      updateSummary();
+      closePanel();
+    });
+
+    // init defaults
+    setSecret();
+    renderBackups();
+    setMethod('app');
+    syncButtons();
+    updateSummary();
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', initTwofa);
+  }else{
+    initTwofa();
+  }
+})();
 
 
 

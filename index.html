@@ -2067,13 +2067,137 @@
                                 <div class="fw-semibold">Verificación en dos pasos</div>
                                 <small class="text-muted">Activa protección adicional</small>
                               </div>
-                              <button class="btn btn-link btn-sm p-0" data-bs-toggle="pill" data-bs-target="#seg-2fa">Activar</button>
+                              <button class="btn btn-link btn-sm p-0" data-bs-toggle="collapse" data-bs-target="#seg-2fa-panel" aria-expanded="false" aria-controls="seg-2fa-panel">Activar</button>
                             </div>
+                          </div>
+                        </div>
+                        <div class="twofa-summary mt-2" data-twofa-summary>
+                          <span class="badge bg-secondary me-2" data-twofa-status>2FA inactivo</span>
+                          <span class="text-muted" data-twofa-method-label>Selecciona un Método para activarlo.</span>
+                          <div class="d-flex flex-wrap gap-2 mt-2">
+                            <button class="btn btn-primary btn-sm" type="button" data-twofa-activate>Activar 2FA</button>
+                            <button class="btn btn-outline-primary btn-sm d-none" type="button" data-twofa-change>Cambiar Método</button>
+                            <button class="btn btn-outline-secondary btn-sm d-none" type="button" data-twofa-disable>Desactivar</button>
                           </div>
                         </div>
                         <div class="verif-tip mt-2">
                           <span><span class="verif-tip-ico material-symbols-rounded" aria-hidden="true">key</span>No pierdas el acceso a tu cuenta / Cambia tu contraseña periódicamente.</span><br>
-                          <span><span class="verif-tip-ico material-symbols-rounded" aria-hidden="true">verified_user</span>Activa el método de verificación en 2 pasos. <a href="#" class="verif-tip-link" data-bs-toggle="pill" data-bs-target="#seg-2fa">Activar ahora</a></span>
+                          <span><span class="verif-tip-ico material-symbols-rounded" aria-hidden="true">verified_user</span>Activa el método de verificación en 2 pasos. <a href="#" class="verif-tip-link" data-bs-toggle="collapse" data-bs-target="#seg-2fa-panel" aria-expanded="false" aria-controls="seg-2fa-panel">Activar ahora</a></span>
+                        </div>
+                      </div>
+                      <div class="collapse mt-3" id="seg-2fa-panel">
+                        <div class="verify-card border rounded-3 p-3 position-relative twofa-card">
+                          <button type="button" class="btn-close btn-sm position-absolute top-0 end-0 mt-2 me-2" aria-label="Cerrar" data-sec-close="#seg-2fa-panel"></button>
+                          <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="material-symbols-rounded text-primary" aria-hidden="true">verified_user</span>
+                            <div><strong>Verificacion en dos pasos</strong><div class="text-muted small">Protege tu cuenta con un segundo factor.</div></div>
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label small text-uppercase text-muted">Metodo</label>
+                            <div class="btn-group" role="group" aria-label="Metodo 2FA">
+                              <input type="radio" class="btn-check" name="twofa-method" id="twofa-app" autocomplete="off" checked data-twofa-method="app">
+                              <label class="btn btn-outline-primary btn-sm" for="twofa-app">App autenticadora</label>
+                              <input type="radio" class="btn-check" name="twofa-method" id="twofa-sms" autocomplete="off" data-twofa-method="sms">
+                              <label class="btn btn-outline-primary btn-sm" for="twofa-sms">SMS</label>
+                              <input type="radio" class="btn-check" name="twofa-method" id="twofa-wa" autocomplete="off" data-twofa-method="whatsapp">
+                              <label class="btn btn-outline-primary btn-sm" for="twofa-wa">Whatsapp</label>
+                              <input type="radio" class="btn-check" name="twofa-method" id="twofa-call" autocomplete="off" data-twofa-method="call">
+                              <label class="btn btn-outline-primary btn-sm" for="twofa-call">Llamada</label>
+                            </div>
+                          </div>
+                          <div class="twofa-pane" data-twofa-view="app">
+                            <div class="twofa-qr-wrap">
+                              <div class="twofa-qr" data-twofa-qr aria-hidden="true">QR</div>
+                              <div class="twofa-secret">
+                                <div class="text-muted small mb-1">Clave secreta</div>
+                                <div class="code" data-twofa-secret>JZ4X-GH72-PL9K</div>
+                                <button class="btn btn-link btn-sm p-0 text-primary" type="button" data-twofa-generate>Generar nuevo codigo</button>
+                              </div>
+                            </div>
+                            <div class="twofa-otp-row d-flex flex-wrap align-items-center gap-2 mt-2">
+                              <div class="otp-inputs" data-otp-group data-twofa-otp-app>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                              </div>
+                              <button class="btn btn-primary btn-sm" type="button" data-twofa-confirm-app disabled>Confirmar 2FA</button>
+                            </div>
+                            <small class="text-muted d-block mt-1">Escanea el QR o escribe la clave en tu app (Google Authenticator, Authy, etc.).</small>
+                          </div>
+                          <div class="twofa-pane d-none" data-twofa-view="sms">
+                            <div class="mb-2">
+                              <label class="form-label small text-uppercase text-muted">Telefono</label>
+                              <input type="tel" class="form-control" style="max-width:260px;" placeholder="+52 000 000 0000" data-twofa-phone>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                              <button class="btn btn-primary btn-sm" type="button" data-twofa-send>Enviar codigo</button>
+                              <div class="text-muted small d-none" data-twofa-sent>Enviado. Revisa tu SMS.</div>
+                            </div>
+                            <div class="twofa-otp-row d-flex flex-wrap align-items-center gap-2 mt-2">
+                              <div class="otp-inputs" data-otp-group data-twofa-otp-sms>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                              </div>
+                              <button class="btn btn-primary btn-sm" type="button" data-twofa-confirm-sms disabled>Confirmar 2FA</button>
+                            </div>
+                          </div>
+                          <div class="twofa-pane d-none" data-twofa-view="whatsapp">
+                            <div class="mb-2">
+                              <label class="form-label small text-uppercase text-muted">Telefono</label>
+                              <input type="tel" class="form-control" style="max-width:260px;" placeholder="+52 000 000 0000" data-twofa-phone-wa>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                              <button class="btn btn-primary btn-sm" type="button" data-twofa-send-wa>Enviar por WhatsApp</button>
+                              <div class="text-muted small d-none" data-twofa-sent-wa>Enviado. Revisa tu WhatsApp.</div>
+                            </div>
+                            <div class="twofa-otp-row d-flex flex-wrap align-items-center gap-2 mt-2">
+                              <div class="otp-inputs" data-otp-group data-twofa-otp-wa>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                              </div>
+                              <button class="btn btn-primary btn-sm" type="button" data-twofa-confirm-wa disabled>Confirmar 2FA</button>
+                            </div>
+                          </div>
+                          <div class="twofa-pane d-none" data-twofa-view="call">
+                            <div class="mb-2">
+                              <label class="form-label small text-uppercase text-muted">Telefono</label>
+                              <input type="tel" class="form-control" style="max-width:260px;" placeholder="+52 000 000 0000" data-twofa-phone-call>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                              <button class="btn btn-primary btn-sm" type="button" data-twofa-send-call>Solicitar llamada</button>
+                              <div class="text-muted small d-none" data-twofa-sent-call>Te llamaremos con el codigo.</div>
+                            </div>
+                            <div class="twofa-otp-row d-flex flex-wrap align-items-center gap-2 mt-2">
+                              <div class="otp-inputs" data-otp-group data-twofa-otp-call>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-otp-input>
+                              </div>
+                              <button class="btn btn-primary btn-sm" type="button" data-twofa-confirm-call disabled>Confirmar 2FA</button>
+                            </div>
+                          </div>
+                          <div class="twofa-backups mt-3">
+                            <div class="text-muted small mb-1">Codigos de respaldo</div>
+                            <div class="backup-list" data-twofa-backups></div>
+                            <small class="text-muted">Guardalos en un lugar seguro para usarlos si pierdes tu dispositivo.</small>
+                          </div>
+                          <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button class="btn btn-outline-secondary btn-sm" type="button" data-sec-close="#seg-2fa-panel">Cancelar</button>
+                          </div>
                         </div>
                       </div>
                       <div class="collapse mt-3" id="pwd-change-panel" data-pwd-panel>
@@ -2877,6 +3001,13 @@
 </body>
 
 </html>
+
+
+
+
+
+
+
 
 
 
