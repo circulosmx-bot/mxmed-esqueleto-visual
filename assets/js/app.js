@@ -1127,26 +1127,35 @@ console.info('app.js loaded :: 20251123a');
   syncState();
 })();
 
-// Fallback para cierres con data-sec-close (ej. Cambiar contraseña)
-(function(){
+
+// Refuerzo: cierres manuales sin Bootstrap (data-sec-close y collapse)
+;(function(){
   const closers = document.querySelectorAll('[data-sec-close]');
-  if(!closers.length) return;
   closers.forEach(btn=>{
-    btn.addEventListener('click', (ev)=>{
+    btn.addEventListener('click',(ev)=>{
       ev.preventDefault();
       const sel = btn.getAttribute('data-sec-close');
       const panel = sel ? document.querySelector(sel) : btn.closest('.collapse');
       if(!panel) return;
-      // intenta colapsar con Bootstrap si está disponible
       const inst = window.bootstrap?.Collapse?.getOrCreateInstance(panel);
-      if(inst){
-        inst.hide();
-      }else{
-        panel.classList.remove('show');
-        panel.style.display = 'none';
-      }
+      if(inst){ inst.hide(); return; }
+      panel.classList.remove('show');
+      panel.style.display = 'none';
     });
   });
+  if(!window.bootstrap?.Collapse){
+    document.querySelectorAll('[data-bs-toggle="collapse"][data-bs-target]').forEach(btn=>{
+      const sel = btn.getAttribute('data-bs-target');
+      const panel = sel ? document.querySelector(sel) : null;
+      if(!panel) return;
+      btn.addEventListener('click',(ev)=>{
+        ev.preventDefault();
+        const open = panel.classList.contains('show');
+        panel.classList.toggle('show', !open);
+        panel.style.display = open ? 'none' : 'block';
+      });
+    });
+  }
 })();
 
 // ====== Seguridad: validaciÃ³n TelÃ©fono/E-mail ======
@@ -1424,25 +1433,6 @@ console.info('app.js loaded :: 20251123a');
       if(!panel) return;
       if(typeof panel.__verifyShow === 'function'){
         panel.__verifyShow();
-      }
-    });
-  });
-})();
-
-(function(){
-  const closers = document.querySelectorAll('[data-sec-close]');
-  if(!closers.length) return;
-  closers.forEach(btn=>{
-    btn.addEventListener('click', (ev)=>{
-      ev.preventDefault();
-      const sel = btn.getAttribute('data-sec-close');
-      const panel = sel ? document.querySelector(sel) : btn.closest('.collapse');
-      if(!panel) return;
-      if(window.bootstrap && window.bootstrap.Collapse){
-        window.bootstrap.Collapse.getOrCreateInstance(panel).hide();
-      }else{
-        panel.classList.remove('show');
-        panel.style.display = 'none';
       }
     });
   });
