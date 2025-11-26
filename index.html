@@ -516,7 +516,7 @@
 
 
 
-        <!-- ===== RESUMEN PRO ===== -->
+        <!-- ===== RESUMEN ?PRO? ===== -->
 
 
 
@@ -860,7 +860,7 @@
 
                   <div class="col-md-3"><label class="form-label">Apellido Materno</label><input class="form-control" placeholder="Apellido Materno"></div>
 
-                  <div class="col-md-3"><label class="form-label">Género</label><select class="form-select" id="dp-genero"><option></option><option>Femenino</option><option>Masculino</option><option>No Específico</option></select></div>
+                  <div class="col-md-3"><label class="form-label">Género</label><select class="form-select" id="dp-genero"><option>?</option><option>Femenino</option><option>Masculino</option><option>No Específico</option></select></div>
 
 
 
@@ -1415,17 +1415,17 @@
 
                   <div class="col-12"><strong style="color:#005684;font-size:120%;">Teléfonos del consultorio</strong></div>
 
-                  <div class="col-md-3"><label class="form-label" for="cons-tel1">Teléfono 01</label><div class="save-wrap"><input id="cons-tel1" class="form-control" inputmode="tel" data-validate="phone" placeholder="(###) ### ####"/><div class="err-bubble">Ingresa un teléfono válido (715 dígitos).</div></div></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-tel1">Teléfono 01</label><div class="save-wrap"><input id="cons-tel1" class="form-control" inputmode="tel" data-validate="phone" placeholder="(###) ### ####"/><div class="err-bubble">Ingresa un teléfono válido (7-15 dígitos).</div></div></div>
 
-                  <div class="col-md-3"><label class="form-label" for="cons-tel2">Teléfono 02</label><div class="save-wrap"><input id="cons-tel2" class="form-control" inputmode="tel" data-validate="phone"/><div class="err-bubble">Ingresa un teléfono válido (715 dígitos).</div></div></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-tel2">Teléfono 02</label><div class="save-wrap"><input id="cons-tel2" class="form-control" inputmode="tel" data-validate="phone"/><div class="err-bubble">Ingresa un teléfono válido (7-15 dígitos).</div></div></div>
 
-                  <div class="col-md-3"><label class="form-label" for="cons-tel3">Teléfono 03</label><div class="save-wrap"><input id="cons-tel3" class="form-control" inputmode="tel" data-validate="phone"/><div class="err-bubble">Ingresa un teléfono válido (715 dígitos).</div></div></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-tel3">Teléfono 03</label><div class="save-wrap"><input id="cons-tel3" class="form-control" inputmode="tel" data-validate="phone"/><div class="err-bubble">Ingresa un teléfono válido (7-15 dígitos).</div></div></div>
 
-                  <div class="col-md-3 mb-2"><label class="form-label" for="cons-wa">Whatsapp consultorio</label><div class="save-wrap"><input id="cons-wa" class="form-control" inputmode="tel" data-validate="phone" placeholder="+52 ..."/><div class="err-bubble">Ingresa un número válido (715 dígitos).</div></div></div>
+                  <div class="col-md-3 mb-2"><label class="form-label" for="cons-wa">Whatsapp consultorio</label><div class="save-wrap"><input id="cons-wa" class="form-control" inputmode="tel" data-validate="phone" placeholder="+52 ..."/><div class="err-bubble">Ingresa un número válido (7-15 dígitos).</div></div></div>
 
-                  <div class="col-md-3"><label class="form-label" for="cons-urg1">Teléfono Urgencias 01</label><div class="save-wrap"><input id="cons-urg1" class="form-control" inputmode="tel" data-validate="phone"/><div class="err-bubble">Ingresa un teléfono válido (715 dígitos).</div></div></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-urg1">Teléfono Urgencias 01</label><div class="save-wrap"><input id="cons-urg1" class="form-control" inputmode="tel" data-validate="phone"/><div class="err-bubble">Ingresa un teléfono válido (7-15 dígitos).</div></div></div>
 
-                  <div class="col-md-3"><label class="form-label" for="cons-urg2">Teléfono Urgencias 02</label><div class="save-wrap"><input id="cons-urg2" class="form-control" inputmode="tel" data-validate="phone"/><div class="err-bubble">Ingresa un teléfono válido (715 dígitos).</div></div></div>
+                  <div class="col-md-3"><label class="form-label" for="cons-urg2">Teléfono Urgencias 02</label><div class="save-wrap"><input id="cons-urg2" class="form-control" inputmode="tel" data-validate="phone"/><div class="err-bubble">Ingresa un teléfono válido (7-15 dígitos).</div></div></div>
 
                   <div class="col-md-6 d-flex justify-content-start gap-4 align-items-center cons-flags">
 
@@ -1785,7 +1785,7 @@
 
                   <label class="form-label" for="del-pass">Ingresa tu Contraseña</label>
 
-                  <input id="del-pass" type="password" class="form-control" placeholder="">
+                  <input id="del-pass" type="password" class="form-control" placeholder="????????">
 
                 </div>
 
@@ -1946,13 +1946,92 @@
 
             <div class="tab-content">
 
+              <div class="tab-pane fade" id="t-seg-priv">
+                <div class="mb-3">
+                  <h6 class="d-flex align-items-center gap-2"><span class="material-symbols-rounded" aria-hidden="true">policy</span>Declaración de privacidad</h6>
+                  <p class="text-muted mb-1 small">Protegemos tu información de acuerdo con nuestro Aviso de Privacidad y la normativa aplicable. Puedes ajustar qué usos permites.</p>
+                </div>
+                <div class="list-group privacy-list">
+                  <div class="list-group-item d-flex align-items-start gap-2 privacy-item">
+                    <div class="flex-grow-1">
+                      <div class="fw-semibold">Datos de ubicación esenciales para tu seguridad</div>
+                      <div class="text-muted small">Usamos algunos datos de ubicación para proteger tu cuenta y evitar fraudes. Si lo desactivas, podríamos limitar funciones de seguridad.</div>
+                    </div>
+                    <div class="form-check form-switch ms-auto">
+                      <input class="form-check-input" type="checkbox" checked>
+                    </div>
+                  </div>
+                  <div class="list-group-item d-flex align-items-start gap-2 privacy-item">
+                    <div class="flex-grow-1">
+                      <div class="fw-semibold">Permiso de localización</div>
+                      <div class="text-muted small">Mantén activo el permiso en tu dispositivo para recibir información relevante de laboratorios, aseguradoras, novedades, artículos y avisos oficiales.</div>
+                    </div>
+                    <div class="form-check form-switch ms-auto">
+                      <input class="form-check-input" type="checkbox" checked>
+                    </div>
+                  </div>
+                  <div class="list-group-item d-flex align-items-start gap-2 privacy-item">
+                    <div class="flex-grow-1">
+                      <div class="fw-semibold">Información de navegación</div>
+                      <div class="text-muted small">Permite que personalicemos contenido y recomendaciones según tu actividad en la plataforma.</div>
+                    </div>
+                    <div class="form-check form-switch ms-auto">
+                      <input class="form-check-input" type="checkbox" checked>
+                    </div>
+                  </div>
+                  <div class="list-group-item d-flex align-items-start gap-2 privacy-item">
+                    <div class="flex-grow-1">
+                      <div class="fw-semibold">Mostrar publicidad personalizada en la plataforma</div>
+                      <div class="text-muted small">Recibe anuncios y banners relevantes dentro de la plataforma.</div>
+                    </div>
+                    <div class="form-check form-switch ms-auto">
+                      <input class="form-check-input" type="checkbox" checked>
+                    </div>
+                  </div>
+                  <div class="list-group-item d-flex align-items-start gap-2 privacy-item">
+                    <div class="flex-grow-1">
+                      <div class="fw-semibold">Mostrar publicidad personalizada en otros sitios web</div>
+                      <div class="text-muted small">Usamos datos (cookies/identificadores) para mostrarte anuncios relevantes fuera de la plataforma.</div>
+                    </div>
+                    <div class="form-check form-switch ms-auto">
+                      <input class="form-check-input" type="checkbox" checked>
+                    </div>
+                  </div>
+                  <div class="list-group-item d-flex align-items-start gap-2 privacy-item">
+                    <div class="flex-grow-1">
+                      <div class="fw-semibold">Promover mi perfil como modelo de éxito</div>
+                      <div class="text-muted small">Permite que usemos tu perfil como ejemplo de buenas prácticas dentro de la plataforma.</div>
+                    </div>
+                    <div class="form-check form-switch ms-auto">
+                      <input class="form-check-input" type="checkbox" checked>
+                    </div>
+                  </div>
+                  <div class="list-group-item d-flex align-items-start gap-2 privacy-item">
+                    <div class="flex-grow-1">
+                      <div class="fw-semibold">Publicar mi aviso de privacidad en mi perfil</div>
+                      <div class="text-muted small">Muestra tu propio aviso de privacidad en tu perfil público para mayor transparencia.</div>
+                    </div>
+                    <div class="form-check form-switch ms-auto">
+                      <input class="form-check-input" type="checkbox" checked>
+                    </div>
+                  </div>
+                </div>
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                  <button class="btn btn-outline-secondary btn-sm" type="button">Restablecer valores</button>
+                  <button class="btn btn-primary btn-sm" type="button">Guardar cambios</button>
+                </div>
+              </div>
+
               <div class="tab-pane fade show active" id="t-seg-general">
 
                 <div class="mb-4">
 
-                  <h6 class="d-flex align-items-center gap-2"><span class="material-symbols-rounded" aria-hidden="true">verified_user</span>Métodos de verificación</h6>
+                  <h6 class="d-flex align-items-center gap-2" style="font-size:1.1em;color:#00ADC1;">
+                    <span class="material-symbols-rounded" aria-hidden="true" style="font-size:2em;">verified_user</span>
+                    Activa los m&eacute;todos de verificaci&oacute;n necesarios para proteger tu cuenta
+                  </h6>
 
-                  <p class="text-muted mb-2">Activa los métodos de verificación necesarios para proteger tu cuenta.</p>
+                  
 
                   <div class="list-group">
 
@@ -1963,7 +2042,7 @@
                           <div class="verif-field">
                             <div class="save-wrap needs-verify">
                               <input class="form-control" type="tel" inputmode="tel" data-validate="phone" placeholder="+52 000 000 0000" style="max-width:260px;" id="verify-phone-input"/>
-                              <div class="err-bubble">Ingresa un teléfono válido (715 dígitos).</div>
+                              <div class="err-bubble">Ingresa un teléfono válido (7-15 dígitos).</div>
                             </div>
                           </div>
                           <div class="verif-status d-flex align-items-center gap-2">
@@ -2048,7 +2127,7 @@
                         <div class="verif-row verif-row-actions">
                           <div class="verif-field">
                             <div class="save-wrap needs-verify">
-                              <input class="form-control" type="password" placeholder="" style="max-width:240px;"/>
+                              <input class="form-control" type="password" placeholder="????????" style="max-width:240px;"/>
                               <div class="err-bubble">Tu contraseña venció, modifícala para volver a usarla.</div>
                             </div>
                           </div>
@@ -2090,7 +2169,7 @@
                           <button type="button" class="btn-close btn-sm position-absolute top-0 end-0 mt-2 me-2" aria-label="Cerrar" data-sec-close="#seg-2fa-panel"></button>
                           <div class="d-flex align-items-center gap-2 mb-2">
                             <span class="material-symbols-rounded text-primary" aria-hidden="true">verified_user</span>
-                            <div><strong>Verificacion en dos pasos</strong><div class="text-muted small">Protege tu cuenta con un segundo factor.</div></div>
+                            <div><strong>Verificación en dos pasos</strong><div class="text-muted small">Protege tu cuenta con un segundo factor.</div></div>
                           </div>
                           <div class="mb-3">
                             <label class="form-label small text-uppercase text-muted">Metodo</label>
@@ -2206,15 +2285,15 @@
                           <div class="row g-3">
                             <div class="col-md-4">
                               <label class="form-label small text-uppercase text-muted">Contraseña actual</label>
-                              <input type="password" class="form-control" placeholder="" autocomplete="current-password">
+                              <input type="password" class="form-control" placeholder="????????" autocomplete="current-password">
                             </div>
                             <div class="col-md-4">
                               <label class="form-label small text-uppercase text-muted">Nueva contraseña</label>
-                              <input type="password" class="form-control" placeholder="" autocomplete="new-password" data-pwd-new>
+                              <input type="password" class="form-control" placeholder="????????" autocomplete="new-password" data-pwd-new>
                             </div>
                             <div class="col-md-4">
                               <label class="form-label small text-uppercase text-muted">Confirmar nueva contraseña</label>
-                              <input type="password" class="form-control" placeholder="" autocomplete="new-password" data-pwd-confirm>
+                              <input type="password" class="form-control" placeholder="????????" autocomplete="new-password" data-pwd-confirm>
                               <div class="form-text text-danger d-none" data-pwd-match-hint>Las contraseñas deben coincidir.</div>
                             </div>
                           </div>
@@ -2830,7 +2909,7 @@
 
                     <tbody>
 
-                      <tr><td>Promo verano</td><td>$1,800</td><td>JunAgo 2025</td><td>Finalizada</td></tr>
+                      <tr><td>Promo verano</td><td>$1,800</td><td>Jun?Ago 2025</td><td>Finalizada</td></tr>
 
                     </tbody>
 
@@ -3001,6 +3080,11 @@
 </body>
 
 </html>
+
+
+
+
+
 
 
 

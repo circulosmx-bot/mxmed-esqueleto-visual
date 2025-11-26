@@ -2882,3 +2882,13 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-seguridad .twofa-otp-row{display:flex;flex-wrap:wrap;align-items:center;gap:0.5rem;}#p-seguridad .twofa-otp-row > .btn{min-width:130px;margin-left:30px;}
 
 #p-seguridad [data-twofa-status].bg-success{background-color:#00ADC1 !important;border-color:#00ADC1 !important;}
+
+#t-seg-priv .privacy-list .privacy-item{align-items:flex-start;}
+#t-seg-priv .privacy-list .privacy-item .form-check{margin-left:auto;}
+#t-seg-priv .privacy-list .privacy-item .form-check-input{width:2.5em;height:1.35em;}
+#t-seg-priv .privacy-list .privacy-item .fw-semibold{color:#003152;}
+#t-seg-priv .privacy-list .text-muted{color:#59758c !important;}
+#t-seg-priv .btn-primary{background:#00ADC1;border-color:#00ADC1;}
+#t-seg-priv .btn-primary:hover{background:#008a9a;border-color:#008a9a;}
+#t-seg-priv .form-check-input:checked{background-color:#00ADC1;border-color:#00ADC1;}
+#t-seg-priv .form-check-input:focus{box-shadow:0 0 0 0.2rem rgba(0,173,193,.25);}
