@@ -2892,3 +2892,20 @@ body{margin:0;background:var(--mm-fondo-base);}
 #t-seg-priv .btn-primary:hover{background:#008a9a;border-color:#008a9a;}
 #t-seg-priv .form-check-input:checked{background-color:#00ADC1;border-color:#00ADC1;}
 #t-seg-priv .form-check-input:focus{box-shadow:0 0 0 0.2rem rgba(0,173,193,.25);}
+
+/* Biometría y sesiones */
+#p-seguridad .bio-qr-box{
+  width:160px;
+  height:160px;
+  border:2px dashed #00ADC1;
+  border-radius:16px;
+  background:linear-gradient(135deg,rgba(0,173,193,0.08),rgba(0,173,193,0.18));
+  color:#00ADC1;
+  font-weight:700;
+  letter-spacing:0.05em;
+}
+#p-seguridad [data-bio-status].success{color:#198754;}
+#p-seguridad [data-bio-status].error{color:#dc3545;}
+#p-seguridad .trust-device .form-check-label{font-size:0.9rem;}
+#p-seguridad table.table td:last-child{white-space:nowrap;}
+#p-seguridad [data-bio-badge].bg-secondary{background:#6c757d !important;}

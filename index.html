@@ -2387,17 +2387,74 @@
                       </div>
                     </div>
                     <div class="list-group-item">
+                      <label class="form-label mb-1 seg-block-title"><strong>Acceso biom&eacute;trico (QR + m&oacute;vil)</strong></label>
+                      <div class="verif-row flex-column">
+                        <div class="d-flex align-items-center gap-2">
+                          <span class="badge bg-secondary" data-bio-badge>Inactivo</span>
+                          <small class="text-muted" data-bio-last>Listo para configurar biometr&iacute;a remota.</small>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                          <button class="btn btn-primary btn-sm" type="button" data-bio-start>Iniciar con QR</button>
+                          <button class="btn btn-outline-primary btn-sm" type="button" data-bio-mark-trusted disabled>Marcar equipo como confiable (21 d&iacute;as)</button>
+                        </div>
+                      </div>
+                      <div class="collapse mt-3" id="bio-panel" data-bio-panel>
+                        <div class="verify-card border rounded-3 p-3 position-relative">
+                          <button type="button" class="btn-close btn-sm position-absolute top-0 end-0 mt-2 me-2" aria-label="Cerrar" data-bio-close></button>
+                          <div class="d-flex align-items-center gap-2 mb-3">
+                            <span class="material-symbols-rounded text-primary" aria-hidden="true">qr_code</span>
+                            <div><strong>Inicio biom&eacute;trico con QR</strong><div class="text-muted small">Escanea con tu tel&eacute;fono y valida con biometr&iacute;a.</div></div>
+                          </div>
+                          <div class="row g-3 align-items-center">
+                            <div class="col-md-4">
+                              <div class="bio-qr-box d-flex align-items-center justify-content-center" data-bio-qr>QR</div>
+                            </div>
+                            <div class="col-md-8">
+                              <div class="text-muted small mb-1">ID de sesi&oacute;n: <span class="fw-semibold" data-bio-session>—</span></div>
+                              <div class="text-muted small mb-2">Expira en <span class="fw-semibold" data-bio-countdown>02:00</span></div>
+                              <div class="alert alert-info py-2 mb-2 small mb-3">Autentica en tu m&oacute;vil con huella o rostro. No compartas este c&oacute;digo.</div>
+                              <div class="d-flex flex-wrap gap-2">
+                                <button class="btn btn-primary btn-sm" type="button" data-bio-refresh>Generar nuevo c&oacute;digo</button>
+                                <button class="btn btn-outline-secondary btn-sm" type="button" data-bio-close>Cancelar</button>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="mt-3 small" data-bio-status>Esperando autenticaci&oacute;n biom&eacute;trica&hellip;</div>
+                          <div class="trust-device d-none mt-3" data-bio-trustask>
+                            <div class="form-check">
+                              <input class="form-check-input" type="checkbox" id="bio-trust-check">
+                              <label class="form-check-label" for="bio-trust-check">Marcar este equipo como confiable por 21 d&iacute;as (no usar en equipos p&uacute;blicos).</label>
+                            </div>
+                            <div class="d-flex gap-2 mt-2">
+                              <button class="btn btn-primary btn-sm" type="button" data-bio-save-trust disabled>Guardar equipo confiable</button>
+                              <button class="btn btn-outline-secondary btn-sm" type="button" data-bio-close>Listo</button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-
-
-                      <div><strong>Reconocimiento facial</strong></div>
-
-
-
-                      <input class="form-control mt-2" placeholder="Nombre del usuario y apellidos">
-
-
-
+                    <div class="list-group-item">
+                      <label class="form-label mb-1 seg-block-title"><strong>Sesiones activas</strong></label>
+                      <div class="text-muted small mb-2">Dispositivos con tu sesi&oacute;n abierta. Cierra las que no reconozcas.</div>
+                      <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-2">
+                          <thead>
+                            <tr>
+                              <th>Dispositivo</th>
+                              <th>Ubicaci&oacute;n</th>
+                              <th>&Uacute;ltimo acceso</th>
+                              <th>Confiable</th>
+                              <th></th>
+                            </tr>
+                          </thead>
+                          <tbody data-sessions-body></tbody>
+                        </table>
+                      </div>
+                      <div class="d-flex justify-content-end gap-2">
+                        <button class="btn btn-outline-secondary btn-sm" type="button" data-session-refresh>Actualizar</button>
+                        <button class="btn btn-outline-danger btn-sm" type="button" data-session-close-others>Cerrar todas salvo esta</button>
+                      </div>
                     </div>
 
 

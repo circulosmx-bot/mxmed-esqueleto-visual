@@ -3238,6 +3238,206 @@ function mxResetLogoPreview(){
 })();
 
 
+// ==== Biometría remota via QR + control de sesiones (mock UI listo para backend) ====
+(function initBiometricAccess(){
+  const container = document.querySelector('#p-seguridad');
+  const panel = document.querySelector('#bio-panel');
+  const startBtn = container?.querySelector('[data-bio-start]');
+  const badge = container?.querySelector('[data-bio-badge]');
+  const last = container?.querySelector('[data-bio-last]');
+  const markTrustedBtn = container?.querySelector('[data-bio-mark-trusted]');
+  if(!container || !panel || !startBtn) return;
+
+  const qrBox = panel.querySelector('[data-bio-qr]');
+  const sessionEl = panel.querySelector('[data-bio-session]');
+  const countdownEl = panel.querySelector('[data-bio-countdown]');
+  const statusEl = panel.querySelector('[data-bio-status]');
+  const refreshBtn = panel.querySelector('[data-bio-refresh]');
+  const trustAsk = panel.querySelector('[data-bio-trustask]');
+  const trustCheck = panel.querySelector('#bio-trust-check');
+  const trustSave = panel.querySelector('[data-bio-save-trust]');
+  let timer = null;
+  let secs = 0;
+  let trusted = false;
+
+  const setBadge = (active)=>{
+    if(!badge) return;
+    badge.classList.toggle('bg-success', active);
+    badge.classList.toggle('bg-secondary', !active);
+    badge.textContent = active ? 'Activo' : 'Inactivo';
+  };
+
+  const setStatus = (txt, cls)=>{
+    if(!statusEl) return;
+    statusEl.textContent = txt;
+    statusEl.classList.remove('success','error');
+    if(cls) statusEl.classList.add(cls);
+  };
+
+  const formatCountdown = ()=>{
+    const m = String(Math.floor(secs/60)).padStart(2,'0');
+    const s = String(secs%60).padStart(2,'0');
+    return `${m}:${s}`;
+  };
+
+  const updateCountdown = ()=>{
+    if(countdownEl) countdownEl.textContent = formatCountdown();
+  };
+
+  const randomSession = ()=> 'BIO-' + Math.random().toString(36).substring(2,7).toUpperCase();
+
+  const renderQR = (id)=>{
+    if(qrBox){
+      qrBox.textContent = id;
+      qrBox.setAttribute('aria-label', `Código para sesión ${id}`);
+    }
+  };
+
+  const stopTimer = ()=>{
+    if(timer) clearInterval(timer);
+    timer = null;
+  };
+
+  const openPanel = ()=>{
+    panel.classList.add('show');
+    panel.style.display = 'block';
+    panel.removeAttribute('aria-hidden');
+  };
+
+  const closePanel = ()=>{
+    stopTimer();
+    panel.classList.remove('show');
+    panel.style.display = 'none';
+    panel.setAttribute('aria-hidden','true');
+    trustAsk?.classList.add('d-none');
+  };
+
+  const simulateApproval = ()=>{
+    // Simula confirmación desde el móvil tras 8s si no expiró
+    setTimeout(()=>{
+      if(secs <= 0) return;
+      setStatus('Autenticación confirmada desde tu móvil.', 'success');
+      setBadge(true);
+      if(last) last.textContent = 'Biometría activa en este equipo.';
+      trustAsk?.classList.remove('d-none');
+      markTrustedBtn?.removeAttribute('disabled');
+      if(trustSave) trustSave.disabled = !(trustCheck?.checked);
+    }, 8000);
+  };
+
+  const startSession = ()=>{
+    stopTimer();
+    const sid = randomSession();
+    if(sessionEl) sessionEl.textContent = sid;
+    renderQR(sid);
+    secs = 120;
+    updateCountdown();
+    setStatus('Esperando autenticación biométrica…');
+    timer = setInterval(()=>{
+      secs -= 1;
+      updateCountdown();
+      if(secs <= 0){
+        setStatus('El código expiró. Genera uno nuevo.', 'error');
+        stopTimer();
+      }
+    }, 1000);
+    simulateApproval();
+  };
+
+  startBtn.addEventListener('click', (ev)=>{
+    ev.preventDefault();
+    openPanel();
+    startSession();
+  });
+
+  refreshBtn?.addEventListener('click', (ev)=>{
+    ev.preventDefault();
+    startSession();
+  });
+
+  panel.querySelectorAll('[data-bio-close]').forEach(btn=>{
+    btn.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      closePanel();
+    });
+  });
+
+  trustCheck?.addEventListener('change', ()=>{
+    if(trustSave) trustSave.disabled = !trustCheck.checked;
+  });
+
+  trustSave?.addEventListener('click', (ev)=>{
+    ev.preventDefault();
+    if(!trustCheck?.checked) return;
+    trusted = true;
+    setStatus('Equipo marcado como confiable por 21 días.', 'success');
+    markTrustedBtn?.setAttribute('disabled','disabled');
+  });
+
+  markTrustedBtn?.addEventListener('click', (ev)=>{
+    ev.preventDefault();
+    openPanel();
+    startSession();
+    trustAsk?.classList.remove('d-none');
+    if(trustSave) trustSave.disabled = !trustCheck?.checked;
+  });
+})();
+
+(function initSessionPanel(){
+  const tbody = document.querySelector('[data-sessions-body]');
+  if(!tbody) return;
+  const refreshBtn = document.querySelector('[data-session-refresh]');
+  const closeOthersBtn = document.querySelector('[data-session-close-others]');
+
+  let sessions = [
+    {id:'current', device:'Windows • Chrome', location:'Aguascalientes, MX', last:'Ahora', trusted:true, current:true},
+    {id:'ios-01', device:'iPhone • Safari', location:'CDMX, MX', last:'Hace 2 h', trusted:true, current:false},
+    {id:'and-02', device:'Android • App', location:'Zapopan, MX', last:'Ayer', trusted:false, current:false}
+  ];
+
+  const render = ()=>{
+    tbody.innerHTML = '';
+    sessions.forEach(s=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${s.device}${s.current ? ' <span class=\"badge bg-info text-dark\">Este equipo</span>' : ''}</td>
+        <td>${s.location}</td>
+        <td>${s.last}</td>
+        <td>${s.trusted ? '<span class=\"badge bg-success\">Sí</span>' : '<span class=\"badge bg-secondary\">No</span>'}</td>
+        <td class=\"text-end\">
+          ${s.current ? '<span class=\"text-muted small\">Activa</span>' : '<button class=\"btn btn-link btn-sm p-0\" data-session-close=\"'+s.id+'\">Cerrar sesión</button>'}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  };
+
+  const closeSession = (id)=>{
+    sessions = sessions.filter(s=> s.id !== id || s.current);
+    render();
+  };
+
+  tbody.addEventListener('click', (ev)=>{
+    const btn = ev.target.closest('[data-session-close]');
+    if(!btn) return;
+    ev.preventDefault();
+    closeSession(btn.getAttribute('data-session-close'));
+  });
+
+  refreshBtn?.addEventListener('click', (ev)=>{
+    ev.preventDefault();
+    render();
+  });
+
+  closeOthersBtn?.addEventListener('click', (ev)=>{
+    ev.preventDefault();
+    sessions = sessions.filter(s=> s.current);
+    render();
+  });
+
+  render();
+})();
+
 
 
 
