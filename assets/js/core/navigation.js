@@ -1,10 +1,10 @@
-﻿/* ===== Helpers de navegaci?n r?pida ===== */
+﻿/* ===== Helpers de navegación rápida ===== */
 function jumpTo(panelId){
   showPanel(panelId);
-  // marca activo el subbot?n correspondiente, si existe
+  // marca activo el subbotón correspondiente, si existe
   $('.menu-sub-btn').removeClass('active');
   $('.menu-sub-btn[data-panel="'+panelId+'"]').addClass('active');
-  // marcar activo el bot?n principal si es un panel directo
+  // marcar activo el botón principal si es un panel directo
   $('.menu-main').removeClass('active');
   var $main = $('.menu-main[data-panel="'+panelId+'"]');
   if($main.length){ $main.addClass('active'); }
@@ -19,7 +19,7 @@ function selectPaqTab(selector){
   if(btn){ new bootstrap.Tab(btn).show(); }
 }
 
-/* ===== Acorde?n exclusivo (s?lo en grupos con submen?) ===== */
+/* ===== Acordeón exclusivo (sólo en grupos con submenú) ===== */
 function openGroup(group){
   $('.menu-sub').removeClass('open').slideUp(100);
   const $t = $('.menu-sub[data-group="'+group+'"]');
@@ -38,20 +38,20 @@ function activateFirstSub(group){
   localStorage.setItem('mxmed_last_panel', panelId);
 }
 
-/* Click en men? principal */
+/* Click en menú principal */
 $('.menu-main').on('click', function(){
   const panel = $(this).data('panel');   // panel directo
-  const grp   = $(this).data('group');   // grupo acorde?n
+  const grp   = $(this).data('group');   // grupo acordeón
 
-  if(panel){ // sin submen?: abrir panel directo
+  if(panel){ // sin submenú: abrir panel directo
     $('.menu-sub').removeClass('open').slideUp(100);
     showPanel(panel);
-    // activar este bot?n principal y desactivar los dem?s
+    // activar este botón principal y desactivar los demás
     $('.menu-main').removeClass('active');
     $(this).addClass('active');
     localStorage.setItem('mxmed_last_panel', panel);
-    localStorage.removeItem('mxmed_menu_group'); // ning?n grupo abierto
-  }else if(grp){ // con submen? (acorde?n)
+    localStorage.removeItem('mxmed_menu_group'); // ningún grupo abierto
+  }else if(grp){ // con submenú (acordeón)
     const $pane = $('.menu-sub[data-group="'+grp+'"]');
     if($pane.hasClass('open')){
       $pane.removeClass('open').slideUp(100);
@@ -66,18 +66,28 @@ $('.menu-main').on('click', function(){
   }
 });
 
-/* Activaci?n de subbotones y panel derecho */
+/* Activación de subbotones y panel derecho */
 function showPanel(id){
-  // Oculta todos los paneles, est?n o no dentro de #viewport
+  // Oculta todos los paneles, estén o no dentro de #viewport
   $('section[id^="p-"]').addClass('d-none');
   // Muestra el panel solicitado
   const pane = document.getElementById(id);
   if(pane){
     pane.classList.remove('d-none');
+    // Refuerzo para Suscripción: forzar visibilidad
+    if(id === 'p-suscripcion'){
+      pane.style.display = 'block';
+      pane.style.visibility = 'visible';
+      pane.style.opacity = '1';
+    } else {
+      pane.style.display = '';
+      pane.style.visibility = '';
+      pane.style.opacity = '';
+    }
     const tabs = pane.querySelectorAll('.nav-tabs [data-bs-toggle="tab"]');
     const activeTab = pane.querySelector('.nav-tabs .active');
     if(tabs.length && !activeTab){
-      try{ new bootstrap.Tab(tabs[0]).show(); }catch(_){}
+      try{ new bootstrap.Tab(tabs[0]).show(); }catch(_){ }
     }
   }else{
     $('#'+id).removeClass('d-none');
@@ -86,7 +96,7 @@ function showPanel(id){
 $('.menu-sub-btn').on('click', function(){
   $('.menu-sub-btn').removeClass('active');
   $(this).addClass('active');
-  // limpiar activos en botones principales cuando se usa submen?
+  // limpiar activos en botones principales cuando se usa submenú
   $('.menu-main').removeClass('active');
   const id = $(this).data('panel');
   if(id) showPanel(id);
@@ -103,7 +113,7 @@ $(function(){
   localStorage.removeItem('mxmed_menu_group');
   showPanel(lastPanel);
 
-  // Si ?ltimo panel pertenece a un grupo, abrirlo
+  // Si último panel pertenece a un grupo, abrirlo
   const groups = ['perfil','agenda','pacientes'];
   let opened = false;
   for(const g of groups){
@@ -118,15 +128,21 @@ $(function(){
     $('.menu-sub').removeClass('open').hide();
   }
 
-  // Si el ?ltimo panel coincide con un bot?n principal directo, marcarlo activo
-  const $mainMatch = $('.menu-main[data-panel="'+lastPanel+'"]');
+  // Si el último panel coincide con un botón principal directo, marcarlo activo
+  const $mainMatch = $('.menu-main[data-panel="'+lastPanel+'"]').first();
   if($mainMatch.length){ $('.menu-main').removeClass('active'); $mainMatch.addClass('active'); }
 
-  // Restaurar pesta?a interna de Informaci?n ? Mi Perfil
+  // Restaurar pestaña interna de Información – Mi Perfil
   const lastInfoTab = localStorage.getItem('mxmed_info_tab') || '#t-datos';
   const tabTrigger = document.querySelector(`[data-bs-target="${lastInfoTab}"]`);
   if(tabTrigger){ new bootstrap.Tab(tabTrigger).show(); }
 });
 
-
-
+// Refuerzo: reubicar Suscripción en #viewport si quedó anidado
+$(function(){
+  const pane = document.getElementById('p-suscripcion');
+  const vp = document.getElementById('viewport');
+  if(pane && vp && pane.parentElement !== vp){
+    vp.appendChild(pane);
+  }
+});
