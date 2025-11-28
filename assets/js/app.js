@@ -3554,7 +3554,7 @@ function mxResetLogoPreview(){
       const price = yearly ? p.yearly : p.monthly;
       const save = yearly ? (p.monthly*12 - p.yearly) : 0;
       const isCurrent = p.id === data.current.id;
-      return `<div class="subp-plan ${isCurrent?'current':''}">
+      return `<div class="subp-plan ${isCurrent?'current':''}" data-plan="${p.id}">
         ${isCurrent?'<div class="subp-plan-badge">Plan actual</div>':''}
         <div class="subp-plan-title">${p.name}</div>
         <div class="subp-price">${fmtMoney(price)} <small>${yearly?'/ año':'/ mes'}</small></div>
