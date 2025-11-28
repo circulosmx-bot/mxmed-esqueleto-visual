@@ -3521,7 +3521,10 @@ function mxResetLogoPreview(){
   }
 
   function renderCurrent(){
-    if(els.planName) els.planName.textContent = data.current.name;
+    if(els.planName){
+      els.planName.textContent = data.current.name;
+      els.planName.setAttribute('data-plan', data.current.id || '');
+    }
     if(els.status) els.status.textContent = data.current.status;
     if(els.since) els.since.textContent = data.current.since;
     if(els.until) els.until.textContent = data.current.until;

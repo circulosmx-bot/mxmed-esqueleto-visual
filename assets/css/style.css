@@ -2936,3 +2936,29 @@ body{margin:0;background:var(--mm-fondo-base);}
 .subp-plan[data-plan="optimo"] .subp-plan-title{ background:#003154; }
 .subp-plan[data-plan="estandar"] .subp-plan-title{ background:#3bb5c4; }
 .subp-plan[data-plan="basico"] .subp-plan-title{ background:#698fa4; }
+.subp-plan-pill[data-plan="pro"]{ background:#017290; }
+.subp-plan-pill[data-plan="optimo"]{ background:#003154; }
+.subp-plan-pill[data-plan="estandar"]{ background:#3bb5c4; }
+.subp-plan-pill[data-plan="basico"]{ background:#698fa4; }
+.subp-plan[data-plan="pro"] .subp-btn{ background:#017290; border-color:#017290; color:#fff; }
+.subp-plan[data-plan="optimo"] .subp-btn{ background:#003154; border-color:#003154; color:#fff; }
+.subp-plan[data-plan="estandar"] .subp-btn{ background:#3bb5c4; border-color:#3bb5c4; color:#fff; }
+.subp-plan[data-plan="basico"] .subp-btn{ background:#698fa4; border-color:#698fa4; color:#fff; }
+.subp-plan[data-plan] .subp-btn:hover{ filter:brightness(0.92); }
+
+/* Botones generales de cupones/factura/renovar */
+.subp-wrap [data-subp-renew],
+.subp-wrap [data-subp-renew-cta],
+.subp-wrap [data-subp-coupon-apply],
+.subp-wrap [data-subp-invoice]{
+  background:#00adc1;
+  border-color:#00adc1;
+  color:#fff;
+}
+.subp-wrap [data-subp-renew]:hover,
+.subp-wrap [data-subp-renew-cta]:hover,
+.subp-wrap [data-subp-coupon-apply]:hover,
+.subp-wrap [data-subp-invoice]:hover{
+  filter:brightness(0.92);
+  color:#fff;
+}
