@@ -3460,3 +3460,138 @@ function mxResetLogoPreview(){
 
 
 
+
+// ================== SUSCRIPCIÓN (maqueta) ==================
+(()=>{
+  const pane = document.getElementById('p-suscripcion');
+  if(!pane) return;
+
+  const els = {
+    planName: pane.querySelector('[data-subp-current-name]'),
+    status: pane.querySelector('[data-subp-current-status]'),
+    since: pane.querySelector('[data-subp-since]'),
+    until: pane.querySelector('[data-subp-until]'),
+    autorenew: pane.querySelector('#subp-autorenew'),
+    renewBtn: pane.querySelector('[data-subp-renew]'),
+    currentTitle: pane.querySelector('[data-subp-current-title]'),
+    currentNote: pane.querySelector('[data-subp-current-note]'),
+    currentFeat: pane.querySelector('[data-subp-current-features]'),
+    currentAlert: pane.querySelector('[data-subp-current-alert]'),
+    nextBill: pane.querySelector('[data-subp-next-bill]'),
+    renewCTA: pane.querySelector('[data-subp-renew-cta]'),
+    catalog: pane.querySelector('[data-subp-catalog]'),
+    couponInput: pane.querySelector('[data-subp-coupon-input]'),
+    couponApply: pane.querySelector('[data-subp-coupon-apply]'),
+    couponMsg: pane.querySelector('[data-subp-coupon-msg]'),
+    invoiceBtn: pane.querySelector('[data-subp-invoice]'),
+    invoiceHint: pane.querySelector('[data-subp-invoice-hint]'),
+    historyBody: pane.querySelector('[data-subp-history]'),
+    historyRefresh: pane.querySelector('[data-subp-history-refresh]'),
+    billingRadios: pane.querySelectorAll('input[name="subp-billing"]')
+  };
+
+  const data = {
+    billing: 'monthly',
+    current: {
+      id: 'optimo',
+      name: 'Óptimo',
+      since: '22 Dic 2024',
+      until: '22 Dic 2025',
+      status: 'Activo',
+      nextBill: '22 Dic 2025',
+      autorenew: true,
+      note: 'Tu perfil está en línea / tienes acceso a:',
+      alert: 'Tu anualidad vence el 22 Diciembre 2025 · RENUEVA AHORA',
+      features: ['Perfil en línea','Agenda','Expediente','Recetas']
+    },
+    plans: [
+      { id:'pro', name:'Profesional', monthly:0, yearly:0, features:['Perfil en línea','Agenda','Expediente','Recetas','Asistente IA'] },
+      { id:'optimo', name:'Óptimo', monthly:0, yearly:0, features:['Perfil en línea','Agenda','Expediente','Recetas'] },
+      { id:'estandar', name:'Estándar', monthly:0, yearly:0, features:['Perfil en línea','Agenda'] },
+      { id:'basico', name:'Básico', monthly:0, yearly:0, features:['Perfil en línea'] }
+    ],
+    history: [
+      {fecha:'2025-06-01', plan:'Óptimo', mov:'Renovación', vig:'22 Dic 2025', est:'Activo', apoyo:'—'},
+      {fecha:'2024-12-22', plan:'Estándar', mov:'Upgrade', vig:'22 Dic 2024', est:'Activo', apoyo:'—'}
+    ]
+  };
+
+  function fmtMoney(n){
+    return `$${n.toLocaleString('es-MX')} MXN`;
+  }
+
+  function renderCurrent(){
+    if(els.planName) els.planName.textContent = data.current.name;
+    if(els.status) els.status.textContent = data.current.status;
+    if(els.since) els.since.textContent = data.current.since;
+    if(els.until) els.until.textContent = data.current.until;
+    if(els.autorenew) els.autorenew.checked = !!data.current.autorenew;
+    if(els.currentTitle) els.currentTitle.textContent = `${data.current.name} · Tu plan actual`;
+    if(els.currentNote) els.currentNote.textContent = data.current.note || '';
+    if(els.nextBill) els.nextBill.textContent = data.current.nextBill || '—';
+    if(els.currentFeat){
+      els.currentFeat.innerHTML = data.current.features.map(f=>`<li class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${f}</span></li>`).join('');
+    }
+    if(els.currentAlert){
+      if(data.current.alert){
+        els.currentAlert.textContent = data.current.alert;
+        els.currentAlert.classList.remove('d-none');
+      } else {
+        els.currentAlert.classList.add('d-none');
+      }
+    }
+  }
+
+  function renderHistory(){
+    if(!els.historyBody) return;
+    els.historyBody.innerHTML = data.history.map(h=>`<tr><td>${h.fecha}</td><td>${h.plan}</td><td>${h.mov}</td><td>${h.vig}</td><td>${h.est}</td><td>${h.apoyo}</td></tr>`).join('');
+  }
+
+  function renderCatalog(){
+    if(!els.catalog) return;
+    const yearly = data.billing === 'yearly';
+    els.catalog.innerHTML = data.plans.map(p=>{
+      const price = yearly ? p.yearly : p.monthly;
+      const save = yearly ? (p.monthly*12 - p.yearly) : 0;
+      const isCurrent = p.id === data.current.id;
+      return `<div class="subp-plan ${isCurrent?'current':''}">
+        ${isCurrent?'<div class="subp-plan-badge">Plan actual</div>':''}
+        <div class="subp-plan-title">${p.name}</div>
+        <div class="subp-price">${fmtMoney(price)} <small>${yearly?'/ año':'/ mes'}</small></div>
+        <div class="mt-2">${p.features.map(f=>`<div class="subp-feature"><span class="material-symbols-rounded mat-ico" aria-hidden="true">check</span><span>${f}</span></div>`).join('')}</div>
+        ${save>0?`<div class="subp-save">Ahorra $${save.toLocaleString('es-MX')} al contratar anual</div>`:''}
+        <button class="btn ${isCurrent?'btn-outline-primary':'btn-primary'} subp-btn" type="button" data-subp-select="${p.id}">${isCurrent?'Renovar':'Seleccionar'}</button>
+      </div>`;
+    }).join('');
+    els.catalog.querySelectorAll('[data-subp-select]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const id = btn.getAttribute('data-subp-select');
+        console.log('Seleccionar plan', id);
+      });
+    });
+  }
+
+  // Eventos
+  els.billingRadios.forEach(r=>{
+    r.addEventListener('change', ()=>{
+      data.billing = r.value === 'yearly' ? 'yearly' : 'monthly';
+      renderCatalog();
+    });
+  });
+  els.renewBtn?.addEventListener('click', ()=>console.log('Renovar plan actual'));
+  els.renewCTA?.addEventListener('click', ()=>console.log('Renovar plan actual'));
+  els.couponApply?.addEventListener('click', ()=>{
+    const code = (els.couponInput?.value||'').trim();
+    els.couponMsg.textContent = code ? `Cupón "${code}" aplicado (demo)` : 'Sin cupón aplicado';
+  });
+  els.invoiceBtn?.addEventListener('click', ()=>{
+    els.invoiceHint.textContent = 'Solicitud de factura registrada (demo)';
+  });
+  els.historyRefresh?.addEventListener('click', ()=>{
+    renderHistory();
+  });
+
+  renderCurrent();
+  renderCatalog();
+  renderHistory();
+})();

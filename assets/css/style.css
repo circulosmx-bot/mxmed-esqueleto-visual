@@ -2909,3 +2909,24 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-seguridad .trust-device .form-check-label{font-size:0.9rem;}
 #p-seguridad table.table td:last-child{white-space:nowrap;}
 #p-seguridad [data-bio-badge].bg-secondary{background:#6c757d !important;}
+
+/* ================== SUSCRIPCIÓN ================== */
+.subp-wrap{ background:#f2fbfc; border:1px solid #00adc1; border-radius:12px; padding:16px; box-shadow:0 8px 18px rgba(0,0,0,0.06) }
+.subp-band{ background:#009ab0; color:#fff; border-radius:10px; padding:12px 16px }
+.subp-plan-pill{ background:#006b82; color:#fff; padding:6px 12px; border-radius:12px; font-weight:700; text-transform:uppercase; letter-spacing:.5px }
+.subp-status{ background:rgba(255,255,255,0.18); color:#fff; padding:6px 10px; border-radius:10px; font-weight:600 }
+.subp-current{ border:1px solid #d7e8ef }
+.subp-card{ background:#fff; border:1px solid #d7e8ef; border-radius:12px }
+.subp-plans-head .btn-check:checked + .btn{ background:#00adc1; color:#fff; border-color:#00adc1 }
+.subp-plan-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px }
+.subp-plan{ border:1px solid #d7e8ef; border-radius:16px; background:#fff; padding:14px; box-shadow:0 6px 14px rgba(0,0,0,0.05); position:relative }
+.subp-plan.current{ border:2px solid #00adc1 }
+.subp-plan .subp-plan-title{ font-weight:700; font-size:1.05rem; margin-bottom:.35rem }
+.subp-price{ font-size:1.4rem; font-weight:800; color:#0b3750 }
+.subp-price small{ font-size:.75rem; color:#4c6470 }
+.subp-feature{ display:flex; align-items:flex-start; gap:6px; margin-bottom:6px; color:#2b3c42; font-size:.95rem }
+.subp-feature .mat-ico{ font-size:18px; color:#1fbf75; line-height:1 }
+.subp-save{ color:#00adc1; font-weight:700; font-size:.85rem; margin-top:6px }
+.subp-btn{ width:100%; margin-top:10px }
+.subp-alert{ background:#fff3cd; border:1px solid #ffe69c; color:#664d03; padding:8px 10px; border-radius:8px; font-size:.9rem }
+.subp-plan-badge{ position:absolute; top:10px; right:10px; background:#00adc1; color:#fff; padding:4px 10px; border-radius:10px; font-weight:700; font-size:.75rem }

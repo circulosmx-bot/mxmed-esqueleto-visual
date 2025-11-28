@@ -2190,7 +2190,7 @@
                               <div class="twofa-secret">
                                 <div class="text-muted small mb-1">Clave secreta</div>
                                 <div class="code" data-twofa-secret>JZ4X-GH72-PL9K</div>
-                                <button class="btn btn-link btn-sm p-0 text-primary" type="button" data-twofa-generate>Generar nuevo codigo</button>
+                                <button class="btn btn-link btn-sm p-0 text-primary" type="button" data-twofa-generate>Generar nuevo código</button>
                               </div>
                             </div>
                             <div class="twofa-otp-row d-flex flex-wrap align-items-center gap-2 mt-2">
@@ -2212,7 +2212,7 @@
                               <input type="tel" class="form-control" style="max-width:260px;" placeholder="+52 000 000 0000" data-twofa-phone>
                             </div>
                             <div class="d-flex flex-wrap align-items-center gap-2">
-                              <button class="btn btn-primary btn-sm" type="button" data-twofa-send>Enviar codigo</button>
+                              <button class="btn btn-primary btn-sm" type="button" data-twofa-send>Enviar código</button>
                               <div class="text-muted small d-none" data-twofa-sent>Enviado. Revisa tu SMS.</div>
                             </div>
                             <div class="twofa-otp-row d-flex flex-wrap align-items-center gap-2 mt-2">
@@ -2255,7 +2255,7 @@
                             </div>
                             <div class="d-flex flex-wrap align-items-center gap-2">
                               <button class="btn btn-primary btn-sm" type="button" data-twofa-send-call>Solicitar llamada</button>
-                              <div class="text-muted small d-none" data-twofa-sent-call>Te llamaremos con el codigo.</div>
+                              <div class="text-muted small d-none" data-twofa-sent-call>Te llamaremos con el código.</div>
                             </div>
                             <div class="twofa-otp-row d-flex flex-wrap align-items-center gap-2 mt-2">
                               <div class="otp-inputs" data-otp-group data-twofa-otp-call>
@@ -2469,74 +2469,96 @@
 
                 <hr>
 
-
-<!-- SUSCRIPCIÓN -->
-
         <section class="mm-card d-none" id="p-suscripcion">
-
-          <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">license</span>Estado de mi Perfil</h5></div>
-
-          <div class="body">
-
-            <div class="row g-3">
-
-              <div class="col-md-4">
-
-                <div class="kpi">
-
-                  <div><strong>Plan actual</strong>: Óptimo</div>
-
-                  <div><strong>Vigencia</strong>: 22 Dic 2024</div>
-
-                  <div><strong>Estatus</strong>: Activo</div>
-
-                  <button class="btn btn-primary btn-sm mt-2">Cambiar/Mejorar plan</button>
-
+          <div class="body subp-wrap">
+            <div class="subp-band d-flex flex-wrap align-items-center justify-content-between gap-3">
+              <div class="d-flex flex-wrap align-items-center gap-3">
+                <div class="subp-plan-pill" data-subp-current-name>Pendiente</div>
+                <div class="subp-status" data-subp-current-status>Estado</div>
+                <div class="subp-dates text-white small">
+                  <div>Activo desde <span data-subp-since>&mdash;</span></div>
+                  <div>Vigencia <span data-subp-until>&mdash;</span></div>
                 </div>
-
               </div>
-
-              <div class="col-md-8">
-
-                <label class="form-label">Historial de suscripciones</label>
-
-                <div class="table-responsive">
-
-                  <table class="table table-sm">
-
-                    <thead><tr><th>Fecha</th><th>Plan</th><th>Movimiento</th><th>Vigencia</th></tr></thead>
-
-                    <tbody>
-
-                      <tr><td>2025-06-01</td><td>Óptimo</td><td>Renovación</td><td>22 Dic 2024</td></tr>
-
-                      <tr><td>2024-12-22</td><td>Estándar</td><td>Upgrade</td><td>22 Jun 2025</td></tr>
-
-                    </tbody>
-
-                  </table>
-
+              <div class="d-flex flex-wrap align-items-center gap-3">
+                <div class="form-check form-switch text-white mb-0">
+                  <input class="form-check-input" type="checkbox" id="subp-autorenew">
+                  <label class="form-check-label" for="subp-autorenew">Renovación automática</label>
                 </div>
-
-                <div class="form-check mt-2">
-
-                  <input class="form-check-input" type="checkbox" id="auto_ren">
-
-                  <label class="form-check-label" for="auto_ren">Activar renovación automática</label>
-
-                </div>
-
+                <button class="btn btn-light btn-sm" type="button" data-subp-renew>Renovar</button>
               </div>
-
             </div>
 
+            <div class="subp-current card border-0 shadow-sm p-3 mb-4">
+              <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                <div>
+                  <div class="h5 mb-1" data-subp-current-title>Tu plan actual</div>
+                  <div class="text-muted mb-2" data-subp-current-note>Tu perfil está en línea</div>
+                  <ul class="list-unstyled mb-2" data-subp-current-features></ul>
+                  <div class="subp-alert d-none" data-subp-current-alert></div>
+                </div>
+                <div class="text-end">
+                  <div class="text-muted small">Próximo cobro</div>
+                  <div class="fw-semibold" data-subp-next-bill>&mdash;</div>
+                  <button class="btn btn-primary btn-sm mt-2" type="button" data-subp-renew-cta>Renovar</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="subp-plans-head d-flex flex-wrap align-items-center justify-content-between mb-3">
+              <div>
+                <div class="h5 mb-0">Mejora tu plan</div>
+                <div class="text-muted small">Aprovecha al máximo todas las funciones</div>
+              </div>
+              <div class="btn-group btn-group-sm" role="group" aria-label="Frecuencia de cobro">
+                <input type="radio" class="btn-check" name="subp-billing" id="subp-billing-m" value="monthly" checked>
+                <label class="btn btn-outline-primary" for="subp-billing-m">Mensual</label>
+                <input type="radio" class="btn-check" name="subp-billing" id="subp-billing-y" value="yearly">
+                <label class="btn btn-outline-primary" for="subp-billing-y">Anual (ahorra)</label>
+              </div>
+            </div>
+
+            <div class="subp-plan-grid" data-subp-catalog></div>
+
+            <div class="row g-3 mt-4">
+              <div class="col-lg-6">
+                <div class="card h-100 subp-card border-0 shadow-sm p-3">
+                  <label class="form-label mb-1">Cupones / Patrocinios</label>
+                  <div class="input-group input-group-sm mb-2">
+                    <input type="text" class="form-control" placeholder="Ingresa tu código" data-subp-coupon-input>
+                    <button class="btn btn-outline-primary" type="button" data-subp-coupon-apply>Aplicar</button>
+                  </div>
+                  <div class="text-muted small" data-subp-coupon-msg>Si aplica un apoyo, se refleja en tu próximo cargo.</div>
+                </div>
+              </div>
+              <div class="col-lg-6">
+                <div class="card h-100 subp-card border-0 shadow-sm p-3">
+                  <label class="form-label mb-1">Facturación</label>
+                  <p class="text-muted small mb-2">Solicita factura en el mes del pago con datos fiscales válidos.</p>
+                  <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-primary btn-sm" type="button" data-subp-invoice>Solicitar factura</button>
+                    <button class="btn btn-outline-secondary btn-sm" type="button">Editar datos fiscales</button>
+                  </div>
+                  <div class="text-muted small mt-2" data-subp-invoice-hint>Factura disponible en el mes del pago.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card subp-card border-0 shadow-sm p-3 mt-4">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <label class="form-label mb-0">Historial de suscripciones</label>
+                <button class="btn btn-outline-secondary btn-sm" type="button" data-subp-history-refresh>Actualizar</button>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                  <thead><tr><th>Fecha</th><th>Plan</th><th>Movimiento</th><th>Vigencia</th><th>Estatus</th><th>Apoyo</th></tr></thead>
+                  <tbody data-subp-history></tbody>
+                </table>
+              </div>
+            </div>
           </div>
-
         </section>
-
-
-
-        <!-- AGENDA · CONFIGURACIÓN -->
+<!-- AGENDA · CONFIGURACIÓN -->
 
         <section class="mm-card d-none" id="p-ag-ajustes">
 
@@ -3137,6 +3159,19 @@
 </body>
 
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
