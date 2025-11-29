@@ -2962,3 +2962,30 @@ body{margin:0;background:var(--mm-fondo-base);}
   filter:brightness(0.92);
   color:#fff;
 }
+
+/* Botón de factura en historial */
+.subp-wrap [data-subp-history] button.btn{
+  background:#00adc1;
+  border-color:#00adc1;
+  color:#fff;
+}
+.subp-wrap [data-subp-history] button.btn:hover{
+  filter:brightness(0.92);
+  color:#fff;
+  position:relative;
+}
+.subp-wrap [data-subp-history] button.btn:hover::after{
+  content:"Factura disponible únicamente en el mes de pago.";
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  bottom:120%;
+  background:#003154;
+  color:#fff;
+  padding:6px 10px;
+  border-radius:8px;
+  white-space:nowrap;
+  font-size:.75rem;
+  box-shadow:0 4px 12px rgba(0,0,0,0.18);
+  z-index:5;
+}

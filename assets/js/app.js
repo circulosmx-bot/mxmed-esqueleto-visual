@@ -3547,7 +3547,26 @@ function mxResetLogoPreview(){
 
   function renderHistory(){
     if(!els.historyBody) return;
-    els.historyBody.innerHTML = data.history.map(h=>`<tr><td>${h.fecha}</td><td>${h.plan}</td><td>${h.mov}</td><td>${h.vig}</td><td>${h.est}</td><td>${h.apoyo}</td></tr>`).join('');
+    const today = new Date();
+    const ymNow = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+    const hist = [...data.history];
+    // Simular una línea del mes en curso con opción de facturar
+    if(!hist.some(h => (h.fecha || '').startsWith(ymNow))){
+      const iso = today.toISOString().slice(0,10);
+      hist.unshift({
+        fecha: iso,
+        plan: data.current.name || '—',
+        mov: 'Renovación',
+        vig: data.current.until || iso,
+        est: 'Pagado',
+        apoyo: '—'
+      });
+    }
+    els.historyBody.innerHTML = hist.map(h=>{
+      const isCurrentMonth = (h.fecha || '').startsWith(ymNow);
+      const facturaBtn = isCurrentMonth ? `<button class="btn btn-primary btn-sm" type="button">Solicitar factura</button>` : '';
+      return `<tr><td>${h.fecha}</td><td>${h.plan}</td><td>${h.mov}</td><td>${h.vig}</td><td>${h.est}</td><td>${h.apoyo}</td><td>${facturaBtn}</td></tr>`;
+    }).join('');
   }
 
   function renderCatalog(){
