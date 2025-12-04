@@ -333,23 +333,14 @@ body{margin:0;background:var(--mm-fondo-base);}
 /* Texto dentro de botones */
 
 .menu-main .txt{
-
   display:flex;
-
   flex-direction:column;
-
   row-gap:var(--row-gap);
-
   padding-left:.35rem;
-
   min-width:0;
-
   flex:1 1 auto;
-
   align-items:center;
-
   text-align:center;
-
 }
 
 
@@ -405,25 +396,15 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 
 .menu-main .ico{
-
   font-size:var(--ico-main);
-
   line-height:1;
-
   flex:0 0 auto;
-
   margin-left:auto;
-
   width:var(--ico-main);
-
   height:var(--ico-main);
-
   display:flex;
-
   align-items:center;
-
   justify-content:center;
-
 }
 
 .menu-main .txt,
@@ -730,7 +711,9 @@ body{margin:0;background:var(--mm-fondo-base);}
 
   row-gap:var(--row-gap);
 
-  padding-left:.35rem;
+  padding-left:calc(var(--btn-pad-h) + 10px); /* centra virtualmente entre ceja izquierda e ícono */
+  padding-right:calc(var(--ico-sub) + var(--btn-pad-h)*2); /* reserva espacio para el ícono derecho */
+  width:100%;
 
   min-width:0;
 
@@ -3009,12 +2992,12 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 .menu-sub .menu-sub-btn{
   position:relative;
-  width:97% !important;      /* desplaza ligeramente a la derecha pero alinea el borde derecho */
-  margin-left:auto !important;
+  width:100% !important;      /* alineado con el botón principal */
+  margin-left:0 !important;
   padding-top:calc(var(--btn-pad-v) + 2px) !important;
   padding-bottom:calc(var(--btn-pad-v) + 2px) !important;
-  padding-left:calc(var(--btn-pad-h) + 8px) !important;
-  padding-right:calc(var(--btn-pad-h) + 28px) !important;
+  padding-left:calc(var(--btn-pad-h) + 18px) !important;  /* sangría ligera */
+  padding-right:calc(var(--btn-pad-h) + 24px) !important;
   border-radius:.55rem;
 }
 .menu-sub .menu-sub-btn::before{
@@ -3027,6 +3010,13 @@ body{margin:0;background:var(--mm-fondo-base);}
   background:#7FD5E4;
   opacity:1;
   border-radius:6px;
+}
+.menu-sub .menu-sub-btn .ico-right{
+  position:absolute;
+  right:var(--btn-pad-h);
+  top:50%;
+  transform:translateY(-50%);
+  margin-left:0;
 }
 
 /* Atenuar otros grupos cuando hay un acordeón abierto */
