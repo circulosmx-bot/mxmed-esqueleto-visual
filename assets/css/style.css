@@ -2989,3 +2989,56 @@ body{margin:0;background:var(--mm-fondo-base);}
   box-shadow:0 4px 12px rgba(0,0,0,0.18);
   z-index:5;
 }
+
+
+/* ================== NAV LATERAL: caja y alineación de submenú ================== */
+.menu-sub{
+  display:none !important;
+  flex-direction:column;
+  gap:2px; /* reducir separación interna para acercar al espaciado estático */
+  padding:0 !important;
+  margin:0 !important;
+}
+.menu-sub.open{
+  display:flex !important;
+  background:rgba(0,173,193,0.08);
+  border:1px solid rgba(0,173,193,0.35);
+  border-radius:12px;
+  padding:0 !important;
+  margin:0 !important; /* igual separación que en estado estático */
+}
+.menu-sub .menu-sub-btn{
+  position:relative;
+  width:97% !important;      /* desplaza ligeramente a la derecha pero alinea el borde derecho */
+  margin-left:auto !important;
+  padding-top:calc(var(--btn-pad-v) + 2px) !important;
+  padding-bottom:calc(var(--btn-pad-v) + 2px) !important;
+  padding-left:calc(var(--btn-pad-h) + 8px) !important;
+  padding-right:calc(var(--btn-pad-h) + 28px) !important;
+  border-radius:.55rem;
+}
+.menu-sub .menu-sub-btn::before{
+  content:"";
+  position:absolute;
+  left:-12px;
+  top:6px;
+  bottom:6px;
+  width:10px;
+  background:#7FD5E4;
+  opacity:1;
+  border-radius:6px;
+}
+
+/* Atenuar otros grupos cuando hay un acordeón abierto */
+.mm-sidebar:has(.menu-sub.open) .menu-main:not(:has(+ .menu-sub.open)),
+.mm-sidebar:has(.menu-sub.open) .menu-sub-btn:not(.menu-sub.open .menu-sub-btn){
+  opacity:.72;
+  filter:grayscale(12%) brightness(0.96);
+  transition:opacity var(--mm-transition), filter var(--mm-transition);
+}
+/* Mantener foco en el grupo desplegado */
+.menu-main:has(+ .menu-sub.open),
+.menu-sub.open .menu-sub-btn{
+  opacity:1;
+  filter:none;
+}
