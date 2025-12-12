@@ -3155,30 +3155,9 @@
 
 <script src="assets/js/fotos.js"></script>
 
-<script>
-  // Refuerzo de paneles pendientes (Pacientes, Facturación, Promoción, Notificaciones)
-  document.addEventListener('DOMContentLoaded', function () {
-    var forceIds = ['p-expediente','p-pac-archivo','p-pac-recetas','p-facturacion','p-paquetes','p-Notificaciones'];
-    function showFallback(id){
-      var pane = document.getElementById(id);
-      if(!pane) return;
-      var vp = document.getElementById('viewport');
-      if(vp && pane.parentElement !== vp){ vp.appendChild(pane); }
-      document.querySelectorAll('section[id^="p-"]').forEach(function(s){ s.classList.add('d-none'); });
-      pane.classList.remove('d-none');
-      pane.style.display = 'block';
-      pane.style.visibility = 'visible';
-      pane.style.opacity = '1';
-    }
-    forceIds.forEach(function(id){
-      document.querySelectorAll('[data-panel="'+id+'"]').forEach(function(btn){
-        btn.addEventListener('click', function(){ showFallback(id); });
-      });
-    });
-  });
-</script>
 </body>
 </html>
+
 
 
 

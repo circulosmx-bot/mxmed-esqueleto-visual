@@ -68,14 +68,18 @@ $('.menu-main').on('click', function(){
 
 /* Activación de subbotones y panel derecho */
 function showPanel(id){
-  // Oculta todos los paneles, estén o no dentro de #viewport
-  $('section[id^="p-"]').addClass('d-none');
+  // Oculta todos los paneles, est1n o no dentro de #viewport
+  $("section[id^=\"p-\"]").addClass('d-none');
   // Muestra el panel solicitado
   const pane = document.getElementById(id);
   if(pane){
+    const vp = document.getElementById('viewport');
+    const forcePanels = ['p-suscripcion','p-expediente','p-pac-archivo','p-pac-recetas','p-facturacion','p-paquetes','p-Notificaciones'];
+    if(forcePanels.includes(id) && vp && pane.parentElement !== vp){
+      vp.appendChild(pane);
+    }
     pane.classList.remove('d-none');
-    // Refuerzo para Suscripción: forzar visibilidad
-    if(id === 'p-suscripcion'){
+    if(forcePanels.includes(id)){
       pane.style.display = 'block';
       pane.style.visibility = 'visible';
       pane.style.opacity = '1';
@@ -146,3 +150,4 @@ $(function(){
     vp.appendChild(pane);
   }
 });
+
