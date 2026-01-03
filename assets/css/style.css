@@ -1,4 +1,26 @@
 ﻿/* ===== Extracted CSS blocks from base HTML ===== */
+/* Scrollbar estable y sutil (sin saltos ni fondo visible) */
+:root{
+  scrollbar-gutter: stable;
+  scrollbar-width: thin; /* Firefox */
+}
+/* WebKit/Chromium */
+::-webkit-scrollbar{
+  width: 12px;
+  background: transparent;
+}
+::-webkit-scrollbar-track{
+  background: transparent;
+}
+::-webkit-scrollbar-thumb{
+  background: rgba(0,0,0,0.12);
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover{
+  background: rgba(0,0,0,0.25);
+}
 
 
 
@@ -3037,3 +3059,4 @@ body{margin:0;background:var(--mm-fondo-base);}
   opacity:1;
   filter:none;
 }
+
