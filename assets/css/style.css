@@ -1,4 +1,12 @@
-﻿/* ===== Extracted CSS blocks from base HTML ===== */
+﻿/* ===== Extracted CSS blocks from base HTML ===
+
+/* Evitar brincos cuando aparece la barra de scroll */
+html{
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
+== */
 
 
 
@@ -3032,3 +3040,4 @@ body{margin:0;background:var(--mm-fondo-base);}
   opacity:1;
   filter:none;
 }
+
