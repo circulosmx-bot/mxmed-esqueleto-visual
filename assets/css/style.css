@@ -2,6 +2,11 @@
 
 
 
+/* Evitar brincos cuando aparece la barra de scroll */
+html{
+  scrollbar-gutter: stable;
+}
+
 /* ================== DESIGN TOKENS ================== */
 
 :root{
