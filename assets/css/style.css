@@ -1,33 +1,15 @@
 ﻿/* ===== Extracted CSS blocks from base HTML ===== */
-/* Scrollbar estable y sutil (sin saltos ni fondo visible) */
-:root{
-  scrollbar-gutter: stable;
-  scrollbar-width: thin; /* Firefox */
+/* Scrollbar overlay sin hueco visible */
+html{
+  overflow-y: overlay;
+  scrollbar-width: thin;
 }
 /* WebKit/Chromium */
-::-webkit-scrollbar{
-  width: 12px;
-  background: transparent;
-}
-::-webkit-scrollbar-track{
-  background: transparent;
-}
-::-webkit-scrollbar-thumb{
-  background: rgba(0,0,0,0.12);
-  border-radius: 10px;
-  border: 3px solid transparent;
-  background-clip: content-box;
-}
-::-webkit-scrollbar-thumb:hover{
-  background: rgba(0,0,0,0.25);
-}
+::-webkit-scrollbar{ width: 12px; background: transparent; }
+::-webkit-scrollbar-track{ background: transparent; }
+::-webkit-scrollbar-thumb{ background: rgba(0,0,0,0.12); border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover{ background: rgba(0,0,0,0.25); }
 
-
-
-/* Evitar brincos cuando aparece la barra de scroll */
-html{
-  scrollbar-gutter: stable;
-}
 
 /* ================== DESIGN TOKENS ================== */
 
@@ -3059,4 +3041,5 @@ body{margin:0;background:var(--mm-fondo-base);}
   opacity:1;
   filter:none;
 }
+
 
