@@ -3040,3 +3040,59 @@ body{margin:0;background:var(--mm-fondo-base);}
   filter:none;
 }
 
+
+/* Pacientes: tabs en dos filas (5 arriba, 4 abajo) con grid responsivo */
+#p-expediente .mm-tabs-embed{
+  display:grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap:3px;
+  margin:0 -0.9rem 0 -0.9rem;
+}
+#p-expediente .mm-tabs-embed .nav-item{ width:100%; }
+#p-expediente .mm-tabs-embed .nav-link{
+  width:100%; text-align:left; white-space:normal;
+  min-height:52px; display:flex; align-items:center; justify-content:flex-start;
+  padding:10px 12px;
+}
+@media (max-width:1200px){
+  #p-expediente .mm-tabs-embed{ grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width:992px){
+  #p-expediente .mm-tabs-embed{ grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width:768px){
+  #p-expediente .mm-tabs-embed{ grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width:576px){
+  #p-expediente .mm-tabs-embed{ grid-template-columns: repeat(1, 1fr); }
+}
+
+/* Pacientes: tabs en dos filas (5 arriba, 4 abajo) con grid responsivo */
+#p-expediente .mm-tabs-embed{
+  display:grid;
+  grid-template-columns: repeat(20, 1fr);
+  gap:4px;
+  margin:0 -0.9rem 0 -0.9rem;
+}
+#p-expediente .mm-tabs-embed .nav-item{ width:100%; }
+#p-expediente .mm-tabs-embed .nav-item:nth-child(-n+5){ grid-column: span 4; }
+#p-expediente .mm-tabs-embed .nav-item:nth-child(n+6){ grid-column: span 5; }
+#p-expediente .mm-tabs-embed .nav-link{
+  width:100%; text-align:left; white-space:normal;
+  min-height:52px;
+  display:flex; align-items:center; justify-content:flex-start;
+  padding:10px 12px;
+}
+@media (max-width:1200px){
+  #p-expediente .mm-tabs-embed{ grid-template-columns: repeat(5, 1fr); }
+  #p-expediente .mm-tabs-embed .nav-item{ grid-column: span 1 !important; }
+}
+@media (max-width:992px){
+  #p-expediente .mm-tabs-embed{ grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width:768px){
+  #p-expediente .mm-tabs-embed{ grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width:576px){
+  #p-expediente .mm-tabs-embed{ grid-template-columns: repeat(1, 1fr); }
+}

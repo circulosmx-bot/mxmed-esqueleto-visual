@@ -151,3 +151,33 @@ $(function(){
   }
 });
 
+
+// Título dinámico en Pacientes según tab activa
+document.addEventListener('DOMContentLoaded', function () {
+  const head = document.querySelector('#p-expediente .head h5');
+  if (!head) return;
+  const iconHTML = head.querySelector('.material-symbols-rounded')?.outerHTML || '';
+  const labels = {
+    't-historia': 'Expediente Médico • Historia Clínica',
+    't-gineco': 'Expediente Médico • Antecedentes Gineco-obstétricos',
+    't-exploracion': 'Expediente Médico • Exploración Física',
+    't-estudios': 'Expediente Médico • Estudios Diagnóstico',
+    't-tratamiento': 'Expediente Médico • Tratamiento Recetas',
+    't-notas': 'Expediente Médico • Notas Evolución',
+    't-manejo': 'Expediente Médico • Manejo Hospitalario',
+    't-consent': 'Expediente Médico • Consentimiento Informado',
+    't-archivo': 'Expediente Médico • Archivo'
+  };
+  const setTitle = (id) => {
+    if (labels[id]) head.innerHTML = iconHTML + labels[id];
+  };
+  document.querySelectorAll('#p-expediente .mm-tabs-embed .nav-link').forEach(btn => {
+    btn.addEventListener('shown.bs.tab', () => {
+      const target = btn.getAttribute('data-bs-target') || '';
+      setTitle(target.replace('#',''));
+    });
+  });
+  const active = document.querySelector('#p-expediente .mm-tabs-embed .nav-link.active');
+  const initial = active?.getAttribute('data-bs-target')?.replace('#','') || 't-historia';
+  setTitle(initial);
+});
