@@ -3096,3 +3096,6 @@ body{margin:0;background:var(--mm-fondo-base);}
 @media (max-width:576px){
   #p-expediente .mm-tabs-embed{ grid-template-columns: repeat(1, 1fr); }
 }
+
+/* Prefijo reducido para título dinámico de Pacientes */
+.exp-prefix{ font-size:0.5em; }
