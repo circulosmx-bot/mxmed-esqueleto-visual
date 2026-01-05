@@ -150,7 +150,6 @@ $(function(){
     vp.appendChild(pane);
   }
 });
-
 // Título dinámico en Pacientes según tab activa
 (function(){
   const head = document.querySelector('#p-expediente .head h5');
@@ -168,12 +167,13 @@ $(function(){
     "t-consent": "Consentimiento Informado",
     "t-archivo": "Archivo"
   };
-  const nameSource = document.querySelector("[data-paciente-nombre]");
-  let patientName = (nameSource?.textContent || "").trim();
-  if(!patientName) patientName = "Carlos Martín Quintero Montañéz";
-  const nameBadge = patientName ? `<div class="exp-name-badge">${patientName}</div>` : "";
+  const nameSource = document.querySelector('[data-paciente-nombre]');
+  let patientName = (nameSource?.textContent || '').trim();
+  if(!patientName) patientName = 'Carlos Martín Quintero Montañez';
+  const nameBadge = patientName ? `<div class="exp-name-badge">${patientName}</div>` : '';
   const setTitle = (id) => {
-    if (labels[id]) head.innerHTML = `${iconHTML}${prefix}<span class="exp-title">${labels[id]}</span>${nameBadge}`;
+    if (!labels[id]) return;
+    head.innerHTML = `<div class="exp-title-row">${iconHTML}${prefix}<span class="exp-title">${labels[id]}</span></div><div class="exp-name-row">${nameBadge}</div>`;
   };
   document.querySelectorAll('#p-expediente .mm-tabs-embed .nav-link').forEach(btn => {
     btn.addEventListener('shown.bs.tab', () => {
@@ -185,4 +185,3 @@ $(function(){
   const initial = active?.getAttribute('data-bs-target')?.replace('#','') || 't-historia';
   setTitle(initial);
 })();
-
