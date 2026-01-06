@@ -3155,3 +3155,16 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-size:0.65em;
   box-shadow:0 2px 6px rgba(0,0,0,0.15);
 }
+/* Pacientes: escala de alfa en tabs inactivos (9 tabs) */
+#p-expediente .mm-tabs-embed .nav-item:nth-child(1) .nav-link:not(.active){ background: rgba(0,173,193,.90); color:#fff }
+#p-expediente .mm-tabs-embed .nav-item:nth-child(2) .nav-link:not(.active){ background: rgba(0,173,193,.84); color:#fff }
+#p-expediente .mm-tabs-embed .nav-item:nth-child(3) .nav-link:not(.active){ background: rgba(0,173,193,.78); color:#fff }
+#p-expediente .mm-tabs-embed .nav-item:nth-child(4) .nav-link:not(.active){ background: rgba(0,173,193,.72); color:#fff }
+#p-expediente .mm-tabs-embed .nav-item:nth-child(5) .nav-link:not(.active){ background: rgba(0,173,193,.66); color:#fff }
+#p-expediente .mm-tabs-embed .nav-item:nth-child(6) .nav-link:not(.active){ background: rgba(0,173,193,.60); color:#fff }
+#p-expediente .mm-tabs-embed .nav-item:nth-child(7) .nav-link:not(.active){ background: rgba(0,173,193,.54); color:#fff }
+#p-expediente .mm-tabs-embed .nav-item:nth-child(8) .nav-link:not(.active){ background: rgba(0,173,193,.48); color:#fff }
+#p-expediente .mm-tabs-embed .nav-item:nth-child(9) .nav-link:not(.active){ background: rgba(0,173,193,.42); color:#fff }
+#p-expediente .mm-tabs-embed .nav-link:not(.active) .tab-ico{ color:#fff; }
+#p-expediente .mm-tabs-embed .nav-link.active{ background:#F2FBFC; color:#003152; }
+#p-expediente .mm-tabs-embed .nav-link.active .tab-ico{ color:#003152; }
