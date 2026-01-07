@@ -142,6 +142,18 @@ $(function(){
   if(tabTrigger){ new bootstrap.Tab(tabTrigger).show(); }
 });
 
+// Bloqueo de tabs deshabilitados en Expediente (no avanzar si faltan datos base)
+$(function(){
+  document.querySelectorAll('#p-expediente .mm-tabs-embed .nav-link').forEach(btn=>{
+    btn.addEventListener('click', (ev)=>{
+      if(btn.classList.contains('disabled')){
+        ev.preventDefault();
+        ev.stopPropagation();
+      }
+    });
+  });
+});
+
 // Refuerzo: reubicar Suscripción en #viewport si quedó anidado
 $(function(){
   const pane = document.getElementById('p-suscripcion');
@@ -155,7 +167,7 @@ $(function(){
   const head = document.querySelector('#p-expediente .head h5');
   if (!head) return;
   const iconHTML = head.querySelector('.material-symbols-rounded')?.outerHTML || '';
-  const prefix = '<span class="exp-prefix">Expediente Médico • </span>';
+  const prefix = '<span class="exp-prefix">Expediente Médico \u0007 </span>';
   const labels = {
     "t-historia": "Historia Clínica",
     "t-gineco": "Antecedentes Gineco-obstétricos",
@@ -167,13 +179,20 @@ $(function(){
     "t-consent": "Consentimiento Informado",
     "t-archivo": "Archivo"
   };
-  const nameSource = document.querySelector('[data-paciente-nombre]');
-  let patientName = (nameSource?.textContent || '').trim();
-  if(!patientName) patientName = 'Carlos Martín Quintero Montañez';
-  const nameBadge = patientName ? `<div class="exp-name-badge">${patientName}</div>` : '';
+  const nameSpan = document.querySelector('[data-paciente-nombre]');
+  const nameInput = document.querySelector('[data-pac-nombre]');
+  const getPatientName = ()=>{
+    const fromInput = (nameInput?.value || '').trim();
+    if(fromInput) return fromInput;
+    const fromSpan = (nameSpan?.textContent || '').trim();
+    return fromSpan;
+  };
   const setTitle = (id) => {
     if (!labels[id]) return;
-    head.innerHTML = `<div class="exp-title-row">${iconHTML}${prefix}<span class="exp-title">${labels[id]}</span></div><div class="exp-name-row">${nameBadge}</div>`;
+    const patientName = getPatientName();
+    const nameBadge = patientName ? `<div class="exp-name-badge">${patientName}</div>` : '';
+    const nameRow = nameBadge ? `<div class="exp-name-row">${nameBadge}</div>` : '';
+    head.innerHTML = `<div class="exp-title-row">${iconHTML}${prefix}<span class="exp-title">${labels[id]}</span></div>${nameRow}`;
   };
   document.querySelectorAll('#p-expediente .mm-tabs-embed .nav-link').forEach(btn => {
     btn.addEventListener('shown.bs.tab', () => {
@@ -181,6 +200,13 @@ $(function(){
       setTitle(target.replace('#',''));
     });
   });
+  if(nameInput){
+    nameInput.addEventListener('input', ()=>{
+      const active = document.querySelector('#p-expediente .mm-tabs-embed .nav-link.active');
+      const current = active?.getAttribute('data-bs-target')?.replace('#','') || 't-historia';
+      setTitle(current);
+    });
+  }
   const active = document.querySelector('#p-expediente .mm-tabs-embed .nav-link.active');
   const initial = active?.getAttribute('data-bs-target')?.replace('#','') || 't-historia';
   setTitle(initial);

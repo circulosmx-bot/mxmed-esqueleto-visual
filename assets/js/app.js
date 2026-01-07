@@ -1046,6 +1046,79 @@ console.info('app.js loaded :: 20251123a');
   })();
 })();
 
+// ====== Pacientes: tabs bloqueados hasta capturar nombre y género ======
+(function(){
+  const pane = document.getElementById('p-expediente');
+  if(!pane) return;
+  const tabs = Array.from(pane.querySelectorAll('.mm-tabs-embed .nav-link'));
+  if(!tabs.length) return;
+
+  const nameInput = pane.querySelector('[data-pac-nombre]');
+  const genderInputs = Array.from(pane.querySelectorAll('input[name="pac-genero"]'));
+  const ginecoItem = pane.querySelector('[data-tab-conditional="gineco"]');
+  const ginecoLink = pane.querySelector('[data-tab-key="t-gineco"]');
+  const setGenderAttr = (genero)=>{
+    if(genero){ pane.setAttribute('data-exp-gender', genero); }
+    else { pane.removeAttribute('data-exp-gender'); }
+  };
+
+  const toggleTabState = (btn, disabled)=>{
+    if(!btn) return;
+    btn.classList.toggle('disabled', disabled);
+    btn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+    btn.tabIndex = disabled ? -1 : 0;
+  };
+
+  const basicsReady = ()=>{
+    const nombre = (nameInput?.value || '').trim();
+    const genero = genderInputs.find(r=>r.checked)?.value || '';
+    return !!nombre && !!genero;
+  };
+
+  const showFirstAvailable = ()=>{
+    const active = pane.querySelector('.mm-tabs-embed .nav-link.active');
+    if(active && active.classList.contains('disabled')){
+      const first = tabs.find(btn=> !btn.classList.contains('disabled') && btn.closest('.nav-item') && !btn.closest('.nav-item').classList.contains('d-none'));
+      if(first){
+        try{ new bootstrap.Tab(first).show(); }catch(_){ }
+      }
+    }
+  };
+
+  const syncGineco = (genero, allowNavigate)=>{
+    const show = genero === 'F';
+    if(ginecoItem){ ginecoItem.classList.toggle('d-none', !show); }
+    if(!ginecoLink) return;
+    if(show && basicsReady()){
+      toggleTabState(ginecoLink, false);
+    }else{
+      toggleTabState(ginecoLink, true);
+    }
+    if(!show && ginecoLink.classList.contains('active') && allowNavigate){
+      const first = tabs[0];
+      if(first){ try{ new bootstrap.Tab(first).show(); }catch(_){ } }
+    }
+  };
+
+  const syncState = (opts={})=>{
+    const ready = basicsReady();
+    tabs.forEach((btn, idx)=>{
+      if(idx === 0) return;
+      toggleTabState(btn, !ready);
+    });
+    const genero = genderInputs.find(r=>r.checked)?.value || '';
+    setGenderAttr(genero);
+    syncGineco(genero, opts.allowNavigate);
+    if(!ready){
+      showFirstAvailable();
+    }
+  };
+
+  nameInput?.addEventListener('input', ()=> syncState({ allowNavigate:true }));
+  genderInputs.forEach(r=> r.addEventListener('change', ()=> syncState({ allowNavigate:true })));
+
+  syncState();
+})();
 // ====== Seguridad: checklist compacto de contraseÃƒÂ±a ======
 (function(){
   const panel = document.getElementById('pwd-change-panel');

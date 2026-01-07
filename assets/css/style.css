@@ -3168,3 +3168,15 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-expediente .mm-tabs-embed .nav-link:not(.active) .tab-ico{ color:#fff; }
 #p-expediente .mm-tabs-embed .nav-link.active{ background:#F2FBFC; color:#003152; }
 #p-expediente .mm-tabs-embed .nav-link.active .tab-ico{ color:#003152; }
+#p-expediente[data-exp-gender="F"] .exp-name-badge{
+  background:#FFC5D3;
+  color:#004465;
+}
+#p-expediente .mm-tabs-embed .nav-item[data-tab-conditional="gineco"] .nav-link{
+  background:#FFC5D3 !important;
+  color:#004465 !important;
+}
+#p-expediente .mm-tabs-embed .nav-item[data-tab-conditional="gineco"] .nav-link.active{
+  background:#FFC5D3 !important;
+  color:#004465 !important;
+}
