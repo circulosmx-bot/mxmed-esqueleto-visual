@@ -3078,6 +3078,93 @@ body{margin:0;background:var(--mm-fondo-base);}
   #p-expediente .mm-tabs-row .nav-link{ min-height:48px; }
 }
 
+.dg-photo{
+  border:2px dashed #009ab0;
+  border-radius:12px;
+  background:#f6fbfd;
+  height:180px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.dg-photo-inner{
+  text-align:center;
+  color:#006b82;
+  font-weight:700;
+  line-height:1.2;
+}
+.dg-photo-inner .material-symbols-outlined{
+  font-size:48px;
+  display:block;
+  margin-bottom:4px;
+}
+.dg-photo-text{ font-size:0.9rem; }
+.dg-age-wrap{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.dg-age-num{
+  font-size:1.8rem;
+  font-weight:800;
+  color:#007ea6;
+}
+.dg-age-label{ font-weight:600; color:#005275; display:flex; align-items:center; gap:6px; }
+.dg-age-check{ display:none; font-size:1.2rem; color:#00b67a; }
+.dg-gender-row{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.dg-gender-item{
+  position:relative;
+}
+.dg-gender-item input[type="radio"]{
+  position:absolute;
+  inset:0;
+  opacity:0;
+  cursor:pointer;
+}
+.dg-gender-card{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  padding:10px 12px;
+  border:1px solid #009ab0;
+  border-radius:10px;
+  background:#f2fbfc;
+  cursor:pointer;
+  min-width:120px;
+}
+.dg-gender-ico{
+  width:48px;
+  height:48px;
+  background:#dceff5;
+  border-radius:50%;
+  display:block;
+}
+.dg-gender-lbl{
+  font-weight:700;
+  color:#006b82;
+  text-align:center;
+  font-size:0.9rem;
+}
+.dg-gender-item input[type="radio"]:checked + .dg-gender-card{
+  border-color:#EF5070;
+  box-shadow:0 0 0 2px rgba(239,80,112,0.2);
+}
+.dg-form .form-control,
+.dg-form .form-select{
+  border:1px solid #009ab0;
+  border-radius:12px;
+}
+.dg-form .form-label{
+  font-weight:600;
+  color:#003152;
+}
+.dg-date-dd{ max-width:110px; }
 /* Prefijo reducido para título dinámico de Pacientes */
 .exp-prefix{ font-size:0.5em; }
 /* Prefijo reducido y badge de nombre para título dinámico de Pacientes */

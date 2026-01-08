@@ -1087,13 +1087,62 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const showFirstAvailable = ()=>{
-    const active = pane.querySelector('.mm-tabs-embed .nav-link.active');
+    const active = pane.querySelector('.mm-tabs-row .nav-link.active');
     if(active && active.classList.contains('disabled')){
       const first = tabs.find(btn=> !btn.classList.contains('disabled') && btn.closest('.nav-item') && !btn.closest('.nav-item').classList.contains('d-none'));
       if(first){
         try{ new bootstrap.Tab(first).show(); }catch(_){ }
       }
     }
+  };
+
+  const computeAge = ()=>{
+    const dd = pane.querySelector('[data-dg-dia]');
+    const mm = pane.querySelector('[data-dg-mes]');
+    const yy = pane.querySelector('[data-dg-anio]');
+    const edadLbl = pane.querySelector('[data-dg-edad]');
+    const edadOk = pane.querySelector('[data-dg-ok]');
+    if(!dd || !mm || !yy || !edadLbl) return;
+    const d = Number(dd.value);
+    const m = Number(mm.value);
+    const y = Number(yy.value);
+    const valid = Number.isInteger(d) && Number.isInteger(m) && Number.isInteger(y) && d>=1 && d<=31 && m>=1 && m<=12 && y>=1900;
+    if(!valid){
+      edadLbl.textContent = '--';
+      if(edadOk) edadOk.style.display = 'none';
+      return;
+    }
+    const today = new Date();
+    const birth = new Date(y, m-1, d);
+    let age = today.getFullYear() - birth.getFullYear();
+    const hasHadBirthday = (today.getMonth() > birth.getMonth()) || (today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate());
+    if(!hasHadBirthday) age -= 1;
+    const ok = age >= 0 && age < 150;
+    edadLbl.textContent = ok ? (age + ' años') : '--';
+    if(edadOk) edadOk.style.display = ok ? 'inline-flex' : 'none';
+  };
+
+  const bindDOB = ()=>{
+    const dd = pane.querySelector('[data-dg-dia]');
+    const mm = pane.querySelector('[data-dg-mes]');
+    const yy = pane.querySelector('[data-dg-anio]');
+    if(dd){
+      const syncDay = ()=>{
+        dd.value = (dd.value||'').slice(0,2);
+        computeAge();
+      };
+      dd.addEventListener('input', syncDay);
+      dd.addEventListener('change', syncDay);
+    }
+    if(mm){
+      mm.addEventListener('change', computeAge);
+      mm.addEventListener('input', computeAge);
+    }
+    if(yy){
+      yy.addEventListener('change', computeAge);
+      yy.addEventListener('input', computeAge);
+    }
+    computeAge();
   };
 
   const syncGineco = (genero, allowNavigate)=>{
@@ -1131,6 +1180,7 @@ console.info('app.js loaded :: 20251123a');
 
   syncState();
   layoutTabs(false);
+  bindDOB();
 })();
 // ====== Seguridad: checklist compacto de contraseÃƒÂ±a ======
 (function(){
