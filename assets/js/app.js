@@ -1118,9 +1118,11 @@ console.info('app.js loaded :: 20251123a');
     const hasHadBirthday = (today.getMonth() > birth.getMonth()) || (today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate());
     if(!hasHadBirthday) age -= 1;
     const ok = age >= 0 && age < 150;
-    edadLbl.textContent = ok ? (age + ' años') : '--';
-    if(edadOk) edadOk.style.display = ok ? 'inline-flex' : 'none';
-  };
+      edadLbl.textContent = ok ? (age + ' años') : '--';
+      if(edadOk) edadOk.style.display = ok ? 'inline-flex' : 'none';
+      const dateFields = pane.querySelectorAll('.dg-date-field');
+      dateFields.forEach(f=> f.classList.toggle('is-valid-date', ok));
+    };
 
   const bindDOB = ()=>{
     const dd = pane.querySelector('[data-dg-dia]');

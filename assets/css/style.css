@@ -3165,6 +3165,29 @@ body{margin:0;background:var(--mm-fondo-base);}
   color:#003152;
 }
 .dg-date-dd{ max-width:110px; }
+.dg-date-mm{ max-width:180px; padding-right:2.4rem; background-position: right 0.6rem center; }
+.dg-date-yy{ max-width:120px; padding-right:2.4rem; background-position: right 0.6rem center; }
+.dg-date-field{
+  position:relative;
+  display:block;
+}
+.dg-date-field .form-control,
+.dg-date-field .form-select{
+  padding-right:2.4rem;
+}
+.dg-date-ok{
+  position:absolute;
+  right:0.55rem;
+  top:50%;
+  transform:translateY(-50%);
+  font-size:18px;
+  color:#00b67a;
+  display:none;
+  pointer-events:none;
+}
+.dg-date-field.is-valid-date .dg-date-ok{
+  display:inline-flex;
+}
 /* Prefijo reducido para título dinámico de Pacientes */
 .exp-prefix{ font-size:0.5em; }
 /* Prefijo reducido y badge de nombre para título dinámico de Pacientes */

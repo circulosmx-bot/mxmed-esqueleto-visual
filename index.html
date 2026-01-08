@@ -2817,7 +2817,13 @@
 
                         <label class="form-label">Día</label>
 
-                        <input class="form-control dg-date-dd" type="number" min="1" max="31" placeholder="DD" data-dg-dia>
+                        <div class="dg-date-field">
+
+                          <input class="form-control dg-date-dd" type="number" min="1" max="31" placeholder="DD" data-dg-dia>
+
+                          <span class="dg-date-ok material-symbols-outlined" aria-hidden="true">check_circle</span>
+
+                        </div>
 
                       </div>
 
@@ -2825,7 +2831,9 @@
 
                         <label class="form-label">Mes</label>
 
-                        <select class="form-select" data-dg-mes>
+                        <div class="dg-date-field">
+
+                        <select class="form-select dg-date-mm" data-dg-mes>
 
                           <option value="">Selecciona mes</option>
                           <option value="01">Enero</option>
@@ -2843,12 +2851,18 @@
 
                         </select>
 
+                        <span class="dg-date-ok material-symbols-outlined" aria-hidden="true">check_circle</span>
+
+                        </div>
+
                       </div>
                       <div class="col-md-4 col-12">
 
                         <label class="form-label">Año</label>
 
-                        <select class="form-select" data-dg-anio>
+                        <div class="dg-date-field">
+
+                        <select class="form-select dg-date-yy" data-dg-anio>
 
                           <option value="">Selecciona año</option>
                           <option value="2026">2026</option>
@@ -2980,6 +2994,10 @@
                           <option value="1900">1900</option>
 
                         </select>
+
+                        <span class="dg-date-ok material-symbols-outlined" aria-hidden="true">check_circle</span>
+
+                        </div>
 
                       </div>
 
