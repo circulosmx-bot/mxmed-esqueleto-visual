@@ -2108,9 +2108,11 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 }
 
-.mm-tabs-embed .nav-link .tab-lbl{ text-transform:uppercase; font-weight:700; line-height:1.1; white-space:normal; flex:1 1 auto; text-align:center; display:block; }
+.mm-tabs-embed .nav-link .tab-lbl,
+#p-expediente .mm-tabs-row .nav-link .tab-lbl{ text-transform:uppercase; font-weight:700; line-height:1.1; white-space:normal; flex:1 1 auto; text-align:center; display:block; }
 
-.mm-tabs-embed .nav-link .tab-ico{ flex:0 0 3.2rem; min-width:3.2rem; text-align:left; font-size:3rem; line-height:1; }
+.mm-tabs-embed .nav-link .tab-ico,
+#p-expediente .mm-tabs-row .nav-link .tab-ico{ flex:0 0 3.2rem; min-width:3.2rem; text-align:left; font-size:3rem; line-height:1; }
 
 .mm-tabs-embed .nav-link:hover{ filter:brightness(1.06); background:#00ADC1; color:#fff; }
 
