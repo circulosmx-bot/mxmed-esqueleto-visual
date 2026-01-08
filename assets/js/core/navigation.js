@@ -169,6 +169,7 @@ $(function(){
   const iconHTML = head.querySelector('.material-symbols-rounded')?.outerHTML || '';
   const prefix = '<span class="exp-prefix">Expediente Médico \u0007 </span>';
   const labels = {
+    "t-datos": "Datos Generales",
     "t-historia": "Historia Clínica",
     "t-gineco": "Antecedentes Gineco-obstétricos",
     "t-exploracion": "Exploración Física",
@@ -194,7 +195,7 @@ $(function(){
     const nameRow = nameBadge ? `<div class="exp-name-row">${nameBadge}</div>` : '';
     head.innerHTML = `<div class="exp-title-row">${iconHTML}${prefix}<span class="exp-title">${labels[id]}</span></div>${nameRow}`;
   };
-  document.querySelectorAll('#p-expediente .mm-tabs-embed .nav-link').forEach(btn => {
+  document.querySelectorAll('#p-expediente .mm-tabs-row .nav-link').forEach(btn => {
     btn.addEventListener('shown.bs.tab', () => {
       const target = btn.getAttribute('data-bs-target') || '';
       setTitle(target.replace('#',''));
@@ -202,12 +203,12 @@ $(function(){
   });
   if(nameInput){
     nameInput.addEventListener('input', ()=>{
-      const active = document.querySelector('#p-expediente .mm-tabs-embed .nav-link.active');
+      const active = document.querySelector('#p-expediente .mm-tabs-row .nav-link.active');
       const current = active?.getAttribute('data-bs-target')?.replace('#','') || 't-historia';
       setTitle(current);
     });
   }
-  const active = document.querySelector('#p-expediente .mm-tabs-embed .nav-link.active');
+  const active = document.querySelector('#p-expediente .mm-tabs-row .nav-link.active');
   const initial = active?.getAttribute('data-bs-target')?.replace('#','') || 't-historia';
   setTitle(initial);
 })();

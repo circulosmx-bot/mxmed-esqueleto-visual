@@ -2745,31 +2745,41 @@
 
           <div class="body">
 
-            <ul class="nav nav-pills mm-tabs mm-tabs-embed mb-3" role="tablist">
+            <div class="mm-tabs mm-tabs-rows mb-3" data-exp-tabs>
 
-              <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-historia" data-tab-key="t-historia">Historia Clínica</button></li>
+              <ul class="nav nav-pills mm-tabs-row mm-tabs-row-top" role="tablist">
 
-              <li class="nav-item d-none" data-tab-conditional="gineco"><button class="nav-link disabled" data-bs-toggle="pill" data-bs-target="#t-gineco" data-tab-key="t-gineco" tabindex="-1" aria-disabled="true">Antecedentes gineco-obstétricos</button></li>
+                <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-datos" data-tab-key="t-datos">Datos Generales</button></li>
 
-              <li class="nav-item"><button class="nav-link disabled" data-bs-toggle="pill" data-bs-target="#t-exploracion" data-tab-key="t-exploracion" tabindex="-1" aria-disabled="true">Exploración Física</button></li>
+                <li class="nav-item"><button class="nav-link disabled" data-bs-toggle="pill" data-bs-target="#t-historia" data-tab-key="t-historia" tabindex="-1" aria-disabled="true">Historia Clínica</button></li>
 
-              <li class="nav-item"><button class="nav-link disabled" data-bs-toggle="pill" data-bs-target="#t-estudios" data-tab-key="t-estudios" tabindex="-1" aria-disabled="true">Estudios Diagnóstico</button></li>
+                <li class="nav-item d-none" data-tab-conditional="gineco"><button class="nav-link disabled" data-bs-toggle="pill" data-bs-target="#t-gineco" data-tab-key="t-gineco" tabindex="-1" aria-disabled="true">Antecedentes gineco-obstétricos</button></li>
 
-              <li class="nav-item"><button class="nav-link disabled" data-bs-toggle="pill" data-bs-target="#t-tratamiento" data-tab-key="t-tratamiento" tabindex="-1" aria-disabled="true">Tratamiento Recetas</button></li>
+                <li class="nav-item"><button class="nav-link disabled" data-bs-toggle="pill" data-bs-target="#t-exploracion" data-tab-key="t-exploracion" tabindex="-1" aria-disabled="true">Exploración Física</button></li>
 
-              <li class="nav-item"><button class="nav-link disabled" data-bs-toggle="pill" data-bs-target="#t-notas" data-tab-key="t-notas" tabindex="-1" aria-disabled="true">Notas Evolución</button></li>
+                <li class="nav-item"><button class="nav-link disabled" data-bs-toggle="pill" data-bs-target="#t-estudios" data-tab-key="t-estudios" tabindex="-1" aria-disabled="true">Estudios Diagnóstico</button></li>
 
-              <li class="nav-item"><button class="nav-link disabled" data-bs-toggle="pill" data-bs-target="#t-manejo" data-tab-key="t-manejo" tabindex="-1" aria-disabled="true">Manejo Hospitalario</button></li>
+              </ul>
 
-              <li class="nav-item"><button class="nav-link disabled" data-bs-toggle="pill" data-bs-target="#t-consent" data-tab-key="t-consent" tabindex="-1" aria-disabled="true">Consentimiento Informado</button></li>
+              <ul class="nav nav-pills mm-tabs-row mm-tabs-row-bottom" role="tablist">
 
-              <li class="nav-item"><button class="nav-link disabled" data-bs-toggle="pill" data-bs-target="#t-archivo" data-tab-key="t-archivo" tabindex="-1" aria-disabled="true">Archivo</button></li>
+                <li class="nav-item"><button class="nav-link disabled" data-bs-toggle="pill" data-bs-target="#t-tratamiento" data-tab-key="t-tratamiento" tabindex="-1" aria-disabled="true">Tratamiento Recetas</button></li>
 
-            </ul>
+                <li class="nav-item"><button class="nav-link disabled" data-bs-toggle="pill" data-bs-target="#t-notas" data-tab-key="t-notas" tabindex="-1" aria-disabled="true">Notas Evolución</button></li>
+
+                <li class="nav-item"><button class="nav-link disabled" data-bs-toggle="pill" data-bs-target="#t-manejo" data-tab-key="t-manejo" tabindex="-1" aria-disabled="true">Manejo Hospitalario</button></li>
+
+                <li class="nav-item"><button class="nav-link disabled" data-bs-toggle="pill" data-bs-target="#t-consent" data-tab-key="t-consent" tabindex="-1" aria-disabled="true">Consentimiento Informado</button></li>
+
+                <li class="nav-item"><button class="nav-link disabled" data-bs-toggle="pill" data-bs-target="#t-archivo" data-tab-key="t-archivo" tabindex="-1" aria-disabled="true">Archivo</button></li>
+
+              </ul>
+
+            </div>
 
             <div class="tab-content">
 
-              <div class="tab-pane fade show active" id="t-historia">
+              <div class="tab-pane fade show active" id="t-datos">
 
                 <div class="row g-3 align-items-end mb-2">
 
@@ -2811,6 +2821,10 @@
 
                 </div>
 
+              </div>
+
+              <div class="tab-pane fade" id="t-historia">
+
                 <div class="row g-3 mt-1">
 
                   <div class="col-md-6"><label class="form-label">Motivo de consulta</label><input class="form-control"></div>
@@ -2822,7 +2836,6 @@
                 </div>
 
               </div>
-
               <div class="tab-pane fade" id="t-gineco"><div class="alert alert-info">Campos gineco-obstétricos
 </div></div>
 

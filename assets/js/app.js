@@ -1050,7 +1050,8 @@ console.info('app.js loaded :: 20251123a');
 (function(){
   const pane = document.getElementById('p-expediente');
   if(!pane) return;
-  const tabs = Array.from(pane.querySelectorAll('.mm-tabs-embed .nav-link'));
+  const tabs = Array.from(pane.querySelectorAll('.mm-tabs-row .nav-link'));
+  const tabsWrap = pane.querySelector('[data-exp-tabs]');
   if(!tabs.length) return;
 
   const nameInput = pane.querySelector('[data-pac-nombre]');
@@ -1060,6 +1061,16 @@ console.info('app.js loaded :: 20251123a');
   const setGenderAttr = (genero)=>{
     if(genero){ pane.setAttribute('data-exp-gender', genero); }
     else { pane.removeAttribute('data-exp-gender'); }
+  };
+
+  const layoutTabs = (showGineco)=>{
+    if(!tabsWrap) return;
+    const items = Array.from(tabsWrap.querySelectorAll('.nav-item'));
+    items.forEach(item=>{
+      item.style.flex = '';
+      item.style.order = '';
+    });
+    tabsWrap.classList.toggle('has-gineco', showGineco);
   };
 
   const toggleTabState = (btn, disabled)=>{
@@ -1088,6 +1099,7 @@ console.info('app.js loaded :: 20251123a');
   const syncGineco = (genero, allowNavigate)=>{
     const show = genero === 'F';
     if(ginecoItem){ ginecoItem.classList.toggle('d-none', !show); }
+    layoutTabs(show);
     if(!ginecoLink) return;
     if(show && basicsReady()){
       toggleTabState(ginecoLink, false);
@@ -1118,6 +1130,7 @@ console.info('app.js loaded :: 20251123a');
   genderInputs.forEach(r=> r.addEventListener('change', ()=> syncState({ allowNavigate:true })));
 
   syncState();
+  layoutTabs(false);
 })();
 // ====== Seguridad: checklist compacto de contraseÃƒÂ±a ======
 (function(){

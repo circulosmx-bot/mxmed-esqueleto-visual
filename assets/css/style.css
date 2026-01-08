@@ -3041,60 +3041,39 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 
 
-/* Pacientes: tabs en dos filas (5 arriba, 4 abajo) con grid responsivo */
-#p-expediente .mm-tabs-embed{
-  display:grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap:3px;
-  margin:0 -0.9rem 0 -0.9rem;
-}
-#p-expediente .mm-tabs-embed .nav-item{ width:100%; }
-#p-expediente .mm-tabs-embed .nav-link{
-  width:100%; text-align:left; white-space:normal;
-  min-height:52px; display:flex; align-items:center; justify-content:flex-start;
-  padding:10px 12px;
-}
-@media (max-width:1200px){
-  #p-expediente .mm-tabs-embed{ grid-template-columns: repeat(4, 1fr); }
-}
-@media (max-width:992px){
-  #p-expediente .mm-tabs-embed{ grid-template-columns: repeat(3, 1fr); }
-}
-@media (max-width:768px){
-  #p-expediente .mm-tabs-embed{ grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width:576px){
-  #p-expediente .mm-tabs-embed{ grid-template-columns: repeat(1, 1fr); }
-}
-
-/* Pacientes: tabs en dos filas (5 arriba, 4 abajo) con grid responsivo */
-#p-expediente .mm-tabs-embed{
-  display:grid;
-  grid-template-columns: repeat(20, 1fr);
+#p-expediente .mm-tabs-rows{
+  display:flex;
+  flex-direction:column;
   gap:4px;
   margin:0 -0.9rem 0 -0.9rem;
 }
-#p-expediente .mm-tabs-embed .nav-item{ width:100%; }
-#p-expediente .mm-tabs-embed .nav-item:nth-child(-n+5){ grid-column: span 4; }
-#p-expediente .mm-tabs-embed .nav-item:nth-child(n+6){ grid-column: span 5; }
-#p-expediente .mm-tabs-embed .nav-link{
+#p-expediente .mm-tabs-row{
+  display:grid;
+  gap:4px;
+  padding:0;
+  list-style:none;
+}
+#p-expediente .mm-tabs-row-top{ grid-template-columns: repeat(4, 1fr); }
+#p-expediente .mm-tabs-row-bottom{ grid-template-columns: repeat(5, 1fr); }
+#p-expediente .mm-tabs-rows.has-gineco .mm-tabs-row-top{ grid-template-columns: repeat(5, 1fr); }
+#p-expediente .mm-tabs-row .nav-item{
+  width:100%;
+  display:flex;
+}
+#p-expediente .mm-tabs-row .nav-link{
   width:100%; text-align:left; white-space:normal;
   min-height:52px;
   display:flex; align-items:center; justify-content:flex-start;
   padding:10px 12px;
+  border-radius:0;
+  height:100%;
 }
 @media (max-width:1200px){
-  #p-expediente .mm-tabs-embed{ grid-template-columns: repeat(5, 1fr); }
-  #p-expediente .mm-tabs-embed .nav-item{ grid-column: span 1 !important; }
-}
-@media (max-width:992px){
-  #p-expediente .mm-tabs-embed{ grid-template-columns: repeat(3, 1fr); }
+  #p-expediente .mm-tabs-row{ gap:3px; }
 }
 @media (max-width:768px){
-  #p-expediente .mm-tabs-embed{ grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width:576px){
-  #p-expediente .mm-tabs-embed{ grid-template-columns: repeat(1, 1fr); }
+  #p-expediente .mm-tabs-row{ grid-template-columns: repeat(2, 1fr) !important; }
+  #p-expediente .mm-tabs-row .nav-link{ min-height:48px; }
 }
 
 /* Prefijo reducido para título dinámico de Pacientes */
@@ -3155,28 +3134,29 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-size:0.65em;
   box-shadow:0 2px 6px rgba(0,0,0,0.15);
 }
-/* Pacientes: escala de alfa en tabs inactivos (9 tabs) */
-#p-expediente .mm-tabs-embed .nav-item:nth-child(1) .nav-link:not(.active){ background: rgba(0,173,193,.90); color:#fff }
-#p-expediente .mm-tabs-embed .nav-item:nth-child(2) .nav-link:not(.active){ background: rgba(0,173,193,.84); color:#fff }
-#p-expediente .mm-tabs-embed .nav-item:nth-child(3) .nav-link:not(.active){ background: rgba(0,173,193,.78); color:#fff }
-#p-expediente .mm-tabs-embed .nav-item:nth-child(4) .nav-link:not(.active){ background: rgba(0,173,193,.72); color:#fff }
-#p-expediente .mm-tabs-embed .nav-item:nth-child(5) .nav-link:not(.active){ background: rgba(0,173,193,.66); color:#fff }
-#p-expediente .mm-tabs-embed .nav-item:nth-child(6) .nav-link:not(.active){ background: rgba(0,173,193,.60); color:#fff }
-#p-expediente .mm-tabs-embed .nav-item:nth-child(7) .nav-link:not(.active){ background: rgba(0,173,193,.54); color:#fff }
-#p-expediente .mm-tabs-embed .nav-item:nth-child(8) .nav-link:not(.active){ background: rgba(0,173,193,.48); color:#fff }
-#p-expediente .mm-tabs-embed .nav-item:nth-child(9) .nav-link:not(.active){ background: rgba(0,173,193,.42); color:#fff }
-#p-expediente .mm-tabs-embed .nav-link:not(.active) .tab-ico{ color:#fff; }
-#p-expediente .mm-tabs-embed .nav-link.active{ background:#F2FBFC; color:#003152; }
-#p-expediente .mm-tabs-embed .nav-link.active .tab-ico{ color:#003152; }
+/* Pacientes: escala de alfa en tabs inactivos (nuevo orden 10 tabs, 2 filas) */
+#p-expediente .mm-tabs-row-top .nav-item:nth-child(1) .nav-link:not(.active){ background: rgba(0,173,193,.90); color:#fff }
+#p-expediente .mm-tabs-row-top .nav-item:nth-child(2) .nav-link:not(.active){ background: rgba(0,173,193,.84); color:#fff }
+#p-expediente .mm-tabs-row-top .nav-item:nth-child(3) .nav-link:not(.active){ background: rgba(0,173,193,.78); color:#fff }
+#p-expediente .mm-tabs-row-top .nav-item:nth-child(4) .nav-link:not(.active){ background: rgba(0,173,193,.72); color:#fff }
+#p-expediente .mm-tabs-row-top .nav-item:nth-child(5) .nav-link:not(.active){ background: rgba(0,173,193,.66); color:#fff }
+#p-expediente .mm-tabs-row-bottom .nav-item:nth-child(1) .nav-link:not(.active){ background: rgba(0,173,193,.60); color:#fff }
+#p-expediente .mm-tabs-row-bottom .nav-item:nth-child(2) .nav-link:not(.active){ background: rgba(0,173,193,.54); color:#fff }
+#p-expediente .mm-tabs-row-bottom .nav-item:nth-child(3) .nav-link:not(.active){ background: rgba(0,173,193,.48); color:#fff }
+#p-expediente .mm-tabs-row-bottom .nav-item:nth-child(4) .nav-link:not(.active){ background: rgba(0,173,193,.42); color:#fff }
+#p-expediente .mm-tabs-row-bottom .nav-item:nth-child(5) .nav-link:not(.active){ background: rgba(0,173,193,.36); color:#fff }
+#p-expediente .mm-tabs-row .nav-link:not(.active) .tab-ico{ color:#fff; }
+#p-expediente .mm-tabs-row .nav-link.active{ background:#F2FBFC; color:#003152; }
+#p-expediente .mm-tabs-row .nav-link.active .tab-ico{ color:#003152; }
 #p-expediente[data-exp-gender="F"] .exp-name-badge{
   background:#FFC5D3;
   color:#004465;
 }
-#p-expediente .mm-tabs-embed .nav-item[data-tab-conditional="gineco"] .nav-link{
+#p-expediente .mm-tabs-row .nav-item[data-tab-conditional="gineco"] .nav-link{
   background:#FFC5D3 !important;
   color:#004465 !important;
 }
-#p-expediente .mm-tabs-embed .nav-item[data-tab-conditional="gineco"] .nav-link.active{
+#p-expediente .mm-tabs-row .nav-item[data-tab-conditional="gineco"] .nav-link.active{
   background:#FFC5D3 !important;
   color:#004465 !important;
 }
