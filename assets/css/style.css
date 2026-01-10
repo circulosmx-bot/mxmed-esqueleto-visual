@@ -3164,30 +3164,136 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-weight:600;
   color:#003152;
 }
-.dg-date-dd{ max-width:110px; }
-.dg-date-mm{ max-width:180px; padding-right:2.4rem; background-position: right 0.6rem center; }
-.dg-date-yy{ max-width:120px; padding-right:2.4rem; background-position: right 0.6rem center; }
+.dg-heading{
+  font-size:1rem;
+  font-weight:600;
+  color:#003152;
+}
+.dg-date-dd{ width:80px; min-width:80px; max-width:80px; }
+.dg-date-field .dg-date-dd{
+  padding-right:1.6rem;
+  padding-left:0.6rem;
+  text-align:left;
+}
+.dg-date-mm{ width:155px; min-width:155px; max-width:155px; }
+.dg-date-yy{ width:90px; min-width:90px; max-width:90px; }
 .dg-date-field{
   position:relative;
   display:block;
 }
+.dg-date-row{ --bs-gutter-x:15px; }
 .dg-date-field .form-control,
 .dg-date-field .form-select{
-  padding-right:2.4rem;
+  padding-right:0.75rem;
 }
-.dg-date-ok{
+.dg-date-mm,
+.dg-date-yy{
+  -webkit-appearance:none !important;
+  -moz-appearance:none !important;
+  appearance:none !important;
+  background-image:none !important;
+  --bs-form-select-bg-img:none !important;
+  background-size:0 0 !important;
+  padding-right:0.6rem !important;
+  background: #fff;
+}
+.dg-date-dd.no-caret,
+.dg-date-mm.no-caret,
+.dg-date-yy.no-caret{
+  -webkit-appearance:none !important;
+  -moz-appearance:none !important;
+  appearance:none !important;
+  background-image:none !important;
+  --bs-form-select-bg-img:none !important;
+  background-size:0 0 !important;
+  padding-right:0.6rem !important;
+}
+.dg-date-row .save-ok{ display:none !important; }
+.dg-date-mm::-ms-expand,
+.dg-date-yy::-ms-expand{ display:none; }
+.dg-date-mm::-webkit-calendar-picker-indicator,
+.dg-date-yy::-webkit-calendar-picker-indicator{ display:none !important; }
+.dg-date-year{ position:relative; }
+.dg-date-year .form-select{
+  -webkit-appearance:none !important;
+  -moz-appearance:none !important;
+  appearance:none !important;
+  background:none !important;
+  background-color:#fff !important;
+  background-image:none !important;
+  background-repeat:no-repeat !important;
+  background-position:100% 50% !important;
+  padding-right:0.6rem !important;
+  box-shadow:none !important;
+}
+.dg-date-year .save-ok{ display:none !important; }
+.dg-date-year .form-select::-ms-expand{ display:none; }
+.dg-date-year .form-select::-webkit-calendar-picker-indicator{ display:none !important; }
+.dg-date-year .material-symbols-outlined,
+.dg-date-year .material-symbols-rounded{ display:none !important; }
+.dg-date-year::after{ content:none !important; }
+.dg-date-yy.no-caret{
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  appearance:none;
+  background-image:none !important;
+  padding-right:0.75rem;
+}
+.dg-date-field:not(.dg-date-year)::before,
+.dg-date-field:not(.dg-date-year)::after{
+  content:none !important;
+  display:none !important;
+}
+.dg-day-dropdown{
   position:absolute;
-  right:0.55rem;
-  top:50%;
-  transform:translateY(-50%);
-  font-size:18px;
-  color:#00b67a;
+  top:calc(100% + 4px);
+  left:0;
+  right:0;
+  background:#fff;
+  border:1px solid #00738F;
+  border-radius:10px;
+  box-shadow:0 8px 22px rgba(0,0,0,0.12);
+  padding:8px;
+  max-height:240px;
+  overflow-y:auto;
   display:none;
+  z-index:10;
+}
+.dg-day-dropdown.open{ display:block; }
+.dg-day-grid{
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:6px;
+}
+.dg-day-grid button{
+  border:1px solid #d0e6ec;
+  background:#f7fbfc;
+  border-radius:8px;
+  padding:6px 0;
+  font-weight:600;
+  color:#003152;
+  transition:all .1s ease;
+}
+.dg-day-grid button:hover,
+.dg-day-grid button:focus{
+  border-color:#00738F;
+  background:#e3f4f7;
+  outline:none;
+}
+.dg-day-trigger::after{
+  content:'';
+  position:absolute;
+  top:50%;
+  right:10px;
+  width:10px;
+  height:6px;
   pointer-events:none;
+  transform:translateY(-50%);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2300738F' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-size:10px 6px;
 }
-.dg-date-field.is-valid-date .dg-date-ok{
-  display:inline-flex;
-}
+.dg-day-trigger.no-caret::after{ display:none !important; }
 /* Prefijo reducido para título dinámico de Pacientes */
 .exp-prefix{ font-size:0.5em; }
 /* Prefijo reducido y badge de nombre para título dinámico de Pacientes */

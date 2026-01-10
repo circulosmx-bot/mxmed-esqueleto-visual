@@ -1106,10 +1106,30 @@ console.info('app.js loaded :: 20251123a');
     const d = Number(dd.value);
     const m = Number(mm.value);
     const y = Number(yy.value);
+    const filled = !!(dd.value && mm.value && yy.value);
     const valid = Number.isInteger(d) && Number.isInteger(m) && Number.isInteger(y) && d>=1 && d<=31 && m>=1 && m<=12 && y>=1900;
+    const yearField = pane.querySelector('.dg-date-year') || yy.closest('.dg-date-field');
+    if(dd){
+      dd.classList.toggle('no-caret', !!dd.value);
+    }
+    if(yy){
+      yy.classList.toggle('has-value', !!yy.value);
+      yy.classList.toggle('no-caret', !!yy.value);
+      yy.style.backgroundImage = 'none';
+      yy.style.paddingRight = '0.6rem';
+    }
+    // Barrer spans en campos que no sean año (previene círculos residuales)
+    pane.querySelectorAll('.dg-date-field:not(.dg-date-year) span').forEach(el=> el.remove());
+    // Limpiar estado visual en campos que no sean Año
+    pane.querySelectorAll('.dg-date-field').forEach(field=>{
+      if(field !== yearField){
+        field.classList.remove('is-valid-date');
+      }
+    });
     if(!valid){
       edadLbl.textContent = '--';
       if(edadOk) edadOk.style.display = 'none';
+      if(yearField) yearField.classList.remove('is-valid-date');
       return;
     }
     const today = new Date();
@@ -1118,23 +1138,33 @@ console.info('app.js loaded :: 20251123a');
     const hasHadBirthday = (today.getMonth() > birth.getMonth()) || (today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate());
     if(!hasHadBirthday) age -= 1;
     const ok = age >= 0 && age < 150;
-      edadLbl.textContent = ok ? (age + ' años') : '--';
-      if(edadOk) edadOk.style.display = ok ? 'inline-flex' : 'none';
-      const dateFields = pane.querySelectorAll('.dg-date-field');
-      dateFields.forEach(f=> f.classList.toggle('is-valid-date', ok));
-    };
+    const showCheck = filled && ok;
+    edadLbl.textContent = ok ? (age + ' años') : '--';
+    if(edadOk) edadOk.style.display = showCheck ? 'inline-flex' : 'none';
+    if(yearField) yearField.classList.toggle('is-valid-date', showCheck);
+  };
+
+  const normalizeDateChecks = ()=>{
+    const yearField = pane.querySelector('.dg-date-year');
+    // Eliminar cualquier ícono de check residual
+    pane.querySelectorAll('.dg-date-ok').forEach(el=> el.remove());
+    if(yearField){
+      yearField.querySelectorAll('.material-symbols-outlined, .material-symbols-rounded').forEach(el=> el.remove());
+      // Eliminar cualquier nodo adicional distinto al select
+      yearField.querySelectorAll(':scope > :not(select)').forEach(el=> el.remove());
+      // Eliminar spans de autosave que se agreguen a contenedores padres
+      yearField.closest('.save-wrap')?.querySelectorAll('.save-ok')?.forEach(el=> el.remove());
+    }
+  };
 
   const bindDOB = ()=>{
     const dd = pane.querySelector('[data-dg-dia]');
     const mm = pane.querySelector('[data-dg-mes]');
     const yy = pane.querySelector('[data-dg-anio]');
+    normalizeDateChecks();
     if(dd){
-      const syncDay = ()=>{
-        dd.value = (dd.value||'').slice(0,2);
-        computeAge();
-      };
-      dd.addEventListener('input', syncDay);
-      dd.addEventListener('change', syncDay);
+      dd.addEventListener('change', computeAge);
+      dd.addEventListener('input', computeAge);
     }
     if(mm){
       mm.addEventListener('change', computeAge);
