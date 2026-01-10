@@ -1058,6 +1058,8 @@ console.info('app.js loaded :: 20251123a');
   const genderInputs = Array.from(pane.querySelectorAll('input[name="pac-genero"]'));
   const ginecoItem = pane.querySelector('[data-tab-conditional="gineco"]');
   const ginecoLink = pane.querySelector('[data-tab-key="t-gineco"]');
+  const dayError = pane.querySelector('[data-dg-day-error]');
+  let lastDayInvalid = false;
   const setGenderAttr = (genero)=>{
     if(genero){ pane.setAttribute('data-exp-gender', genero); }
     else { pane.removeAttribute('data-exp-gender'); }
@@ -1109,8 +1111,37 @@ console.info('app.js loaded :: 20251123a');
     const filled = !!(dd.value && mm.value && yy.value);
     const valid = Number.isInteger(d) && Number.isInteger(m) && Number.isInteger(y) && d>=1 && d<=31 && m>=1 && m<=12 && y>=1900;
     const yearField = pane.querySelector('.dg-date-year') || yy.closest('.dg-date-field');
+    const daysInMonth = (monthStr, yearStr)=>{
+      const mVal = Number(monthStr);
+      const yVal = yearStr ? Number(yearStr) : 2001;
+      if(!Number.isInteger(mVal) || mVal<1 || mVal>12) return 31;
+      return new Date(yVal, mVal, 0).getDate();
+    };
+    const showDayError = (flag)=>{
+      lastDayInvalid = flag;
+      if(dayError) dayError.classList.toggle('d-none', !flag);
+    };
+    const validateDayCombo = ()=>{
+      if(!dd || !mm){ showDayError(false); return true; }
+      const dayVal = dd.value || '';
+      const monthVal = mm.value || '';
+      const yearVal = yy?.value || '';
+      if(!dayVal || !monthVal){ showDayError(lastDayInvalid); return true; }
+      const dNum = Number(dayVal);
+      const max = daysInMonth(monthVal, yearVal);
+      const okDay = Number.isInteger(dNum) && dNum>=1 && dNum<=max;
+      showDayError(!okDay);
+      if(!okDay){
+        dd.value = '';
+        dd.classList.remove('no-caret');
+      }
+      return okDay;
+    };
+    const dayValid = validateDayCombo();
     if(dd){
       dd.classList.toggle('no-caret', !!dd.value);
+      dd.style.setProperty('--bs-form-select-bg-img','none');
+      dd.style.backgroundImage = 'none';
     }
     if(yy){
       yy.classList.toggle('has-value', !!yy.value);
@@ -1126,7 +1157,7 @@ console.info('app.js loaded :: 20251123a');
         field.classList.remove('is-valid-date');
       }
     });
-    if(!valid){
+    if(!dayValid || !valid){
       edadLbl.textContent = '--';
       if(edadOk) edadOk.style.display = 'none';
       if(yearField) yearField.classList.remove('is-valid-date');
