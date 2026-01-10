@@ -2786,15 +2786,20 @@
                   <div class="col-lg-3">
 
                     <div class="dg-photo">
-
-                      <div class="dg-photo-inner">
-
-                        <span class="material-symbols-outlined" aria-hidden="true">photo_camera</span>
-
-                        <div class="dg-photo-text">+ tomar con cámara</div>
-
+                      <div class="foto-slot" id="pac-foto-slot">
+                        <div class="mf-upload square" data-type="foto" id="pac-foto-drop">
+                          <div class="mf-illus">
+                            <span class="material-symbols-outlined" aria-hidden="true">photo_camera</span>
+                          </div>
+                          <div class="mf-title">Arrastra aquí la fotografía</div>
+                          <button type="button" class="btn btn-link p-0 mf-btn" data-pac-foto-btn>+ tomar con cámara</button>
+                          <input id="pac-foto" type="file" accept="image/*" capture="environment" class="d-none mf-input">
+                        </div>
+                        <div id="pac-foto-prev" class="mf-prev" hidden>
+                          <button type="button" class="foto-x" id="pac-foto-del" title="Eliminar fotografía">&times;</button>
+                          <img id="pac-foto-img" alt="Foto del paciente">
+                        </div>
                       </div>
-
                     </div>
 
                   </div>
