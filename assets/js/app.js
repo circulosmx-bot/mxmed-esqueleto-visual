@@ -314,69 +314,6 @@ console.info('app.js loaded :: 20251123a');
   }
 
 
-  // ====== Pacientes: foto (arrastrar o tomar con cámara) ======
-  (function(){
-    const slot = document.getElementById('pac-foto-slot');
-    const input = document.getElementById('pac-foto');
-    const prev = document.getElementById('pac-foto-prev');
-    const img = document.getElementById('pac-foto-img');
-    const del = document.getElementById('pac-foto-del');
-    const drop = document.getElementById('pac-foto-drop');
-    const btnCam = document.querySelector('[data-pac-foto-btn]');
-    if(!slot || !input) return;
-
-    const showPreview = (src)=>{
-      if(img){ img.src = src || ''; }
-      if(prev){
-        prev.style.display = src ? 'block' : 'none';
-        prev.hidden = !src;
-      }
-      if(drop){
-        drop.style.display = src ? 'none' : 'flex';
-      }
-    };
-
-    const clear = ()=>{
-      if(input) input.value = '';
-      showPreview('');
-    };
-
-    const handleFile = (file)=>{
-      if(!file) return;
-      const rd = new FileReader();
-      rd.onload = ev => showPreview(ev.target.result);
-      rd.readAsDataURL(file);
-    };
-
-    input.addEventListener('change', (e)=>{
-      const f = e.target.files?.[0];
-      handleFile(f);
-    });
-
-    const openPicker = (ev)=>{
-      ev?.preventDefault();
-      input?.click();
-    };
-
-    drop?.addEventListener('click', openPicker);
-    btnCam?.addEventListener('click', openPicker);
-
-    ['dragenter','dragover'].forEach(evt=>{
-      drop?.addEventListener(evt, ev=>{ ev.preventDefault(); drop.classList.add('dragover'); });
-    });
-    ['dragleave','dragend','drop'].forEach(evt=>{
-      drop?.addEventListener(evt, ev=>{ drop.classList.remove('dragover'); });
-    });
-    drop?.addEventListener('drop', ev=>{
-      ev.preventDefault();
-      const f = ev.dataTransfer?.files?.[0];
-      handleFile(f);
-    });
-
-    del?.addEventListener('click', (ev)=>{ ev.preventDefault(); clear(); });
-  })();
-
-
   // Utilidad: construir texto de direcci?n
 
   function buildAddress(){

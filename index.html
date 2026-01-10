@@ -2786,19 +2786,20 @@
                   <div class="col-lg-3">
 
                     <div class="dg-photo">
-                      <div class="foto-slot" id="pac-foto-slot">
-                        <div class="mf-upload square" data-type="foto" id="pac-foto-drop">
-                          <div class="mf-illus">
-                            <span class="material-symbols-outlined" aria-hidden="true">photo_camera</span>
-                          </div>
-                          <div class="mf-title">Arrastra aquí la fotografía</div>
-                          <button type="button" class="btn btn-link p-0 mf-btn" data-pac-foto-btn>+ tomar con cámara</button>
-                          <input id="pac-foto" type="file" accept="image/*" capture="environment" class="d-none mf-input">
+                      <div class="mf-upload square" data-type="foto" id="pac-foto-slot">
+                        <svg class="mf-illus" viewBox="0 0 64 64" aria-hidden="true">
+                          <circle cx="32" cy="22" r="12" fill="#c7dbe4"/>
+                          <rect x="16" y="36" width="32" height="18" rx="9" fill="#c7dbe4"/>
+                          <rect x="6" y="8" width="52" height="48" rx="8" fill="none" stroke="#99bfd0" stroke-width="2"/>
+                        </svg>
+                        <div class="mf-title">Arrastra aquí tu fotografía</div>
+                        <div class="mf-sub">o haz clic para subirla</div>
+                        <div class="mf-actions">
+                          <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cámara</button>
                         </div>
-                        <div id="pac-foto-prev" class="mf-prev" hidden>
-                          <button type="button" class="foto-x" id="pac-foto-del" title="Eliminar fotografía">&times;</button>
-                          <img id="pac-foto-img" alt="Foto del paciente">
-                        </div>
+                        <input type="file" accept="image/*" class="d-none mf-input" id="pac-foto">
+                        <div class="mf-prev"><img id="pac-foto-img" alt="preview foto"></div>
                       </div>
                     </div>
 
