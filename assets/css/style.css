@@ -3048,6 +3048,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   flex-direction:column;
   gap:4px;
   margin:0 -0.9rem 0 -0.9rem;
+  border-top-left-radius:.9rem;
+  overflow:hidden;
+  padding-top:0;
 }
 #p-expediente .mm-tabs-row{
   display:grid;
@@ -3069,6 +3072,17 @@ body{margin:0;background:var(--mm-fondo-base);}
   padding:10px 12px;
   border-radius:0;
   height:100%;
+  position:relative;
+}
+#p-expediente .mm-tabs-row-top .nav-item:first-child .nav-link{
+  border-top-left-radius:.9rem;
+}
+#p-expediente .mm-tabs-row-top .nav-item:first-child .nav-link::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  border-top-left-radius:.9rem;
+  pointer-events:none;
 }
 @media (max-width:1200px){
   #p-expediente .mm-tabs-row{ gap:3px; }
@@ -3355,3 +3369,4 @@ body{margin:0;background:var(--mm-fondo-base);}
   background:#FFC5D3 !important;
   color:#004465 !important;
 }
+\n#p-expediente.mm-card .body{\n  border-top-left-radius:.9rem;\n  overflow:hidden;\n}\n
