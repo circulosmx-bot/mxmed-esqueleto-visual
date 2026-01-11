@@ -3101,16 +3101,18 @@ body{margin:0;background:var(--mm-fondo-base);}
 .dg-photo-text{ font-size:0.9rem; }
 .dg-age-wrap{
   display:flex;
-  align-items:center;
+  align-items:baseline;
   gap:12px;
   flex-wrap:wrap;
+  position:relative;
+  top:10px;
 }
 .dg-age-num{
   font-size:1.8rem;
   font-weight:800;
   color:#007ea6;
 }
-.dg-age-label{ font-weight:600; color:#005275; display:flex; align-items:center; gap:6px; }
+.dg-age-label{ font-weight:600; color:#005275; display:flex; align-items:center; gap:6px; margin-left:4px; }
 .dg-age-check{ display:none; font-size:1.2rem; color:#00b67a; }
 .dg-gender-row{
   display:flex;
@@ -3180,7 +3182,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   color:#003152;
 }
 .dg-heading{
-  font-size:1rem;
+  font-size:1.25rem;
   font-weight:600;
   color:#003152;
 }
