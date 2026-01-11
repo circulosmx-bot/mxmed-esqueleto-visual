@@ -3087,6 +3087,12 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-weight:700;
   line-height:1.2;
 }
+.dg-photo .mf-upload.square{
+  min-height:240px;
+  width:100%;
+  max-width:320px;
+  padding:20px;
+}
 .dg-photo-inner .material-symbols-outlined{
   font-size:48px;
   display:block;
@@ -3154,6 +3160,15 @@ body{margin:0;background:var(--mm-fondo-base);}
 .dg-gender-item input[type="radio"]:checked + .dg-gender-card{
   border-color:#EF5070;
   box-shadow:0 0 0 2px rgba(239,80,112,0.2);
+}
+.dg-gender-inline{
+  display:flex;
+  gap:18px;
+  align-items:center;
+  margin-top:12px;
+  flex-wrap:wrap;
+  justify-content:flex-start;
+  padding-left:0;
 }
 .dg-form .form-control,
 .dg-form .form-select{
