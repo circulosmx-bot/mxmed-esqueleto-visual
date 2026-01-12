@@ -1058,6 +1058,7 @@ console.info('app.js loaded :: 20251123a');
   const ginecoItem = pane.querySelector('[data-tab-conditional="gineco"]');
   const ginecoLink = pane.querySelector('[data-tab-key="t-gineco"]');
   const dayError = pane.querySelector('[data-dg-day-error]');
+  const genderExtra = pane.querySelector('[data-gen-extra]');
   let lastDayInvalid = false;
   const setGenderAttr = (genero)=>{
     if(genero){ pane.setAttribute('data-exp-gender', genero); }
@@ -1079,6 +1080,21 @@ console.info('app.js loaded :: 20251123a');
     btn.classList.toggle('disabled', disabled);
     btn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
     btn.tabIndex = disabled ? -1 : 0;
+  };
+
+  const updateGenderExtra = ()=>{
+    if(!genderExtra) return;
+    const extraInput = genderExtra.querySelector('input');
+    const selected = genderInputs.find(inp=>inp.checked);
+    if(selected && selected.value==='O'){
+      genderExtra.classList.remove('d-none');
+      extraInput.removeAttribute('disabled');
+      extraInput.focus();
+    } else {
+      genderExtra.classList.add('d-none');
+      extraInput.value = '';
+      extraInput.setAttribute('disabled','disabled');
+    }
   };
 
   const basicsReady = ()=>{
@@ -1232,6 +1248,7 @@ console.info('app.js loaded :: 20251123a');
     const genero = genderInputs.find(r=>r.checked)?.value || '';
     setGenderAttr(genero);
     syncGineco(genero, opts.allowNavigate);
+    updateGenderExtra();
     if(!ready){
       showFirstAvailable();
     }

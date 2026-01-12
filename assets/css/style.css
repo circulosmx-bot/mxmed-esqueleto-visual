@@ -3173,6 +3173,19 @@ body{margin:0;background:var(--mm-fondo-base);}
   text-align:center;
   font-size:0.9rem;
 }
+.dg-gender-extra{
+  display:flex;
+  align-items:center;
+  flex:1 1 0;
+  margin-left:auto;
+  width:100%;
+}
+.dg-gender-extra input.form-control{
+  width:100%;
+  min-height:38px;
+  border-radius:8px;
+  padding-left:10px;
+}
 .dg-gender-item input[type="radio"]:checked + .dg-gender-card{
   border-color:#EF5070;
   box-shadow:0 0 0 2px rgba(239,80,112,0.2);
