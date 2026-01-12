@@ -1253,7 +1253,6 @@ console.info('app.js loaded :: 20251123a');
       showFirstAvailable();
     }
   };
-
   nameInput?.addEventListener('input', ()=> syncState({ allowNavigate:true }));
   genderInputs.forEach(r=> r.addEventListener('change', ()=> syncState({ allowNavigate:true })));
 

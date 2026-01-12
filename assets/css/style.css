@@ -3213,6 +3213,16 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-weight:600;
   color:#003152;
 }
+.dg-head-name{
+  display:inline-flex;
+  align-items:center;
+  padding:0.15rem 0.9rem;
+  background:#003152;
+  color:#fff;
+  font-weight:600;
+  border-radius:999px;
+  margin-top:0.5rem;
+}
 .dg-date-dd{ width:80px; min-width:80px; max-width:80px; }
 .dg-date-field .dg-date-dd{
   padding-right:1.6rem;

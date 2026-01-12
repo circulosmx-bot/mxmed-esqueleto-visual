@@ -182,9 +182,15 @@ $(function(){
   };
   const nameSpan = document.querySelector('[data-paciente-nombre]');
   const nameInput = document.querySelector('[data-pac-nombre]');
+  const apellidoP = document.querySelector('[data-pac-apellido-paterno]');
+  const apellidoM = document.querySelector('[data-pac-apellido-materno]');
   const getPatientName = ()=>{
-    const fromInput = (nameInput?.value || '').trim();
-    if(fromInput) return fromInput;
+    const parts = [
+      (nameInput?.value || '').trim(),
+      (apellidoP?.value || '').trim(),
+      (apellidoM?.value || '').trim()
+    ].filter(Boolean);
+    if(parts.length) return parts.join(' ');
     const fromSpan = (nameSpan?.textContent || '').trim();
     return fromSpan;
   };
@@ -201,12 +207,14 @@ $(function(){
       setTitle(target.replace('#',''));
     });
   });
-  if(nameInput){
-    nameInput.addEventListener('input', ()=>{
+  const wireInputs = [nameInput, apellidoP, apellidoM].filter(Boolean);
+  if(wireInputs.length){
+    const onNameChange = ()=>{
       const active = document.querySelector('#p-expediente .mm-tabs-row .nav-link.active');
       const current = active?.getAttribute('data-bs-target')?.replace('#','') || 't-historia';
       setTitle(current);
-    });
+    };
+    wireInputs.forEach(inp=> inp.addEventListener('input', onNameChange));
   }
   const active = document.querySelector('#p-expediente .mm-tabs-row .nav-link.active');
   const initial = active?.getAttribute('data-bs-target')?.replace('#','') || 't-historia';
