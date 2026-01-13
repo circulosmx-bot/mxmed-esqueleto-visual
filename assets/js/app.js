@@ -1097,11 +1097,8 @@ console.info('app.js loaded :: 20251123a');
     }
   };
 
-  const basicsReady = ()=>{
-    const nombre = (nameInput?.value || '').trim();
-    const genero = genderInputs.find(r=>r.checked)?.value || '';
-    return !!nombre && !!genero;
-  };
+  // Desbloqueo: permitir navegar otros tabs sin requisitos
+  const basicsReady = ()=> true;
 
   const showFirstAvailable = ()=>{
     const active = pane.querySelector('.mm-tabs-row .nav-link.active');
@@ -1241,9 +1238,8 @@ console.info('app.js loaded :: 20251123a');
 
   const syncState = (opts={})=>{
     const ready = basicsReady();
-    tabs.forEach((btn, idx)=>{
-      if(idx === 0) return;
-      toggleTabState(btn, !ready);
+    tabs.forEach((btn)=>{
+      toggleTabState(btn, false);
     });
     const genero = genderInputs.find(r=>r.checked)?.value || '';
     setGenderAttr(genero);
@@ -1255,6 +1251,24 @@ console.info('app.js loaded :: 20251123a');
   };
   nameInput?.addEventListener('input', ()=> syncState({ allowNavigate:true }));
   genderInputs.forEach(r=> r.addEventListener('change', ()=> syncState({ allowNavigate:true })));
+
+  // Refuerzo: asegurar que el click cambie de tab
+  const tabLinks = Array.from(document.querySelectorAll('#p-expediente .mm-tabs-row .nav-link'));
+  const tabPanes = Array.from(document.querySelectorAll('#p-expediente .tab-content .tab-pane'));
+  tabLinks.forEach(btn=>{
+    btn.addEventListener('click', (ev)=>{
+      const target = btn.getAttribute('data-bs-target');
+      if(!target) return;
+      ev.preventDefault();
+      tabLinks.forEach(b=> b.classList.remove('active'));
+      btn.classList.add('active');
+      tabPanes.forEach(p=> p.classList.remove('show','active'));
+      const paneTarget = pane.querySelector(target);
+      if(paneTarget){
+        paneTarget.classList.add('show','active');
+      }
+    });
+  });
 
   syncState();
   layoutTabs(false);
