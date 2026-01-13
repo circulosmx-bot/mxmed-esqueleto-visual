@@ -1187,6 +1187,8 @@ console.info('app.js loaded :: 20251123a');
     edadLbl.textContent = ok ? (age + ' años') : '--';
     if(edadOk) edadOk.style.display = showCheck ? 'inline-flex' : 'none';
     if(yearField) yearField.classList.toggle('is-valid-date', showCheck);
+    // Avisar a cabecera para refrescar edad mostrada
+    pane.dispatchEvent(new CustomEvent('pac-age-changed'));
   };
 
   const normalizeDateChecks = ()=>{

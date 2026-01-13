@@ -180,16 +180,24 @@ $(function(){
     "t-consent": "Consentimiento Informado",
     "t-archivo": "Archivo"
   };
+  const pane = document.getElementById('p-expediente');
   const nameSpan = document.querySelector('[data-paciente-nombre]');
   const nameInput = document.querySelector('[data-pac-nombre]');
   const apellidoP = document.querySelector('[data-pac-apellido-paterno]');
   const apellidoM = document.querySelector('[data-pac-apellido-materno]');
+  const getPatientAge = ()=>{
+    const ageEl = pane?.querySelector('[data-dg-edad]');
+    if(!ageEl) return '';
+    const txt = (ageEl.textContent || '').trim();
+    if(!txt || txt === '--' || txt === '-') return '';
+    if(!/\d/.test(txt)) return '';
+    return txt;
+  };
   const getPatientName = ()=>{
-    const parts = [
-      (nameInput?.value || '').trim(),
-      (apellidoP?.value || '').trim(),
-      (apellidoM?.value || '').trim()
-    ].filter(Boolean);
+    const first = (nameInput?.value || '').trim();
+    const apP = (apellidoP?.value || '').trim();
+    const apM = (apellidoM?.value || '').trim();
+    const parts = (first && (apP || apM)) ? [first, apP, apM].filter(Boolean) : [];
     if(parts.length) return parts.join(' ');
     const fromSpan = (nameSpan?.textContent || '').trim();
     return fromSpan;
@@ -197,7 +205,12 @@ $(function(){
   const setTitle = (id) => {
     if (!labels[id]) return;
     const patientName = getPatientName();
-    const nameBadge = patientName ? `<div class="exp-name-badge">${patientName}</div>` : '';
+    const ageTxt = getPatientAge();
+    const namePieces = [];
+    if (patientName) namePieces.push(patientName);
+    if (ageTxt) namePieces.push(`Edad ${ageTxt}`);
+    const fullBadgeText = namePieces.join(' / ');
+    const nameBadge = fullBadgeText ? `<div class="exp-name-badge">${fullBadgeText}</div>` : '';
     const nameRow = nameBadge ? `<div class="exp-name-row">${nameBadge}</div>` : '';
     head.innerHTML = `<div class="exp-title-row">${iconHTML}${prefix}<span class="exp-title">${labels[id]}</span></div>${nameRow}`;
   };
@@ -216,6 +229,11 @@ $(function(){
     };
     wireInputs.forEach(inp=> inp.addEventListener('input', onNameChange));
   }
+  pane?.addEventListener('pac-age-changed', ()=>{
+    const active = document.querySelector('#p-expediente .mm-tabs-row .nav-link.active');
+    const current = active?.getAttribute('data-bs-target')?.replace('#','') || 't-historia';
+    setTitle(current);
+  });
   const active = document.querySelector('#p-expediente .mm-tabs-row .nav-link.active');
   const initial = active?.getAttribute('data-bs-target')?.replace('#','') || 't-historia';
   setTitle(initial);
