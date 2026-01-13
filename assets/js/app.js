@@ -1054,6 +1054,8 @@ console.info('app.js loaded :: 20251123a');
   if(!tabs.length) return;
 
   const nameInput = pane.querySelector('[data-pac-nombre]');
+  const apellidoPaternoInput = pane.querySelector('[data-pac-apellido-paterno]');
+  const apellidoMaternoInput = pane.querySelector('[data-pac-apellido-materno]');
   const genderInputs = Array.from(pane.querySelectorAll('input[name="pac-genero"]'));
   const ginecoItem = pane.querySelector('[data-tab-conditional="gineco"]');
   const ginecoLink = pane.querySelector('[data-tab-key="t-gineco"]');
@@ -1097,7 +1099,7 @@ console.info('app.js loaded :: 20251123a');
     }
   };
 
-  // Desbloqueo: permitir navegar otros tabs sin requisitos
+  // Desbloqueo: dejar tabs accesibles (replantear reglas después)
   const basicsReady = ()=> true;
 
   const showFirstAvailable = ()=>{
