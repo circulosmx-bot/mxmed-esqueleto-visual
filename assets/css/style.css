@@ -3323,6 +3323,19 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-weight:800;
   font-size:0.65em;
   box-shadow:0 2px 6px rgba(0,0,0,0.15);
+  line-height:1.2;
+}
+.exp-age-badge{
+  display:inline-block;
+  background:#00b0c5;
+  color:#fff;
+  border-radius:12px;
+  padding:4px 8px;
+  margin-left:8px;
+  font-weight:800;
+  font-size:0.65em;
+  box-shadow:0 2px 6px rgba(0,0,0,0.15);
+  line-height:1.2;
 }
 
 /* Título dinámico Pacientes: prefijo reducido y badge de nombre */
