@@ -1278,6 +1278,185 @@ console.info('app.js loaded :: 20251123a');
   layoutTabs(false);
   bindDOB();
 })();
+
+// ====== Historia Clinica: registros con chips + modal ======
+(function(){
+  const pane = document.getElementById('p-expediente');
+  if(!pane) return;
+  const modalEl = document.getElementById('modalHistItem');
+  if(!modalEl) return;
+
+  const titleEl = modalEl.querySelector('[data-hc-title]');
+  const yearSel = modalEl.querySelector('[data-hc-year]');
+  const detailsInput = modalEl.querySelector('[data-hc-details]');
+  const detailsLabel = modalEl.querySelector('[data-hc-details-label]');
+  const saveBtn = modalEl.querySelector('[data-hc-save]');
+  const deleteBtn = modalEl.querySelector('[data-hc-delete]');
+
+  if(!yearSel || !detailsInput || !saveBtn) return;
+
+  const getLabel = (itemEl)=>{
+    const labelEl = itemEl?.querySelector('.hc-chip-head span');
+    return (labelEl?.textContent || 'Registro').trim();
+  };
+
+  const buildYearOptions = ()=>{
+    const now = new Date().getFullYear();
+    const opts = [];
+    for(let i=0; i<=75; i+=1){
+      const y = now - i;
+      let label = '';
+      if(i === 0){
+        label = `${y} (este a\u00f1o)`;
+      }else if(i === 1){
+        label = `${y} (hace 1 a\u00f1o)`;
+      }else if(i === 75){
+        label = `${y} o antes (hace 75 a\u00f1os o m\u00e1s)`;
+      }else{
+        label = `${y} (hace ${i} a\u00f1os)`;
+      }
+      opts.push({ value: String(y), label });
+    }
+    return opts;
+  };
+
+  const fillYears = ()=>{
+    const opts = buildYearOptions();
+    yearSel.innerHTML = '<option value=\"\">Selecciona a\u00f1o</option>' + opts.map(o=>`<option value=\"${o.value}\">${o.label}</option>`).join('');
+  };
+
+  const makeChipLabel = (year, details)=>{
+    const clean = (details || '').trim();
+    if(!clean) return year;
+    let short = clean;
+    if(short.length > 32){
+      short = short.slice(0, 32).trim() + '...';
+    }
+    return `${year} · ${short}`;
+  };
+
+  const modal = (window.bootstrap && bootstrap.Modal && bootstrap.Modal.getOrCreateInstance)
+    ? bootstrap.Modal.getOrCreateInstance(modalEl)
+    : new bootstrap.Modal(modalEl);
+
+  let activeItem = null;
+  let activeChip = null;
+
+  const openModal = (itemEl, chipEl)=>{
+    activeItem = itemEl;
+    activeChip = chipEl || null;
+    const label = getLabel(itemEl);
+    if(titleEl) titleEl.textContent = (chipEl ? 'Editar ' : 'Agregar ') + label;
+    fillYears();
+
+    if(chipEl){
+      yearSel.value = chipEl.dataset.year || '';
+      detailsInput.value = chipEl.dataset.details || '';
+      deleteBtn?.classList.remove('d-none');
+    }else{
+      yearSel.value = '';
+      detailsInput.value = '';
+      deleteBtn?.classList.add('d-none');
+    }
+
+    const key = itemEl?.getAttribute('data-hc-item') || '';
+    const isTransfusion = key === 'transfusiones';
+    if(detailsLabel) detailsLabel.textContent = isTransfusion ? 'Motivo' : 'Detalles';
+    detailsInput.placeholder = isTransfusion ? 'Motivo' : 'Detalles';
+
+    modal.show();
+  };
+
+  pane.querySelectorAll('[data-hc-add]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const itemEl = btn.closest('[data-hc-item]');
+      if(!itemEl) return;
+      const list = itemEl.querySelector('[data-hc-chips]');
+      const max = Number(itemEl.getAttribute('data-hc-max') || 10);
+      if(list && list.querySelectorAll('.hc-chip').length >= max){
+        window.alert('Maximo 10 registros.');
+        return;
+      }
+      openModal(itemEl, null);
+    });
+  });
+
+  pane.addEventListener('click', (ev)=>{
+    const chip = ev.target.closest('.hc-chip');
+    if(!chip) return;
+    const itemEl = chip.closest('[data-hc-item]');
+    if(!itemEl) return;
+    openModal(itemEl, chip);
+  });
+
+  saveBtn.addEventListener('click', ()=>{
+    if(!activeItem) return;
+    const year = yearSel.value;
+    const details = detailsInput.value.trim();
+    if(!year){
+      yearSel.focus();
+      return;
+    }
+    const list = activeItem.querySelector('[data-hc-chips]');
+    if(!list) return;
+    const max = Number(activeItem.getAttribute('data-hc-max') || 10);
+
+    if(activeChip){
+      activeChip.dataset.year = year;
+      activeChip.dataset.details = details;
+      activeChip.textContent = makeChipLabel(year, details);
+    }else{
+      if(list.querySelectorAll('.hc-chip').length >= max){
+        window.alert('Maximo 10 registros.');
+        return;
+      }
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'hc-chip';
+      chip.dataset.year = year;
+      chip.dataset.details = details;
+      chip.textContent = makeChipLabel(year, details);
+      list.appendChild(chip);
+    }
+    modal.hide();
+  });
+
+  deleteBtn?.addEventListener('click', ()=>{
+    if(!activeChip) return;
+    const ok = window.confirm('Desea eliminar esta informacion?');
+    if(!ok) return;
+    activeChip.remove();
+    modal.hide();
+  });
+
+  modalEl.addEventListener('hidden.bs.modal', ()=>{
+    activeItem = null;
+    activeChip = null;
+  });
+})();
+
+// ====== Historia Clinica: vacunas relevantes ======
+(function(){
+  const pane = document.getElementById('p-expediente');
+  if(!pane) return;
+  const toggles = Array.from(pane.querySelectorAll('[data-vac-toggle]'));
+  if(!toggles.length) return;
+  toggles.forEach(chk=>{
+    const item = chk.closest('.hc-vac-item');
+    const note = item?.querySelector('[data-vac-note]');
+    const sync = ()=>{
+      if(!note) return;
+      if(chk.checked){
+        note.removeAttribute('disabled');
+      }else{
+        note.value = '';
+        note.setAttribute('disabled','disabled');
+      }
+    };
+    chk.addEventListener('change', sync);
+    sync();
+  });
+})();
 // ====== Seguridad: checklist compacto de contraseÃƒÂ±a ======
 (function(){
   const panel = document.getElementById('pwd-change-panel');
