@@ -3133,6 +3133,20 @@ body{margin:0;background:var(--mm-fondo-base);}
   gap:12px;
   flex-wrap:wrap;
 }
+.hc-ante-grid{
+  display:grid;
+  grid-template-columns:repeat(5, minmax(0, 1fr));
+  gap:10px;
+}
+.hc-ante-grid .form-label{
+  font-size:0.95rem;
+}
+.hc-ante-grid .form-check-label{
+  font-size:0.88rem;
+}
+.hc-ante-grid .form-check{
+  margin-bottom:4px;
+}
 .dg-gender-item{
   position:relative;
 }

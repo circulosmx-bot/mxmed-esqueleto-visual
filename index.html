@@ -3112,12 +3112,138 @@
               <div class="tab-pane fade" id="t-historia">
 
                 <div class="row g-3 mt-1">
+                  <div class="col-md-4">
+                    <label class="form-label">Motivo de la Consulta</label>
+                    <textarea class="form-control" rows="3" placeholder="Describe el motivo principal de la consulta"></textarea>
+                  </div>
+                  <div class="col-md-8">
+                    <label class="form-label">Padecimiento Actual</label>
+                    <textarea class="form-control" rows="3" placeholder="Evolución y síntomas actuales"></textarea>
+                  </div>
 
-                  <div class="col-md-6"><label class="form-label">Motivo de consulta</label><input class="form-control"></div>
+                  <div class="col-md-12">
+                    <label class="form-label">Interrogatorio por aparatos</label>
+                    <textarea class="form-control" rows="3" placeholder="Hallazgos relevantes por sistemas"></textarea>
+                  </div>
 
-                  <div class="col-md-6"><label class="form-label">Padecimiento actual</label><input class="form-control"></div>
+                  <div class="col-12">
+                    <h6 class="mt-2">Antecedentes Personales</h6>
+                  </div>
 
-                  <div class="col-md-12"><label class="form-label">Interrogatorio por aparatos</label><textarea class="form-control" rows="3"></textarea></div>
+                  <div class="col-12">
+                    <div class="hc-ante-grid">
+                      <div class="hc-ante-item">
+                        <label class="form-label d-block">Fuma</label>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-fuma" id="hist-fuma-nunca"><label class="form-check-label" for="hist-fuma-nunca">Nunca</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-fuma" id="hist-fuma-activo"><label class="form-check-label" for="hist-fuma-activo">Fumador activo</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-fuma" id="hist-fuma-ocasional"><label class="form-check-label" for="hist-fuma-ocasional">Fumador ocasional</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-fuma" id="hist-fuma-ex"><label class="form-check-label" for="hist-fuma-ex">Exfumador</label></div>
+                      </div>
+
+                      <div class="hc-ante-item">
+                        <label class="form-label d-block">Bebe</label>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-bebe" id="hist-bebe-nunca"><label class="form-check-label" for="hist-bebe-nunca">Nunca</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-bebe" id="hist-bebe-cronico"><label class="form-check-label" for="hist-bebe-cronico">Bebedor cr¢nico</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-bebe" id="hist-bebe-ocasional"><label class="form-check-label" for="hist-bebe-ocasional">Bebedor ocasional</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-bebe" id="hist-bebe-ex"><label class="form-check-label" for="hist-bebe-ex">Exbebedor</label></div>
+                      </div>
+
+                      <div class="hc-ante-item">
+                        <label class="form-label d-block">Actividad F¡sica</label>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-actividad" id="hist-act-norealiza"><label class="form-check-label" for="hist-act-norealiza">No realiza</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-actividad" id="hist-act-moderado"><label class="form-check-label" for="hist-act-moderado">Ejercicio moderado</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-actividad" id="hist-act-intenso"><label class="form-check-label" for="hist-act-intenso">Ejercicio intenso</label></div>
+                      </div>
+
+                      <div class="hc-ante-item">
+                        <label class="form-label d-block">Drogas / Sustancias</label>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-drogas" id="hist-drogas-si"><label class="form-check-label" for="hist-drogas-si">S¡</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-drogas" id="hist-drogas-neg"><label class="form-check-label" for="hist-drogas-neg">Negado</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-drogas" id="hist-drogas-ocasional"><label class="form-check-label" for="hist-drogas-ocasional">Ocasionalmente</label></div>
+                      </div>
+
+                      <div class="hc-ante-item">
+                        <label class="form-label d-block">Dieta</label>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-dieta" id="hist-dieta-bal"><label class="form-check-label" for="hist-dieta-bal">Balanceada</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-dieta" id="hist-dieta-carb"><label class="form-check-label" for="hist-dieta-carb">Alta en carbohidratos</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-dieta" id="hist-dieta-veg"><label class="form-check-label" for="hist-dieta-veg">Vegetariana</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-dieta" id="hist-dieta-nesp"><label class="form-check-label" for="hist-dieta-nesp">No espec¡fica</label></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-12">
+                    <h6 class="mt-2">Padecimientos Previos</h6>
+                  </div>
+
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Hospitalizaciones</label>
+                    <div class="row g-2">
+                      <div class="col-4"><input class="form-control" placeholder="Año"></div>
+                      <div class="col-8"><input class="form-control" placeholder="Observaciones"></div>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Cirugías</label>
+                    <div class="row g-2">
+                      <div class="col-4"><input class="form-control" placeholder="Año"></div>
+                      <div class="col-8"><input class="form-control" placeholder="Observaciones"></div>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Accidentes</label>
+                    <div class="row g-2">
+                      <div class="col-4"><input class="form-control" placeholder="Año"></div>
+                      <div class="col-8"><input class="form-control" placeholder="Observaciones"></div>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Alergias</label>
+                    <div class="row g-2">
+                      <div class="col-4"><input class="form-control" placeholder="Año"></div>
+                      <div class="col-8"><input class="form-control" placeholder="Observaciones"></div>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Diabetes</label>
+                    <div class="row g-2">
+                      <div class="col-4"><input class="form-control" placeholder="Año"></div>
+                      <div class="col-8"><input class="form-control" placeholder="Observaciones"></div>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Hipertensión arterial</label>
+                    <div class="row g-2">
+                      <div class="col-4"><input class="form-control" placeholder="Año"></div>
+                      <div class="col-8"><input class="form-control" placeholder="Observaciones"></div>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Asma</label>
+                    <div class="row g-2">
+                      <div class="col-4"><input class="form-control" placeholder="Año"></div>
+                      <div class="col-8"><input class="form-control" placeholder="Observaciones"></div>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Cáncer</label>
+                    <div class="row g-2">
+                      <div class="col-4"><input class="form-control" placeholder="Año"></div>
+                      <div class="col-8"><input class="form-control" placeholder="Observaciones"></div>
+                    </div>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Traumatismos previos</label>
+                    <div class="row g-2">
+                      <div class="col-4"><input class="form-control" placeholder="Año"></div>
+                      <div class="col-8"><input class="form-control" placeholder="Observaciones"></div>
+                    </div>
+                  </div>
+
+                  <div class="col-12">
+                    <h6 class="mt-2">Antecedentes Familiares</h6>
+                    <textarea class="form-control" rows="2" placeholder="Ejemplo: Diabetes en madre, hipertensión en padre, cáncer de mama en abuela..."></textarea>
+                  </div>
 
                 </div>
 
