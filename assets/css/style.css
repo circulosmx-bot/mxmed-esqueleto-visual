@@ -3155,6 +3155,27 @@ body{margin:0;background:var(--mm-fondo-base);}
   grid-auto-rows:auto;
   justify-items:stretch;
 }
+.hc-chip-grid--two{
+  grid-template-columns:repeat(1, minmax(0, 1fr));
+}
+.hc-dual-row{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.hc-dual-item{
+  flex:1;
+  min-width:260px;
+}
+.hc-chip-row{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.hc-chip-block{
+  flex:1;
+  min-width:260px;
+}
 .hc-chip-item{
   border:1px solid #cfe9f0;
   border-radius:10px;
