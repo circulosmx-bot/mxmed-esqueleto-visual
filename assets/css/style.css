@@ -41,7 +41,7 @@ html{
 
 
 
-  /* TipografÃ­as equivalentes */
+  /* Tipografías equivalentes */
 
   --fz-activo:.958rem;   /* 11.5pt */
 
@@ -223,7 +223,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 
 
-/* ================== MENÃ LATERAL ================== */
+/* ================== MENÚ LATERAL ================== */
 
 .menu-main, .menu-sub-btn, .menu-sep{ width:100%; box-sizing:border-box; }
 
@@ -327,7 +327,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 .menu-sub-btn:focus-visible::before{
 
-  /* Simplificar hover: sin animaciÃ³n/gradiente */
+  /* Simplificar hover: sin animación/gradiente */
 
   transform:none;
 
@@ -694,7 +694,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 
 
-/* Separador SÃLO entre subbotones (blanco con alta opacidad) */
+/* Separador SÓLO entre subbotones (blanco con alta opacidad) */
 
 /* Mantener el espacio entre subbotones, sin barra visible */
 
@@ -816,7 +816,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 
 
-/* ================== ÃREA DERECHA ================== */
+/* ================== ÁREA DERECHA ================== */
 
 .mm-card{background:#fff;border-radius:.9rem;border:1px solid #00ADC1;box-shadow:0 12px 28px rgba(0,0,0,.08);overflow:hidden;}
 
@@ -828,11 +828,11 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 
 
-/* Icono en tÃ­tulos (30% mÃ¡s grande) */
+/* Icono en títulos (30% más grande) */
 
 .mm-card .head .title-ico{
 
-  font-size:2.6em; /* 2x del tamaÃ±o anterior */
+  font-size:2.6em; /* 2x del tamaño anterior */
 
   line-height:1;
 
@@ -848,7 +848,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 
 
-/* PestaÃ±as corporativas */
+/* Pestañas corporativas */
 
 .mm-tabs{
 
@@ -904,7 +904,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 
 
-/* Botones principales en paneles especÃ­ficos */
+/* Botones principales en paneles específicos */
 
 #p-ag-admin .btn-primary,
 
@@ -986,7 +986,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 .progress-bar::after{
 
-  /* lÃ­neas diagonales en movimiento */
+  /* líneas diagonales en movimiento */
 
   content:"";
 
@@ -1060,7 +1060,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 
 
-/* === Tarjeta dinÃ¡mica "Completa tu perfil" === */
+/* === Tarjeta dinámica "Completa tu perfil" === */
 
 .nudge-card{
 
@@ -1184,7 +1184,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 
 
-/* === Mi Perfil Â· Carga de imÃ¡genes (minimal, no impact to global layout) === */
+/* === Mi Perfil · Carga de imágenes (minimal, no impact to global layout) === */
 
 .mf-upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:6px}
 
@@ -1362,7 +1362,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 .mf-sub{font-size:.9rem;color:#597482;text-align:center;margin-bottom:4px}
 
-/* Mostrar solo el botÃ³n de cÃ¡mara; centrar acciones */
+/* Mostrar solo el botón de cámara; centrar acciones */
 
 .mf-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 
@@ -1418,7 +1418,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 
 
-/* Placeholders mÃ¡s claros en campos de muestra */
+/* Placeholders más claros en campos de muestra */
 
 .form-control::placeholder{color:#CCCCCC}
 
@@ -1474,7 +1474,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 .save-wrap.saved select.form-select{padding-right:3.2rem;background-position: right 3.2rem center !important}
 
-/* Forzar peso 600 solo para el icono de confirmaciÃ³n */
+/* Forzar peso 600 solo para el icono de confirmación */
 
 .save-wrap .save-ok .material-symbols-outlined{
 
@@ -1706,7 +1706,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 
 
-/* Chips de listas dinÃ¡micas (enfermedades/tratamientos) */
+/* Chips de listas dinámicas (enfermedades/tratamientos) */
 
 .chip-list{ display:flex; flex-wrap:wrap; gap:8px; }
 
@@ -1750,7 +1750,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 
 
-/* Fila de input + botÃ³n para chips */
+/* Fila de input + botón para chips */
 
 .chips-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 

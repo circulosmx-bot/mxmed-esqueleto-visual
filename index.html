@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 
 <html lang="es">
 
@@ -2044,7 +2044,7 @@
                             </div>
                           </div>
                           <div class="verif-status d-flex align-items-center gap-2">
-                            <div class="text-warning fw-semibold mb-0">⚠️ No validado</div>
+                            <div class="text-warning fw-semibold mb-0">?? No validado</div>
                             <button class="btn btn-link btn-sm p-0" type="button" data-verify-trigger="#phone-verify-panel" data-verify-input="#verify-phone-input" data-verify-hint="#phone-verify-hint" data-verify-type="phone">Validar ahora</button>
                           </div>
                         </div>
@@ -2337,7 +2337,7 @@
                             </div>
                           </div>
                           <div class="verif-status d-flex align-items-center gap-2">
-                            <div class="text-warning fw-semibold mb-0">⚠️ No validado</div>
+                            <div class="text-warning fw-semibold mb-0">?? No validado</div>
                             <button class="btn btn-link btn-sm p-0" type="button" data-bs-toggle="collapse" data-bs-target="#email-verify-panel" aria-expanded="false" aria-controls="email-verify-panel">Validar ahora</button>
                           </div>
                         </div>
@@ -3325,8 +3325,44 @@
                 </div>
 
               </div>
-              <div class="tab-pane fade" id="t-gineco"><div class="alert alert-info">Campos gineco-obstétricos
-</div></div>
+              <div class="tab-pane fade" id="t-gineco">
+                <div class="row g-3 mt-1">
+                  <div class="col-md-3">
+                    <label class="form-label">Embarazos</label>
+                    <input class="form-control" type="number" min="0" step="1" placeholder="0">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Partos</label>
+                    <input class="form-control" type="number" min="0" step="1" placeholder="0">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Ces&#225;reas</label>
+                    <input class="form-control" type="number" min="0" step="1" placeholder="0">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Abortos</label>
+                    <input class="form-control" type="number" min="0" step="1" placeholder="0">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Fecha de &#250;ltima menstruaci&#243;n (FUM)</label>
+                    <input class="form-control" type="date">
+                  </div>
+                  <div class="col-md-8">
+                    <label class="form-label">M&#233;todo anticonceptivo</label>
+                    <select class="form-select">
+                      <option value="">Selecciona una opci&#243;n</option>
+                      <option value="ninguno">Ninguno</option>
+                      <option value="preservativo">Preservativo</option>
+                      <option value="hormonal">Hormonal (oral/parche/anillo)</option>
+                      <option value="inyeccion">Inyecci&#243;n</option>
+                      <option value="diu">DIU</option>
+                      <option value="implante">Implante subd&#233;rmico</option>
+                      <option value="otb">Oclusi&#243;n tubaria (OTB)</option>
+                      <option value="otro">Otro</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
 
               <div class="tab-pane fade" id="t-exploracion"><div class="alert alert-info">Signos vitales, exploración
 </div></div>
@@ -3728,6 +3764,9 @@
 
 </body>
 </html>
+
+
+
 
 
 

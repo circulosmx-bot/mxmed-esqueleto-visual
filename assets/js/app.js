@@ -790,13 +790,13 @@ console.info('app.js loaded :: 20251123a');
 
       switch(reason){
 
-        case 'invalid_char': return 'Solo nÃƒÂºmeros y + ( ) -';
+        case 'invalid_char': return 'Solo números y + ( ) -';
 
-        case 'too_short': return 'NÃƒÂºmero incompleto (se requieren 10 dÃƒÂ­gitos)';
+        case 'too_short': return 'Número incompleto (se requieren 10 dígitos)';
 
-        case 'too_long': return 'Demasiados dÃƒÂ­gitos (mÃƒÂ¡ximo 10 o +52 + 10)';
+        case 'too_long': return 'Demasiados dígitos (máximo 10 o +52 + 10)';
 
-        default: return 'TelÃƒÂ©fono invÃƒÂ¡lido';
+        default: return 'Teléfono inválido';
 
       }
 
@@ -828,13 +828,13 @@ console.info('app.js loaded :: 20251123a');
 
         else { el.classList.add('is-invalid'); }
 
-        el.setCustomValidity('TelÃƒÂ©fono invÃƒÂ¡lido');
+        el.setCustomValidity('Teléfono inválido');
 
       }
 
     }
 
-    // Reglas adicionales en vivo: tope de 3 letras y tope de dÃƒÂ­gitos
+    // Reglas adicionales en vivo: tope de 3 letras y tope de dígitos
 
     const _state = new WeakMap(); // { value, letters, digits }
 
@@ -842,7 +842,7 @@ console.info('app.js loaded :: 20251123a');
 
     function countLetters(s){
 
-      const m = (s||'').match(/[A-Za-zÃƒÂÃƒÂ‰ÃƒÂÃƒÂ“ÃƒÂšÃƒÂœÃƒÂ‘ÃƒÂ¡ÃƒÂ©ÃƒÂ­ÃƒÂ³ÃƒÂºÃƒÂ¼ÃƒÂ±]/g);
+      const m = (s||'').match(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g);
 
       return m ? m.length : 0;
 
@@ -1037,7 +1037,7 @@ console.info('app.js loaded :: 20251123a');
   // Ocultar campos antiguos del consultorio para evitar duplicados
   (function hideLegacyFields(){
     const root = document.querySelector("#sede1"); if(!root) return;
-    const labels = ["Nombre de la sede","TelÃƒÂ©fono (planes de pago)","DirecciÃƒÂ³n","Horario","Notas"];
+    const labels = ["Nombre de la sede","Teléfono (planes de pago)","Dirección","Horario","Notas"];
     labels.forEach(txt=>{
       const el = Array.from(root.querySelectorAll("label.form-label")).find(l=> (l.textContent||"").trim().indexOf(txt)===0);
       if(el){ const wrap = el.closest("[class*='col-']"); if(wrap) wrap.style.display='none'; }
@@ -1457,7 +1457,7 @@ console.info('app.js loaded :: 20251123a');
     sync();
   });
 })();
-// ====== Seguridad: checklist compacto de contraseÃƒÂ±a ======
+// ====== Seguridad: checklist compacto de contraseña ======
 (function(){
   const panel = document.getElementById('pwd-change-panel');
   if(!panel) return;
@@ -1481,7 +1481,7 @@ console.info('app.js loaded :: 20251123a');
   };
   const tests = {
     length: (val)=> val.length >= 8,
-    upper: (val)=> /[A-ZÃƒÂÃƒÂ‰ÃƒÂÃƒÂ“ÃƒÂšÃƒÂœÃƒÂ‘]/.test(val),
+    upper: (val)=> /[A-ZÁÉÍÓÚÜÑ]/.test(val),
     number: (val)=> /\d/.test(val),
     symbol: (val)=> /[^A-Za-z0-9]/.test(val),
   };
@@ -1569,7 +1569,7 @@ console.info('app.js loaded :: 20251123a');
   }
 })();
 
-// ====== Seguridad: validaciÃƒÂ³n TelÃƒÂ©fono/E-mail ======
+// ====== Seguridad: validación Teléfono/E-mail ======
 (function(){
   const panels = document.querySelectorAll('[data-verify-panel]');
   if(!panels.length) return;
@@ -1849,14 +1849,6 @@ console.info('app.js loaded :: 20251123a');
   });
 })();
 
-// ===== Correcciones rÃƒÂ¡pidas de acentos en header (muestra) =====
-(function(){
-  const t = document.querySelector('.optimo'); if(t) t.textContent = 'ÃƒÂ“ptimo';
-  const n = document.querySelector('.name'); if(n && /MuÃƒÂ±oz|MuÃ¯Â¿Â½oz/.test(n.textContent)) n.textContent = 'Leticia MuÃƒÂ±oz Alfaro';
-  const img = document.querySelector('.header-top img'); if(img) img.alt = 'MÃƒÂ©xico MÃƒÂ©dico';
-  if(document.title && document.title.indexOf('MXMed')>=0) document.title = 'MXMed 2025 Ã‚Â· Perfil MÃƒÂ©dico';
-})();
-
 // ===== Sugerencia de Grupo Medico y sincronizacion de logotipo (demo) =====
 
 (function setupGrupoMedicoSuggest(){
@@ -1923,7 +1915,7 @@ console.info('app.js loaded :: 20251123a');
 
     const el = document.getElementById('modalGrupoSuggest'); if(!el) return;
 
-    el.querySelector('#grp-name').textContent = s.nombre || 'Grupo MÃƒÂ©dico';
+    el.querySelector('#grp-name').textContent = s.nombre || 'Grupo Médico';
 
     el.querySelector('#grp-addr').textContent = s.addr || '';
 
@@ -2604,7 +2596,7 @@ console.info('app.js loaded :: 20251123a');
 
   try{
 
-    // 1) Header: "ÃƒÂ“ptimo"
+    // 1) Header: "Óptimo"
 
     const t = document.querySelector('.optimo');
 
@@ -2658,7 +2650,7 @@ console.info('app.js loaded :: 20251123a');
 
 
 
-// ===== Grupo MÃƒÂ©dico: asegurarnos de limpieza de overlay al cerrar =====
+// ===== Grupo Médico: asegurarnos de limpieza de overlay al cerrar =====
 
 (function ensureGrupoModalCleanup(){
 
@@ -2703,7 +2695,7 @@ console.info('app.js loaded :: 20251123a');
     // Mostrar siempre (antes solo en localhost); se puede desactivar con window.mxHideResetWidget = true;
     if(window.mxHideResetWidget) return;
 
-    // Crear botÃ³n flotante solo una vez
+    // Crear botón flotante solo una vez
     if(document.getElementById('mx-dev-reset')) return;
 
     const btn = document.createElement('button');
@@ -2920,7 +2912,7 @@ console.info('app.js loaded :: 20251123a');
             badge.classList.remove('bg-success');
             badge.classList.add('bg-secondary');
           }
-          if(lbl) lbl.textContent = 'Selecciona un mÃ©todo para activarlo.';
+          if(lbl) lbl.textContent = 'Selecciona un método para activarlo.';
           if(btnAct) btnAct.classList.remove('d-none');
           if(btnChg) btnChg.classList.add('d-none');
           if(btnOff) btnOff.classList.add('d-none');
@@ -3363,7 +3355,7 @@ function mxResetLogoPreview(){
 
 
 
-// ===== Seguridad: VerificaciÃ³n en dos pasos (2FA) =====
+// ===== Seguridad: Verificación en dos pasos (2FA) =====
 (function(){
   function initTwofa(){
     const panel = document.getElementById('seg-2fa-panel');
