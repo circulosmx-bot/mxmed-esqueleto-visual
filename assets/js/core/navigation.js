@@ -10,9 +10,20 @@ function jumpTo(panelId){
   if($main.length){ $main.addClass('active'); }
   localStorage.setItem('mxmed_last_panel', panelId);
 }
+const INFO_TAB_ALIASES = {
+  '#t-datos': '#t-info-datos',
+  '#t-formacion': '#t-info-formacion',
+  '#t-servicios': '#t-info-servicios',
+  '#t-enfermedades': '#t-info-enfermedades',
+  '#t-fotos': '#t-info-fotos'
+};
+function normalizeInfoTab(selector){
+  return INFO_TAB_ALIASES[selector] || selector;
+}
 function selectInfoTab(selector){
-  const btn = document.querySelector('[data-bs-target="'+selector+'"]');
-  if(btn){ new bootstrap.Tab(btn).show(); localStorage.setItem('mxmed_info_tab', selector); }
+  const normalized = normalizeInfoTab(selector);
+  const btn = document.querySelector('[data-bs-target="'+normalized+'"]');
+  if(btn){ new bootstrap.Tab(btn).show(); localStorage.setItem('mxmed_info_tab', normalized); }
 }
 function selectPaqTab(selector){
   const btn = document.querySelector('[data-bs-target="'+selector+'"]');
@@ -137,7 +148,9 @@ $(function(){
   if($mainMatch.length){ $('.menu-main').removeClass('active'); $mainMatch.addClass('active'); }
 
   // Restaurar pestaña interna de Información – Mi Perfil
-  const lastInfoTab = localStorage.getItem('mxmed_info_tab') || '#t-datos';
+  let lastInfoTab = localStorage.getItem('mxmed_info_tab') || '#t-info-datos';
+  lastInfoTab = normalizeInfoTab(lastInfoTab);
+  localStorage.setItem('mxmed_info_tab', lastInfoTab);
   const tabTrigger = document.querySelector(`[data-bs-target="${lastInfoTab}"]`);
   if(tabTrigger){ new bootstrap.Tab(tabTrigger).show(); }
 });

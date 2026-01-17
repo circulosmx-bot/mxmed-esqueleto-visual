@@ -29,9 +29,9 @@
     cta.addEventListener('click', function(e){
       e.preventDefault();
       var minKey = Object.keys(secciones).sort((a,b)=>secciones[a]-secciones[b])[0];
-      if(minKey === 'serv'){ openGroup('perfil'); jumpTo('p-info'); selectInfoTab('#t-servicios'); }
+      if(minKey === 'serv'){ openGroup('perfil'); jumpTo('p-info'); selectInfoTab('#t-info-servicios'); }
       else if(minKey === 'consul'){ openGroup('perfil'); jumpTo('p-consultorio'); }
-      else { openGroup('perfil'); jumpTo('p-info'); selectInfoTab('#t-datos'); }
+      else { openGroup('perfil'); jumpTo('p-info'); selectInfoTab('#t-info-datos'); }
       window.scrollTo({top:0, behavior:'smooth'});
     });
   }
@@ -63,4 +63,3 @@
   document.querySelector('.resumen-donut-caption-title')?.addEventListener('click', openModal);
   document.getElementById('btnCompletar')?.addEventListener('click', openModal);
 })();
-

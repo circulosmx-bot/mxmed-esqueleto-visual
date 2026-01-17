@@ -28,7 +28,7 @@
   }
 
   function render(){
-    const items = load(); grid.innerHTML=''; drop.classList.toggle('has-items', items.length>0); document.getElementById('t-fotos')?.classList.toggle('has-items', items.length>0);
+    const items = load(); grid.innerHTML=''; drop.classList.toggle('has-items', items.length>0); document.getElementById('t-info-fotos')?.classList.toggle('has-items', items.length>0);
     items.forEach((it,idx)=>{
       const wrap = document.createElement('div'); wrap.className='foto-item';
       const img = document.createElement('img'); img.src = it.data; img.alt = 'foto '+(idx+1);
@@ -71,4 +71,3 @@
 
   render();
 })();
-

@@ -84,11 +84,11 @@
 
       var minKey = Object.keys(secciones).sort((a,b)=>secciones[a]-secciones[b])[0];
 
-      if(minKey === 'serv'){ openGroup('perfil'); jumpTo('p-info'); selectInfoTab('#t-servicios'); }
+      if(minKey === 'serv'){ openGroup('perfil'); jumpTo('p-info'); selectInfoTab('#t-info-servicios'); }
 
       else if(minKey === 'consul'){ openGroup('perfil'); jumpTo('p-consultorio'); }
 
-      else { openGroup('perfil'); jumpTo('p-info'); selectInfoTab('#t-datos'); }
+      else { openGroup('perfil'); jumpTo('p-info'); selectInfoTab('#t-info-datos'); }
 
       window.scrollTo({top:0, behavior:'smooth'});
 
@@ -714,7 +714,7 @@
 
               <li class="nav-item">
 
-                <button class="nav-link" id="t-datos-tab" data-bs-toggle="pill" data-bs-target="#t-datos" type="button">
+                <button class="nav-link" id="t-info-datos-tab" data-bs-toggle="pill" data-bs-target="#t-info-datos" type="button">
 
                   <span class="tab-ico material-symbols-rounded" aria-hidden="true">person</span>
 
@@ -726,7 +726,7 @@
 
               <li class="nav-item">
 
-                <button class="nav-link" id="t-formacion-tab" data-bs-toggle="pill" data-bs-target="#t-formacion" type="button">
+                <button class="nav-link" id="t-info-formacion-tab" data-bs-toggle="pill" data-bs-target="#t-info-formacion" type="button">
 
                   <span class="tab-ico material-symbols-rounded" aria-hidden="true">edit_note</span>
 
@@ -738,7 +738,7 @@
 
               <li class="nav-item">
 
-                <button class="nav-link" id="t-servicios-tab" data-bs-toggle="pill" data-bs-target="#t-servicios" type="button">
+                <button class="nav-link" id="t-info-servicios-tab" data-bs-toggle="pill" data-bs-target="#t-info-servicios" type="button">
 
                   <span class="tab-ico material-symbols-rounded" aria-hidden="true">groups</span>
 
@@ -750,7 +750,7 @@
 
               <li class="nav-item">
 
-                <button class="nav-link" id="t-enfermedades-tab" data-bs-toggle="pill" data-bs-target="#t-enfermedades" type="button">
+                <button class="nav-link" id="t-info-enfermedades-tab" data-bs-toggle="pill" data-bs-target="#t-info-enfermedades" type="button">
 
                   <span class="tab-ico material-symbols-rounded" aria-hidden="true">medication</span>
 
@@ -762,7 +762,7 @@
 
               <li class="nav-item">
 
-                <button class="nav-link" id="t-fotos-tab" data-bs-toggle="pill" data-bs-target="#t-fotos" type="button">
+                <button class="nav-link" id="t-info-fotos-tab" data-bs-toggle="pill" data-bs-target="#t-info-fotos" type="button">
 
                   <span class="tab-ico material-symbols-rounded" aria-hidden="true">photo_library</span>
 
@@ -780,7 +780,7 @@
 
               <!-- DATOS GENERALES -->
 
-              <div class="tab-pane fade" id="t-datos" role="tabpanel">
+              <div class="tab-pane fade" id="t-info-datos" role="tabpanel">
 
 
 
@@ -896,7 +896,7 @@
 
               <!-- FOTOS -->
 
-              <div class="tab-pane fade" id="t-fotos" role="tabpanel">
+              <div class="tab-pane fade" id="t-info-fotos" role="tabpanel">
 
                 <div class="sp-note mb-2">Agrega fotografías de tu práctica médica</div>
 
@@ -938,7 +938,7 @@
 
               <!-- SERVICIOS PRINCIPALES -->
 
-              <div class="tab-pane fade" id="t-servicios" role="tabpanel">
+              <div class="tab-pane fade" id="t-info-servicios" role="tabpanel">
 
                 <div class="row g-3">
 
@@ -1024,7 +1024,7 @@
 
               <!-- ENFERMEDADES Y TRATAMIENTOS -->
 
-              <div class="tab-pane fade" id="t-enfermedades" role="tabpanel">
+              <div class="tab-pane fade" id="t-info-enfermedades" role="tabpanel">
 
                 <div class="row g-3">
 
@@ -1126,7 +1126,7 @@
 
               <!-- MI FORMACIÓN PROFESIONAL -->
 
-                            <div class="tab-pane fade" id="t-formacion" role="tabpanel">
+                            <div class="tab-pane fade" id="t-info-formacion" role="tabpanel">
 
                 <div class="row g-3">
 
@@ -2810,7 +2810,6 @@
                     <div class="row g-2 mt-2 dg-date-row">
 
                       <div class="col-auto">
-
                         <div class="dg-date-field">
                           <select class="form-select dg-date-dd" data-dg-dia>
                             <option value="">Día</option>
@@ -3326,40 +3325,115 @@
 
               </div>
               <div class="tab-pane fade" id="t-gineco">
-                <div class="row g-3 mt-1">
-                  <div class="col-md-3">
-                    <label class="form-label">Embarazos</label>
-                    <input class="form-control" type="number" min="0" step="1" placeholder="0">
+                <div class="gyn-panel mt-1">
+                  <div class="gyn-block">
+                    <h6>Resumen obst&#233;trico</h6>
+                    <div class="gyn-summary">
+                      <div>
+                        <label class="form-label">Gestas</label>
+                        <input class="form-control form-control-sm" type="number" min="0" step="1" placeholder="0">
+                      </div>
+                      <div>
+                        <label class="form-label">Partos</label>
+                        <input class="form-control form-control-sm" type="number" min="0" step="1" placeholder="0">
+                      </div>
+                      <div>
+                        <label class="form-label">Ces&#225;reas</label>
+                        <input class="form-control form-control-sm" type="number" min="0" step="1" placeholder="0">
+                      </div>
+                      <div>
+                        <label class="form-label">Abortos</label>
+                        <input class="form-control form-control-sm" type="number" min="0" step="1" placeholder="0">
+                      </div>
+                      <div>
+                        <label class="form-label">Nacidos vivos</label>
+                        <input class="form-control form-control-sm" type="number" min="0" step="1" placeholder="0">
+                      </div>
+                    </div>
+                    <div class="gyn-note">Gestas, partos, ces&#225;reas, abortos y nacidos vivos.</div>
                   </div>
-                  <div class="col-md-3">
-                    <label class="form-label">Partos</label>
-                    <input class="form-control" type="number" min="0" step="1" placeholder="0">
+
+                  <div class="gyn-block">
+                    <h6>Ciclo menstrual</h6>
+                    <div class="row g-2">
+                      <div class="col-md-4">
+                        <label class="form-label">FUM</label>
+                        <input class="form-control" type="date">
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label">Regularidad</label>
+                        <select class="form-select">
+                          <option value="">Selecciona una opci&#243;n</option>
+                          <option value="regular">Regular</option>
+                          <option value="irregular">Irregular</option>
+                          <option value="no-aplica">No aplica</option>
+                        </select>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label">Duraci&#243;n (d&#237;as)</label>
+                        <input class="form-control" type="number" min="0" step="1" placeholder="5">
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label">Frecuencia (d&#237;as)</label>
+                        <input class="form-control" type="number" min="0" step="1" placeholder="28">
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label">Intensidad</label>
+                        <select class="form-select">
+                          <option value="">Selecciona una opci&#243;n</option>
+                          <option value="leve">Leve</option>
+                          <option value="moderada">Moderada</option>
+                          <option value="abundante">Abundante</option>
+                        </select>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label">Dolor</label>
+                        <select class="form-select">
+                          <option value="">Selecciona una opci&#243;n</option>
+                          <option value="sin-dolor">Sin dolor</option>
+                          <option value="leve">Leve</option>
+                          <option value="moderado">Moderado</option>
+                          <option value="severo">Severo</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                  <div class="col-md-3">
-                    <label class="form-label">Ces&#225;reas</label>
-                    <input class="form-control" type="number" min="0" step="1" placeholder="0">
-                  </div>
-                  <div class="col-md-3">
-                    <label class="form-label">Abortos</label>
-                    <input class="form-control" type="number" min="0" step="1" placeholder="0">
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label">Fecha de &#250;ltima menstruaci&#243;n (FUM)</label>
-                    <input class="form-control" type="date">
-                  </div>
-                  <div class="col-md-8">
-                    <label class="form-label">M&#233;todo anticonceptivo</label>
-                    <select class="form-select">
-                      <option value="">Selecciona una opci&#243;n</option>
-                      <option value="ninguno">Ninguno</option>
-                      <option value="preservativo">Preservativo</option>
-                      <option value="hormonal">Hormonal (oral/parche/anillo)</option>
-                      <option value="inyeccion">Inyecci&#243;n</option>
-                      <option value="diu">DIU</option>
-                      <option value="implante">Implante subd&#233;rmico</option>
-                      <option value="otb">Oclusi&#243;n tubaria (OTB)</option>
-                      <option value="otro">Otro</option>
-                    </select>
+
+                  <div class="gyn-block">
+                    <h6>Anticoncepci&#243;n</h6>
+                    <div class="row g-2">
+                      <div class="col-md-5">
+                        <label class="form-label">M&#233;todo</label>
+                        <select class="form-select">
+                          <option value="">Selecciona una opci&#243;n</option>
+                          <option value="ninguno">Ninguno</option>
+                          <option value="preservativo">Preservativo</option>
+                          <option value="hormonal">Hormonal (oral/parche/anillo)</option>
+                          <option value="inyeccion">Inyecci&#243;n</option>
+                          <option value="diu">DIU</option>
+                          <option value="implante">Implante subd&#233;rmico</option>
+                          <option value="otb">Oclusi&#243;n tubaria (OTB)</option>
+                          <option value="otro">Otro</option>
+                        </select>
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label">Tiempo de uso (meses)</label>
+                        <input class="form-control" type="number" min="0" step="1" placeholder="0">
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label">Plan reproductivo</label>
+                        <select class="form-select">
+                          <option value="">Selecciona una opci&#243;n</option>
+                          <option value="busca-embarazo">Busca embarazo</option>
+                          <option value="no-busca">No busca embarazo</option>
+                          <option value="indiferente">Indiferente</option>
+                        </select>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label">Observaciones</label>
+                        <textarea class="form-control" rows="2" placeholder="Notas relevantes sobre anticoncepci&#243;n y planificaci&#243;n familiar"></textarea>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -3367,8 +3441,296 @@
               <div class="tab-pane fade" id="t-exploracion"><div class="alert alert-info">Signos vitales, exploración
 </div></div>
 
-              <div class="tab-pane fade" id="t-estudios"><div class="alert alert-info">Laboratorio, imagenología
-</div></div>
+              <div class="tab-pane fade" id="t-estudios">
+                <div class="est-panel">
+                  <div class="est-toolbar row g-2 align-items-end">
+                    <div class="col-md-4">
+                      <label class="form-label">Buscar estudio</label>
+                      <input class="form-control" placeholder="Nombre, marcador, nota cl&#237;nica">
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label">Categor&#237;a</label>
+                      <select class="form-select">
+                        <option value="">Todas</option>
+                        <option value="lab">Laboratorio cl&#237;nico</option>
+                        <option value="img">Gabinete / Imagenolog&#237;a</option>
+                        <option value="card">Cardiolog&#237;a funcional</option>
+                        <option value="endo">Endoscop&#237;a</option>
+                        <option value="pat">Patolog&#237;a</option>
+                        <option value="gen">Gen&#233;tica / Molecular</option>
+                        <option value="func">Pruebas funcionales</option>
+                        <option value="otros">Otros</option>
+                      </select>
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label">Desde</label>
+                      <input class="form-control" type="date">
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label">Hasta</label>
+                      <input class="form-control" type="date">
+                    </div>
+                    <div class="col-md-1 d-grid">
+                      <button class="btn btn-primary">Agregar</button>
+                    </div>
+                  </div>
+
+                  <div class="est-cat-grid">
+                    <button class="est-cat active" type="button">
+                      <div class="est-cat-title">Laboratorio</div>
+                      <div class="est-cat-meta">12 estudios &#183; &#218;ltimo 04/02/2026</div>
+                    </button>
+                    <button class="est-cat" type="button">
+                      <div class="est-cat-title">Gabinete / Imagenolog&#237;a</div>
+                      <div class="est-cat-meta">6 estudios &#183; &#218;ltimo 22/01/2026</div>
+                    </button>
+                    <button class="est-cat" type="button">
+                      <div class="est-cat-title">Cardiolog&#237;a</div>
+                      <div class="est-cat-meta">3 estudios &#183; &#218;ltimo 18/01/2026</div>
+                    </button>
+                    <button class="est-cat" type="button">
+                      <div class="est-cat-title">Endoscop&#237;a</div>
+                      <div class="est-cat-meta">2 estudios &#183; &#218;ltimo 10/12/2025</div>
+                    </button>
+                    <button class="est-cat" type="button">
+                      <div class="est-cat-title">Patolog&#237;a</div>
+                      <div class="est-cat-meta">1 estudio &#183; &#218;ltimo 06/11/2025</div>
+                    </button>
+                    <button class="est-cat" type="button">
+                      <div class="est-cat-title">Gen&#233;tica / Molecular</div>
+                      <div class="est-cat-meta">1 estudio &#183; &#218;ltimo 01/11/2025</div>
+                    </button>
+                    <button class="est-cat" type="button">
+                      <div class="est-cat-title">Funcionales</div>
+                      <div class="est-cat-meta">4 estudios &#183; &#218;ltimo 02/10/2025</div>
+                    </button>
+                    <button class="est-cat" type="button">
+                      <div class="est-cat-title">Otros</div>
+                      <div class="est-cat-meta">2 estudios &#183; &#218;ltimo 22/09/2025</div>
+                    </button>
+                  </div>
+
+                  <div class="row g-3">
+                    <div class="col-lg-4">
+                      <div class="est-side">
+                        <div class="est-side-head">Plantillas por categor&#237;a</div>
+                        <div class="est-template">
+                          <div class="est-template-title">Laboratorio cl&#237;nico</div>
+                          <div class="est-template-fields">
+                            <span>Fecha de toma</span>
+                            <span>Tipo de muestra</span>
+                            <span>Biomarcadores</span>
+                            <span>Valor y unidad</span>
+                            <span>Referencia</span>
+                          </div>
+                        </div>
+                        <div class="est-template">
+                          <div class="est-template-title">Gabinete / Imagenolog&#237;a</div>
+                          <div class="est-template-fields">
+                            <span>Modalidad</span>
+                            <span>Regi&#243;n anat&#243;mica</span>
+                            <span>Hallazgos</span>
+                            <span>Impresi&#243;n</span>
+                            <span>Adjuntos</span>
+                          </div>
+                        </div>
+                        <div class="est-template">
+                          <div class="est-template-title">Cardiolog&#237;a funcional</div>
+                          <div class="est-template-fields">
+                            <span>Tipo de prueba</span>
+                            <span>Duraci&#243;n</span>
+                            <span>Ritmo</span>
+                            <span>Conclusiones</span>
+                          </div>
+                        </div>
+                        <div class="est-template">
+                          <div class="est-template-title">Patolog&#237;a / Endoscop&#237;a</div>
+                          <div class="est-template-fields">
+                            <span>&#211;rgano</span>
+                            <span>Hallazgos</span>
+                            <span>Diagn&#243;stico</span>
+                            <span>Biopsias</span>
+                          </div>
+                        </div>
+                        <div class="est-template">
+                          <div class="est-template-title">Gen&#233;tica / Molecular</div>
+                          <div class="est-template-fields">
+                            <span>Panel / Gen</span>
+                            <span>Variante</span>
+                            <span>Interpretaci&#243;n</span>
+                            <span>Riesgo</span>
+                          </div>
+                        </div>
+                        <div class="est-template">
+                          <div class="est-template-title">Funcionales</div>
+                          <div class="est-template-fields">
+                            <span>Escala</span>
+                            <span>Resultado</span>
+                            <span>Recomendaci&#243;n</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-lg-8">
+                      <div class="est-timeline">
+                        <div class="est-timeline-head">
+                          <div class="est-title">Cronolog&#237;a de estudios</div>
+                          <div class="est-head-actions">
+                            <div class="est-order">
+                              <label class="form-label">Orden</label>
+                              <select class="form-select form-select-sm">
+                                <option>M&#225;s reciente</option>
+                                <option>M&#225;s antiguo</option>
+                              </select>
+                            </div>
+                            <button class="btn btn-outline-secondary btn-sm">Archivados</button>
+                          </div>
+                        </div>
+
+                        <div class="est-card est-card-new">
+                          <div class="est-card-head">
+                            <div class="est-date">Nuevo estudio</div>
+                            <div class="est-tags">
+                              <span class="est-tag">Plantilla</span>
+                            </div>
+                          </div>
+                          <div class="row g-2 est-card-body">
+                            <div class="col-md-5">
+                              <label class="form-label">Categor&#237;a</label>
+                              <select class="form-select form-select-sm">
+                                <option>Laboratorio cl&#237;nico</option>
+                                <option>Gabinete / Imagenolog&#237;a</option>
+                                <option>Cardiolog&#237;a funcional</option>
+                                <option>Endoscop&#237;a</option>
+                                <option>Patolog&#237;a</option>
+                                <option>Gen&#233;tica / Molecular</option>
+                                <option>Pruebas funcionales</option>
+                                <option>Otros</option>
+                              </select>
+                            </div>
+                            <div class="col-md-4">
+                              <label class="form-label">Nombre del estudio</label>
+                              <input class="form-control form-control-sm" placeholder="Ej. BH, TAC">
+                            </div>
+                            <div class="col-md-3">
+                              <label class="form-label">Fecha</label>
+                              <input class="form-control form-control-sm" type="date">
+                            </div>
+                            <div class="col-md-6">
+                              <label class="form-label">Resultado principal</label>
+                              <input class="form-control form-control-sm" placeholder="Resultado clave o impresi&#243;n">
+                            </div>
+                            <div class="col-md-6">
+                              <label class="form-label">M&#233;dico solicitante</label>
+                              <input class="form-control form-control-sm" placeholder="Nombre del solicitante">
+                            </div>
+                            <div class="col-12">
+                              <label class="form-label">Notas</label>
+                              <textarea class="form-control form-control-sm" rows="2" placeholder="Observaciones cl&#237;nicas"></textarea>
+                            </div>
+                          </div>
+                          <div class="est-upload">
+                            <div class="est-drop">
+                              <div class="est-drop-title">Arrastra tus archivos aqu&#237;</div>
+                              <div class="est-drop-sub">PDF, imagen o resultados exportados</div>
+                            </div>
+                          </div>
+                          <div class="est-card-actions">
+                            <button class="btn btn-outline-secondary btn-sm">Guardar borrador</button>
+                            <button class="btn btn-primary btn-sm">Agregar estudio</button>
+                          </div>
+                        </div>
+
+                        <div class="est-card">
+                          <div class="est-card-head">
+                            <div class="est-date">04 Feb 2026</div>
+                            <div class="est-tags">
+                              <span class="est-tag">Laboratorio</span>
+                              <span class="est-tag est-tag-ok">Validado</span>
+                            </div>
+                          </div>
+                          <div class="row g-2 est-card-body">
+                            <div class="col-md-6">
+                              <label class="form-label">Estudio</label>
+                              <input class="form-control form-control-sm" value="Biometr&#237;a hem&#225;tica">
+                            </div>
+                            <div class="col-md-3">
+                              <label class="form-label">Muestra</label>
+                              <input class="form-control form-control-sm" value="Sangre">
+                            </div>
+                            <div class="col-md-3">
+                              <label class="form-label">Resultado clave</label>
+                              <input class="form-control form-control-sm" value="Hb 13.2 g/dL">
+                            </div>
+                            <div class="col-12">
+                              <label class="form-label">Observaciones</label>
+                              <input class="form-control form-control-sm" value="Sin alteraciones relevantes">
+                            </div>
+                          </div>
+                          <div class="est-attachments">
+                            <div class="est-attach">
+                              <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+                              <div>
+                                <div class="est-attach-title">BH_04feb2026.pdf</div>
+                                <div class="est-attach-meta">PDF &#183; 1.2 MB</div>
+                              </div>
+                              <button class="btn btn-outline-primary btn-sm">Ver</button>
+                            </div>
+                          </div>
+                          <div class="est-card-actions">
+                            <button class="btn btn-outline-secondary btn-sm">Archivar</button>
+                            <button class="btn btn-outline-primary btn-sm">Agregar resultado</button>
+                            <button class="btn btn-primary btn-sm">Guardar</button>
+                          </div>
+                        </div>
+
+                        <div class="est-card">
+                          <div class="est-card-head">
+                            <div class="est-date">22 Ene 2026</div>
+                            <div class="est-tags">
+                              <span class="est-tag">Gabinete / Imagenolog&#237;a</span>
+                              <span class="est-tag est-tag-warn">Pendiente</span>
+                            </div>
+                          </div>
+                          <div class="row g-2 est-card-body">
+                            <div class="col-md-6">
+                              <label class="form-label">Estudio</label>
+                              <input class="form-control form-control-sm" value="Ultrasonido abdominal">
+                            </div>
+                            <div class="col-md-3">
+                              <label class="form-label">Modalidad</label>
+                              <input class="form-control form-control-sm" value="USG">
+                            </div>
+                            <div class="col-md-3">
+                              <label class="form-label">Regi&#243;n</label>
+                              <input class="form-control form-control-sm" value="Abdomen">
+                            </div>
+                            <div class="col-12">
+                              <label class="form-label">Impresi&#243;n</label>
+                              <input class="form-control form-control-sm" value="Sin hallazgos patol&#243;gicos">
+                            </div>
+                          </div>
+                          <div class="est-attachments">
+                            <div class="est-attach">
+                              <i class="bi bi-file-earmark-image" aria-hidden="true"></i>
+                              <div>
+                                <div class="est-attach-title">USG_22ene2026.jpg</div>
+                                <div class="est-attach-meta">JPG &#183; 3.4 MB</div>
+                              </div>
+                              <button class="btn btn-outline-primary btn-sm">Ver</button>
+                            </div>
+                          </div>
+                          <div class="est-card-actions">
+                            <button class="btn btn-outline-secondary btn-sm">Archivar</button>
+                            <button class="btn btn-outline-primary btn-sm">Agregar resultado</button>
+                            <button class="btn btn-primary btn-sm">Guardar</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <div class="tab-pane fade" id="t-tratamiento"><div class="alert alert-info">Recetas, indicaciones
 </div></div>
@@ -3764,13 +4126,6 @@
 
 </body>
 </html>
-
-
-
-
-
-
-
 
 
 
