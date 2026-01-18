@@ -3443,288 +3443,265 @@
 
               <div class="tab-pane fade" id="t-estudios">
                 <div class="est-panel">
-                  <div class="est-toolbar row g-2 align-items-end">
-                    <div class="col-md-4">
-                      <label class="form-label">Buscar estudio</label>
-                      <input class="form-control" placeholder="Nombre, marcador, nota cl&#237;nica">
+                  <div class="est-actions">
+                    <div class="est-action-card">
+                      <div class="est-action-ttl">Solicitar Estudios</div>
+                      <div class="est-action-txt">Elige un área, marca estudios o usa un paquete preoperatorio. Genera orden en PDF/QR para paciente o centro.</div>
+                      <button class="btn btn-primary btn-sm">Continuar</button>
                     </div>
-                    <div class="col-md-3">
-                      <label class="form-label">Categor&#237;a</label>
-                      <select class="form-select">
-                        <option value="">Todas</option>
-                        <option value="lab">Laboratorio cl&#237;nico</option>
-                        <option value="img">Gabinete / Imagenolog&#237;a</option>
-                        <option value="card">Cardiolog&#237;a funcional</option>
-                        <option value="endo">Endoscop&#237;a</option>
-                        <option value="pat">Patolog&#237;a</option>
-                        <option value="gen">Gen&#233;tica / Molecular</option>
-                        <option value="func">Pruebas funcionales</option>
-                        <option value="otros">Otros</option>
-                      </select>
+                    <div class="est-action-card">
+                      <div class="est-action-ttl">Cargar Resultados</div>
+                      <div class="est-action-txt">Sube PDF/imagen, captura con tu teléfono o ingresa solo texto. Opcional: vincula a una orden.</div>
+                      <button class="btn btn-outline-primary btn-sm">Continuar</button>
                     </div>
-                    <div class="col-md-2">
-                      <label class="form-label">Desde</label>
-                      <input class="form-control" type="date">
-                    </div>
-                    <div class="col-md-2">
-                      <label class="form-label">Hasta</label>
-                      <input class="form-control" type="date">
-                    </div>
-                    <div class="col-md-1 d-grid">
-                      <button class="btn btn-primary">Agregar</button>
+                    <div class="est-action-card">
+                      <div class="est-action-ttl">Histórico</div>
+                      <div class="est-action-txt">Revisa estudios previos por área y fecha. Filtra por estado, origen (archivo/foto/texto) y evento.</div>
+                      <button class="btn btn-outline-secondary btn-sm">Continuar</button>
                     </div>
                   </div>
 
-                  <div class="est-cat-grid">
-                    <button class="est-cat active" type="button">
-                      <div class="est-cat-title">Laboratorio</div>
-                      <div class="est-cat-meta">12 estudios &#183; &#218;ltimo 04/02/2026</div>
-                    </button>
-                    <button class="est-cat" type="button">
-                      <div class="est-cat-title">Gabinete / Imagenolog&#237;a</div>
-                      <div class="est-cat-meta">6 estudios &#183; &#218;ltimo 22/01/2026</div>
-                    </button>
-                    <button class="est-cat" type="button">
-                      <div class="est-cat-title">Cardiolog&#237;a</div>
-                      <div class="est-cat-meta">3 estudios &#183; &#218;ltimo 18/01/2026</div>
-                    </button>
-                    <button class="est-cat" type="button">
-                      <div class="est-cat-title">Endoscop&#237;a</div>
-                      <div class="est-cat-meta">2 estudios &#183; &#218;ltimo 10/12/2025</div>
-                    </button>
-                    <button class="est-cat" type="button">
-                      <div class="est-cat-title">Patolog&#237;a</div>
-                      <div class="est-cat-meta">1 estudio &#183; &#218;ltimo 06/11/2025</div>
-                    </button>
-                    <button class="est-cat" type="button">
-                      <div class="est-cat-title">Gen&#233;tica / Molecular</div>
-                      <div class="est-cat-meta">1 estudio &#183; &#218;ltimo 01/11/2025</div>
-                    </button>
-                    <button class="est-cat" type="button">
-                      <div class="est-cat-title">Funcionales</div>
-                      <div class="est-cat-meta">4 estudios &#183; &#218;ltimo 02/10/2025</div>
-                    </button>
-                    <button class="est-cat" type="button">
-                      <div class="est-cat-title">Otros</div>
-                      <div class="est-cat-meta">2 estudios &#183; &#218;ltimo 22/09/2025</div>
-                    </button>
+                  <div class="est-block">
+                    <div class="est-block-head">
+                      <div class="est-title">Solicitar estudios</div>
+                      <div class="est-head-actions">
+                        <button class="btn btn-outline-secondary btn-sm">Imprimir</button>
+                        <button class="btn btn-outline-primary btn-sm">Compartir / QR</button>
+                      </div>
+                    </div>
+                    <div class="row g-3">
+                      <div class="col-lg-4">
+                        <div class="est-side">
+                          <div class="est-side-head">Paquetes preoperatorios</div>
+                          <div class="est-package">
+                            <div class="est-package-ttl">Preoperatorio básico</div>
+                            <div class="est-template-fields"><span>BH</span><span>QS</span><span>PFH</span><span>EKG</span><span>RX tórax</span></div>
+                            <button class="btn btn-outline-primary btn-sm w-100 mt-2">Usar paquete</button>
+                          </div>
+                          <div class="est-package">
+                            <div class="est-package-ttl">Preop. Gineco</div>
+                            <div class="est-template-fields"><span>BH</span><span>QS</span><span>PFH</span><span>PT</span><span>Colposcopia</span><span>Papanicolaou</span></div>
+                            <button class="btn btn-outline-primary btn-sm w-100 mt-2">Usar paquete</button>
+                          </div>
+                          <div class="est-package">
+                            <div class="est-package-ttl">Preop. Ortopedia</div>
+                            <div class="est-template-fields"><span>BH</span><span>QS</span><span>PFH</span><span>PT</span><span>EKG</span><span>Rx región</span></div>
+                            <button class="btn btn-outline-primary btn-sm w-100 mt-2">Usar paquete</button>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-lg-8">
+                        <div class="est-toolbar row g-2 align-items-end">
+                          <div class="col-md-4">
+                            <label class="form-label">Área</label>
+                            <select class="form-select">
+                              <option>Laboratorio</option><option>Imagenología</option><option>Cardiología</option><option>Endoscopía</option><option>Patología</option><option>Genética</option><option>Funcionales</option><option>Otros</option>
+                            </select>
+                          </div>
+                          <div class="col-md-5">
+                            <label class="form-label">Estudios (checklist)</label>
+                            <input class="form-control" placeholder="Busca y marca del catálogo">
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label">Prioridad</label>
+                            <select class="form-select">
+                              <option>Rutinaria</option><option>Urgente</option>
+                            </select>
+                          </div>
+                          <div class="col-12">
+                            <label class="form-label">Indicación clínica</label>
+                            <textarea class="form-control" rows="2" placeholder="Motivo o diagnóstico presuntivo"></textarea>
+                          </div>
+                        </div>
+                        <div class="est-card-actions justify-content-start mt-2">
+                          <button class="btn btn-outline-secondary btn-sm">Guardar borrador</button>
+                          <button class="btn btn-primary btn-sm">Generar orden</button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div class="row g-3">
-                    <div class="col-lg-4">
-                      <div class="est-side">
-                        <div class="est-side-head">Plantillas por categor&#237;a</div>
-                        <div class="est-template">
-                          <div class="est-template-title">Laboratorio cl&#237;nico</div>
-                          <div class="est-template-fields">
-                            <span>Fecha de toma</span>
-                            <span>Tipo de muestra</span>
-                            <span>Biomarcadores</span>
-                            <span>Valor y unidad</span>
-                            <span>Referencia</span>
-                          </div>
+                  <div class="est-block">
+                    <div class="est-block-head">
+                      <div class="est-title">Cargar resultados</div>
+                      <div class="est-head-actions">
+                        <button class="btn btn-outline-secondary btn-sm">Ver órdenes abiertas</button>
+                      </div>
+                    </div>
+                    <div class="row g-2 est-card-body">
+                      <div class="col-md-4">
+                        <label class="form-label">Área</label>
+                        <select class="form-select form-select-sm">
+                          <option>Laboratorio</option><option>Imagenología</option><option>Cardiología</option><option>Endoscopía</option><option>Patología</option><option>Genética</option><option>Funcionales</option><option>Otros</option>
+                        </select>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label">Estudio</label>
+                        <input class="form-control form-control-sm" placeholder="Ej. BH, TAC, Colposcopia">
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label">Fecha del estudio</label>
+                        <input class="form-control form-control-sm" type="date">
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label">Vincular a orden</label>
+                        <select class="form-select form-select-sm">
+                          <option>Sin orden (carga directa)</option>
+                          <option>#ORD-1245 Preop básico</option>
+                          <option>#ORD-1238 Imagenología</option>
+                        </select>
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label">Estado</label>
+                        <select class="form-select form-select-sm">
+                          <option>Pendiente</option><option>Validado</option><option>Archivado</option>
+                        </select>
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label">Evento/Episodio</label>
+                        <input class="form-control form-control-sm" placeholder="p.ej. Preop, control trimestral">
+                      </div>
+                    </div>
+                    <div class="est-upload">
+                      <div class="est-upload-grid">
+                        <div class="est-drop">
+                          <div class="est-drop-title">Subir archivo</div>
+                          <div class="est-drop-sub">PDF, imagen o exportado</div>
                         </div>
-                        <div class="est-template">
-                          <div class="est-template-title">Gabinete / Imagenolog&#237;a</div>
-                          <div class="est-template-fields">
-                            <span>Modalidad</span>
-                            <span>Regi&#243;n anat&#243;mica</span>
-                            <span>Hallazgos</span>
-                            <span>Impresi&#243;n</span>
-                            <span>Adjuntos</span>
-                          </div>
+                        <div class="est-drop est-drop-qr">
+                          <div class="est-drop-title">Capturar con teléfono</div>
+                          <div class="est-drop-sub">Escanea este QR y sube la foto desde tu móvil</div>
+                          <div class="est-qr-placeholder">QR</div>
                         </div>
-                        <div class="est-template">
-                          <div class="est-template-title">Cardiolog&#237;a funcional</div>
-                          <div class="est-template-fields">
-                            <span>Tipo de prueba</span>
-                            <span>Duraci&#243;n</span>
-                            <span>Ritmo</span>
-                            <span>Conclusiones</span>
-                          </div>
-                        </div>
-                        <div class="est-template">
-                          <div class="est-template-title">Patolog&#237;a / Endoscop&#237;a</div>
-                          <div class="est-template-fields">
-                            <span>&#211;rgano</span>
-                            <span>Hallazgos</span>
-                            <span>Diagn&#243;stico</span>
-                            <span>Biopsias</span>
-                          </div>
-                        </div>
-                        <div class="est-template">
-                          <div class="est-template-title">Gen&#233;tica / Molecular</div>
-                          <div class="est-template-fields">
-                            <span>Panel / Gen</span>
-                            <span>Variante</span>
-                            <span>Interpretaci&#243;n</span>
-                            <span>Riesgo</span>
-                          </div>
-                        </div>
-                        <div class="est-template">
-                          <div class="est-template-title">Funcionales</div>
-                          <div class="est-template-fields">
-                            <span>Escala</span>
-                            <span>Resultado</span>
-                            <span>Recomendaci&#243;n</span>
+                        <div class="est-drop">
+                          <div class="est-drop-title">Solo texto</div>
+                          <div class="est-drop-sub">Resultado en texto + valores clave</div>
+                          <textarea class="form-control form-control-sm" rows="2" placeholder="Resumen del resultado"></textarea>
+                          <div class="row g-1 mt-1">
+                            <div class="col-6"><input class="form-control form-control-sm" placeholder="Marcador / valor"></div>
+                            <div class="col-6"><input class="form-control form-control-sm" placeholder="Unidad / referencia"></div>
                           </div>
                         </div>
                       </div>
                     </div>
-                    <div class="col-lg-8">
-                      <div class="est-timeline">
-                        <div class="est-timeline-head">
-                          <div class="est-title">Cronolog&#237;a de estudios</div>
-                          <div class="est-head-actions">
-                            <div class="est-order">
-                              <label class="form-label">Orden</label>
-                              <select class="form-select form-select-sm">
-                                <option>M&#225;s reciente</option>
-                                <option>M&#225;s antiguo</option>
-                              </select>
-                            </div>
-                            <button class="btn btn-outline-secondary btn-sm">Archivados</button>
+                    <div class="est-card-actions">
+                      <button class="btn btn-outline-secondary btn-sm">Guardar y seguir</button>
+                      <button class="btn btn-primary btn-sm">Guardar resultado</button>
+                    </div>
+                  </div>
+
+                  <div class="est-block">
+                    <div class="est-block-head">
+                      <div class="est-title">Histórico</div>
+                      <div class="est-head-actions">
+                        <button class="btn btn-outline-secondary btn-sm">Archivados</button>
+                      </div>
+                    </div>
+                    <div class="est-toolbar row g-2 align-items-end">
+                      <div class="col-md-3">
+                        <label class="form-label">Área</label>
+                        <select class="form-select">
+                          <option>Todas</option><option>Laboratorio</option><option>Imagenología</option><option>Cardiología</option><option>Endoscopía</option><option>Patología</option><option>Genética</option><option>Funcionales</option><option>Otros</option>
+                        </select>
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label">Origen</label>
+                        <select class="form-select">
+                          <option>Todos</option><option>Archivo digital</option><option>Foto móvil</option><option>Texto</option>
+                        </select>
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label">Desde</label>
+                        <input class="form-control" type="date">
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label">Hasta</label>
+                        <input class="form-control" type="date">
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label">Estado</label>
+                        <select class="form-select">
+                          <option>Todos</option><option>Pendiente</option><option>Validado</option><option>Archivado</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="est-timeline mt-2">
+                      <div class="est-card">
+                        <div class="est-card-head">
+                          <div class="est-date">04 Feb 2026</div>
+                          <div class="est-tags">
+                            <span class="est-tag">Laboratorio</span>
+                            <span class="est-tag est-tag-ok">Validado</span>
+                            <span class="est-tag">📄</span>
                           </div>
                         </div>
-
-                        <div class="est-card est-card-new">
-                          <div class="est-card-head">
-                            <div class="est-date">Nuevo estudio</div>
-                            <div class="est-tags">
-                              <span class="est-tag">Plantilla</span>
-                            </div>
+                        <div class="row g-2 est-card-body">
+                          <div class="col-md-6">
+                            <label class="form-label">Estudio</label>
+                            <input class="form-control form-control-sm" value="Biometría hemática">
                           </div>
-                          <div class="row g-2 est-card-body">
-                            <div class="col-md-5">
-                              <label class="form-label">Categor&#237;a</label>
-                              <select class="form-select form-select-sm">
-                                <option>Laboratorio cl&#237;nico</option>
-                                <option>Gabinete / Imagenolog&#237;a</option>
-                                <option>Cardiolog&#237;a funcional</option>
-                                <option>Endoscop&#237;a</option>
-                                <option>Patolog&#237;a</option>
-                                <option>Gen&#233;tica / Molecular</option>
-                                <option>Pruebas funcionales</option>
-                                <option>Otros</option>
-                              </select>
-                            </div>
-                            <div class="col-md-4">
-                              <label class="form-label">Nombre del estudio</label>
-                              <input class="form-control form-control-sm" placeholder="Ej. BH, TAC">
-                            </div>
-                            <div class="col-md-3">
-                              <label class="form-label">Fecha</label>
-                              <input class="form-control form-control-sm" type="date">
-                            </div>
-                            <div class="col-md-6">
-                              <label class="form-label">Resultado principal</label>
-                              <input class="form-control form-control-sm" placeholder="Resultado clave o impresi&#243;n">
-                            </div>
-                            <div class="col-md-6">
-                              <label class="form-label">M&#233;dico solicitante</label>
-                              <input class="form-control form-control-sm" placeholder="Nombre del solicitante">
-                            </div>
-                            <div class="col-12">
-                              <label class="form-label">Notas</label>
-                              <textarea class="form-control form-control-sm" rows="2" placeholder="Observaciones cl&#237;nicas"></textarea>
-                            </div>
+                          <div class="col-md-3">
+                            <label class="form-label">Evento</label>
+                            <input class="form-control form-control-sm" value="Preop básico">
                           </div>
-                          <div class="est-upload">
-                            <div class="est-drop">
-                              <div class="est-drop-title">Arrastra tus archivos aqu&#237;</div>
-                              <div class="est-drop-sub">PDF, imagen o resultados exportados</div>
-                            </div>
-                          </div>
-                          <div class="est-card-actions">
-                            <button class="btn btn-outline-secondary btn-sm">Guardar borrador</button>
-                            <button class="btn btn-primary btn-sm">Agregar estudio</button>
+                          <div class="col-md-3">
+                            <label class="form-label">Estado</label>
+                            <input class="form-control form-control-sm" value="Validado">
                           </div>
                         </div>
-
-                        <div class="est-card">
-                          <div class="est-card-head">
-                            <div class="est-date">04 Feb 2026</div>
-                            <div class="est-tags">
-                              <span class="est-tag">Laboratorio</span>
-                              <span class="est-tag est-tag-ok">Validado</span>
+                        <div class="est-attachments">
+                          <div class="est-attach">
+                            <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+                            <div>
+                              <div class="est-attach-title">BH_04feb2026.pdf</div>
+                              <div class="est-attach-meta">PDF · 1.2 MB</div>
                             </div>
-                          </div>
-                          <div class="row g-2 est-card-body">
-                            <div class="col-md-6">
-                              <label class="form-label">Estudio</label>
-                              <input class="form-control form-control-sm" value="Biometr&#237;a hem&#225;tica">
-                            </div>
-                            <div class="col-md-3">
-                              <label class="form-label">Muestra</label>
-                              <input class="form-control form-control-sm" value="Sangre">
-                            </div>
-                            <div class="col-md-3">
-                              <label class="form-label">Resultado clave</label>
-                              <input class="form-control form-control-sm" value="Hb 13.2 g/dL">
-                            </div>
-                            <div class="col-12">
-                              <label class="form-label">Observaciones</label>
-                              <input class="form-control form-control-sm" value="Sin alteraciones relevantes">
-                            </div>
-                          </div>
-                          <div class="est-attachments">
-                            <div class="est-attach">
-                              <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
-                              <div>
-                                <div class="est-attach-title">BH_04feb2026.pdf</div>
-                                <div class="est-attach-meta">PDF &#183; 1.2 MB</div>
-                              </div>
-                              <button class="btn btn-outline-primary btn-sm">Ver</button>
-                            </div>
-                          </div>
-                          <div class="est-card-actions">
-                            <button class="btn btn-outline-secondary btn-sm">Archivar</button>
-                            <button class="btn btn-outline-primary btn-sm">Agregar resultado</button>
-                            <button class="btn btn-primary btn-sm">Guardar</button>
+                            <button class="btn btn-outline-primary btn-sm">Ver</button>
                           </div>
                         </div>
+                        <div class="est-card-actions">
+                          <button class="btn btn-outline-primary btn-sm">Agregar resultado</button>
+                          <button class="btn btn-outline-secondary btn-sm">Archivar</button>
+                        </div>
+                      </div>
 
-                        <div class="est-card">
-                          <div class="est-card-head">
-                            <div class="est-date">22 Ene 2026</div>
-                            <div class="est-tags">
-                              <span class="est-tag">Gabinete / Imagenolog&#237;a</span>
-                              <span class="est-tag est-tag-warn">Pendiente</span>
-                            </div>
+                      <div class="est-card">
+                        <div class="est-card-head">
+                          <div class="est-date">22 Ene 2026</div>
+                          <div class="est-tags">
+                            <span class="est-tag">Gabinete / Imagenología</span>
+                            <span class="est-tag est-tag-warn">Pendiente</span>
+                            <span class="est-tag">📷</span>
                           </div>
-                          <div class="row g-2 est-card-body">
-                            <div class="col-md-6">
-                              <label class="form-label">Estudio</label>
-                              <input class="form-control form-control-sm" value="Ultrasonido abdominal">
-                            </div>
-                            <div class="col-md-3">
-                              <label class="form-label">Modalidad</label>
-                              <input class="form-control form-control-sm" value="USG">
-                            </div>
-                            <div class="col-md-3">
-                              <label class="form-label">Regi&#243;n</label>
-                              <input class="form-control form-control-sm" value="Abdomen">
-                            </div>
-                            <div class="col-12">
-                              <label class="form-label">Impresi&#243;n</label>
-                              <input class="form-control form-control-sm" value="Sin hallazgos patol&#243;gicos">
-                            </div>
+                        </div>
+                        <div class="row g-2 est-card-body">
+                          <div class="col-md-6">
+                            <label class="form-label">Estudio</label>
+                            <input class="form-control form-control-sm" value="Ultrasonido abdominal">
                           </div>
-                          <div class="est-attachments">
-                            <div class="est-attach">
-                              <i class="bi bi-file-earmark-image" aria-hidden="true"></i>
-                              <div>
-                                <div class="est-attach-title">USG_22ene2026.jpg</div>
-                                <div class="est-attach-meta">JPG &#183; 3.4 MB</div>
-                              </div>
-                              <button class="btn btn-outline-primary btn-sm">Ver</button>
+                          <div class="col-md-3">
+                            <label class="form-label">Evento</label>
+                            <input class="form-control form-control-sm" value="Control trimestral">
+                          </div>
+                          <div class="col-md-3">
+                            <label class="form-label">Estado</label>
+                            <input class="form-control form-control-sm" value="Pendiente">
+                          </div>
+                        </div>
+                        <div class="est-attachments">
+                          <div class="est-attach">
+                            <i class="bi bi-file-earmark-image" aria-hidden="true"></i>
+                            <div>
+                              <div class="est-attach-title">USG_22ene2026_foto.jpg</div>
+                              <div class="est-attach-meta">Captura móvil</div>
                             </div>
+                            <button class="btn btn-outline-primary btn-sm">Ver</button>
                           </div>
-                          <div class="est-card-actions">
-                            <button class="btn btn-outline-secondary btn-sm">Archivar</button>
-                            <button class="btn btn-outline-primary btn-sm">Agregar resultado</button>
-                            <button class="btn btn-primary btn-sm">Guardar</button>
-                          </div>
+                        </div>
+                        <div class="est-card-actions">
+                          <button class="btn btn-outline-primary btn-sm">Agregar resultado</button>
+                          <button class="btn btn-outline-secondary btn-sm">Archivar</button>
                         </div>
                       </div>
                     </div>
@@ -4126,7 +4103,6 @@
 
 </body>
 </html>
-
 
 
 
