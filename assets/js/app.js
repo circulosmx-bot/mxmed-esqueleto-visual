@@ -2946,6 +2946,13 @@ console.info('app.js loaded :: 20251123a');
         if(backups) backups.innerHTML = '';
       }catch(_){ }
 
+      // Reset Estudios Diagnóstico (catálogo/órdenes)
+      try{
+        if(typeof window.mxResetEstudios === 'function'){
+          window.mxResetEstudios();
+        }
+      }catch(_){ }
+
     };
 
 
@@ -4019,4 +4026,431 @@ function mxResetLogoPreview(){
   renderCurrent();
   renderCatalog();
   renderHistory();
+})();
+
+// ====== Estudios: modal catálogo laboratorio ======
+(function(){
+  const modalEl = document.getElementById('modalEstudiosLab');
+  if(!modalEl || !window.bootstrap) return;
+  const openInputs = Array.from(document.querySelectorAll('[data-est-open-modal]'));
+  if(!openInputs.length) return;
+
+  const modal = new bootstrap.Modal(modalEl);
+  const checkboxes = Array.from(modalEl.querySelectorAll('input[type="checkbox"][data-est-item]'));
+  const selectedWrap = modalEl.querySelector('[data-est-selected]');
+  const modalCount = modalEl.querySelector('[data-est-modal-count]');
+  const addBtn = modalEl.querySelector('.modal-footer .btn-primary');
+  const searchInput = modalEl.querySelector('[data-est-lab-search]');
+  const groupButtons = Array.from(modalEl.querySelectorAll('[data-est-group]'));
+  const filterChips = Array.from(modalEl.querySelectorAll('.est-chip-filter'));
+  const pickButtons = Array.from(modalEl.querySelectorAll('[data-est-lab-pick]'));
+  const packButtons = Array.from(modalEl.querySelectorAll('[data-est-lab-pack]'));
+  const favBox = modalEl.querySelector('.est-lab-fav');
+  const favFre = modalEl.querySelector('[data-est-fav="frecuentes"]');
+  const favPack = modalEl.querySelector('[data-est-fav="paquetes"]');
+  const groupCol = modalEl.querySelector('.est-lab-groups')?.closest('.col-md-3');
+  const accordionCol = modalEl.querySelector('#estLabAccordion')?.closest('.col-md-9');
+  const summaryWrap = document.querySelector('[data-est-summary]');
+  const summaryCount = document.querySelector('[data-est-count]');
+  const summaryEdit = document.querySelector('[data-est-edit]');
+  const summaryClear = document.querySelector('[data-est-clear]');
+  const summaryContainer = summaryWrap?.closest('.est-summary');
+  const orderBlock = document.querySelector('[data-est-order-block]');
+  const orderList = document.querySelector('.est-orders-list');
+  const areaSelect = orderBlock?.querySelector('[data-est-area-select]');
+  const orderListInitial = orderList ? orderList.innerHTML : '';
+  let activeInput = null;
+  let selectionOrder = [];
+  let modalMode = 'add';
+  const groupLabels = {};
+  const itemGroupMap = {};
+  const itemOrder = {};
+  const groupOrder = groupButtons.map(btn=> btn.dataset.estGroup).filter(Boolean);
+  let orderIndex = 0;
+
+  const PICK_MAP = {
+    'BH': ['BH'],
+    'QS': ['Glucosa','Urea','Creatinina'],
+    'EGO': ['EGO'],
+    'Perfil hepático': ['AST/TGO','ALT/TGP','FA','GGT','Bilirrubina total','Bilirrubina directa','Bilirrubina indirecta','Albúmina','TP/INR'],
+    'Perfil lipídico': ['Colesterol total','LDL','HDL','Triglicéridos','ApoA1','ApoB','Lp(a)'],
+    'HbA1c': ['HbA1c']
+  };
+  const PACK_MAP = {
+    'Preop básico': ['BH','Glucosa','Urea','Creatinina','EGO','TP/INR','TTPa','AST/TGO','ALT/TGP','FA','GGT','Bilirrubina total','Bilirrubina directa','Bilirrubina indirecta','Albúmina'],
+    'Preop Gineco': ['BH','Glucosa','Urea','Creatinina','TP/INR','TTPa','Papanicolaou','Colposcopia','β-hCG'],
+    'Preop Ortopedia': ['BH','Glucosa','Urea','Creatinina','EGO','TP/INR','TTPa','AST/TGO','ALT/TGP','FA','GGT']
+  };
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, s=>({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[s]));
+  }
+  function setModalMode(mode){
+    modalMode = mode === 'edit' ? 'edit' : 'add';
+    if(addBtn){
+      addBtn.textContent = modalMode === 'edit' ? 'Actualizar orden' : 'Añadir a la orden';
+    }
+  }
+  function normalizeItems(items){
+    const seen = new Set();
+    return items.map(i=>i.trim()).filter(Boolean).filter(item=>{
+      if(seen.has(item)) return false;
+      seen.add(item);
+      return true;
+    });
+  }
+  function setSelectionOrder(items){
+    selectionOrder = normalizeItems(items || []);
+  }
+  function addToOrder(item){
+    if(!item) return;
+    if(!selectionOrder.includes(item)) selectionOrder.push(item);
+  }
+  function addToOrderList(items){
+    normalizeItems(items || []).forEach(addToOrder);
+  }
+  function removeFromOrder(item){
+    selectionOrder = selectionOrder.filter(i=>i !== item);
+  }
+  function parseInputValue(val){
+    if(!val) return [];
+    return normalizeItems(val.split(','));
+  }
+  function ensureAreaGroup(label){
+    const clean = (label || '').trim();
+    if(!clean) return null;
+    const key = `area-${clean.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+    if(!groupLabels[key]) groupLabels[key] = clean;
+    if(!groupOrder.includes(key)) groupOrder.push(key);
+    return key;
+  }
+  function setAreaSelect(label){
+    if(!areaSelect || !label) return;
+    const target = label.trim().toLowerCase();
+    const option = Array.from(areaSelect.options).find(opt => (opt.textContent || '').trim().toLowerCase() === target);
+    if(option) areaSelect.value = option.value;
+  }
+  function setItemChecked(name, checked){
+    if(!name) return;
+    checkboxes.forEach(cb=>{
+      if(cb.dataset.estItem === name) cb.checked = checked;
+    });
+  }
+  function resetSelections(){
+    checkboxes.forEach(cb=>{ cb.checked = false; });
+  }
+  function getOrderedItems(){
+    const checkedSet = new Set();
+    checkboxes.forEach(cb=>{
+      if(cb.checked) checkedSet.add(cb.dataset.estItem);
+    });
+    selectionOrder = selectionOrder.filter(item=>checkedSet.has(item));
+    checkedSet.forEach(item=>{
+      if(!selectionOrder.includes(item)) selectionOrder.push(item);
+    });
+    return selectionOrder.slice();
+  }
+  function syncCheckboxesFromItems(items){
+    const set = new Set(items);
+    checkboxes.forEach(cb=>{
+      cb.checked = set.has(cb.dataset.estItem);
+    });
+  }
+  function renderSelected(){
+    if(!selectedWrap) return;
+    const items = getOrderedItems();
+    if(modalCount) modalCount.textContent = `(${items.length})`;
+    if(!items.length){
+      selectedWrap.innerHTML = '<span class="text-muted small">Sin selección</span>';
+      return;
+    }
+    selectedWrap.innerHTML = items.map(item=>{
+      const safe = escapeHtml(item);
+      return `<span class="est-chip">${safe}<button type="button" class="est-chip-x" data-est-remove="${safe}" aria-label="Quitar ${safe}">&times;</button></span>`;
+    }).join('');
+  }
+  function renderSummary(items){
+    if(!summaryWrap) return;
+    const list = normalizeItems(items || []);
+    if(summaryCount) summaryCount.textContent = `(${list.length})`;
+    if(!list.length){
+      summaryWrap.innerHTML = '<div class="est-summary-empty">Sin selección todavía</div>';
+      return;
+    }
+    const listIndex = {};
+    list.forEach((item, idx)=>{ listIndex[item] = idx; });
+    const grouped = {};
+    list.forEach(item=>{
+      const groupId = itemGroupMap[item] || 'otros';
+      if(!grouped[groupId]) grouped[groupId] = [];
+      grouped[groupId].push(item);
+    });
+    const order = groupOrder.slice();
+    if(grouped.otros && !order.includes('otros')) order.push('otros');
+    summaryWrap.innerHTML = order.filter(id=> grouped[id]?.length).map(id=>{
+      const label = groupLabels[id] || 'Otros';
+      const itemsSorted = grouped[id].slice().sort((a,b)=>{
+        const oa = itemOrder[a];
+        const ob = itemOrder[b];
+        if(oa != null || ob != null) return (oa ?? 9999) - (ob ?? 9999);
+        return listIndex[a] - listIndex[b];
+      });
+      return `<div class="est-summary-group"><div class="est-summary-group-ttl"><span class="est-summary-group-chip">${escapeHtml(label)} <span class="est-summary-group-count">${itemsSorted.length}</span></span></div><div class="est-summary-group-list">${itemsSorted.map(item=>{
+        const safe = escapeHtml(item);
+        return `<div class="est-summary-item"><span>${safe}</span><button type="button" class="est-summary-remove" data-est-remove="${safe}" aria-label="Quitar ${safe}">&times;</button></div>`;
+      }).join('')}</div></div>`;
+    }).join('');
+  }
+  function setSelection(items, input){
+    const list = normalizeItems(items || []);
+    setSelectionOrder(list);
+    if(input) input.value = list.join(', ');
+    syncCheckboxesFromItems(list);
+    renderSummary(list);
+    renderSelected();
+  }
+  function syncDuplicates(item, checked){
+    checkboxes.forEach(cb=>{
+      if(cb.dataset.estItem === item) cb.checked = checked;
+    });
+  }
+  function openModal(input){
+    activeInput = input || openInputs[0] || null;
+    resetSelections();
+    const parsed = parseInputValue(activeInput?.value || '');
+    setSelectionOrder(parsed);
+    parsed.forEach(item=> setItemChecked(item, true));
+    renderSelected();
+    if(searchInput) searchInput.value = '';
+    modal.show();
+  }
+  function applyFilterChip(type){
+    filterChips.forEach(ch=> ch.classList.toggle('active', ch.dataset.estFilter === type));
+    if(favBox) favBox.classList.remove('d-none');
+    if(type === 'frecuentes'){
+      favFre?.classList.remove('d-none');
+      favPack?.classList.add('d-none');
+      groupCol?.classList.add('d-none');
+      accordionCol?.classList.add('d-none');
+    }else if(type === 'paquetes'){
+      favFre?.classList.add('d-none');
+      favPack?.classList.remove('d-none');
+      groupCol?.classList.add('d-none');
+      accordionCol?.classList.add('d-none');
+    }else{
+      favFre?.classList.remove('d-none');
+      favPack?.classList.remove('d-none');
+      groupCol?.classList.remove('d-none');
+      accordionCol?.classList.remove('d-none');
+    }
+  }
+  function filterList(q){
+    const term = (q || '').trim().toLowerCase();
+    const labels = checkboxes.map(cb=> cb.closest('label')).filter(Boolean);
+    labels.forEach(label=>{
+      const text = (label.textContent || '').toLowerCase();
+      label.classList.toggle('d-none', term && !text.includes(term));
+    });
+    modalEl.querySelectorAll('.est-lab-grid').forEach(grid=>{
+      const hasVisible = Array.from(grid.querySelectorAll('label')).some(l=>!l.classList.contains('d-none'));
+      grid.classList.toggle('d-none', !hasVisible);
+      const head = grid.previousElementSibling;
+      if(head && head.classList.contains('est-lab-sub')){
+        head.classList.toggle('d-none', !hasVisible);
+      }
+    });
+    modalEl.querySelectorAll('.accordion-item').forEach(item=>{
+      const hasVisible = item.querySelectorAll('.est-lab-grid label:not(.d-none)').length > 0;
+      item.classList.toggle('d-none', !hasVisible);
+      if(term){
+        const collapse = item.querySelector('.accordion-collapse');
+        if(collapse) collapse.classList.add('show');
+      }
+    });
+    if(term){
+      groupCol?.classList.remove('d-none');
+      accordionCol?.classList.remove('d-none');
+      favBox?.classList.remove('d-none');
+      favFre?.classList.remove('d-none');
+      favPack?.classList.remove('d-none');
+      filterChips.forEach(ch=> ch.classList.remove('active'));
+    }
+  }
+  function scrollToOrderBlock(){
+    const target = orderBlock || summaryContainer || summaryWrap || activeInput;
+    if(!target) return;
+    const rect = target.getBoundingClientRect();
+    const top = window.scrollY + rect.top - 90;
+    window.scrollTo({ top, behavior: 'smooth' });
+    target.classList.add('est-order-focus');
+    setTimeout(()=> target.classList.remove('est-order-focus'), 1200);
+  }
+
+  groupButtons.forEach(btn=>{
+    const id = btn.dataset.estGroup;
+    if(id) groupLabels[id] = (btn.textContent || '').trim();
+  });
+  groupOrder.forEach(groupId=>{
+    const pane = modalEl.querySelector(`[data-est-group-pane="${groupId}"]`);
+    pane?.querySelectorAll('input[type="checkbox"][data-est-item]').forEach(cb=>{
+      const name = cb.dataset.estItem;
+      if(!itemGroupMap[name]){
+        itemGroupMap[name] = groupId;
+        itemOrder[name] = orderIndex++;
+      }
+    });
+  });
+
+  openInputs.forEach(input=>{
+    input.addEventListener('focus', ()=> { setModalMode('add'); openModal(input); });
+    input.addEventListener('click', ()=> { setModalMode('add'); openModal(input); });
+    input.addEventListener('input', ()=> setSelection(parseInputValue(input.value), input));
+  });
+
+  checkboxes.forEach(cb=>{
+    cb.addEventListener('change', ()=>{
+      const item = cb.dataset.estItem;
+      syncDuplicates(item, cb.checked);
+      if(cb.checked){
+        addToOrder(item);
+      }else{
+        removeFromOrder(item);
+      }
+      renderSelected();
+      if(searchInput && searchInput.value.trim()){
+        searchInput.value = '';
+        applyFilterChip('todos');
+        filterList('');
+      }
+    });
+  });
+  selectedWrap?.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-est-remove]');
+    if(!btn) return;
+    const item = btn.getAttribute('data-est-remove');
+    removeFromOrder(item);
+    setItemChecked(item, false);
+    renderSelected();
+  });
+  summaryWrap?.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-est-remove]');
+    if(!btn) return;
+    const item = btn.getAttribute('data-est-remove');
+    const input = activeInput || openInputs[0];
+    const next = parseInputValue(input?.value || '').filter(i=>i !== item);
+    setSelection(next, input);
+  });
+  summaryEdit?.addEventListener('click', ()=> {
+    const input = activeInput || openInputs[0];
+    if(input) openModal(input);
+  });
+  summaryClear?.addEventListener('click', ()=> {
+    const input = activeInput || openInputs[0];
+    setSelection([], input);
+  });
+  orderList?.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-est-order-delete]');
+    if(!btn) return;
+    const card = btn.closest('.est-order-card');
+    if(!card) return;
+    if(window.confirm('¿Eliminar esta orden? Esta acción no se puede deshacer.')){
+      card.remove();
+    }
+  });
+  orderList?.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-est-order-edit]');
+    if(!btn) return;
+    const card = btn.closest('.est-order-card');
+    if(!card) return;
+    const items = parseInputValue(card.getAttribute('data-est-order-items') || '');
+    const area = (card.getAttribute('data-est-order-area') || '').trim();
+    const input = orderBlock?.querySelector('[data-est-open-modal]') || openInputs[0];
+    if(!input) return;
+    activeInput = input;
+    if(area) setAreaSelect(area);
+    if(area && !/laboratorio/i.test(area)){
+      const key = ensureAreaGroup(area);
+      items.forEach(item=>{
+        if(key) itemGroupMap[item] = key;
+        if(itemOrder[item] == null) itemOrder[item] = orderIndex++;
+      });
+    }
+    setSelection(items, input);
+    if(/laboratorio/i.test(area)){
+      setModalMode('edit');
+      openModal(input);
+      return;
+    }
+    scrollToOrderBlock();
+  });
+
+  pickButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const key = btn.getAttribute('data-est-lab-pick');
+      const items = PICK_MAP[key] || [];
+      addToOrderList(items);
+      items.forEach(item=> setItemChecked(item, true));
+      renderSelected();
+    });
+  });
+  packButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const key = btn.getAttribute('data-est-lab-pack');
+      const items = PACK_MAP[key] || [];
+      addToOrderList(items);
+      items.forEach(item=> setItemChecked(item, true));
+      renderSelected();
+    });
+  });
+  groupButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      groupButtons.forEach(b=> b.classList.remove('active'));
+      btn.classList.add('active');
+      const group = btn.getAttribute('data-est-group');
+      const pane = modalEl.querySelector(`[data-est-group-pane="${group}"]`);
+      const collapse = pane?.querySelector('.accordion-collapse');
+      if(collapse){ try{ new bootstrap.Collapse(collapse, {toggle:true}); }catch(_){ } }
+      pane?.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
+  filterChips.forEach(ch=>{
+    ch.addEventListener('click', ()=> applyFilterChip(ch.dataset.estFilter));
+  });
+  searchInput?.addEventListener('input', (e)=> filterList(e.target.value));
+
+  addBtn?.addEventListener('click', ()=>{
+    const items = getOrderedItems();
+    const input = activeInput || openInputs[0];
+    if(input){ setSelection(items, input); }
+    modal.hide();
+    setTimeout(scrollToOrderBlock, 200);
+  });
+
+  modalEl?.addEventListener('hidden.bs.modal', ()=> setModalMode('add'));
+
+  applyFilterChip('todos');
+  renderSelected();
+  if(openInputs[0]) setSelection(parseInputValue(openInputs[0].value), openInputs[0]);
+
+  window.mxResetEstudios = ()=> {
+    try{
+      const input = openInputs[0];
+      resetSelections();
+      if(input){
+        const defVal = input.defaultValue || '';
+        input.value = defVal;
+        setSelection(parseInputValue(defVal), input);
+      }
+      if(areaSelect) areaSelect.selectedIndex = 0;
+      if(searchInput) searchInput.value = '';
+      applyFilterChip('todos');
+      filterList('');
+      renderSelected();
+      if(orderList && orderListInitial){
+        orderList.innerHTML = orderListInitial;
+      }
+      const inst = window.bootstrap?.Modal?.getInstance ? window.bootstrap.Modal.getInstance(modalEl) : null;
+      inst?.hide();
+    }catch(_){ }
+  };
 })();
