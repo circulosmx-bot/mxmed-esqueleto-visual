@@ -3443,79 +3443,25 @@
 
               <div class="tab-pane fade" id="t-estudios">
                 <div class="est-panel">
-                  <div class="est-actions">
-                    <div class="est-action-card">
-                      <div class="est-action-ttl">Solicitar Estudios</div>
-                      <div class="est-action-txt">Elige un área, marca estudios o usa un paquete preoperatorio. Genera orden en PDF/QR para paciente o centro.</div>
-                      <button class="btn btn-primary btn-sm">Continuar</button>
-                    </div>
-                    <div class="est-action-card">
-                      <div class="est-action-ttl">Cargar Resultados</div>
-                      <div class="est-action-txt">Sube PDF/imagen, captura con tu teléfono o ingresa solo texto. Opcional: vincula a una orden.</div>
-                      <button class="btn btn-outline-primary btn-sm">Continuar</button>
-                    </div>
-                    <div class="est-action-card">
-                      <div class="est-action-ttl">Histórico</div>
-                      <div class="est-action-txt">Revisa estudios previos por área y fecha. Filtra por estado, origen (archivo/foto/texto) y evento.</div>
-                      <button class="btn btn-outline-secondary btn-sm">Continuar</button>
-                    </div>
+                  <div class="est-section-tabs">
+                    <button type="button" class="est-section-tab active" data-est-section="solicitar" data-est-section-desc="Elige un área, marca estudios o usa un paquete preoperatorio. Genera orden en PDF/QR para paciente o centro.">Solicitar estudios</button>
+                    <button type="button" class="est-section-tab" data-est-section="ingresar" data-est-section-desc="Sube PDF/imagen, captura con tu teléfono o ingresa solo texto. Opcional: vincula a una orden.">Ingresar nuevos resultados</button>
+                    <button type="button" class="est-section-tab" data-est-section="previos" data-est-section-desc="Revisa estudios previos por estado, origen y evento. Filtra y archiva para consultas futuras.">Resultados previos</button>
                   </div>
-
-                  <div class="est-block" data-est-order-block>
-                    <div class="est-block-head">
-                      <div class="est-title">Solicitar estudios</div>
-                      <div class="est-head-actions">
-                        <button class="btn btn-outline-secondary btn-sm">Imprimir</button>
-                        <button class="btn btn-outline-primary btn-sm">Compartir / QR</button>
-                      </div>
-                    </div>
-                    <div class="row g-3">
-                      <div class="col-lg-4">
-                        <div class="est-side est-orders">
-                          <div class="est-side-head">Órdenes generadas</div>
-                          <div class="est-orders-list">
-                            <div class="est-order-card est-order--lab" data-est-order-area="Laboratorio" data-est-order-items="BH, Glucosa, Urea, Creatinina, EGO, TP/INR, TTPa, AST/TGO, ALT/TGP, FA, GGT, Bilirrubina total, Bilirrubina directa, Bilirrubina indirecta, Albúmina">
-                              <div class="est-order-head">
-                                <div class="est-order-title"><span class="material-symbols-outlined est-order-ico" aria-hidden="true">science</span><span>Laboratorio · Preop básico</span></div>
-                                <span class="est-order-status est-order-status-ok">Listo</span>
-                              </div>
-                              <button type="button" class="est-order-del" aria-label="Eliminar orden" data-est-order-delete>&times;</button>
-                              <div class="est-order-meta">15 estudios · 04 Feb 2026</div>
-                              <div class="est-order-tags"><span>Química/Hepático (11)</span><span>Hematología (3)</span><span>Orina (1)</span></div>
-                              <div class="est-order-actions">
-                                <button type="button" class="btn btn-outline-primary btn-sm" data-est-order-edit>Ver/Editar</button>
-                                <button class="btn btn-outline-secondary btn-sm">Imprimir</button>
-                                <button class="btn btn-outline-secondary btn-sm">Compartir</button>
-                              </div>
-                            </div>
-                            <div class="est-order-card est-order--img" data-est-order-area="Imagenología" data-est-order-items="Ultrasonido abdominal, RX tórax">
-                              <div class="est-order-head">
-                                <div class="est-order-title"><span class="material-symbols-outlined est-order-ico" aria-hidden="true">radiology</span><span>Imagenología · Control trimestral</span></div>
-                                <span class="est-order-status">Borrador</span>
-                              </div>
-                              <button type="button" class="est-order-del" aria-label="Eliminar orden" data-est-order-delete>&times;</button>
-                              <div class="est-order-meta">2 estudios · 22 Ene 2026</div>
-                              <div class="est-order-tags"><span>USG (1)</span><span>RX (1)</span></div>
-                              <div class="est-order-actions">
-                                <button type="button" class="btn btn-outline-primary btn-sm" data-est-order-edit>Ver/Editar</button>
-                                <button class="btn btn-outline-secondary btn-sm">Imprimir</button>
-                                <button class="btn btn-outline-secondary btn-sm">Compartir</button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    <div class="col-lg-8">
-                      <div class="est-toolbar row g-2 align-items-end">
-                        <div class="col-md-4">
-                          <label class="form-label">Área</label>
-                          <select class="form-select" data-est-area-select>
+                  <div class="est-block" data-est-order-block data-est-section-block="solicitar">
+                    <div class="est-block-head"></div>
+                    <div class="row g-3 align-items-start">
+                      <div class="col-lg-8">
+                        <div class="est-toolbar row g-2 align-items-end">
+                          <div class="col-md-4">
+                            <label class="form-label">Tipo</label>
+                            <select class="form-select" data-est-area-select>
                               <option>Laboratorio</option><option>Imagenología</option><option>Cardiología</option><option>Endoscopía</option><option>Patología</option><option>Genética</option><option>Funcionales</option><option>Otros</option>
                             </select>
                           </div>
                           <div class="col-md-5">
-                          <label class="form-label">Estudios (checklist)</label>
-                            <input class="form-control" placeholder="Busca y marca del catálogo" data-est-open-modal>
+                            <label class="form-label">Listado de Estudios</label>
+                            <input class="form-control" placeholder="Buscar y seleccionar estudios del catálogo" data-est-open-modal>
                           </div>
                           <div class="col-md-3">
                             <label class="form-label">Prioridad</label>
@@ -3532,6 +3478,8 @@
                               <div class="est-summary-head">
                                 <div class="est-summary-title">Resumen de selección <span class="est-summary-count" data-est-count>(0)</span></div>
                                 <div class="est-summary-actions">
+                                  <button type="button" class="btn btn-outline-secondary btn-sm">Imprimir</button>
+                                  <button type="button" class="btn btn-outline-primary btn-sm">Compartir / QR</button>
                                   <button type="button" class="btn btn-outline-primary btn-sm" data-est-edit>Editar selección</button>
                                   <button type="button" class="btn btn-outline-secondary btn-sm" data-est-clear>Limpiar</button>
                                 </div>
@@ -3540,24 +3488,57 @@
                             </div>
                           </div>
                         </div>
-                        <div class="est-card-actions justify-content-start mt-2">
-                          <button class="btn btn-outline-secondary btn-sm">Guardar borrador</button>
-                          <button class="btn btn-primary btn-sm">Generar orden</button>
+                      </div>
+                      <div class="col-lg-4">
+                        <div class="est-side est-orders">
+                          <div class="est-side-head">Órdenes generadas</div>
+                          <div class="est-orders-list">
+                            <div class="est-order-card est-order--lab" data-est-order-area="Laboratorio" data-est-order-items="BH, Glucosa, Urea, Creatinina, EGO, TP/INR, TTPa, AST/TGO, ALT/TGP, FA, GGT, Bilirrubina total, Bilirrubina directa, Bilirrubina indirecta, Albúmina">
+                              <div class="est-order-head">
+                                <div class="est-order-title"><span class="material-symbols-outlined est-order-ico" aria-hidden="true">science</span><span>Laboratorio · Preop básico</span></div>
+                              </div>
+                              <button type="button" class="est-order-del" aria-label="Eliminar orden" data-est-order-delete>&times;</button>
+                              <div class="est-order-meta">15 estudios · 04 Feb 2026</div>
+                              <div class="est-order-tags"><span>Química/Hepático (11)</span><span>Hematología (3)</span><span>Orina (1)</span><span>Endocrino (2)</span><span>Inmuno (1)</span><span>Serología (2)</span><span>Microbiología (1)</span><span>Genética (1)</span><span>Tumorales (1)</span></div>
+                              <div class="est-order-actions">
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-est-order-edit>Ver/Editar</button>
+                                <button class="btn btn-outline-secondary btn-sm">Imprimir</button>
+                                <button class="btn btn-outline-secondary btn-sm">Compartir</button>
+                              </div>
+                            </div>
+                            <div class="est-order-card est-order--img" data-est-order-area="Imagenología" data-est-order-items="Ultrasonido abdominal, RX tórax">
+                              <div class="est-order-head">
+                                <div class="est-order-title"><span class="material-symbols-outlined est-order-ico" aria-hidden="true">radiology</span><span>Imagenología · Control trimestral</span></div>
+                              </div>
+                              <button type="button" class="est-order-del" aria-label="Eliminar orden" data-est-order-delete>&times;</button>
+                              <div class="est-order-meta">2 estudios · 22 Ene 2026</div>
+                              <div class="est-order-tags"><span>USG (1)</span><span>RX (1)</span></div>
+                              <div class="est-order-actions">
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-est-order-edit>Ver/Editar</button>
+                                <button class="btn btn-outline-secondary btn-sm">Imprimir</button>
+                                <button class="btn btn-outline-secondary btn-sm">Compartir</button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div class="est-block">
+                  <div class="est-block d-none" data-est-section-block="ingresar">
                     <div class="est-block-head">
-                      <div class="est-title">Cargar resultados</div>
                       <div class="est-head-actions">
                         <button class="btn btn-outline-secondary btn-sm">Ver órdenes abiertas</button>
                       </div>
                     </div>
+                    <div class="est-block-desc">Sube PDF/imagen, captura con tu teléfono o ingresa solo texto. Opcional: vincula a una orden.</div>
+                    <div class="est-block-controls">
+                      <button class="btn btn-outline-secondary btn-sm">Imprimir</button>
+                      <button class="btn btn-outline-primary btn-sm">Compartir / QR</button>
+                    </div>
                     <div class="row g-2 est-card-body">
                       <div class="col-md-4">
-                        <label class="form-label">Área</label>
+                        <label class="form-label">Tipo</label>
                         <select class="form-select form-select-sm">
                           <option>Laboratorio</option><option>Imagenología</option><option>Cardiología</option><option>Endoscopía</option><option>Patología</option><option>Genética</option><option>Funcionales</option><option>Otros</option>
                         </select>
@@ -3617,16 +3598,16 @@
                     </div>
                   </div>
 
-                  <div class="est-block">
+                  <div class="est-block d-none" data-est-section-block="previos">
                     <div class="est-block-head">
-                      <div class="est-title">Histórico</div>
                       <div class="est-head-actions">
                         <button class="btn btn-outline-secondary btn-sm">Archivados</button>
                       </div>
                     </div>
+                    <div class="est-block-desc">Revisa estudios previos por estado, origen y evento. Filtra y archiva para consultas futuras.</div>
                     <div class="est-toolbar row g-2 align-items-end">
                       <div class="col-md-3">
-                        <label class="form-label">Área</label>
+                        <label class="form-label">Tipo</label>
                         <select class="form-select">
                           <option>Todas</option><option>Laboratorio</option><option>Imagenología</option><option>Cardiología</option><option>Endoscopía</option><option>Patología</option><option>Genética</option><option>Funcionales</option><option>Otros</option>
                         </select>
@@ -3651,6 +3632,10 @@
                           <option>Todos</option><option>Pendiente</option><option>Validado</option><option>Archivado</option>
                         </select>
                       </div>
+                    </div>
+                    <div class="est-block-controls est-block-controls--timeline">
+                      <button class="btn btn-outline-secondary btn-sm">Imprimir</button>
+                      <button class="btn btn-outline-primary btn-sm">Compartir / QR</button>
                     </div>
 
                     <div class="est-timeline mt-2">
@@ -4031,7 +4016,7 @@
                     </div>
                     <div class="modal-footer">
                       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                      <button type="button" class="btn btn-primary">Añadir a la orden</button>
+                      <button type="button" class="btn btn-primary">Generar orden</button>
                     </div>
                   </div>
                 </div>
@@ -4431,32 +4416,6 @@
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

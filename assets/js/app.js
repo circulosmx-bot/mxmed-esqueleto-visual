@@ -4088,7 +4088,7 @@ function mxResetLogoPreview(){
   function setModalMode(mode){
     modalMode = mode === 'edit' ? 'edit' : 'add';
     if(addBtn){
-      addBtn.textContent = modalMode === 'edit' ? 'Actualizar orden' : 'Añadir a la orden';
+      addBtn.textContent = modalMode === 'edit' ? 'Actualizar orden' : 'Generar orden';
     }
   }
   function normalizeItems(items){
@@ -4344,8 +4344,13 @@ function mxResetLogoPreview(){
     const input = activeInput || openInputs[0];
     if(input) openModal(input);
   });
-  summaryClear?.addEventListener('click', ()=> {
+  summaryClear?.addEventListener('click', ()=>{
     const input = activeInput || openInputs[0];
+    const selected = getOrderedItems();
+    if(selected.length){
+      const confirmed = window.confirm('¿Limpiar la selección eliminará los estudios marcados y no podrás recuperarlos. ¿Deseas continuar?');
+      if(!confirmed) return;
+    }
     setSelection([], input);
   });
   orderList?.addEventListener('click', (e)=>{
@@ -4353,9 +4358,9 @@ function mxResetLogoPreview(){
     if(!btn) return;
     const card = btn.closest('.est-order-card');
     if(!card) return;
-    if(window.confirm('¿Eliminar esta orden? Esta acción no se puede deshacer.')){
-      card.remove();
-    }
+      if(window.confirm('¿Eliminar esta orden? Esta acción no se puede deshacer.')){
+        card.remove();
+      }
   });
   orderList?.addEventListener('click', (e)=>{
     const btn = e.target.closest('[data-est-order-edit]');
@@ -4431,7 +4436,6 @@ function mxResetLogoPreview(){
   applyFilterChip('todos');
   renderSelected();
   if(openInputs[0]) setSelection(parseInputValue(openInputs[0].value), openInputs[0]);
-
   window.mxResetEstudios = ()=> {
     try{
       const input = openInputs[0];
@@ -4453,4 +4457,24 @@ function mxResetLogoPreview(){
       inst?.hide();
     }catch(_){ }
   };
+})();
+
+(function(){
+  const desc = document.querySelector('[data-est-section-desc-target]');
+  const tabs = Array.from(document.querySelectorAll('.est-section-tab[data-est-section]'));
+  const sections = Array.from(document.querySelectorAll('[data-est-section-block]'));
+  if(!desc || !tabs.length || !sections.length) return;
+  const show = (key)=>{
+    if(!key) return;
+    const active = tabs.find(tab=> tab.dataset.estSection === key);
+    tabs.forEach(tab=> tab.classList.toggle('active', tab === active));
+    sections.forEach(section=> section.classList.toggle('d-none', section.dataset.estSectionBlock !== key));
+    if(active?.dataset.estSectionDesc){
+      desc.textContent = active.dataset.estSectionDesc;
+    }
+  };
+  tabs.forEach(tab=>{
+    tab.addEventListener('click', ()=> show(tab.dataset.estSection));
+  });
+  show(tabs[0].dataset.estSection);
 })();

@@ -3303,13 +3303,13 @@ body{margin:0;background:var(--mm-fondo-base);}
 .est-action-ttl{ font-weight:800; color:#005275; }
 .est-action-txt{ font-size:0.85rem; color:#4d5965; }
 .est-block{
-  background:#fff;
-  border:1px solid #cfe9f0;
-  border-radius:12px;
-  padding:12px;
-  margin-top:12px;
-  box-shadow:0 8px 18px rgba(0,0,0,.04);
-  transition:box-shadow .2s ease;
+  background:transparent;
+  border:0;
+  border-radius:0;
+  padding:12px 0;
+  margin-top:-2px;
+  box-shadow:none;
+  transition:none;
 }
 .est-block-head{
   display:flex;
@@ -3358,7 +3358,39 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 .est-panel{
   display:grid;
-  gap:14px;
+  gap:4px;
+}
+.est-section-tabs{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.est-section-tab{
+  border-radius:999px;
+  border:1px solid #b6dfe9;
+  padding:8px 16px;
+  background:#fff;
+  color:#005275;
+  font-weight:600;
+  cursor:pointer;
+}
+.est-section-tab.active{
+  background:#00b0c5;
+  color:#fff;
+  border-color:#00b0c5;
+}
+.est-block-desc{
+  font-size:0.82rem;
+  color:#4d5965;
+  margin:8px 0 6px;
+}
+.est-block-controls{
+  margin-bottom:10px;
+  display:flex;
+  gap:6px;
+}
+.est-block-controls--timeline{
+  justify-content:flex-end;
 }
 .est-toolbar{
   background:#f7fcff;
@@ -3512,12 +3544,22 @@ body{margin:0;background:var(--mm-fondo-base);}
   color:#005275;
   margin-bottom:8px;
 }
+.est-block .row.align-items-start > .col-lg-4,
+.est-block .row.align-items-start > .col-lg-8{
+  display:flex;
+  flex-direction:column;
+}
+.est-side,
+.est-toolbar{
+  margin-top:0;
+}
 .est-orders-list{
   display:grid;
-  gap:8px;
+  gap:12px;
   max-height:320px;
   overflow:auto;
   padding-right:4px;
+  margin-top:-4px;
 }
 .est-order-card{
   border:1px solid #cfe9f0;
@@ -3578,6 +3620,8 @@ body{margin:0;background:var(--mm-fondo-base);}
   flex-wrap:wrap;
   gap:4px;
   margin-top:4px;
+  max-height:48px;
+  overflow:hidden;
 }
 .est-order-tags span{
   background:#e6f7fb;
@@ -3586,6 +3630,10 @@ body{margin:0;background:var(--mm-fondo-base);}
   padding:2px 6px;
   font-size:0.7rem;
   color:#005275;
+  display:inline-flex;
+  align-items:center;
+  height:22px;
+  line-height:1;
 }
 .est-order-actions{
   display:flex;
