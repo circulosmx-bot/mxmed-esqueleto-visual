@@ -4030,26 +4030,682 @@ function mxResetLogoPreview(){
 
 // ====== Estudios: modal catálogo laboratorio ======
 (function(){
-  const modalEl = document.getElementById('modalEstudiosLab');
-  if(!modalEl || !window.bootstrap) return;
-  const openInputs = Array.from(document.querySelectorAll('[data-est-open-modal]'));
-  if(!openInputs.length) return;
+  if(!window.bootstrap) return;
 
-  const modal = new bootstrap.Modal(modalEl);
-  const checkboxes = Array.from(modalEl.querySelectorAll('input[type="checkbox"][data-est-item]'));
-  const selectedWrap = modalEl.querySelector('[data-est-selected]');
-  const modalCount = modalEl.querySelector('[data-est-modal-count]');
-  const addBtn = modalEl.querySelector('.modal-footer .btn-primary');
-  const searchInput = modalEl.querySelector('[data-est-lab-search]');
-  const groupButtons = Array.from(modalEl.querySelectorAll('[data-est-group]'));
-  const filterChips = Array.from(modalEl.querySelectorAll('.est-chip-filter'));
-  const pickButtons = Array.from(modalEl.querySelectorAll('[data-est-lab-pick]'));
-  const packButtons = Array.from(modalEl.querySelectorAll('[data-est-lab-pack]'));
-  const favBox = modalEl.querySelector('.est-lab-fav');
-  const favFre = modalEl.querySelector('[data-est-fav="frecuentes"]');
-  const favPack = modalEl.querySelector('[data-est-fav="paquetes"]');
-  const groupCol = modalEl.querySelector('.est-lab-groups')?.closest('.col-md-3');
-  const accordionCol = modalEl.querySelector('#estLabAccordion')?.closest('.col-md-9');
+  const PICK_MAP_LAB = {
+    'Biometría hemática (BH / CBC)': ['Biometría hemática (BH / CBC)'],
+    'EGO (examen general de orina)': ['EGO (examen general de orina)'],
+    'HbA1c': ['HbA1c'],
+    'PCR ultrasensible': ['PCR ultrasensible']
+  };
+  const PACK_MAP_LAB = {
+    'QS (Glucosa, Urea, Creatinina)': ['Glucosa','Urea','Creatinina'],
+    'Perfil lipídico': ['Colesterol total','HDL','LDL','Triglicéridos','Colesterol no-HDL'],
+    'Perfil hepático': ['AST (TGO)','ALT (TGP)','Fosfatasa alcalina (ALP)','GGT','Bilirrubina total','Albúmina','Proteínas totales'],
+    'Perfil tiroideo': ['TSH','T4 libre'],
+    'Control de diabetes': ['Glucosa','HbA1c','EGO (examen general de orina)','Microalbuminuria'],
+    'ETS básico': ['VIH Ag/Ac','VDRL / RPR','HBsAg','VHC (anticuerpos)'],
+    'Preop básico': ['Biometría hemática (BH / CBC)','TP / INR','TTPa (aPTT)','Glucosa','Creatinina'],
+    'Preop gineco': ['Biometría hemática (BH / CBC)','TP / INR','TTPa (aPTT)','Glucosa','Creatinina','β-hCG','EGO (examen general de orina)'],
+    'Preop ortopedia': ['Biometría hemática (BH / CBC)','TP / INR','TTPa (aPTT)','Glucosa','Creatinina','Sodio','Potasio'],
+    'Reuma básico': ['ANA','Factor reumatoide','VSG','PCR ultrasensible','Anti-CCP'],
+    'Embarazo básico': ['β-hCG','VIH Ag/Ac','VDRL / RPR','HBsAg','Anti-HBs','EGO (examen general de orina)'],
+    'Panel viral respiratorio': ['Influenza A','Influenza B','RSV','SARS-CoV-2 (COVID-19)'],
+    'TORCH': ['Toxoplasma','Rubéola','CMV','Herpes'],
+    'Panel infeccioso PCR': ['SARS-CoV-2 (COVID-19)','Influenza A','Influenza B','RSV'],
+    'Panel trombofilia': ['Factor V Leiden','Proteína C','Proteína S'],
+    'Panel farmacogenómico': ['CYP2C19','CYP2D6']
+  };
+  const LAB_SEARCH_CONFIG = {
+    minChars: 2,
+    maxResults: 12,
+    boosts: {
+      labelPrefix: 3,
+      labelContains: 1,
+      aliasPrefix: 4,
+      aliasContains: 2
+    }
+  };
+  const LAB_SEARCH_META = {
+    glucose: { aliases: ['glu','glucosa en sangre'] },
+    hba1c: { aliases: ['a1c','hemoglobina glicosilada'] },
+    fructosamine: { aliases: ['fructosamina'] },
+    ogtt: { aliases: ['curva glucosa','tolerancia a la glucosa','ogtt'] },
+    urea: { aliases: ['urea'] },
+    creatinine: { aliases: ['creat','creatinina'] },
+    egfr: { aliases: ['tfg','egfr'] },
+    bun: { aliases: ['bun','nitrogeno ureico'] },
+    uric_acid: { aliases: ['urico','ácido úrico'] },
+    sodium: { aliases: ['na','sodio'] },
+    potassium: { aliases: ['k','potasio'] },
+    chloride: { aliases: ['cl','cloro'] },
+    calcium: { aliases: ['ca','calcio'] },
+    magnesium: { aliases: ['mg','magnesio'] },
+    phosphorus: { aliases: ['p','fosforo','fósforo'] },
+    chol_total: { aliases: ['col total','colesterol total'] },
+    hdl: { aliases: ['hdl','hdl-c'] },
+    ldl: { aliases: ['ldl','ldl-c'] },
+    triglycerides: { aliases: ['tgs','trigs','trigliceridos','triglicéridos'] },
+    non_hdl: { aliases: ['no hdl','col no hdl'] },
+    ast: { aliases: ['tgo','ast'] },
+    alt: { aliases: ['tgp','alt'] },
+    alp: { aliases: ['fosfatasa','alp'] },
+    ggt: { aliases: ['ggt'] },
+    bilirubin_total: { aliases: ['bt','bilirrubina total'] },
+    bilirubin_direct: { aliases: ['bd','bilirrubina directa'] },
+    bilirubin_indirect: { aliases: ['bi','bilirrubina indirecta'] },
+    albumin: { aliases: ['alb','albumina','albúmina'] },
+    total_protein: { aliases: ['pt','proteinas totales','proteínas totales'] },
+    amylase: { aliases: ['amilasa'] },
+    lipase: { aliases: ['lipasa'] },
+    cbc: { aliases: ['bh','cbc','hemograma','biometria hematica','biometría hemática'] },
+    hgb_hct: { aliases: ['hb','hcto','hemoglobina','hematocrito'] },
+    platelets: { aliases: ['plt','plaquetas'] },
+    iron: { aliases: ['fe','hierro'] },
+    tibc: { aliases: ['tibc','ctfh'] },
+    transferrin_sat: { aliases: ['sat transferrina','saturacion transferrina','saturación transferrina'] },
+    ferritin: { aliases: ['ferritina'] },
+    pt_inr: { aliases: ['tp','inr'] },
+    aptt: { aliases: ['tt pa','aptt','ttpt','ttpa'] },
+    fibrinogen: { aliases: ['fibrinogeno','fibrinógeno'] },
+    d_dimer: { aliases: ['d dimer','dimero d','dímero d'] },
+    tsh: { aliases: ['tsh'] },
+    ft4: { aliases: ['t4l','ft4','t4 libre'] },
+    ft3: { aliases: ['t3l','ft3','t3 libre'] },
+    anti_tpo: { aliases: ['tpo','anti tpo'] },
+    anti_tg: { aliases: ['anti tg','anti tiroglobulina'] },
+    bhcg: { aliases: ['bhcg','beta hcg','β-hcg'] },
+    lh: { aliases: ['lh'] },
+    fsh: { aliases: ['fsh'] },
+    prolactin: { aliases: ['prl','prolactina'] },
+    estradiol: { aliases: ['e2','estradiol'] },
+    progesterone: { aliases: ['p4','progesterona'] },
+    testosterone_total: { aliases: ['testo total','testosterona total'] },
+    testosterone_free: { aliases: ['testo libre','testosterona libre'] },
+    crp_hs: { aliases: ['pcr us','pcr-us','hs-crp','pcr ultrasensible'] },
+    esr: { aliases: ['vsg','esr','eritrosedimentacion','eritrosedimentación'] },
+    ana: { aliases: ['ana'] },
+    ena: { aliases: ['ena'] },
+    anca: { aliases: ['anca'] },
+    rf: { aliases: ['fr','rf','factor reumatoide'] },
+    anti_ccp: { aliases: ['ccp','anti ccp'] },
+    c3: { aliases: ['c3'] },
+    c4: { aliases: ['c4'] },
+    vitamin_d: { aliases: ['25-oh','25oh vitamina d','vit d'] },
+    vitamin_b12: { aliases: ['b12','vit b12'] },
+    folate: { aliases: ['folato','acido folico','ácido fólico'] },
+    igg: { aliases: ['igg'] },
+    iga: { aliases: ['iga'] },
+    igm: { aliases: ['igm'] },
+    hiv_ag_ac: { aliases: ['vih','hiv','vih ag/ac','hiv ag/ac'] },
+    vdrl_rpr: { aliases: ['vdrl','rpr'] },
+    hbsag: { aliases: ['hbsag','hepatitis b s ag'] },
+    anti_hbs: { aliases: ['anti hbs','anti-hbs'] },
+    anti_hbc: { aliases: ['anti hbc','anti-hbc'] },
+    hcv_ab: { aliases: ['vhc','hcv','anti hcv'] },
+    toxoplasma: { aliases: ['toxoplasma'] },
+    rubella: { aliases: ['rubeola','rubéola','rubella'] },
+    cmv: { aliases: ['cmv','citomegalovirus'] },
+    herpes: { aliases: ['herpes'] },
+    influenza_a: { aliases: ['influenza a','flu a'] },
+    influenza_b: { aliases: ['influenza b','flu b'] },
+    rsv: { aliases: ['rsv','virus sincitial'] },
+    covid19: { aliases: ['covid','covid-19','sars-cov-2'] },
+    urine_culture: { aliases: ['urocultivo'] },
+    blood_culture: { aliases: ['hemocultivo'] },
+    stool_culture: { aliases: ['coprocultivo'] },
+    throat_swab: { aliases: ['exudado faringeo','faríngeo'] },
+    vaginal_swab: { aliases: ['exudado vaginal'] },
+    urinalysis: { aliases: ['ego','urinalisis','urinalysis','examen general de orina'] },
+    microalbumin: { aliases: ['microalbumina','microalbuminuria'] },
+    fecal_occult_blood: { aliases: ['soh','sangre oculta','sangre oculta en heces'] },
+    stool_ova_parasites: { aliases: ['coproparasitoscopico','coproparasitoscópico','parasitos'] },
+    factor_v_leiden: { aliases: ['factor v leiden'] },
+    protein_c: { aliases: ['proteina c','proteína c'] },
+    protein_s: { aliases: ['proteina s','proteína s'] },
+    cyp2c19: { aliases: ['cyp2c19'] },
+    cyp2d6: { aliases: ['cyp2d6'] }
+  };
+  const LAB_PACKAGE_META = {
+    'QS (Glucosa, Urea, Creatinina)': { aliases: ['qs','bmp','quimica sanguinea','química sanguínea'] },
+    'Perfil lipídico': { aliases: ['perfil lipidico','lipid panel','p lipidico'] },
+    'Perfil hepático': { aliases: ['perfil hepatico','perfil hepático','pfh','funcion hepatica','función hepática'] },
+    'Perfil tiroideo': { aliases: ['perfil tiroideo','tiroides','pt'] },
+    'Control de diabetes': { aliases: ['control diabetes','diabetes'] },
+    'ETS básico': { aliases: ['ets','its','std'] },
+    'Preop básico': { aliases: ['preop','preoperatorio','preop basico'] },
+    'Preop gineco': { aliases: ['preop gineco','preoperatorio gineco'] },
+    'Preop ortopedia': { aliases: ['preop ortopedia','preoperatorio ortopedia'] },
+    'Reuma básico': { aliases: ['reuma','reumatologia','reuma basico'] },
+    'Embarazo básico': { aliases: ['embarazo','prenatal'] },
+    'Panel viral respiratorio': { aliases: ['panel viral','respiratorio','influenza','covid'] },
+    'TORCH': { aliases: ['torch'] },
+    'Panel infeccioso PCR': { aliases: ['pcr','panel pcr','panel infeccioso'] },
+    'Panel trombofilia': { aliases: ['trombofilia','trombofilia panel'] },
+    'Panel farmacogenómico': { aliases: ['farmacogenomica','farmacogenómica','pgx'] }
+  };
+  const PICK_MAP_IMG = {
+    'RX Tórax': ['RX Tórax'],
+    'US Abdomen': ['US Abdomen'],
+    'TAC Tórax': ['TAC Tórax'],
+    'RM Cerebro': ['RM Cerebro'],
+    'Mamografía': ['Mamografía']
+  };
+  const PACK_MAP_IMG = {
+    'Control trimestral imagen': ['RX Tórax','US Abdomen','RM Columna (segmento)'],
+    'Preop imagen': ['RX Abdomen','US Obstétrico','TAC Abdomen y pelvis'],
+    'Gabinete vascular': ['Doppler carotídeo','Doppler venoso MI (TVP)','Doppler arterial MI']
+  };
+  const PICK_MAP_CARDIO = {};
+  const PACK_MAP_CARDIO = {};
+  const PICK_MAP_ENDO = {};
+  const PACK_MAP_ENDO = {};
+  const PICK_MAP_PAT = {
+    'Biopsia gastrointestinal': ['Biopsia gastrointestinal'],
+    'Pieza quirúrgica (general)': ['Pieza quirúrgica (general)'],
+    'PAAF / BACAF (aspiración con aguja fina)': ['PAAF / BACAF (aspiración con aguja fina)'],
+    'Revisión de laminillas (segunda opinión)': ['Revisión de laminillas (segunda opinión)']
+  };
+  const PACK_MAP_PAT = {
+    'Pieza oncológica completa (márgenes + IHQ si se requiere)': ['Pieza oncológica (resección)'],
+    'Biopsia renal completa (incluye IF si aplica)': ['Biopsia renal'],
+    'Transoperatorio (congelación)': ['Pieza quirúrgica (general)']
+  };
+  const PACK_FLAG_MAP_PAT = {
+    'Pieza oncológica completa (márgenes + IHQ si se requiere)': ['margins'],
+    'Biopsia renal completa (incluye IF si aplica)': ['immunofluorescence'],
+    'Transoperatorio (congelación)': ['frozen_section']
+  };
+  const modalConfigs = [
+    { key:'lab', id:'modalEstudiosLab', accordionId:'estLabAccordion', pickMap:PICK_MAP_LAB, packMap:PACK_MAP_LAB, packFlagMap:{} },
+    { key:'imagenologia', id:'modalEstudiosImg', panelSelector:'[data-est-modality-panels]', pickMap:PICK_MAP_IMG, packMap:PACK_MAP_IMG, packFlagMap:{} },
+    { key:'cardiologia', id:'modalEstudiosCardio', panelSelector:'[data-est-modality-panels]', pickMap:PICK_MAP_CARDIO, packMap:PACK_MAP_CARDIO, packFlagMap:{} },
+    { key:'endoscopia', id:'modalEstudiosEndo', panelSelector:'[data-est-modality-panels]', pickMap:PICK_MAP_ENDO, packMap:PACK_MAP_ENDO, packFlagMap:{} },
+    { key:'patologia', id:'modalEstudiosPat', panelSelector:'[data-est-modality-panels]', pickMap:PICK_MAP_PAT, packMap:PACK_MAP_PAT, packFlagMap:PACK_FLAG_MAP_PAT }
+  ];
+  const flagLabels = {
+    priority_routine: 'Rutinario',
+    priority_urgent: 'Urgente',
+    priority_stat: 'Prioridad (STAT)',
+    second_opinion: 'Segunda opinión',
+    clinicopath_correlation: 'Con correlación clínica',
+    diagnostic: 'Diagnóstica',
+    therapeutic: 'Terapéutica',
+    with_contrast: 'Con contraste',
+    without_contrast: 'Sin contraste',
+    right: 'Derecha',
+    left: 'Izquierda',
+    bilateral: 'Bilateral',
+    with_biopsy: 'Con biopsia',
+    with_polypectomy: 'Con polipectomía',
+    with_hemostasis: 'Hemostasia',
+    with_dilation: 'Con dilatación',
+    with_stent: 'Colocación de stent',
+    with_foreign_body: 'Extracción de cuerpo extraño',
+    with_variceal_band: 'Ligadura de várices',
+    with_injection_therapy: 'Terapia de inyección',
+    with_clips: 'Clips / endoclips',
+    with_tattoo: 'Tatuaje endoscópico',
+    with_chromoendoscopy: 'Cromoendoscopia',
+    with_image_enhancement: 'Realce de imagen (NBI/i-Scan)',
+    with_report: 'Con interpretación',
+    without_report: 'Sin interpretación',
+    resting: 'En reposo',
+    followup: 'Control / seguimiento',
+    fasting: 'Ayuno',
+    serial: 'Seriado',
+    first_morning: 'Primera muestra de la mañana',
+    with_antibiogram: 'Con antibiograma',
+    laterality_right: 'Derecha',
+    laterality_left: 'Izquierda',
+    laterality_bilateral: 'Bilateral',
+    contrast_with: 'Con contraste',
+    contrast_without: 'Sin contraste',
+    contrast_with_without: 'Con y sin contraste',
+    rx_pa: 'PA',
+    rx_ap: 'AP',
+    rx_lateral: 'Lateral',
+    rx_pa_lateral: 'PA + lateral',
+    rx_oblique: 'Oblicuas',
+    rx_portable: 'Portátil',
+    rx_weight_bearing: 'Con carga',
+    rx_two_views: '2 vistas',
+    us_doppler: 'Con Doppler',
+    us_color_doppler: 'Doppler color',
+    us_arterial: 'Doppler arterial',
+    us_venous: 'Doppler venoso',
+    us_transvaginal: 'Transvaginal',
+    us_transrectal: 'Transrectal',
+    us_obstetric: 'Obstétrico',
+    ct_angio: 'Angio-TAC',
+    ct_phase_arterial: 'Fase arterial',
+    ct_phase_venous: 'Fase venosa',
+    ct_phase_delayed: 'Fase tardía',
+    mr_angio: 'Angio-RM',
+    mr_diffusion: 'Difusión (DWI)',
+    mammo_screening: 'Tamizaje',
+    mammo_diagnostic: 'Diagnóstica',
+    mammo_tomo: 'Con tomosíntesis',
+    vascular_color_doppler: 'Doppler color',
+    vascular_spectral: 'Doppler espectral',
+    vascular_arterial: 'Arterial',
+    vascular_venous: 'Venoso',
+    nm_with_ct: 'Con CT (atenuación)',
+    pet_fdg: 'FDG',
+    dexa_spine: 'Columna',
+    dexa_hip: 'Cadera',
+    dexa_whole_body: 'Cuerpo completo',
+    with_color_doppler: 'Con Doppler color',
+    with_tissue_doppler: 'Con Doppler tisular',
+    with_strain: 'Con Strain/GLS',
+    bubble_study: 'Estudio con burbujas (shunt)',
+    margin_assessment: 'Evaluación de márgenes',
+    oriented_margins: 'Márgenes orientados',
+    decalcification: 'Con decalcificación',
+    add_ihc: 'Agregar IHQ/IHC',
+    add_special_stains: 'Agregar tinciones especiales',
+    frozen_section: 'Transoperatorio / congelación',
+    margins: 'Evaluación de márgenes',
+    ihc: 'Con inmunohistoquímica (IHQ)',
+    special_stains: 'Con tinciones especiales',
+    ihc_single_marker: 'IHQ: marcador único',
+    ihc_panel: 'IHQ: panel',
+    ihc_breast_panel: 'IHQ: mama (ER/PR/HER2 ± Ki-67)',
+    ihc_lung_panel: 'IHQ: pulmón (TTF-1/Napsina/P40)',
+    ihc_lymphoma_panel: 'IHQ: linfoma (básico)',
+    stain_pas: 'Tinción PAS',
+    stain_zn: 'Ziehl-Neelsen (BAAR)',
+    stain_gms: 'GMS (hongos)',
+    stain_trichrome: 'Tricrómico (Masson)',
+    stain_congo: 'Rojo Congo (amiloide)',
+    stain_gram: 'Gram',
+    intraoperative: 'Transoperatorio',
+    with_bal: 'Con lavado broncoalveolar (BAL)',
+    with_tbna: 'Con TBNA (aspiración)',
+    with_ebus: 'Con EBUS',
+    immunofluorescence: 'Con inmunofluorescencia',
+    external_review: 'Revisión externa / segunda opinión',
+    block_additional: 'Cortes/bloques adicionales',
+    with_sedation: 'Con sedación',
+    without_sedation: 'Sin sedación',
+    anesthesia: 'Con anestesia',
+    with_doppler: 'Con Doppler',
+    rest: 'Reposo',
+    stress: 'Esfuerzo',
+    adult: 'Adulto',
+    pediatric: 'Pediátrico',
+    ambulatory: 'Ambulatorio',
+    in_hospital: 'Hospitalizado',
+    holter_24h: '24 horas',
+    holter_48h: '48 horas',
+    holter_72h: '72 horas',
+    holter_7d: '7 días',
+    event_monitor: 'Monitor de eventos',
+    exercise_treadmill: 'Banda (treadmill)',
+    exercise_bike: 'Bicicleta',
+    stress_exercise: 'Estrés por ejercicio',
+    stress_pharmacologic: 'Estrés farmacológico',
+    pharm_dobutamine: 'Dobutamina',
+    pharm_dipyridamole: 'Dipiridamol',
+    pharm_adenosine: 'Adenosina',
+    mapa_24h: 'MAPA 24h',
+    mapa_48h: 'MAPA 48h',
+    urgent: 'Urgente'
+  };
+  const endoscopyFlagOrder = [
+    'diagnostic',
+    'therapeutic',
+    'with_biopsy',
+    'with_polypectomy',
+    'with_hemostasis',
+    'with_dilation',
+    'with_stent',
+    'with_foreign_body',
+    'with_variceal_band',
+    'with_injection_therapy',
+    'with_clips',
+    'with_tattoo',
+    'with_chromoendoscopy',
+    'with_image_enhancement',
+    'with_bal',
+    'with_tbna',
+    'with_ebus',
+    'with_sedation',
+    'without_sedation',
+    'anesthesia',
+    'urgent',
+    'followup',
+    'adult',
+    'pediatric'
+  ];
+  const pathologyFlagOrder = [
+    'urgent',
+    'followup',
+    'frozen_section',
+    'margins',
+    'ihc',
+    'special_stains',
+    'decalcification',
+    'immunofluorescence',
+    'external_review',
+    'block_additional'
+  ];
+  const cardiologyFlagOrder = [
+    'priority_routine',
+    'priority_urgent',
+    'priority_stat',
+    'adult',
+    'pediatric',
+    'with_report',
+    'without_report',
+    'resting',
+    'holter_24h',
+    'holter_48h',
+    'holter_72h',
+    'holter_7d',
+    'event_monitor',
+    'with_doppler',
+    'with_color_doppler',
+    'with_tissue_doppler',
+    'with_strain',
+    'with_contrast',
+    'bubble_study',
+    'exercise_treadmill',
+    'exercise_bike',
+    'stress_exercise',
+    'stress_pharmacologic',
+    'pharm_dobutamine',
+    'pharm_dipyridamole',
+    'pharm_adenosine',
+    'with_sedation',
+    'without_sedation',
+    'anesthesia',
+    'followup'
+  ];
+  const imagingFlagOrder = [
+    'priority_urgent',
+    'followup',
+    'laterality_right',
+    'laterality_left',
+    'laterality_bilateral',
+    'rx_two_views',
+    'rx_pa',
+    'rx_ap',
+    'rx_lateral',
+    'rx_pa_lateral',
+    'rx_oblique',
+    'rx_portable',
+    'rx_weight_bearing',
+    'contrast_with_without',
+    'contrast_with',
+    'contrast_without',
+    'ct_angio',
+    'ct_phase_arterial',
+    'ct_phase_venous',
+    'ct_phase_delayed',
+    'us_transvaginal',
+    'us_transrectal',
+    'us_obstetric',
+    'mr_angio',
+    'mr_diffusion',
+    'mammo_screening',
+    'mammo_diagnostic',
+    'mammo_tomo',
+    'vascular_color_doppler',
+    'vascular_spectral',
+    'vascular_arterial',
+    'vascular_venous',
+    'nm_with_ct',
+    'pet_fdg',
+    'dexa_spine',
+    'dexa_hip',
+    'dexa_whole_body'
+  ];
+  const labFlagOrder = [
+    'fasting',
+    'urgent',
+    'followup',
+    'serial',
+    'first_morning',
+    'with_antibiogram'
+  ];
+  const LAB_FLAG_VISIBILITY = {
+    generalFlags: [
+      'fasting',
+      'urgent',
+      'followup'
+    ],
+    applicability: {
+      glucose: ['fasting','serial'],
+      ogtt: ['fasting','serial'],
+      urinalysis: ['first_morning'],
+      microalbumin: ['first_morning'],
+      urine_culture: ['with_antibiogram'],
+      blood_culture: ['with_antibiogram'],
+      stool_culture: ['with_antibiogram'],
+      throat_swab: ['with_antibiogram'],
+      vaginal_swab: ['with_antibiogram']
+    }
+  };
+  const PATHOLOGY_FLAG_VISIBILITY = {
+    generalFlags: [
+      'urgent',
+      'followup'
+    ],
+    applicability: {
+      bx_soft_tissue: ['ihc','special_stains','block_additional'],
+      bx_gi: ['ihc','special_stains','block_additional'],
+      bx_skin: ['ihc','special_stains','block_additional'],
+      bx_breast: ['ihc','special_stains','block_additional'],
+      bx_gyn: ['ihc','special_stains','block_additional'],
+      bx_urology: ['ihc','special_stains','block_additional'],
+      bx_renal: ['immunofluorescence','ihc','special_stains','block_additional'],
+      bx_bone: ['decalcification','ihc','special_stains','block_additional'],
+      surg_specimen_general: ['margins','frozen_section','ihc','special_stains','block_additional'],
+      surg_specimen_onco: ['margins','frozen_section','ihc','special_stains','block_additional'],
+      amputation: ['margins','ihc','special_stains','block_additional'],
+      slides_review: ['external_review'],
+      paraffin_block_review: ['external_review','block_additional'],
+      cyto_fna: ['ihc','special_stains','block_additional'],
+      cyto_fluids: ['ihc','special_stains','block_additional'],
+      cyto_pap: ['followup'],
+      cyto_liquid_based: ['followup'],
+      autopsy_clinical: ['urgent'],
+      autopsy_fetal: ['urgent']
+    }
+  };
+  const CARDIOLOGY_FLAG_VISIBILITY = {
+    generalFlags: [
+      'priority_routine',
+      'priority_urgent',
+      'priority_stat',
+      'adult',
+      'pediatric',
+      'with_report',
+      'without_report',
+      'followup'
+    ],
+    applicability: {
+      ecg_12lead: ['resting'],
+      ecg_rhythm_strip: ['resting'],
+      holter: ['holter_24h','holter_48h','holter_72h','holter_7d','event_monitor'],
+      abpm_mapa: [],
+      echo_tte: ['with_doppler','with_color_doppler','with_tissue_doppler','with_contrast','with_strain','bubble_study'],
+      echo_tes: ['with_doppler','with_color_doppler','with_contrast','bubble_study','with_sedation','without_sedation','anesthesia'],
+      stress_test: ['exercise_treadmill','exercise_bike'],
+      stress_echo: [
+        'stress_exercise',
+        'stress_pharmacologic',
+        'exercise_treadmill',
+        'exercise_bike',
+        'pharm_dobutamine',
+        'pharm_dipyridamole',
+        'pharm_adenosine',
+        'with_doppler',
+        'with_contrast'
+      ],
+      tilt_table: [],
+      carotid_doppler: [],
+      lower_ext_art_doppler: [],
+      lower_ext_venous_doppler: []
+    }
+  };
+  const IMAGING_FLAG_VISIBILITY = {
+    generalFlags: [
+      'priority_urgent',
+      'followup',
+      'laterality_right',
+      'laterality_left',
+      'laterality_bilateral'
+    ],
+    applicability: {
+      rx_chest: ['rx_pa','rx_ap','rx_lateral','rx_pa_lateral','rx_two_views','rx_portable'],
+      rx_abdomen: ['rx_ap','rx_lateral','rx_two_views'],
+      rx_pelvis: ['rx_ap'],
+      rx_cspine: ['rx_ap','rx_lateral','rx_oblique','rx_two_views'],
+      rx_lspine: ['rx_ap','rx_lateral','rx_oblique','rx_two_views'],
+      rx_shoulder: ['rx_ap','rx_lateral','rx_oblique','rx_two_views'],
+      rx_knee: ['rx_ap','rx_lateral','rx_two_views','rx_weight_bearing'],
+      rx_ankle: ['rx_ap','rx_lateral','rx_oblique','rx_two_views'],
+      rx_hand: ['rx_ap','rx_oblique','rx_two_views'],
+      us_abdomen: [],
+      us_pelvic: ['us_transvaginal','us_transrectal'],
+      us_obstetric_study: ['us_obstetric'],
+      us_thyroid: [],
+      us_soft_tissue: [],
+      us_testicular: [],
+      us_renal: [],
+      breast_us: [],
+      ct_head: ['contrast_with','contrast_without','contrast_with_without'],
+      ct_chest: ['contrast_with','contrast_without','contrast_with_without','ct_angio'],
+      ct_abdomen_pelvis: ['contrast_with','contrast_without','contrast_with_without','ct_phase_arterial','ct_phase_venous','ct_phase_delayed'],
+      ct_uro: ['contrast_with','contrast_without','contrast_with_without','ct_phase_venous','ct_phase_delayed'],
+      ct_spine: ['contrast_with','contrast_without','contrast_with_without'],
+      ct_extremity: ['contrast_with','contrast_without','contrast_with_without'],
+      mr_brain: ['contrast_with','contrast_without','contrast_with_without','mr_diffusion'],
+      mr_spine: ['contrast_with','contrast_without','contrast_with_without'],
+      mr_knee: ['contrast_with','contrast_without','contrast_with_without'],
+      mr_shoulder: ['contrast_with','contrast_without','contrast_with_without'],
+      mr_abdomen: ['contrast_with','contrast_without','contrast_with_without'],
+      mr_angio_study: ['mr_angio','contrast_with'],
+      mammo: ['mammo_screening','mammo_diagnostic','mammo_tomo'],
+      vasc_carotid: ['vascular_color_doppler','vascular_spectral'],
+      vasc_venous_leg: ['vascular_color_doppler','vascular_spectral','vascular_venous'],
+      vasc_arterial_leg: ['vascular_color_doppler','vascular_spectral','vascular_arterial'],
+      vasc_upper_ext: ['vascular_color_doppler','vascular_spectral','vascular_arterial','vascular_venous'],
+      vasc_abdomen: ['vascular_color_doppler','vascular_spectral','vascular_arterial','vascular_venous'],
+      nm_bone_scan: ['nm_with_ct'],
+      nm_thyroid_uptake: [],
+      pet_ct: ['pet_fdg'],
+      dexa: ['dexa_spine','dexa_hip','dexa_whole_body'],
+      fluoro_hsg: [],
+      fluoro_vcug: [],
+      fluoro_ugi: [],
+      fluoro_barium_enema: []
+    }
+  };
+  const ENDOSCOPY_FLAG_VISIBILITY = {
+    generalFlags: [
+      'diagnostic',
+      'therapeutic',
+      'with_sedation',
+      'without_sedation',
+      'anesthesia',
+      'urgent',
+      'followup',
+      'adult',
+      'pediatric'
+    ],
+    applicability: {
+      egd_eda_base: [
+        'with_biopsy',
+        'with_hemostasis',
+        'with_dilation',
+        'with_stent',
+        'with_foreign_body',
+        'with_variceal_band',
+        'with_injection_therapy',
+        'with_clips',
+        'with_chromoendoscopy',
+        'with_image_enhancement'
+      ],
+      colonoscopy_base: [
+        'with_biopsy',
+        'with_polypectomy',
+        'with_hemostasis',
+        'with_dilation',
+        'with_stent',
+        'with_foreign_body',
+        'with_clips',
+        'with_tattoo',
+        'with_chromoendoscopy',
+        'with_image_enhancement'
+      ],
+      flex_sig_base: [
+        'with_biopsy',
+        'with_polypectomy',
+        'with_hemostasis',
+        'with_dilation',
+        'with_stent',
+        'with_foreign_body',
+        'with_clips',
+        'with_tattoo',
+        'with_chromoendoscopy',
+        'with_image_enhancement'
+      ],
+      anoscopy_base: [
+        'with_biopsy',
+        'with_hemostasis'
+      ],
+      proctoscopy_base: [
+        'with_biopsy',
+        'with_hemostasis'
+      ],
+      ercp_cpre_base: [
+        'with_dilation',
+        'with_stent'
+      ],
+      eus_use_base: [
+        'with_biopsy'
+      ],
+      capsule_base: [],
+      enteroscopy_base: [
+        'with_biopsy',
+        'with_hemostasis',
+        'with_dilation',
+        'with_stent',
+        'with_foreign_body',
+        'with_clips',
+        'with_tattoo',
+        'with_image_enhancement'
+      ],
+      bronchoscopy_base: [
+        'with_biopsy',
+        'with_bal',
+        'with_tbna',
+        'with_foreign_body',
+        'with_hemostasis',
+        'with_stent'
+      ],
+      ebus_base: [
+        'with_tbna',
+        'with_biopsy',
+        'with_bal'
+      ],
+      laryngoscopy_base: [
+        'with_biopsy'
+      ],
+      pleuroscopy_base: [
+        'with_biopsy',
+        'with_hemostasis'
+      ]
+    }
+  };
+  const activeFlags = new Set();
+  const itemMetaMap = {};
+  const modalityLabelMap = {};
+  const rawDelimiter = '|';
+  const allCheckboxes = Array.from(document.querySelectorAll('input[type="checkbox"][data-est-item]'));
   const summaryWrap = document.querySelector('[data-est-summary]');
   const summaryCount = document.querySelector('[data-est-count]');
   const summaryEdit = document.querySelector('[data-est-edit]');
@@ -4058,38 +4714,29 @@ function mxResetLogoPreview(){
   const orderBlock = document.querySelector('[data-est-order-block]');
   const orderList = document.querySelector('.est-orders-list');
   const areaSelect = orderBlock?.querySelector('[data-est-area-select]');
+  const openInputs = Array.from(document.querySelectorAll('[data-est-open-modal]'));
   const orderListInitial = orderList ? orderList.innerHTML : '';
-  let activeInput = null;
+  if(!openInputs.length) return;
+
+  const controllers = [];
+  const controllerMap = {};
   let selectionOrder = [];
+  let activeInput = null;
+  let activeController = null;
   let modalMode = 'add';
+  let modalModeController = null;
   const groupLabels = {};
   const itemGroupMap = {};
   const itemOrder = {};
-  const groupOrder = groupButtons.map(btn=> btn.dataset.estGroup).filter(Boolean);
+  const groupOrder = [];
   let orderIndex = 0;
-
-  const PICK_MAP = {
-    'BH': ['BH'],
-    'QS': ['Glucosa','Urea','Creatinina'],
-    'EGO': ['EGO'],
-    'Perfil hepático': ['AST/TGO','ALT/TGP','FA','GGT','Bilirrubina total','Bilirrubina directa','Bilirrubina indirecta','Albúmina','TP/INR'],
-    'Perfil lipídico': ['Colesterol total','LDL','HDL','Triglicéridos','ApoA1','ApoB','Lp(a)'],
-    'HbA1c': ['HbA1c']
-  };
-  const PACK_MAP = {
-    'Preop básico': ['BH','Glucosa','Urea','Creatinina','EGO','TP/INR','TTPa','AST/TGO','ALT/TGP','FA','GGT','Bilirrubina total','Bilirrubina directa','Bilirrubina indirecta','Albúmina'],
-    'Preop Gineco': ['BH','Glucosa','Urea','Creatinina','TP/INR','TTPa','Papanicolaou','Colposcopia','β-hCG'],
-    'Preop Ortopedia': ['BH','Glucosa','Urea','Creatinina','EGO','TP/INR','TTPa','AST/TGO','ALT/TGP','FA','GGT']
-  };
+  let labSearchIndex = [];
+  let labSuggestLayer = null;
+  let labSuggestItems = [];
+  let labSuggestIndex = -1;
 
   function escapeHtml(str){
     return String(str).replace(/[&<>"']/g, s=>({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[s]));
-  }
-  function setModalMode(mode){
-    modalMode = mode === 'edit' ? 'edit' : 'add';
-    if(addBtn){
-      addBtn.textContent = modalMode === 'edit' ? 'Actualizar orden' : 'Generar orden';
-    }
   }
   function normalizeItems(items){
     const seen = new Set();
@@ -4098,6 +4745,72 @@ function mxResetLogoPreview(){
       seen.add(item);
       return true;
     });
+  }
+  function normalizeSearchText(value){
+    return String(value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  }
+  function parseInputValue(val){
+    if(!val) return [];
+    return normalizeItems(val.split(','));
+  }
+  function getInputItems(input){
+    const raw = (input?.dataset?.estRaw || '').trim();
+    if(raw) return normalizeItems(raw.split(rawDelimiter));
+    return parseInputValue(input?.value || '');
+  }
+  function getItemMeta(item, controllerKey){
+    const entry = itemMetaMap[item];
+    if(!entry) return null;
+    if(controllerKey && entry[controllerKey]) return entry[controllerKey];
+    return entry.default || entry[Object.keys(entry)[0]] || null;
+  }
+  function getItemGroup(item, controllerKey){
+    const entry = itemGroupMap[item];
+    if(!entry) return null;
+    if(controllerKey && entry[controllerKey]) return entry[controllerKey];
+    return entry.default || entry[Object.keys(entry)[0]] || null;
+  }
+  function getOrderedFlags(controllerKey){
+    if(controllerKey === 'endoscopia'){
+      return endoscopyFlagOrder.filter(id=> activeFlags.has(id)).map(id=> flagLabels[id]).filter(Boolean);
+    }
+    if(controllerKey === 'patologia'){
+      return pathologyFlagOrder.filter(id=> activeFlags.has(id)).map(id=> flagLabels[id]).filter(Boolean);
+    }
+    if(controllerKey === 'cardiologia'){
+      return cardiologyFlagOrder.filter(id=> activeFlags.has(id)).map(id=> flagLabels[id]).filter(Boolean);
+    }
+    if(controllerKey === 'lab'){
+      return labFlagOrder.filter(id=> activeFlags.has(id)).map(id=> flagLabels[id]).filter(Boolean);
+    }
+    if(controllerKey === 'imagenologia'){
+      return imagingFlagOrder.filter(id=> activeFlags.has(id)).map(id=> flagLabels[id]).filter(Boolean);
+    }
+    return Array.from(activeFlags).map(id=> flagLabels[id]).filter(Boolean);
+  }
+  function buildDisplayName(item, controllerKey){
+    const meta = getItemMeta(item, controllerKey);
+    let name = item;
+    const flags = getOrderedFlags(controllerKey).join(' ');
+    if(controllerKey === 'lab' || controllerKey === 'endoscopia' || controllerKey === 'patologia' || controllerKey === 'cardiologia' || controllerKey === 'imagenologia'){
+      if(flags) name = `${name} ${flags}`;
+      return name.trim();
+    }
+    if(meta?.modalityLabel){
+      name = `${meta.modalityLabel} ${name}`;
+      if(flags) name = `${name} ${flags}`;
+    }
+    return name.trim();
+  }
+  function setInputItems(input, items, controllerKey){
+    if(!input) return;
+    input.dataset.estRaw = items.join(rawDelimiter);
+    input.value = items.map(item=> buildDisplayName(item, controllerKey)).join(', ');
   }
   function setSelectionOrder(items){
     selectionOrder = normalizeItems(items || []);
@@ -4112,9 +4825,203 @@ function mxResetLogoPreview(){
   function removeFromOrder(item){
     selectionOrder = selectionOrder.filter(i=>i !== item);
   }
-  function parseInputValue(val){
-    if(!val) return [];
-    return normalizeItems(val.split(','));
+  function setItemChecked(name, checked){
+    if(!name) return;
+    allCheckboxes.forEach(cb=>{
+      if(cb.dataset.estItem === name) cb.checked = checked;
+    });
+  }
+  function resetSelections(){
+    allCheckboxes.forEach(cb=>{ cb.checked = false; });
+  }
+  function getOrderedItems(){
+    const checkedSet = new Set();
+    allCheckboxes.forEach(cb=>{
+      if(cb.checked) checkedSet.add(cb.dataset.estItem);
+    });
+    selectionOrder = selectionOrder.filter(item=>checkedSet.has(item));
+    checkedSet.forEach(item=>{
+      if(!selectionOrder.includes(item)) selectionOrder.push(item);
+    });
+    return selectionOrder.slice();
+  }
+  function buildLabSearchIndex(){
+    const ctrl = controllerMap.lab;
+    if(!ctrl) return [];
+    const entries = [];
+    const inputs = Array.from(ctrl.modalEl.querySelectorAll('input[type="checkbox"][data-est-id][data-est-item]'));
+    inputs.forEach(cb=>{
+      if(cb.disabled) return;
+      const id = cb.dataset.estId;
+      const label = cb.dataset.estItem;
+      if(!id || !label) return;
+      const meta = LAB_SEARCH_META[id] || {};
+      const aliases = (meta.aliases || []).slice();
+      const groupId = getItemGroup(label, 'lab');
+      const areaLabel = groupLabels[groupId] || 'Laboratorio';
+      entries.push({
+        type: 'test',
+        id,
+        label,
+        areaLabel,
+        aliases,
+        normLabel: normalizeSearchText(label),
+        normAliases: aliases.map(normalizeSearchText).filter(Boolean)
+      });
+    });
+    Object.keys(ctrl.packMap || {}).forEach(label=>{
+      const meta = LAB_PACKAGE_META[label] || {};
+      const aliases = (meta.aliases || []).slice();
+      entries.push({
+        type: 'package',
+        id: label,
+        label,
+        areaLabel: 'Paquetes',
+        aliases,
+        normLabel: normalizeSearchText(label),
+        normAliases: aliases.map(normalizeSearchText).filter(Boolean)
+      });
+    });
+    return entries;
+  }
+  function getLabSearchMatches(query){
+    const term = normalizeSearchText(query);
+    if(!term || term.length < LAB_SEARCH_CONFIG.minChars) return [];
+    const termCompact = term.replace(/\s+/g, '');
+    const matches = [];
+    labSearchIndex.forEach(entry=>{
+      let score = 0;
+      if(entry.normLabel.startsWith(term) || entry.normLabel.replace(/\s+/g, '').startsWith(termCompact)){
+        score = Math.max(score, LAB_SEARCH_CONFIG.boosts.labelPrefix);
+      }else if(entry.normLabel.includes(term)){
+        score = Math.max(score, LAB_SEARCH_CONFIG.boosts.labelContains);
+      }
+      entry.normAliases.forEach(alias=>{
+        if(alias.startsWith(term) || alias.replace(/\s+/g, '').startsWith(termCompact)){
+          score = Math.max(score, LAB_SEARCH_CONFIG.boosts.aliasPrefix);
+        }else if(alias.includes(term)){
+          score = Math.max(score, LAB_SEARCH_CONFIG.boosts.aliasContains);
+        }
+      });
+      if(score > 0){
+        matches.push({ entry, score });
+      }
+    });
+    matches.sort((a,b)=>{
+      if(b.score !== a.score) return b.score - a.score;
+      return a.entry.label.localeCompare(b.entry.label);
+    });
+    return matches.slice(0, LAB_SEARCH_CONFIG.maxResults).map(item=> item.entry);
+  }
+  function highlightLabSuggest(idx){
+    labSuggestIndex = idx;
+    labSuggestItems.forEach((item, i)=>{
+      if(item.node){
+        item.node.classList.toggle('active', i === labSuggestIndex);
+        if(i === labSuggestIndex){
+          try{ item.node.scrollIntoView({ block:'nearest' }); }catch(_){}
+        }
+      }
+    });
+  }
+  function hideLabSuggest(){
+    if(labSuggestLayer){
+      labSuggestLayer.remove();
+      labSuggestLayer = null;
+    }
+    labSuggestItems = [];
+    labSuggestIndex = -1;
+  }
+  function applyLabSuggestion(entry, controller){
+    if(!entry || !controller) return;
+    hideLabSuggest();
+    if(entry.type === 'package'){
+      controller.applyPackage(entry.label);
+    }else{
+      controller.applyItems([entry.label]);
+      renderSelected();
+    }
+    if(controller.searchInput){
+      controller.searchInput.value = '';
+      controller.applyFilterChip('todos');
+      controller.filterList('');
+      controller.searchInput.focus();
+    }
+  }
+  function showLabSuggest(list, anchor, controller){
+    hideLabSuggest();
+    if(!list.length || !anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const box = document.createElement('div');
+    box.className = 'grp-suggest';
+    box.style.left = `${window.scrollX + rect.left}px`;
+    box.style.top = `${window.scrollY + rect.bottom + 4}px`;
+    box.style.width = `${rect.width}px`;
+    labSuggestItems = [];
+    list.forEach(entry=>{
+      const it = document.createElement('div');
+      it.className = 'item';
+      const nm = document.createElement('div');
+      nm.className = 'name';
+      nm.textContent = entry.label;
+      const ad = document.createElement('div');
+      ad.className = 'addr';
+      ad.textContent = entry.areaLabel || '';
+      it.appendChild(nm);
+      it.appendChild(ad);
+      it.addEventListener('click', ()=> applyLabSuggestion(entry, controller));
+      box.appendChild(it);
+      labSuggestItems.push({ data: entry, node: it });
+    });
+    document.body.appendChild(box);
+    labSuggestLayer = box;
+    highlightLabSuggest(0);
+    const handler = (ev)=>{
+      if(!labSuggestLayer) return;
+      if(!box.contains(ev.target) && ev.target !== anchor){
+        hideLabSuggest();
+        document.removeEventListener('mousedown', handler, true);
+      }
+    };
+    document.addEventListener('mousedown', handler, true);
+  }
+  function setupLabTypeahead(controller){
+    const input = controller?.searchInput;
+    if(!input) return;
+    input.addEventListener('input', ()=>{
+      const results = getLabSearchMatches(input.value);
+      if(results.length){
+        showLabSuggest(results, input, controller);
+      }else{
+        hideLabSuggest();
+      }
+    });
+    input.addEventListener('keydown', (ev)=>{
+      if(!labSuggestLayer || !labSuggestItems.length) return;
+      if(ev.key === 'ArrowDown'){
+        ev.preventDefault();
+        const next = (labSuggestIndex + 1) % labSuggestItems.length;
+        highlightLabSuggest(next);
+      }else if(ev.key === 'ArrowUp'){
+        ev.preventDefault();
+        const next = (labSuggestIndex - 1 + labSuggestItems.length) % labSuggestItems.length;
+        highlightLabSuggest(next);
+      }else if(ev.key === 'Enter'){
+        ev.preventDefault();
+        const item = labSuggestItems[labSuggestIndex];
+        if(item) applyLabSuggestion(item.data, controller);
+      }else if(ev.key === 'Escape'){
+        ev.preventDefault();
+        hideLabSuggest();
+      }
+    });
+    controller.modalEl?.addEventListener('hidden.bs.modal', hideLabSuggest);
+  }
+  function syncCheckboxesFromItems(items){
+    const set = new Set(items);
+    allCheckboxes.forEach(cb=>{
+      cb.checked = set.has(cb.dataset.estItem);
+    });
   }
   function ensureAreaGroup(label){
     const clean = (label || '').trim();
@@ -4130,46 +5037,7 @@ function mxResetLogoPreview(){
     const option = Array.from(areaSelect.options).find(opt => (opt.textContent || '').trim().toLowerCase() === target);
     if(option) areaSelect.value = option.value;
   }
-  function setItemChecked(name, checked){
-    if(!name) return;
-    checkboxes.forEach(cb=>{
-      if(cb.dataset.estItem === name) cb.checked = checked;
-    });
-  }
-  function resetSelections(){
-    checkboxes.forEach(cb=>{ cb.checked = false; });
-  }
-  function getOrderedItems(){
-    const checkedSet = new Set();
-    checkboxes.forEach(cb=>{
-      if(cb.checked) checkedSet.add(cb.dataset.estItem);
-    });
-    selectionOrder = selectionOrder.filter(item=>checkedSet.has(item));
-    checkedSet.forEach(item=>{
-      if(!selectionOrder.includes(item)) selectionOrder.push(item);
-    });
-    return selectionOrder.slice();
-  }
-  function syncCheckboxesFromItems(items){
-    const set = new Set(items);
-    checkboxes.forEach(cb=>{
-      cb.checked = set.has(cb.dataset.estItem);
-    });
-  }
-  function renderSelected(){
-    if(!selectedWrap) return;
-    const items = getOrderedItems();
-    if(modalCount) modalCount.textContent = `(${items.length})`;
-    if(!items.length){
-      selectedWrap.innerHTML = '<span class="text-muted small">Sin selección</span>';
-      return;
-    }
-    selectedWrap.innerHTML = items.map(item=>{
-      const safe = escapeHtml(item);
-      return `<span class="est-chip">${safe}<button type="button" class="est-chip-x" data-est-remove="${safe}" aria-label="Quitar ${safe}">&times;</button></span>`;
-    }).join('');
-  }
-  function renderSummary(items){
+  function renderSummary(items, controllerKey){
     if(!summaryWrap) return;
     const list = normalizeItems(items || []);
     if(summaryCount) summaryCount.textContent = `(${list.length})`;
@@ -4181,7 +5049,7 @@ function mxResetLogoPreview(){
     list.forEach((item, idx)=>{ listIndex[item] = idx; });
     const grouped = {};
     list.forEach(item=>{
-      const groupId = itemGroupMap[item] || 'otros';
+      const groupId = getItemGroup(item, controllerKey) || 'otros';
       if(!grouped[groupId]) grouped[groupId] = [];
       grouped[groupId].push(item);
     });
@@ -4196,85 +5064,66 @@ function mxResetLogoPreview(){
         return listIndex[a] - listIndex[b];
       });
       return `<div class="est-summary-group"><div class="est-summary-group-ttl"><span class="est-summary-group-chip">${escapeHtml(label)} <span class="est-summary-group-count">${itemsSorted.length}</span></span></div><div class="est-summary-group-list">${itemsSorted.map(item=>{
-        const safe = escapeHtml(item);
-        return `<div class="est-summary-item"><span>${safe}</span><button type="button" class="est-summary-remove" data-est-remove="${safe}" aria-label="Quitar ${safe}">&times;</button></div>`;
+        const safeBase = escapeHtml(item);
+        const display = escapeHtml(buildDisplayName(item, controllerKey));
+        return `<div class="est-summary-item"><span>${display}</span><button type="button" class="est-summary-remove" data-est-remove="${safeBase}" aria-label="Quitar ${safeBase}">&times;</button></div>`;
       }).join('')}</div></div>`;
     }).join('');
   }
-  function setSelection(items, input){
+  function setSelection(items, input, controllerKey){
     const list = normalizeItems(items || []);
+    const controller = controllerKey ? controllerMap[controllerKey] : getControllerForArea(areaSelect?.value || '');
+    const key = controller?.key || controllerKey;
     setSelectionOrder(list);
-    if(input) input.value = list.join(', ');
     syncCheckboxesFromItems(list);
-    renderSummary(list);
+    controller?.updateFlagVisibility?.();
+    setInputItems(input, list, key);
+    renderSummary(list, key);
     renderSelected();
   }
+  function renderSelected(){
+    const items = getOrderedItems();
+    controllers.forEach(ctrl=> ctrl.updateFlagVisibility?.());
+    controllers.forEach(ctrl=> ctrl.renderSelected(items));
+  }
   function syncDuplicates(item, checked){
-    checkboxes.forEach(cb=>{
+    allCheckboxes.forEach(cb=>{
       if(cb.dataset.estItem === item) cb.checked = checked;
     });
   }
-  function openModal(input){
-    activeInput = input || openInputs[0] || null;
-    resetSelections();
-    const parsed = parseInputValue(activeInput?.value || '');
-    setSelectionOrder(parsed);
-    parsed.forEach(item=> setItemChecked(item, true));
-    renderSelected();
-    if(searchInput) searchInput.value = '';
-    modal.show();
-  }
-  function applyFilterChip(type){
-    filterChips.forEach(ch=> ch.classList.toggle('active', ch.dataset.estFilter === type));
-    if(favBox) favBox.classList.remove('d-none');
-    if(type === 'frecuentes'){
-      favFre?.classList.remove('d-none');
-      favPack?.classList.add('d-none');
-      groupCol?.classList.add('d-none');
-      accordionCol?.classList.add('d-none');
-    }else if(type === 'paquetes'){
-      favFre?.classList.add('d-none');
-      favPack?.classList.remove('d-none');
-      groupCol?.classList.add('d-none');
-      accordionCol?.classList.add('d-none');
-    }else{
-      favFre?.classList.remove('d-none');
-      favPack?.classList.remove('d-none');
-      groupCol?.classList.remove('d-none');
-      accordionCol?.classList.remove('d-none');
+  function setModalMode(mode, controller){
+    modalMode = mode === 'edit' ? 'edit' : 'add';
+    modalModeController = controller || null;
+    const target = (controller || activeController)?.addBtn;
+    if(target){
+      target.textContent = modalMode === 'edit' ? 'Actualizar orden' : 'Generar orden';
     }
   }
-  function filterList(q){
-    const term = (q || '').trim().toLowerCase();
-    const labels = checkboxes.map(cb=> cb.closest('label')).filter(Boolean);
-    labels.forEach(label=>{
-      const text = (label.textContent || '').toLowerCase();
-      label.classList.toggle('d-none', term && !text.includes(term));
-    });
-    modalEl.querySelectorAll('.est-lab-grid').forEach(grid=>{
-      const hasVisible = Array.from(grid.querySelectorAll('label')).some(l=>!l.classList.contains('d-none'));
-      grid.classList.toggle('d-none', !hasVisible);
-      const head = grid.previousElementSibling;
-      if(head && head.classList.contains('est-lab-sub')){
-        head.classList.toggle('d-none', !hasVisible);
-      }
-    });
-    modalEl.querySelectorAll('.accordion-item').forEach(item=>{
-      const hasVisible = item.querySelectorAll('.est-lab-grid label:not(.d-none)').length > 0;
-      item.classList.toggle('d-none', !hasVisible);
-      if(term){
-        const collapse = item.querySelector('.accordion-collapse');
-        if(collapse) collapse.classList.add('show');
-      }
-    });
-    if(term){
-      groupCol?.classList.remove('d-none');
-      accordionCol?.classList.remove('d-none');
-      favBox?.classList.remove('d-none');
-      favFre?.classList.remove('d-none');
-      favPack?.classList.remove('d-none');
-      filterChips.forEach(ch=> ch.classList.remove('active'));
-    }
+  function getControllerForArea(area){
+    const normalized = (area || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+    const nameMap = {
+      laboratorio:'lab',
+      imagenologia:'imagenologia',
+      'imagenología':'imagenologia',
+      cardiologia:'cardiologia',
+      'cardiología':'cardiologia',
+      endoscopia:'endoscopia',
+      'endoscopía':'endoscopia',
+      patologia:'patologia',
+      'patología':'patologia'
+    };
+    const key = nameMap[normalized] || 'lab';
+    return controllerMap[key] || controllerMap.lab;
+  }
+  function openControllerForInput(input){
+    if(!input) return;
+    const area = areaSelect?.value || '';
+    const controller = getControllerForArea(area);
+    if(!controller) return;
+    activeInput = input;
+    activeController = controller;
+    setModalMode('add', controller);
+    controller.open(input);
   }
   function scrollToOrderBlock(){
     const target = orderBlock || summaryContainer || summaryWrap || activeInput;
@@ -4285,31 +5134,399 @@ function mxResetLogoPreview(){
     target.classList.add('est-order-focus');
     setTimeout(()=> target.classList.remove('est-order-focus'), 1200);
   }
-
-  groupButtons.forEach(btn=>{
-    const id = btn.dataset.estGroup;
-    if(id) groupLabels[id] = (btn.textContent || '').trim();
-  });
-  groupOrder.forEach(groupId=>{
-    const pane = modalEl.querySelector(`[data-est-group-pane="${groupId}"]`);
-    pane?.querySelectorAll('input[type="checkbox"][data-est-item]').forEach(cb=>{
-      const name = cb.dataset.estItem;
-      if(!itemGroupMap[name]){
-        itemGroupMap[name] = groupId;
-        itemOrder[name] = orderIndex++;
+  function createController(cfg){
+    const modalEl = document.getElementById(cfg.id);
+    if(!modalEl) return null;
+    const modal = new bootstrap.Modal(modalEl);
+    const searchInput = modalEl.querySelector('[data-est-lab-search]');
+    const groupButtons = Array.from(modalEl.querySelectorAll('[data-est-group]'));
+    const modalityButtons = Array.from(modalEl.querySelectorAll('[data-est-modality]'));
+    const modalityPanels = Array.from(modalEl.querySelectorAll('[data-est-modality-panel]'));
+    const groupPanes = Array.from(modalEl.querySelectorAll('[data-est-group-pane]'));
+    const flagButtons = Array.from(modalEl.querySelectorAll('[data-est-flag]'));
+    const filterChips = Array.from(modalEl.querySelectorAll('.est-chip-filter'));
+    const pickButtons = Array.from(modalEl.querySelectorAll('[data-est-lab-pick]'));
+    const packButtons = Array.from(modalEl.querySelectorAll('[data-est-lab-pack]'));
+    const favBox = modalEl.querySelector('.est-lab-fav');
+    const favFre = modalEl.querySelector('[data-est-fav="frecuentes"]');
+    const favPack = modalEl.querySelector('[data-est-fav="paquetes"]');
+    const groupCol = modalEl.querySelector('.est-lab-groups')?.closest('.col-md-3');
+    const accordionCol = cfg.accordionId ? modalEl.querySelector(`#${cfg.accordionId}`)?.closest('.col-md-9') : null;
+    const panelCol = cfg.panelSelector ? modalEl.querySelector(cfg.panelSelector)?.closest('.col-md-9') : null;
+    const selectedWrap = modalEl.querySelector('[data-est-selected]');
+    const modalCount = modalEl.querySelector('[data-est-modal-count]');
+    const addBtn = modalEl.querySelector('.modal-footer .btn-primary');
+    const controller = {
+      key: cfg.key,
+      modal,
+      modalEl,
+      addBtn,
+      groupButtons,
+      modalityButtons,
+      modalityPanels,
+      groupPanes,
+      flagButtons,
+      filterChips,
+      searchInput,
+      pickButtons,
+      packButtons,
+      favBox,
+      favFre,
+      favPack,
+      groupCol,
+      accordionCol,
+      panelCol,
+      selectedWrap,
+      modalCount,
+      pickMap: cfg.pickMap || {},
+      packMap: cfg.packMap || {},
+      packFlagMap: cfg.packFlagMap || {}
+    };
+    const flagButtonMap = flagButtons.reduce((acc, btn)=>{
+      const id = btn.dataset.estFlag;
+      if(id) acc[id] = btn;
+      return acc;
+    }, {});
+    controller.applyItems = function(items){
+      addToOrderList(items);
+      items.forEach(item=> setItemChecked(item, true));
+    };
+    controller.applyPick = function(key){
+      const items = controller.pickMap[key] || [];
+      controller.applyItems(items);
+      renderSelected();
+    };
+    controller.applyPackage = function(key){
+      const items = controller.packMap[key] || [];
+      controller.applyItems(items);
+      controller.updateFlagVisibility?.();
+      const defaults = controller.packFlagMap[key] || [];
+      defaults.forEach(flagId=>{
+        const flagBtn = flagButtonMap[flagId];
+        if(!flagBtn || flagBtn.classList.contains('d-none') || activeFlags.has(flagId)) return;
+        flagBtn.click();
+      });
+      renderSelected();
+    };
+    controller.applyFilterChip = function(type){
+      filterChips.forEach(ch=> ch.classList.toggle('active', ch.dataset.estFilter === type));
+      const contentCol = panelCol || accordionCol;
+      if(!favBox){
+        groupCol?.classList.remove('d-none');
+        contentCol?.classList.remove('d-none');
+        return;
       }
+      favBox.classList.remove('d-none');
+      if(type === 'frecuentes'){
+        favFre?.classList.remove('d-none');
+        favPack?.classList.add('d-none');
+        groupCol?.classList.add('d-none');
+        contentCol?.classList.add('d-none');
+      }else if(type === 'paquetes'){
+        favFre?.classList.add('d-none');
+        favPack?.classList.remove('d-none');
+        groupCol?.classList.add('d-none');
+        contentCol?.classList.add('d-none');
+      }else{
+        favFre?.classList.remove('d-none');
+        favPack?.classList.remove('d-none');
+        groupCol?.classList.remove('d-none');
+        contentCol?.classList.remove('d-none');
+      }
+    };
+    controller.filterList = function(term){
+      const query = (term || '').trim().toLowerCase();
+      const localCheckboxes = Array.from(modalEl.querySelectorAll('input[type="checkbox"][data-est-item]'));
+      const labels = localCheckboxes.map(cb=> cb.closest('label')).filter(Boolean);
+      labels.forEach(label=>{
+        const text = (label.textContent || '').toLowerCase();
+        label.classList.toggle('d-none', query && !text.includes(query));
+      });
+      modalEl.querySelectorAll('.est-lab-grid').forEach(grid=>{
+        const hasVisible = Array.from(grid.querySelectorAll('label')).some(label=>!label.classList.contains('d-none'));
+        grid.classList.toggle('d-none', !hasVisible);
+        const head = grid.previousElementSibling;
+        if(head && head.classList.contains('est-lab-sub')){
+          head.classList.toggle('d-none', !hasVisible);
+        }
+      });
+      modalEl.querySelectorAll('.accordion-item').forEach(item=>{
+        const hasVisible = item.querySelectorAll('.est-lab-grid label:not(.d-none)').length > 0;
+        item.classList.toggle('d-none', !hasVisible);
+        if(query){
+          const collapse = item.querySelector('.accordion-collapse');
+          if(collapse) collapse.classList.add('show');
+        }
+      });
+      groupPanes.forEach(pane=>{
+        const hasVisible = pane.querySelectorAll('.est-lab-grid label:not(.d-none)').length > 0;
+        pane.classList.toggle('d-none', !hasVisible);
+      });
+      if(modalityPanels.length){
+        if(query){
+          modalityPanels.forEach(panel=> panel.classList.remove('d-none'));
+        } else if(controller.activeModality){
+          modalityPanels.forEach(panel=>{
+            panel.classList.toggle('d-none', panel.dataset.estModalityPanel !== controller.activeModality);
+          });
+        }
+      }
+      if(query){
+        const contentCol = panelCol || accordionCol;
+        groupCol?.classList.remove('d-none');
+        contentCol?.classList.remove('d-none');
+        favBox?.classList.remove('d-none');
+        favFre?.classList.remove('d-none');
+        favPack?.classList.remove('d-none');
+        filterChips.forEach(ch=> ch.classList.remove('active'));
+      }
+    };
+    controller.renderSelected = function(items){
+      if(modalCount) modalCount.textContent = `(${items.length})`;
+      if(!selectedWrap) return;
+      if(!items.length){
+        selectedWrap.innerHTML = '<span class="text-muted small">Sin selección</span>';
+        return;
+      }
+      selectedWrap.innerHTML = items.map(item=>{
+        const safeBase = escapeHtml(item);
+        const display = escapeHtml(buildDisplayName(item, controller.key));
+        return `<span class="est-chip">${display}<button type="button" class="est-chip-x" data-est-remove="${safeBase}" aria-label="Quitar ${safeBase}">&times;</button></span>`;
+      }).join('');
+    };
+    controller.updateFlagVisibility = function(){
+      if(!flagButtons.length) return;
+      const visibilityMap = controller.key === 'lab'
+        ? LAB_FLAG_VISIBILITY
+        : (controller.key === 'endoscopia'
+          ? ENDOSCOPY_FLAG_VISIBILITY
+          : (controller.key === 'patologia'
+            ? PATHOLOGY_FLAG_VISIBILITY
+            : (controller.key === 'cardiologia'
+              ? CARDIOLOGY_FLAG_VISIBILITY
+              : (controller.key === 'imagenologia' ? IMAGING_FLAG_VISIBILITY : null))));
+      if(!visibilityMap) return;
+      const selectedIds = Array.from(modalEl.querySelectorAll('input[type="checkbox"][data-est-id]'))
+        .filter(cb=> cb.checked)
+        .map(cb=> cb.dataset.estId)
+        .filter(Boolean);
+      const visibleFlags = new Set(visibilityMap.generalFlags);
+      selectedIds.forEach(id=>{
+        (visibilityMap.applicability[id] || []).forEach(flag=> visibleFlags.add(flag));
+      });
+      flagButtons.forEach(btn=>{
+        const id = btn.dataset.estFlag;
+        const show = visibleFlags.has(id);
+        btn.classList.toggle('d-none', !show);
+        if(!show && activeFlags.has(id)){
+          activeFlags.delete(id);
+          btn.classList.remove('active');
+        }
+      });
+    };
+    controller.open = function(input){
+      activeController = controller;
+      activeInput = input;
+      resetSelections();
+      if(flagButtons.length){
+        activeFlags.clear();
+        flagButtons.forEach(btn=> btn.classList.remove('active'));
+      }
+      const parsed = getInputItems(activeInput);
+      setSelectionOrder(parsed);
+      parsed.forEach(item=> setItemChecked(item, true));
+      if(searchInput) searchInput.value = '';
+      controller.applyFilterChip('todos');
+      controller.filterList('');
+      renderSelected();
+      modal.show();
+    };
+    if(modalityButtons.length){
+      modalityButtons.forEach(btn=>{
+        const id = btn.dataset.estModality;
+        if(id && !modalityLabelMap[id]) modalityLabelMap[id] = (btn.textContent || '').trim();
+      });
+      controller.activeModality = modalityButtons.find(btn=>btn.classList.contains('active'))?.dataset.estModality || modalityButtons[0].dataset.estModality;
+      controller.setActiveModality = (id)=>{
+        if(!id) return;
+        controller.activeModality = id;
+        modalityButtons.forEach(btn=> btn.classList.toggle('active', btn.dataset.estModality === id));
+        modalityPanels.forEach(panel=> panel.classList.toggle('d-none', panel.dataset.estModalityPanel !== id));
+      };
+      controller.setActiveModality(controller.activeModality);
+      modalityButtons.forEach(btn=>{
+        btn.addEventListener('click', ()=> controller.setActiveModality(btn.dataset.estModality));
+      });
+    }
+    if(flagButtons.length){
+      const flagGroups = {
+        diagnostic_type: ['diagnostic','therapeutic'],
+        priority: ['priority_routine','priority_urgent','priority_stat'],
+        report_type: ['with_report','without_report'],
+        contrast: ['with_contrast','without_contrast'],
+        imaging_contrast: ['contrast_with','contrast_without','contrast_with_without'],
+        laterality: ['right','left','bilateral'],
+        imaging_laterality: ['laterality_right','laterality_left','laterality_bilateral'],
+        sedation_type: ['with_sedation','without_sedation'],
+        stress_state: ['rest','stress'],
+        age_group: ['adult','pediatric'],
+        care_setting: ['ambulatory','in_hospital'],
+        holter_duration: ['holter_24h','holter_48h','holter_72h','holter_7d'],
+        mapa_duration: ['mapa_24h','mapa_48h'],
+        exercise_type: ['exercise_treadmill','exercise_bike'],
+        stress_type: ['stress_exercise','stress_pharmacologic'],
+        pharm_type: ['pharm_dobutamine','pharm_dipyridamole','pharm_adenosine'],
+        rx_primary: ['rx_pa','rx_ap','rx_pa_lateral'],
+        rx_lateral_combo: ['rx_lateral','rx_pa_lateral'],
+        mammo_type: ['mammo_screening','mammo_diagnostic'],
+        us_flow: ['us_arterial','us_venous'],
+        vascular_flow: ['vascular_arterial','vascular_venous'],
+        ct_phase: ['ct_phase_arterial','ct_phase_venous','ct_phase_delayed'],
+        dexa_region: ['dexa_spine','dexa_hip','dexa_whole_body'],
+        ihc_type: ['ihc_single_marker','ihc_panel','ihc_breast_panel','ihc_lung_panel','ihc_lymphoma_panel']
+      };
+      const groupLookup = Object.values(flagGroups).reduce((acc, group)=>{
+        group.forEach(id=>{
+          if(!acc[id]) acc[id] = [];
+          acc[id].push(group);
+        });
+        return acc;
+      }, {});
+      flagButtons.forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const id = btn.dataset.estFlag;
+          if(!id) return;
+          const groups = groupLookup[id] || [];
+          if(groups.length){
+            const toClear = new Set();
+            groups.forEach(group=>{
+              group.forEach(flagId=>{
+                if(flagId !== id) toClear.add(flagId);
+              });
+            });
+            toClear.forEach(flagId=>{
+              activeFlags.delete(flagId);
+              flagButtons.forEach(b=>{
+                if(b.dataset.estFlag === flagId) b.classList.remove('active');
+              });
+            });
+          }
+          if(activeFlags.has(id)){
+            activeFlags.delete(id);
+            btn.classList.remove('active');
+          }else{
+            activeFlags.add(id);
+            btn.classList.add('active');
+          }
+          renderSelected();
+        });
+      });
+    }
+    pickButtons.forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const key = btn.getAttribute('data-est-lab-pick');
+        controller.applyPick(key);
+      });
+    });
+    packButtons.forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const key = btn.getAttribute('data-est-lab-pack');
+        controller.applyPackage(key);
+      });
+    });
+    groupButtons.forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        groupButtons.forEach(b=> b.classList.remove('active'));
+        btn.classList.add('active');
+        const group = btn.getAttribute('data-est-group');
+        const pane = modalEl.querySelector(`[data-est-group-pane="${group}"]`);
+        const collapse = pane?.querySelector('.accordion-collapse');
+        if(collapse){ try{ new bootstrap.Collapse(collapse, {toggle:true}); }catch(_){ } }
+        pane?.scrollIntoView({behavior:'smooth', block:'start'});
+      });
+    });
+    filterChips.forEach(ch=> ch.addEventListener('click', ()=> controller.applyFilterChip(ch.dataset.estFilter)));
+    searchInput?.addEventListener('input', (e)=> controller.filterList(e.target.value));
+    selectedWrap?.addEventListener('click', (e)=>{
+      const btn = e.target.closest('[data-est-remove]');
+      if(!btn) return;
+      const item = btn.getAttribute('data-est-remove');
+      removeFromOrder(item);
+      setItemChecked(item, false);
+      renderSelected();
+    });
+    addBtn?.addEventListener('click', ()=>{
+      const items = getOrderedItems();
+      const input = activeInput || openInputs[0];
+      if(input) setSelection(items, input, controller.key);
+      modal.hide();
+      setTimeout(scrollToOrderBlock, 200);
+    });
+    modalEl?.addEventListener('hidden.bs.modal', ()=> setModalMode('add', controller));
+    controller.applyFilterChip('todos');
+    controller.filterList('');
+    return controller;
+  }
+
+  modalConfigs.forEach(cfg=>{
+    const ctrl = createController(cfg);
+    if(ctrl){
+      controllers.push(ctrl);
+      controllerMap[cfg.key] = ctrl;
+    }
+  });
+  if(!controllers.length) return;
+
+  controllers.forEach(ctrl=>{
+    ctrl.groupPanes.forEach(pane=>{
+      const id = pane.dataset.estGroupPane;
+      if(!id) return;
+      const label = pane.dataset.estGroupLabel
+        || pane.querySelector('.accordion-header .accordion-button')?.textContent?.trim()
+        || pane.querySelector('.est-lab-sub')?.textContent?.trim()
+        || id;
+      if(!groupLabels[id]) groupLabels[id] = label;
+      if(!groupOrder.includes(id)) groupOrder.push(id);
+      pane.querySelectorAll('input[type="checkbox"][data-est-item]').forEach(cb=>{
+        const name = cb.dataset.estItem;
+        if(name){
+          if(!itemGroupMap[name]) itemGroupMap[name] = {};
+          if(!itemGroupMap[name][ctrl.key]) itemGroupMap[name][ctrl.key] = id;
+          if(!itemGroupMap[name].default) itemGroupMap[name].default = id;
+        }
+        if(name && itemOrder[name] == null) itemOrder[name] = orderIndex++;
+        const modalityPanel = cb.closest('[data-est-modality-panel]');
+        const modalityId = modalityPanel?.dataset.estModalityPanel;
+        if(name && modalityId){
+          if(!itemMetaMap[name]) itemMetaMap[name] = {};
+          if(!itemMetaMap[name][ctrl.key]){
+            const meta = { modality: modalityId, modalityLabel: modalityLabelMap[modalityId] || '' };
+            itemMetaMap[name][ctrl.key] = meta;
+            if(!itemMetaMap[name].default) itemMetaMap[name].default = meta;
+          }
+        }
+      });
+    });
+  });
+  const labController = controllerMap.lab;
+  if(labController){
+    labSearchIndex = buildLabSearchIndex();
+    setupLabTypeahead(labController);
+  }
+
+  openInputs.forEach(input=>{
+    input.addEventListener('focus', ()=> openControllerForInput(input));
+    input.addEventListener('click', ()=> openControllerForInput(input));
+    input.addEventListener('input', ()=>{
+      input.dataset.estRaw = '';
+      setSelection(parseInputValue(input.value), input);
     });
   });
 
-  openInputs.forEach(input=>{
-    input.addEventListener('focus', ()=> { setModalMode('add'); openModal(input); });
-    input.addEventListener('click', ()=> { setModalMode('add'); openModal(input); });
-    input.addEventListener('input', ()=> setSelection(parseInputValue(input.value), input));
-  });
-
-  checkboxes.forEach(cb=>{
+  allCheckboxes.forEach(cb=>{
     cb.addEventListener('change', ()=>{
       const item = cb.dataset.estItem;
+      const owner = controllers.find(ctrl=> ctrl.modalEl.contains(cb));
       syncDuplicates(item, cb.checked);
       if(cb.checked){
         addToOrder(item);
@@ -4317,32 +5534,26 @@ function mxResetLogoPreview(){
         removeFromOrder(item);
       }
       renderSelected();
-      if(searchInput && searchInput.value.trim()){
-        searchInput.value = '';
-        applyFilterChip('todos');
-        filterList('');
+      if(owner?.searchInput && owner.searchInput.value.trim()){
+        owner.searchInput.value = '';
+        owner.applyFilterChip('todos');
+        owner.filterList('');
+        if(owner?.key === 'lab') hideLabSuggest();
       }
     });
   });
-  selectedWrap?.addEventListener('click', (e)=>{
-    const btn = e.target.closest('[data-est-remove]');
-    if(!btn) return;
-    const item = btn.getAttribute('data-est-remove');
-    removeFromOrder(item);
-    setItemChecked(item, false);
-    renderSelected();
-  });
+
   summaryWrap?.addEventListener('click', (e)=>{
     const btn = e.target.closest('[data-est-remove]');
     if(!btn) return;
     const item = btn.getAttribute('data-est-remove');
     const input = activeInput || openInputs[0];
-    const next = parseInputValue(input?.value || '').filter(i=>i !== item);
+    const next = getInputItems(input).filter(i=>i !== item);
     setSelection(next, input);
   });
-  summaryEdit?.addEventListener('click', ()=> {
+  summaryEdit?.addEventListener('click', ()=>{
     const input = activeInput || openInputs[0];
-    if(input) openModal(input);
+    if(input) openControllerForInput(input);
   });
   summaryClear?.addEventListener('click', ()=>{
     const input = activeInput || openInputs[0];
@@ -4353,14 +5564,15 @@ function mxResetLogoPreview(){
     }
     setSelection([], input);
   });
+
   orderList?.addEventListener('click', (e)=>{
     const btn = e.target.closest('[data-est-order-delete]');
     if(!btn) return;
     const card = btn.closest('.est-order-card');
     if(!card) return;
-      if(window.confirm('¿Eliminar esta orden? Esta acción no se puede deshacer.')){
-        card.remove();
-      }
+    if(window.confirm('¿Eliminar esta orden? Esta acción no se puede deshacer.')){
+      card.remove();
+    }
   });
   orderList?.addEventListener('click', (e)=>{
     const btn = e.target.closest('[data-est-order-edit]');
@@ -4372,92 +5584,59 @@ function mxResetLogoPreview(){
     const input = orderBlock?.querySelector('[data-est-open-modal]') || openInputs[0];
     if(!input) return;
     activeInput = input;
+    const controller = getControllerForArea(area);
     if(area) setAreaSelect(area);
     if(area && !/laboratorio/i.test(area)){
       const key = ensureAreaGroup(area);
+      const controllerKey = controller?.key;
       items.forEach(item=>{
-        if(key) itemGroupMap[item] = key;
+        if(key){
+          if(!itemGroupMap[item]) itemGroupMap[item] = {};
+          if(controllerKey && !itemGroupMap[item][controllerKey]) itemGroupMap[item][controllerKey] = key;
+          if(!itemGroupMap[item].default) itemGroupMap[item].default = key;
+        }
         if(itemOrder[item] == null) itemOrder[item] = orderIndex++;
       });
     }
-    setSelection(items, input);
-    if(/laboratorio/i.test(area)){
-      setModalMode('edit');
-      openModal(input);
-      return;
-    }
-    scrollToOrderBlock();
+    setSelection(items, input, controller?.key);
+    setModalMode('edit', controller);
+    controller.open(input);
   });
 
-  pickButtons.forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const key = btn.getAttribute('data-est-lab-pick');
-      const items = PICK_MAP[key] || [];
-      addToOrderList(items);
-      items.forEach(item=> setItemChecked(item, true));
-      renderSelected();
-    });
-  });
-  packButtons.forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const key = btn.getAttribute('data-est-lab-pack');
-      const items = PACK_MAP[key] || [];
-      addToOrderList(items);
-      items.forEach(item=> setItemChecked(item, true));
-      renderSelected();
-    });
-  });
-  groupButtons.forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      groupButtons.forEach(b=> b.classList.remove('active'));
-      btn.classList.add('active');
-      const group = btn.getAttribute('data-est-group');
-      const pane = modalEl.querySelector(`[data-est-group-pane="${group}"]`);
-      const collapse = pane?.querySelector('.accordion-collapse');
-      if(collapse){ try{ new bootstrap.Collapse(collapse, {toggle:true}); }catch(_){ } }
-      pane?.scrollIntoView({behavior:'smooth', block:'start'});
-    });
-  });
-  filterChips.forEach(ch=>{
-    ch.addEventListener('click', ()=> applyFilterChip(ch.dataset.estFilter));
-  });
-  searchInput?.addEventListener('input', (e)=> filterList(e.target.value));
-
-  addBtn?.addEventListener('click', ()=>{
-    const items = getOrderedItems();
-    const input = activeInput || openInputs[0];
-    if(input){ setSelection(items, input); }
-    modal.hide();
-    setTimeout(scrollToOrderBlock, 200);
-  });
-
-  modalEl?.addEventListener('hidden.bs.modal', ()=> setModalMode('add'));
-
-  applyFilterChip('todos');
-  renderSelected();
-  if(openInputs[0]) setSelection(parseInputValue(openInputs[0].value), openInputs[0]);
-  window.mxResetEstudios = ()=> {
+  window.mxResetEstudios = ()=>{
     try{
       const input = openInputs[0];
       resetSelections();
       if(input){
         const defVal = input.defaultValue || '';
+        input.dataset.estRaw = '';
         input.value = defVal;
         setSelection(parseInputValue(defVal), input);
       }
       if(areaSelect) areaSelect.selectedIndex = 0;
-      if(searchInput) searchInput.value = '';
-      applyFilterChip('todos');
-      filterList('');
-      renderSelected();
+      controllers.forEach(ctrl=>{
+        if(ctrl.searchInput) ctrl.searchInput.value = '';
+        ctrl.applyFilterChip('todos');
+        ctrl.filterList('');
+        ctrl.flagButtons?.forEach(btn=> btn.classList.remove('active'));
+        const inst = window.bootstrap?.Modal?.getInstance ? window.bootstrap.Modal.getInstance(ctrl.modalEl) : null;
+        inst?.hide();
+      });
+      activeFlags.clear();
       if(orderList && orderListInitial){
         orderList.innerHTML = orderListInitial;
       }
-      const inst = window.bootstrap?.Modal?.getInstance ? window.bootstrap.Modal.getInstance(modalEl) : null;
-      inst?.hide();
+      activeController = null;
+      activeInput = null;
+      modalMode = 'add';
+      modalModeController = null;
     }catch(_){ }
   };
+
+  renderSelected();
+  if(openInputs[0]) setSelection(getInputItems(openInputs[0]), openInputs[0]);
 })();
+
 
 (function(){
   const desc = document.querySelector('[data-est-section-desc-target]');

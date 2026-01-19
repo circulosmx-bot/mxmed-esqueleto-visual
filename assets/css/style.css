@@ -3899,6 +3899,26 @@ body{margin:0;background:var(--mm-fondo-base);}
   overflow:auto;
   padding-right:4px;
 }
+.est-flag-grid{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+.est-flag{
+  border:1px solid #b6dfe9;
+  background:#f2fbfd;
+  color:#005275;
+  border-radius:999px;
+  padding:4px 10px;
+  font-weight:600;
+  font-size:0.78rem;
+  cursor:pointer;
+}
+.est-flag.active{
+  background:#00b0c5;
+  border-color:#00b0c5;
+  color:#fff;
+}
 .est-selected-chips .badge{
   background:#e6f7fb;
   color:#005275;

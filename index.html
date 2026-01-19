@@ -3493,26 +3493,26 @@
                         <div class="est-side est-orders">
                           <div class="est-side-head">Órdenes generadas</div>
                           <div class="est-orders-list">
-                            <div class="est-order-card est-order--lab" data-est-order-area="Laboratorio" data-est-order-items="BH, Glucosa, Urea, Creatinina, EGO, TP/INR, TTPa, AST/TGO, ALT/TGP, FA, GGT, Bilirrubina total, Bilirrubina directa, Bilirrubina indirecta, Albúmina">
+                            <div class="est-order-card est-order--lab" data-est-order-area="Laboratorio" data-est-order-items="PCR ultrasensible, Ferritina, ANA, IgG, VIH Ag/Ac, VDRL / RPR, Hemocultivo">
                               <div class="est-order-head">
-                                <div class="est-order-title"><span class="material-symbols-outlined est-order-ico" aria-hidden="true">science</span><span>Laboratorio · Preop básico</span></div>
+                                <div class="est-order-title"><span class="material-symbols-outlined est-order-ico" aria-hidden="true">science</span><span>Laboratorio · Control inmune</span></div>
                               </div>
                               <button type="button" class="est-order-del" aria-label="Eliminar orden" data-est-order-delete>&times;</button>
-                              <div class="est-order-meta">15 estudios · 04 Feb 2026</div>
-                              <div class="est-order-tags"><span>Química/Hepático (11)</span><span>Hematología (3)</span><span>Orina (1)</span><span>Endocrino (2)</span><span>Inmuno (1)</span><span>Serología (2)</span><span>Microbiología (1)</span><span>Genética (1)</span><span>Tumorales (1)</span></div>
+                              <div class="est-order-meta">7 estudios · 04 Feb 2026</div>
+                              <div class="est-order-tags"><span>Inflamación (2)</span><span>Autoinmunidad (1)</span><span>Inmunoglobulinas (1)</span><span>Serologías (2)</span><span>Microbiología (1)</span></div>
                               <div class="est-order-actions">
                                 <button type="button" class="btn btn-outline-primary btn-sm" data-est-order-edit>Ver/Editar</button>
                                 <button class="btn btn-outline-secondary btn-sm">Imprimir</button>
                                 <button class="btn btn-outline-secondary btn-sm">Compartir</button>
                               </div>
                             </div>
-                            <div class="est-order-card est-order--img" data-est-order-area="Imagenología" data-est-order-items="Ultrasonido abdominal, RX tórax">
+                            <div class="est-order-card est-order--img" data-est-order-area="Imagenología" data-est-order-items="US Abdomen, RX Tórax">
                               <div class="est-order-head">
                                 <div class="est-order-title"><span class="material-symbols-outlined est-order-ico" aria-hidden="true">radiology</span><span>Imagenología · Control trimestral</span></div>
                               </div>
                               <button type="button" class="est-order-del" aria-label="Eliminar orden" data-est-order-delete>&times;</button>
                               <div class="est-order-meta">2 estudios · 22 Ene 2026</div>
-                              <div class="est-order-tags"><span>USG (1)</span><span>RX (1)</span></div>
+                              <div class="est-order-tags"><span>US (1)</span><span>RX (1)</span></div>
                               <div class="est-order-actions">
                                 <button type="button" class="btn btn-outline-primary btn-sm" data-est-order-edit>Ver/Editar</button>
                                 <button class="btn btn-outline-secondary btn-sm">Imprimir</button>
@@ -3545,7 +3545,7 @@
                       </div>
                       <div class="col-md-4">
                         <label class="form-label">Estudio</label>
-                        <input class="form-control form-control-sm" placeholder="Ej. BH, TAC, Colposcopia">
+                        <input class="form-control form-control-sm" placeholder="Ej. PCR, TAC, US">
                       </div>
                       <div class="col-md-4">
                         <label class="form-label">Fecha del estudio</label>
@@ -3725,13 +3725,13 @@
                 <div class="modal-dialog modal-xl modal-dialog-scrollable">
                   <div class="modal-content">
                     <div class="modal-header">
-                      <h5 class="modal-title">Seleccionar estudios de laboratorio</h5>
+                      <h5 class="modal-title">Seleccionar estudios</h5>
                       <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                     </div>
                     <div class="modal-body">
                       <div class="row g-3 mb-2 align-items-center">
                         <div class="col-md-6">
-                          <input class="form-control" placeholder="Buscar por nombre o alias (ej. hepático, lípidos, BH)" data-est-lab-search>
+                          <input class="form-control" placeholder="Buscar por nombre o alias (ej. BH, QS, HbA1c)" data-est-lab-search>
                         </div>
                         <div class="col-md-6 d-flex gap-2 flex-wrap">
                           <span class="badge bg-info text-dark est-chip-filter" data-est-filter="frecuentes">Frecuentes</span>
@@ -3743,270 +3743,1100 @@
                         <div class="fw-bold mb-1">Seleccionados <span class="est-summary-count" data-est-modal-count>(0)</span></div>
                         <div class="est-selected-chips" data-est-selected></div>
                       </div>
-                      <div class="est-lab-fav mb-3">
-                        <div class="est-lab-fav-section" data-est-fav="frecuentes">
-                          <div class="est-lab-fav-ttl">Atajos frecuentes</div>
-                          <div class="est-lab-fav-grid">
-                            <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pick="BH">BH</button>
-                            <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pick="QS">QS (Glucosa/Urea/Cr)</button>
-                            <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pick="EGO">EGO</button>
-                            <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pick="Perfil hepático">Perfil hepático</button>
-                            <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pick="Perfil lipídico">Perfil lipídico</button>
-                            <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pick="HbA1c">HbA1c</button>
-                          </div>
+                      <div class="est-flags mb-2" data-est-flags>
+                        <div class="est-lab-fav-ttl">Condiciones de toma</div>
+                        <div class="est-flag-grid">
+                          <button type="button" class="est-flag" data-est-flag="fasting">Ayuno</button>
+                          <button type="button" class="est-flag" data-est-flag="urgent">Urgente</button>
+                          <button type="button" class="est-flag" data-est-flag="followup">Control / seguimiento</button>
+                          <button type="button" class="est-flag" data-est-flag="serial">Seriado</button>
+                          <button type="button" class="est-flag" data-est-flag="first_morning">Primera muestra de la mañana</button>
+                          <button type="button" class="est-flag" data-est-flag="with_antibiogram">Con antibiograma</button>
                         </div>
-                        <div class="est-lab-fav-section mt-2" data-est-fav="paquetes">
-                          <div class="est-lab-fav-ttl">Paquetes predefinidos</div>
-                          <div class="est-pack-list">
-                            <details class="est-pack-item">
-                              <summary class="est-pack-summary">Preop básico</summary>
-                              <div class="est-pack-body">
-                                <div class="est-template-fields"><span>BH</span><span>Glucosa</span><span>Urea</span><span>Creatinina</span><span>EGO</span><span>TP/INR</span><span>TTPa</span><span>AST/TGO</span><span>ALT/TGP</span><span>FA</span><span>GGT</span><span>Bilirrubina total</span><span>Bilirrubina directa</span><span>Bilirrubina indirecta</span><span>Albúmina</span></div>
-                                <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Preop básico">Agregar paquete</button>
-                              </div>
-                            </details>
-                            <details class="est-pack-item">
-                              <summary class="est-pack-summary">Preop Gineco</summary>
-                              <div class="est-pack-body">
-                                <div class="est-template-fields"><span>BH</span><span>Glucosa</span><span>Urea</span><span>Creatinina</span><span>TP/INR</span><span>TTPa</span><span>Papanicolaou</span><span>Colposcopia</span><span>β-hCG</span></div>
-                                <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Preop Gineco">Agregar paquete</button>
-                              </div>
-                            </details>
-                            <details class="est-pack-item">
-                              <summary class="est-pack-summary">Preop Ortopedia</summary>
-                              <div class="est-pack-body">
-                                <div class="est-template-fields"><span>BH</span><span>Glucosa</span><span>Urea</span><span>Creatinina</span><span>EGO</span><span>TP/INR</span><span>TTPa</span><span>AST/TGO</span><span>ALT/TGP</span><span>FA</span><span>GGT</span></div>
-                                <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Preop Ortopedia">Agregar paquete</button>
-                              </div>
-                            </details>
+                      </div>
+                      <div class="est-lab-fav mb-3">
+                        <div class="est-lab-fav-context" data-est-context-content="laboratorio">
+                          <div class="est-lab-fav-section" data-est-fav="frecuentes">
+                            <div class="est-lab-fav-ttl">Atajos frecuentes</div>
+                            <div class="est-lab-fav-grid">
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pick="Biometría hemática (BH / CBC)">BH / CBC</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pack="QS (Glucosa, Urea, Creatinina)">QS</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pick="EGO (examen general de orina)">EGO</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pick="HbA1c">HbA1c</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pack="Perfil lipídico">Perfil lipídico</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pack="Perfil hepático">Perfil hepático</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pack="Perfil tiroideo">Perfil tiroideo</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pick="PCR ultrasensible">PCR ultrasensible</button>
+                            </div>
+                          </div>
+                          <div class="est-lab-fav-section mt-2" data-est-fav="paquetes">
+                            <div class="est-lab-fav-ttl">Paquetes predefinidos</div>
+                            <div class="est-pack-list">
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">QS (Glucosa, Urea, Creatinina)</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>Glucosa</span><span>Urea</span><span>Creatinina</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="QS (Glucosa, Urea, Creatinina)">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Perfil lipídico</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>Colesterol total</span><span>HDL</span><span>LDL</span><span>Triglicéridos</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Perfil lipídico">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Perfil hepático</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>AST (TGO)</span><span>ALT (TGP)</span><span>Fosfatasa alcalina</span><span>Bilirrubina total</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Perfil hepático">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Perfil tiroideo</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>TSH</span><span>T4 libre</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Perfil tiroideo">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Control de diabetes</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>Glucosa</span><span>HbA1c</span><span>EGO</span><span>Microalbuminuria</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Control de diabetes">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">ETS básico</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>VIH Ag/Ac</span><span>VDRL / RPR</span><span>HBsAg</span><span>VHC</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="ETS básico">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Preop básico</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>BH</span><span>TP / INR</span><span>TTPa</span><span>Glucosa</span><span>Creatinina</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Preop básico">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Preop gineco</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>BH</span><span>TP / INR</span><span>TTPa</span><span>β-hCG</span><span>EGO</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Preop gineco">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Preop ortopedia</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>BH</span><span>TP / INR</span><span>TTPa</span><span>Sodio</span><span>Potasio</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Preop ortopedia">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Reuma básico</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>ANA</span><span>FR</span><span>VSG</span><span>PCR-us</span><span>Anti-CCP</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Reuma básico">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Embarazo básico</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>β-hCG</span><span>VIH</span><span>VDRL</span><span>HBsAg</span><span>EGO</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Embarazo básico">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Panel viral respiratorio</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>Influenza A</span><span>Influenza B</span><span>RSV</span><span>SARS-CoV-2</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Panel viral respiratorio">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">TORCH</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>Toxoplasma</span><span>Rubéola</span><span>CMV</span><span>Herpes</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="TORCH">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Panel infeccioso PCR</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>SARS-CoV-2</span><span>Influenza A</span><span>Influenza B</span><span>RSV</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Panel infeccioso PCR">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Panel trombofilia</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>Factor V Leiden</span><span>Proteína C</span><span>Proteína S</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Panel trombofilia">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Panel farmacogenómico</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>CYP2C19</span><span>CYP2D6</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Panel farmacogenómico">Agregar paquete</button>
+                                </div>
+                              </details>
+                            </div>
                           </div>
                         </div>
                       </div>
                       <div class="row">
                         <div class="col-md-3">
                           <div class="list-group est-lab-groups">
-                            <button class="list-group-item list-group-item-action active" data-est-group="quimica">Química / Metabólico</button>
-                            <button class="list-group-item list-group-item-action" data-est-group="hemato">Hematología</button>
-                            <button class="list-group-item list-group-item-action" data-est-group="endo">Endocrino</button>
-                            <button class="list-group-item list-group-item-action" data-est-group="inmuno">Inflamación / Inmuno</button>
-                            <button class="list-group-item list-group-item-action" data-est-group="sero">Serologías / Infecciosas</button>
-                            <button class="list-group-item list-group-item-action" data-est-group="micro">Microbiología</button>
-                            <button class="list-group-item list-group-item-action" data-est-group="citologia">Citología</button>
-                            <button class="list-group-item list-group-item-action" data-est-group="tumor">Marcadores tumorales</button>
-                            <button class="list-group-item list-group-item-action" data-est-group="orina">Orina / Heces</button>
-                            <button class="list-group-item list-group-item-action" data-est-group="genetica">Genética / Molecular</button>
+                            <button class="list-group-item list-group-item-action active" data-est-group="chemistry_metabolic">Química / Metabólico</button>
+                            <button class="list-group-item list-group-item-action" data-est-group="hematology">Hematología</button>
+                            <button class="list-group-item list-group-item-action" data-est-group="coagulation">Coagulación</button>
+                            <button class="list-group-item list-group-item-action" data-est-group="endocrine">Endocrino</button>
+                            <button class="list-group-item list-group-item-action" data-est-group="inflammation_immuno">Inflamación / Inmuno</button>
+                            <button class="list-group-item list-group-item-action" data-est-group="serology_infectious">Serologías / Infecciosas</button>
+                            <button class="list-group-item list-group-item-action" data-est-group="microbiology">Microbiología</button>
+                            <button class="list-group-item list-group-item-action" data-est-group="urine_stool">Orina / Heces</button>
+                            <button class="list-group-item list-group-item-action" data-est-group="genetics_molecular">Genética / Molecular</button>
                           </div>
                         </div>
                         <div class="col-md-9">
                           <div class="accordion" id="estLabAccordion">
-                            <div class="accordion-item" data-est-group-pane="quimica">
-                              <h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#labQuimica">Química / Metabólico</button></h2>
-                              <div id="labQuimica" class="accordion-collapse collapse show">
+                            <div class="accordion-item" data-est-group-pane="chemistry_metabolic" data-est-group-label="Química / Metabólico">
+                              <h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#labChem">Química / Metabólico</button></h2>
+                              <div id="labChem" class="accordion-collapse collapse show">
                                 <div class="accordion-body">
-                                  <div class="est-lab-sub">Perfil básico / QS</div>
-                                  <div class="est-lab-grid" data-est-subgroup="qs">
-                                    <label><input type="checkbox" data-est-item="Glucosa"> Glucosa</label>
-                                    <label><input type="checkbox" data-est-item="Urea"> Urea</label>
-                                    <label><input type="checkbox" data-est-item="Creatinina"> Creatinina</label>
-                                    <label><input type="checkbox" data-est-item="Ácido úrico"> Ácido úrico</label>
+                                  <div class="est-lab-sub">Glucosa y control</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="Glucosa" data-est-id="glucose"> Glucosa</label>
+                                    <label><input type="checkbox" data-est-item="HbA1c" data-est-id="hba1c"> HbA1c</label>
+                                    <label><input type="checkbox" data-est-item="Fructosamina" data-est-id="fructosamine"> Fructosamina</label>
+                                    <label><input type="checkbox" data-est-item="Curva de glucosa (OGTT)" data-est-id="ogtt"> Curva de glucosa (OGTT)</label>
+                                  </div>
+                                  <div class="est-lab-sub mt-2">Función renal</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="Urea" data-est-id="urea"> Urea</label>
+                                    <label><input type="checkbox" data-est-item="Creatinina" data-est-id="creatinine"> Creatinina</label>
+                                    <label><input type="checkbox" data-est-item="TFG estimada (eGFR)" data-est-id="egfr"> TFG estimada (eGFR)</label>
+                                    <label><input type="checkbox" data-est-item="Nitrógeno ureico (BUN)" data-est-id="bun"> Nitrógeno ureico (BUN)</label>
+                                    <label><input type="checkbox" data-est-item="Ácido úrico" data-est-id="uric_acid"> Ácido úrico</label>
                                   </div>
                                   <div class="est-lab-sub mt-2">Electrolitos</div>
-                                  <div class="est-lab-grid" data-est-subgroup="electrolitos">
-                                    <label><input type="checkbox" data-est-item="Sodio"> Sodio</label>
-                                    <label><input type="checkbox" data-est-item="Potasio"> Potasio</label>
-                                    <label><input type="checkbox" data-est-item="Cloro"> Cloro</label>
-                                    <label><input type="checkbox" data-est-item="Calcio"> Calcio</label>
-                                    <label><input type="checkbox" data-est-item="Magnesio"> Magnesio</label>
-                                    <label><input type="checkbox" data-est-item="Fósforo"> Fósforo</label>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="Sodio" data-est-id="sodium"> Sodio</label>
+                                    <label><input type="checkbox" data-est-item="Potasio" data-est-id="potassium"> Potasio</label>
+                                    <label><input type="checkbox" data-est-item="Cloro" data-est-id="chloride"> Cloro</label>
+                                    <label><input type="checkbox" data-est-item="Calcio" data-est-id="calcium"> Calcio</label>
+                                    <label><input type="checkbox" data-est-item="Magnesio" data-est-id="magnesium"> Magnesio</label>
+                                    <label><input type="checkbox" data-est-item="Fósforo" data-est-id="phosphorus"> Fósforo</label>
                                   </div>
-                                  <div class="est-lab-sub mt-2">Hepático</div>
-                                  <div class="est-lab-grid" data-est-subgroup="hepatico">
-                                    <label><input type="checkbox" data-est-item="AST/TGO"> AST/TGO</label>
-                                    <label><input type="checkbox" data-est-item="ALT/TGP"> ALT/TGP</label>
-                                    <label><input type="checkbox" data-est-item="FA"> FA</label>
-                                    <label><input type="checkbox" data-est-item="GGT"> GGT</label>
-                                    <label><input type="checkbox" data-est-item="Bilirrubina total"> Bilirrubina total</label>
-                                    <label><input type="checkbox" data-est-item="Bilirrubina directa"> Bilirrubina directa</label>
-                                    <label><input type="checkbox" data-est-item="Bilirrubina indirecta"> Bilirrubina indirecta</label>
-                                    <label><input type="checkbox" data-est-item="Albúmina"> Albúmina</label>
-                                    <label><input type="checkbox" data-est-item="TP/INR"> TP/INR</label>
+                                  <div class="est-lab-sub mt-2">Perfil lipídico</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="Colesterol total" data-est-id="chol_total"> Colesterol total</label>
+                                    <label><input type="checkbox" data-est-item="HDL" data-est-id="hdl"> HDL</label>
+                                    <label><input type="checkbox" data-est-item="LDL" data-est-id="ldl"> LDL</label>
+                                    <label><input type="checkbox" data-est-item="Triglicéridos" data-est-id="triglycerides"> Triglicéridos</label>
+                                    <label><input type="checkbox" data-est-item="Colesterol no-HDL" data-est-id="non_hdl"> Colesterol no-HDL</label>
                                   </div>
-                                  <div class="est-lab-sub mt-2">Lipídico</div>
-                                  <div class="est-lab-grid" data-est-subgroup="lipidos">
-                                    <label><input type="checkbox" data-est-item="Colesterol total"> Colesterol total</label>
-                                    <label><input type="checkbox" data-est-item="LDL"> LDL</label>
-                                    <label><input type="checkbox" data-est-item="HDL"> HDL</label>
-                                    <label><input type="checkbox" data-est-item="Triglicéridos"> Triglicéridos</label>
-                                    <label><input type="checkbox" data-est-item="ApoA1"> ApoA1</label>
-                                    <label><input type="checkbox" data-est-item="ApoB"> ApoB</label>
-                                    <label><input type="checkbox" data-est-item="Lp(a)"> Lp(a)</label>
+                                  <div class="est-lab-sub mt-2">Función hepática</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="AST (TGO)" data-est-id="ast"> AST (TGO)</label>
+                                    <label><input type="checkbox" data-est-item="ALT (TGP)" data-est-id="alt"> ALT (TGP)</label>
+                                    <label><input type="checkbox" data-est-item="Fosfatasa alcalina (ALP)" data-est-id="alp"> Fosfatasa alcalina (ALP)</label>
+                                    <label><input type="checkbox" data-est-item="GGT" data-est-id="ggt"> GGT</label>
+                                    <label><input type="checkbox" data-est-item="Bilirrubina total" data-est-id="bilirubin_total"> Bilirrubina total</label>
+                                    <label><input type="checkbox" data-est-item="Bilirrubina directa" data-est-id="bilirubin_direct"> Bilirrubina directa</label>
+                                    <label><input type="checkbox" data-est-item="Bilirrubina indirecta" data-est-id="bilirubin_indirect"> Bilirrubina indirecta</label>
+                                    <label><input type="checkbox" data-est-item="Albúmina" data-est-id="albumin"> Albúmina</label>
+                                    <label><input type="checkbox" data-est-item="Proteínas totales" data-est-id="total_protein"> Proteínas totales</label>
                                   </div>
-                                  <div class="est-lab-sub mt-2">Glucemia/Control</div>
-                                  <div class="est-lab-grid" data-est-subgroup="glucemia">
-                                    <label><input type="checkbox" data-est-item="HbA1c"> HbA1c</label>
-                                    <label><input type="checkbox" data-est-item="Fructosamina"> Fructosamina</label>
-                                    <label><input type="checkbox" data-est-item="Curva de glucosa"> Curva de glucosa</label>
+                                  <div class="est-lab-sub mt-2">Pancreáticas</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="Amilasa" data-est-id="amylase"> Amilasa</label>
+                                    <label><input type="checkbox" data-est-item="Lipasa" data-est-id="lipase"> Lipasa</label>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                            <div class="accordion-item" data-est-group-pane="hemato">
-                              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#labHemato">Hematología</button></h2>
-                              <div id="labHemato" class="accordion-collapse collapse">
+                            <div class="accordion-item" data-est-group-pane="hematology" data-est-group-label="Hematología">
+                              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#labHema">Hematología</button></h2>
+                              <div id="labHema" class="accordion-collapse collapse">
                                 <div class="accordion-body">
-                                  <div class="est-lab-grid" data-est-subgroup="hemato">
-                                    <label><input type="checkbox" data-est-item="BH"> BH</label>
-                                    <label><input type="checkbox" data-est-item="Reticulocitos"> Reticulocitos</label>
-                                    <label><input type="checkbox" data-est-item="VSG"> VSG</label>
-                                    <label><input type="checkbox" data-est-item="TP/INR"> TP/INR</label>
-                                    <label><input type="checkbox" data-est-item="TTPa"> TTPa</label>
-                                    <label><input type="checkbox" data-est-item="Fibrinógeno"> Fibrinógeno</label>
-                                    <label><input type="checkbox" data-est-item="Dímero D"> Dímero D</label>
+                                  <div class="est-lab-sub">Básicos</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="Biometría hemática (BH / CBC)" data-est-id="cbc"> Biometría hemática (BH / CBC)</label>
+                                    <label><input type="checkbox" data-est-item="Hemoglobina / Hematocrito" data-est-id="hgb_hct"> Hemoglobina / Hematocrito</label>
+                                    <label><input type="checkbox" data-est-item="Plaquetas" data-est-id="platelets"> Plaquetas</label>
+                                  </div>
+                                  <div class="est-lab-sub mt-2">Hierro</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="Hierro sérico" data-est-id="iron"> Hierro sérico</label>
+                                    <label><input type="checkbox" data-est-item="CTFH (TIBC)" data-est-id="tibc"> CTFH (TIBC)</label>
+                                    <label><input type="checkbox" data-est-item="% Saturación transferrina" data-est-id="transferrin_sat"> % Saturación transferrina</label>
+                                    <label><input type="checkbox" data-est-item="Ferritina" data-est-id="ferritin"> Ferritina</label>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                            <div class="accordion-item" data-est-group-pane="endo">
+                            <div class="accordion-item" data-est-group-pane="coagulation" data-est-group-label="Coagulación">
+                              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#labCoag">Coagulación</button></h2>
+                              <div id="labCoag" class="accordion-collapse collapse">
+                                <div class="accordion-body">
+                                  <div class="est-lab-sub">Pruebas básicas</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="TP / INR" data-est-id="pt_inr"> TP / INR</label>
+                                    <label><input type="checkbox" data-est-item="TTPa (aPTT)" data-est-id="aptt"> TTPa (aPTT)</label>
+                                    <label><input type="checkbox" data-est-item="Fibrinógeno" data-est-id="fibrinogen"> Fibrinógeno</label>
+                                    <label><input type="checkbox" data-est-item="Dímero D" data-est-id="d_dimer"> Dímero D</label>
+                                  </div>
+                                  <div class="est-lab-sub mt-2">Trombofilia</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="Factor V Leiden" data-est-id="factor_v_leiden"> Factor V Leiden</label>
+                                    <label><input type="checkbox" data-est-item="Proteína C" data-est-id="protein_c"> Proteína C</label>
+                                    <label><input type="checkbox" data-est-item="Proteína S" data-est-id="protein_s"> Proteína S</label>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="accordion-item" data-est-group-pane="endocrine" data-est-group-label="Endocrino">
                               <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#labEndo">Endocrino</button></h2>
                               <div id="labEndo" class="accordion-collapse collapse">
                                 <div class="accordion-body">
                                   <div class="est-lab-sub">Tiroides</div>
-                                  <div class="est-lab-grid" data-est-subgroup="tiroides">
-                                    <label><input type="checkbox" data-est-item="TSH"> TSH</label>
-                                    <label><input type="checkbox" data-est-item="T4 libre"> T4 libre</label>
-                                    <label><input type="checkbox" data-est-item="T3 libre"> T3 libre</label>
-                                    <label><input type="checkbox" data-est-item="Anti-TPO"> Anti-TPO</label>
-                                    <label><input type="checkbox" data-est-item="Anti-Tg"> Anti-Tg</label>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="TSH" data-est-id="tsh"> TSH</label>
+                                    <label><input type="checkbox" data-est-item="T4 libre" data-est-id="ft4"> T4 libre</label>
+                                    <label><input type="checkbox" data-est-item="T3 libre" data-est-id="ft3"> T3 libre</label>
+                                    <label><input type="checkbox" data-est-item="Anti-TPO" data-est-id="anti_tpo"> Anti-TPO</label>
+                                    <label><input type="checkbox" data-est-item="Anti-tiroglobulina" data-est-id="anti_tg"> Anti-tiroglobulina</label>
                                   </div>
-                                  <div class="est-lab-sub mt-2">Reproductivo</div>
-                                  <div class="est-lab-grid" data-est-subgroup="repro">
-                                    <label><input type="checkbox" data-est-item="LH"> LH</label>
-                                    <label><input type="checkbox" data-est-item="FSH"> FSH</label>
-                                    <label><input type="checkbox" data-est-item="Estradiol"> Estradiol</label>
-                                    <label><input type="checkbox" data-est-item="Progesterona"> Progesterona</label>
-                                    <label><input type="checkbox" data-est-item="Testosterona total"> Testosterona total</label>
-                                    <label><input type="checkbox" data-est-item="Prolactina"> Prolactina</label>
-                                    <label><input type="checkbox" data-est-item="AMH"> AMH</label>
-                                    <label><input type="checkbox" data-est-item="β-hCG"> β-hCG</label>
-                                  </div>
-                                  <div class="est-lab-sub mt-2">Otros</div>
-                                  <div class="est-lab-grid" data-est-subgroup="endo-otros">
-                                    <label><input type="checkbox" data-est-item="Cortisol"> Cortisol</label>
-                                    <label><input type="checkbox" data-est-item="ACTH"> ACTH</label>
-                                    <label><input type="checkbox" data-est-item="Insulina"> Insulina</label>
-                                    <label><input type="checkbox" data-est-item="Péptido C"> Péptido C</label>
+                                  <div class="est-lab-sub mt-2">Reproductivas</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="β-hCG" data-est-id="bhcg"> β-hCG</label>
+                                    <label><input type="checkbox" data-est-item="LH" data-est-id="lh"> LH</label>
+                                    <label><input type="checkbox" data-est-item="FSH" data-est-id="fsh"> FSH</label>
+                                    <label><input type="checkbox" data-est-item="Prolactina" data-est-id="prolactin"> Prolactina</label>
+                                    <label><input type="checkbox" data-est-item="Estradiol" data-est-id="estradiol"> Estradiol</label>
+                                    <label><input type="checkbox" data-est-item="Progesterona" data-est-id="progesterone"> Progesterona</label>
+                                    <label><input type="checkbox" data-est-item="Testosterona total" data-est-id="testosterone_total"> Testosterona total</label>
+                                    <label><input type="checkbox" data-est-item="Testosterona libre" data-est-id="testosterone_free"> Testosterona libre</label>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                            <div class="accordion-item" data-est-group-pane="inmuno">
-                              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#labInmuno">Inflamación / Inmuno</button></h2>
-                              <div id="labInmuno" class="accordion-collapse collapse">
+                            <div class="accordion-item" data-est-group-pane="inflammation_immuno" data-est-group-label="Inflamación / Inmuno">
+                              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#labInflam">Inflamación / Inmuno</button></h2>
+                              <div id="labInflam" class="accordion-collapse collapse">
                                 <div class="accordion-body">
-                                  <div class="est-lab-grid" data-est-subgroup="inmuno">
-                                    <label><input type="checkbox" data-est-item="PCR ultrasensible"> PCR ultrasensible</label>
-                                    <label><input type="checkbox" data-est-item="Ferritina"> Ferritina</label>
-                                    <label><input type="checkbox" data-est-item="Vitamina D"> Vitamina D</label>
-                                    <label><input type="checkbox" data-est-item="ANA"> ANA</label>
-                                    <label><input type="checkbox" data-est-item="ENA"> ENA</label>
-                                    <label><input type="checkbox" data-est-item="ANCA"> ANCA</label>
-                                    <label><input type="checkbox" data-est-item="FR"> FR</label>
-                                    <label><input type="checkbox" data-est-item="CCP"> CCP</label>
-                                    <label><input type="checkbox" data-est-item="C3"> C3</label>
-                                    <label><input type="checkbox" data-est-item="C4"> C4</label>
+                                  <div class="est-lab-sub">Inflamación</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="PCR ultrasensible" data-est-id="crp_hs"> PCR ultrasensible</label>
+                                    <label><input type="checkbox" data-est-item="VSG" data-est-id="esr"> VSG</label>
+                                  </div>
+                                  <div class="est-lab-sub mt-2">Autoinmunidad</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="ANA" data-est-id="ana"> ANA</label>
+                                    <label><input type="checkbox" data-est-item="ENA" data-est-id="ena"> ENA</label>
+                                    <label><input type="checkbox" data-est-item="ANCA" data-est-id="anca"> ANCA</label>
+                                    <label><input type="checkbox" data-est-item="Factor reumatoide" data-est-id="rf"> Factor reumatoide</label>
+                                    <label><input type="checkbox" data-est-item="Anti-CCP" data-est-id="anti_ccp"> Anti-CCP</label>
+                                    <label><input type="checkbox" data-est-item="C3" data-est-id="c3"> C3</label>
+                                    <label><input type="checkbox" data-est-item="C4" data-est-id="c4"> C4</label>
+                                  </div>
+                                  <div class="est-lab-sub mt-2">Vitaminas</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="Vitamina D" data-est-id="vitamin_d"> Vitamina D</label>
+                                    <label><input type="checkbox" data-est-item="Vitamina B12" data-est-id="vitamin_b12"> Vitamina B12</label>
+                                    <label><input type="checkbox" data-est-item="Ácido fólico" data-est-id="folate"> Ácido fólico</label>
+                                  </div>
+                                  <div class="est-lab-sub mt-2">Inmunoglobulinas</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="IgG" data-est-id="igg"> IgG</label>
+                                    <label><input type="checkbox" data-est-item="IgA" data-est-id="iga"> IgA</label>
+                                    <label><input type="checkbox" data-est-item="IgM" data-est-id="igm"> IgM</label>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                            <div class="accordion-item" data-est-group-pane="sero">
+                            <div class="accordion-item" data-est-group-pane="serology_infectious" data-est-group-label="Serologías / Infecciosas">
                               <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#labSero">Serologías / Infecciosas</button></h2>
                               <div id="labSero" class="accordion-collapse collapse">
                                 <div class="accordion-body">
-                                  <div class="est-lab-grid" data-est-subgroup="sero">
-                                    <label><input type="checkbox" data-est-item="VIH Ag/Ac"> VIH Ag/Ac</label>
-                                    <label><input type="checkbox" data-est-item="HBsAg"> HBsAg</label>
-                                    <label><input type="checkbox" data-est-item="Anti-HBs"> Anti-HBs</label>
-                                    <label><input type="checkbox" data-est-item="Anti-HBc"> Anti-HBc</label>
-                                    <label><input type="checkbox" data-est-item="VHC"> VHC</label>
-                                    <label><input type="checkbox" data-est-item="VDRL/RPR"> VDRL/RPR</label>
-                                    <label><input type="checkbox" data-est-item="TORCH"> TORCH</label>
-                                    <label><input type="checkbox" data-est-item="Panel viral respiratorio"> Panel viral respiratorio</label>
+                                  <div class="est-lab-sub">ETS e infecciosas básicas</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="VIH Ag/Ac" data-est-id="hiv_ag_ac"> VIH Ag/Ac</label>
+                                    <label><input type="checkbox" data-est-item="VDRL / RPR" data-est-id="vdrl_rpr"> VDRL / RPR</label>
+                                    <label><input type="checkbox" data-est-item="HBsAg" data-est-id="hbsag"> HBsAg</label>
+                                    <label><input type="checkbox" data-est-item="Anti-HBs" data-est-id="anti_hbs"> Anti-HBs</label>
+                                    <label><input type="checkbox" data-est-item="Anti-HBc" data-est-id="anti_hbc"> Anti-HBc</label>
+                                    <label><input type="checkbox" data-est-item="VHC (anticuerpos)" data-est-id="hcv_ab"> VHC (anticuerpos)</label>
+                                  </div>
+                                  <div class="est-lab-sub mt-2">TORCH / Virales</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="Toxoplasma" data-est-id="toxoplasma"> Toxoplasma</label>
+                                    <label><input type="checkbox" data-est-item="Rubéola" data-est-id="rubella"> Rubéola</label>
+                                    <label><input type="checkbox" data-est-item="CMV" data-est-id="cmv"> CMV</label>
+                                    <label><input type="checkbox" data-est-item="Herpes" data-est-id="herpes"> Herpes</label>
+                                    <label><input type="checkbox" data-est-item="Influenza A" data-est-id="influenza_a"> Influenza A</label>
+                                    <label><input type="checkbox" data-est-item="Influenza B" data-est-id="influenza_b"> Influenza B</label>
+                                    <label><input type="checkbox" data-est-item="RSV" data-est-id="rsv"> RSV</label>
+                                    <label><input type="checkbox" data-est-item="SARS-CoV-2 (COVID-19)" data-est-id="covid19"> SARS-CoV-2 (COVID-19)</label>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                            <div class="accordion-item" data-est-group-pane="micro">
+                            <div class="accordion-item" data-est-group-pane="microbiology" data-est-group-label="Microbiología">
                               <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#labMicro">Microbiología</button></h2>
                               <div id="labMicro" class="accordion-collapse collapse">
                                 <div class="accordion-body">
-                                  <div class="est-lab-grid" data-est-subgroup="micro">
-                                    <label><input type="checkbox" data-est-item="Hemocultivo"> Hemocultivo</label>
-                                    <label><input type="checkbox" data-est-item="Urocultivo"> Urocultivo</label>
-                                    <label><input type="checkbox" data-est-item="Coprocultivo"> Coprocultivo</label>
-                                    <label><input type="checkbox" data-est-item="Exudado faríngeo"> Exudado faríngeo</label>
-                                    <label><input type="checkbox" data-est-item="Exudado nasal"> Exudado nasal</label>
-                                    <label><input type="checkbox" data-est-item="Exudado vaginal"> Exudado vaginal</label>
-                                    <label><input type="checkbox" data-est-item="Exudado cervical"> Exudado cervical</label>
-                                    <label><input type="checkbox" data-est-item="Gram"> Gram</label>
-                                    <label><input type="checkbox" data-est-item="Ziehl-Neelsen"> Ziehl-Neelsen</label>
-                                    <label><input type="checkbox" data-est-item="KOH"> KOH</label>
+                                  <div class="est-lab-sub">Cultivos</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="Urocultivo" data-est-id="urine_culture"> Urocultivo</label>
+                                    <label><input type="checkbox" data-est-item="Hemocultivo" data-est-id="blood_culture"> Hemocultivo</label>
+                                    <label><input type="checkbox" data-est-item="Coprocultivo" data-est-id="stool_culture"> Coprocultivo</label>
+                                    <label><input type="checkbox" data-est-item="Exudado faríngeo" data-est-id="throat_swab"> Exudado faríngeo</label>
+                                    <label><input type="checkbox" data-est-item="Exudado vaginal" data-est-id="vaginal_swab"> Exudado vaginal</label>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                            <div class="accordion-item" data-est-group-pane="citologia">
-                              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#labCito">Citología</button></h2>
-                              <div id="labCito" class="accordion-collapse collapse">
+                            <div class="accordion-item" data-est-group-pane="urine_stool" data-est-group-label="Orina / Heces">
+                              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#labUrine">Orina / Heces</button></h2>
+                              <div id="labUrine" class="accordion-collapse collapse">
                                 <div class="accordion-body">
-                                  <div class="est-lab-grid" data-est-subgroup="citologia">
-                                    <label><input type="checkbox" data-est-item="Papanicolaou"> Papanicolaou</label>
-                                    <label><input type="checkbox" data-est-item="Colposcopia"> Colposcopia</label>
-                                    <label><input type="checkbox" data-est-item="Exudado vaginal"> Exudado vaginal</label>
-                                    <label><input type="checkbox" data-est-item="Exudado cervical"> Exudado cervical</label>
+                                  <div class="est-lab-sub">Orina</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="EGO (examen general de orina)" data-est-id="urinalysis"> EGO (examen general de orina)</label>
+                                    <label><input type="checkbox" data-est-item="Microalbuminuria" data-est-id="microalbumin"> Microalbuminuria</label>
+                                  </div>
+                                  <div class="est-lab-sub mt-2">Heces</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="Sangre oculta en heces" data-est-id="fecal_occult_blood"> Sangre oculta en heces</label>
+                                    <label><input type="checkbox" data-est-item="Coproparasitoscópico" data-est-id="stool_ova_parasites"> Coproparasitoscópico</label>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                            <div class="accordion-item" data-est-group-pane="tumor">
-                              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#labTumor">Marcadores tumorales</button></h2>
-                              <div id="labTumor" class="accordion-collapse collapse">
-                                <div class="accordion-body">
-                                  <div class="est-lab-grid" data-est-subgroup="tumor">
-                                    <label><input type="checkbox" data-est-item="AFP"> AFP</label>
-                                    <label><input type="checkbox" data-est-item="CEA"> CEA</label>
-                                    <label><input type="checkbox" data-est-item="CA-125"> CA-125</label>
-                                    <label><input type="checkbox" data-est-item="CA 15-3"> CA 15-3</label>
-                                    <label><input type="checkbox" data-est-item="CA 19-9"> CA 19-9</label>
-                                    <label><input type="checkbox" data-est-item="PSA total"> PSA total</label>
-                                    <label><input type="checkbox" data-est-item="PSA libre"> PSA libre</label>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            <div class="accordion-item" data-est-group-pane="orina">
-                              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#labOrina">Orina / Heces</button></h2>
-                              <div id="labOrina" class="accordion-collapse collapse">
-                                <div class="accordion-body">
-                                  <div class="est-lab-grid" data-est-subgroup="orina">
-                                    <label><input type="checkbox" data-est-item="EGO"> EGO</label>
-                                    <label><input type="checkbox" data-est-item="Proteínas 24h"> Proteínas 24h</label>
-                                    <label><input type="checkbox" data-est-item="Microalbuminuria/ACR"> Microalbuminuria/ACR</label>
-                                    <label><input type="checkbox" data-est-item="Coproparasitoscópico"> Coproparasitoscópico</label>
-                                    <label><input type="checkbox" data-est-item="Sangre oculta en heces"> Sangre oculta en heces</label>
-                                    <label><input type="checkbox" data-est-item="Calprotectina fecal"> Calprotectina fecal</label>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            <div class="accordion-item" data-est-group-pane="genetica">
+                            <div class="accordion-item" data-est-group-pane="genetics_molecular" data-est-group-label="Genética / Molecular">
                               <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#labGen">Genética / Molecular</button></h2>
                               <div id="labGen" class="accordion-collapse collapse">
                                 <div class="accordion-body">
-                                  <div class="est-lab-grid" data-est-subgroup="genetica">
-                                    <label><input type="checkbox" data-est-item="Panel infeccioso PCR"> Panel infeccioso PCR</label>
-                                    <label><input type="checkbox" data-est-item="Panel trombofilia"> Panel trombofilia</label>
-                                    <label><input type="checkbox" data-est-item="Panel farmacogenómico"> Panel farmacogenómico</label>
+                                  <div class="est-lab-sub">Farmacogenómica</div>
+                                  <div class="est-lab-grid">
+                                    <label><input type="checkbox" data-est-item="CYP2C19" data-est-id="cyp2c19"> CYP2C19</label>
+                                    <label><input type="checkbox" data-est-item="CYP2D6" data-est-id="cyp2d6"> CYP2D6</label>
                                   </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                      <button type="button" class="btn btn-primary">Generar orden</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Modal catálogo de estudios de imagenología -->
+              <div class="modal fade" id="modalEstudiosImg" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title">Seleccionar estudios de imagenología</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div class="row g-3 mb-2 align-items-center">
+                        <div class="col-md-6">
+                          <input class="form-control" placeholder="Buscar por nombre o alias (ej. RX, TAC, ultrasonido)" data-est-lab-search>
+                        </div>
+                        <div class="col-md-6 d-flex gap-2 flex-wrap">
+                          <span class="badge bg-info text-dark est-chip-filter" data-est-filter="frecuentes">Frecuentes</span>
+                          <span class="badge bg-secondary est-chip-filter" data-est-filter="paquetes">Paquetes</span>
+                          <span class="badge bg-light text-dark est-chip-filter" data-est-filter="todos">Todos</span>
+                        </div>
+                      </div>
+                      <div class="est-selected-panel mb-2">
+                        <div class="fw-bold mb-1">Seleccionados <span class="est-summary-count" data-est-modal-count>(0)</span></div>
+                        <div class="est-selected-chips" data-est-selected></div>
+                      </div>
+                      <div class="est-flags mb-2" data-est-flags>
+                        <div class="est-lab-fav-ttl">Opciones rápidas</div>
+                        <div class="est-flag-grid">
+                          <button type="button" class="est-flag" data-est-flag="priority_urgent">Urgente</button>
+                          <button type="button" class="est-flag" data-est-flag="followup">Control / seguimiento</button>
+                          <button type="button" class="est-flag" data-est-flag="laterality_right">Derecha</button>
+                          <button type="button" class="est-flag" data-est-flag="laterality_left">Izquierda</button>
+                          <button type="button" class="est-flag" data-est-flag="laterality_bilateral">Bilateral</button>
+                          <button type="button" class="est-flag" data-est-flag="contrast_with">Con contraste</button>
+                          <button type="button" class="est-flag" data-est-flag="contrast_without">Sin contraste</button>
+                          <button type="button" class="est-flag" data-est-flag="contrast_with_without">Con y sin contraste</button>
+                          <button type="button" class="est-flag" data-est-flag="rx_pa">PA</button>
+                          <button type="button" class="est-flag" data-est-flag="rx_ap">AP</button>
+                          <button type="button" class="est-flag" data-est-flag="rx_lateral">Lateral</button>
+                          <button type="button" class="est-flag" data-est-flag="rx_pa_lateral">PA + lateral</button>
+                          <button type="button" class="est-flag" data-est-flag="rx_oblique">Oblicuas</button>
+                          <button type="button" class="est-flag" data-est-flag="rx_portable">Portátil</button>
+                          <button type="button" class="est-flag" data-est-flag="rx_weight_bearing">Con carga</button>
+                          <button type="button" class="est-flag" data-est-flag="rx_two_views">2 vistas</button>
+                          <button type="button" class="est-flag" data-est-flag="us_transvaginal">Transvaginal</button>
+                          <button type="button" class="est-flag" data-est-flag="us_transrectal">Transrectal</button>
+                          <button type="button" class="est-flag" data-est-flag="us_obstetric">Obstétrico</button>
+                          <button type="button" class="est-flag" data-est-flag="ct_angio">Angio-TAC</button>
+                          <button type="button" class="est-flag" data-est-flag="ct_phase_arterial">Fase arterial</button>
+                          <button type="button" class="est-flag" data-est-flag="ct_phase_venous">Fase venosa</button>
+                          <button type="button" class="est-flag" data-est-flag="ct_phase_delayed">Fase tardía</button>
+                          <button type="button" class="est-flag" data-est-flag="mr_angio">Angio-RM</button>
+                          <button type="button" class="est-flag" data-est-flag="mr_diffusion">Difusión (DWI)</button>
+                          <button type="button" class="est-flag" data-est-flag="mammo_screening">Tamizaje</button>
+                          <button type="button" class="est-flag" data-est-flag="mammo_diagnostic">Diagnóstica</button>
+                          <button type="button" class="est-flag" data-est-flag="mammo_tomo">Con tomosíntesis</button>
+                          <button type="button" class="est-flag" data-est-flag="vascular_color_doppler">Doppler color</button>
+                          <button type="button" class="est-flag" data-est-flag="vascular_spectral">Doppler espectral</button>
+                          <button type="button" class="est-flag" data-est-flag="vascular_arterial">Arterial</button>
+                          <button type="button" class="est-flag" data-est-flag="vascular_venous">Venoso</button>
+                          <button type="button" class="est-flag" data-est-flag="nm_with_ct">Con CT (atenuación)</button>
+                          <button type="button" class="est-flag" data-est-flag="pet_fdg">FDG</button>
+                          <button type="button" class="est-flag" data-est-flag="dexa_spine">Columna</button>
+                          <button type="button" class="est-flag" data-est-flag="dexa_hip">Cadera</button>
+                          <button type="button" class="est-flag" data-est-flag="dexa_whole_body">Cuerpo completo</button>
+                        </div>
+                      </div>
+                      <div class="row g-3">
+                        <div class="col-md-3">
+                          <div class="list-group est-lab-groups" data-est-modality-menu>
+                            <button type="button" class="list-group-item list-group-item-action active" data-est-modality="xray">Radiografía / Rayos X</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="ultrasound">Ultrasonido</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="ct">TAC / Tomografía</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="mr">Resonancia Magnética</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="breast">Mama</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="vascular_lab">Gabinete vascular</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="nuclear_medicine">Medicina Nuclear</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="pet">PET</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="dexa">Densitometría</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="special_procedures">Procedimientos / Especiales</button>
+                          </div>
+                        </div>
+                        <div class="col-md-9">
+                          <div class="est-modality-panels" data-est-modality-panels>
+                          <div class="est-modality-panel" data-est-modality-panel="xray">
+                            <div class="mb-3" data-est-group-pane="rx_thorax" data-est-group-label="Tórax">
+                              <div class="est-lab-sub">Tórax</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="RX Tórax" data-est-id="rx_chest"> RX Tórax</label>
+                              </div>
+                            </div>
+                            <div class="mb-3" data-est-group-pane="rx_abd_pel" data-est-group-label="Abdomen y pelvis">
+                              <div class="est-lab-sub">Abdomen y pelvis</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="RX Abdomen" data-est-id="rx_abdomen"> RX Abdomen</label>
+                                <label><input type="checkbox" data-est-item="RX Pelvis" data-est-id="rx_pelvis"> RX Pelvis</label>
+                              </div>
+                            </div>
+                            <div class="mb-3" data-est-group-pane="rx_spine" data-est-group-label="Columna">
+                              <div class="est-lab-sub">Columna</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="RX Columna cervical" data-est-id="rx_cspine"> RX Columna cervical</label>
+                                <label><input type="checkbox" data-est-item="RX Columna lumbar" data-est-id="rx_lspine"> RX Columna lumbar</label>
+                              </div>
+                            </div>
+                            <div class="mb-3" data-est-group-pane="rx_ext" data-est-group-label="Extremidades">
+                              <div class="est-lab-sub">Extremidades</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="RX Hombro" data-est-id="rx_shoulder"> RX Hombro</label>
+                                <label><input type="checkbox" data-est-item="RX Rodilla" data-est-id="rx_knee"> RX Rodilla</label>
+                                <label><input type="checkbox" data-est-item="RX Tobillo" data-est-id="rx_ankle"> RX Tobillo</label>
+                                <label><input type="checkbox" data-est-item="RX Mano" data-est-id="rx_hand"> RX Mano</label>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="est-modality-panel d-none" data-est-modality-panel="ultrasound">
+                            <div class="mb-3" data-est-group-pane="us_abdomen" data-est-group-label="Abdomen">
+                              <div class="est-lab-sub">Abdomen</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="US Abdomen" data-est-id="us_abdomen"> US Abdomen</label>
+                                <label><input type="checkbox" data-est-item="US Renal" data-est-id="us_renal"> US Renal</label>
+                              </div>
+                            </div>
+                            <div class="mb-3" data-est-group-pane="us_pelvis" data-est-group-label="Pelvis / Gineco-Obstétrico">
+                              <div class="est-lab-sub">Pelvis / Gineco-Obstétrico</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="US Pélvico" data-est-id="us_pelvic"> US Pélvico</label>
+                                <label><input type="checkbox" data-est-item="US Obstétrico" data-est-id="us_obstetric_study"> US Obstétrico</label>
+                              </div>
+                            </div>
+                            <div class="mb-3" data-est-group-pane="us_neck" data-est-group-label="Cabeza y cuello">
+                              <div class="est-lab-sub">Cabeza y cuello</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="US Tiroides" data-est-id="us_thyroid"> US Tiroides</label>
+                              </div>
+                            </div>
+                            <div class="mb-3" data-est-group-pane="us_soft" data-est-group-label="Partes blandas">
+                              <div class="est-lab-sub">Partes blandas</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="US Partes blandas" data-est-id="us_soft_tissue"> US Partes blandas</label>
+                              </div>
+                            </div>
+                            <div class="mb-3" data-est-group-pane="us_urology" data-est-group-label="Urológico">
+                              <div class="est-lab-sub">Urológico</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="US Testicular" data-est-id="us_testicular"> US Testicular</label>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="est-modality-panel d-none" data-est-modality-panel="ct">
+                            <div class="mb-3" data-est-group-pane="ct_head_neck" data-est-group-label="Cabeza">
+                              <div class="est-lab-sub">Cabeza</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="TAC Cráneo" data-est-id="ct_head"> TAC Cráneo</label>
+                              </div>
+                            </div>
+                            <div class="mb-3" data-est-group-pane="ct_chest" data-est-group-label="Tórax">
+                              <div class="est-lab-sub">Tórax</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="TAC Tórax" data-est-id="ct_chest"> TAC Tórax</label>
+                              </div>
+                            </div>
+                            <div class="mb-3" data-est-group-pane="ct_abdomen_pelvis" data-est-group-label="Abdomen y pelvis">
+                              <div class="est-lab-sub">Abdomen y pelvis</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="TAC Abdomen y pelvis" data-est-id="ct_abdomen_pelvis"> TAC Abdomen y pelvis</label>
+                                <label><input type="checkbox" data-est-item="UroTAC (vías urinarias)" data-est-id="ct_uro"> UroTAC (vías urinarias)</label>
+                              </div>
+                            </div>
+                            <div class="mb-3" data-est-group-pane="ct_spine_ext" data-est-group-label="Columna y extremidades">
+                              <div class="est-lab-sub">Columna y extremidades</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="TAC Columna (segmento)" data-est-id="ct_spine"> TAC Columna (segmento)</label>
+                                <label><input type="checkbox" data-est-item="TAC Extremidad (segmento)" data-est-id="ct_extremity"> TAC Extremidad (segmento)</label>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="est-modality-panel d-none" data-est-modality-panel="mr">
+                            <div class="mb-3" data-est-group-pane="mr_brain" data-est-group-label="Neuro">
+                              <div class="est-lab-sub">Neuro</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="RM Cerebro" data-est-id="mr_brain"> RM Cerebro</label>
+                              </div>
+                            </div>
+                            <div class="mb-3" data-est-group-pane="mr_spine" data-est-group-label="Columna">
+                              <div class="est-lab-sub">Columna</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="RM Columna (segmento)" data-est-id="mr_spine"> RM Columna (segmento)</label>
+                              </div>
+                            </div>
+                            <div class="mb-3" data-est-group-pane="mr_msk" data-est-group-label="Músculo-esquelético">
+                              <div class="est-lab-sub">Músculo-esquelético</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="RM Rodilla" data-est-id="mr_knee"> RM Rodilla</label>
+                                <label><input type="checkbox" data-est-item="RM Hombro" data-est-id="mr_shoulder"> RM Hombro</label>
+                              </div>
+                            </div>
+                            <div class="mb-3" data-est-group-pane="mr_abd" data-est-group-label="Abdomen">
+                              <div class="est-lab-sub">Abdomen</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="RM Abdomen" data-est-id="mr_abdomen"> RM Abdomen</label>
+                              </div>
+                            </div>
+                            <div class="mb-3" data-est-group-pane="mr_angio" data-est-group-label="Angio-RM">
+                              <div class="est-lab-sub">Angio-RM</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="Angio-RM (territorio)" data-est-id="mr_angio_study"> Angio-RM (territorio)</label>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="est-modality-panel d-none" data-est-modality-panel="breast">
+                            <div class="mb-3" data-est-group-pane="breast_base" data-est-group-label="Estudios base">
+                              <div class="est-lab-sub">Estudios base</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="Mamografía" data-est-id="mammo"> Mamografía</label>
+                                <label><input type="checkbox" data-est-item="US Mama" data-est-id="breast_us"> US Mama</label>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="est-modality-panel d-none" data-est-modality-panel="vascular_lab">
+                            <div class="mb-3" data-est-group-pane="vascular_base" data-est-group-label="Estudios base">
+                              <div class="est-lab-sub">Estudios base</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="Doppler carotídeo" data-est-id="vasc_carotid"> Doppler carotídeo</label>
+                                <label><input type="checkbox" data-est-item="Doppler venoso MI (TVP)" data-est-id="vasc_venous_leg"> Doppler venoso MI (TVP)</label>
+                                <label><input type="checkbox" data-est-item="Doppler arterial MI" data-est-id="vasc_arterial_leg"> Doppler arterial MI</label>
+                                <label><input type="checkbox" data-est-item="Doppler MS (arterial/venoso)" data-est-id="vasc_upper_ext"> Doppler MS (arterial/venoso)</label>
+                                <label><input type="checkbox" data-est-item="Doppler abdominal (aorta/renal/mesentérico)" data-est-id="vasc_abdomen"> Doppler abdominal (aorta/renal/mesentérico)</label>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="est-modality-panel d-none" data-est-modality-panel="nuclear_medicine">
+                            <div class="mb-3" data-est-group-pane="nm_base" data-est-group-label="Estudios base">
+                              <div class="est-lab-sub">Estudios base</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="Gammagrama óseo" data-est-id="nm_bone_scan"> Gammagrama óseo</label>
+                                <label><input type="checkbox" data-est-item="Captación tiroidea" data-est-id="nm_thyroid_uptake"> Captación tiroidea</label>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="est-modality-panel d-none" data-est-modality-panel="pet">
+                            <div class="mb-3" data-est-group-pane="pet_base" data-est-group-label="Estudios base">
+                              <div class="est-lab-sub">Estudios base</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="PET-CT" data-est-id="pet_ct"> PET-CT</label>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="est-modality-panel d-none" data-est-modality-panel="dexa">
+                            <div class="mb-3" data-est-group-pane="dexa_base" data-est-group-label="Estudio base">
+                              <div class="est-lab-sub">Estudio base</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="Densitometría ósea (DEXA)" data-est-id="dexa"> Densitometría ósea (DEXA)</label>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="est-modality-panel d-none" data-est-modality-panel="special_procedures">
+                            <div class="mb-3" data-est-group-pane="fluoro_base" data-est-group-label="Fluoroscopía / Contraste">
+                              <div class="est-lab-sub">Fluoroscopía / Contraste</div>
+                              <div class="est-lab-grid">
+                                <label><input type="checkbox" data-est-item="Histerosalpingografía (HSG)" data-est-id="fluoro_hsg"> Histerosalpingografía (HSG)</label>
+                                <label><input type="checkbox" data-est-item="Cistouretrografía miccional (VCUG)" data-est-id="fluoro_vcug"> Cistouretrografía miccional (VCUG)</label>
+                                <label><input type="checkbox" data-est-item="Tránsito esófago-gastro-duodenal (UGI)" data-est-id="fluoro_ugi"> Tránsito esófago-gastro-duodenal (UGI)</label>
+                                <label><input type="checkbox" data-est-item="Enema baritado" data-est-id="fluoro_barium_enema"> Enema baritado</label>
+                              </div>
+                            </div>
+                          </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                      <button type="button" class="btn btn-primary">Generar orden</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Modal catálogo de estudios de cardiología -->
+              <div class="modal fade" id="modalEstudiosCardio" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title">Seleccionar estudios de cardiología</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div class="row g-3 mb-2 align-items-center">
+                        <div class="col-md-6">
+                          <input class="form-control" placeholder="Buscar por nombre o alias (ej. ECG, Holter, eco)" data-est-lab-search>
+                        </div>
+                        <div class="col-md-6 d-flex gap-2 flex-wrap">
+                          <span class="badge bg-info text-dark est-chip-filter" data-est-filter="frecuentes">Frecuentes</span>
+                          <span class="badge bg-secondary est-chip-filter" data-est-filter="paquetes">Paquetes</span>
+                          <span class="badge bg-light text-dark est-chip-filter" data-est-filter="todos">Todos</span>
+                        </div>
+                      </div>
+                      <div class="est-selected-panel mb-2">
+                        <div class="fw-bold mb-1">Seleccionados <span class="est-summary-count" data-est-modal-count>(0)</span></div>
+                        <div class="est-selected-chips" data-est-selected></div>
+                      </div>
+                      <div class="est-flags mb-2" data-est-flags>
+                        <div class="est-lab-fav-ttl">Modificadores</div>
+                        <div class="est-flag-grid">
+                          <button type="button" class="est-flag" data-est-flag="priority_routine">Rutinario</button>
+                          <button type="button" class="est-flag" data-est-flag="priority_urgent">Urgente</button>
+                          <button type="button" class="est-flag" data-est-flag="priority_stat">Prioridad (STAT)</button>
+                          <button type="button" class="est-flag" data-est-flag="adult">Adulto</button>
+                          <button type="button" class="est-flag" data-est-flag="pediatric">Pediátrico</button>
+                          <button type="button" class="est-flag" data-est-flag="with_report">Con interpretación</button>
+                          <button type="button" class="est-flag" data-est-flag="without_report">Sin interpretación</button>
+                          <button type="button" class="est-flag" data-est-flag="followup">Control / seguimiento</button>
+                          <button type="button" class="est-flag" data-est-flag="resting">En reposo</button>
+                          <button type="button" class="est-flag" data-est-flag="with_contrast">Con contraste</button>
+                          <button type="button" class="est-flag" data-est-flag="with_doppler">Con Doppler</button>
+                          <button type="button" class="est-flag" data-est-flag="with_color_doppler">Con Doppler color</button>
+                          <button type="button" class="est-flag" data-est-flag="with_tissue_doppler">Con Doppler tisular</button>
+                          <button type="button" class="est-flag" data-est-flag="with_strain">Con Strain/GLS</button>
+                          <button type="button" class="est-flag" data-est-flag="bubble_study">Estudio con burbujas (shunt)</button>
+                          <button type="button" class="est-flag" data-est-flag="holter_24h">24 h</button>
+                          <button type="button" class="est-flag" data-est-flag="holter_48h">48 h</button>
+                          <button type="button" class="est-flag" data-est-flag="holter_72h">72 h</button>
+                          <button type="button" class="est-flag" data-est-flag="holter_7d">7 días</button>
+                          <button type="button" class="est-flag" data-est-flag="event_monitor">Monitor de eventos</button>
+                          <button type="button" class="est-flag" data-est-flag="exercise_treadmill">Banda (treadmill)</button>
+                          <button type="button" class="est-flag" data-est-flag="exercise_bike">Bicicleta</button>
+                          <button type="button" class="est-flag" data-est-flag="stress_exercise">Estrés por ejercicio</button>
+                          <button type="button" class="est-flag" data-est-flag="stress_pharmacologic">Estrés farmacológico</button>
+                          <button type="button" class="est-flag" data-est-flag="pharm_dobutamine">Dobutamina</button>
+                          <button type="button" class="est-flag" data-est-flag="pharm_dipyridamole">Dipiridamol</button>
+                          <button type="button" class="est-flag" data-est-flag="pharm_adenosine">Adenosina</button>
+                          <button type="button" class="est-flag" data-est-flag="with_sedation">Con sedación</button>
+                          <button type="button" class="est-flag" data-est-flag="without_sedation">Sin sedación</button>
+                          <button type="button" class="est-flag" data-est-flag="anesthesia">Con anestesia</button>
+                        </div>
+                      </div>
+                      <div class="row g-3">
+                        <div class="col-md-3">
+                          <div class="list-group est-lab-groups" data-est-modality-menu>
+                            <button type="button" class="list-group-item list-group-item-action active" data-est-modality="electrocardiography">Electrocardiografía</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="ambulatory_monitoring">Monitoreo ambulatorio</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="echocardiography">Ecocardiografía</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="stress_testing">Pruebas de esfuerzo / estrés</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="other_functional">Otros funcionales</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="vascular_non_imaging">Vascular (Doppler periférico)</button>
+                          </div>
+                        </div>
+                        <div class="col-md-9">
+                          <div class="est-modality-panels" data-est-modality-panels>
+                            <div class="est-modality-panel" data-est-modality-panel="electrocardiography">
+                              <div class="mb-3" data-est-group-pane="cardio_ecg_base" data-est-group-label="ECG · Estudios base">
+                                <div class="est-lab-sub">Estudios base</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="ECG 12 derivaciones" data-est-id="ecg_12lead"> ECG 12 derivaciones</label>
+                                  <label><input type="checkbox" data-est-item="Tira de ritmo" data-est-id="ecg_rhythm_strip"> Tira de ritmo</label>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div class="est-modality-panel d-none" data-est-modality-panel="ambulatory_monitoring">
+                              <div class="mb-3" data-est-group-pane="cardio_monitor_base" data-est-group-label="Monitoreo · Estudios base">
+                                <div class="est-lab-sub">Estudios base</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Holter / monitorización ECG ambulatoria" data-est-id="holter"> Holter / monitorización ECG ambulatoria</label>
+                                  <label><input type="checkbox" data-est-item="MAPA (presión arterial ambulatoria / ABPM)" data-est-id="abpm_mapa"> MAPA (presión arterial ambulatoria / ABPM)</label>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div class="est-modality-panel d-none" data-est-modality-panel="echocardiography">
+                              <div class="mb-3" data-est-group-pane="cardio_echo_base" data-est-group-label="Ecocardiografía · Estudios base">
+                                <div class="est-lab-sub">Estudios base</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Ecocardiograma transtorácico (ETT)" data-est-id="echo_tte"> Ecocardiograma transtorácico (ETT)</label>
+                                  <label><input type="checkbox" data-est-item="Ecocardiograma transesofágico (ETE)" data-est-id="echo_tes"> Ecocardiograma transesofágico (ETE)</label>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div class="est-modality-panel d-none" data-est-modality-panel="stress_testing">
+                              <div class="mb-3" data-est-group-pane="cardio_stress_base" data-est-group-label="Estrés · Estudios base">
+                                <div class="est-lab-sub">Estudios base</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Prueba de esfuerzo (ECG de esfuerzo)" data-est-id="stress_test"> Prueba de esfuerzo (ECG de esfuerzo)</label>
+                                  <label><input type="checkbox" data-est-item="Ecocardiograma de estrés" data-est-id="stress_echo"> Ecocardiograma de estrés</label>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div class="est-modality-panel d-none" data-est-modality-panel="other_functional">
+                              <div class="mb-3" data-est-group-pane="cardio_other_base" data-est-group-label="Otros funcionales · Estudios base">
+                                <div class="est-lab-sub">Estudios base</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Prueba de mesa basculante (Tilt table)" data-est-id="tilt_table"> Prueba de mesa basculante (Tilt table)</label>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div class="est-modality-panel d-none" data-est-modality-panel="vascular_non_imaging">
+                              <div class="mb-3" data-est-group-pane="cardio_vascular_base" data-est-group-label="Vascular · Estudios base">
+                                <div class="est-lab-sub">Estudios base</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Doppler carotídeo" data-est-id="carotid_doppler"> Doppler carotídeo</label>
+                                  <label><input type="checkbox" data-est-item="Doppler arterial de miembros inferiores" data-est-id="lower_ext_art_doppler"> Doppler arterial de miembros inferiores</label>
+                                  <label><input type="checkbox" data-est-item="Doppler venoso de miembros inferiores" data-est-id="lower_ext_venous_doppler"> Doppler venoso de miembros inferiores</label>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                      <button type="button" class="btn btn-primary">Generar orden</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Modal catálogo de estudios de endoscopía -->
+              <div class="modal fade" id="modalEstudiosEndo" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title">Seleccionar estudios de endoscopía</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div class="row g-3 mb-2 align-items-center">
+                        <div class="col-md-6">
+                          <input class="form-control" placeholder="Buscar por nombre o alias (ej. colonoscopia, EGD, CPRE)" data-est-lab-search>
+                        </div>
+                        <div class="col-md-6 d-flex gap-2 flex-wrap">
+                          <span class="badge bg-info text-dark est-chip-filter" data-est-filter="frecuentes">Frecuentes</span>
+                          <span class="badge bg-secondary est-chip-filter" data-est-filter="paquetes">Paquetes</span>
+                          <span class="badge bg-light text-dark est-chip-filter" data-est-filter="todos">Todos</span>
+                        </div>
+                      </div>
+                      <div class="est-selected-panel mb-2">
+                        <div class="fw-bold mb-1">Seleccionados <span class="est-summary-count" data-est-modal-count>(0)</span></div>
+                        <div class="est-selected-chips" data-est-selected></div>
+                      </div>
+                      <div class="est-flags mb-2" data-est-flags>
+                        <div class="est-lab-fav-ttl">Opciones rápidas</div>
+                        <div class="est-flag-grid">
+                          <button type="button" class="est-flag" data-est-flag="diagnostic">Diagnóstica</button>
+                          <button type="button" class="est-flag" data-est-flag="therapeutic">Terapéutica</button>
+                          <button type="button" class="est-flag" data-est-flag="with_biopsy">Con biopsia</button>
+                          <button type="button" class="est-flag" data-est-flag="with_polypectomy">Con polipectomía</button>
+                          <button type="button" class="est-flag" data-est-flag="with_hemostasis">Hemostasia</button>
+                          <button type="button" class="est-flag" data-est-flag="with_dilation">Con dilatación</button>
+                          <button type="button" class="est-flag" data-est-flag="with_stent">Colocación de stent</button>
+                          <button type="button" class="est-flag" data-est-flag="with_foreign_body">Extracción de cuerpo extraño</button>
+                          <button type="button" class="est-flag" data-est-flag="with_variceal_band">Ligadura de várices</button>
+                          <button type="button" class="est-flag" data-est-flag="with_injection_therapy">Terapia de inyección</button>
+                          <button type="button" class="est-flag" data-est-flag="with_clips">Clips / endoclips</button>
+                          <button type="button" class="est-flag" data-est-flag="with_tattoo">Tatuaje endoscópico</button>
+                          <button type="button" class="est-flag" data-est-flag="with_chromoendoscopy">Cromoendoscopia</button>
+                          <button type="button" class="est-flag" data-est-flag="with_image_enhancement">Realce de imagen (NBI/i-Scan)</button>
+                          <button type="button" class="est-flag" data-est-flag="with_bal">Con lavado broncoalveolar (BAL)</button>
+                          <button type="button" class="est-flag" data-est-flag="with_tbna">Con TBNA (aspiración)</button>
+                          <button type="button" class="est-flag" data-est-flag="with_ebus">Con EBUS</button>
+                          <button type="button" class="est-flag" data-est-flag="with_sedation">Con sedación</button>
+                          <button type="button" class="est-flag" data-est-flag="without_sedation">Sin sedación</button>
+                          <button type="button" class="est-flag" data-est-flag="anesthesia">Con anestesia</button>
+                          <button type="button" class="est-flag" data-est-flag="urgent">Urgente</button>
+                          <button type="button" class="est-flag" data-est-flag="followup">Control / seguimiento</button>
+                          <button type="button" class="est-flag" data-est-flag="adult">Adulto</button>
+                          <button type="button" class="est-flag" data-est-flag="pediatric">Pediátrico</button>
+                        </div>
+                      </div>
+                      <div class="row g-3">
+                        <div class="col-md-3">
+                          <div class="list-group est-lab-groups" data-est-modality-menu>
+                            <button type="button" class="list-group-item list-group-item-action active" data-est-modality="gi_endoscopy">Endoscopia digestiva</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="resp_endoscopy">Endoscopia respiratoria</button>
+                          </div>
+                        </div>
+                        <div class="col-md-9">
+                          <div class="est-modality-panels" data-est-modality-panels>
+                            <div class="est-modality-panel" data-est-modality-panel="gi_endoscopy">
+                              <div class="mb-3" data-est-group-pane="endo_gi_upper" data-est-group-label="Digestiva · Endoscopia alta (EGD/EDA)">
+                                <div class="est-lab-sub">Endoscopia digestiva alta (EGD/EDA)</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="EGD/EDA (endoscopia alta)" data-est-id="egd_eda_base"> EGD/EDA (endoscopia alta)</label>
+                                </div>
+                              </div>
+                              <div class="mb-3" data-est-group-pane="endo_gi_lower" data-est-group-label="Digestiva · Colon y recto">
+                                <div class="est-lab-sub">Colon y recto</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Colonoscopia" data-est-id="colonoscopy_base"> Colonoscopia</label>
+                                  <label><input type="checkbox" data-est-item="Sigmoidoscopia flexible" data-est-id="flex_sig_base"> Sigmoidoscopia flexible</label>
+                                  <label><input type="checkbox" data-est-item="Anoscopia" data-est-id="anoscopy_base"> Anoscopia</label>
+                                  <label><input type="checkbox" data-est-item="Proctoscopia" data-est-id="proctoscopy_base"> Proctoscopia</label>
+                                </div>
+                              </div>
+                              <div class="mb-3" data-est-group-pane="endo_gi_biliary" data-est-group-label="Digestiva · Vía biliar / páncreas">
+                                <div class="est-lab-sub">Vía biliar / páncreas</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="CPRE / ERCP" data-est-id="ercp_cpre_base"> CPRE / ERCP</label>
+                                </div>
+                              </div>
+                              <div class="mb-3" data-est-group-pane="endo_gi_eus" data-est-group-label="Digestiva · Ultrasonido endoscópico">
+                                <div class="est-lab-sub">Ultrasonido endoscópico</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="EUS/USE (ultrasonido endoscópico)" data-est-id="eus_use_base"> EUS/USE (ultrasonido endoscópico)</label>
+                                </div>
+                              </div>
+                              <div class="mb-3" data-est-group-pane="endo_gi_small" data-est-group-label="Digestiva · Intestino delgado">
+                                <div class="est-lab-sub">Intestino delgado</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Cápsula endoscópica" data-est-id="capsule_base"> Cápsula endoscópica</label>
+                                  <label><input type="checkbox" data-est-item="Enteroscopia" data-est-id="enteroscopy_base"> Enteroscopia</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="est-modality-panel d-none" data-est-modality-panel="resp_endoscopy">
+                              <div class="mb-3" data-est-group-pane="endo_resp_lower" data-est-group-label="Respiratoria · Vía aérea inferior">
+                                <div class="est-lab-sub">Vía aérea inferior</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Broncoscopía" data-est-id="bronchoscopy_base"> Broncoscopía</label>
+                                  <label><input type="checkbox" data-est-item="EBUS (ultrasonido endobronquial)" data-est-id="ebus_base"> EBUS (ultrasonido endobronquial)</label>
+                                </div>
+                              </div>
+                              <div class="mb-3" data-est-group-pane="endo_resp_upper" data-est-group-label="Respiratoria · Vía aérea superior">
+                                <div class="est-lab-sub">Vía aérea superior</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Laringoscopía flexible" data-est-id="laryngoscopy_base"> Laringoscopía flexible</label>
+                                </div>
+                              </div>
+                              <div class="mb-3" data-est-group-pane="endo_resp_pleura" data-est-group-label="Respiratoria · Pleura">
+                                <div class="est-lab-sub">Pleura</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Pleuroscopía / Toracoscopía médica" data-est-id="pleuroscopy_base"> Pleuroscopía / Toracoscopía médica</label>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                      <button type="button" class="btn btn-primary">Generar orden</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Modal catálogo de estudios de patología -->
+              <div class="modal fade" id="modalEstudiosPat" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title">Seleccionar servicios de patología</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div class="row g-3 mb-2 align-items-center">
+                        <div class="col-md-6">
+                          <input class="form-control" placeholder="Buscar por nombre o alias (ej. biopsia, laminillas, PAAF)" data-est-lab-search>
+                        </div>
+                        <div class="col-md-6 d-flex gap-2 flex-wrap">
+                          <span class="badge bg-info text-dark est-chip-filter" data-est-filter="frecuentes">Frecuentes</span>
+                          <span class="badge bg-secondary est-chip-filter" data-est-filter="paquetes">Paquetes</span>
+                          <span class="badge bg-light text-dark est-chip-filter" data-est-filter="todos">Todos</span>
+                        </div>
+                      </div>
+                      <div class="est-selected-panel mb-2">
+                        <div class="fw-bold mb-1">Seleccionados <span class="est-summary-count" data-est-modal-count>(0)</span></div>
+                        <div class="est-selected-chips" data-est-selected></div>
+                      </div>
+                      <div class="est-flags mb-2" data-est-flags>
+                        <div class="est-lab-fav-ttl">Solicitudes adicionales</div>
+                        <div class="est-flag-grid">
+                          <button type="button" class="est-flag" data-est-flag="urgent">Urgente</button>
+                          <button type="button" class="est-flag" data-est-flag="followup">Control / seguimiento</button>
+                          <button type="button" class="est-flag" data-est-flag="frozen_section">Transoperatorio / congelación</button>
+                          <button type="button" class="est-flag" data-est-flag="margins">Evaluación de márgenes</button>
+                          <button type="button" class="est-flag" data-est-flag="ihc">Con inmunohistoquímica (IHQ)</button>
+                          <button type="button" class="est-flag" data-est-flag="special_stains">Con tinciones especiales</button>
+                          <button type="button" class="est-flag" data-est-flag="decalcification">Con descalcificación</button>
+                          <button type="button" class="est-flag" data-est-flag="immunofluorescence">Con inmunofluorescencia</button>
+                          <button type="button" class="est-flag" data-est-flag="external_review">Revisión externa / segunda opinión</button>
+                          <button type="button" class="est-flag" data-est-flag="block_additional">Cortes/bloques adicionales</button>
+                        </div>
+                      </div>
+                      <div class="est-lab-fav mb-3">
+                        <div class="est-lab-fav-context" data-est-context-content="patologia">
+                          <div class="est-lab-fav-section" data-est-fav="frecuentes">
+                            <div class="est-lab-fav-ttl">Atajos frecuentes</div>
+                            <div class="est-lab-fav-grid">
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pick="Biopsia gastrointestinal">Biopsia gastrointestinal</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pick="Pieza quirúrgica (general)">Pieza quirúrgica (general)</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pick="PAAF / BACAF (aspiración con aguja fina)">PAAF / BACAF (aspiración con aguja fina)</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pick="Revisión de laminillas (segunda opinión)">Revisión de laminillas (segunda opinión)</button>
+                            </div>
+                          </div>
+                          <div class="est-lab-fav-section mt-2" data-est-fav="paquetes">
+                            <div class="est-lab-fav-ttl">Paquetes predefinidos</div>
+                            <div class="est-pack-list">
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Pieza oncológica completa (márgenes + IHQ si se requiere)</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>Pieza oncológica (resección)</span><span>Márgenes</span><span>IHQ (si aplica)</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Pieza oncológica completa (márgenes + IHQ si se requiere)">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Biopsia renal completa (incluye IF si aplica)</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>Biopsia renal</span><span>Inmunofluorescencia</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Biopsia renal completa (incluye IF si aplica)">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Transoperatorio (congelación)</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>Pieza quirúrgica (general)</span><span>Congelación</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Transoperatorio (congelación)">Agregar paquete</button>
+                                </div>
+                              </details>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="row g-3">
+                        <div class="col-md-3">
+                          <div class="list-group est-lab-groups" data-est-modality-menu>
+                            <button type="button" class="list-group-item list-group-item-action active" data-est-modality="histopathology">Histopatología</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="surgical_pathology">Piezas quirúrgicas</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="cytopathology">Citopatología (opcional)</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="autopsy">Autopsia (si aplica)</button>
+                          </div>
+                        </div>
+                        <div class="col-md-9">
+                          <div class="est-modality-panels" data-est-modality-panels>
+                            <div class="est-modality-panel" data-est-modality-panel="histopathology">
+                              <div class="mb-3" data-est-group-pane="bx_general" data-est-group-label="Biopsias (por sistema)">
+                                <div class="est-lab-sub">Biopsias (por sistema)</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Biopsia gastrointestinal" data-est-id="bx_gi"> Biopsia gastrointestinal</label>
+                                  <label><input type="checkbox" data-est-item="Biopsia de piel" data-est-id="bx_skin"> Biopsia de piel</label>
+                                  <label><input type="checkbox" data-est-item="Biopsia de mama" data-est-id="bx_breast"> Biopsia de mama</label>
+                                  <label><input type="checkbox" data-est-item="Biopsia ginecológica" data-est-id="bx_gyn"> Biopsia ginecológica</label>
+                                  <label><input type="checkbox" data-est-item="Biopsia urológica" data-est-id="bx_urology"> Biopsia urológica</label>
+                                  <label><input type="checkbox" data-est-item="Biopsia de partes blandas" data-est-id="bx_soft_tissue"> Biopsia de partes blandas</label>
+                                  <label><input type="checkbox" data-est-item="Biopsia ósea" data-est-id="bx_bone"> Biopsia ósea</label>
+                                  <label><input type="checkbox" data-est-item="Biopsia renal" data-est-id="bx_renal"> Biopsia renal</label>
+                                </div>
+                              </div>
+                              <div class="mb-3" data-est-group-pane="histo_other" data-est-group-label="Servicios relacionados">
+                                <div class="est-lab-sub">Servicios relacionados</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Revisión de laminillas (segunda opinión)" data-est-id="slides_review"> Revisión de laminillas (segunda opinión)</label>
+                                  <label><input type="checkbox" data-est-item="Revisión de bloque/parafina" data-est-id="paraffin_block_review"> Revisión de bloque/parafina</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="est-modality-panel d-none" data-est-modality-panel="surgical_pathology">
+                              <div class="mb-3" data-est-group-pane="surg_general" data-est-group-label="Piezas (generales)">
+                                <div class="est-lab-sub">Piezas (generales)</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Pieza quirúrgica (general)" data-est-id="surg_specimen_general"> Pieza quirúrgica (general)</label>
+                                  <label><input type="checkbox" data-est-item="Pieza oncológica (resección)" data-est-id="surg_specimen_onco"> Pieza oncológica (resección)</label>
+                                  <label><input type="checkbox" data-est-item="Amputación / pieza mayor" data-est-id="amputation"> Amputación / pieza mayor</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="est-modality-panel d-none" data-est-modality-panel="cytopathology">
+                              <div class="mb-3" data-est-group-pane="cyto_samples" data-est-group-label="Muestras citológicas">
+                                <div class="est-lab-sub">Muestras citológicas</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="PAAF / BACAF (aspiración con aguja fina)" data-est-id="cyto_fna"> PAAF / BACAF (aspiración con aguja fina)</label>
+                                  <label><input type="checkbox" data-est-item="Citología de líquidos (pleural/ascítico/LCR)" data-est-id="cyto_fluids"> Citología de líquidos (pleural/ascítico/LCR)</label>
+                                  <label><input type="checkbox" data-est-item="Papanicolaou (convencional)" data-est-id="cyto_pap"> Papanicolaou (convencional)</label>
+                                  <label><input type="checkbox" data-est-item="Citología en base líquida" data-est-id="cyto_liquid_based"> Citología en base líquida</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="est-modality-panel d-none" data-est-modality-panel="autopsy">
+                              <div class="mb-3" data-est-group-pane="autopsy_types" data-est-group-label="Tipos">
+                                <div class="est-lab-sub">Tipos</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Autopsia clínica" data-est-id="autopsy_clinical"> Autopsia clínica</label>
+                                  <label><input type="checkbox" data-est-item="Autopsia fetal/perinatal" data-est-id="autopsy_fetal"> Autopsia fetal/perinatal</label>
                                 </div>
                               </div>
                             </div>
@@ -4416,52 +5246,6 @@
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
