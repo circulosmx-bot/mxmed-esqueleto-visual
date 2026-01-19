@@ -3870,20 +3870,6 @@
                                   <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Panel infeccioso PCR">Agregar paquete</button>
                                 </div>
                               </details>
-                              <details class="est-pack-item">
-                                <summary class="est-pack-summary">Panel trombofilia</summary>
-                                <div class="est-pack-body">
-                                  <div class="est-template-fields"><span>Factor V Leiden</span><span>Proteína C</span><span>Proteína S</span></div>
-                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Panel trombofilia">Agregar paquete</button>
-                                </div>
-                              </details>
-                              <details class="est-pack-item">
-                                <summary class="est-pack-summary">Panel farmacogenómico</summary>
-                                <div class="est-pack-body">
-                                  <div class="est-template-fields"><span>CYP2C19</span><span>CYP2D6</span></div>
-                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Panel farmacogenómico">Agregar paquete</button>
-                                </div>
-                              </details>
                             </div>
                           </div>
                         </div>
@@ -3899,7 +3885,6 @@
                             <button class="list-group-item list-group-item-action" data-est-group="serology_infectious">Serologías / Infecciosas</button>
                             <button class="list-group-item list-group-item-action" data-est-group="microbiology">Microbiología</button>
                             <button class="list-group-item list-group-item-action" data-est-group="urine_stool">Orina / Heces</button>
-                            <button class="list-group-item list-group-item-action" data-est-group="genetics_molecular">Genética / Molecular</button>
                           </div>
                         </div>
                         <div class="col-md-9">
@@ -3990,12 +3975,6 @@
                                     <label><input type="checkbox" data-est-item="TTPa (aPTT)" data-est-id="aptt"> TTPa (aPTT)</label>
                                     <label><input type="checkbox" data-est-item="Fibrinógeno" data-est-id="fibrinogen"> Fibrinógeno</label>
                                     <label><input type="checkbox" data-est-item="Dímero D" data-est-id="d_dimer"> Dímero D</label>
-                                  </div>
-                                  <div class="est-lab-sub mt-2">Trombofilia</div>
-                                  <div class="est-lab-grid">
-                                    <label><input type="checkbox" data-est-item="Factor V Leiden" data-est-id="factor_v_leiden"> Factor V Leiden</label>
-                                    <label><input type="checkbox" data-est-item="Proteína C" data-est-id="protein_c"> Proteína C</label>
-                                    <label><input type="checkbox" data-est-item="Proteína S" data-est-id="protein_s"> Proteína S</label>
                                   </div>
                                 </div>
                               </div>
@@ -4115,18 +4094,6 @@
                                   <div class="est-lab-grid">
                                     <label><input type="checkbox" data-est-item="Sangre oculta en heces" data-est-id="fecal_occult_blood"> Sangre oculta en heces</label>
                                     <label><input type="checkbox" data-est-item="Coproparasitoscópico" data-est-id="stool_ova_parasites"> Coproparasitoscópico</label>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            <div class="accordion-item" data-est-group-pane="genetics_molecular" data-est-group-label="Genética / Molecular">
-                              <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#labGen">Genética / Molecular</button></h2>
-                              <div id="labGen" class="accordion-collapse collapse">
-                                <div class="accordion-body">
-                                  <div class="est-lab-sub">Farmacogenómica</div>
-                                  <div class="est-lab-grid">
-                                    <label><input type="checkbox" data-est-item="CYP2C19" data-est-id="cyp2c19"> CYP2C19</label>
-                                    <label><input type="checkbox" data-est-item="CYP2D6" data-est-id="cyp2d6"> CYP2D6</label>
                                   </div>
                                 </div>
                               </div>
@@ -4852,6 +4819,423 @@
                 </div>
               </div>
 
+              <!-- Modal catálogo de estudios de genética -->
+              <div class="modal fade" id="modalEstudiosGen" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title">Seleccionar estudios de genética</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div class="row g-3 mb-2 align-items-center">
+                        <div class="col-md-6">
+                          <input class="form-control" placeholder="Buscar por nombre o alias (ej. BRCA, WES, NIPT)" data-est-lab-search>
+                        </div>
+                        <div class="col-md-6 d-flex gap-2 flex-wrap">
+                          <span class="badge bg-info text-dark est-chip-filter" data-est-filter="frecuentes">Frecuentes</span>
+                          <span class="badge bg-secondary est-chip-filter" data-est-filter="paquetes">Paquetes</span>
+                          <span class="badge bg-light text-dark est-chip-filter" data-est-filter="todos">Todos</span>
+                        </div>
+                      </div>
+                      <div class="est-selected-panel mb-2">
+                        <div class="fw-bold mb-1">Seleccionados <span class="est-summary-count" data-est-modal-count>(0)</span></div>
+                        <div class="est-selected-chips" data-est-selected></div>
+                      </div>
+                      <div class="est-flags mb-2" data-est-flags>
+                        <div class="est-lab-fav-ttl">Condiciones y alcance</div>
+                        <div class="est-flag-grid">
+                          <button type="button" class="est-flag" data-est-flag="urgent">Urgente</button>
+                          <button type="button" class="est-flag" data-est-flag="followup">Control / seguimiento</button>
+                          <button type="button" class="est-flag" data-est-flag="requires_consent">Requiere consentimiento informado</button>
+                          <button type="button" class="est-flag" data-est-flag="genetic_counseling">Consejería genética (si aplica)</button>
+                          <button type="button" class="est-flag" data-est-flag="context_prenatal">Prenatal</button>
+                          <button type="button" class="est-flag" data-est-flag="context_postnatal">Postnatal</button>
+                          <button type="button" class="est-flag" data-est-flag="sample_blood">Muestra: sangre (EDTA)</button>
+                          <button type="button" class="est-flag" data-est-flag="sample_saliva">Muestra: saliva</button>
+                          <button type="button" class="est-flag" data-est-flag="sample_tissue">Muestra: tejido fresco</button>
+                          <button type="button" class="est-flag" data-est-flag="sample_ffpe">Muestra: bloque/laminilla (FFPE)</button>
+                          <button type="button" class="est-flag" data-est-flag="sample_cvs">Muestra: CVS (vellosidades coriónicas)</button>
+                          <button type="button" class="est-flag" data-est-flag="sample_amnio">Muestra: amniocentesis</button>
+                          <button type="button" class="est-flag" data-est-flag="trio">TRIO (paciente+padre+madre)</button>
+                          <button type="button" class="est-flag" data-est-flag="duo">DUO (paciente+1 progenitor)</button>
+                          <button type="button" class="est-flag" data-est-flag="proband_only">Solo paciente</button>
+                          <button type="button" class="est-flag" data-est-flag="include_cnv">Incluir CNV</button>
+                          <button type="button" class="est-flag" data-est-flag="confirm_sanger">Confirmación por Sanger</button>
+                          <button type="button" class="est-flag" data-est-flag="acmg_secondary_findings">Consentimiento: hallazgos secundarios (ACMG SF)</button>
+                          <button type="button" class="est-flag" data-est-flag="cascade_testing">Familiar (cascade testing)</button>
+                          <button type="button" class="est-flag" data-est-flag="report_reanalysis">Reanálisis (si aplica)</button>
+                        </div>
+                      </div>
+                      <div class="est-lab-fav mb-3">
+                        <div class="est-lab-fav-context" data-est-context-content="genetica">
+                          <div class="est-lab-fav-section" data-est-fav="frecuentes">
+                            <div class="est-lab-fav-ttl">Atajos frecuentes</div>
+                            <div class="est-lab-fav-grid">
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pack="NIPT estándar">NIPT estándar</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pack="CMA / Microarray (postnatal)">CMA postnatal</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pack="Exoma clínico TRIO (WES)">WES TRIO</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pack="Panel multigénico de cáncer hereditario">Panel cáncer hereditario</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pack="Cardiogenética (miocardiopatías / canalopatías)">Cardiogenética</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pack="Neurogenética (epilepsia / neurodesarrollo)">Neurogenética</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pack="Panel tumoral somático (NGS) — FFPE">Panel tumoral</button>
+                            </div>
+                          </div>
+                          <div class="est-lab-fav-section mt-2" data-est-fav="paquetes">
+                            <div class="est-lab-fav-ttl">Paquetes predefinidos</div>
+                            <div class="est-pack-list">
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">NIPT estándar</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>NIPT</span><span>Consentimiento</span><span>Prenatal</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="NIPT estándar">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">CMA / Microarray (postnatal)</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>CMA / Microarray</span><span>Postnatal</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="CMA / Microarray (postnatal)">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Exoma clínico TRIO (WES)</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>WES</span><span>TRIO</span><span>CNV</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Exoma clínico TRIO (WES)">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Panel multigénico de cáncer hereditario</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>Panel cáncer hereditario</span><span>CNV</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Panel multigénico de cáncer hereditario">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Cardiogenética (miocardiopatías / canalopatías)</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>Panel NGS</span><span>CNV</span><span>Postnatal</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Cardiogenética (miocardiopatías / canalopatías)">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Neurogenética (epilepsia / neurodesarrollo)</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>Panel NGS</span><span>CNV</span><span>Postnatal</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Neurogenética (epilepsia / neurodesarrollo)">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Panel tumoral somático (NGS) — FFPE</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>Panel tumoral</span><span>FFPE</span><span>Postnatal</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Panel tumoral somático (NGS) — FFPE">Agregar paquete</button>
+                                </div>
+                              </details>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="row g-3">
+                        <div class="col-md-3">
+                          <div class="list-group est-lab-groups" data-est-modality-menu>
+                            <button type="button" class="list-group-item list-group-item-action active" data-est-modality="cytogenetics">Citogenética</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="ngs_rare_disease">NGS: Enfermedades hereditarias</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="reproductive_prenatal">Reproductiva / Prenatal</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="hereditary_oncology">Cáncer hereditario (germinal)</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="thrombophilia">Trombofilia hereditaria</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="pharmacogenomics">Farmacogenómica (PGx)</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="somatic_oncology_optional">Oncología somática (tumor) — opcional</button>
+                          </div>
+                        </div>
+                        <div class="col-md-9">
+                          <div class="est-modality-panels" data-est-modality-panels>
+                            <div class="est-modality-panel" data-est-modality-panel="cytogenetics">
+                              <div class="mb-3" data-est-group-pane="gen_cyto_base" data-est-group-label="Citogenética · Estudios base">
+                                <div class="est-lab-sub">Estudios base</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Cariotipo" data-est-id="karyotype"> Cariotipo</label>
+                                  <label><input type="checkbox" data-est-item="Microarreglo cromosómico (CMA / Microarray)" data-est-id="cma_microarray"> Microarreglo cromosómico (CMA / Microarray)</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="est-modality-panel d-none" data-est-modality-panel="ngs_rare_disease">
+                              <div class="mb-3" data-est-group-pane="gen_ngs_base" data-est-group-label="NGS · Estudios base">
+                                <div class="est-lab-sub">Estudios base</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Panel genético (NGS)" data-est-id="ngs_panel"> Panel genético (NGS)</label>
+                                  <label><input type="checkbox" data-est-item="Exoma clínico (WES)" data-est-id="wes"> Exoma clínico (WES)</label>
+                                  <label><input type="checkbox" data-est-item="Genoma clínico (WGS)" data-est-id="wgs"> Genoma clínico (WGS)</label>
+                                  <label><input type="checkbox" data-est-item="Prueba dirigida (gen/variante específica)" data-est-id="targeted_variant"> Prueba dirigida (gen/variante específica)</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="est-modality-panel d-none" data-est-modality-panel="reproductive_prenatal">
+                              <div class="mb-3" data-est-group-pane="gen_repro_base" data-est-group-label="Reproductiva · Estudios base">
+                                <div class="est-lab-sub">Estudios base</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="NIPT (tamiz prenatal no invasivo)" data-est-id="nipt"> NIPT (tamiz prenatal no invasivo)</label>
+                                  <label><input type="checkbox" data-est-item="Tamiz de portadores (Carrier screening)" data-est-id="carrier_screening"> Tamiz de portadores (Carrier screening)</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="est-modality-panel d-none" data-est-modality-panel="hereditary_oncology">
+                              <div class="mb-3" data-est-group-pane="gen_onco_base" data-est-group-label="Cáncer hereditario · Estudios base">
+                                <div class="est-lab-sub">Estudios base</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Panel de cáncer hereditario (multigénico)" data-est-id="hereditary_cancer_germline"> Panel de cáncer hereditario (multigénico)</label>
+                                  <label><input type="checkbox" data-est-item="BRCA1/BRCA2 (germinal)" data-est-id="brca1_2"> BRCA1/BRCA2 (germinal)</label>
+                                  <label><input type="checkbox" data-est-item="Síndrome de Lynch (germinal)" data-est-id="lynch"> Síndrome de Lynch (germinal)</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="est-modality-panel d-none" data-est-modality-panel="thrombophilia">
+                              <div class="mb-3" data-est-group-pane="gen_thrombo_base" data-est-group-label="Trombofilia · Estudio base">
+                                <div class="est-lab-sub">Estudio base</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Panel de trombofilia (genético)" data-est-id="thrombophilia"> Panel de trombofilia (genético)</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="est-modality-panel d-none" data-est-modality-panel="pharmacogenomics">
+                              <div class="mb-3" data-est-group-pane="gen_pgx_base" data-est-group-label="PGx · Estudio base">
+                                <div class="est-lab-sub">Estudio base</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Panel farmacogenómico (PGx)" data-est-id="pgx"> Panel farmacogenómico (PGx)</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="est-modality-panel d-none" data-est-modality-panel="somatic_oncology_optional">
+                              <div class="mb-3" data-est-group-pane="gen_somatic_base" data-est-group-label="Oncología somática · Estudio base">
+                                <div class="est-lab-sub">Estudio base</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Panel tumoral (NGS) — somático" data-est-id="somatic_tumor_ngs"> Panel tumoral (NGS) — somático</label>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                      <button type="button" class="btn btn-primary">Generar orden</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Modal catálogo de estudios funcionales -->
+              <div class="modal fade" id="modalEstudiosFunc" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title">Seleccionar estudios funcionales</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div class="row g-3 mb-2 align-items-center">
+                        <div class="col-md-6">
+                          <input class="form-control" placeholder="Buscar por nombre o alias (ej. PFR, PSG, EMG)" data-est-lab-search>
+                        </div>
+                        <div class="col-md-6 d-flex gap-2 flex-wrap">
+                          <span class="badge bg-info text-dark est-chip-filter" data-est-filter="frecuentes">Frecuentes</span>
+                          <span class="badge bg-secondary est-chip-filter" data-est-filter="paquetes">Paquetes</span>
+                          <span class="badge bg-light text-dark est-chip-filter" data-est-filter="todos">Todos</span>
+                        </div>
+                      </div>
+                      <div class="est-selected-panel mb-2">
+                        <div class="fw-bold mb-1">Seleccionados <span class="est-summary-count" data-est-modal-count>(0)</span></div>
+                        <div class="est-selected-chips" data-est-selected></div>
+                      </div>
+                      <div class="est-flags mb-2" data-est-flags>
+                        <div class="est-lab-fav-ttl">Condiciones del estudio</div>
+                        <div class="est-flag-grid">
+                          <button type="button" class="est-flag" data-est-flag="urgent">Urgente</button>
+                          <button type="button" class="est-flag" data-est-flag="followup">Control / seguimiento</button>
+                          <button type="button" class="est-flag" data-est-flag="pre_post_bronchodilator">Pre / post broncodilatador</button>
+                          <button type="button" class="est-flag" data-est-flag="with_bronchial_challenge">Con reto bronquial (provocación)</button>
+                          <button type="button" class="est-flag" data-est-flag="with_exercise">Con ejercicio</button>
+                          <button type="button" class="est-flag" data-est-flag="with_sleep_technologist">Con técnico (atendido)</button>
+                          <button type="button" class="est-flag" data-est-flag="with_titration">Con titulación (CPAP/BiPAP)</button>
+                          <button type="button" class="est-flag" data-est-flag="left">Izquierdo</button>
+                          <button type="button" class="est-flag" data-est-flag="right">Derecho</button>
+                          <button type="button" class="est-flag" data-est-flag="bilateral">Bilateral</button>
+                          <button type="button" class="est-flag" data-est-flag="upper_limbs">Miembros superiores</button>
+                          <button type="button" class="est-flag" data-est-flag="lower_limbs">Miembros inferiores</button>
+                        </div>
+                      </div>
+                      <div class="est-lab-fav mb-3">
+                        <div class="est-lab-fav-context" data-est-context-content="funcionales">
+                          <div class="est-lab-fav-section" data-est-fav="frecuentes">
+                            <div class="est-lab-fav-ttl">Atajos frecuentes</div>
+                            <div class="est-lab-fav-grid">
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pack="Espirometría pre/post broncodilatador">Espiro pre/post</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pack="PFR completo (Espirometría + Volúmenes + DLCO)">PFR completo</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pack="PSG diagnóstica">PSG diagnóstica</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pack="HSAT (apnea del sueño en casa)">HSAT</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pack="EMG + VCN (estudio completo)">EMG + VCN</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-est-lab-pack="EEG rutinario">EEG rutinario</button>
+                            </div>
+                          </div>
+                          <div class="est-lab-fav-section mt-2" data-est-fav="paquetes">
+                            <div class="est-lab-fav-ttl">Paquetes predefinidos</div>
+                            <div class="est-pack-list">
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">Espirometría pre/post broncodilatador</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>Espirometría</span><span>Pre/post</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="Espirometría pre/post broncodilatador">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">PFR completo (Espirometría + Volúmenes + DLCO)</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>PFR completo</span><span>DLCO</span><span>Volúmenes</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="PFR completo (Espirometría + Volúmenes + DLCO)">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">PSG diagnóstica</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>PSG</span><span>Atendida</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="PSG diagnóstica">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">HSAT (apnea del sueño en casa)</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>HSAT</span><span>Domicilio</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="HSAT (apnea del sueño en casa)">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">EMG + VCN (estudio completo)</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>EMG</span><span>VCN</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="EMG + VCN (estudio completo)">Agregar paquete</button>
+                                </div>
+                              </details>
+                              <details class="est-pack-item">
+                                <summary class="est-pack-summary">EEG rutinario</summary>
+                                <div class="est-pack-body">
+                                  <div class="est-template-fields"><span>EEG</span><span>Rutinario</span></div>
+                                  <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-est-lab-pack="EEG rutinario">Agregar paquete</button>
+                                </div>
+                              </details>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="row g-3">
+                        <div class="col-md-3">
+                          <div class="list-group est-lab-groups" data-est-modality-menu>
+                            <button type="button" class="list-group-item list-group-item-action active" data-est-modality="respiratory_function">Respiratorio (función pulmonar)</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="sleep_medicine">Sueño</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="clinical_neurophysiology">Neurofisiología</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="audiology_vestibular">Audiología / Vestibular</button>
+                            <button type="button" class="list-group-item list-group-item-action" data-est-modality="autonomic_exercise">Autonómico / Esfuerzo</button>
+                          </div>
+                        </div>
+                        <div class="col-md-9">
+                          <div class="est-modality-panels" data-est-modality-panels>
+                            <div class="est-modality-panel" data-est-modality-panel="respiratory_function">
+                              <div class="mb-3" data-est-group-pane="func_pft_basics" data-est-group-label="Respiratorio · Pruebas base">
+                                <div class="est-lab-sub">Pruebas base</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Espirometría" data-est-id="spirometry"> Espirometría</label>
+                                  <label><input type="checkbox" data-est-item="DLCO (difusión de CO)" data-est-id="dlco"> DLCO (difusión de CO)</label>
+                                  <label><input type="checkbox" data-est-item="Volúmenes pulmonares (pletismografía corporal)" data-est-id="plethysmography"> Volúmenes pulmonares (pletismografía corporal)</label>
+                                  <label><input type="checkbox" data-est-item="Pruebas funcionales respiratorias completas (PFR completo)" data-est-id="full_pft"> Pruebas funcionales respiratorias completas (PFR completo)</label>
+                                  <label><input type="checkbox" data-est-item="Reto bronquial (provocación)" data-est-id="bronchial_challenge"> Reto bronquial (provocación)</label>
+                                  <label><input type="checkbox" data-est-item="FeNO (óxido nítrico exhalado)" data-est-id="feno"> FeNO (óxido nítrico exhalado)</label>
+                                  <label><input type="checkbox" data-est-item="Caminata 6 minutos (6MWT)" data-est-id="six_min_walk"> Caminata 6 minutos (6MWT)</label>
+                                  <label><input type="checkbox" data-est-item="Prueba de esfuerzo cardiopulmonar (CPET)" data-est-id="cpet"> Prueba de esfuerzo cardiopulmonar (CPET)</label>
+                                  <label><input type="checkbox" data-est-item="Oximetría nocturna" data-est-id="overnight_oximetry"> Oximetría nocturna</label>
+                                  <label><input type="checkbox" data-est-item="Capnografía" data-est-id="capnography"> Capnografía</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="est-modality-panel d-none" data-est-modality-panel="sleep_medicine">
+                              <div class="mb-3" data-est-group-pane="func_sleep_tests" data-est-group-label="Sueño · Estudios base">
+                                <div class="est-lab-sub">Estudios base</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Polisomnografía (PSG) diagnóstica" data-est-id="psg_diagnostic"> Polisomnografía (PSG) diagnóstica</label>
+                                  <label><input type="checkbox" data-est-item="PSG con titulación (CPAP/BiPAP)" data-est-id="psg_titration"> PSG con titulación (CPAP/BiPAP)</label>
+                                  <label><input type="checkbox" data-est-item="Estudio domiciliario de apnea (HSAT)" data-est-id="hsat"> Estudio domiciliario de apnea (HSAT)</label>
+                                  <label><input type="checkbox" data-est-item="MSLT (latencias múltiples del sueño)" data-est-id="mslt"> MSLT (latencias múltiples del sueño)</label>
+                                  <label><input type="checkbox" data-est-item="MWT (mantenimiento de la vigilia)" data-est-id="mwt"> MWT (mantenimiento de la vigilia)</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="est-modality-panel d-none" data-est-modality-panel="clinical_neurophysiology">
+                              <div class="mb-3" data-est-group-pane="func_eeg" data-est-group-label="Neurofisiología · EEG">
+                                <div class="est-lab-sub">EEG</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="EEG rutinario" data-est-id="eeg_routine"> EEG rutinario</label>
+                                  <label><input type="checkbox" data-est-item="EEG con privación de sueño" data-est-id="eeg_sleep_deprived"> EEG con privación de sueño</label>
+                                  <label><input type="checkbox" data-est-item="Video-EEG (prolongado)" data-est-id="video_eeg"> Video-EEG (prolongado)</label>
+                                </div>
+                              </div>
+                              <div class="mb-3" data-est-group-pane="func_emg_ncs" data-est-group-label="Neurofisiología · EMG / VCN">
+                                <div class="est-lab-sub">EMG / Conducción nerviosa</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="EMG + Velocidades de conducción nerviosa (VCN)" data-est-id="emg_ncs"> EMG + Velocidades de conducción nerviosa (VCN)</label>
+                                  <label><input type="checkbox" data-est-item="Estimulación repetitiva" data-est-id="repetitive_nerve_stimulation"> Estimulación repetitiva</label>
+                                  <label><input type="checkbox" data-est-item="EMG de fibra única (SFEMG)" data-est-id="sfemg"> EMG de fibra única (SFEMG)</label>
+                                </div>
+                              </div>
+                              <div class="mb-3" data-est-group-pane="func_evoked" data-est-group-label="Neurofisiología · Potenciales evocados">
+                                <div class="est-lab-sub">Potenciales evocados</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Potenciales evocados visuales (PEV)" data-est-id="evoked_visual"> Potenciales evocados visuales (PEV)</label>
+                                  <label><input type="checkbox" data-est-item="Potenciales auditivos de tronco (PEAT/BAEP)" data-est-id="evoked_auditory_baep"> Potenciales auditivos de tronco (PEAT/BAEP)</label>
+                                  <label><input type="checkbox" data-est-item="Potenciales somatosensoriales (PESS/SSEP)" data-est-id="evoked_ssep"> Potenciales somatosensoriales (PESS/SSEP)</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="est-modality-panel d-none" data-est-modality-panel="audiology_vestibular">
+                              <div class="mb-3" data-est-group-pane="func_hearing" data-est-group-label="Audiología · Audición">
+                                <div class="est-lab-sub">Audición</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Audiometría tonal" data-est-id="audiometry_tonal"> Audiometría tonal</label>
+                                  <label><input type="checkbox" data-est-item="Audiometría verbal" data-est-id="audiometry_speech"> Audiometría verbal</label>
+                                  <label><input type="checkbox" data-est-item="Timpanometría (impedanciometría)" data-est-id="tympanometry"> Timpanometría (impedanciometría)</label>
+                                  <label><input type="checkbox" data-est-item="Emisiones otoacústicas (OEA)" data-est-id="otoacoustic_emissions"> Emisiones otoacústicas (OEA)</label>
+                                  <label><input type="checkbox" data-est-item="Potenciales auditivos (ABR/PEAT)" data-est-id="abr"> Potenciales auditivos (ABR/PEAT)</label>
+                                </div>
+                              </div>
+                              <div class="mb-3" data-est-group-pane="func_vestibular" data-est-group-label="Audiología · Vestibular">
+                                <div class="est-lab-sub">Vestibular</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Videonistagmografía (VNG)" data-est-id="vng"> Videonistagmografía (VNG)</label>
+                                  <label><input type="checkbox" data-est-item="VEMP" data-est-id="vemp"> VEMP</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="est-modality-panel d-none" data-est-modality-panel="autonomic_exercise">
+                              <div class="mb-3" data-est-group-pane="func_autonomic" data-est-group-label="Autonómico · Estudios base">
+                                <div class="est-lab-sub">Estudios base</div>
+                                <div class="est-lab-grid">
+                                  <label><input type="checkbox" data-est-item="Mesa inclinada (Tilt test)" data-est-id="tilt_table"> Mesa inclinada (Tilt test)</label>
+                                  <label><input type="checkbox" data-est-item="MAPA 24 h (presión arterial ambulatoria)" data-est-id="holter_bp_24h"> MAPA 24 h (presión arterial ambulatoria)</label>
+                                  <label><input type="checkbox" data-est-item="Índice tobillo-brazo (ITB/ABI)" data-est-id="ankle_brachial_index"> Índice tobillo-brazo (ITB/ABI)</label>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                      <button type="button" class="btn btn-primary">Generar orden</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="tab-pane fade" id="t-tratamiento"><div class="alert alert-info">Recetas, indicaciones
 </div></div>
 
@@ -5246,13 +5630,6 @@
 
 </body>
 </html>
-
-
-
-
-
-
-
 
 
 

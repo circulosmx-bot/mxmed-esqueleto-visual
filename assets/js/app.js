@@ -4052,9 +4052,7 @@ function mxResetLogoPreview(){
     'Embarazo básico': ['β-hCG','VIH Ag/Ac','VDRL / RPR','HBsAg','Anti-HBs','EGO (examen general de orina)'],
     'Panel viral respiratorio': ['Influenza A','Influenza B','RSV','SARS-CoV-2 (COVID-19)'],
     'TORCH': ['Toxoplasma','Rubéola','CMV','Herpes'],
-    'Panel infeccioso PCR': ['SARS-CoV-2 (COVID-19)','Influenza A','Influenza B','RSV'],
-    'Panel trombofilia': ['Factor V Leiden','Proteína C','Proteína S'],
-    'Panel farmacogenómico': ['CYP2C19','CYP2D6']
+    'Panel infeccioso PCR': ['SARS-CoV-2 (COVID-19)','Influenza A','Influenza B','RSV']
   };
   const LAB_SEARCH_CONFIG = {
     minChars: 2,
@@ -4180,9 +4178,132 @@ function mxResetLogoPreview(){
     'Embarazo básico': { aliases: ['embarazo','prenatal'] },
     'Panel viral respiratorio': { aliases: ['panel viral','respiratorio','influenza','covid'] },
     'TORCH': { aliases: ['torch'] },
-    'Panel infeccioso PCR': { aliases: ['pcr','panel pcr','panel infeccioso'] },
-    'Panel trombofilia': { aliases: ['trombofilia','trombofilia panel'] },
-    'Panel farmacogenómico': { aliases: ['farmacogenomica','farmacogenómica','pgx'] }
+    'Panel infeccioso PCR': { aliases: ['pcr','panel pcr','panel infeccioso'] }
+  };
+  const PICK_MAP_GEN = {};
+  const PACK_MAP_GEN = {
+    'NIPT estándar': ['NIPT (tamiz prenatal no invasivo)'],
+    'CMA / Microarray (postnatal)': ['Microarreglo cromosómico (CMA / Microarray)'],
+    'Exoma clínico TRIO (WES)': ['Exoma clínico (WES)'],
+    'Panel multigénico de cáncer hereditario': ['Panel de cáncer hereditario (multigénico)'],
+    'Cardiogenética (miocardiopatías / canalopatías)': ['Panel genético (NGS)'],
+    'Neurogenética (epilepsia / neurodesarrollo)': ['Panel genético (NGS)'],
+    'Panel tumoral somático (NGS) — FFPE': ['Panel tumoral (NGS) — somático']
+  };
+  const PACK_FLAG_MAP_GEN = {
+    'NIPT estándar': ['context_prenatal','requires_consent','genetic_counseling','sample_blood'],
+    'CMA / Microarray (postnatal)': ['context_postnatal','requires_consent','genetic_counseling','sample_blood'],
+    'Exoma clínico TRIO (WES)': ['context_postnatal','requires_consent','genetic_counseling','trio','include_cnv','acmg_secondary_findings','sample_blood'],
+    'Panel multigénico de cáncer hereditario': ['context_postnatal','requires_consent','genetic_counseling','include_cnv','sample_blood'],
+    'Cardiogenética (miocardiopatías / canalopatías)': ['context_postnatal','requires_consent','genetic_counseling','include_cnv','sample_blood'],
+    'Neurogenética (epilepsia / neurodesarrollo)': ['context_postnatal','requires_consent','genetic_counseling','include_cnv','sample_blood'],
+    'Panel tumoral somático (NGS) — FFPE': ['context_postnatal','requires_consent','sample_ffpe']
+  };
+  const GENETICS_SEARCH_CONFIG = {
+    minChars: 2,
+    maxResults: 12,
+    boosts: {
+      labelPrefix: 3,
+      labelContains: 1,
+      aliasPrefix: 5,
+      aliasContains: 2
+    }
+  };
+  const GENETICS_SEARCH_META = {
+    karyotype: { aliases: ['cariotipo','karyotype'] },
+    cma_microarray: { aliases: ['cma','microarray','array cgh','acgh','a cgh'] },
+    ngs_panel: { aliases: ['panel ngs','panel genes','gene panel','ngs'] },
+    wes: { aliases: ['exoma','wes','whole exome'] },
+    wgs: { aliases: ['genoma','wgs','whole genome'] },
+    targeted_variant: { aliases: ['prueba dirigida','single gene','gen unico','gen único'] },
+    nipt: { aliases: ['nipt','prenatal no invasivo','tamiz prenatal'] },
+    carrier_screening: { aliases: ['portadores','carrier screening'] },
+    hereditary_cancer_germline: { aliases: ['panel cancer','panel cáncer','multicancer','panel multicancer'] },
+    brca1_2: { aliases: ['brca','brca1','brca2'] },
+    lynch: { aliases: ['lynch','mlh1','msh2','msh6','pms2'] },
+    thrombophilia: { aliases: ['trombofilia','factor v leiden','protrombina'] },
+    pgx: { aliases: ['pgx','farmacogenomica','farmacogenómica','farmacogenetica','farmacogenética'] },
+    somatic_tumor_ngs: { aliases: ['panel tumoral','ngs tumor','somatico','somático','tumor'] }
+  };
+  const GENETICS_PACKAGE_META = {
+    'NIPT estándar': { aliases: ['nipt','tamiz prenatal'] },
+    'CMA / Microarray (postnatal)': { aliases: ['cma','microarray','postnatal'] },
+    'Exoma clínico TRIO (WES)': { aliases: ['exoma trio','wes trio','trio'] },
+    'Panel multigénico de cáncer hereditario': { aliases: ['panel cancer','multicancer'] },
+    'Cardiogenética (miocardiopatías / canalopatías)': { aliases: ['cardiogenetica','cardiogenética','miocardiopatia','miocardiopatía','canalopatias','canalopatías','qt largo','brugada'] },
+    'Neurogenética (epilepsia / neurodesarrollo)': { aliases: ['neurogenetica','neurogenética','epilepsia','neurodesarrollo','autismo','ataxia'] },
+    'Panel tumoral somático (NGS) — FFPE': { aliases: ['panel tumoral','ngs tumoral','ffpe','somatico tumor'] }
+  };
+  const PICK_MAP_FUNC = {};
+  const PACK_MAP_FUNC = {
+    'Espirometría pre/post broncodilatador': ['Espirometría'],
+    'PFR completo (Espirometría + Volúmenes + DLCO)': ['Pruebas funcionales respiratorias completas (PFR completo)'],
+    'PSG diagnóstica': ['Polisomnografía (PSG) diagnóstica'],
+    'HSAT (apnea del sueño en casa)': ['Estudio domiciliario de apnea (HSAT)'],
+    'EMG + VCN (estudio completo)': ['EMG + Velocidades de conducción nerviosa (VCN)'],
+    'EEG rutinario': ['EEG rutinario']
+  };
+  const PACK_FLAG_MAP_FUNC = {
+    'Espirometría pre/post broncodilatador': ['pre_post_bronchodilator'],
+    'PFR completo (Espirometría + Volúmenes + DLCO)': [],
+    'PSG diagnóstica': ['with_sleep_technologist'],
+    'HSAT (apnea del sueño en casa)': [],
+    'EMG + VCN (estudio completo)': [],
+    'EEG rutinario': []
+  };
+  const FUNC_SEARCH_CONFIG = {
+    minChars: 2,
+    maxResults: 12,
+    boosts: {
+      labelPrefix: 3,
+      labelContains: 1,
+      aliasPrefix: 5,
+      aliasContains: 2
+    }
+  };
+  const FUNC_SEARCH_META = {
+    spirometry: { aliases: ['espirometria','spirometry','fev1','fvc','curva flujo volumen'] },
+    dlco: { aliases: ['dlco','difusion','diffusing capacity'] },
+    plethysmography: { aliases: ['pletismografia','volumenes pulmonares','body plethysmography'] },
+    full_pft: { aliases: ['pfr completo','funcion pulmonar completa','full pft'] },
+    bronchial_challenge: { aliases: ['reto bronquial','provocacion','metacolina','bronchial challenge'] },
+    feno: { aliases: ['feno','oxido nitrico exhalado'] },
+    six_min_walk: { aliases: ['6mwt','caminata 6 minutos'] },
+    cpet: { aliases: ['cpet','esfuerzo cardiopulmonar','ergospirometria'] },
+    overnight_oximetry: { aliases: ['oximetria nocturna','overnight oximetry'] },
+    capnography: { aliases: ['capnografia','capnography','etco2'] },
+    psg_diagnostic: { aliases: ['psg','polisomnografia','polysomnography'] },
+    psg_titration: { aliases: ['titulacion','psg cpap','pap titration'] },
+    hsat: { aliases: ['hsat','home sleep apnea test','apnea en casa'] },
+    mslt: { aliases: ['mslt','narcolepsia'] },
+    mwt: { aliases: ['mwt','vigilancia'] },
+    eeg_routine: { aliases: ['eeg','electroencefalograma'] },
+    eeg_sleep_deprived: { aliases: ['eeg privacion','sleep deprived eeg'] },
+    video_eeg: { aliases: ['video eeg','monitorizacion eeg'] },
+    emg_ncs: { aliases: ['emg','vcn','ncs'] },
+    repetitive_nerve_stimulation: { aliases: ['estim repetitiva','miastenia'] },
+    sfemg: { aliases: ['fibra unica','sfemg'] },
+    evoked_visual: { aliases: ['pev','visual evoked'] },
+    evoked_auditory_baep: { aliases: ['peat','baep','abr neurologico'] },
+    evoked_ssep: { aliases: ['pess','ssep'] },
+    audiometry_tonal: { aliases: ['audiometria','tonal'] },
+    audiometry_speech: { aliases: ['logoaudiometria','verbal'] },
+    tympanometry: { aliases: ['timpanometria','impedanciometria'] },
+    otoacoustic_emissions: { aliases: ['oea','otoemisiones'] },
+    abr: { aliases: ['abr','peat','baep'] },
+    vng: { aliases: ['vng','videonistagmografia'] },
+    vemp: { aliases: ['vemp'] },
+    tilt_table: { aliases: ['tilt','mesa inclinada','sincope'] },
+    holter_bp_24h: { aliases: ['mapa 24','presion 24h','abpm'] },
+    ankle_brachial_index: { aliases: ['itb','abi','tobillo brazo'] }
+  };
+  const FUNC_PACKAGE_META = {
+    'Espirometría pre/post broncodilatador': { aliases: ['espirometria pre post','pre post broncodilatador'] },
+    'PFR completo (Espirometría + Volúmenes + DLCO)': { aliases: ['pfr completo','funcion pulmonar completa'] },
+    'PSG diagnóstica': { aliases: ['psg','polisomnografia diagnostica'] },
+    'HSAT (apnea del sueño en casa)': { aliases: ['hsat','apnea en casa'] },
+    'EMG + VCN (estudio completo)': { aliases: ['emg vcn','ncs','conduccion nerviosa'] },
+    'EEG rutinario': { aliases: ['eeg','electroencefalograma'] }
   };
   const PICK_MAP_IMG = {
     'RX Tórax': ['RX Tórax'],
@@ -4221,7 +4342,9 @@ function mxResetLogoPreview(){
     { key:'imagenologia', id:'modalEstudiosImg', panelSelector:'[data-est-modality-panels]', pickMap:PICK_MAP_IMG, packMap:PACK_MAP_IMG, packFlagMap:{} },
     { key:'cardiologia', id:'modalEstudiosCardio', panelSelector:'[data-est-modality-panels]', pickMap:PICK_MAP_CARDIO, packMap:PACK_MAP_CARDIO, packFlagMap:{} },
     { key:'endoscopia', id:'modalEstudiosEndo', panelSelector:'[data-est-modality-panels]', pickMap:PICK_MAP_ENDO, packMap:PACK_MAP_ENDO, packFlagMap:{} },
-    { key:'patologia', id:'modalEstudiosPat', panelSelector:'[data-est-modality-panels]', pickMap:PICK_MAP_PAT, packMap:PACK_MAP_PAT, packFlagMap:PACK_FLAG_MAP_PAT }
+    { key:'patologia', id:'modalEstudiosPat', panelSelector:'[data-est-modality-panels]', pickMap:PICK_MAP_PAT, packMap:PACK_MAP_PAT, packFlagMap:PACK_FLAG_MAP_PAT },
+    { key:'genetica', id:'modalEstudiosGen', panelSelector:'[data-est-modality-panels]', pickMap:PICK_MAP_GEN, packMap:PACK_MAP_GEN, packFlagMap:PACK_FLAG_MAP_GEN },
+    { key:'funcionales', id:'modalEstudiosFunc', panelSelector:'[data-est-modality-panels]', pickMap:PICK_MAP_FUNC, packMap:PACK_MAP_FUNC, packFlagMap:PACK_FLAG_MAP_FUNC }
   ];
   const flagLabels = {
     priority_routine: 'Rutinario',
@@ -4323,9 +4446,34 @@ function mxResetLogoPreview(){
     with_bal: 'Con lavado broncoalveolar (BAL)',
     with_tbna: 'Con TBNA (aspiración)',
     with_ebus: 'Con EBUS',
+    pre_post_bronchodilator: 'Pre / post broncodilatador',
+    with_bronchial_challenge: 'Con reto bronquial (provocación)',
+    with_exercise: 'Con ejercicio',
+    with_sleep_technologist: 'Con técnico (atendido)',
+    with_titration: 'Con titulación (CPAP/BiPAP)',
+    upper_limbs: 'Miembros superiores',
+    lower_limbs: 'Miembros inferiores',
     immunofluorescence: 'Con inmunofluorescencia',
     external_review: 'Revisión externa / segunda opinión',
     block_additional: 'Cortes/bloques adicionales',
+    requires_consent: 'Requiere consentimiento informado',
+    genetic_counseling: 'Consejería genética (si aplica)',
+    context_prenatal: 'Prenatal',
+    context_postnatal: 'Postnatal',
+    sample_blood: 'Muestra: sangre (EDTA)',
+    sample_saliva: 'Muestra: saliva',
+    sample_tissue: 'Muestra: tejido fresco',
+    sample_ffpe: 'Muestra: bloque/laminilla (FFPE)',
+    sample_cvs: 'Muestra: CVS (vellosidades coriónicas)',
+    sample_amnio: 'Muestra: amniocentesis',
+    trio: 'TRIO (paciente+padre+madre)',
+    duo: 'DUO (paciente+1 progenitor)',
+    proband_only: 'Solo paciente',
+    include_cnv: 'Incluir CNV',
+    confirm_sanger: 'Confirmación por Sanger',
+    acmg_secondary_findings: 'Consentimiento: hallazgos secundarios (ACMG SF)',
+    cascade_testing: 'Familiar (cascade testing)',
+    report_reanalysis: 'Reanálisis (si aplica)',
     with_sedation: 'Con sedación',
     without_sedation: 'Sin sedación',
     anesthesia: 'Con anestesia',
@@ -4469,6 +4617,42 @@ function mxResetLogoPreview(){
     'first_morning',
     'with_antibiogram'
   ];
+  const geneticsFlagOrder = [
+    'urgent',
+    'followup',
+    'requires_consent',
+    'genetic_counseling',
+    'context_prenatal',
+    'context_postnatal',
+    'sample_blood',
+    'sample_saliva',
+    'sample_tissue',
+    'sample_ffpe',
+    'sample_cvs',
+    'sample_amnio',
+    'trio',
+    'duo',
+    'proband_only',
+    'include_cnv',
+    'confirm_sanger',
+    'acmg_secondary_findings',
+    'cascade_testing',
+    'report_reanalysis'
+  ];
+  const functionalFlagOrder = [
+    'urgent',
+    'followup',
+    'pre_post_bronchodilator',
+    'with_bronchial_challenge',
+    'with_exercise',
+    'with_sleep_technologist',
+    'with_titration',
+    'left',
+    'right',
+    'bilateral',
+    'upper_limbs',
+    'lower_limbs'
+  ];
   const LAB_FLAG_VISIBILITY = {
     generalFlags: [
       'fasting',
@@ -4512,6 +4696,188 @@ function mxResetLogoPreview(){
       cyto_liquid_based: ['followup'],
       autopsy_clinical: ['urgent'],
       autopsy_fetal: ['urgent']
+    }
+  };
+  const GENETICS_FLAG_VISIBILITY = {
+    generalFlags: [
+      'urgent',
+      'followup'
+    ],
+    applicability: {
+      karyotype: [
+        'requires_consent',
+        'genetic_counseling',
+        'context_prenatal',
+        'context_postnatal',
+        'sample_blood',
+        'sample_cvs',
+        'sample_amnio',
+        'cascade_testing'
+      ],
+      cma_microarray: [
+        'requires_consent',
+        'genetic_counseling',
+        'context_prenatal',
+        'context_postnatal',
+        'sample_blood',
+        'sample_cvs',
+        'sample_amnio',
+        'cascade_testing'
+      ],
+      targeted_variant: [
+        'requires_consent',
+        'genetic_counseling',
+        'context_postnatal',
+        'sample_blood',
+        'sample_saliva',
+        'sample_tissue',
+        'cascade_testing',
+        'confirm_sanger'
+      ],
+      ngs_panel: [
+        'requires_consent',
+        'genetic_counseling',
+        'context_postnatal',
+        'sample_blood',
+        'sample_saliva',
+        'sample_tissue',
+        'include_cnv',
+        'confirm_sanger',
+        'cascade_testing'
+      ],
+      wes: [
+        'requires_consent',
+        'genetic_counseling',
+        'context_postnatal',
+        'sample_blood',
+        'sample_saliva',
+        'sample_tissue',
+        'trio',
+        'duo',
+        'proband_only',
+        'include_cnv',
+        'acmg_secondary_findings',
+        'report_reanalysis'
+      ],
+      wgs: [
+        'requires_consent',
+        'genetic_counseling',
+        'context_postnatal',
+        'sample_blood',
+        'sample_saliva',
+        'sample_tissue',
+        'trio',
+        'duo',
+        'proband_only',
+        'include_cnv',
+        'acmg_secondary_findings',
+        'report_reanalysis'
+      ],
+      nipt: [
+        'requires_consent',
+        'genetic_counseling',
+        'context_prenatal',
+        'sample_blood'
+      ],
+      carrier_screening: [
+        'requires_consent',
+        'genetic_counseling',
+        'context_prenatal',
+        'context_postnatal',
+        'sample_blood',
+        'sample_saliva'
+      ],
+      hereditary_cancer_germline: [
+        'requires_consent',
+        'genetic_counseling',
+        'context_postnatal',
+        'sample_blood',
+        'sample_saliva',
+        'include_cnv',
+        'cascade_testing',
+        'confirm_sanger'
+      ],
+      brca1_2: [
+        'requires_consent',
+        'genetic_counseling',
+        'context_postnatal',
+        'sample_blood',
+        'sample_saliva',
+        'include_cnv',
+        'cascade_testing',
+        'confirm_sanger'
+      ],
+      lynch: [
+        'requires_consent',
+        'genetic_counseling',
+        'context_postnatal',
+        'sample_blood',
+        'sample_saliva',
+        'include_cnv',
+        'cascade_testing',
+        'confirm_sanger'
+      ],
+      thrombophilia: [
+        'requires_consent',
+        'context_postnatal',
+        'sample_blood',
+        'cascade_testing',
+        'confirm_sanger'
+      ],
+      pgx: [
+        'requires_consent',
+        'context_postnatal',
+        'sample_blood',
+        'sample_saliva'
+      ],
+      somatic_tumor_ngs: [
+        'requires_consent',
+        'context_postnatal',
+        'sample_ffpe',
+        'sample_tissue'
+      ]
+    }
+  };
+  const FUNCTIONAL_FLAG_VISIBILITY = {
+    generalFlags: [
+      'urgent',
+      'followup'
+    ],
+    applicability: {
+      spirometry: ['pre_post_bronchodilator'],
+      full_pft: ['pre_post_bronchodilator'],
+      dlco: [],
+      plethysmography: [],
+      feno: [],
+      six_min_walk: ['with_exercise'],
+      cpet: ['with_exercise'],
+      bronchial_challenge: ['with_bronchial_challenge'],
+      overnight_oximetry: [],
+      capnography: [],
+      psg_diagnostic: ['with_sleep_technologist'],
+      psg_titration: ['with_sleep_technologist','with_titration'],
+      hsat: [],
+      mslt: ['with_sleep_technologist'],
+      mwt: ['with_sleep_technologist'],
+      eeg_routine: [],
+      eeg_sleep_deprived: [],
+      video_eeg: ['with_sleep_technologist'],
+      emg_ncs: ['upper_limbs','lower_limbs'],
+      repetitive_nerve_stimulation: [],
+      sfemg: [],
+      evoked_visual: [],
+      evoked_auditory_baep: [],
+      evoked_ssep: [],
+      audiometry_tonal: ['left','right','bilateral'],
+      audiometry_speech: ['left','right','bilateral'],
+      tympanometry: ['left','right','bilateral'],
+      otoacoustic_emissions: ['left','right','bilateral'],
+      abr: ['left','right','bilateral'],
+      vng: [],
+      vemp: [],
+      tilt_table: [],
+      holter_bp_24h: [],
+      ankle_brachial_index: ['left','right','bilateral']
     }
   };
   const CARDIOLOGY_FLAG_VISIBILITY = {
@@ -4730,10 +5096,27 @@ function mxResetLogoPreview(){
   const itemOrder = {};
   const groupOrder = [];
   let orderIndex = 0;
-  let labSearchIndex = [];
-  let labSuggestLayer = null;
-  let labSuggestItems = [];
-  let labSuggestIndex = -1;
+  const searchStates = {};
+  const searchConfigMap = {
+    lab: {
+      config: LAB_SEARCH_CONFIG,
+      meta: LAB_SEARCH_META,
+      packMeta: LAB_PACKAGE_META,
+      categoryMode: 'group'
+    },
+    genetica: {
+      config: GENETICS_SEARCH_CONFIG,
+      meta: GENETICS_SEARCH_META,
+      packMeta: GENETICS_PACKAGE_META,
+      categoryMode: 'modality'
+    },
+    funcionales: {
+      config: FUNC_SEARCH_CONFIG,
+      meta: FUNC_SEARCH_META,
+      packMeta: FUNC_PACKAGE_META,
+      categoryMode: 'modality'
+    }
+  };
 
   function escapeHtml(str){
     return String(str).replace(/[&<>"']/g, s=>({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[s]));
@@ -4788,6 +5171,12 @@ function mxResetLogoPreview(){
     if(controllerKey === 'lab'){
       return labFlagOrder.filter(id=> activeFlags.has(id)).map(id=> flagLabels[id]).filter(Boolean);
     }
+    if(controllerKey === 'genetica'){
+      return geneticsFlagOrder.filter(id=> activeFlags.has(id)).map(id=> flagLabels[id]).filter(Boolean);
+    }
+    if(controllerKey === 'funcionales'){
+      return functionalFlagOrder.filter(id=> activeFlags.has(id)).map(id=> flagLabels[id]).filter(Boolean);
+    }
     if(controllerKey === 'imagenologia'){
       return imagingFlagOrder.filter(id=> activeFlags.has(id)).map(id=> flagLabels[id]).filter(Boolean);
     }
@@ -4797,7 +5186,7 @@ function mxResetLogoPreview(){
     const meta = getItemMeta(item, controllerKey);
     let name = item;
     const flags = getOrderedFlags(controllerKey).join(' ');
-    if(controllerKey === 'lab' || controllerKey === 'endoscopia' || controllerKey === 'patologia' || controllerKey === 'cardiologia' || controllerKey === 'imagenologia'){
+    if(controllerKey === 'lab' || controllerKey === 'endoscopia' || controllerKey === 'patologia' || controllerKey === 'cardiologia' || controllerKey === 'imagenologia' || controllerKey === 'genetica' || controllerKey === 'funcionales'){
       if(flags) name = `${name} ${flags}`;
       return name.trim();
     }
@@ -4845,20 +5234,27 @@ function mxResetLogoPreview(){
     });
     return selectionOrder.slice();
   }
-  function buildLabSearchIndex(){
-    const ctrl = controllerMap.lab;
-    if(!ctrl) return [];
+  function getSearchState(key){
+    if(!searchStates[key]){
+      searchStates[key] = { index: [], layer: null, items: [], activeIndex: -1 };
+    }
+    return searchStates[key];
+  }
+  function buildSearchIndex(controller, cfg){
+    if(!controller || !cfg) return [];
     const entries = [];
-    const inputs = Array.from(ctrl.modalEl.querySelectorAll('input[type="checkbox"][data-est-id][data-est-item]'));
+    const inputs = Array.from(controller.modalEl.querySelectorAll('input[type="checkbox"][data-est-id][data-est-item]'));
     inputs.forEach(cb=>{
       if(cb.disabled) return;
       const id = cb.dataset.estId;
       const label = cb.dataset.estItem;
       if(!id || !label) return;
-      const meta = LAB_SEARCH_META[id] || {};
+      const meta = cfg.meta[id] || {};
       const aliases = (meta.aliases || []).slice();
-      const groupId = getItemGroup(label, 'lab');
-      const areaLabel = groupLabels[groupId] || 'Laboratorio';
+      const groupId = getItemGroup(label, controller.key);
+      const groupLabel = groupLabels[groupId] || (controller.key === 'genetica' ? 'Genética' : 'Laboratorio');
+      const modalityLabel = getItemMeta(label, controller.key)?.modalityLabel || groupLabel;
+      const areaLabel = cfg.categoryMode === 'modality' ? modalityLabel : groupLabel;
       entries.push({
         type: 'test',
         id,
@@ -4869,8 +5265,8 @@ function mxResetLogoPreview(){
         normAliases: aliases.map(normalizeSearchText).filter(Boolean)
       });
     });
-    Object.keys(ctrl.packMap || {}).forEach(label=>{
-      const meta = LAB_PACKAGE_META[label] || {};
+    Object.keys(controller.packMap || {}).forEach(label=>{
+      const meta = cfg.packMeta[label] || {};
       const aliases = (meta.aliases || []).slice();
       entries.push({
         type: 'package',
@@ -4884,23 +5280,26 @@ function mxResetLogoPreview(){
     });
     return entries;
   }
-  function getLabSearchMatches(query){
+  function getSearchMatches(controllerKey, query){
+    const cfg = searchConfigMap[controllerKey];
+    if(!cfg) return [];
     const term = normalizeSearchText(query);
-    if(!term || term.length < LAB_SEARCH_CONFIG.minChars) return [];
+    if(!term || term.length < cfg.config.minChars) return [];
     const termCompact = term.replace(/\s+/g, '');
+    const state = getSearchState(controllerKey);
     const matches = [];
-    labSearchIndex.forEach(entry=>{
+    state.index.forEach(entry=>{
       let score = 0;
       if(entry.normLabel.startsWith(term) || entry.normLabel.replace(/\s+/g, '').startsWith(termCompact)){
-        score = Math.max(score, LAB_SEARCH_CONFIG.boosts.labelPrefix);
+        score = Math.max(score, cfg.config.boosts.labelPrefix);
       }else if(entry.normLabel.includes(term)){
-        score = Math.max(score, LAB_SEARCH_CONFIG.boosts.labelContains);
+        score = Math.max(score, cfg.config.boosts.labelContains);
       }
       entry.normAliases.forEach(alias=>{
         if(alias.startsWith(term) || alias.replace(/\s+/g, '').startsWith(termCompact)){
-          score = Math.max(score, LAB_SEARCH_CONFIG.boosts.aliasPrefix);
+          score = Math.max(score, cfg.config.boosts.aliasPrefix);
         }else if(alias.includes(term)){
-          score = Math.max(score, LAB_SEARCH_CONFIG.boosts.aliasContains);
+          score = Math.max(score, cfg.config.boosts.aliasContains);
         }
       });
       if(score > 0){
@@ -4911,30 +5310,31 @@ function mxResetLogoPreview(){
       if(b.score !== a.score) return b.score - a.score;
       return a.entry.label.localeCompare(b.entry.label);
     });
-    return matches.slice(0, LAB_SEARCH_CONFIG.maxResults).map(item=> item.entry);
+    return matches.slice(0, cfg.config.maxResults).map(item=> item.entry);
   }
-  function highlightLabSuggest(idx){
-    labSuggestIndex = idx;
-    labSuggestItems.forEach((item, i)=>{
+  function highlightSuggest(state, idx){
+    state.activeIndex = idx;
+    state.items.forEach((item, i)=>{
       if(item.node){
-        item.node.classList.toggle('active', i === labSuggestIndex);
-        if(i === labSuggestIndex){
+        item.node.classList.toggle('active', i === state.activeIndex);
+        if(i === state.activeIndex){
           try{ item.node.scrollIntoView({ block:'nearest' }); }catch(_){}
         }
       }
     });
   }
-  function hideLabSuggest(){
-    if(labSuggestLayer){
-      labSuggestLayer.remove();
-      labSuggestLayer = null;
+  function hideSuggest(controllerKey){
+    const state = getSearchState(controllerKey);
+    if(state.layer){
+      state.layer.remove();
+      state.layer = null;
     }
-    labSuggestItems = [];
-    labSuggestIndex = -1;
+    state.items = [];
+    state.activeIndex = -1;
   }
-  function applyLabSuggestion(entry, controller){
+  function applySearchSuggestion(entry, controller){
     if(!entry || !controller) return;
-    hideLabSuggest();
+    hideSuggest(controller.key);
     if(entry.type === 'package'){
       controller.applyPackage(entry.label);
     }else{
@@ -4948,16 +5348,17 @@ function mxResetLogoPreview(){
       controller.searchInput.focus();
     }
   }
-  function showLabSuggest(list, anchor, controller){
-    hideLabSuggest();
+  function showSuggest(list, anchor, controller){
     if(!list.length || !anchor) return;
+    hideSuggest(controller.key);
+    const state = getSearchState(controller.key);
     const rect = anchor.getBoundingClientRect();
     const box = document.createElement('div');
     box.className = 'grp-suggest';
     box.style.left = `${window.scrollX + rect.left}px`;
     box.style.top = `${window.scrollY + rect.bottom + 4}px`;
     box.style.width = `${rect.width}px`;
-    labSuggestItems = [];
+    state.items = [];
     list.forEach(entry=>{
       const it = document.createElement('div');
       it.className = 'item';
@@ -4969,53 +5370,56 @@ function mxResetLogoPreview(){
       ad.textContent = entry.areaLabel || '';
       it.appendChild(nm);
       it.appendChild(ad);
-      it.addEventListener('click', ()=> applyLabSuggestion(entry, controller));
+      it.addEventListener('click', ()=> applySearchSuggestion(entry, controller));
       box.appendChild(it);
-      labSuggestItems.push({ data: entry, node: it });
+      state.items.push({ data: entry, node: it });
     });
     document.body.appendChild(box);
-    labSuggestLayer = box;
-    highlightLabSuggest(0);
+    state.layer = box;
+    highlightSuggest(state, 0);
     const handler = (ev)=>{
-      if(!labSuggestLayer) return;
+      if(!state.layer) return;
       if(!box.contains(ev.target) && ev.target !== anchor){
-        hideLabSuggest();
+        hideSuggest(controller.key);
         document.removeEventListener('mousedown', handler, true);
       }
     };
     document.addEventListener('mousedown', handler, true);
   }
-  function setupLabTypeahead(controller){
+  function setupTypeahead(controller){
+    const cfg = searchConfigMap[controller?.key];
     const input = controller?.searchInput;
-    if(!input) return;
+    if(!cfg || !input) return;
+    const state = getSearchState(controller.key);
+    state.index = buildSearchIndex(controller, cfg);
     input.addEventListener('input', ()=>{
-      const results = getLabSearchMatches(input.value);
+      const results = getSearchMatches(controller.key, input.value);
       if(results.length){
-        showLabSuggest(results, input, controller);
+        showSuggest(results, input, controller);
       }else{
-        hideLabSuggest();
+        hideSuggest(controller.key);
       }
     });
     input.addEventListener('keydown', (ev)=>{
-      if(!labSuggestLayer || !labSuggestItems.length) return;
+      if(!state.layer || !state.items.length) return;
       if(ev.key === 'ArrowDown'){
         ev.preventDefault();
-        const next = (labSuggestIndex + 1) % labSuggestItems.length;
-        highlightLabSuggest(next);
+        const next = (state.activeIndex + 1) % state.items.length;
+        highlightSuggest(state, next);
       }else if(ev.key === 'ArrowUp'){
         ev.preventDefault();
-        const next = (labSuggestIndex - 1 + labSuggestItems.length) % labSuggestItems.length;
-        highlightLabSuggest(next);
+        const next = (state.activeIndex - 1 + state.items.length) % state.items.length;
+        highlightSuggest(state, next);
       }else if(ev.key === 'Enter'){
         ev.preventDefault();
-        const item = labSuggestItems[labSuggestIndex];
-        if(item) applyLabSuggestion(item.data, controller);
+        const item = state.items[state.activeIndex];
+        if(item) applySearchSuggestion(item.data, controller);
       }else if(ev.key === 'Escape'){
         ev.preventDefault();
-        hideLabSuggest();
+        hideSuggest(controller.key);
       }
     });
-    controller.modalEl?.addEventListener('hidden.bs.modal', hideLabSuggest);
+    controller.modalEl?.addEventListener('hidden.bs.modal', ()=> hideSuggest(controller.key));
   }
   function syncCheckboxesFromItems(items){
     const set = new Set(items);
@@ -5110,7 +5514,11 @@ function mxResetLogoPreview(){
       endoscopia:'endoscopia',
       'endoscopía':'endoscopia',
       patologia:'patologia',
-      'patología':'patologia'
+      'patología':'patologia',
+      genetica:'genetica',
+      'genética':'genetica',
+      funcionales:'funcionales',
+      funcional:'funcionales'
     };
     const key = nameMap[normalized] || 'lab';
     return controllerMap[key] || controllerMap.lab;
@@ -5302,9 +5710,13 @@ function mxResetLogoPreview(){
           ? ENDOSCOPY_FLAG_VISIBILITY
           : (controller.key === 'patologia'
             ? PATHOLOGY_FLAG_VISIBILITY
-            : (controller.key === 'cardiologia'
-              ? CARDIOLOGY_FLAG_VISIBILITY
-              : (controller.key === 'imagenologia' ? IMAGING_FLAG_VISIBILITY : null))));
+            : (controller.key === 'genetica'
+              ? GENETICS_FLAG_VISIBILITY
+              : (controller.key === 'funcionales'
+                ? FUNCTIONAL_FLAG_VISIBILITY
+                : (controller.key === 'cardiologia'
+                  ? CARDIOLOGY_FLAG_VISIBILITY
+                  : (controller.key === 'imagenologia' ? IMAGING_FLAG_VISIBILITY : null))))));
       if(!visibilityMap) return;
       const selectedIds = Array.from(modalEl.querySelectorAll('input[type="checkbox"][data-est-id]'))
         .filter(cb=> cb.checked)
@@ -5383,7 +5795,11 @@ function mxResetLogoPreview(){
         vascular_flow: ['vascular_arterial','vascular_venous'],
         ct_phase: ['ct_phase_arterial','ct_phase_venous','ct_phase_delayed'],
         dexa_region: ['dexa_spine','dexa_hip','dexa_whole_body'],
-        ihc_type: ['ihc_single_marker','ihc_panel','ihc_breast_panel','ihc_lung_panel','ihc_lymphoma_panel']
+        ihc_type: ['ihc_single_marker','ihc_panel','ihc_breast_panel','ihc_lung_panel','ihc_lymphoma_panel'],
+        context_timing: ['context_prenatal','context_postnatal'],
+        sample_type: ['sample_blood','sample_saliva','sample_tissue','sample_ffpe','sample_cvs','sample_amnio'],
+        proband_group: ['trio','duo','proband_only'],
+        limb_group: ['upper_limbs','lower_limbs']
       };
       const groupLookup = Object.values(flagGroups).reduce((acc, group)=>{
         group.forEach(id=>{
@@ -5508,11 +5924,10 @@ function mxResetLogoPreview(){
       });
     });
   });
-  const labController = controllerMap.lab;
-  if(labController){
-    labSearchIndex = buildLabSearchIndex();
-    setupLabTypeahead(labController);
-  }
+  Object.keys(searchConfigMap).forEach(key=>{
+    const controller = controllerMap[key];
+    if(controller) setupTypeahead(controller);
+  });
 
   openInputs.forEach(input=>{
     input.addEventListener('focus', ()=> openControllerForInput(input));
@@ -5538,7 +5953,7 @@ function mxResetLogoPreview(){
         owner.searchInput.value = '';
         owner.applyFilterChip('todos');
         owner.filterList('');
-        if(owner?.key === 'lab') hideLabSuggest();
+        if(owner?.key && searchConfigMap[owner.key]) hideSuggest(owner.key);
       }
     });
   });
