@@ -3285,6 +3285,341 @@ body{margin:0;background:var(--mm-fondo-base);}
 .gyn-summary input[type=number]::-webkit-outer-spin-button{
   margin-right:0.8rem;
 }
+.exp-panel{
+  display:grid;
+  gap:12px;
+}
+.exp-block{
+  background:#eef6fb;
+  border:1px solid #c9e5ef;
+  border-radius:12px;
+  padding:12px;
+}
+.exp-block--card{
+  min-height:220px;
+}
+.exp-block-title{
+  font-weight:700;
+  color:#005275;
+  margin-bottom:8px;
+}
+.exp-bp-row{
+  flex-wrap:wrap;
+  gap:8px;
+}
+.exp-field{
+  margin-bottom:12px;
+}
+.exp-panel .form-label{
+  margin-bottom:6px;
+}
+.exp-input-group .form-control,
+.exp-input-group .form-select,
+.exp-input-group .input-group-text,
+.exp-panel input.form-control,
+.exp-panel select.form-select{
+  height:auto;
+  min-height:36px;
+}
+.exp-input-group .form-control,
+.exp-input-group .form-select{
+  min-width:0;
+}
+.exp-unit{
+  min-width:52px;
+  justify-content:center;
+}
+.exp-unit--empty{
+  color:transparent;
+}
+.exp-sep{
+  min-width:32px;
+  justify-content:center;
+}
+.exp-presets{
+  min-width:88px;
+  max-width:120px;
+}
+.exp-presets--bp{
+  min-width:76px;
+  max-width:100px;
+}
+.exp-inline .form-control{
+  text-align:center;
+  font-weight:600;
+}
+.exp-input-group.exp-inline .form-control{
+  max-width:140px;
+}
+.exp-inline .input-group-text{
+  background:#e6f7fb;
+  border:1px solid #009ab0;
+  color:#005275;
+  font-weight:600;
+}
+.exp-input-group .form-control{
+  padding:0.35rem 0.65rem;
+  font-size:0.92rem;
+  border-radius:8px;
+  border:1px solid #b8dfe8;
+  background:#fff;
+  color:#003152;
+}
+.exp-input-group .input-group-text{
+  min-height:36px;
+  font-size:0.85rem;
+  padding:0 0.65rem;
+  border-radius:8px;
+  border:1px solid #b8dfe8;
+  background:#f6fdff;
+  color:#004b62;
+}
+.exp-preset-btn{
+  height:36px;
+  padding:0 8px;
+  font-size:13px;
+  min-width:80px;
+  flex:0 0 auto;
+  white-space:nowrap;
+  border-radius:8px;
+  border:1px solid #c9e5ef;
+  background:#fff;
+  color:#004b62;
+}
+.exp-input-group{
+  flex-wrap:nowrap;
+  gap:6px;
+}
+.exp-input-group .dropdown-toggle,
+.exp-input-group .input-group-text{
+  flex-shrink:0;
+}
+.exp-preset-btn{
+  min-width:92px;
+  flex-shrink:0;
+  white-space:nowrap;
+}
+.exp-bp-row .input-group{
+  flex:1 1 auto;
+  min-width:0;
+  flex-wrap:nowrap;
+}
+.exp-bp-row .input-group .form-control{
+  min-width:0;
+}
+.exp-systems{
+  display:grid;
+  gap:10px;
+}
+@media (min-width: 992px){
+  .exp-systems{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+}
+.exp-system{
+  background:#fff;
+  border:1px solid #d6eef4;
+  border-radius:10px;
+  padding:10px;
+}
+.exp-system-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:6px;
+}
+.exp-system-title{
+  font-weight:700;
+  color:#005275;
+}
+.exp-toggle{
+  display:inline-flex;
+  border:1px solid #b6dfe9;
+  border-radius:999px;
+  overflow:hidden;
+  background:#f2fbfc;
+}
+.exp-toggle input{
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+}
+.exp-physical-app{
+  display:grid;
+  gap:12px;
+}
+.exp-card{
+  background:#fff;
+  border:1px solid #cfe9f0;
+  border-radius:12px;
+  padding:16px;
+}
+.exp-card-title{
+  font-weight:600;
+  margin-bottom:8px;
+  color:#005275;
+}
+.exp-field{
+  margin-bottom:10px;
+}
+.exp-input-row{
+  display:grid;
+  grid-template-columns:auto minmax(0,120px) minmax(60px,80px);
+  gap:8px;
+  align-items:center;
+}
+.exp-input-row .form-control{
+  border-radius:8px;
+  border:1px solid #bfe5ef;
+  height:44px;
+  padding:0 0.75rem;
+  background:#fff;
+  text-align:center;
+  width:100%;
+}
+.exp-preset,
+.exp-unit,
+.exp-bp-controls .form-control{
+  align-self:stretch;
+}
+.exp-imc-field{
+  max-width:100px;
+  -moz-appearance:textfield;
+  -webkit-appearance:none;
+  appearance:none;
+}
+.exp-imc-field::-webkit-outer-spin-button,
+.exp-imc-field::-webkit-inner-spin-button {
+  -webkit-appearance:none;
+  margin:0;
+}
+.exp-bp-display{
+  width:100%;
+}
+.exp-bmi-indicator{
+  margin-top:6px;
+}
+.exp-bmi-pill{
+  display:inline-flex;
+  padding:0.1rem 0.75rem;
+  border-radius:999px;
+  font-size:0.75rem;
+  font-weight:600;
+  color:#fff;
+  background:#85929b;
+}
+.exp-bmi-pill--neutral{ background:#85929b; }
+.exp-bmi-pill--normal{ background:#2ecc71; }
+.exp-bmi-pill--underweight{ background:#3498db; }
+.exp-bmi-pill--overweight{ background:#f39c12; }
+.exp-bmi-pill--obese{ background:#e74c3c; }
+.exp-unit{
+  flex:0 0 auto;
+  min-width:48px;
+  height:44px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:8px;
+  border:1px solid #bfe5ef;
+  background:#f5fbff;
+  color:#004b62;
+  font-weight:600;
+  justify-self:center;
+}
+.exp-preset{
+  position:relative;
+  flex:0 0 auto;
+}
+.exp-preset-btn{
+  border:1px solid #cfe9f0;
+  border-radius:8px;
+  background:#fff;
+  color:#004b62;
+  min-width:84px;
+  height:38px;
+  padding:0 12px;
+}
+.exp-bp-display{
+  flex:1 1 auto;
+  min-width:0;
+  border-radius:8px;
+  border:1px solid #bfe5ef;
+  height:44px;
+  padding:0 0.75rem;
+  text-align:center;
+  background:#fff;
+  color:#003152;
+}
+.exp-bp-helper{
+  display:none;
+}
+.exp-bp-controls{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  flex:1 1 auto;
+}
+.exp-bp-controls .form-control{
+  text-align:center;
+}
+ .exp-card--secondary{
+  background:#f6fbff;
+  border-color:#d2e9f2;
+}
+.exp-system-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+  gap:12px;
+}
+.exp-system{
+  border:1px solid #d5e9f2;
+  border-radius:10px;
+  padding:10px;
+  background:#fff;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.exp-system-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.exp-toggle label{
+  font-size:0.75rem;
+  padding:4px 8px;
+  border:1px solid #b6dfe9;
+  border-radius:999px;
+  margin-right:4px;
+}
+.exp-system textarea{
+  border-radius:8px;
+  border:1px solid #bfe5ef;
+}
+.exp-system.full-width{
+  grid-column:1/-1;
+}
+.exp-toggle label{
+  margin:0;
+  padding:4px 10px;
+  font-size:0.78rem;
+  color:#005275;
+  cursor:pointer;
+  border-right:1px solid #b6dfe9;
+}
+.exp-toggle label:last-of-type{
+  border-right:0;
+}
+.exp-toggle input:checked + label{
+  background:#00b0c5;
+  color:#fff;
+}
+.exp-obs{
+  min-height:56px;
+}
+.exp-hallazgos textarea{
+  min-height:90px;
+}
 .est-actions{
   display:grid;
   grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));

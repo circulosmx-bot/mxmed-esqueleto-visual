@@ -3438,10 +3438,186 @@
                 </div>
               </div>
 
-              <div class="tab-pane fade" id="t-exploracion"><div class="alert alert-info">Signos vitales, exploración
-</div></div>
-
-              <div class="tab-pane fade" id="t-estudios">
+                            <div class="tab-pane fade" id="t-exploracion">
+                <div class="exp-physical-app">
+                  <div class="row g-3">
+                    <div class="col-lg-6">
+                      <div class="exp-card">
+                        <div class="exp-card-title">Signos vitales</div>
+                        <div class="exp-field">
+                          <label for="exp_bp_sys">Presión arterial</label>
+                          <div class="exp-input-row">
+                            <div class="exp-preset">
+                              <button class="btn exp-preset-btn" type="button" data-bs-toggle="dropdown">Común</button>
+                              <ul class="dropdown-menu">
+                                <li><button class="dropdown-item" type="button" data-exp-bp-sys="120" data-exp-bp-dia="80">Normal 120/80</button></li>
+                                <li><button class="dropdown-item" type="button" data-exp-bp-sys="140" data-exp-bp-dia="90">Alta 140/90</button></li>
+                              </ul>
+                            </div>
+                            <div class="exp-bp-controls">
+                              <input id="exp_bp_sys" type="hidden" value="">
+                              <input id="exp_bp_dia" type="hidden" value="">
+                              <input id="exp_bp_display" class="form-control exp-bp-display" placeholder="Sistólica/Diastólica" aria-label="Presión arterial">
+                            </div>
+                            <span class="exp-unit exp-unit--mmhg">mmHg</span>
+                          </div>
+                        </div>
+                        <div class="exp-field">
+                          <label for="exp_fc_value">Frecuencia cardiaca</label>
+                          <div class="exp-input-row">
+                            <div class="exp-preset">
+                              <button class="btn exp-preset-btn" type="button" data-bs-toggle="dropdown">Común</button>
+                              <ul class="dropdown-menu">
+                                <li><button class="dropdown-item" type="button" data-exp-target="exp_fc_value" data-exp-value="60">60</button></li>
+                                <li><button class="dropdown-item" type="button" data-exp-target="exp_fc_value" data-exp-value="80">80</button></li>
+                                <li><button class="dropdown-item" type="button" data-exp-target="exp_fc_value" data-exp-value="100">100</button></li>
+                              </ul>
+                            </div>
+                            <input id="exp_fc_value" type="number" class="form-control" min="30" max="220" placeholder="">
+                            <span class="exp-unit">lpm</span>
+                          </div>
+                        </div>
+                        <div class="exp-field">
+                          <label for="exp_fr_value">Frecuencia respiratoria</label>
+                          <div class="exp-input-row">
+                            <div class="exp-preset">
+                              <button class="btn exp-preset-btn" type="button" data-bs-toggle="dropdown">Común</button>
+                              <ul class="dropdown-menu">
+                                <li><button class="dropdown-item" type="button" data-exp-target="exp_fr_value" data-exp-value="16">16</button></li>
+                                <li><button class="dropdown-item" type="button" data-exp-target="exp_fr_value" data-exp-value="20">20</button></li>
+                              </ul>
+                            </div>
+                            <input id="exp_fr_value" type="number" class="form-control" min="6" max="40" placeholder="">
+                            <span class="exp-unit">rpm</span>
+                          </div>
+                        </div>
+                        <div class="exp-field">
+                          <label for="exp_temp_value">Temperatura</label>
+                          <div class="exp-input-row">
+                            <div class="exp-preset">
+                              <button class="btn exp-preset-btn" type="button" data-bs-toggle="dropdown">Común</button>
+                              <ul class="dropdown-menu">
+                                <li><button class="dropdown-item" type="button" data-exp-target="exp_temp_value" data-exp-value="36.5">36.5</button></li>
+                                <li><button class="dropdown-item" type="button" data-exp-target="exp_temp_value" data-exp-value="38.0">38.0</button></li>
+                              </ul>
+                            </div>
+                            <input id="exp_temp_value" type="number" class="form-control" min="34" max="42" step="0.1" placeholder="">
+                            <span class="exp-unit">°C</span>
+                          </div>
+                        </div>
+                        <div class="exp-field">
+                          <label for="exp_spo2_value">Saturación de oxígeno</label>
+                          <div class="exp-input-row">
+                            <div class="exp-preset">
+                              <button class="btn exp-preset-btn" type="button" data-bs-toggle="dropdown">Común</button>
+                              <ul class="dropdown-menu">
+                                <li><button class="dropdown-item" type="button" data-exp-target="exp_spo2_value" data-exp-value="98">98</button></li>
+                                <li><button class="dropdown-item" type="button" data-exp-target="exp_spo2_value" data-exp-value="92">92</button></li>
+                              </ul>
+                            </div>
+                            <input id="exp_spo2_value" type="number" class="form-control" min="50" max="100" placeholder="">
+                            <span class="exp-unit">%</span>
+                          </div>
+                        </div>
+                        <div class="exp-field">
+                          <label for="exp_pain_value">Dolor</label>
+                          <div class="exp-input-row">
+                            <div class="exp-preset">
+                              <button class="btn exp-preset-btn" type="button" data-bs-toggle="dropdown">Común</button>
+                              <ul class="dropdown-menu">
+                                <li><button class="dropdown-item" type="button" data-exp-target="exp_pain_value" data-exp-value="0">0</button></li>
+                                <li><button class="dropdown-item" type="button" data-exp-target="exp_pain_value" data-exp-value="8">8</button></li>
+                              </ul>
+                            </div>
+                            <input id="exp_pain_value" type="number" class="form-control" min="0" max="10" placeholder="">
+                            <span class="exp-unit">0-10</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-lg-6">
+                      <div class="exp-card">
+                        <div class="exp-card-title">Datos antropométricos</div>
+                        <div class="exp-field">
+                          <label for="exp_weight">Peso</label>
+                          <div class="exp-input-row">
+                            <input id="exp_weight" type="number" class="form-control" step="0.1" min="1" max="300" placeholder="">
+                            <span class="exp-unit">kg</span>
+                          </div>
+                        </div>
+                        <div class="exp-field">
+                          <label for="exp_height">Talla</label>
+                          <div class="exp-input-row">
+                            <input id="exp_height" type="number" class="form-control" step="0.1" min="30" max="250" placeholder="">
+                            <span class="exp-unit">cm</span>
+                          </div>
+                        </div>
+                        <div class="exp-field">
+                          <label for="exp_waist">Cintura</label>
+                          <div class="exp-input-row">
+                            <input id="exp_waist" type="number" class="form-control" step="0.1" min="20" max="200" placeholder="">
+                            <span class="exp-unit">cm</span>
+                          </div>
+                        </div>
+                        <div class="exp-field">
+                          <label for="exp_bmi">IMC</label>
+                          <div class="exp-input-row">
+                            <input id="exp_bmi" type="number" class="form-control exp-imc-field" step="0.1" readonly placeholder="Auto">
+                          </div>
+                          <div class="exp-bmi-indicator" aria-live="polite">
+                            <span class="exp-bmi-pill exp-bmi-pill--neutral" id="exp_bmi_state">Sin datos</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="exp-card exp-card--secondary">
+                    <div class="exp-card-title">Exploración por sistemas</div>
+                    <div class="exp-system-grid">
+                      <div class="exp-system">
+                        <div class="exp-system-head">
+                          <span>Estado general</span>
+                          <div class="exp-toggle" role="group">
+                            <label><input type="radio" name="exp_estado_general" value="normal" checked> Normal</label>
+                            <label><input type="radio" name="exp_estado_general" value="anormal"> Anormal</label>
+                            <label><input type="radio" name="exp_estado_general" value="no_aplica"> No aplica</label>
+                          </div>
+                        </div>
+                        <textarea class="form-control" rows="2" placeholder="Observaciones"></textarea>
+                      </div>
+                      <div class="exp-system">
+                        <div class="exp-system-head">
+                          <span>Respiratorio</span>
+                          <div class="exp-toggle" role="group">
+                            <label><input type="radio" name="exp_respiratorio" value="normal" checked> Normal</label>
+                            <label><input type="radio" name="exp_respiratorio" value="anormal"> Anormal</label>
+                            <label><input type="radio" name="exp_respiratorio" value="no_aplica"> No aplica</label>
+                          </div>
+                        </div>
+                        <textarea class="form-control" rows="2" placeholder="Observaciones"></textarea>
+                      </div>
+                      <div class="exp-system">
+                        <div class="exp-system-head">
+                          <span>Cardiovascular</span>
+                          <div class="exp-toggle" role="group">
+                            <label><input type="radio" name="exp_cardiovascular" value="normal" checked> Normal</label>
+                            <label><input type="radio" name="exp_cardiovascular" value="anormal"> Anormal</label>
+                            <label><input type="radio" name="exp_cardiovascular" value="no_aplica"> No aplica</label>
+                          </div>
+                        </div>
+                        <textarea class="form-control" rows="2" placeholder="Observaciones"></textarea>
+                      </div>
+                      <div class="exp-system full-width">
+                        <div class="exp-system-head">
+                          <span>Hallazgos relevantes</span>
+                        </div>
+                        <textarea class="form-control" rows="3" placeholder="Registrar hallazgos claves"></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+<div class="tab-pane fade" id="t-estudios">
                 <div class="est-panel">
                   <div class="est-section-tabs">
                     <button type="button" class="est-section-tab active" data-est-section="solicitar" data-est-section-desc="Elige un área, marca estudios o usa un paquete preoperatorio. Genera orden en PDF/QR para paciente o centro.">Solicitar estudios</button>
@@ -5630,22 +5806,6 @@
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

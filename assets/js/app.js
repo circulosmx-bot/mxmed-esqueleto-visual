@@ -6072,3 +6072,108 @@ function mxResetLogoPreview(){
   });
   show(tabs[0].dataset.estSection);
 })();
+
+(function(){
+  const container = document.querySelector('#t-exploracion');
+  if(!container) return;
+
+  container.addEventListener('click', (event)=>{
+    const preset = event.target.closest('[data-exp-target]');
+    if(preset){
+      const target = preset.dataset.expTarget ? document.getElementById(preset.dataset.expTarget) : null;
+      if(target){
+        target.value = preset.dataset.expValue ?? '';
+        target.dispatchEvent(new Event('input', { bubbles:true }));
+        target.focus();
+      }
+      return;
+    }
+    const bpPreset = event.target.closest('[data-exp-bp-sys]');
+    if(bpPreset){
+      const sys = document.getElementById('exp_bp_sys');
+      const dia = document.getElementById('exp_bp_dia');
+      const display = document.getElementById('exp_bp_display');
+      const sysVal = bpPreset.dataset.expBpSys;
+      const diaVal = bpPreset.dataset.expBpDia;
+      if(sys && sysVal){
+        sys.value = sysVal;
+        sys.dispatchEvent(new Event('input', { bubbles:true }));
+      }
+      if(dia && diaVal){
+        dia.value = diaVal;
+        dia.dispatchEvent(new Event('input', { bubbles:true }));
+      }
+      if(display && sysVal && diaVal){
+        display.value = `${sysVal}/${diaVal}`;
+      }
+      sys?.focus();
+    }
+  });
+
+  const weight = container.querySelector('#exp_weight');
+  const height = container.querySelector('#exp_height');
+  const bmi = container.querySelector('#exp_bmi');
+  const bmiIndicator = container.querySelector('#exp_bmi_state');
+  const bpDisplay = container.querySelector('#exp_bp_display');
+  const bpSys = container.querySelector('#exp_bp_sys');
+  const bpDia = container.querySelector('#exp_bp_dia');
+  const parseBpDisplay = ()=>{
+    if(!bpDisplay || !bpSys || !bpDia) return;
+    const match = bpDisplay.value.match(/(\d{1,3})\s*\/\s*(\d{1,3})/);
+    if(!match) return;
+    const [, sysVal, diaVal] = match;
+    bpSys.value = sysVal;
+    bpDia.value = diaVal;
+    bpSys.dispatchEvent(new Event('input', { bubbles:true }));
+    bpDia.dispatchEvent(new Event('input', { bubbles:true }));
+  };
+  bpDisplay?.addEventListener('blur', parseBpDisplay);
+  bpDisplay?.addEventListener('change', parseBpDisplay);
+  const updateIndicator = (value)=>{
+    if(!bmiIndicator) return;
+    bmiIndicator.textContent = 'Sin datos';
+    bmiIndicator.className = 'exp-bmi-pill exp-bmi-pill--neutral';
+    const numeric = parseFloat(value);
+    if(!numeric) return;
+    let label = 'Normal';
+    let cls = 'exp-bmi-pill--normal';
+    if(numeric < 18.5){
+      label = 'Bajo peso';
+      cls = 'exp-bmi-pill--underweight';
+    }else if(numeric < 25){
+      label = 'Normal';
+      cls = 'exp-bmi-pill--normal';
+    }else if(numeric < 30){
+      label = 'Sobrepeso';
+      cls = 'exp-bmi-pill--overweight';
+    }else{
+      label = 'Obesidad';
+      cls = 'exp-bmi-pill--obese';
+    }
+    bmiIndicator.textContent = label;
+    bmiIndicator.className = `exp-bmi-pill ${cls}`;
+  };
+  if(weight && height && bmi){
+    const calc = ()=>{
+      const w = parseFloat(weight.value);
+      const h = parseFloat(height.value);
+      if(!w || !h){
+        bmi.value = '';
+        updateIndicator('');
+        return;
+      }
+      const meters = h / 100;
+      if(meters <= 0){
+        bmi.value = '';
+        updateIndicator('');
+        return;
+      }
+      const result = w / (meters * meters);
+      bmi.value = Number.isFinite(result) ? result.toFixed(1) : '';
+      updateIndicator(bmi.value);
+    };
+    weight.addEventListener('input', calc);
+    height.addEventListener('input', calc);
+    calc();
+  }
+})();
