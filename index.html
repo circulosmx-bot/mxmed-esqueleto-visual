@@ -3571,48 +3571,223 @@
                       </div>
                     </div>
                   </div>
-                  <div class="exp-card exp-card--secondary">
-                    <div class="exp-card-title">Exploración por sistemas</div>
-                    <div class="exp-system-grid">
-                      <div class="exp-system">
+                  <div class="exp-card exp-card--secondary" data-exp-section="systems" data-exp-specialty="medicina_general">
+                    <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
+                      <span>Exploración por sistemas</span>
+
+                      <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <button type="button" class="btn btn-sm btn-outline-secondary exp-mini-btn" data-exp-action="all-normal">
+                          Marcar visibles: Normal
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary exp-mini-btn" data-exp-action="fill-no-explorado">
+                          Restantes: No explorado
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="exp-system-grid" id="exp_systems_grid">
+
+                      <!-- Estado general -->
+                      <div class="exp-system" data-system-key="estado_general">
                         <div class="exp-system-head">
-                          <span>Estado general</span>
-                          <div class="exp-toggle" role="group">
-                            <label><input type="radio" name="exp_estado_general" value="normal" checked> Normal</label>
-                            <label><input type="radio" name="exp_estado_general" value="anormal"> Anormal</label>
-                            <label><input type="radio" name="exp_estado_general" value="no_aplica"> No aplica</label>
+                          <span class="exp-system-title">Estado general</span>
+
+                          <div class="exp-seg" role="group" aria-label="Estado general">
+                            <input type="radio" class="exp-seg-input" name="exp_estado_general" id="exp_estado_general_normal" value="normal" checked>
+                            <label class="exp-seg-btn" for="exp_estado_general_normal">Normal</label>
+
+                            <input type="radio" class="exp-seg-input" name="exp_estado_general" id="exp_estado_general_anormal" value="anormal">
+                            <label class="exp-seg-btn" for="exp_estado_general_anormal">Anormal</label>
+
+                            <input type="radio" class="exp-seg-input" name="exp_estado_general" id="exp_estado_general_no_explorado" value="no_explorado">
+                            <label class="exp-seg-btn" for="exp_estado_general_no_explorado">No explorado</label>
                           </div>
                         </div>
-                        <textarea class="form-control" rows="2" placeholder="Observaciones"></textarea>
+
+                        <textarea id="exp_notes_estado_general" class="form-control exp-notes" rows="2"
+                          placeholder="Observaciones (solo si Anormal)"
+                          data-notes-for="exp_estado_general"
+                          aria-describedby="exp_hint_notes"
+                          disabled></textarea>
                       </div>
-                      <div class="exp-system">
+
+                      <!-- Respiratorio -->
+                      <div class="exp-system" data-system-key="respiratorio">
                         <div class="exp-system-head">
-                          <span>Respiratorio</span>
-                          <div class="exp-toggle" role="group">
-                            <label><input type="radio" name="exp_respiratorio" value="normal" checked> Normal</label>
-                            <label><input type="radio" name="exp_respiratorio" value="anormal"> Anormal</label>
-                            <label><input type="radio" name="exp_respiratorio" value="no_aplica"> No aplica</label>
+                          <span class="exp-system-title">Respiratorio</span>
+
+                          <div class="exp-seg" role="group" aria-label="Respiratorio">
+                            <input type="radio" class="exp-seg-input" name="exp_respiratorio" id="exp_respiratorio_normal" value="normal" checked>
+                            <label class="exp-seg-btn" for="exp_respiratorio_normal">Normal</label>
+
+                            <input type="radio" class="exp-seg-input" name="exp_respiratorio" id="exp_respiratorio_anormal" value="anormal">
+                            <label class="exp-seg-btn" for="exp_respiratorio_anormal">Anormal</label>
+
+                            <input type="radio" class="exp-seg-input" name="exp_respiratorio" id="exp_respiratorio_no_explorado" value="no_explorado">
+                            <label class="exp-seg-btn" for="exp_respiratorio_no_explorado">No explorado</label>
                           </div>
                         </div>
-                        <textarea class="form-control" rows="2" placeholder="Observaciones"></textarea>
+
+                        <textarea id="exp_notes_respiratorio" class="form-control exp-notes" rows="2"
+                          placeholder="Observaciones (solo si Anormal)"
+                          data-notes-for="exp_respiratorio"
+                          aria-describedby="exp_hint_notes"
+                          disabled></textarea>
                       </div>
-                      <div class="exp-system">
+
+                      <!-- Cardiovascular -->
+                      <div class="exp-system" data-system-key="cardiovascular">
                         <div class="exp-system-head">
-                          <span>Cardiovascular</span>
-                          <div class="exp-toggle" role="group">
-                            <label><input type="radio" name="exp_cardiovascular" value="normal" checked> Normal</label>
-                            <label><input type="radio" name="exp_cardiovascular" value="anormal"> Anormal</label>
-                            <label><input type="radio" name="exp_cardiovascular" value="no_aplica"> No aplica</label>
+                          <span class="exp-system-title">Cardiovascular</span>
+
+                          <div class="exp-seg" role="group" aria-label="Cardiovascular">
+                            <input type="radio" class="exp-seg-input" name="exp_cardiovascular" id="exp_cardiovascular_normal" value="normal" checked>
+                            <label class="exp-seg-btn" for="exp_cardiovascular_normal">Normal</label>
+
+                            <input type="radio" class="exp-seg-input" name="exp_cardiovascular" id="exp_cardiovascular_anormal" value="anormal">
+                            <label class="exp-seg-btn" for="exp_cardiovascular_anormal">Anormal</label>
+
+                            <input type="radio" class="exp-seg-input" name="exp_cardiovascular" id="exp_cardiovascular_no_explorado" value="no_explorado">
+                            <label class="exp-seg-btn" for="exp_cardiovascular_no_explorado">No explorado</label>
                           </div>
                         </div>
-                        <textarea class="form-control" rows="2" placeholder="Observaciones"></textarea>
+
+                        <textarea id="exp_notes_cardiovascular" class="form-control exp-notes" rows="2"
+                          placeholder="Observaciones (solo si Anormal)"
+                          data-notes-for="exp_cardiovascular"
+                          aria-describedby="exp_hint_notes"
+                          disabled></textarea>
                       </div>
+
+                      <!-- Neurológico -->
+                      <div class="exp-system" data-system-key="neurologico">
+                        <div class="exp-system-head">
+                          <span class="exp-system-title">Neurológico</span>
+
+                          <div class="exp-seg" role="group" aria-label="Neurológico">
+                            <input type="radio" class="exp-seg-input" name="exp_neurologico" id="exp_neurologico_normal" value="normal" checked>
+                            <label class="exp-seg-btn" for="exp_neurologico_normal">Normal</label>
+
+                            <input type="radio" class="exp-seg-input" name="exp_neurologico" id="exp_neurologico_anormal" value="anormal">
+                            <label class="exp-seg-btn" for="exp_neurologico_anormal">Anormal</label>
+
+                            <input type="radio" class="exp-seg-input" name="exp_neurologico" id="exp_neurologico_no_explorado" value="no_explorado">
+                            <label class="exp-seg-btn" for="exp_neurologico_no_explorado">No explorado</label>
+                          </div>
+                        </div>
+
+                        <textarea id="exp_notes_neurologico" class="form-control exp-notes" rows="2"
+                          placeholder="Observaciones (solo si Anormal)"
+                          data-notes-for="exp_neurologico"
+                          aria-describedby="exp_hint_notes"
+                          disabled></textarea>
+                      </div>
+
+                      <!-- Opcionales (se muestran con "Mostrar más") -->
+                      <div class="exp-system exp-system--optional" data-system-key="abdomen_gastrointestinal">
+                        <div class="exp-system-head">
+                          <span class="exp-system-title">Abdomen / Gastrointestinal</span>
+                          <div class="exp-seg" role="group" aria-label="Abdomen / Gastrointestinal">
+                            <input type="radio" class="exp-seg-input" name="exp_abdomen_gi" id="exp_abdomen_gi_normal" value="normal" checked>
+                            <label class="exp-seg-btn" for="exp_abdomen_gi_normal">Normal</label>
+
+                            <input type="radio" class="exp-seg-input" name="exp_abdomen_gi" id="exp_abdomen_gi_anormal" value="anormal">
+                            <label class="exp-seg-btn" for="exp_abdomen_gi_anormal">Anormal</label>
+
+                            <input type="radio" class="exp-seg-input" name="exp_abdomen_gi" id="exp_abdomen_gi_no_explorado" value="no_explorado">
+                            <label class="exp-seg-btn" for="exp_abdomen_gi_no_explorado">No explorado</label>
+                          </div>
+                        </div>
+                        <textarea id="exp_notes_abdomen_gi" class="form-control exp-notes" rows="2"
+                          placeholder="Observaciones (solo si Anormal)" data-notes-for="exp_abdomen_gi" aria-describedby="exp_hint_notes" disabled></textarea>
+                      </div>
+
+                      <div class="exp-system exp-system--optional" data-system-key="musculoesqueletico">
+                        <div class="exp-system-head">
+                          <span class="exp-system-title">Músculo-esquelético</span>
+                          <div class="exp-seg" role="group" aria-label="Músculo-esquelético">
+                            <input type="radio" class="exp-seg-input" name="exp_musculoesqueletico" id="exp_musculoesqueletico_normal" value="normal" checked>
+                            <label class="exp-seg-btn" for="exp_musculoesqueletico_normal">Normal</label>
+
+                            <input type="radio" class="exp-seg-input" name="exp_musculoesqueletico" id="exp_musculoesqueletico_anormal" value="anormal">
+                            <label class="exp-seg-btn" for="exp_musculoesqueletico_anormal">Anormal</label>
+
+                            <input type="radio" class="exp-seg-input" name="exp_musculoesqueletico" id="exp_musculoesqueletico_no_explorado" value="no_explorado">
+                            <label class="exp-seg-btn" for="exp_musculoesqueletico_no_explorado">No explorado</label>
+                          </div>
+                        </div>
+                        <textarea id="exp_notes_musculoesqueletico" class="form-control exp-notes" rows="2"
+                          placeholder="Observaciones (solo si Anormal)" data-notes-for="exp_musculoesqueletico" aria-describedby="exp_hint_notes" disabled></textarea>
+                      </div>
+
+                      <div class="exp-system exp-system--optional" data-system-key="piel_tegumentos">
+                        <div class="exp-system-head">
+                          <span class="exp-system-title">Piel y tegumentos</span>
+                          <div class="exp-seg" role="group" aria-label="Piel y tegumentos">
+                            <input type="radio" class="exp-seg-input" name="exp_piel" id="exp_piel_normal" value="normal" checked>
+                            <label class="exp-seg-btn" for="exp_piel_normal">Normal</label>
+
+                            <input type="radio" class="exp-seg-input" name="exp_piel" id="exp_piel_anormal" value="anormal">
+                            <label class="exp-seg-btn" for="exp_piel_anormal">Anormal</label>
+
+                            <input type="radio" class="exp-seg-input" name="exp_piel" id="exp_piel_no_explorado" value="no_explorado">
+                            <label class="exp-seg-btn" for="exp_piel_no_explorado">No explorado</label>
+                          </div>
+                        </div>
+                        <textarea id="exp_notes_piel" class="form-control exp-notes" rows="2"
+                          placeholder="Observaciones (solo si Anormal)" data-notes-for="exp_piel" aria-describedby="exp_hint_notes" disabled></textarea>
+                      </div>
+
+                      <div class="exp-system exp-system--optional" data-system-key="genitourinario">
+                        <div class="exp-system-head">
+                          <span class="exp-system-title">Genitourinario</span>
+                          <div class="exp-seg" role="group" aria-label="Genitourinario">
+                            <input type="radio" class="exp-seg-input" name="exp_genitourinario" id="exp_genitourinario_normal" value="normal" checked>
+                            <label class="exp-seg-btn" for="exp_genitourinario_normal">Normal</label>
+
+                            <input type="radio" class="exp-seg-input" name="exp_genitourinario" id="exp_genitourinario_anormal" value="anormal">
+                            <label class="exp-seg-btn" for="exp_genitourinario_anormal">Anormal</label>
+
+                            <input type="radio" class="exp-seg-input" name="exp_genitourinario" id="exp_genitourinario_no_explorado" value="no_explorado">
+                            <label class="exp-seg-btn" for="exp_genitourinario_no_explorado">No explorado</label>
+                          </div>
+                        </div>
+                        <textarea id="exp_notes_genitourinario" class="form-control exp-notes" rows="2"
+                          placeholder="Observaciones (solo si Anormal)" data-notes-for="exp_genitourinario" aria-describedby="exp_hint_notes" disabled></textarea>
+                      </div>
+
+                      <!-- Acciones -->
+                      <div class="exp-system full-width exp-system-actions">
+                        <button type="button" class="btn btn-sm btn-outline-primary exp-mini-btn" data-exp-action="toggle-optional">
+                          Mostrar más sistemas
+                        </button>
+                        <div class="exp-muted" id="exp_systems_hint">Mostrando sistemas principales según especialidad.</div>
+                        <span id="exp_hint_notes" class="visually-hidden">Las observaciones se habilitan al marcar Anormal.</span>
+                      </div>
+
+                      <!-- Hallazgos relevantes -->
                       <div class="exp-system full-width">
                         <div class="exp-system-head">
-                          <span>Hallazgos relevantes</span>
+                          <span class="exp-system-title">Hallazgos relevantes</span>
                         </div>
-                        <textarea class="form-control" rows="3" placeholder="Registrar hallazgos claves"></textarea>
+                        <textarea class="form-control" id="exp_hallazgos_relevantes" rows="3"
+                          placeholder="Registrar hallazgos clínicamente relevantes..."></textarea>
                       </div>
+
+                      <!-- Resumen -->
+                      <div class="exp-system full-width">
+                        <div class="exp-system-head d-flex align-items-center justify-content-between gap-2">
+                          <span class="exp-system-title">Resumen (editable)</span>
+                          <button type="button" class="btn btn-sm btn-outline-danger exp-mini-btn" id="exp_resumen_reset" disabled>
+                            Restablecer
+                          </button>
+                        </div>
+
+                        <textarea class="form-control" id="exp_resumen" rows="2"
+                          placeholder="Se genera automáticamente según selecciones"></textarea>
+                        <input type="hidden" id="exp_resumen_editado" value="0">
+                      </div>
+
                     </div>
                   </div>
                 </div>
@@ -5415,8 +5590,204 @@
               <div class="tab-pane fade" id="t-tratamiento"><div class="alert alert-info">Recetas, indicaciones
 </div></div>
 
-              <div class="tab-pane fade" id="t-notas"><div la="" class="alert alert-info">Notas de evolución
-</div></div>
+              <div class="tab-pane fade" id="t-notas">
+                <div class="ne-app" data-ne-section="nota_evolucion">
+                  <div class="row g-3 align-items-start">
+
+                    <div class="col-lg-8">
+                      <div class="exp-card">
+                        <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
+                          <span>Nota de evolución</span>
+                        </div>
+
+                        <div class="row g-3 mt-1">
+                          <div class="col-md-4">
+                            <label class="form-label" for="ne_ambito">Ámbito</label>
+                            <select class="form-select" id="ne_ambito">
+                              <option value="consulta" selected>Consulta</option>
+                              <option value="urgencias">Urgencias</option>
+                              <option value="hospitalizacion">Hospitalización</option>
+                            </select>
+                          </div>
+
+                          <div class="col-md-8">
+                            <label class="form-label">Síntomas actuales relevantes (cita)</label>
+                            <div class="ne-readonly" id="ne_citas_block" role="button" tabindex="0" aria-label="Capturar motivo y padecimiento si no están registrados">
+                              <div class="ne-ro-row">
+                                <div class="ne-ro-lbl">Motivo:</div>
+                                <div class="ne-ro-val" id="ne_motivo_ro">No registrado</div>
+                              </div>
+                              <div class="ne-ro-row">
+                                <div class="ne-ro-lbl">Padecimiento:</div>
+                                <div class="ne-ro-val" id="ne_padecimiento_ro">No registrado</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="col-12">
+                            <label class="form-label" for="ne_complemento">Complemento breve (síntomas de hoy) <span class="text-muted">(opcional)</span></label>
+                            <input class="form-control" id="ne_complemento" maxlength="400" placeholder="Notas breves del día (máx. 400 caracteres)">
+                          </div>
+
+                          <div class="col-12">
+                            <label class="form-label" for="ne_evolucion">Evolución / actualización del cuadro clínico</label>
+                            <textarea class="form-control" id="ne_evolucion" rows="4" maxlength="4000" placeholder="Describe la evolución, respuesta a tratamiento, cambios y hallazgos relevantes (obligatorio)"></textarea>
+                          </div>
+
+                          <div class="col-md-6">
+                            <label class="form-label">Signos vitales (auto)</label>
+                            <div class="ne-readonly" id="ne_vitals_ro">No registrado</div>
+                          </div>
+
+                          <div class="col-md-6">
+                            <label class="form-label">Exploración por sistemas (auto)</label>
+                            <div class="ne-readonly" id="ne_exploracion_ro">No registrado</div>
+                          </div>
+
+                          <div class="col-12">
+                            <label class="form-label">Resultados relevantes de estudios <span class="text-muted">(auto)</span></label>
+                            <div class="ne-studies" id="ne_studies_ro">No registrado</div>
+                          </div>
+
+                          <div class="col-12">
+                            <label class="form-label" for="ne_interp">Interpretación clínica de resultados <span class="text-muted">(opcional)</span></label>
+                            <textarea class="form-control" id="ne_interp" rows="3" maxlength="2500" placeholder="Interpretación clínica (recomendado)"></textarea>
+                          </div>
+
+                          <div class="col-12">
+                            <label class="form-label" for="ne_dx">Diagnóstico(s)</label>
+                            <textarea class="form-control" id="ne_dx" rows="2" placeholder="Escribe uno por línea (obligatorio si no existe módulo)"></textarea>
+                            <div class="form-text">Si existe un módulo de diagnósticos, esta lista se tomará de ahí automáticamente.</div>
+                          </div>
+
+                          <div class="col-md-6">
+                            <label class="form-label" for="ne_pronostico">Pronóstico</label>
+                            <select class="form-select" id="ne_pronostico">
+                              <option value="" selected>Selecciona…</option>
+                              <option value="bueno">Bueno</option>
+                              <option value="reservado">Reservado</option>
+                              <option value="malo">Malo</option>
+                              <option value="otro">Otro (texto libre)</option>
+                            </select>
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label" for="ne_pronostico_txt">Pronóstico (texto libre)</label>
+                            <input class="form-control" id="ne_pronostico_txt" placeholder="Especifica pronóstico" disabled>
+                          </div>
+
+                          <div class="col-12">
+                            <label class="form-label" for="ne_plan">Tratamiento e indicaciones</label>
+                            <textarea class="form-control" id="ne_plan" rows="4" maxlength="4000" placeholder="Plan e indicaciones generales (obligatorio)"></textarea>
+                          </div>
+
+                          <div class="col-12">
+                            <div class="ne-rx-head">
+                              <div>
+                                <div class="ne-rx-ttl">Medicamentos (receta)</div>
+                                <div class="ne-rx-sub text-muted">Se administran desde receta; aquí se muestra un resumen.</div>
+                              </div>
+                              <button type="button" class="btn btn-sm btn-outline-primary exp-mini-btn" id="ne_open_rx" data-bs-toggle="modal" data-bs-target="#modalReceta">
+                                Abrir receta
+                              </button>
+                            </div>
+                            <div class="ne-readonly" id="ne_rx_ro">Sin receta registrada</div>
+                          </div>
+                        </div>
+
+                        <div class="ne-alert alert alert-danger d-none mt-3" id="ne_errors" role="alert"></div>
+
+                        <div class="d-flex justify-content-end mt-2">
+                          <button type="button" class="btn btn-primary exp-mini-btn" id="ne_generate">
+                            Generar nota de evolución
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                      <div class="exp-card exp-card--secondary">
+                        <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
+                          <span>Notas generadas</span>
+                          <button type="button" class="btn btn-sm btn-outline-secondary exp-mini-btn" id="ne_refresh">
+                            Actualizar datos
+                          </button>
+                        </div>
+                        <div class="ne-timeline" id="ne_timeline"></div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                <!-- Modal: Receta (mock funcional local) -->
+                <div class="modal fade" id="modalReceta" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Receta</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                        <div class="ne-rx-grid" id="ne_rx_grid">
+                          <!-- filas dinámicas -->
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="ne_rx_add">Agregar medicamento</button>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="button" class="btn btn-primary" id="ne_rx_save" data-bs-dismiss="modal">Guardar receta</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Modal: Vista de nota -->
+                <div class="modal fade" id="modalNotaEvolucion" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Nota de evolución</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                        <textarea class="form-control ne-doc" id="ne_doc_text" rows="16" readonly></textarea>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" id="ne_doc_copy">Copiar</button>
+                        <button type="button" class="btn btn-outline-secondary" id="ne_doc_print">Imprimir</button>
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Cerrar</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Modal: Captura rápida (Historia clínica) -->
+                <div class="modal fade" id="modalCitasClinicas" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Capturar motivo y padecimiento</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                        <div class="mb-3">
+                          <label class="form-label" for="ne_citas_motivo">Motivo de la consulta</label>
+                          <textarea class="form-control" id="ne_citas_motivo" rows="3" maxlength="1200" placeholder="Describe el motivo principal de la consulta"></textarea>
+                        </div>
+                        <div class="mb-2">
+                          <label class="form-label" for="ne_citas_padecimiento">Padecimiento actual</label>
+                          <textarea class="form-control" id="ne_citas_padecimiento" rows="3" maxlength="2500" placeholder="Evolución y síntomas actuales"></textarea>
+                        </div>
+                        <div class="small text-muted">Se guardará en Historia clínica para evitar duplicidad.</div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="ne_citas_save">Guardar</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <div class="tab-pane fade" id="t-manejo"><div class="alert alert-info">Manejo hospitalario
 </div></div>
@@ -5806,10 +6177,6 @@
 
 </body>
 </html>
-
-
-
-
 
 
 

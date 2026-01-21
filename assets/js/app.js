@@ -1045,6 +1045,1144 @@ console.info('app.js loaded :: 20251123a');
   })();
 })();
 
+(() => {
+  const section = document.querySelector('[data-exp-section="systems"]');
+  if (!section || section.dataset.expSystemsInitialized === '1') return;
+  section.dataset.expSystemsInitialized = '1';
+
+  const grid = section.querySelector('.exp-system-grid');
+  const toggleOptionalBtn = section.querySelector('[data-exp-action="toggle-optional"]');
+  const allNormalBtn = section.querySelector('[data-exp-action="all-normal"]');
+  const fillNoExplBtn = section.querySelector('[data-exp-action="fill-no-explorado"]');
+  const resumenInput = section.querySelector('#exp_resumen');
+  const resumenFlag = section.querySelector('#exp_resumen_editado');
+  const resumenResetBtn = section.querySelector('#exp_resumen_reset');
+  const hallazgosTextarea = section.querySelector('#exp_hallazgos_relevantes');
+
+  const systemEls = Array.from(section.querySelectorAll('.exp-system[data-system-key]'));
+  let optionalSystems = [];
+
+  const specialtyVisibilities = {
+    medicina_general: null,
+    pediatria: ['estado_general', 'respiratorio', 'cardiovascular', 'abdomen_gastrointestinal', 'piel_tegumentos', 'neurologico'],
+    ginecologia_obstetricia: ['estado_general', 'cardiovascular', 'respiratorio', 'abdomen_gastrointestinal', 'genitourinario', 'piel_tegumentos'],
+    cardiologia: ['estado_general', 'cardiovascular', 'respiratorio', 'piel_tegumentos']
+  };
+
+  const specialty = section.dataset.expSpecialty?.trim() || 'medicina_general';
+  const state = {
+    manualSummary: false,
+    lastAutoSummary: '',
+    optionalShown: false,
+    bulkUpdate: false
+  };
+
+  const markNotesState = (systemEl) => {
+    if (!systemEl) return;
+    const notes = systemEl.querySelector('.exp-notes');
+    if (!notes) return;
+    const status = systemEl.querySelector('.exp-seg-input:checked')?.value || 'normal';
+    notes.disabled = status !== 'anormal';
+  };
+
+  const getSystemTitle = (systemEl) => {
+    return systemEl.querySelector('.exp-system-title')?.textContent.trim() || systemEl.dataset.systemKey || '';
+  };
+
+  const updateOptionalList = () => {
+    optionalSystems = systemEls.filter(el => el.classList.contains('exp-system--optional'));
+  };
+
+  const setToggleText = () => {
+    if (!toggleOptionalBtn) return;
+    toggleOptionalBtn.textContent = state.optionalShown ? 'Ocultar sistemas' : 'Mostrar más sistemas';
+  };
+
+  const showOptional = () => {
+    grid?.classList.add('exp-show-optional');
+    state.optionalShown = true;
+    setToggleText();
+    updateSummary();
+  };
+
+  const hideOptional = () => {
+    grid?.classList.remove('exp-show-optional');
+    state.optionalShown = false;
+    setToggleText();
+    updateSummary();
+  };
+
+  const applySpecialtyVisibility = () => {
+    const visibleKeys = specialtyVisibilities[specialty];
+    updateOptionalList();
+    if (specialty === 'medicina_general') {
+      showOptional();
+      return;
+    }
+    hideOptional();
+    if (!visibleKeys) return;
+    optionalSystems.forEach(systemEl => {
+      const key = systemEl.dataset.systemKey;
+      if (visibleKeys.includes(key)) {
+        systemEl.classList.remove('exp-system--optional');
+      }
+    });
+    updateOptionalList();
+  };
+
+  const isVisible = (systemEl) => {
+    if (!systemEl) return false;
+    if (!systemEl.classList.contains('exp-system--optional')) return true;
+    return state.optionalShown;
+  };
+
+  const getSystemsVisible = () => systemEls.filter(isVisible);
+
+  const computeSummaryText = () => {
+    const visibleSystems = getSystemsVisible();
+    const abnormal = visibleSystems.filter(el => el.querySelector('.exp-seg-input:checked')?.value === 'anormal');
+    if (abnormal.length === 0) {
+      return 'Exploración por sistemas sin alteraciones relevantes.';
+    }
+    const titles = abnormal.map(el => getSystemTitle(el)).filter(Boolean);
+    const list = titles.slice(0, 3).join(', ');
+    const suffix = titles.length > 3 ? ' y otros.' : '.';
+    return `Exploración con hallazgos en: ${list}${suffix}`;
+  };
+
+  const updateSummary = (force = false) => {
+    if (!resumenInput) return;
+    const text = computeSummaryText();
+    state.lastAutoSummary = text;
+    if (!force && state.manualSummary) return;
+    state.manualSummary = false;
+    resumenInput.value = text;
+    if (resumenFlag) resumenFlag.value = '0';
+    if (resumenResetBtn) resumenResetBtn.disabled = true;
+  };
+
+  const updateSystemStatus = (systemEl, status) => {
+    if (!systemEl) return;
+    const input = systemEl.querySelector(`.exp-seg-input[value="${status}"]`);
+    if (!input) return;
+    if (input.checked) {
+      markNotesState(systemEl);
+      return;
+    }
+    input.checked = true;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+
+  const handleSystemChange = (systemEl) => {
+    if (!state.bulkUpdate) {
+      systemEl.dataset.expTouched = '1';
+    }
+    markNotesState(systemEl);
+    updateSummary();
+  };
+
+  const markVisibleNormal = () => {
+    state.bulkUpdate = true;
+    getSystemsVisible()
+      .filter(el => el.dataset.expTouched !== '1')
+      .forEach(el => updateSystemStatus(el, 'normal'));
+    state.bulkUpdate = false;
+  };
+
+  const markHiddenOptionalNoExplored = () => {
+    if (state.optionalShown) return;
+    state.bulkUpdate = true;
+    optionalSystems
+      .filter(el => el.dataset.expTouched !== '1')
+      .forEach(el => updateSystemStatus(el, 'no_explorado'));
+    state.bulkUpdate = false;
+  };
+
+  const handleSummaryInput = () => {
+    if (!resumenInput) return;
+    state.manualSummary = true;
+    if (resumenFlag) resumenFlag.value = '1';
+    if (resumenResetBtn) resumenResetBtn.disabled = false;
+  };
+
+  const resetSummary = (event) => {
+    event.preventDefault();
+    state.manualSummary = false;
+    if (resumenFlag) resumenFlag.value = '0';
+    updateSummary(true);
+  };
+
+  const buildPayload = () => ({
+    section: 'exploracion_por_sistemas',
+    sistemas: systemEls.map(el => ({
+      system_key: el.dataset.systemKey,
+      status: el.querySelector('.exp-seg-input:checked')?.value || 'normal',
+      notes: el.querySelector('.exp-notes')?.value.trim() || ''
+    })),
+    hallazgos_relevantes: hallazgosTextarea?.value.trim() || '',
+    resumen_auto: state.lastAutoSummary,
+    resumen_editado: resumenInput?.value.trim() || '',
+    resumen_is_user_edited: state.manualSummary ? 1 : 0
+  });
+
+  window.mxExploracionPorSistemasPayload = buildPayload;
+
+  applySpecialtyVisibility();
+  systemEls.forEach(markNotesState);
+  setToggleText();
+  toggleOptionalBtn?.addEventListener('click', () => state.optionalShown ? hideOptional() : showOptional());
+  allNormalBtn?.addEventListener('click', markVisibleNormal);
+  fillNoExplBtn?.addEventListener('click', markHiddenOptionalNoExplored);
+  resumenInput?.addEventListener('input', handleSummaryInput);
+  resumenResetBtn?.addEventListener('click', resetSummary);
+  section.addEventListener('change', (event) => {
+    const input = event.target.closest('.exp-seg-input');
+    if (!input) return;
+    const systemEl = input.closest('.exp-system');
+    if (!systemEl) return;
+    handleSystemChange(systemEl);
+  });
+  updateSummary(true);
+})();
+
+// ====== Nota de evolución (NOM-004) ======
+(function initNotaEvolucion(){
+  const root = document.querySelector('[data-ne-section="nota_evolucion"]');
+  if (!root || root.dataset.neInitialized === '1') return;
+  root.dataset.neInitialized = '1';
+
+  const els = {
+    ambito: root.querySelector('#ne_ambito'),
+    refresh: root.querySelector('#ne_refresh'),
+    complemento: root.querySelector('#ne_complemento'),
+    evolucion: root.querySelector('#ne_evolucion'),
+    motivoRO: root.querySelector('#ne_motivo_ro'),
+    padecimientoRO: root.querySelector('#ne_padecimiento_ro'),
+    vitalsRO: root.querySelector('#ne_vitals_ro'),
+    exploracionRO: root.querySelector('#ne_exploracion_ro'),
+    studiesRO: root.querySelector('#ne_studies_ro'),
+    interp: root.querySelector('#ne_interp'),
+    dx: root.querySelector('#ne_dx'),
+    pronostico: root.querySelector('#ne_pronostico'),
+    pronosticoTxt: root.querySelector('#ne_pronostico_txt'),
+    plan: root.querySelector('#ne_plan'),
+    generate: root.querySelector('#ne_generate'),
+    errors: root.querySelector('#ne_errors'),
+    timeline: root.querySelector('#ne_timeline'),
+
+    rxOpen: root.querySelector('#ne_open_rx'),
+    rxRO: root.querySelector('#ne_rx_ro'),
+    rxGrid: document.getElementById('ne_rx_grid'),
+    rxAdd: document.getElementById('ne_rx_add'),
+    rxSave: document.getElementById('ne_rx_save'),
+
+    docModal: document.getElementById('modalNotaEvolucion'),
+    docText: document.getElementById('ne_doc_text'),
+    docCopy: document.getElementById('ne_doc_copy'),
+    docPrint: document.getElementById('ne_doc_print')
+  };
+
+  const citasModal = document.getElementById('modalCitasClinicas');
+  const citasBlock = root.querySelector('#ne_citas_block');
+  const citasMotivo = document.getElementById('ne_citas_motivo');
+  const citasPadecimiento = document.getElementById('ne_citas_padecimiento');
+  const citasSave = document.getElementById('ne_citas_save');
+
+  const storage = {
+    keyForPatient: (patientKey) => `mxmed_evolution_notes_v1:${patientKey || 'anon'}`,
+    rxKeyForPatient: (patientKey) => `mxmed_rx_draft_v1:${patientKey || 'anon'}`
+  };
+
+  const api = (() => {
+    const endpoint = 'api/clinical-documents.php';
+    let mode = 'unknown'; // unknown | api | local
+
+    const fetchJson = async (url, options) => {
+      const res = await fetch(url, {
+        ...(options || {}),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(options?.headers || {})
+        }
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        const msg = data?.error || (Array.isArray(data?.errors) ? data.errors.join(' ') : '') || `HTTP ${res.status}`;
+        const err = new Error(msg);
+        err.status = res.status;
+        err.data = data;
+        throw err;
+      }
+      return data;
+    };
+
+    const listEvolutionNotes = async (patientId) => {
+      const url = `${endpoint}?action=list&patient_id=${encodeURIComponent(String(patientId ?? ''))}&document_type=nota_evolucion&limit=30`;
+      return fetchJson(url, { method: 'GET', headers: {} });
+    };
+
+    const saveClinicalDocument = async (args) => {
+      return fetchJson(`${endpoint}?action=save`, {
+        method: 'POST',
+        body: JSON.stringify(args || {})
+      });
+    };
+
+    const getClinicalDocument = async (id) => {
+      const url = `${endpoint}?action=get&id=${encodeURIComponent(id)}`;
+      return fetchJson(url, { method: 'GET', headers: {} });
+    };
+
+    return {
+      get mode(){ return mode; },
+      set mode(v){ mode = v; },
+      listEvolutionNotes,
+      saveClinicalDocument,
+      getClinicalDocument
+    };
+  })();
+
+  const normalize = (str) => (str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+  const safeText = (v, fallback = 'No registrado') => {
+    const t = (v ?? '').toString().trim();
+    return t ? t : fallback;
+  };
+
+  const getPatient = () => {
+    const pane = document.getElementById('p-expediente');
+    const nombre = pane?.querySelector('[data-pac-nombre]')?.value?.trim() || '';
+    const apPat = pane?.querySelector('[data-pac-apellido-paterno]')?.value?.trim() || '';
+    const apMat = pane?.querySelector('[data-pac-apellido-materno]')?.value?.trim() || '';
+    const nombreCompleto = [nombre, apPat, apMat].filter(Boolean).join(' ').trim() || 'Paciente';
+    const edad = pane?.querySelector('[data-dg-edad]')?.textContent?.trim() || '--';
+    const sexoVal = pane?.querySelector('input[name="pac-genero"]:checked')?.value || '';
+    const sexo = sexoVal === 'F' ? 'Femenino' : sexoVal === 'M' ? 'Masculino' : sexoVal === 'O' ? 'Otro' : '--';
+    const dd = pane?.querySelector('[data-dg-dia]')?.value || '';
+    const mm = pane?.querySelector('[data-dg-mes]')?.value || '';
+    const yy = pane?.querySelector('[data-dg-anio]')?.value || '';
+    const dob = [yy, mm, dd].filter(Boolean).join('-');
+    const patientKey = normalize([nombreCompleto, dob, sexoVal].join('|')) || 'anon';
+    return {
+      patient_id: patientKey,
+      nombre_completo: nombreCompleto,
+      edad,
+      sexo
+    };
+  };
+
+  const getDoctor = () => {
+    const nombre = document.querySelector('.user-id .name')?.textContent?.trim() || 'Médico';
+    const cedula = document.getElementById('ced-prof')?.value?.trim() || '';
+    const especialidad = document.getElementById('fs-esp')?.textContent?.trim() || '';
+    return {
+      user_id: normalize(nombre) || 'user',
+      nombre_completo: nombre,
+      cedula_profesional: cedula || '--',
+      especialidad: especialidad || '--'
+    };
+  };
+
+  const findTextareaByLabel = (tabId, labelText) => {
+    const tab = document.getElementById(tabId);
+    if (!tab) return '';
+    const labels = Array.from(tab.querySelectorAll('label.form-label'));
+    const label = labels.find(l => normalize(l.textContent).includes(normalize(labelText)));
+    const wrap = label?.closest('div');
+    const ta = wrap?.querySelector('textarea.form-control') || label?.parentElement?.querySelector('textarea.form-control');
+    return ta || null;
+  };
+
+  const getClinicalCitations = () => {
+    const motivo = findTextareaByLabel('t-historia', 'Motivo de la Consulta')?.value?.trim() || '';
+    const padecimiento = findTextareaByLabel('t-historia', 'Padecimiento Actual')?.value?.trim() || '';
+    return {
+      motivo_consulta: motivo,
+      padecimiento_actual: padecimiento
+    };
+  };
+
+  const setClinicalCitations = (motivo, padecimiento) => {
+    const motivoTA = findTextareaByLabel('t-historia', 'Motivo de la Consulta');
+    const padecimientoTA = findTextareaByLabel('t-historia', 'Padecimiento Actual');
+    if (motivoTA) {
+      motivoTA.value = (motivo || '').trim();
+      motivoTA.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    if (padecimientoTA) {
+      padecimientoTA.value = (padecimiento || '').trim();
+      padecimientoTA.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  };
+
+  const numOrNull = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return null;
+    const raw = (el.value ?? '').toString().trim();
+    if (!raw) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const getVitals = () => ({
+    ta_sistolica: numOrNull('exp_bp_sys'),
+    ta_diastolica: numOrNull('exp_bp_dia'),
+    fc: numOrNull('exp_fc_value'),
+    fr: numOrNull('exp_fr_value'),
+    temperatura: numOrNull('exp_temp_value'),
+    spo2: numOrNull('exp_spo2_value'),
+    dolor_eva: numOrNull('exp_pain_value')
+  });
+
+  const getExploracionSistemas = () => {
+    // Preferir la función si existe, pero no depender de ella.
+    try {
+      if (typeof window.mxExploracionPorSistemasPayload === 'function') {
+        const p = window.mxExploracionPorSistemasPayload();
+        return {
+          resumen_sistemas: (p?.resumen_editado || '').trim(),
+          hallazgos_relevantes: (p?.hallazgos_relevantes || '').trim()
+        };
+      }
+    } catch (_) {}
+
+    return {
+      resumen_sistemas: document.getElementById('exp_resumen')?.value?.trim() || '',
+      hallazgos_relevantes: document.getElementById('exp_hallazgos_relevantes')?.value?.trim() || ''
+    };
+  };
+
+  const getRecentStudyOrders = () => {
+    const orders = Array.from(document.querySelectorAll('.est-order-card[data-est-order-area]'));
+    return orders.slice(0, 5).flatMap((card, index) => {
+      const area = card.getAttribute('data-est-order-area') || 'Estudios';
+      const items = (card.getAttribute('data-est-order-items') || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+      const meta = card.querySelector('.est-order-meta')?.textContent?.trim() || '';
+      const dateMatch = meta.split('·').map(s => s.trim()).pop();
+      const fecha = dateMatch || '';
+      return items.map((nombre, j) => ({
+        order_id: `${area}-${index}-${j}`,
+        nombre_estudio: nombre,
+        fecha,
+        resultado_resumen: '',
+        archivo_url: ''
+      }));
+    });
+  };
+
+  const getDiagnosticos = () => {
+    // Si existe un módulo externo de diagnósticos, se puede conectar aquí.
+    const fromText = (els.dx?.value || '')
+      .split('\n')
+      .map(s => s.trim())
+      .filter(Boolean)
+      .map(label => ({ code: '', label }));
+    return fromText;
+  };
+
+  const getPronostico = () => {
+    const v = els.pronostico?.value || '';
+    const free = (els.pronosticoTxt?.value || '').trim();
+    if (v === 'otro') return free;
+    if (v === 'bueno') return 'Bueno';
+    if (v === 'reservado') return 'Reservado';
+    if (v === 'malo') return 'Malo';
+    return '';
+  };
+
+  const formatVitalsLine = (sv) => {
+    const ta = (sv.ta_sistolica != null && sv.ta_diastolica != null) ? `${sv.ta_sistolica}/${sv.ta_diastolica} mmHg` : 'TA: No registrado';
+    const fc = sv.fc != null ? `FC: ${sv.fc} lpm` : 'FC: No registrado';
+    const fr = sv.fr != null ? `FR: ${sv.fr} rpm` : 'FR: No registrado';
+    const t = sv.temperatura != null ? `Temp: ${sv.temperatura} °C` : 'Temp: No registrado';
+    const s = sv.spo2 != null ? `SpO₂: ${sv.spo2}%` : 'SpO₂: No registrado';
+    const d = sv.dolor_eva != null ? `Dolor: ${sv.dolor_eva}/10` : 'Dolor: No registrado';
+    return [ta, fc, fr, t, s, d].join(' · ');
+  };
+
+  const getRxDraft = (patientKey) => {
+    try {
+      const raw = localStorage.getItem(storage.rxKeyForPatient(patientKey));
+      const data = raw ? JSON.parse(raw) : null;
+      if (!data || !Array.isArray(data.medicamentos)) return { has_prescription: false, prescription_id: '', medicamentos: [] };
+      return {
+        has_prescription: data.medicamentos.length > 0,
+        prescription_id: data.prescription_id || '',
+        medicamentos: data.medicamentos
+      };
+    } catch (_) {
+      return { has_prescription: false, prescription_id: '', medicamentos: [] };
+    }
+  };
+
+  const setRxDraft = (patientKey, medicamentos) => {
+    try {
+      localStorage.setItem(storage.rxKeyForPatient(patientKey), JSON.stringify({
+        prescription_id: `rx_${Date.now()}`,
+        medicamentos
+      }));
+    } catch (_) {}
+  };
+
+  const buildPronosticoObject = () => {
+    const preset = (els.pronostico?.value || '').trim();
+    const texto = (els.pronosticoTxt?.value || '').trim();
+    if (preset === 'bueno' || preset === 'reservado' || preset === 'malo') return { preset, texto: null };
+    if (preset === 'otro') return { preset: null, texto: texto || null };
+    return { preset: null, texto: null };
+  };
+
+  const pronosticoToText = (p) => {
+    const preset = p?.preset || '';
+    const texto = (p?.texto || '').trim();
+    if (texto) return texto;
+    if (preset === 'bueno') return 'Bueno';
+    if (preset === 'reservado') return 'Reservado';
+    if (preset === 'malo') return 'Malo';
+    return '';
+  };
+
+  window.buildEvolutionNotePayload = function buildEvolutionNotePayload() {
+    const now = new Date();
+    const citas = getClinicalCitations();
+    const signos = getVitals();
+    const expl = getExploracionSistemas();
+    const estudios = getRecentStudyOrders();
+    const dx = getDiagnosticos();
+    const patient = getPatient();
+    const medico = getDoctor();
+    const rx = getRxDraft(patient.patient_id);
+    const pronostico = buildPronosticoObject();
+
+    return {
+      section_id: 'nota_evolucion',
+      standard: 'NOM-004-SSA3-2012',
+      ambito: els.ambito?.value || 'consulta',
+      citas_clinicas: {
+        motivo_consulta: citas.motivo_consulta || '',
+        padecimiento_actual: citas.padecimiento_actual || ''
+      },
+      complemento_sintomas: (els.complemento?.value || '').trim(),
+      evolucion_cuadro_clinico: (els.evolucion?.value || '').trim(),
+      signos_vitales: signos,
+      exploracion_relevante: {
+        resumen_sistemas: expl.resumen_sistemas || '',
+        hallazgos_relevantes: expl.hallazgos_relevantes || ''
+      },
+      estudios_relevantes: estudios,
+      interpretacion_resultados: (els.interp?.value || '').trim(),
+      diagnosticos: dx,
+      pronostico,
+      plan_indicaciones: (els.plan?.value || '').trim(),
+      receta: rx,
+      snapshot: {
+        paciente: {
+          patient_id: patient.patient_id,
+          nombre_completo: patient.nombre_completo,
+          edad: patient.edad,
+          sexo: patient.sexo
+        },
+        medico: {
+          user_id: medico.user_id,
+          nombre_completo: medico.nombre_completo,
+          cedula_profesional: medico.cedula_profesional,
+          especialidad: medico.especialidad
+        },
+        generated_at: now.toISOString()
+      }
+    };
+  };
+
+  window.buildEvolutionNoteRenderedText = function buildEvolutionNoteRenderedText(payload, context) {
+    const p = payload || {};
+    const dt = new Date();
+    const dtStr = dt.toLocaleString('es-MX');
+
+    const snapshot = p.snapshot || {};
+    const paciente = snapshot.paciente || {};
+    const medico = snapshot.medico || {};
+    const citas = p.citas_clinicas || {};
+    const sv = p.signos_vitales || {};
+    const ex = p.exploracion_relevante || {};
+    const dx = Array.isArray(p.diagnosticos) ? p.diagnosticos : [];
+    const rx = p.receta || { medicamentos: [] };
+    const estudios = Array.isArray(p.estudios_relevantes) ? p.estudios_relevantes : [];
+
+    const lines = [];
+    lines.push('NOTA DE EVOLUCIÓN (NOM-004-SSA3-2012)');
+    lines.push(`Fecha/Hora: ${dtStr}`);
+    lines.push(`Ámbito: ${p.ambito || 'consulta'}`);
+    lines.push('');
+    lines.push(`Médico responsable: ${medico.nombre_completo || 'No registrado'}`);
+    lines.push(`Cédula profesional: ${medico.cedula_profesional || 'No registrado'} · Especialidad: ${medico.especialidad || 'No registrado'}`);
+    lines.push('');
+    lines.push(`Paciente: ${paciente.nombre_completo || 'No registrado'} · Edad: ${paciente.edad || '--'} · Sexo: ${paciente.sexo || '--'}`);
+    lines.push('');
+    lines.push('SÍNTOMAS ACTUALES RELEVANTES (cita)');
+    lines.push(`Motivo de consulta: ${safeText(citas.motivo_consulta, 'No registrado')}`);
+    lines.push(`Padecimiento actual: ${safeText(citas.padecimiento_actual, 'No registrado')}`);
+    if ((p.complemento_sintomas || '').trim()) {
+      lines.push(`Complemento breve: ${p.complemento_sintomas.trim()}`);
+    }
+    lines.push('');
+    lines.push('EVOLUCIÓN / ACTUALIZACIÓN DEL CUADRO CLÍNICO');
+    lines.push(safeText(p.evolucion_cuadro_clinico, 'No registrado'));
+    lines.push('');
+    lines.push('SIGNOS VITALES');
+    lines.push(formatVitalsLine(sv));
+    lines.push('');
+    lines.push('EXPLORACIÓN FÍSICA RELEVANTE');
+    lines.push(`Resumen por sistemas: ${safeText(ex.resumen_sistemas, 'No registrado')}`);
+    lines.push(`Hallazgos relevantes: ${safeText(ex.hallazgos_relevantes, 'No registrado')}`);
+    lines.push('');
+    lines.push('RESULTADOS RELEVANTES DE ESTUDIOS AUXILIARES');
+    if (!estudios.length) {
+      lines.push('No registrado');
+    } else {
+      estudios.slice(0, 12).forEach(item => {
+        const fecha = (item.fecha || '').trim();
+        lines.push(`- ${item.nombre_estudio || 'Estudio'}${fecha ? ` (${fecha})` : ''}`);
+      });
+    }
+    if ((p.interpretacion_resultados || '').trim()) {
+      lines.push('');
+      lines.push('INTERPRETACIÓN CLÍNICA DE RESULTADOS');
+      lines.push(p.interpretacion_resultados.trim());
+    }
+    lines.push('');
+    lines.push('DIAGNÓSTICO(S)');
+    if (!dx.length) {
+      lines.push('No registrado');
+    } else {
+      dx.forEach(d => lines.push(`- ${(d.label || '').trim() || 'Diagnóstico'}`));
+    }
+    lines.push('');
+    lines.push('PRONÓSTICO');
+    lines.push(safeText(pronosticoToText(p.pronostico), 'No registrado'));
+    lines.push('');
+    lines.push('TRATAMIENTO E INDICACIONES');
+    lines.push(safeText(p.plan_indicaciones, 'No registrado'));
+    lines.push('');
+    lines.push('MEDICAMENTOS (RECETA)');
+    if (!Array.isArray(rx.medicamentos) || rx.medicamentos.length === 0) {
+      lines.push('Sin receta registrada');
+    } else {
+      rx.medicamentos.forEach(m => {
+        const parts = [
+          (m.medicamento || '').trim(),
+          (m.dosis || '').trim(),
+          (m.via || '').trim(),
+          (m.periodicidad || '').trim(),
+          (m.duracion || '').trim()
+        ].filter(Boolean);
+        const base = parts.join(' · ') || 'Medicamento';
+        const extra = (m.indicaciones || '').trim();
+        lines.push(`- ${base}${extra ? ` (${extra})` : ''}`);
+      });
+    }
+    lines.push('');
+    lines.push(`Documento generado: ${dtStr}`);
+    return lines.join('\n');
+  };
+
+  // Compat: alias anterior (dev)
+  window.buildEvolutionNoteDocumentText = function(payload, context) {
+    return window.buildEvolutionNoteRenderedText(payload, context);
+  };
+
+  window.buildEvolutionNoteSummary = function buildEvolutionNoteSummary(payload) {
+    const p = payload || {};
+    const evo = (p.evolucion_cuadro_clinico || '').trim();
+    const plan = (p.plan_indicaciones || '').trim();
+    const ex = p.exploracion_relevante || {};
+    const exText = `${(ex.resumen_sistemas || '').trim()}\n${(ex.hallazgos_relevantes || '').trim()}`;
+
+    const hasAdjust = /\b(ajust|cambi|modific|increment|aument|disminu|suspende|inicia|iniciar|titul|escalar|rota|cambia)\w*/i.test(plan);
+    const text = `${exText}\n${evo}`;
+    const spo2Val = Number(p?.signos_vitales?.spo2);
+    const spo2Low = Number.isFinite(spo2Val) && spo2Val <= 93;
+    const spo2FromText = (() => {
+      const m = text.match(/\b(spo2|sp[oó]2|sat|saturaci[oó]n)\s*[:=]?\s*(\d{2,3})\b/i);
+      if (!m) return null;
+      const n = Number(m[2]);
+      return Number.isFinite(n) ? n : null;
+    })();
+    const spo2LowText = spo2FromText != null && spo2FromText <= 93;
+    const respAbn = /\b(disnea|sibilanc\w*|estertor\w*|crepitant\w*|tiraje|cianos\w*|broncoespasm\w*|broncoobstru\w*|hipox\w*|uso\s+de\s+ox[ií]geno|ox[ií]geno\s+(suplementario|terapia)|c[aá]nula\s+nasal|mascarilla|nebuliz\w*|inhalador\w*|wheez\w*)\b/i.test(text);
+    const negRespCore = /\b(sin|niega)\s+(disnea|sibilanc\w*|estertor\w*|crepitant\w*|tiraje|cianos\w*|broncoespasm\w*|hipox\w*)\b/i.test(text);
+    const negO2 = /\b(sin|niega)\s+(uso\s+de\s+ox[ií]geno|requerimiento\s+de\s+ox[ií]geno|ox[ií]geno)\b/i.test(text);
+    const hasResp = (spo2Low || spo2LowText) || (respAbn && !(negRespCore || negO2));
+    const noAlt = /\b(sin\s+alter|sin\s+camb|sin\s+noved|establ|evoluci[oó]n\s+favorable)\w*/i.test(evo);
+
+    if (hasResp) return 'Evolución con hallazgos respiratorios';
+    if (hasAdjust) return 'Evolución con ajustes terapéuticos';
+    if (noAlt) return 'Evolución sin alteraciones relevantes';
+    return 'Evolución registrada';
+  };
+
+  window.buildClinicalDocument = function buildClinicalDocument({ type, context, payload, actor }) {
+    const nowIso = new Date().toISOString();
+    const docType = (type || '').trim();
+    const ctx = context || {};
+    const act = actor || {};
+    return {
+      document_id: `tmp_${Date.now()}`,
+      document_type: docType,
+      title: docType === 'nota_evolucion' ? 'Nota de Evolución' : (docType || 'Documento clínico'),
+      version: 1,
+      context: {
+        patient_id: ctx.patient_id,
+        encounter_id: ctx.encounter_id ?? null,
+        hospital_stay_id: ctx.hospital_stay_id ?? null,
+        care_setting: ctx.care_setting || 'consulta',
+        service: ctx.service ?? null
+      },
+      status: 'generated',
+      timestamps: {
+        created_at: nowIso,
+        updated_at: null,
+        generated_at: nowIso,
+        signed_at: null
+      },
+      audit: {
+        created_by_user_id: act.user_id,
+        updated_by_user_id: null
+      },
+      participants: [
+        {
+          user_id: act.user_id,
+          role: 'medico',
+          participation_type: 'responsable',
+          signed_at: null
+        }
+      ],
+      content: {
+        payload,
+        rendered_text: null,
+        summary: null,
+        edited_flag: 0
+      },
+      ui: {
+        event_datetime: nowIso,
+        widget_group: 'documentos_clinicos',
+        printable: true
+      }
+    };
+  };
+
+  const validate = (payload) => {
+    const errors = [];
+    if (!payload.ambito) errors.push('Ámbito es obligatorio.');
+    if (!payload.evolucion_cuadro_clinico) errors.push('Evolución / actualización del cuadro clínico es obligatoria.');
+    if (!Array.isArray(payload.diagnosticos) || payload.diagnosticos.length === 0) errors.push('Diagnóstico(s) es obligatorio.');
+    const pron = payload.pronostico || {};
+    if (!(pron?.preset || (pron?.texto || '').trim())) errors.push('Pronóstico es obligatorio.');
+    if (!payload.plan_indicaciones) errors.push('Tratamiento e indicaciones es obligatorio.');
+    return errors;
+  };
+
+  const loadNotes = (patientKey) => {
+    try {
+      const raw = localStorage.getItem(storage.keyForPatient(patientKey));
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch (_) {
+      return [];
+    }
+  };
+
+  const saveNotes = (patientKey, list) => {
+    try { localStorage.setItem(storage.keyForPatient(patientKey), JSON.stringify(list)); } catch (_) {}
+  };
+
+  const renderRxSummary = (patientKey) => {
+    const rx = getRxDraft(patientKey);
+    if (!els.rxRO) return;
+    if (!rx.has_prescription) {
+      els.rxRO.textContent = 'Sin receta registrada';
+      return;
+    }
+    const text = rx.medicamentos.map(m => {
+      const parts = [
+        (m.medicamento || '').trim(),
+        (m.dosis || '').trim(),
+        (m.via || '').trim(),
+        (m.periodicidad || '').trim(),
+        (m.duracion || '').trim()
+      ].filter(Boolean).join(' · ');
+      return `• ${parts || 'Medicamento'}`;
+    }).join('\n');
+    els.rxRO.textContent = text;
+    els.rxRO.style.whiteSpace = 'pre-wrap';
+  };
+
+  const renderReadonly = () => {
+    const citas = getClinicalCitations();
+    els.motivoRO && (els.motivoRO.textContent = safeText(citas.motivo_consulta));
+    els.padecimientoRO && (els.padecimientoRO.textContent = safeText(citas.padecimiento_actual));
+
+    const sv = getVitals();
+    els.vitalsRO && (els.vitalsRO.textContent = safeText(formatVitalsLine(sv), 'No registrado'));
+
+    const ex = getExploracionSistemas();
+    const exText = [
+      `Resumen: ${safeText(ex.resumen_sistemas, 'No registrado')}`,
+      `Hallazgos: ${safeText(ex.hallazgos_relevantes, 'No registrado')}`
+    ].join('\n');
+    if (els.exploracionRO) {
+      els.exploracionRO.textContent = exText;
+      els.exploracionRO.style.whiteSpace = 'pre-wrap';
+    }
+
+    const studies = getRecentStudyOrders();
+    if (els.studiesRO) {
+      if (!studies.length) {
+        els.studiesRO.textContent = 'No registrado';
+      } else {
+        els.studiesRO.innerHTML = studies.slice(0, 8).map(s => {
+          const meta = s.fecha ? `<span class="ne-study-meta">${s.fecha}</span>` : `<span class="ne-study-meta">${s.order_id}</span>`;
+          return `<div class="ne-study-item"><div class="ne-study-name">${s.nombre_estudio}</div>${meta}</div>`;
+        }).join('');
+      }
+    }
+
+    renderRxSummary(getPatient().patient_id);
+  };
+
+  const openCitasModalIfMissing = () => {
+    if (!citasModal) return;
+    const citas = getClinicalCitations();
+    const missingAny = !citas.motivo_consulta || !citas.padecimiento_actual;
+    if (!missingAny) return;
+    if (citasMotivo) citasMotivo.value = citas.motivo_consulta || '';
+    if (citasPadecimiento) citasPadecimiento.value = citas.padecimiento_actual || '';
+    try {
+      const modal = bootstrap?.Modal?.getOrCreateInstance ? bootstrap.Modal.getOrCreateInstance(citasModal) : null;
+      modal?.show();
+      setTimeout(() => citasMotivo?.focus?.(), 50);
+    } catch (_) {}
+  };
+
+  const bindCitasTwoWaySync = () => {
+    const motivoTA = findTextareaByLabel('t-historia', 'Motivo de la Consulta');
+    const padecimientoTA = findTextareaByLabel('t-historia', 'Padecimiento Actual');
+    if (!motivoTA || !padecimientoTA) return;
+
+    let t = null;
+    const sync = () => {
+      const citas = getClinicalCitations();
+      if (els.motivoRO) els.motivoRO.textContent = safeText(citas.motivo_consulta);
+      if (els.padecimientoRO) els.padecimientoRO.textContent = safeText(citas.padecimiento_actual);
+    };
+    const schedule = () => {
+      if (t) window.clearTimeout(t);
+      t = window.setTimeout(sync, 120);
+    };
+
+    motivoTA.addEventListener('input', schedule);
+    padecimientoTA.addEventListener('input', schedule);
+  };
+
+  const renderTimeline = () => {
+    const patient = getPatient();
+    if (!els.timeline) return;
+
+    const renderLocal = () => {
+      const list = loadNotes(patient.patient_id);
+      if (!list.length) {
+        els.timeline.innerHTML = '<div class="text-muted small">Sin notas todavía.</div>';
+        return;
+      }
+      els.timeline.innerHTML = list
+        .slice()
+        .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+        .slice(0, 20)
+        .map(n => {
+          const dt = n.created_at ? new Date(n.created_at).toLocaleString('es-MX') : '';
+          const amb = n.ambito_label || '';
+          const doc = n.document_text || '';
+          return `
+            <div class="ne-note-card">
+              <div class="ne-note-head">
+                <div>
+                  <div class="ne-note-ttl">${amb || 'Nota de evolución'}</div>
+                  <div class="ne-note-meta">${dt}</div>
+                </div>
+              </div>
+              <div class="ne-note-actions">
+                <button type="button" class="btn btn-outline-primary btn-sm" data-ne-action="view" data-ne-source="local" data-ne-id="${n.id}">Ver</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-ne-action="print" data-ne-source="local" data-ne-id="${n.id}">Imprimir</button>
+              </div>
+              <textarea class="d-none" data-ne-doc="${n.id}">${doc.replace(/</g, '&lt;')}</textarea>
+            </div>
+          `;
+        })
+        .join('');
+    };
+
+    if (api.mode === 'local') {
+      renderLocal();
+      return;
+    }
+
+    els.timeline.innerHTML = '<div class="text-muted small">Cargando…</div>';
+    api.listEvolutionNotes(patient.patient_id)
+      .then(({ items }) => {
+        api.mode = 'api';
+        const list = Array.isArray(items) ? items : [];
+        if (!list.length) {
+          els.timeline.innerHTML = '<div class="text-muted small">Sin notas todavía.</div>';
+          return;
+        }
+        els.timeline.innerHTML = list.map(item => {
+          const dt = item.event_datetime ? new Date(item.event_datetime).toLocaleString('es-MX') : '';
+          const ttl = (item.summary || '').trim() || item.title || 'Nota de evolución';
+          const docName = (item.doctor_name || '').trim();
+          const meta = [dt, docName].filter(Boolean).join(' · ');
+          return `
+            <div class="ne-note-card">
+              <div class="ne-note-head">
+                <div>
+                  <div class="ne-note-ttl">${ttl.replace(/</g, '&lt;')}</div>
+                  <div class="ne-note-meta">${(meta || dt).replace(/</g, '&lt;')}</div>
+                </div>
+              </div>
+              <div class="ne-note-actions">
+                <button type="button" class="btn btn-outline-primary btn-sm" data-ne-action="view" data-ne-source="api" data-ne-id="${item.id}">Ver</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-ne-action="print" data-ne-source="api" data-ne-id="${item.id}">Imprimir</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      })
+      .catch(() => {
+        api.mode = 'local';
+        renderLocal();
+      });
+  };
+
+  const openDocModal = (text) => {
+    if (!els.docText || !els.docModal) return;
+    els.docText.value = text || '';
+    try {
+      const modal = bootstrap?.Modal?.getOrCreateInstance ? bootstrap.Modal.getOrCreateInstance(els.docModal) : null;
+      modal?.show();
+    } catch (_) {}
+  };
+
+  const printText = (text) => {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write(`<pre style="white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px">${(text || '').replace(/</g,'&lt;')}</pre>`);
+    w.document.close();
+    w.focus();
+    w.print();
+  };
+
+  const syncPronostico = () => {
+    const isOther = (els.pronostico?.value || '') === 'otro';
+    if (!els.pronosticoTxt) return;
+    els.pronosticoTxt.disabled = !isOther;
+    if (!isOther) els.pronosticoTxt.value = '';
+  };
+
+  const showErrors = (messages) => {
+    if (!els.errors) return;
+    if (!messages || messages.length === 0) {
+      els.errors.classList.add('d-none');
+      els.errors.textContent = '';
+      return;
+    }
+    els.errors.classList.remove('d-none');
+    els.errors.innerHTML = `<strong>Faltan campos para generar:</strong><ul class="mb-0">${messages.map(m => `<li>${m}</li>`).join('')}</ul>`;
+  };
+
+  const generateNote = () => {
+    const payload = window.buildEvolutionNotePayload();
+    const errs = validate(payload);
+    showErrors(errs);
+    if (errs.length) return;
+
+    const patient = getPatient();
+    const actor = getDoctor();
+    const context = {
+      patient_id: patient.patient_id,
+      encounter_id: null,
+      hospital_stay_id: null,
+      care_setting: payload.ambito || 'consulta',
+      service: null
+    };
+
+    const args = { type: 'nota_evolucion', context, payload, actor };
+
+    const fallbackToLocal = () => {
+      const text = window.buildEvolutionNoteRenderedText(payload, context);
+      const patientKey = patient.patient_id || 'anon';
+      const list = loadNotes(patientKey);
+      const ambLabel = payload.ambito === 'urgencias' ? 'Urgencias' : payload.ambito === 'hospitalizacion' ? 'Hospitalización' : 'Consulta';
+      const entry = {
+        id: `ne_${Date.now()}`,
+        created_at: new Date().toISOString(),
+        ambito: payload.ambito,
+        ambito_label: ambLabel,
+        payload,
+        document_text: text,
+        signed: false
+      };
+      list.unshift(entry);
+      saveNotes(patientKey, list);
+      renderTimeline();
+      openDocModal(text);
+    };
+
+    if (api.mode === 'local') {
+      fallbackToLocal();
+      return;
+    }
+
+    api.saveClinicalDocument(args)
+      .then(({ document }) => {
+        api.mode = 'api';
+        renderTimeline();
+        openDocModal(document?.content?.rendered_text || '');
+      })
+      .catch((e) => {
+        api.mode = 'local';
+        showErrors([`No se pudo guardar en servidor (${e?.message || 'error'}). Se guardó localmente.`]);
+        fallbackToLocal();
+      });
+  };
+
+  const renderRxModal = () => {
+    if (!els.rxGrid) return;
+    const patientKey = getPatient().patient_id;
+    const rx = getRxDraft(patientKey);
+    const meds = Array.isArray(rx.medicamentos) ? rx.medicamentos : [];
+    els.rxGrid.innerHTML = meds.map((m, idx) => rxRowHtml(idx, m)).join('') || rxRowHtml(0, {});
+  };
+
+  const rxRowHtml = (idx, m) => `
+    <div class="ne-rx-row" data-ne-rx-row="${idx}">
+      <input class="form-control form-control-sm" placeholder="Medicamento" data-ne-rx="medicamento" value="${(m.medicamento || '').replace(/\"/g,'&quot;')}">
+      <input class="form-control form-control-sm" placeholder="Dosis" data-ne-rx="dosis" value="${(m.dosis || '').replace(/\"/g,'&quot;')}">
+      <input class="form-control form-control-sm" placeholder="Vía" data-ne-rx="via" value="${(m.via || '').replace(/\"/g,'&quot;')}">
+      <input class="form-control form-control-sm" placeholder="Periodicidad" data-ne-rx="periodicidad" value="${(m.periodicidad || '').replace(/\"/g,'&quot;')}">
+      <input class="form-control form-control-sm" placeholder="Duración" data-ne-rx="duracion" value="${(m.duracion || '').replace(/\"/g,'&quot;')}">
+      <input class="form-control form-control-sm" placeholder="Indicaciones" data-ne-rx="indicaciones" value="${(m.indicaciones || '').replace(/\"/g,'&quot;')}">
+      <button type="button" class="btn btn-outline-danger btn-sm ne-rx-del" data-ne-rx-del aria-label="Eliminar">&times;</button>
+    </div>
+  `;
+
+  const collectRxModal = () => {
+    if (!els.rxGrid) return [];
+    const rows = Array.from(els.rxGrid.querySelectorAll('.ne-rx-row'));
+    return rows.map(r => {
+      const get = (k) => r.querySelector(`[data-ne-rx="${k}"]`)?.value?.trim() || '';
+      return {
+        medicamento: get('medicamento'),
+        dosis: get('dosis'),
+        via: get('via'),
+        periodicidad: get('periodicidad'),
+        duracion: get('duracion'),
+        indicaciones: get('indicaciones')
+      };
+    }).filter(m => Object.values(m).some(v => v));
+  };
+
+  // Listeners
+  els.refresh?.addEventListener('click', renderReadonly);
+  els.pronostico?.addEventListener('change', syncPronostico);
+  els.generate?.addEventListener('click', generateNote);
+
+  citasBlock?.addEventListener('click', openCitasModalIfMissing);
+  citasBlock?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openCitasModalIfMissing();
+    }
+  });
+  citasSave?.addEventListener('click', () => {
+    setClinicalCitations(citasMotivo?.value || '', citasPadecimiento?.value || '');
+    renderReadonly();
+    try {
+      const modal = bootstrap?.Modal?.getInstance ? bootstrap.Modal.getInstance(citasModal) : null;
+      modal?.hide();
+    } catch (_) {}
+  });
+
+  // Timeline actions
+  els.timeline?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-ne-action]');
+    if (!btn) return;
+    const id = btn.getAttribute('data-ne-id');
+    const src = btn.getAttribute('data-ne-source') || 'local';
+    const action = btn.getAttribute('data-ne-action');
+
+    if (src === 'api') {
+      api.getClinicalDocument(id)
+        .then(({ document }) => {
+          const text = document?.content?.rendered_text || '';
+          if (action === 'view') openDocModal(text);
+          if (action === 'print') printText(text);
+        })
+        .catch(() => {});
+      return;
+    }
+
+    const patientKey = getPatient().patient_id;
+    const notes = loadNotes(patientKey);
+    const note = notes.find(n => n.id === id);
+    if (!note) return;
+    if (action === 'view') openDocModal(note.document_text);
+    if (action === 'print') printText(note.document_text);
+  });
+
+  // Doc actions
+  els.docCopy?.addEventListener('click', async () => {
+    const text = els.docText?.value || '';
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (_) {
+      els.docText?.select?.();
+      document.execCommand?.('copy');
+    }
+  });
+  els.docPrint?.addEventListener('click', () => printText(els.docText?.value || ''));
+
+  // Rx modal
+  document.getElementById('modalReceta')?.addEventListener('show.bs.modal', renderRxModal);
+  els.rxAdd?.addEventListener('click', () => {
+    if (!els.rxGrid) return;
+    const idx = els.rxGrid.querySelectorAll('.ne-rx-row').length;
+    els.rxGrid.insertAdjacentHTML('beforeend', rxRowHtml(idx, {}));
+  });
+  els.rxGrid?.addEventListener('click', (e) => {
+    const del = e.target.closest('[data-ne-rx-del]');
+    if (!del) return;
+    del.closest('.ne-rx-row')?.remove();
+  });
+  els.rxSave?.addEventListener('click', () => {
+    const patientKey = getPatient().patient_id;
+    const meds = collectRxModal();
+    setRxDraft(patientKey, meds);
+    renderRxSummary(patientKey);
+  });
+
+  // Init
+  syncPronostico();
+  renderReadonly();
+  renderTimeline();
+  bindCitasTwoWaySync();
+})();
+
 // ====== Pacientes: tabs bloqueados hasta capturar nombre y género ======
 (function(){
   const pane = document.getElementById('p-expediente');
