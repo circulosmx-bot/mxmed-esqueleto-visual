@@ -1565,6 +1565,7 @@ console.info('app.js loaded :: 20251123a');
     return {
       section_id: 'nota_evolucion',
       standard: 'NOM-004-SSA3-2012',
+      contract_version: 1,
       ambito: els.ambito?.value || 'consulta',
       citas_clinicas: {
         motivo_consulta: citas.motivo_consulta || '',

@@ -1,6 +1,23 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Clinical documents core helpers.
+ * Build/validate/render standardized documents.
+ * Tables: clinical_documents, clinical_document_participants.
+ * Supported types: nota_evolucion, nota_evolucion_hosp, receta, orden_estudio.
+ * Context keys: patient_id, encounter_id, hospital_stay_id, care_setting, service.
+ * Payload: structured JSON from UI or integrations.
+ * Rendered text: printable clinical note.
+ * Summary: short string for timeline cards.
+ * Participants: today medico responsable; future multi-role.
+ * Status values: draft/generated/signed/voided.
+ * Snapshot is audit/display only (no clinical logic).
+ * Backend-only utilities.
+ */
+
+require_once __DIR__ . '/clinical_documents_hospital.php';
+
 function mxmed_uuidv4(): string {
     $data = random_bytes(16);
     $data[6] = chr((ord($data[6]) & 0x0f) | 0x40);
@@ -42,6 +59,12 @@ function mxmed_build_evolution_note_payload(array $payload): array {
     $ambito = trim((string)($payload['ambito'] ?? 'consulta')) ?: 'consulta';
     if (!in_array($ambito, ['consulta', 'urgencias', 'hospitalizacion'], true)) $ambito = 'consulta';
 
+    $contractRaw = $payload['contract_version'] ?? 1;
+    $contractVersion = is_numeric($contractRaw) ? (int)$contractRaw : 1;
+    if (array_key_exists('contract_version', $payload) && $contractVersion !== 1) {
+        try { error_log('mxmed: nota_evolucion contract_version=' . $contractVersion); } catch (Throwable $e) { }
+    }
+
     $citas = is_array($payload['citas_clinicas'] ?? null) ? $payload['citas_clinicas'] : [];
     $sv = is_array($payload['signos_vitales'] ?? null) ? $payload['signos_vitales'] : [];
     $expl = is_array($payload['exploracion_relevante'] ?? null) ? $payload['exploracion_relevante'] : [];
@@ -66,6 +89,7 @@ function mxmed_build_evolution_note_payload(array $payload): array {
     return [
         'section_id' => 'nota_evolucion',
         'standard' => 'NOM-004-SSA3-2012',
+        'contract_version' => $contractVersion,
         'ambito' => $ambito,
         'citas_clinicas' => [
             'motivo_consulta' => (string)($citas['motivo_consulta'] ?? ''),
@@ -306,9 +330,10 @@ function mxmed_build_clinical_document(array $args): array {
     $now = mxmed_now_mysql();
     $uuid = mxmed_uuidv4();
 
-    $payload = $type === 'nota_evolucion'
-        ? mxmed_build_evolution_note_payload($payloadInput)
-        : $payloadInput;
+    $payload = $payloadInput;
+    if ($type === 'nota_evolucion') $payload = mxmed_build_evolution_note_payload($payloadInput);
+    if ($type === 'nota_evolucion_hosp') $payload = mxmed_build_hosp_evolution_note_payload($payloadInput);
+    if ($type === 'hoja_indicaciones') $payload = mxmed_build_hoja_indicaciones_payload($payloadInput);
 
     $title = $type === 'nota_evolucion' ? 'Nota de Evolución' : ucfirst(str_replace('_', ' ', $type));
     $renderedText = null;
@@ -317,6 +342,16 @@ function mxmed_build_clinical_document(array $args): array {
     if ($type === 'nota_evolucion') {
         $renderedText = mxmed_build_evolution_note_rendered_text($payload, $context, $actor);
         $summary = mxmed_build_evolution_note_summary($payload, $actor);
+    }
+    if ($type === 'nota_evolucion_hosp') {
+        $title = 'Nota Intrahospitalaria';
+        $renderedText = mxmed_build_hosp_evolution_note_rendered_text($payload, $context, $actor);
+        $summary = mxmed_build_hosp_evolution_note_summary($payload, $actor);
+    }
+    if ($type === 'hoja_indicaciones') {
+        $title = 'Hoja de Indicaciones';
+        $renderedText = mxmed_build_hoja_indicaciones_rendered_text($payload, $context, $actor);
+        $summary = mxmed_build_hoja_indicaciones_summary($payload, $actor);
     }
 
     return [
@@ -394,9 +429,13 @@ function mxmed_ensure_clinical_docs_schema(PDO $pdo): void {
             UNIQUE KEY uq_clinical_documents_uuid (document_uuid),
             KEY idx_clinical_documents_patient_dt (patient_id, event_datetime),
             KEY idx_clinical_documents_type_dt (document_type, event_datetime),
-            KEY idx_clinical_documents_created_by (created_by_user_id)
+            KEY idx_clinical_documents_created_by (created_by_user_id),
+            KEY idx_clinical_documents_stay_dt (hospital_stay_id, event_datetime)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
+
+    // Compat: añadir índice si la tabla ya existía sin él.
+    try { $pdo->exec("ALTER TABLE clinical_documents ADD INDEX idx_clinical_documents_stay_dt (hospital_stay_id, event_datetime)"); } catch (Throwable $e) { }
 
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS clinical_document_participants (
