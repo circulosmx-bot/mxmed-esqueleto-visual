@@ -251,3 +251,16 @@ $(function(){
   const initial = active?.getAttribute('data-bs-target')?.replace('#','') || 't-historia';
   setTitle(initial);
 })();
+
+// Cargar panel Manejo hospitalario (JS) sin tocar el HTML base.
+(function(){
+  try{
+    const src = 'assets/js/manejo-hospitalario.js';
+    const exists = Array.from(document.scripts || []).some(s => (s.getAttribute('src') || '').includes('manejo-hospitalario.js'));
+    if(exists) return;
+    const s = document.createElement('script');
+    s.src = src;
+    s.defer = true;
+    document.head.appendChild(s);
+  }catch(_){ }
+})();

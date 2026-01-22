@@ -1,6 +1,20 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Endpoint: api/clinical-documents.php
+ * Actions: save, list, get.
+ * save: inserts document + participants from build_clinical_document.
+ * list: filters by patient_id, document_type, hospital_stay_id.
+ * get: returns stored document + participants.
+ * Status handled by payload builder (draft/generated/signed/voided).
+ * Tables: clinical_documents, clinical_document_participants.
+ * Output: JSON with ok flag.
+ * Note: patient_id must be URL-encoded in frontend.
+ * Requires clinical docs schema on each request.
+ * Use for timeline widgets and document viewers.
+ */
+
 require_once __DIR__ . '/_lib/http.php';
 require_once __DIR__ . '/_lib/db.php';
 require_once __DIR__ . '/_lib/clinical_documents.php';
@@ -24,6 +38,10 @@ if ($action === 'save') {
 
     if ($doc['document_type'] === 'nota_evolucion') {
         $errs = mxmed_evolution_note_validate_to_generate($doc['content']['payload']);
+        if (count($errs)) mxmed_json_response(['ok' => false, 'errors' => $errs], 422);
+    }
+    if ($doc['document_type'] === 'nota_evolucion_hosp') {
+        $errs = mxmed_hosp_evolution_note_validate_to_generate($doc['content']['payload']);
         if (count($errs)) mxmed_json_response(['ok' => false, 'errors' => $errs], 422);
     }
 
@@ -111,6 +129,7 @@ if ($action === 'list') {
     $patientId = trim((string)($_GET['patient_id'] ?? ''));
     if ($patientId === '') mxmed_json_response(['ok' => false, 'error' => 'patient_id requerido'], 400);
     $type = trim((string)($_GET['document_type'] ?? ''));
+    $hospitalStayId = trim((string)($_GET['hospital_stay_id'] ?? ''));
     $limit = (int)($_GET['limit'] ?? 30);
     if ($limit <= 0) $limit = 30;
     if ($limit > 200) $limit = 200;
@@ -131,6 +150,10 @@ if ($action === 'list') {
     if ($type !== '') {
         $sql .= " AND document_type = :type";
         $params[':type'] = $type;
+    }
+    if ($hospitalStayId !== '') {
+        $sql .= " AND hospital_stay_id = :hospital_stay_id";
+        $params[':hospital_stay_id'] = $hospitalStayId;
     }
     $sql .= " ORDER BY event_datetime DESC, id DESC LIMIT {$limit}";
 

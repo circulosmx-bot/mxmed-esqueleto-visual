@@ -1,6 +1,20 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Endpoint: POST api/evolution-note-generate.php
+ * Creates nota_evolucion clinical document (status generated).
+ * Input: {context, payload, actor} JSON.
+ * Calls mxmed_build_clinical_document + validation.
+ * Persists to clinical_documents and participants.
+ * Returns {ok, document_id, document_uuid}.
+ * Requires clinical docs schema.
+ * Uses MySQL via mxmed_pdo().
+ * Stores payload_json, rendered_text, summary.
+ * For list, use clinical-documents.php?action=list.
+ * patient_id should be URL-encoded in frontend.
+ */
+
 require_once __DIR__ . '/_lib/http.php';
 require_once __DIR__ . '/_lib/db.php';
 require_once __DIR__ . '/_lib/clinical_documents.php';
@@ -118,4 +132,3 @@ try {
     try { $pdo->rollBack(); } catch (Throwable $e2) { }
     mxmed_json_response(['ok' => false, 'error' => $e->getMessage()], 500);
 }
-
