@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "items": [
+    {
+      "id": 101,
+      "folio": "CI-2025-000101",
+      "estado": "draft",
+      "started_at": "2025-01-22 10:30:00",
+      "template_id": "CI-GENERAL-001",
+      "template_nombre": "Procedimiento medico general"
+    }
+  ]
+}

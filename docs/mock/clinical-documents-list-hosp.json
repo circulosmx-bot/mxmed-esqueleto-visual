@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "items": [
+    {
+      "id": 301,
+      "document_type": "nota_evolucion_hosp",
+      "summary": "Nota intrahospitalaria",
+      "event_datetime": "2025-01-22 09:00:00",
+      "doctor_name": "Dra. Demo"
+    },
+    {
+      "id": 302,
+      "document_type": "hoja_indicaciones",
+      "summary": "Hoja de indicaciones del dia",
+      "event_datetime": "2025-01-22 07:30:00",
+      "doctor_name": "Dr. Demo"
+    }
+  ]
+}

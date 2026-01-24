@@ -1,0 +1,136 @@
+<div class="rx-wrap">
+  <div id="rx_context_notice" class="alert alert-warning py-2 mb-2 d-none">Selecciona paciente</div>
+  <div id="rx_errors" class="alert alert-danger py-2 mb-2 d-none"></div>
+
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <div class="card flex-fill">
+      <div class="card-body">
+        <div class="text-muted small">Paciente</div>
+        <div class="fw-semibold" id="rx_patient">--</div>
+        <div class="text-muted small mt-2">Medico</div>
+        <div class="fw-semibold" id="rx_doctor">--</div>
+      </div>
+    </div>
+    <div class="card" style="min-width:260px;">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="text-muted small">Estado</div>
+          <span id="rx_status" class="badge text-bg-secondary">Borrador</span>
+        </div>
+        <div class="text-muted small">Folio</div>
+        <div class="fw-semibold" id="rx_folio">--</div>
+        <div class="text-muted small mt-2">Fecha/Hora</div>
+        <div class="fw-semibold" id="rx_datetime">--</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-2">
+        <div class="col-md-6">
+          <label class="form-label">Consultorio</label>
+          <select class="form-select form-select-sm" id="rx_consultorio"></select>
+          <div class="text-muted small mt-1" id="rx_consultorio_meta"></div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Firma</label>
+          <select class="form-select form-select-sm" id="rx_firma_mode">
+            <option value="fisica">Firma en fisico</option>
+            <option value="digital">Firma digitalizada</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">QR</label>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="rx_qr_enabled">
+            <label class="form-check-label" for="rx_qr_enabled">Incluir QR</label>
+          </div>
+        </div>
+      </div>
+      <div id="rx_firma_digital" class="mt-2 d-none">
+        <label class="form-label">Firma digital</label>
+        <input type="file" class="form-control form-control-sm" id="rx_firma_file" accept="image/*">
+        <img id="rx_firma_preview" class="img-thumbnail mt-2 d-none" style="max-width:220px;" alt="Firma">
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="fw-semibold">Medicamentos</div>
+        <button class="btn btn-sm btn-outline-primary" id="rx_add_row">+ Agregar</button>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th style="min-width:220px;">Medicamento</th>
+              <th style="min-width:110px;">Dosis</th>
+              <th style="min-width:110px;">Via</th>
+              <th style="min-width:140px;">Periodicidad</th>
+              <th style="min-width:120px;">Duracion</th>
+              <th style="min-width:180px;">Indicaciones</th>
+              <th style="width:40px;"></th>
+            </tr>
+          </thead>
+          <tbody id="rx_rows"></tbody>
+        </table>
+      </div>
+      <datalist id="rx_med_catalog"></datalist>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="form-check form-switch mb-2">
+        <input class="form-check-input" type="checkbox" id="rx_include_dx">
+        <label class="form-check-label" for="rx_include_dx">Incluir diagnostico</label>
+      </div>
+      <div id="rx_dx_block" class="d-none">
+        <label class="form-label">Diagnosticos</label>
+        <textarea class="form-control form-control-sm" id="rx_dx" rows="2" placeholder="Uno por linea"></textarea>
+      </div>
+      <label class="form-label mt-2">Indicaciones generales</label>
+      <textarea class="form-control form-control-sm" id="rx_indicaciones" rows="3" placeholder="Indicaciones generales para el paciente"></textarea>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="fw-semibold">Interacciones</div>
+        <button class="btn btn-sm btn-outline-secondary" id="rx_analyze">Analizar interacciones</button>
+      </div>
+      <div id="rx_interactions" class="text-muted small">Sin analisis.</div>
+      <div class="text-muted small mt-2">Apoyo informativo; no sustituye criterio medico.</div>
+    </div>
+  </div>
+
+  <div class="d-flex flex-wrap gap-2">
+    <button class="btn btn-outline-secondary" id="rx_save_draft">Guardar borrador</button>
+    <button class="btn btn-outline-secondary" id="rx_preview">Vista previa</button>
+    <button class="btn btn-primary" id="rx_generate">Generar</button>
+    <button class="btn btn-outline-primary" id="rx_print">Imprimir</button>
+  </div>
+</div>
+
+<div class="modal fade" id="modalRecetaPreview" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Vista previa de receta</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <textarea class="form-control" id="rx_preview_text" rows="18" readonly></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .rx-wrap .table > :not(caption) > * > * { vertical-align: middle; }
+  .rx-warn { color: #b54708; font-weight: 700; }
+</style>

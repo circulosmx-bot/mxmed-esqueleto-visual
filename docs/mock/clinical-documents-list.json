@@ -1,0 +1,21 @@
+{
+  "ok": true,
+  "items": [
+    {
+      "id": 201,
+      "document_type": "nota_evolucion",
+      "title": "Nota de evolucion",
+      "summary": "Evolucion sin alteraciones relevantes",
+      "event_datetime": "2025-01-22 09:15:00",
+      "doctor_name": "Dra. Demo"
+    },
+    {
+      "id": 202,
+      "document_type": "nota_evolucion",
+      "title": "Nota de evolucion",
+      "summary": "Evolucion con ajustes terapeuticos",
+      "event_datetime": "2025-01-21 18:40:00",
+      "doctor_name": "Dr. Demo"
+    }
+  ]
+}

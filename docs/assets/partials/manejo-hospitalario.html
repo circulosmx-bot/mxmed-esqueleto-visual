@@ -1,0 +1,191 @@
+<div class="mh-app" data-mh-section="manejo_hospitalario">
+  <div class="row g-3">
+    <div class="col-12">
+      <div class="card"><div class="card-body">
+        <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+          <div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <h6 class="mb-0">Episodio hospitalario</h6>
+              <span class="badge text-bg-secondary" id="mh_stay_badge">Sin episodio activo</span>
+            </div>
+            <div class="text-muted small mt-1" id="mh_stay_meta">Para generar documentos intrahospitalarios, inicia una hospitalización.</div>
+            <div class="small mt-2" id="mh_stay_details"></div>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-primary btn-sm" id="mh_start_btn" data-bs-toggle="modal" data-bs-target="#modalMhStart">Iniciar hospitalización</button>
+            <button type="button" class="btn btn-outline-danger btn-sm d-none" id="mh_close_btn" data-bs-toggle="modal" data-bs-target="#modalMhClose">Cerrar hospitalización</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="mh_refresh_btn">Refrescar</button>
+          </div>
+        </div>
+        <div class="alert alert-danger d-none mt-3 mb-0" id="mh_errors" role="alert"></div>
+      </div></div>
+    </div>
+
+    <div class="col-12">
+      <div class="accordion" id="mhAccordion">
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="mhHeadEstado"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#mhEstado">Estado actual</button></h2>
+          <div id="mhEstado" class="accordion-collapse collapse" data-bs-parent="#mhAccordion"><div class="accordion-body">
+            <div class="row g-3">
+              <div class="col-md-3"><label class="form-label">Estado general</label><select class="form-select form-select-sm" id="mh_estado_general"><option value="">Seleccionar</option><option value="estable">Estable</option><option value="delicado">Delicado</option><option value="grave">Grave</option><option value="critico">Crítico</option></select></div>
+              <div class="col-md-3"><label class="form-label">Conciencia</label><select class="form-select form-select-sm" id="mh_conciencia"><option value="">Seleccionar</option><option value="alerta">Alerta</option><option value="somnoliento">Somnoliento</option><option value="estupor">Estupor</option><option value="coma">Coma</option></select></div>
+              <div class="col-md-3"><label class="form-label">Dolor EVA (0-10)</label><input type="number" min="0" max="10" class="form-control form-control-sm" id="mh_dolor_eva" placeholder="0-10"></div>
+              <div class="col-md-3">
+                <label class="form-label">Soporte</label>
+                <div class="d-flex gap-2 flex-wrap">
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="mh_sup_o2"><label class="form-check-label" for="mh_sup_o2">Oxígeno</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="mh_sup_vv"><label class="form-check-label" for="mh_sup_vv">Vía venosa</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="mh_sup_foley"><label class="form-check-label" for="mh_sup_foley">Foley</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="mh_sup_sng"><label class="form-check-label" for="mh_sup_sng">SNG</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="mh_sup_drains"><label class="form-check-label" for="mh_sup_drains">Drenajes</label></div>
+                </div>
+              </div>
+
+              <div class="col-12" id="mh_o2_block" style="display:none;">
+                <div class="row g-2">
+                  <div class="col-md-3"><label class="form-label">Oxígeno (tipo)</label><select class="form-select form-select-sm" id="mh_o2_tipo"><option value="">Seleccionar</option><option value="puntas">Puntas</option><option value="mascarilla">Mascarilla</option><option value="alto_flujo">Alto flujo</option><option value="vm">Ventilación mecánica</option></select></div>
+                  <div class="col-md-3"><label class="form-label">Flujo (L/min)</label><input class="form-control form-control-sm" id="mh_o2_flujo" placeholder="Ej. 2"></div>
+                  <div class="col-md-3"><label class="form-label">FiO₂ (%)</label><input class="form-control form-control-sm" id="mh_o2_fio2" placeholder="Ej. 28"></div>
+                  <div class="col-md-3"><label class="form-label">Notas</label><input class="form-control form-control-sm" id="mh_o2_notas" placeholder="Observaciones"></div>
+                </div>
+              </div>
+              <div class="col-12" id="mh_drains_block" style="display:none;"><label class="form-label">Drenajes (detalle)</label><input class="form-control form-control-sm" id="mh_drains_txt" placeholder="Ej. JP 1, hemovac, etc."></div>
+
+              <div class="col-12">
+                <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap"><div class="fw-semibold">Signos vitales</div><button type="button" class="btn btn-outline-secondary btn-sm" id="mh_vitals_from_expl">Tomar de Exploración</button></div>
+                <div class="row g-2 mt-1">
+                  <div class="col-md-2"><label class="form-label">TA sist</label><input class="form-control form-control-sm" id="mh_vitals_sys" placeholder="mmHg"></div>
+                  <div class="col-md-2"><label class="form-label">TA diast</label><input class="form-control form-control-sm" id="mh_vitals_dia" placeholder="mmHg"></div>
+                  <div class="col-md-2"><label class="form-label">FC</label><input class="form-control form-control-sm" id="mh_vitals_fc" placeholder="lpm"></div>
+                  <div class="col-md-2"><label class="form-label">FR</label><input class="form-control form-control-sm" id="mh_vitals_fr" placeholder="rpm"></div>
+                  <div class="col-md-2"><label class="form-label">Temp</label><input class="form-control form-control-sm" id="mh_vitals_temp" placeholder="°C"></div>
+                  <div class="col-md-2"><label class="form-label">SpO₂</label><input class="form-control form-control-sm" id="mh_vitals_spo2" placeholder="%"></div>
+                </div>
+              </div>
+            </div>
+          </div></div>
+        </div>
+
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="mhHeadBalance"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#mhBalance">Balance hídrico</button></h2>
+          <div id="mhBalance" class="accordion-collapse collapse" data-bs-parent="#mhAccordion"><div class="accordion-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="fw-semibold mb-2">Ingresos (ml)</div>
+                <div class="row g-2">
+                  <div class="col-6"><label class="form-label">IV</label><input class="form-control form-control-sm" id="mh_in_iv" placeholder="0"></div>
+                  <div class="col-6"><label class="form-label">VO</label><input class="form-control form-control-sm" id="mh_in_vo" placeholder="0"></div>
+                  <div class="col-6"><label class="form-label">Otros</label><input class="form-control form-control-sm" id="mh_in_otros" placeholder="0"></div>
+                  <div class="col-6"><label class="form-label">Notas</label><input class="form-control form-control-sm" id="mh_in_notas" placeholder="Opcional"></div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="fw-semibold mb-2">Egresos (ml)</div>
+                <div class="row g-2">
+                  <div class="col-6"><label class="form-label">Diuresis</label><input class="form-control form-control-sm" id="mh_out_diuresis" placeholder="0"></div>
+                  <div class="col-6"><label class="form-label">Evacuaciones</label><input class="form-control form-control-sm" id="mh_out_evacu" placeholder="0"></div>
+                  <div class="col-6"><label class="form-label">Drenajes</label><input class="form-control form-control-sm" id="mh_out_dren" placeholder="0"></div>
+                  <div class="col-6"><label class="form-label">Otros</label><input class="form-control form-control-sm" id="mh_out_otros" placeholder="0"></div>
+                  <div class="col-12"><label class="form-label">Notas</label><input class="form-control form-control-sm" id="mh_out_notas" placeholder="Opcional"></div>
+                </div>
+              </div>
+              <div class="col-12"><div class="d-flex align-items-center justify-content-between flex-wrap gap-2"><div class="fw-semibold">Balance del día</div><span class="badge text-bg-secondary" id="mh_balance_badge">0 ml</span></div></div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card"><div class="card-body">
+        <div class="d-flex align-items-start justify-content-between flex-wrap gap-2">
+          <div><h6 class="mb-0">Terapéutica / Indicaciones del día</h6><div class="text-muted small">Genera una hoja de indicaciones para este episodio.</div></div>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-primary btn-sm" id="mh_open_rx" data-bs-toggle="modal" data-bs-target="#modalReceta">Abrir receta</button>
+            <button type="button" class="btn btn-primary btn-sm" id="mh_generate_orders">Generar hoja de indicaciones</button>
+          </div>
+        </div>
+        <div class="row g-3 mt-2">
+          <div class="col-md-4"><label class="form-label">Dieta</label><select class="form-select form-select-sm" id="mh_dieta"><option value="">Seleccionar</option><option value="ayuno">Ayuno</option><option value="liquidos">Líquidos</option><option value="blanda">Blanda</option><option value="normal">Normal</option><option value="otra">Otra (texto)</option></select><input class="form-control form-control-sm mt-2" id="mh_dieta_txt" placeholder="Detalle de dieta" style="display:none;"></div>
+          <div class="col-md-4"><label class="form-label">Soluciones IV</label><input class="form-control form-control-sm" id="mh_sol_iv" placeholder="Ej. SSN 0.9% a 80 ml/h"></div>
+          <div class="col-md-4"><label class="form-label">Laboratorio / Imagen</label><input class="form-control form-control-sm" id="mh_estudios_txt" placeholder="Ej. BH, QS, Rx tórax"></div>
+          <div class="col-md-6"><label class="form-label">Cuidados de enfermería</label><input class="form-control form-control-sm" id="mh_enfermeria_txt" placeholder="Ej. SV c/4h, control de diuresis"></div>
+          <div class="col-md-6"><label class="form-label">Interconsultas</label><input class="form-control form-control-sm" id="mh_inter_txt" placeholder="Ej. Cardiología, Neumología"></div>
+          <div class="col-12"><label class="form-label mb-1">Medicamentos (resumen)</label><div class="mh-ro form-control form-control-sm" id="mh_rx_ro">Sin receta registrada</div></div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="col-12">
+      <div class="card"><div class="card-body">
+        <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+          <div><h6 class="mb-0">Evolución intrahospitalaria</h6><div class="text-muted small">Genera la nota diaria del episodio activo.</div></div>
+          <button type="button" class="btn btn-primary btn-sm" id="mh_generate_note">Generar Nota Intrahospitalaria</button>
+        </div>
+        <div class="row g-3 mt-2">
+          <div class="col-12"><label class="form-label">Evolución / nota diaria</label><textarea class="form-control" id="mh_evo_nota" rows="4" maxlength="5000" placeholder="Obligatorio"></textarea></div>
+          <div class="col-md-6"><label class="form-label">Hallazgos relevantes</label><textarea class="form-control" id="mh_hallazgos" rows="2" maxlength="2500" placeholder="Opcional"></textarea></div>
+          <div class="col-md-6"><label class="form-label">Exploración relevante (resumen)</label><textarea class="form-control" id="mh_expl_resumen" rows="2" maxlength="2500" placeholder="Opcional"></textarea></div>
+          <div class="col-12"><label class="form-label">Diagnósticos activos (uno por línea)</label><textarea class="form-control" id="mh_dx" rows="2" placeholder="Obligatorio"></textarea></div>
+          <div class="col-md-4"><label class="form-label">Pronóstico</label><select class="form-select" id="mh_pronostico"><option value="">Seleccionar</option><option value="bueno">Bueno</option><option value="reservado">Reservado</option><option value="malo">Malo</option><option value="otro">Otro</option></select></div>
+          <div class="col-md-8"><label class="form-label">Pronóstico (texto libre)</label><input class="form-control" id="mh_pronostico_txt" placeholder="Opcional si eliges 'Otro'" disabled></div>
+          <div class="col-12"><label class="form-label">Plan</label><textarea class="form-control" id="mh_plan" rows="4" maxlength="5000" placeholder="Obligatorio"></textarea></div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="col-12">
+      <div class="card"><div class="card-body">
+        <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+          <div><h6 class="mb-0">Eventos y cambios</h6><div class="text-muted small">Registra eventos (opcional).</div></div>
+          <button type="button" class="btn btn-outline-primary btn-sm" id="mh_event_open" data-bs-toggle="modal" data-bs-target="#modalMhEvent">Registrar evento</button>
+        </div>
+        <div class="mh-events mt-3" id="mh_events_list"><div class="text-muted small">Sin eventos capturados en este panel.</div></div>
+      </div></div>
+    </div>
+
+    <div class="col-12">
+      <div class="card"><div class="card-body">
+        <div><h6 class="mb-0">Timeline del episodio</h6><div class="text-muted small">Documentos creados para este episodio.</div></div>
+        <div class="mh-timeline mt-3" id="mh_timeline"><div class="text-muted small">Sin episodio activo.</div></div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalMhStart" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Iniciar hospitalización</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+    <div class="modal-body">
+      <div class="row g-2">
+        <div class="col-12"><label class="form-label">Servicio/Área</label><select class="form-select" id="mh_start_service"><option value="">Seleccionar</option><option value="Medicina Interna">Medicina Interna</option><option value="Cirugía">Cirugía</option><option value="Ginecología">Ginecología</option><option value="Pediatría">Pediatría</option><option value="UCI">UCI</option><option value="Otro">Otro</option></select><input class="form-control mt-2" id="mh_start_service_other" placeholder="Especifica servicio" style="display:none;"></div>
+        <div class="col-6"><label class="form-label">Habitación</label><input class="form-control" id="mh_start_room" placeholder="Ej. 302"></div>
+        <div class="col-6"><label class="form-label">Cama</label><input class="form-control" id="mh_start_bed" placeholder="Ej. A"></div>
+        <div class="col-12"><label class="form-label">Médico tratante (user_id)</label><input class="form-control" id="mh_start_attending" placeholder="Por defecto: usuario actual"></div>
+        <div class="col-12"><label class="form-label">Diagnóstico de ingreso</label><textarea class="form-control" id="mh_start_dx" rows="2" maxlength="1200"></textarea></div>
+        <div class="col-12"><label class="form-label">Motivo de hospitalización</label><textarea class="form-control" id="mh_start_reason" rows="2" maxlength="1200"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-primary" id="mh_start_save">Iniciar</button></div>
+  </div></div></div>
+
+  <div class="modal fade" id="modalMhClose" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Cerrar hospitalización</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+    <div class="modal-body"><div class="alert alert-warning mb-0">Se cerrará el episodio activo. Los documentos quedarán archivados.</div></div>
+    <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-danger" id="mh_close_confirm">Cerrar episodio</button></div>
+  </div></div></div>
+
+  <div class="modal fade" id="modalMhEvent" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Registrar evento</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+    <div class="modal-body">
+      <div class="mb-2"><label class="form-label">Tipo</label><select class="form-select" id="mh_event_type"><option value="fiebre">Fiebre</option><option value="hipotension">Hipotensión</option><option value="caida">Caída</option><option value="traslado">Traslado</option><option value="procedimiento">Procedimiento</option><option value="reaccion">Reacción</option><option value="incidente">Incidente</option><option value="otro">Otro</option></select></div>
+      <div class="mb-2"><label class="form-label">Descripción</label><textarea class="form-control" id="mh_event_desc" rows="3" maxlength="2000"></textarea></div>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-primary" id="mh_event_save" data-bs-dismiss="modal">Guardar evento</button></div>
+  </div></div></div>
+
+  <div class="modal fade" id="modalMhDocument" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Documento</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+    <div class="modal-body"><textarea class="form-control" id="mh_doc_text" rows="18" readonly style="font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; white-space:pre;"></textarea></div>
+    <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" id="mh_doc_copy">Copiar</button><button type="button" class="btn btn-outline-secondary" id="mh_doc_print">Imprimir</button><button type="button" class="btn btn-primary" data-bs-dismiss="modal">Cerrar</button></div>
+  </div></div></div>
+</div>
+

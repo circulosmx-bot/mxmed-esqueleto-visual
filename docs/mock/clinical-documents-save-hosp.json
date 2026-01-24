@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "document": {
+    "id": 303,
+    "document_uuid": "demo-hosp-uuid",
+    "content": {
+      "rendered_text": "DOCUMENTO HOSPITALARIO (DEMO)\nFecha: 22/01/2025 10:15\n\nDocumento generado en modo demo."
+    }
+  }
+}
