@@ -135,7 +135,21 @@
   };
 
   const state = { loaded: false, stay: null, events: [] };
+  const showDemoModeNotice = () => {
+    const el = qs('#mh_demo_notice');
+    if (!el) return;
+    if (isDemo) {
+      el.textContent = 'Modo demostración: datos simulados / selecciona paciente.';
+      el.classList.remove('d-none');
+    } else {
+      el.classList.add('d-none');
+    }
+  };
   const showErr = (msgs) => {
+    if (isDemo && msgs && msgs.length) {
+      showDemoModeNotice();
+    }
+    if (isDemo) return;
     const el = qs('#mh_errors');
     if (!el) return;
     if (!msgs || !msgs.length) { el.classList.add('d-none'); el.textContent = ''; return; }
@@ -519,6 +533,7 @@
     tab.innerHTML = '';
     tab.appendChild(fragment);
     state.loaded = true;
+    showDemoModeNotice();
     bind();
     await refresh();
   };
