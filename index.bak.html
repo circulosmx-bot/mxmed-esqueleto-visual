@@ -1,0 +1,1005 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MXMed 2025 · Perfil Médico</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* === Nudge: sincroniza porcentaje y tareas sugeridas === */
+(function(){
+  var secciones = window.mxm_sec || { datos:58, prof:88, serv:0, enf:100, consul:50 };
+  var vals = Object.values(secciones);
+  var total = Math.round(vals.reduce((a,b)=>a+b,0) / vals.length);
+
+  var CIRC = 2 * Math.PI * 42;
+  var p = document.getElementById('nudgeProgress');
+  if(p){
+    p.setAttribute('stroke-dasharray', CIRC.toFixed(2));
+    var off = CIRC * (1 - total/100);
+    p.setAttribute('stroke-dashoffset', off.toFixed(2));
+  }
+  var lbl = document.getElementById('nudgeLabel');
+  if(lbl){ lbl.textContent = total + '%'; }
+
+  var list = document.getElementById('nudgeList');
+  if(list){
+    var items = [];
+    if(secciones.consul < 100) items.push('Especificar consultorio');
+    if(secciones.prof < 100) items.push('Indicar especialidades');
+    if(secciones.serv < 100) items.push('Agregar servicios principales');
+    if(secciones.datos < 100) items.push('Completar datos generales');
+    list.innerHTML = items.slice(0,3).map(t => '<li>'+t+'</li>').join('');
+  }
+
+  var cta = document.getElementById('nudgeCTA');
+  if(cta){
+    cta.addEventListener('click', function(e){
+      e.preventDefault();
+      var minKey = Object.keys(secciones).sort((a,b)=>secciones[a]-secciones[b])[0];
+      if(minKey === 'serv'){ openGroup('perfil'); jumpTo('p-info'); selectInfoTab('#t-servicios'); }
+      else if(minKey === 'consul'){ openGroup('perfil'); jumpTo('p-consultorio'); }
+      else { openGroup('perfil'); jumpTo('p-info'); selectInfoTab('#t-datos'); }
+      window.scrollTo({top:0, behavior:'smooth'});
+    });
+  }
+
+  var cls = document.getElementById('nudgeClose');
+  if(cls){
+    cls.addEventListener('click', function(){ this.closest('.nudge-card').remove(); });
+  }
+})();
+</script>
+
+<!-- Tipografía: IBM Plex Sans -->
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Carlito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Asap:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0" rel="stylesheet">
+
+
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- Icono de confirmación: check_small weight 600 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
+<link rel="stylesheet" href="assets/css/style.css?v=codex-2" />
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script>
+(function(){
+  var isLocal = /^(localhost|127\.0\.0\.1)$/i.test(location.hostname);
+  if(!isLocal) return;
+  var v = 'dev-' + Date.now();
+  // CSS assets
+  document.querySelectorAll('link[rel="stylesheet"]').forEach(function(link){
+    var href = link.getAttribute('href');
+    if(!href) return;
+    if(href.indexOf('assets/') === 0) {
+      var nh = href.replace(/([?&])v=[^&]*/, '$1v=' + v);
+      if(nh === href) nh += (href.indexOf('?')===-1?'?':'&') + 'v=' + v;
+      link.href = nh;
+    }
+  });
+  // JS assets
+  document.querySelectorAll('script[src]').forEach(function(s){
+    var src = s.getAttribute('src');
+    if(!src) return;
+    if(src.indexOf('assets/') === 0) {
+      var ns = src.replace(/([?&])v=[^&]*/, '$1v=' + v);
+      if(ns === src) ns += (src.indexOf('?')===-1?'?':'&') + 'v=' + v;
+      s.src = ns;
+    }
+  });
+})();
+</script>
+</head>
+<body>
+
+<!-- ================== HEADER ================== -->
+<div class="header-top">
+  <div class="wrap page">
+    <img src="assets/mexico-medico.svg" alt="México Médico">
+  </div>
+</div>
+
+<div class="header-mid">
+  <div class="wrap page">
+    <div class="hm-left">
+      <span class="activo">activo</span>
+      <span class="modo">modo</span>
+      <span class="optimo">Óptimo</span>
+    </div>
+    <div class="user-id">
+      <span class="chk" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M5 12.5l4.8 4.8L19 8" fill="none" stroke="white" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="name">Leticia Muñoz Alfaro</span>
+    </div>
+  </div>
+</div>
+
+<div class="header-bottom">
+  <div class="wrap page">
+    <div class="hb-left">
+      <span class="vigencia">Vigencia <strong>22 Diciembre 2024</strong></span>
+      <a class="incrementar" href="#"><i class="bi bi-plus-circle"></i> INCREMENTAR VIGENCIA</a>
+    </div>
+    <div class="hb-right">
+      <a class="logout" href="#"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
+    </div>
+  </div>
+</div>
+
+<!-- ================== CUERPO ================== -->
+<div class="mm-wrap">
+  <div class="mm-grid page">
+
+    <!-- ===== LATERAL: Menú ===== -->
+    <aside class="mm-sidebar" id="mmSidebar">
+
+      <!-- RESUMEN (botón principal sin submenú) -->
+      <button class="menu-main" data-panel="p-resumen">
+        <span class="txt">
+          <span class="ttl">Actividad</span>
+          <span class="sub">vista general</span>
+        </span>
+        <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">search_activity</span></span>
+      </button>
+
+      <!-- Mi Perfil (acordeón) -->
+      <button class="menu-main" data-group="perfil">
+        <span class="txt"><span class="ttl">Mi Perfil</span><span class="sub">info / admin</span></span>
+        <span class="ico" aria-hidden="true"><i class="bi bi-person-badge"></i></span>
+      </button>
+      <div class="menu-sub" data-group="perfil">
+        <button class="menu-sub-btn active" data-panel="p-info">
+          <span class="block"><span class="l1">Información</span><span class="l2">Datos personales</span></span>
+          <i class="bi bi-person-badge ico-right"></i>
+        </button>
+        <div class="menu-sep"></div>
+        <button class="menu-sub-btn" data-panel="p-consultorio">
+          <span class="block"><span class="l1">Consultorio</span><span class="l2">datos y contacto</span></span>
+          <i class="bi bi-building ico-right"></i>
+        </button>
+        <div class="menu-sep"></div>
+        <button class="menu-sub-btn" data-panel="p-opiniones">
+          <span class="block"><span class="l1">Opiniones</span><span class="l2">supervisión de comentarios</span></span>
+          <i class="bi bi-chat-quote ico-right"></i>
+        </button>
+        <div class="menu-sep"></div>
+        <button class="menu-sub-btn" data-panel="p-seguridad">
+          <span class="block"><span class="l1">Seguridad</span><span class="l2">acceso y autenticación</span></span>
+          <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">vpn_key</span></span>
+        </button>
+        <div class="menu-sep"></div>
+        <button class="menu-sub-btn" data-panel="p-suscripcion">
+          <span class="block"><span class="l1">Suscripción</span><span class="l2">plan contratado</span></span>
+          <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">license</span></span>
+        </button>
+      </div>
+
+      <!-- Mi Agenda (acordeón) -->
+      <button class="menu-main" data-group="agenda">
+        <span class="txt"><span class="ttl">Agenda</span><span class="sub">configuración</span></span>
+        <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">calendar_month</span></span>
+      </button>
+      <div class="menu-sub" data-group="agenda">
+        <!-- 1) Cita · agregar nueva -->
+        <button class="menu-sub-btn" data-panel="p-ag-admin">
+          <span class="block"><span class="l1">Cita</span><span class="l2">agregar nueva</span></span>
+          <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">edit_calendar</span></span>
+        </button>
+        <div class="menu-sep"></div>
+        <!-- 2) Configuración -->
+        <button class="menu-sub-btn" data-panel="p-ag-ajustes">
+          <span class="block"><span class="l1">Configuración</span><span class="l2"></span></span>
+          <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">manage_history</span></span>
+        </button>
+        <div class="menu-sep"></div>
+        <!-- 3) Operadores · asistentes de consultorio -->
+        <button class="menu-sub-btn" data-panel="p-ag-operadores">
+          <span class="block"><span class="l1">Operadores</span><span class="l2">asistentes de consultorio</span></span>
+          <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">support_agent</span></span>
+        </button>
+      </div>
+
+      <!-- Mis Pacientes (acordeón) -->
+      <button class="menu-main" data-group="pacientes">
+        <span class="txt"><span class="ttl">Pacientes</span></span>
+        <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">group_search</span></span>
+      </button>
+      <div class="menu-sub" data-group="pacientes">
+        <button class="menu-sub-btn" data-panel="p-expediente">
+          <span class="block"><span class="l1">Nuevo</span><span class="l2">registrar paciente</span></span>
+          <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">person_add</span></span>
+        </button>
+        <div class="menu-sep"></div>
+        <button class="menu-sub-btn" data-panel="p-pac-archivo">
+          <span class="block"><span class="l1">Buscar</span><span class="l2">por nombre o apellido</span></span>
+          <span class="ico-right" aria-hidden="true"><span class="material-symbols-rounded">person_search</span></span>
+        </button>
+        <div class="menu-sep"></div>
+        <button class="menu-sub-btn" data-panel="p-pac-recetas">
+          <span class="block"><span class="l1">Recetas</span><span class="l2">generar nueva / buscar</span></span>
+          <span class="ico-right" aria-hidden="true"><span class="material-symbols-outlined">prescriptions</span></span>
+        </button>
+      </div>
+
+      <!-- Facturación (botón principal sin submenú) -->
+      <button class="menu-main" data-panel="p-facturacion">
+        <span class="txt"><span class="ttl">Facturar</span><span class="sub">recibos y facturación</span></span>
+        <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">receipt_long</span></span>
+      </button>
+
+      <!-- Paquetes y Promociones (botón principal sin submenú) -->
+      <button class="menu-main" data-panel="p-paquetes">
+        <span class="txt"><span class="ttl">Promoción</span><span class="sub">administrar paquetes</span></span>
+        <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">campaign</span></span>
+      </button>
+
+      <!-- Notificaciones (botón principal sin submenú) -->
+      <button class="menu-main" data-panel="p-notificaciones">
+        <span class="txt"><span class="ttl">Notificaciones</span><span class="sub">centro de avisos</span></span>
+        <span class="badge-msg" id="badgeMensajes">0</span>
+        <span class="ico" aria-hidden="true"><span class="material-symbols-rounded">notifications</span></span>
+      </button>
+
+      </aside>
+
+    <!-- ===== Área de interacción ===== -->
+    <main class="mm-main">
+      <div id="viewport">
+
+        <!-- ===== RESUMEN “PRO” ===== -->
+
+<section class="mm-card" id="p-resumen">
+  <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">search_activity</span>Actividad reciente de mi perfil</h5></div>
+  <div class="body">
+
+    <div class="resumen-hero">
+      <div>
+        <h2 class="resumen-title">Completa tu perfil para<br>mejorar tu visibilidad</h2>
+        <ul class="resumen-list">
+          <li>Especifica detalles de tu consultorio</li>
+          <li>Indica cuales son tus principales</li>
+          <li>Agrega tu fotografía</li>
+        </ul>
+        <button class="resumen-cta" id="btnCompletar">Ir a completar perfil</button>
+      </div>
+
+      <div class="text-center">
+        <div class="resumen-donut-wrap" id="donutTrigger" title="Ver detalles de completitud">
+          <svg viewBox="0 0 100 100" width="220" height="220" aria-label="Completitud del perfil">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#00ADC1" stroke-width="10"></circle>
+            <circle id="ringProgress" cx="50" cy="50" r="42" fill="none" stroke="#005684" stroke-width="10"
+                    transform="rotate(-90 50 50)" stroke-dasharray="264" stroke-dashoffset="264" stroke-linecap="round"></circle>
+          </svg>
+          <div class="resumen-donut-center" id="donutLabel">59%</div>
+        </div>
+        <div class="resumen-donut-caption-title">Completitud del perfil</div>
+        <div class="resumen-donut-caption-sub">Faltan: Servicios principales, Imagen de perfil</div>
+      </div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="icon-box">
+          <i class="bi bi-bell-fill"></i>
+        </div>
+        <div class="num">7</div>
+        <div class="title">Notificaciones</div>
+        <a class="link" href="#">Ver notificaciones</a>
+      </div>
+
+      <div class="kpi-card">
+        <div class="icon-box">
+          <i class="bi bi-calendar-check-fill"></i>
+        </div>
+        <div class="num">5</div>
+        <div class="title">Nuevas citas</div>
+        <a class="link" href="#">Ver agenda</a>
+      </div>
+
+      <div class="kpi-card">
+        <div class="icon-box">
+          <i class="bi bi-chat-left-quote-fill"></i>
+        </div>
+        <div class="num">4</div>
+        <div class="title">Nuevas reseñas</div>
+        <a class="link" href="#">Ver reseñas</a>
+      </div>
+
+      <div class="kpi-card">
+        <div class="icon-box">
+          <i class="bi bi-eye-fill"></i>
+        </div>
+        <div class="num">35</div>
+        <div class="title">Visitas al perfil</div>
+        <a class="link" href="#">Ver estadísticas</a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- Modal de barras (estilo donut) -->
+<div class="modal fade" id="modalCompletitud" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-md modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Detalle de completitud</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2">
+          <div class="col-12"><div class="d-flex justify-content-between small fw-semibold"><span>Datos generales</span><span>58%</span></div><div class="progress"><div class="progress-bar" style="width:58%"></div></div></div>
+          <div class="col-12"><div class="d-flex justify-content-between small fw-semibold"><span>Mi Información profesional</span><span>88%</span></div><div class="progress"><div class="progress-bar" style="width:88%"></div></div></div>
+          <div class="col-12"><div class="d-flex justify-content-between small fw-semibold"><span>Servicios principales</span><span>0%</span></div><div class="progress"><div class="progress-bar" style="width:0%"></div></div></div>
+          <div class="col-12"><div class="d-flex justify-content-between small fw-semibold"><span>Enfermedades / Tratamientos</span><span>100%</span></div><div class="progress"><div class="progress-bar" style="width:100%"></div></div></div>
+          <div class="col-12"><div class="d-flex justify-content-between small fw-semibold"><span>Información de Consultorio</span><span>50%</span></div><div class="progress"><div class="progress-bar" style="width:50%"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+        <!-- ===== INFORMACIÓN · MI PERFIL ===== -->
+        <section class="mm-card d-none" id="p-info">
+          <div class="head"><h5><i class="bi bi-person-badge title-ico" aria-hidden="true"></i>Datos Personales</h5></div>
+          <div class="body">
+            <ul class="nav nav-pills mm-tabs mb-3" id="tabs-info" role="tablist">
+              <li class="nav-item"><button class="nav-link" id="t-datos-tab" data-bs-toggle="pill" data-bs-target="#t-datos" type="button">Datos Generales</button></li>
+              <li class="nav-item"><button class="nav-link" id="t-formacion-tab" data-bs-toggle="pill" data-bs-target="#t-formacion" type="button">Mi Formación Profesional</button></li>
+              <li class="nav-item"><button class="nav-link" id="t-servicios-tab" data-bs-toggle="pill" data-bs-target="#t-servicios" type="button">Principales Servicios</button></li>
+              <li class="nav-item"><button class="nav-link" id="t-enfermedades-tab" data-bs-toggle="pill" data-bs-target="#t-enfermedades" type="button">Enfermedades y Tratamientos</button></li>
+            </ul>
+
+              <div class="tab-content" id="tabs-infoContent">
+              <!-- DATOS GENERALES -->
+              <div class="tab-pane fade" id="t-datos" role="tabpanel">
+
+<div class="mf-upload-grid">
+  <div class="mf-upload square" data-type="foto">
+    <svg class="mf-illus" viewBox="0 0 64 64" aria-hidden="true">
+      <circle cx="32" cy="22" r="12" fill="#c7dbe4"/>
+      <rect x="16" y="36" width="32" height="18" rx="9" fill="#c7dbe4"/>
+      <rect x="6" y="8" width="52" height="48" rx="8" fill="none" stroke="#99bfd0" stroke-width="2"/>
+    </svg>
+    <div class="mf-title">Arrastra aquí tu fotografía</div>
+    <div class="mf-sub">o haz clic para subirla</div>
+    <div class="mf-actions">
+      <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cámara</button>
+    </div>
+    <input type="file" accept="image/*" class="d-none mf-input">
+    <div class="mf-prev"><img alt="preview foto"></div>
+  </div>
+
+  <div class="mf-upload square" data-type="logo">
+    <svg class="mf-illus" viewBox="0 0 64 64" aria-hidden="true">
+      <rect x="12" y="26" width="40" height="12" rx="6" fill="#c7dbe4"/>
+      <path d="M32 10v44M10 32h44" stroke="#99bfd0" stroke-width="2" stroke-linecap="round"/>
+      <rect x="6" y="8" width="52" height="48" rx="8" fill="none" stroke="#99bfd0" stroke-width="2"/>
+    </svg>
+    <div class="mf-title">Arrastra aquí tu logotipo</div>
+    <div class="mf-sub">o haz clic para subirlo</div>
+    <div class="mf-actions">
+      <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cámara</button>
+    </div>
+    <input type="file" accept="image/*" class="d-none mf-input">
+    <div class="mf-prev"><img alt="preview logo"></div>
+  </div>
+</div>
+<div class="row g-3">
+                  <div class="col-md-3"><label class="form-label">Nombre(s)</label><input class="form-control" placeholder="Nombre(s)"></div>
+                  <div class="col-md-3"><label class="form-label">Apellido Paterno</label><input class="form-control" placeholder="Apellido Paterno"></div>
+                  <div class="col-md-3"><label class="form-label">Apellido Materno</label><input class="form-control" placeholder="Apellido Materno"></div>
+                  <div class="col-md-3"><label class="form-label">Género</label><select class="form-select" id="dp-genero"><option>—</option><option>Femenino</option><option>Masculino</option><option>No Específico</option></select></div>
+
+                  <div class="col-md-4"><label class="form-label">Cédula Profesional</label><input class="form-control" id="ced-prof" placeholder="Número de Cédula"></div>
+                  <div class="col-md-8"><label class="form-label">Universidad / Institución</label><input class="form-control" id="uni-prof" placeholder="p.ej. UNAM"></div>
+                  <div class="col-md-4"><label class="form-label">Cédula de Especialidad</label><input class="form-control" id="ced-esp" placeholder="Número de Cédula"></div>
+                  <div class="col-md-8"><label class="form-label">Universidad / Institución</label><input class="form-control" id="uni-esp" placeholder="p.ej. UNAM"></div>
+                  <div class="col-md-4"><label class="form-label">Agregar Otra Cédula</label><input class="form-control" id="ced-extra" placeholder="Número de Cédula"></div>
+                  <div class="col-md-8"><label class="form-label">Universidad / Institución</label><input class="form-control" id="uni-extra" placeholder="p.ej. UNAM"></div>
+
+                  
+
+                  <div class="col-md-6"><label class="form-label">Correo Electrónico</label><input class="form-control" id="dp-correo" placeholder="nombre@correo.com"></div>
+                  <div class="col-md-6"><label class="form-label">Teléfono Whatsapp</label><input class="form-control" id="dp-whatsapp" placeholder="+52 ..."></div>
+
+                  
+                </div>
+              </div>
+
+              <!-- SERVICIOS PRINCIPALES -->
+              <div class="tab-pane fade" id="t-servicios" role="tabpanel">
+                <div class="row g-3">
+                  <div class="col-12"><div class="sp-note text-muted">Describe de 2 a 4 servicios, cada uno con texto corto.</div></div>
+                  <div class="col-12">
+                    <label class="form-label" for="srv1">Servicio principal 1</label>
+                    <div class="srv-row">
+                      <div class="srv-input-wrap">
+                        <input id="srv1" class="form-control srv-input" maxlength="50" placeholder="p.ej. Diagnóstico">
+                        <small id="srv1-count" class="chip-count">50/50</small>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label" for="srv2">Servicio principal 2</label>
+                    <div class="srv-row">
+                      <div class="srv-input-wrap">
+                        <input id="srv2" class="form-control srv-input" maxlength="50" placeholder="p.ej. Tratamiento Quirúrgico">
+                        <small id="srv2-count" class="chip-count">50/50</small>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label" for="srv3">Servicio principal 3</label>
+                    <div class="srv-row">
+                      <div class="srv-input-wrap">
+                        <input id="srv3" class="form-control srv-input" maxlength="50" placeholder="p.ej. Rehabilitación Intestinal pediátrica">
+                        <small id="srv3-count" class="chip-count">50/50</small>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label" for="srv4">Servicio principal 4 (opcional)</label>
+                    <div class="srv-row">
+                      <div class="srv-input-wrap">
+                        <input id="srv4" class="form-control srv-input" maxlength="50" placeholder="">
+                        <small id="srv4-count" class="chip-count">50/50</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ENFERMEDADES Y TRATAMIENTOS -->
+              <div class="tab-pane fade" id="t-enfermedades" role="tabpanel">
+                <div class="row g-3">
+                  <!-- Enfermedades: nota + input + agregar + chips -->
+                  <div class="col-12"><div class="sp-note text-muted">¿Qué tipo de enfermedades atiendes? Agrégalas una por una.</div></div>
+                  <div class="col-12 tight-top">                    <label class="form-label" for="enf-input">Enfermedad</label>
+                    <div class="chips-row">
+                      <div class="chip-input-wrap">
+                        <input id="enf-input" class="form-control no-check chip-input" maxlength="40" placeholder="Ej.: Cáncer de mama">
+                        <small id="enf-count" class="chip-count">40/40</small>
+                      </div>
+                      <button id="enf-add" class="btn chip-add" type="button"><span class="chip-plus" aria-hidden="true">+</span><span class="chip-word">agregar</span></button>
+                    </div>
+                    <div id="enf-list" class="chip-list mt-2" aria-live="polite"></div>
+                  </div>
+
+                  <!-- Tratamientos/servicios: nota + input + agregar + chips -->
+                  <div class="col-12 chips-section-second"><div class="sp-note text-muted">Agrega uno a uno tratamientos procedimientos o terapias que realizas regularmente</div></div>
+                  <div class="col-12 tight-top">                    <label class="form-label" for="trt-input">Tratamiento / Procedimiento</label>
+                    <div class="chips-row">
+                      <div class="chip-input-wrap">
+                        <input id="trt-input" class="form-control no-check chip-input" maxlength="40" placeholder="Ej.: Quimioterapia">
+                        <small id="trt-count" class="chip-count">40/40</small>
+                      </div>
+                      <button id="trt-add" class="btn chip-add" type="button"><span class="chip-plus" aria-hidden="true">+</span><span class="chip-word">agregar</span></button>
+                    </div>
+                    <div id="trt-list" class="chip-list mt-2" aria-live="polite"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Modal: Reordenar chips -->
+              <div class="modal fade" id="modalSortChips" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title">Cambiar orden</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                      <p class="text-muted mb-2">Arrastra para reordenar:</p>
+                      <ul id="sort-list" class="sort-list" aria-live="polite"></ul>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                      <button type="button" class="btn btn-primary" id="sort-save">Guardar</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- MI FORMACIÓN PROFESIONAL -->
+                            <div class="tab-pane fade" id="t-formacion" role="tabpanel">
+                <div class="row g-3">
+                  <div class="col-12">
+                    <div class="fs-summary">
+                      <div class="fs-line"><span id="fs-titulo">Médico</span> <small>Cirujano/Especialista</small></div>
+                      <div><small>por la</small> <strong id="fs-uni">Universidad</strong></div>
+                      <div><small>Especialista en</small> <strong id="fs-esp">Especialidad</strong></div>
+                    </div>
+                  </div>
+                  <div class="col-12 tight-top"><label class="form-label">Certificaciones</label>
+                    <div class="chips-row">
+                      <div class="chip-input-wrap">
+                        <input id="cert-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Consejo Mexicano...">
+                        <small id="cert-count" class="chip-count">50/50</small>
+                      </div>
+                      <button id="cert-add" class="btn chip-add" type="button"><span class="chip-plus" aria-hidden="true">+</span><span class="chip-word">agregar</span></button>
+                    </div>
+                    <div id="cert-list" class="chip-list mt-2" aria-live="polite"></div>
+                  </div>
+                  <div class="col-12"><label class="form-label">Cursos</label>
+                    <div class="chips-row">
+                      <div class="chip-input-wrap">
+                        <input id="cursos-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Curso avanzado ...">
+                        <small id="cursos-count" class="chip-count">50/50</small>
+                      </div>
+                      <button id="cursos-add" class="btn chip-add" type="button"><span class="chip-plus" aria-hidden="true">+</span><span class="chip-word">agregar</span></button>
+                    </div>
+                    <div id="cursos-list" class="chip-list mt-2" aria-live="polite"></div>
+                  </div>
+                  <div class="col-12"><label class="form-label">Diplomados</label>
+                    <div class="chips-row">
+                      <div class="chip-input-wrap">
+                        <input id="dipl-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Diplomado en ...">
+                        <small id="dipl-count" class="chip-count">50/50</small>
+                      </div>
+                      <button id="dipl-add" class="btn chip-add" type="button"><span class="chip-plus" aria-hidden="true">+</span><span class="chip-word">agregar</span></button>
+                    </div>
+                    <div id="dipl-list" class="chip-list mt-2" aria-live="polite"></div>
+                  </div>
+                  <div class="col-12"><label class="form-label">Miembro de</label>
+                    <div class="chips-row">
+                      <div class="chip-input-wrap">
+                        <input id="miem-input" class="form-control no-check chip-input" maxlength="50" placeholder="Ej.: Asociación ...">
+                        <small id="miem-count" class="chip-count">50/50</small>
+                      </div>
+                      <button id="miem-add" class="btn chip-add" type="button"><span class="chip-plus" aria-hidden="true">+</span><span class="chip-word">agregar</span></button>
+                    </div>
+                    <div id="miem-list" class="chip-list mt-2" aria-live="polite"></div>
+                  </div>
+                  <div class="col-12"><label class="form-label">*Texto libre para mostrar a los pacientes*</label>
+                    <textarea class="form-control" rows="4" placeholder="(puedes describir aquí tu trayectoria profesional, tus áreas de especialización, filosofía y vocación de servicio. tu enfoque de atención al paciente, y los valores que guían su práctica médica)"></textarea>
+                  </div>
+                </div>
+              </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CONSULTORIO -->
+        <section class="mm-card d-none" id="p-consultorio">
+          <div class="head"><h5><i class="bi bi-building title-ico" aria-hidden="true"></i>Información · Consultorio</h5></div>
+          <div class="body">
+            <ul class="nav nav-pills mm-tabs mb-3" role="tablist">
+              <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#sede1" type="button">Sede 1</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#sede2" type="button">Sede 2</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#sede-add" type="button">+ Nueva Sede</button></li>
+            </ul>
+            <div class="tab-content">
+              <div class="tab-pane fade show active" id="sede1">
+                <div class="row g-3">
+                  <div class="col-md-6"><label class="form-label">Nombre de la sede</label><input class="form-control"/></div>
+                  <div class="col-md-6"><label class="form-label">Teléfono (planes de pago)</label><input class="form-control"/></div>
+                  <div class="col-12"><label class="form-label">Dirección</label><input class="form-control" placeholder="Calle, Número, colonia, ciudad, estado"/></div>
+                  <div class="col-md-6"><label class="form-label">Horario</label><input class="form-control" placeholder="Lun-Vie 9:00-14:00, 16:00-19:00"/></div>
+                  <div class="col-md-6"><label class="form-label">Notas</label><input class="form-control" placeholder="Accesibilidad, estacionamiento, etc."/></div>
+                  <div class="col-12"><label class="form-label">Mapa</label>
+                    <div class="ratio ratio-16x9 rounded border" style="border-color:var(--mm-borde-input)!important;">
+                      <!-- Mapa embebido sin API key usando coordenadas (evita 400 de pb incompleto) -->
+                      <iframe src="https://www.google.com/maps?q=21.882,-102.296&z=13&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Ubicación de la sede"></iframe>
+                    </div>
+                    <small class="text-muted">En plan gratuito el mapa no usa GPS; en planes de pago sí.</small>
+                  </div>
+                </div>
+              </div>
+              <div class="tab-pane fade" id="sede2"><div class="alert alert-info">Configura esta sede…</div></div>
+              <div class="tab-pane fade" id="sede-add"><div class="alert alert-info">Formulario para agregar nueva sede…</div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- OPINIONES -->
+        <section class="mm-card d-none" id="p-opiniones">
+          <div class="head"><h5><i class="bi bi-chat-quote title-ico" aria-hidden="true"></i>Opiniones recibidas en mi perfil</h5></div>
+          <div class="body">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Alertas por nueva opinión</label>
+                <select class="form-select"><option>Correo</option><option>App</option><option>Ninguna</option></select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Moderación automática</label>
+                <select class="form-select"><option>Filtrar lenguaje inapropiado</option><option>Manual</option></select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Responder</label>
+                <select class="form-select" disabled><option>Disponible tras reclamar perfil (planes de pago)</option></select>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Plantillas de respuesta</label>
+                <textarea class="form-control" rows="3" placeholder="Gracias por tu opinión…"></textarea>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SEGURIDAD -->
+        <section class="mm-card d-none" id="p-seguridad">
+          <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">vpn_key</span>Seguridad (Acceso y 2FA)</h5></div>
+          <div class="body">
+            <ul class="nav nav-pills mm-tabs mb-3" role="tablist">
+              <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#seg-cred">Credenciales</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#seg-2fa">Doble Factor (2FA)</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#seg-ses">Sesiones/Dispositivos</button></li>
+            </ul>
+            <div class="tab-content">
+              <div class="tab-pane fade show active" id="seg-cred">
+                <div class="row g-3">
+                  <div class="col-md-4"><label class="form-label">Email</label><input class="form-control" value="leticia@example.com"></div>
+                  <div class="col-md-4"><label class="form-label">Nueva contraseña</label><input type="password" class="form-control"></div>
+                  <div class="col-md-4"><label class="form-label">Repetir contraseña</label><input type="password" class="form-control"></div>
+                </div>
+              </div>
+              <div class="tab-pane fade" id="seg-2fa">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="en_2fa">
+                  <label class="form-check-label" for="en_2fa">Activar 2FA por app autenticadora</label>
+                </div>
+                <div class="mt-3 alert alert-info">Al activar, se mostrará código QR y claves de recuperación.</div>
+              </div>
+              <div class="tab-pane fade" id="seg-ses">
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead><tr><th>Dispositivo</th><th>Ubicación aprox.</th><th>Último acceso</th><th></th></tr></thead>
+                    <tbody>
+                      <tr><td>Windows · Edge</td><td>GDL, MX</td><td>2025-09-16 20:12</td><td><button class="btn btn-outline-danger btn-sm">Cerrar</button></td></tr>
+                      <tr><td>iPhone · Safari</td><td>GDL, MX</td><td>2025-09-15 09:41</td><td><button class="btn btn-outline-danger btn-sm">Cerrar</button></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SUSCRIPCIÓN -->
+        <section class="mm-card d-none" id="p-suscripcion">
+          <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">license</span>Estado de mi Perfil</h5></div>
+          <div class="body">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <div class="kpi">
+                  <div><strong>Plan actual</strong>: Óptimo</div>
+                  <div><strong>Vigencia</strong>: 22 Dic 2024</div>
+                  <div><strong>Estatus</strong>: Activo</div>
+                  <button class="btn btn-primary btn-sm mt-2">Cambiar/Mejorar plan</button>
+                </div>
+              </div>
+              <div class="col-md-8">
+                <label class="form-label">Historial de suscripciones</label>
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead><tr><th>Fecha</th><th>Plan</th><th>Movimiento</th><th>Vigencia</th></tr></thead>
+                    <tbody>
+                      <tr><td>2025-06-01</td><td>Óptimo</td><td>Renovación</td><td>22 Dic 2024</td></tr>
+                      <tr><td>2024-12-22</td><td>Estándar</td><td>Upgrade</td><td>22 Jun 2025</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="form-check mt-2">
+                  <input class="form-check-input" type="checkbox" id="auto_ren">
+                  <label class="form-check-label" for="auto_ren">Activar renovación automática</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- AGENDA · CONFIGURACIÓN -->
+        <section class="mm-card d-none" id="p-ag-ajustes">
+          <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">manage_history</span>Mi Agenda · Configuración</h5></div>
+          <div class="body">
+            <div class="row g-3">
+              <div class="col-md-3"><label class="form-label">Duración de cita</label><select class="form-select"><option>20 min</option><option>30 min</option><option>40 min</option></select></div>
+              <div class="col-md-3"><label class="form-label">Tiempo entre citas</label><select class="form-select"><option>0 min</option><option>10 min</option><option>15 min</option></select></div>
+              <div class="col-md-3"><label class="form-label">Canales</label><select class="form-select" multiple><option>Presencial</option><option>Telemedicina</option></select></div>
+              <div class="col-md-3"><label class="form-label">Política de cancelación</label><select class="form-select"><option>24h</option><option>48h</option></select></div>
+
+              <div class="col-md-6"><label class="form-label">Horario (L-V)</label><input class="form-control" placeholder="09:00–14:00, 16:00–19:00"></div>
+              <div class="col-md-6"><label class="form-label">Horario (Sáb)</label><input class="form-control" placeholder="09:00–13:00"></div>
+
+              <div class="col-12"><label class="form-label">Recordatorios</label>
+                <textarea class="form-control" rows="3" placeholder="Plantilla SMS/Email de recordatorio…"></textarea>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- AGENDA · OPERADORES -->
+        <section class="mm-card d-none" id="p-ag-operadores">
+          <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">support_agent</span>Mi Agenda · Administrar Operadores</h5></div>
+          <div class="body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Invitar operador</label>
+                <div class="input-group">
+                  <input class="form-control" placeholder="correo@ejemplo.com"><button class="btn btn-primary">Invitar</button>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead><tr><th>Nombre</th><th>Rol</th><th>Permisos</th><th>Estatus</th><th>Acciones</th></tr></thead>
+                    <tbody>
+                      <tr><td>María López</td><td>Operador</td><td>Agenda, Pacientes</td><td>Activo</td><td><button class="btn btn-outline-secondary btn-sm">Editar</button></td></tr>
+                      <tr><td>C. Ramírez</td><td>Asistente</td><td>Agenda</td><td>Invitado</td><td><button class="btn btn-outline-secondary btn-sm">Reenviar</button></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- AGENDA · ADMINISTRACIÓN -->
+        <section class="mm-card d-none" id="p-ag-admin">
+          <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">edit_calendar</span>Mi Agenda · Administración de Citas</h5></div>
+          <div class="body">
+            <div class="row g-3">
+              <div class="col-md-3"><input class="form-control" placeholder="Buscar paciente/cita"></div>
+              <div class="col-md-3"><select class="form-select"><option>Hoy</option><option>Mañana</option><option>Esta semana</option></select></div>
+              <div class="col-md-3"><select class="form-select"><option>Todos</option><option>Confirmadas</option><option>Pendientes</option><option>Canceladas</option></select></div>
+              <div class="col-md-3 text-end"><button class="btn btn-primary"><i class="bi bi-plus-lg"></i> Nueva cita</button></div>
+              <div class="col-12">
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead><tr><th>Hora</th><th>Paciente</th><th>Tipo</th><th>Estatus</th><th>Acciones</th></tr></thead>
+                    <tbody>
+                      <tr><td>09:00</td><td>J. Pérez</td><td>Consulta</td><td>Pendiente</td><td><button class="btn btn-success btn-sm">Confirmar</button></td></tr>
+                      <tr><td>10:00</td><td>M. Díaz</td><td>Seguimiento</td><td>Confirmada</td><td><button class="btn btn-outline-danger btn-sm">Cancelar</button></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PACIENTES · ARCHIVO -->
+        <section class="mm-card d-none" id="p-pac-archivo">
+          <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">person_search</span>Buscar paciente en mi archivo</h5></div>
+          <div class="body">
+            <div class="row g-3">
+              <div class="col-md-4"><input class="form-control" placeholder="Buscar por nombre, CURP…"></div>
+              <div class="col-md-4"><select class="form-select"><option>Todos</option><option>Con citas recientes</option><option>Inactivos</option></select></div>
+              <div class="col-md-4"><button class="btn btn-primary"><i class="bi bi-person-plus"></i> Nuevo paciente</button></div>
+            </div>
+          </div>
+        </section>
+        <!-- PACIENTES · RECETAS (placeholder) -->
+        <section class="mm-card d-none" id="p-pac-recetas">
+          <div class="head"><h5><span class="material-symbols-outlined title-ico" aria-hidden="true">prescriptions</span>Recetas</h5></div>
+          <div class="body">
+            <div class="alert alert-info">Generar nueva receta o buscar recetas previas (placeholder).</div>
+          </div>
+        </section>
+
+        <!-- PACIENTES · EXPEDIENTE -->
+        <section class="mm-card d-none" id="p-expediente">
+          <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">person_add</span>Mis Pacientes · Expediente Médico</h5></div>
+          <div class="body">
+            <ul class="nav nav-pills mm-tabs mb-3" role="tablist">
+              <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-historia">Historia Clínica</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-gineco">Antecedentes gineco-obstétricos</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-exploracion">Exploración Física</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-estudios">Estudios Diagnóstico</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-tratamiento">Tratamiento Recetas</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-notas">Notas Evolución</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-manejo">Manejo Hospitalario</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-consent">Consentimiento Informado</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-archivo">Archivo</button></li>
+            </ul>
+            <div class="tab-content">
+              <div class="tab-pane fade show active" id="t-historia">
+                <div class="row g-3">
+                  <div class="col-md-6"><label class="form-label">Motivo de consulta</label><input class="form-control"></div>
+                  <div class="col-md-6"><label class="form-label">Padecimiento actual</label><input class="form-control"></div>
+                  <div class="col-md-12"><label class="form-label">Interrogatorio por aparatos</label><textarea class="form-control" rows="3"></textarea></div>
+                </div>
+              </div>
+              <div class="tab-pane fade" id="t-gineco"><div class="alert alert-info">Campos gineco-obstétricos…</div></div>
+              <div class="tab-pane fade" id="t-exploracion"><div class="alert alert-info">Signos vitales, exploración…</div></div>
+              <div class="tab-pane fade" id="t-estudios"><div class="alert alert-info">Laboratorio, imagenología…</div></div>
+              <div class="tab-pane fade" id="t-tratamiento"><div class="alert alert-info">Recetas, indicaciones…</div></div>
+              <div class="tab-pane fade" id="t-notas"><div la="" class="alert alert-info">Notas de evolución…</div></div>
+              <div class="tab-pane fade" id="t-manejo"><div class="alert alert-info">Manejo hospitalario…</div></div>
+              <div class="tab-pane fade" id="t-consent"><div class="alert alert-info">Consentimientos informados…</div></div>
+              <div class="tab-pane fade" id="t-archivo"><div class="alert alert-info">Adjuntos del expediente…</div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- FACTURACIÓN (tabs) -->
+        <section class="mm-card d-none" id="p-facturacion">
+          <div class="head"><h5><span class="material-symbols-rounded title-ico align-middle me-1" aria-hidden="true">receipt_long</span>Facturación</h5></div>
+          <div class="body">
+            <ul class="nav nav-pills mm-tabs mb-3" role="tablist">
+              <li class="nav-item"><button la="" class="nav-link active" data-bs-toggle="pill" data-bs-target="#cfdi-crear">Crear Factura</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#cfdi-listar">Listar Facturas</button></li>
+              <li es="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#cfdi-pacientes">Pacientes</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#cfdi-canceladas">Facturas Canceladas</button></li>
+            </ul>
+            <div class="tab-content">
+              <div class="tab-pane fade show active" id="cfdi-crear">
+                <div class="row g-3">
+                  <div class="col-md-4"><label class="form-label">Paciente</label><input class="form-control" placeholder="Buscar/seleccionar"></div>
+                  <div class="col-md-4"><label class="form-label">Uso CFDI</label><select class="form-select"><option>Gastos médicos</option></select></div>
+                  <div class="col-md-4"><label class="form-label">Forma de pago</label><select class="form-select"><option>Transferencia</option><option>Tarjeta</option></select></div>
+                  <div class="col-12"><label class="form-label">Conceptos</label><textarea class="form-control" rows="3" placeholder="Consulta, estudios, etc."></textarea></div>
+                  <div class="col-md-3"><label class="form-label">Subtotal</label><input class="form-control" placeholder="$0.00"></div>
+                  <div class="col-md-3"><label class="form-label">Impuestos</label><input class="form-control" placeholder="$0.00"></div>
+                  <div class="col-md-3"><label class="form-label">Total</label><input class="form-control" placeholder="$0.00"></div>
+                  <div class="col-md-3 d-grid"><button class="btn btn-primary mt-4">Timbrar</button></div>
+                </div>
+              </div>
+              <div class="tab-pane fade" id="cfdi-listar">
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead><tr><th>Folio</th><th>Fecha</th><th>Paciente</th><th>Importe</th><th>Estatus</th><th></th></tr></thead>
+                    <tbody>
+                      <tr><td>A-1023</td><td>2025-09-12</td><td>J. Pérez</td><td>$1,200</td><td>Timbrada</td><td><button class="btn btn-outline-secondary btn-sm">Descargar</button></td></tr>
+                      <tr><td>A-1018</td><td>2025-09-02</td><td>M. Díaz</td><td>$900</td><td>Timbrada</td><td><button class="btn btn-outline-secondary btn-sm">Descargar</button></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="tab-pane fade" id="cfdi-pacientes"><div class="alert alert-info">Directorio fiscal de pacientes…</div></div>
+              <div class="tab-pane fade" id="cfdi-canceladas"><div class="alert alert-warning">Listado de canceladas y motivo…</div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAQUETES Y PROMOCIONES -->
+        <section class="mm-card d-none" id="p-paquetes">
+          <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">campaign</span>Paquetes y Promociones</h5></div>
+          <div class="body">
+            <ul class="nav nav-pills mm-tabs mb-3" role="tablist">
+              <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#paq-activos">Activos</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#paq-crear">Crear/Editar</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#paq-historial">Historial</button></li>
+            </ul>
+            <div class="tab-content">
+              <div class="tab-pane fade show active" id="paq-activos">
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead><tr><th>Nombre</th><th>Precio</th><th>Vigencia</th><th>Estatus</th><th></th></tr></thead>
+                    <tbody>
+                      <tr><td>Paquete Maternidad</td><td>$25,000</td><td>al 31 Oct 2025</td><td>Publicado</td><td><button class="btn btn-outline-secondary btn-sm" onclick="selectPaqTab('#paq-crear')">Editar</button></td></tr>
+                      <tr><td>Check-up hombres 40+</td><td>$2,500</td><td>Octubre 2025</td><td>Publicado</td><td><button class="btn btn-outline-secondary btn-sm" onclick="selectPaqTab('#paq-crear')">Editar</button></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="tab-pane fade" id="paq-crear">
+                <div class="row g-3">
+                  <div class="col-md-6"><label la="" class="form-label">Nombre del paquete</label><input class="form-control" placeholder="p.ej. Paquete Maternidad"></div>
+                  <div class="col-md-3"><label class="form-label">Precio</label><input class="form-control" placeholder="$25,000"></div>
+                  <div class="col-md-3"><label class="form-label">Vigencia</label><input class="form-control" placeholder="Octubre 2025"></div>
+                  <div class="col-12"><label class="form-label">Descripción</label><textarea class="form-control" rows="3" placeholder="Incluye..."></textarea></div>
+                  <div class="col-md-6">
+                    <label class="form-label">Imagen</label>
+                    <input type="file" class="form-control">
+                    <button class="btn btn-primary mt-2" disabled><i class="bi bi-stars"></i> Generar imagen con IA (Plan Profesional)</button>
+                  </div>
+                  <div class="col-md-3"><label class="form-label">Visibilidad</label><select class="form-select"><option>Público en perfil</option><option>Oculto</option></select></div>
+                  <div class="col-md-3"><label class="form-label">Estatus</label><select class="form-select"><option>Borrador</option><option>Publicado</option></select></div>
+                  <div class="col-12 d-flex gap-2">
+                    <button class="btn btn-success"><i class="bi bi-check2-circle"></i> Guardar</button>
+                    <button class="btn btn-outline-secondary">Previsualizar</button>
+                  </div>
+                </div>
+              </div>
+              <div class="tab-pane fade" id="paq-historial">
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead><tr><th>Nombre</th><th>Precio</th><th>Periodo</th><th>Resultado</th></tr></thead>
+                    <tbody>
+                      <tr><td>Promo verano</td><td>$1,800</td><td>Jun–Ago 2025</td><td>Finalizada</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="alert alert-info mt-3 mb-0">Este módulo se muestra según plan contratado.</div>
+          </div>
+        </section>
+
+        <!-- NOTIFICACIONES -->
+        <section class="mm-card d-none" id="p-notificaciones">
+          <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">notifications</span>Notificaciones</h5></div>
+          <div class="body">
+            <div id="msgList" class="msg-list"></div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+  </div>
+</div>
+
+
+
+
+<!-- Modal: QR cámara móvil (mock) -->
+<div class="modal fade" id="modalQR" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Tomar con cámara del teléfono</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex justify-content-center mb-2" style="background:#f4f7fa;border:1px solid #d9e5ec;border-radius:12px;padding:10px">
+          <svg viewBox="0 0 100 100" width="180" height="180" aria-hidden="true">
+            <rect width="100" height="100" rx="8" fill="#e6eef3"/>
+            <rect x="8" y="8" width="24" height="24" fill="#0b3750"/><rect x="68" y="8" width="24" height="24" fill="#0b3750"/>
+            <rect x="8" y="68" width="24" height="24" fill="#0b3750"/><rect x="40" y="40" width="8" height="8" fill="#0b3750"/>
+            <rect x="52" y="40" width="8" height="8" fill="#0b3750"/><rect x="40" y="52" width="8" height="8" fill="#0b3750"/>
+            <rect x="52" y="52" width="8" height="8" fill="#0b3750"/>
+          </svg>
+        </div>
+        <ol class="mb-1">
+          <li>Escanea el código con tu teléfono.</li>
+          <li>Se vinculará tu sesión y se abrirá la cámara del dispositivo.</li>
+          <li>Toma la foto y se enviará automáticamente a esta pantalla.</li>
+        </ol>
+        <div class="small text-muted text-center">* Demostración visual (mock). Requiere backend para funcionar.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+<footer class="mm-footer">
+  <div class="wrap page">
+    <div class="mm-footer__content">
+      <div class="mm-footer__brand">Todos los derechos reservados México Médico</div>
+      <nav class="mm-footer__nav" aria-label="Enlaces legales">
+        <ul class="mm-footer__links">
+          <li><a href="#">Nosotros</a></li>
+          <li><a href="#">Términos y Condiciones</a></li>
+          <li><a href="#">Aviso de Privacidad</a></li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/app.js"></script>
+<script src="assets/js/messages.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

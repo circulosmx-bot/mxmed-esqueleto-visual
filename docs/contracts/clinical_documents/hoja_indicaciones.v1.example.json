@@ -1,0 +1,48 @@
+{
+  "section_id": "hoja_indicaciones",
+  "standard": "interno",
+  "contract_version": 1,
+  "ambito": "hospitalizacion",
+  "indicaciones_generales": "Vigilancia estrecha y control de signos vitales cada 4 h.",
+  "dieta": {
+    "preset": "liquida",
+    "texto": null
+  },
+  "soluciones_iv": "Solucion Hartmann 1000 ml en 8 h",
+  "medicamentos": [
+    {
+      "medicamento": "Paracetamol 1 g",
+      "dosis": "1 g",
+      "via": "IV",
+      "periodicidad": "cada 8 h",
+      "duracion": "2 dias",
+      "indicaciones": "Si T >= 38 C"
+    }
+  ],
+  "laboratorio_solicitado": [
+    { "estudio": "BH", "fecha": "2024-05-06" }
+  ],
+  "imagen_solicitada": [
+    { "estudio": "Radiografia de torax", "fecha": "2024-05-06" }
+  ],
+  "cuidados_enfermeria": "Curacion de herida cada 24 h",
+  "interconsultas": [
+    { "servicio": "Nutricion", "motivo": "Ajuste de dieta" }
+  ],
+  "restricciones_alertas": "Alergia a penicilina",
+  "snapshot": {
+    "paciente": {
+      "patient_id": "ana-garcia|1988-02-03|F",
+      "nombre_completo": "Ana Garcia",
+      "edad": "36",
+      "sexo": "Femenino"
+    },
+    "medico": {
+      "user_id": "dr-gomez",
+      "nombre_completo": "Dr. Luis Gomez",
+      "cedula_profesional": "1234567",
+      "especialidad": "Cirugia General"
+    },
+    "generated_at": "2024-05-06T14:40:00.000Z"
+  }
+}

@@ -14,3 +14,8 @@ Esta versión separa CSS y JS desde el HTML base validado, manteniendo el diseñ
 ## Notas
 - Si el HTML base contenía estilos inline por atributo (ej. `style="..."`), se conservan tal cual.
 - Si notas cualquier diferencia visual, indícame el elemento y lo ajusto.
+
+## Documentos clínicos (dev)
+- API: `api/clinical-documents.php` (acciones `save`, `list`, `get`).
+- Config DB: copiar `api/mxmed-db.config.sample.php` → `api/mxmed-db.config.php` (MySQL).
+- Tablas se crean con `CREATE TABLE IF NOT EXISTS` al primer request al API.

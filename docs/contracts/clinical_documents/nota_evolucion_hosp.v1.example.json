@@ -1,0 +1,69 @@
+{
+  "section_id": "nota_evolucion_hosp",
+  "standard": "NOM-004-SSA3-2012",
+  "contract_version": 1,
+  "ambito": "hospitalizacion",
+  "evolucion_cuadro_clinico": "Paciente estable, sin datos de alarma.",
+  "signos_vitales": {
+    "ta_sistolica": 118,
+    "ta_diastolica": 72,
+    "fc": 84,
+    "fr": 18,
+    "temperatura": 36.8,
+    "spo2": 96,
+    "dolor_eva": 2
+  },
+  "exploracion_relevante": {
+    "resumen_sistemas": "Cardiopulmonar sin alteraciones. Abdomen blando.",
+    "hallazgos_relevantes": "Herida quirurgica limpia, sin exudado"
+  },
+  "diagnosticos": [
+    { "code": "K35.8", "label": "Apendicitis aguda" }
+  ],
+  "pronostico": { "preset": "bueno", "texto": null },
+  "plan_indicaciones": "Continuar analgesia, movilizacion y dieta progresiva.",
+  "balance_hidrico": {
+    "ingresos_iv_ml": 1200,
+    "ingresos_vo_ml": 600,
+    "ingresos_otros_ml": 0,
+    "egresos_diuresis_ml": 1400,
+    "egresos_evacuaciones_ml": 0,
+    "egresos_drenajes_ml": 0,
+    "egresos_otros_ml": 0,
+    "ingresos_total_ml": 1800,
+    "egresos_total_ml": 1400,
+    "balance_ml": 400,
+    "notas": "Diuresis adecuada"
+  },
+  "soporte": {
+    "oxigeno": true,
+    "oxigeno_tipo": "punta nasal",
+    "oxigeno_flujo": "2 lpm",
+    "oxigeno_fio2": "28%",
+    "via_venosa": true,
+    "sonda_foley": false,
+    "sng": false,
+    "drenajes": false
+  },
+  "eventos_relevantes": [
+    { "type": "fiebre", "label": "Fiebre", "descripcion": "Pico 38.2 C", "fecha": "2024-05-06 14:30" }
+  ],
+  "estudios_relevantes": [
+    { "order_id": "lab_102", "nombre_estudio": "BH", "fecha": "2024-05-06", "resultado_resumen": "Leucocitos 11.8", "archivo_url": null }
+  ],
+  "snapshot": {
+    "paciente": {
+      "patient_id": "ana-garcia|1988-02-03|F",
+      "nombre_completo": "Ana Garcia",
+      "edad": "36",
+      "sexo": "Femenino"
+    },
+    "medico": {
+      "user_id": "dr-gomez",
+      "nombre_completo": "Dr. Luis Gomez",
+      "cedula_profesional": "1234567",
+      "especialidad": "Cirugia General"
+    },
+    "generated_at": "2024-05-06T14:32:00.000Z"
+  }
+}

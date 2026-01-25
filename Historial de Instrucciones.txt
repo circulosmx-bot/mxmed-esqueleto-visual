@@ -1,0 +1,149 @@
+
+[2025-11-10 21:33] Reflejar el commit 4373ab8 en local y continuar trabajando en mxmed-esqueleto-visual.
+
+[2025-11-10 21:38] Establecer lÌmites de telÈfonos: m·ximo 10 dÌgitos (o +52 + 10), permitir hasta 3 letras y mostrar burbuja avisando 'Ingresa solo n˙meros' antes de la 4™; ocultar burbuja al escribir n˙meros; aplicar a todos los inputs de telÈfono/WhatsApp.
+
+[2025-11-10 21:39] Realizar commit y push de los cambios y continuar.
+
+[2025-11-10 21:45] Unificar icono de autosave: usar palomita blanca dentro de cÌrculo turquesa #00ADC1 en todos los checks; replicar modelo de 'Principales servicios' sin mover ubicaciÛn.
+
+[2025-11-10 21:50] Aplicar alfa 50% al cÌrculo turquesa (#00ADC1) del check de autosave; mantener la palomita blanca al 100%.
+
+[2025-11-10 21:51] Realizar commit y push de los cambios.
+
+[2025-11-11 19:11] GÈnero: no mostrar icono de autosave si no hay selecciÛn (placeholder ëóí). Solo mostrar palomita cuando hay una opciÛn v·lida seleccionada.
+
+[2025-11-11 19:27] Revertir el ˙ltimo cambio de tabs en Consultorio (volver al estado anterior).
+
+[2025-11-11 19:35] Consultorio: replicar icono check autosave en todos los campos; enlazar el autosave tambiÈn tras agregar nuevas pestaÒas de consultorio.
+
+[2025-11-11 19:38] Corregir visibilidad del icono check: enlazar autosave global (sin prefijo #viewport) y mostrar la palomita en tiempo real (evento input).
+
+[2025-11-11 19:39] Realizar commit y push de los cambios.
+
+[2025-11-11 19:49] Revertir al estado del commit previo (deshacer el ˙ltimo cambio).
+
+[2025-11-11 19:52] Consultorio: mover el mapa justo despuÈs de la franja de ëCalleí y reducir su altura al 50% (manteniendo ancho).
+
+[2025-11-11 19:53] Realizar commit de los cambios (sin push).
+
+[2025-11-11 19:54] Renombrar etiqueta 'Mapa' a 'UbicaciÛn' en Consultorio.
+
+[2025-11-11 19:56] Confirmar: UbicaciÛn (mapa) colocada enseguida de la franja Calle/N˙mero Ext./N˙mero Int./Piso, manteniendo ancho y altura al 50%.
+
+[2025-11-11 20:00] Consultorio: agregar dos dropzones debajo de Horarios ó izquierda logotipo de grupo mÈdico (cons-logo) y derecha fotografÌa principal del consultorio (cons-foto).
+
+[2025-11-11 20:04] Reubicar dropzones de Consultorio al final del panel (despuÈs de Horarios), manteniendo orden e IDs.
+
+[2025-11-11 20:10] Realizar commit de los cambios (sin push).
+
+[2025-11-11 20:14] Renombrar etiquetas: 'TelÈfono consultorio 01/02/03' a 'TelÈfono 01/02/03' en Consultorio.
+
+[2025-11-11 21:06] Crear rama de trabajo para la secciÛn Consultorio: 'seccion-consultorio' y publicar (commit + push).
+
+[2025-11-11 21:12] CONSULTORIO PRINCIPAL: eliminar etiqueta/checkbox bajo WhatsApp ('Mensajes a mi numero personal') y ajustar distancia (mb-2 en la columna).
+
+[2025-11-11 21:17] CONSULTORIO PRINCIPAL: acortar etiquetas ó 'Cuenta con estacionamiento propio' -> 'Estacionamiento' (con Ìcono) y 'Accesibilidad para discapacitados' -> 'Accesible' (con Ìcono).
+
+[2025-11-11 21:20] Reemplazar Ìconos de Estacionamiento/Accesible a Material Symbols (local_parking, accessible).
+
+[2025-11-11 21:21] CONSULTORIO PRINCIPAL: mover etiquetas Estacionamiento/Accesible a la derecha en la misma fila de TelÈfono Urgencias (col-md-6 alineado a la derecha).
+
+[2025-11-11 21:35] CONSULTORIO PRINCIPAL: restaurar textos largos ó 'Cuenta con Estacionamiento' y 'Accesibilidad para discapacitados'; alinear a la izquierda y equilibrar distancia.
+
+[2025-11-11 21:37] CONSULTORIO PRINCIPAL: bajar 10px el bloque de Estacionamiento/Accesible (clase .cons-flags con margin-top:10px).
+
+[2025-11-11 21:38] Solicitud: realizar commit y push (sin cambios adicionales).
+
+[2025-11-11 22:01] CONSULTORIO PRINCIPAL: agregar modal de sugerencia de Grupo MÈdico y lÛgica para asociar/mostrar logotipo del grupo en dropzone de logotipo.
+
+[2025-11-12 13:44] Reposicionar rama 'seccion-consultorio' al estado estable 958c731 y crear commit 'integracion a grupo medico' como baseline para continuar.
+
+[2025-11-12 13:49] Fix encoding: normalizar 'MÈdico' en modal y nombre del grupo para evitar caracteres rotos.
+
+[2025-11-12 13:52] Fix encoding: placeholder de Colonia ('SeleccionaÖ'), mensaje de CP inv·lido y literal 'MÈxico' normalizados.
+
+[2025-11-12 13:54] Marcar estado estable: b8fa242cd7b85cf8c755d21a57bbfffec0bac4cd (tag consultorio-stable-20251112-1354) y rama seccion-consultorio-stable.
+
+[2025-11-12 14:10] Revertir fixes de mojibake amplios que afectaron horarios (mantener correcciones puntuales previas).
+[2025-11-12] Correcci√≥n puntual de codificaci√≥n: '√ìptimo' en header y placeholders de Horarios (reemplazo de ‚Äò‚Äì‚Äô por '-'); normalizaci√≥n de separadores y d√≠as en tablas de horarios sin tocar otros paneles.
+[2025-11-12] Grupo M√©dico: al responder 'No' ya no se congela la pantalla: se guarda firma de direcci√≥n para no re-preguntar; se asegura limpieza del overlay/backdrop del modal y no se reabre en el mismo estado.
+[2025-11-12] Agregado reinicio de asociaci√≥n desde bot√≥n 'Cambiar' del logotipo: limpia localStorage (aceptado/declinado), re-habilita campos de direcci√≥n y radios para poder repetir el flujo desde cero.
+[2025-11-12] Agregado widget flotante magenta 'Reiniciar estado' (limpia claves locales de grupo y horarios; restaura campos y radios) para facilitar pruebas; se puede retirar luego.
+[2025-11-12] Widget 'Reiniciar estado' limitado a entorno local (localhost/127.0.0.1/::1 o file:) para uso temporal de revisi√≥n.
+[2025-11-12] Unificaci√≥n UTF-8: proyecto configurado para UTF‚Äë8 (DB utf8mb4, headers PHP, meta charset, .htaccess con AddDefaultCharset y default_charset). Verificaci√≥n de PHP sin BOM y gu√≠a WAMP agregada.
+[2025-11-12] Sugerencias aplicadas: collation utf8mb4_unicode_ci en config sample, SET NAMES utf8mb4 en sepomex-import y CREATE DATABASE con COLLATE; estado UTF-8 reforzado.`r`n[2025-11-12] Grupo Medico: al cerrar modal (Si/No) se libera scroll y overlay (limpieza de modal-open/backdrop y flag para evitar reentradas).`r`n[2025-11-12] Solicitud: push rama seccion-consultorio (incluye fix modal Grupo Medico desbloqueo scroll).`r`n[2025-11-12] Consultorio: eliminar campos "Tel√©fono (planes de pago)" y "Direcci√≥n" del bloque inicial (markup).`r`n[2025-11-12] Logotipo de grupo: agregado bot√≥n X rojo (como fotos) en esquina sup. der. del preview; confirma eliminaci√≥n y restaura dropzone/estado original; retirado bot√≥n "Cambiar" textual.`r`n[2025-11-12] Grupo M√©dico: activar match solo al elegir "S√≠"; agregar sugerencias inline debajo del input (lista seleccionable) y mantener widget Reiniciar estado para pruebas.`r`n[2025-11-12] Grupo M√©dico: si elige un grupo de la lista, se asocia y bloquea direcci√≥n; si no elige, puede continuar manual y se recuerda declinaci√≥n. Agregado fallback a modal desde la lista ("Ver sugerencia destacada‚Ä¶").`r`n[2025-11-12] Grupo M√©dico: al cambiar a "No" con una asociaci√≥n activa, se pide confirmaci√≥n para desvincular (usa nombre del grupo); si cancela se revierte a "S√≠"; si acepta, se limpia estado y se re-habilitan campos.`r`n[2025-11-12] Grupo M√©dico: mantener nombre en input tras elegir; al cambiar a "No" usar modal "S√≠ desvincular" (botones centrados); centrar botones en modales de preguntas existentes.
+[2025-11-12] Modal Grupo M√©dico: reetiquetado bot√≥n "No" a "Cancelar" y centrado del footer ya aplicado.
+[2025-11-12] Reversi√≥n: deshacer √∫ltimo cambio de autocompletar nombre (bold) y Calle/NoExt al elegir grupo (rollback por falla en pruebas).
+[2025-11-12] Checkpoint solicitado: commit + push estado actual en seccion-consultorio.
+[2025-11-12] Grupo M√©dico: al elegir de la lista, el nombre queda en el input y en negritas (clase grp-selected); se remueve la marca al desvincular.
+[2025-11-12] Grupo M√©dico: al aceptar desde modal tambi√©n se deja el nombre en input y en negritas y se dispara autosave para mostrar el check.
+[2025-11-12] Grupo M√©dico: corregido orden para aplicar negritas inmediatamente (activar ‚ÄúS√≠‚Äù antes de setear valor) y retiradas opciones ‚ÄúVer sugerencia destacada‚Äù y ‚ÄúContinuar sin seleccionar‚Äù.
+[2025-11-12] Grupo M√©dico: corregido primer clic (enable inmediato del input y seteo del valor tanto en lista como en modal).
+[2025-11-12] Grupo M√©dico: al seleccionar/aceptar grupo, prellenar t√≠tulo con "Consultorio <Grupo>" si est√° vac√≠o (campo editable).
+[2025-11-12] Grupo M√©dico: al prellenar t√≠tulo, enfocar por ~1s (focus y luego blur si el usuario no escribi√≥) para invitar a personalizar.
+[2025-11-12] Grupo M√©dico: si cambia la selecci√≥n, tambi√©n se actualiza el t√≠tulo si fue autogenerado (se marca data-autofill y se limpia al teclear).
+[2025-11-12] Grupo M√©dico: al cambiar selecci√≥n siempre actualiza el t√≠tulo (Consultorio <Grupo>) y re-enfoca; flag auto se restablece al escribir manualmente.
+[2025-11-12] Bot√≥n Reiniciar estado: ahora tambi√©n limpia 'Dale un t√≠tulo a este consultorio' (valor y flag autofill).
+[2025-11-12] Grupo M√©dico: selecci√≥n ahora aplica en el primer clic (no reabre la lista al marcar 'S√≠'); t√≠tulo se actualiza de inmediato.
+[2025-11-12] Grupo M√©dico: nueva rutina applyGroupSelection para aplicar selecci√≥n al primer clic (lista y modal) y sincronizar t√≠tulo siempre.
+[2025-11-12] Grupo M√©dico: lista con navegaci√≥n por teclado (flechas/Enter/Escape), helper applyGroupSelection, y actualizaci√≥n inmediata al primer clic.
+[2025-11-12] Grupo M√©dico: asignados datos ficticios (Grupo Aguascalientes Centro, Grupo M√©dico Central) y al elegirlos se rellenan Calle/No.Ext y t√≠tulo autom√°ticamente.
+[2025-11-12] Grupo M√©dico: Calle y N√∫mero Ext. quedan editables aunque haya match (ya no se deshabilitan al asociar).
+[2025-11-12] Grupo M√©dico: restaurada carga de logotipo desde datos ficticios (Aguascalientes Centro, M√©dico Central).
+[2025-11-12] Eliminaci√≥n de logotipo: usa modal centrado (mismo estilo que confirmaci√≥n de 'No') en lugar de confirm() nativo.
+[2025-11-12] Modal logotipo: texto din√°mico usa #grp-unlink-logo-name para mostrar nombre y mantener confirmaci√≥n centrada.
+[2025-11-12] Destacado: etiqueta '¬øTu consultorio est√° en un Grupo M√©dico?' ahora va sobre barra con fondo #00ADC1 al 25% y esquinas redondeadas.
+[2025-11-12] Barra de pregunta Grupo M√©dico ajustada: fondo turquesa s√≥lido, texto blanco en negritas y radios alineados.
+[2025-11-12] Barra grupo m√©dico: radios fuera del recuadro aliado (#00ADC1 al 25%), texto blanco en bold dentro de la barra.
+[2025-11-12] Barra grupo m√©dico: alfa al 65% y radios alineados a la derecha en la misma fila.
+[2025-11-12] Radios de grupo m√©dico convertidos en botones cuadrados (estilo clickable como en otras secciones).
+[2025-11-12] Radios de grupo m√©dico convertidos a cuadrados estilo check (como Estacionamiento).
+[2025-11-12] Ajuste: texto '¬øTu consultorio est√° en un Grupo M√©dico?' aumentado 15% (1.15rem).
+[2025-11-12] Dropzone Fotograf√≠a: icono interno reemplazado por 'add_a_photo' (mismo tama√±o/color).
+[2025-11-12] Dropzone Foto: icono add_a_photo ajustado a 76px y peso 600 como el logo original.
+[2025-11-12] Dropzone Foto: icono add_a_photo escalado 400% (304px) para igualar tama√±o solicitado.
+[2025-11-12] Icono dropzone Fotograf√≠a: s√≥lo el panel derecho (data-type='foto') usa 304px; los dem√°s regresan a 76px.
+[2025-11-12] Icono dropzone Fotograf√≠a: reducido a la mitad (152px, font-size 120px).
+[2025-11-12] Icono dropzone Logotipo: ahora usa attach_file al mismo tama√±o que fotograf√≠a (regla CSS nueva).
+[2025-11-12] Icono dropzone Logotipo: escalado y color igual al de Fotograf√≠a (152px, #99bfd0).
+[2025-11-12] Iconos de dropzone (logo/foto) reducidos 30% (ahora 106px, font-size 84px).
+[2025-11-12] Grupos demo renombrados a 'Star M√©dica' y 'M√©dica San Juan'.
+[2025-11-12] Grupos demo ahora usan logotipos reales (assets/img/star medica.svg, medica san juan.png).
+[2025-11-12] Dropzone logotipo: imagen con border y X estilo panel fotos; logotipo ocupa todo el √°rea al hacer match.
+[2025-11-12] Dropzone logo: removidos marcos y fondo; logotipo queda flotando con transparencia.
+[2025-11-12] Dropzone logotipo: clase has-logo oculta elementos y quita borde; reset la limpia.
+[2025-11-12] Dropzone logotipo: modo has-logo ahora quita bordes/padding y el logo usa object-fit:contain.
+[2025-11-12] Dropzone logo: contenido original envuelto en .mf-ghost y oculto cuando hay logotipo.
+[2025-11-12] Dropzone logo: JS oculta/rehabilita .mf-ghost al asociar o limpiar para evitar empalmes.
+[2025-11-12] Dropzone logotipo: logo-slot alterna entre drop y vista de logotipo, ocultando completamente elementos originales cuando hay match.
+[2025-11-12] Dropzone logotipo: ghost interno vuelve a una columna centrada para igualar estilo del drop derecho.
+[2025-11-12] Dropzones: wrapper logo-slot fuerza mismas dimensiones que la drop derecha (width/height full y centrado).
+[2025-11-12] Mensaje de sincronizaciÛn actualizado: nuevo texto doble lÌnea sin badge y color #00ADC1.
+[2025-11-12] Mensaje de sincronizaciÛn: se dejÛ una sola lÌnea y el texto ahora usa alfa 30% sobre #00ADC1.
+[2025-11-12] Mensaje de sincronizaciÛn: alfa subido al 60% para mejor legibilidad.
+[2025-11-12] Dropzone foto principal: se agregÛ botÛn X para eliminar la imagen y restablecer el campo.
+[2025-11-12] Foto principal: botÛn X ahora pregunta ìøDeseas quitar esta imagen como foto principal del consultorio?î antes de eliminarla.
+[2025-11-12] Botones "SÌ desvincular" y "SÌ, quitar" ahora usan fondo #EF5070 para mantener la identidad visual.
+[2025-11-12] FotografÌa principal: tras cargar se muestra texto ìFotografÌa principal asignada a tu consultorioî y se oculta al eliminar o reiniciar.
+[2025-11-12] FotografÌa principal: mensaje movido fuera de la dropzone y alineado como el del logotipo para que sea visible bajo la tarjeta.
+[2025-11-12] Dropzones de logotipo/foto alineadas: ambos contenedores usan el mismo ancho y aspecto para que queden simÈtricos.
+[2025-11-12] Dropzone logotipo: soporte para carga manual con mensaje "Logotipo del grupo mÈdico asociado a tu consultorio" y confirmaciÛn dedicada para eliminarlo.
+[2025-11-12] Fix: al confirmar ìSÌ, quitarî en logotipo manual el drop vuelve a mostrarse porque se restaurÛ el helper correcto.
+[2025-11-12] Ajuste: tras "SÌ, quitar" de logotipo manual se restablece explÌcitamente la dropzone original (display default e input habilitado).
+[2025-11-12] Dropzone logotipo manual: se aÒadiÛ helper de reseteo compartido para que la tarjeta reaparezca igual que en la fotografÌa al quitar la imagen.
+[2025-11-12] Dropzone logotipo: se forzÛ display:flex por defecto y el helper limpia data-logoSource para que la tarjeta vuelva a ser visible al quitar.
+[2025-11-12] Dropzone logotipo: ahora se oculta/rehabilita con atributo hidden sobre .logo-slot-drop para evitar que desaparezca tras quitar.
+[2025-11-12] Dropzone logotipo: al eliminar se recrea un contenedor clonado y se reinyecta la lÛgica de carga para garantizar que reaparezca visualmente.
+[2025-11-13] TÌtulo: script separado assets/js/title-fix.js fija "MXMed 2025 ∑ Perfil MÈdico" despuÈs de cargar app.js.
+[2025-11-13] Horarios: copiar lunes sÛlo a viernes, autoactiva botones al capturar horas, indicador visual de dÌa listo y reinicio desde el widget.
+[2025-11-13] Horarios: inputs arrancan con 09:00/14:00/16:00/20:00 como valores iniciales por dÌa.
+[2025-11-13] Horarios: valores base 09/14/16/20 sÛlo se insertan al enfocar cada campo (placeholders).
+[2025-11-13] Horarios: al desactivar un dÌa se limpian los campos para que el usuario vuelva a elegirlos.
+[2025-11-13] Horarios: marcar activo precarga horarios sugeridos y al desmarcar limpia la franja (pane principal).
+[2025-11-13] Horarios: copiar/limpiar marca desplazamiento y tras recargar se hace scroll autom·tico a la tarjeta de horarios.
+[2025-11-13] Horarios: subtÌtulo usa el mismo estilo que ìTelÈfonos del consultorioî.
+[2025-11-13] Horarios: botÛn "Copiar lunes a todos" sÛlo aparece cuando Lunes tiene horario definido.
+
+[2025-11-14 19:28] Consultorio: tabs adicionales limitados a tres (Segundo/Tercer), ocultar boton + al llegar al limite y restaurarlo al eliminar; la sede 2 placeholder ahora se sustituye por el panel real y se reutilizan indices disponibles.
+[2025-11-15] Limpieza mojibake manual en assets/js/app.js (confirmaciones, textos horarios, grupo mÈdico) dejando el archivo Ìntegro en UTF-8.

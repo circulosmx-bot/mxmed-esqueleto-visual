@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "document": {
+    "id": 9999,
+    "document_uuid": "demo-doc-uuid",
+    "content": {
+      "rendered_text": "NOTA DE EVOLUCION (DEMO)\nFecha: 22/01/2025 10:00\nPaciente: Demo\n\nEvolucion: Registro de prueba en modo demo."
+    }
+  }
+}

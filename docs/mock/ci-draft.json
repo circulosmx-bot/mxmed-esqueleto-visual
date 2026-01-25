@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "consentimiento_id": 999,
+  "folio": "CI-2025-000999",
+  "estado": "draft",
+  "patient_contact": {
+    "telefono": "",
+    "correo": "",
+    "domicilio": ""
+  }
+}

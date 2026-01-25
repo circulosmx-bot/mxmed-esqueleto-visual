@@ -1,0 +1,69 @@
+{
+  "section_id": "nota_evolucion",
+  "standard": "NOM-004-SSA3-2012",
+  "contract_version": 1,
+  "ambito": "consulta",
+  "citas_clinicas": {
+    "motivo_consulta": "Dolor de garganta y fiebre de 48 horas",
+    "padecimiento_actual": "Inicia con odinofagia y febricula; sin disnea ni sibilancias"
+  },
+  "complemento_sintomas": "Refiere tos seca ocasional y rinorrea clara",
+  "evolucion_cuadro_clinico": "Se mantiene estable, sin datos de alarma. Tolera via oral. Sin deterioro neurologico.",
+  "signos_vitales": {
+    "ta_sistolica": 118,
+    "ta_diastolica": 76,
+    "fc": 92,
+    "fr": 18,
+    "temperatura": 37.8,
+    "spo2": 97,
+    "dolor_eva": 3
+  },
+  "exploracion_relevante": {
+    "resumen_sistemas": "Faringe hiperemica; murmullo vesicular conservado; abdomen sin datos patologicos",
+    "hallazgos_relevantes": "Adenopatias cervicales dolorosas, sin exudado"
+  },
+  "estudios_relevantes": [
+    {
+      "order_id": "lab_8931",
+      "nombre_estudio": "BH",
+      "fecha": "2024-05-06",
+      "resultado_resumen": "Leucocitos 12.3, neutrofilia",
+      "archivo_url": null
+    }
+  ],
+  "interpretacion_resultados": "Leucocitosis leve compatible con proceso infeccioso.",
+  "diagnosticos": [
+    { "code": "J02.9", "label": "Faringitis aguda no especificada" }
+  ],
+  "pronostico": { "preset": "bueno", "texto": null },
+  "plan_indicaciones": "Hidratacion, analgesia y vigilancia. Regresar si fiebre persistente o dificultad respiratoria.",
+  "receta": {
+    "has_prescription": true,
+    "prescription_id": "rx_1715020000000",
+    "medicamentos": [
+      {
+        "medicamento": "Paracetamol 500 mg",
+        "dosis": "500 mg",
+        "via": "VO",
+        "periodicidad": "cada 8 h",
+        "duracion": "3 dias",
+        "indicaciones": "Tomar con alimentos"
+      }
+    ]
+  },
+  "snapshot": {
+    "paciente": {
+      "patient_id": "ana-garcia|1988-02-03|F",
+      "nombre_completo": "Ana Garcia",
+      "edad": "36",
+      "sexo": "Femenino"
+    },
+    "medico": {
+      "user_id": "dr-gomez",
+      "nombre_completo": "Dr. Luis Gomez",
+      "cedula_profesional": "1234567",
+      "especialidad": "Medicina General"
+    },
+    "generated_at": "2024-05-06T14:32:00.000Z"
+  }
+}

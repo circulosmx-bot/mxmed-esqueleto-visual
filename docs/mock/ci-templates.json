@@ -1,0 +1,54 @@
+{
+  "ok": true,
+  "items": [
+    {
+      "template_id": "CI-GENERAL-001",
+      "nombre": "Procedimiento medico general",
+      "descripcion": "Consentimiento informado para procedimiento medico general.",
+      "template_json": {
+        "version": "1.0",
+        "template_id": "CI-GENERAL-001",
+        "nombre": "Procedimiento medico general",
+        "procedimiento_sugerido": "Procedimiento medico general",
+        "bloques": {
+          "beneficios": [
+            "Mejoria de la condicion clinica."
+          ],
+          "riesgos": [
+            "Dolor o molestia leve.",
+            "Reacciones adversas poco frecuentes."
+          ],
+          "alternativas": [
+            "Tratamiento conservador.",
+            "No realizar el procedimiento."
+          ]
+        }
+      }
+    },
+    {
+      "template_id": "CI-QUIR-001",
+      "nombre": "Procedimiento quirurgico",
+      "descripcion": "Consentimiento informado para procedimiento quirurgico.",
+      "template_json": {
+        "version": "1.0",
+        "template_id": "CI-QUIR-001",
+        "nombre": "Procedimiento quirurgico",
+        "procedimiento_sugerido": "Procedimiento quirurgico de rutina",
+        "bloques": {
+          "beneficios": [
+            "Correccion de la patologia."
+          ],
+          "riesgos": [
+            "Sangrado.",
+            "Infeccion.",
+            "Complicaciones anestesicas."
+          ],
+          "alternativas": [
+            "Manejo conservador.",
+            "No realizar la cirugia."
+          ]
+        }
+      }
+    }
+  ]
+}

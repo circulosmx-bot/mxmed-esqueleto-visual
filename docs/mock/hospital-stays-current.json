@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "stay": {
+    "id": 55,
+    "patient_id": "demo",
+    "service": "Medicina interna",
+    "room": "302",
+    "bed": "B",
+    "started_at": "2025-01-21 08:00:00"
+  }
+}

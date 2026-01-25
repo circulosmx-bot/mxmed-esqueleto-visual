@@ -1,0 +1,11 @@
+*backup*
+*.pdf
+*.txt
+*.docx
+exp_*
+plan-*
+FSD_*
+MODULO*
+api/mxmed-db.config.php
+.DS_Store
+**/.DS_Store
