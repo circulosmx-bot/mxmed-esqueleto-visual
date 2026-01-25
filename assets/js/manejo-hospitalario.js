@@ -4,13 +4,19 @@
   if (!tab || tab.dataset.mhInitialized === '1') return;
   tab.dataset.mhInitialized = '1';
 
-  const CSS = `.mh-ro{background:#f8fafc}.mh-timeline{display:grid;gap:10px}.mh-doc-card{background:#fff;border:1px solid #cfe9f0;border-radius:12px;padding:10px;box-shadow:0 6px 14px rgba(0,0,0,.04)}.mh-doc-ttl{font-weight:800;color:#005275;line-height:1.2}.mh-doc-meta{font-size:.82rem;color:#6c757d;margin-top:2px}.mh-doc-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.mh-events{display:flex;flex-wrap:wrap;gap:8px}.mh-ev-chip{border:1px solid #cfe9f0;border-radius:999px;padding:4px 10px;background:#f5fbff;color:#003152;font-size:.85rem}`;
+  const CSS = `.mh-ro{background:#f8fafc}.mh-timeline{display:grid;gap:10px}.mh-doc-card{background:#fff;border:1px solid #cfe9f0;border-radius:12px;padding:10px;box-shadow:0 6px 14px rgba(0,0,0,.04)}.mh-doc-ttl{font-weight:800;color:#005275;line-height:1.2}.mh-doc-meta{font-size:.82rem;color:#6c757d;margin-top:2px}.mh-doc-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.mh-events{display:flex;flex-wrap:wrap;gap:8px}.mh-ev-chip{border:1px solid #cfe9f0;border-radius:999px;padding:4px 10px;background:#f5fbff;color:#003152;font-size:.85rem}.mh-panel-card .card-body{border-radius:12px}`;
+  const TEMPLATE_ID = 'tpl-manejo-hospitalario';
+
   const ensureCss = () => {
     if (document.getElementById('mh-css')) return;
     const s = document.createElement('style');
     s.id = 'mh-css';
     s.textContent = CSS;
     document.head.appendChild(s);
+  };
+  const getTemplateFragment = () => {
+    const tpl = document.getElementById(TEMPLATE_ID);
+    return tpl ? document.importNode(tpl.content, true) : null;
   };
 
   const qs = (sel, root = tab) => root.querySelector(sel);
@@ -28,8 +34,25 @@
   };
   const normalize = (str) => (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 
+  const isDemo = window.location.hostname.endsWith('github.io');
+  const demoFetchJson = async (path) => {
+    const res = await fetch(path, { method: 'GET', headers: {} });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return data || {};
+  };
+  const demoRoute = (url) => {
+    if (url.includes('hospital-stays.php?action=current')) return demoFetchJson('mock/hospital-stays-current.json');
+    if (url.includes('hospital-stays.php?action=start')) return demoFetchJson('mock/hospital-stays-start.json');
+    if (url.includes('hospital-stays.php?action=close')) return demoFetchJson('mock/hospital-stays-close.json');
+    if (url.includes('clinical-documents.php?action=list')) return demoFetchJson('mock/clinical-documents-list-hosp.json');
+    if (url.includes('clinical-documents.php?action=get')) return demoFetchJson('mock/clinical-documents-get-hosp.json');
+    if (url.includes('clinical-documents.php?action=save')) return demoFetchJson('mock/clinical-documents-save-hosp.json');
+    return Promise.resolve({ ok: true });
+  };
   const api = {
     async j(url, opt) {
+      if (isDemo) return demoRoute(url);
       const res = await fetch(url, { ...(opt || {}), headers: { 'Content-Type': 'application/json', ...(opt?.headers || {}) } });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || (Array.isArray(data?.errors) ? data.errors.join(' ') : '') || `HTTP ${res.status}`);
@@ -74,6 +97,43 @@
     } catch (_) { return { has_prescription: false, prescription_id: '', medicamentos: [] }; }
   };
 
+  const ctxApi = window.mxmedContext || null;
+  const ctxStorageKey = 'mxmed.activeContext';
+  const readStoredContext = () => {
+    try {
+      const raw = localStorage.getItem(ctxStorageKey);
+      return raw ? JSON.parse(raw) : {};
+    } catch (_) {
+      return {};
+    }
+  };
+  const getContextSafe = () => (ctxApi?.getContext ? ctxApi.getContext() : (readStoredContext() || {}));
+  const setContextSafe = (partial) => {
+    if (ctxApi?.setContext) return ctxApi.setContext(partial || {});
+    const prev = readStoredContext() || {};
+    const next = { ...prev };
+    Object.keys(partial || {}).forEach((k) => {
+      const val = partial[k] === '' ? null : partial[k];
+      next[k] = val;
+    });
+    try { localStorage.setItem(ctxStorageKey, JSON.stringify(next)); } catch (_) {}
+    try { document.dispatchEvent(new CustomEvent('mxmed:context:changed', { detail: { ...next } })); } catch (_) {}
+    return next;
+  };
+  const isValidPatientId = (id) => !!id && id !== 'anon' && id !== 'paciente';
+  const ensureContextNotice = () => {
+    let box = qs('#mh_context_notice');
+    if (!box) return null;
+    return box;
+  };
+  const updateContextNotice = () => {
+    const ctx = getContextSafe();
+    const ok = isValidPatientId((ctx?.patient_id || '').trim());
+    const box = ensureContextNotice();
+    if (!box) return;
+    box.classList.toggle('d-none', ok);
+  };
+
   const state = { loaded: false, stay: null, events: [] };
   const showErr = (msgs) => {
     const el = qs('#mh_errors');
@@ -90,8 +150,11 @@
     w.document.close(); w.focus(); w.print();
   };
   const openDoc = (text) => {
-    const ta = qs('#mh_doc_text'); const modalEl = qs('#modalMhDocument');
-    if (!ta || !modalEl) return;
+    const ta = qs('#mh_doc_text');
+    if (!ta) return;
+    ta.value = text || '';
+    const modalEl = qs('#modalMhDocument');
+    if (!modalEl) return;
     ta.value = text || '';
     try { bootstrap?.Modal?.getOrCreateInstance(modalEl)?.show(); } catch (_) {}
   };
@@ -131,7 +194,7 @@
     const box = qs('#mh_rx_ro');
     if (!box) return;
     if (!rx.has_prescription) { box.textContent = 'Sin receta registrada'; return; }
-    box.textContent = rx.medicamentos.map(m => `• ${[(m.medicamento||'').trim(),(m.dosis||'').trim(),(m.via||'').trim(),(m.periodicidad||'').trim(),(m.duracion||'').trim()].filter(Boolean).join(' · ') || 'Medicamento'}`).join('\n');
+    box.textContent = rx.medicamentos.map(m => `• ${[(m.medicamento||'').trim(),(m.dosis||'').trim(),(m.via||'').trim(),(m.periodicidad||'').trim(),(m.duracion||'').trim()].filter(Boolean).join(' · ') || 'Medicamento'}`).join('\\n');
     box.style.whiteSpace = 'pre-wrap';
   };
 
@@ -164,6 +227,20 @@
     }
   };
 
+  const syncContextFromState = () => {
+    if (!ctxApi?.setContext) return;
+    const patient = getPatient();
+    const pid = isValidPatientId(patient.patient_id) ? patient.patient_id : null;
+    const stayId = state.stay?.id ? String(state.stay.id) : null;
+    const care = stayId ? 'hospitalizacion' : (pid ? 'consulta' : null);
+    setContextSafe({
+      patient_id: pid,
+      hospital_stay_id: stayId,
+      care_setting: care,
+      service: state.stay?.service || null
+    });
+  };
+
   const refresh = async () => {
     showErr([]);
     renderRx(); balance(); renderEvents();
@@ -172,10 +249,14 @@
       const res = await api.currentStay(patient.patient_id);
       state.stay = res?.stay || null;
       renderStay();
+      syncContextFromState();
+      updateContextNotice();
       await renderTimeline();
     } catch (e) {
       state.stay = null;
       renderStay();
+      syncContextFromState();
+      updateContextNotice();
       showErr([e?.message || String(e)]);
     }
   };
@@ -199,7 +280,7 @@
     const rx = getRxDraft(patient.patient_id);
     const b = balance();
 
-    const diagnosticos = (qs('#mh_dx')?.value || '').split('\n').map(s => s.trim()).filter(Boolean).map(label => ({ code: null, label }));
+    const diagnosticos = (qs('#mh_dx')?.value || '').split('\\n').map(s => s.trim()).filter(Boolean).map(label => ({ code: null, label }));
 
     return {
       section_id: 'nota_evolucion_hosp',
@@ -296,6 +377,9 @@
   };
 
   const bind = () => {
+    if (ctxApi?.onContextChanged) ctxApi.onContextChanged(updateContextNotice);
+    else document.addEventListener('mxmed:context:changed', updateContextNotice);
+
     qs('#mh_refresh_btn')?.addEventListener('click', refresh);
 
     qs('#mh_start_service')?.addEventListener('change', () => {
@@ -359,17 +443,6 @@
     });
 
     ['#mh_in_iv','#mh_in_vo','#mh_in_otros','#mh_out_diuresis','#mh_out_evacu','#mh_out_dren','#mh_out_otros'].forEach(s => qs(s)?.addEventListener('input', balance));
-
-    qs('#mh_dieta')?.addEventListener('change', () => {
-      const other = (qs('#mh_dieta')?.value || '') === 'otra';
-      const el = qs('#mh_dieta_txt'); if (!el) return;
-      el.style.display = other ? '' : 'none'; if (!other) el.value = '';
-    });
-    qs('#mh_pronostico')?.addEventListener('change', () => {
-      const other = (qs('#mh_pronostico')?.value || '') === 'otro';
-      const el = qs('#mh_pronostico_txt'); if (!el) return;
-      el.disabled = !other; if (!other) el.value = '';
-    });
 
     document.getElementById('modalReceta')?.addEventListener('hidden.bs.modal', renderRx);
 
@@ -438,9 +511,13 @@
   const mount = async () => {
     if (state.loaded) return;
     ensureCss();
-    const res = await fetch('assets/partials/manejo-hospitalario.html', { cache: 'no-store' }).catch(() => null);
-    const html = res ? await res.text().catch(() => '') : '';
-    tab.innerHTML = html || '<div class="alert alert-danger">No se pudo cargar el panel de Manejo hospitalario.</div>';
+    const fragment = getTemplateFragment();
+    if (!fragment) {
+      tab.innerHTML = '<div class="alert alert-danger">Plantilla de Manejo hospitalario no disponible.</div>';
+      return;
+    }
+    tab.innerHTML = '';
+    tab.appendChild(fragment);
     state.loaded = true;
     bind();
     await refresh();

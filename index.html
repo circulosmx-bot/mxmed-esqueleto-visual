@@ -890,7 +890,43 @@
 
                 </div>
 
-                
+                <div class="card mt-3" id="dg-signature-card">
+                  <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between gap-2">
+                      <div>
+                        <div class="fw-semibold">Digitalizar Firma</div>
+                        <div class="text-muted small">Digitaliza tu firma para aplicarla directamente en recetas o formatos dentro del sistema.</div>
+                      </div>
+                      <span class="badge bg-light text-dark border" id="dg-signature-status">Sin firma</span>
+                    </div>
+
+                    <div class="mt-3" id="dg-signature-desktop">
+                      <button class="btn btn-outline-primary btn-sm" id="dg-signature-qr-btn" type="button">Generar codigo QR</button>
+                      <div class="text-muted small mt-2">Escanealo desde tu movil o tablet para firmar en pantalla.</div>
+                      <div class="mt-2 d-none" id="dg-signature-qr-wrap">
+                        <div class="border rounded p-2 d-inline-flex align-items-center justify-content-center bg-white" style="min-width:180px;min-height:180px">
+                          <canvas id="dg-signature-qr" width="180" height="180" aria-label="Codigo QR de sesion"></canvas>
+                        </div>
+                        <div class="text-muted small mt-1">Sesion: <span id="dg-signature-session"></span></div>
+                      </div>
+                    </div>
+
+                    <div class="mt-3 d-none" id="dg-signature-mobile">
+                      <button class="btn btn-primary btn-sm" id="dg-signature-open" type="button">Firmar en pantalla</button>
+                      <div class="text-muted small mt-2">Abre el lienzo para firmar desde tu telefono o tablet.</div>
+                      <div class="mt-3 d-none" id="dg-signature-mobile-body">
+                        <div class="text-muted small mb-2">Firma en pantalla y guarda tu rubrica.</div>
+                        <div class="border rounded p-2 bg-white">
+                          <canvas id="dg-signature-pad" width="420" height="180" class="w-100" style="touch-action:none"></canvas>
+                        </div>
+                        <div class="d-flex gap-2 mt-2">
+                          <button class="btn btn-outline-secondary btn-sm" id="dg-signature-clear" type="button">Reintentar</button>
+                          <button class="btn btn-primary btn-sm" id="dg-signature-save" type="button">Guardar firma</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
               </div>
 
@@ -5789,11 +5825,98 @@
                 </div>
               </div>
 
-              <div class="tab-pane fade" id="t-manejo"><div class="alert alert-info">Manejo hospitalario
-</div></div>
+              <div class="tab-pane fade" id="t-manejo"></div>
 
-              <div class="tab-pane fade" id="t-consent"><div class="alert alert-info">Consentimientos informados
-</div></div>
+              <div class="tab-pane fade" id="t-consent">
+                <div class="exp-card exp-card--secondary">
+                  <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
+                    <span>Consentimientos informados</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary exp-mini-btn" id="ci_new_btn">Nuevo Consentimiento Informado</button>
+                  </div>
+                  <div class="alert alert-info py-2 mb-3 d-none" id="ci_context_notice">Selecciona paciente</div>
+                  <div class="alert alert-light mb-3" id="ci_empty_state">Aún no hay consentimientos para este paciente.</div>
+                  <div class="ci-list d-grid gap-2" id="ci_list"></div>
+                </div>
+
+                <div class="exp-card mt-3 d-none" id="ci_wizard">
+                  <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
+                    <span>Nuevo Consentimiento Informado</span>
+                    <span class="text-muted small" id="ci_step_label">Paso 1 de 2</span>
+                  </div>
+                  <div class="exp-card-body">
+                    <div class="alert alert-warning py-2 d-none" id="ci_wizard_notice"></div>
+
+                    <div id="ci_step_1">
+                      <div class="row g-3">
+                        <div class="col-md-6">
+                          <label class="form-label">Paciente</label>
+                          <input class="form-control" id="ci_pac_nombre" readonly>
+                        </div>
+                        <div class="col-md-3">
+                          <label class="form-label">Edad</label>
+                          <input class="form-control" id="ci_pac_edad" readonly>
+                        </div>
+                        <div class="col-md-3">
+                          <label class="form-label">Sexo</label>
+                          <input class="form-control" id="ci_pac_sexo" readonly>
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label" for="ci_pac_tel">Teléfono</label>
+                          <input class="form-control" id="ci_pac_tel" placeholder="Ej. 5551234567">
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label" for="ci_pac_mail">Correo electrónico</label>
+                          <input class="form-control" id="ci_pac_mail" type="email" placeholder="correo@correo.com">
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label" for="ci_pac_dom">Domicilio</label>
+                          <input class="form-control" id="ci_pac_dom" placeholder="Calle, colonia, municipio, estado">
+                        </div>
+                        <div class="col-12">
+                          <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="ci_update_patient">
+                            <label class="form-check-label" for="ci_update_patient">Actualizar ficha del paciente si ya tiene datos</label>
+                          </div>
+                          <div class="form-text">Si el campo ya estaba capturado, confirma antes de editarlo.</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div id="ci_step_2" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-md-6">
+                          <label class="form-label" for="ci_template">Plantilla de consentimiento</label>
+                          <select class="form-select" id="ci_template">
+                            <option value="">Selecciona una plantilla</option>
+                          </select>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label" for="ci_procedimiento">Procedimiento</label>
+                          <input class="form-control" id="ci_procedimiento" placeholder="Describe el procedimiento">
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label" for="ci_motivo">Motivo / diagnóstico <span class="text-muted">(opcional)</span></label>
+                          <input class="form-control" id="ci_motivo" placeholder="Motivo o diagnóstico">
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label" for="ci_objetivo">Objetivo</label>
+                          <input class="form-control" id="ci_objetivo" placeholder="Objetivo del procedimiento">
+                        </div>
+                        <div class="col-12">
+                          <div class="alert alert-light py-2 mb-0" id="ci_template_desc">Selecciona una plantilla para ver sus riesgos, beneficios y alternativas.</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                      <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_prev" disabled>Anterior</button>
+                      <button type="button" class="btn btn-primary btn-sm" id="ci_next">Continuar</button>
+                      <button type="button" class="btn btn-success btn-sm d-none" id="ci_save">Guardar borrador</button>
+                      <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="ci_cancel">Cancelar</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <div class="tab-pane fade" id="t-archivo"><div class="alert alert-info">Adjuntos del expediente
 </div></div>
@@ -6175,16 +6298,193 @@
 
 <script src="assets/js/fotos.js"></script>
 
+<template id="tpl-manejo-hospitalario">
+  <div class="mh-app" data-mh-section="manejo_hospitalario">
+    <div id="mh_context_notice" class="alert alert-warning py-2 mb-3 d-none">Selecciona paciente</div>
+    <div class="row g-3">
+      <div class="col-12">
+        <div class="card mh-panel-card">
+          <div class="card-body">
+            <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+              <div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                  <h6 class="mb-0">Episodio hospitalario</h6>
+                  <span class="badge text-bg-secondary" id="mh_stay_badge">Sin episodio activo</span>
+                </div>
+                <div class="text-muted small mt-1" id="mh_stay_meta">Para generar documentos intrahospitalarios inicia una hospitalización.</div>
+                <div class="small mt-2" id="mh_stay_details"></div>
+              </div>
+              <div class="d-flex gap-2 flex-wrap">
+                <button type="button" class="btn btn-outline-primary btn-sm" id="mh_start_btn">Iniciar hospitalización</button>
+                <button type="button" class="btn btn-outline-danger btn-sm d-none" id="mh_close_btn">Cerrar hospitalización</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="mh_refresh_btn">Refrescar</button>
+              </div>
+            </div>
+            <div class="alert alert-danger d-none mt-3 mb-0" id="mh_errors" role="alert"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card mh-panel-card">
+          <div class="card-body">
+            <h6>Signos vitales</h6>
+            <div class="row g-2 mt-2">
+              <div class="col-6 col-md-3"><label class="form-label small">TA sist.</label><input id="mh_vitals_sys" type="number" class="form-control form-control-sm" /></div>
+              <div class="col-6 col-md-3"><label class="form-label small">TA diast.</label><input id="mh_vitals_dia" type="number" class="form-control form-control-sm" /></div>
+              <div class="col-6 col-md-3"><label class="form-label small">FC</label><input id="mh_vitals_fc" type="number" class="form-control form-control-sm" /></div>
+              <div class="col-6 col-md-3"><label class="form-label small">FR</label><input id="mh_vitals_fr" type="number" class="form-control form-control-sm" /></div>
+              <div class="col-6 col-md-4"><label class="form-label small">Temp.</label><input id="mh_vitals_temp" type="number" step="0.1" class="form-control form-control-sm" /></div>
+              <div class="col-6 col-md-4"><label class="form-label small">SpO₂</label><input id="mh_vitals_spo2" type="number" class="form-control form-control-sm" /></div>
+              <div class="col-6 col-md-4"><label class="form-label small">Dolor EVA</label><input id="mh_dolor_eva" type="number" class="form-control form-control-sm" /></div>
+            </div>
+            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="mh_vitals_from_expl">Cargar exploración</button>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card mh-panel-card">
+          <div class="card-body">
+            <h6>Balance hídrico</h6>
+            <div class="row g-2">
+              <div class="col-6"><input id="mh_in_iv" type="number" class="form-control form-control-sm" placeholder="IV (ml)" /></div>
+              <div class="col-6"><input id="mh_in_vo" type="number" class="form-control form-control-sm" placeholder="VO (ml)" /></div>
+              <div class="col-6"><input id="mh_in_otros" type="number" class="form-control form-control-sm" placeholder="Otros ingresos" /></div>
+              <div class="col-12"><input id="mh_in_notas" class="form-control form-control-sm" placeholder="Notas ingresos" /></div>
+              <div class="col-6"><input id="mh_out_diuresis" type="number" class="form-control form-control-sm" placeholder="Diuresis" /></div>
+              <div class="col-6"><input id="mh_out_evacu" type="number" class="form-control form-control-sm" placeholder="Evacuaciones" /></div>
+              <div class="col-6"><input id="mh_out_dren" type="number" class="form-control form-control-sm" placeholder="Drenajes" /></div>
+              <div class="col-6"><input id="mh_out_otros" type="number" class="form-control form-control-sm" placeholder="Otros egresos" /></div>
+              <div class="col-12"><input id="mh_out_notas" class="form-control form-control-sm" placeholder="Notas egresos" /></div>
+            </div>
+            <div class="mt-2"><span class="badge text-bg-secondary" id="mh_balance_badge">0 ml</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card mh-panel-card">
+          <div class="card-body">
+            <h6>Soporte / exploración</h6>
+            <div class="form-check"><input id="mh_sup_o2" class="form-check-input" type="checkbox" /><label class="form-check-label">Oxígeno</label></div>
+            <div id="mh_o2_block" class="ps-3 mt-2" style="display:none;">
+              <input id="mh_o2_tipo" class="form-control form-control-sm mb-1" placeholder="Tipo de oxígeno" />
+              <input id="mh_o2_flujo" class="form-control form-control-sm mb-1" placeholder="Flujo / FiO2" />
+              <textarea id="mh_o2_notas" class="form-control form-control-sm" rows="2" placeholder="Notas de oxígeno"></textarea>
+            </div>
+            <div class="form-check mt-2"><input id="mh_sup_vv" class="form-check-input" type="checkbox" /><label class="form-check-label">Vía venosa</label></div>
+            <div class="form-check"><input id="mh_sup_foley" class="form-check-input" type="checkbox" /><label class="form-check-label">Foley</label></div>
+            <div class="form-check"><input id="mh_sup_sng" class="form-check-input" type="checkbox" /><label class="form-check-label">SNG</label></div>
+            <div class="form-check"><input id="mh_sup_drains" class="form-check-input" type="checkbox" /><label class="form-check-label">Drenajes</label></div>
+            <textarea id="mh_drains_txt" class="form-control form-control-sm mt-2" rows="2" placeholder="Detalle drenajes" style="display:none;"></textarea>
+            <h6 class="mt-3">Exploración</h6>
+            <textarea id="mh_expl_resumen" class="form-control form-control-sm mb-2" rows="2" placeholder="Resumen por sistemas"></textarea>
+            <textarea id="mh_hallazgos" class="form-control form-control-sm" rows="2" placeholder="Hallazgos relevantes"></textarea>
+            <textarea id="mh_evo_nota" class="form-control form-control-sm mt-2" rows="3" placeholder="Evolución del paciente"></textarea>
+            <textarea id="mh_plan" class="form-control form-control-sm mt-2" rows="3" placeholder="Plan e indicaciones"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="col-12">
+        <div class="card mh-panel-card">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+              <h6 class="mb-0">Timeline del episodio</h6>
+              <div class="d-flex gap-2 flex-wrap">
+                <button type="button" class="btn btn-outline-primary btn-sm" id="mh_generate_note">Generar nota intrahospitalaria</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="mh_generate_orders">Generar hoja de indicaciones</button>
+              </div>
+            </div>
+            <div class="mt-3 mh-timeline" id="mh_timeline"><div class="text-muted small">Sin episodio activo.</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12">
+        <div class="card mh-panel-card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <h6 class="mb-0">Eventos rápidos</h6>
+              <button type="button" class="btn btn-link btn-sm" id="mh_event_save">Registrar evento</button>
+            </div>
+            <div class="mt-2">
+              <select id="mh_event_type" class="form-select form-select-sm mb-2">
+                <option value="fiebre">Fiebre</option>
+                <option value="hipotension">Hipotensión</option>
+                <option value="caida">Caída</option>
+                <option value="traslado">Traslado</option>
+                <option value="procedimiento">Procedimiento</option>
+                <option value="reaccion">Reacción</option>
+                <option value="incidente">Incidente</option>
+                <option value="otro">Otro</option>
+              </select>
+              <textarea id="mh_event_desc" class="form-control form-control-sm" rows="2" placeholder="Descripción del evento"></textarea>
+            </div>
+            <div class="mt-3 mh-events" id="mh_events_list"><div class="text-muted small">Sin eventos capturados en este panel.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="d-none">
+      <textarea id="mh_doc_text"></textarea>
+    </div>
+    <div class="modal fade" id="modalMhStart" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Iniciar hospitalización</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-2">
+              <label class="form-label small">Servicio</label>
+              <select id="mh_start_service" class="form-select form-select-sm">
+                <option value="Consulta">Consulta</option>
+                <option value="Urgencias">Urgencias</option>
+                <option value="Hospitalización">Hospitalización</option>
+                <option value="Otro">Otro</option>
+              </select>
+              <input id="mh_start_service_other" class="form-control form-control-sm mt-1" placeholder="Otro servicio" style="display:none;" />
+            </div>
+            <div class="row g-2">
+              <div class="col-6"><input id="mh_start_room" class="form-control form-control-sm" placeholder="Habitación" /></div>
+              <div class="col-6"><input id="mh_start_bed" class="form-control form-control-sm" placeholder="Cama" /></div>
+            </div>
+            <div class="mb-2 mt-2">
+              <label class="form-label small">Diagnóstico de ingreso</label>
+              <textarea id="mh_start_dx" class="form-control form-control-sm" rows="2"></textarea>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small">Motivo de hospitalización</label>
+              <textarea id="mh_start_reason" class="form-control form-control-sm" rows="2"></textarea>
+            </div>
+            <input type="hidden" id="mh_start_attending" />
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-primary btn-sm" id="mh_start_save">Guardar episodio</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="modalMhClose" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Cerrar hospitalización</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <p>¿Estás seguro de cerrar el episodio activo?</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-danger btn-sm" id="mh_close_confirm">Confirmar cierre</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
 </body>
 </html>
-
-
-
-
-
-
-
-
 
 
 
