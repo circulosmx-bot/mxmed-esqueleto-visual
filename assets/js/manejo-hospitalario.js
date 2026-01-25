@@ -34,25 +34,65 @@
   };
   const normalize = (str) => (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 
-  const isDemo = window.location.hostname.endsWith('github.io');
-  const demoFetchJson = async (path) => {
-    const res = await fetch(path, { method: 'GET', headers: {} });
-    const data = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return data || {};
+  const isDemo = window.location.hostname.includes('github.io');
+  let demoStay = null;
+  const demoDocuments = [
+    {
+      id: 'demo-n1',
+      document_type: 'nota_evolucion_hosp',
+      summary: 'Evolución demostración',
+      event_datetime: new Date().toISOString(),
+      doctor_name: 'Dr. Demo',
+      content: { rendered_text: 'Evolución simulada para el modo demostración.' }
+    }
+  ];
+  const createDemoDocument = (payload, body) => {
+    const doc = {
+      id: `demo-doc-${Date.now()}`,
+      summary: payload.plan_indicaciones ? `Plan: ${payload.plan_indicaciones.slice(0, 40)}` : 'Documento de demostración',
+      document_type: payload.section_id || 'nota',
+      event_datetime: new Date().toISOString(),
+      doctor_name: body?.actor?.nombre_completo || 'Dr. Demo',
+      content: { rendered_text: 'Documento simulado generado en modo demostración.' }
+    };
+    demoDocuments.unshift(doc);
+    return doc;
   };
-  const demoRoute = (url) => {
-    if (url.includes('hospital-stays.php?action=current')) return demoFetchJson('mock/hospital-stays-current.json');
-    if (url.includes('hospital-stays.php?action=start')) return demoFetchJson('mock/hospital-stays-start.json');
-    if (url.includes('hospital-stays.php?action=close')) return demoFetchJson('mock/hospital-stays-close.json');
-    if (url.includes('clinical-documents.php?action=list')) return demoFetchJson('mock/clinical-documents-list-hosp.json');
-    if (url.includes('clinical-documents.php?action=get')) return demoFetchJson('mock/clinical-documents-get-hosp.json');
-    if (url.includes('clinical-documents.php?action=save')) return demoFetchJson('mock/clinical-documents-save-hosp.json');
+  const demoRoute = (url, opt) => {
+    if (url.includes('hospital-stays.php?action=current')) return Promise.resolve({ stay: demoStay });
+    if (url.includes('hospital-stays.php?action=start')) {
+      const body = opt?.body ? JSON.parse(opt.body) : {};
+      demoStay = {
+        id: `demo-stay-${Date.now()}`,
+        patient_id: body?.patient_id || 'demo-patient',
+        service: body?.service || 'Demo',
+        room: body?.room || 'Demo',
+        bed: body?.bed || 'D',
+        started_at: new Date().toISOString()
+      };
+      return Promise.resolve({ stay: demoStay });
+    }
+    if (url.includes('hospital-stays.php?action=close')) {
+      demoStay = null;
+      return Promise.resolve({ ok: true });
+    }
+    if (url.includes('clinical-documents.php?action=list')) return Promise.resolve({ items: demoDocuments.slice(0, 5) });
+    if (url.includes('clinical-documents.php?action=get')) {
+      const params = new URLSearchParams(url.split('?')[1] || '');
+      const id = params.get('id');
+      const doc = demoDocuments.find(d => String(d.id) === String(id)) || demoDocuments[0];
+      return Promise.resolve({ document: doc });
+    }
+    if (url.includes('clinical-documents.php?action=save')) {
+      const body = opt?.body ? JSON.parse(opt.body) : {};
+      const doc = createDemoDocument(body.payload || {}, body.context || {});
+      return Promise.resolve({ document: doc });
+    }
     return Promise.resolve({ ok: true });
   };
   const api = {
     async j(url, opt) {
-      if (isDemo) return demoRoute(url);
+      if (isDemo) return demoRoute(url, opt);
       const res = await fetch(url, { ...(opt || {}), headers: { 'Content-Type': 'application/json', ...(opt?.headers || {}) } });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || (Array.isArray(data?.errors) ? data.errors.join(' ') : '') || `HTTP ${res.status}`);
