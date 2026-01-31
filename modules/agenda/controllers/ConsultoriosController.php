@@ -28,7 +28,7 @@ class ConsultoriosController
             return $this->error('db_not_ready', 'consultorios table not identified yet');
         }
         if (empty($params['doctor_id'])) {
-            return $this->error('invalid_params', 'doctor_id is required');
+            return $this->error('invalid_params', 'doctor_id is required', ['doctor_id' => $params['doctor_id'] ?? null]);
         }
         try {
             $data = $this->repository->listByDoctor($params['doctor_id']);
@@ -46,14 +46,14 @@ class ConsultoriosController
         ];
     }
 
-    private function error(string $code, string $message)
+    private function error(string $code, string $message, array $meta = [])
     {
         return [
             'ok' => false,
             'error' => $code,
             'message' => $message,
             'data' => null,
-            'meta' => [],
+            'meta' => $meta,
         ];
     }
 }
