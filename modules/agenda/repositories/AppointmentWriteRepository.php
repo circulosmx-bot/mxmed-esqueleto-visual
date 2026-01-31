@@ -127,10 +127,10 @@ class AppointmentWriteRepository
             'appointment_id' => $appointmentId,
             'event_type' => 'appointment_rescheduled',
             'timestamp' => (new DateTime('now', new DateTimeZone(self::TIMEZONE)))->format('Y-m-d H:i:s'),
-            'from_datetime' => $payload['from_start_at'],
+            'from_datetime' => $current['start_at'] ?? null,
             'to_datetime' => $payload['to_end_at'],
-            'from_start_at' => $payload['from_start_at'],
-            'from_end_at' => $payload['from_end_at'],
+            'from_start_at' => $current['start_at'] ?? null,
+            'from_end_at' => $current['end_at'] ?? null,
             'to_start_at' => $payload['to_start_at'],
             'to_end_at' => $payload['to_end_at'],
             'motivo_code' => $payload['motivo_code'] ?? null,
@@ -213,7 +213,7 @@ class AppointmentWriteRepository
         $columns = $this->getColumns($table);
         $available = array_intersect_key($data, array_flip($columns));
         if (empty($available)) {
-            throw new RuntimeException('no columns available for update');
+            throw new RuntimeException('database error');
         }
         $sets = [];
         foreach ($available as $column => $value) {

@@ -117,7 +117,10 @@ class AppointmentWriteController
             if ($message === 'appointment not found') {
                 return ['ok' => false, 'error' => 'not_found', 'message' => 'appointment not found', 'data' => null, 'meta' => (object)[]];
             }
-            return $this->error('db_not_ready', $message);
+            if (in_array($message, ['appointments table not ready', 'appointment events not ready'], true)) {
+                return $this->error('db_not_ready', $message);
+            }
+            return $this->error('db_error', 'database error');
         } catch (PDOException $e) {
             return $this->error('db_error', 'database error');
         }
