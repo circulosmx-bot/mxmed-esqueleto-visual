@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/ConsultoriosController.php';
+require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentEventsController.php';
+require_once __DIR__ . '/../../modules/agenda/controllers/PatientFlagsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AvailabilityController.php';
 
 use Agenda\Controllers\AppointmentsController;
@@ -20,11 +22,22 @@ $response = [
 ];
 
 switch ($segments[0] ?? '') {
-    case 'appointments':
-        if (isset($segments[1]) && $segments[1] !== '') {
-            $response = $controller->show($segments[1]);
+case 'appointments':
+    if (isset($segments[1]) && $segments[1] !== '') {
+            if (($segments[2] ?? '') === 'events') {
+                $events = new AppointmentEventsController();
+                $response = $events->index($segments[1], $_GET);
+            } else {
+                $response = $controller->show($segments[1]);
+            }
         } else {
             $response = $controller->index($_GET);
+        }
+        break;
+    case 'patients':
+        if (isset($segments[1]) && $segments[1] !== '' && ($segments[2] ?? '') === 'flags') {
+            $flags = new PatientFlagsController();
+            $response = $flags->index($segments[1], $_GET);
         }
         break;
     case 'consultorios':
