@@ -49,9 +49,9 @@ class AppointmentWriteRepository
 
         $this->pdo->beginTransaction();
         try {
-        $this->insert($this->appointmentsTable, $appointmentData);
-        $this->appendEvent($appointmentId, $payload, $createdAt);
-        $this->pdo->commit();
+            $this->insert($this->appointmentsTable, $appointmentData);
+            $this->appendEvent($appointmentId, $payload, $createdAt);
+            $this->pdo->commit(); // commit within the try scope after all inserts succeed
         } catch (PDOException $e) {
             $this->pdo->rollBack();
             throw $e;

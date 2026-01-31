@@ -40,7 +40,10 @@ class AppointmentWriteController
             return $this->error('db_error', 'database error');
         }
         if ($this->dbError) {
-            return $this->error('db_not_ready', $this->dbError);
+            if (in_array($this->dbError, ['appointments table not ready', 'appointment events not ready'], true)) {
+                return $this->error('db_not_ready', $this->dbError);
+            }
+            return $this->error('db_error', 'database error');
         }
         if (!$this->repository) {
             return $this->notImplemented();
