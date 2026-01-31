@@ -4,8 +4,8 @@ set -euo pipefail
 BASE_URL="${BASE_URL:-http://127.0.0.1:8089/api/agenda/index.php}"
 DOCTOR_ID="${DOCTOR_ID:-1}"
 CONSULTORIO_ID="${CONSULTORIO_ID:-1}"
-APPOINTMENT_ID="${APPOINTMENT_ID:-unknown}"
-PATIENT_ID="${PATIENT_ID:-unknown}"
+APPOINTMENT_ID="${APPOINTMENT_ID:-demo}"
+PATIENT_ID="${PATIENT_ID:-demo}"
 DATE="${DATE:-2026-02-01}"
 
 need() {
@@ -23,8 +23,6 @@ print_header() {
   echo
   echo "=== $title ==="
 }
-
-LAST_RESPONSE=""
 
 assert_contract() {
   local body="$1"
@@ -53,46 +51,52 @@ assert_error_exact() {
   fi
 }
 
-call() {
+run_test() {
   local title="$1"
-  shift
+  local expected_code="$2"
+  local expected_message="$3"
+  shift 3
   print_header "$title"
   local response
   response="$("$@")"
   echo "$response" | jq .
   assert_contract "$response"
   assert_meta_object "$response"
-  LAST_RESPONSE="$response"
+  assert_error_exact "$response" "$expected_code" "$expected_message"
 }
 
-call "GET availability" curl -s -X GET "$BASE_URL/availability?doctor_id=$DOCTOR_ID&consultorio_id=$CONSULTORIO_ID&date=$DATE"
+run_test "Given agenda tables absent / GET availability" \
+  db_not_ready "availability base schedule not ready" \
+  curl -s -X GET "$BASE_URL/availability?doctor_id=$DOCTOR_ID&consultorio_id=$CONSULTORIO_ID&date=$DATE"
 
-print_header "Overrides scenarios (controlled via modules/agenda/config/agenda.php)"
-echo "- Set overrides_table=null to keep availability running with meta.overrides_enabled=false"
-echo "- Set overrides_table='tabla_missing' (absent table) to observe db_not_ready 'availability overrides not ready'"
-echo "- Once overrides_table points to an existing table, expect ok:true with meta.overrides_enabled=true"
+run_test "Given appointment events missing / GET events" \
+  db_not_ready "appointment events not ready" \
+  curl -s -X GET "$BASE_URL/appointments/$APPOINTMENT_ID/events"
 
-echo
+run_test "Given patient flags missing / GET flags" \
+  db_not_ready "patient flags not ready" \
+  curl -s -X GET "$BASE_URL/patients/$PATIENT_ID/flags"
 
-call "GET appointment events" curl -s -X GET "$BASE_URL/appointments/$APPOINTMENT_ID/events"
+run_test "Given appointments missing / POST create" \
+  invalid_params "invalid_params" \
+  curl -s -X POST "$BASE_URL/appointments" -H 'Content-Type: application/json' -d '{}'
 
-call "GET patient flags" curl -s -X GET "$BASE_URL/patients/$PATIENT_ID/flags"
-
-call "POST create appointment (invalid payload)" curl -s -X POST "$BASE_URL/appointments" -H 'Content-Type: application/json' -d '{}'
-
-call "PATCH reschedule (unknown appointment)" \
+run_test "Given no appointment / PATCH reschedule" \
+  not_found "appointment not found" \
   curl -s -X PATCH "$BASE_URL/appointments/unknown/reschedule" -H 'Content-Type: application/json' \
     -d '{"motivo_code":"test","from_start_at":"2026-02-01 09:00:00","from_end_at":"2026-02-01 09:30:00","to_start_at":"2026-02-02 09:00:00","to_end_at":"2026-02-02 09:30:00"}'
-assert_error_exact "$LAST_RESPONSE" "not_found" "appointment not found"
 
-call "POST cancel (unknown appointment)" \
+run_test "Given no appointment / POST cancel" \
+  not_found "appointment not found" \
   curl -s -X POST "$BASE_URL/appointments/unknown/cancel" -H 'Content-Type: application/json' -d '{"motivo_code":"test"}'
-assert_error_exact "$LAST_RESPONSE" "not_found" "appointment not found"
 
-call "POST no_show (unknown appointment)" \
+run_test "Given invalid payload / POST no_show" \
+  invalid_params "invalid_params" \
   curl -s -X POST "$BASE_URL/appointments/unknown/no_show" -H 'Content-Type: application/json' -d '{"motivo_code":"test"}'
-assert_error_exact "$LAST_RESPONSE" "not_found" "appointment not found"
+
+print_header "Overrides note"
+echo "Control overrides via modules/agenda/config/agenda.php (overrides_table=null / missing table / existing table)."
 
 echo
-print_header "QA script completed"
-echo "Adjust BASE_URL / IDs / DATE via env vars and rerun."
+print_header "QA script finished"
+echo "Use environment vars to point to your server and adjust IDs/dates."
