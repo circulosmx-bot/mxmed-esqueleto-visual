@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/ConsultoriosController.php';
+require_once __DIR__ . '/../../modules/agenda/controllers/AvailabilityController.php';
 
 use Agenda\Controllers\AppointmentsController;
 use Agenda\Controllers\ConsultoriosController;
@@ -29,6 +30,10 @@ switch ($segments[0] ?? '') {
     case 'consultorios':
         $consultorios = new ConsultoriosController();
         $response = $consultorios->index($_GET);
+        break;
+    case 'availability':
+        $availability = new AvailabilityController();
+        $response = $availability->index($_GET);
         break;
 }
 

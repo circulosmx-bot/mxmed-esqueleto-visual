@@ -106,7 +106,7 @@ class AppointmentsController
             'error' => $code,
             'message' => $message,
             'data' => null,
-            'meta' => $meta,
+            'meta' => (object)$meta,
         ];
     }
 }
