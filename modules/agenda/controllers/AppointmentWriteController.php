@@ -6,17 +6,23 @@ use PDOException;
 use RuntimeException;
 
 require_once __DIR__ . '/../repositories/AppointmentWriteRepository.php';
-require_once __DIR__ . '/../../api/_lib/db.php';
+require_once __DIR__ . '/../../../api/_lib/db.php';
 
 class AppointmentWriteController
 {
     private ?AppointmentWriteRepository $repository = null;
     private ?string $dbError = null;
+    private bool $dbConnectionError = false;
 
     public function __construct()
     {
         try {
             $pdo = mxmed_pdo();
+        } catch (RuntimeException $e) {
+            $this->dbConnectionError = true;
+            return;
+        }
+        try {
             $this->repository = new AppointmentWriteRepository($pdo);
         } catch (RuntimeException $e) {
             $this->dbError = $e->getMessage();
@@ -29,6 +35,9 @@ class AppointmentWriteController
         $errors = $this->validateCreate($payload);
         if ($errors) {
             return $this->error('invalid_params', 'invalid payload for create', $errors);
+        }
+        if ($this->dbConnectionError) {
+            return $this->error('db_error', 'database error');
         }
         if ($this->dbError) {
             return $this->error('db_not_ready', $this->dbError);
