@@ -1,11 +1,14 @@
 <?php
 namespace Agenda\Repositories;
 
+use Agenda\Repositories\PatientFlagsWriteRepository;
 use DateTime;
 use DateTimeZone;
 use PDO;
 use PDOException;
 use RuntimeException;
+
+require_once __DIR__ . '/../repositories/PatientFlagsWriteRepository.php';
 
 class AppointmentWriteRepository
 {
@@ -14,6 +17,8 @@ class AppointmentWriteRepository
     private ?string $eventsTable = null;
     private ?string $appointmentPk = null;
     private array $columnsCache = [];
+    private ?PatientFlagsWriteRepository $patientFlagsRepository = null;
+    private ?float $lateCancelHours = null;
     private const TIMEZONE = 'America/Mexico_City';
 
     public function __construct(PDO $pdo)
@@ -23,6 +28,17 @@ class AppointmentWriteRepository
         $this->appointmentsTable = $this->sanitizeIdentifier($config['appointments_table'] ?? '');
         $this->eventsTable = $this->sanitizeIdentifier($config['appointment_events_table'] ?? '');
         $this->appointmentPk = $this->sanitizeIdentifier($config['appointment_pk'] ?? 'appointment_id');
+        $lateCancel = $config['late_cancel_hours'] ?? null;
+        $this->lateCancelHours = is_numeric($lateCancel) ? (float)$lateCancel : null;
+        $patientFlagsDriven = trim((string)($config['patient_flags_table'] ?? ''));
+        if ($patientFlagsDriven !== '') {
+            try {
+                $this->patientFlagsRepository = new PatientFlagsWriteRepository($this->pdo);
+            } catch (RuntimeException $e) {
+                // swallow: flags table missing or not ready, cancel should continue
+                $this->patientFlagsRepository = null;
+            }
+        }
     }
 
     public function createAppointment(array $payload): array
@@ -162,6 +178,8 @@ class AppointmentWriteRepository
             $this->pdo->rollBack();
             throw $e;
         }
+
+        $this->maybeAppendLateCancelFlag($appointmentId, $current, $payload);
 
         return [
             'appointment_id' => $appointmentId,
@@ -320,5 +338,52 @@ class AppointmentWriteRepository
     private function generateId(): string
     {
         return bin2hex(random_bytes(12));
+    }
+
+    private function maybeAppendLateCancelFlag(string $appointmentId, array $current, array $payload): void
+    {
+        if (!$this->patientFlagsRepository || $this->lateCancelHours === null) {
+            return;
+        }
+        $patientId = $current['patient_id'] ?? null;
+        if (!$patientId) {
+            return;
+        }
+        $startAt = $current['start_at'] ?? null;
+        if (!$startAt) {
+            return;
+        }
+        $startDt = DateTime::createFromFormat('Y-m-d H:i:s', $startAt, new DateTimeZone(self::TIMEZONE));
+        if (!$startDt) {
+            return;
+        }
+        $now = new DateTime('now', new DateTimeZone(self::TIMEZONE));
+        $hoursToStart = ($startDt->getTimestamp() - $now->getTimestamp()) / 3600;
+        if ($hoursToStart > $this->lateCancelHours || $hoursToStart < 0) {
+            return;
+        }
+
+        $flagPayload = [
+            'patient_id' => $patientId,
+            'flag_type' => 'grey',
+            'reason_code' => 'late_cancel',
+            'source_appointment_id' => $appointmentId,
+            'notify_patient' => $payload['notify_patient'] ?? 0,
+            'contact_method' => $payload['contact_method'] ?? 'whatsapp',
+            'actor_role' => $payload['actor_role'] ?? $payload['created_by_role'] ?? null,
+            'actor_id' => $payload['actor_id'] ?? $payload['created_by_id'] ?? null,
+            'channel_origin' => $payload['channel_origin'] ?? null,
+            'notes' => sprintf('auto: cancel <= %.1fh', $this->lateCancelHours),
+        ];
+        try {
+            $this->patientFlagsRepository->appendFlag($flagPayload);
+        } catch (RuntimeException $e) {
+            // ignore: optional flag
+        }
+    }
+
+    public function markNoShow(string $appointmentId, array $payload): array
+    {
+        throw new RuntimeException('not implemented');
     }
 }

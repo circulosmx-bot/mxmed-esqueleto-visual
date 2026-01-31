@@ -39,6 +39,7 @@ Esta carpeta agrupa los componentes técnicos básicos del módulo Agenda Médic
 
 ## Patient flags (write-ready plumbing)
 
+- `modules/agenda/config/agenda.php` expone `late_cancel_hours`. Cuando es `null` no se crea flag al cancelar; si se fija en horas, una cancelación dentro de ese umbral agrega un flag gris (append-only) sin bloquear.  
 - El toggle `patient_flags_table` en `modules/agenda/config/agenda.php` activa tanto la lectura como la futura escritura de flags; mientras sea `null` la ruta responde `db_not_ready` con `message: "patient flags not ready"`.  
 - `PatientFlagsWriteRepository` descubre las columnas reales y solo inserta las que existen, generando IDs y timestamps cuando se requieren (flag_id, created_at).  
 - El repositorio será reutilizado por la Parte 3-B para agregar flags tras cancelaciones/no shows.  

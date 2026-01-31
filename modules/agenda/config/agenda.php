@@ -5,4 +5,5 @@ return [
     'appointment_events_table' => null,
     'patient_flags_table' => null,
     'appointment_pk' => 'appointment_id',
+    'late_cancel_hours' => null,
 ];
