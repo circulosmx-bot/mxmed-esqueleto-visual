@@ -53,3 +53,11 @@ Esta carpeta agrupa los componentes técnicos básicos del módulo Agenda Médic
   - Exige motivo y responde `not_implemented`.  
 
 > Nota: estas rutas solo validan request y devuelven el error `not_implemented` hasta que la Parte 2-B y siguientes habiliten las operaciones de escritura.
+
+## Appointment create (Fase III Parte 2-B habilitada)
+
+- Si `modules/agenda/config/agenda.php` define `appointments_table` y `appointment_events_table` con tablas reales, el POST `/appointments` inserta la cita y un evento `appointment_created` en una sola transacción.  
+- Si `appointments_table` está `null` o la tabla no existe, responde `db_not_ready` con mensaje exacto `appointments table not ready`.  
+- Si `appointment_events_table` está `null` o no existe, responde `db_not_ready` con mensaje exacto `appointment events not ready`.  
+- El payload sigue validándose; en caso de éxito regresa `write=create` y `events_appended=1`.  
+- Reprogramaciones y cancelaciones siguen devolviendo `not_implemented` hasta las siguientes partes.
