@@ -12,8 +12,8 @@ class AppointmentWriteRepository
     private PDO $pdo;
     private ?string $appointmentsTable = null;
     private ?string $eventsTable = null;
+    private ?string $appointmentPk = null;
     private array $columnsCache = [];
-
     private const TIMEZONE = 'America/Mexico_City';
 
     public function __construct(PDO $pdo)
@@ -22,6 +22,7 @@ class AppointmentWriteRepository
         $config = $this->loadConfig();
         $this->appointmentsTable = $this->sanitizeIdentifier($config['appointments_table'] ?? '');
         $this->eventsTable = $this->sanitizeIdentifier($config['appointment_events_table'] ?? '');
+        $this->appointmentPk = $this->sanitizeIdentifier($config['appointment_pk'] ?? 'appointment_id');
     }
 
     public function createAppointment(array $payload): array
@@ -81,6 +82,65 @@ class AppointmentWriteRepository
         $this->insert($this->eventsTable, $eventData);
     }
 
+    public function rescheduleAppointment(string $appointmentId, array $payload): array
+    {
+        $this->ensureAppointmentsTable();
+        $this->ensureEventsTable();
+        $pkColumn = $this->appointmentPk ?: 'appointment_id';
+        $this->ensurePrimaryKeyColumn($pkColumn);
+
+        $current = $this->fetchAppointment($appointmentId, $pkColumn);
+
+        $this->pdo->beginTransaction();
+        try {
+            $this->update($this->appointmentsTable, $pkColumn, $appointmentId, [
+                'start_at' => $payload['to_start_at'],
+                'end_at' => $payload['to_end_at'],
+            ]);
+            $this->appendRescheduleEvent($appointmentId, $payload, $current);
+            $this->pdo->commit();
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        } catch (RuntimeException $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+
+        return [
+            'appointment_id' => $appointmentId,
+            'from_start_at' => $current['start_at'] ?? null,
+            'from_end_at' => $current['end_at'] ?? null,
+            'to_start_at' => $payload['to_start_at'],
+            'to_end_at' => $payload['to_end_at'],
+            'motivo_code' => $payload['motivo_code'] ?? null,
+            'motivo_text' => $payload['motivo_text'] ?? null,
+            'notify_patient' => isset($payload['notify_patient']) ? (int)$payload['notify_patient'] : 0,
+            'contact_method' => $payload['contact_method'] ?? 'whatsapp',
+        ];
+    }
+
+    private function appendRescheduleEvent(string $appointmentId, array $payload, array $current): void
+    {
+        $eventData = [
+            'event_id' => $this->generateId(),
+            'appointment_id' => $appointmentId,
+            'event_type' => 'appointment_rescheduled',
+            'timestamp' => (new DateTime('now', new DateTimeZone(self::TIMEZONE)))->format('Y-m-d H:i:s'),
+            'from_datetime' => $payload['from_start_at'],
+            'to_datetime' => $payload['to_end_at'],
+            'from_start_at' => $payload['from_start_at'],
+            'from_end_at' => $payload['from_end_at'],
+            'to_start_at' => $payload['to_start_at'],
+            'to_end_at' => $payload['to_end_at'],
+            'motivo_code' => $payload['motivo_code'] ?? null,
+            'motivo_text' => $payload['motivo_text'] ?? null,
+            'notify_patient' => $payload['notify_patient'] ?? 0,
+            'contact_method' => $payload['contact_method'] ?? 'whatsapp',
+        ];
+        $this->insert($this->eventsTable, $eventData);
+    }
+
     private function insert(string $table, array $data): void
     {
         $columns = $this->getColumns($table);
@@ -126,6 +186,46 @@ class AppointmentWriteRepository
         if (!$this->tableExists($this->eventsTable)) {
             throw new RuntimeException('appointment events not ready');
         }
+    }
+
+    private function ensurePrimaryKeyColumn(string $pkColumn): void
+    {
+        $columns = $this->getColumns($this->appointmentsTable);
+        if (!in_array($pkColumn, $columns, true)) {
+            throw new RuntimeException('appointments table not ready');
+        }
+    }
+
+    private function fetchAppointment(string $appointmentId, string $pkColumn): array
+    {
+        $sql = sprintf('SELECT * FROM %s WHERE %s = :id LIMIT 1', $this->appointmentsTable, $pkColumn);
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(['id' => $appointmentId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            throw new RuntimeException('appointment not found');
+        }
+        return $row;
+    }
+
+    private function update(string $table, string $pkColumn, string $pkValue, array $data): void
+    {
+        $columns = $this->getColumns($table);
+        $available = array_intersect_key($data, array_flip($columns));
+        if (empty($available)) {
+            throw new RuntimeException('no columns available for update');
+        }
+        $sets = [];
+        foreach ($available as $column => $value) {
+            $sets[] = sprintf('%s = :%s', $column, $column);
+        }
+        $sql = sprintf('UPDATE %s SET %s WHERE %s = :pk', $table, implode(',', $sets), $pkColumn);
+        $stmt = $this->pdo->prepare($sql);
+        foreach ($available as $column => $value) {
+            $stmt->bindValue(':' . $column, $value);
+        }
+        $stmt->bindValue(':pk', $pkValue);
+        $stmt->execute();
     }
 
     private function tableExists(string $table): bool

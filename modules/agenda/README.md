@@ -61,3 +61,11 @@ Esta carpeta agrupa los componentes técnicos básicos del módulo Agenda Médic
 - Si `appointment_events_table` está `null` o no existe, responde `db_not_ready` con mensaje exacto `appointment events not ready`.  
 - El payload sigue validándose; en caso de éxito regresa `write=create` y `events_appended=1`.  
 - Reprogramaciones y cancelaciones siguen devolviendo `not_implemented` hasta las siguientes partes.
+
+## Appointment reschedule (Fase III Parte 2-C habilitada)
+
+- Requiere las mismas tablas (`appointments_table`, `appointment_events_table`). Si falta alguna, la ruta responde `db_not_ready` con `appointments table not ready` o `appointment events not ready` respectivamente.  
+- Actualiza `start_at`/`end_at` de la cita dentro de una transacción y añade un evento `appointment_rescheduled` con la bitácora de `from_*` y `to_*`.  
+- La respuesta exitosa incluye el rango anterior y el nuevo, junto con `meta.write=reschedule`, `meta.events_appended=1` y los campos `notify_patient`/`contact_method`.  
+- Si no existe la cita, responde `not_found` con `message: "appointment not found"`.  
+- Las cancelaciones aún devolvemos `not_implemented`.

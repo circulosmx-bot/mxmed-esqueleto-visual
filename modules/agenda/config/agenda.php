@@ -4,4 +4,5 @@ return [
     'appointments_table' => null,
     'appointment_events_table' => null,
     'patient_flags_table' => null,
+    'appointment_pk' => 'appointment_id',
 ];

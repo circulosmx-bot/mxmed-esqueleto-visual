@@ -67,16 +67,6 @@ class AppointmentWriteController
         );
     }
 
-    public function reschedule(string $appointmentId): array
-    {
-        $payload = $this->getPayload();
-        $errors = $this->validateReschedule($appointmentId, $payload);
-        if ($errors) {
-            return $this->error('invalid_params', 'invalid payload for reschedule', $errors);
-        }
-        return $this->notImplemented();
-    }
-
     public function cancel(string $appointmentId): array
     {
         $payload = $this->getPayload();
@@ -102,6 +92,53 @@ class AppointmentWriteController
             $errors['end_at'] = $payload['end_at'] ?? null;
         }
         return $errors;
+    }
+
+    public function reschedule(string $appointmentId): array
+    {
+        $payload = $this->getPayload();
+        $errors = $this->validateReschedule($appointmentId, $payload);
+        if ($errors) {
+            return $this->error('invalid_params', 'invalid payload for reschedule', $errors);
+        }
+        if ($this->dbConnectionError) {
+            return $this->error('db_error', 'database error');
+        }
+        if ($this->dbError) {
+            return $this->error('db_not_ready', $this->dbError);
+        }
+        if (!$this->repository) {
+            return $this->notImplemented();
+        }
+        try {
+            $result = $this->repository->rescheduleAppointment($appointmentId, $payload);
+        } catch (RuntimeException $e) {
+            $message = $e->getMessage();
+            if ($message === 'appointment not found') {
+                return ['ok' => false, 'error' => 'not_found', 'message' => 'appointment not found', 'data' => null, 'meta' => (object)[]];
+            }
+            return $this->error('db_not_ready', $message);
+        } catch (PDOException $e) {
+            return $this->error('db_error', 'database error');
+        }
+        return $this->success(
+            [
+                'appointment_id' => $result['appointment_id'],
+                'status' => 'rescheduled',
+                'from_start_at' => $result['from_start_at'],
+                'from_end_at' => $result['from_end_at'],
+                'to_start_at' => $result['to_start_at'],
+                'to_end_at' => $result['to_end_at'],
+                'motivo_code' => $result['motivo_code'],
+                'motivo_text' => $result['motivo_text'],
+            ],
+            [
+                'write' => 'reschedule',
+                'events_appended' => 1,
+                'notify_patient' => $result['notify_patient'],
+                'contact_method' => $result['contact_method'],
+            ]
+        );
     }
 
     private function validateReschedule(string $appointmentId, array $payload): array
