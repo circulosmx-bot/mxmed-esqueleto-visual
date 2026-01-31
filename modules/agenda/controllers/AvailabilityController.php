@@ -18,7 +18,6 @@ class AvailabilityController
     private ?AvailabilityRepository $repository = null;
     private ?OverrideRepository $overrideRepository = null;
     private ?string $dbError = null;
-    private ?string $overrideError = null;
 
     public function __construct()
     {
@@ -27,11 +26,7 @@ class AvailabilityController
             $this->repository = new AvailabilityRepository($pdo);
             $this->overrideRepository = new OverrideRepository($pdo);
         } catch (RuntimeException $e) {
-            if (!$this->repository) {
-                $this->dbError = $e->getMessage();
-            } else {
-                $this->overrideError = $e->getMessage();
-            }
+            $this->dbError = $e->getMessage();
         }
     }
 
@@ -39,9 +34,6 @@ class AvailabilityController
     {
         if ($this->dbError) {
             return $this->error('db_not_ready', 'availability base schedule not ready');
-        }
-        if ($this->overrideError) {
-            return $this->error('db_not_ready', 'availability overrides not ready');
         }
 
         $doctorId = $params['doctor_id'] ?? null;
@@ -68,16 +60,16 @@ class AvailabilityController
         $isHoliday = $holiday['is_holiday'];
         $holidayName = $holiday['name'];
 
-        if (!$this->overrideRepository) {
-            return $this->error('db_not_ready', 'availability overrides not ready');
-        }
-
-        try {
-            $overrides = $this->overrideRepository->getOverridesForDate($doctorId, $consultorioId, $date);
-        } catch (RuntimeException $e) {
-            return $this->error('db_not_ready', 'availability overrides not ready');
-        } catch (PDOException $e) {
-            return $this->error('db_error', $e->getMessage());
+        $overrides = [];
+        $overridesEnabled = $this->overrideRepository && $this->overrideRepository->isEnabled();
+        if ($overridesEnabled) {
+            try {
+                $overrides = $this->overrideRepository->getOverridesForDate($doctorId, $consultorioId, $date);
+            } catch (RuntimeException $e) {
+                return $this->error('db_not_ready', 'availability overrides not ready');
+            } catch (PDOException $e) {
+                return $this->error('db_error', $e->getMessage());
+            }
         }
 
         $closeOverrides = array_values(array_filter($overrides, fn($override) => $override['type'] === 'close'));
@@ -108,7 +100,7 @@ class AvailabilityController
 
         $windows = $this->sortWindows($windows);
         $isOverride = !empty($overrides);
-        $overrideTypes = array_values(array_unique(array_map(fn($override) => $override['type'], $overrides)));
+        $overrideTypes = $isOverride ? array_values(array_unique(array_map(fn($override) => $override['type'], $overrides))) : [];
 
         return $this->success(
             [
@@ -118,7 +110,7 @@ class AvailabilityController
                 'consultorio_id' => $consultorioId,
                 'windows' => $windows,
             ],
-            $this->buildMeta($doctorId, $consultorioId, $date, $isHoliday, $holidayName, $isOverride, $overrideTypes)
+            $this->buildMeta($doctorId, $consultorioId, $date, $isHoliday, $holidayName, $isOverride, $overrideTypes, $overridesEnabled)
         );
     }
 
@@ -168,13 +160,15 @@ class AvailabilityController
         bool $isHoliday,
         ?string $holidayName = null,
         bool $isOverride = false,
-        array $overrideTypes = []
+        array $overrideTypes = [],
+        bool $overridesEnabled = false
     ): array {
         $meta = [
             'doctor_id' => $doctorId,
             'consultorio_id' => $consultorioId,
             'date' => $date,
             'is_holiday' => $isHoliday,
+            'overrides_enabled' => $overridesEnabled,
             'is_override' => $isOverride,
             'override_types' => $overrideTypes,
         ];

@@ -11,28 +11,35 @@ class OverrideRepository
 {
     private PDO $pdo;
     private ?string $table = null;
-
-    private array $tableCandidates = [
-        'agenda_overrides',
-        'agenda_exceptions',
-        'schedule_exceptions',
-        'bloqueos_agenda',
-        'disponibilidad_excepciones',
-        'agenda_overrides_v1',
-        'availability_overrides',
-    ];
+    private bool $enabled = false;
 
     private const TIMEZONE = AvailabilityRepository::TIMEZONE;
 
     public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
-        $this->table = $this->locateTable();
+        $config = $this->loadConfig();
+        $table = trim((string)($config['overrides_table'] ?? ''));
+        $this->enabled = $table !== '';
+        if ($this->enabled) {
+            $this->table = $table;
+        }
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
     }
 
     public function getOverridesForDate(string $doctorId, string $consultorioId, string $dateYmd): array
     {
-        $this->ensureTable();
+        if (!$this->enabled) {
+            return [];
+        }
+
+        if (!$this->tableExists($this->table)) {
+            throw new RuntimeException('availability overrides not ready');
+        }
 
         $stmt = $this->pdo->prepare(sprintf(
             'SELECT * FROM %s WHERE doctor_id = :doctor_id AND consultorio_id = :consultorio_id AND date = :date',
@@ -101,25 +108,21 @@ class OverrideRepository
         return null;
     }
 
-    private function locateTable(): ?string
+    private function loadConfig(): array
     {
-        foreach ($this->tableCandidates as $candidate) {
-            if ($this->tableExists($candidate)) {
-                return $candidate;
-            }
+        $path = __DIR__ . '/../config/agenda.php';
+        if (!is_file($path)) {
+            return [];
         }
-        return null;
+        $config = require $path;
+        return is_array($config) ? $config : [];
     }
 
-    private function ensureTable(): void
+    private function tableExists(?string $name): bool
     {
-        if (!$this->table) {
-            throw new RuntimeException('availability overrides not ready');
+        if (!$name) {
+            return false;
         }
-    }
-
-    private function tableExists(string $name): bool
-    {
         $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = :table');
         $stmt->execute(['table' => $name]);
         return (int)$stmt->fetchColumn() > 0;
