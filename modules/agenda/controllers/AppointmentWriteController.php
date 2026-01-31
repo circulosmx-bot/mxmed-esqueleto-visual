@@ -1,8 +1,28 @@
 <?php
 namespace Agenda\Controllers;
 
+use Agenda\Repositories\AppointmentWriteRepository;
+use PDOException;
+use RuntimeException;
+
+require_once __DIR__ . '/../repositories/AppointmentWriteRepository.php';
+require_once __DIR__ . '/../../api/_lib/db.php';
+
 class AppointmentWriteController
 {
+    private ?AppointmentWriteRepository $repository = null;
+    private ?string $dbError = null;
+
+    public function __construct()
+    {
+        try {
+            $pdo = mxmed_pdo();
+            $this->repository = new AppointmentWriteRepository($pdo);
+        } catch (RuntimeException $e) {
+            $this->dbError = $e->getMessage();
+        }
+    }
+
     public function create(): array
     {
         $payload = $this->getPayload();
@@ -10,7 +30,32 @@ class AppointmentWriteController
         if ($errors) {
             return $this->error('invalid_params', 'invalid payload for create', $errors);
         }
-        return $this->notImplemented();
+        if ($this->dbError) {
+            return $this->error('db_not_ready', $this->dbError);
+        }
+        if (!$this->repository) {
+            return $this->notImplemented();
+        }
+        try {
+            $result = $this->repository->createAppointment($payload);
+        } catch (RuntimeException $e) {
+            return $this->error('db_not_ready', $e->getMessage());
+        } catch (PDOException $e) {
+            return $this->error('db_error', 'database error');
+        }
+        return $this->success(
+            [
+                'appointment_id' => $result['appointment_id'],
+                'status' => 'created',
+                'start_at' => $payload['start_at'],
+                'end_at' => $payload['end_at'],
+                'doctor_id' => $payload['doctor_id'],
+                'consultorio_id' => $payload['consultorio_id'],
+                'patient_id' => $payload['patient_id'] ?? null,
+                'created_at' => $result['created_at'],
+            ],
+            ['write' => 'create', 'events_appended' => 1]
+        );
     }
 
     public function reschedule(string $appointmentId): array
@@ -108,7 +153,12 @@ class AppointmentWriteController
 
     private function notImplemented(): array
     {
-        return ['ok' => false, 'error' => 'not_implemented', 'message' => 'write operations not enabled yet', 'data' => null, 'meta' => (object)[]];
+        return $this->error('not_implemented', 'write operations not enabled yet');
+    }
+
+    private function success(array $data, array $meta = []): array
+    {
+        return ['ok' => true, 'error' => null, 'message' => '', 'data' => $data, 'meta' => empty($meta) ? (object)[] : (object)$meta];
     }
 
     private function error(string $code, string $message, array $meta = []): array
