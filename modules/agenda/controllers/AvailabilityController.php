@@ -94,7 +94,7 @@ class AvailabilityController
             'error' => $code,
             'message' => $message,
             'data' => null,
-            'meta' => $meta,
+            'meta' => empty($meta) ? (object)[] : (object)$meta,
         ];
     }
 }

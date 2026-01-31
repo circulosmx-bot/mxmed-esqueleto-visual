@@ -7,6 +7,13 @@ Esta carpeta agrupa los componentes técnicos básicos del módulo Agenda Médic
 - `repositories/`: repositorios con stubs para futuros accesos.
 - `validators/`: validadores de requests pendientes.
 
-El objetivo es preparar la base y dejar guardadas las convenciones antes de implementar la lógica.
+ El objetivo es preparar la base y dejar guardadas las convenciones antes de implementar la lógica.
 
 - El módulo reutiliza `api/_lib/db.php` y su helper `mxmed_pdo()` para obtener la conexión PDO sin reconfigurar el proyecto.
+
+## Availability endpoint (Capa A + fundación)
+
+- **Ruta:** `GET /api/agenda/index.php/availability?doctor_id={id}&consultorio_id={id}&date=YYYY-MM-DD`
+- **Devuelve:** ventanas (`windows`) con `start_at`/`end_at` en `America/Mexico_City`.
+- **No hace:** no calcula slots, no aplica feriados (Capa B), no considera overrides (Capa C) ni colisiones con citas.
+- **Errores:** `invalid_params` (meta con doctor_id/consultorio_id/date), `db_not_ready` (mensaje exacto `availability base schedule not ready`), `db_error`.
