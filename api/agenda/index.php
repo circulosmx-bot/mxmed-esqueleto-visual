@@ -44,6 +44,11 @@ case 'appointments':
             $response = $writes->cancel($segments[1]);
             break;
         }
+        if ($method === 'POST' && $sub === 'no_show') {
+            $writes = new AppointmentWriteController();
+            $response = $writes->noShow($segments[1]);
+            break;
+        }
         if ($sub === '') {
             $response = $controller->show($segments[1]);
         } elseif ($sub === 'events') {

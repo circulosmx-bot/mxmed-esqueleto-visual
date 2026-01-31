@@ -118,6 +118,59 @@ class AppointmentWriteController
         );
     }
 
+    public function noShow(string $appointmentId): array
+    {
+        $payload = $this->getPayload();
+        $errors = $this->validateNoShow($appointmentId, $payload);
+        if ($errors) {
+            return $this->error('invalid_params', 'invalid payload for no_show', $errors);
+        }
+        if ($this->dbConnectionError) {
+            return $this->error('db_error', 'database error');
+        }
+        if ($this->dbError) {
+            if (in_array($this->dbError, ['appointments table not ready', 'appointment events not ready'], true)) {
+                return $this->error('db_not_ready', $this->dbError);
+            }
+            return $this->error('db_error', 'database error');
+        }
+        if (!$this->repository) {
+            return $this->notImplemented();
+        }
+        try {
+            $result = $this->repository->markNoShow($appointmentId, $payload);
+        } catch (RuntimeException $e) {
+            $message = $e->getMessage();
+            if ($message === 'appointment not found') {
+                return ['ok' => false, 'error' => 'not_found', 'message' => 'appointment not found', 'data' => null, 'meta' => (object)[]];
+            }
+            if (in_array($message, ['appointments table not ready', 'appointment events not ready'], true)) {
+                return $this->error('db_not_ready', $message);
+            }
+            return $this->error('db_error', 'database error');
+        } catch (PDOException $e) {
+            return $this->error('db_error', 'database error');
+        }
+        return $this->success(
+            [
+                'appointment_id' => $result['appointment_id'],
+                'status' => 'no_show',
+                'start_at' => $result['start_at'],
+                'end_at' => $result['end_at'],
+                'motivo_code' => $result['motivo_code'],
+                'motivo_text' => $result['motivo_text'],
+                'observed_at' => $result['observed_at'],
+            ],
+            [
+                'write' => 'no_show',
+                'events_appended' => 1,
+                'flag_appended' => $result['flag_appended'],
+                'notify_patient' => $result['notify_patient'],
+                'contact_method' => $result['contact_method'],
+            ]
+        );
+    }
+
     private function validateCreate(array $payload): array
     {
         $errors = [];
@@ -221,6 +274,24 @@ class AppointmentWriteController
         }
         if (($payload['motivo_code'] ?? '') === '' && ($payload['motivo_text'] ?? '') === '') {
             $errors['motivo'] = 'motivo_code or motivo_text required';
+        }
+        return $errors;
+    }
+
+    private function validateNoShow(string $appointmentId, array $payload): array
+    {
+        $errors = [];
+        if (trim($appointmentId) === '') {
+            $errors['appointment_id'] = $appointmentId;
+        }
+        if (($payload['motivo_code'] ?? '') === '' && ($payload['motivo_text'] ?? '') === '') {
+            $errors['motivo'] = 'motivo_code or motivo_text required';
+        }
+        if (isset($payload['notify_patient']) && !in_array($payload['notify_patient'], ['0', '1', 0, 1], true)) {
+            $errors['notify_patient'] = $payload['notify_patient'];
+        }
+        if (isset($payload['observed_at']) && $this->parseDateTime($payload['observed_at']) === null) {
+            $errors['observed_at'] = $payload['observed_at'];
         }
         return $errors;
     }

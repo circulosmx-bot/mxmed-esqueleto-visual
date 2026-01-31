@@ -85,3 +85,28 @@ Esta carpeta agrupa los componentes técnicos básicos del módulo Agenda Médic
 - Si la cita no existe se devuelve `not_found` con `message: "appointment not found"`.  
 - Las cancelaciones solo actualizan el campo `status` si existe en la tabla; si no está presente, el evento registra la cancelación pero no bloquea la consulta.  
 - No se genera lógica de flags/no show en esta fase.
+
+## Appointment no_show (Fase III Parte 3)
+
+- **Ruta:** `POST /api/agenda/index.php/appointments/{appointment_id}/no_show`
+- **Payload esperado:**  
+  ```
+  {
+    "motivo_code": "...", // o motivo_text
+    "motivo_text": "...",
+    "notify_patient": 0|1,
+    "contact_method": "whatsapp",
+    "actor_role": "...",
+    "actor_id": "...",
+    "channel_origin": "...",
+    "observed_at": "YYYY-MM-DD HH:mm:ss" // opcional, default now
+  }
+  ```
+- **Comportamiento:** actualiza `status` (si está presente) y registra el evento `appointment_no_show`, incluyendo los nuevos campos.  
+- **Patient flags:** si `patient_flags_table` está configurada e insertable, se crea un flag tipo `red` con `reason_code: no_show`, pero si la tabla falta la operación sigue adelante sin errores.  
+- **Errores contractuales:**  
+  - `invalid_params` (meta describe los campos inválidos)  
+  - `db_not_ready` con `message: "appointments table not ready"` o `message: "appointment events not ready"` según falte la tabla  
+  - `not_found` con `message: "appointment not found"` cuando la cita no existe  
+  - `db_error` con `message: "database error"` en cualquier otro fallo  
+- **Respuestas exitosas:** devuelven `meta.write=no_show`, `meta.events_appended=1`, `meta.flag_appended` (0/1) y `notify_patient`/`contact_method`. Flags no bloquean la operación.

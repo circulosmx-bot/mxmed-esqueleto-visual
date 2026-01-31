@@ -7,6 +7,7 @@ use DateTimeZone;
 use PDO;
 use PDOException;
 use RuntimeException;
+use Throwable;
 
 require_once __DIR__ . '/../repositories/PatientFlagsWriteRepository.php';
 
@@ -384,6 +385,85 @@ class AppointmentWriteRepository
 
     public function markNoShow(string $appointmentId, array $payload): array
     {
-        throw new RuntimeException('not implemented');
+        $this->ensureAppointmentsTable();
+        $this->ensureEventsTable();
+        $pkColumn = $this->appointmentPk ?: 'appointment_id';
+        $this->ensurePrimaryKeyColumn($pkColumn);
+
+        $current = $this->fetchAppointment($appointmentId, $pkColumn);
+        $observedAt = $payload['observed_at'] ?? (new DateTime('now', new DateTimeZone(self::TIMEZONE)))->format('Y-m-d H:i:s');
+
+        $this->pdo->beginTransaction();
+        try {
+            $this->updateStatusIfExists($pkColumn, $appointmentId, 'no_show');
+            $this->appendNoShowEvent($appointmentId, $payload, $current, $observedAt);
+            $flagAppended = $this->maybeAppendNoShowFlag($appointmentId, $current, $payload);
+            $this->pdo->commit();
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        } catch (RuntimeException $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+
+        return [
+            'appointment_id' => $appointmentId,
+            'start_at' => $current['start_at'] ?? null,
+            'end_at' => $current['end_at'] ?? null,
+            'observed_at' => $observedAt,
+            'motivo_code' => $payload['motivo_code'] ?? null,
+            'motivo_text' => $payload['motivo_text'] ?? null,
+            'notify_patient' => isset($payload['notify_patient']) ? (int)$payload['notify_patient'] : 0,
+            'contact_method' => $payload['contact_method'] ?? 'whatsapp',
+            'flag_appended' => $flagAppended,
+        ];
+    }
+
+    private function appendNoShowEvent(string $appointmentId, array $payload, array $current, string $observedAt): void
+    {
+        $eventData = [
+            'event_id' => $this->generateId(),
+            'appointment_id' => $appointmentId,
+            'event_type' => 'appointment_no_show',
+            'timestamp' => (new DateTime('now', new DateTimeZone(self::TIMEZONE)))->format('Y-m-d H:i:s'),
+            'observed_at' => $observedAt,
+            'from_start_at' => $current['start_at'] ?? null,
+            'from_end_at' => $current['end_at'] ?? null,
+            'motivo_code' => $payload['motivo_code'] ?? null,
+            'motivo_text' => $payload['motivo_text'] ?? null,
+            'notify_patient' => $payload['notify_patient'] ?? 0,
+            'contact_method' => $payload['contact_method'] ?? 'whatsapp',
+            'actor_role' => $payload['actor_role'] ?? $payload['created_by_role'] ?? null,
+            'actor_id' => $payload['actor_id'] ?? $payload['created_by_id'] ?? null,
+            'channel_origin' => $payload['channel_origin'] ?? null,
+        ];
+        $this->insert($this->eventsTable, $eventData);
+    }
+
+    private function maybeAppendNoShowFlag(string $appointmentId, array $current, array $payload): int
+    {
+        if (!$this->patientFlagsRepository) {
+            return 0;
+        }
+        $patientId = $current['patient_id'] ?? null;
+        if (!$patientId) {
+            return 0;
+        }
+        try {
+            $this->patientFlagsRepository->appendFlag([
+                'patient_id' => $patientId,
+                'flag_type' => 'red',
+                'reason_code' => 'no_show',
+                'source_appointment_id' => $appointmentId,
+                'notes' => 'auto: no_show',
+                'actor_role' => $payload['actor_role'] ?? $payload['created_by_role'] ?? null,
+                'actor_id' => $payload['actor_id'] ?? $payload['created_by_id'] ?? null,
+                'channel_origin' => $payload['channel_origin'] ?? null,
+            ]);
+            return 1;
+        } catch (Throwable $e) {
+            return 0;
+        }
     }
 }
