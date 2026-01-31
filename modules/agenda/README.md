@@ -37,6 +37,13 @@ Esta carpeta agrupa los componentes técnicos básicos del módulo Agenda Médic
 
 > Nota: Fase III Parte 1 es completamente de solo lectura; la edición de citas, eventos o flags llegará en la Parte 2.
 
+## Patient flags (write-ready plumbing)
+
+- El toggle `patient_flags_table` en `modules/agenda/config/agenda.php` activa tanto la lectura como la futura escritura de flags; mientras sea `null` la ruta responde `db_not_ready` con `message: "patient flags not ready"`.  
+- `PatientFlagsWriteRepository` descubre las columnas reales y solo inserta las que existen, generando IDs y timestamps cuando se requieren (flag_id, created_at).  
+- El repositorio será reutilizado por la Parte 3-B para agregar flags tras cancelaciones/no shows.  
+- **Importante:** la introducción de flags no bloquea ni cancela citas automáticamente; son registros append-only para auditoría/manual review.
+
 ## Write endpoint skeletons (Fase III Parte 2-A prep)
 
 - **POST** `/api/agenda/index.php/appointments`  
