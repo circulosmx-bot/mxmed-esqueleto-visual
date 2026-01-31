@@ -49,9 +49,9 @@ class AppointmentWriteRepository
 
         $this->pdo->beginTransaction();
         try {
-            $this->insert($this->appointmentsTable, $appointmentData);
-            $this->appendEvent($appointmentId, $payload, $createdAt);
-            $this->pdo->commit();
+        $this->insert($this->appointmentsTable, $appointmentData);
+        $this->appendEvent($appointmentId, $payload, $createdAt);
+        $this->pdo->commit();
         } catch (PDOException $e) {
             $this->pdo->rollBack();
             throw $e;
@@ -137,6 +137,70 @@ class AppointmentWriteRepository
             'motivo_text' => $payload['motivo_text'] ?? null,
             'notify_patient' => $payload['notify_patient'] ?? 0,
             'contact_method' => $payload['contact_method'] ?? 'whatsapp',
+        ];
+        $this->insert($this->eventsTable, $eventData);
+    }
+
+    public function cancelAppointment(string $appointmentId, array $payload): array
+    {
+        $this->ensureAppointmentsTable();
+        $this->ensureEventsTable();
+        $pkColumn = $this->appointmentPk ?: 'appointment_id';
+        $this->ensurePrimaryKeyColumn($pkColumn);
+
+        $current = $this->fetchAppointment($appointmentId, $pkColumn);
+
+        $this->pdo->beginTransaction();
+        try {
+            $this->updateStatusIfExists($pkColumn, $appointmentId, 'canceled');
+            $this->appendCancelEvent($appointmentId, $payload, $current);
+            $this->pdo->commit();
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        } catch (RuntimeException $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+
+        return [
+            'appointment_id' => $appointmentId,
+            'status' => 'canceled',
+            'start_at' => $current['start_at'] ?? null,
+            'end_at' => $current['end_at'] ?? null,
+            'motivo_code' => $payload['motivo_code'] ?? null,
+            'motivo_text' => $payload['motivo_text'] ?? null,
+            'notify_patient' => isset($payload['notify_patient']) ? (int)$payload['notify_patient'] : 0,
+            'contact_method' => $payload['contact_method'] ?? 'whatsapp',
+        ];
+    }
+
+    private function updateStatusIfExists(string $pkColumn, string $appointmentId, string $status): void
+    {
+        $columns = $this->getColumns($this->appointmentsTable);
+        if (!in_array('status', $columns, true)) {
+            return;
+        }
+        $this->update($this->appointmentsTable, $pkColumn, $appointmentId, ['status' => $status]);
+    }
+
+    private function appendCancelEvent(string $appointmentId, array $payload, array $current): void
+    {
+        $eventData = [
+            'event_id' => $this->generateId(),
+            'appointment_id' => $appointmentId,
+            'event_type' => 'appointment_canceled',
+            'timestamp' => (new DateTime('now', new DateTimeZone(self::TIMEZONE)))->format('Y-m-d H:i:s'),
+            'from_datetime' => $current['start_at'] ?? null,
+            'from_start_at' => $current['start_at'] ?? null,
+            'from_end_at' => $current['end_at'] ?? null,
+            'motivo_code' => $payload['motivo_code'] ?? null,
+            'motivo_text' => $payload['motivo_text'] ?? null,
+            'notify_patient' => $payload['notify_patient'] ?? 0,
+            'contact_method' => $payload['contact_method'] ?? 'whatsapp',
+            'actor_role' => $payload['actor_role'] ?? $payload['created_by_role'] ?? null,
+            'actor_id' => $payload['actor_id'] ?? $payload['created_by_id'] ?? null,
+            'channel_origin' => $payload['channel_origin'] ?? null,
         ];
         $this->insert($this->eventsTable, $eventData);
     }

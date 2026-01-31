@@ -74,7 +74,45 @@ class AppointmentWriteController
         if ($errors) {
             return $this->error('invalid_params', 'invalid payload for cancel', $errors);
         }
-        return $this->notImplemented();
+        if ($this->dbConnectionError) {
+            return $this->error('db_error', 'database error');
+        }
+        if ($this->dbError) {
+            return $this->error('db_not_ready', $this->dbError);
+        }
+        if (!$this->repository) {
+            return $this->notImplemented();
+        }
+        try {
+            $result = $this->repository->cancelAppointment($appointmentId, $payload);
+        } catch (RuntimeException $e) {
+            $message = $e->getMessage();
+            if ($message === 'appointment not found') {
+                return ['ok' => false, 'error' => 'not_found', 'message' => 'appointment not found', 'data' => null, 'meta' => (object)[]];
+            }
+            if (in_array($message, ['appointments table not ready', 'appointment events not ready'], true)) {
+                return $this->error('db_not_ready', $message);
+            }
+            return $this->error('db_error', 'database error');
+        } catch (PDOException $e) {
+            return $this->error('db_error', 'database error');
+        }
+        return $this->success(
+            [
+                'appointment_id' => $result['appointment_id'],
+                'status' => 'canceled',
+                'start_at' => $result['start_at'],
+                'end_at' => $result['end_at'],
+                'motivo_code' => $result['motivo_code'],
+                'motivo_text' => $result['motivo_text'],
+            ],
+            [
+                'write' => 'cancel',
+                'events_appended' => 1,
+                'notify_patient' => $result['notify_patient'],
+                'contact_method' => $result['contact_method'],
+            ]
+        );
     }
 
     private function validateCreate(array $payload): array

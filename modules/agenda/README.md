@@ -69,3 +69,11 @@ Esta carpeta agrupa los componentes técnicos básicos del módulo Agenda Médic
 - La respuesta exitosa incluye el rango anterior y el nuevo, junto con `meta.write=reschedule`, `meta.events_appended=1` y los campos `notify_patient`/`contact_method`.  
 - Si no existe la cita, responde `not_found` con `message: "appointment not found"`.  
 - Las cancelaciones aún devolvemos `not_implemented`.
+
+## Appointment cancel (Fase III Parte 2-D habilitada)
+
+- Utiliza las mismas configuraciones (`appointments_table`, `appointment_events_table`). Si las tablas faltan, el endpoint responde `db_not_ready` con el mensaje exacto `appointments table not ready` o `appointment events not ready`.  
+- Registra el `appointment_canceled` event append-only, guarda los motivos y el contacto, y responde con `meta.write=cancel`, `meta.events_appended=1`.  
+- Si la cita no existe se devuelve `not_found` con `message: "appointment not found"`.  
+- Las cancelaciones solo actualizan el campo `status` si existe en la tabla; si no está presente, el evento registra la cancelación pero no bloquea la consulta.  
+- No se genera lógica de flags/no show en esta fase.
