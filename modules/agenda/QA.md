@@ -63,16 +63,31 @@ Todos los casos siguen el patrón Given / When / Then y deben validar:
 - `overrides_table` apunta a tabla existente → `/availability` debe responder `ok:true` y `meta.overrides_enabled=true`.
 
 ## Requisitos del script QA
-- Usa `BASE_URL`, `DOCTOR_ID`, `CONSULTORIO_ID`, `APPOINTMENT_ID`, `PATIENT_ID`, `DATE` como variables configurables
+- Usa `BASE_URL`, `DOCTOR_ID`, `CONSULTORIO_ID`, `APPOINTMENT_ID`, `PATIENT_ID`, `DATE` y `QA_MODE` como variables configurables
 - No modifica routers ni rewrites
 - No depende de WAMP ni levanta servidores
 - El script debe fallar (exit != 0) si algún contrato se rompe o un mensaje no es el esperado
 
-## Ejecución recomendada
-```
-BASE_URL=http://127.0.0.1:8089/api/agenda/index.php \
-  DOCTOR_ID=1 CONSULTORIO_ID=1 APPOINTMENT_ID=demo PATIENT_ID=demo DATE=2026-02-01 \
-  bash modules/agenda/qa/requests.sh
-```
+## Ejecución (Mac)
+- Modo `not_ready` (tablas faltantes)
+  ```sh
+  BASE_URL=http://127.0.0.1:8089/api/agenda/index.php \
+    DOCTOR_ID=1 CONSULTORIO_ID=1 APPOINTMENT_ID=demo PATIENT_ID=demo DATE=2026-02-01 \
+    QA_MODE=not_ready bash modules/agenda/qa/requests.sh
+  ```
+- Modo `ready` (tablas reales listas)
+  ```sh
+  BASE_URL=http://127.0.0.1:8089/api/agenda/index.php \
+    DOCTOR_ID=1 CONSULTORIO_ID=1 APPOINTMENT_ID=demo PATIENT_ID=demo DATE=2026-02-01 \
+    QA_MODE=ready bash modules/agenda/qa/requests.sh
+  ```
 
-Ajusta las variables para cubrir distintos escenarios y repite.
+## READY MODE (tablas reales)
+- Given: las tablas `appointments`, `appointment_events`, `patient_flags` están creadas y configuradas en `modules/agenda/config/agenda.php`.
+- When: se ejecutan las operaciones `POST /appointments`, `PATCH /appointments/{id}/reschedule`, `POST /appointments/{id}/cancel`, `POST /appointments/{id}/no_show` y las lecturas relacionadas (`/events`, `/patients/{id}/flags`).
+- Then:
+  - Cada respuesta cumple el contrato JSON (ok/error/message/data/meta) y `meta` es siempre un objeto.
+  - `POST /appointments` crea la cita y genera un evento `appointment_created`.
+  - Después de reschedule/cancel/no_show los eventos incrementan su contador.
+  - `POST /appointments/{id}/no_show` retorna `meta.flag_appended` (0 o 1) y `GET /patients/{id}/flags` reporta un `reason_code` `no_show` o `late_cancel` cuando el flag está habilitado.
+  - El script imprime diferencias de cuenta y el estado del flag al final.
