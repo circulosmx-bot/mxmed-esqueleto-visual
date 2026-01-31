@@ -36,3 +36,20 @@ Esta carpeta agrupa los componentes técnicos básicos del módulo Agenda Médic
 - **Errores:** `invalid_params`, `db_not_ready` (`patient flags not ready`), `db_error`.
 
 > Nota: Fase III Parte 1 es completamente de solo lectura; la edición de citas, eventos o flags llegará en la Parte 2.
+
+## Write endpoint skeletons (Fase III Parte 2-A prep)
+
+- **POST** `/api/agenda/index.php/appointments`  
+  - Espera payload JSON con `doctor_id`, `consultorio_id`, `start_at`, `end_at`, `modality`, `patient_id`, `channel_origin`, `created_by_role`, `created_by_id`.  
+  - Valida fechas (`YYYY-MM-DD HH:MM:SS`), `start_at < end_at` y campos requeridos, pero en esta fase aún no escribe nada.  
+  - Responde `not_implemented` con mensaje `"write operations not enabled yet"` mientras el flujo de escritura no esté activo.  
+
+- **PATCH** `/api/agenda/index.php/appointments/{appointment_id}/reschedule`  
+  - Body con `from_start_at`, `from_end_at`, `to_start_at`, `to_end_at`, `motivo_code`, `motivo_text`, `notify_patient`, `contact_method`.  
+  - Valida rangos y al menos un motivo; por ahora retorna `not_implemented`.  
+
+- **POST** `/api/agenda/index.php/appointments/{appointment_id}/cancel`  
+  - Body con `motivo_code`, `motivo_text`, `notify_patient`, `contact_method`.  
+  - Exige motivo y responde `not_implemented`.  
+
+> Nota: estas rutas solo validan request y devuelven el error `not_implemented` hasta que la Parte 2-B y siguientes habiliten las operaciones de escritura.
