@@ -19,16 +19,26 @@ $response = [
     'error' => 'not_implemented',
     'message' => 'Route not implemented',
     'data' => null,
+    'meta' => (object)[],
 ];
 
 switch ($segments[0] ?? '') {
 case 'appointments':
     if (isset($segments[1]) && $segments[1] !== '') {
-            if (($segments[2] ?? '') === 'events') {
+            $sub = $segments[2] ?? '';
+            if ($sub === '') {
+                $response = $controller->show($segments[1]);
+            } elseif ($sub === 'events') {
                 $events = new AppointmentEventsController();
                 $response = $events->index($segments[1], $_GET);
             } else {
-                $response = $controller->show($segments[1]);
+                $response = [
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'route not found',
+                    'data' => null,
+                    'meta' => (object)[],
+                ];
             }
         } else {
             $response = $controller->index($_GET);
@@ -38,6 +48,14 @@ case 'appointments':
         if (isset($segments[1]) && $segments[1] !== '' && ($segments[2] ?? '') === 'flags') {
             $flags = new PatientFlagsController();
             $response = $flags->index($segments[1], $_GET);
+        } else {
+            $response = [
+                'ok' => false,
+                'error' => 'not_found',
+                'message' => 'route not found',
+                'data' => null,
+                'meta' => (object)[],
+            ];
         }
         break;
     case 'consultorios':
