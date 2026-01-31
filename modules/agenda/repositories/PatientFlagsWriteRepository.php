@@ -27,11 +27,20 @@ class PatientFlagsWriteRepository
     public function listByPatientId(string $patientId, bool $activeOnly, int $limit): array
     {
         $this->ensureTable();
+        $columns = $this->getColumns($this->table);
+        $hasExpires = in_array('expires_at', $columns, true);
+        $hasCreated = in_array('created_at', $columns, true);
+
         $sql = sprintf('SELECT * FROM %s WHERE patient_id = :patient_id', $this->table);
-        if ($activeOnly) {
+        if ($activeOnly && $hasExpires) {
             $sql .= ' AND (expires_at IS NULL OR expires_at >= NOW())';
         }
-        $sql .= ' ORDER BY created_at DESC LIMIT :limit';
+        if ($hasCreated) {
+            $sql .= ' ORDER BY created_at DESC';
+        } else {
+            $sql .= ' ORDER BY 1 DESC';
+        }
+        $sql .= ' LIMIT :limit';
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindValue(':patient_id', $patientId);
