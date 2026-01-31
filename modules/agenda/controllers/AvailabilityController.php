@@ -57,26 +57,19 @@ class AvailabilityController
         $isHoliday = $holiday['is_holiday'];
         $holidayName = $holiday['name'];
 
-        if ($isHoliday) {
-            return $this->success(
-                [
-                    'date' => $date,
-                    'timezone' => AvailabilityRepository::TIMEZONE,
-                    'doctor_id' => $doctorId,
-                    'consultorio_id' => $consultorioId,
-                    'windows' => [],
-                ],
-                $this->buildMeta($doctorId, $consultorioId, $date, true, $holidayName)
-            );
+        $windows = [];
+        if (!$isHoliday) {
+            try {
+                $windows = $this->repository->getBaseWindowsForDate($doctorId, $consultorioId, $date);
+            } catch (RuntimeException $e) {
+                return $this->error('db_not_ready', $e->getMessage());
+            } catch (PDOException $e) {
+                return $this->error('db_error', $e->getMessage());
+            }
+        } else {
+            // Layer C may reopen/override holidays in a later phase (not implemented yet).
         }
 
-        try {
-            $windows = $this->repository->getBaseWindowsForDate($doctorId, $consultorioId, $date);
-        } catch (RuntimeException $e) {
-            return $this->error('db_not_ready', $e->getMessage());
-        } catch (PDOException $e) {
-            return $this->error('db_error', $e->getMessage());
-        }
 
         return $this->success(
             [
@@ -86,7 +79,7 @@ class AvailabilityController
                 'consultorio_id' => $consultorioId,
                 'windows' => $windows,
             ],
-            $this->buildMeta($doctorId, $consultorioId, $date, false)
+            $this->buildMeta($doctorId, $consultorioId, $date, $isHoliday, $holidayName)
         );
     }
 
