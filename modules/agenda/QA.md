@@ -83,14 +83,10 @@ Todos los casos siguen el patrón Given / When / Then y deben validar:
   ```
 
 ## READY MODE (tablas reales)
-- Given: las tablas `appointments`, `appointment_events`, `patient_flags` están creadas y configuradas en `modules/agenda/config/agenda.php`.
-- When: se ejecutan las operaciones `POST /appointments`, `PATCH /appointments/{id}/reschedule`, `POST /appointments/{id}/cancel`, `POST /appointments/{id}/no_show` y las lecturas relacionadas (`/events`, `/patients/{id}/flags`).
-- Then:
-  - Cada respuesta cumple el contrato JSON (ok/error/message/data/meta) y `meta` es siempre un objeto.
-  - `POST /appointments` crea la cita y genera un evento `appointment_created`.
-  - Después de reschedule/cancel/no_show los eventos incrementan su contador.
-  - `POST /appointments/{id}/no_show` retorna `meta.flag_appended` (0 o 1) y `GET /patients/{id}/flags` reporta un `reason_code` `no_show` o `late_cancel` cuando el flag está habilitado.
-- El script imprime diferencias de cuenta y el estado del flag al final.
+- El schema mínimo necesario se define en `modules/agenda/sql/ready_schema.sql` y crea las tablas `agenda_appointments`, `agenda_appointment_events` y `agenda_patient_flags` con las columnas utilizadas por el módulo (appointments, events y flags).
+- QA_MODE=ready asume que esas tres tablas existen en la base configurada por `modules/agenda/config/agenda.php`.
+- Con el schema aplicado, el QA Pack valida la creación de citas, las lecturas de eventos, los cambios de estado (reschedule/cancel/no_show) y el flag asociado a un paciente.
+- Si el schema no está presente o falla la conexión, READY MODE devolverá `db_not_ready` o `db_error` según el caso y no avanzará con la verificación.
 
 ## READY MODE bootstrap
 - El SQL `modules/agenda/sql/ready_schema.sql` crea las tablas mínimas `agenda_appointments`, `agenda_appointment_events` y `agenda_patient_flags` necesarias para los writes.
