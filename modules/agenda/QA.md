@@ -82,7 +82,7 @@ Todos los casos siguen el patrón Given / When / Then y deben validar:
     QA_MODE=ready bash modules/agenda/qa/requests.sh
   ```
 
-## READY MODE (tablas reales)
+## READY MODE (schema mínimo)
 - El schema mínimo necesario se define en `modules/agenda/sql/ready_schema.sql` y crea las tablas `agenda_appointments`, `agenda_appointment_events` y `agenda_patient_flags` con las columnas utilizadas por el módulo (appointments, events y flags).
 - QA_MODE=ready asume que esas tres tablas existen en la base configurada por `modules/agenda/config/agenda.php`.
 - Con el schema aplicado, el QA Pack valida la creación de citas, las lecturas de eventos, los cambios de estado (reschedule/cancel/no_show) y el flag asociado a un paciente.
