@@ -102,6 +102,29 @@ assert_error_exact() {
   fi
 }
 
+assert_error_any_of() {
+  local body="$1"
+  shift
+  local err
+  local msg
+  err=$(echo "$body" | jq -r '.error // empty')
+  msg=$(echo "$body" | jq -r '.message // empty')
+  local pairs=()
+  while (( $# )); do
+    local code="$1"
+    shift
+    local message="$1"
+    shift
+    pairs+=("error=$code message='$message'")
+    if [[ "$err" == "$code" && "$msg" == "$message" ]]; then
+      return 0
+    fi
+  done
+  echo "Expected one of: ${pairs[*]} but got: error=$err message='$msg'" >&2
+  echo "$body" | jq . >&2 || true
+  exit 1
+}
+
 run_error_test() {
   local title="$1"
   local code="$2"
@@ -233,7 +256,6 @@ if [[ "$QA_MODE" == "not_ready" ]]; then
     invalid_params "invalid payload for create" \
     curl_request -X POST "$BASE_URL/appointments" -H 'Content-Type: application/json' -d '{}'
 
-  local response
   print_header "Given no appointment / PATCH reschedule"
   response=$(curl_request -X PATCH "$BASE_URL/appointments/unknown/reschedule" -H 'Content-Type: application/json' \
     -d '{"motivo_code":"test","from_start_at":"2026-02-01 09:00:00","from_end_at":"2026-02-01 09:30:00","to_start_at":"2026-02-02 09:00:00","to_end_at":"2026-02-02 09:30:00"}')
