@@ -8,6 +8,11 @@ APPOINTMENT_ID="${APPOINTMENT_ID:-demo}"
 PATIENT_ID="${PATIENT_ID:-demo}"
 DATE="${DATE:-2026-02-01}"
 QA_MODE="${QA_MODE:-not_ready}"
+QA_HEADER=(-H "X-QA-Mode: $QA_MODE")
+
+curl_request() {
+  curl -sS "${QA_HEADER[@]}" "$@"
+}
 
 need() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -171,7 +176,7 @@ print_header "QA mode"
 echo "QA_MODE=$QA_MODE"
 echo
 if [[ "$QA_MODE" == "not_ready" ]]; then
-  response=$(curl -sS -X GET "$BASE_URL/availability?doctor_id=$DOCTOR_ID&consultorio_id=$CONSULTORIO_ID&date=$DATE")
+  response=$(curl_request -X GET "$BASE_URL/availability?doctor_id=$DOCTOR_ID&consultorio_id=$CONSULTORIO_ID&date=$DATE")
   print_header "Given agenda tables absent / GET availability"
   echo "$response" | jq .
   assert_contract "$response"
@@ -180,19 +185,19 @@ if [[ "$QA_MODE" == "not_ready" ]]; then
 
   run_error_test "Given appointment events missing / GET events" \
     db_not_ready "appointment events not ready" \
-    curl -s -X GET "$BASE_URL/appointments/$APPOINTMENT_ID/events"
+    curl_request -X GET "$BASE_URL/appointments/$APPOINTMENT_ID/events"
 
   run_error_test "Given patient flags missing / GET flags" \
     db_not_ready "patient flags not ready" \
-    curl -s -X GET "$BASE_URL/patients/$PATIENT_ID/flags"
+    curl_request -X GET "$BASE_URL/patients/$PATIENT_ID/flags"
 
   run_error_test "Given appointments missing / POST create" \
     invalid_params "invalid payload for create" \
-    curl -s -X POST "$BASE_URL/appointments" -H 'Content-Type: application/json' -d '{}'
+    curl_request -X POST "$BASE_URL/appointments" -H 'Content-Type: application/json' -d '{}'
 
   local response
   print_header "Given no appointment / PATCH reschedule"
-  response=$(curl -s -X PATCH "$BASE_URL/appointments/unknown/reschedule" -H 'Content-Type: application/json' \
+  response=$(curl_request -X PATCH "$BASE_URL/appointments/unknown/reschedule" -H 'Content-Type: application/json' \
     -d '{"motivo_code":"test","from_start_at":"2026-02-01 09:00:00","from_end_at":"2026-02-01 09:30:00","to_start_at":"2026-02-02 09:00:00","to_end_at":"2026-02-02 09:30:00"}')
   echo "$response" | jq .
   assert_contract "$response"
@@ -204,7 +209,7 @@ if [[ "$QA_MODE" == "not_ready" ]]; then
     not_found "appointment not found"
 
   print_header "Given no appointment / POST cancel"
-  response=$(curl -s -X POST "$BASE_URL/appointments/unknown/cancel" -H 'Content-Type: application/json' -d '{"motivo_code":"test"}')
+  response=$(curl_request -X POST "$BASE_URL/appointments/unknown/cancel" -H 'Content-Type: application/json' -d '{"motivo_code":"test"}')
   echo "$response" | jq .
   assert_contract "$response"
   assert_meta_object "$response"
@@ -216,11 +221,11 @@ if [[ "$QA_MODE" == "not_ready" ]]; then
 
   run_error_test "Given no appointment / POST cancel" \
     not_found "appointment not found" \
-    curl -s -X POST "$BASE_URL/appointments/unknown/cancel" -H 'Content-Type: application/json' -d '{"motivo_code":"test"}'
+    curl_request -X POST "$BASE_URL/appointments/unknown/cancel" -H 'Content-Type: application/json' -d '{"motivo_code":"test"}'
 
   run_error_test "Given invalid payload / POST no_show" \
     invalid_params "invalid payload for no_show" \
-    curl -s -X POST "$BASE_URL/appointments/unknown/no_show" -H 'Content-Type: application/json' -d '{}'
+    curl_request -X POST "$BASE_URL/appointments/unknown/no_show" -H 'Content-Type: application/json' -d '{}'
 
   print_header "QA script finished (not_ready mode)"
   echo "Use QA_MODE=ready to exercise the write flow once tables are available."
