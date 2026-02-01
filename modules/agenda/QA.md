@@ -90,4 +90,15 @@ Todos los casos siguen el patrón Given / When / Then y deben validar:
   - `POST /appointments` crea la cita y genera un evento `appointment_created`.
   - Después de reschedule/cancel/no_show los eventos incrementan su contador.
   - `POST /appointments/{id}/no_show` retorna `meta.flag_appended` (0 o 1) y `GET /patients/{id}/flags` reporta un `reason_code` `no_show` o `late_cancel` cuando el flag está habilitado.
-  - El script imprime diferencias de cuenta y el estado del flag al final.
+- El script imprime diferencias de cuenta y el estado del flag al final.
+
+## READY MODE bootstrap
+- El SQL `modules/agenda/sql/ready_schema.sql` crea las tablas mínimas `agenda_appointments`, `agenda_appointment_events` y `agenda_patient_flags` necesarias para los writes.
+- Importa este SQL en tu instancia MySQL local (puede ser `mysql -u user -p < modules/agenda/sql/ready_schema.sql`); el comando debe ejecutarse en la carpeta raíz del repo.
+- Ajusta `modules/agenda/config/agenda.php` para que apunte a esas tablas (ya está preconfigurado en este repo).
+- Una vez las tablas existan, corre:
+  ```sh
+  QA_MODE=ready BASE_URL=http://127.0.0.1:8089/api/agenda/index.php bash modules/agenda/qa/requests.sh
+  ```
+- Observá que los eventos aumentan de cuenta (`GET /appointments/{id}/events` después de cada operación) y que `meta.flag_appended` refleja si el flag se creó.
+- Si las tablas aún no existen o la conexión falla, el modo `ready` devolverá `db_not_ready` o `db_error` y se debe resolver la base antes de volver a correr.
