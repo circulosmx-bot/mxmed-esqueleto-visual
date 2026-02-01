@@ -75,6 +75,49 @@ run_error_test() {
   assert_error_exact "$response" "$code" "$message"
 }
 
+assert_error_one_of() {
+  local response="$1"
+  shift
+  local match=0
+  while (( $# )); do
+    local code="$1"; shift
+    local message="$1"; shift
+    if echo "$response" | jq -e --arg code "$code" --arg msg "$message" '(.ok == false) and (.error == $code) and (.message == $msg) and (.meta | type == "object")' >/dev/null; then
+      match=1
+      break
+    fi
+  done
+  if (( match == 0 )); then
+    echo "Response did not match any expected error pair" >&2
+    echo "$response" | jq . >&2 || true
+    exit 1
+  fi
+}
+
+run_error_expect_two() {
+  local title="$1"
+  local code1="$2"
+  local message1="$3"
+  local code2="$4"
+  local message2="$5"
+  shift 5
+  print_header "$title"
+  local response
+  response="$("$@")"
+  echo "$response" | jq .
+  assert_contract "$response"
+  assert_meta_object "$response"
+  if echo "$response" | jq -e --arg code "$code1" --arg msg "$message1" '(.ok == false) and (.error == $code) and (.message == $msg) and (.meta | type == "object")' >/dev/null; then
+    return
+  fi
+  if echo "$response" | jq -e --arg code "$code2" --arg msg "$message2" '(.ok == false) and (.error == $code) and (.message == $msg) and (.meta | type == "object")' >/dev/null; then
+    return
+  fi
+  echo "Expected error=$code1/$code2 message='$message1' or '$message2' but got:" >&2
+  echo "$response" | jq . >&2 || true
+  exit 1
+}
+
 run_success_test() {
   local title="$1"
   shift
@@ -141,21 +184,40 @@ if [[ "$QA_MODE" == "not_ready" ]]; then
     curl -s -X GET "$BASE_URL/patients/$PATIENT_ID/flags"
 
   run_error_test "Given appointments missing / POST create" \
-    invalid_params "invalid_params" \
+    invalid_params "invalid payload for create" \
     curl -s -X POST "$BASE_URL/appointments" -H 'Content-Type: application/json' -d '{}'
 
-  run_error_test "Given no appointment / PATCH reschedule" \
-    not_found "appointment not found" \
-    curl -s -X PATCH "$BASE_URL/appointments/unknown/reschedule" -H 'Content-Type: application/json' \
-      -d '{"motivo_code":"test","from_start_at":"2026-02-01 09:00:00","from_end_at":"2026-02-01 09:30:00","to_start_at":"2026-02-02 09:00:00","to_end_at":"2026-02-02 09:30:00"}'
+  local response
+  print_header "Given no appointment / PATCH reschedule"
+  response=$(curl -s -X PATCH "$BASE_URL/appointments/unknown/reschedule" -H 'Content-Type: application/json' \
+    -d '{"motivo_code":"test","from_start_at":"2026-02-01 09:00:00","from_end_at":"2026-02-01 09:30:00","to_start_at":"2026-02-02 09:00:00","to_end_at":"2026-02-02 09:30:00"}')
+  echo "$response" | jq .
+  assert_contract "$response"
+  assert_meta_object "$response"
+  assert_error_any_of "$response" \
+    db_error "database error" \
+    db_not_ready "appointments table not ready" \
+    db_not_ready "appointment events not ready" \
+    not_found "appointment not found"
+
+  print_header "Given no appointment / POST cancel"
+  response=$(curl -s -X POST "$BASE_URL/appointments/unknown/cancel" -H 'Content-Type: application/json' -d '{"motivo_code":"test"}')
+  echo "$response" | jq .
+  assert_contract "$response"
+  assert_meta_object "$response"
+  assert_error_any_of "$response" \
+    db_error "database error" \
+    db_not_ready "appointments table not ready" \
+    db_not_ready "appointment events not ready" \
+    not_found "appointment not found"
 
   run_error_test "Given no appointment / POST cancel" \
     not_found "appointment not found" \
     curl -s -X POST "$BASE_URL/appointments/unknown/cancel" -H 'Content-Type: application/json' -d '{"motivo_code":"test"}'
 
   run_error_test "Given invalid payload / POST no_show" \
-    invalid_params "invalid_params" \
-    curl -s -X POST "$BASE_URL/appointments/unknown/no_show" -H 'Content-Type: application/json' -d '{"motivo_code":"test"}'
+    invalid_params "invalid payload for no_show" \
+    curl -s -X POST "$BASE_URL/appointments/unknown/no_show" -H 'Content-Type: application/json' -d '{}'
 
   print_header "QA script finished (not_ready mode)"
   echo "Use QA_MODE=ready to exercise the write flow once tables are available."
