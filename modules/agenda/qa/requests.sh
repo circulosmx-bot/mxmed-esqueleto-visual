@@ -171,9 +171,12 @@ print_header "QA mode"
 echo "QA_MODE=$QA_MODE"
 echo
 if [[ "$QA_MODE" == "not_ready" ]]; then
-  run_error_test "Given agenda tables absent / GET availability" \
-    db_not_ready "availability base schedule not ready" \
-    curl -s -X GET "$BASE_URL/availability?doctor_id=$DOCTOR_ID&consultorio_id=$CONSULTORIO_ID&date=$DATE"
+  response=$(curl -sS -X GET "$BASE_URL/availability?doctor_id=$DOCTOR_ID&consultorio_id=$CONSULTORIO_ID&date=$DATE")
+  print_header "Given agenda tables absent / GET availability"
+  echo "$response" | jq .
+  assert_contract "$response"
+  assert_meta_object "$response"
+  assert_error_exact "$response" "db_not_ready" "availability base schedule not ready"
 
   run_error_test "Given appointment events missing / GET events" \
     db_not_ready "appointment events not ready" \
