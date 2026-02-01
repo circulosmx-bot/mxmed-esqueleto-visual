@@ -8,9 +8,6 @@ require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentWriteContro
 
 use Agenda\Controllers\AppointmentsController;
 use Agenda\Controllers\ConsultoriosController;
-use Agenda\Controllers\AppointmentEventsController;
-use Agenda\Controllers\PatientFlagsController;
-use Agenda\Controllers\AvailabilityController;
 use Agenda\Controllers\AppointmentWriteController;
 
 header('Content-Type: application/json');

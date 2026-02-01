@@ -4,9 +4,11 @@ namespace Agenda\Controllers;
 use Agenda\Repositories\AppointmentEventsRepository;
 use PDOException;
 use RuntimeException;
+use Agenda\Helpers as DbHelpers;
 
 require_once __DIR__ . '/../repositories/AppointmentEventsRepository.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
+require_once __DIR__ . '/../helpers/db_helpers.php';
 
 class AppointmentEventsController
 {
@@ -19,9 +21,7 @@ class AppointmentEventsController
             $pdo = mxmed_pdo();
             $this->repository = new AppointmentEventsRepository($pdo);
         } catch (RuntimeException $e) {
-            $this->dbError = 'appointment events not ready';
-        } catch (PDOException $e) {
-            $this->dbError = 'appointment events not ready';
+            $this->dbError = $e->getMessage();
         }
     }
 
@@ -42,7 +42,10 @@ class AppointmentEventsController
         } catch (RuntimeException $e) {
             return $this->error('db_not_ready', $e->getMessage());
         } catch (PDOException $e) {
-            return $this->error('db_error', $e->getMessage());
+            if (DbHelpers\shouldTreatAsNotReady($e)) {
+                return $this->error('db_not_ready', 'appointment events not ready');
+            }
+            return $this->error('db_error', 'database error');
         }
 
         return $this->success($events, ['appointment_id' => $appointmentId, 'limit' => $limit, 'count' => count($events)]);
