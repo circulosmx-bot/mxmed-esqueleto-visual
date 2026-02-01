@@ -9,8 +9,25 @@ PATIENT_ID="${PATIENT_ID:-demo}"
 DATE="${DATE:-2026-02-01}"
 QA_MODE="${QA_MODE:-not_ready}"
 QA_HEADER=(-H "X-QA-Mode: $QA_MODE")
+LAST_METHOD=""
+LAST_URL=""
 
 curl_request() {
+  local method="GET"
+  local url=""
+  local i=1
+  while [[ $i -le $# ]]; do
+    local arg="${!i}"
+    if [[ "$arg" == "-X" ]]; then
+      ((i++))
+      method="${!i}"
+    elif [[ "$arg" == http*://* ]]; then
+      url="$arg"
+    fi
+    ((i++))
+  done
+  LAST_METHOD="$method"
+  LAST_URL="$url"
   curl -sS "${QA_HEADER[@]}" "$@"
 }
 
@@ -59,6 +76,10 @@ assert_qa_mode_seen() {
   if [[ "$seen" != "$expected" ]]; then
     echo "Expected meta.qa_mode_seen='$expected' but got: '$seen'" >&2
     echo "$body" | jq . >&2 || true
+    if [[ -n "$LAST_URL" ]]; then
+      echo "Hint: reproduce with:" >&2
+      echo "curl -i -H 'X-QA-Mode: ${QA_MODE}' -X ${LAST_METHOD} '${LAST_URL}'" >&2
+    fi
     exit 1
   fi
 }
