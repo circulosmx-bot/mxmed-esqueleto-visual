@@ -5,7 +5,7 @@ use Agenda\Repositories\ConsultoriosRepository;
 use PDOException;
 
 require_once __DIR__ . '/../repositories/ConsultoriosRepository.php';
-require_once __DIR__ . '/../../api/_lib/db.php';
+require_once __DIR__ . '/../../../api/_lib/db.php';
 
 class ConsultoriosController
 {

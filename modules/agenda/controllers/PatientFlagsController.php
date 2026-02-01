@@ -6,7 +6,7 @@ use PDOException;
 use RuntimeException;
 
 require_once __DIR__ . '/../repositories/PatientFlagsRepository.php';
-require_once __DIR__ . '/../../api/_lib/db.php';
+require_once __DIR__ . '/../../../api/_lib/db.php';
 
 class PatientFlagsController
 {

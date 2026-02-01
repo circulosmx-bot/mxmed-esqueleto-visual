@@ -11,7 +11,7 @@ use RuntimeException;
 
 require_once __DIR__ . '/../repositories/AvailabilityRepository.php';
 require_once __DIR__ . '/../services/HolidayMxProvider.php';
-require_once __DIR__ . '/../../api/_lib/db.php';
+require_once __DIR__ . '/../../../api/_lib/db.php';
 
 class AvailabilityController
 {

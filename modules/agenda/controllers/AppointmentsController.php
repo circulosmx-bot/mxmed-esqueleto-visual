@@ -5,7 +5,7 @@ use Agenda\Repositories\AppointmentsRepository;
 use PDOException;
 
 require_once __DIR__ . '/../repositories/AppointmentsRepository.php';
-require_once __DIR__ . '/../../api/_lib/db.php';
+require_once __DIR__ . '/../../../api/_lib/db.php';
 
 class AppointmentsController
 {
