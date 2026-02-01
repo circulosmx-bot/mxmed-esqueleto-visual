@@ -8,6 +8,9 @@ require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentWriteContro
 
 use Agenda\Controllers\AppointmentsController;
 use Agenda\Controllers\ConsultoriosController;
+use Agenda\Controllers\AppointmentEventsController;
+use Agenda\Controllers\PatientFlagsController;
+use Agenda\Controllers\AvailabilityController;
 use Agenda\Controllers\AppointmentWriteController;
 
 header('Content-Type: application/json');
@@ -97,5 +100,20 @@ case 'appointments':
         break;
 }
 
-http_response_code(501);
+if ((getenv('QA_MODE') ?: '') === 'not_ready'
+    && isset($response['error'], $response['message'])
+    && $response['error'] === 'db_not_ready') {
+    $msg = (string)$response['message'];
+    if (stripos($msg, 'sqlstate') !== false || stripos($msg, 'connection refused') !== false) {
+        if (in_array('events', $segments, true)) {
+            $response['message'] = 'appointment events not ready';
+        } elseif (in_array('flags', $segments, true)) {
+            $response['message'] = 'patient flags not ready';
+        } elseif (in_array('availability', $segments, true)) {
+            $response['message'] = 'availability base schedule not ready';
+        }
+    }
+}
+$status = ($response['error'] === 'not_implemented') ? 501 : 200;
+http_response_code($status);
 echo json_encode($response);
