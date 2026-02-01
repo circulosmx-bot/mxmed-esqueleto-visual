@@ -19,7 +19,9 @@ class PatientFlagsController
             $pdo = mxmed_pdo();
             $this->repository = new PatientFlagsRepository($pdo);
         } catch (RuntimeException $e) {
-            $this->dbError = $e->getMessage();
+            $this->dbError = 'patient flags not ready';
+        } catch (PDOException $e) {
+            $this->dbError = 'patient flags not ready';
         }
     }
 
