@@ -48,6 +48,21 @@ assert_meta_object() {
   fi
 }
 
+assert_qa_mode_seen() {
+  local body="$1"
+  local expected="${QA_MODE:-}"
+  if [[ -z "$expected" ]]; then
+    return 0
+  fi
+  local seen
+  seen=$(echo "$body" | jq -r '.meta.qa_mode_seen // empty')
+  if [[ "$seen" != "$expected" ]]; then
+    echo "Expected meta.qa_mode_seen='$expected' but got: '$seen'" >&2
+    echo "$body" | jq . >&2 || true
+    exit 1
+  fi
+}
+
 assert_ok() {
   local body="$1"
   if ! echo "$body" | jq -e '.ok == true' >/dev/null; then
@@ -77,6 +92,7 @@ run_error_test() {
   echo "$response" | jq .
   assert_contract "$response"
   assert_meta_object "$response"
+  assert_qa_mode_seen "$response"
   assert_error_exact "$response" "$code" "$message"
 }
 
@@ -132,6 +148,7 @@ run_success_test() {
   echo "$response" | jq .
   assert_contract "$response"
   assert_meta_object "$response"
+  assert_qa_mode_seen "$response"
   assert_ok "$response"
   LAST_RESPONSE="$response"
 }
