@@ -24,6 +24,7 @@ if ($script !== '' && str_starts_with($path, $script)) {
 }
 $segments = array_values(array_filter(explode('/', trim($relative, '/'))));
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+$qaMode = getenv('QA_MODE') ?: ($_SERVER['HTTP_X_QA_MODE'] ?? '');
 
 $controller = new AppointmentsController();
 $response = [
@@ -100,7 +101,7 @@ case 'appointments':
         break;
 }
 
-if ((getenv('QA_MODE') ?: '') === 'not_ready'
+if ($qaMode === 'not_ready'
     && isset($response['error'], $response['message'])
     && $response['error'] === 'db_not_ready') {
     $msg = (string)$response['message'];

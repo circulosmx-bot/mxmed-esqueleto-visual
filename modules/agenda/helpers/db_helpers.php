@@ -6,8 +6,8 @@ use Throwable;
 
 function isQaModeNotReady(): bool
 {
-    $mode = getenv('QA_MODE') ?: '';
-    return strcasecmp($mode, 'not_ready') === 0;
+    $qa = getenv('QA_MODE') ?: ($_SERVER['HTTP_X_QA_MODE'] ?? '');
+    return strcasecmp($qa, 'not_ready') === 0;
 }
 
 function isConnectionFailure(Throwable $exception): bool
