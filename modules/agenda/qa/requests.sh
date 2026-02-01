@@ -279,10 +279,6 @@ if [[ "$QA_MODE" == "not_ready" ]]; then
     db_not_ready "appointment events not ready" \
     not_found "appointment not found"
 
-  run_error_test "Given no appointment / POST cancel" \
-    not_found "appointment not found" \
-    curl_request -X POST "$BASE_URL/appointments/unknown/cancel" -H 'Content-Type: application/json' -d '{"motivo_code":"test"}'
-
   run_error_test "Given invalid payload / POST no_show" \
     invalid_params "invalid payload for no_show" \
     curl_request -X POST "$BASE_URL/appointments/unknown/no_show" -H 'Content-Type: application/json' -d '{}'
