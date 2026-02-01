@@ -19,7 +19,9 @@ class AppointmentEventsController
             $pdo = mxmed_pdo();
             $this->repository = new AppointmentEventsRepository($pdo);
         } catch (RuntimeException $e) {
-            $this->dbError = $e->getMessage();
+            $this->dbError = 'appointment events not ready';
+        } catch (PDOException $e) {
+            $this->dbError = 'appointment events not ready';
         }
     }
 
