@@ -2,6 +2,7 @@
 namespace Agenda\Helpers;
 
 use PDOException;
+use Throwable;
 
 function isQaModeNotReady(): bool
 {
@@ -9,7 +10,7 @@ function isQaModeNotReady(): bool
     return strcasecmp($mode, 'not_ready') === 0;
 }
 
-function isConnectionFailure(PDOException $exception): bool
+function isConnectionFailure(Throwable $exception): bool
 {
     $message = $exception->getMessage();
     $patterns = [
@@ -26,7 +27,7 @@ function isConnectionFailure(PDOException $exception): bool
     return false;
 }
 
-function shouldTreatAsNotReady(PDOException $exception): bool
+function shouldTreatAsNotReady(Throwable $exception): bool
 {
     return isQaModeNotReady() && isConnectionFailure($exception);
 }
