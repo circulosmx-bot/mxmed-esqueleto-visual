@@ -12,8 +12,14 @@ use Agenda\Controllers\AppointmentWriteController;
 
 header('Content-Type: application/json');
 $path = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
-$script = trim(str_replace($_SERVER['SCRIPT_NAME'], '', $_SERVER['SCRIPT_NAME']), '/');
-$segments = array_values(array_filter(explode('/', str_replace('api/agenda', '', $path))));
+$script = trim($_SERVER['SCRIPT_NAME'] ?? '', '/');
+$relative = $path;
+if ($script !== '' && str_starts_with($path, $script)) {
+    $relative = substr($path, strlen($script));
+} elseif (str_starts_with($path, 'api/agenda')) {
+    $relative = substr($path, strlen('api/agenda'));
+}
+$segments = array_values(array_filter(explode('/', trim($relative, '/'))));
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 $controller = new AppointmentsController();
