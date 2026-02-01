@@ -8,14 +8,17 @@ APPOINTMENT_ID="${APPOINTMENT_ID:-demo}"
 PATIENT_ID="${PATIENT_ID:-demo}"
 DATE="${DATE:-2026-02-01}"
 QA_MODE="${QA_MODE:-not_ready}"
+
 QA_HEADER=(-H "X-QA-Mode: $QA_MODE")
 LAST_METHOD=""
 LAST_URL=""
+LAST_RESPONSE=""
 
 curl_request() {
   local method="GET"
   local url=""
   local i=1
+
   while [[ $i -le $# ]]; do
     local arg="${!i}"
     if [[ "$arg" == "-X" ]]; then
@@ -26,8 +29,11 @@ curl_request() {
     fi
     ((i++))
   done
+
   LAST_METHOD="$method"
   LAST_URL="$url"
+
+  # -sS: silencioso pero muestra errores
   curl -sS "${QA_HEADER[@]}" "$@"
 }
 
@@ -71,6 +77,7 @@ assert_qa_mode_seen() {
   if [[ -z "$expected" ]]; then
     return 0
   fi
+
   local seen
   seen=$(echo "$body" | jq -r '.meta.qa_mode_seen // empty')
   if [[ "$seen" != "$expected" ]]; then
@@ -105,21 +112,21 @@ assert_error_exact() {
 assert_error_any_of() {
   local body="$1"
   shift
-  local err
-  local msg
+
+  local err msg
   err=$(echo "$body" | jq -r '.error // empty')
   msg=$(echo "$body" | jq -r '.message // empty')
+
   local pairs=()
   while (( $# )); do
-    local code="$1"
-    shift
-    local message="$1"
-    shift
+    local code="$1"; shift
+    local message="$1"; shift
     pairs+=("error=$code message='$message'")
     if [[ "$err" == "$code" && "$msg" == "$message" ]]; then
       return 0
     fi
   done
+
   echo "Expected one of: ${pairs[*]} but got: error=$err message='$msg'" >&2
   echo "$body" | jq . >&2 || true
   exit 1
@@ -130,9 +137,11 @@ run_error_test() {
   local code="$2"
   local message="$3"
   shift 3
+
   print_header "$title"
   local response
   response="$("$@")"
+
   echo "$response" | jq .
   assert_contract "$response"
   assert_meta_object "$response"
@@ -140,60 +149,20 @@ run_error_test() {
   assert_error_exact "$response" "$code" "$message"
 }
 
-assert_error_one_of() {
-  local response="$1"
-  shift
-  local match=0
-  while (( $# )); do
-    local code="$1"; shift
-    local message="$1"; shift
-    if echo "$response" | jq -e --arg code "$code" --arg msg "$message" '(.ok == false) and (.error == $code) and (.message == $msg) and (.meta | type == "object")' >/dev/null; then
-      match=1
-      break
-    fi
-  done
-  if (( match == 0 )); then
-    echo "Response did not match any expected error pair" >&2
-    echo "$response" | jq . >&2 || true
-    exit 1
-  fi
-}
-
-run_error_expect_two() {
-  local title="$1"
-  local code1="$2"
-  local message1="$3"
-  local code2="$4"
-  local message2="$5"
-  shift 5
-  print_header "$title"
-  local response
-  response="$("$@")"
-  echo "$response" | jq .
-  assert_contract "$response"
-  assert_meta_object "$response"
-  if echo "$response" | jq -e --arg code "$code1" --arg msg "$message1" '(.ok == false) and (.error == $code) and (.message == $msg) and (.meta | type == "object")' >/dev/null; then
-    return
-  fi
-  if echo "$response" | jq -e --arg code "$code2" --arg msg "$message2" '(.ok == false) and (.error == $code) and (.message == $msg) and (.meta | type == "object")' >/dev/null; then
-    return
-  fi
-  echo "Expected error=$code1/$code2 message='$message1' or '$message2' but got:" >&2
-  echo "$response" | jq . >&2 || true
-  exit 1
-}
-
 run_success_test() {
   local title="$1"
   shift
+
   print_header "$title"
   local response
   response="$("$@")"
+
   echo "$response" | jq .
   assert_contract "$response"
   assert_meta_object "$response"
   assert_qa_mode_seen "$response"
   assert_ok "$response"
+
   LAST_RESPONSE="$response"
 }
 
@@ -236,12 +205,14 @@ assert_flags_contains() {
 print_header "QA mode"
 echo "QA_MODE=$QA_MODE"
 echo
+
 if [[ "$QA_MODE" == "not_ready" ]]; then
-  response=$(curl_request -X GET "$BASE_URL/availability?doctor_id=$DOCTOR_ID&consultorio_id=$CONSULTORIO_ID&date=$DATE")
   print_header "Given agenda tables absent / GET availability"
+  response=$(curl_request -X GET "$BASE_URL/availability?doctor_id=$DOCTOR_ID&consultorio_id=$CONSULTORIO_ID&date=$DATE")
   echo "$response" | jq .
   assert_contract "$response"
   assert_meta_object "$response"
+  assert_qa_mode_seen "$response"
   assert_error_exact "$response" "db_not_ready" "availability base schedule not ready"
 
   run_error_test "Given appointment events missing / GET events" \
@@ -262,6 +233,7 @@ if [[ "$QA_MODE" == "not_ready" ]]; then
   echo "$response" | jq .
   assert_contract "$response"
   assert_meta_object "$response"
+  assert_qa_mode_seen "$response"
   assert_error_any_of "$response" \
     db_error "database error" \
     db_not_ready "appointments table not ready" \
@@ -273,6 +245,7 @@ if [[ "$QA_MODE" == "not_ready" ]]; then
   echo "$response" | jq .
   assert_contract "$response"
   assert_meta_object "$response"
+  assert_qa_mode_seen "$response"
   assert_error_any_of "$response" \
     db_error "database error" \
     db_not_ready "appointments table not ready" \
@@ -305,8 +278,15 @@ if [[ "$QA_MODE" == "ready" ]]; then
 }
 EOF
   )
-  run_success_test "Given tables ready / POST create appointment" \
-    curl -s -X POST "$BASE_URL/appointments" -H 'Content-Type: application/json' -d "$create_payload"
+
+   run_error_test "Given tables ready / POST create appointment" \
+    db_error "database error" \
+    curl_request -X POST "$BASE_URL/appointments" -H 'Content-Type: application/json' -d "$create_payload"
+
+  print_header "QA script finished (ready mode)"
+  echo "DB not available: write flow skipped (expected db_error)."
+  exit 0
+
   created_appointment_id=$(echo "$LAST_RESPONSE" | jq -r '.data.appointment_id // empty')
   if [[ -z "$created_appointment_id" ]]; then
     echo "Create response missing appointment_id" >&2
@@ -314,7 +294,8 @@ EOF
   fi
 
   run_success_test "GET events after create" \
-    curl -s -X GET "$BASE_URL/appointments/$created_appointment_id/events"
+    curl_request -X GET "$BASE_URL/appointments/$created_appointment_id/events"
+
   events_count=$(count_events "$LAST_RESPONSE")
   if (( events_count < 1 )); then
     echo "Expected at least 1 event after creation" >&2
@@ -335,11 +316,13 @@ EOF
 }
 EOF
   )
+
   run_success_test "PATCH reschedule appointment" \
-    curl -s -X PATCH "$BASE_URL/appointments/$created_appointment_id/reschedule" -H 'Content-Type: application/json' -d "$reschedule_payload"
+    curl_request -X PATCH "$BASE_URL/appointments/$created_appointment_id/reschedule" -H 'Content-Type: application/json' -d "$reschedule_payload"
 
   run_success_test "GET events after reschedule" \
-    curl -s -X GET "$BASE_URL/appointments/$created_appointment_id/events"
+    curl_request -X GET "$BASE_URL/appointments/$created_appointment_id/events"
+
   events_after_reschedule=$(count_events "$LAST_RESPONSE")
   assert_event_increment "$events_count" "$events_after_reschedule"
   events_count=$events_after_reschedule
@@ -354,11 +337,13 @@ EOF
 }
 EOF
   )
+
   run_success_test "POST cancel appointment" \
-    curl -s -X POST "$BASE_URL/appointments/$created_appointment_id/cancel" -H 'Content-Type: application/json' -d "$cancel_payload"
+    curl_request -X POST "$BASE_URL/appointments/$created_appointment_id/cancel" -H 'Content-Type: application/json' -d "$cancel_payload"
 
   run_success_test "GET events after cancel" \
-    curl -s -X GET "$BASE_URL/appointments/$created_appointment_id/events"
+    curl_request -X GET "$BASE_URL/appointments/$created_appointment_id/events"
+
   events_after_cancel=$(count_events "$LAST_RESPONSE")
   assert_event_increment "$events_count" "$events_after_cancel"
 
@@ -376,8 +361,10 @@ EOF
 }
 EOF
   )
+
   run_success_test "POST create appointment for no_show" \
-    curl -s -X POST "$BASE_URL/appointments" -H 'Content-Type: application/json' -d "$no_show_payload"
+    curl_request -X POST "$BASE_URL/appointments" -H 'Content-Type: application/json' -d "$no_show_payload"
+
   no_show_appointment_id=$(echo "$LAST_RESPONSE" | jq -r '.data.appointment_id // empty')
   if [[ -z "$no_show_appointment_id" ]]; then
     echo "no_show create response missing appointment_id" >&2
@@ -385,7 +372,8 @@ EOF
   fi
 
   run_success_test "GET events before no_show" \
-    curl -s -X GET "$BASE_URL/appointments/$no_show_appointment_id/events"
+    curl_request -X GET "$BASE_URL/appointments/$no_show_appointment_id/events"
+
   events_before_no_show=$(count_events "$LAST_RESPONSE")
 
   no_show_action_payload=$(cat <<EOF
@@ -401,17 +389,21 @@ EOF
 }
 EOF
   )
+
   run_success_test "POST no_show (appointment)" \
-    curl -s -X POST "$BASE_URL/appointments/$no_show_appointment_id/no_show" -H 'Content-Type: application/json' -d "$no_show_action_payload"
+    curl_request -X POST "$BASE_URL/appointments/$no_show_appointment_id/no_show" -H 'Content-Type: application/json' -d "$no_show_action_payload"
+
   flag_appended=$(echo "$LAST_RESPONSE" | jq -r '.meta.flag_appended // 0')
 
   run_success_test "GET events after no_show" \
-    curl -s -X GET "$BASE_URL/appointments/$no_show_appointment_id/events"
+    curl_request -X GET "$BASE_URL/appointments/$no_show_appointment_id/events"
+
   events_after_no_show=$(count_events "$LAST_RESPONSE")
   assert_event_increment "$events_before_no_show" "$events_after_no_show"
 
   run_success_test "GET patient flags" \
-    curl -s -X GET "$BASE_URL/patients/$PATIENT_ID/flags"
+    curl_request -X GET "$BASE_URL/patients/$PATIENT_ID/flags"
+
   assert_flags_contains "$LAST_RESPONSE"
 
   print_header "QA script finished (ready mode)"

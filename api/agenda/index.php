@@ -115,6 +115,23 @@ if ($qaMode === 'not_ready'
         }
     }
 }
+if (is_string($qaMode) && $qaMode !== '') {
+    $meta = [];
+    if (isset($response['meta'])) {
+        if (is_object($response['meta'])) {
+            $meta = (array)$response['meta'];
+        } elseif (is_array($response['meta'])) {
+            $meta = $response['meta'];
+        }
+    }
+    $meta['qa_mode_seen'] = $qaMode;
+    $response['meta'] = $meta;
+}
+
+if (isset($response['meta']) && is_array($response['meta'])) {
+    $response['meta'] = (object)$response['meta'];
+}
+
 $status = ($response['error'] === 'not_implemented') ? 501 : 200;
 http_response_code($status);
 echo json_encode($response);
