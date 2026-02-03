@@ -2,8 +2,8 @@
 namespace Agenda\Controllers;
 
 use Agenda\Repositories\AvailabilityRepository;
-use Agenda\Repositories\OverrideRepository;
 use Agenda\Services\HolidayMxProvider;
+use Agenda\Helpers as DbHelpers;
 use DateTime;
 use DateTimeZone;
 use PDOException;
@@ -16,15 +16,18 @@ require_once __DIR__ . '/../../../api/_lib/db.php';
 class AvailabilityController
 {
     private ?AvailabilityRepository $repository = null;
-    private ?OverrideRepository $overrideRepository = null;
     private ?string $dbError = null;
+    private bool $qaNotReady = false;
 
     public function __construct()
     {
+        $this->qaNotReady = DbHelpers\isQaModeNotReady();
+        if ($this->qaNotReady) {
+            return;
+        }
         try {
             $pdo = mxmed_pdo();
             $this->repository = new AvailabilityRepository($pdo);
-            $this->overrideRepository = new OverrideRepository($pdo);
         } catch (RuntimeException $e) {
             $this->dbError = $e->getMessage();
         }
@@ -32,6 +35,9 @@ class AvailabilityController
 
     public function index(array $params = [])
     {
+        if ($this->qaNotReady) {
+            return $this->error('db_not_ready', 'availability base schedule not ready');
+        }
         if ($this->dbError) {
             return $this->error('db_not_ready', 'availability base schedule not ready');
         }
@@ -61,16 +67,7 @@ class AvailabilityController
         $holidayName = $holiday['name'];
 
         $overrides = [];
-        $overridesEnabled = $this->overrideRepository && $this->overrideRepository->isEnabled();
-        if ($overridesEnabled) {
-            try {
-                $overrides = $this->overrideRepository->getOverridesForDate($doctorId, $consultorioId, $date);
-            } catch (RuntimeException $e) {
-                return $this->error('db_not_ready', 'availability overrides not ready');
-            } catch (PDOException $e) {
-                return $this->error('db_error', $e->getMessage());
-            }
-        }
+        $overridesEnabled = false;
 
         $closeOverrides = array_values(array_filter($overrides, fn($override) => $override['type'] === 'close'));
         $openOverrides = array_values(array_filter($overrides, fn($override) => $override['type'] === 'open'));

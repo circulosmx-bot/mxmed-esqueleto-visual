@@ -279,13 +279,23 @@ if [[ "$QA_MODE" == "ready" ]]; then
 EOF
   )
 
-   run_error_test "Given tables ready / POST create appointment" \
-    db_error "database error" \
-    curl_request -X POST "$BASE_URL/appointments" -H 'Content-Type: application/json' -d "$create_payload"
+  print_header "Given tables ready / POST create appointment"
+  response=$(curl_request -X POST "$BASE_URL/appointments" -H 'Content-Type: application/json' -d "$create_payload")
+  echo "$response" | jq .
+  assert_contract "$response"
+  assert_meta_object "$response"
+  assert_qa_mode_seen "$response"
 
-  print_header "QA script finished (ready mode)"
-  echo "DB not available: write flow skipped (expected db_error)."
-  exit 0
+  # Si la DB no está disponible en ready, salimos limpio (comportamiento anterior).
+  if echo "$response" | jq -e '.ok == false and .error == "db_error"' >/dev/null; then
+    print_header "QA script finished (ready mode)"
+    echo "DB not available: write flow skipped (expected db_error)."
+    exit 0
+  fi
+
+  # Si sí pudo escribir, seguimos con el flujo completo.
+  assert_ok "$response"
+  LAST_RESPONSE="$response"
 
   created_appointment_id=$(echo "$LAST_RESPONSE" | jq -r '.data.appointment_id // empty')
   if [[ -z "$created_appointment_id" ]]; then

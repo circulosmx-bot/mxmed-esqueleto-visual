@@ -31,6 +31,10 @@ class AppointmentEventsController
 
     public function index(string $appointmentId, array $params = [])
     {
+        if (DbHelpers\isQaModeNotReady()) {
+            return $this->error('db_not_ready', 'appointment events not ready');
+        }
+
         if ($this->dbError) {
             return $this->error('db_not_ready', $this->dbError);
         }
