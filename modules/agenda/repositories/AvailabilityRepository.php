@@ -134,10 +134,12 @@ class AvailabilityRepository
     {
         $formats = ['Y-m-d H:i:s', 'Y-m-d H:i', 'H:i:s', 'H:i'];
         foreach ($formats as $format) {
-            $template = strpos($format, 'Y-m-d') === false
+            $needsDate = strpos($format, 'Y-m-d') === false;
+            $effectiveFormat = $needsDate ? 'Y-m-d ' . $format : $format;
+            $template = $needsDate
                 ? $date->format('Y-m-d') . ' ' . $value
                 : $value;
-            $dt = DateTimeImmutable::createFromFormat($format, $template, $timezone);
+            $dt = DateTimeImmutable::createFromFormat($effectiveFormat, $template, $timezone);
             if ($dt) {
                 return $dt;
             }
