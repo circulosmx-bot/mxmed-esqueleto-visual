@@ -3,6 +3,7 @@ namespace Agenda\Controllers;
 
 use Agenda\Repositories\AppointmentsRepository;
 use PDOException;
+use RuntimeException;
 
 require_once __DIR__ . '/../repositories/AppointmentsRepository.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
@@ -51,10 +52,13 @@ class AppointmentsController
                 $consultorioId,
                 $limit
             );
-        } catch (RuntimeException $e) {
-            return $this->error('db_not_ready', 'appointments table not ready');
-        } catch (PDOException $e) {
-            return $this->error('db_error', $e->getMessage());
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'appointments table not ready') {
+                return $this->error('db_not_ready', 'appointments table not ready');
+            }
+            return $this->error('db_error', 'database error');
+        } catch (\PDOException $e) {
+            return $this->error('db_error', 'database error');
         }
 
         return [
@@ -62,7 +66,7 @@ class AppointmentsController
             'error' => null,
             'message' => '',
             'data' => $data,
-            'meta' => ['count' => count($data)],
+            'meta' => (object)['count' => count($data)],
         ];
     }
 
@@ -76,10 +80,17 @@ class AppointmentsController
         }
         try {
             $row = $this->repository->getById($id);
-        } catch (RuntimeException $e) {
-            return $this->error('db_not_ready', 'appointments table not ready');
-        } catch (PDOException $e) {
-            return $this->error('db_error', $e->getMessage());
+        } catch (\RuntimeException $e) {
+            $msg = $e->getMessage();
+            if ($msg === 'appointments table not ready') {
+                return $this->error('db_not_ready', 'appointments table not ready');
+            }
+            if ($msg === 'appointment not found') {
+                return $this->error('not_found', 'appointment not found');
+            }
+            return $this->error('db_error', 'database error');
+        } catch (\PDOException $e) {
+            return $this->error('db_error', 'database error');
         }
         if (!$row) {
             return $this->error('not_found', 'appointment not found');
@@ -89,7 +100,7 @@ class AppointmentsController
             'error' => null,
             'message' => '',
             'data' => $row,
-            'meta' => [],
+            'meta' => (object)[],
         ];
     }
 
