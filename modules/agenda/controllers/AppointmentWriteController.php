@@ -32,6 +32,32 @@ class AppointmentWriteController
     public function create(): array
     {
         $payload = $this->getPayload();
+        // Auto-create patient if missing patient_id and patient info is provided
+        if (!isset($payload['patient_id'])) {
+            $patientInput = $payload['patient'] ?? null;
+            if (!$patientInput) {
+                // fallback to top-level minimal fields
+                $patientInput = [
+                    'display_name' => $payload['display_name'] ?? null,
+                    'sex' => $payload['sex'] ?? null,
+                    'birthdate' => $payload['birthdate'] ?? null,
+                    'contacts' => $payload['contacts'] ?? null,
+                ];
+            }
+            if (!empty($patientInput['display_name'])) {
+                if (!isset($patientInput['doctor_id']) && isset($payload['doctor_id'])) {
+                    $patientInput['doctor_id'] = $payload['doctor_id'];
+                }
+                require_once __DIR__ . '/../helpers/patients_client.php';
+                $patientResp = agenda_patients_create($patientInput);
+                if (!$patientResp['ok']) {
+                    // propagate error with masked visibility
+                    return $this->error($patientResp['error'], $patientResp['message'], (array)($patientResp['meta'] ?? ['visibility' => ['contact' => 'masked']]));
+                }
+                $payload['patient_id'] = $patientResp['data']['patient_id'] ?? null;
+            }
+        }
+
         $errors = $this->validateCreate($payload);
         if ($errors) {
             return $this->error('invalid_params', 'invalid payload for create', $errors);
@@ -301,8 +327,14 @@ class AppointmentWriteController
         if (!$value) {
             return null;
         }
-        $dt = \DateTime::createFromFormat('Y-m-d H:i:s', $value);
-        return $dt && $dt->format('Y-m-d H:i:s') === $value ? $dt : null;
+        $formats = ['Y-m-d H:i:s', 'Y-m-d\TH:i:s'];
+        foreach ($formats as $fmt) {
+            $dt = \DateTime::createFromFormat($fmt, $value);
+            if ($dt && $dt->format($fmt) === $value) {
+                return $dt;
+            }
+        }
+        return null;
     }
 
     private function getPayload(): array
