@@ -168,3 +168,7 @@ QA_MODE=not_ready curl -i -X POST "http://127.0.0.1:8088/api/agenda/index.php/ap
   }'
 ```
 - Expected: `ok:false`, `error:"db_not_ready"`, `message:"patients db not ready"`, `meta.visibility.contact="masked"`, la cita no se crea.
+
+## Nota sobre QA_MODE (comportamiento real)
+- QA_MODE=not_ready no fuerza errores artificiales: solo devuelve `db_not_ready` cuando hay un problema real de base de datos (por ejemplo, tablas no listas).
+- Endpoints como `/appointments/{id}/events`, `/availability` y `/patients/{id}/flags` pueden responder `ok:true` con listas vacías aun con QA_MODE=not_ready activo; esto es el comportamiento esperado.
