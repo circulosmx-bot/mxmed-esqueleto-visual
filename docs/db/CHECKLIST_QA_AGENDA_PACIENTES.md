@@ -52,7 +52,7 @@ curl -i -X POST "http://127.0.0.1:8088/api/agenda/index.php/appointments" \
     }
   }'
 ```
-- Expected: `ok:true`, `data.patient_id` asignado, `data.appointment_id` presente, `meta.visibility.contact="masked"`.
+ - Expected: `ok:true`, `data.patient_id` asignado, `data.appointment_id` presente, `meta.write="create"`, `meta.events_appended=1`.
 
 ## 5) POST /appointments — OK con patient{} y timestamps con espacio
 - Propósito: Aceptar formato con espacio.
@@ -75,7 +75,7 @@ curl -i -X POST "http://127.0.0.1:8088/api/agenda/index.php/appointments" \
     }
   }'
 ```
-- Expected: `ok:true`, `patient_id` creado, `appointment_id` presente, `meta.visibility.contact="masked"`.
+ - Expected: `ok:true`, `data.patient_id` creado, `data.appointment_id` presente, `meta.write="create"`, `meta.events_appended=1`.
 
 ## 6) POST /appointments — NO auto-crea si viene patient_id
 - Propósito: Reusar paciente existente.
@@ -100,6 +100,7 @@ curl -i -X POST "http://127.0.0.1:8088/api/agenda/index.php/appointments" \
   }'
 ```
 - Expected: `ok:true`, `data.patient_id` igual al enviado, no depende de `patient{}`.
+ - Expected: `ok:true`, `data.patient_id` igual al enviado, no depende de `patient{}`. Nota: si viene `patient_id`, Agenda no intenta crear paciente y el objeto `patient{}` se ignora para creación.
 
 ## 7) POST /appointments — Fallback en raíz (sin patient{})
 - Propósito: Compatibilidad con payload plano.
@@ -120,7 +121,7 @@ curl -i -X POST "http://127.0.0.1:8088/api/agenda/index.php/appointments" \
     "contacts":[{"type":"phone","value":"+5215588888888"}]
   }'
 ```
-- Expected: `ok:true`, `data.patient_id` generado, `meta.visibility.contact="masked"`.
+ - Expected: `ok:true`, `data.patient_id` generado, `data.appointment_id` presente, `meta.write="create"`, `meta.events_appended=1`.
 
 ## 8) POST /appointments — Propaga error invalid_params de pacientes
 - Propósito: Ver propagación de errores de creación de paciente.
