@@ -32,17 +32,20 @@ class ConsultoriosController
         }
         try {
             $data = $this->repository->listByDoctor($params['doctor_id']);
-        } catch (RuntimeException $e) {
-            return $this->error('db_not_ready', 'consultorios table not identified yet');
-        } catch (PDOException $e) {
-            return $this->error('db_error', $e->getMessage());
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'consultorios table not identified yet') {
+                return $this->error('db_not_ready', 'consultorios not ready');
+            }
+            return $this->error('db_error', 'database error');
+        } catch (\PDOException $e) {
+            return $this->error('db_error', 'database error');
         }
         return [
             'ok' => true,
             'error' => null,
             'message' => '',
             'data' => $data,
-            'meta' => [],
+            'meta' => (object)[],
         ];
     }
 
