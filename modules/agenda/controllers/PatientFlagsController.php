@@ -20,8 +20,8 @@ class PatientFlagsController
         try {
             $pdo = mxmed_pdo();
             $this->repository = new PatientFlagsRepository($pdo);
-        } catch (RuntimeException $e) {
-            $this->dbError = $e->getMessage();
+        } catch (\RuntimeException $e) {
+            $this->dbError = 'patient flags not ready';
         }
     }
 
@@ -48,9 +48,12 @@ class PatientFlagsController
 
         try {
             $flags = $this->repository->listByPatientId($patientId, $activeOnly, $limit);
-        } catch (RuntimeException $e) {
-            return $this->error('db_not_ready', $e->getMessage());
-        } catch (PDOException $e) {
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'patient flags not ready') {
+                return $this->error('db_not_ready', 'patient flags not ready');
+            }
+            return $this->error('db_error', 'database error');
+        } catch (\PDOException $e) {
             if (DbHelpers\shouldTreatAsNotReady($e)) {
                 return $this->error('db_not_ready', 'patient flags not ready');
             }

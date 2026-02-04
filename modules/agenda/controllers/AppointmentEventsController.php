@@ -20,7 +20,7 @@ class AppointmentEventsController
         try {
             $pdo = mxmed_pdo();
             $this->repository = new AppointmentEventsRepository($pdo);
-        } catch (RuntimeException $e) {
+        } catch (\RuntimeException $e) {
             if (DbHelpers\shouldTreatAsNotReady($e)) {
                 $this->dbError = 'appointment events not ready';
             } else {
@@ -47,9 +47,12 @@ class AppointmentEventsController
 
         try {
             $events = $this->repository->listByAppointmentId($appointmentId, $limit);
-        } catch (RuntimeException $e) {
-            return $this->error('db_not_ready', $e->getMessage());
-        } catch (PDOException $e) {
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'appointment events not ready') {
+                return $this->error('db_not_ready', 'appointment events not ready');
+            }
+            return $this->error('db_error', 'database error');
+        } catch (\PDOException $e) {
             if (DbHelpers\shouldTreatAsNotReady($e)) {
                 return $this->error('db_not_ready', 'appointment events not ready');
             }

@@ -28,8 +28,8 @@ class AvailabilityController
         try {
             $pdo = mxmed_pdo();
             $this->repository = new AvailabilityRepository($pdo);
-        } catch (RuntimeException $e) {
-            $this->dbError = $e->getMessage();
+        } catch (\RuntimeException $e) {
+            $this->dbError = 'availability base schedule not ready';
         }
     }
 
@@ -79,10 +79,10 @@ class AvailabilityController
         if ($shouldLoadBase) {
             try {
                 $baseWindows = $this->repository->getBaseWindowsForDate($doctorId, $consultorioId, $date);
-            } catch (RuntimeException $e) {
-                return $this->error('db_not_ready', $e->getMessage());
-            } catch (PDOException $e) {
-                return $this->error('db_error', $e->getMessage());
+            } catch (\RuntimeException $e) {
+                return $this->error('db_not_ready', 'availability base schedule not ready');
+            } catch (\PDOException $e) {
+                return $this->error('db_error', 'database error');
             }
         }
 
