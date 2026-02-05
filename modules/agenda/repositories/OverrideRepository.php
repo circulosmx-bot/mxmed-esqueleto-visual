@@ -41,10 +41,9 @@ class OverrideRepository
             throw new RuntimeException('availability overrides not ready');
         }
 
-        $stmt = $this->pdo->prepare(sprintf(
-            'SELECT * FROM %s WHERE doctor_id = :doctor_id AND consultorio_id = :consultorio_id AND date = :date',
-            $this->table
-        ));
+        $stmt = $this->pdo->prepare(
+            "SELECT * FROM {$this->table} WHERE doctor_id = :doctor_id AND consultorio_id = :consultorio_id AND (date = :date OR date_ymd = :date)"
+        );
         $stmt->execute([
             'doctor_id' => $doctorId,
             'consultorio_id' => $consultorioId,
@@ -58,8 +57,8 @@ class OverrideRepository
             if ($type !== 'close' && $type !== 'open') {
                 continue;
             }
-            $start = $this->resolveDatetime($row, $dateYmd, ['start_at', 'from_time', 'hora_inicio'], '00:00:00');
-            $end = $this->resolveDatetime($row, $dateYmd, ['end_at', 'to_time', 'hora_fin'], '23:59:59');
+            $start = $this->resolveDatetime($row, $dateYmd, ['start_at', 'start_time', 'from_time', 'hora_inicio'], '00:00:00');
+            $end = $this->resolveDatetime($row, $dateYmd, ['end_at', 'end_time', 'to_time', 'hora_fin'], '23:59:59');
             if (!$start || !$end || $start >= $end) {
                 continue;
             }
