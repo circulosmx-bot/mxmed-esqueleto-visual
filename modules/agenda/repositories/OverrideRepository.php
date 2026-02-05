@@ -41,8 +41,15 @@ class OverrideRepository
             throw new RuntimeException('availability overrides not ready');
         }
 
+        // IMPORTANTE:
+        // Tu tabla real usa date_ymd (DATE). NO usamos "date" porque no existe.
         $stmt = $this->pdo->prepare(
-            "SELECT * FROM {$this->table} WHERE doctor_id = :doctor_id AND consultorio_id = :consultorio_id AND (date = :date OR date_ymd = :date)"
+            "SELECT *
+             FROM {$this->table}
+             WHERE doctor_id = :doctor_id
+               AND consultorio_id = :consultorio_id
+               AND date_ymd = :date
+               AND is_active = 1"
         );
         $stmt->execute([
             'doctor_id' => $doctorId,
@@ -57,11 +64,14 @@ class OverrideRepository
             if ($type !== 'close' && $type !== 'open') {
                 continue;
             }
+
             $start = $this->resolveDatetime($row, $dateYmd, ['start_at', 'start_time', 'from_time', 'hora_inicio'], '00:00:00');
-            $end = $this->resolveDatetime($row, $dateYmd, ['end_at', 'end_time', 'to_time', 'hora_fin'], '23:59:59');
+            $end   = $this->resolveDatetime($row, $dateYmd, ['end_at', 'end_time', 'to_time', 'hora_fin'], '23:59:59');
+
             if (!$start || !$end || $start >= $end) {
                 continue;
             }
+
             $overrides[] = [
                 'type' => $type,
                 'start_at' => $start->format('Y-m-d H:i:s'),

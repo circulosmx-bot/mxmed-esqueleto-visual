@@ -2,6 +2,7 @@
 namespace Agenda\Controllers;
 
 use Agenda\Repositories\AvailabilityRepository;
+use Agenda\Repositories\OverrideRepository;
 use Agenda\Services\HolidayMxProvider;
 use Agenda\Helpers as DbHelpers;
 use DateTime;
@@ -10,14 +11,23 @@ use PDOException;
 use RuntimeException;
 
 require_once __DIR__ . '/../repositories/AvailabilityRepository.php';
+require_once __DIR__ . '/../repositories/OverrideRepository.php';
 require_once __DIR__ . '/../services/HolidayMxProvider.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
 
 class AvailabilityController
 {
     private ?AvailabilityRepository $repository = null;
+
+    // null = ok, 'availability base schedule not ready' o 'database error'
     private ?string $dbError = null;
+
     private bool $qaNotReady = false;
+
+    private ?OverrideRepository $overrideRepo = null;
+    private bool $overridesConfigured = false; // config overrides_table tiene string
+    private bool $overridesEnabled = false;    // tabla existe y repo activa
+    private ?string $overrideDbError = null;   // null o 'database error'
 
     public function __construct()
     {
@@ -25,20 +35,68 @@ class AvailabilityController
         if ($this->qaNotReady) {
             return;
         }
+
+        $pdo = null;
+
+        // 1) Conexión + repo base (capa A)
         try {
             $pdo = mxmed_pdo();
             $this->repository = new AvailabilityRepository($pdo);
-        } catch (\RuntimeException $e) {
+        } catch (RuntimeException $e) {
+            // incluye: "availability base schedule not ready"
             $this->dbError = 'availability base schedule not ready';
+        } catch (PDOException $e) {
+            $this->dbError = 'database error';
+        } catch (\Throwable $e) {
+            $this->dbError = 'database error';
+        }
+
+        // 2) Config overrides (capa C) — nunca debe tumbar el endpoint
+        try {
+            $config = require __DIR__ . '/../config/agenda.php';
+        } catch (\Throwable $e) {
+            // Si no se puede cargar config, solo deshabilitamos overrides
+            $this->overridesConfigured = false;
+            $this->overridesEnabled = false;
+            return;
+        }
+
+        $table = trim((string)($config['overrides_table'] ?? ''));
+        $this->overridesConfigured = ($table !== '');
+
+        if (!$this->overridesConfigured || !$pdo) {
+            return;
+        }
+
+        try {
+            $this->overrideRepo = new OverrideRepository($pdo);
+            $this->overridesEnabled = $this->overrideRepo->isEnabled();
+        } catch (RuntimeException $e) {
+            // Caso esperado: tabla configurada pero aún no existe
+            if ($e->getMessage() === 'availability overrides not ready') {
+                $this->overridesEnabled = false;
+            } else {
+                $this->overrideDbError = 'database error';
+            }
+        } catch (PDOException $e) {
+            $this->overrideDbError = 'database error';
+        } catch (\Throwable $e) {
+            $this->overrideDbError = 'database error';
         }
     }
 
     public function index(array $params = [])
     {
+        // QA not_ready mantiene el contrato previo
         if ($this->qaNotReady) {
             return $this->error('db_not_ready', 'availability base schedule not ready');
         }
-        if ($this->dbError) {
+
+        // Base DB error
+        if ($this->dbError === 'database error') {
+            return $this->error('db_error', 'database error');
+        }
+        if ($this->dbError || !$this->repository) {
             return $this->error('db_not_ready', 'availability base schedule not ready');
         }
 
@@ -66,38 +124,74 @@ class AvailabilityController
         $isHoliday = $holiday['is_holiday'];
         $holidayName = $holiday['name'];
 
+        // Overrides (C)
         $overrides = [];
-        $overridesEnabled = false;
+        $overridesEnabled = $this->overridesEnabled;
+
+        if ($this->overrideDbError) {
+            return $this->error('db_error', 'database error');
+        }
+
+        // Si está configurado en agenda.php pero no está lista la tabla => db_not_ready estable
+        if ($this->overridesConfigured && !$this->overridesEnabled) {
+            return $this->error('db_not_ready', 'availability overrides not ready');
+        }
+
+        if ($this->overridesEnabled && $this->overrideRepo) {
+            try {
+                $overrides = $this->overrideRepo->getOverridesForDate(
+                    $doctorId,
+                    $consultorioId,
+                    $date
+                );
+            } catch (RuntimeException $e) {
+                if ($e->getMessage() === 'availability overrides not ready') {
+                    return $this->error('db_not_ready', 'availability overrides not ready');
+                }
+                return $this->error('db_error', 'database error');
+            } catch (PDOException $e) {
+                return $this->error('db_error', 'database error');
+            } catch (\Throwable $e) {
+                return $this->error('db_error', 'database error');
+            }
+        }
 
         $closeOverrides = array_values(array_filter($overrides, fn($override) => $override['type'] === 'close'));
-        $openOverrides = array_values(array_filter($overrides, fn($override) => $override['type'] === 'open'));
+        $openOverrides  = array_values(array_filter($overrides, fn($override) => $override['type'] === 'open'));
         $hasOpen = !empty($openOverrides);
         $hasCloseFullDay = $this->hasFullDayClose($closeOverrides, $date);
+
         $shouldLoadBase = (!$isHoliday || !empty($closeOverrides) || $hasOpen) && (!$hasCloseFullDay || $hasOpen);
 
         $baseWindows = [];
         if ($shouldLoadBase) {
             try {
                 $baseWindows = $this->repository->getBaseWindowsForDate($doctorId, $consultorioId, $date);
-            } catch (\RuntimeException $e) {
+            } catch (RuntimeException $e) {
                 return $this->error('db_not_ready', 'availability base schedule not ready');
-            } catch (\PDOException $e) {
+            } catch (PDOException $e) {
+                return $this->error('db_error', 'database error');
+            } catch (\Throwable $e) {
                 return $this->error('db_error', 'database error');
             }
         }
 
         $windows = $baseWindows;
+
         if (!empty($closeOverrides)) {
             $windows = $this->subtractIntervals($windows, $closeOverrides);
         }
         if (!empty($openOverrides)) {
-            // Layer C may reopen/override holidays in a later phase (not implemented yet).
+            // Layer C reabre rangos (incluye feriados)
             $windows = array_merge($windows, $this->buildOverrideWindows($openOverrides));
         }
 
         $windows = $this->sortWindows($windows);
+
         $isOverride = !empty($overrides);
-        $overrideTypes = $isOverride ? array_values(array_unique(array_map(fn($override) => $override['type'], $overrides))) : [];
+        $overrideTypes = $isOverride
+            ? array_values(array_unique(array_map(fn($override) => $override['type'], $overrides)))
+            : [];
 
         return $this->success(
             [
@@ -107,7 +201,16 @@ class AvailabilityController
                 'consultorio_id' => $consultorioId,
                 'windows' => $windows,
             ],
-            $this->buildMeta($doctorId, $consultorioId, $date, $isHoliday, $holidayName, $isOverride, $overrideTypes, $overridesEnabled)
+            $this->buildMeta(
+                $doctorId,
+                $consultorioId,
+                $date,
+                $isHoliday,
+                $holidayName,
+                $isOverride,
+                $overrideTypes,
+                $overridesEnabled
+            )
         );
     }
 
@@ -207,9 +310,9 @@ class AvailabilityController
     private function subtractSegment(array $segment, array $close): array
     {
         $segmentStart = $this->toTimestamp($segment['start_at']);
-        $segmentEnd = $this->toTimestamp($segment['end_at']);
-        $closeStart = $this->toTimestamp($close['start_at']);
-        $closeEnd = $this->toTimestamp($close['end_at']);
+        $segmentEnd   = $this->toTimestamp($segment['end_at']);
+        $closeStart   = $this->toTimestamp($close['start_at']);
+        $closeEnd     = $this->toTimestamp($close['end_at']);
 
         if ($closeEnd <= $segmentStart || $closeStart >= $segmentEnd) {
             return [$segment];
@@ -219,15 +322,15 @@ class AvailabilityController
         if ($closeStart > $segmentStart) {
             $parts[] = [
                 'start_at' => $segment['start_at'],
-                'end_at' => $this->formatTimestamp(min($closeStart, $segmentEnd)),
-                'source' => $segment['source'] ?? 'A',
+                'end_at'   => $this->formatTimestamp(min($closeStart, $segmentEnd)),
+                'source'   => $segment['source'] ?? 'A',
             ];
         }
         if ($closeEnd < $segmentEnd) {
             $parts[] = [
                 'start_at' => $this->formatTimestamp(max($closeEnd, $segmentStart)),
-                'end_at' => $segment['end_at'],
-                'source' => $segment['source'] ?? 'A',
+                'end_at'   => $segment['end_at'],
+                'source'   => $segment['source'] ?? 'A',
             ];
         }
 
@@ -246,7 +349,7 @@ class AvailabilityController
             return false;
         }
         $startOfDay = "{$date} 00:00:00";
-        $endOfDay = "{$date} 23:59:59";
+        $endOfDay   = "{$date} 23:59:59";
         foreach ($closes as $close) {
             if ($this->toTimestamp($close['start_at']) <= $this->toTimestamp($startOfDay)
                 && $this->toTimestamp($close['end_at']) >= $this->toTimestamp($endOfDay)
@@ -259,7 +362,11 @@ class AvailabilityController
 
     private function toTimestamp(string $datetime): int
     {
-        $dt = DateTime::createFromFormat('Y-m-d H:i:s', $datetime, new DateTimeZone(AvailabilityRepository::TIMEZONE));
+        $dt = DateTime::createFromFormat(
+            'Y-m-d H:i:s',
+            $datetime,
+            new DateTimeZone(AvailabilityRepository::TIMEZONE)
+        );
         if (!$dt) {
             return (int)strtotime($datetime);
         }
