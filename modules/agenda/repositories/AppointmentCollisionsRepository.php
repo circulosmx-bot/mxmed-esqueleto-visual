@@ -12,6 +12,7 @@ class AppointmentCollisionsRepository
 {
     private PDO $pdo;
     private array $config;
+    private string $appointmentPk;
 
     private const START_KEYS = ['start_at', 'starts_at', 'inicio_at'];
     private const END_KEYS = ['end_at', 'ends_at', 'fin_at'];
@@ -23,9 +24,10 @@ class AppointmentCollisionsRepository
     {
         $this->pdo = $pdo;
         $this->config = $config;
+        $this->appointmentPk = trim((string)($config['appointment_pk'] ?? 'appointment_id')) ?: 'appointment_id';
     }
 
-    public function getBusyIntervalsForDate(string $doctorId, string $consultorioId, string $dateYmd): array
+    public function getBusyIntervalsForDate(string $doctorId, string $consultorioId, string $dateYmd, ?string $excludeAppointmentId = null): array
     {
         $table = trim((string)($this->config['appointments_table'] ?? ''));
         if ($table === '') {
@@ -46,13 +48,18 @@ class AppointmentCollisionsRepository
 
         $sql = "SELECT * FROM {$table} WHERE doctor_id = :doctor_id AND consultorio_id = :consultorio_id";
         $sql .= " AND DATE({$startCol}) = :date";
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
+        $params = [
             'doctor_id' => $doctorId,
             'consultorio_id' => $consultorioId,
             'date' => $dateYmd,
-        ]);
+        ];
+        if ($excludeAppointmentId && in_array($this->appointmentPk, $columns, true)) {
+            $sql .= " AND {$this->appointmentPk} <> :exclude_id";
+            $params['exclude_id'] = $excludeAppointmentId;
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $tz = new DateTimeZone(self::TIMEZONE);
         $busy = [];
