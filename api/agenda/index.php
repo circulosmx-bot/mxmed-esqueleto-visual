@@ -107,7 +107,7 @@ try {
                     $response = $writes->cancel($segments[1]);
                     break;
                 }
-                if ($method === 'POST' && $sub === 'no_show') {
+                if ($method === 'POST' && ($sub === 'no_show' || $sub === 'no-show')) {
                     $writes = new AppointmentWriteController();
                     $response = $writes->noShow($segments[1]);
                     break;

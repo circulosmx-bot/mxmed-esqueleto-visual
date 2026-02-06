@@ -222,6 +222,7 @@ class AppointmentWriteController
         $meta = [
             'write' => 'cancel',
             'events_appended' => $result['events_appended'],
+            'flags_appended' => $result['flags_appended'] ?? 0,
             'notify_patient' => $result['notify_patient'],
             'contact_method' => $result['contact_method'],
         ];
@@ -240,6 +241,19 @@ class AppointmentWriteController
     public function noShow(string $appointmentId): array
     {
         $payload = $this->getPayload();
+        if (!isset($payload['motivo_code']) && isset($payload['reason_code'])) {
+            $payload['motivo_code'] = $payload['reason_code'];
+        }
+        if (!isset($payload['motivo_text']) && isset($payload['reason_text'])) {
+            $payload['motivo_text'] = $payload['reason_text'];
+        }
+        if (!isset($payload['notify_patient'])) {
+            $payload['notify_patient'] = false;
+        }
+        $payload['notify_patient'] = $this->normalizeBoolean($payload['notify_patient']);
+        if (!isset($payload['contact_method'])) {
+            $payload['contact_method'] = 'none';
+        }
 
         $errors = $this->validateNoShow($appointmentId, $payload);
         if ($errors) {
@@ -278,24 +292,38 @@ class AppointmentWriteController
             return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
         }
 
-        return $this->success(
-            [
-                'appointment_id' => $result['appointment_id'],
-                'status' => 'no_show',
-                'start_at' => $result['start_at'],
-                'end_at' => $result['end_at'],
-                'motivo_code' => $result['motivo_code'],
-                'motivo_text' => $result['motivo_text'],
-                'observed_at' => $result['observed_at'],
-            ],
-            [
-                'write' => 'no_show',
-                'events_appended' => 1,
-                'flag_appended' => $result['flag_appended'],
-                'notify_patient' => $result['notify_patient'],
-                'contact_method' => $result['contact_method'],
-            ]
-        );
+        $flagsAppended = (int)($result['flags_appended'] ?? 0);
+        $eventsAppended = (int)($result['events_appended'] ?? 0);
+        $contactMethod = $result['contact_method'] ?? 'none';
+        $notifyPatient = (int)($result['notify_patient'] ?? 0);
+        $data = [
+            'appointment_id' => $result['appointment_id'],
+            'status' => 'no_show',
+            'start_at' => $result['start_at'],
+            'end_at' => $result['end_at'],
+            'motivo_code' => $result['motivo_code'],
+            'motivo_text' => $result['motivo_text'],
+            'observed_at' => $result['observed_at'],
+            'event_id' => $result['event_id'] ?? null,
+        ];
+        $meta = [
+            'write' => 'no_show',
+            'events_appended' => $eventsAppended,
+            'flags_appended' => $flagsAppended,
+            'flag_appended' => $flagsAppended,
+            'notify_patient' => $notifyPatient,
+            'contact_method' => $contactMethod,
+        ];
+        if (!empty($result['already_no_show'])) {
+            return [
+                'ok' => true,
+                'error' => null,
+                'message' => 'already_no_show',
+                'data' => $data,
+                'meta' => (object)$meta,
+            ];
+        }
+        return $this->success($data, $meta);
     }
 
     public function reschedule(string $appointmentId): array
@@ -466,11 +494,32 @@ class AppointmentWriteController
         if (trim($appointmentId) === '') {
             $errors['appointment_id'] = $appointmentId;
         }
-        if (($payload['motivo_code'] ?? '') === '' && ($payload['motivo_text'] ?? '') === '') {
-            $errors['motivo'] = 'motivo_code or motivo_text required';
+        $actorRole = trim((string)($payload['actor_role'] ?? ''));
+        if ($actorRole === '') {
+            $errors['actor_role'] = 'actor_role required';
+        } elseif (!in_array($actorRole, ['patient', 'operator', 'doctor', 'system'], true)) {
+            $errors['actor_role'] = 'actor_role invalid';
         }
-        if (isset($payload['notify_patient']) && !in_array($payload['notify_patient'], ['0', '1', 0, 1], true)) {
+        $channelOrigin = trim((string)($payload['channel_origin'] ?? ''));
+        if ($channelOrigin === '') {
+            $errors['channel_origin'] = 'channel_origin required';
+        }
+        $reasonCode = $payload['motivo_code'] ?? null;
+        $reasonText = $payload['motivo_text'] ?? null;
+        if ($reasonCode !== null && (!is_string($reasonCode) || strlen($reasonCode) > 255)) {
+            $errors['reason_code'] = 'reason_code invalid';
+        }
+        if ($reasonText !== null && (!is_string($reasonText) || strlen($reasonText) > 255)) {
+            $errors['reason_text'] = 'reason_text invalid';
+        }
+        if (isset($payload['notify_patient']) && !in_array($payload['notify_patient'], ['0', '1', 0, 1, true, false, 'true', 'false'], true)) {
             $errors['notify_patient'] = $payload['notify_patient'];
+        }
+        $contactMethod = $payload['contact_method'] ?? 'none';
+        if (!is_string($contactMethod) || trim($contactMethod) === '') {
+            $errors['contact_method'] = 'contact_method invalid';
+        } elseif (!in_array($contactMethod, ['sms', 'whatsapp', 'email', 'phone', 'none'], true)) {
+            $errors['contact_method'] = 'contact_method invalid';
         }
         if (isset($payload['observed_at']) && $this->parseDateTime($payload['observed_at']) === null) {
             $errors['observed_at'] = $payload['observed_at'];

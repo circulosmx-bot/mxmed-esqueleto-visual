@@ -19,8 +19,8 @@ class AppointmentWriteRepository
     private ?string $appointmentPk = null;
     private array $columnsCache = [];
     private ?PatientFlagsWriteRepository $patientFlagsRepository = null;
-    private ?float $lateCancelHours = null;
     private const TIMEZONE = 'America/Mexico_City';
+    private const LATE_CANCEL_THRESHOLD_MINUTES = 1080;
 
     public function __construct(PDO $pdo)
     {
@@ -29,8 +29,6 @@ class AppointmentWriteRepository
         $this->appointmentsTable = $this->sanitizeIdentifier($config['appointments_table'] ?? '');
         $this->eventsTable = $this->sanitizeIdentifier($config['appointment_events_table'] ?? '');
         $this->appointmentPk = $this->sanitizeIdentifier($config['appointment_pk'] ?? 'appointment_id');
-        $lateCancel = $config['late_cancel_hours'] ?? null;
-        $this->lateCancelHours = is_numeric($lateCancel) ? (float)$lateCancel : null;
         $patientFlagsDriven = trim((string)($config['patient_flags_table'] ?? ''));
         if ($patientFlagsDriven !== '') {
             try {
@@ -190,11 +188,13 @@ class AppointmentWriteRepository
         }
 
         $cancelledAt = (new DateTime('now', new DateTimeZone(self::TIMEZONE)))->format('Y-m-d H:i:s');
+        $lateCancelResult = ['event_appended' => 0, 'flag_appended' => 0];
 
         $this->pdo->beginTransaction();
         try {
             $this->updateCancelFields($pkColumn, $appointmentId, 'canceled', $cancelledAt);
             $eventId = $this->appendCancelEvent($appointmentId, $payload, $current);
+            $lateCancelResult = $this->appendLateCancelEventIfNeeded($appointmentId, $payload, $current, $cancelledAt);
             $this->pdo->commit();
         } catch (PDOException $e) {
             $this->pdo->rollBack();
@@ -203,8 +203,6 @@ class AppointmentWriteRepository
             $this->pdo->rollBack();
             throw $e;
         }
-
-        $this->maybeAppendLateCancelFlag($appointmentId, $current, $payload);
 
         return [
             'appointment_id' => $appointmentId,
@@ -218,6 +216,7 @@ class AppointmentWriteRepository
             'cancelled_at' => $cancelledAt,
             'event_id' => $eventId ?? null,
             'events_appended' => 1,
+            'flags_appended' => $lateCancelResult['flag_appended'] ?? 0,
         ];
     }
 
@@ -237,6 +236,15 @@ class AppointmentWriteRepository
             return;
         }
         $this->update($this->appointmentsTable, $pkColumn, $appointmentId, $data);
+    }
+
+    private function updateStatusIfExists(string $pkColumn, string $appointmentId, string $status): void
+    {
+        $columns = $this->getColumns($this->appointmentsTable);
+        if (!in_array('status', $columns, true)) {
+            return;
+        }
+        $this->update($this->appointmentsTable, $pkColumn, $appointmentId, ['status' => $status]);
     }
 
     private function appendCancelEvent(string $appointmentId, array $payload, array $current): string
@@ -379,46 +387,53 @@ class AppointmentWriteRepository
         return bin2hex(random_bytes(12));
     }
 
-    private function maybeAppendLateCancelFlag(string $appointmentId, array $current, array $payload): void
+    private function appendLateCancelEventIfNeeded(string $appointmentId, array $payload, array $current, string $cancelledAt): array
     {
-        if (!$this->patientFlagsRepository || $this->lateCancelHours === null) {
-            return;
-        }
-        $patientId = $current['patient_id'] ?? null;
-        if (!$patientId) {
-            return;
-        }
         $startAt = $current['start_at'] ?? null;
         if (!$startAt) {
-            return;
+            return ['event_appended' => 0, 'flag_appended' => 0];
         }
         $startDt = DateTime::createFromFormat('Y-m-d H:i:s', $startAt, new DateTimeZone(self::TIMEZONE));
-        if (!$startDt) {
-            return;
+        $cancelledDt = DateTime::createFromFormat('Y-m-d H:i:s', $cancelledAt, new DateTimeZone(self::TIMEZONE));
+        if (!$startDt || !$cancelledDt) {
+            return ['event_appended' => 0, 'flag_appended' => 0];
         }
-        $now = new DateTime('now', new DateTimeZone(self::TIMEZONE));
-        $hoursToStart = ($startDt->getTimestamp() - $now->getTimestamp()) / 3600;
-        if ($hoursToStart > $this->lateCancelHours || $hoursToStart < 0) {
-            return;
+        $diffMinutes = (int)(($startDt->getTimestamp() - $cancelledDt->getTimestamp()) / 60);
+        if ($diffMinutes < 0 || $diffMinutes >= self::LATE_CANCEL_THRESHOLD_MINUTES) {
+            return ['event_appended' => 0, 'flag_appended' => 0];
+        }
+        if ($this->eventExists($appointmentId, 'appointment_late_cancel')) {
+            return ['event_appended' => 0, 'flag_appended' => 0];
         }
 
-        $flagPayload = [
-            'patient_id' => $patientId,
-            'flag_type' => 'grey',
-            'reason_code' => 'late_cancel',
-            'source_appointment_id' => $appointmentId,
-            'notify_patient' => $payload['notify_patient'] ?? 0,
+        $eventData = [
+            'event_id' => $this->generateId(),
+            'appointment_id' => $appointmentId,
+            'event_type' => 'appointment_late_cancel',
+            'timestamp' => (new DateTime('now', new DateTimeZone(self::TIMEZONE)))->format('Y-m-d H:i:s'),
+            'from_datetime' => $startAt,
+            'from_start_at' => $startAt,
+            'from_end_at' => $current['end_at'] ?? null,
+            'motivo_code' => $payload['motivo_code'] ?? null,
+            'motivo_text' => $payload['motivo_text'] ?? null,
+            'notify_patient' => isset($payload['notify_patient']) ? (int)$payload['notify_patient'] : 0,
             'contact_method' => $payload['contact_method'] ?? 'whatsapp',
             'actor_role' => $payload['actor_role'] ?? $payload['created_by_role'] ?? null,
             'actor_id' => $payload['actor_id'] ?? $payload['created_by_id'] ?? null,
             'channel_origin' => $payload['channel_origin'] ?? null,
-            'notes' => sprintf('auto: cancel <= %.1fh', $this->lateCancelHours),
         ];
-        try {
-            $this->patientFlagsRepository->appendFlag($flagPayload);
-        } catch (RuntimeException $e) {
-            // ignore: optional flag
-        }
+        $this->insert($this->eventsTable, $eventData);
+
+        $flagAppended = $this->maybeAppendFlag(
+            $this->resolvePatientIdForFlag($current, $payload),
+            'grey',
+            'late_cancel',
+            $appointmentId,
+            $payload,
+            'auto: late_cancel'
+        );
+
+        return ['event_appended' => 1, 'flag_appended' => $flagAppended];
     }
 
     public function markNoShow(string $appointmentId, array $payload): array
@@ -430,12 +445,37 @@ class AppointmentWriteRepository
 
         $current = $this->fetchAppointment($appointmentId, $pkColumn);
         $observedAt = $payload['observed_at'] ?? (new DateTime('now', new DateTimeZone(self::TIMEZONE)))->format('Y-m-d H:i:s');
+        $columns = $this->getColumns($this->appointmentsTable);
+        $statusExists = in_array('status', $columns, true);
+        $statusValue = strtolower((string)($current['status'] ?? ''));
+        if (($statusExists && $statusValue === 'no_show') || $this->eventExists($appointmentId, 'appointment_no_show')) {
+            return [
+                'appointment_id' => $appointmentId,
+                'start_at' => $current['start_at'] ?? null,
+                'end_at' => $current['end_at'] ?? null,
+                'observed_at' => $observedAt,
+                'motivo_code' => $payload['motivo_code'] ?? null,
+                'motivo_text' => $payload['motivo_text'] ?? null,
+                'notify_patient' => isset($payload['notify_patient']) ? (int)$payload['notify_patient'] : 0,
+                'contact_method' => $payload['contact_method'] ?? 'whatsapp',
+                'events_appended' => 0,
+                'flags_appended' => 0,
+                'already_no_show' => true,
+            ];
+        }
 
         $this->pdo->beginTransaction();
         try {
             $this->updateStatusIfExists($pkColumn, $appointmentId, 'no_show');
             $this->appendNoShowEvent($appointmentId, $payload, $current, $observedAt);
-            $flagAppended = $this->maybeAppendNoShowFlag($appointmentId, $current, $payload);
+            $flagAppended = $this->maybeAppendFlag(
+                $this->resolvePatientIdForFlag($current, $payload),
+                'black',
+                'no_show',
+                $appointmentId,
+                $payload,
+                'auto: no_show'
+            );
             $this->pdo->commit();
         } catch (PDOException $e) {
             $this->pdo->rollBack();
@@ -454,7 +494,9 @@ class AppointmentWriteRepository
             'motivo_text' => $payload['motivo_text'] ?? null,
             'notify_patient' => isset($payload['notify_patient']) ? (int)$payload['notify_patient'] : 0,
             'contact_method' => $payload['contact_method'] ?? 'whatsapp',
-            'flag_appended' => $flagAppended,
+            'events_appended' => 1,
+            'flags_appended' => $flagAppended,
+            'already_no_show' => false,
         ];
     }
 
@@ -470,7 +512,7 @@ class AppointmentWriteRepository
             'from_end_at' => $current['end_at'] ?? null,
             'motivo_code' => $payload['motivo_code'] ?? null,
             'motivo_text' => $payload['motivo_text'] ?? null,
-            'notify_patient' => $payload['notify_patient'] ?? 0,
+            'notify_patient' => isset($payload['notify_patient']) ? (int)$payload['notify_patient'] : 0,
             'contact_method' => $payload['contact_method'] ?? 'whatsapp',
             'actor_role' => $payload['actor_role'] ?? $payload['created_by_role'] ?? null,
             'actor_id' => $payload['actor_id'] ?? $payload['created_by_id'] ?? null,
@@ -479,22 +521,30 @@ class AppointmentWriteRepository
         $this->insert($this->eventsTable, $eventData);
     }
 
-    private function maybeAppendNoShowFlag(string $appointmentId, array $current, array $payload): int
-    {
+    private function maybeAppendFlag(
+        ?string $patientId,
+        string $flagType,
+        string $reasonCode,
+        string $appointmentId,
+        array $payload,
+        string $notes
+    ): int {
         if (!$this->patientFlagsRepository) {
             return 0;
         }
-        $patientId = $current['patient_id'] ?? null;
         if (!$patientId) {
             return 0;
         }
         try {
+            if ($this->patientFlagsRepository->flagExists($patientId, $reasonCode)) {
+                return 0;
+            }
             $this->patientFlagsRepository->appendFlag([
                 'patient_id' => $patientId,
-                'flag_type' => 'red',
-                'reason_code' => 'no_show',
+                'flag_type' => $flagType,
+                'reason_code' => $reasonCode,
                 'source_appointment_id' => $appointmentId,
-                'notes' => 'auto: no_show',
+                'notes' => $notes,
                 'actor_role' => $payload['actor_role'] ?? $payload['created_by_role'] ?? null,
                 'actor_id' => $payload['actor_id'] ?? $payload['created_by_id'] ?? null,
                 'channel_origin' => $payload['channel_origin'] ?? null,
@@ -503,5 +553,28 @@ class AppointmentWriteRepository
         } catch (Throwable $e) {
             return 0;
         }
+    }
+
+    private function resolvePatientIdForFlag(array $current, array $payload): ?string
+    {
+        if (!empty($current['patient_id'])) {
+            return (string)$current['patient_id'];
+        }
+        if (!empty($payload['patient_id'])) {
+            return (string)$payload['patient_id'];
+        }
+        return null;
+    }
+
+    private function eventExists(string $appointmentId, string $eventType): bool
+    {
+        $columns = $this->getColumns($this->eventsTable);
+        if (!in_array('appointment_id', $columns, true) || !in_array('event_type', $columns, true)) {
+            return false;
+        }
+        $sql = sprintf('SELECT COUNT(*) FROM %s WHERE appointment_id = :appointment_id AND event_type = :event_type', $this->eventsTable);
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(['appointment_id' => $appointmentId, 'event_type' => $eventType]);
+        return (int)$stmt->fetchColumn() > 0;
     }
 }
