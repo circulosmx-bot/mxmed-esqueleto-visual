@@ -19,6 +19,7 @@ El flujo de escritura devolvia `db_error` generico en validaciones de disponibil
 Scripts que deben pasar:
 - `docs/qa/availability_engine_qa.sh`
 - `docs/qa/availability_write_guard_qa.sh`
+Nota: el QA write_guard es idempotente y realiza cleanup previo de fixtures.
 
 ## PR / Commit
 - PR #4

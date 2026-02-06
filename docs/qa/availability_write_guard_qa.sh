@@ -1,13 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_URL="${BASE_URL:-http://127.0.0.1:8009}"
+if [[ -z "${BASE_URL:-}" ]]; then
+  echo "BASE_URL env var required"
+  exit 1
+fi
+if [[ -z "${QA_MODE:-}" ]]; then
+  echo "QA_MODE env var required"
+  exit 1
+fi
+
+BASE_URL="$BASE_URL"
 API_BASE="$BASE_URL/api/agenda/index.php"
 DOCTOR_ID="${DOCTOR_ID:-1}"
 CONSULTORIO_ID="${CONSULTORIO_ID:-1}"
 DATE="${DATE:-2026-02-03}"
 SLOT_MINUTES="${SLOT_MINUTES:-30}"
-QA_MODE="${QA_MODE:-}"
+QA_MODE="$QA_MODE"
 
 fail=0
 
@@ -17,6 +26,7 @@ need() {
 
 need curl
 need jq
+need mysql
 
 QA_HEADER=()
 if [[ -n "$QA_MODE" ]]; then
@@ -30,6 +40,20 @@ fail_assert() {
 
 curl_request() {
   curl -sS "${QA_HEADER[@]}" "$@"
+}
+
+mysql_exec() {
+  local sql="$1"
+  if [[ -n "${MYSQL_PASS:-}" ]]; then
+    mysql -h 127.0.0.1 -P 3306 -u mxmed -p"$MYSQL_PASS" mxmed -e "$sql"
+  else
+    mysql -h 127.0.0.1 -P 3306 -u mxmed -p mxmed -e "$sql"
+  fi
+}
+
+cleanup_fixtures() {
+  mysql_exec "DELETE e FROM agenda_appointment_events e JOIN agenda_appointments a ON a.appointment_id = e.appointment_id WHERE a.doctor_id='${DOCTOR_ID}' AND a.consultorio_id='${CONSULTORIO_ID}' AND DATE(a.start_at)='${DATE}';"
+  mysql_exec "DELETE FROM agenda_appointments WHERE doctor_id='${DOCTOR_ID}' AND consultorio_id='${CONSULTORIO_ID}' AND DATE(start_at)='${DATE}';"
 }
 
 assert_json() {
@@ -68,6 +92,9 @@ print_header() {
   echo "=== $1 ==="
 }
 
+print_header "Cleanup fixtures (appointments/events)"
+cleanup_fixtures
+
 print_header "Check availability with slots"
 availability_resp=$(curl_request -X GET "$API_BASE/availability?doctor_id=$DOCTOR_ID&consultorio_id=$CONSULTORIO_ID&date=$DATE&slot_minutes=$SLOT_MINUTES")
 echo "$availability_resp" | jq .
@@ -79,6 +106,12 @@ else
   if [[ "$slots_count" -lt 1 ]]; then
     fail_assert "expected slots_count >= 1 for $DATE"
   fi
+fi
+busy_count=$(echo "$availability_resp" | jq -r '.meta.busy_count // empty')
+if [[ -z "$busy_count" ]]; then
+  fail_assert "busy_count missing; aborting QA to avoid false collisions"
+elif [[ "$busy_count" != "0" ]]; then
+  fail_assert "DB not clean; busy_count=$busy_count; aborting QA to avoid false collisions"
 fi
 
 create_payload() {
@@ -169,8 +202,14 @@ assert_ok "$resp_reschedule_ok"
 
 if (( fail > 0 )); then
   echo
+  print_header "Cleanup fixtures (post-run)"
+  cleanup_fixtures
   echo "RESULT: FAIL ($fail issues)"
   exit 1
 fi
+
+print_header "Cleanup fixtures (post-run)"
+cleanup_fixtures
+
 echo
 echo "RESULT: PASS"
