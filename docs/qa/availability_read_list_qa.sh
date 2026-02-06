@@ -12,8 +12,8 @@ fi
 
 BASE_URL="$BASE_URL"
 API_BASE="$BASE_URL/api/agenda/index.php"
-DOCTOR_ID="${DOCTOR_ID:-1}"
-CONSULTORIO_ID="${CONSULTORIO_ID:-1}"
+DOCTOR_ID="${DOCTOR_ID:-qa_doc_read}"
+CONSULTORIO_ID="${CONSULTORIO_ID:-qa_cons_read}"
 PATIENT_ID="${PATIENT_ID:-p_qa_read}"
 DATE="${DATE:-2026-02-03}"
 SLOT_MINUTES="${SLOT_MINUTES:-30}"
@@ -63,14 +63,21 @@ print_header() {
   echo "=== $1 ==="
 }
 
+weekday=$(python3 - <<PY
+import datetime
+date = datetime.datetime.strptime("${DATE}", "%Y-%m-%d")
+print(date.isoweekday())
+PY
+)
+
 cleanup() {
   mysql_exec "DELETE e FROM agenda_appointment_events e JOIN agenda_appointments a ON a.appointment_id=e.appointment_id WHERE a.doctor_id='${DOCTOR_ID}' AND a.consultorio_id='${CONSULTORIO_ID}' AND DATE(a.start_at)='${DATE}';"
   mysql_exec "DELETE FROM agenda_appointments WHERE doctor_id='${DOCTOR_ID}' AND consultorio_id='${CONSULTORIO_ID}' AND DATE(start_at)='${DATE}';"
-  mysql_exec "DELETE FROM consultorio_schedule WHERE doctor_id='${DOCTOR_ID}' AND consultorio_id='${CONSULTORIO_ID}' AND weekday=2;"
+  mysql_exec "DELETE FROM consultorio_schedule WHERE doctor_id='${DOCTOR_ID}' AND consultorio_id='${CONSULTORIO_ID}' AND weekday=${weekday} AND start_time='09:00:00' AND end_time='10:00:00';"
 }
 
 schedule() {
-  mysql_exec "INSERT INTO consultorio_schedule (doctor_id, consultorio_id, weekday, start_time, end_time, is_active) SELECT '${DOCTOR_ID}','${CONSULTORIO_ID}',2,'09:00:00','10:00:00',1 WHERE NOT EXISTS (SELECT 1 FROM consultorio_schedule WHERE doctor_id='${DOCTOR_ID}' AND consultorio_id='${CONSULTORIO_ID}' AND weekday=2 AND start_time='09:00:00' AND end_time='10:00:00');"
+  mysql_exec "INSERT INTO consultorio_schedule (doctor_id, consultorio_id, weekday, start_time, end_time, is_active) SELECT '${DOCTOR_ID}','${CONSULTORIO_ID}',${weekday},'09:00:00','10:00:00',1 WHERE NOT EXISTS (SELECT 1 FROM consultorio_schedule WHERE doctor_id='${DOCTOR_ID}' AND consultorio_id='${CONSULTORIO_ID}' AND weekday=${weekday} AND start_time='09:00:00' AND end_time='10:00:00');"
 }
 
 print_header "Cleanup fixtures"
