@@ -35,7 +35,7 @@ class AppointmentsRepository
     {
         $this->ensureTable();
         $sql = sprintf(
-            'SELECT appointment_id, doctor_id, consultorio_id, patient_id, start_at, end_at, modality, status, channel_origin FROM %s WHERE start_at >= :from AND end_at <= :to',
+            'SELECT appointment_id, doctor_id, consultorio_id, patient_id, start_at, end_at, modality, status, channel_origin FROM %s WHERE start_at < :to AND end_at > :from',
             $this->table
         );
         $params = ['from' => $from, 'to' => $to];
