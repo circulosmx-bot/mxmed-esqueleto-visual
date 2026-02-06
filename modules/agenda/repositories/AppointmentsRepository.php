@@ -7,15 +7,19 @@ use RuntimeException;
 class AppointmentsRepository
 {
     private PDO $pdo;
+    private string $table;
 
     public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
+        $config = $this->loadConfig();
+        $table = trim((string)($config['appointments_table'] ?? ''));
+        $this->table = $table !== '' ? $this->sanitizeIdentifier($table) : 'agenda_appointments';
     }
 
     private function ensureTable(): void
     {
-        if (!$this->tableExists('appointments')) {
+        if (!$this->tableExists($this->table)) {
             throw new RuntimeException('appointments table not ready');
         }
     }
@@ -30,7 +34,10 @@ class AppointmentsRepository
     public function listByRange(string $from, string $to, ?string $doctorId = null, ?string $consultorioId = null, int $limit = 200): array
     {
         $this->ensureTable();
-        $sql = 'SELECT appointment_id, doctor_id, consultorio_id, patient_id, start_at, end_at, modality, status, price_amount FROM appointments WHERE start_at >= :from AND end_at <= :to';
+        $sql = sprintf(
+            'SELECT appointment_id, doctor_id, consultorio_id, patient_id, start_at, end_at, modality, status, channel_origin FROM %s WHERE start_at >= :from AND end_at <= :to',
+            $this->table
+        );
         $params = ['from' => $from, 'to' => $to];
 
         if ($doctorId) {
@@ -55,9 +62,28 @@ class AppointmentsRepository
     public function getById(string $id): ?array
     {
         $this->ensureTable();
-        $stmt = $this->pdo->prepare('SELECT * FROM appointments WHERE appointment_id = :id LIMIT 1');
+        $sql = sprintf('SELECT * FROM %s WHERE appointment_id = :id LIMIT 1', $this->table);
+        $stmt = $this->pdo->prepare($sql);
         $stmt->execute(['id' => $id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
+    }
+
+    private function sanitizeIdentifier(?string $value): string
+    {
+        if (!$value) {
+            return '';
+        }
+        return preg_replace('/[^a-zA-Z0-9_]/', '', $value) ?: '';
+    }
+
+    private function loadConfig(): array
+    {
+        $path = __DIR__ . '/../config/agenda.php';
+        if (!is_file($path)) {
+            return [];
+        }
+        $config = require $path;
+        return is_array($config) ? $config : [];
     }
 }
