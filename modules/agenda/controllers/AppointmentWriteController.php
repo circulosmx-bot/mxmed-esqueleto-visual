@@ -157,6 +157,25 @@ class AppointmentWriteController
     public function cancel(string $appointmentId): array
     {
         $payload = $this->getPayload();
+        if (!isset($payload['motivo_code']) && isset($payload['reason_code'])) {
+            $payload['motivo_code'] = $payload['reason_code'];
+        }
+        if (!isset($payload['motivo_text']) && isset($payload['reason_text'])) {
+            $payload['motivo_text'] = $payload['reason_text'];
+        }
+        if (!isset($payload['actor_role']) && isset($payload['created_by_role'])) {
+            $payload['actor_role'] = $payload['created_by_role'];
+        }
+        if (!isset($payload['actor_id']) && isset($payload['created_by_id'])) {
+            $payload['actor_id'] = $payload['created_by_id'];
+        }
+        if (!isset($payload['notify_patient'])) {
+            $payload['notify_patient'] = false;
+        }
+        $payload['notify_patient'] = $this->normalizeBoolean($payload['notify_patient']);
+        if (!isset($payload['contact_method'])) {
+            $payload['contact_method'] = 'none';
+        }
 
         $errors = $this->validateCancel($appointmentId, $payload);
         if ($errors) {
@@ -192,22 +211,30 @@ class AppointmentWriteController
             return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
         }
 
-        return $this->success(
-            [
-                'appointment_id' => $result['appointment_id'],
-                'status' => 'canceled',
-                'start_at' => $result['start_at'],
-                'end_at' => $result['end_at'],
-                'motivo_code' => $result['motivo_code'],
-                'motivo_text' => $result['motivo_text'],
-            ],
-            [
-                'write' => 'cancel',
-                'events_appended' => 1,
-                'notify_patient' => $result['notify_patient'],
-                'contact_method' => $result['contact_method'],
-            ]
-        );
+        $data = [
+            'appointment_id' => $result['appointment_id'],
+            'status' => $result['status'],
+            'start_at' => $result['start_at'],
+            'end_at' => $result['end_at'],
+            'cancelled_at' => $result['cancelled_at'] ?? null,
+            'event_id' => $result['event_id'] ?? null,
+        ];
+        $meta = [
+            'write' => 'cancel',
+            'events_appended' => $result['events_appended'],
+            'notify_patient' => $result['notify_patient'],
+            'contact_method' => $result['contact_method'],
+        ];
+        if (!empty($result['already_cancelled'])) {
+            return [
+                'ok' => true,
+                'error' => null,
+                'message' => 'already_cancelled',
+                'data' => $data,
+                'meta' => (object)$meta,
+            ];
+        }
+        return $this->success($data, $meta);
     }
 
     public function noShow(string $appointmentId): array
@@ -403,8 +430,32 @@ class AppointmentWriteController
         if (trim($appointmentId) === '') {
             $errors['appointment_id'] = $appointmentId;
         }
-        if (($payload['motivo_code'] ?? '') === '' && ($payload['motivo_text'] ?? '') === '') {
-            $errors['motivo'] = 'motivo_code or motivo_text required';
+        $actorRole = trim((string)($payload['actor_role'] ?? ''));
+        if ($actorRole === '') {
+            $errors['actor_role'] = 'actor_role required';
+        } elseif (!in_array($actorRole, ['patient', 'operator', 'doctor', 'system'], true)) {
+            $errors['actor_role'] = 'actor_role invalid';
+        }
+        $channelOrigin = trim((string)($payload['channel_origin'] ?? ''));
+        if ($channelOrigin === '') {
+            $errors['channel_origin'] = 'channel_origin required';
+        }
+        $reasonCode = $payload['motivo_code'] ?? null;
+        $reasonText = $payload['motivo_text'] ?? null;
+        if ($reasonCode !== null && (!is_string($reasonCode) || strlen($reasonCode) > 255)) {
+            $errors['reason_code'] = 'reason_code invalid';
+        }
+        if ($reasonText !== null && (!is_string($reasonText) || strlen($reasonText) > 255)) {
+            $errors['reason_text'] = 'reason_text invalid';
+        }
+        if (isset($payload['notify_patient']) && !in_array($payload['notify_patient'], ['0', '1', 0, 1, true, false, 'true', 'false'], true)) {
+            $errors['notify_patient'] = $payload['notify_patient'];
+        }
+        $contactMethod = $payload['contact_method'] ?? 'none';
+        if (!is_string($contactMethod) || trim($contactMethod) === '') {
+            $errors['contact_method'] = 'contact_method invalid';
+        } elseif (!in_array($contactMethod, ['sms', 'whatsapp', 'email', 'phone', 'none'], true)) {
+            $errors['contact_method'] = 'contact_method invalid';
         }
         return $errors;
     }
@@ -440,6 +491,15 @@ class AppointmentWriteController
             }
         }
         return null;
+    }
+
+    private function normalizeBoolean($value): int
+    {
+        $truthy = [true, 1, '1', 'true'];
+        if (in_array($value, $truthy, true)) {
+            return 1;
+        }
+        return 0;
     }
 
     private function normalizeSlotMinutes($value): ?int

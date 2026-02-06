@@ -199,6 +199,20 @@ Campos de origen que deben viajar en cada write:
 - **Given:** cita existente.
 - **When:** POST /appointments/{id}/cancel.
 - **Then:** ok:true + evento `appointment_canceled`.
+- **Payload mínimo (JSON):**
+```json
+{
+  "reason_code": "string|null",
+  "reason_text": "string|null",
+  "actor_role": "patient|operator|doctor|system",
+  "actor_id": "string|int|null",
+  "channel_origin": "web|phone|admin|api|other",
+  "notify_patient": true,
+  "contact_method": "sms|whatsapp|email|phone|none"
+}
+```
+- **Errores esperados:** invalid_params, not_found, db_not_ready, db_error.
+- **Idempotencia:** si la cita ya estaba cancelada, responde ok:true con `message:"already_cancelled"` y no duplica evento.
 
 ### 5.4 No show
 - **Given:** cita existente.
