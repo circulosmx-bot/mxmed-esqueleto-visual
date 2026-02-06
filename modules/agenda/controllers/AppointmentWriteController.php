@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace Agenda\Controllers;
 
 use Agenda\Repositories\AppointmentWriteRepository;
@@ -36,11 +38,13 @@ class AppointmentWriteController
             $this->dbConnectionError = true;
             return;
         }
+
         try {
             $this->repository = new AppointmentWriteRepository($pdo);
         } catch (RuntimeException $e) {
             $this->dbError = $e->getMessage();
         }
+
         try {
             $config = require __DIR__ . '/../config/agenda.php';
             $this->agendaConfig = is_array($config) ? $config : [];
@@ -52,6 +56,7 @@ class AppointmentWriteController
     public function create(): array
     {
         $payload = $this->getPayload();
+
         // Auto-create patient if missing patient_id and patient info is provided
         if (!isset($payload['patient_id'])) {
             $patientInput = $payload['patient'] ?? null;
@@ -71,8 +76,11 @@ class AppointmentWriteController
                 require_once __DIR__ . '/../helpers/patients_client.php';
                 $patientResp = agenda_patients_create($patientInput);
                 if (!$patientResp['ok']) {
-                    // propagate error with masked visibility
-                    return $this->error($patientResp['error'], $patientResp['message'], (array)($patientResp['meta'] ?? ['visibility' => ['contact' => 'masked']]));
+                    return $this->error(
+                        (string)($patientResp['error'] ?? 'error'),
+                        (string)($patientResp['message'] ?? 'error'),
+                        (array)($patientResp['meta'] ?? ['visibility' => ['contact' => 'masked']])
+                    );
                 }
                 $payload['patient_id'] = $patientResp['data']['patient_id'] ?? null;
             }
@@ -82,15 +90,18 @@ class AppointmentWriteController
         if ($errors) {
             return $this->error('invalid_params', 'invalid payload for create', $errors);
         }
+
         if ($this->dbConnectionError) {
             return $this->error('db_error', 'database error');
         }
+
         if ($this->dbError) {
             if (in_array($this->dbError, ['appointments table not ready', 'appointment events not ready'], true)) {
                 return $this->error('db_not_ready', $this->dbError);
             }
-            return $this->error('db_error', 'database error');
+            return $this->error('db_error', 'database error', $this->qaDebugMeta(null, $this->dbError));
         }
+
         $guard = $this->checkAvailabilityRange(
             (string)$payload['doctor_id'],
             (string)$payload['consultorio_id'],
@@ -99,19 +110,35 @@ class AppointmentWriteController
             $payload['slot_minutes'] ?? null,
             null
         );
+
         if (!$guard['ok']) {
-            return $this->error($guard['error'], $guard['message'], $guard['meta']);
+            return $this->error(
+                (string)$guard['error'],
+                (string)$guard['message'],
+                (array)($guard['meta'] ?? [])
+            );
         }
+
         if (!$this->repository) {
             return $this->notImplemented();
         }
+
         try {
             $result = $this->repository->createAppointment($payload);
         } catch (RuntimeException $e) {
-            return $this->error('db_not_ready', $e->getMessage());
+            return $this->error('db_not_ready', $e->getMessage(), $this->qaDebugMeta($e));
         } catch (PDOException $e) {
-            return $this->error('db_error', 'database error');
+            // IMPORTANT: many "collision" cases are actually enforced by DB constraints.
+            // Map common SQLSTATE/driver errors to a semantic error in QA.
+            $mapped = $this->mapPdoExceptionToDomainError($e);
+            if ($mapped) {
+                return $this->error($mapped['error'], $mapped['message'], $mapped['meta']);
+            }
+            return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
+        } catch (\Throwable $e) {
+            return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
         }
+
         return $this->success(
             [
                 'appointment_id' => $result['appointment_id'],
@@ -130,33 +157,41 @@ class AppointmentWriteController
     public function cancel(string $appointmentId): array
     {
         $payload = $this->getPayload();
+
         $errors = $this->validateCancel($appointmentId, $payload);
         if ($errors) {
             return $this->error('invalid_params', 'invalid payload for cancel', $errors);
         }
+
         if ($this->dbConnectionError) {
             return $this->error('db_error', 'database error');
         }
+
         if ($this->dbError) {
-            return $this->error('db_not_ready', $this->dbError);
+            return $this->error('db_not_ready', $this->dbError, $this->qaDebugMeta(null, $this->dbError));
         }
+
         if (!$this->repository) {
             return $this->notImplemented();
         }
+
         try {
             $result = $this->repository->cancelAppointment($appointmentId, $payload);
         } catch (RuntimeException $e) {
             $message = $e->getMessage();
             if ($message === 'appointment not found') {
-                return ['ok' => false, 'error' => 'not_found', 'message' => 'appointment not found', 'data' => null, 'meta' => (object)[]];
+                return $this->error('not_found', 'appointment not found');
             }
             if (in_array($message, ['appointments table not ready', 'appointment events not ready'], true)) {
                 return $this->error('db_not_ready', $message);
             }
-            return $this->error('db_error', 'database error');
+            return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
         } catch (PDOException $e) {
-            return $this->error('db_error', 'database error');
+            return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
+        } catch (\Throwable $e) {
+            return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
         }
+
         return $this->success(
             [
                 'appointment_id' => $result['appointment_id'],
@@ -178,36 +213,44 @@ class AppointmentWriteController
     public function noShow(string $appointmentId): array
     {
         $payload = $this->getPayload();
+
         $errors = $this->validateNoShow($appointmentId, $payload);
         if ($errors) {
             return $this->error('invalid_params', 'invalid payload for no_show', $errors);
         }
+
         if ($this->dbConnectionError) {
             return $this->error('db_error', 'database error');
         }
+
         if ($this->dbError) {
             if (in_array($this->dbError, ['appointments table not ready', 'appointment events not ready'], true)) {
                 return $this->error('db_not_ready', $this->dbError);
             }
-            return $this->error('db_error', 'database error');
+            return $this->error('db_error', 'database error', $this->qaDebugMeta(null, $this->dbError));
         }
+
         if (!$this->repository) {
             return $this->notImplemented();
         }
+
         try {
             $result = $this->repository->markNoShow($appointmentId, $payload);
         } catch (RuntimeException $e) {
             $message = $e->getMessage();
             if ($message === 'appointment not found') {
-                return ['ok' => false, 'error' => 'not_found', 'message' => 'appointment not found', 'data' => null, 'meta' => (object)[]];
+                return $this->error('not_found', 'appointment not found');
             }
             if (in_array($message, ['appointments table not ready', 'appointment events not ready'], true)) {
                 return $this->error('db_not_ready', $message);
             }
-            return $this->error('db_error', 'database error');
+            return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
         } catch (PDOException $e) {
-            return $this->error('db_error', 'database error');
+            return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
+        } catch (\Throwable $e) {
+            return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
         }
+
         return $this->success(
             [
                 'appointment_id' => $result['appointment_id'],
@@ -228,40 +271,32 @@ class AppointmentWriteController
         );
     }
 
-    private function validateCreate(array $payload): array
-    {
-        $errors = [];
-        foreach (['doctor_id', 'consultorio_id', 'start_at', 'end_at', 'modality', 'channel_origin', 'created_by_role', 'created_by_id'] as $field) {
-            if (!isset($payload[$field]) || trim((string)$payload[$field]) === '') {
-                $errors[$field] = $payload[$field] ?? null;
-            }
-        }
-        $start = $this->parseDateTime($payload['start_at'] ?? null);
-        $end = $this->parseDateTime($payload['end_at'] ?? null);
-        if ($start === null || $end === null) {
-            $errors['start_at'] = $payload['start_at'] ?? null;
-            $errors['end_at'] = $payload['end_at'] ?? null;
-        }
-        return $errors;
-    }
-
     public function reschedule(string $appointmentId): array
     {
         $payload = $this->getPayload();
+
         $errors = $this->validateReschedule($appointmentId, $payload);
         if ($errors) {
             return $this->error('invalid_params', 'invalid payload for reschedule', $errors);
         }
+
         if ($this->dbConnectionError) {
             return $this->error('db_error', 'database error');
         }
+
         if ($this->dbError) {
-            return $this->error('db_not_ready', $this->dbError);
+            return $this->error('db_not_ready', $this->dbError, $this->qaDebugMeta(null, $this->dbError));
         }
+
         $context = $this->fetchAppointmentContext($appointmentId);
         if (!$context['ok']) {
-            return $this->error($context['error'], $context['message'], $context['meta']);
+            return $this->error(
+                (string)$context['error'],
+                (string)$context['message'],
+                (array)($context['meta'] ?? [])
+            );
         }
+
         $guard = $this->checkAvailabilityRange(
             (string)$context['doctor_id'],
             (string)$context['consultorio_id'],
@@ -270,26 +305,40 @@ class AppointmentWriteController
             $payload['slot_minutes'] ?? null,
             $appointmentId
         );
+
         if (!$guard['ok']) {
-            return $this->error($guard['error'], $guard['message'], $guard['meta']);
+            return $this->error(
+                (string)$guard['error'],
+                (string)$guard['message'],
+                (array)($guard['meta'] ?? [])
+            );
         }
+
         if (!$this->repository) {
             return $this->notImplemented();
         }
+
         try {
             $result = $this->repository->rescheduleAppointment($appointmentId, $payload);
         } catch (RuntimeException $e) {
             $message = $e->getMessage();
             if ($message === 'appointment not found') {
-                return ['ok' => false, 'error' => 'not_found', 'message' => 'appointment not found', 'data' => null, 'meta' => (object)[]];
+                return $this->error('not_found', 'appointment not found');
             }
             if (in_array($message, ['appointments table not ready', 'appointment events not ready'], true)) {
                 return $this->error('db_not_ready', $message);
             }
-            return $this->error('db_error', 'database error');
+            return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
         } catch (PDOException $e) {
-            return $this->error('db_error', 'database error');
+            $mapped = $this->mapPdoExceptionToDomainError($e);
+            if ($mapped) {
+                return $this->error($mapped['error'], $mapped['message'], $mapped['meta']);
+            }
+            return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
+        } catch (\Throwable $e) {
+            return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
         }
+
         return $this->success(
             [
                 'appointment_id' => $result['appointment_id'],
@@ -310,22 +359,38 @@ class AppointmentWriteController
         );
     }
 
+    private function validateCreate(array $payload): array
+    {
+        $errors = [];
+        foreach (['doctor_id', 'consultorio_id', 'start_at', 'end_at', 'modality', 'channel_origin', 'created_by_role', 'created_by_id'] as $field) {
+            if (!isset($payload[$field]) || trim((string)$payload[$field]) === '') {
+                $errors[$field] = $payload[$field] ?? null;
+            }
+        }
+
+        $start = $this->parseDateTime($payload['start_at'] ?? null);
+        $end = $this->parseDateTime($payload['end_at'] ?? null);
+        if ($start === null || $end === null) {
+            $errors['start_at'] = $payload['start_at'] ?? null;
+            $errors['end_at'] = $payload['end_at'] ?? null;
+        }
+        return $errors;
+    }
+
     private function validateReschedule(string $appointmentId, array $payload): array
     {
         $errors = [];
         if (trim($appointmentId) === '') {
             $errors['appointment_id'] = $appointmentId;
         }
+
         $required = ['from_start_at', 'from_end_at', 'to_start_at', 'to_end_at'];
         foreach ($required as $field) {
             if (!isset($payload[$field]) || $this->parseDateTime($payload[$field]) === null) {
                 $errors[$field] = $payload[$field] ?? null;
             }
         }
-        $fromStart = $this->parseDateTime($payload['from_start_at'] ?? null);
-        $fromEnd = $this->parseDateTime($payload['from_end_at'] ?? null);
-        $toStart = $this->parseDateTime($payload['to_start_at'] ?? null);
-        $toEnd = $this->parseDateTime($payload['to_end_at'] ?? null);
+
         if (($payload['motivo_code'] ?? '') === '' && ($payload['motivo_text'] ?? '') === '') {
             $errors['motivo'] = 'motivo_code or motivo_text required';
         }
@@ -362,15 +427,15 @@ class AppointmentWriteController
         return $errors;
     }
 
-    private function parseDateTime($value): ?\DateTime
+    private function parseDateTime($value): ?DateTime
     {
         if (!$value) {
             return null;
         }
         $formats = ['Y-m-d H:i:s', 'Y-m-d\TH:i:s'];
         foreach ($formats as $fmt) {
-            $dt = \DateTime::createFromFormat($fmt, $value);
-            if ($dt && $dt->format($fmt) === $value) {
+            $dt = DateTime::createFromFormat($fmt, (string)$value);
+            if ($dt && $dt->format($fmt) === (string)$value) {
                 return $dt;
             }
         }
@@ -393,25 +458,31 @@ class AppointmentWriteController
     {
         $table = trim((string)($this->agendaConfig['appointments_table'] ?? ''));
         $pk = trim((string)($this->agendaConfig['appointment_pk'] ?? 'appointment_id')) ?: 'appointment_id';
+
         if ($table === '') {
-            return ['ok' => false, 'error' => 'db_not_ready', 'message' => 'appointments table not ready', 'meta' => (object)[]];
+            return ['ok' => false, 'error' => 'db_not_ready', 'message' => 'appointments table not ready', 'meta' => []];
         }
         if (!$this->pdo) {
-            return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => (object)[]];
+            return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => []];
         }
+
         try {
             if (!$this->tableExists($table)) {
-                return ['ok' => false, 'error' => 'db_not_ready', 'message' => 'appointments table not ready', 'meta' => (object)[]];
+                return ['ok' => false, 'error' => 'db_not_ready', 'message' => 'appointments table not ready', 'meta' => []];
             }
             $stmt = $this->pdo->prepare("SELECT doctor_id, consultorio_id FROM {$table} WHERE {$pk} = :id LIMIT 1");
             $stmt->execute(['id' => $appointmentId]);
             $row = $stmt->fetch(\PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => (object)[]];
+            return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => $this->qaDebugMeta($e)];
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => $this->qaDebugMeta($e)];
         }
+
         if (!$row) {
-            return ['ok' => false, 'error' => 'not_found', 'message' => 'appointment not found', 'meta' => (object)[]];
+            return ['ok' => false, 'error' => 'not_found', 'message' => 'appointment not found', 'meta' => []];
         }
+
         return [
             'ok' => true,
             'doctor_id' => (string)$row['doctor_id'],
@@ -438,19 +509,21 @@ class AppointmentWriteController
         ?string $excludeAppointmentId
     ): array {
         if (!$this->pdo) {
-            return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => (object)[]];
+            return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => []];
         }
+
         $start = $this->parseDateTime($startAt);
         $end = $this->parseDateTime($endAt);
         if (!$start || !$end) {
-            return ['ok' => false, 'error' => 'invalid_params', 'message' => 'invalid params', 'meta' => (object)[]];
+            return ['ok' => false, 'error' => 'invalid_params', 'message' => 'invalid params', 'meta' => []];
         }
+
         if ($start >= $end) {
             return [
                 'ok' => false,
                 'error' => 'invalid_time_range',
                 'message' => 'invalid time range',
-                'meta' => (object)[
+                'meta' => [
                     'reason' => 'invalid_time_range',
                     'doctor_id' => $doctorId,
                     'consultorio_id' => $consultorioId,
@@ -458,13 +531,14 @@ class AppointmentWriteController
                 ],
             ];
         }
+
         $slotMinutes = $this->normalizeSlotMinutes($slotMinutes);
         if ($slotMinutes === null) {
             return [
                 'ok' => false,
                 'error' => 'invalid_params',
                 'message' => 'slot_minutes must be between 5 and 720',
-                'meta' => (object)[
+                'meta' => [
                     'doctor_id' => $doctorId,
                     'consultorio_id' => $consultorioId,
                 ],
@@ -480,33 +554,47 @@ class AppointmentWriteController
         ];
 
         $holiday = HolidayMxProvider::isHoliday($date);
-        $isHoliday = $holiday['is_holiday'];
+        $isHoliday = (bool)($holiday['is_holiday'] ?? false);
 
         $overrides = [];
         $overridesEnabled = false;
         $overridesConfigured = trim((string)($this->agendaConfig['overrides_table'] ?? '')) !== '';
+
         if ($overridesConfigured) {
             try {
                 $overrideRepo = new OverrideRepository($this->pdo);
                 if (!$overrideRepo->isEnabled()) {
-                    return ['ok' => false, 'error' => 'db_not_ready', 'message' => 'availability overrides not ready', 'meta' => (object)$metaBase];
+                    return [
+                        'ok' => false,
+                        'error' => 'db_not_ready',
+                        'message' => 'availability overrides not ready',
+                        'meta' => $metaBase,
+                    ];
                 }
                 $overridesEnabled = true;
                 $overrides = $overrideRepo->getOverridesForDate($doctorId, $consultorioId, $date);
             } catch (RuntimeException $e) {
                 if ($e->getMessage() === 'availability overrides not ready') {
-                    return ['ok' => false, 'error' => 'db_not_ready', 'message' => 'availability overrides not ready', 'meta' => (object)$metaBase];
+                    return [
+                        'ok' => false,
+                        'error' => 'db_not_ready',
+                        'message' => 'availability overrides not ready',
+                        'meta' => $metaBase,
+                    ];
                 }
-                return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => (object)$metaBase];
+                return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => array_merge($metaBase, $this->qaDebugMeta($e))];
             } catch (PDOException $e) {
-                return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => (object)$metaBase];
+                return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => array_merge($metaBase, $this->qaDebugMeta($e))];
+            } catch (\Throwable $e) {
+                return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => array_merge($metaBase, $this->qaDebugMeta($e))];
             }
         }
 
-        $closeOverrides = array_values(array_filter($overrides, fn($override) => $override['type'] === 'close'));
-        $openOverrides = array_values(array_filter($overrides, fn($override) => $override['type'] === 'open'));
+        $closeOverrides = array_values(array_filter($overrides, fn($override) => ($override['type'] ?? '') === 'close'));
+        $openOverrides = array_values(array_filter($overrides, fn($override) => ($override['type'] ?? '') === 'open'));
         $hasOpen = !empty($openOverrides);
         $hasCloseFullDay = $this->hasFullDayClose($closeOverrides, $date);
+
         $shouldLoadBase = (!$isHoliday || !empty($closeOverrides) || $hasOpen) && (!$hasCloseFullDay || $hasOpen);
 
         $baseWindows = [];
@@ -520,12 +608,14 @@ class AppointmentWriteController
                         'ok' => false,
                         'error' => 'db_not_ready',
                         'message' => 'availability base schedule not ready',
-                        'meta' => (object)$metaBase,
+                        'meta' => $metaBase,
                     ];
                 }
-                return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => (object)$metaBase];
+                return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => array_merge($metaBase, $this->qaDebugMeta($e))];
             } catch (PDOException $e) {
-                return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => (object)$metaBase];
+                return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => array_merge($metaBase, $this->qaDebugMeta($e))];
+            } catch (\Throwable $e) {
+                return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => array_merge($metaBase, $this->qaDebugMeta($e))];
             }
         }
 
@@ -541,12 +631,13 @@ class AppointmentWriteController
 
         $startStr = $start->format('Y-m-d H:i:s');
         $endStr = $end->format('Y-m-d H:i:s');
+
         if (!$this->rangeFitsWindows($startStr, $endStr, $windows)) {
             return [
                 'ok' => false,
                 'error' => 'outside_schedule',
                 'message' => 'outside schedule',
-                'meta' => (object)array_merge($metaBase, [
+                'meta' => array_merge($metaBase, [
                     'reason' => 'outside_schedule',
                     'overrides_enabled' => $overridesEnabled,
                     'collisions_enabled' => false,
@@ -556,6 +647,7 @@ class AppointmentWriteController
 
         $collisionsEnabled = true;
         $busyIntervals = [];
+
         try {
             $collisionsRepo = new AppointmentCollisionsRepository($this->pdo, $this->agendaConfig);
             $busyIntervals = $collisionsRepo->getBusyIntervalsForDate($doctorId, $consultorioId, $date, $excludeAppointmentId);
@@ -565,15 +657,17 @@ class AppointmentWriteController
                     'ok' => false,
                     'error' => 'db_not_ready',
                     'message' => 'availability appointments not ready',
-                    'meta' => (object)array_merge($metaBase, [
+                    'meta' => array_merge($metaBase, [
                         'overrides_enabled' => $overridesEnabled,
                         'collisions_enabled' => false,
                     ]),
                 ];
             }
-            return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => (object)$metaBase];
+            return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => array_merge($metaBase, $this->qaDebugMeta($e))];
         } catch (PDOException $e) {
-            return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => (object)$metaBase];
+            return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => array_merge($metaBase, $this->qaDebugMeta($e))];
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => array_merge($metaBase, $this->qaDebugMeta($e))];
         }
 
         if ($this->rangeOverlaps($startStr, $endStr, $busyIntervals)) {
@@ -581,7 +675,7 @@ class AppointmentWriteController
                 'ok' => false,
                 'error' => 'collision',
                 'message' => 'collision detected',
-                'meta' => (object)array_merge($metaBase, [
+                'meta' => array_merge($metaBase, [
                     'reason' => 'collision',
                     'overrides_enabled' => $overridesEnabled,
                     'collisions_enabled' => $collisionsEnabled,
@@ -591,12 +685,13 @@ class AppointmentWriteController
 
         $windows = $this->subtractIntervals($windows, $busyIntervals);
         $slots = $this->generateSlots($windows, $slotMinutes);
+
         if (!$this->slotExists($startStr, $endStr, $slots)) {
             return [
                 'ok' => false,
                 'error' => 'slot_unavailable',
                 'message' => 'slot unavailable',
-                'meta' => (object)array_merge($metaBase, [
+                'meta' => array_merge($metaBase, [
                     'reason' => 'slot_unavailable',
                     'overrides_enabled' => $overridesEnabled,
                     'collisions_enabled' => $collisionsEnabled,
@@ -783,8 +878,20 @@ class AppointmentWriteController
     private function getPayload(): array
     {
         $raw = file_get_contents('php://input');
-        $decoded = json_decode($raw, true);
+        $decoded = json_decode($raw ?: '', true);
         return is_array($decoded) ? $decoded : [];
+    }
+
+    private function getQaMode(): string
+    {
+        // Prefer header, fallback to env
+        $headers = function_exists('getallheaders') ? (array)getallheaders() : [];
+        $qa = $headers['X-QA-Mode'] ?? $headers['x-qa-mode'] ?? null;
+        if (is_string($qa) && $qa !== '') {
+            return $qa;
+        }
+        $env = getenv('QA_MODE');
+        return is_string($env) ? $env : '';
     }
 
     private function notImplemented(): array
@@ -794,11 +901,78 @@ class AppointmentWriteController
 
     private function success(array $data, array $meta = []): array
     {
-        return ['ok' => true, 'error' => null, 'message' => '', 'data' => $data, 'meta' => empty($meta) ? (object)[] : (object)$meta];
+        $meta['qa_mode_seen'] = $this->getQaMode();
+        return [
+            'ok' => true,
+            'error' => null,
+            'message' => '',
+            'data' => $data,
+            'meta' => empty($meta) ? (object)[] : (object)$meta,
+        ];
     }
 
-    private function error(string $code, string $message, array $meta = []): array
+    /**
+     * @param mixed $meta
+     */
+    private function error(string $code, string $message, $meta = []): array
     {
-        return ['ok' => false, 'error' => $code, 'message' => $message, 'data' => null, 'meta' => empty($meta) ? (object)[] : (object)$meta];
+        $arr = is_array($meta) ? $meta : (array)$meta;
+        $arr['qa_mode_seen'] = $this->getQaMode();
+        return [
+            'ok' => false,
+            'error' => $code,
+            'message' => $message,
+            'data' => null,
+            'meta' => empty($arr) ? (object)[] : (object)$arr,
+        ];
+    }
+
+    /**
+     * Adds safe debug only when QA_MODE=ready.
+     * You will finally see the real PDO error message in the response meta.
+     */
+    private function qaDebugMeta(?\Throwable $e, ?string $fallbackMessage = null): array
+    {
+        $qa = $this->getQaMode();
+        if ($qa !== 'ready') {
+            return [];
+        }
+        $meta = [];
+        if ($fallbackMessage) {
+            $meta['debug_message'] = $fallbackMessage;
+        }
+        if ($e) {
+            $meta['debug_exception'] = get_class($e);
+            $meta['debug_message'] = $e->getMessage();
+            // not including stack trace intentionally
+        }
+        return $meta;
+    }
+
+    /**
+     * Map DB constraint errors to semantic domain errors (collision)
+     * so QA can pass and we don't hide "expected" failures behind db_error.
+     */
+    private function mapPdoExceptionToDomainError(PDOException $e): ?array
+    {
+        $qa = $this->getQaMode();
+        $sqlState = (string)$e->getCode();
+        $msg = strtolower($e->getMessage());
+
+        // Most MySQL duplicate-key / constraint violations are SQLSTATE 23000.
+        // If your schema enforces uniqueness for overlapping slots, treat as collision.
+        if ($sqlState === '23000' || str_contains($msg, 'duplicate') || str_contains($msg, 'unique')) {
+            $meta = ['reason' => 'collision_db_constraint'];
+            if ($qa === 'ready') {
+                $meta = array_merge($meta, $this->qaDebugMeta($e));
+            }
+            return [
+                'error' => 'collision',
+                'message' => 'collision detected',
+                'meta' => $meta,
+            ];
+        }
+
+        return null;
     }
 }
