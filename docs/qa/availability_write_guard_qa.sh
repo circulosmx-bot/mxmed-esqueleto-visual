@@ -17,6 +17,8 @@ CONSULTORIO_ID="${CONSULTORIO_ID:-1}"
 DATE="${DATE:-2026-02-03}"
 SLOT_MINUTES="${SLOT_MINUTES:-30}"
 QA_MODE="$QA_MODE"
+# Nota: mysql puede pedir password con -p; si prefieres evitar prompt:
+# export MYSQL_PASS="tu_password" antes de ejecutar este script.
 
 fail=0
 
