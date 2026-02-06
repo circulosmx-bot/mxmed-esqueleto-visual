@@ -6,6 +6,7 @@ Validar de manera automatizada que el módulo Agenda cumple el contrato JSON (ok
 ## Mensajes contractuales definitivos
 Cada error debe utilizar exactamente el mensaje que se indica a continuación. Hay que verificarlo en cada caso y, cuando la tabla correspondiente no existe, el script debe salir con código distinto de cero.
 - `availability base schedule not ready`
+- `availability appointments not ready`
 - `availability overrides not ready` *(controlado únicamente por `overrides_table` dentro de `modules/agenda/config/agenda.php`)*
 - `appointments table not ready`
 - `appointment events not ready`
@@ -61,6 +62,7 @@ Todos los casos siguen el patrón Given / When / Then y deben validar:
 - `overrides_table = null` → `/availability` continúa respondiendo `ok:true` con `meta.overrides_enabled=false`.
 - `overrides_table = 'tabla_missing'` (configurada pero tabla ausente) → error `availability overrides not ready`.
 - `overrides_table` apunta a tabla existente → `/availability` debe responder `ok:true` y `meta.overrides_enabled=true`.
+- Colisiones (citas del día): si `appointments_table` no está lista, puede responder `availability appointments not ready`. Si la tabla existe pero hay error de conexión, puede devolver `db_error`. Si se degrada, `collisions_enabled=false` y no se restan colisiones.
 
 ## Requisitos del script QA
 - Usa `BASE_URL`, `DOCTOR_ID`, `CONSULTORIO_ID`, `APPOINTMENT_ID`, `PATIENT_ID`, `DATE` y `QA_MODE` como variables configurables

@@ -55,25 +55,33 @@ run() {
     fi
   done
 
+  if [[ -z "$resp" ]]; then
+    fail_assert "empty response body"
+    return
+  fi
   local counts
-  counts=$($PYTHON_BIN - <<'PY'
+  counts=$(printf '%s' "$resp" | $PYTHON_BIN -c '
 import json,sys
 obj=json.loads(sys.stdin.read())
 data=obj.get("data", {})
 windows=data.get("windows", [])
 slots=data.get("slots", [])
-def unique(arr):
+def unique_windows(arr):
     seen=set()
-    res=0
+    for item in arr:
+        key=(item.get("start_at"), item.get("end_at"), item.get("source", "A"))
+        if key not in seen:
+            seen.add(key)
+    return len(seen)
+def unique_slots(arr):
+    seen=set()
     for item in arr:
         key=(item.get("start_at"), item.get("end_at"))
         if key not in seen:
             seen.add(key)
-            res+=1
-    return res
-print(len(windows), len(slots), unique(windows), unique(slots))
-PY
-  <<<"$resp")
+    return len(seen)
+print(len(windows), len(slots), unique_windows(windows), unique_slots(slots))
+')
   local windows_count="${counts%% *}"
   local slots_count="$(cut -d' ' -f2 <<<"$counts")"
   local windows_unique="$(cut -d' ' -f3 <<<"$counts")"

@@ -3,6 +3,7 @@ namespace Agenda\Controllers;
 
 use Agenda\Repositories\AvailabilityRepository;
 use Agenda\Repositories\OverrideRepository;
+use Agenda\Repositories\AppointmentCollisionsRepository;
 use Agenda\Services\HolidayMxProvider;
 use Agenda\Helpers as DbHelpers;
 use DateTime;
@@ -12,7 +13,9 @@ use RuntimeException;
 
 require_once __DIR__ . '/../repositories/AvailabilityRepository.php';
 require_once __DIR__ . '/../repositories/OverrideRepository.php';
+require_once __DIR__ . '/../repositories/AppointmentCollisionsRepository.php';
 require_once __DIR__ . '/../services/HolidayMxProvider.php';
+require_once __DIR__ . '/../config/agenda.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
 
 class AvailabilityController
@@ -28,6 +31,9 @@ class AvailabilityController
     private bool $overridesConfigured = false; // config overrides_table tiene string
     private bool $overridesEnabled = false;    // tabla existe y repo activa
     private ?string $overrideDbError = null;   // null o 'database error'
+    private ?AppointmentCollisionsRepository $collisionRepo = null;
+    private bool $collisionsEnabled = false;
+    private array $config = [];
 
     public function __construct()
     {
@@ -54,34 +60,49 @@ class AvailabilityController
         // 2) Config overrides (capa C) — nunca debe tumbar el endpoint
         try {
             $config = require __DIR__ . '/../config/agenda.php';
+            $this->config = is_array($config) ? $config : [];
         } catch (\Throwable $e) {
-            // Si no se puede cargar config, solo deshabilitamos overrides
             $this->overridesConfigured = false;
             $this->overridesEnabled = false;
             return;
         }
 
-        $table = trim((string)($config['overrides_table'] ?? ''));
+        $table = trim((string)($this->config['overrides_table'] ?? ''));
         $this->overridesConfigured = ($table !== '');
 
-        if (!$this->overridesConfigured || !$pdo) {
-            return;
-        }
-
-        try {
-            $this->overrideRepo = new OverrideRepository($pdo);
-            $this->overridesEnabled = $this->overrideRepo->isEnabled();
-        } catch (RuntimeException $e) {
-            // Caso esperado: tabla configurada pero aún no existe
-            if ($e->getMessage() === 'availability overrides not ready') {
-                $this->overridesEnabled = false;
-            } else {
+        if ($pdo && $this->overridesConfigured) {
+            try {
+                $this->overrideRepo = new OverrideRepository($pdo);
+                $this->overridesEnabled = $this->overrideRepo->isEnabled();
+            } catch (RuntimeException $e) {
+                if ($e->getMessage() === 'availability overrides not ready') {
+                    $this->overridesEnabled = false;
+                } else {
+                    $this->overrideDbError = 'database error';
+                }
+            } catch (PDOException $e) {
+                $this->overrideDbError = 'database error';
+            } catch (\Throwable $e) {
                 $this->overrideDbError = 'database error';
             }
-        } catch (PDOException $e) {
-            $this->overrideDbError = 'database error';
-        } catch (\Throwable $e) {
-            $this->overrideDbError = 'database error';
+        }
+
+        // Repo de colisiones (citas del día) — degradación controlada
+        if ($pdo) {
+            try {
+                $this->collisionRepo = new AppointmentCollisionsRepository($pdo, $this->config);
+                $this->collisionsEnabled = true;
+            } catch (RuntimeException $e) {
+                if ($e->getMessage() === 'availability appointments not ready') {
+                    $this->collisionsEnabled = false;
+                } else {
+                    $this->collisionsEnabled = false;
+                }
+            } catch (PDOException $e) {
+                $this->collisionsEnabled = false;
+            } catch (\Throwable $e) {
+                $this->collisionsEnabled = false;
+            }
         }
     }
 
@@ -118,6 +139,11 @@ class AvailabilityController
         }
         if (!$this->isValidDate($date)) {
             return $this->error('invalid_params', 'date must be in YYYY-MM-DD format', $meta);
+        }
+
+        $slotMinutes = $this->normalizeSlotMinutes($params['slot_minutes'] ?? null);
+        if ($slotMinutes === null) {
+            return $this->error('invalid_params', 'slot_minutes must be between 5 and 720', $meta);
         }
 
         $holiday = HolidayMxProvider::isHoliday($date);
@@ -186,7 +212,38 @@ class AvailabilityController
             $windows = array_merge($windows, $this->buildOverrideWindows($openOverrides));
         }
 
+        $windows = $this->deduplicateWindows($windows);
+
+        $windowsBeforeCollisions = count($windows);
+
+        $busyIntervals = [];
+        $collisionsEnabled = $this->collisionsEnabled;
+        if ($this->collisionsEnabled && $this->collisionRepo) {
+            try {
+                $busyIntervals = $this->collisionRepo->getBusyIntervalsForDate(
+                    $doctorId,
+                    $consultorioId,
+                    $date
+                );
+            } catch (RuntimeException $e) {
+                if ($e->getMessage() === 'availability appointments not ready') {
+                    $collisionsEnabled = false;
+                } else {
+                    return $this->error('db_error', 'database error');
+                }
+            } catch (PDOException $e) {
+                return $this->error('db_error', 'database error');
+            } catch (\Throwable $e) {
+                return $this->error('db_error', 'database error');
+            }
+        }
+
+        if (!empty($busyIntervals)) {
+            $windows = $this->subtractIntervals($windows, $busyIntervals);
+        }
+
         $windows = $this->sortWindows($windows);
+        $slots = $this->generateSlots($windows, $slotMinutes);
 
         $isOverride = !empty($overrides);
         $overrideTypes = $isOverride
@@ -200,6 +257,7 @@ class AvailabilityController
                 'doctor_id' => $doctorId,
                 'consultorio_id' => $consultorioId,
                 'windows' => $windows,
+                'slots' => $slots,
             ],
             $this->buildMeta(
                 $doctorId,
@@ -209,7 +267,12 @@ class AvailabilityController
                 $holidayName,
                 $isOverride,
                 $overrideTypes,
-                $overridesEnabled
+                $overridesEnabled,
+                $collisionsEnabled,
+                count($busyIntervals),
+                $windowsBeforeCollisions,
+                count($slots),
+                $slotMinutes
             )
         );
     }
@@ -229,6 +292,18 @@ class AvailabilityController
         }
         $dt = DateTime::createFromFormat('Y-m-d', $value);
         return $dt && $dt->format('Y-m-d') === $value;
+    }
+
+    private function normalizeSlotMinutes($value): ?int
+    {
+        if ($value === null || $value === '') {
+            return 30;
+        }
+        $minutes = (int)$value;
+        if ($minutes < 5 || $minutes > 720) {
+            return null;
+        }
+        return $minutes;
     }
 
     private function error(string $code, string $message, array $meta = [])
@@ -261,7 +336,12 @@ class AvailabilityController
         ?string $holidayName = null,
         bool $isOverride = false,
         array $overrideTypes = [],
-        bool $overridesEnabled = false
+        bool $overridesEnabled = false,
+        bool $collisionsEnabled = false,
+        int $busyCount = 0,
+        int $windowsBeforeCollisions = 0,
+        int $slotsCount = 0,
+        int $slotMinutes = 30
     ): array {
         $meta = [
             'doctor_id' => $doctorId,
@@ -271,6 +351,11 @@ class AvailabilityController
             'overrides_enabled' => $overridesEnabled,
             'is_override' => $isOverride,
             'override_types' => $overrideTypes,
+            'collisions_enabled' => $collisionsEnabled,
+            'busy_count' => $busyCount,
+            'windows_before_collisions' => $windowsBeforeCollisions,
+            'slots_count' => $slotsCount,
+            'slot_minutes' => $slotMinutes,
         ];
         if ($isHoliday && $holidayName) {
             $meta['holiday_name'] = $holidayName;
@@ -341,6 +426,51 @@ class AvailabilityController
     {
         usort($windows, fn($a, $b) => strcmp($a['start_at'], $b['start_at']));
         return $windows;
+    }
+
+    private function deduplicateWindows(array $windows): array
+    {
+        $seen = [];
+        $deduped = [];
+        foreach ($windows as $window) {
+            $key = sprintf('%s|%s|%s', $window['start_at'], $window['end_at'], $window['source'] ?? 'A');
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $deduped[] = $window;
+        }
+        return $deduped;
+    }
+
+
+    private function generateSlots(array $windows, int $slotMinutes): array
+    {
+        if ($slotMinutes <= 0) {
+            return [];
+        }
+        $maxSlots = 5000;
+        $slots = [];
+        foreach ($windows as $window) {
+            $startTs = $this->toTimestamp($window['start_at']);
+            $endTs = $this->toTimestamp($window['end_at']);
+            $step = $slotMinutes * 60;
+            if ($step <= 0 || $startTs >= $endTs) {
+                continue;
+            }
+            $cursor = $startTs;
+            while ($cursor + $step <= $endTs) {
+                $slots[] = [
+                    'start_at' => $this->formatTimestamp($cursor),
+                    'end_at' => $this->formatTimestamp($cursor + $step),
+                ];
+                $cursor += $step;
+                if (count($slots) > $maxSlots) {
+                    break;
+                }
+            }
+        }
+        return $slots;
     }
 
     private function hasFullDayClose(array $closes, string $date): bool
