@@ -81,7 +81,6 @@ class AgendaApiClient
         $responseBody = curl_exec($ch);
         if ($responseBody === false) {
             $error = curl_error($ch);
-            curl_close($ch);
             return $this->normalize([
                 'ok' => false,
                 'error' => 'network_error',
@@ -92,7 +91,6 @@ class AgendaApiClient
         }
 
         $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
 
         if ($status !== 200) {
             return $this->normalize([
@@ -138,10 +136,18 @@ class AgendaApiClient
         ];
     }
 
-    private function detectBaseUrl(): string
-    {
-        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        $host = $_SERVER['HTTP_HOST'] ?? '127.0.0.1';
-        return $scheme . '://' . $host . '/api/agenda/index.php';
+   private function detectBaseUrl(): string
+{
+    $env = getenv('AGENDA_API_BASE');
+    if (is_string($env)) {
+        $env = trim($env);
+        if ($env !== '') {
+            return rtrim($env, '/');
+        }
     }
+
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? '127.0.0.1';
+    return $scheme . '://' . $host . '/api/agenda/index.php';
+}
 }
