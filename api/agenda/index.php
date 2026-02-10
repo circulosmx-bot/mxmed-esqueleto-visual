@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentEventsContr
 require_once __DIR__ . '/../../modules/agenda/controllers/PatientFlagsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AvailabilityController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentWriteController.php';
+require_once __DIR__ . '/../../modules/agenda/controllers/WaitlistController.php';
 
 use Agenda\Controllers\AppointmentsController;
 use Agenda\Controllers\ConsultoriosController;
@@ -12,6 +13,7 @@ use Agenda\Controllers\AppointmentEventsController;
 use Agenda\Controllers\PatientFlagsController;
 use Agenda\Controllers\AvailabilityController;
 use Agenda\Controllers\AppointmentWriteController;
+use Agenda\Controllers\WaitlistController;
 
 header('Content-Type: application/json');
 
@@ -151,6 +153,28 @@ try {
         case 'availability':
             $availability = new AvailabilityController();
             $response = $availability->index($_GET);
+            break;
+        case 'waitlist':
+            $waitlist = new WaitlistController();
+            $entryId = $segments[1] ?? '';
+            $sub = $segments[2] ?? '';
+            if ($method === 'GET' && !$entryId) {
+                $response = $waitlist->index($_GET);
+            } elseif ($method === 'POST' && !$entryId) {
+                $response = $waitlist->store();
+            } elseif ($method === 'PATCH' && $entryId && $sub === '') {
+                $response = $waitlist->update($entryId);
+            } elseif ($method === 'POST' && $entryId && $sub === 'assign') {
+                $response = $waitlist->assign($entryId);
+            } else {
+                $response = [
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'route not found',
+                    'data' => null,
+                    'meta' => (object)[],
+                ];
+            }
             break;
     }
 } catch (\Throwable $e) {

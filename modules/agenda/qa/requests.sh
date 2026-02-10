@@ -8,6 +8,11 @@ APPOINTMENT_ID="${APPOINTMENT_ID:-demo}"
 PATIENT_ID="${PATIENT_ID:-demo}"
 DATE="${DATE:-2026-02-01}"
 QA_MODE="${QA_MODE:-not_ready}"
+WAITLIST_PATIENT_NAME="${WAITLIST_PATIENT_NAME:-QA Lista Espera}"
+WAITLIST_PATIENT_PHONE="${WAITLIST_PATIENT_PHONE:-5512345678}"
+WAITLIST_START="${WAITLIST_START:-2026-02-03 08:00:00}"
+WAITLIST_END="${WAITLIST_END:-2026-02-03 08:30:00}"
+WAITLIST_SLOT_MINUTES="${WAITLIST_SLOT_MINUTES:-30}"
 
 QA_HEADER=(-H "X-QA-Mode: $QA_MODE")
 LAST_METHOD=""
@@ -415,6 +420,71 @@ EOF
     curl_request -X GET "$BASE_URL/patients/$PATIENT_ID/flags"
 
   assert_flags_contains "$LAST_RESPONSE"
+
+  print_header "Waitlist minimal flow"
+
+  waitlist_payload=$(cat <<EOF
+{
+  "doctor_id": "$DOCTOR_ID",
+  "consultorio_id": "$CONSULTORIO_ID",
+  "patient_name": "$WAITLIST_PATIENT_NAME",
+  "patient_phone": "$WAITLIST_PATIENT_PHONE"
+}
+EOF
+  )
+
+  run_success_test "POST waitlist entry" \
+    curl_request -X POST "$BASE_URL/waitlist" -H 'Content-Type: application/json' -d "$waitlist_payload"
+
+  waitlist_entry_id=$(echo "$LAST_RESPONSE" | jq -r '.data.id // empty')
+  if [[ -z "$waitlist_entry_id" ]]; then
+    echo "waitlist create response missing id" >&2
+    exit 1
+  fi
+
+  run_success_test "GET waitlist active entries" \
+    curl_request -X GET "$BASE_URL/waitlist?doctor_id=$DOCTOR_ID&consultorio_id=$CONSULTORIO_ID&status=active"
+
+  if ! echo "$LAST_RESPONSE" | jq -e --arg id "$waitlist_entry_id" '.data | type=="array" and any(.[]; .id == $id)' >/dev/null; then
+    echo "Created waitlist entry not listed" >&2
+    exit 1
+  fi
+
+  run_success_test "PATCH waitlist status to contacted" \
+    curl_request -X PATCH "$BASE_URL/waitlist/$waitlist_entry_id" -H 'Content-Type: application/json' -d '{"status":"contacted"}'
+
+  run_success_test "POST assign waitlist entry" \
+    curl_request -X POST "$BASE_URL/waitlist/$waitlist_entry_id/assign" -H 'Content-Type: application/json' -d "$(
+cat <<EOF
+{
+  "doctor_id": "$DOCTOR_ID",
+  "consultorio_id": "$CONSULTORIO_ID",
+  "start_at": "$WAITLIST_START",
+  "end_at": "$WAITLIST_END",
+  "slot_minutes": $WAITLIST_SLOT_MINUTES,
+  "override": false,
+  "override_reason": "QA assign",
+  "linked_cancelled_appointment_id": null,
+  "actor_role": "operator",
+  "actor_id": "qa",
+  "channel_origin": "qa_waitlist"
+}
+EOF
+)"
+
+  assigned_appointment_id=$(echo "$LAST_RESPONSE" | jq -r '.data.appointment_id // empty')
+  if [[ -z "$assigned_appointment_id" ]]; then
+    echo "Waitlist assign response missing appointment_id" >&2
+    exit 1
+  fi
+
+  status_after_assign=$(echo "$LAST_RESPONSE" | jq -r '.data.entry.status // empty')
+  if [[ "$status_after_assign" != "confirmed" ]]; then
+    echo "Expected confirmed status after assign, got '$status_after_assign'" >&2
+    exit 1
+  fi
+
+  echo "Waitlist assigned appointment: $assigned_appointment_id"
 
   print_header "QA script finished (ready mode)"
   echo "Flag appended: $flag_appended (0=disabled, 1=created)"

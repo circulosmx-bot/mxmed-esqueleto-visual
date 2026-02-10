@@ -97,6 +97,46 @@ class AppointmentWriteRepository
         $this->insert($this->eventsTable, $eventData);
     }
 
+    public function appendWaitlistAssignmentEvent(string $appointmentId, array $payload, array $entry): string
+    {
+        $this->ensureEventsTable();
+        $timestamp = (new DateTime('now', new DateTimeZone(self::TIMEZONE)))->format('Y-m-d H:i:s');
+        $eventData = [
+            'event_id' => $this->generateId(),
+            'appointment_id' => $appointmentId,
+            'event_type' => 'appointment_reassigned_from_waitlist',
+            'timestamp' => $timestamp,
+            'from_datetime' => $payload['start_at'] ?? null,
+            'to_datetime' => $payload['end_at'] ?? null,
+            'from_start_at' => $payload['start_at'] ?? null,
+            'to_end_at' => $payload['end_at'] ?? null,
+            'actor_role' => $payload['actor_role'] ?? null,
+            'actor_id' => $payload['actor_id'] ?? null,
+            'channel_origin' => $payload['channel_origin'] ?? null,
+            'notes' => $this->buildWaitlistEventNotes($payload, $entry),
+        ];
+        $this->insert($this->eventsTable, $eventData);
+        return $eventData['event_id'];
+    }
+
+    private function buildWaitlistEventNotes(array $payload, array $entry): string
+    {
+        $parts = [];
+        if (!empty($payload['override']) && $payload['override']) {
+            $parts[] = 'override forced';
+        }
+        if (!empty($payload['override_reason'])) {
+            $parts[] = 'razón: ' . $payload['override_reason'];
+        }
+        if (!empty($payload['linked_cancelled_appointment_id'])) {
+            $parts[] = 'linked_cancelled:' . $payload['linked_cancelled_appointment_id'];
+        }
+        if (!empty($entry['notes'])) {
+            $parts[] = 'entry_notes:' . $entry['notes'];
+        }
+        return implode(' | ', $parts);
+    }
+
     public function rescheduleAppointment(string $appointmentId, array $payload): array
     {
         $this->ensureAppointmentsTable();
