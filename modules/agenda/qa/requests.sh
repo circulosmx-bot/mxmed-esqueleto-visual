@@ -13,6 +13,9 @@ WAITLIST_PATIENT_PHONE="${WAITLIST_PATIENT_PHONE:-5512345678}"
 WAITLIST_START="${WAITLIST_START:-2026-02-03 08:00:00}"
 WAITLIST_END="${WAITLIST_END:-2026-02-03 08:30:00}"
 WAITLIST_SLOT_MINUTES="${WAITLIST_SLOT_MINUTES:-30}"
+QA_APPT_START_AT="${QA_APPT_START_AT:-2026-02-03 09:00:00}"
+QA_APPT_END_AT="${QA_APPT_END_AT:-2026-02-03 09:30:00}"
+QA_APPT_SLOT_MINUTES="${QA_APPT_SLOT_MINUTES:-30}"
 
 QA_HEADER=(-H "X-QA-Mode: $QA_MODE")
 LAST_METHOD=""
@@ -274,8 +277,9 @@ if [[ "$QA_MODE" == "ready" ]]; then
   "doctor_id": "$DOCTOR_ID",
   "consultorio_id": "$CONSULTORIO_ID",
   "patient_id": "$PATIENT_ID",
-  "start_at": "2026-03-01 09:00:00",
-  "end_at": "2026-03-01 09:30:00",
+  "start_at": "$QA_APPT_START_AT",
+  "end_at": "$QA_APPT_END_AT",
+  "slot_minutes": $QA_APPT_SLOT_MINUTES,
   "modality": "presencial",
   "channel_origin": "qa_script",
   "created_by_role": "system",
