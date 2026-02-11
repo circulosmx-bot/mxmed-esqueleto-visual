@@ -13,9 +13,24 @@ WAITLIST_PATIENT_PHONE="${WAITLIST_PATIENT_PHONE:-5512345678}"
 WAITLIST_START="${WAITLIST_START:-2026-02-03 08:00:00}"
 WAITLIST_END="${WAITLIST_END:-2026-02-03 08:30:00}"
 WAITLIST_SLOT_MINUTES="${WAITLIST_SLOT_MINUTES:-30}"
-QA_APPT_START_AT="${QA_APPT_START_AT:-2026-02-03 09:00:00}"
-QA_APPT_END_AT="${QA_APPT_END_AT:-2026-02-03 09:30:00}"
+QA_APPT_START_AT_DEFAULT="2026-02-03 09:00:00"
+QA_APPT_END_AT_DEFAULT="2026-02-03 09:30:00"
 QA_APPT_SLOT_MINUTES="${QA_APPT_SLOT_MINUTES:-30}"
+QA_RESCHED_START_AT="${QA_RESCHED_START_AT:-}"
+QA_RESCHED_END_AT="${QA_RESCHED_END_AT:-}"
+QA_RESCHED_SLOT_MINUTES="${QA_RESCHED_SLOT_MINUTES:-30}"
+if [[ -z "${QA_APPT_START_AT+x}" ]]; then
+  QA_APPT_START_AT_PROVIDED=0
+else
+  QA_APPT_START_AT_PROVIDED=1
+fi
+if [[ -z "${QA_APPT_END_AT+x}" ]]; then
+  QA_APPT_END_AT_PROVIDED=0
+else
+  QA_APPT_END_AT_PROVIDED=1
+fi
+QA_APPT_START_AT="${QA_APPT_START_AT:-$QA_APPT_START_AT_DEFAULT}"
+QA_APPT_END_AT="${QA_APPT_END_AT:-$QA_APPT_END_AT_DEFAULT}"
 
 QA_HEADER=(-H "X-QA-Mode: $QA_MODE")
 LAST_METHOD=""
@@ -272,6 +287,58 @@ fi
 if [[ "$QA_MODE" == "ready" ]]; then
   print_header "READY MODE: verifying writes"
 
+  if [[ "$QA_APPT_START_AT_PROVIDED" -eq 0 && "$QA_APPT_END_AT_PROVIDED" -eq 0 ]]; then
+    availability_response=$(curl_request -X GET "$BASE_URL/availability?doctor_id=$DOCTOR_ID&consultorio_id=$CONSULTORIO_ID&date=$DATE&slot_minutes=$QA_APPT_SLOT_MINUTES")
+    if ! echo "$availability_response" | jq -e '.ok == true' >/dev/null; then
+      echo "$availability_response" | jq .
+      echo "No available slots for QA appointment" >&2
+      exit 1
+    fi
+
+    slot_candidates=$(printf '%s\n' "$availability_response" | jq -r '
+      (.data.slots // .slots // []) as $slots |
+      (.data.available // .available // []) as $available |
+      (.data.windows // .windows // []) as $windows |
+      (($slots | length) + ($available | length) + ($windows | length))
+    ')
+
+    if [[ -z "$slot_candidates" || "$slot_candidates" -eq 0 ]]; then
+      echo "$availability_response" | jq .
+      echo "No available slots for QA appointment" >&2
+      exit 1
+    fi
+
+    slot_entry=$(printf '%s\n' "$availability_response" | jq -c '
+      (
+        (.data.slots // .slots // []) as $slots |
+        (.data.available // .available // []) as $available |
+        (.data.windows // .windows // []) as $windows
+      ) |
+      if ($slots | length) > 0 then $slots[0]
+      elif ($available | length) > 0 then $available[0]
+      elif ($windows | length) > 0 then $windows[0]
+      else null end
+    ')
+
+    if [[ -z "$slot_entry" || "$slot_entry" == "null" ]]; then
+      echo "$availability_response" | jq .
+      echo "Cannot parse availability response for slots" >&2
+      exit 1
+    fi
+
+    slot_start=$(printf '%s\n' "$slot_entry" | jq -r '(.start_at // .start // .from // empty)')
+    slot_end=$(printf '%s\n' "$slot_entry" | jq -r '(.end_at // .end // .to // empty)')
+    if [[ -z "$slot_start" || -z "$slot_end" ]]; then
+      echo "$availability_response" | jq .
+      echo "Cannot parse availability response for slots" >&2
+      exit 1
+    fi
+
+    QA_APPT_START_AT="$slot_start"
+    QA_APPT_END_AT="$slot_end"
+    echo "Selected slot from availability: $QA_APPT_START_AT -> $QA_APPT_END_AT"
+  fi
+
   create_payload=$(cat <<EOF
 {
   "doctor_id": "$DOCTOR_ID",
@@ -321,14 +388,68 @@ EOF
     exit 1
   fi
 
+  resched_start="$QA_RESCHED_START_AT"
+  resched_end="$QA_RESCHED_END_AT"
+  resched_slot_minutes="$QA_RESCHED_SLOT_MINUTES"
+
+  if [[ -z "$resched_start" || -z "$resched_end" ]]; then
+    availability_response=$(curl_request -X GET "$BASE_URL/availability?doctor_id=$DOCTOR_ID&consultorio_id=$CONSULTORIO_ID&date=$DATE&slot_minutes=$QA_RESCHED_SLOT_MINUTES")
+    if ! echo "$availability_response" | jq -e '.ok == true' >/dev/null; then
+      echo "$availability_response" | jq .
+      echo "No available slots for QA appointment" >&2
+      exit 1
+    fi
+
+    slot_candidates=$(printf '%s\n' "$availability_response" | jq -c '
+      (
+        [
+          (.data.slots // .slots // []),
+          (.data.available // .available // []),
+          (.data.windows // .windows // [])
+        ] | flatten(1)
+      ) | map({
+        start: (.start_at // .start // .from // empty),
+        end: (.end_at // .end // .to // empty)
+      }) | map(select(.start != "" and .end != ""))
+    ')
+
+    slot_count=$(printf '%s\n' "$slot_candidates" | jq 'length')
+    if [[ "$slot_count" -eq 0 ]]; then
+      echo "$availability_response" | jq .
+      echo "No available slots for QA appointment" >&2
+      exit 1
+    fi
+
+    slot_entry=$(printf '%s\n' "$slot_candidates" | jq -c --arg start "$QA_APPT_START_AT" --arg end "$QA_APPT_END_AT" '
+      map(select(.start != $start or .end != $end)) | .[0]
+    ')
+
+    if [[ -z "$slot_entry" || "$slot_entry" == "null" ]]; then
+      echo "$availability_response" | jq .
+      echo "No alternate slot available for reschedule" >&2
+      exit 1
+    fi
+
+    resched_start=$(printf '%s\n' "$slot_entry" | jq -r '.start // empty')
+    resched_end=$(printf '%s\n' "$slot_entry" | jq -r '.end // empty')
+    if [[ -z "$resched_start" || -z "$resched_end" ]]; then
+      echo "$availability_response" | jq .
+      echo "Cannot parse availability response for reschedule slots" >&2
+      exit 1
+    fi
+  fi
+
+  echo "Selected reschedule slot: $resched_start -> $resched_end"
+
   reschedule_payload=$(cat <<EOF
 {
   "motivo_code": "qa_reschedule",
   "motivo_text": "QA reschedule",
-  "from_start_at": "2026-03-01 09:00:00",
-  "from_end_at": "2026-03-01 09:30:00",
-  "to_start_at": "2026-03-01 10:00:00",
-  "to_end_at": "2026-03-01 10:30:00",
+  "from_start_at": "$QA_APPT_START_AT",
+  "from_end_at": "$QA_APPT_END_AT",
+  "to_start_at": "$resched_start",
+  "to_end_at": "$resched_end",
+  "slot_minutes": $resched_slot_minutes,
   "channel_origin": "qa_script",
   "actor_role": "system",
   "actor_id": "qa"
