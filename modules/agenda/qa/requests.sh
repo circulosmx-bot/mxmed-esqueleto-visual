@@ -309,16 +309,14 @@ if [[ "$QA_MODE" == "ready" ]]; then
     fi
 
     slot_entry=$(printf '%s\n' "$availability_response" | jq -c '
-      (
-        (.data.slots // .slots // []) as $slots |
-        (.data.available // .available // []) as $available |
-        (.data.windows // .windows // []) as $windows
-      ) |
-      if ($slots | length) > 0 then $slots[0]
-      elif ($available | length) > 0 then $available[0]
-      elif ($windows | length) > 0 then $windows[0]
-      else null end
-    ')
+  (.data.slots // .slots // []) as $slots |
+  (.data.available // .available // []) as $available |
+  (.data.windows // .windows // []) as $windows |
+  if ($slots | length) > 0 then $slots[0]
+  elif ($available | length) > 0 then $available[0]
+  elif ($windows | length) > 0 then $windows[0]
+  else null end
+')
 
     if [[ -z "$slot_entry" || "$slot_entry" == "null" ]]; then
       echo "$availability_response" | jq .
