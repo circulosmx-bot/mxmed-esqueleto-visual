@@ -1,27 +1,19 @@
-# Módulo A v1: Clinical (Pacientes / Expedientes / Consentimientos)
+# modules/clinical — Módulo A v1 (Pacientes / Expedientes / Consentimientos)
 
-## Propósito v1
-Este módulo define el espacio de trabajo para la evolución del dominio clínico administrativo de:
+Este módulo agrupa el Módulo A v1 de MXMED:
 - Pacientes
 - Expedientes (entradas/notas clínicas mínimas)
 - Consentimientos
 
-El contrato maestro vigente de v1 está en:
-- `/docs/modulo_a_pacientes_expedientes_consentimientos_v1.md`
+## Contrato maestro (documentación)
+El contrato maestro v1 está definido aquí:
+- /docs/modulo_a_pacientes_expedientes_consentimientos_v1.md
 
-## Estado actual
-- SIN implementación aún.
-- Este módulo contiene solo scaffolding inicial de carpetas y documentación base.
+## Estado
+- v1 (actual): SOLO scaffolding del módulo (sin DB, sin endpoints, sin UI).
 
-## Alcance técnico actual
-- No hay implementación de DB.
-- No hay implementación de endpoints.
-- No hay implementación de UI.
-- No hay lógica de negocio activa.
-
-## FUTURO
-Todo desarrollo técnico queda para fases futuras, incluyendo:
-- DB/migraciones/modelado físico.
-- Endpoints y contratos operativos en runtime.
-- UI/flows de captura y consulta.
-- Integraciones y automatizaciones.
+## FUTURO (fuera de alcance en esta fase)
+- Esquema SQL / migraciones
+- Endpoints y lógica de negocio
+- UI server-rendered
+- Adjuntos, firmas digitales avanzadas, automatizaciones, integraciones, IA, portal paciente
