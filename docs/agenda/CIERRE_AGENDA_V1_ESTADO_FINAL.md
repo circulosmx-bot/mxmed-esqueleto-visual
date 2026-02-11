@@ -26,8 +26,10 @@
 2. Asignación manual desde la operadora sobre una entrada activa.
 3. Creación real de la cita derivada de la entrada.
 4. Registro de eventos (`appointment_created`, `appointment_reassigned_from_waitlist`, etc.).
-5. Limpieza automática o manual de entries expiradas/confirmadas.
+5. Limpieza manual / por reglas simples de entries expiradas/confirmadas (sin automatización).
 6. Bloqueo y verificación de colisiones antes de confirmar slot.
+
+Rutas reales y ejemplos reproducibles: ver `modules/agenda/qa/requests.sh` (READY MODE + Waitlist minimal flow).
 
 ## QA mínimo — Smoke tests
 - `GET [REEMPLAZAR_RUTA_REAL]/appointments/{id}/events` con `ok:true` y `events` ordenados.
