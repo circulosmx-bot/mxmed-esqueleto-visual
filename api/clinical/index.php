@@ -146,6 +146,126 @@ function clinical_read_json_body(): array
     ];
 }
 
+function clinical_is_local_host(): bool
+{
+    $host = strtolower(trim((string)($_SERVER['HTTP_HOST'] ?? '')));
+    if ($host === '') {
+        return false;
+    }
+    return (strpos($host, '127.0.0.1') !== false) || (strpos($host, 'localhost') !== false);
+}
+
+function clinical_build_tag(): string
+{
+    $build = trim((string)(getenv('MXMED_BUILD') ?: ''));
+    if ($build === '') {
+        $build = clinical_is_local_host() ? 'dev' : 'prod';
+    }
+    return strtolower($build);
+}
+
+function clinical_is_local_or_dev(): bool
+{
+    return clinical_is_local_host() || clinical_build_tag() === 'dev';
+}
+
+function clinical_documents_pdo(): PDO
+{
+    require_once __DIR__ . '/../_lib/db.php';
+    return mxmed_pdo();
+}
+
+function clinical_documents_list_fetch(PDO $pdo, string $patientId, string $documentType, string $hospitalStayId, int $limit): array
+{
+    $sql = "
+        SELECT
+            id,
+            title,
+            document_type,
+            summary,
+            event_datetime,
+            printable,
+            JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.snapshot.medico.nombre_completo')) AS doctor_name
+        FROM clinical_documents
+        WHERE patient_id = :patient_id
+    ";
+    $params = [':patient_id' => $patientId];
+    if ($documentType !== '') {
+        $sql .= " AND document_type = :type";
+        $params[':type'] = $documentType;
+    }
+    if ($hospitalStayId !== '') {
+        $sql .= " AND hospital_stay_id = :hospital_stay_id";
+        $params[':hospital_stay_id'] = $hospitalStayId;
+    }
+    $sql .= " ORDER BY event_datetime DESC, id DESC LIMIT {$limit}";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $items = $stmt->fetchAll();
+    return is_array($items) ? $items : [];
+}
+
+function clinical_documents_get_fetch(PDO $pdo, int $id): ?array
+{
+    $stmt = $pdo->prepare("SELECT * FROM clinical_documents WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    if (!$row || !is_array($row)) {
+        return null;
+    }
+
+    $pstmt = $pdo->prepare("SELECT user_id, role, participation_type, signed_at FROM clinical_document_participants WHERE clinical_document_id = :id ORDER BY id ASC");
+    $pstmt->execute([':id' => $id]);
+    $participants = $pstmt->fetchAll();
+    if (!is_array($participants)) {
+        $participants = [];
+    }
+
+    $payload = json_decode((string)$row['payload_json'], true);
+    if (!is_array($payload)) {
+        $payload = [];
+    }
+
+    return [
+        'document_db_id' => (int)$row['id'],
+        'document_id' => $row['document_uuid'],
+        'document_type' => $row['document_type'],
+        'title' => $row['title'],
+        'version' => (int)$row['version'],
+        'context' => [
+            'patient_id' => $row['patient_id'],
+            'encounter_id' => $row['encounter_id'],
+            'hospital_stay_id' => $row['hospital_stay_id'],
+            'care_setting' => $row['care_setting'],
+            'service' => $row['service'],
+        ],
+        'status' => $row['status'],
+        'timestamps' => [
+            'created_at' => $row['created_at'],
+            'updated_at' => $row['updated_at'],
+            'generated_at' => $row['generated_at'],
+            'signed_at' => $row['signed_at'],
+        ],
+        'audit' => [
+            'created_by_user_id' => $row['created_by_user_id'],
+            'updated_by_user_id' => $row['updated_by_user_id'],
+        ],
+        'participants' => $participants,
+        'content' => [
+            'payload' => $payload,
+            'rendered_text' => $row['rendered_text'],
+            'summary' => $row['summary'],
+            'edited_flag' => (int)$row['edited_flag'],
+        ],
+        'ui' => [
+            'event_datetime' => $row['event_datetime'],
+            'widget_group' => $row['widget_group'],
+            'printable' => (bool)$row['printable'],
+        ],
+    ];
+}
+
 set_error_handler(static function ($severity, $message, $file, $line): void {
     throw new ErrorException((string)$message, 0, (int)$severity, (string)$file, (int)$line);
 });
@@ -180,7 +300,7 @@ try {
             'data' => [
                 'service' => 'clinical',
                 'version' => 'v1',
-                'build' => 'dev',
+                'build' => clinical_build_tag(),
             ],
             'meta' => [
                 'route' => 'version',
@@ -271,6 +391,137 @@ try {
         return;
     }
 
+    if ($method === 'GET' && ($segments[0] ?? '') === 'documents') {
+        if (count($segments) === 1) {
+            $patientId = trim((string)($_GET['patient_id'] ?? ''));
+            if ($patientId === '') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'patient_id requerido',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'GET',
+                        'route' => 'documents',
+                        'source' => 'clinical_documents_pdo',
+                    ],
+                ], 400);
+                return;
+            }
+
+            $limit = (int)($_GET['limit'] ?? 30);
+            if ($limit <= 0) {
+                $limit = 30;
+            } elseif ($limit > 200) {
+                $limit = 200;
+            }
+
+            $documentType = trim((string)($_GET['document_type'] ?? ''));
+            $hospitalStayId = trim((string)($_GET['hospital_stay_id'] ?? ''));
+
+            try {
+                $pdo = clinical_documents_pdo();
+                $items = clinical_documents_list_fetch($pdo, $patientId, $documentType, $hospitalStayId, $limit);
+            } catch (Throwable $e) {
+                $msg = trim($e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => ($msg !== '') ? $msg : 'server error',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'GET',
+                        'route' => 'documents',
+                        'source' => 'clinical_documents_pdo',
+                    ],
+                ], 500);
+                return;
+            }
+
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => 'documents listed',
+                'data' => [
+                    'items' => $items,
+                ],
+                'meta' => [
+                    'method' => 'GET',
+                    'route' => 'documents',
+                    'source' => 'clinical_documents_pdo',
+                ],
+            ], 200);
+            return;
+        }
+
+        if (count($segments) === 2) {
+            $id = (int)$segments[1];
+            if ($id <= 0) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'document id must be a positive integer',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'GET',
+                        'route' => 'documents/{id}',
+                        'source' => 'clinical_documents_pdo',
+                    ],
+                ], 400);
+                return;
+            }
+
+            try {
+                $pdo = clinical_documents_pdo();
+                $document = clinical_documents_get_fetch($pdo, $id);
+            } catch (Throwable $e) {
+                $msg = trim($e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => ($msg !== '') ? $msg : 'server error',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'GET',
+                        'route' => 'documents/{id}',
+                        'source' => 'clinical_documents_pdo',
+                    ],
+                ], 500);
+                return;
+            }
+
+            if ($document === null) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'Documento no encontrado',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'GET',
+                        'route' => 'documents/{id}',
+                        'source' => 'clinical_documents_pdo',
+                    ],
+                ], 404);
+                return;
+            }
+
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => 'document retrieved',
+                'data' => [
+                    'document' => $document,
+                ],
+                'meta' => [
+                    'method' => 'GET',
+                    'route' => 'documents/{id}',
+                    'source' => 'clinical_documents_pdo',
+                ],
+            ], 200);
+            return;
+        }
+    }
+
     clinical_send_response([
         'ok' => false,
         'error' => 'not_found',
@@ -282,13 +533,20 @@ try {
         ],
     ], 404);
 } catch (Throwable $e) {
+    $meta = [
+        'exception' => get_class($e),
+    ];
+    if (clinical_is_local_or_dev()) {
+        $meta['exception_message'] = $e->getMessage();
+        $meta['exception_file'] = $e->getFile();
+        $meta['exception_line'] = $e->getLine();
+    }
+
     clinical_send_response([
         'ok' => false,
         'error' => 'server_error',
         'message' => 'server error',
         'data' => null,
-        'meta' => [
-            'exception' => get_class($e),
-        ],
+        'meta' => $meta,
     ], 500);
 }
