@@ -169,6 +169,21 @@ function clinical_is_local_or_dev(): bool
     return clinical_is_local_host() || clinical_build_tag() === 'dev';
 }
 
+function clinical_ensure_identity_bridge_schema(PDO $pdo): void
+{
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS clinical_patient_identity_bridge (
+            id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            legacy_patient_id VARCHAR(128) NOT NULL,
+            canonical_patient_id VARCHAR(64) NOT NULL,
+            strategy VARCHAR(50) NOT NULL,
+            confidence DECIMAL(3,2) NOT NULL DEFAULT 1.00,
+            created_at DATETIME NOT NULL,
+            UNIQUE KEY uniq_legacy (legacy_patient_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+}
+
 function clinical_is_uuid_v4(string $value): bool
 {
     return preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $value) === 1;
@@ -334,6 +349,13 @@ try {
     $segments = clinical_route_segments();
     $route = implode('/', $segments);
 
+    // Ensure bridge schema at gateway startup (best-effort to avoid breaking non-DB routes).
+    try {
+        $bridgePdo = clinical_documents_pdo();
+        clinical_ensure_identity_bridge_schema($bridgePdo);
+    } catch (Throwable $e) {
+    }
+
     if ($method === 'GET' && $route === 'health') {
         clinical_send_response([
             'ok' => true,
@@ -404,6 +426,13 @@ try {
     }
 
     if ($method === 'POST' && $route === 'patient-id/resolve') {
+        $resolveMeta = [
+            'method' => 'POST',
+            'route' => 'patient-id/resolve',
+            'resolver_version' => 'v2',
+            'bridge' => 'clinical_patient_identity_bridge',
+        ];
+
         $bodyResult = clinical_read_json_body();
         if ($bodyResult['ok'] !== true) {
             clinical_send_response([
@@ -411,10 +440,7 @@ try {
                 'error' => 'bad_request',
                 'message' => (string)$bodyResult['error'],
                 'data' => null,
-                'meta' => [
-                    'method' => 'POST',
-                    'route' => 'patient-id/resolve',
-                ],
+                'meta' => $resolveMeta,
             ], 400);
             return;
         }
@@ -429,10 +455,7 @@ try {
                     'error' => 'invalid_params',
                     'message' => 'patient_id must be a non-empty string with length >= 8',
                     'data' => null,
-                    'meta' => [
-                        'method' => 'POST',
-                        'route' => 'patient-id/resolve',
-                    ],
+                    'meta' => $resolveMeta,
                 ], 400);
                 return;
             }
@@ -446,40 +469,96 @@ try {
                     'confidence' => 1.0,
                     'strategy' => 'passthrough',
                 ],
-                'meta' => [
-                    'method' => 'POST',
-                    'route' => 'patient-id/resolve',
-                ],
+                'meta' => $resolveMeta,
             ], 200);
             return;
         }
 
         if (array_key_exists('legacy', $body)) {
+            $legacy = $body['legacy'];
+            if (!is_array($legacy)) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'invalid_params',
+                    'message' => 'legacy debe ser objeto',
+                    'data' => null,
+                    'meta' => $resolveMeta,
+                ], 400);
+                return;
+            }
+
+            $legacyPatientId = trim((string)($legacy['legacy_patient_id'] ?? ''));
+            if ($legacyPatientId === '') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'invalid_params',
+                    'message' => 'legacy.legacy_patient_id requerido',
+                    'data' => null,
+                    'meta' => $resolveMeta,
+                ], 400);
+                return;
+            }
+
+            try {
+                $pdo = clinical_documents_pdo();
+                clinical_ensure_identity_bridge_schema($pdo);
+
+                $stmt = $pdo->prepare(
+                    'SELECT canonical_patient_id, strategy, confidence
+                     FROM clinical_patient_identity_bridge
+                     WHERE legacy_patient_id = :legacy
+                     LIMIT 1'
+                );
+                $stmt->execute([':legacy' => $legacyPatientId]);
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            } catch (Throwable $e) {
+                $msg = trim((string)$e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => ($msg !== '') ? $msg : 'server error',
+                    'data' => null,
+                    'meta' => $resolveMeta,
+                ], 500);
+                return;
+            }
+
+            if (is_array($row)) {
+                clinical_send_response([
+                    'ok' => true,
+                    'error' => null,
+                    'message' => 'legacy mapped via identity bridge',
+                    'data' => [
+                        'patient_id' => (string)$row['canonical_patient_id'],
+                        'confidence' => (float)$row['confidence'],
+                        'strategy' => (string)$row['strategy'],
+                        'legacy_patient_id' => $legacyPatientId,
+                    ],
+                    'meta' => $resolveMeta,
+                ], 200);
+                return;
+            }
+
             clinical_send_response([
                 'ok' => false,
                 'error' => 'not_ready',
-                'message' => 'legacy identity resolution is not available in v1 yet',
+                'message' => 'legacy identity not mapped yet',
                 'data' => [
-                    'required_next' => 'identity_bridge_v2',
+                    'required_next' => 'bridge_mapping_required',
+                    'legacy_patient_id' => $legacyPatientId,
                     'received' => true,
                 ],
-                'meta' => [
-                    'method' => 'POST',
-                    'route' => 'patient-id/resolve',
-                ],
-            ], 501);
+                'meta' => $resolveMeta,
+            ], 409);
             return;
         }
 
         clinical_send_response([
             'ok' => false,
             'error' => 'invalid_params',
-            'message' => 'either patient_id or legacy payload is required',
+            'message' => 'patient_id o legacy requerido',
             'data' => null,
-            'meta' => [
-                'method' => 'POST',
-                'route' => 'patient-id/resolve',
-            ],
+            'meta' => $resolveMeta,
         ], 400);
         return;
     }
