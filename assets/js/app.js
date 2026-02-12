@@ -1349,6 +1349,44 @@ console.info('app.js loaded :: 20251123a');
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 
+  const getIdentityApi = () => window.mxmedIdentity || null;
+  const getCanonicalCache = () => {
+    if (!window.__mxmed_canonical_cache || typeof window.__mxmed_canonical_cache !== 'object') {
+      window.__mxmed_canonical_cache = {};
+    }
+    return window.__mxmed_canonical_cache;
+  };
+  const buildLegacyPatientId = (nombreCompleto, dob, sexoVal) => {
+    const identity = getIdentityApi();
+    if (identity && typeof identity.buildLegacyPatientId === 'function') {
+      return identity.buildLegacyPatientId(nombreCompleto, dob, sexoVal, normalize);
+    }
+    return normalize([nombreCompleto, dob, sexoVal].join('|')) || 'anon';
+  };
+  const resolveCanonicalPatientIdSafe = (legacyPatientId) => {
+    const legacy = String(legacyPatientId ?? '').trim();
+    if (!legacy || legacy === 'anon') return Promise.resolve(null);
+
+    const cache = getCanonicalCache();
+    if (Object.prototype.hasOwnProperty.call(cache, legacy)) {
+      return Promise.resolve(cache[legacy] || null);
+    }
+
+    const identity = getIdentityApi();
+    if (!identity || typeof identity.resolveCanonicalPatientId !== 'function') {
+      cache[legacy] = null;
+      return Promise.resolve(null);
+    }
+
+    return identity.resolveCanonicalPatientId(legacy).then((canonical) => {
+      cache[legacy] = canonical || null;
+      return cache[legacy];
+    }).catch(() => {
+      cache[legacy] = null;
+      return null;
+    });
+  };
+
   const safeText = (v, fallback = 'No registrado') => {
     const t = (v ?? '').toString().trim();
     return t ? t : fallback;
@@ -1367,9 +1405,17 @@ console.info('app.js loaded :: 20251123a');
     const mm = pane?.querySelector('[data-dg-mes]')?.value || '';
     const yy = pane?.querySelector('[data-dg-anio]')?.value || '';
     const dob = [yy, mm, dd].filter(Boolean).join('-');
-    const patientKey = normalize([nombreCompleto, dob, sexoVal].join('|')) || 'anon';
+    const patientKey = buildLegacyPatientId(nombreCompleto, dob, sexoVal);
+    const canonicalCache = getCanonicalCache();
+    const canonicalPatientId = Object.prototype.hasOwnProperty.call(canonicalCache, patientKey)
+      ? (canonicalCache[patientKey] || null)
+      : null;
+
+    resolveCanonicalPatientIdSafe(patientKey).catch(() => {});
+
     return {
       patient_id: patientKey,
+      canonical_patient_id: canonicalPatientId,
       nombre_completo: nombreCompleto,
       edad,
       sexo
@@ -2016,6 +2062,7 @@ console.info('app.js loaded :: 20251123a');
     const actor = getDoctor();
     const context = {
       patient_id: patient.patient_id,
+      canonical_patient_id: patient.canonical_patient_id || null,
       encounter_id: null,
       hospital_stay_id: null,
       care_setting: payload.ambito || 'consulta',

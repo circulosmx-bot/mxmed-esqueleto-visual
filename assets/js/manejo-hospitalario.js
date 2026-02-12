@@ -33,6 +33,43 @@
     return Number.isFinite(n) ? n : null;
   };
   const normalize = (str) => (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  const getIdentityApi = () => window.mxmedIdentity || null;
+  const getCanonicalCache = () => {
+    if (!window.__mxmed_canonical_cache || typeof window.__mxmed_canonical_cache !== 'object') {
+      window.__mxmed_canonical_cache = {};
+    }
+    return window.__mxmed_canonical_cache;
+  };
+  const buildLegacyPatientId = (nombreCompleto, dob, sexoVal) => {
+    const identity = getIdentityApi();
+    if (identity && typeof identity.buildLegacyPatientId === 'function') {
+      return identity.buildLegacyPatientId(nombreCompleto, dob, sexoVal, normalize);
+    }
+    return normalize([nombreCompleto, dob, sexoVal].join('|')) || 'anon';
+  };
+  const resolveCanonicalPatientIdSafe = (legacyPatientId) => {
+    const legacy = String(legacyPatientId ?? '').trim();
+    if (!legacy || legacy === 'anon') return Promise.resolve(null);
+
+    const cache = getCanonicalCache();
+    if (Object.prototype.hasOwnProperty.call(cache, legacy)) {
+      return Promise.resolve(cache[legacy] || null);
+    }
+
+    const identity = getIdentityApi();
+    if (!identity || typeof identity.resolveCanonicalPatientId !== 'function') {
+      cache[legacy] = null;
+      return Promise.resolve(null);
+    }
+
+    return identity.resolveCanonicalPatientId(legacy).then((canonical) => {
+      cache[legacy] = canonical || null;
+      return cache[legacy];
+    }).catch(() => {
+      cache[legacy] = null;
+      return null;
+    });
+  };
 
   const isDemo = window.location.hostname.endsWith('github.io');
   const demoFetchJson = async (path) => {
@@ -79,8 +116,15 @@
     const edad = pane?.querySelector('[data-dg-edad]')?.textContent?.trim() || '--';
     const sexoVal = pane?.querySelector('input[name=\"pac-genero\"]:checked')?.value || '';
     const sexo = sexoVal === 'F' ? 'Femenino' : sexoVal === 'M' ? 'Masculino' : sexoVal === 'O' ? 'Otro' : '--';
-    const patient_id = normalize([nombre, dob, sexoVal].join('|')) || 'anon';
-    return { patient_id, nombre_completo: nombre, edad, sexo };
+    const patient_id = buildLegacyPatientId(nombre, dob, sexoVal);
+    const canonicalCache = getCanonicalCache();
+    const canonical_patient_id = Object.prototype.hasOwnProperty.call(canonicalCache, patient_id)
+      ? (canonicalCache[patient_id] || null)
+      : null;
+
+    resolveCanonicalPatientIdSafe(patient_id).catch(() => {});
+
+    return { patient_id, canonical_patient_id, nombre_completo: nombre, edad, sexo };
   };
   const getDoctor = () => {
     const nombre = document.querySelector('.user-id .name')?.textContent?.trim() || 'Médico';
@@ -249,6 +293,7 @@
     const care = stayId ? 'hospitalizacion' : (pid ? 'consulta' : null);
     setContextSafe({
       patient_id: pid,
+      canonical_patient_id: patient.canonical_patient_id || null,
       hospital_stay_id: stayId,
       care_setting: care,
       service: state.stay?.service || null
@@ -277,7 +322,14 @@
 
   const buildContext = () => {
     const patient = getPatient();
-    return { patient_id: patient.patient_id, encounter_id: null, hospital_stay_id: String(state.stay?.id || ''), care_setting: 'hospitalizacion', service: state.stay?.service || null };
+    return {
+      patient_id: patient.patient_id,
+      canonical_patient_id: patient.canonical_patient_id || null,
+      encounter_id: null,
+      hospital_stay_id: String(state.stay?.id || ''),
+      care_setting: 'hospitalizacion',
+      service: state.stay?.service || null
+    };
   };
 
   const buildPron = () => {
