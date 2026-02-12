@@ -169,6 +169,65 @@ function clinical_is_local_or_dev(): bool
     return clinical_is_local_host() || clinical_build_tag() === 'dev';
 }
 
+function clinical_is_uuid_v4(string $value): bool
+{
+    return preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $value) === 1;
+}
+
+function clinical_is_canonical_patient_id_pattern(string $value): bool
+{
+    // Pattern generated in modules/patients (PatientsRepository::generateId with prefix p_).
+    if (preg_match('/^p_[a-f0-9]{12}$/i', $value) === 1) {
+        return true;
+    }
+
+    // Tolerant canonical prefix for existing IDs in environments with prior formats.
+    return preg_match('/^p_[A-Za-z0-9_-]{6,62}$/', $value) === 1;
+}
+
+function clinical_has_multiple_legacy_tokens(string $value): bool
+{
+    $parts = preg_split('/[\|,;\/\s]+/', trim($value), -1, PREG_SPLIT_NO_EMPTY);
+    if (!is_array($parts)) {
+        return false;
+    }
+    return count($parts) >= 3;
+}
+
+function clinical_inspect_patient_id_kind(string $patientId): array
+{
+    $notes = [];
+
+    if (clinical_is_uuid_v4($patientId)) {
+        $notes[] = 'matches UUID v4 format';
+        return ['kind' => 'canonical', 'notes' => $notes];
+    }
+
+    if (clinical_is_canonical_patient_id_pattern($patientId)) {
+        $notes[] = 'matches canonical patients pattern (prefix p_)';
+        return ['kind' => 'canonical', 'notes' => $notes];
+    }
+
+    if (strpos($patientId, '|') !== false) {
+        $notes[] = 'contains legacy separator "|"';
+    }
+    if (strlen($patientId) > 64) {
+        $notes[] = 'length greater than 64 characters';
+    }
+    if (clinical_has_multiple_legacy_tokens($patientId)) {
+        $notes[] = 'contains multiple separated tokens';
+    }
+
+    if (count($notes) > 0) {
+        return ['kind' => 'legacy', 'notes' => $notes];
+    }
+
+    return [
+        'kind' => 'unknown',
+        'notes' => ['no canonical or legacy heuristic matched'],
+    ];
+}
+
 function clinical_documents_pdo(): PDO
 {
     require_once __DIR__ . '/../_lib/db.php';
@@ -305,6 +364,40 @@ try {
             'meta' => [
                 'route' => 'version',
                 'method' => 'GET',
+            ],
+        ], 200);
+        return;
+    }
+
+    if ($method === 'GET' && $route === 'patient-id/inspect') {
+        $patientId = trim((string)($_GET['patient_id'] ?? ''));
+        if ($patientId === '') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'bad_request',
+                'message' => 'patient_id requerido',
+                'data' => null,
+                'meta' => [
+                    'method' => 'GET',
+                    'route' => 'patient-id/inspect',
+                ],
+            ], 400);
+            return;
+        }
+
+        $inspection = clinical_inspect_patient_id_kind($patientId);
+        clinical_send_response([
+            'ok' => true,
+            'error' => null,
+            'message' => 'patient_id inspected',
+            'data' => [
+                'patient_id' => $patientId,
+                'kind' => $inspection['kind'],
+                'notes' => $inspection['notes'],
+            ],
+            'meta' => [
+                'method' => 'GET',
+                'route' => 'patient-id/inspect',
             ],
         ], 200);
         return;
