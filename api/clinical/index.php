@@ -243,6 +243,16 @@ function clinical_inspect_patient_id_kind(string $patientId): array
     ];
 }
 
+function clinical_identity_bridge_admin_meta(string $method, string $route): array
+{
+    return [
+        'method' => $method,
+        'route' => $route,
+        'bridge' => 'clinical_patient_identity_bridge',
+        'admin' => true,
+    ];
+}
+
 function clinical_documents_pdo(): PDO
 {
     require_once __DIR__ . '/../_lib/db.php';
@@ -560,6 +570,274 @@ try {
             'data' => null,
             'meta' => $resolveMeta,
         ], 400);
+        return;
+    }
+
+    if ($route === 'identity-bridge/lookup') {
+        $meta = clinical_identity_bridge_admin_meta((string)$method, 'identity-bridge/lookup');
+        if ($method !== 'GET') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'not_found',
+                'message' => 'route not found',
+                'data' => null,
+                'meta' => $meta,
+            ], 404);
+            return;
+        }
+
+        if (!clinical_is_local_or_dev()) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'forbidden',
+                'message' => 'dev_only',
+                'data' => null,
+                'meta' => $meta,
+            ], 403);
+            return;
+        }
+
+        $legacyPatientId = trim((string)($_GET['legacy_patient_id'] ?? ''));
+        if ($legacyPatientId === '') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'bad_request',
+                'message' => 'legacy_patient_id requerido',
+                'data' => null,
+                'meta' => $meta,
+            ], 400);
+            return;
+        }
+
+        try {
+            $pdo = clinical_documents_pdo();
+            clinical_ensure_identity_bridge_schema($pdo);
+            $stmt = $pdo->prepare(
+                'SELECT legacy_patient_id, canonical_patient_id, strategy, confidence, created_at
+                 FROM clinical_patient_identity_bridge
+                 WHERE legacy_patient_id = :l
+                 LIMIT 1'
+            );
+            $stmt->execute([':l' => $legacyPatientId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            $msg = trim((string)$e->getMessage());
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'server_error',
+                'message' => ($msg !== '') ? $msg : 'server error',
+                'data' => null,
+                'meta' => $meta,
+            ], 500);
+            return;
+        }
+
+        if (!$row || !is_array($row)) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'not_found',
+                'message' => 'mapping not found',
+                'data' => null,
+                'meta' => $meta,
+            ], 404);
+            return;
+        }
+
+        clinical_send_response([
+            'ok' => true,
+            'error' => null,
+            'message' => 'mapping found',
+            'data' => [
+                'mapping' => [
+                    'legacy_patient_id' => (string)$row['legacy_patient_id'],
+                    'canonical_patient_id' => (string)$row['canonical_patient_id'],
+                    'strategy' => (string)$row['strategy'],
+                    'confidence' => (float)$row['confidence'],
+                    'created_at' => $row['created_at'],
+                ],
+            ],
+            'meta' => $meta,
+        ], 200);
+        return;
+    }
+
+    if ($route === 'identity-bridge/upsert') {
+        $meta = clinical_identity_bridge_admin_meta((string)$method, 'identity-bridge/upsert');
+        if ($method !== 'POST') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'not_found',
+                'message' => 'route not found',
+                'data' => null,
+                'meta' => $meta,
+            ], 404);
+            return;
+        }
+
+        if (!clinical_is_local_or_dev()) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'forbidden',
+                'message' => 'dev_only',
+                'data' => null,
+                'meta' => $meta,
+            ], 403);
+            return;
+        }
+
+        $bodyResult = clinical_read_json_body();
+        if ($bodyResult['ok'] !== true) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'bad_request',
+                'message' => (string)$bodyResult['error'],
+                'data' => null,
+                'meta' => $meta,
+            ], 400);
+            return;
+        }
+
+        $body = (array)$bodyResult['data'];
+        $legacyPatientId = trim((string)($body['legacy_patient_id'] ?? ''));
+        $canonicalPatientId = trim((string)($body['canonical_patient_id'] ?? ''));
+        $strategy = trim((string)($body['strategy'] ?? ''));
+        if ($strategy === '') {
+            $strategy = 'manual';
+        }
+
+        $confidence = 1.0;
+        if (array_key_exists('confidence', $body) && is_numeric($body['confidence'])) {
+            $confidence = (float)$body['confidence'];
+        }
+        if ($confidence < 0.0) {
+            $confidence = 0.0;
+        } elseif ($confidence > 1.0) {
+            $confidence = 1.0;
+        }
+        $confidence = round($confidence, 2);
+
+        if ($legacyPatientId === '' || $canonicalPatientId === '') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'bad_request',
+                'message' => 'legacy_patient_id y canonical_patient_id requeridos',
+                'data' => null,
+                'meta' => $meta,
+            ], 400);
+            return;
+        }
+
+        try {
+            $pdo = clinical_documents_pdo();
+            clinical_ensure_identity_bridge_schema($pdo);
+            $stmt = $pdo->prepare(
+                'INSERT INTO clinical_patient_identity_bridge
+                    (legacy_patient_id, canonical_patient_id, strategy, confidence, created_at)
+                 VALUES
+                    (:legacy_patient_id, :canonical_patient_id, :strategy, :confidence, :created_at)
+                 ON DUPLICATE KEY UPDATE
+                    canonical_patient_id = VALUES(canonical_patient_id),
+                    strategy = VALUES(strategy),
+                    confidence = VALUES(confidence)'
+            );
+            $stmt->execute([
+                ':legacy_patient_id' => $legacyPatientId,
+                ':canonical_patient_id' => $canonicalPatientId,
+                ':strategy' => $strategy,
+                ':confidence' => $confidence,
+                ':created_at' => gmdate('Y-m-d H:i:s'),
+            ]);
+        } catch (Throwable $e) {
+            $msg = trim((string)$e->getMessage());
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'server_error',
+                'message' => ($msg !== '') ? $msg : 'server error',
+                'data' => null,
+                'meta' => $meta,
+            ], 500);
+            return;
+        }
+
+        clinical_send_response([
+            'ok' => true,
+            'error' => null,
+            'message' => 'mapping upserted',
+            'data' => [
+                'legacy_patient_id' => $legacyPatientId,
+                'canonical_patient_id' => $canonicalPatientId,
+                'strategy' => $strategy,
+                'confidence' => $confidence,
+            ],
+            'meta' => $meta,
+        ], 200);
+        return;
+    }
+
+    if ($route === 'identity-bridge/delete') {
+        $meta = clinical_identity_bridge_admin_meta((string)$method, 'identity-bridge/delete');
+        if ($method !== 'DELETE') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'not_found',
+                'message' => 'route not found',
+                'data' => null,
+                'meta' => $meta,
+            ], 404);
+            return;
+        }
+
+        if (!clinical_is_local_or_dev()) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'forbidden',
+                'message' => 'dev_only',
+                'data' => null,
+                'meta' => $meta,
+            ], 403);
+            return;
+        }
+
+        $legacyPatientId = trim((string)($_GET['legacy_patient_id'] ?? ''));
+        if ($legacyPatientId === '') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'bad_request',
+                'message' => 'legacy_patient_id requerido',
+                'data' => null,
+                'meta' => $meta,
+            ], 400);
+            return;
+        }
+
+        $deleted = false;
+        try {
+            $pdo = clinical_documents_pdo();
+            clinical_ensure_identity_bridge_schema($pdo);
+            $stmt = $pdo->prepare('DELETE FROM clinical_patient_identity_bridge WHERE legacy_patient_id = :l');
+            $stmt->execute([':l' => $legacyPatientId]);
+            $deleted = ($stmt->rowCount() > 0);
+        } catch (Throwable $e) {
+            $msg = trim((string)$e->getMessage());
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'server_error',
+                'message' => ($msg !== '') ? $msg : 'server error',
+                'data' => null,
+                'meta' => $meta,
+            ], 500);
+            return;
+        }
+
+        clinical_send_response([
+            'ok' => true,
+            'error' => null,
+            'message' => 'mapping deleted',
+            'data' => [
+                'deleted' => $deleted,
+            ],
+            'meta' => $meta,
+        ], 200);
         return;
     }
 
