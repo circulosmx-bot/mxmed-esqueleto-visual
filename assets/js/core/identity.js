@@ -25,6 +25,21 @@
     return legacy || 'anon';
   }
 
+  function mxmedApiBase() {
+    const loc = window.location;
+    const host = loc.hostname;
+    const port = loc.port;
+
+    if (host === '127.0.0.1' || host === 'localhost') {
+      if (port === '' || port === '80' || port === '443') {
+        return loc.protocol + '//' + host + ':8090';
+      }
+      return loc.origin;
+    }
+
+    return loc.origin;
+  }
+
   async function resolveCanonicalPatientId(legacyPatientId) {
     const legacy = clean(legacyPatientId);
     if (legacy === '' || legacy === 'anon') return null;
@@ -33,7 +48,8 @@
     if (hasOwn.call(globalCache, legacy)) return remember(legacy, globalCache[legacy]);
     if (pending.has(legacy)) return pending.get(legacy);
 
-    const request = fetch('api/clinical/index.php/patient-id/resolve', {
+    const url = mxmedApiBase() + '/api/clinical/index.php/patient-id/resolve';
+    const request = fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
