@@ -111,6 +111,41 @@ function clinical_route_segments(): array
     return array_values($segments);
 }
 
+function clinical_read_json_body(): array
+{
+    $raw = file_get_contents('php://input');
+    if ($raw === false) {
+        return [
+            'ok' => false,
+            'error' => 'unable to read request body',
+            'data' => null,
+        ];
+    }
+
+    if (trim($raw) === '') {
+        return [
+            'ok' => false,
+            'error' => 'request body must be valid json',
+            'data' => null,
+        ];
+    }
+
+    $decoded = json_decode($raw, true);
+    if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+        return [
+            'ok' => false,
+            'error' => 'invalid json body',
+            'data' => null,
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'error' => null,
+        'data' => $decoded,
+    ];
+}
+
 set_error_handler(static function ($severity, $message, $file, $line): void {
     throw new ErrorException((string)$message, 0, (int)$severity, (string)$file, (int)$line);
 });
@@ -152,6 +187,87 @@ try {
                 'method' => 'GET',
             ],
         ], 200);
+        return;
+    }
+
+    if ($method === 'POST' && $route === 'patient-id/resolve') {
+        $bodyResult = clinical_read_json_body();
+        if ($bodyResult['ok'] !== true) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'bad_request',
+                'message' => (string)$bodyResult['error'],
+                'data' => null,
+                'meta' => [
+                    'method' => 'POST',
+                    'route' => 'patient-id/resolve',
+                ],
+            ], 400);
+            return;
+        }
+
+        $body = (array)$bodyResult['data'];
+
+        if (array_key_exists('patient_id', $body)) {
+            $patientId = trim((string)$body['patient_id']);
+            if ($patientId === '' || strlen($patientId) < 8) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'invalid_params',
+                    'message' => 'patient_id must be a non-empty string with length >= 8',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'patient-id/resolve',
+                    ],
+                ], 400);
+                return;
+            }
+
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => 'patient_id passthrough accepted',
+                'data' => [
+                    'patient_id' => $patientId,
+                    'confidence' => 1.0,
+                    'strategy' => 'passthrough',
+                ],
+                'meta' => [
+                    'method' => 'POST',
+                    'route' => 'patient-id/resolve',
+                ],
+            ], 200);
+            return;
+        }
+
+        if (array_key_exists('legacy', $body)) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'not_ready',
+                'message' => 'legacy identity resolution is not available in v1 yet',
+                'data' => [
+                    'required_next' => 'identity_bridge_v2',
+                    'received' => true,
+                ],
+                'meta' => [
+                    'method' => 'POST',
+                    'route' => 'patient-id/resolve',
+                ],
+            ], 501);
+            return;
+        }
+
+        clinical_send_response([
+            'ok' => false,
+            'error' => 'invalid_params',
+            'message' => 'either patient_id or legacy payload is required',
+            'data' => null,
+            'meta' => [
+                'method' => 'POST',
+                'route' => 'patient-id/resolve',
+            ],
+        ], 400);
         return;
     }
 
