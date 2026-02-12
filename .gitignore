@@ -11,3 +11,6 @@ api/mxmed-db.config.php
 **/.DS_Store
 !docs/modulo_a_pacientes_expedientes_consentimientos_v1.md
 
+
+# Local QA scripts (do not commit)
+modules/clinical/qa/requests.sh
