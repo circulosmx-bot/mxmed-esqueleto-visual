@@ -350,6 +350,116 @@ function clinical_documents_get_fetch(PDO $pdo, int $id): ?array
     ];
 }
 
+function clinical_documents_save_passthrough(PDO $pdo, array $args): array
+{
+    require_once __DIR__ . '/../_lib/clinical_documents.php';
+
+    mxmed_ensure_clinical_docs_schema($pdo);
+
+    $doc = mxmed_build_clinical_document($args);
+
+    if (($doc['document_type'] ?? '') === 'nota_evolucion') {
+        $errs = mxmed_evolution_note_validate_to_generate((array)($doc['content']['payload'] ?? []));
+        if (count($errs) > 0) {
+            throw new InvalidArgumentException(implode(' ', $errs));
+        }
+    }
+    if (($doc['document_type'] ?? '') === 'nota_evolucion_hosp') {
+        $errs = mxmed_hosp_evolution_note_validate_to_generate((array)($doc['content']['payload'] ?? []));
+        if (count($errs) > 0) {
+            throw new InvalidArgumentException(implode(' ', $errs));
+        }
+    }
+
+    $payloadJson = json_encode((array)$doc['content']['payload'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (!is_string($payloadJson)) {
+        throw new RuntimeException('invalid payload json');
+    }
+
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO clinical_documents (
+                document_uuid, document_type, title, version, status,
+                patient_id, encounter_id, hospital_stay_id, care_setting, service,
+                payload_json, rendered_text, summary, edited_flag,
+                event_datetime, widget_group, printable,
+                created_at, updated_at, generated_at, signed_at,
+                created_by_user_id, updated_by_user_id
+            ) VALUES (
+                :uuid, :type, :title, :version, :status,
+                :patient_id, :encounter_id, :hospital_stay_id, :care_setting, :service,
+                :payload_json, :rendered_text, :summary, :edited_flag,
+                :event_datetime, :widget_group, :printable,
+                :created_at, :updated_at, :generated_at, :signed_at,
+                :created_by_user_id, :updated_by_user_id
+            )
+        ");
+
+        $stmt->execute([
+            ':uuid' => $doc['document_id'],
+            ':type' => $doc['document_type'],
+            ':title' => $doc['title'],
+            ':version' => (int)$doc['version'],
+            ':status' => $doc['status'],
+            ':patient_id' => $doc['context']['patient_id'],
+            ':encounter_id' => $doc['context']['encounter_id'],
+            ':hospital_stay_id' => $doc['context']['hospital_stay_id'],
+            ':care_setting' => $doc['context']['care_setting'],
+            ':service' => $doc['context']['service'],
+            ':payload_json' => $payloadJson,
+            ':rendered_text' => $doc['content']['rendered_text'],
+            ':summary' => $doc['content']['summary'],
+            ':edited_flag' => (int)($doc['content']['edited_flag'] ?? 0),
+            ':event_datetime' => $doc['ui']['event_datetime'],
+            ':widget_group' => $doc['ui']['widget_group'],
+            ':printable' => !empty($doc['ui']['printable']) ? 1 : 0,
+            ':created_at' => $doc['timestamps']['created_at'],
+            ':updated_at' => $doc['timestamps']['updated_at'],
+            ':generated_at' => $doc['timestamps']['generated_at'],
+            ':signed_at' => $doc['timestamps']['signed_at'],
+            ':created_by_user_id' => $doc['audit']['created_by_user_id'],
+            ':updated_by_user_id' => $doc['audit']['updated_by_user_id'],
+        ]);
+
+        $docId = (int)$pdo->lastInsertId();
+
+        $pstmt = $pdo->prepare("
+            INSERT INTO clinical_document_participants (
+                clinical_document_id, user_id, role, participation_type, signed_at, created_at
+            ) VALUES (
+                :doc_id, :user_id, :role, :ptype, :signed_at, :created_at
+            )
+        ");
+
+        $participants = (array)($doc['participants'] ?? []);
+        foreach ($participants as $p) {
+            if (!is_array($p)) {
+                continue;
+            }
+            $pstmt->execute([
+                ':doc_id' => $docId,
+                ':user_id' => (string)($p['user_id'] ?? ''),
+                ':role' => (string)($p['role'] ?? ''),
+                ':ptype' => (string)($p['participation_type'] ?? ''),
+                ':signed_at' => $p['signed_at'] ?? null,
+                ':created_at' => $doc['timestamps']['created_at'],
+            ]);
+        }
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        try {
+            $pdo->rollBack();
+        } catch (Throwable $e2) {
+        }
+        throw $e;
+    }
+
+    $doc['document_db_id'] = $docId;
+    return $doc;
+}
+
 set_error_handler(static function ($severity, $message, $file, $line): void {
     throw new ErrorException((string)$message, 0, (int)$severity, (string)$file, (int)$line);
 });
@@ -841,8 +951,67 @@ try {
         return;
     }
 
-    if ($method === 'GET' && ($segments[0] ?? '') === 'documents') {
-        if (count($segments) === 1) {
+    if (($segments[0] ?? '') === 'documents') {
+        if ($method === 'POST' && count($segments) === 1) {
+            $meta = [
+                'method' => 'POST',
+                'route' => 'clinical_gateway',
+                'resource' => 'documents',
+                'fallback_used' => false,
+                'source' => 'clinical_documents_pdo',
+            ];
+
+            $bodyResult = clinical_read_json_body();
+            if ($bodyResult['ok'] !== true) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => (string)$bodyResult['error'],
+                    'data' => null,
+                    'meta' => $meta,
+                ], 400);
+                return;
+            }
+
+            try {
+                $pdo = clinical_documents_pdo();
+                $document = clinical_documents_save_passthrough($pdo, (array)$bodyResult['data']);
+            } catch (InvalidArgumentException $e) {
+                $msg = trim((string)$e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'invalid_params',
+                    'message' => ($msg !== '') ? $msg : 'invalid params',
+                    'data' => null,
+                    'meta' => $meta,
+                ], 400);
+                return;
+            } catch (Throwable $e) {
+                $msg = trim((string)$e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => ($msg !== '') ? $msg : 'server error',
+                    'data' => null,
+                    'meta' => $meta,
+                ], 500);
+                return;
+            }
+
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => 'document saved',
+                'data' => [
+                    'document_id' => $document['document_id'] ?? null,
+                    'document' => $document,
+                ],
+                'meta' => $meta,
+            ], 201);
+            return;
+        }
+
+        if ($method === 'GET' && count($segments) === 1) {
             $patientId = trim((string)($_GET['patient_id'] ?? ''));
             if ($patientId === '') {
                 clinical_send_response([
@@ -904,7 +1073,7 @@ try {
             return;
         }
 
-        if (count($segments) === 2) {
+        if ($method === 'GET' && count($segments) === 2) {
             $id = (int)$segments[1];
             if ($id <= 0) {
                 clinical_send_response([
@@ -970,6 +1139,18 @@ try {
             ], 200);
             return;
         }
+
+        clinical_send_response([
+            'ok' => false,
+            'error' => 'not_found',
+            'message' => 'route not found',
+            'data' => null,
+            'meta' => [
+                'method' => $method,
+                'route' => $route,
+            ],
+        ], 404);
+        return;
     }
 
     clinical_send_response([

@@ -1294,7 +1294,20 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const api = (() => {
-    const endpoint = 'api/clinical-documents.php';
+    const mxmedApiBase = () => {
+      const loc = window.location;
+      const host = loc.hostname;
+      const port = loc.port;
+      if (host === '127.0.0.1' || host === 'localhost') {
+        if (port === '' || port === '80' || port === '443') {
+          return loc.protocol + '//' + host + ':8090';
+        }
+        return loc.origin;
+      }
+      return loc.origin;
+    };
+    const legacyEndpoint = 'api/clinical-documents.php';
+    const gatewayDocumentsEndpoint = mxmedApiBase() + '/api/clinical/index.php/documents';
     let mode = 'unknown'; // unknown | api | local
 
     const fetchJson = async (url, options) => {
@@ -1316,20 +1329,186 @@ console.info('app.js loaded :: 20251123a');
       return data;
     };
 
-    const listEvolutionNotes = async (patientId) => {
-      const url = `${endpoint}?action=list&patient_id=${encodeURIComponent(String(patientId ?? ''))}&document_type=nota_evolucion&limit=30`;
-      return fetchJson(url, { method: 'GET', headers: {} });
+    const normalizeLimit = (value, fallback = 30) => {
+      const n = Number(value);
+      if (!Number.isFinite(n) || n <= 0) return fallback;
+      return Math.min(200, Math.floor(n));
     };
 
-    const saveClinicalDocument = async (args) => {
-      return fetchJson(`${endpoint}?action=save`, {
+    const listClinicalDocumentsLegacy = async (legacyPatientId, opts = {}) => {
+      const patientId = String(legacyPatientId ?? '');
+      const documentType = String(opts.document_type ?? '');
+      const hospitalStayId = String(opts.hospital_stay_id ?? '');
+      const limit = normalizeLimit(opts.limit, 30);
+
+      let url = `${legacyEndpoint}?action=list&patient_id=${encodeURIComponent(patientId)}&limit=${encodeURIComponent(String(limit))}`;
+      if (documentType !== '') {
+        url += `&document_type=${encodeURIComponent(documentType)}`;
+      }
+      if (hospitalStayId !== '') {
+        url += `&hospital_stay_id=${encodeURIComponent(hospitalStayId)}`;
+      }
+
+      const payload = await fetchJson(url, { method: 'GET', headers: {} });
+      return Array.isArray(payload?.items) ? payload.items : [];
+    };
+
+    const listClinicalDocumentsGateway = async (canonicalPatientId, opts = {}) => {
+      const patientId = String(canonicalPatientId ?? '').trim();
+      const documentType = String(opts.document_type ?? '');
+      const hospitalStayId = String(opts.hospital_stay_id ?? '');
+      const limit = normalizeLimit(opts.limit, 30);
+
+      let url = `${gatewayDocumentsEndpoint}?patient_id=${encodeURIComponent(patientId)}&limit=${encodeURIComponent(String(limit))}`;
+      if (documentType !== '') {
+        url += `&document_type=${encodeURIComponent(documentType)}`;
+      }
+      if (hospitalStayId !== '') {
+        url += `&hospital_stay_id=${encodeURIComponent(hospitalStayId)}`;
+      }
+
+      const payload = await fetchJson(url, { method: 'GET', headers: { Accept: 'application/json' } });
+      const items = payload?.data?.items;
+      if (payload?.ok === true && Array.isArray(items)) {
+        return items;
+      }
+      throw new Error(payload?.error || 'gateway documents list failed');
+    };
+
+    const listClinicalDocuments = async (patient, opts = {}) => {
+      const patientObj = (patient && typeof patient === 'object')
+        ? patient
+        : { patient_id: patient, canonical_patient_id: null };
+
+      const legacyPatientId = String(patientObj?.patient_id ?? '');
+      let canonicalPatientId = String(patientObj?.canonical_patient_id ?? '').trim();
+
+      // If canonical is not yet available (non-blocking resolver), try a short resolve window.
+      const waitWithTimeout = (promise, ms = 400) => {
+        return new Promise((resolve) => {
+          let settled = false;
+          const timer = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            resolve(null);
+          }, ms);
+
+          Promise.resolve(promise)
+            .then((v) => {
+              if (settled) return;
+              settled = true;
+              clearTimeout(timer);
+              resolve(v ?? null);
+            })
+            .catch(() => {
+              if (settled) return;
+              settled = true;
+              clearTimeout(timer);
+              resolve(null);
+            });
+        });
+      };
+
+      if (canonicalPatientId === '') {
+        const identity = window.mxmedIdentity || null;
+        if (identity && typeof identity.resolveCanonicalPatientId === 'function') {
+          const resolved = await waitWithTimeout(identity.resolveCanonicalPatientId(legacyPatientId), 400);
+          if (typeof resolved === 'string' && resolved.trim() !== '') {
+            canonicalPatientId = resolved.trim();
+            // Keep a soft cache on the patient object (best-effort, no contract change).
+            try { patientObj.canonical_patient_id = canonicalPatientId; } catch (_) {}
+          }
+        }
+      }
+
+      if (canonicalPatientId !== '') {
+        try {
+          const items = await listClinicalDocumentsGateway(canonicalPatientId, opts);
+          return { items };
+        } catch (_) {
+          // Gateway failed; keep legacy behavior for v1 compatibility.
+        }
+      }
+
+      const items = await listClinicalDocumentsLegacy(legacyPatientId, opts);
+      return { items };
+    };
+
+    const listEvolutionNotes = async (patient) => {
+      return listClinicalDocuments(patient, {
+        document_type: 'nota_evolucion',
+        limit: 30
+      });
+    };
+
+    const saveClinicalDocumentLegacy = async (args) => {
+      return fetchJson(`${legacyEndpoint}?action=save`, {
         method: 'POST',
         body: JSON.stringify(args || {})
       });
     };
 
+    const normalizeSavedDocumentResponse = (payload) => {
+      const document = payload?.data?.document ?? payload?.document ?? null;
+      if (!document || typeof document !== 'object') {
+        throw new Error('invalid save response');
+      }
+      return { document };
+    };
+
+    const saveClinicalDocument = async (args) => {
+      const requestArgs = (args && typeof args === 'object') ? args : {};
+      const context = (requestArgs.context && typeof requestArgs.context === 'object') ? requestArgs.context : {};
+      const legacyPatientId = String(context.patient_id ?? '').trim();
+      const canonicalPatientId = await resolveCanonicalPatientIdSafe(legacyPatientId).catch(() => null);
+
+      if (canonicalPatientId) {
+        const gatewayArgs = {
+          ...requestArgs,
+          context: {
+            ...context,
+            patient_id: canonicalPatientId,
+            legacy_patient_id: legacyPatientId || undefined
+          }
+        };
+
+        console.debug('SAVE gateway attempt', {
+          patient_id: canonicalPatientId,
+          legacy_patient_id: legacyPatientId || null,
+          source: 'app'
+        });
+
+        try {
+          const gatewayPayload = await fetchJson(gatewayDocumentsEndpoint, {
+            method: 'POST',
+            headers: { Accept: 'application/json' },
+            body: JSON.stringify(gatewayArgs)
+          });
+          const normalized = normalizeSavedDocumentResponse(gatewayPayload);
+          console.debug('SAVE gateway ok', {
+            patient_id: canonicalPatientId,
+            source: 'app'
+          });
+          return normalized;
+        } catch (_) {
+          console.debug('SAVE fallback legacy', {
+            reason: 'gateway_failed',
+            source: 'app'
+          });
+        }
+      } else {
+        console.debug('SAVE fallback legacy', {
+          reason: 'canonical_unavailable',
+          source: 'app'
+        });
+      }
+
+      const legacyPayload = await saveClinicalDocumentLegacy(requestArgs);
+      return normalizeSavedDocumentResponse(legacyPayload);
+    };
+
     const getClinicalDocument = async (id) => {
-      const url = `${endpoint}?action=get&id=${encodeURIComponent(id)}`;
+      const url = `${legacyEndpoint}?action=get&id=${encodeURIComponent(id)}`;
       return fetchJson(url, { method: 'GET', headers: {} });
     };
 
@@ -1981,7 +2160,7 @@ console.info('app.js loaded :: 20251123a');
     }
 
     els.timeline.innerHTML = '<div class="text-muted small">Cargando…</div>';
-    api.listEvolutionNotes(patient.patient_id)
+    api.listEvolutionNotes(patient)
       .then(({ items }) => {
         api.mode = 'api';
         const list = Array.isArray(items) ? items : [];
