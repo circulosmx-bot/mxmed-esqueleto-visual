@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../modules/agenda/controllers/PatientFlagsController
 require_once __DIR__ . '/../../modules/agenda/controllers/AvailabilityController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentWriteController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/WaitlistController.php';
+require_once __DIR__ . '/../../modules/agenda/controllers/PublicAppointmentsController.php';
 
 use Agenda\Controllers\AppointmentsController;
 use Agenda\Controllers\ConsultoriosController;
@@ -14,6 +15,7 @@ use Agenda\Controllers\PatientFlagsController;
 use Agenda\Controllers\AvailabilityController;
 use Agenda\Controllers\AppointmentWriteController;
 use Agenda\Controllers\WaitlistController;
+use Agenda\Controllers\PublicAppointmentsController;
 
 header('Content-Type: application/json');
 
@@ -67,6 +69,16 @@ function normalize_response($response): array
     }
 
     return $response;
+}
+
+function read_json_body(): array
+{
+    $raw = file_get_contents('php://input');
+    if (!is_string($raw) || trim($raw) === '') {
+        return [];
+    }
+    $decoded = json_decode($raw, true);
+    return is_array($decoded) ? $decoded : [];
 }
 
 try {
@@ -158,6 +170,12 @@ try {
             if ($method === 'GET' && ($segments[1] ?? '') === 'availability' && !isset($segments[2])) {
                 $availability = new AvailabilityController();
                 $response = $availability->publicAvailability($_GET);
+            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'appointments' && ($segments[2] ?? '') === 'request' && !isset($segments[3])) {
+                $publicAppointments = new PublicAppointmentsController();
+                $response = $publicAppointments->request(read_json_body());
+            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'appointments' && ($segments[2] ?? '') === 'verify' && !isset($segments[3])) {
+                $publicAppointments = new PublicAppointmentsController();
+                $response = $publicAppointments->verify(read_json_body());
             } else {
                 $response = [
                     'ok' => false,

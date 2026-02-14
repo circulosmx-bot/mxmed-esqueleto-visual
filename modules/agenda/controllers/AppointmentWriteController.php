@@ -56,7 +56,11 @@ class AppointmentWriteController
     public function create(): array
     {
         $payload = $this->getPayload();
+        return $this->createFromPayload($payload);
+    }
 
+    public function createFromPayload(array $payload): array
+    {
         // Auto-create patient if missing patient_id and patient info is provided
         if (!isset($payload['patient_id'])) {
             $patientInput = $payload['patient'] ?? null;
