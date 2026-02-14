@@ -154,6 +154,20 @@ try {
             $availability = new AvailabilityController();
             $response = $availability->index($_GET);
             break;
+        case 'public':
+            if ($method === 'GET' && ($segments[1] ?? '') === 'availability' && !isset($segments[2])) {
+                $availability = new AvailabilityController();
+                $response = $availability->publicAvailability($_GET);
+            } else {
+                $response = [
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'route not found',
+                    'data' => null,
+                    'meta' => (object)[],
+                ];
+            }
+            break;
         case 'waitlist':
             $waitlist = new WaitlistController();
             $entryId = $segments[1] ?? '';
