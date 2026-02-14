@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../modules/agenda/controllers/AvailabilityController
 require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentWriteController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/WaitlistController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/PublicAppointmentsController.php';
+require_once __DIR__ . '/../../modules/agenda/controllers/PublicOtpController.php';
 
 use Agenda\Controllers\AppointmentsController;
 use Agenda\Controllers\ConsultoriosController;
@@ -16,6 +17,7 @@ use Agenda\Controllers\AvailabilityController;
 use Agenda\Controllers\AppointmentWriteController;
 use Agenda\Controllers\WaitlistController;
 use Agenda\Controllers\PublicAppointmentsController;
+use Agenda\Controllers\PublicOtpController;
 
 header('Content-Type: application/json');
 
@@ -170,6 +172,12 @@ try {
             if ($method === 'GET' && ($segments[1] ?? '') === 'availability' && !isset($segments[2])) {
                 $availability = new AvailabilityController();
                 $response = $availability->publicAvailability($_GET);
+            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'otp' && ($segments[2] ?? '') === 'request' && !isset($segments[3])) {
+                $publicOtp = new PublicOtpController();
+                $response = $publicOtp->request(read_json_body());
+            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'otp' && ($segments[2] ?? '') === 'verify' && !isset($segments[3])) {
+                $publicOtp = new PublicOtpController();
+                $response = $publicOtp->verify(read_json_body());
             } elseif ($method === 'POST' && ($segments[1] ?? '') === 'appointments' && ($segments[2] ?? '') === 'request' && !isset($segments[3])) {
                 $publicAppointments = new PublicAppointmentsController();
                 $response = $publicAppointments->request(read_json_body());
