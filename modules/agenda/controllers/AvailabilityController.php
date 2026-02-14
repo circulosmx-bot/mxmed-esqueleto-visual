@@ -4,16 +4,20 @@ namespace Agenda\Controllers;
 use Agenda\Repositories\AvailabilityRepository;
 use Agenda\Repositories\OverrideRepository;
 use Agenda\Repositories\AppointmentCollisionsRepository;
+use Agenda\Repositories\ConsultoriosRepository;
 use Agenda\Services\HolidayMxProvider;
 use Agenda\Helpers as DbHelpers;
 use DateTime;
+use DateTimeImmutable;
 use DateTimeZone;
+use PDO;
 use PDOException;
 use RuntimeException;
 
 require_once __DIR__ . '/../repositories/AvailabilityRepository.php';
 require_once __DIR__ . '/../repositories/OverrideRepository.php';
 require_once __DIR__ . '/../repositories/AppointmentCollisionsRepository.php';
+require_once __DIR__ . '/../repositories/ConsultoriosRepository.php';
 require_once __DIR__ . '/../services/HolidayMxProvider.php';
 require_once __DIR__ . '/../config/agenda.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
@@ -277,6 +281,302 @@ class AvailabilityController
         );
     }
 
+    /**
+     * Public read-only availability.
+     *
+     * Manual QA curl examples:
+     * - next mode:
+     *   curl -s "http://127.0.0.1:8090/api/agenda/index.php/public/availability?doctor_id=1&mode=next&days=3"
+     * - week mode:
+     *   curl -s "http://127.0.0.1:8090/api/agenda/index.php/public/availability?doctor_id=1&mode=week&week_offset=0"
+     */
+    public function publicAvailability(array $params = []): array
+    {
+        if ($this->qaNotReady) {
+            return $this->error('db_not_ready', 'availability base schedule not ready');
+        }
+        if ($this->dbError === 'database error') {
+            return $this->error('db_error', 'database error');
+        }
+        if ($this->dbError || !$this->repository) {
+            return $this->error('db_not_ready', 'availability base schedule not ready');
+        }
+
+        $doctorId = $params['doctor_id'] ?? null;
+        $requestedConsultorioId = $params['consultorio_id'] ?? null;
+        $mode = strtolower(trim((string)($params['mode'] ?? 'next')));
+        if ($mode === '') {
+            $mode = 'next';
+        }
+
+        $meta = [
+            'doctor_id' => $doctorId,
+            'consultorio_id' => $requestedConsultorioId,
+            'mode' => $mode,
+            'consultorio_id_used' => null,
+        ];
+
+        if (!$this->isValidNumeric($doctorId)) {
+            return $this->error('invalid_params', 'doctor_id must be numeric', $meta);
+        }
+
+        $consultorioId = $this->resolvePublicConsultorioId((string)$doctorId, $requestedConsultorioId);
+        if (!$this->isValidNumeric($consultorioId)) {
+            return $this->error(
+                'invalid_params',
+                'consultorio_id must be numeric',
+                $meta
+            );
+        }
+        $consultorioId = (string)$consultorioId;
+        $meta['consultorio_id_used'] = $consultorioId;
+
+        if (!in_array($mode, ['next', 'week'], true)) {
+            return $this->error('invalid_params', 'mode must be next or week', $meta);
+        }
+
+        $slotMinutes = $this->normalizeSlotMinutes($params['slot_minutes'] ?? null);
+        if ($slotMinutes === null) {
+            return $this->error('invalid_params', 'slot_minutes must be between 5 and 720', $meta);
+        }
+
+        $limitPerDay = 12;
+        if (array_key_exists('limit_per_day', $params) && $params['limit_per_day'] !== '' && $params['limit_per_day'] !== null) {
+            if (!preg_match('/^-?\d+$/', (string)$params['limit_per_day'])) {
+                return $this->error('invalid_params', 'limit_per_day must be numeric', $meta);
+            }
+            $limitPerDay = (int)$params['limit_per_day'];
+            if ($limitPerDay < 0) {
+                return $this->error('invalid_params', 'limit_per_day must be >= 0', $meta);
+            }
+            if ($limitPerDay > 200) {
+                $limitPerDay = 200;
+            }
+            if ($limitPerDay === 0) {
+                $limitPerDay = null;
+            }
+        }
+
+        $timezone = new DateTimeZone(AvailabilityRepository::TIMEZONE);
+        $today = (new DateTimeImmutable('now', $timezone))->setTime(0, 0, 0);
+
+        if ($mode === 'week') {
+            $weekOffset = 0;
+            if (array_key_exists('week_offset', $params) && $params['week_offset'] !== '' && $params['week_offset'] !== null) {
+                if (!preg_match('/^-?\d+$/', (string)$params['week_offset'])) {
+                    return $this->error('invalid_params', 'week_offset must be numeric', $meta);
+                }
+                $weekOffset = (int)$params['week_offset'];
+            }
+            if ($weekOffset < 0) {
+                $weekOffset = 0;
+            } elseif ($weekOffset > 3) {
+                $weekOffset = 3;
+            }
+
+            $weekStart = $today->modify('monday this week')->modify('+' . $weekOffset . ' week');
+            $weekEnd = $weekStart->modify('+6 day');
+            $days = [];
+
+            for ($i = 0; $i < 7; $i++) {
+                $date = $weekStart->modify('+' . $i . ' day');
+                $dayResult = $this->publicDayAvailability(
+                    (string)$doctorId,
+                    (string)$consultorioId,
+                    $date->format('Y-m-d'),
+                    $slotMinutes
+                );
+                if (($dayResult['ok'] ?? false) !== true) {
+                    $response = $dayResult['response'];
+                    $errorMeta = (array)($response['meta'] ?? []);
+                    $errorMeta['consultorio_id_used'] = $consultorioId;
+                    $response['meta'] = (object)$errorMeta;
+                    return $response;
+                }
+                $slots = $dayResult['slots'] ?? [];
+                if ($limitPerDay !== null && count($slots) > $limitPerDay) {
+                    $slots = array_slice($slots, 0, $limitPerDay);
+                }
+                if (!empty($slots)) {
+                    $days[] = [
+                        'date' => $date->format('Y-m-d'),
+                        'weekday' => (int)$date->format('N'),
+                        'slots' => $slots,
+                    ];
+                }
+            }
+
+            return [
+                'ok' => true,
+                'error' => null,
+                'message' => empty($days) ? 'no availability' : 'availability found',
+                'data' => [
+                    'mode' => 'week',
+                    'week_offset' => $weekOffset,
+                    'week_start' => $weekStart->format('Y-m-d'),
+                    'week_end' => $weekEnd->format('Y-m-d'),
+                    'days' => $days,
+                ],
+                'meta' => [
+                    'mode' => 'week',
+                    'week_offset' => $weekOffset,
+                    'slot_minutes' => $slotMinutes,
+                    'limit_per_day' => $limitPerDay,
+                    'consultorio_id_used' => $consultorioId,
+                    'timezone' => AvailabilityRepository::TIMEZONE,
+                ],
+            ];
+        }
+
+        $daysRequested = 3;
+        if (array_key_exists('days', $params) && $params['days'] !== '' && $params['days'] !== null) {
+            if (!preg_match('/^-?\d+$/', (string)$params['days'])) {
+                return $this->error('invalid_params', 'days must be numeric', $meta);
+            }
+            $daysRequested = (int)$params['days'];
+        }
+        if ($daysRequested < 1) {
+            $daysRequested = 1;
+        } elseif ($daysRequested > 7) {
+            $daysRequested = 7;
+        }
+
+        $days = [];
+        $maxScanDays = 90;
+        for ($offset = 0; $offset < $maxScanDays && count($days) < $daysRequested; $offset++) {
+            $date = $today->modify('+' . $offset . ' day');
+            $dayResult = $this->publicDayAvailability(
+                (string)$doctorId,
+                (string)$consultorioId,
+                $date->format('Y-m-d'),
+                $slotMinutes
+            );
+            if (($dayResult['ok'] ?? false) !== true) {
+                $response = $dayResult['response'];
+                $errorMeta = (array)($response['meta'] ?? []);
+                $errorMeta['consultorio_id_used'] = $consultorioId;
+                $response['meta'] = (object)$errorMeta;
+                return $response;
+            }
+            $slots = $dayResult['slots'] ?? [];
+            if ($limitPerDay !== null && count($slots) > $limitPerDay) {
+                $slots = array_slice($slots, 0, $limitPerDay);
+            }
+            if (!empty($slots)) {
+                $days[] = [
+                    'date' => $date->format('Y-m-d'),
+                    'weekday' => (int)$date->format('N'),
+                    'slots' => $slots,
+                ];
+            }
+        }
+
+        return [
+            'ok' => true,
+            'error' => null,
+            'message' => empty($days) ? 'no availability' : 'availability found',
+            'data' => [
+                'mode' => 'next',
+                'days' => $days,
+            ],
+            'meta' => [
+                'mode' => 'next',
+                'days_requested' => $daysRequested,
+                'days_found' => count($days),
+                'slot_minutes' => $slotMinutes,
+                'limit_per_day' => $limitPerDay,
+                'consultorio_id_used' => $consultorioId,
+                'timezone' => AvailabilityRepository::TIMEZONE,
+            ],
+        ];
+    }
+
+    private function resolvePublicConsultorioId(string $doctorId, $requestedConsultorioId): ?string
+    {
+        if ($this->isValidNumeric($requestedConsultorioId)) {
+            return (string)$requestedConsultorioId;
+        }
+
+        try {
+            $pdo = mxmed_pdo();
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        $catalogConsultorioId = $this->resolveConsultorioFromCatalog($pdo, $doctorId);
+        if ($catalogConsultorioId !== null) {
+            return $catalogConsultorioId;
+        }
+
+        return $this->resolveConsultorioFromSchedule($pdo, $doctorId);
+    }
+
+    private function resolveConsultorioFromCatalog(PDO $pdo, string $doctorId): ?string
+    {
+        try {
+            $repository = new ConsultoriosRepository($pdo);
+            $rows = $repository->listByDoctor($doctorId);
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $candidate = $row['consultorio_id'] ?? $row['id'] ?? null;
+            if ($this->isValidNumeric($candidate)) {
+                return (string)$candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveConsultorioFromSchedule(PDO $pdo, string $doctorId): ?string
+    {
+        $tableCandidates = [
+            'consultorio_schedule',
+            'consultorio_schedules',
+            'consultorio_horarios',
+            'consultorio_horarios_base',
+            'agenda_consultorio_schedule',
+        ];
+
+        foreach ($tableCandidates as $tableName) {
+            if (!$this->tableExists($pdo, $tableName)) {
+                continue;
+            }
+            try {
+                $sql = sprintf(
+                    'SELECT consultorio_id FROM %s WHERE doctor_id = :doctor_id ORDER BY consultorio_id ASC LIMIT 1',
+                    $tableName
+                );
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute(['doctor_id' => $doctorId]);
+                $candidate = $stmt->fetchColumn();
+            } catch (\Throwable $e) {
+                continue;
+            }
+            if ($this->isValidNumeric($candidate)) {
+                return (string)$candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private function tableExists(PDO $pdo, string $tableName): bool
+    {
+        try {
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = :table');
+            $stmt->execute(['table' => $tableName]);
+            return (int)$stmt->fetchColumn() > 0;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
     private function isValidNumeric($value): bool
     {
         if ($value === null) {
@@ -304,6 +604,67 @@ class AvailabilityController
             return null;
         }
         return $minutes;
+    }
+
+    private function publicDayAvailability(
+        string $doctorId,
+        string $consultorioId,
+        string $dateYmd,
+        int $slotMinutes
+    ): array {
+        $dayResponse = $this->index([
+            'doctor_id' => $doctorId,
+            'consultorio_id' => $consultorioId,
+            'date' => $dateYmd,
+            'slot_minutes' => $slotMinutes,
+        ]);
+
+        if (($dayResponse['ok'] ?? false) !== true) {
+            $meta = (array)($dayResponse['meta'] ?? []);
+            $meta['date'] = $dateYmd;
+            return [
+                'ok' => false,
+                'response' => [
+                    'ok' => false,
+                    'error' => (string)($dayResponse['error'] ?? 'db_error'),
+                    'message' => (string)($dayResponse['message'] ?? 'database error'),
+                    'data' => null,
+                    'meta' => (object)$meta,
+                ],
+            ];
+        }
+
+        $slots = [];
+        $rawSlots = $dayResponse['data']['slots'] ?? [];
+        if (is_array($rawSlots)) {
+            foreach ($rawSlots as $slot) {
+                if (!is_array($slot)) {
+                    continue;
+                }
+                $startAt = (string)($slot['start_at'] ?? '');
+                $endAt = (string)($slot['end_at'] ?? '');
+                if ($startAt === '' || $endAt === '') {
+                    continue;
+                }
+                $slots[] = [
+                    'start_at' => $startAt,
+                    'end_at' => $endAt,
+                ];
+            }
+        }
+
+        usort($slots, static function (array $a, array $b): int {
+            $cmp = strcmp($a['start_at'], $b['start_at']);
+            if ($cmp !== 0) {
+                return $cmp;
+            }
+            return strcmp($a['end_at'], $b['end_at']);
+        });
+
+        return [
+            'ok' => true,
+            'slots' => $slots,
+        ];
     }
 
     private function error(string $code, string $message, array $meta = [])
