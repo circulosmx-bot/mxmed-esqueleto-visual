@@ -85,17 +85,51 @@
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h2 class="modal-title fs-5">Resumen de cita</h2>
+          <h2 class="modal-title fs-5">Confirmar cita</h2>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
         </div>
         <div class="modal-body">
           <p class="mb-2"><strong>Fecha y hora:</strong> <span id="modalDateTime">-</span></p>
           <p class="mb-2"><strong>doctor_id:</strong> <span id="modalDoctorId">-</span></p>
-          <p class="mb-0"><strong>consultorio_id:</strong> <span id="modalConsultorioId">-</span></p>
+          <p class="mb-3"><strong>consultorio_id:</strong> <span id="modalConsultorioId">-</span></p>
+
+          <div id="modalAlert" class="alert d-none" role="alert"></div>
+
+          <form id="appointmentRequestForm" class="vstack gap-2">
+            <div>
+              <label for="patientNameInput" class="form-label">Nombre completo</label>
+              <input id="patientNameInput" class="form-control" type="text" maxlength="160" required />
+            </div>
+            <div>
+              <label for="patientPhoneInput" class="form-label">Telefono</label>
+              <input id="patientPhoneInput" class="form-control" type="tel" maxlength="32" placeholder="Opcional" />
+            </div>
+            <div>
+              <label for="patientEmailInput" class="form-label">Correo</label>
+              <input id="patientEmailInput" class="form-control" type="email" maxlength="191" placeholder="Opcional" />
+            </div>
+            <div class="form-text">Ingresa telefono o correo para recibir el codigo.</div>
+            <button id="sendOtpBtn" type="submit" class="btn btn-primary w-100">Enviar codigo</button>
+          </form>
+
+          <section id="otpStep" class="d-none mt-3">
+            <hr />
+            <div>
+              <label for="otpInput" class="form-label">Codigo OTP (6 digitos)</label>
+              <input id="otpInput" class="form-control" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" />
+            </div>
+            <div id="otpDebugHint" class="small text-secondary mt-2 d-none"></div>
+            <button id="confirmOtpBtn" type="button" class="btn btn-success w-100 mt-2">Confirmar cita</button>
+          </section>
+
+          <section id="successStep" class="d-none mt-3">
+            <hr />
+            <div class="alert alert-success mb-2">Cita confirmada.</div>
+            <p class="mb-0 small">appointment_id: <strong id="successAppointmentId">-</strong></p>
+          </section>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-          <button type="button" class="btn btn-primary" disabled>Proximamente</button>
         </div>
       </div>
     </div>

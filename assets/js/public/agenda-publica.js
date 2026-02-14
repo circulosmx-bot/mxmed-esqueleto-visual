@@ -17,7 +17,19 @@
     slotModal: document.getElementById('slotModal'),
     modalDateTime: document.getElementById('modalDateTime'),
     modalDoctorId: document.getElementById('modalDoctorId'),
-    modalConsultorioId: document.getElementById('modalConsultorioId')
+    modalConsultorioId: document.getElementById('modalConsultorioId'),
+    modalAlert: document.getElementById('modalAlert'),
+    appointmentRequestForm: document.getElementById('appointmentRequestForm'),
+    patientNameInput: document.getElementById('patientNameInput'),
+    patientPhoneInput: document.getElementById('patientPhoneInput'),
+    patientEmailInput: document.getElementById('patientEmailInput'),
+    sendOtpBtn: document.getElementById('sendOtpBtn'),
+    otpStep: document.getElementById('otpStep'),
+    otpInput: document.getElementById('otpInput'),
+    otpDebugHint: document.getElementById('otpDebugHint'),
+    confirmOtpBtn: document.getElementById('confirmOtpBtn'),
+    successStep: document.getElementById('successStep'),
+    successAppointmentId: document.getElementById('successAppointmentId')
   };
 
   if (!elements.daysContainer || !elements.toggleModeBtn) {
@@ -31,7 +43,9 @@
     mode: 'next',
     days: 3,
     weekOffset: 0,
-    lastMeta: null
+    lastMeta: null,
+    selectedSlot: null,
+    otpContext: null
   };
 
   bindEvents();
@@ -69,7 +83,26 @@
       if (!btn) {
         return;
       }
-      openSlotModal(btn.getAttribute('data-date'), btn.getAttribute('data-start-at'));
+      openSlotModal({
+        date: btn.getAttribute('data-date') || '',
+        startAt: btn.getAttribute('data-start-at') || '',
+        endAt: btn.getAttribute('data-end-at') || ''
+      });
+    });
+
+    elements.appointmentRequestForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+      requestOtp();
+    });
+
+    elements.confirmOtpBtn.addEventListener('click', function () {
+      verifyOtp();
+    });
+
+    elements.slotModal.addEventListener('hidden.bs.modal', function () {
+      state.selectedSlot = null;
+      state.otpContext = null;
+      resetModalFlow();
     });
   }
 
@@ -112,7 +145,7 @@
     return loc.origin;
   }
 
-  function buildApiUrl() {
+  function buildAvailabilityUrl() {
     var params = new URLSearchParams();
     params.set('doctor_id', state.doctorId);
 
@@ -138,21 +171,14 @@
     updateControls();
 
     try {
-      var response = await fetch(buildApiUrl(), {
+      var response = await fetch(buildAvailabilityUrl(), {
         method: 'GET',
         headers: { 'Accept': 'application/json' }
       });
 
-      var payload = null;
-      try {
-        payload = await response.json();
-      } catch (jsonErr) {
-        payload = null;
-      }
-
+      var payload = await parseJsonSafe(response);
       if (!response.ok || !payload || payload.ok !== true) {
-        var errMessage = readErrorMessage(payload, response.status);
-        throw new Error(errMessage);
+        throw new Error(readErrorMessage(payload, response.status));
       }
 
       state.lastMeta = payload.meta || {};
@@ -163,19 +189,6 @@
     } finally {
       setLoading(false);
     }
-  }
-
-  function readErrorMessage(payload, statusCode) {
-    if (payload && typeof payload.message === 'string' && payload.message.trim() !== '') {
-      return payload.message;
-    }
-    if (payload && typeof payload.error === 'string' && payload.error.trim() !== '') {
-      return payload.error;
-    }
-    if (statusCode) {
-      return 'Error API (' + statusCode + ')';
-    }
-    return 'Error al cargar disponibilidad';
   }
 
   function renderAvailability(data) {
@@ -222,8 +235,9 @@
       for (var j = 0; j < slots.length; j += 1) {
         var slot = slots[j] || {};
         var startAt = String(slot.start_at || '');
+        var endAt = String(slot.end_at || '');
 
-        if (startAt === '') {
+        if (startAt === '' || endAt === '') {
           continue;
         }
 
@@ -232,6 +246,7 @@
         chip.className = 'btn btn-outline-primary btn-sm slot-chip';
         chip.setAttribute('data-date', dateValue);
         chip.setAttribute('data-start-at', startAt);
+        chip.setAttribute('data-end-at', endAt);
         chip.textContent = formatTime(startAt);
 
         slotsWrap.appendChild(chip);
@@ -241,6 +256,202 @@
       card.appendChild(body);
       elements.daysContainer.appendChild(card);
     }
+  }
+
+  function openSlotModal(slot) {
+    state.selectedSlot = {
+      date: String(slot.date || ''),
+      startAt: String(slot.startAt || ''),
+      endAt: String(slot.endAt || '')
+    };
+
+    state.otpContext = null;
+    resetModalFlow();
+
+    var dayLabel = formatDayLabel(state.selectedSlot.date);
+    var timeLabel = formatTime(state.selectedSlot.startAt);
+    var consultorio = state.lastMeta && state.lastMeta.consultorio_id_used ? state.lastMeta.consultorio_id_used : 'N/A';
+
+    elements.modalDateTime.textContent = dayLabel + ' ' + timeLabel;
+    elements.modalDoctorId.textContent = state.doctorId;
+    elements.modalConsultorioId.textContent = consultorio;
+
+    var modal = window.bootstrap && window.bootstrap.Modal
+      ? window.bootstrap.Modal.getOrCreateInstance(elements.slotModal)
+      : null;
+
+    if (modal) {
+      modal.show();
+    }
+  }
+
+  async function requestOtp() {
+    if (!state.selectedSlot) {
+      showModalAlert('Selecciona un horario.', 'danger');
+      return;
+    }
+
+    var patientName = String(elements.patientNameInput.value || '').trim();
+    var patientPhone = String(elements.patientPhoneInput.value || '').trim();
+    var patientEmail = String(elements.patientEmailInput.value || '').trim();
+
+    if (patientName === '') {
+      showModalAlert('Nombre completo es requerido.', 'danger');
+      return;
+    }
+
+    if (patientPhone === '' && patientEmail === '') {
+      showModalAlert('Ingresa telefono o correo.', 'danger');
+      return;
+    }
+
+    var payload = {
+      doctor_id: state.doctorId,
+      start_at: state.selectedSlot.startAt,
+      end_at: state.selectedSlot.endAt,
+      patient_name: patientName,
+      patient_phone: patientPhone,
+      patient_email: patientEmail
+    };
+
+    var consultorioUsed = state.lastMeta && state.lastMeta.consultorio_id_used ? state.lastMeta.consultorio_id_used : null;
+    if (consultorioUsed) {
+      payload.consultorio_id = consultorioUsed;
+    } else if (state.consultorioId) {
+      payload.consultorio_id = state.consultorioId;
+    }
+
+    elements.sendOtpBtn.disabled = true;
+    elements.sendOtpBtn.textContent = 'Enviando...';
+    hideModalAlert();
+
+    try {
+      var response = await postJson('/api/agenda/index.php/public/appointments/request', payload);
+      if (!response.ok) {
+        throw new Error(response.message);
+      }
+
+      state.otpContext = {
+        requestId: response.payload && response.payload.data ? response.payload.data.request_id : null,
+        expiresAt: response.payload && response.payload.data ? response.payload.data.expires_at : null
+      };
+
+      elements.otpStep.classList.remove('d-none');
+      elements.otpInput.value = '';
+      elements.otpInput.focus();
+
+      var otpDebug = response.payload && response.payload.meta ? response.payload.meta.otp_debug : null;
+      if (otpDebug) {
+        elements.otpDebugHint.textContent = 'QA OTP debug: ' + String(otpDebug);
+        elements.otpDebugHint.classList.remove('d-none');
+      } else {
+        elements.otpDebugHint.textContent = '';
+        elements.otpDebugHint.classList.add('d-none');
+      }
+
+      showModalAlert('Codigo enviado. Revisa tu telefono o correo.', 'info');
+    } catch (err) {
+      showModalAlert(err && err.message ? err.message : 'No se pudo enviar codigo.', 'danger');
+    } finally {
+      elements.sendOtpBtn.disabled = false;
+      elements.sendOtpBtn.textContent = 'Enviar codigo';
+    }
+  }
+
+  async function verifyOtp() {
+    if (!state.otpContext || !state.otpContext.requestId) {
+      showModalAlert('Primero envia el codigo OTP.', 'danger');
+      return;
+    }
+
+    var otp = String(elements.otpInput.value || '').trim();
+    if (!/^\d{6}$/.test(otp)) {
+      showModalAlert('OTP invalido. Deben ser 6 digitos.', 'danger');
+      return;
+    }
+
+    elements.confirmOtpBtn.disabled = true;
+    elements.confirmOtpBtn.textContent = 'Confirmando...';
+    hideModalAlert();
+
+    try {
+      var response = await postJson('/api/agenda/index.php/public/appointments/verify', {
+        request_id: state.otpContext.requestId,
+        otp: otp
+      });
+
+      if (!response.ok) {
+        throw new Error(response.message);
+      }
+
+      var appointmentId = response.payload && response.payload.data ? response.payload.data.appointment_id : '';
+      elements.successAppointmentId.textContent = appointmentId || '-';
+      elements.successStep.classList.remove('d-none');
+      elements.otpStep.classList.add('d-none');
+      showModalAlert('Cita confirmada correctamente.', 'success');
+
+      loadAvailability();
+    } catch (err) {
+      showModalAlert(err && err.message ? err.message : 'No se pudo confirmar OTP.', 'danger');
+    } finally {
+      elements.confirmOtpBtn.disabled = false;
+      elements.confirmOtpBtn.textContent = 'Confirmar cita';
+    }
+  }
+
+  async function postJson(path, payload) {
+    try {
+      var response = await fetch(resolveApiBase() + path, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      var json = await parseJsonSafe(response);
+      if (!response.ok || !json || json.ok !== true) {
+        return {
+          ok: false,
+          payload: json,
+          message: readErrorMessage(json, response.status)
+        };
+      }
+
+      return {
+        ok: true,
+        payload: json,
+        message: ''
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        payload: null,
+        message: err && err.message ? err.message : 'Error de red'
+      };
+    }
+  }
+
+  async function parseJsonSafe(response) {
+    try {
+      return await response.json();
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function readErrorMessage(payload, statusCode) {
+    if (payload && typeof payload.message === 'string' && payload.message.trim() !== '') {
+      return payload.message;
+    }
+    if (payload && typeof payload.error === 'string' && payload.error.trim() !== '') {
+      return payload.error;
+    }
+    if (statusCode) {
+      return 'Error API (' + statusCode + ')';
+    }
+    return 'Error al procesar solicitud';
   }
 
   function formatDayLabel(dateYmd) {
@@ -269,22 +480,25 @@
     return dateTimeValue;
   }
 
-  function openSlotModal(dateYmd, startAt) {
-    var dayLabel = formatDayLabel(String(dateYmd || ''));
-    var timeLabel = formatTime(String(startAt || ''));
-    var consultorio = state.lastMeta && state.lastMeta.consultorio_id_used ? state.lastMeta.consultorio_id_used : 'N/A';
+  function resetModalFlow() {
+    hideModalAlert();
+    elements.otpStep.classList.add('d-none');
+    elements.successStep.classList.add('d-none');
+    elements.otpDebugHint.classList.add('d-none');
+    elements.otpDebugHint.textContent = '';
+    elements.otpInput.value = '';
+  }
 
-    elements.modalDateTime.textContent = dayLabel + ' ' + timeLabel;
-    elements.modalDoctorId.textContent = state.doctorId;
-    elements.modalConsultorioId.textContent = consultorio;
+  function showModalAlert(message, type) {
+    var level = type || 'danger';
+    elements.modalAlert.className = 'alert alert-' + level;
+    elements.modalAlert.textContent = message;
+    elements.modalAlert.classList.remove('d-none');
+  }
 
-    var modal = window.bootstrap && window.bootstrap.Modal
-      ? window.bootstrap.Modal.getOrCreateInstance(elements.slotModal)
-      : null;
-
-    if (modal) {
-      modal.show();
-    }
+  function hideModalAlert() {
+    elements.modalAlert.classList.add('d-none');
+    elements.modalAlert.textContent = '';
   }
 
   function updateControls() {
