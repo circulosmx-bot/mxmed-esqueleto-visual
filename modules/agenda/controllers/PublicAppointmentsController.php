@@ -391,6 +391,15 @@ class PublicAppointmentsController
             ]);
         }
 
+        $flowStatus = (string)($flow['status'] ?? '');
+        if ($flowStatus === 'canceled' || $flowStatus === 'expired') {
+            return $this->error('conflict', 'appointment not confirmable', [
+                'route' => 'public_confirm',
+                'appointment_id' => $appointmentId,
+                'flow_status' => $flowStatus,
+            ]);
+        }
+
         $expiresAt = $this->parseDateTime((string)($flow['expires_at'] ?? ''));
         if (!$expiresAt || $expiresAt < $this->now()) {
             $this->markFlowExpired($appointmentId);
@@ -444,38 +453,43 @@ class PublicAppointmentsController
             );
         }
 
-        $this->markFlowConfirmed($appointmentId, (int)$otpId, (string)($otpRow['contact_type'] ?? ''), (string)$otpId);
+$this->markFlowConfirmed(
+    $appointmentId,
+    (int)$otpId,
+    (string)($otpRow['contact_type'] ?? ''),
+    '' // otp_external_id no existe en agenda_public_otps (se guarda NULL)
+);
 
-        return $this->success([
-            'appointment_id' => $appointmentId,
-            'status' => 'confirmed',
-        ], [
-            'route' => 'public_confirm',
-        ]);
+return $this->success([
+    'appointment_id' => $appointmentId,
+    'status' => 'confirmed',
+], [
+    'route' => 'public_confirm',
+]);
+}
+
+public function cancel(array $payload = []): array
+{
+    if ($this->dbError || !$this->pdo) {
+        return $this->error('db_error', 'database error', ['route' => 'public_cancel']);
     }
 
-    public function cancel(array $payload = []): array
-    {
-        if ($this->dbError || !$this->pdo) {
-            return $this->error('db_error', 'database error', ['route' => 'public_cancel']);
-        }
+    $cancelToken = trim((string)($payload['cancel_token'] ?? ''));
+    $reason = trim((string)($payload['reason'] ?? ''));
 
-        $cancelToken = trim((string)($payload['cancel_token'] ?? ''));
-        $reason = trim((string)($payload['reason'] ?? ''));
-
-        $fields = [];
-        if ($cancelToken === '') {
-            $fields['cancel_token'] = 'required';
-        }
-        if ($reason !== '' && strlen($reason) > 280) {
-            $fields['reason'] = 'max_280';
-        }
-        if (!empty($fields)) {
-            return $this->error('validation_error', 'invalid payload', [
-                'route' => 'public_cancel',
-                'fields' => $fields,
-            ]);
-        }
+    $fields = [];
+    if ($cancelToken === '') {
+        $fields['cancel_token'] = 'required';
+    }
+    if ($reason !== '' && strlen($reason) > 280) {
+        $fields['reason'] = 'max_280';
+    }
+    if (!empty($fields)) {
+        return $this->error('validation_error', 'invalid payload', [
+            'route' => 'public_cancel',
+            'fields' => $fields,
+        ]);
+    }
 
         try {
             $this->ensureFlowTable();
@@ -1066,48 +1080,90 @@ class PublicAppointmentsController
         }
     }
 
-    private function updateFlowCancellationAudit(array $flow, string $reason, string $flowStatus): void
-    {
-        if (!$this->pdo) {
-            return;
-        }
+private function updateFlowCancellationAudit(array $flow, string $reason, string $flowStatus): void
+{
+    if (!$this->pdo) {
+        return;
+    }
 
-        $currentPayload = [];
-        $rawPayload = $flow['payload_json'] ?? null;
-        if (is_string($rawPayload) && trim($rawPayload) !== '') {
-            $decoded = json_decode($rawPayload, true);
-            if (is_array($decoded)) {
-                $currentPayload = $decoded;
-            }
-        }
-
-        $currentPayload['cancellation'] = [
-            'reason' => $reason,
-            'status' => $flowStatus,
-            'canceled_at' => $this->now()->format('Y-m-d H:i:s'),
-        ];
-
-        $payloadJson = json_encode($currentPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        if ($payloadJson === false) {
-            $payloadJson = '{}';
-        }
-
-        try {
-            $stmt = $this->pdo->prepare(
-                'UPDATE ' . self::FLOW_TABLE . '
-                 SET status = :status, payload_json = :payload_json, updated_at = :updated_at
-                 WHERE flow_id = :flow_id'
-            );
-            $stmt->execute([
-                'status' => $flowStatus,
-                'payload_json' => $payloadJson,
-                'updated_at' => $this->now()->format('Y-m-d H:i:s'),
-                'flow_id' => (int)($flow['flow_id'] ?? 0),
-            ]);
-        } catch (\Throwable $e) {
-            // noop
+    $currentPayload = [];
+    $rawPayload = $flow['payload_json'] ?? null;
+    if (is_string($rawPayload) && trim($rawPayload) !== '') {
+        $decoded = json_decode($rawPayload, true);
+        if (is_array($decoded)) {
+            $currentPayload = $decoded;
         }
     }
+
+    $currentPayload['cancellation'] = [
+        'reason' => $reason,
+        'status' => $flowStatus,
+        'canceled_at' => $this->now()->format('Y-m-d H:i:s'),
+    ];
+
+    $payloadJson = json_encode($currentPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    if ($payloadJson === false) {
+        $payloadJson = '{}';
+    }
+
+    try {
+        $stmt = $this->pdo->prepare(
+            'UPDATE ' . self::FLOW_TABLE . '
+             SET status = :status, payload_json = :payload_json, updated_at = :updated_at
+             WHERE flow_id = :flow_id'
+        );
+        $stmt->execute([
+            'status' => $flowStatus,
+            'payload_json' => $payloadJson,
+            'updated_at' => $this->now()->format('Y-m-d H:i:s'),
+            'flow_id' => (int)($flow['flow_id'] ?? 0),
+        ]);
+    } catch (\Throwable $e) {
+        // noop
+    }
+}
+
+private function updateFlowConfirmationAudit(array $flow, array $otpMeta = []): void
+{
+    if (!$this->pdo) {
+        return;
+    }
+
+    $currentPayload = [];
+    $rawPayload = $flow['payload_json'] ?? null;
+    if (is_string($rawPayload) && trim($rawPayload) !== '') {
+        $decoded = json_decode($rawPayload, true);
+        if (is_array($decoded)) {
+            $currentPayload = $decoded;
+        }
+    }
+
+    $currentPayload['confirmation'] = [
+        'confirmed_at' => $this->now()->format('Y-m-d H:i:s'),
+        'otp_meta' => $otpMeta,
+    ];
+
+    $payloadJson = json_encode($currentPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    if ($payloadJson === false) {
+        $payloadJson = '{}';
+    }
+
+    try {
+        $stmt = $this->pdo->prepare(
+            'UPDATE ' . self::FLOW_TABLE . '
+             SET status = :status, payload_json = :payload_json, updated_at = :updated_at
+             WHERE flow_id = :flow_id'
+        );
+        $stmt->execute([
+            'status' => 'confirmed',
+            'payload_json' => $payloadJson,
+            'updated_at' => $this->now()->format('Y-m-d H:i:s'),
+            'flow_id' => (int)($flow['flow_id'] ?? 0),
+        ]);
+    } catch (\Throwable $e) {
+        // noop
+    }
+}
 
     private function updateFlowExpirationAudit(int $flowId, array $flow, string $expiredAt): void
     {
