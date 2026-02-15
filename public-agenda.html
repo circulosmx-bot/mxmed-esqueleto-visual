@@ -7,12 +7,12 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <style>
     body {
-      background: #f4f6f9;
+      background: linear-gradient(180deg, #f8fbff 0%, #eef2f8 100%);
       color: #1f2937;
     }
 
     .page-wrap {
-      max-width: 620px;
+      max-width: 680px;
     }
 
     .day-card {
@@ -28,16 +28,18 @@
 
     .day-title {
       font-size: 0.95rem;
-      font-weight: 600;
+      font-weight: 700;
       margin-bottom: 10px;
       color: #111827;
       text-transform: capitalize;
     }
 
     .slot-chip {
-      min-width: 96px;
+      min-width: 100px;
       border-radius: 999px;
-      font-weight: 600;
+      font-weight: 700;
+      padding-top: 10px;
+      padding-bottom: 10px;
     }
 
     .week-controls {
@@ -45,6 +47,67 @@
       border-radius: 12px;
       background: #ffffff;
       padding: 10px;
+    }
+
+    .wizard-progress {
+      height: 8px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .wizard-progress > span {
+      display: block;
+      height: 100%;
+      background: #0d6efd;
+      transition: width 0.2s ease-in-out;
+    }
+
+    .wizard-step {
+      display: none;
+    }
+
+    .wizard-step.active {
+      display: block;
+    }
+
+    .big-choice {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .big-choice .btn {
+      text-align: left;
+      padding: 14px;
+      border-radius: 12px;
+      font-weight: 700;
+    }
+
+    .wizard-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .wizard-actions .btn {
+      flex: 1 1 auto;
+      padding-top: 10px;
+      padding-bottom: 10px;
+      font-weight: 700;
+    }
+
+    @media (max-width: 576px) {
+      .modal-dialog {
+        margin: 0;
+        min-height: 100vh;
+      }
+
+      .modal-content {
+        min-height: 100vh;
+        border-radius: 0;
+      }
     }
   </style>
 </head>
@@ -82,51 +145,120 @@
   </main>
 
   <div class="modal fade" id="slotModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h2 class="modal-title fs-5">Confirmar cita</h2>
+          <h2 class="modal-title fs-5">Reserva de cita</h2>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
         </div>
         <div class="modal-body">
+          <div class="wizard-progress"><span id="wizardProgressBar" style="width:16%"></span></div>
+          <p class="small text-secondary mb-2">Paso <span id="wizardStepText">1</span> de 6</p>
           <p class="mb-2"><strong>Fecha y hora:</strong> <span id="modalDateTime">-</span></p>
           <p class="mb-2"><strong>doctor_id:</strong> <span id="modalDoctorId">-</span></p>
           <p class="mb-3"><strong>consultorio_id:</strong> <span id="modalConsultorioId">-</span></p>
 
           <div id="modalAlert" class="alert d-none" role="alert"></div>
 
-          <form id="appointmentRequestForm" class="vstack gap-2">
-            <div>
-              <label for="patientNameInput" class="form-label">Nombre completo</label>
-              <input id="patientNameInput" class="form-control" type="text" maxlength="160" required />
+          <section class="wizard-step active" id="step1">
+            <h3 class="h6">Tipo de cita</h3>
+            <div class="big-choice">
+              <input class="btn-check" type="radio" name="visitKind" id="visitKindPresencial" value="presencial">
+              <label class="btn btn-outline-primary" for="visitKindPresencial">Presencial<br><small class="text-secondary">Precio placeholder: $900 MXN</small></label>
+              <input class="btn-check" type="radio" name="visitKind" id="visitKindVideo" value="video">
+              <label class="btn btn-outline-primary" for="visitKindVideo">Videoconsulta<br><small class="text-secondary">Precio placeholder: $800 MXN</small></label>
             </div>
-            <div>
-              <label for="patientPhoneInput" class="form-label">Telefono</label>
-              <input id="patientPhoneInput" class="form-control" type="tel" maxlength="32" placeholder="Opcional" />
-            </div>
-            <div>
-              <label for="patientEmailInput" class="form-label">Correo</label>
-              <input id="patientEmailInput" class="form-control" type="email" maxlength="191" placeholder="Opcional" />
-            </div>
-            <div class="form-text">Ingresa telefono o correo para recibir el codigo.</div>
-            <button id="sendOtpBtn" type="submit" class="btn btn-primary w-100">Enviar codigo</button>
-          </form>
+          </section>
 
-          <section id="otpStep" class="d-none mt-3">
-            <hr />
-            <div>
-              <label for="otpInput" class="form-label">Codigo OTP (6 digitos)</label>
-              <input id="otpInput" class="form-control" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" />
+          <section class="wizard-step" id="step2">
+            <h3 class="h6">Tipo de paciente</h3>
+            <div class="big-choice">
+              <input class="btn-check" type="radio" name="patientType" id="patientTypeFirst" value="first_time">
+              <label class="btn btn-outline-primary" for="patientTypeFirst">Primera vez</label>
+              <input class="btn-check" type="radio" name="patientType" id="patientTypeFollow" value="follow_up">
+              <label class="btn btn-outline-primary" for="patientTypeFollow">Subsecuente</label>
             </div>
+            <p class="small mt-2 mb-0">Precio estimado (placeholder): <strong id="estimatedPrice">-</strong></p>
+          </section>
+
+          <section class="wizard-step" id="step3">
+            <h3 class="h6">Quien agenda</h3>
+            <div class="big-choice mb-2">
+              <input class="btn-check" type="radio" name="bookerIsPatient" id="bookerIsPatientYes" value="true">
+              <label class="btn btn-outline-primary" for="bookerIsPatientYes">La persona que agenda es el paciente</label>
+              <input class="btn-check" type="radio" name="bookerIsPatient" id="bookerIsPatientNo" value="false">
+              <label class="btn btn-outline-primary" for="bookerIsPatientNo">Agenda un familiar o cuidador</label>
+            </div>
+            <div id="bookerFields" class="vstack gap-2 d-none">
+              <input id="bookerName" class="form-control" type="text" maxlength="160" placeholder="Nombre de quien agenda">
+              <input id="bookerPhone" class="form-control" type="tel" maxlength="32" placeholder="Celular WhatsApp">
+              <input id="bookerEmail" class="form-control" type="email" maxlength="191" placeholder="Correo">
+              <select id="bookerRelationship" class="form-select">
+                <option value="">Relacion con el paciente</option>
+                <option value="madre">Madre</option>
+                <option value="padre">Padre</option>
+                <option value="hijo">Hijo</option>
+                <option value="hija">Hija</option>
+                <option value="nieto">Nieto</option>
+                <option value="amigo">Amigo</option>
+                <option value="cuidador">Cuidador</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+          </section>
+
+          <section class="wizard-step" id="step4">
+            <h3 class="h6">Datos del paciente</h3>
+            <div class="vstack gap-2">
+              <input id="patientName" class="form-control" type="text" maxlength="160" placeholder="Nombre completo" />
+              <input id="patientPhone" class="form-control" type="tel" maxlength="32" placeholder="Celular WhatsApp" />
+              <input id="patientEmail" class="form-control" type="email" maxlength="191" placeholder="Correo" />
+              <input id="patientDob" class="form-control" type="date" />
+              <select id="patientGender" class="form-select">
+                <option value="">Genero</option>
+                <option value="M">M</option>
+                <option value="F">F</option>
+                <option value="No especifica">No especifica</option>
+              </select>
+              <textarea id="patientReason" class="form-control" rows="2" maxlength="1000" placeholder="Motivo de consulta (opcional)"></textarea>
+            </div>
+          </section>
+
+          <section class="wizard-step" id="step5">
+            <h3 class="h6">Datos adicionales (opcionales)</h3>
+            <div class="vstack gap-2">
+              <input id="extraAddressLine1" class="form-control" type="text" maxlength="180" placeholder="Domicilio" />
+              <input id="extraAddressCp" class="form-control" type="text" maxlength="10" placeholder="CP" />
+              <input id="extraAddressCity" class="form-control" type="text" maxlength="100" placeholder="Ciudad" />
+              <input id="extraAddressState" class="form-control" type="text" maxlength="100" placeholder="Estado" />
+              <textarea id="extraAllergies" class="form-control" rows="2" maxlength="1000" placeholder="Alergias"></textarea>
+              <textarea id="extraHabits" class="form-control" rows="2" maxlength="1000" placeholder="Habitos basicos"></textarea>
+            </div>
+            <p class="small text-secondary mt-2 mb-0">Placeholder futuro: referido por otro medico.</p>
+          </section>
+
+          <section class="wizard-step" id="step6">
+            <h3 class="h6">Confirmacion OTP</h3>
+            <div class="big-choice mb-2">
+              <input class="btn-check" type="radio" name="otpChannel" id="otpChannelSms" value="sms">
+              <label class="btn btn-outline-primary" for="otpChannelSms">SMS</label>
+              <input class="btn-check" type="radio" name="otpChannel" id="otpChannelEmail" value="email">
+              <label class="btn btn-outline-primary" for="otpChannelEmail">Email</label>
+            </div>
+            <button id="sendOtpBtn" type="button" class="btn btn-primary w-100 mb-2">Reservar y enviar OTP</button>
+            <input id="otpCode" class="form-control" type="text" inputmode="numeric" maxlength="6" placeholder="Codigo OTP de 6 digitos" />
             <div id="otpDebugHint" class="small text-secondary mt-2 d-none"></div>
             <button id="confirmOtpBtn" type="button" class="btn btn-success w-100 mt-2">Confirmar cita</button>
+            <section id="successStep" class="d-none mt-3">
+              <div class="alert alert-success mb-2">Cita confirmada.</div>
+              <p class="mb-0 small">appointment_id: <strong id="successAppointmentId">-</strong></p>
+            </section>
           </section>
 
-          <section id="successStep" class="d-none mt-3">
-            <hr />
-            <div class="alert alert-success mb-2">Cita confirmada.</div>
-            <p class="mb-0 small">appointment_id: <strong id="successAppointmentId">-</strong></p>
-          </section>
+          <div class="wizard-actions">
+            <button id="wizardBackBtn" type="button" class="btn btn-outline-secondary">Atras</button>
+            <button id="wizardNextBtn" type="button" class="btn btn-primary">Siguiente</button>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>

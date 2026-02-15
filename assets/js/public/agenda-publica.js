@@ -19,22 +19,41 @@
     modalDoctorId: document.getElementById('modalDoctorId'),
     modalConsultorioId: document.getElementById('modalConsultorioId'),
     modalAlert: document.getElementById('modalAlert'),
-    appointmentRequestForm: document.getElementById('appointmentRequestForm'),
-    patientNameInput: document.getElementById('patientNameInput'),
-    patientPhoneInput: document.getElementById('patientPhoneInput'),
-    patientEmailInput: document.getElementById('patientEmailInput'),
+    wizardProgressBar: document.getElementById('wizardProgressBar'),
+    wizardStepText: document.getElementById('wizardStepText'),
+    wizardBackBtn: document.getElementById('wizardBackBtn'),
+    wizardNextBtn: document.getElementById('wizardNextBtn'),
+    estimatedPrice: document.getElementById('estimatedPrice'),
+    bookerFields: document.getElementById('bookerFields'),
+    bookerName: document.getElementById('bookerName'),
+    bookerPhone: document.getElementById('bookerPhone'),
+    bookerEmail: document.getElementById('bookerEmail'),
+    bookerRelationship: document.getElementById('bookerRelationship'),
+    patientName: document.getElementById('patientName'),
+    patientPhone: document.getElementById('patientPhone'),
+    patientEmail: document.getElementById('patientEmail'),
+    patientDob: document.getElementById('patientDob'),
+    patientGender: document.getElementById('patientGender'),
+    patientReason: document.getElementById('patientReason'),
+    extraAddressLine1: document.getElementById('extraAddressLine1'),
+    extraAddressCp: document.getElementById('extraAddressCp'),
+    extraAddressCity: document.getElementById('extraAddressCity'),
+    extraAddressState: document.getElementById('extraAddressState'),
+    extraAllergies: document.getElementById('extraAllergies'),
+    extraHabits: document.getElementById('extraHabits'),
     sendOtpBtn: document.getElementById('sendOtpBtn'),
-    otpStep: document.getElementById('otpStep'),
-    otpInput: document.getElementById('otpInput'),
+    otpCode: document.getElementById('otpCode'),
     otpDebugHint: document.getElementById('otpDebugHint'),
     confirmOtpBtn: document.getElementById('confirmOtpBtn'),
     successStep: document.getElementById('successStep'),
     successAppointmentId: document.getElementById('successAppointmentId')
   };
 
-  if (!elements.daysContainer || !elements.toggleModeBtn) {
+  if (!elements.daysContainer || !elements.toggleModeBtn || !elements.slotModal) {
     return;
   }
+
+  var steps = ['step1', 'step2', 'step3', 'step4', 'step5', 'step6'];
 
   var state = {
     doctorId: readDoctorId(query.get('doctor_id')),
@@ -45,7 +64,9 @@
     weekOffset: 0,
     lastMeta: null,
     selectedSlot: null,
-    otpContext: null
+    wizardStep: 1,
+    appointmentId: null,
+    otpId: null
   };
 
   bindEvents();
@@ -83,26 +104,55 @@
       if (!btn) {
         return;
       }
-      openSlotModal({
+      openWizard({
         date: btn.getAttribute('data-date') || '',
         startAt: btn.getAttribute('data-start-at') || '',
         endAt: btn.getAttribute('data-end-at') || ''
       });
     });
 
-    elements.appointmentRequestForm.addEventListener('submit', function (event) {
-      event.preventDefault();
-      requestOtp();
+    elements.wizardBackBtn.addEventListener('click', function () {
+      if (state.wizardStep <= 1) {
+        return;
+      }
+      setWizardStep(state.wizardStep - 1);
+    });
+
+    elements.wizardNextBtn.addEventListener('click', function () {
+      if (!validateStep(state.wizardStep)) {
+        return;
+      }
+      if (state.wizardStep >= 6) {
+        return;
+      }
+      setWizardStep(state.wizardStep + 1);
+    });
+
+    elements.sendOtpBtn.addEventListener('click', function () {
+      submitReserveAndOtp();
     });
 
     elements.confirmOtpBtn.addEventListener('click', function () {
-      verifyOtp();
+      submitOtpConfirm();
     });
 
+    var bookerRadios = document.querySelectorAll('input[name="bookerIsPatient"]');
+    for (var i = 0; i < bookerRadios.length; i += 1) {
+      bookerRadios[i].addEventListener('change', function () {
+        updateBookerVisibility();
+      });
+    }
+
+    var pricingRadios = document.querySelectorAll('input[name="visitKind"], input[name="patientType"]');
+    for (var j = 0; j < pricingRadios.length; j += 1) {
+      pricingRadios[j].addEventListener('change', function () {
+        updateEstimatedPrice();
+      });
+    }
+
     elements.slotModal.addEventListener('hidden.bs.modal', function () {
+      resetWizard();
       state.selectedSlot = null;
-      state.otpContext = null;
-      resetModalFlow();
     });
   }
 
@@ -173,7 +223,7 @@
     try {
       var response = await fetch(buildAvailabilityUrl(), {
         method: 'GET',
-        headers: { 'Accept': 'application/json' }
+        headers: { Accept: 'application/json' }
       });
 
       var payload = await parseJsonSafe(response);
@@ -243,7 +293,7 @@
 
         var chip = document.createElement('button');
         chip.type = 'button';
-        chip.className = 'btn btn-outline-primary btn-sm slot-chip';
+        chip.className = 'btn btn-outline-primary slot-chip';
         chip.setAttribute('data-date', dateValue);
         chip.setAttribute('data-start-at', startAt);
         chip.setAttribute('data-end-at', endAt);
@@ -258,19 +308,18 @@
     }
   }
 
-  function openSlotModal(slot) {
+  function openWizard(slot) {
     state.selectedSlot = {
       date: String(slot.date || ''),
       startAt: String(slot.startAt || ''),
       endAt: String(slot.endAt || '')
     };
 
-    state.otpContext = null;
-    resetModalFlow();
+    resetWizard();
 
     var dayLabel = formatDayLabel(state.selectedSlot.date);
     var timeLabel = formatTime(state.selectedSlot.startAt);
-    var consultorio = state.lastMeta && state.lastMeta.consultorio_id_used ? state.lastMeta.consultorio_id_used : 'N/A';
+    var consultorio = state.lastMeta && state.lastMeta.consultorio_id_used ? state.lastMeta.consultorio_id_used : (state.consultorioId || 'N/A');
 
     elements.modalDateTime.textContent = dayLabel + ' ' + timeLabel;
     elements.modalDoctorId.textContent = state.doctorId;
@@ -285,88 +334,294 @@
     }
   }
 
-  async function requestOtp() {
+  function resetWizard() {
+    state.wizardStep = 1;
+    state.appointmentId = null;
+    state.otpId = null;
+    hideModalAlert();
+    elements.otpCode.value = '';
+    elements.otpDebugHint.classList.add('d-none');
+    elements.otpDebugHint.textContent = '';
+    elements.successStep.classList.add('d-none');
+    elements.successAppointmentId.textContent = '-';
+    setWizardStep(1);
+    updateBookerVisibility();
+    updateEstimatedPrice();
+  }
+
+  function setWizardStep(step) {
+    state.wizardStep = step;
+    for (var i = 0; i < steps.length; i += 1) {
+      var el = document.getElementById(steps[i]);
+      if (!el) {
+        continue;
+      }
+      el.classList.toggle('active', i === (step - 1));
+    }
+
+    elements.wizardStepText.textContent = String(step);
+    elements.wizardProgressBar.style.width = String((step / 6) * 100) + '%';
+    elements.wizardBackBtn.disabled = step <= 1;
+
+    if (step >= 6) {
+      elements.wizardNextBtn.classList.add('d-none');
+    } else {
+      elements.wizardNextBtn.classList.remove('d-none');
+    }
+
+    hideModalAlert();
+  }
+
+  function getCheckedValue(name) {
+    var el = document.querySelector('input[name="' + name + '"]:checked');
+    return el ? String(el.value || '') : '';
+  }
+
+  function updateBookerVisibility() {
+    var isPatient = getCheckedValue('bookerIsPatient');
+    elements.bookerFields.classList.toggle('d-none', isPatient !== 'false');
+  }
+
+  function updateEstimatedPrice() {
+    var visitKind = getCheckedValue('visitKind');
+    var patientType = getCheckedValue('patientType');
+    if (!visitKind || !patientType) {
+      elements.estimatedPrice.textContent = '-';
+      return;
+    }
+
+    var base = visitKind === 'video' ? 800 : 900;
+    var price = patientType === 'follow_up' ? (base - 150) : base;
+    elements.estimatedPrice.textContent = '$' + String(price) + ' MXN';
+  }
+
+  function validateStep(step) {
+    if (step === 1 && getCheckedValue('visitKind') === '') {
+      showModalAlert('Selecciona tipo de cita.', 'danger');
+      return false;
+    }
+
+    if (step === 2 && getCheckedValue('patientType') === '') {
+      showModalAlert('Selecciona primera vez o subsecuente.', 'danger');
+      return false;
+    }
+
+    if (step === 3) {
+      var bookerIsPatient = getCheckedValue('bookerIsPatient');
+      if (bookerIsPatient === '') {
+        showModalAlert('Indica quien agenda.', 'danger');
+        return false;
+      }
+      if (bookerIsPatient === 'false') {
+        if (String(elements.bookerName.value || '').trim() === '' ||
+          String(elements.bookerPhone.value || '').trim() === '' ||
+          String(elements.bookerEmail.value || '').trim() === '' ||
+          String(elements.bookerRelationship.value || '').trim() === '') {
+          showModalAlert('Completa datos de la persona que agenda.', 'danger');
+          return false;
+        }
+      }
+    }
+
+    if (step === 4) {
+      if (String(elements.patientName.value || '').trim() === '' ||
+          String(elements.patientPhone.value || '').trim() === '' ||
+          String(elements.patientEmail.value || '').trim() === '' ||
+          String(elements.patientDob.value || '').trim() === '' ||
+          String(elements.patientGender.value || '').trim() === '') {
+        showModalAlert('Completa los datos obligatorios del paciente.', 'danger');
+        return false;
+      }
+      if (!isValidEmail(String(elements.patientEmail.value || '').trim())) {
+        showModalAlert('Correo del paciente invalido.', 'danger');
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  function validateForReserve() {
+    for (var step = 1; step <= 4; step += 1) {
+      if (!validateStep(step)) {
+        setWizardStep(step);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function buildReservePayload() {
+    var bookerIsPatient = getCheckedValue('bookerIsPatient') === 'true';
+    var patientName = String(elements.patientName.value || '').trim();
+    var patientPhone = String(elements.patientPhone.value || '').trim();
+    var patientEmail = String(elements.patientEmail.value || '').trim();
+
+    var booker = {
+      name: patientName,
+      phone: patientPhone,
+      email: patientEmail
+    };
+
+    if (!bookerIsPatient) {
+      booker = {
+        name: String(elements.bookerName.value || '').trim(),
+        phone: String(elements.bookerPhone.value || '').trim(),
+        email: String(elements.bookerEmail.value || '').trim(),
+        relationship: String(elements.bookerRelationship.value || '').trim()
+      };
+    }
+
+    var extras = {
+      address: {
+        line1: String(elements.extraAddressLine1.value || '').trim(),
+        cp: String(elements.extraAddressCp.value || '').trim(),
+        city: String(elements.extraAddressCity.value || '').trim(),
+        state: String(elements.extraAddressState.value || '').trim()
+      },
+      allergies: String(elements.extraAllergies.value || '').trim(),
+      habits: String(elements.extraHabits.value || '').trim(),
+      referred_by_placeholder: true
+    };
+
+    var consultorioUsed = state.lastMeta && state.lastMeta.consultorio_id_used
+      ? state.lastMeta.consultorio_id_used
+      : state.consultorioId;
+
+    return {
+      doctor_id: state.doctorId,
+      consultorio_id: consultorioUsed || undefined,
+      start_at: state.selectedSlot ? state.selectedSlot.startAt : '',
+      end_at: state.selectedSlot ? state.selectedSlot.endAt : '',
+      visit_kind: getCheckedValue('visitKind'),
+      patient_type: getCheckedValue('patientType'),
+      booker_is_patient: bookerIsPatient,
+      booker: booker,
+      patient: {
+        name: patientName,
+        phone: patientPhone,
+        email: patientEmail,
+        dob: String(elements.patientDob.value || '').trim(),
+        gender: String(elements.patientGender.value || '').trim(),
+        reason: String(elements.patientReason.value || '').trim()
+      },
+      extras: extras,
+      otp: {
+        channel: getCheckedValue('otpChannel') || undefined,
+        otp_id: state.otpId || undefined
+      },
+      payment_mode: 'none'
+    };
+  }
+
+  function getOtpContactValue(channel) {
+    var bookerIsPatient = getCheckedValue('bookerIsPatient') === 'true';
+    if (channel === 'sms') {
+      return bookerIsPatient
+        ? String(elements.patientPhone.value || '').trim()
+        : String(elements.bookerPhone.value || '').trim();
+    }
+
+    return bookerIsPatient
+      ? String(elements.patientEmail.value || '').trim()
+      : String(elements.bookerEmail.value || '').trim();
+  }
+
+  async function submitReserveAndOtp() {
     if (!state.selectedSlot) {
       showModalAlert('Selecciona un horario.', 'danger');
       return;
     }
 
-    var patientName = String(elements.patientNameInput.value || '').trim();
-    var patientPhone = String(elements.patientPhoneInput.value || '').trim();
-    var patientEmail = String(elements.patientEmailInput.value || '').trim();
-
-    if (patientName === '') {
-      showModalAlert('Nombre completo es requerido.', 'danger');
+    if (!validateForReserve()) {
       return;
     }
 
-    if (patientPhone === '' && patientEmail === '') {
-      showModalAlert('Ingresa telefono o correo.', 'danger');
+    var channel = getCheckedValue('otpChannel');
+    if (channel !== 'sms' && channel !== 'email') {
+      showModalAlert('Selecciona canal OTP (sms o email).', 'danger');
       return;
     }
 
-    var payload = {
-      doctor_id: state.doctorId,
-      start_at: state.selectedSlot.startAt,
-      end_at: state.selectedSlot.endAt,
-      patient_name: patientName,
-      patient_phone: patientPhone,
-      patient_email: patientEmail
-    };
-
-    var consultorioUsed = state.lastMeta && state.lastMeta.consultorio_id_used ? state.lastMeta.consultorio_id_used : null;
-    if (consultorioUsed) {
-      payload.consultorio_id = consultorioUsed;
-    } else if (state.consultorioId) {
-      payload.consultorio_id = state.consultorioId;
+    var contactValue = getOtpContactValue(channel);
+    if (!contactValue) {
+      showModalAlert('Falta contacto para enviar OTP.', 'danger');
+      return;
     }
 
     elements.sendOtpBtn.disabled = true;
-    elements.sendOtpBtn.textContent = 'Enviando...';
+    elements.sendOtpBtn.textContent = 'Procesando...';
     hideModalAlert();
 
     try {
-      var response = await postJson('/api/agenda/index.php/public/appointments/request', payload);
-      if (!response.ok) {
-        throw new Error(response.message);
+      if (!state.appointmentId) {
+        var reserveResponse = await postJson('/api/agenda/index.php/public/appointments/reserve', buildReservePayload());
+        if (!reserveResponse.ok) {
+          if (reserveResponse.payload && reserveResponse.payload.error === 'slot_taken') {
+            loadAvailability();
+          }
+          throw new Error(reserveResponse.message);
+        }
+
+        state.appointmentId = reserveResponse.payload && reserveResponse.payload.data
+          ? reserveResponse.payload.data.appointment_id
+          : null;
       }
 
-      state.otpContext = {
-        requestId: response.payload && response.payload.data ? response.payload.data.request_id : null,
-        expiresAt: response.payload && response.payload.data ? response.payload.data.expires_at : null
-      };
+      if (!state.appointmentId) {
+        throw new Error('No se pudo reservar el horario.');
+      }
 
-      elements.otpStep.classList.remove('d-none');
-      elements.otpInput.value = '';
-      elements.otpInput.focus();
+      var otpResponse = await postJson('/api/agenda/index.php/public/otp/request', {
+        doctor_id: state.doctorId,
+        contact_type: channel,
+        contact_value: contactValue
+      }, true);
 
-      var otpDebug = response.payload && response.payload.meta ? response.payload.meta.otp_debug : null;
-      if (otpDebug) {
-        elements.otpDebugHint.textContent = 'QA OTP debug: ' + String(otpDebug);
+      if (!otpResponse.ok) {
+        throw new Error(otpResponse.message);
+      }
+
+      state.otpId = otpResponse.payload && otpResponse.payload.data
+        ? otpResponse.payload.data.otp_id
+        : null;
+
+      if (!state.otpId) {
+        throw new Error('No se recibio otp_id.');
+      }
+
+      var debugCode = otpResponse.payload && otpResponse.payload.meta
+        ? otpResponse.payload.meta.debug_code
+        : null;
+      if (debugCode) {
+        elements.otpDebugHint.textContent = 'Solo QA: debug_code=' + String(debugCode);
         elements.otpDebugHint.classList.remove('d-none');
       } else {
         elements.otpDebugHint.textContent = '';
         elements.otpDebugHint.classList.add('d-none');
       }
 
-      showModalAlert('Codigo enviado. Revisa tu telefono o correo.', 'info');
+      showModalAlert('Reserva creada y OTP enviado. Ingresa el codigo para confirmar.', 'info');
     } catch (err) {
-      showModalAlert(err && err.message ? err.message : 'No se pudo enviar codigo.', 'danger');
+      showModalAlert(err && err.message ? err.message : 'No se pudo procesar la reserva.', 'danger');
     } finally {
       elements.sendOtpBtn.disabled = false;
-      elements.sendOtpBtn.textContent = 'Enviar codigo';
+      elements.sendOtpBtn.textContent = 'Reservar y enviar OTP';
     }
   }
 
-  async function verifyOtp() {
-    if (!state.otpContext || !state.otpContext.requestId) {
-      showModalAlert('Primero envia el codigo OTP.', 'danger');
+  async function submitOtpConfirm() {
+    var code = String(elements.otpCode.value || '').trim();
+    if (!state.appointmentId) {
+      showModalAlert('Primero reserva y solicita OTP.', 'danger');
       return;
     }
-
-    var otp = String(elements.otpInput.value || '').trim();
-    if (!/^\d{6}$/.test(otp)) {
-      showModalAlert('OTP invalido. Deben ser 6 digitos.', 'danger');
+    if (!state.otpId) {
+      showModalAlert('Primero solicita OTP.', 'danger');
+      return;
+    }
+    if (!/^\d{6}$/.test(code)) {
+      showModalAlert('Codigo OTP invalido.', 'danger');
       return;
     }
 
@@ -375,21 +630,19 @@
     hideModalAlert();
 
     try {
-      var response = await postJson('/api/agenda/index.php/public/appointments/verify', {
-        request_id: state.otpContext.requestId,
-        otp: otp
+      var confirmResponse = await postJson('/api/agenda/index.php/public/appointments/confirm', {
+        appointment_id: state.appointmentId,
+        otp_id: state.otpId,
+        code: code
       });
 
-      if (!response.ok) {
-        throw new Error(response.message);
+      if (!confirmResponse.ok) {
+        throw new Error(confirmResponse.message);
       }
 
-      var appointmentId = response.payload && response.payload.data ? response.payload.data.appointment_id : '';
-      elements.successAppointmentId.textContent = appointmentId || '-';
+      elements.successAppointmentId.textContent = state.appointmentId;
       elements.successStep.classList.remove('d-none');
-      elements.otpStep.classList.add('d-none');
       showModalAlert('Cita confirmada correctamente.', 'success');
-
       loadAvailability();
     } catch (err) {
       showModalAlert(err && err.message ? err.message : 'No se pudo confirmar OTP.', 'danger');
@@ -399,14 +652,19 @@
     }
   }
 
-  async function postJson(path, payload) {
+  async function postJson(path, payload, qaMode) {
     try {
+      var headers = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      };
+      if (qaMode === true) {
+        headers['X-MXMED-QA-Mode'] = '1';
+      }
+
       var response = await fetch(resolveApiBase() + path, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers: headers,
         body: JSON.stringify(payload)
       });
 
@@ -480,13 +738,11 @@
     return dateTimeValue;
   }
 
-  function resetModalFlow() {
-    hideModalAlert();
-    elements.otpStep.classList.add('d-none');
-    elements.successStep.classList.add('d-none');
-    elements.otpDebugHint.classList.add('d-none');
-    elements.otpDebugHint.textContent = '';
-    elements.otpInput.value = '';
+  function isValidEmail(value) {
+    if (value.indexOf('@') === -1) {
+      return false;
+    }
+    return /.+@.+\..+/.test(value);
   }
 
   function showModalAlert(message, type) {

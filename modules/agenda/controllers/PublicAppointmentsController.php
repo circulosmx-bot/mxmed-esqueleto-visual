@@ -2,6 +2,7 @@
 namespace Agenda\Controllers;
 
 use Agenda\Repositories\ConsultoriosRepository;
+use Agenda\Repositories\PublicOtpRepository;
 use Agenda\Services\DevOtpSender;
 use Agenda\Services\OtpSender;
 use DateInterval;
@@ -12,6 +13,7 @@ use PDOException;
 use RuntimeException;
 
 require_once __DIR__ . '/../repositories/ConsultoriosRepository.php';
+require_once __DIR__ . '/../repositories/PublicOtpRepository.php';
 require_once __DIR__ . '/../services/OtpSender.php';
 require_once __DIR__ . '/AvailabilityController.php';
 require_once __DIR__ . '/AppointmentWriteController.php';
@@ -22,6 +24,7 @@ class PublicAppointmentsController
 {
     private const TIMEZONE = 'America/Mexico_City';
     private const OTP_TABLE = 'agenda_public_otp_requests';
+    private const FLOW_TABLE = 'agenda_public_appointment_flows';
     private const OTP_TTL_MINUTES = 10;
     private const OTP_MAX_ATTEMPTS = 5;
 
@@ -257,6 +260,687 @@ class PublicAppointmentsController
         ], array_merge($metaBase, [
             'confirmed' => true,
         ]), 'appointment confirmed');
+    }
+
+    public function reserve(array $payload = []): array
+    {
+        if ($this->dbError || !$this->pdo) {
+            return $this->error('db_error', 'database error', ['route' => 'public_reserve']);
+        }
+
+        try {
+            $this->ensureFlowTable();
+            $this->expirePendingReservations();
+        } catch (\Throwable $e) {
+            return $this->error('db_error', 'database error', ['route' => 'public_reserve']);
+        }
+
+        $validated = $this->validateReservePayload($payload);
+        if (!empty($validated['errors'])) {
+            return $this->error('invalid_params', 'invalid payload', [
+                'route' => 'public_reserve',
+                'fields' => $validated['errors'],
+            ]);
+        }
+
+        $doctorId = (string)$validated['doctor_id'];
+        $consultorioId = $this->resolveConsultorioId($doctorId, $payload['consultorio_id'] ?? null);
+        if (!$this->isValidNumeric($consultorioId)) {
+            return $this->error('invalid_params', 'consultorio_id must be numeric', [
+                'route' => 'public_reserve',
+                'doctor_id' => $doctorId,
+                'consultorio_id_used' => null,
+            ]);
+        }
+
+        $consultorioId = (string)$consultorioId;
+        $slotCheck = $this->checkSlotAvailability(
+            $doctorId,
+            $consultorioId,
+            (string)$validated['start_at'],
+            (string)$validated['end_at']
+        );
+
+        if (($slotCheck['ok'] ?? false) !== true) {
+            return $this->mapSlotErrorForReserve($slotCheck, $doctorId, $consultorioId, (string)$validated['start_at'], (string)$validated['end_at']);
+        }
+
+        $writer = new AppointmentWriteController();
+        $createPayload = $this->buildReserveCreatePayload($validated, $consultorioId);
+        $created = $writer->createFromPayload($createPayload);
+        if (($created['ok'] ?? false) !== true) {
+            return $this->mapWriterCreateErrorForReserve($created, $doctorId, $consultorioId, (string)$validated['start_at'], (string)$validated['end_at']);
+        }
+
+        $appointmentId = (string)($created['data']['appointment_id'] ?? '');
+        if ($appointmentId === '') {
+            return $this->error('db_error', 'database error', ['route' => 'public_reserve']);
+        }
+
+        $expiresAt = $this->now()->add(new DateInterval('PT' . self::OTP_TTL_MINUTES . 'M'));
+        $cancelToken = bin2hex(random_bytes(16));
+        $flowInsert = $this->insertReserveFlow($appointmentId, $doctorId, $consultorioId, $validated, $expiresAt, $cancelToken);
+        if (($flowInsert['ok'] ?? false) !== true) {
+            $this->tryCancelPendingAppointment($appointmentId);
+            return $this->error('db_error', 'database error', ['route' => 'public_reserve']);
+        }
+
+        return $this->success([
+            'appointment_id' => $appointmentId,
+            'status' => 'pending_otp',
+            'expires_in' => self::OTP_TTL_MINUTES * 60,
+        ], [
+            'route' => 'public_reserve',
+            'doctor_id' => $doctorId,
+            'consultorio_id_used' => $consultorioId,
+            'start_at' => (string)$validated['start_at'],
+            'end_at' => (string)$validated['end_at'],
+            'cancel_token_ready' => true,
+        ]);
+    }
+
+    public function confirm(array $payload = []): array
+    {
+        if ($this->dbError || !$this->pdo) {
+            return $this->error('db_error', 'database error', ['route' => 'public_confirm']);
+        }
+
+        $appointmentId = trim((string)($payload['appointment_id'] ?? ''));
+        $otpId = trim((string)($payload['otp_id'] ?? ''));
+        $code = trim((string)($payload['code'] ?? ''));
+        $errors = [];
+        if ($appointmentId === '') {
+            $errors['appointment_id'] = 'required';
+        }
+        if (!$this->isValidNumeric($otpId)) {
+            $errors['otp_id'] = 'required_numeric';
+        }
+        if (!preg_match('/^\d{6}$/', $code)) {
+            $errors['code'] = 'must_be_6_digits';
+        }
+        if (!empty($errors)) {
+            return $this->error('invalid_params', 'invalid payload', [
+                'route' => 'public_confirm',
+                'fields' => $errors,
+            ]);
+        }
+
+        try {
+            $this->ensureFlowTable();
+            $this->expirePendingReservations();
+        } catch (\Throwable $e) {
+            return $this->error('db_error', 'database error', ['route' => 'public_confirm']);
+        }
+
+        $flow = $this->findFlowByAppointmentId($appointmentId);
+        if (!$flow) {
+            return $this->error('not_found', 'appointment not found', [
+                'route' => 'public_confirm',
+                'appointment_id' => $appointmentId,
+            ]);
+        }
+
+        if ((string)($flow['status'] ?? '') === 'confirmed') {
+            return $this->success([
+                'appointment_id' => $appointmentId,
+                'status' => 'confirmed',
+            ], [
+                'route' => 'public_confirm',
+                'idempotent' => true,
+            ]);
+        }
+
+        $expiresAt = $this->parseDateTime((string)($flow['expires_at'] ?? ''));
+        if (!$expiresAt || $expiresAt < $this->now()) {
+            $this->markFlowExpired($appointmentId);
+            $this->tryCancelPendingAppointment($appointmentId);
+            return $this->error('otp_expired', 'otp expired', [
+                'route' => 'public_confirm',
+                'appointment_id' => $appointmentId,
+            ]);
+        }
+
+        $otpController = new PublicOtpController();
+        $otpVerify = $otpController->verify([
+            'otp_id' => (string)$otpId,
+            'code' => $code,
+        ]);
+        if (($otpVerify['ok'] ?? false) !== true) {
+            $meta = (array)($otpVerify['meta'] ?? []);
+            $meta['route'] = 'public_confirm';
+            $meta['appointment_id'] = $appointmentId;
+            return $this->error(
+                (string)($otpVerify['error'] ?? 'invalid_code'),
+                (string)($otpVerify['message'] ?? 'invalid code'),
+                $meta
+            );
+        }
+
+        $otpRepository = new PublicOtpRepository($this->pdo);
+        $otpRow = $otpRepository->findOtpById((int)$otpId);
+        if (!$otpRow) {
+            return $this->error('not_found', 'otp not found', [
+                'route' => 'public_confirm',
+                'appointment_id' => $appointmentId,
+                'otp_id' => (int)$otpId,
+            ]);
+        }
+
+        if ((string)($otpRow['doctor_id'] ?? '') !== (string)($flow['doctor_id'] ?? '')) {
+            return $this->error('otp_mismatch', 'otp does not match appointment', [
+                'route' => 'public_confirm',
+                'appointment_id' => $appointmentId,
+                'otp_id' => (int)$otpId,
+            ]);
+        }
+
+        $statusUpdate = $this->updateAppointmentStatus($appointmentId, 'confirmed');
+        if (($statusUpdate['ok'] ?? false) !== true) {
+            return $this->error(
+                (string)($statusUpdate['error'] ?? 'db_error'),
+                (string)($statusUpdate['message'] ?? 'database error'),
+                array_merge(['route' => 'public_confirm'], (array)($statusUpdate['meta'] ?? []))
+            );
+        }
+
+        $this->markFlowConfirmed($appointmentId, (int)$otpId, (string)($otpRow['contact_type'] ?? ''), (string)$otpId);
+
+        return $this->success([
+            'appointment_id' => $appointmentId,
+            'status' => 'confirmed',
+        ], [
+            'route' => 'public_confirm',
+        ]);
+    }
+
+    private function validateReservePayload(array $payload): array
+    {
+        $errors = [];
+
+        $doctorId = trim((string)($payload['doctor_id'] ?? ''));
+        if (!$this->isValidNumeric($doctorId)) {
+            $errors['doctor_id'] = 'required_numeric';
+        }
+
+        $startAt = $this->normalizeDateTime((string)($payload['start_at'] ?? ''));
+        $endAt = $this->normalizeDateTime((string)($payload['end_at'] ?? ''));
+        if ($startAt === null) {
+            $errors['start_at'] = 'invalid_datetime';
+        }
+        if ($endAt === null) {
+            $errors['end_at'] = 'invalid_datetime';
+        }
+        if ($startAt !== null && $endAt !== null) {
+            $start = $this->parseDateTime($startAt);
+            $end = $this->parseDateTime($endAt);
+            if (!$start || !$end || $start >= $end) {
+                $errors['time_range'] = 'invalid';
+            } elseif ($start->format('Y-m-d') !== $end->format('Y-m-d')) {
+                $errors['time_range'] = 'same_day_required';
+            }
+        }
+
+        $visitKind = trim((string)($payload['visit_kind'] ?? ''));
+        if (!in_array($visitKind, ['presencial', 'video'], true)) {
+            $errors['visit_kind'] = 'must_be_presencial_or_video';
+        }
+
+        $patientType = trim((string)($payload['patient_type'] ?? ''));
+        if (!in_array($patientType, ['first_time', 'follow_up'], true)) {
+            $errors['patient_type'] = 'must_be_first_time_or_follow_up';
+        }
+
+        if (!array_key_exists('booker_is_patient', $payload)) {
+            $errors['booker_is_patient'] = 'required_boolean';
+        }
+        $bookerIsPatient = $this->normalizeBooleanInput($payload['booker_is_patient'] ?? null);
+        if ($bookerIsPatient === null) {
+            $errors['booker_is_patient'] = 'required_boolean';
+        }
+
+        $paymentMode = trim((string)($payload['payment_mode'] ?? 'none'));
+        if (!in_array($paymentMode, ['none', 'future_platform_charge', 'future_doctor_charge'], true)) {
+            $errors['payment_mode'] = 'invalid';
+        }
+
+        $patient = is_array($payload['patient'] ?? null) ? $payload['patient'] : [];
+        $patientName = trim((string)($patient['name'] ?? ''));
+        $patientPhone = trim((string)($patient['phone'] ?? ''));
+        $patientEmail = trim((string)($patient['email'] ?? ''));
+        $patientDob = trim((string)($patient['dob'] ?? ''));
+        $patientGender = trim((string)($patient['gender'] ?? ''));
+        $patientReason = trim((string)($patient['reason'] ?? ''));
+
+        if ($patientName === '') {
+            $errors['patient.name'] = 'required';
+        }
+        if ($patientPhone === '') {
+            $errors['patient.phone'] = 'required';
+        }
+        if ($patientEmail === '') {
+            $errors['patient.email'] = 'required';
+        } elseif (filter_var($patientEmail, FILTER_VALIDATE_EMAIL) === false) {
+            $errors['patient.email'] = 'invalid_email';
+        }
+        if ($patientDob === '' || !$this->isValidDateYmd($patientDob)) {
+            $errors['patient.dob'] = 'invalid_ymd';
+        }
+        if (!in_array($patientGender, ['M', 'F', 'No especifica'], true)) {
+            $errors['patient.gender'] = 'must_be_M_F_or_No_especifica';
+        }
+        if ($patientReason !== '' && strlen($patientReason) > 1000) {
+            $errors['patient.reason'] = 'too_long';
+        }
+
+        $booker = is_array($payload['booker'] ?? null) ? $payload['booker'] : [];
+        if ($bookerIsPatient === false) {
+            if (trim((string)($booker['name'] ?? '')) === '') {
+                $errors['booker.name'] = 'required';
+            }
+            if (trim((string)($booker['phone'] ?? '')) === '') {
+                $errors['booker.phone'] = 'required';
+            }
+            $bookerEmail = trim((string)($booker['email'] ?? ''));
+            if ($bookerEmail === '') {
+                $errors['booker.email'] = 'required';
+            } elseif (filter_var($bookerEmail, FILTER_VALIDATE_EMAIL) === false) {
+                $errors['booker.email'] = 'invalid_email';
+            }
+            if (trim((string)($booker['relationship'] ?? '')) === '') {
+                $errors['booker.relationship'] = 'required';
+            }
+        }
+
+        $otp = is_array($payload['otp'] ?? null) ? $payload['otp'] : [];
+        if (isset($otp['otp_id']) && !$this->isValidNumeric((string)$otp['otp_id'])) {
+            $errors['otp.otp_id'] = 'must_be_numeric';
+        }
+        if (isset($otp['channel']) && !in_array((string)$otp['channel'], ['sms', 'email'], true)) {
+            $errors['otp.channel'] = 'must_be_sms_or_email';
+        }
+
+        return [
+            'errors' => $errors,
+            'doctor_id' => $doctorId,
+            'start_at' => $startAt,
+            'end_at' => $endAt,
+            'visit_kind' => $visitKind,
+            'patient_type' => $patientType,
+            'booker_is_patient' => $bookerIsPatient,
+            'booker' => $booker,
+            'patient' => [
+                'name' => $patientName,
+                'phone' => $patientPhone,
+                'email' => $patientEmail,
+                'dob' => $patientDob,
+                'gender' => $patientGender,
+                'reason' => $patientReason,
+            ],
+            'extras' => is_array($payload['extras'] ?? null) ? $payload['extras'] : [],
+            'otp' => $otp,
+            'payment_mode' => $paymentMode,
+        ];
+    }
+
+    private function buildReserveCreatePayload(array $validated, string $consultorioId): array
+    {
+        $patient = is_array($validated['patient'] ?? null) ? $validated['patient'] : [];
+        $contacts = [];
+        if (trim((string)($patient['phone'] ?? '')) !== '') {
+            $contacts[] = [
+                'type' => 'phone',
+                'value' => trim((string)$patient['phone']),
+            ];
+        }
+        if (trim((string)($patient['email'] ?? '')) !== '') {
+            $contacts[] = [
+                'type' => 'email',
+                'value' => trim((string)$patient['email']),
+            ];
+        }
+
+        return [
+            'doctor_id' => (string)$validated['doctor_id'],
+            'consultorio_id' => $consultorioId,
+            'start_at' => (string)$validated['start_at'],
+            'end_at' => (string)$validated['end_at'],
+            'modality' => (string)$validated['visit_kind'],
+            'status' => 'pending_otp',
+            'channel_origin' => 'public_agenda',
+            'created_by_role' => 'patient',
+            'created_by_id' => 'public_reserve',
+            'patient' => [
+                'display_name' => trim((string)($patient['name'] ?? '')),
+                'doctor_id' => (string)$validated['doctor_id'],
+                'birthdate' => (string)($patient['dob'] ?? ''),
+                'sex' => $this->normalizeGender((string)($patient['gender'] ?? '')),
+                'contacts' => $contacts,
+            ],
+        ];
+    }
+
+    private function mapSlotErrorForReserve(array $slotCheck, string $doctorId, string $consultorioId, string $startAt, string $endAt): array
+    {
+        $error = (string)($slotCheck['error'] ?? 'slot_unavailable');
+        if (in_array($error, ['slot_unavailable', 'collision'], true)) {
+            return $this->error('slot_taken', 'El horario ya fue reservado, elige otro', [
+                'route' => 'public_reserve',
+                'start_at' => $startAt,
+                'end_at' => $endAt,
+                'doctor_id' => $doctorId,
+                'consultorio_id_used' => $consultorioId,
+            ]);
+        }
+
+        return $this->error(
+            $error,
+            (string)($slotCheck['message'] ?? 'slot unavailable'),
+            array_merge([
+                'route' => 'public_reserve',
+                'doctor_id' => $doctorId,
+                'consultorio_id_used' => $consultorioId,
+            ], (array)($slotCheck['meta'] ?? []))
+        );
+    }
+
+    private function mapWriterCreateErrorForReserve(array $created, string $doctorId, string $consultorioId, string $startAt, string $endAt): array
+    {
+        $error = (string)($created['error'] ?? 'db_error');
+        $message = strtolower((string)($created['message'] ?? ''));
+        if ($error === 'collision' || $error === 'slot_unavailable' || str_contains($message, 'collision') || str_contains($message, 'duplicate')) {
+            return $this->error('slot_taken', 'El horario ya fue reservado, elige otro', [
+                'route' => 'public_reserve',
+                'start_at' => $startAt,
+                'end_at' => $endAt,
+                'doctor_id' => $doctorId,
+                'consultorio_id_used' => $consultorioId,
+            ]);
+        }
+
+        return $this->error(
+            $error,
+            (string)($created['message'] ?? 'database error'),
+            array_merge([
+                'route' => 'public_reserve',
+                'doctor_id' => $doctorId,
+                'consultorio_id_used' => $consultorioId,
+            ], (array)($created['meta'] ?? []))
+        );
+    }
+
+    private function ensureFlowTable(): void
+    {
+        if (!$this->pdo) {
+            throw new RuntimeException('database error');
+        }
+
+        $sql = 'CREATE TABLE IF NOT EXISTS ' . self::FLOW_TABLE . ' (
+            flow_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            appointment_id VARCHAR(64) NOT NULL,
+            doctor_id VARCHAR(64) NOT NULL,
+            consultorio_id VARCHAR(64) NOT NULL,
+            start_at DATETIME NOT NULL,
+            end_at DATETIME NOT NULL,
+            status VARCHAR(32) NOT NULL DEFAULT "pending_otp",
+            otp_id BIGINT UNSIGNED DEFAULT NULL,
+            otp_channel VARCHAR(16) DEFAULT NULL,
+            otp_external_id VARCHAR(64) DEFAULT NULL,
+            otp_verified_at DATETIME DEFAULT NULL,
+            expires_at DATETIME NOT NULL,
+            cancel_token VARCHAR(64) NOT NULL,
+            payload_json JSON DEFAULT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (flow_id),
+            UNIQUE KEY uniq_public_flow_appointment (appointment_id),
+            KEY idx_public_flow_status_expires (status, expires_at),
+            KEY idx_public_flow_slot (doctor_id, consultorio_id, start_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
+
+        $this->pdo->exec($sql);
+    }
+
+    private function expirePendingReservations(): void
+    {
+        if (!$this->pdo) {
+            return;
+        }
+
+        $now = $this->now()->format('Y-m-d H:i:s');
+        $cutoff = $this->now()->sub(new DateInterval('PT' . self::OTP_TTL_MINUTES . 'M'))->format('Y-m-d H:i:s');
+
+        try {
+            $stmt = $this->pdo->prepare(
+                'UPDATE ' . self::FLOW_TABLE . '
+                 SET status = "expired"
+                 WHERE status = "pending_otp" AND expires_at < :now'
+            );
+            $stmt->execute(['now' => $now]);
+        } catch (\Throwable $e) {
+            return;
+        }
+
+        [$appointmentsTable] = $this->getAppointmentsTableAndPk();
+        try {
+            $stmt = $this->pdo->prepare(
+                "UPDATE {$appointmentsTable}
+                 SET status = \"canceled\"
+                 WHERE status = \"pending_otp\" AND channel_origin = \"public_agenda\" AND created_at < :cutoff"
+            );
+            $stmt->execute(['cutoff' => $cutoff]);
+        } catch (\Throwable $e) {
+            // noop
+        }
+    }
+
+    private function insertReserveFlow(
+        string $appointmentId,
+        string $doctorId,
+        string $consultorioId,
+        array $validated,
+        DateTimeImmutable $expiresAt,
+        string $cancelToken
+    ): array {
+        if (!$this->pdo) {
+            return ['ok' => false];
+        }
+
+        $payloadJson = json_encode($validated, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($payloadJson === false) {
+            $payloadJson = '{}';
+        }
+
+        try {
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO ' . self::FLOW_TABLE . '
+                (appointment_id, doctor_id, consultorio_id, start_at, end_at, status, otp_id, otp_channel, otp_external_id, otp_verified_at, expires_at, cancel_token, payload_json, created_at, updated_at)
+                VALUES
+                (:appointment_id, :doctor_id, :consultorio_id, :start_at, :end_at, "pending_otp", :otp_id, :otp_channel, NULL, NULL, :expires_at, :cancel_token, :payload_json, :created_at, :updated_at)'
+            );
+            $stmt->execute([
+                'appointment_id' => $appointmentId,
+                'doctor_id' => $doctorId,
+                'consultorio_id' => $consultorioId,
+                'start_at' => (string)$validated['start_at'],
+                'end_at' => (string)$validated['end_at'],
+                'otp_id' => isset($validated['otp']['otp_id']) ? (int)$validated['otp']['otp_id'] : null,
+                'otp_channel' => isset($validated['otp']['channel']) ? (string)$validated['otp']['channel'] : null,
+                'expires_at' => $expiresAt->format('Y-m-d H:i:s'),
+                'cancel_token' => $cancelToken,
+                'payload_json' => $payloadJson,
+                'created_at' => $this->now()->format('Y-m-d H:i:s'),
+                'updated_at' => $this->now()->format('Y-m-d H:i:s'),
+            ]);
+            return ['ok' => true];
+        } catch (\Throwable $e) {
+            return ['ok' => false];
+        }
+    }
+
+    private function findFlowByAppointmentId(string $appointmentId): ?array
+    {
+        if (!$this->pdo) {
+            return null;
+        }
+        try {
+            $stmt = $this->pdo->prepare('SELECT * FROM ' . self::FLOW_TABLE . ' WHERE appointment_id = :appointment_id LIMIT 1');
+            $stmt->execute(['appointment_id' => $appointmentId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return is_array($row) ? $row : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function markFlowExpired(string $appointmentId): void
+    {
+        if (!$this->pdo) {
+            return;
+        }
+        try {
+            $stmt = $this->pdo->prepare('UPDATE ' . self::FLOW_TABLE . ' SET status = "expired" WHERE appointment_id = :appointment_id');
+            $stmt->execute(['appointment_id' => $appointmentId]);
+        } catch (\Throwable $e) {
+            // noop
+        }
+    }
+
+    private function markFlowConfirmed(string $appointmentId, int $otpId, string $otpChannel, string $otpExternalId): void
+    {
+        if (!$this->pdo) {
+            return;
+        }
+        try {
+            $stmt = $this->pdo->prepare(
+                'UPDATE ' . self::FLOW_TABLE . '
+                 SET status = "confirmed", otp_id = :otp_id, otp_channel = :otp_channel, otp_external_id = :otp_external_id, otp_verified_at = :otp_verified_at
+                 WHERE appointment_id = :appointment_id'
+            );
+            $stmt->execute([
+                'otp_id' => $otpId,
+                'otp_channel' => $otpChannel !== '' ? $otpChannel : null,
+                'otp_external_id' => $otpExternalId !== '' ? $otpExternalId : null,
+                'otp_verified_at' => $this->now()->format('Y-m-d H:i:s'),
+                'appointment_id' => $appointmentId,
+            ]);
+        } catch (\Throwable $e) {
+            // noop
+        }
+    }
+
+    private function updateAppointmentStatus(string $appointmentId, string $toStatus): array
+    {
+        if (!$this->pdo) {
+            return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => []];
+        }
+
+        [$table, $pk] = $this->getAppointmentsTableAndPk();
+
+        try {
+            $stmt = $this->pdo->prepare(
+                "UPDATE {$table} SET status = :to_status WHERE {$pk} = :appointment_id AND status IN ('pending_otp', 'confirmed')"
+            );
+            $stmt->execute([
+                'to_status' => $toStatus,
+                'appointment_id' => $appointmentId,
+            ]);
+
+            if ($stmt->rowCount() > 0) {
+                return ['ok' => true];
+            }
+
+            $find = $this->pdo->prepare("SELECT status FROM {$table} WHERE {$pk} = :appointment_id LIMIT 1");
+            $find->execute(['appointment_id' => $appointmentId]);
+            $currentRaw = $find->fetchColumn();
+            $current = is_string($currentRaw) ? $currentRaw : '';
+            if ($current === 'confirmed' && $toStatus === 'confirmed') {
+                return ['ok' => true];
+            }
+            if ($current === '') {
+                return ['ok' => false, 'error' => 'not_found', 'message' => 'appointment not found', 'meta' => ['appointment_id' => $appointmentId]];
+            }
+            return ['ok' => false, 'error' => 'conflict', 'message' => 'appointment status conflict', 'meta' => ['status' => $current]];
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'error' => 'db_error', 'message' => 'database error', 'meta' => []];
+        }
+    }
+
+    private function tryCancelPendingAppointment(string $appointmentId): void
+    {
+        if (!$this->pdo) {
+            return;
+        }
+        [$table, $pk] = $this->getAppointmentsTableAndPk();
+        try {
+            $stmt = $this->pdo->prepare(
+                "UPDATE {$table}
+                 SET status = \"canceled\"
+                 WHERE {$pk} = :appointment_id AND status = \"pending_otp\""
+            );
+            $stmt->execute(['appointment_id' => $appointmentId]);
+        } catch (\Throwable $e) {
+            // noop
+        }
+    }
+
+    private function getAppointmentsTableAndPk(): array
+    {
+        $table = 'agenda_appointments';
+        $pk = 'appointment_id';
+        try {
+            $config = require __DIR__ . '/../config/agenda.php';
+            if (is_array($config) && trim((string)($config['appointments_table'] ?? '')) !== '') {
+                $table = trim((string)$config['appointments_table']);
+            }
+            if (is_array($config) && trim((string)($config['appointment_pk'] ?? '')) !== '') {
+                $pk = trim((string)$config['appointment_pk']);
+            }
+        } catch (\Throwable $e) {
+            // defaults
+        }
+        return [$table, $pk];
+    }
+
+    private function normalizeBooleanInput($value): ?bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_int($value)) {
+            if ($value === 1) {
+                return true;
+            }
+            if ($value === 0) {
+                return false;
+            }
+        }
+        if (is_string($value)) {
+            $v = strtolower(trim($value));
+            if (in_array($v, ['1', 'true', 'yes', 'si'], true)) {
+                return true;
+            }
+            if (in_array($v, ['0', 'false', 'no'], true)) {
+                return false;
+            }
+        }
+        return null;
+    }
+
+    private function isValidDateYmd(string $value): bool
+    {
+        $dt = DateTimeImmutable::createFromFormat('Y-m-d', $value, new DateTimeZone(self::TIMEZONE));
+        return $dt instanceof DateTimeImmutable && $dt->format('Y-m-d') === $value;
+    }
+
+    private function normalizeGender(string $value): ?string
+    {
+        if ($value === 'M') {
+            return 'M';
+        }
+        if ($value === 'F') {
+            return 'F';
+        }
+        return null;
     }
 
     private function validateRequestPayload(array $payload): array

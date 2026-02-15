@@ -178,6 +178,12 @@ try {
             } elseif ($method === 'POST' && ($segments[1] ?? '') === 'otp' && ($segments[2] ?? '') === 'verify' && !isset($segments[3])) {
                 $publicOtp = new PublicOtpController();
                 $response = $publicOtp->verify(read_json_body());
+            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'appointments' && ($segments[2] ?? '') === 'reserve' && !isset($segments[3])) {
+                $publicAppointments = new PublicAppointmentsController();
+                $response = $publicAppointments->reserve(read_json_body());
+            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'appointments' && ($segments[2] ?? '') === 'confirm' && !isset($segments[3])) {
+                $publicAppointments = new PublicAppointmentsController();
+                $response = $publicAppointments->confirm(read_json_body());
             } elseif ($method === 'POST' && ($segments[1] ?? '') === 'appointments' && ($segments[2] ?? '') === 'request' && !isset($segments[3])) {
                 $publicAppointments = new PublicAppointmentsController();
                 $response = $publicAppointments->request(read_json_body());
