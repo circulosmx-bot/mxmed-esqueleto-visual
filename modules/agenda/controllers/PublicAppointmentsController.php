@@ -479,7 +479,6 @@ class PublicAppointmentsController
 
         try {
             $this->ensureFlowTable();
-            $this->expirePendingReservations();
         } catch (\Throwable $e) {
             return $this->error('db_error', 'database error', ['route' => 'public_cancel']);
         }
@@ -509,10 +508,7 @@ class PublicAppointmentsController
 
             if (!is_array($appointment)) {
                 $this->pdo->rollBack();
-                return $this->error('appointment_missing', 'appointment missing', [
-                    'route' => 'public_cancel',
-                    'appointment_id' => $appointmentId,
-                ]);
+                return $this->error('invalid_token', 'invalid token', ['route' => 'public_cancel']);
             }
 
             $currentStatus = strtolower(trim((string)($appointment['status'] ?? '')));

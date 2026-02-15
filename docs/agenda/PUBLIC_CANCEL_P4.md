@@ -57,7 +57,7 @@
 - `validation_error`: falta `cancel_token` o `reason` > 280.
 - `invalid_token`: token inexistente.
 - `not_cancelable`: estado distinto de `pending_otp|confirmed|canceled`.
-- `appointment_missing`: flujo existe pero cita no existe.
+- `invalid_token`: también se usa cuando el flow existe pero la cita ya no existe (hardening para no filtrar información).
 
 ## Comportamiento de slot
 
