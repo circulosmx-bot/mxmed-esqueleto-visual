@@ -68,7 +68,8 @@
     otpId: null,
     confirmed: false,
     canceled: false,
-    autoStepTimer: null
+    autoStepTimer: null,
+    didAutoAdvanceSlot: false
   };
 
   if (doctorId === '') {
@@ -499,6 +500,7 @@
   function restartFlow() {
     window.clearTimeout(state.autoStepTimer);
     state.autoStepTimer = null;
+    state.didAutoAdvanceSlot = false;
     state.step = 1;
     state.slot = null;
     state.appointmentId = null;
@@ -549,9 +551,10 @@
   }
 
   function scheduleAutoAdvanceToDataStep() {
-    if (!state.slot || state.step !== 1) {
+    if (!state.slot || state.step !== 1 || state.didAutoAdvanceSlot) {
       return;
     }
+    state.didAutoAdvanceSlot = true;
     window.clearTimeout(state.autoStepTimer);
     state.autoStepTimer = window.setTimeout(function () {
       if (state.step !== 1 || !state.slot) {
