@@ -614,7 +614,7 @@
       elements.selectedPatientContext.textContent = isBookerPatient() ? 'Para mí' : 'Para otra persona';
     }
     if (elements.selectedBookerContext) {
-      elements.selectedBookerContext.textContent = isBookerPatient() ? 'La misma persona paciente.' : 'Se solicitarán tus datos como quien agenda.';
+      elements.selectedBookerContext.textContent = isBookerPatient() ? 'La misma persona.' : 'Una persona distinta al paciente.';
     }
   }
 
