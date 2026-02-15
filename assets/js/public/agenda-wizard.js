@@ -18,6 +18,7 @@
     availabilityError: document.getElementById('availabilityError'),
     retryAvailabilityBtn: document.getElementById('retryAvailabilityBtn'),
     slotsContainer: document.getElementById('slotsContainer'),
+    changeSlotBtn: document.getElementById('changeSlotBtn'),
     selectedSlotNotice: document.getElementById('selectedSlotNotice'),
     selectedSlotText: document.getElementById('selectedSlotText'),
     selectedDoctorText: document.getElementById('selectedDoctorText'),
@@ -112,6 +113,13 @@
     elements.retryAvailabilityBtn.addEventListener('click', function () {
       loadAvailability();
     });
+
+    if (elements.changeSlotBtn) {
+      elements.changeSlotBtn.addEventListener('click', function () {
+        setStep(1);
+        scrollToSlots();
+      });
+    }
 
     elements.bookerIsPatient.addEventListener('change', syncBookerFieldsVisibility);
     if (elements.bookerIsOther) {
@@ -577,6 +585,16 @@
 
   function syncBookerFieldsVisibility() {
     elements.bookerFields.classList.toggle('d-none', isBookerPatient());
+  }
+
+  function scrollToSlots() {
+    var target = elements.slotsContainer || document.getElementById('step1');
+    if (!target || typeof target.scrollIntoView !== 'function') {
+      return;
+    }
+    window.requestAnimationFrame(function () {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   }
 
   function isBookerPatient() {

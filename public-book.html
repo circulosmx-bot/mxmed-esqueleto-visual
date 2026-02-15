@@ -106,6 +106,7 @@
         <div class="summary-box mb-3 small">
           <div><strong>Horario:</strong> <span id="selectedSlotText">-</span></div>
           <div><strong>Doctor:</strong> <span id="selectedDoctorText">-</span></div>
+          <button id="changeSlotBtn" type="button" class="btn btn-link btn-sm px-0 mt-1">Cambiar horario</button>
         </div>
 
         <div class="mb-2">
@@ -139,7 +140,7 @@
         </div>
 
         <div id="bookerFields" class="d-none mb-2">
-          <label class="form-label">Datos de quien agenda</label>
+          <label class="form-label">Ahora cuéntanos quién eres tú (quien agenda)</label>
           <input id="bookerName" class="form-control mb-2" type="text" placeholder="Nombre completo" maxlength="160" />
           <input id="bookerPhone" class="form-control mb-2" type="tel" placeholder="Celular WhatsApp" maxlength="32" />
           <input id="bookerEmail" class="form-control" type="email" placeholder="Correo" maxlength="191" />
@@ -156,8 +157,8 @@
             <input id="patientLastName" class="form-control" type="text" maxlength="80" />
           </div>
           <div class="col-12 col-md-4">
-            <label for="patientSecondLastName" class="form-label">Segundo apellido (opcional)</label>
-            <input id="patientSecondLastName" class="form-control" type="text" maxlength="80" />
+            <label for="patientSecondLastName" class="form-label">Segundo apellido</label>
+            <input id="patientSecondLastName" class="form-control" type="text" maxlength="80" placeholder="Opcional" />
           </div>
         </div>
         <label for="patientPhone" class="form-label">Celular WhatsApp</label>
@@ -202,7 +203,7 @@
         <div class="mb-2">
           <label for="patientGender" class="form-label">Sexo</label>
           <select id="patientGender" class="form-select">
-            <option value="">Selecciona sexo</option>
+            <option value="">Selecciona</option>
             <option value="M">Masculino</option>
             <option value="F">Femenino</option>
             <option value="No especifica">No especifica</option>
