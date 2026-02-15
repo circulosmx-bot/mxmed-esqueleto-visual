@@ -1,14 +1,14 @@
 -- MXMed Agenda Publica P3
 -- Reserve + confirm OTP + anti doble-booking.
 -- SAFE DROP uniq_appointments_slot (idempotente)
-SET  := (
+SET  = (
   SELECT COUNT(*)
   FROM INFORMATION_SCHEMA.STATISTICS
   WHERE TABLE_SCHEMA = DATABASE()
     AND TABLE_NAME = "agenda_appointments"
     AND INDEX_NAME = "uniq_appointments_slot"
 );
-SET  := IF( > 0,
+SET  = IF( > 0,
   "ALTER TABLE `agenda_appointments` DROP INDEX `uniq_appointments_slot`",
   "SELECT 1"
 );
