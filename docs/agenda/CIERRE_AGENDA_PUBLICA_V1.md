@@ -58,6 +58,9 @@ Reglas de transicion:
   - `pending_otp -> canceled` (cancelacion)
   - `pending_otp -> expired` (expire)
 
+Estados terminales del flow:
+- `confirmed`, `canceled`, `expired` (una vez que llega aqui, el flow ya no debe volver a `pending_otp`).
+
 Reglas:
 - `reserve` crea flow en `pending_otp`.
 - `confirm` marca flow `confirmed`.
