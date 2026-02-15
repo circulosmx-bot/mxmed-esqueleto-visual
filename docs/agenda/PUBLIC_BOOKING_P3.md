@@ -58,7 +58,8 @@ Reserva el slot en `pending_otp` para bloquear concurrencia temprano.
   "data": {
     "appointment_id": "...",
     "status": "pending_otp",
-    "expires_in": 600
+    "expires_in": 600,
+    "cancel_token": "..."
   },
   "meta": {
     "route": "public_reserve"
@@ -144,5 +145,5 @@ Archivo de apoyo:
 - `modules/agenda/db/public_booking_p3.sql`
 
 Incluye:
-- `UNIQUE KEY uniq_appointments_slot (doctor_id, consultorio_id, start_at)`.
+- `active_slot_key` (GENERATED) + `UNIQUE KEY uniq_active_slot (active_slot_key)` para bloquear solo citas activas.
 - Tabla `agenda_public_appointment_flows` para estado de reserva publica + concepto de `cancel_token` (uso futuro).
