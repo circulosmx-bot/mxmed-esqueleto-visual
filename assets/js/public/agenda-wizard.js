@@ -21,6 +21,8 @@
     changeSlotBtn: document.getElementById('changeSlotBtn'),
     selectedSlotNotice: document.getElementById('selectedSlotNotice'),
     selectedSlotText: document.getElementById('selectedSlotText'),
+    selectedPatientContext: document.getElementById('selectedPatientContext'),
+    selectedBookerContext: document.getElementById('selectedBookerContext'),
     selectedDoctorText: document.getElementById('selectedDoctorText'),
     visitKind: document.getElementById('visitKind'),
     patientType: document.getElementById('patientType'),
@@ -116,6 +118,7 @@
 
     if (elements.changeSlotBtn) {
       elements.changeSlotBtn.addEventListener('click', function () {
+        state.didAutoAdvanceSlot = true;
         setStep(1);
         scrollToSlots();
       });
@@ -251,9 +254,11 @@
     for (var i = 0; i < buttons.length; i += 1) {
       buttons[i].classList.remove('btn-primary');
       buttons[i].classList.add('btn-outline-primary');
+      buttons[i].classList.remove('is-selected');
     }
     selected.classList.remove('btn-outline-primary');
     selected.classList.add('btn-primary');
+    selected.classList.add('is-selected');
   }
 
   function updateSlotSummary() {
@@ -270,7 +275,7 @@
       elements.selectedSlotNotice.textContent = '';
       return;
     }
-    elements.selectedSlotNotice.textContent = '✅ Has seleccionado: ' + text;
+    elements.selectedSlotNotice.textContent = 'Horario seleccionado. Continúa para confirmar tus datos.';
     elements.selectedSlotNotice.classList.remove('d-none');
   }
 
@@ -552,10 +557,12 @@
     elements.progressFill.style.width = String(state.step * 25) + '%';
     elements.backBtn.disabled = state.step <= 1;
     elements.nextBtn.classList.toggle('d-none', state.step >= 3);
+    elements.nextBtn.disabled = state.step === 1 && !state.slot;
     if (state.step === 1 && state.slot) {
       restoreSelectedSlotButton();
     }
     updateSlotSummary();
+    updateBookingContextSummary();
   }
 
   function scheduleAutoAdvanceToDataStep() {
@@ -585,6 +592,7 @@
 
   function syncBookerFieldsVisibility() {
     elements.bookerFields.classList.toggle('d-none', isBookerPatient());
+    updateBookingContextSummary();
   }
 
   function scrollToSlots() {
@@ -599,6 +607,15 @@
 
   function isBookerPatient() {
     return !!(elements.bookerIsPatient && elements.bookerIsPatient.checked);
+  }
+
+  function updateBookingContextSummary() {
+    if (elements.selectedPatientContext) {
+      elements.selectedPatientContext.textContent = isBookerPatient() ? 'Para mí' : 'Para otra persona';
+    }
+    if (elements.selectedBookerContext) {
+      elements.selectedBookerContext.textContent = isBookerPatient() ? 'La misma persona paciente.' : 'Se solicitarán tus datos como quien agenda.';
+    }
   }
 
   async function postJson(path, payload) {
