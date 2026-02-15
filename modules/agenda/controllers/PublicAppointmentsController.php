@@ -329,6 +329,7 @@ class PublicAppointmentsController
             'appointment_id' => $appointmentId,
             'status' => 'pending_otp',
             'expires_in' => self::OTP_TTL_MINUTES * 60,
+            'cancel_token' => $cancelToken,
         ], [
             'route' => 'public_reserve',
             'doctor_id' => $doctorId,
@@ -451,6 +452,113 @@ class PublicAppointmentsController
         ], [
             'route' => 'public_confirm',
         ]);
+    }
+
+    public function cancel(array $payload = []): array
+    {
+        if ($this->dbError || !$this->pdo) {
+            return $this->error('db_error', 'database error', ['route' => 'public_cancel']);
+        }
+
+        $cancelToken = trim((string)($payload['cancel_token'] ?? ''));
+        $reason = trim((string)($payload['reason'] ?? ''));
+
+        $fields = [];
+        if ($cancelToken === '') {
+            $fields['cancel_token'] = 'required';
+        }
+        if ($reason !== '' && strlen($reason) > 280) {
+            $fields['reason'] = 'max_280';
+        }
+        if (!empty($fields)) {
+            return $this->error('validation_error', 'invalid payload', [
+                'route' => 'public_cancel',
+                'fields' => $fields,
+            ]);
+        }
+
+        try {
+            $this->ensureFlowTable();
+            $this->expirePendingReservations();
+        } catch (\Throwable $e) {
+            return $this->error('db_error', 'database error', ['route' => 'public_cancel']);
+        }
+
+        [$appointmentsTable, $appointmentPk] = $this->getAppointmentsTableAndPk();
+
+        try {
+            $this->pdo->beginTransaction();
+
+            $flow = $this->findFlowByCancelTokenForUpdate($cancelToken);
+            if (!$flow) {
+                $this->pdo->rollBack();
+                return $this->error('invalid_token', 'invalid token', ['route' => 'public_cancel']);
+            }
+
+            $appointmentId = (string)($flow['appointment_id'] ?? '');
+            if ($appointmentId === '') {
+                $this->pdo->rollBack();
+                return $this->error('invalid_token', 'invalid token', ['route' => 'public_cancel']);
+            }
+
+            $appointmentStmt = $this->pdo->prepare(
+                "SELECT * FROM {$appointmentsTable} WHERE {$appointmentPk} = :appointment_id LIMIT 1 FOR UPDATE"
+            );
+            $appointmentStmt->execute(['appointment_id' => $appointmentId]);
+            $appointment = $appointmentStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!is_array($appointment)) {
+                $this->pdo->rollBack();
+                return $this->error('appointment_missing', 'appointment missing', [
+                    'route' => 'public_cancel',
+                    'appointment_id' => $appointmentId,
+                ]);
+            }
+
+            $currentStatus = strtolower(trim((string)($appointment['status'] ?? '')));
+            if (in_array($currentStatus, ['canceled', 'cancelled'], true)) {
+                $this->updateFlowCancellationAudit($flow, $reason, 'already_canceled');
+                $this->pdo->commit();
+                return $this->success([
+                    'appointment_id' => $appointmentId,
+                    'status' => 'canceled',
+                ], [
+                    'route' => 'public_cancel',
+                    'released_slot' => true,
+                    'idempotent' => true,
+                ], 'already_canceled');
+            }
+
+            if (!in_array($currentStatus, ['pending_otp', 'confirmed'], true)) {
+                $this->pdo->rollBack();
+                return $this->error('not_cancelable', 'not cancelable', [
+                    'route' => 'public_cancel',
+                    'appointment_id' => $appointmentId,
+                    'status' => $currentStatus,
+                ]);
+            }
+
+            $cancelStmt = $this->pdo->prepare(
+                "UPDATE {$appointmentsTable} SET status = 'canceled' WHERE {$appointmentPk} = :appointment_id"
+            );
+            $cancelStmt->execute(['appointment_id' => $appointmentId]);
+
+            $this->updateFlowCancellationAudit($flow, $reason, 'canceled');
+
+            $this->pdo->commit();
+            return $this->success([
+                'appointment_id' => $appointmentId,
+                'status' => 'canceled',
+            ], [
+                'route' => 'public_cancel',
+                'released_slot' => true,
+            ], 'canceled');
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            return $this->error('db_error', 'database error', ['route' => 'public_cancel']);
+        }
     }
 
     private function validateReservePayload(array $payload): array
@@ -792,6 +900,21 @@ class PublicAppointmentsController
         }
     }
 
+    private function findFlowByCancelTokenForUpdate(string $cancelToken): ?array
+    {
+        if (!$this->pdo) {
+            return null;
+        }
+        try {
+            $stmt = $this->pdo->prepare('SELECT * FROM ' . self::FLOW_TABLE . ' WHERE cancel_token = :cancel_token LIMIT 1 FOR UPDATE');
+            $stmt->execute(['cancel_token' => $cancelToken]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return is_array($row) ? $row : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     private function markFlowExpired(string $appointmentId): void
     {
         if (!$this->pdo) {
@@ -822,6 +945,49 @@ class PublicAppointmentsController
                 'otp_external_id' => $otpExternalId !== '' ? $otpExternalId : null,
                 'otp_verified_at' => $this->now()->format('Y-m-d H:i:s'),
                 'appointment_id' => $appointmentId,
+            ]);
+        } catch (\Throwable $e) {
+            // noop
+        }
+    }
+
+    private function updateFlowCancellationAudit(array $flow, string $reason, string $flowStatus): void
+    {
+        if (!$this->pdo) {
+            return;
+        }
+
+        $currentPayload = [];
+        $rawPayload = $flow['payload_json'] ?? null;
+        if (is_string($rawPayload) && trim($rawPayload) !== '') {
+            $decoded = json_decode($rawPayload, true);
+            if (is_array($decoded)) {
+                $currentPayload = $decoded;
+            }
+        }
+
+        $currentPayload['cancellation'] = [
+            'reason' => $reason,
+            'status' => $flowStatus,
+            'canceled_at' => $this->now()->format('Y-m-d H:i:s'),
+        ];
+
+        $payloadJson = json_encode($currentPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($payloadJson === false) {
+            $payloadJson = '{}';
+        }
+
+        try {
+            $stmt = $this->pdo->prepare(
+                'UPDATE ' . self::FLOW_TABLE . '
+                 SET status = :status, payload_json = :payload_json, updated_at = :updated_at
+                 WHERE flow_id = :flow_id'
+            );
+            $stmt->execute([
+                'status' => $flowStatus,
+                'payload_json' => $payloadJson,
+                'updated_at' => $this->now()->format('Y-m-d H:i:s'),
+                'flow_id' => (int)($flow['flow_id'] ?? 0),
             ]);
         } catch (\Throwable $e) {
             // noop
