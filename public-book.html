@@ -98,6 +98,7 @@
         <div id="availabilityError" class="alert alert-danger d-none"></div>
         <button id="retryAvailabilityBtn" type="button" class="btn btn-outline-secondary btn-sm d-none mb-2">Reintentar</button>
         <div id="slotsContainer"></div>
+        <div id="selectedSlotNotice" class="alert alert-success d-none mt-2 mb-0 small" role="status"></div>
       </section>
 
       <section id="step2" class="step-pane">
@@ -123,9 +124,18 @@
           </select>
         </div>
 
-        <div class="form-check form-switch mb-2">
-          <input class="form-check-input" type="checkbox" id="bookerIsPatient" checked>
-          <label class="form-check-label" for="bookerIsPatient">Quien agenda es el paciente</label>
+        <div class="mb-2">
+          <label class="form-label d-block mb-1">¿La cita es para ti o para otra persona?</label>
+          <div class="d-flex flex-column flex-sm-row gap-3">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="bookerIsPatientChoice" id="bookerIsPatient" checked>
+              <label class="form-check-label" for="bookerIsPatient">Para mí</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="bookerIsPatientChoice" id="bookerIsOther">
+              <label class="form-check-label" for="bookerIsOther">Para otra persona</label>
+            </div>
+          </div>
         </div>
 
         <div id="bookerFields" class="d-none mb-2">
@@ -136,23 +146,70 @@
         </div>
 
         <label class="form-label">Datos del paciente</label>
-        <input id="patientName" class="form-control mb-2" type="text" placeholder="Nombre completo" maxlength="160" />
-        <input id="patientPhone" class="form-control mb-2" type="tel" placeholder="Celular WhatsApp" maxlength="32" />
-        <input id="patientEmail" class="form-control mb-2" type="email" placeholder="Correo" maxlength="191" />
         <div class="row g-2 mb-2">
-          <div class="col-6">
-            <input id="patientDob" class="form-control" type="date" />
+          <div class="col-12 col-md-4">
+            <label for="patientFirstName" class="form-label">Nombre(s)</label>
+            <input id="patientFirstName" class="form-control" type="text" maxlength="80" />
           </div>
-          <div class="col-6">
-            <select id="patientGender" class="form-select">
-              <option value="">Genero</option>
-              <option value="M">M</option>
-              <option value="F">F</option>
-              <option value="No especifica">No especifica</option>
+          <div class="col-12 col-md-4">
+            <label for="patientLastName" class="form-label">Primer apellido</label>
+            <input id="patientLastName" class="form-control" type="text" maxlength="80" />
+          </div>
+          <div class="col-12 col-md-4">
+            <label for="patientSecondLastName" class="form-label">Segundo apellido (opcional)</label>
+            <input id="patientSecondLastName" class="form-control" type="text" maxlength="80" />
+          </div>
+        </div>
+        <label for="patientPhone" class="form-label">Celular WhatsApp</label>
+        <input id="patientPhone" class="form-control mb-2" type="tel" maxlength="32" />
+        <label for="patientEmail" class="form-label">Correo</label>
+        <input id="patientEmail" class="form-control mb-2" type="email" maxlength="191" />
+        <div class="row g-2 mb-2">
+          <div class="col-12">
+            <label class="form-label mb-1">Fecha de nacimiento</label>
+          </div>
+          <div class="col-4">
+            <label for="patientDobYear" class="form-label">Año</label>
+            <select id="patientDobYear" class="form-select">
+              <option value="">Año</option>
+            </select>
+          </div>
+          <div class="col-4">
+            <label for="patientDobMonth" class="form-label">Mes</label>
+            <select id="patientDobMonth" class="form-select">
+              <option value="">Mes</option>
+              <option value="1">Enero</option>
+              <option value="2">Febrero</option>
+              <option value="3">Marzo</option>
+              <option value="4">Abril</option>
+              <option value="5">Mayo</option>
+              <option value="6">Junio</option>
+              <option value="7">Julio</option>
+              <option value="8">Agosto</option>
+              <option value="9">Septiembre</option>
+              <option value="10">Octubre</option>
+              <option value="11">Noviembre</option>
+              <option value="12">Diciembre</option>
+            </select>
+          </div>
+          <div class="col-4">
+            <label for="patientDobDay" class="form-label">Día</label>
+            <select id="patientDobDay" class="form-select">
+              <option value="">Día</option>
             </select>
           </div>
         </div>
-        <textarea id="patientReason" class="form-control" rows="2" maxlength="500" placeholder="Motivo de consulta (opcional)"></textarea>
+        <div class="mb-2">
+          <label for="patientGender" class="form-label">Sexo</label>
+          <select id="patientGender" class="form-select">
+            <option value="">Selecciona sexo</option>
+            <option value="M">Masculino</option>
+            <option value="F">Femenino</option>
+            <option value="No especifica">No especifica</option>
+          </select>
+        </div>
+        <label for="patientReason" class="form-label">Motivo de la consulta (opcional)</label>
+        <textarea id="patientReason" class="form-control" rows="2" maxlength="280"></textarea>
       </section>
 
       <section id="step3" class="step-pane">

@@ -18,19 +18,25 @@
     availabilityError: document.getElementById('availabilityError'),
     retryAvailabilityBtn: document.getElementById('retryAvailabilityBtn'),
     slotsContainer: document.getElementById('slotsContainer'),
+    selectedSlotNotice: document.getElementById('selectedSlotNotice'),
     selectedSlotText: document.getElementById('selectedSlotText'),
     selectedDoctorText: document.getElementById('selectedDoctorText'),
     visitKind: document.getElementById('visitKind'),
     patientType: document.getElementById('patientType'),
     bookerIsPatient: document.getElementById('bookerIsPatient'),
+    bookerIsOther: document.getElementById('bookerIsOther'),
     bookerFields: document.getElementById('bookerFields'),
     bookerName: document.getElementById('bookerName'),
     bookerPhone: document.getElementById('bookerPhone'),
     bookerEmail: document.getElementById('bookerEmail'),
-    patientName: document.getElementById('patientName'),
+    patientFirstName: document.getElementById('patientFirstName'),
+    patientLastName: document.getElementById('patientLastName'),
+    patientSecondLastName: document.getElementById('patientSecondLastName'),
     patientPhone: document.getElementById('patientPhone'),
     patientEmail: document.getElementById('patientEmail'),
-    patientDob: document.getElementById('patientDob'),
+    patientDobYear: document.getElementById('patientDobYear'),
+    patientDobMonth: document.getElementById('patientDobMonth'),
+    patientDobDay: document.getElementById('patientDobDay'),
     patientGender: document.getElementById('patientGender'),
     patientReason: document.getElementById('patientReason'),
     otpSummarySlot: document.getElementById('otpSummarySlot'),
@@ -61,7 +67,8 @@
     cancelToken: null,
     otpId: null,
     confirmed: false,
-    canceled: false
+    canceled: false,
+    autoStepTimer: null
   };
 
   if (doctorId === '') {
@@ -70,6 +77,8 @@
   }
 
   bind();
+  initDobSelectors();
+  syncBookerFieldsVisibility();
   renderStep();
   loadAvailability();
 
@@ -103,8 +112,17 @@
       loadAvailability();
     });
 
-    elements.bookerIsPatient.addEventListener('change', function () {
-      elements.bookerFields.classList.toggle('d-none', elements.bookerIsPatient.checked);
+    elements.bookerIsPatient.addEventListener('change', syncBookerFieldsVisibility);
+    if (elements.bookerIsOther) {
+      elements.bookerIsOther.addEventListener('change', syncBookerFieldsVisibility);
+    }
+
+    elements.patientDobYear.addEventListener('change', function () {
+      refreshDayOptions();
+    });
+
+    elements.patientDobMonth.addEventListener('change', function () {
+      refreshDayOptions();
     });
 
     elements.sendOtpBtn.addEventListener('click', function () {
@@ -136,6 +154,7 @@
       updateSlotSummary();
       markSelectedSlotButton(btn);
       hideAlert();
+      scheduleAutoAdvanceToDataStep();
     });
   }
 
@@ -215,6 +234,7 @@
       html += '</div></div>';
     }
     elements.slotsContainer.innerHTML = html;
+    restoreSelectedSlotButton();
   }
 
   function markSelectedSlotButton(selected) {
@@ -228,26 +248,50 @@
   }
 
   function updateSlotSummary() {
-    var text = state.slot ? (formatDayLabel(state.slot.date) + ' ' + formatTime(state.slot.startAt)) : '-';
+    var text = state.slot ? getSlotSummaryText(state.slot) : '-';
     elements.selectedSlotText.textContent = text;
     elements.selectedDoctorText.textContent = doctorId;
     elements.otpSummarySlot.textContent = text;
     elements.finalSlotText.textContent = text;
+    if (!elements.selectedSlotNotice) {
+      return;
+    }
+    if (!state.slot) {
+      elements.selectedSlotNotice.classList.add('d-none');
+      elements.selectedSlotNotice.textContent = '';
+      return;
+    }
+    elements.selectedSlotNotice.textContent = '✅ Has seleccionado: ' + text;
+    elements.selectedSlotNotice.classList.remove('d-none');
   }
 
   function validateDataStep() {
-    var patientName = String(elements.patientName.value || '').trim();
+    var patientName = getPatientFullName();
+    var patientFirstName = String(elements.patientFirstName.value || '').trim();
+    var patientLastName = String(elements.patientLastName.value || '').trim();
     var patientPhone = String(elements.patientPhone.value || '').trim();
     var patientEmail = String(elements.patientEmail.value || '').trim();
+    var patientDob = getPatientDob();
+    var patientGender = String(elements.patientGender.value || '').trim();
 
-    if (patientName === '' || patientPhone === '' || patientEmail === '') {
-      return { ok: false, message: 'Completa nombre, telefono y correo del paciente.' };
+    if (patientFirstName === '' || patientLastName === '') {
+      return { ok: false, message: 'Completa nombre(s) y primer apellido del paciente.' };
+    }
+
+    if (patientPhone === '' || patientEmail === '') {
+      return { ok: false, message: 'Completa teléfono y correo del paciente.' };
     }
     if (!isValidEmail(patientEmail)) {
       return { ok: false, message: 'Correo del paciente invalido.' };
     }
+    if (patientDob === null) {
+      return { ok: false, message: 'Selecciona una fecha de nacimiento valida.' };
+    }
+    if (patientGender !== 'M' && patientGender !== 'F' && patientGender !== 'No especifica') {
+      return { ok: false, message: 'Selecciona un sexo valido.' };
+    }
 
-    if (!elements.bookerIsPatient.checked) {
+    if (!isBookerPatient()) {
       var bookerName = String(elements.bookerName.value || '').trim();
       var bookerPhone = String(elements.bookerPhone.value || '').trim();
       var bookerEmail = String(elements.bookerEmail.value || '').trim();
@@ -263,8 +307,8 @@
   }
 
   function buildReservePayload() {
-    var bookerIsPatient = elements.bookerIsPatient.checked;
-    var patientName = String(elements.patientName.value || '').trim();
+    var bookerIsPatient = isBookerPatient();
+    var patientName = getPatientFullName();
     var patientPhone = String(elements.patientPhone.value || '').trim();
     var patientEmail = String(elements.patientEmail.value || '').trim();
 
@@ -294,7 +338,7 @@
         name: patientName,
         phone: patientPhone,
         email: patientEmail,
-        dob: String(elements.patientDob.value || '').trim(),
+        dob: getPatientDob() || '',
         gender: String(elements.patientGender.value || '').trim(),
         reason: String(elements.patientReason.value || '').trim()
       },
@@ -309,7 +353,7 @@
   }
 
   function getOtpContactValue() {
-    if (!elements.bookerIsPatient.checked) {
+    if (!isBookerPatient()) {
       return String(elements.bookerPhone.value || '').trim();
     }
     return String(elements.patientPhone.value || '').trim();
@@ -453,6 +497,8 @@
   }
 
   function restartFlow() {
+    window.clearTimeout(state.autoStepTimer);
+    state.autoStepTimer = null;
     state.step = 1;
     state.slot = null;
     state.appointmentId = null;
@@ -496,7 +542,42 @@
     elements.progressFill.style.width = String(state.step * 25) + '%';
     elements.backBtn.disabled = state.step <= 1;
     elements.nextBtn.classList.toggle('d-none', state.step >= 3);
+    if (state.step === 1 && state.slot) {
+      restoreSelectedSlotButton();
+    }
     updateSlotSummary();
+  }
+
+  function scheduleAutoAdvanceToDataStep() {
+    if (!state.slot || state.step !== 1) {
+      return;
+    }
+    window.clearTimeout(state.autoStepTimer);
+    state.autoStepTimer = window.setTimeout(function () {
+      if (state.step !== 1 || !state.slot) {
+        return;
+      }
+      setStep(2);
+    }, 550);
+  }
+
+  function restoreSelectedSlotButton() {
+    if (!state.slot) {
+      return;
+    }
+    var selector = 'button[data-date="' + cssEscape(state.slot.date) + '"][data-start-at="' + cssEscape(state.slot.startAt) + '"][data-end-at="' + cssEscape(state.slot.endAt) + '"]';
+    var selected = elements.slotsContainer.querySelector(selector);
+    if (selected) {
+      markSelectedSlotButton(selected);
+    }
+  }
+
+  function syncBookerFieldsVisibility() {
+    elements.bookerFields.classList.toggle('d-none', isBookerPatient());
+  }
+
+  function isBookerPatient() {
+    return !!(elements.bookerIsPatient && elements.bookerIsPatient.checked);
   }
 
   async function postJson(path, payload) {
@@ -587,8 +668,80 @@
     return dateTimeValue;
   }
 
+  function getSlotSummaryText(slot) {
+    return formatDayLabel(slot.date) + ' · ' + formatTime(slot.startAt) + '–' + formatTime(slot.endAt);
+  }
+
   function isValidEmail(value) {
     return /.+@.+\..+/.test(String(value || '').trim());
+  }
+
+  function initDobSelectors() {
+    var currentYear = new Date().getFullYear();
+    var minYear = currentYear - 120;
+    var yearOptions = '<option value="">Año</option>';
+
+    for (var year = currentYear; year >= minYear; year -= 1) {
+      yearOptions += '<option value="' + String(year) + '">' + String(year) + '</option>';
+    }
+
+    elements.patientDobYear.innerHTML = yearOptions;
+    refreshDayOptions();
+  }
+
+  function refreshDayOptions() {
+    var selectedYear = parseInt(String(elements.patientDobYear.value || ''), 10);
+    var selectedMonth = parseInt(String(elements.patientDobMonth.value || ''), 10);
+    var selectedDay = String(elements.patientDobDay.value || '').trim();
+
+    var maxDay = 31;
+    if (!Number.isNaN(selectedYear) && !Number.isNaN(selectedMonth)) {
+      maxDay = new Date(selectedYear, selectedMonth, 0).getDate();
+    }
+
+    var dayOptions = '<option value="">Día</option>';
+    for (var day = 1; day <= maxDay; day += 1) {
+      var isSelected = selectedDay === String(day) ? ' selected' : '';
+      dayOptions += '<option value="' + String(day) + '"' + isSelected + '>' + String(day) + '</option>';
+    }
+
+    elements.patientDobDay.innerHTML = dayOptions;
+    if (selectedDay !== '' && parseInt(selectedDay, 10) > maxDay) {
+      elements.patientDobDay.value = '';
+    }
+  }
+
+  function getPatientFullName() {
+    var firstName = String(elements.patientFirstName.value || '').trim();
+    var lastName = String(elements.patientLastName.value || '').trim();
+    var secondLastName = String(elements.patientSecondLastName.value || '').trim();
+    return [firstName, lastName, secondLastName].filter(function (part) {
+      return part !== '';
+    }).join(' ');
+  }
+
+  function getPatientDob() {
+    var year = parseInt(String(elements.patientDobYear.value || ''), 10);
+    var month = parseInt(String(elements.patientDobMonth.value || ''), 10);
+    var day = parseInt(String(elements.patientDobDay.value || ''), 10);
+
+    if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) {
+      return null;
+    }
+
+    var date = new Date(year, month - 1, day);
+    if (
+      Number.isNaN(date.getTime()) ||
+      date.getFullYear() !== year ||
+      date.getMonth() !== (month - 1) ||
+      date.getDate() !== day
+    ) {
+      return null;
+    }
+
+    var mm = String(month).padStart(2, '0');
+    var dd = String(day).padStart(2, '0');
+    return String(year) + '-' + mm + '-' + dd;
   }
 
   function escapeHtml(value) {
@@ -602,5 +755,9 @@
 
   function escapeAttr(value) {
     return escapeHtml(value).replace(/`/g, '&#96;');
+  }
+
+  function cssEscape(value) {
+    return String(value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   }
 })();
