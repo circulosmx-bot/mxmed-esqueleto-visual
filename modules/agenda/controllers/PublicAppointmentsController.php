@@ -557,6 +557,125 @@ class PublicAppointmentsController
         }
     }
 
+    public function expireReservations(array $payload = []): array
+    {
+        if ($this->dbError || !$this->pdo) {
+            return $this->error('db_error', 'database error', ['route' => 'public_expire']);
+        }
+
+        $limitRaw = $payload['limit'] ?? 50;
+        $limit = is_numeric($limitRaw) ? (int)$limitRaw : 50;
+        if ($limit <= 0) {
+            $limit = 50;
+        }
+        if ($limit > 200) {
+            $limit = 200;
+        }
+
+        $dryRun = $this->normalizeBooleanInput($payload['dry_run'] ?? false) === true;
+        $force = $this->normalizeBooleanInput($payload['force'] ?? false) === true;
+        $forceAppointmentId = trim((string)($payload['appointment_id'] ?? ''));
+
+        try {
+            $this->ensureFlowTable();
+        } catch (\Throwable $e) {
+            return $this->error('db_error', 'database error', ['route' => 'public_expire']);
+        }
+
+        [$appointmentsTable, $appointmentPk] = $this->getAppointmentsTableAndPk();
+        $now = $this->now()->format('Y-m-d H:i:s');
+        $flowsExpired = 0;
+        $appointmentsCanceled = 0;
+
+        try {
+            $this->pdo->beginTransaction();
+
+            if ($force && $this->isQaDebugEnabled() && $forceAppointmentId !== '') {
+                $forceStmt = $this->pdo->prepare(
+                    'UPDATE ' . self::FLOW_TABLE . '
+                     SET expires_at = :forced_expiry
+                     WHERE appointment_id = :appointment_id'
+                );
+                $forceStmt->execute([
+                    'forced_expiry' => $this->now()->sub(new DateInterval('PT1M'))->format('Y-m-d H:i:s'),
+                    'appointment_id' => $forceAppointmentId,
+                ]);
+            }
+
+            $flowsStmt = $this->pdo->prepare(
+                'SELECT * FROM ' . self::FLOW_TABLE . '
+                 WHERE expires_at IS NOT NULL
+                   AND expires_at <= :now
+                   AND status = "pending_otp"
+                 ORDER BY flow_id ASC
+                 LIMIT ' . $limit . '
+                 FOR UPDATE'
+            );
+            $flowsStmt->execute(['now' => $now]);
+            $flows = $flowsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (is_array($flows)) {
+                foreach ($flows as $flow) {
+                    if (!is_array($flow)) {
+                        continue;
+                    }
+
+                    $appointmentId = trim((string)($flow['appointment_id'] ?? ''));
+                    if ($appointmentId === '') {
+                        if (!$dryRun) {
+                            $this->updateFlowExpirationAudit((int)($flow['flow_id'] ?? 0), $flow, $now);
+                        }
+                        $flowsExpired += 1;
+                        continue;
+                    }
+
+                    $apptStmt = $this->pdo->prepare(
+                        "SELECT * FROM {$appointmentsTable} WHERE {$appointmentPk} = :appointment_id LIMIT 1 FOR UPDATE"
+                    );
+                    $apptStmt->execute(['appointment_id' => $appointmentId]);
+                    $appointment = $apptStmt->fetch(PDO::FETCH_ASSOC);
+
+                    if (is_array($appointment)) {
+                        $status = strtolower(trim((string)($appointment['status'] ?? '')));
+                        if ($status === 'pending_otp') {
+                            if (!$dryRun) {
+                                $cancelStmt = $this->pdo->prepare(
+                                    "UPDATE {$appointmentsTable}
+                                     SET status = 'canceled'
+                                     WHERE {$appointmentPk} = :appointment_id
+                                       AND status = 'pending_otp'"
+                                );
+                                $cancelStmt->execute(['appointment_id' => $appointmentId]);
+                            }
+                            $appointmentsCanceled += 1;
+                        }
+                    }
+
+                    if (!$dryRun) {
+                        $this->updateFlowExpirationAudit((int)($flow['flow_id'] ?? 0), $flow, $now);
+                    }
+                    $flowsExpired += 1;
+                }
+            }
+
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            return $this->error('db_error', 'database error', ['route' => 'public_expire']);
+        }
+
+        return $this->success([
+            'flows_expired' => $flowsExpired,
+            'appointments_canceled' => $appointmentsCanceled,
+        ], [
+            'route' => 'public_expire',
+            'limit_used' => $limit,
+            'dry_run' => $dryRun,
+        ], 'expire completed');
+    }
+
     private function validateReservePayload(array $payload): array
     {
         $errors = [];
@@ -984,6 +1103,47 @@ class PublicAppointmentsController
                 'payload_json' => $payloadJson,
                 'updated_at' => $this->now()->format('Y-m-d H:i:s'),
                 'flow_id' => (int)($flow['flow_id'] ?? 0),
+            ]);
+        } catch (\Throwable $e) {
+            // noop
+        }
+    }
+
+    private function updateFlowExpirationAudit(int $flowId, array $flow, string $expiredAt): void
+    {
+        if (!$this->pdo || $flowId <= 0) {
+            return;
+        }
+
+        $currentPayload = [];
+        $rawPayload = $flow['payload_json'] ?? null;
+        if (is_string($rawPayload) && trim($rawPayload) !== '') {
+            $decoded = json_decode($rawPayload, true);
+            if (is_array($decoded)) {
+                $currentPayload = $decoded;
+            }
+        }
+
+        $currentPayload['expiration'] = [
+            'expired_at' => $expiredAt,
+            'reason' => 'ttl_reached',
+        ];
+
+        $payloadJson = json_encode($currentPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($payloadJson === false) {
+            $payloadJson = '{}';
+        }
+
+        try {
+            $stmt = $this->pdo->prepare(
+                'UPDATE ' . self::FLOW_TABLE . '
+                 SET status = "expired", payload_json = :payload_json, updated_at = :updated_at
+                 WHERE flow_id = :flow_id'
+            );
+            $stmt->execute([
+                'payload_json' => $payloadJson,
+                'updated_at' => $expiredAt,
+                'flow_id' => $flowId,
             ]);
         } catch (\Throwable $e) {
             // noop
