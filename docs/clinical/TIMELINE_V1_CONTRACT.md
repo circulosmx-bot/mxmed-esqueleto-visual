@@ -109,3 +109,43 @@ El cursor es **opaco para el cliente**; solo se reenvía.
   }
 }
 ```
+
+### 4.2 Item común (shape mínimo)
+Se mantiene el shape mínimo común de item para orden y render de timeline, sin cambios de contrato en esta revisión.
+
+---
+
+## 5) Tipos de item
+Se mantiene el contrato v1 para tipos de item (`encounter`, `document`, `billing`) sin cambios en reglas o enums.
+
+---
+
+## 6) Reglas de composición
+Se mantienen las reglas de composición/agregación de timeline v1 sin cambios técnicos en esta revisión.
+
+---
+
+## 7) Errores y validaciones
+Se mantienen las validaciones y respuestas de error del contrato v1 sin cambios técnicos en esta revisión.
+
+---
+
+## 8) Seguridad y performance
+Se mantienen lineamientos de seguridad, paginación y performance del contrato v1 sin cambios técnicos en esta revisión.
+
+---
+
+## 9) QA mínimo
+Se mantiene el alcance de QA/curl de contrato v1 sin cambios técnicos en esta revisión.
+
+---
+
+## 10) Próximos pasos
+- Scaffold del endpoint timeline (read model) con contrato base.
+- Activar `include=agenda` para citas pasadas/futuras.
+- Activar `include=clinical` para documentos clínicos consolidados.
+- Validar paginación por cursor (`cursor_next`/`cursor_prev`) con curl.
+- Verificar orden estable por `sort_datetime` + `sort_key`.
+- Documentar filtros (`types`, `doc_types`, `from/to`) para QA funcional.
+- Dejar `include=billing` preparado por contrato (feature-flag/placeholder).
+- Incorporar dominio billing/fiscal en implementación posterior sin romper v1.
