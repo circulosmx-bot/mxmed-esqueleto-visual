@@ -39,15 +39,15 @@ if ($patientId !== '') {
 
     $raw = @file_get_contents($url, false, $context);
     if ($raw === false) {
-        $errorMessage = 'No se pudo consultar el historial.';
+        $errorMessage = 'No se pudo consultar el historial de atención de atención.';
     } else {
         $decoded = json_decode($raw, true);
         if (!is_array($decoded)) {
-            $errorMessage = 'Respuesta inválida del endpoint historial.';
+            $errorMessage = 'Respuesta inválida del endpoint historial de atención.';
         } else {
             $responseData = $decoded;
             if (($decoded['ok'] ?? false) !== true) {
-                $errorMessage = (string)($decoded['message'] ?? 'Error consultando historial.');
+                $errorMessage = (string)($decoded['message'] ?? 'Error consultando historial de atención.');
             } else {
                 $list = $decoded['data']['items'] ?? [];
                 $items = is_array($list) ? $list : [];
@@ -67,12 +67,12 @@ $filters = [
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Historial del paciente</title>
+  <title>Historial de atención</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
 <div class="container py-4">
-  <h1 class="h4 mb-1">Historial del paciente</h1>
+  <h1 class="h4 mb-1">Historial de atención</h1>
   <p class="text-secondary mb-3">patient_id: <code><?php echo h($patientId !== '' ? $patientId : '-'); ?></code></p>
 
   <form class="row g-2 mb-3" method="get">
@@ -81,11 +81,11 @@ $filters = [
       <input id="patient_id" name="patient_id" class="form-control" value="<?php echo h($patientId); ?>" required>
     </div>
     <div class="col-12 col-md-4 d-flex align-items-end">
-      <button type="submit" class="btn btn-primary w-100">Cargar historial</button>
+      <button type="submit" class="btn btn-primary w-100">Cargar historial de atención</button>
     </div>
   </form>
 
-  <div class="btn-group mb-3" role="group" aria-label="Filtros del historial">
+  <div class="btn-group mb-3" role="group" aria-label="Filtros del historial de atención">
     <?php foreach ($filters as $filterValue => $filterLabel): ?>
       <?php
       $isActive = ($include === $filterValue);
@@ -98,11 +98,11 @@ $filters = [
   </div>
 
   <?php if ($patientId === ''): ?>
-    <div class="alert alert-info">Captura un <code>patient_id</code> para consultar el historial.</div>
+    <div class="alert alert-info">Captura un <code>patient_id</code> para consultar el historial de atención.</div>
   <?php elseif ($errorMessage !== ''): ?>
     <div class="alert alert-danger"><?php echo h($errorMessage); ?></div>
   <?php elseif ($items === []): ?>
-    <div class="alert alert-light border">Sin eventos en el historial</div>
+    <div class="alert alert-light border">Sin eventos en el historial de atención</div>
   <?php else: ?>
     <div class="vstack gap-2">
       <?php foreach ($items as $item): ?>
@@ -123,6 +123,7 @@ $filters = [
 
             <?php if ($itemType === 'appointment'): ?>
               <?php $agenda = is_array($item['agenda'] ?? null) ? $item['agenda'] : []; ?>
+              <?php $links = is_array($item['links'] ?? null) ? $item['links'] : []; ?>
               <div class="small text-secondary">
                 status: <?php echo h((string)($agenda['status'] ?? '-')); ?> |
                 start_at: <?php echo h((string)($agenda['start_at'] ?? '-')); ?> |
@@ -130,12 +131,24 @@ $filters = [
                 modality: <?php echo h((string)($agenda['modality'] ?? '-')); ?> |
                 channel_origin: <?php echo h((string)($agenda['channel_origin'] ?? '-')); ?>
               </div>
+              <?php if (trim((string)($links['appointment_id'] ?? '')) !== ''): ?>
+                <div class="mt-2">
+                  <a class="btn btn-sm btn-outline-primary" href="/index.html#p-agenda">Ver cita</a>
+                </div>
+              <?php endif; ?>
             <?php elseif ($itemType === 'document'): ?>
               <?php $doc = is_array($item['clinical_document'] ?? null) ? $item['clinical_document'] : []; ?>
+              <?php $links = is_array($item['links'] ?? null) ? $item['links'] : []; ?>
               <div class="small text-secondary">
                 document_type: <?php echo h((string)($doc['document_type'] ?? '-')); ?> |
                 summary: <?php echo h((string)($doc['summary'] ?? '-')); ?>
               </div>
+              <?php $docUuid = trim((string)($links['document_uuid'] ?? '')); ?>
+              <?php if ($docUuid !== ''): ?>
+                <div class="mt-2">
+                  <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/document.php?uuid=<?php echo urlencode($docUuid); ?>">Ver documento</a>
+                </div>
+              <?php endif; ?>
             <?php elseif ($itemType === 'encounter'): ?>
               <?php
               $clinical = is_array($item['clinical'] ?? null) ? $item['clinical'] : [];
@@ -154,6 +167,11 @@ $filters = [
                 documentos: <?php echo count($docs); ?> |
                 tipos: <?php echo h(implode(', ', array_keys($types))); ?>
               </div>
+              <?php if (trim($encounterKey) !== ''): ?>
+                <div class="mt-2">
+                  <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/encounter.php?encounter_key=<?php echo urlencode($encounterKey); ?>">Ver atención</a>
+                </div>
+              <?php endif; ?>
             <?php endif; ?>
           </div>
         </article>
