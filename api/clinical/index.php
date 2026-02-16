@@ -686,6 +686,78 @@ function clinical_timeline_encounter_flags(array $documents): array
     return $flags;
 }
 
+function clinical_timeline_legacy_patient_ids(PDO $pdo, string $canonicalPatientId): array
+{
+    $stmt = $pdo->prepare("
+        SELECT legacy_patient_id
+        FROM clinical_patient_identity_bridge
+        WHERE canonical_patient_id = :canonical_patient_id
+        ORDER BY legacy_patient_id ASC
+    ");
+    $stmt->bindValue(':canonical_patient_id', $canonicalPatientId, PDO::PARAM_STR);
+    $stmt->execute();
+
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if (!is_array($rows)) {
+        return [];
+    }
+
+    $result = [];
+    foreach ($rows as $row) {
+        $legacyId = trim((string)($row['legacy_patient_id'] ?? ''));
+        if ($legacyId !== '') {
+            $result[$legacyId] = true;
+        }
+    }
+
+    return array_keys($result);
+}
+
+function clinical_timeline_agenda_appointments_fetch(PDO $pdo, array $legacyPatientIds, int $limit, string $direction): array
+{
+    if ($legacyPatientIds === []) {
+        return [];
+    }
+
+    $placeholders = [];
+    $params = [];
+    foreach (array_values($legacyPatientIds) as $idx => $legacyId) {
+        $ph = ':pid' . $idx;
+        $placeholders[] = $ph;
+        $params[$ph] = $legacyId;
+    }
+
+    $orderDir = ($direction === 'forward') ? 'ASC' : 'DESC';
+    $sql = "
+        SELECT
+            appointment_id,
+            doctor_id,
+            consultorio_id,
+            patient_id,
+            start_at,
+            end_at,
+            modality,
+            status,
+            channel_origin,
+            created_by_role,
+            created_by_id
+        FROM agenda_appointments
+        WHERE patient_id IN (" . implode(',', $placeholders) . ")
+        ORDER BY start_at {$orderDir}, appointment_id {$orderDir}
+        LIMIT :limit
+    ";
+
+    $stmt = $pdo->prepare($sql);
+    foreach ($params as $ph => $value) {
+        $stmt->bindValue($ph, $value, PDO::PARAM_STR);
+    }
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    return is_array($rows) ? $rows : [];
+}
+
 set_error_handler(static function ($severity, $message, $file, $line): void {
     throw new ErrorException((string)$message, 0, (int)$severity, (string)$file, (int)$line);
 });
@@ -798,6 +870,7 @@ try {
             $include = clinical_parse_include_csv($includeRaw);
         }
         $includeClinical = in_array('clinical', $include, true);
+        $includeAgenda = in_array('agenda', $include, true);
 
         $cursorDt = null;
         $cursorUuid = null;
@@ -826,12 +899,21 @@ try {
 
         $items = [];
         $cursorNext = null;
-        $isScaffold = !$includeClinical;
-        if ($includeClinical) {
+        $isScaffold = !($includeClinical || $includeAgenda);
+        if ($includeClinical || $includeAgenda) {
+            $encounters = [];
+            $rows = [];
+            $agendaAppointments = [];
             try {
                 $pdo = clinical_documents_pdo();
-                $encounters = clinical_timeline_encounters_fetch($pdo, $patientId, $limit);
-                $rows = clinical_timeline_documents_fetch($pdo, $patientId, $limit, $cursorDt, $cursorUuid);
+                if ($includeClinical) {
+                    $encounters = clinical_timeline_encounters_fetch($pdo, $patientId, $limit);
+                    $rows = clinical_timeline_documents_fetch($pdo, $patientId, $limit, $cursorDt, $cursorUuid);
+                }
+                if ($includeAgenda) {
+                    $legacyPatientIds = clinical_timeline_legacy_patient_ids($pdo, $patientId);
+                    $agendaAppointments = clinical_timeline_agenda_appointments_fetch($pdo, $legacyPatientIds, $limit, $direction);
+                }
             } catch (Throwable $e) {
                 $msg = trim((string)$e->getMessage());
                 clinical_send_response([
@@ -850,72 +932,120 @@ try {
                 return;
             }
 
-            foreach ($encounters as $encounter) {
-                $appointmentId = trim((string)($encounter['appointment_id'] ?? ''));
-                if ($appointmentId === '') {
-                    continue;
-                }
+            $encounterItems = [];
+            $appointmentItems = [];
+            $documentItems = [];
 
-                $encounterDocs = clinical_timeline_encounter_documents_fetch($pdo, $patientId, $appointmentId);
-                $docItems = [];
-                foreach ($encounterDocs as $docRow) {
-                    $docItems[] = [
-                        'document_uuid' => (string)($docRow['document_uuid'] ?? ''),
-                        'document_type' => (string)($docRow['document_type'] ?? ''),
-                        'event_datetime' => (string)($docRow['event_datetime'] ?? ''),
-                        'summary' => (string)($docRow['summary'] ?? ''),
+            if ($includeClinical) {
+                foreach ($encounters as $encounter) {
+                    $appointmentId = trim((string)($encounter['appointment_id'] ?? ''));
+                    if ($appointmentId === '') {
+                        continue;
+                    }
+
+                    $encounterDocs = clinical_timeline_encounter_documents_fetch($pdo, $patientId, $appointmentId);
+                    $docItems = [];
+                    foreach ($encounterDocs as $docRow) {
+                        $docItems[] = [
+                            'document_uuid' => (string)($docRow['document_uuid'] ?? ''),
+                            'document_type' => (string)($docRow['document_type'] ?? ''),
+                            'event_datetime' => (string)($docRow['event_datetime'] ?? ''),
+                            'summary' => (string)($docRow['summary'] ?? ''),
+                        ];
+                    }
+                    $flags = clinical_timeline_encounter_flags($docItems);
+
+                    $encounterItems[] = [
+                        'item_type' => 'encounter',
+                        'encounter_key' => 'appt:' . $appointmentId,
+                        'event_datetime' => (string)($encounter['encounter_dt'] ?? ''),
+                        'sort_datetime' => (string)($encounter['encounter_dt'] ?? ''),
+                        'sort_key' => 'appt:' . $appointmentId,
+                        'links' => [
+                            'patient_id' => $patientId,
+                            'appointment_id' => $appointmentId,
+                            'encounter_id' => null,
+                            'hospital_stay_id' => null,
+                        ],
+                        'clinical' => [
+                            'has_vitals' => $flags['has_vitals'],
+                            'has_note' => $flags['has_note'],
+                            'has_prescription' => $flags['has_prescription'],
+                            'has_orders' => $flags['has_orders'],
+                            'has_results' => $flags['has_results'],
+                            'documents' => $docItems,
+                        ],
                     ];
                 }
-                $flags = clinical_timeline_encounter_flags($docItems);
-
-                $items[] = [
-                    'item_type' => 'encounter',
-                    'encounter_key' => 'appt:' . $appointmentId,
-                    'event_datetime' => (string)($encounter['encounter_dt'] ?? ''),
-                    'sort_datetime' => (string)($encounter['encounter_dt'] ?? ''),
-                    'sort_key' => 'appt:' . $appointmentId,
-                    'links' => [
-                        'patient_id' => $patientId,
-                        'appointment_id' => $appointmentId,
-                        'encounter_id' => null,
-                        'hospital_stay_id' => null,
-                    ],
-                    'clinical' => [
-                        'has_vitals' => $flags['has_vitals'],
-                        'has_note' => $flags['has_note'],
-                        'has_prescription' => $flags['has_prescription'],
-                        'has_orders' => $flags['has_orders'],
-                        'has_results' => $flags['has_results'],
-                        'documents' => $docItems,
-                    ],
-                ];
             }
 
-            foreach ($rows as $row) {
-                $eventDatetime = (string)($row['event_datetime'] ?? '');
-                $documentUuid = (string)($row['document_uuid'] ?? '');
-                $items[] = [
-                    'item_type' => 'document',
-                    'encounter_key' => clinical_timeline_encounter_key_from_datetime($eventDatetime),
-                    'event_datetime' => $eventDatetime,
-                    'sort_datetime' => $eventDatetime,
-                    'sort_key' => 'doc:' . $documentUuid,
-                    'links' => [
-                        'patient_id' => $patientId,
-                        'appointment_id' => null,
-                        'document_uuid' => $documentUuid,
-                        'encounter_id' => null,
-                        'hospital_stay_id' => $row['hospital_stay_id'] ?? null,
-                    ],
-                    'clinical_document' => [
-                        'document_uuid' => $documentUuid,
-                        'document_type' => (string)($row['document_type'] ?? ''),
-                        'summary' => (string)($row['summary'] ?? ''),
-                    ],
-                ];
+            if ($includeAgenda) {
+                foreach ($agendaAppointments as $appt) {
+                    $appointmentId = trim((string)($appt['appointment_id'] ?? ''));
+                    if ($appointmentId === '') {
+                        continue;
+                    }
+
+                    $appointmentItems[] = [
+                        'item_type' => 'appointment',
+                        'encounter_key' => 'appt:' . $appointmentId,
+                        'event_datetime' => (string)($appt['start_at'] ?? ''),
+                        'sort_datetime' => (string)($appt['start_at'] ?? ''),
+                        'sort_key' => 'appt:' . $appointmentId,
+                        'links' => [
+                            'patient_id' => $patientId,
+                            'appointment_id' => $appointmentId,
+                            'encounter_id' => null,
+                            'hospital_stay_id' => null,
+                        ],
+                        'agenda' => [
+                            'patient_id_legacy' => (string)($appt['patient_id'] ?? ''),
+                            'doctor_id' => $appt['doctor_id'] ?? null,
+                            'consultorio_id' => $appt['consultorio_id'] ?? null,
+                            'start_at' => (string)($appt['start_at'] ?? ''),
+                            'end_at' => (string)($appt['end_at'] ?? ''),
+                            'modality' => $appt['modality'] ?? null,
+                            'status' => $appt['status'] ?? null,
+                            'channel_origin' => $appt['channel_origin'] ?? null,
+                            'created_by_role' => $appt['created_by_role'] ?? null,
+                            'created_by_id' => $appt['created_by_id'] ?? null,
+                        ],
+                    ];
+                }
             }
 
-            if (count($encounters) > 0) {
+            if ($includeClinical) {
+                foreach ($rows as $row) {
+                    $eventDatetime = (string)($row['event_datetime'] ?? '');
+                    $documentUuid = (string)($row['document_uuid'] ?? '');
+                    $documentItems[] = [
+                        'item_type' => 'document',
+                        'encounter_key' => clinical_timeline_encounter_key_from_datetime($eventDatetime),
+                        'event_datetime' => $eventDatetime,
+                        'sort_datetime' => $eventDatetime,
+                        'sort_key' => 'doc:' . $documentUuid,
+                        'links' => [
+                            'patient_id' => $patientId,
+                            'appointment_id' => null,
+                            'document_uuid' => $documentUuid,
+                            'encounter_id' => null,
+                            'hospital_stay_id' => $row['hospital_stay_id'] ?? null,
+                        ],
+                        'clinical_document' => [
+                            'document_uuid' => $documentUuid,
+                            'document_type' => (string)($row['document_type'] ?? ''),
+                            'summary' => (string)($row['summary'] ?? ''),
+                        ],
+                    ];
+                }
+            }
+
+            $items = array_merge($encounterItems, $appointmentItems, $documentItems);
+
+            if ($includeAgenda) {
+                // TODO(timeline-v1): unify cursor across agenda + clinical streams.
+                $cursorNext = null;
+            } elseif (count($encounters) > 0) {
                 // TODO(timeline-v1): unify cursor across mixed encounter + document streams.
                 $cursorNext = null;
             } elseif (count($rows) === $limit && $rows !== []) {
@@ -985,7 +1115,6 @@ try {
         ], 200);
         return;
     }
-
     if ($method === 'GET' && $route === 'patient-id/inspect') {
         $patientId = trim((string)($_GET['patient_id'] ?? ''));
         if ($patientId === '') {
