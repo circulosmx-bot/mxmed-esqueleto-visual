@@ -29,11 +29,29 @@ function clinical_normalize_response($response): array
             $response['message'] = 'ok';
         }
     } else {
-        if (!is_string($response['error']) || $response['error'] === '') {
-            $response['error'] = 'server_error';
-        }
-        if (!is_string($response['message']) || $response['message'] === '') {
-            $response['message'] = ($response['error'] === 'not_found') ? 'route not found' : 'server error';
+        if (is_array($response['error'])) {
+            $errorCode = trim((string)($response['error']['code'] ?? ''));
+            $errorMessage = trim((string)($response['error']['message'] ?? ''));
+            if ($errorCode === '') {
+                $errorCode = 'server_error';
+            }
+            if ($errorMessage === '') {
+                $errorMessage = ($errorCode === 'not_found') ? 'route not found' : 'server error';
+            }
+            $response['error'] = [
+                'code' => $errorCode,
+                'message' => $errorMessage,
+            ];
+            if (!is_string($response['message']) || $response['message'] === '') {
+                $response['message'] = $errorMessage;
+            }
+        } else {
+            if (!is_string($response['error']) || $response['error'] === '') {
+                $response['error'] = 'server_error';
+            }
+            if (!is_string($response['message']) || $response['message'] === '') {
+                $response['message'] = ($response['error'] === 'not_found') ? 'route not found' : 'server error';
+            }
         }
     }
 
@@ -468,12 +486,128 @@ try {
     $method = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
     $segments = clinical_route_segments();
     $route = implode('/', $segments);
+    $isTimelineRoute = ($method === 'GET'
+        && ($segments[0] ?? '') === 'patients'
+        && ($segments[2] ?? '') === 'timeline'
+        && count($segments) === 3);
 
     // Ensure bridge schema at gateway startup (best-effort to avoid breaking non-DB routes).
-    try {
-        $bridgePdo = clinical_documents_pdo();
-        clinical_ensure_identity_bridge_schema($bridgePdo);
-    } catch (Throwable $e) {
+    if (!$isTimelineRoute) {
+        try {
+            $bridgePdo = clinical_documents_pdo();
+            clinical_ensure_identity_bridge_schema($bridgePdo);
+        } catch (Throwable $e) {
+        }
+    }
+
+    if ($isTimelineRoute) {
+        $patientId = trim((string)$segments[1]);
+        if ($patientId === '') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => [
+                    'code' => 'bad_request',
+                    'message' => 'patient_id requerido',
+                ],
+                'message' => '',
+                'data' => null,
+                'meta' => [
+                    'method' => 'GET',
+                    'route' => 'patients/{patient_id}/timeline',
+                ],
+            ], 400);
+            return;
+        }
+
+        $limit = 30;
+        $limitRaw = $_GET['limit'] ?? null;
+        if ($limitRaw !== null && trim((string)$limitRaw) !== '') {
+            $limitText = trim((string)$limitRaw);
+            if (preg_match('/^\d+$/', $limitText) !== 1) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => [
+                        'code' => 'bad_request',
+                        'message' => 'limit debe ser int entre 1 y 100',
+                    ],
+                    'message' => '',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'GET',
+                        'route' => 'patients/{patient_id}/timeline',
+                    ],
+                ], 400);
+                return;
+            }
+
+            $limit = (int)$limitText;
+            if ($limit < 1 || $limit > 100) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => [
+                        'code' => 'bad_request',
+                        'message' => 'limit debe ser int entre 1 y 100',
+                    ],
+                    'message' => '',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'GET',
+                        'route' => 'patients/{patient_id}/timeline',
+                    ],
+                ], 400);
+                return;
+            }
+        }
+
+        $direction = trim((string)($_GET['direction'] ?? 'backward'));
+        if ($direction === '') {
+            $direction = 'backward';
+        }
+        if ($direction !== 'backward' && $direction !== 'forward') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => [
+                    'code' => 'bad_request',
+                    'message' => 'direction inválido; usa backward|forward',
+                ],
+                'message' => '',
+                'data' => null,
+                'meta' => [
+                    'method' => 'GET',
+                    'route' => 'patients/{patient_id}/timeline',
+                ],
+            ], 400);
+            return;
+        }
+
+        // Cursor scaffold: parse only, ignore for now.
+        $cursor = trim((string)($_GET['cursor'] ?? ''));
+        if ($cursor !== '') {
+            // Intentionally ignored in scaffold v1.
+        }
+
+        clinical_send_response([
+            'ok' => true,
+            'error' => null,
+            'message' => '',
+            'data' => [
+                'patient_id' => $patientId,
+                'range' => [
+                    'mode' => 'cursor',
+                    'limit' => $limit,
+                    'direction' => $direction,
+                    'cursor_next' => null,
+                    'cursor_prev' => null,
+                ],
+                'items' => [],
+            ],
+            'meta' => [
+                'method' => 'GET',
+                'route' => 'patients/{patient_id}/timeline',
+                'scaffold' => true,
+            ],
+        ], 200);
+        return;
     }
 
     if ($method === 'GET' && $route === 'health') {
