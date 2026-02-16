@@ -8,6 +8,11 @@
   - `include=agenda,clinical`: mezcla
 - UI QA: `modules/clinical/ui/timeline.php`
 
+## Nota de nomenclatura (UI)
+- Internamente el endpoint y contrato se mantienen como `timeline`.
+- En UI se presenta como: **Historial del paciente**.
+- Alias de vista: `modules/clinical/ui/historial.php` (incluye `timeline.php`).
+
 ## Cómo probar
 ```bash
 php -l api/clinical/index.php
