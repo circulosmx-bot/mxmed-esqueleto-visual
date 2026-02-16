@@ -39,15 +39,15 @@ if ($patientId !== '') {
 
     $raw = @file_get_contents($url, false, $context);
     if ($raw === false) {
-        $errorMessage = 'No se pudo consultar el timeline.';
+        $errorMessage = 'No se pudo consultar el historial.';
     } else {
         $decoded = json_decode($raw, true);
         if (!is_array($decoded)) {
-            $errorMessage = 'Respuesta inválida del endpoint timeline.';
+            $errorMessage = 'Respuesta inválida del endpoint historial.';
         } else {
             $responseData = $decoded;
             if (($decoded['ok'] ?? false) !== true) {
-                $errorMessage = (string)($decoded['message'] ?? 'Error consultando timeline.');
+                $errorMessage = (string)($decoded['message'] ?? 'Error consultando historial.');
             } else {
                 $list = $decoded['data']['items'] ?? [];
                 $items = is_array($list) ? $list : [];
@@ -59,7 +59,7 @@ if ($patientId !== '') {
 $filters = [
     'agenda,clinical' => 'Todo',
     'agenda' => 'Agenda',
-    'clinical' => 'Clinical',
+    'clinical' => 'Clínico',
 ];
 ?>
 <!doctype html>
@@ -67,12 +67,12 @@ $filters = [
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Timeline del Paciente</title>
+  <title>Historial del paciente</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
 <div class="container py-4">
-  <h1 class="h4 mb-1">Timeline del Paciente</h1>
+  <h1 class="h4 mb-1">Historial del paciente</h1>
   <p class="text-secondary mb-3">patient_id: <code><?php echo h($patientId !== '' ? $patientId : '-'); ?></code></p>
 
   <form class="row g-2 mb-3" method="get">
@@ -81,11 +81,11 @@ $filters = [
       <input id="patient_id" name="patient_id" class="form-control" value="<?php echo h($patientId); ?>" required>
     </div>
     <div class="col-12 col-md-4 d-flex align-items-end">
-      <button type="submit" class="btn btn-primary w-100">Cargar timeline</button>
+      <button type="submit" class="btn btn-primary w-100">Cargar historial</button>
     </div>
   </form>
 
-  <div class="btn-group mb-3" role="group" aria-label="Filtros timeline">
+  <div class="btn-group mb-3" role="group" aria-label="Filtros del historial">
     <?php foreach ($filters as $filterValue => $filterLabel): ?>
       <?php
       $isActive = ($include === $filterValue);
@@ -98,11 +98,11 @@ $filters = [
   </div>
 
   <?php if ($patientId === ''): ?>
-    <div class="alert alert-info">Captura un <code>patient_id</code> para consultar el timeline.</div>
+    <div class="alert alert-info">Captura un <code>patient_id</code> para consultar el historial.</div>
   <?php elseif ($errorMessage !== ''): ?>
     <div class="alert alert-danger"><?php echo h($errorMessage); ?></div>
   <?php elseif ($items === []): ?>
-    <div class="alert alert-light border">Sin eventos en timeline</div>
+    <div class="alert alert-light border">Sin eventos en el historial</div>
   <?php else: ?>
     <div class="vstack gap-2">
       <?php foreach ($items as $item): ?>
