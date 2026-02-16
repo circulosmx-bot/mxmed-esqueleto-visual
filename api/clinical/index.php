@@ -478,6 +478,133 @@ function clinical_documents_save_passthrough(PDO $pdo, array $args): array
     return $doc;
 }
 
+function clinical_parse_include_csv(?string $raw): array
+{
+    $value = trim((string)$raw);
+    if ($value === '') {
+        return ['clinical'];
+    }
+
+    $parts = preg_split('/\s*,\s*/', $value, -1, PREG_SPLIT_NO_EMPTY);
+    if (!is_array($parts) || $parts === []) {
+        return ['clinical'];
+    }
+
+    $normalized = [];
+    foreach ($parts as $part) {
+        $key = strtolower(trim((string)$part));
+        if ($key === '') {
+            continue;
+        }
+        $normalized[$key] = true;
+    }
+
+    $list = array_keys($normalized);
+    return ($list === []) ? ['clinical'] : $list;
+}
+
+function clinical_timeline_encode_cursor(string $eventDatetime, string $documentUuid): string
+{
+    $payload = [
+        'dt' => $eventDatetime,
+        'uuid' => $documentUuid,
+    ];
+    return base64_encode((string)json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+}
+
+function clinical_timeline_decode_cursor(string $cursor): array
+{
+    $decoded = base64_decode($cursor, true);
+    if ($decoded === false || trim($decoded) === '') {
+        return ['ok' => false, 'error' => 'cursor inválido'];
+    }
+
+    $data = json_decode($decoded, true);
+    if (!is_array($data)) {
+        return ['ok' => false, 'error' => 'cursor inválido'];
+    }
+
+    $dt = trim((string)($data['dt'] ?? ''));
+    $uuid = trim((string)($data['uuid'] ?? ''));
+    if ($dt === '' || $uuid === '') {
+        return ['ok' => false, 'error' => 'cursor inválido'];
+    }
+
+    return [
+        'ok' => true,
+        'error' => null,
+        'dt' => $dt,
+        'uuid' => $uuid,
+    ];
+}
+
+function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $limit, ?string $cursorDt, ?string $cursorUuid): array
+{
+    $baseSelect = "
+        SELECT
+            document_uuid,
+            document_type,
+            summary,
+            event_datetime,
+            hospital_stay_id
+        FROM clinical_documents
+        WHERE patient_id = :patient_id
+    ";
+
+    $paramsBase = [':patient_id' => $patientId];
+    $cursorClause = '';
+    $orderLimit = " ORDER BY event_datetime DESC, document_uuid DESC LIMIT :limit";
+
+    if ($cursorDt !== null && $cursorUuid !== null) {
+        $cursorClause = "
+          AND (
+            event_datetime < :cursor_dt
+            OR (event_datetime = :cursor_dt AND document_uuid < :cursor_uuid)
+          )
+        ";
+    }
+
+    $run = static function (string $sql, array $params) use ($pdo, $limit): array {
+        $stmt = $pdo->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value, PDO::PARAM_STR);
+        }
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return is_array($rows) ? $rows : [];
+    };
+
+    $sqlWithAppointment = $baseSelect . " AND appointment_id IS NULL " . $cursorClause . $orderLimit;
+    $params = $paramsBase;
+    if ($cursorDt !== null && $cursorUuid !== null) {
+        $params[':cursor_dt'] = $cursorDt;
+        $params[':cursor_uuid'] = $cursorUuid;
+    }
+
+    try {
+        return $run($sqlWithAppointment, $params);
+    } catch (Throwable $e) {
+        $msg = strtolower(trim((string)$e->getMessage()));
+        if (strpos($msg, "unknown column 'appointment_id'") === false) {
+            throw $e;
+        }
+    }
+
+    // Backward-compatible fallback for legacy schemas without appointment_id.
+    $sqlLegacy = $baseSelect . $cursorClause . $orderLimit;
+    return $run($sqlLegacy, $params);
+}
+
+function clinical_timeline_encounter_key_from_datetime(string $eventDatetime): string
+{
+    $ts = strtotime($eventDatetime);
+    if ($ts === false) {
+        return 'dt:00000000T0000:bucket60';
+    }
+    return 'dt:' . gmdate('Ymd\THi', $ts) . ':bucket60';
+}
+
 set_error_handler(static function ($severity, $message, $file, $line): void {
     throw new ErrorException((string)$message, 0, (int)$severity, (string)$file, (int)$line);
 });
@@ -580,10 +707,89 @@ try {
             return;
         }
 
-        // Cursor scaffold: parse only, ignore for now.
+        $include = clinical_parse_include_csv((string)($_GET['include'] ?? ''));
+        $includeClinical = in_array('clinical', $include, true);
+
+        $cursorDt = null;
+        $cursorUuid = null;
         $cursor = trim((string)($_GET['cursor'] ?? ''));
         if ($cursor !== '') {
-            // Intentionally ignored in scaffold v1.
+            $cursorDecoded = clinical_timeline_decode_cursor($cursor);
+            if (($cursorDecoded['ok'] ?? false) !== true) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => [
+                        'code' => 'bad_request',
+                        'message' => (string)($cursorDecoded['error'] ?? 'cursor inválido'),
+                    ],
+                    'message' => '',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'GET',
+                        'route' => 'patients/{patient_id}/timeline',
+                    ],
+                ], 400);
+                return;
+            }
+            $cursorDt = (string)$cursorDecoded['dt'];
+            $cursorUuid = (string)$cursorDecoded['uuid'];
+        }
+
+        $items = [];
+        $cursorNext = null;
+        if ($includeClinical) {
+            try {
+                $pdo = clinical_documents_pdo();
+                $rows = clinical_timeline_documents_fetch($pdo, $patientId, $limit, $cursorDt, $cursorUuid);
+            } catch (Throwable $e) {
+                $msg = trim((string)$e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => [
+                        'code' => 'server_error',
+                        'message' => ($msg !== '') ? $msg : 'server error',
+                    ],
+                    'message' => '',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'GET',
+                        'route' => 'patients/{patient_id}/timeline',
+                    ],
+                ], 500);
+                return;
+            }
+
+            foreach ($rows as $row) {
+                $eventDatetime = (string)($row['event_datetime'] ?? '');
+                $documentUuid = (string)($row['document_uuid'] ?? '');
+                $items[] = [
+                    'item_type' => 'document',
+                    'encounter_key' => clinical_timeline_encounter_key_from_datetime($eventDatetime),
+                    'event_datetime' => $eventDatetime,
+                    'sort_datetime' => $eventDatetime,
+                    'sort_key' => 'doc:' . $documentUuid,
+                    'links' => [
+                        'patient_id' => $patientId,
+                        'appointment_id' => null,
+                        'document_uuid' => $documentUuid,
+                        'encounter_id' => null,
+                        'hospital_stay_id' => $row['hospital_stay_id'] ?? null,
+                    ],
+                    'clinical_document' => [
+                        'document_uuid' => $documentUuid,
+                        'document_type' => (string)($row['document_type'] ?? ''),
+                        'summary' => (string)($row['summary'] ?? ''),
+                    ],
+                ];
+            }
+
+            if (count($rows) === $limit && $rows !== []) {
+                $last = $rows[count($rows) - 1];
+                $cursorNext = clinical_timeline_encode_cursor(
+                    (string)($last['event_datetime'] ?? ''),
+                    (string)($last['document_uuid'] ?? '')
+                );
+            }
         }
 
         clinical_send_response([
@@ -596,10 +802,10 @@ try {
                     'mode' => 'cursor',
                     'limit' => $limit,
                     'direction' => $direction,
-                    'cursor_next' => null,
+                    'cursor_next' => $cursorNext,
                     'cursor_prev' => null,
                 ],
-                'items' => [],
+                'items' => $items,
             ],
             'meta' => [
                 'method' => 'GET',
