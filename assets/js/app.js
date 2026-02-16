@@ -2415,6 +2415,7 @@ console.info('app.js loaded :: 20251123a');
   const pane = document.getElementById('p-expediente');
   if(!pane) return;
   const tabs = Array.from(pane.querySelectorAll('.mm-tabs-row .nav-link'));
+  const historialAtencionBtn = pane.querySelector('[data-action="open-historial-atencion"]');
   const tabsWrap = pane.querySelector('[data-exp-tabs]');
   if(!tabs.length) return;
 
@@ -2589,6 +2590,57 @@ console.info('app.js loaded :: 20251123a');
     computeAge();
   };
 
+  const normalizeToken = (str) => (str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+  const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '').trim());
+
+  const getCurrentPatientId = ()=>{
+    const explicit = String(pane.getAttribute('data-patient-id') || pane.dataset?.patientId || '').trim();
+    if(explicit) return explicit;
+
+    const nombre = pane.querySelector('[data-pac-nombre]')?.value?.trim() || '';
+    const apPat = pane.querySelector('[data-pac-apellido-paterno]')?.value?.trim() || '';
+    const apMat = pane.querySelector('[data-pac-apellido-materno]')?.value?.trim() || '';
+    const sexoVal = pane.querySelector('input[name="pac-genero"]:checked')?.value || '';
+    const dd = pane.querySelector('[data-dg-dia]')?.value || '';
+    const mm = pane.querySelector('[data-dg-mes]')?.value || '';
+    const yy = pane.querySelector('[data-dg-anio]')?.value || '';
+    const dob = [yy, mm, dd].filter(Boolean).join('-');
+    const base = [nombre, apPat, apMat].filter(Boolean).join(' ').trim();
+    const identity = window.mxmedIdentity || null;
+    if(identity && typeof identity.buildLegacyPatientId === 'function'){
+      try{
+        const built = String(identity.buildLegacyPatientId(base, dob, sexoVal, normalizeToken) || '').trim();
+        if(built) return built;
+      }catch(_){}
+    }
+    return normalizeToken([base, dob, sexoVal].join('|')) || '';
+  };
+
+  const openHistorialAtencion = async ()=>{
+    const originalId = getCurrentPatientId();
+    if(!originalId) return;
+
+    let finalId = originalId;
+    const shouldResolve = finalId.startsWith('p_') || !isUuidLike(finalId);
+    const identity = window.mxmedIdentity || null;
+    if(shouldResolve && identity && typeof identity.resolveCanonicalPatientId === 'function'){
+      try{
+        const resolved = await identity.resolveCanonicalPatientId(finalId);
+        if(typeof resolved === 'string' && resolved.trim()){
+          finalId = resolved.trim();
+        }
+      }catch(_){}
+    }
+
+    window.location.href = `/modules/clinical/ui/historial.php?patient_id=${encodeURIComponent(finalId)}`;
+  };
+
   const syncGineco = (genero, allowNavigate)=>{
     const show = genero === 'F';
     if(ginecoItem){ ginecoItem.classList.toggle('d-none', !show); }
@@ -2637,6 +2689,11 @@ console.info('app.js loaded :: 20251123a');
         paneTarget.classList.add('show','active');
       }
     });
+  });
+
+  historialAtencionBtn?.addEventListener('click', (ev)=>{
+    ev.preventDefault();
+    openHistorialAtencion();
   });
 
   syncState();

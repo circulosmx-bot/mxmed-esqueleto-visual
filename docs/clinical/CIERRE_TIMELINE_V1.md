@@ -10,7 +10,9 @@
 
 ## Nota de nomenclatura (UI)
 - Internamente el endpoint y contrato se mantienen como `timeline`.
-- En UI se presenta como: **Historial del paciente**.
+- En UI el nombre para usuario es: **Historial de atención**.
+- **Historia Clínica** se mantiene como pestaña clínica de captura/consulta de contenido médico.
+- **Historial de atención** es la vista cronológica unificada de eventos (agenda + clinical).
 - Alias de vista: `modules/clinical/ui/historial.php` (incluye `timeline.php`).
 
 ## Cómo probar
