@@ -368,6 +368,36 @@ function clinical_documents_get_fetch(PDO $pdo, int $id): ?array
     ];
 }
 
+function clinical_documents_get_by_uuid_fetch(PDO $pdo, string $uuid): ?array
+{
+    $stmt = $pdo->prepare("SELECT id FROM clinical_documents WHERE document_uuid = :uuid LIMIT 1");
+    $stmt->execute([':uuid' => $uuid]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$row || !is_array($row)) {
+        return null;
+    }
+
+    $id = (int)($row['id'] ?? 0);
+    if ($id <= 0) {
+        return null;
+    }
+
+    return clinical_documents_get_fetch($pdo, $id);
+}
+
+function clinical_encounter_documents_fetch(PDO $pdo, string $appointmentId): array
+{
+    $stmt = $pdo->prepare("
+        SELECT document_uuid, document_type, event_datetime, summary, patient_id, appointment_id, hospital_stay_id
+        FROM clinical_documents
+        WHERE appointment_id = :appointment_id
+        ORDER BY event_datetime ASC, document_uuid ASC
+    ");
+    $stmt->execute([':appointment_id' => $appointmentId]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    return is_array($rows) ? $rows : [];
+}
+
 function clinical_documents_save_passthrough(PDO $pdo, array $args): array
 {
     require_once __DIR__ . '/../_lib/clinical_documents.php';
@@ -1555,6 +1585,129 @@ try {
         return;
     }
 
+    if (($segments[0] ?? '') === 'encounters') {
+        if ($method !== 'GET' || count($segments) !== 2) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'not_found',
+                'message' => 'route not found',
+                'data' => null,
+                'meta' => [
+                    'method' => $method,
+                    'route' => $route,
+                ],
+            ], 404);
+            return;
+        }
+
+        $encounterKey = urldecode(trim((string)$segments[1]));
+        if ($encounterKey === '') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'bad_request',
+                'message' => 'encounter_key requerido',
+                'data' => null,
+                'meta' => [
+                    'method' => 'GET',
+                    'route' => 'encounters/{encounter_key}',
+                ],
+            ], 400);
+            return;
+        }
+
+        if (strpos($encounterKey, 'appt:') !== 0) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'bad_request',
+                'message' => 'encounter_key no soportado',
+                'data' => null,
+                'meta' => [
+                    'method' => 'GET',
+                    'route' => 'encounters/{encounter_key}',
+                ],
+            ], 400);
+            return;
+        }
+
+        $appointmentId = trim(substr($encounterKey, 5));
+        if ($appointmentId === '') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'bad_request',
+                'message' => 'appointment_id inválido',
+                'data' => null,
+                'meta' => [
+                    'method' => 'GET',
+                    'route' => 'encounters/{encounter_key}',
+                ],
+            ], 400);
+            return;
+        }
+
+        try {
+            $pdo = clinical_documents_pdo();
+            $rows = clinical_encounter_documents_fetch($pdo, $appointmentId);
+        } catch (Throwable $e) {
+            $msg = trim((string)$e->getMessage());
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'server_error',
+                'message' => ($msg !== '') ? $msg : 'server error',
+                'data' => null,
+                'meta' => [
+                    'method' => 'GET',
+                    'route' => 'encounters/{encounter_key}',
+                ],
+            ], 500);
+            return;
+        }
+
+        $documents = [];
+        $patientId = null;
+        $eventDatetime = null;
+        foreach ($rows as $row) {
+            $documents[] = [
+                'document_uuid' => (string)($row['document_uuid'] ?? ''),
+                'document_type' => (string)($row['document_type'] ?? ''),
+                'event_datetime' => (string)($row['event_datetime'] ?? ''),
+                'summary' => (string)($row['summary'] ?? ''),
+                'hospital_stay_id' => $row['hospital_stay_id'] ?? null,
+            ];
+
+            if ($patientId === null) {
+                $tmpPatientId = trim((string)($row['patient_id'] ?? ''));
+                if ($tmpPatientId !== '') {
+                    $patientId = $tmpPatientId;
+                }
+            }
+            $tmpDt = trim((string)($row['event_datetime'] ?? ''));
+            if ($tmpDt !== '') {
+                $eventDatetime = $tmpDt;
+            }
+        }
+
+        clinical_send_response([
+            'ok' => true,
+            'error' => null,
+            'message' => 'encounter retrieved',
+            'data' => [
+                'encounter_key' => $encounterKey,
+                'appointment_id' => $appointmentId,
+                'patient_id' => $patientId,
+                'event_datetime' => $eventDatetime,
+                'documents' => $documents,
+                'prescriptions' => [],
+                'orders' => [],
+                'results' => [],
+            ],
+            'meta' => [
+                'method' => 'GET',
+                'route' => 'encounters/{encounter_key}',
+            ],
+        ], 200);
+        return;
+    }
+
     if (($segments[0] ?? '') === 'documents') {
         if ($method === 'POST' && count($segments) === 1) {
             $meta = [
@@ -1678,16 +1831,16 @@ try {
         }
 
         if ($method === 'GET' && count($segments) === 2) {
-            $id = (int)$segments[1];
-            if ($id <= 0) {
+            $documentToken = trim((string)$segments[1]);
+            if ($documentToken === '') {
                 clinical_send_response([
                     'ok' => false,
                     'error' => 'bad_request',
-                    'message' => 'document id must be a positive integer',
+                    'message' => 'document id or uuid required',
                     'data' => null,
                     'meta' => [
                         'method' => 'GET',
-                        'route' => 'documents/{id}',
+                        'route' => 'documents/{id_or_uuid}',
                         'source' => 'clinical_documents_pdo',
                     ],
                 ], 400);
@@ -1696,7 +1849,11 @@ try {
 
             try {
                 $pdo = clinical_documents_pdo();
-                $document = clinical_documents_get_fetch($pdo, $id);
+                if (preg_match('/^\d+$/', $documentToken) === 1) {
+                    $document = clinical_documents_get_fetch($pdo, (int)$documentToken);
+                } else {
+                    $document = clinical_documents_get_by_uuid_fetch($pdo, $documentToken);
+                }
             } catch (Throwable $e) {
                 $msg = trim($e->getMessage());
                 clinical_send_response([
@@ -1706,7 +1863,7 @@ try {
                     'data' => null,
                     'meta' => [
                         'method' => 'GET',
-                        'route' => 'documents/{id}',
+                        'route' => 'documents/{id_or_uuid}',
                         'source' => 'clinical_documents_pdo',
                     ],
                 ], 500);
@@ -1721,7 +1878,7 @@ try {
                     'data' => null,
                     'meta' => [
                         'method' => 'GET',
-                        'route' => 'documents/{id}',
+                        'route' => 'documents/{id_or_uuid}',
                         'source' => 'clinical_documents_pdo',
                     ],
                 ], 404);
@@ -1737,7 +1894,7 @@ try {
                 ],
                 'meta' => [
                     'method' => 'GET',
-                    'route' => 'documents/{id}',
+                    'route' => 'documents/{id_or_uuid}',
                     'source' => 'clinical_documents_pdo',
                 ],
             ], 200);
