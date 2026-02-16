@@ -605,6 +605,87 @@ function clinical_timeline_encounter_key_from_datetime(string $eventDatetime): s
     return 'dt:' . gmdate('Ymd\THi', $ts) . ':bucket60';
 }
 
+function clinical_timeline_encounters_fetch(PDO $pdo, string $patientId, int $limit): array
+{
+    $sql = "
+        SELECT appointment_id, MAX(event_datetime) AS encounter_dt
+        FROM clinical_documents
+        WHERE patient_id = :patient_id
+          AND appointment_id IS NOT NULL
+        GROUP BY appointment_id
+        ORDER BY encounter_dt DESC, appointment_id DESC
+        LIMIT :limit
+    ";
+
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return is_array($rows) ? $rows : [];
+    } catch (Throwable $e) {
+        $msg = strtolower(trim((string)$e->getMessage()));
+        if (strpos($msg, "unknown column 'appointment_id'") !== false) {
+            return [];
+        }
+        throw $e;
+    }
+}
+
+function clinical_timeline_encounter_documents_fetch(PDO $pdo, string $patientId, string $appointmentId): array
+{
+    $sql = "
+        SELECT document_uuid, document_type, event_datetime, summary
+        FROM clinical_documents
+        WHERE patient_id = :patient_id AND appointment_id = :appointment_id
+        ORDER BY event_datetime ASC, document_uuid ASC
+    ";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+    $stmt->bindValue(':appointment_id', $appointmentId, PDO::PARAM_STR);
+    $stmt->execute();
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    return is_array($rows) ? $rows : [];
+}
+
+function clinical_timeline_encounter_flags(array $documents): array
+{
+    $flags = [
+        'has_vitals' => false,
+        'has_note' => false,
+        'has_prescription' => false,
+        'has_orders' => false,
+        'has_results' => false,
+    ];
+
+    foreach ($documents as $doc) {
+        $type = strtolower(trim((string)($doc['document_type'] ?? '')));
+        if ($type === '') {
+            continue;
+        }
+
+        if (in_array($type, ['vitals', 'vital_signs', 'signs'], true)) {
+            $flags['has_vitals'] = true;
+        }
+        if (in_array($type, ['note', 'medical_note', 'evolution_note'], true)) {
+            $flags['has_note'] = true;
+        }
+        if (in_array($type, ['prescription', 'rx'], true)) {
+            $flags['has_prescription'] = true;
+        }
+        if (in_array($type, ['orders', 'order', 'lab_order', 'imaging_order'], true)) {
+            $flags['has_orders'] = true;
+        }
+        if (in_array($type, ['results', 'result', 'lab_result', 'imaging_result'], true)) {
+            $flags['has_results'] = true;
+        }
+    }
+
+    return $flags;
+}
+
 set_error_handler(static function ($severity, $message, $file, $line): void {
     throw new ErrorException((string)$message, 0, (int)$severity, (string)$file, (int)$line);
 });
@@ -707,7 +788,15 @@ try {
             return;
         }
 
-        $include = clinical_parse_include_csv((string)($_GET['include'] ?? ''));
+        $includeProvided = array_key_exists('include', $_GET);
+        $includeRaw = (string)($_GET['include'] ?? '');
+        if (!$includeProvided) {
+            $include = ['clinical'];
+        } elseif (trim($includeRaw) === '') {
+            $include = [];
+        } else {
+            $include = clinical_parse_include_csv($includeRaw);
+        }
         $includeClinical = in_array('clinical', $include, true);
 
         $cursorDt = null;
@@ -737,9 +826,11 @@ try {
 
         $items = [];
         $cursorNext = null;
+        $isScaffold = !$includeClinical;
         if ($includeClinical) {
             try {
                 $pdo = clinical_documents_pdo();
+                $encounters = clinical_timeline_encounters_fetch($pdo, $patientId, $limit);
                 $rows = clinical_timeline_documents_fetch($pdo, $patientId, $limit, $cursorDt, $cursorUuid);
             } catch (Throwable $e) {
                 $msg = trim((string)$e->getMessage());
@@ -757,6 +848,47 @@ try {
                     ],
                 ], 500);
                 return;
+            }
+
+            foreach ($encounters as $encounter) {
+                $appointmentId = trim((string)($encounter['appointment_id'] ?? ''));
+                if ($appointmentId === '') {
+                    continue;
+                }
+
+                $encounterDocs = clinical_timeline_encounter_documents_fetch($pdo, $patientId, $appointmentId);
+                $docItems = [];
+                foreach ($encounterDocs as $docRow) {
+                    $docItems[] = [
+                        'document_uuid' => (string)($docRow['document_uuid'] ?? ''),
+                        'document_type' => (string)($docRow['document_type'] ?? ''),
+                        'event_datetime' => (string)($docRow['event_datetime'] ?? ''),
+                        'summary' => (string)($docRow['summary'] ?? ''),
+                    ];
+                }
+                $flags = clinical_timeline_encounter_flags($docItems);
+
+                $items[] = [
+                    'item_type' => 'encounter',
+                    'encounter_key' => 'appt:' . $appointmentId,
+                    'event_datetime' => (string)($encounter['encounter_dt'] ?? ''),
+                    'sort_datetime' => (string)($encounter['encounter_dt'] ?? ''),
+                    'sort_key' => 'appt:' . $appointmentId,
+                    'links' => [
+                        'patient_id' => $patientId,
+                        'appointment_id' => $appointmentId,
+                        'encounter_id' => null,
+                        'hospital_stay_id' => null,
+                    ],
+                    'clinical' => [
+                        'has_vitals' => $flags['has_vitals'],
+                        'has_note' => $flags['has_note'],
+                        'has_prescription' => $flags['has_prescription'],
+                        'has_orders' => $flags['has_orders'],
+                        'has_results' => $flags['has_results'],
+                        'documents' => $docItems,
+                    ],
+                ];
             }
 
             foreach ($rows as $row) {
@@ -783,7 +915,10 @@ try {
                 ];
             }
 
-            if (count($rows) === $limit && $rows !== []) {
+            if (count($encounters) > 0) {
+                // TODO(timeline-v1): unify cursor across mixed encounter + document streams.
+                $cursorNext = null;
+            } elseif (count($rows) === $limit && $rows !== []) {
                 $last = $rows[count($rows) - 1];
                 $cursorNext = clinical_timeline_encode_cursor(
                     (string)($last['event_datetime'] ?? ''),
@@ -810,7 +945,7 @@ try {
             'meta' => [
                 'method' => 'GET',
                 'route' => 'patients/{patient_id}/timeline',
-                'scaffold' => true,
+                'scaffold' => $isScaffold,
             ],
         ], 200);
         return;
