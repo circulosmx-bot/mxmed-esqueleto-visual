@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 function get_api_base(): string
 {
     $env = trim((string)getenv('MXMED_TIMELINE_API_BASE'));
@@ -30,7 +28,9 @@ $errorMessage = '';
 $encounter = null;
 
 if ($encounterKey !== '') {
-$url = get_api_base() . '/api/clinical/index.php/documents/' . rawurlencode($uuid);
+    // ✅ CORRECTO: encounters/{encounter_key}
+    $url = get_api_base() . '/api/clinical/index.php/encounters/' . rawurlencode($encounterKey);
+
     $context = stream_context_create([
         'http' => [
             'method' => 'GET',
@@ -50,6 +50,7 @@ $url = get_api_base() . '/api/clinical/index.php/documents/' . rawurlencode($uui
         } elseif (($decoded['ok'] ?? false) !== true) {
             $errorMessage = (string)($decoded['message'] ?? 'Error consultando atención.');
         } else {
+            // La API devuelve: { data: { encounter_key, appointment_id, ... } }
             $data = $decoded['data'] ?? null;
             $encounter = is_array($data) ? $data : null;
             if ($encounter === null) {
@@ -63,6 +64,7 @@ $documents = is_array($encounter['documents'] ?? null) ? $encounter['documents']
 $prescriptions = is_array($encounter['prescriptions'] ?? null) ? $encounter['prescriptions'] : [];
 $orders = is_array($encounter['orders'] ?? null) ? $encounter['orders'] : [];
 $results = is_array($encounter['results'] ?? null) ? $encounter['results'] : [];
+
 ?>
 <!doctype html>
 <html lang="es">
@@ -101,10 +103,16 @@ $results = is_array($encounter['results'] ?? null) ? $encounter['results'] : [];
           <li class="list-group-item text-secondary">Sin documentos</li>
         <?php else: ?>
           <?php foreach ($documents as $doc): ?>
-            <?php $uuid = trim((string)($doc['document_uuid'] ?? '')); ?>
+            <?php
+              // OJO: en la API de documentos el campo que vimos es "document_id" (UUID).
+              // Pero dejamos fallback a "document_uuid" por compatibilidad.
+              $uuid = trim((string)($doc['document_id'] ?? ($doc['document_uuid'] ?? '')));
+              $docType = (string)($doc['document_type'] ?? '-');
+              $docDt = (string)($doc['event_datetime'] ?? '-');
+            ?>
             <li class="list-group-item small">
-              <strong><?php echo h((string)($doc['document_type'] ?? '-')); ?></strong>
-              · <?php echo h((string)($doc['event_datetime'] ?? '-')); ?>
+              <strong><?php echo h($docType); ?></strong>
+              · <?php echo h($docDt); ?>
               <?php if ($uuid !== ''): ?>
                 · <a href="/modules/clinical/ui/document.php?uuid=<?php echo urlencode($uuid); ?>">Ver documento</a>
               <?php endif; ?>
