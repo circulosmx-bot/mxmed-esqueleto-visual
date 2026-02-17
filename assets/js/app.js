@@ -2623,8 +2623,13 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const openHistorialAtencion = async ()=>{
-    const originalId = getCurrentPatientId();
-    if(!originalId) return;
+    const originalId = String(getCurrentPatientId() || '').trim();
+    const lowerOriginalId = originalId.toLowerCase();
+    const invalidOriginalId = !originalId || lowerOriginalId === 'anon' || lowerOriginalId === 'anonymous' || originalId === '-' || originalId.length < 6;
+    if(invalidOriginalId){
+      window.alert('Primero selecciona o guarda un paciente para ver su historial de atención.');
+      return;
+    }
 
     let finalId = originalId;
     const shouldResolve = finalId.startsWith('p_') || !isUuidLike(finalId);
