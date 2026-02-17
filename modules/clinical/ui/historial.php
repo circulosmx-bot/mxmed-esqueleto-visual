@@ -70,6 +70,57 @@ $filters = [
     'agenda' => 'Agenda',
     'clinical' => 'Clínico',
 ];
+
+$encounters = [];
+$encounterOrder = [];
+$orphanDocs = [];
+$appointmentItems = [];
+
+foreach ($items as $item) {
+    if (!is_array($item)) {
+        continue;
+    }
+    $itemType = (string)($item['item_type'] ?? '');
+    if ($itemType === 'encounter') {
+        $encounterKey = trim((string)($item['encounter_key'] ?? ''));
+        if ($encounterKey === '') {
+            continue;
+        }
+        $appointmentId = null;
+        if (strpos($encounterKey, 'appt:') === 0) {
+            $appointmentId = substr($encounterKey, 5);
+            $appointmentId = $appointmentId !== '' ? $appointmentId : null;
+        }
+        $encounters[$encounterKey] = [
+            'encounter_key' => $encounterKey,
+            'event_datetime' => (string)($item['event_datetime'] ?? ''),
+            'appointment_id' => $appointmentId,
+            'documents' => [],
+            'raw' => $item,
+        ];
+        $encounterOrder[] = $encounterKey;
+    } elseif ($itemType === 'appointment') {
+        $appointmentItems[] = $item;
+    }
+}
+
+foreach ($items as $item) {
+    if (!is_array($item) || (string)($item['item_type'] ?? '') !== 'document') {
+        continue;
+    }
+    $links = is_array($item['links'] ?? null) ? $item['links'] : [];
+    $appointmentId = trim((string)($links['appointment_id'] ?? ''));
+    if ($appointmentId !== '') {
+        $key = 'appt:' . $appointmentId;
+        if (isset($encounters[$key])) {
+            $encounters[$key]['documents'][] = $item;
+            continue;
+        }
+    }
+    $orphanDocs[] = $item;
+}
+
+$hasRenderableItems = ($appointmentItems !== []) || ($encounterOrder !== []) || ($orphanDocs !== []);
 ?>
 <!doctype html>
 <html lang="es">
@@ -110,95 +161,134 @@ $filters = [
     <div class="alert alert-info">Captura un <code>patient_id</code> para consultar el historial de atención.</div>
   <?php elseif ($errorMessage !== ''): ?>
     <div class="alert alert-danger"><?php echo h($errorMessage); ?></div>
-  <?php elseif ($items === []): ?>
-    <div class="alert alert-secondary">Sin eventos</div>
+  <?php elseif (!$hasRenderableItems): ?>
+    <div class="alert alert-secondary">Sin eventos (no hay encuentros ni documentos)</div>
   <?php else: ?>
     <div class="vstack gap-2">
-      <?php foreach ($items as $item): ?>
+      <?php foreach ($appointmentItems as $item): ?>
         <?php
-        $itemType = (string)($item['item_type'] ?? '-');
-        $eventDatetime = (string)($item['event_datetime'] ?? '-');
-        $encounterKey = (string)($item['encounter_key'] ?? '-');
-        $sortKey = (string)($item['sort_key'] ?? '-');
+        $agenda = is_array($item['agenda'] ?? null) ? $item['agenda'] : [];
+        $links = is_array($item['links'] ?? null) ? $item['links'] : [];
         ?>
         <article class="card">
           <div class="card-body">
             <div class="d-flex flex-wrap gap-3 small mb-2">
-              <span><strong>Tipo:</strong> <?php echo h($itemType); ?></span>
-              <span><strong>Fecha:</strong> <?php echo h($eventDatetime); ?></span>
-              <span><strong>Encounter:</strong> <?php echo h($encounterKey); ?></span>
-              <span><strong>Sort:</strong> <?php echo h($sortKey); ?></span>
+              <span><strong>Tipo:</strong> appointment</span>
+              <span><strong>Fecha:</strong> <?php echo h((string)($item['event_datetime'] ?? '-')); ?></span>
+              <span><strong>Atención:</strong> <?php echo h((string)($item['encounter_key'] ?? '-')); ?></span>
             </div>
-
-            <?php if ($itemType === 'appointment'): ?>
-              <?php $agenda = is_array($item['agenda'] ?? null) ? $item['agenda'] : []; ?>
-              <?php $links = is_array($item['links'] ?? null) ? $item['links'] : []; ?>
-              <div class="small text-secondary">
-                status: <?php echo h((string)($agenda['status'] ?? '-')); ?> |
-                start_at: <?php echo h((string)($agenda['start_at'] ?? '-')); ?> |
-                end_at: <?php echo h((string)($agenda['end_at'] ?? '-')); ?> |
-                modality: <?php echo h((string)($agenda['modality'] ?? '-')); ?> |
-                channel_origin: <?php echo h((string)($agenda['channel_origin'] ?? '-')); ?>
+            <div class="small text-secondary">
+              status: <?php echo h((string)($agenda['status'] ?? '-')); ?> |
+              start_at: <?php echo h((string)($agenda['start_at'] ?? '-')); ?> |
+              end_at: <?php echo h((string)($agenda['end_at'] ?? '-')); ?> |
+              modality: <?php echo h((string)($agenda['modality'] ?? '-')); ?> |
+              channel_origin: <?php echo h((string)($agenda['channel_origin'] ?? '-')); ?>
+            </div>
+            <?php if (trim((string)($links['appointment_id'] ?? '')) !== ''): ?>
+              <div class="mt-2">
+                <a class="btn btn-sm btn-outline-primary" href="/index.html#p-agenda">Ver cita</a>
               </div>
-              <?php if (trim((string)($links['appointment_id'] ?? '')) !== ''): ?>
-                <div class="mt-2">
-                  <a class="btn btn-sm btn-outline-primary" href="/index.html#p-agenda">Ver cita</a>
+            <?php endif; ?>
+          </div>
+        </article>
+      <?php endforeach; ?>
+
+      <?php foreach ($encounterOrder as $encounterKey): ?>
+        <?php
+        if (!isset($encounters[$encounterKey])) {
+            continue;
+        }
+        $encounter = $encounters[$encounterKey];
+        $rawEncounter = is_array($encounter['raw'] ?? null) ? $encounter['raw'] : [];
+        $clinical = is_array($rawEncounter['clinical'] ?? null) ? $rawEncounter['clinical'] : [];
+        $clinicalDocs = is_array($clinical['documents'] ?? null) ? $clinical['documents'] : [];
+        $types = [];
+        foreach ($clinicalDocs as $d) {
+            if (is_array($d)) {
+                $t = trim((string)($d['document_type'] ?? ''));
+                if ($t !== '') {
+                    $types[$t] = true;
+                }
+            }
+        }
+        $isAppointmentEncounter = strpos($encounterKey, 'appt:') === 0;
+        $docsInEncounter = is_array($encounter['documents'] ?? null) ? $encounter['documents'] : [];
+        ?>
+        <article class="card">
+          <div class="card-body">
+            <div class="d-flex flex-wrap gap-3 small mb-2">
+              <span><strong>Tipo:</strong> encounter</span>
+              <span><strong>Fecha:</strong> <?php echo h((string)($encounter['event_datetime'] ?: '-')); ?></span>
+              <span><strong>Atención:</strong> <?php echo h($encounterKey); ?></span>
+            </div>
+            <div class="small text-secondary">
+              documentos: <?php echo count($clinicalDocs); ?> |
+              tipos: <?php echo h(implode(', ', array_keys($types))); ?>
+            </div>
+            <?php if ($isAppointmentEncounter): ?>
+              <div class="mt-2">
+                <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/encounter.php?encounter_key=<?php echo urlencode($encounterKey); ?>">Ver atención</a>
+              </div>
+            <?php endif; ?>
+
+            <div class="mt-3">
+              <div class="small fw-semibold mb-2">Documentos asociados</div>
+              <?php if ($docsInEncounter === []): ?>
+                <div class="small text-secondary">Sin documentos asociados</div>
+              <?php else: ?>
+                <div class="vstack gap-2">
+                  <?php foreach ($docsInEncounter as $docItem): ?>
+                    <?php
+                    $doc = is_array($docItem['clinical_document'] ?? null) ? $docItem['clinical_document'] : [];
+                    $links = is_array($docItem['links'] ?? null) ? $docItem['links'] : [];
+                    $docUuid = trim((string)($links['document_uuid'] ?? ''));
+                    ?>
+                    <div class="border rounded p-2 small">
+                      <div><strong><?php echo h((string)($doc['document_type'] ?? '-')); ?></strong></div>
+                      <div class="text-secondary"><?php echo h((string)($doc['summary'] ?? '-')); ?></div>
+                      <?php if ($docUuid !== ''): ?>
+                        <div class="mt-1">
+                          <a class="btn btn-sm btn-outline-secondary" href="/modules/clinical/ui/document.php?uuid=<?php echo urlencode($docUuid); ?>">Ver documento</a>
+                        </div>
+                      <?php endif; ?>
+                    </div>
+                  <?php endforeach; ?>
                 </div>
               <?php endif; ?>
-            <?php elseif ($itemType === 'document'): ?>
-              <?php $doc = is_array($item['clinical_document'] ?? null) ? $item['clinical_document'] : []; ?>
-              <?php $links = is_array($item['links'] ?? null) ? $item['links'] : []; ?>
+            </div>
+          </div>
+        </article>
+      <?php endforeach; ?>
+
+      <?php if ($orphanDocs !== []): ?>
+        <div class="pt-2">
+          <h2 class="h6 mb-2">Documentos sin atención</h2>
+        </div>
+        <?php foreach ($orphanDocs as $docItem): ?>
+          <?php
+          $doc = is_array($docItem['clinical_document'] ?? null) ? $docItem['clinical_document'] : [];
+          $links = is_array($docItem['links'] ?? null) ? $docItem['links'] : [];
+          $docUuid = trim((string)($links['document_uuid'] ?? ''));
+          ?>
+          <article class="card">
+            <div class="card-body">
+              <div class="d-flex flex-wrap gap-3 small mb-2">
+                <span><strong>Tipo:</strong> document</span>
+                <span><strong>Fecha:</strong> <?php echo h((string)($docItem['event_datetime'] ?? '-')); ?></span>
+              </div>
               <div class="small text-secondary">
                 document_type: <?php echo h((string)($doc['document_type'] ?? '-')); ?> |
                 summary: <?php echo h((string)($doc['summary'] ?? '-')); ?>
               </div>
-              <?php $docUuid = trim((string)($links['document_uuid'] ?? '')); ?>
               <?php if ($docUuid !== ''): ?>
                 <div class="mt-2">
                   <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/document.php?uuid=<?php echo urlencode($docUuid); ?>">Ver documento</a>
                 </div>
               <?php endif; ?>
-            <?php elseif ($itemType === 'encounter'): ?>
-              <?php
-              $clinical = is_array($item['clinical'] ?? null) ? $item['clinical'] : [];
-              $docs = is_array($clinical['documents'] ?? null) ? $clinical['documents'] : [];
-              $types = [];
-              $docLinks = [];
-              foreach ($docs as $d) {
-                  if (is_array($d)) {
-                      $t = trim((string)($d['document_type'] ?? ''));
-                      if ($t !== '') {
-                          $types[$t] = true;
-                      }
-                      $docUuid = trim((string)($d['document_uuid'] ?? ''));
-                      if ($docUuid !== '') {
-                          $docLinks[$docUuid] = true;
-                      }
-                  }
-              }
-              $isAppointmentEncounter = strpos($encounterKey, 'appt:') === 0;
-              ?>
-              <div class="small text-secondary">
-                <strong>Atención:</strong> <?php echo h($encounterKey); ?> |
-                documentos: <?php echo count($docs); ?> |
-                tipos: <?php echo h(implode(', ', array_keys($types))); ?>
-              </div>
-              <?php if (trim($encounterKey) !== '' && $isAppointmentEncounter): ?>
-                <div class="mt-2">
-                  <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/encounter.php?encounter_key=<?php echo urlencode($encounterKey); ?>">Ver atención</a>
-                </div>
-              <?php endif; ?>
-              <?php if ($docLinks !== []): ?>
-                <div class="mt-2 d-flex flex-wrap gap-2">
-                  <?php foreach (array_keys($docLinks) as $uuid): ?>
-                    <a class="btn btn-sm btn-outline-secondary" href="/modules/clinical/ui/document.php?uuid=<?php echo urlencode($uuid); ?>">Documento</a>
-                  <?php endforeach; ?>
-                </div>
-              <?php endif; ?>
-            <?php endif; ?>
-          </div>
-        </article>
-      <?php endforeach; ?>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      <?php endif; ?>
     </div>
   <?php endif; ?>
 </div>
