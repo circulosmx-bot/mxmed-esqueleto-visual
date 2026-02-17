@@ -25,6 +25,8 @@ function h(string $value): string
 }
 
 $patientId = trim((string)($_GET['patient_id'] ?? ''));
+$appointmentId = trim((string)($_GET['appointment_id'] ?? ''));
+$encounterKey = trim((string)($_GET['encounter_key'] ?? ''));
 $include = trim((string)($_GET['include'] ?? 'agenda,clinical'));
 $limit = (int)($_GET['limit'] ?? 20);
 $cursor = trim((string)($_GET['cursor'] ?? ''));
@@ -33,9 +35,49 @@ $include = $include !== '' ? $include : 'agenda,clinical';
 $limit = ($limit > 0 && $limit <= 200) ? $limit : 20;
 
 $errorMessage = '';
+$resolveErrorMsg = '';
 $items = [];
 $cursorNext = '';
 $cursorPrev = '';
+
+if ($encounterKey === '' && $appointmentId !== '') {
+    $encounterKey = 'appt:' . $appointmentId;
+}
+
+if ($patientId === '' && $encounterKey !== '') {
+    $resolveUrl = get_api_base() . '/api/clinical/index.php/encounters/' . rawurlencode($encounterKey);
+    $resolveContext = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'timeout' => 8,
+            'ignore_errors' => true,
+            'header' => "Accept: application/json\r\n",
+        ],
+    ]);
+    $resolveRaw = @file_get_contents($resolveUrl, false, $resolveContext);
+    if ($resolveRaw !== false) {
+        $resolveDecoded = json_decode($resolveRaw, true);
+        $resolveData = is_array($resolveDecoded['data'] ?? null) ? $resolveDecoded['data'] : [];
+        $resolveLinks = is_array($resolveData['links'] ?? null) ? $resolveData['links'] : [];
+        $resolvedPatientId = trim((string)($resolveLinks['patient_id'] ?? ($resolveData['patient_id'] ?? '')));
+        if (is_array($resolveDecoded) && ($resolveDecoded['ok'] ?? false) === true && $resolvedPatientId !== '') {
+            $redirectParams = [
+                'patient_id' => $resolvedPatientId,
+                'include' => $include,
+                'limit' => $limit,
+            ];
+            if ($cursor !== '') {
+                $redirectParams['cursor'] = $cursor;
+            }
+            if ($direction !== '') {
+                $redirectParams['direction'] = $direction;
+            }
+            header('Location: /modules/clinical/ui/historial.php?' . http_build_query($redirectParams));
+            exit;
+        }
+    }
+    $resolveErrorMsg = 'No se pudo resolver patient_id desde el encounter.';
+}
 
 if ($patientId !== '') {
     $query = [
@@ -48,6 +90,7 @@ if ($patientId !== '') {
     if ($direction !== '') {
         $query['direction'] = $direction;
     }
+
     $url = get_api_base() . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/timeline'
          . '?' . http_build_query($query);
 
@@ -99,23 +142,23 @@ foreach ($items as $item) {
     }
     $itemType = (string)($item['item_type'] ?? '');
     if ($itemType === 'encounter') {
-        $encounterKey = trim((string)($item['encounter_key'] ?? ''));
-        if ($encounterKey === '') {
+        $ek = trim((string)($item['encounter_key'] ?? ''));
+        if ($ek === '') {
             continue;
         }
-        $appointmentId = null;
-        if (strpos($encounterKey, 'appt:') === 0) {
-            $appointmentId = substr($encounterKey, 5);
-            $appointmentId = $appointmentId !== '' ? $appointmentId : null;
+        $appointmentInEncounter = null;
+        if (strpos($ek, 'appt:') === 0) {
+            $appointmentInEncounter = substr($ek, 5);
+            $appointmentInEncounter = $appointmentInEncounter !== '' ? $appointmentInEncounter : null;
         }
-        $encounters[$encounterKey] = [
-            'encounter_key' => $encounterKey,
+        $encounters[$ek] = [
+            'encounter_key' => $ek,
             'event_datetime' => (string)($item['event_datetime'] ?? ''),
-            'appointment_id' => $appointmentId,
+            'appointment_id' => $appointmentInEncounter,
             'documents' => [],
             'raw' => $item,
         ];
-        $encounterOrder[] = $encounterKey;
+        $encounterOrder[] = $ek;
     } elseif ($itemType === 'appointment') {
         $appointmentItems[] = $item;
     }
@@ -126,9 +169,9 @@ foreach ($items as $item) {
         continue;
     }
     $links = is_array($item['links'] ?? null) ? $item['links'] : [];
-    $appointmentId = trim((string)($links['appointment_id'] ?? ''));
-    if ($appointmentId !== '') {
-        $key = 'appt:' . $appointmentId;
+    $appt = trim((string)($links['appointment_id'] ?? ''));
+    if ($appt !== '') {
+        $key = 'appt:' . $appt;
         if (isset($encounters[$key])) {
             $encounters[$key]['documents'][] = $item;
             continue;
@@ -139,12 +182,12 @@ foreach ($items as $item) {
 
 $hasRenderableItems = ($appointmentItems !== []) || ($encounterOrder !== []) || ($orphanDocs !== []);
 
-$buildPageHref = static function (string $cursorValue) use ($patientId, $include, $limit, $direction): string {
+$buildCursorHref = static function (string $nextCursor) use ($patientId, $include, $limit, $direction): string {
     $params = [
         'patient_id' => $patientId,
         'include' => $include,
         'limit' => $limit,
-        'cursor' => $cursorValue,
+        'cursor' => $nextCursor,
     ];
     if ($direction !== '') {
         $params['direction'] = $direction;
@@ -187,6 +230,10 @@ $buildPageHref = static function (string $cursorValue) use ($patientId, $include
     <?php endforeach; ?>
   </div>
 
+  <?php if ($resolveErrorMsg !== ''): ?>
+    <div class="alert alert-danger"><?php echo h($resolveErrorMsg); ?></div>
+  <?php endif; ?>
+
   <?php if ($patientId === ''): ?>
     <div class="alert alert-info">Captura un <code>patient_id</code> para consultar el historial de atención.</div>
   <?php elseif ($errorMessage !== ''): ?>
@@ -197,10 +244,10 @@ $buildPageHref = static function (string $cursorValue) use ($patientId, $include
     <?php if ($cursorNext !== '' || $cursorPrev !== ''): ?>
       <div class="d-flex flex-wrap gap-2 mb-3">
         <?php if ($cursorNext !== ''): ?>
-          <a class="btn btn-outline-primary btn-sm" href="<?php echo h($buildPageHref($cursorNext)); ?>">Más reciente</a>
+          <a class="btn btn-outline-primary btn-sm" href="<?php echo h($buildCursorHref($cursorNext)); ?>">Más reciente</a>
         <?php endif; ?>
         <?php if ($cursorPrev !== ''): ?>
-          <a class="btn btn-outline-primary btn-sm" href="<?php echo h($buildPageHref($cursorPrev)); ?>">Más antiguo</a>
+          <a class="btn btn-outline-primary btn-sm" href="<?php echo h($buildCursorHref($cursorPrev)); ?>">Más antiguo</a>
         <?php endif; ?>
       </div>
     <?php endif; ?>
@@ -234,12 +281,12 @@ $buildPageHref = static function (string $cursorValue) use ($patientId, $include
         </article>
       <?php endforeach; ?>
 
-      <?php foreach ($encounterOrder as $encounterKey): ?>
+      <?php foreach ($encounterOrder as $ek): ?>
         <?php
-        if (!isset($encounters[$encounterKey])) {
+        if (!isset($encounters[$ek])) {
             continue;
         }
-        $encounter = $encounters[$encounterKey];
+        $encounter = $encounters[$ek];
         $rawEncounter = is_array($encounter['raw'] ?? null) ? $encounter['raw'] : [];
         $clinical = is_array($rawEncounter['clinical'] ?? null) ? $rawEncounter['clinical'] : [];
         $clinicalDocs = is_array($clinical['documents'] ?? null) ? $clinical['documents'] : [];
@@ -252,7 +299,7 @@ $buildPageHref = static function (string $cursorValue) use ($patientId, $include
                 }
             }
         }
-        $isAppointmentEncounter = strpos($encounterKey, 'appt:') === 0;
+        $isAppointmentEncounter = strpos($ek, 'appt:') === 0;
         $docsInEncounter = is_array($encounter['documents'] ?? null) ? $encounter['documents'] : [];
         ?>
         <article class="card">
@@ -260,7 +307,7 @@ $buildPageHref = static function (string $cursorValue) use ($patientId, $include
             <div class="d-flex flex-wrap gap-3 small mb-2">
               <span><strong>Tipo:</strong> encounter</span>
               <span><strong>Fecha:</strong> <?php echo h((string)($encounter['event_datetime'] ?: '-')); ?></span>
-              <span><strong>Atención:</strong> <?php echo h($encounterKey); ?></span>
+              <span><strong>Atención:</strong> <?php echo h($ek); ?></span>
             </div>
             <div class="small text-secondary">
               documentos: <?php echo count($clinicalDocs); ?> |
@@ -268,7 +315,7 @@ $buildPageHref = static function (string $cursorValue) use ($patientId, $include
             </div>
             <?php if ($isAppointmentEncounter): ?>
               <div class="mt-2">
-                <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/encounter.php?encounter_key=<?php echo urlencode($encounterKey); ?>">Ver atención</a>
+                <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/encounter.php?encounter_key=<?php echo urlencode($ek); ?>">Ver atención</a>
               </div>
             <?php endif; ?>
 
