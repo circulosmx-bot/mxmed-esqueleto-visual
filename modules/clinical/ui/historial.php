@@ -27,16 +27,30 @@ function h(string $value): string
 $patientId = trim((string)($_GET['patient_id'] ?? ''));
 $include = trim((string)($_GET['include'] ?? 'agenda,clinical'));
 $limit = (int)($_GET['limit'] ?? 20);
+$cursor = trim((string)($_GET['cursor'] ?? ''));
+$direction = trim((string)($_GET['direction'] ?? ''));
 $include = $include !== '' ? $include : 'agenda,clinical';
 $limit = ($limit > 0 && $limit <= 200) ? $limit : 20;
 
 $errorMessage = '';
 $items = [];
+$cursorNext = '';
+$cursorPrev = '';
 
 if ($patientId !== '') {
+    $query = [
+        'include' => $include,
+        'limit' => $limit,
+    ];
+    if ($cursor !== '') {
+        $query['cursor'] = $cursor;
+    }
+    if ($direction !== '') {
+        $query['direction'] = $direction;
+    }
+
     $url = get_api_base() . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/timeline'
-         . '?include=' . rawurlencode($include)
-         . '&limit=' . $limit;
+         . '?' . http_build_query($query);
 
     $context = stream_context_create([
         'http' => [
@@ -59,8 +73,12 @@ if ($patientId !== '') {
         } elseif (($decoded['ok'] ?? false) !== true) {
             $errorMessage = (string)($decoded['message'] ?? 'Error consultando historial de atención.');
         } else {
-            $list = $decoded['data']['items'] ?? [];
+            $data = is_array($decoded['data'] ?? null) ? $decoded['data'] : [];
+            $list = $data['items'] ?? [];
             $items = is_array($list) ? $list : [];
+            $range = is_array($data['range'] ?? null) ? $data['range'] : [];
+            $cursorNext = trim((string)($range['cursor_next'] ?? ''));
+            $cursorPrev = trim((string)($range['cursor_prev'] ?? ''));
         }
     }
 }
@@ -70,6 +88,19 @@ $filters = [
     'agenda' => 'Agenda',
     'clinical' => 'Clínico',
 ];
+
+$buildCursorHref = static function (string $nextCursor) use ($patientId, $include, $limit, $direction): string {
+    $params = [
+        'patient_id' => $patientId,
+        'include' => $include,
+        'limit' => $limit,
+        'cursor' => $nextCursor,
+    ];
+    if ($direction !== '') {
+        $params['direction'] = $direction;
+    }
+    return '?' . http_build_query($params);
+};
 ?>
 <!doctype html>
 <html lang="es">
@@ -113,6 +144,17 @@ $filters = [
   <?php elseif ($items === []): ?>
     <div class="alert alert-secondary">Sin eventos</div>
   <?php else: ?>
+    <?php if ($cursorNext !== '' || $cursorPrev !== ''): ?>
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        <?php if ($cursorNext !== ''): ?>
+          <a class="btn btn-outline-primary btn-sm" href="<?php echo h($buildCursorHref($cursorNext)); ?>">Más reciente</a>
+        <?php endif; ?>
+        <?php if ($cursorPrev !== ''): ?>
+          <a class="btn btn-outline-primary btn-sm" href="<?php echo h($buildCursorHref($cursorPrev)); ?>">Más antiguo</a>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
+
     <div class="vstack gap-2">
       <?php foreach ($items as $item): ?>
         <?php
