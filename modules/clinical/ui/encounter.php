@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 function get_api_base(): string
 {
@@ -50,7 +51,6 @@ if ($encounterKey !== '') {
         } elseif (($decoded['ok'] ?? false) !== true) {
             $errorMessage = (string)($decoded['message'] ?? 'Error consultando atención.');
         } else {
-            // La API devuelve: { data: { encounter_key, appointment_id, ... } }
             $data = $decoded['data'] ?? null;
             $encounter = is_array($data) ? $data : null;
             if ($encounter === null) {
@@ -104,17 +104,15 @@ $results = is_array($encounter['results'] ?? null) ? $encounter['results'] : [];
         <?php else: ?>
           <?php foreach ($documents as $doc): ?>
             <?php
-              // OJO: en la API de documentos el campo que vimos es "document_id" (UUID).
-              // Pero dejamos fallback a "document_uuid" por compatibilidad.
-              $uuid = trim((string)($doc['document_id'] ?? ($doc['document_uuid'] ?? '')));
+              $docUuid = trim((string)($doc['document_uuid'] ?? $doc['document_id'] ?? ''));
               $docType = (string)($doc['document_type'] ?? '-');
-              $docDt = (string)($doc['event_datetime'] ?? '-');
+              $docDate = (string)($doc['event_datetime'] ?? $doc['ui']['event_datetime'] ?? $doc['timestamps']['created_at'] ?? '-');
             ?>
             <li class="list-group-item small">
               <strong><?php echo h($docType); ?></strong>
-              · <?php echo h($docDt); ?>
-              <?php if ($uuid !== ''): ?>
-                · <a href="/modules/clinical/ui/document.php?uuid=<?php echo urlencode($uuid); ?>">Ver documento</a>
+              · <?php echo h($docDate); ?>
+              <?php if ($docUuid !== ''): ?>
+                · <a href="/modules/clinical/ui/document.php?uuid=<?php echo urlencode($docUuid); ?>">Ver documento</a>
               <?php endif; ?>
             </li>
           <?php endforeach; ?>
