@@ -2,7 +2,23 @@
 
 declare(strict_types=1);
 
-const TIMELINE_API_BASE = 'http://127.0.0.1:8091';
+function get_api_base(): string
+{
+    $env = trim((string)getenv('MXMED_TIMELINE_API_BASE'));
+    if ($env !== '') {
+        return rtrim($env, '/');
+    }
+
+    $host = (string)($_SERVER['HTTP_HOST'] ?? '127.0.0.1');
+    $proto = 'http';
+    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+        $proto = 'https';
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+        $proto = (string)$_SERVER['HTTP_X_FORWARDED_PROTO'];
+    }
+
+    return $proto . '://' . $host;
+}
 
 function h(string $value): string
 {
@@ -14,7 +30,7 @@ $errorMessage = '';
 $encounter = null;
 
 if ($encounterKey !== '') {
-    $url = TIMELINE_API_BASE . '/api/clinical/index.php/encounters/' . rawurlencode($encounterKey);
+$url = get_api_base() . '/api/clinical/index.php/documents/' . rawurlencode($uuid);
     $context = stream_context_create([
         'http' => [
             'method' => 'GET',
