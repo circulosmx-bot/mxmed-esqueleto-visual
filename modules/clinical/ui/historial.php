@@ -79,6 +79,45 @@ if ($patientId === '' && $encounterKey !== '') {
     $resolveErrorMsg = 'No se pudo resolver patient_id desde el encounter.';
 }
 
+if ($encounterKey === '' && $appointmentId !== '') {
+    $encounterKey = 'appt:' . $appointmentId;
+}
+
+if ($patientId === '' && $encounterKey !== '') {
+    $resolveUrl = get_api_base() . '/api/clinical/index.php/encounters/' . rawurlencode($encounterKey);
+    $resolveContext = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'timeout' => 8,
+            'ignore_errors' => true,
+            'header' => "Accept: application/json\r\n",
+        ],
+    ]);
+    $resolveRaw = @file_get_contents($resolveUrl, false, $resolveContext);
+    if ($resolveRaw !== false) {
+        $resolveDecoded = json_decode($resolveRaw, true);
+        $resolveData = is_array($resolveDecoded['data'] ?? null) ? $resolveDecoded['data'] : [];
+        $resolveLinks = is_array($resolveData['links'] ?? null) ? $resolveData['links'] : [];
+        $resolvedPatientId = trim((string)($resolveLinks['patient_id'] ?? ($resolveData['patient_id'] ?? '')));
+        if (is_array($resolveDecoded) && ($resolveDecoded['ok'] ?? false) === true && $resolvedPatientId !== '') {
+            $redirectParams = [
+                'patient_id' => $resolvedPatientId,
+                'include' => $include,
+                'limit' => $limit,
+            ];
+            if ($cursor !== '') {
+                $redirectParams['cursor'] = $cursor;
+            }
+            if ($direction !== '') {
+                $redirectParams['direction'] = $direction;
+            }
+            header('Location: /modules/clinical/ui/historial.php?' . http_build_query($redirectParams));
+            exit;
+        }
+    }
+    $resolveErrorMsg = 'No se pudo resolver patient_id desde el encounter.';
+}
+
 if ($patientId !== '') {
     $query = [
         'include' => $include,
