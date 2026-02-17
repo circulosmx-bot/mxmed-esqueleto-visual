@@ -26,9 +26,9 @@ function h(string $value): string
 
 $patientId = trim((string)($_GET['patient_id'] ?? ''));
 $include = trim((string)($_GET['include'] ?? 'agenda,clinical'));
-$limit = (int)($_GET['limit'] ?? 50);
+$limit = (int)($_GET['limit'] ?? 20);
 $include = $include !== '' ? $include : 'agenda,clinical';
-$limit = ($limit > 0 && $limit <= 200) ? $limit : 50;
+$limit = ($limit > 0 && $limit <= 200) ? $limit : 20;
 
 $errorMessage = '';
 $items = [];
@@ -49,7 +49,9 @@ if ($patientId !== '') {
 
     $raw = @file_get_contents($url, false, $context);
     if ($raw === false) {
-        $errorMessage = 'No se pudo consultar el historial de atención.';
+        $lastError = error_get_last();
+        $detail = is_array($lastError) ? trim((string)($lastError['message'] ?? '')) : '';
+        $errorMessage = $detail !== '' ? $detail : 'No se pudo consultar el historial de atención.';
     } else {
         $decoded = json_decode($raw, true);
         if (!is_array($decoded)) {
@@ -109,7 +111,7 @@ $filters = [
   <?php elseif ($errorMessage !== ''): ?>
     <div class="alert alert-danger"><?php echo h($errorMessage); ?></div>
   <?php elseif ($items === []): ?>
-    <div class="alert alert-light border">Sin eventos</div>
+    <div class="alert alert-secondary">Sin eventos</div>
   <?php else: ?>
     <div class="vstack gap-2">
       <?php foreach ($items as $item): ?>
@@ -161,22 +163,36 @@ $filters = [
               $clinical = is_array($item['clinical'] ?? null) ? $item['clinical'] : [];
               $docs = is_array($clinical['documents'] ?? null) ? $clinical['documents'] : [];
               $types = [];
+              $docLinks = [];
               foreach ($docs as $d) {
                   if (is_array($d)) {
                       $t = trim((string)($d['document_type'] ?? ''));
                       if ($t !== '') {
                           $types[$t] = true;
                       }
+                      $docUuid = trim((string)($d['document_uuid'] ?? ''));
+                      if ($docUuid !== '') {
+                          $docLinks[$docUuid] = true;
+                      }
                   }
               }
+              $isAppointmentEncounter = strpos($encounterKey, 'appt:') === 0;
               ?>
               <div class="small text-secondary">
+                <strong>Atención:</strong> <?php echo h($encounterKey); ?> |
                 documentos: <?php echo count($docs); ?> |
                 tipos: <?php echo h(implode(', ', array_keys($types))); ?>
               </div>
-              <?php if (trim($encounterKey) !== ''): ?>
+              <?php if (trim($encounterKey) !== '' && $isAppointmentEncounter): ?>
                 <div class="mt-2">
                   <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/encounter.php?encounter_key=<?php echo urlencode($encounterKey); ?>">Ver atención</a>
+                </div>
+              <?php endif; ?>
+              <?php if ($docLinks !== []): ?>
+                <div class="mt-2 d-flex flex-wrap gap-2">
+                  <?php foreach (array_keys($docLinks) as $uuid): ?>
+                    <a class="btn btn-sm btn-outline-secondary" href="/modules/clinical/ui/document.php?uuid=<?php echo urlencode($uuid); ?>">Documento</a>
+                  <?php endforeach; ?>
                 </div>
               <?php endif; ?>
             <?php endif; ?>
