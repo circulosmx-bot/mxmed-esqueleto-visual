@@ -338,6 +338,11 @@ $buildCursorHref = static function (string $nextCursor) use ($patientId, $includ
                 }
             }
         }
+        $hasVitals = (bool)($clinical['has_vitals'] ?? false);
+        $hasNote = (bool)($clinical['has_note'] ?? false);
+        $hasPrescription = (bool)($clinical['has_prescription'] ?? false);
+        $hasOrders = (bool)($clinical['has_orders'] ?? false);
+        $hasResults = (bool)($clinical['has_results'] ?? false);
         $isAppointmentEncounter = strpos($ek, 'appt:') === 0;
         $docsInEncounter = is_array($encounter['documents'] ?? null) ? $encounter['documents'] : [];
         ?>
@@ -347,6 +352,13 @@ $buildCursorHref = static function (string $nextCursor) use ($patientId, $includ
               <span><strong>Tipo:</strong> encounter</span>
               <span><strong>Fecha:</strong> <?php echo h((string)($encounter['event_datetime'] ?: '-')); ?></span>
               <span><strong>Atención:</strong> <?php echo h($ek); ?></span>
+            </div>
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              <span class="badge <?php echo $hasVitals ? 'text-bg-primary' : 'bg-light text-muted opacity-50'; ?>" title="<?php echo $hasVitals ? 'Tiene signos vitales' : 'Sin signos vitales'; ?>">Signos</span>
+              <span class="badge <?php echo $hasNote ? 'text-bg-success' : 'bg-light text-muted opacity-50'; ?>" title="<?php echo $hasNote ? 'Tiene nota clínica' : 'Sin nota clínica'; ?>">Nota</span>
+              <span class="badge <?php echo $hasPrescription ? 'text-bg-warning' : 'bg-light text-muted opacity-50'; ?>" title="<?php echo $hasPrescription ? 'Tiene receta' : 'Sin receta'; ?>">Rx</span>
+              <span class="badge <?php echo $hasOrders ? 'text-bg-info' : 'bg-light text-muted opacity-50'; ?>" title="<?php echo $hasOrders ? 'Tiene órdenes' : 'Sin órdenes'; ?>">Órdenes</span>
+              <span class="badge <?php echo $hasResults ? 'text-bg-dark' : 'bg-light text-muted opacity-50'; ?>" title="<?php echo $hasResults ? 'Tiene resultados' : 'Sin resultados'; ?>">Resultados</span>
             </div>
             <div class="small text-secondary">
               documentos: <?php echo count($clinicalDocs); ?> |
