@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 function get_api_base(): string
 {
+    $env = trim((string)getenv('MXMED_API_BASE'));
+    if ($env !== '') {
+        return rtrim($env, '/');
+    }
+
     $env = trim((string)getenv('MXMED_TIMELINE_API_BASE'));
     if ($env !== '') {
         return rtrim($env, '/');

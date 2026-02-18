@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 function get_api_base(): string
 {
+    $env = trim((string)getenv('MXMED_API_BASE'));
+    if ($env !== '') {
+        return rtrim($env, '/');
+    }
+
     // UI corre en 8091
     // API Gateway corre en 8092
     return 'http://127.0.0.1:8092';
