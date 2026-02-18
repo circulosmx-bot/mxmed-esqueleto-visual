@@ -27,6 +27,25 @@ lsof -tiTCP:8091 -sTCP:LISTEN | xargs -r kill
 lsof -tiTCP:8092 -sTCP:LISTEN | xargs -r kill
 ```
 
+## Preflight antes de QA
+Confirma que ambos puertos estén en `LISTEN` (con mensaje si están DOWN):
+
+```bash
+lsof -nP -iTCP:8091 -sTCP:LISTEN >/dev/null && echo "8091 UP" || echo "8091 DOWN"
+lsof -nP -iTCP:8092 -sTCP:LISTEN >/dev/null && echo "8092 UP" || echo "8092 DOWN"
+```
+
+Si están DOWN, inicia de nuevo con logs:
+
+```bash
+cd /Users/circulodigital/Documents/GitHub/mxmed-esqueleto-visual
+truncate -s 0 /tmp/mxmed_8091.log /tmp/mxmed_8092.log
+nohup php -S 127.0.0.1:8091 -t . >/tmp/mxmed_8091.log 2>&1 &
+nohup env MXMED_API_BASE=http://127.0.0.1:8091 php -S 127.0.0.1:8092 -t . >/tmp/mxmed_8092.log 2>&1 &
+```
+
+Nota operativa: mantener una terminal dedicada abierta para servidores y otra para ejecutar QA.
+
 ## Checklist de verificación
 ```bash
 lsof -nP -iTCP:8091 -sTCP:LISTEN
