@@ -2788,7 +2788,7 @@
                 <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-datos" data-tab-key="t-datos"><span class="tab-ico material-symbols-outlined" aria-hidden="true">id_card</span><span class="tab-lbl">Datos Generales</span></button></li>
 
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historia" data-tab-key="t-historia"><span class="tab-ico material-symbols-outlined" aria-hidden="true">menu_book</span><span class="tab-lbl">Historia Clínica</span></button></li>
-                <li class="nav-item"><button class="nav-link" type="button" data-action="open-historial-atencion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">history</span><span class="tab-lbl">Historial de atención</span></button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historial-atencion" data-tab-key="t-historial-atencion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">history</span><span class="tab-lbl">Historial de atención</span></button></li>
 
                 <li class="nav-item d-none" data-tab-conditional="gineco"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-gineco" data-tab-key="t-gineco"><span class="tab-ico material-symbols-rounded" aria-hidden="true">pregnant_woman</span><span class="tab-lbl">Antecedentes gineco-obstétricos</span></button></li>
 
@@ -3360,6 +3360,20 @@
 
                 </div>
 
+              </div>
+              <div class="tab-pane fade" id="t-historial-atencion">
+                <div class="clinical-panel mt-2 p-2">
+                  <div class="small text-secondary mb-2">Historial de atención (vista embebida)</div>
+                  <div id="mm-embed-historial-empty" class="alert alert-info d-none mb-2">Selecciona un paciente para ver el historial.</div>
+                  <iframe
+                    id="mm-embed-historial"
+                    title="Historial de atención"
+                    src=""
+                    style="width:100%; min-height:70vh; border:0;"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                  ></iframe>
+                </div>
               </div>
               <div class="tab-pane fade" id="t-gineco">
                 <div class="gyn-panel mt-1">
@@ -5923,7 +5937,6 @@
 </div></div>
 
             </div>
-
           </div>
 
         </section>
@@ -6487,9 +6500,133 @@
     </div>
   </div>
 </template>
+<script>
+  (function () {
+    var historialTabBtn = document.querySelector('[data-bs-target="#t-historial-atencion"]');
+    var historialPane = document.getElementById('t-historial-atencion');
+    var iframe = document.getElementById('mm-embed-historial');
+    var emptyMsg = document.getElementById('mm-embed-historial-empty');
+    var expedientePane = document.getElementById('p-expediente');
+    if (!historialTabBtn || !historialPane || !iframe || !expedientePane) return;
+    var lastLoadedPatientId = '';
+
+    function getParam(name) {
+      try {
+        return new URLSearchParams(window.location.search).get(name) || '';
+      } catch (_) {
+        return '';
+      }
+    }
+
+    function normalizeToken(str) {
+      return String(str || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+    }
+
+    function isHistorialTabVisible() {
+      return historialPane.classList.contains('show') || historialPane.classList.contains('active');
+    }
+
+    // Referencia: docs/ui/GLOSARIO_UI_MXMED.md (Panel / EmbedView)
+    // Prioridad de patient_id alineada con flujo real de Expediente (app.js:getCurrentPatientId).
+    function resolveActivePatientId() {
+      var explicit = String(expedientePane.getAttribute('data-patient-id') || expedientePane.dataset.patientId || '').trim();
+      if (explicit) return explicit;
+
+      var hidden = expedientePane.querySelector('input[name="patient_id"], input#patient_id');
+      if (hidden && hidden.value && String(hidden.value).trim() !== '') return String(hidden.value).trim();
+
+      var byDataset = String(expedientePane.getAttribute('data-active-patient-id') || expedientePane.dataset.activePatientId || '').trim();
+      if (byDataset) return byDataset;
+
+      var nombre = expedientePane.querySelector('[data-pac-nombre]')?.value?.trim() || '';
+      var apPat = expedientePane.querySelector('[data-pac-apellido-paterno]')?.value?.trim() || '';
+      var apMat = expedientePane.querySelector('[data-pac-apellido-materno]')?.value?.trim() || '';
+      var sexoVal = expedientePane.querySelector('input[name="pac-genero"]:checked')?.value || '';
+      var dd = expedientePane.querySelector('[data-dg-dia]')?.value || '';
+      var mm = expedientePane.querySelector('[data-dg-mes]')?.value || '';
+      var yy = expedientePane.querySelector('[data-dg-anio]')?.value || '';
+      var dob = [yy, mm, dd].filter(Boolean).join('-');
+      var nombreCompleto = [nombre, apPat, apMat].filter(Boolean).join(' ').trim();
+
+      var identity = window.mxmedIdentity || null;
+      if (identity && typeof identity.buildLegacyPatientId === 'function') {
+        try {
+          var built = String(identity.buildLegacyPatientId(nombreCompleto, dob, sexoVal, normalizeToken) || '').trim();
+          if (built && built !== 'anon') return built;
+        } catch (_) {}
+      }
+
+      try {
+        var stored = localStorage.getItem('mxmed_active_patient_id');
+        if (stored && String(stored).trim() !== '') return String(stored).trim();
+      } catch (_) {}
+
+      var fromQuery = getParam('patient_id');
+      if (fromQuery && fromQuery.trim() !== '') return fromQuery.trim();
+      return null;
+    }
+
+    function loadHistorialForPatient(pid) {
+      var nextSrc = '/modules/clinical/ui/historial.php?patient_id=' + encodeURIComponent(pid) + '&embed=1';
+      iframe.setAttribute('src', nextSrc);
+      iframe.dataset.loadedPatientId = pid;
+      lastLoadedPatientId = pid;
+      if (emptyMsg) emptyMsg.classList.add('d-none');
+    }
+
+    function ensureHistorialIframe() {
+      var pid = resolveActivePatientId();
+      if (!pid) {
+        if (emptyMsg) emptyMsg.classList.remove('d-none');
+        iframe.removeAttribute('src');
+        iframe.dataset.loadedPatientId = '';
+        lastLoadedPatientId = '';
+        return;
+      }
+      if (!iframe.getAttribute('src')) {
+        loadHistorialForPatient(pid);
+        return;
+      }
+      var loadedPid = String(iframe.dataset.loadedPatientId || lastLoadedPatientId || '').trim();
+      if (isHistorialTabVisible() && loadedPid !== pid) {
+        loadHistorialForPatient(pid);
+      }
+    }
+
+    historialTabBtn.addEventListener('shown.bs.tab', ensureHistorialIframe);
+
+    var patientInputs = expedientePane.querySelectorAll(
+      '[data-pac-nombre], [data-pac-apellido-paterno], [data-pac-apellido-materno], [data-dg-dia], [data-dg-mes], [data-dg-anio], input[name="pac-genero"]'
+    );
+    patientInputs.forEach(function (el) {
+      el.addEventListener('input', function () {
+        if (isHistorialTabVisible()) ensureHistorialIframe();
+      });
+      el.addEventListener('change', function () {
+        if (isHistorialTabVisible()) ensureHistorialIframe();
+      });
+    });
+
+    var observer = new MutationObserver(function () {
+      if (isHistorialTabVisible()) ensureHistorialIframe();
+    });
+    observer.observe(expedientePane, { attributes: true, attributeFilter: ['data-patient-id', 'data-active-patient-id'] });
+
+    ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach(function (evtName) {
+      document.addEventListener(evtName, function () {
+        if (isHistorialTabVisible()) ensureHistorialIframe();
+      });
+    });
+
+    if (historialTabBtn.classList.contains('active') || historialPane.classList.contains('show')) {
+      ensureHistorialIframe();
+    }
+  })();
+</script>
 </body>
 </html>
-
-
-
-
