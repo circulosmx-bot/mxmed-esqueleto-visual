@@ -64,27 +64,18 @@ $documents = is_array($encounter['documents'] ?? null) ? $encounter['documents']
 $prescriptions = is_array($encounter['prescriptions'] ?? null) ? $encounter['prescriptions'] : [];
 $orders = is_array($encounter['orders'] ?? null) ? $encounter['orders'] : [];
 $results = is_array($encounter['results'] ?? null) ? $encounter['results'] : [];
-$embed = isset($_GET['embed']) && $_GET['embed'] === '1';
-
-function carry_embed_params(array $extra = []): string
-{
-    global $embed;
-    $params = $extra;
-    if ($embed) {
-        $params['embed'] = '1';
-    }
-    return http_build_query($params);
-}
+require_once __DIR__ . '/../../_partials/clinical_embed.php';
+$embed = is_embed_request();
 
 // Shell MXMed
 if (!$embed) {
     $pageTitle = 'Atención clínica';
     require_once __DIR__ . '/../../_partials/mm_shell_top.php';
 } else {
-    echo '<div class="clinical-embed p-2">';
+    clinical_embed_start();
 }
 ?>
-<div class="container py-4">
+<div class="<?php echo $embed ? 'py-1' : 'container py-4'; ?>">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h4 mb-0">Atención clínica</h1>
     <div class="d-flex gap-2">
@@ -158,7 +149,7 @@ if (!$embed) {
   <?php endif; ?>
 </div>
 <?php if ($embed): ?>
-</div>
+<?php clinical_embed_end(); ?>
 <?php else: ?>
 <?php require_once __DIR__ . '/../../_partials/mm_shell_bottom.php'; ?>
 <?php endif; ?>

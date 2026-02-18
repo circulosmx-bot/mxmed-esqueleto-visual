@@ -22,17 +22,8 @@ $cursor = trim((string)($_GET['cursor'] ?? ''));
 $direction = trim((string)($_GET['direction'] ?? ''));
 $include = $include !== '' ? $include : 'agenda,clinical';
 $limit = ($limit > 0 && $limit <= 200) ? $limit : 20;
-$embed = isset($_GET['embed']) && $_GET['embed'] === '1';
-
-function carry_embed_params(array $extra = []): string
-{
-    global $embed;
-    $params = $extra;
-    if ($embed) {
-        $params['embed'] = '1';
-    }
-    return http_build_query($params);
-}
+require_once __DIR__ . '/../../_partials/clinical_embed.php';
+$embed = is_embed_request();
 
 $errorMessage = '';
 $resolveErrorMsg = '';
@@ -279,11 +270,12 @@ HTML;
 if (!$embed) {
     require_once __DIR__ . '/../../_partials/mm_shell_top.php';
 } else {
-    echo '<div class="clinical-embed p-2">';
+    echo $extraHead;
+    clinical_embed_start();
 }
 ?>
 <div class="clinical-historial">
-<div class="container py-4">
+<div class="<?php echo $embed ? 'py-1' : 'container py-4'; ?>">
   <h1 class="h4 mb-1">Historial de atención</h1>
   <p class="text-secondary mb-3">patient_id: <code><?php echo h($patientId !== '' ? $patientId : '-'); ?></code></p>
 
@@ -291,9 +283,7 @@ if (!$embed) {
     <div class="col-12 col-md-8">
       <label for="patient_id" class="form-label">Patient ID</label>
       <input id="patient_id" name="patient_id" class="form-control" value="<?php echo h($patientId); ?>" required>
-      <?php if ($embed): ?>
-        <input type="hidden" name="embed" value="1">
-      <?php endif; ?>
+      <?php echo carry_embed_hidden_input(); ?>
     </div>
     <div class="col-12 col-md-4 d-flex align-items-end">
       <button type="submit" class="btn btn-primary w-100">Cargar historial de atención</button>
@@ -480,7 +470,7 @@ if (!$embed) {
 </div>
 </div>
 <?php if ($embed): ?>
-</div>
+<?php clinical_embed_end(); ?>
 <?php else: ?>
 <?php require_once __DIR__ . '/../../_partials/mm_shell_bottom.php'; ?>
 <?php endif; ?>

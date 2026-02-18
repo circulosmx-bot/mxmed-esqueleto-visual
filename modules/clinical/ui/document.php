@@ -73,27 +73,18 @@ $summary = $document ? (string)($document['content']['summary'] ?? '-') : '-';
 $payload = $document && is_array($document['content']['payload'] ?? null) ? $document['content']['payload'] : null;
 $payloadJson = $payload ? json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '';
 $renderedText = $document ? (string)($document['content']['rendered_text'] ?? '') : '';
-$embed = isset($_GET['embed']) && $_GET['embed'] === '1';
-
-function carry_embed_params(array $extra = []): string
-{
-  global $embed;
-  $params = $extra;
-  if ($embed) {
-    $params['embed'] = '1';
-  }
-  return http_build_query($params);
-}
+require_once __DIR__ . '/../../_partials/clinical_embed.php';
+$embed = is_embed_request();
 
 // Shell MXMed
 if (!$embed) {
     $pageTitle = 'Documento clínico';
     require_once __DIR__ . '/../../_partials/mm_shell_top.php';
 } else {
-    echo '<div class="clinical-embed p-2">';
+    clinical_embed_start();
 }
 ?>
-<div class="container py-4">
+<div class="<?php echo $embed ? 'py-1' : 'container py-4'; ?>">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
       <h1 class="h4 mb-0">Documento clínico</h1>
@@ -139,7 +130,7 @@ if (!$embed) {
   <?php endif; ?>
 </div>
 <?php if ($embed): ?>
-</div>
+<?php clinical_embed_end(); ?>
 <?php else: ?>
 <?php require_once __DIR__ . '/../../_partials/mm_shell_bottom.php'; ?>
 <?php endif; ?>
