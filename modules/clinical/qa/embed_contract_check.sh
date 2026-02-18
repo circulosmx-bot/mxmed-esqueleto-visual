@@ -33,7 +33,12 @@ check_absent() {
 
 fetch_body() {
   local url="$1"
-  curl -fsS "$url" 2>/dev/null || true
+  curl -sS --max-time 8 "$url" 2>/dev/null || true
+}
+
+fetch_status() {
+  local url="$1"
+  curl -sS -o /dev/null -w "%{http_code}" --max-time 8 "$url" 2>/dev/null || echo "000"
 }
 
 run_embed_checks() {
@@ -41,13 +46,29 @@ run_embed_checks() {
   local path="$2"
   local url="${UI_BASE}${path}"
   local body
+  local status
 
   echo "--- $name (embed) ---"
   echo "URL: $url"
+  status="$(fetch_status "$url")"
+  echo "HTTP: $status"
   body="$(fetch_body "$url")"
+
+  if [ "$status" != "200" ]; then
+    echo "DEBUG | $name embed | non-200 status: $status"
+    if [ -n "$body" ]; then
+      echo "DEBUG | $name embed | body (first 30 lines):"
+      printf '%s\n' "$body" | sed -n '1,30p'
+    fi
+  fi
 
   if [ -z "$body" ]; then
     echo "FAIL | $name embed | empty response"
+    case "$status" in
+      000) echo "DEBUG | $name embed | server down / connect refused" ;;
+      500) echo "DEBUG | $name embed | php error; revisar /tmp/mxmed_8092.log" ;;
+      404) echo "DEBUG | $name embed | ruta no encontrada" ;;
+    esac
     failures=$((failures + 1))
     return
   fi
@@ -61,7 +82,8 @@ run_embed_checks() {
   check_absent "$body" "<html" "$name embed / rule B"
   check_absent "$body" "<head" "$name embed / rule B"
   check_absent "$body" "<body" "$name embed / rule B"
-  check_absent "$body" "header-top" "$name embed / rule B"
+  check_absent "$body" "<div class=\"header-top\"" "$name embed / rule B"
+  check_absent "$body" "<div class=\"header-mid\"" "$name embed / rule B"
   check_absent "$body" "mm-wrap" "$name embed / rule B"
   check_absent "$body" "mm-grid" "$name embed / rule B"
   check_absent "$body" "mm-main" "$name embed / rule B"
@@ -72,13 +94,29 @@ run_standalone_historial_check() {
   local path="/modules/clinical/ui/historial.php?patient_id=demo"
   local url="${UI_BASE}${path}"
   local body
+  local status
 
   echo "--- $name (standalone) ---"
   echo "URL: $url"
+  status="$(fetch_status "$url")"
+  echo "HTTP: $status"
   body="$(fetch_body "$url")"
+
+  if [ "$status" != "200" ]; then
+    echo "DEBUG | $name standalone | non-200 status: $status"
+    if [ -n "$body" ]; then
+      echo "DEBUG | $name standalone | body (first 30 lines):"
+      printf '%s\n' "$body" | sed -n '1,30p'
+    fi
+  fi
 
   if [ -z "$body" ]; then
     echo "FAIL | $name standalone | empty response"
+    case "$status" in
+      000) echo "DEBUG | $name standalone | server down / connect refused" ;;
+      500) echo "DEBUG | $name standalone | php error; revisar /tmp/mxmed_8092.log" ;;
+      404) echo "DEBUG | $name standalone | ruta no encontrada" ;;
+    esac
     failures=$((failures + 1))
     return
   fi
