@@ -22,6 +22,17 @@ $cursor = trim((string)($_GET['cursor'] ?? ''));
 $direction = trim((string)($_GET['direction'] ?? ''));
 $include = $include !== '' ? $include : 'agenda,clinical';
 $limit = ($limit > 0 && $limit <= 200) ? $limit : 20;
+$embed = isset($_GET['embed']) && $_GET['embed'] === '1';
+
+function carry_embed_params(array $extra = []): string
+{
+    global $embed;
+    $params = $extra;
+    if ($embed) {
+        $params['embed'] = '1';
+    }
+    return http_build_query($params);
+}
 
 $errorMessage = '';
 $resolveErrorMsg = '';
@@ -61,6 +72,9 @@ if ($patientId === '' && $encounterKey !== '') {
             if ($direction !== '') {
                 $redirectParams['direction'] = $direction;
             }
+            if ($embed) {
+                $redirectParams['embed'] = '1';
+            }
             header('Location: /modules/clinical/ui/historial.php?' . http_build_query($redirectParams));
             exit;
         }
@@ -99,6 +113,9 @@ if ($patientId === '' && $encounterKey !== '') {
             }
             if ($direction !== '') {
                 $redirectParams['direction'] = $direction;
+            }
+            if ($embed) {
+                $redirectParams['embed'] = '1';
             }
             header('Location: /modules/clinical/ui/historial.php?' . http_build_query($redirectParams));
             exit;
@@ -220,7 +237,7 @@ $buildCursorHref = static function (string $nextCursor) use ($patientId, $includ
     if ($direction !== '') {
         $params['direction'] = $direction;
     }
-    return '?' . http_build_query($params);
+    return '?' . carry_embed_params($params);
 };
 // Shell MXMed
 $pageTitle = 'Historial de atención';
@@ -259,11 +276,9 @@ $extraHead = <<<'HTML'
     }
   </style>
 HTML;
-$embed = isset($_GET['embed']) && $_GET['embed'] === '1';
 if (!$embed) {
     require_once __DIR__ . '/../../_partials/mm_shell_top.php';
 } else {
-    echo $extraHead;
     echo '<div class="clinical-embed p-2">';
 }
 ?>
@@ -276,6 +291,9 @@ if (!$embed) {
     <div class="col-12 col-md-8">
       <label for="patient_id" class="form-label">Patient ID</label>
       <input id="patient_id" name="patient_id" class="form-control" value="<?php echo h($patientId); ?>" required>
+      <?php if ($embed): ?>
+        <input type="hidden" name="embed" value="1">
+      <?php endif; ?>
     </div>
     <div class="col-12 col-md-4 d-flex align-items-end">
       <button type="submit" class="btn btn-primary w-100">Cargar historial de atención</button>
@@ -286,7 +304,11 @@ if (!$embed) {
     <?php foreach ($filters as $filterValue => $filterLabel): ?>
       <?php
       $isActive = ($include === $filterValue);
-      $href = '?patient_id=' . urlencode($patientId) . '&include=' . urlencode($filterValue) . '&limit=' . $limit;
+      $href = '?' . carry_embed_params([
+          'patient_id' => $patientId,
+          'include' => $filterValue,
+          'limit' => $limit,
+      ]);
       ?>
       <a class="btn <?php echo $isActive ? 'btn-primary' : 'btn-outline-primary'; ?>" href="<?php echo h($href); ?>">
         <?php echo h($filterLabel); ?>
@@ -391,7 +413,7 @@ if (!$embed) {
             </div>
             <?php if ($isAppointmentEncounter): ?>
               <div class="mt-2">
-                <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/encounter.php?encounter_key=<?php echo urlencode($ek); ?>">Ver atención</a>
+                <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $ek])); ?>">Ver atención</a>
               </div>
             <?php endif; ?>
 
@@ -412,7 +434,7 @@ if (!$embed) {
                       <div class="text-secondary"><?php echo h((string)($doc['summary'] ?? '-')); ?></div>
                       <?php if ($docUuid !== ''): ?>
                         <div class="mt-1">
-                          <a class="btn btn-sm btn-outline-secondary" href="/modules/clinical/ui/document.php?uuid=<?php echo urlencode($docUuid); ?>">Ver documento</a>
+                          <a class="btn btn-sm btn-outline-secondary" href="/modules/clinical/ui/document.php?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>">Ver documento</a>
                         </div>
                       <?php endif; ?>
                     </div>
@@ -446,7 +468,7 @@ if (!$embed) {
               </div>
               <?php if ($docUuid !== ''): ?>
                 <div class="mt-2">
-                  <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/document.php?uuid=<?php echo urlencode($docUuid); ?>">Ver documento</a>
+                  <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/document.php?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>">Ver documento</a>
                 </div>
               <?php endif; ?>
             </div>

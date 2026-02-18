@@ -75,6 +75,16 @@ $payloadJson = $payload ? json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAP
 $renderedText = $document ? (string)($document['content']['rendered_text'] ?? '') : '';
 $embed = isset($_GET['embed']) && $_GET['embed'] === '1';
 
+function carry_embed_params(array $extra = []): string
+{
+  global $embed;
+  $params = $extra;
+  if ($embed) {
+    $params['embed'] = '1';
+  }
+  return http_build_query($params);
+}
+
 // Shell MXMed
 if (!$embed) {
     $pageTitle = 'Documento clínico';

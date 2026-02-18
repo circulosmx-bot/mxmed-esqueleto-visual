@@ -66,6 +66,16 @@ $orders = is_array($encounter['orders'] ?? null) ? $encounter['orders'] : [];
 $results = is_array($encounter['results'] ?? null) ? $encounter['results'] : [];
 $embed = isset($_GET['embed']) && $_GET['embed'] === '1';
 
+function carry_embed_params(array $extra = []): string
+{
+    global $embed;
+    $params = $extra;
+    if ($embed) {
+        $params['embed'] = '1';
+    }
+    return http_build_query($params);
+}
+
 // Shell MXMed
 if (!$embed) {
     $pageTitle = 'Atención clínica';
@@ -79,7 +89,7 @@ if (!$embed) {
     <h1 class="h4 mb-0">Atención clínica</h1>
     <div class="d-flex gap-2">
       <?php if ($encounterKey !== ''): ?>
-        <a class="btn btn-outline-primary btn-sm" href="/modules/clinical/ui/historial.php?encounter_key=<?php echo urlencode($encounterKey); ?>&include=agenda%2Cclinical&limit=20">Ver historial del paciente</a>
+        <a class="btn btn-outline-primary btn-sm" href="/modules/clinical/ui/historial.php?<?php echo h(carry_embed_params(['encounter_key' => $encounterKey, 'include' => 'agenda,clinical', 'limit' => 20])); ?>">Ver historial del paciente</a>
       <?php endif; ?>
       <a class="btn btn-outline-secondary btn-sm" href="javascript:history.back()">Volver</a>
     </div>
@@ -117,7 +127,7 @@ if (!$embed) {
               <strong><?php echo h($docType); ?></strong>
               · <?php echo h($docDate); ?>
               <?php if ($docUuid !== ''): ?>
-                · <a href="/modules/clinical/ui/document.php?uuid=<?php echo urlencode($docUuid); ?>">Ver documento</a>
+                · <a href="/modules/clinical/ui/document.php?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>">Ver documento</a>
               <?php endif; ?>
             </li>
           <?php endforeach; ?>
