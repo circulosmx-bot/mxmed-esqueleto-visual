@@ -3,20 +3,9 @@ declare(strict_types=1);
 
 function get_api_base(): string
 {
-    $env = trim((string)getenv('MXMED_TIMELINE_API_BASE'));
-    if ($env !== '') {
-        return rtrim($env, '/');
-    }
-
-    $host = (string)($_SERVER['HTTP_HOST'] ?? '127.0.0.1');
-    $proto = 'http';
-    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
-        $proto = 'https';
-    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
-        $proto = (string)$_SERVER['HTTP_X_FORWARDED_PROTO'];
-    }
-
-    return $proto . '://' . $host;
+    // UI corre en 8091
+    // API Gateway corre en 8092
+    return 'http://127.0.0.1:8092';
 }
 
 function h(string $value): string
@@ -233,16 +222,52 @@ $buildCursorHref = static function (string $nextCursor) use ($patientId, $includ
     }
     return '?' . http_build_query($params);
 };
+// Shell MXMed
+$pageTitle = 'Historial de atención';
+$extraHead = <<<'HTML'
+  <style>
+    .clinical-historial .mm-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:.25rem .55rem;
+      border-radius:999px;
+      font-weight:600;
+      font-size:.78rem;
+      border:1px solid rgba(0,0,0,.08);
+    }
+    .clinical-historial .mm-chip.is-on{
+      background-color:var(--mm-header-top, #EAF6FB) !important;
+      border-color:var(--mm-borde-input, #00B0C5) !important;
+      color:var(--mm-barra-vigencia, #003152) !important;
+    }
+    .clinical-historial .mm-chip.is-off{
+      background-color:#fff !important;
+      color:#6c757d !important;
+      opacity:.55;
+      border-color:rgba(0,0,0,.08) !important;
+    }
+    .clinical-historial .mm-chip .dot{
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background-color:var(--mm-acc-activo, #00738F) !important;
+      flex:0 0 auto;
+    }
+    .clinical-historial .mm-chip.is-off .dot{
+      background-color:#adb5bd !important;
+    }
+  </style>
+HTML;
+$embed = isset($_GET['embed']) && $_GET['embed'] === '1';
+if (!$embed) {
+    require_once __DIR__ . '/../../_partials/mm_shell_top.php';
+} else {
+    echo $extraHead;
+    echo '<div class="clinical-embed p-2">';
+}
 ?>
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Historial de atención</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
+<div class="clinical-historial">
 <div class="container py-4">
   <h1 class="h4 mb-1">Historial de atención</h1>
   <p class="text-secondary mb-3">patient_id: <code><?php echo h($patientId !== '' ? $patientId : '-'); ?></code></p>
@@ -297,8 +322,8 @@ $buildCursorHref = static function (string $nextCursor) use ($patientId, $includ
         $agenda = is_array($item['agenda'] ?? null) ? $item['agenda'] : [];
         $links = is_array($item['links'] ?? null) ? $item['links'] : [];
         ?>
-        <article class="card">
-          <div class="card-body">
+        <article class="mm-card">
+          <div class="body">
             <div class="d-flex flex-wrap gap-3 small mb-2">
               <span><strong>Tipo:</strong> appointment</span>
               <span><strong>Fecha:</strong> <?php echo h((string)($item['event_datetime'] ?? '-')); ?></span>
@@ -346,19 +371,19 @@ $buildCursorHref = static function (string $nextCursor) use ($patientId, $includ
         $isAppointmentEncounter = strpos($ek, 'appt:') === 0;
         $docsInEncounter = is_array($encounter['documents'] ?? null) ? $encounter['documents'] : [];
         ?>
-        <article class="card">
-          <div class="card-body">
+        <article class="mm-card">
+          <div class="body">
             <div class="d-flex flex-wrap gap-3 small mb-2">
               <span><strong>Tipo:</strong> encounter</span>
               <span><strong>Fecha:</strong> <?php echo h((string)($encounter['event_datetime'] ?: '-')); ?></span>
               <span><strong>Atención:</strong> <?php echo h($ek); ?></span>
             </div>
             <div class="d-flex flex-wrap gap-2 mb-2">
-              <span class="badge <?php echo $hasVitals ? 'text-bg-primary' : 'bg-light text-muted opacity-50'; ?>" title="<?php echo $hasVitals ? 'Tiene signos vitales' : 'Sin signos vitales'; ?>">Signos</span>
-              <span class="badge <?php echo $hasNote ? 'text-bg-success' : 'bg-light text-muted opacity-50'; ?>" title="<?php echo $hasNote ? 'Tiene nota clínica' : 'Sin nota clínica'; ?>">Nota</span>
-              <span class="badge <?php echo $hasPrescription ? 'text-bg-warning' : 'bg-light text-muted opacity-50'; ?>" title="<?php echo $hasPrescription ? 'Tiene receta' : 'Sin receta'; ?>">Rx</span>
-              <span class="badge <?php echo $hasOrders ? 'text-bg-info' : 'bg-light text-muted opacity-50'; ?>" title="<?php echo $hasOrders ? 'Tiene órdenes' : 'Sin órdenes'; ?>">Órdenes</span>
-              <span class="badge <?php echo $hasResults ? 'text-bg-dark' : 'bg-light text-muted opacity-50'; ?>" title="<?php echo $hasResults ? 'Tiene resultados' : 'Sin resultados'; ?>">Resultados</span>
+              <span class="mm-chip <?php echo $hasVitals ? 'is-on' : 'is-off'; ?>" title="<?php echo $hasVitals ? 'Tiene signos vitales' : 'Sin signos vitales'; ?>"><span class="dot"></span>Signos</span>
+              <span class="mm-chip <?php echo $hasNote ? 'is-on' : 'is-off'; ?>" title="<?php echo $hasNote ? 'Tiene nota clínica' : 'Sin nota clínica'; ?>"><span class="dot"></span>Nota</span>
+              <span class="mm-chip <?php echo $hasPrescription ? 'is-on' : 'is-off'; ?>" title="<?php echo $hasPrescription ? 'Tiene receta' : 'Sin receta'; ?>"><span class="dot"></span>Rx</span>
+              <span class="mm-chip <?php echo $hasOrders ? 'is-on' : 'is-off'; ?>" title="<?php echo $hasOrders ? 'Tiene órdenes' : 'Sin órdenes'; ?>"><span class="dot"></span>Órdenes</span>
+              <span class="mm-chip <?php echo $hasResults ? 'is-on' : 'is-off'; ?>" title="<?php echo $hasResults ? 'Tiene resultados' : 'Sin resultados'; ?>"><span class="dot"></span>Resultados</span>
             </div>
             <div class="small text-secondary">
               documentos: <?php echo count($clinicalDocs); ?> |
@@ -409,8 +434,8 @@ $buildCursorHref = static function (string $nextCursor) use ($patientId, $includ
           $links = is_array($docItem['links'] ?? null) ? $docItem['links'] : [];
           $docUuid = trim((string)($links['document_uuid'] ?? ''));
           ?>
-          <article class="card">
-            <div class="card-body">
+          <article class="mm-card">
+            <div class="body">
               <div class="d-flex flex-wrap gap-3 small mb-2">
                 <span><strong>Tipo:</strong> document</span>
                 <span><strong>Fecha:</strong> <?php echo h((string)($docItem['event_datetime'] ?? '-')); ?></span>
@@ -431,5 +456,9 @@ $buildCursorHref = static function (string $nextCursor) use ($patientId, $includ
     </div>
   <?php endif; ?>
 </div>
-</body>
-</html>
+</div>
+<?php if ($embed): ?>
+</div>
+<?php else: ?>
+<?php require_once __DIR__ . '/../../_partials/mm_shell_bottom.php'; ?>
+<?php endif; ?>

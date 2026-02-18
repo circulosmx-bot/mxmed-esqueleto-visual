@@ -64,17 +64,16 @@ $documents = is_array($encounter['documents'] ?? null) ? $encounter['documents']
 $prescriptions = is_array($encounter['prescriptions'] ?? null) ? $encounter['prescriptions'] : [];
 $orders = is_array($encounter['orders'] ?? null) ? $encounter['orders'] : [];
 $results = is_array($encounter['results'] ?? null) ? $encounter['results'] : [];
+$embed = isset($_GET['embed']) && $_GET['embed'] === '1';
 
+// Shell MXMed
+if (!$embed) {
+    $pageTitle = 'Atención clínica';
+    require_once __DIR__ . '/../../_partials/mm_shell_top.php';
+} else {
+    echo '<div class="clinical-embed p-2">';
+}
 ?>
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Atención clínica</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h4 mb-0">Atención clínica</h1>
@@ -93,16 +92,17 @@ $results = is_array($encounter['results'] ?? null) ? $encounter['results'] : [];
   <?php elseif ($errorMessage !== ''): ?>
     <div class="alert alert-danger"><?php echo h($errorMessage); ?></div>
   <?php else: ?>
-    <div class="card mb-3">
-      <div class="card-body small">
+    <div class="mm-card mb-3">
+      <div class="head"><h5>Resumen</h5></div>
+      <div class="body small">
         <div><strong>Fecha:</strong> <?php echo h((string)($encounter['event_datetime'] ?? '-')); ?></div>
         <div><strong>patient_id:</strong> <?php echo h((string)($encounter['patient_id'] ?? '-')); ?></div>
         <div><strong>appointment_id:</strong> <?php echo h((string)($encounter['appointment_id'] ?? '-')); ?></div>
       </div>
     </div>
 
-    <div class="card mb-3">
-      <div class="card-header">Documentos</div>
+    <div class="mm-card mb-3">
+      <div class="head"><h5>Documentos</h5></div>
       <ul class="list-group list-group-flush">
         <?php if ($documents === []): ?>
           <li class="list-group-item text-secondary">Sin documentos</li>
@@ -127,25 +127,28 @@ $results = is_array($encounter['results'] ?? null) ? $encounter['results'] : [];
 
     <div class="row g-3">
       <div class="col-md-4">
-        <div class="card h-100">
-          <div class="card-header">Recetas</div>
-          <div class="card-body small text-secondary"><?php echo $prescriptions === [] ? 'Sin recetas' : h((string)count($prescriptions)); ?></div>
+        <div class="mm-card h-100">
+          <div class="head"><h5>Recetas</h5></div>
+          <div class="body small text-secondary"><?php echo $prescriptions === [] ? 'Sin recetas' : h((string)count($prescriptions)); ?></div>
         </div>
       </div>
       <div class="col-md-4">
-        <div class="card h-100">
-          <div class="card-header">Órdenes</div>
-          <div class="card-body small text-secondary"><?php echo $orders === [] ? 'Sin órdenes' : h((string)count($orders)); ?></div>
+        <div class="mm-card h-100">
+          <div class="head"><h5>Órdenes</h5></div>
+          <div class="body small text-secondary"><?php echo $orders === [] ? 'Sin órdenes' : h((string)count($orders)); ?></div>
         </div>
       </div>
       <div class="col-md-4">
-        <div class="card h-100">
-          <div class="card-header">Resultados</div>
-          <div class="card-body small text-secondary"><?php echo $results === [] ? 'Sin resultados' : h((string)count($results)); ?></div>
+        <div class="mm-card h-100">
+          <div class="head"><h5>Resultados</h5></div>
+          <div class="body small text-secondary"><?php echo $results === [] ? 'Sin resultados' : h((string)count($results)); ?></div>
         </div>
       </div>
     </div>
   <?php endif; ?>
 </div>
-</body>
-</html>
+<?php if ($embed): ?>
+</div>
+<?php else: ?>
+<?php require_once __DIR__ . '/../../_partials/mm_shell_bottom.php'; ?>
+<?php endif; ?>

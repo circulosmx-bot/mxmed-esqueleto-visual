@@ -73,17 +73,16 @@ $summary = $document ? (string)($document['content']['summary'] ?? '-') : '-';
 $payload = $document && is_array($document['content']['payload'] ?? null) ? $document['content']['payload'] : null;
 $payloadJson = $payload ? json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '';
 $renderedText = $document ? (string)($document['content']['rendered_text'] ?? '') : '';
+$embed = isset($_GET['embed']) && $_GET['embed'] === '1';
 
+// Shell MXMed
+if (!$embed) {
+    $pageTitle = 'Documento clínico';
+    require_once __DIR__ . '/../../_partials/mm_shell_top.php';
+} else {
+    echo '<div class="clinical-embed p-2">';
+}
 ?>
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Documento clínico</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
@@ -102,8 +101,8 @@ $renderedText = $document ? (string)($document['content']['rendered_text'] ?? ''
   <?php elseif ($errorMessage !== ''): ?>
     <div class="alert alert-danger"><?php echo h($errorMessage); ?></div>
   <?php else: ?>
-    <div class="card mb-3">
-      <div class="card-body small">
+    <div class="mm-card mb-3">
+      <div class="body small">
         <div><strong>Tipo:</strong> <?php echo h($docType); ?></div>
         <div><strong>Fecha:</strong> <?php echo h($date); ?></div>
         <div><strong>Summary:</strong> <?php echo h($summary); ?></div>
@@ -111,23 +110,26 @@ $renderedText = $document ? (string)($document['content']['rendered_text'] ?? ''
     </div>
 
     <?php if ($renderedText !== ''): ?>
-      <div class="card mb-3">
-        <div class="card-header">Texto renderizado</div>
-        <div class="card-body">
+      <div class="mm-card mb-3">
+        <div class="head"><h5>Texto renderizado</h5></div>
+        <div class="body">
           <pre class="mb-0 small"><?php echo h($renderedText); ?></pre>
         </div>
       </div>
     <?php endif; ?>
 
     <?php if ($payloadJson !== ''): ?>
-      <div class="card">
-        <div class="card-header">Payload (JSON)</div>
-        <div class="card-body">
+      <div class="mm-card">
+        <div class="head"><h5>Payload (JSON)</h5></div>
+        <div class="body">
           <pre class="mb-0 small"><?php echo h($payloadJson); ?></pre>
         </div>
       </div>
     <?php endif; ?>
   <?php endif; ?>
 </div>
-</body>
-</html>
+<?php if ($embed): ?>
+</div>
+<?php else: ?>
+<?php require_once __DIR__ . '/../../_partials/mm_shell_bottom.php'; ?>
+<?php endif; ?>
