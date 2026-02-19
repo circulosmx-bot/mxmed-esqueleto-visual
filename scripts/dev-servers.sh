@@ -165,6 +165,12 @@ do_logs() {
 }
 
 do_start_tabs() {
+  local force="${1:-}"
+  local force_mode=0
+  if [ "$force" = "--force" ]; then
+    force_mode=1
+  fi
+
   if [ "$(uname -s)" != "Darwin" ] || ! command -v osascript >/dev/null 2>&1; then
     echo "start-tabs is only available on macOS with osascript."
     echo "Use: ./scripts/dev-servers.sh start"
@@ -172,10 +178,20 @@ do_start_tabs() {
   fi
 
   if pid_alive "$(port_pid "$API_PORT")" || pid_alive "$(port_pid "$UI_PORT")"; then
+    if [ "$force_mode" -eq 1 ]; then
+      echo "Detected running servers on 8091/8092. Forcing stop before opening tabs..."
+      do_stop
+    else
     echo "Detected running servers on 8091/8092."
     echo "start-tabs will not stop running servers automatically."
     echo "Use: ./scripts/dev-servers.sh stop  or  ./scripts/dev-servers.sh restart"
+    echo "Or run: ./scripts/dev-servers.sh start-tabs --force"
     exit 1
+    fi
+  fi
+
+  if [ "$force_mode" -eq 1 ]; then
+    trap 'echo "Interrupted during start-tabs --force. Restoring servers in background..."; do_start; trap - INT TERM; exit 130' INT TERM
   fi
 
   local osa_output=""
@@ -197,18 +213,36 @@ on run argv
     activate
     if (count of windows) = 0 then
       do script ""
+      delay 0.2
     end if
     do script apiCmd in front window
-    do script uiCmd
+    delay 0.2
+    do script uiCmd in front window
   end tell
+  return "OK"
 end run
 OSA
   )"
   osa_status=$?
+  trap - INT TERM
 
   if [ "$osa_status" -ne 0 ]; then
     echo "Failed to open Terminal tabs with osascript."
     echo "$osa_output"
+    if [ "$force_mode" -eq 1 ]; then
+      echo "Restoring servers in background after failed --force..."
+      do_start
+    fi
+    exit 1
+  fi
+
+  sleep 1
+  if ! pid_alive "$(port_pid "$API_PORT")" || ! pid_alive "$(port_pid "$UI_PORT")"; then
+    echo "Failed to verify listeners after start-tabs."
+    if [ "$force_mode" -eq 1 ]; then
+      echo "Restoring servers in background after failed --force verification..."
+      do_start
+    fi
     exit 1
   fi
 
@@ -222,7 +256,10 @@ case "${1:-}" in
     do_start
     ;;
   start-tabs)
-    do_start_tabs
+    do_start_tabs "${2:-}"
+    ;;
+  start-tabs-force)
+    do_start_tabs "--force"
     ;;
   stop)
     do_stop
@@ -238,7 +275,7 @@ case "${1:-}" in
     do_start
     ;;
   *)
-    echo "Usage: ./scripts/dev-servers.sh {start|start-tabs|stop|status|logs|restart}"
+    echo "Usage: ./scripts/dev-servers.sh {start|start-tabs [--force]|start-tabs-force|stop|status|logs|restart}"
     exit 1
     ;;
 esac
