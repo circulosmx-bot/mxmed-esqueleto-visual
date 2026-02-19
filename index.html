@@ -6522,6 +6522,8 @@
     if (!historialTabBtn || !historialPane || !iframe || !expedientePane || !modeButtons.length) return;
     var activeMode = 'historial';
     var lastLoadedKey = '';
+    var forcedEncounterKey = '';
+    var forcedDocumentUuid = '';
 
     function getParam(name) {
       try {
@@ -6621,8 +6623,8 @@
       var useDemo = !pid;
       var context = {
         patientId: useDemo ? 'demo' : pid,
-        encounterKey: useDemo ? 'appt:demo' : resolveEncounterKey(),
-        documentUuid: useDemo ? 'demo' : resolveDocumentUuid()
+        encounterKey: forcedEncounterKey || (useDemo ? 'appt:demo' : resolveEncounterKey()),
+        documentUuid: forcedDocumentUuid || (useDemo ? 'demo' : resolveDocumentUuid())
       };
 
       if (emptyMsg) {
@@ -6675,8 +6677,35 @@
 
     ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach(function (evtName) {
       document.addEventListener(evtName, function () {
+        forcedEncounterKey = '';
+        forcedDocumentUuid = '';
         if (isHistorialTabVisible()) ensureEmbedIframe();
       });
+    });
+
+    window.addEventListener('message', function (event) {
+      if (!event || event.source !== iframe.contentWindow) return;
+      var data = event.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.type !== 'mxmed:embed:navigate') return;
+
+      if (data.mode === 'encounter') {
+        var ek = String(data.encounter_key || '').trim();
+        if (!ek) return;
+        forcedEncounterKey = ek;
+        setActiveMode('encounter');
+      } else if (data.mode === 'document') {
+        var uuid = String(data.uuid || '').trim();
+        if (!uuid) return;
+        forcedDocumentUuid = uuid;
+        setActiveMode('document');
+      } else {
+        return;
+      }
+
+      if (isHistorialTabVisible()) {
+        ensureEmbedIframe();
+      }
     });
 
     if (historialTabBtn.classList.contains('active') || historialPane.classList.contains('show')) {

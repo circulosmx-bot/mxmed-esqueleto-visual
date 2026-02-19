@@ -523,7 +523,8 @@ if (!$embed) {
         $agenda = is_array($item['agenda'] ?? null) ? $item['agenda'] : [];
         $links = is_array($item['links'] ?? null) ? $item['links'] : [];
         ?>
-        <article class="mm-card">
+        <?php $appointmentEncounterKey = trim((string)($item['encounter_key'] ?? '')); ?>
+        <article class="mm-card" data-item-type="appointment" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>">
           <div class="body">
             <div class="d-flex flex-wrap gap-3 small mb-2">
               <span><strong>Tipo:</strong> appointment</span>
@@ -537,6 +538,11 @@ if (!$embed) {
               modality: <?php echo h((string)($agenda['modality'] ?? '-')); ?> |
               channel_origin: <?php echo h((string)($agenda['channel_origin'] ?? '-')); ?>
             </div>
+            <?php if ($appointmentEncounterKey !== ''): ?>
+              <div class="mt-2">
+                <a class="btn btn-sm btn-outline-secondary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $appointmentEncounterKey])); ?>" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>">Ver episodio</a>
+              </div>
+            <?php endif; ?>
             <?php if (trim((string)($links['appointment_id'] ?? '')) !== ''): ?>
               <div class="mt-2">
                 <a class="btn btn-sm btn-outline-primary" href="/index.html#p-agenda">Ver cita</a>
@@ -572,7 +578,7 @@ if (!$embed) {
         $isAppointmentEncounter = strpos($ek, 'appt:') === 0;
         $docsInEncounter = is_array($encounter['documents'] ?? null) ? $encounter['documents'] : [];
         ?>
-        <article class="mm-card">
+        <article class="mm-card" data-item-type="encounter" data-encounter-key="<?php echo h($ek); ?>">
           <div class="body">
             <div class="d-flex flex-wrap gap-3 small mb-2">
               <span><strong>Tipo:</strong> encounter</span>
@@ -592,7 +598,7 @@ if (!$embed) {
             </div>
             <?php if ($isAppointmentEncounter): ?>
               <div class="mt-2">
-                <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $ek])); ?>">Ver atención</a>
+                <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $ek])); ?>" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($ek); ?>">Ver atención</a>
               </div>
             <?php endif; ?>
 
@@ -608,12 +614,12 @@ if (!$embed) {
                     $links = is_array($docItem['links'] ?? null) ? $docItem['links'] : [];
                     $docUuid = trim((string)($links['document_uuid'] ?? ''));
                     ?>
-                    <div class="border rounded p-2 small">
+                    <div class="border rounded p-2 small" data-item-type="document" data-document-uuid="<?php echo h($docUuid); ?>">
                       <div><strong><?php echo h((string)($doc['document_type'] ?? '-')); ?></strong></div>
                       <div class="text-secondary"><?php echo h((string)($doc['summary'] ?? '-')); ?></div>
                       <?php if ($docUuid !== ''): ?>
                         <div class="mt-1">
-                          <a class="btn btn-sm btn-outline-secondary" href="/modules/clinical/ui/document.php?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>">Ver documento</a>
+                          <a class="btn btn-sm btn-outline-secondary" href="/modules/clinical/ui/document.php?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>" data-embed-nav data-nav-mode="document" data-uuid="<?php echo h($docUuid); ?>">Ver documento</a>
                         </div>
                       <?php endif; ?>
                     </div>
@@ -635,7 +641,7 @@ if (!$embed) {
           $links = is_array($docItem['links'] ?? null) ? $docItem['links'] : [];
           $docUuid = trim((string)($links['document_uuid'] ?? ''));
           ?>
-          <article class="mm-card">
+          <article class="mm-card" data-item-type="document" data-document-uuid="<?php echo h($docUuid); ?>">
             <div class="body">
               <div class="d-flex flex-wrap gap-3 small mb-2">
                 <span><strong>Tipo:</strong> document</span>
@@ -647,7 +653,7 @@ if (!$embed) {
               </div>
               <?php if ($docUuid !== ''): ?>
                 <div class="mt-2">
-                  <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/document.php?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>">Ver documento</a>
+                  <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/document.php?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>" data-embed-nav data-nav-mode="document" data-uuid="<?php echo h($docUuid); ?>">Ver documento</a>
                 </div>
               <?php endif; ?>
             </div>
@@ -658,6 +664,34 @@ if (!$embed) {
   <?php endif; ?>
 </div>
 </div>
+<script>
+  (function () {
+    document.addEventListener('click', function (event) {
+      var trigger = event.target && event.target.closest ? event.target.closest('[data-embed-nav]') : null;
+      if (!trigger) return;
+      var mode = String(trigger.getAttribute('data-nav-mode') || '').trim();
+      if (mode !== 'encounter' && mode !== 'document') return;
+
+      if (!window.parent || window.parent === window || typeof window.parent.postMessage !== 'function') {
+        return;
+      }
+
+      var payload = { type: 'mxmed:embed:navigate', mode: mode };
+      if (mode === 'encounter') {
+        var encounterKey = String(trigger.getAttribute('data-encounter-key') || '').trim();
+        if (!encounterKey) return;
+        payload.encounter_key = encounterKey;
+      } else {
+        var uuid = String(trigger.getAttribute('data-uuid') || '').trim();
+        if (!uuid) return;
+        payload.uuid = uuid;
+      }
+
+      event.preventDefault();
+      window.parent.postMessage(payload, '*');
+    });
+  })();
+</script>
 <?php if ($embed): ?>
 <?php clinical_embed_end(); ?>
 <?php else: ?>
