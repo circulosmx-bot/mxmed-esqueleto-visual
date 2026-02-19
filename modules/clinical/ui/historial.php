@@ -18,6 +18,16 @@ function h(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+function render_embed_css(bool $embed): void
+{
+    if (!$embed) {
+        return;
+    }
+
+    echo '<link rel="stylesheet" href="/assets/css/style.css">' . "\n";
+    echo '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">' . "\n";
+}
+
 function build_demo_timeline_items(): array
 {
     // Fixtures demo para UX (sin dependencia de DB/API)
@@ -440,6 +450,7 @@ HTML;
 if (!$embed) {
     require_once __DIR__ . '/../../_partials/mm_shell_top.php';
 } else {
+    render_embed_css($embed);
     echo $extraHead;
     clinical_embed_start();
 }
