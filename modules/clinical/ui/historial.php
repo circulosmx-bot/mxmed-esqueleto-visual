@@ -446,19 +446,23 @@ if (!$embed) {
 ?>
 <div class="clinical-historial">
 <div class="<?php echo $embed ? 'py-1' : 'container py-4'; ?>">
-  <h1 class="h4 mb-1">Historial de atención</h1>
-  <p class="text-secondary mb-3">patient_id: <code><?php echo h($patientId !== '' ? $patientId : '-'); ?></code></p>
+  <?php if (!$embed): ?>
+    <h1 class="h4 mb-1">Historial de atención</h1>
+    <p class="text-secondary mb-3">patient_id: <code><?php echo h($patientId !== '' ? $patientId : '-'); ?></code></p>
 
-  <form class="row g-2 mb-3" method="get">
-    <div class="col-12 col-md-8">
-      <label for="patient_id" class="form-label">Patient ID</label>
-      <input id="patient_id" name="patient_id" class="form-control" value="<?php echo h($patientId); ?>" required>
-      <?php echo carry_embed_hidden_input(); ?>
-    </div>
-    <div class="col-12 col-md-4 d-flex align-items-end">
-      <button type="submit" class="btn btn-primary w-100">Cargar historial de atención</button>
-    </div>
-  </form>
+    <form class="row g-2 mb-3" method="get">
+      <div class="col-12 col-md-8">
+        <label for="patient_id" class="form-label">Patient ID</label>
+        <input id="patient_id" name="patient_id" class="form-control" value="<?php echo h($patientId); ?>" required>
+        <?php echo carry_embed_hidden_input(); ?>
+      </div>
+      <div class="col-12 col-md-4 d-flex align-items-end">
+        <button type="submit" class="btn btn-primary w-100">Cargar historial de atención</button>
+      </div>
+    </form>
+  <?php else: ?>
+    <?php // Modo embed: ocultar encabezado y formulario (UX integrado) ?>
+  <?php endif; ?>
 
   <div class="btn-group mb-3" role="group" aria-label="Filtros del historial de atención">
     <?php foreach ($filters as $filterValue => $filterLabel): ?>
@@ -481,7 +485,11 @@ if (!$embed) {
   <?php endif; ?>
 
   <?php if ($patientId === ''): ?>
-    <div class="alert alert-info">Captura un <code>patient_id</code> para consultar el historial de atención.</div>
+    <?php if ($embed): ?>
+      <div class="alert alert-info py-2 mb-2">Sin <code>patient_id</code>.</div>
+    <?php else: ?>
+      <div class="alert alert-info">Captura un <code>patient_id</code> para consultar el historial de atención.</div>
+    <?php endif; ?>
   <?php elseif ($errorMessage !== ''): ?>
     <div class="alert alert-danger"><?php echo h($errorMessage); ?></div>
   <?php elseif (!$hasRenderableItems): ?>
