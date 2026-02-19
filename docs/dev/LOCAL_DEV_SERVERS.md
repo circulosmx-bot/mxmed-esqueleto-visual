@@ -65,3 +65,18 @@ El override `MXMED_API_BASE` ya existe en:
 - `modules/clinical/ui/document.php`
 - `modules/clinical/ui/encounter.php`
 - `modules/clinical/ui/historial.php`
+
+## Scripts (start/stop/status)
+Usa el script del repo para controlar servidores locales duales.
+
+```bash
+./scripts/dev-servers.sh start
+./scripts/dev-servers.sh status
+./scripts/dev-servers.sh logs
+./scripts/dev-servers.sh stop
+./scripts/dev-servers.sh restart
+```
+
+Detalles:
+- API: `127.0.0.1:8091` (log: `/tmp/mxmed_api_8091.log`)
+- UI: `127.0.0.1:8092` con `MXMED_API_BASE=http://127.0.0.1:8091` (log: `/tmp/mxmed_ui_8092.log`)
