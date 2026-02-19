@@ -3364,7 +3364,12 @@
               <div class="tab-pane fade" id="t-historial-atencion">
                 <div class="clinical-panel mt-2 p-2">
                   <div class="small text-secondary mb-2">Historial de atención (vista embebida)</div>
-                  <div id="mm-embed-historial-empty" class="alert alert-info d-none mb-2">Selecciona un paciente para ver el historial.</div>
+                  <div class="btn-group btn-group-sm mb-2" role="group" aria-label="Subvistas de historial">
+                    <button type="button" class="btn btn-outline-primary active" data-embed-mode="historial">Historial</button>
+                    <button type="button" class="btn btn-outline-primary" data-embed-mode="encounter">Episodio</button>
+                    <button type="button" class="btn btn-outline-primary" data-embed-mode="document">Documento</button>
+                  </div>
+                  <div id="mm-embed-historial-empty" class="alert alert-info d-none mb-2">Sin paciente activo. Cargando modo demo.</div>
                   <iframe
                     id="mm-embed-historial"
                     title="Historial de atención"
@@ -6507,8 +6512,10 @@
     var iframe = document.getElementById('mm-embed-historial');
     var emptyMsg = document.getElementById('mm-embed-historial-empty');
     var expedientePane = document.getElementById('p-expediente');
-    if (!historialTabBtn || !historialPane || !iframe || !expedientePane) return;
-    var lastLoadedPatientId = '';
+    var modeButtons = historialPane ? Array.from(historialPane.querySelectorAll('[data-embed-mode]')) : [];
+    if (!historialTabBtn || !historialPane || !iframe || !expedientePane || !modeButtons.length) return;
+    var activeMode = 'historial';
+    var lastLoadedKey = '';
 
     function getParam(name) {
       try {
@@ -6531,8 +6538,6 @@
       return historialPane.classList.contains('show') || historialPane.classList.contains('active');
     }
 
-    // Referencia: docs/ui/GLOSARIO_UI_MXMED.md (Panel / EmbedView)
-    // Prioridad de patient_id alineada con flujo real de Expediente (app.js:getCurrentPatientId).
     function resolveActivePatientId() {
       var explicit = String(expedientePane.getAttribute('data-patient-id') || expedientePane.dataset.patientId || '').trim();
       if (explicit) return explicit;
@@ -6571,60 +6576,105 @@
       return null;
     }
 
-    function loadHistorialForPatient(pid) {
-      var nextSrc = '/modules/clinical/ui/historial.php?patient_id=' + encodeURIComponent(pid) + '&embed=1';
-      iframe.setAttribute('src', nextSrc);
-      iframe.dataset.loadedPatientId = pid;
-      lastLoadedPatientId = pid;
-      if (emptyMsg) emptyMsg.classList.add('d-none');
+    function resolveEncounterKey() {
+      var fromQuery = getParam('encounter_key');
+      if (fromQuery && fromQuery.trim() !== '') return fromQuery.trim();
+      var fromData = String(historialPane.getAttribute('data-encounter-key') || historialPane.dataset.encounterKey || '').trim();
+      if (fromData) return fromData;
+      return 'appt:demo';
     }
 
-    function ensureHistorialIframe() {
+    function resolveDocumentUuid() {
+      var fromQuery = getParam('uuid');
+      if (fromQuery && fromQuery.trim() !== '') return fromQuery.trim();
+      var fromData = String(historialPane.getAttribute('data-document-uuid') || historialPane.dataset.documentUuid || '').trim();
+      if (fromData) return fromData;
+      return 'demo';
+    }
+
+    function buildSrc(mode, context) {
+      if (mode === 'encounter') {
+        return '/modules/clinical/ui/encounter.php?encounter_key=' + encodeURIComponent(context.encounterKey) + '&embed=1';
+      }
+      if (mode === 'document') {
+        return '/modules/clinical/ui/document.php?uuid=' + encodeURIComponent(context.documentUuid) + '&embed=1';
+      }
+      return '/modules/clinical/ui/historial.php?patient_id=' + encodeURIComponent(context.patientId) + '&embed=1';
+    }
+
+    function setActiveMode(mode) {
+      activeMode = mode;
+      modeButtons.forEach(function (btn) {
+        var on = btn.getAttribute('data-embed-mode') === mode;
+        btn.classList.toggle('active', on);
+      });
+    }
+
+    function ensureEmbedIframe() {
       var pid = resolveActivePatientId();
-      if (!pid) {
-        if (emptyMsg) emptyMsg.classList.remove('d-none');
-        iframe.removeAttribute('src');
-        iframe.dataset.loadedPatientId = '';
-        lastLoadedPatientId = '';
+      var useDemo = !pid;
+      var context = {
+        patientId: useDemo ? 'demo' : pid,
+        encounterKey: useDemo ? 'appt:demo' : resolveEncounterKey(),
+        documentUuid: useDemo ? 'demo' : resolveDocumentUuid()
+      };
+
+      if (emptyMsg) {
+        emptyMsg.classList.toggle('d-none', !useDemo);
+      }
+
+      var idValue = activeMode === 'encounter'
+        ? context.encounterKey
+        : activeMode === 'document'
+          ? context.documentUuid
+          : context.patientId;
+      var nextKey = activeMode + '|' + String(idValue || '').trim();
+      var nextSrc = buildSrc(activeMode, context);
+
+      if (iframe.getAttribute('src') && lastLoadedKey === nextKey) {
         return;
       }
-      if (!iframe.getAttribute('src')) {
-        loadHistorialForPatient(pid);
-        return;
-      }
-      var loadedPid = String(iframe.dataset.loadedPatientId || lastLoadedPatientId || '').trim();
-      if (isHistorialTabVisible() && loadedPid !== pid) {
-        loadHistorialForPatient(pid);
-      }
+
+      iframe.setAttribute('src', nextSrc);
+      iframe.dataset.loadedKey = nextKey;
+      lastLoadedKey = nextKey;
     }
 
-    historialTabBtn.addEventListener('shown.bs.tab', ensureHistorialIframe);
+    modeButtons.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var mode = btn.getAttribute('data-embed-mode') || 'historial';
+        setActiveMode(mode);
+        if (isHistorialTabVisible()) ensureEmbedIframe();
+      });
+    });
+
+    historialTabBtn.addEventListener('shown.bs.tab', ensureEmbedIframe);
 
     var patientInputs = expedientePane.querySelectorAll(
       '[data-pac-nombre], [data-pac-apellido-paterno], [data-pac-apellido-materno], [data-dg-dia], [data-dg-mes], [data-dg-anio], input[name="pac-genero"]'
     );
     patientInputs.forEach(function (el) {
       el.addEventListener('input', function () {
-        if (isHistorialTabVisible()) ensureHistorialIframe();
+        if (isHistorialTabVisible()) ensureEmbedIframe();
       });
       el.addEventListener('change', function () {
-        if (isHistorialTabVisible()) ensureHistorialIframe();
+        if (isHistorialTabVisible()) ensureEmbedIframe();
       });
     });
 
     var observer = new MutationObserver(function () {
-      if (isHistorialTabVisible()) ensureHistorialIframe();
+      if (isHistorialTabVisible()) ensureEmbedIframe();
     });
     observer.observe(expedientePane, { attributes: true, attributeFilter: ['data-patient-id', 'data-active-patient-id'] });
 
     ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach(function (evtName) {
       document.addEventListener(evtName, function () {
-        if (isHistorialTabVisible()) ensureHistorialIframe();
+        if (isHistorialTabVisible()) ensureEmbedIframe();
       });
     });
 
     if (historialTabBtn.classList.contains('active') || historialPane.classList.contains('show')) {
-      ensureHistorialIframe();
+      ensureEmbedIframe();
     }
   })();
 </script>
