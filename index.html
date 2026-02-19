@@ -6533,51 +6533,29 @@
       }
     }
 
-    function normalizeToken(str) {
-      return String(str || '')
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, ' ')
-        .trim();
-    }
-
     function isHistorialTabVisible() {
       return historialPane.classList.contains('show') || historialPane.classList.contains('active');
     }
 
     function resolveActivePatientId() {
-      var explicit = String(expedientePane.getAttribute('data-patient-id') || expedientePane.dataset.patientId || '').trim();
-      if (explicit) return explicit;
+      var fromPatientId = String(expedientePane.getAttribute('data-patient-id') || expedientePane.dataset.patientId || '').trim();
+      if (fromPatientId) return fromPatientId;
 
-      var hidden = expedientePane.querySelector('input[name="patient_id"], input#patient_id');
-      if (hidden && hidden.value && String(hidden.value).trim() !== '') return String(hidden.value).trim();
+      var fromActivePatientId = String(expedientePane.getAttribute('data-active-patient-id') || expedientePane.dataset.activePatientId || '').trim();
+      if (fromActivePatientId) return fromActivePatientId;
 
-      var byDataset = String(expedientePane.getAttribute('data-active-patient-id') || expedientePane.dataset.activePatientId || '').trim();
-      if (byDataset) return byDataset;
-
-      var nombre = expedientePane.querySelector('[data-pac-nombre]')?.value?.trim() || '';
-      var apPat = expedientePane.querySelector('[data-pac-apellido-paterno]')?.value?.trim() || '';
-      var apMat = expedientePane.querySelector('[data-pac-apellido-materno]')?.value?.trim() || '';
-      var sexoVal = expedientePane.querySelector('input[name="pac-genero"]:checked')?.value || '';
-      var dd = expedientePane.querySelector('[data-dg-dia]')?.value || '';
-      var mm = expedientePane.querySelector('[data-dg-mes]')?.value || '';
-      var yy = expedientePane.querySelector('[data-dg-anio]')?.value || '';
-      var dob = [yy, mm, dd].filter(Boolean).join('-');
-      var nombreCompleto = [nombre, apPat, apMat].filter(Boolean).join(' ').trim();
-
-      var identity = window.mxmedIdentity || null;
-      if (identity && typeof identity.buildLegacyPatientId === 'function') {
-        try {
-          var built = String(identity.buildLegacyPatientId(nombreCompleto, dob, sexoVal, normalizeToken) || '').trim();
-          if (built && built !== 'anon') return built;
-        } catch (_) {}
+      var globalCandidates = [
+        window.mxmedActivePatientId,
+        window.__MXMED_ACTIVE_PATIENT_ID,
+        window.mxmedPatient && window.mxmedPatient.patient_id,
+        window.mxmedPatientContext && window.mxmedPatientContext.patient_id,
+        window.mxmedStore && window.mxmedStore.activePatientId,
+        window.mxmedStore && window.mxmedStore.patient_id
+      ];
+      for (var i = 0; i < globalCandidates.length; i += 1) {
+        var candidate = String(globalCandidates[i] || '').trim();
+        if (candidate) return candidate;
       }
-
-      try {
-        var stored = localStorage.getItem('mxmed_active_patient_id');
-        if (stored && String(stored).trim() !== '') return String(stored).trim();
-      } catch (_) {}
 
       var fromQuery = getParam('patient_id');
       if (fromQuery && fromQuery.trim() !== '') return fromQuery.trim();
@@ -6679,6 +6657,7 @@
       document.addEventListener(evtName, function () {
         forcedEncounterKey = '';
         forcedDocumentUuid = '';
+        setActiveMode('historial');
         if (isHistorialTabVisible()) ensureEmbedIframe();
       });
     });
