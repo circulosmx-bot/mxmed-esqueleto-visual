@@ -176,16 +176,35 @@ do_start_tabs() {
     do_stop
   fi
 
-  osascript <<OSA
-tell application "Terminal"
-  activate
-  if (count of windows) = 0 then
-    do script ""
-  end if
-  do script "cd \"$ROOT_DIR\"; echo -ne \"\\033]0;MXMED-API-8091\\a\"; php -S $API_HOST:$API_PORT -t ." in front window
-  do script "cd \"$ROOT_DIR\"; echo -ne \"\\033]0;MXMED-UI-8092\\a\"; MXMED_API_BASE=$UI_API_BASE php -S $UI_HOST:$UI_PORT -t ." in front window
-end tell
+  local osa_output
+  if ! osa_output="$(
+    osascript - "$ROOT_DIR" "$API_HOST" "$API_PORT" "$UI_HOST" "$UI_PORT" "$UI_API_BASE" <<'OSA'
+on run argv
+  set rootDir to item 1 of argv
+  set apiHost to item 2 of argv
+  set apiPort to item 3 of argv
+  set uiHost to item 4 of argv
+  set uiPort to item 5 of argv
+  set uiApiBase to item 6 of argv
+
+  set apiCmd to "cd " & quoted form of rootDir & "; printf '\\033]0;MXMED-API-8091\\a'; php -S " & apiHost & ":" & apiPort & " -t ."
+  set uiCmd to "cd " & quoted form of rootDir & "; printf '\\033]0;MXMED-UI-8092\\a'; MXMED_API_BASE=" & quoted form of uiApiBase & " php -S " & uiHost & ":" & uiPort & " -t ."
+
+  tell application "Terminal"
+    activate
+    if (count of windows) = 0 then
+      do script ""
+    end if
+    do script apiCmd in front window
+    do script uiCmd
+  end tell
+end run
 OSA
+  )"; then
+    echo "Failed to open Terminal tabs with osascript."
+    echo "$osa_output"
+    exit 1
+  fi
 
   echo "Opened Terminal tabs:"
   echo "- MXMED-API-8091 -> http://$API_HOST:$API_PORT"
