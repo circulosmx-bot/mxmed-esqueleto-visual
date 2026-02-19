@@ -14,3 +14,6 @@ api/mxmed-db.config.php
 
 # Local QA scripts (do not commit)
 modules/clinical/qa/requests.sh
+
+# Dev runtime (pids, temp)
+.tmp/
