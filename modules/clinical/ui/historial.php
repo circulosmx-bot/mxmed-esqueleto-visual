@@ -18,6 +18,151 @@ function h(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+function build_demo_timeline_items(): array
+{
+    // Fixtures demo para UX (sin dependencia de DB/API)
+    return [
+        [
+            'item_type' => 'appointment',
+            'encounter_key' => 'appt:9001',
+            'event_datetime' => '2026-02-19 09:00:00',
+            'agenda' => [
+                'status' => 'confirmed',
+                'start_at' => '2026-02-19 09:00:00',
+                'end_at' => '2026-02-19 09:30:00',
+                'modality' => 'presencial',
+                'channel_origin' => 'public_web',
+            ],
+            'links' => ['appointment_id' => '9001'],
+        ],
+        [
+            'item_type' => 'encounter',
+            'encounter_key' => 'appt:9001',
+            'event_datetime' => '2026-02-19 09:35:00',
+            'clinical' => [
+                'has_vitals' => true,
+                'has_note' => true,
+                'has_prescription' => true,
+                'has_orders' => true,
+                'has_results' => false,
+                'documents' => [
+                    ['document_type' => 'vitals'],
+                    ['document_type' => 'note'],
+                    ['document_type' => 'prescription'],
+                    ['document_type' => 'orders'],
+                ],
+            ],
+        ],
+        [
+            'item_type' => 'document',
+            'event_datetime' => '2026-02-19 09:12:00',
+            'clinical_document' => ['document_type' => 'vitals', 'summary' => 'TA 120/80, FC 72, Temp 36.6'],
+            'links' => ['appointment_id' => '9001', 'document_uuid' => 'demo-doc-9001-vitals'],
+        ],
+        [
+            'item_type' => 'document',
+            'event_datetime' => '2026-02-19 09:18:00',
+            'clinical_document' => ['document_type' => 'note', 'summary' => 'Dolor faríngeo de 3 días, sin fiebre.'],
+            'links' => ['appointment_id' => '9001', 'document_uuid' => 'demo-doc-9001-note'],
+        ],
+        [
+            'item_type' => 'document',
+            'event_datetime' => '2026-02-19 09:24:00',
+            'clinical_document' => ['document_type' => 'prescription', 'summary' => 'Paracetamol 500mg cada 8h por 3 días.'],
+            'links' => ['appointment_id' => '9001', 'document_uuid' => 'demo-doc-9001-rx'],
+        ],
+        [
+            'item_type' => 'appointment',
+            'encounter_key' => 'appt:9002',
+            'event_datetime' => '2026-02-17 16:00:00',
+            'agenda' => [
+                'status' => 'completed',
+                'start_at' => '2026-02-17 16:00:00',
+                'end_at' => '2026-02-17 16:40:00',
+                'modality' => 'teleconsulta',
+                'channel_origin' => 'call_center',
+            ],
+            'links' => ['appointment_id' => '9002'],
+        ],
+        [
+            'item_type' => 'encounter',
+            'encounter_key' => 'appt:9002',
+            'event_datetime' => '2026-02-17 16:45:00',
+            'clinical' => [
+                'has_vitals' => false,
+                'has_note' => true,
+                'has_prescription' => false,
+                'has_orders' => true,
+                'has_results' => true,
+                'documents' => [
+                    ['document_type' => 'note'],
+                    ['document_type' => 'orders'],
+                    ['document_type' => 'results'],
+                ],
+            ],
+        ],
+        [
+            'item_type' => 'document',
+            'event_datetime' => '2026-02-17 16:20:00',
+            'clinical_document' => ['document_type' => 'note', 'summary' => 'Control metabólico con mejoría parcial.'],
+            'links' => ['appointment_id' => '9002', 'document_uuid' => 'demo-doc-9002-note'],
+        ],
+        [
+            'item_type' => 'document',
+            'event_datetime' => '2026-02-17 16:33:00',
+            'clinical_document' => ['document_type' => 'results', 'summary' => 'HbA1c 6.9%, glucosa en ayuno 122 mg/dL.'],
+            'links' => ['appointment_id' => '9002', 'document_uuid' => 'demo-doc-9002-results'],
+        ],
+        [
+            'item_type' => 'appointment',
+            'encounter_key' => 'appt:9003',
+            'event_datetime' => '2026-02-12 11:30:00',
+            'agenda' => [
+                'status' => 'cancelled',
+                'start_at' => '2026-02-12 11:30:00',
+                'end_at' => '2026-02-12 12:00:00',
+                'modality' => 'presencial',
+                'channel_origin' => 'doctor_assistant',
+            ],
+            'links' => ['appointment_id' => '9003'],
+        ],
+        [
+            'item_type' => 'encounter',
+            'encounter_key' => 'appt:9004',
+            'event_datetime' => '2026-02-09 14:20:00',
+            'clinical' => [
+                'has_vitals' => true,
+                'has_note' => false,
+                'has_prescription' => true,
+                'has_orders' => false,
+                'has_results' => false,
+                'documents' => [
+                    ['document_type' => 'vitals'],
+                    ['document_type' => 'prescription'],
+                ],
+            ],
+        ],
+        [
+            'item_type' => 'document',
+            'event_datetime' => '2026-02-09 14:10:00',
+            'clinical_document' => ['document_type' => 'vitals', 'summary' => 'Peso 82 kg, IMC 28.2.'],
+            'links' => ['appointment_id' => '9004', 'document_uuid' => 'demo-doc-9004-vitals'],
+        ],
+        [
+            'item_type' => 'document',
+            'event_datetime' => '2026-02-09 14:15:00',
+            'clinical_document' => ['document_type' => 'prescription', 'summary' => 'Omeprazol 20mg cada 24h por 14 días.'],
+            'links' => ['appointment_id' => '9004', 'document_uuid' => 'demo-doc-9004-rx'],
+        ],
+        [
+            'item_type' => 'document',
+            'event_datetime' => '2026-01-28 08:40:00',
+            'clinical_document' => ['document_type' => 'note', 'summary' => 'Nota externa sin cita ligada en sistema.'],
+            'links' => ['appointment_id' => null, 'document_uuid' => 'demo-doc-orphan-01'],
+        ],
+    ];
+}
+
 $patientId = trim((string)($_GET['patient_id'] ?? ''));
 $appointmentId = trim((string)($_GET['appointment_id'] ?? ''));
 $encounterKey = trim((string)($_GET['encounter_key'] ?? ''));
@@ -121,47 +266,67 @@ if ($patientId === '' && $encounterKey !== '') {
 }
 
 if ($patientId !== '') {
-    $query = [
-        'include' => $include,
-        'limit' => $limit,
-    ];
-    if ($cursor !== '') {
-        $query['cursor'] = $cursor;
-    }
-    if ($direction !== '') {
-        $query['direction'] = $direction;
-    }
-
-    $url = get_api_base() . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/timeline'
-         . '?' . http_build_query($query);
-
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'timeout' => 8,
-            'ignore_errors' => true,
-            'header' => "Accept: application/json\r\n",
-        ],
-    ]);
-
-    $raw = @file_get_contents($url, false, $context);
-    if ($raw === false) {
-        $lastError = error_get_last();
-        $detail = is_array($lastError) ? trim((string)($lastError['message'] ?? '')) : '';
-        $errorMessage = $detail !== '' ? $detail : 'No se pudo consultar el historial de atención.';
+    if ($patientId === 'demo') {
+        $demoItems = build_demo_timeline_items();
+        $items = array_values(array_filter($demoItems, static function (array $item) use ($include): bool {
+            $type = (string)($item['item_type'] ?? '');
+            if ($include === 'agenda') {
+                return $type === 'appointment';
+            }
+            if ($include === 'clinical') {
+                return $type === 'encounter' || $type === 'document';
+            }
+            return true;
+        }));
+        usort($items, static function (array $a, array $b): int {
+            return strcmp((string)($b['event_datetime'] ?? ''), (string)($a['event_datetime'] ?? ''));
+        });
+        if ($limit > 0) {
+            $items = array_slice($items, 0, $limit);
+        }
     } else {
-        $decoded = json_decode($raw, true);
-        if (!is_array($decoded)) {
-            $errorMessage = 'Respuesta inválida del endpoint de timeline.';
-        } elseif (($decoded['ok'] ?? false) !== true) {
-            $errorMessage = (string)($decoded['message'] ?? 'Error consultando historial de atención.');
+        $query = [
+            'include' => $include,
+            'limit' => $limit,
+        ];
+        if ($cursor !== '') {
+            $query['cursor'] = $cursor;
+        }
+        if ($direction !== '') {
+            $query['direction'] = $direction;
+        }
+
+        $url = get_api_base() . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/timeline'
+            . '?' . http_build_query($query);
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'timeout' => 8,
+                'ignore_errors' => true,
+                'header' => "Accept: application/json\r\n",
+            ],
+        ]);
+
+        $raw = @file_get_contents($url, false, $context);
+        if ($raw === false) {
+            $lastError = error_get_last();
+            $detail = is_array($lastError) ? trim((string)($lastError['message'] ?? '')) : '';
+            $errorMessage = $detail !== '' ? $detail : 'No se pudo consultar el historial de atención.';
         } else {
-            $data = is_array($decoded['data'] ?? null) ? $decoded['data'] : [];
-            $list = $data['items'] ?? [];
-            $items = is_array($list) ? $list : [];
-            $range = is_array($data['range'] ?? null) ? $data['range'] : [];
-            $cursorNext = trim((string)($range['cursor_next'] ?? ''));
-            $cursorPrev = trim((string)($range['cursor_prev'] ?? ''));
+            $decoded = json_decode($raw, true);
+            if (!is_array($decoded)) {
+                $errorMessage = 'Respuesta inválida del endpoint de timeline.';
+            } elseif (($decoded['ok'] ?? false) !== true) {
+                $errorMessage = (string)($decoded['message'] ?? 'Error consultando historial de atención.');
+            } else {
+                $data = is_array($decoded['data'] ?? null) ? $decoded['data'] : [];
+                $list = $data['items'] ?? [];
+                $items = is_array($list) ? $list : [];
+                $range = is_array($data['range'] ?? null) ? $data['range'] : [];
+                $cursorNext = trim((string)($range['cursor_next'] ?? ''));
+                $cursorPrev = trim((string)($range['cursor_prev'] ?? ''));
+            }
         }
     }
 }
