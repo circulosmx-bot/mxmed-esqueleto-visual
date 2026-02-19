@@ -54,7 +54,7 @@ start_api() {
     return
   fi
 
-  nohup php -S "$API_HOST:$API_PORT" -t "$ROOT_DIR" > "$API_LOG" 2>&1 &
+  nohup bash -lc "echo -ne '\033]0;MXMED-API-8091\a'; exec php -S '$API_HOST:$API_PORT' -t '$ROOT_DIR'" > "$API_LOG" 2>&1 &
   local pid=$!
   sleep 1
 
@@ -75,7 +75,7 @@ start_ui() {
     return
   fi
 
-  nohup env MXMED_API_BASE="$UI_API_BASE" php -S "$UI_HOST:$UI_PORT" -t "$ROOT_DIR" > "$UI_LOG" 2>&1 &
+  nohup bash -lc "echo -ne '\033]0;MXMED-UI-8092\a'; exec env MXMED_API_BASE='$UI_API_BASE' php -S '$UI_HOST:$UI_PORT' -t '$ROOT_DIR'" > "$UI_LOG" 2>&1 &
   local pid=$!
   sleep 1
 
@@ -164,9 +164,40 @@ do_logs() {
   tail -n 80 "$UI_LOG" 2>/dev/null || echo "(no log yet)"
 }
 
+do_start_tabs() {
+  if [ "$(uname -s)" != "Darwin" ] || ! command -v osascript >/dev/null 2>&1; then
+    echo "start-tabs is only available on macOS with osascript."
+    echo "Use: ./scripts/dev-servers.sh start"
+    exit 1
+  fi
+
+  if pid_alive "$(port_pid "$API_PORT")" || pid_alive "$(port_pid "$UI_PORT")"; then
+    echo "Detected running servers on 8091/8092. Stopping first..."
+    do_stop
+  fi
+
+  osascript <<OSA
+tell application "Terminal"
+  activate
+  if (count of windows) = 0 then
+    do script ""
+  end if
+  do script "cd \"$ROOT_DIR\"; echo -ne \"\\033]0;MXMED-API-8091\\a\"; php -S $API_HOST:$API_PORT -t ." in front window
+  do script "cd \"$ROOT_DIR\"; echo -ne \"\\033]0;MXMED-UI-8092\\a\"; MXMED_API_BASE=$UI_API_BASE php -S $UI_HOST:$UI_PORT -t ." in front window
+end tell
+OSA
+
+  echo "Opened Terminal tabs:"
+  echo "- MXMED-API-8091 -> http://$API_HOST:$API_PORT"
+  echo "- MXMED-UI-8092 -> http://$UI_HOST:$UI_PORT (MXMED_API_BASE=$UI_API_BASE)"
+}
+
 case "${1:-}" in
   start)
     do_start
+    ;;
+  start-tabs)
+    do_start_tabs
     ;;
   stop)
     do_stop
@@ -182,7 +213,7 @@ case "${1:-}" in
     do_start
     ;;
   *)
-    echo "Usage: ./scripts/dev-servers.sh {start|stop|status|logs|restart}"
+    echo "Usage: ./scripts/dev-servers.sh {start|start-tabs|stop|status|logs|restart}"
     exit 1
     ;;
 esac
