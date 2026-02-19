@@ -475,7 +475,7 @@ if (!$embed) {
     <?php // Modo embed: ocultar encabezado y formulario (UX integrado) ?>
   <?php endif; ?>
 
-  <div class="btn-group mb-3" role="group" aria-label="Filtros del historial de atención">
+  <div class="btn-group mb-3" role="group" aria-label="Filtros del historial de atención" data-role="timeline-filters">
     <?php foreach ($filters as $filterValue => $filterLabel): ?>
       <?php
       $isActive = ($include === $filterValue);

@@ -6594,6 +6594,15 @@
         var on = btn.getAttribute('data-embed-mode') === mode;
         btn.classList.toggle('active', on);
       });
+      updateTimelineFilterVisibility(mode);
+    }
+
+    function updateTimelineFilterVisibility(mode) {
+      var frameDoc = iframe.contentDocument;
+      if (!frameDoc) return;
+      var filters = frameDoc.querySelector('[data-role="timeline-filters"]');
+      if (!filters) return;
+      filters.hidden = mode !== 'historial';
     }
 
     function ensureEmbedIframe() {
@@ -6635,6 +6644,9 @@
     });
 
     historialTabBtn.addEventListener('shown.bs.tab', ensureEmbedIframe);
+    iframe.addEventListener('load', function () {
+      updateTimelineFilterVisibility(activeMode);
+    });
 
     var patientInputs = expedientePane.querySelectorAll(
       '[data-pac-nombre], [data-pac-apellido-paterno], [data-pac-apellido-materno], [data-dg-dia], [data-dg-mes], [data-dg-anio], input[name="pac-genero"]'
@@ -6690,6 +6702,7 @@
     if (historialTabBtn.classList.contains('active') || historialPane.classList.contains('show')) {
       ensureEmbedIframe();
     }
+    updateTimelineFilterVisibility(activeMode);
   })();
 </script>
 <script>
