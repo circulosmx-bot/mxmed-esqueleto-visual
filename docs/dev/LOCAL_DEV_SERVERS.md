@@ -71,6 +71,7 @@ Usa el script del repo para controlar servidores locales duales.
 
 ```bash
 ./scripts/dev-servers.sh start
+./scripts/dev-servers.sh start-tabs
 ./scripts/dev-servers.sh status
 ./scripts/dev-servers.sh logs
 ./scripts/dev-servers.sh stop
@@ -80,3 +81,5 @@ Usa el script del repo para controlar servidores locales duales.
 Detalles:
 - API: `127.0.0.1:8091` (log: `/tmp/mxmed_api_8091.log`)
 - UI: `127.0.0.1:8092` con `MXMED_API_BASE=http://127.0.0.1:8091` (log: `/tmp/mxmed_ui_8092.log`)
+- `start-tabs`: abre dos tabs nuevas en Terminal.app en foreground (no usa pidfiles).
+- Para QA automatizado, usar `start` normal (background + pidfiles).

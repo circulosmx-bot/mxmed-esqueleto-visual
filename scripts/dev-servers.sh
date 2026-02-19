@@ -172,13 +172,16 @@ do_start_tabs() {
   fi
 
   if pid_alive "$(port_pid "$API_PORT")" || pid_alive "$(port_pid "$UI_PORT")"; then
-    echo "Detected running servers on 8091/8092. Stopping first..."
-    do_stop
+    echo "Detected running servers on 8091/8092."
+    echo "start-tabs will not stop running servers automatically."
+    echo "Use: ./scripts/dev-servers.sh stop  or  ./scripts/dev-servers.sh restart"
+    exit 1
   fi
 
-  local osa_output
-  if ! osa_output="$(
-    osascript - "$ROOT_DIR" "$API_HOST" "$API_PORT" "$UI_HOST" "$UI_PORT" "$UI_API_BASE" <<'OSA'
+  local osa_output=""
+  local osa_status=0
+  osa_output="$(
+    osascript - "$ROOT_DIR" "$API_HOST" "$API_PORT" "$UI_HOST" "$UI_PORT" "$UI_API_BASE" 2>&1 <<'OSA'
 on run argv
   set rootDir to item 1 of argv
   set apiHost to item 2 of argv
@@ -200,7 +203,10 @@ on run argv
   end tell
 end run
 OSA
-  )"; then
+  )"
+  osa_status=$?
+
+  if [ "$osa_status" -ne 0 ]; then
     echo "Failed to open Terminal tabs with osascript."
     echo "$osa_output"
     exit 1
