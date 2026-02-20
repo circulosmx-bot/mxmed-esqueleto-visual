@@ -2427,6 +2427,8 @@ console.info('app.js loaded :: 20251123a');
   const ginecoLink = pane.querySelector('[data-tab-key="t-gineco"]');
   const dayError = pane.querySelector('[data-dg-day-error]');
   const genderExtra = pane.querySelector('[data-gen-extra]');
+  const datosTabLink = pane.querySelector('[data-tab-key="t-datos"]');
+  const datosTabPane = pane.querySelector('#t-datos');
   let lastDayInvalid = false;
   const setGenderAttr = (genero)=>{
     if(genero){ pane.setAttribute('data-exp-gender', genero); }
@@ -2662,6 +2664,58 @@ console.info('app.js loaded :: 20251123a');
     }
   };
 
+  const isPatientActive = ()=>{
+    const candidates = [
+      pane.getAttribute('data-patient-id'),
+      pane.dataset?.patientId,
+      pane.getAttribute('data-active-patient-id'),
+      pane.dataset?.activePatientId,
+      window.mxmedActivePatientId,
+      window.__MXMED_ACTIVE_PATIENT_ID,
+      window.mxmedPatient && window.mxmedPatient.patient_id,
+      window.mxmedPatientContext && window.mxmedPatientContext.patient_id,
+      window.mxmedStore && (window.mxmedStore.activePatientId || window.mxmedStore.patient_id)
+    ];
+    for (const raw of candidates) {
+      const id = String(raw || '').trim();
+      const lower = id.toLowerCase();
+      if (!id || lower === 'anon' || lower === 'anonymous' || id === '-') continue;
+      return true;
+    }
+    return false;
+  };
+
+  const applyPatientGate = ()=>{
+    const gateOn = isPatientActive();
+    const panes = Array.from(pane.querySelectorAll('.tab-content .tab-pane'));
+    const nonDatosLinks = tabs.filter(btn => btn.getAttribute('data-tab-key') !== 't-datos');
+    const nonDatosPanes = panes.filter(p => p.id !== 't-datos');
+
+    if (!gateOn) {
+      nonDatosLinks.forEach(btn => btn.closest('.nav-item')?.classList.add('d-none'));
+      nonDatosPanes.forEach(p => {
+        p.classList.add('d-none');
+        p.classList.remove('show', 'active');
+      });
+      tabs.forEach(btn => btn.classList.remove('active'));
+      datosTabLink?.classList.add('active');
+      panes.forEach(p => p.classList.remove('show', 'active'));
+      if (datosTabPane) {
+        datosTabPane.classList.remove('d-none');
+        datosTabPane.classList.add('show', 'active');
+      }
+      return;
+    }
+
+    nonDatosLinks.forEach(btn => {
+      const item = btn.closest('.nav-item');
+      if (!item) return;
+      if (item.getAttribute('data-tab-conditional') === 'gineco') return;
+      item.classList.remove('d-none');
+    });
+    nonDatosPanes.forEach(p => p.classList.remove('d-none'));
+  };
+
   const syncState = (opts={})=>{
     const ready = basicsReady();
     tabs.forEach((btn)=>{
@@ -2671,6 +2725,7 @@ console.info('app.js loaded :: 20251123a');
     setGenderAttr(genero);
     syncGineco(genero, opts.allowNavigate);
     updateGenderExtra();
+    applyPatientGate();
     if(!ready){
       showFirstAvailable();
     }
@@ -2700,6 +2755,12 @@ console.info('app.js loaded :: 20251123a');
     ev.preventDefault();
     openHistorialAtencion();
   });
+
+  ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach((evtName)=>{
+    document.addEventListener(evtName, ()=> syncState({ allowNavigate:true }));
+  });
+  const patientAttrObserver = new MutationObserver(()=> syncState({ allowNavigate:true }));
+  patientAttrObserver.observe(pane, { attributes:true, attributeFilter:['data-patient-id', 'data-active-patient-id'] });
 
   syncState();
   layoutTabs(false);
