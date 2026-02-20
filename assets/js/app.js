@@ -2664,29 +2664,29 @@ console.info('app.js loaded :: 20251123a');
     }
   };
 
-  const isPatientActive = ()=>{
-    const candidates = [
-      pane.getAttribute('data-patient-id'),
-      pane.dataset?.patientId,
-      pane.getAttribute('data-active-patient-id'),
-      pane.dataset?.activePatientId,
+  const getActivePatientId = ()=>{
+    const fromPane = String(pane.dataset?.patientId || pane.getAttribute('data-patient-id') || '').trim();
+    if(fromPane) return fromPane;
+
+    const fromPaneActive = String(pane.dataset?.activePatientId || pane.getAttribute('data-active-patient-id') || '').trim();
+    if(fromPaneActive) return fromPaneActive;
+
+    const fallback = [
       window.mxmedActivePatientId,
       window.__MXMED_ACTIVE_PATIENT_ID,
       window.mxmedPatient && window.mxmedPatient.patient_id,
       window.mxmedPatientContext && window.mxmedPatientContext.patient_id,
       window.mxmedStore && (window.mxmedStore.activePatientId || window.mxmedStore.patient_id)
     ];
-    for (const raw of candidates) {
-      const id = String(raw || '').trim();
-      const lower = id.toLowerCase();
-      if (!id || lower === 'anon' || lower === 'anonymous' || id === '-') continue;
-      return true;
+    for(const raw of fallback){
+      const value = String(raw || '').trim();
+      if(value) return value;
     }
-    return false;
+    return '';
   };
 
   const applyPatientGate = ()=>{
-    const gateOn = isPatientActive();
+    const gateOn = String(getActivePatientId() || '').trim() !== '';
     const panes = Array.from(pane.querySelectorAll('.tab-content .tab-pane'));
     const nonDatosLinks = tabs.filter(btn => btn.getAttribute('data-tab-key') !== 't-datos');
     const nonDatosPanes = panes.filter(p => p.id !== 't-datos');
@@ -2756,11 +2756,15 @@ console.info('app.js loaded :: 20251123a');
     openHistorialAtencion();
   });
 
-  ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach((evtName)=>{
-    document.addEventListener(evtName, ()=> syncState({ allowNavigate:true }));
-  });
-  const patientAttrObserver = new MutationObserver(()=> syncState({ allowNavigate:true }));
-  patientAttrObserver.observe(pane, { attributes:true, attributeFilter:['data-patient-id', 'data-active-patient-id'] });
+  if(!pane.__patientGateInit){
+    const handlePatientGateChange = ()=> syncState({ allowNavigate:true });
+    ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach((evtName)=>{
+      window.addEventListener(evtName, handlePatientGateChange);
+    });
+    const patientAttrObserver = new MutationObserver(handlePatientGateChange);
+    patientAttrObserver.observe(pane, { attributes:true, attributeFilter:['data-patient-id', 'data-active-patient-id'] });
+    pane.__patientGateInit = true;
+  }
 
   syncState();
   layoutTabs(false);
