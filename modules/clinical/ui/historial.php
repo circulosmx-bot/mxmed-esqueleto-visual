@@ -421,6 +421,26 @@ foreach ($items as $item) {
 }
 
 $hasRenderableItems = ($appointmentItems !== []) || ($encounterOrder !== []) || ($orphanDocs !== []);
+$activeCaseId = (is_array($activeCase) && isset($activeCase['case_id'])) ? (string)$activeCase['case_id'] : '';
+$activeCaseItemsCount = 0;
+if ($activeCaseId !== '') {
+    foreach ($appointmentItems as $it) {
+        if ((string)($it['case_id'] ?? '') === $activeCaseId) {
+            $activeCaseItemsCount++;
+        }
+    }
+    foreach ($encounterOrder as $ek) {
+        $enc = is_array($encounters[$ek]['raw'] ?? null) ? $encounters[$ek]['raw'] : [];
+        if ((string)($enc['case_id'] ?? '') === $activeCaseId) {
+            $activeCaseItemsCount++;
+        }
+    }
+    foreach ($orphanDocs as $docIt) {
+        if ((string)($docIt['case_id'] ?? '') === $activeCaseId) {
+            $activeCaseItemsCount++;
+        }
+    }
+}
 
 $buildCursorHref = static function (string $nextCursor) use ($patientId, $include, $limit, $direction): string {
     $params = [
@@ -468,6 +488,19 @@ $extraHead = <<<'HTML'
     }
     .clinical-historial .mm-chip.is-off .dot{
       background-color:#adb5bd !important;
+    }
+    .clinical-historial .is-in-active-case{
+      border-left: 4px solid var(--mm-borde-input, #00B0C5);
+      background: linear-gradient(90deg, rgba(0,176,197,.06) 0%, rgba(0,176,197,0) 24%);
+    }
+    .clinical-historial .only-active-case-note{
+      background: var(--mm-header-top, #EAF6FB);
+      border: 1px solid rgba(0,176,197,.35);
+      color: var(--mm-barra-vigencia, #003152);
+      border-radius: .6rem;
+      padding: .5rem .75rem;
+      font-size: .875rem;
+      margin-bottom: .75rem;
     }
   </style>
 HTML;
@@ -524,6 +557,8 @@ if (!$embed) {
             <strong><?php echo h((string)($activeCase['title'] ?? 'Caso clínico')); ?></strong>
           </div>
           <div class="d-flex gap-2">
+            <span class="small text-secondary align-self-center" data-role="active-case-counter">Items en este caso: <?php echo h((string)$activeCaseItemsCount); ?></span>
+            <button type="button" class="btn btn-sm btn-outline-success" data-action="toggle-only-active-case">Ver solo este caso</button>
             <button
               type="button"
               class="btn btn-sm btn-outline-primary"
@@ -575,15 +610,18 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
+    <div class="only-active-case-note d-none" data-role="only-active-case-note">Mostrando solo items del caso activo.</div>
     <div class="vstack gap-2">
       <?php foreach ($appointmentItems as $item): ?>
         <?php
         $agenda = is_array($item['agenda'] ?? null) ? $item['agenda'] : [];
         $links = is_array($item['links'] ?? null) ? $item['links'] : [];
         $appointmentRef = trim((string)($links['appointment_id'] ?? ''));
+        $isInActiveCase = ($activeCaseId !== '' && (string)($item['case_id'] ?? '') === $activeCaseId);
+        $itemCaseId = trim((string)($item['case_id'] ?? ''));
         ?>
         <?php $appointmentEncounterKey = trim((string)($item['encounter_key'] ?? '')); ?>
-        <article class="mm-card" data-item-type="appointment" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>">
+        <article class="mm-card <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($itemCaseId); ?>" data-item-type="appointment" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>">
           <div class="body">
             <?php if (!empty($item['case_id'])): ?>
               <div class="mb-2"><span class="badge text-bg-info">Caso: <?php echo h((string)($item['case_title'] ?? '')); ?></span></div>
@@ -650,8 +688,10 @@ if (!$embed) {
         $hasResults = (bool)($clinical['has_results'] ?? false);
         $isAppointmentEncounter = strpos($ek, 'appt:') === 0;
         $docsInEncounter = is_array($encounter['documents'] ?? null) ? $encounter['documents'] : [];
+        $encCaseId = trim((string)($rawEncounter['case_id'] ?? ''));
+        $encInActiveCase = ($activeCaseId !== '' && $encCaseId === $activeCaseId);
         ?>
-        <article class="mm-card" data-item-type="encounter" data-encounter-key="<?php echo h($ek); ?>">
+        <article class="mm-card <?php echo $encInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($encCaseId); ?>" data-item-type="encounter" data-encounter-key="<?php echo h($ek); ?>">
           <div class="body">
             <?php if (!empty($rawEncounter['case_id'])): ?>
               <div class="mb-2"><span class="badge text-bg-info">Caso: <?php echo h((string)($rawEncounter['case_title'] ?? '')); ?></span></div>
@@ -741,8 +781,10 @@ if (!$embed) {
           $doc = is_array($docItem['clinical_document'] ?? null) ? $docItem['clinical_document'] : [];
           $links = is_array($docItem['links'] ?? null) ? $docItem['links'] : [];
           $docUuid = trim((string)($links['document_uuid'] ?? ''));
+          $docCaseId = trim((string)($docItem['case_id'] ?? ''));
+          $docInActiveCase = ($activeCaseId !== '' && $docCaseId === $activeCaseId);
           ?>
-          <article class="mm-card" data-item-type="document" data-document-uuid="<?php echo h($docUuid); ?>">
+          <article class="mm-card <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($docCaseId); ?>" data-item-type="document" data-document-uuid="<?php echo h($docUuid); ?>">
             <div class="body">
               <?php if (!empty($docItem['case_id'])): ?>
                 <div class="mb-2"><span class="badge text-bg-info">Caso: <?php echo h((string)($docItem['case_title'] ?? '')); ?></span></div>
@@ -801,6 +843,8 @@ if (!$embed) {
   (function () {
     var patientId = <?php echo json_encode($patientId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var apiBase = <?php echo json_encode(get_api_base(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    var activeCaseId = <?php echo json_encode($activeCaseId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    var onlyActiveCaseStorageKey = 'mxmed_historial_only_active_case:' + String(patientId || '');
     var casesModalEl = document.getElementById('clinicalCasesModal');
     var casesModalList = document.getElementById('casesModalList');
     var casesModalEmpty = document.getElementById('casesModalEmpty');
@@ -808,6 +852,44 @@ if (!$embed) {
     var casesModalInstance = null;
     if (casesModalEl && window.bootstrap && window.bootstrap.Modal) {
       casesModalInstance = window.bootstrap.Modal.getOrCreateInstance(casesModalEl);
+    }
+    var onlyActiveCaseBtn = document.querySelector('[data-action="toggle-only-active-case"]');
+    var onlyActiveCaseNotice = document.querySelector('[data-role="only-active-case-note"]');
+    var onlyActiveCaseEnabled = false;
+    try {
+      onlyActiveCaseEnabled = activeCaseId !== '' && localStorage.getItem(onlyActiveCaseStorageKey) === '1';
+    } catch (_) {
+      onlyActiveCaseEnabled = false;
+    }
+
+    function applyOnlyActiveCaseFilter() {
+      var timelineItems = document.querySelectorAll('[data-timeline-item="1"]');
+      timelineItems.forEach(function (item) {
+        if (!onlyActiveCaseEnabled || activeCaseId === '') {
+          item.classList.remove('d-none');
+          return;
+        }
+        var itemCaseId = String(item.getAttribute('data-case-id') || '').trim();
+        item.classList.toggle('d-none', itemCaseId !== activeCaseId);
+      });
+      if (onlyActiveCaseNotice) {
+        onlyActiveCaseNotice.classList.toggle('d-none', !onlyActiveCaseEnabled || activeCaseId === '');
+      }
+      if (onlyActiveCaseBtn) {
+        onlyActiveCaseBtn.textContent = (onlyActiveCaseEnabled && activeCaseId !== '') ? 'Ver todos' : 'Ver solo este caso';
+      }
+    }
+
+    function setOnlyActiveCaseEnabled(nextValue) {
+      onlyActiveCaseEnabled = !!nextValue && activeCaseId !== '';
+      try {
+        if (activeCaseId === '') {
+          localStorage.removeItem(onlyActiveCaseStorageKey);
+        } else {
+          localStorage.setItem(onlyActiveCaseStorageKey, onlyActiveCaseEnabled ? '1' : '0');
+        }
+      } catch (_) {}
+      applyOnlyActiveCaseFilter();
     }
 
     async function apiJson(url, options) {
@@ -969,6 +1051,13 @@ if (!$embed) {
         return;
       }
 
+      var toggleOnlyCaseBtn = event.target && event.target.closest ? event.target.closest('[data-action="toggle-only-active-case"]') : null;
+      if (toggleOnlyCaseBtn) {
+        event.preventDefault();
+        setOnlyActiveCaseEnabled(!onlyActiveCaseEnabled);
+        return;
+      }
+
       var activateCaseBtn = event.target && event.target.closest ? event.target.closest('[data-action="activate-case"]') : null;
       if (activateCaseBtn) {
         event.preventDefault();
@@ -1044,6 +1133,7 @@ if (!$embed) {
     if (patientId) {
       loadActiveCase(patientId).catch(function () {});
     }
+    applyOnlyActiveCaseFilter();
   })();
 </script>
 <?php if ($embed): ?>
