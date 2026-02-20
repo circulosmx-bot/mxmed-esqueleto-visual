@@ -579,6 +579,13 @@ if (!$embed) {
         <?php endif; ?>
       </div>
     </div>
+    <div class="alert alert-info d-none py-2 mb-3" data-role="recent-case-suggestion">
+      <span data-role="recent-case-suggestion-text"></span>
+      <div class="mt-2 d-flex gap-2">
+        <button type="button" class="btn btn-sm btn-primary" data-action="assign-recent-to-active-case">Agregar recientes</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-action="snooze-recent-case-suggestion">No por ahora</button>
+      </div>
+    </div>
   <?php endif; ?>
 
   <?php if ($resolveErrorMsg !== ''): ?>
@@ -621,7 +628,7 @@ if (!$embed) {
         $itemCaseId = trim((string)($item['case_id'] ?? ''));
         ?>
         <?php $appointmentEncounterKey = trim((string)($item['encounter_key'] ?? '')); ?>
-        <article class="mm-card <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($itemCaseId); ?>" data-item-type="appointment" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>">
+        <article class="mm-card <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($itemCaseId); ?>" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>">
           <div class="body">
             <?php if (!empty($item['case_id'])): ?>
               <div class="mb-2"><span class="badge text-bg-info">Caso: <?php echo h((string)($item['case_title'] ?? '')); ?></span></div>
@@ -691,7 +698,7 @@ if (!$embed) {
         $encCaseId = trim((string)($rawEncounter['case_id'] ?? ''));
         $encInActiveCase = ($activeCaseId !== '' && $encCaseId === $activeCaseId);
         ?>
-        <article class="mm-card <?php echo $encInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($encCaseId); ?>" data-item-type="encounter" data-encounter-key="<?php echo h($ek); ?>">
+        <article class="mm-card <?php echo $encInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($encCaseId); ?>" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>" data-encounter-key="<?php echo h($ek); ?>">
           <div class="body">
             <?php if (!empty($rawEncounter['case_id'])): ?>
               <div class="mb-2"><span class="badge text-bg-info">Caso: <?php echo h((string)($rawEncounter['case_title'] ?? '')); ?></span></div>
@@ -784,7 +791,7 @@ if (!$embed) {
           $docCaseId = trim((string)($docItem['case_id'] ?? ''));
           $docInActiveCase = ($activeCaseId !== '' && $docCaseId === $activeCaseId);
           ?>
-          <article class="mm-card <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($docCaseId); ?>" data-item-type="document" data-document-uuid="<?php echo h($docUuid); ?>">
+          <article class="mm-card <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($docCaseId); ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>" data-document-uuid="<?php echo h($docUuid); ?>">
             <div class="body">
               <?php if (!empty($docItem['case_id'])): ?>
                 <div class="mb-2"><span class="badge text-bg-info">Caso: <?php echo h((string)($docItem['case_title'] ?? '')); ?></span></div>
@@ -855,7 +862,11 @@ if (!$embed) {
     }
     var onlyActiveCaseBtn = document.querySelector('[data-action="toggle-only-active-case"]');
     var onlyActiveCaseNotice = document.querySelector('[data-role="only-active-case-note"]');
+    var recentSuggestion = document.querySelector('[data-role="recent-case-suggestion"]');
+    var recentSuggestionText = document.querySelector('[data-role="recent-case-suggestion-text"]');
     var onlyActiveCaseEnabled = false;
+    var recentCandidates = [];
+    var recentSuggestStorageKey = 'mxmed_historial_snooze_suggest:' + String(patientId || '');
     try {
       onlyActiveCaseEnabled = activeCaseId !== '' && localStorage.getItem(onlyActiveCaseStorageKey) === '1';
     } catch (_) {
@@ -890,6 +901,40 @@ if (!$embed) {
         }
       } catch (_) {}
       applyOnlyActiveCaseFilter();
+    }
+
+    function recentSnoozed() {
+      try {
+        var ts = Number(localStorage.getItem(recentSuggestStorageKey) || '0');
+        if (!Number.isFinite(ts) || ts <= 0) return false;
+        return (Date.now() - ts) < (24 * 60 * 60 * 1000);
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function computeRecentCandidates() {
+      if (!activeCaseId) return [];
+      var nodes = Array.from(document.querySelectorAll('[data-timeline-item="1"]')).slice(0, 10);
+      return nodes.map(function (node) {
+        return {
+          caseId: String(node.getAttribute('data-case-id') || '').trim(),
+          itemType: String(node.getAttribute('data-item-type') || '').trim(),
+          itemRef: String(node.getAttribute('data-item-ref') || '').trim()
+        };
+      }).filter(function (item) {
+        return item.caseId === '' && item.itemType !== '' && item.itemRef !== '';
+      });
+    }
+
+    function renderRecentSuggestion() {
+      if (!recentSuggestion || !recentSuggestionText) return;
+      recentCandidates = computeRecentCandidates();
+      var show = activeCaseId !== '' && recentCandidates.length >= 2 && !recentSnoozed();
+      recentSuggestion.classList.toggle('d-none', !show);
+      if (show) {
+        recentSuggestionText.textContent = 'Hay ' + recentCandidates.length + ' eventos recientes sin caso. ¿Agregar al caso activo?';
+      }
     }
 
     async function apiJson(url, options) {
@@ -1106,6 +1151,35 @@ if (!$embed) {
         return;
       }
 
+      var assignRecentBtn = event.target && event.target.closest ? event.target.closest('[data-action="assign-recent-to-active-case"]') : null;
+      if (assignRecentBtn) {
+        event.preventDefault();
+        if (!activeCaseId || recentCandidates.length < 1) return;
+        (async function () {
+          var okCount = 0;
+          for (var i = 0; i < recentCandidates.length; i += 1) {
+            var rc = recentCandidates[i];
+            try {
+              await assignItem(activeCaseId, rc.itemType, rc.itemRef);
+              okCount += 1;
+            } catch (_) {}
+          }
+          window.alert('Listo: se agregaron ' + okCount);
+          window.location.reload();
+        })();
+        return;
+      }
+
+      var snoozeRecentBtn = event.target && event.target.closest ? event.target.closest('[data-action="snooze-recent-case-suggestion"]') : null;
+      if (snoozeRecentBtn) {
+        event.preventDefault();
+        try {
+          localStorage.setItem(recentSuggestStorageKey, String(Date.now()));
+        } catch (_) {}
+        renderRecentSuggestion();
+        return;
+      }
+
       var trigger = event.target && event.target.closest ? event.target.closest('[data-embed-nav]') : null;
       if (!trigger) return;
       var mode = String(trigger.getAttribute('data-nav-mode') || '').trim();
@@ -1134,6 +1208,7 @@ if (!$embed) {
       loadActiveCase(patientId).catch(function () {});
     }
     applyOnlyActiveCaseFilter();
+    renderRecentSuggestion();
   })();
 </script>
 <?php if ($embed): ?>
