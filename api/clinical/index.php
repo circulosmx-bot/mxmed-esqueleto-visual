@@ -788,6 +788,198 @@ function clinical_timeline_agenda_appointments_fetch(PDO $pdo, array $legacyPati
     return is_array($rows) ? $rows : [];
 }
 
+function clinical_cases_ensure_schema(PDO $pdo): void
+{
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS clinical_cases (
+            case_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            patient_id VARCHAR(64) NOT NULL,
+            title VARCHAR(180) NOT NULL,
+            status VARCHAR(16) NOT NULL DEFAULT 'active',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            KEY idx_clinical_cases_patient_status (patient_id, status),
+            CONSTRAINT fk_clinical_cases_patient
+                FOREIGN KEY (patient_id) REFERENCES patients_patients (patient_id)
+                ON UPDATE CASCADE
+                ON DELETE RESTRICT
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS clinical_case_items (
+            case_id BIGINT UNSIGNED NOT NULL,
+            item_type VARCHAR(24) NOT NULL,
+            item_ref VARCHAR(190) NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (case_id, item_type, item_ref),
+            KEY idx_clinical_case_items_case (case_id),
+            CONSTRAINT fk_clinical_case_items_case
+                FOREIGN KEY (case_id) REFERENCES clinical_cases (case_id)
+                ON UPDATE CASCADE
+                ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+}
+
+function clinical_cases_active_fetch(PDO $pdo, string $patientId): ?array
+{
+    $stmt = $pdo->prepare("
+        SELECT case_id, patient_id, title, status, created_at, updated_at
+        FROM clinical_cases
+        WHERE patient_id = :patient_id AND status = 'active'
+        ORDER BY updated_at DESC, case_id DESC
+        LIMIT 1
+    ");
+    $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return (is_array($row) && $row !== []) ? $row : null;
+}
+
+function clinical_case_get_by_id(PDO $pdo, int $caseId): ?array
+{
+    $stmt = $pdo->prepare("
+        SELECT case_id, patient_id, title, status, created_at, updated_at
+        FROM clinical_cases
+        WHERE case_id = :case_id
+        LIMIT 1
+    ");
+    $stmt->bindValue(':case_id', $caseId, PDO::PARAM_INT);
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return (is_array($row) && $row !== []) ? $row : null;
+}
+
+function clinical_cases_create(PDO $pdo, string $patientId, string $title): array
+{
+    $pdo->beginTransaction();
+    try {
+        $stmtOff = $pdo->prepare("
+            UPDATE clinical_cases
+            SET status = 'inactive', updated_at = NOW()
+            WHERE patient_id = :patient_id AND status = 'active'
+        ");
+        $stmtOff->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+        $stmtOff->execute();
+
+        $stmtCreate = $pdo->prepare("
+            INSERT INTO clinical_cases (patient_id, title, status, created_at, updated_at)
+            VALUES (:patient_id, :title, 'active', NOW(), NOW())
+        ");
+        $stmtCreate->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+        $stmtCreate->bindValue(':title', $title, PDO::PARAM_STR);
+        $stmtCreate->execute();
+        $caseId = (int)$pdo->lastInsertId();
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        try {
+            $pdo->rollBack();
+        } catch (Throwable $e2) {
+        }
+        throw $e;
+    }
+
+    $created = clinical_case_get_by_id($pdo, $caseId);
+    if ($created === null) {
+        throw new RuntimeException('no se pudo crear case');
+    }
+    return $created;
+}
+
+function clinical_cases_activate(PDO $pdo, int $caseId): ?array
+{
+    $target = clinical_case_get_by_id($pdo, $caseId);
+    if ($target === null) {
+        return null;
+    }
+
+    $patientId = trim((string)($target['patient_id'] ?? ''));
+    if ($patientId === '') {
+        return null;
+    }
+
+    $pdo->beginTransaction();
+    try {
+        $stmtOff = $pdo->prepare("
+            UPDATE clinical_cases
+            SET status = 'inactive', updated_at = NOW()
+            WHERE patient_id = :patient_id AND status = 'active' AND case_id <> :case_id
+        ");
+        $stmtOff->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+        $stmtOff->bindValue(':case_id', $caseId, PDO::PARAM_INT);
+        $stmtOff->execute();
+
+        $stmtOn = $pdo->prepare("
+            UPDATE clinical_cases
+            SET status = 'active', updated_at = NOW()
+            WHERE case_id = :case_id
+        ");
+        $stmtOn->bindValue(':case_id', $caseId, PDO::PARAM_INT);
+        $stmtOn->execute();
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        try {
+            $pdo->rollBack();
+        } catch (Throwable $e2) {
+        }
+        throw $e;
+    }
+
+    return clinical_case_get_by_id($pdo, $caseId);
+}
+
+function clinical_cases_rename(PDO $pdo, int $caseId, string $title): ?array
+{
+    $stmt = $pdo->prepare("
+        UPDATE clinical_cases
+        SET title = :title, updated_at = NOW()
+        WHERE case_id = :case_id
+    ");
+    $stmt->bindValue(':title', $title, PDO::PARAM_STR);
+    $stmt->bindValue(':case_id', $caseId, PDO::PARAM_INT);
+    $stmt->execute();
+    if ($stmt->rowCount() <= 0) {
+        return clinical_case_get_by_id($pdo, $caseId);
+    }
+    return clinical_case_get_by_id($pdo, $caseId);
+}
+
+function clinical_case_item_type_allowed(string $itemType): bool
+{
+    return in_array($itemType, ['encounter', 'document', 'appointment'], true);
+}
+
+function clinical_case_item_insert(PDO $pdo, int $caseId, string $itemType, string $itemRef): bool
+{
+    $sql = "
+        INSERT INTO clinical_case_items (case_id, item_type, item_ref, created_at)
+        VALUES (:case_id, :item_type, :item_ref, NOW())
+        ON DUPLICATE KEY UPDATE created_at = created_at
+    ";
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue(':case_id', $caseId, PDO::PARAM_INT);
+    $stmt->bindValue(':item_type', $itemType, PDO::PARAM_STR);
+    $stmt->bindValue(':item_ref', $itemRef, PDO::PARAM_STR);
+    $stmt->execute();
+    return $stmt->rowCount() > 0;
+}
+
+function clinical_case_items_fetch(PDO $pdo, int $caseId): array
+{
+    $stmt = $pdo->prepare("
+        SELECT item_type, item_ref
+        FROM clinical_case_items
+        WHERE case_id = :case_id
+    ");
+    $stmt->bindValue(':case_id', $caseId, PDO::PARAM_INT);
+    $stmt->execute();
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    return is_array($rows) ? $rows : [];
+}
+
 set_error_handler(static function ($severity, $message, $file, $line): void {
     throw new ErrorException((string)$message, 0, (int)$severity, (string)$file, (int)$line);
 });
@@ -930,12 +1122,15 @@ try {
         $items = [];
         $cursorNext = null;
         $isScaffold = !($includeClinical || $includeAgenda);
+        $activeCase = null;
         if ($includeClinical || $includeAgenda) {
             $encounters = [];
             $rows = [];
             $agendaAppointments = [];
             try {
                 $pdo = clinical_documents_pdo();
+                clinical_cases_ensure_schema($pdo);
+                $activeCase = clinical_cases_active_fetch($pdo, $patientId);
                 if ($includeClinical) {
                     $encounters = clinical_timeline_encounters_fetch($pdo, $patientId, $limit);
                     $rows = clinical_timeline_documents_fetch($pdo, $patientId, $limit, $cursorDt, $cursorUuid);
@@ -1071,6 +1266,46 @@ try {
             }
 
             $items = array_merge($encounterItems, $appointmentItems, $documentItems);
+
+            if (is_array($activeCase) && $activeCase !== []) {
+                $activeCaseId = (int)($activeCase['case_id'] ?? 0);
+                $activeCaseTitle = (string)($activeCase['title'] ?? '');
+                if ($activeCaseId > 0) {
+                    $caseItems = clinical_case_items_fetch($pdo, $activeCaseId);
+                    $caseMap = [];
+                    foreach ($caseItems as $ci) {
+                        $ciType = trim((string)($ci['item_type'] ?? ''));
+                        $ciRef = trim((string)($ci['item_ref'] ?? ''));
+                        if ($ciType === '' || $ciRef === '') {
+                            continue;
+                        }
+                        $caseMap[$ciType . '|' . $ciRef] = true;
+                    }
+
+                    foreach ($items as &$timelineItem) {
+                        if (!is_array($timelineItem)) {
+                            continue;
+                        }
+                        $itemType = trim((string)($timelineItem['item_type'] ?? ''));
+                        $itemRef = '';
+                        if ($itemType === 'encounter') {
+                            $itemRef = trim((string)($timelineItem['encounter_key'] ?? ''));
+                        } elseif ($itemType === 'document') {
+                            $links = is_array($timelineItem['links'] ?? null) ? $timelineItem['links'] : [];
+                            $itemRef = trim((string)($links['document_uuid'] ?? ''));
+                        } elseif ($itemType === 'appointment') {
+                            $links = is_array($timelineItem['links'] ?? null) ? $timelineItem['links'] : [];
+                            $itemRef = trim((string)($links['appointment_id'] ?? ''));
+                        }
+
+                        if ($itemType !== '' && $itemRef !== '' && isset($caseMap[$itemType . '|' . $itemRef])) {
+                            $timelineItem['case_id'] = $activeCaseId;
+                            $timelineItem['case_title'] = $activeCaseTitle;
+                        }
+                    }
+                    unset($timelineItem);
+                }
+            }
 
             if ($includeAgenda) {
                 // TODO(timeline-v1): unify cursor across agenda + clinical streams.
@@ -1581,6 +1816,356 @@ try {
                 'deleted' => $deleted,
             ],
             'meta' => $meta,
+        ], 200);
+        return;
+    }
+
+    if (($segments[0] ?? '') === 'patients' && ($segments[2] ?? '') === 'cases' && count($segments) === 4 && $segments[3] === 'active') {
+        if ($method !== 'GET') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'not_found',
+                'message' => 'route not found',
+                'data' => null,
+                'meta' => ['method' => $method, 'route' => $route],
+            ], 404);
+            return;
+        }
+
+        $patientId = trim((string)$segments[1]);
+        if ($patientId === '') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => 'patient_id requerido'],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'GET', 'route' => 'patients/{patient_id}/cases/active'],
+            ], 400);
+            return;
+        }
+
+        try {
+            $pdo = clinical_documents_pdo();
+            clinical_cases_ensure_schema($pdo);
+            $active = clinical_cases_active_fetch($pdo, $patientId);
+        } catch (Throwable $e) {
+            $msg = trim((string)$e->getMessage());
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'server_error', 'message' => ($msg !== '' ? $msg : 'server error')],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'GET', 'route' => 'patients/{patient_id}/cases/active'],
+            ], 500);
+            return;
+        }
+
+        clinical_send_response([
+            'ok' => true,
+            'error' => null,
+            'message' => 'active case fetched',
+            'data' => $active,
+            'meta' => ['method' => 'GET', 'route' => 'patients/{patient_id}/cases/active'],
+        ], 200);
+        return;
+    }
+
+    if (($segments[0] ?? '') === 'patients' && ($segments[2] ?? '') === 'cases' && count($segments) === 3) {
+        if ($method !== 'POST') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'not_found',
+                'message' => 'route not found',
+                'data' => null,
+                'meta' => ['method' => $method, 'route' => $route],
+            ], 404);
+            return;
+        }
+
+        $patientId = trim((string)$segments[1]);
+        if ($patientId === '') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => 'patient_id requerido'],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'patients/{patient_id}/cases'],
+            ], 400);
+            return;
+        }
+
+        $body = clinical_read_json_body();
+        if (($body['ok'] ?? false) !== true) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => (string)($body['error'] ?? 'invalid body')],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'patients/{patient_id}/cases'],
+            ], 400);
+            return;
+        }
+        $payload = is_array($body['data'] ?? null) ? $body['data'] : [];
+        $title = trim((string)($payload['title'] ?? 'Caso clínico'));
+        if ($title === '') {
+            $title = 'Caso clínico';
+        }
+        if (mb_strlen($title) > 180) {
+            $title = mb_substr($title, 0, 180);
+        }
+
+        try {
+            $pdo = clinical_documents_pdo();
+            clinical_cases_ensure_schema($pdo);
+            $created = clinical_cases_create($pdo, $patientId, $title);
+        } catch (Throwable $e) {
+            $msg = trim((string)$e->getMessage());
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'server_error', 'message' => ($msg !== '' ? $msg : 'server error')],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'patients/{patient_id}/cases'],
+            ], 500);
+            return;
+        }
+
+        clinical_send_response([
+            'ok' => true,
+            'error' => null,
+            'message' => 'case created',
+            'data' => $created,
+            'meta' => ['method' => 'POST', 'route' => 'patients/{patient_id}/cases'],
+        ], 201);
+        return;
+    }
+
+    if (($segments[0] ?? '') === 'cases' && count($segments) === 2 && $method === 'PATCH') {
+        $caseId = (int)trim((string)$segments[1]);
+        if ($caseId <= 0) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => 'case_id inválido'],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'PATCH', 'route' => 'cases/{case_id}'],
+            ], 400);
+            return;
+        }
+
+        $body = clinical_read_json_body();
+        if (($body['ok'] ?? false) !== true) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => (string)($body['error'] ?? 'invalid body')],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'PATCH', 'route' => 'cases/{case_id}'],
+            ], 400);
+            return;
+        }
+        $payload = is_array($body['data'] ?? null) ? $body['data'] : [];
+        $title = trim((string)($payload['title'] ?? ''));
+        if ($title === '') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => 'title requerido'],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'PATCH', 'route' => 'cases/{case_id}'],
+            ], 400);
+            return;
+        }
+        if (mb_strlen($title) > 180) {
+            $title = mb_substr($title, 0, 180);
+        }
+
+        try {
+            $pdo = clinical_documents_pdo();
+            clinical_cases_ensure_schema($pdo);
+            $updated = clinical_cases_rename($pdo, $caseId, $title);
+        } catch (Throwable $e) {
+            $msg = trim((string)$e->getMessage());
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'server_error', 'message' => ($msg !== '' ? $msg : 'server error')],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'PATCH', 'route' => 'cases/{case_id}'],
+            ], 500);
+            return;
+        }
+
+        if ($updated === null) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'not_found', 'message' => 'case no encontrado'],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'PATCH', 'route' => 'cases/{case_id}'],
+            ], 404);
+            return;
+        }
+
+        clinical_send_response([
+            'ok' => true,
+            'error' => null,
+            'message' => 'case updated',
+            'data' => $updated,
+            'meta' => ['method' => 'PATCH', 'route' => 'cases/{case_id}'],
+        ], 200);
+        return;
+    }
+
+    if (($segments[0] ?? '') === 'cases' && count($segments) === 3 && $segments[2] === 'activate') {
+        if ($method !== 'POST') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'not_found',
+                'message' => 'route not found',
+                'data' => null,
+                'meta' => ['method' => $method, 'route' => $route],
+            ], 404);
+            return;
+        }
+
+        $caseId = (int)trim((string)$segments[1]);
+        if ($caseId <= 0) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => 'case_id inválido'],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'cases/{case_id}/activate'],
+            ], 400);
+            return;
+        }
+
+        try {
+            $pdo = clinical_documents_pdo();
+            clinical_cases_ensure_schema($pdo);
+            $updated = clinical_cases_activate($pdo, $caseId);
+        } catch (Throwable $e) {
+            $msg = trim((string)$e->getMessage());
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'server_error', 'message' => ($msg !== '' ? $msg : 'server error')],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'cases/{case_id}/activate'],
+            ], 500);
+            return;
+        }
+
+        if ($updated === null) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'not_found', 'message' => 'case no encontrado'],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'cases/{case_id}/activate'],
+            ], 404);
+            return;
+        }
+
+        clinical_send_response([
+            'ok' => true,
+            'error' => null,
+            'message' => 'case activated',
+            'data' => $updated,
+            'meta' => ['method' => 'POST', 'route' => 'cases/{case_id}/activate'],
+        ], 200);
+        return;
+    }
+
+    if (($segments[0] ?? '') === 'cases' && count($segments) === 3 && $segments[2] === 'items') {
+        if ($method !== 'POST') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'not_found',
+                'message' => 'route not found',
+                'data' => null,
+                'meta' => ['method' => $method, 'route' => $route],
+            ], 404);
+            return;
+        }
+
+        $caseId = (int)trim((string)$segments[1]);
+        if ($caseId <= 0) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => 'case_id inválido'],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'cases/{case_id}/items'],
+            ], 400);
+            return;
+        }
+
+        $body = clinical_read_json_body();
+        if (($body['ok'] ?? false) !== true) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => (string)($body['error'] ?? 'invalid body')],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'cases/{case_id}/items'],
+            ], 400);
+            return;
+        }
+
+        $payload = is_array($body['data'] ?? null) ? $body['data'] : [];
+        $itemType = strtolower(trim((string)($payload['item_type'] ?? '')));
+        $itemRef = trim((string)($payload['item_ref'] ?? ''));
+        if (!clinical_case_item_type_allowed($itemType) || $itemRef === '') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => 'item_type/item_ref inválidos'],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'cases/{case_id}/items'],
+            ], 400);
+            return;
+        }
+
+        try {
+            $pdo = clinical_documents_pdo();
+            clinical_cases_ensure_schema($pdo);
+            $existingCase = clinical_case_get_by_id($pdo, $caseId);
+            if ($existingCase === null) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => ['code' => 'not_found', 'message' => 'case no encontrado'],
+                    'message' => '',
+                    'data' => null,
+                    'meta' => ['method' => 'POST', 'route' => 'cases/{case_id}/items'],
+                ], 404);
+                return;
+            }
+            $created = clinical_case_item_insert($pdo, $caseId, $itemType, $itemRef);
+        } catch (Throwable $e) {
+            $msg = trim((string)$e->getMessage());
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'server_error', 'message' => ($msg !== '' ? $msg : 'server error')],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'cases/{case_id}/items'],
+            ], 500);
+            return;
+        }
+
+        clinical_send_response([
+            'ok' => true,
+            'error' => null,
+            'message' => 'item assigned',
+            'data' => [
+                'case_id' => $caseId,
+                'item_type' => $itemType,
+                'item_ref' => $itemRef,
+                'created' => $created,
+            ],
+            'meta' => ['method' => 'POST', 'route' => 'cases/{case_id}/items'],
         ], 200);
         return;
     }

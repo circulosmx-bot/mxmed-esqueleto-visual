@@ -95,3 +95,39 @@ CREATE INDEX idx_clinical_consents_patient_granted_at
 
 CREATE INDEX idx_clinical_consents_status
   ON clinical_consents (status);
+
+-- -----------------------------------------------------------------------------
+-- Casos clínicos v1: 1 caso activo por paciente (enforced por lógica de app)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS clinical_cases (
+  case_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  patient_id VARCHAR(64) NOT NULL,
+  title VARCHAR(180) NOT NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'active',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (case_id),
+  KEY idx_clinical_cases_patient_status (patient_id, status),
+  CONSTRAINT fk_clinical_cases_patient_v1
+    FOREIGN KEY (patient_id)
+    REFERENCES patients_patients (patient_id)
+    ON UPDATE CASCADE
+    ON DELETE RESTRICT,
+  CONSTRAINT chk_clinical_cases_status_v1
+    CHECK (status IN ('active', 'inactive', 'closed'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS clinical_case_items (
+  case_id BIGINT UNSIGNED NOT NULL,
+  item_type VARCHAR(24) NOT NULL,
+  item_ref VARCHAR(190) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (case_id, item_type, item_ref),
+  CONSTRAINT fk_clinical_case_items_case_v1
+    FOREIGN KEY (case_id)
+    REFERENCES clinical_cases (case_id)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

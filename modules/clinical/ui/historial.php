@@ -190,6 +190,8 @@ $resolveErrorMsg = '';
 $items = [];
 $cursorNext = '';
 $cursorPrev = '';
+$activeCase = null;
+$activeCaseError = '';
 
 if ($encounterKey === '' && $appointmentId !== '') {
     $encounterKey = 'appt:' . $appointmentId;
@@ -337,6 +339,28 @@ if ($patientId !== '') {
                 $cursorNext = trim((string)($range['cursor_next'] ?? ''));
                 $cursorPrev = trim((string)($range['cursor_prev'] ?? ''));
             }
+        }
+    }
+}
+
+if ($patientId !== '') {
+    $caseUrl = get_api_base() . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/cases/active';
+    $caseContext = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'timeout' => 8,
+            'ignore_errors' => true,
+            'header' => "Accept: application/json\r\n",
+        ],
+    ]);
+    $caseRaw = @file_get_contents($caseUrl, false, $caseContext);
+    if ($caseRaw !== false) {
+        $caseDecoded = json_decode($caseRaw, true);
+        if (is_array($caseDecoded) && ($caseDecoded['ok'] ?? false) === true) {
+            $caseData = $caseDecoded['data'] ?? null;
+            $activeCase = is_array($caseData) ? $caseData : null;
+        } elseif (is_array($caseDecoded)) {
+            $activeCaseError = trim((string)($caseDecoded['message'] ?? ''));
         }
     }
 }
@@ -491,8 +515,41 @@ if (!$embed) {
     <?php endforeach; ?>
   </div>
 
+  <?php if ($patientId !== ''): ?>
+    <div class="mm-card mb-3">
+      <div class="body d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <?php if (is_array($activeCase) && $activeCase !== []): ?>
+          <div>
+            <span class="badge text-bg-success me-2">Caso activo</span>
+            <strong><?php echo h((string)($activeCase['title'] ?? 'Caso clínico')); ?></strong>
+          </div>
+          <div class="d-flex gap-2">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-primary"
+              data-action="rename-active-case"
+              data-case-id="<?php echo h((string)($activeCase['case_id'] ?? '')); ?>"
+            >Renombrar</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="view-cases-placeholder">Ver casos</button>
+          </div>
+        <?php else: ?>
+          <div>
+            <span class="badge text-bg-secondary me-2">Sin caso clínico</span>
+            <span class="text-secondary">Crea un caso para agrupar eventos del historial.</span>
+          </div>
+          <div>
+            <button type="button" class="btn btn-sm btn-primary" data-action="create-clinical-case">Crear caso clínico</button>
+          </div>
+        <?php endif; ?>
+      </div>
+    </div>
+  <?php endif; ?>
+
   <?php if ($resolveErrorMsg !== ''): ?>
     <div class="alert alert-danger"><?php echo h($resolveErrorMsg); ?></div>
+  <?php endif; ?>
+  <?php if ($activeCaseError !== ''): ?>
+    <div class="alert alert-warning py-2"><?php echo h($activeCaseError); ?></div>
   <?php endif; ?>
 
   <?php if ($patientId === ''): ?>
@@ -522,10 +579,25 @@ if (!$embed) {
         <?php
         $agenda = is_array($item['agenda'] ?? null) ? $item['agenda'] : [];
         $links = is_array($item['links'] ?? null) ? $item['links'] : [];
+        $appointmentRef = trim((string)($links['appointment_id'] ?? ''));
         ?>
         <?php $appointmentEncounterKey = trim((string)($item['encounter_key'] ?? '')); ?>
         <article class="mm-card" data-item-type="appointment" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>">
           <div class="body">
+            <?php if (!empty($item['case_id'])): ?>
+              <div class="mb-2"><span class="badge text-bg-info">Caso: <?php echo h((string)($item['case_title'] ?? '')); ?></span></div>
+            <?php elseif (is_array($activeCase) && $appointmentRef !== ''): ?>
+              <div class="mb-2">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-success"
+                  data-action="assign-case-item"
+                  data-case-id="<?php echo h((string)($activeCase['case_id'] ?? '')); ?>"
+                  data-item-type="appointment"
+                  data-item-ref="<?php echo h($appointmentRef); ?>"
+                >Agregar a caso activo</button>
+              </div>
+            <?php endif; ?>
             <div class="d-flex flex-wrap gap-3 small mb-2">
               <span><strong>Tipo:</strong> appointment</span>
               <span><strong>Fecha:</strong> <?php echo h((string)($item['event_datetime'] ?? '-')); ?></span>
@@ -580,6 +652,20 @@ if (!$embed) {
         ?>
         <article class="mm-card" data-item-type="encounter" data-encounter-key="<?php echo h($ek); ?>">
           <div class="body">
+            <?php if (!empty($rawEncounter['case_id'])): ?>
+              <div class="mb-2"><span class="badge text-bg-info">Caso: <?php echo h((string)($rawEncounter['case_title'] ?? '')); ?></span></div>
+            <?php elseif (is_array($activeCase) && $ek !== ''): ?>
+              <div class="mb-2">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-success"
+                  data-action="assign-case-item"
+                  data-case-id="<?php echo h((string)($activeCase['case_id'] ?? '')); ?>"
+                  data-item-type="encounter"
+                  data-item-ref="<?php echo h($ek); ?>"
+                >Agregar a caso activo</button>
+              </div>
+            <?php endif; ?>
             <div class="d-flex flex-wrap gap-3 small mb-2">
               <span><strong>Tipo:</strong> encounter</span>
               <span><strong>Fecha:</strong> <?php echo h((string)($encounter['event_datetime'] ?: '-')); ?></span>
@@ -615,6 +701,20 @@ if (!$embed) {
                     $docUuid = trim((string)($links['document_uuid'] ?? ''));
                     ?>
                     <div class="border rounded p-2 small" data-item-type="document" data-document-uuid="<?php echo h($docUuid); ?>">
+                      <?php if (!empty($docItem['case_id'])): ?>
+                        <div class="mb-1"><span class="badge text-bg-info">Caso: <?php echo h((string)($docItem['case_title'] ?? '')); ?></span></div>
+                      <?php elseif (is_array($activeCase) && $docUuid !== ''): ?>
+                        <div class="mb-1">
+                          <button
+                            type="button"
+                            class="btn btn-sm btn-outline-success"
+                            data-action="assign-case-item"
+                            data-case-id="<?php echo h((string)($activeCase['case_id'] ?? '')); ?>"
+                            data-item-type="document"
+                            data-item-ref="<?php echo h($docUuid); ?>"
+                          >Agregar a caso activo</button>
+                        </div>
+                      <?php endif; ?>
                       <div><strong><?php echo h((string)($doc['document_type'] ?? '-')); ?></strong></div>
                       <div class="text-secondary"><?php echo h((string)($doc['summary'] ?? '-')); ?></div>
                       <?php if ($docUuid !== ''): ?>
@@ -643,6 +743,20 @@ if (!$embed) {
           ?>
           <article class="mm-card" data-item-type="document" data-document-uuid="<?php echo h($docUuid); ?>">
             <div class="body">
+              <?php if (!empty($docItem['case_id'])): ?>
+                <div class="mb-2"><span class="badge text-bg-info">Caso: <?php echo h((string)($docItem['case_title'] ?? '')); ?></span></div>
+              <?php elseif (is_array($activeCase) && $docUuid !== ''): ?>
+                <div class="mb-2">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-success"
+                    data-action="assign-case-item"
+                    data-case-id="<?php echo h((string)($activeCase['case_id'] ?? '')); ?>"
+                    data-item-type="document"
+                    data-item-ref="<?php echo h($docUuid); ?>"
+                  >Agregar a caso activo</button>
+                </div>
+              <?php endif; ?>
               <div class="d-flex flex-wrap gap-3 small mb-2">
                 <span><strong>Tipo:</strong> document</span>
                 <span><strong>Fecha:</strong> <?php echo h((string)($docItem['event_datetime'] ?? '-')); ?></span>
@@ -666,7 +780,121 @@ if (!$embed) {
 </div>
 <script>
   (function () {
+    var patientId = <?php echo json_encode($patientId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    var apiBase = <?php echo json_encode(get_api_base(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+
+    async function apiJson(url, options) {
+      var response = await fetch(url, Object.assign({
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+      }, options || {}));
+      var payload = null;
+      try {
+        payload = await response.json();
+      } catch (_) {
+        payload = null;
+      }
+      if (!payload || payload.ok !== true) {
+        var message = (payload && payload.message) ? String(payload.message) : ('HTTP ' + response.status);
+        throw new Error(message);
+      }
+      return payload;
+    }
+
+    async function loadActiveCase(pid) {
+      if (!pid) return null;
+      var url = apiBase + '/api/clinical/index.php/patients/' + encodeURIComponent(pid) + '/cases/active';
+      var payload = await apiJson(url, { method: 'GET' });
+      return payload.data || null;
+    }
+
+    async function createCase(pid, title) {
+      var url = apiBase + '/api/clinical/index.php/patients/' + encodeURIComponent(pid) + '/cases';
+      var payload = await apiJson(url, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ title: title || 'Caso clínico' }),
+        credentials: 'same-origin'
+      });
+      return payload.data || null;
+    }
+
+    async function renameCase(caseId, title) {
+      var url = apiBase + '/api/clinical/index.php/cases/' + encodeURIComponent(String(caseId || ''));
+      var payload = await apiJson(url, {
+        method: 'PATCH',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ title: title }),
+        credentials: 'same-origin'
+      });
+      return payload.data || null;
+    }
+
+    async function assignItem(caseId, itemType, itemRef) {
+      var url = apiBase + '/api/clinical/index.php/cases/' + encodeURIComponent(String(caseId || '')) + '/items';
+      var payload = await apiJson(url, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ item_type: itemType, item_ref: itemRef }),
+        credentials: 'same-origin'
+      });
+      return payload.data || null;
+    }
+
     document.addEventListener('click', function (event) {
+      var createBtn = event.target && event.target.closest ? event.target.closest('[data-action="create-clinical-case"]') : null;
+      if (createBtn) {
+        event.preventDefault();
+        createCase(patientId, 'Caso clínico')
+          .then(function () { window.location.reload(); })
+          .catch(function (err) { window.alert(err.message || 'No se pudo crear caso clínico'); });
+        return;
+      }
+
+      var renameBtn = event.target && event.target.closest ? event.target.closest('[data-action="rename-active-case"]') : null;
+      if (renameBtn) {
+        event.preventDefault();
+        var caseId = String(renameBtn.getAttribute('data-case-id') || '').trim();
+        if (!caseId) return;
+        var nextTitle = window.prompt('Nuevo nombre del caso clínico:', '');
+        if (nextTitle === null) return;
+        nextTitle = String(nextTitle || '').trim();
+        if (!nextTitle) return;
+        renameCase(caseId, nextTitle)
+          .then(function () { window.location.reload(); })
+          .catch(function (err) { window.alert(err.message || 'No se pudo renombrar caso clínico'); });
+        return;
+      }
+
+      var viewCasesBtn = event.target && event.target.closest ? event.target.closest('[data-action="view-cases-placeholder"]') : null;
+      if (viewCasesBtn) {
+        event.preventDefault();
+        window.alert('Listado de casos disponible en próxima iteración.');
+        return;
+      }
+
+      var assignBtn = event.target && event.target.closest ? event.target.closest('[data-action="assign-case-item"]') : null;
+      if (assignBtn) {
+        event.preventDefault();
+        var cId = String(assignBtn.getAttribute('data-case-id') || '').trim();
+        var itemType = String(assignBtn.getAttribute('data-item-type') || '').trim();
+        var itemRef = String(assignBtn.getAttribute('data-item-ref') || '').trim();
+        if (!cId || !itemType || !itemRef) return;
+        assignItem(cId, itemType, itemRef)
+          .then(function () { window.location.reload(); })
+          .catch(function (err) { window.alert(err.message || 'No se pudo asignar item al caso'); });
+        return;
+      }
+
       var trigger = event.target && event.target.closest ? event.target.closest('[data-embed-nav]') : null;
       if (!trigger) return;
       var mode = String(trigger.getAttribute('data-nav-mode') || '').trim();
@@ -690,6 +918,10 @@ if (!$embed) {
       event.preventDefault();
       window.parent.postMessage(payload, '*');
     });
+
+    if (patientId) {
+      loadActiveCase(patientId).catch(function () {});
+    }
   })();
 </script>
 <?php if ($embed): ?>
