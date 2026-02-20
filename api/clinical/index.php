@@ -980,6 +980,32 @@ function clinical_case_items_fetch(PDO $pdo, int $caseId): array
     return is_array($rows) ? $rows : [];
 }
 
+function clinical_patient_exists(PDO $pdo, string $patientId): bool
+{
+    $stmt = $pdo->prepare("SELECT patient_id FROM patients_patients WHERE patient_id = :patient_id LIMIT 1");
+    $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return is_array($row) && trim((string)($row['patient_id'] ?? '')) !== '';
+}
+
+function clinical_cases_list_fetch(PDO $pdo, string $patientId): array
+{
+    $stmt = $pdo->prepare("
+        SELECT case_id, patient_id, title, status, created_at, updated_at
+        FROM clinical_cases
+        WHERE patient_id = :patient_id
+        ORDER BY
+            CASE WHEN status = 'active' THEN 0 ELSE 1 END ASC,
+            updated_at DESC,
+            case_id DESC
+    ");
+    $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+    $stmt->execute();
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    return is_array($rows) ? $rows : [];
+}
+
 set_error_handler(static function ($severity, $message, $file, $line): void {
     throw new ErrorException((string)$message, 0, (int)$severity, (string)$file, (int)$line);
 });
@@ -1871,7 +1897,7 @@ try {
     }
 
     if (($segments[0] ?? '') === 'patients' && ($segments[2] ?? '') === 'cases' && count($segments) === 3) {
-        if ($method !== 'POST') {
+        if ($method !== 'POST' && $method !== 'GET') {
             clinical_send_response([
                 'ok' => false,
                 'error' => 'not_found',
@@ -1889,8 +1915,58 @@ try {
                 'error' => ['code' => 'bad_request', 'message' => 'patient_id requerido'],
                 'message' => '',
                 'data' => null,
-                'meta' => ['method' => 'POST', 'route' => 'patients/{patient_id}/cases'],
+                'meta' => ['method' => $method, 'route' => 'patients/{patient_id}/cases'],
             ], 400);
+            return;
+        }
+
+        try {
+            $pdo = clinical_documents_pdo();
+            clinical_cases_ensure_schema($pdo);
+            if (!clinical_patient_exists($pdo, $patientId)) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => ['code' => 'not_found', 'message' => 'patient no encontrado'],
+                    'message' => '',
+                    'data' => null,
+                    'meta' => ['method' => $method, 'route' => 'patients/{patient_id}/cases'],
+                ], 404);
+                return;
+            }
+        } catch (Throwable $e) {
+            $msg = trim((string)$e->getMessage());
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'server_error', 'message' => ($msg !== '' ? $msg : 'server error')],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => $method, 'route' => 'patients/{patient_id}/cases'],
+            ], 500);
+            return;
+        }
+
+        if ($method === 'GET') {
+            try {
+                $items = clinical_cases_list_fetch($pdo, $patientId);
+            } catch (Throwable $e) {
+                $msg = trim((string)$e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => ['code' => 'server_error', 'message' => ($msg !== '' ? $msg : 'server error')],
+                    'message' => '',
+                    'data' => null,
+                    'meta' => ['method' => 'GET', 'route' => 'patients/{patient_id}/cases'],
+                ], 500);
+                return;
+            }
+
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => '',
+                'data' => $items,
+                'meta' => ['method' => 'GET', 'route' => 'patients/{patient_id}/cases'],
+            ], 200);
             return;
         }
 
@@ -1915,8 +1991,6 @@ try {
         }
 
         try {
-            $pdo = clinical_documents_pdo();
-            clinical_cases_ensure_schema($pdo);
             $created = clinical_cases_create($pdo, $patientId, $title);
         } catch (Throwable $e) {
             $msg = trim((string)$e->getMessage());

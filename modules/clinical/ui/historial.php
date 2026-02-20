@@ -530,7 +530,7 @@ if (!$embed) {
               data-action="rename-active-case"
               data-case-id="<?php echo h((string)($activeCase['case_id'] ?? '')); ?>"
             >Renombrar</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="view-cases-placeholder">Ver casos</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="open-cases-modal">Ver casos</button>
           </div>
         <?php else: ?>
           <div>
@@ -539,6 +539,7 @@ if (!$embed) {
           </div>
           <div>
             <button type="button" class="btn btn-sm btn-primary" data-action="create-clinical-case">Crear caso clínico</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="open-cases-modal">Ver casos</button>
           </div>
         <?php endif; ?>
       </div>
@@ -778,10 +779,36 @@ if (!$embed) {
   <?php endif; ?>
 </div>
 </div>
+<div class="modal fade" id="clinicalCasesModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Casos clínicos</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="casesModalLoading" class="text-secondary small d-none">Cargando casos...</div>
+        <div id="casesModalEmpty" class="alert alert-secondary d-none mb-0">Sin casos clínicos.</div>
+        <div id="casesModalList" class="vstack gap-2"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal" data-action="close-cases-modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
 <script>
   (function () {
     var patientId = <?php echo json_encode($patientId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var apiBase = <?php echo json_encode(get_api_base(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    var casesModalEl = document.getElementById('clinicalCasesModal');
+    var casesModalList = document.getElementById('casesModalList');
+    var casesModalEmpty = document.getElementById('casesModalEmpty');
+    var casesModalLoading = document.getElementById('casesModalLoading');
+    var casesModalInstance = null;
+    if (casesModalEl && window.bootstrap && window.bootstrap.Modal) {
+      casesModalInstance = window.bootstrap.Modal.getOrCreateInstance(casesModalEl);
+    }
 
     async function apiJson(url, options) {
       var response = await fetch(url, Object.assign({
@@ -836,6 +863,66 @@ if (!$embed) {
       return payload.data || null;
     }
 
+    async function listCases(pid) {
+      if (!pid) return [];
+      var url = apiBase + '/api/clinical/index.php/patients/' + encodeURIComponent(pid) + '/cases';
+      var payload = await apiJson(url, { method: 'GET' });
+      return Array.isArray(payload.data) ? payload.data : [];
+    }
+
+    function setCasesModalLoading(flag) {
+      if (!casesModalLoading) return;
+      casesModalLoading.classList.toggle('d-none', !flag);
+    }
+
+    function renderCases(cases) {
+      if (!casesModalList || !casesModalEmpty) return;
+      casesModalList.innerHTML = '';
+      var list = Array.isArray(cases) ? cases : [];
+      casesModalEmpty.classList.toggle('d-none', list.length > 0);
+      list.forEach(function (item) {
+        var row = document.createElement('div');
+        row.className = 'border rounded p-2 d-flex flex-wrap justify-content-between align-items-center gap-2';
+        var caseId = String(item.case_id || '').trim();
+        var status = String(item.status || '').trim();
+        var title = String(item.title || 'Caso clínico').trim();
+        var active = status === 'active';
+        row.innerHTML = ''
+          + '<div>'
+          + '  <div class="fw-semibold">' + title.replace(/</g, '&lt;') + '</div>'
+          + '  <div class="small text-secondary">#' + caseId + ' · ' + (item.updated_at || '-') + '</div>'
+          + '</div>'
+          + '<div class="d-flex gap-2">'
+          + '  <span class="badge ' + (active ? 'text-bg-success' : 'text-bg-secondary') + '">' + (active ? 'Activo' : (status || '')) + '</span>'
+          + (active ? '' : '<button type="button" class="btn btn-sm btn-outline-primary" data-action="activate-case" data-case-id="' + caseId + '">Activar</button>')
+          + '  <button type="button" class="btn btn-sm btn-outline-secondary" data-action="rename-case-from-modal" data-case-id="' + caseId + '" data-case-title="' + title.replace(/"/g, '&quot;') + '">Renombrar</button>'
+          + '</div>';
+        casesModalList.appendChild(row);
+      });
+    }
+
+    async function openCasesModal() {
+      if (!patientId) {
+        window.alert('patient_id requerido para listar casos.');
+        return;
+      }
+      if (casesModalInstance) {
+        casesModalInstance.show();
+      } else if (casesModalEl) {
+        casesModalEl.style.display = 'block';
+        casesModalEl.classList.add('show');
+      }
+      setCasesModalLoading(true);
+      try {
+        var cases = await listCases(patientId);
+        renderCases(cases);
+      } catch (err) {
+        window.alert(err.message || 'No se pudieron listar casos clínicos');
+      } finally {
+        setCasesModalLoading(false);
+      }
+    }
+
     async function assignItem(caseId, itemType, itemRef) {
       var url = apiBase + '/api/clinical/index.php/cases/' + encodeURIComponent(String(caseId || '')) + '/items';
       var payload = await apiJson(url, {
@@ -875,10 +962,45 @@ if (!$embed) {
         return;
       }
 
-      var viewCasesBtn = event.target && event.target.closest ? event.target.closest('[data-action="view-cases-placeholder"]') : null;
-      if (viewCasesBtn) {
+      var openCasesBtn = event.target && event.target.closest ? event.target.closest('[data-action="open-cases-modal"]') : null;
+      if (openCasesBtn) {
         event.preventDefault();
-        window.alert('Listado de casos disponible en próxima iteración.');
+        openCasesModal();
+        return;
+      }
+
+      var activateCaseBtn = event.target && event.target.closest ? event.target.closest('[data-action="activate-case"]') : null;
+      if (activateCaseBtn) {
+        event.preventDefault();
+        var activateCaseId = String(activateCaseBtn.getAttribute('data-case-id') || '').trim();
+        if (!activateCaseId) return;
+        apiJson(apiBase + '/api/clinical/index.php/cases/' + encodeURIComponent(activateCaseId) + '/activate', { method: 'POST' })
+          .then(function () { window.location.reload(); })
+          .catch(function (err) { window.alert(err.message || 'No se pudo activar caso'); });
+        return;
+      }
+
+      var renameFromModalBtn = event.target && event.target.closest ? event.target.closest('[data-action="rename-case-from-modal"]') : null;
+      if (renameFromModalBtn) {
+        event.preventDefault();
+        var modalCaseId = String(renameFromModalBtn.getAttribute('data-case-id') || '').trim();
+        if (!modalCaseId) return;
+        var currentTitle = String(renameFromModalBtn.getAttribute('data-case-title') || '').trim();
+        var nextModalTitle = window.prompt('Nuevo nombre del caso clínico:', currentTitle);
+        if (nextModalTitle === null) return;
+        nextModalTitle = String(nextModalTitle || '').trim();
+        if (!nextModalTitle) return;
+        renameCase(modalCaseId, nextModalTitle)
+          .then(function () { window.location.reload(); })
+          .catch(function (err) { window.alert(err.message || 'No se pudo renombrar caso'); });
+        return;
+      }
+
+      var closeCasesBtn = event.target && event.target.closest ? event.target.closest('[data-action="close-cases-modal"]') : null;
+      if (closeCasesBtn && !casesModalInstance && casesModalEl) {
+        event.preventDefault();
+        casesModalEl.classList.remove('show');
+        casesModalEl.style.display = 'none';
         return;
       }
 
