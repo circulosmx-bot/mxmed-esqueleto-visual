@@ -825,15 +825,29 @@ function clinical_cases_ensure_schema(PDO $pdo): void
 function clinical_cases_active_fetch(PDO $pdo, string $patientId): ?array
 {
     $stmt = $pdo->prepare("
-        SELECT case_id, patient_id, title, status, created_at, updated_at
-        FROM clinical_cases
-        WHERE patient_id = :patient_id AND status = 'active'
+        SELECT
+            c.case_id,
+            c.patient_id,
+            c.title,
+            c.status,
+            c.created_at,
+            c.updated_at,
+            (
+                SELECT COUNT(*)
+                FROM clinical_case_items i
+                WHERE i.case_id = c.case_id
+            ) AS items_count
+        FROM clinical_cases c
+        WHERE c.patient_id = :patient_id AND c.status = 'active'
         ORDER BY updated_at DESC, case_id DESC
         LIMIT 1
     ");
     $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
     $stmt->execute();
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (is_array($row) && $row !== []) {
+        $row['items_count'] = (int)($row['items_count'] ?? 0);
+    }
     return (is_array($row) && $row !== []) ? $row : null;
 }
 
@@ -1314,19 +1328,17 @@ try {
                         }
                         $itemType = trim((string)($timelineItem['item_type'] ?? ''));
                         $itemRef = '';
-                        if ($itemType === 'encounter') {
+                        if ($itemType === 'encounter' || $itemType === 'appointment') {
                             $itemRef = trim((string)($timelineItem['encounter_key'] ?? ''));
                         } elseif ($itemType === 'document') {
                             $links = is_array($timelineItem['links'] ?? null) ? $timelineItem['links'] : [];
                             $itemRef = trim((string)($links['document_uuid'] ?? ''));
-                        } elseif ($itemType === 'appointment') {
-                            $links = is_array($timelineItem['links'] ?? null) ? $timelineItem['links'] : [];
-                            $itemRef = trim((string)($links['appointment_id'] ?? ''));
                         }
 
                         if ($itemType !== '' && $itemRef !== '' && isset($caseMap[$itemType . '|' . $itemRef])) {
                             $timelineItem['case_id'] = $activeCaseId;
                             $timelineItem['case_title'] = $activeCaseTitle;
+                            $timelineItem['is_in_active_case'] = true;
                         }
                     }
                     unset($timelineItem);
