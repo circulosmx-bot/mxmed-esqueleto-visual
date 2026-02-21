@@ -28,6 +28,62 @@ function render_embed_css(bool $embed): void
     echo '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">' . "\n";
 }
 
+function fetch_http_json(string $url, int $timeoutSeconds = 4, int $maxAttempts = 2): array
+{
+    $last = [
+        'ok' => false,
+        'raw' => false,
+        'status' => 0,
+        'headers' => [],
+        'error' => '',
+        'body_snippet' => '',
+        'attempts' => 0,
+    ];
+
+    for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'timeout' => $timeoutSeconds,
+                'ignore_errors' => true,
+                'header' => "Accept: application/json\r\nUser-Agent: MXMed\r\n",
+            ],
+        ]);
+
+        $raw = @file_get_contents($url, false, $context);
+        $headers = function_exists('http_get_last_response_headers')
+            ? http_get_last_response_headers()
+            : [];
+        if (!is_array($headers)) {
+            $headers = [];
+        }
+        $status = 0;
+        if (!empty($headers) && preg_match('/^HTTP\/\S+\s+(\d{3})\b/', (string)$headers[0], $m) === 1) {
+            $status = (int)$m[1];
+        }
+        $lastError = error_get_last();
+        $errMsg = is_array($lastError) ? trim((string)($lastError['message'] ?? '')) : '';
+        $snippet = is_string($raw) ? substr(trim($raw), 0, 600) : '';
+        $isOk = is_string($raw) && $status >= 200 && $status < 300;
+
+        $last = [
+            'ok' => $isOk,
+            'raw' => $raw,
+            'status' => $status,
+            'headers' => $headers,
+            'error' => $errMsg,
+            'body_snippet' => $snippet,
+            'attempts' => $attempt,
+        ];
+
+        if ($isOk) {
+            break;
+        }
+    }
+
+    return $last;
+}
+
 function build_demo_timeline_items(): array
 {
     // Fixtures demo para UX (sin dependencia de DB/API)
@@ -186,6 +242,7 @@ require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
 
 $errorMessage = '';
+$errorTechnicalDetails = '';
 $resolveErrorMsg = '';
 $items = [];
 $cursorNext = '';
@@ -308,29 +365,30 @@ if ($patientId !== '') {
             $query['direction'] = $direction;
         }
 
+        $queryApi = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
         $url = get_api_base() . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/timeline'
-            . '?' . http_build_query($query);
+            . '?' . $queryApi;
 
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'GET',
-                'timeout' => 8,
-                'ignore_errors' => true,
-                'header' => "Accept: application/json\r\n",
-            ],
-        ]);
+        $fetch = fetch_http_json($url, 4, 2);
+        $raw = $fetch['raw'];
+        $status = (int)($fetch['status'] ?? 0);
+        $headers = is_array($fetch['headers'] ?? null) ? $fetch['headers'] : [];
+        $attempts = (int)($fetch['attempts'] ?? 1);
 
-        $raw = @file_get_contents($url, false, $context);
         if ($raw === false) {
-            $lastError = error_get_last();
-            $detail = is_array($lastError) ? trim((string)($lastError['message'] ?? '')) : '';
-            $errorMessage = $detail !== '' ? $detail : 'No se pudo consultar el historial de atención.';
+            $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
+            $errorTechnicalDetails = "status: {$status}\nurl: {$url}\nattempts: {$attempts}\nerror: " . (string)($fetch['error'] ?? '') . "\nheaders:\n" . implode("\n", $headers);
+        } elseif ($status >= 400) {
+            $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
+            $errorTechnicalDetails = "status: {$status}\nurl: {$url}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\nbody_snippet:\n" . (string)($fetch['body_snippet'] ?? '');
         } else {
             $decoded = json_decode($raw, true);
             if (!is_array($decoded)) {
-                $errorMessage = 'Respuesta inválida del endpoint de timeline.';
+                $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
+                $errorTechnicalDetails = "status: {$status}\nurl: {$url}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\nbody_snippet:\n" . (string)($fetch['body_snippet'] ?? '');
             } elseif (($decoded['ok'] ?? false) !== true) {
-                $errorMessage = (string)($decoded['message'] ?? 'Error consultando historial de atención.');
+                $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
+                $errorTechnicalDetails = "status: {$status}\nurl: {$url}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\napi_message: " . (string)($decoded['message'] ?? '');
             } else {
                 $data = is_array($decoded['data'] ?? null) ? $decoded['data'] : [];
                 $list = $data['items'] ?? [];
@@ -602,7 +660,15 @@ if (!$embed) {
       <div class="alert alert-info">Captura un <code>patient_id</code> para consultar el historial de atención.</div>
     <?php endif; ?>
   <?php elseif ($errorMessage !== ''): ?>
-    <div class="alert alert-danger"><?php echo h($errorMessage); ?></div>
+    <div class="alert alert-danger">
+      <?php echo h($errorMessage); ?>
+      <?php if ($errorTechnicalDetails !== ''): ?>
+        <details class="mt-2">
+          <summary>Detalles técnicos</summary>
+          <pre class="mb-0 mt-2 small"><?php echo h($errorTechnicalDetails); ?></pre>
+        </details>
+      <?php endif; ?>
+    </div>
   <?php elseif (!$hasRenderableItems): ?>
     <div class="alert alert-secondary">Sin eventos (no hay encuentros ni documentos)</div>
   <?php else: ?>
