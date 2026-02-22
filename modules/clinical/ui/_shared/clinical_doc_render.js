@@ -48,6 +48,7 @@
 
     var embedLink = opts.embedLink !== false;
     var returnTo = (typeof opts.returnTo === 'string' ? opts.returnTo : '').trim();
+    var openInOverlay = opts.openInOverlay === true;
     var bodyHtml = list.map(function (doc) {
       var type = String((doc && (doc.document_type || doc.type)) || '-');
       var title = String((doc && doc.title) || '');
@@ -71,7 +72,7 @@
         + '  <div class="small text-secondary">' + esc(dt) + '</div>'
         + '  <div class="small">' + esc(summary) + '</div>'
         + (href
-          ? '  <div class="mt-2"><a class="btn btn-sm btn-outline-primary" href="' + esc(href) + '">Abrir documento</a></div>'
+          ? '  <div class="mt-2"><a class="btn btn-sm btn-outline-primary" href="' + esc(href) + '"' + (openInOverlay ? ' data-role="open-doc-overlay"' : '') + '>Abrir documento</a></div>'
           : '')
         + '</div>';
     }).join('');

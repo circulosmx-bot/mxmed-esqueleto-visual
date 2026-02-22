@@ -579,6 +579,47 @@ $extraHead = <<<'HTML'
       border-bottom: 0;
       padding-bottom: 0;
     }
+    .clinical-historial [data-role="doc-overlay"]{
+      position: fixed;
+      inset: 0;
+      z-index: 1060;
+    }
+    .clinical-historial [data-role="doc-overlay"][hidden]{
+      display: none !important;
+    }
+    .clinical-historial [data-role="doc-overlay-backdrop"]{
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+    }
+    .clinical-historial [data-role="doc-overlay-panel"]{
+      position: relative;
+      width: min(1200px, calc(100vw - 2rem));
+      height: 90vh;
+      margin: 5vh auto;
+      background: #fff;
+      border-radius: .75rem;
+      border: 1px solid rgba(0,0,0,.08);
+      box-shadow: 0 20px 40px rgba(0,0,0,.25);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .clinical-historial [data-role="doc-overlay-head"]{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .75rem;
+      padding: .65rem .85rem;
+      border-bottom: 1px solid rgba(0,0,0,.1);
+    }
+    .clinical-historial [data-role="doc-overlay-iframe"]{
+      width: 100%;
+      height: 100%;
+      border: 0;
+      flex: 1 1 auto;
+      background: #fff;
+    }
   </style>
 HTML;
 if (!$embed) {
@@ -968,6 +1009,16 @@ if (!$embed) {
       </div>
     </div>
   </div>
+  <div data-role="doc-overlay" hidden aria-hidden="true">
+    <div data-role="doc-overlay-backdrop"></div>
+    <div data-role="doc-overlay-panel" role="dialog" aria-modal="true" aria-label="Documento">
+      <div data-role="doc-overlay-head">
+        <strong>Documento</strong>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-role="doc-overlay-close">Cerrar</button>
+      </div>
+      <iframe data-role="doc-overlay-iframe" src="about:blank" loading="lazy"></iframe>
+    </div>
+  </div>
 </div>
 </div>
 <script src="/modules/clinical/ui/_shared/clinical_doc_render.js"></script>
@@ -994,6 +1045,7 @@ if (!$embed) {
     var patientId = <?php echo json_encode($patientId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var apiBase = <?php echo json_encode(get_api_base(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var activeCaseId = <?php echo json_encode($activeCaseId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    var isEmbed = <?php echo $embed ? 'true' : 'false'; ?>;
     var onlyActiveCaseStorageKey = 'mxmed_historial_only_active_case:' + String(patientId || '');
     var casesModalEl = document.getElementById('clinicalCasesModal');
     var casesModalList = document.getElementById('casesModalList');
@@ -1017,6 +1069,8 @@ if (!$embed) {
     if (encounterDetailModalEl && window.bootstrap && window.bootstrap.Modal) {
       encounterDetailModalInstance = window.bootstrap.Modal.getOrCreateInstance(encounterDetailModalEl);
     }
+    var docOverlayEl = document.querySelector('[data-role="doc-overlay"]');
+    var docOverlayIframe = document.querySelector('[data-role="doc-overlay-iframe"]');
     var debugMode = false;
     try {
       debugMode = new URLSearchParams(window.location.search || '').get('debug') === '1';
@@ -1245,8 +1299,23 @@ if (!$embed) {
       encounterDetailList.innerHTML = renderer(docsRaw, {
         embedLink: true,
         returnTo: window.location.href,
+        openInOverlay: isEmbed,
         emptyHtml: '<div class="alert alert-secondary mb-0">Sin documentos en esta atención.</div>'
       });
+    }
+
+    function openDocOverlay(url) {
+      if (!docOverlayEl || !docOverlayIframe || !url) return;
+      docOverlayIframe.src = url;
+      docOverlayEl.hidden = false;
+      docOverlayEl.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeDocOverlay() {
+      if (!docOverlayEl || !docOverlayIframe) return;
+      docOverlayIframe.src = 'about:blank';
+      docOverlayEl.hidden = true;
+      docOverlayEl.setAttribute('aria-hidden', 'true');
     }
 
     async function openEncounterDetail(encounterKey) {
@@ -1333,6 +1402,15 @@ if (!$embed) {
         return;
       }
 
+      var openDocOverlayLink = event.target && event.target.closest ? event.target.closest('a[data-role="open-doc-overlay"]') : null;
+      if (openDocOverlayLink && isEmbed) {
+        var href = String(openDocOverlayLink.getAttribute('href') || '').trim();
+        if (!href) return;
+        event.preventDefault();
+        openDocOverlay(href);
+        return;
+      }
+
       var toggleOnlyCaseBtn = event.target && event.target.closest ? event.target.closest('[data-action="toggle-only-active-case"]') : null;
       if (toggleOnlyCaseBtn) {
         event.preventDefault();
@@ -1372,6 +1450,13 @@ if (!$embed) {
         event.preventDefault();
         casesModalEl.classList.remove('show');
         casesModalEl.style.display = 'none';
+        return;
+      }
+
+      var closeDocOverlayBtn = event.target && event.target.closest ? event.target.closest('[data-role="doc-overlay-close"], [data-role="doc-overlay-backdrop"]') : null;
+      if (closeDocOverlayBtn) {
+        event.preventDefault();
+        closeDocOverlay();
         return;
       }
 
@@ -1440,6 +1525,13 @@ if (!$embed) {
       event.preventDefault();
       window.parent.postMessage(payload, '*');
     }, true);
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') return;
+      if (docOverlayEl && !docOverlayEl.hidden) {
+        closeDocOverlay();
+      }
+    });
 
     if (patientId) {
       loadActiveCase(patientId).catch(function () {});
