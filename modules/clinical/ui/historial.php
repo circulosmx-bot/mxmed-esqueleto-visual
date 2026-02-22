@@ -560,6 +560,21 @@ $extraHead = <<<'HTML'
       font-size: .875rem;
       margin-bottom: .75rem;
     }
+    .clinical-historial .encounter-doc-preview{
+      border: 1px solid rgba(0,0,0,.08);
+      border-radius: .5rem;
+      padding: .5rem .6rem;
+      background: #fff;
+    }
+    .clinical-historial .encounter-doc-preview .doc-line{
+      padding: .25rem 0;
+      border-bottom: 1px dashed rgba(0,0,0,.08);
+      font-size: .88rem;
+    }
+    .clinical-historial .encounter-doc-preview .doc-line:last-child{
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
   </style>
 HTML;
 if (!$embed) {
@@ -761,6 +776,8 @@ if (!$embed) {
         $hasResults = (bool)($clinical['has_results'] ?? false);
         $isAppointmentEncounter = strpos($ek, 'appt:') === 0;
         $docsInEncounter = is_array($encounter['documents'] ?? null) ? $encounter['documents'] : [];
+        $encounterDocCount = count($clinicalDocs);
+        $encounterPreviewDocs = array_slice($clinicalDocs, 0, 3);
         $encCaseId = trim((string)($rawEncounter['case_id'] ?? ''));
         $encInActiveCase = ($activeCaseId !== '' && $encCaseId === $activeCaseId);
         ?>
@@ -796,11 +813,41 @@ if (!$embed) {
               documentos: <?php echo count($clinicalDocs); ?> |
               tipos: <?php echo h(implode(', ', array_keys($types))); ?>
             </div>
-            <?php if ($isAppointmentEncounter): ?>
+            <?php if ($ek !== ''): ?>
               <div class="mt-2">
-                <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $ek])); ?>" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($ek); ?>">Ver atención</a>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-action="open-encounter-detail" data-encounter-key="<?php echo h($ek); ?>">Ver detalle</button>
+                <?php if ($isAppointmentEncounter): ?>
+                  <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $ek])); ?>" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($ek); ?>">Ver atención</a>
+                <?php endif; ?>
               </div>
             <?php endif; ?>
+
+            <div class="mt-3">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="small fw-semibold">Documentos: <?php echo (int)$encounterDocCount; ?></div>
+                <?php if ($encounterDocCount > 3): ?>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" data-action="open-encounter-detail" data-encounter-key="<?php echo h($ek); ?>">Ver todos (<?php echo (int)$encounterDocCount; ?>)</button>
+                <?php endif; ?>
+              </div>
+              <div class="encounter-doc-preview">
+                <?php if ($encounterPreviewDocs === []): ?>
+                  <div class="small text-secondary">Sin documentos clínicos en esta atención</div>
+                <?php else: ?>
+                  <?php foreach ($encounterPreviewDocs as $pdoc): ?>
+                    <?php
+                    $pType = trim((string)($pdoc['document_type'] ?? '-'));
+                    $pSummary = trim((string)($pdoc['summary'] ?? ''));
+                    $pEvent = trim((string)($pdoc['event_datetime'] ?? ''));
+                    $pDateShort = ($pEvent !== '') ? substr($pEvent, 0, 16) : '-';
+                    ?>
+                    <div class="doc-line">
+                      <div><strong><?php echo h($pType); ?></strong> · <span class="text-secondary"><?php echo h($pDateShort); ?></span></div>
+                      <div class="text-secondary"><?php echo h($pSummary !== '' ? $pSummary : '-'); ?></div>
+                    </div>
+                  <?php endforeach; ?>
+                <?php endif; ?>
+              </div>
+            </div>
 
             <div class="mt-3">
               <div class="small fw-semibold mb-2">Documentos asociados</div>
@@ -894,6 +941,25 @@ if (!$embed) {
   <?php endif; ?>
 </div>
 </div>
+<div class="modal fade" id="encounterDetailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Detalle de atención</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="encounterDetailLoading" class="text-secondary small d-none">Cargando detalle...</div>
+        <div id="encounterDetailError" class="alert alert-danger d-none mb-2">No se pudo cargar el detalle del encounter.</div>
+        <div id="encounterDetailMeta" class="small text-secondary mb-2 d-none"></div>
+        <div id="encounterDetailList" class="vstack gap-2"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="modal fade" id="clinicalCasesModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
@@ -931,6 +997,15 @@ if (!$embed) {
     var recentSuggestion = document.querySelector('[data-role="recent-case-suggestion"]');
     var recentSuggestionText = document.querySelector('[data-role="recent-case-suggestion-text"]');
     var onlyActiveCaseEnabled = false;
+    var encounterDetailModalEl = document.getElementById('encounterDetailModal');
+    var encounterDetailLoading = document.getElementById('encounterDetailLoading');
+    var encounterDetailError = document.getElementById('encounterDetailError');
+    var encounterDetailMeta = document.getElementById('encounterDetailMeta');
+    var encounterDetailList = document.getElementById('encounterDetailList');
+    var encounterDetailModalInstance = null;
+    if (encounterDetailModalEl && window.bootstrap && window.bootstrap.Modal) {
+      encounterDetailModalInstance = window.bootstrap.Modal.getOrCreateInstance(encounterDetailModalEl);
+    }
     var recentCandidates = [];
     var recentSuggestStorageKey = 'mxmed_historial_snooze_suggest:' + String(patientId || '');
     try {
@@ -1130,6 +1205,60 @@ if (!$embed) {
       return payload.data || null;
     }
 
+    function renderEncounterDetail(payload) {
+      var data = payload && payload.data ? payload.data : {};
+      if (encounterDetailMeta) {
+        var metaParts = [];
+        metaParts.push('Atención: ' + String(data.encounter_key || '-'));
+        metaParts.push('Fecha: ' + String(data.event_datetime || '-'));
+        encounterDetailMeta.textContent = metaParts.join(' | ');
+        encounterDetailMeta.classList.remove('d-none');
+      }
+      if (!encounterDetailList) return;
+      var docs = Array.isArray(data.documents) ? data.documents : [];
+      if (docs.length === 0) {
+        encounterDetailList.innerHTML = '<div class="alert alert-secondary mb-0">Sin documentos en esta atención.</div>';
+        return;
+      }
+      var html = docs.map(function (doc) {
+        var type = String(doc.document_type || '-');
+        var title = String(doc.title || '');
+        var summary = String(doc.summary || '-');
+        var dt = String(doc.event_datetime || '-');
+        var header = title ? (type + ' · ' + title) : type;
+        return ''
+          + '<div class="border rounded p-2">'
+          + '  <div class="small"><strong>' + header.replace(/[&<>"]/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]); }) + '</strong></div>'
+          + '  <div class="small text-secondary">' + dt.replace(/[&<>"]/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]); }) + '</div>'
+          + '  <div class="small">' + summary.replace(/[&<>"]/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]); }) + '</div>'
+          + '</div>';
+      }).join('');
+      encounterDetailList.innerHTML = html;
+    }
+
+    async function openEncounterDetail(encounterKey) {
+      if (!encounterKey || !encounterDetailModalInstance) return;
+      encounterDetailModalInstance.show();
+      if (encounterDetailLoading) encounterDetailLoading.classList.remove('d-none');
+      if (encounterDetailError) encounterDetailError.classList.add('d-none');
+      if (encounterDetailMeta) {
+        encounterDetailMeta.textContent = '';
+        encounterDetailMeta.classList.add('d-none');
+      }
+      if (encounterDetailList) {
+        encounterDetailList.innerHTML = '';
+      }
+      try {
+        var url = apiBase + '/api/clinical/index.php/encounters/' + encodeURIComponent(String(encounterKey));
+        var payload = await apiJson(url, { method: 'GET' });
+        renderEncounterDetail(payload);
+      } catch (_) {
+        if (encounterDetailError) encounterDetailError.classList.remove('d-none');
+      } finally {
+        if (encounterDetailLoading) encounterDetailLoading.classList.add('d-none');
+      }
+    }
+
     document.addEventListener('click', function (event) {
       var createBtn = event.target && event.target.closest ? event.target.closest('[data-action="create-clinical-case"]') : null;
       if (createBtn) {
@@ -1159,6 +1288,15 @@ if (!$embed) {
       if (openCasesBtn) {
         event.preventDefault();
         openCasesModal();
+        return;
+      }
+
+      var openEncounterDetailBtn = event.target && event.target.closest ? event.target.closest('[data-action="open-encounter-detail"]') : null;
+      if (openEncounterDetailBtn) {
+        event.preventDefault();
+        var encounterKey = String(openEncounterDetailBtn.getAttribute('data-encounter-key') || '').trim();
+        if (!encounterKey) return;
+        openEncounterDetail(encounterKey);
         return;
       }
 
