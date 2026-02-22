@@ -46,3 +46,27 @@ Si availability devuelve 0 slots, normalmente hay overrides activos; ejecutar re
 ## Referencia
 Documento de cierre con contexto y cobertura:
 - `docs/agenda/CIERRE_FASE_III_WRITE_GUARD.md`
+
+## Clinical UI (embed) – Smoke test visual
+URL de prueba:
+`http://127.0.0.1:8092/modules/clinical/ui/historial.php?patient_id=p_0c874aa9cbad&embed=1`
+
+Qué debe verse:
+- Timeline con cards de `encounter` y contador `Documentos: N`.
+- Botones `Ver detalle` y, cuando aplique, `Ver todos (N)`.
+- Modal `Detalle de atención` con lista de documentos.
+
+Pasos:
+1. Abrir la URL de prueba en navegador.
+2. Ubicar un encounter con documentos y hacer click en `Ver detalle`.
+3. Confirmar que abre el modal `Detalle de atención` y lista documentos (title/summary/event_datetime/document_type).
+4. Cerrar modal, hacer click en `Ver todos (N)` del mismo encounter y confirmar lista completa.
+5. Ubicar un encounter con `Documentos: 0`, abrir detalle y confirmar mensaje `Sin documentos en esta atención.`.
+
+Checklist de consola:
+- Sin errores CORS.
+- Sin errores `Unhandled promise rejection` / `unhandledrejection`.
+
+Resultado esperado: PASS
+
+Nota: Checkpoint tag: `mxmed-clinical-embed-v1` (git tag).
