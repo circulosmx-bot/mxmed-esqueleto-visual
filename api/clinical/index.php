@@ -943,6 +943,99 @@ function clinical_encounter_key(int $encounterId, ?string $appointmentId): strin
     return 'enc:' . $encounterId;
 }
 
+function clinical_resolve_encounter_key(PDO $pdo, string $encounterKey): array
+{
+    $encounterKey = urldecode(trim($encounterKey));
+    if ($encounterKey === '') {
+        return [
+            'ok' => false,
+            'error_code' => 'bad_request',
+            'error_message' => 'encounter_key requerido',
+        ];
+    }
+
+    $encounterRow = null;
+    if (strpos($encounterKey, 'enc:') === 0) {
+        $encounterId = (int)trim(substr($encounterKey, 4));
+        if ($encounterId <= 0) {
+            return [
+                'ok' => false,
+                'error_code' => 'bad_request',
+                'error_message' => 'encounter_id inválido',
+            ];
+        }
+        $encounterRow = clinical_encounter_get_by_id($pdo, $encounterId);
+        if ($encounterRow === null) {
+            return [
+                'ok' => false,
+                'error_code' => 'not_found',
+                'error_message' => 'encounter no encontrado',
+            ];
+        }
+    } elseif (strpos($encounterKey, 'appt:') === 0) {
+        $rest = trim(substr($encounterKey, 5));
+        if ($rest === '') {
+            return [
+                'ok' => false,
+                'error_code' => 'bad_request',
+                'error_message' => 'appointment_id inválido',
+            ];
+        }
+
+        $hashPos = strpos($rest, '#enc:');
+        if ($hashPos !== false) {
+            $apptCandidate = trim(substr($rest, 0, $hashPos));
+            $encCandidate = (int)trim(substr($rest, $hashPos + 5));
+            if ($apptCandidate === '' || $encCandidate <= 0) {
+                return [
+                    'ok' => false,
+                    'error_code' => 'bad_request',
+                    'error_message' => 'encounter_key inválido',
+                ];
+            }
+            $encounterRow = clinical_encounter_get_by_id($pdo, $encCandidate);
+            if ($encounterRow === null) {
+                return [
+                    'ok' => false,
+                    'error_code' => 'not_found',
+                    'error_message' => 'encounter no encontrado',
+                ];
+            }
+            $rowAppt = trim((string)($encounterRow['appointment_id'] ?? ''));
+            if ($rowAppt !== $apptCandidate) {
+                return [
+                    'ok' => false,
+                    'error_code' => 'not_found',
+                    'error_message' => 'encounter no encontrado',
+                ];
+            }
+        } else {
+            $encounterRow = clinical_encounter_get_latest_by_appointment($pdo, $rest);
+            if ($encounterRow === null) {
+                return [
+                    'ok' => false,
+                    'error_code' => 'not_found',
+                    'error_message' => 'encounter no encontrado',
+                ];
+            }
+        }
+    } else {
+        return [
+            'ok' => false,
+            'error_code' => 'bad_request',
+            'error_message' => 'encounter_key no soportado',
+        ];
+    }
+
+    $encounterId = (int)($encounterRow['encounter_id'] ?? 0);
+    $appointmentId = trim((string)($encounterRow['appointment_id'] ?? ''));
+    return [
+        'ok' => true,
+        'row' => $encounterRow,
+        'encounter_key' => clinical_encounter_key($encounterId, $appointmentId),
+    ];
+}
+
 function clinical_encounters_create(
     PDO $pdo,
     string $patientId,
@@ -2796,239 +2889,275 @@ try {
     }
 
     if (($segments[0] ?? '') === 'encounters') {
-        if ($method !== 'GET' || count($segments) !== 2) {
-            clinical_send_response([
-                'ok' => false,
-                'error' => 'not_found',
-                'message' => 'route not found',
-                'data' => null,
-                'meta' => [
-                    'method' => $method,
-                    'route' => $route,
-                ],
-            ], 404);
-            return;
-        }
-
-        $encounterKey = urldecode(trim((string)$segments[1]));
-            if ($encounterKey === '') {
-                clinical_send_response([
-                'ok' => false,
-                'error' => 'bad_request',
-                'message' => 'encounter_key requerido',
-                'data' => null,
-                'meta' => [
-                    'method' => 'GET',
-                    'route' => 'encounters/{encounter_key}',
-                ],
-            ], 400);
-            return;
-        }
-
-        $appointmentId = null;
-        $patientId = null;
-        $eventDatetime = null;
-        $encounterId = null;
-        $encounterRow = null;
-        $responseEncounterKey = $encounterKey;
-        $rows = [];
-
-        try {
-            $pdo = clinical_documents_pdo();
-            clinical_encounters_ensure_schema($pdo);
-
-            if (strpos($encounterKey, 'enc:') === 0) {
-                $encounterId = (int)trim(substr($encounterKey, 4));
-                if ($encounterId <= 0) {
-                    clinical_send_response([
-                        'ok' => false,
-                        'error' => 'bad_request',
-                        'message' => 'encounter_id inválido',
-                        'data' => null,
-                        'meta' => [
-                            'method' => 'GET',
-                            'route' => 'encounters/{encounter_key}',
-                        ],
-                    ], 400);
-                    return;
-                }
-                $encounterRow = clinical_encounter_get_by_id($pdo, $encounterId);
-                if ($encounterRow === null) {
-                    clinical_send_response([
-                        'ok' => false,
-                        'error' => 'not_found',
-                        'message' => 'encounter no encontrado',
-                        'data' => null,
-                        'meta' => [
-                            'method' => 'GET',
-                            'route' => 'encounters/{encounter_key}',
-                        ],
-                    ], 404);
-                    return;
-                }
-            } elseif (strpos($encounterKey, 'appt:') === 0) {
-                $rest = trim(substr($encounterKey, 5));
-                if ($rest === '') {
-                    clinical_send_response([
-                        'ok' => false,
-                        'error' => 'bad_request',
-                        'message' => 'appointment_id inválido',
-                        'data' => null,
-                        'meta' => [
-                            'method' => 'GET',
-                            'route' => 'encounters/{encounter_key}',
-                        ],
-                    ], 400);
-                    return;
-                }
-
-                $hashPos = strpos($rest, '#enc:');
-                if ($hashPos !== false) {
-                    $apptCandidate = trim(substr($rest, 0, $hashPos));
-                    $encCandidate = (int)trim(substr($rest, $hashPos + 5));
-                    if ($apptCandidate === '' || $encCandidate <= 0) {
-                        clinical_send_response([
-                            'ok' => false,
-                            'error' => 'bad_request',
-                            'message' => 'encounter_key inválido',
-                            'data' => null,
-                            'meta' => [
-                                'method' => 'GET',
-                                'route' => 'encounters/{encounter_key}',
-                            ],
-                        ], 400);
-                        return;
-                    }
-
-                    $encounterRow = clinical_encounter_get_by_id($pdo, $encCandidate);
-                    if ($encounterRow === null) {
-                        clinical_send_response([
-                            'ok' => false,
-                            'error' => 'not_found',
-                            'message' => 'encounter no encontrado',
-                            'data' => null,
-                            'meta' => [
-                                'method' => 'GET',
-                                'route' => 'encounters/{encounter_key}',
-                            ],
-                        ], 404);
-                        return;
-                    }
-                    $rowAppt = trim((string)($encounterRow['appointment_id'] ?? ''));
-                    if ($rowAppt !== $apptCandidate) {
-                        clinical_send_response([
-                            'ok' => false,
-                            'error' => 'not_found',
-                            'message' => 'encounter no encontrado',
-                            'data' => null,
-                            'meta' => [
-                                'method' => 'GET',
-                                'route' => 'encounters/{encounter_key}',
-                            ],
-                        ], 404);
-                        return;
-                    }
-                } else {
-                    $appointmentId = $rest;
-                    $encounterRow = clinical_encounter_get_latest_by_appointment($pdo, $appointmentId);
-                    if ($encounterRow === null) {
-                        clinical_send_response([
-                            'ok' => false,
-                            'error' => 'not_found',
-                            'message' => 'encounter no encontrado',
-                            'data' => null,
-                            'meta' => [
-                                'method' => 'GET',
-                                'route' => 'encounters/{encounter_key}',
-                            ],
-                        ], 404);
-                        return;
-                    }
-                }
-            } else {
+        if (count($segments) === 3 && ($segments[2] ?? '') === 'documents' && $method === 'POST') {
+            $encounterKey = urldecode(trim((string)$segments[1]));
+            $body = clinical_read_json_body();
+            if (($body['ok'] ?? false) !== true) {
                 clinical_send_response([
                     'ok' => false,
-                    'error' => 'bad_request',
-                    'message' => 'encounter_key no soportado',
+                    'error' => ['code' => 'bad_request', 'message' => (string)($body['error'] ?? 'invalid body')],
+                    'message' => '',
+                    'data' => null,
+                    'meta' => ['method' => 'POST', 'route' => 'encounters/{encounter_key}/documents'],
+                ], 400);
+                return;
+            }
+
+            $payload = is_array($body['data'] ?? null) ? $body['data'] : [];
+            $documentType = strtolower(trim((string)($payload['document_type'] ?? '')));
+            $title = trim((string)($payload['title'] ?? ''));
+            $summary = trim((string)($payload['summary'] ?? ''));
+            $payloadData = $payload['payload'] ?? [];
+            $eventDatetime = trim((string)($payload['event_datetime'] ?? ''));
+            if (!is_array($payloadData)) {
+                $payloadData = [];
+            }
+            if ($documentType === '') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => ['code' => 'bad_request', 'message' => 'document_type requerido'],
+                    'message' => '',
+                    'data' => null,
+                    'meta' => ['method' => 'POST', 'route' => 'encounters/{encounter_key}/documents'],
+                ], 400);
+                return;
+            }
+            if ($title === '') {
+                $title = 'Documento clínico (' . $documentType . ')';
+            }
+            if ($eventDatetime === '') {
+                $eventDatetime = gmdate('Y-m-d H:i:s');
+            }
+            if (preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/', $eventDatetime) !== 1) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => ['code' => 'bad_request', 'message' => 'event_datetime inválido (YYYY-MM-DD HH:MM:SS)'],
+                    'message' => '',
+                    'data' => null,
+                    'meta' => ['method' => 'POST', 'route' => 'encounters/{encounter_key}/documents'],
+                ], 400);
+                return;
+            }
+
+            try {
+                $pdo = clinical_documents_pdo();
+                clinical_encounters_ensure_schema($pdo);
+                $resolved = clinical_resolve_encounter_key($pdo, $encounterKey);
+                if (($resolved['ok'] ?? false) !== true) {
+                    $status = (($resolved['error_code'] ?? '') === 'not_found') ? 404 : 400;
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => (string)($resolved['error_code'] ?? 'bad_request'),
+                        'message' => (string)($resolved['error_message'] ?? 'encounter inválido'),
+                        'data' => null,
+                        'meta' => ['method' => 'POST', 'route' => 'encounters/{encounter_key}/documents'],
+                    ], $status);
+                    return;
+                }
+
+                $encounterRow = is_array($resolved['row'] ?? null) ? $resolved['row'] : [];
+                $encounterId = (int)($encounterRow['encounter_id'] ?? 0);
+                $patientId = trim((string)($encounterRow['patient_id'] ?? ''));
+                $appointmentId = trim((string)($encounterRow['appointment_id'] ?? ''));
+                if ($encounterId <= 0 || $patientId === '') {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'server_error',
+                        'message' => 'encounter inválido',
+                        'data' => null,
+                        'meta' => ['method' => 'POST', 'route' => 'encounters/{encounter_key}/documents'],
+                    ], 500);
+                    return;
+                }
+
+                $payloadJson = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                if (!is_string($payloadJson)) {
+                    $payloadJson = '{}';
+                }
+                $renderedText = null;
+                if (is_string($payloadData['text'] ?? null)) {
+                    $renderedText = (string)$payloadData['text'];
+                }
+
+                $documentUuid = clinical_generate_document_uuid();
+                $now = gmdate('Y-m-d H:i:s');
+                $cols = clinical_table_columns($pdo, 'clinical_documents');
+                $values = [
+                    'document_uuid' => $documentUuid,
+                    'document_type' => $documentType,
+                    'title' => $title,
+                    'version' => 1,
+                    'status' => 'signed',
+                    'patient_id' => $patientId,
+                    'appointment_id' => ($appointmentId !== '' ? $appointmentId : null),
+                    'encounter_id' => (string)$encounterId,
+                    'hospital_stay_id' => null,
+                    'care_setting' => 'consulta',
+                    'service' => null,
+                    'payload_json' => $payloadJson,
+                    'rendered_text' => $renderedText,
+                    'summary' => $summary,
+                    'edited_flag' => 0,
+                    'event_datetime' => $eventDatetime,
+                    'widget_group' => 'documentos_clinicos',
+                    'printable' => 1,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                    'generated_at' => $now,
+                    'signed_at' => $now,
+                    'created_by_user_id' => 'qa',
+                    'updated_by_user_id' => 'qa',
+                ];
+
+                $insertCols = [];
+                $placeholders = [];
+                $params = [];
+                foreach ($values as $col => $val) {
+                    if (!isset($cols[$col])) {
+                        continue;
+                    }
+                    $insertCols[] = '`' . $col . '`';
+                    $ph = ':c_' . $col;
+                    $placeholders[] = $ph;
+                    $params[$ph] = $val;
+                }
+                $sql = 'INSERT INTO clinical_documents (' . implode(', ', $insertCols) . ') VALUES (' . implode(', ', $placeholders) . ')';
+                $stmt = $pdo->prepare($sql);
+                foreach ($params as $ph => $val) {
+                    if ($val === null) {
+                        $stmt->bindValue($ph, null, PDO::PARAM_NULL);
+                    } else {
+                        $stmt->bindValue($ph, (string)$val, PDO::PARAM_STR);
+                    }
+                }
+                $stmt->execute();
+            } catch (Throwable $e) {
+                $msg = trim((string)$e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => ($msg !== '' ? $msg : 'server error'),
+                    'data' => null,
+                    'meta' => ['method' => 'POST', 'route' => 'encounters/{encounter_key}/documents'],
+                ], 500);
+                return;
+            }
+
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => 'document created',
+                'data' => [
+                    'document_uuid' => $documentUuid,
+                    'encounter_key' => (string)($resolved['encounter_key'] ?? $encounterKey),
+                    'encounter_id' => $encounterId,
+                    'appointment_id' => ($appointmentId !== '' ? $appointmentId : null),
+                    'patient_id' => $patientId,
+                ],
+                'meta' => ['method' => 'POST', 'route' => 'encounters/{encounter_key}/documents'],
+            ], 201);
+            return;
+        }
+
+        if (count($segments) === 2 && $method === 'GET') {
+            $encounterKey = urldecode(trim((string)$segments[1]));
+            $appointmentId = null;
+            $patientId = null;
+            $eventDatetime = null;
+            $encounterId = null;
+            $responseEncounterKey = $encounterKey;
+            $rows = [];
+
+            try {
+                $pdo = clinical_documents_pdo();
+                clinical_encounters_ensure_schema($pdo);
+                $resolved = clinical_resolve_encounter_key($pdo, $encounterKey);
+                if (($resolved['ok'] ?? false) !== true) {
+                    $status = (($resolved['error_code'] ?? '') === 'not_found') ? 404 : 400;
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => (string)($resolved['error_code'] ?? 'bad_request'),
+                        'message' => (string)($resolved['error_message'] ?? 'encounter inválido'),
+                        'data' => null,
+                        'meta' => ['method' => 'GET', 'route' => 'encounters/{encounter_key}'],
+                    ], $status);
+                    return;
+                }
+
+                $encounterRow = is_array($resolved['row'] ?? null) ? $resolved['row'] : [];
+                $encounterId = (int)($encounterRow['encounter_id'] ?? 0);
+                $appointmentId = trim((string)($encounterRow['appointment_id'] ?? ''));
+                $patientId = trim((string)($encounterRow['patient_id'] ?? ''));
+                $eventDatetime = trim((string)($encounterRow['encounter_dt'] ?? ''));
+                $responseEncounterKey = (string)($resolved['encounter_key'] ?? $encounterKey);
+
+                $rows = clinical_encounter_documents_direct_fetch($pdo, $patientId, $encounterId, 'DESC');
+                if ($rows === [] && $appointmentId !== '') {
+                    $latestForAppt = clinical_encounter_get_latest_by_appointment($pdo, $appointmentId);
+                    $isLatestForAppt = ((int)($latestForAppt['encounter_id'] ?? 0) === $encounterId);
+                    if ($isLatestForAppt) {
+                        $rows = clinical_encounter_documents_legacy_by_appointment_fetch($pdo, $patientId, $appointmentId, 'DESC');
+                    }
+                }
+            } catch (Throwable $e) {
+                $msg = trim((string)$e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => ($msg !== '') ? $msg : 'server error',
                     'data' => null,
                     'meta' => [
                         'method' => 'GET',
                         'route' => 'encounters/{encounter_key}',
                     ],
-                ], 400);
+                ], 500);
                 return;
             }
 
-            $encounterId = (int)($encounterRow['encounter_id'] ?? 0);
-            $appointmentId = trim((string)($encounterRow['appointment_id'] ?? ''));
-            $patientId = trim((string)($encounterRow['patient_id'] ?? ''));
-            $eventDatetime = trim((string)($encounterRow['encounter_dt'] ?? ''));
-            $responseEncounterKey = clinical_encounter_key($encounterId, $appointmentId);
-            $rows = clinical_encounter_documents_direct_fetch($pdo, $patientId, $encounterId, 'DESC');
-            if ($rows === [] && $appointmentId !== '') {
-                $latestForAppt = clinical_encounter_get_latest_by_appointment($pdo, $appointmentId);
-                $isLatestForAppt = ((int)($latestForAppt['encounter_id'] ?? 0) === $encounterId);
-                if ($isLatestForAppt) {
-                    $rows = clinical_encounter_documents_legacy_by_appointment_fetch($pdo, $patientId, $appointmentId, 'DESC');
-                }
+            $documents = [];
+            foreach ($rows as $row) {
+                $documents[] = [
+                    'document_uuid' => (string)($row['document_uuid'] ?? ''),
+                    'document_type' => (string)($row['document_type'] ?? ''),
+                    'title' => (string)($row['title'] ?? ''),
+                    'event_datetime' => (string)($row['event_datetime'] ?? ''),
+                    'summary' => (string)($row['summary'] ?? ''),
+                    'hospital_stay_id' => $row['hospital_stay_id'] ?? null,
+                ];
             }
-        } catch (Throwable $e) {
-            $msg = trim((string)$e->getMessage());
+
             clinical_send_response([
-                'ok' => false,
-                'error' => 'server_error',
-                'message' => ($msg !== '') ? $msg : 'server error',
-                'data' => null,
+                'ok' => true,
+                'error' => null,
+                'message' => 'encounter retrieved',
+                'data' => [
+                    'encounter_key' => $responseEncounterKey,
+                    'appointment_id' => ($appointmentId !== '' ? $appointmentId : null),
+                    'patient_id' => $patientId,
+                    'event_datetime' => $eventDatetime,
+                    'documents' => $documents,
+                    'prescriptions' => [],
+                    'orders' => [],
+                    'results' => [],
+                ],
                 'meta' => [
                     'method' => 'GET',
                     'route' => 'encounters/{encounter_key}',
                 ],
-            ], 500);
+            ], 200);
             return;
         }
 
-        $documents = [];
-        foreach ($rows as $row) {
-            $documents[] = [
-                'document_uuid' => (string)($row['document_uuid'] ?? ''),
-                'document_type' => (string)($row['document_type'] ?? ''),
-                'title' => (string)($row['title'] ?? ''),
-                'event_datetime' => (string)($row['event_datetime'] ?? ''),
-                'summary' => (string)($row['summary'] ?? ''),
-                'hospital_stay_id' => $row['hospital_stay_id'] ?? null,
-            ];
-
-            if ($patientId === null || $patientId === '') {
-                $tmpPatientId = trim((string)($row['patient_id'] ?? ''));
-                if ($tmpPatientId !== '') {
-                    $patientId = $tmpPatientId;
-                }
-            }
-            $tmpDt = trim((string)($row['event_datetime'] ?? ''));
-            if ($tmpDt !== '') {
-                $eventDatetime = $tmpDt;
-            }
-        }
-
         clinical_send_response([
-            'ok' => true,
-            'error' => null,
-            'message' => 'encounter retrieved',
-            'data' => [
-                'encounter_key' => $responseEncounterKey,
-                'appointment_id' => ($appointmentId !== '' ? $appointmentId : null),
-                'patient_id' => $patientId,
-                'event_datetime' => $eventDatetime,
-                'documents' => $documents,
-                'prescriptions' => [],
-                'orders' => [],
-                'results' => [],
-            ],
+            'ok' => false,
+            'error' => 'not_found',
+            'message' => 'route not found',
+            'data' => null,
             'meta' => [
-                'method' => 'GET',
-                'route' => 'encounters/{encounter_key}',
+                'method' => $method,
+                'route' => $route,
             ],
-        ], 200);
+        ], 404);
         return;
     }
 
