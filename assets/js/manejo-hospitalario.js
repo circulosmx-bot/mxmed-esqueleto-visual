@@ -33,26 +33,126 @@
     return Number.isFinite(n) ? n : null;
   };
   const normalize = (str) => (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  const mxmedApiBase = () => {
+    const loc = window.location;
+    const host = loc.hostname;
+    const port = loc.port;
+    if (host === '127.0.0.1' || host === 'localhost') {
+      if (port === '' || port === '80' || port === '443') {
+        return loc.protocol + '//' + host + ':8090';
+      }
+      return loc.origin;
+    }
+    return loc.origin;
+  };
+  const legacyDocumentsEndpoint = 'api/clinical-documents.php';
+  const gatewayDocumentsEndpoint = mxmedApiBase() + '/api/clinical/index.php/documents';
+  const normalizeLimit = (value, fallback = 50) => {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return fallback;
+    return Math.min(200, Math.floor(n));
+  };
+  const buildLegacyDocumentsListUrl = (legacyPatientId, opts = {}) => {
+    const patientId = String(legacyPatientId ?? '');
+    const hospitalStayId = String(opts.hospital_stay_id ?? '');
+    const documentType = String(opts.document_type ?? '');
+    const limit = normalizeLimit(opts.limit, 50);
 
-  const isDemo = window.location.hostname.endsWith('github.io');
+    let url = `${legacyDocumentsEndpoint}?action=list&patient_id=${enc(patientId)}&limit=${enc(String(limit))}`;
+
+    if (documentType !== '') {
+      url += `&document_type=${enc(documentType)}`;
+    }
+
+    if (hospitalStayId !== '') {
+      url += `&hospital_stay_id=${enc(hospitalStayId)}`;
+    }
+
+    return url;
+  };
+
+  const buildGatewayDocumentsListUrl = (canonicalPatientId, opts = {}) => {
+    const patientId = String(canonicalPatientId ?? '').trim();
+    const hospitalStayId = String(opts.hospital_stay_id ?? '');
+    const documentType = String(opts.document_type ?? '');
+    const limit = normalizeLimit(opts.limit, 50);
+
+    let url = `${gatewayDocumentsEndpoint}?patient_id=${enc(patientId)}&limit=${enc(String(limit))}`;
+
+    if (documentType !== '') {
+      url += `&document_type=${enc(documentType)}`;
+    }
+
+    if (hospitalStayId !== '') {
+      url += `&hospital_stay_id=${enc(hospitalStayId)}`;
+    }
+
+    return url;
+  };
+    return url;
+  };
+  const getIdentityApi = () => window.mxmedIdentity || null;
+  const getCanonicalCache = () => {
+    if (!window.__mxmed_canonical_cache || typeof window.__mxmed_canonical_cache !== 'object') {
+      window.__mxmed_canonical_cache = {};
+    }
+    return window.__mxmed_canonical_cache;
+  };
+  const buildLegacyPatientId = (nombreCompleto, dob, sexoVal) => {
+    const identity = getIdentityApi();
+    if (identity && typeof identity.buildLegacyPatientId === 'function') {
+      return identity.buildLegacyPatientId(nombreCompleto, dob, sexoVal, normalize);
+    }
+    return normalize([nombreCompleto, dob, sexoVal].join('|')) || 'anon';
+  };
+  const resolveCanonicalPatientIdSafe = (legacyPatientId) => {
+    const legacy = String(legacyPatientId ?? '').trim();
+    if (!legacy || legacy === 'anon') return Promise.resolve(null);
+
+    const cache = getCanonicalCache();
+    if (Object.prototype.hasOwnProperty.call(cache, legacy)) {
+      return Promise.resolve(cache[legacy] || null);
+    }
+
+    const identity = getIdentityApi();
+    if (!identity || typeof identity.resolveCanonicalPatientId !== 'function') {
+      cache[legacy] = null;
+      return Promise.resolve(null);
+    }
+
+    return identity.resolveCanonicalPatientId(legacy).then((canonical) => {
+      cache[legacy] = canonical || null;
+      return cache[legacy];
+    }).catch(() => {
+      cache[legacy] = null;
+      return null;
+    });
+  };
+
+const isDemo = window.location.hostname.endsWith('github.io');
+curl -sS "http://127.0.0.1:8090/api/clinical/index.php/documents?patient_id=550e8400-e29b-41d4-a716-446655440000&limit=10" \
+  | head -c 3000; echo
   const demoFetchJson = async (path) => {
     const res = await fetch(path, { method: 'GET', headers: {} });
     const data = await res.json().catch(() => null);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return data || {};
   };
-  const demoRoute = (url) => {
+  const demoRoute = (url, opt) => {
+    const method = String(opt?.method || 'GET').toUpperCase();
     if (url.includes('hospital-stays.php?action=current')) return demoFetchJson('mock/hospital-stays-current.json');
     if (url.includes('hospital-stays.php?action=start')) return demoFetchJson('mock/hospital-stays-start.json');
     if (url.includes('hospital-stays.php?action=close')) return demoFetchJson('mock/hospital-stays-close.json');
     if (url.includes('clinical-documents.php?action=list')) return demoFetchJson('mock/clinical-documents-list-hosp.json');
+    if (url.includes('/api/clinical/index.php/documents') && method === 'POST') return demoFetchJson('mock/clinical-documents-save-hosp.json');
+    if (url.includes('/api/clinical/index.php/documents') && method === 'GET') return demoFetchJson('mock/clinical-documents-list-hosp.json');
     if (url.includes('clinical-documents.php?action=get')) return demoFetchJson('mock/clinical-documents-get-hosp.json');
     if (url.includes('clinical-documents.php?action=save')) return demoFetchJson('mock/clinical-documents-save-hosp.json');
     return Promise.resolve({ ok: true });
   };
   const api = {
     async j(url, opt) {
-      if (isDemo) return demoRoute(url);
+      if (isDemo) return demoRoute(url, opt);
       const res = await fetch(url, { ...(opt || {}), headers: { 'Content-Type': 'application/json', ...(opt?.headers || {}) } });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || (Array.isArray(data?.errors) ? data.errors.join(' ') : '') || `HTTP ${res.status}`);
@@ -61,8 +161,91 @@
     currentStay: (pid) => api.j(`api/hospital-stays.php?action=current&patient_id=${enc(pid)}`, { method: 'GET', headers: {} }),
     startStay: (body) => api.j('api/hospital-stays.php?action=start', { method: 'POST', body: JSON.stringify(body || {}) }),
     closeStay: (body) => api.j('api/hospital-stays.php?action=close', { method: 'POST', body: JSON.stringify(body || {}) }),
-    saveDoc: (body) => api.j('api/clinical-documents.php?action=save', { method: 'POST', body: JSON.stringify(body || {}) }),
-    listDocs: (pid, sid) => api.j(`api/clinical-documents.php?action=list&patient_id=${enc(pid)}&hospital_stay_id=${enc(sid)}&limit=50`, { method: 'GET', headers: {} }),
+    saveDocLegacy: (body) => api.j('api/clinical-documents.php?action=save', { method: 'POST', body: JSON.stringify(body || {}) }),
+    async listDocs(patient, sid) {
+      const patientObj = (patient && typeof patient === 'object')
+        ? patient
+        : { patient_id: patient, canonical_patient_id: null };
+      const legacyPatientId = String(patientObj?.patient_id ?? '');
+      const canonicalPatientId = String(patientObj?.canonical_patient_id ?? '').trim();
+      const options = {
+        hospital_stay_id: sid,
+        limit: 50
+      };
+
+      if (canonicalPatientId !== '') {
+        try {
+          const gatewayPayload = await api.j(buildGatewayDocumentsListUrl(canonicalPatientId, options), { method: 'GET', headers: { Accept: 'application/json' } });
+          const gatewayItems = gatewayPayload?.data?.items;
+          if (gatewayPayload?.ok === true && Array.isArray(gatewayItems)) {
+            return { items: gatewayItems };
+          }
+        } catch (_) {
+          // Gateway failed; fallback to legacy for compatibility.
+        }
+      }
+
+      const legacyPayload = await api.j(buildLegacyDocumentsListUrl(legacyPatientId, options), { method: 'GET', headers: {} });
+      return { items: Array.isArray(legacyPayload?.items) ? legacyPayload.items : [] };
+    },
+    async saveDoc(body) {
+      const requestBody = (body && typeof body === 'object') ? body : {};
+      const context = (requestBody.context && typeof requestBody.context === 'object') ? requestBody.context : {};
+      const legacyPatientId = String(context.patient_id ?? '').trim();
+      const canonicalPatientId = await resolveCanonicalPatientIdSafe(legacyPatientId).catch(() => null);
+
+      const normalizeSavedDocumentResponse = (payload) => {
+        const document = payload?.data?.document ?? payload?.document ?? null;
+        if (!document || typeof document !== 'object') {
+          throw new Error('invalid save response');
+        }
+        return { document };
+      };
+
+      if (canonicalPatientId) {
+        const gatewayBody = {
+          ...requestBody,
+          context: {
+            ...context,
+            patient_id: canonicalPatientId,
+            legacy_patient_id: legacyPatientId || undefined
+          }
+        };
+
+        console.debug('SAVE gateway attempt', {
+          patient_id: canonicalPatientId,
+          legacy_patient_id: legacyPatientId || null,
+          source: 'manejo-hospitalario'
+        });
+
+        try {
+          const gatewayPayload = await api.j(gatewayDocumentsEndpoint, {
+            method: 'POST',
+            headers: { Accept: 'application/json' },
+            body: JSON.stringify(gatewayBody)
+          });
+          const normalized = normalizeSavedDocumentResponse(gatewayPayload);
+          console.debug('SAVE gateway ok', {
+            patient_id: canonicalPatientId,
+            source: 'manejo-hospitalario'
+          });
+          return normalized;
+        } catch (_) {
+          console.debug('SAVE fallback legacy', {
+            reason: 'gateway_failed',
+            source: 'manejo-hospitalario'
+          });
+        }
+      } else {
+        console.debug('SAVE fallback legacy', {
+          reason: 'canonical_unavailable',
+          source: 'manejo-hospitalario'
+        });
+      }
+
+      const legacyPayload = await api.saveDocLegacy(requestBody);
+      return normalizeSavedDocumentResponse(legacyPayload);
+    },
     getDoc: (id) => api.j(`api/clinical-documents.php?action=get&id=${enc(id)}`, { method: 'GET', headers: {} }),
   };
 
@@ -79,8 +262,15 @@
     const edad = pane?.querySelector('[data-dg-edad]')?.textContent?.trim() || '--';
     const sexoVal = pane?.querySelector('input[name=\"pac-genero\"]:checked')?.value || '';
     const sexo = sexoVal === 'F' ? 'Femenino' : sexoVal === 'M' ? 'Masculino' : sexoVal === 'O' ? 'Otro' : '--';
-    const patient_id = normalize([nombre, dob, sexoVal].join('|')) || 'anon';
-    return { patient_id, nombre_completo: nombre, edad, sexo };
+    const patient_id = buildLegacyPatientId(nombre, dob, sexoVal);
+    const canonicalCache = getCanonicalCache();
+    const canonical_patient_id = Object.prototype.hasOwnProperty.call(canonicalCache, patient_id)
+      ? (canonicalCache[patient_id] || null)
+      : null;
+
+    resolveCanonicalPatientIdSafe(patient_id).catch(() => {});
+
+    return { patient_id, canonical_patient_id, nombre_completo: nombre, edad, sexo };
   };
   const getDoctor = () => {
     const nombre = document.querySelector('.user-id .name')?.textContent?.trim() || 'Médico';
@@ -226,7 +416,7 @@
     box.innerHTML = '<div class="text-muted small">Cargando…</div>';
     const patient = getPatient();
     try {
-      const { items } = await api.listDocs(patient.patient_id, state.stay.id);
+      const { items } = await api.listDocs(patient, state.stay.id);
       const list = Array.isArray(items) ? items : [];
       if (!list.length) { box.innerHTML = '<div class="text-muted small">Sin documentos en este episodio.</div>'; return; }
       const label = (t) => t === 'nota_evolucion_hosp' ? 'Nota intrahospitalaria' : t === 'hoja_indicaciones' ? 'Hoja de indicaciones' : (t || 'Documento');
@@ -249,6 +439,7 @@
     const care = stayId ? 'hospitalizacion' : (pid ? 'consulta' : null);
     setContextSafe({
       patient_id: pid,
+      canonical_patient_id: patient.canonical_patient_id || null,
       hospital_stay_id: stayId,
       care_setting: care,
       service: state.stay?.service || null
@@ -277,7 +468,14 @@
 
   const buildContext = () => {
     const patient = getPatient();
-    return { patient_id: patient.patient_id, encounter_id: null, hospital_stay_id: String(state.stay?.id || ''), care_setting: 'hospitalizacion', service: state.stay?.service || null };
+    return {
+      patient_id: patient.patient_id,
+      canonical_patient_id: patient.canonical_patient_id || null,
+      encounter_id: null,
+      hospital_stay_id: String(state.stay?.id || ''),
+      care_setting: 'hospitalizacion',
+      service: state.stay?.service || null
+    };
   };
 
   const buildPron = () => {

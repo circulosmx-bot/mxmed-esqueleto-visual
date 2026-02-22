@@ -2753,6 +2753,12 @@
 
             </div>
 
+            <div class="mt-3">
+              <button type="button" class="btn btn-outline-primary btn-sm" id="mm-open-historial-tab">
+                Ver historial de atención
+              </button>
+            </div>
+
           </div>
 
         </section>
@@ -2788,6 +2794,7 @@
                 <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-datos" data-tab-key="t-datos"><span class="tab-ico material-symbols-outlined" aria-hidden="true">id_card</span><span class="tab-lbl">Datos Generales</span></button></li>
 
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historia" data-tab-key="t-historia"><span class="tab-ico material-symbols-outlined" aria-hidden="true">menu_book</span><span class="tab-lbl">Historia Clínica</span></button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historial-atencion" data-tab-key="t-historial-atencion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">history</span><span class="tab-lbl">Historial de atención</span></button></li>
 
                 <li class="nav-item d-none" data-tab-conditional="gineco"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-gineco" data-tab-key="t-gineco"><span class="tab-ico material-symbols-rounded" aria-hidden="true">pregnant_woman</span><span class="tab-lbl">Antecedentes gineco-obstétricos</span></button></li>
 
@@ -3359,6 +3366,25 @@
 
                 </div>
 
+              </div>
+              <div class="tab-pane fade" id="t-historial-atencion">
+                <div class="clinical-panel mt-2 p-2">
+                  <div class="small text-secondary mb-2">Historial de atención (vista embebida)</div>
+                  <div class="btn-group btn-group-sm mb-2" role="group" aria-label="Subvistas de historial">
+                    <button type="button" class="btn btn-outline-primary active" data-embed-mode="historial">Historial</button>
+                    <button type="button" class="btn btn-outline-primary" data-embed-mode="encounter">Episodio</button>
+                    <button type="button" class="btn btn-outline-primary" data-embed-mode="document">Documento</button>
+                  </div>
+                  <div id="mm-embed-historial-empty" class="alert alert-info d-none mb-2">Sin paciente activo. Cargando modo demo.</div>
+                  <iframe
+                    id="mm-embed-historial"
+                    title="Historial de atención"
+                    src=""
+                    style="width:100%; min-height:70vh; border:0;"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                  ></iframe>
+                </div>
               </div>
               <div class="tab-pane fade" id="t-gineco">
                 <div class="gyn-panel mt-1">
@@ -5922,7 +5948,6 @@
 </div></div>
 
             </div>
-
           </div>
 
         </section>
@@ -6286,6 +6311,8 @@
 
 <script src="assets/js/core/dashboard.js"></script>
 
+<script src="assets/js/core/identity.js"></script>
+
 <script src="assets/js/app.js?v=20251123b"></script>
 <script src="assets/js/perfil/datos-generales.js"></script>
 <script src="assets/js/perfil/formacion.js"></script>
@@ -6484,11 +6511,217 @@
     </div>
   </div>
 </template>
+<script>
+  (function () {
+    var historialTabBtn = document.querySelector('[data-bs-target="#t-historial-atencion"]');
+    var historialPane = document.getElementById('t-historial-atencion');
+    var iframe = document.getElementById('mm-embed-historial');
+    var emptyMsg = document.getElementById('mm-embed-historial-empty');
+    var expedientePane = document.getElementById('p-expediente');
+    var modeButtons = historialPane ? Array.from(historialPane.querySelectorAll('[data-embed-mode]')) : [];
+    if (!historialTabBtn || !historialPane || !iframe || !expedientePane || !modeButtons.length) return;
+    var activeMode = 'historial';
+    var lastLoadedKey = '';
+    var forcedEncounterKey = '';
+    var forcedDocumentUuid = '';
+
+    function getParam(name) {
+      try {
+        return new URLSearchParams(window.location.search).get(name) || '';
+      } catch (_) {
+        return '';
+      }
+    }
+
+    function isHistorialTabVisible() {
+      return historialPane.classList.contains('show') || historialPane.classList.contains('active');
+    }
+
+    function resolveActivePatientId() {
+      var fromPatientId = String(expedientePane.getAttribute('data-patient-id') || expedientePane.dataset.patientId || '').trim();
+      if (fromPatientId) return fromPatientId;
+
+      var fromActivePatientId = String(expedientePane.getAttribute('data-active-patient-id') || expedientePane.dataset.activePatientId || '').trim();
+      if (fromActivePatientId) return fromActivePatientId;
+
+      var globalCandidates = [
+        window.mxmedActivePatientId,
+        window.__MXMED_ACTIVE_PATIENT_ID,
+        window.mxmedPatient && window.mxmedPatient.patient_id,
+        window.mxmedPatientContext && window.mxmedPatientContext.patient_id,
+        window.mxmedStore && window.mxmedStore.activePatientId,
+        window.mxmedStore && window.mxmedStore.patient_id
+      ];
+      for (var i = 0; i < globalCandidates.length; i += 1) {
+        var candidate = String(globalCandidates[i] || '').trim();
+        if (candidate) return candidate;
+      }
+
+      var fromQuery = getParam('patient_id');
+      if (fromQuery && fromQuery.trim() !== '') return fromQuery.trim();
+      return null;
+    }
+
+    function resolveEncounterKey() {
+      var fromQuery = getParam('encounter_key');
+      if (fromQuery && fromQuery.trim() !== '') return fromQuery.trim();
+      var fromData = String(historialPane.getAttribute('data-encounter-key') || historialPane.dataset.encounterKey || '').trim();
+      if (fromData) return fromData;
+      return 'appt:demo';
+    }
+
+    function resolveDocumentUuid() {
+      var fromQuery = getParam('uuid');
+      if (fromQuery && fromQuery.trim() !== '') return fromQuery.trim();
+      var fromData = String(historialPane.getAttribute('data-document-uuid') || historialPane.dataset.documentUuid || '').trim();
+      if (fromData) return fromData;
+      return 'demo';
+    }
+
+    function buildSrc(mode, context) {
+      if (mode === 'encounter') {
+        return '/modules/clinical/ui/encounter.php?encounter_key=' + encodeURIComponent(context.encounterKey) + '&embed=1';
+      }
+      if (mode === 'document') {
+        return '/modules/clinical/ui/document.php?uuid=' + encodeURIComponent(context.documentUuid) + '&embed=1';
+      }
+      return '/modules/clinical/ui/historial.php?patient_id=' + encodeURIComponent(context.patientId) + '&embed=1';
+    }
+
+    function setActiveMode(mode) {
+      activeMode = mode;
+      modeButtons.forEach(function (btn) {
+        var on = btn.getAttribute('data-embed-mode') === mode;
+        btn.classList.toggle('active', on);
+      });
+      updateTimelineFilterVisibility(mode);
+    }
+
+    function updateTimelineFilterVisibility(mode) {
+      var frameDoc = iframe.contentDocument;
+      if (!frameDoc) return;
+      var filters = frameDoc.querySelector('[data-role="timeline-filters"]');
+      if (!filters) return;
+      filters.hidden = mode !== 'historial';
+    }
+
+    function ensureEmbedIframe() {
+      var pid = resolveActivePatientId();
+      var useDemo = !pid;
+      var context = {
+        patientId: useDemo ? 'demo' : pid,
+        encounterKey: forcedEncounterKey || (useDemo ? 'appt:demo' : resolveEncounterKey()),
+        documentUuid: forcedDocumentUuid || (useDemo ? 'demo' : resolveDocumentUuid())
+      };
+
+      if (emptyMsg) {
+        emptyMsg.classList.toggle('d-none', !useDemo);
+      }
+
+      var idValue = activeMode === 'encounter'
+        ? context.encounterKey
+        : activeMode === 'document'
+          ? context.documentUuid
+          : context.patientId;
+      var nextKey = activeMode + '|' + String(idValue || '').trim();
+      var nextSrc = buildSrc(activeMode, context);
+
+      if (iframe.getAttribute('src') && lastLoadedKey === nextKey) {
+        return;
+      }
+
+      iframe.setAttribute('src', nextSrc);
+      iframe.dataset.loadedKey = nextKey;
+      lastLoadedKey = nextKey;
+    }
+
+    modeButtons.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var mode = btn.getAttribute('data-embed-mode') || 'historial';
+        setActiveMode(mode);
+        if (isHistorialTabVisible()) ensureEmbedIframe();
+      });
+    });
+
+    historialTabBtn.addEventListener('shown.bs.tab', ensureEmbedIframe);
+    iframe.addEventListener('load', function () {
+      updateTimelineFilterVisibility(activeMode);
+    });
+
+    var patientInputs = expedientePane.querySelectorAll(
+      '[data-pac-nombre], [data-pac-apellido-paterno], [data-pac-apellido-materno], [data-dg-dia], [data-dg-mes], [data-dg-anio], input[name="pac-genero"]'
+    );
+    patientInputs.forEach(function (el) {
+      el.addEventListener('input', function () {
+        if (isHistorialTabVisible()) ensureEmbedIframe();
+      });
+      el.addEventListener('change', function () {
+        if (isHistorialTabVisible()) ensureEmbedIframe();
+      });
+    });
+
+    var observer = new MutationObserver(function () {
+      if (isHistorialTabVisible()) ensureEmbedIframe();
+    });
+    observer.observe(expedientePane, { attributes: true, attributeFilter: ['data-patient-id', 'data-active-patient-id'] });
+
+    ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach(function (evtName) {
+      document.addEventListener(evtName, function () {
+        forcedEncounterKey = '';
+        forcedDocumentUuid = '';
+        setActiveMode('historial');
+        if (isHistorialTabVisible()) ensureEmbedIframe();
+      });
+    });
+
+    window.addEventListener('message', function (event) {
+      if (!event || event.source !== iframe.contentWindow) return;
+      var data = event.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.type !== 'mxmed:embed:navigate') return;
+
+      if (data.mode === 'encounter') {
+        var ek = String(data.encounter_key || '').trim();
+        if (!ek) return;
+        forcedEncounterKey = ek;
+        setActiveMode('encounter');
+      } else if (data.mode === 'document') {
+        var uuid = String(data.uuid || '').trim();
+        if (!uuid) return;
+        forcedDocumentUuid = uuid;
+        setActiveMode('document');
+      } else {
+        return;
+      }
+
+      if (isHistorialTabVisible()) {
+        ensureEmbedIframe();
+      }
+    });
+
+    if (historialTabBtn.classList.contains('active') || historialPane.classList.contains('show')) {
+      ensureEmbedIframe();
+    }
+    updateTimelineFilterVisibility(activeMode);
+  })();
+</script>
+<script>
+  (function () {
+    var openHistorialBtn = document.getElementById('mm-open-historial-tab');
+    if (!openHistorialBtn) return;
+    openHistorialBtn.addEventListener('click', function () {
+      var historialTabBtn = document.querySelector('[data-bs-target="#t-historial-atencion"]');
+      if (!historialTabBtn) {
+        window.location.hash = 't-historial-atencion';
+        return;
+      }
+      if (window.bootstrap && window.bootstrap.Tab) {
+        window.bootstrap.Tab.getOrCreateInstance(historialTabBtn).show();
+      } else {
+        historialTabBtn.click();
+      }
+    });
+  })();
+</script>
 </body>
 </html>
-
-
-
-
-
-

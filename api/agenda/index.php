@@ -5,6 +5,9 @@ require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentEventsContr
 require_once __DIR__ . '/../../modules/agenda/controllers/PatientFlagsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AvailabilityController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentWriteController.php';
+require_once __DIR__ . '/../../modules/agenda/controllers/WaitlistController.php';
+require_once __DIR__ . '/../../modules/agenda/controllers/PublicAppointmentsController.php';
+require_once __DIR__ . '/../../modules/agenda/controllers/PublicOtpController.php';
 
 use Agenda\Controllers\AppointmentsController;
 use Agenda\Controllers\ConsultoriosController;
@@ -12,6 +15,9 @@ use Agenda\Controllers\AppointmentEventsController;
 use Agenda\Controllers\PatientFlagsController;
 use Agenda\Controllers\AvailabilityController;
 use Agenda\Controllers\AppointmentWriteController;
+use Agenda\Controllers\WaitlistController;
+use Agenda\Controllers\PublicAppointmentsController;
+use Agenda\Controllers\PublicOtpController;
 
 header('Content-Type: application/json');
 
@@ -67,6 +73,16 @@ function normalize_response($response): array
     return $response;
 }
 
+function read_json_body(): array
+{
+    $raw = file_get_contents('php://input');
+    if (!is_string($raw) || trim($raw) === '') {
+        return [];
+    }
+    $decoded = json_decode($raw, true);
+    return is_array($decoded) ? $decoded : [];
+}
+
 try {
     $path = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
     $script = trim($_SERVER['SCRIPT_NAME'] ?? '', '/');
@@ -107,7 +123,7 @@ try {
                     $response = $writes->cancel($segments[1]);
                     break;
                 }
-                if ($method === 'POST' && $sub === 'no_show') {
+                if ($method === 'POST' && ($sub === 'no_show' || $sub === 'no-show')) {
                     $writes = new AppointmentWriteController();
                     $response = $writes->noShow($segments[1]);
                     break;
@@ -151,6 +167,66 @@ try {
         case 'availability':
             $availability = new AvailabilityController();
             $response = $availability->index($_GET);
+            break;
+        case 'public':
+            if ($method === 'GET' && ($segments[1] ?? '') === 'availability' && !isset($segments[2])) {
+                $availability = new AvailabilityController();
+                $response = $availability->publicAvailability($_GET);
+            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'otp' && ($segments[2] ?? '') === 'request' && !isset($segments[3])) {
+                $publicOtp = new PublicOtpController();
+                $response = $publicOtp->request(read_json_body());
+            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'otp' && ($segments[2] ?? '') === 'verify' && !isset($segments[3])) {
+                $publicOtp = new PublicOtpController();
+                $response = $publicOtp->verify(read_json_body());
+            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'maintenance' && ($segments[2] ?? '') === 'expire' && !isset($segments[3])) {
+                $publicAppointments = new PublicAppointmentsController();
+                $response = $publicAppointments->expireReservations(read_json_body());
+            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'appointments' && ($segments[2] ?? '') === 'reserve' && !isset($segments[3])) {
+                $publicAppointments = new PublicAppointmentsController();
+                $response = $publicAppointments->reserve(read_json_body());
+            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'appointments' && ($segments[2] ?? '') === 'confirm' && !isset($segments[3])) {
+                $publicAppointments = new PublicAppointmentsController();
+                $response = $publicAppointments->confirm(read_json_body());
+            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'appointments' && ($segments[2] ?? '') === 'cancel' && !isset($segments[3])) {
+                $publicAppointments = new PublicAppointmentsController();
+                $response = $publicAppointments->cancel(read_json_body());
+            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'appointments' && ($segments[2] ?? '') === 'request' && !isset($segments[3])) {
+                $publicAppointments = new PublicAppointmentsController();
+                $response = $publicAppointments->request(read_json_body());
+            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'appointments' && ($segments[2] ?? '') === 'verify' && !isset($segments[3])) {
+                $publicAppointments = new PublicAppointmentsController();
+                $response = $publicAppointments->verify(read_json_body());
+            } else {
+                $response = [
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'route not found',
+                    'data' => null,
+                    'meta' => (object)[],
+                ];
+            }
+            break;
+        case 'waitlist':
+            $waitlist = new WaitlistController();
+            $entryId = $segments[1] ?? '';
+            $sub = $segments[2] ?? '';
+            if ($method === 'GET' && !$entryId) {
+                $response = $waitlist->index($_GET);
+            } elseif ($method === 'POST' && !$entryId) {
+                $response = $waitlist->store();
+            } elseif ($method === 'PATCH' && $entryId && $sub === '') {
+                $response = $waitlist->update($entryId);
+            } elseif ($method === 'POST' && $entryId && $sub === 'assign') {
+                $response = $waitlist->assign($entryId);
+            } else {
+                $response = [
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'route not found',
+                    'data' => null,
+                    'meta' => (object)[],
+                ];
+            }
             break;
     }
 } catch (\Throwable $e) {

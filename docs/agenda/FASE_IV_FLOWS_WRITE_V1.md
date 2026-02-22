@@ -213,8 +213,21 @@ Campos de origen que deben viajar en cada write:
 ```
 - **Errores esperados:** invalid_params, not_found, db_not_ready, db_error.
 - **Idempotencia:** si la cita ya estaba cancelada, responde ok:true con `message:"already_cancelled"` y no duplica evento.
+- **Late cancel (<1080 min):** además del evento `appointment_canceled`, se agrega `appointment_late_cancel` y flag `grey` con reason_code `late_cancel`.
 
 ### 5.4 No show
 - **Given:** cita existente.
 - **When:** POST /appointments/{id}/no_show.
 - **Then:** ok:true + evento `appointment_no_show`.
+- **Payload mínimo (JSON):**
+```json
+{
+  "actor_role": "patient|operator|doctor|system",
+  "actor_id": "string|int|null",
+  "channel_origin": "web|phone|admin|api|other",
+  "reason_code": "string|null",
+  "reason_text": "string|null",
+  "patient_id": "string|null"
+}
+```
+- **Idempotencia:** si ya estaba no_show, responde ok:true con `message:"already_no_show"` y no duplica evento/flag.

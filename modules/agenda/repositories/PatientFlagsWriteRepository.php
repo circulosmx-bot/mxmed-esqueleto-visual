@@ -82,6 +82,19 @@ class PatientFlagsWriteRepository
         ];
     }
 
+    public function flagExists(string $patientId, string $reasonCode): bool
+    {
+        $this->ensureTable();
+        $columns = $this->getColumns($this->table);
+        if (!in_array('patient_id', $columns, true) || !in_array('reason_code', $columns, true)) {
+            return false;
+        }
+        $sql = sprintf('SELECT COUNT(*) FROM %s WHERE patient_id = :patient_id AND reason_code = :reason_code', $this->table);
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(['patient_id' => $patientId, 'reason_code' => $reasonCode]);
+        return (int)$stmt->fetchColumn() > 0;
+    }
+
     private function insert(array $data): void
     {
         $columns = array_keys($data);

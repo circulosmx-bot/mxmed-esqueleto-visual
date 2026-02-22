@@ -51,7 +51,7 @@ Plataforma digital MXMed 2025 con perfiles profesionales del área médica (méd
 
 - **Mis Pacientes**
   - Archivo de Pacientes.
-  - Expediente Médico → pestañas: *Historia Clínica*, *Antecedentes Ginecoobstétricos*, *Exploración Física*, *Estudios Diagnóstico*, *Tratamiento/Recetas*, *Notas de Evolución*, *Manejo Hospitalario*, *Consentimiento Informado*, *Archivo*.
+Expediente Médico → pestañas: Datos Generales, Historia Clínica, Historial de atención (timeline), Antecedentes Ginecoobstétricos, Exploración Física, Estudios Diagnóstico, Tratamiento/Recetas, Notas de Evolución, Manejo Hospitalario, Consentimiento Informado, Archivo.
 
 - **Facturación**
   - Crear factura / Listar facturas / Pacientes / Facturas canceladas.

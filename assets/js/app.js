@@ -1294,7 +1294,20 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const api = (() => {
-    const endpoint = 'api/clinical-documents.php';
+    const mxmedApiBase = () => {
+      const loc = window.location;
+      const host = loc.hostname;
+      const port = loc.port;
+      if (host === '127.0.0.1' || host === 'localhost') {
+        if (port === '' || port === '80' || port === '443') {
+          return loc.protocol + '//' + host + ':8090';
+        }
+        return loc.origin;
+      }
+      return loc.origin;
+    };
+    const legacyEndpoint = 'api/clinical-documents.php';
+    const gatewayDocumentsEndpoint = mxmedApiBase() + '/api/clinical/index.php/documents';
     let mode = 'unknown'; // unknown | api | local
 
     const fetchJson = async (url, options) => {
@@ -1316,20 +1329,186 @@ console.info('app.js loaded :: 20251123a');
       return data;
     };
 
-    const listEvolutionNotes = async (patientId) => {
-      const url = `${endpoint}?action=list&patient_id=${encodeURIComponent(String(patientId ?? ''))}&document_type=nota_evolucion&limit=30`;
-      return fetchJson(url, { method: 'GET', headers: {} });
+    const normalizeLimit = (value, fallback = 30) => {
+      const n = Number(value);
+      if (!Number.isFinite(n) || n <= 0) return fallback;
+      return Math.min(200, Math.floor(n));
     };
 
-    const saveClinicalDocument = async (args) => {
-      return fetchJson(`${endpoint}?action=save`, {
+    const listClinicalDocumentsLegacy = async (legacyPatientId, opts = {}) => {
+      const patientId = String(legacyPatientId ?? '');
+      const documentType = String(opts.document_type ?? '');
+      const hospitalStayId = String(opts.hospital_stay_id ?? '');
+      const limit = normalizeLimit(opts.limit, 30);
+
+      let url = `${legacyEndpoint}?action=list&patient_id=${encodeURIComponent(patientId)}&limit=${encodeURIComponent(String(limit))}`;
+      if (documentType !== '') {
+        url += `&document_type=${encodeURIComponent(documentType)}`;
+      }
+      if (hospitalStayId !== '') {
+        url += `&hospital_stay_id=${encodeURIComponent(hospitalStayId)}`;
+      }
+
+      const payload = await fetchJson(url, { method: 'GET', headers: {} });
+      return Array.isArray(payload?.items) ? payload.items : [];
+    };
+
+    const listClinicalDocumentsGateway = async (canonicalPatientId, opts = {}) => {
+      const patientId = String(canonicalPatientId ?? '').trim();
+      const documentType = String(opts.document_type ?? '');
+      const hospitalStayId = String(opts.hospital_stay_id ?? '');
+      const limit = normalizeLimit(opts.limit, 30);
+
+      let url = `${gatewayDocumentsEndpoint}?patient_id=${encodeURIComponent(patientId)}&limit=${encodeURIComponent(String(limit))}`;
+      if (documentType !== '') {
+        url += `&document_type=${encodeURIComponent(documentType)}`;
+      }
+      if (hospitalStayId !== '') {
+        url += `&hospital_stay_id=${encodeURIComponent(hospitalStayId)}`;
+      }
+
+      const payload = await fetchJson(url, { method: 'GET', headers: { Accept: 'application/json' } });
+      const items = payload?.data?.items;
+      if (payload?.ok === true && Array.isArray(items)) {
+        return items;
+      }
+      throw new Error(payload?.error || 'gateway documents list failed');
+    };
+
+    const listClinicalDocuments = async (patient, opts = {}) => {
+      const patientObj = (patient && typeof patient === 'object')
+        ? patient
+        : { patient_id: patient, canonical_patient_id: null };
+
+      const legacyPatientId = String(patientObj?.patient_id ?? '');
+      let canonicalPatientId = String(patientObj?.canonical_patient_id ?? '').trim();
+
+      // If canonical is not yet available (non-blocking resolver), try a short resolve window.
+      const waitWithTimeout = (promise, ms = 400) => {
+        return new Promise((resolve) => {
+          let settled = false;
+          const timer = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            resolve(null);
+          }, ms);
+
+          Promise.resolve(promise)
+            .then((v) => {
+              if (settled) return;
+              settled = true;
+              clearTimeout(timer);
+              resolve(v ?? null);
+            })
+            .catch(() => {
+              if (settled) return;
+              settled = true;
+              clearTimeout(timer);
+              resolve(null);
+            });
+        });
+      };
+
+      if (canonicalPatientId === '') {
+        const identity = window.mxmedIdentity || null;
+        if (identity && typeof identity.resolveCanonicalPatientId === 'function') {
+          const resolved = await waitWithTimeout(identity.resolveCanonicalPatientId(legacyPatientId), 400);
+          if (typeof resolved === 'string' && resolved.trim() !== '') {
+            canonicalPatientId = resolved.trim();
+            // Keep a soft cache on the patient object (best-effort, no contract change).
+            try { patientObj.canonical_patient_id = canonicalPatientId; } catch (_) {}
+          }
+        }
+      }
+
+      if (canonicalPatientId !== '') {
+        try {
+          const items = await listClinicalDocumentsGateway(canonicalPatientId, opts);
+          return { items };
+        } catch (_) {
+          // Gateway failed; keep legacy behavior for v1 compatibility.
+        }
+      }
+
+      const items = await listClinicalDocumentsLegacy(legacyPatientId, opts);
+      return { items };
+    };
+
+    const listEvolutionNotes = async (patient) => {
+      return listClinicalDocuments(patient, {
+        document_type: 'nota_evolucion',
+        limit: 30
+      });
+    };
+
+    const saveClinicalDocumentLegacy = async (args) => {
+      return fetchJson(`${legacyEndpoint}?action=save`, {
         method: 'POST',
         body: JSON.stringify(args || {})
       });
     };
 
+    const normalizeSavedDocumentResponse = (payload) => {
+      const document = payload?.data?.document ?? payload?.document ?? null;
+      if (!document || typeof document !== 'object') {
+        throw new Error('invalid save response');
+      }
+      return { document };
+    };
+
+    const saveClinicalDocument = async (args) => {
+      const requestArgs = (args && typeof args === 'object') ? args : {};
+      const context = (requestArgs.context && typeof requestArgs.context === 'object') ? requestArgs.context : {};
+      const legacyPatientId = String(context.patient_id ?? '').trim();
+      const canonicalPatientId = await resolveCanonicalPatientIdSafe(legacyPatientId).catch(() => null);
+
+      if (canonicalPatientId) {
+        const gatewayArgs = {
+          ...requestArgs,
+          context: {
+            ...context,
+            patient_id: canonicalPatientId,
+            legacy_patient_id: legacyPatientId || undefined
+          }
+        };
+
+        console.debug('SAVE gateway attempt', {
+          patient_id: canonicalPatientId,
+          legacy_patient_id: legacyPatientId || null,
+          source: 'app'
+        });
+
+        try {
+          const gatewayPayload = await fetchJson(gatewayDocumentsEndpoint, {
+            method: 'POST',
+            headers: { Accept: 'application/json' },
+            body: JSON.stringify(gatewayArgs)
+          });
+          const normalized = normalizeSavedDocumentResponse(gatewayPayload);
+          console.debug('SAVE gateway ok', {
+            patient_id: canonicalPatientId,
+            source: 'app'
+          });
+          return normalized;
+        } catch (_) {
+          console.debug('SAVE fallback legacy', {
+            reason: 'gateway_failed',
+            source: 'app'
+          });
+        }
+      } else {
+        console.debug('SAVE fallback legacy', {
+          reason: 'canonical_unavailable',
+          source: 'app'
+        });
+      }
+
+      const legacyPayload = await saveClinicalDocumentLegacy(requestArgs);
+      return normalizeSavedDocumentResponse(legacyPayload);
+    };
+
     const getClinicalDocument = async (id) => {
-      const url = `${endpoint}?action=get&id=${encodeURIComponent(id)}`;
+      const url = `${legacyEndpoint}?action=get&id=${encodeURIComponent(id)}`;
       return fetchJson(url, { method: 'GET', headers: {} });
     };
 
@@ -1349,6 +1528,44 @@ console.info('app.js loaded :: 20251123a');
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 
+  const getIdentityApi = () => window.mxmedIdentity || null;
+  const getCanonicalCache = () => {
+    if (!window.__mxmed_canonical_cache || typeof window.__mxmed_canonical_cache !== 'object') {
+      window.__mxmed_canonical_cache = {};
+    }
+    return window.__mxmed_canonical_cache;
+  };
+  const buildLegacyPatientId = (nombreCompleto, dob, sexoVal) => {
+    const identity = getIdentityApi();
+    if (identity && typeof identity.buildLegacyPatientId === 'function') {
+      return identity.buildLegacyPatientId(nombreCompleto, dob, sexoVal, normalize);
+    }
+    return normalize([nombreCompleto, dob, sexoVal].join('|')) || 'anon';
+  };
+  const resolveCanonicalPatientIdSafe = (legacyPatientId) => {
+    const legacy = String(legacyPatientId ?? '').trim();
+    if (!legacy || legacy === 'anon') return Promise.resolve(null);
+
+    const cache = getCanonicalCache();
+    if (Object.prototype.hasOwnProperty.call(cache, legacy)) {
+      return Promise.resolve(cache[legacy] || null);
+    }
+
+    const identity = getIdentityApi();
+    if (!identity || typeof identity.resolveCanonicalPatientId !== 'function') {
+      cache[legacy] = null;
+      return Promise.resolve(null);
+    }
+
+    return identity.resolveCanonicalPatientId(legacy).then((canonical) => {
+      cache[legacy] = canonical || null;
+      return cache[legacy];
+    }).catch(() => {
+      cache[legacy] = null;
+      return null;
+    });
+  };
+
   const safeText = (v, fallback = 'No registrado') => {
     const t = (v ?? '').toString().trim();
     return t ? t : fallback;
@@ -1367,9 +1584,17 @@ console.info('app.js loaded :: 20251123a');
     const mm = pane?.querySelector('[data-dg-mes]')?.value || '';
     const yy = pane?.querySelector('[data-dg-anio]')?.value || '';
     const dob = [yy, mm, dd].filter(Boolean).join('-');
-    const patientKey = normalize([nombreCompleto, dob, sexoVal].join('|')) || 'anon';
+    const patientKey = buildLegacyPatientId(nombreCompleto, dob, sexoVal);
+    const canonicalCache = getCanonicalCache();
+    const canonicalPatientId = Object.prototype.hasOwnProperty.call(canonicalCache, patientKey)
+      ? (canonicalCache[patientKey] || null)
+      : null;
+
+    resolveCanonicalPatientIdSafe(patientKey).catch(() => {});
+
     return {
       patient_id: patientKey,
+      canonical_patient_id: canonicalPatientId,
       nombre_completo: nombreCompleto,
       edad,
       sexo
@@ -1935,7 +2160,7 @@ console.info('app.js loaded :: 20251123a');
     }
 
     els.timeline.innerHTML = '<div class="text-muted small">Cargando…</div>';
-    api.listEvolutionNotes(patient.patient_id)
+    api.listEvolutionNotes(patient)
       .then(({ items }) => {
         api.mode = 'api';
         const list = Array.isArray(items) ? items : [];
@@ -2016,6 +2241,7 @@ console.info('app.js loaded :: 20251123a');
     const actor = getDoctor();
     const context = {
       patient_id: patient.patient_id,
+      canonical_patient_id: patient.canonical_patient_id || null,
       encounter_id: null,
       hospital_stay_id: null,
       care_setting: payload.ambito || 'consulta',
@@ -2189,6 +2415,7 @@ console.info('app.js loaded :: 20251123a');
   const pane = document.getElementById('p-expediente');
   if(!pane) return;
   const tabs = Array.from(pane.querySelectorAll('.mm-tabs-row .nav-link'));
+  const historialAtencionBtn = pane.querySelector('[data-action="open-historial-atencion"]');
   const tabsWrap = pane.querySelector('[data-exp-tabs]');
   if(!tabs.length) return;
 
@@ -2200,6 +2427,8 @@ console.info('app.js loaded :: 20251123a');
   const ginecoLink = pane.querySelector('[data-tab-key="t-gineco"]');
   const dayError = pane.querySelector('[data-dg-day-error]');
   const genderExtra = pane.querySelector('[data-gen-extra]');
+  const datosTabLink = pane.querySelector('[data-tab-key="t-datos"]');
+  const datosTabPane = pane.querySelector('#t-datos');
   let lastDayInvalid = false;
   const setGenderAttr = (genero)=>{
     if(genero){ pane.setAttribute('data-exp-gender', genero); }
@@ -2363,6 +2592,62 @@ console.info('app.js loaded :: 20251123a');
     computeAge();
   };
 
+  const normalizeToken = (str) => (str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+  const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '').trim());
+
+  const getCurrentPatientId = ()=>{
+    const explicit = String(pane.getAttribute('data-patient-id') || pane.dataset?.patientId || '').trim();
+    if(explicit) return explicit;
+
+    const nombre = pane.querySelector('[data-pac-nombre]')?.value?.trim() || '';
+    const apPat = pane.querySelector('[data-pac-apellido-paterno]')?.value?.trim() || '';
+    const apMat = pane.querySelector('[data-pac-apellido-materno]')?.value?.trim() || '';
+    const sexoVal = pane.querySelector('input[name="pac-genero"]:checked')?.value || '';
+    const dd = pane.querySelector('[data-dg-dia]')?.value || '';
+    const mm = pane.querySelector('[data-dg-mes]')?.value || '';
+    const yy = pane.querySelector('[data-dg-anio]')?.value || '';
+    const dob = [yy, mm, dd].filter(Boolean).join('-');
+    const base = [nombre, apPat, apMat].filter(Boolean).join(' ').trim();
+    const identity = window.mxmedIdentity || null;
+    if(identity && typeof identity.buildLegacyPatientId === 'function'){
+      try{
+        const built = String(identity.buildLegacyPatientId(base, dob, sexoVal, normalizeToken) || '').trim();
+        if(built) return built;
+      }catch(_){}
+    }
+    return normalizeToken([base, dob, sexoVal].join('|')) || '';
+  };
+
+  const openHistorialAtencion = async ()=>{
+    const originalId = String(getCurrentPatientId() || '').trim();
+    const lowerOriginalId = originalId.toLowerCase();
+    const invalidOriginalId = !originalId || lowerOriginalId === 'anon' || lowerOriginalId === 'anonymous' || originalId === '-' || originalId.length < 6;
+    if(invalidOriginalId){
+      window.alert('Primero selecciona o guarda un paciente para ver su historial de atención.');
+      return;
+    }
+
+    let finalId = originalId;
+    const shouldResolve = finalId.startsWith('p_') || !isUuidLike(finalId);
+    const identity = window.mxmedIdentity || null;
+    if(shouldResolve && identity && typeof identity.resolveCanonicalPatientId === 'function'){
+      try{
+        const resolved = await identity.resolveCanonicalPatientId(finalId);
+        if(typeof resolved === 'string' && resolved.trim()){
+          finalId = resolved.trim();
+        }
+      }catch(_){}
+    }
+
+    window.location.href = `/modules/clinical/ui/historial.php?patient_id=${encodeURIComponent(finalId)}`;
+  };
+
   const syncGineco = (genero, allowNavigate)=>{
     const show = genero === 'F';
     if(ginecoItem){ ginecoItem.classList.toggle('d-none', !show); }
@@ -2379,6 +2664,58 @@ console.info('app.js loaded :: 20251123a');
     }
   };
 
+  const getActivePatientId = ()=>{
+    const fromPane = String(pane.dataset?.patientId || pane.getAttribute('data-patient-id') || '').trim();
+    if(fromPane) return fromPane;
+
+    const fromPaneActive = String(pane.dataset?.activePatientId || pane.getAttribute('data-active-patient-id') || '').trim();
+    if(fromPaneActive) return fromPaneActive;
+
+    const fallback = [
+      window.mxmedActivePatientId,
+      window.__MXMED_ACTIVE_PATIENT_ID,
+      window.mxmedPatient && window.mxmedPatient.patient_id,
+      window.mxmedPatientContext && window.mxmedPatientContext.patient_id,
+      window.mxmedStore && (window.mxmedStore.activePatientId || window.mxmedStore.patient_id)
+    ];
+    for(const raw of fallback){
+      const value = String(raw || '').trim();
+      if(value) return value;
+    }
+    return '';
+  };
+
+  const applyPatientGate = ()=>{
+    const gateOn = String(getActivePatientId() || '').trim() !== '';
+    const panes = Array.from(pane.querySelectorAll('.tab-content .tab-pane'));
+    const nonDatosLinks = tabs.filter(btn => btn.getAttribute('data-tab-key') !== 't-datos');
+    const nonDatosPanes = panes.filter(p => p.id !== 't-datos');
+
+    if (!gateOn) {
+      nonDatosLinks.forEach(btn => btn.closest('.nav-item')?.classList.add('d-none'));
+      nonDatosPanes.forEach(p => {
+        p.classList.add('d-none');
+        p.classList.remove('show', 'active');
+      });
+      tabs.forEach(btn => btn.classList.remove('active'));
+      datosTabLink?.classList.add('active');
+      panes.forEach(p => p.classList.remove('show', 'active'));
+      if (datosTabPane) {
+        datosTabPane.classList.remove('d-none');
+        datosTabPane.classList.add('show', 'active');
+      }
+      return;
+    }
+
+    nonDatosLinks.forEach(btn => {
+      const item = btn.closest('.nav-item');
+      if (!item) return;
+      if (item.getAttribute('data-tab-conditional') === 'gineco') return;
+      item.classList.remove('d-none');
+    });
+    nonDatosPanes.forEach(p => p.classList.remove('d-none'));
+  };
+
   const syncState = (opts={})=>{
     const ready = basicsReady();
     tabs.forEach((btn)=>{
@@ -2388,6 +2725,7 @@ console.info('app.js loaded :: 20251123a');
     setGenderAttr(genero);
     syncGineco(genero, opts.allowNavigate);
     updateGenderExtra();
+    applyPatientGate();
     if(!ready){
       showFirstAvailable();
     }
@@ -2412,6 +2750,21 @@ console.info('app.js loaded :: 20251123a');
       }
     });
   });
+
+  historialAtencionBtn?.addEventListener('click', (ev)=>{
+    ev.preventDefault();
+    openHistorialAtencion();
+  });
+
+  if(!pane.__patientGateInit){
+    const handlePatientGateChange = ()=> syncState({ allowNavigate:true });
+    ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach((evtName)=>{
+      window.addEventListener(evtName, handlePatientGateChange);
+    });
+    const patientAttrObserver = new MutationObserver(handlePatientGateChange);
+    patientAttrObserver.observe(pane, { attributes:true, attributeFilter:['data-patient-id', 'data-active-patient-id'] });
+    pane.__patientGateInit = true;
+  }
 
   syncState();
   layoutTabs(false);
