@@ -1244,6 +1244,7 @@ if (!$embed) {
       }
       encounterDetailList.innerHTML = renderer(docsRaw, {
         embedLink: true,
+        returnTo: window.location.href,
         emptyHtml: '<div class="alert alert-secondary mb-0">Sin documentos en esta atención.</div>'
       });
     }

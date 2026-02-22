@@ -166,6 +166,7 @@ if (!$embed) {
     }
     el.innerHTML = renderer(docs, {
       embedLink: <?php echo $embed ? 'true' : 'false'; ?>,
+      returnTo: window.location.href,
       emptyHtml: '<div class="small text-secondary">Sin documentos</div>'
     });
   })();
