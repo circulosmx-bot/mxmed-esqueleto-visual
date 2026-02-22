@@ -131,3 +131,25 @@ CREATE TABLE IF NOT EXISTS clinical_case_items (
     ON UPDATE CASCADE
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
+-- Encounters clínicos v0: entidad central de atención (con o sin appointment_id)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS clinical_encounters (
+  encounter_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  patient_id VARCHAR(64) NOT NULL,
+  appointment_id VARCHAR(64) DEFAULT NULL,
+  encounter_dt DATETIME NOT NULL,
+  encounter_type VARCHAR(32) NOT NULL DEFAULT 'outpatient',
+  status VARCHAR(16) NOT NULL DEFAULT 'completed',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  KEY idx_patient_dt (patient_id, encounter_dt),
+  KEY idx_appt (appointment_id),
+  CONSTRAINT fk_encounters_patient_v0
+    FOREIGN KEY (patient_id)
+    REFERENCES patients_patients (patient_id)
+    ON UPDATE CASCADE
+    ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
