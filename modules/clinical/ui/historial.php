@@ -1243,12 +1243,17 @@ if (!$embed) {
         var title = String(doc.title || '');
         var summary = String(doc.summary || '-');
         var dt = String(doc.event_datetime || '-');
+        var docUuid = String(doc.document_uuid || '').trim();
+        var openHref = docUuid ? ('/modules/clinical/ui/document.php?uuid=' + encodeURIComponent(docUuid) + '&embed=1') : '';
         var header = title ? (type + ' · ' + title) : type;
         return ''
           + '<div class="border rounded p-2">'
           + '  <div class="small"><strong>' + header.replace(/[&<>"]/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]); }) + '</strong></div>'
           + '  <div class="small text-secondary">' + dt.replace(/[&<>"]/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]); }) + '</div>'
           + '  <div class="small">' + summary.replace(/[&<>"]/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]); }) + '</div>'
+          + (openHref
+              ? '  <div class="mt-2"><a class="btn btn-sm btn-outline-primary" href="' + openHref.replace(/[&<>"]/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]); }) + '">Abrir documento</a></div>'
+              : '')
           + '</div>';
       }).join('');
       encounterDetailList.innerHTML = html;
