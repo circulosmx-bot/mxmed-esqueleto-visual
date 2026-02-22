@@ -14,6 +14,16 @@
     return Number.isFinite(t) ? t : null;
   }
 
+  function getBadgeClass(type) {
+    var t = String(type == null ? '' : type).trim().toLowerCase();
+    if (t === 'prescription' || t === 'rx') return 'text-bg-primary';
+    if (t === 'vitals') return 'text-bg-info';
+    if (t === 'lab') return 'text-bg-warning';
+    if (t === 'imaging') return 'text-bg-dark';
+    if (t === 'note') return 'text-bg-secondary';
+    return 'text-bg-secondary';
+  }
+
   window.MXMed.renderClinicalDocuments = function (docs, opts) {
     opts = opts || {};
     var list = Array.isArray(docs) ? docs.slice() : [];
@@ -27,12 +37,17 @@
     });
 
     if (list.length === 0) {
-      return typeof opts.emptyHtml === 'string' ? opts.emptyHtml : '';
+      if (typeof opts.emptyHtml === 'string') {
+        return opts.emptyHtml;
+      }
+      return ''
+        + '<div class="border rounded p-3 bg-light">'
+        + '  <div class="small text-secondary">Sin documentos</div>'
+        + '</div>';
     }
 
     var embedLink = opts.embedLink !== false;
-
-    return list.map(function (doc) {
+    var bodyHtml = list.map(function (doc) {
       var type = String((doc && (doc.document_type || doc.type)) || '-');
       var title = String((doc && doc.title) || '');
       var summary = String((doc && doc.summary) || '-');
@@ -40,13 +55,14 @@
       var uuid = String((doc && (doc.document_uuid || doc.document_id)) || '').trim();
       var header = title ? (type + ' · ' + title) : type;
       var href = '';
+      var badgeClass = getBadgeClass(type);
       if (uuid) {
         href = '/modules/clinical/ui/document.php?uuid=' + encodeURIComponent(uuid) + (embedLink ? '&embed=1' : '');
       }
 
       return ''
         + '<div class="border rounded p-2">'
-        + '  <div class="mb-1"><span class="badge text-bg-secondary">' + esc(type) + '</span></div>'
+        + '  <div class="mb-1"><span class="badge ' + esc(badgeClass) + '">' + esc(type) + '</span></div>'
         + '  <div class="small"><strong>' + esc(header) + '</strong></div>'
         + '  <div class="small text-secondary">' + esc(dt) + '</div>'
         + '  <div class="small">' + esc(summary) + '</div>'
@@ -55,5 +71,11 @@
           : '')
         + '</div>';
     }).join('');
+
+    return ''
+      + '<div class="d-flex justify-content-between align-items-center mb-2">'
+      + '  <div class="small text-secondary">Documentos (' + String(list.length) + ')</div>'
+      + '</div>'
+      + bodyHtml;
   };
 })(window);
