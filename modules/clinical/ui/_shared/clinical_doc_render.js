@@ -47,6 +47,7 @@
     }
 
     var embedLink = opts.embedLink !== false;
+    var returnTo = (typeof opts.returnTo === 'string' ? opts.returnTo : '').trim();
     var bodyHtml = list.map(function (doc) {
       var type = String((doc && (doc.document_type || doc.type)) || '-');
       var title = String((doc && doc.title) || '');
@@ -58,6 +59,9 @@
       var badgeClass = getBadgeClass(type);
       if (uuid) {
         href = '/modules/clinical/ui/document.php?uuid=' + encodeURIComponent(uuid) + (embedLink ? '&embed=1' : '');
+        if (returnTo) {
+          href += '&return_to=' + encodeURIComponent(returnTo);
+        }
       }
 
       return ''

@@ -28,6 +28,55 @@ function h(string $value): string {
   return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+function validate_return_to(string $value): ?string {
+  $value = trim($value);
+  if ($value === '') {
+    return null;
+  }
+
+  if ($value[0] === '/') {
+    return (strpos($value, '//') === 0) ? null : $value;
+  }
+
+  if (!preg_match('/^https?:\/\//i', $value)) {
+    return null;
+  }
+
+  $parts = parse_url($value);
+  if (!is_array($parts)) {
+    return null;
+  }
+
+  $urlPath = (string)($parts['path'] ?? '');
+  if ($urlPath !== '' && strpos($urlPath, '/modules/clinical/ui/') === 0) {
+    return $value;
+  }
+
+  $host = strtolower((string)($parts['host'] ?? ''));
+  $scheme = strtolower((string)($parts['scheme'] ?? ''));
+  $port = isset($parts['port']) ? (int)$parts['port'] : null;
+
+  $currentHostRaw = (string)($_SERVER['HTTP_HOST'] ?? '');
+  $currentHostParts = parse_url('http://' . $currentHostRaw);
+  $currentHost = strtolower((string)($currentHostParts['host'] ?? ''));
+  $currentPort = isset($currentHostParts['port']) ? (int)$currentHostParts['port'] : null;
+  $currentScheme = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http';
+
+  if ($host === '' || $currentHost === '') {
+    return null;
+  }
+
+  if ($host !== $currentHost || $scheme !== $currentScheme) {
+    return null;
+  }
+
+  if (($port ?? ($scheme === 'https' ? 443 : 80)) !== ($currentPort ?? ($currentScheme === 'https' ? 443 : 80))) {
+    return null;
+  }
+
+  return $value;
+}
+
 function render_embed_css(bool $embed): void {
   if (!$embed) {
     return;
@@ -61,6 +110,8 @@ function http_get_json(string $url, int $timeoutSeconds = 8): array {
 }
 
 $uuid = trim((string)($_GET['uuid'] ?? ''));
+$returnTo = validate_return_to((string)($_GET['return_to'] ?? ''));
+$backHref = $returnTo ?? 'javascript:history.back()';
 $errorMessage = '';
 $document = null;
 
@@ -107,7 +158,7 @@ if (!$embed) {
         <div class="text-secondary small"><?php echo h($title); ?></div>
       <?php endif; ?>
     </div>
-    <a class="btn btn-outline-secondary btn-sm" href="javascript:history.back()">Volver</a>
+    <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($backHref); ?>">Volver</a>
   </div>
 
   <p class="text-secondary mb-3">uuid: <code><?php echo h($uuid !== '' ? $uuid : '-'); ?></code></p>
