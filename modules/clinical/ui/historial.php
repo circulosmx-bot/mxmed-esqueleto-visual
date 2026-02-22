@@ -1006,6 +1006,12 @@ if (!$embed) {
     if (encounterDetailModalEl && window.bootstrap && window.bootstrap.Modal) {
       encounterDetailModalInstance = window.bootstrap.Modal.getOrCreateInstance(encounterDetailModalEl);
     }
+    var debugMode = false;
+    try {
+      debugMode = new URLSearchParams(window.location.search || '').get('debug') === '1';
+    } catch (_) {
+      debugMode = false;
+    }
     var recentCandidates = [];
     var recentSuggestStorageKey = 'mxmed_historial_snooze_suggest:' + String(patientId || '');
     try {
@@ -1237,8 +1243,15 @@ if (!$embed) {
     }
 
     async function openEncounterDetail(encounterKey) {
-      if (!encounterKey || !encounterDetailModalInstance) return;
-      encounterDetailModalInstance.show();
+      if (!encounterKey) return;
+      if (encounterDetailModalInstance) {
+        encounterDetailModalInstance.show();
+      } else if (encounterDetailModalEl) {
+        // Fallback when Bootstrap JS is not available in embed host.
+        encounterDetailModalEl.style.display = 'block';
+        encounterDetailModalEl.classList.add('show');
+        encounterDetailModalEl.removeAttribute('aria-hidden');
+      }
       if (encounterDetailLoading) encounterDetailLoading.classList.remove('d-none');
       if (encounterDetailError) encounterDetailError.classList.add('d-none');
       if (encounterDetailMeta) {
@@ -1250,6 +1263,9 @@ if (!$embed) {
       }
       try {
         var url = apiBase + '/api/clinical/index.php/encounters/' + encodeURIComponent(String(encounterKey));
+        if (debugMode && window.console && typeof window.console.log === 'function') {
+          window.console.log('[encounter detail] key=', encounterKey, 'url=', url);
+        }
         var payload = await apiJson(url, { method: 'GET' });
         renderEncounterDetail(payload);
       } catch (_) {
@@ -1406,7 +1422,7 @@ if (!$embed) {
 
       event.preventDefault();
       window.parent.postMessage(payload, '*');
-    });
+    }, true);
 
     if (patientId) {
       loadActiveCase(patientId).catch(function () {});
