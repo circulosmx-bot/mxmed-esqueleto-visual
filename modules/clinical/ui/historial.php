@@ -1212,7 +1212,9 @@ if (!$embed) {
     }
 
     function renderEncounterDetail(payload) {
-      var data = payload && payload.data ? payload.data : {};
+      var data = payload && typeof payload === 'object'
+        ? (payload.data && typeof payload.data === 'object' ? payload.data : payload)
+        : {};
       if (encounterDetailMeta) {
         var metaParts = [];
         metaParts.push('Atención: ' + String(data.encounter_key || '-'));
@@ -1277,7 +1279,7 @@ if (!$embed) {
         if (!payload || payload.ok !== true) {
           throw new Error((payload && payload.message) ? String(payload.message) : 'No se pudo cargar detalle');
         }
-        renderEncounterDetail(payload);
+        renderEncounterDetail((payload && payload.data) ? payload.data : payload);
       } catch (_) {
         if (encounterDetailError) encounterDetailError.classList.remove('d-none');
       } finally {
