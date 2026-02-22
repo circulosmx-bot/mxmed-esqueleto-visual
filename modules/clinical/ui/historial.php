@@ -1264,9 +1264,19 @@ if (!$embed) {
       try {
         var url = apiBase + '/api/clinical/index.php/encounters/' + encodeURIComponent(String(encounterKey));
         if (debugMode && window.console && typeof window.console.log === 'function') {
-          window.console.log('[encounter detail] key=', encounterKey, 'url=', url);
+          window.console.log('[encounter detail] fetching', url);
         }
-        var payload = await apiJson(url, { method: 'GET' });
+        var resp = await fetch(url, { method: 'GET', credentials: 'include' });
+        if (debugMode && window.console && typeof window.console.log === 'function') {
+          window.console.log('[encounter detail] status', resp.status);
+        }
+        if (!resp.ok) {
+          throw new Error('HTTP ' + resp.status);
+        }
+        var payload = await resp.json();
+        if (!payload || payload.ok !== true) {
+          throw new Error((payload && payload.message) ? String(payload.message) : 'No se pudo cargar detalle');
+        }
         renderEncounterDetail(payload);
       } catch (_) {
         if (encounterDetailError) encounterDetailError.classList.remove('d-none');
