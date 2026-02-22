@@ -95,6 +95,49 @@ if (!$embed) {
     clinical_embed_start();
 }
 ?>
+<style>
+  [data-role="doc-overlay"]{
+    position: fixed;
+    inset: 0;
+    z-index: 1060;
+  }
+  [data-role="doc-overlay"][hidden]{
+    display: none !important;
+  }
+  [data-role="doc-overlay-backdrop"]{
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+  }
+  [data-role="doc-overlay-panel"]{
+    position: relative;
+    width: min(1200px, calc(100vw - 2rem));
+    height: 90vh;
+    margin: 5vh auto;
+    background: #fff;
+    border-radius: .75rem;
+    border: 1px solid rgba(0,0,0,.08);
+    box-shadow: 0 20px 40px rgba(0,0,0,.25);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  [data-role="doc-overlay-head"]{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .65rem .85rem;
+    border-bottom: 1px solid rgba(0,0,0,.1);
+  }
+  [data-role="doc-overlay-iframe"]{
+    width: 100%;
+    height: 100%;
+    border: 0;
+    flex: 1 1 auto;
+    background: #fff;
+  }
+</style>
 <div class="<?php echo $embed ? 'py-1' : 'container py-4'; ?>">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h4 mb-0">Atención clínica</h1>
@@ -151,11 +194,39 @@ if (!$embed) {
     </div>
   <?php endif; ?>
 </div>
+<div data-role="doc-overlay" hidden aria-hidden="true">
+  <div data-role="doc-overlay-backdrop"></div>
+  <div data-role="doc-overlay-panel" role="dialog" aria-modal="true" aria-label="Documento">
+    <div data-role="doc-overlay-head">
+      <strong>Documento</strong>
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-role="doc-overlay-close">Cerrar</button>
+    </div>
+    <iframe data-role="doc-overlay-iframe" src="about:blank" loading="lazy"></iframe>
+  </div>
+</div>
 <script src="/modules/clinical/ui/_shared/clinical_doc_render.js"></script>
 <script>
   (function () {
+    var isEmbed = <?php echo $embed ? 'true' : 'false'; ?>;
     var el = document.getElementById('encounterDocumentsList');
     if (!el) return;
+    var docOverlayEl = document.querySelector('[data-role="doc-overlay"]');
+    var docOverlayIframe = document.querySelector('[data-role="doc-overlay-iframe"]');
+
+    function openDocOverlay(url) {
+      if (!docOverlayEl || !docOverlayIframe || !url) return;
+      docOverlayIframe.src = url;
+      docOverlayEl.hidden = false;
+      docOverlayEl.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeDocOverlay() {
+      if (!docOverlayEl || !docOverlayIframe) return;
+      docOverlayIframe.src = 'about:blank';
+      docOverlayEl.hidden = true;
+      docOverlayEl.setAttribute('aria-hidden', 'true');
+    }
+
     var docs = <?php echo $documentsJson; ?>;
     var renderer = window.MXMed && typeof window.MXMed.renderClinicalDocuments === 'function'
       ? window.MXMed.renderClinicalDocuments
@@ -167,7 +238,32 @@ if (!$embed) {
     el.innerHTML = renderer(docs, {
       embedLink: <?php echo $embed ? 'true' : 'false'; ?>,
       returnTo: window.location.href,
+      openInOverlay: isEmbed,
       emptyHtml: '<div class="small text-secondary">Sin documentos</div>'
+    });
+
+    document.addEventListener('click', function (event) {
+      var openLink = event.target && event.target.closest ? event.target.closest('a[data-role="open-doc-overlay"]') : null;
+      if (openLink && isEmbed) {
+        var href = String(openLink.getAttribute('href') || '').trim();
+        if (!href) return;
+        event.preventDefault();
+        openDocOverlay(href);
+        return;
+      }
+
+      var closeBtn = event.target && event.target.closest ? event.target.closest('[data-role="doc-overlay-close"], [data-role="doc-overlay-backdrop"]') : null;
+      if (closeBtn) {
+        event.preventDefault();
+        closeDocOverlay();
+      }
+    }, true);
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') return;
+      if (docOverlayEl && !docOverlayEl.hidden) {
+        closeDocOverlay();
+      }
     });
   })();
 </script>
