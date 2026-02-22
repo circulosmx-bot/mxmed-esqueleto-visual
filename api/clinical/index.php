@@ -187,6 +187,11 @@ function clinical_is_local_or_dev(): bool
     return clinical_is_local_host() || clinical_build_tag() === 'dev';
 }
 
+function clinical_debug_enabled(): bool
+{
+    return trim((string)getenv('MXMED_DEBUG')) === '1';
+}
+
 function clinical_ensure_identity_bridge_schema(PDO $pdo): void
 {
     $pdo->exec("
@@ -506,6 +511,40 @@ function clinical_documents_save_passthrough(PDO $pdo, array $args): array
 
     $doc['document_db_id'] = $docId;
     return $doc;
+}
+
+function clinical_generate_document_uuid(): string
+{
+    try {
+        $bytes = random_bytes(16);
+        $hex = bin2hex($bytes);
+        return substr($hex, 0, 8) . '-' .
+            substr($hex, 8, 4) . '-' .
+            substr($hex, 12, 4) . '-' .
+            substr($hex, 16, 4) . '-' .
+            substr($hex, 20, 12);
+    } catch (Throwable $e) {
+        return 'dbg-' . str_replace('.', '', (string)microtime(true)) . '-' . substr(md5((string)mt_rand()), 0, 12);
+    }
+}
+
+function clinical_table_columns(PDO $pdo, string $tableName): array
+{
+    $stmt = $pdo->prepare('SHOW COLUMNS FROM `' . str_replace('`', '', $tableName) . '`');
+    $stmt->execute();
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if (!is_array($rows)) {
+        return [];
+    }
+
+    $cols = [];
+    foreach ($rows as $row) {
+        $name = trim((string)($row['Field'] ?? ''));
+        if ($name !== '') {
+            $cols[$name] = true;
+        }
+    }
+    return $cols;
 }
 
 function clinical_parse_include_csv(?string $raw): array
@@ -1974,6 +2013,165 @@ try {
             ],
             'meta' => $meta,
         ], 200);
+        return;
+    }
+
+    if ($route === 'debug/seed_document') {
+        if ($method !== 'POST' || !clinical_debug_enabled()) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'not_found',
+                'message' => 'route not found',
+                'data' => null,
+                'meta' => ['method' => $method, 'route' => $route],
+            ], 404);
+            return;
+        }
+
+        $body = clinical_read_json_body();
+        if (($body['ok'] ?? false) !== true) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => (string)($body['error'] ?? 'invalid body')],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'debug/seed_document'],
+            ], 400);
+            return;
+        }
+
+        $payload = is_array($body['data'] ?? null) ? $body['data'] : [];
+        $patientId = trim((string)($payload['patient_id'] ?? ''));
+        $appointmentId = trim((string)($payload['appointment_id'] ?? ''));
+        $documentType = strtolower(trim((string)($payload['document_type'] ?? '')));
+        $eventDatetime = trim((string)($payload['event_datetime'] ?? ''));
+        $summary = trim((string)($payload['summary'] ?? ''));
+        $contentPayload = $payload['payload'] ?? [];
+        if (!is_array($contentPayload)) {
+            $contentPayload = [];
+        }
+
+        if ($patientId === '' || $documentType === '') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => 'patient_id y document_type requeridos'],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'debug/seed_document'],
+            ], 400);
+            return;
+        }
+        if ($eventDatetime === '') {
+            $eventDatetime = gmdate('Y-m-d H:i:s');
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/', $eventDatetime) !== 1) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => 'event_datetime inválido (YYYY-MM-DD HH:MM:SS)'],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'debug/seed_document'],
+            ], 400);
+            return;
+        }
+        if ($summary === '') {
+            $summary = 'Documento demo seeded';
+        }
+        if (mb_strlen($summary) > 500) {
+            $summary = mb_substr($summary, 0, 500);
+        }
+
+        try {
+            $pdo = clinical_documents_pdo();
+            $cols = clinical_table_columns($pdo, 'clinical_documents');
+            if ($cols === []) {
+                throw new RuntimeException('no se pudieron leer columnas de clinical_documents');
+            }
+
+            $documentUuid = clinical_generate_document_uuid();
+            $now = gmdate('Y-m-d H:i:s');
+            $payloadJson = json_encode($contentPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if (!is_string($payloadJson)) {
+                $payloadJson = '{}';
+            }
+
+            $values = [
+                'document_uuid' => $documentUuid,
+                'document_type' => $documentType,
+                'title' => 'Seed ' . $documentType,
+                'version' => 1,
+                'status' => 'signed',
+                'patient_id' => $patientId,
+                'encounter_id' => null,
+                'hospital_stay_id' => null,
+                'care_setting' => 'consulta',
+                'service' => null,
+                'payload_json' => $payloadJson,
+                'rendered_text' => null,
+                'summary' => $summary,
+                'edited_flag' => 0,
+                'event_datetime' => $eventDatetime,
+                'widget_group' => 'timeline',
+                'printable' => 1,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'generated_at' => $now,
+                'signed_at' => $now,
+                'created_by_user_id' => 'debug',
+                'updated_by_user_id' => 'debug',
+                'appointment_id' => ($appointmentId !== '' ? $appointmentId : null),
+            ];
+
+            $insertCols = [];
+            $placeholders = [];
+            $params = [];
+            foreach ($values as $col => $val) {
+                if (!isset($cols[$col])) {
+                    continue;
+                }
+                $insertCols[] = '`' . $col . '`';
+                $ph = ':c_' . $col;
+                $placeholders[] = $ph;
+                $params[$ph] = $val;
+            }
+            if ($insertCols === []) {
+                throw new RuntimeException('clinical_documents sin columnas compatibles para seed');
+            }
+
+            $sql = 'INSERT INTO clinical_documents (' . implode(', ', $insertCols) . ') VALUES (' . implode(', ', $placeholders) . ')';
+            $stmt = $pdo->prepare($sql);
+            foreach ($params as $ph => $val) {
+                if ($val === null) {
+                    $stmt->bindValue($ph, null, PDO::PARAM_NULL);
+                } else {
+                    $stmt->bindValue($ph, (string)$val, PDO::PARAM_STR);
+                }
+            }
+            $stmt->execute();
+        } catch (Throwable $e) {
+            $msg = trim((string)$e->getMessage());
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'server_error', 'message' => ($msg !== '' ? $msg : 'server error')],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'debug/seed_document'],
+            ], 500);
+            return;
+        }
+
+        clinical_send_response([
+            'ok' => true,
+            'error' => null,
+            'message' => 'seed document created',
+            'data' => [
+                'document_uuid' => $documentUuid,
+                'document_type' => $documentType,
+                'event_datetime' => $eventDatetime,
+                'summary' => $summary,
+            ],
+            'meta' => ['method' => 'POST', 'route' => 'debug/seed_document'],
+        ], 201);
         return;
     }
 
