@@ -187,6 +187,56 @@ function clinical_is_local_or_dev(): bool
     return clinical_is_local_host() || clinical_build_tag() === 'dev';
 }
 
+function clinical_cors_allowed_origin(?string $origin): ?string
+{
+    $origin = trim((string)$origin);
+    if ($origin === '') {
+        return null;
+    }
+
+    $allowlist = [
+        'http://127.0.0.1:8092',
+        'http://localhost:8092',
+    ];
+    if (in_array($origin, $allowlist, true)) {
+        return $origin;
+    }
+
+    if (!clinical_is_local_or_dev()) {
+        return null;
+    }
+
+    $parts = parse_url($origin);
+    if (!is_array($parts)) {
+        return null;
+    }
+    $scheme = strtolower((string)($parts['scheme'] ?? ''));
+    $host = strtolower((string)($parts['host'] ?? ''));
+    $port = (int)($parts['port'] ?? 0);
+    if ($scheme !== 'http' && $scheme !== 'https') {
+        return null;
+    }
+    if (($host !== '127.0.0.1' && $host !== 'localhost') || $port <= 0) {
+        return null;
+    }
+    return $origin;
+}
+
+function clinical_apply_cors_headers(?string $origin): void
+{
+    $allowedOrigin = clinical_cors_allowed_origin($origin);
+    if ($allowedOrigin === null) {
+        return;
+    }
+
+    header('Access-Control-Allow-Origin: ' . $allowedOrigin);
+    header('Vary: Origin');
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Accept, Authorization, X-Requested-With');
+    header('Access-Control-Max-Age: 600');
+}
+
 function clinical_debug_enabled(): bool
 {
     return trim((string)getenv('MXMED_DEBUG')) === '1';
@@ -1291,6 +1341,13 @@ set_error_handler(static function ($severity, $message, $file, $line): void {
 
 try {
     $method = (string)($_SERVER['REQUEST_METHOD'] ?? 'GET');
+    $origin = (string)($_SERVER['HTTP_ORIGIN'] ?? '');
+    clinical_apply_cors_headers($origin);
+    if ($method === 'OPTIONS') {
+        http_response_code(204);
+        exit;
+    }
+
     $segments = clinical_route_segments();
     $route = implode('/', $segments);
     $isTimelineRoute = ($method === 'GET'

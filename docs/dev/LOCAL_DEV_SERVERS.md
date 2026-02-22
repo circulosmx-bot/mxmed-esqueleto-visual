@@ -60,6 +60,16 @@ tail -n 100 /tmp/mxmed-8091.log
 tail -n 100 /tmp/mxmed-8092.log
 ```
 
+## CORS local (embed)
+Para validar CORS entre UI `8092` y API `8091`:
+
+```bash
+curl -i -X OPTIONS "http://127.0.0.1:8091/api/clinical/index.php/patients/demo/timeline?include=agenda,clinical" -H "Origin: http://127.0.0.1:8092" -H "Access-Control-Request-Method: GET" -H "Access-Control-Request-Headers: Content-Type"
+curl -i "http://127.0.0.1:8091/api/clinical/index.php/patients/demo/cases/active" -H "Origin: http://127.0.0.1:8092"
+```
+
+Debes ver `Access-Control-Allow-Origin: http://127.0.0.1:8092` y `Vary: Origin`.
+
 ## Nota
 El override `MXMED_API_BASE` ya existe en:
 - `modules/clinical/ui/document.php`
