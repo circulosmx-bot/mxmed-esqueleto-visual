@@ -390,15 +390,43 @@ function clinical_documents_get_by_uuid_fetch(PDO $pdo, string $uuid): ?array
     return clinical_documents_get_fetch($pdo, $id);
 }
 
-function clinical_encounter_documents_fetch(PDO $pdo, string $appointmentId): array
+function clinical_encounter_documents_direct_fetch(PDO $pdo, string $patientId, int $encounterId, string $orderDir = 'ASC'): array
 {
+    if ($encounterId <= 0 || $patientId === '') {
+        return [];
+    }
+    $dir = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
     $stmt = $pdo->prepare("
-        SELECT document_uuid, document_type, event_datetime, summary, patient_id, appointment_id, hospital_stay_id
+        SELECT document_uuid, document_type, title, event_datetime, summary, patient_id, appointment_id, hospital_stay_id
         FROM clinical_documents
-        WHERE appointment_id = :appointment_id
-        ORDER BY event_datetime ASC, document_uuid ASC
+        WHERE patient_id = :patient_id
+          AND encounter_id = :encounter_id
+        ORDER BY event_datetime {$dir}, document_uuid {$dir}
     ");
-    $stmt->execute([':appointment_id' => $appointmentId]);
+    $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+    $stmt->bindValue(':encounter_id', (string)$encounterId, PDO::PARAM_STR);
+    $stmt->execute();
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    return is_array($rows) ? $rows : [];
+}
+
+function clinical_encounter_documents_legacy_by_appointment_fetch(PDO $pdo, string $patientId, string $appointmentId, string $orderDir = 'ASC'): array
+{
+    if ($appointmentId === '' || $patientId === '') {
+        return [];
+    }
+    $dir = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
+    $stmt = $pdo->prepare("
+        SELECT document_uuid, document_type, title, event_datetime, summary, patient_id, appointment_id, hospital_stay_id
+        FROM clinical_documents
+        WHERE patient_id = :patient_id
+          AND appointment_id = :appointment_id
+          AND (encounter_id IS NULL OR TRIM(encounter_id) = '')
+        ORDER BY event_datetime {$dir}, document_uuid {$dir}
+    ");
+    $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+    $stmt->bindValue(':appointment_id', $appointmentId, PDO::PARAM_STR);
+    $stmt->execute();
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     return is_array($rows) ? $rows : [];
 }
@@ -690,21 +718,23 @@ function clinical_timeline_encounters_fetch(PDO $pdo, string $patientId, int $li
     return is_array($rows) ? $rows : [];
 }
 
-function clinical_timeline_encounter_documents_fetch(PDO $pdo, string $patientId, string $appointmentId): array
-{
-    $sql = "
-        SELECT document_uuid, document_type, event_datetime, summary
-        FROM clinical_documents
-        WHERE patient_id = :patient_id AND appointment_id = :appointment_id
-        ORDER BY event_datetime ASC, document_uuid ASC
-    ";
+function clinical_timeline_encounter_documents_fetch(
+    PDO $pdo,
+    string $patientId,
+    int $encounterId,
+    string $appointmentId,
+    bool $isLatestByAppointment
+): array {
+    $direct = clinical_encounter_documents_direct_fetch($pdo, $patientId, $encounterId, 'ASC');
+    if ($direct !== []) {
+        return $direct;
+    }
 
-    $stmt = $pdo->prepare($sql);
-    $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
-    $stmt->bindValue(':appointment_id', $appointmentId, PDO::PARAM_STR);
-    $stmt->execute();
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    return is_array($rows) ? $rows : [];
+    if ($isLatestByAppointment && $appointmentId !== '') {
+        return clinical_encounter_documents_legacy_by_appointment_fetch($pdo, $patientId, $appointmentId, 'ASC');
+    }
+
+    return [];
 }
 
 function clinical_timeline_encounter_flags(array $documents): array
@@ -1344,6 +1374,17 @@ try {
             $appointmentItems = [];
             $documentItems = [];
             $encounterAppointmentMap = [];
+            $latestEncounterIdByAppointment = [];
+
+            if ($includeClinical) {
+                foreach ($encounters as $encounter) {
+                    $appt = trim((string)($encounter['appointment_id'] ?? ''));
+                    $eid = (int)($encounter['encounter_id'] ?? 0);
+                    if ($appt !== '' && $eid > 0 && !isset($latestEncounterIdByAppointment[$appt])) {
+                        $latestEncounterIdByAppointment[$appt] = $eid;
+                    }
+                }
+            }
 
             if ($includeClinical) {
                 foreach ($encounters as $encounter) {
@@ -1360,10 +1401,15 @@ try {
                         $encounterAppointmentMap[$appointmentId] = true;
                     }
 
-                    $encounterDocs = [];
-                    if ($appointmentId !== '') {
-                        $encounterDocs = clinical_timeline_encounter_documents_fetch($pdo, $patientId, $appointmentId);
-                    }
+                    $isLatestByAppointment = ($appointmentId !== ''
+                        && ((int)($latestEncounterIdByAppointment[$appointmentId] ?? 0) === $encounterId));
+                    $encounterDocs = clinical_timeline_encounter_documents_fetch(
+                        $pdo,
+                        $patientId,
+                        $encounterId,
+                        $appointmentId,
+                        $isLatestByAppointment
+                    );
                     $docItems = [];
                     foreach ($encounterDocs as $docRow) {
                         $docItems[] = [
@@ -2765,8 +2811,8 @@ try {
         }
 
         $encounterKey = urldecode(trim((string)$segments[1]));
-        if ($encounterKey === '') {
-            clinical_send_response([
+            if ($encounterKey === '') {
+                clinical_send_response([
                 'ok' => false,
                 'error' => 'bad_request',
                 'message' => 'encounter_key requerido',
@@ -2918,8 +2964,13 @@ try {
             $patientId = trim((string)($encounterRow['patient_id'] ?? ''));
             $eventDatetime = trim((string)($encounterRow['encounter_dt'] ?? ''));
             $responseEncounterKey = clinical_encounter_key($encounterId, $appointmentId);
-            if ($appointmentId !== '') {
-                $rows = clinical_encounter_documents_fetch($pdo, $appointmentId);
+            $rows = clinical_encounter_documents_direct_fetch($pdo, $patientId, $encounterId, 'DESC');
+            if ($rows === [] && $appointmentId !== '') {
+                $latestForAppt = clinical_encounter_get_latest_by_appointment($pdo, $appointmentId);
+                $isLatestForAppt = ((int)($latestForAppt['encounter_id'] ?? 0) === $encounterId);
+                if ($isLatestForAppt) {
+                    $rows = clinical_encounter_documents_legacy_by_appointment_fetch($pdo, $patientId, $appointmentId, 'DESC');
+                }
             }
         } catch (Throwable $e) {
             $msg = trim((string)$e->getMessage());
@@ -2941,6 +2992,7 @@ try {
             $documents[] = [
                 'document_uuid' => (string)($row['document_uuid'] ?? ''),
                 'document_type' => (string)($row['document_type'] ?? ''),
+                'title' => (string)($row['title'] ?? ''),
                 'event_datetime' => (string)($row['event_datetime'] ?? ''),
                 'summary' => (string)($row['summary'] ?? ''),
                 'hospital_stay_id' => $row['hospital_stay_id'] ?? null,
