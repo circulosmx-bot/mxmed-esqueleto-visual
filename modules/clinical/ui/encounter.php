@@ -79,6 +79,10 @@ $documents = is_array($encounter['documents'] ?? null) ? $encounter['documents']
 $prescriptions = is_array($encounter['prescriptions'] ?? null) ? $encounter['prescriptions'] : [];
 $orders = is_array($encounter['orders'] ?? null) ? $encounter['orders'] : [];
 $results = is_array($encounter['results'] ?? null) ? $encounter['results'] : [];
+$documentsJson = json_encode($documents, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+if (!is_string($documentsJson)) {
+    $documentsJson = '[]';
+}
 require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
 
@@ -120,26 +124,9 @@ if (!$embed) {
 
     <div class="mm-card mb-3">
       <div class="head"><h5>Documentos</h5></div>
-      <ul class="list-group list-group-flush">
-        <?php if ($documents === []): ?>
-          <li class="list-group-item text-secondary">Sin documentos</li>
-        <?php else: ?>
-          <?php foreach ($documents as $doc): ?>
-            <?php
-              $docUuid = trim((string)($doc['document_uuid'] ?? $doc['document_id'] ?? ''));
-              $docType = (string)($doc['document_type'] ?? '-');
-              $docDate = (string)($doc['event_datetime'] ?? $doc['ui']['event_datetime'] ?? $doc['timestamps']['created_at'] ?? '-');
-            ?>
-            <li class="list-group-item small">
-              <strong><?php echo h($docType); ?></strong>
-              · <?php echo h($docDate); ?>
-              <?php if ($docUuid !== ''): ?>
-                · <a href="/modules/clinical/ui/document.php?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>">Ver documento</a>
-              <?php endif; ?>
-            </li>
-          <?php endforeach; ?>
-        <?php endif; ?>
-      </ul>
+      <div class="body">
+        <div id="encounterDocumentsList" class="vstack gap-2"></div>
+      </div>
     </div>
 
     <div class="row g-3">
@@ -164,6 +151,25 @@ if (!$embed) {
     </div>
   <?php endif; ?>
 </div>
+<script src="/modules/clinical/ui/_shared/clinical_doc_render.js"></script>
+<script>
+  (function () {
+    var el = document.getElementById('encounterDocumentsList');
+    if (!el) return;
+    var docs = <?php echo $documentsJson; ?>;
+    var renderer = window.MXMed && typeof window.MXMed.renderClinicalDocuments === 'function'
+      ? window.MXMed.renderClinicalDocuments
+      : null;
+    if (!renderer) {
+      el.innerHTML = '<div class="small text-secondary">Sin documentos</div>';
+      return;
+    }
+    el.innerHTML = renderer(docs, {
+      embedLink: <?php echo $embed ? 'true' : 'false'; ?>,
+      emptyHtml: '<div class="small text-secondary">Sin documentos</div>'
+    });
+  })();
+</script>
 <?php if ($embed): ?>
 <?php clinical_embed_end(); ?>
 <?php else: ?>

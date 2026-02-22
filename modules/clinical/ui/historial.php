@@ -970,6 +970,7 @@ if (!$embed) {
   </div>
 </div>
 </div>
+<script src="/modules/clinical/ui/_shared/clinical_doc_render.js"></script>
 <div class="modal fade" id="clinicalCasesModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
@@ -1234,41 +1235,17 @@ if (!$embed) {
       }
       if (!encounterDetailList) return;
       var docsRaw = Array.isArray(data.documents) ? data.documents : [];
-      if (docsRaw.length === 0) {
+      var renderer = window.MXMed && typeof window.MXMed.renderClinicalDocuments === 'function'
+        ? window.MXMed.renderClinicalDocuments
+        : null;
+      if (!renderer) {
         encounterDetailList.innerHTML = '<div class="alert alert-secondary mb-0">Sin documentos en esta atención.</div>';
         return;
       }
-      var docs = docsRaw.slice().sort(function (a, b) {
-        var da = String((a && a.event_datetime) || '').trim();
-        var db = String((b && b.event_datetime) || '').trim();
-        var ta = Date.parse(da.replace(' ', 'T'));
-        var tb = Date.parse(db.replace(' ', 'T'));
-        var va = Number.isFinite(ta) ? ta : -Infinity;
-        var vb = Number.isFinite(tb) ? tb : -Infinity;
-        if (va === vb) return 0;
-        return vb - va;
+      encounterDetailList.innerHTML = renderer(docsRaw, {
+        embedLink: true,
+        emptyHtml: '<div class="alert alert-secondary mb-0">Sin documentos en esta atención.</div>'
       });
-      var html = docs.map(function (doc) {
-        var type = String(doc.document_type || '-');
-        var title = String(doc.title || '');
-        var summary = String(doc.summary || '-');
-        var dt = String(doc.event_datetime || '-');
-        var docUuid = String(doc.document_uuid || '').trim();
-        var openHref = docUuid ? ('/modules/clinical/ui/document.php?uuid=' + encodeURIComponent(docUuid) + '&embed=1') : '';
-        var header = title ? (type + ' · ' + title) : type;
-        var typeEsc = type.replace(/[&<>"]/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]); });
-        return ''
-          + '<div class="border rounded p-2">'
-          + '  <div class="mb-1"><span class="badge text-bg-secondary">' + typeEsc + '</span></div>'
-          + '  <div class="small"><strong>' + header.replace(/[&<>"]/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]); }) + '</strong></div>'
-          + '  <div class="small text-secondary">' + dt.replace(/[&<>"]/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]); }) + '</div>'
-          + '  <div class="small">' + summary.replace(/[&<>"]/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]); }) + '</div>'
-          + (openHref
-              ? '  <div class="mt-2"><a class="btn btn-sm btn-outline-primary" href="' + openHref.replace(/[&<>"]/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]); }) + '">Abrir documento</a></div>'
-              : '')
-          + '</div>';
-      }).join('');
-      encounterDetailList.innerHTML = html;
     }
 
     async function openEncounterDetail(encounterKey) {
