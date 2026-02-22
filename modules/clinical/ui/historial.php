@@ -943,26 +943,32 @@ if (!$embed) {
       <?php endif; ?>
     </div>
   <?php endif; ?>
-</div>
-</div>
-<div class="modal fade" id="encounterDetailModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Detalle de atención</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-      </div>
-      <div class="modal-body">
-        <div id="encounterDetailLoading" class="text-secondary small d-none">Cargando detalle...</div>
-        <div id="encounterDetailError" class="alert alert-danger d-none mb-2">No se pudo cargar el detalle del encounter.</div>
-        <div id="encounterDetailMeta" class="small text-secondary mb-2 d-none"></div>
-        <div id="encounterDetailList" class="vstack gap-2"></div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+  <div
+    class="modal fade"
+    id="encounterDetailModal"
+    data-role="encounter-detail-modal"
+    tabindex="-1"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Detalle de atención</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div id="encounterDetailLoading" data-role="encounter-detail-loading" class="text-secondary small d-none">Cargando detalle...</div>
+          <div id="encounterDetailError" data-role="encounter-detail-error" class="alert alert-danger d-none mb-2">No se pudo cargar el detalle del encounter.</div>
+          <div id="encounterDetailMeta" data-role="encounter-detail-meta" class="small text-secondary mb-2 d-none"></div>
+          <div id="encounterDetailList" data-role="encounter-detail-list" class="vstack gap-2"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+        </div>
       </div>
     </div>
   </div>
+</div>
 </div>
 <div class="modal fade" id="clinicalCasesModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -1001,11 +1007,11 @@ if (!$embed) {
     var recentSuggestion = document.querySelector('[data-role="recent-case-suggestion"]');
     var recentSuggestionText = document.querySelector('[data-role="recent-case-suggestion-text"]');
     var onlyActiveCaseEnabled = false;
-    var encounterDetailModalEl = document.getElementById('encounterDetailModal');
-    var encounterDetailLoading = document.getElementById('encounterDetailLoading');
-    var encounterDetailError = document.getElementById('encounterDetailError');
-    var encounterDetailMeta = document.getElementById('encounterDetailMeta');
-    var encounterDetailList = document.getElementById('encounterDetailList');
+    var encounterDetailModalEl = document.querySelector('[data-role="encounter-detail-modal"]');
+    var encounterDetailLoading = document.querySelector('[data-role="encounter-detail-loading"]');
+    var encounterDetailError = document.querySelector('[data-role="encounter-detail-error"]');
+    var encounterDetailMeta = document.querySelector('[data-role="encounter-detail-meta"]');
+    var encounterDetailList = document.querySelector('[data-role="encounter-detail-list"]');
     var encounterDetailModalInstance = null;
     if (encounterDetailModalEl && window.bootstrap && window.bootstrap.Modal) {
       encounterDetailModalInstance = window.bootstrap.Modal.getOrCreateInstance(encounterDetailModalEl);
