@@ -1233,11 +1233,21 @@ if (!$embed) {
         encounterDetailMeta.classList.remove('d-none');
       }
       if (!encounterDetailList) return;
-      var docs = Array.isArray(data.documents) ? data.documents : [];
-      if (docs.length === 0) {
+      var docsRaw = Array.isArray(data.documents) ? data.documents : [];
+      if (docsRaw.length === 0) {
         encounterDetailList.innerHTML = '<div class="alert alert-secondary mb-0">Sin documentos en esta atención.</div>';
         return;
       }
+      var docs = docsRaw.slice().sort(function (a, b) {
+        var da = String((a && a.event_datetime) || '').trim();
+        var db = String((b && b.event_datetime) || '').trim();
+        var ta = Date.parse(da.replace(' ', 'T'));
+        var tb = Date.parse(db.replace(' ', 'T'));
+        var va = Number.isFinite(ta) ? ta : -Infinity;
+        var vb = Number.isFinite(tb) ? tb : -Infinity;
+        if (va === vb) return 0;
+        return vb - va;
+      });
       var html = docs.map(function (doc) {
         var type = String(doc.document_type || '-');
         var title = String(doc.title || '');
@@ -1246,8 +1256,10 @@ if (!$embed) {
         var docUuid = String(doc.document_uuid || '').trim();
         var openHref = docUuid ? ('/modules/clinical/ui/document.php?uuid=' + encodeURIComponent(docUuid) + '&embed=1') : '';
         var header = title ? (type + ' · ' + title) : type;
+        var typeEsc = type.replace(/[&<>"]/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]); });
         return ''
           + '<div class="border rounded p-2">'
+          + '  <div class="mb-1"><span class="badge text-bg-secondary">' + typeEsc + '</span></div>'
           + '  <div class="small"><strong>' + header.replace(/[&<>"]/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]); }) + '</strong></div>'
           + '  <div class="small text-secondary">' + dt.replace(/[&<>"]/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]); }) + '</div>'
           + '  <div class="small">' + summary.replace(/[&<>"]/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]); }) + '</div>'
