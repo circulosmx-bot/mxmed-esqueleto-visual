@@ -243,6 +243,8 @@ $embed = is_embed_request();
 
 $errorMessage = '';
 $errorTechnicalDetails = '';
+$timelineUrlRaw = '';
+$timelineUrlSafe = '';
 $resolveErrorMsg = '';
 $items = [];
 $cursorNext = '';
@@ -366,10 +368,12 @@ if ($patientId !== '') {
         }
 
         $queryApi = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
-        $url = get_api_base() . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/timeline'
+        $timelineUrlRaw = get_api_base() . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/timeline'
             . '?' . $queryApi;
+        $timelineUrlSafe = h($timelineUrlRaw);
 
-        $fetch = fetch_http_json($url, 4, 2);
+        // IMPORTANT: always use raw URL for HTTP calls (never HTML-escaped URL).
+        $fetch = fetch_http_json($timelineUrlRaw, 4, 2);
         $raw = $fetch['raw'];
         $status = (int)($fetch['status'] ?? 0);
         $headers = is_array($fetch['headers'] ?? null) ? $fetch['headers'] : [];
@@ -377,18 +381,18 @@ if ($patientId !== '') {
 
         if ($raw === false) {
             $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
-            $errorTechnicalDetails = "status: {$status}\nurl: {$url}\nattempts: {$attempts}\nerror: " . (string)($fetch['error'] ?? '') . "\nheaders:\n" . implode("\n", $headers);
+            $errorTechnicalDetails = "status: {$status}\nurl: {$timelineUrlSafe}\nattempts: {$attempts}\nerror: " . (string)($fetch['error'] ?? '') . "\nheaders:\n" . implode("\n", $headers);
         } elseif ($status >= 400) {
             $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
-            $errorTechnicalDetails = "status: {$status}\nurl: {$url}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\nbody_snippet:\n" . (string)($fetch['body_snippet'] ?? '');
+            $errorTechnicalDetails = "status: {$status}\nurl: {$timelineUrlSafe}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\nbody_snippet:\n" . (string)($fetch['body_snippet'] ?? '');
         } else {
             $decoded = json_decode($raw, true);
             if (!is_array($decoded)) {
                 $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
-                $errorTechnicalDetails = "status: {$status}\nurl: {$url}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\nbody_snippet:\n" . (string)($fetch['body_snippet'] ?? '');
+                $errorTechnicalDetails = "status: {$status}\nurl: {$timelineUrlSafe}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\nbody_snippet:\n" . (string)($fetch['body_snippet'] ?? '');
             } elseif (($decoded['ok'] ?? false) !== true) {
                 $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
-                $errorTechnicalDetails = "status: {$status}\nurl: {$url}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\napi_message: " . (string)($decoded['message'] ?? '');
+                $errorTechnicalDetails = "status: {$status}\nurl: {$timelineUrlSafe}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\napi_message: " . (string)($decoded['message'] ?? '');
             } else {
                 $data = is_array($decoded['data'] ?? null) ? $decoded['data'] : [];
                 $list = $data['items'] ?? [];
