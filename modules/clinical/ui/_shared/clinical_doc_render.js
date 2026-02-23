@@ -59,7 +59,7 @@
       var href = '';
       var badgeClass = getBadgeClass(type);
       if (uuid) {
-        href = '/modules/clinical/ui/document.php?uuid=' + encodeURIComponent(uuid) + (embedLink ? '&embed=1' : '');
+        href = '/modules/clinical/ui/viewer.php?uuid=' + encodeURIComponent(uuid) + (embedLink ? '&embed=1' : '');
         if (returnTo) {
           href += '&return_to=' + encodeURIComponent(returnTo);
         }

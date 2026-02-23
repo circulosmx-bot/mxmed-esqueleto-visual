@@ -59,7 +59,7 @@
 
   function buildDocumentHref(uuid) {
     var cleanReturnTo = buildCleanReturnTo(window.location.href);
-    return '/modules/clinical/ui/document.php?uuid='
+    return '/modules/clinical/ui/viewer.php?uuid='
       + encodeURIComponent(uuid)
       + '&embed=1&return_to='
       + encodeURIComponent(cleanReturnTo);
