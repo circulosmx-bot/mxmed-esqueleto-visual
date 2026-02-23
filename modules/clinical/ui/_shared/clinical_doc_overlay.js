@@ -13,6 +13,21 @@
     return String(value == null ? '' : value).trim();
   }
 
+  function parseUrlSafe(href) {
+    try {
+      return new URL(href, window.location.origin);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function buildCleanReturnTo(href) {
+    var url = parseUrlSafe(href);
+    if (!url) return window.location.href;
+    url.searchParams.delete('doc_uuid');
+    return url.toString();
+  }
+
   function buildTitle(docType, docTitle) {
     var type = asString(docType);
     var title = asString(docTitle);
@@ -63,14 +78,11 @@
       hideLoader();
     }
 
-    function openOverlayFromLink(link) {
-      var href = asString(link && link.getAttribute('href'));
+    function openOverlayWithHref(href, docType, docTitle) {
+      href = asString(href);
       if (!href) return;
       if (titleEl) {
-        titleEl.textContent = buildTitle(
-          link.getAttribute('data-doc-type'),
-          link.getAttribute('data-doc-title')
-        );
+        titleEl.textContent = buildTitle(docType, docTitle);
       }
       if (openNewEl) {
         openNewEl.setAttribute('href', href);
@@ -120,5 +132,32 @@
         closeOverlay();
       }
     });
+
+    if (embedOnly && isEmbedRequest()) {
+      var url = parseUrlSafe(window.location.href);
+      var deepDocUuid = asString(url && url.searchParams ? url.searchParams.get('doc_uuid') : '');
+      if (deepDocUuid) {
+        var cleanReturnTo = buildCleanReturnTo(window.location.href);
+        var deepHref = '/modules/clinical/ui/document.php?uuid='
+          + encodeURIComponent(deepDocUuid)
+          + '&embed=1&return_to='
+          + encodeURIComponent(cleanReturnTo);
+        openOverlayWithHref(deepHref, '', '');
+        try {
+          if (window.history && typeof window.history.replaceState === 'function') {
+            window.history.replaceState(null, '', cleanReturnTo);
+          }
+        } catch (_) {}
+      }
+    }
   };
 })(window, document);
+    function openOverlayFromLink(link) {
+      var href = asString(link && link.getAttribute('href'));
+      if (!href) return;
+      openOverlayWithHref(
+        href,
+        link.getAttribute('data-doc-type'),
+        link.getAttribute('data-doc-title')
+      );
+    }
