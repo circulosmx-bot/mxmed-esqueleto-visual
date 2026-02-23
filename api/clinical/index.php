@@ -1309,6 +1309,22 @@ function clinical_case_items_fetch(PDO $pdo, int $caseId): array
     return is_array($rows) ? $rows : [];
 }
 
+function clinical_case_items_list_fetch(PDO $pdo, int $caseId, int $limit): array
+{
+    $stmt = $pdo->prepare("
+        SELECT case_id, item_type, item_ref, created_at
+        FROM clinical_case_items
+        WHERE case_id = :case_id
+        ORDER BY created_at DESC, item_type ASC, item_ref ASC
+        LIMIT :limit
+    ");
+    $stmt->bindValue(':case_id', $caseId, PDO::PARAM_INT);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    return is_array($rows) ? $rows : [];
+}
+
 function clinical_patient_exists(PDO $pdo, string $patientId): bool
 {
     $stmt = $pdo->prepare("SELECT patient_id FROM patients_patients WHERE patient_id = :patient_id LIMIT 1");
@@ -2854,7 +2870,7 @@ try {
     }
 
     if (($segments[0] ?? '') === 'cases' && count($segments) === 3 && $segments[2] === 'items') {
-        if ($method !== 'POST') {
+        if ($method !== 'POST' && $method !== 'GET') {
             clinical_send_response([
                 'ok' => false,
                 'error' => 'not_found',
@@ -2869,11 +2885,76 @@ try {
         if ($caseId <= 0) {
             clinical_send_response([
                 'ok' => false,
-                'error' => ['code' => 'bad_request', 'message' => 'case_id inválido'],
+                'error' => ['code' => 'bad_request', 'message' => 'case_id invalido'],
                 'message' => '',
                 'data' => null,
-                'meta' => ['method' => 'POST', 'route' => 'cases/{case_id}/items'],
+                'meta' => ['method' => $method, 'route' => 'cases/{case_id}/items'],
             ], 400);
+            return;
+        }
+
+        if ($method === 'GET') {
+            $limit = 50;
+            $limitRaw = $_GET['limit'] ?? null;
+            if ($limitRaw !== null && trim((string)$limitRaw) !== '') {
+                $limitText = trim((string)$limitRaw);
+                if (preg_match('/^\d+$/', $limitText) !== 1) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => ['code' => 'bad_request', 'message' => 'limit debe ser int entre 1 y 200'],
+                        'message' => '',
+                        'data' => null,
+                        'meta' => ['method' => 'GET', 'route' => 'cases/{case_id}/items'],
+                    ], 400);
+                    return;
+                }
+                $limit = (int)$limitText;
+                if ($limit < 1 || $limit > 200) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => ['code' => 'bad_request', 'message' => 'limit debe ser int entre 1 y 200'],
+                        'message' => '',
+                        'data' => null,
+                        'meta' => ['method' => 'GET', 'route' => 'cases/{case_id}/items'],
+                    ], 400);
+                    return;
+                }
+            }
+
+            try {
+                $pdo = clinical_documents_pdo();
+                clinical_cases_ensure_schema($pdo);
+                $existingCase = clinical_case_get_by_id($pdo, $caseId);
+                if ($existingCase === null) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'not_found',
+                        'message' => 'case not found',
+                        'data' => null,
+                        'meta' => ['method' => 'GET', 'route' => 'cases/{case_id}/items'],
+                    ], 404);
+                    return;
+                }
+                $items = clinical_case_items_list_fetch($pdo, $caseId, $limit);
+            } catch (Throwable $e) {
+                $msg = trim((string)$e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => ['code' => 'server_error', 'message' => ($msg !== '' ? $msg : 'server error')],
+                    'message' => '',
+                    'data' => null,
+                    'meta' => ['method' => 'GET', 'route' => 'cases/{case_id}/items'],
+                ], 500);
+                return;
+            }
+
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => 'ok',
+                'data' => $items,
+                'meta' => ['method' => 'GET', 'route' => 'cases/{case_id}/items'],
+            ], 200);
             return;
         }
 
