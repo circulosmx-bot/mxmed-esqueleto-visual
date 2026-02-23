@@ -2,6 +2,7 @@
 namespace Agenda\Repositories;
 
 use Agenda\Repositories\PatientFlagsWriteRepository;
+use Agenda\Services\ClinicalEncounterBridge;
 use DateTime;
 use DateTimeZone;
 use PDO;
@@ -10,6 +11,7 @@ use RuntimeException;
 use Throwable;
 
 require_once __DIR__ . '/../repositories/PatientFlagsWriteRepository.php';
+require_once __DIR__ . '/../services/ClinicalEncounterBridge.php';
 
 class AppointmentWriteRepository
 {
@@ -19,6 +21,7 @@ class AppointmentWriteRepository
     private ?string $appointmentPk = null;
     private array $columnsCache = [];
     private ?PatientFlagsWriteRepository $patientFlagsRepository = null;
+    private ?ClinicalEncounterBridge $clinicalEncounterBridge = null;
     private const TIMEZONE = 'America/Mexico_City';
     private const LATE_CANCEL_THRESHOLD_MINUTES = 1080;
 
@@ -38,6 +41,7 @@ class AppointmentWriteRepository
                 $this->patientFlagsRepository = null;
             }
         }
+        $this->clinicalEncounterBridge = new ClinicalEncounterBridge($config);
     }
 
     public function createAppointment(array $payload): array
@@ -74,6 +78,8 @@ class AppointmentWriteRepository
             $this->pdo->rollBack();
             throw $e;
         }
+
+        $this->bridgeClinicalEncounterIfCompleted($appointmentData);
 
         return [
             'appointment_id' => $appointmentId,
@@ -474,6 +480,25 @@ class AppointmentWriteRepository
         );
 
         return ['event_appended' => 1, 'flag_appended' => $flagAppended];
+    }
+
+    private function bridgeClinicalEncounterIfCompleted(array $appointmentData): void
+    {
+        $bridge = $this->clinicalEncounterBridge;
+        if (!$bridge || !$bridge->isEnabled()) {
+            return;
+        }
+
+        try {
+            $bridge->syncCompletedAppointment($appointmentData);
+        } catch (Throwable $e) {
+            error_log(sprintf(
+                '[agenda-clinical-bridge] failed appointment_id=%s patient_id=%s error=%s',
+                (string)($appointmentData['appointment_id'] ?? ''),
+                (string)($appointmentData['patient_id'] ?? ''),
+                trim((string)$e->getMessage())
+            ));
+        }
     }
 
     public function markNoShow(string $appointmentId, array $payload): array
