@@ -798,7 +798,6 @@ if (!$embed) {
             </div>
             <?php if ($appointmentEncounterKey !== ''): ?>
               <div class="mt-2" data-role="appointment-episode-cta" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>">
-                <a class="btn btn-sm btn-outline-secondary d-none" href="#" data-role="appointment-episode-link encounter-episode-link" data-episode-link="1" data-embed-nav data-nav-mode="encounter" data-encounter-key="" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>">Ver episodio</a>
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-role="appointment-episode-missing" disabled>Sin episodio</button>
               </div>
             <?php endif; ?>
@@ -1311,34 +1310,13 @@ if (!$embed) {
       var ctas = document.querySelectorAll('[data-role="appointment-episode-cta"]');
       ctas.forEach(function (cta) {
         var apptId = String(cta.getAttribute('data-appointment-id') || '').trim();
-        var link = cta.querySelector('[data-role~="appointment-episode-link"]');
         var missingBtn = cta.querySelector('[data-role="appointment-episode-missing"]');
-        if (!apptId && link) {
-          apptId = appointmentIdFromRef(link.getAttribute('data-encounter-key') || '');
-        }
-        var latest = apptId !== '' ? latestEncByAppt[apptId] : null;
-        var encId = Number(latest && latest.encounter_id);
-        var hasEncounter = Number.isFinite(encId) && encId > 0;
-        if (hasEncounter && link) {
-          var encounterKey = 'appt:' + apptId + '#enc:' + String(encId);
-          var query = 'encounter_key=' + encodeURIComponent(encounterKey);
-          if (isEmbed) {
-            query += '&embed=1';
-            try {
-              var params = new URLSearchParams(window.location.search || '');
-              if (params.get('standalone') === '1') {
-                query += '&standalone=1';
-              }
-            } catch (_) {}
-          }
-          link.setAttribute('data-encounter-key', encounterKey);
-          link.setAttribute('href', '/modules/clinical/ui/encounter.php?' + query);
-        }
-        if (link) {
-          link.classList.toggle('d-none', !hasEncounter);
+        // Step 25: appointment cards keep a non-clickable "Sin episodio" state.
+        if (!apptId) {
+          apptId = '';
         }
         if (missingBtn) {
-          missingBtn.classList.toggle('d-none', hasEncounter);
+          missingBtn.classList.remove('d-none');
         }
       });
     }
