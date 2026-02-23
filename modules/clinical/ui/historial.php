@@ -752,10 +752,13 @@ if (!$embed) {
         $appointmentRef = trim((string)($links['appointment_id'] ?? ''));
         $isInActiveCase = ($activeCaseId !== '' && (string)($item['case_id'] ?? '') === $activeCaseId);
         $itemCaseId = trim((string)($item['case_id'] ?? ''));
-        $appointmentEpisodeId = trim((string)($links['appointment_id'] ?? ''));
+        $appointmentEpisodeId = trim((string)(($item['links']['appointment_id'] ?? '')));
         ?>
         <?php $appointmentEncounterKey = trim((string)($item['encounter_key'] ?? '')); ?>
         <?php
+        if ($appointmentEpisodeId === '') {
+            $appointmentEpisodeId = trim((string)($agenda['appointment_id'] ?? ''));
+        }
         if ($appointmentEpisodeId === '' && strpos($appointmentEncounterKey, 'appt:') === 0) {
             $appointmentEpisodeId = substr($appointmentEncounterKey, 5);
             $hashPos = strpos($appointmentEpisodeId, '#enc:');
