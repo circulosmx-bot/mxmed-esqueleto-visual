@@ -210,6 +210,7 @@ if (!$embed) {
 </div>
 <script src="/modules/clinical/ui/_shared/clinical_doc_render.js"></script>
 <script src="/modules/clinical/ui/_shared/clinical_doc_overlay.js"></script>
+<script src="/modules/clinical/ui/_shared/clinical_embed_kit.js"></script>
 <script>
   (function () {
     var isEmbed = <?php echo $embed ? 'true' : 'false'; ?>;
@@ -230,8 +231,8 @@ if (!$embed) {
       openInOverlay: isEmbed,
       emptyHtml: '<div class="small text-secondary">Sin documentos</div>'
     });
-    if (window.MXMed && typeof window.MXMed.initDocOverlay === 'function') {
-      window.MXMed.initDocOverlay({ embedOnly: true });
+    if (window.MXMed && typeof window.MXMed.initClinicalEmbedKit === 'function') {
+      window.MXMed.initClinicalEmbedKit({ embedOnly: true });
     }
   })();
 </script>

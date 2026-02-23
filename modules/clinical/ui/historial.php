@@ -1027,6 +1027,7 @@ if (!$embed) {
 </div>
 <script src="/modules/clinical/ui/_shared/clinical_doc_render.js"></script>
 <script src="/modules/clinical/ui/_shared/clinical_doc_overlay.js"></script>
+<script src="/modules/clinical/ui/_shared/clinical_embed_kit.js"></script>
 <div class="modal fade" id="clinicalCasesModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
@@ -1499,8 +1500,8 @@ if (!$embed) {
       window.parent.postMessage(payload, '*');
     }, true);
 
-    if (window.MXMed && typeof window.MXMed.initDocOverlay === 'function') {
-      window.MXMed.initDocOverlay({ embedOnly: true });
+    if (window.MXMed && typeof window.MXMed.initClinicalEmbedKit === 'function') {
+      window.MXMed.initClinicalEmbedKit({ embedOnly: true });
     }
 
     if (patientId) {
