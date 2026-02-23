@@ -79,6 +79,57 @@ function validate_return_to(string $value): ?string
     return $value;
 }
 
+function normalize_return_to(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+
+    if ($value[0] === '/') {
+        $parts = parse_url($value);
+        if (!is_array($parts)) {
+            return $value;
+        }
+        $path = (string)($parts['path'] ?? '/');
+        $query = [];
+        if (isset($parts['query'])) {
+            parse_str((string)$parts['query'], $query);
+            if (is_array($query)) {
+                unset($query['doc_uuid']);
+            } else {
+                $query = [];
+            }
+        }
+        $qs = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+        return $path . ($qs !== '' ? ('?' . $qs) : '');
+    }
+
+    if (!preg_match('/^https?:\/\//i', $value)) {
+        return $value;
+    }
+
+    $url = parse_url($value);
+    if (!is_array($url)) {
+        return $value;
+    }
+    $query = [];
+    if (isset($url['query'])) {
+        parse_str((string)$url['query'], $query);
+        if (is_array($query)) {
+            unset($query['doc_uuid']);
+        } else {
+            $query = [];
+        }
+    }
+    $scheme = (string)($url['scheme'] ?? 'http');
+    $host = (string)($url['host'] ?? '');
+    $port = isset($url['port']) ? (':' . (int)$url['port']) : '';
+    $path = (string)($url['path'] ?? '/');
+    $qs = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+    return $scheme . '://' . $host . $port . $path . ($qs !== '' ? ('?' . $qs) : '');
+}
+
 function render_embed_css(bool $embed): void
 {
     if (!$embed) {
@@ -129,9 +180,39 @@ function first_non_empty_string(array $sources, array $keys): string
     return '';
 }
 
+function is_allowed_external_url(string $url, array $allowedHosts, string $currentHost): bool
+{
+    $url = trim($url);
+    if ($url === '') {
+        return false;
+    }
+
+    $parts = parse_url($url);
+    if (!is_array($parts)) {
+        return false;
+    }
+
+    $scheme = strtolower((string)($parts['scheme'] ?? ''));
+    if ($scheme !== 'http' && $scheme !== 'https') {
+        return false;
+    }
+
+    $host = strtolower((string)($parts['host'] ?? ''));
+    if ($host === '') {
+        return false;
+    }
+
+    if ($currentHost !== '' && $host === $currentHost) {
+        return true;
+    }
+
+    return in_array($host, $allowedHosts, true);
+}
+
 $uuid = trim((string)($_GET['uuid'] ?? ''));
 $returnTo = validate_return_to((string)($_GET['return_to'] ?? ''));
-$backHref = $returnTo ?? 'javascript:history.back()';
+$returnToClean = $returnTo !== null ? normalize_return_to($returnTo) : '';
+$backHref = $returnToClean !== '' ? $returnToClean : 'javascript:history.back()';
 $errorMessage = '';
 $document = null;
 
@@ -159,9 +240,14 @@ $payload = $document && is_array($content['payload'] ?? null) ? $content['payloa
 $payloadJson = $payload ? json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '';
 $renderedText = $document ? (string)($content['rendered_text'] ?? '') : '';
 
-$mimeType = strtolower(first_non_empty_string([$content, $payload], ['mime_type', 'content_type', 'type', 'media_type']));
+$mimeType = strtolower(first_non_empty_string([$document, $content, $payload], ['mime_type', 'content_type', 'type', 'media_type']));
 $mediaSrc = first_non_empty_string([$payload, $content], ['url', 'src', 'file_url', 'pdf_url', 'image_url']);
 $htmlInline = trim((string)($payload['html'] ?? ''));
+
+$currentHost = strtolower((string)parse_url(get_api_base(), PHP_URL_HOST));
+$externalIframeAllowlist = []; // viewer v0.1: dominios explícitos para iframe externo.
+$externalAllowed = $mediaSrc !== '' ? is_allowed_external_url($mediaSrc, $externalIframeAllowlist, $currentHost) : false;
+$externalBlockedMessage = '';
 
 $detectedMode = 'json';
 if ($htmlInline !== '') {
@@ -177,6 +263,13 @@ if ($htmlInline !== '') {
     }
 }
 
+if (($detectedMode === 'pdf' || $detectedMode === 'html_external') && $mediaSrc !== '' && !$externalAllowed) {
+    $externalBlockedMessage = 'La URL externa no está permitida por la allowlist del viewer.';
+    $detectedMode = 'json';
+}
+
+$openInNewHref = $mediaSrc !== '' && $externalAllowed ? $mediaSrc : ((string)($_SERVER['REQUEST_URI'] ?? '/modules/clinical/ui/viewer.php'));
+
 require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
 
@@ -188,15 +281,32 @@ if (!$embed) {
     clinical_embed_start();
 }
 ?>
+<style>
+  .clinical-viewer .viewer-sticky-head{
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #fff;
+    border-bottom: 1px solid rgba(0,0,0,.08);
+    padding-bottom: .5rem;
+    margin-bottom: .75rem;
+  }
+</style>
 <div class="<?php echo $embed ? 'py-1' : 'container py-4'; ?>">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-      <h1 class="h4 mb-0">Document Viewer</h1>
-      <?php if ($title !== '-' && $uuid !== ''): ?>
-        <div class="text-secondary small"><?php echo h($title); ?></div>
-      <?php endif; ?>
+  <div class="clinical-viewer">
+  <div class="viewer-sticky-head">
+    <div class="d-flex justify-content-between align-items-center mt-2">
+      <div>
+        <h1 class="h5 mb-0">Document Viewer</h1>
+        <?php if ($title !== '-' && $uuid !== ''): ?>
+          <div class="text-secondary small"><?php echo h($title); ?></div>
+        <?php endif; ?>
+      </div>
+      <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($backHref); ?>">Volver</a>
+        <a class="btn btn-outline-primary btn-sm" href="<?php echo h($openInNewHref); ?>" target="_blank" rel="noopener">Abrir en pestaña</a>
+      </div>
     </div>
-    <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($backHref); ?>">Volver</a>
   </div>
 
   <p class="text-secondary mb-3">uuid: <code><?php echo h($uuid !== '' ? $uuid : '-'); ?></code></p>
@@ -215,6 +325,10 @@ if (!$embed) {
       </div>
     </div>
 
+    <?php if ($externalBlockedMessage !== ''): ?>
+      <div class="alert alert-warning"><?php echo h($externalBlockedMessage); ?></div>
+    <?php endif; ?>
+
     <?php if ($detectedMode === 'image' && $mediaSrc !== ''): ?>
       <div class="mm-card mb-3">
         <div class="head"><h5>Vista previa</h5></div>
@@ -225,15 +339,21 @@ if (!$embed) {
     <?php elseif (($detectedMode === 'pdf' || $detectedMode === 'html_external') && $mediaSrc !== ''): ?>
       <div class="mm-card mb-3">
         <div class="head"><h5>Vista previa</h5></div>
+        <div class="body">
+          <div data-role="viewer-loader" class="small text-secondary mb-2">Cargando…</div>
+        </div>
         <div class="body p-0">
-          <iframe src="<?php echo h($mediaSrc); ?>" style="width:100%;height:72vh;border:0;"></iframe>
+          <iframe data-role="viewer-iframe" sandbox="allow-same-origin allow-scripts allow-forms allow-downloads" src="<?php echo h($mediaSrc); ?>" style="width:100%;height:72vh;border:0;"></iframe>
         </div>
       </div>
     <?php elseif ($detectedMode === 'html_inline' && $htmlInline !== ''): ?>
       <div class="mm-card mb-3">
         <div class="head"><h5>Vista previa</h5></div>
+        <div class="body">
+          <div data-role="viewer-loader" class="small text-secondary mb-2">Cargando…</div>
+        </div>
         <div class="body p-0">
-          <iframe srcdoc="<?php echo h($htmlInline); ?>" style="width:100%;height:72vh;border:0;"></iframe>
+          <iframe data-role="viewer-iframe" sandbox="allow-same-origin allow-scripts allow-forms" srcdoc="<?php echo h($htmlInline); ?>" style="width:100%;height:72vh;border:0;"></iframe>
         </div>
       </div>
     <?php endif; ?>
@@ -256,7 +376,18 @@ if (!$embed) {
       </div>
     <?php endif; ?>
   <?php endif; ?>
+  </div>
 </div>
+<script>
+  (function () {
+    var iframe = document.querySelector('[data-role="viewer-iframe"]');
+    var loader = document.querySelector('[data-role="viewer-loader"]');
+    if (!iframe || !loader) return;
+    iframe.addEventListener('load', function () {
+      loader.classList.add('d-none');
+    });
+  })();
+</script>
 <?php if ($embed): ?>
 <?php clinical_embed_end(); ?>
 <?php else: ?>
