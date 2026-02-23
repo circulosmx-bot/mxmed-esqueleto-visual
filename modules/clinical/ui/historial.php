@@ -1026,6 +1026,7 @@ if (!$embed) {
 </div>
 </div>
 <script src="/modules/clinical/ui/_shared/clinical_doc_render.js"></script>
+<script src="/modules/clinical/ui/_shared/clinical_doc_overlay.js"></script>
 <div class="modal fade" id="clinicalCasesModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
@@ -1073,11 +1074,6 @@ if (!$embed) {
     if (encounterDetailModalEl && window.bootstrap && window.bootstrap.Modal) {
       encounterDetailModalInstance = window.bootstrap.Modal.getOrCreateInstance(encounterDetailModalEl);
     }
-    var docOverlayEl = document.querySelector('[data-role="doc-overlay"]');
-    var docOverlayIframe = document.querySelector('[data-role="doc-overlay-iframe"]');
-    var docOverlayTitle = document.querySelector('[data-role="doc-overlay-title"]');
-    var docOverlayOpenNew = document.querySelector('[data-role="doc-overlay-open-new"]');
-    var docOverlayLoader = document.querySelector('[data-role="doc-overlay-loader"]');
     var debugMode = false;
     try {
       debugMode = new URLSearchParams(window.location.search || '').get('debug') === '1';
@@ -1311,55 +1307,6 @@ if (!$embed) {
       });
     }
 
-    function buildDocOverlayTitle(docType, docTitle) {
-      var type = String(docType || '').trim();
-      var title = String(docTitle || '').trim();
-      if (type && title) return 'Documento: ' + type + ' · ' + title;
-      if (type) return 'Documento: ' + type;
-      if (title) return 'Documento: ' + title;
-      return 'Documento';
-    }
-
-    function openDocOverlay(url, docType, docTitle) {
-      if (!docOverlayEl || !docOverlayIframe || !url) return;
-      if (docOverlayTitle) {
-        docOverlayTitle.textContent = buildDocOverlayTitle(docType, docTitle);
-      }
-      if (docOverlayOpenNew) {
-        docOverlayOpenNew.setAttribute('href', url);
-      }
-      if (docOverlayLoader) {
-        docOverlayLoader.classList.remove('d-none');
-      }
-      docOverlayIframe.src = url;
-      docOverlayEl.hidden = false;
-      docOverlayEl.setAttribute('aria-hidden', 'false');
-    }
-
-    function closeDocOverlay() {
-      if (!docOverlayEl || !docOverlayIframe) return;
-      docOverlayIframe.src = 'about:blank';
-      if (docOverlayTitle) {
-        docOverlayTitle.textContent = 'Documento';
-      }
-      if (docOverlayOpenNew) {
-        docOverlayOpenNew.setAttribute('href', '#');
-      }
-      if (docOverlayLoader) {
-        docOverlayLoader.classList.add('d-none');
-      }
-      docOverlayEl.hidden = true;
-      docOverlayEl.setAttribute('aria-hidden', 'true');
-    }
-
-    if (docOverlayIframe) {
-      docOverlayIframe.addEventListener('load', function () {
-        if (docOverlayLoader) {
-          docOverlayLoader.classList.add('d-none');
-        }
-      });
-    }
-
     async function openEncounterDetail(encounterKey) {
       if (!encounterKey) return;
       if (encounterDetailModalInstance) {
@@ -1444,17 +1391,6 @@ if (!$embed) {
         return;
       }
 
-      var openDocOverlayLink = event.target && event.target.closest ? event.target.closest('a[data-role="open-doc-overlay"]') : null;
-      if (openDocOverlayLink && isEmbed) {
-        var href = String(openDocOverlayLink.getAttribute('href') || '').trim();
-        if (!href) return;
-        var docType = String(openDocOverlayLink.getAttribute('data-doc-type') || '').trim();
-        var docTitle = String(openDocOverlayLink.getAttribute('data-doc-title') || '').trim();
-        event.preventDefault();
-        openDocOverlay(href, docType, docTitle);
-        return;
-      }
-
       var toggleOnlyCaseBtn = event.target && event.target.closest ? event.target.closest('[data-action="toggle-only-active-case"]') : null;
       if (toggleOnlyCaseBtn) {
         event.preventDefault();
@@ -1494,13 +1430,6 @@ if (!$embed) {
         event.preventDefault();
         casesModalEl.classList.remove('show');
         casesModalEl.style.display = 'none';
-        return;
-      }
-
-      var closeDocOverlayBtn = event.target && event.target.closest ? event.target.closest('[data-role="doc-overlay-close"], [data-role="doc-overlay-backdrop"]') : null;
-      if (closeDocOverlayBtn) {
-        event.preventDefault();
-        closeDocOverlay();
         return;
       }
 
@@ -1570,12 +1499,9 @@ if (!$embed) {
       window.parent.postMessage(payload, '*');
     }, true);
 
-    document.addEventListener('keydown', function (event) {
-      if (event.key !== 'Escape') return;
-      if (docOverlayEl && !docOverlayEl.hidden) {
-        closeDocOverlay();
-      }
-    });
+    if (window.MXMed && typeof window.MXMed.initDocOverlay === 'function') {
+      window.MXMed.initDocOverlay({ embedOnly: true });
+    }
 
     if (patientId) {
       loadActiveCase(patientId).catch(function () {});
