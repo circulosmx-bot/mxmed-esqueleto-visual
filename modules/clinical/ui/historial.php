@@ -798,7 +798,7 @@ if (!$embed) {
             </div>
             <?php if ($appointmentEncounterKey !== ''): ?>
               <div class="mt-2" data-role="appointment-episode-cta" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>">
-                <a class="btn btn-sm btn-outline-secondary d-none" href="#" data-role="appointment-episode-link" data-embed-nav data-nav-mode="encounter" data-encounter-key="" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>">Ver episodio</a>
+                <a class="btn btn-sm btn-outline-secondary d-none" href="#" data-role="appointment-episode-link encounter-episode-link" data-embed-nav data-nav-mode="encounter" data-encounter-key="" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>">Ver episodio</a>
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-role="appointment-episode-missing" disabled>Sin episodio</button>
               </div>
             <?php endif; ?>
@@ -876,7 +876,7 @@ if (!$embed) {
             <?php if ($ek !== ''): ?>
               <div class="mt-2">
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-action="open-encounter-detail" data-encounter-key="<?php echo h($ek); ?>">Ver detalle</button>
-                <a class="btn btn-sm btn-outline-secondary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $ek])); ?>" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($ek); ?>">Ver episodio</a>
+                <a class="btn btn-sm btn-outline-secondary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $ek])); ?>" data-role="encounter-episode-link" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($ek); ?>">Ver episodio</a>
                 <?php if ($isAppointmentEncounter): ?>
                   <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $ek])); ?>" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($ek); ?>">Ver atención</a>
                 <?php endif; ?>
@@ -1311,7 +1311,7 @@ if (!$embed) {
       var ctas = document.querySelectorAll('[data-role="appointment-episode-cta"]');
       ctas.forEach(function (cta) {
         var apptId = String(cta.getAttribute('data-appointment-id') || '').trim();
-        var link = cta.querySelector('[data-role="appointment-episode-link"]');
+        var link = cta.querySelector('[data-role~="appointment-episode-link"]');
         var missingBtn = cta.querySelector('[data-role="appointment-episode-missing"]');
         if (!apptId && link) {
           apptId = appointmentIdFromRef(link.getAttribute('data-encounter-key') || '');
