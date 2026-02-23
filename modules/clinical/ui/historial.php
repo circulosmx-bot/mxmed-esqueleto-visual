@@ -752,8 +752,19 @@ if (!$embed) {
         $appointmentRef = trim((string)($links['appointment_id'] ?? ''));
         $isInActiveCase = ($activeCaseId !== '' && (string)($item['case_id'] ?? '') === $activeCaseId);
         $itemCaseId = trim((string)($item['case_id'] ?? ''));
+        $appointmentEpisodeId = trim((string)($links['appointment_id'] ?? ''));
         ?>
         <?php $appointmentEncounterKey = trim((string)($item['encounter_key'] ?? '')); ?>
+        <?php
+        if ($appointmentEpisodeId === '' && strpos($appointmentEncounterKey, 'appt:') === 0) {
+            $appointmentEpisodeId = substr($appointmentEncounterKey, 5);
+            $hashPos = strpos($appointmentEpisodeId, '#enc:');
+            if ($hashPos !== false) {
+                $appointmentEpisodeId = substr($appointmentEpisodeId, 0, $hashPos);
+            }
+            $appointmentEpisodeId = trim((string)$appointmentEpisodeId);
+        }
+        ?>
         <article class="mm-card <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($itemCaseId); ?>" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>">
           <div class="body">
             <?php if (!empty($item['case_id'])): ?>
@@ -783,8 +794,9 @@ if (!$embed) {
               channel_origin: <?php echo h((string)($agenda['channel_origin'] ?? '-')); ?>
             </div>
             <?php if ($appointmentEncounterKey !== ''): ?>
-              <div class="mt-2">
-                <a class="btn btn-sm btn-outline-secondary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $appointmentEncounterKey])); ?>" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>">Ver episodio</a>
+              <div class="mt-2" data-role="appointment-episode-cta" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>">
+                <a class="btn btn-sm btn-outline-secondary d-none" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $appointmentEncounterKey])); ?>" data-role="appointment-episode-link" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>">Ver episodio</a>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-role="appointment-episode-missing" disabled>Sin episodio</button>
               </div>
             <?php endif; ?>
             <?php if (trim((string)($links['appointment_id'] ?? '')) !== ''): ?>
@@ -1082,6 +1094,7 @@ if (!$embed) {
       debugMode = false;
     }
     var recentCandidates = [];
+    var encByAppt = new Set();
     var recentSuggestStorageKey = 'mxmed_historial_snooze_suggest:' + String(patientId || '');
     try {
       onlyActiveCaseEnabled = activeCaseId !== '' && localStorage.getItem(onlyActiveCaseStorageKey) === '1';
@@ -1211,6 +1224,70 @@ if (!$embed) {
       var url = apiBase + '/api/clinical/index.php/patients/' + encodeURIComponent(pid) + '/cases';
       var payload = await apiJson(url, { method: 'GET' });
       return Array.isArray(payload.data) ? payload.data : [];
+    }
+
+    function appointmentIdFromRef(ref) {
+      var text = String(ref || '').trim();
+      if (!text) return '';
+      if (text.indexOf('appt:') === 0) {
+        var id = text.slice(5);
+        var hashPos = id.indexOf('#enc:');
+        if (hashPos >= 0) {
+          id = id.slice(0, hashPos);
+        }
+        return String(id || '').trim();
+      }
+      return text;
+    }
+
+    async function loadEncounterAppointmentSet(pid) {
+      var result = new Set();
+      if (!pid) return result;
+
+      async function fetchEncounters(url) {
+        try {
+          var payload = await apiJson(url, { method: 'GET' });
+          return Array.isArray(payload.data) ? payload.data : [];
+        } catch (_) {
+          return null;
+        }
+      }
+
+      var base = apiBase + '/api/clinical/index.php/patients/' + encodeURIComponent(pid) + '/encounters';
+      var rows = await fetchEncounters(base + '?limit=200');
+      if (rows === null) {
+        rows = await fetchEncounters(base);
+      }
+      if (!Array.isArray(rows)) {
+        return result;
+      }
+
+      rows.forEach(function (row) {
+        var appt = String((row && row.appointment_id) || '').trim();
+        if (appt) {
+          result.add(appt);
+        }
+      });
+      return result;
+    }
+
+    function applyEpisodeButtonsAvailability() {
+      var ctas = document.querySelectorAll('[data-role="appointment-episode-cta"]');
+      ctas.forEach(function (cta) {
+        var apptId = String(cta.getAttribute('data-appointment-id') || '').trim();
+        var link = cta.querySelector('[data-role="appointment-episode-link"]');
+        var missingBtn = cta.querySelector('[data-role="appointment-episode-missing"]');
+        if (!apptId && link) {
+          apptId = appointmentIdFromRef(link.getAttribute('data-encounter-key') || '');
+        }
+        var hasEncounter = apptId !== '' && encByAppt.has(apptId);
+        if (link) {
+          link.classList.toggle('d-none', !hasEncounter);
+        }
+        if (missingBtn) {
+          missingBtn.classList.toggle('d-none', hasEncounter);
+        }
+      });
     }
 
     function setCasesModalLoading(flag) {
@@ -1506,7 +1583,17 @@ if (!$embed) {
 
     if (patientId) {
       loadActiveCase(patientId).catch(function () {});
+      loadEncounterAppointmentSet(patientId)
+        .then(function (set) {
+          encByAppt = set;
+          applyEpisodeButtonsAvailability();
+        })
+        .catch(function () {
+          encByAppt = new Set();
+          applyEpisodeButtonsAvailability();
+        });
     }
+    applyEpisodeButtonsAvailability();
     applyOnlyActiveCaseFilter();
     renderRecentSuggestion();
   })();
