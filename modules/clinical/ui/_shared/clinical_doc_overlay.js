@@ -46,9 +46,7 @@
     var url = parseUrlSafe(href);
     if (!url) return window.location.href;
     url.searchParams.delete('doc_uuid');
-    if (getDocUuidFromHash(url.hash)) {
-      url.hash = '';
-    }
+    url.hash = '';
     return url.toString();
   }
 
