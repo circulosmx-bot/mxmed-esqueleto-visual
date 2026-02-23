@@ -876,6 +876,7 @@ if (!$embed) {
             <?php if ($ek !== ''): ?>
               <div class="mt-2">
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-action="open-encounter-detail" data-encounter-key="<?php echo h($ek); ?>">Ver detalle</button>
+                <a class="btn btn-sm btn-outline-secondary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $ek])); ?>" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($ek); ?>">Ver episodio</a>
                 <?php if ($isAppointmentEncounter): ?>
                   <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $ek])); ?>" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($ek); ?>">Ver atención</a>
                 <?php endif; ?>
