@@ -795,7 +795,7 @@ if (!$embed) {
             </div>
             <?php if ($appointmentEncounterKey !== ''): ?>
               <div class="mt-2" data-role="appointment-episode-cta" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>">
-                <a class="btn btn-sm btn-outline-secondary d-none" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $appointmentEncounterKey])); ?>" data-role="appointment-episode-link" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>">Ver episodio</a>
+                <a class="btn btn-sm btn-outline-secondary d-none" href="#" data-role="appointment-episode-link" data-embed-nav data-nav-mode="encounter" data-encounter-key="" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>">Ver episodio</a>
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-role="appointment-episode-missing" disabled>Sin episodio</button>
               </div>
             <?php endif; ?>
@@ -1094,7 +1094,7 @@ if (!$embed) {
       debugMode = false;
     }
     var recentCandidates = [];
-    var encByAppt = new Set();
+    var latestEncByAppt = Object.create(null);
     var recentSuggestStorageKey = 'mxmed_historial_snooze_suggest:' + String(patientId || '');
     try {
       onlyActiveCaseEnabled = activeCaseId !== '' && localStorage.getItem(onlyActiveCaseStorageKey) === '1';
@@ -1240,8 +1240,8 @@ if (!$embed) {
       return text;
     }
 
-    async function loadEncounterAppointmentSet(pid) {
-      var result = new Set();
+    async function loadLatestEncounterByAppointment(pid) {
+      var result = Object.create(null);
       if (!pid) return result;
 
       async function fetchEncounters(url) {
@@ -1263,9 +1263,41 @@ if (!$embed) {
       }
 
       rows.forEach(function (row) {
-        var appt = String((row && row.appointment_id) || '').trim();
-        if (appt) {
-          result.add(appt);
+        var appt = String(
+          (row && (row.appointment_id || row.appt_id || row.appointmentId)) || ''
+        ).trim();
+        if (!appt) return;
+
+        var encId = Number((row && (row.encounter_id || row.encounterId)) || 0);
+        if (!Number.isFinite(encId) || encId <= 0) return;
+
+        var encDt = String((row && (row.encounter_dt || row.encounterDt || row.event_datetime)) || '').trim();
+        var ts = NaN;
+        if (encDt) {
+          ts = Date.parse(encDt.replace(' ', 'T'));
+        }
+        var hasTs = Number.isFinite(ts);
+
+        var current = result[appt] || null;
+        if (!current) {
+          result[appt] = { encounter_id: encId, encounter_dt: encDt || null, _ts: hasTs ? ts : null };
+          return;
+        }
+
+        var currentHasTs = Number.isFinite(current._ts);
+        // Prefer latest by encounter_dt; fallback to highest encounter_id.
+        if (hasTs && currentHasTs) {
+          if (ts > current._ts) {
+            result[appt] = { encounter_id: encId, encounter_dt: encDt || null, _ts: ts };
+          }
+          return;
+        }
+        if (hasTs && !currentHasTs) {
+          result[appt] = { encounter_id: encId, encounter_dt: encDt || null, _ts: ts };
+          return;
+        }
+        if (!hasTs && !currentHasTs && encId > Number(current.encounter_id || 0)) {
+          result[appt] = { encounter_id: encId, encounter_dt: encDt || null, _ts: null };
         }
       });
       return result;
@@ -1280,7 +1312,24 @@ if (!$embed) {
         if (!apptId && link) {
           apptId = appointmentIdFromRef(link.getAttribute('data-encounter-key') || '');
         }
-        var hasEncounter = apptId !== '' && encByAppt.has(apptId);
+        var latest = apptId !== '' ? latestEncByAppt[apptId] : null;
+        var encId = Number(latest && latest.encounter_id);
+        var hasEncounter = Number.isFinite(encId) && encId > 0;
+        if (hasEncounter && link) {
+          var encounterKey = 'appt:' + apptId + '#enc:' + String(encId);
+          var query = 'encounter_key=' + encodeURIComponent(encounterKey);
+          if (isEmbed) {
+            query += '&embed=1';
+            try {
+              var params = new URLSearchParams(window.location.search || '');
+              if (params.get('standalone') === '1') {
+                query += '&standalone=1';
+              }
+            } catch (_) {}
+          }
+          link.setAttribute('data-encounter-key', encounterKey);
+          link.setAttribute('href', '/modules/clinical/ui/encounter.php?' + query);
+        }
         if (link) {
           link.classList.toggle('d-none', !hasEncounter);
         }
@@ -1583,13 +1632,13 @@ if (!$embed) {
 
     if (patientId) {
       loadActiveCase(patientId).catch(function () {});
-      loadEncounterAppointmentSet(patientId)
-        .then(function (set) {
-          encByAppt = set;
+      loadLatestEncounterByAppointment(patientId)
+        .then(function (map) {
+          latestEncByAppt = map;
           applyEpisodeButtonsAvailability();
         })
         .catch(function () {
-          encByAppt = new Set();
+          latestEncByAppt = Object.create(null);
           applyEpisodeButtonsAvailability();
         });
     }
