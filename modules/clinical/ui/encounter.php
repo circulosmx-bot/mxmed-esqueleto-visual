@@ -198,9 +198,13 @@ if (!$embed) {
   <div data-role="doc-overlay-backdrop"></div>
   <div data-role="doc-overlay-panel" role="dialog" aria-modal="true" aria-label="Documento">
     <div data-role="doc-overlay-head">
-      <strong>Documento</strong>
-      <button type="button" class="btn btn-sm btn-outline-secondary" data-role="doc-overlay-close">Cerrar</button>
+      <strong data-role="doc-overlay-title">Documento</strong>
+      <div class="d-flex gap-2">
+        <a class="btn btn-sm btn-outline-primary" data-role="doc-overlay-open-new" href="#" target="_blank" rel="noopener">Abrir en pestaña</a>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-role="doc-overlay-close">Cerrar</button>
+      </div>
     </div>
+    <div data-role="doc-overlay-loader" class="small text-secondary px-3 py-2 d-none">Cargando…</div>
     <iframe data-role="doc-overlay-iframe" src="about:blank" loading="lazy"></iframe>
   </div>
 </div>
@@ -212,9 +216,30 @@ if (!$embed) {
     if (!el) return;
     var docOverlayEl = document.querySelector('[data-role="doc-overlay"]');
     var docOverlayIframe = document.querySelector('[data-role="doc-overlay-iframe"]');
+    var docOverlayTitle = document.querySelector('[data-role="doc-overlay-title"]');
+    var docOverlayOpenNew = document.querySelector('[data-role="doc-overlay-open-new"]');
+    var docOverlayLoader = document.querySelector('[data-role="doc-overlay-loader"]');
 
-    function openDocOverlay(url) {
+    function buildDocOverlayTitle(docType, docTitle) {
+      var type = String(docType || '').trim();
+      var title = String(docTitle || '').trim();
+      if (type && title) return 'Documento: ' + type + ' · ' + title;
+      if (type) return 'Documento: ' + type;
+      if (title) return 'Documento: ' + title;
+      return 'Documento';
+    }
+
+    function openDocOverlay(url, docType, docTitle) {
       if (!docOverlayEl || !docOverlayIframe || !url) return;
+      if (docOverlayTitle) {
+        docOverlayTitle.textContent = buildDocOverlayTitle(docType, docTitle);
+      }
+      if (docOverlayOpenNew) {
+        docOverlayOpenNew.setAttribute('href', url);
+      }
+      if (docOverlayLoader) {
+        docOverlayLoader.classList.remove('d-none');
+      }
       docOverlayIframe.src = url;
       docOverlayEl.hidden = false;
       docOverlayEl.setAttribute('aria-hidden', 'false');
@@ -223,8 +248,25 @@ if (!$embed) {
     function closeDocOverlay() {
       if (!docOverlayEl || !docOverlayIframe) return;
       docOverlayIframe.src = 'about:blank';
+      if (docOverlayTitle) {
+        docOverlayTitle.textContent = 'Documento';
+      }
+      if (docOverlayOpenNew) {
+        docOverlayOpenNew.setAttribute('href', '#');
+      }
+      if (docOverlayLoader) {
+        docOverlayLoader.classList.add('d-none');
+      }
       docOverlayEl.hidden = true;
       docOverlayEl.setAttribute('aria-hidden', 'true');
+    }
+
+    if (docOverlayIframe) {
+      docOverlayIframe.addEventListener('load', function () {
+        if (docOverlayLoader) {
+          docOverlayLoader.classList.add('d-none');
+        }
+      });
     }
 
     var docs = <?php echo $documentsJson; ?>;
@@ -247,8 +289,10 @@ if (!$embed) {
       if (openLink && isEmbed) {
         var href = String(openLink.getAttribute('href') || '').trim();
         if (!href) return;
+        var docType = String(openLink.getAttribute('data-doc-type') || '').trim();
+        var docTitle = String(openLink.getAttribute('data-doc-title') || '').trim();
         event.preventDefault();
-        openDocOverlay(href);
+        openDocOverlay(href, docType, docTitle);
         return;
       }
 

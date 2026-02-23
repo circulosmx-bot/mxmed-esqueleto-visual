@@ -72,7 +72,7 @@
         + '  <div class="small text-secondary">' + esc(dt) + '</div>'
         + '  <div class="small">' + esc(summary) + '</div>'
         + (href
-          ? '  <div class="mt-2"><a class="btn btn-sm btn-outline-primary" href="' + esc(href) + '"' + (openInOverlay ? ' data-role="open-doc-overlay"' : '') + '>Abrir documento</a></div>'
+          ? '  <div class="mt-2"><a class="btn btn-sm btn-outline-primary" href="' + esc(href) + '"' + (openInOverlay ? ' data-role="open-doc-overlay"' : '') + ' data-doc-type="' + esc(type) + '" data-doc-title="' + esc(title) + '">Abrir documento</a></div>'
           : '')
         + '</div>';
     }).join('');
