@@ -1254,7 +1254,7 @@ if (!$embed) {
       }
 
       var base = apiBase + '/api/clinical/index.php/patients/' + encodeURIComponent(pid) + '/encounters';
-      var rows = await fetchEncounters(base + '?limit=200');
+      var rows = await fetchEncounters(base + '?limit=100');
       if (rows === null) {
         rows = await fetchEncounters(base);
       }
