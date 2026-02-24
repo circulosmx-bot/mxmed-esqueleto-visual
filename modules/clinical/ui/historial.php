@@ -497,18 +497,18 @@ $activeCaseId = (is_array($activeCase) && isset($activeCase['case_id'])) ? (stri
 $activeCaseItemsCount = 0;
 if ($activeCaseId !== '') {
     foreach ($appointmentItems as $it) {
-        if ((string)($it['case_id'] ?? '') === $activeCaseId) {
+        if ((bool)($it['is_in_active_case'] ?? false)) {
             $activeCaseItemsCount++;
         }
     }
     foreach ($encounterOrder as $ek) {
         $enc = is_array($encounters[$ek]['raw'] ?? null) ? $encounters[$ek]['raw'] : [];
-        if ((string)($enc['case_id'] ?? '') === $activeCaseId) {
+        if ((bool)($enc['is_in_active_case'] ?? false)) {
             $activeCaseItemsCount++;
         }
     }
     foreach ($orphanDocs as $docIt) {
-        if ((string)($docIt['case_id'] ?? '') === $activeCaseId) {
+        if ((bool)($docIt['is_in_active_case'] ?? false)) {
             $activeCaseItemsCount++;
         }
     }
@@ -754,13 +754,19 @@ if (!$embed) {
     <?php endif; ?>
 
     <div class="only-active-case-note d-none" data-role="only-active-case-note">Mostrando solo items del caso activo.</div>
+    <div class="btn-group btn-group-sm mb-3" role="group" aria-label="Filtro por caso activo" data-role="case-scope-filter">
+      <button type="button" class="btn btn-outline-secondary active" data-action="set-case-scope" data-case-scope="all">Todos</button>
+      <button type="button" class="btn btn-outline-secondary" data-action="set-case-scope" data-case-scope="in">Solo caso activo</button>
+      <button type="button" class="btn btn-outline-secondary" data-action="set-case-scope" data-case-scope="out">Fuera de caso</button>
+    </div>
+    <div class="alert alert-secondary d-none py-2 mb-3" data-role="case-scope-empty">Sin eventos del caso activo.</div>
     <div class="vstack gap-2">
       <?php foreach ($appointmentItems as $item): ?>
         <?php
         $agenda = is_array($item['agenda'] ?? null) ? $item['agenda'] : [];
         $links = is_array($item['links'] ?? null) ? $item['links'] : [];
         $appointmentRef = trim((string)($links['appointment_id'] ?? ''));
-        $isInActiveCase = ($activeCaseId !== '' && (string)($item['case_id'] ?? '') === $activeCaseId);
+        $isInActiveCase = (bool)($item['is_in_active_case'] ?? false);
         $itemCaseId = trim((string)($item['case_id'] ?? ''));
         $appointmentEpisodeId = trim((string)(($item['links']['appointment_id'] ?? '')));
         ?>
@@ -778,9 +784,14 @@ if (!$embed) {
             $appointmentEpisodeId = trim((string)$appointmentEpisodeId);
         }
         ?>
-        <article class="mm-card <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($itemCaseId); ?>" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>">
+        <article class="mm-card <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($itemCaseId); ?>" data-in-active-case="<?php echo $isInActiveCase ? '1' : '0'; ?>" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>">
           <div class="body">
-            <?php if (!empty($item['case_id'])): ?>
+            <div class="mb-2">
+              <span class="badge <?php echo $isInActiveCase ? 'text-bg-success' : 'text-bg-secondary'; ?>">
+                <?php echo $isInActiveCase ? 'En caso activo' : 'Fuera de caso'; ?>
+              </span>
+            </div>
+            <?php if ($isInActiveCase): ?>
               <div class="mb-2"><span class="badge text-bg-info">Caso: <?php echo h((string)($item['case_title'] ?? '')); ?></span></div>
             <?php elseif (is_array($activeCase) && $appointmentRef !== ''): ?>
               <div class="mb-2">
@@ -848,11 +859,16 @@ if (!$embed) {
         $encounterDocCount = count($clinicalDocs);
         $encounterPreviewDocs = array_slice($clinicalDocs, 0, 3);
         $encCaseId = trim((string)($rawEncounter['case_id'] ?? ''));
-        $encInActiveCase = ($activeCaseId !== '' && $encCaseId === $activeCaseId);
+        $encInActiveCase = (bool)($rawEncounter['is_in_active_case'] ?? false);
         ?>
-        <article class="mm-card <?php echo $encInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($encCaseId); ?>" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>" data-encounter-key="<?php echo h($ek); ?>">
+        <article class="mm-card <?php echo $encInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($encCaseId); ?>" data-in-active-case="<?php echo $encInActiveCase ? '1' : '0'; ?>" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>" data-encounter-key="<?php echo h($ek); ?>">
           <div class="body">
-            <?php if (!empty($rawEncounter['case_id'])): ?>
+            <div class="mb-2">
+              <span class="badge <?php echo $encInActiveCase ? 'text-bg-success' : 'text-bg-secondary'; ?>">
+                <?php echo $encInActiveCase ? 'En caso activo' : 'Fuera de caso'; ?>
+              </span>
+            </div>
+            <?php if ($encInActiveCase): ?>
               <div class="mb-2"><span class="badge text-bg-info">Caso: <?php echo h((string)($rawEncounter['case_title'] ?? '')); ?></span></div>
             <?php elseif (is_array($activeCase) && $ek !== ''): ?>
               <div class="mb-2">
@@ -972,11 +988,16 @@ if (!$embed) {
           $links = is_array($docItem['links'] ?? null) ? $docItem['links'] : [];
           $docUuid = trim((string)($links['document_uuid'] ?? ''));
           $docCaseId = trim((string)($docItem['case_id'] ?? ''));
-          $docInActiveCase = ($activeCaseId !== '' && $docCaseId === $activeCaseId);
+          $docInActiveCase = (bool)($docItem['is_in_active_case'] ?? false);
           ?>
-          <article class="mm-card <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($docCaseId); ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>" data-document-uuid="<?php echo h($docUuid); ?>">
+          <article class="mm-card <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>" data-document-uuid="<?php echo h($docUuid); ?>">
             <div class="body">
-              <?php if (!empty($docItem['case_id'])): ?>
+              <div class="mb-2">
+                <span class="badge <?php echo $docInActiveCase ? 'text-bg-success' : 'text-bg-secondary'; ?>">
+                  <?php echo $docInActiveCase ? 'En caso activo' : 'Fuera de caso'; ?>
+                </span>
+              </div>
+              <?php if ($docInActiveCase): ?>
                 <div class="mb-2"><span class="badge text-bg-info">Caso: <?php echo h((string)($docItem['case_title'] ?? '')); ?></span></div>
               <?php elseif (is_array($activeCase) && $docUuid !== ''): ?>
                 <div class="mb-2">
@@ -1088,9 +1109,12 @@ if (!$embed) {
     }
     var onlyActiveCaseBtn = document.querySelector('[data-action="toggle-only-active-case"]');
     var onlyActiveCaseNotice = document.querySelector('[data-role="only-active-case-note"]');
+    var caseScopeFilterWrap = document.querySelector('[data-role="case-scope-filter"]');
+    var caseScopeEmpty = document.querySelector('[data-role="case-scope-empty"]');
     var recentSuggestion = document.querySelector('[data-role="recent-case-suggestion"]');
     var recentSuggestionText = document.querySelector('[data-role="recent-case-suggestion-text"]');
     var onlyActiveCaseEnabled = false;
+    var caseScope = 'all';
     var encounterDetailModalEl = document.querySelector('[data-role="encounter-detail-modal"]');
     var encounterDetailLoading = document.querySelector('[data-role="encounter-detail-loading"]');
     var encounterDetailError = document.querySelector('[data-role="encounter-detail-error"]');
@@ -1115,21 +1139,51 @@ if (!$embed) {
       onlyActiveCaseEnabled = false;
     }
 
+    function applyTimelineCaseScopeFilter() {
+      if (!caseScopeFilterWrap) return;
+      var buttons = caseScopeFilterWrap.querySelectorAll('[data-action="set-case-scope"]');
+      buttons.forEach(function (btn) {
+        var scope = String(btn.getAttribute('data-case-scope') || '').trim();
+        btn.classList.toggle('active', scope === caseScope);
+      });
+    }
+
     function applyOnlyActiveCaseFilter() {
       var timelineItems = document.querySelectorAll('[data-timeline-item="1"]');
+      var visibleCount = 0;
       timelineItems.forEach(function (item) {
-        if (!onlyActiveCaseEnabled || activeCaseId === '') {
-          item.classList.remove('d-none');
-          return;
+        var inActiveCase = String(item.getAttribute('data-in-active-case') || '').trim() === '1';
+        var hide = false;
+
+        if (onlyActiveCaseEnabled && activeCaseId !== '') {
+          hide = !inActiveCase;
         }
-        var itemCaseId = String(item.getAttribute('data-case-id') || '').trim();
-        item.classList.toggle('d-none', itemCaseId !== activeCaseId);
+        if (!hide) {
+          if (caseScope === 'in') {
+            hide = !inActiveCase;
+          } else if (caseScope === 'out') {
+            hide = inActiveCase;
+          }
+        }
+
+        item.classList.toggle('d-none', hide);
+        if (!hide) {
+          visibleCount += 1;
+        }
       });
       if (onlyActiveCaseNotice) {
         onlyActiveCaseNotice.classList.toggle('d-none', !onlyActiveCaseEnabled || activeCaseId === '');
       }
       if (onlyActiveCaseBtn) {
         onlyActiveCaseBtn.textContent = (onlyActiveCaseEnabled && activeCaseId !== '') ? 'Ver todos' : 'Ver solo este caso';
+      }
+      applyTimelineCaseScopeFilter();
+      if (caseScopeEmpty) {
+        var showEmpty = (caseScope === 'in' || caseScope === 'out') && visibleCount === 0;
+        caseScopeEmpty.textContent = (caseScope === 'in')
+          ? 'Sin eventos del caso activo.'
+          : 'Sin eventos fuera de caso.';
+        caseScopeEmpty.classList.toggle('d-none', !showEmpty);
       }
     }
 
@@ -1161,11 +1215,12 @@ if (!$embed) {
       return nodes.map(function (node) {
         return {
           caseId: String(node.getAttribute('data-case-id') || '').trim(),
+          inActiveCase: String(node.getAttribute('data-in-active-case') || '').trim() === '1',
           itemType: String(node.getAttribute('data-item-type') || '').trim(),
           itemRef: String(node.getAttribute('data-item-ref') || '').trim()
         };
       }).filter(function (item) {
-        return item.caseId === '' && item.itemType !== '' && item.itemRef !== '';
+        return !item.inActiveCase && item.itemType !== '' && item.itemRef !== '';
       });
     }
 
@@ -1514,6 +1569,17 @@ if (!$embed) {
       if (toggleOnlyCaseBtn) {
         event.preventDefault();
         setOnlyActiveCaseEnabled(!onlyActiveCaseEnabled);
+        return;
+      }
+
+      var setCaseScopeBtn = event.target && event.target.closest ? event.target.closest('[data-action="set-case-scope"]') : null;
+      if (setCaseScopeBtn) {
+        event.preventDefault();
+        caseScope = String(setCaseScopeBtn.getAttribute('data-case-scope') || 'all').trim();
+        if (caseScope !== 'in' && caseScope !== 'out') {
+          caseScope = 'all';
+        }
+        applyOnlyActiveCaseFilter();
         return;
       }
 
