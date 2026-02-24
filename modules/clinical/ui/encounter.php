@@ -68,9 +68,17 @@ $errorMessage = '';
 $encounter = null;
 $activeCase = null;
 $activeCaseError = '';
+$activeCaseSuccess = '';
 $isInActiveCase = false;
 $isInActiveCaseExact = false;
 $isInActiveCaseByAppt = false;
+$patientId = '';
+$appointmentId = '';
+$apiBase = get_api_base();
+
+if (trim((string)($_GET['flash'] ?? '')) === 'added_case_item') {
+    $activeCaseSuccess = 'Agregado al caso activo.';
+}
 
 if ($encounterKey !== '') {
     // IMPORTANT (dev mode): use API base for server-side calls to avoid UI->UI recursion.
@@ -108,7 +116,6 @@ if ($encounter !== null) {
     $patientId = trim((string)($encounter['patient_id'] ?? (($encounter['links']['patient_id'] ?? ''))));
     $appointmentId = trim((string)($encounter['appointment_id'] ?? ($encounter['links']['appointment_id'] ?? '')));
     if ($patientId !== '') {
-        $apiBase = get_api_base();
         $activeCaseUrl = $apiBase . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/cases/active';
         $activeCaseResp = http_get_json($activeCaseUrl);
         if (is_array($activeCaseResp) && ($activeCaseResp['ok'] ?? false) === true) {
@@ -143,6 +150,54 @@ if ($encounter !== null) {
             $activeCaseError = trim((string)($activeCaseResp['message'] ?? 'No se pudo consultar el caso activo.'));
         } else {
             $activeCaseError = 'No se pudo consultar el caso activo.';
+        }
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $encounter !== null) {
+    $action = trim((string)($_POST['action'] ?? ''));
+    if ($action === 'add_active_case_appointment') {
+        $caseId = (int)($activeCase['case_id'] ?? 0);
+        if ($caseId <= 0 || $appointmentId === '') {
+            $activeCaseError = 'No se pudo agregar al caso activo.';
+        } elseif (!$isInActiveCase) {
+            $itemRef = 'appt:' . $appointmentId;
+            $postUrl = $apiBase . '/api/clinical/index.php/cases/' . rawurlencode((string)$caseId) . '/items';
+            $postPayload = json_encode([
+                'item_type' => 'appointment',
+                'item_ref' => $itemRef,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if (!is_string($postPayload)) {
+                $postPayload = '{"item_type":"appointment","item_ref":""}';
+            }
+            $postContext = stream_context_create([
+                'http' => [
+                    'method' => 'POST',
+                    'timeout' => 8,
+                    'ignore_errors' => true,
+                    'header' => "Accept: application/json\r\nContent-Type: application/json\r\n",
+                    'content' => $postPayload,
+                ],
+            ]);
+            $postRaw = @file_get_contents($postUrl, false, $postContext);
+            if (!is_string($postRaw) || $postRaw === '') {
+                $activeCaseError = 'No se pudo agregar al caso activo.';
+            } else {
+                $postDecoded = json_decode($postRaw, true);
+                if (!is_array($postDecoded) || ($postDecoded['ok'] ?? false) !== true) {
+                    $activeCaseError = trim((string)($postDecoded['message'] ?? 'No se pudo agregar al caso activo.'));
+                    if ($activeCaseError === '') {
+                        $activeCaseError = 'No se pudo agregar al caso activo.';
+                    }
+                } else {
+                    $redirectParams = ['encounter_key' => $encounterKey, 'flash' => 'added_case_item'];
+                    if (trim((string)($_GET['embed'] ?? '')) === '1') {
+                        $redirectParams['embed'] = '1';
+                    }
+                    header('Location: /modules/clinical/ui/encounter.php?' . http_build_query($redirectParams));
+                    exit;
+                }
+            }
         }
     }
 }
@@ -228,6 +283,9 @@ if (!$embed) {
   <?php elseif ($errorMessage !== ''): ?>
     <div class="alert alert-danger"><?php echo h($errorMessage); ?></div>
   <?php else: ?>
+    <?php if ($activeCaseSuccess !== ''): ?>
+      <div class="alert alert-success mb-3"><?php echo h($activeCaseSuccess); ?></div>
+    <?php endif; ?>
     <?php if ($activeCase === null): ?>
       <div class="alert alert-secondary d-flex justify-content-between align-items-center mb-3">
         <div>Sin caso clínico activo</div>
@@ -244,7 +302,14 @@ if (!$embed) {
             <?php echo $isInActiveCase ? 'Incluido en caso activo' : 'No pertenece al caso activo'; ?>
           </span>
           <?php if (!$isInActiveCase): ?>
-            <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Próximamente">Agregar a caso activo</button>
+            <?php if ($appointmentId !== ''): ?>
+              <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
+                <input type="hidden" name="action" value="add_active_case_appointment">
+                <button type="submit" class="btn btn-sm btn-outline-secondary">Agregar a caso activo</button>
+              </form>
+            <?php else: ?>
+              <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Sin appointment_id">Agregar a caso activo</button>
+            <?php endif; ?>
           <?php endif; ?>
         </div>
       </div>
