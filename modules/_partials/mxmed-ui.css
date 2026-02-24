@@ -1,0 +1,95 @@
+:root{
+  --mm-radius: 14px;
+  --mm-gap: 12px;
+  --mm-border: rgba(0,0,0,.10);
+  --mm-soft: rgba(255,255,255,.65);
+  --mm-text: rgba(0,0,0,.85);
+  --mm-muted: rgba(0,0,0,.55);
+
+  --mm-ok-bg: rgba(25,135,84,.14);
+  --mm-ok-bd: rgba(25,135,84,.35);
+  --mm-ok-tx: rgba(10,80,50,.95);
+
+  --mm-warn-bg: rgba(255,193,7,.18);
+  --mm-warn-bd: rgba(255,193,7,.45);
+  --mm-warn-tx: rgba(110,80,0,.95);
+
+  --mm-off-bg: rgba(108,117,125,.14);
+  --mm-off-bd: rgba(108,117,125,.35);
+  --mm-off-tx: rgba(60,65,70,.95);
+}
+
+.mm-card{
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: rgba(255,255,255,.75);
+  box-shadow: 0 6px 20px rgba(0,0,0,.08);
+}
+
+.mm-toolbar{
+  display:flex;
+  gap: var(--mm-gap);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.mm-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 12px;
+  border: 1px solid var(--mm-border);
+}
+
+.mm-badge--ok{ background: var(--mm-ok-bg); border-color: var(--mm-ok-bd); color: var(--mm-ok-tx); }
+.mm-badge--warn{ background: var(--mm-warn-bg); border-color: var(--mm-warn-bd); color: var(--mm-warn-tx); }
+.mm-badge--off{ background: var(--mm-off-bg); border-color: var(--mm-off-bd); color: var(--mm-off-tx); }
+
+.mm-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--mm-border);
+  background: rgba(255,255,255,.85);
+  color: var(--mm-text);
+  text-decoration: none;
+  font-weight: 600;
+  line-height: 1;
+  user-select: none;
+}
+
+.mm-btn:active{ transform: translateY(1px); }
+
+.mm-btn-sm{ padding: 7px 10px; border-radius: 9px; font-size: 13px; }
+
+.mm-btn-outline-success{
+  border-color: var(--mm-ok-bd);
+  background: rgba(255,255,255,.85);
+  color: var(--mm-ok-tx);
+}
+
+.mm-btn-outline-secondary{
+  border-color: rgba(0,0,0,.20);
+  background: rgba(255,255,255,.75);
+  color: var(--mm-muted);
+}
+
+.mm-btn[disabled], .mm-btn.is-disabled{
+  opacity: .55;
+  pointer-events: none;
+}
+
+.mm-empty{
+  border: 1px dashed rgba(0,0,0,.20);
+  background: rgba(255,255,255,.55);
+  border-radius: var(--mm-radius);
+  padding: 12px;
+  color: var(--mm-muted);
+  font-weight: 600;
+}
