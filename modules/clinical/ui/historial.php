@@ -240,6 +240,11 @@ $include = $include !== '' ? $include : 'agenda,clinical';
 $limit = ($limit > 0 && $limit <= 200) ? $limit : 20;
 require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
+$clinicalApiBase = rtrim((string)getenv('CLINICAL_API_BASE'), '/');
+if ($clinicalApiBase === '') {
+    $clinicalApiBase = get_api_base();
+}
+// usar base raw para HTTP calls, nunca HTML-escaped
 
 $errorMessage = '';
 $errorTechnicalDetails = '';
@@ -257,7 +262,7 @@ if ($encounterKey === '' && $appointmentId !== '') {
 }
 
 if ($patientId === '' && $encounterKey !== '') {
-    $resolveUrl = get_api_base() . '/api/clinical/index.php/encounters/' . rawurlencode($encounterKey);
+    $resolveUrl = $clinicalApiBase . '/api/clinical/index.php/encounters/' . rawurlencode($encounterKey);
     $resolveContext = stream_context_create([
         'http' => [
             'method' => 'GET',
@@ -299,7 +304,7 @@ if ($encounterKey === '' && $appointmentId !== '') {
 }
 
 if ($patientId === '' && $encounterKey !== '') {
-    $resolveUrl = get_api_base() . '/api/clinical/index.php/encounters/' . rawurlencode($encounterKey);
+    $resolveUrl = $clinicalApiBase . '/api/clinical/index.php/encounters/' . rawurlencode($encounterKey);
     $resolveContext = stream_context_create([
         'http' => [
             'method' => 'GET',
@@ -368,7 +373,7 @@ if ($patientId !== '') {
         }
 
         $queryApi = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
-        $timelineUrlRaw = get_api_base() . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/timeline'
+        $timelineUrlRaw = $clinicalApiBase . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/timeline'
             . '?' . $queryApi;
         $timelineUrlSafe = h($timelineUrlRaw);
 
@@ -406,7 +411,7 @@ if ($patientId !== '') {
 }
 
 if ($patientId !== '') {
-    $caseUrl = get_api_base() . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/cases/active';
+    $caseUrl = $clinicalApiBase . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/cases/active';
     $caseContext = stream_context_create([
         'http' => [
             'method' => 'GET',
