@@ -43,6 +43,7 @@ function render_embed_css(bool $embed): void
 
     echo '<link rel="stylesheet" href="/assets/css/style.css">' . "\n";
     echo '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">' . "\n";
+    echo '<link rel="stylesheet" href="/modules/_partials/mxmed-ui.css?v=1">' . "\n";
 }
 
 function http_get_json(string $url, int $timeoutSeconds = 8): ?array
