@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 function get_api_base(): string
 {
+    $env = trim((string)getenv('CLINICAL_API_BASE'));
+    if ($env !== '') {
+        return rtrim($env, '/');
+    }
+
     $env = trim((string)getenv('MXMED_API_BASE'));
     if ($env !== '') {
         return rtrim($env, '/');
@@ -21,7 +26,8 @@ function get_api_base(): string
         $proto = (string)$_SERVER['HTTP_X_FORWARDED_PROTO'];
     }
 
-    return $proto . '://' . $host;
+    $hostOnly = preg_replace('/:\d+$/', '', $host) ?: '127.0.0.1';
+    return $proto . '://' . $hostOnly . ':8091';
 }
 
 function h(string $value): string
@@ -44,7 +50,7 @@ $errorMessage = '';
 $encounter = null;
 
 if ($encounterKey !== '') {
-    // ✅ CORRECTO: encounters/{encounter_key}
+    // IMPORTANT (dev mode): use API base for server-side calls to avoid UI->UI recursion.
     $url = get_api_base() . '/api/clinical/index.php/encounters/' . rawurlencode($encounterKey);
 
     $context = stream_context_create([
