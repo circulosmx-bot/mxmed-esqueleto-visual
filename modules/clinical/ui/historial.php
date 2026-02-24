@@ -242,6 +242,11 @@ require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
 $clinicalApiBase = rtrim((string)getenv('CLINICAL_API_BASE'), '/');
 if ($clinicalApiBase === '') {
+    // IMPORTANT (dev mode):
+    // Always use CLINICAL_API_BASE for server-side HTTP calls.
+    // In PHP built-in server (php -S), calling the same port (UI -> UI)
+    // causes self-request recursion and status:0 failures.
+    // UI runs on 8092 and API on 8091 in local dev.
     $clinicalApiBase = get_api_base();
 }
 // usar base raw para HTTP calls, nunca HTML-escaped
