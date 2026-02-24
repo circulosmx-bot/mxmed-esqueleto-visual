@@ -45,9 +45,32 @@ function render_embed_css(bool $embed): void
     echo '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">' . "\n";
 }
 
+function http_get_json(string $url, int $timeoutSeconds = 8): ?array
+{
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'timeout' => $timeoutSeconds,
+            'ignore_errors' => true,
+            'header' => "Accept: application/json\r\n",
+        ],
+    ]);
+    $raw = @file_get_contents($url, false, $context);
+    if (!is_string($raw) || $raw === '') {
+        return null;
+    }
+    $decoded = json_decode($raw, true);
+    return is_array($decoded) ? $decoded : null;
+}
+
 $encounterKey = trim((string)($_GET['encounter_key'] ?? ''));
 $errorMessage = '';
 $encounter = null;
+$activeCase = null;
+$activeCaseError = '';
+$isInActiveCase = false;
+$isInActiveCaseExact = false;
+$isInActiveCaseByAppt = false;
 
 if ($encounterKey !== '') {
     // IMPORTANT (dev mode): use API base for server-side calls to avoid UI->UI recursion.
@@ -77,6 +100,49 @@ if ($encounterKey !== '') {
             if ($encounter === null) {
                 $errorMessage = 'Atención no disponible.';
             }
+        }
+    }
+}
+
+if ($encounter !== null) {
+    $patientId = trim((string)($encounter['patient_id'] ?? (($encounter['links']['patient_id'] ?? ''))));
+    $appointmentId = trim((string)($encounter['links']['appointment_id'] ?? (($encounter['appointment_id'] ?? ''))));
+    if ($patientId !== '') {
+        $apiBase = get_api_base();
+        $activeCaseUrl = $apiBase . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/cases/active';
+        $activeCaseResp = http_get_json($activeCaseUrl);
+        if (is_array($activeCaseResp) && ($activeCaseResp['ok'] ?? false) === true) {
+            $caseData = $activeCaseResp['data'] ?? null;
+            $activeCase = is_array($caseData) ? $caseData : null;
+            $caseId = (int)($activeCase['case_id'] ?? 0);
+            if ($caseId > 0) {
+                $caseItemsUrl = $apiBase . '/api/clinical/index.php/cases/' . rawurlencode((string)$caseId) . '/items?limit=200';
+                $caseItemsResp = http_get_json($caseItemsUrl);
+                if (is_array($caseItemsResp) && ($caseItemsResp['ok'] ?? false) === true) {
+                    $caseItems = is_array($caseItemsResp['data'] ?? null) ? $caseItemsResp['data'] : [];
+                    $caseMap = [];
+                    foreach ($caseItems as $row) {
+                        if (!is_array($row)) {
+                            continue;
+                        }
+                        $itemType = trim((string)($row['item_type'] ?? ''));
+                        $itemRef = trim((string)($row['item_ref'] ?? ''));
+                        if ($itemType === '' || $itemRef === '') {
+                            continue;
+                        }
+                        $caseMap[$itemType . '|' . $itemRef] = true;
+                    }
+                    $isInActiveCaseExact = isset($caseMap['encounter|' . $encounterKey]);
+                    $isInActiveCaseByAppt = ($appointmentId !== '') && isset($caseMap['appointment|appt:' . $appointmentId]);
+                    $isInActiveCase = $isInActiveCaseExact || $isInActiveCaseByAppt;
+                } else {
+                    $activeCaseError = 'No se pudo consultar los items del caso activo.';
+                }
+            }
+        } elseif (is_array($activeCaseResp)) {
+            $activeCaseError = trim((string)($activeCaseResp['message'] ?? 'No se pudo consultar el caso activo.'));
+        } else {
+            $activeCaseError = 'No se pudo consultar el caso activo.';
         }
     }
 }
@@ -162,6 +228,31 @@ if (!$embed) {
   <?php elseif ($errorMessage !== ''): ?>
     <div class="alert alert-danger"><?php echo h($errorMessage); ?></div>
   <?php else: ?>
+    <?php if ($activeCase === null): ?>
+      <div class="alert alert-secondary d-flex justify-content-between align-items-center mb-3">
+        <div>Sin caso clínico activo</div>
+        <span class="badge text-bg-secondary">Sin caso</span>
+      </div>
+    <?php else: ?>
+      <div class="alert <?php echo $isInActiveCase ? 'alert-success' : 'alert-warning'; ?> d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+          <strong>Caso activo:</strong> <?php echo h((string)($activeCase['title'] ?? 'Caso clínico')); ?>
+          <span class="text-secondary">(ID <?php echo h((string)($activeCase['case_id'] ?? '')); ?>)</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge <?php echo $isInActiveCase ? 'text-bg-success' : 'text-bg-warning'; ?>">
+            <?php echo $isInActiveCase ? 'Incluido en caso activo' : 'No pertenece al caso activo'; ?>
+          </span>
+          <?php if (!$isInActiveCase): ?>
+            <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Próximamente">Agregar a caso activo</button>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endif; ?>
+    <?php if ($activeCaseError !== ''): ?>
+      <div class="alert alert-warning mb-3"><?php echo h($activeCaseError); ?></div>
+    <?php endif; ?>
+
     <div class="mm-card mb-3">
       <div class="head"><h5>Resumen</h5></div>
       <div class="body small">
