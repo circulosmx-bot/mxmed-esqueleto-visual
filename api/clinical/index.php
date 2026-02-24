@@ -752,6 +752,33 @@ function clinical_timeline_encounter_key_from_datetime(string $eventDatetime): s
     return 'dt:' . gmdate('Ymd\THi', $ts) . ':bucket60';
 }
 
+function clinical_timeline_extract_appointment_id(array $timelineItem): string
+{
+    $links = is_array($timelineItem['links'] ?? null) ? $timelineItem['links'] : [];
+    $appointmentId = trim((string)($links['appointment_id'] ?? ''));
+    if ($appointmentId !== '') {
+        return $appointmentId;
+    }
+
+    // encounter_key can be "appt:{id}" or "appt:{id}#enc:{n}".
+    $encounterKey = trim((string)($timelineItem['encounter_key'] ?? ''));
+    if ($encounterKey === '' || strpos($encounterKey, 'appt:') !== 0) {
+        return '';
+    }
+
+    $ref = substr($encounterKey, 5);
+    if ($ref === false || $ref === '') {
+        return '';
+    }
+
+    $hashPos = strpos($ref, '#enc:');
+    if ($hashPos !== false) {
+        $ref = substr($ref, 0, $hashPos);
+    }
+
+    return trim((string)$ref);
+}
+
 function clinical_timeline_encounters_fetch(PDO $pdo, string $patientId, int $limit): array
 {
     $stmt = $pdo->prepare("
@@ -1677,43 +1704,36 @@ try {
 
             $items = array_merge($encounterItems, $appointmentItems, $documentItems);
 
-            if (is_array($activeCase) && $activeCase !== []) {
-                $activeCaseId = (int)($activeCase['case_id'] ?? 0);
-                $activeCaseTitle = (string)($activeCase['title'] ?? '');
-                if ($activeCaseId > 0) {
-                    $caseItems = clinical_case_items_fetch($pdo, $activeCaseId);
-                    $caseMap = [];
-                    foreach ($caseItems as $ci) {
-                        $ciType = trim((string)($ci['item_type'] ?? ''));
-                        $ciRef = trim((string)($ci['item_ref'] ?? ''));
-                        if ($ciType === '' || $ciRef === '') {
-                            continue;
-                        }
-                        $caseMap[$ciType . '|' . $ciRef] = true;
+            $activeCaseId = (int)($activeCase['case_id'] ?? 0);
+            $activeCaseTitle = (string)($activeCase['title'] ?? '');
+            $appointmentCaseSet = [];
+            if ($activeCaseId > 0) {
+                $caseItems = clinical_case_items_fetch($pdo, $activeCaseId);
+                foreach ($caseItems as $ci) {
+                    $ciType = strtolower(trim((string)($ci['item_type'] ?? '')));
+                    $ciRef = trim((string)($ci['item_ref'] ?? ''));
+                    if ($ciType !== 'appointment' || $ciRef === '') {
+                        continue;
                     }
-
-                    foreach ($items as &$timelineItem) {
-                        if (!is_array($timelineItem)) {
-                            continue;
-                        }
-                        $itemType = trim((string)($timelineItem['item_type'] ?? ''));
-                        $itemRef = '';
-                        if ($itemType === 'encounter' || $itemType === 'appointment') {
-                            $itemRef = trim((string)($timelineItem['encounter_key'] ?? ''));
-                        } elseif ($itemType === 'document') {
-                            $links = is_array($timelineItem['links'] ?? null) ? $timelineItem['links'] : [];
-                            $itemRef = trim((string)($links['document_uuid'] ?? ''));
-                        }
-
-                        if ($itemType !== '' && $itemRef !== '' && isset($caseMap[$itemType . '|' . $itemRef])) {
-                            $timelineItem['case_id'] = $activeCaseId;
-                            $timelineItem['case_title'] = $activeCaseTitle;
-                            $timelineItem['is_in_active_case'] = true;
-                        }
-                    }
-                    unset($timelineItem);
+                    $appointmentCaseSet[$ciRef] = true;
                 }
             }
+
+            foreach ($items as &$timelineItem) {
+                if (!is_array($timelineItem)) {
+                    continue;
+                }
+
+                $appointmentId = clinical_timeline_extract_appointment_id($timelineItem);
+                $appointmentRef = ($appointmentId !== '') ? ('appt:' . $appointmentId) : '';
+                $inActiveCase = ($appointmentRef !== '' && isset($appointmentCaseSet[$appointmentRef]));
+
+                // Keep active case context on every item; membership is explicit with is_in_active_case.
+                $timelineItem['case_id'] = ($activeCaseId > 0) ? $activeCaseId : null;
+                $timelineItem['case_title'] = ($activeCaseId > 0) ? $activeCaseTitle : null;
+                $timelineItem['is_in_active_case'] = $inActiveCase;
+            }
+            unset($timelineItem);
 
             if ($includeAgenda) {
                 // TODO(timeline-v1): unify cursor across agenda + clinical streams.
