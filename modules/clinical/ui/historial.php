@@ -771,16 +771,16 @@ if (!$embed) {
             <span class="badge text-bg-success me-2">Caso activo</span>
             <strong><?php echo h((string)($activeCase['title'] ?? 'Caso clínico')); ?></strong>
           </div>
-          <div class="d-flex gap-2">
+          <div class="d-flex flex-wrap gap-2">
             <span class="small text-secondary align-self-center" data-role="active-case-counter">Items en este caso: <?php echo h((string)$activeCaseItemsCount); ?></span>
             <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-success" data-action="toggle-only-active-case">Ver solo este caso</button>
             <button
               type="button"
-              class="btn btn-sm btn-outline-primary"
+              class="mm-btn mm-btn-sm mm-btn-outline-primary"
               data-action="rename-active-case"
               data-case-id="<?php echo h((string)($activeCase['case_id'] ?? '')); ?>"
             >Renombrar</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="open-cases-modal">Ver casos</button>
+            <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-cases-modal">Ver casos</button>
           </div>
         <?php else: ?>
           <div>
@@ -789,16 +789,16 @@ if (!$embed) {
           </div>
           <div>
             <button type="button" class="btn btn-sm btn-primary" data-action="create-clinical-case">Crear caso clínico</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="open-cases-modal">Ver casos</button>
+            <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-cases-modal">Ver casos</button>
           </div>
         <?php endif; ?>
       </div>
     </div>
     <div class="alert alert-info d-none py-2 mb-3" data-role="recent-case-suggestion">
       <span data-role="recent-case-suggestion-text"></span>
-      <div class="mt-2 d-flex gap-2">
+      <div class="mt-2 d-flex flex-wrap gap-2">
         <button type="button" class="btn btn-sm btn-primary" data-action="assign-recent-to-active-case">Agregar recientes</button>
-        <button type="button" class="btn btn-sm btn-outline-secondary" data-action="snooze-recent-case-suggestion">No por ahora</button>
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="snooze-recent-case-suggestion">No por ahora</button>
       </div>
     </div>
   <?php endif; ?>
@@ -838,19 +838,19 @@ if (!$embed) {
     <?php if ($cursorNext !== '' || $cursorPrev !== ''): ?>
       <div class="d-flex flex-wrap gap-2 mb-3">
         <?php if ($cursorNext !== ''): ?>
-          <a class="btn btn-outline-primary btn-sm" href="<?php echo h($buildCursorHref($cursorNext)); ?>">Más reciente</a>
+          <a class="mm-btn mm-btn-sm mm-btn-outline-primary" href="<?php echo h($buildCursorHref($cursorNext)); ?>">Más reciente</a>
         <?php endif; ?>
         <?php if ($cursorPrev !== ''): ?>
-          <a class="btn btn-outline-primary btn-sm" href="<?php echo h($buildCursorHref($cursorPrev)); ?>">Más antiguo</a>
+          <a class="mm-btn mm-btn-sm mm-btn-outline-primary" href="<?php echo h($buildCursorHref($cursorPrev)); ?>">Más antiguo</a>
         <?php endif; ?>
       </div>
     <?php endif; ?>
 
     <div class="only-active-case-note d-none" data-role="only-active-case-note">Mostrando solo items del caso activo.</div>
     <div class="btn-group btn-group-sm mb-3" role="group" aria-label="Filtro por caso activo" data-role="case-scope-filter">
-      <button type="button" class="btn btn-outline-secondary active" data-action="set-case-scope" data-case-scope="all">Todos</button>
-      <button type="button" class="btn btn-outline-secondary" data-action="set-case-scope" data-case-scope="in">Solo caso activo</button>
-      <button type="button" class="btn btn-outline-secondary" data-action="set-case-scope" data-case-scope="out">Fuera de caso</button>
+      <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary active" data-action="set-case-scope" data-case-scope="all">Todos</button>
+      <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-case-scope" data-case-scope="in">Solo caso activo</button>
+      <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-case-scope" data-case-scope="out">Fuera de caso</button>
     </div>
     <div class="alert alert-secondary d-none py-2 mb-3" data-role="case-scope-empty">Sin eventos del caso activo.</div>
     <div class="vstack gap-2">
@@ -881,7 +881,7 @@ if (!$embed) {
           <div class="body">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
               <div class="d-flex flex-wrap align-items-center gap-2">
-                <span class="badge <?php echo $isInActiveCase ? 'text-bg-success' : 'text-bg-secondary'; ?>" data-role="case-badge">
+                <span class="mm-badge <?php echo $isInActiveCase ? 'mm-badge-ok' : 'mm-badge-muted'; ?>" data-role="case-badge">
                   <?php echo $isInActiveCase ? 'En caso activo' : 'Fuera de caso'; ?>
                 </span>
                 <?php if ($isInActiveCase): ?>
@@ -910,12 +910,12 @@ if (!$embed) {
             </div>
             <?php if ($appointmentEncounterKey !== ''): ?>
               <div class="mt-2" data-role="appointment-episode-cta" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>">
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-role="appointment-episode-missing" disabled>Sin episodio</button>
+                <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-role="appointment-episode-missing" disabled>Sin episodio</button>
               </div>
             <?php endif; ?>
             <?php if (trim((string)($links['appointment_id'] ?? '')) !== ''): ?>
               <div class="mt-2">
-                <a class="btn btn-sm btn-outline-primary" href="/index.html#p-agenda">Ver cita</a>
+                <a class="mm-btn mm-btn-sm mm-btn-outline-primary" href="/index.html#p-agenda">Ver cita</a>
               </div>
             <?php endif; ?>
           </div>
@@ -956,7 +956,7 @@ if (!$embed) {
           <div class="body">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
               <div class="d-flex flex-wrap align-items-center gap-2">
-                <span class="badge <?php echo $encInActiveCase ? 'text-bg-success' : 'text-bg-secondary'; ?>" data-role="case-badge">
+                <span class="mm-badge <?php echo $encInActiveCase ? 'mm-badge-ok' : 'mm-badge-muted'; ?>" data-role="case-badge">
                   <?php echo $encInActiveCase ? 'En caso activo' : 'Fuera de caso'; ?>
                 </span>
                 <?php if ($encInActiveCase): ?>
@@ -989,10 +989,10 @@ if (!$embed) {
             </div>
             <?php if ($ek !== ''): ?>
               <div class="mt-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-action="open-encounter-detail" data-encounter-key="<?php echo h($ek); ?>">Ver detalle</button>
-                <a class="btn btn-sm btn-outline-secondary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $ek])); ?>" data-role="encounter-episode-link" data-episode-link="1" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($ek); ?>">Ver episodio</a>
+                <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-encounter-detail" data-encounter-key="<?php echo h($ek); ?>">Ver detalle</button>
+                <a class="mm-btn mm-btn-sm mm-btn-outline-secondary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $ek])); ?>" data-role="encounter-episode-link" data-episode-link="1" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($ek); ?>">Ver episodio</a>
                 <?php if ($isAppointmentEncounter): ?>
-                  <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $ek])); ?>" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($ek); ?>">Ver atención</a>
+                  <a class="mm-btn mm-btn-sm mm-btn-outline-primary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $ek])); ?>" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($ek); ?>">Ver atención</a>
                 <?php endif; ?>
               </div>
             <?php endif; ?>
@@ -1001,7 +1001,7 @@ if (!$embed) {
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="small fw-semibold">Documentos: <?php echo (int)$encounterDocCount; ?></div>
                 <?php if ($encounterDocCount > 3): ?>
-                  <button type="button" class="btn btn-sm btn-outline-secondary" data-action="open-encounter-detail" data-encounter-key="<?php echo h($ek); ?>">Ver todos (<?php echo (int)$encounterDocCount; ?>)</button>
+                  <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-encounter-detail" data-encounter-key="<?php echo h($ek); ?>">Ver todos (<?php echo (int)$encounterDocCount; ?>)</button>
                 <?php endif; ?>
               </div>
               <div class="encounter-doc-preview">
@@ -1055,7 +1055,7 @@ if (!$embed) {
                       <div class="text-secondary"><?php echo h((string)($doc['summary'] ?? '-')); ?></div>
                       <?php if ($docUuid !== ''): ?>
                         <div class="mt-1">
-                          <a class="btn btn-sm btn-outline-secondary" href="/modules/clinical/ui/document.php?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>" data-embed-nav data-nav-mode="document" data-uuid="<?php echo h($docUuid); ?>">Ver documento</a>
+                          <a class="mm-btn mm-btn-sm mm-btn-outline-secondary" href="/modules/clinical/ui/document.php?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>" data-embed-nav data-nav-mode="document" data-uuid="<?php echo h($docUuid); ?>">Ver documento</a>
                         </div>
                       <?php endif; ?>
                     </div>
@@ -1082,8 +1082,8 @@ if (!$embed) {
           <article class="mm-card <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>" data-document-uuid="<?php echo h($docUuid); ?>">
             <div class="body">
               <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-              <div class="d-flex flex-wrap align-items-center gap-2">
-                  <span class="badge <?php echo $docInActiveCase ? 'text-bg-success' : 'text-bg-secondary'; ?>" data-role="case-badge">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                  <span class="mm-badge <?php echo $docInActiveCase ? 'mm-badge-ok' : 'mm-badge-muted'; ?>" data-role="case-badge">
                     <?php echo $docInActiveCase ? 'En caso activo' : 'Fuera de caso'; ?>
                   </span>
                   <?php if ($docInActiveCase): ?>
@@ -1111,7 +1111,7 @@ if (!$embed) {
               </div>
               <?php if ($docUuid !== ''): ?>
                 <div class="mt-2">
-                  <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/document.php?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>" data-embed-nav data-nav-mode="document" data-uuid="<?php echo h($docUuid); ?>">Ver documento</a>
+                  <a class="mm-btn mm-btn-sm mm-btn-outline-primary" href="/modules/clinical/ui/document.php?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>" data-embed-nav data-nav-mode="document" data-uuid="<?php echo h($docUuid); ?>">Ver documento</a>
                 </div>
               <?php endif; ?>
             </div>
@@ -1140,7 +1140,7 @@ if (!$embed) {
           <div id="encounterDetailList" data-role="encounter-detail-list" class="vstack gap-2"></div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
         </div>
       </div>
     </div>
@@ -1150,9 +1150,9 @@ if (!$embed) {
     <div data-role="doc-overlay-panel" role="dialog" aria-modal="true" aria-label="Documento">
       <div data-role="doc-overlay-head">
         <strong data-role="doc-overlay-title">Documento</strong>
-        <div class="d-flex gap-2">
-          <a class="btn btn-sm btn-outline-primary" data-role="doc-overlay-open-new" href="#" target="_blank" rel="noopener">Abrir en pestaña</a>
-          <button type="button" class="btn btn-sm btn-outline-secondary" data-role="doc-overlay-close">Cerrar</button>
+        <div class="d-flex flex-wrap gap-2">
+          <a class="mm-btn mm-btn-sm mm-btn-outline-primary" data-role="doc-overlay-open-new" href="#" target="_blank" rel="noopener">Abrir en pestaña</a>
+          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-role="doc-overlay-close">Cerrar</button>
         </div>
       </div>
       <div data-role="doc-overlay-loader" class="small text-secondary px-3 py-2 d-none">Cargando…</div>
@@ -1177,7 +1177,7 @@ if (!$embed) {
         <div id="casesModalList" class="vstack gap-2"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal" data-action="close-cases-modal">Cerrar</button>
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-bs-dismiss="modal" data-action="close-cases-modal">Cerrar</button>
       </div>
     </div>
   </div>
@@ -1498,10 +1498,10 @@ if (!$embed) {
           + '  <div class="fw-semibold">' + title.replace(/</g, '&lt;') + '</div>'
           + '  <div class="small text-secondary">#' + caseId + ' · ' + (item.updated_at || '-') + '</div>'
           + '</div>'
-          + '<div class="d-flex gap-2">'
+          + '<div class="d-flex flex-wrap gap-2">'
           + '  <span class="badge ' + (active ? 'text-bg-success' : 'text-bg-secondary') + '">' + (active ? 'Activo' : (status || '')) + '</span>'
-          + (active ? '' : '<button type="button" class="btn btn-sm btn-outline-primary" data-action="activate-case" data-case-id="' + caseId + '">Activar</button>')
-          + '  <button type="button" class="btn btn-sm btn-outline-secondary" data-action="rename-case-from-modal" data-case-id="' + caseId + '" data-case-title="' + title.replace(/"/g, '&quot;') + '">Renombrar</button>'
+          + (active ? '' : '<button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="activate-case" data-case-id="' + caseId + '">Activar</button>')
+          + '  <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="rename-case-from-modal" data-case-id="' + caseId + '" data-case-title="' + title.replace(/"/g, '&quot;') + '">Renombrar</button>'
           + '</div>';
         casesModalList.appendChild(row);
       });
