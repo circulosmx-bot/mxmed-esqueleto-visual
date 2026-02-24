@@ -47,6 +47,8 @@
 .mm-badge--ok{ background: var(--mm-ok-bg); border-color: var(--mm-ok-bd); color: var(--mm-ok-tx); }
 .mm-badge--warn{ background: var(--mm-warn-bg); border-color: var(--mm-warn-bd); color: var(--mm-warn-tx); }
 .mm-badge--off{ background: var(--mm-off-bg); border-color: var(--mm-off-bd); color: var(--mm-off-tx); }
+.mm-badge-ok{ background: var(--mm-ok-bg); border-color: var(--mm-ok-bd); color: var(--mm-ok-tx); }
+.mm-badge-muted{ background: var(--mm-off-bg); border-color: var(--mm-off-bd); color: var(--mm-off-tx); }
 
 .mm-btn{
   display:inline-flex;
@@ -74,10 +76,22 @@
   color: var(--mm-ok-tx);
 }
 
+.mm-btn-outline-primary{
+  border-color: rgba(13,110,253,.35);
+  background: rgba(255,255,255,.85);
+  color: rgba(13,60,160,.95);
+}
+
 .mm-btn-outline-secondary{
   border-color: rgba(0,0,0,.20);
   background: rgba(255,255,255,.75);
   color: var(--mm-muted);
+}
+
+.mm-btn-secondary{
+  border-color: rgba(108,117,125,.35);
+  background: rgba(108,117,125,.14);
+  color: rgba(60,65,70,.95);
 }
 
 .mm-btn[disabled], .mm-btn.is-disabled{
