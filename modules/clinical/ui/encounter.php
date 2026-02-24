@@ -106,7 +106,7 @@ if ($encounterKey !== '') {
 
 if ($encounter !== null) {
     $patientId = trim((string)($encounter['patient_id'] ?? (($encounter['links']['patient_id'] ?? ''))));
-    $appointmentId = trim((string)($encounter['links']['appointment_id'] ?? (($encounter['appointment_id'] ?? ''))));
+    $appointmentId = trim((string)($encounter['appointment_id'] ?? ($encounter['links']['appointment_id'] ?? '')));
     if ($patientId !== '') {
         $apiBase = get_api_base();
         $activeCaseUrl = $apiBase . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/cases/active';
