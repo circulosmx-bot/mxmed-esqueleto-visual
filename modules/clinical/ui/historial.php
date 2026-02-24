@@ -772,7 +772,7 @@ if (!$embed) {
           </div>
           <div class="d-flex gap-2">
             <span class="small text-secondary align-self-center" data-role="active-case-counter">Items en este caso: <?php echo h((string)$activeCaseItemsCount); ?></span>
-            <button type="button" class="btn btn-sm btn-outline-success" data-action="toggle-only-active-case">Ver solo este caso</button>
+            <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-success" data-action="toggle-only-active-case">Ver solo este caso</button>
             <button
               type="button"
               class="btn btn-sm btn-outline-primary"
@@ -891,7 +891,7 @@ if (!$embed) {
                 <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
                   <input type="hidden" name="action" value="add_active_case_appointment">
                   <input type="hidden" name="encounter_key" value="<?php echo h($appointmentEncounterKey); ?>">
-                  <button type="submit" class="btn btn-sm btn-outline-success">Agregar a caso activo</button>
+                  <button type="submit" class="mm-btn mm-btn-sm mm-btn-outline-success">Agregar a caso activo</button>
                 </form>
               <?php endif; ?>
             </div>
@@ -966,7 +966,7 @@ if (!$embed) {
                 <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
                   <input type="hidden" name="action" value="add_active_case_appointment">
                   <input type="hidden" name="encounter_key" value="<?php echo h($ek); ?>">
-                  <button type="submit" class="btn btn-sm btn-outline-success">Agregar a caso activo</button>
+                  <button type="submit" class="mm-btn mm-btn-sm mm-btn-outline-success">Agregar a caso activo</button>
                 </form>
               <?php endif; ?>
             </div>
@@ -1042,7 +1042,7 @@ if (!$embed) {
                         <div class="mb-1">
                           <button
                             type="button"
-                            class="btn btn-sm btn-outline-success"
+                            class="mm-btn mm-btn-sm mm-btn-outline-success"
                             data-action="assign-case-item"
                             data-case-id="<?php echo h((string)($activeCase['case_id'] ?? '')); ?>"
                             data-item-type="document"
@@ -1092,7 +1092,7 @@ if (!$embed) {
                 <?php if (!$docInActiveCase && is_array($activeCase) && $docUuid !== ''): ?>
                   <button
                     type="button"
-                    class="btn btn-sm btn-outline-success"
+                    class="mm-btn mm-btn-sm mm-btn-outline-success"
                     data-action="assign-case-item"
                     data-case-id="<?php echo h((string)($activeCase['case_id'] ?? '')); ?>"
                     data-item-type="document"
