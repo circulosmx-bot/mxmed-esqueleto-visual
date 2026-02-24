@@ -876,28 +876,29 @@ if (!$embed) {
             $appointmentEpisodeId = trim((string)$appointmentEpisodeId);
         }
         ?>
-        <article class="mm-card <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($itemCaseId); ?>" data-in-active-case="<?php echo $isInActiveCase ? '1' : '0'; ?>" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>">
+        <article class="mm-card <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($itemCaseId); ?>" data-in-active-case="<?php echo $isInActiveCase ? '1' : '0'; ?>" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>">
           <div class="body">
-            <div class="mb-2">
-              <span class="badge <?php echo $isInActiveCase ? 'text-bg-success' : 'text-bg-secondary'; ?>">
-                <?php echo $isInActiveCase ? 'En caso activo' : 'Fuera de caso'; ?>
-              </span>
-            </div>
-            <?php if ($isInActiveCase): ?>
-              <div class="mb-2"><span class="badge text-bg-info">Caso: <?php echo h((string)($item['case_title'] ?? '')); ?></span></div>
-            <?php elseif (is_array($activeCase) && $appointmentRef !== ''): ?>
-              <div class="mb-2">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="badge <?php echo $isInActiveCase ? 'text-bg-success' : 'text-bg-secondary'; ?>" data-role="case-badge">
+                  <?php echo $isInActiveCase ? 'En caso activo' : 'Fuera de caso'; ?>
+                </span>
+                <?php if ($isInActiveCase): ?>
+                  <span class="badge text-bg-info">Caso: <?php echo h((string)($item['case_title'] ?? '')); ?></span>
+                <?php endif; ?>
+              </div>
+              <?php if (!$isInActiveCase && is_array($activeCase) && $appointmentRef !== ''): ?>
                 <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
                   <input type="hidden" name="action" value="add_active_case_appointment">
                   <input type="hidden" name="encounter_key" value="<?php echo h($appointmentEncounterKey); ?>">
                   <button type="submit" class="btn btn-sm btn-outline-success">Agregar a caso activo</button>
                 </form>
-              </div>
-            <?php endif; ?>
+              <?php endif; ?>
+            </div>
             <div class="d-flex flex-wrap gap-3 small mb-2">
               <span><strong>Tipo:</strong> appointment</span>
               <span><strong>Fecha:</strong> <?php echo h((string)($item['event_datetime'] ?? '-')); ?></span>
-              <span><strong>Atención:</strong> <?php echo h((string)($item['encounter_key'] ?? '-')); ?></span>
+              <span class="text-break"><strong>Atención:</strong> <?php echo h((string)($item['encounter_key'] ?? '-')); ?></span>
             </div>
             <div class="small text-secondary">
               status: <?php echo h((string)($agenda['status'] ?? '-')); ?> |
@@ -950,28 +951,29 @@ if (!$embed) {
         $encCaseId = trim((string)($rawEncounter['case_id'] ?? ''));
         $encInActiveCase = (bool)($rawEncounter['is_in_active_case'] ?? false);
         ?>
-        <article class="mm-card <?php echo $encInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($encCaseId); ?>" data-in-active-case="<?php echo $encInActiveCase ? '1' : '0'; ?>" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>" data-encounter-key="<?php echo h($ek); ?>">
+        <article class="mm-card <?php echo $encInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($encCaseId); ?>" data-in-active-case="<?php echo $encInActiveCase ? '1' : '0'; ?>" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>" data-encounter-key="<?php echo h($ek); ?>">
           <div class="body">
-            <div class="mb-2">
-              <span class="badge <?php echo $encInActiveCase ? 'text-bg-success' : 'text-bg-secondary'; ?>">
-                <?php echo $encInActiveCase ? 'En caso activo' : 'Fuera de caso'; ?>
-              </span>
-            </div>
-            <?php if ($encInActiveCase): ?>
-              <div class="mb-2"><span class="badge text-bg-info">Caso: <?php echo h((string)($rawEncounter['case_title'] ?? '')); ?></span></div>
-            <?php elseif (is_array($activeCase) && $ek !== ''): ?>
-              <div class="mb-2">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="badge <?php echo $encInActiveCase ? 'text-bg-success' : 'text-bg-secondary'; ?>" data-role="case-badge">
+                  <?php echo $encInActiveCase ? 'En caso activo' : 'Fuera de caso'; ?>
+                </span>
+                <?php if ($encInActiveCase): ?>
+                  <span class="badge text-bg-info">Caso: <?php echo h((string)($rawEncounter['case_title'] ?? '')); ?></span>
+                <?php endif; ?>
+              </div>
+              <?php if (!$encInActiveCase && is_array($activeCase) && $ek !== ''): ?>
                 <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
                   <input type="hidden" name="action" value="add_active_case_appointment">
                   <input type="hidden" name="encounter_key" value="<?php echo h($ek); ?>">
                   <button type="submit" class="btn btn-sm btn-outline-success">Agregar a caso activo</button>
                 </form>
-              </div>
-            <?php endif; ?>
+              <?php endif; ?>
+            </div>
             <div class="d-flex flex-wrap gap-3 small mb-2">
               <span><strong>Tipo:</strong> encounter</span>
               <span><strong>Fecha:</strong> <?php echo h((string)($encounter['event_datetime'] ?: '-')); ?></span>
-              <span><strong>Atención:</strong> <?php echo h($ek); ?></span>
+              <span class="text-break"><strong>Atención:</strong> <?php echo h($ek); ?></span>
             </div>
             <div class="d-flex flex-wrap gap-2 mb-2">
               <span class="mm-chip <?php echo $hasVitals ? 'is-on' : 'is-off'; ?>" title="<?php echo $hasVitals ? 'Tiene signos vitales' : 'Sin signos vitales'; ?>"><span class="dot"></span>Signos</span>
@@ -1076,17 +1078,18 @@ if (!$embed) {
           $docCaseId = trim((string)($docItem['case_id'] ?? ''));
           $docInActiveCase = (bool)($docItem['is_in_active_case'] ?? false);
           ?>
-          <article class="mm-card <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>" data-document-uuid="<?php echo h($docUuid); ?>">
+          <article class="mm-card <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>" data-document-uuid="<?php echo h($docUuid); ?>">
             <div class="body">
-              <div class="mb-2">
-                <span class="badge <?php echo $docInActiveCase ? 'text-bg-success' : 'text-bg-secondary'; ?>">
-                  <?php echo $docInActiveCase ? 'En caso activo' : 'Fuera de caso'; ?>
-                </span>
-              </div>
-              <?php if ($docInActiveCase): ?>
-                <div class="mb-2"><span class="badge text-bg-info">Caso: <?php echo h((string)($docItem['case_title'] ?? '')); ?></span></div>
-              <?php elseif (is_array($activeCase) && $docUuid !== ''): ?>
-                <div class="mb-2">
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                  <span class="badge <?php echo $docInActiveCase ? 'text-bg-success' : 'text-bg-secondary'; ?>" data-role="case-badge">
+                    <?php echo $docInActiveCase ? 'En caso activo' : 'Fuera de caso'; ?>
+                  </span>
+                  <?php if ($docInActiveCase): ?>
+                    <span class="badge text-bg-info">Caso: <?php echo h((string)($docItem['case_title'] ?? '')); ?></span>
+                  <?php endif; ?>
+                </div>
+                <?php if (!$docInActiveCase && is_array($activeCase) && $docUuid !== ''): ?>
                   <button
                     type="button"
                     class="btn btn-sm btn-outline-success"
@@ -1095,8 +1098,8 @@ if (!$embed) {
                     data-item-type="document"
                     data-item-ref="<?php echo h($docUuid); ?>"
                   >Agregar a caso activo</button>
-                </div>
-              <?php endif; ?>
+                <?php endif; ?>
+              </div>
               <div class="d-flex flex-wrap gap-3 small mb-2">
                 <span><strong>Tipo:</strong> document</span>
                 <span><strong>Fecha:</strong> <?php echo h((string)($docItem['event_datetime'] ?? '-')); ?></span>
