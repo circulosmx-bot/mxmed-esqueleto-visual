@@ -18,6 +18,23 @@ function h(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+function appointment_id_from_encounter_key(string $encounterKey): string
+{
+    $value = trim($encounterKey);
+    if ($value === '' || strpos($value, 'appt:') !== 0) {
+        return '';
+    }
+    $value = substr($value, 5);
+    if ($value === false || $value === '') {
+        return '';
+    }
+    $hashPos = strpos($value, '#enc:');
+    if ($hashPos !== false) {
+        $value = substr($value, 0, $hashPos);
+    }
+    return trim((string)$value);
+}
+
 function render_embed_css(bool $embed): void
 {
     if (!$embed) {
@@ -261,6 +278,8 @@ $cursorNext = '';
 $cursorPrev = '';
 $activeCase = null;
 $activeCaseError = '';
+$caseAssignError = '';
+$caseAssignSuccess = '';
 
 if ($encounterKey === '' && $appointmentId !== '') {
     $encounterKey = 'appt:' . $appointmentId;
@@ -494,6 +513,73 @@ foreach ($items as $item) {
 
 $hasRenderableItems = ($appointmentItems !== []) || ($encounterOrder !== []) || ($orphanDocs !== []);
 $activeCaseId = (is_array($activeCase) && isset($activeCase['case_id'])) ? (string)$activeCase['case_id'] : '';
+if (trim((string)($_GET['flash'] ?? '')) === 'added_case_item') {
+    $caseAssignSuccess = 'Agregado al caso activo';
+}
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = trim((string)($_POST['action'] ?? ''));
+    if ($action === 'add_active_case_appointment') {
+        $caseId = (int)$activeCaseId;
+        $sourceEncounterKey = trim((string)($_POST['encounter_key'] ?? ''));
+        $appointmentIdToAssign = appointment_id_from_encounter_key($sourceEncounterKey);
+        if ($caseId <= 0) {
+            $caseAssignError = 'No hay caso activo para asignar.';
+        } elseif ($appointmentIdToAssign === '') {
+            $caseAssignError = 'No se pudo obtener appointment_id para asignar.';
+        } else {
+            $assignUrl = $clinicalApiBase . '/api/clinical/index.php/cases/' . rawurlencode((string)$caseId) . '/items';
+            $assignPayload = json_encode([
+                'item_type' => 'appointment',
+                'item_ref' => 'appt:' . $appointmentIdToAssign,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if (!is_string($assignPayload)) {
+                $assignPayload = '{"item_type":"appointment","item_ref":""}';
+            }
+            $assignContext = stream_context_create([
+                'http' => [
+                    'method' => 'POST',
+                    'timeout' => 8,
+                    'ignore_errors' => true,
+                    'header' => "Accept: application/json\r\nContent-Type: application/json\r\n",
+                    'content' => $assignPayload,
+                ],
+            ]);
+            $assignRaw = @file_get_contents($assignUrl, false, $assignContext);
+            if (!is_string($assignRaw) || $assignRaw === '') {
+                $caseAssignError = 'No se pudo agregar al caso activo.';
+            } else {
+                $assignDecoded = json_decode($assignRaw, true);
+                if (!is_array($assignDecoded) || ($assignDecoded['ok'] ?? false) !== true) {
+                    $caseAssignError = trim((string)($assignDecoded['message'] ?? 'No se pudo agregar al caso activo.'));
+                    if ($caseAssignError === '') {
+                        $caseAssignError = 'No se pudo agregar al caso activo.';
+                    }
+                } else {
+                    $redirectParams = [
+                        'patient_id' => $patientId,
+                        'include' => $include,
+                        'limit' => $limit,
+                        'flash' => 'added_case_item',
+                    ];
+                    if ($cursor !== '') {
+                        $redirectParams['cursor'] = $cursor;
+                    }
+                    if ($direction !== '') {
+                        $redirectParams['direction'] = $direction;
+                    }
+                    if ($embed) {
+                        $redirectParams['embed'] = '1';
+                    }
+                    if (trim((string)($_GET['debug'] ?? '')) === '1') {
+                        $redirectParams['debug'] = '1';
+                    }
+                    header('Location: /modules/clinical/ui/historial.php?' . http_build_query($redirectParams));
+                    exit;
+                }
+            }
+        }
+    }
+}
 $activeCaseItemsCount = 0;
 if ($activeCaseId !== '') {
     foreach ($appointmentItems as $it) {
@@ -722,6 +808,12 @@ if (!$embed) {
   <?php if ($activeCaseError !== ''): ?>
     <div class="alert alert-warning py-2"><?php echo h($activeCaseError); ?></div>
   <?php endif; ?>
+  <?php if ($caseAssignSuccess !== ''): ?>
+    <div class="alert alert-success py-2"><?php echo h($caseAssignSuccess); ?></div>
+  <?php endif; ?>
+  <?php if ($caseAssignError !== ''): ?>
+    <div class="alert alert-danger py-2"><?php echo h($caseAssignError); ?></div>
+  <?php endif; ?>
 
   <?php if ($patientId === ''): ?>
     <?php if ($embed): ?>
@@ -795,14 +887,11 @@ if (!$embed) {
               <div class="mb-2"><span class="badge text-bg-info">Caso: <?php echo h((string)($item['case_title'] ?? '')); ?></span></div>
             <?php elseif (is_array($activeCase) && $appointmentRef !== ''): ?>
               <div class="mb-2">
-                <button
-                  type="button"
-                  class="btn btn-sm btn-outline-success"
-                  data-action="assign-case-item"
-                  data-case-id="<?php echo h((string)($activeCase['case_id'] ?? '')); ?>"
-                  data-item-type="appointment"
-                  data-item-ref="<?php echo h($appointmentRef); ?>"
-                >Agregar a caso activo</button>
+                <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
+                  <input type="hidden" name="action" value="add_active_case_appointment">
+                  <input type="hidden" name="encounter_key" value="<?php echo h($appointmentEncounterKey); ?>">
+                  <button type="submit" class="btn btn-sm btn-outline-success">Agregar a caso activo</button>
+                </form>
               </div>
             <?php endif; ?>
             <div class="d-flex flex-wrap gap-3 small mb-2">
@@ -872,14 +961,11 @@ if (!$embed) {
               <div class="mb-2"><span class="badge text-bg-info">Caso: <?php echo h((string)($rawEncounter['case_title'] ?? '')); ?></span></div>
             <?php elseif (is_array($activeCase) && $ek !== ''): ?>
               <div class="mb-2">
-                <button
-                  type="button"
-                  class="btn btn-sm btn-outline-success"
-                  data-action="assign-case-item"
-                  data-case-id="<?php echo h((string)($activeCase['case_id'] ?? '')); ?>"
-                  data-item-type="encounter"
-                  data-item-ref="<?php echo h($ek); ?>"
-                >Agregar a caso activo</button>
+                <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
+                  <input type="hidden" name="action" value="add_active_case_appointment">
+                  <input type="hidden" name="encounter_key" value="<?php echo h($ek); ?>">
+                  <button type="submit" class="btn btn-sm btn-outline-success">Agregar a caso activo</button>
+                </form>
               </div>
             <?php endif; ?>
             <div class="d-flex flex-wrap gap-3 small mb-2">
