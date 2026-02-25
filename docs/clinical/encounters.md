@@ -14,6 +14,7 @@ Nota:
 - En navegador, el fragmento `#...` no se envía al servidor.
 - Por eso, en `encounter_key` compuesto (`appt:{id}#enc:{id}`), el `#` debe ir como `%23`.
 - En terminal, usa la URL entre comillas para evitar interpretación del shell.
+- En PHP para path segments usa `rawurlencode($encounterKey)` (helper API: `clinical_url_encode_key()`).
 
 ## Seed QA local: 1 `clinical_document` para Encounter
 

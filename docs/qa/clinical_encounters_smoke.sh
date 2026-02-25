@@ -147,7 +147,9 @@ else
 fi
 
 log "Step 2: resolve encounter_key from legacy appt key"
-if encounter_resp=$(http_get "$API_ROOT/encounters/appt:$APPT_ID"); then
+LEGACY_APPT_KEY="appt:$APPT_ID"
+LEGACY_APPT_KEY_ENC=$(urlencode "$LEGACY_APPT_KEY")
+if encounter_resp=$(http_get "$API_ROOT/encounters/$LEGACY_APPT_KEY_ENC"); then
   if printf '%s' "$encounter_resp" | json_assert_ok_true; then
     if ENCOUNTER_KEY=$(printf '%s' "$encounter_resp" | json_extract_encounter_key); then
       ENCOUNTER_KEY_ENC=$(urlencode "$ENCOUNTER_KEY")
@@ -156,10 +158,10 @@ if encounter_resp=$(http_get "$API_ROOT/encounters/appt:$APPT_ID"); then
       fail "could not extract encounter_key"
     fi
   else
-    fail "GET /encounters/appt:$APPT_ID returned ok!=true"
+    fail "GET /encounters/{encoded legacy appt key} returned ok!=true"
   fi
 else
-  fail "GET /encounters/appt:$APPT_ID failed"
+  fail "GET /encounters/{encoded legacy appt key} failed"
 fi
 
 log "Step 3: GET /encounters/{encounter_key_encoded}"

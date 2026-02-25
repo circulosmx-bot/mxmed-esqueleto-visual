@@ -287,7 +287,8 @@ if ($encounterKey === '' && $appointmentId !== '') {
 }
 
 if ($patientId === '' && $encounterKey !== '') {
-    $resolveUrl = $clinicalApiBase . '/api/clinical/index.php/encounters/' . rawurlencode($encounterKey);
+    $encodedEncounterKey = rawurlencode($encounterKey);
+    $resolveUrl = $clinicalApiBase . '/api/clinical/index.php/encounters/' . $encodedEncounterKey;
     $resolveContext = stream_context_create([
         'http' => [
             'method' => 'GET',
@@ -329,7 +330,8 @@ if ($encounterKey === '' && $appointmentId !== '') {
 }
 
 if ($patientId === '' && $encounterKey !== '') {
-    $resolveUrl = $clinicalApiBase . '/api/clinical/index.php/encounters/' . rawurlencode($encounterKey);
+    $encodedEncounterKey = rawurlencode($encounterKey);
+    $resolveUrl = $clinicalApiBase . '/api/clinical/index.php/encounters/' . $encodedEncounterKey;
     $resolveContext = stream_context_create([
         'http' => [
             'method' => 'GET',
