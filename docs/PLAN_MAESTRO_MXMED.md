@@ -3,6 +3,9 @@
 Fuente principal (base de estado actual): `docs/MAPA_TOTAL_SISTEMA_MXMED.md`.
 Este plan maestro NO duplica ese mapa completo; lo usa como referencia operativa y concentra gobernanza transversal: checklist + decisiones + roadmap + fuentes.
 
+> Este documento reemplaza al “Documento Limpio FSD Maestro” como fuente viva de coordinación.
+> El FSD queda absorbido por este Plan Maestro; todo hallazgo nuevo de fuentes/PDFs se traduce obligatoriamente a Decision Log + Checklist + Backlog.
+
 ## A. Propósito y principios (Etapa 1 = perfil médico)
 
 ### Propósito
@@ -98,10 +101,11 @@ Perfil médico end-to-end:
 | Agenda | Hecho (v1) | Citas, eventos, waitlist | `docs/MAPA_TOTAL_SISTEMA_MXMED.md`; `api/agenda/index.php`; `docs/agenda/CIERRE_AGENDA_V1_ESTADO_FINAL.md` | Consolidar bridge robusto a Clinical en completed |
 | Clinical API (timeline/encounters/documents) | En progreso | Timeline, encounters, documentos y casos en evolución | `docs/clinical/TIMELINE_V1_CONTRACT.md`; `docs/clinical/encounters.md`; tags `mxmed-camino2-step*` | Endurecer contratos cross-módulo y deuda legacy |
 | Cases | En progreso | Caso activo y items por caso | `docs/clinical/CONTRATO_APPOINTMENT_ENCOUNTER_LINKING_V1.md`; endpoints `/cases/*` | Mejorar trazabilidad item_type y overlays de pertenencia |
-| Clinical UI (historial/encounter embed) | En progreso | Embed estable + overlay documento + viewer host | tags `mxmed-camino2-step10`..`mxmed-camino2-step31`; `modules/clinical/ui/*.php` | Homologación visual completa y filtros/contexto de caso |
+| Clinical UI (historial/encounter embed) | En progreso | Embed estable + overlay documento + viewer host | tags `mxmed-camino2-step10`..`mxmed-camino2-step31`; `modules/clinical/ui/*.php` | Homologación visual completa + auditoría de fidelidad visual + unificación de componentes/variables globales (pendientes visuales críticos en PDF UX/UI, extracción pendiente) |
 | QA scripts (smokes) | En progreso | Contrato embed + smoke encounters/docs | `modules/clinical/qa/embed_contract_check.sh`; `docs/qa/clinical_encounters_smoke.sh` | Unificar rutas/ownership y ampliar checks de contrato |
 | Legacy wrappers (`clinical-documents`, `evolution-note`) | Deuda controlada | Compatibilidad histórica activa | `api/clinical-documents.php`; `api/evolution-note-generate.php`; `docs/clinical/DECISION_COMPAT_CLINICAL_DOCUMENTS_WRAPPER.md` | Plan de salida gradual sin ruptura |
 | Migraciones pendientes (schema v1/v2, encounter_id typing, document_id vs uuid, cursor) | Pendiente | Pendientes de consolidación estructural | `modules/clinical/db/schema_v1.sql`; `modules/clinical/db/schema_v2.sql`; `docs/clinical/TIMELINE_V1_CONTRACT.md` | Definir plan formal de migración por fases y rollback |
+| UX/UI (Deuda Visual Controlada) | En progreso | Gobernanza visual transversal para Etapa 1 (criterio de fidelidad, componentes y variables globales) | `00MANUAL DE DISENO Y UX UI PENDIENTES VISUALES previo a 09 de Octubre 2025.pdf` | Auditoría visual posterior al cierre de integración transversal médica (Etapa 1) |
 | RBAC (Transversal) | Pendiente | Modelo de roles jerárquicos + delegabilidad + bitácora | 00INDICE MAESTRO DE FUNCIONES.pdf | Diseño conceptual posterior a cierre núcleo médico |
 | Dominio Organizacional | Pendiente | Hospital, Lab, Aseguradora, Pharma como entidades aisladas | 00INDICE MAESTRO DE FUNCIONES.pdf | Diseñar modelo org + membership antes de Etapa 2 |
 | Dominio Order (Diagnóstico) | Pendiente | Entidad formal para órdenes de estudio con estados y QR | 00INDICE MAESTRO DE FUNCIONES.pdf | Definir contrato antes de implementar laboratorios |
@@ -125,6 +129,10 @@ Formato obligatorio por entrada:
 | 2026-02-25 | El dominio "Order" (órdenes de laboratorio/estudio) será entidad nueva futura y no reutilización de Document | Evitar ambigüedad semántica entre documento clínico y orden diagnóstica | Mantiene integridad del timeline y correlación encounter/document | 00INDICE MAESTRO DE FUNCIONES.pdf | vigente |
 | 2026-02-25 | Facturación clínica (CFDI paciente) y facturación plataforma (suscripción) serán dominios distintos | Separación contable y contractual clara | Evita mezcla de responsabilidades y facilita auditoría | 00INDICE MAESTRO DE FUNCIONES.pdf | vigente |
 | 2026-02-25 | La arquitectura evolucionará hacia modelo modular con RBAC + dominio organizacional + event-driven sin alterar contratos clínicos actuales | Preparar expansión futura sin deuda estructural | Garantiza estabilidad del núcleo médico en Etapa 1 | 00INDICE MAESTRO DE FUNCIONES.pdf | vigente |
+| 2026-02-25 | Biblioteca única de componentes y variables globales obligatoria para UI nueva | Reducir inconsistencia visual y deuda de estilos por módulo | Mejora mantenibilidad UI y evita divergencia entre pantallas clínicas y shell principal | 00MANUAL DE DISENO Y UX UI PENDIENTES VISUALES previo a 09 de Octubre 2025.pdf | vigente |
+| 2026-02-25 | Auditoría visual completa post-cierre de integración transversal médica (Etapa 1) | No bloquear núcleo médico con deuda visual, pero cerrarla antes de expansión | Define gate de calidad visual al cierre de Etapa 1 | 00MANUAL DE DISENO Y UX UI PENDIENTES VISUALES previo a 09 de Octubre 2025.pdf | vigente |
+| 2026-02-25 | Criterio de aceptación visual: fidelidad al maestro (pixel-fit razonable ±4px) | Establecer criterio objetivo de validación UX/UI sin sobre-optimización temprana | Estandariza QA visual y reduce discusiones subjetivas | 00MANUAL DE DISENO Y UX UI PENDIENTES VISUALES previo a 09 de Octubre 2025.pdf | vigente |
+| 2026-02-25 | Pendientes visuales críticos se priorizan después del núcleo médico, antes de expansión organizacional (hospitales/labs/aseguradoras) | Ordenar prioridades entre estabilidad clínica y expansión multi-dominio | Mantiene foco en Etapa 1 y prepara Etapa 2 con base visual consistente | 00MANUAL DE DISENO Y UX UI PENDIENTES VISUALES previo a 09 de Octubre 2025.pdf | vigente |
 | _pendiente_ | _agregar nuevas decisiones aquí_ |  |  |  |  |
 
 ## F. Mapa de interconexiones (flows principales)
@@ -163,6 +171,7 @@ Refs:
 - `[contract]` cerrar convergencia `patient_id` canónico en flujos clinical legacy.
 - `[api]` endurecer correlación appointment↔encounter sin parseos frágiles.
 - `[ui]` homologar UI clínica en modo ambiente (mm-btn/mm-badge) sin romper embed.
+- `[ui]` Gate UX/UI Etapa 1: auditoría de fidelidad visual + componentes unificados + variables globales.
 - `[qa]` ampliar smoke de contratos timeline + cases + overlay.
 - `[migration]` plan de migración schema v1/v2 y tipos de IDs.
 
@@ -170,15 +179,18 @@ Refs:
 - `[api]` órdenes, recetas y resultados con contratos estables.
 - `[ui]` experiencia de episodio completa (acciones y contexto longitudinal).
 - `[ops]` observabilidad básica de bridges y retries.
+- Nota: perfiles Hospital/Lab/Pharma/Aseguradora son FUTURO y no bloquean cierre de Etapa 1.
 
 ### 3a) Integraciones institucionales
 - `[contract]` hospitales/labs/pharma/insurers con IDs interoperables.
 - `[api]` conectores externos y trazabilidad.
+- Nota: esta etapa inicia después del gate UX/UI y cierre del núcleo médico de Etapa 1.
 
 ### 4a) Canales y monetización
 - `[api]` notifications/reviews/billing/invoice.
 - `[ui]` paneles operativos por perfil.
 - `[ops]` controles de cumplimiento/auditoría.
+- Nota: no bloquear Etapa 1 por funcionalidad comercial/organizacional futura.
 
 ## H. Índice de fuentes externas
 
@@ -186,6 +198,8 @@ Refs:
 |---|---|---|---|---|---|
 | `00Introduccion para Desarrolladores.pdf` | PDF externo | 2026-02-25 | pendiente | Por definir | Extraer decisiones y actualizar Decision Log + Checklist + Backlog |
 | `00Funcionalidades por Tipo de Perfil.pdf` | PDF externo | 2026-02-25 | pendiente | Por definir | Extraer decisiones y actualizar Decision Log + Checklist + Backlog |
+| `00INDICE MAESTRO DE FUNCIONES.pdf` | PDF externo | 2026-02-25 | pendiente | Decisiones de arquitectura modular transversal (RBAC/Org/Order/Billing) | Extraer decisiones y actualizar Decision Log + Checklist + Backlog |
+| `00MANUAL DE DISENO Y UX UI PENDIENTES VISUALES previo a 09 de Octubre 2025.pdf` | PDF externo | 2026-02-25 | en revisión / pendiente de extracción | Gobernanza UX/UI transversal (decisiones de método, no detalle visual) | Extraer decisiones y actualizar Decision Log + Checklist + Backlog |
 
 ## H1. Inventario de fuentes internas (repo)
 
