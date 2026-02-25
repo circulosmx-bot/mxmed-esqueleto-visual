@@ -116,7 +116,11 @@ if ($encounterKey !== '') {
 
 if ($encounter !== null) {
     $patientId = trim((string)($encounter['patient_id'] ?? (($encounter['links']['patient_id'] ?? ''))));
-    $appointmentId = trim((string)($encounter['appointment_id'] ?? ($encounter['links']['appointment_id'] ?? '')));
+    $appointmentId = trim((string)(($encounter['links']['appointment_id'] ?? ($encounter['appointment_id'] ?? ''))));
+    if ($appointmentId === '' && $encounterKey !== '' && strpos($encounterKey, 'appt:') === 0) {
+        $appointmentId = preg_replace('/^appt:([^#]+)(#enc:.*)?$/', '$1', $encounterKey) ?? '';
+        $appointmentId = trim((string)$appointmentId);
+    }
     if ($patientId !== '') {
         $activeCaseUrl = $apiBase . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/cases/active';
         $activeCaseResp = http_get_json($activeCaseUrl);

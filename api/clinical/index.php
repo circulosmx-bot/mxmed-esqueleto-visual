@@ -1588,6 +1588,12 @@ try {
                         continue;
                     }
                     $encounterKey = clinical_encounter_key($encounterId, $appointmentId);
+                    if ($appointmentId === '') {
+                        $appointmentId = clinical_timeline_extract_appointment_id([
+                            'encounter_key' => $encounterKey,
+                            'links' => ['appointment_id' => null],
+                        ]);
+                    }
                     $sortKey = $encounterKey;
 
                     if ($appointmentId !== '') {

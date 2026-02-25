@@ -480,15 +480,15 @@ foreach ($items as $item) {
         if ($ek === '') {
             continue;
         }
-        $appointmentInEncounter = null;
-        if (strpos($ek, 'appt:') === 0) {
-            $appointmentInEncounter = substr($ek, 5);
-            $appointmentInEncounter = $appointmentInEncounter !== '' ? $appointmentInEncounter : null;
+        $links = is_array($item['links'] ?? null) ? $item['links'] : [];
+        $appointmentInEncounter = trim((string)($links['appointment_id'] ?? ''));
+        if ($appointmentInEncounter === '' && strpos($ek, 'appt:') === 0) {
+            $appointmentInEncounter = appointment_id_from_encounter_key($ek);
         }
         $encounters[$ek] = [
             'encounter_key' => $ek,
             'event_datetime' => (string)($item['event_datetime'] ?? ''),
-            'appointment_id' => $appointmentInEncounter,
+            'appointment_id' => ($appointmentInEncounter !== '' ? $appointmentInEncounter : null),
             'documents' => [],
             'raw' => $item,
         ];

@@ -51,6 +51,27 @@ sys.exit(0 if ok else 1)
 "
 }
 
+json_timeline_appt_encounters_have_links_appointment_id() {
+  python3 -c "
+import json,sys
+obj=json.load(sys.stdin)
+items=((obj.get('data') or {}).get('items') or [])
+for it in items:
+    if not isinstance(it,dict):
+        continue
+    if it.get('item_type')!='encounter':
+        continue
+    key=(it.get('encounter_key') or '').strip()
+    if not key.startswith('appt:') or '#enc:' not in key:
+        continue
+    links=it.get('links') or {}
+    appt=(links.get('appointment_id') or '').strip() if isinstance(links,dict) else ''
+    if not appt:
+        sys.exit(1)
+sys.exit(0)
+"
+}
+
 json_extract_encounter_key() {
   python3 -c "
 import json,sys
@@ -140,6 +161,11 @@ if timeline_resp=$(http_get "$API_ROOT/patients/$PATIENT_ID/timeline?include=age
     pass "timeline includes at least one encounter item"
   else
     fail "timeline has no encounter items"
+  fi
+  if printf '%s' "$timeline_resp" | json_timeline_appt_encounters_have_links_appointment_id; then
+    pass "timeline encounter appt:*#enc:* items include links.appointment_id"
+  else
+    fail "timeline encounter appt:*#enc:* missing links.appointment_id"
   fi
 else
   fail "timeline request failed"
