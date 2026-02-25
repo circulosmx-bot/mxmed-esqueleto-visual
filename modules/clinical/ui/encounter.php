@@ -83,7 +83,8 @@ if (trim((string)($_GET['flash'] ?? '')) === 'added_case_item') {
 
 if ($encounterKey !== '') {
     // IMPORTANT (dev mode): use API base for server-side calls to avoid UI->UI recursion.
-    $url = get_api_base() . '/api/clinical/index.php/encounters/' . rawurlencode($encounterKey);
+    $encodedEncounterKey = rawurlencode($encounterKey);
+    $url = $apiBase . '/api/clinical/index.php/encounters/' . $encodedEncounterKey;
 
     $context = stream_context_create([
         'http' => [

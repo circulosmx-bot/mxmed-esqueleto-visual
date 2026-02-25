@@ -2407,6 +2407,114 @@ try {
         return;
     }
 
+    if ($route === 'debug/seed_encounter') {
+        if ($method !== 'POST' || !clinical_debug_enabled()) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'not_found',
+                'message' => 'route not found',
+                'data' => null,
+                'meta' => ['method' => $method, 'route' => $route],
+            ], 404);
+            return;
+        }
+
+        $body = clinical_read_json_body();
+        if (($body['ok'] ?? false) !== true) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => (string)($body['error'] ?? 'invalid body')],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'debug/seed_encounter'],
+            ], 400);
+            return;
+        }
+
+        $payload = is_array($body['data'] ?? null) ? $body['data'] : [];
+        $patientId = trim((string)($payload['patient_id'] ?? ''));
+        $appointmentId = trim((string)($payload['appointment_id'] ?? '9001'));
+        $encounterDt = trim((string)($payload['encounter_dt'] ?? ''));
+        $encounterType = trim((string)($payload['encounter_type'] ?? 'outpatient'));
+        $status = trim((string)($payload['status'] ?? 'completed'));
+
+        if ($patientId === '') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => 'patient_id requerido'],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'debug/seed_encounter'],
+            ], 400);
+            return;
+        }
+
+        if ($encounterDt === '') {
+            $encounterDt = gmdate('Y-m-d H:i:s');
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/', $encounterDt) !== 1) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => 'encounter_dt inválido (YYYY-MM-DD HH:MM:SS)'],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'debug/seed_encounter'],
+            ], 400);
+            return;
+        }
+
+        if ($encounterType === '') $encounterType = 'outpatient';
+        if ($status === '') $status = 'completed';
+
+        try {
+            $pdo = clinical_documents_pdo();
+            clinical_encounters_ensure_schema($pdo);
+
+            if (!clinical_patient_exists($pdo, $patientId)) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => ['code' => 'not_found', 'message' => 'patient no encontrado'],
+                    'message' => '',
+                    'data' => null,
+                    'meta' => ['method' => 'POST', 'route' => 'debug/seed_encounter'],
+                ], 404);
+                return;
+            }
+
+            $created = clinical_encounters_create($pdo, $patientId, ($appointmentId !== '' ? $appointmentId : null), $encounterDt, $encounterType, $status);
+            $encounterId = (int)($created['encounter_id'] ?? 0);
+            $appt = trim((string)($created['appointment_id'] ?? ''));
+            $key = clinical_encounter_key($encounterId, $appt);
+        } catch (Throwable $e) {
+            $msg = trim((string)$e->getMessage());
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'server_error', 'message' => ($msg !== '' ? $msg : 'server error')],
+                'message' => '',
+                'data' => null,
+                'meta' => ['method' => 'POST', 'route' => 'debug/seed_encounter'],
+            ], 500);
+            return;
+        }
+
+        clinical_send_response([
+            'ok' => true,
+            'error' => null,
+            'message' => 'seed encounter created',
+            'data' => [
+                'encounter_id' => $encounterId,
+                'patient_id' => $patientId,
+                'appointment_id' => ($appt !== '' ? $appt : null),
+                'encounter_dt' => $encounterDt,
+                'encounter_type' => $encounterType,
+                'status' => $status,
+                'encounter_key' => $key,
+            ],
+            'meta' => ['method' => 'POST', 'route' => 'debug/seed_encounter'],
+        ], 201);
+        return;
+    }
+
     if (($segments[0] ?? '') === 'patients' && ($segments[2] ?? '') === 'cases' && count($segments) === 4 && $segments[3] === 'active') {
         if ($method !== 'GET') {
             clinical_send_response([
