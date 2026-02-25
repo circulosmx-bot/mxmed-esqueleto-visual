@@ -24,6 +24,13 @@ Perfil médico end-to-end:
 - Compatibilidad embebido/standalone obligatoria para UI clínica.
 - Toda fuente nueva revisada debe traducirse a: Decision Log + Checklist + Backlog.
 
+## A1. Estado actual (punto de control)
+- Fecha: 2026-02-25
+- Rama: main
+- Últimos commits relevantes: `cc0da8f` (plan maestro), `e7cbe9b` (links.appointment_id preferido), `9d124a8` (seed_encounter + encode encounter_key)
+- Objetivo inmediato actual: Integración transversal / Casos (Camino 2)
+- Regla: antes de iniciar cualquier trabajo nuevo, revisar esta sección.
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)
@@ -95,6 +102,10 @@ Perfil médico end-to-end:
 | QA scripts (smokes) | En progreso | Contrato embed + smoke encounters/docs | `modules/clinical/qa/embed_contract_check.sh`; `docs/qa/clinical_encounters_smoke.sh` | Unificar rutas/ownership y ampliar checks de contrato |
 | Legacy wrappers (`clinical-documents`, `evolution-note`) | Deuda controlada | Compatibilidad histórica activa | `api/clinical-documents.php`; `api/evolution-note-generate.php`; `docs/clinical/DECISION_COMPAT_CLINICAL_DOCUMENTS_WRAPPER.md` | Plan de salida gradual sin ruptura |
 | Migraciones pendientes (schema v1/v2, encounter_id typing, document_id vs uuid, cursor) | Pendiente | Pendientes de consolidación estructural | `modules/clinical/db/schema_v1.sql`; `modules/clinical/db/schema_v2.sql`; `docs/clinical/TIMELINE_V1_CONTRACT.md` | Definir plan formal de migración por fases y rollback |
+| RBAC (Transversal) | Pendiente | Modelo de roles jerárquicos + delegabilidad + bitácora | 00INDICE MAESTRO DE FUNCIONES.pdf | Diseño conceptual posterior a cierre núcleo médico |
+| Dominio Organizacional | Pendiente | Hospital, Lab, Aseguradora, Pharma como entidades aisladas | 00INDICE MAESTRO DE FUNCIONES.pdf | Diseñar modelo org + membership antes de Etapa 2 |
+| Dominio Order (Diagnóstico) | Pendiente | Entidad formal para órdenes de estudio con estados y QR | 00INDICE MAESTRO DE FUNCIONES.pdf | Definir contrato antes de implementar laboratorios |
+| Facturación Plataforma | Pendiente | Motor de planes, upgrade/downgrade, reclamo de perfil | 00INDICE MAESTRO DE FUNCIONES.pdf | Diseñar capa comercial posterior a Etapa 1 |
 
 ## E. Registro de decisiones (Decision Log)
 
@@ -109,6 +120,11 @@ Formato obligatorio por entrada:
 | Fecha | Decisión | Motivo | Impacto | Referencias | Estado |
 |---|---|---|---|---|---|
 | 2026-02-25 | **Ejemplo**: `appointment_id` canónico proviene de Agenda | Eliminar divergencias Agenda/Clinical | Correlación estable appointment↔encounter en UI/API | `docs/clinical/DECISION_APPOINTMENT_ID_CANONICO_AGENDA_V1.md` | vigente |
+| 2026-02-25 | RBAC será un módulo transversal independiente del dominio clínico y de agenda | Evitar contaminación de contratos clínicos con lógica de permisos organizacionales | Permite evolución multi-actor sin alterar Clinical core | 00INDICE MAESTRO DE FUNCIONES.pdf | vigente |
+| 2026-02-25 | Modelo organizacional (Hospital, Lab, Aseguradora, Pharma) será dominio separado del dominio clínico | Separación clara entre actor organizacional y acto clínico | Facilita expansión futura sin romper núcleo médico | 00INDICE MAESTRO DE FUNCIONES.pdf | vigente |
+| 2026-02-25 | El dominio "Order" (órdenes de laboratorio/estudio) será entidad nueva futura y no reutilización de Document | Evitar ambigüedad semántica entre documento clínico y orden diagnóstica | Mantiene integridad del timeline y correlación encounter/document | 00INDICE MAESTRO DE FUNCIONES.pdf | vigente |
+| 2026-02-25 | Facturación clínica (CFDI paciente) y facturación plataforma (suscripción) serán dominios distintos | Separación contable y contractual clara | Evita mezcla de responsabilidades y facilita auditoría | 00INDICE MAESTRO DE FUNCIONES.pdf | vigente |
+| 2026-02-25 | La arquitectura evolucionará hacia modelo modular con RBAC + dominio organizacional + event-driven sin alterar contratos clínicos actuales | Preparar expansión futura sin deuda estructural | Garantiza estabilidad del núcleo médico en Etapa 1 | 00INDICE MAESTRO DE FUNCIONES.pdf | vigente |
 | _pendiente_ | _agregar nuevas decisiones aquí_ |  |  |  |  |
 
 ## F. Mapa de interconexiones (flows principales)
@@ -164,21 +180,27 @@ Refs:
 - `[ui]` paneles operativos por perfil.
 - `[ops]` controles de cumplimiento/auditoría.
 
-## H. Índice de fuentes (incluye PDFs externos)
+## H. Índice de fuentes externas
 
 | Fuente | Tipo | Fecha | Estado | Decisiones derivadas | Próxima acción |
 |---|---|---|---|---|---|
-| `docs/MAPA_TOTAL_SISTEMA_MXMED.md` | Doc interno (fuente principal) | 2026-02-25 | revisado | Base de este plan maestro | Mantener sincronizado por iteración |
-| `docs/clinical/DECISION_FUENTES_DE_VERDAD.md` | Decisión interna | 2026-02-25 | revisado | Fuentes canónicas (Patients/clinical_documents) | Revisar impacto en nuevas migraciones |
-| `docs/clinical/DECISION_APPOINTMENT_ID_CANONICO_AGENDA_V1.md` | Decisión interna | 2026-02-25 | revisado | Appointment canónico en Agenda | Verificar cumplimiento en todos los endpoints |
-| `docs/clinical/CONTRATO_APPOINTMENT_ENCOUNTER_LINKING_V1.md` | Contrato interno | 2026-02-25 | revisado | Regla de correlación appointment↔encounter | Endurecer QA contractual |
-| `docs/clinical/DECISION_AGENDA_CREATES_CLINICAL_ENCOUNTER_V1.md` | Decisión interna | 2026-02-25 | revisado | Trigger Agenda->Clinical en completed | Activar con guard controlado |
-| `docs/db/INTEGRACION_PACIENTES_AGENDA.md` | Integración interna | 2026-02-25 | revisado | Frontera Pacientes↔Agenda | Mantener alineado con contratos API |
-| `docs/db/INTEGRACION_AGENDA_POST_PATIENTS.md` | Integración interna | 2026-02-25 | revisado | Auto-create patient desde Agenda | Revisar propagación de errores |
-| `docs/ui/REGLAS_UI_MXMED.md` | Regla operativa UI | 2026-02-25 | revisado | Metodología de cambios UI/UX | Cumplimiento obligatorio en PRs |
-| `docs/dev/LOCAL_DEV_SERVERS.md` | Operación dev | 2026-02-25 | revisado | Doble puerto 8091/8092 y preflight | Mantener checklist actualizado |
-| `00Introduccion para Desarrolladores.pdf` | PDF externo | 2026-02-25 | pendiente | Por definir | Revisar y registrar decisiones en sección E |
-| `00Funcionalidades por Tipo de Perfil.pdf` | PDF externo | 2026-02-25 | pendiente | Por definir | Revisar y convertir hallazgos a backlog/contratos |
+| `00Introduccion para Desarrolladores.pdf` | PDF externo | 2026-02-25 | pendiente | Por definir | Extraer decisiones y actualizar Decision Log + Checklist + Backlog |
+| `00Funcionalidades por Tipo de Perfil.pdf` | PDF externo | 2026-02-25 | pendiente | Por definir | Extraer decisiones y actualizar Decision Log + Checklist + Backlog |
+
+## H1. Inventario de fuentes internas (repo)
+
+| Fuente (ruta en repo) | Tipo (doc interno) | Propósito | Estado (pendiente / revisado / reemplazado) | Decisiones derivadas (si aplica) | Próxima acción |
+|---|---|---|---|---|---|
+| `docs/MAPA_TOTAL_SISTEMA_MXMED.md` | doc interno | Mapa total del sistema y estado transversal | pendiente | Por definir | Revisar y extraer decisiones al Decision Log |
+| `docs/clinical/DECISION_FUENTES_DE_VERDAD.md` | doc interno | Fuente canónica de dominios clínicos/paciente/documentos | pendiente | Por definir | Revisar y confirmar contratos canónicos |
+| `docs/db/MAPA_DOMINIOS_DATOS.md` | doc interno | Mapa de dominios y relaciones de datos | pendiente | Por definir | Revisar y alinear arquitectura universal |
+| `docs/ui/REGLAS_UI_MXMED.md` | doc interno | Metodología operativa para cambios UI/UX | pendiente | Por definir | Revisar y reflejar reglas en checklist |
+| `docs/db/INTEGRACION_AGENDA_POST_PATIENTS.md` | doc interno | Integración Agenda -> alta de paciente cuando no hay patient_id | pendiente | Por definir | Revisar y validar flujo/errores propagados |
+| `docs/db/INTEGRACION_PACIENTES_AGENDA.md` | doc interno | Integración conceptual Pacientes ↔ Agenda | pendiente | Por definir | Revisar y consolidar fronteras de dominio |
+| `docs/clinical/DECISION_APPOINTMENT_ID_CANONICO_AGENDA_V1.md` | doc interno | Decisión de appointment_id canónico en Agenda | pendiente | Por definir | Revisar cumplimiento en endpoints y UI |
+| `docs/clinical/CONTRATO_APPOINTMENT_ENCOUNTER_LINKING_V1.md` | doc interno | Contrato de correlación appointment ↔ encounter | pendiente | Por definir | Revisar y reforzar QA contractual |
+| `docs/clinical/DECISION_AGENDA_CREATES_CLINICAL_ENCOUNTER_V1.md` | doc interno | Decisión del bridge Agenda -> Clinical en completed | pendiente | Por definir | Revisar implementación y feature-flag |
+| `docs/dev/LOCAL_DEV_SERVERS.md` | doc interno | Operación local dual-server y preflight QA | pendiente | Por definir | Revisar y mantener comandos operativos vigentes |
 
 ## I. Cómo trabajar este plan
 
