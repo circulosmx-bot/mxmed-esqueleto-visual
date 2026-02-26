@@ -146,6 +146,107 @@ sys.exit(0 if ok else 1)
 " "$encounter_key" "$uuid"
 }
 
+json_extract_active_case_id() {
+  python3 -c "
+import json,sys
+obj=json.load(sys.stdin)
+d=obj.get('data') or {}
+try:
+    cid=int(d.get('case_id') or 0)
+except Exception:
+    cid=0
+if cid<=0:
+    sys.exit(1)
+print(cid)
+"
+}
+
+json_extract_case_appt_refs_csv() {
+  python3 -c "
+import json,sys
+obj=json.load(sys.stdin)
+items=obj.get('data') or []
+refs=[]
+if isinstance(items,list):
+    for it in items:
+        if not isinstance(it,dict):
+            continue
+        if (it.get('item_type') or '').strip()!='appointment':
+            continue
+        ref=(it.get('item_ref') or '').strip()
+        if ref.startswith('appt:'):
+            refs.append(ref)
+seen=[]
+for r in refs:
+    if r not in seen:
+        seen.append(r)
+print(','.join(seen))
+"
+}
+
+json_timeline_validate_refs_in_case() {
+  local refs_csv="$1"
+  python3 -c "
+import json,sys
+refs=set([r for r in sys.argv[1].split(',') if r])
+obj=json.load(sys.stdin)
+items=((obj.get('data') or {}).get('items') or [])
+matched=0
+for it in items:
+    if not isinstance(it,dict) or it.get('item_type')!='encounter':
+        continue
+    links=it.get('links') if isinstance(it.get('links'),dict) else {}
+    appt=(links.get('appointment_id') or '').strip()
+    if not appt:
+        continue
+    ref='appt:'+appt
+    if ref not in refs:
+        continue
+    matched += 1
+    if it.get('is_in_active_case') is not True:
+        sys.exit(1)
+sys.exit(0 if matched>0 else 2)
+" "$refs_csv"
+}
+
+json_timeline_pick_out_of_case_encounter() {
+  python3 -c "
+import json,sys
+obj=json.load(sys.stdin)
+items=((obj.get('data') or {}).get('items') or [])
+for it in items:
+    if not isinstance(it,dict) or it.get('item_type')!='encounter':
+        continue
+    links=it.get('links') if isinstance(it.get('links'),dict) else {}
+    appt=(links.get('appointment_id') or '').strip()
+    key=(it.get('encounter_key') or '').strip()
+    if not key or not appt:
+        continue
+    if it.get('is_in_active_case') is True:
+        continue
+    print(key + '|' + appt)
+    sys.exit(0)
+sys.exit(1)
+"
+}
+
+json_timeline_encounter_is_in_case() {
+  local encounter_key="$1"
+  python3 -c "
+import json,sys
+target=sys.argv[1]
+obj=json.load(sys.stdin)
+items=((obj.get('data') or {}).get('items') or [])
+for it in items:
+    if not isinstance(it,dict) or it.get('item_type')!='encounter':
+        continue
+    if (it.get('encounter_key') or '').strip()!=target:
+        continue
+    sys.exit(0 if it.get('is_in_active_case') is True else 1)
+sys.exit(2)
+" "$encounter_key"
+}
+
 log "BASE_API=$BASE_API"
 log "PATIENT_ID=$PATIENT_ID"
 log "APPT_ID=$APPT_ID"
@@ -257,6 +358,79 @@ if [[ -n "$NEW_DOC_UUID" && -n "$ENCOUNTER_KEY" ]]; then
   fi
 else
   fail "skipping step 6 (missing encounter key or new uuid)"
+fi
+
+log "Step 7: active case items consistency against timeline + add-to-case reflect"
+ACTIVE_CASE_ID=""
+APPT_REFS_CSV=""
+if active_case_resp=$(http_get "$API_ROOT/patients/$PATIENT_ID/cases/active"); then
+  if printf '%s' "$active_case_resp" | json_assert_ok_true; then
+    if ACTIVE_CASE_ID=$(printf '%s' "$active_case_resp" | json_extract_active_case_id); then
+      pass "active case found: case_id=$ACTIVE_CASE_ID"
+    else
+      fail "active case is null/missing case_id"
+    fi
+  else
+    fail "GET active case returned ok!=true"
+  fi
+else
+  fail "GET active case request failed"
+fi
+
+if [[ -n "$ACTIVE_CASE_ID" ]]; then
+  if case_items_resp=$(http_get "$API_ROOT/cases/$ACTIVE_CASE_ID/items?limit=200"); then
+    if printf '%s' "$case_items_resp" | json_assert_ok_true; then
+      APPT_REFS_CSV=$(printf '%s' "$case_items_resp" | json_extract_case_appt_refs_csv || true)
+      pass "case items loaded (appointment refs: ${APPT_REFS_CSV:-<none>})"
+    else
+      fail "GET case items returned ok!=true"
+    fi
+  else
+    fail "GET case items request failed"
+  fi
+fi
+
+if [[ -n "$ACTIVE_CASE_ID" && -n "$APPT_REFS_CSV" ]]; then
+  if timeline_case_resp=$(http_get "$API_ROOT/patients/$PATIENT_ID/timeline?include=agenda,clinical&limit=20"); then
+    if printf '%s' "$timeline_case_resp" | json_timeline_validate_refs_in_case "$APPT_REFS_CSV"; then
+      pass "timeline encounter items in case refs are marked is_in_active_case=true"
+    else
+      rc=$?
+      if [[ "$rc" -eq 2 ]]; then
+        fail "timeline has no encounter items matching active case appointment refs"
+      else
+        fail "timeline membership mismatch for active case appointment refs"
+      fi
+    fi
+    if pick=$(printf '%s' "$timeline_case_resp" | json_timeline_pick_out_of_case_encounter); then
+      PICK_ENC_KEY="${pick%%|*}"
+      PICK_APPT_ID="${pick#*|}"
+      add_payload="{\"item_type\":\"appointment\",\"item_ref\":\"appt:$PICK_APPT_ID\"}"
+      if add_resp=$(http_post_json "$API_ROOT/cases/$ACTIVE_CASE_ID/items" "$add_payload"); then
+        if printf '%s' "$add_resp" | json_assert_ok_true; then
+          if timeline_after_add=$(http_get "$API_ROOT/patients/$PATIENT_ID/timeline?include=agenda,clinical&limit=20"); then
+            if printf '%s' "$timeline_after_add" | json_timeline_encounter_is_in_case "$PICK_ENC_KEY"; then
+              pass "add-to-case reflected in timeline for encounter $PICK_ENC_KEY"
+            else
+              fail "add-to-case not reflected in timeline for encounter $PICK_ENC_KEY"
+            fi
+          else
+            fail "timeline fetch after add-to-case failed"
+          fi
+        else
+          fail "POST case item returned ok!=true"
+        fi
+      else
+        fail "POST case item request failed"
+      fi
+    else
+      fail "no out-of-case encounter candidate found for add-to-case check"
+    fi
+  else
+    fail "timeline request for case consistency failed"
+  fi
+elif [[ -n "$ACTIVE_CASE_ID" ]]; then
+  fail "active case has no appointment refs; cannot validate encounter membership"
 fi
 
 echo

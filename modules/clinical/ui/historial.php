@@ -583,25 +583,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-$activeCaseItemsCount = 0;
-if ($activeCaseId !== '') {
-    foreach ($appointmentItems as $it) {
-        if ((bool)($it['is_in_active_case'] ?? false)) {
-            $activeCaseItemsCount++;
-        }
-    }
-    foreach ($encounterOrder as $ek) {
-        $enc = is_array($encounters[$ek]['raw'] ?? null) ? $encounters[$ek]['raw'] : [];
-        if ((bool)($enc['is_in_active_case'] ?? false)) {
-            $activeCaseItemsCount++;
-        }
-    }
-    foreach ($orphanDocs as $docIt) {
-        if ((bool)($docIt['is_in_active_case'] ?? false)) {
-            $activeCaseItemsCount++;
-        }
-    }
-}
+$activeCaseItemsCount = is_array($activeCase)
+    ? (int)($activeCase['items_count'] ?? 0)
+    : 0;
 
 $buildCursorHref = static function (string $nextCursor) use ($patientId, $include, $limit, $direction): string {
     $params = [

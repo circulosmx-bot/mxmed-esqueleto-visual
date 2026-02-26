@@ -71,7 +71,6 @@ $activeCase = null;
 $activeCaseError = '';
 $activeCaseSuccess = '';
 $isInActiveCase = false;
-$isInActiveCaseExact = false;
 $isInActiveCaseByAppt = false;
 $patientId = '';
 $appointmentId = '';
@@ -116,7 +115,7 @@ if ($encounterKey !== '') {
 
 if ($encounter !== null) {
     $patientId = trim((string)($encounter['patient_id'] ?? (($encounter['links']['patient_id'] ?? ''))));
-    $appointmentId = trim((string)(($encounter['links']['appointment_id'] ?? ($encounter['appointment_id'] ?? ''))));
+    $appointmentId = trim((string)($encounter['appointment_id'] ?? ($encounter['links']['appointment_id'] ?? '')));
     if ($appointmentId === '' && $encounterKey !== '' && strpos($encounterKey, 'appt:') === 0) {
         $appointmentId = preg_replace('/^appt:([^#]+)(#enc:.*)?$/', '$1', $encounterKey) ?? '';
         $appointmentId = trim((string)$appointmentId);
@@ -145,9 +144,9 @@ if ($encounter !== null) {
                         }
                         $caseMap[$itemType . '|' . $itemRef] = true;
                     }
-                    $isInActiveCaseExact = isset($caseMap['encounter|' . $encounterKey]);
                     $isInActiveCaseByAppt = ($appointmentId !== '') && isset($caseMap['appointment|appt:' . $appointmentId]);
-                    $isInActiveCase = $isInActiveCaseExact || $isInActiveCaseByAppt;
+                    // Keep membership rule aligned with timeline: derive by appointment_id.
+                    $isInActiveCase = $isInActiveCaseByAppt;
                 } else {
                     $activeCaseError = 'No se pudo consultar los items del caso activo.';
                 }
