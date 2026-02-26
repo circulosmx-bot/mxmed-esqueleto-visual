@@ -99,6 +99,7 @@ Perfil médico end-to-end:
 |---|---|---|---|---|
 | Patients | En progreso | Fuente canónica de identidad y contactos | `docs/MAPA_TOTAL_SISTEMA_MXMED.md`; `api/patients/index.php` | Cerrar convergencia total patient_id en clinical legacy |
 | Agenda | Hecho (v1) | Citas, eventos, waitlist | `docs/MAPA_TOTAL_SISTEMA_MXMED.md`; `api/agenda/index.php`; `docs/agenda/CIERRE_AGENDA_V1_ESTADO_FINAL.md` | Consolidar bridge robusto a Clinical en completed |
+| Agenda (Flags / Risk) | Hecho (registro) / Pendiente (enforcement) | Flags de riesgo por no_show/late_cancel en flujo write de Agenda | `modules/agenda/repositories/AppointmentWriteRepository.php:473-480`; `modules/agenda/repositories/AppointmentWriteRepository.php:536-543`; `modules/agenda/repositories/PatientFlagsWriteRepository.php:52-96`; `modules/agenda/controllers/AppointmentWriteController.php:93-124`; `docs/qa/availability_no_show_flow_qa.sh:144-163`; `docs/qa/availability_late_cancel_flow_qa.sh:155-182` | Definir política de bloqueo por flags antes de enforcement en create |
 | Clinical API (timeline/encounters/documents) | En progreso | Timeline, encounters, documentos y casos en evolución | `docs/clinical/TIMELINE_V1_CONTRACT.md`; `docs/clinical/encounters.md`; tags `mxmed-camino2-step*` | Endurecer contratos cross-módulo y deuda legacy |
 | Cases | En progreso | Caso activo y items por caso | `docs/clinical/CONTRATO_APPOINTMENT_ENCOUNTER_LINKING_V1.md`; endpoints `/cases/*` | Mejorar trazabilidad item_type y overlays de pertenencia |
 | Clinical UI (historial/encounter embed) | En progreso | Embed estable + overlay documento + viewer host | tags `mxmed-camino2-step10`..`mxmed-camino2-step31`; `modules/clinical/ui/*.php` | Homologación visual completa + auditoría de fidelidad visual + unificación de componentes/variables globales (pendientes visuales críticos en PDF UX/UI, extracción pendiente) |
@@ -133,6 +134,8 @@ Formato obligatorio por entrada:
 | 2026-02-25 | Auditoría visual completa post-cierre de integración transversal médica (Etapa 1) | No bloquear núcleo médico con deuda visual, pero cerrarla antes de expansión | Define gate de calidad visual al cierre de Etapa 1 | 00MANUAL DE DISENO Y UX UI PENDIENTES VISUALES previo a 09 de Octubre 2025.pdf | vigente |
 | 2026-02-25 | Criterio de aceptación visual: fidelidad al maestro (pixel-fit razonable ±4px) | Establecer criterio objetivo de validación UX/UI sin sobre-optimización temprana | Estandariza QA visual y reduce discusiones subjetivas | 00MANUAL DE DISENO Y UX UI PENDIENTES VISUALES previo a 09 de Octubre 2025.pdf | vigente |
 | 2026-02-25 | Pendientes visuales críticos se priorizan después del núcleo médico, antes de expansión organizacional (hospitales/labs/aseguradoras) | Ordenar prioridades entre estabilidad clínica y expansión multi-dominio | Mantiene foco en Etapa 1 y prepara Etapa 2 con base visual consistente | 00MANUAL DE DISENO Y UX UI PENDIENTES VISUALES previo a 09 de Octubre 2025.pdf | vigente |
+| 2026-02-25 | Flags grey/black son append-only (no bloquean create) en Etapa 1 (estado actual) | Evitar bloqueo automático sin política de negocio explícita | Auditoría/QA de flags vigente; enforcement se decide aparte | `modules/agenda/README.md:42-47`; `modules/agenda/controllers/AppointmentWriteController.php:93-124`; `docs/qa/availability_no_show_flow_qa.sh:144-163`; `docs/qa/availability_late_cancel_flow_qa.sh:155-182` | vigente |
+| 2026-02-25 | Naming canónico: no_show => black (deprecar red en docs) | Alinear código, QA y documentación con una sola semántica | Actualización documental pendiente para eliminar ambigüedad red/black | `modules/agenda/repositories/AppointmentWriteRepository.php:538-539`; `modules/agenda/README.md:106` | vigente |
 | _pendiente_ | _agregar nuevas decisiones aquí_ |  |  |  |  |
 
 ## F. Mapa de interconexiones (flows principales)
@@ -174,6 +177,7 @@ Refs:
 - `[ui]` Gate UX/UI Etapa 1: auditoría de fidelidad visual + componentes unificados + variables globales.
 - `[qa]` ampliar smoke de contratos timeline + cases + overlay.
 - `[migration]` plan de migración schema v1/v2 y tipos de IDs.
+- `[contract/api/qa]` Definir política y (opcional) enforcement de bloqueo por flags (grey/black): ¿grey bloquea?, ¿black bloquea?, duración (`expires_at`), override por rol; punto técnico para guard en `AppointmentWriteController::createFromPayload` entre payload válido y `checkAvailabilityRange` (`modules/agenda/controllers/AppointmentWriteController.php:93-124`). DoD: decisión escrita + QA contractual + error contract definido.
 
 ### 2a) Operación clínica extendida
 - `[api]` órdenes, recetas y resultados con contratos estables.
@@ -215,6 +219,11 @@ Refs:
 | `docs/clinical/CONTRATO_APPOINTMENT_ENCOUNTER_LINKING_V1.md` | doc interno | Contrato de correlación appointment ↔ encounter | pendiente | Por definir | Revisar y reforzar QA contractual |
 | `docs/clinical/DECISION_AGENDA_CREATES_CLINICAL_ENCOUNTER_V1.md` | doc interno | Decisión del bridge Agenda -> Clinical en completed | pendiente | Por definir | Revisar implementación y feature-flag |
 | `docs/dev/LOCAL_DEV_SERVERS.md` | doc interno | Operación local dual-server y preflight QA | pendiente | Por definir | Revisar y mantener comandos operativos vigentes |
+| `docs/qa/availability_no_show_flow_qa.sh` | doc interno | QA smoke de no_show + flag black + idempotencia | pendiente | Por definir | Revisar y convertir asserts en contrato explícito de flags |
+| `docs/qa/availability_late_cancel_flow_qa.sh` | doc interno | QA smoke de late_cancel + flag grey + idempotencia | pendiente | Por definir | Revisar y convertir asserts en contrato explícito de flags |
+| `docs/agenda/CIERRE_FASE_I6_SEMANTICA_Y_CONTRATO_FRONTEND.md` | doc interno | Semántica de cancel/no_show y expectativa de flags | pendiente | Por definir | Alinear naming y semántica con código vigente |
+| `docs/db/MODELO_CANONICO_AGENDA.md` | doc interno | Modelo canónico de Agenda y significado de flags | pendiente | Por definir | Mantener alineado con enforcement futuro |
+| `modules/agenda/README.md` | doc interno | Contrato operativo Agenda y estado real de flags (append-only) | pendiente | Por definir | Corregir naming red/black y mantener documentación sincronizada |
 
 ## I. Cómo trabajar este plan
 
