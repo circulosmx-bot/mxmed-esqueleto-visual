@@ -1711,6 +1711,56 @@ try {
                 }
             }
 
+            if ($includeClinical && $encounterItems !== []) {
+                $dedupedEncounterItems = [];
+                $byAppointment = [];
+                foreach ($encounterItems as $encItem) {
+                    if (!is_array($encItem)) {
+                        continue;
+                    }
+                    $links = is_array($encItem['links'] ?? null) ? $encItem['links'] : [];
+                    $apptId = trim((string)($links['appointment_id'] ?? ''));
+                    if ($apptId === '') {
+                        $dedupedEncounterItems[] = $encItem;
+                        continue;
+                    }
+                    $encounterDt = trim((string)($encItem['event_datetime'] ?? ''));
+                    $encounterTs = strtotime($encounterDt);
+                    if ($encounterTs === false) {
+                        $encounterTs = 0;
+                    }
+                    $encounterId = (int)($links['encounter_id'] ?? 0);
+                    $current = $byAppointment[$apptId] ?? null;
+                    if (!is_array($current)) {
+                        $byAppointment[$apptId] = [
+                            'item' => $encItem,
+                            'ts' => $encounterTs,
+                            'id' => $encounterId,
+                        ];
+                        continue;
+                    }
+                    $replace = false;
+                    if ($encounterTs > (int)$current['ts']) {
+                        $replace = true;
+                    } elseif ($encounterTs === (int)$current['ts'] && $encounterId > (int)$current['id']) {
+                        $replace = true;
+                    }
+                    if ($replace) {
+                        $byAppointment[$apptId] = [
+                            'item' => $encItem,
+                            'ts' => $encounterTs,
+                            'id' => $encounterId,
+                        ];
+                    }
+                }
+                foreach ($byAppointment as $group) {
+                    if (is_array($group) && is_array($group['item'] ?? null)) {
+                        $dedupedEncounterItems[] = $group['item'];
+                    }
+                }
+                $encounterItems = $dedupedEncounterItems;
+            }
+
             $items = array_merge($encounterItems, $appointmentItems, $documentItems);
 
             $activeCaseId = (int)($activeCase['case_id'] ?? 0);
