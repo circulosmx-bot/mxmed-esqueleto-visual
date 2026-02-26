@@ -1622,6 +1622,8 @@ try {
 
                     $encounterItems[] = [
                         'item_type' => 'encounter',
+                        'has_encounter' => true,
+                        'latest_encounter_key' => $encounterKey,
                         'ref' => $encounterKey,
                         'encounter_key' => $encounterKey,
                         'event_datetime' => $encounterDt,
@@ -1657,6 +1659,8 @@ try {
 
                     $appointmentItems[] = [
                         'item_type' => 'appointment',
+                        'has_encounter' => false,
+                        'latest_encounter_key' => null,
                         'ref' => 'appt:' . $appointmentId,
                         'encounter_key' => 'appt:' . $appointmentId,
                         'event_datetime' => (string)($appt['start_at'] ?? ''),
