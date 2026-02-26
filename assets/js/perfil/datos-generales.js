@@ -144,6 +144,76 @@
   }
 
   function initAutosave(){
+    const expedienteRoot = document.getElementById('p-expediente');
+    let creatingPatientPromise = null;
+    let lastCreateAttemptAt = 0;
+
+    const getActivePatientId = ()=>{
+      if(!expedienteRoot) return '';
+      const fromData = String(expedienteRoot.dataset?.activePatientId || expedienteRoot.dataset?.patientId || '').trim();
+      if(fromData) return fromData;
+      const fromAttr = String(expedienteRoot.getAttribute('data-active-patient-id') || expedienteRoot.getAttribute('data-patient-id') || '').trim();
+      if(fromAttr) return fromAttr;
+      const fromGlobal = String(window.mxmedActivePatientId || window.__MXMED_ACTIVE_PATIENT_ID || '').trim();
+      return fromGlobal;
+    };
+
+    const setActivePatientId = (patientId)=>{
+      const pid = String(patientId || '').trim();
+      if(!pid || !expedienteRoot) return;
+      expedienteRoot.dataset.activePatientId = pid;
+      expedienteRoot.dataset.patientId = pid;
+      expedienteRoot.setAttribute('data-active-patient-id', pid);
+      expedienteRoot.setAttribute('data-patient-id', pid);
+      window.mxmedActivePatientId = pid;
+      window.__MXMED_ACTIVE_PATIENT_ID = pid;
+      window.dispatchEvent(new Event('patient:selected'));
+    };
+
+    const buildCreatePayload = ()=>{
+      if(!expedienteRoot) return null;
+      const first = (expedienteRoot.querySelector('[data-pac-nombre]')?.value || '').trim();
+      const apPat = (expedienteRoot.querySelector('[data-pac-apellido-paterno]')?.value || '').trim();
+      const apMat = (expedienteRoot.querySelector('[data-pac-apellido-materno]')?.value || '').trim();
+      const displayName = [first, apPat, apMat].filter(Boolean).join(' ').trim();
+      if(!displayName) return null;
+
+      const dd = (expedienteRoot.querySelector('[data-dg-dia]')?.value || '').trim();
+      const mm = (expedienteRoot.querySelector('[data-dg-mes]')?.value || '').trim();
+      const yy = (expedienteRoot.querySelector('[data-dg-anio]')?.value || '').trim();
+      const sex = (expedienteRoot.querySelector('input[name="pac-genero"]:checked')?.value || '').trim();
+      const birthdate = (yy && mm && dd) ? `${yy}-${mm}-${dd}` : null;
+
+      return {
+        display_name: displayName,
+        birthdate: birthdate || undefined,
+        sex: sex || undefined
+      };
+    };
+
+    const ensureActivePatientFromAutosave = ()=>{
+      if(getActivePatientId()) return;
+      const payload = buildCreatePayload();
+      if(!payload) return;
+      const now = Date.now();
+      if(now - lastCreateAttemptAt < 1200) return;
+      if(creatingPatientPromise) return;
+      lastCreateAttemptAt = now;
+      creatingPatientPromise = fetch('/api/patients/index.php/patients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then((res)=> res.json().catch(()=> null))
+        .then((json)=>{
+          const patientId = String(json?.data?.patient_id || '').trim();
+          if(json?.ok === true && patientId){
+            setActivePatientId(patientId);
+          }
+        })
+        .catch(()=>{})
+        .finally(()=>{ creatingPatientPromise = null; });
+    };
+
     document.querySelectorAll('input.form-control, select.form-select, textarea.form-control').forEach(ctrl=>{
       if(ctrl.type==='file') return;
       // excluir campos de búsqueda u opt-out manual
@@ -173,9 +243,9 @@
         if(col){ col.classList.toggle('saved', hasVal && !invalid); }
       };
       maybeMark();
-      ctrl.addEventListener('input', ()=>{ maybeMark(); });
-      ctrl.addEventListener('change', ()=>{ localStorage.setItem(key, ctrl.value); maybeMark(); });
-      ctrl.addEventListener('blur', ()=>{ localStorage.setItem(key, ctrl.value); maybeMark(); });
+      ctrl.addEventListener('input', ()=>{ maybeMark(); ensureActivePatientFromAutosave(); });
+      ctrl.addEventListener('change', ()=>{ localStorage.setItem(key, ctrl.value); maybeMark(); ensureActivePatientFromAutosave(); });
+      ctrl.addEventListener('blur', ()=>{ localStorage.setItem(key, ctrl.value); maybeMark(); ensureActivePatientFromAutosave(); });
     });
   }
   initAutosave();
