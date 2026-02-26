@@ -255,6 +255,7 @@ $include = $include !== '' ? $include : 'agenda,clinical';
 $limit = ($limit > 0 && $limit <= 200) ? $limit : 20;
 require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
+$envClinicalApiBaseRaw = trim((string)getenv('CLINICAL_API_BASE'));
 $clinicalApiBase = get_api_base();
 if (strpos($clinicalApiBase, '/') === 0) {
     $proto = 'http';
@@ -412,18 +413,18 @@ if ($patientId !== '') {
 
         if ($raw === false) {
             $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
-            $errorTechnicalDetails = "status: {$status}\nurl: {$timelineUrlSafe}\nattempts: {$attempts}\nerror: " . (string)($fetch['error'] ?? '') . "\nheaders:\n" . implode("\n", $headers);
+            $errorTechnicalDetails = "status: {$status}\nurl: {$timelineUrlSafe}\nenv_CLINICAL_API_BASE: " . ($envClinicalApiBaseRaw !== '' ? $envClinicalApiBaseRaw : '<empty>') . "\nresolved_api_base: {$clinicalApiBase}\nattempts: {$attempts}\nerror: " . (string)($fetch['error'] ?? '') . "\nheaders:\n" . implode("\n", $headers);
         } elseif ($status >= 400) {
             $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
-            $errorTechnicalDetails = "status: {$status}\nurl: {$timelineUrlSafe}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\nbody_snippet:\n" . (string)($fetch['body_snippet'] ?? '');
+            $errorTechnicalDetails = "status: {$status}\nurl: {$timelineUrlSafe}\nenv_CLINICAL_API_BASE: " . ($envClinicalApiBaseRaw !== '' ? $envClinicalApiBaseRaw : '<empty>') . "\nresolved_api_base: {$clinicalApiBase}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\nbody_snippet:\n" . (string)($fetch['body_snippet'] ?? '');
         } else {
             $decoded = json_decode($raw, true);
             if (!is_array($decoded)) {
                 $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
-                $errorTechnicalDetails = "status: {$status}\nurl: {$timelineUrlSafe}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\nbody_snippet:\n" . (string)($fetch['body_snippet'] ?? '');
+                $errorTechnicalDetails = "status: {$status}\nurl: {$timelineUrlSafe}\nenv_CLINICAL_API_BASE: " . ($envClinicalApiBaseRaw !== '' ? $envClinicalApiBaseRaw : '<empty>') . "\nresolved_api_base: {$clinicalApiBase}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\nbody_snippet:\n" . (string)($fetch['body_snippet'] ?? '');
             } elseif (($decoded['ok'] ?? false) !== true) {
                 $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
-                $errorTechnicalDetails = "status: {$status}\nurl: {$timelineUrlSafe}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\napi_message: " . (string)($decoded['message'] ?? '');
+                $errorTechnicalDetails = "status: {$status}\nurl: {$timelineUrlSafe}\nenv_CLINICAL_API_BASE: " . ($envClinicalApiBaseRaw !== '' ? $envClinicalApiBaseRaw : '<empty>') . "\nresolved_api_base: {$clinicalApiBase}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\napi_message: " . (string)($decoded['message'] ?? '');
             } else {
                 $data = is_array($decoded['data'] ?? null) ? $decoded['data'] : [];
                 $list = $data['items'] ?? [];
