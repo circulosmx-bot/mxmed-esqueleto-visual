@@ -1622,6 +1622,7 @@ try {
 
                     $encounterItems[] = [
                         'item_type' => 'encounter',
+                        'ref' => $encounterKey,
                         'encounter_key' => $encounterKey,
                         'event_datetime' => $encounterDt,
                         'sort_datetime' => $encounterDt,
@@ -1656,6 +1657,7 @@ try {
 
                     $appointmentItems[] = [
                         'item_type' => 'appointment',
+                        'ref' => 'appt:' . $appointmentId,
                         'encounter_key' => 'appt:' . $appointmentId,
                         'event_datetime' => (string)($appt['start_at'] ?? ''),
                         'sort_datetime' => (string)($appt['start_at'] ?? ''),
@@ -1688,6 +1690,7 @@ try {
                     $documentUuid = (string)($row['document_uuid'] ?? '');
                     $documentItems[] = [
                         'item_type' => 'document',
+                        'ref' => ($documentUuid !== '' ? ('doc:' . $documentUuid) : null),
                         'encounter_key' => clinical_timeline_encounter_key_from_datetime($eventDatetime),
                         'event_datetime' => $eventDatetime,
                         'sort_datetime' => $eventDatetime,
