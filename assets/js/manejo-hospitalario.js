@@ -128,8 +128,6 @@
   };
 
 const isDemo = window.location.hostname.endsWith('github.io');
-curl -sS "http://127.0.0.1:8090/api/clinical/index.php/documents?patient_id=550e8400-e29b-41d4-a716-446655440000&limit=10" \
-  | head -c 3000; echo
   const demoFetchJson = async (path) => {
     const res = await fetch(path, { method: 'GET', headers: {} });
     const data = await res.json().catch(() => null);
