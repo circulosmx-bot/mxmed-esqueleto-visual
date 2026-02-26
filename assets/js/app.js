@@ -2649,18 +2649,39 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const syncGineco = (genero, allowNavigate)=>{
-    const show = genero === 'F';
-    if(ginecoItem){ ginecoItem.classList.toggle('d-none', !show); }
-    layoutTabs(show);
-    if(!ginecoLink) return;
-    if(show && basicsReady()){
-      toggleTabState(ginecoLink, false);
-    }else{
-      toggleTabState(ginecoLink, true);
+    const generoNorm = String(genero || '').toLowerCase();
+    const isWoman = generoNorm.startsWith('f') || generoNorm.includes('muj');
+    const gineLi = pane.querySelector('[data-tab-conditional="gineco"]');
+    const gineLinkLocal = gineLi ? gineLi.querySelector('.nav-link') : null;
+    const ginePane = pane.querySelector('#t-gineco');
+
+    if(gineLi){ gineLi.classList.toggle('d-none', !isWoman); }
+    if(ginePane){ ginePane.classList.toggle('d-none', !isWoman); }
+    layoutTabs(isWoman);
+
+    if(gineLinkLocal){
+      if(isWoman && basicsReady()){
+        toggleTabState(gineLinkLocal, false);
+      }else{
+        toggleTabState(gineLinkLocal, true);
+      }
     }
-    if(!show && ginecoLink.classList.contains('active') && allowNavigate){
-      const first = tabs[0];
-      if(first){ try{ new bootstrap.Tab(first).show(); }catch(_){ } }
+
+    if(!isWoman){
+      gineLinkLocal?.classList.remove('active');
+      ginePane?.classList.remove('show','active');
+      if(gineLinkLocal?.getAttribute('aria-selected') === 'true'){
+        gineLinkLocal.setAttribute('aria-selected', 'false');
+      }
+      if(datosTabLink){ datosTabLink.classList.add('active'); }
+      if(datosTabPane){
+        datosTabPane.classList.remove('d-none');
+        datosTabPane.classList.add('show','active');
+      }
+      if(allowNavigate){
+        const first = tabs[0];
+        if(first){ try{ new bootstrap.Tab(first).show(); }catch(_){ } }
+      }
     }
   };
 
