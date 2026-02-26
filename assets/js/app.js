@@ -2715,15 +2715,8 @@ console.info('app.js loaded :: 20251123a');
   const setActivePatientId = (pid, opts = {})=>{
     const next = String(pid || '').trim();
     if(!next) return;
-    const current = String(
-      getHashPatientId()
-      || pane?.dataset?.patientId
-      || pane?.dataset?.activePatientId
-      || window.mxmedActivePatientId
-      || getSessionPatientId()
-      || ''
-    ).trim();
-    if(current && current === next){
+    const current = String(getActivePatientId() || '').trim();
+    if(current === next){
       applyPatientGate();
       return;
     }
@@ -2840,20 +2833,23 @@ console.info('app.js loaded :: 20251123a');
   if(!pane.__patientGateInit){
     const handlePatientGateChange = ()=>{
       const pid = String(getActivePatientId() || '').trim();
-      if(pid){
-        setActivePatientId(pid);
+      if(!pid){
+        syncState({ allowNavigate:true });
+        return;
       }
+      setActivePatientId(pid, { emitEvent:false });
       syncState({ allowNavigate:true });
     };
     ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach((evtName)=>{
       window.addEventListener(evtName, handlePatientGateChange);
     });
-    window.addEventListener('hashchange', ()=>{
+    const onHashChange = ()=>{
       const pid = String(getHashPatientId() || '').trim();
       if(!pid) return;
-      setActivePatientId(pid, { source:'hashchange' });
+      setActivePatientId(pid, { source:'hashchange', emitEvent:false });
       syncState({ allowNavigate:true });
-    });
+    };
+    window.addEventListener('hashchange', onHashChange);
     const patientAttrObserver = new MutationObserver(handlePatientGateChange);
     patientAttrObserver.observe(pane, { attributes:true, attributeFilter:['data-patient-id', 'data-active-patient-id'] });
     pane.__patientGateInit = true;
