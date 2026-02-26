@@ -1734,9 +1734,9 @@ try {
                 $appointmentRef = ($appointmentId !== '') ? ('appt:' . $appointmentId) : '';
                 $inActiveCase = ($appointmentRef !== '' && isset($appointmentCaseSet[$appointmentRef]));
 
-                // Keep active case context on every item; membership is explicit with is_in_active_case.
-                $timelineItem['case_id'] = ($activeCaseId > 0) ? $activeCaseId : null;
-                $timelineItem['case_title'] = ($activeCaseId > 0) ? $activeCaseTitle : null;
+                // case_id/case_title are set only when item is in active case; membership is explicit with is_in_active_case.
+                $timelineItem['case_id'] = $inActiveCase && $activeCaseId > 0 ? $activeCaseId : null;
+                $timelineItem['case_title'] = $inActiveCase && $activeCaseTitle !== '' ? $activeCaseTitle : null;
                 $timelineItem['is_in_active_case'] = $inActiveCase;
             }
             unset($timelineItem);
