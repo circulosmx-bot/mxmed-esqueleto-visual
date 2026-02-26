@@ -3,14 +3,11 @@ declare(strict_types=1);
 
 function get_api_base(): string
 {
-    $env = trim((string)getenv('MXMED_API_BASE'));
+    $env = trim((string)getenv('CLINICAL_API_BASE'));
     if ($env !== '') {
         return rtrim($env, '/');
     }
-
-    // UI corre en 8091
-    // API Gateway corre en 8092
-    return 'http://127.0.0.1:8092';
+    return '/api/clinical/index.php';
 }
 
 function h(string $value): string
@@ -258,14 +255,16 @@ $include = $include !== '' ? $include : 'agenda,clinical';
 $limit = ($limit > 0 && $limit <= 200) ? $limit : 20;
 require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
-$clinicalApiBase = rtrim((string)getenv('CLINICAL_API_BASE'), '/');
-if ($clinicalApiBase === '') {
-    // IMPORTANT (dev mode):
-    // Always use CLINICAL_API_BASE for server-side HTTP calls.
-    // In PHP built-in server (php -S), calling the same port (UI -> UI)
-    // causes self-request recursion and status:0 failures.
-    // UI runs on 8092 and API on 8091 in local dev.
-    $clinicalApiBase = get_api_base();
+$clinicalApiBase = get_api_base();
+if (strpos($clinicalApiBase, '/') === 0) {
+    $proto = 'http';
+    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+        $proto = 'https';
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+        $proto = (string)$_SERVER['HTTP_X_FORWARDED_PROTO'];
+    }
+    $host = (string)($_SERVER['HTTP_HOST'] ?? '127.0.0.1');
+    $clinicalApiBase = $proto . '://' . $host;
 }
 // usar base raw para HTTP calls, nunca HTML-escaped
 
