@@ -2713,21 +2713,32 @@ console.info('app.js loaded :: 20251123a');
     try{ window.sessionStorage?.setItem(activePatientSessionKey, patientId); }catch(_){}
   };
   const setActivePatientId = (pid, opts = {})=>{
-    const patientId = String(pid || '').trim();
-    if(!patientId) return;
-    pane.dataset.patientId = patientId;
-    pane.dataset.activePatientId = patientId;
-    pane.setAttribute('data-patient-id', patientId);
-    pane.setAttribute('data-active-patient-id', patientId);
-    window.mxmedActivePatientId = patientId;
-    window.__MXMED_ACTIVE_PATIENT_ID = patientId;
-    setSessionPatientId(patientId);
-    setHashPatientId(patientId);
-    if(opts.emitEvent === true){
-      window.dispatchEvent(new Event('patient:selected'));
-    }else{
+    const next = String(pid || '').trim();
+    if(!next) return;
+    const current = String(
+      getHashPatientId()
+      || pane?.dataset?.patientId
+      || pane?.dataset?.activePatientId
+      || window.mxmedActivePatientId
+      || getSessionPatientId()
+      || ''
+    ).trim();
+    if(current && current === next){
       applyPatientGate();
+      return;
     }
+    pane.dataset.patientId = next;
+    pane.dataset.activePatientId = next;
+    pane.setAttribute('data-patient-id', next);
+    pane.setAttribute('data-active-patient-id', next);
+    window.mxmedActivePatientId = next;
+    window.__MXMED_ACTIVE_PATIENT_ID = next;
+    setSessionPatientId(next);
+    setHashPatientId(next);
+    if(opts.source !== 'hashchange' && opts.emitEvent === true){
+      window.dispatchEvent(new Event('patient:selected'));
+    }
+    applyPatientGate();
   };
   window.mxmedSetActivePatientId = setActivePatientId;
 
@@ -2837,7 +2848,12 @@ console.info('app.js loaded :: 20251123a');
     ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach((evtName)=>{
       window.addEventListener(evtName, handlePatientGateChange);
     });
-    window.addEventListener('hashchange', handlePatientGateChange);
+    window.addEventListener('hashchange', ()=>{
+      const pid = String(getHashPatientId() || '').trim();
+      if(!pid) return;
+      setActivePatientId(pid, { source:'hashchange' });
+      syncState({ allowNavigate:true });
+    });
     const patientAttrObserver = new MutationObserver(handlePatientGateChange);
     patientAttrObserver.observe(pane, { attributes:true, attributeFilter:['data-patient-id', 'data-active-patient-id'] });
     pane.__patientGateInit = true;
