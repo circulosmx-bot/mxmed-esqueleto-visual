@@ -51,6 +51,8 @@ Documento de cierre con contexto y cobertura:
 URL de prueba:
 `http://127.0.0.1:8092/modules/clinical/ui/historial.php?patient_id=p_0c874aa9cbad&embed=1`
 
+Uso QA determinismo resolver de encounters: `bash docs/qa/clinical_encounter_resolver_determinism_qa.sh fe61cdd67e97dcfde3a70c02`
+
 Qué debe verse:
 - Timeline con cards de `encounter` y contador `Documentos: N`.
 - Botones `Ver detalle` y, cuando aplique, `Ver todos (N)`.
