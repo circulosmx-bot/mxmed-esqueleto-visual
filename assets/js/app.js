@@ -2664,7 +2664,77 @@ console.info('app.js loaded :: 20251123a');
     }
   };
 
+  const activePatientSessionKey = 'mxmedActivePatientId';
+  const getHashPatientId = ()=>{
+    const rawHash = String(window.location.hash || '');
+    if(!rawHash) return '';
+    const hashBody = rawHash.startsWith('#') ? rawHash.slice(1) : rawHash;
+    const qIndex = hashBody.indexOf('?');
+    const routePart = (qIndex >= 0 ? hashBody.slice(0, qIndex) : hashBody).trim().toLowerCase();
+    if(routePart.indexOf('expediente') === -1) return '';
+    const queryPart = qIndex >= 0 ? hashBody.slice(qIndex + 1) : '';
+    if(!queryPart) return '';
+    try{
+      const params = new URLSearchParams(queryPart);
+      return String(params.get('patient_id') || '').trim();
+    }catch(_){
+      return '';
+    }
+  };
+  const setHashPatientId = (pid)=>{
+    const patientId = String(pid || '').trim();
+    if(!patientId) return;
+    const rawHash = String(window.location.hash || '');
+    const hashBody = rawHash.startsWith('#') ? rawHash.slice(1) : rawHash;
+    const qIndex = hashBody.indexOf('?');
+    const routePart = (qIndex >= 0 ? hashBody.slice(0, qIndex) : hashBody).trim();
+    if(routePart.toLowerCase().indexOf('expediente') === -1) return;
+    const queryPart = qIndex >= 0 ? hashBody.slice(qIndex + 1) : '';
+    let params;
+    try{ params = new URLSearchParams(queryPart); }catch(_){ params = new URLSearchParams(); }
+    params.set('patient_id', patientId);
+    const nextHash = '#' + routePart + '?' + params.toString();
+    try{
+      if(window.history && typeof window.history.replaceState === 'function'){
+        window.history.replaceState(null, '', window.location.pathname + window.location.search + nextHash);
+      }else{
+        window.location.hash = nextHash;
+      }
+    }catch(_){
+      window.location.hash = nextHash;
+    }
+  };
+  const getSessionPatientId = ()=>{
+    try{ return String(window.sessionStorage?.getItem(activePatientSessionKey) || '').trim(); }catch(_){ return ''; }
+  };
+  const setSessionPatientId = (pid)=>{
+    const patientId = String(pid || '').trim();
+    if(!patientId) return;
+    try{ window.sessionStorage?.setItem(activePatientSessionKey, patientId); }catch(_){}
+  };
+  const setActivePatientId = (pid, opts = {})=>{
+    const patientId = String(pid || '').trim();
+    if(!patientId) return;
+    pane.dataset.patientId = patientId;
+    pane.dataset.activePatientId = patientId;
+    pane.setAttribute('data-patient-id', patientId);
+    pane.setAttribute('data-active-patient-id', patientId);
+    window.mxmedActivePatientId = patientId;
+    window.__MXMED_ACTIVE_PATIENT_ID = patientId;
+    setSessionPatientId(patientId);
+    setHashPatientId(patientId);
+    if(opts.emitEvent === true){
+      window.dispatchEvent(new Event('patient:selected'));
+    }else{
+      applyPatientGate();
+    }
+  };
+  window.mxmedSetActivePatientId = setActivePatientId;
+
   const getActivePatientId = ()=>{
+    const fromHash = getHashPatientId();
+    if(fromHash) return fromHash;
+
     const fromPane = String(pane.dataset?.patientId || pane.getAttribute('data-patient-id') || '').trim();
     if(fromPane) return fromPane;
 
@@ -2673,16 +2743,16 @@ console.info('app.js loaded :: 20251123a');
 
     const fallback = [
       window.mxmedActivePatientId,
-      window.__MXMED_ACTIVE_PATIENT_ID,
-      window.mxmedPatient && window.mxmedPatient.patient_id,
-      window.mxmedPatientContext && window.mxmedPatientContext.patient_id,
-      window.mxmedStore && (window.mxmedStore.activePatientId || window.mxmedStore.patient_id)
+      window.__MXMED_ACTIVE_PATIENT_ID
     ];
     for(const raw of fallback){
       const value = String(raw || '').trim();
       if(value) return value;
     }
-    return '';
+
+    const fromSession = getSessionPatientId();
+    if(fromSession) return fromSession;
+    return null;
   };
 
   const applyPatientGate = ()=>{
@@ -2757,10 +2827,17 @@ console.info('app.js loaded :: 20251123a');
   });
 
   if(!pane.__patientGateInit){
-    const handlePatientGateChange = ()=> syncState({ allowNavigate:true });
+    const handlePatientGateChange = ()=>{
+      const pid = String(getActivePatientId() || '').trim();
+      if(pid){
+        setActivePatientId(pid);
+      }
+      syncState({ allowNavigate:true });
+    };
     ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach((evtName)=>{
       window.addEventListener(evtName, handlePatientGateChange);
     });
+    window.addEventListener('hashchange', handlePatientGateChange);
     const patientAttrObserver = new MutationObserver(handlePatientGateChange);
     patientAttrObserver.observe(pane, { attributes:true, attributeFilter:['data-patient-id', 'data-active-patient-id'] });
     pane.__patientGateInit = true;
