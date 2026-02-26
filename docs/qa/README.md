@@ -51,7 +51,11 @@ Documento de cierre con contexto y cobertura:
 URL de prueba:
 `http://127.0.0.1:8092/modules/clinical/ui/historial.php?patient_id=p_0c874aa9cbad&embed=1`
 
-Uso QA determinismo resolver de encounters: `bash docs/qa/clinical_encounter_resolver_determinism_qa.sh fe61cdd67e97dcfde3a70c02`
+Uso QA determinismo resolver de encounters:
+- `bash docs/qa/clinical_encounter_resolver_determinism_qa.sh`
+- `bash docs/qa/clinical_encounter_resolver_determinism_qa.sh <APPT_ID>`
+- `MYSQL_PWD='tu_password' bash docs/qa/clinical_encounter_resolver_determinism_qa.sh fe61cdd67e97dcfde3a70c02` (evita prompt)
+- Regla canónica validada: `ORDER BY encounter_dt DESC, encounter_id DESC`.
 
 Qué debe verse:
 - Timeline con cards de `encounter` y contador `Documentos: N`.
