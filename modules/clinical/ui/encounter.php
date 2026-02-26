@@ -30,6 +30,19 @@ function get_api_base(): string
     return $proto . '://' . $hostOnly . ':8091';
 }
 
+function normalize_clinical_api_base(string $base): string
+{
+    $normalized = rtrim(trim($base), '/');
+    if ($normalized === '') {
+        return '';
+    }
+    $suffix = '/api/clinical/index.php';
+    if (substr($normalized, -strlen($suffix)) === $suffix) {
+        $normalized = rtrim(substr($normalized, 0, -strlen($suffix)), '/');
+    }
+    return $normalized;
+}
+
 function h(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
@@ -74,7 +87,11 @@ $isInActiveCase = false;
 $isInActiveCaseByAppt = false;
 $patientId = '';
 $appointmentId = '';
-$apiBase = get_api_base();
+$apiBase = normalize_clinical_api_base((string)getenv('CLINICAL_API_BASE'));
+if ($apiBase === '') {
+    $apiBase = normalize_clinical_api_base(get_api_base());
+}
+$apiIndexBase = $apiBase . '/api/clinical/index.php';
 
 if (trim((string)($_GET['flash'] ?? '')) === 'added_case_item') {
     $activeCaseSuccess = 'Agregado al caso activo.';
@@ -83,7 +100,7 @@ if (trim((string)($_GET['flash'] ?? '')) === 'added_case_item') {
 if ($encounterKey !== '') {
     // IMPORTANT (dev mode): use API base for server-side calls to avoid UI->UI recursion.
     $encodedEncounterKey = rawurlencode($encounterKey);
-    $url = $apiBase . '/api/clinical/index.php/encounters/' . $encodedEncounterKey;
+    $url = $apiIndexBase . '/encounters/' . $encodedEncounterKey;
 
     $context = stream_context_create([
         'http' => [
@@ -121,14 +138,14 @@ if ($encounter !== null) {
         $appointmentId = trim((string)$appointmentId);
     }
     if ($patientId !== '') {
-        $activeCaseUrl = $apiBase . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/cases/active';
+        $activeCaseUrl = $apiIndexBase . '/patients/' . rawurlencode($patientId) . '/cases/active';
         $activeCaseResp = http_get_json($activeCaseUrl);
         if (is_array($activeCaseResp) && ($activeCaseResp['ok'] ?? false) === true) {
             $caseData = $activeCaseResp['data'] ?? null;
             $activeCase = is_array($caseData) ? $caseData : null;
             $caseId = (int)($activeCase['case_id'] ?? 0);
             if ($caseId > 0) {
-                $caseItemsUrl = $apiBase . '/api/clinical/index.php/cases/' . rawurlencode((string)$caseId) . '/items?limit=200';
+                $caseItemsUrl = $apiIndexBase . '/cases/' . rawurlencode((string)$caseId) . '/items?limit=200';
                 $caseItemsResp = http_get_json($caseItemsUrl);
                 if (is_array($caseItemsResp) && ($caseItemsResp['ok'] ?? false) === true) {
                     $caseItems = is_array($caseItemsResp['data'] ?? null) ? $caseItemsResp['data'] : [];
@@ -167,7 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $encounter !== null) {
             $activeCaseError = 'No se pudo agregar al caso activo.';
         } elseif (!$isInActiveCase) {
             $itemRef = 'appt:' . $appointmentId;
-            $postUrl = $apiBase . '/api/clinical/index.php/cases/' . rawurlencode((string)$caseId) . '/items';
+            $postUrl = $apiIndexBase . '/cases/' . rawurlencode((string)$caseId) . '/items';
             $postPayload = json_encode([
                 'item_type' => 'appointment',
                 'item_ref' => $itemRef,

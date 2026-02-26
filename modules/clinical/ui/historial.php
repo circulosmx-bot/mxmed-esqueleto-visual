@@ -10,6 +10,19 @@ function get_api_base(): string
     return '/api/clinical/index.php';
 }
 
+function normalize_clinical_api_base(string $base): string
+{
+    $normalized = rtrim(trim($base), '/');
+    if ($normalized === '') {
+        return '';
+    }
+    $suffix = '/api/clinical/index.php';
+    if (substr($normalized, -strlen($suffix)) === $suffix) {
+        $normalized = rtrim(substr($normalized, 0, -strlen($suffix)), '/');
+    }
+    return $normalized;
+}
+
 function h(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
@@ -256,8 +269,11 @@ $limit = ($limit > 0 && $limit <= 200) ? $limit : 20;
 require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
 $envClinicalApiBaseRaw = trim((string)getenv('CLINICAL_API_BASE'));
-$clinicalApiBase = get_api_base();
-if (strpos($clinicalApiBase, '/') === 0) {
+$clinicalApiBase = normalize_clinical_api_base($envClinicalApiBaseRaw);
+if ($clinicalApiBase === '') {
+    $clinicalApiBase = normalize_clinical_api_base(get_api_base());
+}
+if ($clinicalApiBase === '' || strpos($clinicalApiBase, '/') === 0) {
     $proto = 'http';
     if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
         $proto = 'https';
@@ -267,6 +283,7 @@ if (strpos($clinicalApiBase, '/') === 0) {
     $host = (string)($_SERVER['HTTP_HOST'] ?? '127.0.0.1');
     $clinicalApiBase = $proto . '://' . $host;
 }
+$clinicalApiIndexBase = $clinicalApiBase . '/api/clinical/index.php';
 // usar base raw para HTTP calls, nunca HTML-escaped
 
 $errorMessage = '';
@@ -288,7 +305,7 @@ if ($encounterKey === '' && $appointmentId !== '') {
 
 if ($patientId === '' && $encounterKey !== '') {
     $encodedEncounterKey = rawurlencode($encounterKey);
-    $resolveUrl = $clinicalApiBase . '/api/clinical/index.php/encounters/' . $encodedEncounterKey;
+    $resolveUrl = $clinicalApiIndexBase . '/encounters/' . $encodedEncounterKey;
     $resolveContext = stream_context_create([
         'http' => [
             'method' => 'GET',
@@ -331,7 +348,7 @@ if ($encounterKey === '' && $appointmentId !== '') {
 
 if ($patientId === '' && $encounterKey !== '') {
     $encodedEncounterKey = rawurlencode($encounterKey);
-    $resolveUrl = $clinicalApiBase . '/api/clinical/index.php/encounters/' . $encodedEncounterKey;
+    $resolveUrl = $clinicalApiIndexBase . '/encounters/' . $encodedEncounterKey;
     $resolveContext = stream_context_create([
         'http' => [
             'method' => 'GET',
@@ -400,7 +417,7 @@ if ($patientId !== '') {
         }
 
         $queryApi = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
-        $timelineUrlRaw = $clinicalApiBase . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/timeline'
+        $timelineUrlRaw = $clinicalApiIndexBase . '/patients/' . rawurlencode($patientId) . '/timeline'
             . '?' . $queryApi;
         $timelineUrlSafe = h($timelineUrlRaw);
 
@@ -413,18 +430,18 @@ if ($patientId !== '') {
 
         if ($raw === false) {
             $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
-            $errorTechnicalDetails = "status: {$status}\nurl: {$timelineUrlSafe}\nenv_CLINICAL_API_BASE: " . ($envClinicalApiBaseRaw !== '' ? $envClinicalApiBaseRaw : '<empty>') . "\nresolved_api_base: {$clinicalApiBase}\nattempts: {$attempts}\nerror: " . (string)($fetch['error'] ?? '') . "\nheaders:\n" . implode("\n", $headers);
+            $errorTechnicalDetails = "status: {$status}\ntimeline_url: {$timelineUrlSafe}\nenv_CLINICAL_API_BASE: " . ($envClinicalApiBaseRaw !== '' ? $envClinicalApiBaseRaw : '<empty>') . "\nnormalized_api_base: {$clinicalApiBase}\nattempts: {$attempts}\nerror: " . (string)($fetch['error'] ?? '') . "\nheaders:\n" . implode("\n", $headers);
         } elseif ($status >= 400) {
             $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
-            $errorTechnicalDetails = "status: {$status}\nurl: {$timelineUrlSafe}\nenv_CLINICAL_API_BASE: " . ($envClinicalApiBaseRaw !== '' ? $envClinicalApiBaseRaw : '<empty>') . "\nresolved_api_base: {$clinicalApiBase}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\nbody_snippet:\n" . (string)($fetch['body_snippet'] ?? '');
+            $errorTechnicalDetails = "status: {$status}\ntimeline_url: {$timelineUrlSafe}\nenv_CLINICAL_API_BASE: " . ($envClinicalApiBaseRaw !== '' ? $envClinicalApiBaseRaw : '<empty>') . "\nnormalized_api_base: {$clinicalApiBase}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\nbody_snippet:\n" . (string)($fetch['body_snippet'] ?? '');
         } else {
             $decoded = json_decode($raw, true);
             if (!is_array($decoded)) {
                 $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
-                $errorTechnicalDetails = "status: {$status}\nurl: {$timelineUrlSafe}\nenv_CLINICAL_API_BASE: " . ($envClinicalApiBaseRaw !== '' ? $envClinicalApiBaseRaw : '<empty>') . "\nresolved_api_base: {$clinicalApiBase}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\nbody_snippet:\n" . (string)($fetch['body_snippet'] ?? '');
+                $errorTechnicalDetails = "status: {$status}\ntimeline_url: {$timelineUrlSafe}\nenv_CLINICAL_API_BASE: " . ($envClinicalApiBaseRaw !== '' ? $envClinicalApiBaseRaw : '<empty>') . "\nnormalized_api_base: {$clinicalApiBase}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\nbody_snippet:\n" . (string)($fetch['body_snippet'] ?? '');
             } elseif (($decoded['ok'] ?? false) !== true) {
                 $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
-                $errorTechnicalDetails = "status: {$status}\nurl: {$timelineUrlSafe}\nenv_CLINICAL_API_BASE: " . ($envClinicalApiBaseRaw !== '' ? $envClinicalApiBaseRaw : '<empty>') . "\nresolved_api_base: {$clinicalApiBase}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\napi_message: " . (string)($decoded['message'] ?? '');
+                $errorTechnicalDetails = "status: {$status}\ntimeline_url: {$timelineUrlSafe}\nenv_CLINICAL_API_BASE: " . ($envClinicalApiBaseRaw !== '' ? $envClinicalApiBaseRaw : '<empty>') . "\nnormalized_api_base: {$clinicalApiBase}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\napi_message: " . (string)($decoded['message'] ?? '');
             } else {
                 $data = is_array($decoded['data'] ?? null) ? $decoded['data'] : [];
                 $list = $data['items'] ?? [];
@@ -438,7 +455,7 @@ if ($patientId !== '') {
 }
 
 if ($patientId !== '') {
-    $caseUrl = $clinicalApiBase . '/api/clinical/index.php/patients/' . rawurlencode($patientId) . '/cases/active';
+    $caseUrl = $clinicalApiIndexBase . '/patients/' . rawurlencode($patientId) . '/cases/active';
     $caseContext = stream_context_create([
         'http' => [
             'method' => 'GET',
@@ -530,7 +547,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($appointmentIdToAssign === '') {
             $caseAssignError = 'No se pudo obtener appointment_id para asignar.';
         } else {
-            $assignUrl = $clinicalApiBase . '/api/clinical/index.php/cases/' . rawurlencode((string)$caseId) . '/items';
+            $assignUrl = $clinicalApiIndexBase . '/cases/' . rawurlencode((string)$caseId) . '/items';
             $assignPayload = json_encode([
                 'item_type' => 'appointment',
                 'item_ref' => 'appt:' . $appointmentIdToAssign,
@@ -1171,7 +1188,7 @@ if (!$embed) {
 <script>
   (function () {
     var patientId = <?php echo json_encode($patientId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
-    var apiBase = <?php echo json_encode(get_api_base(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    var apiBase = <?php echo json_encode($clinicalApiBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var activeCaseId = <?php echo json_encode($activeCaseId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var isEmbed = <?php echo $embed ? 'true' : 'false'; ?>;
     var onlyActiveCaseStorageKey = 'mxmed_historial_only_active_case:' + String(patientId || '');
