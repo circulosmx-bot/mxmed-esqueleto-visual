@@ -89,8 +89,6 @@
 
     return url;
   };
-    return url;
-  };
   const getIdentityApi = () => window.mxmedIdentity || null;
   const getCanonicalCache = () => {
     if (!window.__mxmed_canonical_cache || typeof window.__mxmed_canonical_cache !== 'object') {
