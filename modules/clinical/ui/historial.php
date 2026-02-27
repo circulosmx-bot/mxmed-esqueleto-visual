@@ -1233,7 +1233,6 @@ if (!$embed) {
       debugMode = false;
     }
     var recentCandidates = [];
-    var latestEncByAppt = Object.create(null);
     var recentSuggestStorageKey = 'mxmed_historial_snooze_suggest:' + String(patientId || '');
     try {
       onlyActiveCaseEnabled = activeCaseId !== '' && localStorage.getItem(onlyActiveCaseStorageKey) === '1';
@@ -1394,83 +1393,6 @@ if (!$embed) {
       var url = apiBase + '/api/clinical/index.php/patients/' + encodeURIComponent(pid) + '/cases';
       var payload = await apiJson(url, { method: 'GET' });
       return Array.isArray(payload.data) ? payload.data : [];
-    }
-
-    function appointmentIdFromRef(ref) {
-      var text = String(ref || '').trim();
-      if (!text) return '';
-      if (text.indexOf('appt:') === 0) {
-        var id = text.slice(5);
-        var hashPos = id.indexOf('#enc:');
-        if (hashPos >= 0) {
-          id = id.slice(0, hashPos);
-        }
-        return String(id || '').trim();
-      }
-      return text;
-    }
-
-    async function loadLatestEncounterByAppointment(pid) {
-      var result = Object.create(null);
-      if (!pid) return result;
-
-      async function fetchEncounters(url) {
-        try {
-          var payload = await apiJson(url, { method: 'GET' });
-          return Array.isArray(payload.data) ? payload.data : [];
-        } catch (_) {
-          return null;
-        }
-      }
-
-      var base = apiBase + '/api/clinical/index.php/patients/' + encodeURIComponent(pid) + '/encounters';
-      var rows = await fetchEncounters(base + '?limit=100');
-      if (rows === null) {
-        rows = await fetchEncounters(base);
-      }
-      if (!Array.isArray(rows)) {
-        return result;
-      }
-
-      rows.forEach(function (row) {
-        var appt = String(
-          (row && (row.appointment_id || row.appt_id || row.appointmentId)) || ''
-        ).trim();
-        if (!appt) return;
-
-        var encId = Number((row && (row.encounter_id || row.encounterId)) || 0);
-        if (!Number.isFinite(encId) || encId <= 0) return;
-
-        var encDt = String((row && (row.encounter_dt || row.encounterDt || row.event_datetime)) || '').trim();
-        var ts = NaN;
-        if (encDt) {
-          ts = Date.parse(encDt.replace(' ', 'T'));
-        }
-        var hasTs = Number.isFinite(ts);
-
-        var current = result[appt] || null;
-        if (!current) {
-          result[appt] = { encounter_id: encId, encounter_dt: encDt || null, _ts: hasTs ? ts : null };
-          return;
-        }
-
-        var currentHasTs = Number.isFinite(current._ts);
-        // Prefer latest by encounter_dt; fallback to highest encounter_id.
-        if (hasTs && currentHasTs) {
-          if (ts > current._ts) {
-            result[appt] = { encounter_id: encId, encounter_dt: encDt || null, _ts: ts };
-          }
-          return;
-        }
-        if (hasTs && !currentHasTs) {
-          result[appt] = { encounter_id: encId, encounter_dt: encDt || null, _ts: ts };
-          return;
-        }
-        if (!hasTs && !currentHasTs && encId > Number(current.encounter_id || 0)) {
-          result[appt] = { encounter_id: encId, encounter_dt: encDt || null, _ts: null };
-        }
-      });
-      return result;
     }
 
     function setCasesModalLoading(flag) {
