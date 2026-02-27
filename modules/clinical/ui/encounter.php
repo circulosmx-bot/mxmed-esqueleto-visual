@@ -77,6 +77,22 @@ function http_get_json(string $url, int $timeoutSeconds = 8): ?array
     return is_array($decoded) ? $decoded : null;
 }
 
+function http_status_from_headers(?array $headers): int
+{
+    if (!is_array($headers)) {
+        return 0;
+    }
+    foreach ($headers as $line) {
+        if (!is_string($line)) {
+            continue;
+        }
+        if (preg_match('/^HTTP\/\d+(?:\.\d+)?\s+(\d{3})/i', trim($line), $m)) {
+            return (int)$m[1];
+        }
+    }
+    return 0;
+}
+
 $encounterKey = trim((string)($_GET['encounter_key'] ?? ''));
 $errorMessage = '';
 $encounter = null;
@@ -91,7 +107,7 @@ $apiBase = normalize_clinical_api_base((string)getenv('CLINICAL_API_BASE'));
 if ($apiBase === '') {
     $apiBase = normalize_clinical_api_base(get_api_base());
 }
-$apiIndexBase = $apiBase . '/api/clinical/index.php';
+$apiIndexBase = ($apiBase !== '') ? ($apiBase . '/api/clinical/index.php') : '';
 
 if (trim((string)($_GET['flash'] ?? '')) === 'added_case_item') {
     $activeCaseSuccess = 'Agregado al caso activo.';
@@ -99,32 +115,56 @@ if (trim((string)($_GET['flash'] ?? '')) === 'added_case_item') {
 
 if ($encounterKey !== '') {
     // IMPORTANT (dev mode): use API base for server-side calls to avoid UI->UI recursion.
-    $encodedEncounterKey = rawurlencode($encounterKey);
-    $url = $apiIndexBase . '/encounters/' . $encodedEncounterKey;
-
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'timeout' => 8,
-            'ignore_errors' => true,
-            'header' => "Accept: application/json\r\n",
-        ],
-    ]);
-
-    $raw = @file_get_contents($url, false, $context);
-    if ($raw === false) {
-        $errorMessage = 'No se pudo consultar la atención.';
+    if ($apiIndexBase === '') {
+        $errorMessage = 'CLINICAL_API_BASE no configurado y get_api_base() vacío';
     } else {
-        $decoded = json_decode($raw, true);
-        if (!is_array($decoded)) {
-            $errorMessage = 'Respuesta inválida del endpoint de encounters.';
-        } elseif (($decoded['ok'] ?? false) !== true) {
-            $errorMessage = (string)($decoded['message'] ?? 'Error consultando atención.');
+        $encodedEncounterKey = rawurlencode($encounterKey);
+        $url = $apiIndexBase . '/encounters/' . $encodedEncounterKey;
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'timeout' => 8,
+                'ignore_errors' => true,
+                'header' => "Accept: application/json\r\n",
+            ],
+        ]);
+
+        $raw = @file_get_contents($url, false, $context);
+        $status = http_status_from_headers($http_response_header ?? null);
+        if ($raw === false) {
+            $last = error_get_last();
+            $details = trim((string)($last['message'] ?? ''));
+            $errorMessage = 'No se pudo consultar la atención.';
+            if ($status > 0) {
+                $errorMessage .= ' status=' . $status . '.';
+            }
+            if ($details !== '') {
+                $errorMessage .= ' ' . $details;
+            }
         } else {
-            $data = $decoded['data'] ?? null;
-            $encounter = is_array($data) ? $data : null;
-            if ($encounter === null) {
-                $errorMessage = 'Atención no disponible.';
+            $decoded = json_decode($raw, true);
+            if (!is_array($decoded)) {
+                $errorMessage = 'Respuesta inválida del endpoint de encounters.';
+                if ($status > 0) {
+                    $errorMessage .= ' status=' . $status . '.';
+                }
+            } elseif (($decoded['ok'] ?? false) !== true) {
+                $backendMessage = trim((string)($decoded['message'] ?? ''));
+                $backendError = trim((string)($decoded['error'] ?? ''));
+                $errorMessage = ($backendMessage !== '') ? $backendMessage : 'Error consultando atención.';
+                if ($backendError !== '') {
+                    $errorMessage .= ' (' . $backendError . ')';
+                }
+                if ($status > 0) {
+                    $errorMessage .= ' status=' . $status . '.';
+                }
+            } else {
+                $data = $decoded['data'] ?? null;
+                $encounter = is_array($data) ? $data : null;
+                if ($encounter === null) {
+                    $errorMessage = 'Atención no disponible.';
+                }
             }
         }
     }
