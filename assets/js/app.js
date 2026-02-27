@@ -2649,11 +2649,12 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const syncGineco = (genero, allowNavigate)=>{
-    const generoNorm = String(genero || '').toLowerCase();
-    const isWoman = generoNorm.startsWith('f') || generoNorm.includes('muj');
+    const generoNorm = String(genero || '').trim().toLowerCase();
+    const isWoman = ['f', 'female', 'femenino', 'mujer'].includes(generoNorm);
     const gineLi = pane.querySelector('[data-tab-conditional="gineco"]');
     const gineLinkLocal = gineLi ? gineLi.querySelector('.nav-link') : null;
     const ginePane = pane.querySelector('#t-gineco');
+    const datosBtn = pane.querySelector('[data-tab-key="t-datos"]');
 
     if(gineLi){ gineLi.classList.toggle('d-none', !isWoman); }
     if(ginePane){ ginePane.classList.toggle('d-none', !isWoman); }
@@ -2668,6 +2669,7 @@ console.info('app.js loaded :: 20251123a');
     }
 
     if(!isWoman){
+      const wasOnGine = !!(gineLinkLocal?.classList.contains('active') || ginePane?.classList.contains('active'));
       gineLinkLocal?.classList.remove('active');
       ginePane?.classList.remove('show','active');
       if(gineLinkLocal?.getAttribute('aria-selected') === 'true'){
@@ -2678,9 +2680,9 @@ console.info('app.js loaded :: 20251123a');
         datosTabPane.classList.remove('d-none');
         datosTabPane.classList.add('show','active');
       }
-      if(allowNavigate){
-        const first = tabs[0];
-        if(first){ try{ new bootstrap.Tab(first).show(); }catch(_){ } }
+      if(wasOnGine && allowNavigate){
+        const targetDatosBtn = datosBtn || tabs[0];
+        if(targetDatosBtn){ try{ new bootstrap.Tab(targetDatosBtn).show(); }catch(_){ } }
       }
     }
   };
@@ -2805,7 +2807,6 @@ console.info('app.js loaded :: 20251123a');
     nonDatosLinks.forEach(btn => {
       const item = btn.closest('.nav-item');
       if (!item) return;
-      if (item.getAttribute('data-tab-conditional') === 'gineco') return;
       item.classList.remove('d-none');
     });
     nonDatosPanes.forEach(p => p.classList.remove('d-none'));
