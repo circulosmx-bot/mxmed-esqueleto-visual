@@ -2653,7 +2653,8 @@ console.info('app.js loaded :: 20251123a');
     const isWoman = ['f', 'female', 'femenino', 'mujer'].includes(generoNorm);
     const gineLi = pane.querySelector('[data-tab-conditional="gineco"]');
     const gineLinkLocal = gineLi ? gineLi.querySelector('.nav-link') : null;
-    const ginePane = pane.querySelector('#t-gineco');
+    // legacy gyn panel may use .gyn-panel instead of #t-gineco
+    const ginePane = pane.querySelector('#t-gineco') || pane.querySelector('.gyn-panel') || pane.querySelector('[data-exp-section="gineco"]');
     const datosBtn = pane.querySelector('[data-tab-key="t-datos"]');
 
     if(gineLi){ gineLi.classList.toggle('d-none', !isWoman); }
@@ -2827,7 +2828,11 @@ console.info('app.js loaded :: 20251123a');
     }
   };
   nameInput?.addEventListener('input', ()=> syncState({ allowNavigate:true }));
-  genderInputs.forEach(r=> r.addEventListener('change', ()=> syncState({ allowNavigate:true })));
+  genderInputs.forEach(r=> r.addEventListener('change', ()=>{
+    const selected = genderInputs.find(inp => inp.checked)?.value || '';
+    syncGineco(selected, true);
+    syncState({ allowNavigate:true });
+  }));
 
   // Refuerzo: asegurar que el click cambie de tab
   const tabLinks = Array.from(document.querySelectorAll('#p-expediente .mm-tabs-row .nav-link'));
@@ -2877,6 +2882,8 @@ console.info('app.js loaded :: 20251123a');
     pane.__patientGateInit = true;
   }
 
+  const selectedGenero = genderInputs.find(inp => inp.checked)?.value || '';
+  syncGineco(selectedGenero, false);
   syncState();
   layoutTabs(false);
   bindDOB();
