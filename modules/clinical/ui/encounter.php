@@ -352,6 +352,7 @@ if (!$embed) {
     <div class="mm-card mb-3">
       <div class="head"><h5>Documentos</h5></div>
       <div class="body">
+        <div id="encounterDocumentsControls" class="d-none mb-2"></div>
         <div id="encounterDocumentsList" class="vstack gap-2"></div>
       </div>
     </div>
@@ -398,7 +399,9 @@ if (!$embed) {
 <script>
   (function () {
     var isEmbed = <?php echo $embed ? 'true' : 'false'; ?>;
+    var PREVIEW_LIMIT = 10;
     var el = document.getElementById('encounterDocumentsList');
+    var controlsEl = document.getElementById('encounterDocumentsControls');
     if (!el) return;
 
     var docs = <?php echo $documentsJson; ?>;
@@ -415,6 +418,69 @@ if (!$embed) {
       openInOverlay: isEmbed,
       emptyHtml: '<div class="small text-secondary">Sin documentos</div>'
     });
+
+    function getDocumentItems() {
+      return Array.prototype.slice.call(el.children).filter(function (child) {
+        return child && child.classList
+          && child.classList.contains('border')
+          && child.classList.contains('rounded')
+          && child.classList.contains('p-2');
+      });
+    }
+
+    function renderDocControls(items, expanded) {
+      if (!controlsEl) return;
+      var total = items.length;
+      if (total <= PREVIEW_LIMIT) {
+        controlsEl.classList.add('d-none');
+        controlsEl.innerHTML = '';
+        return;
+      }
+      controlsEl.classList.remove('d-none');
+      var shown = expanded ? total : PREVIEW_LIMIT;
+      controlsEl.innerHTML = ''
+        + '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2">'
+        + '  <span class="small text-secondary">Mostrando ' + shown + ' de ' + total + '</span>'
+        + '  <div class="d-flex gap-2">'
+        + (expanded
+          ? '<button type="button" class="btn btn-sm btn-outline-secondary" data-action="docs-show-less">Ver menos</button>'
+          : '<button type="button" class="btn btn-sm btn-outline-primary" data-action="docs-show-all">Ver todos</button>')
+        + '  </div>'
+        + '</div>';
+    }
+
+    function applyDocumentsPreview(expanded) {
+      var items = getDocumentItems();
+      if (items.length === 0) {
+        if (controlsEl) {
+          controlsEl.classList.add('d-none');
+          controlsEl.innerHTML = '';
+        }
+        return;
+      }
+      items.forEach(function (item, idx) {
+        item.hidden = !expanded && idx >= PREVIEW_LIMIT;
+      });
+      renderDocControls(items, expanded);
+    }
+
+    var docsExpanded = false;
+    applyDocumentsPreview(docsExpanded);
+    if (controlsEl) {
+      controlsEl.addEventListener('click', function (event) {
+        var btn = event.target.closest('button[data-action]');
+        if (!btn) return;
+        var action = btn.getAttribute('data-action') || '';
+        if (action === 'docs-show-all') {
+          docsExpanded = true;
+          applyDocumentsPreview(docsExpanded);
+        } else if (action === 'docs-show-less') {
+          docsExpanded = false;
+          applyDocumentsPreview(docsExpanded);
+        }
+      });
+    }
+
     if (window.MXMed && typeof window.MXMed.initClinicalEmbedKit === 'function') {
       window.MXMed.initClinicalEmbedKit({ embedOnly: true });
     }
