@@ -918,12 +918,7 @@ if (!$embed) {
                 <?php if ($appointmentHasEncounter && $appointmentLatestEncounterKey !== ''): ?>
                   <a class="mm-btn mm-btn-sm mm-btn-outline-primary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $appointmentLatestEncounterKey])); ?>" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($appointmentLatestEncounterKey); ?>">Ver atención</a>
                 <?php else: ?>
-                  <a
-                    class="mm-btn mm-btn-sm mm-btn-outline-primary"
-                    href="/api/clinical/index.php/patients/<?php echo rawurlencode($patientId); ?>/encounters"
-                    data-action="start-encounter"
-                    data-appointment-id="<?php echo h($appointmentEpisodeId); ?>"
-                  >Iniciar atención</a>
+                  <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" disabled title="Sin atención registrada para esta cita">Sin atención</button>
                 <?php endif; ?>
               </div>
             <?php endif; ?>
@@ -1749,66 +1744,6 @@ if (!$embed) {
           localStorage.setItem(recentSuggestStorageKey, String(Date.now()));
         } catch (_) {}
         renderRecentSuggestion();
-        return;
-      }
-
-      var startEncounterBtn = event.target && event.target.closest ? event.target.closest('[data-action="start-encounter"]') : null;
-      if (startEncounterBtn) {
-        event.preventDefault();
-        var apptId = String(startEncounterBtn.getAttribute('data-appointment-id') || '').trim();
-        if (!patientId || !apptId) {
-          window.alert('No se pudo iniciar la atención.');
-          return;
-        }
-        var now = new Date();
-        var pad2 = function (n) { return String(n).padStart(2, '0'); };
-        var encounterDt = now.getFullYear()
-          + '-' + pad2(now.getMonth() + 1)
-          + '-' + pad2(now.getDate())
-          + ' ' + pad2(now.getHours())
-          + ':' + pad2(now.getMinutes())
-          + ':' + pad2(now.getSeconds());
-        var createUrl = apiBase + '/api/clinical/index.php/patients/' + encodeURIComponent(patientId) + '/encounters';
-        apiJson(createUrl, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            appointment_id: apptId,
-            encounter_dt: encounterDt,
-            encounter_type: 'outpatient',
-            status: 'completed'
-          }),
-          credentials: 'same-origin'
-        }).then(function (payload) {
-          var data = payload && typeof payload === 'object' && payload.data && typeof payload.data === 'object'
-            ? payload.data
-            : {};
-          var encounterKey = String(data.encounter_key || '').trim();
-          if (!encounterKey) {
-            var encId = Number(data.encounter_id || 0);
-            var appt = String(data.appointment_id || apptId).trim();
-            if (encId > 0 && appt) {
-              encounterKey = 'appt:' + appt + '#enc:' + String(encId);
-            } else if (encId > 0) {
-              encounterKey = 'enc:' + String(encId);
-            }
-          }
-          if (!encounterKey) {
-            throw new Error('No se pudo resolver encounter_key.');
-          }
-          var qp = new URLSearchParams();
-          qp.set('encounter_key', encounterKey);
-          var currentQs = new URLSearchParams(window.location.search || '');
-          if (currentQs.get('embed') === '1') qp.set('embed', '1');
-          if (currentQs.get('standalone') === '1') qp.set('standalone', '1');
-          if (currentQs.get('debug') === '1') qp.set('debug', '1');
-          window.location.href = '/modules/clinical/ui/encounter.php?' + qp.toString();
-        }).catch(function (err) {
-          window.alert(err && err.message ? err.message : 'No se pudo iniciar la atención.');
-        });
         return;
       }
 
