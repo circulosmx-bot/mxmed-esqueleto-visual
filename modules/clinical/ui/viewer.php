@@ -3,6 +3,11 @@
 
 function get_api_base(): string
 {
+    $env = trim((string)getenv('CLINICAL_API_BASE'));
+    if ($env !== '') {
+        return rtrim($env, '/');
+    }
+
     $env = trim((string)getenv('MXMED_API_BASE'));
     if ($env !== '') {
         return rtrim($env, '/');
@@ -22,6 +27,19 @@ function get_api_base(): string
     }
 
     return $proto . '://' . $host;
+}
+
+function normalize_clinical_api_base(string $base): string
+{
+    $normalized = rtrim(trim($base), '/');
+    if ($normalized === '') {
+        return '';
+    }
+    $suffix = '/api/clinical/index.php';
+    if (substr($normalized, -strlen($suffix)) === $suffix) {
+        $normalized = rtrim(substr($normalized, 0, -strlen($suffix)), '/');
+    }
+    return $normalized;
 }
 
 function h(string $value): string
@@ -152,13 +170,29 @@ function http_get_json(string $url, int $timeoutSeconds = 8): array
     ]);
 
     $raw = @file_get_contents($url, false, $context);
+    $status = 0;
+    foreach (($http_response_header ?? []) as $line) {
+        if (is_string($line) && preg_match('/^HTTP\/\d+(?:\.\d+)?\s+(\d{3})/i', trim($line), $m)) {
+            $status = (int)$m[1];
+            break;
+        }
+    }
     if ($raw === false) {
-        return ['ok' => false, 'error' => 'fetch_failed', 'message' => 'No se pudo consultar el documento.'];
+        return ['ok' => false, 'error' => 'fetch_failed', 'message' => 'No se pudo consultar el documento. status=' . $status];
     }
 
     $decoded = json_decode($raw, true);
     if (!is_array($decoded)) {
-        return ['ok' => false, 'error' => 'invalid_json', 'message' => 'Respuesta inválida del endpoint de documentos.'];
+        return ['ok' => false, 'error' => 'invalid_json', 'message' => 'Respuesta inválida del endpoint de documentos. status=' . $status];
+    }
+
+    if ($status !== 0 && $status !== 200 && (($decoded['ok'] ?? false) !== true)) {
+        $msg = trim((string)($decoded['message'] ?? ''));
+        return [
+            'ok' => false,
+            'error' => (string)($decoded['error'] ?? 'http_error'),
+            'message' => ($msg !== '' ? $msg : 'Error consultando documento.') . ' status=' . $status,
+        ];
     }
 
     return $decoded;
@@ -215,18 +249,27 @@ $returnToClean = $returnTo !== null ? normalize_return_to($returnTo) : '';
 $backHref = $returnToClean !== '' ? $returnToClean : 'javascript:history.back()';
 $errorMessage = '';
 $document = null;
+$apiBase = normalize_clinical_api_base((string)getenv('CLINICAL_API_BASE'));
+if ($apiBase === '') {
+    $apiBase = normalize_clinical_api_base(get_api_base());
+}
+$apiIndexBase = ($apiBase !== '') ? ($apiBase . '/api/clinical/index.php') : '';
 
 if ($uuid !== '') {
-    $url = get_api_base() . '/api/clinical/index.php/documents/' . rawurlencode($uuid);
-    $decoded = http_get_json($url, 8);
-
-    if (($decoded['ok'] ?? false) !== true) {
-        $errorMessage = (string)($decoded['message'] ?? 'Error consultando documento.');
+    if ($apiIndexBase === '') {
+        $errorMessage = 'CLINICAL_API_BASE no configurado y get_api_base() vacío.';
     } else {
-        $doc = $decoded['data']['document'] ?? null;
-        $document = is_array($doc) ? $doc : null;
-        if (!$document) {
-            $errorMessage = 'Documento no disponible.';
+        $url = $apiIndexBase . '/documents/' . rawurlencode($uuid);
+        $decoded = http_get_json($url, 8);
+
+        if (($decoded['ok'] ?? false) !== true) {
+            $errorMessage = (string)($decoded['message'] ?? 'Error consultando documento.');
+        } else {
+            $doc = $decoded['data']['document'] ?? null;
+            $document = is_array($doc) ? $doc : null;
+            if (!$document) {
+                $errorMessage = 'Documento no disponible.';
+            }
         }
     }
 }
