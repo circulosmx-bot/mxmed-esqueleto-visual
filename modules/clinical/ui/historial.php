@@ -1201,6 +1201,27 @@ if (!$embed) {
     </div>
   </div>
 </div>
+<div class="modal fade" id="clinicalDocumentModal" data-role="document-viewer-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" data-role="document-viewer-title">Documento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" data-action="close-document-viewer-modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div data-role="document-viewer-loading" class="text-secondary small d-none">Cargando documento...</div>
+        <div data-role="document-viewer-error" class="alert alert-danger d-none mb-2">No se pudo cargar el documento.</div>
+        <div data-role="document-viewer-body" class="vstack gap-2"></div>
+      </div>
+      <div class="modal-footer d-flex flex-wrap gap-2">
+        <a class="mm-btn mm-btn-sm mm-btn-outline-primary" data-role="document-viewer-open-new" href="#" target="_blank" rel="noopener">Abrir en pestaña</a>
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="copy-document-link">Copiar enlace</button>
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="print-document-link">Imprimir</button>
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-bs-dismiss="modal" data-action="close-document-viewer-modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
 <script>
   (function () {
     var patientId = <?php echo json_encode($patientId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
@@ -1233,6 +1254,17 @@ if (!$embed) {
     if (encounterDetailModalEl && window.bootstrap && window.bootstrap.Modal) {
       encounterDetailModalInstance = window.bootstrap.Modal.getOrCreateInstance(encounterDetailModalEl);
     }
+    var documentViewerModalEl = document.querySelector('[data-role="document-viewer-modal"]');
+    var documentViewerTitle = document.querySelector('[data-role="document-viewer-title"]');
+    var documentViewerLoading = document.querySelector('[data-role="document-viewer-loading"]');
+    var documentViewerError = document.querySelector('[data-role="document-viewer-error"]');
+    var documentViewerBody = document.querySelector('[data-role="document-viewer-body"]');
+    var documentViewerOpenNew = document.querySelector('[data-role="document-viewer-open-new"]');
+    var documentViewerModalInstance = null;
+    if (documentViewerModalEl && window.bootstrap && window.bootstrap.Modal) {
+      documentViewerModalInstance = window.bootstrap.Modal.getOrCreateInstance(documentViewerModalEl);
+    }
+    var activeDocumentUrl = '';
     var debugMode = false;
     try {
       debugMode = new URLSearchParams(window.location.search || '').get('debug') === '1';
@@ -1469,6 +1501,96 @@ if (!$embed) {
       return payload.data || null;
     }
 
+    function buildDocumentUrl(uuid) {
+      var key = String(uuid || '').trim();
+      if (!key) return '';
+      var query = new URLSearchParams();
+      query.set('uuid', key);
+      if (isEmbed) {
+        query.set('embed', '1');
+      }
+      return '/modules/clinical/ui/document.php?' + query.toString();
+    }
+
+    function setDocumentViewerLoading(flag) {
+      if (documentViewerLoading) {
+        documentViewerLoading.classList.toggle('d-none', !flag);
+      }
+    }
+
+    function closeDocumentViewerModal() {
+      if (!documentViewerModalEl) return;
+      if (documentViewerModalInstance) {
+        documentViewerModalInstance.hide();
+        return;
+      }
+      documentViewerModalEl.classList.remove('show');
+      documentViewerModalEl.style.display = 'none';
+      documentViewerModalEl.setAttribute('aria-hidden', 'true');
+    }
+
+    function openDocumentViewerModal() {
+      if (!documentViewerModalEl) return;
+      if (documentViewerModalInstance) {
+        documentViewerModalInstance.show();
+        return;
+      }
+      documentViewerModalEl.style.display = 'block';
+      documentViewerModalEl.classList.add('show');
+      documentViewerModalEl.removeAttribute('aria-hidden');
+    }
+
+    function renderDocumentViewerCard(docData) {
+      if (!documentViewerBody) return;
+      var renderer = window.MXMed && typeof window.MXMed.renderClinicalDocuments === 'function'
+        ? window.MXMed.renderClinicalDocuments
+        : null;
+      if (!renderer) {
+        documentViewerBody.innerHTML = '<div class="alert alert-secondary mb-0">No se pudo renderizar el documento.</div>';
+        return;
+      }
+      documentViewerBody.innerHTML = renderer([docData], {
+        embedLink: isEmbed,
+        returnTo: window.location.href,
+        openInOverlay: isEmbed,
+        emptyHtml: '<div class="alert alert-secondary mb-0">Sin contenido de documento.</div>'
+      });
+    }
+
+    async function openDocumentViewer(uuid, summaryHint) {
+      var key = String(uuid || '').trim();
+      if (!key || !documentViewerModalEl) return;
+      activeDocumentUrl = buildDocumentUrl(key);
+      openDocumentViewerModal();
+      if (documentViewerError) documentViewerError.classList.add('d-none');
+      if (documentViewerBody) documentViewerBody.innerHTML = '';
+      if (documentViewerOpenNew) {
+        documentViewerOpenNew.setAttribute('href', activeDocumentUrl || '#');
+      }
+      var shortUuid = key.length > 12 ? key.slice(0, 12) + '...' : key;
+      var titleText = String(summaryHint || '').trim();
+      if (!titleText) {
+        titleText = 'UUID ' + shortUuid;
+      }
+      if (documentViewerTitle) {
+        documentViewerTitle.textContent = 'Documento · ' + titleText;
+      }
+      setDocumentViewerLoading(true);
+      try {
+        var url = apiBase + '/api/clinical/index.php/documents/' + encodeURIComponent(key);
+        var payload = await apiJson(url, { method: 'GET' });
+        var data = payload && payload.data && typeof payload.data === 'object' ? payload.data : null;
+        if (!data) {
+          throw new Error('Documento no disponible');
+        }
+        renderDocumentViewerCard(data);
+      } catch (_) {
+        if (documentViewerError) documentViewerError.classList.remove('d-none');
+      } finally {
+        setDocumentViewerLoading(false);
+      }
+    }
+
     function renderEncounterDetail(payload) {
       var data = payload && typeof payload === 'object'
         ? (payload.data && typeof payload.data === 'object' ? payload.data : payload)
@@ -1657,6 +1779,54 @@ if (!$embed) {
         return;
       }
 
+      var closeDocumentModalBtn = event.target && event.target.closest ? event.target.closest('[data-action="close-document-viewer-modal"]') : null;
+      if (closeDocumentModalBtn) {
+        event.preventDefault();
+        closeDocumentViewerModal();
+        return;
+      }
+
+      if (!documentViewerModalInstance && documentViewerModalEl && event.target === documentViewerModalEl) {
+        closeDocumentViewerModal();
+        return;
+      }
+
+      var copyDocumentLinkBtn = event.target && event.target.closest ? event.target.closest('[data-action="copy-document-link"]') : null;
+      if (copyDocumentLinkBtn) {
+        event.preventDefault();
+        if (!activeDocumentUrl) return;
+        var absoluteUrl = window.location.origin + activeDocumentUrl;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          navigator.clipboard.writeText(absoluteUrl).catch(function () {});
+        }
+        return;
+      }
+
+      var printDocumentLinkBtn = event.target && event.target.closest ? event.target.closest('[data-action="print-document-link"]') : null;
+      if (printDocumentLinkBtn) {
+        event.preventDefault();
+        if (!activeDocumentUrl) return;
+        var printWin = window.open(activeDocumentUrl, '_blank', 'noopener');
+        if (printWin && typeof printWin.focus === 'function') {
+          printWin.focus();
+        }
+        return;
+      }
+
+      var openDocumentBtn = event.target && event.target.closest ? event.target.closest('[data-nav-mode="document"][data-uuid]') : null;
+      if (openDocumentBtn) {
+        event.preventDefault();
+        var docUuid = String(openDocumentBtn.getAttribute('data-uuid') || '').trim();
+        var summaryEl = openDocumentBtn.closest('.border, .doc-line, .mm-card');
+        var summaryHint = '';
+        if (summaryEl) {
+          var secondary = summaryEl.querySelector('.text-secondary');
+          summaryHint = secondary ? String(secondary.textContent || '').trim() : '';
+        }
+        openDocumentViewer(docUuid, summaryHint);
+        return;
+      }
+
       var assignBtn = event.target && event.target.closest ? event.target.closest('[data-action="assign-case-item"]') : null;
       if (assignBtn) {
         event.preventDefault();
@@ -1725,10 +1895,19 @@ if (!$embed) {
 
     document.addEventListener('keydown', function (event) {
       if (!event || event.key !== 'Escape') return;
-      if (!encounterDetailModalEl) return;
-      var isVisible = encounterDetailModalEl.classList.contains('show') || encounterDetailModalEl.style.display === 'block';
-      if (!isVisible) return;
-      closeEncounterDetailModal();
+      if (encounterDetailModalEl) {
+        var encounterVisible = encounterDetailModalEl.classList.contains('show') || encounterDetailModalEl.style.display === 'block';
+        if (encounterVisible) {
+          closeEncounterDetailModal();
+          return;
+        }
+      }
+      if (documentViewerModalEl) {
+        var documentVisible = documentViewerModalEl.classList.contains('show') || documentViewerModalEl.style.display === 'block';
+        if (documentVisible) {
+          closeDocumentViewerModal();
+        }
+      }
     });
 
     if (window.MXMed && typeof window.MXMed.initClinicalEmbedKit === 'function') {
