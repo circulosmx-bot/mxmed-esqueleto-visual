@@ -114,7 +114,7 @@ function normalize_return_to(string $value): string
         if (isset($parts['query'])) {
             parse_str((string)$parts['query'], $query);
             if (is_array($query)) {
-                unset($query['doc_uuid']);
+                unset($query['doc_uuid'], $query['uuid']);
             } else {
                 $query = [];
             }
@@ -135,7 +135,7 @@ function normalize_return_to(string $value): string
     if (isset($url['query'])) {
         parse_str((string)$url['query'], $query);
         if (is_array($query)) {
-            unset($query['doc_uuid']);
+            unset($query['doc_uuid'], $query['uuid']);
         } else {
             $query = [];
         }
@@ -260,6 +260,9 @@ function is_same_origin_media_url(string $url, string $currentHost): bool
 }
 
 $uuid = trim((string)($_GET['uuid'] ?? ''));
+if ($uuid === '') {
+    $uuid = trim((string)($_GET['doc_uuid'] ?? ''));
+}
 $returnTo = validate_return_to((string)($_GET['return_to'] ?? ''));
 $returnToClean = $returnTo !== null ? normalize_return_to($returnTo) : '';
 $backHref = $returnToClean !== '' ? $returnToClean : 'javascript:history.back()';
