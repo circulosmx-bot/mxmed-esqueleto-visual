@@ -75,6 +75,34 @@ Perfil médico end-to-end:
 - `git revert b704ebd` -> revierte colapsado de lista de documentos en Encounter.
 - `git revert 7d08e63` -> revierte fix de fetch/encoding/base en Encounter.
 
+## Clinical — Checkpoints, contratos y decisiones (Feb 2026)
+
+### A) Checkpoints (tags)
+- `mxmed-clinical-checkpoint-encounter-timeline-v1`: checkpoint de integración encounter/timeline (flujo base clínico).
+- `mxmed-clinical-uploads-v1`: valida pipeline de uploads clínicos con optimización automática (GD/EXIF + derivados).
+- `mxmed-clinical-doc-actions-v1`: valida barra/menú de acciones por tipo en UI de documento y flujo de viewer.
+
+### B) Contratos
+- Timeline:
+  - `clinical.documents_count`
+  - `clinical.documents_preview` (<=3)
+  - `include_docs=1` opcional para compat/debug.
+- Uploads:
+  - `payload_json.file.render_mode`
+  - `payload_json.file.optimized`
+  - `payload_json.file.thumb`
+  - Nota explícita: `payload_json.file.original.path` **NO existe** actualmente.
+- UI Documento:
+  - `document.php` con dropdown **Acciones** por tipo.
+  - `viewer.php` con visualización de imagen y modo `fullscreen`.
+
+### C) Decisiones
+- No se edita documento generado.
+- Replicar = crear documento **nuevo** con `source_document_uuid`.
+
+### D) Siguiente objetivo
+- Camino A — Replicación controlada: `POST /documents/{uuid}/replicate`.
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)
