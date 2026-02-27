@@ -939,9 +939,10 @@ if (!$embed) {
         $encounter = $encounters[$ek];
         $rawEncounter = is_array($encounter['raw'] ?? null) ? $encounter['raw'] : [];
         $clinical = is_array($rawEncounter['clinical'] ?? null) ? $rawEncounter['clinical'] : [];
-        $clinicalDocs = is_array($clinical['documents'] ?? null) ? $clinical['documents'] : [];
+        $clinicalDocsLegacy = is_array($clinical['documents'] ?? null) ? $clinical['documents'] : [];
+        $clinicalDocsPreview = is_array($clinical['documents_preview'] ?? null) ? $clinical['documents_preview'] : [];
         $types = [];
-        foreach ($clinicalDocs as $d) {
+        foreach (($clinicalDocsPreview !== [] ? $clinicalDocsPreview : $clinicalDocsLegacy) as $d) {
             if (is_array($d)) {
                 $t = trim((string)($d['document_type'] ?? ''));
                 if ($t !== '') {
@@ -955,8 +956,12 @@ if (!$embed) {
         $hasOrders = (bool)($clinical['has_orders'] ?? false);
         $hasResults = (bool)($clinical['has_results'] ?? false);
         $docsInEncounter = is_array($encounter['documents'] ?? null) ? $encounter['documents'] : [];
-        $encounterDocCount = count($clinicalDocs);
-        $encounterPreviewDocs = array_slice($clinicalDocs, 0, 3);
+        $encounterDocCount = array_key_exists('documents_count', $clinical)
+            ? (int)$clinical['documents_count']
+            : count($clinicalDocsLegacy);
+        $encounterPreviewDocs = ($clinicalDocsPreview !== [])
+            ? array_slice($clinicalDocsPreview, 0, 3)
+            : array_slice($clinicalDocsLegacy, 0, 3);
         $encCaseId = trim((string)($rawEncounter['case_id'] ?? ''));
         $encInActiveCase = (bool)($rawEncounter['is_in_active_case'] ?? false);
         $encHasEncounter = (bool)($rawEncounter['has_encounter'] ?? true);
@@ -993,10 +998,14 @@ if (!$embed) {
               <span class="mm-chip <?php echo $hasOrders ? 'is-on' : 'is-off'; ?>" title="<?php echo $hasOrders ? 'Tiene órdenes' : 'Sin órdenes'; ?>"><span class="dot"></span>Órdenes</span>
               <span class="mm-chip <?php echo $hasResults ? 'is-on' : 'is-off'; ?>" title="<?php echo $hasResults ? 'Tiene resultados' : 'Sin resultados'; ?>"><span class="dot"></span>Resultados</span>
             </div>
-            <div class="small text-secondary">
-              documentos: <?php echo count($clinicalDocs); ?> |
-              tipos: <?php echo h(implode(', ', array_keys($types))); ?>
-            </div>
+            <?php if ($encounterDocCount > 0): ?>
+              <div class="small text-secondary">
+                documentos: <?php echo (int)$encounterDocCount; ?>
+                <?php if ($types !== []): ?>
+                  | tipos: <?php echo h(implode(', ', array_keys($types))); ?>
+                <?php endif; ?>
+              </div>
+            <?php endif; ?>
             <?php if ($ek !== ''): ?>
               <div class="mt-2">
                 <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-encounter-detail" data-encounter-key="<?php echo h($ek); ?>">Ver detalle</button>
@@ -1009,17 +1018,15 @@ if (!$embed) {
               </div>
             <?php endif; ?>
 
-            <div class="mt-3">
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="small fw-semibold">Documentos: <?php echo (int)$encounterDocCount; ?></div>
-                <?php if ($encounterDocCount > 3): ?>
-                  <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-encounter-detail" data-encounter-key="<?php echo h($ek); ?>">Ver todos (<?php echo (int)$encounterDocCount; ?>)</button>
-                <?php endif; ?>
-              </div>
-              <div class="encounter-doc-preview">
-                <?php if ($encounterPreviewDocs === []): ?>
-                  <div class="small text-secondary">Sin documentos clínicos en esta atención</div>
-                <?php else: ?>
+            <?php if ($encounterDocCount > 0): ?>
+              <div class="mt-3">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="small fw-semibold">Documentos: <?php echo (int)$encounterDocCount; ?></div>
+                  <?php if ($encounterDocCount > 3): ?>
+                    <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-encounter-detail" data-encounter-key="<?php echo h($ek); ?>">Ver todos (<?php echo (int)$encounterDocCount; ?>)</button>
+                  <?php endif; ?>
+                </div>
+                <div class="encounter-doc-preview">
                   <?php foreach ($encounterPreviewDocs as $pdoc): ?>
                     <?php
                     $pType = trim((string)($pdoc['document_type'] ?? '-'));
@@ -1032,9 +1039,9 @@ if (!$embed) {
                       <div class="text-secondary"><?php echo h($pSummary !== '' ? $pSummary : '-'); ?></div>
                     </div>
                   <?php endforeach; ?>
-                <?php endif; ?>
+                </div>
               </div>
-            </div>
+            <?php endif; ?>
 
             <div class="mt-3">
               <div class="small fw-semibold mb-2">Documentos asociados</div>
