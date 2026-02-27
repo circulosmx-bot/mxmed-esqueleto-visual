@@ -34,6 +34,47 @@ Perfil médico end-to-end:
 - Objetivo inmediato actual: Integración transversal / Casos (Camino 2)
 - Regla: antes de iniciar cualquier trabajo nuevo, revisar esta sección.
 
+## A2. Cierre clínico reciente (Encounter/Historial/Timeline)
+
+### Estado actual (cerrado)
+- STEP A: Flujo `Historial -> Ver atención -> Encounter -> Volver` cerrado (`40f80bd`, `e4f5de5`, `7d08e63`).
+- STEP B: UX documentos en Encounter (preview + `Ver todos`/`Ver menos`) cerrado (`b704ebd`).
+- STEP C: Timeline payload optimizado cerrado (`6927d0f`):
+  - `clinical.documents_count`
+  - `clinical.documents_preview` (max 3)
+  - `clinical.documents` completo solo con `include_docs=1`
+- STEP D: Historial muestra `Documentos: N` (+ preview) y modal `Ver todos` cierra correctamente (`9ac8922`, `6283967`).
+
+### Decisiones de arquitectura
+- Timeline = **RESUMEN** (sin lista completa de documentos por default).
+- Encounter = **DETALLE** (fuente de verdad para listado completo de documentos).
+- `include_docs=1` se mantiene para compatibilidad/debug controlado.
+
+### Rutas / contratos relevantes
+- UI:
+  - `/modules/clinical/ui/historial.php?patient_id=...`
+  - `/modules/clinical/ui/encounter.php?encounter_key=...`
+- API:
+  - `GET /api/clinical/index.php/patients/{patient_id}/timeline?include=agenda,clinical&limit=...`
+  - `GET /api/clinical/index.php/patients/{patient_id}/timeline?...&include_docs=1` (compat)
+  - `GET /api/clinical/index.php/encounters/{encounter_key}`
+
+### QA mínimo (manual)
+- Paciente de prueba: `p_0c874aa9cbad`
+- Encounter de prueba: `appt:fe61cdd67e97dcfde3a70c02#enc:2` (en URL por path debe ir URL-encoded).
+- Checklist:
+  1. En Historial, `Ver atención` abre Encounter y `Volver` regresa al flujo.
+  2. En Encounter con volumen alto, documentos inician colapsados (10 de N), `Ver todos` expande, `Ver menos` colapsa.
+  3. En Timeline, cards de encounter muestran `Documentos: N` + preview (si N>0).
+  4. Modal `Ver todos` del Historial cierra con `X`, botón `Cerrar`, backdrop y `ESC`.
+
+### Retrocesos / reverts (operación segura)
+- `git revert 6283967` -> revierte fix de cierre del modal `Ver todos` en Historial.
+- `git revert 9ac8922` -> revierte visualización `Documentos: N` + preview en Historial.
+- `git revert 6927d0f` -> revierte optimización de payload timeline (`documents_count`/`documents_preview`).
+- `git revert b704ebd` -> revierte colapsado de lista de documentos en Encounter.
+- `git revert 7d08e63` -> revierte fix de fetch/encoding/base en Encounter.
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)
