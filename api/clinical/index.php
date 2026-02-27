@@ -903,6 +903,55 @@ function clinical_optimize_uploaded_image(array $file, string $documentUuid): ar
     ];
 }
 
+function clinical_store_uploaded_file(array $file, string $documentUuid): array
+{
+    $tmpPath = (string)($file['tmp_name'] ?? '');
+    $rawBytes = (int)($file['size'] ?? 0);
+    if ($tmpPath === '' || !is_file($tmpPath)) {
+        throw new RuntimeException('archivo temporal inválido');
+    }
+    if ($rawBytes <= 0 || $rawBytes > (25 * 1024 * 1024)) {
+        throw new RuntimeException('tamaño de archivo inválido (máximo 25MB)');
+    }
+
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime = strtolower(trim((string)$finfo->file($tmpPath)));
+    if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+        return clinical_optimize_uploaded_image($file, $documentUuid);
+    }
+    if ($mime !== 'application/pdf') {
+        throw new RuntimeException('solo se permiten imágenes jpeg/png/webp o PDF');
+    }
+
+    $year = gmdate('Y');
+    $month = gmdate('m');
+    $baseDir = rtrim(clinical_uploads_root_dir(), '/');
+    $relDir = rtrim(clinical_uploads_relative_dir(), '/');
+    $folderAbs = $baseDir . '/' . $year . '/' . $month;
+    $folderRel = $relDir . '/' . $year . '/' . $month;
+    if (!is_dir($folderAbs) && !@mkdir($folderAbs, 0775, true) && !is_dir($folderAbs)) {
+        throw new RuntimeException('no se pudo crear directorio de uploads');
+    }
+
+    $origFilename = $documentUuid . '-orig.pdf';
+    $abs = $folderAbs . '/' . $origFilename;
+    $rel = $folderRel . '/' . $origFilename;
+    if (!@move_uploaded_file($tmpPath, $abs)) {
+        throw new RuntimeException('no se pudo guardar PDF');
+    }
+
+    return [
+        'render_mode' => 'pdf',
+        'original' => [
+            'path' => $rel,
+            'url' => $rel,
+            'mime' => 'application/pdf',
+            'bytes' => $rawBytes,
+            'filename' => trim((string)($file['name'] ?? '')),
+        ],
+    ];
+}
+
 function clinical_parse_include_csv(?string $raw): array
 {
     $value = trim((string)$raw);
@@ -3626,11 +3675,11 @@ try {
 
                 $documentUuid = clinical_generate_document_uuid();
                 if (is_array($uploadFile)) {
-                    $fileMeta = clinical_optimize_uploaded_image($uploadFile, $documentUuid);
-                    $payloadData['render_mode'] = 'image';
+                    $fileMeta = clinical_store_uploaded_file($uploadFile, $documentUuid);
+                    $payloadData['render_mode'] = (string)($fileMeta['render_mode'] ?? 'image');
                     $payloadData['file'] = $fileMeta;
                     if ($summary === '') {
-                        $summary = 'Imagen clínica';
+                        $summary = ($payloadData['render_mode'] === 'pdf') ? 'PDF clínico' : 'Imagen clínica';
                     }
                 }
                 $payloadJson = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
