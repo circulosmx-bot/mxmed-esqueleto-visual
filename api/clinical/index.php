@@ -687,6 +687,25 @@ function clinical_image_load_resource(string $tmpPath, string $mime)
     return false;
 }
 
+function clinical_prepare_png_for_webp($image): bool
+{
+    if (!clinical_is_image_handle($image)) {
+        return false;
+    }
+    if (function_exists('imageistruecolor') && !imageistruecolor($image)) {
+        if (!function_exists('imagepalettetotruecolor')) {
+            return false;
+        }
+        $ok = @imagepalettetotruecolor($image);
+        if (!$ok) {
+            return false;
+        }
+    }
+    imagealphablending($image, false);
+    imagesavealpha($image, true);
+    return true;
+}
+
 function clinical_image_fix_orientation($image, string $tmpPath, string $mime)
 {
     if ($mime !== 'image/jpeg' || !function_exists('exif_read_data')) {
@@ -815,6 +834,13 @@ function clinical_optimize_uploaded_image(array $file, string $documentUuid): ar
 
     $keepPng = ($mime === 'image/png') && clinical_image_has_alpha($source);
     $supportsWebp = clinical_gd_supports_webp();
+    if ($mime === 'image/png' && !$keepPng && $supportsWebp) {
+        // PNG palettized -> convert to truecolor before WebP encode.
+        if (!clinical_prepare_png_for_webp($source)) {
+            // Safe fallback: keep optimized PNG when conversion is unavailable/fails.
+            $keepPng = true;
+        }
+    }
     $targetFormat = $keepPng ? 'png' : ($supportsWebp ? 'webp' : 'jpeg');
     $targetMime = $targetFormat === 'png' ? 'image/png' : ($targetFormat === 'webp' ? 'image/webp' : 'image/jpeg');
     $targetExt = $targetFormat === 'png' ? 'png' : ($targetFormat === 'webp' ? 'webp' : 'jpg');
