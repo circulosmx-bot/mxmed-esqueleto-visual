@@ -3933,7 +3933,7 @@ try {
                 }
 
                 $sourceStmt = $pdo->prepare("
-                    SELECT patient_id, appointment_id, encounter_id, hospital_stay_id, document_type, title, summary, payload_json, created_by_user_id
+                    SELECT patient_id, appointment_id, encounter_id, hospital_stay_id, document_type, title, summary, payload_json, created_by_user_id, care_setting
                     FROM clinical_documents
                     WHERE document_uuid = :uuid
                     LIMIT 1
@@ -4025,6 +4025,13 @@ try {
                 if (!is_array($payloadData)) {
                     $payloadData = [];
                 }
+                $careSetting = trim((string)($sourceRow['care_setting'] ?? ''));
+                if ($careSetting === '') {
+                    $careSetting = trim((string)($payloadData['care_setting'] ?? (($payloadData['context']['care_setting'] ?? ''))));
+                }
+                if ($careSetting === '') {
+                    $careSetting = 'consulta';
+                }
                 $metaPayload = is_array($payloadData['meta'] ?? null) ? (array)$payloadData['meta'] : [];
                 $metaPayload['source_document_uuid'] = $sourceUuid;
                 $metaPayload['replicated_at'] = gmdate('Y-m-d H:i:s');
@@ -4043,17 +4050,29 @@ try {
                 $now = gmdate('Y-m-d H:i:s');
                 $newUuid = clinical_generate_document_uuid();
                 $cols = clinical_table_columns($pdo, 'clinical_documents');
+                $statusValue = 'generated';
+                try {
+                    $statusStmt = $pdo->prepare("SHOW COLUMNS FROM `clinical_documents` LIKE 'status'");
+                    $statusStmt->execute();
+                    $statusRow = $statusStmt->fetch(PDO::FETCH_ASSOC);
+                    $statusType = strtolower(trim((string)($statusRow['Type'] ?? '')));
+                    if ($statusType !== '' && strpos($statusType, "'draft'") !== false) {
+                        $statusValue = 'draft';
+                    }
+                } catch (Throwable $e) {
+                    $statusValue = 'generated';
+                }
                 $values = [
                     'document_uuid' => $newUuid,
                     'document_type' => $sourceType,
                     'title' => $title,
                     'version' => 1,
-                    'status' => 'generated',
+                    'status' => $statusValue,
                     'patient_id' => $patientId,
                     'appointment_id' => ($appointmentId !== '' ? $appointmentId : null),
                     'encounter_id' => ($encounterId > 0 ? (string)$encounterId : null),
                     'hospital_stay_id' => ($hospitalStayId !== '' ? $hospitalStayId : null),
-                    'care_setting' => null,
+                    'care_setting' => $careSetting,
                     'service' => null,
                     'payload_json' => $payloadJson,
                     'rendered_text' => null,
