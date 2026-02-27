@@ -198,6 +198,7 @@ $renderedText = $document ? (string)($document['content']['rendered_text'] ?? ''
 $docTypeNorm = strtolower(trim($docType));
 $fileMeta = is_array($payload['file'] ?? null) ? $payload['file'] : [];
 $optimizedMeta = is_array($fileMeta['optimized'] ?? null) ? $fileMeta['optimized'] : [];
+$originalMeta = is_array($fileMeta['original'] ?? null) ? $fileMeta['original'] : [];
 $renderMode = strtolower(trim((string)($fileMeta['render_mode'] ?? '')));
 if ($renderMode === '') {
   if ($docTypeNorm === 'image') {
@@ -213,11 +214,16 @@ if ($downloadCandidate === '' && is_array($payload)) {
   $downloadCandidate = trim((string)($payload['url'] ?? $payload['src'] ?? $payload['file_url'] ?? $payload['pdf_url'] ?? $payload['image_url'] ?? ''));
 }
 $downloadHref = resolve_media_href($downloadCandidate);
-$downloadLabel = $renderMode === 'pdf' ? 'Descargar PDF' : 'Descargar imagen';
-$openNewHref = '/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid);
-$emitAllowedTypes = ['rx', 'prescription', 'note', 'orders', 'lab_order', 'imaging_order'];
-$canEmitBasedOn = in_array($docTypeNorm, $emitAllowedTypes, true);
-$payloadJsonJs = ($payloadJson !== '') ? $payloadJson : '{}';
+$originalDownloadHref = resolve_media_href(trim((string)($originalMeta['url'] ?? $originalMeta['path'] ?? '')));
+$embedRequested = trim((string)($_GET['embed'] ?? '')) === '1';
+$documentOpenHref = '/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedRequested ? '&embed=1' : '');
+$viewerOpenHref = '/modules/clinical/ui/viewer.php?uuid=' . rawurlencode($uuid) . ($embedRequested ? '&embed=1' : '');
+$viewerFullscreenHref = $viewerOpenHref . '&mode=fullscreen';
+$isImageDoc = ($renderMode === 'image' || $docTypeNorm === 'image');
+$isPdfDoc = ($renderMode === 'pdf' || $docTypeNorm === 'pdf');
+$isNoteDoc = in_array($docTypeNorm, ['note', 'nota_evolucion'], true);
+$isOrderDoc = in_array($docTypeNorm, ['lab_order', 'imaging_order', 'orders'], true);
+$showCommonDocActions = $isNoteDoc || $isOrderDoc || (!$isImageDoc && !$isPdfDoc);
 require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
 
@@ -240,24 +246,36 @@ if (!$embed) {
     </div>
     <div class="d-flex flex-wrap justify-content-end gap-2">
       <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($backHref); ?>">Volver</a>
-      <a class="btn btn-outline-primary btn-sm" href="<?php echo h($openNewHref); ?>" target="_blank" rel="noopener">Abrir en nueva pestaña</a>
-      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">Imprimir</button>
-      <?php if ($renderMode === 'image' || $renderMode === 'pdf'): ?>
-        <?php if ($downloadHref !== ''): ?>
-          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($downloadHref); ?>" target="_blank" rel="noopener" download><?php echo h($downloadLabel); ?></a>
-        <?php else: ?>
-          <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="No disponible"><?php echo h($downloadLabel); ?></button>
-        <?php endif; ?>
-      <?php else: ?>
-        <?php if ($payloadJson !== ''): ?>
-          <button type="button" class="btn btn-outline-secondary btn-sm" data-action="download-json">Descargar JSON</button>
-        <?php else: ?>
-          <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="No disponible">Descargar JSON</button>
-        <?php endif; ?>
-        <?php if ($canEmitBasedOn): ?>
-          <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="Próximamente">Emitir basado en este</button>
-        <?php endif; ?>
-      <?php endif; ?>
+      <div class="dropdown">
+        <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Acciones</button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <?php if ($isImageDoc): ?>
+            <li><a class="dropdown-item" href="<?php echo h($viewerOpenHref); ?>" target="_blank" rel="noopener">Abrir en nueva pestaña</a></li>
+            <li><a class="dropdown-item" href="<?php echo h($viewerFullscreenHref); ?>" target="_blank" rel="noopener">Pantalla completa</a></li>
+            <?php if ($downloadHref !== ''): ?>
+              <li><a class="dropdown-item" href="<?php echo h($downloadHref); ?>" target="_blank" rel="noopener" download>Descargar optimizada</a></li>
+            <?php else: ?>
+              <li><button type="button" class="dropdown-item" disabled title="No disponible">Descargar optimizada</button></li>
+            <?php endif; ?>
+            <?php if ($originalDownloadHref !== ''): ?>
+              <li><a class="dropdown-item" href="<?php echo h($originalDownloadHref); ?>" target="_blank" rel="noopener" download>Descargar original</a></li>
+            <?php endif; ?>
+            <li><button type="button" class="dropdown-item" data-action="print-document">Imprimir</button></li>
+          <?php elseif ($isPdfDoc): ?>
+            <li><a class="dropdown-item" href="<?php echo h($viewerOpenHref); ?>" target="_blank" rel="noopener">Abrir en nueva pestaña</a></li>
+            <?php if ($downloadHref !== ''): ?>
+              <li><a class="dropdown-item" href="<?php echo h($downloadHref); ?>" target="_blank" rel="noopener" download>Descargar PDF</a></li>
+            <?php else: ?>
+              <li><button type="button" class="dropdown-item" disabled title="No disponible">Descargar PDF</button></li>
+            <?php endif; ?>
+            <li><button type="button" class="dropdown-item" data-action="print-document">Imprimir</button></li>
+          <?php elseif ($showCommonDocActions): ?>
+            <li><a class="dropdown-item" href="<?php echo h($documentOpenHref); ?>" target="_blank" rel="noopener">Abrir en nueva pestaña</a></li>
+            <li><button type="button" class="dropdown-item" data-action="print-document">Imprimir</button></li>
+            <li><button type="button" class="dropdown-item" data-action="copy-document-link">Copiar enlace</button></li>
+          <?php endif; ?>
+        </ul>
+      </div>
     </div>
   </div>
 
@@ -297,19 +315,20 @@ if (!$embed) {
 </div>
 <script>
   (function () {
-    var payload = <?php echo json_encode($payloadJsonJs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     document.addEventListener('click', function (event) {
-      var btn = event.target && event.target.closest ? event.target.closest('[data-action="download-json"]') : null;
-      if (!btn) return;
-      event.preventDefault();
-      var blob = new Blob([String(payload || '{}')], { type: 'application/json;charset=utf-8' });
-      var link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'document-' + <?php echo json_encode($uuid, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?> + '.json';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
+      var printBtn = event.target && event.target.closest ? event.target.closest('[data-action="print-document"]') : null;
+      if (printBtn) {
+        event.preventDefault();
+        window.print();
+        return;
+      }
+      var copyBtn = event.target && event.target.closest ? event.target.closest('[data-action="copy-document-link"]') : null;
+      if (copyBtn) {
+        event.preventDefault();
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          navigator.clipboard.writeText(window.location.href).catch(function () {});
+        }
+      }
     }, true);
   })();
 </script>

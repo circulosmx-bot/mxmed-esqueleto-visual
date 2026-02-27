@@ -280,14 +280,18 @@ $date = $document ? (string)($document['ui']['event_datetime'] ?? ($document['ti
 $summary = $document ? (string)($document['content']['summary'] ?? '-') : '-';
 $content = $document && is_array($document['content'] ?? null) ? $document['content'] : [];
 $payload = $document && is_array($content['payload'] ?? null) ? $content['payload'] : [];
+$mode = strtolower(trim((string)($_GET['mode'] ?? '')));
+$isFullscreenMode = ($mode === 'fullscreen');
 $payloadJson = $payload ? json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '';
 $renderedText = $document ? (string)($content['rendered_text'] ?? '') : '';
 
 $fileMeta = is_array($payload['file'] ?? null) ? $payload['file'] : [];
 $optimizedMeta = is_array($fileMeta['optimized'] ?? null) ? $fileMeta['optimized'] : [];
 $thumbMeta = is_array($fileMeta['thumb'] ?? null) ? $fileMeta['thumb'] : [];
+$originalMeta = is_array($fileMeta['original'] ?? null) ? $fileMeta['original'] : [];
+$renderMode = strtolower(trim((string)($fileMeta['render_mode'] ?? '')));
 $mimeType = strtolower(first_non_empty_string([$optimizedMeta, $fileMeta, $document, $content, $payload], ['mime', 'mime_type', 'content_type', 'type', 'media_type']));
-$mediaSrc = first_non_empty_string([$optimizedMeta, $fileMeta, $payload, $content], ['path', 'url', 'src', 'file_url', 'pdf_url', 'image_url']);
+$mediaSrc = first_non_empty_string([$optimizedMeta, $originalMeta, $fileMeta, $payload, $content], ['path', 'url', 'src', 'file_url', 'pdf_url', 'image_url']);
 $thumbSrc = first_non_empty_string([$thumbMeta], ['path', 'url', 'src']);
 $htmlInline = trim((string)($payload['html'] ?? ''));
 
@@ -297,7 +301,9 @@ $externalAllowed = $mediaSrc !== '' ? is_allowed_external_url($mediaSrc, $extern
 $externalBlockedMessage = '';
 
 $detectedMode = 'json';
-if ($htmlInline !== '') {
+if ($renderMode === 'image') {
+    $detectedMode = 'image';
+} elseif ($htmlInline !== '') {
     $detectedMode = 'html_inline';
 } elseif ($mediaSrc !== '') {
     $srcLower = strtolower($mediaSrc);
@@ -338,9 +344,30 @@ if (!$embed) {
     padding-bottom: .5rem;
     margin-bottom: .75rem;
   }
+  .clinical-viewer.is-fullscreen{
+    background: #111827;
+    min-height: 100vh;
+    padding: 0 !important;
+  }
+  .clinical-viewer.is-fullscreen .viewer-sticky-head{
+    display: none;
+  }
+  .clinical-viewer.is-fullscreen .fullscreen-image-wrap{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 1rem;
+  }
+  .clinical-viewer.is-fullscreen .fullscreen-image-wrap img{
+    max-width: 100%;
+    max-height: 96vh;
+    object-fit: contain;
+    border: 0;
+  }
 </style>
 <div class="<?php echo $embed ? 'py-1' : 'container py-4'; ?>">
-  <div class="clinical-viewer">
+  <div class="clinical-viewer <?php echo $isFullscreenMode ? 'is-fullscreen' : ''; ?>">
   <div class="viewer-sticky-head">
     <div class="d-flex justify-content-between align-items-center mt-2">
       <div>
@@ -379,13 +406,15 @@ if (!$embed) {
     <?php if ($detectedMode === 'image' && $mediaSrc !== ''): ?>
       <div class="mm-card mb-3">
         <div class="head"><h5>Vista previa</h5></div>
-        <div class="body">
+        <div class="body <?php echo $isFullscreenMode ? 'fullscreen-image-wrap' : ''; ?>">
           <img src="<?php echo h($mediaSrc); ?>" alt="Documento" class="img-fluid border rounded">
           <?php if ($thumbSrc !== ''): ?>
             <div class="small text-secondary mt-2">Miniatura disponible: <?php echo h($thumbSrc); ?></div>
           <?php endif; ?>
         </div>
       </div>
+    <?php elseif ($renderMode === 'image' && $mediaSrc === ''): ?>
+      <div class="alert alert-warning">Archivo no disponible.</div>
     <?php elseif (($detectedMode === 'pdf' || $detectedMode === 'html_external') && $mediaSrc !== ''): ?>
       <div class="mm-card mb-3">
         <div class="head"><h5>Vista previa</h5></div>
