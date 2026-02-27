@@ -81,6 +81,7 @@ Perfil médico end-to-end:
 - `mxmed-clinical-checkpoint-encounter-timeline-v1`: checkpoint de integración encounter/timeline (flujo base clínico).
 - `mxmed-clinical-uploads-v1`: valida pipeline de uploads clínicos con optimización automática (GD/EXIF + derivados).
 - `mxmed-clinical-doc-actions-v1`: valida barra/menú de acciones por tipo en UI de documento y flujo de viewer.
+- `mxmed-clinical-doc-replicate-ui-v1`: valida milestone de replicación controlada (API + UI) con redirección al nuevo documento.
 
 ### B) Contratos
 - Timeline:
@@ -100,8 +101,9 @@ Perfil médico end-to-end:
 - No se edita documento generado.
 - Replicar = crear documento **nuevo** con `source_document_uuid`.
 
-### D) Siguiente objetivo
-- Camino A — Replicación controlada: `POST /documents/{uuid}/replicate`.
+### D) Estado replicación (implementado)
+- Endpoint implementado: `POST /documents/{uuid}/replicate` (QA PASS).
+- UI implementada: `document.php` incluye acción **Replicar (crear copia)** en menú **Acciones**; llama al endpoint y redirige a `document.php?uuid=<new_uuid>` preservando parámetros embed (`carry_embed_params`).
 
 ## B. Arquitectura universal (actual + futura)
 
