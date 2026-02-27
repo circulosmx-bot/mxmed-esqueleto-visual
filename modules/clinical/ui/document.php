@@ -226,6 +226,9 @@ $isOrderDoc = in_array($docTypeNorm, ['lab_order', 'imaging_order', 'orders'], t
 $showCommonDocActions = $isNoteDoc || $isOrderDoc || (!$isImageDoc && !$isPdfDoc);
 require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
+$replicateUrl = ($apiIndexBase !== '' && $uuid !== '') ? ($apiIndexBase . '/documents/' . rawurlencode($uuid) . '/replicate') : '';
+$replicateRedirectTemplate = '/modules/clinical/ui/document.php?' . carry_embed_params(['uuid' => '__UUID__']);
+$replicateTitleOverride = ($title !== '' && $title !== '-') ? ($title . ' (replicado)') : '';
 
 // Shell MXMed
 if (!$embed) {
@@ -273,6 +276,19 @@ if (!$embed) {
             <li><a class="dropdown-item" href="<?php echo h($documentOpenHref); ?>" target="_blank" rel="noopener">Abrir en nueva pestaña</a></li>
             <li><button type="button" class="dropdown-item" data-action="print-document">Imprimir</button></li>
             <li><button type="button" class="dropdown-item" data-action="copy-document-link">Copiar enlace</button></li>
+          <?php endif; ?>
+          <?php if ($uuid !== '' && $errorMessage === '' && $replicateUrl !== ''): ?>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <button
+                type="button"
+                class="dropdown-item"
+                data-action="replicate-document"
+                data-replicate-url="<?php echo h($replicateUrl); ?>"
+                data-redirect-template="<?php echo h($replicateRedirectTemplate); ?>"
+                data-title-override="<?php echo h($replicateTitleOverride); ?>"
+              >Replicar (crear copia)</button>
+            </li>
           <?php endif; ?>
         </ul>
       </div>
@@ -328,6 +344,66 @@ if (!$embed) {
         if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
           navigator.clipboard.writeText(window.location.href).catch(function () {});
         }
+        return;
+      }
+      var replicateBtn = event.target && event.target.closest ? event.target.closest('[data-action="replicate-document"]') : null;
+      if (replicateBtn) {
+        event.preventDefault();
+        if (replicateBtn.disabled) {
+          return;
+        }
+        if (!window.confirm('¿Crear una copia de este documento?')) {
+          return;
+        }
+        var endpoint = String(replicateBtn.getAttribute('data-replicate-url') || '').trim();
+        if (!endpoint) {
+          window.alert('No se pudo iniciar la replicación.');
+          return;
+        }
+        var payload = {};
+        var titleOverride = String(replicateBtn.getAttribute('data-title-override') || '').trim();
+        if (titleOverride) {
+          payload.title_override = titleOverride;
+        }
+        var originalText = replicateBtn.textContent;
+        replicateBtn.disabled = true;
+        replicateBtn.textContent = 'Replicando...';
+        fetch(endpoint, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        })
+          .then(function (resp) {
+            return resp.json().catch(function () { return {}; }).then(function (json) {
+              if (!resp.ok || !json || json.ok !== true) {
+                var msg = (json && (json.message || json.error)) ? String(json.message || json.error) : ('Error HTTP ' + resp.status);
+                throw new Error(msg);
+              }
+              return json;
+            });
+          })
+          .then(function (json) {
+            var newUuid = String((json && json.data && json.data.document_uuid) ? json.data.document_uuid : '').trim();
+            if (!newUuid) {
+              throw new Error('Respuesta inválida al replicar.');
+            }
+            var redirectTemplate = String(replicateBtn.getAttribute('data-redirect-template') || '').trim();
+            if (!redirectTemplate) {
+              redirectTemplate = '/modules/clinical/ui/document.php?uuid=__UUID__';
+            }
+            window.location.href = redirectTemplate.replace('__UUID__', encodeURIComponent(newUuid));
+          })
+          .catch(function (err) {
+            window.alert((err && err.message) ? err.message : 'No se pudo replicar el documento.');
+          })
+          .finally(function () {
+            replicateBtn.disabled = false;
+            replicateBtn.textContent = originalText;
+          });
       }
     }, true);
   })();
