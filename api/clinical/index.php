@@ -3878,6 +3878,252 @@ try {
             return;
         }
 
+        if ($method === 'POST' && count($segments) === 3 && ($segments[2] ?? '') === 'replicate') {
+            $sourceUuid = trim(rawurldecode((string)$segments[1]));
+            if ($sourceUuid === '') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'source document uuid requerido',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'documents/{uuid}/replicate',
+                    ],
+                ], 400);
+                return;
+            }
+
+            $bodyResult = clinical_read_json_body();
+            if (($bodyResult['ok'] ?? false) !== true) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => (string)($bodyResult['error'] ?? 'invalid body'),
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'documents/{uuid}/replicate',
+                    ],
+                ], 400);
+                return;
+            }
+            $body = is_array($bodyResult['data'] ?? null) ? (array)$bodyResult['data'] : [];
+            $titleOverride = trim((string)($body['title_override'] ?? ''));
+            $summaryOverride = trim((string)($body['summary_override'] ?? ''));
+            $targetEncounterKey = trim((string)($body['target_encounter_key'] ?? ''));
+            $targetPatientId = trim((string)($body['target_patient_id'] ?? ''));
+
+            try {
+                $pdo = clinical_documents_pdo();
+                clinical_encounters_ensure_schema($pdo);
+                $sourceDoc = clinical_documents_get_by_uuid_fetch($pdo, $sourceUuid);
+                if (!is_array($sourceDoc)) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'not_found',
+                        'message' => 'source document not found',
+                        'data' => null,
+                        'meta' => [
+                            'method' => 'POST',
+                            'route' => 'documents/{uuid}/replicate',
+                        ],
+                    ], 404);
+                    return;
+                }
+
+                $sourceStmt = $pdo->prepare("
+                    SELECT patient_id, appointment_id, encounter_id, hospital_stay_id, document_type, title, summary, payload_json, created_by_user_id
+                    FROM clinical_documents
+                    WHERE document_uuid = :uuid
+                    LIMIT 1
+                ");
+                $sourceStmt->bindValue(':uuid', $sourceUuid, PDO::PARAM_STR);
+                $sourceStmt->execute();
+                $sourceRow = $sourceStmt->fetch(PDO::FETCH_ASSOC);
+                if (!is_array($sourceRow)) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'not_found',
+                        'message' => 'source document not found',
+                        'data' => null,
+                        'meta' => [
+                            'method' => 'POST',
+                            'route' => 'documents/{uuid}/replicate',
+                        ],
+                    ], 404);
+                    return;
+                }
+
+                $patientId = trim((string)($sourceRow['patient_id'] ?? ''));
+                if ($patientId === '') {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'bad_request',
+                        'message' => 'source document without patient_id',
+                        'data' => null,
+                        'meta' => [
+                            'method' => 'POST',
+                            'route' => 'documents/{uuid}/replicate',
+                        ],
+                    ], 400);
+                    return;
+                }
+
+                if ($targetPatientId !== '' && $targetPatientId !== $patientId) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'bad_request',
+                        'message' => 'target_patient_id must match source patient_id',
+                        'data' => null,
+                        'meta' => [
+                            'method' => 'POST',
+                            'route' => 'documents/{uuid}/replicate',
+                        ],
+                    ], 400);
+                    return;
+                }
+
+                $appointmentId = trim((string)($sourceRow['appointment_id'] ?? ''));
+                $encounterId = (int)trim((string)($sourceRow['encounter_id'] ?? '0'));
+                $hospitalStayId = trim((string)($sourceRow['hospital_stay_id'] ?? ''));
+                if ($targetEncounterKey !== '') {
+                    $resolved = clinical_resolve_encounter_key($pdo, $targetEncounterKey);
+                    if (($resolved['ok'] ?? false) !== true) {
+                        clinical_send_response([
+                            'ok' => false,
+                            'error' => (string)($resolved['error_code'] ?? 'bad_request'),
+                            'message' => (string)($resolved['error_message'] ?? 'target_encounter_key inválido'),
+                            'data' => null,
+                            'meta' => [
+                                'method' => 'POST',
+                                'route' => 'documents/{uuid}/replicate',
+                            ],
+                        ], 400);
+                        return;
+                    }
+                    $encounterRow = is_array($resolved['row'] ?? null) ? $resolved['row'] : [];
+                    $resolvedPatientId = trim((string)($encounterRow['patient_id'] ?? ''));
+                    if ($resolvedPatientId === '' || $resolvedPatientId !== $patientId) {
+                        clinical_send_response([
+                            'ok' => false,
+                            'error' => 'bad_request',
+                            'message' => 'target_encounter_key patient mismatch',
+                            'data' => null,
+                            'meta' => [
+                                'method' => 'POST',
+                                'route' => 'documents/{uuid}/replicate',
+                            ],
+                        ], 400);
+                        return;
+                    }
+                    $encounterId = (int)($encounterRow['encounter_id'] ?? 0);
+                    $appointmentId = trim((string)($encounterRow['appointment_id'] ?? ''));
+                }
+
+                $payloadData = json_decode((string)($sourceRow['payload_json'] ?? ''), true);
+                if (!is_array($payloadData)) {
+                    $payloadData = [];
+                }
+                $metaPayload = is_array($payloadData['meta'] ?? null) ? (array)$payloadData['meta'] : [];
+                $metaPayload['source_document_uuid'] = $sourceUuid;
+                $metaPayload['replicated_at'] = gmdate('Y-m-d H:i:s');
+                $payloadData['meta'] = $metaPayload;
+
+                $payloadJson = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                if (!is_string($payloadJson)) {
+                    $payloadJson = '{}';
+                }
+
+                $sourceType = trim((string)($sourceRow['document_type'] ?? ''));
+                $sourceTitle = trim((string)($sourceRow['title'] ?? ''));
+                $sourceSummary = trim((string)($sourceRow['summary'] ?? ''));
+                $title = ($titleOverride !== '') ? $titleOverride : (($sourceTitle !== '') ? ($sourceTitle . ' (replicado)') : 'Documento replicado');
+                $summary = ($summaryOverride !== '') ? $summaryOverride : $sourceSummary;
+                $now = gmdate('Y-m-d H:i:s');
+                $newUuid = clinical_generate_document_uuid();
+                $cols = clinical_table_columns($pdo, 'clinical_documents');
+                $values = [
+                    'document_uuid' => $newUuid,
+                    'document_type' => $sourceType,
+                    'title' => $title,
+                    'version' => 1,
+                    'status' => 'generated',
+                    'patient_id' => $patientId,
+                    'appointment_id' => ($appointmentId !== '' ? $appointmentId : null),
+                    'encounter_id' => ($encounterId > 0 ? (string)$encounterId : null),
+                    'hospital_stay_id' => ($hospitalStayId !== '' ? $hospitalStayId : null),
+                    'care_setting' => null,
+                    'service' => null,
+                    'payload_json' => $payloadJson,
+                    'rendered_text' => null,
+                    'summary' => $summary,
+                    'edited_flag' => 0,
+                    'event_datetime' => $now,
+                    'widget_group' => 'documentos_clinicos',
+                    'printable' => 1,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                    'generated_at' => $now,
+                    'signed_at' => null,
+                    'created_by_user_id' => 'system',
+                    'updated_by_user_id' => 'system',
+                ];
+                $insertCols = [];
+                $placeholders = [];
+                $params = [];
+                foreach ($values as $col => $val) {
+                    if (!isset($cols[$col])) {
+                        continue;
+                    }
+                    $insertCols[] = '`' . $col . '`';
+                    $ph = ':r_' . $col;
+                    $placeholders[] = $ph;
+                    $params[$ph] = $val;
+                }
+                $sql = 'INSERT INTO clinical_documents (' . implode(', ', $insertCols) . ') VALUES (' . implode(', ', $placeholders) . ')';
+                $stmt = $pdo->prepare($sql);
+                foreach ($params as $ph => $val) {
+                    if ($val === null) {
+                        $stmt->bindValue($ph, null, PDO::PARAM_NULL);
+                    } else {
+                        $stmt->bindValue($ph, (string)$val, PDO::PARAM_STR);
+                    }
+                }
+                $stmt->execute();
+
+                clinical_send_response([
+                    'ok' => true,
+                    'error' => null,
+                    'message' => 'document replicated',
+                    'data' => [
+                        'document_uuid' => $newUuid,
+                        'source_document_uuid' => $sourceUuid,
+                        'patient_id' => $patientId,
+                        'encounter_id' => ($encounterId > 0 ? $encounterId : null),
+                        'appointment_id' => ($appointmentId !== '' ? $appointmentId : null),
+                    ],
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'documents/{uuid}/replicate',
+                    ],
+                ], 200);
+                return;
+            } catch (Throwable $e) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => trim((string)$e->getMessage()) ?: 'server error',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'documents/{uuid}/replicate',
+                    ],
+                ], 500);
+                return;
+            }
+        }
+
         if ($method === 'GET' && count($segments) === 1) {
             $patientId = trim((string)($_GET['patient_id'] ?? ''));
             if ($patientId === '') {
