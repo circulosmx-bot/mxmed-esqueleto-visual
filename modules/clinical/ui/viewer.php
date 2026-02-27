@@ -243,6 +243,22 @@ function is_allowed_external_url(string $url, array $allowedHosts, string $curre
     return in_array($host, $allowedHosts, true);
 }
 
+function is_relative_media_url(string $url): bool
+{
+    $url = trim($url);
+    return $url !== '' && $url[0] === '/';
+}
+
+function is_same_origin_media_url(string $url, string $currentHost): bool
+{
+    $url = trim($url);
+    if ($url === '' || !preg_match('/^https?:\/\//i', $url)) {
+        return false;
+    }
+    $host = strtolower((string)parse_url($url, PHP_URL_HOST));
+    return $host !== '' && $currentHost !== '' && $host === strtolower($currentHost);
+}
+
 $uuid = trim((string)($_GET['uuid'] ?? ''));
 $returnTo = validate_return_to((string)($_GET['return_to'] ?? ''));
 $returnToClean = $returnTo !== null ? normalize_return_to($returnTo) : '';
@@ -298,6 +314,8 @@ $htmlInline = trim((string)($payload['html'] ?? ''));
 $currentHost = strtolower((string)parse_url(get_api_base(), PHP_URL_HOST));
 $externalIframeAllowlist = []; // viewer v0.1: dominios explícitos para iframe externo.
 $externalAllowed = $mediaSrc !== '' ? is_allowed_external_url($mediaSrc, $externalIframeAllowlist, $currentHost) : false;
+$isRelativeMediaSrc = is_relative_media_url($mediaSrc);
+$isSameOriginMediaSrc = is_same_origin_media_url($mediaSrc, $currentHost);
 $externalBlockedMessage = '';
 
 $detectedMode = 'json';
@@ -316,12 +334,15 @@ if ($renderMode === 'image') {
     }
 }
 
-if (($detectedMode === 'pdf' || $detectedMode === 'html_external') && $mediaSrc !== '' && !$externalAllowed) {
+if (($detectedMode === 'pdf' || $detectedMode === 'html_external') && $mediaSrc !== '' && !$externalAllowed && !$isRelativeMediaSrc && !$isSameOriginMediaSrc) {
     $externalBlockedMessage = 'La URL externa no está permitida por la allowlist del viewer.';
     $detectedMode = 'json';
 }
 
+$isPdf = ($renderMode === 'pdf' || $mimeType === 'application/pdf' || $detectedMode === 'pdf');
 $openInNewHref = $mediaSrc !== '' && $externalAllowed ? $mediaSrc : ((string)($_SERVER['REQUEST_URI'] ?? '/modules/clinical/ui/viewer.php'));
+$showDownloadAction = ($mediaSrc !== '' && ($isRelativeMediaSrc || $isSameOriginMediaSrc || $externalAllowed));
+$downloadIsRelative = $isRelativeMediaSrc;
 
 require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
@@ -335,6 +356,11 @@ if (!$embed) {
 }
 ?>
 <style>
+  html,body{height:100%;}
+  .mm-viewer-shell{height:100vh;display:flex;flex-direction:column;}
+  .mm-viewer-actions{flex:0 0 auto;}
+  .mm-viewer-frame{flex:1 1 auto;min-height:0;}
+  .mm-viewer-frame iframe{width:100%;height:100%;border:0;}
   .clinical-viewer .viewer-sticky-head{
     position: sticky;
     top: 0;
@@ -367,7 +393,7 @@ if (!$embed) {
   }
 </style>
 <div class="<?php echo $embed ? 'py-1' : 'container py-4'; ?>">
-  <div class="clinical-viewer <?php echo $isFullscreenMode ? 'is-fullscreen' : ''; ?>">
+  <div class="clinical-viewer mm-viewer-shell <?php echo $isFullscreenMode ? 'is-fullscreen' : ''; ?>">
   <div class="viewer-sticky-head">
     <div class="d-flex justify-content-between align-items-center mt-2">
       <div>
@@ -376,8 +402,16 @@ if (!$embed) {
           <div class="text-secondary small"><?php echo h($title); ?></div>
         <?php endif; ?>
       </div>
-      <div class="d-flex gap-2">
-        <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($backHref); ?>">Volver</a>
+      <div class="d-flex gap-2 mm-viewer-actions">
+        <?php if ($returnToClean !== ''): ?>
+          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($backHref); ?>">Volver</a>
+        <?php endif; ?>
+        <?php if ($showDownloadAction): ?>
+          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($mediaSrc); ?>"<?php echo $downloadIsRelative ? ' download' : ''; ?>>Descargar</a>
+        <?php endif; ?>
+        <?php if ($isPdf): ?>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-role="viewer-print">Imprimir</button>
+        <?php endif; ?>
         <a class="btn btn-outline-primary btn-sm" href="<?php echo h($openInNewHref); ?>" target="_blank" rel="noopener">Abrir en pestaña</a>
       </div>
     </div>
@@ -416,13 +450,13 @@ if (!$embed) {
     <?php elseif ($renderMode === 'image' && $mediaSrc === ''): ?>
       <div class="alert alert-warning">Archivo no disponible.</div>
     <?php elseif (($detectedMode === 'pdf' || $detectedMode === 'html_external') && $mediaSrc !== ''): ?>
-      <div class="mm-card mb-3">
+      <div class="mm-card mb-3 mm-viewer-frame">
         <div class="head"><h5>Vista previa</h5></div>
         <div class="body">
           <div data-role="viewer-loader" class="small text-secondary mb-2">Cargando…</div>
         </div>
-        <div class="body p-0">
-          <iframe data-role="viewer-iframe" sandbox="allow-same-origin allow-scripts allow-forms allow-downloads" src="<?php echo h($mediaSrc); ?>" style="width:100%;height:72vh;border:0;"></iframe>
+        <div class="body p-0 mm-viewer-frame">
+          <iframe data-role="viewer-iframe" sandbox="allow-same-origin allow-scripts allow-forms allow-downloads" src="<?php echo h($mediaSrc); ?>"></iframe>
         </div>
       </div>
     <?php elseif ($detectedMode === 'html_inline' && $htmlInline !== ''): ?>
@@ -461,10 +495,24 @@ if (!$embed) {
   (function () {
     var iframe = document.querySelector('[data-role="viewer-iframe"]');
     var loader = document.querySelector('[data-role="viewer-loader"]');
-    if (!iframe || !loader) return;
-    iframe.addEventListener('load', function () {
-      loader.classList.add('d-none');
-    });
+    if (iframe && loader) {
+      iframe.addEventListener('load', function () {
+        loader.classList.add('d-none');
+      });
+    }
+    document.addEventListener('click', function (event) {
+      var printBtn = event.target && event.target.closest ? event.target.closest('[data-role="viewer-print"]') : null;
+      if (!printBtn) return;
+      event.preventDefault();
+      var frame = document.querySelector('[data-role="viewer-iframe"]');
+      if (!frame) return;
+      try {
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+      } catch (e) {
+        window.open(<?php echo json_encode($openInNewHref, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>, '_blank', 'noopener');
+      }
+    }, true);
   })();
 </script>
 <?php if ($embed): ?>
