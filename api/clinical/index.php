@@ -777,7 +777,6 @@ function clinical_save_image_variant($image, string $absPath, string $format, in
         imagefilledrectangle($bg, 0, 0, imagesx($bg), imagesy($bg), $white);
         imagecopy($bg, $image, 0, 0, 0, 0, imagesx($image), imagesy($image));
         $ok = (bool)@imagejpeg($bg, $absPath, $quality);
-        imagedestroy($bg);
         return $ok;
     }
     if ($format === 'png') {
@@ -818,17 +817,11 @@ function clinical_optimize_uploaded_image(array $file, string $documentUuid): ar
         throw new RuntimeException('no se pudo decodificar imagen');
     }
     $oriented = clinical_image_fix_orientation($source, $tmpPath, $mime);
-    if ($oriented !== $source && clinical_is_image_handle($source)) {
-        imagedestroy($source);
-    }
     $source = $oriented;
 
     $maxImage = clinical_image_resize($source, 2048);
     if ($maxImage === false) {
         throw new RuntimeException('no se pudo redimensionar imagen');
-    }
-    if ($maxImage !== $source && clinical_is_image_handle($source)) {
-        imagedestroy($source);
     }
     $source = $maxImage;
 
@@ -884,13 +877,6 @@ function clinical_optimize_uploaded_image(array $file, string $documentUuid): ar
     $optH = imagesy($source);
     $thumbW = imagesx($thumbSource);
     $thumbH = imagesy($thumbSource);
-
-    if (clinical_is_image_handle($source)) {
-        imagedestroy($source);
-    }
-    if ($thumbSource !== $source && clinical_is_image_handle($thumbSource)) {
-        imagedestroy($thumbSource);
-    }
 
     return [
         'render_mode' => 'image',
