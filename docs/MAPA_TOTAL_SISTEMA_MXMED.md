@@ -492,3 +492,54 @@ api/verify-sms.php (solo {ok})
   - Integración backend real para secciones UI hoy locales/placeholder.
   - Normalización de contratos API clínicos y cierre de endpoints faltantes.
   - Alineación definitiva a fuentes canónicas para evitar duplicidad de identidad y contratos.
+
+## 6) Clinical Resolver v2 — Determinismo por Appointment (Feb 2026)
+
+### Problema previo
+Cuando existían múltiples encounters asociados a un mismo `appointment_id`, el sistema podía devolver resultados no deterministas dependiendo del orden interno.
+
+### Decisión arquitectónica
+Se establece un resolver determinista para:
+
+`GET /api/clinical/index.php/encounters/appt:{appointment_id}`
+
+Regla canónica de selección:
+
+`ORDER BY encounter_dt DESC, encounter_id DESC`
+
+`LIMIT 1`
+
+Garantizando que siempre se devuelve el encounter más reciente.
+
+### Extensión del contrato Timeline
+
+El endpoint:
+
+`GET /patients/{patient_id}/timeline`
+
+Ahora expone adicionalmente:
+
+- `has_encounter` (boolean)
+- `latest_encounter_key` (string|null)
+
+Contrato:
+
+- `item_type="encounter"`
+  - `has_encounter = true`
+  - `latest_encounter_key = encounter_key`
+
+- `item_type="appointment"`
+  - `has_encounter = false`
+  - `latest_encounter_key = null`
+
+### Principio de diseño adoptado
+
+El frontend NO debe inferir existencia de encounter.
+Debe consumir explícitamente:
+- `has_encounter`
+- `latest_encounter_key`
+
+Toda lógica de resolución pertenece al backend clínico.
+
+### Fecha de actualización
+- 2026-02-25
