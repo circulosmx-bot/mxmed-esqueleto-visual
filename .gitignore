@@ -17,3 +17,6 @@ modules/clinical/qa/requests.sh
 
 # Dev runtime (pids, temp)
 .tmp/
+
+# Runtime storage (uploads)
+storage/
