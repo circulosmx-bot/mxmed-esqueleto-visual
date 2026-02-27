@@ -1150,7 +1150,7 @@ if (!$embed) {
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Detalle de atención</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" data-action="close-encounter-detail-modal" aria-label="Cerrar"></button>
         </div>
         <div class="modal-body">
           <div id="encounterDetailLoading" data-role="encounter-detail-loading" class="text-secondary small d-none">Cargando detalle...</div>
@@ -1159,7 +1159,7 @@ if (!$embed) {
           <div id="encounterDetailList" data-role="encounter-detail-list" class="vstack gap-2"></div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-bs-dismiss="modal" data-action="close-encounter-detail-modal">Cerrar</button>
         </div>
       </div>
     </div>
@@ -1540,6 +1540,17 @@ if (!$embed) {
       }
     }
 
+    function closeEncounterDetailModal() {
+      if (!encounterDetailModalEl) return;
+      if (encounterDetailModalInstance) {
+        encounterDetailModalInstance.hide();
+        return;
+      }
+      encounterDetailModalEl.classList.remove('show');
+      encounterDetailModalEl.style.display = 'none';
+      encounterDetailModalEl.setAttribute('aria-hidden', 'true');
+    }
+
     document.addEventListener('click', function (event) {
       var createBtn = event.target && event.target.closest ? event.target.closest('[data-action="create-clinical-case"]') : null;
       if (createBtn) {
@@ -1634,6 +1645,18 @@ if (!$embed) {
         return;
       }
 
+      var closeEncounterDetailBtn = event.target && event.target.closest ? event.target.closest('[data-action="close-encounter-detail-modal"]') : null;
+      if (closeEncounterDetailBtn) {
+        event.preventDefault();
+        closeEncounterDetailModal();
+        return;
+      }
+
+      if (!encounterDetailModalInstance && encounterDetailModalEl && event.target === encounterDetailModalEl) {
+        closeEncounterDetailModal();
+        return;
+      }
+
       var assignBtn = event.target && event.target.closest ? event.target.closest('[data-action="assign-case-item"]') : null;
       if (assignBtn) {
         event.preventDefault();
@@ -1699,6 +1722,14 @@ if (!$embed) {
       event.preventDefault();
       window.parent.postMessage(payload, '*');
     }, true);
+
+    document.addEventListener('keydown', function (event) {
+      if (!event || event.key !== 'Escape') return;
+      if (!encounterDetailModalEl) return;
+      var isVisible = encounterDetailModalEl.classList.contains('show') || encounterDetailModalEl.style.display === 'block';
+      if (!isVisible) return;
+      closeEncounterDetailModal();
+    });
 
     if (window.MXMed && typeof window.MXMed.initClinicalEmbedKit === 'function') {
       window.MXMed.initClinicalEmbedKit({ embedOnly: true });
