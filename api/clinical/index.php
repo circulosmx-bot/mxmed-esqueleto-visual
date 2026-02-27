@@ -1498,6 +1498,8 @@ try {
         }
         $includeClinical = in_array('clinical', $include, true);
         $includeAgenda = in_array('agenda', $include, true);
+        $includeDocsRaw = strtolower(trim((string)($_GET['include_docs'] ?? '0')));
+        $includeDocs = in_array($includeDocsRaw, ['1', 'true', 'yes', 'on'], true);
 
         $cursorDt = null;
         $cursorUuid = null;
@@ -1618,7 +1620,21 @@ try {
                             'summary' => (string)($docRow['summary'] ?? ''),
                         ];
                     }
+                    $docPreview = array_slice($docItems, 0, 3);
                     $flags = clinical_timeline_encounter_flags($docItems);
+
+                    $clinicalPayload = [
+                        'has_vitals' => $flags['has_vitals'],
+                        'has_note' => $flags['has_note'],
+                        'has_prescription' => $flags['has_prescription'],
+                        'has_orders' => $flags['has_orders'],
+                        'has_results' => $flags['has_results'],
+                        'documents_count' => count($docItems),
+                        'documents_preview' => $docPreview,
+                    ];
+                    if ($includeDocs) {
+                        $clinicalPayload['documents'] = $docItems;
+                    }
 
                     $encounterItems[] = [
                         'item_type' => 'encounter',
@@ -1635,14 +1651,7 @@ try {
                             'encounter_id' => ($encounterId > 0 ? $encounterId : null),
                             'hospital_stay_id' => null,
                         ],
-                        'clinical' => [
-                            'has_vitals' => $flags['has_vitals'],
-                            'has_note' => $flags['has_note'],
-                            'has_prescription' => $flags['has_prescription'],
-                            'has_orders' => $flags['has_orders'],
-                            'has_results' => $flags['has_results'],
-                            'documents' => $docItems,
-                        ],
+                        'clinical' => $clinicalPayload,
                     ];
                 }
             }
