@@ -1054,6 +1054,13 @@ if (!$embed) {
                     $doc = is_array($docItem['clinical_document'] ?? null) ? $docItem['clinical_document'] : [];
                     $links = is_array($docItem['links'] ?? null) ? $docItem['links'] : [];
                     $docUuid = trim((string)($links['document_uuid'] ?? ''));
+                    $docTypeNorm = strtolower(trim((string)($doc['document_type'] ?? '')));
+                    $docPayload = is_array($doc['payload'] ?? null) ? $doc['payload'] : [];
+                    $docFilePayload = is_array($docPayload['file'] ?? null) ? $docPayload['file'] : [];
+                    $docRenderMode = strtolower(trim((string)($doc['render_mode'] ?? ($docFilePayload['render_mode'] ?? ''))));
+                    $docIsImage = ($docTypeNorm === 'image' || $docRenderMode === 'image');
+                    $docViewPath = $docIsImage ? '/modules/clinical/ui/viewer.php' : '/modules/clinical/ui/document.php';
+                    $docViewLabel = $docIsImage ? 'Ver imagen' : 'Ver documento';
                     ?>
                     <div class="border rounded p-2 small" data-item-type="document" data-document-uuid="<?php echo h($docUuid); ?>">
                       <?php if (!empty($docItem['case_id'])): ?>
@@ -1074,7 +1081,7 @@ if (!$embed) {
                       <div class="text-secondary"><?php echo h((string)($doc['summary'] ?? '-')); ?></div>
                       <?php if ($docUuid !== ''): ?>
                         <div class="mt-1">
-                          <a class="mm-btn mm-btn-sm mm-btn-outline-secondary" href="/modules/clinical/ui/document.php?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>" data-embed-nav data-nav-mode="document" data-uuid="<?php echo h($docUuid); ?>">Ver documento</a>
+                          <a class="mm-btn mm-btn-sm mm-btn-outline-secondary" href="<?php echo h($docViewPath); ?>?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>" data-embed-nav data-nav-mode="document" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>" data-uuid="<?php echo h($docUuid); ?>"><?php echo $docViewLabel; ?></a>
                         </div>
                       <?php endif; ?>
                     </div>
@@ -1097,6 +1104,13 @@ if (!$embed) {
           $docUuid = trim((string)($links['document_uuid'] ?? ''));
           $docCaseId = trim((string)($docItem['case_id'] ?? ''));
           $docInActiveCase = (bool)($docItem['is_in_active_case'] ?? false);
+          $docTypeNorm = strtolower(trim((string)($doc['document_type'] ?? '')));
+          $docPayload = is_array($doc['payload'] ?? null) ? $doc['payload'] : [];
+          $docFilePayload = is_array($docPayload['file'] ?? null) ? $docPayload['file'] : [];
+          $docRenderMode = strtolower(trim((string)($doc['render_mode'] ?? ($docFilePayload['render_mode'] ?? ''))));
+          $docIsImage = ($docTypeNorm === 'image' || $docRenderMode === 'image');
+          $docViewPath = $docIsImage ? '/modules/clinical/ui/viewer.php' : '/modules/clinical/ui/document.php';
+          $docViewLabel = $docIsImage ? 'Ver imagen' : 'Ver documento';
           ?>
           <article class="mm-card <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>" data-document-uuid="<?php echo h($docUuid); ?>">
             <div class="body">
@@ -1130,7 +1144,7 @@ if (!$embed) {
               </div>
               <?php if ($docUuid !== ''): ?>
                 <div class="mt-2">
-                  <a class="mm-btn mm-btn-sm mm-btn-outline-primary" href="/modules/clinical/ui/document.php?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>" data-embed-nav data-nav-mode="document" data-uuid="<?php echo h($docUuid); ?>">Ver documento</a>
+                  <a class="mm-btn mm-btn-sm mm-btn-outline-primary" href="<?php echo h($docViewPath); ?>?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>" data-embed-nav data-nav-mode="document" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>" data-uuid="<?php echo h($docUuid); ?>"><?php echo $docViewLabel; ?></a>
                 </div>
               <?php endif; ?>
             </div>
@@ -1501,7 +1515,16 @@ if (!$embed) {
       return payload.data || null;
     }
 
-    function buildDocumentUrl(uuid) {
+    function isImageDocumentMeta(doc) {
+      if (!doc || typeof doc !== 'object') return false;
+      var type = String((doc.document_type || doc.type || '')).trim().toLowerCase();
+      var payload = (doc.payload && typeof doc.payload === 'object') ? doc.payload : {};
+      var file = (payload.file && typeof payload.file === 'object') ? payload.file : {};
+      var renderMode = String((doc.render_mode || file.render_mode || '')).trim().toLowerCase();
+      return type === 'image' || renderMode === 'image';
+    }
+
+    function buildDocumentUrl(uuid, mode) {
       var key = String(uuid || '').trim();
       if (!key) return '';
       var query = new URLSearchParams();
@@ -1509,7 +1532,40 @@ if (!$embed) {
       if (isEmbed) {
         query.set('embed', '1');
       }
-      return '/modules/clinical/ui/document.php?' + query.toString();
+      var path = (String(mode || '').trim() === 'image')
+        ? '/modules/clinical/ui/viewer.php'
+        : '/modules/clinical/ui/document.php';
+      return path + '?' + query.toString();
+    }
+
+    function tuneEncounterDetailDocumentLinks(docsRaw) {
+      if (!encounterDetailList) return;
+      var docs = Array.isArray(docsRaw) ? docsRaw : [];
+      var byUuid = {};
+      docs.forEach(function (doc) {
+        var uuid = String((doc && (doc.document_uuid || doc.document_id)) || '').trim();
+        if (!uuid) return;
+        byUuid[uuid] = {
+          isImage: isImageDocumentMeta(doc)
+        };
+      });
+      var anchors = encounterDetailList.querySelectorAll('a[href*="/modules/clinical/ui/document.php"], a[href*="/modules/clinical/ui/viewer.php"]');
+      anchors.forEach(function (anchor) {
+        var rawHref = String(anchor.getAttribute('href') || '').trim();
+        if (!rawHref) return;
+        var parsed;
+        try {
+          parsed = new URL(rawHref, window.location.origin);
+        } catch (_) {
+          return;
+        }
+        var uuid = String(parsed.searchParams.get('uuid') || '').trim();
+        if (!uuid) return;
+        var meta = byUuid[uuid] || { isImage: false };
+        var mode = meta.isImage ? 'image' : 'document';
+        anchor.setAttribute('href', buildDocumentUrl(uuid, mode));
+        anchor.textContent = meta.isImage ? 'Ver imagen' : 'Ver documento';
+      });
     }
 
     function setDocumentViewerLoading(flag) {
@@ -1557,10 +1613,10 @@ if (!$embed) {
       });
     }
 
-    async function openDocumentViewer(uuid, summaryHint) {
+    async function openDocumentViewer(uuid, summaryHint, mode) {
       var key = String(uuid || '').trim();
       if (!key || !documentViewerModalEl) return;
-      activeDocumentUrl = buildDocumentUrl(key);
+      activeDocumentUrl = buildDocumentUrl(key, mode);
       openDocumentViewerModal();
       if (documentViewerError) documentViewerError.classList.add('d-none');
       if (documentViewerBody) documentViewerBody.innerHTML = '';
@@ -1617,6 +1673,7 @@ if (!$embed) {
         openInOverlay: isEmbed,
         emptyHtml: '<div class="alert alert-secondary mb-0">Sin documentos en esta atención.</div>'
       });
+      tuneEncounterDetailDocumentLinks(docsRaw);
     }
 
     async function openEncounterDetail(encounterKey) {
@@ -1817,13 +1874,14 @@ if (!$embed) {
       if (openDocumentBtn) {
         event.preventDefault();
         var docUuid = String(openDocumentBtn.getAttribute('data-uuid') || '').trim();
+        var docTarget = String(openDocumentBtn.getAttribute('data-doc-target') || '').trim().toLowerCase();
         var summaryEl = openDocumentBtn.closest('.border, .doc-line, .mm-card');
         var summaryHint = '';
         if (summaryEl) {
           var secondary = summaryEl.querySelector('.text-secondary');
           summaryHint = secondary ? String(secondary.textContent || '').trim() : '';
         }
-        openDocumentViewer(docUuid, summaryHint);
+        openDocumentViewer(docUuid, summaryHint, docTarget === 'image' ? 'image' : 'document');
         return;
       }
 
