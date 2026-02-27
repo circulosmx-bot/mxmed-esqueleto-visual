@@ -625,6 +625,272 @@ function clinical_table_columns(PDO $pdo, string $tableName): array
     return $cols;
 }
 
+function clinical_uploads_root_dir(): string
+{
+    return dirname(__DIR__, 2) . '/storage/clinical_uploads';
+}
+
+function clinical_uploads_relative_dir(): string
+{
+    return '/storage/clinical_uploads';
+}
+
+function clinical_gd_supports_webp(): bool
+{
+    if (!function_exists('gd_info')) {
+        return false;
+    }
+    $info = gd_info();
+    return (bool)($info['WebP Support'] ?? false);
+}
+
+function clinical_is_image_handle($value): bool
+{
+    return is_resource($value) || is_object($value);
+}
+
+function clinical_image_has_alpha($image): bool
+{
+    if (!clinical_is_image_handle($image)) {
+        return false;
+    }
+    $w = imagesx($image);
+    $h = imagesy($image);
+    if ($w <= 0 || $h <= 0) {
+        return false;
+    }
+    $stepX = max(1, (int)floor($w / 48));
+    $stepY = max(1, (int)floor($h / 48));
+    for ($y = 0; $y < $h; $y += $stepY) {
+        for ($x = 0; $x < $w; $x += $stepX) {
+            $rgba = imagecolorat($image, $x, $y);
+            $alpha = ($rgba & 0x7F000000) >> 24;
+            if ($alpha > 0) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function clinical_image_load_resource(string $tmpPath, string $mime)
+{
+    if ($mime === 'image/jpeg') {
+        return @imagecreatefromjpeg($tmpPath);
+    }
+    if ($mime === 'image/png') {
+        return @imagecreatefrompng($tmpPath);
+    }
+    if ($mime === 'image/webp' && function_exists('imagecreatefromwebp')) {
+        return @imagecreatefromwebp($tmpPath);
+    }
+    return false;
+}
+
+function clinical_image_fix_orientation($image, string $tmpPath, string $mime)
+{
+    if ($mime !== 'image/jpeg' || !function_exists('exif_read_data')) {
+        return $image;
+    }
+    $exif = @exif_read_data($tmpPath);
+    $orientation = (int)($exif['Orientation'] ?? 1);
+    if ($orientation === 1) {
+        return $image;
+    }
+
+    switch ($orientation) {
+        case 2:
+            imageflip($image, IMG_FLIP_HORIZONTAL);
+            return $image;
+        case 3:
+            return imagerotate($image, 180, 0);
+        case 4:
+            imageflip($image, IMG_FLIP_VERTICAL);
+            return $image;
+        case 5:
+            $rot = imagerotate($image, -90, 0);
+            imageflip($rot, IMG_FLIP_HORIZONTAL);
+            return $rot;
+        case 6:
+            return imagerotate($image, -90, 0);
+        case 7:
+            $rot = imagerotate($image, 90, 0);
+            imageflip($rot, IMG_FLIP_HORIZONTAL);
+            return $rot;
+        case 8:
+            return imagerotate($image, 90, 0);
+        default:
+            return $image;
+    }
+}
+
+function clinical_image_resize($source, int $maxSide)
+{
+    $srcW = imagesx($source);
+    $srcH = imagesy($source);
+    if ($srcW <= 0 || $srcH <= 0) {
+        return false;
+    }
+    $long = max($srcW, $srcH);
+    if ($long <= $maxSide) {
+        return $source;
+    }
+    $ratio = $maxSide / $long;
+    $dstW = max(1, (int)round($srcW * $ratio));
+    $dstH = max(1, (int)round($srcH * $ratio));
+    $dst = imagecreatetruecolor($dstW, $dstH);
+    imagealphablending($dst, false);
+    imagesavealpha($dst, true);
+    $transparent = imagecolorallocatealpha($dst, 0, 0, 0, 127);
+    imagefilledrectangle($dst, 0, 0, $dstW, $dstH, $transparent);
+    imagecopyresampled($dst, $source, 0, 0, 0, 0, $dstW, $dstH, $srcW, $srcH);
+    return $dst;
+}
+
+function clinical_save_image_variant($image, string $absPath, string $format, int $quality): bool
+{
+    if ($format === 'webp' && function_exists('imagewebp')) {
+        return (bool)@imagewebp($image, $absPath, $quality);
+    }
+    if ($format === 'jpeg') {
+        $bg = imagecreatetruecolor(imagesx($image), imagesy($image));
+        $white = imagecolorallocate($bg, 255, 255, 255);
+        imagefilledrectangle($bg, 0, 0, imagesx($bg), imagesy($bg), $white);
+        imagecopy($bg, $image, 0, 0, 0, 0, imagesx($image), imagesy($image));
+        $ok = (bool)@imagejpeg($bg, $absPath, $quality);
+        imagedestroy($bg);
+        return $ok;
+    }
+    if ($format === 'png') {
+        return (bool)@imagepng($image, $absPath, 6);
+    }
+    return false;
+}
+
+function clinical_optimize_uploaded_image(array $file, string $documentUuid): array
+{
+    $tmpPath = (string)($file['tmp_name'] ?? '');
+    $rawBytes = (int)($file['size'] ?? 0);
+    if ($tmpPath === '' || !is_file($tmpPath)) {
+        throw new RuntimeException('archivo temporal inválido');
+    }
+    if ($rawBytes <= 0 || $rawBytes > (25 * 1024 * 1024)) {
+        throw new RuntimeException('tamaño de imagen inválido (máximo 25MB)');
+    }
+
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime = strtolower(trim((string)$finfo->file($tmpPath)));
+    if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+        throw new RuntimeException('solo se permiten imágenes jpeg/png/webp');
+    }
+
+    $size = @getimagesize($tmpPath);
+    if (!is_array($size)) {
+        throw new RuntimeException('imagen inválida');
+    }
+    $origW = (int)($size[0] ?? 0);
+    $origH = (int)($size[1] ?? 0);
+    if ($origW <= 0 || $origH <= 0 || $origW > 10000 || $origH > 10000) {
+        throw new RuntimeException('dimensiones de imagen inválidas');
+    }
+
+    $source = clinical_image_load_resource($tmpPath, $mime);
+    if ($source === false) {
+        throw new RuntimeException('no se pudo decodificar imagen');
+    }
+    $oriented = clinical_image_fix_orientation($source, $tmpPath, $mime);
+    if ($oriented !== $source && clinical_is_image_handle($source)) {
+        imagedestroy($source);
+    }
+    $source = $oriented;
+
+    $maxImage = clinical_image_resize($source, 2048);
+    if ($maxImage === false) {
+        throw new RuntimeException('no se pudo redimensionar imagen');
+    }
+    if ($maxImage !== $source && clinical_is_image_handle($source)) {
+        imagedestroy($source);
+    }
+    $source = $maxImage;
+
+    $keepPng = ($mime === 'image/png') && clinical_image_has_alpha($source);
+    $supportsWebp = clinical_gd_supports_webp();
+    $targetFormat = $keepPng ? 'png' : ($supportsWebp ? 'webp' : 'jpeg');
+    $targetMime = $targetFormat === 'png' ? 'image/png' : ($targetFormat === 'webp' ? 'image/webp' : 'image/jpeg');
+    $targetExt = $targetFormat === 'png' ? 'png' : ($targetFormat === 'webp' ? 'webp' : 'jpg');
+
+    $thumbSource = clinical_image_resize($source, 480);
+    if ($thumbSource === false) {
+        throw new RuntimeException('no se pudo generar thumbnail');
+    }
+
+    $thumbFormat = $keepPng ? 'png' : ($supportsWebp ? 'webp' : 'jpeg');
+    $thumbMime = $thumbFormat === 'png' ? 'image/png' : ($thumbFormat === 'webp' ? 'image/webp' : 'image/jpeg');
+    $thumbExt = $thumbFormat === 'png' ? 'png' : ($thumbFormat === 'webp' ? 'webp' : 'jpg');
+
+    $year = gmdate('Y');
+    $month = gmdate('m');
+    $baseDir = rtrim(clinical_uploads_root_dir(), '/');
+    $relDir = rtrim(clinical_uploads_relative_dir(), '/');
+    $folderAbs = $baseDir . '/' . $year . '/' . $month;
+    $folderRel = $relDir . '/' . $year . '/' . $month;
+    if (!is_dir($folderAbs) && !@mkdir($folderAbs, 0775, true) && !is_dir($folderAbs)) {
+        throw new RuntimeException('no se pudo crear directorio de uploads');
+    }
+
+    $optFilename = $documentUuid . '-opt.' . $targetExt;
+    $thumbFilename = $documentUuid . '-thumb.' . $thumbExt;
+    $optAbs = $folderAbs . '/' . $optFilename;
+    $thumbAbs = $folderAbs . '/' . $thumbFilename;
+    $optRel = $folderRel . '/' . $optFilename;
+    $thumbRel = $folderRel . '/' . $thumbFilename;
+
+    $savedOpt = clinical_save_image_variant($source, $optAbs, $targetFormat, 80);
+    if (!$savedOpt) {
+        throw new RuntimeException('no se pudo guardar imagen optimizada');
+    }
+    $savedThumb = clinical_save_image_variant($thumbSource, $thumbAbs, $thumbFormat, 75);
+    if (!$savedThumb) {
+        throw new RuntimeException('no se pudo guardar thumbnail');
+    }
+
+    $optW = imagesx($source);
+    $optH = imagesy($source);
+    $thumbW = imagesx($thumbSource);
+    $thumbH = imagesy($thumbSource);
+
+    if (clinical_is_image_handle($source)) {
+        imagedestroy($source);
+    }
+    if ($thumbSource !== $source && clinical_is_image_handle($thumbSource)) {
+        imagedestroy($thumbSource);
+    }
+
+    return [
+        'render_mode' => 'image',
+        'optimized' => [
+            'path' => $optRel,
+            'mime' => $targetMime,
+            'bytes' => (int)(@filesize($optAbs) ?: 0),
+            'w' => (int)$optW,
+            'h' => (int)$optH,
+        ],
+        'thumb' => [
+            'path' => $thumbRel,
+            'mime' => $thumbMime,
+            'bytes' => (int)(@filesize($thumbAbs) ?: 0),
+            'w' => (int)$thumbW,
+            'h' => (int)$thumbH,
+        ],
+        'original' => [
+            'bytes' => (int)$rawBytes,
+            'w' => (int)$origW,
+            'h' => (int)$origH,
+            'mime' => $mime,
+        ],
+    ];
+}
+
 function clinical_parse_include_csv(?string $raw): array
 {
     $value = trim((string)$raw);
@@ -3229,19 +3495,48 @@ try {
     if (($segments[0] ?? '') === 'encounters') {
         if (count($segments) === 3 && ($segments[2] ?? '') === 'documents' && $method === 'POST') {
             $encounterKey = urldecode(trim((string)$segments[1]));
-            $body = clinical_read_json_body();
-            if (($body['ok'] ?? false) !== true) {
-                clinical_send_response([
-                    'ok' => false,
-                    'error' => ['code' => 'bad_request', 'message' => (string)($body['error'] ?? 'invalid body')],
-                    'message' => '',
-                    'data' => null,
-                    'meta' => ['method' => 'POST', 'route' => 'encounters/{encounter_key}/documents'],
-                ], 400);
-                return;
+            $contentType = strtolower((string)($_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? ''));
+            $isMultipart = (strpos($contentType, 'multipart/form-data') !== false);
+            $payload = [];
+            $uploadFile = null;
+            if ($isMultipart) {
+                $payload = is_array($_POST) ? $_POST : [];
+                if (isset($payload['payload']) && is_string($payload['payload'])) {
+                    $payloadDecoded = json_decode((string)$payload['payload'], true);
+                    if (is_array($payloadDecoded)) {
+                        $payload['payload'] = $payloadDecoded;
+                    }
+                }
+                $uploadCandidate = $_FILES['file'] ?? null;
+                if (is_array($uploadCandidate) && (($uploadCandidate['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE)) {
+                    $uploadFile = $uploadCandidate;
+                    $uploadError = (int)($uploadFile['error'] ?? UPLOAD_ERR_NO_FILE);
+                    if ($uploadError !== UPLOAD_ERR_OK) {
+                        clinical_send_response([
+                            'ok' => false,
+                            'error' => ['code' => 'bad_request', 'message' => 'upload inválido'],
+                            'message' => '',
+                            'data' => null,
+                            'meta' => ['method' => 'POST', 'route' => 'encounters/{encounter_key}/documents'],
+                        ], 400);
+                        return;
+                    }
+                }
+            } else {
+                $body = clinical_read_json_body();
+                if (($body['ok'] ?? false) !== true) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => ['code' => 'bad_request', 'message' => (string)($body['error'] ?? 'invalid body')],
+                        'message' => '',
+                        'data' => null,
+                        'meta' => ['method' => 'POST', 'route' => 'encounters/{encounter_key}/documents'],
+                    ], 400);
+                    return;
+                }
+                $payload = is_array($body['data'] ?? null) ? $body['data'] : [];
             }
 
-            $payload = is_array($body['data'] ?? null) ? $body['data'] : [];
             $documentType = strtolower(trim((string)($payload['document_type'] ?? '')));
             $title = trim((string)($payload['title'] ?? ''));
             $summary = trim((string)($payload['summary'] ?? ''));
@@ -3318,6 +3613,18 @@ try {
                 }
 
                 $documentUuid = clinical_generate_document_uuid();
+                if (is_array($uploadFile)) {
+                    $fileMeta = clinical_optimize_uploaded_image($uploadFile, $documentUuid);
+                    $payloadData['render_mode'] = 'image';
+                    $payloadData['file'] = $fileMeta;
+                    if ($summary === '') {
+                        $summary = 'Imagen clínica';
+                    }
+                }
+                $payloadJson = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                if (!is_string($payloadJson)) {
+                    $payloadJson = '{}';
+                }
                 $now = gmdate('Y-m-d H:i:s');
                 $cols = clinical_table_columns($pdo, 'clinical_documents');
                 $values = [

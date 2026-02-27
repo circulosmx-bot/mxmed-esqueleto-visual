@@ -240,8 +240,12 @@ $payload = $document && is_array($content['payload'] ?? null) ? $content['payloa
 $payloadJson = $payload ? json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '';
 $renderedText = $document ? (string)($content['rendered_text'] ?? '') : '';
 
-$mimeType = strtolower(first_non_empty_string([$document, $content, $payload], ['mime_type', 'content_type', 'type', 'media_type']));
-$mediaSrc = first_non_empty_string([$payload, $content], ['url', 'src', 'file_url', 'pdf_url', 'image_url']);
+$fileMeta = is_array($payload['file'] ?? null) ? $payload['file'] : [];
+$optimizedMeta = is_array($fileMeta['optimized'] ?? null) ? $fileMeta['optimized'] : [];
+$thumbMeta = is_array($fileMeta['thumb'] ?? null) ? $fileMeta['thumb'] : [];
+$mimeType = strtolower(first_non_empty_string([$optimizedMeta, $fileMeta, $document, $content, $payload], ['mime', 'mime_type', 'content_type', 'type', 'media_type']));
+$mediaSrc = first_non_empty_string([$optimizedMeta, $fileMeta, $payload, $content], ['path', 'url', 'src', 'file_url', 'pdf_url', 'image_url']);
+$thumbSrc = first_non_empty_string([$thumbMeta], ['path', 'url', 'src']);
 $htmlInline = trim((string)($payload['html'] ?? ''));
 
 $currentHost = strtolower((string)parse_url(get_api_base(), PHP_URL_HOST));
@@ -334,6 +338,9 @@ if (!$embed) {
         <div class="head"><h5>Vista previa</h5></div>
         <div class="body">
           <img src="<?php echo h($mediaSrc); ?>" alt="Documento" class="img-fluid border rounded">
+          <?php if ($thumbSrc !== ''): ?>
+            <div class="small text-secondary mt-2">Miniatura disponible: <?php echo h($thumbSrc); ?></div>
+          <?php endif; ?>
         </div>
       </div>
     <?php elseif (($detectedMode === 'pdf' || $detectedMode === 'html_external') && $mediaSrc !== ''): ?>
