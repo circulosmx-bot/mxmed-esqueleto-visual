@@ -105,6 +105,39 @@ Perfil médico end-to-end:
 - Endpoint implementado: `POST /documents/{uuid}/replicate` (QA PASS).
 - UI implementada: `document.php` incluye acción **Replicar (crear copia)** en menú **Acciones**; llama al endpoint y redirige a `document.php?uuid=<new_uuid>` preservando parámetros embed (`carry_embed_params`).
 
+### A3 — PDF Viewer Minimalista (v1)
+
+Estado: ✅ QA PASS  
+Tag sugerido: mxmed-clinical-pdf-viewer-v1  
+
+#### Backend
+- Soporte upload `application/pdf`
+- Guarda archivo original en:
+  `storage/clinical_uploads/YYYY/MM/{uuid}-orig.pdf`
+- `render_mode = pdf`
+- Compatible con flujo existente de imágenes
+- No se modificó estructura DB
+
+#### UI
+- `viewer.php` soporta `render_mode=pdf`
+- iframe nativo del navegador
+- Layout app-like (100vh, flex vertical)
+- Acciones disponibles:
+  - Volver
+  - Descargar
+  - Imprimir
+  - Abrir en pestaña
+- Alias `doc_uuid` aceptado además de `uuid`
+
+#### QA realizado
+- Upload PDF vía multipart POST
+- Verificación GET encounter
+- Visualización iframe
+- Descarga funcional
+- Impresión funcional
+
+Este milestone no altera contratos existentes y mantiene compatibilidad total con imágenes.
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)
