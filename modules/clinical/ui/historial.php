@@ -71,12 +71,12 @@ function timeline_day_label(string $dayKey): string
 
 function timeline_item_catalog_meta(array $item): array
 {
-    $category = trim((string)($item['category'] ?? ''));
-    $subtype = trim((string)($item['subtype'] ?? ''));
-    if ($category !== '') {
-        return mxmed_clinical_timeline_catalog_entry($category, $subtype !== '' ? $subtype : 'unknown');
-    }
-    return classify_timeline_item($item);
+    $classification = classify_timeline_item($item);
+    $catalogV11 = classify_catalog_v11($item);
+
+    return array_merge($classification, $catalogV11, [
+        'chip_text' => mxmed_clinical_timeline_chip_text($item),
+    ]);
 }
 
 function timeline_item_uid(array $item): string
@@ -109,15 +109,15 @@ function timeline_category_summary(array $entries, int $limit = 3): array
             continue;
         }
         $meta = is_array($entry['category_meta'] ?? null) ? $entry['category_meta'] : [];
-        $category = trim((string)($meta['category'] ?? ''));
-        if ($category === '') {
+        $group = trim((string)($meta['catalog_group'] ?? ''));
+        if ($group === '') {
             continue;
         }
-        if (!isset($summary[$category])) {
-            $summary[$category] = [
-                'category' => $category,
-                'label' => (string)($meta['category_label'] ?? $category),
-                'priority' => (int)($meta['category_priority'] ?? 999),
+        if (!isset($summary[$group])) {
+            $summary[$group] = [
+                'catalog_group' => $group,
+                'label' => (string)($meta['catalog_group_label'] ?? $group),
+                'priority' => (int)($meta['catalog_priority'] ?? 999),
             ];
         }
     }
@@ -128,6 +128,106 @@ function timeline_category_summary(array $entries, int $limit = 3): array
         return (int)$a['priority'] <=> (int)$b['priority'];
     });
     return array_slice($summary, 0, $limit);
+}
+
+function timeline_activity_taxonomy_label(array $item, array $meta): string
+{
+    $groupLabel = trim((string)($meta['catalog_group_label'] ?? ''));
+    $phaseLabel = trim((string)($meta['catalog_phase_label'] ?? ''));
+    $subtypeLabel = trim((string)($meta['subtype_label'] ?? ''));
+    $parts = [];
+    if ($groupLabel !== '') {
+        $parts[] = $groupLabel;
+    }
+    if ($phaseLabel !== '') {
+        $parts[] = $phaseLabel;
+    } elseif ($subtypeLabel !== '') {
+        $parts[] = $subtypeLabel;
+    }
+    return implode(' · ', $parts);
+}
+
+function timeline_activity_title(array $item, array $meta): string
+{
+    $itemType = trim((string)($item['item_type'] ?? ''));
+    $subtype = trim((string)($meta['subtype'] ?? ''));
+    $group = trim((string)($meta['catalog_group'] ?? ''));
+    $phase = trim((string)($meta['catalog_phase'] ?? ''));
+    $document = is_array($item['clinical_document'] ?? null) ? $item['clinical_document'] : [];
+    $documentType = strtolower(trim((string)($document['document_type'] ?? '')));
+
+    if ($group === 'attention' && $subtype === 'appointment') {
+        return 'Cita';
+    }
+    if ($group === 'attention' && $subtype === 'encounter') {
+        return 'Atención';
+    }
+    if ($group === 'attention' && ($subtype === 'note' || $subtype === 'note_evolution' || $documentType === 'note' || $documentType === 'nota_evolucion')) {
+        return 'Nota de evolución';
+    }
+    if ($group === 'studies' && $phase === 'order') {
+        return 'Orden de estudio';
+    }
+    if ($group === 'studies' && $phase === 'result') {
+        return 'Resultado de estudio';
+    }
+    if ($group === 'media') {
+        return $documentType === 'image' ? 'Foto clínica' : 'Archivo';
+    }
+    if ($group === 'orders') {
+        return 'Órdenes';
+    }
+
+    $fallback = trim((string)($meta['subtype_label'] ?? $meta['catalog_group_label'] ?? 'Evento clinico'));
+    return $fallback !== '' ? $fallback : 'Evento clinico';
+}
+
+function timeline_activity_icon(array $item, array $meta): string
+{
+    $itemType = trim((string)($item['item_type'] ?? ''));
+    $group = trim((string)($meta['catalog_group'] ?? ''));
+    $phase = trim((string)($meta['catalog_phase'] ?? ''));
+    $document = is_array($item['clinical_document'] ?? null) ? $item['clinical_document'] : [];
+    $documentType = strtolower(trim((string)($document['document_type'] ?? '')));
+
+    if ($itemType === 'appointment') {
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"></rect><path d="M8 3v4M16 3v4M4 9h16"></path></svg>';
+    }
+    if ($itemType === 'encounter' || $group === 'attention') {
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4h6l1 2h2a2 2 0 0 1 2 2v9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V8a2 2 0 0 1 2-2h2z"></path><path d="M12 10v6M9 13h6"></path></svg>';
+    }
+    if ($group === 'studies' && $phase === 'result') {
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 4h10v6l-3 3v5a2 2 0 0 1-4 0v-5l-3-3z"></path><path d="M9 4v2M15 4v2"></path></svg>';
+    }
+    if ($group === 'studies') {
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 4v7l-4 7a2 2 0 0 0 1.8 3h8.4A2 2 0 0 0 18 18l-4-7V4"></path><path d="M8 4h8"></path></svg>';
+    }
+    if ($group === 'media' || $documentType === 'image') {
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="9" cy="10" r="1.5"></circle><path d="M21 16l-5-5-7 7"></path></svg>';
+    }
+    if ($group === 'orders') {
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 6h10M8 12h10M8 18h10"></path><path d="M4 6h.01M4 12h.01M4 18h.01"></path></svg>';
+    }
+
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"></rect><path d="M8 9h8M8 13h8M8 17h5"></path></svg>';
+}
+
+function timeline_activity_tooltip_lines(array $item, array $meta): array
+{
+    $lines = [];
+    $taxonomy = timeline_activity_taxonomy_label($item, $meta);
+    if ($taxonomy !== '') {
+        $lines[] = $taxonomy;
+    }
+    $eventDatetime = trim((string)($item['event_datetime'] ?? ''));
+    if ($eventDatetime !== '') {
+        $lines[] = $eventDatetime;
+    }
+    $caseTitle = trim((string)($item['case_title'] ?? ''));
+    if ($caseTitle !== '') {
+        $lines[] = 'Caso: ' . $caseTitle;
+    }
+    return array_slice($lines, 0, 3);
 }
 
 function render_embed_css(bool $embed): void
@@ -767,12 +867,12 @@ foreach ($renderEntries as $entry) {
     $dayGroups[$dayKey]['entries'][] = $entry;
 
     $categoryMeta = is_array($entry['category_meta'] ?? null) ? $entry['category_meta'] : [];
-    $category = trim((string)($categoryMeta['category'] ?? ''));
-    if ($category !== '') {
-        $availableCategoryFilters[$category] = [
-            'category' => $category,
-            'label' => (string)($categoryMeta['category_label'] ?? $category),
-            'priority' => (int)($categoryMeta['category_priority'] ?? 999),
+    $catalogGroup = trim((string)($categoryMeta['catalog_group'] ?? ''));
+    if ($catalogGroup !== '') {
+        $availableCategoryFilters[$catalogGroup] = [
+            'catalog_group' => $catalogGroup,
+            'label' => (string)($categoryMeta['catalog_group_label'] ?? $catalogGroup),
+            'priority' => (int)($categoryMeta['catalog_priority'] ?? 999),
         ];
     }
 }
@@ -786,7 +886,7 @@ usort($availableCategoryFilters, static function (array $a, array $b): int {
     }
     return (int)$a['priority'] <=> (int)$b['priority'];
 });
-$timelineCategoryPriorityMap = mxmed_clinical_timeline_category_priority_map();
+$timelineCategoryPriorityMap = mxmed_clinical_timeline_group_priority_map();
 
 $buildCursorHref = static function (string $nextCursor) use ($patientId, $include, $limit, $direction): string {
     $params = [
@@ -882,14 +982,75 @@ $extraHead = <<<'HTML'
       gap:.65rem;
     }
     .clinical-historial .timeline-event{
-      border: 1px solid rgba(0,0,0,.08);
-      border-radius: .8rem;
+      border: 0;
+      background: transparent;
+    }
+    .clinical-historial .mm-activity-item{
+      display:flex;
+      align-items:flex-start;
+      gap:12px;
+      border:1px solid #e5e7eb;
+      border-radius:10px;
+      padding:12px 14px;
       background:#fff;
+      transition:all .15s ease;
+      cursor:pointer;
+    }
+    .clinical-historial .mm-activity-item:hover{
+      box-shadow:0 4px 14px rgba(0,0,0,.06);
+      border-color:#d1d5db;
+    }
+    .clinical-historial .mm-activity-icon{
+      width:24px;
+      height:24px;
+      flex-shrink:0;
+      color:#374151;
+    }
+    .clinical-historial .mm-activity-icon svg{
+      width:24px;
+      height:24px;
+      display:block;
+    }
+    .clinical-historial .mm-activity-body{
+      flex:1;
+      min-width:0;
+    }
+    .clinical-historial .mm-activity-title{
+      font-weight:600;
+      font-size:.95rem;
+      line-height:1.2;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .clinical-historial .mm-activity-meta{
+      font-size:.8rem;
+      color:#6b7280;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      margin-top:2px;
+    }
+    .clinical-historial .mm-activity-badge{
+      font-size:.65rem;
+    }
+    .clinical-historial .mm-activity-day-header{
+      font-weight:600;
+      font-size:.9rem;
+      color:#6b7280;
+      margin-bottom:8px;
+    }
+    .clinical-historial .mm-activity-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:.4rem;
+      margin-top:.55rem;
     }
     .clinical-historial .timeline-taxonomy-chip{
       border-radius:999px;
       font-weight:600;
-      padding:.32rem .58rem;
+      padding:.24rem .5rem;
+      font-size:.72rem;
     }
     .clinical-historial .timeline-category-summary{
       display:flex;
@@ -942,6 +1103,10 @@ $extraHead = <<<'HTML'
       border: 0;
       flex: 1 1 auto;
       background: #fff;
+    }
+    .tooltip .tooltip-inner{
+      white-space:pre-line;
+      text-align:left;
     }
   </style>
 HTML;
@@ -1082,7 +1247,7 @@ if (!$embed) {
     <div class="timeline-category-filters" data-role="timeline-category-filters">
       <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary active" data-action="set-category-filter" data-category-filter="all">Todo</button>
       <?php foreach ($availableCategoryFilters as $categoryFilter): ?>
-        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-category-filter" data-category-filter="<?php echo h((string)$categoryFilter['category']); ?>">
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-category-filter" data-category-filter="<?php echo h((string)$categoryFilter['catalog_group']); ?>">
           <?php echo h((string)$categoryFilter['label']); ?>
         </button>
       <?php endforeach; ?>
@@ -1093,7 +1258,7 @@ if (!$embed) {
         <section class="timeline-day-card" data-day-card="1" data-day-key="<?php echo h((string)$dayGroup['day_key']); ?>">
           <div class="timeline-day-header">
             <div>
-              <div class="small text-secondary">Atencion del dia</div>
+              <div class="mm-activity-day-header">Atención del día</div>
               <div class="fw-semibold"><?php echo h((string)$dayGroup['day_label']); ?></div>
             </div>
             <div class="timeline-category-summary" data-role="day-category-summary">
@@ -1101,9 +1266,9 @@ if (!$embed) {
                 <span
                   class="badge rounded-pill text-bg-light border"
                   data-category-summary-item="1"
-                  data-category="<?php echo h((string)$summaryCategory['category']); ?>"
-                  data-category-label="<?php echo h((string)$summaryCategory['label']); ?>"
-                  data-category-priority="<?php echo (int)$summaryCategory['priority']; ?>"
+                  data-catalog-group="<?php echo h((string)$summaryCategory['catalog_group']); ?>"
+                  data-catalog-group-label="<?php echo h((string)$summaryCategory['label']); ?>"
+                  data-catalog-priority="<?php echo (int)$summaryCategory['priority']; ?>"
                 ><?php echo h((string)$summaryCategory['label']); ?></span>
               <?php endforeach; ?>
             </div>
@@ -1115,9 +1280,17 @@ if (!$embed) {
               $categoryMeta = is_array($entry['category_meta'] ?? null) ? $entry['category_meta'] : [];
               $entryCategory = trim((string)($categoryMeta['category'] ?? 'other'));
               $entrySubtype = trim((string)($categoryMeta['subtype'] ?? 'unknown'));
-              $entryCategoryLabel = trim((string)($categoryMeta['category_label'] ?? 'Otros'));
-              $entrySubtypeLabel = trim((string)($categoryMeta['subtype_label'] ?? 'Sin clasificar'));
-              $entryCategoryPriority = (int)($categoryMeta['category_priority'] ?? 999);
+              $entryCatalogGroup = trim((string)($categoryMeta['catalog_group'] ?? 'other'));
+              $entryCatalogPhase = trim((string)($categoryMeta['catalog_phase'] ?? ''));
+              $entryCatalogGroupLabel = trim((string)($categoryMeta['catalog_group_label'] ?? 'Otros'));
+              $entryCatalogPhaseLabel = trim((string)($categoryMeta['catalog_phase_label'] ?? ''));
+              $entryCatalogPriority = (int)($categoryMeta['catalog_priority'] ?? 999);
+              $entryChipText = trim((string)($categoryMeta['chip_text'] ?? $entryCatalogGroupLabel));
+              $entryTitle = timeline_activity_title($entryItem, $categoryMeta);
+              $entryIcon = timeline_activity_icon($entryItem, $categoryMeta);
+              $entryTooltipLines = timeline_activity_tooltip_lines($entryItem, $categoryMeta);
+              $entryTooltipText = implode("\n", $entryTooltipLines);
+              $entryTooltipFallback = implode(' • ', $entryTooltipLines);
               ?>
               <?php if (($entry['kind'] ?? '') === 'appointment'): ?>
                 <?php
@@ -1143,60 +1316,42 @@ if (!$embed) {
                     $appointmentEpisodeId = trim((string)$appointmentEpisodeId);
                 }
                 ?>
-                <article class="mm-card timeline-event <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($itemCaseId); ?>" data-in-active-case="<?php echo $isInActiveCase ? '1' : '0'; ?>" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-category-label="<?php echo h($entryCategoryLabel); ?>" data-category-priority="<?php echo $entryCategoryPriority; ?>">
-                  <div class="body">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                      <div class="d-flex flex-wrap align-items-center gap-2">
-                        <span class="mm-badge <?php echo $isInActiveCase ? 'mm-badge-ok' : 'mm-badge-muted'; ?>" data-role="case-badge">
-                          <?php echo $isInActiveCase ? 'En caso activo' : 'Fuera de caso'; ?>
-                        </span>
-                        <?php if ($isInActiveCase): ?>
-                          <span class="badge text-bg-info">Caso: <?php echo h((string)($item['case_title'] ?? '')); ?></span>
-                        <?php endif; ?>
-                        <span class="badge rounded-pill text-bg-light border timeline-taxonomy-chip"><?php echo h($entryCategoryLabel); ?></span>
-                        <?php if ($entrySubtype !== 'unknown' && $entrySubtypeLabel !== '' && $entrySubtypeLabel !== $entryCategoryLabel): ?>
-                          <span class="badge rounded-pill text-bg-light border timeline-taxonomy-chip"><?php echo h($entrySubtypeLabel); ?></span>
+                <article class="mm-card timeline-event mm-activity-item <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($itemCaseId); ?>" data-in-active-case="<?php echo $isInActiveCase ? '1' : '0'; ?>" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
+                  <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
+                  <div class="mm-activity-body">
+                    <div class="d-flex align-items-start justify-content-between gap-2">
+                      <div class="min-w-0 flex-grow-1">
+                        <div class="mm-activity-title"><?php echo h($entryTitle); ?></div>
+                        <?php if (trim((string)($item['case_title'] ?? '')) !== ''): ?>
+                          <div class="mm-activity-meta"><?php echo h((string)$item['case_title']); ?></div>
                         <?php endif; ?>
                       </div>
-                      <div class="d-flex flex-wrap gap-2">
-                        <?php if (!$isInActiveCase && $appointmentRef !== ''): ?>
-                          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-to-case" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>">Integrar a caso clínico</button>
-                        <?php endif; ?>
-                        <?php if (!$isInActiveCase && is_array($activeCase) && $appointmentRef !== ''): ?>
-                          <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
-                            <input type="hidden" name="action" value="add_active_case_appointment">
-                            <input type="hidden" name="encounter_key" value="<?php echo h($appointmentEncounterKey); ?>">
-                            <button type="submit" class="mm-btn mm-btn-sm mm-btn-outline-success">Agregar a caso activo</button>
-                          </form>
-                        <?php endif; ?>
-                      </div>
+                      <?php if ($isInActiveCase): ?>
+                        <span class="badge rounded-pill text-bg-success mm-activity-badge">Activo</span>
+                      <?php endif; ?>
                     </div>
-                    <div class="d-flex flex-wrap gap-3 small mb-2">
-                      <span><strong>Tipo:</strong> appointment</span>
-                      <span><strong>Fecha:</strong> <?php echo h((string)($item['event_datetime'] ?? '-')); ?></span>
-                      <span class="text-break"><strong>Atención:</strong> <?php echo h((string)($item['encounter_key'] ?? '-')); ?></span>
-                    </div>
-                    <div class="small text-secondary">
-                      status: <?php echo h((string)($agenda['status'] ?? '-')); ?> |
-                      start_at: <?php echo h((string)($agenda['start_at'] ?? '-')); ?> |
-                      end_at: <?php echo h((string)($agenda['end_at'] ?? '-')); ?> |
-                      modality: <?php echo h((string)($agenda['modality'] ?? '-')); ?> |
-                      channel_origin: <?php echo h((string)($agenda['channel_origin'] ?? '-')); ?>
-                    </div>
-                    <?php if ($appointmentEncounterKey !== ''): ?>
-                      <div class="mt-2" data-role="appointment-episode-cta" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>">
+                    <div class="mm-activity-actions" data-role="appointment-episode-cta" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>">
+                      <?php if ($appointmentEncounterKey !== ''): ?>
                         <?php if ($appointmentHasEncounter && $appointmentLatestEncounterKey !== ''): ?>
                           <a class="mm-btn mm-btn-sm mm-btn-outline-primary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $appointmentLatestEncounterKey])); ?>" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($appointmentLatestEncounterKey); ?>">Ver atención</a>
                         <?php else: ?>
                           <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" disabled title="Sin atención registrada para esta cita">Sin atención</button>
                         <?php endif; ?>
-                      </div>
-                    <?php endif; ?>
-                    <?php if (trim((string)($links['appointment_id'] ?? '')) !== ''): ?>
-                      <div class="mt-2">
-                        <a class="mm-btn mm-btn-sm mm-btn-outline-primary" href="/index.html#p-agenda">Ver cita</a>
-                      </div>
-                    <?php endif; ?>
+                      <?php endif; ?>
+                      <?php if (trim((string)($links['appointment_id'] ?? '')) !== ''): ?>
+                        <a class="mm-btn mm-btn-sm mm-btn-outline-secondary" href="/index.html#p-agenda">Ver cita</a>
+                      <?php endif; ?>
+                      <?php if (!$isInActiveCase && $appointmentRef !== ''): ?>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-to-case" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>">Integrar a caso clínico</button>
+                      <?php endif; ?>
+                      <?php if (!$isInActiveCase && is_array($activeCase) && $appointmentRef !== ''): ?>
+                        <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
+                          <input type="hidden" name="action" value="add_active_case_appointment">
+                          <input type="hidden" name="encounter_key" value="<?php echo h($appointmentEncounterKey); ?>">
+                          <button type="submit" class="mm-btn mm-btn-sm mm-btn-outline-success">Agregar a caso activo</button>
+                        </form>
+                      <?php endif; ?>
+                    </div>
                   </div>
                 </article>
               <?php elseif (($entry['kind'] ?? '') === 'encounter'): ?>
@@ -1229,126 +1384,36 @@ if (!$embed) {
                 $encHasEncounter = (bool)($rawEncounter['has_encounter'] ?? true);
                 $encLatestEncounterKey = trim((string)($rawEncounter['latest_encounter_key'] ?? $ek));
                 ?>
-                <article class="mm-card timeline-event <?php echo $encInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($encCaseId); ?>" data-in-active-case="<?php echo $encInActiveCase ? '1' : '0'; ?>" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>" data-encounter-key="<?php echo h($ek); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-category-label="<?php echo h($entryCategoryLabel); ?>" data-category-priority="<?php echo $entryCategoryPriority; ?>">
-                  <div class="body">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                      <div class="d-flex flex-wrap align-items-center gap-2">
-                        <span class="mm-badge <?php echo $encInActiveCase ? 'mm-badge-ok' : 'mm-badge-muted'; ?>" data-role="case-badge">
-                          <?php echo $encInActiveCase ? 'En caso activo' : 'Fuera de caso'; ?>
-                        </span>
-                        <?php if ($encInActiveCase): ?>
-                          <span class="badge text-bg-info">Caso: <?php echo h((string)($rawEncounter['case_title'] ?? '')); ?></span>
-                        <?php endif; ?>
-                        <span class="badge rounded-pill text-bg-light border timeline-taxonomy-chip"><?php echo h($entryCategoryLabel); ?></span>
-                        <?php if ($entrySubtype !== 'unknown' && $entrySubtypeLabel !== '' && $entrySubtypeLabel !== $entryCategoryLabel): ?>
-                          <span class="badge rounded-pill text-bg-light border timeline-taxonomy-chip"><?php echo h($entrySubtypeLabel); ?></span>
+                <article class="mm-card timeline-event mm-activity-item <?php echo $encInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($encCaseId); ?>" data-in-active-case="<?php echo $encInActiveCase ? '1' : '0'; ?>" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>" data-encounter-key="<?php echo h($ek); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
+                  <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
+                  <div class="mm-activity-body">
+                    <div class="d-flex align-items-start justify-content-between gap-2">
+                      <div class="min-w-0 flex-grow-1">
+                        <div class="mm-activity-title"><?php echo h($entryTitle); ?></div>
+                        <?php if (trim((string)($rawEncounter['case_title'] ?? '')) !== ''): ?>
+                          <div class="mm-activity-meta"><?php echo h((string)$rawEncounter['case_title']); ?></div>
                         <?php endif; ?>
                       </div>
-                      <div class="d-flex flex-wrap gap-2">
-                        <?php if (!$encInActiveCase && $ek !== ''): ?>
-                          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-to-case" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>">Integrar a caso clínico</button>
-                        <?php endif; ?>
-                        <?php if (!$encInActiveCase && is_array($activeCase) && $ek !== ''): ?>
-                          <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
-                            <input type="hidden" name="action" value="add_active_case_appointment">
-                            <input type="hidden" name="encounter_key" value="<?php echo h($ek); ?>">
-                            <button type="submit" class="mm-btn mm-btn-sm mm-btn-outline-success">Agregar a caso activo</button>
-                          </form>
-                        <?php endif; ?>
-                      </div>
+                      <?php if ($encInActiveCase): ?>
+                        <span class="badge rounded-pill text-bg-success mm-activity-badge">Activo</span>
+                      <?php endif; ?>
                     </div>
-                    <div class="d-flex flex-wrap gap-3 small mb-2">
-                      <span><strong>Tipo:</strong> encounter</span>
-                      <span><strong>Fecha:</strong> <?php echo h((string)($encounter['event_datetime'] ?: '-')); ?></span>
-                      <span class="text-break"><strong>Atención:</strong> <?php echo h($ek); ?></span>
-                    </div>
-                    <div class="d-flex flex-wrap gap-2 mb-2">
-                      <span class="mm-chip <?php echo $hasVitals ? 'is-on' : 'is-off'; ?>" title="<?php echo $hasVitals ? 'Tiene signos vitales' : 'Sin signos vitales'; ?>"><span class="dot"></span>Signos</span>
-                      <span class="mm-chip <?php echo $hasNote ? 'is-on' : 'is-off'; ?>" title="<?php echo $hasNote ? 'Tiene nota clínica' : 'Sin nota clínica'; ?>"><span class="dot"></span>Nota</span>
-                      <span class="mm-chip <?php echo $hasPrescription ? 'is-on' : 'is-off'; ?>" title="<?php echo $hasPrescription ? 'Tiene receta' : 'Sin receta'; ?>"><span class="dot"></span>Rx</span>
-                      <span class="mm-chip <?php echo $hasOrders ? 'is-on' : 'is-off'; ?>" title="<?php echo $hasOrders ? 'Tiene órdenes' : 'Sin órdenes'; ?>"><span class="dot"></span>Órdenes</span>
-                      <span class="mm-chip <?php echo $hasResults ? 'is-on' : 'is-off'; ?>" title="<?php echo $hasResults ? 'Tiene resultados' : 'Sin resultados'; ?>"><span class="dot"></span>Resultados</span>
-                    </div>
-                    <?php if ($encounterDocCount > 0): ?>
-                      <div class="small text-secondary">
-                        documentos: <?php echo (int)$encounterDocCount; ?>
-                        <?php if ($types !== []): ?>
-                          | tipos: <?php echo h(implode(', ', array_keys($types))); ?>
-                        <?php endif; ?>
-                      </div>
-                    <?php endif; ?>
-                    <?php if ($ek !== ''): ?>
-                      <div class="mt-2">
+                    <div class="mm-activity-actions">
+                      <?php if ($ek !== ''): ?>
                         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-encounter-detail" data-encounter-key="<?php echo h($ek); ?>">Ver detalle</button>
                         <?php if ($encHasEncounter && $encLatestEncounterKey !== ''): ?>
                           <a class="mm-btn mm-btn-sm mm-btn-outline-primary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $encLatestEncounterKey])); ?>" data-role="encounter-episode-link" data-episode-link="1" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($encLatestEncounterKey); ?>">Ver atención</a>
                         <?php endif; ?>
-                        <?php if ($encInActiveCase): ?>
-                          <span class="badge text-bg-success">Caso activo</span>
-                        <?php endif; ?>
-                      </div>
-                    <?php endif; ?>
-                    <?php if ($encounterDocCount > 0): ?>
-                      <div class="mt-3">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                          <div class="small fw-semibold">Documentos: <?php echo (int)$encounterDocCount; ?></div>
-                          <?php if ($encounterDocCount > 3): ?>
-                            <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-encounter-detail" data-encounter-key="<?php echo h($ek); ?>">Ver todos (<?php echo (int)$encounterDocCount; ?>)</button>
-                          <?php endif; ?>
-                        </div>
-                        <div class="encounter-doc-preview">
-                          <?php foreach ($encounterPreviewDocs as $pdoc): ?>
-                            <?php
-                            $pType = trim((string)($pdoc['document_type'] ?? '-'));
-                            $pSummary = trim((string)($pdoc['summary'] ?? ''));
-                            $pEvent = trim((string)($pdoc['event_datetime'] ?? ''));
-                            $pDateShort = ($pEvent !== '') ? substr($pEvent, 0, 16) : '-';
-                            ?>
-                            <div class="doc-line">
-                              <div><strong><?php echo h($pType); ?></strong> · <span class="text-secondary"><?php echo h($pDateShort); ?></span></div>
-                              <div class="text-secondary"><?php echo h($pSummary !== '' ? $pSummary : '-'); ?></div>
-                            </div>
-                          <?php endforeach; ?>
-                        </div>
-                      </div>
-                    <?php endif; ?>
-                    <div class="mt-3">
-                      <div class="small fw-semibold mb-2">Documentos asociados</div>
-                      <?php if ($docsInEncounter === []): ?>
-                        <div class="small text-secondary">Sin documentos asociados</div>
-                      <?php else: ?>
-                        <div class="vstack gap-2">
-                          <?php foreach ($docsInEncounter as $docItem): ?>
-                            <?php
-                            $doc = is_array($docItem['clinical_document'] ?? null) ? $docItem['clinical_document'] : [];
-                            $links = is_array($docItem['links'] ?? null) ? $docItem['links'] : [];
-                            $docUuid = trim((string)($links['document_uuid'] ?? ''));
-                            $docTypeNorm = strtolower(trim((string)($doc['document_type'] ?? '')));
-                            $docPayload = is_array($doc['payload'] ?? null) ? $doc['payload'] : [];
-                            $docFilePayload = is_array($docPayload['file'] ?? null) ? $docPayload['file'] : [];
-                            $docRenderMode = strtolower(trim((string)($doc['render_mode'] ?? ($docFilePayload['render_mode'] ?? ''))));
-                            $docIsImage = ($docTypeNorm === 'image' || $docRenderMode === 'image');
-                            $docViewPath = $docIsImage ? '/modules/clinical/ui/viewer.php' : '/modules/clinical/ui/document.php';
-                            $docViewLabel = $docIsImage ? 'Ver imagen' : 'Ver documento';
-                            ?>
-                            <div class="border rounded p-2 small" data-item-type="document" data-document-uuid="<?php echo h($docUuid); ?>">
-                              <?php if (!empty($docItem['case_id'])): ?>
-                                <div class="mb-1"><span class="badge text-bg-info">Caso: <?php echo h((string)($docItem['case_title'] ?? '')); ?></span></div>
-                              <?php elseif ($activeCaseId !== '' && $docUuid !== ''): ?>
-                                <div class="mb-1">
-                                  <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-success" data-action="assign-case-item" data-case-id="<?php echo h($activeCaseId); ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Agregar a caso activo</button>
-                                </div>
-                              <?php endif; ?>
-                              <div><strong><?php echo h((string)($doc['document_type'] ?? '-')); ?></strong></div>
-                              <div class="text-secondary"><?php echo h((string)($doc['summary'] ?? '-')); ?></div>
-                              <?php if ($docUuid !== ''): ?>
-                                <div class="mt-1">
-                                  <a class="mm-btn mm-btn-sm mm-btn-outline-secondary" href="<?php echo h($docViewPath); ?>?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>" data-embed-nav data-nav-mode="document" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>" data-uuid="<?php echo h($docUuid); ?>"><?php echo $docViewLabel; ?></a>
-                                </div>
-                              <?php endif; ?>
-                            </div>
-                          <?php endforeach; ?>
-                        </div>
+                      <?php endif; ?>
+                      <?php if (!$encInActiveCase && $ek !== ''): ?>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-to-case" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>">Integrar a caso clínico</button>
+                      <?php endif; ?>
+                      <?php if (!$encInActiveCase && is_array($activeCase) && $ek !== ''): ?>
+                        <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
+                          <input type="hidden" name="action" value="add_active_case_appointment">
+                          <input type="hidden" name="encounter_key" value="<?php echo h($ek); ?>">
+                          <button type="submit" class="mm-btn mm-btn-sm mm-btn-outline-success">Agregar a caso activo</button>
+                        </form>
                       <?php endif; ?>
                     </div>
                   </div>
@@ -1369,38 +1434,31 @@ if (!$embed) {
                 $docViewPath = $docIsImage ? '/modules/clinical/ui/viewer.php' : '/modules/clinical/ui/document.php';
                 $docViewLabel = $docIsImage ? 'Ver imagen' : 'Ver documento';
                 ?>
-                <article class="mm-card timeline-event <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>" data-document-uuid="<?php echo h($docUuid); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-category-label="<?php echo h($entryCategoryLabel); ?>" data-category-priority="<?php echo $entryCategoryPriority; ?>">
-                  <div class="body">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                      <div class="d-flex flex-wrap align-items-center gap-2">
-                        <span class="mm-badge <?php echo $docInActiveCase ? 'mm-badge-ok' : 'mm-badge-muted'; ?>" data-role="case-badge">
-                          <?php echo $docInActiveCase ? 'En caso activo' : 'Fuera de caso'; ?>
-                        </span>
-                        <?php if ($docInActiveCase): ?>
-                          <span class="badge text-bg-info">Caso: <?php echo h((string)($docItem['case_title'] ?? '')); ?></span>
-                        <?php endif; ?>
-                        <span class="badge rounded-pill text-bg-light border timeline-taxonomy-chip"><?php echo h($entryCategoryLabel); ?></span>
-                        <?php if ($entrySubtype !== 'unknown' && $entrySubtypeLabel !== '' && $entrySubtypeLabel !== $entryCategoryLabel): ?>
-                          <span class="badge rounded-pill text-bg-light border timeline-taxonomy-chip"><?php echo h($entrySubtypeLabel); ?></span>
+                <article class="mm-card timeline-event mm-activity-item <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>" data-document-uuid="<?php echo h($docUuid); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
+                  <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
+                  <div class="mm-activity-body">
+                    <div class="d-flex align-items-start justify-content-between gap-2">
+                      <div class="min-w-0 flex-grow-1">
+                        <div class="mm-activity-title"><?php echo h($entryTitle); ?></div>
+                        <?php if (trim((string)($docItem['case_title'] ?? '')) !== ''): ?>
+                          <div class="mm-activity-meta"><?php echo h((string)$docItem['case_title']); ?></div>
                         <?php endif; ?>
                       </div>
+                      <?php if ($docInActiveCase): ?>
+                        <span class="badge rounded-pill text-bg-success mm-activity-badge">Activo</span>
+                      <?php endif; ?>
+                    </div>
+                    <div class="mm-activity-actions">
+                      <?php if ($docUuid !== ''): ?>
+                        <a class="mm-btn mm-btn-sm mm-btn-outline-primary" href="<?php echo h($docViewPath); ?>?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>" data-embed-nav data-nav-mode="document" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>" data-uuid="<?php echo h($docUuid); ?>"><?php echo $docViewLabel; ?></a>
+                      <?php endif; ?>
+                      <?php if (!$docInActiveCase && $docUuid !== ''): ?>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-to-case" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Integrar a caso clínico</button>
+                      <?php endif; ?>
                       <?php if (!$docInActiveCase && $activeCaseId !== '' && $docUuid !== ''): ?>
                         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-success" data-action="assign-case-item" data-case-id="<?php echo h($activeCaseId); ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Agregar a caso activo</button>
                       <?php endif; ?>
                     </div>
-                    <div class="d-flex flex-wrap gap-3 small mb-2">
-                      <span><strong>Tipo:</strong> document</span>
-                      <span><strong>Fecha:</strong> <?php echo h((string)($docItem['event_datetime'] ?? '-')); ?></span>
-                    </div>
-                    <div class="small text-secondary">
-                      document_type: <?php echo h((string)($doc['document_type'] ?? '-')); ?> |
-                      summary: <?php echo h((string)($doc['summary'] ?? '-')); ?>
-                    </div>
-                    <?php if ($docUuid !== ''): ?>
-                      <div class="mt-2">
-                        <a class="mm-btn mm-btn-sm mm-btn-outline-primary" href="<?php echo h($docViewPath); ?>?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>" data-embed-nav data-nav-mode="document" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>" data-uuid="<?php echo h($docUuid); ?>"><?php echo $docViewLabel; ?></a>
-                      </div>
-                    <?php endif; ?>
                   </div>
                 </article>
               <?php endif; ?>
@@ -1615,6 +1673,17 @@ if (!$embed) {
       });
     }
 
+    function initActivityTooltips() {
+      if (!window.bootstrap || !window.bootstrap.Tooltip) return;
+      var nodes = document.querySelectorAll('.mm-activity-item[data-bs-toggle="tooltip"]');
+      nodes.forEach(function (node) {
+        window.bootstrap.Tooltip.getOrCreateInstance(node, {
+          trigger: 'hover focus',
+          container: 'body'
+        });
+      });
+    }
+
     function applyTimelineCategoryFilter() {
       if (!categoryFilterWrap) return;
       var buttons = categoryFilterWrap.querySelectorAll('[data-action="set-category-filter"]');
@@ -1636,13 +1705,13 @@ if (!$embed) {
         if (!summaryWrap) return;
         var categoryMap = {};
         visibleEvents.forEach(function (item) {
-          var category = String(item.getAttribute('data-category') || '').trim();
+          var category = String(item.getAttribute('data-catalog-group') || '').trim();
           if (!category) return;
           if (!categoryMap[category]) {
             categoryMap[category] = {
               category: category,
-              label: String(item.getAttribute('data-category-label') || category).trim(),
-              priority: Number(item.getAttribute('data-category-priority') || categoryPriorityMap[category] || 999)
+              label: String(item.getAttribute('data-catalog-group-label') || category).trim(),
+              priority: Number(item.getAttribute('data-catalog-priority') || categoryPriorityMap[category] || 999)
             };
           }
         });
@@ -1656,9 +1725,9 @@ if (!$embed) {
           var chip = document.createElement('span');
           chip.className = 'badge rounded-pill text-bg-light border';
           chip.setAttribute('data-category-summary-item', '1');
-          chip.setAttribute('data-category', meta.category);
-          chip.setAttribute('data-category-label', meta.label);
-          chip.setAttribute('data-category-priority', String(meta.priority));
+          chip.setAttribute('data-catalog-group', meta.category);
+          chip.setAttribute('data-catalog-group-label', meta.label);
+          chip.setAttribute('data-catalog-priority', String(meta.priority));
           chip.textContent = meta.label;
           summaryWrap.appendChild(chip);
         });
@@ -1670,7 +1739,7 @@ if (!$embed) {
       var visibleCount = 0;
       timelineItems.forEach(function (item) {
         var inActiveCase = String(item.getAttribute('data-in-active-case') || '').trim() === '1';
-        var itemCategory = String(item.getAttribute('data-category') || '').trim();
+        var itemCategory = String(item.getAttribute('data-catalog-group') || '').trim();
         var hide = false;
 
         if (onlyActiveCaseEnabled && activeCaseId !== '') {
@@ -2545,6 +2614,22 @@ if (!$embed) {
         return;
       }
 
+      var activityItem = event.target && event.target.closest ? event.target.closest('.mm-activity-item[data-timeline-item="1"]') : null;
+      if (activityItem) {
+        var interactiveParent = event.target && event.target.closest
+          ? event.target.closest('a, button, input, label, form, textarea, select')
+          : null;
+        if (interactiveParent) {
+          return;
+        }
+        var primaryAction = activityItem.querySelector('[data-action="open-encounter-detail"], [data-nav-mode="document"][data-uuid], [data-nav-mode="encounter"][data-encounter-key], a[href]');
+        if (primaryAction && typeof primaryAction.click === 'function') {
+          event.preventDefault();
+          primaryAction.click();
+        }
+        return;
+      }
+
       var assignRecentBtn = event.target && event.target.closest ? event.target.closest('[data-action="assign-recent-to-active-case"]') : null;
       if (assignRecentBtn) {
         event.preventDefault();
@@ -2655,6 +2740,7 @@ if (!$embed) {
     if (patientId) {
       loadActiveCase(patientId).catch(function () {});
     }
+    initActivityTooltips();
     applyOnlyActiveCaseFilter();
     renderRecentSuggestion();
   })();
