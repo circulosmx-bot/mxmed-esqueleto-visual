@@ -45,6 +45,15 @@ function appointment_id_from_encounter_key(string $encounterKey): string
     return trim((string)$value);
 }
 
+function timeline_date_only(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+    return substr($value, 0, 10);
+}
+
 function render_embed_css(bool $embed): void
 {
     if (!$embed) {
@@ -524,8 +533,12 @@ foreach ($items as $item) {
     if ($appt !== '') {
         $key = 'appt:' . $appt;
         if (isset($encounters[$key])) {
-            $encounters[$key]['documents'][] = $item;
-            continue;
+            $documentDt = timeline_date_only((string)($item['event_datetime'] ?? ''));
+            $encounterDt = timeline_date_only((string)($encounters[$key]['event_datetime'] ?? ''));
+            if ($documentDt !== '' && $encounterDt !== '' && $documentDt === $encounterDt) {
+                $encounters[$key]['documents'][] = $item;
+                continue;
+            }
         }
     }
     $orphanDocs[] = $item;

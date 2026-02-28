@@ -1012,6 +1012,16 @@ function clinical_timeline_decode_cursor(string $cursor): array
     ];
 }
 
+function clinical_timeline_date_only(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+
+    return substr($value, 0, 10);
+}
+
 function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $limit, ?string $cursorDt, ?string $cursorUuid): array
 {
     $baseSelect = "
@@ -1020,6 +1030,17 @@ function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $lim
             document_type,
             summary,
             event_datetime,
+            hospital_stay_id
+        FROM clinical_documents
+        WHERE patient_id = :patient_id
+    ";
+    $baseSelectWithAppointment = "
+        SELECT
+            document_uuid,
+            document_type,
+            summary,
+            event_datetime,
+            appointment_id,
             hospital_stay_id
         FROM clinical_documents
         WHERE patient_id = :patient_id
@@ -1049,7 +1070,7 @@ function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $lim
         return is_array($rows) ? $rows : [];
     };
 
-    $sqlWithAppointment = $baseSelect . " AND appointment_id IS NULL " . $cursorClause . $orderLimit;
+    $sqlWithAppointment = $baseSelectWithAppointment . " AND appointment_id IS NULL " . $cursorClause . $orderLimit;
     $params = $paramsBase;
     if ($cursorDt !== null && $cursorUuid !== null) {
         $params[':cursor_dt'] = $cursorDt;
@@ -1077,6 +1098,35 @@ function clinical_timeline_encounter_key_from_datetime(string $eventDatetime): s
         return 'dt:00000000T0000:bucket60';
     }
     return 'dt:' . gmdate('Ymd\THi', $ts) . ':bucket60';
+}
+
+function clinical_timeline_document_item_from_row(array $row, string $patientId, ?int $encounterId = null): array
+{
+    $eventDatetime = (string)($row['event_datetime'] ?? '');
+    $documentUuid = (string)($row['document_uuid'] ?? '');
+    $appointmentId = trim((string)($row['appointment_id'] ?? ''));
+    $resolvedEncounterId = (int)($encounterId ?? 0);
+
+    return [
+        'item_type' => 'document',
+        'ref' => ($documentUuid !== '' ? ('doc:' . $documentUuid) : null),
+        'encounter_key' => clinical_timeline_encounter_key_from_datetime($eventDatetime),
+        'event_datetime' => $eventDatetime,
+        'sort_datetime' => $eventDatetime,
+        'sort_key' => 'doc:' . $documentUuid,
+        'links' => [
+            'patient_id' => $patientId,
+            'appointment_id' => ($appointmentId !== '' ? $appointmentId : null),
+            'document_uuid' => $documentUuid,
+            'encounter_id' => ($resolvedEncounterId > 0 ? $resolvedEncounterId : null),
+            'hospital_stay_id' => $row['hospital_stay_id'] ?? null,
+        ],
+        'clinical_document' => [
+            'document_uuid' => $documentUuid,
+            'document_type' => (string)($row['document_type'] ?? ''),
+            'summary' => (string)($row['summary'] ?? ''),
+        ],
+    ];
 }
 
 function clinical_timeline_extract_appointment_id(array $timelineItem): string
@@ -1911,6 +1961,7 @@ try {
             $encounterItems = [];
             $appointmentItems = [];
             $documentItems = [];
+            $documentItemSeen = [];
             $encounterAppointmentMap = [];
             $latestEncounterIdByAppointment = [];
 
@@ -1954,14 +2005,29 @@ try {
                         $appointmentId,
                         $isLatestByAppointment
                     );
+                    $encounterDate = clinical_timeline_date_only($encounterDt);
                     $docItems = [];
                     foreach ($encounterDocs as $docRow) {
-                        $docItems[] = [
+                        $docItem = [
                             'document_uuid' => (string)($docRow['document_uuid'] ?? ''),
                             'document_type' => (string)($docRow['document_type'] ?? ''),
                             'event_datetime' => (string)($docRow['event_datetime'] ?? ''),
                             'summary' => (string)($docRow['summary'] ?? ''),
                         ];
+                        $docDate = clinical_timeline_date_only((string)($docRow['event_datetime'] ?? ''));
+                        if ($encounterDate !== '' && $docDate !== '' && $encounterDate === $docDate) {
+                            $docItems[] = $docItem;
+                            continue;
+                        }
+
+                        $documentUuid = trim((string)($docRow['document_uuid'] ?? ''));
+                        if ($documentUuid !== '' && isset($documentItemSeen[$documentUuid])) {
+                            continue;
+                        }
+                        $documentItems[] = clinical_timeline_document_item_from_row($docRow, $patientId, $encounterId);
+                        if ($documentUuid !== '') {
+                            $documentItemSeen[$documentUuid] = true;
+                        }
                     }
                     $docPreview = array_slice($docItems, 0, 3);
                     $flags = clinical_timeline_encounter_flags($docItems);
@@ -2042,28 +2108,14 @@ try {
 
             if ($includeClinical) {
                 foreach ($rows as $row) {
-                    $eventDatetime = (string)($row['event_datetime'] ?? '');
                     $documentUuid = (string)($row['document_uuid'] ?? '');
-                    $documentItems[] = [
-                        'item_type' => 'document',
-                        'ref' => ($documentUuid !== '' ? ('doc:' . $documentUuid) : null),
-                        'encounter_key' => clinical_timeline_encounter_key_from_datetime($eventDatetime),
-                        'event_datetime' => $eventDatetime,
-                        'sort_datetime' => $eventDatetime,
-                        'sort_key' => 'doc:' . $documentUuid,
-                        'links' => [
-                            'patient_id' => $patientId,
-                            'appointment_id' => null,
-                            'document_uuid' => $documentUuid,
-                            'encounter_id' => null,
-                            'hospital_stay_id' => $row['hospital_stay_id'] ?? null,
-                        ],
-                        'clinical_document' => [
-                            'document_uuid' => $documentUuid,
-                            'document_type' => (string)($row['document_type'] ?? ''),
-                            'summary' => (string)($row['summary'] ?? ''),
-                        ],
-                    ];
+                    if ($documentUuid !== '' && isset($documentItemSeen[$documentUuid])) {
+                        continue;
+                    }
+                    $documentItems[] = clinical_timeline_document_item_from_row($row, $patientId);
+                    if ($documentUuid !== '') {
+                        $documentItemSeen[$documentUuid] = true;
+                    }
                 }
             }
 
