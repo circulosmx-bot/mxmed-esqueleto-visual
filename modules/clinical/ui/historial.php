@@ -1065,13 +1065,13 @@ if (!$embed) {
                     <div class="border rounded p-2 small" data-item-type="document" data-document-uuid="<?php echo h($docUuid); ?>">
                       <?php if (!empty($docItem['case_id'])): ?>
                         <div class="mb-1"><span class="badge text-bg-info">Caso: <?php echo h((string)($docItem['case_title'] ?? '')); ?></span></div>
-                      <?php elseif (is_array($activeCase) && $docUuid !== ''): ?>
+                      <?php elseif ($activeCaseId !== '' && $docUuid !== ''): ?>
                         <div class="mb-1">
                           <button
                             type="button"
                             class="mm-btn mm-btn-sm mm-btn-outline-success"
                             data-action="assign-case-item"
-                            data-case-id="<?php echo h((string)($activeCase['case_id'] ?? '')); ?>"
+                            data-case-id="<?php echo h($activeCaseId); ?>"
                             data-item-type="document"
                             data-item-ref="<?php echo h($docUuid); ?>"
                           >Agregar a caso activo</button>
@@ -1123,12 +1123,12 @@ if (!$embed) {
                     <span class="badge text-bg-info">Caso: <?php echo h((string)($docItem['case_title'] ?? '')); ?></span>
                   <?php endif; ?>
                 </div>
-                <?php if (!$docInActiveCase && is_array($activeCase) && $docUuid !== ''): ?>
+                <?php if (!$docInActiveCase && $activeCaseId !== '' && $docUuid !== ''): ?>
                   <button
                     type="button"
                     class="mm-btn mm-btn-sm mm-btn-outline-success"
                     data-action="assign-case-item"
-                    data-case-id="<?php echo h((string)($activeCase['case_id'] ?? '')); ?>"
+                    data-case-id="<?php echo h($activeCaseId); ?>"
                     data-item-type="document"
                     data-item-ref="<?php echo h($docUuid); ?>"
                   >Agregar a caso activo</button>
