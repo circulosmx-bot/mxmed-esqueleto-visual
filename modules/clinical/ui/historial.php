@@ -1251,26 +1251,38 @@ if (!$embed) {
   </div>
 </div>
 <div class="modal fade" id="clinicalCreateCaseModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Crear caso clínico</h5>
+        <h5 class="modal-title">Integrar a caso clínico</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
       <div class="modal-body">
-        <label for="clinicalCreateCaseTitle" class="form-label">Nombre del caso</label>
-        <input
-          type="text"
-          class="form-control"
-          id="clinicalCreateCaseTitle"
-          data-role="create-case-title"
-          placeholder="Ej. Fractura tibia y peroné"
-          maxlength="190"
-        >
-        <div class="alert alert-danger small mt-3 mb-0 d-none" data-role="create-case-error"></div>
+        <div class="alert alert-danger small d-none" data-role="integrate-case-error"></div>
+        <div class="vstack gap-3">
+          <div>
+            <div class="fw-semibold mb-2">Casos existentes</div>
+            <div class="text-secondary small mb-2 d-none" data-role="integrate-case-loading">Cargando casos...</div>
+            <div class="alert alert-secondary small d-none mb-2" data-role="integrate-case-empty">Sin casos clínicos disponibles.</div>
+            <div class="vstack gap-2" data-role="integrate-case-list"></div>
+          </div>
+          <div class="border-top pt-3">
+            <div class="fw-semibold mb-2">Crear nuevo caso</div>
+            <label for="clinicalCreateCaseTitle" class="form-label">Nombre del caso</label>
+            <input
+              type="text"
+              class="form-control"
+              id="clinicalCreateCaseTitle"
+              data-role="create-case-title"
+              placeholder="Ej. Fractura tibia y peroné"
+              maxlength="190"
+            >
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-bs-dismiss="modal" data-action="cancel-create-case">Cancelar</button>
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="confirm-integrate-case">Integrar</button>
         <button type="button" class="btn btn-sm btn-primary" data-action="confirm-create-case">Crear e integrar</button>
       </div>
     </div>
@@ -1314,7 +1326,11 @@ if (!$embed) {
     }
     var createCaseModalEl = document.getElementById('clinicalCreateCaseModal');
     var createCaseTitleInput = document.querySelector('[data-role="create-case-title"]');
-    var createCaseError = document.querySelector('[data-role="create-case-error"]');
+    var integrateCaseError = document.querySelector('[data-role="integrate-case-error"]');
+    var integrateCaseList = document.querySelector('[data-role="integrate-case-list"]');
+    var integrateCaseLoading = document.querySelector('[data-role="integrate-case-loading"]');
+    var integrateCaseEmpty = document.querySelector('[data-role="integrate-case-empty"]');
+    var integrateCaseConfirmBtn = document.querySelector('[data-action="confirm-integrate-case"]');
     var createCaseConfirmBtn = document.querySelector('[data-action="confirm-create-case"]');
     var createCaseModalInstance = null;
     if (createCaseModalEl && window.bootstrap && window.bootstrap.Modal) {
@@ -1357,6 +1373,8 @@ if (!$embed) {
     var recentCandidates = [];
     var recentSuggestStorageKey = 'mxmed_historial_snooze_suggest:' + String(patientId || '');
     var pendingCaseIntegration = null;
+    var createCaseSubmitting = false;
+    var integrateCaseSubmitting = false;
     try {
       onlyActiveCaseEnabled = activeCaseId !== '' && localStorage.getItem(onlyActiveCaseStorageKey) === '1';
     } catch (_) {
@@ -1589,41 +1607,166 @@ if (!$embed) {
       return payload.data || null;
     }
 
-    function setCreateCaseError(message) {
-      if (!createCaseError) return;
-      var text = String(message || '').trim();
-      createCaseError.textContent = text;
-      createCaseError.classList.toggle('d-none', text === '');
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
-    function setCreateCaseSubmitting(flag) {
-      if (!createCaseConfirmBtn) return;
-      createCaseConfirmBtn.disabled = !!flag;
-      createCaseConfirmBtn.textContent = flag ? 'Creando...' : 'Crear e integrar';
+    function selectedIntegrateCaseId() {
+      if (!integrateCaseList) return '';
+      var selected = integrateCaseList.querySelector('input[name="integrate_case_id"]:checked');
+      return selected ? String(selected.value || '').trim() : '';
+    }
+
+    function syncIntegrateCaseButtons() {
+      if (integrateCaseConfirmBtn) {
+        integrateCaseConfirmBtn.disabled = integrateCaseSubmitting || createCaseSubmitting || !selectedIntegrateCaseId();
+        integrateCaseConfirmBtn.textContent = integrateCaseSubmitting ? 'Integrando...' : 'Integrar';
+      }
+      if (createCaseConfirmBtn) {
+        createCaseConfirmBtn.disabled = integrateCaseSubmitting || createCaseSubmitting;
+        createCaseConfirmBtn.textContent = createCaseSubmitting ? 'Creando...' : 'Crear e integrar';
+      }
+    }
+
+    function setIntegrateCaseLoading(flag) {
+      if (integrateCaseLoading) {
+        integrateCaseLoading.classList.toggle('d-none', !flag);
+      }
+      syncIntegrateCaseButtons();
+    }
+
+    function setIntegrateCaseError(message, ownerCaseId) {
+      if (!integrateCaseError) return;
+      var text = String(message || '').trim();
+      integrateCaseError.innerHTML = '';
+      if (text === '') {
+        integrateCaseError.classList.add('d-none');
+        return;
+      }
+      var copy = document.createElement('div');
+      copy.textContent = text;
+      integrateCaseError.appendChild(copy);
+      if (ownerCaseId) {
+        var actions = document.createElement('div');
+        actions.className = 'd-flex flex-wrap gap-2 mt-2';
+        actions.innerHTML = ''
+          + '<button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="activate-owner-case" data-case-id="' + escapeHtml(ownerCaseId) + '">Activar caso #' + escapeHtml(ownerCaseId) + '</button>'
+          + '<button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="dismiss-integrate-case-error">Cerrar</button>';
+        integrateCaseError.appendChild(actions);
+      }
+      integrateCaseError.classList.remove('d-none');
+    }
+
+    function renderIntegrateCases(cases) {
+      if (!integrateCaseList || !integrateCaseEmpty) return;
+      integrateCaseList.innerHTML = '';
+      var list = Array.isArray(cases) ? cases : [];
+      integrateCaseEmpty.classList.toggle('d-none', list.length > 0);
+      list.forEach(function (item, index) {
+        var row = document.createElement('label');
+        row.className = 'border rounded p-2 d-flex gap-3 align-items-start';
+        var caseId = String(item.case_id || '').trim();
+        var status = String(item.status || '').trim();
+        var title = String(item.title || 'Caso clínico').trim();
+        var updatedAt = String(item.updated_at || '-').trim();
+        var itemsCount = (item && item.items_count !== undefined && item.items_count !== null)
+          ? String(item.items_count).trim()
+          : '';
+        var active = status === 'active';
+        var checked = (activeCaseId !== '' && caseId === String(activeCaseId))
+          || (activeCaseId === '' && index === 0);
+        row.innerHTML = ''
+          + '<input class="form-check-input mt-1" type="radio" name="integrate_case_id" value="' + escapeHtml(caseId) + '"' + (checked ? ' checked' : '') + '>'
+          + '<div class="flex-grow-1">'
+          + '  <div class="d-flex flex-wrap align-items-center gap-2">'
+          + '    <span class="fw-semibold">' + escapeHtml(title) + '</span>'
+          + '    <span class="badge ' + (active ? 'text-bg-success' : 'text-bg-secondary') + '">' + escapeHtml(active ? 'Activo' : (status || '')) + '</span>'
+          + '  </div>'
+          + '  <div class="small text-secondary mt-1">#' + escapeHtml(caseId) + ' · ' + escapeHtml(updatedAt) + (itemsCount !== '' ? ' · items: ' + escapeHtml(itemsCount) : '') + '</div>'
+          + '</div>';
+        integrateCaseList.appendChild(row);
+      });
+      syncIntegrateCaseButtons();
+    }
+
+    async function activateCase(caseId) {
+      return apiJson(apiBase + '/api/clinical/index.php/cases/' + encodeURIComponent(String(caseId || '')) + '/activate', { method: 'POST' });
+    }
+
+    async function loadIntegrateCaseChoices() {
+      if (!patientId) {
+        setIntegrateCaseError('patient_id requerido para listar casos.');
+        return;
+      }
+      setIntegrateCaseLoading(true);
+      setIntegrateCaseError('');
+      try {
+        var cases = await listCases(patientId);
+        renderIntegrateCases(cases);
+      } catch (err) {
+        setIntegrateCaseError(err.message || 'No se pudieron cargar los casos clínicos.');
+      } finally {
+        setIntegrateCaseLoading(false);
+      }
+    }
+
+    async function integrateToCase(caseId, itemType, itemRef) {
+      var nextCaseId = String(caseId || '').trim();
+      var nextItemType = String(itemType || '').trim();
+      var nextItemRef = String(itemRef || '').trim();
+      if (!nextCaseId || !nextItemType || !nextItemRef) return;
+      integrateCaseSubmitting = true;
+      setIntegrateCaseError('');
+      syncIntegrateCaseButtons();
+      try {
+        await assignItem(nextCaseId, nextItemType, nextItemRef);
+        window.location.reload();
+      } catch (err) {
+        integrateCaseSubmitting = false;
+        syncIntegrateCaseButtons();
+        if ((Number(err.status) === 409 || err.code === 'conflict') && err.data && err.data.owner_case_id) {
+          var ownerCaseId = String(err.data.owner_case_id || '').trim();
+          setIntegrateCaseError('Este elemento ya está integrado en el caso #' + ownerCaseId + '.', ownerCaseId);
+          return;
+        }
+        setIntegrateCaseError(err.message || 'No se pudo integrar el elemento al caso.');
+      }
     }
 
     function openCreateCaseModal(context) {
       pendingCaseIntegration = context || null;
-      setCreateCaseError('');
+      setIntegrateCaseError('');
+      integrateCaseSubmitting = false;
+      createCaseSubmitting = false;
       if (createCaseTitleInput) {
         createCaseTitleInput.value = '';
       }
+      if (integrateCaseList) {
+        integrateCaseList.innerHTML = '';
+      }
+      if (integrateCaseEmpty) {
+        integrateCaseEmpty.classList.add('d-none');
+      }
+      syncIntegrateCaseButtons();
+      loadIntegrateCaseChoices();
       if (createCaseModalInstance) {
         createCaseModalInstance.show();
       } else if (createCaseModalEl) {
         createCaseModalEl.style.display = 'block';
         createCaseModalEl.classList.add('show');
       }
-      if (createCaseTitleInput && typeof createCaseTitleInput.focus === 'function') {
-        window.setTimeout(function () {
-          createCaseTitleInput.focus();
-        }, 120);
-      }
     }
 
     function closeCreateCaseModal() {
-      setCreateCaseError('');
-      setCreateCaseSubmitting(false);
+      setIntegrateCaseError('');
+      integrateCaseSubmitting = false;
+      createCaseSubmitting = false;
+      syncIntegrateCaseButtons();
       if (createCaseModalInstance) {
         createCaseModalInstance.hide();
       } else if (createCaseModalEl) {
@@ -1636,19 +1779,9 @@ if (!$embed) {
       var nextItemType = String(itemType || '').trim();
       var nextItemRef = String(itemRef || '').trim();
       if (!nextItemType || !nextItemRef) return;
-      if (activeCaseId) {
-        try {
-          await assignItem(activeCaseId, nextItemType, nextItemRef);
-          window.location.reload();
-        } catch (err) {
-          window.alert(err.message || 'No se pudo asignar item al caso');
-        }
-        return;
-      }
       openCreateCaseModal({
         itemType: nextItemType,
-        itemRef: nextItemRef,
-        reloadAfterCreate: true
+        itemRef: nextItemRef
       });
     }
 
@@ -1929,7 +2062,7 @@ if (!$embed) {
         event.preventDefault();
         var activateCaseId = String(activateCaseBtn.getAttribute('data-case-id') || '').trim();
         if (!activateCaseId) return;
-        apiJson(apiBase + '/api/clinical/index.php/cases/' + encodeURIComponent(activateCaseId) + '/activate', { method: 'POST' })
+        activateCase(activateCaseId)
           .then(function () { window.location.reload(); })
           .catch(function (err) { window.alert(err.message || 'No se pudo activar caso'); });
         return;
@@ -1966,16 +2099,51 @@ if (!$embed) {
         return;
       }
 
+      var dismissIntegrateErrorBtn = event.target && event.target.closest ? event.target.closest('[data-action="dismiss-integrate-case-error"]') : null;
+      if (dismissIntegrateErrorBtn) {
+        event.preventDefault();
+        setIntegrateCaseError('');
+        return;
+      }
+
+      var activateOwnerCaseBtn = event.target && event.target.closest ? event.target.closest('[data-action="activate-owner-case"]') : null;
+      if (activateOwnerCaseBtn) {
+        event.preventDefault();
+        var ownerCaseId = String(activateOwnerCaseBtn.getAttribute('data-case-id') || '').trim();
+        if (!ownerCaseId) return;
+        activateCase(ownerCaseId)
+          .then(function () { window.location.reload(); })
+          .catch(function (err) { setIntegrateCaseError(err.message || 'No se pudo activar el caso.'); });
+        return;
+      }
+
+      var confirmIntegrateCaseBtn = event.target && event.target.closest ? event.target.closest('[data-action="confirm-integrate-case"]') : null;
+      if (confirmIntegrateCaseBtn) {
+        event.preventDefault();
+        if (!pendingCaseIntegration) {
+          setIntegrateCaseError('Selecciona un elemento para integrar.');
+          return;
+        }
+        var selectedCaseId = selectedIntegrateCaseId();
+        if (!selectedCaseId) {
+          setIntegrateCaseError('Selecciona un caso destino.');
+          return;
+        }
+        integrateToCase(selectedCaseId, pendingCaseIntegration.itemType, pendingCaseIntegration.itemRef);
+        return;
+      }
+
       var confirmCreateCaseBtn = event.target && event.target.closest ? event.target.closest('[data-action="confirm-create-case"]') : null;
       if (confirmCreateCaseBtn) {
         event.preventDefault();
         var title = createCaseTitleInput ? String(createCaseTitleInput.value || '').trim() : '';
         if (title.length < 3) {
-          setCreateCaseError('Ingresa un nombre de al menos 3 caracteres.');
+          setIntegrateCaseError('Ingresa un nombre de al menos 3 caracteres.');
           return;
         }
-        setCreateCaseSubmitting(true);
-        setCreateCaseError('');
+        createCaseSubmitting = true;
+        syncIntegrateCaseButtons();
+        setIntegrateCaseError('');
         createCase(patientId, title)
           .then(function (createdCase) {
             var createdCaseId = createdCase && createdCase.case_id ? String(createdCase.case_id) : '';
@@ -1983,14 +2151,14 @@ if (!$embed) {
               window.location.reload();
               return;
             }
-            return assignItem(createdCaseId, pendingCaseIntegration.itemType, pendingCaseIntegration.itemRef)
-              .then(function () {
-                window.location.reload();
-              });
+            createCaseSubmitting = false;
+            syncIntegrateCaseButtons();
+            return integrateToCase(createdCaseId, pendingCaseIntegration.itemType, pendingCaseIntegration.itemRef);
           })
           .catch(function (err) {
-            setCreateCaseSubmitting(false);
-            setCreateCaseError(err.message || 'No se pudo crear el caso clínico.');
+            createCaseSubmitting = false;
+            syncIntegrateCaseButtons();
+            setIntegrateCaseError(err.message || 'No se pudo crear el caso clínico.');
           });
         return;
       }
@@ -2152,11 +2320,16 @@ if (!$embed) {
     if (createCaseModalEl) {
       createCaseModalEl.addEventListener('hidden.bs.modal', function () {
         pendingCaseIntegration = null;
-        setCreateCaseError('');
-        setCreateCaseSubmitting(false);
+        setIntegrateCaseError('');
+        integrateCaseSubmitting = false;
+        createCaseSubmitting = false;
+        if (integrateCaseList) {
+          integrateCaseList.innerHTML = '';
+        }
         if (createCaseTitleInput) {
           createCaseTitleInput.value = '';
         }
+        syncIntegrateCaseButtons();
       });
     }
 
@@ -2168,6 +2341,12 @@ if (!$embed) {
             createCaseConfirmBtn.click();
           }
         }
+      });
+    }
+
+    if (integrateCaseList) {
+      integrateCaseList.addEventListener('change', function () {
+        syncIntegrateCaseButtons();
       });
     }
 
