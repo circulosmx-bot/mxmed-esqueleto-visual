@@ -183,6 +183,18 @@ Este milestone no altera contratos existentes y mantiene compatibilidad total co
 6. Tag sugerido:
 - `mxmed-clinical-dx-case-bitacora-v1`
 
+### A6 — UX Integrar a caso (modal único select/crear) (v2)
+
+- El botón “Integrar a caso clínico” siempre abre un modal único.
+- El modal permite:
+  - Seleccionar un caso existente (caso activo preseleccionado si existe).
+  - Crear un nuevo caso e integrar en el mismo flujo.
+- Manejo de `409 conflict`:
+  - Si el item ya pertenece a otro caso, mostrar mensaje dentro del modal.
+  - Ofrecer botón “Activar caso #X” cuando backend devuelve `owner_case_id`.
+- No hubo cambios de backend en esta iteración.
+- Tag asociado: `mxmed-clinical-cases-integrate-ui-v2`
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)
