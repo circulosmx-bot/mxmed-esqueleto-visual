@@ -1318,8 +1318,12 @@ if (!$embed) {
                     }
                     $appointmentEpisodeId = trim((string)$appointmentEpisodeId);
                 }
+                $appointmentHref = '';
+                if ($appointmentEpisodeId !== '') {
+                    $appointmentHref = '/index.html#p-agenda';
+                }
                 ?>
-                <article class="mm-card timeline-event mm-activity-item <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($itemCaseId); ?>" data-in-active-case="<?php echo $isInActiveCase ? '1' : '0'; ?>" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
+                <article class="mm-card timeline-event mm-activity-item <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($itemCaseId); ?>" data-in-active-case="<?php echo $isInActiveCase ? '1' : '0'; ?>" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-href="<?php echo h($appointmentHref); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
                     <div class="d-flex align-items-start justify-content-between gap-2">
@@ -1334,16 +1338,6 @@ if (!$embed) {
                       <?php endif; ?>
                     </div>
                     <div class="mm-activity-actions" data-role="appointment-episode-cta" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>">
-                      <?php if ($appointmentEncounterKey !== ''): ?>
-                        <?php if ($appointmentHasEncounter && $appointmentLatestEncounterKey !== ''): ?>
-                          <a class="mm-btn mm-btn-sm mm-btn-outline-primary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $appointmentLatestEncounterKey])); ?>" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($appointmentLatestEncounterKey); ?>">Ver atención</a>
-                        <?php else: ?>
-                          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" disabled title="Sin atención registrada para esta cita">Sin atención</button>
-                        <?php endif; ?>
-                      <?php endif; ?>
-                      <?php if (trim((string)($links['appointment_id'] ?? '')) !== ''): ?>
-                        <a class="mm-btn mm-btn-sm mm-btn-outline-secondary" href="/index.html#p-agenda">Ver cita</a>
-                      <?php endif; ?>
                       <?php if (!$isInActiveCase && $appointmentRef !== ''): ?>
                         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-to-case" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>">Integrar a caso clínico</button>
                       <?php endif; ?>
@@ -1386,8 +1380,12 @@ if (!$embed) {
                 $encInActiveCase = (bool)($rawEncounter['is_in_active_case'] ?? false);
                 $encHasEncounter = (bool)($rawEncounter['has_encounter'] ?? true);
                 $encLatestEncounterKey = trim((string)($rawEncounter['latest_encounter_key'] ?? $ek));
+                $encounterHref = '';
+                if ($encHasEncounter && $encLatestEncounterKey !== '') {
+                    $encounterHref = '/modules/clinical/ui/encounter.php?' . carry_embed_params(['encounter_key' => $encLatestEncounterKey]);
+                }
                 ?>
-                <article class="mm-card timeline-event mm-activity-item <?php echo $encInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($encCaseId); ?>" data-in-active-case="<?php echo $encInActiveCase ? '1' : '0'; ?>" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>" data-encounter-key="<?php echo h($ek); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
+                <article class="mm-card timeline-event mm-activity-item <?php echo $encInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($encCaseId); ?>" data-in-active-case="<?php echo $encInActiveCase ? '1' : '0'; ?>" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>" data-encounter-key="<?php echo h($ek); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-href="<?php echo h($encounterHref); ?>" data-nav-mode="<?php echo $encounterHref !== '' ? 'encounter' : ''; ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
                     <div class="d-flex align-items-start justify-content-between gap-2">
@@ -1402,12 +1400,6 @@ if (!$embed) {
                       <?php endif; ?>
                     </div>
                     <div class="mm-activity-actions">
-                      <?php if ($ek !== ''): ?>
-                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-encounter-detail" data-encounter-key="<?php echo h($ek); ?>">Ver detalle</button>
-                        <?php if ($encHasEncounter && $encLatestEncounterKey !== ''): ?>
-                          <a class="mm-btn mm-btn-sm mm-btn-outline-primary" href="/modules/clinical/ui/encounter.php?<?php echo h(carry_embed_params(['encounter_key' => $encLatestEncounterKey])); ?>" data-role="encounter-episode-link" data-episode-link="1" data-embed-nav data-nav-mode="encounter" data-encounter-key="<?php echo h($encLatestEncounterKey); ?>">Ver atención</a>
-                        <?php endif; ?>
-                      <?php endif; ?>
                       <?php if (!$encInActiveCase && $ek !== ''): ?>
                         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-to-case" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>">Integrar a caso clínico</button>
                       <?php endif; ?>
@@ -1435,9 +1427,9 @@ if (!$embed) {
                 $docRenderMode = strtolower(trim((string)($doc['render_mode'] ?? ($docFilePayload['render_mode'] ?? ''))));
                 $docIsImage = ($docTypeNorm === 'image' || $docRenderMode === 'image');
                 $docViewPath = $docIsImage ? '/modules/clinical/ui/viewer.php' : '/modules/clinical/ui/document.php';
-                $docViewLabel = $docIsImage ? 'Ver imagen' : 'Ver documento';
+                $docHref = $docUuid !== '' ? $docViewPath . '?' . carry_embed_params(['uuid' => $docUuid]) : '';
                 ?>
-                <article class="mm-card timeline-event mm-activity-item <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>" data-document-uuid="<?php echo h($docUuid); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
+                <article class="mm-card timeline-event mm-activity-item <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>" data-document-uuid="<?php echo h($docUuid); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-href="<?php echo h($docHref); ?>" data-nav-mode="<?php echo $docHref !== '' ? 'document' : ''; ?>" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>" data-uuid="<?php echo h($docUuid); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
                     <div class="d-flex align-items-start justify-content-between gap-2">
@@ -1452,9 +1444,6 @@ if (!$embed) {
                       <?php endif; ?>
                     </div>
                     <div class="mm-activity-actions">
-                      <?php if ($docUuid !== ''): ?>
-                        <a class="mm-btn mm-btn-sm mm-btn-outline-primary" href="<?php echo h($docViewPath); ?>?<?php echo h(carry_embed_params(['uuid' => $docUuid])); ?>" data-embed-nav data-nav-mode="document" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>" data-uuid="<?php echo h($docUuid); ?>"><?php echo $docViewLabel; ?></a>
-                      <?php endif; ?>
                       <?php if (!$docInActiveCase && $docUuid !== ''): ?>
                         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-to-case" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Integrar a caso clínico</button>
                       <?php endif; ?>
@@ -1685,6 +1674,28 @@ if (!$embed) {
           container: 'body'
         });
       });
+    }
+
+    function navigateTimelineItem(itemEl) {
+      if (!itemEl) return;
+      var href = String(itemEl.getAttribute('data-href') || '').trim();
+      if (!href) return;
+      var mode = String(itemEl.getAttribute('data-nav-mode') || '').trim();
+      if ((mode === 'encounter' || mode === 'document') && isEmbed && window.parent && window.parent !== window && typeof window.parent.postMessage === 'function') {
+        var payload = { type: 'mxmed:embed:navigate', mode: mode };
+        if (mode === 'encounter') {
+          var encounterKey = String(itemEl.getAttribute('data-encounter-key') || '').trim();
+          if (!encounterKey) return;
+          payload.encounter_key = encounterKey;
+        } else {
+          var uuid = String(itemEl.getAttribute('data-uuid') || '').trim();
+          if (!uuid) return;
+          payload.uuid = uuid;
+        }
+        window.parent.postMessage(payload, '*');
+        return;
+      }
+      window.location.href = href;
     }
 
     function applyTimelineCategoryFilter() {
@@ -2625,11 +2636,8 @@ if (!$embed) {
         if (interactiveParent) {
           return;
         }
-        var primaryAction = activityItem.querySelector('[data-action="open-encounter-detail"], [data-nav-mode="document"][data-uuid], [data-nav-mode="encounter"][data-encounter-key], a[href]');
-        if (primaryAction && typeof primaryAction.click === 'function') {
-          event.preventDefault();
-          primaryAction.click();
-        }
+        event.preventDefault();
+        navigateTimelineItem(activityItem);
         return;
       }
 
