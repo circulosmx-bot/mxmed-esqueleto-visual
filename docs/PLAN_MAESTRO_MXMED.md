@@ -138,6 +138,51 @@ Tag sugerido: mxmed-clinical-pdf-viewer-v1
 
 Este milestone no altera contratos existentes y mantiene compatibilidad total con imágenes.
 
+### A4 — Casos: Single-owner por item (v1)
+
+- Regla: `(item_type + item_ref)` solo puede pertenecer a un caso.
+- `POST /cases/{case_id}/items`:
+  - `409 conflict` si ya pertenece a otro caso, incluye `data.owner_case_id`
+  - idempotente si ya pertenece al mismo caso: `ok true`, `created false`, `message "item already assigned"`
+- Sin cambios de DB (enforcement por consulta previa).
+- Tag: `mxmed-clinical-cases-single-owner-v1`
+
+### A5 — Diagnóstico → Caso clínico + Bitácora (v1)
+
+1. Concepto y regla:
+- El “Caso clínico” es el dueño de la “bitácora de diagnósticos”.
+- La “Atención del día” (episodio) solo muestra el diagnóstico principal vigente si está integrado a un caso.
+
+2. Bitácora (modelo conceptual):
+- Cada captura de diagnóstico crea una entrada con:
+  - texto
+  - timestamp del sistema
+  - origen (receta / nota / etc.) (opcional v1 pero recomendado)
+- El diagnóstico más reciente pasa a ser el “principal”.
+
+3. UX gatillos:
+- A) Si el episodio NO está integrado a un caso:
+  - Modal bloqueante “Crear caso clínico”
+  - Input “Nombre del caso” prellenado con el diagnóstico capturado
+  - Acciones:
+    - “Crear e integrar”
+    - “Ahora no” (cierra sin crear; el diagnóstico se guarda donde se capturó, pero no crea bitácora del caso)
+- B) Si el episodio YA está integrado a un caso:
+  - Actualiza diagnóstico principal del caso
+  - Agrega entrada a bitácora
+  - Confirmación ligera (no bloqueante)
+
+4. Visual:
+- En cards integradas: badge destacado “Caso: …”
+- Línea adicional discreta: “Diagnóstico: …” (si existe)
+- En vista del caso: principal + lista de historial con timestamps
+
+5. Alcance v1:
+- Inicia con el campo de diagnóstico que ya exista (por ejemplo receta), pero regla aplica a cualquier futura captura de diagnóstico (nota, paciente, etc.).
+
+6. Tag sugerido:
+- `mxmed-clinical-dx-case-bitacora-v1`
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)
