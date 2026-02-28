@@ -893,13 +893,24 @@ if (!$embed) {
                   <span class="badge text-bg-info">Caso: <?php echo h((string)($item['case_title'] ?? '')); ?></span>
                 <?php endif; ?>
               </div>
-              <?php if (!$isInActiveCase && is_array($activeCase) && $appointmentRef !== ''): ?>
-                <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
-                  <input type="hidden" name="action" value="add_active_case_appointment">
-                  <input type="hidden" name="encounter_key" value="<?php echo h($appointmentEncounterKey); ?>">
-                  <button type="submit" class="mm-btn mm-btn-sm mm-btn-outline-success">Agregar a caso activo</button>
-                </form>
-              <?php endif; ?>
+              <div class="d-flex flex-wrap gap-2">
+                <?php if (!$isInActiveCase && $appointmentRef !== ''): ?>
+                  <button
+                    type="button"
+                    class="mm-btn mm-btn-sm mm-btn-outline-primary"
+                    data-action="integrate-to-case"
+                    data-item-type="appointment"
+                    data-item-ref="<?php echo h($appointmentRef); ?>"
+                  >Integrar a caso clínico</button>
+                <?php endif; ?>
+                <?php if (!$isInActiveCase && is_array($activeCase) && $appointmentRef !== ''): ?>
+                  <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
+                    <input type="hidden" name="action" value="add_active_case_appointment">
+                    <input type="hidden" name="encounter_key" value="<?php echo h($appointmentEncounterKey); ?>">
+                    <button type="submit" class="mm-btn mm-btn-sm mm-btn-outline-success">Agregar a caso activo</button>
+                  </form>
+                <?php endif; ?>
+              </div>
             </div>
             <div class="d-flex flex-wrap gap-3 small mb-2">
               <span><strong>Tipo:</strong> appointment</span>
@@ -978,13 +989,24 @@ if (!$embed) {
                   <span class="badge text-bg-info">Caso: <?php echo h((string)($rawEncounter['case_title'] ?? '')); ?></span>
                 <?php endif; ?>
               </div>
-              <?php if (!$encInActiveCase && is_array($activeCase) && $ek !== ''): ?>
-                <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
-                  <input type="hidden" name="action" value="add_active_case_appointment">
-                  <input type="hidden" name="encounter_key" value="<?php echo h($ek); ?>">
-                  <button type="submit" class="mm-btn mm-btn-sm mm-btn-outline-success">Agregar a caso activo</button>
-                </form>
-              <?php endif; ?>
+              <div class="d-flex flex-wrap gap-2">
+                <?php if (!$encInActiveCase && $ek !== ''): ?>
+                  <button
+                    type="button"
+                    class="mm-btn mm-btn-sm mm-btn-outline-primary"
+                    data-action="integrate-to-case"
+                    data-item-type="encounter"
+                    data-item-ref="<?php echo h($ek); ?>"
+                  >Integrar a caso clínico</button>
+                <?php endif; ?>
+                <?php if (!$encInActiveCase && is_array($activeCase) && $ek !== ''): ?>
+                  <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
+                    <input type="hidden" name="action" value="add_active_case_appointment">
+                    <input type="hidden" name="encounter_key" value="<?php echo h($ek); ?>">
+                    <button type="submit" class="mm-btn mm-btn-sm mm-btn-outline-success">Agregar a caso activo</button>
+                  </form>
+                <?php endif; ?>
+              </div>
             </div>
             <div class="d-flex flex-wrap gap-3 small mb-2">
               <span><strong>Tipo:</strong> encounter</span>
@@ -1215,6 +1237,32 @@ if (!$embed) {
     </div>
   </div>
 </div>
+<div class="modal fade" id="clinicalCreateCaseModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Crear caso clínico</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <label for="clinicalCreateCaseTitle" class="form-label">Nombre del caso</label>
+        <input
+          type="text"
+          class="form-control"
+          id="clinicalCreateCaseTitle"
+          data-role="create-case-title"
+          placeholder="Ej. Fractura tibia y peroné"
+          maxlength="190"
+        >
+        <div class="alert alert-danger small mt-3 mb-0 d-none" data-role="create-case-error"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-bs-dismiss="modal" data-action="cancel-create-case">Cancelar</button>
+        <button type="button" class="btn btn-sm btn-primary" data-action="confirm-create-case">Crear e integrar</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="modal fade" id="clinicalDocumentModal" data-role="document-viewer-modal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-scrollable">
     <div class="modal-content">
@@ -1250,6 +1298,14 @@ if (!$embed) {
     var casesModalInstance = null;
     if (casesModalEl && window.bootstrap && window.bootstrap.Modal) {
       casesModalInstance = window.bootstrap.Modal.getOrCreateInstance(casesModalEl);
+    }
+    var createCaseModalEl = document.getElementById('clinicalCreateCaseModal');
+    var createCaseTitleInput = document.querySelector('[data-role="create-case-title"]');
+    var createCaseError = document.querySelector('[data-role="create-case-error"]');
+    var createCaseConfirmBtn = document.querySelector('[data-action="confirm-create-case"]');
+    var createCaseModalInstance = null;
+    if (createCaseModalEl && window.bootstrap && window.bootstrap.Modal) {
+      createCaseModalInstance = window.bootstrap.Modal.getOrCreateInstance(createCaseModalEl);
     }
     var onlyActiveCaseBtn = document.querySelector('[data-action="toggle-only-active-case"]');
     var onlyActiveCaseNotice = document.querySelector('[data-role="only-active-case-note"]');
@@ -1287,6 +1343,7 @@ if (!$embed) {
     }
     var recentCandidates = [];
     var recentSuggestStorageKey = 'mxmed_historial_snooze_suggest:' + String(patientId || '');
+    var pendingCaseIntegration = null;
     try {
       onlyActiveCaseEnabled = activeCaseId !== '' && localStorage.getItem(onlyActiveCaseStorageKey) === '1';
     } catch (_) {
@@ -1401,7 +1458,11 @@ if (!$embed) {
       }
       if (!payload || payload.ok !== true) {
         var message = (payload && payload.message) ? String(payload.message) : ('HTTP ' + response.status);
-        throw new Error(message);
+        var err = new Error(message);
+        err.status = response.status;
+        err.code = payload && payload.error && payload.error.code ? String(payload.error.code) : '';
+        err.data = payload && payload.data ? payload.data : null;
+        throw err;
       }
       return payload;
     }
@@ -1421,7 +1482,7 @@ if (!$embed) {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ title: title || 'Caso clínico' }),
+        body: JSON.stringify({ patient_id: pid, title: title || 'Caso clínico' }),
         credentials: 'same-origin'
       });
       return payload.data || null;
@@ -1513,6 +1574,69 @@ if (!$embed) {
         credentials: 'same-origin'
       });
       return payload.data || null;
+    }
+
+    function setCreateCaseError(message) {
+      if (!createCaseError) return;
+      var text = String(message || '').trim();
+      createCaseError.textContent = text;
+      createCaseError.classList.toggle('d-none', text === '');
+    }
+
+    function setCreateCaseSubmitting(flag) {
+      if (!createCaseConfirmBtn) return;
+      createCaseConfirmBtn.disabled = !!flag;
+      createCaseConfirmBtn.textContent = flag ? 'Creando...' : 'Crear e integrar';
+    }
+
+    function openCreateCaseModal(context) {
+      pendingCaseIntegration = context || null;
+      setCreateCaseError('');
+      if (createCaseTitleInput) {
+        createCaseTitleInput.value = '';
+      }
+      if (createCaseModalInstance) {
+        createCaseModalInstance.show();
+      } else if (createCaseModalEl) {
+        createCaseModalEl.style.display = 'block';
+        createCaseModalEl.classList.add('show');
+      }
+      if (createCaseTitleInput && typeof createCaseTitleInput.focus === 'function') {
+        window.setTimeout(function () {
+          createCaseTitleInput.focus();
+        }, 120);
+      }
+    }
+
+    function closeCreateCaseModal() {
+      setCreateCaseError('');
+      setCreateCaseSubmitting(false);
+      if (createCaseModalInstance) {
+        createCaseModalInstance.hide();
+      } else if (createCaseModalEl) {
+        createCaseModalEl.classList.remove('show');
+        createCaseModalEl.style.display = 'none';
+      }
+    }
+
+    async function ensureActiveCaseThenAssign(itemType, itemRef) {
+      var nextItemType = String(itemType || '').trim();
+      var nextItemRef = String(itemRef || '').trim();
+      if (!nextItemType || !nextItemRef) return;
+      if (activeCaseId) {
+        try {
+          await assignItem(activeCaseId, nextItemType, nextItemRef);
+          window.location.reload();
+        } catch (err) {
+          window.alert(err.message || 'No se pudo asignar item al caso');
+        }
+        return;
+      }
+      openCreateCaseModal({
+        itemType: nextItemType,
+        itemRef: nextItemRef,
+        reloadAfterCreate: true
+      });
     }
 
     function isImageDocumentMeta(doc) {
@@ -1734,9 +1858,7 @@ if (!$embed) {
       var createBtn = event.target && event.target.closest ? event.target.closest('[data-action="create-clinical-case"]') : null;
       if (createBtn) {
         event.preventDefault();
-        createCase(patientId, 'Caso clínico')
-          .then(function () { window.location.reload(); })
-          .catch(function (err) { window.alert(err.message || 'No se pudo crear caso clínico'); });
+        openCreateCaseModal(null);
         return;
       }
 
@@ -1824,6 +1946,42 @@ if (!$embed) {
         return;
       }
 
+      var cancelCreateCaseBtn = event.target && event.target.closest ? event.target.closest('[data-action="cancel-create-case"]') : null;
+      if (cancelCreateCaseBtn && !createCaseModalInstance && createCaseModalEl) {
+        event.preventDefault();
+        closeCreateCaseModal();
+        return;
+      }
+
+      var confirmCreateCaseBtn = event.target && event.target.closest ? event.target.closest('[data-action="confirm-create-case"]') : null;
+      if (confirmCreateCaseBtn) {
+        event.preventDefault();
+        var title = createCaseTitleInput ? String(createCaseTitleInput.value || '').trim() : '';
+        if (title.length < 3) {
+          setCreateCaseError('Ingresa un nombre de al menos 3 caracteres.');
+          return;
+        }
+        setCreateCaseSubmitting(true);
+        setCreateCaseError('');
+        createCase(patientId, title)
+          .then(function (createdCase) {
+            var createdCaseId = createdCase && createdCase.case_id ? String(createdCase.case_id) : '';
+            if (!pendingCaseIntegration || !createdCaseId) {
+              window.location.reload();
+              return;
+            }
+            return assignItem(createdCaseId, pendingCaseIntegration.itemType, pendingCaseIntegration.itemRef)
+              .then(function () {
+                window.location.reload();
+              });
+          })
+          .catch(function (err) {
+            setCreateCaseSubmitting(false);
+            setCreateCaseError(err.message || 'No se pudo crear el caso clínico.');
+          });
+        return;
+      }
+
       var closeEncounterDetailBtn = event.target && event.target.closest ? event.target.closest('[data-action="close-encounter-detail-modal"]') : null;
       if (closeEncounterDetailBtn) {
         event.preventDefault();
@@ -1898,6 +2056,16 @@ if (!$embed) {
         return;
       }
 
+      var integrateBtn = event.target && event.target.closest ? event.target.closest('[data-action="integrate-to-case"]') : null;
+      if (integrateBtn) {
+        event.preventDefault();
+        var integrateItemType = String(integrateBtn.getAttribute('data-item-type') || '').trim();
+        var integrateItemRef = String(integrateBtn.getAttribute('data-item-ref') || '').trim();
+        if (!integrateItemType || !integrateItemRef) return;
+        ensureActiveCaseThenAssign(integrateItemType, integrateItemRef);
+        return;
+      }
+
       var assignRecentBtn = event.target && event.target.closest ? event.target.closest('[data-action="assign-recent-to-active-case"]') : null;
       if (assignRecentBtn) {
         event.preventDefault();
@@ -1967,6 +2135,28 @@ if (!$embed) {
         }
       }
     });
+
+    if (createCaseModalEl) {
+      createCaseModalEl.addEventListener('hidden.bs.modal', function () {
+        pendingCaseIntegration = null;
+        setCreateCaseError('');
+        setCreateCaseSubmitting(false);
+        if (createCaseTitleInput) {
+          createCaseTitleInput.value = '';
+        }
+      });
+    }
+
+    if (createCaseTitleInput) {
+      createCaseTitleInput.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (createCaseConfirmBtn) {
+            createCaseConfirmBtn.click();
+          }
+        }
+      });
+    }
 
     if (window.MXMed && typeof window.MXMed.initClinicalEmbedKit === 'function') {
       window.MXMed.initClinicalEmbedKit({ embedOnly: true });
