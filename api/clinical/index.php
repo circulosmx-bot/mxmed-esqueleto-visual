@@ -2207,6 +2207,13 @@ try {
                 $timelineItem['subtype'] = (string)($classification['subtype'] ?? 'unknown');
                 $timelineItem['category_label'] = (string)($classification['category_label'] ?? 'Otros');
                 $timelineItem['subtype_label'] = (string)($classification['subtype_label'] ?? 'Sin clasificar');
+
+                $catalogV11 = classify_catalog_v11($timelineItem);
+                $timelineItem['catalog_group'] = (string)($catalogV11['catalog_group'] ?? 'other');
+                $timelineItem['catalog_group_label'] = (string)($catalogV11['catalog_group_label'] ?? 'Otros');
+                $timelineItem['catalog_phase'] = $catalogV11['catalog_phase'] ?? null;
+                $timelineItem['catalog_phase_label'] = $catalogV11['catalog_phase_label'] ?? null;
+                $timelineItem['catalog_priority'] = (int)($catalogV11['catalog_priority'] ?? 999);
             }
             unset($timelineItem);
 

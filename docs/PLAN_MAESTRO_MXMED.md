@@ -220,6 +220,36 @@ Este milestone no altera contratos existentes y mantiene compatibilidad total co
   - Confirmar resumen diario derivado y ordenado por prioridad.
   - Confirmar que el filtro por categoría oculta eventos y días vacíos sin romper embed ni navegación existente.
 
+### A7.1 — Catálogo clínico controlado (v1.1: grupo/área/fase)
+
+- Objetivo:
+  - Extender A7 con una capa compatible de `catalog_group` / `catalog_phase` sin DB changes.
+  - Mantener intactos `category`, `subtype`, `category_label` y `subtype_label`.
+- Mapping técnico `document_type -> group/phase`:
+  - `note` -> `attention` / `null`
+  - `nota_evolucion` -> `attention` / `null`
+  - `lab_order` -> `studies` / `order`
+  - `lab_pdf` -> `studies` / `result`
+  - `imaging_order` -> `studies` / `order`
+  - `image` -> `media` / `null`
+  - `orders` -> `orders` / `null`
+- Contrato nuevo por item del timeline:
+  - `catalog_group`
+  - `catalog_group_label`
+  - `catalog_phase`
+  - `catalog_phase_label`
+  - `catalog_priority`
+- Reglas UX:
+  - Filtros rápidos por `catalog_group` (Todo + grupos presentes).
+  - Chips compactos por evento usando grupo + fase cuando aplique.
+  - Modelo A intacto: Día > Eventos, sin romper agrupación por `YYYY-MM-DD`.
+- Checklist QA propuesto:
+  - Confirmar `php -l` en API, helper compartido y `historial.php`.
+  - Confirmar que todos los items del timeline traen `catalog_group`.
+  - Confirmar que `lab_order`, `lab_pdf`, `imaging_order`, `image`, `orders`, `note` y `nota_evolucion` caen en el grupo/fase correcto.
+  - Confirmar filtros por grupo en Historial y ocultamiento de días vacíos.
+  - Confirmar que embed y CTAs existentes siguen operando sin cambios.
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)
