@@ -1635,6 +1635,22 @@ function clinical_case_item_type_allowed(string $itemType): bool
     return in_array($itemType, ['encounter', 'document', 'appointment'], true);
 }
 
+function clinical_case_item_find_owner_case(PDO $pdo, string $itemType, string $itemRef): ?int
+{
+    $stmt = $pdo->prepare("
+        SELECT case_id
+        FROM clinical_case_items
+        WHERE item_type = :t AND item_ref = :r
+        LIMIT 1
+    ");
+    $stmt->bindValue(':t', $itemType, PDO::PARAM_STR);
+    $stmt->bindValue(':r', $itemRef, PDO::PARAM_STR);
+    $stmt->execute();
+    $caseId = $stmt->fetchColumn();
+
+    return $caseId === false ? null : (int)$caseId;
+}
+
 function clinical_case_item_insert(PDO $pdo, int $caseId, string $itemType, string $itemRef): bool
 {
     $sql = "
@@ -3523,6 +3539,32 @@ try {
                     'data' => null,
                     'meta' => ['method' => 'POST', 'route' => 'cases/{case_id}/items'],
                 ], 404);
+                return;
+            }
+            $ownerCaseId = clinical_case_item_find_owner_case($pdo, $itemType, $itemRef);
+            if ($ownerCaseId !== null && $ownerCaseId !== $caseId) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => ['code' => 'conflict', 'message' => 'item ya pertenece a otro caso'],
+                    'message' => "Este elemento ya está integrado en el caso #{$ownerCaseId}. Usa 'Cambiar' para moverlo.",
+                    'data' => ['owner_case_id' => $ownerCaseId],
+                    'meta' => ['method' => 'POST', 'route' => 'cases/{case_id}/items'],
+                ], 409);
+                return;
+            }
+            if ($ownerCaseId === $caseId) {
+                clinical_send_response([
+                    'ok' => true,
+                    'error' => null,
+                    'message' => 'item already assigned',
+                    'data' => [
+                        'case_id' => $caseId,
+                        'item_type' => $itemType,
+                        'item_ref' => $itemRef,
+                        'created' => false,
+                    ],
+                    'meta' => ['method' => 'POST', 'route' => 'cases/{case_id}/items'],
+                ], 200);
                 return;
             }
             $created = clinical_case_item_insert($pdo, $caseId, $itemType, $itemRef);
