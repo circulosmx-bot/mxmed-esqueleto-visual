@@ -23,6 +23,7 @@ function mxmed_clinical_timeline_catalog(): array
             'subtypes' => [
                 'vitals' => ['label' => 'Signos', 'priority' => 10],
                 'note' => ['label' => 'Nota', 'priority' => 20],
+                'note_evolution' => ['label' => 'Evolucion', 'priority' => 30],
             ],
         ],
         'treatment' => [
@@ -136,6 +137,9 @@ function mxmed_clinical_timeline_classify_item(array $item): array
     if (in_array($documentType, ['note', 'medical_note', 'evolution_note'], true)) {
         return mxmed_clinical_timeline_catalog_entry('clinical', 'note');
     }
+    if ($documentType === 'nota_evolucion') {
+        return mxmed_clinical_timeline_catalog_entry('clinical', 'note_evolution');
+    }
     if (in_array($documentType, ['prescription', 'rx'], true)) {
         return mxmed_clinical_timeline_catalog_entry('treatment', 'prescription');
     }
@@ -176,4 +180,155 @@ function mxmed_clinical_timeline_classify_item(array $item): array
 function classify_timeline_item(array $item): array
 {
     return mxmed_clinical_timeline_classify_item($item);
+}
+
+function mxmed_clinical_timeline_catalog_v11(): array
+{
+    return [
+        'groups' => [
+            'attention' => ['label' => 'Atencion', 'priority' => 10],
+            'clinical' => ['label' => 'Clinico', 'priority' => 20],
+            'studies' => ['label' => 'Estudios', 'priority' => 30],
+            'multimedia' => ['label' => 'Multimedia', 'priority' => 40],
+            'documents' => ['label' => 'Documentos', 'priority' => 50],
+            'other' => ['label' => 'Otros', 'priority' => 999],
+        ],
+        'phases' => [
+            'order' => ['label' => 'Orden'],
+            'result' => ['label' => 'Resultado'],
+        ],
+    ];
+}
+
+function mxmed_clinical_timeline_catalog_group_entry(string $group, ?string $phase = null): array
+{
+    $catalog = mxmed_clinical_timeline_catalog_v11();
+    $groupKey = trim($group);
+    $phaseKey = ($phase === null) ? null : trim($phase);
+
+    if ($groupKey === '' || !isset($catalog['groups'][$groupKey])) {
+        $groupKey = 'other';
+        $phaseKey = null;
+    }
+
+    $groupMeta = $catalog['groups'][$groupKey];
+    $phaseMeta = null;
+    if ($phaseKey !== null && $phaseKey !== '' && isset($catalog['phases'][$phaseKey])) {
+        $phaseMeta = $catalog['phases'][$phaseKey];
+    } else {
+        $phaseKey = null;
+    }
+
+    return [
+        'catalog_group' => $groupKey,
+        'catalog_group_label' => (string)($groupMeta['label'] ?? 'Otros'),
+        'catalog_phase' => $phaseKey,
+        'catalog_phase_label' => $phaseMeta !== null ? (string)($phaseMeta['label'] ?? '') : null,
+        'catalog_priority' => (int)($groupMeta['priority'] ?? 999),
+    ];
+}
+
+function mxmed_clinical_timeline_detect_document_type(array $item): string
+{
+    $clinicalDocument = is_array($item['clinical_document'] ?? null) ? $item['clinical_document'] : [];
+    $documentType = strtolower(trim((string)($clinicalDocument['document_type'] ?? '')));
+    if ($documentType !== '') {
+        return $documentType;
+    }
+
+    return strtolower(trim((string)($item['subtype'] ?? '')));
+}
+
+function classify_catalog_v11(array $item): array
+{
+    $itemType = strtolower(trim((string)($item['item_type'] ?? '')));
+    if ($itemType === 'appointment' || $itemType === 'encounter') {
+        return mxmed_clinical_timeline_catalog_group_entry('attention');
+    }
+    if ($itemType !== 'document') {
+        return mxmed_clinical_timeline_catalog_group_entry('other');
+    }
+
+    $documentType = mxmed_clinical_timeline_detect_document_type($item);
+    if ($documentType === 'note' || $documentType === 'nota_evolucion') {
+        return mxmed_clinical_timeline_catalog_group_entry('clinical');
+    }
+    if ($documentType === 'lab_order' || $documentType === 'imaging_order' || $documentType === 'orders') {
+        return mxmed_clinical_timeline_catalog_group_entry('studies', 'order');
+    }
+    if ($documentType === 'lab_pdf') {
+        return mxmed_clinical_timeline_catalog_group_entry('studies', 'result');
+    }
+    if ($documentType === 'image') {
+        return mxmed_clinical_timeline_catalog_group_entry('multimedia');
+    }
+    if ($documentType !== '') {
+        return mxmed_clinical_timeline_catalog_group_entry('documents');
+    }
+
+    return mxmed_clinical_timeline_catalog_group_entry('other');
+}
+
+function mxmed_clinical_timeline_group_priority_map(): array
+{
+    $map = [];
+    foreach (mxmed_clinical_timeline_catalog_v11()['groups'] as $group => $meta) {
+        $map[$group] = (int)($meta['priority'] ?? 999);
+    }
+    return $map;
+}
+
+function mxmed_clinical_timeline_chip_text(array $item): string
+{
+    $groupMeta = classify_catalog_v11($item);
+    $groupLabel = (string)($groupMeta['catalog_group_label'] ?? 'Otros');
+    $phaseLabel = trim((string)($groupMeta['catalog_phase_label'] ?? ''));
+    $documentType = mxmed_clinical_timeline_detect_document_type($item);
+
+    if ($groupMeta['catalog_group'] === 'attention') {
+        $subtypeLabel = trim((string)($item['subtype_label'] ?? ''));
+        if ($subtypeLabel !== '' && strtolower($subtypeLabel) !== strtolower($groupLabel)) {
+            return $groupLabel . ' · ' . $subtypeLabel;
+        }
+        return $groupLabel;
+    }
+
+    if ($groupMeta['catalog_group'] === 'clinical') {
+        if ($documentType === 'nota_evolucion') {
+            return 'Clinico · Evolucion';
+        }
+        if ($documentType === 'note') {
+            return 'Clinico · Nota';
+        }
+        return $groupLabel;
+    }
+
+    if ($groupMeta['catalog_group'] === 'studies') {
+        $areaLabel = '';
+        if ($documentType === 'lab_order' || $documentType === 'lab_pdf') {
+            $areaLabel = 'Lab';
+        } elseif ($documentType === 'imaging_order') {
+            $areaLabel = 'Imagen';
+        } elseif ($documentType === 'orders') {
+            $areaLabel = 'Orden';
+        }
+        $parts = [$groupLabel];
+        if ($areaLabel !== '') {
+            $parts[] = $areaLabel;
+        }
+        if ($phaseLabel !== '') {
+            $parts[] = $phaseLabel;
+        }
+        return implode(' · ', $parts);
+    }
+
+    if ($groupMeta['catalog_group'] === 'multimedia') {
+        return 'Multimedia · Foto';
+    }
+
+    if ($groupMeta['catalog_group'] === 'documents') {
+        return 'Documentos';
+    }
+
+    return $groupLabel;
 }

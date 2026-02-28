@@ -162,7 +162,7 @@ function timeline_activity_title(array $item, array $meta): string
     if ($group === 'attention' && $subtype === 'encounter') {
         return 'Atención';
     }
-    if ($group === 'attention' && ($subtype === 'note' || $subtype === 'note_evolution' || $documentType === 'note' || $documentType === 'nota_evolucion')) {
+    if ($group === 'clinical' && ($subtype === 'note' || $subtype === 'note_evolution' || $documentType === 'note' || $documentType === 'nota_evolucion')) {
         return 'Nota de evolución';
     }
     if ($group === 'studies' && $phase === 'order') {
@@ -171,11 +171,14 @@ function timeline_activity_title(array $item, array $meta): string
     if ($group === 'studies' && $phase === 'result') {
         return 'Resultado de estudio';
     }
-    if ($group === 'media') {
+    if ($group === 'multimedia') {
         return $documentType === 'image' ? 'Foto clínica' : 'Archivo';
     }
-    if ($group === 'orders') {
-        return 'Órdenes';
+    if ($group === 'clinical') {
+        return 'Documento clínico';
+    }
+    if ($group === 'documents') {
+        return 'Archivo';
     }
 
     $fallback = trim((string)($meta['subtype_label'] ?? $meta['catalog_group_label'] ?? 'Evento clinico'));
@@ -193,7 +196,7 @@ function timeline_activity_icon(array $item, array $meta): string
     if ($itemType === 'appointment') {
         return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"></rect><path d="M8 3v4M16 3v4M4 9h16"></path></svg>';
     }
-    if ($itemType === 'encounter' || $group === 'attention') {
+    if ($itemType === 'encounter' || $group === 'attention' || $group === 'clinical') {
         return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4h6l1 2h2a2 2 0 0 1 2 2v9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V8a2 2 0 0 1 2-2h2z"></path><path d="M12 10v6M9 13h6"></path></svg>';
     }
     if ($group === 'studies' && $phase === 'result') {
@@ -202,11 +205,11 @@ function timeline_activity_icon(array $item, array $meta): string
     if ($group === 'studies') {
         return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 4v7l-4 7a2 2 0 0 0 1.8 3h8.4A2 2 0 0 0 18 18l-4-7V4"></path><path d="M8 4h8"></path></svg>';
     }
-    if ($group === 'media' || $documentType === 'image') {
+    if ($group === 'multimedia' || $documentType === 'image') {
         return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="9" cy="10" r="1.5"></circle><path d="M21 16l-5-5-7 7"></path></svg>';
     }
-    if ($group === 'orders') {
-        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 6h10M8 12h10M8 18h10"></path><path d="M4 6h.01M4 12h.01M4 18h.01"></path></svg>';
+    if ($group === 'documents') {
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"></rect><path d="M8 9h8M8 13h8M8 17h5"></path></svg>';
     }
 
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"></rect><path d="M8 9h8M8 13h8M8 17h5"></path></svg>';
