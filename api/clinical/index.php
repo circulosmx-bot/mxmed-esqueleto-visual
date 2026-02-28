@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 
+require_once __DIR__ . '/../../modules/clinical/src/timeline_catalog.php';
+
 function clinical_normalize_response($response): array
 {
     if (!is_array($response)) {
@@ -2199,6 +2201,12 @@ try {
                 $timelineItem['case_id'] = $inActiveCase && $activeCaseId > 0 ? $activeCaseId : null;
                 $timelineItem['case_title'] = $inActiveCase && $activeCaseTitle !== '' ? $activeCaseTitle : null;
                 $timelineItem['is_in_active_case'] = $inActiveCase;
+
+                $classification = classify_timeline_item($timelineItem);
+                $timelineItem['category'] = (string)($classification['category'] ?? 'other');
+                $timelineItem['subtype'] = (string)($classification['subtype'] ?? 'unknown');
+                $timelineItem['category_label'] = (string)($classification['category_label'] ?? 'Otros');
+                $timelineItem['subtype_label'] = (string)($classification['subtype_label'] ?? 'Sin clasificar');
             }
             unset($timelineItem);
 

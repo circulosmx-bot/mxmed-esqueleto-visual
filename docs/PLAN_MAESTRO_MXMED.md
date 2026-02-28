@@ -195,6 +195,31 @@ Este milestone no altera contratos existentes y mantiene compatibilidad total co
 - No hubo cambios de backend en esta iteración.
 - Tag asociado: `mxmed-clinical-cases-integrate-ui-v2`
 
+### A7 — Catálogo clínico controlado (v1)
+
+- Catálogo controlado a nivel evento:
+  - Source of truth finito para `category` + `subtype`, con labels y prioridad.
+  - Aplica sobre cada item del timeline; no redefine la jerarquía visual del día.
+- Campos nuevos agregados al JSON de `GET /patients/{patient_id}/timeline`:
+  - `category`
+  - `subtype`
+  - `category_label`
+  - `subtype_label`
+- Reglas UX:
+  - Día > Eventos > Chips
+  - Cada evento muestra chips compactos de clasificación.
+  - Cada día deriva un resumen compacto de categorías presentes (máx 3, ordenado por prioridad).
+  - Filtros rápidos por categoría operan client-side sobre eventos; si un día queda sin eventos visibles, se oculta.
+- Nota explícita:
+  - Sin DB changes.
+  - Compatibilidad preservada: no se renombra ni elimina ningún campo existente del timeline.
+- Checklist QA propuesto:
+  - Confirmar que appointment / encounter / document reciben `category` y `subtype` en el JSON.
+  - Confirmar fallback `other/unknown` cuando no hay match.
+  - Confirmar chips visibles por evento en Historial.
+  - Confirmar resumen diario derivado y ordenado por prioridad.
+  - Confirmar que el filtro por categoría oculta eventos y días vacíos sin romper embed ni navegación existente.
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)
