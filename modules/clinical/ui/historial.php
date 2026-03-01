@@ -161,13 +161,31 @@ function timeline_activity_taxonomy_label(array $item, array $meta): string
     $groupLabel = trim((string)($meta['catalog_group_label'] ?? ''));
     $phaseLabel = trim((string)($meta['catalog_phase_label'] ?? ''));
     $subtypeLabel = trim((string)($meta['subtype_label'] ?? ''));
+    $normalize = static function (string $value): string {
+        $value = strtolower(trim($value));
+        if ($value === '') {
+            return '';
+        }
+        return strtr($value, [
+            'á' => 'a',
+            'é' => 'e',
+            'í' => 'i',
+            'ó' => 'o',
+            'ú' => 'u',
+            'ä' => 'a',
+            'ë' => 'e',
+            'ï' => 'i',
+            'ö' => 'o',
+            'ü' => 'u',
+        ]);
+    };
     $parts = [];
     if ($groupLabel !== '') {
         $parts[] = $groupLabel;
     }
     if ($phaseLabel !== '') {
         $parts[] = $phaseLabel;
-    } elseif ($subtypeLabel !== '') {
+    } elseif ($subtypeLabel !== '' && $normalize($subtypeLabel) !== $normalize($groupLabel)) {
         $parts[] = $subtypeLabel;
     }
     return implode(' · ', $parts);
@@ -1185,7 +1203,6 @@ if (!$embed) {
       <div class="body d-flex flex-wrap justify-content-between align-items-center gap-2">
         <?php if (is_array($activeCase) && $activeCase !== []): ?>
           <div>
-            <span class="badge text-bg-success me-2">Caso activo</span>
             <strong><?php echo h((string)($activeCase['title'] ?? 'Caso clínico')); ?></strong>
           </div>
           <div class="d-flex flex-wrap gap-2">
@@ -1201,7 +1218,6 @@ if (!$embed) {
           </div>
         <?php else: ?>
           <div>
-            <span class="badge text-bg-secondary me-2">Sin caso clínico</span>
             <span class="text-secondary">Crea un caso para agrupar eventos del historial.</span>
           </div>
           <div>
