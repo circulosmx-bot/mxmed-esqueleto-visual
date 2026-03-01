@@ -1251,6 +1251,95 @@ function clinical_bundle_clinical_block_from_row(array $row): ?array
     return $block;
 }
 
+function clinical_bundle_notes_excerpt(string $value, int $limit = 140): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+
+    if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+        if (mb_strlen($value, 'UTF-8') <= $limit) {
+            return $value;
+        }
+        return rtrim(mb_substr($value, 0, $limit, 'UTF-8')) . '...';
+    }
+
+    if (strlen($value) <= $limit) {
+        return $value;
+    }
+
+    return rtrim(substr($value, 0, $limit)) . '...';
+}
+
+function clinical_timeline_bundle_notes_map(PDO $pdo, string $patientId, array $bundleIds): array
+{
+    $normalizedBundleIds = [];
+    foreach ($bundleIds as $bundleIdRaw) {
+        $bundleId = trim((string)$bundleIdRaw);
+        if ($bundleId === '') {
+            continue;
+        }
+        $normalizedBundleIds[$bundleId] = true;
+    }
+    $bundleIds = array_keys($normalizedBundleIds);
+    if ($patientId === '' || $bundleIds === []) {
+        return [];
+    }
+
+    $placeholders = [];
+    $params = [':patient_id' => $patientId];
+    foreach ($bundleIds as $idx => $bundleId) {
+        $paramKey = ':bundle_id_' . $idx;
+        $placeholders[] = $paramKey;
+        $params[$paramKey] = $bundleId;
+    }
+
+    $sql = "
+        SELECT payload_json, summary, document_type
+        FROM clinical_documents
+        WHERE document_type = 'bundle_clinical'
+          AND patient_id = :patient_id
+          AND JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.media_bundle_id')) IN (" . implode(', ', $placeholders) . ")
+        ORDER BY id DESC
+    ";
+
+    $stmt = $pdo->prepare($sql);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value, PDO::PARAM_STR);
+    }
+    $stmt->execute();
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if (!is_array($rows) || $rows === []) {
+        return [];
+    }
+
+    $notesByBundleId = [];
+    foreach ($rows as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $mediaMeta = clinical_media_meta_from_row($row);
+        $bundleId = trim((string)($mediaMeta['media_bundle_id'] ?? ''));
+        if ($bundleId === '' || isset($notesByBundleId[$bundleId])) {
+            continue;
+        }
+
+        $block = clinical_bundle_clinical_block_from_row($row);
+        $summary = trim((string)($block['summary'] ?? ''));
+        $interpretation = trim((string)($block['interpretation'] ?? ''));
+        $observations = trim((string)($block['observations'] ?? ''));
+        $excerptSource = $summary !== '' ? $summary : ($interpretation !== '' ? $interpretation : $observations);
+
+        $notesByBundleId[$bundleId] = [
+            'has_notes' => ($summary !== '' || $interpretation !== '' || $observations !== ''),
+            'excerpt' => clinical_bundle_notes_excerpt($excerptSource, 140),
+        ];
+    }
+
+    return $notesByBundleId;
+}
+
 function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $limit, ?string $cursorDt, ?string $cursorUuid): array
 {
     $baseSelect = "
@@ -2535,6 +2624,36 @@ try {
                 $timelineItem['catalog_phase'] = $catalogV11['catalog_phase'] ?? null;
                 $timelineItem['catalog_phase_label'] = $catalogV11['catalog_phase_label'] ?? null;
                 $timelineItem['catalog_priority'] = (int)($catalogV11['catalog_priority'] ?? 999);
+            }
+            unset($timelineItem);
+
+            $bundleIds = [];
+            foreach ($items as $timelineItem) {
+                if (!is_array($timelineItem)) {
+                    continue;
+                }
+                $bundleId = trim((string)($timelineItem['media_bundle_id'] ?? ''));
+                if ($bundleId !== '') {
+                    $bundleIds[$bundleId] = true;
+                }
+            }
+
+            $bundleNotesById = [];
+            if ($includeClinical && $bundleIds !== []) {
+                $bundleNotesById = clinical_timeline_bundle_notes_map($pdo, $patientId, array_keys($bundleIds));
+            }
+            foreach ($items as &$timelineItem) {
+                if (!is_array($timelineItem)) {
+                    continue;
+                }
+                $bundleId = trim((string)($timelineItem['media_bundle_id'] ?? ''));
+                if ($bundleId === '') {
+                    continue;
+                }
+                $timelineItem['bundle_notes'] = $bundleNotesById[$bundleId] ?? [
+                    'has_notes' => false,
+                    'excerpt' => '',
+                ];
             }
             unset($timelineItem);
 
