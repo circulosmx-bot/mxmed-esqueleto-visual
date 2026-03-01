@@ -1229,15 +1229,26 @@ function clinical_bundle_clinical_block_from_row(array $row): ?array
         $payload = [];
     }
 
-    $summary = trim((string)($payload['summary'] ?? ($row['summary'] ?? '')));
-    $interpretation = trim((string)($payload['interpretation'] ?? ''));
-    $observations = trim((string)($payload['observations'] ?? ''));
+    $bundlePayload = is_array($payload['bundle_clinical'] ?? null) ? (array)$payload['bundle_clinical'] : [];
+    $summary = trim((string)($bundlePayload['summary'] ?? ($payload['summary'] ?? ($row['summary'] ?? ''))));
+    $interpretation = trim((string)($bundlePayload['interpretation'] ?? ($payload['interpretation'] ?? '')));
+    $observations = trim((string)($bundlePayload['observations'] ?? ($payload['observations'] ?? '')));
+    $schemaVersion = trim((string)($bundlePayload['schema_version'] ?? ($payload['schema_version'] ?? '')));
 
-    return [
+    if ($summary === '' && $interpretation === '' && $observations === '') {
+        return null;
+    }
+
+    $block = [
         'summary' => ($summary !== '' ? $summary : null),
         'interpretation' => ($interpretation !== '' ? $interpretation : null),
         'observations' => ($observations !== '' ? $observations : null),
     ];
+    if ($schemaVersion !== '') {
+        $block['schema_version'] = $schemaVersion;
+    }
+
+    return $block;
 }
 
 function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $limit, ?string $cursorDt, ?string $cursorUuid): array
@@ -1366,8 +1377,8 @@ function clinical_bundle_documents_fetch(PDO $pdo, string $bundleId, string $pat
         return [];
     }
 
-    // QA manual: insertar un bundle_clinical con el mismo media_bundle_id en payload_json
-    // y document_type='bundle_clinical' para validar el bloque de interpretación en el viewer.
+    // QA manual: insertar bundle_clinical en payload_json.bundle_clinical.summary|interpretation|observations
+    // con el mismo media_bundle_id y document_type='bundle_clinical'; payload_json.summary|... en raíz sigue soportado por compatibilidad.
 
     $sql = "
         SELECT
