@@ -1285,22 +1285,6 @@ if (!$embed) {
     <?php // Modo embed: ocultar encabezado y formulario (UX integrado) ?>
   <?php endif; ?>
 
-  <div class="btn-group mb-3" role="group" aria-label="Filtros del historial de atención" data-role="timeline-filters">
-    <?php foreach ($filters as $filterValue => $filterLabel): ?>
-      <?php
-      $isActive = ($include === $filterValue);
-      $href = '?' . carry_embed_params([
-          'patient_id' => $patientId,
-          'include' => $filterValue,
-          'limit' => $limit,
-      ]);
-      ?>
-      <a class="btn <?php echo $isActive ? 'btn-primary' : 'btn-outline-primary'; ?>" href="<?php echo h($href); ?>">
-        <?php echo h($filterLabel); ?>
-      </a>
-    <?php endforeach; ?>
-  </div>
-
   <?php if ($patientId !== ''): ?>
     <div class="mm-card mb-3<?php echo $activeCaseId === '' ? ' d-none' : ''; ?>" data-role="case-summary-panel">
       <div class="body d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -1384,6 +1368,23 @@ if (!$embed) {
 
     <div class="only-active-case-note d-none" data-role="only-active-case-note">Mostrando solo items del caso activo.</div>
     <button type="button" class="btn btn-link btn-sm px-0 mb-2 text-decoration-none" data-action="toggle-advanced-filters">Ver opciones avanzadas</button>
+    <div class="d-none mb-3" data-role="advanced-filters-panel">
+      <div class="btn-group mb-2" role="group" aria-label="Filtros del historial de atención" data-role="timeline-filters">
+        <?php foreach ($filters as $filterValue => $filterLabel): ?>
+          <?php
+          $isActive = ($include === $filterValue);
+          $href = '?' . carry_embed_params([
+              'patient_id' => $patientId,
+              'include' => $filterValue,
+              'limit' => $limit,
+          ]);
+          ?>
+          <a class="btn <?php echo $isActive ? 'btn-primary' : 'btn-outline-primary'; ?>" href="<?php echo h($href); ?>">
+            <?php echo h($filterLabel); ?>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    </div>
     <div class="btn-group btn-group-sm mb-3 d-none" role="group" aria-label="Filtro por caso activo" data-role="case-scope-filter">
       <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary active" data-action="set-case-scope" data-case-scope="all">Todos</button>
       <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-case-scope" data-case-scope="in">Solo caso activo</button>
@@ -1795,6 +1796,7 @@ if (!$embed) {
     var caseScopeFilterWrap = document.querySelector('[data-role="case-scope-filter"]');
     var categoryFilterWrap = document.querySelector('[data-role="timeline-category-filters"]');
     var studyFilterWrap = document.querySelector('[data-role="timeline-study-filters"]');
+    var advancedFiltersPanel = document.querySelector('[data-role="advanced-filters-panel"]');
     var caseSummaryPanel = document.querySelector('[data-role="case-summary-panel"]');
     var openCasesButtons = document.querySelectorAll('[data-role="open-cases-btn"]');
     var advancedFiltersToggle = document.querySelector('[data-action="toggle-advanced-filters"]');
@@ -2080,8 +2082,13 @@ if (!$embed) {
     }
 
     function applyAdvancedFiltersVisibility() {
-      if (!caseScopeFilterWrap || !advancedFiltersToggle) return;
-      caseScopeFilterWrap.classList.toggle('d-none', !advancedFiltersVisible);
+      if (!advancedFiltersToggle) return;
+      if (advancedFiltersPanel) {
+        advancedFiltersPanel.classList.toggle('d-none', !advancedFiltersVisible);
+      }
+      if (caseScopeFilterWrap) {
+        caseScopeFilterWrap.classList.toggle('d-none', !advancedFiltersVisible);
+      }
       advancedFiltersToggle.textContent = advancedFiltersVisible ? 'Ocultar opciones avanzadas' : 'Ver opciones avanzadas';
     }
 
