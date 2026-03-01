@@ -954,6 +954,158 @@ function clinical_store_uploaded_file(array $file, string $documentUuid): array
     ];
 }
 
+function clinical_documents_gateway_save_upload(PDO $pdo, array $payload, ?array $uploadFile): array
+{
+    $documentType = strtolower(trim((string)($payload['document_type'] ?? '')));
+    $title = trim((string)($payload['title'] ?? ''));
+    $summary = trim((string)($payload['summary'] ?? ''));
+    $eventDatetime = trim((string)($payload['event_datetime'] ?? ''));
+    $payloadData = $payload['payload'] ?? [];
+    if (!is_array($payloadData)) {
+        $payloadData = [];
+    }
+
+    if ($documentType === '') {
+        throw new InvalidArgumentException('document_type requerido');
+    }
+
+    $requiredMediaTagKey = trim((string)($payload['media_tag_key'] ?? (($payloadData['media_tag_key'] ?? ''))));
+    if ($documentType === 'image' && $requiredMediaTagKey === '') {
+        throw new RuntimeException('MEDIA_TAG_REQUIRED');
+    }
+
+    if ($title === '') {
+        $title = 'Documento clínico (' . $documentType . ')';
+    }
+    if ($eventDatetime === '') {
+        $eventDatetime = gmdate('Y-m-d H:i:s');
+    }
+    if (preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/', $eventDatetime) !== 1) {
+        throw new InvalidArgumentException('event_datetime inválido (YYYY-MM-DD HH:MM:SS)');
+    }
+
+    $context = is_array($payload['context'] ?? null) ? $payload['context'] : [];
+    $encounterKey = trim((string)($payload['encounter_key'] ?? ($context['encounter_key'] ?? '')));
+    $patientId = trim((string)($payload['patient_id'] ?? ($context['patient_id'] ?? '')));
+    $appointmentId = trim((string)($payload['appointment_id'] ?? ($context['appointment_id'] ?? '')));
+    $encounterId = (int)($payload['encounter_id'] ?? ($context['encounter_id'] ?? 0));
+    $hospitalStayId = trim((string)($payload['hospital_stay_id'] ?? ($context['hospital_stay_id'] ?? '')));
+    $careSetting = trim((string)($payload['care_setting'] ?? ($context['care_setting'] ?? 'consulta')));
+    if ($careSetting === '') {
+        $careSetting = 'consulta';
+    }
+
+    if ($encounterKey !== '') {
+        clinical_encounters_ensure_schema($pdo);
+        $resolved = clinical_resolve_encounter_key($pdo, $encounterKey);
+        if (($resolved['ok'] ?? false) !== true) {
+            throw new InvalidArgumentException((string)($resolved['error_message'] ?? 'encounter inválido'));
+        }
+        $encounterRow = is_array($resolved['row'] ?? null) ? $resolved['row'] : [];
+        $encounterId = (int)($encounterRow['encounter_id'] ?? 0);
+        $patientId = trim((string)($encounterRow['patient_id'] ?? $patientId));
+        $appointmentId = trim((string)($encounterRow['appointment_id'] ?? $appointmentId));
+    }
+
+    if ($patientId === '') {
+        throw new InvalidArgumentException('patient_id requerido');
+    }
+
+    $renderedText = null;
+    if (is_string($payloadData['text'] ?? null)) {
+        $renderedText = (string)$payloadData['text'];
+    }
+
+    $documentUuid = clinical_generate_document_uuid();
+    if (is_array($uploadFile)) {
+        $fileMeta = clinical_store_uploaded_file($uploadFile, $documentUuid);
+        $payloadData['render_mode'] = (string)($fileMeta['render_mode'] ?? 'image');
+        $payloadData['file'] = $fileMeta;
+        if ($summary === '') {
+            $summary = ($payloadData['render_mode'] === 'pdf') ? 'PDF clínico' : 'Imagen clínica';
+        }
+    }
+
+    if ($documentType === 'image' || $documentType === 'pdf') {
+        $mediaMeta = clinical_media_meta_from_payload([
+            'media_tag_key' => ($payload['media_tag_key'] ?? ($payloadData['media_tag_key'] ?? null)),
+            'media_tag_label' => ($payload['media_tag_label'] ?? ($payloadData['media_tag_label'] ?? null)),
+            'media_caption' => ($payload['media_caption'] ?? ($payloadData['media_caption'] ?? null)),
+            'media_bundle_id' => ($payload['media_bundle_id'] ?? ($payloadData['media_bundle_id'] ?? null)),
+            'media_bundle_title' => ($payload['media_bundle_title'] ?? ($payloadData['media_bundle_title'] ?? null)),
+            'media_bundle_note' => ($payload['media_bundle_note'] ?? ($payloadData['media_bundle_note'] ?? null)),
+        ]);
+        foreach ($mediaMeta as $mediaKey => $mediaValue) {
+            if ($mediaValue !== null) {
+                $payloadData[$mediaKey] = $mediaValue;
+            }
+        }
+    }
+
+    $payloadJson = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (!is_string($payloadJson)) {
+        $payloadJson = '{}';
+    }
+
+    $now = gmdate('Y-m-d H:i:s');
+    $cols = clinical_table_columns($pdo, 'clinical_documents');
+    $values = [
+        'document_uuid' => $documentUuid,
+        'document_type' => $documentType,
+        'title' => $title,
+        'version' => 1,
+        'status' => 'signed',
+        'patient_id' => $patientId,
+        'appointment_id' => ($appointmentId !== '' ? $appointmentId : null),
+        'encounter_id' => ($encounterId > 0 ? (string)$encounterId : null),
+        'hospital_stay_id' => ($hospitalStayId !== '' ? $hospitalStayId : null),
+        'care_setting' => $careSetting,
+        'service' => null,
+        'payload_json' => $payloadJson,
+        'rendered_text' => $renderedText,
+        'summary' => $summary,
+        'edited_flag' => 0,
+        'event_datetime' => $eventDatetime,
+        'widget_group' => 'documentos_clinicos',
+        'printable' => 1,
+        'created_at' => $now,
+        'updated_at' => $now,
+        'generated_at' => $now,
+        'signed_at' => $now,
+        'created_by_user_id' => 'qa',
+        'updated_by_user_id' => 'qa',
+    ];
+
+    $insertCols = [];
+    $placeholders = [];
+    $params = [];
+    foreach ($values as $col => $val) {
+        if (!isset($cols[$col])) {
+            continue;
+        }
+        $insertCols[] = '`' . $col . '`';
+        $ph = ':g_' . $col;
+        $placeholders[] = $ph;
+        $params[$ph] = $val;
+    }
+
+    $sql = 'INSERT INTO clinical_documents (' . implode(', ', $insertCols) . ') VALUES (' . implode(', ', $placeholders) . ')';
+    $stmt = $pdo->prepare($sql);
+    foreach ($params as $ph => $val) {
+        if ($val === null) {
+            $stmt->bindValue($ph, null, PDO::PARAM_NULL);
+        } else {
+            $stmt->bindValue($ph, (string)$val, PDO::PARAM_STR);
+        }
+    }
+    $stmt->execute();
+
+    return clinical_documents_get_by_uuid_fetch($pdo, $documentUuid) ?? [
+        'document_id' => $documentUuid,
+        'document_uuid' => $documentUuid,
+    ];
+}
+
 function clinical_parse_include_csv(?string $raw): array
 {
     $value = trim((string)$raw);
@@ -4081,22 +4233,59 @@ try {
                 'fallback_used' => false,
                 'source' => 'clinical_documents_pdo',
             ];
-
-            $bodyResult = clinical_read_json_body();
-            if ($bodyResult['ok'] !== true) {
-                clinical_send_response([
-                    'ok' => false,
-                    'error' => 'bad_request',
-                    'message' => (string)$bodyResult['error'],
-                    'data' => null,
-                    'meta' => $meta,
-                ], 400);
-                return;
+            $contentType = strtolower((string)($_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? ''));
+            $isMultipart = (!empty($_FILES) || strpos($contentType, 'multipart/form-data') !== false);
+            $payload = [];
+            $uploadFile = null;
+            if ($isMultipart) {
+                $payload = is_array($_POST) ? $_POST : [];
+                if (isset($payload['payload']) && is_string($payload['payload'])) {
+                    $payloadDecoded = json_decode((string)$payload['payload'], true);
+                    if (is_array($payloadDecoded)) {
+                        $payload['payload'] = $payloadDecoded;
+                    }
+                }
+                $uploadCandidate = $_FILES['file'] ?? null;
+                if (is_array($uploadCandidate) && (($uploadCandidate['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE)) {
+                    $uploadFile = $uploadCandidate;
+                    $uploadError = (int)($uploadFile['error'] ?? UPLOAD_ERR_NO_FILE);
+                    if ($uploadError !== UPLOAD_ERR_OK) {
+                        clinical_send_response([
+                            'ok' => false,
+                            'error' => 'bad_request',
+                            'message' => 'upload inválido',
+                            'data' => null,
+                            'meta' => $meta,
+                        ], 400);
+                        return;
+                    }
+                }
+            } else {
+                $bodyResult = clinical_read_json_body();
+                if ($bodyResult['ok'] !== true) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'bad_request',
+                        'message' => (string)$bodyResult['error'],
+                        'data' => null,
+                        'meta' => $meta,
+                    ], 400);
+                    return;
+                }
+                $payload = is_array($bodyResult['data'] ?? null) ? (array)$bodyResult['data'] : [];
             }
 
             try {
                 $pdo = clinical_documents_pdo();
-                $document = clinical_documents_save_passthrough($pdo, (array)$bodyResult['data']);
+                $looksLikeUploadDocument = $isMultipart && (
+                    is_array($uploadFile)
+                    || trim((string)($payload['document_type'] ?? '')) !== ''
+                );
+                if ($looksLikeUploadDocument) {
+                    $document = clinical_documents_gateway_save_upload($pdo, $payload, $uploadFile);
+                } else {
+                    $document = clinical_documents_save_passthrough($pdo, $payload);
+                }
             } catch (InvalidArgumentException $e) {
                 $msg = trim((string)$e->getMessage());
                 clinical_send_response([
@@ -4106,6 +4295,29 @@ try {
                     'data' => null,
                     'meta' => $meta,
                 ], 400);
+                return;
+            } catch (RuntimeException $e) {
+                $msg = trim((string)$e->getMessage());
+                if ($msg === 'MEDIA_TAG_REQUIRED') {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => [
+                            'code' => 'MEDIA_TAG_REQUIRED',
+                            'message' => 'Selecciona una etiqueta para esta imagen.',
+                        ],
+                        'message' => 'Selecciona una etiqueta para esta imagen.',
+                        'data' => null,
+                        'meta' => $meta,
+                    ], 400);
+                    return;
+                }
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => ($msg !== '') ? $msg : 'server error',
+                    'data' => null,
+                    'meta' => $meta,
+                ], 500);
                 return;
             } catch (Throwable $e) {
                 $msg = trim((string)$e->getMessage());
@@ -4124,7 +4336,7 @@ try {
                 'error' => null,
                 'message' => 'document saved',
                 'data' => [
-                    'document_id' => $document['document_id'] ?? null,
+                    'document_id' => $document['document_id'] ?? ($document['document_uuid'] ?? null),
                     'document' => $document,
                 ],
                 'meta' => $meta,
