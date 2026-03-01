@@ -604,31 +604,6 @@ if (!$embed) {
     $bundleClinicalInterpretation = trim((string)($bundleClinicalBlock['interpretation'] ?? ''));
     $bundleClinicalObservations = trim((string)($bundleClinicalBlock['observations'] ?? ''));
     ?>
-    <?php if ($bundleClinicalSummary !== '' || $bundleClinicalInterpretation !== '' || $bundleClinicalObservations !== ''): ?>
-      <div class="mm-card mb-3">
-        <div class="head"><h5>Interpretación del estudio</h5></div>
-        <div class="body">
-          <?php if ($bundleClinicalSummary !== ''): ?>
-            <div class="mb-3">
-              <div class="fw-semibold small text-uppercase text-secondary">Resumen</div>
-              <div><?php echo nl2br(h($bundleClinicalSummary)); ?></div>
-            </div>
-          <?php endif; ?>
-          <?php if ($bundleClinicalInterpretation !== ''): ?>
-            <div class="mb-3">
-              <div class="fw-semibold small text-uppercase text-secondary">Interpretación</div>
-              <div><?php echo nl2br(h($bundleClinicalInterpretation)); ?></div>
-            </div>
-          <?php endif; ?>
-          <?php if ($bundleClinicalObservations !== ''): ?>
-            <div>
-              <div class="fw-semibold small text-uppercase text-secondary">Observaciones</div>
-              <div><?php echo nl2br(h($bundleClinicalObservations)); ?></div>
-            </div>
-          <?php endif; ?>
-        </div>
-      </div>
-    <?php endif; ?>
     <?php if ($bundleItems !== []): ?>
       <div class="mm-card mb-3">
         <div class="body">
@@ -656,6 +631,31 @@ if (!$embed) {
               </a>
             <?php endforeach; ?>
           </div>
+        </div>
+      </div>
+    <?php endif; ?>
+    <?php if ($bundleClinicalSummary !== '' || $bundleClinicalInterpretation !== '' || $bundleClinicalObservations !== ''): ?>
+      <div class="mm-card mb-3">
+        <div class="head"><h5>Notas clínicas del estudio</h5></div>
+        <div class="body">
+          <?php if ($bundleClinicalSummary !== ''): ?>
+            <div class="mb-3">
+              <div class="fw-semibold small text-uppercase text-secondary">Descripción</div>
+              <div><?php echo nl2br(h($bundleClinicalSummary)); ?></div>
+            </div>
+          <?php endif; ?>
+          <?php if ($bundleClinicalInterpretation !== ''): ?>
+            <div class="mb-3">
+              <div class="fw-semibold small text-uppercase text-secondary">Interpretación</div>
+              <div><?php echo nl2br(h($bundleClinicalInterpretation)); ?></div>
+            </div>
+          <?php endif; ?>
+          <?php if ($bundleClinicalObservations !== ''): ?>
+            <div>
+              <div class="fw-semibold small text-uppercase text-secondary">Observaciones</div>
+              <div><?php echo nl2br(h($bundleClinicalObservations)); ?></div>
+            </div>
+          <?php endif; ?>
         </div>
       </div>
     <?php endif; ?>
