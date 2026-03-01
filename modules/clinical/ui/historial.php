@@ -66,7 +66,33 @@ function timeline_day_label(string $dayKey): string
     if ($ts === false) {
         return $normalized;
     }
-    return date('d M Y', $ts);
+    $weekdays = [
+        'Sunday' => 'Domingo',
+        'Monday' => 'Lunes',
+        'Tuesday' => 'Martes',
+        'Wednesday' => 'Miercoles',
+        'Thursday' => 'Jueves',
+        'Friday' => 'Viernes',
+        'Saturday' => 'Sabado',
+    ];
+    $months = [
+        '01' => 'Enero',
+        '02' => 'Febrero',
+        '03' => 'Marzo',
+        '04' => 'Abril',
+        '05' => 'Mayo',
+        '06' => 'Junio',
+        '07' => 'Julio',
+        '08' => 'Agosto',
+        '09' => 'Septiembre',
+        '10' => 'Octubre',
+        '11' => 'Noviembre',
+        '12' => 'Diciembre',
+    ];
+    $weekday = $weekdays[date('l', $ts)] ?? date('l', $ts);
+    $month = $months[date('m', $ts)] ?? date('m', $ts);
+    $day = (int)date('j', $ts);
+    return $weekday . ' ' . $day . ' de ' . $month;
 }
 
 function timeline_item_catalog_meta(array $item): array
@@ -994,7 +1020,7 @@ $extraHead = <<<'HTML'
       gap:12px;
       border:1px solid #e5e7eb;
       border-radius:10px;
-      padding:12px 14px;
+      padding:9px 12px;
       background:#fff;
       transition:all .15s ease;
       cursor:pointer;
@@ -1021,33 +1047,30 @@ $extraHead = <<<'HTML'
     .clinical-historial .mm-activity-title{
       font-weight:600;
       font-size:.95rem;
-      line-height:1.2;
+      line-height:1.15;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
     }
     .clinical-historial .mm-activity-meta{
-      font-size:.8rem;
+      font-size:.76rem;
       color:#6b7280;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
-      margin-top:2px;
-    }
-    .clinical-historial .mm-activity-badge{
-      font-size:.65rem;
+      margin-top:1px;
     }
     .clinical-historial .mm-activity-day-header{
       font-weight:600;
-      font-size:.9rem;
-      color:#6b7280;
-      margin-bottom:8px;
+      font-size:1rem;
+      color:#374151;
+      margin-bottom:0;
     }
     .clinical-historial .mm-activity-actions{
       display:flex;
       flex-wrap:wrap;
       gap:.4rem;
-      margin-top:.55rem;
+      margin-top:.4rem;
     }
     .clinical-historial .timeline-taxonomy-chip{
       border-radius:999px;
@@ -1261,8 +1284,7 @@ if (!$embed) {
         <section class="timeline-day-card" data-day-card="1" data-day-key="<?php echo h((string)$dayGroup['day_key']); ?>">
           <div class="timeline-day-header">
             <div>
-              <div class="mm-activity-day-header">Atención del día</div>
-              <div class="fw-semibold"><?php echo h((string)$dayGroup['day_label']); ?></div>
+              <div class="mm-activity-day-header"><?php echo h((string)$dayGroup['day_label']); ?></div>
             </div>
             <div class="timeline-category-summary" data-role="day-category-summary">
               <?php foreach ($dayGroup['summary'] as $summaryCategory): ?>
@@ -1326,15 +1348,10 @@ if (!$embed) {
                 <article class="mm-card timeline-event mm-activity-item <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($itemCaseId); ?>" data-in-active-case="<?php echo $isInActiveCase ? '1' : '0'; ?>" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-href="<?php echo h($appointmentHref); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
-                    <div class="d-flex align-items-start justify-content-between gap-2">
-                      <div class="min-w-0 flex-grow-1">
-                        <div class="mm-activity-title"><?php echo h($entryTitle); ?></div>
-                        <?php if (trim((string)($item['case_title'] ?? '')) !== ''): ?>
-                          <div class="mm-activity-meta"><?php echo h((string)$item['case_title']); ?></div>
-                        <?php endif; ?>
-                      </div>
-                      <?php if ($isInActiveCase): ?>
-                        <span class="badge rounded-pill text-bg-success mm-activity-badge">Activo</span>
+                    <div class="min-w-0 flex-grow-1">
+                      <div class="mm-activity-title"><?php echo h($entryTitle); ?></div>
+                      <?php if (trim((string)($item['case_title'] ?? '')) !== ''): ?>
+                        <div class="mm-activity-meta">Caso: <?php echo h((string)$item['case_title']); ?></div>
                       <?php endif; ?>
                     </div>
                     <div class="mm-activity-actions" data-role="appointment-episode-cta" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>">
@@ -1388,15 +1405,10 @@ if (!$embed) {
                 <article class="mm-card timeline-event mm-activity-item <?php echo $encInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($encCaseId); ?>" data-in-active-case="<?php echo $encInActiveCase ? '1' : '0'; ?>" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>" data-encounter-key="<?php echo h($ek); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-href="<?php echo h($encounterHref); ?>" data-nav-mode="<?php echo $encounterHref !== '' ? 'encounter' : ''; ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
-                    <div class="d-flex align-items-start justify-content-between gap-2">
-                      <div class="min-w-0 flex-grow-1">
-                        <div class="mm-activity-title"><?php echo h($entryTitle); ?></div>
-                        <?php if (trim((string)($rawEncounter['case_title'] ?? '')) !== ''): ?>
-                          <div class="mm-activity-meta"><?php echo h((string)$rawEncounter['case_title']); ?></div>
-                        <?php endif; ?>
-                      </div>
-                      <?php if ($encInActiveCase): ?>
-                        <span class="badge rounded-pill text-bg-success mm-activity-badge">Activo</span>
+                    <div class="min-w-0 flex-grow-1">
+                      <div class="mm-activity-title"><?php echo h($entryTitle); ?></div>
+                      <?php if (trim((string)($rawEncounter['case_title'] ?? '')) !== ''): ?>
+                        <div class="mm-activity-meta">Caso: <?php echo h((string)$rawEncounter['case_title']); ?></div>
                       <?php endif; ?>
                     </div>
                     <div class="mm-activity-actions">
@@ -1432,15 +1444,10 @@ if (!$embed) {
                 <article class="mm-card timeline-event mm-activity-item <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>" data-document-uuid="<?php echo h($docUuid); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-href="<?php echo h($docHref); ?>" data-nav-mode="<?php echo $docHref !== '' ? 'document' : ''; ?>" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>" data-uuid="<?php echo h($docUuid); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
-                    <div class="d-flex align-items-start justify-content-between gap-2">
-                      <div class="min-w-0 flex-grow-1">
-                        <div class="mm-activity-title"><?php echo h($entryTitle); ?></div>
-                        <?php if (trim((string)($docItem['case_title'] ?? '')) !== ''): ?>
-                          <div class="mm-activity-meta"><?php echo h((string)$docItem['case_title']); ?></div>
-                        <?php endif; ?>
-                      </div>
-                      <?php if ($docInActiveCase): ?>
-                        <span class="badge rounded-pill text-bg-success mm-activity-badge">Activo</span>
+                    <div class="min-w-0 flex-grow-1">
+                      <div class="mm-activity-title"><?php echo h($entryTitle); ?></div>
+                      <?php if (trim((string)($docItem['case_title'] ?? '')) !== ''): ?>
+                        <div class="mm-activity-meta">Caso: <?php echo h((string)$docItem['case_title']); ?></div>
                       <?php endif; ?>
                     </div>
                     <div class="mm-activity-actions">
