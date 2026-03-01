@@ -198,6 +198,22 @@ function http_get_json(string $url, int $timeoutSeconds = 8): array
     return $decoded;
 }
 
+function build_viewer_self_href(array $params): string
+{
+    $query = [];
+    foreach ($params as $key => $value) {
+        if ($value === null) {
+            continue;
+        }
+        $stringValue = trim((string)$value);
+        if ($stringValue === '') {
+            continue;
+        }
+        $query[$key] = $stringValue;
+    }
+    return '/modules/clinical/ui/viewer.php' . ($query !== [] ? ('?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986)) : '');
+}
+
 function first_non_empty_string(array $sources, array $keys): string
 {
     foreach ($sources as $source) {
@@ -263,16 +279,67 @@ $uuid = trim((string)($_GET['uuid'] ?? ''));
 if ($uuid === '') {
     $uuid = trim((string)($_GET['doc_uuid'] ?? ''));
 }
+$bundleId = trim((string)($_GET['bundle_id'] ?? ''));
+$patientId = trim((string)($_GET['patient_id'] ?? ''));
 $returnTo = validate_return_to((string)($_GET['return_to'] ?? ''));
 $returnToClean = $returnTo !== null ? normalize_return_to($returnTo) : '';
 $backHref = $returnToClean !== '' ? $returnToClean : 'javascript:history.back()';
+$embedQueryFlag = trim((string)($_GET['embed'] ?? '')) === '1' ? '1' : '';
 $errorMessage = '';
 $document = null;
+$bundleData = null;
+$bundleItems = [];
+$bundleTitle = '';
+$bundleNote = '';
+$selectedBundleIndex = 0;
 $apiBase = normalize_clinical_api_base((string)getenv('CLINICAL_API_BASE'));
 if ($apiBase === '') {
     $apiBase = normalize_clinical_api_base(get_api_base());
 }
 $apiIndexBase = ($apiBase !== '') ? ($apiBase . '/api/clinical/index.php') : '';
+
+if ($bundleId !== '' && $apiIndexBase !== '') {
+    $bundleUrl = $apiIndexBase . '/bundles/' . rawurlencode($bundleId) . '/documents';
+    if ($patientId !== '') {
+        $bundleUrl .= '?patient_id=' . rawurlencode($patientId);
+    }
+    $bundleDecoded = http_get_json($bundleUrl, 8);
+    if (($bundleDecoded['ok'] ?? false) !== true) {
+        $errorMessage = (string)($bundleDecoded['message'] ?? 'Error consultando bundle.');
+    } else {
+        $bundlePayload = is_array($bundleDecoded['data'] ?? null) ? $bundleDecoded['data'] : [];
+        $bundleItems = is_array($bundlePayload['items'] ?? null) ? $bundlePayload['items'] : [];
+        $bundleTitle = trim((string)($bundlePayload['bundle_title'] ?? ''));
+        $bundleNote = trim((string)($bundlePayload['bundle_note'] ?? ''));
+        $bundleData = $bundlePayload;
+        if ($bundleItems === []) {
+            $errorMessage = 'Bundle sin documentos.';
+        } else {
+            if ($uuid !== '') {
+                foreach ($bundleItems as $idx => $bundleItem) {
+                    if (!is_array($bundleItem)) {
+                        continue;
+                    }
+                    if (trim((string)($bundleItem['document_uuid'] ?? '')) === $uuid) {
+                        $selectedBundleIndex = $idx;
+                        break;
+                    }
+                }
+            }
+            $selectedItem = is_array($bundleItems[$selectedBundleIndex] ?? null) ? $bundleItems[$selectedBundleIndex] : [];
+            $uuid = trim((string)($selectedItem['document_uuid'] ?? $uuid));
+            if ($patientId === '') {
+                $patientId = trim((string)($bundlePayload['patient_id'] ?? ''));
+            }
+            if ($bundleTitle === '') {
+                $bundleTitle = trim((string)($selectedItem['media_bundle_title'] ?? ''));
+            }
+            if ($bundleNote === '') {
+                $bundleNote = trim((string)($selectedItem['media_bundle_note'] ?? ''));
+            }
+        }
+    }
+}
 
 if ($uuid !== '') {
     if ($apiIndexBase === '') {
@@ -295,6 +362,7 @@ if ($uuid !== '') {
 
 $docType = $document ? (string)($document['document_type'] ?? '-') : '-';
 $title = $document ? (string)($document['title'] ?? '-') : '-';
+$displayTitle = $bundleTitle !== '' ? $bundleTitle : $title;
 $date = $document ? (string)($document['ui']['event_datetime'] ?? ($document['timestamps']['created_at'] ?? '-')) : '-';
 $summary = $document ? (string)($document['content']['summary'] ?? '-') : '-';
 $content = $document && is_array($document['content'] ?? null) ? $document['content'] : [];
@@ -346,6 +414,30 @@ $isPdf = ($renderMode === 'pdf' || $mimeType === 'application/pdf' || $detectedM
 $openInNewHref = $mediaSrc !== '' && $externalAllowed ? $mediaSrc : ((string)($_SERVER['REQUEST_URI'] ?? '/modules/clinical/ui/viewer.php'));
 $showDownloadAction = ($mediaSrc !== '' && ($isRelativeMediaSrc || $isSameOriginMediaSrc || $externalAllowed));
 $downloadIsRelative = $isRelativeMediaSrc;
+$bundlePrevHref = '';
+$bundleNextHref = '';
+if ($bundleItems !== []) {
+    $prevIndex = ($selectedBundleIndex > 0) ? ($selectedBundleIndex - 1) : -1;
+    $nextIndex = ($selectedBundleIndex < (count($bundleItems) - 1)) ? ($selectedBundleIndex + 1) : -1;
+    if ($prevIndex >= 0 && is_array($bundleItems[$prevIndex] ?? null)) {
+        $bundlePrevHref = build_viewer_self_href([
+            'bundle_id' => $bundleId,
+            'patient_id' => $patientId,
+            'uuid' => (string)($bundleItems[$prevIndex]['document_uuid'] ?? ''),
+            'return_to' => $returnToClean,
+            'embed' => $embedQueryFlag,
+        ]);
+    }
+    if ($nextIndex >= 0 && is_array($bundleItems[$nextIndex] ?? null)) {
+        $bundleNextHref = build_viewer_self_href([
+            'bundle_id' => $bundleId,
+            'patient_id' => $patientId,
+            'uuid' => (string)($bundleItems[$nextIndex]['document_uuid'] ?? ''),
+            'return_to' => $returnToClean,
+            'embed' => $embedQueryFlag,
+        ]);
+    }
+}
 
 require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
@@ -401,8 +493,8 @@ if (!$embed) {
     <div class="d-flex justify-content-between align-items-center mt-2">
       <div>
         <h1 class="h5 mb-0">Document Viewer</h1>
-        <?php if ($title !== '-' && $uuid !== ''): ?>
-          <div class="text-secondary small"><?php echo h($title); ?></div>
+        <?php if ($displayTitle !== '-' && ($uuid !== '' || $bundleId !== '')): ?>
+          <div class="text-secondary small"><?php echo h($displayTitle); ?></div>
         <?php endif; ?>
       </div>
       <div class="d-flex gap-2 mm-viewer-actions">
@@ -415,23 +507,65 @@ if (!$embed) {
         <?php if ($isPdf): ?>
           <button type="button" class="btn btn-outline-secondary btn-sm" data-role="viewer-print">Imprimir</button>
         <?php endif; ?>
+        <?php if ($bundlePrevHref !== ''): ?>
+          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($bundlePrevHref); ?>">Anterior</a>
+        <?php endif; ?>
+        <?php if ($bundleNextHref !== ''): ?>
+          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($bundleNextHref); ?>">Siguiente</a>
+        <?php endif; ?>
         <a class="btn btn-outline-primary btn-sm" href="<?php echo h($openInNewHref); ?>" target="_blank" rel="noopener">Abrir en pestaña</a>
       </div>
     </div>
   </div>
 
-  <p class="text-secondary mb-3">uuid: <code><?php echo h($uuid !== '' ? $uuid : '-'); ?></code></p>
+  <?php if ($bundleId !== ''): ?>
+    <p class="text-secondary mb-3">bundle_id: <code><?php echo h($bundleId); ?></code></p>
+  <?php else: ?>
+    <p class="text-secondary mb-3">uuid: <code><?php echo h($uuid !== '' ? $uuid : '-'); ?></code></p>
+  <?php endif; ?>
 
-  <?php if ($uuid === ''): ?>
-    <div class="alert alert-warning">uuid requerido.</div>
+  <?php if ($uuid === '' && $bundleId === ''): ?>
+    <div class="alert alert-warning">uuid o bundle_id requerido.</div>
   <?php elseif ($errorMessage !== ''): ?>
     <div class="alert alert-danger"><?php echo h($errorMessage); ?></div>
   <?php else: ?>
+    <?php if ($bundleItems !== []): ?>
+      <div class="mm-card mb-3">
+        <div class="body">
+          <div class="fw-semibold"><?php echo h($bundleTitle !== '' ? $bundleTitle : 'Bundle de imágenes'); ?></div>
+          <?php if ($bundleNote !== ''): ?>
+            <div class="text-secondary small mt-1"><?php echo h($bundleNote); ?></div>
+          <?php endif; ?>
+          <div class="mt-2 vstack gap-2">
+            <?php foreach ($bundleItems as $bundleIndex => $bundleItem): ?>
+              <?php
+              $bundleItemUuid = trim((string)($bundleItem['document_uuid'] ?? ''));
+              $bundleItemCaption = trim((string)($bundleItem['media_caption'] ?? ''));
+              $bundleItemTag = trim((string)($bundleItem['media_tag_label'] ?? ''));
+              $bundleItemLabel = $bundleItemCaption !== '' ? $bundleItemCaption : ($bundleItemTag !== '' ? $bundleItemTag : 'Imagen');
+              $bundleItemHref = build_viewer_self_href([
+                  'bundle_id' => $bundleId,
+                  'patient_id' => $patientId,
+                  'uuid' => $bundleItemUuid,
+                  'return_to' => $returnToClean,
+                  'embed' => $embed ? '1' : '',
+              ]);
+              ?>
+              <a class="btn btn-sm <?php echo $bundleIndex === $selectedBundleIndex ? 'btn-primary' : 'btn-outline-secondary'; ?> text-start" href="<?php echo h($bundleItemHref); ?>">
+                <?php echo h($bundleItemLabel); ?>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      </div>
+    <?php endif; ?>
     <div class="mm-card mb-3">
       <div class="body small">
         <div><strong>Tipo:</strong> <?php echo h($docType); ?></div>
         <div><strong>Fecha:</strong> <?php echo h($date); ?></div>
-        <div><strong>Summary:</strong> <?php echo h($summary); ?></div>
+        <?php if ($summary !== '' && $summary !== '-'): ?>
+          <div><strong>Summary:</strong> <?php echo h($summary); ?></div>
+        <?php endif; ?>
         <div><strong>Viewer mode:</strong> <?php echo h($detectedMode); ?></div>
       </div>
     </div>

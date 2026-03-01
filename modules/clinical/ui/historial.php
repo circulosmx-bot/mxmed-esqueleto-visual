@@ -1580,7 +1580,11 @@ if (!$embed) {
                 $bundleTitle = trim((string)($bundleItem['media_bundle_title'] ?? ($bundleDoc['media_bundle_title'] ?? '')));
                 $bundleTagLabel = trim((string)($bundleItem['media_tag_label'] ?? ($bundleDoc['media_tag_label'] ?? '')));
                 $bundleNote = trim((string)($bundleItem['media_bundle_note'] ?? ($bundleDoc['media_bundle_note'] ?? '')));
-                $bundleHref = $bundleUuid !== '' ? ('/modules/clinical/ui/viewer.php?' . carry_embed_params(['uuid' => $bundleUuid])) : '';
+                $bundleId = trim((string)($bundleItem['media_bundle_id'] ?? ($bundleDoc['media_bundle_id'] ?? '')));
+                $bundleHref = $bundleId !== '' ? ('/modules/clinical/ui/viewer.php?' . carry_embed_params([
+                    'bundle_id' => $bundleId,
+                    'patient_id' => $patientId,
+                ])) : ($bundleUuid !== '' ? ('/modules/clinical/ui/viewer.php?' . carry_embed_params(['uuid' => $bundleUuid])) : '');
                 $bundleDisplayTitle = $bundleTitle !== '' ? $bundleTitle : ($bundleTagLabel !== '' ? $bundleTagLabel : 'Imagen');
                 $bundleMetaParts = [];
                 if (trim((string)($bundleItem['case_title'] ?? '')) !== '') {
@@ -1593,7 +1597,7 @@ if (!$embed) {
                 }
                 $bundleMetaText = implode(' · ', $bundleMetaParts);
                 ?>
-                <article class="mm-card timeline-event mm-activity-item <?php echo $bundleInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($bundleCaseId); ?>" data-in-active-case="<?php echo $bundleInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($bundleUuid); ?>" data-document-uuid="<?php echo h($bundleUuid); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-href="<?php echo h($bundleHref); ?>" data-nav-mode="<?php echo $bundleHref !== '' ? 'document' : ''; ?>" data-doc-target="image" data-uuid="<?php echo h($bundleUuid); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
+                <article class="mm-card timeline-event mm-activity-item <?php echo $bundleInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($bundleCaseId); ?>" data-in-active-case="<?php echo $bundleInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($bundleUuid); ?>" data-document-uuid="<?php echo h($bundleUuid); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-href="<?php echo h($bundleHref); ?>" data-nav-mode="<?php echo $bundleHref !== '' ? 'document' : ''; ?>" data-doc-target="image" data-uuid="<?php echo h($bundleUuid); ?>" data-bundle-id="<?php echo h($bundleId); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
                     <div class="min-w-0 flex-grow-1">
@@ -1848,8 +1852,11 @@ if (!$embed) {
           payload.encounter_key = encounterKey;
         } else {
           var uuid = String(itemEl.getAttribute('data-uuid') || '').trim();
+          var bundleId = String(itemEl.getAttribute('data-bundle-id') || '').trim();
           if (!uuid) return;
           payload.uuid = uuid;
+          if (bundleId) payload.bundle_id = bundleId;
+          payload.href = href;
         }
         window.parent.postMessage(payload, '*');
         return;
@@ -2841,8 +2848,12 @@ if (!$embed) {
         payload.encounter_key = encounterKey;
       } else {
         var uuid = String(trigger.getAttribute('data-uuid') || '').trim();
+        var bundleId = String(trigger.getAttribute('data-bundle-id') || '').trim();
         if (!uuid) return;
         payload.uuid = uuid;
+        if (bundleId) payload.bundle_id = bundleId;
+        var href = String(trigger.getAttribute('href') || trigger.getAttribute('data-href') || '').trim();
+        if (href) payload.href = href;
       }
 
       event.preventDefault();
