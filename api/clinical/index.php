@@ -1030,11 +1030,17 @@ function clinical_media_meta_from_payload($payload): array
     $tagKey = trim((string)($data['media_tag_key'] ?? ''));
     $tagLabel = trim((string)($data['media_tag_label'] ?? ''));
     $caption = trim((string)($data['media_caption'] ?? ''));
+    $bundleId = trim((string)($data['media_bundle_id'] ?? ''));
+    $bundleTitle = trim((string)($data['media_bundle_title'] ?? ''));
+    $bundleNote = trim((string)($data['media_bundle_note'] ?? ''));
 
     return [
         'media_tag_key' => ($tagKey !== '' ? $tagKey : null),
         'media_tag_label' => ($tagLabel !== '' ? $tagLabel : null),
         'media_caption' => ($caption !== '' ? $caption : null),
+        'media_bundle_id' => ($bundleId !== '' ? $bundleId : null),
+        'media_bundle_title' => ($bundleTitle !== '' ? $bundleTitle : null),
+        'media_bundle_note' => ($bundleNote !== '' ? $bundleNote : null),
     ];
 }
 
@@ -1046,6 +1052,9 @@ function clinical_media_meta_from_row(array $row): array
             'media_tag_key' => null,
             'media_tag_label' => null,
             'media_caption' => null,
+            'media_bundle_id' => null,
+            'media_bundle_title' => null,
+            'media_bundle_note' => null,
         ];
     }
 
@@ -1165,9 +1174,15 @@ function clinical_timeline_document_item_from_row(array $row, string $patientId,
             'summary' => (string)($row['summary'] ?? ''),
             'media_tag_label' => $mediaMeta['media_tag_label'],
             'media_caption' => $mediaMeta['media_caption'],
+            'media_bundle_id' => $mediaMeta['media_bundle_id'],
+            'media_bundle_title' => $mediaMeta['media_bundle_title'],
+            'media_bundle_note' => $mediaMeta['media_bundle_note'],
         ],
         'media_tag_label' => $mediaMeta['media_tag_label'],
         'media_caption' => $mediaMeta['media_caption'],
+        'media_bundle_id' => $mediaMeta['media_bundle_id'],
+        'media_bundle_title' => $mediaMeta['media_bundle_title'],
+        'media_bundle_note' => $mediaMeta['media_bundle_note'],
     ];
 }
 
@@ -3765,6 +3780,19 @@ try {
                 ], 400);
                 return;
             }
+            if ($documentType === 'image') {
+                $requiredMediaTagKey = trim((string)($payload['media_tag_key'] ?? (($payloadData['media_tag_key'] ?? ''))));
+                if ($requiredMediaTagKey === '') {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => ['code' => 'MEDIA_TAG_REQUIRED', 'message' => 'Selecciona una etiqueta para esta imagen.'],
+                        'message' => '',
+                        'data' => null,
+                        'meta' => ['method' => 'POST', 'route' => 'encounters/{encounter_key}/documents'],
+                    ], 400);
+                    return;
+                }
+            }
             if ($title === '') {
                 $title = 'Documento clínico (' . $documentType . ')';
             }
@@ -3831,11 +3859,14 @@ try {
                         $summary = ($payloadData['render_mode'] === 'pdf') ? 'PDF clínico' : 'Imagen clínica';
                     }
                 }
-                if ($documentType === 'image') {
+                if ($documentType === 'image' || $documentType === 'pdf') {
                     $mediaMeta = clinical_media_meta_from_payload([
                         'media_tag_key' => ($payload['media_tag_key'] ?? ($payloadData['media_tag_key'] ?? null)),
                         'media_tag_label' => ($payload['media_tag_label'] ?? ($payloadData['media_tag_label'] ?? null)),
                         'media_caption' => ($payload['media_caption'] ?? ($payloadData['media_caption'] ?? null)),
+                        'media_bundle_id' => ($payload['media_bundle_id'] ?? ($payloadData['media_bundle_id'] ?? null)),
+                        'media_bundle_title' => ($payload['media_bundle_title'] ?? ($payloadData['media_bundle_title'] ?? null)),
+                        'media_bundle_note' => ($payload['media_bundle_note'] ?? ($payloadData['media_bundle_note'] ?? null)),
                     ]);
                     if ($mediaMeta['media_tag_key'] !== null) {
                         $payloadData['media_tag_key'] = $mediaMeta['media_tag_key'];
@@ -3845,6 +3876,15 @@ try {
                     }
                     if ($mediaMeta['media_caption'] !== null) {
                         $payloadData['media_caption'] = $mediaMeta['media_caption'];
+                    }
+                    if ($mediaMeta['media_bundle_id'] !== null) {
+                        $payloadData['media_bundle_id'] = $mediaMeta['media_bundle_id'];
+                    }
+                    if ($mediaMeta['media_bundle_title'] !== null) {
+                        $payloadData['media_bundle_title'] = $mediaMeta['media_bundle_title'];
+                    }
+                    if ($mediaMeta['media_bundle_note'] !== null) {
+                        $payloadData['media_bundle_note'] = $mediaMeta['media_bundle_note'];
                     }
                 }
                 $payloadJson = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
