@@ -250,6 +250,22 @@ Este milestone no altera contratos existentes y mantiene compatibilidad total co
   - Confirmar filtros por grupo en Historial y ocultamiento de días vacíos.
   - Confirmar que embed y CTAs existentes siguen operando sin cambios.
 
+### FASE: Bundle Clinical Block v1 (solo lectura + render en viewer)
+
+- Decisión:
+  - Reusar el mismo `bundle_id` en `clinical_documents` para admitir un documento lógico `bundle_clinical` sin DB changes.
+  - Mantener compatibilidad: el endpoint del bundle sigue devolviendo `items`; solo agrega soporte de lectura para `bundle_clinical`.
+- Backend:
+  - `GET /bundles/{bundle_id}/documents` incluye `bundle_clinical` cuando exista.
+  - El `bundle_clinical` se ordena primero y las imágenes conservan su orden estable actual.
+- Viewer:
+  - Si el bundle trae `bundle_clinical`, renderiza arriba del visor un bloque “Interpretación del estudio”.
+  - Secciones opcionales: `summary`, `interpretation`, `observations`.
+  - Si no existe `bundle_clinical`, el layout y la navegación siguen igual.
+- Compatibilidad:
+  - Sin cambios de auth, agenda, timeline, embed ni encounter.
+  - Sin tablas nuevas en esta fase.
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)

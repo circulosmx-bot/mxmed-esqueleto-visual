@@ -338,6 +338,7 @@ $errorMessage = '';
 $document = null;
 $bundleData = null;
 $bundleItems = [];
+$bundleClinicalBlock = null;
 $bundleTitle = '';
 $bundleNote = '';
 $selectedBundleIndex = 0;
@@ -357,14 +358,32 @@ if ($bundleId !== '' && $apiIndexBase !== '') {
         $errorMessage = (string)($bundleDecoded['message'] ?? 'Error consultando bundle.');
     } else {
         $bundlePayload = is_array($bundleDecoded['data'] ?? null) ? $bundleDecoded['data'] : [];
-        $bundleItems = is_array($bundlePayload['items'] ?? null) ? $bundlePayload['items'] : [];
+        $bundleItemsRaw = is_array($bundlePayload['items'] ?? null) ? $bundlePayload['items'] : [];
+        $bundleItems = [];
+        foreach ($bundleItemsRaw as $bundleItemRaw) {
+            if (!is_array($bundleItemRaw)) {
+                continue;
+            }
+            if (trim((string)($bundleItemRaw['document_type'] ?? '')) === 'bundle_clinical') {
+                if ($bundleClinicalBlock === null) {
+                    $bundleClinicalCandidate = is_array($bundleItemRaw['bundle_clinical'] ?? null) ? $bundleItemRaw['bundle_clinical'] : [];
+                    $bundleClinicalBlock = [
+                        'summary' => trim((string)($bundleClinicalCandidate['summary'] ?? ($bundleItemRaw['summary'] ?? ''))),
+                        'interpretation' => trim((string)($bundleClinicalCandidate['interpretation'] ?? '')),
+                        'observations' => trim((string)($bundleClinicalCandidate['observations'] ?? '')),
+                    ];
+                }
+                continue;
+            }
+            $bundleItems[] = $bundleItemRaw;
+        }
         $bundleItems = sort_bundle_documents_for_viewer($bundleItems);
         $bundleTitle = trim((string)($bundlePayload['bundle_title'] ?? ''));
         $bundleNote = trim((string)($bundlePayload['bundle_note'] ?? ''));
         $bundleData = $bundlePayload;
-        if ($bundleItems === []) {
+        if ($bundleItems === [] && $bundleClinicalBlock === null) {
             $errorMessage = 'Bundle sin documentos.';
-        } else {
+        } elseif ($bundleItems !== []) {
             $selectedBundleIndex = 0;
             if ($uuid !== '') {
                 foreach ($bundleItems as $idx => $bundleItem) {
@@ -580,6 +599,36 @@ if (!$embed) {
   <?php elseif ($errorMessage !== ''): ?>
     <div class="alert alert-danger"><?php echo h($errorMessage); ?></div>
   <?php else: ?>
+    <?php
+    $bundleClinicalSummary = trim((string)($bundleClinicalBlock['summary'] ?? ''));
+    $bundleClinicalInterpretation = trim((string)($bundleClinicalBlock['interpretation'] ?? ''));
+    $bundleClinicalObservations = trim((string)($bundleClinicalBlock['observations'] ?? ''));
+    ?>
+    <?php if ($bundleClinicalSummary !== '' || $bundleClinicalInterpretation !== '' || $bundleClinicalObservations !== ''): ?>
+      <div class="mm-card mb-3">
+        <div class="head"><h5>Interpretación del estudio</h5></div>
+        <div class="body">
+          <?php if ($bundleClinicalSummary !== ''): ?>
+            <div class="mb-3">
+              <div class="fw-semibold small text-uppercase text-secondary">Resumen</div>
+              <div><?php echo nl2br(h($bundleClinicalSummary)); ?></div>
+            </div>
+          <?php endif; ?>
+          <?php if ($bundleClinicalInterpretation !== ''): ?>
+            <div class="mb-3">
+              <div class="fw-semibold small text-uppercase text-secondary">Interpretación</div>
+              <div><?php echo nl2br(h($bundleClinicalInterpretation)); ?></div>
+            </div>
+          <?php endif; ?>
+          <?php if ($bundleClinicalObservations !== ''): ?>
+            <div>
+              <div class="fw-semibold small text-uppercase text-secondary">Observaciones</div>
+              <div><?php echo nl2br(h($bundleClinicalObservations)); ?></div>
+            </div>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endif; ?>
     <?php if ($bundleItems !== []): ?>
       <div class="mm-card mb-3">
         <div class="body">

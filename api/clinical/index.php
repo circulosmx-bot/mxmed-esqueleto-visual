@@ -1218,6 +1218,28 @@ function clinical_media_meta_from_row(array $row): array
     return clinical_media_meta_from_payload($payload);
 }
 
+function clinical_bundle_clinical_block_from_row(array $row): ?array
+{
+    if (trim((string)($row['document_type'] ?? '')) !== 'bundle_clinical') {
+        return null;
+    }
+
+    $payload = json_decode((string)($row['payload_json'] ?? ''), true);
+    if (!is_array($payload)) {
+        $payload = [];
+    }
+
+    $summary = trim((string)($payload['summary'] ?? ($row['summary'] ?? '')));
+    $interpretation = trim((string)($payload['interpretation'] ?? ''));
+    $observations = trim((string)($payload['observations'] ?? ''));
+
+    return [
+        'summary' => ($summary !== '' ? $summary : null),
+        'interpretation' => ($interpretation !== '' ? $interpretation : null),
+        'observations' => ($observations !== '' ? $observations : null),
+    ];
+}
+
 function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $limit, ?string $cursorDt, ?string $cursorUuid): array
 {
     $baseSelect = "
@@ -1344,6 +1366,9 @@ function clinical_bundle_documents_fetch(PDO $pdo, string $bundleId, string $pat
         return [];
     }
 
+    // QA manual: insertar un bundle_clinical con el mismo media_bundle_id en payload_json
+    // y document_type='bundle_clinical' para validar el bloque de interpretación en el viewer.
+
     $sql = "
         SELECT
             id,
@@ -1365,8 +1390,8 @@ function clinical_bundle_documents_fetch(PDO $pdo, string $bundleId, string $pat
         $sql .= " AND patient_id = :patient_id";
         $params[':patient_id'] = $patientId;
     }
-    // event_datetime puede empatar entre varias fotos del mismo bundle; id/document_uuid estabilizan el orden.
-    $sql .= " ORDER BY event_datetime ASC, id ASC, document_uuid ASC";
+    // bundle_clinical debe abrir el payload clínico del bundle; las imágenes conservan su orden estable actual.
+    $sql .= " ORDER BY CASE WHEN document_type = 'bundle_clinical' THEN 0 ELSE 1 END ASC, event_datetime ASC, id ASC, document_uuid ASC";
 
     $stmt = $pdo->prepare($sql);
     foreach ($params as $key => $value) {
@@ -1388,7 +1413,9 @@ function clinical_bundle_documents_fetch(PDO $pdo, string $bundleId, string $pat
             continue;
         }
         $mediaMeta = clinical_media_meta_from_row($row);
+        $bundleClinical = clinical_bundle_clinical_block_from_row($row);
         $items[] = [
+            'id' => (int)($row['id'] ?? 0),
             'document_uuid' => $uuid,
             'document_type' => (string)($row['document_type'] ?? ''),
             'event_datetime' => (string)($row['event_datetime'] ?? ''),
@@ -1398,6 +1425,7 @@ function clinical_bundle_documents_fetch(PDO $pdo, string $bundleId, string $pat
             'media_bundle_id' => $mediaMeta['media_bundle_id'],
             'media_bundle_title' => $mediaMeta['media_bundle_title'],
             'media_bundle_note' => $mediaMeta['media_bundle_note'],
+            'bundle_clinical' => $bundleClinical,
             'links' => [
                 'patient_id' => (string)($row['patient_id'] ?? ''),
                 'appointment_id' => ($row['appointment_id'] ?? null),
@@ -4884,16 +4912,32 @@ try {
                 return;
             }
 
-            $first = is_array($items[0] ?? null) ? $items[0] : [];
+            $responsePatientId = $patientId;
+            $responseBundleTitle = '';
+            $responseBundleNote = '';
+            foreach ($items as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                if ($responsePatientId === '') {
+                    $responsePatientId = trim((string)($item['links']['patient_id'] ?? ''));
+                }
+                if ($responseBundleTitle === '') {
+                    $responseBundleTitle = trim((string)($item['media_bundle_title'] ?? ''));
+                }
+                if ($responseBundleNote === '') {
+                    $responseBundleNote = trim((string)($item['media_bundle_note'] ?? ''));
+                }
+            }
             clinical_send_response([
                 'ok' => true,
                 'error' => null,
                 'message' => 'bundle documents listed',
                 'data' => [
                     'bundle_id' => $bundleId,
-                    'patient_id' => ($patientId !== '' ? $patientId : (string)($first['links']['patient_id'] ?? '')),
-                    'bundle_title' => (string)($first['media_bundle_title'] ?? ''),
-                    'bundle_note' => (string)($first['media_bundle_note'] ?? ''),
+                    'patient_id' => $responsePatientId,
+                    'bundle_title' => $responseBundleTitle,
+                    'bundle_note' => $responseBundleNote,
                     'items' => $items,
                 ],
                 'meta' => [
