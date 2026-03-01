@@ -1471,8 +1471,13 @@ function clinical_timeline_semantic_classify(array $item): array
     }
 
     $document = is_array($item['clinical_document'] ?? null) ? $item['clinical_document'] : [];
-    $documentType = strtolower(trim((string)($document['document_type'] ?? '')));
+    $documentType = strtolower(trim((string)($item['clinical_document_type'] ?? '')));
+    if ($documentType === '') {
+        $documentType = strtolower(trim((string)($document['document_type'] ?? '')));
+    }
     $mediaBundleId = trim((string)($item['media_bundle_id'] ?? ($document['media_bundle_id'] ?? '')));
+    $bundleNotes = is_array($item['bundle_notes'] ?? null) ? $item['bundle_notes'] : [];
+    $bundleHasNotes = (bool)($bundleNotes['has_notes'] ?? false);
 
     if ($documentType === 'prescription') {
         return [
@@ -1492,10 +1497,16 @@ function clinical_timeline_semantic_classify(array $item): array
             'study_role' => 'resultado',
         ];
     }
+    if ($mediaBundleId !== '' || $bundleHasNotes) {
+        return [
+            'clinical_category' => 'estudio',
+            'study_role' => 'resultado',
+        ];
+    }
     if ($documentType === 'image') {
         return [
-            'clinical_category' => ($mediaBundleId !== '' ? 'estudio' : 'documento'),
-            'study_role' => ($mediaBundleId !== '' ? 'resultado' : null),
+            'clinical_category' => 'documento',
+            'study_role' => null,
         ];
     }
     if ($documentType === 'note') {
