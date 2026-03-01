@@ -1940,7 +1940,6 @@ if (!$embed) {
           + '  <div class="small text-secondary">#' + caseId + ' · ' + (item.updated_at || '-') + '</div>'
           + '</div>'
           + '<div class="d-flex flex-wrap gap-2">'
-          + '  <span class="badge ' + (active ? 'text-bg-success' : 'text-bg-secondary') + '">' + (active ? 'Activo' : (status || '')) + '</span>'
           + (active ? '' : '<button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="activate-case" data-case-id="' + caseId + '">Activar</button>')
           + '  <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="rename-case-from-modal" data-case-id="' + caseId + '" data-case-title="' + title.replace(/"/g, '&quot;') + '">Renombrar</button>'
           + '</div>';
@@ -2062,7 +2061,6 @@ if (!$embed) {
           + '<div class="flex-grow-1">'
           + '  <div class="d-flex flex-wrap align-items-center gap-2">'
           + '    <span class="fw-semibold">' + escapeHtml(title) + '</span>'
-          + '    <span class="badge ' + (active ? 'text-bg-success' : 'text-bg-secondary') + '">' + escapeHtml(active ? 'Activo' : (status || '')) + '</span>'
           + '  </div>'
           + '  <div class="small text-secondary mt-1">#' + escapeHtml(caseId) + ' · ' + escapeHtml(updatedAt) + (itemsCount !== '' ? ' · items: ' + escapeHtml(itemsCount) : '') + '</div>'
           + '</div>';
