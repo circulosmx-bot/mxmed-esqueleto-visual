@@ -161,6 +161,8 @@ function timeline_activity_taxonomy_label(array $item, array $meta): string
     $groupLabel = trim((string)($meta['catalog_group_label'] ?? ''));
     $phaseLabel = trim((string)($meta['catalog_phase_label'] ?? ''));
     $subtypeLabel = trim((string)($meta['subtype_label'] ?? ''));
+    $document = is_array($item['clinical_document'] ?? null) ? $item['clinical_document'] : [];
+    $mediaTagLabel = trim((string)($item['media_tag_label'] ?? ($document['media_tag_label'] ?? '')));
     $normalize = static function (string $value): string {
         $value = strtolower(trim($value));
         if ($value === '') {
@@ -185,6 +187,8 @@ function timeline_activity_taxonomy_label(array $item, array $meta): string
     }
     if ($phaseLabel !== '') {
         $parts[] = $phaseLabel;
+    } elseif ($mediaTagLabel !== '' && $normalize($mediaTagLabel) !== $normalize($groupLabel)) {
+        $parts[] = $mediaTagLabel;
     } elseif ($subtypeLabel !== '' && $normalize($subtypeLabel) !== $normalize($groupLabel)) {
         $parts[] = $subtypeLabel;
     }
@@ -199,6 +203,8 @@ function timeline_activity_title(array $item, array $meta): string
     $phase = trim((string)($meta['catalog_phase'] ?? ''));
     $document = is_array($item['clinical_document'] ?? null) ? $item['clinical_document'] : [];
     $documentType = strtolower(trim((string)($document['document_type'] ?? '')));
+    $mediaTagLabel = trim((string)($item['media_tag_label'] ?? ($document['media_tag_label'] ?? '')));
+    $mediaCaption = trim((string)($item['media_caption'] ?? ($document['media_caption'] ?? '')));
 
     if ($group === 'attention' && $subtype === 'appointment') {
         return 'Cita';
@@ -216,7 +222,16 @@ function timeline_activity_title(array $item, array $meta): string
         return 'Resultado de estudio';
     }
     if ($group === 'multimedia') {
-        return $documentType === 'image' ? 'Foto clínica' : 'Archivo';
+        if ($documentType === 'image') {
+            if ($mediaCaption !== '') {
+                return $mediaCaption;
+            }
+            if ($mediaTagLabel !== '') {
+                return $mediaTagLabel;
+            }
+            return 'Imagen';
+        }
+        return 'Archivo';
     }
     if ($group === 'clinical') {
         return 'Documento clínico';
