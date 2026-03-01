@@ -1460,6 +1460,57 @@ function clinical_timeline_document_item_from_row(array $row, string $patientId,
     ];
 }
 
+function clinical_timeline_semantic_classify(array $item): array
+{
+    $itemType = strtolower(trim((string)($item['item_type'] ?? '')));
+    if ($itemType === 'appointment') {
+        return [
+            'clinical_category' => 'cita',
+            'study_role' => null,
+        ];
+    }
+
+    $document = is_array($item['clinical_document'] ?? null) ? $item['clinical_document'] : [];
+    $documentType = strtolower(trim((string)($document['document_type'] ?? '')));
+    $mediaBundleId = trim((string)($item['media_bundle_id'] ?? ($document['media_bundle_id'] ?? '')));
+
+    if ($documentType === 'prescription') {
+        return [
+            'clinical_category' => 'receta',
+            'study_role' => null,
+        ];
+    }
+    if ($documentType === 'orders') {
+        return [
+            'clinical_category' => 'estudio',
+            'study_role' => 'orden',
+        ];
+    }
+    if ($documentType === 'results') {
+        return [
+            'clinical_category' => 'estudio',
+            'study_role' => 'resultado',
+        ];
+    }
+    if ($documentType === 'image') {
+        return [
+            'clinical_category' => ($mediaBundleId !== '' ? 'estudio' : 'documento'),
+            'study_role' => ($mediaBundleId !== '' ? 'resultado' : null),
+        ];
+    }
+    if ($documentType === 'note') {
+        return [
+            'clinical_category' => 'consulta',
+            'study_role' => null,
+        ];
+    }
+
+    return [
+        'clinical_category' => 'documento',
+        'study_role' => null,
+    ];
+}
+
 function clinical_bundle_documents_fetch(PDO $pdo, string $bundleId, string $patientId = ''): array
 {
     if ($bundleId === '') {
@@ -2624,6 +2675,10 @@ try {
                 $timelineItem['catalog_phase'] = $catalogV11['catalog_phase'] ?? null;
                 $timelineItem['catalog_phase_label'] = $catalogV11['catalog_phase_label'] ?? null;
                 $timelineItem['catalog_priority'] = (int)($catalogV11['catalog_priority'] ?? 999);
+
+                $semantic = clinical_timeline_semantic_classify($timelineItem);
+                $timelineItem['clinical_category'] = (string)($semantic['clinical_category'] ?? 'documento');
+                $timelineItem['study_role'] = $semantic['study_role'] ?? null;
             }
             unset($timelineItem);
 
