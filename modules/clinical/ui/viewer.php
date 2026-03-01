@@ -275,6 +275,39 @@ function is_same_origin_media_url(string $url, string $currentHost): bool
     return $host !== '' && $currentHost !== '' && $host === strtolower($currentHost);
 }
 
+function sort_bundle_documents_for_viewer(array $items): array
+{
+    usort($items, static function ($left, $right): int {
+        $leftItem = is_array($left) ? $left : [];
+        $rightItem = is_array($right) ? $right : [];
+
+        $leftDt = trim((string)($leftItem['event_datetime'] ?? ''));
+        $rightDt = trim((string)($rightItem['event_datetime'] ?? ''));
+        if ($leftDt !== $rightDt) {
+            return strcmp($leftDt, $rightDt);
+        }
+
+        $leftId = (int)($leftItem['id'] ?? 0);
+        $rightId = (int)($rightItem['id'] ?? 0);
+        if ($leftId > 0 || $rightId > 0) {
+            if ($leftId === $rightId) {
+                return strcmp(
+                    trim((string)($leftItem['document_uuid'] ?? '')),
+                    trim((string)($rightItem['document_uuid'] ?? ''))
+                );
+            }
+            return $leftId <=> $rightId;
+        }
+
+        return strcmp(
+            trim((string)($leftItem['document_uuid'] ?? '')),
+            trim((string)($rightItem['document_uuid'] ?? ''))
+        );
+    });
+
+    return $items;
+}
+
 $uuid = trim((string)($_GET['uuid'] ?? ''));
 if ($uuid === '') {
     $uuid = trim((string)($_GET['doc_uuid'] ?? ''));
@@ -309,12 +342,14 @@ if ($bundleId !== '' && $apiIndexBase !== '') {
     } else {
         $bundlePayload = is_array($bundleDecoded['data'] ?? null) ? $bundleDecoded['data'] : [];
         $bundleItems = is_array($bundlePayload['items'] ?? null) ? $bundlePayload['items'] : [];
+        $bundleItems = sort_bundle_documents_for_viewer($bundleItems);
         $bundleTitle = trim((string)($bundlePayload['bundle_title'] ?? ''));
         $bundleNote = trim((string)($bundlePayload['bundle_note'] ?? ''));
         $bundleData = $bundlePayload;
         if ($bundleItems === []) {
             $errorMessage = 'Bundle sin documentos.';
         } else {
+            $selectedBundleIndex = 0;
             if ($uuid !== '') {
                 foreach ($bundleItems as $idx => $bundleItem) {
                     if (!is_array($bundleItem)) {
