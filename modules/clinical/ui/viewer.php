@@ -277,7 +277,16 @@ function is_same_origin_media_url(string $url, string $currentHost): bool
 
 function sort_bundle_documents_for_viewer(array $items): array
 {
-    usort($items, static function ($left, $right): int {
+    $decorated = [];
+    foreach ($items as $idx => $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+        $item['_idx'] = (int)$idx;
+        $decorated[] = $item;
+    }
+
+    usort($decorated, static function ($left, $right): int {
         $leftItem = is_array($left) ? $left : [];
         $rightItem = is_array($right) ? $right : [];
 
@@ -290,13 +299,15 @@ function sort_bundle_documents_for_viewer(array $items): array
         $leftId = (int)($leftItem['id'] ?? 0);
         $rightId = (int)($rightItem['id'] ?? 0);
         if ($leftId > 0 || $rightId > 0) {
-            if ($leftId === $rightId) {
-                return strcmp(
-                    trim((string)($leftItem['document_uuid'] ?? '')),
-                    trim((string)($rightItem['document_uuid'] ?? ''))
-                );
+            if ($leftId !== $rightId) {
+                return $leftId <=> $rightId;
             }
-            return $leftId <=> $rightId;
+        }
+
+        $leftIdx = (int)($leftItem['_idx'] ?? 0);
+        $rightIdx = (int)($rightItem['_idx'] ?? 0);
+        if ($leftIdx !== $rightIdx) {
+            return $leftIdx <=> $rightIdx;
         }
 
         return strcmp(
@@ -305,7 +316,12 @@ function sort_bundle_documents_for_viewer(array $items): array
         );
     });
 
-    return $items;
+    foreach ($decorated as &$item) {
+        unset($item['_idx']);
+    }
+    unset($item);
+
+    return $decorated;
 }
 
 $uuid = trim((string)($_GET['uuid'] ?? ''));
