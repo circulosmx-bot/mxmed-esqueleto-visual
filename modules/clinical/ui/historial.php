@@ -1587,6 +1587,9 @@ if (!$embed) {
                 ])) : ($bundleUuid !== '' ? ('/modules/clinical/ui/viewer.php?' . carry_embed_params(['uuid' => $bundleUuid])) : '');
                 $bundleDisplayTitle = $bundleTitle !== '' ? $bundleTitle : ($bundleTagLabel !== '' ? $bundleTagLabel : 'Imagen');
                 $bundleMetaParts = [];
+                $bundleNotes = is_array($bundleItem['bundle_notes'] ?? null) ? $bundleItem['bundle_notes'] : [];
+                $hasNotes = (bool)($bundleNotes['has_notes'] ?? false);
+                $notesExcerpt = trim((string)($bundleNotes['excerpt'] ?? ''));
                 if (trim((string)($bundleItem['case_title'] ?? '')) !== '') {
                     $bundleMetaParts[] = 'Caso: ' . trim((string)$bundleItem['case_title']);
                 }
@@ -1601,9 +1604,17 @@ if (!$embed) {
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
                     <div class="min-w-0 flex-grow-1">
-                      <div class="mm-activity-title"><?php echo h($bundleDisplayTitle); ?></div>
+                      <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="mm-activity-title"><?php echo h($bundleDisplayTitle); ?></div>
+                        <?php if ($hasNotes): ?>
+                          <span class="badge rounded-pill text-bg-secondary">Notas clínicas</span>
+                        <?php endif; ?>
+                      </div>
                       <?php if ($bundleMetaText !== ''): ?>
                         <div class="mm-activity-meta"><?php echo h($bundleMetaText); ?></div>
+                      <?php endif; ?>
+                      <?php if ($hasNotes && $notesExcerpt !== ''): ?>
+                        <div class="small text-secondary mt-1"><?php echo h($notesExcerpt); ?></div>
                       <?php endif; ?>
                     </div>
                     <div class="mm-activity-actions">
