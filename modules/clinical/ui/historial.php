@@ -1286,17 +1286,6 @@ if (!$embed) {
             <div>
               <div class="mm-activity-day-header"><?php echo h((string)$dayGroup['day_label']); ?></div>
             </div>
-            <div class="timeline-category-summary" data-role="day-category-summary">
-              <?php foreach ($dayGroup['summary'] as $summaryCategory): ?>
-                <span
-                  class="badge rounded-pill text-bg-light border"
-                  data-category-summary-item="1"
-                  data-catalog-group="<?php echo h((string)$summaryCategory['catalog_group']); ?>"
-                  data-catalog-group-label="<?php echo h((string)$summaryCategory['label']); ?>"
-                  data-catalog-priority="<?php echo (int)$summaryCategory['priority']; ?>"
-                ><?php echo h((string)$summaryCategory['label']); ?></span>
-              <?php endforeach; ?>
-            </div>
           </div>
           <div class="timeline-day-events">
             <?php foreach ($dayGroup['entries'] as $entry): ?>
@@ -1931,9 +1920,8 @@ if (!$embed) {
         var row = document.createElement('div');
         row.className = 'border rounded p-2 d-flex flex-wrap justify-content-between align-items-center gap-2';
         var caseId = String(item.case_id || '').trim();
-        var status = String(item.status || '').trim();
         var title = String(item.title || 'Caso clínico').trim();
-        var active = status === 'active';
+        var active = String(item.status || '').trim() === 'active';
         row.innerHTML = ''
           + '<div>'
           + '  <div class="fw-semibold">' + title.replace(/</g, '&lt;') + '</div>'
@@ -2047,13 +2035,12 @@ if (!$embed) {
         var row = document.createElement('label');
         row.className = 'border rounded p-2 d-flex gap-3 align-items-start';
         var caseId = String(item.case_id || '').trim();
-        var status = String(item.status || '').trim();
         var title = String(item.title || 'Caso clínico').trim();
         var updatedAt = String(item.updated_at || '-').trim();
         var itemsCount = (item && item.items_count !== undefined && item.items_count !== null)
           ? String(item.items_count).trim()
           : '';
-        var active = status === 'active';
+        var active = String(item.status || '').trim() === 'active';
         var checked = (activeCaseId !== '' && caseId === String(activeCaseId))
           || (activeCaseId === '' && index === 0);
         row.innerHTML = ''
