@@ -195,6 +195,26 @@ function timeline_activity_taxonomy_label(array $item, array $meta): string
     return implode(' · ', $parts);
 }
 
+function timeline_normalize_label(string $value): string
+{
+    $value = strtolower(trim($value));
+    if ($value === '') {
+        return '';
+    }
+    return strtr($value, [
+        'á' => 'a',
+        'é' => 'e',
+        'í' => 'i',
+        'ó' => 'o',
+        'ú' => 'u',
+        'ä' => 'a',
+        'ë' => 'e',
+        'ï' => 'i',
+        'ö' => 'o',
+        'ü' => 'u',
+    ]);
+}
+
 function timeline_activity_title(array $item, array $meta): string
 {
     $itemType = trim((string)($item['item_type'] ?? ''));
@@ -205,6 +225,7 @@ function timeline_activity_title(array $item, array $meta): string
     $documentType = strtolower(trim((string)($document['document_type'] ?? '')));
     $mediaTagLabel = trim((string)($item['media_tag_label'] ?? ($document['media_tag_label'] ?? '')));
     $mediaCaption = trim((string)($item['media_caption'] ?? ($document['media_caption'] ?? '')));
+    $mediaBundleTitle = trim((string)($item['media_bundle_title'] ?? ($document['media_bundle_title'] ?? '')));
 
     if ($group === 'attention' && $subtype === 'appointment') {
         return 'Cita';
@@ -223,6 +244,9 @@ function timeline_activity_title(array $item, array $meta): string
     }
     if ($group === 'multimedia') {
         if ($documentType === 'image') {
+            if ($mediaBundleTitle !== '') {
+                return $mediaBundleTitle;
+            }
             if ($mediaCaption !== '') {
                 return $mediaCaption;
             }
@@ -278,8 +302,13 @@ function timeline_activity_tooltip_lines(array $item, array $meta): array
 {
     $lines = [];
     $taxonomy = timeline_activity_taxonomy_label($item, $meta);
+    $document = is_array($item['clinical_document'] ?? null) ? $item['clinical_document'] : [];
+    $mediaBundleTitle = trim((string)($item['media_bundle_title'] ?? ($document['media_bundle_title'] ?? '')));
     if ($taxonomy !== '') {
         $lines[] = $taxonomy;
+    }
+    if ($mediaBundleTitle !== '' && timeline_normalize_label($mediaBundleTitle) !== timeline_normalize_label($taxonomy)) {
+        $lines[] = $mediaBundleTitle;
     }
     $eventDatetime = trim((string)($item['event_datetime'] ?? ''));
     if ($eventDatetime !== '') {
@@ -290,6 +319,17 @@ function timeline_activity_tooltip_lines(array $item, array $meta): array
         $lines[] = 'Caso: ' . $caseTitle;
     }
     return array_slice($lines, 0, 3);
+}
+
+function timeline_is_bundleable_image(array $item, array $meta): bool
+{
+    if (trim((string)($item['item_type'] ?? '')) !== 'document') {
+        return false;
+    }
+    $document = is_array($item['clinical_document'] ?? null) ? $item['clinical_document'] : [];
+    $documentType = strtolower(trim((string)($document['document_type'] ?? '')));
+    $bundleId = trim((string)($item['media_bundle_id'] ?? ($document['media_bundle_id'] ?? '')));
+    return $documentType === 'image' && $bundleId !== '';
 }
 
 function render_embed_css(bool $embed): void
@@ -864,6 +904,7 @@ foreach ($orphanDocs as $docItem) {
 }
 
 $renderEntries = [];
+$bundleEntries = [];
 foreach ($items as $item) {
     if (!is_array($item)) {
         continue;
@@ -899,15 +940,62 @@ foreach ($items as $item) {
         if (!isset($orphanDocMap[$uid])) {
             continue;
         }
+        $docItem = $orphanDocMap[$uid];
+        $docMeta = timeline_item_catalog_meta($docItem);
+        if (timeline_is_bundleable_image($docItem, $docMeta)) {
+            $doc = is_array($docItem['clinical_document'] ?? null) ? $docItem['clinical_document'] : [];
+            $bundleId = trim((string)($docItem['media_bundle_id'] ?? ($doc['media_bundle_id'] ?? '')));
+            $dayKey = timeline_date_only((string)($item['event_datetime'] ?? ''));
+            $bundleKey = $dayKey . '|' . $bundleId;
+            if (!isset($bundleEntries[$bundleKey])) {
+                $bundleEntries[$bundleKey] = [
+                    'kind' => 'media_bundle',
+                    'item' => $docItem,
+                    'bundle_items' => [],
+                    'bundle_count' => 0,
+                    'event_datetime' => (string)($item['event_datetime'] ?? ''),
+                    'day_key' => $dayKey,
+                    'category_meta' => $docMeta,
+                ];
+            }
+            $bundleEntries[$bundleKey]['bundle_items'][] = $docItem;
+            $bundleEntries[$bundleKey]['bundle_count'] += 1;
+            continue;
+        }
         $renderEntries[] = [
             'kind' => 'document',
-            'item' => $orphanDocMap[$uid],
+            'item' => $docItem,
             'event_datetime' => (string)($item['event_datetime'] ?? ''),
             'day_key' => timeline_date_only((string)($item['event_datetime'] ?? '')),
-            'category_meta' => timeline_item_catalog_meta($orphanDocMap[$uid]),
+            'category_meta' => $docMeta,
         ];
     }
 }
+
+foreach ($bundleEntries as $bundleEntry) {
+    if (!is_array($bundleEntry)) {
+        continue;
+    }
+    $bundleItems = is_array($bundleEntry['bundle_items'] ?? null) ? $bundleEntry['bundle_items'] : [];
+    if ($bundleItems === []) {
+        continue;
+    }
+    usort($bundleItems, static function (array $a, array $b): int {
+        return strcmp((string)($a['event_datetime'] ?? ''), (string)($b['event_datetime'] ?? ''));
+    });
+    $bundleEntry['bundle_items'] = $bundleItems;
+    $bundleEntry['item'] = $bundleItems[0];
+    $bundleEntry['bundle_count'] = count($bundleItems);
+    $renderEntries[] = $bundleEntry;
+}
+
+usort($renderEntries, static function (array $a, array $b): int {
+    $dtCmp = strcmp((string)($b['event_datetime'] ?? ''), (string)($a['event_datetime'] ?? ''));
+    if ($dtCmp !== 0) {
+        return $dtCmp;
+    }
+    return strcmp((string)($b['kind'] ?? ''), (string)($a['kind'] ?? ''));
+});
 
 $dayGroups = [];
 $dayOrder = [];
@@ -1476,6 +1564,50 @@ if (!$embed) {
                       <?php endif; ?>
                       <?php if (!$docInActiveCase && $activeCaseId !== '' && $docUuid !== ''): ?>
                         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-success" data-action="assign-case-item" data-case-id="<?php echo h($activeCaseId); ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Agregar a caso activo</button>
+                      <?php endif; ?>
+                    </div>
+                  </div>
+                </article>
+              <?php elseif (($entry['kind'] ?? '') === 'media_bundle'): ?>
+                <?php
+                $bundleItem = $entryItem;
+                $bundleDoc = is_array($bundleItem['clinical_document'] ?? null) ? $bundleItem['clinical_document'] : [];
+                $bundleItems = is_array($entry['bundle_items'] ?? null) ? $entry['bundle_items'] : [];
+                $bundleCount = max(1, (int)($entry['bundle_count'] ?? count($bundleItems)));
+                $bundleUuid = trim((string)($bundleItem['links']['document_uuid'] ?? ''));
+                $bundleCaseId = trim((string)($bundleItem['case_id'] ?? ''));
+                $bundleInActiveCase = (bool)($bundleItem['is_in_active_case'] ?? false);
+                $bundleTitle = trim((string)($bundleItem['media_bundle_title'] ?? ($bundleDoc['media_bundle_title'] ?? '')));
+                $bundleTagLabel = trim((string)($bundleItem['media_tag_label'] ?? ($bundleDoc['media_tag_label'] ?? '')));
+                $bundleNote = trim((string)($bundleItem['media_bundle_note'] ?? ($bundleDoc['media_bundle_note'] ?? '')));
+                $bundleHref = $bundleUuid !== '' ? ('/modules/clinical/ui/viewer.php?' . carry_embed_params(['uuid' => $bundleUuid])) : '';
+                $bundleDisplayTitle = $bundleTitle !== '' ? $bundleTitle : ($bundleTagLabel !== '' ? $bundleTagLabel : 'Imagen');
+                $bundleMetaParts = [];
+                if (trim((string)($bundleItem['case_title'] ?? '')) !== '') {
+                    $bundleMetaParts[] = 'Caso: ' . trim((string)$bundleItem['case_title']);
+                }
+                if ($bundleNote !== '') {
+                    $bundleMetaParts[] = $bundleNote;
+                } else {
+                    $bundleMetaParts[] = $bundleCount . ' archivos';
+                }
+                $bundleMetaText = implode(' · ', $bundleMetaParts);
+                ?>
+                <article class="mm-card timeline-event mm-activity-item <?php echo $bundleInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($bundleCaseId); ?>" data-in-active-case="<?php echo $bundleInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($bundleUuid); ?>" data-document-uuid="<?php echo h($bundleUuid); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-href="<?php echo h($bundleHref); ?>" data-nav-mode="<?php echo $bundleHref !== '' ? 'document' : ''; ?>" data-doc-target="image" data-uuid="<?php echo h($bundleUuid); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
+                  <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
+                  <div class="mm-activity-body">
+                    <div class="min-w-0 flex-grow-1">
+                      <div class="mm-activity-title"><?php echo h($bundleDisplayTitle); ?></div>
+                      <?php if ($bundleMetaText !== ''): ?>
+                        <div class="mm-activity-meta"><?php echo h($bundleMetaText); ?></div>
+                      <?php endif; ?>
+                    </div>
+                    <div class="mm-activity-actions">
+                      <?php if (!$bundleInActiveCase && $bundleUuid !== ''): ?>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-to-case" data-item-type="document" data-item-ref="<?php echo h($bundleUuid); ?>">Integrar a caso clínico</button>
+                      <?php endif; ?>
+                      <?php if (!$bundleInActiveCase && $activeCaseId !== '' && $bundleUuid !== ''): ?>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-success" data-action="assign-case-item" data-case-id="<?php echo h($activeCaseId); ?>" data-item-type="document" data-item-ref="<?php echo h($bundleUuid); ?>">Agregar a caso activo</button>
                       <?php endif; ?>
                     </div>
                   </div>
