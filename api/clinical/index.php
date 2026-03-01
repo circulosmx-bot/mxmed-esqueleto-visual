@@ -1346,6 +1346,7 @@ function clinical_bundle_documents_fetch(PDO $pdo, string $bundleId, string $pat
 
     $sql = "
         SELECT
+            id,
             document_uuid,
             document_type,
             title,
@@ -1364,7 +1365,8 @@ function clinical_bundle_documents_fetch(PDO $pdo, string $bundleId, string $pat
         $sql .= " AND patient_id = :patient_id";
         $params[':patient_id'] = $patientId;
     }
-    $sql .= " ORDER BY event_datetime ASC, created_at ASC, document_uuid ASC";
+    // event_datetime puede empatar entre varias fotos del mismo bundle; id/document_uuid estabilizan el orden.
+    $sql .= " ORDER BY event_datetime ASC, id ASC, document_uuid ASC";
 
     $stmt = $pdo->prepare($sql);
     foreach ($params as $key => $value) {
