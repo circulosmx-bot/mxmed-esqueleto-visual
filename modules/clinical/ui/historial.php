@@ -1390,12 +1390,19 @@ if (!$embed) {
     </div>
     <div class="alert alert-secondary d-none py-2 mb-3" data-role="case-scope-empty">Sin eventos del caso activo.</div>
     <div class="timeline-category-filters" data-role="timeline-category-filters">
-      <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary active" data-action="set-category-filter" data-category-filter="all">Todo</button>
-      <?php foreach ($availableCategoryFilters as $categoryFilter): ?>
-        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-category-filter" data-category-filter="<?php echo h((string)$categoryFilter['catalog_group']); ?>">
-          <?php echo h((string)$categoryFilter['label']); ?>
-        </button>
-      <?php endforeach; ?>
+      <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Filtros clínicos">
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary active" data-action="set-clinical-filter" data-clinical-filter="all">Todo</button>
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="cita">Citas</button>
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="consulta">Consultas</button>
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="receta">Recetas</button>
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="estudio">Estudios</button>
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="documento">Documentos</button>
+      </div>
+      <div class="btn-group btn-group-sm flex-wrap d-none" role="group" aria-label="Subfiltros de estudios" data-role="timeline-study-filters">
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary active" data-action="set-study-filter" data-study-filter="all">Todos</button>
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-study-filter" data-study-filter="orden">Órdenes</button>
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-study-filter" data-study-filter="resultado">Resultados</button>
+      </div>
     </div>
     <div class="vstack gap-3">
       <?php foreach ($dayOrder as $dayKey): ?>
@@ -1453,7 +1460,7 @@ if (!$embed) {
                     $appointmentHref = '/index.html#p-agenda';
                 }
                 ?>
-                <article class="mm-card timeline-event mm-activity-item <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($itemCaseId); ?>" data-in-active-case="<?php echo $isInActiveCase ? '1' : '0'; ?>" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-href="<?php echo h($appointmentHref); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
+                <article class="mm-card timeline-event mm-activity-item <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($itemCaseId); ?>" data-in-active-case="<?php echo $isInActiveCase ? '1' : '0'; ?>" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-clinical-category="<?php echo h(trim((string)($item['clinical_category'] ?? ''))); ?>" data-study-role="<?php echo h(trim((string)($item['study_role'] ?? ''))); ?>" data-href="<?php echo h($appointmentHref); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
                     <div class="min-w-0 flex-grow-1">
@@ -1510,7 +1517,7 @@ if (!$embed) {
                     $encounterHref = '/modules/clinical/ui/encounter.php?' . carry_embed_params(['encounter_key' => $encLatestEncounterKey]);
                 }
                 ?>
-                <article class="mm-card timeline-event mm-activity-item <?php echo $encInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($encCaseId); ?>" data-in-active-case="<?php echo $encInActiveCase ? '1' : '0'; ?>" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>" data-encounter-key="<?php echo h($ek); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-href="<?php echo h($encounterHref); ?>" data-nav-mode="<?php echo $encounterHref !== '' ? 'encounter' : ''; ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
+                <article class="mm-card timeline-event mm-activity-item <?php echo $encInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($encCaseId); ?>" data-in-active-case="<?php echo $encInActiveCase ? '1' : '0'; ?>" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>" data-encounter-key="<?php echo h($ek); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-clinical-category="<?php echo h(trim((string)($rawEncounter['clinical_category'] ?? ''))); ?>" data-study-role="<?php echo h(trim((string)($rawEncounter['study_role'] ?? ''))); ?>" data-href="<?php echo h($encounterHref); ?>" data-nav-mode="<?php echo $encounterHref !== '' ? 'encounter' : ''; ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
                     <div class="min-w-0 flex-grow-1">
@@ -1549,7 +1556,7 @@ if (!$embed) {
                 $docViewPath = $docIsImage ? '/modules/clinical/ui/viewer.php' : '/modules/clinical/ui/document.php';
                 $docHref = $docUuid !== '' ? $docViewPath . '?' . carry_embed_params(['uuid' => $docUuid]) : '';
                 ?>
-                <article class="mm-card timeline-event mm-activity-item <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>" data-document-uuid="<?php echo h($docUuid); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-href="<?php echo h($docHref); ?>" data-nav-mode="<?php echo $docHref !== '' ? 'document' : ''; ?>" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>" data-uuid="<?php echo h($docUuid); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
+                <article class="mm-card timeline-event mm-activity-item <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>" data-document-uuid="<?php echo h($docUuid); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-clinical-category="<?php echo h(trim((string)($docItem['clinical_category'] ?? ''))); ?>" data-study-role="<?php echo h(trim((string)($docItem['study_role'] ?? ''))); ?>" data-href="<?php echo h($docHref); ?>" data-nav-mode="<?php echo $docHref !== '' ? 'document' : ''; ?>" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>" data-uuid="<?php echo h($docUuid); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
                     <div class="min-w-0 flex-grow-1">
@@ -1600,7 +1607,7 @@ if (!$embed) {
                 }
                 $bundleMetaText = implode(' · ', $bundleMetaParts);
                 ?>
-                <article class="mm-card timeline-event mm-activity-item <?php echo $bundleInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($bundleCaseId); ?>" data-in-active-case="<?php echo $bundleInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($bundleUuid); ?>" data-document-uuid="<?php echo h($bundleUuid); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-href="<?php echo h($bundleHref); ?>" data-nav-mode="<?php echo $bundleHref !== '' ? 'document' : ''; ?>" data-doc-target="image" data-uuid="<?php echo h($bundleUuid); ?>" data-bundle-id="<?php echo h($bundleId); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
+                <article class="mm-card timeline-event mm-activity-item <?php echo $bundleInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($bundleCaseId); ?>" data-in-active-case="<?php echo $bundleInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($bundleUuid); ?>" data-document-uuid="<?php echo h($bundleUuid); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-clinical-category="<?php echo h(trim((string)($bundleItem['clinical_category'] ?? ''))); ?>" data-study-role="<?php echo h(trim((string)($bundleItem['study_role'] ?? ''))); ?>" data-href="<?php echo h($bundleHref); ?>" data-nav-mode="<?php echo $bundleHref !== '' ? 'document' : ''; ?>" data-doc-target="image" data-uuid="<?php echo h($bundleUuid); ?>" data-bundle-id="<?php echo h($bundleId); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
                     <div class="min-w-0 flex-grow-1">
@@ -1786,12 +1793,14 @@ if (!$embed) {
     var onlyActiveCaseNotice = document.querySelector('[data-role="only-active-case-note"]');
     var caseScopeFilterWrap = document.querySelector('[data-role="case-scope-filter"]');
     var categoryFilterWrap = document.querySelector('[data-role="timeline-category-filters"]');
+    var studyFilterWrap = document.querySelector('[data-role="timeline-study-filters"]');
     var caseScopeEmpty = document.querySelector('[data-role="case-scope-empty"]');
     var recentSuggestion = document.querySelector('[data-role="recent-case-suggestion"]');
     var recentSuggestionText = document.querySelector('[data-role="recent-case-suggestion-text"]');
     var onlyActiveCaseEnabled = false;
     var caseScope = 'all';
-    var categoryFilter = 'all';
+    var clinicalCategoryFilter = 'all';
+    var studyRoleFilter = 'all';
     var categoryPriorityMap = <?php echo json_encode($timelineCategoryPriorityMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var encounterDetailModalEl = document.querySelector('[data-role="encounter-detail-modal"]');
     var encounterDetailLoading = document.querySelector('[data-role="encounter-detail-loading"]');
@@ -1877,10 +1886,17 @@ if (!$embed) {
 
     function applyTimelineCategoryFilter() {
       if (!categoryFilterWrap) return;
-      var buttons = categoryFilterWrap.querySelectorAll('[data-action="set-category-filter"]');
+      var buttons = categoryFilterWrap.querySelectorAll('[data-action="set-clinical-filter"]');
       buttons.forEach(function (btn) {
-        var value = String(btn.getAttribute('data-category-filter') || '').trim();
-        btn.classList.toggle('active', value === categoryFilter);
+        var value = String(btn.getAttribute('data-clinical-filter') || '').trim();
+        btn.classList.toggle('active', value === clinicalCategoryFilter);
+      });
+      if (!studyFilterWrap) return;
+      studyFilterWrap.classList.toggle('d-none', clinicalCategoryFilter !== 'estudio');
+      var studyButtons = studyFilterWrap.querySelectorAll('[data-action="set-study-filter"]');
+      studyButtons.forEach(function (btn) {
+        var value = String(btn.getAttribute('data-study-filter') || '').trim();
+        btn.classList.toggle('active', value === studyRoleFilter);
       });
     }
 
@@ -1930,7 +1946,8 @@ if (!$embed) {
       var visibleCount = 0;
       timelineItems.forEach(function (item) {
         var inActiveCase = String(item.getAttribute('data-in-active-case') || '').trim() === '1';
-        var itemCategory = String(item.getAttribute('data-catalog-group') || '').trim();
+        var itemClinicalCategory = String(item.getAttribute('data-clinical-category') || '').trim();
+        var itemStudyRole = String(item.getAttribute('data-study-role') || '').trim();
         var hide = false;
 
         if (onlyActiveCaseEnabled && activeCaseId !== '') {
@@ -1943,8 +1960,11 @@ if (!$embed) {
             hide = inActiveCase;
           }
         }
-        if (!hide && categoryFilter !== 'all') {
-          hide = itemCategory !== categoryFilter;
+        if (!hide && clinicalCategoryFilter !== 'all') {
+          hide = itemClinicalCategory !== clinicalCategoryFilter;
+          if (!hide && clinicalCategoryFilter === 'estudio' && studyRoleFilter !== 'all') {
+            hide = itemStudyRole !== studyRoleFilter;
+          }
         }
 
         item.classList.toggle('d-none', hide);
@@ -1963,8 +1983,10 @@ if (!$embed) {
       updateDayCardVisibility();
       if (caseScopeEmpty) {
         var showEmpty = visibleCount === 0;
-        if (categoryFilter !== 'all') {
-          caseScopeEmpty.textContent = 'Sin eventos para la categoria seleccionada.';
+        if (clinicalCategoryFilter === 'estudio' && studyRoleFilter !== 'all') {
+          caseScopeEmpty.textContent = 'Sin eventos para el subfiltro de estudios seleccionado.';
+        } else if (clinicalCategoryFilter !== 'all') {
+          caseScopeEmpty.textContent = 'Sin eventos para la categoría clínica seleccionada.';
         } else if (caseScope === 'in') {
           caseScopeEmpty.textContent = 'Sin eventos del caso activo.';
         } else if (caseScope === 'out') {
@@ -2600,12 +2622,26 @@ if (!$embed) {
         return;
       }
 
-      var setCategoryFilterBtn = event.target && event.target.closest ? event.target.closest('[data-action="set-category-filter"]') : null;
-      if (setCategoryFilterBtn) {
+      var setClinicalFilterBtn = event.target && event.target.closest ? event.target.closest('[data-action="set-clinical-filter"]') : null;
+      if (setClinicalFilterBtn) {
         event.preventDefault();
-        categoryFilter = String(setCategoryFilterBtn.getAttribute('data-category-filter') || 'all').trim();
-        if (categoryFilter === '') {
-          categoryFilter = 'all';
+        clinicalCategoryFilter = String(setClinicalFilterBtn.getAttribute('data-clinical-filter') || 'all').trim();
+        if (clinicalCategoryFilter === '') {
+          clinicalCategoryFilter = 'all';
+        }
+        if (clinicalCategoryFilter !== 'estudio') {
+          studyRoleFilter = 'all';
+        }
+        applyOnlyActiveCaseFilter();
+        return;
+      }
+
+      var setStudyFilterBtn = event.target && event.target.closest ? event.target.closest('[data-action="set-study-filter"]') : null;
+      if (setStudyFilterBtn) {
+        event.preventDefault();
+        studyRoleFilter = String(setStudyFilterBtn.getAttribute('data-study-filter') || 'all').trim();
+        if (studyRoleFilter !== 'orden' && studyRoleFilter !== 'resultado') {
+          studyRoleFilter = 'all';
         }
         applyOnlyActiveCaseFilter();
         return;
