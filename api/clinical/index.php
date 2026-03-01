@@ -449,7 +449,7 @@ function clinical_encounter_documents_direct_fetch(PDO $pdo, string $patientId, 
     }
     $dir = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
     $stmt = $pdo->prepare("
-        SELECT document_uuid, document_type, title, event_datetime, summary, patient_id, appointment_id, hospital_stay_id
+        SELECT document_uuid, document_type, title, event_datetime, summary, patient_id, appointment_id, payload_json, hospital_stay_id
         FROM clinical_documents
         WHERE patient_id = :patient_id
           AND encounter_id = :encounter_id
@@ -469,7 +469,7 @@ function clinical_encounter_documents_legacy_by_appointment_fetch(PDO $pdo, stri
     }
     $dir = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
     $stmt = $pdo->prepare("
-        SELECT document_uuid, document_type, title, event_datetime, summary, patient_id, appointment_id, hospital_stay_id
+        SELECT document_uuid, document_type, title, event_datetime, summary, patient_id, appointment_id, payload_json, hospital_stay_id
         FROM clinical_documents
         WHERE patient_id = :patient_id
           AND appointment_id = :appointment_id
@@ -1024,6 +1024,39 @@ function clinical_timeline_date_only(string $value): string
     return substr($value, 0, 10);
 }
 
+function clinical_media_meta_from_payload($payload): array
+{
+    $data = is_array($payload) ? $payload : [];
+    $tagKey = trim((string)($data['media_tag_key'] ?? ''));
+    $tagLabel = trim((string)($data['media_tag_label'] ?? ''));
+    $caption = trim((string)($data['media_caption'] ?? ''));
+
+    return [
+        'media_tag_key' => ($tagKey !== '' ? $tagKey : null),
+        'media_tag_label' => ($tagLabel !== '' ? $tagLabel : null),
+        'media_caption' => ($caption !== '' ? $caption : null),
+    ];
+}
+
+function clinical_media_meta_from_row(array $row): array
+{
+    $payloadJson = (string)($row['payload_json'] ?? '');
+    if ($payloadJson === '') {
+        return [
+            'media_tag_key' => null,
+            'media_tag_label' => null,
+            'media_caption' => null,
+        ];
+    }
+
+    $payload = json_decode($payloadJson, true);
+    if (!is_array($payload)) {
+        $payload = [];
+    }
+
+    return clinical_media_meta_from_payload($payload);
+}
+
 function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $limit, ?string $cursorDt, ?string $cursorUuid): array
 {
     $baseSelect = "
@@ -1032,6 +1065,7 @@ function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $lim
             document_type,
             summary,
             event_datetime,
+            payload_json,
             hospital_stay_id
         FROM clinical_documents
         WHERE patient_id = :patient_id
@@ -1043,6 +1077,7 @@ function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $lim
             summary,
             event_datetime,
             appointment_id,
+            payload_json,
             hospital_stay_id
         FROM clinical_documents
         WHERE patient_id = :patient_id
@@ -1108,6 +1143,7 @@ function clinical_timeline_document_item_from_row(array $row, string $patientId,
     $documentUuid = (string)($row['document_uuid'] ?? '');
     $appointmentId = trim((string)($row['appointment_id'] ?? ''));
     $resolvedEncounterId = (int)($encounterId ?? 0);
+    $mediaMeta = clinical_media_meta_from_row($row);
 
     return [
         'item_type' => 'document',
@@ -1127,7 +1163,11 @@ function clinical_timeline_document_item_from_row(array $row, string $patientId,
             'document_uuid' => $documentUuid,
             'document_type' => (string)($row['document_type'] ?? ''),
             'summary' => (string)($row['summary'] ?? ''),
+            'media_tag_label' => $mediaMeta['media_tag_label'],
+            'media_caption' => $mediaMeta['media_caption'],
         ],
+        'media_tag_label' => $mediaMeta['media_tag_label'],
+        'media_caption' => $mediaMeta['media_caption'],
     ];
 }
 
@@ -3789,6 +3829,22 @@ try {
                     $payloadData['file'] = $fileMeta;
                     if ($summary === '') {
                         $summary = ($payloadData['render_mode'] === 'pdf') ? 'PDF clínico' : 'Imagen clínica';
+                    }
+                }
+                if ($documentType === 'image') {
+                    $mediaMeta = clinical_media_meta_from_payload([
+                        'media_tag_key' => ($payload['media_tag_key'] ?? ($payloadData['media_tag_key'] ?? null)),
+                        'media_tag_label' => ($payload['media_tag_label'] ?? ($payloadData['media_tag_label'] ?? null)),
+                        'media_caption' => ($payload['media_caption'] ?? ($payloadData['media_caption'] ?? null)),
+                    ]);
+                    if ($mediaMeta['media_tag_key'] !== null) {
+                        $payloadData['media_tag_key'] = $mediaMeta['media_tag_key'];
+                    }
+                    if ($mediaMeta['media_tag_label'] !== null) {
+                        $payloadData['media_tag_label'] = $mediaMeta['media_tag_label'];
+                    }
+                    if ($mediaMeta['media_caption'] !== null) {
+                        $payloadData['media_caption'] = $mediaMeta['media_caption'];
                     }
                 }
                 $payloadJson = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
