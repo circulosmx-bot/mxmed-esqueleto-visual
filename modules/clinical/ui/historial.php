@@ -1302,7 +1302,7 @@ if (!$embed) {
   </div>
 
   <?php if ($patientId !== ''): ?>
-    <div class="mm-card mb-3">
+    <div class="mm-card mb-3<?php echo $activeCaseId === '' ? ' d-none' : ''; ?>" data-role="case-summary-panel">
       <div class="body d-flex flex-wrap justify-content-between align-items-center gap-2">
         <?php if (is_array($activeCase) && $activeCase !== []): ?>
           <div>
@@ -1317,23 +1317,23 @@ if (!$embed) {
               data-action="rename-active-case"
               data-case-id="<?php echo h((string)($activeCase['case_id'] ?? '')); ?>"
             >Renombrar</button>
-            <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-cases-modal">Ver casos</button>
+            <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-cases-modal" data-role="open-cases-btn">Ver casos</button>
           </div>
         <?php else: ?>
           <div>
-            <span class="text-secondary">Crea un caso para agrupar eventos del historial.</span>
+            <span class="text-secondary">Casos clínicos disponibles.</span>
           </div>
           <div>
-            <button type="button" class="btn btn-sm btn-primary" data-action="create-clinical-case">Crear caso clínico</button>
-            <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-cases-modal">Ver casos</button>
+            <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-cases-modal" data-role="open-cases-btn">Ver casos</button>
           </div>
         <?php endif; ?>
       </div>
     </div>
     <div class="alert alert-info d-none py-2 mb-3" data-role="recent-case-suggestion">
-      <span data-role="recent-case-suggestion-text"></span>
+      <div data-role="recent-case-suggestion-text"></div>
+      <div class="small text-secondary mt-1" data-role="recent-case-suggestion-subtext">Puedes agruparlos para mantener el expediente organizado.</div>
       <div class="mt-2 d-flex flex-wrap gap-2">
-        <button type="button" class="btn btn-sm btn-primary" data-action="assign-recent-to-active-case">Agregar recientes</button>
+        <button type="button" class="btn btn-sm btn-primary" data-action="assign-recent-to-active-case">Agrupar recientes</button>
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="snooze-recent-case-suggestion">No por ahora</button>
       </div>
     </div>
@@ -1383,7 +1383,8 @@ if (!$embed) {
     <?php endif; ?>
 
     <div class="only-active-case-note d-none" data-role="only-active-case-note">Mostrando solo items del caso activo.</div>
-    <div class="btn-group btn-group-sm mb-3" role="group" aria-label="Filtro por caso activo" data-role="case-scope-filter">
+    <button type="button" class="btn btn-link btn-sm px-0 mb-2 text-decoration-none" data-action="toggle-advanced-filters">Ver opciones avanzadas</button>
+    <div class="btn-group btn-group-sm mb-3 d-none" role="group" aria-label="Filtro por caso activo" data-role="case-scope-filter">
       <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary active" data-action="set-case-scope" data-case-scope="all">Todos</button>
       <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-case-scope" data-case-scope="in">Solo caso activo</button>
       <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-case-scope" data-case-scope="out">Fuera de caso</button>
@@ -1794,9 +1795,14 @@ if (!$embed) {
     var caseScopeFilterWrap = document.querySelector('[data-role="case-scope-filter"]');
     var categoryFilterWrap = document.querySelector('[data-role="timeline-category-filters"]');
     var studyFilterWrap = document.querySelector('[data-role="timeline-study-filters"]');
+    var caseSummaryPanel = document.querySelector('[data-role="case-summary-panel"]');
+    var openCasesButtons = document.querySelectorAll('[data-role="open-cases-btn"]');
+    var advancedFiltersToggle = document.querySelector('[data-action="toggle-advanced-filters"]');
     var caseScopeEmpty = document.querySelector('[data-role="case-scope-empty"]');
     var recentSuggestion = document.querySelector('[data-role="recent-case-suggestion"]');
     var recentSuggestionText = document.querySelector('[data-role="recent-case-suggestion-text"]');
+    var advancedFiltersVisible = false;
+    var knownCasesCount = activeCaseId !== '' ? 1 : 0;
     var onlyActiveCaseEnabled = false;
     var caseScope = 'all';
     var clinicalCategoryFilter = 'all';
@@ -2010,6 +2016,24 @@ if (!$embed) {
       applyOnlyActiveCaseFilter();
     }
 
+    async function bootstrapCaseSummary() {
+      if (!patientId) {
+        updateCaseSummaryVisibility();
+        return;
+      }
+      if (activeCaseId !== '') {
+        updateCaseSummaryVisibility();
+        return;
+      }
+      try {
+        var cases = await listCases(patientId);
+        knownCasesCount = cases.length;
+      } catch (_) {
+        knownCasesCount = 0;
+      }
+      updateCaseSummaryVisibility();
+    }
+
     function recentSnoozed() {
       try {
         var ts = Number(localStorage.getItem(recentSuggestStorageKey) || '0');
@@ -2038,11 +2062,27 @@ if (!$embed) {
     function renderRecentSuggestion() {
       if (!recentSuggestion || !recentSuggestionText) return;
       recentCandidates = computeRecentCandidates();
-      var show = activeCaseId !== '' && recentCandidates.length >= 2 && !recentSnoozed();
+      var show = activeCaseId !== '' && recentCandidates.length > 0 && !recentSnoozed();
       recentSuggestion.classList.toggle('d-none', !show);
       if (show) {
-        recentSuggestionText.textContent = 'Hay ' + recentCandidates.length + ' eventos recientes sin caso. ¿Agregar al caso activo?';
+        recentSuggestionText.textContent = 'Hay ' + recentCandidates.length + ' episodios sin agrupar en casos clínicos.';
       }
+    }
+
+    function updateCaseSummaryVisibility() {
+      var showPanel = activeCaseId !== '' || knownCasesCount > 0;
+      if (caseSummaryPanel) {
+        caseSummaryPanel.classList.toggle('d-none', !showPanel);
+      }
+      openCasesButtons.forEach(function (btn) {
+        btn.classList.toggle('d-none', knownCasesCount < 1);
+      });
+    }
+
+    function applyAdvancedFiltersVisibility() {
+      if (!caseScopeFilterWrap || !advancedFiltersToggle) return;
+      caseScopeFilterWrap.classList.toggle('d-none', !advancedFiltersVisible);
+      advancedFiltersToggle.textContent = advancedFiltersVisible ? 'Ocultar opciones avanzadas' : 'Ver opciones avanzadas';
     }
 
     async function apiJson(url, options) {
@@ -2152,6 +2192,8 @@ if (!$embed) {
       setCasesModalLoading(true);
       try {
         var cases = await listCases(patientId);
+        knownCasesCount = cases.length;
+        updateCaseSummaryVisibility();
         renderCases(cases);
       } catch (err) {
         window.alert(err.message || 'No se pudieron listar casos clínicos');
@@ -2272,6 +2314,8 @@ if (!$embed) {
       setIntegrateCaseError('');
       try {
         var cases = await listCases(patientId);
+        knownCasesCount = cases.length;
+        updateCaseSummaryVisibility();
         renderIntegrateCases(cases);
       } catch (err) {
         setIntegrateCaseError(err.message || 'No se pudieron cargar los casos clínicos.');
@@ -2622,6 +2666,14 @@ if (!$embed) {
         return;
       }
 
+      var toggleAdvancedFiltersBtn = event.target && event.target.closest ? event.target.closest('[data-action="toggle-advanced-filters"]') : null;
+      if (toggleAdvancedFiltersBtn) {
+        event.preventDefault();
+        advancedFiltersVisible = !advancedFiltersVisible;
+        applyAdvancedFiltersVisibility();
+        return;
+      }
+
       var setClinicalFilterBtn = event.target && event.target.closest ? event.target.closest('[data-action="set-clinical-filter"]') : null;
       if (setClinicalFilterBtn) {
         event.preventDefault();
@@ -2967,6 +3019,8 @@ if (!$embed) {
     initActivityTooltips();
     applyOnlyActiveCaseFilter();
     renderRecentSuggestion();
+    applyAdvancedFiltersVisibility();
+    bootstrapCaseSummary();
   })();
 </script>
 <?php if ($embed): ?>
