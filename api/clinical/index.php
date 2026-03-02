@@ -1430,10 +1430,28 @@ function clinical_timeline_document_item_from_row(array $row, string $patientId,
     $documentId = (int)($row['id'] ?? 0);
     $documentUuid = (string)($row['document_uuid'] ?? '');
     $documentType = (string)($row['document_type'] ?? '');
+    $docType = strtolower(trim($documentType));
     $documentTitle = (string)($row['title'] ?? '');
     $appointmentId = trim((string)($row['appointment_id'] ?? ''));
     $resolvedEncounterId = (int)($encounterId ?? 0);
     $mediaMeta = clinical_media_meta_from_row($row);
+    $clinicalDocument = [
+        'id' => ($documentUuid !== '' ? $documentUuid : ($documentId > 0 ? (string)$documentId : null)),
+        'document_uuid' => $documentUuid,
+        'document_type' => $documentType,
+        'title' => $documentTitle,
+        'occurred_at' => ($eventDatetime !== '' ? $eventDatetime : null),
+        'summary' => (string)($row['summary'] ?? ''),
+        'media_tag_label' => $mediaMeta['media_tag_label'],
+        'media_caption' => $mediaMeta['media_caption'],
+        'media_bundle_id' => $mediaMeta['media_bundle_id'],
+        'media_bundle_title' => $mediaMeta['media_bundle_title'],
+        'media_bundle_note' => $mediaMeta['media_bundle_note'],
+    ];
+    if ($docType === 'immunization') {
+        $payload = json_decode((string)($row['payload_json'] ?? ''), true);
+        $clinicalDocument['payload'] = is_array($payload) ? $payload : [];
+    }
 
     return [
         'item_type' => 'document',
@@ -1453,19 +1471,7 @@ function clinical_timeline_document_item_from_row(array $row, string $patientId,
             'encounter_id' => ($resolvedEncounterId > 0 ? $resolvedEncounterId : null),
             'hospital_stay_id' => $row['hospital_stay_id'] ?? null,
         ],
-        'clinical_document' => [
-            'id' => ($documentUuid !== '' ? $documentUuid : ($documentId > 0 ? (string)$documentId : null)),
-            'document_uuid' => $documentUuid,
-            'document_type' => $documentType,
-            'title' => $documentTitle,
-            'occurred_at' => ($eventDatetime !== '' ? $eventDatetime : null),
-            'summary' => (string)($row['summary'] ?? ''),
-            'media_tag_label' => $mediaMeta['media_tag_label'],
-            'media_caption' => $mediaMeta['media_caption'],
-            'media_bundle_id' => $mediaMeta['media_bundle_id'],
-            'media_bundle_title' => $mediaMeta['media_bundle_title'],
-            'media_bundle_note' => $mediaMeta['media_bundle_note'],
-        ],
+        'clinical_document' => $clinicalDocument,
         'media_tag_label' => $mediaMeta['media_tag_label'],
         'media_caption' => $mediaMeta['media_caption'],
         'media_bundle_id' => $mediaMeta['media_bundle_id'],
