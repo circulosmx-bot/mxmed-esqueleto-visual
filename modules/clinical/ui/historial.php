@@ -1358,7 +1358,8 @@ if (!$embed) {
     </div>
   <?php else: ?>
     <?php if ($patientId !== ''): ?>
-      <div class="d-flex justify-content-end mb-3">
+      <div class="d-flex justify-content-end gap-2 flex-wrap mb-3">
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="open-wound-care-modal">Registrar curación</button>
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="open-immunization-modal">Registrar vacuna</button>
       </div>
     <?php endif; ?>
@@ -2001,6 +2002,62 @@ if (!$embed) {
     </div>
   </div>
 </div>
+<div class="modal fade" id="clinicalWoundCareModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Registrar curación</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger small d-none" data-role="wound-care-form-error"></div>
+        <form class="vstack gap-3" data-role="wound-care-form">
+          <div>
+            <label for="woundCareName" class="form-label">Nombre de curación</label>
+            <input id="woundCareName" type="text" class="form-control" data-role="wound-care-name" maxlength="190" required>
+          </div>
+          <div>
+            <label for="woundCareMaterial" class="form-label">Material</label>
+            <input id="woundCareMaterial" type="text" class="form-control" data-role="wound-care-material" maxlength="190">
+          </div>
+          <div>
+            <label for="woundCarePlaceType" class="form-label">Lugar de aplicación</label>
+            <select id="woundCarePlaceType" class="form-select" data-role="wound-care-place-type" required>
+              <option value="">Selecciona una opción</option>
+              <option value="consultorio_prop">Consultorio</option>
+              <option value="institucion">Institución</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div class="d-none" data-role="wound-care-place-name-wrap">
+            <label for="woundCarePlaceName" class="form-label">¿Cuál? / ¿Dónde?</label>
+            <input id="woundCarePlaceName" type="text" class="form-control" data-role="wound-care-place-name" maxlength="190">
+          </div>
+          <div class="d-none" data-role="wound-care-place-sector-wrap">
+            <label for="woundCarePlaceSector" class="form-label">Sector</label>
+            <select id="woundCarePlaceSector" class="form-select" data-role="wound-care-place-sector">
+              <option value="">Sin especificar</option>
+              <option value="publica">Pública</option>
+              <option value="privada">Privada</option>
+            </select>
+          </div>
+          <div>
+            <label for="woundCareEventDatetime" class="form-label">Fecha y hora</label>
+            <input id="woundCareEventDatetime" type="datetime-local" class="form-control" data-role="wound-care-event-datetime">
+          </div>
+          <div>
+            <label for="woundCareNotes" class="form-label">Nota clínica</label>
+            <textarea id="woundCareNotes" class="form-control" data-role="wound-care-notes" rows="3" maxlength="2000"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-bs-dismiss="modal" data-action="cancel-wound-care-modal">Cancelar</button>
+        <button type="button" class="btn btn-sm btn-primary" data-action="submit-wound-care">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
 <script>
   (function () {
     var patientId = <?php echo json_encode($patientId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
@@ -2091,6 +2148,24 @@ if (!$embed) {
     var immunizationNotes = document.querySelector('[data-role="immunization-notes"]');
     var immunizationSubmitBtn = document.querySelector('[data-action="submit-immunization"]');
     var immunizationSubmitting = false;
+    var woundCareModalEl = document.getElementById('clinicalWoundCareModal');
+    var woundCareModalInstance = null;
+    if (woundCareModalEl && window.bootstrap && window.bootstrap.Modal) {
+      woundCareModalInstance = window.bootstrap.Modal.getOrCreateInstance(woundCareModalEl);
+    }
+    var woundCareForm = document.querySelector('[data-role="wound-care-form"]');
+    var woundCareFormError = document.querySelector('[data-role="wound-care-form-error"]');
+    var woundCareName = document.querySelector('[data-role="wound-care-name"]');
+    var woundCareMaterial = document.querySelector('[data-role="wound-care-material"]');
+    var woundCarePlaceType = document.querySelector('[data-role="wound-care-place-type"]');
+    var woundCarePlaceNameWrap = document.querySelector('[data-role="wound-care-place-name-wrap"]');
+    var woundCarePlaceName = document.querySelector('[data-role="wound-care-place-name"]');
+    var woundCarePlaceSectorWrap = document.querySelector('[data-role="wound-care-place-sector-wrap"]');
+    var woundCarePlaceSector = document.querySelector('[data-role="wound-care-place-sector"]');
+    var woundCareEventDatetime = document.querySelector('[data-role="wound-care-event-datetime"]');
+    var woundCareNotes = document.querySelector('[data-role="wound-care-notes"]');
+    var woundCareSubmitBtn = document.querySelector('[data-action="submit-wound-care"]');
+    var woundCareSubmitting = false;
     var immunizationVaccineCatalog = {
       influenza_tetravalente: 'Influenza tetravalente',
       hepatitis_b: 'Hepatitis B',
@@ -2414,6 +2489,24 @@ if (!$embed) {
       }
     }
 
+    function syncWoundCarePlaceFields() {
+      var placeType = woundCarePlaceType ? String(woundCarePlaceType.value || '').trim() : '';
+      var needsPlaceName = placeType === 'institucion' || placeType === 'otro';
+      var showSector = placeType === 'institucion';
+      if (woundCarePlaceNameWrap) {
+        woundCarePlaceNameWrap.classList.toggle('d-none', !needsPlaceName);
+      }
+      if (woundCarePlaceSectorWrap) {
+        woundCarePlaceSectorWrap.classList.toggle('d-none', !showSector);
+      }
+      if (!needsPlaceName && woundCarePlaceName) {
+        woundCarePlaceName.value = '';
+      }
+      if (!showSector && woundCarePlaceSector) {
+        woundCarePlaceSector.value = '';
+      }
+    }
+
     function syncImmunizationVaccineFields() {
       var vaccineKey = immunizationVaccineSelect ? String(immunizationVaccineSelect.value || '').trim() : '';
       var showOther = vaccineKey === '__other__';
@@ -2431,6 +2524,19 @@ if (!$embed) {
       immunizationSubmitBtn.textContent = immunizationSubmitting ? 'Guardando...' : 'Guardar';
     }
 
+    function setWoundCareFormError(message) {
+      if (!woundCareFormError) return;
+      var text = String(message || '').trim();
+      woundCareFormError.textContent = text;
+      woundCareFormError.classList.toggle('d-none', text === '');
+    }
+
+    function syncWoundCareSubmitButton() {
+      if (!woundCareSubmitBtn) return;
+      woundCareSubmitBtn.disabled = woundCareSubmitting;
+      woundCareSubmitBtn.textContent = woundCareSubmitting ? 'Guardando...' : 'Guardar';
+    }
+
     function resetImmunizationForm() {
       if (immunizationForm) {
         immunizationForm.reset();
@@ -2439,6 +2545,16 @@ if (!$embed) {
       immunizationSubmitting = false;
       syncImmunizationSubmitButton();
       syncImmunizationPlaceFields();
+    }
+
+    function resetWoundCareForm() {
+      if (woundCareForm) {
+        woundCareForm.reset();
+      }
+      setWoundCareFormError('');
+      woundCareSubmitting = false;
+      syncWoundCareSubmitButton();
+      syncWoundCarePlaceFields();
     }
 
     function openImmunizationModal() {
@@ -2455,6 +2571,20 @@ if (!$embed) {
       }
     }
 
+    function openWoundCareModal() {
+      if (!patientId) {
+        window.alert('patient_id requerido para registrar curación.');
+        return;
+      }
+      resetWoundCareForm();
+      if (woundCareModalInstance) {
+        woundCareModalInstance.show();
+      } else if (woundCareModalEl) {
+        woundCareModalEl.style.display = 'block';
+        woundCareModalEl.classList.add('show');
+      }
+    }
+
     function closeImmunizationModal() {
       if (!immunizationModalEl) return;
       if (immunizationModalInstance) {
@@ -2465,6 +2595,18 @@ if (!$embed) {
       immunizationModalEl.style.display = 'none';
       immunizationModalEl.setAttribute('aria-hidden', 'true');
       resetImmunizationForm();
+    }
+
+    function closeWoundCareModal() {
+      if (!woundCareModalEl) return;
+      if (woundCareModalInstance) {
+        woundCareModalInstance.hide();
+        return;
+      }
+      woundCareModalEl.classList.remove('show');
+      woundCareModalEl.style.display = 'none';
+      woundCareModalEl.setAttribute('aria-hidden', 'true');
+      resetWoundCareForm();
     }
 
     function normalizeEventDatetime(value) {
@@ -2599,6 +2741,88 @@ if (!$embed) {
         immunizationSubmitting = false;
         syncImmunizationSubmitButton();
         setImmunizationFormError(err && err.message ? err.message : 'No se pudo registrar la vacuna.');
+      }
+    }
+
+    async function submitWoundCare() {
+      if (woundCareSubmitting) return;
+      if (!patientId) {
+        setWoundCareFormError('patient_id requerido.');
+        return;
+      }
+      var name = woundCareName ? String(woundCareName.value || '').trim() : '';
+      var material = woundCareMaterial ? String(woundCareMaterial.value || '').trim() : '';
+      var placeType = woundCarePlaceType ? String(woundCarePlaceType.value || '').trim() : '';
+      var placeName = woundCarePlaceName ? String(woundCarePlaceName.value || '').trim() : '';
+      var placeSector = woundCarePlaceSector ? String(woundCarePlaceSector.value || '').trim() : '';
+      var eventDatetime = normalizeEventDatetime(woundCareEventDatetime ? woundCareEventDatetime.value : '');
+      var notesClinical = woundCareNotes ? String(woundCareNotes.value || '').trim() : '';
+
+      if (name.length < 3) {
+        setWoundCareFormError('Ingresa el nombre de la curación.');
+        return;
+      }
+      if (!placeType) {
+        setWoundCareFormError('Selecciona el lugar de aplicación.');
+        return;
+      }
+      if ((placeType === 'institucion' || placeType === 'otro') && !placeName) {
+        setWoundCareFormError('Indica ¿cuál? / ¿dónde? para el lugar de aplicación.');
+        return;
+      }
+
+      var payload = {
+        administration: {
+          place_type: placeType
+        },
+        item: {
+          kind: 'procedure',
+          name: name
+        }
+      };
+      if (material) {
+        payload.item.material = material;
+      }
+      if (placeName) {
+        payload.administration.place_name = placeName;
+      }
+      if (placeType === 'institucion' && placeSector) {
+        payload.administration.place_sector = placeSector;
+      }
+      if (notesClinical) {
+        payload.notes = { clinical: notesClinical };
+      }
+
+      var body = {
+        type: 'wound_care',
+        title: 'Curación',
+        actor: { user_id: currentUserId || 'qa' },
+        context: { patient_id: patientId },
+        payload: payload
+      };
+      if (eventDatetime !== '') {
+        body.event_datetime = eventDatetime;
+      }
+
+      woundCareSubmitting = true;
+      syncWoundCareSubmitButton();
+      setWoundCareFormError('');
+      try {
+        await apiJson(apiBase + '/api/clinical/index.php/documents', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body),
+          credentials: 'same-origin'
+        });
+        closeWoundCareModal();
+        window.location.reload();
+      } catch (err) {
+        woundCareSubmitting = false;
+        syncWoundCareSubmitButton();
+        setWoundCareFormError(err && err.message ? err.message : 'No se pudo registrar la curación.');
       }
     }
 
@@ -3198,6 +3422,13 @@ if (!$embed) {
         return;
       }
 
+      var openWoundCareBtn = event.target && event.target.closest ? event.target.closest('[data-action="open-wound-care-modal"]') : null;
+      if (openWoundCareBtn) {
+        event.preventDefault();
+        openWoundCareModal();
+        return;
+      }
+
       var setClinicalFilterBtn = event.target && event.target.closest ? event.target.closest('[data-action="set-clinical-filter"]') : null;
       if (setClinicalFilterBtn) {
         event.preventDefault();
@@ -3362,10 +3593,24 @@ if (!$embed) {
         return;
       }
 
+      var cancelWoundCareBtn = event.target && event.target.closest ? event.target.closest('[data-action="cancel-wound-care-modal"]') : null;
+      if (cancelWoundCareBtn && !woundCareModalInstance && woundCareModalEl) {
+        event.preventDefault();
+        closeWoundCareModal();
+        return;
+      }
+
       var submitImmunizationBtn = event.target && event.target.closest ? event.target.closest('[data-action="submit-immunization"]') : null;
       if (submitImmunizationBtn) {
         event.preventDefault();
         submitImmunization();
+        return;
+      }
+
+      var submitWoundCareBtn = event.target && event.target.closest ? event.target.closest('[data-action="submit-wound-care"]') : null;
+      if (submitWoundCareBtn) {
+        event.preventDefault();
+        submitWoundCare();
         return;
       }
 
@@ -3376,6 +3621,11 @@ if (!$embed) {
 
       if (!immunizationModalInstance && immunizationModalEl && event.target === immunizationModalEl) {
         closeImmunizationModal();
+        return;
+      }
+
+      if (!woundCareModalInstance && woundCareModalEl && event.target === woundCareModalEl) {
+        closeWoundCareModal();
         return;
       }
 
@@ -3548,6 +3798,12 @@ if (!$embed) {
       });
     }
 
+    if (woundCareModalEl) {
+      woundCareModalEl.addEventListener('hidden.bs.modal', function () {
+        resetWoundCareForm();
+      });
+    }
+
     if (createCaseTitleInput) {
       createCaseTitleInput.addEventListener('keydown', function (event) {
         if (event.key === 'Enter') {
@@ -3565,6 +3821,12 @@ if (!$embed) {
       });
     }
 
+    if (woundCarePlaceType) {
+      woundCarePlaceType.addEventListener('change', function () {
+        syncWoundCarePlaceFields();
+      });
+    }
+
     if (immunizationVaccineSelect) {
       immunizationVaccineSelect.addEventListener('change', function () {
         syncImmunizationVaccineFields();
@@ -3575,6 +3837,13 @@ if (!$embed) {
       immunizationForm.addEventListener('submit', function (event) {
         event.preventDefault();
         submitImmunization();
+      });
+    }
+
+    if (woundCareForm) {
+      woundCareForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        submitWoundCare();
       });
     }
 
@@ -3599,6 +3868,8 @@ if (!$embed) {
     syncImmunizationPlaceFields();
     syncImmunizationVaccineFields();
     syncImmunizationSubmitButton();
+    syncWoundCarePlaceFields();
+    syncWoundCareSubmitButton();
     resetClinicalFiltersToAll();
     renderRecentSuggestion();
     applyAdvancedFiltersVisibility();
