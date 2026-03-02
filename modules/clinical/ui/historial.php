@@ -1867,8 +1867,36 @@ if (!$embed) {
             </select>
           </div>
           <div>
-            <label for="immunizationProductName" class="form-label">Vacuna (nombre)</label>
-            <input id="immunizationProductName" type="text" class="form-control" data-role="immunization-product-name" maxlength="190" required>
+            <label for="immunizationVaccineSelect" class="form-label">Vacuna</label>
+            <select id="immunizationVaccineSelect" class="form-select" data-role="immunization-vaccine-select" required>
+              <option value="">Selecciona una vacuna…</option>
+              <optgroup label="Comunes">
+                <option value="influenza_tetravalente">Influenza tetravalente</option>
+                <option value="hepatitis_b">Hepatitis B</option>
+                <option value="td_tdap">Td/Tdap (tétanos-difteria/tosferina)</option>
+                <option value="srp">SRP (triple viral)</option>
+                <option value="vph">VPH</option>
+                <option value="neumococo">Neumococo</option>
+                <option value="covid_refuerzo">COVID-19 (refuerzo)</option>
+              </optgroup>
+              <optgroup label="Lista ampliada">
+                <option value="bcg">BCG</option>
+                <option value="rotavirus">Rotavirus</option>
+                <option value="varicela">Varicela</option>
+                <option value="hepatitis_a">Hepatitis A</option>
+                <option value="meningococo">Meningococo</option>
+                <option value="zoster">Herpes zóster</option>
+                <option value="tosferina">Tosferina</option>
+                <option value="polio_ipv">Polio (IPV)</option>
+                <option value="dpt">DPT</option>
+                <option value="hib">Hib (Haemophilus influenzae tipo b)</option>
+              </optgroup>
+              <option value="__other__">Otra (escribir)</option>
+            </select>
+          </div>
+          <div class="d-none" data-role="immunization-other-vaccine-wrap">
+            <label for="immunizationOtherVaccine" class="form-label">Especifica vacuna</label>
+            <input id="immunizationOtherVaccine" type="text" class="form-control" data-role="immunization-other-vaccine" maxlength="190">
           </div>
           <div>
             <label for="immunizationManufacturer" class="form-label">Fabricante</label>
@@ -1984,7 +2012,9 @@ if (!$embed) {
     var immunizationPlaceName = document.querySelector('[data-role="immunization-place-name"]');
     var immunizationPlaceSectorWrap = document.querySelector('[data-role="immunization-place-sector-wrap"]');
     var immunizationPlaceSector = document.querySelector('[data-role="immunization-place-sector"]');
-    var immunizationProductName = document.querySelector('[data-role="immunization-product-name"]');
+    var immunizationVaccineSelect = document.querySelector('[data-role="immunization-vaccine-select"]');
+    var immunizationOtherVaccineWrap = document.querySelector('[data-role="immunization-other-vaccine-wrap"]');
+    var immunizationOtherVaccine = document.querySelector('[data-role="immunization-other-vaccine"]');
     var immunizationManufacturer = document.querySelector('[data-role="immunization-manufacturer"]');
     var immunizationLot = document.querySelector('[data-role="immunization-lot"]');
     var immunizationDose = document.querySelector('[data-role="immunization-dose"]');
@@ -1993,6 +2023,25 @@ if (!$embed) {
     var immunizationNotes = document.querySelector('[data-role="immunization-notes"]');
     var immunizationSubmitBtn = document.querySelector('[data-action="submit-immunization"]');
     var immunizationSubmitting = false;
+    var immunizationVaccineCatalog = {
+      influenza_tetravalente: 'Influenza tetravalente',
+      hepatitis_b: 'Hepatitis B',
+      td_tdap: 'Td/Tdap (tétanos-difteria/tosferina)',
+      srp: 'SRP (triple viral)',
+      vph: 'VPH',
+      neumococo: 'Neumococo',
+      covid_refuerzo: 'COVID-19 (refuerzo)',
+      bcg: 'BCG',
+      rotavirus: 'Rotavirus',
+      varicela: 'Varicela',
+      hepatitis_a: 'Hepatitis A',
+      meningococo: 'Meningococo',
+      zoster: 'Herpes zóster',
+      tosferina: 'Tosferina',
+      polio_ipv: 'Polio (IPV)',
+      dpt: 'DPT',
+      hib: 'Hib (Haemophilus influenzae tipo b)'
+    };
     var activeDocumentUrl = '';
     var debugMode = false;
     try {
@@ -2297,6 +2346,17 @@ if (!$embed) {
       }
     }
 
+    function syncImmunizationVaccineFields() {
+      var vaccineKey = immunizationVaccineSelect ? String(immunizationVaccineSelect.value || '').trim() : '';
+      var showOther = vaccineKey === '__other__';
+      if (immunizationOtherVaccineWrap) {
+        immunizationOtherVaccineWrap.classList.toggle('d-none', !showOther);
+      }
+      if (!showOther && immunizationOtherVaccine) {
+        immunizationOtherVaccine.value = '';
+      }
+    }
+
     function syncImmunizationSubmitButton() {
       if (!immunizationSubmitBtn) return;
       immunizationSubmitBtn.disabled = immunizationSubmitting;
@@ -2360,7 +2420,9 @@ if (!$embed) {
       var placeType = immunizationPlaceType ? String(immunizationPlaceType.value || '').trim() : '';
       var placeName = immunizationPlaceName ? String(immunizationPlaceName.value || '').trim() : '';
       var placeSector = immunizationPlaceSector ? String(immunizationPlaceSector.value || '').trim() : '';
-      var productName = immunizationProductName ? String(immunizationProductName.value || '').trim() : '';
+      var vaccineKey = immunizationVaccineSelect ? String(immunizationVaccineSelect.value || '').trim() : '';
+      var otherVaccineName = immunizationOtherVaccine ? String(immunizationOtherVaccine.value || '').trim() : '';
+      var productName = '';
       var manufacturer = immunizationManufacturer ? String(immunizationManufacturer.value || '').trim() : '';
       var lot = immunizationLot ? String(immunizationLot.value || '').trim() : '';
       var doseVolume = immunizationDose ? String(immunizationDose.value || '').trim() : '';
@@ -2372,8 +2434,21 @@ if (!$embed) {
         setImmunizationFormError('Selecciona el lugar de aplicación.');
         return;
       }
+      if (!vaccineKey) {
+        setImmunizationFormError('Selecciona una vacuna.');
+        return;
+      }
+      if (vaccineKey === '__other__') {
+        if (otherVaccineName.length < 3) {
+          setImmunizationFormError('Especifica la vacuna con al menos 3 caracteres.');
+          return;
+        }
+        productName = otherVaccineName;
+      } else {
+        productName = String(immunizationVaccineCatalog[vaccineKey] || '').trim();
+      }
       if (!productName) {
-        setImmunizationFormError('Ingresa el nombre de la vacuna.');
+        setImmunizationFormError('Selecciona una vacuna válida.');
         return;
       }
       if ((placeType === 'institucion' || placeType === 'otro') && !placeName) {
@@ -2398,6 +2473,9 @@ if (!$embed) {
       }
       if (manufacturer) {
         payload.vaccine.manufacturer = manufacturer;
+      }
+      if (vaccineKey !== '__other__') {
+        payload.vaccine.catalog_key = vaccineKey;
       }
       if (lot) {
         payload.trace = { lot: lot };
@@ -3414,6 +3492,12 @@ if (!$embed) {
       });
     }
 
+    if (immunizationVaccineSelect) {
+      immunizationVaccineSelect.addEventListener('change', function () {
+        syncImmunizationVaccineFields();
+      });
+    }
+
     if (immunizationForm) {
       immunizationForm.addEventListener('submit', function (event) {
         event.preventDefault();
@@ -3440,6 +3524,7 @@ if (!$embed) {
       return;
     }
     syncImmunizationPlaceFields();
+    syncImmunizationVaccineFields();
     syncImmunizationSubmitButton();
     resetClinicalFiltersToAll();
     renderRecentSuggestion();
