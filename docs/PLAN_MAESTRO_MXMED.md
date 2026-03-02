@@ -266,6 +266,72 @@ Este milestone no altera contratos existentes y mantiene compatibilidad total co
   - Sin cambios de auth, agenda, timeline, embed ni encounter.
   - Sin tablas nuevas en esta fase.
 
+### FASE: Timeline Semántico v1.1 (procedimiento + fixture QA + hidratación + tab UI)
+
+- Estado:
+  - Cerrada.
+  - No reabrir fases cerradas.
+- Alcance cerrado:
+  - P1: `immunization` clasifica como `procedimiento` en timeline.
+  - P2: fixture QA estable para paciente/demo de inmunización.
+  - P2.1: hidratación de items timeline desde `clinical_documents` con `id`, `document_type`, `occurred_at`, `title`.
+  - P3: tab UI `Procedimientos` en Historial.
+- Commits exactos:
+  - `69e2f42` `clinical api: timeline classify immunization as procedimiento`
+  - `47e0c29` `clinical api: hydrate timeline document items with id type occurred_at title`
+  - `eb99d97` `clinical ui: add Procedimientos tab to timeline`
+- Fixture QA registrado:
+  - DB: `patients_patients.patient_id = p_demo_immun_01`
+  - DB: `clinical_documents.id = 89`
+  - DB: `clinical_documents.document_uuid = 7dbf2a93-7d0d-4fe7-a612-4bdca0dc4512`
+  - Expectativa contractual en timeline para ese documento:
+    - `document_type = immunization`
+    - `clinical_category = procedimiento`
+    - `study_role = null`
+    - `occurred_at != null`
+    - `title != null`
+- Gateway passthrough QA mínimo requerido:
+  - Shape mínimo soportado por `POST /api/clinical/index.php/documents` para documento clínico tipo passthrough:
+    - `type`
+    - `actor.user_id`
+    - `context.patient_id`
+  - Ejemplo curl QA:
+```bash
+PATIENT_ID="p_demo_immun_01"
+curl -sS -X POST "http://127.0.0.1:8091/api/clinical/index.php/documents" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{
+    "type": "immunization",
+    "title": "Vacunación influenza",
+    "event_datetime": "2026-03-02 10:30:00",
+    "summary": "Aplicación de vacuna influenza estacional",
+    "actor": {
+      "user_id": "qa"
+    },
+    "context": {
+      "patient_id": "'"$PATIENT_ID"'"
+    },
+    "payload": {
+      "vaccine_name": "Influenza tetravalente",
+      "dose": "0.5 mL",
+      "route": "IM",
+      "site": "Deltoides izquierdo",
+      "lot": "LOT-12345"
+    }
+  }' | jq
+```
+- Evidencia QA:
+  - `php -l api/clinical/index.php` OK en P1 y P2.1.
+  - `php -l modules/clinical/ui/historial.php` OK en P3.
+  - `GET /api/clinical/index.php/patients/p_demo_immun_01/timeline?include=agenda,clinical&limit=50` devuelve item con:
+    - `document_type: "immunization"`
+    - `clinical_category: "procedimiento"`
+    - `study_role: null`
+    - `occurred_at: "2026-03-02 05:52:17"`
+    - `title: "Immunization"`
+  - `GET /modules/clinical/ui/historial.php?patient_id=p_demo_immun_01&embed=1` expone tab `Procedimientos` y el item demo con `data-clinical-category="procedimiento"`.
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)
