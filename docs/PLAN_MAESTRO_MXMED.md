@@ -331,6 +331,37 @@ curl -sS -X POST "http://127.0.0.1:8091/api/clinical/index.php/documents" \
     - `occurred_at: "2026-03-02 05:52:17"`
     - `title: "Immunization"`
   - `GET /modules/clinical/ui/historial.php?patient_id=p_demo_immun_01&embed=1` expone tab `Procedimientos` y el item demo con `data-clinical-category="procedimiento"`.
+  - Nota QA filtro `Procedimientos`:
+    - El filtro sí funciona; inicialmente no se notaba porque el paciente demo estaba dominado por items `procedimiento`.
+    - Para comprobarlo visualmente se creó un documento no-procedimiento (`type = note`) sobre el mismo `patient_id`.
+    - En tab `Todo` aparecen la nota y los procedimientos.
+    - En tab `Procedimientos` la nota desaparece y quedan sólo los items `procedimiento`.
+    - Curl usado para crear la note QA:
+```bash
+curl -sS -X POST "http://127.0.0.1:8091/api/clinical/index.php/documents" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{
+    "type": "note",
+    "title": "Nota QA filtro Procedimientos",
+    "actor": {
+      "user_id": "qa"
+    },
+    "context": {
+      "patient_id": "p_demo_immun_01"
+    },
+    "payload": {
+      "text": "Nota de control para validar filtro de Procedimientos."
+    }
+  }' | jq
+```
+    - Ejemplo de conteo `by_cat` ya con mezcla real:
+```json
+{
+  "consulta": 2,
+  "procedimiento": 10
+}
+```
 
 #### Regla oficial de captura y render: `document_type = immunization`
 
