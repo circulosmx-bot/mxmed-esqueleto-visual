@@ -429,6 +429,36 @@ curl -sS -X POST "http://127.0.0.1:8091/api/clinical/index.php/documents" \
 - Commit exacto de documentación:
   - `docs: define procedimiento generico v1 contract for future procedures`
 
+#### Cierre P9 — medication_administration (piloto procedimiento)
+
+- Semántica:
+  - `document_type = medication_administration`
+  - `clinical_category = procedimiento`
+  - `study_role = null`
+- Commits de soporte (exactos):
+  - `dd10eec` `clinical api: classify medication_administration as procedimiento`
+  - `2e8d241` `clinical api: include medication_administration payload in timeline preview`
+  - `99f82fe` `clinical ui: render medication_administration timeline item from procedimiento payload`
+- Fixture / evidencia QA (este entorno):
+  - `patient_id: p_demo_immun_01`
+  - Documento creado vía gateway:
+    - `document_db_id: 95`
+    - `document_uuid: fb3e0df0-3694-459d-b19a-8ff9dd7908b6`
+  - Payload ejemplo:
+    - `item`: Ketorolaco, `30 mg`, `IM`
+    - `administration.place_type`: `consultorio_prop`
+    - `notes.clinical`: `Aplicación por dolor agudo.`
+- UI: qué se ve
+  - `Aplicación de medicamento: Ketorolaco`
+  - `30 mg · IM`
+  - `Aplicada en: Consultorio`
+  - `Nota: Aplicación por dolor agudo.`
+- Nota de gobernanza:
+  - No reabrir fases cerradas.
+  - Próximo paso sugerido: `P10 Curación/procedimiento menor` (opcional) o extender catálogo.
+- Commit exacto de documentación:
+  - `docs: close P9 medication_administration piloto in plan maestro`
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)
