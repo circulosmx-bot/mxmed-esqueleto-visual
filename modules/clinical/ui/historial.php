@@ -1572,6 +1572,7 @@ if (!$embed) {
                 $docMetaLine2 = '';
                 $docMetaLine3 = '';
                 $isImmunization = ($docTypeNorm === 'immunization');
+                $isMedicationAdministration = ($docTypeNorm === 'medication_administration');
                 if ($isImmunization) {
                     $vaccine = is_array($docPayload['vaccine'] ?? null) ? $docPayload['vaccine'] : [];
                     $trace = is_array($docPayload['trace'] ?? null) ? $docPayload['trace'] : [];
@@ -1612,6 +1613,42 @@ if (!$embed) {
                     } elseif ($docMetaLine2 === '' && $site !== '') {
                         $docMetaLine3 = $site;
                     }
+                } elseif ($isMedicationAdministration) {
+                    $itemPayload = is_array($docPayload['item'] ?? null) ? $docPayload['item'] : [];
+                    $administration = is_array($docPayload['administration'] ?? null) ? $docPayload['administration'] : [];
+                    $medicationName = trim((string)($itemPayload['name'] ?? ''));
+                    $dose = trim((string)($itemPayload['dose'] ?? ''));
+                    $route = trim((string)($itemPayload['route'] ?? ''));
+                    $placeType = trim((string)($administration['place_type'] ?? ''));
+                    $placeName = trim((string)($administration['place_name'] ?? ''));
+                    $placeSector = trim((string)($administration['place_sector'] ?? ''));
+                    $note = trim((string)($docPayload['notes']['clinical'] ?? ''));
+                    $docDisplayTitle = 'Aplicación de medicamento';
+                    if ($medicationName !== '') {
+                        $docDisplayTitle .= ': ' . $medicationName;
+                    }
+                    $detailParts = [];
+                    if ($dose !== '') {
+                        $detailParts[] = $dose;
+                    }
+                    if ($route !== '') {
+                        $detailParts[] = $route;
+                    }
+                    $docMetaLine1 = implode(' · ', $detailParts);
+                    if ($placeType === 'consultorio_prop') {
+                        $docMetaLine2 = 'Aplicada en: Consultorio';
+                    } elseif ($placeType === 'institucion') {
+                        $placeLabel = ($placeName !== '' ? $placeName : 'Institución');
+                        if ($placeSector !== '') {
+                            $placeLabel .= ' (' . ucfirst($placeSector) . ')';
+                        }
+                        $docMetaLine2 = 'Aplicada en: ' . $placeLabel;
+                    } elseif ($placeType === 'otro') {
+                        $docMetaLine2 = 'Aplicada en: ' . ($placeName !== '' ? $placeName : 'Otro');
+                    }
+                    if ($note !== '') {
+                        $docMetaLine3 = 'Nota: ' . $note;
+                    }
                 }
                 $docViewPath = $docIsImage ? '/modules/clinical/ui/viewer.php' : '/modules/clinical/ui/document.php';
                 $docHref = $docUuid !== '' ? $docViewPath . '?' . carry_embed_params(['uuid' => $docUuid]) : '';
@@ -1621,16 +1658,16 @@ if (!$embed) {
                   <div class="mm-activity-body">
                     <div class="min-w-0 flex-grow-1">
                       <div class="mm-activity-title"><?php echo h($docDisplayTitle); ?></div>
-                      <?php if ($isImmunization && $docOccurredAt !== ''): ?>
+                      <?php if (($isImmunization || $isMedicationAdministration) && $docOccurredAt !== ''): ?>
                         <div class="mm-activity-meta"><?php echo h($docOccurredAt); ?></div>
                       <?php endif; ?>
-                      <?php if ($isImmunization && $docMetaLine1 !== ''): ?>
+                      <?php if (($isImmunization || $isMedicationAdministration) && $docMetaLine1 !== ''): ?>
                         <div class="mm-activity-meta"><?php echo h($docMetaLine1); ?></div>
                       <?php endif; ?>
-                      <?php if ($isImmunization && $docMetaLine2 !== ''): ?>
+                      <?php if (($isImmunization || $isMedicationAdministration) && $docMetaLine2 !== ''): ?>
                         <div class="mm-activity-meta"><?php echo h($docMetaLine2); ?></div>
                       <?php endif; ?>
-                      <?php if ($isImmunization && $docMetaLine3 !== ''): ?>
+                      <?php if (($isImmunization || $isMedicationAdministration) && $docMetaLine3 !== ''): ?>
                         <div class="mm-activity-meta"><?php echo h($docMetaLine3); ?></div>
                       <?php endif; ?>
                       <?php if (trim((string)($docItem['case_title'] ?? '')) !== ''): ?>
