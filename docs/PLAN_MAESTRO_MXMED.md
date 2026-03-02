@@ -380,6 +380,55 @@ curl -sS -X POST "http://127.0.0.1:8091/api/clinical/index.php/documents" \
 - Commit exacto de documentación:
   - `docs: define immunization required administration place and manufacturer free-text`
 
+#### Procedimiento Genérico v1 (base para immunization + medication_administration)
+
+- Estado:
+  - Vigente.
+  - No reabrir fases cerradas.
+- Objetivo:
+  - Unificar captura/render de procedimientos recurrentes (vacunas, aplicaciones de medicamento, curaciones, etc.).
+  - Estandarizar `lugar`, `notas`, `insumo`, `trazabilidad`, sin forzar catálogos gigantes.
+- Semántica:
+  - `clinical_category = "procedimiento"`
+  - `study_role = null`
+  - `document_type` específicos se mapean a procedimiento (lista extensible):
+    - `immunization` (cerrado)
+    - `medication_administration` (nuevo piloto P9)
+- Payload: shape genérico (v1):
+  - `payload.administration` (obligatorio en procedimientos):
+    - `place_type`: enum `["consultorio_prop","institucion","otro"]`
+    - `place_name`: string (obligatorio si `institucion` o `otro`)
+    - `place_sector`: enum `["publica","privada"]` (opcional; solo `institucion`)
+  - `payload.notes` (opcional):
+    - `clinical`: string
+  - `payload.trace` (opcional):
+    - `lot`: string
+  - `payload.item` (opcional, genérico para “lo aplicado/realizado”):
+    - `kind`: string (ej. `"vaccine" | "medication" | "material" | "procedure"`)
+    - `name`: string (nombre humano del insumo o procedimiento)
+    - `manufacturer`: string (texto libre, opcional)
+    - `dose`: string (texto libre, opcional)
+    - `route`: string (texto libre, opcional)
+- Compatibilidad:
+  - Para inmunización mantener compat con payload plano existente:
+    - `vaccine_name`
+    - `lot`
+    - `dose`
+    - `route`
+  - Para `medication_administration` se permitirá compat plano opcional futuro (no definir aún si no existe).
+- Prioridad de render en timeline (procedimiento):
+  - `Aplicada/realizada en: <place>`
+  - `Qué: <item.name>` (o `vaccine.product_name` si aplica)
+  - `Fabricante` (si existe)
+  - `Lote / dosis / vía` (si existen)
+  - `Nota clínica` (si existe)
+- Reglas de catálogo:
+  - Catálogos solo como ayuda de captura en UI (no son truth source).
+  - Persistir `catalog_key` cuando aplica (como en vacunas).
+  - Siempre guardar `name` final como texto en payload (`product_name` / `item.name`).
+- Commit exacto de documentación:
+  - `docs: define procedimiento generico v1 contract for future procedures`
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)
