@@ -1552,23 +1552,24 @@ if (!$embed) {
                 $docCaseId = trim((string)($docItem['case_id'] ?? ''));
                 $docInActiveCase = (bool)($docItem['is_in_active_case'] ?? false);
                 $docTypeNorm = strtolower(trim((string)($doc['document_type'] ?? '')));
-                $docClinicalCategory = strtolower(trim((string)($docItem['clinical_category'] ?? '')));
                 $docPayload = is_array($doc['payload'] ?? null) ? $doc['payload'] : [];
                 $docFilePayload = is_array($docPayload['file'] ?? null) ? $docPayload['file'] : [];
                 $docRenderMode = strtolower(trim((string)($doc['render_mode'] ?? ($docFilePayload['render_mode'] ?? ''))));
                 $docIsImage = ($docTypeNorm === 'image' || $docRenderMode === 'image');
                 $docOccurredAt = trim((string)($docItem['occurred_at'] ?? ($doc['occurred_at'] ?? ($docItem['event_datetime'] ?? ''))));
                 $docDisplayTitle = $entryTitle;
-                $docExtraMeta = '';
-                $docDetailsLine = '';
-                $isImmunization = ($docTypeNorm === 'immunization') || ($docClinicalCategory === 'procedimiento');
+                $docDetailLine = '';
+                $isImmunization = ($docTypeNorm === 'immunization');
                 if ($isImmunization) {
                     $vaccineName = trim((string)($docPayload['vaccine_name'] ?? ''));
                     $dose = trim((string)($docPayload['dose'] ?? ''));
                     $route = trim((string)($docPayload['route'] ?? ''));
                     $site = trim((string)($docPayload['site'] ?? ''));
                     $lot = trim((string)($docPayload['lot'] ?? ''));
-                    $docDisplayTitle = ($vaccineName !== '' ? ('Vacunación: ' . $vaccineName) : 'Vacunación');
+                    $docDisplayTitle = 'Vacunación';
+                    if ($vaccineName !== '') {
+                        $docDisplayTitle = 'Vacunación: ' . $vaccineName;
+                    }
                     $detailParts = [];
                     if ($dose !== '') {
                         $detailParts[] = $dose;
@@ -1582,8 +1583,7 @@ if (!$embed) {
                     if ($lot !== '') {
                         $detailParts[] = 'Lote ' . $lot;
                     }
-                    $docDetailsLine = implode(' · ', $detailParts);
-                    $docExtraMeta = $docOccurredAt;
+                    $docDetailLine = implode(' · ', $detailParts);
                 }
                 $docViewPath = $docIsImage ? '/modules/clinical/ui/viewer.php' : '/modules/clinical/ui/document.php';
                 $docHref = $docUuid !== '' ? $docViewPath . '?' . carry_embed_params(['uuid' => $docUuid]) : '';
@@ -1593,11 +1593,11 @@ if (!$embed) {
                   <div class="mm-activity-body">
                     <div class="min-w-0 flex-grow-1">
                       <div class="mm-activity-title"><?php echo h($docDisplayTitle); ?></div>
-                      <?php if ($docExtraMeta !== ''): ?>
-                        <div class="mm-activity-meta"><?php echo h($docExtraMeta); ?></div>
+                      <?php if ($isImmunization && $docOccurredAt !== ''): ?>
+                        <div class="mm-activity-meta"><?php echo h($docOccurredAt); ?></div>
                       <?php endif; ?>
-                      <?php if ($docDetailsLine !== ''): ?>
-                        <div class="small text-secondary mt-1"><?php echo h($docDetailsLine); ?></div>
+                      <?php if ($isImmunization && $docDetailLine !== ''): ?>
+                        <div class="mm-activity-meta"><?php echo h($docDetailLine); ?></div>
                       <?php endif; ?>
                       <?php if (trim((string)($docItem['case_title'] ?? '')) !== ''): ?>
                         <div class="mm-activity-meta">Caso: <?php echo h((string)$docItem['case_title']); ?></div>
