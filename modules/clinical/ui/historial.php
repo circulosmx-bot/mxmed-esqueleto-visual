@@ -1767,6 +1767,7 @@ if (!$embed) {
 <script>
   (function () {
     var patientId = <?php echo json_encode($patientId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    var currentInclude = <?php echo json_encode($include, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var apiBase = <?php echo json_encode($clinicalApiBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var activeCaseId = <?php echo json_encode($activeCaseId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var isEmbed = <?php echo $embed ? 'true' : 'false'; ?>;
@@ -2015,6 +2016,22 @@ if (!$embed) {
           localStorage.setItem(onlyActiveCaseStorageKey, onlyActiveCaseEnabled ? '1' : '0');
         }
       } catch (_) {}
+      applyOnlyActiveCaseFilter();
+    }
+
+    function navigateWithInclude(nextInclude) {
+      var includeValue = String(nextInclude || '').trim();
+      if (!includeValue) return;
+      try {
+        var url = new URL(window.location.href);
+        url.searchParams.set('include', includeValue);
+        window.location.href = url.toString();
+      } catch (_) {}
+    }
+
+    function resetClinicalFiltersToAll() {
+      clinicalCategoryFilter = 'all';
+      studyRoleFilter = 'all';
       applyOnlyActiveCaseFilter();
     }
 
@@ -2688,6 +2705,13 @@ if (!$embed) {
         if (clinicalCategoryFilter === '') {
           clinicalCategoryFilter = 'all';
         }
+        if (clinicalCategoryFilter === 'all') {
+          studyRoleFilter = 'all';
+          if (currentInclude !== 'agenda,clinical') {
+            navigateWithInclude('agenda,clinical');
+            return;
+          }
+        }
         if (clinicalCategoryFilter !== 'estudio') {
           studyRoleFilter = 'all';
         }
@@ -3024,7 +3048,11 @@ if (!$embed) {
       loadActiveCase(patientId).catch(function () {});
     }
     initActivityTooltips();
-    applyOnlyActiveCaseFilter();
+    if (currentInclude !== 'agenda,clinical') {
+      navigateWithInclude('agenda,clinical');
+      return;
+    }
+    resetClinicalFiltersToAll();
     renderRecentSuggestion();
     applyAdvancedFiltersVisibility();
     bootstrapCaseSummary();
