@@ -1520,7 +1520,7 @@ function clinical_timeline_semantic_classify(array $item): array
             'study_role' => 'resultado',
         ];
     }
-    if ($documentType === 'immunization' || $documentType === 'medication_administration' || $documentType === 'procedure') {
+    if ($documentType === 'immunization' || $documentType === 'medication_administration' || $documentType === 'wound_care' || $documentType === 'procedure') {
         return [
             'clinical_category' => 'procedimiento',
             'study_role' => null,
