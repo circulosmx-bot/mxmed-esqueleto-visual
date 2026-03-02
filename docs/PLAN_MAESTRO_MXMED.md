@@ -332,6 +332,54 @@ curl -sS -X POST "http://127.0.0.1:8091/api/clinical/index.php/documents" \
     - `title: "Immunization"`
   - `GET /modules/clinical/ui/historial.php?patient_id=p_demo_immun_01&embed=1` expone tab `Procedimientos` y el item demo con `data-clinical-category="procedimiento"`.
 
+#### Regla oficial de captura y render: `document_type = immunization`
+
+- Estado:
+  - Vigente.
+  - No reabrir fases cerradas.
+- Lugar de aplicación:
+  - Obligatorio.
+  - Se guarda en `payload.administration`.
+  - Campos oficiales:
+    - `place_type` (enum)
+    - `place_name` (string según caso)
+    - `place_sector` (opcional)
+  - Catálogo simple inicial:
+    - `consultorio_prop`: no pide nombre.
+    - `institucion`: pide `place_name` y acepta `place_sector` (`publica` o `privada`).
+    - `otro`: pide `place_name`.
+- Fabricante:
+  - Opcional.
+  - Texto libre.
+  - Se guarda en `payload.vaccine.manufacturer`.
+  - No se cataloga en esta etapa por impráctico.
+- Compatibilidad de payload:
+  - Se mantiene soporte al payload plano actual:
+    - `vaccine_name`
+    - `lot`
+    - `dose`
+    - `route`
+  - Se habilita payload estructurado futuro:
+    - `payload.vaccine.product_name`
+    - `payload.vaccine.manufacturer`
+    - `payload.trace.lot`
+    - `payload.schedule.dose_volume`
+    - `payload.schedule.route`
+    - `payload.schedule.site`
+    - `payload.administration.place_type`
+    - `payload.administration.place_name`
+    - `payload.administration.place_sector`
+    - `payload.notes.clinical`
+- Prioridad oficial de visualización en timeline:
+  - lugar de aplicación
+  - nombre de vacuna
+  - fabricante
+  - lote
+  - dosis/vía
+  - nota
+- Commit exacto de documentación:
+  - `docs: define immunization required administration place and manufacturer free-text`
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)
