@@ -1344,8 +1344,10 @@ function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $lim
 {
     $baseSelect = "
         SELECT
+            id,
             document_uuid,
             document_type,
+            title,
             summary,
             event_datetime,
             payload_json,
@@ -1355,8 +1357,10 @@ function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $lim
     ";
     $baseSelectWithAppointment = "
         SELECT
+            id,
             document_uuid,
             document_type,
+            title,
             summary,
             event_datetime,
             appointment_id,
@@ -1423,13 +1427,20 @@ function clinical_timeline_encounter_key_from_datetime(string $eventDatetime): s
 function clinical_timeline_document_item_from_row(array $row, string $patientId, ?int $encounterId = null): array
 {
     $eventDatetime = (string)($row['event_datetime'] ?? '');
+    $documentId = (int)($row['id'] ?? 0);
     $documentUuid = (string)($row['document_uuid'] ?? '');
+    $documentType = (string)($row['document_type'] ?? '');
+    $documentTitle = (string)($row['title'] ?? '');
     $appointmentId = trim((string)($row['appointment_id'] ?? ''));
     $resolvedEncounterId = (int)($encounterId ?? 0);
     $mediaMeta = clinical_media_meta_from_row($row);
 
     return [
         'item_type' => 'document',
+        'id' => ($documentUuid !== '' ? $documentUuid : ($documentId > 0 ? (string)$documentId : null)),
+        'document_type' => $documentType,
+        'occurred_at' => ($eventDatetime !== '' ? $eventDatetime : null),
+        'title' => ($documentTitle !== '' ? $documentTitle : null),
         'ref' => ($documentUuid !== '' ? ('doc:' . $documentUuid) : null),
         'encounter_key' => clinical_timeline_encounter_key_from_datetime($eventDatetime),
         'event_datetime' => $eventDatetime,
@@ -1443,8 +1454,11 @@ function clinical_timeline_document_item_from_row(array $row, string $patientId,
             'hospital_stay_id' => $row['hospital_stay_id'] ?? null,
         ],
         'clinical_document' => [
+            'id' => ($documentUuid !== '' ? $documentUuid : ($documentId > 0 ? (string)$documentId : null)),
             'document_uuid' => $documentUuid,
-            'document_type' => (string)($row['document_type'] ?? ''),
+            'document_type' => $documentType,
+            'title' => $documentTitle,
+            'occurred_at' => ($eventDatetime !== '' ? $eventDatetime : null),
             'summary' => (string)($row['summary'] ?? ''),
             'media_tag_label' => $mediaMeta['media_tag_label'],
             'media_caption' => $mediaMeta['media_caption'],
