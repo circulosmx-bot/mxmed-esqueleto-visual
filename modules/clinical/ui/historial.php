@@ -2421,6 +2421,11 @@ if (!$embed) {
       var placeName = immunizationPlaceName ? String(immunizationPlaceName.value || '').trim() : '';
       var placeSector = immunizationPlaceSector ? String(immunizationPlaceSector.value || '').trim() : '';
       var vaccineKey = immunizationVaccineSelect ? String(immunizationVaccineSelect.value || '').trim() : '';
+      var selectedVaccineLabel = '';
+      if (immunizationVaccineSelect && immunizationVaccineSelect.selectedIndex >= 0) {
+        var selectedOption = immunizationVaccineSelect.options[immunizationVaccineSelect.selectedIndex];
+        selectedVaccineLabel = selectedOption ? String(selectedOption.text || '').trim() : '';
+      }
       var otherVaccineName = immunizationOtherVaccine ? String(immunizationOtherVaccine.value || '').trim() : '';
       var productName = '';
       var manufacturer = immunizationManufacturer ? String(immunizationManufacturer.value || '').trim() : '';
@@ -2445,7 +2450,7 @@ if (!$embed) {
         }
         productName = otherVaccineName;
       } else {
-        productName = String(immunizationVaccineCatalog[vaccineKey] || '').trim();
+        productName = selectedVaccineLabel;
       }
       if (!productName) {
         setImmunizationFormError('Selecciona una vacuna válida.');
