@@ -1397,6 +1397,7 @@ if (!$embed) {
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="cita">Citas</button>
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="consulta">Consultas</button>
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="receta">Recetas</button>
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="procedimiento">Procedimientos</button>
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="estudio">Estudios</button>
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="documento">Documentos</button>
       </div>
