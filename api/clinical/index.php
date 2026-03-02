@@ -1475,6 +1475,9 @@ function clinical_timeline_semantic_classify(array $item): array
     if ($documentType === '') {
         $documentType = strtolower(trim((string)($document['document_type'] ?? '')));
     }
+    if ($documentType === '') {
+        $documentType = strtolower(trim((string)($item['document_type'] ?? '')));
+    }
     $mediaBundleId = trim((string)($item['media_bundle_id'] ?? ($document['media_bundle_id'] ?? '')));
     $bundleNotes = is_array($item['bundle_notes'] ?? null) ? $item['bundle_notes'] : [];
     $bundleHasNotes = (bool)($bundleNotes['has_notes'] ?? false);
@@ -1495,6 +1498,12 @@ function clinical_timeline_semantic_classify(array $item): array
         return [
             'clinical_category' => 'estudio',
             'study_role' => 'resultado',
+        ];
+    }
+    if ($documentType === 'immunization' || $documentType === 'procedure') {
+        return [
+            'clinical_category' => 'procedimiento',
+            'study_role' => null,
         ];
     }
     if ($mediaBundleId !== '' || $bundleHasNotes) {
