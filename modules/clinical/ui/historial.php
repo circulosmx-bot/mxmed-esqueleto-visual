@@ -572,6 +572,10 @@ if ($clinicalApiBase === '' || strpos($clinicalApiBase, '/') === 0) {
 }
 $clinicalApiIndexBase = $clinicalApiBase . '/api/clinical/index.php';
 // usar base raw para HTTP calls, nunca HTML-escaped
+$currentUserId = trim((string)($_SESSION['user_id'] ?? ($_SERVER['PHP_AUTH_USER'] ?? 'qa')));
+if ($currentUserId === '') {
+    $currentUserId = 'qa';
+}
 
 $errorMessage = '';
 $errorTechnicalDetails = '';
@@ -1352,9 +1356,15 @@ if (!$embed) {
         </details>
       <?php endif; ?>
     </div>
-  <?php elseif (!$hasRenderableItems): ?>
-    <div class="alert alert-secondary">Sin eventos (no hay encuentros ni documentos)</div>
   <?php else: ?>
+    <?php if ($patientId !== ''): ?>
+      <div class="d-flex justify-content-end mb-3">
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="open-immunization-modal">Registrar vacuna</button>
+      </div>
+    <?php endif; ?>
+    <?php if (!$hasRenderableItems): ?>
+      <div class="alert alert-secondary">Sin eventos (no hay encuentros ni documentos)</div>
+    <?php else: ?>
     <?php if ($cursorNext !== '' || $cursorPrev !== ''): ?>
       <div class="d-flex flex-wrap gap-2 mb-3">
         <?php if ($cursorNext !== ''): ?>
@@ -1702,6 +1712,7 @@ if (!$embed) {
         </section>
       <?php endforeach; ?>
     </div>
+    <?php endif; ?>
   <?php endif; ?>
   <div
     class="modal fade"
@@ -1824,9 +1835,80 @@ if (!$embed) {
     </div>
   </div>
 </div>
+<div class="modal fade" id="clinicalImmunizationModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Registrar vacuna</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger small d-none" data-role="immunization-form-error"></div>
+        <form class="vstack gap-3" data-role="immunization-form">
+          <div>
+            <label for="immunizationPlaceType" class="form-label">Lugar de aplicación</label>
+            <select id="immunizationPlaceType" class="form-select" data-role="immunization-place-type" required>
+              <option value="">Selecciona una opción</option>
+              <option value="consultorio_prop">Consultorio</option>
+              <option value="institucion">Institución</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div class="d-none" data-role="immunization-place-name-wrap">
+            <label for="immunizationPlaceName" class="form-label">¿Cuál? / ¿Dónde?</label>
+            <input id="immunizationPlaceName" type="text" class="form-control" data-role="immunization-place-name" maxlength="190">
+          </div>
+          <div class="d-none" data-role="immunization-place-sector-wrap">
+            <label for="immunizationPlaceSector" class="form-label">Sector</label>
+            <select id="immunizationPlaceSector" class="form-select" data-role="immunization-place-sector">
+              <option value="">Sin especificar</option>
+              <option value="publica">Pública</option>
+              <option value="privada">Privada</option>
+            </select>
+          </div>
+          <div>
+            <label for="immunizationProductName" class="form-label">Vacuna (nombre)</label>
+            <input id="immunizationProductName" type="text" class="form-control" data-role="immunization-product-name" maxlength="190" required>
+          </div>
+          <div>
+            <label for="immunizationManufacturer" class="form-label">Fabricante</label>
+            <input id="immunizationManufacturer" type="text" class="form-control" data-role="immunization-manufacturer" maxlength="190">
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="immunizationLot" class="form-label">Lote</label>
+              <input id="immunizationLot" type="text" class="form-control" data-role="immunization-lot" maxlength="120">
+            </div>
+            <div class="col-md-6">
+              <label for="immunizationDose" class="form-label">Dosis</label>
+              <input id="immunizationDose" type="text" class="form-control" data-role="immunization-dose" maxlength="120" placeholder="Ej. 0.5 mL">
+            </div>
+            <div class="col-md-6">
+              <label for="immunizationRoute" class="form-label">Vía</label>
+              <input id="immunizationRoute" type="text" class="form-control" data-role="immunization-route" maxlength="120" placeholder="Ej. IM, SC, ID">
+            </div>
+            <div class="col-md-6">
+              <label for="immunizationEventDatetime" class="form-label">Fecha y hora</label>
+              <input id="immunizationEventDatetime" type="datetime-local" class="form-control" data-role="immunization-event-datetime">
+            </div>
+          </div>
+          <div>
+            <label for="immunizationNotes" class="form-label">Notas</label>
+            <textarea id="immunizationNotes" class="form-control" data-role="immunization-notes" rows="3" maxlength="2000"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-bs-dismiss="modal" data-action="cancel-immunization-modal">Cancelar</button>
+        <button type="button" class="btn btn-sm btn-primary" data-action="submit-immunization">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
 <script>
   (function () {
     var patientId = <?php echo json_encode($patientId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    var currentUserId = <?php echo json_encode($currentUserId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var currentInclude = <?php echo json_encode($include, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var apiBase = <?php echo json_encode($clinicalApiBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var activeCaseId = <?php echo json_encode($activeCaseId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
@@ -1890,6 +1972,27 @@ if (!$embed) {
     if (documentViewerModalEl && window.bootstrap && window.bootstrap.Modal) {
       documentViewerModalInstance = window.bootstrap.Modal.getOrCreateInstance(documentViewerModalEl);
     }
+    var immunizationModalEl = document.getElementById('clinicalImmunizationModal');
+    var immunizationModalInstance = null;
+    if (immunizationModalEl && window.bootstrap && window.bootstrap.Modal) {
+      immunizationModalInstance = window.bootstrap.Modal.getOrCreateInstance(immunizationModalEl);
+    }
+    var immunizationForm = document.querySelector('[data-role="immunization-form"]');
+    var immunizationFormError = document.querySelector('[data-role="immunization-form-error"]');
+    var immunizationPlaceType = document.querySelector('[data-role="immunization-place-type"]');
+    var immunizationPlaceNameWrap = document.querySelector('[data-role="immunization-place-name-wrap"]');
+    var immunizationPlaceName = document.querySelector('[data-role="immunization-place-name"]');
+    var immunizationPlaceSectorWrap = document.querySelector('[data-role="immunization-place-sector-wrap"]');
+    var immunizationPlaceSector = document.querySelector('[data-role="immunization-place-sector"]');
+    var immunizationProductName = document.querySelector('[data-role="immunization-product-name"]');
+    var immunizationManufacturer = document.querySelector('[data-role="immunization-manufacturer"]');
+    var immunizationLot = document.querySelector('[data-role="immunization-lot"]');
+    var immunizationDose = document.querySelector('[data-role="immunization-dose"]');
+    var immunizationRoute = document.querySelector('[data-role="immunization-route"]');
+    var immunizationEventDatetime = document.querySelector('[data-role="immunization-event-datetime"]');
+    var immunizationNotes = document.querySelector('[data-role="immunization-notes"]');
+    var immunizationSubmitBtn = document.querySelector('[data-action="submit-immunization"]');
+    var immunizationSubmitting = false;
     var activeDocumentUrl = '';
     var debugMode = false;
     try {
@@ -2167,6 +2270,185 @@ if (!$embed) {
         caseScopeFilterWrap.classList.toggle('d-none', !advancedFiltersVisible);
       }
       advancedFiltersToggle.textContent = advancedFiltersVisible ? 'Ocultar opciones avanzadas' : 'Ver opciones avanzadas';
+    }
+
+    function setImmunizationFormError(message) {
+      if (!immunizationFormError) return;
+      var text = String(message || '').trim();
+      immunizationFormError.textContent = text;
+      immunizationFormError.classList.toggle('d-none', text === '');
+    }
+
+    function syncImmunizationPlaceFields() {
+      var placeType = immunizationPlaceType ? String(immunizationPlaceType.value || '').trim() : '';
+      var needsPlaceName = placeType === 'institucion' || placeType === 'otro';
+      var showSector = placeType === 'institucion';
+      if (immunizationPlaceNameWrap) {
+        immunizationPlaceNameWrap.classList.toggle('d-none', !needsPlaceName);
+      }
+      if (immunizationPlaceSectorWrap) {
+        immunizationPlaceSectorWrap.classList.toggle('d-none', !showSector);
+      }
+      if (!needsPlaceName && immunizationPlaceName) {
+        immunizationPlaceName.value = '';
+      }
+      if (!showSector && immunizationPlaceSector) {
+        immunizationPlaceSector.value = '';
+      }
+    }
+
+    function syncImmunizationSubmitButton() {
+      if (!immunizationSubmitBtn) return;
+      immunizationSubmitBtn.disabled = immunizationSubmitting;
+      immunizationSubmitBtn.textContent = immunizationSubmitting ? 'Guardando...' : 'Guardar';
+    }
+
+    function resetImmunizationForm() {
+      if (immunizationForm) {
+        immunizationForm.reset();
+      }
+      setImmunizationFormError('');
+      immunizationSubmitting = false;
+      syncImmunizationSubmitButton();
+      syncImmunizationPlaceFields();
+    }
+
+    function openImmunizationModal() {
+      if (!patientId) {
+        window.alert('patient_id requerido para registrar vacuna.');
+        return;
+      }
+      resetImmunizationForm();
+      if (immunizationModalInstance) {
+        immunizationModalInstance.show();
+      } else if (immunizationModalEl) {
+        immunizationModalEl.style.display = 'block';
+        immunizationModalEl.classList.add('show');
+      }
+    }
+
+    function closeImmunizationModal() {
+      if (!immunizationModalEl) return;
+      if (immunizationModalInstance) {
+        immunizationModalInstance.hide();
+        return;
+      }
+      immunizationModalEl.classList.remove('show');
+      immunizationModalEl.style.display = 'none';
+      immunizationModalEl.setAttribute('aria-hidden', 'true');
+      resetImmunizationForm();
+    }
+
+    function normalizeEventDatetime(value) {
+      var text = String(value || '').trim();
+      if (!text) return '';
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(text)) {
+        return text.replace('T', ' ') + ':00';
+      }
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(text)) {
+        return text.replace('T', ' ');
+      }
+      return text;
+    }
+
+    async function submitImmunization() {
+      if (immunizationSubmitting) return;
+      if (!patientId) {
+        setImmunizationFormError('patient_id requerido.');
+        return;
+      }
+      var placeType = immunizationPlaceType ? String(immunizationPlaceType.value || '').trim() : '';
+      var placeName = immunizationPlaceName ? String(immunizationPlaceName.value || '').trim() : '';
+      var placeSector = immunizationPlaceSector ? String(immunizationPlaceSector.value || '').trim() : '';
+      var productName = immunizationProductName ? String(immunizationProductName.value || '').trim() : '';
+      var manufacturer = immunizationManufacturer ? String(immunizationManufacturer.value || '').trim() : '';
+      var lot = immunizationLot ? String(immunizationLot.value || '').trim() : '';
+      var doseVolume = immunizationDose ? String(immunizationDose.value || '').trim() : '';
+      var route = immunizationRoute ? String(immunizationRoute.value || '').trim() : '';
+      var notesClinical = immunizationNotes ? String(immunizationNotes.value || '').trim() : '';
+      var eventDatetime = normalizeEventDatetime(immunizationEventDatetime ? immunizationEventDatetime.value : '');
+
+      if (!placeType) {
+        setImmunizationFormError('Selecciona el lugar de aplicación.');
+        return;
+      }
+      if (!productName) {
+        setImmunizationFormError('Ingresa el nombre de la vacuna.');
+        return;
+      }
+      if ((placeType === 'institucion' || placeType === 'otro') && !placeName) {
+        setImmunizationFormError('Indica ¿cuál? / ¿dónde? para el lugar de aplicación.');
+        return;
+      }
+
+      var payload = {
+        administration: {
+          place_type: placeType
+        },
+        vaccine: {
+          product_name: productName
+        },
+        vaccine_name: productName
+      };
+      if (placeName) {
+        payload.administration.place_name = placeName;
+      }
+      if (placeType === 'institucion' && placeSector) {
+        payload.administration.place_sector = placeSector;
+      }
+      if (manufacturer) {
+        payload.vaccine.manufacturer = manufacturer;
+      }
+      if (lot) {
+        payload.trace = { lot: lot };
+        payload.lot = lot;
+      }
+      if (doseVolume || route) {
+        payload.schedule = {};
+        if (doseVolume) {
+          payload.schedule.dose_volume = doseVolume;
+          payload.dose = doseVolume;
+        }
+        if (route) {
+          payload.schedule.route = route;
+          payload.route = route;
+        }
+      }
+      if (notesClinical) {
+        payload.notes = { clinical: notesClinical };
+      }
+
+      var body = {
+        type: 'immunization',
+        actor: { user_id: currentUserId || 'qa' },
+        context: { patient_id: patientId },
+        title: 'Vacunación',
+        payload: payload
+      };
+      if (eventDatetime !== '') {
+        body.event_datetime = eventDatetime;
+      }
+
+      immunizationSubmitting = true;
+      syncImmunizationSubmitButton();
+      setImmunizationFormError('');
+      try {
+        await apiJson(apiBase + '/api/clinical/index.php/documents', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body),
+          credentials: 'same-origin'
+        });
+        closeImmunizationModal();
+        window.location.reload();
+      } catch (err) {
+        immunizationSubmitting = false;
+        syncImmunizationSubmitButton();
+        setImmunizationFormError(err && err.message ? err.message : 'No se pudo registrar la vacuna.');
+      }
     }
 
     async function apiJson(url, options) {
@@ -2758,6 +3040,13 @@ if (!$embed) {
         return;
       }
 
+      var openImmunizationBtn = event.target && event.target.closest ? event.target.closest('[data-action="open-immunization-modal"]') : null;
+      if (openImmunizationBtn) {
+        event.preventDefault();
+        openImmunizationModal();
+        return;
+      }
+
       var setClinicalFilterBtn = event.target && event.target.closest ? event.target.closest('[data-action="set-clinical-filter"]') : null;
       if (setClinicalFilterBtn) {
         event.preventDefault();
@@ -2915,8 +3204,27 @@ if (!$embed) {
         return;
       }
 
+      var cancelImmunizationBtn = event.target && event.target.closest ? event.target.closest('[data-action="cancel-immunization-modal"]') : null;
+      if (cancelImmunizationBtn && !immunizationModalInstance && immunizationModalEl) {
+        event.preventDefault();
+        closeImmunizationModal();
+        return;
+      }
+
+      var submitImmunizationBtn = event.target && event.target.closest ? event.target.closest('[data-action="submit-immunization"]') : null;
+      if (submitImmunizationBtn) {
+        event.preventDefault();
+        submitImmunization();
+        return;
+      }
+
       if (!documentViewerModalInstance && documentViewerModalEl && event.target === documentViewerModalEl) {
         closeDocumentViewerModal();
+        return;
+      }
+
+      if (!immunizationModalInstance && immunizationModalEl && event.target === immunizationModalEl) {
+        closeImmunizationModal();
         return;
       }
 
@@ -3083,6 +3391,12 @@ if (!$embed) {
       });
     }
 
+    if (immunizationModalEl) {
+      immunizationModalEl.addEventListener('hidden.bs.modal', function () {
+        resetImmunizationForm();
+      });
+    }
+
     if (createCaseTitleInput) {
       createCaseTitleInput.addEventListener('keydown', function (event) {
         if (event.key === 'Enter') {
@@ -3091,6 +3405,19 @@ if (!$embed) {
             createCaseConfirmBtn.click();
           }
         }
+      });
+    }
+
+    if (immunizationPlaceType) {
+      immunizationPlaceType.addEventListener('change', function () {
+        syncImmunizationPlaceFields();
+      });
+    }
+
+    if (immunizationForm) {
+      immunizationForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        submitImmunization();
       });
     }
 
@@ -3112,6 +3439,8 @@ if (!$embed) {
       navigateWithInclude('agenda,clinical');
       return;
     }
+    syncImmunizationPlaceFields();
+    syncImmunizationSubmitButton();
     resetClinicalFiltersToAll();
     renderRecentSuggestion();
     applyAdvancedFiltersVisibility();
