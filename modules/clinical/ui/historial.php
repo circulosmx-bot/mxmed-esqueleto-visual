@@ -1459,6 +1459,15 @@ if (!$embed) {
                 $appointmentLatestEncounterKey = trim((string)($item['latest_encounter_key'] ?? ''));
                 $appointmentEpisodeId = trim((string)(($item['links']['appointment_id'] ?? '')));
                 $appointmentEncounterKey = trim((string)($item['encounter_key'] ?? ''));
+                $appointmentClinicalCategory = trim((string)($item['clinical_category'] ?? ''));
+                $appointmentReasonText = trim((string)($agenda['reason_text'] ?? ''));
+                $appointmentDisplayTitle = $entryTitle;
+                if ($appointmentClinicalCategory === 'procedimiento') {
+                    $appointmentDisplayTitle = 'Procedimiento programado';
+                    if ($appointmentReasonText !== '') {
+                        $appointmentDisplayTitle .= ': ' . $appointmentReasonText;
+                    }
+                }
                 if ($appointmentEpisodeId === '') {
                     $appointmentEpisodeId = trim((string)($agenda['appointment_id'] ?? ''));
                 }
@@ -1479,12 +1488,18 @@ if (!$embed) {
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
                     <div class="min-w-0 flex-grow-1">
-                      <div class="mm-activity-title"><?php echo h($entryTitle); ?></div>
+                      <div class="mm-activity-title"><?php echo h($appointmentDisplayTitle); ?></div>
+                      <?php if ($appointmentClinicalCategory === 'procedimiento' && trim((string)($agenda['start_at'] ?? '')) !== ''): ?>
+                        <div class="mm-activity-meta"><?php echo h((string)$agenda['start_at']); ?></div>
+                      <?php endif; ?>
                       <?php if (trim((string)($item['case_title'] ?? '')) !== ''): ?>
                         <div class="mm-activity-meta">Caso: <?php echo h((string)$item['case_title']); ?></div>
                       <?php endif; ?>
                     </div>
                     <div class="mm-activity-actions" data-role="appointment-episode-cta" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>">
+                      <?php if ($appointmentClinicalCategory === 'procedimiento' && $appointmentEpisodeId !== ''): ?>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="open-procedure-from-appointment" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>" data-default-title="<?php echo h($appointmentReasonText); ?>" data-default-datetime="<?php echo h((string)($item['event_datetime'] ?? ($agenda['start_at'] ?? ''))); ?>">Agregar detalles</button>
+                      <?php endif; ?>
                       <?php if (!$isInActiveCase && $appointmentRef !== ''): ?>
                         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-to-case" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>">Integrar a caso clínico</button>
                       <?php endif; ?>
@@ -2100,6 +2115,7 @@ if (!$embed) {
       <div class="modal-body">
         <div class="alert alert-danger small d-none" data-role="generic-procedure-form-error"></div>
         <form class="vstack gap-3" data-role="generic-procedure-form">
+          <input type="hidden" data-role="generic-procedure-appointment-id" value="">
           <div>
             <label for="genericProcedureType" class="form-label">Tipo de procedimiento</label>
             <select id="genericProcedureType" class="form-select" data-role="generic-procedure-type" required>
@@ -2355,6 +2371,7 @@ if (!$embed) {
     }
     var genericProcedureForm = document.querySelector('[data-role="generic-procedure-form"]');
     var genericProcedureFormError = document.querySelector('[data-role="generic-procedure-form-error"]');
+    var genericProcedureAppointmentId = document.querySelector('[data-role="generic-procedure-appointment-id"]');
     var genericProcedureType = document.querySelector('[data-role="generic-procedure-type"]');
     var genericProcedureEventDatetime = document.querySelector('[data-role="generic-procedure-event-datetime"]');
     var genericProcedurePlaceType = document.querySelector('[data-role="generic-procedure-place-type"]');
@@ -2858,11 +2875,26 @@ if (!$embed) {
       if (genericProcedureForm) {
         genericProcedureForm.reset();
       }
+      if (genericProcedureAppointmentId) {
+        genericProcedureAppointmentId.value = '';
+      }
       setGenericProcedureFormError('');
       genericProcedureSubmitting = false;
       syncGenericProcedureSubmitButton();
       syncGenericProcedurePlaceFields();
       syncGenericProcedureTypeFields();
+    }
+
+    function toDatetimeLocalValue(value) {
+      var text = String(value || '').trim();
+      if (!text) {
+        return '';
+      }
+      var match = text.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
+      if (match) {
+        return match[1] + 'T' + match[2];
+      }
+      return '';
     }
 
     function openImmunizationModal() {
@@ -2893,14 +2925,24 @@ if (!$embed) {
       }
     }
 
-    function openGenericProcedureModal(defaultType) {
+    function openGenericProcedureModal(defaultType, defaults) {
       if (!patientId) {
         window.alert('patient_id requerido para registrar procedimiento.');
         return;
       }
+      var modalDefaults = defaults && typeof defaults === 'object' ? defaults : {};
       resetGenericProcedureForm();
       if (genericProcedureType) {
         genericProcedureType.value = String(defaultType || 'immunization').trim() || 'immunization';
+      }
+      if (genericProcedureAppointmentId) {
+        genericProcedureAppointmentId.value = String(modalDefaults.appointmentId || '').trim();
+      }
+      if (genericProcedureEventDatetime) {
+        genericProcedureEventDatetime.value = toDatetimeLocalValue(modalDefaults.defaultDatetime || '');
+      }
+      if (genericProcedureOtherName && String(defaultType || '').trim() === 'other_procedure') {
+        genericProcedureOtherName.value = String(modalDefaults.defaultTitle || '').trim();
       }
       syncGenericProcedureTypeFields();
       if (genericProcedureModalInstance) {
@@ -3330,6 +3372,11 @@ if (!$embed) {
       }
 
       var requestType = (procedureType === 'other_procedure') ? 'procedure' : procedureType;
+      var requestContext = { patient_id: patientId };
+      var genericAppointmentId = genericProcedureAppointmentId ? String(genericProcedureAppointmentId.value || '').trim() : '';
+      if (genericAppointmentId) {
+        requestContext.appointment_id = genericAppointmentId;
+      }
 
       genericProcedureSubmitting = true;
       syncGenericProcedureSubmitButton();
@@ -3346,7 +3393,7 @@ if (!$embed) {
             title: title,
             event_datetime: eventDatetime,
             actor: { user_id: currentUserId || 'qa' },
-            context: { patient_id: patientId },
+            context: requestContext,
             payload: payload
           }),
           credentials: 'same-origin'
@@ -3967,6 +4014,17 @@ if (!$embed) {
       if (openGenericProcedureBtn) {
         event.preventDefault();
         openGenericProcedureModal('immunization');
+        return;
+      }
+
+      var openProcedureFromAppointmentBtn = event.target && event.target.closest ? event.target.closest('[data-action="open-procedure-from-appointment"]') : null;
+      if (openProcedureFromAppointmentBtn) {
+        event.preventDefault();
+        openGenericProcedureModal('other_procedure', {
+          appointmentId: String(openProcedureFromAppointmentBtn.getAttribute('data-appointment-id') || '').trim(),
+          defaultTitle: String(openProcedureFromAppointmentBtn.getAttribute('data-default-title') || '').trim(),
+          defaultDatetime: String(openProcedureFromAppointmentBtn.getAttribute('data-default-datetime') || '').trim()
+        });
         return;
       }
 
