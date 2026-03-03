@@ -3111,7 +3111,7 @@ if (!$embed) {
         }
       }
       if (notesClinical) {
-        payload.notes = { clinical: notesClinical };
+        payload.notes = notesClinical;
       }
 
       return {
@@ -3238,7 +3238,7 @@ if (!$embed) {
         payload.administration.place_sector = placeSector;
       }
       if (notesClinical) {
-        payload.notes = { clinical: notesClinical };
+        payload.notes = notesClinical;
       }
 
       var body = {
@@ -3402,7 +3402,7 @@ if (!$embed) {
         payload.administration.place_sector = placeSector;
       }
       if (notesClinical) {
-        payload.notes = { clinical: notesClinical };
+        payload.notes = notesClinical;
       }
 
       var requestType = (procedureType === 'other_procedure') ? 'procedure' : procedureType;
@@ -3426,7 +3426,7 @@ if (!$embed) {
             type: requestType,
             title: title,
             event_datetime: eventDatetime,
-            actor: { user_id: currentUserId || 'qa' },
+            actor: { user_id: resolveClinicalActorUserId() },
             context: requestContext,
             payload: payload
           }),
@@ -4054,64 +4054,21 @@ if (!$embed) {
       var registerProcedureBtn = event.target && event.target.closest ? event.target.closest('[data-action="register-procedure"]') : null;
       if (registerProcedureBtn) {
         event.preventDefault();
-        var registerPatientId = String(registerProcedureBtn.getAttribute('data-patient-id') || '').trim();
         var registerAppointmentId = String(registerProcedureBtn.getAttribute('data-appt-id') || '').trim();
-        var registerStartAt = normalizeEventDatetime(String(registerProcedureBtn.getAttribute('data-start-at') || '').trim());
+        var registerStartAt = String(registerProcedureBtn.getAttribute('data-start-at') || '').trim();
         var registerReasonText = String(registerProcedureBtn.getAttribute('data-reason-text') || '').trim();
-        var actorId = resolveClinicalActorUserId();
-        if (!registerPatientId || !registerAppointmentId) {
+        if (!registerAppointmentId) {
           window.alert('Faltan datos del appointment para registrar el procedimiento.');
           return;
         }
-        if (!window.confirm('¿Registrar procedimiento realizado?')) {
-          return;
-        }
-        var requestBody = {
-          type: 'procedure',
-          event_datetime: registerStartAt,
-          actor: { user_id: actorId },
-          context: {
-            patient_id: registerPatientId,
-            appointment_id: registerAppointmentId
-          },
-          ui: {
-            event_datetime: registerStartAt,
-            widget_group: 'procedimiento',
-            printable: 0
-          },
-          payload: {
-            name: registerReasonText || 'Procedimiento',
-            notes: 'Registrado desde agenda',
-            context: {
-              appointment_id: registerAppointmentId
-            }
-          }
-        };
-        fetch(apiBase + '/api/clinical/index.php/documents', {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-          credentials: 'same-origin',
-          body: JSON.stringify(requestBody)
+        openGenericProcedureModal('other_procedure', {
+          appointmentId: registerAppointmentId,
+          defaultTitle: registerReasonText,
+          defaultDatetime: registerStartAt
         })
-          .then(function (response) {
-            return response.json().catch(function () { return null; });
-          })
-          .then(function (resp) {
-            if (resp && resp.ok === true) {
-              window.alert('Procedimiento registrado');
-              window.location.reload();
-              return;
-            }
-            window.alert('Error: ' + String((resp && (resp.message || resp.error)) || 'No se pudo registrar el procedimiento.'));
-            console.log(resp);
-          })
-          .catch(function (err) {
-            window.alert('Error: ' + String((err && err.message) || 'No se pudo registrar el procedimiento.'));
-            console.log(err);
-          });
+        if (genericProcedureNotes) {
+          genericProcedureNotes.value = 'Registrado desde agenda';
+        }
         return;
       }
 
