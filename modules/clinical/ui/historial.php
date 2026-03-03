@@ -745,6 +745,14 @@ if ($patientId !== '') {
     }
 }
 
+$items = array_values(array_filter($items, static function ($item): bool {
+    if (!is_array($item)) {
+        return false;
+    }
+    $itemType = trim((string)($item['item_type'] ?? ''));
+    return $itemType === 'appointment' || $itemType === 'encounter' || $itemType === 'document';
+}));
+
 if ($patientId !== '') {
     $caseUrl = $clinicalApiIndexBase . '/patients/' . rawurlencode($patientId) . '/cases/active';
     $caseContext = stream_context_create([
@@ -1041,6 +1049,8 @@ usort($availableCategoryFilters, static function (array $a, array $b): int {
     return (int)$a['priority'] <=> (int)$b['priority'];
 });
 $timelineCategoryPriorityMap = mxmed_clinical_timeline_group_priority_map();
+$countAppointments = count(array_filter($items, static fn($it): bool => (($it['item_type'] ?? '') === 'appointment')));
+$countDocuments = count(array_filter($items, static fn($it): bool => (($it['item_type'] ?? '') === 'document')));
 
 $buildCursorHref = static function (string $nextCursor) use ($patientId, $include, $limit, $direction): string {
     $params = [
