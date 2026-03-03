@@ -361,6 +361,7 @@ function mxmed_build_clinical_document(array $args): array {
         'version' => 1,
         'context' => [
             'patient_id' => $patientId,
+            'appointment_id' => $context['appointment_id'] ?? null,
             'encounter_id' => $context['encounter_id'] ?? null,
             'hospital_stay_id' => $context['hospital_stay_id'] ?? null,
             'care_setting' => $care,

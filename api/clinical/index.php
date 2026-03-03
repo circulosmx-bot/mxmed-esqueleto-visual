@@ -490,6 +490,14 @@ function clinical_documents_save_passthrough(PDO $pdo, array $args): array
     mxmed_ensure_clinical_docs_schema($pdo);
 
     $doc = mxmed_build_clinical_document($args);
+    $apptId = trim((string)($doc['context']['appointment_id'] ?? ''));
+    if ($apptId !== '') {
+        $payload = is_array($doc['content']['payload'] ?? null) ? $doc['content']['payload'] : [];
+        $payloadContext = is_array($payload['context'] ?? null) ? $payload['context'] : [];
+        $payloadContext['appointment_id'] = $apptId;
+        $payload['context'] = $payloadContext;
+        $doc['content']['payload'] = $payload;
+    }
 
     if (($doc['document_type'] ?? '') === 'nota_evolucion') {
         $errs = mxmed_evolution_note_validate_to_generate((array)($doc['content']['payload'] ?? []));
@@ -511,25 +519,50 @@ function clinical_documents_save_passthrough(PDO $pdo, array $args): array
 
     $pdo->beginTransaction();
     try {
+        $cols = clinical_table_columns($pdo, 'clinical_documents');
+        $hasApptCol = isset($cols['appointment_id']);
+        $insertMap = [
+            'document_uuid' => ':uuid',
+            'document_type' => ':type',
+            'title' => ':title',
+            'version' => ':version',
+            'status' => ':status',
+            'patient_id' => ':patient_id',
+        ];
+        if ($hasApptCol) {
+            $insertMap['appointment_id'] = ':appointment_id';
+        }
+        $insertMap += [
+            'encounter_id' => ':encounter_id',
+            'hospital_stay_id' => ':hospital_stay_id',
+            'care_setting' => ':care_setting',
+            'service' => ':service',
+            'payload_json' => ':payload_json',
+            'rendered_text' => ':rendered_text',
+            'summary' => ':summary',
+            'edited_flag' => ':edited_flag',
+            'event_datetime' => ':event_datetime',
+            'widget_group' => ':widget_group',
+            'printable' => ':printable',
+            'created_at' => ':created_at',
+            'updated_at' => ':updated_at',
+            'generated_at' => ':generated_at',
+            'signed_at' => ':signed_at',
+            'created_by_user_id' => ':created_by_user_id',
+            'updated_by_user_id' => ':updated_by_user_id',
+        ];
+
+        $sqlColumns = implode(', ', array_keys($insertMap));
+        $sqlPlaceholders = implode(', ', array_values($insertMap));
         $stmt = $pdo->prepare("
             INSERT INTO clinical_documents (
-                document_uuid, document_type, title, version, status,
-                patient_id, encounter_id, hospital_stay_id, care_setting, service,
-                payload_json, rendered_text, summary, edited_flag,
-                event_datetime, widget_group, printable,
-                created_at, updated_at, generated_at, signed_at,
-                created_by_user_id, updated_by_user_id
+                {$sqlColumns}
             ) VALUES (
-                :uuid, :type, :title, :version, :status,
-                :patient_id, :encounter_id, :hospital_stay_id, :care_setting, :service,
-                :payload_json, :rendered_text, :summary, :edited_flag,
-                :event_datetime, :widget_group, :printable,
-                :created_at, :updated_at, :generated_at, :signed_at,
-                :created_by_user_id, :updated_by_user_id
+                {$sqlPlaceholders}
             )
         ");
 
-        $stmt->execute([
+        $params = [
             ':uuid' => $doc['document_id'],
             ':type' => $doc['document_type'],
             ':title' => $doc['title'],
@@ -553,7 +586,12 @@ function clinical_documents_save_passthrough(PDO $pdo, array $args): array
             ':signed_at' => $doc['timestamps']['signed_at'],
             ':created_by_user_id' => $doc['audit']['created_by_user_id'],
             ':updated_by_user_id' => $doc['audit']['updated_by_user_id'],
-        ]);
+        ];
+        if ($hasApptCol) {
+            $params[':appointment_id'] = ($apptId !== '' ? $apptId : null);
+        }
+
+        $stmt->execute($params);
 
         $docId = (int)$pdo->lastInsertId();
 
