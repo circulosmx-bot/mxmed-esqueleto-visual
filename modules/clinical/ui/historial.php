@@ -1359,6 +1359,7 @@ if (!$embed) {
   <?php else: ?>
     <?php if ($patientId !== ''): ?>
       <div class="d-flex justify-content-end gap-2 flex-wrap mb-3">
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="open-generic-procedure-modal">Registrar procedimiento</button>
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="open-wound-care-modal">Registrar curación</button>
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="open-immunization-modal">Registrar vacuna</button>
       </div>
@@ -2058,6 +2059,103 @@ if (!$embed) {
     </div>
   </div>
 </div>
+<div class="modal fade" id="clinicalGenericProcedureModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Registrar procedimiento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger small d-none" data-role="generic-procedure-form-error"></div>
+        <form class="vstack gap-3" data-role="generic-procedure-form">
+          <div>
+            <label for="genericProcedureType" class="form-label">Tipo de procedimiento</label>
+            <select id="genericProcedureType" class="form-select" data-role="generic-procedure-type" required>
+              <option value="">Selecciona una opción</option>
+              <option value="medication_administration">Aplicación de medicamento</option>
+              <option value="wound_care">Curación</option>
+              <option value="other_procedure">Otro procedimiento</option>
+            </select>
+          </div>
+          <div>
+            <label for="genericProcedureEventDatetime" class="form-label">Fecha y hora</label>
+            <input id="genericProcedureEventDatetime" type="datetime-local" class="form-control" data-role="generic-procedure-event-datetime" required>
+          </div>
+          <div>
+            <label for="genericProcedurePlaceType" class="form-label">Lugar de aplicación</label>
+            <select id="genericProcedurePlaceType" class="form-select" data-role="generic-procedure-place-type" required>
+              <option value="">Selecciona una opción</option>
+              <option value="consultorio_prop">Consultorio</option>
+              <option value="institucion">Institución</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div class="d-none" data-role="generic-procedure-place-name-wrap">
+            <label for="genericProcedurePlaceName" class="form-label">¿Cuál? / ¿Dónde?</label>
+            <input id="genericProcedurePlaceName" type="text" class="form-control" data-role="generic-procedure-place-name" maxlength="190">
+          </div>
+          <div class="d-none" data-role="generic-procedure-place-sector-wrap">
+            <label for="genericProcedurePlaceSector" class="form-label">Sector</label>
+            <select id="genericProcedurePlaceSector" class="form-select" data-role="generic-procedure-place-sector">
+              <option value="">Sin especificar</option>
+              <option value="publica">Pública</option>
+              <option value="privada">Privada</option>
+            </select>
+          </div>
+          <div class="d-none" data-role="generic-procedure-medication-fields">
+            <div class="row g-3">
+              <div class="col-12">
+                <label for="genericProcedureMedicationName" class="form-label">Medicamento (nombre)</label>
+                <input id="genericProcedureMedicationName" type="text" class="form-control" data-role="generic-procedure-medication-name" maxlength="190">
+              </div>
+              <div class="col-md-6">
+                <label for="genericProcedureMedicationDose" class="form-label">Dosis</label>
+                <input id="genericProcedureMedicationDose" type="text" class="form-control" data-role="generic-procedure-medication-dose" maxlength="120">
+              </div>
+              <div class="col-md-6">
+                <label for="genericProcedureMedicationRoute" class="form-label">Vía</label>
+                <input id="genericProcedureMedicationRoute" type="text" class="form-control" data-role="generic-procedure-medication-route" maxlength="120">
+              </div>
+            </div>
+          </div>
+          <div class="d-none" data-role="generic-procedure-wound-fields">
+            <div class="row g-3">
+              <div class="col-12">
+                <label for="genericProcedureWoundName" class="form-label">Nombre de curación</label>
+                <input id="genericProcedureWoundName" type="text" class="form-control" data-role="generic-procedure-wound-name" maxlength="190">
+              </div>
+              <div class="col-12">
+                <label for="genericProcedureWoundMaterial" class="form-label">Material</label>
+                <input id="genericProcedureWoundMaterial" type="text" class="form-control" data-role="generic-procedure-wound-material" maxlength="190">
+              </div>
+            </div>
+          </div>
+          <div class="d-none" data-role="generic-procedure-other-fields">
+            <div class="row g-3">
+              <div class="col-12">
+                <label for="genericProcedureOtherName" class="form-label">Nombre del procedimiento</label>
+                <input id="genericProcedureOtherName" type="text" class="form-control" data-role="generic-procedure-other-name" maxlength="190">
+              </div>
+              <div class="col-12">
+                <label for="genericProcedureOtherDescription" class="form-label">Descripción</label>
+                <textarea id="genericProcedureOtherDescription" class="form-control" data-role="generic-procedure-other-description" rows="3" maxlength="2000"></textarea>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label for="genericProcedureNotes" class="form-label">Nota clínica</label>
+            <textarea id="genericProcedureNotes" class="form-control" data-role="generic-procedure-notes" rows="3" maxlength="2000"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-bs-dismiss="modal" data-action="cancel-generic-procedure-modal">Cancelar</button>
+        <button type="button" class="btn btn-sm btn-primary" data-action="submit-generic-procedure">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
 <script>
   (function () {
     var patientId = <?php echo json_encode($patientId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
@@ -2166,6 +2264,33 @@ if (!$embed) {
     var woundCareNotes = document.querySelector('[data-role="wound-care-notes"]');
     var woundCareSubmitBtn = document.querySelector('[data-action="submit-wound-care"]');
     var woundCareSubmitting = false;
+    var genericProcedureModalEl = document.getElementById('clinicalGenericProcedureModal');
+    var genericProcedureModalInstance = null;
+    if (genericProcedureModalEl && window.bootstrap && window.bootstrap.Modal) {
+      genericProcedureModalInstance = window.bootstrap.Modal.getOrCreateInstance(genericProcedureModalEl);
+    }
+    var genericProcedureForm = document.querySelector('[data-role="generic-procedure-form"]');
+    var genericProcedureFormError = document.querySelector('[data-role="generic-procedure-form-error"]');
+    var genericProcedureType = document.querySelector('[data-role="generic-procedure-type"]');
+    var genericProcedureEventDatetime = document.querySelector('[data-role="generic-procedure-event-datetime"]');
+    var genericProcedurePlaceType = document.querySelector('[data-role="generic-procedure-place-type"]');
+    var genericProcedurePlaceNameWrap = document.querySelector('[data-role="generic-procedure-place-name-wrap"]');
+    var genericProcedurePlaceName = document.querySelector('[data-role="generic-procedure-place-name"]');
+    var genericProcedurePlaceSectorWrap = document.querySelector('[data-role="generic-procedure-place-sector-wrap"]');
+    var genericProcedurePlaceSector = document.querySelector('[data-role="generic-procedure-place-sector"]');
+    var genericProcedureMedicationFields = document.querySelector('[data-role="generic-procedure-medication-fields"]');
+    var genericProcedureMedicationName = document.querySelector('[data-role="generic-procedure-medication-name"]');
+    var genericProcedureMedicationDose = document.querySelector('[data-role="generic-procedure-medication-dose"]');
+    var genericProcedureMedicationRoute = document.querySelector('[data-role="generic-procedure-medication-route"]');
+    var genericProcedureWoundFields = document.querySelector('[data-role="generic-procedure-wound-fields"]');
+    var genericProcedureWoundName = document.querySelector('[data-role="generic-procedure-wound-name"]');
+    var genericProcedureWoundMaterial = document.querySelector('[data-role="generic-procedure-wound-material"]');
+    var genericProcedureOtherFields = document.querySelector('[data-role="generic-procedure-other-fields"]');
+    var genericProcedureOtherName = document.querySelector('[data-role="generic-procedure-other-name"]');
+    var genericProcedureOtherDescription = document.querySelector('[data-role="generic-procedure-other-description"]');
+    var genericProcedureNotes = document.querySelector('[data-role="generic-procedure-notes"]');
+    var genericProcedureSubmitBtn = document.querySelector('[data-action="submit-generic-procedure"]');
+    var genericProcedureSubmitting = false;
     var immunizationVaccineCatalog = {
       influenza_tetravalente: 'Influenza tetravalente',
       hepatitis_b: 'Hepatitis B',
@@ -2507,6 +2632,50 @@ if (!$embed) {
       }
     }
 
+    function syncGenericProcedurePlaceFields() {
+      var placeType = genericProcedurePlaceType ? String(genericProcedurePlaceType.value || '').trim() : '';
+      var needsPlaceName = placeType === 'institucion' || placeType === 'otro';
+      var showSector = placeType === 'institucion';
+      if (genericProcedurePlaceNameWrap) {
+        genericProcedurePlaceNameWrap.classList.toggle('d-none', !needsPlaceName);
+      }
+      if (genericProcedurePlaceSectorWrap) {
+        genericProcedurePlaceSectorWrap.classList.toggle('d-none', !showSector);
+      }
+      if (!needsPlaceName && genericProcedurePlaceName) {
+        genericProcedurePlaceName.value = '';
+      }
+      if (!showSector && genericProcedurePlaceSector) {
+        genericProcedurePlaceSector.value = '';
+      }
+    }
+
+    function syncGenericProcedureTypeFields() {
+      var procedureType = genericProcedureType ? String(genericProcedureType.value || '').trim() : '';
+      if (genericProcedureMedicationFields) {
+        genericProcedureMedicationFields.classList.toggle('d-none', procedureType !== 'medication_administration');
+      }
+      if (genericProcedureWoundFields) {
+        genericProcedureWoundFields.classList.toggle('d-none', procedureType !== 'wound_care');
+      }
+      if (genericProcedureOtherFields) {
+        genericProcedureOtherFields.classList.toggle('d-none', procedureType !== 'other_procedure');
+      }
+      if (procedureType !== 'medication_administration') {
+        if (genericProcedureMedicationName) genericProcedureMedicationName.value = '';
+        if (genericProcedureMedicationDose) genericProcedureMedicationDose.value = '';
+        if (genericProcedureMedicationRoute) genericProcedureMedicationRoute.value = '';
+      }
+      if (procedureType !== 'wound_care') {
+        if (genericProcedureWoundName) genericProcedureWoundName.value = '';
+        if (genericProcedureWoundMaterial) genericProcedureWoundMaterial.value = '';
+      }
+      if (procedureType !== 'other_procedure') {
+        if (genericProcedureOtherName) genericProcedureOtherName.value = '';
+        if (genericProcedureOtherDescription) genericProcedureOtherDescription.value = '';
+      }
+    }
+
     function syncImmunizationVaccineFields() {
       var vaccineKey = immunizationVaccineSelect ? String(immunizationVaccineSelect.value || '').trim() : '';
       var showOther = vaccineKey === '__other__';
@@ -2537,6 +2706,19 @@ if (!$embed) {
       woundCareSubmitBtn.textContent = woundCareSubmitting ? 'Guardando...' : 'Guardar';
     }
 
+    function setGenericProcedureFormError(message) {
+      if (!genericProcedureFormError) return;
+      var text = String(message || '').trim();
+      genericProcedureFormError.textContent = text;
+      genericProcedureFormError.classList.toggle('d-none', text === '');
+    }
+
+    function syncGenericProcedureSubmitButton() {
+      if (!genericProcedureSubmitBtn) return;
+      genericProcedureSubmitBtn.disabled = genericProcedureSubmitting;
+      genericProcedureSubmitBtn.textContent = genericProcedureSubmitting ? 'Guardando...' : 'Guardar';
+    }
+
     function resetImmunizationForm() {
       if (immunizationForm) {
         immunizationForm.reset();
@@ -2555,6 +2737,17 @@ if (!$embed) {
       woundCareSubmitting = false;
       syncWoundCareSubmitButton();
       syncWoundCarePlaceFields();
+    }
+
+    function resetGenericProcedureForm() {
+      if (genericProcedureForm) {
+        genericProcedureForm.reset();
+      }
+      setGenericProcedureFormError('');
+      genericProcedureSubmitting = false;
+      syncGenericProcedureSubmitButton();
+      syncGenericProcedurePlaceFields();
+      syncGenericProcedureTypeFields();
     }
 
     function openImmunizationModal() {
@@ -2585,6 +2778,20 @@ if (!$embed) {
       }
     }
 
+    function openGenericProcedureModal() {
+      if (!patientId) {
+        window.alert('patient_id requerido para registrar procedimiento.');
+        return;
+      }
+      resetGenericProcedureForm();
+      if (genericProcedureModalInstance) {
+        genericProcedureModalInstance.show();
+      } else if (genericProcedureModalEl) {
+        genericProcedureModalEl.style.display = 'block';
+        genericProcedureModalEl.classList.add('show');
+      }
+    }
+
     function closeImmunizationModal() {
       if (!immunizationModalEl) return;
       if (immunizationModalInstance) {
@@ -2607,6 +2814,18 @@ if (!$embed) {
       woundCareModalEl.style.display = 'none';
       woundCareModalEl.setAttribute('aria-hidden', 'true');
       resetWoundCareForm();
+    }
+
+    function closeGenericProcedureModal() {
+      if (!genericProcedureModalEl) return;
+      if (genericProcedureModalInstance) {
+        genericProcedureModalInstance.hide();
+        return;
+      }
+      genericProcedureModalEl.classList.remove('show');
+      genericProcedureModalEl.style.display = 'none';
+      genericProcedureModalEl.setAttribute('aria-hidden', 'true');
+      resetGenericProcedureForm();
     }
 
     function normalizeEventDatetime(value) {
@@ -2823,6 +3042,120 @@ if (!$embed) {
         woundCareSubmitting = false;
         syncWoundCareSubmitButton();
         setWoundCareFormError(err && err.message ? err.message : 'No se pudo registrar la curación.');
+      }
+    }
+
+    async function submitGenericProcedure() {
+      if (genericProcedureSubmitting) return;
+      if (!patientId) {
+        setGenericProcedureFormError('patient_id requerido.');
+        return;
+      }
+      var procedureType = genericProcedureType ? String(genericProcedureType.value || '').trim() : '';
+      var eventDatetime = normalizeEventDatetime(genericProcedureEventDatetime ? genericProcedureEventDatetime.value : '');
+      var placeType = genericProcedurePlaceType ? String(genericProcedurePlaceType.value || '').trim() : '';
+      var placeName = genericProcedurePlaceName ? String(genericProcedurePlaceName.value || '').trim() : '';
+      var placeSector = genericProcedurePlaceSector ? String(genericProcedurePlaceSector.value || '').trim() : '';
+      var notesClinical = genericProcedureNotes ? String(genericProcedureNotes.value || '').trim() : '';
+      var item = {};
+      var title = 'Procedimiento';
+
+      if (!procedureType) {
+        setGenericProcedureFormError('Selecciona el tipo de procedimiento.');
+        return;
+      }
+      if (!eventDatetime) {
+        setGenericProcedureFormError('Captura la fecha y hora.');
+        return;
+      }
+      if (!placeType) {
+        setGenericProcedureFormError('Selecciona el lugar de aplicación.');
+        return;
+      }
+      if ((placeType === 'institucion' || placeType === 'otro') && !placeName) {
+        setGenericProcedureFormError('Indica ¿cuál? / ¿dónde? para el lugar de aplicación.');
+        return;
+      }
+
+      if (procedureType === 'medication_administration') {
+        var medicationName = genericProcedureMedicationName ? String(genericProcedureMedicationName.value || '').trim() : '';
+        var medicationDose = genericProcedureMedicationDose ? String(genericProcedureMedicationDose.value || '').trim() : '';
+        var medicationRoute = genericProcedureMedicationRoute ? String(genericProcedureMedicationRoute.value || '').trim() : '';
+        if (!medicationName) {
+          setGenericProcedureFormError('Ingresa el nombre del medicamento.');
+          return;
+        }
+        item = { kind: 'medication', name: medicationName };
+        if (medicationDose) item.dose = medicationDose;
+        if (medicationRoute) item.route = medicationRoute;
+        title = 'Aplicación de medicamento';
+      } else if (procedureType === 'wound_care') {
+        var woundName = genericProcedureWoundName ? String(genericProcedureWoundName.value || '').trim() : '';
+        var woundMaterial = genericProcedureWoundMaterial ? String(genericProcedureWoundMaterial.value || '').trim() : '';
+        if (!woundName) {
+          setGenericProcedureFormError('Ingresa el nombre de la curación.');
+          return;
+        }
+        item = { kind: 'procedure', name: woundName };
+        if (woundMaterial) item.material = woundMaterial;
+        title = 'Curación';
+      } else if (procedureType === 'other_procedure') {
+        var otherName = genericProcedureOtherName ? String(genericProcedureOtherName.value || '').trim() : '';
+        var otherDescription = genericProcedureOtherDescription ? String(genericProcedureOtherDescription.value || '').trim() : '';
+        if (!otherName) {
+          setGenericProcedureFormError('Ingresa el nombre del procedimiento.');
+          return;
+        }
+        item = { kind: 'procedure', name: otherName };
+        if (otherDescription) item.description = otherDescription;
+        title = 'Procedimiento';
+      } else {
+        setGenericProcedureFormError('Tipo de procedimiento no soportado.');
+        return;
+      }
+
+      var payload = {
+        administration: {
+          place_type: placeType
+        },
+        item: item
+      };
+      if (placeName) {
+        payload.administration.place_name = placeName;
+      }
+      if (placeType === 'institucion' && placeSector) {
+        payload.administration.place_sector = placeSector;
+      }
+      if (notesClinical) {
+        payload.notes = { clinical: notesClinical };
+      }
+
+      genericProcedureSubmitting = true;
+      syncGenericProcedureSubmitButton();
+      setGenericProcedureFormError('');
+      try {
+        await apiJson(apiBase + '/api/clinical/index.php/documents', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            type: procedureType,
+            title: title,
+            event_datetime: eventDatetime,
+            actor: { user_id: currentUserId || 'qa' },
+            context: { patient_id: patientId },
+            payload: payload
+          }),
+          credentials: 'same-origin'
+        });
+        closeGenericProcedureModal();
+        window.location.reload();
+      } catch (err) {
+        genericProcedureSubmitting = false;
+        syncGenericProcedureSubmitButton();
+        setGenericProcedureFormError(err && err.message ? err.message : 'No se pudo registrar el procedimiento.');
       }
     }
 
@@ -3429,6 +3762,13 @@ if (!$embed) {
         return;
       }
 
+      var openGenericProcedureBtn = event.target && event.target.closest ? event.target.closest('[data-action="open-generic-procedure-modal"]') : null;
+      if (openGenericProcedureBtn) {
+        event.preventDefault();
+        openGenericProcedureModal();
+        return;
+      }
+
       var setClinicalFilterBtn = event.target && event.target.closest ? event.target.closest('[data-action="set-clinical-filter"]') : null;
       if (setClinicalFilterBtn) {
         event.preventDefault();
@@ -3600,6 +3940,13 @@ if (!$embed) {
         return;
       }
 
+      var cancelGenericProcedureBtn = event.target && event.target.closest ? event.target.closest('[data-action="cancel-generic-procedure-modal"]') : null;
+      if (cancelGenericProcedureBtn && !genericProcedureModalInstance && genericProcedureModalEl) {
+        event.preventDefault();
+        closeGenericProcedureModal();
+        return;
+      }
+
       var submitImmunizationBtn = event.target && event.target.closest ? event.target.closest('[data-action="submit-immunization"]') : null;
       if (submitImmunizationBtn) {
         event.preventDefault();
@@ -3611,6 +3958,13 @@ if (!$embed) {
       if (submitWoundCareBtn) {
         event.preventDefault();
         submitWoundCare();
+        return;
+      }
+
+      var submitGenericProcedureBtn = event.target && event.target.closest ? event.target.closest('[data-action="submit-generic-procedure"]') : null;
+      if (submitGenericProcedureBtn) {
+        event.preventDefault();
+        submitGenericProcedure();
         return;
       }
 
@@ -3626,6 +3980,11 @@ if (!$embed) {
 
       if (!woundCareModalInstance && woundCareModalEl && event.target === woundCareModalEl) {
         closeWoundCareModal();
+        return;
+      }
+
+      if (!genericProcedureModalInstance && genericProcedureModalEl && event.target === genericProcedureModalEl) {
+        closeGenericProcedureModal();
         return;
       }
 
@@ -3804,6 +4163,12 @@ if (!$embed) {
       });
     }
 
+    if (genericProcedureModalEl) {
+      genericProcedureModalEl.addEventListener('hidden.bs.modal', function () {
+        resetGenericProcedureForm();
+      });
+    }
+
     if (createCaseTitleInput) {
       createCaseTitleInput.addEventListener('keydown', function (event) {
         if (event.key === 'Enter') {
@@ -3827,9 +4192,21 @@ if (!$embed) {
       });
     }
 
+    if (genericProcedurePlaceType) {
+      genericProcedurePlaceType.addEventListener('change', function () {
+        syncGenericProcedurePlaceFields();
+      });
+    }
+
     if (immunizationVaccineSelect) {
       immunizationVaccineSelect.addEventListener('change', function () {
         syncImmunizationVaccineFields();
+      });
+    }
+
+    if (genericProcedureType) {
+      genericProcedureType.addEventListener('change', function () {
+        syncGenericProcedureTypeFields();
       });
     }
 
@@ -3844,6 +4221,13 @@ if (!$embed) {
       woundCareForm.addEventListener('submit', function (event) {
         event.preventDefault();
         submitWoundCare();
+      });
+    }
+
+    if (genericProcedureForm) {
+      genericProcedureForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        submitGenericProcedure();
       });
     }
 
@@ -3870,6 +4254,9 @@ if (!$embed) {
     syncImmunizationSubmitButton();
     syncWoundCarePlaceFields();
     syncWoundCareSubmitButton();
+    syncGenericProcedurePlaceFields();
+    syncGenericProcedureTypeFields();
+    syncGenericProcedureSubmitButton();
     resetClinicalFiltersToAll();
     renderRecentSuggestion();
     applyAdvancedFiltersVisibility();
