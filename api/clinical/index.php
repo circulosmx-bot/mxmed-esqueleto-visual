@@ -1484,6 +1484,14 @@ function clinical_timeline_semantic_classify(array $item): array
 {
     $itemType = strtolower(trim((string)($item['item_type'] ?? '')));
     if ($itemType === 'appointment') {
+        $agenda = is_array($item['agenda'] ?? null) ? $item['agenda'] : [];
+        $reasonCode = strtolower(trim((string)($agenda['reason_code'] ?? '')));
+        if ($reasonCode === 'procedure') {
+            return [
+                'clinical_category' => 'procedimiento',
+                'study_role' => null,
+            ];
+        }
         return [
             'clinical_category' => 'cita',
             'study_role' => null,
@@ -1778,6 +1786,8 @@ function clinical_timeline_agenda_appointments_fetch(PDO $pdo, array $legacyPati
             doctor_id,
             consultorio_id,
             patient_id,
+            reason_code,
+            reason_text,
             start_at,
             end_at,
             modality,
@@ -2597,6 +2607,8 @@ try {
                             'patient_id_legacy' => (string)($appt['patient_id'] ?? ''),
                             'doctor_id' => $appt['doctor_id'] ?? null,
                             'consultorio_id' => $appt['consultorio_id'] ?? null,
+                            'reason_code' => $appt['reason_code'] ?? null,
+                            'reason_text' => $appt['reason_text'] ?? null,
                             'start_at' => (string)($appt['start_at'] ?? ''),
                             'end_at' => (string)($appt['end_at'] ?? ''),
                             'modality' => $appt['modality'] ?? null,
