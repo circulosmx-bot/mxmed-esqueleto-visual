@@ -93,6 +93,72 @@ function http_status_from_headers(?array $headers): int
     return 0;
 }
 
+function agenda_actor_role_label(string $role): string
+{
+    $role = strtolower(trim($role));
+    switch ($role) {
+        case 'patient':
+            return 'Paciente';
+        case 'doctor':
+            return 'Medico';
+        case 'operator':
+        case 'operadora':
+            return 'Operadora';
+        case 'system':
+            return 'Sistema';
+        default:
+            return $role !== '' ? ucfirst($role) : '-';
+    }
+}
+
+function agenda_modality_label(string $modality): string
+{
+    $modality = strtolower(trim($modality));
+    switch ($modality) {
+        case 'presencial':
+            return 'Presencial';
+        case 'video':
+        case 'online':
+            return 'Online';
+        default:
+            return $modality !== '' ? ucfirst($modality) : '-';
+    }
+}
+
+function clinical_encounter_document_buckets_ui(array $documents): array
+{
+    $buckets = [
+        'vitals' => [],
+        'notes' => [],
+        'prescriptions' => [],
+        'orders' => [],
+        'results' => [],
+        'procedures' => [],
+    ];
+
+    foreach ($documents as $doc) {
+        if (!is_array($doc)) {
+            continue;
+        }
+        $type = strtolower(trim((string)($doc['document_type'] ?? '')));
+        if (in_array($type, ['vitals', 'vital_signs', 'signs'], true)) {
+            $buckets['vitals'][] = $doc;
+        } elseif (in_array($type, ['note', 'medical_note', 'evolution_note'], true)) {
+            $buckets['notes'][] = $doc;
+        } elseif (in_array($type, ['prescription', 'rx'], true)) {
+            $buckets['prescriptions'][] = $doc;
+        } elseif (in_array($type, ['orders', 'order', 'lab_order', 'imaging_order'], true)) {
+            $buckets['orders'][] = $doc;
+        } elseif (in_array($type, ['results', 'result', 'lab_result', 'imaging_result'], true)) {
+            $buckets['results'][] = $doc;
+        } elseif (in_array($type, ['procedure', 'immunization', 'medication_administration', 'wound_care'], true)) {
+            $buckets['procedures'][] = $doc;
+        }
+    }
+
+    return $buckets;
+}
+
 $encounterKey = trim((string)($_GET['encounter_key'] ?? ''));
 $errorMessage = '';
 $encounter = null;
@@ -103,6 +169,13 @@ $isInActiveCase = false;
 $isInActiveCaseByAppt = false;
 $patientId = '';
 $appointmentId = '';
+$currentUserId = trim((string)($_SESSION['user_id'] ?? ($_SERVER['PHP_AUTH_USER'] ?? 'qa')));
+if ($currentUserId === '') {
+    $currentUserId = 'qa';
+}
+$appointmentData = null;
+$appointmentEvents = [];
+$appointmentError = '';
 $apiBase = normalize_clinical_api_base((string)getenv('CLINICAL_API_BASE'));
 if ($apiBase === '') {
     $apiBase = normalize_clinical_api_base(get_api_base());
@@ -216,6 +289,37 @@ if ($encounter !== null) {
     }
 }
 
+if ($encounter !== null && $appointmentId !== '') {
+    require_once __DIR__ . '/../../agenda/controllers/AppointmentsController.php';
+    require_once __DIR__ . '/../../agenda/controllers/AppointmentEventsController.php';
+
+    try {
+        $appointmentsController = new \Agenda\Controllers\AppointmentsController();
+        $appointmentResp = $appointmentsController->show($appointmentId);
+        if (is_array($appointmentResp) && ($appointmentResp['ok'] ?? false) === true && is_array($appointmentResp['data'] ?? null)) {
+            $appointmentData = $appointmentResp['data'];
+        } else {
+            $appointmentError = trim((string)($appointmentResp['message'] ?? ''));
+        }
+    } catch (Throwable $e) {
+        $appointmentError = trim((string)$e->getMessage());
+    }
+
+    try {
+        $eventsController = new \Agenda\Controllers\AppointmentEventsController();
+        $eventsResp = $eventsController->index($appointmentId, ['limit' => 50]);
+        if (is_array($eventsResp) && ($eventsResp['ok'] ?? false) === true && is_array($eventsResp['data'] ?? null)) {
+            $appointmentEvents = $eventsResp['data'];
+        } elseif ($appointmentError === '') {
+            $appointmentError = trim((string)($eventsResp['message'] ?? ''));
+        }
+    } catch (Throwable $e) {
+        if ($appointmentError === '') {
+            $appointmentError = trim((string)$e->getMessage());
+        }
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $encounter !== null) {
     $action = trim((string)($_POST['action'] ?? ''));
     if ($action === 'add_active_case_appointment') {
@@ -265,9 +369,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $encounter !== null) {
 }
 
 $documents = is_array($encounter['documents'] ?? null) ? $encounter['documents'] : [];
-$prescriptions = is_array($encounter['prescriptions'] ?? null) ? $encounter['prescriptions'] : [];
-$orders = is_array($encounter['orders'] ?? null) ? $encounter['orders'] : [];
-$results = is_array($encounter['results'] ?? null) ? $encounter['results'] : [];
+$documentBuckets = clinical_encounter_document_buckets_ui($documents);
+$vitals = is_array($encounter['vitals'] ?? null) ? $encounter['vitals'] : $documentBuckets['vitals'];
+$notes = is_array($encounter['notes'] ?? null) ? $encounter['notes'] : $documentBuckets['notes'];
+$prescriptions = is_array($encounter['prescriptions'] ?? null) ? $encounter['prescriptions'] : $documentBuckets['prescriptions'];
+$orders = is_array($encounter['orders'] ?? null) ? $encounter['orders'] : $documentBuckets['orders'];
+$results = is_array($encounter['results'] ?? null) ? $encounter['results'] : $documentBuckets['results'];
+$procedures = is_array($encounter['procedures'] ?? null) ? $encounter['procedures'] : $documentBuckets['procedures'];
+$encounterStatus = strtolower(trim((string)($encounter['status'] ?? 'open')));
+$encounterClosedAt = trim((string)($encounter['closed_at'] ?? ''));
+$encounterAutoNoteUuidFinal = trim((string)($encounter['auto_note_uuid_final'] ?? ''));
+$autoNoteFinalHref = $encounterAutoNoteUuidFinal !== ''
+    ? ('/modules/clinical/ui/viewer.php?uuid=' . rawurlencode($encounterAutoNoteUuidFinal) . ($embed ? '&embed=1' : ''))
+    : '';
 $documentsJson = json_encode($documents, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 if (!is_string($documentsJson)) {
     $documentsJson = '[]';
@@ -345,6 +459,34 @@ if (!$embed) {
   <?php elseif ($errorMessage !== ''): ?>
     <div class="alert alert-danger"><?php echo h($errorMessage); ?></div>
   <?php else: ?>
+    <?php
+      $agendaStartAt = trim((string)($appointmentData['start_at'] ?? $appointmentId));
+      $agendaEndAt = trim((string)($appointmentData['end_at'] ?? ''));
+      $agendaStatus = trim((string)($appointmentData['status'] ?? ''));
+      $agendaModality = trim((string)($appointmentData['modality'] ?? ''));
+      $agendaChannelOrigin = trim((string)($appointmentData['channel_origin'] ?? ''));
+      $agendaCreatedByRole = trim((string)($appointmentData['created_by_role'] ?? ''));
+      $agendaCreatedById = trim((string)($appointmentData['created_by_id'] ?? ''));
+      $agendaCancelledAt = trim((string)($appointmentData['cancelled_at'] ?? ($appointmentData['canceled_at'] ?? '')));
+      $agendaReasonCode = trim((string)($appointmentData['reason_code'] ?? ''));
+      $agendaReasonText = trim((string)($appointmentData['reason_text'] ?? ''));
+      if (($agendaReasonCode === '' || $agendaReasonText === '') && $appointmentEvents !== []) {
+          foreach (array_reverse($appointmentEvents) as $ev) {
+              if (!is_array($ev)) {
+                  continue;
+              }
+              if ($agendaReasonCode === '') {
+                  $agendaReasonCode = trim((string)($ev['reason_code'] ?? ($ev['motivo_code'] ?? '')));
+              }
+              if ($agendaReasonText === '') {
+                  $agendaReasonText = trim((string)($ev['reason_text'] ?? ($ev['motivo_text'] ?? '')));
+              }
+              if ($agendaReasonCode !== '' || $agendaReasonText !== '') {
+                  break;
+              }
+          }
+      }
+    ?>
     <?php if ($activeCaseSuccess !== ''): ?>
       <div class="alert alert-success mb-3"><?php echo h($activeCaseSuccess); ?></div>
     <?php endif; ?>
@@ -381,13 +523,72 @@ if (!$embed) {
     <?php endif; ?>
 
     <div class="mm-card mb-3">
+      <div class="head"><h5>Agenda</h5></div>
+      <div class="body small">
+        <div><strong>Agendada para:</strong> <?php echo h($agendaStartAt !== '' ? $agendaStartAt : '-'); ?></div>
+        <div><strong>Fin estimado:</strong> <?php echo h($agendaEndAt !== '' ? $agendaEndAt : '-'); ?></div>
+        <div><strong>Estado:</strong> <?php echo h($agendaStatus !== '' ? $agendaStatus : '-'); ?></div>
+        <div><strong>Modalidad:</strong> <?php echo h(agenda_modality_label($agendaModality)); ?></div>
+        <div><strong>Origen:</strong> <?php echo h($agendaChannelOrigin !== '' ? $agendaChannelOrigin : '-'); ?></div>
+        <div><strong>Creada por:</strong> <?php echo h(agenda_actor_role_label($agendaCreatedByRole)); ?><?php echo $agendaCreatedById !== '' ? ' · ' . h($agendaCreatedById) : ''; ?></div>
+        <div><strong>Motivo:</strong> <?php echo h($agendaReasonText !== '' ? $agendaReasonText : ($agendaReasonCode !== '' ? $agendaReasonCode : '-')); ?></div>
+        <?php if ($agendaCancelledAt !== ''): ?>
+          <div><strong>Cancelada:</strong> <?php echo h($agendaCancelledAt); ?></div>
+        <?php endif; ?>
+        <?php if ($appointmentError !== ''): ?>
+          <div class="text-secondary mt-2">Agenda: <?php echo h($appointmentError); ?></div>
+        <?php endif; ?>
+      </div>
+    </div>
+
+    <div class="mm-card mb-3">
       <div class="head"><h5>Resumen</h5></div>
       <div class="body small">
         <div><strong>Fecha:</strong> <?php echo h((string)($encounter['event_datetime'] ?? '-')); ?></div>
+        <div><strong>encounter_id:</strong> <?php echo h((string)($encounter['encounter_id'] ?? '-')); ?></div>
         <div><strong>patient_id:</strong> <?php echo h((string)($encounter['patient_id'] ?? '-')); ?></div>
         <div><strong>appointment_id:</strong> <?php echo h((string)($encounter['appointment_id'] ?? '-')); ?></div>
       </div>
     </div>
+
+    <?php if ($appointmentEvents !== []): ?>
+      <div class="mm-card mb-3">
+        <div class="head"><h5>Eventos de agenda</h5></div>
+        <div class="body">
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Evento</th>
+                  <th>Actor</th>
+                  <th>Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($appointmentEvents as $ev): ?>
+                  <?php if (!is_array($ev)) continue; ?>
+                  <?php
+                    $evTs = trim((string)($ev['timestamp'] ?? ($ev['created_at'] ?? '')));
+                    $evType = trim((string)($ev['event_type'] ?? ''));
+                    $evActorRole = trim((string)($ev['actor_role'] ?? ''));
+                    $evActorId = trim((string)($ev['actor_id'] ?? ''));
+                    $evReasonCode = trim((string)($ev['reason_code'] ?? ($ev['motivo_code'] ?? '')));
+                    $evReasonText = trim((string)($ev['reason_text'] ?? ($ev['motivo_text'] ?? '')));
+                  ?>
+                  <tr>
+                    <td><?php echo h($evTs !== '' ? $evTs : '-'); ?></td>
+                    <td><?php echo h($evType !== '' ? $evType : '-'); ?></td>
+                    <td><?php echo h(agenda_actor_role_label($evActorRole)); ?><?php echo $evActorId !== '' ? ' · ' . h($evActorId) : ''; ?></td>
+                    <td><?php echo h($evReasonText !== '' ? $evReasonText : ($evReasonCode !== '' ? $evReasonCode : '-')); ?></td>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    <?php endif; ?>
 
     <div class="mm-card mb-3">
       <div class="head"><h5>Documentos</h5></div>
@@ -398,23 +599,79 @@ if (!$embed) {
     </div>
 
     <div class="row g-3">
-      <div class="col-md-4">
+      <div class="col-md-2">
+        <div class="mm-card h-100">
+          <div class="head"><h5>Signos</h5></div>
+          <div class="body small text-secondary"><?php echo $vitals === [] ? 'Sin signos' : h((string)count($vitals)); ?></div>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="mm-card h-100">
+          <div class="head"><h5>Notas</h5></div>
+          <div class="body small text-secondary"><?php echo $notes === [] ? 'Sin notas' : h((string)count($notes)); ?></div>
+        </div>
+      </div>
+      <div class="col-md-2">
         <div class="mm-card h-100">
           <div class="head"><h5>Recetas</h5></div>
           <div class="body small text-secondary"><?php echo $prescriptions === [] ? 'Sin recetas' : h((string)count($prescriptions)); ?></div>
         </div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-2">
         <div class="mm-card h-100">
           <div class="head"><h5>Órdenes</h5></div>
           <div class="body small text-secondary"><?php echo $orders === [] ? 'Sin órdenes' : h((string)count($orders)); ?></div>
         </div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-2">
         <div class="mm-card h-100">
           <div class="head"><h5>Resultados</h5></div>
           <div class="body small text-secondary"><?php echo $results === [] ? 'Sin resultados' : h((string)count($results)); ?></div>
         </div>
+      </div>
+      <div class="col-md-2">
+        <div class="mm-card h-100">
+          <div class="head"><h5>Procedimientos</h5></div>
+          <div class="body small text-secondary"><?php echo $procedures === [] ? 'Sin procedimientos' : h((string)count($procedures)); ?></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mm-card mt-3">
+      <div class="head"><h5>Cierre</h5></div>
+      <div class="body small">
+        <?php if ($encounterStatus !== 'closed'): ?>
+          <div class="text-secondary mb-3">La consulta sigue abierta. Al cerrar se generará la Nota clínica AUTO final de esta consulta.</div>
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-primary" data-action="finalize-encounter">Cerrar consulta</button>
+            <span class="text-secondary d-none" data-role="finalize-encounter-loading">Generando Nota clínica AUTO final…</span>
+          </div>
+          <div class="alert alert-danger small d-none mt-3 mb-0" data-role="finalize-encounter-error"></div>
+        <?php else: ?>
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <span class="badge text-bg-success">Consulta cerrada</span>
+            <span>Cerrada el <?php echo h($encounterClosedAt !== '' ? $encounterClosedAt : '-'); ?></span>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <?php if ($autoNoteFinalHref !== ''): ?>
+              <a class="btn btn-sm btn-outline-primary" href="<?php echo h($autoNoteFinalHref); ?>" data-role="open-final-auto-note" data-href="<?php echo h($autoNoteFinalHref); ?>">Ver Nota clínica AUTO (Cierre)</a>
+            <?php endif; ?>
+            <?php if (count($prescriptions) === 1): ?>
+              <?php $rxUuid = trim((string)($prescriptions[0]['document_uuid'] ?? '')); ?>
+              <?php if ($rxUuid !== ''): ?>
+                <a class="btn btn-sm btn-outline-secondary" href="<?php echo h('/modules/clinical/ui/viewer.php?uuid=' . rawurlencode($rxUuid) . ($embed ? '&embed=1' : '')); ?>">Abrir receta de esta consulta</a>
+              <?php endif; ?>
+            <?php elseif (count($prescriptions) > 1): ?>
+              <div class="w-100 text-secondary">Recetas de esta consulta:</div>
+              <?php foreach ($prescriptions as $rx): ?>
+                <?php $rxUuid = trim((string)($rx['document_uuid'] ?? '')); ?>
+                <?php $rxTitle = trim((string)($rx['title'] ?? 'Receta')); ?>
+                <?php if ($rxUuid === '') continue; ?>
+                <a class="btn btn-sm btn-outline-secondary" href="<?php echo h('/modules/clinical/ui/viewer.php?uuid=' . rawurlencode($rxUuid) . ($embed ? '&embed=1' : '')); ?>"><?php echo h($rxTitle !== '' ? $rxTitle : 'Receta'); ?></a>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </div>
+        <?php endif; ?>
       </div>
     </div>
   <?php endif; ?>
@@ -440,6 +697,9 @@ if (!$embed) {
   (function () {
     var isEmbed = <?php echo $embed ? 'true' : 'false'; ?>;
     var PREVIEW_LIMIT = 10;
+    var encounterKey = <?php echo json_encode($encounterKey, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    var apiIndexBase = <?php echo json_encode($apiIndexBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    var currentUserId = <?php echo json_encode($currentUserId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var el = document.getElementById('encounterDocumentsList');
     var controlsEl = document.getElementById('encounterDocumentsControls');
     if (!el) return;
@@ -506,6 +766,49 @@ if (!$embed) {
 
     var docsExpanded = false;
     applyDocumentsPreview(docsExpanded);
+
+    function resolveClinicalActorUserId() {
+      if (currentUserId) {
+        return String(currentUserId).trim();
+      }
+      if (window.MXMED_USER_ID) {
+        return String(window.MXMED_USER_ID).trim();
+      }
+      if (window.__MXMED && window.__MXMED.user_id) {
+        return String(window.__MXMED.user_id).trim();
+      }
+      var rootUserId = document.body ? String(document.body.getAttribute('data-user-id') || '').trim() : '';
+      if (rootUserId) {
+        return rootUserId;
+      }
+      return 'qa';
+    }
+
+    function showFinalizeLoading(flag) {
+      var el = document.querySelector('[data-role="finalize-encounter-loading"]');
+      if (el) el.classList.toggle('d-none', !flag);
+      var btn = document.querySelector('[data-action="finalize-encounter"]');
+      if (btn) btn.disabled = !!flag;
+    }
+
+    function setFinalizeError(message) {
+      var el = document.querySelector('[data-role="finalize-encounter-error"]');
+      if (!el) return;
+      var text = String(message || '').trim();
+      el.textContent = text;
+      el.classList.toggle('d-none', text === '');
+    }
+
+    function openHrefWithCurrentPattern(href) {
+      var nextHref = String(href || '').trim();
+      if (!nextHref) return;
+      if (isEmbed && window.parent && window.parent !== window && typeof window.parent.postMessage === 'function') {
+        window.parent.postMessage({ type: 'mxmed:embed:navigate', mode: 'document', href: nextHref }, '*');
+        return;
+      }
+      window.location.href = nextHref;
+    }
+
     if (controlsEl) {
       controlsEl.addEventListener('click', function (event) {
         var btn = event.target.closest('button[data-action]');
@@ -520,6 +823,54 @@ if (!$embed) {
         }
       });
     }
+
+    document.addEventListener('click', function (event) {
+      var finalizeBtn = event.target && event.target.closest ? event.target.closest('[data-action="finalize-encounter"]') : null;
+      if (finalizeBtn) {
+        event.preventDefault();
+        if (!encounterKey) return;
+        if (!window.confirm('¿Cerrar consulta? Se generará la Nota clínica AUTO final de esta consulta.')) {
+          return;
+        }
+        showFinalizeLoading(true);
+        setFinalizeError('');
+        fetch(apiIndexBase + '/encounters/' + encodeURIComponent(encounterKey) + '/finalize', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            actor: {
+              user_id: resolveClinicalActorUserId()
+            }
+          })
+        })
+          .then(function (response) {
+            return response.json().catch(function () { return null; });
+          })
+          .then(function (resp) {
+            if (resp && resp.ok === true) {
+              window.location.reload();
+              return;
+            }
+            showFinalizeLoading(false);
+            setFinalizeError((resp && (resp.message || resp.error)) || 'No se pudo cerrar la consulta.');
+          })
+          .catch(function (err) {
+            showFinalizeLoading(false);
+            setFinalizeError((err && err.message) || 'No se pudo cerrar la consulta.');
+          });
+        return;
+      }
+
+      var openFinalNoteLink = event.target && event.target.closest ? event.target.closest('[data-role="open-final-auto-note"]') : null;
+      if (openFinalNoteLink) {
+        event.preventDefault();
+        openHrefWithCurrentPattern(openFinalNoteLink.getAttribute('data-href') || openFinalNoteLink.getAttribute('href') || '');
+      }
+    });
 
     if (window.MXMed && typeof window.MXMed.initClinicalEmbedKit === 'function') {
       window.MXMed.initClinicalEmbedKit({ embedOnly: true });
