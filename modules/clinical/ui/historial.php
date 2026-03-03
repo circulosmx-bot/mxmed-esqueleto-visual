@@ -1360,8 +1360,8 @@ if (!$embed) {
     <?php if ($patientId !== ''): ?>
       <div class="d-flex justify-content-end gap-2 flex-wrap mb-3">
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="open-generic-procedure-modal">Registrar procedimiento</button>
-        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="open-wound-care-modal">Registrar curación</button>
-        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="open-immunization-modal">Registrar vacuna</button>
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary d-none" data-action="open-wound-care-modal">Registrar curación</button>
+        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary d-none" data-action="open-immunization-modal">Registrar vacuna</button>
       </div>
     <?php endif; ?>
     <?php if (!$hasRenderableItems): ?>
@@ -2073,6 +2073,7 @@ if (!$embed) {
             <label for="genericProcedureType" class="form-label">Tipo de procedimiento</label>
             <select id="genericProcedureType" class="form-select" data-role="generic-procedure-type" required>
               <option value="">Selecciona una opción</option>
+              <option value="immunization">Vacuna</option>
               <option value="medication_administration">Aplicación de medicamento</option>
               <option value="wound_care">Curación</option>
               <option value="other_procedure">Otro procedimiento</option>
@@ -2116,6 +2117,58 @@ if (!$embed) {
               <div class="col-md-6">
                 <label for="genericProcedureMedicationRoute" class="form-label">Vía</label>
                 <input id="genericProcedureMedicationRoute" type="text" class="form-control" data-role="generic-procedure-medication-route" maxlength="120">
+              </div>
+            </div>
+          </div>
+          <div class="d-none" data-role="generic-procedure-immunization-fields">
+            <div class="row g-3">
+              <div class="col-12">
+                <label for="genericProcedureVaccineSelect" class="form-label">Vacuna</label>
+                <select id="genericProcedureVaccineSelect" class="form-select" data-role="generic-procedure-vaccine-select">
+                  <option value="">Selecciona una vacuna…</option>
+                  <optgroup label="Comunes">
+                    <option value="influenza_tetravalente">Influenza tetravalente</option>
+                    <option value="hepatitis_b">Hepatitis B</option>
+                    <option value="td_tdap">Td/Tdap (tétanos-difteria/tosferina)</option>
+                    <option value="srp">SRP (triple viral)</option>
+                    <option value="vph">VPH</option>
+                    <option value="neumococo">Neumococo</option>
+                    <option value="covid_refuerzo">COVID-19 (refuerzo)</option>
+                  </optgroup>
+                  <optgroup label="Lista ampliada">
+                    <option value="bcg">BCG</option>
+                    <option value="rotavirus">Rotavirus</option>
+                    <option value="varicela">Varicela</option>
+                    <option value="hepatitis_a">Hepatitis A</option>
+                    <option value="meningococo">Meningococo</option>
+                    <option value="zoster">Herpes zóster</option>
+                    <option value="tosferina">Tosferina</option>
+                    <option value="polio_ipv">Polio (IPV)</option>
+                    <option value="dpt">DPT</option>
+                    <option value="hib">Hib (Haemophilus influenzae tipo b)</option>
+                  </optgroup>
+                  <option value="__other__">Otra (escribir)</option>
+                </select>
+              </div>
+              <div class="col-12 d-none" data-role="generic-procedure-other-vaccine-wrap">
+                <label for="genericProcedureOtherVaccine" class="form-label">Especifica vacuna</label>
+                <input id="genericProcedureOtherVaccine" type="text" class="form-control" data-role="generic-procedure-other-vaccine" maxlength="190">
+              </div>
+              <div class="col-md-6">
+                <label for="genericProcedureManufacturer" class="form-label">Fabricante</label>
+                <input id="genericProcedureManufacturer" type="text" class="form-control" data-role="generic-procedure-manufacturer" maxlength="190">
+              </div>
+              <div class="col-md-6">
+                <label for="genericProcedureLot" class="form-label">Lote</label>
+                <input id="genericProcedureLot" type="text" class="form-control" data-role="generic-procedure-lot" maxlength="120">
+              </div>
+              <div class="col-md-6">
+                <label for="genericProcedureDose" class="form-label">Dosis</label>
+                <input id="genericProcedureDose" type="text" class="form-control" data-role="generic-procedure-dose" maxlength="120">
+              </div>
+              <div class="col-md-6">
+                <label for="genericProcedureRoute" class="form-label">Vía</label>
+                <input id="genericProcedureRoute" type="text" class="form-control" data-role="generic-procedure-route" maxlength="120">
               </div>
             </div>
           </div>
@@ -2278,6 +2331,14 @@ if (!$embed) {
     var genericProcedurePlaceName = document.querySelector('[data-role="generic-procedure-place-name"]');
     var genericProcedurePlaceSectorWrap = document.querySelector('[data-role="generic-procedure-place-sector-wrap"]');
     var genericProcedurePlaceSector = document.querySelector('[data-role="generic-procedure-place-sector"]');
+    var genericProcedureImmunizationFields = document.querySelector('[data-role="generic-procedure-immunization-fields"]');
+    var genericProcedureVaccineSelect = document.querySelector('[data-role="generic-procedure-vaccine-select"]');
+    var genericProcedureOtherVaccineWrap = document.querySelector('[data-role="generic-procedure-other-vaccine-wrap"]');
+    var genericProcedureOtherVaccine = document.querySelector('[data-role="generic-procedure-other-vaccine"]');
+    var genericProcedureManufacturer = document.querySelector('[data-role="generic-procedure-manufacturer"]');
+    var genericProcedureLot = document.querySelector('[data-role="generic-procedure-lot"]');
+    var genericProcedureDose = document.querySelector('[data-role="generic-procedure-dose"]');
+    var genericProcedureRoute = document.querySelector('[data-role="generic-procedure-route"]');
     var genericProcedureMedicationFields = document.querySelector('[data-role="generic-procedure-medication-fields"]');
     var genericProcedureMedicationName = document.querySelector('[data-role="generic-procedure-medication-name"]');
     var genericProcedureMedicationDose = document.querySelector('[data-role="generic-procedure-medication-dose"]');
@@ -2652,6 +2713,9 @@ if (!$embed) {
 
     function syncGenericProcedureTypeFields() {
       var procedureType = genericProcedureType ? String(genericProcedureType.value || '').trim() : '';
+      if (genericProcedureImmunizationFields) {
+        genericProcedureImmunizationFields.classList.toggle('d-none', procedureType !== 'immunization');
+      }
       if (genericProcedureMedicationFields) {
         genericProcedureMedicationFields.classList.toggle('d-none', procedureType !== 'medication_administration');
       }
@@ -2660,6 +2724,14 @@ if (!$embed) {
       }
       if (genericProcedureOtherFields) {
         genericProcedureOtherFields.classList.toggle('d-none', procedureType !== 'other_procedure');
+      }
+      if (procedureType !== 'immunization') {
+        if (genericProcedureVaccineSelect) genericProcedureVaccineSelect.value = '';
+        if (genericProcedureOtherVaccine) genericProcedureOtherVaccine.value = '';
+        if (genericProcedureManufacturer) genericProcedureManufacturer.value = '';
+        if (genericProcedureLot) genericProcedureLot.value = '';
+        if (genericProcedureDose) genericProcedureDose.value = '';
+        if (genericProcedureRoute) genericProcedureRoute.value = '';
       }
       if (procedureType !== 'medication_administration') {
         if (genericProcedureMedicationName) genericProcedureMedicationName.value = '';
@@ -2673,6 +2745,18 @@ if (!$embed) {
       if (procedureType !== 'other_procedure') {
         if (genericProcedureOtherName) genericProcedureOtherName.value = '';
         if (genericProcedureOtherDescription) genericProcedureOtherDescription.value = '';
+      }
+      syncGenericProcedureVaccineFields();
+    }
+
+    function syncGenericProcedureVaccineFields() {
+      var vaccineKey = genericProcedureVaccineSelect ? String(genericProcedureVaccineSelect.value || '').trim() : '';
+      var showOther = vaccineKey === '__other__';
+      if (genericProcedureOtherVaccineWrap) {
+        genericProcedureOtherVaccineWrap.classList.toggle('d-none', !showOther);
+      }
+      if (!showOther && genericProcedureOtherVaccine) {
+        genericProcedureOtherVaccine.value = '';
       }
     }
 
@@ -2778,12 +2862,16 @@ if (!$embed) {
       }
     }
 
-    function openGenericProcedureModal() {
+    function openGenericProcedureModal(defaultType) {
       if (!patientId) {
         window.alert('patient_id requerido para registrar procedimiento.');
         return;
       }
       resetGenericProcedureForm();
+      if (genericProcedureType) {
+        genericProcedureType.value = String(defaultType || 'immunization').trim() || 'immunization';
+      }
+      syncGenericProcedureTypeFields();
       if (genericProcedureModalInstance) {
         genericProcedureModalInstance.show();
       } else if (genericProcedureModalEl) {
@@ -2840,54 +2928,43 @@ if (!$embed) {
       return text;
     }
 
-    async function submitImmunization() {
-      if (immunizationSubmitting) return;
-      if (!patientId) {
-        setImmunizationFormError('patient_id requerido.');
-        return;
-      }
-      var placeType = immunizationPlaceType ? String(immunizationPlaceType.value || '').trim() : '';
-      var placeName = immunizationPlaceName ? String(immunizationPlaceName.value || '').trim() : '';
-      var placeSector = immunizationPlaceSector ? String(immunizationPlaceSector.value || '').trim() : '';
-      var vaccineKey = immunizationVaccineSelect ? String(immunizationVaccineSelect.value || '').trim() : '';
-      var selectedVaccineLabel = '';
-      if (immunizationVaccineSelect && immunizationVaccineSelect.selectedIndex >= 0) {
-        var selectedOption = immunizationVaccineSelect.options[immunizationVaccineSelect.selectedIndex];
-        selectedVaccineLabel = selectedOption ? String(selectedOption.text || '').trim() : '';
-      }
-      var otherVaccineName = immunizationOtherVaccine ? String(immunizationOtherVaccine.value || '').trim() : '';
+    function buildImmunizationRequest(input) {
+      var placeType = String(input.placeType || '').trim();
+      var placeName = String(input.placeName || '').trim();
+      var placeSector = String(input.placeSector || '').trim();
+      var vaccineKey = String(input.vaccineKey || '').trim();
+      var selectedVaccineLabel = String(input.selectedVaccineLabel || '').trim();
+      var otherVaccineName = String(input.otherVaccineName || '').trim();
+      var manufacturer = String(input.manufacturer || '').trim();
+      var lot = String(input.lot || '').trim();
+      var doseVolume = String(input.doseVolume || '').trim();
+      var route = String(input.route || '').trim();
+      var notesClinical = String(input.notesClinical || '').trim();
+      var eventDatetime = String(input.eventDatetime || '').trim();
       var productName = '';
-      var manufacturer = immunizationManufacturer ? String(immunizationManufacturer.value || '').trim() : '';
-      var lot = immunizationLot ? String(immunizationLot.value || '').trim() : '';
-      var doseVolume = immunizationDose ? String(immunizationDose.value || '').trim() : '';
-      var route = immunizationRoute ? String(immunizationRoute.value || '').trim() : '';
-      var notesClinical = immunizationNotes ? String(immunizationNotes.value || '').trim() : '';
-      var eventDatetime = normalizeEventDatetime(immunizationEventDatetime ? immunizationEventDatetime.value : '');
 
       if (!placeType) {
-        setImmunizationFormError('Selecciona el lugar de aplicación.');
-        return;
+        return { error: 'Selecciona el lugar de aplicación.' };
+      }
+      if (!eventDatetime) {
+        return { error: 'Captura la fecha y hora.' };
       }
       if (!vaccineKey) {
-        setImmunizationFormError('Selecciona una vacuna.');
-        return;
+        return { error: 'Selecciona una vacuna.' };
       }
       if (vaccineKey === '__other__') {
         if (otherVaccineName.length < 3) {
-          setImmunizationFormError('Especifica la vacuna con al menos 3 caracteres.');
-          return;
+          return { error: 'Especifica la vacuna con al menos 3 caracteres.' };
         }
         productName = otherVaccineName;
       } else {
         productName = selectedVaccineLabel;
       }
       if (!productName) {
-        setImmunizationFormError('Selecciona una vacuna válida.');
-        return;
+        return { error: 'Selecciona una vacuna válida.' };
       }
       if ((placeType === 'institucion' || placeType === 'otro') && !placeName) {
-        setImmunizationFormError('Indica ¿cuál? / ¿dónde? para el lugar de aplicación.');
-        return;
+        return { error: 'Indica ¿cuál? / ¿dónde? para el lugar de aplicación.' };
       }
 
       var payload = {
@@ -2930,15 +3007,60 @@ if (!$embed) {
         payload.notes = { clinical: notesClinical };
       }
 
-      var body = {
-        type: 'immunization',
-        actor: { user_id: currentUserId || 'qa' },
-        context: { patient_id: patientId },
-        title: 'Vacunación',
-        payload: payload
+      return {
+        error: '',
+        request: {
+          type: 'immunization',
+          actor: { user_id: currentUserId || 'qa' },
+          context: { patient_id: patientId },
+          title: 'Vacunación',
+          event_datetime: eventDatetime,
+          payload: payload
+        }
       };
-      if (eventDatetime !== '') {
-        body.event_datetime = eventDatetime;
+    }
+
+    async function submitImmunization() {
+      if (immunizationSubmitting) return;
+      if (!patientId) {
+        setImmunizationFormError('patient_id requerido.');
+        return;
+      }
+      var placeType = immunizationPlaceType ? String(immunizationPlaceType.value || '').trim() : '';
+      var placeName = immunizationPlaceName ? String(immunizationPlaceName.value || '').trim() : '';
+      var placeSector = immunizationPlaceSector ? String(immunizationPlaceSector.value || '').trim() : '';
+      var vaccineKey = immunizationVaccineSelect ? String(immunizationVaccineSelect.value || '').trim() : '';
+      var selectedVaccineLabel = '';
+      if (immunizationVaccineSelect && immunizationVaccineSelect.selectedIndex >= 0) {
+        var selectedOption = immunizationVaccineSelect.options[immunizationVaccineSelect.selectedIndex];
+        selectedVaccineLabel = selectedOption ? String(selectedOption.text || '').trim() : '';
+      }
+      var otherVaccineName = immunizationOtherVaccine ? String(immunizationOtherVaccine.value || '').trim() : '';
+      var productName = '';
+      var manufacturer = immunizationManufacturer ? String(immunizationManufacturer.value || '').trim() : '';
+      var lot = immunizationLot ? String(immunizationLot.value || '').trim() : '';
+      var doseVolume = immunizationDose ? String(immunizationDose.value || '').trim() : '';
+      var route = immunizationRoute ? String(immunizationRoute.value || '').trim() : '';
+      var notesClinical = immunizationNotes ? String(immunizationNotes.value || '').trim() : '';
+      var eventDatetime = normalizeEventDatetime(immunizationEventDatetime ? immunizationEventDatetime.value : '');
+
+      var immunizationRequest = buildImmunizationRequest({
+        placeType: placeType,
+        placeName: placeName,
+        placeSector: placeSector,
+        vaccineKey: vaccineKey,
+        selectedVaccineLabel: selectedVaccineLabel,
+        otherVaccineName: otherVaccineName,
+        manufacturer: manufacturer,
+        lot: lot,
+        doseVolume: doseVolume,
+        route: route,
+        notesClinical: notesClinical,
+        eventDatetime: eventDatetime
+      });
+      if (immunizationRequest.error) {
+        setImmunizationFormError(immunizationRequest.error);
+        return;
       }
 
       immunizationSubmitting = true;
@@ -2951,7 +3073,7 @@ if (!$embed) {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(body),
+          body: JSON.stringify(immunizationRequest.request),
           credentials: 'same-origin'
         });
         closeImmunizationModal();
@@ -3077,7 +3199,53 @@ if (!$embed) {
         return;
       }
 
-      if (procedureType === 'medication_administration') {
+      if (procedureType === 'immunization') {
+        var genericVaccineKey = genericProcedureVaccineSelect ? String(genericProcedureVaccineSelect.value || '').trim() : '';
+        var genericSelectedVaccineLabel = '';
+        if (genericProcedureVaccineSelect && genericProcedureVaccineSelect.selectedIndex >= 0) {
+          var genericSelectedOption = genericProcedureVaccineSelect.options[genericProcedureVaccineSelect.selectedIndex];
+          genericSelectedVaccineLabel = genericSelectedOption ? String(genericSelectedOption.text || '').trim() : '';
+        }
+        var genericImmunizationRequest = buildImmunizationRequest({
+          placeType: placeType,
+          placeName: placeName,
+          placeSector: placeSector,
+          vaccineKey: genericVaccineKey,
+          selectedVaccineLabel: genericSelectedVaccineLabel,
+          otherVaccineName: genericProcedureOtherVaccine ? String(genericProcedureOtherVaccine.value || '').trim() : '',
+          manufacturer: genericProcedureManufacturer ? String(genericProcedureManufacturer.value || '').trim() : '',
+          lot: genericProcedureLot ? String(genericProcedureLot.value || '').trim() : '',
+          doseVolume: genericProcedureDose ? String(genericProcedureDose.value || '').trim() : '',
+          route: genericProcedureRoute ? String(genericProcedureRoute.value || '').trim() : '',
+          notesClinical: notesClinical,
+          eventDatetime: eventDatetime
+        });
+        if (genericImmunizationRequest.error) {
+          setGenericProcedureFormError(genericImmunizationRequest.error);
+          return;
+        }
+        genericProcedureSubmitting = true;
+        syncGenericProcedureSubmitButton();
+        setGenericProcedureFormError('');
+        try {
+          await apiJson(apiBase + '/api/clinical/index.php/documents', {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(genericImmunizationRequest.request),
+            credentials: 'same-origin'
+          });
+          closeGenericProcedureModal();
+          window.location.reload();
+        } catch (err) {
+          genericProcedureSubmitting = false;
+          syncGenericProcedureSubmitButton();
+          setGenericProcedureFormError(err && err.message ? err.message : 'No se pudo registrar el procedimiento.');
+        }
+        return;
+      } else if (procedureType === 'medication_administration') {
         var medicationName = genericProcedureMedicationName ? String(genericProcedureMedicationName.value || '').trim() : '';
         var medicationDose = genericProcedureMedicationDose ? String(genericProcedureMedicationDose.value || '').trim() : '';
         var medicationRoute = genericProcedureMedicationRoute ? String(genericProcedureMedicationRoute.value || '').trim() : '';
@@ -3751,21 +3919,21 @@ if (!$embed) {
       var openImmunizationBtn = event.target && event.target.closest ? event.target.closest('[data-action="open-immunization-modal"]') : null;
       if (openImmunizationBtn) {
         event.preventDefault();
-        openImmunizationModal();
+        openGenericProcedureModal('immunization');
         return;
       }
 
       var openWoundCareBtn = event.target && event.target.closest ? event.target.closest('[data-action="open-wound-care-modal"]') : null;
       if (openWoundCareBtn) {
         event.preventDefault();
-        openWoundCareModal();
+        openGenericProcedureModal('wound_care');
         return;
       }
 
       var openGenericProcedureBtn = event.target && event.target.closest ? event.target.closest('[data-action="open-generic-procedure-modal"]') : null;
       if (openGenericProcedureBtn) {
         event.preventDefault();
-        openGenericProcedureModal();
+        openGenericProcedureModal('immunization');
         return;
       }
 
@@ -4210,6 +4378,12 @@ if (!$embed) {
       });
     }
 
+    if (genericProcedureVaccineSelect) {
+      genericProcedureVaccineSelect.addEventListener('change', function () {
+        syncGenericProcedureVaccineFields();
+      });
+    }
+
     if (immunizationForm) {
       immunizationForm.addEventListener('submit', function (event) {
         event.preventDefault();
@@ -4256,6 +4430,7 @@ if (!$embed) {
     syncWoundCareSubmitButton();
     syncGenericProcedurePlaceFields();
     syncGenericProcedureTypeFields();
+    syncGenericProcedureVaccineFields();
     syncGenericProcedureSubmitButton();
     resetClinicalFiltersToAll();
     renderRecentSuggestion();
