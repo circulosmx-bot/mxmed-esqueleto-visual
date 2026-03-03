@@ -166,6 +166,25 @@ function clinical_read_json_body(): array
     ];
 }
 
+function clinical_request_actor_user_id(?array $payload = null): string
+{
+    $payload = is_array($payload) ? $payload : [];
+    $actor = is_array($payload['actor'] ?? null) ? $payload['actor'] : [];
+    $candidates = [
+        $actor['user_id'] ?? null,
+        $_SERVER['HTTP_X_USER_ID'] ?? null,
+        $_SESSION['user_id'] ?? null,
+        $_SERVER['PHP_AUTH_USER'] ?? null,
+    ];
+    foreach ($candidates as $candidate) {
+        $value = trim((string)($candidate ?? ''));
+        if ($value !== '') {
+            return $value;
+        }
+    }
+    return 'qa';
+}
+
 function clinical_is_local_host(): bool
 {
     $host = strtolower(trim((string)($_SERVER['HTTP_HOST'] ?? '')));
@@ -483,6 +502,711 @@ function clinical_encounter_documents_legacy_by_appointment_fetch(PDO $pdo, stri
     return is_array($rows) ? $rows : [];
 }
 
+function clinical_encounter_auto_note_type_label(string $documentType): string
+{
+    switch (strtolower(trim($documentType))) {
+        case 'procedure':
+            return 'Procedimiento';
+        case 'immunization':
+            return 'Vacunación';
+        case 'medication_administration':
+            return 'Aplicación de medicamento';
+        case 'wound_care':
+            return 'Curación';
+        case 'prescription':
+        case 'rx':
+            return 'Receta';
+        case 'orders':
+        case 'order':
+        case 'lab_order':
+        case 'imaging_order':
+            return 'Orden';
+        case 'results':
+        case 'result':
+        case 'lab_result':
+        case 'imaging_result':
+            return 'Resultado';
+        case 'vitals':
+        case 'vital_signs':
+        case 'signs':
+            return 'Signos vitales';
+        case 'image':
+            return 'Imagen clínica';
+        case 'bundle_clinical':
+            return 'Interpretación del estudio';
+        case 'note':
+        case 'medical_note':
+        case 'evolution_note':
+            return 'Nota clínica';
+        default:
+            return 'Documento clínico';
+    }
+}
+
+function clinical_encounter_auto_note_matches_row(array $row): bool
+{
+    if (strtolower(trim((string)($row['document_type'] ?? ''))) !== 'note') {
+        return false;
+    }
+    $payload = json_decode((string)($row['payload_json'] ?? ''), true);
+    if (!is_array($payload)) {
+        return false;
+    }
+    return trim((string)($payload['snapshot_type'] ?? '')) === 'encounter_auto';
+}
+
+function clinical_encounter_auto_note_filter_documents(array $rows): array
+{
+    $filtered = [];
+    foreach ($rows as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        if (clinical_encounter_auto_note_matches_row($row)) {
+            continue;
+        }
+        $filtered[] = $row;
+    }
+    return $filtered;
+}
+
+function clinical_encounter_document_buckets(array $rows): array
+{
+    $buckets = [
+        'documents' => [],
+        'vitals' => [],
+        'notes' => [],
+        'prescriptions' => [],
+        'orders' => [],
+        'results' => [],
+        'procedures' => [],
+        'images' => [],
+    ];
+
+    foreach ($rows as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $type = strtolower(trim((string)($row['document_type'] ?? '')));
+        $buckets['documents'][] = $row;
+        if (in_array($type, ['vitals', 'vital_signs', 'signs'], true)) {
+            $buckets['vitals'][] = $row;
+            continue;
+        }
+        if (in_array($type, ['note', 'medical_note', 'evolution_note'], true)) {
+            $buckets['notes'][] = $row;
+            continue;
+        }
+        if (in_array($type, ['prescription', 'rx'], true)) {
+            $buckets['prescriptions'][] = $row;
+            continue;
+        }
+        if (in_array($type, ['orders', 'order', 'lab_order', 'imaging_order'], true)) {
+            $buckets['orders'][] = $row;
+            continue;
+        }
+        if (in_array($type, ['results', 'result', 'lab_result', 'imaging_result'], true)) {
+            $buckets['results'][] = $row;
+            continue;
+        }
+        if (in_array($type, ['procedure', 'immunization', 'medication_administration', 'wound_care'], true)) {
+            $buckets['procedures'][] = $row;
+            continue;
+        }
+        if (in_array($type, ['image', 'pdf', 'bundle_clinical'], true)) {
+            $buckets['images'][] = $row;
+            continue;
+        }
+    }
+
+    return $buckets;
+}
+
+function clinical_encounter_auto_note_rendered_text(
+    string $patientId,
+    string $encounterKey,
+    string $eventDatetime,
+    ?string $appointmentId,
+    int $encounterId,
+    array $snapshotDocuments,
+    array $counts
+): string {
+    $lines = [];
+    $lines[] = 'NOTA CLÍNICA AUTO';
+    $lines[] = 'Consulta: ' . ($eventDatetime !== '' ? $eventDatetime : gmdate('Y-m-d H:i:s'));
+    $lines[] = 'Paciente: ' . $patientId;
+    $lines[] = 'Encounter: ' . ($encounterKey !== '' ? $encounterKey : ('enc:' . $encounterId));
+    if ($appointmentId !== null && trim($appointmentId) !== '') {
+        $lines[] = 'Cita: ' . trim($appointmentId);
+    }
+    $lines[] = '';
+    $lines[] = 'Resumen capturado en esta consulta:';
+    $lines[] = '- Documentos: ' . (string)($counts['documents'] ?? 0);
+    $lines[] = '- Signos vitales: ' . (string)($counts['vitals'] ?? 0);
+    $lines[] = '- Notas clínicas: ' . (string)($counts['notes'] ?? 0);
+    $lines[] = '- Recetas: ' . (string)($counts['prescriptions'] ?? 0);
+    $lines[] = '- Órdenes: ' . (string)($counts['orders'] ?? 0);
+    $lines[] = '- Resultados: ' . (string)($counts['results'] ?? 0);
+    $lines[] = '- Procedimientos: ' . (string)($counts['procedures'] ?? 0);
+    $lines[] = '- Imágenes / bundles: ' . (string)($counts['images'] ?? 0);
+    if ($snapshotDocuments !== []) {
+        $lines[] = '';
+        $lines[] = 'Elementos capturados:';
+        foreach ($snapshotDocuments as $doc) {
+            if (!is_array($doc)) {
+                continue;
+            }
+            $label = clinical_encounter_auto_note_type_label((string)($doc['document_type'] ?? ''));
+            $title = trim((string)($doc['title'] ?? ''));
+            $summary = trim((string)($doc['summary'] ?? ''));
+            $parts = [];
+            if ($title !== '') {
+                $parts[] = $title;
+            } else {
+                $parts[] = $label;
+            }
+            if ($summary !== '') {
+                $parts[] = $summary;
+            }
+            $lines[] = '- ' . implode(' · ', $parts);
+        }
+    }
+    return implode("\n", $lines);
+}
+
+function clinical_encounter_auto_note_summary(array $counts): string
+{
+    $parts = [];
+    $parts[] = 'Snapshot AUTO de consulta';
+    $parts[] = 'documentos ' . (string)($counts['documents'] ?? 0);
+    if (($counts['procedures'] ?? 0) > 0) {
+        $parts[] = 'procedimientos ' . (string)$counts['procedures'];
+    }
+    if (($counts['results'] ?? 0) > 0) {
+        $parts[] = 'resultados ' . (string)$counts['results'];
+    }
+    if (($counts['prescriptions'] ?? 0) > 0) {
+        $parts[] = 'recetas ' . (string)$counts['prescriptions'];
+    }
+    return implode(' · ', $parts);
+}
+
+function clinical_encounter_auto_note_find_existing(
+    PDO $pdo,
+    string $patientId,
+    string $encounterKey,
+    ?string $appointmentId,
+    int $encounterId
+): ?array {
+    $appointmentId = trim((string)$appointmentId);
+    $stmt = $pdo->prepare("
+        SELECT id, document_uuid, created_at, created_by_user_id
+        FROM clinical_documents
+        WHERE patient_id = :patient_id
+          AND document_type = 'note'
+          AND JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.snapshot_type')) = 'encounter_auto'
+          AND (
+            JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.context.encounter_key')) = :encounter_key
+            OR (
+              JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.context.encounter_id')) = :encounter_id
+              AND JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.context.appointment_id')) = :appointment_id
+            )
+          )
+        ORDER BY id DESC
+        LIMIT 1
+    ");
+    $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+    $stmt->bindValue(':encounter_key', $encounterKey, PDO::PARAM_STR);
+    $stmt->bindValue(':encounter_id', (string)$encounterId, PDO::PARAM_STR);
+    $stmt->bindValue(':appointment_id', $appointmentId, PDO::PARAM_STR);
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return is_array($row) ? $row : null;
+}
+
+function clinical_encounter_auto_note_upsert(PDO $pdo, array $encounterRow): ?array
+{
+    $encounterId = (int)($encounterRow['encounter_id'] ?? 0);
+    $patientId = trim((string)($encounterRow['patient_id'] ?? ''));
+    $appointmentId = trim((string)($encounterRow['appointment_id'] ?? ''));
+    $eventDatetime = trim((string)($encounterRow['encounter_dt'] ?? ''));
+    if ($encounterId <= 0 || $patientId === '') {
+        return null;
+    }
+
+    $encounterKey = clinical_encounter_key($encounterId, $appointmentId !== '' ? $appointmentId : null);
+    $isLatestByAppointment = false;
+    if ($appointmentId !== '') {
+        $latest = clinical_encounter_get_latest_by_appointment($pdo, $appointmentId);
+        $isLatestByAppointment = ((int)($latest['encounter_id'] ?? 0) === $encounterId);
+    }
+
+    $rows = clinical_timeline_encounter_documents_fetch($pdo, $patientId, $encounterId, $appointmentId, $isLatestByAppointment);
+    $rows = clinical_encounter_auto_note_filter_documents($rows);
+    $buckets = clinical_encounter_document_buckets($rows);
+    $counts = [
+        'documents' => count($buckets['documents']),
+        'vitals' => count($buckets['vitals']),
+        'notes' => count($buckets['notes']),
+        'prescriptions' => count($buckets['prescriptions']),
+        'orders' => count($buckets['orders']),
+        'results' => count($buckets['results']),
+        'procedures' => count($buckets['procedures']),
+        'images' => count($buckets['images']),
+    ];
+
+    $snapshotDocuments = [];
+    foreach ($rows as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $payload = json_decode((string)($row['payload_json'] ?? ''), true);
+        $snapshotDocuments[] = [
+            'document_uuid' => (string)($row['document_uuid'] ?? ''),
+            'document_type' => (string)($row['document_type'] ?? ''),
+            'title' => (string)($row['title'] ?? ''),
+            'event_datetime' => (string)($row['event_datetime'] ?? ''),
+            'summary' => (string)($row['summary'] ?? ''),
+            'payload' => is_array($payload) ? $payload : [],
+        ];
+    }
+
+    $now = gmdate('Y-m-d H:i:s');
+    $payloadData = [
+        'auto_generated' => true,
+        'snapshot_type' => 'encounter_auto',
+        'context' => [
+            'patient_id' => $patientId,
+            'appointment_id' => ($appointmentId !== '' ? $appointmentId : null),
+            'encounter_id' => (string)$encounterId,
+            'encounter_key' => $encounterKey,
+        ],
+        'snapshot' => [
+            'captured_at' => $now,
+            'consultation_datetime' => ($eventDatetime !== '' ? $eventDatetime : $now),
+            'counts' => $counts,
+            'documents' => $snapshotDocuments,
+        ],
+    ];
+    $payloadJson = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (!is_string($payloadJson)) {
+        throw new RuntimeException('invalid auto note payload');
+    }
+
+    $renderedText = clinical_encounter_auto_note_rendered_text(
+        $patientId,
+        $encounterKey,
+        ($eventDatetime !== '' ? $eventDatetime : $now),
+        ($appointmentId !== '' ? $appointmentId : null),
+        $encounterId,
+        $snapshotDocuments,
+        $counts
+    );
+    $summary = clinical_encounter_auto_note_summary($counts);
+    $title = 'Nota clínica AUTO';
+    $cols = clinical_table_columns($pdo, 'clinical_documents');
+    $hasApptCol = isset($cols['appointment_id']);
+    $existing = clinical_encounter_auto_note_find_existing($pdo, $patientId, $encounterKey, ($appointmentId !== '' ? $appointmentId : null), $encounterId);
+
+    if (is_array($existing) && (int)($existing['id'] ?? 0) > 0) {
+        $updateParts = [
+            'title = :title',
+            'encounter_id = :encounter_id',
+            'payload_json = :payload_json',
+            'rendered_text = :rendered_text',
+            'summary = :summary',
+            'event_datetime = :event_datetime',
+            'updated_at = :updated_at',
+            'generated_at = :generated_at',
+            'signed_at = :signed_at',
+            'updated_by_user_id = :updated_by_user_id',
+        ];
+        if ($hasApptCol) {
+            $updateParts[] = 'appointment_id = :appointment_id';
+        }
+        $stmt = $pdo->prepare("
+            UPDATE clinical_documents
+            SET " . implode(', ', $updateParts) . "
+            WHERE id = :id
+            LIMIT 1
+        ");
+        $stmt->bindValue(':id', (int)$existing['id'], PDO::PARAM_INT);
+        $stmt->bindValue(':title', $title, PDO::PARAM_STR);
+        $stmt->bindValue(':encounter_id', (string)$encounterId, PDO::PARAM_STR);
+        $stmt->bindValue(':payload_json', $payloadJson, PDO::PARAM_STR);
+        $stmt->bindValue(':rendered_text', $renderedText, PDO::PARAM_STR);
+        $stmt->bindValue(':summary', $summary, PDO::PARAM_STR);
+        $stmt->bindValue(':event_datetime', ($eventDatetime !== '' ? $eventDatetime : $now), PDO::PARAM_STR);
+        $stmt->bindValue(':updated_at', $now, PDO::PARAM_STR);
+        $stmt->bindValue(':generated_at', $now, PDO::PARAM_STR);
+        $stmt->bindValue(':signed_at', $now, PDO::PARAM_STR);
+        $stmt->bindValue(':updated_by_user_id', 'system_auto', PDO::PARAM_STR);
+        if ($hasApptCol) {
+            if ($appointmentId !== '') {
+                $stmt->bindValue(':appointment_id', $appointmentId, PDO::PARAM_STR);
+            } else {
+                $stmt->bindValue(':appointment_id', null, PDO::PARAM_NULL);
+            }
+        }
+        $stmt->execute();
+        return [
+            'action' => 'updated',
+            'document_uuid' => (string)($existing['document_uuid'] ?? ''),
+        ];
+    }
+
+    $documentUuid = clinical_generate_document_uuid();
+    $values = [
+        'document_uuid' => $documentUuid,
+        'document_type' => 'note',
+        'title' => $title,
+        'version' => 1,
+        'status' => 'signed',
+        'patient_id' => $patientId,
+        'appointment_id' => ($appointmentId !== '' ? $appointmentId : null),
+        'encounter_id' => (string)$encounterId,
+        'hospital_stay_id' => null,
+        'care_setting' => 'consulta',
+        'service' => null,
+        'payload_json' => $payloadJson,
+        'rendered_text' => $renderedText,
+        'summary' => $summary,
+        'edited_flag' => 0,
+        'event_datetime' => ($eventDatetime !== '' ? $eventDatetime : $now),
+        'widget_group' => 'documentos_clinicos',
+        'printable' => 1,
+        'created_at' => $now,
+        'updated_at' => $now,
+        'generated_at' => $now,
+        'signed_at' => $now,
+        'created_by_user_id' => 'system_auto',
+        'updated_by_user_id' => 'system_auto',
+    ];
+
+    $insertCols = [];
+    $placeholders = [];
+    $params = [];
+    foreach ($values as $col => $val) {
+        if (!isset($cols[$col])) {
+            continue;
+        }
+        $insertCols[] = '`' . $col . '`';
+        $ph = ':auto_' . $col;
+        $placeholders[] = $ph;
+        $params[$ph] = $val;
+    }
+    $stmt = $pdo->prepare('INSERT INTO clinical_documents (' . implode(', ', $insertCols) . ') VALUES (' . implode(', ', $placeholders) . ')');
+    foreach ($params as $ph => $val) {
+        if ($val === null) {
+            $stmt->bindValue($ph, null, PDO::PARAM_NULL);
+        } else {
+            $stmt->bindValue($ph, (string)$val, PDO::PARAM_STR);
+        }
+    }
+    $stmt->execute();
+
+    return [
+        'action' => 'created',
+        'document_uuid' => $documentUuid,
+    ];
+}
+
+function clinical_encounter_final_note_upsert(PDO $pdo, array $encounterRow, string $closedByUserId): ?array
+{
+    $encounterId = (int)($encounterRow['encounter_id'] ?? 0);
+    $patientId = trim((string)($encounterRow['patient_id'] ?? ''));
+    $appointmentId = trim((string)($encounterRow['appointment_id'] ?? ''));
+    $eventDatetime = trim((string)($encounterRow['encounter_dt'] ?? ''));
+    if ($encounterId <= 0 || $patientId === '') {
+        return null;
+    }
+
+    $encounterKey = clinical_encounter_key($encounterId, $appointmentId !== '' ? $appointmentId : null);
+    $isLatestByAppointment = false;
+    if ($appointmentId !== '') {
+        $latest = clinical_encounter_get_latest_by_appointment($pdo, $appointmentId);
+        $isLatestByAppointment = ((int)($latest['encounter_id'] ?? 0) === $encounterId);
+    }
+
+    $rows = clinical_timeline_encounter_documents_fetch($pdo, $patientId, $encounterId, $appointmentId, $isLatestByAppointment);
+    $snapshotRows = [];
+    foreach ($rows as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $payload = json_decode((string)($row['payload_json'] ?? ''), true);
+        $snapshotType = trim((string)($payload['snapshot_type'] ?? ''));
+        if (strtolower(trim((string)($row['document_type'] ?? ''))) === 'note' && in_array($snapshotType, ['encounter_auto', 'encounter_auto_final'], true)) {
+            continue;
+        }
+        $snapshotRows[] = $row;
+    }
+    $buckets = clinical_encounter_document_buckets($snapshotRows);
+    $counts = [
+        'vitals' => count($buckets['vitals']),
+        'notes' => count($buckets['notes']),
+        'prescriptions' => count($buckets['prescriptions']),
+        'orders' => count($buckets['orders']),
+        'results' => count($buckets['results']),
+        'procedures' => count($buckets['procedures']),
+        'documents' => count($buckets['documents']),
+        'images' => count($buckets['images']),
+    ];
+
+    $snapshotDocuments = [];
+    foreach ($snapshotRows as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $snapshotDocuments[] = [
+            'document_uuid' => (string)($row['document_uuid'] ?? ''),
+            'document_type' => (string)($row['document_type'] ?? ''),
+            'title' => (string)($row['title'] ?? ''),
+            'event_datetime' => (string)($row['event_datetime'] ?? ''),
+            'summary' => (string)($row['summary'] ?? ''),
+        ];
+    }
+
+    $now = gmdate('Y-m-d H:i:s');
+    $payloadData = [
+        'auto_generated' => true,
+        'snapshot_type' => 'encounter_auto_final',
+        'finalized' => true,
+        'context' => [
+            'patient_id' => $patientId,
+            'appointment_id' => ($appointmentId !== '' ? $appointmentId : null),
+            'encounter_id' => (string)$encounterId,
+            'encounter_key' => $encounterKey,
+        ],
+        'snapshot' => [
+            'captured_at' => $now,
+            'consultation_datetime' => ($eventDatetime !== '' ? $eventDatetime : $now),
+            'counts' => $counts,
+            'documents' => $snapshotDocuments,
+        ],
+    ];
+    $payloadJson = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (!is_string($payloadJson)) {
+        throw new RuntimeException('invalid final auto note payload');
+    }
+
+    $renderedText = clinical_encounter_auto_note_rendered_text(
+        $patientId,
+        $encounterKey,
+        ($eventDatetime !== '' ? $eventDatetime : $now),
+        ($appointmentId !== '' ? $appointmentId : null),
+        $encounterId,
+        $snapshotDocuments,
+        $counts
+    );
+    $summary = 'Cierre AUTO de consulta · ' . clinical_encounter_auto_note_summary($counts);
+    $title = 'Nota clínica AUTO (Cierre)';
+    $cols = clinical_table_columns($pdo, 'clinical_documents');
+    $hasApptCol = isset($cols['appointment_id']);
+    $stmt = $pdo->prepare("
+        SELECT id, document_uuid
+        FROM clinical_documents
+        WHERE patient_id = :patient_id
+          AND document_type = 'note'
+          AND JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.snapshot_type')) = 'encounter_auto_final'
+          AND JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.context.encounter_key')) = :encounter_key
+        ORDER BY id DESC
+        LIMIT 1
+    ");
+    $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+    $stmt->bindValue(':encounter_key', $encounterKey, PDO::PARAM_STR);
+    $stmt->execute();
+    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (is_array($existing) && (int)($existing['id'] ?? 0) > 0) {
+        $updateParts = [
+            'title = :title',
+            'encounter_id = :encounter_id',
+            'payload_json = :payload_json',
+            'rendered_text = :rendered_text',
+            'summary = :summary',
+            'event_datetime = :event_datetime',
+            'updated_at = :updated_at',
+            'generated_at = :generated_at',
+            'signed_at = :signed_at',
+            'updated_by_user_id = :updated_by_user_id',
+        ];
+        if ($hasApptCol) {
+            $updateParts[] = 'appointment_id = :appointment_id';
+        }
+        $updateStmt = $pdo->prepare("
+            UPDATE clinical_documents
+            SET " . implode(', ', $updateParts) . "
+            WHERE id = :id
+            LIMIT 1
+        ");
+        $updateStmt->bindValue(':id', (int)$existing['id'], PDO::PARAM_INT);
+        $updateStmt->bindValue(':title', $title, PDO::PARAM_STR);
+        $updateStmt->bindValue(':encounter_id', (string)$encounterId, PDO::PARAM_STR);
+        $updateStmt->bindValue(':payload_json', $payloadJson, PDO::PARAM_STR);
+        $updateStmt->bindValue(':rendered_text', $renderedText, PDO::PARAM_STR);
+        $updateStmt->bindValue(':summary', $summary, PDO::PARAM_STR);
+        $updateStmt->bindValue(':event_datetime', ($eventDatetime !== '' ? $eventDatetime : $now), PDO::PARAM_STR);
+        $updateStmt->bindValue(':updated_at', $now, PDO::PARAM_STR);
+        $updateStmt->bindValue(':generated_at', $now, PDO::PARAM_STR);
+        $updateStmt->bindValue(':signed_at', $now, PDO::PARAM_STR);
+        $updateStmt->bindValue(':updated_by_user_id', $closedByUserId, PDO::PARAM_STR);
+        if ($hasApptCol) {
+            if ($appointmentId !== '') {
+                $updateStmt->bindValue(':appointment_id', $appointmentId, PDO::PARAM_STR);
+            } else {
+                $updateStmt->bindValue(':appointment_id', null, PDO::PARAM_NULL);
+            }
+        }
+        $updateStmt->execute();
+        return [
+            'action' => 'updated',
+            'document_uuid' => (string)($existing['document_uuid'] ?? ''),
+            'counts' => $counts,
+        ];
+    }
+
+    $documentUuid = clinical_generate_document_uuid();
+    $values = [
+        'document_uuid' => $documentUuid,
+        'document_type' => 'note',
+        'title' => $title,
+        'version' => 1,
+        'status' => 'signed',
+        'patient_id' => $patientId,
+        'appointment_id' => ($appointmentId !== '' ? $appointmentId : null),
+        'encounter_id' => (string)$encounterId,
+        'hospital_stay_id' => null,
+        'care_setting' => 'consulta',
+        'service' => null,
+        'payload_json' => $payloadJson,
+        'rendered_text' => $renderedText,
+        'summary' => $summary,
+        'edited_flag' => 0,
+        'event_datetime' => ($eventDatetime !== '' ? $eventDatetime : $now),
+        'widget_group' => 'documentos_clinicos',
+        'printable' => 1,
+        'created_at' => $now,
+        'updated_at' => $now,
+        'generated_at' => $now,
+        'signed_at' => $now,
+        'created_by_user_id' => $closedByUserId,
+        'updated_by_user_id' => $closedByUserId,
+    ];
+    $insertCols = [];
+    $placeholders = [];
+    $params = [];
+    foreach ($values as $col => $val) {
+        if (!isset($cols[$col])) {
+            continue;
+        }
+        $insertCols[] = '`' . $col . '`';
+        $ph = ':final_' . $col;
+        $placeholders[] = $ph;
+        $params[$ph] = $val;
+    }
+    $insertStmt = $pdo->prepare('INSERT INTO clinical_documents (' . implode(', ', $insertCols) . ') VALUES (' . implode(', ', $placeholders) . ')');
+    foreach ($params as $ph => $val) {
+        if ($val === null) {
+            $insertStmt->bindValue($ph, null, PDO::PARAM_NULL);
+        } else {
+            $insertStmt->bindValue($ph, (string)$val, PDO::PARAM_STR);
+        }
+    }
+    $insertStmt->execute();
+
+    return [
+        'action' => 'created',
+        'document_uuid' => $documentUuid,
+        'counts' => $counts,
+    ];
+}
+
+function clinical_encounter_finalize(PDO $pdo, array $encounterRow, string $closedByUserId): array
+{
+    $encounterId = (int)($encounterRow['encounter_id'] ?? 0);
+    $patientId = trim((string)($encounterRow['patient_id'] ?? ''));
+    $appointmentId = trim((string)($encounterRow['appointment_id'] ?? ''));
+    $status = strtolower(trim((string)($encounterRow['status'] ?? 'open')));
+    $closedAt = trim((string)($encounterRow['closed_at'] ?? ''));
+    $autoNoteUuidFinal = trim((string)($encounterRow['auto_note_uuid_final'] ?? ''));
+
+    if ($encounterId <= 0 || $patientId === '') {
+        throw new RuntimeException('encounter inválido');
+    }
+
+    $encounterKey = clinical_encounter_key($encounterId, $appointmentId !== '' ? $appointmentId : null);
+    if ($status === 'closed' && $autoNoteUuidFinal !== '') {
+        $finalDoc = clinical_documents_get_by_uuid_fetch($pdo, $autoNoteUuidFinal);
+        $payload = is_array($finalDoc['content']['payload'] ?? null) ? $finalDoc['content']['payload'] : [];
+        $counts = is_array($payload['snapshot']['counts'] ?? null) ? $payload['snapshot']['counts'] : [
+            'vitals' => 0,
+            'notes' => 0,
+            'prescriptions' => 0,
+            'orders' => 0,
+            'results' => 0,
+            'procedures' => 0,
+        ];
+        return [
+            'encounter_key' => $encounterKey,
+            'status' => 'closed',
+            'closed_at' => ($closedAt !== '' ? $closedAt : null),
+            'auto_note_uuid_final' => $autoNoteUuidFinal,
+            'counts' => $counts,
+            'primary_prescription_uuid' => null, // TODO: wire direct prescription uuid when prescription linkage is formalized.
+        ];
+    }
+
+    $pdo->beginTransaction();
+    try {
+        $finalNote = clinical_encounter_final_note_upsert($pdo, $encounterRow, $closedByUserId);
+        $finalUuid = trim((string)($finalNote['document_uuid'] ?? ''));
+        $counts = is_array($finalNote['counts'] ?? null) ? $finalNote['counts'] : [];
+        $now = gmdate('Y-m-d H:i:s');
+        $stmt = $pdo->prepare("
+            UPDATE clinical_encounters
+            SET status = 'closed',
+                closed_at = :closed_at,
+                closed_by_user_id = :closed_by_user_id,
+                auto_note_uuid_final = :auto_note_uuid_final,
+                updated_at = NOW()
+            WHERE encounter_id = :encounter_id
+            LIMIT 1
+        ");
+        $stmt->bindValue(':closed_at', $now, PDO::PARAM_STR);
+        $stmt->bindValue(':closed_by_user_id', $closedByUserId, PDO::PARAM_STR);
+        if ($finalUuid !== '') {
+            $stmt->bindValue(':auto_note_uuid_final', $finalUuid, PDO::PARAM_STR);
+        } else {
+            $stmt->bindValue(':auto_note_uuid_final', null, PDO::PARAM_NULL);
+        }
+        $stmt->bindValue(':encounter_id', $encounterId, PDO::PARAM_INT);
+        $stmt->execute();
+        $pdo->commit();
+
+        return [
+            'encounter_key' => $encounterKey,
+            'status' => 'closed',
+            'closed_at' => $now,
+            'auto_note_uuid_final' => ($finalUuid !== '' ? $finalUuid : null),
+            'counts' => [
+                'vitals' => (int)($counts['vitals'] ?? 0),
+                'notes' => (int)($counts['notes'] ?? 0),
+                'prescriptions' => (int)($counts['prescriptions'] ?? 0),
+                'orders' => (int)($counts['orders'] ?? 0),
+                'results' => (int)($counts['results'] ?? 0),
+                'procedures' => (int)($counts['procedures'] ?? 0),
+            ],
+            'primary_prescription_uuid' => null, // TODO: return direct uuid when prescription documents are linked 1:1.
+        ];
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+}
+
 function clinical_documents_save_passthrough(PDO $pdo, array $args): array
 {
     require_once __DIR__ . '/../_lib/clinical_documents.php';
@@ -616,6 +1340,20 @@ function clinical_documents_save_passthrough(PDO $pdo, array $args): array
                 ':signed_at' => $p['signed_at'] ?? null,
                 ':created_at' => $doc['timestamps']['created_at'],
             ]);
+        }
+
+        $triggerEncounterId = (int)($doc['context']['encounter_id'] ?? 0);
+        $triggerPayload = is_array($doc['content']['payload'] ?? null) ? $doc['content']['payload'] : [];
+        $isAutoEncounterNote = (
+            strtolower(trim((string)($doc['document_type'] ?? ''))) === 'note'
+            && trim((string)($triggerPayload['snapshot_type'] ?? '')) === 'encounter_auto'
+        );
+        if ($triggerEncounterId > 0 && !$isAutoEncounterNote) {
+            clinical_encounters_ensure_schema($pdo);
+            $encounterRow = clinical_encounter_get_by_id($pdo, $triggerEncounterId);
+            if (is_array($encounterRow) && $encounterRow !== []) {
+                clinical_encounter_auto_note_upsert($pdo, $encounterRow);
+            }
         }
 
         $pdo->commit();
@@ -1898,7 +2636,10 @@ function clinical_encounters_ensure_schema(PDO $pdo): void
             appointment_id VARCHAR(64) DEFAULT NULL,
             encounter_dt DATETIME NOT NULL,
             encounter_type VARCHAR(32) NOT NULL DEFAULT 'outpatient',
-            status VARCHAR(16) NOT NULL DEFAULT 'completed',
+            status VARCHAR(32) NOT NULL DEFAULT 'open',
+            closed_at DATETIME DEFAULT NULL,
+            closed_by_user_id VARCHAR(64) DEFAULT NULL,
+            auto_note_uuid_final VARCHAR(64) DEFAULT NULL,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             KEY idx_patient_dt (patient_id, encounter_dt),
@@ -1909,6 +2650,31 @@ function clinical_encounters_ensure_schema(PDO $pdo): void
                 ON DELETE RESTRICT
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
+
+    $alterStatements = [
+        "ALTER TABLE clinical_encounters MODIFY COLUMN status VARCHAR(32) NOT NULL DEFAULT 'open'",
+        "ALTER TABLE clinical_encounters ADD COLUMN closed_at DATETIME NULL AFTER status",
+        "ALTER TABLE clinical_encounters ADD COLUMN closed_by_user_id VARCHAR(64) NULL AFTER closed_at",
+        "ALTER TABLE clinical_encounters ADD COLUMN auto_note_uuid_final VARCHAR(64) NULL AFTER closed_by_user_id",
+    ];
+    foreach ($alterStatements as $sql) {
+        try {
+            $pdo->exec($sql);
+        } catch (Throwable $e) {
+            // backward-compatible migration: ignore duplicate/missing-column ALTER failures.
+        }
+    }
+    try {
+        $pdo->exec("
+            UPDATE clinical_encounters
+            SET status = 'open'
+            WHERE status IS NULL
+               OR TRIM(status) = ''
+               OR LOWER(TRIM(status)) = 'completed'
+        ");
+    } catch (Throwable $e) {
+        // best effort normalization for legacy rows
+    }
 }
 
 function clinical_encounter_get_by_id(PDO $pdo, int $encounterId): ?array
@@ -1916,7 +2682,7 @@ function clinical_encounter_get_by_id(PDO $pdo, int $encounterId): ?array
     $stmt = $pdo->prepare("
         SELECT
             encounter_id, patient_id, appointment_id, encounter_dt,
-            encounter_type, status, created_at, updated_at
+            encounter_type, status, closed_at, closed_by_user_id, auto_note_uuid_final, created_at, updated_at
         FROM clinical_encounters
         WHERE encounter_id = :encounter_id
         LIMIT 1
@@ -1932,7 +2698,7 @@ function clinical_encounter_get_latest_by_appointment(PDO $pdo, string $appointm
     $stmt = $pdo->prepare("
         SELECT
             encounter_id, patient_id, appointment_id, encounter_dt,
-            encounter_type, status, created_at, updated_at
+            encounter_type, status, closed_at, closed_by_user_id, auto_note_uuid_final, created_at, updated_at
         FROM clinical_encounters
         WHERE appointment_id = :appointment_id
         ORDER BY encounter_dt DESC, encounter_id DESC
@@ -2084,7 +2850,7 @@ function clinical_encounters_list_fetch(PDO $pdo, string $patientId, int $limit)
     $stmt = $pdo->prepare("
         SELECT
             encounter_id, patient_id, appointment_id, encounter_dt,
-            encounter_type, status, created_at, updated_at
+            encounter_type, status, closed_at, closed_by_user_id, auto_note_uuid_final, created_at, updated_at
         FROM clinical_encounters
         WHERE patient_id = :patient_id
         ORDER BY encounter_dt DESC, encounter_id DESC
@@ -3508,7 +4274,7 @@ try {
         $appointmentId = trim((string)($payload['appointment_id'] ?? '9001'));
         $encounterDt = trim((string)($payload['encounter_dt'] ?? ''));
         $encounterType = trim((string)($payload['encounter_type'] ?? 'outpatient'));
-        $status = trim((string)($payload['status'] ?? 'completed'));
+        $status = trim((string)($payload['status'] ?? 'open'));
 
         if ($patientId === '') {
             clinical_send_response([
@@ -3776,10 +4542,10 @@ try {
             $encounterType = mb_substr($encounterType, 0, 32);
         }
         if ($status === '') {
-            $status = 'completed';
+            $status = 'open';
         }
-        if (mb_strlen($status) > 16) {
-            $status = mb_substr($status, 0, 16);
+        if (mb_strlen($status) > 32) {
+            $status = mb_substr($status, 0, 32);
         }
 
         try {
@@ -4253,6 +5019,51 @@ try {
     }
 
     if (($segments[0] ?? '') === 'encounters') {
+        if (count($segments) === 3 && ($segments[2] ?? '') === 'finalize' && $method === 'POST') {
+            $encounterKey = urldecode(trim((string)$segments[1]));
+            $body = clinical_read_json_body();
+            $payload = (($body['ok'] ?? false) === true && is_array($body['data'] ?? null)) ? $body['data'] : [];
+            $closedByUserId = clinical_request_actor_user_id($payload);
+
+            try {
+                $pdo = clinical_documents_pdo();
+                clinical_encounters_ensure_schema($pdo);
+                $resolved = clinical_resolve_encounter_key($pdo, $encounterKey);
+                if (($resolved['ok'] ?? false) !== true) {
+                    $status = (($resolved['error_code'] ?? '') === 'not_found') ? 404 : 400;
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => (string)($resolved['error_code'] ?? 'bad_request'),
+                        'message' => (string)($resolved['error_message'] ?? 'encounter inválido'),
+                        'data' => null,
+                        'meta' => ['method' => 'POST', 'route' => 'encounters/{encounter_key}/finalize'],
+                    ], $status);
+                    return;
+                }
+                $encounterRow = is_array($resolved['row'] ?? null) ? $resolved['row'] : [];
+                $finalized = clinical_encounter_finalize($pdo, $encounterRow, $closedByUserId);
+            } catch (Throwable $e) {
+                $msg = trim((string)$e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => ($msg !== '' ? $msg : 'server error'),
+                    'data' => null,
+                    'meta' => ['method' => 'POST', 'route' => 'encounters/{encounter_key}/finalize'],
+                ], 500);
+                return;
+            }
+
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => 'encounter finalized',
+                'data' => $finalized,
+                'meta' => ['method' => 'POST', 'route' => 'encounters/{encounter_key}/finalize'],
+            ], 200);
+            return;
+        }
+
         if (count($segments) === 3 && ($segments[2] ?? '') === 'documents' && $method === 'POST') {
             $encounterKey = urldecode(trim((string)$segments[1]));
             $contentType = strtolower((string)($_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? ''));
@@ -4469,6 +5280,7 @@ try {
                 }
                 $sql = 'INSERT INTO clinical_documents (' . implode(', ', $insertCols) . ') VALUES (' . implode(', ', $placeholders) . ')';
                 $stmt = $pdo->prepare($sql);
+                $pdo->beginTransaction();
                 foreach ($params as $ph => $val) {
                     if ($val === null) {
                         $stmt->bindValue($ph, null, PDO::PARAM_NULL);
@@ -4477,7 +5289,12 @@ try {
                     }
                 }
                 $stmt->execute();
+                clinical_encounter_auto_note_upsert($pdo, $encounterRow);
+                $pdo->commit();
             } catch (Throwable $e) {
+                if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
                 $msg = trim((string)$e->getMessage());
                 clinical_send_response([
                     'ok' => false,
@@ -4561,6 +5378,8 @@ try {
             }
 
             $documents = [];
+            $bucketSource = clinical_encounter_auto_note_filter_documents($rows);
+            $buckets = clinical_encounter_document_buckets($bucketSource);
             foreach ($rows as $row) {
                 $documents[] = [
                     'document_uuid' => (string)($row['document_uuid'] ?? ''),
@@ -4572,19 +5391,44 @@ try {
                 ];
             }
 
+            $mapList = static function (array $bucketRows): array {
+                $mapped = [];
+                foreach ($bucketRows as $row) {
+                    if (!is_array($row)) {
+                        continue;
+                    }
+                    $mapped[] = [
+                        'document_uuid' => (string)($row['document_uuid'] ?? ''),
+                        'document_type' => (string)($row['document_type'] ?? ''),
+                        'title' => (string)($row['title'] ?? ''),
+                        'event_datetime' => (string)($row['event_datetime'] ?? ''),
+                        'summary' => (string)($row['summary'] ?? ''),
+                    ];
+                }
+                return $mapped;
+            };
+
             clinical_send_response([
                 'ok' => true,
                 'error' => null,
                 'message' => 'encounter retrieved',
                 'data' => [
                     'encounter_key' => $responseEncounterKey,
+                    'encounter_id' => $encounterId,
                     'appointment_id' => ($appointmentId !== '' ? $appointmentId : null),
                     'patient_id' => $patientId,
                     'event_datetime' => $eventDatetime,
+                    'status' => (string)($encounterRow['status'] ?? 'open'),
+                    'closed_at' => ($encounterRow['closed_at'] ?? null),
+                    'closed_by_user_id' => ($encounterRow['closed_by_user_id'] ?? null),
+                    'auto_note_uuid_final' => ($encounterRow['auto_note_uuid_final'] ?? null),
                     'documents' => $documents,
-                    'prescriptions' => [],
-                    'orders' => [],
-                    'results' => [],
+                    'vitals' => $mapList($buckets['vitals']),
+                    'notes' => $mapList($buckets['notes']),
+                    'prescriptions' => $mapList($buckets['prescriptions']),
+                    'orders' => $mapList($buckets['orders']),
+                    'results' => $mapList($buckets['results']),
+                    'procedures' => $mapList($buckets['procedures']),
                 ],
                 'meta' => [
                     'method' => 'GET',
