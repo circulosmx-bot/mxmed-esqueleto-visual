@@ -1511,6 +1511,9 @@ if (!$embed) {
                     </div>
                     <div class="mm-activity-actions" data-role="appointment-episode-cta" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>">
                       <?php if ($appointmentClinicalCategory === 'procedimiento' && $appointmentEpisodeId !== ''): ?>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="register-procedure" data-appt-id="<?php echo h($appointmentEpisodeId); ?>" data-patient-id="<?php echo h($patientId); ?>" data-start-at="<?php echo h((string)($agenda['start_at'] ?? ($item['event_datetime'] ?? ''))); ?>" data-reason-text="<?php echo h($appointmentReasonText); ?>">Registrar procedimiento realizado</button>
+                      <?php endif; ?>
+                      <?php if ($appointmentClinicalCategory === 'procedimiento' && $appointmentEpisodeId !== ''): ?>
                         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="open-procedure-from-appointment" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>" data-default-title="<?php echo h($appointmentReasonText); ?>" data-default-datetime="<?php echo h((string)($item['event_datetime'] ?? ($agenda['start_at'] ?? ''))); ?>">Agregar detalles</button>
                       <?php endif; ?>
                       <?php if (!$isInActiveCase && $appointmentRef !== ''): ?>
@@ -3014,6 +3017,24 @@ if (!$embed) {
       return text;
     }
 
+    function resolveClinicalActorUserId() {
+      if (currentUserId) {
+        return String(currentUserId).trim();
+      }
+      if (window.MXMED_USER_ID) {
+        return String(window.MXMED_USER_ID).trim();
+      }
+      if (window.__MXMED && window.__MXMED.user_id) {
+        return String(window.__MXMED.user_id).trim();
+      }
+      var rootUserId = document.body ? String(document.body.getAttribute('data-user-id') || '').trim() : '';
+      if (rootUserId) {
+        return rootUserId;
+      }
+      // TODO: reemplazar este fallback por user_id de sesión real.
+      return '1';
+    }
+
     function buildImmunizationRequest(input) {
       var placeType = String(input.placeType || '').trim();
       var placeName = String(input.placeName || '').trim();
@@ -4027,6 +4048,70 @@ if (!$embed) {
       if (openGenericProcedureBtn) {
         event.preventDefault();
         openGenericProcedureModal('immunization');
+        return;
+      }
+
+      var registerProcedureBtn = event.target && event.target.closest ? event.target.closest('[data-action="register-procedure"]') : null;
+      if (registerProcedureBtn) {
+        event.preventDefault();
+        var registerPatientId = String(registerProcedureBtn.getAttribute('data-patient-id') || '').trim();
+        var registerAppointmentId = String(registerProcedureBtn.getAttribute('data-appt-id') || '').trim();
+        var registerStartAt = normalizeEventDatetime(String(registerProcedureBtn.getAttribute('data-start-at') || '').trim());
+        var registerReasonText = String(registerProcedureBtn.getAttribute('data-reason-text') || '').trim();
+        var actorId = resolveClinicalActorUserId();
+        if (!registerPatientId || !registerAppointmentId) {
+          window.alert('Faltan datos del appointment para registrar el procedimiento.');
+          return;
+        }
+        if (!window.confirm('¿Registrar procedimiento realizado?')) {
+          return;
+        }
+        var requestBody = {
+          type: 'procedure',
+          event_datetime: registerStartAt,
+          actor: { user_id: actorId },
+          context: {
+            patient_id: registerPatientId,
+            appointment_id: registerAppointmentId
+          },
+          ui: {
+            event_datetime: registerStartAt,
+            widget_group: 'procedimiento',
+            printable: 0
+          },
+          payload: {
+            name: registerReasonText || 'Procedimiento',
+            notes: 'Registrado desde agenda',
+            context: {
+              appointment_id: registerAppointmentId
+            }
+          }
+        };
+        fetch(apiBase + '/api/clinical/index.php/documents', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify(requestBody)
+        })
+          .then(function (response) {
+            return response.json().catch(function () { return null; });
+          })
+          .then(function (resp) {
+            if (resp && resp.ok === true) {
+              window.alert('Procedimiento registrado');
+              window.location.reload();
+              return;
+            }
+            window.alert('Error: ' + String((resp && (resp.message || resp.error)) || 'No se pudo registrar el procedimiento.'));
+            console.log(resp);
+          })
+          .catch(function (err) {
+            window.alert('Error: ' + String((err && err.message) || 'No se pudo registrar el procedimiento.'));
+            console.log(err);
+          });
         return;
       }
 
