@@ -2501,7 +2501,7 @@ if (!$embed) {
     function updateDayCardVisibility() {
       var dayCards = document.querySelectorAll('[data-day-card="1"]');
       dayCards.forEach(function (card) {
-        var visibleEvents = Array.from(card.querySelectorAll('[data-timeline-item="1"]')).filter(function (item) {
+        var visibleEvents = Array.from(card.querySelectorAll('[data-role="timeline-item"]')).filter(function (item) {
           return !item.classList.contains('d-none');
         });
         card.classList.toggle('d-none', visibleEvents.length === 0);
@@ -2540,7 +2540,7 @@ if (!$embed) {
     }
 
     function applyOnlyActiveCaseFilter() {
-      var timelineItems = document.querySelectorAll('[data-timeline-item="1"]');
+      var timelineItems = document.querySelectorAll('[data-role="timeline-item"]');
       var visibleCount = 0;
       timelineItems.forEach(function (item) {
         var inActiveCase = String(item.getAttribute('data-in-active-case') || '').trim() === '1';
@@ -2654,7 +2654,7 @@ if (!$embed) {
 
     function computeRecentCandidates() {
       if (!activeCaseId) return [];
-      var nodes = Array.from(document.querySelectorAll('[data-timeline-item="1"]')).slice(0, 10);
+      var nodes = Array.from(document.querySelectorAll('[data-role="timeline-item"]')).slice(0, 10);
       return nodes.map(function (node) {
         return {
           caseId: String(node.getAttribute('data-case-id') || '').trim(),
