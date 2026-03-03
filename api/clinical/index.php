@@ -1448,7 +1448,7 @@ function clinical_timeline_document_item_from_row(array $row, string $patientId,
         'media_bundle_title' => $mediaMeta['media_bundle_title'],
         'media_bundle_note' => $mediaMeta['media_bundle_note'],
     ];
-    if ($docType === 'immunization' || $docType === 'medication_administration' || $docType === 'wound_care') {
+    if ($docType === 'immunization' || $docType === 'medication_administration' || $docType === 'wound_care' || $docType === 'procedure') {
         $payload = json_decode((string)($row['payload_json'] ?? ''), true);
         $clinicalDocument['payload'] = is_array($payload) ? $payload : [];
     }

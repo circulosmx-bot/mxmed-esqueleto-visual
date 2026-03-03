@@ -1576,6 +1576,7 @@ if (!$embed) {
                 $isImmunization = ($docTypeNorm === 'immunization');
                 $isMedicationAdministration = ($docTypeNorm === 'medication_administration');
                 $isWoundCare = ($docTypeNorm === 'wound_care');
+                $isProcedure = ($docTypeNorm === 'procedure');
                 if ($isImmunization) {
                     $vaccine = is_array($docPayload['vaccine'] ?? null) ? $docPayload['vaccine'] : [];
                     $trace = is_array($docPayload['trace'] ?? null) ? $docPayload['trace'] : [];
@@ -1682,6 +1683,36 @@ if (!$embed) {
                     if ($note !== '') {
                         $docMetaLine3 = 'Nota: ' . $note;
                     }
+                } elseif ($isProcedure) {
+                    $itemPayload = is_array($docPayload['item'] ?? null) ? $docPayload['item'] : [];
+                    $administration = is_array($docPayload['administration'] ?? null) ? $docPayload['administration'] : [];
+                    $procedureName = trim((string)($itemPayload['name'] ?? ''));
+                    $description = trim((string)($itemPayload['description'] ?? ''));
+                    $placeType = trim((string)($administration['place_type'] ?? ''));
+                    $placeName = trim((string)($administration['place_name'] ?? ''));
+                    $placeSector = trim((string)($administration['place_sector'] ?? ''));
+                    $note = trim((string)($docPayload['notes']['clinical'] ?? ''));
+                    $docDisplayTitle = 'Procedimiento';
+                    if ($procedureName !== '') {
+                        $docDisplayTitle .= ': ' . $procedureName;
+                    }
+                    if ($description !== '') {
+                        $docMetaLine1 = $description;
+                    }
+                    if ($placeType === 'consultorio_prop') {
+                        $docMetaLine2 = 'Aplicada en: Consultorio';
+                    } elseif ($placeType === 'institucion') {
+                        $placeLabel = ($placeName !== '' ? $placeName : 'Institución');
+                        if ($placeSector !== '') {
+                            $placeLabel .= ' (' . ucfirst($placeSector) . ')';
+                        }
+                        $docMetaLine2 = 'Aplicada en: ' . $placeLabel;
+                    } elseif ($placeType === 'otro') {
+                        $docMetaLine2 = 'Aplicada en: ' . ($placeName !== '' ? $placeName : 'Otro');
+                    }
+                    if ($note !== '') {
+                        $docMetaLine3 = 'Nota: ' . $note;
+                    }
                 }
                 $docViewPath = $docIsImage ? '/modules/clinical/ui/viewer.php' : '/modules/clinical/ui/document.php';
                 $docHref = $docUuid !== '' ? $docViewPath . '?' . carry_embed_params(['uuid' => $docUuid]) : '';
@@ -1691,16 +1722,16 @@ if (!$embed) {
                   <div class="mm-activity-body">
                     <div class="min-w-0 flex-grow-1">
                       <div class="mm-activity-title"><?php echo h($docDisplayTitle); ?></div>
-                      <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare) && $docOccurredAt !== ''): ?>
+                      <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare || $isProcedure) && $docOccurredAt !== ''): ?>
                         <div class="mm-activity-meta"><?php echo h($docOccurredAt); ?></div>
                       <?php endif; ?>
-                      <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare) && $docMetaLine1 !== ''): ?>
+                      <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare || $isProcedure) && $docMetaLine1 !== ''): ?>
                         <div class="mm-activity-meta"><?php echo h($docMetaLine1); ?></div>
                       <?php endif; ?>
-                      <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare) && $docMetaLine2 !== ''): ?>
+                      <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare || $isProcedure) && $docMetaLine2 !== ''): ?>
                         <div class="mm-activity-meta"><?php echo h($docMetaLine2); ?></div>
                       <?php endif; ?>
-                      <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare) && $docMetaLine3 !== ''): ?>
+                      <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare || $isProcedure) && $docMetaLine3 !== ''): ?>
                         <div class="mm-activity-meta"><?php echo h($docMetaLine3); ?></div>
                       <?php endif; ?>
                       <?php if (trim((string)($docItem['case_title'] ?? '')) !== ''): ?>
@@ -3298,6 +3329,8 @@ if (!$embed) {
         payload.notes = { clinical: notesClinical };
       }
 
+      var requestType = (procedureType === 'other_procedure') ? 'procedure' : procedureType;
+
       genericProcedureSubmitting = true;
       syncGenericProcedureSubmitButton();
       setGenericProcedureFormError('');
@@ -3309,7 +3342,7 @@ if (!$embed) {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            type: procedureType,
+            type: requestType,
             title: title,
             event_datetime: eventDatetime,
             actor: { user_id: currentUserId || 'qa' },
