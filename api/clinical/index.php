@@ -1432,7 +1432,7 @@ function clinical_timeline_documents_fetch(PDO $pdo, string $patientId, int $lim
         return is_array($rows) ? $rows : [];
     };
 
-    $sqlWithAppointment = $baseSelectWithAppointment . " AND appointment_id IS NULL " . $cursorClause . $orderLimit;
+    $sqlWithAppointment = $baseSelectWithAppointment . " AND (appointment_id IS NULL OR document_type = 'procedure') " . $cursorClause . $orderLimit;
     $params = $paramsBase;
     if ($cursorDt !== null && $cursorUuid !== null) {
         $params[':cursor_dt'] = $cursorDt;
@@ -1486,6 +1486,11 @@ function clinical_timeline_document_item_from_row(array $row, string $patientId,
         'media_bundle_title' => $mediaMeta['media_bundle_title'],
         'media_bundle_note' => $mediaMeta['media_bundle_note'],
     ];
+    if ($appointmentId !== '') {
+        $clinicalDocument['context'] = [
+            'appointment_id' => $appointmentId,
+        ];
+    }
     if ($docType === 'immunization' || $docType === 'medication_administration' || $docType === 'wound_care' || $docType === 'procedure') {
         $payload = json_decode((string)($row['payload_json'] ?? ''), true);
         $clinicalDocument['payload'] = is_array($payload) ? $payload : [];
