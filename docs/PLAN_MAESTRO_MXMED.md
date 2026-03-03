@@ -490,6 +490,180 @@ curl -sS -X POST "http://127.0.0.1:8091/api/clinical/index.php/documents" \
 - Commit exacto de documentación:
   - `docs: close P9 medication_administration piloto in plan maestro`
 
+#### Cierre P9.1 — procedure ligado a appointment (timeline + UI)
+
+- Estado:
+  - Integrado y validado.
+  - No reabrir fases cerradas.
+- Qué cambió:
+  - Timeline backend ahora incluye documentos `procedure` aunque tengan `appointment_id`.
+  - Regla aplicada en `api/clinical/index.php`:
+    - `clinical_timeline_documents_fetch()` permite `appointment_id IS NULL OR document_type = 'procedure'`.
+  - Preview slim de timeline para documentos ahora expone `clinical_document.context.appointment_id` cuando existe.
+  - Fuente primaria para `appointment_id` en preview slim:
+    - `clinical_document.context.appointment_id`
+  - Fallback de compatibilidad:
+    - `clinical_document.payload.context.appointment_id` / `links.appointment_id`
+  - UI de historial agrega botón `Registrar procedimiento realizado` dentro de `mm-activity-actions` para appointments clasificados como `procedimiento`.
+  - El handler `data-action="register-procedure"` ya no hace POST directo:
+    - abre `openGenericProcedureModal('other_procedure', defaults)`
+    - precarga `appointmentId`, `defaultTitle`, `defaultDatetime`
+    - precarga nota `Registrado desde agenda`
+    - `defaultDatetime` sale de `start_at` / `event_datetime` y la UI lo convierte a formato `datetime-local` vía `toDatetimeLocalValue`
+  - `submitGenericProcedure()` ahora:
+    - usa `resolveClinicalActorUserId()` para `actor.user_id`
+    - envía `payload.notes` como string simple
+    - mantiene `context.appointment_id` desde `genericProcedureAppointmentId`
+- Por qué:
+  - Los `procedure` creados desde agenda estaban persistidos en `clinical_documents`, pero no aparecían en timeline si tenían `appointment_id`.
+  - La UI necesitaba un flujo consistente para pasar de `appointment` programado a `procedure` realizado sin duplicar lógica ni romper embed.
+- QA manual (comandos usados):
+  - Confirmar que timeline ya incluye `procedure` en tipos únicos:
+    - `include=clinical` es suficiente para validar documentos; `agenda` no es necesario en esta comprobación.
+```bash
+curl -sS "http://127.0.0.1:8091/api/clinical/index.php/patients/p_0c874aa9cbad/timeline?include=clinical&limit=100" \
+  | jq -r '[.data.items[] | select(.item_type=="document") | .clinical_document.document_type] | unique'
+```
+  - Salida validada:
+```json
+[
+  "bundle_clinical",
+  "image",
+  "immunization",
+  "note",
+  "procedure"
+]
+```
+  - Confirmar que `procedure` expone `appointment_id` en preview slim:
+```bash
+curl -sS "http://127.0.0.1:8091/api/clinical/index.php/patients/p_0c874aa9cbad/timeline?include=clinical&limit=100" \
+  | jq '[.data.items[] | select(.item_type=="document" and .clinical_document.document_type=="procedure") | {document_uuid: .clinical_document.document_uuid, appointment_id: (.clinical_document.context.appointment_id // .links.appointment_id // .clinical_document.payload.context.appointment_id // null)}]'
+```
+  - Salida validada:
+```json
+[
+  {
+    "document_uuid": "62fcc146-6999-4e0b-87ae-20606be3b4bf",
+    "appointment_id": "fe61cdd67e97dcfde3a70c02"
+  },
+  {
+    "document_uuid": "017e66d2-5250-4c32-a09b-b412ec056a48",
+    "appointment_id": "8928a5144fed68f1731f44b7"
+  }
+]
+```
+  - Confirmar sintaxis:
+```bash
+php -l api/clinical/index.php
+php -l modules/clinical/ui/historial.php
+```
+- Commits exactos:
+  - `a2142d6` `button + POST inicial`
+  - `d61042e` `register-procedure abre modal; submit usa actor id + notes string`
+  - `8d2cfbc` `timeline incluye procedure con appointment_id + expone appointment_id en slim preview`
+  - `e43a27c` `documents allow linking procedure to appointment_id en persistencia/payload`
+
+#### Cierre P9.2 — Cerrar consulta + Nota clínica AUTO (Cierre)
+
+- Estado:
+  - Integrado y validado.
+  - No reabrir fases cerradas.
+- Qué se implementó:
+  - `Consulta = Encounter` ahora tiene cierre formal vía `POST /encounters/{encounter_key}/finalize`.
+  - El cierre genera o actualiza una `Nota clínica AUTO (Cierre)` idempotente por consulta.
+  - La vista `encounter.php` muestra sección `Cierre` con:
+    - botón `Cerrar consulta` mientras el encounter está `open`
+    - badge `Consulta cerrada` cuando el encounter ya está `closed`
+    - acceso a `Ver Nota clínica AUTO (Cierre)`
+- Qué cambió:
+  - `api/clinical/index.php`
+    - `clinical_encounters_ensure_schema()` ahora asegura columnas:
+      - `status`
+      - `closed_at`
+      - `closed_by_user_id`
+      - `auto_note_uuid_final`
+    - normaliza encounters legacy `completed` a `open` si aún no están cerrados.
+    - agrega `clinical_encounter_finalize(...)` y `clinical_encounter_final_note_upsert(...)`.
+    - nuevo endpoint:
+      - `POST /encounters/{encounter_key}/finalize`
+    - `GET /encounters/{encounter_key}` ahora devuelve:
+      - `status`
+      - `closed_at`
+      - `closed_by_user_id`
+      - `auto_note_uuid_final`
+      - buckets clínicos (`vitals`, `notes`, `prescriptions`, `orders`, `results`, `procedures`)
+  - `modules/clinical/ui/encounter.php`
+    - mantiene el patrón actual de apertura desde historial
+    - muestra agenda real y eventos de agenda dentro de la consulta
+    - agrega flujo UI de cierre con confirmación y refresh
+    - si hay recetas:
+      - una receta: abre directo
+      - varias: lista sólo las recetas de esa consulta
+- Por qué:
+  - la información clínica cambia con el tiempo y la consulta necesitaba un snapshot final explícito, estable y legible.
+  - el estado formal `closed` evita depender de inferencias por documentos sueltos.
+- Contrato de la nota AUTO final:
+  - `document_type = note`
+  - `title = Nota clínica AUTO (Cierre)`
+  - `event_datetime = datetime original de la consulta`
+  - `payload.auto_generated = true`
+  - `payload.snapshot_type = encounter_auto_final`
+  - `payload.finalized = true`
+  - `payload.context.patient_id / appointment_id / encounter_id / encounter_key`
+  - `payload.snapshot.counts`
+  - `payload.snapshot.documents`
+- QA manual (comandos usados):
+  - Sintaxis:
+```bash
+php -l api/clinical/index.php
+php -l modules/clinical/ui/encounter.php
+```
+  - Antes de cerrar, verificar `status=open`:
+```bash
+curl -sS "http://127.0.0.1:8091/api/clinical/index.php/encounters/appt%3Afe61cdd67e97dcfde3a70c02%23enc%3A2" \
+  | jq '{status: .data.status, closed_at: .data.closed_at, auto_note_uuid_final: .data.auto_note_uuid_final, prescriptions: (.data.prescriptions|length)}'
+```
+  - Cerrar consulta:
+```bash
+curl -sS -X POST "http://127.0.0.1:8091/api/clinical/index.php/encounters/appt%3Afe61cdd67e97dcfde3a70c02%23enc%3A2/finalize" \
+  -H "Content-Type: application/json" \
+  -d '{"actor":{"user_id":"qa"}}' | jq
+```
+  - Validar estado cerrado e idempotencia:
+```bash
+curl -sS "http://127.0.0.1:8091/api/clinical/index.php/encounters/appt%3Afe61cdd67e97dcfde3a70c02%23enc%3A2" \
+  | jq '{status: .data.status, closed_at: .data.closed_at, auto_note_uuid_final: .data.auto_note_uuid_final}'
+```
+```bash
+curl -sS -X POST "http://127.0.0.1:8091/api/clinical/index.php/encounters/appt%3Afe61cdd67e97dcfde3a70c02%23enc%3A2/finalize" \
+  -H "Content-Type: application/json" \
+  -d '{"actor":{"user_id":"qa"}}' \
+  | jq '{status: .data.status, closed_at: .data.closed_at, auto_note_uuid_final: .data.auto_note_uuid_final, counts: .data.counts}'
+```
+  - Validar documento final:
+```bash
+AUTO_UUID=$(curl -sS "http://127.0.0.1:8091/api/clinical/index.php/encounters/appt%3Afe61cdd67e97dcfde3a70c02%23enc%3A2" \
+  | jq -r '.data.auto_note_uuid_final')
+
+curl -sS "http://127.0.0.1:8091/api/clinical/index.php/documents/$AUTO_UUID" \
+  | jq '{title: .data.document.title, event_datetime: .data.document.ui.event_datetime, snapshot_type: .data.document.content.payload.snapshot_type, auto_generated: .data.document.content.payload.auto_generated, finalized: .data.document.content.payload.finalized, context: .data.document.content.payload.context}'
+```
+  - Validar UI:
+```bash
+curl -sS "http://127.0.0.1:8092/modules/clinical/ui/encounter.php?encounter_key=appt%3Afe61cdd67e97dcfde3a70c02%23enc%3A2&embed=1" \
+  | rg -n "Cierre|Consulta cerrada|Nota clínica AUTO \\(Cierre\\)|Cerrar consulta" -n
+```
+- URLs de prueba:
+  - UI:
+    - `http://127.0.0.1:8092/modules/clinical/ui/encounter.php?encounter_key=appt%3Afe61cdd67e97dcfde3a70c02%23enc%3A2&embed=1`
+    - `http://127.0.0.1:8092/modules/clinical/ui/historial.php?patient_id=p_0c874aa9cbad&embed=1`
+  - API:
+    - `http://127.0.0.1:8091/api/clinical/index.php/encounters/appt%3Afe61cdd67e97dcfde3a70c02%23enc%3A2`
+    - `http://127.0.0.1:8091/api/clinical/index.php/encounters/appt%3Afe61cdd67e97dcfde3a70c02%23enc%3A2/finalize`
+- Commits exactos:
+  - `7321ed9` `clinical api: finalize encounters with auto closing note`
+  - `32a054e` `clinical ui: add cerrar consulta flow to encounter view`
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)
