@@ -1462,12 +1462,15 @@ if (!$embed) {
                 $item = $entryItem;
                 $agenda = is_array($item['agenda'] ?? null) ? $item['agenda'] : [];
                 $links = is_array($item['links'] ?? null) ? $item['links'] : [];
-                $appointmentRef = trim((string)($links['appointment_id'] ?? ''));
+                $appointmentId = trim((string)($links['appointment_id'] ?? ''));
+                $appointmentRef = $appointmentId !== ''
+                    ? 'appt:' . $appointmentId
+                    : trim((string)($item['ref'] ?? ''));
                 $isInActiveCase = (bool)($item['is_in_active_case'] ?? false);
                 $itemCaseId = trim((string)($item['case_id'] ?? ''));
                 $appointmentHasEncounter = (bool)($item['has_encounter'] ?? false);
                 $appointmentLatestEncounterKey = trim((string)($item['latest_encounter_key'] ?? ''));
-                $appointmentEpisodeId = trim((string)(($item['links']['appointment_id'] ?? '')));
+                $appointmentEpisodeId = $appointmentId;
                 $appointmentEncounterKey = trim((string)($item['encounter_key'] ?? ''));
                 $appointmentClinicalCategory = trim((string)($item['clinical_category'] ?? ''));
                 $appointmentReasonText = trim((string)($agenda['reason_text'] ?? ''));
