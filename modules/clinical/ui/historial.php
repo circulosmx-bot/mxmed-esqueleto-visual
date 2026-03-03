@@ -551,7 +551,7 @@ $include = trim((string)($_GET['include'] ?? 'agenda,clinical'));
 $limit = (int)($_GET['limit'] ?? 20);
 $cursor = trim((string)($_GET['cursor'] ?? ''));
 $direction = trim((string)($_GET['direction'] ?? ''));
-$include = $include !== '' ? $include : 'agenda,clinical';
+$include = 'agenda,clinical';
 $limit = ($limit > 0 && $limit <= 200) ? $limit : 20;
 require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
