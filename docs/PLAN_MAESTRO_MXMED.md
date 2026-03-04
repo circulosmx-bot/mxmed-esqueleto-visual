@@ -706,12 +706,29 @@ curl -sS "http://127.0.0.1:8092/modules/clinical/ui/encounter.php?encounter_key=
   - No bloquea P10.
   - Diseñar para que, a futuro, si hay receta emitida en esa consulta, `Cerrar consulta` pueda dejar un vínculo/navegación a la receta asociada sin obligar implementación en esta fase.
 
+- Implementación (commits)
+  - `ebf6f4e` `MXMed P10: Ambiente A patients embed adds iniciar/ON AIR/cerrar consulta in parent`
+  - `e27efe7` `clinical api: enable patients/{patient_id}/encounters/active route`
+  - `453daad` `MXMed P10: parent uses fallback user id for active encounter API calls`
+  - `d4f1e0a` `MXMed P10: make ON AIR bar sticky in patients embed host`
+
+- QA (evidencia)
+  - Se validó en dashboard (`index.html`) dentro de `Pacientes > Expediente > Historial de atención`.
+  - Flujo: `Iniciar consulta -> ON AIR -> Cerrar consulta`.
+  - Se confirmó que cerrar genera `Nota clínica AUTO (Cierre)` con:
+    - `snapshot_type=encounter_auto_final`
+    - `auto_generated=true`
+    - `finalized=true`
+  - Se confirmó que después del cierre ya no existe consulta activa para ese paciente.
+
 - Checklist de implementación (para la siguiente fase)
   1. Confirmar fuente única de `patient_id` en parent (`#p-expediente[data-patient-id]` como primaria).
   2. Insertar UI ON AIR + `Iniciar consulta` en `index.html` dentro del tab host.
   3. Parent: al abrir tab, consultar `encounters/active` y setear modo del iframe.
   4. Mantener `mxmed:embed:navigate` intacto.
   5. QA: probar flujo desde Pacientes (nuevo/buscar) y luego desde Agenda cuando exista UI.
+
+- Estado: `CERRADA`
 
 ## B. Arquitectura universal (actual + futura)
 
