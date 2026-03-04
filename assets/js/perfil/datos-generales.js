@@ -149,24 +149,36 @@
     let lastCreateAttemptAt = 0;
 
     const getActivePatientId = ()=>{
+      if(typeof window.resolveActivePatientId === 'function'){
+        const resolved = String(window.resolveActivePatientId() || '').trim();
+        if(resolved) return resolved;
+      }
       if(!expedienteRoot) return '';
       const fromData = String(expedienteRoot.dataset?.activePatientId || expedienteRoot.dataset?.patientId || '').trim();
       if(fromData) return fromData;
       const fromAttr = String(expedienteRoot.getAttribute('data-active-patient-id') || expedienteRoot.getAttribute('data-patient-id') || '').trim();
       if(fromAttr) return fromAttr;
-      const fromGlobal = String(window.mxmedActivePatientId || window.__MXMED_ACTIVE_PATIENT_ID || '').trim();
+      const fromGlobal = String(window.mxmedActivePatientId || window.__MXMED_ACTIVE_PATIENT_ID || (window.mxmedStore && window.mxmedStore.activePatientId) || '').trim();
       return fromGlobal;
     };
 
     const setActivePatientId = (patientId)=>{
       const pid = String(patientId || '').trim();
-      if(!pid || !expedienteRoot) return;
+      if(!pid) return;
+      if(typeof window.setActivePatientId === 'function'){
+        window.setActivePatientId(pid, { emitEvent: true });
+        return;
+      }
+      if(!expedienteRoot) return;
       expedienteRoot.dataset.activePatientId = pid;
       expedienteRoot.dataset.patientId = pid;
       expedienteRoot.setAttribute('data-active-patient-id', pid);
       expedienteRoot.setAttribute('data-patient-id', pid);
       window.mxmedActivePatientId = pid;
       window.__MXMED_ACTIVE_PATIENT_ID = pid;
+      if(window.mxmedStore && typeof window.mxmedStore === 'object'){
+        window.mxmedStore.activePatientId = pid;
+      }
       window.dispatchEvent(new Event('patient:selected'));
     };
 

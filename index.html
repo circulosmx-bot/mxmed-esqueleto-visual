@@ -6561,29 +6561,54 @@
       return historialPane.classList.contains('show') || historialPane.classList.contains('active');
     }
 
-    function resolveActivePatientId() {
-      var fromPatientId = String(expedientePane.getAttribute('data-patient-id') || expedientePane.dataset.patientId || '').trim();
+    function readActivePatientId() {
+      if (typeof window.resolveActivePatientId === 'function') {
+        var resolved = String(window.resolveActivePatientId() || '').trim();
+        if (resolved) return resolved;
+      }
+
+      var panel = document.getElementById('p-expediente');
+      var fromPatientId = String((panel && (panel.dataset.patientId || panel.getAttribute('data-patient-id'))) || '').trim();
       if (fromPatientId) return fromPatientId;
 
-      var fromActivePatientId = String(expedientePane.getAttribute('data-active-patient-id') || expedientePane.dataset.activePatientId || '').trim();
+      var fromActivePatientId = String((panel && (panel.dataset.activePatientId || panel.getAttribute('data-active-patient-id'))) || '').trim();
       if (fromActivePatientId) return fromActivePatientId;
 
       var globalCandidates = [
         window.mxmedActivePatientId,
         window.__MXMED_ACTIVE_PATIENT_ID,
-        window.mxmedPatient && window.mxmedPatient.patient_id,
-        window.mxmedPatientContext && window.mxmedPatientContext.patient_id,
-        window.mxmedStore && window.mxmedStore.activePatientId,
-        window.mxmedStore && window.mxmedStore.patient_id
+        window.mxmedStore && window.mxmedStore.activePatientId
       ];
       for (var i = 0; i < globalCandidates.length; i += 1) {
         var candidate = String(globalCandidates[i] || '').trim();
         if (candidate) return candidate;
       }
 
-      var fromQuery = getParam('patient_id');
+      var fromQuery = getParam('patient_id') || getParam('patientId');
       if (fromQuery && fromQuery.trim() !== '') return fromQuery.trim();
       return null;
+    }
+
+    function syncActivePatientId(patientId) {
+      var next = String(patientId || '').trim();
+      if (!next) return next;
+      if (typeof window.setActivePatientId === 'function') {
+        window.setActivePatientId(next, { emitEvent: false });
+        return next;
+      }
+      var panel = document.getElementById('p-expediente');
+      if (panel) {
+        panel.dataset.patientId = next;
+        panel.dataset.activePatientId = next;
+        panel.setAttribute('data-patient-id', next);
+        panel.setAttribute('data-active-patient-id', next);
+      }
+      window.mxmedActivePatientId = next;
+      window.__MXMED_ACTIVE_PATIENT_ID = next;
+      if (window.mxmedStore && typeof window.mxmedStore === 'object') {
+        window.mxmedStore.activePatientId = next;
+      }
+      return next;
     }
 
     function resolveEncounterKey() {
@@ -6680,7 +6705,7 @@
     }
 
     function renderP10Bar(state) {
-      var patientId = resolveActivePatientId();
+      var patientId = readActivePatientId();
       if (!patientId) {
         p10Bar.classList.add('d-none');
         p10Bar.dataset.encounterKey = '';
@@ -6807,7 +6832,7 @@
     }
 
     function refreshP10() {
-      var patientId = resolveActivePatientId();
+      var patientId = readActivePatientId();
       if (!patientId) {
         renderP10Bar({ hasActive: false });
         return Promise.resolve({ hasActive: false });
@@ -6857,7 +6882,7 @@
     }
 
     function ensureEmbedIframe() {
-      var pid = resolveActivePatientId();
+      var pid = syncActivePatientId(readActivePatientId());
       var useDemo = !pid;
       var context = {
         patientId: useDemo ? 'demo' : pid,
@@ -6955,7 +6980,7 @@
     if (p10StartBtn) {
       p10StartBtn.addEventListener('click', function () {
         if (p10Loading) return;
-        var patientId = resolveActivePatientId();
+        var patientId = readActivePatientId();
         if (!patientId) {
           window.alert('No se encontró patient_id activo para iniciar consulta.');
           return;

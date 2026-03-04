@@ -2750,6 +2750,9 @@ console.info('app.js loaded :: 20251123a');
     pane.setAttribute('data-active-patient-id', next);
     window.mxmedActivePatientId = next;
     window.__MXMED_ACTIVE_PATIENT_ID = next;
+    if(window.mxmedStore && typeof window.mxmedStore === 'object'){
+      window.mxmedStore.activePatientId = next;
+    }
     setSessionPatientId(next);
     setHashPatientId(next);
     if(opts.source !== 'hashchange' && opts.emitEvent === true){
@@ -2757,31 +2760,35 @@ console.info('app.js loaded :: 20251123a');
     }
     applyPatientGate();
   };
+  window.setActivePatientId = setActivePatientId;
   window.mxmedSetActivePatientId = setActivePatientId;
 
   const getActivePatientId = ()=>{
-    const fromHash = getHashPatientId();
-    if(fromHash) return fromHash;
-
     const fromPane = String(pane.dataset?.patientId || pane.getAttribute('data-patient-id') || '').trim();
     if(fromPane) return fromPane;
 
-    const fromPaneActive = String(pane.dataset?.activePatientId || pane.getAttribute('data-active-patient-id') || '').trim();
-    if(fromPaneActive) return fromPaneActive;
-
     const fallback = [
       window.mxmedActivePatientId,
-      window.__MXMED_ACTIVE_PATIENT_ID
+      window.__MXMED_ACTIVE_PATIENT_ID,
+      window.mxmedStore && window.mxmedStore.activePatientId
     ];
     for(const raw of fallback){
       const value = String(raw || '').trim();
       if(value) return value;
     }
 
+    const fromPaneActive = String(pane.dataset?.activePatientId || pane.getAttribute('data-active-patient-id') || '').trim();
+    if(fromPaneActive) return fromPaneActive;
+
+    const fromHash = getHashPatientId();
+    if(fromHash) return fromHash;
+
     const fromSession = getSessionPatientId();
     if(fromSession) return fromSession;
     return null;
   };
+  window.resolveActivePatientId = getActivePatientId;
+  window.mxmedResolveActivePatientId = getActivePatientId;
 
   const applyPatientGate = ()=>{
     const gateOn = String(getActivePatientId() || '').trim() !== '';
