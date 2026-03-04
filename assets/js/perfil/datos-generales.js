@@ -195,12 +195,21 @@
       const yy = (expedienteRoot.querySelector('[data-dg-anio]')?.value || '').trim();
       const sex = (expedienteRoot.querySelector('input[name="pac-genero"]:checked')?.value || '').trim();
       const birthdate = (yy && mm && dd) ? `${yy}-${mm}-${dd}` : null;
+      const doctorId = String(
+        (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : '') ||
+        document.body?.dataset?.doctorId ||
+        ''
+      ).trim();
 
-      return {
+      const payload = {
         display_name: displayName,
         birthdate: birthdate || undefined,
         sex: sex || undefined
       };
+      if(doctorId){
+        payload.doctor_id = doctorId;
+      }
+      return payload;
     };
 
     const ensureActivePatientFromAutosave = ()=>{
