@@ -3370,6 +3370,21 @@
               <div class="tab-pane fade" id="t-historial-atencion">
                 <div class="clinical-panel mt-2 p-2">
                   <div class="small text-secondary mb-2">Historial de atención (vista embebida)</div>
+                  <div id="mm-p10-bar" class="d-none mb-2">
+                    <div class="alert alert-light border d-flex flex-wrap align-items-center justify-content-between gap-2 py-2 px-3 mb-0">
+                      <div class="d-flex flex-column gap-1">
+                        <div class="d-flex align-items-center gap-2 d-none" data-role="p10-on-air">
+                          <span aria-hidden="true" style="display:inline-block;width:.8rem;height:.8rem;border-radius:999px;background:#11c26d;box-shadow:0 0 0 .18rem rgba(17,194,109,.18),0 0 14px rgba(17,194,109,.55);"></span>
+                          <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none align-baseline" data-action="p10-open-active-encounter">Consulta activa</button>
+                        </div>
+                        <div class="small text-secondary" data-role="p10-status-text">No hay consulta activa para este paciente</div>
+                      </div>
+                      <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-primary btn-sm" data-action="p10-start-encounter">Iniciar consulta</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-none" data-action="p10-finalize-encounter">Cerrar consulta</button>
+                      </div>
+                    </div>
+                  </div>
                   <div class="btn-group btn-group-sm mb-2" role="group" aria-label="Subvistas de historial">
                     <button type="button" class="btn btn-outline-primary active" data-embed-mode="historial">Historial</button>
                     <button type="button" class="btn btn-outline-primary" data-embed-mode="encounter">Episodio</button>
@@ -6517,13 +6532,22 @@
     var historialPane = document.getElementById('t-historial-atencion');
     var iframe = document.getElementById('mm-embed-historial');
     var emptyMsg = document.getElementById('mm-embed-historial-empty');
+    var p10Bar = document.getElementById('mm-p10-bar');
     var expedientePane = document.getElementById('p-expediente');
     var modeButtons = historialPane ? Array.from(historialPane.querySelectorAll('[data-embed-mode]')) : [];
-    if (!historialTabBtn || !historialPane || !iframe || !expedientePane || !modeButtons.length) return;
+    if (!historialTabBtn || !historialPane || !iframe || !emptyMsg || !p10Bar || !expedientePane || !modeButtons.length) return;
     var activeMode = 'historial';
     var lastLoadedKey = '';
     var forcedEncounterKey = '';
     var forcedDocumentUuid = '';
+    var p10ActiveEncounter = null;
+    var p10PollingTimer = null;
+    var p10Loading = false;
+    var p10OnAir = p10Bar.querySelector('[data-role="p10-on-air"]');
+    var p10StatusText = p10Bar.querySelector('[data-role="p10-status-text"]');
+    var p10StartBtn = p10Bar.querySelector('[data-action="p10-start-encounter"]');
+    var p10FinalizeBtn = p10Bar.querySelector('[data-action="p10-finalize-encounter"]');
+    var p10OpenBtn = p10Bar.querySelector('[data-action="p10-open-active-encounter"]');
 
     function getParam(name) {
       try {
@@ -6588,6 +6612,234 @@
       return '/modules/clinical/ui/historial.php?patient_id=' + encodeURIComponent(context.patientId) + '&embed=1';
     }
 
+    function padDatePart(value) {
+      return String(value || '').padStart(2, '0');
+    }
+
+    function formatNowMysql() {
+      var now = new Date();
+      return [
+        now.getFullYear(),
+        padDatePart(now.getMonth() + 1),
+        padDatePart(now.getDate())
+      ].join('-') + ' ' + [
+        padDatePart(now.getHours()),
+        padDatePart(now.getMinutes()),
+        padDatePart(now.getSeconds())
+      ].join(':');
+    }
+
+    function resolveClinicalUserId() {
+      var candidates = [
+        window.mxmedUserId,
+        window.__MXMED_USER_ID,
+        window.mxmedStore && window.mxmedStore.user_id,
+        document.body && document.body.dataset ? document.body.dataset.userId : ''
+      ];
+      for (var i = 0; i < candidates.length; i += 1) {
+        var candidate = String(candidates[i] || '').trim();
+        if (candidate) return candidate;
+      }
+      return '';
+    }
+
+    function buildClinicalHeaders(extraHeaders) {
+      var headers = { 'Accept': 'application/json' };
+      var userId = resolveClinicalUserId();
+      if (userId) {
+        headers['X-User-Id'] = userId;
+      }
+      if (extraHeaders && typeof extraHeaders === 'object') {
+        Object.keys(extraHeaders).forEach(function (key) {
+          headers[key] = extraHeaders[key];
+        });
+      }
+      return headers;
+    }
+
+    function fetchJson(url, options) {
+      return fetch(url, options).then(function (response) {
+        return response.json().catch(function () { return null; }).then(function (data) {
+          return { response: response, data: data };
+        });
+      });
+    }
+
+    function setP10Loading(flag) {
+      p10Loading = !!flag;
+      if (p10StartBtn) {
+        p10StartBtn.disabled = !!flag;
+        p10StartBtn.textContent = flag ? 'Abriendo…' : 'Iniciar consulta';
+      }
+      if (p10FinalizeBtn) {
+        p10FinalizeBtn.disabled = !!flag;
+        p10FinalizeBtn.textContent = flag ? 'Cerrando…' : 'Cerrar consulta';
+      }
+      if (p10OpenBtn) {
+        p10OpenBtn.disabled = !!flag;
+      }
+    }
+
+    function renderP10Bar(state) {
+      var patientId = resolveActivePatientId();
+      if (!patientId) {
+        p10Bar.classList.add('d-none');
+        p10Bar.dataset.encounterKey = '';
+        p10ActiveEncounter = null;
+        return;
+      }
+
+      p10Bar.classList.remove('d-none');
+      var hasActive = !!(state && state.hasActive && state.encounter_key);
+      p10ActiveEncounter = hasActive ? state : null;
+      p10Bar.dataset.encounterKey = hasActive ? String(state.encounter_key || '').trim() : '';
+      if (p10OnAir) p10OnAir.classList.toggle('d-none', !hasActive);
+      if (p10StartBtn) p10StartBtn.classList.toggle('d-none', hasActive);
+      if (p10FinalizeBtn) p10FinalizeBtn.classList.toggle('d-none', !hasActive);
+
+      if (p10StatusText) {
+        if (hasActive) {
+          p10StatusText.textContent = 'Consulta activa para este paciente';
+        } else if (state && state.errorMessage) {
+          p10StatusText.textContent = state.errorMessage;
+        } else {
+          p10StatusText.textContent = 'No hay consulta activa para este paciente';
+        }
+      }
+    }
+
+    function fetchActiveEncounter(patientId) {
+      var safePatientId = String(patientId || '').trim();
+      if (!safePatientId) {
+        return Promise.resolve({ hasActive: false });
+      }
+      return fetchJson('/api/clinical/index.php/patients/' + encodeURIComponent(safePatientId) + '/encounters/active', {
+        method: 'GET',
+        headers: buildClinicalHeaders(),
+        credentials: 'same-origin'
+      }).then(function (result) {
+        var resp = result.data;
+        if (!resp || resp.ok !== true || !resp.data || !resp.data.encounter_key) {
+          return {
+            hasActive: false,
+            errorMessage: resp && resp.ok === false ? String(resp.message || resp.error || '').trim() : ''
+          };
+        }
+        return {
+          hasActive: true,
+          encounter_key: String(resp.data.encounter_key || '').trim(),
+          appointment_id: String(resp.data.appointment_id || '').trim(),
+          status: String(resp.data.status || '').trim()
+        };
+      }).catch(function (err) {
+        return {
+          hasActive: false,
+          errorMessage: String((err && err.message) || 'No se pudo consultar la consulta activa.').trim()
+        };
+      });
+    }
+
+    function openEncounterInEmbed(encounterKey) {
+      var safeEncounterKey = String(encounterKey || '').trim();
+      if (!safeEncounterKey) return;
+      forcedEncounterKey = safeEncounterKey;
+      forcedDocumentUuid = '';
+      setActiveMode('encounter');
+      if (isHistorialTabVisible()) ensureEmbedIframe();
+    }
+
+    function startEncounter(patientId) {
+      var safePatientId = String(patientId || '').trim();
+      if (!safePatientId) {
+        return Promise.reject(new Error('No se encontró patient_id activo.'));
+      }
+      return fetchActiveEncounter(safePatientId).then(function (activeState) {
+        if (activeState && activeState.hasActive && activeState.encounter_key) {
+          return activeState;
+        }
+        return fetchJson('/api/clinical/index.php/patients/' + encodeURIComponent(safePatientId) + '/encounters', {
+          method: 'POST',
+          headers: buildClinicalHeaders({ 'Content-Type': 'application/json' }),
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            status: 'open',
+            encounter_type: 'outpatient',
+            encounter_dt: formatNowMysql()
+          })
+        }).then(function (result) {
+          var resp = result.data;
+          if (!resp || resp.ok !== true || !resp.data || !resp.data.encounter_key) {
+            throw new Error(String((resp && (resp.message || resp.error)) || 'No se pudo iniciar la consulta.'));
+          }
+          return {
+            hasActive: true,
+            encounter_key: String(resp.data.encounter_key || '').trim(),
+            appointment_id: String(resp.data.appointment_id || '').trim(),
+            status: String(resp.data.status || 'open').trim()
+          };
+        });
+      });
+    }
+
+    function finalizeEncounter(encounterKey) {
+      var safeEncounterKey = String(encounterKey || '').trim();
+      var userId = resolveClinicalUserId();
+      if (!safeEncounterKey) {
+        return Promise.reject(new Error('No se encontró la consulta activa.'));
+      }
+      return fetchJson('/api/clinical/index.php/encounters/' + encodeURIComponent(safeEncounterKey) + '/finalize', {
+        method: 'POST',
+        headers: buildClinicalHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          actor: { user_id: userId || 'qa' }
+        })
+      }).then(function (result) {
+        var resp = result.data;
+        if (!resp || resp.ok !== true) {
+          throw new Error(String((resp && (resp.message || resp.error)) || 'No se pudo cerrar la consulta.'));
+        }
+        forcedEncounterKey = '';
+        forcedDocumentUuid = '';
+        setActiveMode('historial');
+        ensureEmbedIframe();
+        return resp;
+      });
+    }
+
+    function refreshP10() {
+      var patientId = resolveActivePatientId();
+      if (!patientId) {
+        renderP10Bar({ hasActive: false });
+        return Promise.resolve({ hasActive: false });
+      }
+      return fetchActiveEncounter(patientId).then(function (state) {
+        renderP10Bar(state);
+        return state;
+      });
+    }
+
+    function stopP10Polling() {
+      if (p10PollingTimer) {
+        window.clearInterval(p10PollingTimer);
+        p10PollingTimer = null;
+      }
+    }
+
+    function updateP10Polling() {
+      if (!isHistorialTabVisible()) {
+        stopP10Polling();
+        return;
+      }
+      if (!p10PollingTimer) {
+        p10PollingTimer = window.setInterval(function () {
+          if (!p10Loading) {
+            refreshP10();
+          }
+        }, 5000);
+      }
+    }
+
     function setActiveMode(mode) {
       activeMode = mode;
       modeButtons.forEach(function (btn) {
@@ -6643,7 +6895,11 @@
       });
     });
 
-    historialTabBtn.addEventListener('shown.bs.tab', ensureEmbedIframe);
+    historialTabBtn.addEventListener('shown.bs.tab', function () {
+      ensureEmbedIframe();
+      refreshP10();
+      updateP10Polling();
+    });
     iframe.addEventListener('load', function () {
       updateTimelineFilterVisibility(activeMode);
     });
@@ -6653,15 +6909,24 @@
     );
     patientInputs.forEach(function (el) {
       el.addEventListener('input', function () {
-        if (isHistorialTabVisible()) ensureEmbedIframe();
+        if (isHistorialTabVisible()) {
+          ensureEmbedIframe();
+          refreshP10();
+        }
       });
       el.addEventListener('change', function () {
-        if (isHistorialTabVisible()) ensureEmbedIframe();
+        if (isHistorialTabVisible()) {
+          ensureEmbedIframe();
+          refreshP10();
+        }
       });
     });
 
     var observer = new MutationObserver(function () {
-      if (isHistorialTabVisible()) ensureEmbedIframe();
+      if (isHistorialTabVisible()) {
+        ensureEmbedIframe();
+        refreshP10();
+      }
     });
     observer.observe(expedientePane, { attributes: true, attributeFilter: ['data-patient-id', 'data-active-patient-id'] });
 
@@ -6670,9 +6935,69 @@
         forcedEncounterKey = '';
         forcedDocumentUuid = '';
         setActiveMode('historial');
-        if (isHistorialTabVisible()) ensureEmbedIframe();
+        if (isHistorialTabVisible()) {
+          ensureEmbedIframe();
+          refreshP10();
+        }
       });
     });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-bs-toggle="pill"]'), function (tabBtn) {
+      tabBtn.addEventListener('shown.bs.tab', updateP10Polling);
+    });
+
+    if (p10OpenBtn) {
+      p10OpenBtn.addEventListener('click', function () {
+        if (p10Loading || !p10ActiveEncounter || !p10ActiveEncounter.encounter_key) return;
+        openEncounterInEmbed(p10ActiveEncounter.encounter_key);
+      });
+    }
+
+    if (p10StartBtn) {
+      p10StartBtn.addEventListener('click', function () {
+        if (p10Loading) return;
+        var patientId = resolveActivePatientId();
+        if (!patientId) {
+          window.alert('No se encontró patient_id activo para iniciar consulta.');
+          return;
+        }
+        setP10Loading(true);
+        startEncounter(patientId)
+          .then(function (state) {
+            renderP10Bar(state);
+            if (state && state.encounter_key) {
+              openEncounterInEmbed(state.encounter_key);
+            }
+          })
+          .catch(function (err) {
+            window.alert(String((err && err.message) || 'No se pudo iniciar la consulta.'));
+          })
+          .finally(function () {
+            setP10Loading(false);
+            refreshP10();
+          });
+      });
+    }
+
+    if (p10FinalizeBtn) {
+      p10FinalizeBtn.addEventListener('click', function () {
+        if (p10Loading || !p10ActiveEncounter || !p10ActiveEncounter.encounter_key) return;
+        if (!window.confirm('¿Cerrar consulta? Se generará nota clínica AUTO de cierre.')) {
+          return;
+        }
+        setP10Loading(true);
+        finalizeEncounter(p10ActiveEncounter.encounter_key)
+          .then(function () {
+            return refreshP10();
+          })
+          .catch(function (err) {
+            window.alert(String((err && err.message) || 'No se pudo cerrar la consulta.'));
+          })
+          .finally(function () {
+            setP10Loading(false);
+          });
+      });
+    }
 
     window.addEventListener('message', function (event) {
       if (!event || event.source !== iframe.contentWindow) return;
@@ -6696,13 +7021,16 @@
 
       if (isHistorialTabVisible()) {
         ensureEmbedIframe();
+        refreshP10();
       }
     });
 
     if (historialTabBtn.classList.contains('active') || historialPane.classList.contains('show')) {
       ensureEmbedIframe();
+      refreshP10();
     }
     updateTimelineFilterVisibility(activeMode);
+    updateP10Polling();
   })();
 </script>
 <script>
