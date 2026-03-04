@@ -664,6 +664,55 @@ curl -sS "http://127.0.0.1:8092/modules/clinical/ui/encounter.php?encounter_key=
   - `7321ed9` `clinical api: finalize encounters with auto closing note`
   - `32a054e` `clinical ui: add cerrar consulta flow to encounter view`
 
+#### Fase P10 — Integración Clínica en Ambiente A (Iniciar / ON AIR / Cerrar consulta)
+
+- Estado actual (consolidado)
+  - Clinical embed funcionando en Pacientes: `#p-expediente > #t-historial-atencion`.
+  - Navegación child→parent por `mxmed:embed:navigate`.
+  - Encounter: `open` / `active` / `finalize`.
+  - Nota clínica AUTO por consulta + nota AUTO final (cierre).
+  - Timeline incluye `procedure` aunque tenga `appointment_id`.
+
+- Decisión de arquitectura
+  - Parent (Ambiente A) orquesta:
+    - resolver `patient_id`
+    - consultar encounter activo
+    - decidir modo del iframe (`historial` vs `encounter` vs `document`)
+    - mostrar indicador ON AIR
+    - ejecutar `Cerrar consulta`
+  - Child clínico:
+    - no conoce el estado global del dashboard
+    - sigue reusable: standalone o embed
+    - se mantiene compatibilidad del contrato `mxmed:embed:navigate` (no romper)
+
+- Regla operativa
+  - `1 consulta activa por médico y por paciente`.
+  - Enforcement en backend (idempotencia al crear `open`).
+  - UI solo consulta estado y refleja.
+
+- UX target (Ambiente A)
+  - Host oficial: tab `Historial de atención` dentro de Pacientes.
+  - Comportamiento:
+    - Si NO hay activa: mostrar botón `Iniciar consulta`.
+    - Si SÍ hay activa: mostrar barra discreta ON AIR (LED verde) + `Consulta activa` (link) + `Cerrar consulta`.
+  - `Cerrar consulta` genera nota clínica AUTO final (foto fija del momento).
+
+- Endpoints involucrados (referencia)
+  - `GET /api/clinical/index.php/patients/{patient_id}/encounters/active`
+  - `POST /api/clinical/index.php/patients/{patient_id}/encounters` (idempotente si ya hay `open`)
+  - `POST /api/clinical/index.php/encounters/{encounter_key}/finalize`
+
+- Nota sobre Recetas (pendiente)
+  - No bloquea P10.
+  - Diseñar para que, a futuro, si hay receta emitida en esa consulta, `Cerrar consulta` pueda dejar un vínculo/navegación a la receta asociada sin obligar implementación en esta fase.
+
+- Checklist de implementación (para la siguiente fase)
+  1. Confirmar fuente única de `patient_id` en parent (`#p-expediente[data-patient-id]` como primaria).
+  2. Insertar UI ON AIR + `Iniciar consulta` en `index.html` dentro del tab host.
+  3. Parent: al abrir tab, consultar `encounters/active` y setear modo del iframe.
+  4. Mantener `mxmed:embed:navigate` intacto.
+  5. QA: probar flujo desde Pacientes (nuevo/buscar) y luego desde Agenda cuando exista UI.
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)
