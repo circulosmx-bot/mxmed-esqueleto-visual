@@ -17,15 +17,25 @@ header('Content-Type: application/json');
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $uri = $_SERVER['REQUEST_URI'] ?? '/';
 
-// Normaliza para casos /api/patients/index.php/...
-$script = $_SERVER['SCRIPT_NAME'] ?? '';
-$base = $script;
-if (substr($script, -strlen('index.php')) === 'index.php') {
-    $base = substr($script, 0, -strlen('index.php'));
+// Preferimos recortar desde un marcador fijo porque SCRIPT_NAME puede variar según el server.
+$path = parse_url($uri, PHP_URL_PATH);
+$path = is_string($path) ? $path : '';
+$marker = '/api/patients/index.php';
+$pos = strpos($path, $marker);
+if ($pos !== false) {
+    $relative = substr($path, $pos + strlen($marker));
+} else {
+    // Fallback legado para mantener compatibilidad en despliegues con rutas distintas.
+    $script = $_SERVER['SCRIPT_NAME'] ?? '';
+    $base = $script;
+    if (substr($script, -strlen('index.php')) === 'index.php') {
+        $base = substr($script, 0, -strlen('index.php'));
+    }
+    $relative = substr($uri, strlen($base));
 }
-$relative = substr($uri, strlen($base));
 $relative = trim($relative, '/');
 $segments = $relative === '' ? [] : explode('/', $relative);
+// Compat con llamadas donde aún llega index.php como primer segmento.
 if (!empty($segments) && $segments[0] === 'index.php') {
     array_shift($segments);
 }
