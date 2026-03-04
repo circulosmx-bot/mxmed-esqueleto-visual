@@ -6640,15 +6640,14 @@
         var candidate = String(candidates[i] || '').trim();
         if (candidate) return candidate;
       }
-      return '';
+      return 'qa';
     }
 
     function buildClinicalHeaders(extraHeaders) {
-      var headers = { 'Accept': 'application/json' };
-      var userId = resolveClinicalUserId();
-      if (userId) {
-        headers['X-User-Id'] = userId;
-      }
+      var headers = {
+        'Accept': 'application/json',
+        'X-User-Id': resolveClinicalUserId()
+      };
       if (extraHeaders && typeof extraHeaders === 'object') {
         Object.keys(extraHeaders).forEach(function (key) {
           headers[key] = extraHeaders[key];
@@ -6792,7 +6791,7 @@
         headers: buildClinicalHeaders({ 'Content-Type': 'application/json' }),
         credentials: 'same-origin',
         body: JSON.stringify({
-          actor: { user_id: userId || 'qa' }
+          actor: { user_id: userId }
         })
       }).then(function (result) {
         var resp = result.data;
