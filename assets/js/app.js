@@ -7829,6 +7829,8 @@ function mxResetLogoPreview(){
     }
     return '/api/patients/index.php/patients';
   }
+  window.resolveDoctorId = resolveDoctorId;
+  window.resolvePatientsSearchUrl = resolvePatientsSearchUrl;
   let debounceTimer = null;
   let cachedList = null;
   let cachedAt = 0;
