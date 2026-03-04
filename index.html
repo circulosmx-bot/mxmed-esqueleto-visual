@@ -2744,13 +2744,23 @@
 
             <div class="row g-3">
 
-              <div class="col-md-4"><input class="form-control" placeholder="Buscar por nombre, CURP
+              <div class="col-md-4"><input id="mm-pac-archivo-q" class="form-control" placeholder="Buscar por nombre, CURP
 "></div>
 
-              <div class="col-md-4"><select class="form-select"><option>Todos</option><option>Con citas recientes</option><option>Inactivos</option></select></div>
+              <div class="col-md-3"><select id="mm-pac-archivo-filter" class="form-select"><option value="all">Todos</option><option value="recent">Con citas recientes</option><option value="inactive">Inactivos</option></select></div>
 
-              <div class="col-md-4"><button class="btn btn-primary"><i class="bi bi-person-plus"></i> Nuevo paciente</button></div>
+              <div class="col-md-2"><button id="mm-pac-archivo-search" type="button" class="btn btn-outline-primary w-100">Buscar</button></div>
 
+              <div class="col-md-3"><button id="mm-pac-archivo-new" class="btn btn-primary w-100"><i class="bi bi-person-plus"></i> Nuevo paciente</button></div>
+
+            </div>
+
+            <div id="mm-pac-archivo-msg" class="alert alert-info mt-3 d-none"></div>
+            <div class="table-responsive mt-2">
+              <table class="table table-sm" id="mm-pac-archivo-table">
+                <thead><tr><th>Paciente</th><th>CURP</th><th></th></tr></thead>
+                <tbody id="mm-pac-archivo-tbody"></tbody>
+              </table>
             </div>
 
             <div class="mt-3">
