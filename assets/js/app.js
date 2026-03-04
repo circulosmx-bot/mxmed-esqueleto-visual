@@ -7794,3 +7794,202 @@ function mxResetLogoPreview(){
     calc();
   }
 })();
+
+// ====== Pacientes: buscar en archivo ======
+(function(){
+  const pane = document.getElementById('p-pac-archivo');
+  if(!pane) return;
+
+  const qEl = document.getElementById('mm-pac-archivo-q');
+  const filterEl = document.getElementById('mm-pac-archivo-filter');
+  const searchBtn = document.getElementById('mm-pac-archivo-search');
+  const msgEl = document.getElementById('mm-pac-archivo-msg');
+  const tbodyEl = document.getElementById('mm-pac-archivo-tbody');
+  if(!qEl || !filterEl || !searchBtn || !msgEl || !tbodyEl) return;
+
+  function resolveDoctorId(){
+    const cand = [
+      window.mxmedDoctor?.doctor_id,
+      window.mxmedDoctor?.id,
+      window.mxmedStore?.doctorId,
+      window.mxmedStore?.doctor_id,
+      document.body?.dataset?.doctorId,
+    ];
+    for(const v of cand){
+      const s = String(v || '').trim();
+      if(s) return s;
+    }
+    return '';
+  }
+
+  function resolvePatientsSearchUrl(){
+    const docId = resolveDoctorId();
+    if(docId){
+      return `/api/patients/index.php/doctors/${encodeURIComponent(docId)}/patients`;
+    }
+    return '/api/patients/index.php/patients';
+  }
+  let debounceTimer = null;
+  let cachedList = null;
+  let cachedAt = 0;
+  let cachingPromise = null;
+
+  const hideMsg = ()=>{
+    msgEl.classList.add('d-none');
+    msgEl.textContent = '';
+  };
+
+  const showMsg = (text, type='info')=>{
+    msgEl.className = `alert alert-${type} mt-3`;
+    msgEl.textContent = text;
+  };
+
+  const clearResults = ()=>{
+    tbodyEl.innerHTML = '';
+  };
+
+  const normalizeList = (payload)=>{
+    if(!payload || payload.ok !== true) return [];
+    const raw = Array.isArray(payload.data)
+      ? payload.data
+      : (Array.isArray(payload.data?.items) ? payload.data.items : []);
+    const list = raw.filter(item => item && typeof item === 'object');
+    return list.map((item)=>{
+      const patientId = String(item.patient_id || item.id || item.patientId || '').trim();
+      const fullName = String(item.nombre_completo || item.display_name || item.name || '').trim();
+      const curp = String(item.curp || '').trim();
+      return {
+        patient_id: patientId,
+        nombre_completo: fullName,
+        curp
+      };
+    }).filter(item => item.patient_id !== '');
+  };
+
+  const norm = (value)=>{
+    const text = String(value || '').toLowerCase().trim();
+    if(!text) return '';
+    return text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const matchesPatient = (patient, qn)=>{
+    const name = norm(patient.nombre_completo || patient.display_name || patient.name || '');
+    const curp = norm(patient.curp || '');
+    const pid = norm(patient.patient_id || '');
+    return name.includes(qn) || curp.includes(qn) || pid.includes(qn);
+  };
+
+  const fetchPatientsIndex = async ({ force = false } = {})=>{
+    if(cachedList && !force){
+      return cachedList;
+    }
+    if(cachingPromise){
+      return await cachingPromise;
+    }
+    const base = resolvePatientsSearchUrl();
+    const url = new URL(base, window.location.origin);
+    url.searchParams.set('limit', '200');
+    cachingPromise = fetch(url.toString(), {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      credentials: 'same-origin'
+    }).then(async (resp)=>{
+      const json = await resp.json().catch(()=> null);
+      if(!json || json.ok !== true){
+        throw new Error(String((json && (json.message || json.error)) || 'No se pudo cargar el índice de pacientes.'));
+      }
+      const normalized = normalizeList(json);
+      cachedList = normalized;
+      cachedAt = Date.now();
+      return cachedList;
+    }).finally(()=>{
+      cachingPromise = null;
+    });
+    return await cachingPromise;
+  };
+
+  const renderResults = (list)=>{
+    if(!Array.isArray(list) || !list.length){
+      clearResults();
+      showMsg('Sin resultados', 'info');
+      return;
+    }
+    hideMsg();
+    tbodyEl.innerHTML = list.map((item)=>{
+      const pid = String(item.patient_id || '').trim();
+      const name = String(item.nombre_completo || item.display_name || pid || 'Paciente').trim();
+      const curp = String(item.curp || '').trim();
+      return `
+        <tr>
+          <td>${name.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>
+          <td>${(curp || '-').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>
+          <td class="text-end">
+            <button type="button" class="btn btn-outline-primary btn-sm" data-pid="${pid.replace(/"/g,'&quot;')}">Abrir expediente</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  };
+
+  const doSearch = async ()=>{
+    const q = String(qEl.value || '').trim();
+    const filterVal = String(filterEl.value || '').trim();
+
+    if(q.length < 2){
+      clearResults();
+      showMsg('Escribe al menos 2 caracteres', 'info');
+      return;
+    }
+
+    const qn = norm(q);
+    searchBtn.disabled = true;
+    searchBtn.textContent = 'Buscando…';
+    try{
+      const list = await fetchPatientsIndex();
+      // TODO: aplicar `filterVal` cuando el índice exponga señales (recent/inactive) de forma consistente.
+      void filterVal;
+      const filtered = list.filter((patient)=> matchesPatient(patient, qn));
+      renderResults(filtered);
+    }catch(err){
+      clearResults();
+      showMsg(String(err?.message || 'Error de red al buscar pacientes.'), 'danger');
+    }finally{
+      searchBtn.disabled = false;
+      searchBtn.textContent = 'Buscar';
+    }
+  };
+
+  const scheduleSearch = ()=>{
+    if(debounceTimer){
+      window.clearTimeout(debounceTimer);
+    }
+    debounceTimer = window.setTimeout(doSearch, 300);
+  };
+
+  qEl.addEventListener('input', scheduleSearch);
+  qEl.addEventListener('keydown', (ev)=>{
+    if(ev.key === 'Enter'){
+      ev.preventDefault();
+      doSearch();
+    }
+  });
+  searchBtn.addEventListener('click', doSearch);
+  tbodyEl.addEventListener('click', (ev)=>{
+    const btn = ev.target.closest('[data-pid]');
+    if(!btn) return;
+    const pid = String(btn.getAttribute('data-pid') || '').trim();
+    if(!pid) return;
+    if(typeof window.setActivePatientId === 'function'){
+      window.setActivePatientId(pid, { emitEvent:true });
+    }else if(typeof window.mxmedSetActivePatientId === 'function'){
+      window.mxmedSetActivePatientId(pid, { emitEvent:true });
+    }
+    if(typeof jumpTo === 'function'){
+      jumpTo('p-expediente');
+    }
+  });
+})();
