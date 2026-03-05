@@ -3,6 +3,9 @@ console.info('app.js loaded :: 20251123a');
 
 // P11 single source shim
 (function(){
+  if(window.__mxmedPatientSourceShimApplied) return;
+  window.__mxmedPatientSourceShimApplied = true;
+
   if(!window.mxmedStore || typeof window.mxmedStore !== 'object'){
     window.mxmedStore = {};
   }
@@ -71,6 +74,89 @@ console.info('app.js loaded :: 20251123a');
   window.setTimeout(applyWrap, 0);
   document.addEventListener('DOMContentLoaded', ()=> window.setTimeout(applyWrap, 0), { once:true });
   console.info('P11 shim active');
+})();
+
+// Clinical API fetch auth header shim
+(function(){
+  if(window.__mxmedClinicalFetchAuthWrapped) return;
+  window.__mxmedClinicalFetchAuthWrapped = true;
+
+  const nativeFetch = (typeof window.fetch === 'function') ? window.fetch.bind(window) : null;
+  if(!nativeFetch) return;
+
+  const isDemoEnv = ()=>{
+    const doctorId = String(
+      document.body?.dataset?.doctorId ||
+      window.mxmedStore?.doctorId ||
+      window.mxmedStore?.doctor_id ||
+      window.mxmedDoctor?.doctor_id ||
+      ''
+    ).trim();
+    return doctorId === 'd_demo_01';
+  };
+
+  const resolveClinicalUserId = ()=>{
+    const fromStore = String(window.mxmedStore?.user_id || '').trim();
+    if(fromStore) return fromStore;
+    const fromBody = String(document.body?.dataset?.userId || '').trim();
+    if(fromBody) return fromBody;
+    if(isDemoEnv()) return 'u_demo_01';
+    return '';
+  };
+
+  const isClinicalUrl = (urlLike)=>{
+    const raw = String(urlLike || '').trim();
+    if(!raw) return false;
+    return raw.indexOf('/api/clinical/index.php') !== -1;
+  };
+
+  const hasUserHeader = (headersLike)=>{
+    const headers = new Headers(headersLike || undefined);
+    return headers.has('X-User-Id') || headers.has('x-user-id');
+  };
+
+  window.fetch = function(input, init){
+    try{
+      const url = input instanceof Request ? input.url : String(input || '');
+      if(!isClinicalUrl(url)){
+        return nativeFetch(input, init);
+      }
+
+      if(input instanceof Request){
+        const req = new Request(input, init || {});
+        if(hasUserHeader(req.headers)){
+          return nativeFetch(req);
+        }
+        const userId = resolveClinicalUserId();
+        if(!userId){
+          return nativeFetch(req);
+        }
+        const reqHeaders = new Headers(req.headers);
+        reqHeaders.set('X-User-Id', userId);
+        return nativeFetch(new Request(req, { headers: reqHeaders }));
+      }
+
+      const initHeaders = new Headers((init && init.headers) ? init.headers : undefined);
+      if(hasUserHeader(initHeaders)){
+        return nativeFetch(input, init);
+      }
+      const userId = resolveClinicalUserId();
+      if(!userId){
+        return nativeFetch(input, init);
+      }
+      initHeaders.set('X-User-Id', userId);
+      return nativeFetch(input, Object.assign({}, init || {}, { headers: initHeaders }));
+    }catch(_){
+      return nativeFetch(input, init);
+    }
+  };
+
+  const demoUserId = isDemoEnv() ? resolveClinicalUserId() : '';
+  if(demoUserId){
+    console.info('Clinical fetch auth header enabled', demoUserId);
+  }else{
+    console.info('Clinical fetch auth header enabled');
+  }
 })();
 
 // ====== Consultorio: horarios, foto preview, mapa (fallback) ======
@@ -8037,6 +8123,56 @@ function mxResetLogoPreview(){
     }
   };
 
+  const ensureActiveEncounter = async (pid)=>{
+    const safePid = String(pid || '').trim();
+    if(!safePid) return null;
+    try{
+      const activeUrl = `/api/clinical/index.php/patients/${encodeURIComponent(safePid)}/encounters/active`;
+      const activeResp = await fetch(activeUrl, {
+        method: 'GET',
+        headers: { 'Accept':'application/json' },
+        credentials: 'same-origin'
+      });
+      const activeJson = await activeResp.json().catch(()=> null);
+      let encounterKey = String(activeJson?.data?.encounter_key || '').trim();
+
+      if(!encounterKey && activeJson?.ok === true && activeJson?.data === null){
+        const createUrl = `/api/clinical/index.php/patients/${encodeURIComponent(safePid)}/encounters`;
+        const createResp = await fetch(createUrl, {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ status: 'open' })
+        });
+        const createJson = await createResp.json().catch(()=> null);
+        encounterKey = String(createJson?.data?.encounter_key || '').trim();
+      }
+
+      if(!encounterKey){
+        return null;
+      }
+
+      if(window.mxmedStore && typeof window.mxmedStore === 'object'){
+        window.mxmedStore.activeEncounterKey = encounterKey;
+      }
+      const expedientePane = document.getElementById('p-expediente');
+      if(expedientePane){
+        expedientePane.dataset.encounterKey = encounterKey;
+        expedientePane.dataset.activeEncounterKey = encounterKey;
+        expedientePane.setAttribute('data-encounter-key', encounterKey);
+        expedientePane.setAttribute('data-active-encounter-key', encounterKey);
+      }
+
+      const detail = { patient_id: safePid, encounter_key: encounterKey };
+      window.dispatchEvent(new CustomEvent('encounter:active', { detail }));
+      window.dispatchEvent(new CustomEvent('mxmed:encounter-changed', { detail }));
+      return encounterKey;
+    }catch(_){
+      console.warn('[P11] ensureActiveEncounter failed');
+      return null;
+    }
+  };
+
   const scheduleSearch = ()=>{
     if(debounceTimer){
       window.clearTimeout(debounceTimer);
@@ -8052,7 +8188,7 @@ function mxResetLogoPreview(){
     }
   });
   searchBtn.addEventListener('click', doSearch);
-  tbodyEl.addEventListener('click', (ev)=>{
+  tbodyEl.addEventListener('click', async (ev)=>{
     const btn = ev.target.closest('[data-pid]');
     if(!btn) return;
     const pid = String(btn.getAttribute('data-pid') || '').trim();
@@ -8062,6 +8198,7 @@ function mxResetLogoPreview(){
     }else if(typeof window.mxmedSetActivePatientId === 'function'){
       window.mxmedSetActivePatientId(pid, { emitEvent:true });
     }
+    await ensureActiveEncounter(pid);
     if(typeof jumpTo === 'function'){
       jumpTo('p-expediente');
     }
