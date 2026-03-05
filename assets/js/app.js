@@ -8123,6 +8123,18 @@ function mxResetLogoPreview(){
     }
   };
 
+  const formatDateTime = (date = new Date())=>{
+    const d = (date instanceof Date) ? date : new Date(date);
+    const pad2 = (n)=> String(n).padStart(2, '0');
+    const y = d.getFullYear();
+    const m = pad2(d.getMonth() + 1);
+    const day = pad2(d.getDate());
+    const hh = pad2(d.getHours());
+    const mm = pad2(d.getMinutes());
+    const ss = pad2(d.getSeconds());
+    return `${y}-${m}-${day} ${hh}:${mm}:${ss}`;
+  };
+
   const ensureActiveEncounter = async (pid)=>{
     const safePid = String(pid || '').trim();
     if(!safePid) return null;
@@ -8134,18 +8146,29 @@ function mxResetLogoPreview(){
         credentials: 'same-origin'
       });
       const activeJson = await activeResp.json().catch(()=> null);
-      let encounterKey = String(activeJson?.data?.encounter_key || '').trim();
+      if(activeJson?.ok !== true){
+        console.warn('[P11] ensureActiveEncounter active lookup failed');
+        return null;
+      }
+      let encounterKey = String(activeJson?.data?.encounter_key || activeJson?.encounter_key || '').trim();
 
-      if(!encounterKey && activeJson?.ok === true && activeJson?.data === null){
+      if(!encounterKey && activeJson?.data === null){
         const createUrl = `/api/clinical/index.php/patients/${encodeURIComponent(safePid)}/encounters`;
         const createResp = await fetch(createUrl, {
           method: 'POST',
           headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
           credentials: 'same-origin',
-          body: JSON.stringify({ status: 'open' })
+          body: JSON.stringify({
+            status: 'open',
+            encounter_dt: formatDateTime()
+          })
         });
         const createJson = await createResp.json().catch(()=> null);
-        encounterKey = String(createJson?.data?.encounter_key || '').trim();
+        if(createJson?.ok !== true){
+          console.warn('[P11] ensureActiveEncounter create failed');
+          return null;
+        }
+        encounterKey = String(createJson?.data?.encounter_key || createJson?.encounter_key || '').trim();
       }
 
       if(!encounterKey){
