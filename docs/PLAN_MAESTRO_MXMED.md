@@ -761,6 +761,40 @@ curl -sS "http://127.0.0.1:8092/modules/clinical/ui/encounter.php?encounter_key=
   - P11 consolida la garantía de contexto clínico activo desde el primer ingreso a expediente y reduce estados nulos en la capa host.
 - Estado: `CERRADA`
 
+#### Cierre P12 — Clinical Context Propagation (encounter_key fuente única)
+
+- Estado:
+  - Integrado y validado.
+  - Compatibilidad preservada con flujo embed existente.
+- Objetivo cumplido:
+  - Se consolida `encounter_key` activo como fuente única en frontend host.
+  - Lectura centralizada: `window.mxmedStore.activeEncounterKey`.
+  - Visibilidad operacional: dataset del pane de expediente para inspección/debug.
+- Implementación (frontend host):
+  - Archivo: `assets/js/app.js`.
+  - Bridge clínico agregado:
+    - `window.getActiveEncounterKey()`
+    - `window.setEncounterContextOnPane(encounterKey, patientId)`
+  - Suscripción de eventos existentes:
+    - `encounter:active`
+    - `mxmed:encounter-changed`
+  - Sincronización aplicada por evento:
+    - `mxmedStore.activeEncounterKey`
+    - `data-encounter-key` y `data-active-encounter-key` en pane de expediente
+    - actualización de `patient_id` en dataset cuando aplica
+  - QA hook:
+    - `window.mxmedDebug.getEncounterKey()`
+- Integración mínima de consumidores:
+  - `nota_evolucion` incorpora `encounter_key` en `context`.
+  - Si no existe `encounter_key`, se aborta guardado con warning controlado (sin romper navegación).
+- Evidencia:
+  - Commit: `55a9369`
+  - Tag: `mxmed-p12-context-bridge-v1`
+  - Validación manual: `window.mxmedDebug.getEncounterKey()` devolvió `"enc:18"` tras abrir expediente.
+- Nota operativa:
+  - P12 cierra la propagación de contexto clínico activo para reducir ambigüedad entre módulos y facilitar trazabilidad de acciones clínicas.
+- Estado: `CERRADA`
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)
