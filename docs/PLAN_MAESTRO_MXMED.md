@@ -730,6 +730,37 @@ curl -sS "http://127.0.0.1:8092/modules/clinical/ui/encounter.php?encounter_key=
 
 - Estado: `CERRADA`
 
+#### Cierre P11 — Auto Encounter al abrir expediente
+
+- Estado:
+  - Integrado y validado.
+  - No rompe contratos previos de embed/navegación.
+- Objetivo cumplido:
+  - Al abrir expediente desde botón `[data-pid]`, se garantiza encounter activo para el paciente.
+- Implementación (frontend host):
+  - Archivo: `assets/js/app.js`.
+  - Se agregó `ensureActiveEncounter(pid)` y se invoca al abrir expediente.
+  - Flujo aplicado:
+    1. `GET /api/clinical/index.php/patients/{pid}/encounters/active`
+    2. Si `data=null` -> `POST /api/clinical/index.php/patients/{pid}/encounters`
+       - payload:
+         - `status: "open"`
+         - `encounter_dt: "YYYY-MM-DD HH:MM:SS"`
+    3. Persistencia en store:
+       - `mxmedStore.activePatientId`
+       - `mxmedStore.activeEncounterKey`
+    4. Eventos emitidos:
+       - `encounter:active` con `detail: { patient_id, encounter_key }`
+       - `mxmed:encounter-changed` con `detail: { patient_id, encounter_key }`
+- Validación real (evidencia):
+  - El `POST` devolvió `ok:true`.
+  - Se creó `encounter_key: "enc:18"`.
+  - `opened_by_user_id: "u_demo_01"`.
+  - El header `x-user-id` se envía por shim.
+- Nota operativa:
+  - P11 consolida la garantía de contexto clínico activo desde el primer ingreso a expediente y reduce estados nulos en la capa host.
+- Estado: `CERRADA`
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)
