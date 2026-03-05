@@ -152,6 +152,58 @@ console.info('app.js loaded :: 20251123a');
   window.getActiveEncounterKey = getActiveEncounterKey;
   window.setEncounterContextOnPane = setEncounterContextOnPane;
 
+  let lastEncounterPayload = null;
+  let lastEncounterPayloadKey = '';
+  let encounterPayloadInFlight = null;
+
+  const loadActiveEncounterPayload = async (encounterKey, opts = {})=>{
+    const safeEncounterKey = cleanValue(encounterKey || getActiveEncounterKey());
+    const force = opts && opts.force === true;
+    if(!safeEncounterKey){
+      console.warn('[P13] No hay encounter activo para cargar detalle.');
+      return null;
+    }
+    if(!force && lastEncounterPayload && lastEncounterPayloadKey === safeEncounterKey){
+      return lastEncounterPayload;
+    }
+    if(encounterPayloadInFlight && !force){
+      return encounterPayloadInFlight;
+    }
+
+    const requestUrl = `/api/clinical/index.php/encounters/${encodeURIComponent(safeEncounterKey)}`;
+    encounterPayloadInFlight = fetch(requestUrl, {
+      method: 'GET',
+      headers: { 'Accept':'application/json' },
+      credentials: 'same-origin'
+    }).then(async (resp)=>{
+      const json = await resp.json().catch(()=> null);
+      if(!json || json.ok !== true || !json.data){
+        console.warn('[P13] Encounter payload fetch failed', {
+          encounter_key: safeEncounterKey,
+          status: resp.status
+        });
+        return null;
+      }
+      lastEncounterPayload = json;
+      lastEncounterPayloadKey = safeEncounterKey;
+      console.info('[P13] Encounter payload loaded', {
+        encounter_key: safeEncounterKey,
+        status: String(json?.data?.status || ''),
+        documents: Array.isArray(json?.data?.documents) ? json.data.documents.length : 0
+      });
+      return json;
+    }).catch(()=>{
+      console.warn('[P13] Encounter payload request error', { encounter_key: safeEncounterKey });
+      return null;
+    }).finally(()=>{
+      encounterPayloadInFlight = null;
+    });
+
+    return encounterPayloadInFlight;
+  };
+
+  window.loadActiveEncounterPayload = loadActiveEncounterPayload;
+
   const syncFromEvent = (eventName, ev)=>{
     const detail = (ev && ev.detail && typeof ev.detail === 'object') ? ev.detail : {};
     const encounterKey = cleanValue(detail.encounter_key || getActiveEncounterKey());
@@ -169,6 +221,7 @@ console.info('app.js loaded :: 20251123a');
   let lastBridgeLog = '';
   const handleEvent = (eventName)=>(ev)=>{
     const synced = syncFromEvent(eventName, ev);
+    loadActiveEncounterPayload(synced.encounterKey);
     const signature = `${eventName}|${synced.patientId || ''}|${synced.encounterKey || ''}`;
     if(signature !== lastBridgeLog){
       lastBridgeLog = signature;
@@ -184,10 +237,14 @@ console.info('app.js loaded :: 20251123a');
   window.addEventListener('mxmed:encounter-changed', handleEvent('mxmed:encounter-changed'));
 
   // Initial best-effort sync for debug visibility.
-  syncFromEvent('bootstrap', { detail:{} });
+  const boot = syncFromEvent('bootstrap', { detail:{} });
+  if(boot && boot.encounterKey){
+    loadActiveEncounterPayload(boot.encounterKey);
+  }
 
   window.mxmedDebug = window.mxmedDebug || {};
   window.mxmedDebug.getEncounterKey = ()=> getActiveEncounterKey();
+  window.mxmedDebug.getEncounterPayload = ()=> lastEncounterPayload;
 })();
 
 // Clinical API fetch auth header shim
