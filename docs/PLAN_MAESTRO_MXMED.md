@@ -795,6 +795,36 @@ curl -sS "http://127.0.0.1:8092/modules/clinical/ui/encounter.php?encounter_key=
   - P12 cierra la propagación de contexto clínico activo para reducir ambigüedad entre módulos y facilitar trazabilidad de acciones clínicas.
 - Estado: `CERRADA`
 
+#### Cierre P13 — Load Encounter Payload (por encounter_key)
+
+- Estado:
+  - Integrado y validado.
+  - Sin cambios de contrato backend ni navegación existente.
+- Objetivo cumplido:
+  - Al existir `encounter_key` activo, el host precarga detalle de consulta vía endpoint por encounter.
+  - Se conserva en memoria el último JSON para inspección/QA.
+- Implementación (frontend host):
+  - Archivo: `assets/js/app.js` (solo host).
+  - Eventos escuchados:
+    - `encounter:active`
+    - `mxmed:encounter-changed`
+  - Endpoint consumido:
+    - `GET /api/clinical/index.php/encounters/{encounter_key}`
+  - Comportamiento:
+    - resuelve key desde `window.getActiveEncounterKey()`
+    - carga payload de encounter en background
+    - guarda snapshot en `lastEncounterPayload`
+  - Hook QA:
+    - `window.mxmedDebug.getEncounterPayload()`
+- Evidencia:
+  - Commit: `4fb31d0`
+  - Tag: `mxmed-p13-encounter-payload-v1`
+- Validación manual (ejemplo real):
+  - `window.mxmedDebug.getEncounterPayload()` devolvió `ok:true` con encounter activo `enc:18`.
+  - En Network se observó `GET /api/clinical/index.php/encounters/<encounter_key_url_encoded>` con `200`.
+  - En Console se observó log `[P13] Encounter payload loaded ...`.
+- Estado: `CERRADA`
+
 ## B. Arquitectura universal (actual + futura)
 
 ### Núcleo actual (operando)
