@@ -1,6 +1,78 @@
 ﻿// MXMed app bundle
 console.info('app.js loaded :: 20251123a');
 
+// P11 single source shim
+(function(){
+  if(!window.mxmedStore || typeof window.mxmedStore !== 'object'){
+    window.mxmedStore = {};
+  }
+
+  const syncPatientState = (rawPid)=>{
+    const pid = String(rawPid || '').trim();
+    const pane = document.getElementById('p-expediente');
+
+    if(pid){
+      window.mxmedStore.activePatientId = pid;
+      window.mxmedActivePatientId = pid;
+      window.__MXMED_ACTIVE_PATIENT_ID = pid;
+      if(pane){
+        pane.dataset.patientId = pid;
+        pane.dataset.activePatientId = pid;
+        pane.setAttribute('data-patient-id', pid);
+        pane.setAttribute('data-active-patient-id', pid);
+      }
+    }else{
+      window.mxmedStore.activePatientId = '';
+      window.mxmedActivePatientId = '';
+      window.__MXMED_ACTIVE_PATIENT_ID = '';
+      if(pane){
+        delete pane.dataset.patientId;
+        delete pane.dataset.activePatientId;
+        pane.removeAttribute('data-patient-id');
+        pane.removeAttribute('data-active-patient-id');
+      }
+    }
+
+    window.dispatchEvent(new Event('patient:selected'));
+    window.dispatchEvent(new Event('expediente:patient_changed'));
+    window.dispatchEvent(new Event('expediente:patient-changed'));
+  };
+
+  const wrapSetter = (name)=>{
+    const current = window[name];
+    if(typeof current === 'function' && current.__mxmedP11Wrapped === true){
+      return;
+    }
+    const original = (typeof current === 'function') ? current : null;
+    const wrapped = function(pid, opts){
+      let result;
+      if(original){
+        try{
+          result = original.call(window, pid, opts);
+        }catch(_){}
+      }
+      syncPatientState(pid);
+      return result;
+    };
+    wrapped.__mxmedP11Wrapped = true;
+    wrapped.__mxmedP11Original = original;
+    window[name] = wrapped;
+  };
+
+  const applyWrap = ()=>{
+    wrapSetter('setActivePatientId');
+    wrapSetter('mxmedSetActivePatientId');
+    if(window.mxmedSetActivePatientId !== window.setActivePatientId){
+      window.mxmedSetActivePatientId = window.setActivePatientId;
+    }
+  };
+
+  applyWrap();
+  window.setTimeout(applyWrap, 0);
+  document.addEventListener('DOMContentLoaded', ()=> window.setTimeout(applyWrap, 0), { once:true });
+  console.info('P11 shim active');
+})();
+
 // ====== Consultorio: horarios, foto preview, mapa (fallback) ======
 
 (function(){
