@@ -76,6 +76,120 @@ console.info('app.js loaded :: 20251123a');
   console.info('P11 shim active');
 })();
 
+// P12 clinical context bridge (encounter_key as single source)
+(function(){
+  if(window.__mxmedClinicalContextBridgeApplied) return;
+  window.__mxmedClinicalContextBridgeApplied = true;
+
+  if(!window.mxmedStore || typeof window.mxmedStore !== 'object'){
+    window.mxmedStore = {};
+  }
+
+  const cleanValue = (raw)=>{
+    const value = String(raw || '').trim();
+    return value || null;
+  };
+
+  const findExpedientePane = ()=>{
+    const byId = document.getElementById('p-expediente');
+    if(byId) return byId;
+
+    const candidates = [
+      document.querySelector('.mm-card.show[data-patient-id]'),
+      document.querySelector('.mm-card.active[data-patient-id]'),
+      document.querySelector('[data-active-patient-id]'),
+      document.querySelector('[data-patient-id]')
+    ];
+    for(const node of candidates){
+      if(node) return node;
+    }
+    return null;
+  };
+
+  const getActiveEncounterKey = ()=>{
+    const fromStore = cleanValue(window.mxmedStore?.activeEncounterKey);
+    if(fromStore) return fromStore;
+
+    const pane = findExpedientePane();
+    if(!pane) return null;
+    return cleanValue(
+      pane.dataset?.encounterKey ||
+      pane.getAttribute('data-encounter-key') ||
+      pane.dataset?.activeEncounterKey ||
+      pane.getAttribute('data-active-encounter-key')
+    );
+  };
+
+  const setEncounterContextOnPane = (encounterKey, patientId)=>{
+    const pane = findExpedientePane();
+    if(!pane) return false;
+
+    const safeEncounterKey = cleanValue(encounterKey);
+    const safePatientId = cleanValue(patientId);
+
+    if(safeEncounterKey){
+      pane.dataset.encounterKey = safeEncounterKey;
+      pane.dataset.activeEncounterKey = safeEncounterKey;
+      pane.setAttribute('data-encounter-key', safeEncounterKey);
+      pane.setAttribute('data-active-encounter-key', safeEncounterKey);
+    }else{
+      delete pane.dataset.encounterKey;
+      delete pane.dataset.activeEncounterKey;
+      pane.removeAttribute('data-encounter-key');
+      pane.removeAttribute('data-active-encounter-key');
+    }
+
+    if(safePatientId){
+      pane.dataset.patientId = safePatientId;
+      pane.dataset.activePatientId = safePatientId;
+      pane.setAttribute('data-patient-id', safePatientId);
+      pane.setAttribute('data-active-patient-id', safePatientId);
+    }
+
+    return true;
+  };
+
+  window.getActiveEncounterKey = getActiveEncounterKey;
+  window.setEncounterContextOnPane = setEncounterContextOnPane;
+
+  const syncFromEvent = (eventName, ev)=>{
+    const detail = (ev && ev.detail && typeof ev.detail === 'object') ? ev.detail : {};
+    const encounterKey = cleanValue(detail.encounter_key || getActiveEncounterKey());
+    const patientId = cleanValue(detail.patient_id || window.mxmedStore?.activePatientId);
+    if(encounterKey){
+      window.mxmedStore.activeEncounterKey = encounterKey;
+    }
+    if(patientId){
+      window.mxmedStore.activePatientId = patientId;
+    }
+    setEncounterContextOnPane(encounterKey, patientId);
+    return { encounterKey, patientId };
+  };
+
+  let lastBridgeLog = '';
+  const handleEvent = (eventName)=>(ev)=>{
+    const synced = syncFromEvent(eventName, ev);
+    const signature = `${eventName}|${synced.patientId || ''}|${synced.encounterKey || ''}`;
+    if(signature !== lastBridgeLog){
+      lastBridgeLog = signature;
+      console.info('[P12] context sync', {
+        event: eventName,
+        patient_id: synced.patientId || null,
+        encounter_key: synced.encounterKey || null
+      });
+    }
+  };
+
+  window.addEventListener('encounter:active', handleEvent('encounter:active'));
+  window.addEventListener('mxmed:encounter-changed', handleEvent('mxmed:encounter-changed'));
+
+  // Initial best-effort sync for debug visibility.
+  syncFromEvent('bootstrap', { detail:{} });
+
+  window.mxmedDebug = window.mxmedDebug || {};
+  window.mxmedDebug.getEncounterKey = ()=> getActiveEncounterKey();
+})();
+
 // Clinical API fetch auth header shim
 (function(){
   if(window.__mxmedClinicalFetchAuthWrapped) return;
@@ -1615,8 +1729,21 @@ console.info('app.js loaded :: 20251123a');
     };
 
     const saveClinicalDocument = async (args) => {
-      const requestArgs = (args && typeof args === 'object') ? args : {};
-      const context = (requestArgs.context && typeof requestArgs.context === 'object') ? requestArgs.context : {};
+      const requestArgs = (args && typeof args === 'object') ? { ...args } : {};
+      const context = (requestArgs.context && typeof requestArgs.context === 'object') ? { ...requestArgs.context } : {};
+      const needsEncounterContext = String(requestArgs.type || '').trim() === 'nota_evolucion';
+      const fromBridge = (typeof window.getActiveEncounterKey === 'function')
+        ? String(window.getActiveEncounterKey() || '').trim()
+        : '';
+      const encounterKey = String(context.encounter_key || fromBridge || '').trim();
+      if (encounterKey) {
+        context.encounter_key = encounterKey;
+      }
+      requestArgs.context = context;
+      if (needsEncounterContext && !encounterKey) {
+        console.warn('[P12] nota_evolucion requires encounter_key; action aborted');
+        throw new Error('No hay encounter activo para guardar la nota.');
+      }
       const legacyPatientId = String(context.patient_id ?? '').trim();
       const canonicalPatientId = await resolveCanonicalPatientIdSafe(legacyPatientId).catch(() => null);
 
@@ -2124,6 +2251,7 @@ console.info('app.js loaded :: 20251123a');
       version: 1,
       context: {
         patient_id: ctx.patient_id,
+        encounter_key: ctx.encounter_key ?? null,
         encounter_id: ctx.encounter_id ?? null,
         hospital_stay_id: ctx.hospital_stay_id ?? null,
         care_setting: ctx.care_setting || 'consulta',
@@ -2397,9 +2525,18 @@ console.info('app.js loaded :: 20251123a');
 
     const patient = getPatient();
     const actor = getDoctor();
+    const encounterKey = (typeof window.getActiveEncounterKey === 'function')
+      ? String(window.getActiveEncounterKey() || '').trim()
+      : '';
+    if (!encounterKey) {
+      console.warn('[P12] nota_evolucion requires encounter_key; action aborted');
+      showErrors(['No hay encounter activo. Abre expediente para sincronizar el contexto clínico.']);
+      return;
+    }
     const context = {
       patient_id: patient.patient_id,
       canonical_patient_id: patient.canonical_patient_id || null,
+      encounter_key: encounterKey,
       encounter_id: null,
       hospital_stay_id: null,
       care_setting: payload.ambito || 'consulta',
@@ -8178,12 +8315,8 @@ function mxResetLogoPreview(){
       if(window.mxmedStore && typeof window.mxmedStore === 'object'){
         window.mxmedStore.activeEncounterKey = encounterKey;
       }
-      const expedientePane = document.getElementById('p-expediente');
-      if(expedientePane){
-        expedientePane.dataset.encounterKey = encounterKey;
-        expedientePane.dataset.activeEncounterKey = encounterKey;
-        expedientePane.setAttribute('data-encounter-key', encounterKey);
-        expedientePane.setAttribute('data-active-encounter-key', encounterKey);
+      if(typeof window.setEncounterContextOnPane === 'function'){
+        window.setEncounterContextOnPane(encounterKey, safePid);
       }
 
       const detail = { patient_id: safePid, encounter_key: encounterKey };
