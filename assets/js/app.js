@@ -3193,14 +3193,38 @@ console.info('app.js loaded :: 20251123a');
     syncState({ allowNavigate:true });
   }));
 
+  const getTabIdFromTarget = (target)=> String(target || '').replace(/^#/, '').trim();
+  const activateWithBootstrap = (btn)=>{
+    const BsTab = window.bootstrap && window.bootstrap.Tab;
+    if(!BsTab) return false;
+    try{
+      if(typeof BsTab.getOrCreateInstance === 'function'){
+        BsTab.getOrCreateInstance(btn).show();
+      }else{
+        (new BsTab(btn)).show();
+      }
+      return true;
+    }catch(_err){
+      return false;
+    }
+  };
+
   // Refuerzo: asegurar que el click cambie de tab
   const tabLinks = Array.from(document.querySelectorAll('#p-expediente .mm-tabs-row .nav-link'));
   const tabPanes = Array.from(document.querySelectorAll('#p-expediente .tab-content .tab-pane'));
+  tabLinks.forEach((btn)=>{
+    btn.addEventListener('shown.bs.tab', ()=>{
+      const target = btn.getAttribute('data-bs-target');
+      if(!target) return;
+      pane.dataset.activeTab = getTabIdFromTarget(target);
+    });
+  });
   tabLinks.forEach(btn=>{
     btn.addEventListener('click', (ev)=>{
       const target = btn.getAttribute('data-bs-target');
       if(!target) return;
       ev.preventDefault();
+      if(activateWithBootstrap(btn)) return;
       tabLinks.forEach(b=> b.classList.remove('active'));
       btn.classList.add('active');
       tabPanes.forEach(p=> p.classList.remove('show','active'));
@@ -3208,6 +3232,7 @@ console.info('app.js loaded :: 20251123a');
       if(paneTarget){
         paneTarget.classList.add('show','active');
       }
+      pane.dataset.activeTab = getTabIdFromTarget(target);
     });
   });
 
@@ -8411,9 +8436,9 @@ function mxResetLogoPreview(){
     }else if(typeof window.mxmedSetActivePatientId === 'function'){
       window.mxmedSetActivePatientId(pid, { emitEvent:true });
     }
-    await ensureActiveEncounter(pid);
     if(typeof jumpTo === 'function'){
       jumpTo('p-expediente');
     }
+    ensureActiveEncounter(pid).catch(()=> null);
   });
 })();
