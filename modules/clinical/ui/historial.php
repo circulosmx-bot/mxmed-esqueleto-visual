@@ -567,10 +567,29 @@ if ($clinicalApiBase === '' || strpos($clinicalApiBase, '/') === 0) {
     } elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
         $proto = (string)$_SERVER['HTTP_X_FORWARDED_PROTO'];
     }
-    $host = (string)($_SERVER['HTTP_HOST'] ?? '127.0.0.1');
-    $clinicalApiBase = $proto . '://' . $host;
+    $hostRaw = (string)($_SERVER['HTTP_HOST'] ?? '127.0.0.1');
+    $hostName = $hostRaw;
+    $hostPort = null;
+    if (strpos($hostRaw, ':') !== false) {
+        $hostParts = explode(':', $hostRaw, 2);
+        $hostName = trim((string)($hostParts[0] ?? ''));
+        $portCandidate = trim((string)($hostParts[1] ?? ''));
+        if ($portCandidate !== '' && ctype_digit($portCandidate)) {
+            $hostPort = (int)$portCandidate;
+        }
+    }
+    $hostNameLower = strtolower(trim($hostName));
+    $isLocalHost = in_array($hostNameLower, ['127.0.0.1', 'localhost'], true);
+    // Local dev convention: UI on :8092 and clinical API on :8091.
+    if ($isLocalHost && $hostPort === 8092) {
+        $clinicalApiBase = $proto . '://' . $hostName . ':8091';
+    } else {
+        $clinicalApiBase = $proto . '://' . $hostRaw;
+    }
 }
 $clinicalApiIndexBase = $clinicalApiBase . '/api/clinical/index.php';
+// Client-side fetch base: in embed, force same-origin relative routes to avoid CORS between host and iframe origins.
+$clinicalApiClientBase = $embed ? '' : $clinicalApiBase;
 // usar base raw para HTTP calls, nunca HTML-escaped
 $currentUserId = trim((string)($_SESSION['user_id'] ?? ($_SERVER['PHP_AUTH_USER'] ?? 'qa')));
 if ($currentUserId === '') {
@@ -2277,7 +2296,7 @@ if (!$embed) {
     var patientId = <?php echo json_encode($patientId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var currentUserId = <?php echo json_encode($currentUserId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var currentInclude = <?php echo json_encode($include, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
-    var apiBase = <?php echo json_encode($clinicalApiBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    var apiBase = <?php echo json_encode($clinicalApiClientBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var activeCaseId = <?php echo json_encode($activeCaseId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var isEmbed = <?php echo $embed ? 'true' : 'false'; ?>;
     var onlyActiveCaseStorageKey = 'mxmed_historial_only_active_case:' + String(patientId || '');

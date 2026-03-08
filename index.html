@@ -6538,8 +6538,10 @@
 </template>
 <script>
   (function () {
-    var historialTabBtn = document.querySelector('[data-bs-target="#t-historial-atencion"]');
-    var historialPane = document.getElementById('t-historial-atencion');
+    var HIST_TAB_ID = 't-historial-atencion';
+    var HIST_TAB_TARGET = '#' + HIST_TAB_ID;
+    var historialTabBtn = document.querySelector('[data-bs-target="' + HIST_TAB_TARGET + '"]');
+    var historialPane = document.getElementById(HIST_TAB_ID);
     var iframe = document.getElementById('mm-embed-historial');
     var emptyMsg = document.getElementById('mm-embed-historial-empty');
     var p10Bar = document.getElementById('mm-p10-bar');
@@ -6553,6 +6555,8 @@
     var p10ActiveEncounter = null;
     var p10PollingTimer = null;
     var p10Loading = false;
+    var p10RefreshPromise = null;
+    var observerSyncTimer = null;
     var p10OnAir = p10Bar.querySelector('[data-role="p10-on-air"]');
     var p10StatusText = p10Bar.querySelector('[data-role="p10-status-text"]');
     var p10StartBtn = p10Bar.querySelector('[data-action="p10-start-encounter"]');
@@ -6569,6 +6573,23 @@
 
     function isHistorialTabVisible() {
       return historialPane.classList.contains('show') || historialPane.classList.contains('active');
+    }
+
+    function ensureHistorialPaneActiveNow() {
+      var tabContent = historialPane.closest('.tab-content');
+      if (!tabContent) return;
+      var tabLinks = Array.from(expedientePane.querySelectorAll('.mm-tabs-row .nav-link[data-bs-target]'));
+      tabLinks.forEach(function (btn) {
+        btn.classList.toggle('active', btn === historialTabBtn);
+        btn.setAttribute('aria-selected', btn === historialTabBtn ? 'true' : 'false');
+      });
+      Array.from(tabContent.children).forEach(function (child) {
+        if (!child.classList || !child.classList.contains('tab-pane')) return;
+        var on = child === historialPane;
+        child.classList.toggle('show', on);
+        child.classList.toggle('active', on);
+      });
+      expedientePane.dataset.activeTab = HIST_TAB_ID;
     }
 
     function readActivePatientId() {
@@ -6597,28 +6618,6 @@
       var fromQuery = getParam('patient_id') || getParam('patientId');
       if (fromQuery && fromQuery.trim() !== '') return fromQuery.trim();
       return null;
-    }
-
-    function syncActivePatientId(patientId) {
-      var next = String(patientId || '').trim();
-      if (!next) return next;
-      if (typeof window.setActivePatientId === 'function') {
-        window.setActivePatientId(next, { emitEvent: false });
-        return next;
-      }
-      var panel = document.getElementById('p-expediente');
-      if (panel) {
-        panel.dataset.patientId = next;
-        panel.dataset.activePatientId = next;
-        panel.setAttribute('data-patient-id', next);
-        panel.setAttribute('data-active-patient-id', next);
-      }
-      window.mxmedActivePatientId = next;
-      window.__MXMED_ACTIVE_PATIENT_ID = next;
-      if (window.mxmedStore && typeof window.mxmedStore === 'object') {
-        window.mxmedStore.activePatientId = next;
-      }
-      return next;
     }
 
     function resolveEncounterKey() {
@@ -6842,15 +6841,24 @@
     }
 
     function refreshP10() {
+      if (!isHistorialTabVisible()) {
+        return Promise.resolve({ hasActive: false, skipped: true });
+      }
+      if (p10RefreshPromise) {
+        return p10RefreshPromise;
+      }
       var patientId = readActivePatientId();
       if (!patientId) {
         renderP10Bar({ hasActive: false });
         return Promise.resolve({ hasActive: false });
       }
-      return fetchActiveEncounter(patientId).then(function (state) {
+      p10RefreshPromise = fetchActiveEncounter(patientId).then(function (state) {
         renderP10Bar(state);
         return state;
+      }).finally(function () {
+        p10RefreshPromise = null;
       });
+      return p10RefreshPromise;
     }
 
     function stopP10Polling() {
@@ -6870,7 +6878,7 @@
           if (!p10Loading) {
             refreshP10();
           }
-        }, 5000);
+        }, 10000);
       }
     }
 
@@ -6892,7 +6900,7 @@
     }
 
     function ensureEmbedIframe() {
-      var pid = syncActivePatientId(readActivePatientId());
+      var pid = String(readActivePatientId() || '').trim();
       var useDemo = !pid;
       var context = {
         patientId: useDemo ? 'demo' : pid,
@@ -6929,7 +6937,21 @@
       });
     });
 
+    historialTabBtn.addEventListener('click', function () {
+      if (window.bootstrap && window.bootstrap.Tab) {
+        try {
+          window.bootstrap.Tab.getOrCreateInstance(historialTabBtn).show();
+        } catch (_) {}
+      }
+      window.requestAnimationFrame(function () {
+        if (!isHistorialTabVisible()) {
+          ensureHistorialPaneActiveNow();
+        }
+      });
+    });
+
     historialTabBtn.addEventListener('shown.bs.tab', function () {
+      expedientePane.dataset.activeTab = HIST_TAB_ID;
       ensureEmbedIframe();
       refreshP10();
       updateP10Polling();
@@ -6958,8 +6980,14 @@
 
     var observer = new MutationObserver(function () {
       if (isHistorialTabVisible()) {
-        ensureEmbedIframe();
-        refreshP10();
+        if (observerSyncTimer) {
+          window.clearTimeout(observerSyncTimer);
+        }
+        observerSyncTimer = window.setTimeout(function () {
+          observerSyncTimer = null;
+          ensureEmbedIframe();
+          refreshP10();
+        }, 120);
       }
     });
     observer.observe(expedientePane, { attributes: true, attributeFilter: ['data-patient-id', 'data-active-patient-id'] });
@@ -7069,12 +7097,14 @@
 </script>
 <script>
   (function () {
+    var HIST_TAB_ID = 't-historial-atencion';
+    var HIST_TAB_TARGET = '#' + HIST_TAB_ID;
     var openHistorialBtn = document.getElementById('mm-open-historial-tab');
     if (!openHistorialBtn) return;
     openHistorialBtn.addEventListener('click', function () {
-      var historialTabBtn = document.querySelector('[data-bs-target="#t-historial-atencion"]');
+      var historialTabBtn = document.querySelector('[data-bs-target="' + HIST_TAB_TARGET + '"]');
       if (!historialTabBtn) {
-        window.location.hash = 't-historial-atencion';
+        window.location.hash = HIST_TAB_ID;
         return;
       }
       if (window.bootstrap && window.bootstrap.Tab) {
