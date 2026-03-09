@@ -4748,6 +4748,20 @@ body{margin:0;background:var(--mm-fondo-base);}
   color:#3f5e75;
   line-height:1.2;
 }
+#p-expediente .head .exp-hdr-neutral{
+  display:inline-flex;
+  align-items:center;
+  border-radius:999px;
+  padding:3px 10px;
+  font-size:0.72rem;
+  font-weight:700;
+  background:#eef3f7;
+  color:#4b5f73;
+  white-space:nowrap;
+}
+#p-expediente .head [data-role="exp-h-start-enc-btn"]{
+  white-space:nowrap;
+}
 #p-expediente .head [data-role="exp-h-close-enc-btn"]{
   white-space:nowrap;
 }

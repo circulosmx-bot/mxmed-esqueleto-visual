@@ -54,6 +54,18 @@ console.info('app.js loaded :: 20251123a');
           result = original.call(window, pid, opts);
         }catch(_){}
       }
+      if(result === false){
+        return false;
+      }
+      if(result && typeof result.then === 'function'){
+        return result.then((ok)=>{
+          if(ok === false) return false;
+          syncPatientState(pid);
+          return ok;
+        }).catch((err)=>{
+          throw err;
+        });
+      }
       syncPatientState(pid);
       return result;
     };
@@ -245,6 +257,268 @@ console.info('app.js loaded :: 20251123a');
   window.mxmedDebug = window.mxmedDebug || {};
   window.mxmedDebug.getEncounterKey = ()=> getActiveEncounterKey();
   window.mxmedDebug.getEncounterPayload = ()=> lastEncounterPayload;
+})();
+
+// P14C.1+ multi-active lifecycle instrumentation (frontend only)
+(function(){
+  if(window.__mxmedEncounterLifecycleApplied) return;
+  window.__mxmedEncounterLifecycleApplied = true;
+
+  if(!window.mxmedStore || typeof window.mxmedStore !== 'object'){
+    window.mxmedStore = {};
+  }
+
+  const nowIso = ()=> new Date().toISOString();
+  const clean = (raw)=> {
+    const value = String(raw || '').trim();
+    return value || '';
+  };
+  const allowedStatus = new Set([
+    'sin_consulta_activa',
+    'consulta_activa',
+    'consulta_pendiente_cierre',
+    'consulta_cerrada'
+  ]);
+  const findExpedientePane = ()=>{
+    const byId = document.getElementById('p-expediente');
+    if(byId) return byId;
+    return document.querySelector('[data-active-encounter-key], [data-encounter-key]');
+  };
+  const findP10Bar = ()=> document.getElementById('mm-p10-bar');
+  const ensureActiveEncountersMap = ()=>{
+    if(!window.mxmedStore.activeEncounters || typeof window.mxmedStore.activeEncounters !== 'object'){
+      window.mxmedStore.activeEncounters = {};
+    }
+    return window.mxmedStore.activeEncounters;
+  };
+  const detectExistingEncounterKey = ()=>{
+    const pane = findExpedientePane();
+    const fromPane = clean(
+      (pane && (pane.dataset?.activeEncounterKey || pane.getAttribute('data-active-encounter-key')))
+      || (pane && (pane.dataset?.encounterKey || pane.getAttribute('data-encounter-key')))
+    );
+    if(fromPane) return fromPane;
+    const p10Bar = findP10Bar();
+    const fromP10 = clean(p10Bar && p10Bar.dataset ? p10Bar.dataset.encounterKey : '');
+    if(fromP10) return fromP10;
+    const fromStore = clean(window.mxmedStore.currentEncounterKey || window.mxmedStore.activeEncounterKey);
+    if(fromStore) return fromStore;
+    if(typeof window.getActiveEncounterKey === 'function'){
+      const fromBridge = clean(window.getActiveEncounterKey());
+      if(fromBridge) return fromBridge;
+    }
+    return '';
+  };
+  const detectExistingPatientId = ()=>{
+    const pane = findExpedientePane();
+    const fromPane = clean(
+      (pane && (pane.dataset?.patientId || pane.getAttribute('data-patient-id')))
+      || (pane && (pane.dataset?.activePatientId || pane.getAttribute('data-active-patient-id')))
+    );
+    if(fromPane) return fromPane;
+    return clean(window.mxmedStore.currentPatientId || window.mxmedStore.activePatientId);
+  };
+  const pickEncounterForPatient = (patientId)=>{
+    const safePatientId = clean(patientId);
+    if(!safePatientId) return '';
+    const map = ensureActiveEncountersMap();
+    const candidates = Object.values(map).filter((entry)=>{
+      if(!entry || typeof entry !== 'object') return false;
+      const pid = clean(entry.patient_id);
+      const status = clean(entry.status);
+      return pid === safePatientId && (status === 'consulta_activa' || status === 'consulta_pendiente_cierre');
+    });
+    if(!candidates.length) return '';
+    candidates.sort((a, b)=>{
+      const da = clean(a.last_activity_at || a.started_at);
+      const db = clean(b.last_activity_at || b.started_at);
+      return db.localeCompare(da);
+    });
+    return clean(candidates[0].encounter_key);
+  };
+  const syncCurrentContextNodes = ()=>{
+    const map = ensureActiveEncountersMap();
+    const pane = findExpedientePane();
+    const p10Bar = findP10Bar();
+    const currentPatientId = clean(window.mxmedStore.currentPatientId || window.mxmedStore.activePatientId);
+    let currentEncounterKey = clean(window.mxmedStore.currentEncounterKey);
+    const currentEntry = currentEncounterKey ? map[currentEncounterKey] : null;
+    const belongsToCurrentPatient = !!(currentEntry && clean(currentEntry.patient_id) === currentPatientId);
+    if(!belongsToCurrentPatient){
+      currentEncounterKey = pickEncounterForPatient(currentPatientId);
+      window.mxmedStore.currentEncounterKey = currentEncounterKey;
+    }
+    if(pane){
+      if(currentEncounterKey){
+        pane.dataset.encounterKey = currentEncounterKey;
+        pane.dataset.activeEncounterKey = currentEncounterKey;
+        pane.setAttribute('data-encounter-key', currentEncounterKey);
+        pane.setAttribute('data-active-encounter-key', currentEncounterKey);
+      }else{
+        delete pane.dataset.encounterKey;
+        delete pane.dataset.activeEncounterKey;
+        pane.removeAttribute('data-encounter-key');
+        pane.removeAttribute('data-active-encounter-key');
+      }
+    }
+    if(p10Bar && p10Bar.dataset){
+      p10Bar.dataset.encounterKey = currentEncounterKey || '';
+    }
+    window.mxmedStore.activeEncounterKey = currentEncounterKey || '';
+    return currentEncounterKey;
+  };
+  const rebuildCompatibilityState = ()=>{
+    const map = ensureActiveEncountersMap();
+    const currentPatientId = clean(window.mxmedStore.currentPatientId || window.mxmedStore.activePatientId);
+    const currentEncounterKey = clean(window.mxmedStore.currentEncounterKey);
+    const entry = currentEncounterKey ? map[currentEncounterKey] : null;
+    const isCurrentActive = !!(
+      entry
+      && clean(entry.patient_id) === currentPatientId
+      && (clean(entry.status) === 'consulta_activa' || clean(entry.status) === 'consulta_pendiente_cierre')
+    );
+    const status = isCurrentActive ? clean(entry.status) : 'sin_consulta_activa';
+    const compat = {
+      patient_id: currentPatientId,
+      encounter_key: isCurrentActive ? currentEncounterKey : '',
+      status,
+      started_at: isCurrentActive ? clean(entry.started_at) : '',
+      last_activity_at: isCurrentActive ? clean(entry.last_activity_at || nowIso()) : nowIso(),
+      origin: isCurrentActive ? clean(entry.origin) : 'multi_active_bridge',
+      pending_reason: isCurrentActive ? clean(entry.pending_reason) : ''
+    };
+    window.mxmedStore.activeEncounterState = compat;
+    return compat;
+  };
+  const setCurrentPatientContext = (patientId, opts = {})=>{
+    const safePatientId = clean(patientId);
+    window.mxmedStore.currentPatientId = safePatientId;
+    const nextEncounter = pickEncounterForPatient(safePatientId);
+    window.mxmedStore.currentEncounterKey = nextEncounter;
+    if(opts.sync !== false){
+      syncCurrentContextNodes();
+      rebuildCompatibilityState();
+    }
+    return nextEncounter;
+  };
+  const upsertEncounterEntry = (detail, status)=>{
+    const encounterKey = clean(detail.encounter_key);
+    if(!encounterKey) return null;
+    const map = ensureActiveEncountersMap();
+    const prev = (map[encounterKey] && typeof map[encounterKey] === 'object') ? map[encounterKey] : {};
+    const next = {
+      encounter_key: encounterKey,
+      patient_id: clean(detail.patient_id || prev.patient_id || window.mxmedStore.currentPatientId || window.mxmedStore.activePatientId),
+      status: clean(status || prev.status || 'consulta_activa'),
+      started_at: clean(detail.started_at || prev.started_at || nowIso()),
+      last_activity_at: clean(detail.last_activity_at || nowIso()),
+      origin: clean(detail.origin || prev.origin),
+      pending_reason: clean(detail.pending_reason || (status === 'consulta_pendiente_cierre' ? 'user_finalize_request' : ''))
+    };
+    map[encounterKey] = next;
+    return next;
+  };
+  const removeEncounterEntry = (encounterKey)=>{
+    const map = ensureActiveEncountersMap();
+    const key = clean(encounterKey);
+    if(!key) return;
+    delete map[key];
+  };
+
+  const applyLifecycle = (detailRaw)=>{
+    const detail = (detailRaw && typeof detailRaw === 'object') ? detailRaw : {};
+    const requestedStatus = clean(detail.status);
+    const status = allowedStatus.has(requestedStatus) ? requestedStatus : 'sin_consulta_activa';
+    const patientId = clean(detail.patient_id || window.mxmedStore.currentPatientId || window.mxmedStore.activePatientId || detectExistingPatientId());
+    const encounterKey = clean(detail.encounter_key);
+
+    if(patientId){
+      window.mxmedStore.currentPatientId = patientId;
+      window.mxmedStore.activePatientId = patientId;
+    }
+
+    if(status === 'consulta_activa' || status === 'consulta_pendiente_cierre'){
+      const entry = upsertEncounterEntry(detail, status);
+      if(entry && clean(entry.patient_id) === clean(window.mxmedStore.currentPatientId)){
+        window.mxmedStore.currentEncounterKey = clean(entry.encounter_key);
+      }else if(!clean(window.mxmedStore.currentEncounterKey) && entry){
+        window.mxmedStore.currentEncounterKey = clean(entry.encounter_key);
+      }
+    } else if(status === 'consulta_cerrada'){
+      const targetKey = encounterKey || clean(window.mxmedStore.currentEncounterKey);
+      removeEncounterEntry(targetKey);
+      if(clean(window.mxmedStore.currentEncounterKey) === clean(targetKey)){
+        window.mxmedStore.currentEncounterKey = pickEncounterForPatient(window.mxmedStore.currentPatientId);
+      }
+    } else if(status === 'sin_consulta_activa'){
+      if(encounterKey){
+        removeEncounterEntry(encounterKey);
+        if(clean(window.mxmedStore.currentEncounterKey) === encounterKey){
+          window.mxmedStore.currentEncounterKey = pickEncounterForPatient(window.mxmedStore.currentPatientId);
+        }
+      } else if(!clean(window.mxmedStore.currentEncounterKey)){
+        window.mxmedStore.currentEncounterKey = pickEncounterForPatient(window.mxmedStore.currentPatientId);
+      }
+    }
+
+    syncCurrentContextNodes();
+    return rebuildCompatibilityState();
+  };
+
+  window.mxmedEmitEncounterLifecycle = function(detail){
+    try{
+      window.dispatchEvent(new CustomEvent('mxmed:encounter-lifecycle', {
+        detail: (detail && typeof detail === 'object') ? detail : {}
+      }));
+    }catch(_){}
+  };
+  window.mxmedResolveCurrentEncounterForPatient = pickEncounterForPatient;
+  window.mxmedSetCurrentPatientContext = setCurrentPatientContext;
+
+  window.addEventListener('mxmed:encounter-lifecycle', (ev)=>{
+    const detail = (ev && ev.detail && typeof ev.detail === 'object') ? ev.detail : {};
+    applyLifecycle(detail);
+  });
+
+  const bridgeLegacyActive = (ev)=>{
+    const detail = (ev && ev.detail && typeof ev.detail === 'object') ? ev.detail : {};
+    const encounterKey = clean(detail.encounter_key);
+    if(!encounterKey) return;
+    applyLifecycle({
+      patient_id: clean(detail.patient_id || window.mxmedStore.currentPatientId || window.mxmedStore.activePatientId),
+      encounter_key: encounterKey,
+      status: 'consulta_activa',
+      origin: 'legacy_event_bridge',
+      last_activity_at: nowIso()
+    });
+  };
+  window.addEventListener('encounter:active', bridgeLegacyActive);
+  window.addEventListener('mxmed:encounter-changed', bridgeLegacyActive);
+
+  // Bootstrap: hydrate multi-active structures from existing single-key context.
+  ensureActiveEncountersMap();
+  const bootPatientId = detectExistingPatientId();
+  const bootEncounterKey = detectExistingEncounterKey();
+  if(bootEncounterKey){
+    upsertEncounterEntry({
+      patient_id: bootPatientId,
+      encounter_key: bootEncounterKey,
+      started_at: nowIso(),
+      last_activity_at: nowIso(),
+      origin: 'bootstrap'
+    }, 'consulta_activa');
+  }
+  if(bootPatientId){
+    window.mxmedStore.currentPatientId = bootPatientId;
+    window.mxmedStore.activePatientId = bootPatientId;
+  }
+  if(bootEncounterKey){
+    window.mxmedStore.currentEncounterKey = bootEncounterKey;
+  }else{
+    window.mxmedStore.currentEncounterKey = pickEncounterForPatient(window.mxmedStore.currentPatientId);
+  }
+  syncCurrentContextNodes();
+  rebuildCompatibilityState();
 })();
 
 // Clinical API fetch auth header shim
@@ -2790,7 +3064,10 @@ console.info('app.js loaded :: 20251123a');
   const expHeaderActiveBadge = pane.querySelector('[data-role="exp-h-active-enc"]');
   const expHeaderOrigin = pane.querySelector('[data-role="exp-h-enc-origin"]');
   const expHeaderStart = pane.querySelector('[data-role="exp-h-enc-start"]');
+  const expHeaderNeutral = pane.querySelector('[data-role="exp-h-neutral"]');
+  const expHeaderStartBtn = pane.querySelector('[data-role="exp-h-start-enc-btn"]');
   const expHeaderCloseBtn = pane.querySelector('[data-role="exp-h-close-enc-btn"]');
+  const p10StartBtn = document.querySelector('#mm-p10-bar [data-action="p10-start-encounter"]');
   const p10FinalizeBtn = document.querySelector('#mm-p10-bar [data-action="p10-finalize-encounter"]');
   const p10BarNode = document.getElementById('mm-p10-bar');
   let headerSyncToken = 0;
@@ -3103,13 +3380,29 @@ console.info('app.js loaded :: 20251123a');
     if(!patientId) return;
     try{ window.sessionStorage?.setItem(activePatientSessionKey, patientId); }catch(_){}
   };
-  const setActivePatientId = (pid, opts = {})=>{
+  const maybeConfirmActiveEncounterBeforePatientChange = async (nextPatientId)=>{
+    const nextPid = String(nextPatientId || '').trim();
+    if(!nextPid) return false;
+    const currentPid = String(getActivePatientId() || '').trim();
+    if(!currentPid || currentPid === nextPid) return true;
+    // Multi-active mode: cambiar de paciente no obliga a cerrar consultas previas.
+    return true;
+  };
+  window.maybeConfirmActiveEncounterBeforePatientChange = maybeConfirmActiveEncounterBeforePatientChange;
+
+  const setActivePatientId = async (pid, opts = {})=>{
     const next = String(pid || '').trim();
-    if(!next) return;
+    if(!next) return false;
     const current = String(getActivePatientId() || '').trim();
     if(current === next){
       applyPatientGate();
-      return;
+      return true;
+    }
+    if(opts.skipActiveEncounterConfirm !== true){
+      const allowed = await maybeConfirmActiveEncounterBeforePatientChange(next);
+      if(!allowed){
+        return false;
+      }
     }
     pane.dataset.patientId = next;
     pane.dataset.activePatientId = next;
@@ -3119,6 +3412,13 @@ console.info('app.js loaded :: 20251123a');
     window.__MXMED_ACTIVE_PATIENT_ID = next;
     if(window.mxmedStore && typeof window.mxmedStore === 'object'){
       window.mxmedStore.activePatientId = next;
+      window.mxmedStore.currentPatientId = next;
+      if(typeof window.mxmedResolveCurrentEncounterForPatient === 'function'){
+        window.mxmedStore.currentEncounterKey = window.mxmedResolveCurrentEncounterForPatient(next) || '';
+      }
+    }
+    if(typeof window.mxmedSetCurrentPatientContext === 'function'){
+      window.mxmedSetCurrentPatientContext(next, { sync:true });
     }
     setSessionPatientId(next);
     setHashPatientId(next);
@@ -3126,6 +3426,7 @@ console.info('app.js loaded :: 20251123a');
       window.dispatchEvent(new Event('patient:selected'));
     }
     applyPatientGate();
+    return true;
   };
   window.setActivePatientId = setActivePatientId;
   window.mxmedSetActivePatientId = setActivePatientId;
@@ -3284,7 +3585,51 @@ console.info('app.js loaded :: 20251123a');
     return headerActiveLookupPromise;
   };
 
+  const getCanonicalEncounterState = ()=>{
+    const store = (window.mxmedStore && typeof window.mxmedStore === 'object') ? window.mxmedStore : null;
+    if(!store) return null;
+    const activeMap = (store.activeEncounters && typeof store.activeEncounters === 'object')
+      ? store.activeEncounters
+      : {};
+    const patientId = String(store.currentPatientId || store.activePatientId || '').trim();
+    let encounterKey = String(store.currentEncounterKey || '').trim();
+    let entry = encounterKey ? activeMap[encounterKey] : null;
+    if(!entry || String(entry.patient_id || '').trim() !== patientId){
+      if(typeof window.mxmedResolveCurrentEncounterForPatient === 'function'){
+        encounterKey = String(window.mxmedResolveCurrentEncounterForPatient(patientId) || '').trim();
+        entry = encounterKey ? activeMap[encounterKey] : null;
+      }
+    }
+    if(!entry){
+      const compat = (store.activeEncounterState && typeof store.activeEncounterState === 'object')
+        ? store.activeEncounterState
+        : null;
+      if(!compat) return null;
+      return {
+        status: String(compat.status || '').trim(),
+        encounter_key: String(compat.encounter_key || '').trim(),
+        origin: String(compat.origin || '').trim(),
+        started_at: String(compat.started_at || '').trim()
+      };
+    }
+    return {
+      status: String(entry.status || '').trim(),
+      encounter_key: String(entry.encounter_key || '').trim(),
+      origin: String(entry.origin || '').trim(),
+      started_at: String(entry.started_at || '').trim()
+    };
+  };
+
   const resolveEncounterKeyForHeader = async (patientId)=>{
+    const canonical = getCanonicalEncounterState();
+    if(canonical){
+      if(canonical.status === 'sin_consulta_activa'){
+        return '';
+      }
+      if(canonical.encounter_key){
+        return canonical.encounter_key;
+      }
+    }
     const fromImmediate = firstNonEmpty(
       pane.dataset.activeEncounterKey,
       pane.getAttribute('data-active-encounter-key'),
@@ -3297,7 +3642,17 @@ console.info('app.js loaded :: 20251123a');
     if(fromImmediate){
       return fromImmediate;
     }
-    return fetchActiveEncounterKeyForHeader(patientId);
+    const fetched = await fetchActiveEncounterKeyForHeader(patientId);
+    if(fetched && patientId && typeof window.mxmedEmitEncounterLifecycle === 'function'){
+      window.mxmedEmitEncounterLifecycle({
+        patient_id: patientId,
+        encounter_key: fetched,
+        status: 'consulta_activa',
+        origin: 'header_patient_resolve',
+        last_activity_at: new Date().toISOString()
+      });
+    }
+    return fetched;
   };
 
   const syncExpedienteHeaderContext = async ()=>{
@@ -3339,12 +3694,18 @@ console.info('app.js loaded :: 20251123a');
       expHeaderLastDx.classList.toggle('d-none', !lastDxLabel);
     }
 
+    const canonical = getCanonicalEncounterState();
     const encounterKey = await resolveEncounterKeyForHeader(patientId);
     if(runToken !== headerSyncToken) return;
-    const hasActiveEncounter = !!encounterKey;
+    const hasPatientContext = !!patientId;
+    const hasActiveEncounter = canonical
+      ? canonical.status !== 'sin_consulta_activa' && !!encounterKey
+      : !!encounterKey;
 
     if(expHeaderActiveWrap) expHeaderActiveWrap.classList.toggle('d-none', !hasActiveEncounter);
     if(expHeaderActiveBadge) expHeaderActiveBadge.classList.toggle('d-none', !hasActiveEncounter);
+    if(expHeaderNeutral) expHeaderNeutral.classList.toggle('d-none', hasActiveEncounter || !hasPatientContext);
+    if(expHeaderStartBtn) expHeaderStartBtn.classList.toggle('d-none', hasActiveEncounter || !hasPatientContext);
     if(expHeaderCloseBtn) expHeaderCloseBtn.classList.toggle('d-none', !hasActiveEncounter);
 
     if(!hasActiveEncounter){
@@ -3507,7 +3868,7 @@ console.info('app.js loaded :: 20251123a');
         syncState({ allowNavigate:true });
         return;
       }
-      setActivePatientId(pid, { emitEvent:false });
+      setActivePatientId(pid, { emitEvent:false, skipActiveEncounterConfirm:true });
       syncState({ allowNavigate:true });
     };
     ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach((evtName)=>{
@@ -3516,7 +3877,7 @@ console.info('app.js loaded :: 20251123a');
     const onHashChange = ()=>{
       const pid = String(getHashPatientId() || '').trim();
       if(!pid) return;
-      setActivePatientId(pid, { source:'hashchange', emitEvent:false });
+      setActivePatientId(pid, { source:'hashchange', emitEvent:false, skipActiveEncounterConfirm:true });
       syncState({ allowNavigate:true });
     };
     window.addEventListener('hashchange', onHashChange);
@@ -3529,6 +3890,12 @@ console.info('app.js loaded :: 20251123a');
     expHeaderCloseBtn.addEventListener('click', ()=>{
       if(!p10FinalizeBtn || p10FinalizeBtn.disabled) return;
       p10FinalizeBtn.click();
+    });
+  }
+  if(expHeaderStartBtn){
+    expHeaderStartBtn.addEventListener('click', ()=>{
+      if(!p10StartBtn || p10StartBtn.disabled) return;
+      p10StartBtn.click();
     });
   }
   const headerInputs = [
@@ -3547,7 +3914,7 @@ console.info('app.js loaded :: 20251123a');
     el.addEventListener('change', syncExpedienteHeaderContext);
   });
   pane.addEventListener('pac-age-changed', syncExpedienteHeaderContext);
-  ['encounter:active', 'mxmed:encounter-changed', 'patient:selected', 'expediente:patient_changed', 'expediente:patient-changed']
+  ['encounter:active', 'mxmed:encounter-changed', 'mxmed:encounter-lifecycle', 'patient:selected', 'expediente:patient_changed', 'expediente:patient-changed']
     .forEach((evtName)=> window.addEventListener(evtName, syncExpedienteHeaderContext));
   const headerEncounterObserver = new MutationObserver(syncExpedienteHeaderContext);
   headerEncounterObserver.observe(pane, {
@@ -8694,6 +9061,15 @@ function mxResetLogoPreview(){
       const detail = { patient_id: safePid, encounter_key: encounterKey };
       window.dispatchEvent(new CustomEvent('encounter:active', { detail }));
       window.dispatchEvent(new CustomEvent('mxmed:encounter-changed', { detail }));
+      if(typeof window.mxmedEmitEncounterLifecycle === 'function'){
+        window.mxmedEmitEncounterLifecycle({
+          patient_id: safePid,
+          encounter_key: encounterKey,
+          status: 'consulta_activa',
+          origin: 'ensure_active_encounter',
+          last_activity_at: new Date().toISOString()
+        });
+      }
       return encounterKey;
     }catch(_){
       console.warn('[P11] ensureActiveEncounter failed');
@@ -8721,14 +9097,21 @@ function mxResetLogoPreview(){
     if(!btn) return;
     const pid = String(btn.getAttribute('data-pid') || '').trim();
     if(!pid) return;
+    let changed = true;
     if(typeof window.setActivePatientId === 'function'){
-      window.setActivePatientId(pid, { emitEvent:true });
+      changed = await window.setActivePatientId(pid, { emitEvent:true });
     }else if(typeof window.mxmedSetActivePatientId === 'function'){
-      window.mxmedSetActivePatientId(pid, { emitEvent:true });
+      changed = await window.mxmedSetActivePatientId(pid, { emitEvent:true });
+    }
+    if(changed === false){
+      return;
     }
     if(typeof jumpTo === 'function'){
       jumpTo('p-expediente');
     }
-    ensureActiveEncounter(pid).catch(()=> null);
+    const openOrigin = String(btn.getAttribute('data-open-origin') || 'search_general').trim().toLowerCase();
+    if(openOrigin === 'clinical_explicit'){
+      ensureActiveEncounter(pid).catch(()=> null);
+    }
   });
 })();

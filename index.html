@@ -2815,6 +2815,8 @@
                     <div class="exp-hdr-meta-line d-none" data-role="exp-h-enc-start"></div>
                   </div>
                 </div>
+                <div class="exp-hdr-neutral d-none" data-role="exp-h-neutral">Sin consulta activa</div>
+                <button type="button" class="btn btn-outline-primary btn-sm d-none" data-role="exp-h-start-enc-btn">Iniciar consulta</button>
                 <button type="button" class="btn btn-success btn-sm d-none" data-role="exp-h-close-enc-btn">Cerrar consulta</button>
               </div>
             </div>
@@ -6749,8 +6751,21 @@
 
       p10Bar.classList.remove('d-none');
       var hasActive = !!(state && state.hasActive && state.encounter_key);
+      var canonicalPatientId = String((window.mxmedStore && (window.mxmedStore.currentPatientId || window.mxmedStore.activePatientId)) || '').trim();
+      var canonicalEncounterKey = String((window.mxmedStore && window.mxmedStore.currentEncounterKey) || '').trim();
+      if (canonicalPatientId && canonicalPatientId === String(patientId || '').trim()) {
+        if (!canonicalEncounterKey) {
+          hasActive = false;
+        } else if (!hasActive || String(state.encounter_key || '').trim() !== canonicalEncounterKey) {
+          hasActive = true;
+          state = Object.assign({}, state || {}, {
+            hasActive: true,
+            encounter_key: canonicalEncounterKey
+          });
+        }
+      }
       p10ActiveEncounter = hasActive ? state : null;
-      p10Bar.dataset.encounterKey = hasActive ? String(state.encounter_key || '').trim() : '';
+      p10Bar.dataset.encounterKey = hasActive ? String((state && state.encounter_key) || '').trim() : '';
       if (p10OnAir) p10OnAir.classList.toggle('d-none', !hasActive);
       if (p10StartBtn) p10StartBtn.classList.toggle('d-none', hasActive);
       if (p10FinalizeBtn) p10FinalizeBtn.classList.toggle('d-none', !hasActive);
@@ -6763,6 +6778,25 @@
         } else {
           p10StatusText.textContent = 'No hay consulta activa para este paciente';
         }
+      }
+    }
+
+    function renderP10FromCanonicalContext() {
+      var patientId = readActivePatientId();
+      if (!patientId) {
+        renderP10Bar({ hasActive: false });
+        return;
+      }
+      var canonicalPatientId = String((window.mxmedStore && (window.mxmedStore.currentPatientId || window.mxmedStore.activePatientId)) || '').trim();
+      var canonicalEncounterKey = String((window.mxmedStore && window.mxmedStore.currentEncounterKey) || '').trim();
+      if (canonicalPatientId && canonicalPatientId === String(patientId).trim() && canonicalEncounterKey) {
+        renderP10Bar({
+          hasActive: true,
+          encounter_key: canonicalEncounterKey,
+          status: 'open'
+        });
+      } else {
+        renderP10Bar({ hasActive: false });
       }
     }
 
@@ -6864,6 +6898,11 @@
         return resp;
       });
     }
+    window.mxmedFinalizeEncounterFlow = function (encounterKey) {
+      return finalizeEncounter(encounterKey).then(function (resp) {
+        return refreshP10().catch(function () { return null; }).then(function () { return resp; });
+      });
+    };
 
     function refreshP10() {
       if (!isHistorialTabVisible()) {
@@ -7052,6 +7091,16 @@
         startEncounter(patientId)
           .then(function (state) {
             renderP10Bar(state);
+            if (typeof window.mxmedEmitEncounterLifecycle === 'function' && state && state.encounter_key) {
+              window.mxmedEmitEncounterLifecycle({
+                patient_id: patientId,
+                encounter_key: String(state.encounter_key || '').trim(),
+                status: 'consulta_activa',
+                origin: 'p10_start',
+                started_at: formatNowMysql(),
+                last_activity_at: new Date().toISOString()
+              });
+            }
             if (state && state.encounter_key) {
               openEncounterInEmbed(state.encounter_key);
             }
@@ -7069,15 +7118,48 @@
     if (p10FinalizeBtn) {
       p10FinalizeBtn.addEventListener('click', function () {
         if (p10Loading || !p10ActiveEncounter || !p10ActiveEncounter.encounter_key) return;
+        var closingEncounterKey = String(p10ActiveEncounter.encounter_key || '').trim();
+        if (!closingEncounterKey) return;
         if (!window.confirm('¿Cerrar consulta? Se generará nota clínica AUTO de cierre.')) {
           return;
         }
+        if (typeof window.mxmedEmitEncounterLifecycle === 'function') {
+          window.mxmedEmitEncounterLifecycle({
+            patient_id: readActivePatientId(),
+            encounter_key: closingEncounterKey,
+            status: 'consulta_pendiente_cierre',
+            origin: 'p10_finalize_click',
+            pending_reason: 'user_finalize_request',
+            last_activity_at: new Date().toISOString()
+          });
+        }
         setP10Loading(true);
-        finalizeEncounter(p10ActiveEncounter.encounter_key)
+        finalizeEncounter(closingEncounterKey)
           .then(function () {
+            if (typeof window.mxmedEmitEncounterLifecycle === 'function') {
+              window.mxmedEmitEncounterLifecycle({
+                patient_id: readActivePatientId(),
+                encounter_key: closingEncounterKey,
+                status: 'consulta_cerrada',
+                origin: 'p10_finalize_success',
+                last_activity_at: new Date().toISOString()
+              });
+            }
+            renderP10FromCanonicalContext();
             return refreshP10();
           })
           .catch(function (err) {
+            if (typeof window.mxmedEmitEncounterLifecycle === 'function') {
+              window.mxmedEmitEncounterLifecycle({
+                patient_id: readActivePatientId(),
+                encounter_key: closingEncounterKey,
+                status: 'consulta_activa',
+                origin: 'p10_finalize_error',
+                pending_reason: String((err && err.message) || '').trim(),
+                last_activity_at: new Date().toISOString()
+              });
+            }
+            renderP10FromCanonicalContext();
             window.alert(String((err && err.message) || 'No se pudo cerrar la consulta.'));
           })
           .finally(function () {
@@ -7085,6 +7167,10 @@
           });
       });
     }
+
+    window.addEventListener('mxmed:encounter-lifecycle', function () {
+      renderP10FromCanonicalContext();
+    });
 
     window.addEventListener('message', function (event) {
       if (!event || event.source !== iframe.contentWindow) return;
