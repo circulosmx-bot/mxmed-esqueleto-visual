@@ -2781,6 +2781,21 @@ console.info('app.js loaded :: 20251123a');
   const genderExtra = pane.querySelector('[data-gen-extra]');
   const datosTabLink = pane.querySelector('[data-tab-key="t-datos"]');
   const datosTabPane = pane.querySelector('#t-datos');
+  const expHeader = pane.querySelector('[data-role="exp-header"]');
+  const expHeaderName = pane.querySelector('[data-role="exp-h-patient-name"]');
+  const expHeaderAge = pane.querySelector('[data-role="exp-h-age"]');
+  const expHeaderSex = pane.querySelector('[data-role="exp-h-sex"]');
+  const expHeaderLastDx = pane.querySelector('[data-role="exp-h-last-dx"]');
+  const expHeaderActiveWrap = pane.querySelector('[data-role="exp-h-active-wrap"]');
+  const expHeaderActiveBadge = pane.querySelector('[data-role="exp-h-active-enc"]');
+  const expHeaderOrigin = pane.querySelector('[data-role="exp-h-enc-origin"]');
+  const expHeaderStart = pane.querySelector('[data-role="exp-h-enc-start"]');
+  const expHeaderCloseBtn = pane.querySelector('[data-role="exp-h-close-enc-btn"]');
+  const p10FinalizeBtn = document.querySelector('#mm-p10-bar [data-action="p10-finalize-encounter"]');
+  const p10BarNode = document.getElementById('mm-p10-bar');
+  let headerSyncToken = 0;
+  let headerActiveLookupPid = '';
+  let headerActiveLookupPromise = null;
   let lastDayInvalid = false;
   const setGenderAttr = (genero)=>{
     if(genero){ pane.setAttribute('data-exp-gender', genero); }
@@ -3142,6 +3157,249 @@ console.info('app.js loaded :: 20251123a');
   window.resolveActivePatientId = getActivePatientId;
   window.mxmedResolveActivePatientId = getActivePatientId;
 
+  const firstNonEmpty = (...values)=>{
+    for(const raw of values){
+      const value = String(raw ?? '').trim();
+      if(value) return value;
+    }
+    return '';
+  };
+
+  const toUserSex = (value)=>{
+    const raw = String(value || '').trim().toUpperCase();
+    if(raw === 'F') return 'Femenino';
+    if(raw === 'M') return 'Masculino';
+    if(raw === 'O') return 'Otro';
+    return '--';
+  };
+
+  const mapEncounterOriginLabel = (value)=>{
+    const raw = String(value || '').trim();
+    if(!raw) return '';
+    const key = raw.toLowerCase();
+    const map = {
+      agenda: 'Agenda',
+      appointment: 'Cita programada',
+      cita: 'Cita programada',
+      walkin: 'Sin cita',
+      walk_in: 'Sin cita',
+      'walk-in': 'Sin cita',
+      urgencias: 'Urgencias',
+      emergency: 'Urgencias',
+      referencia: 'Referencia',
+      referral: 'Referencia',
+      app: 'Aplicación',
+      web: 'Portal web'
+    };
+    return map[key] || raw.replace(/[_-]+/g, ' ');
+  };
+
+  const resolveClinicalUserIdForHeader = ()=>{
+    const candidates = [
+      window.mxmedUserId,
+      window.__MXMED_USER_ID,
+      window.mxmedStore && window.mxmedStore.user_id,
+      document.body && document.body.dataset ? document.body.dataset.userId : ''
+    ];
+    for(const raw of candidates){
+      const value = String(raw || '').trim();
+      if(value) return value;
+    }
+    return '';
+  };
+
+  const buildClinicalHeadersForHeader = (extraHeaders = {})=>{
+    const headers = { Accept: 'application/json' };
+    const userId = resolveClinicalUserIdForHeader();
+    if(userId){
+      headers['X-User-Id'] = userId;
+    }
+    Object.keys(extraHeaders).forEach((key)=>{ headers[key] = extraHeaders[key]; });
+    return headers;
+  };
+
+  const formatEncounterStartHour = (value)=>{
+    const raw = String(value || '').trim();
+    if(!raw) return '';
+    const parsed = new Date(raw);
+    if(Number.isNaN(parsed.getTime())) return '';
+    try{
+      return new Intl.DateTimeFormat('es-MX', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).format(parsed);
+    }catch(_){
+      const hh = String(parsed.getHours()).padStart(2, '0');
+      const mm = String(parsed.getMinutes()).padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
+  };
+
+  const getEncounterDataForHeader = async (encounterKey)=>{
+    const safeEncounterKey = String(encounterKey || '').trim();
+    if(!safeEncounterKey) return null;
+    if(typeof window.loadActiveEncounterPayload === 'function'){
+      const payload = await window.loadActiveEncounterPayload(safeEncounterKey).catch(()=> null);
+      if(payload && payload.data && typeof payload.data === 'object'){
+        return payload.data;
+      }
+    }
+    try{
+      const resp = await fetch(`/api/clinical/index.php/encounters/${encodeURIComponent(safeEncounterKey)}`, {
+        method: 'GET',
+        headers: buildClinicalHeadersForHeader(),
+        credentials: 'same-origin'
+      });
+      const json = await resp.json().catch(()=> null);
+      if(json && json.ok === true && json.data && typeof json.data === 'object'){
+        return json.data;
+      }
+    }catch(_){}
+    return null;
+  };
+
+  const fetchActiveEncounterKeyForHeader = async (patientId)=>{
+    const safePatientId = String(patientId || '').trim();
+    if(!safePatientId) return '';
+    if(headerActiveLookupPid === safePatientId && headerActiveLookupPromise){
+      return headerActiveLookupPromise;
+    }
+    headerActiveLookupPid = safePatientId;
+    headerActiveLookupPromise = fetch(`/api/clinical/index.php/patients/${encodeURIComponent(safePatientId)}/encounters/active`, {
+      method: 'GET',
+      headers: buildClinicalHeadersForHeader(),
+      credentials: 'same-origin'
+    }).then((resp)=> resp.json().catch(()=> null))
+      .then((json)=>{
+        if(!json || json.ok !== true || !json.data || !json.data.encounter_key){
+          return '';
+        }
+        return String(json.data.encounter_key || '').trim();
+      })
+      .catch(()=> '')
+      .finally(()=>{
+        headerActiveLookupPromise = null;
+      });
+    return headerActiveLookupPromise;
+  };
+
+  const resolveEncounterKeyForHeader = async (patientId)=>{
+    const fromImmediate = firstNonEmpty(
+      pane.dataset.activeEncounterKey,
+      pane.getAttribute('data-active-encounter-key'),
+      pane.dataset.encounterKey,
+      pane.getAttribute('data-encounter-key'),
+      p10BarNode && p10BarNode.dataset ? p10BarNode.dataset.encounterKey : '',
+      window.mxmedStore && window.mxmedStore.activeEncounterKey,
+      (typeof window.getActiveEncounterKey === 'function') ? window.getActiveEncounterKey() : ''
+    );
+    if(fromImmediate){
+      return fromImmediate;
+    }
+    return fetchActiveEncounterKeyForHeader(patientId);
+  };
+
+  const syncExpedienteHeaderContext = async ()=>{
+    if(!expHeader) return;
+    const runToken = ++headerSyncToken;
+    const patientId = String(getActivePatientId() || '').trim();
+    const nombre = pane.querySelector('[data-pac-nombre]')?.value?.trim() || '';
+    const apPat = pane.querySelector('[data-pac-apellido-paterno]')?.value?.trim() || '';
+    const apMat = pane.querySelector('[data-pac-apellido-materno]')?.value?.trim() || '';
+    const fullName = [nombre, apPat, apMat].filter(Boolean).join(' ').trim() || 'Paciente';
+    const ageText = pane.querySelector('[data-dg-edad]')?.textContent?.trim() || '--';
+    const sexoVal = firstNonEmpty(
+      pane.querySelector('input[name="pac-genero"]:checked')?.value || '',
+      pane.getAttribute('data-exp-gender')
+    );
+    const sexText = toUserSex(sexoVal);
+
+    if(expHeaderName) expHeaderName.textContent = fullName;
+    if(expHeaderAge) expHeaderAge.textContent = ageText || '--';
+    if(expHeaderSex) expHeaderSex.textContent = sexText;
+
+    const lastDxRaw = firstNonEmpty(
+      pane.dataset.lastDxText,
+      pane.getAttribute('data-last-dx-text'),
+      pane.dataset.lastDiagnosis,
+      pane.getAttribute('data-last-diagnosis')
+    );
+    const lastDxDate = firstNonEmpty(
+      pane.dataset.lastDxDate,
+      pane.getAttribute('data-last-dx-date'),
+      pane.dataset.lastDiagnosisDate,
+      pane.getAttribute('data-last-diagnosis-date')
+    );
+    const lastDxLabel = lastDxRaw
+      ? `Último diagnóstico: ${lastDxRaw}${lastDxDate ? ' · ' + lastDxDate : ''}`
+      : '';
+    if(expHeaderLastDx){
+      expHeaderLastDx.textContent = lastDxLabel;
+      expHeaderLastDx.classList.toggle('d-none', !lastDxLabel);
+    }
+
+    const encounterKey = await resolveEncounterKeyForHeader(patientId);
+    if(runToken !== headerSyncToken) return;
+    const hasActiveEncounter = !!encounterKey;
+
+    if(expHeaderActiveWrap) expHeaderActiveWrap.classList.toggle('d-none', !hasActiveEncounter);
+    if(expHeaderActiveBadge) expHeaderActiveBadge.classList.toggle('d-none', !hasActiveEncounter);
+    if(expHeaderCloseBtn) expHeaderCloseBtn.classList.toggle('d-none', !hasActiveEncounter);
+
+    if(!hasActiveEncounter){
+      if(expHeaderOrigin){
+        expHeaderOrigin.textContent = '';
+        expHeaderOrigin.classList.add('d-none');
+      }
+      if(expHeaderStart){
+        expHeaderStart.textContent = '';
+        expHeaderStart.classList.add('d-none');
+      }
+      return;
+    }
+
+    let originText = '';
+    let startText = '';
+    const encounterData = await getEncounterDataForHeader(encounterKey);
+    if(runToken !== headerSyncToken) return;
+    if(encounterData){
+      const originRaw = firstNonEmpty(
+        encounterData.origin,
+        encounterData.source,
+        encounterData.encounter_origin,
+        encounterData.appointment_origin,
+        encounterData.encounter_source,
+        encounterData.channel,
+        encounterData.encounter_type
+      );
+      const mappedOrigin = mapEncounterOriginLabel(originRaw);
+      if(mappedOrigin){
+        originText = `Origen: ${mappedOrigin}`;
+      }
+      const startRaw = firstNonEmpty(
+        encounterData.started_at,
+        encounterData.start_at,
+        encounterData.encounter_dt,
+        encounterData.opened_at,
+        encounterData.created_at
+      );
+      const startHour = formatEncounterStartHour(startRaw);
+      if(startHour){
+        startText = `Inicio: ${startHour}`;
+      }
+    }
+
+    if(expHeaderOrigin){
+      expHeaderOrigin.textContent = originText;
+      expHeaderOrigin.classList.toggle('d-none', !originText);
+    }
+    if(expHeaderStart){
+      expHeaderStart.textContent = startText;
+      expHeaderStart.classList.toggle('d-none', !startText);
+    }
+  };
+
   const applyPatientGate = ()=>{
     const gateOn = String(getActivePatientId() || '').trim() !== '';
     const panes = Array.from(pane.querySelectorAll('.tab-content .tab-pane'));
@@ -3182,6 +3440,7 @@ console.info('app.js loaded :: 20251123a');
     syncGineco(genero, opts.allowNavigate);
     updateGenderExtra();
     applyPatientGate();
+    syncExpedienteHeaderContext();
     if(!ready){
       showFirstAvailable();
     }
@@ -3266,11 +3525,42 @@ console.info('app.js loaded :: 20251123a');
     pane.__patientGateInit = true;
   }
 
+  if(expHeaderCloseBtn){
+    expHeaderCloseBtn.addEventListener('click', ()=>{
+      if(!p10FinalizeBtn || p10FinalizeBtn.disabled) return;
+      p10FinalizeBtn.click();
+    });
+  }
+  const headerInputs = [
+    nameInput,
+    apellidoPaternoInput,
+    apellidoMaternoInput,
+    pane.querySelector('[data-dg-dia]'),
+    pane.querySelector('[data-dg-mes]'),
+    pane.querySelector('[data-dg-anio]')
+  ].filter(Boolean);
+  headerInputs.forEach((el)=>{
+    el.addEventListener('input', syncExpedienteHeaderContext);
+    el.addEventListener('change', syncExpedienteHeaderContext);
+  });
+  genderInputs.forEach((el)=>{
+    el.addEventListener('change', syncExpedienteHeaderContext);
+  });
+  pane.addEventListener('pac-age-changed', syncExpedienteHeaderContext);
+  ['encounter:active', 'mxmed:encounter-changed', 'patient:selected', 'expediente:patient_changed', 'expediente:patient-changed']
+    .forEach((evtName)=> window.addEventListener(evtName, syncExpedienteHeaderContext));
+  const headerEncounterObserver = new MutationObserver(syncExpedienteHeaderContext);
+  headerEncounterObserver.observe(pane, {
+    attributes:true,
+    attributeFilter:['data-encounter-key', 'data-active-encounter-key', 'data-patient-id', 'data-active-patient-id']
+  });
+
   const selectedGenero = genderInputs.find(inp => inp.checked)?.value || '';
   syncGineco(selectedGenero, false);
   syncState();
   layoutTabs(false);
   bindDOB();
+  syncExpedienteHeaderContext();
 })();
 
 // ====== Historia Clinica: registros con chips + modal ======

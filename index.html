@@ -2793,7 +2793,32 @@
 
         <section class="mm-card d-none" id="p-expediente">
 
-          <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">person_add</span>Mis Pacientes · Expediente Médico</h5></div>
+          <div class="head">
+            <div class="exp-hdr" data-role="exp-header">
+              <div class="exp-hdr-left">
+                <div class="exp-hdr-title-row">
+                  <span class="material-symbols-rounded title-ico" aria-hidden="true">person_add</span>
+                  <span class="exp-hdr-title">Mis Pacientes · Expediente Médico</span>
+                </div>
+                <div class="exp-hdr-patient-row">
+                  <span class="exp-hdr-patient-name" data-role="exp-h-patient-name">Paciente</span>
+                  <span class="exp-hdr-chip" data-role="exp-h-age">--</span>
+                  <span class="exp-hdr-chip exp-hdr-chip-sex" data-role="exp-h-sex">--</span>
+                </div>
+                <div class="exp-hdr-last-dx d-none" data-role="exp-h-last-dx"></div>
+              </div>
+              <div class="exp-hdr-right">
+                <div class="exp-hdr-active-wrap d-none" data-role="exp-h-active-wrap">
+                  <span class="exp-hdr-onair-badge d-none" data-role="exp-h-active-enc">CONSULTA ACTIVA</span>
+                  <div class="exp-hdr-active-meta">
+                    <div class="exp-hdr-meta-line" data-role="exp-h-enc-origin"></div>
+                    <div class="exp-hdr-meta-line d-none" data-role="exp-h-enc-start"></div>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-success btn-sm d-none" data-role="exp-h-close-enc-btn">Cerrar consulta</button>
+              </div>
+            </div>
+          </div>
 
           <div class="body">
 
