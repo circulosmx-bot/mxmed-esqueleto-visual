@@ -47,6 +47,28 @@ function appointment_id_from_encounter_key(string $encounterKey): string
     return trim((string)$value);
 }
 
+function normalize_encounter_match_key(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+    if (preg_match('/(enc:[A-Za-z0-9:_-]+)/', $value, $m) === 1) {
+        return strtolower(trim((string)$m[1]));
+    }
+    return strtolower($value);
+}
+
+function encounter_key_matches_active(string $candidate, string $active): bool
+{
+    $candidateNorm = normalize_encounter_match_key($candidate);
+    $activeNorm = normalize_encounter_match_key($active);
+    if ($candidateNorm === '' || $activeNorm === '') {
+        return false;
+    }
+    return $candidateNorm === $activeNorm;
+}
+
 function timeline_date_only(string $value): string
 {
     $value = trim($value);
@@ -608,6 +630,7 @@ $activeCase = null;
 $activeCaseError = '';
 $caseAssignError = '';
 $caseAssignSuccess = '';
+$activeEncounterKey = trim((string)$encounterKey);
 
 if ($encounterKey === '' && $appointmentId !== '') {
     $encounterKey = 'appt:' . $appointmentId;
@@ -763,6 +786,27 @@ if ($patientId !== '') {
         }
     }
 }
+
+if ($patientId !== '' && $patientId !== 'demo' && $activeEncounterKey === '') {
+    $activeEncounterUrl = $clinicalApiIndexBase . '/patients/' . rawurlencode($patientId) . '/encounters/active';
+    $activeEncounterContext = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'timeout' => 8,
+            'ignore_errors' => true,
+            'header' => "Accept: application/json\r\n",
+        ],
+    ]);
+    $activeEncounterRaw = @file_get_contents($activeEncounterUrl, false, $activeEncounterContext);
+    if ($activeEncounterRaw !== false) {
+        $activeEncounterDecoded = json_decode($activeEncounterRaw, true);
+        if (is_array($activeEncounterDecoded) && ($activeEncounterDecoded['ok'] ?? false) === true) {
+            $activeEncounterData = is_array($activeEncounterDecoded['data'] ?? null) ? $activeEncounterDecoded['data'] : [];
+            $activeEncounterKey = trim((string)($activeEncounterData['encounter_key'] ?? ($activeEncounterDecoded['encounter_key'] ?? '')));
+        }
+    }
+}
+$activeEncounterKey = normalize_encounter_match_key($activeEncounterKey);
 
 $items = array_values(array_filter($items, static function ($item): bool {
     if (!is_array($item)) {
@@ -1121,6 +1165,22 @@ $extraHead = <<<'HTML'
     .clinical-historial .is-in-active-case{
       border-left: 4px solid var(--mm-borde-input, #00B0C5);
       background: linear-gradient(90deg, rgba(0,176,197,.06) 0%, rgba(0,176,197,0) 24%);
+    }
+    .clinical-historial .is-active-encounter{
+      border-left: 4px solid #198754;
+      background: linear-gradient(90deg, rgba(25,135,84,.10) 0%, rgba(25,135,84,0) 26%);
+      box-shadow: 0 0 0 1px rgba(25,135,84,.16) inset;
+    }
+    .clinical-historial .encounter-active-badge{
+      background:#198754;
+      color:#fff;
+      border-radius:999px;
+      padding:.18rem .48rem;
+      font-size:.68rem;
+      font-weight:700;
+      line-height:1;
+      letter-spacing:.01em;
+      white-space:nowrap;
     }
     .clinical-historial .only-active-case-note{
       background: var(--mm-header-top, #EAF6FB);
@@ -1488,9 +1548,9 @@ if (!$embed) {
                 $isInActiveCase = (bool)($item['is_in_active_case'] ?? false);
                 $itemCaseId = trim((string)($item['case_id'] ?? ''));
                 $appointmentHasEncounter = (bool)($item['has_encounter'] ?? false);
-                $appointmentLatestEncounterKey = trim((string)($item['latest_encounter_key'] ?? ''));
                 $appointmentEpisodeId = $appointmentId;
                 $appointmentEncounterKey = trim((string)($item['encounter_key'] ?? ''));
+                $appointmentIsActiveEncounter = encounter_key_matches_active($appointmentEncounterKey, $activeEncounterKey);
                 $appointmentClinicalCategory = trim((string)($item['clinical_category'] ?? ''));
                 $appointmentReasonText = trim((string)($agenda['reason_text'] ?? ''));
                 $appointmentDisplayTitle = $entryTitle;
@@ -1516,11 +1576,16 @@ if (!$embed) {
                     $appointmentHref = '/index.html#p-agenda';
                 }
                 ?>
-                <article class="mm-card timeline-event mm-activity-item <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($itemCaseId); ?>" data-in-active-case="<?php echo $isInActiveCase ? '1' : '0'; ?>" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-clinical-category="<?php echo h(trim((string)($item['clinical_category'] ?? ''))); ?>" data-study-role="<?php echo h(trim((string)($item['study_role'] ?? ''))); ?>" data-href="<?php echo h($appointmentHref); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
+                <article class="mm-card timeline-event mm-activity-item <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?> <?php echo $appointmentIsActiveEncounter ? 'is-active-encounter' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($itemCaseId); ?>" data-in-active-case="<?php echo $isInActiveCase ? '1' : '0'; ?>" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-clinical-category="<?php echo h(trim((string)($item['clinical_category'] ?? ''))); ?>" data-study-role="<?php echo h(trim((string)($item['study_role'] ?? ''))); ?>" data-href="<?php echo h($appointmentHref); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
                     <div class="min-w-0 flex-grow-1">
-                      <div class="mm-activity-title"><?php echo h($appointmentDisplayTitle); ?></div>
+                      <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="mm-activity-title"><?php echo h($appointmentDisplayTitle); ?></div>
+                        <?php if ($appointmentIsActiveEncounter): ?>
+                          <span class="encounter-active-badge">Consulta actual</span>
+                        <?php endif; ?>
+                      </div>
                       <?php if ($appointmentClinicalCategory === 'procedimiento' && trim((string)($agenda['start_at'] ?? '')) !== ''): ?>
                         <div class="mm-activity-meta"><?php echo h((string)$agenda['start_at']); ?></div>
                       <?php endif; ?>
@@ -1576,17 +1641,22 @@ if (!$embed) {
                 $encCaseId = trim((string)($rawEncounter['case_id'] ?? ''));
                 $encInActiveCase = (bool)($rawEncounter['is_in_active_case'] ?? false);
                 $encHasEncounter = (bool)($rawEncounter['has_encounter'] ?? true);
-                $encLatestEncounterKey = trim((string)($rawEncounter['latest_encounter_key'] ?? $ek));
+                $encIsActiveEncounter = encounter_key_matches_active($ek, $activeEncounterKey);
                 $encounterHref = '';
-                if ($encHasEncounter && $encLatestEncounterKey !== '') {
-                    $encounterHref = '/modules/clinical/ui/encounter.php?' . carry_embed_params(['encounter_key' => $encLatestEncounterKey]);
+                if ($encHasEncounter && $ek !== '') {
+                    $encounterHref = '/modules/clinical/ui/encounter.php?' . carry_embed_params(['encounter_key' => $ek]);
                 }
                 ?>
-                <article class="mm-card timeline-event mm-activity-item <?php echo $encInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($encCaseId); ?>" data-in-active-case="<?php echo $encInActiveCase ? '1' : '0'; ?>" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>" data-encounter-key="<?php echo h($ek); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-clinical-category="<?php echo h(trim((string)($rawEncounter['clinical_category'] ?? ''))); ?>" data-study-role="<?php echo h(trim((string)($rawEncounter['study_role'] ?? ''))); ?>" data-href="<?php echo h($encounterHref); ?>" data-nav-mode="<?php echo $encounterHref !== '' ? 'encounter' : ''; ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
+                <article class="mm-card timeline-event mm-activity-item <?php echo $encInActiveCase ? 'is-in-active-case' : ''; ?> <?php echo $encIsActiveEncounter ? 'is-active-encounter' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($encCaseId); ?>" data-in-active-case="<?php echo $encInActiveCase ? '1' : '0'; ?>" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>" data-encounter-key="<?php echo h($ek); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-clinical-category="<?php echo h(trim((string)($rawEncounter['clinical_category'] ?? ''))); ?>" data-study-role="<?php echo h(trim((string)($rawEncounter['study_role'] ?? ''))); ?>" data-href="<?php echo h($encounterHref); ?>" data-nav-mode="<?php echo $encounterHref !== '' ? 'encounter' : ''; ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
                     <div class="min-w-0 flex-grow-1">
-                      <div class="mm-activity-title"><?php echo h($entryTitle); ?></div>
+                      <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="mm-activity-title"><?php echo h($entryTitle); ?></div>
+                        <?php if ($encIsActiveEncounter): ?>
+                          <span class="encounter-active-badge">Consulta actual</span>
+                        <?php endif; ?>
+                      </div>
                       <?php if (trim((string)($rawEncounter['case_title'] ?? '')) !== ''): ?>
                         <div class="mm-activity-meta">Caso: <?php echo h((string)$rawEncounter['case_title']); ?></div>
                       <?php endif; ?>
