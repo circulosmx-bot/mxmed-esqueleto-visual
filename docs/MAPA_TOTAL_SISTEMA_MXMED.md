@@ -1,29 +1,59 @@
 # MAPA TOTAL DEL SISTEMA MXMED
 
 ## 0) Contexto, alcance y método
-- Alcance de este documento: mapa verificable del estado actual del repo, sin implementación.
-- Método aplicado: escaneo real de `modules/*`, `api/*`, `docs/*`, `assets/js/*`, `index.html` y rutas auxiliares en raíz.
-- Estados usados: `DONE`, `PARTIAL`, `FUTURO`, `NO CONFIRMADO`.
+- Alcance: mapa verificable del estado actual del repo (arquitectura + evidencia técnica), sin implementar cambios funcionales.
+- Método: inspección de `modules/*`, `api/*`, `assets/js/*`, `index.html`, `docs/*` y utilerías en raíz.
+- Este documento combina:
+  - claridad arquitectónica (para decisiones)
+  - inventario técnico real (para ejecución)
+- Estados usados:
+  - `DONE`: módulo funcional y operando
+  - `PARTIAL`: existe pero con huecos de integración o contrato
+  - `FUTURO`: visual/prototipo sin backend operativo
+  - `NO CONFIRMADO`: referencia documental sin implementación verificable
 - Decisiones canónicas respetadas:
-  - Agenda/Waitlist v1 `READY` y congelada.
-  - Paciente canónico: `modules/patients`.
+  - Agenda/Waitlist v1 `READY`.
+  - Paciente canónico: `modules/patients` (`patients_patients.patient_id`).
   - Documentos clínicos canónicos: `clinical_documents`.
-  - `modules/clinical` no debe duplicar paciente.
+  - `modules/clinical` no debe duplicar identidad paciente.
 
-## 1) Estructura relevante detectada
-- `modules/agenda`, `modules/patients`, `modules/clinical`.
-- `api/agenda/index.php`, `api/patients/index.php`, `api/clinical-documents.php`, `api/evolution-note-generate.php`, `api/verify-password.php`, `api/verify-sms.php`.
-- UI principal: `index.html` con scripts en `assets/js/*`.
-- UI Agenda server-rendered: `api/agenda/ui/*`.
-- Contratos/documentación: `docs/contracts/clinical_documents/*`, `docs/agenda/*`, `docs/db/*`, `docs/clinical/*`.
-- SQL adicional legacy: `database/agenda/*`.
-- Auxiliares de geolocalización/CP: `geocode-proxy.php`, `sepomex-local.php`, `sepomex-proxy.php`, `sepomex-import.php`.
+## 1) Resumen arquitectónico general
+
+### Núcleo funcional
+1. Pacientes
+2. Consultas (encounters)
+3. Expediente clínico
+
+Cadena principal:
+
+Paciente  
+↓  
+Consulta  
+↓  
+Registro clínico  
+↓  
+Documentos / órdenes / resultados
+
+### Módulos principales de alto nivel
+- Patients (identidad administrativa)
+- Agenda/Waitlist (operación de citas)
+- Expediente UI (captura y visualización clínica)
+- Clinical Documents (persistencia documental clínica)
+- Clinical (integrador en transición)
+
+### Flujo principal de negocio (alto nivel)
+1. Alta/selección de paciente
+2. Apertura de expediente
+3. Inicio explícito de consulta
+4. Registro de actividad clínica
+5. Generación de documentos/órdenes/resultados
+6. Consolidación en timeline
+7. Cierre de consulta
 
 ## 2) Inventario por dominio / módulo / sección
 
 ### Dominio 1: Agenda / Waitlist
-- Nombre humano: Agenda Médica v1 + Waitlist v1.
-- Propósito: operación de citas, disponibilidad, eventos auditables, flags y lista de espera.
+- Propósito: citas, disponibilidad, eventos auditables, flags y lista de espera.
 - Archivos/rutas detectadas:
 ```text
 api/agenda/index.php
@@ -42,7 +72,7 @@ modules/agenda/db/availability_bootstrap_min.sql
 modules/agenda/db/availability_overrides_min.sql
 docs/agenda/CIERRE_AGENDA_V1_ESTADO_FINAL.md
 ```
-- DB: sí.
+- DB:
 ```text
 agenda_appointments
 agenda_appointment_events
@@ -51,7 +81,7 @@ agenda_waitlist_entries
 consultorio_schedule
 agenda_availability_overrides
 ```
-- API: sí.
+- API:
 ```text
 GET    /api/agenda/index.php/appointments
 GET    /api/agenda/index.php/appointments/{id}
@@ -68,22 +98,20 @@ POST   /api/agenda/index.php/waitlist
 PATCH  /api/agenda/index.php/waitlist/{id}
 POST   /api/agenda/index.php/waitlist/{id}/assign
 ```
-- UI: sí.
+- UI:
 ```text
-UI server-rendered funcional en api/agenda/ui/*
-UI raíz (index.html, paneles p-ag-*) existe, pero no consume API Agenda
+UI server-rendered operativa en api/agenda/ui/*
+UI raíz (index.html, paneles p-ag-*) existe, pero no consume API Agenda de forma integral
 ```
-- Estado: `DONE`.
+- Estado: `DONE`
 - Dependencias:
-  - Consume: `modules/patients` para crear paciente desde waitlist sin `patient_id` (`modules/agenda/helpers/patients_client.php`).
-  - Requerido por: operación de agenda y flujos de espera.
-- Riesgos/Notas:
-  - Divergencia de schema: `modules/agenda/sql/ready_schema.sql` sí incluye `agenda_waitlist_entries`; `modules/agenda/db/ready_schema.sql` no.
-  - `modules/agenda/README.md` contiene partes desactualizadas frente al estado real implementado.
+  - Consume `modules/patients` para crear paciente desde waitlist sin `patient_id`.
+- Riesgos/notas:
+  - Divergencia entre `modules/agenda/sql/ready_schema.sql` y `modules/agenda/db/ready_schema.sql`.
+  - README con secciones desactualizadas respecto a implementación.
 
 ### Dominio 2: Patients (canónico de identidad)
-- Nombre humano: Pacientes administrativos.
-- Propósito: identidad de paciente, contactos, vínculos médico-paciente y consentimientos administrativos.
+- Propósito: identidad, contactos y vínculo médico-paciente.
 - Archivos/rutas detectadas:
 ```text
 modules/patients/db/ready_schema.sql
@@ -93,106 +121,96 @@ modules/patients/controllers/GetDoctorPatientsController.php
 modules/patients/repositories/PatientsRepository.php
 api/patients/index.php
 ```
-- DB: sí.
+- DB:
 ```text
 patients_patients
 patients_contacts
 patients_consents
 patients_doctor_links
 ```
-- API: sí.
+- API:
 ```text
 POST /api/patients/index.php/patients
 GET  /api/patients/index.php/patients/{patient_id}
 GET  /api/patients/index.php/doctors/{doctor_id}/patients
 ```
-- UI: parcial.
+- UI:
 ```text
-index.html: tab #t-datos y paneles de pacientes
-No se detecta consumo directo de /api/patients desde assets/js de la UI raíz
+index.html: paneles de pacientes y datos generales
+Integración aún parcial entre runtime raíz y API patients
 ```
-- Estado: `PARTIAL`.
+- Estado: `PARTIAL`
 - Dependencias:
-  - Consume: DB propia `patients_*`.
-  - Requerido por: Agenda/Waitlist, Clinical v2, clinical_documents (por convención de patient_id).
-- Riesgos/Notas:
-  - Contrato maestro clínico usa nombres `full_name`/`birth_date`; backend actual de Patients usa `display_name`/`birthdate`.
-  - Integración UI raíz con API de Patients no está cerrada.
+  - Base para Agenda, expediente clínico y relaciones por `patient_id`.
+- Riesgos/notas:
+  - Divergencia de naming con contratos clínicos legacy (`display_name/birthdate` vs `full_name/birth_date`).
 
 ### Dominio 3: Clinical Documents (canónico documental)
-- Nombre humano: Motor documental clínico.
-- Propósito: persistir y recuperar documentos clínicos estructurados con payload JSON y timeline.
+- Propósito: persistir/consultar documentos clínicos estructurados.
 - Archivos/rutas detectadas:
 ```text
 api/clinical-documents.php
 api/evolution-note-generate.php
 api/_lib/clinical_documents.php
 api/_lib/clinical_documents_hospital.php
-api/_lib/README_clinical_documents.md
 docs/contracts/clinical_documents/README.md
 docs/contracts/clinical_documents/*.json
 ```
-- DB: sí (creación runtime).
+- DB:
 ```text
 clinical_documents
 clinical_document_participants
 ```
-- API: sí.
+- API:
 ```text
 POST /api/clinical-documents.php?action=save
 GET  /api/clinical-documents.php?action=list&patient_id=...
 GET  /api/clinical-documents.php?action=get&id=...
 POST /api/evolution-note-generate.php (legacy)
 ```
-- UI: sí.
+- UI:
 ```text
-index.html tab #t-notas (nota_evolucion)
-assets/js/app.js (initNotaEvolucion)
-assets/js/manejo-hospitalario.js (nota intrahospitalaria / hoja indicaciones)
-```
-- Estado: `DONE`.
-- Dependencias:
-  - Consume: `patient_id` del flujo UI/contexto.
-  - Requerido por: expediente UI (timeline/notas), manejo hospitalario.
-- Riesgos/Notas:
-  - No hay FK explícita desde `clinical_documents.patient_id` a `patients_patients.patient_id`.
-  - Contrato JSON de respuesta no está normalizado al wrapper global `{ok,error,message,data,meta}`.
-
-### Dominio 4: Expediente UI avanzado (tabs clínicos)
-- Nombre humano: Expediente médico UI (captura clínica multipestaña).
-- Propósito: captura operativa de datos clínicos en tabs del expediente.
-- Archivos/rutas detectadas:
-```text
-index.html (tabs: t-datos, t-historia, t-gineco, t-exploracion, t-estudios, t-tratamiento, t-notas, t-manejo, t-consent, t-archivo)
-assets/js/app.js
-assets/js/core/navigation.js
+index.html tab #t-notas
+assets/js/app.js (nota evolución)
 assets/js/manejo-hospitalario.js
 ```
-- DB: parcial.
-```text
-Persistencia real detectada: clinical_documents
-Resto de secciones: sin tablas dedicadas detectadas
-```
-- API: parcial.
-```text
-Sí: api/clinical-documents.php
-Referenciados pero inexistentes: api/hospital-stays.php, api/prescription-generate.php, api/ci/*
-```
-- UI: sí.
-```text
-index.html implementa toda la estructura visual de tabs y formularios
-```
-- Estado: `PARTIAL`.
+- Estado: `DONE`
 - Dependencias:
-  - Consume: clinical_documents, localStorage, contexto de paciente en DOM.
-  - Requerido por: consolidación clínica futura en modules/clinical.
-- Riesgos/Notas:
-  - Persistencia heterogénea: combinación de backend real + localStorage + estado DOM.
-  - En varios flujos, `patient_id` se sintetiza desde nombre/fecha/sexo (riesgo de IDs paralelos).
+  - Depende de `patient_id` contextual.
+- Riesgos/notas:
+  - Sin FK explícita a `patients_patients`.
+  - Wrapper de respuesta no totalmente homogéneo con estándar global.
 
-### Dominio 5: modules/clinical (nuevo integrador)
-- Nombre humano: Módulo Clinical integrador (nuevo).
-- Propósito: ordenar dominio clínico faltante y normalizar contratos API.
+### Dominio 4: Expediente UI avanzado
+- Propósito: captura clínica multipestaña y contexto operativo del paciente.
+- Archivos/rutas detectadas:
+```text
+index.html (t-datos, t-historia, t-gineco, t-exploracion, t-estudios, t-tratamiento, t-notas, t-manejo, t-consent, t-archivo)
+assets/js/app.js
+assets/js/core/navigation.js
+assets/js/perfil/datos-generales.js
+assets/js/manejo-hospitalario.js
+```
+- DB:
+```text
+Persistencia real consolidada: clinical_documents
+Resto de secciones: parcial o DOM/localStorage
+```
+- API:
+```text
+Integrada: api/clinical-documents.php
+Referenciada pero faltante en varios flujos históricos: api/hospital-stays.php, api/prescription-generate.php, api/ci/*
+```
+- UI: sí, amplia.
+- Estado: `PARTIAL`
+- Dependencias:
+  - Contexto activo de paciente/consulta en frontend.
+- Riesgos/notas:
+  - Persistencia heterogénea (backend + localStorage + estado DOM).
+  - Riesgo de IDs sintéticos en flujos legacy si no se fuerza `patient_id` canónico.
+
+### Dominio 5: modules/clinical (integrador en transición)
+- Propósito: ordenar dominio clínico estructurado y contratos API v1/v2.
 - Archivos/rutas detectadas:
 ```text
 modules/clinical/README.md
@@ -201,29 +219,26 @@ modules/clinical/db/schema_v1.sql
 modules/clinical/db/schema_v2.sql
 modules/clinical/qa/requests.sh
 ```
-- DB: sí (documental/DDL, sin despliegue confirmado).
+- DB:
 ```text
 schema_v1: clinical_patients, clinical_record_entries, clinical_consents
-schema_v2: clinical_record_entries, clinical_consents (FK a patients_patients)
+schema_v2: clinical_record_entries, clinical_consents (referencia a patients_patients)
 ```
-- API: no implementación real.
+- API:
 ```text
-Contrato propuesto en docs: /api/clinical/index.php
-Ruta real api/clinical/index.php: no detectada
+Contrato propuesto: /api/clinical/index.php
+Implementación real completa en raíz: parcial/no uniforme por rutas
 ```
-- UI: no.
-- Estado: `PARTIAL`.
+- UI: parcial (conectado por piezas del expediente y embed).
+- Estado: `PARTIAL`
 - Dependencias:
-  - Consume: decisión canónica en `docs/clinical/DECISION_FUENTES_DE_VERDAD.md`.
-  - Requerido por: consolidación clínica estructurada pendiente.
-- Riesgos/Notas:
-  - `schema_v1.sql` y `API_V1.md` aún modelan `clinical_patients` (duplica paciente canónico).
-  - `schema_v2.sql` sí está alineado a `patients_patients.patient_id`.
-  - `modules/clinical/README.md` quedó desactualizado frente a archivos ya existentes.
+  - Debe alinearse a decisión de fuentes de verdad en `docs/clinical/DECISION_FUENTES_DE_VERDAD.md`.
+- Riesgos/notas:
+  - `schema_v1` duplica paciente canónico.
+  - Coexistencia v1/v2 aumenta deuda de convergencia.
 
 ### Dominio 6: Reviews / Opiniones
-- Nombre humano: Opiniones del perfil médico.
-- Propósito: supervisión y respuesta de opiniones.
+- Propósito: feedback/reputación del perfil.
 - Archivos/rutas detectadas:
 ```text
 index.html sección #p-opiniones
@@ -231,16 +246,12 @@ index.html sección #p-opiniones
 - DB: no detectada.
 - API: no detectada.
 - UI: sí.
-- Estado: `PARTIAL`.
-- Dependencias:
-  - Consume: navegación/UI general.
-  - Requerido por: experiencia de perfil y reputación.
-- Riesgos/Notas:
-  - Sección visual sin persistencia real ni moderación backend.
+- Estado: `PARTIAL`
+- Riesgos/notas:
+  - Capa visual sin persistencia ni moderación backend.
 
-### Dominio 7: Offers / Paquetes / Promociones
-- Nombre humano: Paquetes y promociones.
-- Propósito: gestión comercial de paquetes/promos.
+### Dominio 7: Offers / Paquetes
+- Propósito: productos/promociones comerciales.
 - Archivos/rutas detectadas:
 ```text
 index.html sección #p-paquetes
@@ -248,17 +259,12 @@ index.html sección #p-paquetes
 - DB: no detectada.
 - API: no detectada.
 - UI: sí.
-- Estado: `PARTIAL`.
-- Dependencias:
-  - Consume: navegación/UI general.
-  - Requerido por: monetización comercial.
-- Riesgos/Notas:
-  - Flujo actualmente maqueta; no hay persistencia de catálogo/ofertas.
-  - Elementos marcados con IA se muestran como deshabilitados (FUTURO).
+- Estado: `PARTIAL`
+- Riesgos/notas:
+  - Flujo mayormente maqueta.
 
 ### Dominio 8: Notificaciones
-- Nombre humano: Centro de notificaciones.
-- Propósito: mostrar avisos y acciones rápidas.
+- Propósito: avisos y atajos de navegación.
 - Archivos/rutas detectadas:
 ```text
 index.html sección #p-Notificaciones
@@ -267,116 +273,81 @@ assets/js/messages.js
 - DB: no detectada.
 - API: no detectada.
 - UI: sí.
-- Estado: `PARTIAL`.
-- Dependencias:
-  - Consume: `localStorage` (`mxmed_msgs_read`) y navegación (`jumpTo`).
-  - Requerido por: UX de alertas.
-- Riesgos/Notas:
-  - Datos semilla hardcodeados; no hay fuente transaccional ni trazabilidad backend.
+- Estado: `PARTIAL`
+- Riesgos/notas:
+  - Datos semilla/localStorage, sin fuente transaccional.
 
-### Dominio 9: Roles / Permisos / Auth / Seguridad
-- Nombre humano: Seguridad de cuenta y verificación.
-- Propósito: control de verificación básica en UI.
+### Dominio 9: Seguridad / Roles / Verificación
+- Propósito: verificación básica de acciones sensibles.
 - Archivos/rutas detectadas:
 ```text
 index.html sección #p-seguridad
-assets/js/perfil/consultorio/multisede.js
 api/verify-password.php
 api/verify-sms.php
+assets/js/perfil/consultorio/multisede.js
 ```
-- DB: no detectada para auth/roles.
-- API: parcial.
-```text
-POST/GET api/verify-password.php (stub)
-POST/GET api/verify-sms.php (stub)
-```
+- DB de auth/RBAC: no confirmada en este repo.
+- API: parcial (stubs).
 - UI: sí.
-- Estado: `PARTIAL`.
-- Dependencias:
-  - Consume: formularios de seguridad/consultorio.
-  - Requerido por: acciones sensibles de UI.
-- Riesgos/Notas:
-  - Endpoints de verificación son stubs (aceptan cualquier valor no vacío).
-  - No se detecta RBAC/auth canónico en backend.
+- Estado: `PARTIAL`
+- Riesgos/notas:
+  - Endpoints de verificación no representan validación robusta de producción.
 
-### Dominio 10: Planes / Suscripción / Estado del perfil
-- Nombre humano: Suscripción y planes.
-- Propósito: mostrar estado de plan, renovaciones y catálogo comercial.
+### Dominio 10: Suscripción / Planes
+- Propósito: estado de plan y vistas de renovación.
 - Archivos/rutas detectadas:
 ```text
 index.html sección #p-suscripcion
-assets/js/app.js (bloque "SUSCRIPCIÓN (maqueta)")
+assets/js/app.js (bloques de maqueta)
 ```
-- DB: no detectada.
-- API: no detectada.
+- DB/API: no detectadas integradas.
 - UI: sí.
-- Estado: `PARTIAL`.
-- Dependencias:
-  - Consume: datos mock in-memory en JS.
-  - Requerido por: vistas de cuenta y facturación UX.
-- Riesgos/Notas:
-  - Lógica demo sin persistencia real ni integraciones de cobro.
+- Estado: `PARTIAL`
+- Riesgos/notas:
+  - Lógica demo sin persistencia real.
 
-### Dominio 11: Billing plataforma / Billing clínica
-- Nombre humano: Facturación.
-- Propósito: captura/listado de CFDI y directorio fiscal.
+### Dominio 11: Billing
+- Propósito: facturación y datos fiscales.
 - Archivos/rutas detectadas:
 ```text
 index.html sección #p-facturacion
 ```
-- DB: no detectada.
-- API: no detectada.
+- DB/API: no detectadas operativas.
 - UI: sí.
-- Estado: `PARTIAL`.
-- Dependencias:
-  - Consume: paneles y formularios UI.
-  - Requerido por: operación administrativa de cobros/facturas.
-- Riesgos/Notas:
-  - Panel completamente visual; no hay timbrado real ni almacenamiento.
+- Estado: `PARTIAL`
+- Riesgos/notas:
+  - Panel visual sin timbrado/integración fiscal real.
 
-### Dominio 12: Dashboard / Actividad
-- Nombre humano: Resumen de actividad y completitud.
-- Propósito: mostrar métricas visuales y nudge de acciones.
+### Dominio 12: Dashboard
+- Propósito: resumen de actividad/completitud.
 - Archivos/rutas detectadas:
 ```text
 index.html sección #p-resumen
 assets/js/core/dashboard.js
 ```
-- DB: no detectada.
-- API: no detectada.
+- DB/API: no detectadas.
 - UI: sí.
-- Estado: `PARTIAL`.
-- Dependencias:
-  - Consume: valores JS (`window.mxm_sec`) y navegación.
-  - Requerido por: home dashboard.
-- Riesgos/Notas:
-  - Métricas estáticas/demostrativas, no conectadas a datos reales.
+- Estado: `PARTIAL`
+- Riesgos/notas:
+  - Métricas de carácter demostrativo.
 
-### Dominio 13: Adjuntos / Archivo
-- Nombre humano: Archivo del expediente y adjuntos.
-- Propósito: gestión de archivos del paciente.
+### Dominio 13: Archivo / Adjuntos
+- Propósito: gestión de adjuntos del expediente.
 - Archivos/rutas detectadas:
 ```text
 index.html tab #t-archivo
 index.html panel #p-pac-archivo
 ```
-- DB: no detectada.
-- API: no detectada.
+- DB/API: no detectadas completas.
 - UI: parcial/placeholder.
-- Estado: `FUTURO`.
-- Dependencias:
-  - Consume: navegación de pacientes/expediente.
-  - Requerido por: expediente completo y compliance documental.
-- Riesgos/Notas:
-  - No hay backend de archivos ni modelo de metadatos.
+- Estado: `FUTURO`
+- Riesgos/notas:
+  - Falta backend de archivos y modelo de metadatos.
 
-### Dominio 14: Consultorio / Perfil multisede + geolocalización
-- Nombre humano: Perfil profesional y consultorios.
-- Propósito: captura de datos de consultorio, horarios, ubicación, CP/colonias.
+### Dominio 14: Consultorio / multisede / geolocalización
+- Propósito: datos de consultorio, sedes, CP/colonias, ubicación.
 - Archivos/rutas detectadas:
 ```text
-index.html secciones de perfil y consultorio
-assets/js/app.js
 assets/js/perfil/consultorio/multisede.js
 geocode-proxy.php
 sepomex-local.php
@@ -384,162 +355,98 @@ sepomex-proxy.php
 sepomex-import.php
 assets/data/sepomex-fallback.json
 ```
-- DB: parcial.
-```text
-Tabla opcional local: sepomex
-No se detecta tabla canónica de consultorios en backend del repo
-```
-- API: parcial.
-```text
-GET geocode-proxy.php?q=...
-GET sepomex-local.php?cp=.....
-GET sepomex-proxy.php?cp=.....
-POST/GET api/verify-password.php y api/verify-sms.php (para flujos de borrado en UI)
-```
+- DB/API: parcial.
 - UI: sí.
-- Estado: `PARTIAL`.
-- Dependencias:
-  - Consume: servicios externos (Nominatim, SEPOMEX), localStorage y stubs de verify.
-  - Requerido por: configuración de sedes/consultorio.
-- Riesgos/Notas:
-  - Persistencia principal sigue en cliente para varias partes.
-  - Integración parcial con backend real.
+- Estado: `PARTIAL`
+- Riesgos/notas:
+  - Dependencia de servicios externos y almacenamiento local para parte del flujo.
 
-### Dominio 15: Entorno docs/mock y prototipos
-- Nombre humano: Activos de documentación y mock.
-- Propósito: contratos JSON, mocks y referencia visual.
+### Dominio 15: docs/mock/prototipos
+- Propósito: contratos, mocks y soporte QA/UX.
 - Archivos/rutas detectadas:
 ```text
 docs/contracts/clinical_documents/*
 docs/mock/*
 docs/assets/js/consentimientos.js
 docs/assets/js/recetas.js
-docs/assets/js/core/context.js
 ```
-- DB: no aplica.
-- API: contratos/mocks, no implementación real en `api/` para varias rutas referenciadas.
-- UI: parcial.
-- Estado: `PARTIAL`.
-- Dependencias:
-  - Consume: documentación clínica y front prototipo.
-  - Requerido por: definición funcional y QA manual.
-- Riesgos/Notas:
-  - Existen scripts de consentimiento/recetas en `docs/assets/js`, pero no están cargados por el `index.html` raíz.
-  - Endpoints referenciados por esos scripts (`api/ci/*`, `api/prescription-generate.php`) no existen en `api/`.
+- Estado: `PARTIAL`
+- Riesgos/notas:
+  - Existen referencias de endpoints que no siempre existen en `api/` runtime.
 
-## 3) Integración de fuentes internas obligatorias (estado)
-- `docs/expediente_inventario_existente.md`: alineado; se confirman secciones DONE/PARTIAL y huecos.
-- `docs/clinical/DECISION_FUENTES_DE_VERDAD.md`: alineado; paciente canónico y documentos canónicos respetados como base arquitectónica.
-- `docs/modulo_a_pacientes_expedientes_consentimientos_v1.md`: tomado como contrato maestro clínico v1.
-- `modules/clinical/docs/API_V1.md`: existe como contrato, pero contiene divergencia con la decisión canónica (usa `clinical_patients`).
-- `modules/clinical/db/schema_v1.sql` y `modules/clinical/db/schema_v2.sql`: coexisten; v2 alinea canónico, v1 duplica paciente.
-- `modules/patients/db/ready_schema.sql`: confirma tabla/PK canónica `patients_patients.patient_id`.
-- `docs/contracts/clinical_documents/*`: confirma contrato documental actual en producción para notas/documentos.
+## 3) Interconexiones de alto nivel
+- Paciente -> Expediente: todo contexto clínico útil requiere `patient_id`.
+- Expediente -> Consulta: el expediente puede existir sin consulta activa.
+- Consulta -> Actividad: solo acciones clínicas exitosas deben actualizar actividad.
+- Consulta -> Documentos/Órdenes/Resultados: asociación clínica por encounter cuando corresponda.
+- Timeline <- Consulta + Documentos + Resultados: vista consolidada, no fuente primaria de captura.
 
-## 4) Secciones obligatorias finales
+## 4) Fuentes de verdad canónicas
+- Paciente canónico: `patients_patients.patient_id` (`modules/patients`).
+- Documento clínico canónico: `clinical_documents`.
+- Consulta activa (frontend): `mxmedStore.activeEncounters`, `mxmedStore.currentEncounterKey`, contexto de expediente.
+- Consulta activa (backend clínico): encounter en endpoints clínicos/agenda según flujo.
+- Timeline: consolidación de eventos clínicos del paciente, no motor de captura.
 
-### A) HUECOS DE INTEGRACIÓN (priorizados)
-1. `P0` UI clínica avanzada sin backend estructurado por sección fuera de `clinical_documents`.
-2. `P0` Endpoints referenciados pero inexistentes: `api/clinical/index.php`, `api/hospital-stays.php`, `api/ci/*`, `api/prescription-generate.php`.
-3. `P0` Persistencia parcial en cliente (`localStorage`, DOM-only) en varias secciones del expediente/perfil.
-4. `P1` UI raíz de Agenda (`p-ag-*`) no está integrada al API real de Agenda; la UI operativa real está en `api/agenda/ui/*`.
-5. `P1` Consentimiento informado del expediente (#t-consent) tiene estructura UI, pero sin integración JS/backend en runtime raíz.
+## 5) Huecos de integración
+1. Endpoints referenciados históricamente pero faltantes en runtime raíz (`api/hospital-stays.php`, `api/ci/*`, `api/prescription-generate.php`).
+2. Paneles UI con backend incompleto o no conectado (facturación, paquetes, parte de seguridad/suscripción).
+3. Persistencia parcial en cliente para secciones clínicas y de perfil.
+4. Integración desigual entre UI raíz y APIs operativas (ej. Agenda server-rendered vs shell principal).
+5. Secciones de expediente con estructura visual avanzada, pero sin backend estructurado homogéneo por sección.
 
-### B) DIVERGENCIAS DE CONTRATO
-- Endpoints que sí siguen `{ok,error,message,data,meta}`:
+## 6) Divergencias de contrato
+- Wrappers estándar más consistentes:
 ```text
 api/agenda/index.php
 api/patients/index.php
 ```
-- Endpoints que no siguen completamente el wrapper estándar:
+- Wrappers no homogéneos o legacy:
 ```text
-api/clinical-documents.php (devuelve ok + document/items/error, sin message/data/meta uniforme)
-api/evolution-note-generate.php (ok + document_id/document_uuid)
-api/verify-password.php (solo {ok})
-api/verify-sms.php (solo {ok})
+api/clinical-documents.php
+api/evolution-note-generate.php
+api/verify-password.php
+api/verify-sms.php
 ```
-- Contrato legacy vs estándar:
-  - Superficie clínica documental actual usa contrato legacy funcional.
-  - Contrato estándar está documentado en módulo clinical, pero no implementado en `api/clinical/index.php`.
+- Nombres de campos divergentes detectados:
+  - Patients: `display_name`, `birthdate`
+  - Contratos clínicos/docs legacy: `full_name`, `birth_date` en algunas referencias
+- Contrato clinical v1/v2 coexistente, con deuda de convergencia.
 
-### C) RIESGOS DE DUPLICIDAD
-1. IDs paralelos de paciente en UI: se sintetiza `patient_id` desde nombre/fecha/sexo en JS de expediente, en lugar de usar exclusivamente `patients_patients.patient_id`.
-2. Duplicidad de fuente de verdad en diseño clinical:
-   - `schema_v1.sql` / `API_V1.md` modelan `clinical_patients`.
-   - Decisión canónica exige no duplicar paciente y referenciar `patients_patients.patient_id`.
-3. Consentimientos potencialmente duplicados por dominio:
-   - `patients_consents` (administrativo).
-   - `clinical_consents` (clínico, propuesto en schema v2).
-4. `clinical_documents` sin FK explícita a `patients_patients` incrementa riesgo de desalineación de identidad.
-5. Duplicidad de artefactos de schema Agenda (`modules/agenda/sql/ready_schema.sql` vs `modules/agenda/db/ready_schema.sql`) con cobertura distinta de tablas.
+## 7) Riesgos de duplicidad
+1. `patient_id` paralelo/sintético en frontend legacy si no se fuerza `patients_patients.patient_id`.
+2. `clinical_patients` (v1) vs `patients_patients` (canónico).
+3. Consentimientos potencialmente superpuestos (`patients_consents` vs `clinical_consents`).
+4. `clinical_documents` sin FK explícita a identidad canónica.
+5. Schemas Agenda duplicados con diferencias de cobertura de tablas.
 
-### D) BACKLOG PROPUESTO DE CONSOLIDACIÓN (sin implementar)
-1. `FUTURO` Formalizar matriz única de contratos API y normalizar todas las respuestas a `{ok,error,message,data,meta}` sin romper compatibilidad existente.
-2. `FUTURO` Forzar uso de `patients_patients.patient_id` en UI clínica (eliminar generación sintética de IDs).
-3. `FUTURO` Cerrar brecha de endpoints faltantes (`api/clinical/index.php`, `api/ci/*`, `api/hospital-stays.php`, `api/prescription-generate.php`) o retirar referencias para evitar deuda activa.
-4. `FUTURO` Definir qué secciones del expediente vivirán en `clinical_documents` y cuáles en `modules/clinical` estructurado (v2), sin duplicar paciente/documentos canónicos.
-5. `FUTURO` Consolidar artefactos de schema/documentación divergentes (`schema_v1` vs `schema_v2`, README desactualizados, schema Agenda duplicado).
-6. `FUTURO` Integrar UI raíz con APIs reales por dominio o declarar explícitamente qué paneles se mantienen como maqueta.
-7. `FUTURO` Incorporar verificación de integridad entre dominios (patient_id canónico en Agenda, Clinical Documents y Clinical estructurado) y validaciones de no-duplicidad.
+## 8) Backlog propuesto de consolidación (documental)
+1. Normalizar wrappers de respuesta sin romper compatibilidad.
+2. Eliminar generación sintética de identidad y forzar `patient_id` canónico end-to-end.
+3. Cerrar o retirar referencias a endpoints inexistentes.
+4. Definir matriz explícita: qué vive en `clinical_documents` y qué en `modules/clinical` estructurado.
+5. Consolidar documentación/esquemas divergentes (Agenda y Clinical v1/v2).
+6. Integrar shell UI con APIs reales o declarar explícitamente paneles de maqueta.
+7. Añadir validaciones de integridad cruzada entre módulos (paciente/encounter/documento/resultado).
 
-## 5) Resumen ejecutivo (qué ya existe vs qué falta)
-- Qué ya existe:
-  - Agenda/Waitlist backend + UI operativa server-rendered en estado `READY`.
-  - Dominio Patients funcional a nivel DB/API.
-  - Motor `clinical_documents` funcional para notas/documentos clínicos.
-  - UI raíz extensa con múltiples dominios y tabs clínicos.
-- Qué falta para consolidación total:
-  - Integración backend real para secciones UI hoy locales/placeholder.
-  - Normalización de contratos API clínicos y cierre de endpoints faltantes.
-  - Alineación definitiva a fuentes canónicas para evitar duplicidad de identidad y contratos.
+## 9) Resumen ejecutivo
+- Consolidado:
+  - Agenda/Waitlist operativo.
+  - Patients operativo en DB/API.
+  - Clinical Documents operativo para notas/documentos.
+- En transición:
+  - Expediente multipestaña con mezcla de persistencia real y local.
+  - Clinical estructurado (v1/v2) sin convergencia total.
+- Pendiente clave:
+  - Homologación de contratos y cierre de huecos de integración para lograr trazabilidad clínica completa.
 
-## 6) Clinical Resolver v2 — Determinismo por Appointment (Feb 2026)
-
-### Problema previo
-Cuando existían múltiples encounters asociados a un mismo `appointment_id`, el sistema podía devolver resultados no deterministas dependiendo del orden interno.
-
-### Decisión arquitectónica
-Se establece un resolver determinista para:
-
-`GET /api/clinical/index.php/encounters/appt:{appointment_id}`
-
-Regla canónica de selección:
-
-`ORDER BY encounter_dt DESC, encounter_id DESC`
-
-`LIMIT 1`
-
-Garantizando que siempre se devuelve el encounter más reciente.
-
-### Extensión del contrato Timeline
-
-El endpoint:
-
-`GET /patients/{patient_id}/timeline`
-
-Ahora expone adicionalmente:
-
-- `has_encounter` (boolean)
-- `latest_encounter_key` (string|null)
-
-Contrato:
-
-- `item_type="encounter"`
-  - `has_encounter = true`
-  - `latest_encounter_key = encounter_key`
-
-- `item_type="appointment"`
-  - `has_encounter = false`
-  - `latest_encounter_key = null`
-
-### Principio de diseño adoptado
-
-El frontend NO debe inferir existencia de encounter.
-Debe consumir explícitamente:
-- `has_encounter`
-- `latest_encounter_key`
-
-Toda lógica de resolución pertenece al backend clínico.
-
-### Fecha de actualización
-- 2026-02-25
+## Anexo: Clinical Resolver v2 (determinismo por appointment)
+- Endpoint:
+  - `GET /api/clinical/index.php/encounters/appt:{appointment_id}`
+- Regla canónica de selección:
+  - `ORDER BY encounter_dt DESC, encounter_id DESC LIMIT 1`
+- Extensión de timeline:
+  - `has_encounter`
+  - `latest_encounter_key`
+- Principio:
+  - El frontend no infiere encounter; consume señales explícitas del backend.

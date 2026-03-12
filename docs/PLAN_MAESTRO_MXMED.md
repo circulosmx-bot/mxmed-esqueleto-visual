@@ -1029,3 +1029,319 @@ Criterio de calidad de actualización:
 - Sin evidencia concreta, no hay cambio de estado.
 - Si cambia contrato canónico, debe existir decisión explícita en E.
 - Si una tarea impacta múltiples módulos, actualizar también sección F (interconexiones).
+
+## Arquitectura del flujo del expediente
+
+El flujo de estados del expediente clínico se define en:
+
+docs/ARQUITECTURA_ESTADOS_EXPEDIENTE.md
+
+Este documento establece el contrato arquitectónico para:
+
+- alta administrativa de pacientes
+- inicio de consultas
+- lifecycle clínico
+
+Toda modificación relacionada con pacientes o consultas debe respetar este modelo.
+
+## Arquitectura general del sistema
+
+El mapa completo del sistema se encuentra en:
+
+docs/MAPA_TOTAL_SISTEMA_MXMED.md
+
+Este documento describe los módulos principales del sistema y su relación.
+
+Debe utilizarse como referencia antes de implementar nuevos módulos o modificar los existentes.
+
+## Interconexiones clínicas del sistema
+
+El mapa de interconexiones clínicas se define en:
+
+docs/MAPA_INTERCONEXIONES_CLINICAS_MXMED.md
+
+Este documento especifica cómo se relacionan paciente, expediente, consulta, actividad clínica, documentos, órdenes, resultados y timeline.
+
+Debe usarse como referencia antes de integrar módulos clínicos o modificar sus dependencias.
+
+## Agenda como puerta de entrada clínica
+
+La relación entre Agenda, Paciente, Expediente y Consulta se define en:
+
+docs/AGENDA_COMO_PUERTA_DE_ENTRADA_CLINICA_MXMED.md
+
+Este documento establece que Agenda puede abrir el contexto del paciente, pero no debe iniciar consulta automáticamente.
+
+Debe usarse como referencia antes de modificar la integración entre citas y flujo clínico.
+
+## Fase de levantamiento módulo por módulo
+
+Se inicia una fase de levantamiento y mapeo técnico por módulo, basada en evidencia directa del repositorio.
+
+Primer módulo analizado:
+
+docs/MAPEO_AGENDA_MXMED.md
+
+Este mapeo documenta archivos reales, endpoints, tablas, flujo funcional, interconexiones y divergencias de Agenda antes de cualquier cambio funcional.
+
+Se documentó además la separación formal entre consolidación funcional de Agenda y deuda de implementación UX/UI en:
+
+docs/AGENDA_ESTADO_CONSOLIDACION_Y_DEUDA_UI_MXMED.md
+
+Tras el cierre documental de Agenda, se inicia el levantamiento del módulo Pacientes:
+
+docs/MAPEO_PACIENTES_MXMED.md
+
+Después del mapeo de Pacientes, se inicia el levantamiento del módulo Expediente:
+
+docs/MAPEO_EXPEDIENTE_MXMED.md
+
+Tras el mapeo de Expediente, inicia una fase de auditoría detallada por secciones del módulo:
+
+docs/AUDITORIA_EXPEDIENTE_CHECKLIST_MXMED.md
+
+## Cierre Fase UX del Expediente del Paciente (P14 UX-Min)
+
+### Objetivo de la fase
+Cerrar un ajuste mínimo y seguro de UX en `Pacientes > Expediente` para separar con claridad:
+- ficha administrativa editable (`Datos Generales`)
+- flujo clínico operativo (`Historia Clínica` / `Historial de Atención`)
+
+Sin alterar el comportamiento clínico estabilizado de encounters, chips activos y cierre aislado.
+
+### Cambios implementados y validados
+1. Semántica visible en `Datos Generales`:
+- `Nombre` -> `Nombre(s)`
+- `Apellido Paterno` -> `Primer Apellido`
+- `Apellido Materno` -> `Segundo Apellido`
+
+2. `Datos Generales` deja de operar como portada obligatoria permanente del expediente y queda como ficha administrativa editable.
+
+3. Regla de entrada al expediente:
+- paciente incompleto -> entrada inicial a `Datos Generales`
+- paciente con mínimos completos -> entrada inicial a flujo clínico
+- preferencia clínica: `Historial de Atención`
+- fallback: `Historia Clínica`
+
+4. Navegación manual entre tabs clínicos liberada:
+- ya no debe existir rebote artificial a `Datos Generales` al cambiar manualmente de tab.
+
+5. Motivo de consulta:
+- se mantiene lectura robusta y se muestra en header cuando existe
+- **no** bloquea entrada clínica por completitud
+- se clasifica como dato clínico primario opcional y cambiante
+
+### Regla de completitud mínima vigente
+Datos mínimos obligatorios (`completeProfile = true`):
+- `Nombre(s)`
+- `Primer Apellido`
+- `Género`
+- `Fecha de Nacimiento`
+
+Dato opcional no bloqueante:
+- `Motivo de consulta`
+
+### Estado validado
+- Sin regresiones funcionales en:
+  - chips de consultas activas
+  - consultas activas y cambio de paciente
+  - límite de 3 consultas activas
+  - finalize encounter (cierre aislado)
+  - `ensureActiveEncounter`
+  - navegación manual estabilizada de tabs clínicos
+
+### Deuda / siguiente paso recomendado
+- Diseñar y cerrar la versión final del **header clínico permanente** del expediente (jerarquía visual, contenido clínico persistente y reglas de degradación cuando no hay consulta activa), manteniendo separación estricta entre contexto administrativo y contexto clínico.
+
+## Cierre Fase Header Clínico Permanente del Expediente (P14 UX-Header)
+
+### Objetivo de la fase
+Implementar de forma incremental el header clínico permanente del paciente dentro de `Pacientes > Expediente`, reforzando contexto clínico persistente sin intervenir la lógica clínica sensible ya estabilizada.
+
+### Estructura final implementada del header
+Se consolidó el header en 4 bloques funcionales:
+
+1. Identidad fija principal:
+- Nombre completo
+- Edad
+- Género
+
+2. Contexto clínico opcional:
+- Motivo de consulta (solo cuando existe)
+- Sin texto de relleno cuando no existe dato
+
+3. Estado clínico:
+- Consulta activa / sin consulta activa
+- Metadatos ya existentes (origen/inicio cuando disponibles)
+- Acciones existentes:
+  - Iniciar consulta
+  - Cerrar consulta
+
+4. Multi-activo:
+- Strip de consultas activas conservado sin rediseño en esta fase
+
+### Fuente de verdad por campo
+- Nombre completo: identidad visible del paciente cargado en expediente (`Nombre(s)`, `Primer Apellido`, `Segundo Apellido`).
+- Edad: cálculo vigente derivado de fecha de nacimiento (flujo actual de `computeAge`).
+- Género: fuente canónica vigente del expediente (`input[name="pac-genero"]` / atributo normalizado del pane).
+- Motivo: helper robusto con fallbacks vigentes del frontend.
+- Estado clínico: resolución de consulta activa ya existente (sin introducir motor nuevo de encounters).
+- Strip multi-activo: store multi-activo vigente.
+
+### Reglas visuales y funcionales validadas
+- Prioridad visual:
+  - 1) Nombre completo
+  - 2) Estado clínico
+  - 3) Edad y género
+  - 4) Motivo opcional
+- El motivo se muestra como sublínea discreta y solo si existe.
+- `syncExpedienteHeaderContext()` quedó como renderizador de contexto (no como motor de navegación).
+- Se añadieron guardas de actualización para evitar repaints innecesarios del header.
+
+### Restricciones respetadas
+Sin regresiones en:
+- chips de consultas activas
+- consultas activas / multi-activo
+- límite de 3 consultas activas
+- navegación manual de tabs clínicos
+- finalize / cierre aislado
+- `ensureActiveEncounter`
+
+### Estado validado
+- Header muestra de forma persistente: nombre, edad y género.
+- Motivo aparece solo cuando existe.
+- Estado de consulta activa se mantiene consistente.
+- Strip multi-activo continúa operando sin cambios estructurales en esta fase.
+- Navegación manual en tabs clínicos permanece estable.
+
+### Siguiente paso sugerido
+- Afinación futura del contexto clínico superior (micro-UX y jerarquía visual avanzada) solo si el uso real lo justifica, manteniendo la separación entre:
+  - ficha administrativa editable
+  - contexto clínico persistente superior.
+
+## Mitigación Runtime: Manejo Hospitalario sin Backend de Estancias
+
+### Problema detectado
+Durante validación de `Pacientes > Expediente > Manejo Hospitalario` se confirmó error funcional:
+- `404 (Not Found)` por llamadas frontend a `api/hospital-stays.php` (`current`, `start`, `close`) en un runtime donde ese endpoint no existe.
+
+### Decisión implementada
+Se aplicó mitigación de frontend por **degradación controlada (capability gate)**:
+- el tab **Manejo Hospitalario** permanece visible
+- en este entorno, no se ejecutan llamadas a `api/hospital-stays.php`
+- el módulo entra en estado neutral/no disponible
+- se muestra aviso explícito de no disponibilidad
+- acciones dependientes de estancia hospitalaria quedan deshabilitadas
+
+### Estado actual validado
+- eliminado el `404` funcional asociado al submódulo en este runtime
+- apertura del tab estable, sin ruptura de layout
+- sin impacto en:
+  - chips de consultas activas
+  - encounters activos
+  - límite de 3 activas
+  - finalize
+  - ensureActiveEncounter
+  - navegación manual de tabs clínicos base
+
+### Alcance de la mitigación
+- incidencia mitigada en frontend para el entorno actual
+- sin backend nuevo
+- sin endpoint puente
+- sin refactorización amplia del submódulo
+
+### Restricción arquitectónica explícita
+La habilitación clínica real de Manejo Hospitalario requiere contrato backend formal de estancias hospitalarias (consulta de estancia activa, inicio y cierre), con su persistencia y reglas de negocio definidas.
+
+### Siguiente paso recomendado
+Planificar fase backend específica para estancias hospitalarias y, después, reactivar capacidades del tab retirando el modo neutral de forma controlada.
+
+## Mejora de Hidratación de Expediente sin Draft Local (Patients API)
+
+### Problema original
+En `Pacientes > Expediente`, la hidratación de `Datos Generales` dependía principalmente de `patientIdentityDrafts` en memoria frontend.
+
+Efecto observado:
+- paciente visible en buscador (índice correcto),
+- pero expediente con identidad vacía al abrir, cuando no existía draft local para ese `patient_id`.
+
+### Fuente real anterior de hidratación
+- `setActivePatientId()` aplicaba `applyExpedienteIdentityDraft(patientId)` como ruta principal.
+- Si el draft no existía, no había respaldo robusto para poblar identidad desde backend de Patients en esa transición.
+
+### Decisión implementada
+Se incorporó una hidratación mínima y segura:
+- si no existe draft local de identidad para el paciente activo,
+- se consulta `GET /api/patients/index.php/patients/{patient_id}`,
+- se construye draft frontend con datos de Patients (identidad/sexo/fecha de nacimiento),
+- se reaplica la hidratación al formulario de expediente.
+
+### Comportamiento nuevo validado
+- pacientes existentes pueden abrir expediente con identidad visible aun sin draft local previo;
+- header clínico obtiene contexto coherente (nombre/edad/género) desde la identidad ya hidratada en DOM;
+- navegación manual de tabs permanece estable.
+
+### Alcance y restricciones respetadas
+Sin intervención de lógica clínica sensible:
+- chips de activas
+- lifecycle de encounters
+- finalize
+- ensureActiveEncounter
+- límite de 3 consultas activas
+
+Sin cambios de contrato backend en Patients.
+
+### Estado validado
+Validado con pacientes demo de prueba integral:
+- búsqueda funcional,
+- apertura de expediente con identidad visible,
+- header consistente en cambio de paciente.
+
+### Límite actual de la solución
+La mejora cubre hidratación de identidad administrativa básica desde Patients.
+No convierte automáticamente campos clínicos opcionales (ej. motivo de consulta) en requisito ni en fuente obligatoria para entrada clínica.
+
+### Siguiente paso sugerido
+Opcional: precarga contextual de motivo desde Agenda (`reason_text`) al abrir expediente, sin volverlo obligatorio ni bloquear flujo clínico.
+
+## Corrección: Aislamiento de Motivo de Consulta por Paciente (Expediente)
+
+### Problema detectado
+Durante validación de cambio de paciente en `Pacientes > Expediente`, se observó fuga de estado en el campo visible de **Motivo de consulta**:
+- al pasar de un paciente a otro, el textarea y la sublínea del header podían conservar el motivo del paciente anterior.
+- esto producía contexto clínico incorrecto en pantalla.
+
+### Causa raíz
+La vista no limpiaba explícitamente el motivo visible al cambiar de paciente.
+Con esa condición, la guarda de no sobrescritura ("si ya hay texto, no precargar") se activaba correctamente, pero sobre un texto residual del paciente previo.
+
+### Solución aplicada
+Se implementó corrección mínima y segura en frontend de expediente:
+- captura del motivo del paciente saliente en su draft correspondiente,
+- limpieza explícita del motivo visible al cambio de paciente,
+- rehidratación del motivo del paciente entrante desde su draft,
+- y después aplicación de prefill contextual solo si corresponde.
+
+### Regla funcional final (vigente)
+El motivo queda aislado por paciente y se resuelve con esta precedencia:
+1. captura manual del paciente actual
+2. draft del paciente actual
+3. prefill contextual del paciente actual
+4. vacío
+
+Consecuencia: nunca debe heredarse visualmente el motivo entre expedientes de pacientes distintos.
+
+### Estado validado
+Prueba de navegación cruzada validada:
+- `Adriana -> Jorge -> Adriana` conserva el motivo correcto de cada paciente.
+- si el paciente entrante no tiene motivo, el campo queda vacío y no hereda el anterior.
+
+### Restricciones respetadas
+La corrección se aplicó sin regresiones en:
+- header clínico
+- tabs manuales
+- chips
+- encounters
+- finalize
+- ensureActiveEncounter
+- límite de 3 activas
