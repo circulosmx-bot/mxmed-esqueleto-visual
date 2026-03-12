@@ -3066,9 +3066,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   padding:0;
   list-style:none;
 }
-#p-expediente .mm-tabs-row-top{ grid-template-columns: repeat(4, 1fr); }
-#p-expediente .mm-tabs-row-bottom{ grid-template-columns: repeat(5, 1fr); }
-#p-expediente .mm-tabs-rows.has-gineco .mm-tabs-row-top{ grid-template-columns: repeat(5, 1fr); }
+#p-expediente .mm-tabs-row-top{ grid-template-columns: repeat(var(--top-tabs-count, 6), minmax(0, 1fr)); }
+#p-expediente .mm-tabs-row-bottom{ grid-template-columns: repeat(var(--bottom-tabs-count, 5), minmax(0, 1fr)); }
+#p-expediente .mm-tabs-rows.has-gineco .mm-tabs-row-top{ grid-template-columns: repeat(var(--top-tabs-count, 6), minmax(0, 1fr)); }
 #p-expediente .mm-tabs-row .nav-item{
   width:100%;
   display:flex;
@@ -3081,6 +3081,18 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-radius:0;
   height:100%;
   position:relative;
+  min-width:0;
+}
+#p-expediente .mm-tabs-row .nav-link .tab-ico{
+  align-self:flex-start;
+  margin-top:2px;
+}
+#p-expediente .mm-tabs-row .nav-link .tab-lbl{
+  min-width:0;
+  overflow-wrap:normal;
+  word-break:normal;
+  hyphens:none;
+  text-wrap:balance;
 }
 #p-expediente .mm-tabs-row-top .nav-item:first-child .nav-link{
   border-top-left-radius:.9rem;
@@ -3098,6 +3110,98 @@ body{margin:0;background:var(--mm-fondo-base);}
 @media (max-width:768px){
   #p-expediente .mm-tabs-row{ grid-template-columns: repeat(2, 1fr) !important; }
   #p-expediente .mm-tabs-row .nav-link{ min-height:48px; }
+}
+
+/* Composición tipográfica puntual por tab (sin afectar el resto) */
+#p-expediente .mm-tabs-row .nav-link .tab-lbl.tab-lbl-stack{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:1px;
+}
+#p-expediente .mm-tabs-row .nav-link .tab-lbl.tab-lbl-stack .tab-line{
+  display:block;
+  white-space:nowrap;
+  overflow-wrap:normal;
+  word-break:keep-all;
+  hyphens:none;
+  line-height:1.06;
+}
+#p-expediente .mm-tabs-row .nav-link .tab-lbl.tab-lbl-stack-historial .tab-line-sub{
+  font-size:.92em;
+  letter-spacing:0;
+}
+#p-expediente .mm-tabs-row .nav-link .tab-lbl.tab-lbl-stack-gineco .tab-line{
+  line-height:1.03;
+}
+
+/* Elasticidad interna solo en modo compacto (fila superior con 6 tabs visibles) */
+#p-expediente [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-historial-atencion"] .tab-ico,
+#p-expediente [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-gineco"] .tab-ico,
+#p-expediente [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-exploracion"] .tab-ico,
+#p-expediente [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-estudios"] .tab-ico,
+#p-expediente [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-consent"] .tab-ico{
+  margin-left:-8px;
+  margin-right:2px;
+  transform:translateX(-2px);
+}
+#p-expediente [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-historial-atencion"] .tab-lbl,
+#p-expediente [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-gineco"] .tab-lbl,
+#p-expediente [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-exploracion"] .tab-lbl,
+#p-expediente [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-estudios"] .tab-lbl,
+#p-expediente [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-consent"] .tab-lbl{
+  flex:1 1 0;
+  min-width:0;
+  text-align:center;
+}
+#p-expediente [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-historial-atencion"] .tab-lbl.tab-lbl-stack,
+#p-expediente [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-gineco"] .tab-lbl.tab-lbl-stack{
+  align-items:center;
+}
+#p-expediente [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-historial-atencion"] .tab-lbl.tab-lbl-stack-historial .tab-line-sub,
+#p-expediente [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-gineco"] .tab-lbl{
+  font-size:.96em;
+}
+
+/* Calibración fina en modo Mujer (gineco visible) */
+#p-expediente[data-exp-gender="F"] [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-gineco"] .tab-ico{
+  margin-left:-12px;
+  margin-right:1px;
+  transform:translateX(-3px);
+}
+#p-expediente[data-exp-gender="F"] [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-gineco"] .tab-lbl{
+  transform:translateX(-2px);
+}
+#p-expediente[data-exp-gender="F"] [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-exploracion"] .tab-ico{
+  margin-left:-10px;
+  transform:translateX(-2px);
+}
+#p-expediente[data-exp-gender="F"] [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-exploracion"] .tab-lbl{
+  transform:translateX(-2px);
+}
+#p-expediente[data-exp-gender="F"] [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-estudios"] .tab-ico{
+  margin-left:-9px;
+  transform:translateX(-2px);
+}
+#p-expediente[data-exp-gender="F"] [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-estudios"] .tab-lbl{
+  transform:translateX(-1px);
+}
+#p-expediente[data-exp-gender="F"] [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-consent"] .tab-ico{
+  margin-left:-9px;
+  transform:translateX(-1px);
+}
+#p-expediente[data-exp-gender="F"] [data-exp-tabs].is-top-compact .mm-tabs-row .nav-link[data-tab-key="t-consent"] .tab-lbl{
+  transform:translateX(-1px);
+}
+
+/* Microajuste: modo Hombre/sin gineco para Consentimiento Informado */
+#p-expediente:not([data-exp-gender="F"]) .mm-tabs-row .nav-link[data-tab-key="t-consent"] .tab-ico{
+  margin-left:-6px;
+  margin-right:3px;
+  transform:translateX(-1px);
+}
+#p-expediente:not([data-exp-gender="F"]) .mm-tabs-row .nav-link[data-tab-key="t-consent"] .tab-lbl{
+  transform:translateX(-2px);
 }
 
 .dg-photo{
@@ -4689,6 +4793,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-expediente .head .exp-hdr-patient-name{
   font-weight:800;
   color:#003152;
+  font-size:1.02rem;
+  line-height:1.2;
 }
 #p-expediente .head .exp-hdr-chip{
   display:inline-flex;
@@ -4713,6 +4819,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   margin-top:3px;
   font-size:0.75rem;
   color:#5a6f84;
+  line-height:1.25;
 }
 #p-expediente .head .exp-hdr-right{
   display:flex;
@@ -4765,6 +4872,72 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-expediente .head [data-role="exp-h-close-enc-btn"]{
   white-space:nowrap;
 }
+#p-expediente .head .exp-h-active-strip{
+  margin-top:8px;
+  padding-top:7px;
+  border-top:1px solid #d8e5ef;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+#p-expediente .head .exp-h-active-strip-title{
+  flex:0 0 auto;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:#6f7f8b;
+  white-space:nowrap;
+}
+#p-expediente .head .exp-h-active-strip-scroll{
+  flex:1 1 auto;
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  scrollbar-width:thin;
+  padding-bottom:2px;
+}
+#p-expediente .head .exp-h-active-chip{
+  appearance:none;
+  border:1px solid #1FAF63;
+  background:#E8F6EE;
+  color:#1FAF63;
+  border-radius:10px;
+  padding:8px 14px;
+  min-height:40px;
+  font-size:14px;
+  font-weight:600;
+  line-height:1.2;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  white-space:nowrap;
+  transition:background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+#p-expediente .head .exp-h-active-chip:hover{
+  background:#ddf1e7;
+  border-color:#1FAF63;
+}
+#p-expediente .head .exp-h-active-chip.is-current,
+#p-expediente .head .exp-h-active-chip[aria-current="true"]{
+  background:#1FAF63;
+  border-color:#1FAF63;
+  color:#fff;
+  font-weight:600;
+}
+#p-expediente .head .exp-h-active-chip-name{
+  font-weight:800;
+}
+#p-expediente .head .exp-h-active-chip-state{
+  font-size:11px;
+  letter-spacing:.03em;
+  text-transform:uppercase;
+  opacity:.92;
+}
 @media (max-width: 991.98px){
   #p-expediente .head .exp-hdr{
     flex-direction:column;
@@ -4775,6 +4948,9 @@ body{margin:0;background:var(--mm-fondo-base);}
     justify-content:space-between;
     align-items:center;
     flex-wrap:wrap;
+  }
+  #p-expediente .head .exp-h-active-chip{
+    padding:7px 12px;
   }
 }
 /* Pacientes: escala de alfa en tabs inactivos (nuevo orden 10 tabs, 2 filas) */

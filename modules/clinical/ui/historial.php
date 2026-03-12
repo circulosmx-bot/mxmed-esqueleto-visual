@@ -787,7 +787,8 @@ if ($patientId !== '') {
     }
 }
 
-if ($patientId !== '' && $patientId !== 'demo' && $activeEncounterKey === '') {
+if ($patientId !== '' && $patientId !== 'demo') {
+    $activeEncounterKey = '';
     $activeEncounterUrl = $clinicalApiIndexBase . '/patients/' . rawurlencode($patientId) . '/encounters/active';
     $activeEncounterContext = stream_context_create([
         'http' => [

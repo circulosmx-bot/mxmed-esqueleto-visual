@@ -128,6 +128,12 @@
   };
 
 const isDemo = window.location.hostname.endsWith('github.io');
+  const hasHospitalStaySupport = (() => {
+    if (isDemo) return true;
+    if (tab?.dataset?.hospitalStaySupport === '1') return true;
+    if (window.MXMED_FEATURES && window.MXMED_FEATURES.hospital_stays === true) return true;
+    return false;
+  })();
   const demoFetchJson = async (path) => {
     const res = await fetch(path, { method: 'GET', headers: {} });
     const data = await res.json().catch(() => null);
@@ -321,9 +327,42 @@ const isDemo = window.location.hostname.endsWith('github.io');
   };
 
   const state = { loaded: false, stay: null, events: [] };
+  const setHospitalStayActionsDisabled = (disabled) => {
+    [
+      '#mh_start_btn',
+      '#mh_start_save',
+      '#mh_close_btn',
+      '#mh_close_confirm',
+      '#mh_generate_note',
+      '#mh_generate_orders',
+      '#mh_event_save'
+    ].forEach((selector) => {
+      const node = qs(selector);
+      if (!node) return;
+      if ('disabled' in node) {
+        node.disabled = !!disabled;
+      } else {
+        node.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+        node.classList.toggle('disabled', !!disabled);
+      }
+    });
+    const closeBtn = qs('#mh_close_btn');
+    if (closeBtn && disabled) closeBtn.classList.add('d-none');
+  };
+  const showUnsupportedNotice = () => {
+    if (hasHospitalStaySupport) return;
+    const el = qs('#mh_demo_notice');
+    if (!el) return;
+    el.textContent = 'Manejo hospitalario no disponible en este entorno.';
+    el.classList.remove('d-none');
+  };
   const showDemoModeNotice = () => {
     const el = qs('#mh_demo_notice');
     if (!el) return;
+    if (!hasHospitalStaySupport) {
+      showUnsupportedNotice();
+      return;
+    }
     if (isDemo) {
       el.textContent = 'Modo demostración: datos simulados / selecciona paciente.';
       el.classList.remove('d-none');
@@ -374,6 +413,15 @@ const isDemo = window.location.hostname.endsWith('github.io');
   const renderStay = () => {
     const badge = qs('#mh_stay_badge'), meta = qs('#mh_stay_meta'), det = qs('#mh_stay_details'), closeBtn = qs('#mh_close_btn');
     if (!badge || !meta || !det || !closeBtn) return;
+    if (!hasHospitalStaySupport) {
+      badge.className = 'badge text-bg-secondary';
+      badge.textContent = 'No disponible';
+      meta.textContent = 'Manejo hospitalario no disponible en este entorno.';
+      det.textContent = '';
+      closeBtn.classList.add('d-none');
+      qs('#mh_timeline') && (qs('#mh_timeline').innerHTML = '<div class="text-muted small">Manejo hospitalario no disponible en este entorno.</div>');
+      return;
+    }
     if (!state.stay) {
       badge.className = 'badge text-bg-secondary'; badge.textContent = 'Sin episodio activo';
       meta.textContent = 'Para generar documentos intrahospitalarios, inicia una hospitalización.';
@@ -445,6 +493,14 @@ const isDemo = window.location.hostname.endsWith('github.io');
   const refresh = async () => {
     showErr([]);
     renderRx(); balance(); renderEvents();
+    if (!hasHospitalStaySupport) {
+      state.stay = null;
+      renderStay();
+      syncContextFromState();
+      updateContextNotice();
+      setHospitalStayActionsDisabled(true);
+      return;
+    }
     const patient = getPatient();
     try {
       const res = await api.currentStay(patient.patient_id);
@@ -600,6 +656,7 @@ const isDemo = window.location.hostname.endsWith('github.io');
       const a = qs('#mh_start_attending'); if (a) a.value = doc.user_id;
     });
     qs('#mh_start_save')?.addEventListener('click', async () => {
+      if (!hasHospitalStaySupport) return;
       showErr([]);
       const patient = getPatient();
       const doc = getDoctor();
@@ -623,6 +680,7 @@ const isDemo = window.location.hostname.endsWith('github.io');
       } catch (e) { showErr([e?.message || String(e)]); }
     });
     qs('#mh_close_confirm')?.addEventListener('click', async () => {
+      if (!hasHospitalStaySupport) return;
       showErr([]);
       const patient = getPatient();
       try {
@@ -728,6 +786,7 @@ const isDemo = window.location.hostname.endsWith('github.io');
     tab.appendChild(fragment);
     state.loaded = true;
     showDemoModeNotice();
+    setHospitalStayActionsDisabled(!hasHospitalStaySupport);
     bind();
     await refresh();
   };

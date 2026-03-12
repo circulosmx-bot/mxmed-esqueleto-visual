@@ -2820,6 +2820,9 @@
                 <button type="button" class="btn btn-success btn-sm d-none" data-role="exp-h-close-enc-btn">Cerrar consulta</button>
               </div>
             </div>
+            <div class="exp-h-active-strip d-none" data-role="exp-h-active-strip">
+              <div class="exp-h-active-strip-scroll" data-role="exp-h-active-strip-scroll"></div>
+            </div>
           </div>
 
           <div class="body">
@@ -2828,12 +2831,12 @@
 
               <ul class="nav nav-pills mm-tabs-row mm-tabs-row-top" role="tablist">
 
-                <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-datos" data-tab-key="t-datos"><span class="tab-ico material-symbols-outlined" aria-hidden="true">id_card</span><span class="tab-lbl">Datos Generales</span></button></li>
+                <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-datos" data-tab-key="t-datos"><span class="tab-ico material-symbols-outlined" aria-hidden="true">id_card</span><span class="tab-lbl tab-lbl-stack tab-lbl-stack-datos"><span class="tab-line">Datos</span><span class="tab-line">Generales</span></span></button></li>
 
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historia" data-tab-key="t-historia"><span class="tab-ico material-symbols-outlined" aria-hidden="true">menu_book</span><span class="tab-lbl">Historia Clínica</span></button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historial-atencion" data-tab-key="t-historial-atencion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">history</span><span class="tab-lbl">Historial de atención</span></button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historial-atencion" data-tab-key="t-historial-atencion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">history</span><span class="tab-lbl tab-lbl-stack tab-lbl-stack-historial"><span class="tab-line">Historial</span><span class="tab-line tab-line-sub">de atención</span></span></button></li>
 
-                <li class="nav-item d-none" data-tab-conditional="gineco"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-gineco" data-tab-key="t-gineco"><span class="tab-ico material-symbols-rounded" aria-hidden="true">pregnant_woman</span><span class="tab-lbl">Antecedentes gineco-obstétricos</span></button></li>
+                <li class="nav-item d-none" data-tab-conditional="gineco"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-gineco" data-tab-key="t-gineco"><span class="tab-ico material-symbols-rounded" aria-hidden="true">pregnant_woman</span><span class="tab-lbl tab-lbl-stack tab-lbl-stack-gineco"><span class="tab-line">Antecedentes</span><span class="tab-line">Gineco</span><span class="tab-line">Obstétricos</span></span></button></li>
 
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-exploracion" data-tab-key="t-exploracion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">accessibility</span><span class="tab-lbl">Exploración Física</span></button></li>
 
@@ -3134,11 +3137,11 @@
 
                 <div class="dg-form row g-3">
 
-                  <div class="col-md-4"><label class="form-label">Nombre</label><input class="form-control" data-pac-nombre placeholder="Nombre(s)"></div>
+                  <div class="col-md-4"><label class="form-label">Nombre(s)</label><input class="form-control" data-pac-nombre placeholder="Nombre(s)"></div>
 
-                  <div class="col-md-4"><label class="form-label">Apellido Paterno</label><input class="form-control" data-pac-apellido-paterno placeholder="Apellido paterno"></div>
+                  <div class="col-md-4"><label class="form-label">Primer Apellido</label><input class="form-control" data-pac-apellido-paterno placeholder="Primer apellido"></div>
 
-                  <div class="col-md-4"><label class="form-label">Apellido Materno</label><input class="form-control" data-pac-apellido-materno placeholder="Apellido materno"></div>
+                  <div class="col-md-4"><label class="form-label">Segundo Apellido</label><input class="form-control" data-pac-apellido-materno placeholder="Segundo apellido"></div>
 
                   <div class="col-md-4"><label class="form-label">Teléfono Celular</label><input class="form-control" placeholder="Ej. 5551234567"></div>
 
@@ -3184,6 +3187,11 @@
 
                   </div>
 
+                  <div class="col-12 d-flex justify-content-end align-items-center gap-2 mt-2">
+                    <div class="small text-muted d-none" id="dg-save-feedback" aria-live="polite"></div>
+                    <button type="button" class="btn btn-primary btn-sm" id="dg-save-patient">Guardar paciente</button>
+                  </div>
+
                 </div>
 
               </div>
@@ -3193,7 +3201,7 @@
                 <div class="row g-3 mt-1">
                   <div class="col-md-4">
                     <label class="form-label">Motivo de la Consulta</label>
-                    <textarea class="form-control" rows="3" placeholder="Describe el motivo principal de la consulta"></textarea>
+                    <textarea class="form-control" data-pac-motivo-consulta rows="3" placeholder="Describe el motivo principal de la consulta"></textarea>
                   </div>
                   <div class="col-md-8">
                     <label class="form-label">Padecimiento Actual</label>
@@ -6620,11 +6628,6 @@
     }
 
     function readActivePatientId() {
-      if (typeof window.resolveActivePatientId === 'function') {
-        var resolved = String(window.resolveActivePatientId() || '').trim();
-        if (resolved) return resolved;
-      }
-
       var panel = document.getElementById('p-expediente');
       var fromPatientId = String((panel && (panel.dataset.patientId || panel.getAttribute('data-patient-id'))) || '').trim();
       if (fromPatientId) return fromPatientId;
@@ -6632,6 +6635,12 @@
       var fromActivePatientId = String((panel && (panel.dataset.activePatientId || panel.getAttribute('data-active-patient-id'))) || '').trim();
       if (fromActivePatientId) return fromActivePatientId;
 
+      var fromQuery = getParam('patient_id') || getParam('patientId');
+      if (fromQuery && fromQuery.trim() !== '') return fromQuery.trim();
+      if (typeof window.resolveActivePatientId === 'function') {
+        var resolved = String(window.resolveActivePatientId() || '').trim();
+        if (resolved) return resolved;
+      }
       var globalCandidates = [
         window.mxmedActivePatientId,
         window.__MXMED_ACTIVE_PATIENT_ID,
@@ -6641,18 +6650,13 @@
         var candidate = String(globalCandidates[i] || '').trim();
         if (candidate) return candidate;
       }
-
-      var fromQuery = getParam('patient_id') || getParam('patientId');
-      if (fromQuery && fromQuery.trim() !== '') return fromQuery.trim();
       return null;
     }
 
     function resolveEncounterKey() {
       var fromQuery = getParam('encounter_key');
       if (fromQuery && fromQuery.trim() !== '') return fromQuery.trim();
-      var fromData = String(historialPane.getAttribute('data-encounter-key') || historialPane.dataset.encounterKey || '').trim();
-      if (fromData) return fromData;
-      return 'appt:demo';
+      return '';
     }
 
     function resolveDocumentUuid() {
@@ -6751,19 +6755,6 @@
 
       p10Bar.classList.remove('d-none');
       var hasActive = !!(state && state.hasActive && state.encounter_key);
-      var canonicalPatientId = String((window.mxmedStore && (window.mxmedStore.currentPatientId || window.mxmedStore.activePatientId)) || '').trim();
-      var canonicalEncounterKey = String((window.mxmedStore && window.mxmedStore.currentEncounterKey) || '').trim();
-      if (canonicalPatientId && canonicalPatientId === String(patientId || '').trim()) {
-        if (!canonicalEncounterKey) {
-          hasActive = false;
-        } else if (!hasActive || String(state.encounter_key || '').trim() !== canonicalEncounterKey) {
-          hasActive = true;
-          state = Object.assign({}, state || {}, {
-            hasActive: true,
-            encounter_key: canonicalEncounterKey
-          });
-        }
-      }
       p10ActiveEncounter = hasActive ? state : null;
       p10Bar.dataset.encounterKey = hasActive ? String((state && state.encounter_key) || '').trim() : '';
       if (p10OnAir) p10OnAir.classList.toggle('d-none', !hasActive);
@@ -6787,23 +6778,37 @@
         renderP10Bar({ hasActive: false });
         return;
       }
-      var canonicalPatientId = String((window.mxmedStore && (window.mxmedStore.currentPatientId || window.mxmedStore.activePatientId)) || '').trim();
-      var canonicalEncounterKey = String((window.mxmedStore && window.mxmedStore.currentEncounterKey) || '').trim();
-      if (canonicalPatientId && canonicalPatientId === String(patientId).trim() && canonicalEncounterKey) {
-        renderP10Bar({
-          hasActive: true,
-          encounter_key: canonicalEncounterKey,
-          status: 'open'
-        });
-      } else {
-        renderP10Bar({ hasActive: false });
-      }
+      renderP10Bar({ hasActive: false });
+      refreshP10();
     }
 
     function fetchActiveEncounter(patientId) {
       var safePatientId = String(patientId || '').trim();
       if (!safePatientId) {
         return Promise.resolve({ hasActive: false });
+      }
+      if (typeof window.resolveActiveEncounterForPatient === 'function') {
+        return Promise.resolve(window.resolveActiveEncounterForPatient(safePatientId, { source: 'p10' }))
+          .then(function (resolved) {
+            if (!resolved || resolved.ok !== true || !resolved.hasActive || !resolved.encounterKey) {
+              return {
+                hasActive: false,
+                errorMessage: String((resolved && resolved.errorMessage) || '').trim()
+              };
+            }
+            return {
+              hasActive: true,
+              encounter_key: String(resolved.encounterKey || '').trim(),
+              appointment_id: String(resolved.appointmentId || '').trim(),
+              status: String(resolved.status || '').trim()
+            };
+          })
+          .catch(function (err) {
+            return {
+              hasActive: false,
+              errorMessage: String((err && err.message) || 'No se pudo consultar la consulta activa.').trim()
+            };
+          });
       }
       return fetchJson('/api/clinical/index.php/patients/' + encodeURIComponent(safePatientId) + '/encounters/active', {
         method: 'GET',
@@ -6848,6 +6853,12 @@
       return fetchActiveEncounter(safePatientId).then(function (activeState) {
         if (activeState && activeState.hasActive && activeState.encounter_key) {
           return activeState;
+        }
+        if (typeof window.mxmedCanStartEncounter === 'function') {
+          var gate = window.mxmedCanStartEncounter(safePatientId, 3);
+          if (gate && gate.allowed === false) {
+            throw new Error('Ya tienes 3 consultas activas. Cierra una consulta antes de iniciar otra.');
+          }
         }
         return fetchJson('/api/clinical/index.php/patients/' + encodeURIComponent(safePatientId) + '/encounters', {
           method: 'POST',
@@ -6918,6 +6929,43 @@
       }
       p10RefreshPromise = fetchActiveEncounter(patientId).then(function (state) {
         renderP10Bar(state);
+        var shouldReconcile = true;
+        if ((!state || !state.hasActive || !state.encounter_key) && typeof window.mxmedHasActiveEntriesForPatient === 'function') {
+          try {
+            shouldReconcile = window.mxmedHasActiveEntriesForPatient(patientId) === true;
+          } catch (_) {
+            shouldReconcile = true;
+          }
+        }
+        if (shouldReconcile && typeof window.mxmedReconcileActiveEntriesForPatient === 'function') {
+          var debugHasEntriesForPatient = null;
+          if (typeof window.mxmedHasActiveEntriesForPatient === 'function') {
+            try {
+              debugHasEntriesForPatient = window.mxmedHasActiveEntriesForPatient(patientId);
+            } catch (_) {
+              debugHasEntriesForPatient = null;
+            }
+          }
+          try {
+            window.mxmedReconcileActiveEntriesForPatient(
+              patientId,
+              (state && state.hasActive && state.encounter_key) ? String(state.encounter_key || '').trim() : ''
+            );
+          } catch (_) {}
+        }
+        if (!state || !state.hasActive || !state.encounter_key) {
+          if (typeof window.setEncounterContextOnPane === 'function') {
+            try { window.setEncounterContextOnPane('', patientId); } catch (_) {}
+          }
+          if (window.mxmedStore && typeof window.mxmedStore === 'object') {
+            var currentPid = String(window.mxmedStore.currentPatientId || window.mxmedStore.activePatientId || '').trim();
+            if (!currentPid || currentPid === patientId) {
+              window.mxmedStore.currentEncounterKey = '';
+              window.mxmedStore.activeEncounterKey = '';
+            }
+          }
+          p10Bar.dataset.encounterKey = '';
+        }
         return state;
       }).finally(function () {
         p10RefreshPromise = null;
@@ -6971,6 +7019,10 @@
         encounterKey: forcedEncounterKey || (useDemo ? 'appt:demo' : resolveEncounterKey()),
         documentUuid: forcedDocumentUuid || (useDemo ? 'demo' : resolveDocumentUuid())
       };
+      if (activeMode === 'encounter' && !String(context.encounterKey || '').trim()) {
+        setActiveMode('historial');
+        context.encounterKey = useDemo ? 'appt:demo' : '';
+      }
 
       if (emptyMsg) {
         emptyMsg.classList.toggle('d-none', !useDemo);
@@ -7057,7 +7109,7 @@
     observer.observe(expedientePane, { attributes: true, attributeFilter: ['data-patient-id', 'data-active-patient-id'] });
 
     ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach(function (evtName) {
-      document.addEventListener(evtName, function () {
+      window.addEventListener(evtName, function () {
         forcedEncounterKey = '';
         forcedDocumentUuid = '';
         setActiveMode('historial');
@@ -7117,54 +7169,105 @@
 
     if (p10FinalizeBtn) {
       p10FinalizeBtn.addEventListener('click', function () {
-        if (p10Loading || !p10ActiveEncounter || !p10ActiveEncounter.encounter_key) return;
-        var closingEncounterKey = String(p10ActiveEncounter.encounter_key || '').trim();
-        if (!closingEncounterKey) return;
-        if (!window.confirm('¿Cerrar consulta? Se generará nota clínica AUTO de cierre.')) {
+        if (p10Loading) return;
+        var storePatientId = String((window.mxmedStore && (window.mxmedStore.currentPatientId || window.mxmedStore.activePatientId)) || '').trim();
+        var panePatientId = String((expedientePane && (expedientePane.dataset.patientId || expedientePane.dataset.activePatientId)) || '').trim();
+        var patientId = storePatientId || panePatientId || String(readActivePatientId() || '').trim();
+        var preloadedEncounterKey = String(
+          (p10ActiveEncounter && p10ActiveEncounter.encounter_key)
+          || p10Bar.dataset.encounterKey
+          || ''
+        ).trim();
+        if (!patientId) {
+          window.alert('No se encontró patient_id activo para cerrar consulta.');
           return;
         }
-        if (typeof window.mxmedEmitEncounterLifecycle === 'function') {
-          window.mxmedEmitEncounterLifecycle({
-            patient_id: readActivePatientId(),
-            encounter_key: closingEncounterKey,
-            status: 'consulta_pendiente_cierre',
-            origin: 'p10_finalize_click',
-            pending_reason: 'user_finalize_request',
-            last_activity_at: new Date().toISOString()
-          });
+        if (preloadedEncounterKey && window.mxmedStore && typeof window.mxmedStore === 'object') {
+          var activeMap = (window.mxmedStore.activeEncounters && typeof window.mxmedStore.activeEncounters === 'object')
+            ? window.mxmedStore.activeEncounters
+            : null;
+          var preloadedEntry = activeMap ? activeMap[preloadedEncounterKey] : null;
+          var preloadedPid = String((preloadedEntry && preloadedEntry.patient_id) || '').trim();
+          if (!preloadedPid || preloadedPid !== patientId) {
+            preloadedEncounterKey = '';
+          }
         }
-        setP10Loading(true);
-        finalizeEncounter(closingEncounterKey)
-          .then(function () {
+        var resolveClosingEncounter = function () {
+          return fetchActiveEncounter(patientId).then(function (state) {
+            if (!state || !state.hasActive || !state.encounter_key) return null;
+            var apiEncounterKey = String(state.encounter_key || '').trim();
+            if (!apiEncounterKey) return null;
+            if (preloadedEncounterKey && preloadedEncounterKey !== apiEncounterKey) {
+              preloadedEncounterKey = '';
+            }
+            return {
+              encounter_key: apiEncounterKey,
+              patient_id: patientId
+            };
+          });
+        };
+
+        resolveClosingEncounter().then(function (closingState) {
+          var closingEncounterKey = String((closingState && closingState.encounter_key) || '').trim();
+          if (!closingEncounterKey) {
+            window.alert('No se encontró una consulta activa para cerrar.');
+            return;
+          }
+          if (!window.confirm('¿Cerrar consulta? Se generará nota clínica AUTO de cierre.')) {
+            return;
+          }
+          if (typeof window.mxmedEmitEncounterLifecycle === 'function') {
+            window.mxmedEmitEncounterLifecycle({
+              patient_id: patientId,
+              encounter_key: closingEncounterKey,
+              status: 'consulta_pendiente_cierre',
+              origin: 'p10_finalize_click',
+              pending_reason: 'user_finalize_request',
+              last_activity_at: new Date().toISOString()
+            });
+          }
+          setP10Loading(true);
+          return finalizeEncounter(closingEncounterKey)
+            .then(function () {
+            p10ActiveEncounter = null;
+            p10Bar.dataset.encounterKey = '';
+            renderP10Bar({ hasActive: false });
             if (typeof window.mxmedEmitEncounterLifecycle === 'function') {
               window.mxmedEmitEncounterLifecycle({
-                patient_id: readActivePatientId(),
+                patient_id: patientId,
                 encounter_key: closingEncounterKey,
                 status: 'consulta_cerrada',
                 origin: 'p10_finalize_success',
                 last_activity_at: new Date().toISOString()
               });
             }
-            renderP10FromCanonicalContext();
-            return refreshP10();
+            return Promise.resolve(
+              (typeof window.mxmedReconcileActiveEncounters === 'function')
+                ? window.mxmedReconcileActiveEncounters({ emitEvent: true, reason: 'finalize_success' })
+                : null
+            ).catch(function () { return null; }).then(function () {
+              renderP10FromCanonicalContext();
+              return refreshP10();
+            });
           })
-          .catch(function (err) {
-            if (typeof window.mxmedEmitEncounterLifecycle === 'function') {
-              window.mxmedEmitEncounterLifecycle({
-                patient_id: readActivePatientId(),
-                encounter_key: closingEncounterKey,
-                status: 'consulta_activa',
-                origin: 'p10_finalize_error',
-                pending_reason: String((err && err.message) || '').trim(),
-                last_activity_at: new Date().toISOString()
-              });
-            }
-            renderP10FromCanonicalContext();
-            window.alert(String((err && err.message) || 'No se pudo cerrar la consulta.'));
-          })
-          .finally(function () {
-            setP10Loading(false);
-          });
+            .catch(function (err) {
+              if (typeof window.mxmedEmitEncounterLifecycle === 'function') {
+                window.mxmedEmitEncounterLifecycle({
+                  patient_id: patientId,
+                  encounter_key: closingEncounterKey,
+                  status: 'consulta_activa',
+                  origin: 'p10_finalize_error',
+                  pending_reason: String((err && err.message) || '').trim(),
+                  last_activity_at: new Date().toISOString()
+                });
+              }
+              renderP10FromCanonicalContext();
+              window.alert(String((err && err.message) || 'No se pudo cerrar la consulta.'));
+            })
+            .finally(function () {
+              setP10Loading(false);
+            });
+        });
       });
     }
 

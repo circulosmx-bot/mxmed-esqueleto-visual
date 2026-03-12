@@ -146,7 +146,9 @@
   function initAutosave(){
     const expedienteRoot = document.getElementById('p-expediente');
     let creatingPatientPromise = null;
-    let lastCreateAttemptAt = 0;
+    let explicitSaveCompleted = false;
+    const savePatientBtn = document.getElementById('dg-save-patient');
+    const savePatientFeedback = document.getElementById('dg-save-feedback');
 
     const getActivePatientId = ()=>{
       if(typeof window.resolveActivePatientId === 'function'){
@@ -166,8 +168,7 @@
       const pid = String(patientId || '').trim();
       if(!pid) return;
       if(typeof window.setActivePatientId === 'function'){
-        window.setActivePatientId(pid, { emitEvent: true });
-        return;
+        return window.setActivePatientId(pid, { emitEvent: true, skipUnsavedNewPatientConfirm: true });
       }
       if(!expedienteRoot) return;
       expedienteRoot.dataset.activePatientId = pid;
@@ -180,6 +181,7 @@
         window.mxmedStore.activePatientId = pid;
       }
       window.dispatchEvent(new Event('patient:selected'));
+      return true;
     };
 
     const buildCreatePayload = ()=>{
@@ -212,14 +214,121 @@
       return payload;
     };
 
-    const ensureActivePatientFromAutosave = ()=>{
-      if(getActivePatientId()) return;
+    const isInNewEntryMode = ()=>{
+      if(!expedienteRoot) return false;
+      return String(expedienteRoot.dataset?.newEntryMode || expedienteRoot.getAttribute('data-new-entry-mode') || '').trim() === '1';
+    };
+
+    const readIdentityDraftFromDom = ()=>{
+      if(!expedienteRoot) return null;
+      return {
+        nombre: String(expedienteRoot.querySelector('[data-pac-nombre]')?.value || '').trim(),
+        apellido_paterno: String(expedienteRoot.querySelector('[data-pac-apellido-paterno]')?.value || '').trim(),
+        apellido_materno: String(expedienteRoot.querySelector('[data-pac-apellido-materno]')?.value || '').trim(),
+        sexo: String(expedienteRoot.querySelector('input[name="pac-genero"]:checked')?.value || '').trim(),
+        dia: String(expedienteRoot.querySelector('[data-dg-dia]')?.value || '').trim(),
+        mes: String(expedienteRoot.querySelector('[data-dg-mes]')?.value || '').trim(),
+        anio: String(expedienteRoot.querySelector('[data-dg-anio]')?.value || '').trim()
+      };
+    };
+
+    const hasPrimaryIdentityData = ()=>{
+      const draft = readIdentityDraftFromDom();
+      if(!draft) return false;
+      return [
+        draft.nombre,
+        draft.apellido_paterno,
+        draft.apellido_materno,
+        draft.sexo,
+        draft.dia,
+        draft.mes,
+        draft.anio
+      ].some((value)=> String(value || '').trim() !== '');
+    };
+
+    const persistIdentityDraftForPatient = (patientId)=>{
+      const pid = String(patientId || '').trim();
+      if(!pid) return false;
+      const draft = readIdentityDraftFromDom();
+      if(!draft) return false;
+      const hasData = Object.values(draft).some((val)=> String(val || '').trim() !== '');
+      if(!window.mxmedStore || typeof window.mxmedStore !== 'object'){
+        window.mxmedStore = {};
+      }
+      if(!window.mxmedStore.patientIdentityDrafts || typeof window.mxmedStore.patientIdentityDrafts !== 'object'){
+        window.mxmedStore.patientIdentityDrafts = {};
+      }
+      if(!hasData){
+        delete window.mxmedStore.patientIdentityDrafts[pid];
+        return false;
+      }
+      window.mxmedStore.patientIdentityDrafts[pid] = draft;
+      const label = [draft.nombre, draft.apellido_paterno, draft.apellido_materno].filter(Boolean).join(' ').trim();
+      if(label){
+        if(typeof window.mxmedRememberPatientLabel === 'function'){
+          window.mxmedRememberPatientLabel(pid, label);
+        }else{
+          if(!window.mxmedStore.patientLabelById || typeof window.mxmedStore.patientLabelById !== 'object'){
+            window.mxmedStore.patientLabelById = {};
+          }
+          window.mxmedStore.patientLabelById[pid] = label;
+        }
+      }
+      return true;
+    };
+
+    const syncNewPatientDirtyState = ()=>{
+      if(!window.mxmedStore || typeof window.mxmedStore !== 'object'){
+        window.mxmedStore = {};
+      }
+      const dirty = isInNewEntryMode() && hasPrimaryIdentityData() && !explicitSaveCompleted;
+      window.mxmedStore.newPatientEntryDirty = dirty;
+      return dirty;
+    };
+
+    const clearNewPatientDirtyState = ()=>{
+      explicitSaveCompleted = false;
+      if(!window.mxmedStore || typeof window.mxmedStore !== 'object'){
+        window.mxmedStore = {};
+      }
+      window.mxmedStore.newPatientEntryDirty = false;
+    };
+
+    window.mxmedHasUnsavedNewPatientDraft = ()=> syncNewPatientDirtyState();
+    window.mxmedClearNewPatientEntryDirty = ()=> clearNewPatientDirtyState();
+
+    const setSaveFeedback = (text, type = 'muted')=>{
+      if(!savePatientFeedback) return;
+      const msg = String(text || '').trim();
+      if(!msg){
+        savePatientFeedback.textContent = '';
+        savePatientFeedback.className = 'small text-muted d-none';
+        return;
+      }
+      const cls = type === 'success'
+        ? 'small text-success'
+        : type === 'error'
+          ? 'small text-danger'
+          : 'small text-muted';
+      savePatientFeedback.textContent = msg;
+      savePatientFeedback.className = cls;
+    };
+
+    const createPatientFromExplicitSave = ()=>{
       const payload = buildCreatePayload();
-      if(!payload) return;
-      const now = Date.now();
-      if(now - lastCreateAttemptAt < 1200) return;
-      if(creatingPatientPromise) return;
-      lastCreateAttemptAt = now;
+      if(!payload || !String(payload.display_name || '').trim()){
+        setSaveFeedback('Captura nombre y apellidos para guardar.', 'error');
+        return Promise.resolve(null);
+      }
+      if(creatingPatientPromise) return creatingPatientPromise;
+      if(savePatientBtn) savePatientBtn.disabled = true;
+      setSaveFeedback('Guardando paciente...', 'muted');
+      console.info('[P14-PATIENT-SAVE] attempt', {
+        display_name: payload.display_name || '',
+        has_birthdate: !!payload.birthdate,
+        sex: payload.sex || '',
+        has_doctor_id: !!payload.doctor_id
+      });
       creatingPatientPromise = fetch('/api/patients/index.php/patients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -228,12 +337,46 @@
         .then((json)=>{
           const patientId = String(json?.data?.patient_id || '').trim();
           if(json?.ok === true && patientId){
-            setActivePatientId(patientId);
+            console.info('[P14-PATIENT-SAVE] success', { patient_id: patientId });
+            persistIdentityDraftForPatient(patientId);
+            explicitSaveCompleted = true;
+            syncNewPatientDirtyState();
+            Promise.resolve(setActivePatientId(patientId))
+              .catch(()=> null)
+              .finally(()=>{
+                if(typeof window.mxmedApplyExpedienteEntryTabRule === 'function'){
+                  try{ window.mxmedApplyExpedienteEntryTabRule({ context: 'explicit_save' }); }catch(_){}
+                }
+              });
+            if(typeof window.mxmedInvalidatePatientsIndexCache === 'function'){
+              window.mxmedInvalidatePatientsIndexCache();
+            }
+            setSaveFeedback('Paciente guardado correctamente.', 'success');
+            return patientId;
           }
+          console.warn('[P14-PATIENT-SAVE] no_create', {
+            ok: json?.ok === true,
+            error: String(json?.error || '').trim(),
+            message: String(json?.message || '').trim(),
+            has_patient_id: !!patientId
+          });
+          setSaveFeedback(String(json?.message || 'No se pudo guardar el paciente.'), 'error');
+          return null;
         })
-        .catch(()=>{})
-        .finally(()=>{ creatingPatientPromise = null; });
+        .catch((err)=>{
+          console.warn('[P14-PATIENT-SAVE] request_error', {
+            message: String(err?.message || '').trim()
+          });
+          setSaveFeedback('Error de red al guardar paciente.', 'error');
+          return null;
+        })
+        .finally(()=>{
+          creatingPatientPromise = null;
+          if(savePatientBtn) savePatientBtn.disabled = false;
+        });
+      return creatingPatientPromise;
     };
+    savePatientBtn?.addEventListener('click', ()=>{ createPatientFromExplicitSave(); });
 
     document.querySelectorAll('input.form-control, select.form-select, textarea.form-control').forEach(ctrl=>{
       if(ctrl.type==='file') return;
@@ -264,10 +407,15 @@
         if(col){ col.classList.toggle('saved', hasVal && !invalid); }
       };
       maybeMark();
-      ctrl.addEventListener('input', ()=>{ maybeMark(); ensureActivePatientFromAutosave(); });
-      ctrl.addEventListener('change', ()=>{ localStorage.setItem(key, ctrl.value); maybeMark(); ensureActivePatientFromAutosave(); });
-      ctrl.addEventListener('blur', ()=>{ localStorage.setItem(key, ctrl.value); maybeMark(); ensureActivePatientFromAutosave(); });
+      ctrl.addEventListener('input', ()=>{ explicitSaveCompleted = false; maybeMark(); syncNewPatientDirtyState(); });
+      ctrl.addEventListener('change', ()=>{ localStorage.setItem(key, ctrl.value); explicitSaveCompleted = false; maybeMark(); syncNewPatientDirtyState(); });
+      ctrl.addEventListener('blur', ()=>{ localStorage.setItem(key, ctrl.value); explicitSaveCompleted = false; maybeMark(); syncNewPatientDirtyState(); });
     });
+    document.querySelectorAll('input[name="pac-genero"]').forEach((ctrl)=>{
+      ctrl.addEventListener('change', ()=>{ explicitSaveCompleted = false; syncNewPatientDirtyState(); });
+    });
+    window.addEventListener('mxmed:expediente-neutralize', ()=>{ clearNewPatientDirtyState(); });
+    window.setTimeout(syncNewPatientDirtyState, 0);
   }
   initAutosave();
 })();

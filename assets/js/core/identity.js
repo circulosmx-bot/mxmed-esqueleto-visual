@@ -12,6 +12,10 @@
     return String(value ?? '').trim();
   }
 
+  function isCanonicalPatientId(value) {
+    return clean(value).startsWith('p_');
+  }
+
   function remember(legacy, canonical) {
     const value = clean(canonical) || null;
     cache.set(legacy, value);
@@ -43,6 +47,7 @@
   async function resolveCanonicalPatientId(legacyPatientId) {
     const legacy = clean(legacyPatientId);
     if (legacy === '' || legacy === 'anon') return null;
+    if (isCanonicalPatientId(legacy)) return remember(legacy, legacy);
 
     if (cache.has(legacy)) return cache.get(legacy);
     if (hasOwn.call(globalCache, legacy)) return remember(legacy, globalCache[legacy]);
@@ -69,6 +74,10 @@
         return remember(legacy, null);
       }
 
+      if (res.status === 409) {
+        // Expected transition state: legacy id not mapped yet in identity bridge.
+        return remember(legacy, legacy);
+      }
       if (!payload || typeof payload !== 'object') return remember(legacy, null);
       if (payload.ok === true) return remember(legacy, payload?.data?.patient_id ?? null);
       return remember(legacy, null);
