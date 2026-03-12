@@ -1345,3 +1345,41 @@ La corrección se aplicó sin regresiones en:
 - finalize
 - ensureActiveEncounter
 - límite de 3 activas
+
+## P14 Context-Orchestrator F2 — Setter de Contexto de Encounter
+
+### 1) Problema original
+El contexto de encounter activo se escribía desde varias rutas de UI (chips, P10 y sincronizaciones parciales), lo que elevaba riesgo de desincronización entre:
+- header clínico
+- P10
+- strip/chips
+- store/datasets del expediente
+
+### 2) Solución aplicada
+Se implementó una ruta oficial frontend:
+- `setCurrentEncounterForPatient(patientId, encounterKey, opts = {})`
+
+Con esta fase se consolidó:
+- actualización única de estado canónico (`currentPatientId`, `currentEncounterKey`, `activePatientId`, `activeEncounterKey`)
+- actualización coherente de datasets del pane de expediente
+- migración del handler de chips (`exp-switch-active-enc`) para usar el setter oficial
+- emisión de eventos controlada cuando existe cambio real (sin emisión redundante)
+
+### 3) Estado final de F2
+Quedó validado el aislamiento de contexto por paciente:
+- cambiar foco por chips mantiene sincronía de contexto
+- header, P10 y datasets se mantienen coherentes
+- al cambiar de paciente no se hereda encounter del paciente anterior
+- abrir paciente sin activa mantiene estado neutro
+- iniciar consulta actualiza store/pane/P10 de forma consistente
+
+### 4) Riesgos residuales
+- Persisten listeners legacy sobre `mxmed:encounter-changed`.
+- En fases siguientes conviene migrar consumo progresivo a `mxmed:encounter-context-changed` como señal principal del cambio de contexto de encounter.
+
+### 5) Validación QA de cierre
+Checklist validado para esta fase:
+1. abrir paciente sin consulta activa -> estado neutro
+2. iniciar consulta en paciente objetivo -> estado activo coherente
+3. cambiar entre pacientes con y sin activa -> sin herencia de encounter
+4. confirmar sincronía entre store, pane expediente, P10 y header clínico

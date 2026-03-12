@@ -6591,6 +6591,7 @@
     var p10PollingTimer = null;
     var p10Loading = false;
     var p10RefreshPromise = null;
+    var p10RefreshPatientId = '';
     var observerSyncTimer = null;
     var p10OnAir = p10Bar.querySelector('[data-role="p10-on-air"]');
     var p10StatusText = p10Bar.querySelector('[data-role="p10-status-text"]');
@@ -6919,20 +6920,27 @@
       if (!isHistorialTabVisible()) {
         return Promise.resolve({ hasActive: false, skipped: true });
       }
-      if (p10RefreshPromise) {
-        return p10RefreshPromise;
-      }
       var patientId = readActivePatientId();
       if (!patientId) {
         renderP10Bar({ hasActive: false });
+        p10RefreshPatientId = '';
         return Promise.resolve({ hasActive: false });
       }
-      p10RefreshPromise = fetchActiveEncounter(patientId).then(function (state) {
+      var safePatientId = String(patientId || '').trim();
+      if (p10RefreshPromise && p10RefreshPatientId === safePatientId) {
+        return p10RefreshPromise;
+      }
+      p10RefreshPatientId = safePatientId;
+      var refreshForPatientId = safePatientId;
+      var refreshPromise = fetchActiveEncounter(safePatientId).then(function (state) {
+        if (String(readActivePatientId() || '').trim() !== refreshForPatientId) {
+          return state;
+        }
         renderP10Bar(state);
         var shouldReconcile = true;
         if ((!state || !state.hasActive || !state.encounter_key) && typeof window.mxmedHasActiveEntriesForPatient === 'function') {
           try {
-            shouldReconcile = window.mxmedHasActiveEntriesForPatient(patientId) === true;
+            shouldReconcile = window.mxmedHasActiveEntriesForPatient(refreshForPatientId) === true;
           } catch (_) {
             shouldReconcile = true;
           }
@@ -6948,18 +6956,18 @@
           }
           try {
             window.mxmedReconcileActiveEntriesForPatient(
-              patientId,
+              refreshForPatientId,
               (state && state.hasActive && state.encounter_key) ? String(state.encounter_key || '').trim() : ''
             );
           } catch (_) {}
         }
         if (!state || !state.hasActive || !state.encounter_key) {
           if (typeof window.setEncounterContextOnPane === 'function') {
-            try { window.setEncounterContextOnPane('', patientId); } catch (_) {}
+            try { window.setEncounterContextOnPane('', refreshForPatientId); } catch (_) {}
           }
           if (window.mxmedStore && typeof window.mxmedStore === 'object') {
             var currentPid = String(window.mxmedStore.currentPatientId || window.mxmedStore.activePatientId || '').trim();
-            if (!currentPid || currentPid === patientId) {
+            if (!currentPid || currentPid === refreshForPatientId) {
               window.mxmedStore.currentEncounterKey = '';
               window.mxmedStore.activeEncounterKey = '';
             }
@@ -6968,9 +6976,13 @@
         }
         return state;
       }).finally(function () {
-        p10RefreshPromise = null;
+        if (p10RefreshPromise === refreshPromise) {
+          p10RefreshPromise = null;
+          p10RefreshPatientId = '';
+        }
       });
-      return p10RefreshPromise;
+      p10RefreshPromise = refreshPromise;
+      return refreshPromise;
     }
 
     function stopP10Polling() {

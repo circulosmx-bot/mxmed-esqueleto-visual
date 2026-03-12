@@ -4421,6 +4421,18 @@ console.info('app.js loaded :: 20251123a');
       captureExpedienteIdentityDraft(current);
       captureCurrentMotivoDraftForPatient(current);
     }
+    // Limpiar contexto visible de encounter del paciente saliente antes de hidratar el entrante.
+    if(window.mxmedStore && typeof window.mxmedStore === 'object'){
+      window.mxmedStore.currentEncounterKey = '';
+      window.mxmedStore.activeEncounterKey = '';
+    }
+    if(typeof window.setEncounterContextOnPane === 'function'){
+      try{ window.setEncounterContextOnPane('', next); }catch(_){}
+    }
+    const p10Bar = document.getElementById('mm-p10-bar');
+    if(p10Bar && p10Bar.dataset){
+      p10Bar.dataset.encounterKey = '';
+    }
     delete pane.dataset.newEntryMode;
     pane.removeAttribute('data-new-entry-mode');
     resetExpedienteIdentityFields();
@@ -5110,6 +5122,9 @@ console.info('app.js loaded :: 20251123a');
       && !hasActiveEncounter
       && hasEntriesForPatient === false;
     if(isStableClosedFromEncounterChangedEvent){
+      // Estado cerrado estable: mantener strip en sincronía inmediata
+      // aunque no haya más trabajo de reconciliación para este paciente.
+      renderActiveEncounterStrip({ currentFullName: fullName });
       return;
     }
     const reconciledCurrentPatient = reconcileActiveEntriesForPatient(patientId, encounterKey);
@@ -5192,6 +5207,57 @@ console.info('app.js loaded :: 20251123a');
       toggleNodeHidden(expHeaderStart, !startText);
     }
   };
+  const setCurrentEncounterForPatient = (patientId, encounterKey, opts = {})=>{
+    const pid = String(patientId || '').trim();
+    const eKey = String(encounterKey || '').trim();
+    if(!pid){
+      return { changed: false, patientId: '', encounterKey: '' };
+    }
+    const store = (window.mxmedStore && typeof window.mxmedStore === 'object') ? window.mxmedStore : null;
+    if(!store){
+      return { changed: false, patientId: pid, encounterKey: eKey };
+    }
+
+    const prevPatientId = String(store.currentPatientId || store.activePatientId || '').trim();
+    const prevEncounterKey = String(store.currentEncounterKey || store.activeEncounterKey || '').trim();
+    const changed = prevPatientId !== pid || prevEncounterKey !== eKey;
+
+    store.currentPatientId = pid;
+    store.activePatientId = pid;
+    store.currentEncounterKey = eKey;
+    store.activeEncounterKey = eKey;
+    if(typeof window.setEncounterContextOnPane === 'function'){
+      try{ window.setEncounterContextOnPane(eKey, pid); }catch(_){}
+    }
+    const p10Bar = document.getElementById('mm-p10-bar');
+    if(p10Bar && p10Bar.dataset){
+      p10Bar.dataset.encounterKey = eKey || '';
+    }
+
+    if(!changed){
+      return { changed: false, patientId: pid, encounterKey: eKey };
+    }
+
+    const source = String(opts.source || '').trim();
+    if(opts.skipEvents !== true){
+      const detail = { patientId: pid, encounterKey: eKey, source };
+      try{
+        window.dispatchEvent(new CustomEvent('mxmed:encounter-context-changed', { detail }));
+      }catch(_){}
+      try{
+        window.dispatchEvent(new CustomEvent('mxmed:encounter-changed', {
+          detail: { patient_id: pid, encounter_key: eKey, source }
+        }));
+      }catch(_){}
+    }else if(opts.syncHeader !== false){
+      window.__mxmedHeaderSyncOrigin = source ? `setCurrentEncounterForPatient:${source}` : 'setCurrentEncounterForPatient';
+      try{ syncExpedienteHeaderContext(); }catch(_){}
+    }
+
+    return { changed: true, patientId: pid, encounterKey: eKey };
+  };
+  window.setCurrentEncounterForPatient = setCurrentEncounterForPatient;
+  window.mxmedSetCurrentEncounterForPatient = setCurrentEncounterForPatient;
 
   const applyPatientGate = ()=>{
     const gateOn = String(getActivePatientId() || '').trim() !== '';
@@ -5366,13 +5432,16 @@ console.info('app.js loaded :: 20251123a');
         changed = await window.mxmedSetActivePatientId(targetPatientId, { emitEvent:true, skipActiveEncounterConfirm:true });
       }
       if(changed === false) return;
-
-      if(window.mxmedStore && typeof window.mxmedStore === 'object'){
-        window.mxmedStore.currentPatientId = targetPatientId;
-        window.mxmedStore.currentEncounterKey = targetEncounterKey;
-      }
-      if(typeof window.setEncounterContextOnPane === 'function'){
-        window.setEncounterContextOnPane(targetEncounterKey, targetPatientId);
+      if(typeof window.setCurrentEncounterForPatient === 'function'){
+        window.setCurrentEncounterForPatient(targetPatientId, targetEncounterKey, { source: 'active_strip_select' });
+      }else{
+        if(window.mxmedStore && typeof window.mxmedStore === 'object'){
+          window.mxmedStore.currentPatientId = targetPatientId;
+          window.mxmedStore.currentEncounterKey = targetEncounterKey;
+        }
+        if(typeof window.setEncounterContextOnPane === 'function'){
+          window.setEncounterContextOnPane(targetEncounterKey, targetPatientId);
+        }
       }
       if(typeof window.mxmedEmitEncounterLifecycle === 'function'){
         window.mxmedEmitEncounterLifecycle({
@@ -5383,14 +5452,9 @@ console.info('app.js loaded :: 20251123a');
           last_activity_at: new Date().toISOString()
         });
       }
-      window.dispatchEvent(new CustomEvent('mxmed:encounter-changed', {
-        detail: { patient_id: targetPatientId, encounter_key: targetEncounterKey }
-      }));
       if(typeof jumpTo === 'function'){
         jumpTo('p-expediente');
       }
-      window.__mxmedHeaderSyncOrigin = 'active_strip_select';
-      syncExpedienteHeaderContext();
     });
   }
   const headerInputs = [
