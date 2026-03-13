@@ -1383,3 +1383,146 @@ Checklist validado para esta fase:
 2. iniciar consulta en paciente objetivo -> estado activo coherente
 3. cambiar entre pacientes con y sin activa -> sin herencia de encounter
 4. confirmar sincronía entre store, pane expediente, P10 y header clínico
+
+## Ajustes de Cierre — P15 Notas y Search Open (commit `0db14d4`)
+
+### A) P15 — Notas de Evolución (UX de título visible)
+Se cerró el ajuste de identificación visual en `Notas generadas` con estas reglas vigentes:
+- el título visible usa solo el **Tema de la nota**
+- se eliminó el prefijo visible `Nota de evolución —` en listado/render UX
+- se eliminó el nombre del médico del meta visible del listado
+- se conserva fecha/hora visible
+- se mantiene compatibilidad con documentos legacy mediante normalización visual del título
+
+Impacto funcional: mejora de legibilidad y diferenciación de notas sin alterar persistencia canónica ni contrato documental.
+
+### B) Buscar -> Abrir expediente (entrada neutra y tab inicial)
+Se cerró el ajuste de estabilidad del flujo `search_open` con estas reglas vigentes:
+- `Abrir expediente` desde Buscar **no auto-activa consulta**
+- apertura en estado clínico neutro (sin encounter operativo automático)
+- tab inicial forzada para `search_open` en `#t-datos` (Datos Generales)
+- se conserva hidratación correcta de identidad/datos generales
+- la activación de consulta queda reservada a acciones explícitas del usuario (`Iniciar consulta`)
+
+Impacto funcional: evita herencia de encounter al abrir desde búsqueda y estabiliza la entrada al expediente sin romper sincronización clínica existente.
+
+## Actividad clínica — Fase 1 (launcher UX)
+
+commit: `63ec87b`
+
+Se introduce un entry point unificado para registrar acciones clínicas desde
+Historial de Atención mediante el botón:
+
+Registrar actividad clínica
+
+Este launcher abre un panel con accesos directos a flujos existentes sin
+modificar contratos backend ni módulos clínicos.
+
+Acciones conectadas en esta fase:
+
+- Nota clínica -> flujo existente de notas (`#t-notas`)
+- Procedimiento -> handler existente `open-generic-procedure-modal` en historial embebido
+- Receta -> modal de receta (`#ne_open_rx`) reutilizando flujo de notas
+
+Objetivo de esta fase:
+Unificar el punto de entrada UX para registrar eventos clínicos sin reescribir
+módulos existentes.
+
+Notas técnicas:
+- no se modifica P10 ni lifecycle de encounter
+- no se modifica API clínica
+- procedimientos aún dependen del módulo embebido en iframe
+- cambios limitados a `index.html` y `assets/js/app.js`
+
+Fases futuras previstas:
+
+Actividad clínica F2
+- incorporar Orden de estudio
+- incorporar Resultado de estudio
+- incorporar Adjuntar documento
+
+Actividad clínica F3
+- desacoplar procedimientos del iframe
+- normalizar catálogo de procedimientos
+
+## Directrices permanentes del núcleo clínico MXMed
+
+El núcleo clínico de MXMed se organiza bajo la siguiente arquitectura conceptual:
+
+Agenda → Encounter → Actividad clínica → Clinical Documents → Timeline → Expediente
+
+Cada capa cumple un rol específico dentro del sistema:
+
+**Agenda**
+Origen de la interacción clínica. Representa citas programadas o atenciones previstas.
+
+**Encounter (consulta)**
+Contexto clínico activo donde se agrupan las acciones médicas realizadas durante una atención.
+
+**Actividad clínica**
+Capa de registro de acciones médicas. Desde aquí se capturan eventos como notas clínicas, procedimientos, recetas, órdenes de estudio, resultados o documentos clínicos.
+
+**Clinical Documents**
+Persistencia estructurada de las acciones clínicas. Cada registro clínico se almacena como un documento clínico con estructura uniforme.
+
+**Timeline clínico**
+Proyección cronológica de la actividad clínica del paciente. Permite visualizar eventos médicos en orden temporal.
+
+**Expediente del paciente**
+Interfaz donde se consultan los datos clínicos, historial y documentos generados a lo largo del tiempo.
+
+### Principios arquitectónicos permanentes
+
+1. Todo registro médico nuevo debe entrar por la capa **Actividad clínica**.
+2. Toda acción clínica registrable debe persistirse como **clinical_document** o converger a esa arquitectura.
+3. **Historial de Atención** funciona principalmente como capa de lectura del timeline clínico.
+4. **Actividad clínica** funciona principalmente como capa de captura de eventos clínicos.
+5. La clasificación semántica visible para UX debe privilegiar `clinical_category`.
+6. `document_type` y otras capas de catálogo funcionan como soporte técnico interno.
+7. Nuevas funcionalidades clínicas no deben introducir entry points aislados fuera de esta arquitectura, salvo justificación explícita documentada.
+
+Estas directrices funcionan como marco de referencia para futuras intervenciones del sistema.
+
+## Diagnóstico longitudinal — Prioridad de arquitectura clínica
+
+Se establece como primera entidad longitudinal prioritaria del estado clínico en MXMed:
+
+- **Diagnóstico longitudinal**
+
+Principio de implementación:
+- El estado clínico longitudinal debe construirse sobre la arquitectura vigente:
+  `Actividad clínica -> Clinical Documents -> Timeline -> Expediente`.
+- No debe crearse una fuente de verdad paralela desvinculada de `clinical_documents`.
+
+Modelo conceptual base:
+- lectura longitudinal derivada desde documentos clínicos
+- captura clínica se mantiene en Actividad clínica
+- fuente inicial principal: `nota_evolucion.diagnosticos`
+
+Campos mínimos sugeridos del diagnóstico longitudinal:
+- `patient_id`
+- `diagnosis_key`
+- `label`
+- `code` (opcional)
+- `status` (`active`/`resolved`)
+- `onset_at` (opcional)
+- `resolved_at` (opcional)
+- `resolution_note` (opcional)
+- `first_seen_at`
+- `last_updated_at`
+- `source_document_uuid`
+- `source_encounter_key` (opcional)
+
+Ruta de implementación propuesta:
+- D1 solo lectura
+- D2 estado `active`/`resolved` + bitácora
+- D3 UX en expediente
+- D4 captura explícita vía Actividad clínica
+- D5 normalización avanzada
+
+Riesgos a evitar:
+- fuente paralela
+- escritura fuera de Actividad clínica
+- duplicación de diagnósticos
+- obligar encounter en todos los casos
+- falta de bitácora/auditoría
