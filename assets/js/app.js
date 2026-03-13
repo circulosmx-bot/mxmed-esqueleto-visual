@@ -3499,6 +3499,8 @@ console.info('app.js loaded :: 20251123a');
   const p10StartBtn = document.querySelector('#mm-p10-bar [data-action="p10-start-encounter"]');
   const p10FinalizeBtn = document.querySelector('#mm-p10-bar [data-action="p10-finalize-encounter"]');
   const p10BarNode = document.getElementById('mm-p10-bar');
+  const actividadClinicaModalEl = pane.querySelector('#modalActividadClinica');
+  const actividadClinicaLaunchBtn = pane.querySelector('[data-action="open-actividad-clinica"]');
   let headerSyncToken = 0;
   const activeEncounterLookupInFlight = new Map();
   let lastDayInvalid = false;
@@ -3521,7 +3523,8 @@ console.info('app.js loaded :: 20251123a');
   const clinicalTabTargets = {
     datos: '#t-datos',
     historia: '#t-historia',
-    historialAtencion: '#t-historial-atencion'
+    historialAtencion: '#t-historial-atencion',
+    notas: '#t-notas'
   };
   const findClinicalTabTrigger = (target)=>{
     const safeTarget = sanitizeText(target);
@@ -3900,6 +3903,78 @@ console.info('app.js loaded :: 20251123a');
     }
     return false;
   };
+  const hideActividadClinicaModal = ()=>{
+    if(!actividadClinicaModalEl) return;
+    const BsModal = window.bootstrap && window.bootstrap.Modal;
+    if(!BsModal) return;
+    try{
+      const modal = typeof BsModal.getOrCreateInstance === 'function'
+        ? BsModal.getOrCreateInstance(actividadClinicaModalEl)
+        : new BsModal(actividadClinicaModalEl);
+      modal.hide();
+    }catch(_){}
+  };
+  const openNotaClinicaFromActividad = ()=>{
+    hideActividadClinicaModal();
+    const opened = showClinicalTab(clinicalTabTargets.notas);
+    if(!opened) return false;
+    const focusField = pane.querySelector('#ne_complemento, #ne_evolucion, #ne_dx');
+    if(focusField){
+      window.requestAnimationFrame(()=> focusField.focus());
+    }
+    try{
+      console.info('[mxmed-actividad-clinica] open nota clinica');
+    }catch(_){}
+    return true;
+  };
+  const openRecetaFromActividad = ()=>{
+    hideActividadClinicaModal();
+    const opened = showClinicalTab(clinicalTabTargets.notas);
+    if(!opened) return false;
+    const openRecetaBtn = pane.querySelector('#ne_open_rx');
+    if(!openRecetaBtn) return false;
+    window.requestAnimationFrame(()=> openRecetaBtn.click());
+    try{
+      console.info('[mxmed-actividad-clinica] open receta');
+    }catch(_){}
+    return true;
+  };
+  const triggerProcedimientoFromEmbed = async ()=>{
+    const iframe = document.getElementById('mm-embed-historial');
+    if(!iframe) return false;
+    const modeHistorialBtn = pane.querySelector('#t-historial-atencion [data-embed-mode="historial"]');
+    if(modeHistorialBtn) modeHistorialBtn.click();
+    const findAndClickProcedure = ()=>{
+      try{
+        const doc = iframe.contentWindow?.document;
+        const trigger = doc?.querySelector('[data-action="open-generic-procedure-modal"]');
+        if(!trigger) return false;
+        trigger.click();
+        return true;
+      }catch(_){
+        return false;
+      }
+    };
+    if(findAndClickProcedure()) return true;
+    for(let attempt = 0; attempt < 10; attempt += 1){
+      await new Promise((resolve)=> window.setTimeout(resolve, 120));
+      if(findAndClickProcedure()) return true;
+    }
+    return false;
+  };
+  const openProcedimientoFromActividad = async ()=>{
+    hideActividadClinicaModal();
+    showClinicalTab(clinicalTabTargets.historialAtencion);
+    const opened = await triggerProcedimientoFromEmbed();
+    if(!opened){
+      window.alert('No fue posible abrir Procedimiento en este momento. Intenta abrir Historial y vuelve a intentar.');
+      return false;
+    }
+    try{
+      console.info('[mxmed-actividad-clinica] open procedimiento');
+    }catch(_){}
+    return true;
+  };
   const pickClinicalEntryTarget = ()=>{
     const preferredTargets = [clinicalTabTargets.historialAtencion, clinicalTabTargets.historia];
     for(const target of preferredTargets){
@@ -3945,6 +4020,30 @@ console.info('app.js loaded :: 20251123a');
   window.mxmedReadMotivoConsulta = readMotivoConsulta;
   window.mxmedHasMinimumPatientProfile = ()=> hasMinimumPatientProfile();
   window.mxmedApplyExpedienteEntryTabRule = (opts)=> applyExpedienteEntryTabRule(opts);
+  actividadClinicaLaunchBtn?.addEventListener('click', ()=>{
+    try{
+      console.info('[mxmed-actividad-clinica] launcher open');
+    }catch(_){}
+  });
+  actividadClinicaModalEl?.addEventListener('click', async (event)=>{
+    const noteBtn = event.target.closest('[data-action="actividad-clinica-open-nota"]');
+    if(noteBtn){
+      event.preventDefault();
+      openNotaClinicaFromActividad();
+      return;
+    }
+    const procedureBtn = event.target.closest('[data-action="actividad-clinica-open-procedimiento"]');
+    if(procedureBtn){
+      event.preventDefault();
+      await openProcedimientoFromActividad();
+      return;
+    }
+    const rxBtn = event.target.closest('[data-action="actividad-clinica-open-receta"]');
+    if(rxBtn){
+      event.preventDefault();
+      openRecetaFromActividad();
+    }
+  });
 
   const layoutTabs = (showGineco)=>{
     if(!tabsWrap) return;
