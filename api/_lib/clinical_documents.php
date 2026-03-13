@@ -95,6 +95,9 @@ function mxmed_build_evolution_note_payload(array $payload): array {
             'motivo_consulta' => (string)($citas['motivo_consulta'] ?? ''),
             'padecimiento_actual' => (string)($citas['padecimiento_actual'] ?? ''),
         ],
+        'tema_nota' => isset($payload['tema_nota'])
+            ? trim((string)$payload['tema_nota'])
+            : trim((string)($payload['complemento_sintomas'] ?? '')),
         'complemento_sintomas' => isset($payload['complemento_sintomas']) ? (string)$payload['complemento_sintomas'] : null,
         'evolucion_cuadro_clinico' => (string)($payload['evolucion_cuadro_clinico'] ?? ''),
         'signos_vitales' => [
@@ -127,6 +130,8 @@ function mxmed_build_evolution_note_payload(array $payload): array {
 
 function mxmed_evolution_note_validate_to_generate(array $payload): array {
     $errors = [];
+    $tema = trim((string)($payload['tema_nota'] ?? ($payload['complemento_sintomas'] ?? '')));
+    if ($tema === '') $errors[] = 'Tema de la nota es obligatorio.';
     if (empty($payload['ambito'])) $errors[] = 'Ámbito es obligatorio.';
     if (trim((string)($payload['evolucion_cuadro_clinico'] ?? '')) === '') $errors[] = 'Evolución / actualización del cuadro clínico es obligatoria.';
     $dx = $payload['diagnosticos'] ?? [];
@@ -197,8 +202,8 @@ function mxmed_build_evolution_note_rendered_text(array $payload, array $context
     $lines[] = 'SÍNTOMAS ACTUALES RELEVANTES (cita)';
     $lines[] = 'Motivo de consulta: ' . $safeText($citas['motivo_consulta'] ?? null);
     $lines[] = 'Padecimiento actual: ' . $safeText($citas['padecimiento_actual'] ?? null);
-    $complemento = trim((string)($payload['complemento_sintomas'] ?? ''));
-    if ($complemento !== '') $lines[] = "Complemento breve: {$complemento}";
+    $temaNota = trim((string)($payload['tema_nota'] ?? ($payload['complemento_sintomas'] ?? '')));
+    if ($temaNota !== '') $lines[] = "Tema de la nota: {$temaNota}";
     $lines[] = '';
 
     $lines[] = 'EVOLUCIÓN / ACTUALIZACIÓN DEL CUADRO CLÍNICO';
@@ -280,6 +285,9 @@ function mxmed_build_evolution_note_rendered_text(array $payload, array $context
 }
 
 function mxmed_build_evolution_note_summary(array $payload, array $actor): string {
+    $tema = trim((string)($payload['tema_nota'] ?? ($payload['complemento_sintomas'] ?? '')));
+    if ($tema !== '') return $tema;
+
     $evo = trim((string)($payload['evolucion_cuadro_clinico'] ?? ''));
     $plan = trim((string)($payload['plan_indicaciones'] ?? ''));
     $expl = is_array($payload['exploracion_relevante'] ?? null) ? $payload['exploracion_relevante'] : [];
@@ -305,10 +313,10 @@ function mxmed_build_evolution_note_summary(array $payload, array $actor): strin
     $resp = $spo2Low || ($respAbn && !$negResp);
     $sinAlt = preg_match('/\\b(sin\\s+alter|sin\\s+camb|sin\\s+noved|establ|evoluci[oó]n\\s+favorable)\\w*/iu', $evo) === 1;
 
-    if ($resp) return 'Evolución con hallazgos respiratorios';
-    if ($hayAjustes) return 'Evolución con ajustes terapéuticos';
-    if ($sinAlt) return 'Evolución sin alteraciones relevantes';
-    return 'Evolución registrada';
+    if ($resp) return 'Hallazgos respiratorios';
+    if ($hayAjustes) return 'Ajustes terapéuticos';
+    if ($sinAlt) return 'Sin alteraciones relevantes';
+    return 'Nota de evolución';
 }
 
 function mxmed_build_clinical_document(array $args): array {
@@ -342,6 +350,9 @@ function mxmed_build_clinical_document(array $args): array {
     if ($type === 'nota_evolucion') {
         $renderedText = mxmed_build_evolution_note_rendered_text($payload, $context, $actor);
         $summary = mxmed_build_evolution_note_summary($payload, $actor);
+        if (is_string($summary) && trim($summary) !== '') {
+            $title = trim($summary);
+        }
     }
     if ($type === 'nota_evolucion_hosp') {
         $title = 'Nota Intrahospitalaria';

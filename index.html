@@ -5747,8 +5747,9 @@
                           </div>
 
                           <div class="col-12">
-                            <label class="form-label" for="ne_complemento">Complemento breve (síntomas de hoy) <span class="text-muted">(opcional)</span></label>
-                            <input class="form-control" id="ne_complemento" maxlength="400" placeholder="Notas breves del día (máx. 400 caracteres)">
+                            <label class="form-label" for="ne_complemento">Tema de la nota</label>
+                            <input class="form-control" id="ne_complemento" maxlength="400" placeholder="Tema breve de la nota (obligatorio)">
+                            <div class="form-text">Describe brevemente de qué trata esta nota. Se usará para identificarla en el historial.</div>
                           </div>
 
                           <div class="col-12">
@@ -6788,6 +6789,10 @@
       if (!safePatientId) {
         return Promise.resolve({ hasActive: false });
       }
+      if (typeof window.mxmedShouldSuppressAutoEncounterContext === 'function' && window.mxmedShouldSuppressAutoEncounterContext(safePatientId) === true) {
+        console.info('[mxmed-search-open] p10 suppress auto encounter context', { patient_id: safePatientId });
+        return Promise.resolve({ hasActive: false, suppressed: true });
+      }
       if (typeof window.resolveActiveEncounterForPatient === 'function') {
         return Promise.resolve(window.resolveActiveEncounterForPatient(safePatientId, { source: 'p10' }))
           .then(function (resolved) {
@@ -6850,6 +6855,9 @@
       var safePatientId = String(patientId || '').trim();
       if (!safePatientId) {
         return Promise.reject(new Error('No se encontró patient_id activo.'));
+      }
+      if (typeof window.mxmedClearSuppressedAutoEncounterContext === 'function') {
+        window.mxmedClearSuppressedAutoEncounterContext(safePatientId);
       }
       return fetchActiveEncounter(safePatientId).then(function (activeState) {
         if (activeState && activeState.hasActive && activeState.encounter_key) {
