@@ -3524,7 +3524,8 @@ console.info('app.js loaded :: 20251123a');
     datos: '#t-datos',
     historia: '#t-historia',
     historialAtencion: '#t-historial-atencion',
-    notas: '#t-notas'
+    notas: '#t-notas',
+    estudios: '#t-estudios'
   };
   const findClinicalTabTrigger = (target)=>{
     const safeTarget = sanitizeText(target);
@@ -4042,6 +4043,12 @@ console.info('app.js loaded :: 20251123a');
     if(rxBtn){
       event.preventDefault();
       openRecetaFromActividad();
+      return;
+    }
+    const attachBtn = event.target.closest('[data-action="actividad-clinica-open-adjunto"]');
+    if(attachBtn){
+      event.preventDefault();
+      openAdjuntoDocumentoFromActividad();
     }
   });
 
@@ -4485,6 +4492,24 @@ console.info('app.js loaded :: 20251123a');
     if(displayName && typeof rememberPatientLabel === 'function'){
       try{ rememberPatientLabel(pid, displayName); }catch(_){}
     }
+    return true;
+  };
+  const openAdjuntoDocumentoFromActividad = ()=>{
+    hideActividadClinicaModal();
+    const opened = showClinicalTab(clinicalTabTargets.estudios);
+    if(!opened){
+      window.alert('No fue posible abrir Estudios diagnósticos en este momento.');
+      return false;
+    }
+    const ingresarBtn = pane.querySelector('#t-estudios .est-section-tab[data-est-section="ingresar"]');
+    if(ingresarBtn) ingresarBtn.click();
+    window.setTimeout(()=>{
+      const fileInput = pane.querySelector('#t-estudios [data-role="ac-doc-file"]');
+      fileInput?.focus?.();
+    }, 120);
+    try{
+      console.info('[mxmed-actividad-clinica] open adjuntar documento');
+    }catch(_){}
     return true;
   };
 
@@ -10678,6 +10703,211 @@ function mxResetLogoPreview(){
     tab.addEventListener('click', ()=> show(tab.dataset.estSection));
   });
   show(tabs[0].dataset.estSection);
+})();
+
+(function initActividadClinicaCanonicalUpload(){
+  const studiesPane = document.getElementById('t-estudios');
+  if(!studiesPane || studiesPane.dataset.acDocUploadInit === '1') return;
+  studiesPane.dataset.acDocUploadInit = '1';
+
+  const fileInput = studiesPane.querySelector('[data-role="ac-doc-file"]');
+  const summaryInput = studiesPane.querySelector('[data-role="ac-doc-summary"]');
+  const eventDatetimeInput = studiesPane.querySelector('[data-role="ac-doc-event-datetime"]');
+  const mediaTagSelect = studiesPane.querySelector('[data-role="ac-doc-media-tag"]');
+  const saveBtn = studiesPane.querySelector('[data-action="ac-doc-upload-save"]');
+  const feedbackEl = studiesPane.querySelector('[data-role="ac-doc-upload-feedback"]');
+  const ingresarSectionBtn = studiesPane.querySelector('.est-section-tab[data-est-section="ingresar"]');
+  if(!fileInput || !saveBtn || !feedbackEl) return;
+
+  const clean = (value)=> String(value || '').trim();
+  const setFeedback = (message, tone = 'muted')=>{
+    const text = clean(message);
+    const classes = ['text-muted', 'text-success', 'text-danger'];
+    feedbackEl.classList.remove(...classes);
+    if(!text){
+      feedbackEl.classList.add('d-none');
+      feedbackEl.textContent = '';
+      return;
+    }
+    feedbackEl.classList.remove('d-none');
+    feedbackEl.classList.add(
+      tone === 'success' ? 'text-success' : (tone === 'error' ? 'text-danger' : 'text-muted')
+    );
+    feedbackEl.textContent = text;
+  };
+  const inferDocumentTypeFromFile = (file)=>{
+    if(!file) return '';
+    const mime = clean(file.type).toLowerCase();
+    const name = clean(file.name).toLowerCase();
+    if(mime === 'application/pdf' || name.endsWith('.pdf')) return 'pdf';
+    if(mime.startsWith('image/')) return 'image';
+    return '';
+  };
+  const toSqlDatetime = (inputValue)=>{
+    const raw = clean(inputValue);
+    if(!raw) return '';
+    const normalized = raw.replace('T', ' ');
+    if(/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/.test(normalized)) return `${normalized}:00`;
+    if(/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/.test(normalized)) return normalized;
+    return '';
+  };
+  const resolveActivePatientIdForUpload = ()=>{
+    const fromResolver = (typeof window.resolveActivePatientId === 'function')
+      ? clean(window.resolveActivePatientId())
+      : '';
+    if(fromResolver) return fromResolver;
+    const fromStore = clean(window.mxmedStore?.currentPatientId || window.mxmedStore?.activePatientId);
+    if(fromStore) return fromStore;
+    const expPane = document.getElementById('p-expediente');
+    return clean(expPane?.dataset?.patientId || expPane?.getAttribute?.('data-patient-id'));
+  };
+  const resolveOptionalEncounterKeyForUpload = ()=>{
+    if(typeof window.getActiveEncounterKey === 'function'){
+      return clean(window.getActiveEncounterKey());
+    }
+    return clean(window.mxmedStore?.currentEncounterKey || window.mxmedStore?.activeEncounterKey);
+  };
+
+  const uploadCanonicalDocument = async ()=>{
+    const patientId = resolveActivePatientIdForUpload();
+    if(!patientId){
+      setFeedback('Selecciona un paciente activo antes de adjuntar un documento.', 'error');
+      return;
+    }
+    const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+    if(!file){
+      setFeedback('Selecciona un archivo (imagen o PDF).', 'error');
+      return;
+    }
+    const documentType = inferDocumentTypeFromFile(file);
+    if(!documentType){
+      setFeedback('Formato no compatible. Usa imagen o PDF.', 'error');
+      return;
+    }
+    const summary = clean(summaryInput?.value || '');
+    const eventDatetime = toSqlDatetime(eventDatetimeInput?.value || '');
+    const encounterKey = resolveOptionalEncounterKeyForUpload();
+    const mediaTagKey = clean(mediaTagSelect?.value || 'evidencia_clinica');
+    const mediaTagLabel = clean(mediaTagSelect?.selectedOptions?.[0]?.textContent || 'Evidencia clínica');
+
+    const payload = {
+      patient_id: patientId,
+      document_type: documentType,
+      payload: {
+        source: 'actividad_clinica_host',
+        filename: clean(file.name || '')
+      }
+    };
+    if(summary) payload.summary = summary;
+    if(eventDatetime) payload.event_datetime = eventDatetime;
+    if(encounterKey) payload.encounter_key = encounterKey;
+    if(documentType === 'image'){
+      payload.media_tag_key = mediaTagKey || 'evidencia_clinica';
+      payload.media_tag_label = mediaTagLabel || 'Evidencia clínica';
+      payload.payload.media_tag_key = payload.media_tag_key;
+      payload.payload.media_tag_label = payload.media_tag_label;
+    }
+
+    const formData = new FormData();
+    Object.keys(payload).forEach((key)=>{
+      const value = payload[key];
+      if(value == null || value === '') return;
+      if(key === 'payload'){
+        formData.append(key, JSON.stringify(value));
+      }else{
+        formData.append(key, String(value));
+      }
+    });
+    formData.append('file', file);
+
+    saveBtn.disabled = true;
+    setFeedback('Guardando documento clínico…');
+    try{
+      console.info('[mxmed-actividad-clinica] upload start', {
+        patient_id: patientId,
+        encounter_key: encounterKey || null,
+        document_type: documentType
+      });
+    }catch(_){}
+
+    try{
+      const resp = await fetch('/api/clinical/index.php/documents', {
+        method: 'POST',
+        body: formData,
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin'
+      });
+      const json = await resp.json().catch(()=> null);
+      if(!resp.ok || !json || json.ok !== true){
+        const message = clean(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo guardar el documento.';
+        throw new Error(message);
+      }
+
+      setFeedback('Documento adjuntado correctamente.', 'success');
+      try{
+        console.info('[mxmed-actividad-clinica] upload success', {
+          patient_id: patientId,
+          encounter_key: encounterKey || null,
+          document_type: documentType,
+          document_uuid: clean(json?.data?.document?.document_uuid || '')
+        });
+      }catch(_){}
+
+      fileInput.value = '';
+      if(summaryInput) summaryInput.value = '';
+      if(eventDatetimeInput) eventDatetimeInput.value = '';
+
+      try{
+        window.mxmedRegisterEncounterActivity?.('documento_clinico_adjunto', {
+          encounterKey: encounterKey || '',
+          patientId,
+          source: 'actividad_clinica_adjuntar_documento'
+        });
+      }catch(_){}
+      try{
+        window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created', {
+          detail: {
+            patient_id: patientId,
+            encounter_key: encounterKey || '',
+            document_type: documentType,
+            source: 'actividad_clinica_adjuntar_documento'
+          }
+        }));
+      }catch(_){}
+    }catch(err){
+      setFeedback(String(err?.message || 'No se pudo adjuntar el documento.'), 'error');
+      try{
+        console.info('[mxmed-actividad-clinica] upload error', {
+          patient_id: patientId,
+          encounter_key: encounterKey || null,
+          reason: String(err?.message || 'upload_failed')
+        });
+      }catch(_){}
+    }finally{
+      saveBtn.disabled = false;
+    }
+  };
+
+  saveBtn.addEventListener('click', (event)=>{
+    event.preventDefault();
+    uploadCanonicalDocument();
+  });
+  fileInput.addEventListener('change', ()=>{
+    const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+    if(!file){
+      setFeedback('');
+      return;
+    }
+    const docType = inferDocumentTypeFromFile(file);
+    if(!docType){
+      setFeedback('Formato no compatible. Usa imagen o PDF.', 'error');
+      return;
+    }
+    setFeedback(`Archivo seleccionado: ${file.name} (${docType.toUpperCase()})`);
+    if(ingresarSectionBtn && !ingresarSectionBtn.classList.contains('active')){
+      ingresarSectionBtn.click();
+    }
+  });
 })();
 
 (function(){

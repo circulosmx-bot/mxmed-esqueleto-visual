@@ -3483,6 +3483,12 @@
                               <div class="small text-muted">Abre el modal de receta</div>
                             </button>
                           </div>
+                          <div class="col-12">
+                            <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-adjunto">
+                              <strong>Adjuntar documento</strong>
+                              <div class="small text-muted">Sube imagen o PDF al expediente clínico</div>
+                            </button>
+                          </div>
                         </div>
                       </div>
                       <div class="modal-footer">
@@ -4094,6 +4100,25 @@
                         <div class="est-drop">
                           <div class="est-drop-title">Subir archivo</div>
                           <div class="est-drop-sub">PDF, imagen o exportado</div>
+                          <input class="form-control form-control-sm mt-2" type="file" accept="image/*,.pdf,application/pdf" data-role="ac-doc-file">
+                          <div class="small text-muted mt-2">Se guarda como documento clínico canónico del paciente activo.</div>
+                        </div>
+                        <div class="est-drop">
+                          <div class="est-drop-title">Resumen (opcional)</div>
+                          <div class="est-drop-sub">Ayuda a identificar el documento en el historial.</div>
+                          <input class="form-control form-control-sm mt-2" type="text" maxlength="500" placeholder="Ej. Radiografía de tórax control" data-role="ac-doc-summary">
+                          <div class="mt-2">
+                            <label class="form-label mb-1 small">Fecha/hora del evento (opcional)</label>
+                            <input class="form-control form-control-sm" type="datetime-local" data-role="ac-doc-event-datetime">
+                          </div>
+                          <div class="mt-2">
+                            <label class="form-label mb-1 small">Etiqueta de imagen (solo imagen)</label>
+                            <select class="form-select form-select-sm" data-role="ac-doc-media-tag">
+                              <option value="evidencia_clinica">Evidencia clínica</option>
+                              <option value="estudio_imagen">Estudio de imagen</option>
+                              <option value="documento_apoyo">Documento de apoyo</option>
+                            </select>
+                          </div>
                         </div>
                         <div class="est-drop est-drop-qr">
                           <div class="est-drop-title">Capturar con teléfono</div>
@@ -4111,9 +4136,10 @@
                         </div>
                       </div>
                     </div>
+                    <div class="small mt-2 d-none" data-role="ac-doc-upload-feedback"></div>
                     <div class="est-card-actions">
                       <button class="btn btn-outline-secondary btn-sm">Guardar y seguir</button>
-                      <button class="btn btn-primary btn-sm">Guardar resultado</button>
+                      <button class="btn btn-primary btn-sm" data-action="ac-doc-upload-save">Guardar documento</button>
                     </div>
                   </div>
 
