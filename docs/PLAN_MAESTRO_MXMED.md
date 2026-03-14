@@ -1483,6 +1483,23 @@ Interfaz donde se consultan los datos clínicos, historial y documentos generado
 
 Estas directrices funcionan como marco de referencia para futuras intervenciones del sistema.
 
+### Ordenamiento del catálogo documental clínico (v1)
+
+Se formaliza el primer registro maestro versionado de `document_type` para MXMed en:
+
+- `docs/DOCUMENT_TYPE_REGISTRY_MXMED.md`
+
+Alcance de esta base v1:
+- define estructura estándar por `document_type`
+- consolida tipos prioritarios y su estatus (`active`, `planned`, `legacy_readonly`)
+- fija reglas de captura canónica vs lectura legacy
+- alinea clasificación semántica para Timeline/Expediente (`clinical_category`, `study_role`)
+
+Secuencia de evolución aprobada:
+1. documento técnico versionado (actual)
+2. helper/config compartida en runtime
+3. posible catálogo BD futuro si se requiere gobernanza dinámica
+
 ## Diagnóstico longitudinal — Prioridad de arquitectura clínica
 
 Se establece como primera entidad longitudinal prioritaria del estado clínico en MXMed:
