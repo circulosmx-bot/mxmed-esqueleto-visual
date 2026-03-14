@@ -5844,8 +5844,24 @@
                 </div>
               </div>
 
-              <div class="tab-pane fade" id="t-tratamiento"><div class="alert alert-info">Recetas, indicaciones
-</div></div>
+              <div class="tab-pane fade" id="t-tratamiento">
+                <div class="exp-card exp-card--secondary trx-alias-card" data-role="trx-alias-panel">
+                  <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
+                    <span>Tratamiento y recetas</span>
+                  </div>
+                  <p class="text-muted mb-3">
+                    La receta se gestiona desde <strong>Actividad clínica</strong> para mantener el registro clínico unificado en el expediente del paciente.
+                  </p>
+                  <div class="trx-alias-actions d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-primary btn-sm" data-action="tratamiento-alias-open-receta">
+                      Emitir receta
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-action="tratamiento-alias-open-actividad">
+                      Ir a Actividad clínica
+                    </button>
+                  </div>
+                </div>
+              </div>
 
               <div class="tab-pane fade" id="t-notas">
                 <div class="ne-app" data-ne-section="nota_evolucion">

@@ -3512,6 +3512,7 @@ console.info('app.js loaded :: 20251123a');
   const actividadClinicaNotasMotivo = pane.querySelector('[data-role="ac-notas-motivo"]');
   const actividadClinicaNotasEncounterMeta = pane.querySelector('[data-role="ac-notas-encounter-meta"]');
   const actividadClinicaNotasActions = pane.querySelector('[data-role="ac-notas-actions"]');
+  const tratamientoAliasPanel = pane.querySelector('[data-role="trx-alias-panel"]');
   let headerSyncToken = 0;
   let actividadClinicaContextSyncToken = 0;
   const activeEncounterLookupInFlight = new Map();
@@ -4068,6 +4069,23 @@ console.info('app.js loaded :: 20251123a');
     hideActividadClinicaModal();
     return showClinicalTab(clinicalTabTargets.consent);
   };
+  const openActividadClinicaFromTratamientoAlias = ()=>{
+    const opened = showClinicalTab(clinicalTabTargets.notas);
+    if(!opened) return false;
+    focusActividadClinicaActions();
+    try{
+      console.info('[mxmed-tratamiento-alias] open actividad clinica');
+    }catch(_){}
+    return true;
+  };
+  const openRecetaFromTratamientoAlias = ()=>{
+    const opened = openRecetaFromActividad();
+    if(!opened) return false;
+    try{
+      console.info('[mxmed-tratamiento-alias] open receta');
+    }catch(_){}
+    return true;
+  };
   const triggerProcedimientoFromEmbed = async ()=>{
     const iframe = document.getElementById('mm-embed-historial');
     if(!iframe) return false;
@@ -4303,6 +4321,19 @@ console.info('app.js loaded :: 20251123a');
     if(attachBtn){
       event.preventDefault();
       openAdjuntoDocumentoFromActividad();
+    }
+  });
+  tratamientoAliasPanel?.addEventListener('click', (event)=>{
+    const recetaBtn = event.target.closest('[data-action="tratamiento-alias-open-receta"]');
+    if(recetaBtn){
+      event.preventDefault();
+      openRecetaFromTratamientoAlias();
+      return;
+    }
+    const actividadBtn = event.target.closest('[data-action="tratamiento-alias-open-actividad"]');
+    if(actividadBtn){
+      event.preventDefault();
+      openActividadClinicaFromTratamientoAlias();
     }
   });
 

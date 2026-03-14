@@ -5025,6 +5025,12 @@ body{margin:0;background:var(--mm-fondo-base);}
 .ne-activity-actions .btn{
   flex:0 1 auto;
 }
+.trx-alias-card{
+  max-width:760px;
+}
+.trx-alias-actions .btn{
+  min-width:170px;
+}
 
 .ne-readonly{
   background:#f5fbff;
