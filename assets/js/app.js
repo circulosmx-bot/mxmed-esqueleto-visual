@@ -5014,6 +5014,512 @@ console.info('app.js loaded :: 20251123a');
   };
   setupHostProcedureModal();
 
+  const setupConsentimientoCanonicoHost = ()=>{
+    const root = pane.querySelector('#t-consent');
+    if(!root) return;
+    const els = {
+      list: root.querySelector('#ci_list'),
+      empty: root.querySelector('#ci_empty_state'),
+      newBtn: root.querySelector('#ci_new_btn'),
+      wizard: root.querySelector('#ci_wizard'),
+      notice: root.querySelector('#ci_wizard_notice'),
+      ctxNotice: root.querySelector('#ci_context_notice'),
+      stepLabel: root.querySelector('#ci_step_label'),
+      step1: root.querySelector('#ci_step_1'),
+      step2: root.querySelector('#ci_step_2'),
+      prev: root.querySelector('#ci_prev'),
+      next: root.querySelector('#ci_next'),
+      save: root.querySelector('#ci_save'),
+      cancel: root.querySelector('#ci_cancel'),
+      pacNombre: root.querySelector('#ci_pac_nombre'),
+      pacEdad: root.querySelector('#ci_pac_edad'),
+      pacSexo: root.querySelector('#ci_pac_sexo'),
+      pacTel: root.querySelector('#ci_pac_tel'),
+      pacMail: root.querySelector('#ci_pac_mail'),
+      pacDom: root.querySelector('#ci_pac_dom'),
+      updatePatient: root.querySelector('#ci_update_patient'),
+      template: root.querySelector('#ci_template'),
+      procedimiento: root.querySelector('#ci_procedimiento'),
+      motivo: root.querySelector('#ci_motivo'),
+      objetivo: root.querySelector('#ci_objetivo'),
+      templateDesc: root.querySelector('#ci_template_desc')
+    };
+    if(!els.list || !els.empty || !els.newBtn || !els.wizard || !els.next || !els.save) return;
+
+    const state = {
+      step: 1,
+      draftId: '',
+      saving: false,
+      templates: [
+        { key: 'procedimiento', label: 'Procedimiento invasivo', desc: 'Consentimiento para procedimientos diagnósticos o terapéuticos invasivos.' },
+        { key: 'anestesia', label: 'Anestesia / sedación', desc: 'Consentimiento para administración de anestesia o sedación.' },
+        { key: 'transfusion', label: 'Transfusión', desc: 'Consentimiento para transfusión de hemoderivados.' },
+        { key: 'investigacion', label: 'Investigación clínica', desc: 'Consentimiento para participación en protocolo de investigación.' },
+        { key: 'otro', label: 'Otro', desc: 'Consentimiento informado general para procedimiento clínico.' }
+      ]
+    };
+
+    const normalize = (str)=> String(str || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+
+    const findFieldByLabel = (tab, labelText)=>{
+      if(!tab) return null;
+      const labels = Array.from(tab.querySelectorAll('label.form-label'));
+      const target = labels.find((label)=> normalize(label.textContent).includes(normalize(labelText)));
+      if(!target) return null;
+      const wrap = target.closest('div');
+      return wrap?.querySelector('input.form-control, textarea.form-control, select.form-select') || null;
+    };
+
+    const formatNowSql = ()=>{
+      const now = new Date();
+      const pad2 = (n)=> String(n).padStart(2, '0');
+      return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())} ${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`;
+    };
+
+    const resolveClinicalActorUserId = ()=>{
+      const candidates = [
+        window.mxmedUserId,
+        window.__MXMED_USER_ID,
+        window.mxmedStore && window.mxmedStore.user_id,
+        document.body && document.body.dataset ? document.body.dataset.userId : '',
+        'qa'
+      ];
+      for(const raw of candidates){
+        const value = sanitizeText(raw);
+        if(value) return value;
+      }
+      return 'qa';
+    };
+
+    const resolveActivePatientIdForConsent = ()=>{
+      const fromHelper = (typeof getActivePatientId === 'function') ? sanitizeText(getActivePatientId()) : '';
+      if(fromHelper) return fromHelper;
+      const fromResolver = (typeof window.resolveActivePatientId === 'function') ? sanitizeText(window.resolveActivePatientId()) : '';
+      if(fromResolver) return fromResolver;
+      const fromStore = sanitizeText(window.mxmedStore?.currentPatientId || window.mxmedStore?.activePatientId);
+      if(fromStore) return fromStore;
+      return sanitizeText(pane?.dataset?.patientId || pane?.getAttribute?.('data-patient-id'));
+    };
+
+    const readPatientSnapshot = ()=>{
+      const nombre = sanitizeText(pane.querySelector('[data-pac-nombre]')?.value);
+      const ap1 = sanitizeText(pane.querySelector('[data-pac-apellido-paterno]')?.value);
+      const ap2 = sanitizeText(pane.querySelector('[data-pac-apellido-materno]')?.value);
+      const fullName = [nombre, ap1, ap2].filter(Boolean).join(' ').trim() || 'Paciente';
+      const age = sanitizeText(pane.querySelector('[data-dg-edad]')?.textContent).replace(/^Edad:\s*/i, '') || '--';
+      const sexoRaw = sanitizeText(pane.querySelector('input[name="pac-genero"]:checked')?.value);
+      const sexo = sexoRaw === 'F' ? 'Femenino' : (sexoRaw === 'M' ? 'Masculino' : (sexoRaw === 'O' ? 'Otro' : '--'));
+      return {
+        full_name: fullName,
+        age,
+        sexo
+      };
+    };
+
+    const readPatientContact = ()=>{
+      const datosPane = pane.querySelector('#t-datos');
+      const tel = sanitizeText(findFieldByLabel(datosPane, 'telefono celular')?.value || findFieldByLabel(datosPane, 'telefono')?.value || '');
+      const mail = sanitizeText(findFieldByLabel(datosPane, 'correo electronico')?.value || '');
+      const calle = sanitizeText(findFieldByLabel(datosPane, 'calle')?.value || '');
+      const colonia = sanitizeText(findFieldByLabel(datosPane, 'colonia')?.value || '');
+      const municipio = sanitizeText(findFieldByLabel(datosPane, 'municipio')?.value || '');
+      const estado = sanitizeText(findFieldByLabel(datosPane, 'estado')?.value || '');
+      const cp = sanitizeText(findFieldByLabel(datosPane, 'codigo postal')?.value || '');
+      const domicilio = [calle, colonia, municipio, estado, cp ? `CP ${cp}` : ''].filter(Boolean).join(', ');
+      return {
+        telefono: tel,
+        correo: mail,
+        domicilio
+      };
+    };
+
+    const showNotice = (msg)=>{
+      if(!els.notice) return;
+      const text = sanitizeText(msg);
+      els.notice.textContent = text;
+      els.notice.classList.toggle('d-none', !text);
+    };
+
+    const renderStep = ()=>{
+      const isStep1 = state.step === 1;
+      els.step1?.classList.toggle('d-none', !isStep1);
+      els.step2?.classList.toggle('d-none', isStep1);
+      if(els.prev) els.prev.disabled = isStep1;
+      els.next?.classList.toggle('d-none', !isStep1);
+      els.save?.classList.toggle('d-none', isStep1);
+      if(els.stepLabel) els.stepLabel.textContent = `Paso ${state.step} de 2`;
+    };
+
+    const renderTemplates = ()=>{
+      if(!els.template) return;
+      if(els.template.dataset.canonicalReady === '1') return;
+      els.template.innerHTML = '<option value="">Selecciona una plantilla</option>';
+      state.templates.forEach((tpl)=>{
+        const option = document.createElement('option');
+        option.value = tpl.key;
+        option.textContent = tpl.label;
+        els.template.appendChild(option);
+      });
+      els.template.dataset.canonicalReady = '1';
+    };
+
+    const describeTemplate = (key)=>{
+      const current = state.templates.find((tpl)=> tpl.key === sanitizeText(key));
+      if(!els.templateDesc) return;
+      if(!current){
+        els.templateDesc.textContent = 'Selecciona una plantilla para ver sus riesgos, beneficios y alternativas.';
+        return;
+      }
+      els.templateDesc.textContent = current.desc;
+    };
+
+    const fillWizardPatientFields = ()=>{
+      const patient = readPatientSnapshot();
+      const contact = readPatientContact();
+      if(els.pacNombre) els.pacNombre.value = patient.full_name;
+      if(els.pacEdad) els.pacEdad.value = patient.age;
+      if(els.pacSexo) els.pacSexo.value = patient.sexo;
+      if(els.pacTel) els.pacTel.value = contact.telefono;
+      if(els.pacMail) els.pacMail.value = contact.correo;
+      if(els.pacDom) els.pacDom.value = contact.domicilio;
+    };
+
+    const resetWizard = ()=>{
+      state.step = 1;
+      state.draftId = '';
+      showNotice('');
+      if(els.template) els.template.value = '';
+      if(els.procedimiento) els.procedimiento.value = '';
+      if(els.motivo) els.motivo.value = '';
+      if(els.objetivo) els.objetivo.value = '';
+      if(els.updatePatient) els.updatePatient.checked = false;
+      describeTemplate('');
+      renderStep();
+      els.wizard.classList.add('d-none');
+    };
+
+    const startDraft = ()=>{
+      const patientId = resolveActivePatientIdForConsent();
+      const hasPatient = !!patientId;
+      els.ctxNotice?.classList.toggle('d-none', hasPatient);
+      if(!hasPatient){
+        showNotice('Selecciona paciente antes de crear el borrador.');
+        return;
+      }
+      state.draftId = `cons_draft_${Date.now()}`;
+      renderTemplates();
+      fillWizardPatientFields();
+      state.step = 1;
+      renderStep();
+      showNotice('');
+      els.wizard.classList.remove('d-none');
+    };
+
+    const openConsentViewer = (documentUuid)=>{
+      const uuid = sanitizeText(documentUuid);
+      if(!uuid) return false;
+      const href = `/modules/clinical/ui/viewer.php?uuid=${encodeURIComponent(uuid)}&embed=1`;
+      window.open(href, '_blank', 'noopener');
+      return true;
+    };
+
+    const renderList = (items)=>{
+      els.list.innerHTML = '';
+      const list = Array.isArray(items) ? items : [];
+      if(!list.length){
+        els.empty.classList.remove('d-none');
+        return;
+      }
+      els.empty.classList.add('d-none');
+      list.forEach((doc)=>{
+        const title = sanitizeText(doc.title || doc.summary || 'Consentimiento informado');
+        const summary = sanitizeText(doc.summary || '');
+        const dtRaw = sanitizeText(doc.event_datetime || doc.created_at || '');
+        const dateText = dtRaw ? dtRaw.replace('T', ' ') : '—';
+        const status = sanitizeText(doc.status || doc.payload?.consent?.status || 'draft');
+        const uuid = sanitizeText(doc.document_uuid || '');
+        const card = document.createElement('div');
+        card.className = 'exp-card exp-card--secondary';
+        card.setAttribute('role', 'button');
+        card.setAttribute('tabindex', '0');
+        if(uuid) card.dataset.docUuid = uuid;
+        card.innerHTML = `
+          <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
+            <span>${title.replace(/</g, '&lt;')}</span>
+            <span class="badge bg-light text-dark border">${status.replace(/</g, '&lt;')}</span>
+          </div>
+          <div class="small text-muted">${dateText.replace(/</g, '&lt;')}</div>
+          ${summary ? `<div class="small mt-1">${summary.replace(/</g, '&lt;')}</div>` : ''}
+          ${uuid ? '<div class="small mt-2"><span class="text-primary">Abrir detalle</span></div>' : ''}
+        `;
+        els.list.appendChild(card);
+      });
+    };
+
+    const listCanonicalConsents = async ()=>{
+      const patientId = resolveActivePatientIdForConsent();
+      const hasPatient = !!patientId;
+      els.ctxNotice?.classList.toggle('d-none', hasPatient);
+      if(!hasPatient){
+        renderList([]);
+        return;
+      }
+      try{
+        const url = `/api/clinical/index.php/documents?patient_id=${encodeURIComponent(patientId)}&document_type=consentimiento_informado&limit=50`;
+        const resp = await fetch(url, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          credentials: 'same-origin'
+        });
+        const json = await resp.json().catch(()=> null);
+        const items = Array.isArray(json?.data?.items) ? json.data.items : [];
+        const normalized = items.map((item)=>{
+          const clinicalDoc = item?.clinical_document && typeof item.clinical_document === 'object' ? item.clinical_document : {};
+          const payload = clinicalDoc?.payload && typeof clinicalDoc.payload === 'object' ? clinicalDoc.payload : {};
+          return {
+            document_uuid: sanitizeText(
+              clinicalDoc.document_uuid
+              || item?.document_uuid
+              || item?.document_id
+              || item?.links?.document_uuid
+              || item?.id
+              || ''
+            ),
+            title: clinicalDoc.title || item.title || '',
+            summary: clinicalDoc.summary || item.summary || '',
+            event_datetime: item.event_datetime || item.occurred_at || '',
+            status: payload?.consent?.status || 'draft',
+            payload
+          };
+        });
+        renderList(normalized);
+      }catch(_){
+        renderList([]);
+      }
+    };
+
+    const validateStep2 = ()=>{
+      const errors = [];
+      if(!sanitizeText(els.template?.value)) errors.push('Selecciona una plantilla.');
+      if(!sanitizeText(els.procedimiento?.value)) errors.push('Indica el procedimiento.');
+      if(!sanitizeText(els.objetivo?.value)) errors.push('Indica el objetivo.');
+      return errors;
+    };
+
+    const buildCanonicalConsentDocument = async ()=>{
+      const patientId = resolveActivePatientIdForConsent();
+      if(!patientId) return { error: 'patient_id requerido.' };
+      const errors = validateStep2();
+      if(errors.length){
+        return { error: errors.join(' ') };
+      }
+      const actorUserId = resolveClinicalActorUserId();
+      const actorName = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
+      const nowSql = formatNowSql();
+      const consentType = sanitizeText(els.template?.value || 'otro');
+      const templateLabel = sanitizeText(els.template?.selectedOptions?.[0]?.textContent || consentType || 'Consentimiento');
+      const procedimiento = sanitizeText(els.procedimiento?.value || '');
+      const motivo = sanitizeText(els.motivo?.value || '');
+      const objetivo = sanitizeText(els.objetivo?.value || '');
+      const status = 'draft';
+      const title = `Consentimiento informado — ${procedimiento || templateLabel || 'General'}`;
+      const summary = `${status} · ${templateLabel || consentType || 'consentimiento'} · ${nowSql.slice(0, 10)}`;
+      const patientSnapshot = readPatientSnapshot();
+      const contact = {
+        telefono: sanitizeText(els.pacTel?.value || ''),
+        correo: sanitizeText(els.pacMail?.value || ''),
+        domicilio: sanitizeText(els.pacDom?.value || '')
+      };
+      let encounterKey = '';
+      if(typeof window.getActiveEncounterKey === 'function'){
+        encounterKey = sanitizeText(window.getActiveEncounterKey());
+      }
+      if(encounterKey && typeof window.mxmedIsOperationalEncounterForPatient === 'function'){
+        const isOperational = window.mxmedIsOperationalEncounterForPatient(patientId, encounterKey) === true;
+        if(!isOperational) encounterKey = '';
+      }
+      let appointmentId = '';
+      if(typeof window.resolveActiveEncounterForPatient === 'function'){
+        const resolved = await window.resolveActiveEncounterForPatient(patientId, { source: 'consentimiento_canonico_host' }).catch(()=> null);
+        appointmentId = sanitizeText(resolved?.appointmentId || resolved?.appointment_id || '');
+      }
+      const context = {
+        patient_id: patientId,
+        care_setting: 'consulta'
+      };
+      if(encounterKey) context.encounter_key = encounterKey;
+      if(appointmentId) context.appointment_id = appointmentId;
+      const payload = {
+        contract_version: 1,
+        consent: {
+          consent_type: consentType || 'otro',
+          document_title: procedimiento || templateLabel || 'Consentimiento informado',
+          status,
+          granted_at: nowSql,
+          revoked_at: null
+        },
+        patient_snapshot: {
+          full_name: patientSnapshot.full_name,
+          identifier: '',
+          contact
+        },
+        actor_snapshot: {
+          user_id: actorUserId,
+          full_name: actorName,
+          license: sanitizeText(document.getElementById('ced-prof')?.value || '')
+        },
+        template_snapshot: {
+          template_id: consentType || '',
+          template_name: templateLabel || '',
+          body_text: sanitizeText(els.templateDesc?.textContent || '')
+        },
+        legal: {
+          risks_explained: false,
+          alternatives_explained: false,
+          questions_resolved: false,
+          voluntary_acceptance: false
+        },
+        signatures: {
+          patient_signed: false,
+          doctor_signed: false,
+          witness_signed: false,
+          signature_mode: 'none'
+        },
+        observations: motivo || ''
+      };
+
+      return {
+        error: '',
+        patientId,
+        body: {
+          type: 'consentimiento_informado',
+          document_type: 'consentimiento_informado',
+          title,
+          summary,
+          context,
+          payload,
+          event_datetime: nowSql,
+          actor: { user_id: actorUserId },
+          source: 'host_t_consent'
+        }
+      };
+    };
+
+    const saveCanonicalConsent = async ()=>{
+      if(state.saving) return;
+      const prepared = await buildCanonicalConsentDocument();
+      if(prepared.error){
+        showNotice(prepared.error);
+        return;
+      }
+      state.saving = true;
+      if(els.save){
+        els.save.disabled = true;
+        els.save.textContent = 'Guardando...';
+      }
+      showNotice('');
+      try{
+        const resp = await fetch('/api/clinical/index.php/documents', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(prepared.body),
+          credentials: 'same-origin'
+        });
+        const json = await resp.json().catch(()=> null);
+        if(!resp.ok || !json || json.ok !== true){
+          const msg = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo guardar el consentimiento.';
+          throw new Error(msg);
+        }
+        try{
+          console.info('[mxmed-consent] save canonical ok', {
+            patient_id: prepared.patientId,
+            document_type: 'consentimiento_informado'
+          });
+        }catch(_){}
+        resetWizard();
+        listCanonicalConsents();
+        try{
+          window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created', {
+            detail: {
+              patient_id: prepared.patientId,
+              document_type: 'consentimiento_informado',
+              source: 'consentimiento_canonico_host'
+            }
+          }));
+        }catch(_){}
+      }catch(err){
+        showNotice(sanitizeText(err?.message || 'No se pudo guardar el consentimiento.'));
+      }finally{
+        state.saving = false;
+        if(els.save){
+          els.save.disabled = false;
+          els.save.textContent = 'Guardar borrador';
+        }
+      }
+    };
+
+    els.newBtn.addEventListener('click', (event)=>{
+      event.preventDefault();
+      startDraft();
+    });
+    els.cancel?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      resetWizard();
+    });
+    els.next?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      state.step = 2;
+      renderStep();
+      describeTemplate(els.template?.value || '');
+    });
+    els.prev?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      state.step = 1;
+      renderStep();
+    });
+    els.save?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      saveCanonicalConsent();
+    });
+    els.template?.addEventListener('change', (event)=>{
+      describeTemplate(event?.target?.value || '');
+    });
+    els.list.addEventListener('click', (event)=>{
+      const card = event.target.closest('[data-doc-uuid]');
+      if(!card) return;
+      event.preventDefault();
+      openConsentViewer(card.getAttribute('data-doc-uuid'));
+    });
+    els.list.addEventListener('keydown', (event)=>{
+      if(event.key !== 'Enter' && event.key !== ' ') return;
+      const card = event.target.closest('[data-doc-uuid]');
+      if(!card) return;
+      event.preventDefault();
+      openConsentViewer(card.getAttribute('data-doc-uuid'));
+    });
+
+    window.addEventListener('expediente:patient-changed', ()=>{ listCanonicalConsents(); });
+    window.addEventListener('mxmed:encounter-context-changed', ()=>{ listCanonicalConsents(); });
+    pane.addEventListener('click', (event)=>{
+      const tabBtn = event.target.closest('.nav-link[data-bs-target="#t-consent"]');
+      if(!tabBtn) return;
+      window.setTimeout(()=>{ listCanonicalConsents(); }, 80);
+    });
+
+    renderTemplates();
+    renderStep();
+    listCanonicalConsents();
+  };
+  setupConsentimientoCanonicoHost();
+
   const readExpedienteIdentityDraftFromDom = ()=>{
     return {
       nombre: String(nameInput?.value || '').trim(),

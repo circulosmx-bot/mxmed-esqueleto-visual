@@ -26,7 +26,8 @@ function get_api_base(): string
         $proto = (string)$_SERVER['HTTP_X_FORWARDED_PROTO'];
     }
 
-    return $proto . '://' . $host;
+    $hostOnly = preg_replace('/:\d+$/', '', $host) ?: '127.0.0.1';
+    return $proto . '://' . $hostOnly . ':8091';
 }
 
 function normalize_clinical_api_base(string $base): string
@@ -441,6 +442,19 @@ $mode = strtolower(trim((string)($_GET['mode'] ?? '')));
 $isFullscreenMode = ($mode === 'fullscreen');
 $payloadJson = $payload ? json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '';
 $renderedText = $document ? (string)($content['rendered_text'] ?? '') : '';
+$docTypeNorm = strtolower(trim($docType));
+$isConsentDoc = ($docTypeNorm === 'consentimiento_informado');
+$consentBlock = is_array($payload['consent'] ?? null) ? $payload['consent'] : [];
+$consentPatientSnapshot = is_array($payload['patient_snapshot'] ?? null) ? $payload['patient_snapshot'] : [];
+$consentActorSnapshot = is_array($payload['actor_snapshot'] ?? null) ? $payload['actor_snapshot'] : [];
+$consentTemplateSnapshot = is_array($payload['template_snapshot'] ?? null) ? $payload['template_snapshot'] : [];
+$consentLegal = is_array($payload['legal'] ?? null) ? $payload['legal'] : [];
+$consentSignatures = is_array($payload['signatures'] ?? null) ? $payload['signatures'] : [];
+$consentObservations = trim((string)($payload['observations'] ?? ''));
+
+$consentBoolLabel = static function ($value): string {
+    return $value ? 'Sí' : 'No';
+};
 
 $fileMeta = is_array($payload['file'] ?? null) ? $payload['file'] : [];
 $optimizedMeta = is_array($fileMeta['optimized'] ?? null) ? $fileMeta['optimized'] : [];
@@ -669,6 +683,70 @@ if (!$embed) {
         <div><strong>Viewer mode:</strong> <?php echo h($detectedMode); ?></div>
       </div>
     </div>
+
+    <?php if ($isConsentDoc): ?>
+      <div class="mm-card mb-3">
+        <div class="head"><h5>Detalle del consentimiento</h5></div>
+        <div class="body small">
+          <div><strong>Título:</strong> <?php echo h((string)($consentBlock['document_title'] ?? $title)); ?></div>
+          <div><strong>Tipo:</strong> <?php echo h((string)($consentBlock['consent_type'] ?? '-')); ?></div>
+          <div><strong>Estatus:</strong> <?php echo h((string)($consentBlock['status'] ?? 'draft')); ?></div>
+          <div><strong>Fecha:</strong> <?php echo h((string)($consentBlock['granted_at'] ?? $date)); ?></div>
+        </div>
+      </div>
+
+      <div class="mm-card mb-3">
+        <div class="head"><h5>Paciente / médico</h5></div>
+        <div class="body small">
+          <div><strong>Paciente:</strong> <?php echo h((string)($consentPatientSnapshot['full_name'] ?? '-')); ?></div>
+          <div><strong>Contacto:</strong>
+            <?php
+              $contact = is_array($consentPatientSnapshot['contact'] ?? null) ? $consentPatientSnapshot['contact'] : [];
+              $contactBits = [];
+              $tel = trim((string)($contact['telefono'] ?? ''));
+              $correo = trim((string)($contact['correo'] ?? ''));
+              $dom = trim((string)($contact['domicilio'] ?? ''));
+              if ($tel !== '') $contactBits[] = 'Tel: ' . $tel;
+              if ($correo !== '') $contactBits[] = 'Correo: ' . $correo;
+              if ($dom !== '') $contactBits[] = 'Domicilio: ' . $dom;
+              echo h($contactBits !== [] ? implode(' · ', $contactBits) : '-');
+            ?>
+          </div>
+          <div><strong>Médico:</strong> <?php echo h((string)($consentActorSnapshot['full_name'] ?? '-')); ?></div>
+          <div><strong>Cédula:</strong> <?php echo h((string)($consentActorSnapshot['license'] ?? '-')); ?></div>
+        </div>
+      </div>
+
+      <div class="mm-card mb-3">
+        <div class="head"><h5>Plantilla y texto</h5></div>
+        <div class="body small">
+          <div><strong>Plantilla:</strong> <?php echo h((string)($consentTemplateSnapshot['template_name'] ?? '-')); ?></div>
+          <?php $bodyText = trim((string)($consentTemplateSnapshot['body_text'] ?? '')); ?>
+          <div class="mt-2"><strong>Texto base:</strong></div>
+          <pre class="mb-0 small"><?php echo h($bodyText !== '' ? $bodyText : 'Sin texto de plantilla.'); ?></pre>
+        </div>
+      </div>
+
+      <div class="mm-card mb-3">
+        <div class="head"><h5>Confirmaciones legales y firmas</h5></div>
+        <div class="body small">
+          <div><strong>Riesgos explicados:</strong> <?php echo h($consentBoolLabel((bool)($consentLegal['risks_explained'] ?? false))); ?></div>
+          <div><strong>Alternativas explicadas:</strong> <?php echo h($consentBoolLabel((bool)($consentLegal['alternatives_explained'] ?? false))); ?></div>
+          <div><strong>Dudas resueltas:</strong> <?php echo h($consentBoolLabel((bool)($consentLegal['questions_resolved'] ?? false))); ?></div>
+          <div><strong>Aceptación voluntaria:</strong> <?php echo h($consentBoolLabel((bool)($consentLegal['voluntary_acceptance'] ?? false))); ?></div>
+          <hr>
+          <div><strong>Firma paciente:</strong> <?php echo h($consentBoolLabel((bool)($consentSignatures['patient_signed'] ?? false))); ?></div>
+          <div><strong>Firma médico:</strong> <?php echo h($consentBoolLabel((bool)($consentSignatures['doctor_signed'] ?? false))); ?></div>
+          <div><strong>Firma testigo:</strong> <?php echo h($consentBoolLabel((bool)($consentSignatures['witness_signed'] ?? false))); ?></div>
+          <div><strong>Modo de firma:</strong> <?php echo h((string)($consentSignatures['signature_mode'] ?? '-')); ?></div>
+          <?php if ($consentObservations !== ''): ?>
+            <hr>
+            <div><strong>Observaciones:</strong></div>
+            <pre class="mb-0 small"><?php echo h($consentObservations); ?></pre>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endif; ?>
 
     <?php if ($externalBlockedMessage !== ''): ?>
       <div class="alert alert-warning"><?php echo h($externalBlockedMessage); ?></div>

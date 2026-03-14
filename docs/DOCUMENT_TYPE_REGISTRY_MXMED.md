@@ -272,3 +272,101 @@ Legacy lectura contemplada para:
 Regla general:
 - Lectura: tolerante con alias legacy.
 - Captura: estrictamente canónica.
+
+---
+
+## CONS-2 — Contrato canónico mínimo de consentimiento_informado
+
+Estado documental:
+- definido en arquitectura y registry v1
+- sin implementación backend/UI canónica en esta fase
+
+Reglas base:
+- `patient_id` canónico obligatorio
+- `encounter_key` opcional
+- `appointment_id` opcional
+- visible en Timeline y Expediente
+- ruta objetivo: converger al modelo clínico canónico (`clinical_documents`)
+
+### Estructura general propuesta
+
+```json
+{
+  "document_type": "consentimiento_informado",
+  "title": "Consentimiento informado — <tipo|procedimiento>",
+  "summary": "<estado> · <tipo> · <fecha>",
+  "context": {
+    "patient_id": "p_xxx",
+    "encounter_key": "enc:123",
+    "appointment_id": "a_xxx",
+    "care_setting": "consulta"
+  },
+  "payload": {
+    "contract_version": 1,
+    "consent": {},
+    "patient_snapshot": {},
+    "actor_snapshot": {},
+    "template_snapshot": {},
+    "legal": {},
+    "signatures": {},
+    "observations": ""
+  },
+  "event_datetime": "YYYY-MM-DD HH:mm:ss"
+}
+```
+
+### Payload mínimo sugerido (`payload`)
+
+```json
+{
+  "contract_version": 1,
+  "consent": {
+    "consent_type": "procedimiento|anestesia|transfusion|investigacion|otro",
+    "document_title": "Consentimiento para ...",
+    "status": "draft|granted|revoked",
+    "granted_at": "YYYY-MM-DD HH:mm:ss",
+    "revoked_at": null
+  },
+  "patient_snapshot": {
+    "full_name": "Nombre Paciente",
+    "identifier": "opcional",
+    "contact": "opcional"
+  },
+  "actor_snapshot": {
+    "user_id": "u_xxx",
+    "full_name": "Médico Tratante",
+    "license": "opcional"
+  },
+  "template_snapshot": {
+    "template_id": "opcional",
+    "template_name": "opcional",
+    "body_text": "texto base mostrado/aceptado"
+  },
+  "legal": {
+    "risks_explained": true,
+    "alternatives_explained": true,
+    "questions_resolved": true,
+    "voluntary_acceptance": true
+  },
+  "signatures": {
+    "patient_signed": true,
+    "doctor_signed": true,
+    "witness_signed": false,
+    "signature_mode": "digital|captured|manual|none"
+  },
+  "observations": "opcional"
+}
+```
+
+### Regla de mapeo operativo
+
+- `title`: nombre legible del consentimiento (tipo/procedimiento).
+- `summary`: estado breve para cards y listado (`<estado> · <tipo> · <fecha>`).
+- `context`: claves clínicas de enlace (`patient_id` obligatorio; `encounter_key`/`appointment_id` opcionales).
+- `payload`: detalle legal, snapshots y firmas.
+
+### Proyección esperada
+
+- Timeline: item de categoría `administrativo` con estado visible.
+- Expediente: listado/consulta de consentimientos y acceso a detalle.
+- Visor: texto/plantilla, confirmaciones legales y firmas.

@@ -1500,6 +1500,26 @@ Secuencia de evolución aprobada:
 2. helper/config compartida en runtime
 3. posible catálogo BD futuro si se requiere gobernanza dinámica
 
+### CONS-2 — Contrato canónico mínimo de consentimiento_informado (definición documental)
+
+Se define formalmente el contrato mínimo canónico de `consentimiento_informado` como
+documento clínico-administrativo del ecosistema `clinical_documents`.
+
+Referencia principal:
+- `docs/DOCUMENT_TYPE_REGISTRY_MXMED.md` (sección `CONS-2 — Contrato canónico mínimo de consentimiento_informado`)
+
+Decisiones asentadas:
+- `document_type = consentimiento_informado`
+- `patient_id` canónico obligatorio
+- `encounter_key` opcional
+- `appointment_id` opcional
+- visible en timeline y expediente
+- ruta objetivo: convergencia al modelo clínico canónico (sin dualidad como ruta principal)
+
+Alcance de esta fase:
+- definición documental del contrato mínimo (`title`, `summary`, `context`, `payload`, `event_datetime`)
+- sin implementación backend/UI funcional en esta iteración
+
 ## Diagnóstico longitudinal — Prioridad de arquitectura clínica
 
 Se establece como primera entidad longitudinal prioritaria del estado clínico en MXMed:
