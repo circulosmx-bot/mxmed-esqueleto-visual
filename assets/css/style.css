@@ -3342,6 +3342,12 @@ body{margin:0;background:var(--mm-fondo-base);}
   display:grid;
   gap:12px;
 }
+.hc-gyn-subsection{
+  background:#fff;
+  border:1px solid #dceaf1;
+  border-radius:12px;
+  padding:12px;
+}
 .gyn-block{
   background:#f7fcff;
   border:1px solid #cfe9f0;

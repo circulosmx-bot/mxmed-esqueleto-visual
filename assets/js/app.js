@@ -3513,6 +3513,8 @@ console.info('app.js loaded :: 20251123a');
   const actividadClinicaNotasEncounterMeta = pane.querySelector('[data-role="ac-notas-encounter-meta"]');
   const actividadClinicaNotasActions = pane.querySelector('[data-role="ac-notas-actions"]');
   const tratamientoAliasPanel = pane.querySelector('[data-role="trx-alias-panel"]');
+  const ginecoHistoriaSection = pane.querySelector('[data-role="hc-gineco-subsection"]');
+  const ginecoAliasPane = pane.querySelector('#t-gineco');
   let headerSyncToken = 0;
   let actividadClinicaContextSyncToken = 0;
   const activeEncounterLookupInFlight = new Map();
@@ -4336,6 +4338,17 @@ console.info('app.js loaded :: 20251123a');
       openActividadClinicaFromTratamientoAlias();
     }
   });
+  pane.addEventListener('click', (event)=>{
+    const gineAliasBtn = event.target.closest('[data-action="gineco-alias-open-historia"]');
+    if(!gineAliasBtn) return;
+    event.preventDefault();
+    const opened = showClinicalTab(clinicalTabTargets.historia);
+    if(opened && ginecoHistoriaSection){
+      window.requestAnimationFrame(()=>{
+        ginecoHistoriaSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  });
 
   const layoutTabs = (showGineco)=>{
     if(!tabsWrap) return;
@@ -4578,11 +4591,12 @@ console.info('app.js loaded :: 20251123a');
     const gineLi = pane.querySelector('[data-tab-conditional="gineco"]');
     const gineLinkLocal = gineLi ? gineLi.querySelector('.nav-link') : null;
     // legacy gyn panel may use .gyn-panel instead of #t-gineco
-    const ginePane = pane.querySelector('#t-gineco') || pane.querySelector('.gyn-panel') || pane.querySelector('[data-exp-section="gineco"]');
-    const datosBtn = pane.querySelector('[data-tab-key="t-datos"]');
+    const ginePane = ginecoAliasPane || pane.querySelector('#t-gineco') || pane.querySelector('.gyn-panel') || pane.querySelector('[data-exp-section="gineco"]');
+    const historiaBtn = pane.querySelector('[data-tab-key="t-historia"]');
 
     if(gineLi){ gineLi.classList.toggle('d-none', !isWoman); }
     if(ginePane){ ginePane.classList.toggle('d-none', !isWoman); }
+    if(ginecoHistoriaSection){ ginecoHistoriaSection.classList.toggle('d-none', !isWoman); }
     layoutTabs(isWoman);
 
     if(gineLinkLocal){
@@ -4601,13 +4615,14 @@ console.info('app.js loaded :: 20251123a');
         gineLinkLocal.setAttribute('aria-selected', 'false');
       }
       if(wasOnGine && allowNavigate){
-        if(datosTabLink){ datosTabLink.classList.add('active'); }
-        if(datosTabPane){
-          datosTabPane.classList.remove('d-none');
-          datosTabPane.classList.add('show','active');
+        const historiaPane = pane.querySelector('#t-historia');
+        if(historiaBtn){ historiaBtn.classList.add('active'); }
+        if(historiaPane){
+          historiaPane.classList.remove('d-none');
+          historiaPane.classList.add('show','active');
         }
-        const targetDatosBtn = datosBtn || tabs[0];
-        if(targetDatosBtn){ try{ new bootstrap.Tab(targetDatosBtn).show(); }catch(_){ } }
+        const targetHistoriaBtn = historiaBtn || tabs[0];
+        if(targetHistoriaBtn){ try{ new bootstrap.Tab(targetHistoriaBtn).show(); }catch(_){ } }
       }
     }
   };
