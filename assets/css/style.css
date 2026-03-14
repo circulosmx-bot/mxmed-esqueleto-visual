@@ -4991,6 +4991,40 @@ body{margin:0;background:var(--mm-fondo-base);}
 .ne-app .exp-card-title{
   margin-bottom:10px;
 }
+.ne-activity-context{
+  display:grid;
+  gap:6px;
+}
+.ne-activity-status-line{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:10px;
+}
+.ne-activity-status-badge{
+  display:inline-flex;
+  align-items:center;
+  border-radius:999px;
+  padding:4px 10px;
+  font-size:.78rem;
+  font-weight:700;
+  letter-spacing:.03em;
+  text-transform:uppercase;
+  background:#f0f4f7;
+  color:#5c6b75;
+}
+.ne-activity-status-badge.is-active{
+  background:#e7f8ef;
+  color:#0d7b44;
+}
+.ne-activity-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.ne-activity-actions .btn{
+  flex:0 1 auto;
+}
 
 .ne-readonly{
   background:#f5fbff;

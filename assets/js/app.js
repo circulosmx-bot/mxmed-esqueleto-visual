@@ -760,6 +760,18 @@ console.info('app.js loaded :: 20251123a');
   window.mxRegisterEncounterActivity = registerEncounterActivity;
   window.mxmedRegisterEncounterActivity = registerEncounterActivity;
   window.mxmedResolveCurrentEncounterForPatient = pickEncounterForPatient;
+  window.mxmedGetOperationalEncounterKeyForPatient = pickEncounterForPatient;
+  window.mxmedIsOperationalEncounterForPatient = (patientId, encounterKey = '')=>{
+    const pid = clean(patientId);
+    if(!pid) return false;
+    const key = clean(encounterKey);
+    const resolved = key || pickEncounterForPatient(pid);
+    if(!resolved) return false;
+    const map = ensureActiveEncountersMap();
+    const entry = map[resolved];
+    if(!entry || typeof entry !== 'object') return false;
+    return clean(entry.patient_id) === pid && isEncounterActiveStatus(clean(entry.status));
+  };
   window.mxmedSetCurrentPatientContext = setCurrentPatientContext;
   window.mxmedCanStartEncounter = canStartEncounterForPatient;
 
@@ -794,15 +806,8 @@ console.info('app.js loaded :: 20251123a');
   ensureActiveEncountersMap();
   const bootPatientId = detectExistingPatientId();
   const bootEncounterKey = detectExistingEncounterKey();
-  if(bootEncounterKey){
-    upsertEncounterEntry({
-      patient_id: bootPatientId,
-      encounter_key: bootEncounterKey,
-      started_at: nowIso(),
-      last_activity_at: nowIso(),
-      origin: 'bootstrap'
-    }, 'consulta_activa');
-  }
+  // No promover encounter activo en bootstrap desde datasets/store residuales.
+  // El estado operativo debe entrar por acciones explícitas (lifecycle).
   if(bootPatientId){
     window.mxmedStore.currentPatientId = bootPatientId;
     window.mxmedStore.activePatientId = bootPatientId;
@@ -3501,9 +3506,20 @@ console.info('app.js loaded :: 20251123a');
   const p10BarNode = document.getElementById('mm-p10-bar');
   const actividadClinicaModalEl = pane.querySelector('#modalActividadClinica');
   const actividadClinicaLaunchBtn = pane.querySelector('[data-action="open-actividad-clinica"]');
+  const actividadClinicaNotasCard = pane.querySelector('[data-role="ac-notas-context-card"]');
+  const actividadClinicaNotasStatusBadge = pane.querySelector('[data-role="ac-notas-status-badge"]');
+  const actividadClinicaNotasStatusText = pane.querySelector('[data-role="ac-notas-status-text"]');
+  const actividadClinicaNotasMotivo = pane.querySelector('[data-role="ac-notas-motivo"]');
+  const actividadClinicaNotasEncounterMeta = pane.querySelector('[data-role="ac-notas-encounter-meta"]');
+  const actividadClinicaNotasActions = pane.querySelector('[data-role="ac-notas-actions"]');
   let headerSyncToken = 0;
+  let actividadClinicaContextSyncToken = 0;
   const activeEncounterLookupInFlight = new Map();
   let lastDayInvalid = false;
+  if(actividadClinicaLaunchBtn){
+    actividadClinicaLaunchBtn.removeAttribute('data-bs-toggle');
+    actividadClinicaLaunchBtn.removeAttribute('data-bs-target');
+  }
   const normalizeExpGender = (genero)=>{
     const raw = String(genero || '').trim();
     if(!raw) return '';
@@ -3525,7 +3541,8 @@ console.info('app.js loaded :: 20251123a');
     historia: '#t-historia',
     historialAtencion: '#t-historial-atencion',
     notas: '#t-notas',
-    estudios: '#t-estudios'
+    estudios: '#t-estudios',
+    consent: '#t-consent'
   };
   const findClinicalTabTrigger = (target)=>{
     const safeTarget = sanitizeText(target);
@@ -3915,6 +3932,113 @@ console.info('app.js loaded :: 20251123a');
       modal.hide();
     }catch(_){}
   };
+  const focusActividadClinicaActions = ()=>{
+    if(!actividadClinicaNotasActions) return;
+    actividadClinicaNotasActions.scrollIntoView({ behavior:'smooth', block:'center' });
+    const firstActionBtn = actividadClinicaNotasActions.querySelector('button[data-action^="actividad-tab-open-"]');
+    if(firstActionBtn){
+      window.setTimeout(()=> firstActionBtn.focus(), 220);
+    }
+  };
+  const setActividadClinicaActionOrder = (hasActiveEncounter)=>{
+    if(!actividadClinicaNotasActions) return;
+    const orderWithEncounter = ['nota', 'receta', 'procedimiento', 'adjunto', 'consentimiento'];
+    const orderWithoutEncounter = ['receta', 'adjunto', 'nota', 'procedimiento', 'consentimiento'];
+    const order = hasActiveEncounter ? orderWithEncounter : orderWithoutEncounter;
+    const rank = new Map(order.map((key, index)=> [key, String(index + 1)]));
+    const actionButtons = Array.from(actividadClinicaNotasActions.querySelectorAll('[data-ac-kind]'));
+    actionButtons.forEach((btn)=>{
+      const kind = sanitizeText(btn.getAttribute('data-ac-kind'));
+      btn.style.order = rank.get(kind) || '99';
+    });
+  };
+  const renderActividadClinicaContext = async ()=>{
+    if(!actividadClinicaNotasCard) return;
+    const runToken = ++actividadClinicaContextSyncToken;
+    const patientId = sanitizeText(getActivePatientId());
+    const setMotivo = (value)=>{
+      if(!actividadClinicaNotasMotivo) return;
+      const text = sanitizeText(value);
+      if(!text){
+        actividadClinicaNotasMotivo.textContent = '';
+        actividadClinicaNotasMotivo.classList.add('d-none');
+        return;
+      }
+      actividadClinicaNotasMotivo.textContent = `Motivo de consulta: ${text}`;
+      actividadClinicaNotasMotivo.classList.remove('d-none');
+    };
+    const setEncounterMeta = (value)=>{
+      if(!actividadClinicaNotasEncounterMeta) return;
+      const text = sanitizeText(value);
+      if(!text){
+        actividadClinicaNotasEncounterMeta.textContent = '';
+        actividadClinicaNotasEncounterMeta.classList.add('d-none');
+        return;
+      }
+      actividadClinicaNotasEncounterMeta.textContent = text;
+      actividadClinicaNotasEncounterMeta.classList.remove('d-none');
+    };
+    const setNeutral = (message)=>{
+      if(actividadClinicaNotasStatusBadge){
+        actividadClinicaNotasStatusBadge.textContent = 'Sin consulta activa';
+        actividadClinicaNotasStatusBadge.classList.remove('is-active');
+      }
+      if(actividadClinicaNotasStatusText){
+        actividadClinicaNotasStatusText.textContent = message || 'Puedes registrar información clínica a nivel del expediente del paciente.';
+      }
+      setEncounterMeta('');
+      setActividadClinicaActionOrder(false);
+    };
+
+    setMotivo(readMotivoConsulta());
+    if(!patientId){
+      setNeutral('Selecciona un paciente para registrar actividad clínica.');
+      return;
+    }
+
+    let resolved = null;
+    if(typeof window.resolveActiveEncounterForPatient === 'function'){
+      resolved = await window.resolveActiveEncounterForPatient(patientId, {
+        source: 'actividad_clinica_tab_context'
+      }).catch(()=> null);
+    }
+    if(runToken !== actividadClinicaContextSyncToken) return;
+
+    const isSuppressedAutoContext = (typeof window.mxmedShouldSuppressAutoEncounterContext === 'function')
+      ? window.mxmedShouldSuppressAutoEncounterContext(patientId) === true
+      : false;
+    const encounterKey = sanitizeText(resolved?.encounterKey || '');
+    const appointmentId = sanitizeText(resolved?.appointmentId || '');
+    const isOperationalEncounter = (typeof window.mxmedIsOperationalEncounterForPatient === 'function')
+      ? window.mxmedIsOperationalEncounterForPatient(patientId, encounterKey) === true
+      : false;
+    const hasActiveEncounter = !!(
+      resolved
+      && resolved.ok === true
+      && resolved.hasActive === true
+      && sanitizeText(resolved.patientId || patientId) === patientId
+      && encounterKey
+      && isOperationalEncounter
+      && !isSuppressedAutoContext
+    );
+    if(!hasActiveEncounter){
+      setNeutral('Puedes registrar información clínica a nivel del expediente del paciente.');
+      return;
+    }
+
+    if(actividadClinicaNotasStatusBadge){
+      actividadClinicaNotasStatusBadge.textContent = 'Consulta activa';
+      actividadClinicaNotasStatusBadge.classList.add('is-active');
+    }
+    if(actividadClinicaNotasStatusText){
+      actividadClinicaNotasStatusText.textContent = 'Esta actividad se asociará a la consulta activa actual.';
+    }
+    const metaParts = [];
+    if(encounterKey) metaParts.push(`Encounter: ${encounterKey}`);
+    if(appointmentId) metaParts.push(`Cita: ${appointmentId}`);
+    setEncounterMeta(metaParts.join(' · '));
+    setActividadClinicaActionOrder(true);
+  };
   const openNotaClinicaFromActividad = ()=>{
     hideActividadClinicaModal();
     const opened = showClinicalTab(clinicalTabTargets.notas);
@@ -3940,6 +4064,10 @@ console.info('app.js loaded :: 20251123a');
     }catch(_){}
     return true;
   };
+  const openConsentimientoFromActividad = ()=>{
+    hideActividadClinicaModal();
+    return showClinicalTab(clinicalTabTargets.consent);
+  };
   const triggerProcedimientoFromEmbed = async ()=>{
     const iframe = document.getElementById('mm-embed-historial');
     if(!iframe) return false;
@@ -3963,16 +4091,82 @@ console.info('app.js loaded :: 20251123a');
     }
     return false;
   };
+  const openProcedimientoHostModal = async ()=>{
+    const modalEl = document.getElementById('modalActividadClinicaProcedimientoHost');
+    if(!modalEl || !window.bootstrap || !window.bootstrap.Modal){
+      return false;
+    }
+    const form = modalEl.querySelector('[data-role="ac-proc-form"]');
+    const errorEl = modalEl.querySelector('[data-role="ac-proc-error"]');
+    const contextNoteEl = modalEl.querySelector('[data-role="ac-proc-context-note"]');
+    const appointmentInput = modalEl.querySelector('[data-role="ac-proc-appointment-id"]');
+    if(!form) return false;
+    try{
+      form.reset();
+      if(errorEl){
+        errorEl.textContent = '';
+        errorEl.classList.add('d-none');
+      }
+      const patientId = sanitizeText(getActivePatientId());
+      if(!patientId){
+        if(errorEl){
+          errorEl.textContent = 'Selecciona un paciente activo para registrar procedimiento.';
+          errorEl.classList.remove('d-none');
+        }
+        return false;
+      }
+      if(appointmentInput) appointmentInput.value = '';
+      if(contextNoteEl){
+        contextNoteEl.textContent = 'Sin appointment vinculado.';
+      }
+      if(typeof window.resolveActiveEncounterForPatient === 'function'){
+        const active = await window.resolveActiveEncounterForPatient(patientId, { source: 'actividad_clinica_procedimiento_host' }).catch(()=> null);
+        const appointmentId = sanitizeText(active?.appointmentId || active?.appointment_id || '');
+        if(appointmentInput) appointmentInput.value = appointmentId;
+        if(contextNoteEl){
+          contextNoteEl.textContent = appointmentId
+            ? `Se vinculará appointment_id: ${appointmentId}`
+            : 'Sin appointment vinculado.';
+        }
+      }
+      const placeType = modalEl.querySelector('[data-role="ac-proc-place-type"]');
+      placeType?.dispatchEvent(new Event('change'));
+      const eventInput = modalEl.querySelector('[data-role="ac-proc-event-datetime"]');
+      if(eventInput){
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        eventInput.value = `${y}-${m}-${d}T${hh}:${mm}`;
+      }
+      const modal = (typeof window.bootstrap.Modal.getOrCreateInstance === 'function')
+        ? window.bootstrap.Modal.getOrCreateInstance(modalEl)
+        : new window.bootstrap.Modal(modalEl);
+      modal.show();
+      return true;
+    }catch(_){
+      return false;
+    }
+  };
   const openProcedimientoFromActividad = async ()=>{
     hideActividadClinicaModal();
     showClinicalTab(clinicalTabTargets.historialAtencion);
-    const opened = await triggerProcedimientoFromEmbed();
-    if(!opened){
+    const openedHost = await openProcedimientoHostModal();
+    if(openedHost){
+      try{
+        console.info('[mxmed-actividad-clinica] open procedimiento host');
+      }catch(_){}
+      return true;
+    }
+    const openedEmbed = await triggerProcedimientoFromEmbed();
+    if(!openedEmbed){
       window.alert('No fue posible abrir Procedimiento en este momento. Intenta abrir Historial y vuelve a intentar.');
       return false;
     }
     try{
-      console.info('[mxmed-actividad-clinica] open procedimiento');
+      console.info('[mxmed-actividad-clinica] open procedimiento fallback iframe');
     }catch(_){}
     return true;
   };
@@ -4021,10 +4215,70 @@ console.info('app.js loaded :: 20251123a');
   window.mxmedReadMotivoConsulta = readMotivoConsulta;
   window.mxmedHasMinimumPatientProfile = ()=> hasMinimumPatientProfile();
   window.mxmedApplyExpedienteEntryTabRule = (opts)=> applyExpedienteEntryTabRule(opts);
-  actividadClinicaLaunchBtn?.addEventListener('click', ()=>{
+  actividadClinicaLaunchBtn?.addEventListener('click', (event)=>{
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    hideActividadClinicaModal();
+    const notasPaneAvailable = !!pane.querySelector(clinicalTabTargets.notas);
+    const actionsBlockAvailable = !!actividadClinicaNotasActions;
+    const opened = notasPaneAvailable ? showClinicalTab(clinicalTabTargets.notas) : false;
+    if(opened && actionsBlockAvailable){
+      focusActividadClinicaActions();
+      try{
+        console.info('[mxmed-actividad-clinica] launcher open -> t-notas');
+      }catch(_){}
+      return;
+    }
     try{
-      console.info('[mxmed-actividad-clinica] launcher open');
+      const BsModal = window.bootstrap && window.bootstrap.Modal;
+      if(BsModal && actividadClinicaModalEl){
+        const modal = typeof BsModal.getOrCreateInstance === 'function'
+          ? BsModal.getOrCreateInstance(actividadClinicaModalEl)
+          : new BsModal(actividadClinicaModalEl);
+        modal.show();
+        try{
+          console.info('[mxmed-actividad-clinica] launcher fallback -> modal', {
+            notasPaneAvailable,
+            actionsBlockAvailable,
+            opened
+          });
+        }catch(_){}
+      }
     }catch(_){}
+  }, true);
+  actividadClinicaNotasActions?.addEventListener('click', async (event)=>{
+    const noteBtn = event.target.closest('[data-action="actividad-tab-open-nota"]');
+    if(noteBtn){
+      event.preventDefault();
+      openNotaClinicaFromActividad();
+      const field = pane.querySelector('#ne_complemento, #ne_evolucion, #ne_dx');
+      field?.focus?.();
+      return;
+    }
+    const rxBtn = event.target.closest('[data-action="actividad-tab-open-receta"]');
+    if(rxBtn){
+      event.preventDefault();
+      openRecetaFromActividad();
+      return;
+    }
+    const procBtn = event.target.closest('[data-action="actividad-tab-open-procedimiento"]');
+    if(procBtn){
+      event.preventDefault();
+      await openProcedimientoFromActividad();
+      return;
+    }
+    const attachBtn = event.target.closest('[data-action="actividad-tab-open-adjunto"]');
+    if(attachBtn){
+      event.preventDefault();
+      openAdjuntoDocumentoFromActividad();
+      return;
+    }
+    const consentBtn = event.target.closest('[data-action="actividad-tab-open-consent"]');
+    if(consentBtn){
+      event.preventDefault();
+      openConsentimientoFromActividad();
+    }
   });
   actividadClinicaModalEl?.addEventListener('click', async (event)=>{
     const noteBtn = event.target.closest('[data-action="actividad-clinica-open-nota"]');
@@ -4512,6 +4766,207 @@ console.info('app.js loaded :: 20251123a');
     }catch(_){}
     return true;
   };
+
+  const setupHostProcedureModal = ()=>{
+    const modalEl = document.getElementById('modalActividadClinicaProcedimientoHost');
+    if(!modalEl || modalEl.dataset.procHostInit === '1') return;
+    modalEl.dataset.procHostInit = '1';
+
+    const errorEl = modalEl.querySelector('[data-role="ac-proc-error"]');
+    const submitBtn = modalEl.querySelector('[data-action="ac-proc-submit"]');
+    const typeInput = modalEl.querySelector('[data-role="ac-proc-type"]');
+    const titleInput = modalEl.querySelector('[data-role="ac-proc-title"]');
+    const eventInput = modalEl.querySelector('[data-role="ac-proc-event-datetime"]');
+    const notesInput = modalEl.querySelector('[data-role="ac-proc-notes"]');
+    const placeTypeInput = modalEl.querySelector('[data-role="ac-proc-place-type"]');
+    const placeNameInput = modalEl.querySelector('[data-role="ac-proc-place-name"]');
+    const placeSectorInput = modalEl.querySelector('[data-role="ac-proc-place-sector"]');
+    const placeNameWrap = modalEl.querySelector('[data-role="ac-proc-place-name-wrap"]');
+    const placeSectorWrap = modalEl.querySelector('[data-role="ac-proc-place-sector-wrap"]');
+    const appointmentInput = modalEl.querySelector('[data-role="ac-proc-appointment-id"]');
+    if(!submitBtn || !typeInput || !titleInput || !eventInput || !placeTypeInput) return;
+
+    const setError = (message)=>{
+      const text = sanitizeText(message);
+      if(!errorEl) return;
+      errorEl.textContent = text;
+      errorEl.classList.toggle('d-none', !text);
+    };
+    const syncPlaceFields = ()=>{
+      const placeType = sanitizeText(placeTypeInput.value);
+      const needsPlaceName = placeType === 'institucion' || placeType === 'otro';
+      const needsSector = placeType === 'institucion';
+      if(placeNameWrap) placeNameWrap.classList.toggle('d-none', !needsPlaceName);
+      if(placeSectorWrap) placeSectorWrap.classList.toggle('d-none', !needsSector);
+      if(!needsPlaceName && placeNameInput) placeNameInput.value = '';
+      if(!needsSector && placeSectorInput) placeSectorInput.value = '';
+    };
+    const normalizeEventDatetime = (value)=>{
+      const text = String(value || '').trim();
+      if(!text) return '';
+      if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(text)) return `${text.replace('T', ' ')}:00`;
+      if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(text)) return text.replace('T', ' ');
+      return '';
+    };
+    const resolveClinicalActorUserId = ()=>{
+      const candidates = [
+        window.mxmedUserId,
+        window.__MXMED_USER_ID,
+        window.mxmedStore && window.mxmedStore.user_id,
+        document.body && document.body.dataset ? document.body.dataset.userId : '',
+        'qa'
+      ];
+      for(const raw of candidates){
+        const value = String(raw || '').trim();
+        if(value) return value;
+      }
+      return 'qa';
+    };
+    const refreshAfterSave = (patientId, requestType)=>{
+      try{
+        window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created', {
+          detail: {
+            patient_id: patientId,
+            document_type: requestType,
+            source: 'actividad_clinica_procedimiento_host'
+          }
+        }));
+      }catch(_){}
+      try{
+        const encounterKey = (typeof window.getActiveEncounterKey === 'function')
+          ? String(window.getActiveEncounterKey() || '').trim()
+          : '';
+        window.mxmedRegisterEncounterActivity?.('procedimiento_guardado_host', {
+          encounterKey,
+          patientId,
+          source: 'actividad_clinica_procedimiento_host'
+        });
+      }catch(_){}
+      try{
+        const iframe = document.getElementById('mm-embed-historial');
+        if(iframe){
+          const src = String(iframe.getAttribute('src') || '').trim();
+          if(src && src.indexOf('/modules/clinical/ui/historial.php') !== -1){
+            const next = `${src}${src.indexOf('?') !== -1 ? '&' : '?'}host_proc_refresh=${Date.now()}`;
+            iframe.setAttribute('src', next);
+          }
+        }
+      }catch(_){}
+    };
+    const buildRequest = ()=>{
+      const patientId = sanitizeText(getActivePatientId());
+      if(!patientId) return { error: 'patient_id requerido.' };
+      const procedureType = sanitizeText(typeInput.value);
+      if(!procedureType) return { error: 'Selecciona el tipo de procedimiento.' };
+      const title = sanitizeText(titleInput.value);
+      if(!title) return { error: 'Ingresa título / nombre.' };
+      const eventDatetime = normalizeEventDatetime(eventInput.value);
+      if(!eventDatetime) return { error: 'Captura fecha y hora válidas.' };
+      const placeType = sanitizeText(placeTypeInput.value);
+      if(!placeType) return { error: 'Selecciona lugar de aplicación.' };
+      const placeName = sanitizeText(placeNameInput?.value || '');
+      if((placeType === 'institucion' || placeType === 'otro') && !placeName){
+        return { error: 'Indica ¿cuál? / ¿dónde? para el lugar de aplicación.' };
+      }
+      const placeSector = sanitizeText(placeSectorInput?.value || '');
+      const notes = sanitizeText(notesInput?.value || '');
+      const appointmentId = sanitizeText(appointmentInput?.value || '');
+      const requestType = (
+        procedureType === 'procedure'
+        || procedureType === 'immunization'
+        || procedureType === 'medication_administration'
+        || procedureType === 'wound_care'
+      ) ? procedureType : 'procedure';
+      const payload = {
+        administration: { place_type: placeType },
+        item: {
+          kind: (requestType === 'medication_administration') ? 'medication' : 'procedure',
+          name: title
+        }
+      };
+      if(placeName) payload.administration.place_name = placeName;
+      if(placeType === 'institucion' && placeSector) payload.administration.place_sector = placeSector;
+      if(notes) payload.notes = notes;
+
+      const context = { patient_id: patientId };
+      if(appointmentId) context.appointment_id = appointmentId;
+      const encounterKey = (typeof window.getActiveEncounterKey === 'function')
+        ? String(window.getActiveEncounterKey() || '').trim()
+        : '';
+      if(encounterKey) context.encounter_key = encounterKey;
+
+      return {
+        error: '',
+        patientId,
+        requestType,
+        body: {
+          type: requestType,
+          title,
+          event_datetime: eventDatetime,
+          actor: { user_id: resolveClinicalActorUserId() },
+          context,
+          payload
+        }
+      };
+    };
+
+    placeTypeInput.addEventListener('change', syncPlaceFields);
+    modalEl.addEventListener('hidden.bs.modal', ()=>{
+      setError('');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Guardar';
+    });
+    submitBtn.addEventListener('click', async (event)=>{
+      event.preventDefault();
+      const prepared = buildRequest();
+      if(prepared.error){
+        setError(prepared.error);
+        return;
+      }
+      setError('');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Guardando...';
+      try{
+        console.info('[mxmed-actividad-clinica] host procedure save start', {
+          patient_id: prepared.patientId,
+          type: prepared.requestType
+        });
+      }catch(_){}
+      try{
+        const resp = await fetch('/api/clinical/index.php/documents', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(prepared.body),
+          credentials: 'same-origin'
+        });
+        const json = await resp.json().catch(()=> null);
+        if(!resp.ok || !json || json.ok !== true){
+          const msg = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo registrar el procedimiento.';
+          throw new Error(msg);
+        }
+        const modal = (window.bootstrap && window.bootstrap.Modal && typeof window.bootstrap.Modal.getInstance === 'function')
+          ? window.bootstrap.Modal.getInstance(modalEl)
+          : null;
+        modal?.hide();
+        refreshAfterSave(prepared.patientId, prepared.requestType);
+        try{
+          console.info('[mxmed-actividad-clinica] host procedure save ok', {
+            patient_id: prepared.patientId,
+            type: prepared.requestType
+          });
+        }catch(_){}
+      }catch(err){
+        setError(err?.message || 'No se pudo registrar el procedimiento.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Guardar';
+      }
+    });
+    syncPlaceFields();
+  };
+  setupHostProcedureModal();
 
   const readExpedienteIdentityDraftFromDom = ()=>{
     return {
@@ -5355,17 +5810,25 @@ console.info('app.js loaded :: 20251123a');
       }
     });
 
+    // No promover nuevas entries desde lookup pasivo.
+    // Solo mantener/actualizar entries ya operativas para este paciente.
     if(activeKey){
-      const prev = (map[activeKey] && typeof map[activeKey] === 'object') ? map[activeKey] : {};
-      map[activeKey] = Object.assign({}, prev, {
-        encounter_key: activeKey,
-        patient_id: pid,
-        status: 'consulta_activa',
-        last_activity_at: String(prev.last_activity_at || new Date().toISOString()).trim(),
-        origin: String(prev.origin || 'active_lookup').trim()
-      });
-      if(!prev || String(prev.encounter_key || '').trim() !== activeKey || String(prev.patient_id || '').trim() !== pid || String(prev.status || '').trim() !== 'consulta_activa'){
-        changed = true;
+      const prev = (map[activeKey] && typeof map[activeKey] === 'object') ? map[activeKey] : null;
+      if(prev && String(prev.patient_id || '').trim() === pid){
+        const next = Object.assign({}, prev, {
+          encounter_key: activeKey,
+          patient_id: pid,
+          status: 'consulta_activa',
+          last_activity_at: String(prev.last_activity_at || new Date().toISOString()).trim()
+        });
+        map[activeKey] = next;
+        if(
+          String(prev.encounter_key || '').trim() !== String(next.encounter_key || '').trim()
+          || String(prev.patient_id || '').trim() !== String(next.patient_id || '').trim()
+          || String(prev.status || '').trim() !== String(next.status || '').trim()
+        ){
+          changed = true;
+        }
       }
     }
 
@@ -5436,6 +5899,7 @@ console.info('app.js loaded :: 20251123a');
       setNodeText(expHeaderLastDx, lastDxLabel);
       toggleNodeHidden(expHeaderLastDx, !lastDxLabel);
     }
+    renderActividadClinicaContext();
 
     // 3) Estado clínico (consulta activa)
     const syncOrigin = String(window.__mxmedHeaderSyncOrigin || 'direct').trim() || 'direct';
@@ -5449,7 +5913,10 @@ console.info('app.js loaded :: 20251123a');
         encounter_key: resolvedEncounterKey
       });
     }
-    const encounterKey = suppressAutoEncounterContext ? '' : resolvedEncounterKey;
+    const isOperationalEncounter = (typeof window.mxmedIsOperationalEncounterForPatient === 'function')
+      ? window.mxmedIsOperationalEncounterForPatient(patientId, resolvedEncounterKey) === true
+      : false;
+    const encounterKey = (suppressAutoEncounterContext || !isOperationalEncounter) ? '' : resolvedEncounterKey;
     if(runToken !== headerSyncToken) return;
     const hasPatientContext = !!patientId;
     const hasActiveEncounter = !!encounterKey;
@@ -5853,10 +6320,51 @@ console.info('app.js loaded :: 20251123a');
       });
     });
   }
+  window.addEventListener('mxmed:encounter-lifecycle', (ev)=>{
+    const detail = (ev && ev.detail && typeof ev.detail === 'object') ? ev.detail : {};
+    const status = sanitizeText(detail.status);
+    if(status !== 'consulta_cerrada' && status !== 'sin_consulta_activa') return;
+    const patientId = sanitizeText(detail.patient_id || getActivePatientId());
+    if(!patientId) return;
+    const fullName = [
+      sanitizeText(nameInput?.value),
+      sanitizeText(apellidoPaternoInput?.value),
+      sanitizeText(apellidoMaternoInput?.value)
+    ].filter(Boolean).join(' ').trim() || 'Paciente';
+    const refreshClosedState = (activeEncounterKey = '')=>{
+      if(typeof window.mxmedReconcileActiveEntriesForPatient === 'function'){
+        try{
+          window.mxmedReconcileActiveEntriesForPatient(patientId, sanitizeText(activeEncounterKey));
+        }catch(_){}
+      }
+      renderActiveEncounterStrip({ currentFullName: fullName });
+      window.__mxmedHeaderSyncOrigin = 'event:mxmed:encounter-lifecycle:closed';
+      syncExpedienteHeaderContext();
+      renderActividadClinicaContext();
+    };
+    if(typeof window.resolveActiveEncounterForPatient === 'function'){
+      Promise.resolve(
+        window.resolveActiveEncounterForPatient(patientId, {
+          force: true,
+          source: 'encounter_lifecycle_closed_refresh'
+        })
+      ).then((resolved)=>{
+        const activeKey = (resolved && resolved.ok === true && resolved.hasActive)
+          ? sanitizeText(resolved.encounterKey)
+          : '';
+        refreshClosedState(activeKey);
+      }).catch(()=>{
+        refreshClosedState('');
+      });
+      return;
+    }
+    refreshClosedState('');
+  });
   ['encounter:active', 'mxmed:encounter-changed', 'mxmed:encounter-lifecycle', 'mxmed:encounter-activity', 'patient:selected', 'expediente:patient_changed', 'expediente:patient-changed']
     .forEach((evtName)=> window.addEventListener(evtName, ()=>{
       window.__mxmedHeaderSyncOrigin = `event:${evtName}`;
       syncExpedienteHeaderContext();
+      renderActividadClinicaContext();
     }));
   window.addEventListener('mxmed:expediente-neutralize', ()=>{
     resetExpedienteIdentityFields();
@@ -5875,6 +6383,7 @@ console.info('app.js loaded :: 20251123a');
     applyPatientGate();
     window.__mxmedHeaderSyncOrigin = 'event:mxmed:expediente-neutralize';
     syncExpedienteHeaderContext();
+    renderActividadClinicaContext();
   });
   const newPatientMenuBtn = document.querySelector('.menu-sub[data-group="pacientes"] .menu-sub-btn[data-panel="p-expediente"]');
   if(newPatientMenuBtn){
@@ -5904,6 +6413,7 @@ console.info('app.js loaded :: 20251123a');
   layoutTabs(false);
   bindDOB();
   syncExpedienteHeaderContext();
+  renderActividadClinicaContext();
   applyExpedienteEntryTabRule({ context: 'boot' });
   const bootPatientId = sanitizeText(getActivePatientId());
   if(bootPatientId){

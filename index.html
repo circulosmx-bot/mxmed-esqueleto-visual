@@ -2848,7 +2848,7 @@
 
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-tratamiento" data-tab-key="t-tratamiento"><span class="tab-ico material-symbols-outlined" aria-hidden="true">prescriptions</span><span class="tab-lbl">Tratamiento Recetas</span></button></li>
 
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-notas" data-tab-key="t-notas"><span class="tab-ico material-symbols-outlined" aria-hidden="true">stylus_note</span><span class="tab-lbl">Notas Evolución</span></button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-notas" data-tab-key="t-notas"><span class="tab-ico material-symbols-outlined" aria-hidden="true">stylus_note</span><span class="tab-lbl">Actividad Clínica</span></button></li>
 
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-manejo" data-tab-key="t-manejo"><span class="tab-ico material-symbols-outlined" aria-hidden="true">clinical_notes</span><span class="tab-lbl">Manejo Hospitalario</span></button></li>
 
@@ -3493,6 +3493,69 @@
                       </div>
                       <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal fade" id="modalActividadClinicaProcedimientoHost" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-scrollable">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Registrar procedimiento</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                        <div class="alert alert-danger small d-none" data-role="ac-proc-error"></div>
+                        <form class="vstack gap-3" data-role="ac-proc-form">
+                          <div>
+                            <label class="form-label" for="acProcType">Tipo de procedimiento</label>
+                            <select id="acProcType" class="form-select" data-role="ac-proc-type" required>
+                              <option value="">Selecciona una opción</option>
+                              <option value="procedure">Procedimiento</option>
+                              <option value="immunization">Vacuna</option>
+                              <option value="medication_administration">Aplicación de medicamento</option>
+                              <option value="wound_care">Curación</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label class="form-label" for="acProcTitle">Título / nombre</label>
+                            <input id="acProcTitle" class="form-control" data-role="ac-proc-title" maxlength="190" placeholder="Ej. Infiltración de rodilla" required>
+                          </div>
+                          <div>
+                            <label class="form-label" for="acProcEventDatetime">Fecha y hora del evento</label>
+                            <input id="acProcEventDatetime" type="datetime-local" class="form-control" data-role="ac-proc-event-datetime" required>
+                          </div>
+                          <div>
+                            <label class="form-label" for="acProcNotes">Notas</label>
+                            <textarea id="acProcNotes" class="form-control" data-role="ac-proc-notes" rows="3" maxlength="2000" placeholder="Detalle clínico breve"></textarea>
+                          </div>
+                          <div>
+                            <label class="form-label" for="acProcPlaceType">Lugar de aplicación</label>
+                            <select id="acProcPlaceType" class="form-select" data-role="ac-proc-place-type">
+                              <option value="consultorio_prop">Consultorio</option>
+                              <option value="institucion">Institución</option>
+                              <option value="otro">Otro</option>
+                            </select>
+                          </div>
+                          <div class="d-none" data-role="ac-proc-place-name-wrap">
+                            <label class="form-label" for="acProcPlaceName">¿Cuál? / ¿Dónde?</label>
+                            <input id="acProcPlaceName" class="form-control" data-role="ac-proc-place-name" maxlength="190">
+                          </div>
+                          <div class="d-none" data-role="ac-proc-place-sector-wrap">
+                            <label class="form-label" for="acProcPlaceSector">Sector</label>
+                            <select id="acProcPlaceSector" class="form-select" data-role="ac-proc-place-sector">
+                              <option value="">Sin especificar</option>
+                              <option value="publica">Pública</option>
+                              <option value="privada">Privada</option>
+                            </select>
+                          </div>
+                          <input type="hidden" data-role="ac-proc-appointment-id" value="">
+                        </form>
+                        <div class="small text-muted mt-2" data-role="ac-proc-context-note"></div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" data-action="ac-proc-submit">Guardar</button>
                       </div>
                     </div>
                   </div>
@@ -5786,6 +5849,36 @@
 
               <div class="tab-pane fade" id="t-notas">
                 <div class="ne-app" data-ne-section="nota_evolucion">
+                  <div class="exp-card exp-card--secondary ne-activity-context-card mb-3" data-role="ac-notas-context-card">
+                    <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
+                      <span>Actividad clínica</span>
+                    </div>
+                    <div class="ne-activity-context">
+                      <div class="ne-activity-status-line">
+                        <span class="ne-activity-status-badge" data-role="ac-notas-status-badge">Sin consulta activa</span>
+                        <span class="text-muted small" data-role="ac-notas-status-text">Puedes registrar información clínica a nivel del expediente del paciente.</span>
+                      </div>
+                      <div class="small text-muted d-none" data-role="ac-notas-motivo"></div>
+                      <div class="small text-muted d-none" data-role="ac-notas-encounter-meta"></div>
+                    </div>
+                    <div class="ne-activity-actions mt-3" data-role="ac-notas-actions">
+                      <button type="button" class="btn btn-outline-primary btn-sm" data-action="actividad-tab-open-nota" data-ac-kind="nota">
+                        Nota de evolución
+                      </button>
+                      <button type="button" class="btn btn-outline-primary btn-sm" data-action="actividad-tab-open-receta" data-ac-kind="receta">
+                        Receta
+                      </button>
+                      <button type="button" class="btn btn-outline-primary btn-sm" data-action="actividad-tab-open-procedimiento" data-ac-kind="procedimiento">
+                        Procedimiento
+                      </button>
+                      <button type="button" class="btn btn-outline-primary btn-sm" data-action="actividad-tab-open-adjunto" data-ac-kind="adjunto">
+                        Adjuntar documento
+                      </button>
+                      <button type="button" class="btn btn-outline-primary btn-sm" data-action="actividad-tab-open-consent" data-ac-kind="consentimiento">
+                        Consentimiento informado
+                      </button>
+                    </div>
+                  </div>
                   <div class="row g-3 align-items-start">
 
                     <div class="col-lg-8">
@@ -6874,6 +6967,14 @@
                 errorMessage: String((resolved && resolved.errorMessage) || '').trim()
               };
             }
+            if (typeof window.mxmedIsOperationalEncounterForPatient === 'function') {
+              try {
+                var operational = window.mxmedIsOperationalEncounterForPatient(safePatientId, String(resolved.encounterKey || '').trim()) === true;
+                if (!operational) {
+                  return { hasActive: false };
+                }
+              } catch (_) {}
+            }
             return {
               hasActive: true,
               encounter_key: String(resolved.encounterKey || '').trim(),
@@ -6899,6 +7000,14 @@
             hasActive: false,
             errorMessage: resp && resp.ok === false ? String(resp.message || resp.error || '').trim() : ''
           };
+        }
+        if (typeof window.mxmedIsOperationalEncounterForPatient === 'function') {
+          try {
+            var op = window.mxmedIsOperationalEncounterForPatient(safePatientId, String(resp.data.encounter_key || '').trim()) === true;
+            if (!op) {
+              return { hasActive: false };
+            }
+          } catch (_) {}
         }
         return {
           hasActive: true,
@@ -6931,7 +7040,30 @@
       if (typeof window.mxmedClearSuppressedAutoEncounterContext === 'function') {
         window.mxmedClearSuppressedAutoEncounterContext(safePatientId);
       }
-      return fetchActiveEncounter(safePatientId).then(function (activeState) {
+      var lookupRawActive = function () {
+        return fetchJson('/api/clinical/index.php/patients/' + encodeURIComponent(safePatientId) + '/encounters/active', {
+          method: 'GET',
+          headers: buildClinicalHeaders(),
+          credentials: 'same-origin'
+        }).then(function (result) {
+          var resp = result.data;
+          if (!resp || resp.ok !== true || !resp.data || !resp.data.encounter_key) {
+            return null;
+          }
+          return {
+            hasActive: true,
+            encounter_key: String(resp.data.encounter_key || '').trim(),
+            appointment_id: String(resp.data.appointment_id || '').trim(),
+            status: String(resp.data.status || '').trim()
+          };
+        }).catch(function () { return null; });
+      };
+      return lookupRawActive().then(function (rawActive) {
+        if (rawActive && rawActive.hasActive && rawActive.encounter_key) {
+          return rawActive;
+        }
+        return fetchActiveEncounter(safePatientId);
+      }).then(function (activeState) {
         if (activeState && activeState.hasActive && activeState.encounter_key) {
           return activeState;
         }
