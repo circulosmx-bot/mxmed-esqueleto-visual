@@ -4060,6 +4060,34 @@ body{margin:0;background:var(--mm-fondo-base);}
 .est-order-focus{
   box-shadow:0 0 0 2px rgba(0,176,197,.35), 0 8px 18px rgba(0,0,0,.08);
 }
+.est-order-card.is-new-document{
+  border-color:#00b0c5;
+  box-shadow:0 0 0 3px rgba(0,176,197,.25), 0 10px 22px rgba(0,0,0,.12);
+  transition:box-shadow .25s ease, border-color .25s ease;
+}
+.est-order-card.is-latest-created{
+  border-color:#00b0c5;
+}
+.est-order-summary{
+  font-size:.82rem;
+  color:#0a4f66;
+  margin-top:4px;
+}
+.est-order-preview{
+  font-size:.78rem;
+  color:#6b7783;
+  margin-top:2px;
+}
+.est-orders-divider{
+  font-size:.72rem;
+  font-weight:700;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:#6b7783;
+  margin:8px 0 6px;
+  padding-top:6px;
+  border-top:1px dashed #cfe9f0;
+}
 .est-cat-grid{
   display:grid;
   grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));

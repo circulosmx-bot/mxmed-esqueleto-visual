@@ -1563,3 +1563,43 @@ Riesgos a evitar:
 - duplicación de diagnósticos
 - obligar encounter en todos los casos
 - falta de bitácora/auditoría
+
+## DOC-ORD-1A — Validación de orden múltiple y ajuste UX de listado
+
+Estado: implementado y validado en QA técnico.
+
+Conclusión funcional:
+- La persistencia de órdenes múltiples en DOC-ORD-1A queda validada como **documento único** en `clinical_documents`.
+- Una selección múltiple (ej. 3 estudios) genera un solo `POST /api/clinical/index.php/documents` y un solo documento nuevo (`lab_order`/`imaging_order`) con:
+  - `payload.requested_studies[]`
+  - `payload.selection_count`
+
+Alcance del ajuste aplicado:
+- Se confirmó por trazabilidad frontend (`save_submit` / `save_response` / `list_refresh`) que el problema principal no era fragmentación de persistencia en la prueba validada, sino priorización visual del listado.
+- Se reforzó el listado de “Órdenes generadas” para comportamiento determinístico:
+  - orden por `event_datetime DESC`
+  - desempate por `id DESC`
+  - reconstrucción limpia del contenedor (sin append incremental de colección previa)
+- Tras guardado exitoso:
+  - captura de `document_db_id`/`document_uuid`
+  - refresh del listado
+  - localización de la card creada
+  - promoción visual al inicio del contenedor si no quedó primera
+  - resaltado temporal (`is-new-document`) y enfoque visual
+  - trazabilidad DOM explícita por card:
+    - `data-document-id`
+    - `data-document-uuid`
+    - `data-event-datetime`
+  - la priorización post-save usa estos atributos estables (no texto visible ni posición).
+  - ajuste final UX/listado:
+    - confirmada persistencia correcta (documento único por acción)
+    - cards con contenido legible (`summary` + preview corto)
+    - orden histórico determinístico (`event_datetime DESC`, desempate `id DESC`)
+    - separación explícita de bloques:
+      - card “recién generada” fija en el bloque superior (sin duplicarse)
+      - bloque “historicas” debajo con orden determinístico interno.
+
+Límites explícitos de esta fase:
+- Sin tocar resultados (`lab_result`/`imaging_result`).
+- Sin refactor grande de viewer/modal.
+- Sin delete canónico de órdenes en esta etapa.

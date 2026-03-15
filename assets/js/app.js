@@ -5900,7 +5900,7 @@ console.info('app.js loaded :: 20251123a');
   wrapJumpToWithUnsavedGuard();
   window.setTimeout(wrapJumpToWithUnsavedGuard, 0);
 
-  const getActivePatientId = ()=>{
+  function getActivePatientId(){
     const fromPane = String(pane.dataset?.patientId || pane.getAttribute('data-patient-id') || '').trim();
     if(fromPane) return fromPane;
 
@@ -5923,7 +5923,7 @@ console.info('app.js loaded :: 20251123a');
       if(value) return value;
     }
     return null;
-  };
+  }
   window.resolveActivePatientId = getActivePatientId;
   window.mxmedResolveActivePatientId = getActivePatientId;
 
@@ -9725,6 +9725,10 @@ function mxResetLogoPreview(){
 // ====== Estudios: modal catálogo laboratorio ======
 (function(){
   if(!window.bootstrap) return;
+  const studiesPane = document.getElementById('t-estudios');
+  if(!studiesPane) return;
+  if(studiesPane.dataset.estudiosOrdersInit === '1') return;
+  studiesPane.dataset.estudiosOrdersInit = '1';
 
   const PICK_MAP_LAB = {
     'Biometría hemática (BH / CBC)': ['Biometría hemática (BH / CBC)'],
@@ -10774,8 +10778,10 @@ function mxResetLogoPreview(){
   const orderBlock = document.querySelector('[data-est-order-block]');
   const orderList = document.querySelector('.est-orders-list');
   const areaSelect = orderBlock?.querySelector('[data-est-area-select]');
+  const prioritySelect = orderBlock?.querySelector('[data-role="ac-order-priority"]');
+  const indicationTextarea = orderBlock?.querySelector('[data-role="ac-order-indication"]');
+  const orderFeedbackEl = orderBlock?.querySelector('[data-role="ac-order-feedback"]');
   const openInputs = Array.from(document.querySelectorAll('[data-est-open-modal]'));
-  const orderListInitial = orderList ? orderList.innerHTML : '';
   if(!openInputs.length) return;
 
   const controllers = [];
@@ -10783,6 +10789,9 @@ function mxResetLogoPreview(){
   let selectionOrder = [];
   let activeInput = null;
   let activeController = null;
+  let canonicalOrderSubmitting = false;
+  const lastCreatedOrderRef = { id: '', uuid: '' };
+  const orderSubmitLock = (window.__mxmedOrderSubmitLock = window.__mxmedOrderSubmitLock || { signature: '', ts: 0 });
   let modalMode = 'add';
   let modalModeController = null;
   const groupLabels = {};
@@ -10814,6 +10823,478 @@ function mxResetLogoPreview(){
 
   function escapeHtml(str){
     return String(str).replace(/[&<>"']/g, s=>({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[s]));
+  }
+  function clean(value){
+    return String(value || '').trim();
+  }
+  function setOrderFeedback(message, tone = 'muted'){
+    if(!orderFeedbackEl) return;
+    const text = clean(message);
+    orderFeedbackEl.classList.remove('d-none', 'text-muted', 'text-success', 'text-danger');
+    if(!text){
+      orderFeedbackEl.classList.add('d-none');
+      orderFeedbackEl.textContent = '';
+      return;
+    }
+    orderFeedbackEl.classList.add(
+      tone === 'success' ? 'text-success' : (tone === 'error' ? 'text-danger' : 'text-muted')
+    );
+    orderFeedbackEl.textContent = text;
+  }
+  function nowSqlDateTime(){
+    const d = new Date();
+    const pad = (n)=> String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+  function prettyDate(value){
+    const raw = clean(value);
+    const dt = raw ? new Date(raw.replace(' ', 'T')) : new Date();
+    if(Number.isNaN(dt.getTime())) return raw || '';
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return `${String(dt.getDate()).padStart(2, '0')} ${months[dt.getMonth()]} ${dt.getFullYear()}`;
+  }
+  function resolveOrderPatientId(){
+    const isCanonicalPatientId = (value)=> /^p_[a-z0-9]+$/i.test(clean(value));
+    const fromResolver = (typeof window.resolveActivePatientId === 'function') ? clean(window.resolveActivePatientId()) : '';
+    if(isCanonicalPatientId(fromResolver)) return fromResolver;
+    const fromStore = clean(window.mxmedStore?.currentPatientId || window.mxmedStore?.activePatientId);
+    if(isCanonicalPatientId(fromStore)) return fromStore;
+    const pane = document.getElementById('p-expediente');
+    const fromPane = clean(pane?.dataset?.patientId || pane?.getAttribute?.('data-patient-id'));
+    if(isCanonicalPatientId(fromPane)) return fromPane;
+    return '';
+  }
+  function resolveOrderEncounterKey(){
+    if(typeof window.getActiveEncounterKey === 'function'){
+      const fromGetter = clean(window.getActiveEncounterKey());
+      if(fromGetter) return fromGetter;
+    }
+    return clean(window.mxmedStore?.currentEncounterKey || window.mxmedStore?.activeEncounterKey);
+  }
+  function resolveOrderAppointmentId(patientId, encounterKey){
+    const bar = document.getElementById('mm-p10-bar');
+    const fromBar = clean(bar?.dataset?.appointmentId || bar?.getAttribute?.('data-appointment-id'));
+    if(fromBar) return fromBar;
+    const encounters = window.mxmedStore?.activeEncounters;
+    if(encounterKey && encounters && typeof encounters === 'object'){
+      const entry = encounters[encounterKey];
+      if(entry && clean(entry.patient_id) === patientId){
+        return clean(entry.appointment_id || entry.appointmentId);
+      }
+    }
+    return '';
+  }
+  function resolveClinicalActorUserId(){
+    const candidates = [
+      window.mxmedUser?.user_id,
+      window.mxmedAuth?.user_id,
+      window.mxmedStore?.currentUserId,
+      window.mxmedStore?.userId,
+      document.body?.dataset?.userId
+    ];
+    for(const value of candidates){
+      const safe = clean(value);
+      if(safe) return safe;
+    }
+    return 'u_demo_01';
+  }
+  function resolveOrderDocumentType(controllerKey, area){
+    const key = clean(controllerKey).toLowerCase();
+    const label = clean(area).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if(key === 'lab' || label === 'laboratorio') return 'lab_order';
+    if(key === 'imagenologia' || label === 'imagenologia') return 'imaging_order';
+    return '';
+  }
+  function inferOrderIcon(area){
+    const label = clean(area).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if(label === 'laboratorio') return 'science';
+    return 'radiology';
+  }
+  function inferOrderColor(area){
+    const label = clean(area).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if(label === 'laboratorio') return 'est-order--lab';
+    return 'est-order--img';
+  }
+  function isCanonicalOrderCard(card){
+    if(!card) return false;
+    const hasUuid = clean(card.getAttribute('data-document-uuid') || card.getAttribute('data-est-document-uuid'));
+    const hasId = clean(card.getAttribute('data-document-id') || card.getAttribute('data-est-document-id'));
+    return hasUuid !== '' || hasId !== '' || card.getAttribute('data-est-readonly') === '1';
+  }
+  function formatOrderActionLabel(card){
+    return isCanonicalOrderCard(card) ? 'Ver' : 'Ver/Editar';
+  }
+  function traceOrder(eventName, payload){
+    try{
+      console.info(`[DOC-ORD-1A] ${eventName}`, payload);
+    }catch(_){}
+  }
+  function prependOrderCard(order, opts = {}){
+    if(!orderList || !order || !Array.isArray(order.items) || !order.items.length) return;
+    const area = clean(order.area) || 'Estudios';
+    const card = document.createElement('div');
+    card.className = `est-order-card ${inferOrderColor(area)}`;
+    card.setAttribute('data-est-order-area', area);
+    card.setAttribute('data-est-order-items', order.items.join(', '));
+    if(order.documentUuid){
+      card.setAttribute('data-document-uuid', order.documentUuid);
+      card.setAttribute('data-est-document-uuid', order.documentUuid);
+    }
+    if(order.documentId){
+      card.setAttribute('data-document-id', String(order.documentId));
+      card.setAttribute('data-est-document-id', String(order.documentId));
+    }
+    const eventDatetime = clean(order.eventDatetime) || nowSqlDateTime();
+    card.setAttribute('data-event-datetime', eventDatetime);
+    if(order.readOnly){
+      card.setAttribute('data-est-readonly', '1');
+    }
+    const selectionCountRaw = Number(order.selectionCount);
+    const selectionCount = Number.isFinite(selectionCountRaw) && selectionCountRaw > 0
+      ? Math.round(selectionCountRaw)
+      : order.items.length;
+    const summaryText = clean(order.summary || '');
+    const studiesPreview = clean(order.studiesPreview || order.items[0] || '');
+    const meta = `${selectionCount} estudios · ${prettyDate(eventDatetime) || prettyDate(nowSqlDateTime())}`;
+    const title = `${area} · ${clean(order.indication) || 'Orden clínica'}`;
+    if(summaryText){
+      card.setAttribute('data-summary', summaryText);
+    }
+    if(studiesPreview){
+      card.setAttribute('data-studies-preview', studiesPreview);
+    }
+    card.innerHTML = `
+      <div class="est-order-head">
+        <div class="est-order-title"><span class="material-symbols-outlined est-order-ico" aria-hidden="true">${escapeHtml(inferOrderIcon(area))}</span><span>${escapeHtml(title)}</span></div>
+      </div>
+      ${order.readOnly ? '' : '<button type="button" class="est-order-del" aria-label="Eliminar orden" data-est-order-delete>&times;</button>'}
+      ${summaryText ? `<div class="est-order-summary">${escapeHtml(summaryText)}</div>` : ''}
+      ${studiesPreview ? `<div class="est-order-preview">${escapeHtml(studiesPreview)}</div>` : ''}
+      <div class="est-order-meta">${escapeHtml(meta)}</div>
+      <div class="est-order-tags">${order.priority ? `<span>${escapeHtml(order.priority)}</span>` : ''}${order.documentType ? `<span>${escapeHtml(order.documentType)}</span>` : ''}</div>
+      <div class="est-order-actions">
+        <button type="button" class="btn btn-outline-primary btn-sm" data-est-order-edit>${formatOrderActionLabel(card)}</button>
+        <button class="btn btn-outline-secondary btn-sm">Imprimir</button>
+        <button class="btn btn-outline-secondary btn-sm">Compartir</button>
+      </div>
+    `;
+    if(opts.position === 'append'){
+      orderList.appendChild(card);
+    }else{
+      orderList.prepend(card);
+    }
+  }
+  let refreshOrdersInFlight = null;
+  let refreshOrdersTimer = null;
+  let lastListRefreshSignature = '';
+  async function fetchCanonicalOrderDocuments(patientId){
+    const safePatientId = clean(patientId);
+    if(!safePatientId) return [];
+    const url = `/api/clinical/index.php/documents?patient_id=${encodeURIComponent(safePatientId)}&limit=80`;
+    const resp = await fetch(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      credentials: 'same-origin'
+    });
+    const json = await resp.json().catch(()=> null);
+    if(!resp.ok || !json || json.ok !== true){
+      throw new Error(clean(json?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudieron consultar órdenes.');
+    }
+    const allItems = Array.isArray(json?.data?.items) ? json.data.items : [];
+    const allowedTypes = new Set(['lab_order', 'imaging_order']);
+    const filteredItems = allItems.filter((row)=> allowedTypes.has(clean(row?.document_type).toLowerCase()));
+    const deduped = [];
+    const seen = new Set();
+    filteredItems.forEach((row)=>{
+      const key = clean(row?.document_uuid || row?.document_id || row?.id || '');
+      if(!key) return;
+      if(seen.has(key)) return;
+      seen.add(key);
+      deduped.push(row);
+    });
+    return deduped.sort((a, b)=>{
+      const ad = clean(a?.event_datetime);
+      const bd = clean(b?.event_datetime);
+      const byDatetime = bd.localeCompare(ad);
+      if(byDatetime !== 0) return byDatetime;
+      const ai = Number(clean(a?.id || 0));
+      const bi = Number(clean(b?.id || 0));
+      return bi - ai;
+    });
+  }
+  function resolveDocRefMatch(row, ref){
+    if(!row || !ref) return false;
+    const rowId = clean(row?.id);
+    const rowUuid = clean(row?.document_uuid || row?.document_id || '');
+    const refId = clean(ref?.id);
+    const refUuid = clean(ref?.uuid);
+    if(refId && rowId === refId) return true;
+    if(refUuid && rowUuid === refUuid) return true;
+    return false;
+  }
+  function syncCanonicalOrderCardsFromDocuments(rows){
+    if(!orderList || !Array.isArray(rows)) return;
+    orderList.innerHTML = '';
+    const newestRow = rows.find((row)=> resolveDocRefMatch(row, lastCreatedOrderRef)) || null;
+    const historicalRows = newestRow ? rows.filter((row)=> !resolveDocRefMatch(row, lastCreatedOrderRef)) : rows.slice();
+
+    const renderRow = (row)=>{
+      const docId = clean(row?.id);
+      const docType = clean(row?.document_type).toLowerCase();
+      const docUuid = clean(row?.document_uuid || row?.document_id || '');
+      if(!docId && !docUuid) return;
+      if(docType !== 'lab_order' && docType !== 'imaging_order') return;
+      const area = docType === 'lab_order' ? 'Laboratorio' : 'Imagenología';
+      const summary = clean(row?.summary);
+      const countMatch = summary.match(/^(\d+)\s+estudios?/i);
+      const parsedSelectionCount = countMatch ? Number(countMatch[1]) : 0;
+      prependOrderCard({
+        area,
+        items: [summary || clean(row?.title) || 'Orden clínica'],
+        selectionCount: parsedSelectionCount,
+        summary: summary || '',
+        studiesPreview: clean(row?.title) || summary || '',
+        eventDatetime: clean(row?.event_datetime) || nowSqlDateTime(),
+        indication: clean(row?.title),
+        priority: '',
+        documentType: docType,
+        documentId: docId,
+        documentUuid: docUuid,
+        readOnly: true
+      }, { position: 'append' });
+    };
+
+    if(newestRow){
+      renderRow(newestRow);
+      const firstHistorical = historicalRows[0] || null;
+      if(firstHistorical){
+        const divider = document.createElement('div');
+        divider.className = 'est-orders-divider';
+        divider.textContent = 'Historicas';
+        orderList.appendChild(divider);
+      }
+    }
+    historicalRows.forEach(renderRow);
+  }
+  async function refreshCanonicalOrdersList(){
+    if(refreshOrdersInFlight) return refreshOrdersInFlight;
+    refreshOrdersInFlight = (async ()=>{
+    try{
+      const patientId = resolveOrderPatientId();
+      if(!orderList) return;
+      orderList.innerHTML = '';
+      if(!patientId){
+        setOrderFeedback('Selecciona un paciente para consultar órdenes generadas.', 'muted');
+        return;
+      }
+      const rows = await fetchCanonicalOrderDocuments(patientId);
+      syncCanonicalOrderCardsFromDocuments(rows);
+      const signature = JSON.stringify(rows.slice(0, 10).map((row)=> `${clean(row?.id)}|${clean(row?.event_datetime)}|${clean(row?.document_type)}`));
+      if(signature !== lastListRefreshSignature){
+        lastListRefreshSignature = signature;
+        traceOrder('list_refresh', {
+        patient_id: patientId,
+        count: rows.length,
+        top3: rows.slice(0, 3).map((row)=> ({
+          id: clean(row?.id),
+          document_uuid: clean(row?.document_uuid || row?.document_id || ''),
+          document_type: clean(row?.document_type),
+          event_datetime: clean(row?.event_datetime),
+          title: clean(row?.title),
+          summary: clean(row?.summary)
+        }))
+        });
+      }
+      if(lastCreatedOrderRef.id || lastCreatedOrderRef.uuid){
+        orderList.querySelectorAll('.est-order-card').forEach((el)=> el.classList.remove('is-latest-created'));
+        const card = Array.from(orderList.querySelectorAll('.est-order-card')).find((el)=>{
+          const idRef = clean(el.getAttribute('data-document-id') || el.getAttribute('data-est-document-id'));
+          const uuidRef = clean(el.getAttribute('data-document-uuid') || el.getAttribute('data-est-document-uuid'));
+          return (lastCreatedOrderRef.id && idRef === lastCreatedOrderRef.id)
+            || (lastCreatedOrderRef.uuid && uuidRef === lastCreatedOrderRef.uuid);
+        });
+        if(card){
+          card.classList.add('is-latest-created');
+          card.classList.add('est-order-focus', 'is-new-document');
+          setTimeout(()=> {
+            card.classList.remove('est-order-focus', 'is-new-document');
+          }, 2800);
+          try{
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }catch(_){}
+        }
+      }
+    }catch(err){
+      setOrderFeedback(clean(err?.message || ''), 'muted');
+    }
+    })();
+    try{
+      return await refreshOrdersInFlight;
+    }finally{
+      refreshOrdersInFlight = null;
+    }
+  }
+  function requestRefreshCanonicalOrdersList(){
+    if(refreshOrdersTimer){
+      window.clearTimeout(refreshOrdersTimer);
+    }
+    refreshOrdersTimer = window.setTimeout(()=>{
+      refreshOrdersTimer = null;
+      refreshCanonicalOrdersList();
+    }, 80);
+  }
+  function buildOrderSubmitSignature(params){
+    const items = Array.isArray(params?.items) ? params.items.map(clean).filter(Boolean).sort() : [];
+    const flags = Array.isArray(params?.flags) ? params.flags.map(clean).filter(Boolean).sort() : [];
+    return JSON.stringify({
+      patientId: clean(params?.patientId),
+      documentType: clean(params?.documentType),
+      area: clean(params?.area),
+      priority: clean(params?.priority),
+      indication: clean(params?.indication),
+      items,
+      flags
+    });
+  }
+  async function saveCanonicalStudyOrder(params){
+    const items = normalizeItems(Array.isArray(params?.items) ? params.items.map(clean).filter(Boolean) : []);
+    if(!items.length){
+      setOrderFeedback('Selecciona al menos un estudio para generar la orden.', 'error');
+      return { ok: false, reason: 'empty_selection' };
+    }
+    const area = clean(params?.area || areaSelect?.value || '');
+    const documentType = resolveOrderDocumentType(params?.controllerKey, area);
+    if(!documentType){
+      setOrderFeedback(`La persistencia canónica para ${area || 'esta área'} se habilitará en una fase posterior.`, 'muted');
+      return { ok: false, reason: 'unsupported_area' };
+    }
+    const patientId = resolveOrderPatientId();
+    if(!patientId){
+      setOrderFeedback('Selecciona un paciente activo antes de generar la orden.', 'error');
+      return { ok: false, reason: 'missing_patient' };
+    }
+    const encounterKey = resolveOrderEncounterKey();
+    const appointmentId = resolveOrderAppointmentId(patientId, encounterKey);
+    const eventDatetime = nowSqlDateTime();
+    const priority = clean(prioritySelect?.value || '');
+    const indication = clean(indicationTextarea?.value || '');
+    const title = documentType === 'lab_order' ? 'Orden de laboratorio' : 'Orden de imagen';
+    const summaryParts = [];
+    summaryParts.push(`${items.length} estudio${items.length === 1 ? '' : 's'}`);
+    if(priority) summaryParts.push(priority);
+    if(indication) summaryParts.push(indication);
+    const summary = summaryParts.join(' · ');
+    const flags = getOrderedFlags(params?.controllerKey);
+    traceOrder('save_submit', {
+      patient_id: patientId,
+      encounter_key: encounterKey,
+      appointment_id: appointmentId,
+      controller_key: clean(params?.controllerKey),
+      area: area,
+      document_type: documentType,
+      priority: priority,
+      indication: indication,
+      selection_count: items.length,
+      requested_studies: items.slice()
+    });
+
+    const payloadData = {
+      source: 'estudios_host_solicitar',
+      order_area: area || null,
+      priority: priority || null,
+      indication: indication || null,
+      requested_studies: items,
+      flags: flags,
+      selection_count: items.length
+    };
+    const signature = buildOrderSubmitSignature({
+      patientId,
+      documentType,
+      area,
+      priority,
+      indication,
+      items,
+      flags
+    });
+    const nowTs = Date.now();
+    if(orderSubmitLock.signature === signature && (nowTs - Number(orderSubmitLock.ts || 0)) < 4000){
+      setOrderFeedback('Solicitud duplicada detectada. Se ignoró un guardado repetido.', 'muted');
+      return { ok: false, reason: 'duplicate_submit_suppressed' };
+    }
+    orderSubmitLock.signature = signature;
+    orderSubmitLock.ts = nowTs;
+    const formData = new FormData();
+    formData.append('patient_id', patientId);
+    formData.append('document_type', documentType);
+    formData.append('title', title);
+    formData.append('summary', summary);
+    formData.append('event_datetime', eventDatetime);
+    formData.append('payload', JSON.stringify(payloadData));
+    if(encounterKey) formData.append('encounter_key', encounterKey);
+    if(appointmentId) formData.append('appointment_id', appointmentId);
+
+    setOrderFeedback('Guardando orden canónica…');
+    try{
+      const resp = await fetch('/api/clinical/index.php/documents', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json'
+        },
+        credentials: 'same-origin',
+        body: formData
+      });
+      const json = await resp.json().catch(()=> null);
+      if(!resp.ok || !json || json.ok !== true){
+        const message = clean(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo guardar la orden.';
+        throw new Error(message);
+      }
+      const documentUuid = clean(
+        json?.data?.document?.document_uuid
+        || json?.data?.document?.document_id
+        || json?.data?.document_uuid
+        || json?.data?.document_id
+        || ''
+      );
+      const documentDbId = clean(
+        json?.data?.document?.document_db_id
+        || json?.data?.document?.id
+        || ''
+      );
+      lastCreatedOrderRef.id = documentDbId || '';
+      lastCreatedOrderRef.uuid = documentUuid || '';
+      traceOrder('save_response', {
+        ok: true,
+        document_db_id: documentDbId,
+        document_uuid: documentUuid,
+        title: clean(json?.data?.document?.title),
+        summary: clean(json?.data?.document?.content?.summary),
+        event_datetime: clean(json?.data?.document?.ui?.event_datetime)
+      });
+      await refreshCanonicalOrdersList();
+      setOrderFeedback('Orden canónica guardada correctamente.', 'success');
+      try{
+        window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created', {
+          detail: {
+            patient_id: patientId,
+            encounter_key: encounterKey || '',
+            appointment_id: appointmentId || '',
+            document_type: documentType,
+            document_uuid: documentUuid || '',
+            source: 'estudios_host_solicitar'
+          }
+        }));
+      }catch(_){}
+      return { ok: true, documentType, documentUuid, patientId, encounterKey, appointmentId };
+    }catch(err){
+      orderSubmitLock.signature = '';
+      orderSubmitLock.ts = 0;
+      traceOrder('save_response', {
+        ok: false,
+        error: clean(err?.message || 'request_failed')
+      });
+      setOrderFeedback(clean(err?.message || 'No se pudo guardar la orden canónica.'), 'error');
+      return { ok: false, reason: 'request_failed' };
+    }
   }
   function normalizeItems(items){
     const seen = new Set();
@@ -10917,9 +11398,12 @@ function mxResetLogoPreview(){
   function resetSelections(){
     allCheckboxes.forEach(cb=>{ cb.checked = false; });
   }
-  function getOrderedItems(){
+  function getOrderedItems(scopeController = null){
+    const scopeCheckboxes = scopeController?.modalEl
+      ? Array.from(scopeController.modalEl.querySelectorAll('input[type="checkbox"][data-est-item]'))
+      : allCheckboxes;
     const checkedSet = new Set();
-    allCheckboxes.forEach(cb=>{
+    scopeCheckboxes.forEach(cb=>{
       if(cb.checked) checkedSet.add(cb.dataset.estItem);
     });
     selectionOrder = selectionOrder.filter(item=>checkedSet.has(item));
@@ -11256,8 +11740,18 @@ function mxResetLogoPreview(){
     const accordionCol = cfg.accordionId ? modalEl.querySelector(`#${cfg.accordionId}`)?.closest('.col-md-9') : null;
     const panelCol = cfg.panelSelector ? modalEl.querySelector(cfg.panelSelector)?.closest('.col-md-9') : null;
     const selectedWrap = modalEl.querySelector('[data-est-selected]');
+    const selectedPanel = selectedWrap?.closest('.est-selected-panel');
     const modalCount = modalEl.querySelector('[data-est-modal-count]');
     const addBtn = modalEl.querySelector('.modal-footer .btn-primary');
+    let clearSelectionBtn = selectedPanel?.querySelector('[data-action="est-clear-selection-modal"]');
+    if(selectedPanel && !clearSelectionBtn){
+      clearSelectionBtn = document.createElement('button');
+      clearSelectionBtn.type = 'button';
+      clearSelectionBtn.className = 'btn btn-outline-secondary btn-sm mt-2';
+      clearSelectionBtn.setAttribute('data-action', 'est-clear-selection-modal');
+      clearSelectionBtn.textContent = 'Limpiar selección';
+      selectedPanel.appendChild(clearSelectionBtn);
+    }
     const controller = {
       key: cfg.key,
       modal,
@@ -11279,6 +11773,7 @@ function mxResetLogoPreview(){
       accordionCol,
       panelCol,
       selectedWrap,
+      clearSelectionBtn,
       modalCount,
       pickMap: cfg.pickMap || {},
       packMap: cfg.packMap || {},
@@ -11384,6 +11879,14 @@ function mxResetLogoPreview(){
       }
     };
     controller.renderSelected = function(items){
+      const hasSelection = Array.isArray(items) && items.length > 0;
+      if(clearSelectionBtn){
+        clearSelectionBtn.classList.toggle('d-none', !hasSelection);
+        clearSelectionBtn.disabled = !hasSelection;
+      }
+      if(addBtn && !canonicalOrderSubmitting){
+        addBtn.disabled = !hasSelection;
+      }
       if(modalCount) modalCount.textContent = `(${items.length})`;
       if(!selectedWrap) return;
       if(!items.length){
@@ -11565,12 +12068,53 @@ function mxResetLogoPreview(){
       setItemChecked(item, false);
       renderSelected();
     });
+    clearSelectionBtn?.addEventListener('click', ()=>{
+      const selected = getOrderedItems(controller);
+      if(!selected.length){
+        setOrderFeedback('No hay estudios seleccionados para limpiar.', 'muted');
+        return;
+      }
+      const confirmed = window.confirm('¿Seguro que deseas limpiar todos los estudios seleccionados?');
+      if(!confirmed) return;
+      const input = activeInput || openInputs[0];
+      setSelection([], input, controller.key);
+      activeFlags.clear();
+      controller.flagButtons?.forEach((btn)=> btn.classList.remove('active'));
+      controller.updateFlagVisibility?.();
+      setOrderFeedback('Selección limpiada.', 'muted');
+    });
     addBtn?.addEventListener('click', ()=>{
-      const items = getOrderedItems();
+      const items = getOrderedItems(controller);
+      if(!items.length){
+        setOrderFeedback('Selecciona al menos un estudio para generar la orden.', 'error');
+        return;
+      }
       const input = activeInput || openInputs[0];
       if(input) setSelection(items, input, controller.key);
-      modal.hide();
-      setTimeout(scrollToOrderBlock, 200);
+      const controllerAreaMap = {
+        lab: 'Laboratorio',
+        imagenologia: 'Imagenología'
+      };
+      const run = async ()=>{
+        if(canonicalOrderSubmitting) return;
+        canonicalOrderSubmitting = true;
+        if(addBtn){
+          addBtn.disabled = true;
+        }
+        try{
+          await saveCanonicalStudyOrder({
+            items,
+            controllerKey: controller.key,
+            area: controllerAreaMap[controller.key] || areaSelect?.value || ''
+          });
+        }finally{
+          canonicalOrderSubmitting = false;
+          renderSelected();
+          modal.hide();
+          setTimeout(scrollToOrderBlock, 200);
+        }
+      };
+      run();
     });
     modalEl?.addEventListener('hidden.bs.modal', ()=> setModalMode('add', controller));
     controller.applyFilterChip('todos');
@@ -11672,6 +12216,17 @@ function mxResetLogoPreview(){
       if(!confirmed) return;
     }
     setSelection([], input);
+    setOrderFeedback('');
+  });
+  areaSelect?.addEventListener('change', ()=>{
+    const input = activeInput || openInputs[0];
+    setSelection([], input);
+    activeFlags.clear();
+    controllers.forEach(ctrl=>{
+      ctrl.flagButtons?.forEach((btn)=> btn.classList.remove('active'));
+      ctrl.updateFlagVisibility?.();
+    });
+    setOrderFeedback('');
   });
 
   orderList?.addEventListener('click', (e)=>{
@@ -11679,6 +12234,10 @@ function mxResetLogoPreview(){
     if(!btn) return;
     const card = btn.closest('.est-order-card');
     if(!card) return;
+    if(isCanonicalOrderCard(card)){
+      setOrderFeedback('La eliminación de órdenes canónicas no está disponible en esta fase.', 'muted');
+      return;
+    }
     if(window.confirm('¿Eliminar esta orden? Esta acción no se puede deshacer.')){
       card.remove();
     }
@@ -11688,6 +12247,18 @@ function mxResetLogoPreview(){
     if(!btn) return;
     const card = btn.closest('.est-order-card');
     if(!card) return;
+    if(isCanonicalOrderCard(card)){
+      const docUuid = clean(card.getAttribute('data-document-uuid') || card.getAttribute('data-est-document-uuid'));
+      const docId = clean(card.getAttribute('data-document-id') || card.getAttribute('data-est-document-id'));
+      const docRef = docUuid || docId;
+      if(docRef){
+        const href = `/modules/clinical/ui/viewer.php?uuid=${encodeURIComponent(docRef)}&embed=1`;
+        window.open(href, '_blank', 'noopener');
+      }else{
+        setOrderFeedback('La edición de órdenes canónicas no está habilitada aún. Puedes generar una nueva orden.', 'muted');
+      }
+      return;
+    }
     const items = parseInputValue(card.getAttribute('data-est-order-items') || '');
     const area = (card.getAttribute('data-est-order-area') || '').trim();
     const input = orderBlock?.querySelector('[data-est-open-modal]') || openInputs[0];
@@ -11732,18 +12303,23 @@ function mxResetLogoPreview(){
         inst?.hide();
       });
       activeFlags.clear();
-      if(orderList && orderListInitial){
-        orderList.innerHTML = orderListInitial;
+      if(orderList){
+        orderList.innerHTML = '';
       }
       activeController = null;
       activeInput = null;
       modalMode = 'add';
       modalModeController = null;
+      requestRefreshCanonicalOrdersList();
     }catch(_){ }
   };
 
   renderSelected();
   if(openInputs[0]) setSelection(getInputItems(openInputs[0]), openInputs[0]);
+  requestRefreshCanonicalOrdersList();
+  window.addEventListener('expediente:patient_changed', requestRefreshCanonicalOrdersList);
+  window.addEventListener('expediente:patient-changed', requestRefreshCanonicalOrdersList);
+  window.addEventListener('patient:selected', requestRefreshCanonicalOrdersList);
 })();
 
 
