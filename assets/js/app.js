@@ -10929,6 +10929,189 @@ function mxResetLogoPreview(){
       console.info(`[DOC-ORD-1A] ${eventName}`, payload);
     }catch(_){}
   }
+  const orderPayloadCache = new Map();
+  const orderPayloadFetchInFlight = new Map();
+  function parseMaybeJson(value){
+    if(value == null) return null;
+    if(typeof value === 'object') return value;
+    const raw = clean(value);
+    if(!raw) return null;
+    try{
+      return JSON.parse(raw);
+    }catch(_){
+      return null;
+    }
+  }
+  function normalizePreviewList(values){
+    const out = [];
+    const seen = new Set();
+    (Array.isArray(values) ? values : []).forEach((value)=>{
+      const item = clean(value);
+      if(!item) return;
+      const key = item.toLowerCase();
+      if(seen.has(key)) return;
+      seen.add(key);
+      out.push(item);
+    });
+    return out;
+  }
+  function extractNamedList(values){
+    if(!Array.isArray(values)) return [];
+    const out = [];
+    values.forEach((entry)=>{
+      if(typeof entry === 'string'){
+        out.push(clean(entry));
+        return;
+      }
+      if(!entry || typeof entry !== 'object') return;
+      out.push(clean(
+        entry.label
+        || entry.name
+        || entry.title
+        || entry.text
+        || entry.study_name
+        || entry.item_name
+        || entry.preset_name
+        || entry.profile_name
+      ));
+    });
+    return normalizePreviewList(out);
+  }
+  function extractPresetNamesFromPayload(payload){
+    if(!payload || typeof payload !== 'object') return [];
+    const keys = [
+      'requested_packages',
+      'packages',
+      'package_names',
+      'requested_profiles',
+      'profiles',
+      'profile_names',
+      'requested_presets',
+      'presets',
+      'preset_names',
+      'requested_panels',
+      'panels',
+      'panel_names'
+    ];
+    const names = [];
+    keys.forEach((key)=>{
+      names.push(...extractNamedList(payload[key]));
+    });
+    return normalizePreviewList(names);
+  }
+  function extractDiagnosticItemsFromPayload(payload){
+    if(!payload || typeof payload !== 'object') return [];
+    const keys = [
+      'requested_studies',
+      'requested_items',
+      'selected_studies',
+      'selected_items',
+      'studies',
+      'items',
+      'tests'
+    ];
+    const names = [];
+    keys.forEach((key)=>{
+      names.push(...extractNamedList(payload[key]));
+    });
+    return normalizePreviewList(names);
+  }
+  function resolveDiagnosticTypeLabel(docType){
+    const type = clean(docType).toLowerCase();
+    if(type === 'lab_order') return 'Orden de laboratorio';
+    if(type === 'imaging_order') return 'Orden de imagen';
+    return 'Orden diagnóstica';
+  }
+  function buildDiagnosticOrderPreview(row, payload){
+    const docType = clean(row?.document_type).toLowerCase();
+    const displayTitle = resolveDiagnosticTypeLabel(docType);
+    const summaryText = clean(row?.summary);
+    const dateText = prettyDate(clean(row?.event_datetime) || nowSqlDateTime()) || '';
+    const presets = extractPresetNamesFromPayload(payload);
+    const items = extractDiagnosticItemsFromPayload(payload);
+    let studiesPreview = '';
+    let studiesComplement = '';
+    if(presets.length){
+      const visible = presets.slice(0, 2);
+      studiesPreview = visible.join(' · ');
+      const extra = presets.length - visible.length;
+      if(extra > 0){
+        studiesComplement = `y ${extra} estudios más`;
+      }
+    }else if(items.length){
+      const visible = items.slice(0, 3);
+      studiesPreview = visible.join(', ');
+      const extra = items.length - visible.length;
+      if(extra > 0){
+        studiesComplement = `y ${extra} estudios más`;
+      }
+    }
+    return {
+      displayTitle,
+      summary: summaryText || '',
+      studiesPreview: studiesPreview || '',
+      studiesComplement: studiesComplement || '',
+      metaText: dateText || ''
+    };
+  }
+  async function fetchOrderPayloadById(docId){
+    const safeId = clean(docId);
+    if(!safeId) return null;
+    if(orderPayloadCache.has(safeId)){
+      return orderPayloadCache.get(safeId);
+    }
+    if(orderPayloadFetchInFlight.has(safeId)){
+      return orderPayloadFetchInFlight.get(safeId);
+    }
+    const request = (async ()=>{
+      try{
+        const resp = await fetch(`/api/clinical/index.php/documents/${encodeURIComponent(safeId)}`, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          credentials: 'same-origin'
+        });
+        const json = await resp.json().catch(()=> null);
+        if(!resp.ok || !json || json.ok !== true){
+          return null;
+        }
+        const doc = (json?.data && typeof json.data === 'object' && json.data.document)
+          ? json.data.document
+          : (json?.data || {});
+        const payload = parseMaybeJson(doc?.content?.payload)
+          || parseMaybeJson(doc?.payload)
+          || parseMaybeJson(doc?.content)
+          || {};
+        const normalized = (payload && typeof payload === 'object') ? payload : {};
+        orderPayloadCache.set(safeId, normalized);
+        const docUuid = clean(doc?.document_uuid || doc?.document_id || '');
+        if(docUuid){
+          orderPayloadCache.set(docUuid, normalized);
+        }
+        return normalized;
+      }catch(_){
+        return null;
+      }finally{
+        orderPayloadFetchInFlight.delete(safeId);
+      }
+    })();
+    orderPayloadFetchInFlight.set(safeId, request);
+    return request;
+  }
+  async function hydrateOrderRowsPayload(rows){
+    const safeRows = Array.isArray(rows) ? rows : [];
+    await Promise.all(safeRows.map(async (row)=>{
+      const docId = clean(row?.id);
+      const docUuid = clean(row?.document_uuid || row?.document_id || '');
+      const cacheKey = docId || docUuid;
+      if(cacheKey && orderPayloadCache.has(cacheKey)){
+        row.__docPayload = orderPayloadCache.get(cacheKey);
+        return;
+      }
+      const payload = await fetchOrderPayloadById(docId || docUuid);
+      row.__docPayload = (payload && typeof payload === 'object') ? payload : {};
+    }));
+    return safeRows;
+  }
   function prependOrderCard(order, opts = {}){
     if(!orderList || !order || !Array.isArray(order.items) || !order.items.length) return;
     const area = clean(order.area) || 'Estudios';
@@ -10955,13 +11138,17 @@ function mxResetLogoPreview(){
       : order.items.length;
     const summaryText = clean(order.summary || '');
     const studiesPreview = clean(order.studiesPreview || order.items[0] || '');
-    const meta = `${selectionCount} estudios · ${prettyDate(eventDatetime) || prettyDate(nowSqlDateTime())}`;
-    const title = `${area} · ${clean(order.indication) || 'Orden clínica'}`;
+    const studiesComplement = clean(order.studiesComplement || '');
+    const meta = clean(order.metaText || '') || `${selectionCount} estudios · ${prettyDate(eventDatetime) || prettyDate(nowSqlDateTime())}`;
+    const title = clean(order.displayTitle || '') || `${area} · ${clean(order.indication) || 'Orden clínica'}`;
     if(summaryText){
       card.setAttribute('data-summary', summaryText);
     }
     if(studiesPreview){
       card.setAttribute('data-studies-preview', studiesPreview);
+    }
+    if(studiesComplement){
+      card.setAttribute('data-studies-complement', studiesComplement);
     }
     card.innerHTML = `
       <div class="est-order-head">
@@ -10970,8 +11157,9 @@ function mxResetLogoPreview(){
       ${order.readOnly ? '' : '<button type="button" class="est-order-del" aria-label="Eliminar orden" data-est-order-delete>&times;</button>'}
       ${summaryText ? `<div class="est-order-summary">${escapeHtml(summaryText)}</div>` : ''}
       ${studiesPreview ? `<div class="est-order-preview">${escapeHtml(studiesPreview)}</div>` : ''}
+      ${studiesComplement ? `<div class="est-order-complement">${escapeHtml(studiesComplement)}</div>` : ''}
       <div class="est-order-meta">${escapeHtml(meta)}</div>
-      <div class="est-order-tags">${order.priority ? `<span>${escapeHtml(order.priority)}</span>` : ''}${order.documentType ? `<span>${escapeHtml(order.documentType)}</span>` : ''}</div>
+      ${order.priority ? `<div class="est-order-tags"><span>${escapeHtml(order.priority)}</span></div>` : ''}
       <div class="est-order-actions">
         <button type="button" class="btn btn-outline-primary btn-sm" data-est-order-edit>${formatOrderActionLabel(card)}</button>
         <button class="btn btn-outline-secondary btn-sm">Imprimir</button>
@@ -11048,12 +11236,17 @@ function mxResetLogoPreview(){
       const summary = clean(row?.summary);
       const countMatch = summary.match(/^(\d+)\s+estudios?/i);
       const parsedSelectionCount = countMatch ? Number(countMatch[1]) : 0;
+      const payload = (row && typeof row.__docPayload === 'object') ? row.__docPayload : {};
+      const preview = buildDiagnosticOrderPreview(row, payload);
       prependOrderCard({
         area,
         items: [summary || clean(row?.title) || 'Orden clínica'],
         selectionCount: parsedSelectionCount,
-        summary: summary || '',
-        studiesPreview: clean(row?.title) || summary || '',
+        summary: preview.summary || summary || '',
+        displayTitle: preview.displayTitle,
+        studiesPreview: preview.studiesPreview || clean(row?.title) || summary || '',
+        studiesComplement: preview.studiesComplement || '',
+        metaText: preview.metaText || '',
         eventDatetime: clean(row?.event_datetime) || nowSqlDateTime(),
         indication: clean(row?.title),
         priority: '',
@@ -11088,6 +11281,7 @@ function mxResetLogoPreview(){
         return;
       }
       const rows = await fetchCanonicalOrderDocuments(patientId);
+      await hydrateOrderRowsPayload(rows);
       syncCanonicalOrderCardsFromDocuments(rows);
       const signature = JSON.stringify(rows.slice(0, 10).map((row)=> `${clean(row?.id)}|${clean(row?.event_datetime)}|${clean(row?.document_type)}`));
       if(signature !== lastListRefreshSignature){
@@ -11548,7 +11742,11 @@ function mxResetLogoPreview(){
       ad.textContent = entry.areaLabel || '';
       it.appendChild(nm);
       it.appendChild(ad);
-      it.addEventListener('click', ()=> applySearchSuggestion(entry, controller));
+      it.addEventListener('mousedown', (ev)=>{
+        ev.preventDefault();
+        ev.stopPropagation();
+        applySearchSuggestion(entry, controller);
+      });
       box.appendChild(it);
       state.items.push({ data: entry, node: it });
     });
@@ -12097,21 +12295,47 @@ function mxResetLogoPreview(){
       };
       const run = async ()=>{
         if(canonicalOrderSubmitting) return;
+        let savedOk = false;
         canonicalOrderSubmitting = true;
         if(addBtn){
           addBtn.disabled = true;
         }
         try{
-          await saveCanonicalStudyOrder({
+          const saveResult = await saveCanonicalStudyOrder({
             items,
             controllerKey: controller.key,
             area: controllerAreaMap[controller.key] || areaSelect?.value || ''
           });
+          savedOk = saveResult && saveResult.ok === true;
+          if(savedOk){
+            if(modalMode !== 'edit'){
+              const nextInput = activeInput || openInputs[0];
+              if(nextInput){
+                setSelection([], nextInput, controller.key);
+              }else{
+                setSelectionOrder([]);
+                resetSelections();
+                renderSelected();
+              }
+              activeFlags.clear();
+              controller.flagButtons?.forEach((btn)=> btn.classList.remove('active'));
+              controller.updateFlagVisibility?.();
+              if(controller.searchInput){
+                controller.searchInput.value = '';
+                controller.applyFilterChip('todos');
+                controller.filterList('');
+                if(searchConfigMap[controller.key]) hideSuggest(controller.key);
+              }
+            }
+            modal.hide();
+            setTimeout(scrollToOrderBlock, 200);
+          }
         }finally{
           canonicalOrderSubmitting = false;
           renderSelected();
-          modal.hide();
-          setTimeout(scrollToOrderBlock, 200);
+          if(!savedOk){
+            controller.updateFlagVisibility?.();
+          }
         }
       };
       run();
