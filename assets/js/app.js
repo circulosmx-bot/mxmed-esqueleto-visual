@@ -10931,6 +10931,8 @@ function mxResetLogoPreview(){
   }
   const orderPayloadCache = new Map();
   const orderPayloadFetchInFlight = new Map();
+  const orderDocumentDetailCache = new Map();
+  const orderDocumentDetailFetchInFlight = new Map();
   function parseMaybeJson(value){
     if(value == null) return null;
     if(typeof value === 'object') return value;
@@ -11054,6 +11056,213 @@ function mxResetLogoPreview(){
       metaText: dateText || ''
     };
   }
+  function resolveOrderAreaLabel(docType, payload){
+    const payloadArea = clean(
+      payload?.order_area
+      || payload?.area
+      || payload?.context?.order_area
+      || payload?.context?.area
+    );
+    if(payloadArea) return payloadArea;
+    const type = clean(docType).toLowerCase();
+    if(type === 'lab_order') return 'Laboratorio';
+    if(type === 'imaging_order') return 'Imagenología';
+    return 'Diagnóstico';
+  }
+  function resolveOrderPriorityLabel(payload){
+    const direct = clean(payload?.priority || payload?.context?.priority || '');
+    if(direct) return direct;
+    const flags = Array.isArray(payload?.flags) ? payload.flags.map(clean).filter(Boolean) : [];
+    if(flags.some((flag)=> /urgent|urgente|stat/i.test(flag))) return 'Urgente';
+    if(flags.some((flag)=> /routine|rutinaria|routine/i.test(flag))) return 'Rutinaria';
+    return '';
+  }
+  function getOrderDetailModalRefs(){
+    const BsModal = window.bootstrap && window.bootstrap.Modal;
+    if(!BsModal) return null;
+    let modalEl = document.getElementById('modalEstOrderDetail');
+    if(!modalEl){
+      modalEl = document.createElement('div');
+      modalEl.className = 'modal fade';
+      modalEl.id = 'modalEstOrderDetail';
+      modalEl.setAttribute('tabindex', '-1');
+      modalEl.setAttribute('aria-hidden', 'true');
+      modalEl.innerHTML = `
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" data-est-order-detail-title>Detalle de orden diagnóstica</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body" data-est-order-detail-body></div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary btn-sm" data-est-order-print-disabled disabled>Imprimir (próximamente)</button>
+              <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modalEl);
+    }
+    const titleEl = modalEl.querySelector('[data-est-order-detail-title]');
+    const bodyEl = modalEl.querySelector('[data-est-order-detail-body]');
+    const printBtn = modalEl.querySelector('[data-est-order-print-disabled]');
+    if(printBtn && !printBtn.dataset.bound){
+      printBtn.dataset.bound = '1';
+      printBtn.addEventListener('click', ()=>{
+        setOrderFeedback('La impresión de órdenes diagnósticas se habilitará en una fase posterior.', 'muted');
+      });
+    }
+    const modal = (typeof BsModal.getOrCreateInstance === 'function')
+      ? BsModal.getOrCreateInstance(modalEl)
+      : new BsModal(modalEl);
+    return { modal, modalEl, titleEl, bodyEl };
+  }
+  function renderOrderDetailState(refs, mode, model = {}){
+    if(!refs || !refs.bodyEl || !refs.titleEl) return;
+    if(mode === 'loading'){
+      refs.titleEl.textContent = 'Detalle de orden diagnóstica';
+      refs.bodyEl.innerHTML = '<div class="text-muted">Cargando orden…</div>';
+      return;
+    }
+    if(mode === 'error'){
+      refs.titleEl.textContent = 'Detalle de orden diagnóstica';
+      refs.bodyEl.innerHTML = `<div class="alert alert-warning mb-0">${escapeHtml(clean(model.message || 'No se pudo consultar el documento.'))}</div>`;
+      return;
+    }
+    const typeLabel = clean(model.typeLabel || 'Orden diagnóstica');
+    refs.titleEl.textContent = typeLabel;
+    const dateText = clean(model.dateText || '—') || '—';
+    const areaText = clean(model.area || '') || '—';
+    const priorityText = clean(model.priority || '') || '—';
+    const indicationText = clean(model.indication || '');
+    const summaryText = clean(model.summary || '');
+    const studies = Array.isArray(model.studies) ? model.studies.filter(Boolean) : [];
+    const packages = Array.isArray(model.packages) ? model.packages.filter(Boolean) : [];
+    refs.bodyEl.innerHTML = `
+      <div class="est-order-detail">
+        <div class="est-order-detail-meta" data-order-detail-meta>
+          <span><strong>Fecha:</strong> ${escapeHtml(dateText)}</span>
+          <span><strong>Área:</strong> ${escapeHtml(areaText)}</span>
+          <span><strong>Prioridad:</strong> ${escapeHtml(priorityText)}</span>
+        </div>
+        <div class="est-order-detail-summary" data-order-detail-summary>${escapeHtml(summaryText || 'Sin resumen clínico registrado.')}</div>
+        <div class="est-order-detail-section" data-order-detail-section="indicacion">
+          <div class="est-order-detail-label">Indicación clínica</div>
+          <div class="est-order-detail-text">${escapeHtml(indicationText || 'Sin indicación clínica registrada.')}</div>
+        </div>
+        <div class="est-order-detail-section" data-order-detail-section="paquetes">
+          <div class="est-order-detail-label">Perfiles / paquetes</div>
+          ${packages.length
+            ? `<div class="est-order-detail-chips">${packages.map((name)=> `<span class="est-order-detail-chip">${escapeHtml(name)}</span>`).join('')}</div>`
+            : '<div class="text-muted small">Sin paquetes o perfiles explícitos.</div>'}
+        </div>
+        <div class="est-order-detail-section" data-order-detail-section="estudios">
+          <div class="est-order-detail-label">Estudios solicitados</div>
+          ${studies.length
+            ? `<ul class="est-order-detail-list" data-order-detail-items>${studies.map((item)=> `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+            : '<div class="text-muted small">Esta orden no trae estudios detallados en el payload.</div>'}
+        </div>
+      </div>
+    `;
+  }
+  async function fetchOrderDocumentDetail(docRef, opts = {}){
+    const safeRef = clean(docRef);
+    if(!safeRef){
+      throw new Error('Documento no disponible.');
+    }
+    if(opts.force !== true && orderDocumentDetailCache.has(safeRef)){
+      return orderDocumentDetailCache.get(safeRef);
+    }
+    if(opts.force !== true && orderDocumentDetailFetchInFlight.has(safeRef)){
+      return orderDocumentDetailFetchInFlight.get(safeRef);
+    }
+    const request = (async ()=>{
+      try{
+        const resp = await fetch(`/api/clinical/index.php/documents/${encodeURIComponent(safeRef)}`, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          credentials: 'same-origin'
+        });
+        const json = await resp.json().catch(()=> null);
+        if(!resp.ok || !json || json.ok !== true){
+          const message = clean(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo consultar el documento.';
+          throw new Error(message);
+        }
+        const doc = (json?.data && typeof json.data === 'object' && json.data.document)
+          ? json.data.document
+          : (json?.data || {});
+        const payload = parseMaybeJson(doc?.content?.payload)
+          || parseMaybeJson(doc?.payload)
+          || {};
+        const normalizedPayload = (payload && typeof payload === 'object') ? payload : {};
+        const detail = {
+          id: clean(doc?.id || ''),
+          uuid: clean(doc?.document_uuid || doc?.document_id || ''),
+          documentType: clean(doc?.document_type || doc?.type || ''),
+          title: clean(doc?.title || ''),
+          summary: clean(doc?.summary || doc?.content?.summary || ''),
+          eventDatetime: clean(
+            doc?.ui?.event_datetime
+            || doc?.event_datetime
+            || doc?.timestamps?.created_at
+            || doc?.created_at
+            || ''
+          ),
+          payload: normalizedPayload
+        };
+        const keys = [safeRef, detail.id, detail.uuid].filter(Boolean);
+        keys.forEach((key)=> orderDocumentDetailCache.set(key, detail));
+        if(detail.id){
+          orderPayloadCache.set(detail.id, normalizedPayload);
+        }
+        if(detail.uuid){
+          orderPayloadCache.set(detail.uuid, normalizedPayload);
+        }
+        return detail;
+      }finally{
+        orderDocumentDetailFetchInFlight.delete(safeRef);
+      }
+    })();
+    orderDocumentDetailFetchInFlight.set(safeRef, request);
+    return request;
+  }
+  async function openOrderDetailModal(docRef){
+    const refs = getOrderDetailModalRefs();
+    if(!refs || !refs.modal){
+      setOrderFeedback('No se pudo abrir el visor interno en este entorno.', 'error');
+      return;
+    }
+    renderOrderDetailState(refs, 'loading');
+    refs.modal.show();
+    try{
+      const detail = await fetchOrderDocumentDetail(docRef);
+      const payload = (detail && typeof detail.payload === 'object') ? detail.payload : {};
+      const model = {
+        typeLabel: resolveDiagnosticTypeLabel(detail.documentType),
+        area: resolveOrderAreaLabel(detail.documentType, payload),
+        dateText: prettyDate(detail.eventDatetime) || detail.eventDatetime || '—',
+        priority: resolveOrderPriorityLabel(payload),
+        indication: clean(payload?.indication || ''),
+        summary: clean(detail.summary || ''),
+        studies: extractDiagnosticItemsFromPayload(payload),
+        packages: extractPresetNamesFromPayload(payload)
+      };
+      traceOrder('detail_loaded', {
+        document_ref: clean(docRef),
+        document_id: clean(detail.id),
+        document_uuid: clean(detail.uuid),
+        document_type: clean(detail.documentType),
+        studies_count: Array.isArray(model.studies) ? model.studies.length : 0,
+        packages_count: Array.isArray(model.packages) ? model.packages.length : 0
+      });
+      renderOrderDetailState(refs, 'ready', model);
+    }catch(err){
+      renderOrderDetailState(refs, 'error', {
+        message: clean(err?.message || 'No se pudo consultar el documento.')
+      });
+    }
+  }
   async function fetchOrderPayloadById(docId){
     const safeId = clean(docId);
     if(!safeId) return null;
@@ -11065,29 +11274,10 @@ function mxResetLogoPreview(){
     }
     const request = (async ()=>{
       try{
-        const resp = await fetch(`/api/clinical/index.php/documents/${encodeURIComponent(safeId)}`, {
-          method: 'GET',
-          headers: { Accept: 'application/json' },
-          credentials: 'same-origin'
-        });
-        const json = await resp.json().catch(()=> null);
-        if(!resp.ok || !json || json.ok !== true){
-          return null;
-        }
-        const doc = (json?.data && typeof json.data === 'object' && json.data.document)
-          ? json.data.document
-          : (json?.data || {});
-        const payload = parseMaybeJson(doc?.content?.payload)
-          || parseMaybeJson(doc?.payload)
-          || parseMaybeJson(doc?.content)
-          || {};
-        const normalized = (payload && typeof payload === 'object') ? payload : {};
-        orderPayloadCache.set(safeId, normalized);
-        const docUuid = clean(doc?.document_uuid || doc?.document_id || '');
-        if(docUuid){
-          orderPayloadCache.set(docUuid, normalized);
-        }
-        return normalized;
+        const detail = await fetchOrderDocumentDetail(safeId);
+        const payload = (detail && typeof detail.payload === 'object') ? detail.payload : {};
+        orderPayloadCache.set(safeId, payload);
+        return payload;
       }catch(_){
         return null;
       }finally{
@@ -12476,10 +12666,9 @@ function mxResetLogoPreview(){
       const docId = clean(card.getAttribute('data-document-id') || card.getAttribute('data-est-document-id'));
       const docRef = docUuid || docId;
       if(docRef){
-        const href = `/modules/clinical/ui/viewer.php?uuid=${encodeURIComponent(docRef)}&embed=1`;
-        window.open(href, '_blank', 'noopener');
+        openOrderDetailModal(docRef);
       }else{
-        setOrderFeedback('La edición de órdenes canónicas no está habilitada aún. Puedes generar una nueva orden.', 'muted');
+        setOrderFeedback('No se encontró identificador para consultar el detalle de la orden.', 'muted');
       }
       return;
     }

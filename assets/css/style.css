@@ -4078,6 +4078,11 @@ body{margin:0;background:var(--mm-fondo-base);}
   color:#6b7783;
   margin-top:2px;
 }
+.est-order-complement{
+  font-size:.76rem;
+  color:#8b97a2;
+  margin-top:2px;
+}
 .est-orders-divider{
   font-size:.72rem;
   font-weight:700;
@@ -4087,6 +4092,62 @@ body{margin:0;background:var(--mm-fondo-base);}
   margin:8px 0 6px;
   padding-top:6px;
   border-top:1px dashed #cfe9f0;
+}
+.est-order-detail{
+  display:grid;
+  gap:12px;
+}
+.est-order-detail-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px 14px;
+  font-size:.86rem;
+  color:#3d5462;
+}
+.est-order-detail-summary{
+  font-size:.9rem;
+  color:#0a4f66;
+  background:#f4fbfd;
+  border:1px solid #d5ebf2;
+  border-radius:8px;
+  padding:8px 10px;
+}
+.est-order-detail-section{
+  display:grid;
+  gap:6px;
+}
+.est-order-detail-label{
+  font-weight:700;
+  font-size:.85rem;
+  color:#0b3242;
+}
+.est-order-detail-text{
+  font-size:.88rem;
+  color:#233a47;
+  white-space:pre-wrap;
+}
+.est-order-detail-list{
+  margin:0;
+  padding-left:18px;
+  display:grid;
+  gap:4px;
+  font-size:.88rem;
+  color:#233a47;
+}
+.est-order-detail-chips{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+.est-order-detail-chip{
+  display:inline-flex;
+  align-items:center;
+  font-size:.76rem;
+  border:1px solid #c9e5ef;
+  background:#f7fcfe;
+  color:#0b4a61;
+  border-radius:999px;
+  padding:3px 8px;
 }
 .est-cat-grid{
   display:grid;
