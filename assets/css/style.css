@@ -4083,6 +4083,17 @@ body{margin:0;background:var(--mm-fondo-base);}
   color:#8b97a2;
   margin-top:2px;
 }
+.est-order-result-state{
+  margin-top:6px;
+  font-size:.76rem;
+  font-weight:600;
+}
+.est-order-result-state.has-result{
+  color:#0a7a4b;
+}
+.est-order-result-state.no-result{
+  color:#7b5a00;
+}
 .est-orders-divider{
   font-size:.72rem;
   font-weight:700;

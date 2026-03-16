@@ -6413,6 +6413,22 @@ console.info('app.js loaded :: 20251123a');
       return String(entry.patient_id || '').trim() === pid;
     });
   };
+  const shouldLogSearchOpenAutoEncounterBlocked = (patientId, encounterKey)=>{
+    const pid = String(patientId || '').trim();
+    const eKey = String(encounterKey || '').trim();
+    if(!pid || !eKey) return false;
+    const now = Date.now();
+    const state = window.__mxmedAutoEncounterBlockedLogState && typeof window.__mxmedAutoEncounterBlockedLogState === 'object'
+      ? window.__mxmedAutoEncounterBlockedLogState
+      : (window.__mxmedAutoEncounterBlockedLogState = { key: '', ts: 0 });
+    const key = `${pid}::${eKey}`;
+    if(state.key === key && (now - Number(state.ts || 0)) < 2500){
+      return false;
+    }
+    state.key = key;
+    state.ts = now;
+    return true;
+  };
   const syncExpedienteHeaderContext = async ()=>{
     if(!expHeader) return;
     const runToken = ++headerSyncToken;
@@ -6459,7 +6475,7 @@ console.info('app.js loaded :: 20251123a');
     const suppressAutoEncounterContext = (typeof window.mxmedShouldSuppressAutoEncounterContext === 'function')
       ? window.mxmedShouldSuppressAutoEncounterContext(patientId) === true
       : false;
-    if(suppressAutoEncounterContext && resolvedEncounterKey){
+    if(suppressAutoEncounterContext && resolvedEncounterKey && shouldLogSearchOpenAutoEncounterBlocked(patientId, resolvedEncounterKey)){
       console.info('[mxmed-search-open] auto encounter blocked', {
         patient_id: patientId,
         encounter_key: resolvedEncounterKey
@@ -11022,6 +11038,8 @@ function mxResetLogoPreview(){
     const type = clean(docType).toLowerCase();
     if(type === 'lab_order') return 'Orden de laboratorio';
     if(type === 'imaging_order') return 'Orden de imagen';
+    if(type === 'lab_result') return 'Resultado de laboratorio';
+    if(type === 'imaging_result') return 'Resultado de imagen';
     return 'Orden diagnóstica';
   }
   function buildDiagnosticOrderPreview(row, payload){
@@ -11076,6 +11094,72 @@ function mxResetLogoPreview(){
     if(flags.some((flag)=> /urgent|urgente|stat/i.test(flag))) return 'Urgente';
     if(flags.some((flag)=> /routine|rutinaria|routine/i.test(flag))) return 'Rutinaria';
     return '';
+  }
+  function normalizeClinicalAssetUrl(rawUrl){
+    const value = clean(rawUrl);
+    if(!value) return '';
+    if(/^https?:\/\//i.test(value) || value.startsWith('data:') || value.startsWith('blob:')){
+      return value;
+    }
+    if(value.startsWith('/')){
+      return value;
+    }
+    return `/${value.replace(/^\/+/, '')}`;
+  }
+  function resolveClinicalFileFromPayload(payload){
+    const data = (payload && typeof payload === 'object') ? payload : {};
+    const file = (data.file && typeof data.file === 'object') ? data.file : null;
+    const altFile = (!file && data.attachment && typeof data.attachment === 'object') ? data.attachment : null;
+    const target = file || altFile;
+    const filesList = Array.isArray(data.files) ? data.files : [];
+    if(!target && !filesList.length) return null;
+    const fromList = (!target && filesList.length && typeof filesList[0] === 'object') ? filesList[0] : null;
+    const effective = target || fromList;
+    if(!effective) return null;
+    const renderMode = clean(data.render_mode || effective.render_mode || '');
+    const original = (effective.original && typeof effective.original === 'object') ? effective.original : {};
+    const processed = (effective.processed && typeof effective.processed === 'object') ? effective.processed : {};
+    const optimized = (effective.optimized && typeof effective.optimized === 'object') ? effective.optimized : {};
+    const thumb = (effective.thumb && typeof effective.thumb === 'object') ? effective.thumb : {};
+    const mime = clean(
+      original.mime
+      || processed.mime
+      || optimized.mime
+      || thumb.mime
+      || effective.mime
+      || data.mime
+      || ''
+    );
+    const urlRaw = clean(
+      processed.url
+      || original.url
+      || optimized.url
+      || thumb.url
+      || effective.url
+      || processed.path
+      || original.path
+      || optimized.path
+      || thumb.path
+      || effective.path
+      || ''
+    );
+    const url = normalizeClinicalAssetUrl(urlRaw);
+    const filename = clean(original.filename || effective.filename || '');
+    if(!url) return null;
+    let sourceField = 'unknown';
+    if(clean(processed.url || processed.path)) sourceField = 'payload.file.processed';
+    else if(clean(original.url || original.path)) sourceField = 'payload.file.original';
+    else if(clean(optimized.url || optimized.path)) sourceField = 'payload.file.optimized';
+    else if(clean(thumb.url || thumb.path)) sourceField = 'payload.file.thumb';
+    else if(clean(effective.url || effective.path)) sourceField = 'payload.file';
+    else if(fromList) sourceField = 'payload.files[0]';
+    return {
+      renderMode: renderMode || (mime === 'application/pdf' ? 'pdf' : 'image'),
+      mime,
+      url,
+      filename,
+      sourceField
+    };
   }
   function getOrderDetailModalRefs(){
     const BsModal = window.bootstrap && window.bootstrap.Modal;
@@ -11139,6 +11223,7 @@ function mxResetLogoPreview(){
     const summaryText = clean(model.summary || '');
     const studies = Array.isArray(model.studies) ? model.studies.filter(Boolean) : [];
     const packages = Array.isArray(model.packages) ? model.packages.filter(Boolean) : [];
+    const file = model.file && typeof model.file === 'object' ? model.file : null;
     refs.bodyEl.innerHTML = `
       <div class="est-order-detail">
         <div class="est-order-detail-meta" data-order-detail-meta>
@@ -11165,6 +11250,73 @@ function mxResetLogoPreview(){
         </div>
       </div>
     `;
+    const detailRoot = refs.bodyEl.querySelector('.est-order-detail');
+    let renderTag = '';
+    if(detailRoot && file && clean(file.url)){
+      const section = document.createElement('div');
+      section.className = 'est-order-detail-section';
+      section.setAttribute('data-order-detail-section', 'archivo');
+      const label = document.createElement('div');
+      label.className = 'est-order-detail-label';
+      label.textContent = 'Archivo adjunto';
+      section.appendChild(label);
+      const hint = document.createElement('div');
+      hint.className = 'small text-muted mb-1';
+      hint.textContent = clean(file.filename || file.url);
+      section.appendChild(hint);
+      const mode = clean(file.renderMode || '').toLowerCase();
+      const isPdf = mode === 'pdf' || /pdf/i.test(clean(file.mime || '')) || /\.pdf(?:$|\?)/i.test(clean(file.url || ''));
+      if(isPdf){
+        const frame = document.createElement('iframe');
+        frame.src = file.url;
+        frame.title = 'Resultado PDF';
+        frame.style.width = '100%';
+        frame.style.height = '320px';
+        frame.style.border = '1px solid #d8e6ee';
+        frame.style.borderRadius = '8px';
+        frame.style.background = '#fff';
+        section.appendChild(frame);
+        renderTag = 'iframe';
+      }else{
+        const img = document.createElement('img');
+        img.src = file.url;
+        img.alt = 'Resultado clínico';
+        img.className = 'img-fluid rounded border';
+        img.style.maxHeight = '320px';
+        img.style.objectFit = 'contain';
+        section.appendChild(img);
+        renderTag = 'img';
+      }
+      detailRoot.appendChild(section);
+    }
+    const isResultDoc = isDiagnosticResultDocumentType(model.documentType);
+    const relatedOrderRef = clean(model.relatedOrderRef || '');
+    if(isResultDoc && relatedOrderRef && detailRoot){
+      const relatedSection = document.createElement('div');
+      relatedSection.className = 'est-order-detail-section';
+      relatedSection.setAttribute('data-order-detail-section', 'related-order');
+      const relatedLabel = document.createElement('div');
+      relatedLabel.className = 'est-order-detail-label';
+      relatedLabel.textContent = 'Acción secundaria';
+      relatedSection.appendChild(relatedLabel);
+      const relatedBtn = document.createElement('button');
+      relatedBtn.type = 'button';
+      relatedBtn.className = 'btn btn-outline-primary btn-sm';
+      relatedBtn.setAttribute('data-order-detail-open-related-order', relatedOrderRef);
+      relatedBtn.textContent = 'Ver orden original';
+      relatedSection.appendChild(relatedBtn);
+      detailRoot.appendChild(relatedSection);
+    }
+    traceOrder('detail_file_rendered', {
+      container: '#modalEstOrderDetail [data-est-order-detail-body]',
+      inserted: !!renderTag,
+      render_tag: renderTag || 'none',
+      file_url: clean(file?.url || ''),
+      render_mode: clean(file?.renderMode || ''),
+      image_count: refs.bodyEl.querySelectorAll('img').length,
+      iframe_count: refs.bodyEl.querySelectorAll('iframe').length,
+      related_order_ref: relatedOrderRef
+    });
   }
   async function fetchOrderDocumentDetail(docRef, opts = {}){
     const safeRef = clean(docRef);
@@ -11197,11 +11349,12 @@ function mxResetLogoPreview(){
           || {};
         const normalizedPayload = (payload && typeof payload === 'object') ? payload : {};
         const detail = {
-          id: clean(doc?.id || ''),
+          id: clean(doc?.document_db_id || doc?.id || ''),
           uuid: clean(doc?.document_uuid || doc?.document_id || ''),
           documentType: clean(doc?.document_type || doc?.type || ''),
           title: clean(doc?.title || ''),
           summary: clean(doc?.summary || doc?.content?.summary || ''),
+          context: (doc?.context && typeof doc.context === 'object') ? doc.context : {},
           eventDatetime: clean(
             doc?.ui?.event_datetime
             || doc?.event_datetime
@@ -11246,8 +11399,21 @@ function mxResetLogoPreview(){
         indication: clean(payload?.indication || ''),
         summary: clean(detail.summary || ''),
         studies: extractDiagnosticItemsFromPayload(payload),
-        packages: extractPresetNamesFromPayload(payload)
+        packages: extractPresetNamesFromPayload(payload),
+        file: resolveClinicalFileFromPayload(payload),
+        documentType: clean(detail.documentType || ''),
+        relatedOrderRef: resolveRelatedOrderRefFromPayload(payload)
       };
+      traceOrder('detail_file_resolved', {
+        document_ref: clean(docRef),
+        document_id: clean(detail.id),
+        document_uuid: clean(detail.uuid),
+        document_type: clean(detail.documentType),
+        file_source: clean(model?.file?.sourceField || ''),
+        file_url: clean(model?.file?.url || ''),
+        render_mode: clean(model?.file?.renderMode || ''),
+        mime: clean(model?.file?.mime || '')
+      });
       traceOrder('detail_loaded', {
         document_ref: clean(docRef),
         document_id: clean(detail.id),
@@ -11261,6 +11427,257 @@ function mxResetLogoPreview(){
       renderOrderDetailState(refs, 'error', {
         message: clean(err?.message || 'No se pudo consultar el documento.')
       });
+    }
+  }
+  function resolveResultDocumentTypeFromOrder(orderDocumentType){
+    const type = clean(orderDocumentType).toLowerCase();
+    if(type === 'lab_order') return 'lab_result';
+    if(type === 'imaging_order') return 'imaging_result';
+    return 'result';
+  }
+  function isDiagnosticResultDocumentType(documentType){
+    const type = clean(documentType).toLowerCase();
+    return type === 'lab_result' || type === 'imaging_result' || type === 'result' || type === 'lab_pdf';
+  }
+  function resolveRelatedOrderRefFromPayload(payload){
+    const safe = (payload && typeof payload === 'object') ? payload : {};
+    const byUuid = clean(
+      safe?.related_order_document_uuid
+      || safe?.context?.related_order_document_uuid
+      || safe?.related_document_uuid
+      || safe?.context?.related_document_uuid
+      || ''
+    );
+    if(byUuid) return byUuid;
+    return clean(
+      safe?.related_order_document_id
+      || safe?.context?.related_order_document_id
+      || safe?.related_document_id
+      || safe?.context?.related_document_id
+      || safe?.related_order_id
+      || ''
+    );
+  }
+  function buildResultSummary(orderDetail, studies){
+    const resultType = resolveResultDocumentTypeFromOrder(orderDetail?.documentType);
+    const prefix = resultType === 'lab_result' ? 'Resultado de laboratorio' : (resultType === 'imaging_result' ? 'Resultado de imagen' : 'Resultado de estudio');
+    const count = Array.isArray(studies) ? studies.length : 0;
+    return `${prefix} · ${count > 0 ? `${count} estudio${count === 1 ? '' : 's'}` : 'sin detalle de estudios'}`;
+  }
+  function getOrderResultModalRefs(){
+    const BsModal = window.bootstrap && window.bootstrap.Modal;
+    if(!BsModal) return null;
+    let modalEl = document.getElementById('modalEstOrderResult');
+    if(!modalEl){
+      modalEl = document.createElement('div');
+      modalEl.className = 'modal fade';
+      modalEl.id = 'modalEstOrderResult';
+      modalEl.setAttribute('tabindex', '-1');
+      modalEl.setAttribute('aria-hidden', 'true');
+      modalEl.innerHTML = `
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Ingresar resultado diagnóstico</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+              <div class="est-order-detail mb-3" data-order-result-context></div>
+              <div class="mb-3">
+                <label class="form-label">Archivo del resultado (PDF o imagen)</label>
+                <input type="file" class="form-control" accept="application/pdf,.pdf,image/*" data-order-result-file>
+              </div>
+              <div class="mb-0">
+                <label class="form-label">Observaciones (opcional)</label>
+                <textarea class="form-control" rows="3" data-order-result-notes placeholder="Comentario clínico breve del resultado"></textarea>
+              </div>
+              <div class="small mt-2 d-none" data-order-result-feedback></div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+              <button type="button" class="btn btn-primary btn-sm" data-order-result-save>Guardar resultado</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modalEl);
+    }
+    const refs = {
+      modalEl,
+      modal: (typeof BsModal.getOrCreateInstance === 'function') ? BsModal.getOrCreateInstance(modalEl) : new BsModal(modalEl),
+      contextEl: modalEl.querySelector('[data-order-result-context]'),
+      fileInput: modalEl.querySelector('[data-order-result-file]'),
+      notesInput: modalEl.querySelector('[data-order-result-notes]'),
+      feedbackEl: modalEl.querySelector('[data-order-result-feedback]'),
+      saveBtn: modalEl.querySelector('[data-order-result-save]')
+    };
+    if(refs.saveBtn && !refs.saveBtn.dataset.bound){
+      refs.saveBtn.dataset.bound = '1';
+      refs.saveBtn.addEventListener('click', ()=> saveOrderResultFromModal());
+    }
+    return refs;
+  }
+  const orderResultModalState = {
+    orderRef: '',
+    orderDetail: null,
+    resultRef: '',
+    saving: false
+  };
+  function setOrderResultFeedback(refs, message, tone = 'muted'){
+    if(!refs?.feedbackEl) return;
+    const text = clean(message);
+    refs.feedbackEl.classList.remove('d-none', 'text-muted', 'text-success', 'text-danger');
+    if(!text){
+      refs.feedbackEl.classList.add('d-none');
+      refs.feedbackEl.textContent = '';
+      return;
+    }
+    refs.feedbackEl.classList.add(
+      tone === 'success' ? 'text-success' : (tone === 'error' ? 'text-danger' : 'text-muted')
+    );
+    refs.feedbackEl.textContent = text;
+  }
+  function renderOrderResultContext(refs, orderDetail){
+    if(!refs?.contextEl) return;
+    if(!orderDetail){
+      refs.contextEl.innerHTML = '<div class="text-muted">No se pudo cargar el contexto de la orden.</div>';
+      return;
+    }
+    const payload = (orderDetail.payload && typeof orderDetail.payload === 'object') ? orderDetail.payload : {};
+    const studies = extractDiagnosticItemsFromPayload(payload);
+    const area = resolveOrderAreaLabel(orderDetail.documentType, payload);
+    const priority = resolveOrderPriorityLabel(payload) || '—';
+    const dateText = prettyDate(orderDetail.eventDatetime) || orderDetail.eventDatetime || '—';
+    refs.contextEl.innerHTML = `
+      <div class="est-order-detail-meta">
+        <span><strong>Orden:</strong> ${escapeHtml(resolveDiagnosticTypeLabel(orderDetail.documentType))}</span>
+        <span><strong>Fecha:</strong> ${escapeHtml(dateText)}</span>
+        <span><strong>Área:</strong> ${escapeHtml(area || '—')}</span>
+        <span><strong>Prioridad:</strong> ${escapeHtml(priority)}</span>
+      </div>
+      <div class="est-order-detail-section">
+        <div class="est-order-detail-label">Estudios solicitados</div>
+        ${studies.length
+          ? `<ul class="est-order-detail-list">${studies.map((item)=> `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+          : '<div class="text-muted small">Sin estudios detallados en el payload de la orden.</div>'}
+      </div>
+    `;
+  }
+  async function openOrderResultModal(orderRef, opts = {}){
+    const refs = getOrderResultModalRefs();
+    if(!refs?.modal){
+      setOrderFeedback('No se pudo abrir el ingreso de resultados en este entorno.', 'error');
+      return;
+    }
+    orderResultModalState.orderRef = clean(orderRef);
+    orderResultModalState.orderDetail = null;
+    orderResultModalState.resultRef = clean(opts?.resultRef || '');
+    if(refs.fileInput) refs.fileInput.value = '';
+    if(refs.notesInput) refs.notesInput.value = '';
+    setOrderResultFeedback(refs, 'Cargando contexto de la orden…');
+    refs.saveBtn && (refs.saveBtn.disabled = true);
+    refs.modal.show();
+    try{
+      const detail = await fetchOrderDocumentDetail(orderRef);
+      orderResultModalState.orderDetail = detail;
+      renderOrderResultContext(refs, detail);
+      setOrderResultFeedback(refs, '');
+      refs.saveBtn && (refs.saveBtn.disabled = false);
+    }catch(err){
+      renderOrderResultContext(refs, null);
+      setOrderResultFeedback(refs, clean(err?.message || 'No se pudo cargar la orden.'), 'error');
+      refs.saveBtn && (refs.saveBtn.disabled = true);
+    }
+  }
+  async function saveOrderResultFromModal(){
+    const refs = getOrderResultModalRefs();
+    if(!refs || orderResultModalState.saving) return;
+    const detail = orderResultModalState.orderDetail;
+    if(!detail){
+      setOrderResultFeedback(refs, 'No hay orden activa para guardar el resultado.', 'error');
+      return;
+    }
+    const file = refs.fileInput?.files && refs.fileInput.files[0] ? refs.fileInput.files[0] : null;
+    if(!file){
+      setOrderResultFeedback(refs, 'Selecciona un archivo PDF o imagen.', 'error');
+      return;
+    }
+    const payload = (detail.payload && typeof detail.payload === 'object') ? detail.payload : {};
+    const patientId = clean(detail?.context?.patient_id || resolveOrderPatientId());
+    if(!patientId){
+      setOrderResultFeedback(refs, 'No se pudo resolver el paciente activo para guardar el resultado.', 'error');
+      return;
+    }
+    const studies = extractDiagnosticItemsFromPayload(payload);
+    const resultDocumentType = resolveResultDocumentTypeFromOrder(detail.documentType);
+    const observations = clean(refs.notesInput?.value || '');
+    const payloadData = {
+      source: 'estudios_host_resultado',
+      related_order_document_id: clean(detail.id || ''),
+      related_order_document_uuid: clean(detail.uuid || ''),
+      related_document_id: clean(detail.uuid || detail.id || ''),
+      order_document_type: clean(detail.documentType || ''),
+      order_area: resolveOrderAreaLabel(detail.documentType, payload),
+      requested_studies: studies,
+      selection_count: studies.length,
+      indication: clean(payload?.indication || ''),
+      observations: observations || null,
+      result_file_name: clean(file.name || '')
+    };
+    const formData = new FormData();
+    formData.append('patient_id', patientId);
+    formData.append('document_type', resultDocumentType);
+    formData.append('summary', buildResultSummary(detail, studies));
+    formData.append('event_datetime', nowSqlDateTime());
+    formData.append('payload', JSON.stringify(payloadData));
+    formData.append('file', file);
+    orderResultModalState.saving = true;
+    if(refs.saveBtn) refs.saveBtn.disabled = true;
+    setOrderResultFeedback(refs, 'Guardando resultado canónico…');
+    try{
+      const resp = await fetch('/api/clinical/index.php/documents', {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+        body: formData
+      });
+      const json = await resp.json().catch(()=> null);
+      if(!resp.ok || !json || json.ok !== true){
+        const message = clean(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo guardar el resultado.';
+        throw new Error(message);
+      }
+      const resultRef = clean(
+        json?.data?.document?.document_uuid
+        || json?.data?.document_uuid
+        || json?.data?.document?.document_db_id
+        || json?.data?.document?.id
+        || ''
+      );
+      setOrderResultFeedback(refs, 'Resultado guardado correctamente.', 'success');
+      traceOrder('result_saved', {
+        order_document_id: clean(detail.id || ''),
+        order_document_uuid: clean(detail.uuid || ''),
+        result_document_ref: resultRef,
+        result_document_type: resultDocumentType
+      });
+      try{
+        window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created', {
+          detail: {
+            patient_id: patientId,
+            document_type: resultDocumentType,
+            source: 'estudios_host_resultado',
+            related_order_document_id: clean(detail.id || ''),
+            related_order_document_uuid: clean(detail.uuid || '')
+          }
+        }));
+      }catch(_){}
+      requestRefreshCanonicalOrdersList();
+      setTimeout(()=> refs.modal.hide(), 250);
+    }catch(err){
+      setOrderResultFeedback(refs, clean(err?.message || 'No se pudo guardar el resultado.'), 'error');
+    }finally{
+      orderResultModalState.saving = false;
+      if(refs.saveBtn) refs.saveBtn.disabled = false;
     }
   }
   async function fetchOrderPayloadById(docId){
@@ -11292,13 +11709,22 @@ function mxResetLogoPreview(){
     await Promise.all(safeRows.map(async (row)=>{
       const docId = clean(row?.id);
       const docUuid = clean(row?.document_uuid || row?.document_id || '');
+      const detail = await fetchOrderDocumentDetail(docId || docUuid).catch(()=> null);
+      if(detail && typeof detail === 'object'){
+        row.__docPayload = (detail.payload && typeof detail.payload === 'object') ? detail.payload : {};
+        row.__docUuid = clean(detail.uuid || docUuid);
+        row.__docId = clean(detail.id || docId);
+        return;
+      }
       const cacheKey = docId || docUuid;
       if(cacheKey && orderPayloadCache.has(cacheKey)){
         row.__docPayload = orderPayloadCache.get(cacheKey);
-        return;
+      }else{
+        const payload = await fetchOrderPayloadById(docId || docUuid);
+        row.__docPayload = (payload && typeof payload === 'object') ? payload : {};
       }
-      const payload = await fetchOrderPayloadById(docId || docUuid);
-      row.__docPayload = (payload && typeof payload === 'object') ? payload : {};
+      row.__docUuid = docUuid;
+      row.__docId = docId;
     }));
     return safeRows;
   }
@@ -11316,6 +11742,10 @@ function mxResetLogoPreview(){
     if(order.documentId){
       card.setAttribute('data-document-id', String(order.documentId));
       card.setAttribute('data-est-document-id', String(order.documentId));
+    }
+    const resultRef = clean(order.resultRef || '');
+    if(resultRef){
+      card.setAttribute('data-result-document-ref', resultRef);
     }
     const eventDatetime = clean(order.eventDatetime) || nowSqlDateTime();
     card.setAttribute('data-event-datetime', eventDatetime);
@@ -11349,9 +11779,12 @@ function mxResetLogoPreview(){
       ${studiesPreview ? `<div class="est-order-preview">${escapeHtml(studiesPreview)}</div>` : ''}
       ${studiesComplement ? `<div class="est-order-complement">${escapeHtml(studiesComplement)}</div>` : ''}
       <div class="est-order-meta">${escapeHtml(meta)}</div>
+      ${order.readOnly ? `<div class="est-order-result-state ${order.hasResult ? 'has-result' : 'no-result'}">${order.hasResult ? 'Resultado cargado' : 'Sin resultado cargado'}</div>` : ''}
       ${order.priority ? `<div class="est-order-tags"><span>${escapeHtml(order.priority)}</span></div>` : ''}
       <div class="est-order-actions">
-        <button type="button" class="btn btn-outline-primary btn-sm" data-est-order-edit>${formatOrderActionLabel(card)}</button>
+        ${order.readOnly ? '' : `<button type="button" class="btn btn-outline-primary btn-sm" data-est-order-edit>${formatOrderActionLabel(card)}</button>`}
+        ${order.readOnly && !order.hasResult ? '<button type="button" class="btn btn-outline-success btn-sm" data-est-order-upload-result>Ingresar resultado</button>' : ''}
+        ${order.readOnly && order.hasResult ? '<button type="button" class="btn btn-outline-secondary btn-sm" data-est-order-view-result>Ver resultado</button>' : ''}
         <button class="btn btn-outline-secondary btn-sm">Imprimir</button>
         <button class="btn btn-outline-secondary btn-sm">Compartir</button>
       </div>
@@ -11365,6 +11798,7 @@ function mxResetLogoPreview(){
   let refreshOrdersInFlight = null;
   let refreshOrdersTimer = null;
   let lastListRefreshSignature = '';
+  let lastOrderResultsIndex = new Map();
   async function fetchCanonicalOrderDocuments(patientId){
     const safePatientId = clean(patientId);
     if(!safePatientId) return [];
@@ -11400,6 +11834,72 @@ function mxResetLogoPreview(){
       return bi - ai;
     });
   }
+  async function fetchCanonicalResultDocuments(patientId){
+    const safePatientId = clean(patientId);
+    if(!safePatientId) return [];
+    const url = `/api/clinical/index.php/documents?patient_id=${encodeURIComponent(safePatientId)}&limit=120`;
+    const resp = await fetch(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      credentials: 'same-origin'
+    });
+    const json = await resp.json().catch(()=> null);
+    if(!resp.ok || !json || json.ok !== true){
+      throw new Error(clean(json?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudieron consultar resultados.');
+    }
+    const allItems = Array.isArray(json?.data?.items) ? json.data.items : [];
+    const allowedTypes = new Set(['lab_result', 'imaging_result', 'result', 'lab_pdf']);
+    const filteredItems = allItems.filter((row)=> allowedTypes.has(clean(row?.document_type).toLowerCase()));
+    return filteredItems.sort((a, b)=>{
+      const ad = clean(a?.event_datetime);
+      const bd = clean(b?.event_datetime);
+      const byDatetime = bd.localeCompare(ad);
+      if(byDatetime !== 0) return byDatetime;
+      const ai = Number(clean(a?.id || 0));
+      const bi = Number(clean(b?.id || 0));
+      return bi - ai;
+    });
+  }
+  function extractRelatedOrderRefsFromPayload(payload){
+    const refs = [
+      clean(payload?.related_order_document_id),
+      clean(payload?.related_order_document_uuid),
+      clean(payload?.related_document_id),
+      clean(payload?.related_document_uuid),
+      clean(payload?.related_order_id),
+      clean(payload?.context?.related_order_document_id),
+      clean(payload?.context?.related_order_document_uuid),
+      clean(payload?.context?.related_document_id),
+      clean(payload?.context?.related_document_uuid)
+    ].filter(Boolean);
+    return Array.from(new Set(refs));
+  }
+  async function buildOrderResultsIndex(patientId){
+    const map = new Map();
+    const rows = await fetchCanonicalResultDocuments(patientId);
+    await Promise.all(rows.map(async (row)=>{
+      const ref = clean(row?.id || row?.document_uuid || row?.document_id);
+      if(!ref) return;
+      try{
+        const detail = await fetchOrderDocumentDetail(ref);
+        const payload = (detail && typeof detail.payload === 'object') ? detail.payload : {};
+        const relatedRefs = extractRelatedOrderRefsFromPayload(payload);
+        if(!relatedRefs.length) return;
+        const resultInfo = {
+          id: clean(detail?.id || row?.id || ''),
+          uuid: clean(detail?.uuid || row?.document_uuid || row?.document_id || ''),
+          documentType: clean(detail?.documentType || row?.document_type || ''),
+          eventDatetime: clean(detail?.eventDatetime || row?.event_datetime || '')
+        };
+        relatedRefs.forEach((relatedRef)=>{
+          if(!map.has(relatedRef)){
+            map.set(relatedRef, resultInfo);
+          }
+        });
+      }catch(_){}
+    }));
+    return map;
+  }
   function resolveDocRefMatch(row, ref){
     if(!row || !ref) return false;
     const rowId = clean(row?.id);
@@ -11410,16 +11910,16 @@ function mxResetLogoPreview(){
     if(refUuid && rowUuid === refUuid) return true;
     return false;
   }
-  function syncCanonicalOrderCardsFromDocuments(rows){
+  function syncCanonicalOrderCardsFromDocuments(rows, resultsIndex = new Map()){
     if(!orderList || !Array.isArray(rows)) return;
     orderList.innerHTML = '';
     const newestRow = rows.find((row)=> resolveDocRefMatch(row, lastCreatedOrderRef)) || null;
     const historicalRows = newestRow ? rows.filter((row)=> !resolveDocRefMatch(row, lastCreatedOrderRef)) : rows.slice();
 
     const renderRow = (row)=>{
-      const docId = clean(row?.id);
+      const docId = clean(row?.id || row?.__docId);
       const docType = clean(row?.document_type).toLowerCase();
-      const docUuid = clean(row?.document_uuid || row?.document_id || '');
+      const docUuid = clean(row?.document_uuid || row?.document_id || row?.__docUuid || '');
       if(!docId && !docUuid) return;
       if(docType !== 'lab_order' && docType !== 'imaging_order') return;
       const area = docType === 'lab_order' ? 'Laboratorio' : 'Imagenología';
@@ -11428,6 +11928,7 @@ function mxResetLogoPreview(){
       const parsedSelectionCount = countMatch ? Number(countMatch[1]) : 0;
       const payload = (row && typeof row.__docPayload === 'object') ? row.__docPayload : {};
       const preview = buildDiagnosticOrderPreview(row, payload);
+      const relatedResult = resultsIndex.get(docId) || resultsIndex.get(docUuid) || null;
       prependOrderCard({
         area,
         items: [summary || clean(row?.title) || 'Orden clínica'],
@@ -11443,6 +11944,8 @@ function mxResetLogoPreview(){
         documentType: docType,
         documentId: docId,
         documentUuid: docUuid,
+        hasResult: !!relatedResult,
+        resultRef: clean(relatedResult?.uuid || relatedResult?.id || ''),
         readOnly: true
       }, { position: 'append' });
     };
@@ -11472,7 +11975,14 @@ function mxResetLogoPreview(){
       }
       const rows = await fetchCanonicalOrderDocuments(patientId);
       await hydrateOrderRowsPayload(rows);
-      syncCanonicalOrderCardsFromDocuments(rows);
+      let resultsIndex = new Map();
+      try{
+        resultsIndex = await buildOrderResultsIndex(patientId);
+      }catch(_){
+        resultsIndex = new Map();
+      }
+      lastOrderResultsIndex = resultsIndex;
+      syncCanonicalOrderCardsFromDocuments(rows, resultsIndex);
       const signature = JSON.stringify(rows.slice(0, 10).map((row)=> `${clean(row?.id)}|${clean(row?.event_datetime)}|${clean(row?.document_type)}`));
       if(signature !== lastListRefreshSignature){
         lastListRefreshSignature = signature;
@@ -11526,6 +12036,28 @@ function mxResetLogoPreview(){
       refreshOrdersTimer = null;
       refreshCanonicalOrdersList();
     }, 80);
+  }
+  function resolveResultRefForOrderCard(card){
+    if(!card) return '';
+    const rawResultRef = clean(card.getAttribute('data-result-document-ref') || '');
+    const orderId = clean(card.getAttribute('data-document-id') || card.getAttribute('data-est-document-id') || '');
+    const orderUuid = clean(card.getAttribute('data-document-uuid') || card.getAttribute('data-est-document-uuid') || '');
+    const orderRef = orderUuid || orderId;
+    if(rawResultRef && (!orderRef || rawResultRef !== orderRef)){
+      return rawResultRef;
+    }
+    if(lastOrderResultsIndex && typeof lastOrderResultsIndex.get === 'function'){
+      const related = (orderId && lastOrderResultsIndex.get(orderId))
+        || (orderUuid && lastOrderResultsIndex.get(orderUuid))
+        || null;
+      if(related){
+        const fallbackRef = clean(related.uuid || related.id || '');
+        if(fallbackRef && (!orderRef || fallbackRef !== orderRef)){
+          return fallbackRef;
+        }
+      }
+    }
+    return '';
   }
   function buildOrderSubmitSignature(params){
     const items = Array.isArray(params?.items) ? params.items.map(clean).filter(Boolean).sort() : [];
@@ -12643,6 +13175,43 @@ function mxResetLogoPreview(){
     setOrderFeedback('');
   });
 
+  orderList?.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-est-order-upload-result]');
+    if(!btn) return;
+    const card = btn.closest('.est-order-card');
+    if(!card) return;
+    const docUuid = clean(card.getAttribute('data-document-uuid') || card.getAttribute('data-est-document-uuid'));
+    const docId = clean(card.getAttribute('data-document-id') || card.getAttribute('data-est-document-id'));
+    const docRef = docUuid || docId;
+    if(!docRef){
+      setOrderFeedback('No se pudo resolver la orden para ingresar resultado.', 'error');
+      return;
+    }
+    const resultRef = clean(card.getAttribute('data-result-document-ref') || '');
+    openOrderResultModal(docRef, { resultRef });
+  });
+  orderList?.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-est-order-view-result]');
+    if(!btn) return;
+    const card = btn.closest('.est-order-card');
+    if(!card) return;
+    const resultRef = resolveResultRefForOrderCard(card);
+    if(!resultRef){
+      setOrderFeedback('Esta orden no tiene resultado asociado todavía.', 'muted');
+      return;
+    }
+    openOrderDetailModal(resultRef);
+  });
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-order-detail-open-related-order]');
+    if(!btn) return;
+    const orderRef = clean(btn.getAttribute('data-order-detail-open-related-order') || '');
+    if(!orderRef){
+      setOrderFeedback('No se pudo resolver la orden original asociada.', 'muted');
+      return;
+    }
+    openOrderDetailModal(orderRef);
+  });
   orderList?.addEventListener('click', (e)=>{
     const btn = e.target.closest('[data-est-order-delete]');
     if(!btn) return;
