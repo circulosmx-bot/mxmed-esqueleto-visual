@@ -1350,9 +1350,26 @@ $extraHead = <<<'HTML'
       margin-top:6px;
       gap:4px;
     }
-    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions .btn{
-      padding:2px 8px;
+    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:.35rem .65rem;
+    }
+    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions .mm-link-action{
+      appearance:none;
+      border:0;
+      background:transparent;
+      padding:0;
+      margin:0;
+      color:#0b5ed7;
+      text-decoration:underline;
+      text-underline-offset:2px;
       font-size:.78rem;
+      line-height:1.2;
+      cursor:pointer;
+    }
+    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions .mm-link-action:hover{
+      color:#084298;
     }
     .clinical-historial .timeline-taxonomy-chip{
       border-radius:999px;
@@ -2072,32 +2089,11 @@ if (!$embed) {
                     </div>
                     <div class="mm-activity-actions <?php echo $isStudyDoc ? 'est-order-actions' : ''; ?>">
                       <?php if (!$docInActiveCase && $docUuid !== ''): ?>
-                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-to-case" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Integrar a caso clínico</button>
-                      <?php endif; ?>
-                      <?php if (!$docInActiveCase && $activeCaseId !== '' && $docUuid !== ''): ?>
-                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-success" data-action="assign-case-item" data-case-id="<?php echo h($activeCaseId); ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Agregar a caso activo</button>
-                      <?php endif; ?>
-                      <?php if ($isStudyOrder && $docPrimaryRef !== ''): ?>
-                        <button type="button" class="btn btn-outline-primary btn-sm" data-action="open-diagnostic-document" data-ref="<?php echo h($docPrimaryRef); ?>" data-summary-hint="<?php echo h($docDisplayTitle); ?>">Ver orden</button>
+                        <button type="button" class="mm-link-action" data-action="integrate-to-case" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Integrar a caso clínico</button>
                       <?php endif; ?>
                       <?php if ($isStudyOrder && $docStatus === 'active' && !$hasLinkedResult && $docPrimaryRef !== ''): ?>
-                        <button type="button" class="btn btn-outline-success btn-sm" data-action="open-diagnostic-order-result" data-ref="<?php echo h($docPrimaryRef); ?>">Ingresar resultado</button>
-                        <button type="button" class="btn btn-outline-warning btn-sm" data-action="open-diagnostic-order-replace" data-ref="<?php echo h($docPrimaryRef); ?>">Reemplazar orden</button>
-                      <?php endif; ?>
-                      <?php if ($isStudyOrder && $docStatus === 'active' && $hasLinkedResult): ?>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-action="open-diagnostic-document" data-ref="<?php echo h($linkedResultRef); ?>" data-summary-hint="Resultado asociado">Ver resultado</button>
-                      <?php endif; ?>
-                      <?php if ($isStudyResult && $docUuid !== ''): ?>
-                        <button type="button" class="btn btn-outline-primary btn-sm" data-action="open-diagnostic-document" data-ref="<?php echo h($docUuid); ?>" data-summary-hint="<?php echo h($docDisplayTitle); ?>">Ver resultado</button>
-                      <?php endif; ?>
-                      <?php if ($isStudyOrder && $docStatus === 'replaced' && $replacedByRef !== ''): ?>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-action="open-diagnostic-document" data-ref="<?php echo h($replacedByRef); ?>" data-summary-hint="Orden reemplazante">Ver orden reemplazante</button>
-                      <?php endif; ?>
-                      <?php if ($isStudyOrder && $docStatus === 'active' && $replacementSourceRef !== ''): ?>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-action="open-diagnostic-document" data-ref="<?php echo h($replacementSourceRef); ?>" data-summary-hint="Orden previa">Ver orden previa</button>
-                      <?php endif; ?>
-                      <?php if ($isStudyResult && $resultSourceOrderRef !== ''): ?>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-action="open-diagnostic-document" data-ref="<?php echo h($resultSourceOrderRef); ?>" data-summary-hint="Orden original">Ver orden original</button>
+                        <button type="button" class="mm-link-action" data-action="open-diagnostic-order-result" data-ref="<?php echo h($docPrimaryRef); ?>">Ingresar resultado</button>
+                        <button type="button" class="mm-link-action" data-action="open-diagnostic-order-replace" data-ref="<?php echo h($docPrimaryRef); ?>">Reemplazar orden</button>
                       <?php endif; ?>
                     </div>
                   </div>
@@ -2906,7 +2902,7 @@ if (!$embed) {
       var mode = String(itemEl.getAttribute('data-nav-mode') || '').trim();
       var isStudyDoc = String(itemEl.getAttribute('data-is-study-doc') || '').trim() === '1';
       if (mode === 'document' && isStudyDoc) {
-        var studyRef = String(itemEl.getAttribute('data-uuid') || '').trim();
+        var studyRef = String(itemEl.getAttribute('data-uuid') || itemEl.getAttribute('data-item-ref') || '').trim();
         if (studyRef) {
           openDiagnosticDocument(studyRef, 'Documento diagnóstico');
           return;
