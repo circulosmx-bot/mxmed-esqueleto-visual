@@ -1694,11 +1694,69 @@ if (!$embed) {
                 $docMetaLine1 = '';
                 $docMetaLine2 = '';
                 $docMetaLine3 = '';
+                $studyStatusLine = '';
                 $isImmunization = ($docTypeNorm === 'immunization');
                 $isMedicationAdministration = ($docTypeNorm === 'medication_administration');
                 $isWoundCare = ($docTypeNorm === 'wound_care');
                 $isProcedure = ($docTypeNorm === 'procedure');
-                if ($isImmunization) {
+                $isStudyOrder = in_array($docTypeNorm, ['lab_order', 'imaging_order', 'order'], true);
+                $isStudyResult = in_array($docTypeNorm, ['lab_result', 'imaging_result', 'result', 'lab_pdf'], true);
+                $isStudyDoc = $isStudyOrder || $isStudyResult;
+                $docPayloadStatus = strtolower(trim((string)($docPayload['status'] ?? '')));
+                $docStatus = $docPayloadStatus !== '' ? $docPayloadStatus : 'active';
+                $replacedByRef = trim((string)($docPayload['replaced_by_document_uuid'] ?? ($docPayload['replaced_by_document_id'] ?? '')));
+                $replacementSourceRef = trim((string)($docPayload['replacement_source_document_uuid'] ?? ($docPayload['replacement_source_document_id'] ?? '')));
+                $resultSourceOrderRef = trim((string)($docPayload['related_order_document_uuid'] ?? ($docPayload['related_order_document_id'] ?? ($docPayload['related_document_uuid'] ?? ($docPayload['related_document_id'] ?? '')))));
+                if ($isStudyDoc) {
+                    if ($docTypeNorm === 'lab_order') {
+                        $docDisplayTitle = 'Orden de laboratorio';
+                    } elseif ($docTypeNorm === 'imaging_order') {
+                        $docDisplayTitle = 'Orden de imagen';
+                    } elseif ($docTypeNorm === 'lab_result') {
+                        $docDisplayTitle = 'Resultado de laboratorio';
+                    } elseif ($docTypeNorm === 'imaging_result') {
+                        $docDisplayTitle = 'Resultado de imagen';
+                    } elseif ($docTypeNorm === 'lab_pdf') {
+                        $docDisplayTitle = 'PDF de resultado';
+                    }
+                    $requestedStudies = is_array($docPayload['requested_studies'] ?? null) ? $docPayload['requested_studies'] : [];
+                    $requestedStudies = array_values(array_filter(array_map(static function ($v) {
+                        return trim((string)$v);
+                    }, $requestedStudies), static function ($v) {
+                        return $v !== '';
+                    }));
+                    $selectionCount = (int)($docPayload['selection_count'] ?? count($requestedStudies));
+                    $priority = trim((string)($docPayload['priority'] ?? ''));
+                    $indication = trim((string)($docPayload['indication'] ?? ''));
+                    $metaParts = [];
+                    if ($selectionCount > 0) {
+                        $metaParts[] = $selectionCount . ' estudio' . ($selectionCount === 1 ? '' : 's');
+                    }
+                    if ($priority !== '') {
+                        $metaParts[] = $priority;
+                    }
+                    $docMetaLine1 = implode(' · ', $metaParts);
+                    if (!$isStudyResult && $docStatus === 'replaced') {
+                        $studyStatusLine = 'Orden reemplazada';
+                        $docMetaLine2 = 'Esta orden fue sustituida por una nueva versión.';
+                    } elseif (!$isStudyResult && $docStatus === 'active' && $replacementSourceRef !== '') {
+                        $studyStatusLine = 'Orden activa (reemplazo)';
+                    }
+                    if ($isStudyResult && $docOccurredAt !== '') {
+                        $docMetaLine2 = $docOccurredAt;
+                    } elseif ($docMetaLine2 === '' && !empty($requestedStudies)) {
+                        $preview = array_slice($requestedStudies, 0, 3);
+                        $previewText = implode(', ', $preview);
+                        $remaining = count($requestedStudies) - count($preview);
+                        if ($remaining > 0) {
+                            $previewText .= ' y ' . $remaining . ' más';
+                        }
+                        $docMetaLine2 = $previewText;
+                    }
+                    if ($docMetaLine3 === '' && $indication !== '') {
+                        $docMetaLine3 = 'Indicación: ' . $indication;
+                    }
+                } elseif ($isImmunization) {
                     $vaccine = is_array($docPayload['vaccine'] ?? null) ? $docPayload['vaccine'] : [];
                     $trace = is_array($docPayload['trace'] ?? null) ? $docPayload['trace'] : [];
                     $schedule = is_array($docPayload['schedule'] ?? null) ? $docPayload['schedule'] : [];
@@ -1838,21 +1896,27 @@ if (!$embed) {
                 $docViewPath = $docIsImage ? '/modules/clinical/ui/viewer.php' : '/modules/clinical/ui/document.php';
                 $docHref = $docUuid !== '' ? $docViewPath . '?' . carry_embed_params(['uuid' => $docUuid]) : '';
                 ?>
-                <article class="mm-card timeline-event mm-activity-item <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>" data-document-uuid="<?php echo h($docUuid); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-clinical-category="<?php echo h(trim((string)($docItem['clinical_category'] ?? ''))); ?>" data-study-role="<?php echo h(trim((string)($docItem['study_role'] ?? ''))); ?>" data-href="<?php echo h($docHref); ?>" data-nav-mode="<?php echo $docHref !== '' ? 'document' : ''; ?>" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>" data-uuid="<?php echo h($docUuid); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
+                <article class="mm-card timeline-event mm-activity-item <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>" data-document-uuid="<?php echo h($docUuid); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-clinical-category="<?php echo h(trim((string)($docItem['clinical_category'] ?? ''))); ?>" data-study-role="<?php echo h(trim((string)($docItem['study_role'] ?? ''))); ?>" data-order-status="<?php echo h($docStatus); ?>" data-replaced-by-ref="<?php echo h($replacedByRef); ?>" data-replacement-source-ref="<?php echo h($replacementSourceRef); ?>" data-related-order-ref="<?php echo h($resultSourceOrderRef); ?>" data-href="<?php echo h($docHref); ?>" data-nav-mode="<?php echo $docHref !== '' ? 'document' : ''; ?>" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>" data-uuid="<?php echo h($docUuid); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
                     <div class="min-w-0 flex-grow-1">
                       <div class="mm-activity-title"><?php echo h($docDisplayTitle); ?></div>
+                      <?php if ($studyStatusLine !== ''): ?>
+                        <div class="mm-activity-meta"><span class="badge rounded-pill text-bg-warning-subtle border border-warning-subtle text-warning-emphasis"><?php echo h($studyStatusLine); ?></span></div>
+                      <?php endif; ?>
+                      <?php if ($isStudyDoc && $docOccurredAt !== ''): ?>
+                        <div class="mm-activity-meta"><?php echo h($docOccurredAt); ?></div>
+                      <?php endif; ?>
                       <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare || $isProcedure) && $docOccurredAt !== ''): ?>
                         <div class="mm-activity-meta"><?php echo h($docOccurredAt); ?></div>
                       <?php endif; ?>
-                      <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare || $isProcedure) && $docMetaLine1 !== ''): ?>
+                      <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare || $isProcedure || $isStudyDoc) && $docMetaLine1 !== ''): ?>
                         <div class="mm-activity-meta"><?php echo h($docMetaLine1); ?></div>
                       <?php endif; ?>
-                      <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare || $isProcedure) && $docMetaLine2 !== ''): ?>
+                      <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare || $isProcedure || $isStudyDoc) && $docMetaLine2 !== ''): ?>
                         <div class="mm-activity-meta"><?php echo h($docMetaLine2); ?></div>
                       <?php endif; ?>
-                      <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare || $isProcedure) && $docMetaLine3 !== ''): ?>
+                      <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare || $isProcedure || $isStudyDoc) && $docMetaLine3 !== ''): ?>
                         <div class="mm-activity-meta"><?php echo h($docMetaLine3); ?></div>
                       <?php endif; ?>
                       <?php if (trim((string)($docItem['case_title'] ?? '')) !== ''): ?>
@@ -1865,6 +1929,21 @@ if (!$embed) {
                       <?php endif; ?>
                       <?php if (!$docInActiveCase && $activeCaseId !== '' && $docUuid !== ''): ?>
                         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-success" data-action="assign-case-item" data-case-id="<?php echo h($activeCaseId); ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Agregar a caso activo</button>
+                      <?php endif; ?>
+                      <?php if ($isStudyOrder && $docUuid !== ''): ?>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-nav-mode="document" data-uuid="<?php echo h($docUuid); ?>" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>">Ver orden</button>
+                      <?php endif; ?>
+                      <?php if ($isStudyResult && $docUuid !== ''): ?>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-nav-mode="document" data-uuid="<?php echo h($docUuid); ?>" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>">Ver resultado</button>
+                      <?php endif; ?>
+                      <?php if ($isStudyOrder && $docStatus === 'replaced' && $replacedByRef !== ''): ?>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-related-document" data-ref="<?php echo h($replacedByRef); ?>">Ver orden reemplazante</button>
+                      <?php endif; ?>
+                      <?php if ($isStudyOrder && $docStatus === 'active' && $replacementSourceRef !== ''): ?>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-related-document" data-ref="<?php echo h($replacementSourceRef); ?>">Ver orden previa</button>
+                      <?php endif; ?>
+                      <?php if ($isStudyResult && $resultSourceOrderRef !== ''): ?>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-related-document" data-ref="<?php echo h($resultSourceOrderRef); ?>">Ver orden original</button>
                       <?php endif; ?>
                     </div>
                   </div>
@@ -2525,6 +2604,30 @@ if (!$embed) {
       dpt: 'DPT',
       hib: 'Hib (Haemophilus influenzae tipo b)'
     };
+    function populateImmunizationCatalogOptions() {
+      var keys = Object.keys(immunizationVaccineCatalog || {});
+      if (!keys.length) return;
+      keys.sort(function (a, b) {
+        return String(immunizationVaccineCatalog[a] || '').localeCompare(String(immunizationVaccineCatalog[b] || ''), 'es', { sensitivity: 'base' });
+      });
+      var applyToSelect = function (selectEl) {
+        if (!selectEl) return;
+        var existing = new Set();
+        Array.from(selectEl.options || []).forEach(function (opt) {
+          var v = String(opt.value || '').trim();
+          if (v !== '') existing.add(v);
+        });
+        keys.forEach(function (key) {
+          if (existing.has(key)) return;
+          var opt = document.createElement('option');
+          opt.value = key;
+          opt.textContent = String(immunizationVaccineCatalog[key] || key);
+          selectEl.appendChild(opt);
+        });
+      };
+      applyToSelect(immunizationVaccineSelect);
+      applyToSelect(genericProcedureVaccineSelect);
+    }
     var activeDocumentUrl = '';
     var debugMode = false;
     try {
@@ -4429,6 +4532,15 @@ if (!$embed) {
         return;
       }
 
+      var openRelatedDocumentBtn = event.target && event.target.closest ? event.target.closest('[data-action="open-related-document"]') : null;
+      if (openRelatedDocumentBtn) {
+        event.preventDefault();
+        var relatedRef = String(openRelatedDocumentBtn.getAttribute('data-ref') || '').trim();
+        if (!relatedRef) return;
+        openDocumentViewer(relatedRef, 'Documento relacionado', 'document');
+        return;
+      }
+
       var assignBtn = event.target && event.target.closest ? event.target.closest('[data-action="assign-case-item"]') : null;
       if (assignBtn) {
         event.preventDefault();
@@ -4659,6 +4771,7 @@ if (!$embed) {
       navigateWithInclude('agenda,clinical');
       return;
     }
+    populateImmunizationCatalogOptions();
     syncImmunizationPlaceFields();
     syncImmunizationVaccineFields();
     syncImmunizationSubmitButton();

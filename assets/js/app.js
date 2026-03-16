@@ -11961,6 +11961,8 @@ function mxResetLogoPreview(){
     orderList.innerHTML = '';
     const newestRow = rows.find((row)=> resolveDocRefMatch(row, lastCreatedOrderRef)) || null;
     const historicalRows = newestRow ? rows.filter((row)=> !resolveDocRefMatch(row, lastCreatedOrderRef)) : rows.slice();
+    const historicalLimit = 5;
+    const visibleHistoricalRows = historicalRows.slice(0, historicalLimit);
 
     const renderRow = (row)=>{
       const docId = clean(row?.id || row?.__docId);
@@ -12002,7 +12004,7 @@ function mxResetLogoPreview(){
 
     if(newestRow){
       renderRow(newestRow);
-      const firstHistorical = historicalRows[0] || null;
+      const firstHistorical = visibleHistoricalRows[0] || null;
       if(firstHistorical){
         const divider = document.createElement('div');
         divider.className = 'est-orders-divider';
@@ -12010,7 +12012,13 @@ function mxResetLogoPreview(){
         orderList.appendChild(divider);
       }
     }
-    historicalRows.forEach(renderRow);
+    visibleHistoricalRows.forEach(renderRow);
+    if(historicalRows.length > historicalLimit){
+      const note = document.createElement('div');
+      note.className = 'text-muted small mt-2';
+      note.textContent = 'Mostrando historico reciente. Consulta el historial completo en Historial de Atencion.';
+      orderList.appendChild(note);
+    }
   }
   async function refreshCanonicalOrdersList(){
     if(refreshOrdersInFlight) return refreshOrdersInFlight;

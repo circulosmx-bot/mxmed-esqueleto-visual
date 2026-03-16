@@ -2325,7 +2325,19 @@ function clinical_timeline_document_item_from_row(array $row, string $patientId,
             'appointment_id' => $appointmentId,
         ];
     }
-    if ($docType === 'immunization' || $docType === 'medication_administration' || $docType === 'wound_care' || $docType === 'procedure') {
+    if (
+        $docType === 'immunization'
+        || $docType === 'medication_administration'
+        || $docType === 'wound_care'
+        || $docType === 'procedure'
+        || $docType === 'lab_order'
+        || $docType === 'imaging_order'
+        || $docType === 'order'
+        || $docType === 'lab_result'
+        || $docType === 'imaging_result'
+        || $docType === 'result'
+        || $docType === 'lab_pdf'
+    ) {
         $payload = json_decode((string)($row['payload_json'] ?? ''), true);
         $clinicalDocument['payload'] = is_array($payload) ? $payload : [];
     }
