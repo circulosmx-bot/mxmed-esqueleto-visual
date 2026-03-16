@@ -4804,7 +4804,16 @@ if (!$embed) {
         return;
       }
 
+      var actionIntentBtn = event.target && event.target.closest ? event.target.closest('[data-action]') : null;
       var openDocumentBtn = event.target && event.target.closest ? event.target.closest('[data-nav-mode="document"][data-uuid]') : null;
+      if (openDocumentBtn) {
+        if (actionIntentBtn) {
+          // Preserve contextual action buttons inside timeline cards.
+          // Otherwise closest('[data-nav-mode]') resolves to the card container
+          // and hijacks actions like upload_result/replace_order.
+          openDocumentBtn = null;
+        }
+      }
       if (openDocumentBtn) {
         event.preventDefault();
         var docUuid = String(openDocumentBtn.getAttribute('data-uuid') || '').trim();
