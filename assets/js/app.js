@@ -11459,6 +11459,7 @@ function mxResetLogoPreview(){
       });
     }
   }
+  window.mxmedOpenDiagnosticDocumentDetail = (docRef, _opts = {})=> openOrderDetailModal(docRef);
   function resolveResultDocumentTypeFromOrder(orderDocumentType){
     const type = clean(orderDocumentType).toLowerCase();
     if(type === 'lab_order') return 'lab_result';
@@ -12095,18 +12096,17 @@ function mxResetLogoPreview(){
       refreshCanonicalOrdersList();
     }, 80);
   }
-  function resolveResultRefForOrderCard(card){
-    if(!card) return '';
-    const rawResultRef = clean(card.getAttribute('data-result-document-ref') || '');
-    const orderId = clean(card.getAttribute('data-document-id') || card.getAttribute('data-est-document-id') || '');
-    const orderUuid = clean(card.getAttribute('data-document-uuid') || card.getAttribute('data-est-document-uuid') || '');
-    const orderRef = orderUuid || orderId;
-    if(rawResultRef && (!orderRef || rawResultRef !== orderRef)){
-      return rawResultRef;
+  function resolveResultRefForOrderRefs(orderId, orderUuid, rawResultRef = ''){
+    const safeOrderId = clean(orderId);
+    const safeOrderUuid = clean(orderUuid);
+    const safeRawResultRef = clean(rawResultRef);
+    const orderRef = safeOrderUuid || safeOrderId;
+    if(safeRawResultRef && (!orderRef || safeRawResultRef !== orderRef)){
+      return safeRawResultRef;
     }
     if(lastOrderResultsIndex && typeof lastOrderResultsIndex.get === 'function'){
-      const related = (orderId && lastOrderResultsIndex.get(orderId))
-        || (orderUuid && lastOrderResultsIndex.get(orderUuid))
+      const related = (safeOrderId && lastOrderResultsIndex.get(safeOrderId))
+        || (safeOrderUuid && lastOrderResultsIndex.get(safeOrderUuid))
         || null;
       if(related){
         const fallbackRef = clean(related.uuid || related.id || '');
@@ -12116,6 +12116,13 @@ function mxResetLogoPreview(){
       }
     }
     return '';
+  }
+  function resolveResultRefForOrderCard(card){
+    if(!card) return '';
+    const rawResultRef = clean(card.getAttribute('data-result-document-ref') || '');
+    const orderId = clean(card.getAttribute('data-document-id') || card.getAttribute('data-est-document-id') || '');
+    const orderUuid = clean(card.getAttribute('data-document-uuid') || card.getAttribute('data-est-document-uuid') || '');
+    return resolveResultRefForOrderRefs(orderId, orderUuid, rawResultRef);
   }
   function buildOrderSubmitSignature(params){
     const items = Array.isArray(params?.items) ? params.items.map(clean).filter(Boolean).sort() : [];
@@ -12816,6 +12823,85 @@ function mxResetLogoPreview(){
       setOrderFeedback(clean(err?.message || 'No se pudo preparar el reemplazo de la orden.'), 'error');
     }
   }
+  async function startOrderReplacementByRef(orderRef){
+    const docRef = clean(orderRef);
+    if(!docRef){
+      setOrderFeedback('No se pudo resolver la orden para reemplazo.', 'error');
+      return;
+    }
+    try{
+      const detail = await fetchOrderDocumentDetail(docRef);
+      const payload = (detail && typeof detail.payload === 'object') ? detail.payload : {};
+      const lifecycle = resolveDiagnosticOrderLifecycle(payload);
+      if(clean(lifecycle.status || '').toLowerCase() === 'replaced'){
+        setOrderFeedback('Esta orden ya fue reemplazada y no puede reemplazarse de nuevo en esta fase.', 'muted');
+        return;
+      }
+      const patientId = resolveOrderPatientId();
+      if(patientId){
+        try{
+          if(!lastOrderResultsIndex || typeof lastOrderResultsIndex.get !== 'function' || lastOrderResultsIndex.size === 0){
+            lastOrderResultsIndex = await buildOrderResultsIndex(patientId);
+          }
+        }catch(_){}
+      }
+      const hasResultRef = resolveResultRefForOrderRefs(clean(detail.id || ''), clean(detail.uuid || ''), '');
+      if(hasResultRef){
+        setOrderFeedback('No se puede reemplazar una orden con resultado cargado.', 'muted');
+        return;
+      }
+      const studies = extractDiagnosticItemsFromPayload(payload);
+      if(!studies.length){
+        setOrderFeedback('La orden original no contiene estudios para precargar.', 'error');
+        return;
+      }
+      const area = resolveOrderAreaLabel(detail.documentType, payload);
+      const controller = getControllerForArea(area);
+      if(!controller){
+        setOrderFeedback('No se pudo abrir el selector para reemplazo en este entorno.', 'error');
+        return;
+      }
+      setAreaSelect(area);
+      const input = activeInput || openInputs[0] || orderBlock?.querySelector('[data-est-open-modal]');
+      if(!input){
+        setOrderFeedback('No se encontró el input de selección para reemplazar la orden.', 'error');
+        return;
+      }
+      activeInput = input;
+      activeController = controller;
+      clearOrderReplacementState();
+      orderReplacementState.active = true;
+      orderReplacementState.sourceRef = docRef;
+      orderReplacementState.sourceId = clean(detail.id || '');
+      orderReplacementState.sourceUuid = clean(detail.uuid || '');
+      orderReplacementState.reason = '';
+      setSelection(studies, input, controller.key);
+      setPrioritySelectValue(payload?.priority || '');
+      if(indicationTextarea){
+        indicationTextarea.value = clean(payload?.indication || '');
+      }
+      setModalMode('add', controller);
+      controller.open(input);
+      setOrderFeedback('Reemplazo activo: ajusta la orden y guarda la nueva versión.', 'muted');
+    }catch(err){
+      setOrderFeedback(clean(err?.message || 'No se pudo preparar el reemplazo de la orden.'), 'error');
+    }
+  }
+  function ensureEstudiosWorkbenchForDiagnosticAction(){
+    try{
+      if(typeof showClinicalTab === 'function'){
+        showClinicalTab(clinicalTabTargets.estudios);
+      }
+    }catch(_){}
+  }
+  window.mxmedOpenDiagnosticOrderResultModal = (orderRef, _opts = {})=>{
+    ensureEstudiosWorkbenchForDiagnosticAction();
+    return openOrderResultModal(orderRef);
+  };
+  window.mxmedStartDiagnosticOrderReplacement = (orderRef, _opts = {})=>{
+    ensureEstudiosWorkbenchForDiagnosticAction();
+    return startOrderReplacementByRef(orderRef);
+  };
   function createController(cfg){
     const modalEl = document.getElementById(cfg.id);
     if(!modalEl) return null;

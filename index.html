@@ -4066,13 +4066,16 @@
                           </div>
                           <div class="col-md-3">
                             <label class="form-label">Prioridad</label>
-                            <select class="form-select">
+                            <select class="form-select" data-role="ac-order-priority">
                               <option>Rutinaria</option><option>Urgente</option>
                             </select>
                           </div>
                           <div class="col-12">
                             <label class="form-label">Indicación clínica</label>
-                            <textarea class="form-control" rows="2" placeholder="Motivo o diagnóstico presuntivo"></textarea>
+                            <textarea class="form-control" rows="2" placeholder="Motivo o diagnóstico presuntivo" data-role="ac-order-indication"></textarea>
+                          </div>
+                          <div class="col-12">
+                            <div class="small text-muted d-none" data-role="ac-order-feedback"></div>
                           </div>
                           <div class="col-12">
                             <div class="est-summary">
@@ -6983,8 +6986,25 @@
       if (!safePatientId) {
         return Promise.resolve({ hasActive: false });
       }
+      var shouldLogP10Suppressed = (function () {
+        if (!window.__mxmedP10SuppressLogState || typeof window.__mxmedP10SuppressLogState !== 'object') {
+          window.__mxmedP10SuppressLogState = { key: '', ts: 0 };
+        }
+        var now = Date.now();
+        var key = safePatientId;
+        var lastKey = String(window.__mxmedP10SuppressLogState.key || '').trim();
+        var lastTs = Number(window.__mxmedP10SuppressLogState.ts || 0);
+        if (lastKey === key && (now - lastTs) < 3000) {
+          return false;
+        }
+        window.__mxmedP10SuppressLogState.key = key;
+        window.__mxmedP10SuppressLogState.ts = now;
+        return true;
+      })();
       if (typeof window.mxmedShouldSuppressAutoEncounterContext === 'function' && window.mxmedShouldSuppressAutoEncounterContext(safePatientId) === true) {
-        console.info('[mxmed-search-open] p10 suppress auto encounter context', { patient_id: safePatientId });
+        if (shouldLogP10Suppressed) {
+          console.info('[mxmed-search-open] p10 suppress auto encounter context', { patient_id: safePatientId });
+        }
         return Promise.resolve({ hasActive: false, suppressed: true });
       }
       if (typeof window.resolveActiveEncounterForPatient === 'function') {
@@ -7532,6 +7552,35 @@
       if (!event || event.source !== iframe.contentWindow) return;
       var data = event.data;
       if (!data || typeof data !== 'object') return;
+      if (data.type === 'mxmed:embed:open-diagnostic-document') {
+        var docRef = String(data.document_ref || data.uuid || '').trim();
+        if (!docRef) return;
+        if (typeof window.mxmedOpenDiagnosticDocumentDetail === 'function') {
+          window.mxmedOpenDiagnosticDocumentDetail(docRef, { source: 'historial_embed' });
+        } else {
+          forcedDocumentUuid = docRef;
+          setActiveMode('document');
+          if (isHistorialTabVisible()) {
+            ensureEmbedIframe();
+            refreshP10();
+          }
+        }
+        return;
+      }
+      if (data.type === 'mxmed:embed:diagnostic-order-action') {
+        var action = String(data.action || '').trim();
+        var orderRef = String(data.document_ref || data.ref || '').trim();
+        if (!action || !orderRef) return;
+        if (action === 'upload_result' && typeof window.mxmedOpenDiagnosticOrderResultModal === 'function') {
+          window.mxmedOpenDiagnosticOrderResultModal(orderRef, { source: 'historial_embed' });
+          return;
+        }
+        if (action === 'replace_order' && typeof window.mxmedStartDiagnosticOrderReplacement === 'function') {
+          window.mxmedStartDiagnosticOrderReplacement(orderRef, { source: 'historial_embed' });
+          return;
+        }
+        return;
+      }
       if (data.type !== 'mxmed:embed:navigate') return;
 
       if (data.mode === 'encounter') {

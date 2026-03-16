@@ -1287,6 +1287,39 @@ $extraHead = <<<'HTML'
       gap:.4rem;
       margin-top:.4rem;
     }
+    .clinical-historial .mm-activity-item.is-study-diagnostic{
+      background:#f7fcff;
+      border-color:#cfe9f0;
+    }
+    .clinical-historial .mm-activity-item.is-study-diagnostic .mm-activity-title{
+      color:#005275;
+      font-weight:700;
+    }
+    .clinical-historial .mm-activity-item.is-study-diagnostic .mm-activity-meta{
+      color:#4d5965;
+    }
+    .clinical-historial .mm-activity-item.is-study-diagnostic .mm-activity-icon{
+      width:32px;
+      height:32px;
+      border-radius:12px;
+      background:#00b0c5;
+      color:#fff;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .clinical-historial .mm-activity-item.is-study-diagnostic.is-study-img .mm-activity-icon{
+      background:#ef5070;
+    }
+    .clinical-historial .mm-activity-item.is-study-diagnostic .mm-activity-icon svg{
+      width:18px;
+      height:18px;
+    }
+    .clinical-historial .mm-activity-item.is-study-diagnostic .mm-activity-actions .mm-btn,
+    .clinical-historial .mm-activity-item.is-study-diagnostic .mm-activity-actions .btn{
+      padding:2px 8px;
+      font-size:.78rem;
+    }
     .clinical-historial .timeline-taxonomy-chip{
       border-radius:999px;
       font-weight:600;
@@ -1509,6 +1542,48 @@ if (!$embed) {
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-study-filter" data-study-filter="resultado">Resultados</button>
       </div>
     </div>
+    <?php
+    $studyResultRefByOrderRef = [];
+    foreach ($dayOrder as $mapDayKey) {
+        $mapDayGroup = $dayGroups[$mapDayKey] ?? null;
+        if (!is_array($mapDayGroup)) {
+            continue;
+        }
+        $mapEntries = is_array($mapDayGroup['entries'] ?? null) ? $mapDayGroup['entries'] : [];
+        foreach ($mapEntries as $mapEntry) {
+            if (($mapEntry['kind'] ?? '') !== 'document') {
+                continue;
+            }
+            $mapItem = is_array($mapEntry['item'] ?? null) ? $mapEntry['item'] : [];
+            $mapDoc = is_array($mapItem['clinical_document'] ?? null) ? $mapItem['clinical_document'] : [];
+            $mapType = strtolower(trim((string)($mapDoc['document_type'] ?? '')));
+            if (!in_array($mapType, ['lab_result', 'imaging_result', 'result', 'lab_pdf'], true)) {
+                continue;
+            }
+            $mapLinks = is_array($mapItem['links'] ?? null) ? $mapItem['links'] : [];
+            $resultUuid = trim((string)($mapLinks['document_uuid'] ?? ($mapDoc['document_uuid'] ?? ($mapDoc['document_id'] ?? ''))));
+            $resultId = trim((string)($mapDoc['document_db_id'] ?? ($mapDoc['id'] ?? '')));
+            $resultRef = $resultUuid !== '' ? $resultUuid : $resultId;
+            if ($resultRef === '') {
+                continue;
+            }
+            $mapPayload = is_array($mapDoc['payload'] ?? null) ? $mapDoc['payload'] : [];
+            $relatedRefs = [
+                trim((string)($mapPayload['related_order_document_uuid'] ?? '')),
+                trim((string)($mapPayload['related_order_document_id'] ?? '')),
+                trim((string)($mapPayload['related_document_uuid'] ?? '')),
+                trim((string)($mapPayload['related_document_id'] ?? '')),
+                trim((string)($mapPayload['related_order_id'] ?? '')),
+            ];
+            foreach ($relatedRefs as $relatedRef) {
+                if ($relatedRef === '' || isset($studyResultRefByOrderRef[$relatedRef])) {
+                    continue;
+                }
+                $studyResultRefByOrderRef[$relatedRef] = $resultRef;
+            }
+        }
+    }
+    ?>
     <div class="vstack gap-3">
       <?php foreach ($dayOrder as $dayKey): ?>
         <?php $dayGroup = $dayGroups[$dayKey]; ?>
@@ -1681,7 +1756,9 @@ if (!$embed) {
                 $docItem = $entryItem;
                 $doc = is_array($docItem['clinical_document'] ?? null) ? $docItem['clinical_document'] : [];
                 $links = is_array($docItem['links'] ?? null) ? $docItem['links'] : [];
-                $docUuid = trim((string)($links['document_uuid'] ?? ''));
+                $docUuid = trim((string)($links['document_uuid'] ?? ($doc['document_uuid'] ?? ($doc['document_id'] ?? ''))));
+                $docDbId = trim((string)($doc['document_db_id'] ?? ($doc['id'] ?? '')));
+                $docPrimaryRef = $docUuid !== '' ? $docUuid : $docDbId;
                 $docCaseId = trim((string)($docItem['case_id'] ?? ''));
                 $docInActiveCase = (bool)($docItem['is_in_active_case'] ?? false);
                 $docTypeNorm = strtolower(trim((string)($doc['document_type'] ?? '')));
@@ -1707,6 +1784,17 @@ if (!$embed) {
                 $replacedByRef = trim((string)($docPayload['replaced_by_document_uuid'] ?? ($docPayload['replaced_by_document_id'] ?? '')));
                 $replacementSourceRef = trim((string)($docPayload['replacement_source_document_uuid'] ?? ($docPayload['replacement_source_document_id'] ?? '')));
                 $resultSourceOrderRef = trim((string)($docPayload['related_order_document_uuid'] ?? ($docPayload['related_order_document_id'] ?? ($docPayload['related_document_uuid'] ?? ($docPayload['related_document_id'] ?? '')))));
+                $linkedResultRef = '';
+                if ($isStudyOrder) {
+                    foreach ([$docUuid, $docDbId] as $orderRefCandidate) {
+                        $candidate = trim((string)$orderRefCandidate);
+                        if ($candidate !== '' && isset($studyResultRefByOrderRef[$candidate])) {
+                            $linkedResultRef = trim((string)$studyResultRefByOrderRef[$candidate]);
+                            break;
+                        }
+                    }
+                }
+                $hasLinkedResult = ($linkedResultRef !== '');
                 if ($isStudyDoc) {
                     if ($docTypeNorm === 'lab_order') {
                         $docDisplayTitle = 'Orden de laboratorio';
@@ -1896,13 +1984,15 @@ if (!$embed) {
                 $docViewPath = $docIsImage ? '/modules/clinical/ui/viewer.php' : '/modules/clinical/ui/document.php';
                 $docHref = $docUuid !== '' ? $docViewPath . '?' . carry_embed_params(['uuid' => $docUuid]) : '';
                 ?>
-                <article class="mm-card timeline-event mm-activity-item <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>" data-document-uuid="<?php echo h($docUuid); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-clinical-category="<?php echo h(trim((string)($docItem['clinical_category'] ?? ''))); ?>" data-study-role="<?php echo h(trim((string)($docItem['study_role'] ?? ''))); ?>" data-order-status="<?php echo h($docStatus); ?>" data-replaced-by-ref="<?php echo h($replacedByRef); ?>" data-replacement-source-ref="<?php echo h($replacementSourceRef); ?>" data-related-order-ref="<?php echo h($resultSourceOrderRef); ?>" data-href="<?php echo h($docHref); ?>" data-nav-mode="<?php echo $docHref !== '' ? 'document' : ''; ?>" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>" data-uuid="<?php echo h($docUuid); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
+                <article class="mm-card timeline-event mm-activity-item <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?> <?php echo $isStudyDoc ? 'is-study-diagnostic ' . (($docTypeNorm === 'lab_order' || $docTypeNorm === 'lab_result') ? 'is-study-lab' : 'is-study-img') : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docPrimaryRef); ?>" data-document-id="<?php echo h($docDbId); ?>" data-document-uuid="<?php echo h($docUuid); ?>" data-result-ref="<?php echo h($linkedResultRef); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-clinical-category="<?php echo h(trim((string)($docItem['clinical_category'] ?? ''))); ?>" data-study-role="<?php echo h(trim((string)($docItem['study_role'] ?? ''))); ?>" data-is-study-doc="<?php echo $isStudyDoc ? '1' : '0'; ?>" data-order-status="<?php echo h($docStatus); ?>" data-order-has-result="<?php echo $hasLinkedResult ? '1' : '0'; ?>" data-replaced-by-ref="<?php echo h($replacedByRef); ?>" data-replacement-source-ref="<?php echo h($replacementSourceRef); ?>" data-related-order-ref="<?php echo h($resultSourceOrderRef); ?>" data-href="<?php echo h($docHref); ?>" data-nav-mode="<?php echo $docHref !== '' ? 'document' : ''; ?>" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>" data-uuid="<?php echo h($docUuid); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
                     <div class="min-w-0 flex-grow-1">
                       <div class="mm-activity-title"><?php echo h($docDisplayTitle); ?></div>
                       <?php if ($studyStatusLine !== ''): ?>
-                        <div class="mm-activity-meta"><span class="badge rounded-pill text-bg-warning-subtle border border-warning-subtle text-warning-emphasis"><?php echo h($studyStatusLine); ?></span></div>
+                        <div class="mm-activity-meta">
+                          <span class="est-order-result-state <?php echo ($docStatus === 'replaced' || $hasLinkedResult) ? 'has-result' : 'no-result'; ?>"><?php echo h($studyStatusLine); ?></span>
+                        </div>
                       <?php endif; ?>
                       <?php if ($isStudyDoc && $docOccurredAt !== ''): ?>
                         <div class="mm-activity-meta"><?php echo h($docOccurredAt); ?></div>
@@ -1923,27 +2013,34 @@ if (!$embed) {
                         <div class="mm-activity-meta">Caso: <?php echo h((string)$docItem['case_title']); ?></div>
                       <?php endif; ?>
                     </div>
-                    <div class="mm-activity-actions">
+                    <div class="mm-activity-actions <?php echo $isStudyDoc ? 'est-order-actions' : ''; ?>">
                       <?php if (!$docInActiveCase && $docUuid !== ''): ?>
                         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-to-case" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Integrar a caso clínico</button>
                       <?php endif; ?>
                       <?php if (!$docInActiveCase && $activeCaseId !== '' && $docUuid !== ''): ?>
                         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-success" data-action="assign-case-item" data-case-id="<?php echo h($activeCaseId); ?>" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Agregar a caso activo</button>
                       <?php endif; ?>
-                      <?php if ($isStudyOrder && $docUuid !== ''): ?>
-                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-nav-mode="document" data-uuid="<?php echo h($docUuid); ?>" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>">Ver orden</button>
+                      <?php if ($isStudyOrder && $docPrimaryRef !== ''): ?>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="open-diagnostic-document" data-ref="<?php echo h($docPrimaryRef); ?>" data-summary-hint="<?php echo h($docDisplayTitle); ?>">Ver orden</button>
+                      <?php endif; ?>
+                      <?php if ($isStudyOrder && $docStatus === 'active' && !$hasLinkedResult && $docPrimaryRef !== ''): ?>
+                        <button type="button" class="btn btn-outline-success btn-sm" data-action="open-diagnostic-order-result" data-ref="<?php echo h($docPrimaryRef); ?>">Ingresar resultado</button>
+                        <button type="button" class="btn btn-outline-warning btn-sm" data-action="open-diagnostic-order-replace" data-ref="<?php echo h($docPrimaryRef); ?>">Reemplazar orden</button>
+                      <?php endif; ?>
+                      <?php if ($isStudyOrder && $docStatus === 'active' && $hasLinkedResult): ?>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-diagnostic-document" data-ref="<?php echo h($linkedResultRef); ?>" data-summary-hint="Resultado asociado">Ver resultado</button>
                       <?php endif; ?>
                       <?php if ($isStudyResult && $docUuid !== ''): ?>
-                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-nav-mode="document" data-uuid="<?php echo h($docUuid); ?>" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>">Ver resultado</button>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="open-diagnostic-document" data-ref="<?php echo h($docUuid); ?>" data-summary-hint="<?php echo h($docDisplayTitle); ?>">Ver resultado</button>
                       <?php endif; ?>
                       <?php if ($isStudyOrder && $docStatus === 'replaced' && $replacedByRef !== ''): ?>
-                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-related-document" data-ref="<?php echo h($replacedByRef); ?>">Ver orden reemplazante</button>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-diagnostic-document" data-ref="<?php echo h($replacedByRef); ?>" data-summary-hint="Orden reemplazante">Ver orden reemplazante</button>
                       <?php endif; ?>
                       <?php if ($isStudyOrder && $docStatus === 'active' && $replacementSourceRef !== ''): ?>
-                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-related-document" data-ref="<?php echo h($replacementSourceRef); ?>">Ver orden previa</button>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-diagnostic-document" data-ref="<?php echo h($replacementSourceRef); ?>" data-summary-hint="Orden previa">Ver orden previa</button>
                       <?php endif; ?>
                       <?php if ($isStudyResult && $resultSourceOrderRef !== ''): ?>
-                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-related-document" data-ref="<?php echo h($resultSourceOrderRef); ?>">Ver orden original</button>
+                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-diagnostic-document" data-ref="<?php echo h($resultSourceOrderRef); ?>" data-summary-hint="Orden original">Ver orden original</button>
                       <?php endif; ?>
                     </div>
                   </div>
@@ -2671,6 +2768,14 @@ if (!$embed) {
       var href = String(itemEl.getAttribute('data-href') || '').trim();
       if (!href) return;
       var mode = String(itemEl.getAttribute('data-nav-mode') || '').trim();
+      var isStudyDoc = String(itemEl.getAttribute('data-is-study-doc') || '').trim() === '1';
+      if (mode === 'document' && isStudyDoc) {
+        var studyRef = String(itemEl.getAttribute('data-uuid') || '').trim();
+        if (studyRef) {
+          openDiagnosticDocument(studyRef, 'Documento diagnóstico');
+          return;
+        }
+      }
       if ((mode === 'encounter' || mode === 'document') && isEmbed && window.parent && window.parent !== window && typeof window.parent.postMessage === 'function') {
         var payload = { type: 'mxmed:embed:navigate', mode: mode };
         if (mode === 'encounter') {
@@ -2689,6 +2794,52 @@ if (!$embed) {
         return;
       }
       window.location.href = href;
+    }
+
+    function openDiagnosticDocument(ref, summaryHint) {
+      var safeRef = String(ref || '').trim();
+      if (!safeRef) return;
+      if (isEmbed && window.parent && window.parent !== window && typeof window.parent.postMessage === 'function') {
+        window.parent.postMessage({
+          type: 'mxmed:embed:open-diagnostic-document',
+          document_ref: safeRef
+        }, '*');
+        return;
+      }
+      if (typeof window.mxmedOpenDiagnosticDocumentDetail === 'function') {
+        try {
+          window.mxmedOpenDiagnosticDocumentDetail(safeRef, { source: 'historial_standalone' });
+          return;
+        } catch (_) {}
+      }
+      openDocumentViewer(safeRef, String(summaryHint || '').trim() || 'Documento diagnóstico', 'document');
+    }
+
+    function openDiagnosticOrderAction(action, ref) {
+      var safeAction = String(action || '').trim();
+      var safeRef = String(ref || '').trim();
+      if (!safeAction || !safeRef) return;
+      if (isEmbed && window.parent && window.parent !== window && typeof window.parent.postMessage === 'function') {
+        window.parent.postMessage({
+          type: 'mxmed:embed:diagnostic-order-action',
+          action: safeAction,
+          document_ref: safeRef
+        }, '*');
+        return;
+      }
+      if (safeAction === 'upload_result' && typeof window.mxmedOpenDiagnosticOrderResultModal === 'function') {
+        try {
+          window.mxmedOpenDiagnosticOrderResultModal(safeRef, { source: 'historial_standalone' });
+          return;
+        } catch (_) {}
+      }
+      if (safeAction === 'replace_order' && typeof window.mxmedStartDiagnosticOrderReplacement === 'function') {
+        try {
+          window.mxmedStartDiagnosticOrderReplacement(safeRef, { source: 'historial_standalone' });
+          return;
+        } catch (_) {}
+      }
+      window.alert('Esta acción operativa está disponible en el expediente integrado.');
     }
 
     function applyTimelineCategoryFilter() {
@@ -4522,22 +4673,48 @@ if (!$embed) {
         event.preventDefault();
         var docUuid = String(openDocumentBtn.getAttribute('data-uuid') || '').trim();
         var docTarget = String(openDocumentBtn.getAttribute('data-doc-target') || '').trim().toLowerCase();
+        var openDocumentItem = openDocumentBtn.closest ? openDocumentBtn.closest('[data-role="timeline-item"]') : null;
+        var isStudyDocumentBtn = String(openDocumentBtn.getAttribute('data-is-study-doc') || '').trim() === '1'
+          || (openDocumentItem && String(openDocumentItem.getAttribute('data-is-study-doc') || '').trim() === '1');
         var summaryEl = openDocumentBtn.closest('.border, .doc-line, .mm-card');
         var summaryHint = '';
         if (summaryEl) {
           var secondary = summaryEl.querySelector('.text-secondary');
           summaryHint = secondary ? String(secondary.textContent || '').trim() : '';
         }
+        if (isStudyDocumentBtn) {
+          openDiagnosticDocument(docUuid, summaryHint || 'Documento diagnóstico');
+          return;
+        }
         openDocumentViewer(docUuid, summaryHint, docTarget === 'image' ? 'image' : 'document');
         return;
       }
 
-      var openRelatedDocumentBtn = event.target && event.target.closest ? event.target.closest('[data-action="open-related-document"]') : null;
-      if (openRelatedDocumentBtn) {
+      var openDiagnosticDocumentBtn = event.target && event.target.closest ? event.target.closest('[data-action="open-diagnostic-document"]') : null;
+      if (openDiagnosticDocumentBtn) {
         event.preventDefault();
-        var relatedRef = String(openRelatedDocumentBtn.getAttribute('data-ref') || '').trim();
+        var relatedRef = String(openDiagnosticDocumentBtn.getAttribute('data-ref') || '').trim();
+        var relatedHint = String(openDiagnosticDocumentBtn.getAttribute('data-summary-hint') || '').trim();
         if (!relatedRef) return;
-        openDocumentViewer(relatedRef, 'Documento relacionado', 'document');
+        openDiagnosticDocument(relatedRef, relatedHint || 'Documento diagnóstico');
+        return;
+      }
+
+      var openDiagnosticOrderResultBtn = event.target && event.target.closest ? event.target.closest('[data-action="open-diagnostic-order-result"]') : null;
+      if (openDiagnosticOrderResultBtn) {
+        event.preventDefault();
+        var resultOrderRef = String(openDiagnosticOrderResultBtn.getAttribute('data-ref') || '').trim();
+        if (!resultOrderRef) return;
+        openDiagnosticOrderAction('upload_result', resultOrderRef);
+        return;
+      }
+
+      var openDiagnosticOrderReplaceBtn = event.target && event.target.closest ? event.target.closest('[data-action="open-diagnostic-order-replace"]') : null;
+      if (openDiagnosticOrderReplaceBtn) {
+        event.preventDefault();
+        var replaceOrderRef = String(openDiagnosticOrderReplaceBtn.getAttribute('data-ref') || '').trim();
+        if (!replaceOrderRef) return;
+        openDiagnosticOrderAction('replace_order', replaceOrderRef);
         return;
       }
 
