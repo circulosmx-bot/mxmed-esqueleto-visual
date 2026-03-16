@@ -1603,3 +1603,13 @@ Límites explícitos de esta fase:
 - Sin tocar resultados (`lab_result`/`imaging_result`).
 - Sin refactor grande de viewer/modal.
 - Sin delete canónico de órdenes en esta etapa.
+
+## DOC-ORD / DOC-RES — Historial de Atención reutiliza capa compartida de detalle diagnóstico
+
+Estado: ajuste de integración aplicado.
+
+- Historial de Atención mantiene su rol longitudinal y deja de depender de un render diagnóstico paralelo para órdenes/resultados.
+- Las acciones de eventos diagnósticos (`Ver orden`, `Ver resultado`, `Ver orden original`, `Ver orden reemplazante`, `Ver orden previa`) delegan al modal interno compartido del host (`openOrderDetailModal` vía bridge embed), reutilizando la misma capa funcional validada en Estudios Diagnósticos.
+- Se conserva fallback local de visor documental solo cuando no está disponible la capa compartida del host.
+- Se reduce ruido de consola en contexto `search_open` limitando logs redundantes de supresión auto-encounter en P10.
+- Homologación de iconografía diagnóstica: Historial de Atención reutiliza la misma iconografía SVG inline de las cards de Estudios Diagnósticos, se elimina la ruta que renderizaba texto de ligatures (por ejemplo `radiology`) y el render queda centralizado exclusivamente en el helper `resolveClinicalDocumentSvgIcon(...)`.

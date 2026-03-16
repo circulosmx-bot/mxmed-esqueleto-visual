@@ -10928,11 +10928,56 @@ function mxResetLogoPreview(){
     if(key === 'imagenologia' || label === 'imagenologia') return 'imaging_order';
     return '';
   }
-  function inferOrderIcon(area){
-    const label = clean(area).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    if(label === 'laboratorio') return 'science';
-    return 'radiology';
+  function resolveClinicalDocumentIcon(documentType){
+    const type = clean(documentType).toLowerCase();
+    const map = {
+      lab_order: 'science',
+      lab_result: 'science',
+      imaging_order: 'radiology',
+      imaging_result: 'radiology',
+      result: 'monitoring',
+      prescription: 'medication',
+      recipe: 'medication',
+      rx: 'medication',
+      receta: 'medication',
+      clinical_note: 'description',
+      note: 'description',
+      nota_evolucion: 'description',
+      medical_note: 'description',
+      evolution_note: 'description',
+      consent_document: 'fact_check',
+      consentimiento_informado: 'fact_check'
+    };
+    return map[type] || '';
   }
+  window.resolveClinicalDocumentIcon = resolveClinicalDocumentIcon;
+  const CLINICAL_DIAGNOSTIC_SVG_ICON_MAP = Object.freeze({
+    lab_order: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4v7l-4 7a2 2 0 0 0 1.8 3h8.4A2 2 0 0 0 18 18l-4-7V4"/><path d="M8 4h8"/><path d="M9 14h6"/></svg>',
+    lab_result: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4v7l-4 7a2 2 0 0 0 1.8 3h8.4A2 2 0 0 0 18 18l-4-7V4"/><path d="M8 4h8"/><path d="M9 14h6"/></svg>',
+    result: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v6l-3 3v5a2 2 0 0 1-4 0v-5L7 10V4z"/><path d="M9 4v2"/><path d="M15 4v2"/></svg>'
+  });
+  function resolveEstudiosTabImagingIconMarkup(){
+    const tab = document.querySelector('#p-expediente [data-tab-key="t-estudios"] .tab-ico')
+      || document.querySelector('[data-tab-key="t-estudios"] .tab-ico');
+    if(tab){
+      return tab.outerHTML;
+    }
+    return '<span class="tab-ico material-symbols-outlined" aria-hidden="true">radiology</span>';
+  }
+  function resolveClinicalDocumentSvgIcon(documentType, area = ''){
+    const type = clean(documentType).toLowerCase();
+    if(type === 'imaging_order' || type === 'imaging_result'){
+      return resolveEstudiosTabImagingIconMarkup();
+    }
+    if(type && CLINICAL_DIAGNOSTIC_SVG_ICON_MAP[type]){
+      return CLINICAL_DIAGNOSTIC_SVG_ICON_MAP[type];
+    }
+    const label = clean(area).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if(label === 'laboratorio') return CLINICAL_DIAGNOSTIC_SVG_ICON_MAP.lab_order;
+    if(label === 'imagenologia') return resolveEstudiosTabImagingIconMarkup();
+    return CLINICAL_DIAGNOSTIC_SVG_ICON_MAP.result;
+  }
+  window.resolveClinicalDocumentSvgIcon = resolveClinicalDocumentSvgIcon;
   function inferOrderColor(area){
     const label = clean(area).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     if(label === 'laboratorio') return 'est-order--lab';
@@ -11780,6 +11825,9 @@ function mxResetLogoPreview(){
     }
     const orderStatus = clean(order.orderStatus || 'active').toLowerCase() || 'active';
     card.setAttribute('data-order-status', orderStatus);
+    if(order.documentType){
+      card.setAttribute('data-document-type', clean(order.documentType).toLowerCase());
+    }
     const replacedByRef = clean(order.replacedByRef || '');
     const replacementSourceRef = clean(order.replacementSourceRef || '');
     if(replacedByRef){
@@ -11802,6 +11850,7 @@ function mxResetLogoPreview(){
     const studiesComplement = clean(order.studiesComplement || '');
     const meta = clean(order.metaText || '') || `${selectionCount} estudios · ${prettyDate(eventDatetime) || prettyDate(nowSqlDateTime())}`;
     const title = clean(order.displayTitle || '') || `${area} · ${clean(order.indication) || 'Orden clínica'}`;
+    const orderIconSvg = resolveClinicalDocumentSvgIcon(order.documentType, area);
     if(summaryText){
       card.setAttribute('data-summary', summaryText);
     }
@@ -11813,7 +11862,7 @@ function mxResetLogoPreview(){
     }
     card.innerHTML = `
       <div class="est-order-head">
-        <div class="est-order-title"><span class="material-symbols-outlined est-order-ico" aria-hidden="true">${escapeHtml(inferOrderIcon(area))}</span><span>${escapeHtml(title)}</span></div>
+        <div class="est-order-title"><span class="est-order-ico est-order-ico-svg" aria-hidden="true">${orderIconSvg}</span><span>${escapeHtml(title)}</span></div>
       </div>
       ${order.readOnly ? '' : '<button type="button" class="est-order-del" aria-label="Eliminar orden" data-est-order-delete>&times;</button>'}
       ${summaryText ? `<div class="est-order-summary">${escapeHtml(summaryText)}</div>` : ''}

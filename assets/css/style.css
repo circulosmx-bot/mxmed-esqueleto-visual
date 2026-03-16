@@ -4247,6 +4247,25 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-radius:12px;
   padding:8px;
 }
+.est-order-ico.est-order-ico-svg{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  line-height:1;
+  min-width:48px;
+  min-height:48px;
+  box-sizing:border-box;
+}
+.est-order-ico.est-order-ico-svg svg{
+  width:32px;
+  height:32px;
+  display:block;
+  flex-shrink:0;
+}
+.est-order-ico.est-order-ico-svg .tab-ico.material-symbols-outlined{
+  font-size:32px;
+  line-height:1;
+}
 .est-order--lab .est-order-ico{ background:#00b0c5; }
 .est-order--img .est-order-ico{ background:#ef5070; }
 .est-order--cardio .est-order-ico{ background:#005275; }
