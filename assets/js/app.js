@@ -10808,6 +10808,13 @@ function mxResetLogoPreview(){
   let canonicalOrderSubmitting = false;
   const lastCreatedOrderRef = { id: '', uuid: '' };
   const orderSubmitLock = (window.__mxmedOrderSubmitLock = window.__mxmedOrderSubmitLock || { signature: '', ts: 0 });
+  const orderReplacementState = {
+    active: false,
+    sourceRef: '',
+    sourceId: '',
+    sourceUuid: '',
+    reason: ''
+  };
   let modalMode = 'add';
   let modalModeController = null;
   const groupLabels = {};
@@ -11094,6 +11101,29 @@ function mxResetLogoPreview(){
     if(flags.some((flag)=> /urgent|urgente|stat/i.test(flag))) return 'Urgente';
     if(flags.some((flag)=> /routine|rutinaria|routine/i.test(flag))) return 'Rutinaria';
     return '';
+  }
+  function resolveDiagnosticOrderLifecycle(payload){
+    const data = (payload && typeof payload === 'object') ? payload : {};
+    const sourceStatus = clean(data.status || '').toLowerCase();
+    const replacedById = clean(data.replaced_by_document_id || '');
+    const replacedByUuid = clean(data.replaced_by_document_uuid || '');
+    const replacementSourceId = clean(data.replacement_source_document_id || '');
+    const replacementSourceUuid = clean(data.replacement_source_document_uuid || '');
+    const status = sourceStatus || ((replacedById || replacedByUuid) ? 'replaced' : 'active');
+    return {
+      status,
+      replacedByRef: replacedByUuid || replacedById,
+      replacementSourceRef: replacementSourceUuid || replacementSourceId,
+      replacementReason: clean(data.replacement_reason || ''),
+      replacementAt: clean(data.replacement_at || '')
+    };
+  }
+  function clearOrderReplacementState(){
+    orderReplacementState.active = false;
+    orderReplacementState.sourceRef = '';
+    orderReplacementState.sourceId = '';
+    orderReplacementState.sourceUuid = '';
+    orderReplacementState.reason = '';
   }
   function normalizeClinicalAssetUrl(rawUrl){
     const value = clean(rawUrl);
@@ -11747,6 +11777,16 @@ function mxResetLogoPreview(){
     if(resultRef){
       card.setAttribute('data-result-document-ref', resultRef);
     }
+    const orderStatus = clean(order.orderStatus || 'active').toLowerCase() || 'active';
+    card.setAttribute('data-order-status', orderStatus);
+    const replacedByRef = clean(order.replacedByRef || '');
+    const replacementSourceRef = clean(order.replacementSourceRef || '');
+    if(replacedByRef){
+      card.setAttribute('data-replaced-by-document-ref', replacedByRef);
+    }
+    if(replacementSourceRef){
+      card.setAttribute('data-replacement-source-document-ref', replacementSourceRef);
+    }
     const eventDatetime = clean(order.eventDatetime) || nowSqlDateTime();
     card.setAttribute('data-event-datetime', eventDatetime);
     if(order.readOnly){
@@ -11779,12 +11819,18 @@ function mxResetLogoPreview(){
       ${studiesPreview ? `<div class="est-order-preview">${escapeHtml(studiesPreview)}</div>` : ''}
       ${studiesComplement ? `<div class="est-order-complement">${escapeHtml(studiesComplement)}</div>` : ''}
       <div class="est-order-meta">${escapeHtml(meta)}</div>
-      ${order.readOnly ? `<div class="est-order-result-state ${order.hasResult ? 'has-result' : 'no-result'}">${order.hasResult ? 'Resultado cargado' : 'Sin resultado cargado'}</div>` : ''}
+      ${order.readOnly && orderStatus === 'replaced'
+        ? '<div class="est-order-result-state has-result">Orden reemplazada</div><div class="text-muted small">Esta orden fue sustituida por una nueva versión.</div>'
+        : ''}
+      ${order.readOnly && orderStatus !== 'replaced' ? `<div class="est-order-result-state ${order.hasResult ? 'has-result' : 'no-result'}">${order.hasResult ? 'Resultado cargado' : 'Sin resultado cargado'}</div>` : ''}
       ${order.priority ? `<div class="est-order-tags"><span>${escapeHtml(order.priority)}</span></div>` : ''}
       <div class="est-order-actions">
         ${order.readOnly ? '' : `<button type="button" class="btn btn-outline-primary btn-sm" data-est-order-edit>${formatOrderActionLabel(card)}</button>`}
-        ${order.readOnly && !order.hasResult ? '<button type="button" class="btn btn-outline-success btn-sm" data-est-order-upload-result>Ingresar resultado</button>' : ''}
+        ${order.readOnly && orderStatus === 'active' && !order.hasResult ? '<button type="button" class="btn btn-outline-success btn-sm" data-est-order-upload-result>Ingresar resultado</button>' : ''}
+        ${order.readOnly && orderStatus === 'active' && !order.hasResult ? '<button type="button" class="btn btn-outline-warning btn-sm" data-est-order-replace>Reemplazar orden</button>' : ''}
         ${order.readOnly && order.hasResult ? '<button type="button" class="btn btn-outline-secondary btn-sm" data-est-order-view-result>Ver resultado</button>' : ''}
+        ${order.readOnly && orderStatus === 'replaced' && replacedByRef ? '<button type="button" class="btn btn-outline-secondary btn-sm" data-est-order-view-replaced-by>Ver orden reemplazante</button>' : ''}
+        ${order.readOnly && orderStatus === 'active' && replacementSourceRef ? '<button type="button" class="btn btn-outline-secondary btn-sm" data-est-order-view-replacement-source>Ver orden previa</button>' : ''}
         <button class="btn btn-outline-secondary btn-sm">Imprimir</button>
         <button class="btn btn-outline-secondary btn-sm">Compartir</button>
       </div>
@@ -11927,6 +11973,7 @@ function mxResetLogoPreview(){
       const countMatch = summary.match(/^(\d+)\s+estudios?/i);
       const parsedSelectionCount = countMatch ? Number(countMatch[1]) : 0;
       const payload = (row && typeof row.__docPayload === 'object') ? row.__docPayload : {};
+      const lifecycle = resolveDiagnosticOrderLifecycle(payload);
       const preview = buildDiagnosticOrderPreview(row, payload);
       const relatedResult = resultsIndex.get(docId) || resultsIndex.get(docUuid) || null;
       prependOrderCard({
@@ -11946,6 +11993,9 @@ function mxResetLogoPreview(){
         documentUuid: docUuid,
         hasResult: !!relatedResult,
         resultRef: clean(relatedResult?.uuid || relatedResult?.id || ''),
+        orderStatus: lifecycle.status,
+        replacedByRef: lifecycle.replacedByRef,
+        replacementSourceRef: lifecycle.replacementSourceRef,
         readOnly: true
       }, { position: 'append' });
     };
@@ -12068,6 +12118,7 @@ function mxResetLogoPreview(){
       area: clean(params?.area),
       priority: clean(params?.priority),
       indication: clean(params?.indication),
+      replacementSourceRef: clean(params?.replacementSourceRef),
       items,
       flags
     });
@@ -12101,6 +12152,9 @@ function mxResetLogoPreview(){
     if(indication) summaryParts.push(indication);
     const summary = summaryParts.join(' · ');
     const flags = getOrderedFlags(params?.controllerKey);
+    const replacementRef = clean(params?.replacement?.sourceRef || '');
+    const replacementReason = clean(params?.replacement?.reason || '');
+    const isReplacementMode = replacementRef !== '';
     traceOrder('save_submit', {
       patient_id: patientId,
       encounter_key: encounterKey,
@@ -12108,6 +12162,8 @@ function mxResetLogoPreview(){
       controller_key: clean(params?.controllerKey),
       area: area,
       document_type: documentType,
+      mode: isReplacementMode ? 'replacement' : 'create',
+      replacement_source_ref: replacementRef,
       priority: priority,
       indication: indication,
       selection_count: items.length,
@@ -12121,7 +12177,8 @@ function mxResetLogoPreview(){
       indication: indication || null,
       requested_studies: items,
       flags: flags,
-      selection_count: items.length
+      selection_count: items.length,
+      status: 'active'
     };
     const signature = buildOrderSubmitSignature({
       patientId,
@@ -12129,6 +12186,7 @@ function mxResetLogoPreview(){
       area,
       priority,
       indication,
+      replacementSourceRef: replacementRef,
       items,
       flags
     });
@@ -12149,30 +12207,59 @@ function mxResetLogoPreview(){
     if(encounterKey) formData.append('encounter_key', encounterKey);
     if(appointmentId) formData.append('appointment_id', appointmentId);
 
-    setOrderFeedback('Guardando orden canónica…');
+    setOrderFeedback(isReplacementMode ? 'Guardando orden de reemplazo…' : 'Guardando orden canónica…');
     try{
-      const resp = await fetch('/api/clinical/index.php/documents', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json'
-        },
-        credentials: 'same-origin',
-        body: formData
-      });
+      let resp;
+      if(isReplacementMode){
+        const body = {
+          document_type: documentType,
+          order_area: area || null,
+          priority: priority || null,
+          indication: indication || null,
+          requested_studies: items,
+          flags: flags,
+          replacement_reason: replacementReason || null,
+          summary_override: summary,
+          title_override: title,
+          event_datetime: eventDatetime
+        };
+        resp = await fetch(`/api/clinical/index.php/documents/${encodeURIComponent(replacementRef)}/replace`, {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json'
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify(body)
+        });
+      }else{
+        resp = await fetch('/api/clinical/index.php/documents', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json'
+          },
+          credentials: 'same-origin',
+          body: formData
+        });
+      }
       const json = await resp.json().catch(()=> null);
       if(!resp.ok || !json || json.ok !== true){
         const message = clean(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo guardar la orden.';
         throw new Error(message);
       }
       const documentUuid = clean(
-        json?.data?.document?.document_uuid
+        json?.data?.replacement_document?.document_id
+        || json?.data?.replacement_document_uuid
+        || json?.data?.document?.document_uuid
         || json?.data?.document?.document_id
         || json?.data?.document_uuid
         || json?.data?.document_id
         || ''
       );
       const documentDbId = clean(
-        json?.data?.document?.document_db_id
+        json?.data?.replacement_document?.document_db_id
+        || json?.data?.replacement_document_id
+        || json?.data?.document?.document_db_id
         || json?.data?.document?.id
         || ''
       );
@@ -12187,7 +12274,10 @@ function mxResetLogoPreview(){
         event_datetime: clean(json?.data?.document?.ui?.event_datetime)
       });
       await refreshCanonicalOrdersList();
-      setOrderFeedback('Orden canónica guardada correctamente.', 'success');
+      setOrderFeedback(isReplacementMode ? 'Orden reemplazada y nueva versión guardada.' : 'Orden canónica guardada correctamente.', 'success');
+      if(isReplacementMode){
+        clearOrderReplacementState();
+      }
       try{
         window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created', {
           detail: {
@@ -12196,7 +12286,7 @@ function mxResetLogoPreview(){
             appointment_id: appointmentId || '',
             document_type: documentType,
             document_uuid: documentUuid || '',
-            source: 'estudios_host_solicitar'
+            source: isReplacementMode ? 'estudios_host_replace' : 'estudios_host_solicitar'
           }
         }));
       }catch(_){}
@@ -12598,7 +12688,11 @@ function mxResetLogoPreview(){
     modalModeController = controller || null;
     const target = (controller || activeController)?.addBtn;
     if(target){
-      target.textContent = modalMode === 'edit' ? 'Actualizar orden' : 'Generar orden';
+      if(orderReplacementState.active){
+        target.textContent = 'Guardar reemplazo';
+      }else{
+        target.textContent = modalMode === 'edit' ? 'Actualizar orden' : 'Generar orden';
+      }
     }
   }
   function getControllerForArea(area){
@@ -12639,6 +12733,80 @@ function mxResetLogoPreview(){
     window.scrollTo({ top, behavior: 'smooth' });
     target.classList.add('est-order-focus');
     setTimeout(()=> target.classList.remove('est-order-focus'), 1200);
+  }
+  function setPrioritySelectValue(value){
+    if(!prioritySelect) return;
+    const wanted = clean(value);
+    if(!wanted){
+      prioritySelect.value = '';
+      return;
+    }
+    const match = Array.from(prioritySelect.options).find((opt)=> clean(opt.value || opt.textContent || '').toLowerCase() === wanted.toLowerCase());
+    if(match){
+      prioritySelect.value = match.value;
+    }else{
+      prioritySelect.value = '';
+    }
+  }
+  async function startOrderReplacementFromCard(card){
+    if(!card) return;
+    const status = clean(card.getAttribute('data-order-status') || '').toLowerCase();
+    if(status === 'replaced'){
+      setOrderFeedback('Esta orden ya fue reemplazada y no puede reemplazarse de nuevo en esta fase.', 'muted');
+      return;
+    }
+    const hasResult = card.querySelector('[data-est-order-view-result]') != null
+      || clean(card.getAttribute('data-result-document-ref') || '') !== '';
+    if(hasResult){
+      setOrderFeedback('No se puede reemplazar una orden con resultado cargado.', 'muted');
+      return;
+    }
+    const docUuid = clean(card.getAttribute('data-document-uuid') || card.getAttribute('data-est-document-uuid'));
+    const docId = clean(card.getAttribute('data-document-id') || card.getAttribute('data-est-document-id'));
+    const docRef = docUuid || docId;
+    if(!docRef){
+      setOrderFeedback('No se pudo resolver la orden para reemplazo.', 'error');
+      return;
+    }
+    try{
+      const detail = await fetchOrderDocumentDetail(docRef);
+      const payload = (detail && typeof detail.payload === 'object') ? detail.payload : {};
+      const studies = extractDiagnosticItemsFromPayload(payload);
+      if(!studies.length){
+        setOrderFeedback('La orden original no contiene estudios para precargar.', 'error');
+        return;
+      }
+      const area = resolveOrderAreaLabel(detail.documentType, payload);
+      const controller = getControllerForArea(area);
+      if(!controller){
+        setOrderFeedback('No se pudo abrir el selector para reemplazo en este entorno.', 'error');
+        return;
+      }
+      setAreaSelect(area);
+      const input = activeInput || openInputs[0] || orderBlock?.querySelector('[data-est-open-modal]');
+      if(!input){
+        setOrderFeedback('No se encontró el input de selección para reemplazar la orden.', 'error');
+        return;
+      }
+      activeInput = input;
+      activeController = controller;
+      clearOrderReplacementState();
+      orderReplacementState.active = true;
+      orderReplacementState.sourceRef = docRef;
+      orderReplacementState.sourceId = clean(detail.id || '');
+      orderReplacementState.sourceUuid = clean(detail.uuid || '');
+      orderReplacementState.reason = '';
+      setSelection(studies, input, controller.key);
+      setPrioritySelectValue(payload?.priority || '');
+      if(indicationTextarea){
+        indicationTextarea.value = clean(payload?.indication || '');
+      }
+      setModalMode('add', controller);
+      controller.open(input);
+      setOrderFeedback('Reemplazo activo: ajusta la orden y guarda la nueva versión.', 'muted');
+    }catch(err){
+      setOrderFeedback(clean(err?.message || 'No se pudo preparar el reemplazo de la orden.'), 'error');
+    }
   }
   function createController(cfg){
     const modalEl = document.getElementById(cfg.id);
@@ -13026,7 +13194,11 @@ function mxResetLogoPreview(){
           const saveResult = await saveCanonicalStudyOrder({
             items,
             controllerKey: controller.key,
-            area: controllerAreaMap[controller.key] || areaSelect?.value || ''
+            area: controllerAreaMap[controller.key] || areaSelect?.value || '',
+            replacement: orderReplacementState.active ? {
+              sourceRef: orderReplacementState.sourceRef,
+              reason: orderReplacementState.reason
+            } : null
           });
           savedOk = saveResult && saveResult.ok === true;
           if(savedOk){
@@ -13062,7 +13234,10 @@ function mxResetLogoPreview(){
       };
       run();
     });
-    modalEl?.addEventListener('hidden.bs.modal', ()=> setModalMode('add', controller));
+    modalEl?.addEventListener('hidden.bs.modal', ()=>{
+      clearOrderReplacementState();
+      setModalMode('add', controller);
+    });
     controller.applyFilterChip('todos');
     controller.filterList('');
     return controller;
@@ -13191,6 +13366,13 @@ function mxResetLogoPreview(){
     openOrderResultModal(docRef, { resultRef });
   });
   orderList?.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-est-order-replace]');
+    if(!btn) return;
+    const card = btn.closest('.est-order-card');
+    if(!card) return;
+    startOrderReplacementFromCard(card);
+  });
+  orderList?.addEventListener('click', (e)=>{
     const btn = e.target.closest('[data-est-order-view-result]');
     if(!btn) return;
     const card = btn.closest('.est-order-card');
@@ -13201,6 +13383,30 @@ function mxResetLogoPreview(){
       return;
     }
     openOrderDetailModal(resultRef);
+  });
+  orderList?.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-est-order-view-replaced-by]');
+    if(!btn) return;
+    const card = btn.closest('.est-order-card');
+    if(!card) return;
+    const ref = clean(card.getAttribute('data-replaced-by-document-ref') || '');
+    if(!ref){
+      setOrderFeedback('No se encontró la orden reemplazante.', 'muted');
+      return;
+    }
+    openOrderDetailModal(ref);
+  });
+  orderList?.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-est-order-view-replacement-source]');
+    if(!btn) return;
+    const card = btn.closest('.est-order-card');
+    if(!card) return;
+    const ref = clean(card.getAttribute('data-replacement-source-document-ref') || '');
+    if(!ref){
+      setOrderFeedback('No se encontró la orden previa asociada.', 'muted');
+      return;
+    }
+    openOrderDetailModal(ref);
   });
   document.addEventListener('click', (e)=>{
     const btn = e.target.closest('[data-order-detail-open-related-order]');

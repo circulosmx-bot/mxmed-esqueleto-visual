@@ -480,6 +480,83 @@ function clinical_documents_get_by_uuid_fetch(PDO $pdo, string $uuid): ?array
     return clinical_documents_get_fetch($pdo, $id);
 }
 
+function clinical_documents_get_by_token_fetch(PDO $pdo, string $token): ?array
+{
+    $safe = trim((string)$token);
+    if ($safe === '') {
+        return null;
+    }
+    if (preg_match('/^\d+$/', $safe) === 1) {
+        return clinical_documents_get_fetch($pdo, (int)$safe);
+    }
+    return clinical_documents_get_by_uuid_fetch($pdo, $safe);
+}
+
+function clinical_document_extract_related_order_refs(array $payload): array
+{
+    $candidates = [
+        $payload['related_order_document_id'] ?? null,
+        $payload['related_order_document_uuid'] ?? null,
+        $payload['related_document_id'] ?? null,
+        $payload['related_document_uuid'] ?? null,
+        $payload['related_order_id'] ?? null,
+        is_array($payload['context'] ?? null) ? ($payload['context']['related_order_document_id'] ?? null) : null,
+        is_array($payload['context'] ?? null) ? ($payload['context']['related_order_document_uuid'] ?? null) : null,
+        is_array($payload['context'] ?? null) ? ($payload['context']['related_document_id'] ?? null) : null,
+        is_array($payload['context'] ?? null) ? ($payload['context']['related_document_uuid'] ?? null) : null,
+    ];
+    $out = [];
+    foreach ($candidates as $candidate) {
+        $value = trim((string)($candidate ?? ''));
+        if ($value === '') {
+            continue;
+        }
+        if (!in_array($value, $out, true)) {
+            $out[] = $value;
+        }
+    }
+    return $out;
+}
+
+function clinical_document_has_linked_result(PDO $pdo, string $patientId, string $orderId, string $orderUuid): bool
+{
+    $patientId = trim($patientId);
+    if ($patientId === '') {
+        return false;
+    }
+    $stmt = $pdo->prepare("
+        SELECT id, payload_json
+        FROM clinical_documents
+        WHERE patient_id = :patient_id
+          AND document_type IN ('lab_result', 'imaging_result', 'result', 'lab_pdf')
+        ORDER BY id DESC
+        LIMIT 300
+    ");
+    $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+    $stmt->execute();
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if (!is_array($rows)) {
+        return false;
+    }
+    foreach ($rows as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $payload = json_decode((string)($row['payload_json'] ?? ''), true);
+        if (!is_array($payload)) {
+            $payload = [];
+        }
+        $refs = clinical_document_extract_related_order_refs($payload);
+        if ($orderId !== '' && in_array($orderId, $refs, true)) {
+            return true;
+        }
+        if ($orderUuid !== '' && in_array($orderUuid, $refs, true)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function clinical_encounter_documents_direct_fetch(PDO $pdo, string $patientId, int $encounterId, string $orderDir = 'ASC'): array
 {
     if ($encounterId <= 0 || $patientId === '') {
@@ -2322,7 +2399,19 @@ function clinical_timeline_semantic_classify(array $item): array
             'study_role' => 'orden',
         ];
     }
+    if ($documentType === 'lab_order' || $documentType === 'imaging_order' || $documentType === 'order') {
+        return [
+            'clinical_category' => 'estudio',
+            'study_role' => 'orden',
+        ];
+    }
     if ($documentType === 'results') {
+        return [
+            'clinical_category' => 'estudio',
+            'study_role' => 'resultado',
+        ];
+    }
+    if ($documentType === 'lab_result' || $documentType === 'imaging_result' || $documentType === 'result' || $documentType === 'lab_pdf') {
         return [
             'clinical_category' => 'estudio',
             'study_role' => 'resultado',
@@ -6020,6 +6109,352 @@ try {
                     'meta' => [
                         'method' => 'POST',
                         'route' => 'documents/{uuid}/replicate',
+                    ],
+                ], 500);
+                return;
+            }
+        }
+
+        if ($method === 'POST' && count($segments) === 3 && ($segments[2] ?? '') === 'replace') {
+            $sourceToken = trim(rawurldecode((string)$segments[1]));
+            if ($sourceToken === '') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'source document id_or_uuid requerido',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'documents/{id_or_uuid}/replace',
+                    ],
+                ], 400);
+                return;
+            }
+
+            $bodyResult = clinical_read_json_body();
+            if (($bodyResult['ok'] ?? false) !== true) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => (string)($bodyResult['error'] ?? 'invalid body'),
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'documents/{id_or_uuid}/replace',
+                    ],
+                ], 400);
+                return;
+            }
+            $body = is_array($bodyResult['data'] ?? null) ? (array)$bodyResult['data'] : [];
+
+            try {
+                $pdo = clinical_documents_pdo();
+                $sourceDoc = clinical_documents_get_by_token_fetch($pdo, $sourceToken);
+                if (!is_array($sourceDoc)) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'not_found',
+                        'message' => 'source document not found',
+                        'data' => null,
+                        'meta' => [
+                            'method' => 'POST',
+                            'route' => 'documents/{id_or_uuid}/replace',
+                        ],
+                    ], 404);
+                    return;
+                }
+
+                $sourceId = trim((string)($sourceDoc['document_db_id'] ?? ''));
+                $sourceUuid = trim((string)($sourceDoc['document_id'] ?? ''));
+                $sourceType = trim((string)($sourceDoc['document_type'] ?? ''));
+                if (!in_array($sourceType, ['lab_order', 'imaging_order'], true)) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'bad_request',
+                        'message' => 'solo se puede reemplazar lab_order o imaging_order',
+                        'data' => null,
+                        'meta' => [
+                            'method' => 'POST',
+                            'route' => 'documents/{id_or_uuid}/replace',
+                        ],
+                    ], 400);
+                    return;
+                }
+
+                $sourceStmt = $pdo->prepare("
+                    SELECT *
+                    FROM clinical_documents
+                    WHERE id = :id
+                    LIMIT 1
+                ");
+                $sourceStmt->bindValue(':id', (int)$sourceId, PDO::PARAM_INT);
+                $sourceStmt->execute();
+                $sourceRow = $sourceStmt->fetch(PDO::FETCH_ASSOC);
+                if (!is_array($sourceRow)) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'not_found',
+                        'message' => 'source document not found',
+                        'data' => null,
+                        'meta' => [
+                            'method' => 'POST',
+                            'route' => 'documents/{id_or_uuid}/replace',
+                        ],
+                    ], 404);
+                    return;
+                }
+
+                $patientId = trim((string)($sourceRow['patient_id'] ?? ''));
+                if ($patientId === '') {
+                    throw new RuntimeException('source document without patient_id');
+                }
+                $sourcePayload = json_decode((string)($sourceRow['payload_json'] ?? ''), true);
+                if (!is_array($sourcePayload)) {
+                    $sourcePayload = [];
+                }
+                $sourceStatus = strtolower(trim((string)($sourcePayload['status'] ?? '')));
+                $sourceReplacedById = trim((string)($sourcePayload['replaced_by_document_id'] ?? ''));
+                $sourceReplacedByUuid = trim((string)($sourcePayload['replaced_by_document_uuid'] ?? ''));
+                $alreadyReplaced = ($sourceStatus === 'replaced') || $sourceReplacedById !== '' || $sourceReplacedByUuid !== '';
+                if ($alreadyReplaced) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'conflict',
+                        'message' => 'la orden ya fue reemplazada',
+                        'data' => null,
+                        'meta' => [
+                            'method' => 'POST',
+                            'route' => 'documents/{id_or_uuid}/replace',
+                        ],
+                    ], 409);
+                    return;
+                }
+
+                if (clinical_document_has_linked_result($pdo, $patientId, $sourceId, $sourceUuid)) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'conflict',
+                        'message' => 'no se puede reemplazar una orden con resultado cargado',
+                        'data' => null,
+                        'meta' => [
+                            'method' => 'POST',
+                            'route' => 'documents/{id_or_uuid}/replace',
+                        ],
+                    ], 409);
+                    return;
+                }
+
+                $requestedStudies = [];
+                $fromBodyStudies = $body['requested_studies'] ?? null;
+                if (is_array($fromBodyStudies)) {
+                    foreach ($fromBodyStudies as $study) {
+                        $value = trim((string)$study);
+                        if ($value !== '') {
+                            $requestedStudies[] = $value;
+                        }
+                    }
+                }
+                if (!$requestedStudies) {
+                    $fromSource = is_array($sourcePayload['requested_studies'] ?? null) ? $sourcePayload['requested_studies'] : [];
+                    foreach ($fromSource as $study) {
+                        $value = trim((string)$study);
+                        if ($value !== '') {
+                            $requestedStudies[] = $value;
+                        }
+                    }
+                }
+                $requestedStudies = array_values(array_unique($requestedStudies));
+                if (!$requestedStudies) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'bad_request',
+                        'message' => 'requested_studies requerido',
+                        'data' => null,
+                        'meta' => [
+                            'method' => 'POST',
+                            'route' => 'documents/{id_or_uuid}/replace',
+                        ],
+                    ], 400);
+                    return;
+                }
+
+                $orderArea = trim((string)($body['order_area'] ?? ($sourcePayload['order_area'] ?? '')));
+                if ($orderArea === '') {
+                    $orderArea = ($sourceType === 'imaging_order') ? 'Imagenología' : 'Laboratorio';
+                }
+                $bodyType = strtolower(trim((string)($body['document_type'] ?? '')));
+                if ($bodyType === 'lab_order' || $bodyType === 'imaging_order') {
+                    $newType = $bodyType;
+                } else {
+                    $normalizedArea = strtolower($orderArea);
+                    $newType = (strpos($normalizedArea, 'imagen') !== false) ? 'imaging_order' : 'lab_order';
+                }
+                $priority = trim((string)($body['priority'] ?? ($sourcePayload['priority'] ?? '')));
+                $indication = trim((string)($body['indication'] ?? ($sourcePayload['indication'] ?? '')));
+                $flags = is_array($body['flags'] ?? null) ? array_values(array_filter(array_map('strval', $body['flags']), static function ($v) {
+                    return trim($v) !== '';
+                })) : (is_array($sourcePayload['flags'] ?? null) ? $sourcePayload['flags'] : []);
+                $replacementReason = trim((string)($body['replacement_reason'] ?? ''));
+                $eventDatetime = trim((string)($body['event_datetime'] ?? ''));
+                if ($eventDatetime === '') {
+                    $eventDatetime = gmdate('Y-m-d H:i:s');
+                }
+                if (preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/', $eventDatetime) !== 1) {
+                    $eventDatetime = gmdate('Y-m-d H:i:s');
+                }
+
+                $title = trim((string)($body['title_override'] ?? ''));
+                if ($title === '') {
+                    $title = ($newType === 'imaging_order') ? 'Orden de imagen' : 'Orden de laboratorio';
+                }
+                $summary = trim((string)($body['summary_override'] ?? ''));
+                if ($summary === '') {
+                    $summaryParts = [count($requestedStudies) . ' estudio' . (count($requestedStudies) === 1 ? '' : 's')];
+                    if ($priority !== '') {
+                        $summaryParts[] = $priority;
+                    }
+                    if ($indication !== '') {
+                        $summaryParts[] = $indication;
+                    }
+                    $summary = implode(' · ', $summaryParts);
+                }
+
+                $replacementPayload = $sourcePayload;
+                $replacementPayload['source'] = 'estudios_host_replace';
+                $replacementPayload['status'] = 'active';
+                $replacementPayload['replacement_mode'] = 'replacement';
+                $replacementPayload['replacement_source_document_id'] = $sourceId;
+                $replacementPayload['replacement_source_document_uuid'] = $sourceUuid;
+                $replacementPayload['order_area'] = $orderArea;
+                $replacementPayload['priority'] = ($priority !== '') ? $priority : null;
+                $replacementPayload['indication'] = ($indication !== '') ? $indication : null;
+                $replacementPayload['requested_studies'] = $requestedStudies;
+                $replacementPayload['selection_count'] = count($requestedStudies);
+                $replacementPayload['flags'] = $flags;
+                if (isset($replacementPayload['replaced_by_document_id'])) unset($replacementPayload['replaced_by_document_id']);
+                if (isset($replacementPayload['replaced_by_document_uuid'])) unset($replacementPayload['replaced_by_document_uuid']);
+                if (isset($replacementPayload['replacement_at'])) unset($replacementPayload['replacement_at']);
+                if (isset($replacementPayload['replacement_reason'])) unset($replacementPayload['replacement_reason']);
+
+                $payloadJson = json_encode($replacementPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                if (!is_string($payloadJson)) {
+                    $payloadJson = '{}';
+                }
+                $now = gmdate('Y-m-d H:i:s');
+                $newUuid = clinical_generate_document_uuid();
+                $cols = clinical_table_columns($pdo, 'clinical_documents');
+                $actorUserId = clinical_request_actor_user_id_strict($body);
+                if ($actorUserId === '') {
+                    $actorUserId = clinical_request_actor_user_id($body);
+                }
+                $insertValues = [
+                    'document_uuid' => $newUuid,
+                    'document_type' => $newType,
+                    'title' => $title,
+                    'version' => 1,
+                    'status' => 'signed',
+                    'patient_id' => $patientId,
+                    'appointment_id' => trim((string)($sourceRow['appointment_id'] ?? '')) !== '' ? (string)$sourceRow['appointment_id'] : null,
+                    'encounter_id' => trim((string)($sourceRow['encounter_id'] ?? '')) !== '' ? (string)$sourceRow['encounter_id'] : null,
+                    'hospital_stay_id' => trim((string)($sourceRow['hospital_stay_id'] ?? '')) !== '' ? (string)$sourceRow['hospital_stay_id'] : null,
+                    'care_setting' => trim((string)($sourceRow['care_setting'] ?? 'consulta')) ?: 'consulta',
+                    'service' => trim((string)($sourceRow['service'] ?? '')) !== '' ? (string)$sourceRow['service'] : null,
+                    'payload_json' => $payloadJson,
+                    'rendered_text' => null,
+                    'summary' => $summary,
+                    'edited_flag' => 0,
+                    'event_datetime' => $eventDatetime,
+                    'widget_group' => 'ordenes_diagnosticas',
+                    'printable' => 1,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                    'generated_at' => $now,
+                    'signed_at' => $now,
+                    'created_by_user_id' => $actorUserId,
+                    'updated_by_user_id' => $actorUserId,
+                ];
+
+                $pdo->beginTransaction();
+                $insertCols = [];
+                $insertVals = [];
+                $insertParams = [];
+                foreach ($insertValues as $col => $val) {
+                    if (!isset($cols[$col])) {
+                        continue;
+                    }
+                    $insertCols[] = '`' . $col . '`';
+                    $ph = ':n_' . $col;
+                    $insertVals[] = $ph;
+                    $insertParams[$ph] = $val;
+                }
+                $sql = 'INSERT INTO clinical_documents (' . implode(', ', $insertCols) . ') VALUES (' . implode(', ', $insertVals) . ')';
+                $insertStmt = $pdo->prepare($sql);
+                foreach ($insertParams as $ph => $val) {
+                    if ($val === null) {
+                        $insertStmt->bindValue($ph, null, PDO::PARAM_NULL);
+                    } else {
+                        $insertStmt->bindValue($ph, (string)$val, PDO::PARAM_STR);
+                    }
+                }
+                $insertStmt->execute();
+                $newId = (int)$pdo->lastInsertId();
+                if ($newId <= 0) {
+                    throw new RuntimeException('no se pudo crear orden reemplazante');
+                }
+
+                $sourcePayload['status'] = 'replaced';
+                $sourcePayload['replaced_by_document_id'] = (string)$newId;
+                $sourcePayload['replaced_by_document_uuid'] = $newUuid;
+                $sourcePayload['replacement_reason'] = ($replacementReason !== '') ? $replacementReason : null;
+                $sourcePayload['replacement_at'] = $now;
+                $sourcePayloadJson = json_encode($sourcePayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                if (!is_string($sourcePayloadJson)) {
+                    $sourcePayloadJson = '{}';
+                }
+                $updateStmt = $pdo->prepare("
+                    UPDATE clinical_documents
+                    SET payload_json = :payload_json,
+                        updated_at = :updated_at,
+                        updated_by_user_id = :updated_by_user_id
+                    WHERE id = :id
+                ");
+                $updateStmt->bindValue(':payload_json', $sourcePayloadJson, PDO::PARAM_STR);
+                $updateStmt->bindValue(':updated_at', $now, PDO::PARAM_STR);
+                $updateStmt->bindValue(':updated_by_user_id', $actorUserId, PDO::PARAM_STR);
+                $updateStmt->bindValue(':id', (int)$sourceId, PDO::PARAM_INT);
+                $updateStmt->execute();
+
+                $pdo->commit();
+                $replacementDocument = clinical_documents_get_fetch($pdo, $newId);
+                clinical_send_response([
+                    'ok' => true,
+                    'error' => null,
+                    'message' => 'document replaced',
+                    'data' => [
+                        'replacement_document_id' => $newId,
+                        'replacement_document_uuid' => $newUuid,
+                        'source_document_id' => (int)$sourceId,
+                        'source_document_uuid' => $sourceUuid,
+                        'replacement_document' => $replacementDocument,
+                    ],
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'documents/{id_or_uuid}/replace',
+                    ],
+                ], 200);
+                return;
+            } catch (Throwable $e) {
+                if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+                    try { $pdo->rollBack(); } catch (Throwable $ignore) {}
+                }
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => trim((string)$e->getMessage()) ?: 'server error',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'documents/{id_or_uuid}/replace',
                     ],
                 ], 500);
                 return;
