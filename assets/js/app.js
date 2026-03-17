@@ -4018,6 +4018,7 @@ console.info('app.js loaded :: 20251123a');
     documentUuid: '',
     previewUrl: '',
     mobileUrl: '',
+    cancelling: false,
     pollIntervalId: 0,
     pollTimeoutId: 0,
     countdownIntervalId: 0,
@@ -4088,6 +4089,7 @@ console.info('app.js loaded :: 20251123a');
     noteCaptureQrState.documentUuid = '';
     noteCaptureQrState.previewUrl = '';
     noteCaptureQrState.mobileUrl = '';
+    noteCaptureQrState.cancelling = false;
     noteCaptureQrState.startedAt = 0;
     const els = noteQrElements();
     if(els){
@@ -4208,9 +4210,36 @@ console.info('app.js loaded :: 20251123a');
     }
     return json?.data || {};
   };
+  const cancelNoteCaptureTokenIfPending = async (reason = 'user_closed')=>{
+    const token = sanitizeText(noteCaptureQrState.token);
+    const status = sanitizeText(noteCaptureQrState.status || '').toLowerCase();
+    if(!token || (status && status !== 'pending') || noteCaptureQrState.cancelling === true){
+      return false;
+    }
+    noteCaptureQrState.cancelling = true;
+    try{
+      await fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(token)}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ reason: sanitizeText(reason) || 'user_closed' })
+      });
+      noteCaptureQrState.status = 'cancelled';
+      return true;
+    }catch(_){
+      return false;
+    }finally{
+      noteCaptureQrState.cancelling = false;
+    }
+  };
   const syncNoteCaptureTokenStatus = async (opts = {})=>{
     const token = sanitizeText(noteCaptureQrState.token);
     if(!token) return;
+    if(sanitizeText(noteCaptureQrState.status).toLowerCase() === 'expired') return;
+    if(sanitizeText(noteCaptureQrState.status).toLowerCase() === 'cancelled') return;
     try{
       const data = await fetchNoteCaptureTokenStatus(token);
       const status = sanitizeText(data?.status || '').toLowerCase();
@@ -4250,6 +4279,9 @@ console.info('app.js loaded :: 20251123a');
     }
   };
   const startNoteCaptureTokenPolling = ()=>{
+    const token = sanitizeText(noteCaptureQrState.token);
+    const status = sanitizeText(noteCaptureQrState.status || '').toLowerCase();
+    if(!token || status === 'expired' || status === 'cancelled') return;
     stopNoteCaptureQrPolling();
     noteCaptureQrState.startedAt = Date.now();
     noteCaptureQrState.pollIntervalId = window.setInterval(()=>{
@@ -4313,7 +4345,9 @@ console.info('app.js loaded :: 20251123a');
     }
     setNotaQrMainStatus('Generando QR para captura desde celular…', 'muted');
     setNoteCaptureQrModalState('Generando…');
-    hideNotaQrPreview();
+    stopNoteCaptureQrPolling();
+    await cancelNoteCaptureTokenIfPending('new_token_requested');
+    resetNoteCaptureQrState(true);
     try{
       const data = await createNoteCaptureToken();
       const mobileUrl = sanitizeText(data?.mobile_url || '');
@@ -4453,6 +4487,7 @@ console.info('app.js loaded :: 20251123a');
     teardownNotaClinicaModalLayoutObserver();
     restoreNotaClinicaQuickVisibility();
     setNotaClinicaInnerHeaderHidden(false);
+    cancelNoteCaptureTokenIfPending('note_modal_closed');
     resetNoteCaptureQrState();
     const notaRoot = pane.querySelector('[data-ne-section="nota_evolucion"]');
     if(notaRoot){
@@ -4461,6 +4496,7 @@ console.info('app.js loaded :: 20251123a');
     }
   });
   actividadClinicaNotaQrModalEl?.addEventListener('hidden.bs.modal', ()=>{
+    cancelNoteCaptureTokenIfPending('qr_modal_closed');
     stopNoteCaptureQrPolling();
   });
   const applyNotaClinicaQuickDefaults = ()=>{
@@ -4873,6 +4909,36 @@ console.info('app.js loaded :: 20251123a');
     openNotaCaptureQrModal();
   });
   actividadClinicaNotaQrModalEl?.addEventListener('click', (event)=>{
+    const copyBtn = event.target.closest('[data-action="ac-nota-qr-copy-link"]');
+    if(copyBtn){
+      event.preventDefault();
+      const linkEl = actividadClinicaNotaQrModalEl.querySelector('[data-role="ac-nota-qr-link"]');
+      const href = sanitizeText(linkEl?.getAttribute('href') || '');
+      const text = sanitizeText(linkEl?.textContent || href);
+      const value = href || text;
+      if(!value){
+        setNotaQrMainStatus('No hay enlace disponible para copiar todavía.', 'muted');
+        return;
+      }
+      const fallbackCopy = ()=>{
+        const temp = document.createElement('textarea');
+        temp.value = value;
+        temp.setAttribute('readonly', 'readonly');
+        temp.style.position = 'absolute';
+        temp.style.left = '-9999px';
+        document.body.appendChild(temp);
+        temp.select();
+        try{ document.execCommand('copy'); }catch(_){}
+        document.body.removeChild(temp);
+      };
+      if(navigator.clipboard?.writeText){
+        navigator.clipboard.writeText(value).catch(()=> fallbackCopy());
+      }else{
+        fallbackCopy();
+      }
+      setNotaQrMainStatus('Enlace copiado. Ábrelo en tu celular para subir la imagen.', 'success');
+      return;
+    }
     const verifyBtn = event.target.closest('[data-action="ac-nota-qr-verify-now"]');
     if(!verifyBtn) return;
     event.preventDefault();

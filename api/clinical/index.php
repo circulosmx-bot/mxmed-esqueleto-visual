@@ -6082,6 +6082,66 @@ try {
             return;
         }
 
+        if ($method === 'POST' && count($segments) === 3 && ($segments[2] ?? '') === 'cancel') {
+            $token = trim(rawurldecode((string)$segments[1]));
+            if ($token === '') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'token requerido',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/cancel',
+                    ],
+                ], 400);
+                return;
+            }
+            $row = clinical_note_capture_token_fetch($pdo, $token);
+            if (!is_array($row)) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'token no encontrado',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/cancel',
+                    ],
+                ], 404);
+                return;
+            }
+            $row = clinical_note_capture_mark_expired_if_needed($pdo, $row);
+            $status = strtolower(trim((string)($row['status'] ?? 'pending')));
+            if ($status === 'pending') {
+                $cancelledAt = gmdate('Y-m-d H:i:s');
+                $stmt = $pdo->prepare("
+                    UPDATE clinical_note_capture_tokens
+                    SET
+                        status = 'cancelled',
+                        cancelled_at = :cancelled_at,
+                        updated_at = :updated_at
+                    WHERE token = :token
+                ");
+                $stmt->bindValue(':cancelled_at', $cancelledAt, PDO::PARAM_STR);
+                $stmt->bindValue(':updated_at', $cancelledAt, PDO::PARAM_STR);
+                $stmt->bindValue(':token', $token, PDO::PARAM_STR);
+                $stmt->execute();
+                $row = clinical_note_capture_token_fetch($pdo, $token) ?? $row;
+            }
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => 'note capture token cancelled',
+                'data' => clinical_note_capture_status_data($row),
+                'meta' => [
+                    'method' => 'POST',
+                    'route' => 'note-capture-tokens/{token}/cancel',
+                ],
+            ], 200);
+            return;
+        }
+
         if ($method === 'POST' && count($segments) === 3 && ($segments[2] ?? '') === 'upload') {
             $token = trim(rawurldecode((string)$segments[1]));
             if ($token === '') {
