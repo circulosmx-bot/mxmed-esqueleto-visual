@@ -55,6 +55,121 @@ function mxmed_pronostico_to_text(array $pronostico): string {
     return '';
 }
 
+function mxmed_build_prescription_payload(array $payload): array {
+    $contractRaw = $payload['contract_version'] ?? 1;
+    $contractVersion = is_numeric($contractRaw) ? (int)$contractRaw : 1;
+
+    $prescriptionInput = is_array($payload['prescription'] ?? null) ? $payload['prescription'] : [];
+    $itemsInput = is_array($prescriptionInput['items'] ?? null) ? $prescriptionInput['items'] : [];
+    $items = [];
+    foreach ($itemsInput as $item) {
+        if (!is_array($item)) continue;
+        $medicamento = trim((string)($item['medicamento'] ?? ''));
+        $dosis = trim((string)($item['dosis'] ?? ''));
+        $via = trim((string)($item['via'] ?? ''));
+        $frecuencia = trim((string)($item['frecuencia'] ?? ($item['periodicidad'] ?? '')));
+        $duracion = trim((string)($item['duracion'] ?? ''));
+        $indicaciones = trim((string)($item['indicaciones'] ?? ''));
+        if ($medicamento === '' && $dosis === '' && $via === '' && $frecuencia === '' && $duracion === '' && $indicaciones === '') {
+            continue;
+        }
+        $items[] = [
+            'medicamento' => ($medicamento !== '' ? $medicamento : null),
+            'dosis' => ($dosis !== '' ? $dosis : null),
+            'via' => ($via !== '' ? $via : null),
+            'frecuencia' => ($frecuencia !== '' ? $frecuencia : null),
+            'periodicidad' => ($frecuencia !== '' ? $frecuencia : null),
+            'duracion' => ($duracion !== '' ? $duracion : null),
+            'indicaciones' => ($indicaciones !== '' ? $indicaciones : null),
+        ];
+    }
+
+    $observaciones = trim((string)($prescriptionInput['observaciones'] ?? ''));
+    $snapshot = is_array($payload['snapshot'] ?? null) ? $payload['snapshot'] : null;
+
+    return [
+        'contract_version' => $contractVersion,
+        'prescription' => [
+            'items' => $items,
+            'observaciones' => ($observaciones !== '' ? $observaciones : null),
+        ],
+        'snapshot' => $snapshot,
+    ];
+}
+
+function mxmed_build_prescription_summary(array $payload): string {
+    $prescription = is_array($payload['prescription'] ?? null) ? $payload['prescription'] : [];
+    $items = is_array($prescription['items'] ?? null) ? $prescription['items'] : [];
+    if (count($items) === 0) return 'Receta médica';
+
+    $visible = [];
+    foreach (array_slice($items, 0, 2) as $item) {
+        if (!is_array($item)) continue;
+        $medicamento = trim((string)($item['medicamento'] ?? ''));
+        $dosis = trim((string)($item['dosis'] ?? ''));
+        if ($medicamento === '') continue;
+        $visible[] = ($dosis !== '') ? "{$medicamento} {$dosis}" : $medicamento;
+    }
+    if (count($visible) === 0) {
+        return 'Receta médica (' . count($items) . ' medicamento' . (count($items) === 1 ? '' : 's') . ')';
+    }
+    $suffix = (count($items) > 2) ? (' y ' . (count($items) - 2) . ' más') : '';
+    return implode(', ', $visible) . $suffix;
+}
+
+function mxmed_build_prescription_rendered_text(array $payload, array $context, array $actor): string {
+    try {
+        $dt = new DateTimeImmutable('now', new DateTimeZone('America/Mexico_City'));
+    } catch (Throwable $e) {
+        $dt = new DateTimeImmutable('now');
+    }
+    $dtStr = $dt->format('d/m/Y H:i');
+    $snapshot = is_array($payload['snapshot'] ?? null) ? $payload['snapshot'] : [];
+    $paciente = is_array($snapshot['paciente'] ?? null) ? $snapshot['paciente'] : [];
+    $medico = is_array($snapshot['medico'] ?? null) ? $snapshot['medico'] : [];
+    $prescription = is_array($payload['prescription'] ?? null) ? $payload['prescription'] : [];
+    $items = is_array($prescription['items'] ?? null) ? $prescription['items'] : [];
+    $observaciones = trim((string)($prescription['observaciones'] ?? ''));
+
+    $lines = [];
+    $lines[] = 'RECETA MÉDICA';
+    $lines[] = "Fecha/Hora: {$dtStr}";
+    $patientName = trim((string)($paciente['nombre_completo'] ?? ''));
+    if ($patientName !== '') $lines[] = "Paciente: {$patientName}";
+    $doctorName = trim((string)($medico['nombre_completo'] ?? ($actor['nombre_completo'] ?? '')));
+    if ($doctorName !== '') $lines[] = "Médico: {$doctorName}";
+    $lines[] = '';
+    $lines[] = 'MEDICAMENTOS';
+    if (count($items) === 0) {
+        $lines[] = 'Sin medicamentos registrados';
+    } else {
+        foreach ($items as $item) {
+            if (!is_array($item)) continue;
+            $parts = array_values(array_filter([
+                trim((string)($item['medicamento'] ?? '')),
+                trim((string)($item['dosis'] ?? '')),
+                trim((string)($item['via'] ?? '')),
+                trim((string)($item['frecuencia'] ?? ($item['periodicidad'] ?? ''))),
+                trim((string)($item['duracion'] ?? '')),
+            ], static function ($v) { return $v !== ''; }));
+            $base = (count($parts) > 0) ? implode(' · ', $parts) : 'Medicamento';
+            $indicaciones = trim((string)($item['indicaciones'] ?? ''));
+            $lines[] = '- ' . $base . ($indicaciones !== '' ? " ({$indicaciones})" : '');
+        }
+    }
+    if ($observaciones !== '') {
+        $lines[] = '';
+        $lines[] = 'OBSERVACIONES';
+        $lines[] = $observaciones;
+    }
+    $encounterId = trim((string)($context['encounter_id'] ?? ''));
+    if ($encounterId !== '') {
+        $lines[] = '';
+        $lines[] = "Encounter: {$encounterId}";
+    }
+    return implode("\n", $lines);
+}
+
 function mxmed_build_evolution_note_payload(array $payload): array {
     $ambito = trim((string)($payload['ambito'] ?? 'consulta')) ?: 'consulta';
     if (!in_array($ambito, ['consulta', 'urgencias', 'hospitalizacion'], true)) $ambito = 'consulta';
@@ -86,7 +201,34 @@ function mxmed_build_evolution_note_payload(array $payload): array {
     $studies = $payload['estudios_relevantes'] ?? [];
     if (!is_array($studies)) $studies = [];
 
-    return [
+    $attachmentsInput = is_array($payload['attachments'] ?? null) ? $payload['attachments'] : [];
+    $noteCaptureInput = is_array($attachmentsInput['note_capture'] ?? null) ? $attachmentsInput['note_capture'] : [];
+    $noteCapture = [];
+    foreach ($noteCaptureInput as $entry) {
+        if (!is_array($entry)) continue;
+        $documentIdRaw = $entry['document_id'] ?? null;
+        $documentId = null;
+        if ($documentIdRaw !== null && $documentIdRaw !== '') {
+            $documentId = is_numeric($documentIdRaw) ? (int)$documentIdRaw : null;
+        }
+        $documentUuid = trim((string)($entry['document_uuid'] ?? ''));
+        $previewUrl = trim((string)($entry['preview_url'] ?? ''));
+        $token = trim((string)($entry['note_capture_token'] ?? ''));
+        $source = trim((string)($entry['source'] ?? 'nota_modal_qr_v1'));
+        if ($source === '') $source = 'nota_modal_qr_v1';
+        if ($documentId === null && $documentUuid === '' && $previewUrl === '' && $token === '') {
+            continue;
+        }
+        $noteCapture[] = [
+            'document_id' => $documentId,
+            'document_uuid' => ($documentUuid !== '' ? $documentUuid : null),
+            'preview_url' => ($previewUrl !== '' ? $previewUrl : null),
+            'note_capture_token' => ($token !== '' ? $token : null),
+            'source' => $source,
+        ];
+    }
+
+    $normalized = [
         'section_id' => 'nota_evolucion',
         'standard' => 'NOM-004-SSA3-2012',
         'contract_version' => $contractVersion,
@@ -126,6 +268,13 @@ function mxmed_build_evolution_note_payload(array $payload): array {
         // Snapshot opcional para UI / auditoría en ambientes sin maestro de pacientes/usuarios.
         'snapshot' => is_array($payload['snapshot'] ?? null) ? $payload['snapshot'] : null,
     ];
+    if (count($noteCapture) > 0) {
+        $normalized['attachments'] = [
+            'note_capture' => $noteCapture,
+        ];
+    }
+
+    return $normalized;
 }
 
 function mxmed_evolution_note_validate_to_generate(array $payload): array {
@@ -342,6 +491,7 @@ function mxmed_build_clinical_document(array $args): array {
     if ($type === 'nota_evolucion') $payload = mxmed_build_evolution_note_payload($payloadInput);
     if ($type === 'nota_evolucion_hosp') $payload = mxmed_build_hosp_evolution_note_payload($payloadInput);
     if ($type === 'hoja_indicaciones') $payload = mxmed_build_hoja_indicaciones_payload($payloadInput);
+    if ($type === 'prescription') $payload = mxmed_build_prescription_payload($payloadInput);
 
     $title = $type === 'nota_evolucion' ? 'Nota de Evolución' : ucfirst(str_replace('_', ' ', $type));
     $renderedText = null;
@@ -363,6 +513,11 @@ function mxmed_build_clinical_document(array $args): array {
         $title = 'Hoja de Indicaciones';
         $renderedText = mxmed_build_hoja_indicaciones_rendered_text($payload, $context, $actor);
         $summary = mxmed_build_hoja_indicaciones_summary($payload, $actor);
+    }
+    if ($type === 'prescription') {
+        $title = 'Receta médica';
+        $renderedText = mxmed_build_prescription_rendered_text($payload, $context, $actor);
+        $summary = mxmed_build_prescription_summary($payload);
     }
 
     return [

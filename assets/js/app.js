@@ -2178,6 +2178,7 @@ console.info('app.js loaded :: 20251123a');
     rxGrid: document.getElementById('ne_rx_grid'),
     rxAdd: document.getElementById('ne_rx_add'),
     rxSave: document.getElementById('ne_rx_save'),
+    rxFeedback: document.getElementById('ne_rx_feedback'),
 
     docModal: document.getElementById('modalNotaEvolucion'),
     docText: document.getElementById('ne_doc_text'),
@@ -3036,6 +3037,66 @@ console.info('app.js loaded :: 20251123a');
     return 'Nota de evolución';
   };
 
+  window.buildPrescriptionSummary = function buildPrescriptionSummary(payload) {
+    const rx = (payload && typeof payload === 'object' && payload.prescription && typeof payload.prescription === 'object')
+      ? payload.prescription
+      : {};
+    const items = Array.isArray(rx.items) ? rx.items : [];
+    if (!items.length) return 'Receta médica';
+    const visible = items.slice(0, 2).map((item) => {
+      const medicamento = String(item?.medicamento || '').trim();
+      const dosis = String(item?.dosis || '').trim();
+      if (!medicamento) return '';
+      return dosis ? `${medicamento} ${dosis}` : medicamento;
+    }).filter(Boolean);
+    const suffix = items.length > 2 ? ` y ${items.length - 2} más` : '';
+    return visible.length ? `${visible.join(', ')}${suffix}` : `Receta médica (${items.length} medicamento${items.length === 1 ? '' : 's'})`;
+  };
+
+  const buildPrescriptionRenderedText = (payload, context = {}, actor = {}) => {
+    const now = new Date().toLocaleString('es-MX');
+    const rx = (payload && typeof payload === 'object' && payload.prescription && typeof payload.prescription === 'object')
+      ? payload.prescription
+      : {};
+    const items = Array.isArray(rx.items) ? rx.items : [];
+    const patientName = String(payload?.snapshot?.paciente?.nombre_completo || '').trim();
+    const doctorName = String(payload?.snapshot?.medico?.nombre_completo || actor?.nombre_completo || '').trim();
+    const lines = [];
+    lines.push('RECETA MÉDICA');
+    lines.push(`Fecha/Hora: ${now}`);
+    if (patientName) lines.push(`Paciente: ${patientName}`);
+    if (doctorName) lines.push(`Médico: ${doctorName}`);
+    lines.push('');
+    lines.push('MEDICAMENTOS');
+    if (!items.length) {
+      lines.push('Sin medicamentos registrados');
+    } else {
+      items.forEach((item) => {
+        const parts = [
+          String(item?.medicamento || '').trim(),
+          String(item?.dosis || '').trim(),
+          String(item?.via || '').trim(),
+          String(item?.frecuencia || item?.periodicidad || '').trim(),
+          String(item?.duracion || '').trim()
+        ].filter(Boolean);
+        const indicaciones = String(item?.indicaciones || '').trim();
+        const base = parts.join(' · ') || 'Medicamento';
+        lines.push(`- ${base}${indicaciones ? ` (${indicaciones})` : ''}`);
+      });
+    }
+    const observaciones = String(rx.observaciones || '').trim();
+    if (observaciones) {
+      lines.push('');
+      lines.push('OBSERVACIONES');
+      lines.push(observaciones);
+    }
+    if (context?.encounter_key) {
+      lines.push('');
+      lines.push(`Encounter: ${String(context.encounter_key).trim()}`);
+    }
+    return lines.join('\n');
+  };
+
   window.buildClinicalDocument = function buildClinicalDocument({ type, context, payload, actor }) {
     const nowIso = new Date().toISOString();
     const docType = (type || '').trim();
@@ -3046,7 +3107,7 @@ console.info('app.js loaded :: 20251123a');
       document_type: docType,
       title: docType === 'nota_evolucion'
         ? window.buildEvolutionNoteSummary(payload)
-        : (docType || 'Documento clínico'),
+        : (docType === 'prescription' ? 'Receta médica' : (docType || 'Documento clínico')),
       version: 1,
       context: {
         patient_id: ctx.patient_id,
@@ -3077,8 +3138,10 @@ console.info('app.js loaded :: 20251123a');
       ],
       content: {
         payload,
-        rendered_text: null,
-        summary: docType === 'nota_evolucion' ? window.buildEvolutionNoteSummary(payload) : null,
+        rendered_text: docType === 'prescription' ? buildPrescriptionRenderedText(payload, ctx, act) : null,
+        summary: docType === 'nota_evolucion'
+          ? window.buildEvolutionNoteSummary(payload)
+          : (docType === 'prescription' ? window.buildPrescriptionSummary(payload) : null),
         edited_flag: 0
       },
       ui: {
@@ -3478,6 +3541,11 @@ console.info('app.js loaded :: 20251123a');
     const rx = getRxDraft(patientKey);
     const meds = Array.isArray(rx.medicamentos) ? rx.medicamentos : [];
     els.rxGrid.innerHTML = meds.map((m, idx) => rxRowHtml(idx, m)).join('') || rxRowHtml(0, {});
+    if (els.rxFeedback) {
+      els.rxFeedback.classList.add('d-none');
+      els.rxFeedback.classList.remove('text-muted', 'text-success', 'text-danger');
+      els.rxFeedback.textContent = '';
+    }
   };
 
   const rxRowHtml = (idx, m) => `
@@ -3506,6 +3574,48 @@ console.info('app.js loaded :: 20251123a');
         indicaciones: get('indicaciones')
       };
     }).filter(m => Object.values(m).some(v => v));
+  };
+  const setRxFeedback = (message, tone = 'muted') => {
+    if (!els.rxFeedback) return;
+    const text = String(message || '').trim();
+    els.rxFeedback.classList.remove('d-none', 'text-muted', 'text-success', 'text-danger');
+    if (!text) {
+      els.rxFeedback.classList.add('d-none');
+      els.rxFeedback.textContent = '';
+      return;
+    }
+    els.rxFeedback.classList.add(
+      tone === 'success' ? 'text-success' : (tone === 'error' ? 'text-danger' : 'text-muted')
+    );
+    els.rxFeedback.textContent = text;
+  };
+  const resolveRecetaAppointmentId = (patientId, encounterKey) => {
+    const bar = document.getElementById('mm-p10-bar');
+    const fromBar = String(bar?.dataset?.appointmentId || bar?.getAttribute?.('data-appointment-id') || '').trim();
+    if (fromBar) return fromBar;
+    const encounters = window.mxmedStore?.activeEncounters;
+    if (!encounterKey || !encounters || typeof encounters !== 'object') return '';
+    const entry = encounters[encounterKey];
+    if (!entry || String(entry.patient_id || '').trim() !== patientId) return '';
+    return String(entry.appointment_id || entry.appointmentId || '').trim();
+  };
+  const refreshHistorialEmbedAfterPrescriptionSave = () => {
+    try {
+      const iframe = document.getElementById('mm-embed-historial');
+      if (!iframe) return;
+      const src = String(iframe.getAttribute('src') || '').trim();
+      if (!src || src.indexOf('/modules/clinical/ui/historial.php') === -1) return;
+      const next = `${src}${src.indexOf('?') !== -1 ? '&' : '?'}host_rx_refresh=${Date.now()}`;
+      iframe.setAttribute('src', next);
+    } catch (_) {}
+  };
+  const hideRecetaModal = () => {
+    const modalEl = document.getElementById('modalReceta');
+    if (!modalEl) return;
+    try {
+      const modal = bootstrap?.Modal?.getOrCreateInstance ? bootstrap.Modal.getOrCreateInstance(modalEl) : null;
+      modal?.hide();
+    } catch (_) {}
   };
 
   // Listeners
@@ -3586,11 +3696,103 @@ console.info('app.js loaded :: 20251123a');
     if (!del) return;
     del.closest('.ne-rx-row')?.remove();
   });
-  els.rxSave?.addEventListener('click', () => {
+  els.rxSave?.addEventListener('click', async () => {
     const patientKey = getPatient().patient_id;
     const meds = collectRxModal();
     setRxDraft(patientKey, meds);
     renderRxSummary(patientKey);
+    if (!meds.length) {
+      setRxFeedback('Agrega al menos un medicamento para guardar receta clínica.', 'error');
+      return;
+    }
+    const patient = getPatient();
+    const actor = getDoctor();
+    const encounterKey = (typeof window.getActiveEncounterKey === 'function')
+      ? String(window.getActiveEncounterKey() || '').trim()
+      : '';
+    const appointmentId = resolveRecetaAppointmentId(String(patient.patient_id || '').trim(), encounterKey);
+    const payload = {
+      contract_version: 1,
+      prescription: {
+        items: meds.map((item) => ({
+          medicamento: String(item.medicamento || '').trim(),
+          dosis: String(item.dosis || '').trim(),
+          via: String(item.via || '').trim(),
+          frecuencia: String(item.periodicidad || '').trim(),
+          periodicidad: String(item.periodicidad || '').trim(),
+          duracion: String(item.duracion || '').trim(),
+          indicaciones: String(item.indicaciones || '').trim()
+        })),
+        observaciones: ''
+      },
+      snapshot: {
+        paciente: {
+          patient_id: patient.patient_id,
+          nombre_completo: patient.nombre_completo || '',
+          edad: patient.edad || '',
+          sexo: patient.sexo || ''
+        },
+        medico: {
+          user_id: actor.user_id,
+          nombre_completo: actor.nombre_completo || '',
+          cedula_profesional: actor.cedula_profesional || '',
+          especialidad: actor.especialidad || ''
+        },
+        generated_at: new Date().toISOString()
+      }
+    };
+    const context = {
+      patient_id: patient.patient_id,
+      canonical_patient_id: patient.canonical_patient_id || null,
+      encounter_id: null,
+      hospital_stay_id: null,
+      care_setting: 'consulta',
+      service: null
+    };
+    if (encounterKey) context.encounter_key = encounterKey;
+    if (appointmentId) context.appointment_id = appointmentId;
+    setRxFeedback('Guardando receta clínica…');
+    if (els.rxSave) {
+      els.rxSave.disabled = true;
+      els.rxSave.textContent = 'Guardando...';
+    }
+    try {
+      const { source } = await api.saveClinicalDocument({
+        type: 'prescription',
+        context,
+        payload,
+        actor
+      });
+      setRxFeedback('Receta guardada correctamente.', 'success');
+      try{
+        window.mxRegisterEncounterActivity?.('receta_guardada', {
+          encounterKey,
+          patientId: patient.patient_id,
+          source: source === 'legacy' ? 'receta_api_legacy' : 'receta_api'
+        });
+      }catch(_){}
+      try{
+        window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created', {
+          detail: {
+            patient_id: patient.patient_id,
+            encounter_key: encounterKey || '',
+            appointment_id: appointmentId || '',
+            document_type: 'prescription',
+            source: 'actividad_clinica_receta'
+          }
+        }));
+      }catch(_){}
+      renderTimeline();
+      refreshHistorialEmbedAfterPrescriptionSave();
+      window.setTimeout(()=> hideRecetaModal(), 220);
+    } catch (err) {
+      setRxFeedback(`No se pudo guardar la receta clínica (${err?.message || 'error'}).`, 'error');
+    } finally {
+      if (els.rxSave) {
+        els.rxSave.disabled = false;
+        els.rxSave.textContent = 'Guardar receta';
+      }
+    }
     try{
       window.mxRegisterEncounterActivity?.('receta_actualizada', {
         patientId: patientKey,
