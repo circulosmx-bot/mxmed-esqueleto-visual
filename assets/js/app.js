@@ -2181,6 +2181,9 @@ console.info('app.js loaded :: 20251123a');
 
     docModal: document.getElementById('modalNotaEvolucion'),
     docText: document.getElementById('ne_doc_text'),
+    docNoteCaptureWrap: document.getElementById('ne_doc_note_capture_wrap'),
+    docNoteCaptureImg: document.getElementById('ne_doc_note_capture_img'),
+    docNoteCaptureLink: document.getElementById('ne_doc_note_capture_link'),
     docCopy: document.getElementById('ne_doc_copy'),
     docPrint: document.getElementById('ne_doc_print')
   };
@@ -3276,9 +3279,54 @@ console.info('app.js loaded :: 20251123a');
       });
   };
 
-  const openDocModal = (text) => {
+  const resolveNoteCaptureAttachment = (payload) => {
+    const attachments = (payload && typeof payload === 'object' && typeof payload.attachments === 'object')
+      ? payload.attachments
+      : null;
+    const list = Array.isArray(attachments?.note_capture) ? attachments.note_capture : [];
+    if (!list.length) return null;
+    for (const entry of list) {
+      if (!entry || typeof entry !== 'object') continue;
+      const previewUrl = String(entry.preview_url || '').trim();
+      if (!previewUrl) continue;
+      return {
+        preview_url: previewUrl,
+        document_id: String(entry.document_id || '').trim() || null,
+        document_uuid: String(entry.document_uuid || '').trim() || null,
+        note_capture_token: String(entry.note_capture_token || '').trim() || null
+      };
+    }
+    return null;
+  };
+
+  const renderDocNoteCapture = (payload) => {
+    if (!els.docNoteCaptureWrap || !els.docNoteCaptureImg || !els.docNoteCaptureLink) return;
+    const attachment = resolveNoteCaptureAttachment(payload);
+    if (!attachment) {
+      els.docNoteCaptureWrap.classList.add('d-none');
+      els.docNoteCaptureImg.setAttribute('src', '');
+      els.docNoteCaptureLink.setAttribute('href', '#');
+      return;
+    }
+    const rawUrl = String(attachment.preview_url || '').trim();
+    const normalizedUrl = /^https?:\/\//i.test(rawUrl)
+      ? rawUrl
+      : (rawUrl.startsWith('/') ? rawUrl : `/${rawUrl.replace(/^\/+/, '')}`);
+    if (!normalizedUrl) {
+      els.docNoteCaptureWrap.classList.add('d-none');
+      els.docNoteCaptureImg.setAttribute('src', '');
+      els.docNoteCaptureLink.setAttribute('href', '#');
+      return;
+    }
+    els.docNoteCaptureImg.setAttribute('src', normalizedUrl);
+    els.docNoteCaptureLink.setAttribute('href', normalizedUrl);
+    els.docNoteCaptureWrap.classList.remove('d-none');
+  };
+
+  const openDocModal = (text, options = {}) => {
     if (!els.docText || !els.docModal) return;
     els.docText.value = text || '';
+    renderDocNoteCapture(options?.payload || null);
     try {
       const modal = bootstrap?.Modal?.getOrCreateInstance ? bootstrap.Modal.getOrCreateInstance(els.docModal) : null;
       modal?.show();
@@ -3393,7 +3441,7 @@ console.info('app.js loaded :: 20251123a');
       list.unshift(entry);
       saveNotes(patientKey, list);
       renderTimeline();
-      openDocModal(text);
+      openDocModal(text, { payload });
       try{
         window.mxRegisterEncounterActivity?.('nota_evolucion_guardada_local', {
           encounterKey: context.encounter_key,
@@ -3407,7 +3455,7 @@ console.info('app.js loaded :: 20251123a');
       .then(({ document, source }) => {
         console.info('[P15][nota_evolucion] save source', { source: String(source || 'unknown') });
         renderTimeline();
-        openDocModal(document?.content?.rendered_text || '');
+        openDocModal(document?.content?.rendered_text || '', { payload: document?.content?.payload || null });
         consumeQrTokenAfterNoteSave(noteCaptureTokenForConsume, document);
         try{
           window.mxRegisterEncounterActivity?.('nota_evolucion_guardada', {
@@ -3498,7 +3546,8 @@ console.info('app.js loaded :: 20251123a');
       api.getClinicalDocument(id, { preferredSource: src })
         .then(({ document }) => {
           const text = document?.content?.rendered_text || '';
-          if (action === 'view') openDocModal(text);
+          const payload = document?.content?.payload || null;
+          if (action === 'view') openDocModal(text, { payload });
           if (action === 'print') printText(text);
         })
         .catch(() => {});
@@ -3509,7 +3558,7 @@ console.info('app.js loaded :: 20251123a');
     const notes = loadNotes(patientKey);
     const note = notes.find(n => n.id === id);
     if (!note) return;
-    if (action === 'view') openDocModal(note.document_text);
+    if (action === 'view') openDocModal(note.document_text, { payload: note.payload || null });
     if (action === 'print') printText(note.document_text);
   });
 
