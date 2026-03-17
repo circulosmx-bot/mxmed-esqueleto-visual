@@ -3505,6 +3505,9 @@ console.info('app.js loaded :: 20251123a');
   const p10FinalizeBtn = document.querySelector('#mm-p10-bar [data-action="p10-finalize-encounter"]');
   const p10BarNode = document.getElementById('mm-p10-bar');
   const actividadClinicaModalEl = pane.querySelector('#modalActividadClinica');
+  const actividadClinicaNotaModalEl = pane.querySelector('#modalActividadClinicaNota');
+  const actividadClinicaAdjuntoModalEl = pane.querySelector('#modalActividadClinicaAdjunto');
+  const actividadClinicaConsentModalEl = pane.querySelector('#modalActividadClinicaConsent');
   const actividadClinicaLaunchBtn = pane.querySelector('[data-action="open-actividad-clinica"]');
   const actividadClinicaNotasCard = pane.querySelector('[data-role="ac-notas-context-card"]');
   const actividadClinicaNotasStatusBadge = pane.querySelector('[data-role="ac-notas-status-badge"]');
@@ -3935,6 +3938,204 @@ console.info('app.js loaded :: 20251123a');
       modal.hide();
     }catch(_){}
   };
+  const showActividadClinicaModalById = (modalEl)=>{
+    if(!modalEl) return false;
+    const BsModal = window.bootstrap && window.bootstrap.Modal;
+    if(!BsModal) return false;
+    try{
+      const modal = typeof BsModal.getOrCreateInstance === 'function'
+        ? BsModal.getOrCreateInstance(modalEl)
+        : new BsModal(modalEl);
+      modal.show();
+      return true;
+    }catch(_){
+      return false;
+    }
+  };
+  const createActividadClinicaPortalMount = (modalEl, targetSelector, sourceSelector, opts = {})=>{
+    if(!modalEl) return null;
+    const targetEl = modalEl.querySelector(targetSelector);
+    if(!targetEl) return null;
+    const forceVisible = opts.forceVisible === true;
+    let activeMount = null;
+    const restore = ()=>{
+      if(!activeMount || !activeMount.sourceEl || !activeMount.parentEl) return;
+      const { sourceEl, parentEl, nextSibling, wasHidden } = activeMount;
+      if(nextSibling && nextSibling.parentNode === parentEl){
+        parentEl.insertBefore(sourceEl, nextSibling);
+      }else{
+        parentEl.appendChild(sourceEl);
+      }
+      if(wasHidden){
+        sourceEl.classList.add('d-none');
+      }
+      activeMount = null;
+    };
+    modalEl.addEventListener('hidden.bs.modal', restore);
+    const mount = ()=>{
+      if(activeMount && activeMount.sourceEl && targetEl.contains(activeMount.sourceEl)){
+        return true;
+      }
+      const sourceEl = pane.querySelector(sourceSelector);
+      if(!sourceEl || !sourceEl.parentElement) return false;
+      const wasHidden = sourceEl.classList.contains('d-none');
+      activeMount = {
+        sourceEl,
+        parentEl: sourceEl.parentElement,
+        nextSibling: sourceEl.nextSibling || null,
+        wasHidden
+      };
+      if(forceVisible){
+        sourceEl.classList.remove('d-none');
+      }
+      targetEl.appendChild(sourceEl);
+      return true;
+    };
+    return { mount, restore };
+  };
+  const actividadClinicaNotaPortal = createActividadClinicaPortalMount(
+    actividadClinicaNotaModalEl,
+    '[data-role="ac-nota-modal-content"]',
+    '#t-notas .ne-app[data-ne-section="nota_evolucion"]',
+    { forceVisible: true }
+  );
+  const actividadClinicaAdjuntoPortal = createActividadClinicaPortalMount(
+    actividadClinicaAdjuntoModalEl,
+    '[data-role="ac-adjunto-modal-content"]',
+    '#t-estudios [data-est-section-block="ingresar"]',
+    { forceVisible: true }
+  );
+  let notaClinicaModalTimelineObserver = null;
+  const teardownNotaClinicaModalLayoutObserver = ()=>{
+    if(notaClinicaModalTimelineObserver){
+      notaClinicaModalTimelineObserver.disconnect();
+      notaClinicaModalTimelineObserver = null;
+    }
+  };
+  const syncNotaClinicaModalLayoutState = ()=>{
+    const notaRoot = actividadClinicaNotaModalEl?.querySelector('[data-ne-section="nota_evolucion"]');
+    if(!notaRoot) return;
+    const timelineRoot = notaRoot.querySelector('#ne_timeline');
+    const hasNotes = !!timelineRoot?.querySelector('.ne-note-card');
+    notaRoot.setAttribute('data-ac-modal-has-notes', hasNotes ? '1' : '0');
+  };
+  const ensureNotaClinicaModalFieldOrder = ()=>{
+    const notaRoot = actividadClinicaNotaModalEl?.querySelector('[data-ne-section="nota_evolucion"]');
+    if(!notaRoot) return;
+    const fieldsRow = notaRoot.querySelector('[data-role="ne-form-card"] .row.g-3.mt-1')
+      || notaRoot.querySelector('[data-role="ne-field-tema"]')?.closest('.row');
+    if(!fieldsRow) return;
+    const temaField = fieldsRow.querySelector('[data-role="ne-field-tema"]');
+    const contenidoField = fieldsRow.querySelector('[data-role="ne-field-contenido"]');
+    const imageField = fieldsRow.querySelector('[data-role="ne-field-image"]');
+    const orderedFields = [temaField, contenidoField, imageField].filter(Boolean);
+    if(!orderedFields.length) return;
+    const anchor = fieldsRow.firstElementChild;
+    for(let i = orderedFields.length - 1; i >= 0; i -= 1){
+      fieldsRow.insertBefore(orderedFields[i], anchor);
+    }
+  };
+  const applyNotaClinicaQuickVisibility = ()=>{
+    const notaRoot = actividadClinicaNotaModalEl?.querySelector('[data-ne-section="nota_evolucion"]');
+    if(!notaRoot) return;
+    const fieldsRow = notaRoot.querySelector('[data-role="ne-form-card"] .row.g-3.mt-1')
+      || notaRoot.querySelector('[data-role="ne-field-tema"]')?.closest('.row');
+    if(!fieldsRow) return;
+    const visibleRoles = new Set(['ne-field-tema', 'ne-field-contenido', 'ne-field-image']);
+    const fieldNodes = Array.from(fieldsRow.querySelectorAll('[data-role]'));
+    fieldNodes.forEach((node)=>{
+      const role = sanitizeText(node.getAttribute('data-role'));
+      if(!role.startsWith('ne-field-')) return;
+      if(!Object.prototype.hasOwnProperty.call(node.dataset, 'acModalOriginalHidden')){
+        node.dataset.acModalOriginalHidden = node.classList.contains('d-none') ? '1' : '0';
+      }
+      if(visibleRoles.has(role)){
+        node.classList.remove('d-none');
+      }else{
+        node.classList.add('d-none');
+      }
+    });
+  };
+  const restoreNotaClinicaQuickVisibility = ()=>{
+    const notaRoot = pane.querySelector('[data-ne-section="nota_evolucion"]');
+    if(!notaRoot) return;
+    const fieldsRow = notaRoot.querySelector('[data-role="ne-form-card"] .row.g-3.mt-1')
+      || notaRoot.querySelector('[data-role="ne-field-tema"]')?.closest('.row');
+    if(!fieldsRow) return;
+    const fieldNodes = Array.from(fieldsRow.querySelectorAll('[data-role]'));
+    fieldNodes.forEach((node)=>{
+      const role = sanitizeText(node.getAttribute('data-role'));
+      if(!role.startsWith('ne-field-')) return;
+      const originalHidden = node.dataset.acModalOriginalHidden;
+      if(originalHidden === '1'){
+        node.classList.add('d-none');
+      }else{
+        node.classList.remove('d-none');
+      }
+      delete node.dataset.acModalOriginalHidden;
+    });
+  };
+  const setNotaClinicaInnerHeaderHidden = (hidden)=>{
+    const notaRoot = hidden
+      ? actividadClinicaNotaModalEl?.querySelector('[data-ne-section="nota_evolucion"]')
+      : pane.querySelector('[data-ne-section="nota_evolucion"]');
+    const innerHeader = notaRoot?.querySelector('[data-role="ne-form-card"] > .exp-card-title');
+    if(!innerHeader) return;
+    if(hidden){
+      innerHeader.dataset.acModalForcedHidden = '1';
+      innerHeader.style.display = 'none';
+      return;
+    }
+    if(innerHeader.dataset.acModalForcedHidden === '1'){
+      innerHeader.style.removeProperty('display');
+      delete innerHeader.dataset.acModalForcedHidden;
+    }
+  };
+  const setupNotaClinicaModalLayoutObserver = ()=>{
+    teardownNotaClinicaModalLayoutObserver();
+    const notaRoot = actividadClinicaNotaModalEl?.querySelector('[data-ne-section="nota_evolucion"]');
+    const timelineRoot = notaRoot?.querySelector('#ne_timeline');
+    if(!timelineRoot || typeof MutationObserver !== 'function') return;
+    notaClinicaModalTimelineObserver = new MutationObserver(()=>{
+      syncNotaClinicaModalLayoutState();
+    });
+    notaClinicaModalTimelineObserver.observe(timelineRoot, {
+      childList: true,
+      subtree: true
+    });
+  };
+  actividadClinicaNotaModalEl?.addEventListener('hidden.bs.modal', ()=>{
+    teardownNotaClinicaModalLayoutObserver();
+    restoreNotaClinicaQuickVisibility();
+    setNotaClinicaInnerHeaderHidden(false);
+    const notaRoot = pane.querySelector('[data-ne-section="nota_evolucion"]');
+    if(notaRoot){
+      notaRoot.removeAttribute('data-ac-modal-mode');
+      notaRoot.removeAttribute('data-ac-modal-has-notes');
+    }
+  });
+  const applyNotaClinicaQuickDefaults = ()=>{
+    const notaRoot = actividadClinicaNotaModalEl?.querySelector('[data-ne-section="nota_evolucion"]');
+    if(!notaRoot) return;
+    const dxInput = notaRoot.querySelector('#ne_dx');
+    const pronosticoSelect = notaRoot.querySelector('#ne_pronostico');
+    const pronosticoTxtInput = notaRoot.querySelector('#ne_pronostico_txt');
+    const planInput = notaRoot.querySelector('#ne_plan');
+
+    if(dxInput && !sanitizeText(dxInput.value)){
+      dxInput.value = 'No especificado';
+    }
+    if(pronosticoSelect && !sanitizeText(pronosticoSelect.value)){
+      pronosticoSelect.value = 'otro';
+      pronosticoSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    if(pronosticoTxtInput && !sanitizeText(pronosticoTxtInput.value)){
+      pronosticoTxtInput.value = 'No especificado';
+    }
+    if(planInput && !sanitizeText(planInput.value)){
+      planInput.value = 'Pendiente de plan terapéutico.';
+    }
+  };
   const focusActividadClinicaActions = ()=>{
     if(!actividadClinicaNotasActions) return;
     actividadClinicaNotasActions.scrollIntoView({ behavior:'smooth', block:'center' });
@@ -4044,12 +4245,27 @@ console.info('app.js loaded :: 20251123a');
   };
   const openNotaClinicaFromActividad = ()=>{
     hideActividadClinicaModal();
-    const opened = showClinicalTab(clinicalTabTargets.notas);
-    if(!opened) return false;
-    const focusField = pane.querySelector('#ne_complemento, #ne_evolucion, #ne_dx');
-    if(focusField){
-      window.requestAnimationFrame(()=> focusField.focus());
+    const mounted = actividadClinicaNotaPortal?.mount?.() === true;
+    if(!mounted){
+      window.alert('No fue posible abrir Nota clínica en este momento.');
+      return false;
     }
+    const notaRoot = actividadClinicaNotaModalEl?.querySelector('[data-ne-section="nota_evolucion"]');
+    if(notaRoot){
+      notaRoot.setAttribute('data-ac-modal-mode', 'nota');
+    }
+    setNotaClinicaInnerHeaderHidden(true);
+    applyNotaClinicaQuickVisibility();
+    ensureNotaClinicaModalFieldOrder();
+    applyNotaClinicaQuickDefaults();
+    syncNotaClinicaModalLayoutState();
+    setupNotaClinicaModalLayoutObserver();
+    const opened = showActividadClinicaModalById(actividadClinicaNotaModalEl);
+    if(!opened) return false;
+    window.requestAnimationFrame(()=>{
+      const focusField = actividadClinicaNotaModalEl?.querySelector('#ne_complemento, #ne_evolucion, #ne_dx');
+      focusField?.focus?.();
+    });
     try{
       console.info('[mxmed-actividad-clinica] open nota clinica');
     }catch(_){}
@@ -4069,7 +4285,7 @@ console.info('app.js loaded :: 20251123a');
   };
   const openConsentimientoFromActividad = ()=>{
     hideActividadClinicaModal();
-    return showClinicalTab(clinicalTabTargets.consent);
+    return showActividadClinicaModalById(actividadClinicaConsentModalEl);
   };
   const openActividadClinicaFromTratamientoAlias = ()=>{
     const opened = showClinicalTab(clinicalTabTargets.notas);
@@ -4088,17 +4304,40 @@ console.info('app.js loaded :: 20251123a');
     }catch(_){}
     return true;
   };
-  const triggerProcedimientoFromEmbed = async ()=>{
+  const normalizeProcedureKind = (value)=>{
+    const kind = sanitizeText(value).toLowerCase();
+    if(kind === 'immunization' || kind === 'wound_care' || kind === 'medication_administration' || kind === 'procedure'){
+      return kind;
+    }
+    return 'procedure';
+  };
+  const triggerProcedimientoFromEmbed = async (preferredType = '')=>{
     const iframe = document.getElementById('mm-embed-historial');
     if(!iframe) return false;
     const modeHistorialBtn = pane.querySelector('#t-historial-atencion [data-embed-mode="historial"]');
     if(modeHistorialBtn) modeHistorialBtn.click();
+    const preferred = normalizeProcedureKind(preferredType || 'procedure');
     const findAndClickProcedure = ()=>{
       try{
         const doc = iframe.contentWindow?.document;
-        const trigger = doc?.querySelector('[data-action="open-generic-procedure-modal"]');
+        let trigger = null;
+        if(preferred === 'immunization'){
+          trigger = doc?.querySelector('[data-action="open-immunization-modal"]');
+        }else if(preferred === 'wound_care'){
+          trigger = doc?.querySelector('[data-action="open-wound-care-modal"]');
+        }
+        if(!trigger){
+          trigger = doc?.querySelector('[data-action="open-generic-procedure-modal"]');
+        }
         if(!trigger) return false;
         trigger.click();
+        if(preferred !== 'immunization'){
+          const typeInput = doc?.querySelector('[data-role="generic-procedure-type"]');
+          if(typeInput && typeInput.value !== preferred){
+            typeInput.value = preferred;
+            typeInput.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
         return true;
       }catch(_){
         return false;
@@ -4111,7 +4350,7 @@ console.info('app.js loaded :: 20251123a');
     }
     return false;
   };
-  const openProcedimientoHostModal = async ()=>{
+  const openProcedimientoHostModal = async (preferredType = '')=>{
     const modalEl = document.getElementById('modalActividadClinicaProcedimientoHost');
     if(!modalEl || !window.bootstrap || !window.bootstrap.Modal){
       return false;
@@ -4120,6 +4359,7 @@ console.info('app.js loaded :: 20251123a');
     const errorEl = modalEl.querySelector('[data-role="ac-proc-error"]');
     const contextNoteEl = modalEl.querySelector('[data-role="ac-proc-context-note"]');
     const appointmentInput = modalEl.querySelector('[data-role="ac-proc-appointment-id"]');
+    const typeInput = modalEl.querySelector('[data-role="ac-proc-type"]');
     if(!form) return false;
     try{
       form.reset();
@@ -4149,6 +4389,11 @@ console.info('app.js loaded :: 20251123a');
             : 'Sin appointment vinculado.';
         }
       }
+      const resolvedType = normalizeProcedureKind(preferredType || 'procedure');
+      if(typeInput){
+        typeInput.value = resolvedType;
+        typeInput.dispatchEvent(new Event('change', { bubbles: true }));
+      }
       const placeType = modalEl.querySelector('[data-role="ac-proc-place-type"]');
       placeType?.dispatchEvent(new Event('change'));
       const eventInput = modalEl.querySelector('[data-role="ac-proc-event-datetime"]');
@@ -4173,20 +4418,41 @@ console.info('app.js loaded :: 20251123a');
   const openProcedimientoFromActividad = async ()=>{
     hideActividadClinicaModal();
     showClinicalTab(clinicalTabTargets.historialAtencion);
-    const openedHost = await openProcedimientoHostModal();
+    const openedHost = await openProcedimientoHostModal('procedure');
     if(openedHost){
       try{
         console.info('[mxmed-actividad-clinica] open procedimiento host');
       }catch(_){}
       return true;
     }
-    const openedEmbed = await triggerProcedimientoFromEmbed();
+    const openedEmbed = await triggerProcedimientoFromEmbed('procedure');
     if(!openedEmbed){
       window.alert('No fue posible abrir Procedimiento en este momento. Intenta abrir Historial y vuelve a intentar.');
       return false;
     }
     try{
       console.info('[mxmed-actividad-clinica] open procedimiento fallback iframe');
+    }catch(_){}
+    return true;
+  };
+  const openProcedimientoTipoFromActividad = async (type)=>{
+    const normalized = normalizeProcedureKind(type);
+    hideActividadClinicaModal();
+    showClinicalTab(clinicalTabTargets.historialAtencion);
+    const openedHost = await openProcedimientoHostModal(normalized);
+    if(openedHost){
+      try{
+        console.info('[mxmed-actividad-clinica] open procedimiento host by type', { type: normalized });
+      }catch(_){}
+      return true;
+    }
+    const openedEmbed = await triggerProcedimientoFromEmbed(normalized);
+    if(!openedEmbed){
+      window.alert('No fue posible abrir esta opción en este momento. Intenta abrir Historial y vuelve a intentar.');
+      return false;
+    }
+    try{
+      console.info('[mxmed-actividad-clinica] open procedimiento fallback iframe by type', { type: normalized });
     }catch(_){}
     return true;
   };
@@ -4239,17 +4505,6 @@ console.info('app.js loaded :: 20251123a');
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
-    hideActividadClinicaModal();
-    const notasPaneAvailable = !!pane.querySelector(clinicalTabTargets.notas);
-    const actionsBlockAvailable = !!actividadClinicaNotasActions;
-    const opened = notasPaneAvailable ? showClinicalTab(clinicalTabTargets.notas) : false;
-    if(opened && actionsBlockAvailable){
-      focusActividadClinicaActions();
-      try{
-        console.info('[mxmed-actividad-clinica] launcher open -> t-notas');
-      }catch(_){}
-      return;
-    }
     try{
       const BsModal = window.bootstrap && window.bootstrap.Modal;
       if(BsModal && actividadClinicaModalEl){
@@ -4258,11 +4513,7 @@ console.info('app.js loaded :: 20251123a');
           : new BsModal(actividadClinicaModalEl);
         modal.show();
         try{
-          console.info('[mxmed-actividad-clinica] launcher fallback -> modal', {
-            notasPaneAvailable,
-            actionsBlockAvailable,
-            opened
-          });
+          console.info('[mxmed-actividad-clinica] launcher open -> modal');
         }catch(_){}
       }
     }catch(_){}
@@ -4313,10 +4564,34 @@ console.info('app.js loaded :: 20251123a');
       await openProcedimientoFromActividad();
       return;
     }
+    const medicationBtn = event.target.closest('[data-action="actividad-clinica-open-medication"]');
+    if(medicationBtn){
+      event.preventDefault();
+      await openProcedimientoTipoFromActividad('medication_administration');
+      return;
+    }
+    const immunizationBtn = event.target.closest('[data-action="actividad-clinica-open-immunization"]');
+    if(immunizationBtn){
+      event.preventDefault();
+      await openProcedimientoTipoFromActividad('immunization');
+      return;
+    }
+    const woundCareBtn = event.target.closest('[data-action="actividad-clinica-open-wound-care"]');
+    if(woundCareBtn){
+      event.preventDefault();
+      await openProcedimientoTipoFromActividad('wound_care');
+      return;
+    }
     const rxBtn = event.target.closest('[data-action="actividad-clinica-open-receta"]');
     if(rxBtn){
       event.preventDefault();
       openRecetaFromActividad();
+      return;
+    }
+    const consentBtn = event.target.closest('[data-action="actividad-clinica-open-consent"]');
+    if(consentBtn){
+      event.preventDefault();
+      openConsentimientoFromActividad();
       return;
     }
     const attachBtn = event.target.closest('[data-action="actividad-clinica-open-adjunto"]');
@@ -4796,17 +5071,17 @@ console.info('app.js loaded :: 20251123a');
   };
   const openAdjuntoDocumentoFromActividad = ()=>{
     hideActividadClinicaModal();
-    const opened = showClinicalTab(clinicalTabTargets.estudios);
-    if(!opened){
-      window.alert('No fue posible abrir Estudios diagnósticos en este momento.');
+    const mounted = actividadClinicaAdjuntoPortal?.mount?.() === true;
+    if(!mounted){
+      window.alert('No fue posible abrir Adjuntar documento en este momento.');
       return false;
     }
-    const ingresarBtn = pane.querySelector('#t-estudios .est-section-tab[data-est-section="ingresar"]');
-    if(ingresarBtn) ingresarBtn.click();
+    const opened = showActividadClinicaModalById(actividadClinicaAdjuntoModalEl);
+    if(!opened) return false;
     window.setTimeout(()=>{
-      const fileInput = pane.querySelector('#t-estudios [data-role="ac-doc-file"]');
+      const fileInput = actividadClinicaAdjuntoModalEl?.querySelector('[data-role="ac-doc-file"]');
       fileInput?.focus?.();
-    }, 120);
+    }, 80);
     try{
       console.info('[mxmed-actividad-clinica] open adjuntar documento');
     }catch(_){}

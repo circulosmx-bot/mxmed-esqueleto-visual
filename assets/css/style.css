@@ -5282,3 +5282,78 @@ body{margin:0;background:var(--mm-fondo-base);}
     grid-template-columns: 1fr 1fr;
   }
 }
+
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ac-notas-actions"]{
+  display:none !important;
+}
+
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ac-notas-context-card"]{
+  display:none !important;
+}
+
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-form-card"] > .exp-card-title{
+  display:none !important;
+}
+
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-field-ambito"]{
+  display:none !important;
+}
+
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-field-citas"]{
+  display:none !important;
+}
+
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-field-tema"]{
+  order: 1 !important;
+}
+
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-field-contenido"]{
+  order: 2 !important;
+}
+
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-field-vitals-auto"],
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-field-exploracion-auto"],
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-field-studies-auto"],
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-field-interp"],
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-field-dx"],
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-field-pronostico"],
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-field-pronostico-texto"],
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-field-plan"],
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-field-rx-summary"]{
+  display:none !important;
+}
+
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-field-image"]{
+  display:block !important;
+  order: 3 !important;
+}
+
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-main-col"]{
+  flex: 0 0 100%;
+  max-width: 100%;
+}
+
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-timeline-col"]{
+  display:none !important;
+}
+
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"][data-ac-modal-has-notes="1"] [data-role="ne-main-col"]{
+  flex: 0 0 66.66666667%;
+  max-width: 66.66666667%;
+}
+
+[data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"][data-ac-modal-has-notes="1"] [data-role="ne-timeline-col"]{
+  display:block !important;
+  flex: 0 0 33.33333333%;
+  max-width: 33.33333333%;
+}
+
+@media (max-width: 1199.98px){
+  [data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-main-col"]{
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+  [data-ne-section="nota_evolucion"][data-ac-modal-mode="nota"] [data-role="ne-timeline-col"]{
+    display:none !important;
+  }
+}

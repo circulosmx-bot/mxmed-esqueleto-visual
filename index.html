@@ -3531,7 +3531,6 @@
               </div>
               <div class="tab-pane fade" id="t-historial-atencion">
                 <div class="clinical-panel mt-2 p-2">
-                  <div class="small text-secondary mb-2">Historial de atención (vista embebida)</div>
                   <div id="mm-p10-bar" class="d-none mb-2" style="position:sticky;top:0;z-index:1020;background:rgba(248,249,250,.95);backdrop-filter:saturate(1.2) blur(2px);">
                     <div class="alert alert-light border d-flex flex-wrap align-items-center justify-content-between gap-2 py-2 px-3 mb-0">
                       <div class="d-flex flex-column gap-1">
@@ -3561,7 +3560,6 @@
                   <div class="btn-group btn-group-sm mb-2" role="group" aria-label="Subvistas de historial">
                     <button type="button" class="btn btn-outline-primary active" data-embed-mode="historial">Historial</button>
                     <button type="button" class="btn btn-outline-primary" data-embed-mode="encounter">Episodio</button>
-                    <button type="button" class="btn btn-outline-primary" data-embed-mode="document">Documento</button>
                   </div>
                   <div id="mm-embed-historial-empty" class="alert alert-info d-none mb-2">Sin paciente activo. Cargando modo demo.</div>
                   <iframe
@@ -3583,22 +3581,55 @@
                       <div class="modal-body">
                         <div class="row g-2">
                           <div class="col-12">
+                            <div class="small fw-semibold text-uppercase text-muted">Documentar consulta</div>
+                          </div>
+                          <div class="col-12">
                             <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-nota">
                               <strong>Nota clínica</strong>
                               <div class="small text-muted">Abre Notas de evolución</div>
                             </button>
                           </div>
                           <div class="col-12">
+                            <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-receta">
+                              <strong>Generar receta</strong>
+                              <div class="small text-muted">Abre el modal de receta</div>
+                            </button>
+                          </div>
+                          <div class="col-12">
+                            <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-consent">
+                              <strong>Consentimiento informado</strong>
+                              <div class="small text-muted">Abre el registro de consentimiento</div>
+                            </button>
+                          </div>
+                          <div class="col-12 pt-1">
+                            <div class="small fw-semibold text-uppercase text-muted">Procedimientos y aplicaciones</div>
+                          </div>
+                          <div class="col-12">
                             <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-procedimiento">
-                              <strong>Procedimiento</strong>
+                              <strong>Registrar procedimiento</strong>
                               <div class="small text-muted">Abre el registro de procedimiento</div>
                             </button>
                           </div>
                           <div class="col-12">
-                            <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-receta">
-                              <strong>Receta</strong>
-                              <div class="small text-muted">Abre el modal de receta</div>
+                            <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-medication">
+                              <strong>Aplicación de medicamento</strong>
+                              <div class="small text-muted">Abre procedimiento con tipo preseleccionado</div>
                             </button>
+                          </div>
+                          <div class="col-12">
+                            <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-immunization">
+                              <strong>Registrar vacuna</strong>
+                              <div class="small text-muted">Abre procedimiento con tipo vacuna</div>
+                            </button>
+                          </div>
+                          <div class="col-12">
+                            <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-wound-care">
+                              <strong>Registrar curación</strong>
+                              <div class="small text-muted">Abre procedimiento con tipo curación</div>
+                            </button>
+                          </div>
+                          <div class="col-12 pt-1">
+                            <div class="small fw-semibold text-uppercase text-muted">Adjuntos y soporte</div>
                           </div>
                           <div class="col-12">
                             <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-adjunto">
@@ -3610,6 +3641,45 @@
                       </div>
                       <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal fade" id="modalActividadClinicaNota" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Nota clínica</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                        <div data-role="ac-nota-modal-content"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal fade" id="modalActividadClinicaAdjunto" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Adjuntar documento</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                        <div data-role="ac-adjunto-modal-content"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal fade" id="modalActividadClinicaConsent" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Consentimiento informado</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p class="mb-0 text-muted">Funcionalidad en desarrollo.</p>
                       </div>
                     </div>
                   </div>
@@ -5913,14 +5983,14 @@
                   </div>
                   <div class="row g-3 align-items-start">
 
-                    <div class="col-lg-8">
-                      <div class="exp-card">
+                    <div class="col-lg-8" data-role="ne-main-col">
+                      <div class="exp-card" data-role="ne-form-card">
                         <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
-                          <span>Nota de evolución</span>
+                          <span>Nota clínica</span>
                         </div>
 
                         <div class="row g-3 mt-1">
-                          <div class="col-md-4">
+                          <div class="col-md-4" data-role="ne-field-ambito">
                             <label class="form-label" for="ne_ambito">Ámbito</label>
                             <select class="form-select" id="ne_ambito">
                               <option value="consulta" selected>Consulta</option>
@@ -5929,7 +5999,7 @@
                             </select>
                           </div>
 
-                          <div class="col-md-8">
+                          <div class="col-md-8" data-role="ne-field-citas">
                             <label class="form-label">Síntomas actuales relevantes (cita)</label>
                             <div class="ne-readonly" id="ne_citas_block" role="button" tabindex="0" aria-label="Capturar motivo y padecimiento si no están registrados">
                               <div class="ne-ro-row">
@@ -5943,44 +6013,50 @@
                             </div>
                           </div>
 
-                          <div class="col-12">
+                          <div class="col-12" data-role="ne-field-tema">
                             <label class="form-label" for="ne_complemento">Tema de la nota</label>
                             <input class="form-control" id="ne_complemento" maxlength="400" placeholder="Tema breve de la nota (obligatorio)">
                             <div class="form-text">Describe brevemente de qué trata esta nota. Se usará para identificarla en el historial.</div>
                           </div>
 
-                          <div class="col-12">
-                            <label class="form-label" for="ne_evolucion">Evolución / actualización del cuadro clínico</label>
+                          <div class="col-12" data-role="ne-field-contenido">
+                            <label class="form-label" for="ne_evolucion">Contenido clínico</label>
                             <textarea class="form-control" id="ne_evolucion" rows="4" maxlength="4000" placeholder="Describe la evolución, respuesta a tratamiento, cambios y hallazgos relevantes (obligatorio)"></textarea>
                           </div>
 
-                          <div class="col-md-6">
+                          <div class="col-md-6" data-role="ne-field-vitals-auto">
                             <label class="form-label">Signos vitales (auto)</label>
                             <div class="ne-readonly" id="ne_vitals_ro">No registrado</div>
                           </div>
 
-                          <div class="col-md-6">
+                          <div class="col-md-6" data-role="ne-field-exploracion-auto">
                             <label class="form-label">Exploración por sistemas (auto)</label>
                             <div class="ne-readonly" id="ne_exploracion_ro">No registrado</div>
                           </div>
 
-                          <div class="col-12">
+                          <div class="col-12" data-role="ne-field-studies-auto">
                             <label class="form-label">Resultados relevantes de estudios <span class="text-muted">(auto)</span></label>
                             <div class="ne-studies" id="ne_studies_ro">No registrado</div>
                           </div>
 
-                          <div class="col-12">
+                          <div class="col-12" data-role="ne-field-interp">
                             <label class="form-label" for="ne_interp">Interpretación clínica de resultados <span class="text-muted">(opcional)</span></label>
                             <textarea class="form-control" id="ne_interp" rows="3" maxlength="2500" placeholder="Interpretación clínica (recomendado)"></textarea>
                           </div>
 
-                          <div class="col-12">
+                          <div class="col-12 d-none" data-role="ne-field-image">
+                            <label class="form-label" for="ne_image_optional">Adjuntar imagen (opcional)</label>
+                            <input class="form-control" id="ne_image_optional" type="file" accept="image/*">
+                            <div class="form-text">Control visible para captura rápida. El guardado de imagen en este flujo se integrará en una fase posterior.</div>
+                          </div>
+
+                          <div class="col-12" data-role="ne-field-dx">
                             <label class="form-label" for="ne_dx">Diagnóstico(s)</label>
                             <textarea class="form-control" id="ne_dx" rows="2" placeholder="Escribe uno por línea (obligatorio si no existe módulo)"></textarea>
                             <div class="form-text">Si existe un módulo de diagnósticos, esta lista se tomará de ahí automáticamente.</div>
                           </div>
 
-                          <div class="col-md-6">
+                          <div class="col-md-6" data-role="ne-field-pronostico">
                             <label class="form-label" for="ne_pronostico">Pronóstico</label>
                             <select class="form-select" id="ne_pronostico">
                               <option value="" selected>Selecciona…</option>
@@ -5990,17 +6066,17 @@
                               <option value="otro">Otro (texto libre)</option>
                             </select>
                           </div>
-                          <div class="col-md-6">
+                          <div class="col-md-6" data-role="ne-field-pronostico-texto">
                             <label class="form-label" for="ne_pronostico_txt">Pronóstico (texto libre)</label>
                             <input class="form-control" id="ne_pronostico_txt" placeholder="Especifica pronóstico" disabled>
                           </div>
 
-                          <div class="col-12">
+                          <div class="col-12" data-role="ne-field-plan">
                             <label class="form-label" for="ne_plan">Tratamiento e indicaciones</label>
                             <textarea class="form-control" id="ne_plan" rows="4" maxlength="4000" placeholder="Plan e indicaciones generales (obligatorio)"></textarea>
                           </div>
 
-                          <div class="col-12">
+                          <div class="col-12" data-role="ne-field-rx-summary">
                             <div class="ne-rx-head">
                               <div>
                                 <div class="ne-rx-ttl">Medicamentos (receta)</div>
@@ -6024,7 +6100,7 @@
                       </div>
                     </div>
 
-                    <div class="col-lg-4">
+                    <div class="col-lg-4" data-role="ne-timeline-col">
                       <div class="exp-card exp-card--secondary">
                         <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
                           <span>Notas generadas</span>
@@ -6796,7 +6872,6 @@
     var p10StartBtn = p10Bar.querySelector('[data-action="p10-start-encounter"]');
     var p10FinalizeBtn = p10Bar.querySelector('[data-action="p10-finalize-encounter"]');
     var p10OpenBtn = p10Bar.querySelector('[data-action="p10-open-active-encounter"]');
-
     function getParam(name) {
       try {
         return new URLSearchParams(window.location.search).get(name) || '';
