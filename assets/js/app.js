@@ -2733,6 +2733,51 @@ console.info('app.js loaded :: 20251123a');
     if (v === 'malo') return 'Malo';
     return '';
   };
+  const normalizeNoteCaptureAttachmentEntry = (entry) => {
+    if (!entry || typeof entry !== 'object') return null;
+    const rawId = String(entry.document_id ?? '').trim();
+    const docId = /^\d+$/.test(rawId) ? Number(rawId) : null;
+    const docUuid = String(entry.document_uuid ?? '').trim();
+    const previewUrl = String(entry.preview_url ?? '').trim();
+    const token = String(entry.note_capture_token ?? '').trim();
+    const source = String(entry.source ?? 'nota_modal_qr_v1').trim() || 'nota_modal_qr_v1';
+    if (!docId && !docUuid && !previewUrl && !token) return null;
+    return {
+      document_id: docId,
+      document_uuid: docUuid || null,
+      preview_url: previewUrl || null,
+      note_capture_token: token || null,
+      source
+    };
+  };
+  const readQrNoteCaptureAttachmentFromModal = () => {
+    const modalEl = document.getElementById('modalActividadClinicaNota');
+    if (!modalEl) return null;
+    return normalizeNoteCaptureAttachmentEntry({
+      document_id: modalEl.dataset.noteCaptureDocumentId || null,
+      document_uuid: modalEl.dataset.noteCaptureDocumentUuid || null,
+      preview_url: modalEl.dataset.noteCapturePreviewUrl || null,
+      note_capture_token: modalEl.dataset.noteCaptureToken || null,
+      source: 'nota_modal_qr_v1'
+    });
+  };
+  const mergeNoteCaptureAttachments = (currentList, nextEntry) => {
+    const out = [];
+    const seen = new Set();
+    const append = (entry) => {
+      const normalized = normalizeNoteCaptureAttachmentEntry(entry);
+      if (!normalized) return;
+      const key = `${normalized.document_id || ''}|${normalized.document_uuid || ''}|${normalized.note_capture_token || ''}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push(normalized);
+    };
+    if (Array.isArray(currentList)) {
+      currentList.forEach(append);
+    }
+    append(nextEntry);
+    return out;
+  };
 
   const formatVitalsLine = (sv) => {
     const ta = (sv.ta_sistolica != null && sv.ta_diastolica != null) ? `${sv.ta_sistolica}/${sv.ta_diastolica} mmHg` : 'TA: No registrado';
@@ -2797,10 +2842,10 @@ console.info('app.js loaded :: 20251123a');
     const medico = getDoctor();
     const rx = getRxDraft(patient.patient_id);
     const pronostico = buildPronosticoObject();
+    const qrNoteCaptureAttachment = readQrNoteCaptureAttachmentFromModal();
 
     const temaNota = (els.complemento?.value || '').trim();
-
-    return {
+    const payloadBase = {
       section_id: 'nota_evolucion',
       standard: 'NOM-004-SSA3-2012',
       contract_version: 1,
@@ -2839,6 +2884,17 @@ console.info('app.js loaded :: 20251123a');
         generated_at: now.toISOString()
       }
     };
+    const existingNoteCapture = Array.isArray(payloadBase?.attachments?.note_capture)
+      ? payloadBase.attachments.note_capture
+      : [];
+    const mergedNoteCapture = mergeNoteCaptureAttachments(existingNoteCapture, qrNoteCaptureAttachment);
+    if (mergedNoteCapture.length) {
+      payloadBase.attachments = {
+        ...(payloadBase.attachments && typeof payloadBase.attachments === 'object' ? payloadBase.attachments : {}),
+        note_capture: mergedNoteCapture
+      };
+    }
+    return payloadBase;
   };
 
   window.buildEvolutionNoteRenderedText = function buildEvolutionNoteRenderedText(payload, context) {
@@ -3283,7 +3339,40 @@ console.info('app.js loaded :: 20251123a');
       });
     }
 
+    const noteCaptureTokenForConsume = String(payload?.attachments?.note_capture?.[0]?.note_capture_token || '').trim();
     const args = { type: 'nota_evolucion', context, payload, actor };
+    const consumeQrTokenAfterNoteSave = async (token, document) => {
+      const safeToken = String(token || '').trim();
+      if (!safeToken) return;
+      const noteDocumentId = String(document?.document_db_id ?? document?.id ?? '').trim();
+      const noteDocumentUuid = String(document?.document_id ?? document?.document_uuid ?? '').trim();
+      if (!noteDocumentId && !noteDocumentUuid) return;
+      try {
+        const resp = await fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(safeToken)}/consume`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            note_document_id: noteDocumentId || null,
+            note_document_uuid: noteDocumentUuid || null
+          })
+        });
+        if (!resp.ok) {
+          console.info('[P15][nota_evolucion] consume note capture rejected', {
+            token: safeToken,
+            status: resp.status
+          });
+        }
+      } catch (consumeError) {
+        console.info('[P15][nota_evolucion] consume note capture failed', {
+          token: safeToken,
+          reason: String(consumeError?.message || 'consume_failed')
+        });
+      }
+    };
 
     const fallbackToLocal = () => {
       const text = window.buildEvolutionNoteRenderedText(payload, context);
@@ -3319,6 +3408,7 @@ console.info('app.js loaded :: 20251123a');
         console.info('[P15][nota_evolucion] save source', { source: String(source || 'unknown') });
         renderTimeline();
         openDocModal(document?.content?.rendered_text || '');
+        consumeQrTokenAfterNoteSave(noteCaptureTokenForConsume, document);
         try{
           window.mxRegisterEncounterActivity?.('nota_evolucion_guardada', {
             encounterKey: context.encounter_key,
@@ -4054,16 +4144,14 @@ console.info('app.js loaded :: 20251123a');
   const setNotaQrMainStatus = (message, tone = 'muted')=>{
     if(!actividadClinicaNotaQrStatusEl) return;
     const text = sanitizeText(message);
-    actividadClinicaNotaQrStatusEl.classList.remove('text-muted', 'text-success', 'text-danger');
-    if(!text){
-      actividadClinicaNotaQrStatusEl.textContent = 'Sin imagen recibida por celular.';
-      actividadClinicaNotaQrStatusEl.classList.add('text-muted');
+    actividadClinicaNotaQrStatusEl.classList.remove('text-muted', 'text-success', 'text-danger', 'd-none');
+    if(!text || tone !== 'success'){
+      actividadClinicaNotaQrStatusEl.textContent = '';
+      actividadClinicaNotaQrStatusEl.classList.add('d-none');
       return;
     }
     actividadClinicaNotaQrStatusEl.textContent = text;
-    actividadClinicaNotaQrStatusEl.classList.add(
-      tone === 'success' ? 'text-success' : (tone === 'error' ? 'text-danger' : 'text-muted')
-    );
+    actividadClinicaNotaQrStatusEl.classList.add('text-success');
   };
   const stopNoteCaptureQrPolling = ()=>{
     if(noteCaptureQrState.pollIntervalId){
@@ -4106,7 +4194,7 @@ console.info('app.js loaded :: 20251123a');
     }
     hideNotaQrPreview();
     if(!preserveMainStatus){
-      setNotaQrMainStatus('Sin imagen recibida por celular.', 'muted');
+      setNotaQrMainStatus('', 'muted');
     }
     if(actividadClinicaNotaModalEl){
       delete actividadClinicaNotaModalEl.dataset.noteCaptureDocumentId;

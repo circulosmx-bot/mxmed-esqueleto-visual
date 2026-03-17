@@ -3653,12 +3653,6 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-                          <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ac-nota-open-qr-capture">
-                            Usar celular para capturar imagen
-                          </button>
-                          <div class="small text-muted" data-role="ac-nota-qr-status">Sin imagen recibida por celular.</div>
-                        </div>
                         <div data-role="ac-nota-modal-content"></div>
                       </div>
                     </div>
@@ -6100,7 +6094,12 @@
                           <div class="col-12 d-none" data-role="ne-field-image">
                             <label class="form-label" for="ne_image_optional">Adjuntar imagen (opcional)</label>
                             <input class="form-control" id="ne_image_optional" type="file" accept="image/*">
-                            <div class="form-text">Control visible para captura rápida. El guardado de imagen en este flujo se integrará en una fase posterior.</div>
+                            <div class="mt-2 d-flex flex-column align-items-start gap-1">
+                              <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ac-nota-open-qr-capture">
+                                Usar celular para capturar imagen
+                              </button>
+                              <div class="small text-success d-none" data-role="ac-nota-qr-status"></div>
+                            </div>
                           </div>
 
                           <div class="col-12" data-role="ne-field-dx">
