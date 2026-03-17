@@ -1613,3 +1613,77 @@ Estado: ajuste de integración aplicado.
 - Se conserva fallback local de visor documental solo cuando no está disponible la capa compartida del host.
 - Se reduce ruido de consola en contexto `search_open` limitando logs redundantes de supresión auto-encounter en P10.
 - Homologación de iconografía diagnóstica: Historial de Atención reutiliza la misma iconografía SVG inline de las cards de Estudios Diagnósticos, se elimina la ruta que renderizaba texto de ligatures (por ejemplo `radiology`) y el render queda centralizado exclusivamente en el helper `resolveClinicalDocumentSvgIcon(...)`.
+
+## QR-NC — Captura de imagen clínica desde celular (QR)
+
+### 1. Contexto del problema
+
+En la operación real, el médico suele documentar en escritorio, pero la captura de evidencia clínica (foto de lesión, hallazgo o documento visual) se realiza más rápido desde celular. Sin este puente, la nota clínica pierde fluidez y se fragmenta la carga de adjuntos.
+
+### 2. Solución implementada (V1)
+
+Se implementó un flujo auxiliar desde **Nota clínica**:
+- acción secundaria en el modal de nota: **Usar celular para capturar imagen**
+- apertura de submodal QR en escritorio
+- escaneo en celular y apertura de vista móvil mínima
+- captura/subida de imagen desde móvil
+- regreso a escritorio con verificación por polling controlado
+- persistencia en la tubería canónica de `clinical_documents` (sin backend paralelo)
+
+### 3. Arquitectura técnica
+
+Base técnica del flujo:
+- token temporal: `note_capture_token`
+- asociación mínima:
+  - `patient_id` (obligatorio)
+  - `encounter_key` (opcional)
+
+Endpoints implementados:
+- `POST /api/clinical/index.php/note-capture-tokens`
+- `GET /api/clinical/index.php/note-capture-tokens/{token}`
+- `POST /api/clinical/index.php/note-capture-tokens/{token}/upload`
+- `POST /api/clinical/index.php/note-capture-tokens/{token}/cancel`
+
+Persistencia de archivo:
+- la carga móvil reutiliza la tubería canónica de `/api/clinical/index.php/documents`
+- `document_type = image`
+- `media_tag_key = evidencia_clinica`
+- `payload.source = nota_modal_qr_v1`
+- `payload.note_capture_token = <token>`
+
+### 4. UX implementada
+
+Elementos UX de V1:
+- acción secundaria dentro del modal de Nota clínica
+- submodal QR con estado (`Pendiente`, `Imagen recibida`, `Expirado`)
+- fallback con enlace móvil visible cuando el QR no se visualiza
+- botón de copia de enlace para abrir en celular
+- estado visible en modal principal de nota (`Sin imagen recibida` / `Imagen recibida`)
+- vista móvil mínima para captura/subida (sin complejidad adicional)
+
+### 5. Endurecimiento (QR-NC-1C)
+
+Mejoras de robustez aplicadas:
+- limpieza estricta de estado al abrir/cerrar modal de nota
+- cancelación de token pendiente al cerrar submodal QR o modal de nota
+- control de polling (sin intervalos huérfanos, stop por estado/expiración/cierre)
+- fallback QR reforzado (enlace siempre visible + copiar)
+- validación de separación de responsabilidades: sin acoplamiento directo en `historial.php`
+
+### 6. Limitaciones actuales
+
+Límites explícitos de esta versión:
+- el QR depende de servicio externo para generación visual
+- no hay sincronización en tiempo real (polling ligero)
+- el token no se consume al guardar la nota (aún)
+- flujo pensado para una imagen por ciclo de captura
+- cancelación en frontend es best-effort (si se cierra abruptamente, aplica expiración por TTL)
+
+### 7. Evolución futura (V2 sugerida)
+
+Siguientes pasos recomendados:
+- generación de QR local (sin dependencia externa)
+- consumo/cierre definitivo de token al guardar nota clínica
+- asociación formal del documento capturado con la nota clínica guardada
+- soporte multi-imagen por sesión/token
+- evaluación de sincronización en tiempo real si el volumen lo requiere
