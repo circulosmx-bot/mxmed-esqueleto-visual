@@ -3653,7 +3653,56 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                          <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ac-nota-open-qr-capture">
+                            Usar celular para capturar imagen
+                          </button>
+                          <div class="small text-muted" data-role="ac-nota-qr-status">Sin imagen recibida por celular.</div>
+                        </div>
                         <div data-role="ac-nota-modal-content"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal fade" id="modalActividadClinicaNotaQr" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Capturar imagen con celular</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p class="small text-muted mb-3">
+                          Escanea este código con tu celular para tomar o subir una imagen clínica y anexarla a esta nota.
+                        </p>
+                        <div class="text-center mb-3">
+                          <img
+                            data-role="ac-nota-qr-image"
+                            src=""
+                            alt="Código QR para captura clínica"
+                            class="border rounded p-2 bg-white"
+                            style="width:220px;height:220px;object-fit:contain;"
+                          >
+                        </div>
+                        <div class="small text-break mb-2">
+                          <a href="#" target="_blank" rel="noopener" data-role="ac-nota-qr-link"></a>
+                        </div>
+                        <div class="small mb-1" data-role="ac-nota-qr-state">Pendiente</div>
+                        <div class="small text-muted" data-role="ac-nota-qr-countdown"></div>
+                        <div class="alert alert-success d-none mt-3 mb-0 py-2 px-3" data-role="ac-nota-qr-preview-wrap">
+                          <div class="fw-semibold small mb-2">Imagen recibida</div>
+                          <img
+                            data-role="ac-nota-qr-preview-image"
+                            src=""
+                            alt="Vista previa de imagen recibida"
+                            class="img-fluid rounded border"
+                            style="max-height:180px;object-fit:contain;"
+                          >
+                        </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-action="ac-nota-qr-verify-now">Verificar ahora</button>
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Cerrar</button>
                       </div>
                     </div>
                   </div>

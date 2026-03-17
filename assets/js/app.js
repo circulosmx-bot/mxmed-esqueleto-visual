@@ -3506,9 +3506,12 @@ console.info('app.js loaded :: 20251123a');
   const p10BarNode = document.getElementById('mm-p10-bar');
   const actividadClinicaModalEl = pane.querySelector('#modalActividadClinica');
   const actividadClinicaNotaModalEl = pane.querySelector('#modalActividadClinicaNota');
+  const actividadClinicaNotaQrModalEl = pane.querySelector('#modalActividadClinicaNotaQr');
   const actividadClinicaAdjuntoModalEl = pane.querySelector('#modalActividadClinicaAdjunto');
   const actividadClinicaConsentModalEl = pane.querySelector('#modalActividadClinicaConsent');
   const actividadClinicaLaunchBtn = pane.querySelector('[data-action="open-actividad-clinica"]');
+  const actividadClinicaNotaOpenQrBtn = pane.querySelector('[data-action="ac-nota-open-qr-capture"]');
+  const actividadClinicaNotaQrStatusEl = pane.querySelector('[data-role="ac-nota-qr-status"]');
   const actividadClinicaNotasCard = pane.querySelector('[data-role="ac-notas-context-card"]');
   const actividadClinicaNotasStatusBadge = pane.querySelector('[data-role="ac-notas-status-badge"]');
   const actividadClinicaNotasStatusText = pane.querySelector('[data-role="ac-notas-status-text"]');
@@ -4006,6 +4009,348 @@ console.info('app.js loaded :: 20251123a');
     { forceVisible: true }
   );
   let notaClinicaModalTimelineObserver = null;
+  const noteCaptureQrState = {
+    token: '',
+    status: '',
+    expiresAt: '',
+    uploadedAt: '',
+    documentId: '',
+    documentUuid: '',
+    previewUrl: '',
+    mobileUrl: '',
+    pollIntervalId: 0,
+    pollTimeoutId: 0,
+    countdownIntervalId: 0,
+    startedAt: 0
+  };
+  const NOTE_CAPTURE_POLL_INTERVAL_MS = 4000;
+  const NOTE_CAPTURE_MAX_DURATION_MS = 90000;
+  const noteQrSelectors = {
+    qrImage: '[data-role="ac-nota-qr-image"]',
+    qrLink: '[data-role="ac-nota-qr-link"]',
+    qrState: '[data-role="ac-nota-qr-state"]',
+    countdown: '[data-role="ac-nota-qr-countdown"]',
+    previewWrap: '[data-role="ac-nota-qr-preview-wrap"]',
+    previewImage: '[data-role="ac-nota-qr-preview-image"]'
+  };
+  const noteQrElements = ()=>{
+    if(!actividadClinicaNotaQrModalEl) return null;
+    return {
+      qrImage: actividadClinicaNotaQrModalEl.querySelector(noteQrSelectors.qrImage),
+      qrLink: actividadClinicaNotaQrModalEl.querySelector(noteQrSelectors.qrLink),
+      qrState: actividadClinicaNotaQrModalEl.querySelector(noteQrSelectors.qrState),
+      countdown: actividadClinicaNotaQrModalEl.querySelector(noteQrSelectors.countdown),
+      previewWrap: actividadClinicaNotaQrModalEl.querySelector(noteQrSelectors.previewWrap),
+      previewImage: actividadClinicaNotaQrModalEl.querySelector(noteQrSelectors.previewImage)
+    };
+  };
+  const hideNotaQrPreview = ()=>{
+    const els = noteQrElements();
+    if(!els) return;
+    if(els.previewWrap) els.previewWrap.classList.add('d-none');
+    if(els.previewImage) els.previewImage.setAttribute('src', '');
+  };
+  const setNotaQrMainStatus = (message, tone = 'muted')=>{
+    if(!actividadClinicaNotaQrStatusEl) return;
+    const text = sanitizeText(message);
+    actividadClinicaNotaQrStatusEl.classList.remove('text-muted', 'text-success', 'text-danger');
+    if(!text){
+      actividadClinicaNotaQrStatusEl.textContent = 'Sin imagen recibida por celular.';
+      actividadClinicaNotaQrStatusEl.classList.add('text-muted');
+      return;
+    }
+    actividadClinicaNotaQrStatusEl.textContent = text;
+    actividadClinicaNotaQrStatusEl.classList.add(
+      tone === 'success' ? 'text-success' : (tone === 'error' ? 'text-danger' : 'text-muted')
+    );
+  };
+  const stopNoteCaptureQrPolling = ()=>{
+    if(noteCaptureQrState.pollIntervalId){
+      window.clearInterval(noteCaptureQrState.pollIntervalId);
+      noteCaptureQrState.pollIntervalId = 0;
+    }
+    if(noteCaptureQrState.pollTimeoutId){
+      window.clearTimeout(noteCaptureQrState.pollTimeoutId);
+      noteCaptureQrState.pollTimeoutId = 0;
+    }
+    if(noteCaptureQrState.countdownIntervalId){
+      window.clearInterval(noteCaptureQrState.countdownIntervalId);
+      noteCaptureQrState.countdownIntervalId = 0;
+    }
+  };
+  const resetNoteCaptureQrState = (preserveMainStatus = false)=>{
+    stopNoteCaptureQrPolling();
+    noteCaptureQrState.token = '';
+    noteCaptureQrState.status = '';
+    noteCaptureQrState.expiresAt = '';
+    noteCaptureQrState.uploadedAt = '';
+    noteCaptureQrState.documentId = '';
+    noteCaptureQrState.documentUuid = '';
+    noteCaptureQrState.previewUrl = '';
+    noteCaptureQrState.mobileUrl = '';
+    noteCaptureQrState.startedAt = 0;
+    const els = noteQrElements();
+    if(els){
+      if(els.qrImage) els.qrImage.setAttribute('src', '');
+      if(els.qrLink){
+        els.qrLink.setAttribute('href', '#');
+        els.qrLink.textContent = '';
+      }
+      if(els.qrState){
+        els.qrState.textContent = 'Pendiente';
+        els.qrState.classList.remove('text-success', 'text-danger');
+      }
+      if(els.countdown) els.countdown.textContent = '';
+    }
+    hideNotaQrPreview();
+    if(!preserveMainStatus){
+      setNotaQrMainStatus('Sin imagen recibida por celular.', 'muted');
+    }
+    if(actividadClinicaNotaModalEl){
+      delete actividadClinicaNotaModalEl.dataset.noteCaptureDocumentId;
+      delete actividadClinicaNotaModalEl.dataset.noteCaptureDocumentUuid;
+      delete actividadClinicaNotaModalEl.dataset.noteCapturePreviewUrl;
+      delete actividadClinicaNotaModalEl.dataset.noteCaptureToken;
+    }
+  };
+  const updateNoteQrCountdown = ()=>{
+    const els = noteQrElements();
+    if(!els?.countdown) return;
+    const expiresAt = sanitizeText(noteCaptureQrState.expiresAt);
+    if(!expiresAt){
+      els.countdown.textContent = '';
+      return;
+    }
+    const expiresMs = Date.parse(expiresAt);
+    if(Number.isNaN(expiresMs)){
+      els.countdown.textContent = '';
+      return;
+    }
+    const remainingSec = Math.max(0, Math.round((expiresMs - Date.now()) / 1000));
+    if(noteCaptureQrState.status === 'uploaded'){
+      els.countdown.textContent = 'Imagen recibida.';
+      return;
+    }
+    if(noteCaptureQrState.status === 'expired'){
+      els.countdown.textContent = 'Token expirado.';
+      return;
+    }
+    els.countdown.textContent = `Expira en ${remainingSec}s`;
+  };
+  const setNoteCaptureQrModalState = (state, tone = 'muted')=>{
+    const els = noteQrElements();
+    if(!els?.qrState) return;
+    const text = sanitizeText(state) || 'Pendiente';
+    els.qrState.textContent = text;
+    els.qrState.classList.remove('text-success', 'text-danger');
+    if(tone === 'success'){
+      els.qrState.classList.add('text-success');
+    }else if(tone === 'error'){
+      els.qrState.classList.add('text-danger');
+    }
+  };
+  const normalizePreviewUrl = (url)=>{
+    const raw = sanitizeText(url);
+    if(!raw) return '';
+    if(/^https?:\/\//i.test(raw)) return raw;
+    if(raw.startsWith('/')) return raw;
+    return `/${raw.replace(/^\/+/, '')}`;
+  };
+  const resolveNoteCaptureContext = ()=>{
+    const patientId = sanitizeText(getActivePatientId());
+    if(!patientId){
+      return { ok: false, error: 'Selecciona un paciente activo antes de usar captura por celular.' };
+    }
+    const encounterKey = (typeof window.getActiveEncounterKey === 'function')
+      ? sanitizeText(window.getActiveEncounterKey())
+      : sanitizeText(window.mxmedStore?.currentEncounterKey || window.mxmedStore?.activeEncounterKey);
+    return {
+      ok: true,
+      patientId,
+      encounterKey: encounterKey || null
+    };
+  };
+  const persistNoteCaptureDocumentInModal = (data)=>{
+    const documentId = sanitizeText(data?.document_id || '');
+    const documentUuid = sanitizeText(data?.document_uuid || '');
+    const previewUrl = normalizePreviewUrl(data?.preview_url || '');
+    const token = sanitizeText(data?.token || noteCaptureQrState.token || '');
+    if(actividadClinicaNotaModalEl){
+      if(documentId) actividadClinicaNotaModalEl.dataset.noteCaptureDocumentId = documentId;
+      if(documentUuid) actividadClinicaNotaModalEl.dataset.noteCaptureDocumentUuid = documentUuid;
+      if(previewUrl) actividadClinicaNotaModalEl.dataset.noteCapturePreviewUrl = previewUrl;
+      if(token) actividadClinicaNotaModalEl.dataset.noteCaptureToken = token;
+    }
+    noteCaptureQrState.documentId = documentId;
+    noteCaptureQrState.documentUuid = documentUuid;
+    noteCaptureQrState.previewUrl = previewUrl;
+    if(previewUrl){
+      const els = noteQrElements();
+      if(els?.previewImage) els.previewImage.setAttribute('src', previewUrl);
+      if(els?.previewWrap) els.previewWrap.classList.remove('d-none');
+    }
+    setNotaQrMainStatus('Imagen recibida desde celular.', 'success');
+  };
+  const fetchNoteCaptureTokenStatus = async (token)=>{
+    const safeToken = sanitizeText(token);
+    if(!safeToken){
+      throw new Error('Token inválido.');
+    }
+    const resp = await fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(safeToken)}`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      credentials: 'same-origin'
+    });
+    const json = await resp.json().catch(()=> null);
+    if(!resp.ok || !json || json.ok !== true){
+      const message = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`);
+      throw new Error(message || 'No se pudo consultar el estado de la captura.');
+    }
+    return json?.data || {};
+  };
+  const syncNoteCaptureTokenStatus = async (opts = {})=>{
+    const token = sanitizeText(noteCaptureQrState.token);
+    if(!token) return;
+    try{
+      const data = await fetchNoteCaptureTokenStatus(token);
+      const status = sanitizeText(data?.status || '').toLowerCase();
+      noteCaptureQrState.status = status || 'pending';
+      noteCaptureQrState.expiresAt = sanitizeText(data?.expires_at || noteCaptureQrState.expiresAt);
+      if(status === 'uploaded'){
+        stopNoteCaptureQrPolling();
+        setNoteCaptureQrModalState('Imagen recibida', 'success');
+        persistNoteCaptureDocumentInModal(data);
+        updateNoteQrCountdown();
+        return;
+      }
+      if(status === 'expired'){
+        stopNoteCaptureQrPolling();
+        setNoteCaptureQrModalState('Expirado', 'error');
+        setNotaQrMainStatus('El token QR expiró. Genera uno nuevo para continuar.', 'error');
+        updateNoteQrCountdown();
+        return;
+      }
+      if(status === 'cancelled'){
+        stopNoteCaptureQrPolling();
+        setNoteCaptureQrModalState('Cancelado', 'error');
+        setNotaQrMainStatus('La captura por celular fue cancelada.', 'error');
+        updateNoteQrCountdown();
+        return;
+      }
+      setNoteCaptureQrModalState('Pendiente');
+      updateNoteQrCountdown();
+      if(opts.manual === true){
+        setNotaQrMainStatus('Aún no se recibe imagen. Sigue pendiente.', 'muted');
+      }
+    }catch(error){
+      const message = sanitizeText(error?.message || 'No se pudo verificar el estado del token.');
+      if(opts.manual === true){
+        setNotaQrMainStatus(message, 'error');
+      }
+    }
+  };
+  const startNoteCaptureTokenPolling = ()=>{
+    stopNoteCaptureQrPolling();
+    noteCaptureQrState.startedAt = Date.now();
+    noteCaptureQrState.pollIntervalId = window.setInterval(()=>{
+      syncNoteCaptureTokenStatus();
+    }, NOTE_CAPTURE_POLL_INTERVAL_MS);
+    noteCaptureQrState.countdownIntervalId = window.setInterval(()=>{
+      updateNoteQrCountdown();
+    }, 1000);
+    noteCaptureQrState.pollTimeoutId = window.setTimeout(()=>{
+      if(noteCaptureQrState.status === 'uploaded'){
+        return;
+      }
+      stopNoteCaptureQrPolling();
+      setNotaQrMainStatus('No se recibió imagen en el tiempo esperado. Puedes verificar manualmente.', 'muted');
+      setNoteCaptureQrModalState('Pendiente');
+    }, NOTE_CAPTURE_MAX_DURATION_MS);
+  };
+  const createNoteCaptureToken = async ()=>{
+    const context = resolveNoteCaptureContext();
+    if(!context.ok){
+      throw new Error(context.error || 'No se pudo resolver el contexto del paciente.');
+    }
+    const body = {
+      patient_id: context.patientId,
+      encounter_key: context.encounterKey || null,
+      note_context: 'nota_clinica_modal',
+      expires_in_sec: 900
+    };
+    const resp = await fetch('/api/clinical/index.php/note-capture-tokens', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify(body)
+    });
+    const json = await resp.json().catch(()=> null);
+    if(!resp.ok || !json || json.ok !== true){
+      const message = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`);
+      throw new Error(message || 'No se pudo generar el token para captura móvil.');
+    }
+    const data = json?.data || {};
+    noteCaptureQrState.token = sanitizeText(data?.token || '');
+    noteCaptureQrState.status = sanitizeText(data?.status || 'pending').toLowerCase();
+    noteCaptureQrState.expiresAt = sanitizeText(data?.expires_at || '');
+    noteCaptureQrState.mobileUrl = sanitizeText(data?.mobile_url || '');
+    if(!noteCaptureQrState.token){
+      throw new Error('El servicio no devolvió token de captura.');
+    }
+    return data;
+  };
+  const openNotaCaptureQrModal = async ()=>{
+    if(!actividadClinicaNotaQrModalEl){
+      setNotaQrMainStatus('No se encontró el modal QR en esta vista.', 'error');
+      return;
+    }
+    if(!window.bootstrap || !window.bootstrap.Modal){
+      setNotaQrMainStatus('Bootstrap Modal no está disponible para abrir la captura QR.', 'error');
+      return;
+    }
+    setNotaQrMainStatus('Generando QR para captura desde celular…', 'muted');
+    setNoteCaptureQrModalState('Generando…');
+    hideNotaQrPreview();
+    try{
+      const data = await createNoteCaptureToken();
+      const mobileUrl = sanitizeText(data?.mobile_url || '');
+      const qrValue = sanitizeText(data?.qr_value || mobileUrl);
+      const normalizedQrValue = qrValue.startsWith('http')
+        ? qrValue
+        : `${window.location.origin}${qrValue.startsWith('/') ? qrValue : `/${qrValue}`}`;
+      const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(normalizedQrValue)}`;
+      const els = noteQrElements();
+      if(els?.qrImage) els.qrImage.setAttribute('src', qrImageUrl);
+      if(els?.qrLink){
+        const href = mobileUrl || qrValue;
+        const normalizedHref = href.startsWith('http')
+          ? href
+          : `${window.location.origin}${href.startsWith('/') ? href : `/${href}`}`;
+        els.qrLink.setAttribute('href', normalizedHref);
+        els.qrLink.textContent = normalizedHref;
+      }
+      setNoteCaptureQrModalState('Pendiente');
+      setNotaQrMainStatus('Escanea el código QR y sube la imagen desde tu celular.', 'muted');
+      updateNoteQrCountdown();
+      const modal = (typeof window.bootstrap.Modal.getOrCreateInstance === 'function')
+        ? window.bootstrap.Modal.getOrCreateInstance(actividadClinicaNotaQrModalEl)
+        : new window.bootstrap.Modal(actividadClinicaNotaQrModalEl);
+      modal.show();
+      startNoteCaptureTokenPolling();
+      try{
+        console.info('[mxmed-note-capture] token_created', {
+          token: noteCaptureQrState.token,
+          expires_at: noteCaptureQrState.expiresAt
+        });
+      }catch(_){}
+    }catch(error){
+      setNotaQrMainStatus(sanitizeText(error?.message || 'No se pudo iniciar captura por celular.'), 'error');
+      setNoteCaptureQrModalState('Error', 'error');
+    }
+  };
   const teardownNotaClinicaModalLayoutObserver = ()=>{
     if(notaClinicaModalTimelineObserver){
       notaClinicaModalTimelineObserver.disconnect();
@@ -4108,11 +4453,15 @@ console.info('app.js loaded :: 20251123a');
     teardownNotaClinicaModalLayoutObserver();
     restoreNotaClinicaQuickVisibility();
     setNotaClinicaInnerHeaderHidden(false);
+    resetNoteCaptureQrState();
     const notaRoot = pane.querySelector('[data-ne-section="nota_evolucion"]');
     if(notaRoot){
       notaRoot.removeAttribute('data-ac-modal-mode');
       notaRoot.removeAttribute('data-ac-modal-has-notes');
     }
+  });
+  actividadClinicaNotaQrModalEl?.addEventListener('hidden.bs.modal', ()=>{
+    stopNoteCaptureQrPolling();
   });
   const applyNotaClinicaQuickDefaults = ()=>{
     const notaRoot = actividadClinicaNotaModalEl?.querySelector('[data-ne-section="nota_evolucion"]');
@@ -4260,6 +4609,7 @@ console.info('app.js loaded :: 20251123a');
     applyNotaClinicaQuickDefaults();
     syncNotaClinicaModalLayoutState();
     setupNotaClinicaModalLayoutObserver();
+    resetNoteCaptureQrState();
     const opened = showActividadClinicaModalById(actividadClinicaNotaModalEl);
     if(!opened) return false;
     window.requestAnimationFrame(()=>{
@@ -4518,6 +4868,16 @@ console.info('app.js loaded :: 20251123a');
       }
     }catch(_){}
   }, true);
+  actividadClinicaNotaOpenQrBtn?.addEventListener('click', (event)=>{
+    event.preventDefault();
+    openNotaCaptureQrModal();
+  });
+  actividadClinicaNotaQrModalEl?.addEventListener('click', (event)=>{
+    const verifyBtn = event.target.closest('[data-action="ac-nota-qr-verify-now"]');
+    if(!verifyBtn) return;
+    event.preventDefault();
+    syncNoteCaptureTokenStatus({ manual: true });
+  });
   actividadClinicaNotasActions?.addEventListener('click', async (event)=>{
     const noteBtn = event.target.closest('[data-action="actividad-tab-open-nota"]');
     if(noteBtn){

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Capturar imagen clínica</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1f2937;background:#f6f8fb}
+    body{margin:0;padding:20px}
+    .wrap{max-width:560px;margin:0 auto;background:#fff;border:1px solid #dbe3ef;border-radius:14px;padding:18px;box-shadow:0 6px 18px rgba(17,24,39,.08)}
+    h1{margin:0 0 8px;font-size:1.2rem}
+    p{margin:0 0 14px;color:#4b5563}
+    label{display:block;font-weight:600;font-size:.92rem;margin-bottom:6px}
+    input[type="file"],input[type="text"],input[type="datetime-local"]{width:100%;box-sizing:border-box;border:1px solid #c7d2e5;border-radius:10px;padding:10px;font-size:.95rem;margin-bottom:12px}
+    button{border:1px solid #2563eb;background:#2563eb;color:#fff;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer;width:100%}
+    button[disabled]{opacity:.6;cursor:not-allowed}
+    .msg{margin-top:12px;font-size:.92rem}
+    .ok{color:#15803d}
+    .err{color:#b91c1c}
+    .muted{color:#6b7280}
+    .preview{margin-top:10px;display:none}
+    .preview img{width:100%;max-height:260px;object-fit:contain;border:1px solid #dbe3ef;border-radius:10px;background:#f8fafc}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Capturar imagen clínica</h1>
+    <p>Selecciona una imagen desde tu cámara o galería y súbela para anexarla a la nota clínica en escritorio.</p>
+
+    <form id="captureForm">
+      <label for="captureFile">Imagen clínica</label>
+      <input id="captureFile" name="file" type="file" accept="image/*,application/pdf" capture="environment" required>
+
+      <label for="captureSummary">Resumen (opcional)</label>
+      <input id="captureSummary" name="summary" type="text" maxlength="180" placeholder="Ej. Foto de lesión en control">
+
+      <label for="captureDatetime">Fecha y hora (opcional)</label>
+      <input id="captureDatetime" name="event_datetime" type="datetime-local">
+
+      <button id="captureSubmit" type="submit">Subir imagen</button>
+    </form>
+
+    <div class="preview" id="capturePreviewWrap">
+      <img id="capturePreview" alt="Vista previa de imagen">
+    </div>
+
+    <div class="msg muted" id="captureMsg">Esperando imagen para enviar…</div>
+  </main>
+
+  <script>
+    (function(){
+      const params = new URLSearchParams(window.location.search || '');
+      const token = String(params.get('token') || '').trim();
+      const form = document.getElementById('captureForm');
+      const fileInput = document.getElementById('captureFile');
+      const summaryInput = document.getElementById('captureSummary');
+      const datetimeInput = document.getElementById('captureDatetime');
+      const submitBtn = document.getElementById('captureSubmit');
+      const msg = document.getElementById('captureMsg');
+      const previewWrap = document.getElementById('capturePreviewWrap');
+      const previewImg = document.getElementById('capturePreview');
+
+      const setMsg = (text, tone='muted')=>{
+        msg.textContent = String(text || '');
+        msg.classList.remove('muted', 'ok', 'err');
+        msg.classList.add(tone === 'ok' ? 'ok' : (tone === 'err' ? 'err' : 'muted'));
+      };
+
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mi = String(now.getMinutes()).padStart(2, '0');
+      datetimeInput.value = `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+
+      if(!token){
+        setMsg('Token inválido o ausente. Abre este enlace desde el QR del escritorio.', 'err');
+        submitBtn.disabled = true;
+      }
+
+      fileInput.addEventListener('change', ()=>{
+        const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+        if(!file){
+          previewWrap.style.display = 'none';
+          previewImg.removeAttribute('src');
+          return;
+        }
+        if((file.type || '').toLowerCase().startsWith('image/')){
+          previewImg.src = URL.createObjectURL(file);
+          previewWrap.style.display = 'block';
+        }else{
+          previewWrap.style.display = 'none';
+          previewImg.removeAttribute('src');
+        }
+      });
+
+      form.addEventListener('submit', async (event)=>{
+        event.preventDefault();
+        const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+        if(!file){
+          setMsg('Selecciona un archivo antes de subir.', 'err');
+          return;
+        }
+        submitBtn.disabled = true;
+        setMsg('Subiendo imagen…');
+        try{
+          const formData = new FormData();
+          formData.append('file', file);
+          const summary = String(summaryInput.value || '').trim();
+          const eventDatetime = String(datetimeInput.value || '').trim();
+          if(summary) formData.append('summary', summary);
+          if(eventDatetime) formData.append('event_datetime', eventDatetime);
+
+          const resp = await fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(token)}/upload`, {
+            method: 'POST',
+            body: formData,
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin'
+          });
+          const json = await resp.json().catch(()=> null);
+          if(!resp.ok || !json || json.ok !== true){
+            const message = String((json && (json.message || (json.error && json.error.message) || json.error)) || `HTTP ${resp.status}`).trim();
+            throw new Error(message || 'No se pudo subir la imagen.');
+          }
+          setMsg('Imagen enviada correctamente. Ya puedes volver a tu computadora.', 'ok');
+          submitBtn.disabled = true;
+          fileInput.disabled = true;
+          summaryInput.disabled = true;
+          datetimeInput.disabled = true;
+        }catch(error){
+          setMsg(String((error && error.message) || 'No se pudo subir la imagen.'), 'err');
+          submitBtn.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

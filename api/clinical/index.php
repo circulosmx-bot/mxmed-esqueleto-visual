@@ -372,6 +372,162 @@ function clinical_documents_pdo(): PDO
     return mxmed_pdo();
 }
 
+function clinical_note_capture_tokens_ensure_schema(PDO $pdo): void
+{
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS clinical_note_capture_tokens (
+            id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            token VARCHAR(80) NOT NULL,
+            patient_id VARCHAR(128) NOT NULL,
+            encounter_key VARCHAR(191) DEFAULT NULL,
+            note_context VARCHAR(80) NOT NULL DEFAULT 'nota_clinica_modal',
+            status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            expires_at DATETIME NOT NULL,
+            uploaded_at DATETIME DEFAULT NULL,
+            cancelled_at DATETIME DEFAULT NULL,
+            document_id INT DEFAULT NULL,
+            document_uuid VARCHAR(64) DEFAULT NULL,
+            preview_url VARCHAR(600) DEFAULT NULL,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL,
+            UNIQUE KEY uniq_note_capture_token (token),
+            KEY idx_note_capture_patient (patient_id),
+            KEY idx_note_capture_status (status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+}
+
+function clinical_note_capture_datetime_to_iso(?string $value): ?string
+{
+    $raw = trim((string)$value);
+    if ($raw === '') {
+        return null;
+    }
+    $ts = strtotime($raw . ' UTC');
+    if ($ts === false) {
+        $ts = strtotime($raw);
+    }
+    if ($ts === false) {
+        return null;
+    }
+    return gmdate('c', $ts);
+}
+
+function clinical_note_capture_normalize_url(string $value): string
+{
+    $raw = trim($value);
+    if ($raw === '') {
+        return '';
+    }
+    if (preg_match('/^https?:\/\//i', $raw) === 1) {
+        return $raw;
+    }
+    if (strpos($raw, '/') === 0) {
+        return $raw;
+    }
+    return '/' . ltrim($raw, '/');
+}
+
+function clinical_note_capture_token_generate(): string
+{
+    try {
+        return bin2hex(random_bytes(16));
+    } catch (Throwable $e) {
+        return sha1(uniqid('note_capture_', true));
+    }
+}
+
+function clinical_note_capture_token_fetch(PDO $pdo, string $token): ?array
+{
+    $safeToken = trim($token);
+    if ($safeToken === '') {
+        return null;
+    }
+    $stmt = $pdo->prepare("
+        SELECT *
+        FROM clinical_note_capture_tokens
+        WHERE token = :token
+        LIMIT 1
+    ");
+    $stmt->bindValue(':token', $safeToken, PDO::PARAM_STR);
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return is_array($row) ? $row : null;
+}
+
+function clinical_note_capture_mark_expired_if_needed(PDO $pdo, array $row): array
+{
+    $status = strtolower(trim((string)($row['status'] ?? '')));
+    $expiresAt = trim((string)($row['expires_at'] ?? ''));
+    if ($status !== 'pending' || $expiresAt === '') {
+        return $row;
+    }
+    $expiresTs = strtotime($expiresAt . ' UTC');
+    if ($expiresTs === false) {
+        $expiresTs = strtotime($expiresAt);
+    }
+    if ($expiresTs === false || $expiresTs > time()) {
+        return $row;
+    }
+    $token = trim((string)($row['token'] ?? ''));
+    if ($token !== '') {
+        $stmt = $pdo->prepare("
+            UPDATE clinical_note_capture_tokens
+            SET status = 'expired', updated_at = :updated_at
+            WHERE token = :token
+        ");
+        $stmt->bindValue(':updated_at', gmdate('Y-m-d H:i:s'), PDO::PARAM_STR);
+        $stmt->bindValue(':token', $token, PDO::PARAM_STR);
+        $stmt->execute();
+    }
+    $row['status'] = 'expired';
+    return $row;
+}
+
+function clinical_note_capture_extract_preview_url(array $document): string
+{
+    $payload = is_array($document['content']['payload'] ?? null) ? $document['content']['payload'] : [];
+    $file = is_array($payload['file'] ?? null) ? $payload['file'] : [];
+    $candidates = [
+        $file['optimized']['url'] ?? null,
+        $file['optimized']['path'] ?? null,
+        $file['original']['url'] ?? null,
+        $file['original']['path'] ?? null,
+        $file['thumb']['url'] ?? null,
+        $file['thumb']['path'] ?? null,
+        $file['url'] ?? null,
+        $file['path'] ?? null,
+    ];
+    foreach ($candidates as $candidate) {
+        $raw = trim((string)($candidate ?? ''));
+        if ($raw !== '') {
+            return clinical_note_capture_normalize_url($raw);
+        }
+    }
+    return '';
+}
+
+function clinical_note_capture_status_data(array $row): array
+{
+    $status = strtolower(trim((string)($row['status'] ?? 'pending')));
+    if ($status === '') {
+        $status = 'pending';
+    }
+    $data = [
+        'token' => trim((string)($row['token'] ?? '')),
+        'status' => $status,
+        'expires_at' => clinical_note_capture_datetime_to_iso((string)($row['expires_at'] ?? '')),
+    ];
+    if ($status === 'uploaded') {
+        $data['uploaded_at'] = clinical_note_capture_datetime_to_iso((string)($row['uploaded_at'] ?? ''));
+        $documentId = (int)($row['document_id'] ?? 0);
+        $data['document_id'] = ($documentId > 0) ? $documentId : null;
+        $data['document_uuid'] = trim((string)($row['document_uuid'] ?? ''));
+        $data['preview_url'] = clinical_note_capture_normalize_url((string)($row['preview_url'] ?? ''));
+    }
+    return $data;
+}
+
 function clinical_documents_list_fetch(PDO $pdo, string $patientId, string $documentType, string $hospitalStayId, int $limit): array
 {
     $sql = "
@@ -3273,6 +3429,7 @@ try {
         try {
             $bridgePdo = clinical_documents_pdo();
             clinical_ensure_identity_bridge_schema($bridgePdo);
+            clinical_note_capture_tokens_ensure_schema($bridgePdo);
         } catch (Throwable $e) {
         }
     }
@@ -5726,6 +5883,400 @@ try {
                     'route' => 'encounters/{encounter_key}',
                 ],
             ], 200);
+            return;
+        }
+
+        clinical_send_response([
+            'ok' => false,
+            'error' => 'not_found',
+            'message' => 'route not found',
+            'data' => null,
+            'meta' => [
+                'method' => $method,
+                'route' => $route,
+            ],
+        ], 404);
+        return;
+    }
+
+    if (($segments[0] ?? '') === 'note-capture-tokens') {
+        try {
+            $pdo = clinical_documents_pdo();
+            clinical_note_capture_tokens_ensure_schema($pdo);
+        } catch (Throwable $e) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'server_error',
+                'message' => trim((string)$e->getMessage()) ?: 'server error',
+                'data' => null,
+                'meta' => [
+                    'method' => $method,
+                    'route' => $route,
+                ],
+            ], 500);
+            return;
+        }
+
+        if ($method === 'POST' && count($segments) === 1) {
+            $bodyResult = clinical_read_json_body();
+            if (($bodyResult['ok'] ?? false) !== true) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => (string)($bodyResult['error'] ?? 'invalid body'),
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens',
+                    ],
+                ], 400);
+                return;
+            }
+            $body = is_array($bodyResult['data'] ?? null) ? (array)$bodyResult['data'] : [];
+            $patientId = trim((string)($body['patient_id'] ?? ''));
+            $encounterKey = trim((string)($body['encounter_key'] ?? ''));
+            $noteContext = trim((string)($body['note_context'] ?? 'nota_clinica_modal'));
+            if ($patientId === '') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'patient_id requerido',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens',
+                    ],
+                ], 400);
+                return;
+            }
+            if ($noteContext === '') {
+                $noteContext = 'nota_clinica_modal';
+            }
+            $expiresInSec = (int)($body['expires_in_sec'] ?? 900);
+            if ($expiresInSec <= 0) {
+                $expiresInSec = 900;
+            }
+            $expiresInSec = max(60, min(3600, $expiresInSec));
+
+            $token = clinical_note_capture_token_generate();
+            $now = gmdate('Y-m-d H:i:s');
+            $expiresAt = gmdate('Y-m-d H:i:s', time() + $expiresInSec);
+            $mobilePath = '/public/note-capture.html?token=' . rawurlencode($token);
+            try {
+                $stmt = $pdo->prepare("
+                    INSERT INTO clinical_note_capture_tokens (
+                        token,
+                        patient_id,
+                        encounter_key,
+                        note_context,
+                        status,
+                        expires_at,
+                        uploaded_at,
+                        cancelled_at,
+                        document_id,
+                        document_uuid,
+                        preview_url,
+                        created_at,
+                        updated_at
+                    ) VALUES (
+                        :token,
+                        :patient_id,
+                        :encounter_key,
+                        :note_context,
+                        'pending',
+                        :expires_at,
+                        NULL,
+                        NULL,
+                        NULL,
+                        NULL,
+                        NULL,
+                        :created_at,
+                        :updated_at
+                    )
+                ");
+                $stmt->bindValue(':token', $token, PDO::PARAM_STR);
+                $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+                if ($encounterKey === '') {
+                    $stmt->bindValue(':encounter_key', null, PDO::PARAM_NULL);
+                } else {
+                    $stmt->bindValue(':encounter_key', $encounterKey, PDO::PARAM_STR);
+                }
+                $stmt->bindValue(':note_context', $noteContext, PDO::PARAM_STR);
+                $stmt->bindValue(':expires_at', $expiresAt, PDO::PARAM_STR);
+                $stmt->bindValue(':created_at', $now, PDO::PARAM_STR);
+                $stmt->bindValue(':updated_at', $now, PDO::PARAM_STR);
+                $stmt->execute();
+            } catch (Throwable $e) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => trim((string)$e->getMessage()) ?: 'server error',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens',
+                    ],
+                ], 500);
+                return;
+            }
+
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => 'note capture token created',
+                'data' => [
+                    'token' => $token,
+                    'status' => 'pending',
+                    'expires_at' => clinical_note_capture_datetime_to_iso($expiresAt),
+                    'mobile_url' => $mobilePath,
+                    'qr_value' => $mobilePath,
+                ],
+                'meta' => [
+                    'method' => 'POST',
+                    'route' => 'note-capture-tokens',
+                ],
+            ], 201);
+            return;
+        }
+
+        if ($method === 'GET' && count($segments) === 2) {
+            $token = trim(rawurldecode((string)$segments[1]));
+            if ($token === '') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'token requerido',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'GET',
+                        'route' => 'note-capture-tokens/{token}',
+                    ],
+                ], 400);
+                return;
+            }
+            $row = clinical_note_capture_token_fetch($pdo, $token);
+            if (!is_array($row)) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'token no encontrado',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'GET',
+                        'route' => 'note-capture-tokens/{token}',
+                    ],
+                ], 404);
+                return;
+            }
+            $row = clinical_note_capture_mark_expired_if_needed($pdo, $row);
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => 'note capture token status',
+                'data' => clinical_note_capture_status_data($row),
+                'meta' => [
+                    'method' => 'GET',
+                    'route' => 'note-capture-tokens/{token}',
+                ],
+            ], 200);
+            return;
+        }
+
+        if ($method === 'POST' && count($segments) === 3 && ($segments[2] ?? '') === 'upload') {
+            $token = trim(rawurldecode((string)$segments[1]));
+            if ($token === '') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'token requerido',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/upload',
+                    ],
+                ], 400);
+                return;
+            }
+            $row = clinical_note_capture_token_fetch($pdo, $token);
+            if (!is_array($row)) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'token no encontrado',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/upload',
+                    ],
+                ], 404);
+                return;
+            }
+            $row = clinical_note_capture_mark_expired_if_needed($pdo, $row);
+            $status = strtolower(trim((string)($row['status'] ?? 'pending')));
+            if ($status !== 'pending') {
+                $statusCode = ($status === 'expired') ? 410 : 409;
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'conflict',
+                    'message' => 'token no disponible para carga (' . $status . ')',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/upload',
+                    ],
+                ], $statusCode);
+                return;
+            }
+
+            $uploadFile = $_FILES['file'] ?? null;
+            if (!is_array($uploadFile) || ((int)($uploadFile['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK)) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'archivo requerido',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/upload',
+                    ],
+                ], 400);
+                return;
+            }
+
+            $summary = trim((string)($_POST['summary'] ?? ''));
+            $eventDatetime = trim((string)($_POST['event_datetime'] ?? ''));
+            if ($eventDatetime !== '' && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/', $eventDatetime) === 1) {
+                $eventDatetime = str_replace('T', ' ', $eventDatetime) . ':00';
+            }
+            if ($eventDatetime !== '' && preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/', $eventDatetime) === 1) {
+                $eventDatetime .= ':00';
+            }
+            if ($eventDatetime === '' || preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/', $eventDatetime) !== 1) {
+                $eventDatetime = gmdate('Y-m-d H:i:s');
+            }
+
+            $patientId = trim((string)($row['patient_id'] ?? ''));
+            $encounterKey = trim((string)($row['encounter_key'] ?? ''));
+            $noteContext = trim((string)($row['note_context'] ?? 'nota_clinica_modal'));
+            $payload = [
+                'patient_id' => $patientId,
+                'document_type' => 'image',
+                'title' => 'Imagen clínica (captura móvil)',
+                'summary' => ($summary !== '') ? $summary : 'Imagen clínica adjunta desde celular',
+                'event_datetime' => $eventDatetime,
+                'media_tag_key' => 'evidencia_clinica',
+                'media_tag_label' => 'Evidencia clínica',
+                'payload' => [
+                    'source' => 'nota_modal_qr_v1',
+                    'note_capture_token' => $token,
+                    'note_context' => ($noteContext !== '' ? $noteContext : 'nota_clinica_modal'),
+                ],
+            ];
+            if ($encounterKey !== '') {
+                $payload['encounter_key'] = $encounterKey;
+            }
+
+            try {
+                $document = clinical_documents_gateway_save_upload($pdo, $payload, $uploadFile);
+            } catch (InvalidArgumentException $e) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'invalid_params',
+                    'message' => trim((string)$e->getMessage()) ?: 'invalid params',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/upload',
+                    ],
+                ], 400);
+                return;
+            } catch (RuntimeException $e) {
+                $message = trim((string)$e->getMessage());
+                if ($message === 'MEDIA_TAG_REQUIRED') {
+                    $message = 'Selecciona una etiqueta para esta imagen.';
+                }
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => $message !== '' ? $message : 'server error',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/upload',
+                    ],
+                ], 500);
+                return;
+            } catch (Throwable $e) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => trim((string)$e->getMessage()) ?: 'server error',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/upload',
+                    ],
+                ], 500);
+                return;
+            }
+
+            $uploadedAt = gmdate('Y-m-d H:i:s');
+            $documentId = (int)($document['document_db_id'] ?? 0);
+            $documentUuid = trim((string)($document['document_id'] ?? ($document['document_uuid'] ?? '')));
+            $previewUrl = clinical_note_capture_extract_preview_url($document);
+            $update = $pdo->prepare("
+                UPDATE clinical_note_capture_tokens
+                SET
+                    status = 'uploaded',
+                    uploaded_at = :uploaded_at,
+                    document_id = :document_id,
+                    document_uuid = :document_uuid,
+                    preview_url = :preview_url,
+                    updated_at = :updated_at
+                WHERE token = :token
+            ");
+            $update->bindValue(':uploaded_at', $uploadedAt, PDO::PARAM_STR);
+            if ($documentId > 0) {
+                $update->bindValue(':document_id', $documentId, PDO::PARAM_INT);
+            } else {
+                $update->bindValue(':document_id', null, PDO::PARAM_NULL);
+            }
+            if ($documentUuid !== '') {
+                $update->bindValue(':document_uuid', $documentUuid, PDO::PARAM_STR);
+            } else {
+                $update->bindValue(':document_uuid', null, PDO::PARAM_NULL);
+            }
+            if ($previewUrl !== '') {
+                $update->bindValue(':preview_url', $previewUrl, PDO::PARAM_STR);
+            } else {
+                $update->bindValue(':preview_url', null, PDO::PARAM_NULL);
+            }
+            $update->bindValue(':updated_at', $uploadedAt, PDO::PARAM_STR);
+            $update->bindValue(':token', $token, PDO::PARAM_STR);
+            $update->execute();
+
+            $latest = clinical_note_capture_token_fetch($pdo, $token);
+            if (!is_array($latest)) {
+                $latest = [
+                    'token' => $token,
+                    'status' => 'uploaded',
+                    'expires_at' => ($row['expires_at'] ?? ''),
+                    'uploaded_at' => $uploadedAt,
+                    'document_id' => $documentId,
+                    'document_uuid' => $documentUuid,
+                    'preview_url' => $previewUrl,
+                ];
+            }
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => 'note capture uploaded',
+                'data' => clinical_note_capture_status_data($latest),
+                'meta' => [
+                    'method' => 'POST',
+                    'route' => 'note-capture-tokens/{token}/upload',
+                ],
+            ], 201);
             return;
         }
 
