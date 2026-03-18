@@ -25,8 +25,8 @@ function get_api_base(): string
     } elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
         $proto = (string)$_SERVER['HTTP_X_FORWARDED_PROTO'];
     }
-
-    return $proto . '://' . $host;
+    $hostOnly = preg_replace('/:\d+$/', '', $host) ?: '127.0.0.1';
+    return $proto . '://' . $hostOnly . ':8091';
 }
 
 function normalize_clinical_api_base(string $base): string
@@ -244,6 +244,7 @@ $isPdfDoc = ($renderMode === 'pdf' || $docTypeNorm === 'pdf');
 $isNoteDoc = in_array($docTypeNorm, ['note', 'nota_evolucion'], true);
 $isOrderDoc = in_array($docTypeNorm, ['lab_order', 'imaging_order', 'orders'], true);
 $isPrescriptionDoc = in_array($docTypeNorm, ['prescription', 'rx'], true);
+$isConsentDoc = ($docTypeNorm === 'consentimiento_informado');
 $showCommonDocActions = $isNoteDoc || $isOrderDoc || (!$isImageDoc && !$isPdfDoc);
 
 $rxSnapshot = ($isPrescriptionDoc && is_array($payload['snapshot'] ?? null)) ? $payload['snapshot'] : [];
@@ -295,6 +296,61 @@ $rxConsultorios = array_values(array_filter($rxConsultorios, static function (ar
 if (count($rxConsultorios) > 3) {
   $rxConsultorios = array_slice($rxConsultorios, 0, 3);
 }
+
+$consentBlock = ($isConsentDoc && is_array($payload['consent'] ?? null)) ? $payload['consent'] : [];
+$consentPatientSnapshot = ($isConsentDoc && is_array($payload['patient_snapshot'] ?? null)) ? $payload['patient_snapshot'] : [];
+$consentActorSnapshot = ($isConsentDoc && is_array($payload['actor_snapshot'] ?? null)) ? $payload['actor_snapshot'] : [];
+$consentTemplateSnapshot = ($isConsentDoc && is_array($payload['template_snapshot'] ?? null)) ? $payload['template_snapshot'] : [];
+$consentLegalDetails = ($isConsentDoc && is_array($payload['consent_legal'] ?? null)) ? $payload['consent_legal'] : [];
+$consentSigner = ($isConsentDoc && is_array($payload['firmante'] ?? null)) ? $payload['firmante'] : [];
+$consentWitnesses = ($isConsentDoc && is_array($payload['testigos'] ?? null)) ? $payload['testigos'] : [];
+$consentSignatures = ($isConsentDoc && is_array($payload['signatures'] ?? null)) ? $payload['signatures'] : [];
+$consentPatientSignature = ($isConsentDoc && is_array($consentSignatures['patient'] ?? null)) ? $consentSignatures['patient'] : [];
+$consentPatientSignatureImage = ($isConsentDoc ? clinical_doc_clean_text((string)($consentPatientSignature['image_data'] ?? '')) : '');
+$consentPatientSignatureSignerName = ($isConsentDoc ? clinical_doc_clean_text((string)($consentPatientSignature['signer_name'] ?? '')) : '');
+$consentPatientSignatureSignedAt = ($isConsentDoc ? clinical_doc_clean_text((string)($consentPatientSignature['signed_at'] ?? '')) : '');
+$consentIdentityAttachments = [];
+if ($isConsentDoc) {
+  if (is_array($payload['signer_identity_attachments'] ?? null)) {
+    $consentIdentityAttachments = $payload['signer_identity_attachments'];
+  } elseif (is_array($payload['attachments']['signer_identity'] ?? null)) {
+    $consentIdentityAttachments = $payload['attachments']['signer_identity'];
+  }
+}
+$consentRenderedText = ($isConsentDoc ? clinical_doc_clean_text((string)($payload['rendered_text'] ?? ($payload['text'] ?? $renderedText))) : '');
+$consentStatus = ($isConsentDoc ? clinical_doc_clean_text((string)($payload['status'] ?? ($consentBlock['status'] ?? 'draft'))) : '');
+$consentTitle = ($isConsentDoc ? clinical_doc_clean_text((string)($consentBlock['document_title'] ?? $title)) : '');
+$consentProcedure = ($isConsentDoc ? clinical_doc_clean_text((string)($consentBlock['document_title'] ?? '')) : '');
+$consentPatientName = ($isConsentDoc ? clinical_doc_clean_text((string)($consentPatientSnapshot['full_name'] ?? 'Paciente')) : '');
+$consentDoctorName = ($isConsentDoc ? clinical_doc_clean_text((string)($consentActorSnapshot['full_name'] ?? 'Médico tratante')) : '');
+$consentDoctorLicense = ($isConsentDoc ? clinical_doc_clean_text((string)($consentActorSnapshot['license'] ?? '')) : '');
+$consentBenefits = ($isConsentDoc ? clinical_doc_clean_text((string)($consentLegalDetails['beneficios_esperados'] ?? '')) : '');
+$consentAlternatives = ($isConsentDoc ? clinical_doc_clean_text((string)($consentLegalDetails['alternativas'] ?? '')) : '');
+$consentNoAccept = ($isConsentDoc ? clinical_doc_clean_text((string)($consentLegalDetails['consecuencias_no_aceptar'] ?? '')) : '');
+$consentContingency = ($isConsentDoc ? !empty($consentLegalDetails['autorizacion_contingencias']) : false);
+$consentSignerType = ($isConsentDoc ? clinical_doc_clean_text((string)($consentSigner['tipo'] ?? 'paciente')) : '');
+$consentSignerName = ($isConsentDoc ? clinical_doc_clean_text((string)($consentSigner['nombre'] ?? $consentPatientName)) : '');
+$consentSignerRelationRaw = ($isConsentDoc ? clinical_doc_clean_text((string)($consentSigner['relacion'] ?? ($consentSigner['parentesco'] ?? ''))) : '');
+$consentRelationLabels = [
+  'self' => 'Self (paciente)',
+  'padre' => 'Padre',
+  'madre' => 'Madre',
+  'conyuge' => 'Cónyuge',
+  'hijo' => 'Hijo',
+  'hija' => 'Hija',
+  'hermano' => 'Hermano',
+  'hermana' => 'Hermana',
+  'abuelo' => 'Abuelo',
+  'abuela' => 'Abuela',
+  'otro_familiar' => 'Otro familiar',
+  'otro' => 'Otro',
+];
+$consentSignerRelation = ($isConsentDoc ? (string)($consentRelationLabels[$consentSignerRelationRaw] ?? $consentSignerRelationRaw) : '');
+$consentWitness1 = ($isConsentDoc && is_array($consentWitnesses[0] ?? null)) ? clinical_doc_clean_text((string)($consentWitnesses[0]['nombre'] ?? '')) : '';
+$consentWitness2 = ($isConsentDoc && is_array($consentWitnesses[1] ?? null)) ? clinical_doc_clean_text((string)($consentWitnesses[1]['nombre'] ?? '')) : '';
+$consentTemplateBody = ($isConsentDoc ? clinical_doc_clean_text((string)($consentTemplateSnapshot['body_text'] ?? '')) : '');
+$consentEmissionDate = ($isConsentDoc ? clinical_doc_format_date((string)($consentBlock['granted_at'] ?? $date), false) : '');
+$consentEmissionTime = ($isConsentDoc ? clinical_doc_format_date((string)($consentBlock['granted_at'] ?? $date), true) : '');
 
 require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
@@ -393,6 +449,80 @@ if (!$embed) {
   }
 </style>
 <?php endif; ?>
+<?php if ($isConsentDoc): ?>
+<style>
+  .consent-print-sheet{
+    background:#fff;
+    border:1px solid #d7eaf2;
+    border-radius:14px;
+    padding:18px;
+    display:grid;
+    gap:14px;
+  }
+  .consent-print-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    border-bottom:1px solid #edf4f8;
+    padding-bottom:10px;
+    break-inside:avoid;
+  }
+  .consent-print-title{font-size:1.05rem;font-weight:800;color:#0a405f;line-height:1.3;}
+  .consent-print-meta{font-size:.85rem;color:#5d6b74;}
+  .consent-print-status{font-size:.78rem;font-weight:700;padding:4px 8px;border-radius:999px;background:#eef4f8;color:#0a405f;}
+  .consent-print-status.is-granted{background:#dcfce7;color:#166534;}
+  .consent-print-status.is-draft{background:#f1f5f9;color:#334155;}
+  .consent-print-section-title{
+    font-size:.82rem;
+    font-weight:800;
+    color:#0a405f;
+    text-transform:uppercase;
+    letter-spacing:.02em;
+    margin-bottom:4px;
+  }
+  .consent-print-text{font-size:.9rem;color:#273b47;white-space:pre-wrap;line-height:1.46;}
+  .consent-print-sign-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+    break-inside:avoid;
+  }
+  .consent-print-sign{
+    border:1px solid #e8f0f5;
+    border-radius:10px;
+    padding:10px;
+  }
+  .consent-print-sign-image{
+    max-width:220px;
+    max-height:90px;
+    width:100%;
+    object-fit:contain;
+    border:1px dashed #d0dde6;
+    border-radius:8px;
+    background:#fff;
+    margin-top:8px;
+  }
+  .consent-print-sign-line{margin-top:32px;border-top:1px solid #9fb6c4;}
+  @media (max-width: 991.98px){
+    .consent-print-head{flex-direction:column;align-items:flex-start;}
+    .consent-print-sign-grid{grid-template-columns:1fr;}
+  }
+  @media print{
+    @page{size:letter portrait;margin:12mm 14mm;}
+    .no-print{display:none !important;}
+    html, body{background:#fff !important;}
+    .container.py-4{padding:0 !important;max-width:none !important;}
+    .consent-print-sheet{
+      border:0 !important;
+      border-radius:0 !important;
+      box-shadow:none !important;
+      padding:0 !important;
+      gap:10px;
+    }
+  }
+</style>
+<?php endif; ?>
 <div class="<?php echo $embed ? 'py-1' : 'container py-4'; ?>">
   <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3 no-print">
     <div>
@@ -418,6 +548,7 @@ if (!$embed) {
               <li><a class="dropdown-item" href="<?php echo h($originalDownloadHref); ?>" target="_blank" rel="noopener" download>Descargar original</a></li>
             <?php endif; ?>
             <li><button type="button" class="dropdown-item" data-action="print-document">Imprimir</button></li>
+            <li><button type="button" class="dropdown-item" data-action="download-document">Descargar</button></li>
           <?php elseif ($isPdfDoc): ?>
             <li><a class="dropdown-item" href="<?php echo h($viewerOpenHref); ?>" target="_blank" rel="noopener">Abrir en nueva pestaña</a></li>
             <?php if ($downloadHref !== ''): ?>
@@ -426,9 +557,11 @@ if (!$embed) {
               <li><button type="button" class="dropdown-item" disabled title="No disponible">Descargar PDF</button></li>
             <?php endif; ?>
             <li><button type="button" class="dropdown-item" data-action="print-document">Imprimir</button></li>
+            <li><button type="button" class="dropdown-item" data-action="download-document">Descargar</button></li>
           <?php elseif ($showCommonDocActions): ?>
             <li><a class="dropdown-item" href="<?php echo h($documentOpenHref); ?>" target="_blank" rel="noopener">Abrir en nueva pestaña</a></li>
             <li><button type="button" class="dropdown-item" data-action="print-document">Imprimir</button></li>
+            <li><button type="button" class="dropdown-item" data-action="download-document">Descargar</button></li>
             <li><button type="button" class="dropdown-item" data-action="copy-document-link">Copiar enlace</button></li>
           <?php endif; ?>
           <?php if ($uuid !== '' && $errorMessage === '' && $replicateUrl !== ''): ?>
@@ -550,6 +683,118 @@ if (!$embed) {
           <?php endif; ?>
         </footer>
       </article>
+    <?php elseif ($isConsentDoc): ?>
+      <?php
+      $signerTypeLabel = ucfirst(str_replace('_', ' ', ($consentSignerType !== '' ? $consentSignerType : 'paciente')));
+      ?>
+      <article class="consent-print-sheet">
+        <header class="consent-print-head">
+          <div>
+            <div class="consent-print-title"><?php echo h($consentTitle !== '' ? $consentTitle : 'Consentimiento informado'); ?></div>
+            <div class="consent-print-meta">Paciente: <?php echo h($consentPatientName !== '' ? $consentPatientName : 'Paciente'); ?></div>
+            <div class="consent-print-meta">Médico: <?php echo h($consentDoctorName !== '' ? $consentDoctorName : 'Médico tratante'); ?><?php echo $consentDoctorLicense !== '' ? h(' · Cédula: ' . $consentDoctorLicense) : ''; ?></div>
+          </div>
+          <div class="text-end">
+            <span class="consent-print-status <?php echo h(($consentStatus === 'granted') ? 'is-granted' : 'is-draft'); ?>"><?php echo h($consentStatus !== '' ? $consentStatus : 'draft'); ?></span>
+            <div class="consent-print-meta mt-2">Fecha: <?php echo h($consentEmissionDate !== '' ? $consentEmissionDate : clinical_doc_format_date($date, false)); ?></div>
+            <?php if ($consentEmissionTime !== ''): ?>
+              <div class="consent-print-meta"><?php echo h($consentEmissionTime); ?></div>
+            <?php endif; ?>
+          </div>
+        </header>
+
+        <section>
+          <div class="consent-print-section-title">Descripción del procedimiento / acto autorizado</div>
+          <div class="consent-print-text"><?php echo nl2br(h($consentProcedure !== '' ? $consentProcedure : 'Sin descripción registrada.')); ?></div>
+        </section>
+
+        <section>
+          <div class="consent-print-section-title">Riesgos y beneficios esperados</div>
+          <div class="consent-print-text"><?php echo nl2br(h($consentTemplateBody !== '' ? $consentTemplateBody : 'Riesgos explicados conforme a criterio médico.')); ?></div>
+          <?php if ($consentBenefits !== ''): ?>
+            <div class="consent-print-text mt-2"><?php echo nl2br(h('Beneficios esperados: ' . $consentBenefits)); ?></div>
+          <?php endif; ?>
+        </section>
+
+        <?php if ($consentAlternatives !== ''): ?>
+          <section>
+            <div class="consent-print-section-title">Alternativas</div>
+            <div class="consent-print-text"><?php echo nl2br(h($consentAlternatives)); ?></div>
+          </section>
+        <?php endif; ?>
+
+        <?php if ($consentNoAccept !== ''): ?>
+          <section>
+            <div class="consent-print-section-title">Consecuencias de no realizarlo</div>
+            <div class="consent-print-text"><?php echo nl2br(h($consentNoAccept)); ?></div>
+          </section>
+        <?php endif; ?>
+
+        <section>
+          <div class="consent-print-section-title">Autorización y declaración</div>
+          <div class="consent-print-text">Autorización para atención de contingencias y urgencias: <?php echo h($consentContingency ? 'Sí autorizo' : 'No autorizo'); ?>.</div>
+          <div class="consent-print-text">Declaro que este consentimiento fue explicado en lenguaje claro y que se resolvieron mis dudas antes de firmar.</div>
+        </section>
+
+        <?php if ($consentRenderedText !== ''): ?>
+          <section>
+            <div class="consent-print-section-title">Redacción legal integrada</div>
+            <div class="consent-print-text"><?php echo nl2br(h($consentRenderedText)); ?></div>
+          </section>
+        <?php endif; ?>
+
+        <?php if (is_array($consentIdentityAttachments) && $consentIdentityAttachments !== []): ?>
+          <section>
+            <div class="consent-print-section-title">Anexos de identidad del firmante</div>
+            <div class="consent-print-text">
+              <?php
+              $attLines = [];
+              foreach ($consentIdentityAttachments as $att) {
+                $attTitle = clinical_doc_clean_text((string)($att['title'] ?? 'Anexo de identidad'));
+                $attUuid = clinical_doc_clean_text((string)($att['document_uuid'] ?? ''));
+                $attLines[] = ($attUuid !== '') ? ($attTitle . ' · UUID: ' . $attUuid) : $attTitle;
+              }
+              echo nl2br(h(implode("\n", $attLines)));
+              ?>
+            </div>
+          </section>
+        <?php endif; ?>
+
+        <section class="consent-print-sign-grid">
+          <div class="consent-print-sign">
+            <div class="consent-print-meta"><?php echo h($signerTypeLabel); ?></div>
+            <div class="consent-print-text"><?php echo h($consentSignerName !== '' ? $consentSignerName : '________________'); ?><?php echo $consentSignerRelation !== '' ? h(' · ' . $consentSignerRelation) : ''; ?></div>
+            <?php if ($consentPatientSignatureImage !== ''): ?>
+              <img class="consent-print-sign-image" src="<?php echo h($consentPatientSignatureImage); ?>" alt="Firma del paciente o representante">
+              <?php if ($consentPatientSignatureSignerName !== '' || $consentPatientSignatureSignedAt !== ''): ?>
+                <div class="consent-print-meta mt-1">
+                  <?php echo h($consentPatientSignatureSignerName !== '' ? $consentPatientSignatureSignerName : $consentSignerName); ?>
+                  <?php if ($consentPatientSignatureSignedAt !== ''): ?>
+                    <?php echo h(' · ' . $consentPatientSignatureSignedAt); ?>
+                  <?php endif; ?>
+                </div>
+              <?php endif; ?>
+            <?php else: ?>
+              <div class="consent-print-sign-line"></div>
+            <?php endif; ?>
+          </div>
+          <div class="consent-print-sign">
+            <div class="consent-print-meta">Médico responsable</div>
+            <div class="consent-print-text"><?php echo h($consentDoctorName !== '' ? $consentDoctorName : 'Médico tratante'); ?><?php echo $consentDoctorLicense !== '' ? h(' · Cédula: ' . $consentDoctorLicense) : ''; ?></div>
+            <div class="consent-print-sign-line"></div>
+          </div>
+          <div class="consent-print-sign">
+            <div class="consent-print-meta">Testigo 1</div>
+            <div class="consent-print-text"><?php echo h($consentWitness1 !== '' ? $consentWitness1 : '________________'); ?></div>
+            <div class="consent-print-sign-line"></div>
+          </div>
+          <div class="consent-print-sign">
+            <div class="consent-print-meta">Testigo 2</div>
+            <div class="consent-print-text"><?php echo h($consentWitness2 !== '' ? $consentWitness2 : '________________'); ?></div>
+            <div class="consent-print-sign-line"></div>
+          </div>
+        </section>
+      </article>
     <?php else: ?>
     <div class="mm-card mb-3">
       <div class="body small">
@@ -593,6 +838,24 @@ if (!$embed) {
         event.preventDefault();
         if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
           navigator.clipboard.writeText(window.location.href).catch(function () {});
+        }
+        return;
+      }
+      var downloadBtn = event.target && event.target.closest ? event.target.closest('[data-action="download-document"]') : null;
+      if (downloadBtn) {
+        event.preventDefault();
+        try {
+          var blob = new Blob([document.documentElement.outerHTML], { type: 'text/html;charset=utf-8' });
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = 'documento-clinico-<?php echo h($uuid !== '' ? $uuid : 'export'); ?>.html';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        } catch (err) {
+          window.print();
         }
         return;
       }
