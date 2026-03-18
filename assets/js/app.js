@@ -2179,6 +2179,7 @@ console.info('app.js loaded :: 20251123a');
     rxAdd: document.getElementById('ne_rx_add'),
     rxSave: document.getElementById('ne_rx_save'),
     rxFeedback: document.getElementById('ne_rx_feedback'),
+    rxOpenDoc: document.getElementById('ne_rx_open_doc'),
 
     docModal: document.getElementById('modalNotaEvolucion'),
     docModalTitle: document.getElementById('ne_doc_modal_title'),
@@ -3713,6 +3714,7 @@ console.info('app.js loaded :: 20251123a');
       els.rxFeedback.classList.remove('text-muted', 'text-success', 'text-danger');
       els.rxFeedback.textContent = '';
     }
+    setRxOpenDocumentAction('');
   };
 
   const rxRowHtml = (idx, m) => `
@@ -3755,6 +3757,32 @@ console.info('app.js loaded :: 20251123a');
       tone === 'success' ? 'text-success' : (tone === 'error' ? 'text-danger' : 'text-muted')
     );
     els.rxFeedback.textContent = text;
+  };
+  const resolveSavedPrescriptionToken = (document) => {
+    if (!document || typeof document !== 'object') return '';
+    const candidates = [
+      document.document_uuid,
+      document.document_id,
+      document.id,
+      document.document_db_id,
+      document.uuid
+    ];
+    for (const token of candidates) {
+      const safe = String(token || '').trim();
+      if (safe) return safe;
+    }
+    return '';
+  };
+  const setRxOpenDocumentAction = (token) => {
+    if (!els.rxOpenDoc) return;
+    const safeToken = String(token || '').trim();
+    if (!safeToken) {
+      els.rxOpenDoc.classList.add('d-none');
+      els.rxOpenDoc.removeAttribute('data-rx-document-token');
+      return;
+    }
+    els.rxOpenDoc.classList.remove('d-none');
+    els.rxOpenDoc.setAttribute('data-rx-document-token', safeToken);
   };
   const resolveRecetaAppointmentId = (patientId, encounterKey) => {
     const bar = document.getElementById('mm-p10-bar');
@@ -3963,6 +3991,7 @@ console.info('app.js loaded :: 20251123a');
     const blockingErrors = validateRecetaBlockingErrors(recetaCtx, validItems);
     if (blockingErrors.length) {
       setRxFeedback(blockingErrors.join(' '), 'error');
+      setRxOpenDocumentAction('');
       return;
     }
     const patient = recetaCtx.patient;
@@ -3993,13 +4022,15 @@ console.info('app.js loaded :: 20251123a');
       els.rxSave.textContent = 'Guardando...';
     }
     try {
-      const { source } = await api.saveClinicalDocument({
+      const { source, document } = await api.saveClinicalDocument({
         type: 'prescription',
         context,
         payload,
         actor
       });
+      const savedToken = resolveSavedPrescriptionToken(document);
       setRxFeedback('Receta guardada correctamente.', 'success');
+      setRxOpenDocumentAction(savedToken);
       try{
         window.mxRegisterEncounterActivity?.('receta_guardada', {
           encounterKey,
@@ -4014,15 +4045,16 @@ console.info('app.js loaded :: 20251123a');
             encounter_key: encounterKey || '',
             appointment_id: appointmentId || '',
             document_type: 'prescription',
-            source: 'actividad_clinica_receta'
+            source: 'actividad_clinica_receta',
+            document_ref: savedToken || ''
           }
         }));
       }catch(_){}
       renderTimeline();
       refreshHistorialEmbedAfterPrescriptionSave();
-      window.setTimeout(()=> hideRecetaModal(), 220);
     } catch (err) {
       setRxFeedback(`No se pudo guardar la receta clínica (${err?.message || 'error'}).`, 'error');
+      setRxOpenDocumentAction('');
     } finally {
       if (els.rxSave) {
         els.rxSave.disabled = false;
@@ -4035,6 +4067,17 @@ console.info('app.js loaded :: 20251123a');
         source: 'receta_modal_local'
       });
     }catch(_){}
+  });
+  els.rxOpenDoc?.addEventListener('click', (event) => {
+    event.preventDefault();
+    const token = String(els.rxOpenDoc?.getAttribute('data-rx-document-token') || '').trim();
+    if (!token) return;
+    const href = `/modules/clinical/ui/document.php?uuid=${encodeURIComponent(token)}`;
+    try {
+      window.open(href, '_blank', 'noopener');
+    } catch (_) {
+      window.location.href = href;
+    }
   });
   // Hook pendientes (cuando tengan confirmación de éxito explícita): estudios, documentos adjuntos y procedimientos.
 
