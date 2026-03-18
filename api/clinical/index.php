@@ -384,9 +384,12 @@ function clinical_note_capture_tokens_ensure_schema(PDO $pdo): void
             status VARCHAR(20) NOT NULL DEFAULT 'pending',
             expires_at DATETIME NOT NULL,
             uploaded_at DATETIME DEFAULT NULL,
+            consumed_at DATETIME DEFAULT NULL,
             cancelled_at DATETIME DEFAULT NULL,
             document_id INT DEFAULT NULL,
             document_uuid VARCHAR(64) DEFAULT NULL,
+            note_document_id INT DEFAULT NULL,
+            note_document_uuid VARCHAR(64) DEFAULT NULL,
             preview_url VARCHAR(600) DEFAULT NULL,
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL,
@@ -395,6 +398,18 @@ function clinical_note_capture_tokens_ensure_schema(PDO $pdo): void
             KEY idx_note_capture_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
+    try {
+        $pdo->exec("ALTER TABLE clinical_note_capture_tokens ADD COLUMN consumed_at DATETIME DEFAULT NULL");
+    } catch (Throwable $e) {
+    }
+    try {
+        $pdo->exec("ALTER TABLE clinical_note_capture_tokens ADD COLUMN note_document_id INT DEFAULT NULL");
+    } catch (Throwable $e) {
+    }
+    try {
+        $pdo->exec("ALTER TABLE clinical_note_capture_tokens ADD COLUMN note_document_uuid VARCHAR(64) DEFAULT NULL");
+    } catch (Throwable $e) {
+    }
 }
 
 function clinical_note_capture_datetime_to_iso(?string $value): ?string
@@ -518,12 +533,18 @@ function clinical_note_capture_status_data(array $row): array
         'status' => $status,
         'expires_at' => clinical_note_capture_datetime_to_iso((string)($row['expires_at'] ?? '')),
     ];
-    if ($status === 'uploaded') {
+    if ($status === 'uploaded' || $status === 'consumed') {
         $data['uploaded_at'] = clinical_note_capture_datetime_to_iso((string)($row['uploaded_at'] ?? ''));
         $documentId = (int)($row['document_id'] ?? 0);
         $data['document_id'] = ($documentId > 0) ? $documentId : null;
         $data['document_uuid'] = trim((string)($row['document_uuid'] ?? ''));
         $data['preview_url'] = clinical_note_capture_normalize_url((string)($row['preview_url'] ?? ''));
+    }
+    if ($status === 'consumed') {
+        $data['consumed_at'] = clinical_note_capture_datetime_to_iso((string)($row['consumed_at'] ?? ''));
+        $noteDocumentId = (int)($row['note_document_id'] ?? 0);
+        $data['note_document_id'] = ($noteDocumentId > 0) ? $noteDocumentId : null;
+        $data['note_document_uuid'] = trim((string)($row['note_document_uuid'] ?? ''));
     }
     return $data;
 }
@@ -6137,6 +6158,135 @@ try {
                 'meta' => [
                     'method' => 'POST',
                     'route' => 'note-capture-tokens/{token}/cancel',
+                ],
+            ], 200);
+            return;
+        }
+
+        if ($method === 'POST' && count($segments) === 3 && ($segments[2] ?? '') === 'consume') {
+            $token = trim(rawurldecode((string)$segments[1]));
+            if ($token === '') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'token requerido',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/consume',
+                    ],
+                ], 400);
+                return;
+            }
+            $bodyResult = clinical_read_json_body();
+            if (($bodyResult['ok'] ?? false) !== true) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => (string)($bodyResult['error'] ?? 'invalid body'),
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/consume',
+                    ],
+                ], 400);
+                return;
+            }
+            $body = is_array($bodyResult['data'] ?? null) ? (array)$bodyResult['data'] : [];
+            $noteDocumentIdRaw = trim((string)($body['note_document_id'] ?? ''));
+            $noteDocumentUuid = trim((string)($body['note_document_uuid'] ?? ''));
+            $noteDocumentId = (preg_match('/^\d+$/', $noteDocumentIdRaw) === 1) ? (int)$noteDocumentIdRaw : 0;
+            if ($noteDocumentId <= 0 && $noteDocumentUuid === '') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'note_document_id o note_document_uuid requerido',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/consume',
+                    ],
+                ], 400);
+                return;
+            }
+            $row = clinical_note_capture_token_fetch($pdo, $token);
+            if (!is_array($row)) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'token no encontrado',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/consume',
+                    ],
+                ], 404);
+                return;
+            }
+            $row = clinical_note_capture_mark_expired_if_needed($pdo, $row);
+            $status = strtolower(trim((string)($row['status'] ?? 'pending')));
+            if ($status === 'consumed') {
+                clinical_send_response([
+                    'ok' => true,
+                    'error' => null,
+                    'message' => 'note capture token already consumed',
+                    'data' => clinical_note_capture_status_data($row),
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/consume',
+                    ],
+                ], 200);
+                return;
+            }
+            if ($status !== 'uploaded') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'conflict',
+                    'message' => 'token no disponible para consumo (' . $status . ')',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/consume',
+                    ],
+                ], 409);
+                return;
+            }
+
+            $consumedAt = gmdate('Y-m-d H:i:s');
+            $stmt = $pdo->prepare("
+                UPDATE clinical_note_capture_tokens
+                SET
+                    status = 'consumed',
+                    consumed_at = :consumed_at,
+                    note_document_id = :note_document_id,
+                    note_document_uuid = :note_document_uuid,
+                    updated_at = :updated_at
+                WHERE token = :token
+            ");
+            $stmt->bindValue(':consumed_at', $consumedAt, PDO::PARAM_STR);
+            if ($noteDocumentId > 0) {
+                $stmt->bindValue(':note_document_id', $noteDocumentId, PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue(':note_document_id', null, PDO::PARAM_NULL);
+            }
+            if ($noteDocumentUuid !== '') {
+                $stmt->bindValue(':note_document_uuid', $noteDocumentUuid, PDO::PARAM_STR);
+            } else {
+                $stmt->bindValue(':note_document_uuid', null, PDO::PARAM_NULL);
+            }
+            $stmt->bindValue(':updated_at', $consumedAt, PDO::PARAM_STR);
+            $stmt->bindValue(':token', $token, PDO::PARAM_STR);
+            $stmt->execute();
+
+            $latest = clinical_note_capture_token_fetch($pdo, $token) ?? $row;
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => 'note capture token consumed',
+                'data' => clinical_note_capture_status_data($latest),
+                'meta' => [
+                    'method' => 'POST',
+                    'route' => 'note-capture-tokens/{token}/consume',
                 ],
             ], 200);
             return;

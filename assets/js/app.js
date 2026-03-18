@@ -6359,6 +6359,7 @@ console.info('app.js loaded :: 20251123a');
       prev: root.querySelector('#ci_prev'),
       next: root.querySelector('#ci_next'),
       save: root.querySelector('#ci_save'),
+      emit: root.querySelector('#ci_emit'),
       cancel: root.querySelector('#ci_cancel'),
       pacNombre: root.querySelector('#ci_pac_nombre'),
       pacEdad: root.querySelector('#ci_pac_edad'),
@@ -6371,7 +6372,9 @@ console.info('app.js loaded :: 20251123a');
       procedimiento: root.querySelector('#ci_procedimiento'),
       motivo: root.querySelector('#ci_motivo'),
       objetivo: root.querySelector('#ci_objetivo'),
-      templateDesc: root.querySelector('#ci_template_desc')
+      templateDesc: root.querySelector('#ci_template_desc'),
+      legalConfirm: root.querySelector('#ci_confirm_informed'),
+      doctorName: root.querySelector('#ci_doctor_name')
     };
     if(!els.list || !els.empty || !els.newBtn || !els.wizard || !els.next || !els.save) return;
 
@@ -6481,6 +6484,7 @@ console.info('app.js loaded :: 20251123a');
       if(els.prev) els.prev.disabled = isStep1;
       els.next?.classList.toggle('d-none', !isStep1);
       els.save?.classList.toggle('d-none', isStep1);
+      els.emit?.classList.toggle('d-none', isStep1);
       if(els.stepLabel) els.stepLabel.textContent = `Paso ${state.step} de 2`;
     };
 
@@ -6527,6 +6531,10 @@ console.info('app.js loaded :: 20251123a');
       if(els.motivo) els.motivo.value = '';
       if(els.objetivo) els.objetivo.value = '';
       if(els.updatePatient) els.updatePatient.checked = false;
+      if(els.legalConfirm) els.legalConfirm.checked = false;
+      if(els.doctorName){
+        els.doctorName.textContent = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
+      }
       describeTemplate('');
       renderStep();
       els.wizard.classList.add('d-none');
@@ -6543,6 +6551,9 @@ console.info('app.js loaded :: 20251123a');
       state.draftId = `cons_draft_${Date.now()}`;
       renderTemplates();
       fillWizardPatientFields();
+      if(els.doctorName){
+        els.doctorName.textContent = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
+      }
       state.step = 1;
       renderStep();
       showNotice('');
@@ -6632,18 +6643,31 @@ console.info('app.js loaded :: 20251123a');
       }
     };
 
-    const validateStep2 = ()=>{
+    const validateStep2 = (targetStatus = 'draft')=>{
       const errors = [];
-      if(!sanitizeText(els.template?.value)) errors.push('Selecciona una plantilla.');
-      if(!sanitizeText(els.procedimiento?.value)) errors.push('Indica el procedimiento.');
-      if(!sanitizeText(els.objetivo?.value)) errors.push('Indica el objetivo.');
+      const patientId = resolveActivePatientIdForConsent();
+      const templateLabel = sanitizeText(els.template?.selectedOptions?.[0]?.textContent || els.template?.value || '');
+      const procedimiento = sanitizeText(els.procedimiento?.value || '');
+      const titleValue = procedimiento || templateLabel;
+      const contentValue = sanitizeText(els.templateDesc?.textContent || '').replace('Selecciona una plantilla para ver sus riesgos, beneficios y alternativas.', '').trim();
+      if(targetStatus === 'granted'){
+        if(!patientId) errors.push('Selecciona paciente antes de emitir el consentimiento.');
+        if(!titleValue) errors.push('Indica el título o procedimiento del consentimiento.');
+        if(!contentValue) errors.push('Completa el contenido del consentimiento.');
+        if(els.legalConfirm && !els.legalConfirm.checked){
+          errors.push('Debes confirmar que el paciente fue informado y acepta el procedimiento.');
+        }
+      }else{
+        if(!patientId) errors.push('Selecciona paciente antes de crear el borrador.');
+      }
       return errors;
     };
 
-    const buildCanonicalConsentDocument = async ()=>{
+    const buildCanonicalConsentDocument = async (targetStatus = 'draft')=>{
       const patientId = resolveActivePatientIdForConsent();
       if(!patientId) return { error: 'patient_id requerido.' };
-      const errors = validateStep2();
+      const normalizedStatus = targetStatus === 'granted' ? 'granted' : 'draft';
+      const errors = validateStep2(normalizedStatus);
       if(errors.length){
         return { error: errors.join(' ') };
       }
@@ -6655,7 +6679,7 @@ console.info('app.js loaded :: 20251123a');
       const procedimiento = sanitizeText(els.procedimiento?.value || '');
       const motivo = sanitizeText(els.motivo?.value || '');
       const objetivo = sanitizeText(els.objetivo?.value || '');
-      const status = 'draft';
+      const status = normalizedStatus;
       const title = `Consentimiento informado — ${procedimiento || templateLabel || 'General'}`;
       const summary = `${status} · ${templateLabel || consentType || 'consentimiento'} · ${nowSql.slice(0, 10)}`;
       const patientSnapshot = readPatientSnapshot();
@@ -6685,11 +6709,12 @@ console.info('app.js loaded :: 20251123a');
       if(appointmentId) context.appointment_id = appointmentId;
       const payload = {
         contract_version: 1,
+        status,
         consent: {
           consent_type: consentType || 'otro',
           document_title: procedimiento || templateLabel || 'Consentimiento informado',
           status,
-          granted_at: nowSql,
+          granted_at: status === 'granted' ? nowSql : null,
           revoked_at: null
         },
         patient_snapshot: {
@@ -6708,16 +6733,16 @@ console.info('app.js loaded :: 20251123a');
           body_text: sanitizeText(els.templateDesc?.textContent || '')
         },
         legal: {
-          risks_explained: false,
-          alternatives_explained: false,
-          questions_resolved: false,
-          voluntary_acceptance: false
+          risks_explained: status === 'granted',
+          alternatives_explained: status === 'granted',
+          questions_resolved: status === 'granted',
+          voluntary_acceptance: status === 'granted' && !!els.legalConfirm?.checked
         },
         signatures: {
-          patient_signed: false,
-          doctor_signed: false,
+          patient_signed: status === 'granted' && !!els.legalConfirm?.checked,
+          doctor_signed: status === 'granted',
           witness_signed: false,
-          signature_mode: 'none'
+          signature_mode: status === 'granted' ? 'acknowledged' : 'none'
         },
         observations: motivo || ''
       };
@@ -6739,17 +6764,23 @@ console.info('app.js loaded :: 20251123a');
       };
     };
 
-    const saveCanonicalConsent = async ()=>{
+    const saveCanonicalConsent = async (targetStatus = 'draft')=>{
       if(state.saving) return;
-      const prepared = await buildCanonicalConsentDocument();
+      const normalizedStatus = targetStatus === 'granted' ? 'granted' : 'draft';
+      const prepared = await buildCanonicalConsentDocument(normalizedStatus);
       if(prepared.error){
         showNotice(prepared.error);
         return;
       }
       state.saving = true;
+      const isEmit = normalizedStatus === 'granted';
       if(els.save){
         els.save.disabled = true;
-        els.save.textContent = 'Guardando...';
+        if(!isEmit) els.save.textContent = 'Guardando...';
+      }
+      if(els.emit){
+        els.emit.disabled = true;
+        if(isEmit) els.emit.textContent = 'Emitiendo...';
       }
       showNotice('');
       try{
@@ -6792,6 +6823,10 @@ console.info('app.js loaded :: 20251123a');
           els.save.disabled = false;
           els.save.textContent = 'Guardar borrador';
         }
+        if(els.emit){
+          els.emit.disabled = false;
+          els.emit.textContent = 'Emitir consentimiento';
+        }
       }
     };
 
@@ -6816,7 +6851,11 @@ console.info('app.js loaded :: 20251123a');
     });
     els.save?.addEventListener('click', (event)=>{
       event.preventDefault();
-      saveCanonicalConsent();
+      saveCanonicalConsent('draft');
+    });
+    els.emit?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      saveCanonicalConsent('granted');
     });
     els.template?.addEventListener('change', (event)=>{
       describeTemplate(event?.target?.value || '');

@@ -6332,6 +6332,19 @@
                         <div class="col-12">
                           <div class="alert alert-light py-2 mb-0" id="ci_template_desc">Selecciona una plantilla para ver sus riesgos, beneficios y alternativas.</div>
                         </div>
+                        <div class="col-12">
+                          <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="ci_confirm_informed">
+                            <label class="form-check-label" for="ci_confirm_informed">Confirmo que el paciente ha sido informado y acepta el procedimiento</label>
+                          </div>
+                        </div>
+                        <div class="col-12">
+                          <div class="border rounded p-2">
+                            <div class="small text-muted mb-1">Firma del médico</div>
+                            <div class="fw-semibold" id="ci_doctor_name">Médico tratante</div>
+                            <div class="border-top mt-2" style="max-width:260px;"></div>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -6339,6 +6352,7 @@
                       <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_prev" disabled>Anterior</button>
                       <button type="button" class="btn btn-primary btn-sm" id="ci_next">Continuar</button>
                       <button type="button" class="btn btn-success btn-sm d-none" id="ci_save">Guardar borrador</button>
+                      <button type="button" class="btn btn-primary btn-sm d-none" id="ci_emit">Emitir consentimiento</button>
                       <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="ci_cancel">Cancelar</button>
                     </div>
                   </div>

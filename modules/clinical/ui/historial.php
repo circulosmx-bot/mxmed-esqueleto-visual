@@ -1348,12 +1348,44 @@ $extraHead = <<<'HTML'
     }
     .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions{
       margin-top:6px;
-      gap:4px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:.5rem 1rem;
     }
-    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions{
+    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions-left,
+    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions-right{
       display:flex;
       flex-wrap:wrap;
       gap:.35rem .65rem;
+      align-items:center;
+    }
+    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions-right{
+      margin-left:auto;
+      justify-content:flex-end;
+    }
+    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-studies-line{
+      margin-top:2px;
+      font-size:.86rem;
+      color:#51607a;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-head{
+      display:block;
+    }
+    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-title{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:baseline;
+      gap:.4rem;
+    }
+    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-date{
+      font-size:.78rem;
+      color:#6b7280;
+      line-height:1.25;
+      white-space:nowrap;
     }
     .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions .mm-link-action{
       appearance:none;
@@ -1532,8 +1564,7 @@ if (!$embed) {
     </div>
   <?php else: ?>
     <?php if ($patientId !== ''): ?>
-      <div class="d-flex justify-content-end gap-2 flex-wrap mb-3">
-        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="open-generic-procedure-modal">Registrar procedimiento</button>
+      <div class="d-flex justify-content-end gap-2 flex-wrap mb-3 d-none">
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary d-none" data-action="open-wound-care-modal">Registrar curación</button>
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary d-none" data-action="open-immunization-modal">Registrar vacuna</button>
       </div>
@@ -1553,33 +1584,14 @@ if (!$embed) {
     <?php endif; ?>
 
     <div class="only-active-case-note d-none" data-role="only-active-case-note">Mostrando solo items del caso activo.</div>
-    <button type="button" class="btn btn-link btn-sm px-0 mb-2 text-decoration-none" data-action="toggle-advanced-filters">Ver opciones avanzadas</button>
-    <div class="d-none mb-3" data-role="advanced-filters-panel">
-      <div class="btn-group mb-2" role="group" aria-label="Filtros del historial de atención" data-role="timeline-filters">
-        <?php foreach ($filters as $filterValue => $filterLabel): ?>
-          <?php
-          $isActive = ($include === $filterValue);
-          $href = '?' . carry_embed_params([
-              'patient_id' => $patientId,
-              'include' => $filterValue,
-              'limit' => $limit,
-          ]);
-          ?>
-          <a class="btn <?php echo $isActive ? 'btn-primary' : 'btn-outline-primary'; ?>" href="<?php echo h($href); ?>">
-            <?php echo h($filterLabel); ?>
-          </a>
-        <?php endforeach; ?>
-      </div>
-    </div>
-    <div class="btn-group btn-group-sm mb-3 d-none" role="group" aria-label="Filtro por caso activo" data-role="case-scope-filter">
-      <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary active" data-action="set-case-scope" data-case-scope="all">Todos</button>
-      <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-case-scope" data-case-scope="in">Solo caso activo</button>
-      <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-case-scope" data-case-scope="out">Fuera de caso</button>
-    </div>
-    <div class="alert alert-secondary d-none py-2 mb-3" data-role="case-scope-empty">Sin eventos del caso activo.</div>
-    <div class="timeline-category-filters" data-role="timeline-category-filters">
-      <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Filtros clínicos">
+    <div class="timeline-category-filters mb-3" data-role="timeline-category-filters">
+      <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Filtros clínicos de historial">
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary active" data-action="set-clinical-filter" data-clinical-filter="all">Todo</button>
+        <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Filtro por caso" data-role="case-scope-filter">
+          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary d-none" data-action="set-case-scope" data-case-scope="all">Todo</button>
+          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-case-scope" data-case-scope="in">Caso activo</button>
+          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-case-scope" data-case-scope="out">Fuera de caso</button>
+        </div>
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="cita">Citas</button>
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="consulta">Consultas</button>
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="receta">Recetas</button>
@@ -1587,12 +1599,8 @@ if (!$embed) {
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="estudio">Estudios</button>
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="documento">Documentos</button>
       </div>
-      <div class="btn-group btn-group-sm flex-wrap d-none" role="group" aria-label="Subfiltros de estudios" data-role="timeline-study-filters">
-        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary active" data-action="set-study-filter" data-study-filter="all">Todos</button>
-        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-study-filter" data-study-filter="orden">Órdenes</button>
-        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-study-filter" data-study-filter="resultado">Resultados</button>
-      </div>
     </div>
+    <div class="alert alert-secondary d-none py-2 mb-3" data-role="case-scope-empty">Sin eventos del filtro seleccionado.</div>
     <?php
     $studyResultRefByOrderRef = [];
     foreach ($dayOrder as $mapDayKey) {
@@ -1818,6 +1826,10 @@ if (!$embed) {
                 $docRenderMode = strtolower(trim((string)($doc['render_mode'] ?? ($docFilePayload['render_mode'] ?? ''))));
                 $docIsImage = ($docTypeNorm === 'image' || $docRenderMode === 'image');
                 $docOccurredAt = trim((string)($docItem['occurred_at'] ?? ($doc['occurred_at'] ?? ($docItem['event_datetime'] ?? ''))));
+                $docOccurredDate = '';
+                if ($docOccurredAt !== '' && preg_match('/^\\d{4}-\\d{2}-\\d{2}/', $docOccurredAt, $docDateMatch)) {
+                    $docOccurredDate = $docDateMatch[0];
+                }
                 $docDisplayTitle = $entryTitle;
                 $docMetaLine1 = '';
                 $docMetaLine2 = '';
@@ -1894,6 +1906,15 @@ if (!$embed) {
                     }
                     if ($docMetaLine3 === '' && $indication !== '') {
                         $docMetaLine3 = 'Indicación: ' . $indication;
+                    }
+                    $studyCompactLine = '';
+                    if (!empty($requestedStudies)) {
+                        $preview = array_slice($requestedStudies, 0, 3);
+                        $remaining = count($requestedStudies) - count($preview);
+                        $studyCompactLine = 'Estudios: ' . implode(', ', $preview);
+                        if ($remaining > 0) {
+                            $studyCompactLine .= ' y ' . $remaining . ' más';
+                        }
                     }
                 } elseif ($isImmunization) {
                     $vaccine = is_array($docPayload['vaccine'] ?? null) ? $docPayload['vaccine'] : [];
@@ -2048,25 +2069,13 @@ if (!$embed) {
                           <div class="est-order-title">
                             <span class="est-order-ico est-order-ico-svg" aria-hidden="true" data-role="diagnostic-icon" data-document-type="<?php echo h($docTypeNorm); ?>" data-order-area="<?php echo h(($docTypeNorm === 'lab_order' || $docTypeNorm === 'lab_result') ? 'Laboratorio' : 'Imagenología'); ?>"></span>
                             <span><?php echo h($docDisplayTitle); ?></span>
+                            <?php if ($docOccurredDate !== ''): ?>
+                              <span class="est-order-date"><?php echo h($docOccurredDate); ?></span>
+                            <?php endif; ?>
                           </div>
                         </div>
-                        <?php if ($studyStatusLine !== ''): ?>
-                          <div class="est-order-result-state <?php echo ($docStatus === 'replaced' || $hasLinkedResult) ? 'has-result' : 'no-result'; ?>"><?php echo h($studyStatusLine); ?></div>
-                        <?php endif; ?>
-                        <?php if ($docMetaLine1 !== ''): ?>
-                          <div class="est-order-summary"><?php echo h($docMetaLine1); ?></div>
-                        <?php endif; ?>
-                        <?php if ($docMetaLine2 !== ''): ?>
-                          <div class="est-order-preview"><?php echo h($docMetaLine2); ?></div>
-                        <?php endif; ?>
-                        <?php if ($docMetaLine3 !== ''): ?>
-                          <div class="est-order-complement"><?php echo h($docMetaLine3); ?></div>
-                        <?php endif; ?>
-                        <?php if ($docOccurredAt !== ''): ?>
-                          <div class="est-order-meta"><?php echo h($docOccurredAt); ?></div>
-                        <?php endif; ?>
-                        <?php if (trim((string)($docItem['case_title'] ?? '')) !== ''): ?>
-                          <div class="est-order-meta">Caso: <?php echo h((string)$docItem['case_title']); ?></div>
+                        <?php if (!empty($studyCompactLine)): ?>
+                          <div class="est-order-studies-line"><?php echo h($studyCompactLine); ?></div>
                         <?php endif; ?>
                       <?php else: ?>
                         <div class="mm-activity-title"><?php echo h($docDisplayTitle); ?></div>
@@ -2088,12 +2097,22 @@ if (!$embed) {
                       <?php endif; ?>
                     </div>
                     <div class="mm-activity-actions <?php echo $isStudyDoc ? 'est-order-actions' : ''; ?>">
-                      <?php if (!$docInActiveCase && $docUuid !== ''): ?>
-                        <button type="button" class="mm-link-action" data-action="integrate-to-case" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Integrar a caso clínico</button>
-                      <?php endif; ?>
-                      <?php if ($isStudyOrder && $docStatus === 'active' && !$hasLinkedResult && $docPrimaryRef !== ''): ?>
-                        <button type="button" class="mm-link-action" data-action="open-diagnostic-order-result" data-ref="<?php echo h($docPrimaryRef); ?>">Ingresar resultado</button>
-                        <button type="button" class="mm-link-action" data-action="open-diagnostic-order-replace" data-ref="<?php echo h($docPrimaryRef); ?>">Reemplazar orden</button>
+                      <?php if ($isStudyDoc): ?>
+                        <div class="est-order-actions-left">
+                          <?php if ($isStudyOrder && $docStatus === 'active' && !$hasLinkedResult && $docPrimaryRef !== ''): ?>
+                            <button type="button" class="mm-link-action" data-action="open-diagnostic-order-result" data-ref="<?php echo h($docPrimaryRef); ?>">Ingresar resultado</button>
+                            <button type="button" class="mm-link-action" data-action="open-diagnostic-order-replace" data-ref="<?php echo h($docPrimaryRef); ?>">Reemplazar orden</button>
+                          <?php endif; ?>
+                        </div>
+                        <div class="est-order-actions-right">
+                          <?php if (!$docInActiveCase && $docUuid !== ''): ?>
+                            <button type="button" class="mm-link-action" data-action="integrate-to-case" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Integrar a caso clínico</button>
+                          <?php endif; ?>
+                        </div>
+                      <?php else: ?>
+                        <?php if (!$docInActiveCase && $docUuid !== ''): ?>
+                          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-to-case" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Integrar a caso clínico</button>
+                        <?php endif; ?>
                       <?php endif; ?>
                     </div>
                   </div>
@@ -4567,6 +4586,7 @@ if (!$embed) {
           clinicalCategoryFilter = 'all';
         }
         if (clinicalCategoryFilter === 'all') {
+          caseScope = 'all';
           studyRoleFilter = 'all';
           if (currentInclude !== 'agenda,clinical') {
             navigateWithInclude('agenda,clinical');
