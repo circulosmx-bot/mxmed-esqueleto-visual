@@ -6369,10 +6369,20 @@ console.info('app.js loaded :: 20251123a');
       pacDom: root.querySelector('#ci_pac_dom'),
       updatePatient: root.querySelector('#ci_update_patient'),
       template: root.querySelector('#ci_template'),
+      title: root.querySelector('#ci_title'),
       procedimiento: root.querySelector('#ci_procedimiento'),
       motivo: root.querySelector('#ci_motivo'),
       objetivo: root.querySelector('#ci_objetivo'),
       templateDesc: root.querySelector('#ci_template_desc'),
+      beneficiosEsperados: root.querySelector('#ci_beneficios_esperados'),
+      alternativas: root.querySelector('#ci_alternativas'),
+      consecuenciasNoAceptar: root.querySelector('#ci_consecuencias_no_aceptar'),
+      autorizacionContingencias: root.querySelector('#ci_aut_contingencias'),
+      firmanteTipo: root.querySelector('#ci_firmante_tipo'),
+      firmanteNombre: root.querySelector('#ci_firmante_nombre'),
+      firmanteParentesco: root.querySelector('#ci_firmante_parentesco'),
+      testigo1Nombre: root.querySelector('#ci_testigo_1_nombre'),
+      testigo2Nombre: root.querySelector('#ci_testigo_2_nombre'),
       legalConfirm: root.querySelector('#ci_confirm_informed'),
       doctorName: root.querySelector('#ci_doctor_name')
     };
@@ -6526,10 +6536,20 @@ console.info('app.js loaded :: 20251123a');
       state.step = 1;
       state.draftId = '';
       showNotice('');
+      if(els.title) els.title.value = '';
       if(els.template) els.template.value = '';
       if(els.procedimiento) els.procedimiento.value = '';
       if(els.motivo) els.motivo.value = '';
       if(els.objetivo) els.objetivo.value = '';
+      if(els.beneficiosEsperados) els.beneficiosEsperados.value = '';
+      if(els.alternativas) els.alternativas.value = '';
+      if(els.consecuenciasNoAceptar) els.consecuenciasNoAceptar.value = '';
+      if(els.autorizacionContingencias) els.autorizacionContingencias.checked = false;
+      if(els.firmanteTipo) els.firmanteTipo.value = 'paciente';
+      if(els.firmanteNombre) els.firmanteNombre.value = '';
+      if(els.firmanteParentesco) els.firmanteParentesco.value = '';
+      if(els.testigo1Nombre) els.testigo1Nombre.value = '';
+      if(els.testigo2Nombre) els.testigo2Nombre.value = '';
       if(els.updatePatient) els.updatePatient.checked = false;
       if(els.legalConfirm) els.legalConfirm.checked = false;
       if(els.doctorName){
@@ -6646,13 +6666,11 @@ console.info('app.js loaded :: 20251123a');
     const validateStep2 = (targetStatus = 'draft')=>{
       const errors = [];
       const patientId = resolveActivePatientIdForConsent();
-      const templateLabel = sanitizeText(els.template?.selectedOptions?.[0]?.textContent || els.template?.value || '');
-      const procedimiento = sanitizeText(els.procedimiento?.value || '');
-      const titleValue = procedimiento || templateLabel;
-      const contentValue = sanitizeText(els.templateDesc?.textContent || '').replace('Selecciona una plantilla para ver sus riesgos, beneficios y alternativas.', '').trim();
+      const titleValue = sanitizeText(els.title?.value || '');
+      const contentValue = sanitizeText(els.procedimiento?.value || '');
       if(targetStatus === 'granted'){
         if(!patientId) errors.push('Selecciona paciente antes de emitir el consentimiento.');
-        if(!titleValue) errors.push('Indica el título o procedimiento del consentimiento.');
+        if(!titleValue) errors.push('Indica el título del consentimiento.');
         if(!contentValue) errors.push('Completa el contenido del consentimiento.');
         if(els.legalConfirm && !els.legalConfirm.checked){
           errors.push('Debes confirmar que el paciente fue informado y acepta el procedimiento.');
@@ -6661,6 +6679,75 @@ console.info('app.js loaded :: 20251123a');
         if(!patientId) errors.push('Selecciona paciente antes de crear el borrador.');
       }
       return errors;
+    };
+
+    const buildConsentLegalRenderedText = (data = {})=>{
+      const nowSql = sanitizeText(data.nowSql || '');
+      const eventDate = nowSql ? nowSql.slice(0, 10) : '';
+      const eventTime = nowSql ? nowSql.slice(11, 19) : '';
+      const patientName = sanitizeText(data.patientName || 'Paciente');
+      const patientAge = sanitizeText(data.patientAge || '');
+      const patientSexo = sanitizeText(data.patientSexo || '');
+      const patientMeta = [patientAge ? `Edad: ${patientAge}` : '', patientSexo ? `Sexo: ${patientSexo}` : ''].filter(Boolean).join(' · ');
+      const consentTitle = sanitizeText(data.consentTitle || 'Consentimiento informado');
+      const procedureText = sanitizeText(data.procedureText || '');
+      const risks = sanitizeText(data.risks || '');
+      const benefits = sanitizeText(data.benefits || '');
+      const alternatives = sanitizeText(data.alternatives || '');
+      const consequences = sanitizeText(data.consequences || '');
+      const contingencias = !!data.contingencies;
+      const signerType = sanitizeText(data.signerTypeLabel || 'Paciente');
+      const signerName = sanitizeText(data.signerName || patientName || '________________');
+      const signerRelation = sanitizeText(data.signerRelation || '');
+      const doctorName = sanitizeText(data.doctorName || 'Médico tratante');
+      const doctorLicense = sanitizeText(data.doctorLicense || '');
+      const witness1 = sanitizeText(data.witness1 || '');
+      const witness2 = sanitizeText(data.witness2 || '');
+      const objective = sanitizeText(data.objective || '');
+      const motivo = sanitizeText(data.motivo || '');
+
+      const lines = [];
+      lines.push('MXMed');
+      lines.push('CONSENTIMIENTO INFORMADO');
+      lines.push('');
+      lines.push(`Lugar y fecha: MXMed ${eventDate}${eventTime ? ` ${eventTime}` : ''}`.trim());
+      lines.push('');
+      lines.push(`Paciente: ${patientName}`);
+      if(patientMeta) lines.push(patientMeta);
+      lines.push('');
+      lines.push(`Título del consentimiento: ${consentTitle}`);
+      lines.push('');
+      lines.push('Descripción del procedimiento / acto autorizado:');
+      lines.push(procedureText || 'Sin descripción registrada.');
+      if(motivo){
+        lines.push('');
+        lines.push(`Motivo clínico: ${motivo}`);
+      }
+      if(objective){
+        lines.push('');
+        lines.push(`Objetivo: ${objective}`);
+      }
+      lines.push('');
+      lines.push('Riesgos y beneficios esperados:');
+      lines.push(`Riesgos: ${risks || 'Conforme a la plantilla y explicación médica proporcionada.'}`);
+      lines.push(`Beneficios esperados: ${benefits || 'Mejoría clínica o apoyo diagnóstico del paciente.'}`);
+      lines.push('');
+      lines.push('Alternativas:');
+      lines.push(alternatives || 'Se explicaron alternativas razonables de manejo clínico.');
+      lines.push('');
+      lines.push('Consecuencias de no realizar el procedimiento:');
+      lines.push(consequences || 'Se explicaron los posibles riesgos de no aceptar el procedimiento.');
+      lines.push('');
+      lines.push(`Autorización de contingencias y urgencias: ${contingencias ? 'Sí autorizo.' : 'No autorizo.'}`);
+      lines.push('');
+      lines.push('Declaro que la información fue explicada en lenguaje claro, resolviendo dudas y permitiendo decisión libre e informada.');
+      lines.push('');
+      lines.push('Firmas:');
+      lines.push(`${signerType}: ${signerName}${signerRelation ? ` (${signerRelation})` : ''}`);
+      lines.push(`Médico responsable: ${doctorName}${doctorLicense ? ` · Cédula: ${doctorLicense}` : ''}`);
+      lines.push(`Testigo 1: ${witness1 || '________________'}`);
+      lines.push(`Testigo 2: ${witness2 || '________________'}`);
+      return lines.join('\n');
     };
 
     const buildCanonicalConsentDocument = async (targetStatus = 'draft')=>{
@@ -6676,12 +6763,23 @@ console.info('app.js loaded :: 20251123a');
       const nowSql = formatNowSql();
       const consentType = sanitizeText(els.template?.value || 'otro');
       const templateLabel = sanitizeText(els.template?.selectedOptions?.[0]?.textContent || consentType || 'Consentimiento');
+      const consentTitle = sanitizeText(els.title?.value || '');
       const procedimiento = sanitizeText(els.procedimiento?.value || '');
       const motivo = sanitizeText(els.motivo?.value || '');
       const objetivo = sanitizeText(els.objetivo?.value || '');
+      const beneficiosEsperados = sanitizeText(els.beneficiosEsperados?.value || '');
+      const alternativas = sanitizeText(els.alternativas?.value || '');
+      const consecuenciasNoAceptar = sanitizeText(els.consecuenciasNoAceptar?.value || '');
+      const autorizacionContingencias = !!els.autorizacionContingencias?.checked;
+      const firmanteTipo = sanitizeText(els.firmanteTipo?.value || 'paciente');
+      const firmanteNombre = sanitizeText(els.firmanteNombre?.value || '');
+      const firmanteParentesco = sanitizeText(els.firmanteParentesco?.value || '');
+      const testigo1Nombre = sanitizeText(els.testigo1Nombre?.value || '');
+      const testigo2Nombre = sanitizeText(els.testigo2Nombre?.value || '');
       const status = normalizedStatus;
-      const title = `Consentimiento informado — ${procedimiento || templateLabel || 'General'}`;
-      const summary = `${status} · ${templateLabel || consentType || 'consentimiento'} · ${nowSql.slice(0, 10)}`;
+      const titleBase = consentTitle || procedimiento || templateLabel || 'General';
+      const title = `Consentimiento informado — ${titleBase}`;
+      const summary = `${status} · ${consentTitle || templateLabel || consentType || 'consentimiento'} · ${nowSql.slice(0, 10)}`;
       const patientSnapshot = readPatientSnapshot();
       const contact = {
         telefono: sanitizeText(els.pacTel?.value || ''),
@@ -6707,12 +6805,42 @@ console.info('app.js loaded :: 20251123a');
       };
       if(encounterKey) context.encounter_key = encounterKey;
       if(appointmentId) context.appointment_id = appointmentId;
+      const signerTypeLabelMap = {
+        paciente: 'Paciente',
+        tutor: 'Tutor',
+        representante_legal: 'Representante legal'
+      };
+      const signerTypeLabel = signerTypeLabelMap[firmanteTipo] || 'Paciente';
+      const renderedText = buildConsentLegalRenderedText({
+        nowSql,
+        patientName: patientSnapshot.full_name,
+        patientAge: patientSnapshot.age,
+        patientSexo: patientSnapshot.sexo,
+        consentTitle: consentTitle || templateLabel || 'Consentimiento informado',
+        procedureText: procedimiento,
+        risks: sanitizeText(els.templateDesc?.textContent || ''),
+        benefits: beneficiosEsperados,
+        alternatives: alternativas,
+        consequences: consecuenciasNoAceptar,
+        contingencies: autorizacionContingencias,
+        signerTypeLabel,
+        signerName: firmanteNombre || patientSnapshot.full_name,
+        signerRelation: firmanteParentesco,
+        doctorName: actorName,
+        doctorLicense: sanitizeText(document.getElementById('ced-prof')?.value || ''),
+        witness1: testigo1Nombre,
+        witness2: testigo2Nombre,
+        objective: objetivo,
+        motivo
+      });
       const payload = {
         contract_version: 1,
         status,
+        text: renderedText,
+        rendered_text: renderedText,
         consent: {
           consent_type: consentType || 'otro',
-          document_title: procedimiento || templateLabel || 'Consentimiento informado',
+          document_title: consentTitle || procedimiento || templateLabel || 'Consentimiento informado',
           status,
           granted_at: status === 'granted' ? nowSql : null,
           revoked_at: null
@@ -6731,6 +6859,26 @@ console.info('app.js loaded :: 20251123a');
           template_id: consentType || '',
           template_name: templateLabel || '',
           body_text: sanitizeText(els.templateDesc?.textContent || '')
+        },
+        consent_legal: {
+          beneficios_esperados: beneficiosEsperados || null,
+          alternativas: alternativas || null,
+          consecuencias_no_aceptar: consecuenciasNoAceptar || null,
+          autorizacion_contingencias: autorizacionContingencias,
+          declaracion_lenguaje_claro: true
+        },
+        firmante: {
+          tipo: firmanteTipo || 'paciente',
+          nombre: firmanteNombre || patientSnapshot.full_name || null,
+          parentesco: firmanteParentesco || null
+        },
+        testigos: [
+          { nombre: testigo1Nombre || null },
+          { nombre: testigo2Nombre || null }
+        ],
+        signature_capabilities: {
+          local_screen_signature: false,
+          remote_qr_signature: false
         },
         legal: {
           risks_explained: status === 'granted',

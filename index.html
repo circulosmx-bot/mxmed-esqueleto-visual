@@ -6311,26 +6311,73 @@
 
                     <div id="ci_step_2" class="d-none">
                       <div class="row g-3">
-                        <div class="col-md-6">
-                          <label class="form-label" for="ci_template">Plantilla de consentimiento</label>
+                        <div class="col-12">
+                          <label class="form-label" for="ci_title">Título</label>
+                          <input class="form-control" id="ci_title" name="consent_title" placeholder="Ej. Consentimiento para biopsia de piel">
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="ci_motivo">Motivo / diagnóstico <span class="text-muted">(opcional)</span></label>
+                          <input class="form-control" id="ci_motivo" placeholder="Motivo o diagnóstico">
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="ci_procedimiento">Descripción del procedimiento</label>
+                          <textarea class="form-control" id="ci_procedimiento" rows="5" placeholder="Describe de forma clara el procedimiento, alcance y consideraciones principales."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label">Riesgos</label>
+                          <div class="alert alert-light py-2 mb-0" id="ci_template_desc">Selecciona una plantilla para ver sus riesgos, beneficios y alternativas.</div>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="ci_objetivo">Objetivo</label>
+                          <input class="form-control" id="ci_objetivo" placeholder="Objetivo del procedimiento">
+                        </div>
+                        <div class="col-12 pt-2 border-top">
+                          <label class="form-label" for="ci_template">Plantilla base <span class="text-muted">(opcional)</span></label>
                           <select class="form-select" id="ci_template">
                             <option value="">Selecciona una plantilla</option>
                           </select>
                         </div>
-                        <div class="col-md-6">
-                          <label class="form-label" for="ci_procedimiento">Procedimiento</label>
-                          <input class="form-control" id="ci_procedimiento" placeholder="Describe el procedimiento">
-                        </div>
-                        <div class="col-md-6">
-                          <label class="form-label" for="ci_motivo">Motivo / diagnóstico <span class="text-muted">(opcional)</span></label>
-                          <input class="form-control" id="ci_motivo" placeholder="Motivo o diagnóstico">
-                        </div>
-                        <div class="col-md-6">
-                          <label class="form-label" for="ci_objetivo">Objetivo</label>
-                          <input class="form-control" id="ci_objetivo" placeholder="Objetivo del procedimiento">
+                        <div class="col-12">
+                          <label class="form-label" for="ci_beneficios_esperados">Beneficios esperados <span class="text-muted">(opcional)</span></label>
+                          <textarea class="form-control" id="ci_beneficios_esperados" rows="3" placeholder="Beneficios clínicos esperados para el paciente."></textarea>
                         </div>
                         <div class="col-12">
-                          <div class="alert alert-light py-2 mb-0" id="ci_template_desc">Selecciona una plantilla para ver sus riesgos, beneficios y alternativas.</div>
+                          <label class="form-label" for="ci_alternativas">Alternativas <span class="text-muted">(opcional)</span></label>
+                          <textarea class="form-control" id="ci_alternativas" rows="3" placeholder="Alternativas diagnósticas o terapéuticas disponibles."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="ci_consecuencias_no_aceptar">Consecuencias de no aceptar <span class="text-muted">(opcional)</span></label>
+                          <textarea class="form-control" id="ci_consecuencias_no_aceptar" rows="3" placeholder="Posibles consecuencias clínicas de no realizar el procedimiento."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="ci_aut_contingencias">
+                            <label class="form-check-label" for="ci_aut_contingencias">Autorizo la atención de contingencias y urgencias derivadas del procedimiento</label>
+                          </div>
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label" for="ci_firmante_tipo">Tipo de firmante</label>
+                          <select class="form-select" id="ci_firmante_tipo">
+                            <option value="paciente">Paciente</option>
+                            <option value="tutor">Tutor</option>
+                            <option value="representante_legal">Representante legal</option>
+                          </select>
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label" for="ci_firmante_nombre">Nombre de quien firma</label>
+                          <input class="form-control" id="ci_firmante_nombre" placeholder="Nombre completo del firmante">
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label" for="ci_firmante_parentesco">Parentesco <span class="text-muted">(cuando aplique)</span></label>
+                          <input class="form-control" id="ci_firmante_parentesco" placeholder="Ej. Madre, padre, tutor">
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label" for="ci_testigo_1_nombre">Testigo 1 <span class="text-muted">(opcional)</span></label>
+                          <input class="form-control" id="ci_testigo_1_nombre" placeholder="Nombre completo">
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label" for="ci_testigo_2_nombre">Testigo 2 <span class="text-muted">(opcional)</span></label>
+                          <input class="form-control" id="ci_testigo_2_nombre" placeholder="Nombre completo">
                         </div>
                         <div class="col-12">
                           <div class="form-check">
