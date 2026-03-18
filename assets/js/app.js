@@ -5289,7 +5289,17 @@ console.info('app.js loaded :: 20251123a');
   };
   const openConsentimientoFromActividad = ()=>{
     hideActividadClinicaModal();
-    return showActividadClinicaModalById(actividadClinicaConsentModalEl);
+    const opened = showClinicalTab('#t-consent');
+    if(!opened) return false;
+    window.requestAnimationFrame(()=>{
+      const newBtn = pane.querySelector('#ci_new_btn');
+      const firstCard = pane.querySelector('#ci_list [data-doc-uuid]');
+      (newBtn || firstCard)?.focus?.();
+    });
+    try{
+      console.info('[mxmed-actividad-clinica] open consentimiento');
+    }catch(_){}
+    return true;
   };
   const openActividadClinicaFromTratamientoAlias = ()=>{
     const opened = showClinicalTab(clinicalTabTargets.notas);
