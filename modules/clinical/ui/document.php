@@ -118,6 +118,26 @@ function render_embed_css(bool $embed): void {
   echo '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">' . "\n";
 }
 
+function clinical_doc_clean_text($value): string {
+  $text = trim((string)$value);
+  if ($text === '' || $text === '--') {
+    return '';
+  }
+  return $text;
+}
+
+function clinical_doc_format_date(string $value, bool $includeTime = false): string {
+  $safe = trim($value);
+  if ($safe === '') {
+    return '';
+  }
+  $ts = strtotime($safe);
+  if ($ts === false) {
+    return $safe;
+  }
+  return $includeTime ? date('Y-m-d H:i:s', $ts) : date('Y-m-d', $ts);
+}
+
 function http_get_json(string $url, int $timeoutSeconds = 8): array {
   $context = stream_context_create([
     'http' => [
@@ -223,7 +243,59 @@ $isImageDoc = ($renderMode === 'image' || $docTypeNorm === 'image');
 $isPdfDoc = ($renderMode === 'pdf' || $docTypeNorm === 'pdf');
 $isNoteDoc = in_array($docTypeNorm, ['note', 'nota_evolucion'], true);
 $isOrderDoc = in_array($docTypeNorm, ['lab_order', 'imaging_order', 'orders'], true);
+$isPrescriptionDoc = in_array($docTypeNorm, ['prescription', 'rx'], true);
 $showCommonDocActions = $isNoteDoc || $isOrderDoc || (!$isImageDoc && !$isPdfDoc);
+
+$rxSnapshot = ($isPrescriptionDoc && is_array($payload['snapshot'] ?? null)) ? $payload['snapshot'] : [];
+$rxPrescription = ($isPrescriptionDoc && is_array($payload['prescription'] ?? null)) ? $payload['prescription'] : [];
+$rxPaciente = is_array($rxSnapshot['paciente'] ?? null) ? $rxSnapshot['paciente'] : [];
+$rxMedico = is_array($rxSnapshot['medico'] ?? null) ? $rxSnapshot['medico'] : [];
+$rxBranding = is_array($rxSnapshot['branding'] ?? null) ? $rxSnapshot['branding'] : [];
+$rxItems = is_array($rxPrescription['items'] ?? null) ? $rxPrescription['items'] : [];
+$rxObservaciones = clinical_doc_clean_text($rxPrescription['observaciones'] ?? '');
+$rxDoctorName = clinical_doc_clean_text($rxMedico['nombre'] ?? $rxMedico['nombre_completo'] ?? '');
+$rxDoctorSpecialty = clinical_doc_clean_text($rxMedico['especialidad'] ?? '');
+$rxDoctorCedula = clinical_doc_clean_text($rxMedico['cedula'] ?? $rxMedico['cedula_profesional'] ?? '');
+$rxPatientName = clinical_doc_clean_text($rxPaciente['nombre'] ?? $rxPaciente['nombre_completo'] ?? '');
+$rxPatientAge = clinical_doc_clean_text($rxPaciente['edad'] ?? '');
+$rxPatientSex = clinical_doc_clean_text($rxPaciente['sexo'] ?? '');
+$rxPatientMeta = array_values(array_filter([
+    $rxPatientAge !== '' ? ('Edad: ' . $rxPatientAge) : '',
+    $rxPatientSex !== '' ? ('Sexo: ' . $rxPatientSex) : '',
+]));
+$rxDoctorLogo = resolve_media_href((string)($rxBranding['doctor_logo_url'] ?? ''));
+$rxGroupLogo = resolve_media_href((string)($rxBranding['group_logo_url'] ?? ''));
+$rxGeneratedAtRaw = (string)($rxSnapshot['generated_at'] ?? $date);
+$rxEmissionDate = clinical_doc_format_date($rxGeneratedAtRaw, false);
+
+$rxConsultorios = [];
+if (is_array($rxSnapshot['consultorios'] ?? null)) {
+  foreach ($rxSnapshot['consultorios'] as $entry) {
+    if (!is_array($entry)) {
+      continue;
+    }
+    $rxConsultorios[] = [
+      'nombre' => clinical_doc_clean_text($entry['nombre'] ?? $entry['name'] ?? ''),
+      'domicilio' => clinical_doc_clean_text($entry['domicilio'] ?? $entry['address'] ?? ''),
+      'telefono' => clinical_doc_clean_text($entry['telefono'] ?? $entry['phone'] ?? ''),
+    ];
+  }
+}
+if ($rxConsultorios === [] && is_array($rxSnapshot['consultorio'] ?? null)) {
+  $single = $rxSnapshot['consultorio'];
+  $rxConsultorios[] = [
+    'nombre' => clinical_doc_clean_text($single['nombre'] ?? $single['name'] ?? ''),
+    'domicilio' => clinical_doc_clean_text($single['domicilio'] ?? $single['address'] ?? ''),
+    'telefono' => clinical_doc_clean_text($single['telefono'] ?? $single['phone'] ?? ''),
+  ];
+}
+$rxConsultorios = array_values(array_filter($rxConsultorios, static function (array $entry): bool {
+  return (($entry['nombre'] ?? '') !== '') || (($entry['domicilio'] ?? '') !== '') || (($entry['telefono'] ?? '') !== '');
+}));
+if (count($rxConsultorios) > 3) {
+  $rxConsultorios = array_slice($rxConsultorios, 0, 3);
+}
+
 require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
 $replicateUrl = ($apiIndexBase !== '' && $uuid !== '') ? ($apiIndexBase . '/documents/' . rawurlencode($uuid) . '/replicate') : '';
@@ -239,8 +311,90 @@ if (!$embed) {
     clinical_embed_start();
 }
 ?>
+<?php if ($isPrescriptionDoc): ?>
+<style>
+  .rx-doc-sheet{
+    background:#fff;
+    border:1px solid #d7eaf2;
+    border-radius:14px;
+    padding:18px;
+    display:grid;
+    gap:14px;
+  }
+  .rx-doc-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    border-bottom:1px solid #edf4f8;
+    padding-bottom:10px;
+    break-inside:avoid;
+  }
+  .rx-doc-logos{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .rx-doc-logo{max-height:44px;max-width:132px;object-fit:contain;}
+  .rx-doc-doctor{margin-left:auto;text-align:right;min-width:220px;}
+  .rx-doc-doctor-name{font-size:1rem;font-weight:800;color:#0a405f;line-height:1.25;}
+  .rx-doc-doctor-meta{font-size:0.86rem;color:#5d6b74;}
+  .rx-doc-patient{display:grid;gap:4px;break-inside:avoid;}
+  .rx-doc-patient-name{font-size:0.98rem;font-weight:700;color:#12344d;}
+  .rx-doc-patient-meta{font-size:0.84rem;color:#64737d;}
+  .rx-doc-rp{font-size:1.18rem;font-weight:800;color:#0a405f;}
+  .rx-doc-list{margin:0;padding-left:22px;display:grid;gap:8px;}
+  .rx-doc-item{break-inside:avoid;}
+  .rx-doc-item-title{font-size:0.94rem;font-weight:700;color:#12344d;}
+  .rx-doc-item-meta{font-size:0.84rem;color:#546670;}
+  .rx-doc-item-note{font-size:0.84rem;color:#273b47;}
+  .rx-doc-observaciones{
+    border:1px solid #e8f0f5;
+    border-radius:10px;
+    padding:10px 12px;
+    background:#fbfdff;
+    break-inside:avoid;
+  }
+  .rx-doc-section-title{
+    font-size:0.82rem;
+    font-weight:800;
+    color:#0a405f;
+    text-transform:uppercase;
+    letter-spacing:.02em;
+    margin-bottom:4px;
+  }
+  .rx-doc-observaciones-text{font-size:0.88rem;color:#273b47;white-space:pre-wrap;}
+  .rx-doc-signature{display:grid;justify-items:end;gap:4px;break-inside:avoid;}
+  .rx-doc-sign-line{width:230px;border-top:1px solid #9fb6c4;}
+  .rx-doc-sign-name{font-size:0.9rem;font-weight:700;color:#12344d;}
+  .rx-doc-sign-meta{font-size:0.8rem;color:#5d6b74;}
+  .rx-doc-footer{
+    border-top:1px solid #edf4f8;
+    padding-top:10px;
+    display:grid;
+    gap:6px;
+    break-inside:avoid;
+  }
+  .rx-doc-footer-item{font-size:0.8rem;color:#5d6b74;line-height:1.35;}
+  @media (max-width: 991.98px){
+    .rx-doc-header{flex-direction:column;align-items:flex-start;}
+    .rx-doc-doctor{text-align:left;margin-left:0;min-width:0;}
+    .rx-doc-signature{justify-items:start;}
+  }
+  @media print{
+    @page{size:letter portrait;margin:12mm 14mm;}
+    .no-print{display:none !important;}
+    html, body{background:#fff !important;}
+    .container.py-4{padding:0 !important;max-width:none !important;}
+    .rx-doc-sheet{
+      border:0 !important;
+      border-radius:0 !important;
+      box-shadow:none !important;
+      padding:0 !important;
+      gap:12px;
+    }
+    .rx-doc-list{gap:6px;}
+  }
+</style>
+<?php endif; ?>
 <div class="<?php echo $embed ? 'py-1' : 'container py-4'; ?>">
-  <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3 no-print">
     <div>
       <h1 class="h4 mb-0">Documento clínico</h1>
       <?php if ($title !== '-' && $uuid !== ''): ?>
@@ -295,13 +449,108 @@ if (!$embed) {
     </div>
   </div>
 
-  <p class="text-secondary mb-3">uuid: <code><?php echo h($uuid !== '' ? $uuid : '-'); ?></code></p>
+  <p class="text-secondary mb-3 no-print">uuid: <code><?php echo h($uuid !== '' ? $uuid : '-'); ?></code></p>
 
   <?php if ($uuid === ''): ?>
     <div class="alert alert-warning">uuid requerido.</div>
   <?php elseif ($errorMessage !== ''): ?>
     <div class="alert alert-danger"><?php echo h($errorMessage); ?></div>
   <?php else: ?>
+    <?php if ($isPrescriptionDoc): ?>
+      <article class="rx-doc-sheet">
+        <header class="rx-doc-header">
+          <?php if ($rxDoctorLogo !== '' || $rxGroupLogo !== ''): ?>
+            <div class="rx-doc-logos">
+              <?php if ($rxDoctorLogo !== ''): ?>
+                <img class="rx-doc-logo" src="<?php echo h($rxDoctorLogo); ?>" alt="Logo médico">
+              <?php endif; ?>
+              <?php if ($rxGroupLogo !== ''): ?>
+                <img class="rx-doc-logo" src="<?php echo h($rxGroupLogo); ?>" alt="Logo grupo médico">
+              <?php endif; ?>
+            </div>
+          <?php endif; ?>
+          <div class="rx-doc-doctor">
+            <?php if ($rxDoctorName !== ''): ?><div class="rx-doc-doctor-name"><?php echo h($rxDoctorName); ?></div><?php endif; ?>
+            <?php if ($rxDoctorSpecialty !== ''): ?><div class="rx-doc-doctor-meta"><?php echo h($rxDoctorSpecialty); ?></div><?php endif; ?>
+            <?php if ($rxDoctorCedula !== ''): ?><div class="rx-doc-doctor-meta">Cédula: <?php echo h($rxDoctorCedula); ?></div><?php endif; ?>
+          </div>
+        </header>
+
+        <section class="rx-doc-patient">
+          <div class="rx-doc-patient-name"><?php echo h($rxPatientName !== '' ? $rxPatientName : 'Paciente'); ?></div>
+          <div class="rx-doc-patient-meta">
+            <?php
+            $patientMetaText = implode(' · ', $rxPatientMeta);
+            echo h($patientMetaText);
+            if ($rxEmissionDate !== '') {
+                echo h(($patientMetaText !== '' ? ' · ' : '') . 'Fecha: ' . $rxEmissionDate);
+            }
+            ?>
+          </div>
+        </section>
+
+        <section>
+          <div class="rx-doc-rp">Rp.</div>
+          <ol class="rx-doc-list">
+            <?php if ($rxItems === []): ?>
+              <li class="rx-doc-item"><div class="rx-doc-item-note">Sin medicamentos registrados</div></li>
+            <?php else: ?>
+              <?php foreach ($rxItems as $idx => $item): ?>
+                <?php
+                $medicamento = clinical_doc_clean_text($item['medicamento'] ?? '');
+                $dosis = clinical_doc_clean_text($item['dosis'] ?? '');
+                $via = clinical_doc_clean_text($item['via'] ?? '');
+                $frecuencia = clinical_doc_clean_text($item['frecuencia'] ?? $item['periodicidad'] ?? '');
+                $duracion = clinical_doc_clean_text($item['duracion'] ?? '');
+                $indicaciones = clinical_doc_clean_text($item['indicaciones'] ?? '');
+                $itemMeta = array_values(array_filter([
+                  $dosis !== '' ? ('Dosis: ' . $dosis) : '',
+                  $via !== '' ? ('Vía: ' . $via) : '',
+                  $frecuencia !== '' ? ('Frecuencia: ' . $frecuencia) : '',
+                  $duracion !== '' ? ('Duración: ' . $duracion) : '',
+                ]));
+                ?>
+                <li class="rx-doc-item">
+                  <div class="rx-doc-item-title"><?php echo h($medicamento !== '' ? $medicamento : ('Medicamento ' . ((int)$idx + 1))); ?></div>
+                  <?php if ($itemMeta !== []): ?><div class="rx-doc-item-meta"><?php echo h(implode(' · ', $itemMeta)); ?></div><?php endif; ?>
+                  <?php if ($indicaciones !== ''): ?><div class="rx-doc-item-note"><?php echo h($indicaciones); ?></div><?php endif; ?>
+                </li>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </ol>
+        </section>
+
+        <?php if ($rxObservaciones !== ''): ?>
+          <section class="rx-doc-observaciones">
+            <div class="rx-doc-section-title">Observaciones</div>
+            <div class="rx-doc-observaciones-text"><?php echo h($rxObservaciones); ?></div>
+          </section>
+        <?php endif; ?>
+
+        <section class="rx-doc-signature">
+          <div class="rx-doc-sign-line"></div>
+          <?php if ($rxDoctorName !== ''): ?><div class="rx-doc-sign-name"><?php echo h($rxDoctorName); ?></div><?php endif; ?>
+          <?php if ($rxDoctorCedula !== ''): ?><div class="rx-doc-sign-meta">Cédula: <?php echo h($rxDoctorCedula); ?></div><?php endif; ?>
+        </section>
+
+        <footer class="rx-doc-footer">
+          <?php if ($rxConsultorios === []): ?>
+            <div class="rx-doc-footer-item">Información de consultorio no disponible.</div>
+          <?php else: ?>
+            <?php foreach ($rxConsultorios as $consultorio): ?>
+              <?php
+              $lines = array_values(array_filter([
+                $consultorio['nombre'] ?? '',
+                $consultorio['domicilio'] ?? '',
+                $consultorio['telefono'] ?? '',
+              ]));
+              ?>
+              <div class="rx-doc-footer-item"><?php echo h(implode(' · ', $lines)); ?></div>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </footer>
+      </article>
+    <?php else: ?>
     <div class="mm-card mb-3">
       <div class="body small">
         <div><strong>Tipo:</strong> <?php echo h($docType); ?></div>
@@ -326,6 +575,7 @@ if (!$embed) {
           <pre class="mb-0 small"><?php echo h($payloadJson); ?></pre>
         </div>
       </div>
+    <?php endif; ?>
     <?php endif; ?>
   <?php endif; ?>
 </div>
