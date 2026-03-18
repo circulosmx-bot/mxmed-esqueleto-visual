@@ -5254,6 +5254,142 @@ body{margin:0;background:var(--mm-fondo-base);}
   white-space:pre;
 }
 
+.ne-rx-read{
+  width:100%;
+}
+.ne-rx-read-card{
+  background:#fff;
+  border:1px solid #d7eaf2;
+  border-radius:14px;
+  padding:18px;
+  display:grid;
+  gap:14px;
+}
+.ne-rx-read-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  border-bottom:1px solid #edf4f8;
+  padding-bottom:10px;
+}
+.ne-rx-read-logos{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.ne-rx-read-logo{
+  max-height:44px;
+  max-width:132px;
+  object-fit:contain;
+}
+.ne-rx-read-doctor{
+  margin-left:auto;
+  text-align:right;
+  min-width:220px;
+}
+.ne-rx-read-doctor-name{
+  font-size:1rem;
+  font-weight:800;
+  color:#0a405f;
+  line-height:1.25;
+}
+.ne-rx-read-doctor-meta{
+  font-size:0.86rem;
+  color:#5d6b74;
+}
+.ne-rx-read-patient{
+  display:grid;
+  gap:4px;
+}
+.ne-rx-read-patient-name{
+  font-size:0.98rem;
+  font-weight:700;
+  color:#12344d;
+}
+.ne-rx-read-patient-meta{
+  font-size:0.84rem;
+  color:#64737d;
+}
+.ne-rx-read-body{
+  display:grid;
+  gap:8px;
+}
+.ne-rx-read-rp{
+  font-size:1.18rem;
+  font-weight:800;
+  color:#0a405f;
+}
+.ne-rx-read-list{
+  margin:0;
+  padding-left:20px;
+  display:grid;
+  gap:8px;
+}
+.ne-rx-read-item-title{
+  font-size:0.94rem;
+  font-weight:700;
+  color:#12344d;
+}
+.ne-rx-read-item-meta{
+  font-size:0.84rem;
+  color:#546670;
+}
+.ne-rx-read-item-note{
+  font-size:0.84rem;
+  color:#273b47;
+}
+.ne-rx-read-observaciones{
+  border:1px solid #e8f0f5;
+  border-radius:10px;
+  padding:10px 12px;
+  background:#fbfdff;
+}
+.ne-rx-read-section-title{
+  font-size:0.82rem;
+  font-weight:800;
+  color:#0a405f;
+  text-transform:uppercase;
+  letter-spacing:.02em;
+  margin-bottom:4px;
+}
+.ne-rx-read-observaciones-text{
+  font-size:0.88rem;
+  color:#273b47;
+  white-space:pre-wrap;
+}
+.ne-rx-read-signature{
+  display:grid;
+  justify-items:end;
+  gap:4px;
+  margin-top:6px;
+}
+.ne-rx-read-sign-line{
+  width:230px;
+  border-top:1px solid #9fb6c4;
+}
+.ne-rx-read-sign-name{
+  font-size:0.9rem;
+  font-weight:700;
+  color:#12344d;
+}
+.ne-rx-read-sign-meta{
+  font-size:0.8rem;
+  color:#5d6b74;
+}
+.ne-rx-read-footer{
+  border-top:1px solid #edf4f8;
+  padding-top:10px;
+  display:grid;
+  gap:6px;
+}
+.ne-rx-read-footer-item{
+  font-size:0.8rem;
+  color:#5d6b74;
+  line-height:1.35;
+}
+
 .ne-rx-grid{
   display:grid;
   gap:8px;
@@ -5280,6 +5416,18 @@ body{margin:0;background:var(--mm-fondo-base);}
 @media (max-width: 991.98px){
   .ne-rx-row{
     grid-template-columns: 1fr 1fr;
+  }
+  .ne-rx-read-header{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+  .ne-rx-read-doctor{
+    text-align:left;
+    margin-left:0;
+    min-width:0;
+  }
+  .ne-rx-read-signature{
+    justify-items:start;
   }
 }
 

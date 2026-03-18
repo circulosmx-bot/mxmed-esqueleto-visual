@@ -6195,10 +6195,11 @@
                   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                     <div class="modal-content">
                       <div class="modal-header">
-                        <h5 class="modal-title">Nota de evolución</h5>
+                        <h5 class="modal-title" id="ne_doc_modal_title">Nota de evolución</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body">
+                        <div class="ne-rx-read d-none" id="ne_doc_rx_layout" aria-live="polite"></div>
                         <textarea class="form-control ne-doc" id="ne_doc_text" rows="16" readonly></textarea>
                         <div class="mt-3 d-none" id="ne_doc_note_capture_wrap">
                           <div class="small fw-semibold mb-2">Imagen clínica adjunta</div>
