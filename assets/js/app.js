@@ -6372,6 +6372,7 @@ console.info('app.js loaded :: 20251123a');
       pacTel: root.querySelector('#ci_pac_tel'),
       pacMail: root.querySelector('#ci_pac_mail'),
       pacDom: root.querySelector('#ci_pac_dom'),
+      contactNotice: root.querySelector('#ci_contact_notice'),
       template: root.querySelector('#ci_template'),
       title: root.querySelector('#ci_title'),
       procedimiento: root.querySelector('#ci_procedimiento'),
@@ -6864,6 +6865,20 @@ console.info('app.js loaded :: 20251123a');
       if(els.pacTel) els.pacTel.value = contact.telefono;
       if(els.pacMail) els.pacMail.value = contact.correo;
       if(els.pacDom) els.pacDom.value = contact.domicilio;
+      if(els.contactNotice){
+        // TODO(CI): validar contacto obligatorio desde puertas de entrada (alta/cita/agenda), no en consentimiento.
+        const missing = [];
+        if(!sanitizeText(contact.telefono)) missing.push('teléfono');
+        if(!sanitizeText(contact.correo)) missing.push('correo electrónico');
+        if(missing.length){
+          const suffix = missing.length === 2 ? 'teléfono y correo electrónico' : missing[0];
+          els.contactNotice.textContent = `Falta completar ${suffix} en la ficha del paciente.`;
+          els.contactNotice.classList.remove('d-none');
+        }else{
+          els.contactNotice.textContent = '';
+          els.contactNotice.classList.add('d-none');
+        }
+      }
     };
 
     const resetWizard = ()=>{
@@ -7162,10 +7177,11 @@ console.info('app.js loaded :: 20251123a');
       const title = `Consentimiento informado — ${titleBase}`;
       const summary = `${status} · ${consentTitle || templateLabel || consentType || 'consentimiento'} · ${nowSql.slice(0, 10)}`;
       const patientSnapshot = readPatientSnapshot();
+      const contactSnapshot = readPatientContact();
       const contact = {
-        telefono: sanitizeText(els.pacTel?.value || ''),
-        correo: sanitizeText(els.pacMail?.value || ''),
-        domicilio: sanitizeText(els.pacDom?.value || '')
+        telefono: sanitizeText(contactSnapshot.telefono || ''),
+        correo: sanitizeText(contactSnapshot.correo || ''),
+        domicilio: sanitizeText(els.pacDom?.value || contactSnapshot.domicilio || '')
       };
       let encounterKey = '';
       if(typeof window.getActiveEncounterKey === 'function'){

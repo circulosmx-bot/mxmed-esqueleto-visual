@@ -335,6 +335,7 @@ $returnTo = validate_return_to((string)($_GET['return_to'] ?? ''));
 $returnToClean = $returnTo !== null ? normalize_return_to($returnTo) : '';
 $backHref = $returnToClean !== '' ? $returnToClean : 'javascript:history.back()';
 $embedQueryFlag = trim((string)($_GET['embed'] ?? '')) === '1' ? '1' : '';
+$debugView = trim((string)($_GET['debug'] ?? '')) === '1';
 $errorMessage = '';
 $document = null;
 $bundleData = null;
@@ -956,9 +957,9 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
-    <?php if ($payloadJson !== ''): ?>
+    <?php if ($payloadJson !== '' && (!$isConsentDoc || $debugView)): ?>
       <div class="mm-card">
-        <div class="head"><h5>Payload (JSON)</h5></div>
+        <div class="head"><h5><?php echo $isConsentDoc ? 'Datos técnicos (debug)' : 'Payload (JSON)'; ?></h5></div>
         <div class="body">
           <pre class="mb-0 small"><?php echo h($payloadJson); ?></pre>
         </div>
