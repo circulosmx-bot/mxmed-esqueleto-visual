@@ -258,6 +258,9 @@ function timeline_activity_title(array $item, array $meta): string
     if ($group === 'clinical' && ($subtype === 'note' || $subtype === 'note_evolution' || $documentType === 'note' || $documentType === 'nota_evolucion')) {
         return 'Nota de evolución';
     }
+    if ($documentType === 'consentimiento_informado' || $documentType === 'consent_document') {
+        return 'Consentimiento informado';
+    }
     if ($group === 'studies' && $phase === 'order') {
         return 'Orden de estudio';
     }
@@ -297,6 +300,21 @@ function timeline_activity_icon(array $item, array $meta): string
     $phase = trim((string)($meta['catalog_phase'] ?? ''));
     $document = is_array($item['clinical_document'] ?? null) ? $item['clinical_document'] : [];
     $documentType = strtolower(trim((string)($document['document_type'] ?? '')));
+    $documentTypeIconMap = [
+        'nota_evolucion' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"></rect><path d="M8 9h8M8 13h8M8 17h5"></path></svg>',
+        'note' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"></rect><path d="M8 9h8M8 13h8M8 17h5"></path></svg>',
+        'prescription' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 4h8a4 4 0 0 1 0 8H8z"></path><path d="M8 12v8"></path><path d="M4 16h8"></path><path d="m14 14 6 6"></path></svg>',
+        'lab_order' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 4v7l-4 7a2 2 0 0 0 1.8 3h8.4A2 2 0 0 0 18 18l-4-7V4"></path><path d="M8 4h8"></path></svg>',
+        'lab_result' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 4v7l-4 7a2 2 0 0 0 1.8 3h8.4A2 2 0 0 0 18 18l-4-7V4"></path><path d="M8 4h8"></path></svg>',
+        'imaging_order' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2"></rect><circle cx="12" cy="12" r="2.8"></circle><path d="M19 9.5v-2"></path><path d="M5 9.5v-2"></path></svg>',
+        'imaging_result' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2"></rect><circle cx="12" cy="12" r="2.8"></circle><path d="M19 9.5v-2"></path><path d="M5 9.5v-2"></path></svg>',
+        'result' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 4h10v6l-3 3v5a2 2 0 0 1-4 0v-5l-3-3z"></path><path d="M9 4v2M15 4v2"></path></svg>',
+        'consentimiento_informado' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"></rect><path d="M8 9h8"></path><path d="M8 13h5"></path><path d="m14.5 16 1.8 1.8L19.5 14.6"></path></svg>',
+        'consent_document' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"></rect><path d="M8 9h8"></path><path d="M8 13h5"></path><path d="m14.5 16 1.8 1.8L19.5 14.6"></path></svg>',
+    ];
+    if ($itemType === 'document' && isset($documentTypeIconMap[$documentType])) {
+        return $documentTypeIconMap[$documentType];
+    }
 
     if ($itemType === 'appointment') {
         return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"></rect><path d="M8 3v4M16 3v4M4 9h16"></path></svg>';
@@ -1839,6 +1857,7 @@ if (!$embed) {
                 $isMedicationAdministration = ($docTypeNorm === 'medication_administration');
                 $isWoundCare = ($docTypeNorm === 'wound_care');
                 $isProcedure = ($docTypeNorm === 'procedure');
+                $isConsentDoc = in_array($docTypeNorm, ['consentimiento_informado', 'consent_document'], true);
                 $isStudyOrder = in_array($docTypeNorm, ['lab_order', 'imaging_order', 'order'], true);
                 $isStudyResult = in_array($docTypeNorm, ['lab_result', 'imaging_result', 'result', 'lab_pdf'], true);
                 $isStudyDoc = $isStudyOrder || $isStudyResult;
@@ -1915,6 +1934,22 @@ if (!$embed) {
                         if ($remaining > 0) {
                             $studyCompactLine .= ' y ' . $remaining . ' más';
                         }
+                    }
+                } elseif ($isConsentDoc) {
+                    $consentStatus = strtolower(trim((string)($docPayload['status'] ?? ($docPayload['consent']['status'] ?? 'draft'))));
+                    $consentStatusLabel = $consentStatus === 'granted' ? 'Emitido' : 'Borrador';
+                    $consentTitle = trim((string)($docPayload['consent']['document_title'] ?? ''));
+                    $consentProcedure = trim((string)($docPayload['consent_legal']['procedimiento'] ?? ($docPayload['procedure'] ?? '')));
+                    $consentSignerName = trim((string)($docPayload['firmante']['nombre'] ?? ''));
+                    $docDisplayTitle = $consentTitle !== '' ? $consentTitle : 'Consentimiento informado';
+                    $docMetaLine1 = 'Estado: ' . $consentStatusLabel;
+                    if ($docOccurredAt !== '') {
+                        $docMetaLine2 = $docOccurredAt;
+                    }
+                    if ($consentSignerName !== '') {
+                        $docMetaLine3 = 'Firmante: ' . $consentSignerName;
+                    } elseif ($consentProcedure !== '') {
+                        $docMetaLine3 = $consentProcedure;
                     }
                 } elseif ($isImmunization) {
                     $vaccine = is_array($docPayload['vaccine'] ?? null) ? $docPayload['vaccine'] : [];
@@ -2053,7 +2088,7 @@ if (!$embed) {
                         $docMetaLine3 = 'Nota: ' . $note;
                     }
                 }
-                $docViewPath = $docIsImage ? '/modules/clinical/ui/viewer.php' : '/modules/clinical/ui/document.php';
+                $docViewPath = $docIsImage || $isConsentDoc ? '/modules/clinical/ui/viewer.php' : '/modules/clinical/ui/document.php';
                 $docHref = $docUuid !== '' ? $docViewPath . '?' . carry_embed_params(['uuid' => $docUuid]) : '';
                 $studyVisualClass = '';
                 if ($isStudyDoc) {

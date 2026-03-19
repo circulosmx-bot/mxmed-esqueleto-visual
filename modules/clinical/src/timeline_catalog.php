@@ -56,6 +56,7 @@ function mxmed_clinical_timeline_catalog(): array
             'label' => 'Documentos',
             'priority' => 60,
             'subtypes' => [
+                'consentimiento_informado' => ['label' => 'Consentimiento', 'priority' => 5],
                 'image' => ['label' => 'Imagen', 'priority' => 10],
                 'pdf' => ['label' => 'PDF', 'priority' => 20],
                 'document' => ['label' => 'Documento', 'priority' => 30],
@@ -161,6 +162,9 @@ function mxmed_clinical_timeline_classify_item(array $item): array
     if ($documentType === 'lab_pdf') {
         return mxmed_clinical_timeline_catalog_entry('results', 'lab_pdf');
     }
+    if ($documentType === 'consentimiento_informado' || $documentType === 'consent_document') {
+        return mxmed_clinical_timeline_catalog_entry('documents', 'consentimiento_informado');
+    }
     if (in_array($documentType, ['results', 'result'], true)) {
         return mxmed_clinical_timeline_catalog_entry('results', 'result');
     }
@@ -262,6 +266,9 @@ function classify_catalog_v11(array $item): array
     if ($documentType === 'image') {
         return mxmed_clinical_timeline_catalog_group_entry('multimedia');
     }
+    if ($documentType === 'consentimiento_informado' || $documentType === 'consent_document') {
+        return mxmed_clinical_timeline_catalog_group_entry('documents');
+    }
     if ($documentType !== '') {
         return mxmed_clinical_timeline_catalog_group_entry('documents');
     }
@@ -327,6 +334,9 @@ function mxmed_clinical_timeline_chip_text(array $item): string
     }
 
     if ($groupMeta['catalog_group'] === 'documents') {
+        if ($documentType === 'consentimiento_informado' || $documentType === 'consent_document') {
+            return 'Documentos · Consentimiento';
+        }
         return 'Documentos';
     }
 
