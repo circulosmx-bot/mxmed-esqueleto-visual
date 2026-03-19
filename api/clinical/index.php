@@ -6368,20 +6368,55 @@ try {
             $patientId = trim((string)($row['patient_id'] ?? ''));
             $encounterKey = trim((string)($row['encounter_key'] ?? ''));
             $noteContext = trim((string)($row['note_context'] ?? 'nota_clinica_modal'));
+            $noteContextNorm = strtolower($noteContext);
+            $isConsentIdentityContext = strpos($noteContextNorm, 'consentimiento_identidad_firmante') === 0;
+            $identityKind = 'otro';
+            if ($isConsentIdentityContext) {
+                $parts = explode(':', $noteContextNorm, 2);
+                $identityKindCandidate = trim((string)($parts[1] ?? ''));
+                if (in_array($identityKindCandidate, ['ine', 'pasaporte', 'otro'], true)) {
+                    $identityKind = $identityKindCandidate;
+                }
+            }
+            $uploadMime = strtolower(trim((string)($uploadFile['type'] ?? '')));
+            $uploadName = strtolower(trim((string)($uploadFile['name'] ?? '')));
+            $resolvedDocumentType = (strpos($uploadMime, 'pdf') !== false || preg_match('/\.pdf$/i', $uploadName) === 1) ? 'pdf' : 'image';
+            $identityKindLabelMap = [
+                'ine' => 'Credencial de elector / INE',
+                'pasaporte' => 'Pasaporte',
+                'otro' => 'Documento de identidad',
+            ];
+            $identityKindLabel = $identityKindLabelMap[$identityKind] ?? 'Documento de identidad';
+            $defaultTitle = $isConsentIdentityContext
+                ? ('Anexo identidad firmante — ' . $identityKindLabel)
+                : 'Imagen clínica (captura móvil)';
+            $defaultSummary = $isConsentIdentityContext
+                ? 'Anexo de identidad del firmante'
+                : 'Imagen clínica adjunta desde celular';
+            $payloadSource = $isConsentIdentityContext ? 'consentimiento_identidad_qr_v1' : 'nota_modal_qr_v1';
             $payload = [
                 'patient_id' => $patientId,
-                'document_type' => 'image',
-                'title' => 'Imagen clínica (captura móvil)',
-                'summary' => ($summary !== '') ? $summary : 'Imagen clínica adjunta desde celular',
+                'document_type' => $resolvedDocumentType,
+                'title' => $defaultTitle,
+                'summary' => ($summary !== '') ? $summary : $defaultSummary,
                 'event_datetime' => $eventDatetime,
-                'media_tag_key' => 'evidencia_clinica',
-                'media_tag_label' => 'Evidencia clínica',
                 'payload' => [
-                    'source' => 'nota_modal_qr_v1',
+                    'source' => $payloadSource,
                     'note_capture_token' => $token,
                     'note_context' => ($noteContext !== '' ? $noteContext : 'nota_clinica_modal'),
                 ],
             ];
+            if ($isConsentIdentityContext) {
+                $payload['payload']['identity_doc_kind'] = $identityKind;
+                $payload['payload']['identity_doc_label'] = $identityKindLabel;
+                if ($resolvedDocumentType === 'image') {
+                    $payload['media_tag_key'] = 'identidad_firmante';
+                    $payload['media_tag_label'] = 'Identidad del firmante';
+                }
+            } else {
+                $payload['media_tag_key'] = 'evidencia_clinica';
+                $payload['media_tag_label'] = 'Evidencia clínica';
+            }
             if ($encounterKey !== '') {
                 $payload['encounter_key'] = $encounterKey;
             }
