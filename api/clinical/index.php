@@ -6440,30 +6440,43 @@ try {
                 $signedAtRaw = gmdate('Y-m-d H:i:s');
             }
             $uploadedAt = gmdate('Y-m-d H:i:s');
-            $stmt = $pdo->prepare("
-                UPDATE clinical_note_capture_tokens
-                SET
-                    status = 'uploaded',
-                    uploaded_at = :uploaded_at,
-                    signature_image_data = :signature_image_data,
-                    signature_signer_name = :signature_signer_name,
-                    signature_signed_at = :signature_signed_at,
-                    preview_url = :preview_url,
-                    updated_at = :updated_at
-                WHERE token = :token
-            ");
-            $stmt->bindValue(':uploaded_at', $uploadedAt, PDO::PARAM_STR);
-            $stmt->bindValue(':signature_image_data', $signatureData, PDO::PARAM_STR);
-            if ($signerName !== '') {
-                $stmt->bindValue(':signature_signer_name', $signerName, PDO::PARAM_STR);
-            } else {
-                $stmt->bindValue(':signature_signer_name', null, PDO::PARAM_NULL);
+            try {
+                $stmt = $pdo->prepare("
+                    UPDATE clinical_note_capture_tokens
+                    SET
+                        status = 'uploaded',
+                        uploaded_at = :uploaded_at,
+                        signature_image_data = :signature_image_data,
+                        signature_signer_name = :signature_signer_name,
+                        signature_signed_at = :signature_signed_at,
+                        preview_url = NULL,
+                        updated_at = :updated_at
+                    WHERE token = :token
+                ");
+                $stmt->bindValue(':uploaded_at', $uploadedAt, PDO::PARAM_STR);
+                $stmt->bindValue(':signature_image_data', $signatureData, PDO::PARAM_STR);
+                if ($signerName !== '') {
+                    $stmt->bindValue(':signature_signer_name', $signerName, PDO::PARAM_STR);
+                } else {
+                    $stmt->bindValue(':signature_signer_name', null, PDO::PARAM_NULL);
+                }
+                $stmt->bindValue(':signature_signed_at', $signedAtRaw, PDO::PARAM_STR);
+                $stmt->bindValue(':updated_at', $uploadedAt, PDO::PARAM_STR);
+                $stmt->bindValue(':token', $token, PDO::PARAM_STR);
+                $stmt->execute();
+            } catch (Throwable $e) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => trim((string)$e->getMessage()) ?: 'no se pudo guardar la firma remota',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/signature',
+                    ],
+                ], 500);
+                return;
             }
-            $stmt->bindValue(':signature_signed_at', $signedAtRaw, PDO::PARAM_STR);
-            $stmt->bindValue(':preview_url', $signatureData, PDO::PARAM_STR);
-            $stmt->bindValue(':updated_at', $uploadedAt, PDO::PARAM_STR);
-            $stmt->bindValue(':token', $token, PDO::PARAM_STR);
-            $stmt->execute();
 
             $latest = clinical_note_capture_token_fetch($pdo, $token);
             if (!is_array($latest)) {
@@ -6472,7 +6485,7 @@ try {
                     'status' => 'uploaded',
                     'expires_at' => ($row['expires_at'] ?? ''),
                     'uploaded_at' => $uploadedAt,
-                    'preview_url' => $signatureData,
+                    'preview_url' => '',
                     'signature_image_data' => $signatureData,
                     'signature_signer_name' => $signerName,
                     'signature_signed_at' => $signedAtRaw,
@@ -6487,7 +6500,7 @@ try {
                     'method' => 'POST',
                     'route' => 'note-capture-tokens/{token}/signature',
                 ],
-            ], 201);
+            ], 200);
             return;
         }
 
