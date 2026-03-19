@@ -6871,8 +6871,8 @@ console.info('app.js loaded :: 20251123a');
         if(!sanitizeText(contact.telefono)) missing.push('teléfono');
         if(!sanitizeText(contact.correo)) missing.push('correo electrónico');
         if(missing.length){
-          const suffix = missing.length === 2 ? 'teléfono y correo electrónico' : missing[0];
-          els.contactNotice.textContent = `Falta completar ${suffix} en la ficha del paciente.`;
+          const detail = missing.length === 2 ? 'teléfono y correo electrónico' : missing[0];
+          els.contactNotice.textContent = `Falta completar datos de contacto en la ficha del paciente (${detail}).`;
           els.contactNotice.classList.remove('d-none');
         }else{
           els.contactNotice.textContent = '';
