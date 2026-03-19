@@ -6360,6 +6360,7 @@ console.info('app.js loaded :: 20251123a');
       modeGuided: root.querySelector('#ci_mode_guided'),
       modeFull: root.querySelector('#ci_mode_full'),
       emitErrors: root.querySelector('#ci_emit_errors'),
+      prevTop: root.querySelector('#ci_prev_top'),
       prev: root.querySelector('#ci_prev'),
       next: root.querySelector('#ci_next'),
       save: root.querySelector('#ci_save'),
@@ -6371,7 +6372,6 @@ console.info('app.js loaded :: 20251123a');
       pacTel: root.querySelector('#ci_pac_tel'),
       pacMail: root.querySelector('#ci_pac_mail'),
       pacDom: root.querySelector('#ci_pac_dom'),
-      updatePatient: root.querySelector('#ci_update_patient'),
       template: root.querySelector('#ci_template'),
       title: root.querySelector('#ci_title'),
       procedimiento: root.querySelector('#ci_procedimiento'),
@@ -6758,6 +6758,7 @@ console.info('app.js loaded :: 20251123a');
       els.step1?.classList.toggle('d-none', isFullMode || !isStep1);
       els.step2?.classList.toggle('d-none', isFullMode || isStep1);
       els.fullView?.classList.toggle('d-none', !isFullMode);
+      els.prevTop?.classList.toggle('d-none', isFullMode || isStep1);
       if(els.modeGuided) els.modeGuided.classList.toggle('active', !isFullMode);
       if(els.modeFull) els.modeFull.classList.toggle('active', isFullMode);
 
@@ -6844,7 +6845,6 @@ console.info('app.js loaded :: 20251123a');
         testigo_2_nombre: '',
         confirm_informed: false
       };
-      if(els.updatePatient) els.updatePatient.checked = false;
       clearConsentValidationFeedback();
       syncFormStateToInputs();
       if(els.doctorName){
@@ -7454,6 +7454,11 @@ console.info('app.js loaded :: 20251123a');
       describeTemplate(els.template?.value || '');
     });
     els.prev?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      state.step = 1;
+      renderStep();
+    });
+    els.prevTop?.addEventListener('click', (event)=>{
       event.preventDefault();
       state.step = 1;
       renderStep();
