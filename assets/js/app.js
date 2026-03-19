@@ -6412,7 +6412,11 @@ console.info('app.js loaded :: 20251123a');
       identitySlotStep2: root.querySelector('#ci_identity_slot_step2'),
       identitySlotFull: root.querySelector('#ci_identity_slot_full'),
       identityFiles: root.querySelector('#ci_identity_files'),
+      identityDocKind: root.querySelector('#ci_identity_doc_kind'),
       identityFilesList: root.querySelector('#ci_identity_files_list'),
+      identityQrOpen: root.querySelector('[data-action="ci-identity-open-qr"]'),
+      identityQrStatus: root.querySelector('[data-role="ci-identity-qr-status"]'),
+      identityQrModal: pane.querySelector('#modalConsentIdentityQr'),
       signatureCanvas: root.querySelector('#ci_signature_canvas'),
       signatureApply: root.querySelector('#ci_signature_apply'),
       signatureClear: root.querySelector('#ci_signature_clear'),
@@ -6428,6 +6432,7 @@ console.info('app.js loaded :: 20251123a');
       signaturePad: null,
       signatureHasStroke: false,
       identityFiles: [],
+      identityRemoteRefs: [],
       form: {
         title: '',
         motivo: '',
@@ -6452,6 +6457,19 @@ console.info('app.js loaded :: 20251123a');
         { key: 'investigacion', label: 'Investigación clínica', desc: 'Consentimiento para participación en protocolo de investigación.' },
         { key: 'otro', label: 'Otro', desc: 'Consentimiento informado general para procedimiento clínico.' }
       ]
+    };
+    const CONSENT_IDENTITY_QR_POLL_INTERVAL_MS = 4000;
+    const CONSENT_IDENTITY_QR_MAX_DURATION_MS = 90000;
+    const consentIdentityQrState = {
+      token: '',
+      status: '',
+      expiresAt: '',
+      mobileUrl: '',
+      pollIntervalId: 0,
+      pollTimeoutId: 0,
+      countdownIntervalId: 0,
+      cancelling: false,
+      startedAt: 0
     };
 
     const normalize = (str)=> String(str || '')
@@ -6579,19 +6597,379 @@ console.info('app.js loaded :: 20251123a');
       els.identityBlock.classList.remove('d-none');
     };
 
+    const normalizeConsentIdentityRef = (entry = {})=>{
+      if(!entry || typeof entry !== 'object') return null;
+      const normalized = {
+        document_id: sanitizeText(entry.document_id || entry.id || ''),
+        document_uuid: sanitizeText(entry.document_uuid || entry.uuid || ''),
+        title: sanitizeText(entry.title || ''),
+        document_type: sanitizeText(entry.document_type || ''),
+        file_name: sanitizeText(entry.file_name || ''),
+        preview_url: sanitizeText(entry.preview_url || ''),
+        note_capture_token: sanitizeText(entry.note_capture_token || ''),
+        source: sanitizeText(entry.source || '')
+      };
+      if(!normalized.document_id && !normalized.document_uuid && !normalized.note_capture_token){
+        return null;
+      }
+      return normalized;
+    };
+    const mergeConsentIdentityRefs = (refs = [])=>{
+      const incoming = Array.isArray(refs) ? refs : [];
+      if(incoming.length === 0) return;
+      const merged = [];
+      const seen = new Set();
+      const pushUnique = (entry)=>{
+        const normalized = normalizeConsentIdentityRef(entry);
+        if(!normalized) return;
+        const key = `${normalized.document_id}|${normalized.document_uuid}|${normalized.note_capture_token}`;
+        if(seen.has(key)) return;
+        seen.add(key);
+        merged.push(normalized);
+      };
+      (Array.isArray(state.identityRemoteRefs) ? state.identityRemoteRefs : []).forEach(pushUnique);
+      incoming.forEach(pushUnique);
+      state.identityRemoteRefs = merged;
+    };
+    const setConsentIdentityQrStatus = (message = '', tone = 'muted')=>{
+      if(!els.identityQrStatus) return;
+      const text = sanitizeText(message);
+      els.identityQrStatus.textContent = text;
+      els.identityQrStatus.classList.toggle('d-none', !text);
+      els.identityQrStatus.classList.toggle('text-success', tone === 'success');
+      els.identityQrStatus.classList.toggle('text-danger', tone === 'error');
+      els.identityQrStatus.classList.toggle('text-muted', tone !== 'success' && tone !== 'error');
+    };
+
     const renderIdentityFilesList = ()=>{
       if(!els.identityFilesList) return;
-      if(!Array.isArray(state.identityFiles) || state.identityFiles.length === 0){
+      const localFiles = Array.isArray(state.identityFiles) ? state.identityFiles : [];
+      const remoteRefs = Array.isArray(state.identityRemoteRefs) ? state.identityRemoteRefs : [];
+      if(localFiles.length === 0 && remoteRefs.length === 0){
         els.identityFilesList.textContent = 'Sin anexos cargados.';
         return;
       }
-      const labels = state.identityFiles.map((file)=> `${sanitizeText(file?.name || 'archivo')} (${Math.max(1, Math.round((Number(file?.size || 0) || 0) / 1024))} KB)`);
+      const labels = [];
+      localFiles.forEach((file)=>{
+        labels.push(`${sanitizeText(file?.name || 'archivo')} (${Math.max(1, Math.round((Number(file?.size || 0) || 0) / 1024))} KB)`);
+      });
+      remoteRefs.forEach((ref, idx)=>{
+        const title = sanitizeText(ref?.title || ref?.file_name || `Captura móvil ${idx + 1}`);
+        labels.push(`${title} (captura móvil)`);
+      });
       els.identityFilesList.textContent = labels.join(' · ');
+    };
+
+    const consentIdentityQrElements = ()=>{
+      const modal = els.identityQrModal;
+      if(!modal) return null;
+      return {
+        qrImage: modal.querySelector('[data-role="ci-identity-qr-image"]'),
+        qrLink: modal.querySelector('[data-role="ci-identity-qr-link"]'),
+        qrState: modal.querySelector('[data-role="ci-identity-qr-state"]'),
+        countdown: modal.querySelector('[data-role="ci-identity-qr-countdown"]'),
+        previewWrap: modal.querySelector('[data-role="ci-identity-qr-preview-wrap"]'),
+        previewImage: modal.querySelector('[data-role="ci-identity-qr-preview-image"]')
+      };
+    };
+    const setConsentIdentityQrModalState = (label = 'Pendiente', tone = 'muted')=>{
+      const qrEls = consentIdentityQrElements();
+      if(!qrEls?.qrState) return;
+      qrEls.qrState.textContent = sanitizeText(label || 'Pendiente');
+      qrEls.qrState.classList.remove('text-muted', 'text-success', 'text-danger');
+      qrEls.qrState.classList.add(tone === 'success' ? 'text-success' : (tone === 'error' ? 'text-danger' : 'text-muted'));
+    };
+    const updateConsentIdentityQrCountdown = ()=>{
+      const qrEls = consentIdentityQrElements();
+      if(!qrEls?.countdown) return;
+      const expiresRaw = sanitizeText(consentIdentityQrState.expiresAt || '');
+      if(!expiresRaw){
+        qrEls.countdown.textContent = '';
+        return;
+      }
+      const expiresTs = Date.parse(expiresRaw);
+      if(!Number.isFinite(expiresTs)){
+        qrEls.countdown.textContent = '';
+        return;
+      }
+      const remainingMs = Math.max(0, expiresTs - Date.now());
+      const totalSeconds = Math.ceil(remainingMs / 1000);
+      const mm = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+      const ss = String(totalSeconds % 60).padStart(2, '0');
+      qrEls.countdown.textContent = remainingMs <= 0 ? 'Token expirado.' : `Expira en ${mm}:${ss}`;
+    };
+    const stopConsentIdentityQrPolling = ()=>{
+      if(consentIdentityQrState.pollIntervalId){
+        window.clearInterval(consentIdentityQrState.pollIntervalId);
+        consentIdentityQrState.pollIntervalId = 0;
+      }
+      if(consentIdentityQrState.pollTimeoutId){
+        window.clearTimeout(consentIdentityQrState.pollTimeoutId);
+        consentIdentityQrState.pollTimeoutId = 0;
+      }
+      if(consentIdentityQrState.countdownIntervalId){
+        window.clearInterval(consentIdentityQrState.countdownIntervalId);
+        consentIdentityQrState.countdownIntervalId = 0;
+      }
+    };
+    const resetConsentIdentityQrState = (preserveMainStatus = false)=>{
+      stopConsentIdentityQrPolling();
+      consentIdentityQrState.token = '';
+      consentIdentityQrState.status = '';
+      consentIdentityQrState.expiresAt = '';
+      consentIdentityQrState.mobileUrl = '';
+      consentIdentityQrState.cancelling = false;
+      consentIdentityQrState.startedAt = 0;
+      const qrEls = consentIdentityQrElements();
+      if(qrEls?.qrImage) qrEls.qrImage.setAttribute('src', '');
+      if(qrEls?.qrLink){
+        qrEls.qrLink.removeAttribute('href');
+        qrEls.qrLink.textContent = '';
+      }
+      if(qrEls?.previewWrap) qrEls.previewWrap.classList.add('d-none');
+      if(qrEls?.previewImage) qrEls.previewImage.removeAttribute('src');
+      setConsentIdentityQrModalState('Pendiente');
+      updateConsentIdentityQrCountdown();
+      if(!preserveMainStatus){
+        setConsentIdentityQrStatus('');
+      }
+    };
+    const fetchConsentIdentityTokenStatus = async (token)=>{
+      const safeToken = sanitizeText(token);
+      if(!safeToken) throw new Error('Token inválido.');
+      const resp = await fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(safeToken)}`, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin'
+      });
+      const json = await resp.json().catch(()=> null);
+      if(!resp.ok || !json || json.ok !== true){
+        const message = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`);
+        throw new Error(message || 'No se pudo consultar el estado de la captura.');
+      }
+      return json?.data || {};
+    };
+    const cancelConsentIdentityTokenIfPending = async (reason = 'user_closed')=>{
+      const token = sanitizeText(consentIdentityQrState.token);
+      const status = sanitizeText(consentIdentityQrState.status || '').toLowerCase();
+      if(!token || (status && status !== 'pending') || consentIdentityQrState.cancelling){
+        return false;
+      }
+      consentIdentityQrState.cancelling = true;
+      try{
+        await fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(token)}/cancel`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({ reason: sanitizeText(reason) || 'user_closed' })
+        });
+        consentIdentityQrState.status = 'cancelled';
+        return true;
+      }catch(_){
+        return false;
+      }finally{
+        consentIdentityQrState.cancelling = false;
+      }
+    };
+    const persistConsentIdentityQrRef = (data = {})=>{
+      const documentId = sanitizeText(data?.document_id || '');
+      const documentUuid = sanitizeText(data?.document_uuid || '');
+      const previewUrl = sanitizeText(data?.preview_url || '');
+      const token = sanitizeText(consentIdentityQrState.token || data?.token || '');
+      if(!documentId && !documentUuid && !token) return;
+      const selectedKind = sanitizeText(els.identityDocKind?.value || 'ine').toLowerCase();
+      const kindLabelMap = {
+        ine: 'Credencial de elector / INE',
+        pasaporte: 'Pasaporte',
+        otro: 'Documento de identidad'
+      };
+      const kindLabel = kindLabelMap[selectedKind] || 'Documento de identidad';
+      mergeConsentIdentityRefs([{
+        document_id: documentId,
+        document_uuid: documentUuid,
+        title: `Anexo identidad firmante — ${kindLabel}`,
+        document_type: 'image',
+        preview_url: previewUrl,
+        note_capture_token: token,
+        source: 'consentimiento_identidad_qr_v1'
+      }]);
+      renderIdentityFilesList();
+      if(previewUrl){
+        const qrEls = consentIdentityQrElements();
+        if(qrEls?.previewImage) qrEls.previewImage.setAttribute('src', previewUrl);
+        if(qrEls?.previewWrap) qrEls.previewWrap.classList.remove('d-none');
+      }
+      setConsentIdentityQrStatus('Anexo de identidad recibido desde celular. Puedes capturar otro si lo necesitas.', 'success');
+    };
+    const syncConsentIdentityTokenStatus = async (opts = {})=>{
+      const token = sanitizeText(consentIdentityQrState.token);
+      if(!token) return;
+      const currentStatus = sanitizeText(consentIdentityQrState.status).toLowerCase();
+      if(currentStatus === 'expired' || currentStatus === 'cancelled' || currentStatus === 'uploaded') return;
+      try{
+        const data = await fetchConsentIdentityTokenStatus(token);
+        const status = sanitizeText(data?.status || '').toLowerCase();
+        consentIdentityQrState.status = status || 'pending';
+        consentIdentityQrState.expiresAt = sanitizeText(data?.expires_at || consentIdentityQrState.expiresAt);
+        if(status === 'uploaded'){
+          stopConsentIdentityQrPolling();
+          setConsentIdentityQrModalState('Anexo recibido', 'success');
+          persistConsentIdentityQrRef(data);
+          updateConsentIdentityQrCountdown();
+          return;
+        }
+        if(status === 'expired'){
+          stopConsentIdentityQrPolling();
+          setConsentIdentityQrModalState('Expirado', 'error');
+          setConsentIdentityQrStatus('El token QR expiró. Genera uno nuevo para continuar.', 'error');
+          updateConsentIdentityQrCountdown();
+          return;
+        }
+        if(status === 'cancelled'){
+          stopConsentIdentityQrPolling();
+          setConsentIdentityQrModalState('Cancelado', 'error');
+          setConsentIdentityQrStatus('La captura de identidad fue cancelada.', 'error');
+          updateConsentIdentityQrCountdown();
+          return;
+        }
+        setConsentIdentityQrModalState('Pendiente');
+        updateConsentIdentityQrCountdown();
+        if(opts.manual === true){
+          setConsentIdentityQrStatus('Aún no se recibe anexo. Sigue pendiente.', 'muted');
+        }
+      }catch(error){
+        if(opts.manual === true){
+          setConsentIdentityQrStatus(sanitizeText(error?.message || 'No se pudo verificar estado del token.'), 'error');
+        }
+      }
+    };
+    const startConsentIdentityQrPolling = ()=>{
+      const token = sanitizeText(consentIdentityQrState.token);
+      const status = sanitizeText(consentIdentityQrState.status || '').toLowerCase();
+      if(!token || status === 'expired' || status === 'cancelled') return;
+      stopConsentIdentityQrPolling();
+      consentIdentityQrState.startedAt = Date.now();
+      consentIdentityQrState.pollIntervalId = window.setInterval(()=>{
+        syncConsentIdentityTokenStatus();
+      }, CONSENT_IDENTITY_QR_POLL_INTERVAL_MS);
+      consentIdentityQrState.countdownIntervalId = window.setInterval(()=>{
+        updateConsentIdentityQrCountdown();
+      }, 1000);
+      consentIdentityQrState.pollTimeoutId = window.setTimeout(()=>{
+        if(consentIdentityQrState.status === 'uploaded') return;
+        stopConsentIdentityQrPolling();
+        setConsentIdentityQrStatus('No se recibió anexo en el tiempo esperado. Puedes verificar manualmente.', 'muted');
+        setConsentIdentityQrModalState('Pendiente');
+      }, CONSENT_IDENTITY_QR_MAX_DURATION_MS);
+    };
+    const resolveConsentIdentityCaptureContext = async ()=>{
+      const patientId = resolveActivePatientIdForConsent();
+      if(!patientId){
+        return { ok: false, error: 'Selecciona paciente antes de iniciar captura remota.' };
+      }
+      let encounterKey = '';
+      if(typeof window.resolveActiveEncounterForPatient === 'function'){
+        const resolved = await window.resolveActiveEncounterForPatient(patientId, { source: 'consentimiento_identidad_qr' }).catch(()=> null);
+        encounterKey = sanitizeText(resolved?.encounterKey || '');
+      }else if(typeof window.getActiveEncounterKey === 'function'){
+        encounterKey = sanitizeText(window.getActiveEncounterKey() || '');
+      }
+      if(encounterKey && typeof window.mxmedIsOperationalEncounterForPatient === 'function'){
+        const isOperational = window.mxmedIsOperationalEncounterForPatient(patientId, encounterKey) === true;
+        if(!isOperational) encounterKey = '';
+      }
+      return { ok: true, patientId, encounterKey };
+    };
+    const createConsentIdentityCaptureToken = async ()=>{
+      const context = await resolveConsentIdentityCaptureContext();
+      if(!context.ok){
+        throw new Error(context.error || 'No se pudo resolver el contexto del paciente.');
+      }
+      const kind = sanitizeText(els.identityDocKind?.value || 'ine').toLowerCase();
+      const body = {
+        patient_id: context.patientId,
+        encounter_key: context.encounterKey || null,
+        note_context: `consentimiento_identidad_firmante:${kind || 'ine'}`,
+        expires_in_sec: 900
+      };
+      const resp = await fetch('/api/clinical/index.php/note-capture-tokens', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(body)
+      });
+      const json = await resp.json().catch(()=> null);
+      if(!resp.ok || !json || json.ok !== true){
+        const message = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`);
+        throw new Error(message || 'No se pudo generar el token de captura para identidad.');
+      }
+      const data = json?.data || {};
+      consentIdentityQrState.token = sanitizeText(data?.token || '');
+      consentIdentityQrState.status = sanitizeText(data?.status || 'pending').toLowerCase();
+      consentIdentityQrState.expiresAt = sanitizeText(data?.expires_at || '');
+      consentIdentityQrState.mobileUrl = sanitizeText(data?.mobile_url || '');
+      if(!consentIdentityQrState.token){
+        throw new Error('El servicio no devolvió token de captura.');
+      }
+      return data;
+    };
+    const openConsentIdentityQrModal = async ()=>{
+      if(!els.identityQrModal){
+        setConsentIdentityQrStatus('No se encontró el modal QR para identidad.', 'error');
+        return;
+      }
+      if(!window.bootstrap || !window.bootstrap.Modal){
+        setConsentIdentityQrStatus('Bootstrap Modal no está disponible para abrir captura QR.', 'error');
+        return;
+      }
+      setConsentIdentityQrStatus('Generando QR para captura desde celular…', 'muted');
+      setConsentIdentityQrModalState('Generando…');
+      stopConsentIdentityQrPolling();
+      await cancelConsentIdentityTokenIfPending('new_token_requested');
+      resetConsentIdentityQrState(true);
+      try{
+        const data = await createConsentIdentityCaptureToken();
+        const mobileUrl = sanitizeText(data?.mobile_url || '');
+        const qrValue = sanitizeText(data?.qr_value || mobileUrl);
+        const normalizedQrValue = qrValue.startsWith('http')
+          ? qrValue
+          : `${window.location.origin}${qrValue.startsWith('/') ? qrValue : `/${qrValue}`}`;
+        const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(normalizedQrValue)}`;
+        const qrEls = consentIdentityQrElements();
+        if(qrEls?.qrImage) qrEls.qrImage.setAttribute('src', qrImageUrl);
+        if(qrEls?.qrLink){
+          const href = mobileUrl || qrValue;
+          const normalizedHref = href.startsWith('http')
+            ? href
+            : `${window.location.origin}${href.startsWith('/') ? href : `/${href}`}`;
+          qrEls.qrLink.setAttribute('href', normalizedHref);
+          qrEls.qrLink.textContent = normalizedHref;
+        }
+        setConsentIdentityQrModalState('Pendiente');
+        setConsentIdentityQrStatus('Escanea el código QR y sube el documento desde tu celular.', 'muted');
+        updateConsentIdentityQrCountdown();
+        const modal = (typeof window.bootstrap.Modal.getOrCreateInstance === 'function')
+          ? window.bootstrap.Modal.getOrCreateInstance(els.identityQrModal)
+          : new window.bootstrap.Modal(els.identityQrModal);
+        modal.show();
+        startConsentIdentityQrPolling();
+      }catch(error){
+        setConsentIdentityQrStatus(sanitizeText(error?.message || 'No se pudo iniciar captura por celular.'), 'error');
+        setConsentIdentityQrModalState('Error', 'error');
+      }
     };
 
     const clearConsentIdentityFiles = ()=>{
       state.identityFiles = [];
+      state.identityRemoteRefs = [];
       if(els.identityFiles) els.identityFiles.value = '';
+      resetConsentIdentityQrState();
       renderIdentityFilesList();
     };
 
@@ -6909,6 +7287,7 @@ console.info('app.js loaded :: 20251123a');
       if(els.doctorName){
         els.doctorName.textContent = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
       }
+      cancelConsentIdentityTokenIfPending('consent_wizard_reset');
       clearConsentSignaturePad();
       clearConsentIdentityFiles();
       describeTemplate('');
@@ -7324,9 +7703,10 @@ console.info('app.js loaded :: 20251123a');
 
     const uploadConsentIdentityAttachments = async (preparedBody)=>{
       const files = Array.isArray(state.identityFiles) ? state.identityFiles : [];
-      if(files.length === 0) return [];
+      const remoteRefs = Array.isArray(state.identityRemoteRefs) ? state.identityRemoteRefs : [];
+      if(files.length === 0) return remoteRefs.slice();
       const patientId = sanitizeText(preparedBody?.context?.patient_id || '');
-      if(!patientId) return [];
+      if(!patientId) return remoteRefs.slice();
       const encounterKey = sanitizeText(preparedBody?.context?.encounter_key || '');
       const appointmentId = sanitizeText(preparedBody?.context?.appointment_id || '');
       const eventDatetime = sanitizeText(preparedBody?.event_datetime || formatNowSql());
@@ -7370,10 +7750,23 @@ console.info('app.js loaded :: 20251123a');
           document_uuid: sanitizeText(doc.document_uuid || json?.data?.document_uuid || ''),
           title: sanitizeText(doc.title || `Anexo identidad firmante — ${sanitizeText(file?.name || '')}`),
           document_type: sanitizeText(doc.document_type || documentType),
-          file_name: sanitizeText(file?.name || '')
+          file_name: sanitizeText(file?.name || ''),
+          source: 'consentimiento_identidad_local'
         });
       }
-      return refs;
+      const merged = [];
+      const seen = new Set();
+      const pushUnique = (entry)=>{
+        const normalized = normalizeConsentIdentityRef(entry);
+        if(!normalized) return;
+        const key = `${normalized.document_id}|${normalized.document_uuid}|${normalized.note_capture_token}`;
+        if(seen.has(key)) return;
+        seen.add(key);
+        merged.push(normalized);
+      };
+      remoteRefs.forEach(pushUnique);
+      refs.forEach(pushUnique);
+      return merged;
     };
 
     const saveCanonicalConsent = async (targetStatus = 'draft')=>{
@@ -7502,6 +7895,50 @@ console.info('app.js loaded :: 20251123a');
       const files = Array.from(els.identityFiles?.files || []);
       state.identityFiles = files;
       renderIdentityFilesList();
+    });
+    els.identityQrOpen?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      openConsentIdentityQrModal();
+    });
+    els.identityQrModal?.addEventListener('click', (event)=>{
+      const copyBtn = event.target.closest('[data-action="ci-identity-qr-copy-link"]');
+      if(copyBtn){
+        event.preventDefault();
+        const linkEl = els.identityQrModal.querySelector('[data-role="ci-identity-qr-link"]');
+        const href = sanitizeText(linkEl?.getAttribute('href') || '');
+        const text = sanitizeText(linkEl?.textContent || href);
+        const value = href || text;
+        if(!value){
+          setConsentIdentityQrStatus('No hay enlace disponible para copiar todavía.', 'muted');
+          return;
+        }
+        const fallbackCopy = ()=>{
+          const temp = document.createElement('textarea');
+          temp.value = value;
+          temp.setAttribute('readonly', 'readonly');
+          temp.style.position = 'absolute';
+          temp.style.left = '-9999px';
+          document.body.appendChild(temp);
+          temp.select();
+          try{ document.execCommand('copy'); }catch(_){}
+          document.body.removeChild(temp);
+        };
+        if(navigator.clipboard?.writeText){
+          navigator.clipboard.writeText(value).catch(()=> fallbackCopy());
+        }else{
+          fallbackCopy();
+        }
+        setConsentIdentityQrStatus('Enlace copiado. Ábrelo en tu celular para subir el anexo.', 'success');
+        return;
+      }
+      const verifyBtn = event.target.closest('[data-action="ci-identity-qr-verify-now"]');
+      if(!verifyBtn) return;
+      event.preventDefault();
+      syncConsentIdentityTokenStatus({ manual: true });
+    });
+    els.identityQrModal?.addEventListener('hidden.bs.modal', ()=>{
+      cancelConsentIdentityTokenIfPending('consent_identity_qr_closed');
+      stopConsentIdentityQrPolling();
     });
 
     els.modeGuided?.addEventListener('click', (event)=>{

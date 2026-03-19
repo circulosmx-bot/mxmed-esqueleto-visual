@@ -3705,6 +3705,53 @@
                     </div>
                   </div>
                 </div>
+                <div class="modal fade" id="modalConsentIdentityQr" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Capturar identidad con celular</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p class="small text-muted mb-3">
+                          Escanea este código con tu celular para tomar o subir una imagen del documento de identidad del firmante.
+                        </p>
+                        <div class="text-center mb-3">
+                          <img
+                            data-role="ci-identity-qr-image"
+                            src=""
+                            alt="Código QR para captura de identidad"
+                            class="border rounded p-2 bg-white"
+                            style="width:220px;height:220px;object-fit:contain;"
+                          >
+                        </div>
+                        <div class="small text-break mb-2">
+                          <div class="text-muted mb-1">Si no ves el código QR, abre este enlace en tu celular:</div>
+                          <a href="#" target="_blank" rel="noopener" data-role="ci-identity-qr-link"></a>
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm mb-2" data-action="ci-identity-qr-copy-link">
+                          Copiar enlace
+                        </button>
+                        <div class="small mb-1" data-role="ci-identity-qr-state">Pendiente</div>
+                        <div class="small text-muted" data-role="ci-identity-qr-countdown"></div>
+                        <div class="alert alert-success d-none mt-3 mb-0 py-2 px-3" data-role="ci-identity-qr-preview-wrap">
+                          <div class="fw-semibold small mb-2">Anexo recibido</div>
+                          <img
+                            data-role="ci-identity-qr-preview-image"
+                            src=""
+                            alt="Vista previa del anexo recibido"
+                            class="img-fluid rounded border"
+                            style="max-height:180px;object-fit:contain;"
+                          >
+                        </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-action="ci-identity-qr-verify-now">Verificar ahora</button>
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Cerrar</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <div class="modal fade" id="modalActividadClinicaAdjunto" tabindex="-1" aria-hidden="true">
                   <div class="modal-dialog modal-lg modal-dialog-scrollable">
                     <div class="modal-content">
@@ -6527,6 +6574,17 @@
                       <div class="small fw-semibold mb-1">Anexos de identidad del firmante</div>
                       <div class="small text-muted mb-2">Adjunta INE, pasaporte u otro documento de identidad del firmante.</div>
                       <input class="form-control" id="ci_identity_files" type="file" accept="image/*,.pdf" multiple>
+                      <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                        <select class="form-select form-select-sm" id="ci_identity_doc_kind" style="max-width:260px;">
+                          <option value="ine">Credencial de elector / INE</option>
+                          <option value="pasaporte">Pasaporte</option>
+                          <option value="otro">Otro documento</option>
+                        </select>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ci-identity-open-qr">
+                          Capturar con celular
+                        </button>
+                      </div>
+                      <div class="small text-success d-none mt-2" data-role="ci-identity-qr-status"></div>
                       <div class="small text-muted mt-2" id="ci_identity_files_list">Sin anexos cargados.</div>
                     </div>
 
