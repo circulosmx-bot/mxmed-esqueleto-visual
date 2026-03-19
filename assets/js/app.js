@@ -6644,6 +6644,22 @@ console.info('app.js loaded :: 20251123a');
       syncFormStateToInputs();
     };
 
+    const consentValidationFieldTargets = {
+      patient_id: [],
+      title: ['ci_title', 'ci_full_title'],
+      procedimiento: ['ci_procedimiento', 'ci_full_procedimiento'],
+      firmante_nombre: ['ci_firmante_nombre', 'ci_full_firmante_nombre'],
+      firmante_parentesco: ['ci_firmante_parentesco', 'ci_full_firmante_parentesco'],
+      confirm_informed: ['ci_confirm_informed', 'ci_full_confirm_informed']
+    };
+
+    const escapeHtml = (value)=> String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
     const clearConsentValidationFeedback = ()=>{
       if(els.emitErrors){
         els.emitErrors.classList.add('d-none');
@@ -6658,19 +6674,47 @@ console.info('app.js loaded :: 20251123a');
       fields.forEach((el)=> el?.classList?.remove('is-invalid'));
     };
 
+    const clearConsentValidationMarksForKey = (fieldKey = '')=>{
+      const targets = consentValidationFieldTargets[fieldKey];
+      if(!Array.isArray(targets) || targets.length === 0) return;
+      targets.forEach((id)=>{
+        const node = root.querySelector(`#${id}`);
+        node?.classList?.remove('is-invalid');
+      });
+      const hasAnyInvalid = !!root.querySelector('.is-invalid');
+      if(!hasAnyInvalid && els.emitErrors?.classList.contains('d-none') === false){
+        els.emitErrors.classList.add('d-none');
+        els.emitErrors.innerHTML = '';
+      }
+    };
+
     const showConsentValidationFeedback = (messages = [], markTargets = [])=>{
       clearConsentValidationFeedback();
       const list = Array.isArray(messages) ? messages.filter(Boolean) : [];
       if(list.length === 0) return;
       if(els.emitErrors){
-        els.emitErrors.innerHTML = `<ul class="mb-0">${list.map((msg)=> `<li>${String(msg).replace(/</g, '&lt;')}</li>`).join('')}</ul>`;
+        const heading = '<div class="fw-semibold mb-1">No se pudo emitir el consentimiento. Faltan los siguientes datos:</div>';
+        const items = `<ul class="mb-0">${list.map((msg)=> `<li>${escapeHtml(msg)}</li>`).join('')}</ul>`;
+        els.emitErrors.innerHTML = `${heading}${items}`;
         els.emitErrors.classList.remove('d-none');
       }
       const targetIds = Array.isArray(markTargets) ? markTargets : [];
+      let firstInvalidNode = null;
       targetIds.forEach((id)=>{
         const node = root.querySelector(`#${id}`);
-        node?.classList?.add('is-invalid');
+        if(node?.classList){
+          node.classList.add('is-invalid');
+          if(!firstInvalidNode) firstInvalidNode = node;
+        }
       });
+      if(firstInvalidNode){
+        if(typeof firstInvalidNode.focus === 'function'){
+          firstInvalidNode.focus({ preventScroll: true });
+        }
+        firstInvalidNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      els.emitErrors?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
     };
 
     const findFieldByLabel = (tab, labelText)=>{
@@ -6967,42 +7011,47 @@ console.info('app.js loaded :: 20251123a');
     };
 
     const validateStep2 = (targetStatus = 'draft')=>{
-      const errors = [];
-      const markTargets = [];
+      const missing = [];
+      const addMissing = (fieldKey, label)=>{
+        missing.push({ fieldKey, label });
+      };
       const patientId = resolveActivePatientIdForConsent();
       const titleValue = sanitizeText(state.form.title || '');
       const contentValue = sanitizeText(state.form.procedimiento || '');
       if(targetStatus === 'granted'){
         if(!patientId){
-          errors.push('Selecciona paciente antes de emitir el consentimiento.');
+          addMissing('patient_id', 'Paciente activo');
         }
         if(!titleValue){
-          errors.push('Indica el título del consentimiento.');
-          markTargets.push('ci_title', 'ci_full_title');
+          addMissing('title', 'Título');
         }
         if(!contentValue){
-          errors.push('Completa la descripción del procedimiento.');
-          markTargets.push('ci_procedimiento', 'ci_full_procedimiento');
+          addMissing('procedimiento', 'Descripción del procedimiento');
         }
         const signerName = sanitizeText(state.form.firmante_nombre || '');
         const signerType = sanitizeText(state.form.firmante_tipo || 'paciente');
         const signerRelation = sanitizeText(state.form.firmante_parentesco || '');
         if(!signerName){
-          errors.push('Captura el nombre de quien firma el consentimiento.');
-          markTargets.push('ci_firmante_nombre', 'ci_full_firmante_nombre');
+          addMissing('firmante_nombre', 'Nombre del firmante');
         }
         if(signerType !== 'paciente' && !signerRelation){
-          errors.push('Selecciona la relación o parentesco del firmante.');
-          markTargets.push('ci_firmante_parentesco', 'ci_full_firmante_parentesco');
+          addMissing('firmante_parentesco', 'Relación o parentesco del firmante');
         }
         if(!state.form.confirm_informed){
-          errors.push('Debes confirmar que el paciente fue informado y acepta el procedimiento.');
-          markTargets.push('ci_confirm_informed', 'ci_full_confirm_informed');
+          addMissing('confirm_informed', 'Confirmación legal');
         }
       }else{
-        if(!patientId) errors.push('Selecciona paciente antes de crear el borrador.');
+        if(!patientId) addMissing('patient_id', 'Paciente activo');
       }
-      return { errors, markTargets };
+      const markTargets = Array.from(new Set(
+        missing.flatMap((item)=> consentValidationFieldTargets[item.fieldKey] || [])
+      ));
+      return {
+        valid: missing.length === 0,
+        missing,
+        errors: missing.map((item)=> item.label),
+        markTargets
+      };
     };
 
     const buildConsentLegalRenderedText = (data = {})=>{
@@ -7079,8 +7128,13 @@ console.info('app.js loaded :: 20251123a');
       if(!patientId) return { error: 'patient_id requerido.' };
       const normalizedStatus = targetStatus === 'granted' ? 'granted' : 'draft';
       const validation = validateStep2(normalizedStatus);
-      if(validation.errors.length){
-        return { error: validation.errors.join(' '), errors: validation.errors, markTargets: validation.markTargets };
+      if(!validation.valid){
+        return {
+          error: validation.errors.join(' · '),
+          errors: validation.errors,
+          markTargets: validation.markTargets,
+          missing: validation.missing
+        };
       }
       const actorUserId = resolveClinicalActorUserId();
       const actorName = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
@@ -7394,6 +7448,7 @@ console.info('app.js loaded :: 20251123a');
       if(!inputEl) return;
       const evtName = options.event || ((inputEl.tagName === 'SELECT' || inputEl.type === 'checkbox') ? 'change' : 'input');
       inputEl.addEventListener(evtName, ()=>{
+        clearConsentValidationMarksForKey(key);
         const value = inputEl.type === 'checkbox' ? !!inputEl.checked : sanitizeText(inputEl.value || '');
         updateConsentFormState(key, value);
       });
