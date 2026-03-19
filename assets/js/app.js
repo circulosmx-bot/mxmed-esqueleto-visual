@@ -6816,8 +6816,17 @@ console.info('app.js loaded :: 20251123a');
         qrState: modal.querySelector('[data-role="ci-identity-qr-state"]'),
         countdown: modal.querySelector('[data-role="ci-identity-qr-countdown"]'),
         previewWrap: modal.querySelector('[data-role="ci-identity-qr-preview-wrap"]'),
-        previewImage: modal.querySelector('[data-role="ci-identity-qr-preview-image"]')
+        previewImage: modal.querySelector('[data-role="ci-identity-qr-preview-image"]'),
+        verifyBtn: modal.querySelector('[data-action="ci-identity-qr-verify-now"]')
       };
+    };
+    const syncConsentIdentityQrVerifyButton = ()=>{
+      const qrEls = consentIdentityQrElements();
+      if(!qrEls?.verifyBtn) return;
+      const status = sanitizeText(consentIdentityQrState.status || '').toLowerCase();
+      const isPending = !status || status === 'pending';
+      qrEls.verifyBtn.classList.toggle('d-none', !isPending);
+      qrEls.verifyBtn.disabled = !isPending;
     };
     const setConsentIdentityQrModalState = (label = 'Pendiente', tone = 'muted')=>{
       const qrEls = consentIdentityQrElements();
@@ -6877,6 +6886,7 @@ console.info('app.js loaded :: 20251123a');
       if(qrEls?.previewImage) qrEls.previewImage.removeAttribute('src');
       setConsentIdentityQrModalState('Pendiente');
       updateConsentIdentityQrCountdown();
+      syncConsentIdentityQrVerifyButton();
       if(!preserveMainStatus){
         setConsentIdentityQrStatus('');
       }
@@ -6966,6 +6976,7 @@ console.info('app.js loaded :: 20251123a');
           setConsentIdentityQrModalState('Anexo recibido', 'success');
           persistConsentIdentityQrRef(data);
           updateConsentIdentityQrCountdown();
+          syncConsentIdentityQrVerifyButton();
           return;
         }
         if(status === 'expired'){
@@ -6973,6 +6984,7 @@ console.info('app.js loaded :: 20251123a');
           setConsentIdentityQrModalState('Expirado', 'error');
           setConsentIdentityQrStatus('El token QR expiró. Genera uno nuevo para continuar.', 'error');
           updateConsentIdentityQrCountdown();
+          syncConsentIdentityQrVerifyButton();
           return;
         }
         if(status === 'cancelled'){
@@ -6980,10 +6992,12 @@ console.info('app.js loaded :: 20251123a');
           setConsentIdentityQrModalState('Cancelado', 'error');
           setConsentIdentityQrStatus('La captura de identidad fue cancelada.', 'error');
           updateConsentIdentityQrCountdown();
+          syncConsentIdentityQrVerifyButton();
           return;
         }
         setConsentIdentityQrModalState('Pendiente');
         updateConsentIdentityQrCountdown();
+        syncConsentIdentityQrVerifyButton();
         if(opts.manual === true){
           setConsentIdentityQrStatus('Aún no se recibe anexo. Sigue pendiente.', 'muted');
         }
@@ -7010,6 +7024,7 @@ console.info('app.js loaded :: 20251123a');
         stopConsentIdentityQrPolling();
         setConsentIdentityQrStatus('No se recibió anexo en el tiempo esperado. Puedes verificar manualmente.', 'muted');
         setConsentIdentityQrModalState('Pendiente');
+        syncConsentIdentityQrVerifyButton();
       }, CONSENT_IDENTITY_QR_MAX_DURATION_MS);
     };
     const resolveConsentIdentityCaptureContext = async ()=>{
@@ -7101,6 +7116,7 @@ console.info('app.js loaded :: 20251123a');
         setConsentIdentityQrModalState('Pendiente');
         setConsentIdentityQrStatus('Escanea el código QR y sube el documento desde tu celular.', 'muted');
         updateConsentIdentityQrCountdown();
+        syncConsentIdentityQrVerifyButton();
         const modal = (typeof window.bootstrap.Modal.getOrCreateInstance === 'function')
           ? window.bootstrap.Modal.getOrCreateInstance(els.identityQrModal)
           : new window.bootstrap.Modal(els.identityQrModal);
@@ -7121,8 +7137,17 @@ console.info('app.js loaded :: 20251123a');
         qrState: modal.querySelector('[data-role="ci-signature-qr-state"]'),
         countdown: modal.querySelector('[data-role="ci-signature-qr-countdown"]'),
         previewWrap: modal.querySelector('[data-role="ci-signature-qr-preview-wrap"]'),
-        previewImage: modal.querySelector('[data-role="ci-signature-qr-preview-image"]')
+        previewImage: modal.querySelector('[data-role="ci-signature-qr-preview-image"]'),
+        verifyBtn: modal.querySelector('[data-action="ci-signature-qr-verify-now"]')
       };
+    };
+    const syncConsentSignatureQrVerifyButton = ()=>{
+      const qrEls = consentSignatureQrElements();
+      if(!qrEls?.verifyBtn) return;
+      const status = sanitizeText(consentSignatureQrState.status || '').toLowerCase();
+      const isPending = !status || status === 'pending';
+      qrEls.verifyBtn.classList.toggle('d-none', !isPending);
+      qrEls.verifyBtn.disabled = !isPending;
     };
     const setConsentSignatureQrModalState = (label = 'Pendiente', tone = 'muted')=>{
       const qrEls = consentSignatureQrElements();
@@ -7182,6 +7207,7 @@ console.info('app.js loaded :: 20251123a');
       if(qrEls?.previewImage) qrEls.previewImage.removeAttribute('src');
       setConsentSignatureQrModalState('Pendiente');
       updateConsentSignatureQrCountdown();
+      syncConsentSignatureQrVerifyButton();
       if(!preserveMainStatus){
         setConsentRemoteSignatureStatus('');
       }
@@ -7265,9 +7291,10 @@ console.info('app.js loaded :: 20251123a');
         consentSignatureQrState.expiresAt = sanitizeText(data?.expires_at || consentSignatureQrState.expiresAt);
         if(status === 'uploaded' || status === 'consumed'){
           stopConsentSignatureQrPolling();
-          setConsentSignatureQrModalState('Firma recibida', 'success');
+          setConsentSignatureQrModalState(status === 'consumed' ? 'Completado' : 'Firma recibida', 'success');
           persistConsentRemoteSignature(data);
           updateConsentSignatureQrCountdown();
+          syncConsentSignatureQrVerifyButton();
           return;
         }
         if(status === 'expired'){
@@ -7275,6 +7302,7 @@ console.info('app.js loaded :: 20251123a');
           setConsentSignatureQrModalState('Expirado', 'error');
           setConsentRemoteSignatureStatus('La sesión de firma remota expiró. Genera una nueva.', 'error');
           updateConsentSignatureQrCountdown();
+          syncConsentSignatureQrVerifyButton();
           return;
         }
         if(status === 'cancelled'){
@@ -7282,10 +7310,12 @@ console.info('app.js loaded :: 20251123a');
           setConsentSignatureQrModalState('Cancelado', 'error');
           setConsentRemoteSignatureStatus('La sesión de firma remota fue cancelada.', 'error');
           updateConsentSignatureQrCountdown();
+          syncConsentSignatureQrVerifyButton();
           return;
         }
         setConsentSignatureQrModalState('Pendiente');
         updateConsentSignatureQrCountdown();
+        syncConsentSignatureQrVerifyButton();
         if(opts.manual === true){
           setConsentRemoteSignatureStatus('Aún no se recibe firma. Sigue pendiente.', 'muted');
         }
@@ -7312,6 +7342,7 @@ console.info('app.js loaded :: 20251123a');
         stopConsentSignatureQrPolling();
         setConsentRemoteSignatureStatus('No se recibió firma en el tiempo esperado. Puedes verificar manualmente.', 'muted');
         setConsentSignatureQrModalState('Pendiente');
+        syncConsentSignatureQrVerifyButton();
       }, CONSENT_SIGNATURE_QR_MAX_DURATION_MS);
     };
     const createConsentSignatureToken = async ()=>{
@@ -7384,6 +7415,7 @@ console.info('app.js loaded :: 20251123a');
         setConsentSignatureQrModalState('Pendiente');
         setConsentRemoteSignatureStatus('Escanea el código QR y firma desde tu celular.', 'muted');
         updateConsentSignatureQrCountdown();
+        syncConsentSignatureQrVerifyButton();
         const modal = (typeof window.bootstrap.Modal.getOrCreateInstance === 'function')
           ? window.bootstrap.Modal.getOrCreateInstance(els.signatureQrModal)
           : new window.bootstrap.Modal(els.signatureQrModal);

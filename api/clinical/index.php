@@ -6551,15 +6551,27 @@ try {
             }
 
             $uploadFile = $_FILES['file'] ?? null;
-            if (!is_array($uploadFile) || ((int)($uploadFile['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK)) {
+            $uploadError = is_array($uploadFile) ? (int)($uploadFile['error'] ?? UPLOAD_ERR_NO_FILE) : UPLOAD_ERR_NO_FILE;
+            if (!is_array($uploadFile) || $uploadError !== UPLOAD_ERR_OK) {
+                $uploadMessage = 'archivo requerido';
+                if ($uploadError === UPLOAD_ERR_INI_SIZE || $uploadError === UPLOAD_ERR_FORM_SIZE) {
+                    $uploadMessage = 'archivo demasiado grande para el límite de carga';
+                } elseif ($uploadError === UPLOAD_ERR_PARTIAL) {
+                    $uploadMessage = 'la carga del archivo fue parcial, intenta nuevamente';
+                } elseif ($uploadError === UPLOAD_ERR_NO_TMP_DIR || $uploadError === UPLOAD_ERR_CANT_WRITE) {
+                    $uploadMessage = 'no se pudo procesar la carga en el servidor';
+                } elseif ($uploadError === UPLOAD_ERR_EXTENSION) {
+                    $uploadMessage = 'la carga fue bloqueada por extensión del servidor';
+                }
                 clinical_send_response([
                     'ok' => false,
                     'error' => 'bad_request',
-                    'message' => 'archivo requerido',
+                    'message' => $uploadMessage,
                     'data' => null,
                     'meta' => [
                         'method' => 'POST',
                         'route' => 'note-capture-tokens/{token}/upload',
+                        'upload_error' => $uploadError,
                     ],
                 ], 400);
                 return;
