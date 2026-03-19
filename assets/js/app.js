@@ -6417,6 +6417,12 @@ console.info('app.js loaded :: 20251123a');
       identityQrOpen: root.querySelector('[data-action="ci-identity-open-qr"]'),
       identityQrStatus: root.querySelector('[data-role="ci-identity-qr-status"]'),
       identityQrModal: pane.querySelector('#modalConsentIdentityQr'),
+      signatureQrOpen: root.querySelector('[data-action="ci-signature-open-qr"]'),
+      signatureQrModal: pane.querySelector('#modalConsentSignatureQr'),
+      signatureRemoteStatus: root.querySelector('#ci_signature_remote_status'),
+      signatureRemotePreviewWrap: root.querySelector('#ci_signature_remote_preview_wrap'),
+      signatureRemotePreviewImage: root.querySelector('#ci_signature_remote_preview_image'),
+      signatureRemotePreviewMeta: root.querySelector('#ci_signature_remote_preview_meta'),
       signatureCanvas: root.querySelector('#ci_signature_canvas'),
       signatureApply: root.querySelector('#ci_signature_apply'),
       signatureClear: root.querySelector('#ci_signature_clear'),
@@ -6431,6 +6437,8 @@ console.info('app.js loaded :: 20251123a');
       mode: 'guided',
       signaturePad: null,
       signatureHasStroke: false,
+      remoteSignature: null,
+      signaturePreferredSource: '',
       identityFiles: [],
       identityRemoteRefs: [],
       form: {
@@ -6460,7 +6468,20 @@ console.info('app.js loaded :: 20251123a');
     };
     const CONSENT_IDENTITY_QR_POLL_INTERVAL_MS = 4000;
     const CONSENT_IDENTITY_QR_MAX_DURATION_MS = 90000;
+    const CONSENT_SIGNATURE_QR_POLL_INTERVAL_MS = 4000;
+    const CONSENT_SIGNATURE_QR_MAX_DURATION_MS = 90000;
     const consentIdentityQrState = {
+      token: '',
+      status: '',
+      expiresAt: '',
+      mobileUrl: '',
+      pollIntervalId: 0,
+      pollTimeoutId: 0,
+      countdownIntervalId: 0,
+      cancelling: false,
+      startedAt: 0
+    };
+    const consentSignatureQrState = {
       token: '',
       status: '',
       expiresAt: '',
@@ -6479,9 +6500,81 @@ console.info('app.js loaded :: 20251123a');
       .replace(/[^a-z0-9]+/g, ' ')
       .trim();
 
+    const setConsentRemoteSignatureStatus = (message = '', tone = 'muted')=>{
+      if(!els.signatureRemoteStatus) return;
+      const text = sanitizeText(message || '');
+      els.signatureRemoteStatus.textContent = text;
+      els.signatureRemoteStatus.classList.toggle('d-none', !text);
+      els.signatureRemoteStatus.classList.toggle('text-success', tone === 'success');
+      els.signatureRemoteStatus.classList.toggle('text-danger', tone === 'error');
+      els.signatureRemoteStatus.classList.toggle('text-muted', tone !== 'success' && tone !== 'error');
+    };
+
+    const renderConsentRemoteSignaturePreview = ()=>{
+      const signature = (state.remoteSignature && typeof state.remoteSignature === 'object') ? state.remoteSignature : null;
+      if(!els.signatureRemotePreviewWrap || !els.signatureRemotePreviewImage || !els.signatureRemotePreviewMeta){
+        return;
+      }
+      const imageData = sanitizeText(signature?.image_data || '');
+      if(!imageData){
+        els.signatureRemotePreviewWrap.classList.add('d-none');
+        els.signatureRemotePreviewImage.removeAttribute('src');
+        els.signatureRemotePreviewMeta.textContent = '';
+        return;
+      }
+      els.signatureRemotePreviewImage.setAttribute('src', imageData);
+      const signerName = sanitizeText(signature?.signer_name || '');
+      const signedAt = sanitizeText(signature?.signed_at || '');
+      const source = sanitizeText(signature?.source || 'remote_qr');
+      const sourceLabel = source === 'remote_qr' ? 'Firma remota' : 'Firma';
+      const meta = [signerName, signedAt, sourceLabel].filter(Boolean).join(' · ');
+      els.signatureRemotePreviewMeta.textContent = meta;
+      els.signatureRemotePreviewWrap.classList.remove('d-none');
+    };
+
     const updateSignatureStatus = ()=>{
       if(!els.signatureStatus) return;
-      els.signatureStatus.textContent = state.signatureHasStroke ? 'Firma capturada' : 'Sin firma';
+      if(state.signaturePreferredSource === 'remote' && state.remoteSignature){
+        els.signatureStatus.textContent = 'Firma remota lista';
+        return;
+      }
+      if(state.signatureHasStroke){
+        els.signatureStatus.textContent = 'Firma local capturada';
+        return;
+      }
+      if(state.remoteSignature){
+        els.signatureStatus.textContent = 'Firma remota disponible';
+        return;
+      }
+      els.signatureStatus.textContent = 'Sin firma';
+    };
+
+    const setConsentSignaturePreferredSource = (source = '')=>{
+      const normalized = sanitizeText(source).toLowerCase();
+      if(normalized === 'remote' && state.remoteSignature){
+        state.signaturePreferredSource = 'remote';
+      }else if(normalized === 'local' && state.signatureHasStroke){
+        state.signaturePreferredSource = 'local';
+      }else if(state.remoteSignature){
+        state.signaturePreferredSource = 'remote';
+      }else if(state.signatureHasStroke){
+        state.signaturePreferredSource = 'local';
+      }else{
+        state.signaturePreferredSource = '';
+      }
+      updateSignatureStatus();
+    };
+
+    const clearConsentRemoteSignature = ({ keepMessage = false } = {})=>{
+      state.remoteSignature = null;
+      renderConsentRemoteSignaturePreview();
+      if(!keepMessage){
+        setConsentRemoteSignatureStatus('');
+      }
+      if(state.signaturePreferredSource === 'remote'){
+        state.signaturePreferredSource = state.signatureHasStroke ? 'local' : '';
+      }
+      updateSignatureStatus();
     };
 
     const clearConsentSignaturePad = ()=>{
@@ -6493,6 +6586,9 @@ console.info('app.js loaded :: 20251123a');
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       state.signatureHasStroke = false;
+      if(state.signaturePreferredSource === 'local'){
+        state.signaturePreferredSource = state.remoteSignature ? 'remote' : '';
+      }
       updateSignatureStatus();
     };
 
@@ -6521,6 +6617,9 @@ console.info('app.js loaded :: 20251123a');
       ctx.lineWidth = 2;
       ctx.strokeStyle = '#0f172a';
       state.signatureHasStroke = false;
+      if(state.signaturePreferredSource === 'local'){
+        state.signaturePreferredSource = state.remoteSignature ? 'remote' : '';
+      }
       updateSignatureStatus();
     };
 
@@ -6545,6 +6644,7 @@ console.info('app.js loaded :: 20251123a');
         ctx.beginPath();
         ctx.moveTo(pt.x, pt.y);
         state.signatureHasStroke = true;
+        state.signaturePreferredSource = 'local';
         updateSignatureStatus();
         event.preventDefault();
       };
@@ -6579,6 +6679,53 @@ console.info('app.js loaded :: 20251123a');
       }catch(_){
         return '';
       }
+    };
+
+    const setConsentRemoteSignatureFromToken = (entry = {})=>{
+      const imageData = sanitizeText(entry?.image_data || '');
+      if(!imageData) return false;
+      state.remoteSignature = {
+        type: 'drawn',
+        source: 'remote_qr',
+        role: 'patient_or_representative',
+        image_data: imageData,
+        signed_at: sanitizeText(entry?.signed_at || formatNowSql()),
+        signer_name: sanitizeText(entry?.signer_name || state.form.firmante_nombre || ''),
+        token: sanitizeText(entry?.token || consentSignatureQrState.token || '')
+      };
+      state.signaturePreferredSource = 'remote';
+      renderConsentRemoteSignaturePreview();
+      updateSignatureStatus();
+      return true;
+    };
+
+    const getActiveConsentPatientSignature = (nowSql = '')=>{
+      const localSignatureData = exportConsentSignatureData();
+      const localSignature = localSignatureData ? {
+        type: 'drawn',
+        role: 'patient_or_representative',
+        image_data: localSignatureData,
+        signed_at: sanitizeText(nowSql || formatNowSql()),
+        signer_name: sanitizeText(state.form.firmante_nombre || ''),
+        source: 'local_canvas'
+      } : null;
+      const remoteSignature = (state.remoteSignature && sanitizeText(state.remoteSignature.image_data || ''))
+        ? { ...state.remoteSignature }
+        : null;
+
+      if(state.signaturePreferredSource === 'remote' && remoteSignature){
+        return remoteSignature;
+      }
+      if(state.signaturePreferredSource === 'local' && localSignature){
+        return localSignature;
+      }
+      if(remoteSignature){
+        return remoteSignature;
+      }
+      if(localSignature){
+        return localSignature;
+      }
+      return null;
     };
 
     const mountConsentSignatureBlock = (targetSlot)=>{
@@ -6965,6 +7112,311 @@ console.info('app.js loaded :: 20251123a');
       }
     };
 
+    const consentSignatureQrElements = ()=>{
+      const modal = els.signatureQrModal;
+      if(!modal) return null;
+      return {
+        qrImage: modal.querySelector('[data-role="ci-signature-qr-image"]'),
+        qrLink: modal.querySelector('[data-role="ci-signature-qr-link"]'),
+        qrState: modal.querySelector('[data-role="ci-signature-qr-state"]'),
+        countdown: modal.querySelector('[data-role="ci-signature-qr-countdown"]'),
+        previewWrap: modal.querySelector('[data-role="ci-signature-qr-preview-wrap"]'),
+        previewImage: modal.querySelector('[data-role="ci-signature-qr-preview-image"]')
+      };
+    };
+    const setConsentSignatureQrModalState = (label = 'Pendiente', tone = 'muted')=>{
+      const qrEls = consentSignatureQrElements();
+      if(!qrEls?.qrState) return;
+      qrEls.qrState.textContent = sanitizeText(label || 'Pendiente');
+      qrEls.qrState.classList.remove('text-muted', 'text-success', 'text-danger');
+      qrEls.qrState.classList.add(tone === 'success' ? 'text-success' : (tone === 'error' ? 'text-danger' : 'text-muted'));
+    };
+    const updateConsentSignatureQrCountdown = ()=>{
+      const qrEls = consentSignatureQrElements();
+      if(!qrEls?.countdown) return;
+      const expiresRaw = sanitizeText(consentSignatureQrState.expiresAt || '');
+      if(!expiresRaw){
+        qrEls.countdown.textContent = '';
+        return;
+      }
+      const expiresTs = Date.parse(expiresRaw);
+      if(!Number.isFinite(expiresTs)){
+        qrEls.countdown.textContent = '';
+        return;
+      }
+      const remainingMs = Math.max(0, expiresTs - Date.now());
+      const totalSeconds = Math.ceil(remainingMs / 1000);
+      const mm = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+      const ss = String(totalSeconds % 60).padStart(2, '0');
+      qrEls.countdown.textContent = remainingMs <= 0 ? 'Token expirado.' : `Expira en ${mm}:${ss}`;
+    };
+    const stopConsentSignatureQrPolling = ()=>{
+      if(consentSignatureQrState.pollIntervalId){
+        window.clearInterval(consentSignatureQrState.pollIntervalId);
+        consentSignatureQrState.pollIntervalId = 0;
+      }
+      if(consentSignatureQrState.pollTimeoutId){
+        window.clearTimeout(consentSignatureQrState.pollTimeoutId);
+        consentSignatureQrState.pollTimeoutId = 0;
+      }
+      if(consentSignatureQrState.countdownIntervalId){
+        window.clearInterval(consentSignatureQrState.countdownIntervalId);
+        consentSignatureQrState.countdownIntervalId = 0;
+      }
+    };
+    const resetConsentSignatureQrState = (preserveMainStatus = false)=>{
+      stopConsentSignatureQrPolling();
+      consentSignatureQrState.token = '';
+      consentSignatureQrState.status = '';
+      consentSignatureQrState.expiresAt = '';
+      consentSignatureQrState.mobileUrl = '';
+      consentSignatureQrState.cancelling = false;
+      consentSignatureQrState.startedAt = 0;
+      const qrEls = consentSignatureQrElements();
+      if(qrEls?.qrImage) qrEls.qrImage.setAttribute('src', '');
+      if(qrEls?.qrLink){
+        qrEls.qrLink.removeAttribute('href');
+        qrEls.qrLink.textContent = '';
+      }
+      if(qrEls?.previewWrap) qrEls.previewWrap.classList.add('d-none');
+      if(qrEls?.previewImage) qrEls.previewImage.removeAttribute('src');
+      setConsentSignatureQrModalState('Pendiente');
+      updateConsentSignatureQrCountdown();
+      if(!preserveMainStatus){
+        setConsentRemoteSignatureStatus('');
+      }
+    };
+    const fetchConsentSignatureTokenStatus = async (token)=>{
+      const safeToken = sanitizeText(token);
+      if(!safeToken) throw new Error('Token inválido.');
+      const resp = await fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(safeToken)}`, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin'
+      });
+      const json = await resp.json().catch(()=> null);
+      if(!resp.ok || !json || json.ok !== true){
+        const message = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`);
+        throw new Error(message || 'No se pudo consultar el estado de la firma.');
+      }
+      return json?.data || {};
+    };
+    const cancelConsentSignatureTokenIfPending = async (reason = 'user_closed')=>{
+      const token = sanitizeText(consentSignatureQrState.token);
+      const status = sanitizeText(consentSignatureQrState.status || '').toLowerCase();
+      if(!token || (status && status !== 'pending') || consentSignatureQrState.cancelling){
+        return false;
+      }
+      consentSignatureQrState.cancelling = true;
+      try{
+        await fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(token)}/cancel`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({ reason: sanitizeText(reason) || 'user_closed' })
+        });
+        consentSignatureQrState.status = 'cancelled';
+        return true;
+      }catch(_){
+        return false;
+      }finally{
+        consentSignatureQrState.cancelling = false;
+      }
+    };
+    const persistConsentRemoteSignature = (data = {})=>{
+      const signature = (data?.signature && typeof data.signature === 'object') ? data.signature : null;
+      const imageData = sanitizeText(signature?.image_data || '');
+      if(!imageData){
+        return;
+      }
+      const signedAt = sanitizeText(signature?.signed_at || formatNowSql());
+      const signerName = sanitizeText(signature?.signer_name || state.form.firmante_nombre || '');
+      const token = sanitizeText(data?.token || consentSignatureQrState.token || '');
+      const applied = setConsentRemoteSignatureFromToken({
+        image_data: imageData,
+        signed_at: signedAt,
+        signer_name: signerName,
+        token
+      });
+      if(!applied){
+        return;
+      }
+      setConsentRemoteSignatureStatus('Firma recibida desde celular. Se usará en esta emisión.', 'success');
+      const qrEls = consentSignatureQrElements();
+      if(qrEls?.previewImage){
+        qrEls.previewImage.setAttribute('src', imageData);
+      }
+      if(qrEls?.previewWrap){
+        qrEls.previewWrap.classList.remove('d-none');
+      }
+    };
+    const syncConsentSignatureTokenStatus = async (opts = {})=>{
+      const token = sanitizeText(consentSignatureQrState.token);
+      if(!token) return;
+      const currentStatus = sanitizeText(consentSignatureQrState.status).toLowerCase();
+      if(currentStatus === 'expired' || currentStatus === 'cancelled' || currentStatus === 'uploaded') return;
+      try{
+        const data = await fetchConsentSignatureTokenStatus(token);
+        const status = sanitizeText(data?.status || '').toLowerCase();
+        consentSignatureQrState.status = status || 'pending';
+        consentSignatureQrState.expiresAt = sanitizeText(data?.expires_at || consentSignatureQrState.expiresAt);
+        if(status === 'uploaded' || status === 'consumed'){
+          stopConsentSignatureQrPolling();
+          setConsentSignatureQrModalState('Firma recibida', 'success');
+          persistConsentRemoteSignature(data);
+          updateConsentSignatureQrCountdown();
+          return;
+        }
+        if(status === 'expired'){
+          stopConsentSignatureQrPolling();
+          setConsentSignatureQrModalState('Expirado', 'error');
+          setConsentRemoteSignatureStatus('La sesión de firma remota expiró. Genera una nueva.', 'error');
+          updateConsentSignatureQrCountdown();
+          return;
+        }
+        if(status === 'cancelled'){
+          stopConsentSignatureQrPolling();
+          setConsentSignatureQrModalState('Cancelado', 'error');
+          setConsentRemoteSignatureStatus('La sesión de firma remota fue cancelada.', 'error');
+          updateConsentSignatureQrCountdown();
+          return;
+        }
+        setConsentSignatureQrModalState('Pendiente');
+        updateConsentSignatureQrCountdown();
+        if(opts.manual === true){
+          setConsentRemoteSignatureStatus('Aún no se recibe firma. Sigue pendiente.', 'muted');
+        }
+      }catch(error){
+        if(opts.manual === true){
+          setConsentRemoteSignatureStatus(sanitizeText(error?.message || 'No se pudo verificar estado de la firma.'), 'error');
+        }
+      }
+    };
+    const startConsentSignatureQrPolling = ()=>{
+      const token = sanitizeText(consentSignatureQrState.token);
+      const status = sanitizeText(consentSignatureQrState.status || '').toLowerCase();
+      if(!token || status === 'expired' || status === 'cancelled') return;
+      stopConsentSignatureQrPolling();
+      consentSignatureQrState.startedAt = Date.now();
+      consentSignatureQrState.pollIntervalId = window.setInterval(()=>{
+        syncConsentSignatureTokenStatus();
+      }, CONSENT_SIGNATURE_QR_POLL_INTERVAL_MS);
+      consentSignatureQrState.countdownIntervalId = window.setInterval(()=>{
+        updateConsentSignatureQrCountdown();
+      }, 1000);
+      consentSignatureQrState.pollTimeoutId = window.setTimeout(()=>{
+        if(consentSignatureQrState.status === 'uploaded') return;
+        stopConsentSignatureQrPolling();
+        setConsentRemoteSignatureStatus('No se recibió firma en el tiempo esperado. Puedes verificar manualmente.', 'muted');
+        setConsentSignatureQrModalState('Pendiente');
+      }, CONSENT_SIGNATURE_QR_MAX_DURATION_MS);
+    };
+    const createConsentSignatureToken = async ()=>{
+      const context = await resolveConsentIdentityCaptureContext();
+      if(!context.ok){
+        throw new Error(context.error || 'No se pudo resolver el contexto del paciente.');
+      }
+      const body = {
+        patient_id: context.patientId,
+        encounter_key: context.encounterKey || null,
+        note_context: 'consentimiento_firma_remota',
+        expires_in_sec: 900
+      };
+      const resp = await fetch('/api/clinical/index.php/note-capture-tokens', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(body)
+      });
+      const json = await resp.json().catch(()=> null);
+      if(!resp.ok || !json || json.ok !== true){
+        const message = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`);
+        throw new Error(message || 'No se pudo generar el token de firma remota.');
+      }
+      const data = json?.data || {};
+      consentSignatureQrState.token = sanitizeText(data?.token || '');
+      consentSignatureQrState.status = sanitizeText(data?.status || 'pending').toLowerCase();
+      consentSignatureQrState.expiresAt = sanitizeText(data?.expires_at || '');
+      consentSignatureQrState.mobileUrl = sanitizeText(data?.mobile_url || '');
+      if(!consentSignatureQrState.token){
+        throw new Error('El servicio no devolvió token de firma remota.');
+      }
+      return data;
+    };
+    const openConsentSignatureQrModal = async ()=>{
+      if(!els.signatureQrModal){
+        setConsentRemoteSignatureStatus('No se encontró el modal QR de firma remota.', 'error');
+        return;
+      }
+      if(!window.bootstrap || !window.bootstrap.Modal){
+        setConsentRemoteSignatureStatus('Bootstrap Modal no está disponible para abrir firma remota.', 'error');
+        return;
+      }
+      setConsentRemoteSignatureStatus('Generando QR para firma desde celular…', 'muted');
+      setConsentSignatureQrModalState('Generando…');
+      stopConsentSignatureQrPolling();
+      await cancelConsentSignatureTokenIfPending('new_signature_token_requested');
+      resetConsentSignatureQrState(true);
+      try{
+        const data = await createConsentSignatureToken();
+        const mobileUrl = sanitizeText(data?.mobile_url || '');
+        const qrValue = sanitizeText(data?.qr_value || mobileUrl);
+        const normalizedQrValue = qrValue.startsWith('http')
+          ? qrValue
+          : `${window.location.origin}${qrValue.startsWith('/') ? qrValue : `/${qrValue}`}`;
+        const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(normalizedQrValue)}`;
+        const qrEls = consentSignatureQrElements();
+        if(qrEls?.qrImage) qrEls.qrImage.setAttribute('src', qrImageUrl);
+        if(qrEls?.qrLink){
+          const href = mobileUrl || qrValue;
+          const normalizedHref = href.startsWith('http')
+            ? href
+            : `${window.location.origin}${href.startsWith('/') ? href : `/${href}`}`;
+          qrEls.qrLink.setAttribute('href', normalizedHref);
+          qrEls.qrLink.textContent = normalizedHref;
+        }
+        setConsentSignatureQrModalState('Pendiente');
+        setConsentRemoteSignatureStatus('Escanea el código QR y firma desde tu celular.', 'muted');
+        updateConsentSignatureQrCountdown();
+        const modal = (typeof window.bootstrap.Modal.getOrCreateInstance === 'function')
+          ? window.bootstrap.Modal.getOrCreateInstance(els.signatureQrModal)
+          : new window.bootstrap.Modal(els.signatureQrModal);
+        modal.show();
+        startConsentSignatureQrPolling();
+      }catch(error){
+        setConsentRemoteSignatureStatus(sanitizeText(error?.message || 'No se pudo iniciar la firma remota.'), 'error');
+        setConsentSignatureQrModalState('Error', 'error');
+      }
+    };
+
+    const consumeConsentSignatureToken = async (token, noteDocument = {})=>{
+      const safeToken = sanitizeText(token || '');
+      if(!safeToken) return;
+      const noteDocumentId = sanitizeText(noteDocument?.document_db_id || noteDocument?.id || '');
+      const noteDocumentUuid = sanitizeText(noteDocument?.document_uuid || noteDocument?.document_id || noteDocument?.uuid || '');
+      if(!noteDocumentId && !noteDocumentUuid) return;
+      try{
+        await fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(safeToken)}/consume`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            note_document_id: noteDocumentId || null,
+            note_document_uuid: noteDocumentUuid || null
+          })
+        });
+      }catch(_){}
+    };
+
     const clearConsentIdentityFiles = ()=>{
       state.identityFiles = [];
       state.identityRemoteRefs = [];
@@ -7287,6 +7739,9 @@ console.info('app.js loaded :: 20251123a');
       if(els.doctorName){
         els.doctorName.textContent = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
       }
+      cancelConsentSignatureTokenIfPending('consent_wizard_reset');
+      resetConsentSignatureQrState();
+      clearConsentRemoteSignature();
       cancelConsentIdentityTokenIfPending('consent_wizard_reset');
       clearConsentSignaturePad();
       clearConsentIdentityFiles();
@@ -7310,6 +7765,9 @@ console.info('app.js loaded :: 20251123a');
       clearConsentValidationFeedback();
       initConsentSignaturePad();
       syncConsentSignatureCanvasSize();
+      cancelConsentSignatureTokenIfPending('consent_new_draft');
+      resetConsentSignatureQrState();
+      clearConsentRemoteSignature();
       clearConsentSignaturePad();
       clearConsentIdentityFiles();
       if(els.doctorName){
@@ -7610,15 +8068,16 @@ console.info('app.js loaded :: 20251123a');
         objective: objetivo,
         motivo
       });
-      const patientSignatureData = exportConsentSignatureData();
-      const patientSignature = patientSignatureData ? {
-        type: 'drawn',
-        role: 'patient_or_representative',
-        image_data: patientSignatureData,
-        signed_at: nowSql,
-        signer_name: firmanteNombre || patientSnapshot.full_name || null,
-        source: 'local_canvas'
+      const patientSignatureCandidate = getActiveConsentPatientSignature(nowSql);
+      const patientSignature = patientSignatureCandidate ? {
+        ...patientSignatureCandidate,
+        signer_name: sanitizeText(patientSignatureCandidate.signer_name || firmanteNombre || patientSnapshot.full_name || '') || null,
+        signed_at: sanitizeText(patientSignatureCandidate.signed_at || nowSql) || nowSql
       } : null;
+      const signatureSource = sanitizeText(patientSignature?.source || '');
+      const signatureMode = signatureSource === 'remote_qr'
+        ? 'drawn_remote'
+        : (signatureSource === 'local_canvas' ? 'drawn_local' : (status === 'granted' ? 'acknowledged' : 'none'));
       const payload = {
         contract_version: 1,
         status,
@@ -7665,7 +8124,7 @@ console.info('app.js loaded :: 20251123a');
         ],
         signature_capabilities: {
           local_screen_signature: true,
-          remote_qr_signature: false,
+          remote_qr_signature: true,
           supported_sources: ['local_drawn', 'remote_token']
         },
         legal: {
@@ -7678,7 +8137,7 @@ console.info('app.js loaded :: 20251123a');
           patient_signed: status === 'granted' && (!!state.form.confirm_informed || !!patientSignature),
           doctor_signed: status === 'granted',
           witness_signed: false,
-          signature_mode: patientSignature ? 'drawn_local' : (status === 'granted' ? 'acknowledged' : 'none'),
+          signature_mode: signatureMode,
           patient: patientSignature
         },
         observations: motivo || ''
@@ -7823,6 +8282,12 @@ console.info('app.js loaded :: 20251123a');
             document_type: 'consentimiento_informado'
           });
         }catch(_){}
+        const savedDocument = (json?.data?.document && typeof json.data.document === 'object') ? json.data.document : {};
+        const remoteToken = sanitizeText(state.remoteSignature?.token || consentSignatureQrState.token || '');
+        const remoteSource = sanitizeText(state.remoteSignature?.source || '');
+        if(remoteToken && remoteSource === 'remote_qr'){
+          consumeConsentSignatureToken(remoteToken, savedDocument);
+        }
         resetWizard();
         listCanonicalConsents();
         try{
@@ -7940,6 +8405,50 @@ console.info('app.js loaded :: 20251123a');
       cancelConsentIdentityTokenIfPending('consent_identity_qr_closed');
       stopConsentIdentityQrPolling();
     });
+    els.signatureQrOpen?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      openConsentSignatureQrModal();
+    });
+    els.signatureQrModal?.addEventListener('click', (event)=>{
+      const copyBtn = event.target.closest('[data-action="ci-signature-qr-copy-link"]');
+      if(copyBtn){
+        event.preventDefault();
+        const linkEl = els.signatureQrModal.querySelector('[data-role="ci-signature-qr-link"]');
+        const href = sanitizeText(linkEl?.getAttribute('href') || '');
+        const text = sanitizeText(linkEl?.textContent || href);
+        const value = href || text;
+        if(!value){
+          setConsentRemoteSignatureStatus('No hay enlace disponible para copiar todavía.', 'muted');
+          return;
+        }
+        const fallbackCopy = ()=>{
+          const temp = document.createElement('textarea');
+          temp.value = value;
+          temp.setAttribute('readonly', 'readonly');
+          temp.style.position = 'absolute';
+          temp.style.left = '-9999px';
+          document.body.appendChild(temp);
+          temp.select();
+          try{ document.execCommand('copy'); }catch(_){}
+          document.body.removeChild(temp);
+        };
+        if(navigator.clipboard?.writeText){
+          navigator.clipboard.writeText(value).catch(()=> fallbackCopy());
+        }else{
+          fallbackCopy();
+        }
+        setConsentRemoteSignatureStatus('Enlace copiado. Ábrelo en tu celular para firmar.', 'success');
+        return;
+      }
+      const verifyBtn = event.target.closest('[data-action="ci-signature-qr-verify-now"]');
+      if(!verifyBtn) return;
+      event.preventDefault();
+      syncConsentSignatureTokenStatus({ manual: true });
+    });
+    els.signatureQrModal?.addEventListener('hidden.bs.modal', ()=>{
+      cancelConsentSignatureTokenIfPending('consent_signature_qr_closed');
+      stopConsentSignatureQrPolling();
+    });
 
     els.modeGuided?.addEventListener('click', (event)=>{
       event.preventDefault();
@@ -7985,16 +8494,35 @@ console.info('app.js loaded :: 20251123a');
     els.signatureClear?.addEventListener('click', (event)=>{
       event.preventDefault();
       clearConsentSignaturePad();
+      setConsentSignaturePreferredSource(state.remoteSignature ? 'remote' : '');
     });
     els.signatureApply?.addEventListener('click', (event)=>{
       event.preventDefault();
       const signature = exportConsentSignatureData();
       if(!signature){
-        showNotice('Captura la firma en pantalla antes de aplicarla.');
+        if(state.remoteSignature){
+          setConsentSignaturePreferredSource('remote');
+          showNotice('Se mantiene la firma remota recibida.');
+        }else{
+          showNotice('Captura la firma en pantalla antes de aplicarla.');
+        }
         return;
       }
+      setConsentSignaturePreferredSource('local');
+      setConsentRemoteSignatureStatus(state.remoteSignature ? 'Se usará la firma local aplicada.' : '', 'muted');
       showNotice('Firma aplicada para esta emisión.');
       updateSignatureStatus();
+    });
+    root.addEventListener('click', (event)=>{
+      const clearRemoteBtn = event.target.closest('[data-action="ci-signature-clear-remote"]');
+      if(!clearRemoteBtn) return;
+      event.preventDefault();
+      const hadRemote = !!state.remoteSignature;
+      clearConsentRemoteSignature();
+      setConsentSignaturePreferredSource(state.signatureHasStroke ? 'local' : '');
+      if(hadRemote){
+        setConsentRemoteSignatureStatus('Firma remota eliminada de esta emisión.', 'muted');
+      }
     });
     window.addEventListener('resize', ()=>{
       if(state.mode === 'full' || state.step === 2){
@@ -8025,6 +8553,8 @@ console.info('app.js loaded :: 20251123a');
 
     renderTemplates();
     initConsentSignaturePad();
+    renderConsentRemoteSignaturePreview();
+    setConsentRemoteSignatureStatus('');
     updateSignatureStatus();
     renderIdentityFilesList();
     renderStep();

@@ -462,6 +462,7 @@ $consentPatientSignature = is_array($consentSignatures['patient'] ?? null) ? $co
 $consentPatientSignatureImage = trim((string)($consentPatientSignature['image_data'] ?? ''));
 $consentPatientSignatureSignerName = trim((string)($consentPatientSignature['signer_name'] ?? ''));
 $consentPatientSignatureSignedAt = trim((string)($consentPatientSignature['signed_at'] ?? ''));
+$consentPatientSignatureSource = trim((string)($consentPatientSignature['source'] ?? ''));
 $consentIdentityAttachments = [];
 if (is_array($payload['signer_identity_attachments'] ?? null)) {
     $consentIdentityAttachments = $payload['signer_identity_attachments'];
@@ -785,6 +786,11 @@ if (!$embed) {
         'otro' => 'Otro',
       ];
       $consentSignerRelation = (string)($consentRelationLabels[$consentSignerRelationRaw] ?? $consentSignerRelationRaw);
+      $consentSignatureSourceLabelMap = [
+        'local_canvas' => 'Firma local',
+        'remote_qr' => 'Firma remota',
+      ];
+      $consentSignatureSourceLabel = (string)($consentSignatureSourceLabelMap[$consentPatientSignatureSource] ?? '');
       $consentWitness1 = trim((string)((is_array($consentWitnesses[0] ?? null) ? ($consentWitnesses[0]['nombre'] ?? '') : '')));
       $consentWitness2 = trim((string)((is_array($consentWitnesses[1] ?? null) ? ($consentWitnesses[1]['nombre'] ?? '') : '')));
       $consentBodyText = trim((string)($consentTemplateSnapshot['body_text'] ?? ''));
@@ -850,6 +856,9 @@ if (!$embed) {
                   <?php echo h($consentPatientSignatureSignerName !== '' ? $consentPatientSignatureSignerName : $consentSignerName); ?>
                   <?php if ($consentPatientSignatureSignedAt !== ''): ?>
                     <?php echo h(' · ' . $consentPatientSignatureSignedAt); ?>
+                  <?php endif; ?>
+                  <?php if ($consentSignatureSourceLabel !== ''): ?>
+                    <?php echo h(' · ' . $consentSignatureSourceLabel); ?>
                   <?php endif; ?>
                 </div>
               <?php endif; ?>

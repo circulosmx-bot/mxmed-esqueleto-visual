@@ -3752,6 +3752,53 @@
                     </div>
                   </div>
                 </div>
+                <div class="modal fade" id="modalConsentSignatureQr" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Firmar con celular</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p class="small text-muted mb-3">
+                          Escanea este código con tu celular para firmar en pantalla y anexar la firma al consentimiento en curso.
+                        </p>
+                        <div class="text-center mb-3">
+                          <img
+                            data-role="ci-signature-qr-image"
+                            src=""
+                            alt="Código QR para firma remota"
+                            class="border rounded p-2 bg-white"
+                            style="width:220px;height:220px;object-fit:contain;"
+                          >
+                        </div>
+                        <div class="small text-break mb-2">
+                          <div class="text-muted mb-1">Si no ves el código QR, abre este enlace en tu celular:</div>
+                          <a href="#" target="_blank" rel="noopener" data-role="ci-signature-qr-link"></a>
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm mb-2" data-action="ci-signature-qr-copy-link">
+                          Copiar enlace
+                        </button>
+                        <div class="small mb-1" data-role="ci-signature-qr-state">Pendiente</div>
+                        <div class="small text-muted" data-role="ci-signature-qr-countdown"></div>
+                        <div class="alert alert-success d-none mt-3 mb-0 py-2 px-3" data-role="ci-signature-qr-preview-wrap">
+                          <div class="fw-semibold small mb-2">Firma recibida</div>
+                          <img
+                            data-role="ci-signature-qr-preview-image"
+                            src=""
+                            alt="Vista previa de firma remota"
+                            class="img-fluid rounded border bg-white"
+                            style="max-height:180px;object-fit:contain;"
+                          >
+                        </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-action="ci-signature-qr-verify-now">Verificar ahora</button>
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Cerrar</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <div class="modal fade" id="modalActividadClinicaAdjunto" tabindex="-1" aria-hidden="true">
                   <div class="modal-dialog modal-lg modal-dialog-scrollable">
                     <div class="modal-content">
@@ -6565,9 +6612,29 @@
                         <span class="small text-muted" id="ci_signature_status">Sin firma</span>
                       </div>
                       <canvas id="ci_signature_canvas" class="w-100 border rounded bg-white" height="180" style="touch-action:none"></canvas>
-                      <div class="d-flex justify-content-end gap-2 mt-2">
-                        <button type="button" class="btn btn-outline-primary btn-sm" id="ci_signature_apply">Aplicar firma</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_signature_clear">Limpiar firma</button>
+                      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ci-signature-open-qr">
+                          Firmar con celular
+                        </button>
+                        <div class="d-flex flex-wrap justify-content-end gap-2">
+                          <button type="button" class="btn btn-outline-primary btn-sm" id="ci_signature_apply">Aplicar firma</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_signature_clear">Limpiar firma</button>
+                        </div>
+                      </div>
+                      <div class="small text-success d-none mt-2" id="ci_signature_remote_status"></div>
+                      <div class="alert alert-success d-none mt-2 mb-0 py-2 px-3" id="ci_signature_remote_preview_wrap">
+                        <div class="fw-semibold small mb-2">Firma remota recibida</div>
+                        <img
+                          id="ci_signature_remote_preview_image"
+                          src=""
+                          alt="Firma remota recibida"
+                          class="img-fluid rounded border bg-white"
+                          style="max-height:140px;object-fit:contain;"
+                        >
+                        <div class="small text-muted mt-1" id="ci_signature_remote_preview_meta"></div>
+                        <div class="mt-2">
+                          <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ci-signature-clear-remote">Limpiar firma remota</button>
+                        </div>
                       </div>
                     </div>
                     <div id="ci_identity_block" class="border rounded p-2 d-none mt-2">

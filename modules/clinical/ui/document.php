@@ -309,6 +309,7 @@ $consentPatientSignature = ($isConsentDoc && is_array($consentSignatures['patien
 $consentPatientSignatureImage = ($isConsentDoc ? clinical_doc_clean_text((string)($consentPatientSignature['image_data'] ?? '')) : '');
 $consentPatientSignatureSignerName = ($isConsentDoc ? clinical_doc_clean_text((string)($consentPatientSignature['signer_name'] ?? '')) : '');
 $consentPatientSignatureSignedAt = ($isConsentDoc ? clinical_doc_clean_text((string)($consentPatientSignature['signed_at'] ?? '')) : '');
+$consentPatientSignatureSource = ($isConsentDoc ? clinical_doc_clean_text((string)($consentPatientSignature['source'] ?? '')) : '');
 $consentIdentityAttachments = [];
 if ($isConsentDoc) {
   if (is_array($payload['signer_identity_attachments'] ?? null)) {
@@ -346,6 +347,11 @@ $consentRelationLabels = [
   'otro' => 'Otro',
 ];
 $consentSignerRelation = ($isConsentDoc ? (string)($consentRelationLabels[$consentSignerRelationRaw] ?? $consentSignerRelationRaw) : '');
+$consentSignatureSourceLabelMap = [
+  'local_canvas' => 'Firma local',
+  'remote_qr' => 'Firma remota',
+];
+$consentSignatureSourceLabel = ($isConsentDoc ? (string)($consentSignatureSourceLabelMap[$consentPatientSignatureSource] ?? '') : '');
 $consentWitness1 = ($isConsentDoc && is_array($consentWitnesses[0] ?? null)) ? clinical_doc_clean_text((string)($consentWitnesses[0]['nombre'] ?? '')) : '';
 $consentWitness2 = ($isConsentDoc && is_array($consentWitnesses[1] ?? null)) ? clinical_doc_clean_text((string)($consentWitnesses[1]['nombre'] ?? '')) : '';
 $consentTemplateBody = ($isConsentDoc ? clinical_doc_clean_text((string)($consentTemplateSnapshot['body_text'] ?? '')) : '');
@@ -771,6 +777,9 @@ if (!$embed) {
                   <?php echo h($consentPatientSignatureSignerName !== '' ? $consentPatientSignatureSignerName : $consentSignerName); ?>
                   <?php if ($consentPatientSignatureSignedAt !== ''): ?>
                     <?php echo h(' · ' . $consentPatientSignatureSignedAt); ?>
+                  <?php endif; ?>
+                  <?php if ($consentSignatureSourceLabel !== ''): ?>
+                    <?php echo h(' · ' . $consentSignatureSourceLabel); ?>
                   <?php endif; ?>
                 </div>
               <?php endif; ?>

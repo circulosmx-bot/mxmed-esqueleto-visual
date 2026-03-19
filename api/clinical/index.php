@@ -391,6 +391,9 @@ function clinical_note_capture_tokens_ensure_schema(PDO $pdo): void
             note_document_id INT DEFAULT NULL,
             note_document_uuid VARCHAR(64) DEFAULT NULL,
             preview_url VARCHAR(600) DEFAULT NULL,
+            signature_image_data MEDIUMTEXT DEFAULT NULL,
+            signature_signer_name VARCHAR(191) DEFAULT NULL,
+            signature_signed_at DATETIME DEFAULT NULL,
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL,
             UNIQUE KEY uniq_note_capture_token (token),
@@ -408,6 +411,18 @@ function clinical_note_capture_tokens_ensure_schema(PDO $pdo): void
     }
     try {
         $pdo->exec("ALTER TABLE clinical_note_capture_tokens ADD COLUMN note_document_uuid VARCHAR(64) DEFAULT NULL");
+    } catch (Throwable $e) {
+    }
+    try {
+        $pdo->exec("ALTER TABLE clinical_note_capture_tokens ADD COLUMN signature_image_data MEDIUMTEXT DEFAULT NULL");
+    } catch (Throwable $e) {
+    }
+    try {
+        $pdo->exec("ALTER TABLE clinical_note_capture_tokens ADD COLUMN signature_signer_name VARCHAR(191) DEFAULT NULL");
+    } catch (Throwable $e) {
+    }
+    try {
+        $pdo->exec("ALTER TABLE clinical_note_capture_tokens ADD COLUMN signature_signed_at DATETIME DEFAULT NULL");
     } catch (Throwable $e) {
     }
 }
@@ -433,6 +448,9 @@ function clinical_note_capture_normalize_url(string $value): string
     $raw = trim($value);
     if ($raw === '') {
         return '';
+    }
+    if (preg_match('/^data:/i', $raw) === 1) {
+        return $raw;
     }
     if (preg_match('/^https?:\/\//i', $raw) === 1) {
         return $raw;
@@ -532,6 +550,7 @@ function clinical_note_capture_status_data(array $row): array
         'token' => trim((string)($row['token'] ?? '')),
         'status' => $status,
         'expires_at' => clinical_note_capture_datetime_to_iso((string)($row['expires_at'] ?? '')),
+        'note_context' => trim((string)($row['note_context'] ?? '')),
     ];
     if ($status === 'uploaded' || $status === 'consumed') {
         $data['uploaded_at'] = clinical_note_capture_datetime_to_iso((string)($row['uploaded_at'] ?? ''));
@@ -545,6 +564,17 @@ function clinical_note_capture_status_data(array $row): array
         $noteDocumentId = (int)($row['note_document_id'] ?? 0);
         $data['note_document_id'] = ($noteDocumentId > 0) ? $noteDocumentId : null;
         $data['note_document_uuid'] = trim((string)($row['note_document_uuid'] ?? ''));
+    }
+    $signatureImageData = trim((string)($row['signature_image_data'] ?? ''));
+    if ($signatureImageData !== '') {
+        $data['signature'] = [
+            'type' => 'drawn',
+            'source' => 'remote_qr',
+            'role' => 'patient_or_representative',
+            'image_data' => $signatureImageData,
+            'signer_name' => trim((string)($row['signature_signer_name'] ?? '')),
+            'signed_at' => clinical_note_capture_datetime_to_iso((string)($row['signature_signed_at'] ?? ($row['uploaded_at'] ?? ''))),
+        ];
     }
     return $data;
 }
@@ -5982,7 +6012,12 @@ try {
             $token = clinical_note_capture_token_generate();
             $now = gmdate('Y-m-d H:i:s');
             $expiresAt = gmdate('Y-m-d H:i:s', time() + $expiresInSec);
+            $noteContextNorm = strtolower($noteContext);
+            $isConsentRemoteSignatureContext = strpos($noteContextNorm, 'consentimiento_firma_remota') === 0;
             $mobilePath = '/public/note-capture.html?token=' . rawurlencode($token);
+            if ($isConsentRemoteSignatureContext) {
+                $mobilePath .= '&mode=signature';
+            }
             try {
                 $stmt = $pdo->prepare("
                     INSERT INTO clinical_note_capture_tokens (
@@ -6289,6 +6324,170 @@ try {
                     'route' => 'note-capture-tokens/{token}/consume',
                 ],
             ], 200);
+            return;
+        }
+
+        if ($method === 'POST' && count($segments) === 3 && ($segments[2] ?? '') === 'signature') {
+            $token = trim(rawurldecode((string)$segments[1]));
+            if ($token === '') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'token requerido',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/signature',
+                    ],
+                ], 400);
+                return;
+            }
+            $row = clinical_note_capture_token_fetch($pdo, $token);
+            if (!is_array($row)) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'token no encontrado',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/signature',
+                    ],
+                ], 404);
+                return;
+            }
+            $row = clinical_note_capture_mark_expired_if_needed($pdo, $row);
+            $status = strtolower(trim((string)($row['status'] ?? 'pending')));
+            if ($status !== 'pending') {
+                $statusCode = ($status === 'expired') ? 410 : 409;
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'conflict',
+                    'message' => 'token no disponible para firma (' . $status . ')',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/signature',
+                    ],
+                ], $statusCode);
+                return;
+            }
+            $noteContext = strtolower(trim((string)($row['note_context'] ?? '')));
+            if (strpos($noteContext, 'consentimiento_firma_remota') !== 0) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'conflict',
+                    'message' => 'token no corresponde a firma remota',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/signature',
+                    ],
+                ], 409);
+                return;
+            }
+            $bodyResult = clinical_read_json_body();
+            if (($bodyResult['ok'] ?? false) !== true) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => (string)($bodyResult['error'] ?? 'invalid body'),
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/signature',
+                    ],
+                ], 400);
+                return;
+            }
+            $body = is_array($bodyResult['data'] ?? null) ? (array)$bodyResult['data'] : [];
+            $signatureData = trim((string)($body['signature_data'] ?? ''));
+            if ($signatureData === '' || preg_match('/^data:image\//i', $signatureData) !== 1) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'signature_data requerido en formato data:image',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/signature',
+                    ],
+                ], 400);
+                return;
+            }
+            if (strlen($signatureData) > 2_000_000) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'signature_data demasiado grande',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'POST',
+                        'route' => 'note-capture-tokens/{token}/signature',
+                    ],
+                ], 400);
+                return;
+            }
+            $signerName = trim((string)($body['signer_name'] ?? ''));
+            $signedAtRaw = trim((string)($body['signed_at'] ?? ''));
+            if ($signedAtRaw !== '' && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/', $signedAtRaw) === 1) {
+                $signedAtRaw = str_replace('T', ' ', $signedAtRaw) . ':00';
+            }
+            if ($signedAtRaw !== '' && preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/', $signedAtRaw) === 1) {
+                $signedAtRaw .= ':00';
+            }
+            if ($signedAtRaw === '' || preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/', $signedAtRaw) !== 1) {
+                $signedAtRaw = gmdate('Y-m-d H:i:s');
+            }
+            $uploadedAt = gmdate('Y-m-d H:i:s');
+            $stmt = $pdo->prepare("
+                UPDATE clinical_note_capture_tokens
+                SET
+                    status = 'uploaded',
+                    uploaded_at = :uploaded_at,
+                    signature_image_data = :signature_image_data,
+                    signature_signer_name = :signature_signer_name,
+                    signature_signed_at = :signature_signed_at,
+                    preview_url = :preview_url,
+                    updated_at = :updated_at
+                WHERE token = :token
+            ");
+            $stmt->bindValue(':uploaded_at', $uploadedAt, PDO::PARAM_STR);
+            $stmt->bindValue(':signature_image_data', $signatureData, PDO::PARAM_STR);
+            if ($signerName !== '') {
+                $stmt->bindValue(':signature_signer_name', $signerName, PDO::PARAM_STR);
+            } else {
+                $stmt->bindValue(':signature_signer_name', null, PDO::PARAM_NULL);
+            }
+            $stmt->bindValue(':signature_signed_at', $signedAtRaw, PDO::PARAM_STR);
+            $stmt->bindValue(':preview_url', $signatureData, PDO::PARAM_STR);
+            $stmt->bindValue(':updated_at', $uploadedAt, PDO::PARAM_STR);
+            $stmt->bindValue(':token', $token, PDO::PARAM_STR);
+            $stmt->execute();
+
+            $latest = clinical_note_capture_token_fetch($pdo, $token);
+            if (!is_array($latest)) {
+                $latest = [
+                    'token' => $token,
+                    'status' => 'uploaded',
+                    'expires_at' => ($row['expires_at'] ?? ''),
+                    'uploaded_at' => $uploadedAt,
+                    'preview_url' => $signatureData,
+                    'signature_image_data' => $signatureData,
+                    'signature_signer_name' => $signerName,
+                    'signature_signed_at' => $signedAtRaw,
+                ];
+            }
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => 'note capture signature uploaded',
+                'data' => clinical_note_capture_status_data($latest),
+                'meta' => [
+                    'method' => 'POST',
+                    'route' => 'note-capture-tokens/{token}/signature',
+                ],
+            ], 201);
             return;
         }
 

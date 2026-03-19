@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Capturar imagen clínica</title>
+  <title>Captura clínica móvil</title>
   <style>
     :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1f2937;background:#f6f8fb}
     body{margin:0;padding:20px}
@@ -14,18 +14,23 @@
     input[type="file"],input[type="text"],input[type="datetime-local"]{width:100%;box-sizing:border-box;border:1px solid #c7d2e5;border-radius:10px;padding:10px;font-size:.95rem;margin-bottom:12px}
     button{border:1px solid #2563eb;background:#2563eb;color:#fff;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer;width:100%}
     button[disabled]{opacity:.6;cursor:not-allowed}
+    .btn-secondary{border-color:#64748b;background:#fff;color:#334155}
     .msg{margin-top:12px;font-size:.92rem}
     .ok{color:#15803d}
     .err{color:#b91c1c}
     .muted{color:#6b7280}
     .preview{margin-top:10px;display:none}
     .preview img{width:100%;max-height:260px;object-fit:contain;border:1px solid #dbe3ef;border-radius:10px;background:#f8fafc}
+    .d-none{display:none !important}
+    .sig-pad{border:1px solid #c7d2e5;border-radius:10px;background:#fff;touch-action:none;width:100%;height:190px}
+    .sig-actions{display:flex;gap:10px;margin-top:10px}
+    .sig-actions button{width:auto;flex:1}
   </style>
 </head>
 <body>
   <main class="wrap">
-    <h1>Capturar imagen clínica</h1>
-    <p>Selecciona una imagen desde tu cámara o galería y súbela para anexarla al documento clínico activo en escritorio.</p>
+    <h1 id="captureTitle">Capturar imagen clínica</h1>
+    <p id="captureIntro">Selecciona una imagen desde tu cámara o galería y súbela para anexarla al documento clínico activo en escritorio.</p>
 
     <form id="captureForm">
       <label for="captureFile">Imagen clínica</label>
@@ -40,25 +45,52 @@
       <button id="captureSubmit" type="submit">Subir imagen</button>
     </form>
 
+    <form id="signatureForm" class="d-none">
+      <label for="signatureSignerName">Nombre del firmante (opcional)</label>
+      <input id="signatureSignerName" type="text" maxlength="140" placeholder="Nombre de quien firma">
+
+      <label for="signatureCanvas">Firma en pantalla</label>
+      <canvas id="signatureCanvas" class="sig-pad" width="520" height="190" aria-label="Firma del paciente o representante"></canvas>
+
+      <div class="sig-actions">
+        <button type="button" class="btn-secondary" id="signatureClear">Limpiar firma</button>
+        <button type="submit" id="signatureSubmit">Enviar firma</button>
+      </div>
+    </form>
+
     <div class="preview" id="capturePreviewWrap">
       <img id="capturePreview" alt="Vista previa de imagen">
     </div>
 
-    <div class="msg muted" id="captureMsg">Esperando imagen para enviar…</div>
+    <div class="msg muted" id="captureMsg">Esperando acción…</div>
   </main>
 
   <script>
     (function(){
       const params = new URLSearchParams(window.location.search || '');
       const token = String(params.get('token') || '').trim();
+      const mode = String(params.get('mode') || '').trim().toLowerCase();
+
+      const titleEl = document.getElementById('captureTitle');
+      const introEl = document.getElementById('captureIntro');
       const form = document.getElementById('captureForm');
       const fileInput = document.getElementById('captureFile');
       const summaryInput = document.getElementById('captureSummary');
       const datetimeInput = document.getElementById('captureDatetime');
       const submitBtn = document.getElementById('captureSubmit');
-      const msg = document.getElementById('captureMsg');
       const previewWrap = document.getElementById('capturePreviewWrap');
       const previewImg = document.getElementById('capturePreview');
+
+      const signatureForm = document.getElementById('signatureForm');
+      const signatureCanvas = document.getElementById('signatureCanvas');
+      const signatureSignerName = document.getElementById('signatureSignerName');
+      const signatureSubmit = document.getElementById('signatureSubmit');
+      const signatureClear = document.getElementById('signatureClear');
+
+      const msg = document.getElementById('captureMsg');
+
+      const isSignatureMode = mode === 'signature';
+      let signatureHasStroke = false;
 
       const setMsg = (text, tone='muted')=>{
         msg.textContent = String(text || '');
@@ -66,20 +98,91 @@
         msg.classList.add(tone === 'ok' ? 'ok' : (tone === 'err' ? 'err' : 'muted'));
       };
 
-      const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const dd = String(now.getDate()).padStart(2, '0');
-      const hh = String(now.getHours()).padStart(2, '0');
-      const mi = String(now.getMinutes()).padStart(2, '0');
-      datetimeInput.value = `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+      const setNowDatetime = ()=>{
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mi = String(now.getMinutes()).padStart(2, '0');
+        datetimeInput.value = `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+      };
+
+      const setupSignatureCanvas = ()=>{
+        if(!signatureCanvas) return;
+        const ctx = signatureCanvas.getContext('2d');
+        if(!ctx) return;
+        const reset = ()=>{
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#0f172a';
+          signatureHasStroke = false;
+        };
+        reset();
+        let drawing = false;
+        const point = (event)=>{
+          const rect = signatureCanvas.getBoundingClientRect();
+          return {
+            x: (event.clientX - rect.left) * (signatureCanvas.width / Math.max(1, rect.width)),
+            y: (event.clientY - rect.top) * (signatureCanvas.height / Math.max(1, rect.height))
+          };
+        };
+        const start = (event)=>{
+          drawing = true;
+          const p = point(event);
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          signatureHasStroke = true;
+          event.preventDefault();
+        };
+        const move = (event)=>{
+          if(!drawing) return;
+          const p = point(event);
+          ctx.lineTo(p.x, p.y);
+          ctx.stroke();
+          event.preventDefault();
+        };
+        const end = (event)=>{
+          if(!drawing) return;
+          drawing = false;
+          ctx.closePath();
+          event.preventDefault();
+        };
+        signatureCanvas.addEventListener('pointerdown', start);
+        signatureCanvas.addEventListener('pointermove', move);
+        signatureCanvas.addEventListener('pointerup', end);
+        signatureCanvas.addEventListener('pointercancel', end);
+        signatureCanvas.addEventListener('pointerleave', end);
+        signatureClear?.addEventListener('click', (event)=>{
+          event.preventDefault();
+          reset();
+          setMsg('Firma limpiada. Dibuja nuevamente para enviar.', 'muted');
+        });
+      };
 
       if(!token){
         setMsg('Token inválido o ausente. Abre este enlace desde el QR del escritorio.', 'err');
         submitBtn.disabled = true;
+        if(signatureSubmit) signatureSubmit.disabled = true;
       }
 
-      fileInput.addEventListener('change', ()=>{
+      if(isSignatureMode){
+        titleEl.textContent = 'Capturar firma clínica';
+        introEl.textContent = 'Firma en pantalla y envía la firma al consentimiento activo en escritorio.';
+        form.classList.add('d-none');
+        signatureForm.classList.remove('d-none');
+        previewWrap.style.display = 'none';
+        setupSignatureCanvas();
+        setMsg('Firma pendiente de envío…', 'muted');
+      }else{
+        setNowDatetime();
+        setMsg('Esperando imagen para enviar…', 'muted');
+      }
+
+      fileInput?.addEventListener('change', ()=>{
         const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
         if(!file){
           previewWrap.style.display = 'none';
@@ -95,7 +198,7 @@
         }
       });
 
-      form.addEventListener('submit', async (event)=>{
+      form?.addEventListener('submit', async (event)=>{
         event.preventDefault();
         const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
         if(!file){
@@ -131,6 +234,46 @@
         }catch(error){
           setMsg(String((error && error.message) || 'No se pudo subir la imagen.'), 'err');
           submitBtn.disabled = false;
+        }
+      });
+
+      signatureForm?.addEventListener('submit', async (event)=>{
+        event.preventDefault();
+        if(!signatureHasStroke){
+          setMsg('Captura una firma antes de enviar.', 'err');
+          return;
+        }
+        const signatureData = signatureCanvas.toDataURL('image/png');
+        const signerName = String(signatureSignerName?.value || '').trim();
+        signatureSubmit.disabled = true;
+        setMsg('Enviando firma…', 'muted');
+        try{
+          const resp = await fetch(`/api/clinical/index.php/note-capture-tokens/${encodeURIComponent(token)}/signature`, {
+            method: 'POST',
+            headers: {
+              Accept: 'application/json',
+              'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              signature_data: signatureData,
+              signer_name: signerName || null,
+              signed_at: new Date().toISOString()
+            })
+          });
+          const json = await resp.json().catch(()=> null);
+          if(!resp.ok || !json || json.ok !== true){
+            const message = String((json && (json.message || (json.error && json.error.message) || json.error)) || `HTTP ${resp.status}`).trim();
+            throw new Error(message || 'No se pudo enviar la firma.');
+          }
+          setMsg('Firma enviada correctamente. Ya puedes volver a tu computadora.', 'ok');
+          signatureSubmit.disabled = true;
+          signatureSignerName.disabled = true;
+          signatureCanvas.style.pointerEvents = 'none';
+          signatureClear.disabled = true;
+        }catch(error){
+          setMsg(String((error && error.message) || 'No se pudo enviar la firma.'), 'err');
+          signatureSubmit.disabled = false;
         }
       });
     })();
