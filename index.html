@@ -6349,17 +6349,7 @@
               <div class="tab-pane fade" id="t-manejo"></div>
 
               <div class="tab-pane fade" id="t-consent">
-                <div class="exp-card exp-card--secondary">
-                  <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
-                    <span>Consentimientos informados</span>
-                    <button type="button" class="btn btn-sm btn-outline-primary exp-mini-btn" id="ci_new_btn">Nuevo Consentimiento Informado</button>
-                  </div>
-                  <div class="alert alert-info py-2 mb-3 d-none" id="ci_context_notice">Selecciona paciente</div>
-                  <div class="alert alert-light mb-3" id="ci_empty_state">Aún no hay consentimientos para este paciente.</div>
-                  <div class="ci-list d-grid gap-2" id="ci_list"></div>
-                </div>
-
-                <div class="exp-card mt-3 d-none" id="ci_wizard">
+                <div class="exp-card d-none mb-3" id="ci_wizard">
                   <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
                     <span>Nuevo Consentimiento Informado</span>
                     <span class="text-muted small" id="ci_step_label">Paso 1 de 2</span>
@@ -6664,6 +6654,16 @@
                     </div>
                     <div class="alert alert-danger py-2 mt-2 d-none" id="ci_emit_errors"></div>
                   </div>
+                </div>
+
+                <div class="exp-card exp-card--secondary">
+                  <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
+                    <span>Consentimientos generados anteriormente</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary exp-mini-btn" id="ci_new_btn">Nuevo Consentimiento Informado</button>
+                  </div>
+                  <div class="alert alert-info py-2 mb-3 d-none" id="ci_context_notice">Selecciona paciente</div>
+                  <div class="alert alert-light mb-3" id="ci_empty_state">Aún no hay consentimientos para este paciente.</div>
+                  <div class="ci-list d-grid gap-2" id="ci_list"></div>
                 </div>
               </div>
 
