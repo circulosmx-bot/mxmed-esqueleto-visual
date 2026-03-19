@@ -333,7 +333,7 @@ $consentSignerType = ($isConsentDoc ? clinical_doc_clean_text((string)($consentS
 $consentSignerName = ($isConsentDoc ? clinical_doc_clean_text((string)($consentSigner['nombre'] ?? $consentPatientName)) : '');
 $consentSignerRelationRaw = ($isConsentDoc ? clinical_doc_clean_text((string)($consentSigner['relacion'] ?? ($consentSigner['parentesco'] ?? ''))) : '');
 $consentRelationLabels = [
-  'self' => 'Self (paciente)',
+  'self' => 'Paciente',
   'padre' => 'Padre',
   'madre' => 'Madre',
   'conyuge' => 'Cónyuge',
@@ -347,6 +347,13 @@ $consentRelationLabels = [
   'otro' => 'Otro',
 ];
 $consentSignerRelation = ($isConsentDoc ? (string)($consentRelationLabels[$consentSignerRelationRaw] ?? $consentSignerRelationRaw) : '');
+$consentSignerTypeLabels = [
+  'paciente' => 'Paciente',
+  'tutor' => 'Tutor',
+  'representante_legal' => 'Representante legal',
+  'familiar_mas_cercano' => 'Familiar más cercano en vínculo',
+];
+$consentSignerTypeLabel = ($isConsentDoc ? (string)($consentSignerTypeLabels[$consentSignerType] ?? ucfirst(str_replace('_', ' ', ($consentSignerType !== '' ? $consentSignerType : 'paciente')))) : '');
 $consentSignatureSourceLabelMap = [
   'local_canvas' => 'Firma local',
   'remote_qr' => 'Firma remota',
@@ -690,9 +697,6 @@ if (!$embed) {
         </footer>
       </article>
     <?php elseif ($isConsentDoc): ?>
-      <?php
-      $signerTypeLabel = ucfirst(str_replace('_', ' ', ($consentSignerType !== '' ? $consentSignerType : 'paciente')));
-      ?>
       <article class="consent-print-sheet">
         <header class="consent-print-head">
           <div>
@@ -755,10 +759,21 @@ if (!$embed) {
             <div class="consent-print-text">
               <?php
               $attLines = [];
-              foreach ($consentIdentityAttachments as $att) {
+              foreach ($consentIdentityAttachments as $index => $att) {
                 $attTitle = clinical_doc_clean_text((string)($att['title'] ?? 'Anexo de identidad'));
-                $attUuid = clinical_doc_clean_text((string)($att['document_uuid'] ?? ''));
-                $attLines[] = ($attUuid !== '') ? ($attTitle . ' · UUID: ' . $attUuid) : $attTitle;
+                $attSource = clinical_doc_clean_text((string)($att['source'] ?? ''));
+                $attKind = clinical_doc_clean_text((string)($att['identity_doc_label'] ?? ($att['identity_doc_kind'] ?? '')));
+                $attSourceLabelMap = [
+                  'consentimiento_identidad_qr_v1' => 'captura por celular',
+                  'consentimiento_identidad_local' => 'carga local',
+                ];
+                $attSourceLabel = (string)($attSourceLabelMap[$attSource] ?? '');
+                $meta = implode(' · ', array_values(array_filter([$attKind, $attSourceLabel])));
+                $line = ($index + 1) . '. ' . ($attTitle !== '' ? $attTitle : 'Anexo de identidad');
+                if ($meta !== '') {
+                  $line .= ' (' . $meta . ')';
+                }
+                $attLines[] = $line;
               }
               echo nl2br(h(implode("\n", $attLines)));
               ?>
@@ -768,7 +783,7 @@ if (!$embed) {
 
         <section class="consent-print-sign-grid">
           <div class="consent-print-sign">
-            <div class="consent-print-meta"><?php echo h($signerTypeLabel); ?></div>
+            <div class="consent-print-meta"><?php echo h($consentSignerTypeLabel !== '' ? $consentSignerTypeLabel : 'Paciente'); ?></div>
             <div class="consent-print-text"><?php echo h($consentSignerName !== '' ? $consentSignerName : '________________'); ?><?php echo $consentSignerRelation !== '' ? h(' · ' . $consentSignerRelation) : ''; ?></div>
             <?php if ($consentPatientSignatureImage !== ''): ?>
               <img class="consent-print-sign-image" src="<?php echo h($consentPatientSignatureImage); ?>" alt="Firma del paciente o representante">

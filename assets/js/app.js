@@ -6973,7 +6973,7 @@ console.info('app.js loaded :: 20251123a');
         consentIdentityQrState.expiresAt = sanitizeText(data?.expires_at || consentIdentityQrState.expiresAt);
         if(status === 'uploaded'){
           stopConsentIdentityQrPolling();
-          setConsentIdentityQrModalState('Anexo recibido', 'success');
+          setConsentIdentityQrModalState('Recibido', 'success');
           persistConsentIdentityQrRef(data);
           updateConsentIdentityQrCountdown();
           syncConsentIdentityQrVerifyButton();

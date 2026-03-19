@@ -662,6 +662,7 @@ if (!$embed) {
           <button type="button" class="btn btn-outline-secondary btn-sm" data-role="viewer-print">Imprimir</button>
         <?php endif; ?>
         <?php if ($isConsentDoc && $consentPrintableHref !== ''): ?>
+          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($consentPrintableHref); ?>" target="_blank" rel="noopener">Versión imprimible</a>
           <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($consentPrintableHref); ?>" target="_blank" rel="noopener" download>Descargar</a>
         <?php endif; ?>
         <?php if ($bundlePrevHref !== ''): ?>
@@ -772,7 +773,7 @@ if (!$embed) {
       $consentSignerName = trim((string)($consentSigner['nombre'] ?? $consentPatientName));
       $consentSignerRelationRaw = trim((string)($consentSigner['relacion'] ?? ($consentSigner['parentesco'] ?? '')));
       $consentRelationLabels = [
-        'self' => 'Self (paciente)',
+        'self' => 'Paciente',
         'padre' => 'Padre',
         'madre' => 'Madre',
         'conyuge' => 'Cónyuge',
@@ -786,6 +787,13 @@ if (!$embed) {
         'otro' => 'Otro',
       ];
       $consentSignerRelation = (string)($consentRelationLabels[$consentSignerRelationRaw] ?? $consentSignerRelationRaw);
+      $consentSignerTypeLabels = [
+        'paciente' => 'Paciente',
+        'tutor' => 'Tutor',
+        'representante_legal' => 'Representante legal',
+        'familiar_mas_cercano' => 'Familiar más cercano en vínculo',
+      ];
+      $consentSignerTypeLabel = (string)($consentSignerTypeLabels[$consentSignerType] ?? ucfirst(str_replace('_', ' ', $consentSignerType)));
       $consentSignatureSourceLabelMap = [
         'local_canvas' => 'Firma local',
         'remote_qr' => 'Firma remota',
@@ -806,9 +814,6 @@ if (!$embed) {
           <div class="text-end">
             <span class="badge <?php echo h($consentStatusBadgeClass); ?>"><?php echo h($consentStatus !== '' ? $consentStatus : 'draft'); ?></span>
             <div class="consent-doc-meta mt-2">Fecha: <?php echo h((string)($consentBlock['granted_at'] ?? $date)); ?></div>
-            <?php if ($consentPrintableHref !== ''): ?>
-              <div class="mt-2"><a class="btn btn-outline-secondary btn-sm" href="<?php echo h($consentPrintableHref); ?>" target="_blank" rel="noopener">Versión imprimible</a></div>
-            <?php endif; ?>
           </div>
         </header>
 
@@ -847,7 +852,7 @@ if (!$embed) {
 
         <section class="consent-doc-sign-grid">
           <div class="consent-doc-sign-item">
-            <div class="consent-doc-meta"><?php echo h(ucfirst(str_replace('_', ' ', $consentSignerType))); ?></div>
+            <div class="consent-doc-meta"><?php echo h($consentSignerTypeLabel); ?></div>
             <div class="consent-doc-text"><?php echo h($consentSignerName !== '' ? $consentSignerName : '________________'); ?><?php echo $consentSignerRelation !== '' ? h(' · ' . $consentSignerRelation) : ''; ?></div>
             <?php if ($consentPatientSignatureImage !== ''): ?>
               <img class="consent-doc-sign-image" src="<?php echo h($consentPatientSignatureImage); ?>" alt="Firma del paciente o representante">
@@ -894,16 +899,30 @@ if (!$embed) {
           <section>
             <div class="consent-doc-section-title">Anexos de identidad del firmante</div>
             <div class="vstack gap-1">
-              <?php foreach ($consentIdentityAttachments as $att): ?>
+              <?php foreach ($consentIdentityAttachments as $index => $att): ?>
                 <?php
                 $attUuid = trim((string)($att['document_uuid'] ?? ''));
                 $attTitle = trim((string)($att['title'] ?? 'Anexo de identidad'));
+                $attSource = trim((string)($att['source'] ?? ''));
+                $attKind = trim((string)($att['identity_doc_label'] ?? ($att['identity_doc_kind'] ?? '')));
+                $attSourceLabelMap = [
+                  'consentimiento_identidad_qr_v1' => 'Captura por celular',
+                  'consentimiento_identidad_local' => 'Carga local',
+                ];
+                $attSourceLabel = (string)($attSourceLabelMap[$attSource] ?? '');
+                $attMetaParts = array_values(array_filter([
+                  $attKind !== '' ? $attKind : '',
+                  $attSourceLabel !== '' ? $attSourceLabel : '',
+                ]));
                 $attHref = $attUuid !== '' ? ('/modules/clinical/ui/viewer.php?uuid=' . rawurlencode($attUuid) . ($embed ? '&embed=1' : '')) : '';
                 ?>
                 <?php if ($attHref !== ''): ?>
-                  <a class="btn btn-sm btn-outline-secondary text-start" href="<?php echo h($attHref); ?>" target="_blank" rel="noopener"><?php echo h($attTitle); ?></a>
+                  <a class="btn btn-sm btn-outline-secondary text-start" href="<?php echo h($attHref); ?>" target="_blank" rel="noopener"><?php echo h(($index + 1) . '. ' . $attTitle); ?></a>
                 <?php else: ?>
-                  <div class="consent-doc-text"><?php echo h($attTitle); ?></div>
+                  <div class="consent-doc-text"><?php echo h(($index + 1) . '. ' . $attTitle); ?></div>
+                <?php endif; ?>
+                <?php if ($attMetaParts !== []): ?>
+                  <div class="consent-doc-meta ps-1"><?php echo h(implode(' · ', $attMetaParts)); ?></div>
                 <?php endif; ?>
               <?php endforeach; ?>
             </div>
