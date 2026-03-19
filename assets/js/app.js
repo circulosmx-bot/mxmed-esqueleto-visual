@@ -8890,6 +8890,28 @@ console.info('app.js loaded :: 20251123a');
     if(String(pane.dataset?.encounterAutoContextMode || '').trim() !== 'suppressed') return false;
     delete pane.dataset.encounterAutoContextMode;
     delete pane.dataset.encounterAutoContextPatientId;
+    const blockedState = (window.__mxmedBlockedAutoEncounterState && typeof window.__mxmedBlockedAutoEncounterState === 'object')
+      ? window.__mxmedBlockedAutoEncounterState
+      : null;
+    if(blockedState){
+      const purgePid = pid || flaggedPid;
+      if(purgePid){
+        delete blockedState[purgePid];
+      }
+    }
+    const logState = (window.__mxmedAutoEncounterBlockedLogState && typeof window.__mxmedAutoEncounterBlockedLogState === 'object')
+      ? window.__mxmedAutoEncounterBlockedLogState
+      : null;
+    if(logState && logState.seen && typeof logState.seen === 'object'){
+      const purgePid = pid || flaggedPid;
+      if(purgePid){
+        Object.keys(logState.seen).forEach((key)=>{
+          if(key.indexOf(`${purgePid}::`) === 0){
+            delete logState.seen[key];
+          }
+        });
+      }
+    }
     return true;
   };
 
@@ -9397,8 +9419,25 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const resolveEncounterKeyForHeader = async (patientId)=>{
-    if(!String(patientId || '').trim()) return '';
-    const fetched = await fetchActiveEncounterKeyForHeader(patientId);
+    const safePatientId = String(patientId || '').trim();
+    if(!safePatientId) return '';
+    const suppressAutoEncounterContext = (typeof window.mxmedShouldSuppressAutoEncounterContext === 'function')
+      ? window.mxmedShouldSuppressAutoEncounterContext(safePatientId) === true
+      : false;
+    const blockedState = (window.__mxmedBlockedAutoEncounterState && typeof window.__mxmedBlockedAutoEncounterState === 'object')
+      ? window.__mxmedBlockedAutoEncounterState
+      : (window.__mxmedBlockedAutoEncounterState = {});
+    const cachedBlocked = blockedState[safePatientId];
+    if(suppressAutoEncounterContext && cachedBlocked){
+      return String(cachedBlocked.encounterKey || '').trim();
+    }
+    const fetched = await fetchActiveEncounterKeyForHeader(safePatientId);
+    if(suppressAutoEncounterContext){
+      blockedState[safePatientId] = {
+        encounterKey: String(fetched || '').trim(),
+        ts: Date.now()
+      };
+    }
     return fetched;
   };
 
@@ -9491,16 +9530,15 @@ console.info('app.js loaded :: 20251123a');
     const pid = String(patientId || '').trim();
     const eKey = String(encounterKey || '').trim();
     if(!pid || !eKey) return false;
-    const now = Date.now();
+    const key = `${pid}::${eKey}`;
     const state = window.__mxmedAutoEncounterBlockedLogState && typeof window.__mxmedAutoEncounterBlockedLogState === 'object'
       ? window.__mxmedAutoEncounterBlockedLogState
-      : (window.__mxmedAutoEncounterBlockedLogState = { key: '', ts: 0 });
-    const key = `${pid}::${eKey}`;
-    if(state.key === key && (now - Number(state.ts || 0)) < 2500){
+      : (window.__mxmedAutoEncounterBlockedLogState = { seen: {} });
+    const seen = (state.seen && typeof state.seen === 'object') ? state.seen : (state.seen = {});
+    if(seen[key] === true){
       return false;
     }
-    state.key = key;
-    state.ts = now;
+    seen[key] = true;
     return true;
   };
   const syncExpedienteHeaderContext = async ()=>{
