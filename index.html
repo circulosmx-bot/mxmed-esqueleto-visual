@@ -7472,7 +7472,9 @@
       })();
       if (typeof window.mxmedShouldSuppressAutoEncounterContext === 'function' && window.mxmedShouldSuppressAutoEncounterContext(safePatientId) === true) {
         if (shouldLogP10Suppressed) {
-          console.info('[mxmed-search-open] p10 suppress auto encounter context', { patient_id: safePatientId });
+          if(typeof window.mxmedLog === 'function'){
+            window.mxmedLog('mxmed-search-open', 'p10 suppress auto encounter context', { patient_id: safePatientId });
+          }
         }
         return Promise.resolve({ hasActive: false, suppressed: true });
       }

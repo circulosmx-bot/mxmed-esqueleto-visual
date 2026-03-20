@@ -1,4 +1,21 @@
 ﻿// MXMed app bundle
+if(window.__MXMED_DEBUG__ !== true){
+  window.__MXMED_DEBUG__ = false;
+}
+if(typeof window.mxmedLog !== 'function'){
+  window.mxmedLog = function(scope, message, payload){
+    if(window.__MXMED_DEBUG__ === true){
+      const safeScope = String(scope || 'mxmed').trim() || 'mxmed';
+      const safeMessage = String(message || '').trim();
+      if(typeof payload === 'undefined'){
+        console.info(`[${safeScope}] ${safeMessage}`);
+      }else{
+        console.info(`[${safeScope}] ${safeMessage}`, payload);
+      }
+    }
+  };
+}
+const mxmedLog = window.mxmedLog;
 console.info('app.js loaded :: 20251123a');
 
 // P11 single source shim
@@ -5496,14 +5513,14 @@ console.info('app.js loaded :: 20251123a');
     if(context === 'search_open'){
       targetTab = clinicalTabTargets.datos;
       try{
-        console.info('[mxmed-search-open] default tab -> datos-generales', {
+        mxmedLog('mxmed-search-open', 'default tab -> datos-generales', {
           patientId: pid,
           targetTab
         });
       }catch(_){}
     }
     try{
-      console.info('[mxmed-profile-gate] apply-entry-tab-rule', {
+      mxmedLog('mxmed-profile-gate', 'apply-entry-tab-rule', {
         context,
         patientId: pid,
         completeProfile,
@@ -8738,7 +8755,7 @@ console.info('app.js loaded :: 20251123a');
       return allow;
     };
     if(isSearchOpen){
-      console.info('[mxmed-search-open] neutral context start', { patient_id: next, current_patient_id: current || null });
+      mxmedLog('mxmed-search-open', 'neutral context start', { patient_id: next, current_patient_id: current || null });
       setSearchOpenSuppression(true);
     }
     if(current === next){
@@ -8766,14 +8783,14 @@ console.info('app.js loaded :: 20251123a');
         applyMotivoDraftForPatient(next);
         const prefillEncounterContext = { encounter_key: '' };
         maybeApplyContextualMotivoPrefill(next, prefillEncounterContext).catch(()=> null);
-        console.info('[mxmed-search-open] patient hydration ready', { patient_id: next, hydrated: appliedFromDraft === true });
+        mxmedLog('mxmed-search-open', 'patient hydration ready', { patient_id: next, hydrated: appliedFromDraft === true });
         applyPatientGate();
         if(opts.applyEntryRule !== false){
           applyExpedienteEntryTabRule({ context: 'search_open' });
         }
         window.__mxmedHeaderSyncOrigin = 'search_open_same_patient';
         syncExpedienteHeaderContext();
-        console.info('[mxmed-search-open] neutral context complete', { patient_id: next });
+        mxmedLog('mxmed-search-open', 'neutral context complete', { patient_id: next });
         return true;
       }
       if(shouldSuppressAutoEncounterContext){
@@ -8848,7 +8865,7 @@ console.info('app.js loaded :: 20251123a');
     }
     if(shouldSuppressAutoEncounterContext){
       setSearchOpenSuppression(true);
-      console.info('[mxmed-search-open] suppress auto encounter context', { patient_id: next });
+      mxmedLog('mxmed-search-open', 'suppress auto encounter context', { patient_id: next });
     }else{
       setSearchOpenSuppression(false);
     }
@@ -8858,7 +8875,7 @@ console.info('app.js loaded :: 20251123a');
     };
     maybeApplyContextualMotivoPrefill(next, prefillEncounterContext).catch(()=> null);
     if(isSearchOpen){
-      console.info('[mxmed-search-open] patient hydration ready', { patient_id: next, hydrated_from_draft_or_api: appliedFromDraft === true });
+      mxmedLog('mxmed-search-open', 'patient hydration ready', { patient_id: next, hydrated_from_draft_or_api: appliedFromDraft === true });
     }
     captureExpedienteIdentityDraft(next);
     setSessionPatientId(next);
@@ -8871,7 +8888,7 @@ console.info('app.js loaded :: 20251123a');
       applyExpedienteEntryTabRule({ context: isSearchOpen ? 'search_open' : 'setActivePatientId' });
     }
     if(isSearchOpen){
-      console.info('[mxmed-search-open] neutral context complete', { patient_id: next });
+      mxmedLog('mxmed-search-open', 'neutral context complete', { patient_id: next });
     }
     return true;
   };
@@ -9588,7 +9605,7 @@ console.info('app.js loaded :: 20251123a');
       ? window.mxmedShouldSuppressAutoEncounterContext(patientId) === true
       : false;
     if(suppressAutoEncounterContext && resolvedEncounterKey && shouldLogSearchOpenAutoEncounterBlocked(patientId, resolvedEncounterKey)){
-      console.info('[mxmed-search-open] auto encounter blocked', {
+      mxmedLog('mxmed-search-open', 'auto encounter blocked', {
         patient_id: patientId,
         encounter_key: resolvedEncounterKey
       });
