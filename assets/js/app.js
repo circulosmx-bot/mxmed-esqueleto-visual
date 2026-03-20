@@ -138,24 +138,48 @@ console.info('app.js loaded :: 20251123a');
 
     const safeEncounterKey = cleanValue(encounterKey);
     const safePatientId = cleanValue(patientId);
+    const setAttrIfChanged = (attrName, value)=>{
+      const next = String(value || '');
+      const prev = String(pane.getAttribute(attrName) || '').trim();
+      if(prev === next) return false;
+      pane.setAttribute(attrName, next);
+      return true;
+    };
+    const removeAttrIfPresent = (attrName)=>{
+      if(!pane.hasAttribute(attrName)) return false;
+      pane.removeAttribute(attrName);
+      return true;
+    };
 
     if(safeEncounterKey){
-      pane.dataset.encounterKey = safeEncounterKey;
-      pane.dataset.activeEncounterKey = safeEncounterKey;
-      pane.setAttribute('data-encounter-key', safeEncounterKey);
-      pane.setAttribute('data-active-encounter-key', safeEncounterKey);
+      if(String(pane.dataset.encounterKey || '').trim() !== safeEncounterKey){
+        pane.dataset.encounterKey = safeEncounterKey;
+      }
+      if(String(pane.dataset.activeEncounterKey || '').trim() !== safeEncounterKey){
+        pane.dataset.activeEncounterKey = safeEncounterKey;
+      }
+      setAttrIfChanged('data-encounter-key', safeEncounterKey);
+      setAttrIfChanged('data-active-encounter-key', safeEncounterKey);
     }else{
-      delete pane.dataset.encounterKey;
-      delete pane.dataset.activeEncounterKey;
-      pane.removeAttribute('data-encounter-key');
-      pane.removeAttribute('data-active-encounter-key');
+      if('encounterKey' in pane.dataset){
+        delete pane.dataset.encounterKey;
+      }
+      if('activeEncounterKey' in pane.dataset){
+        delete pane.dataset.activeEncounterKey;
+      }
+      removeAttrIfPresent('data-encounter-key');
+      removeAttrIfPresent('data-active-encounter-key');
     }
 
     if(safePatientId){
-      pane.dataset.patientId = safePatientId;
-      pane.dataset.activePatientId = safePatientId;
-      pane.setAttribute('data-patient-id', safePatientId);
-      pane.setAttribute('data-active-patient-id', safePatientId);
+      if(String(pane.dataset.patientId || '').trim() !== safePatientId){
+        pane.dataset.patientId = safePatientId;
+      }
+      if(String(pane.dataset.activePatientId || '').trim() !== safePatientId){
+        pane.dataset.activePatientId = safePatientId;
+      }
+      setAttrIfChanged('data-patient-id', safePatientId);
+      setAttrIfChanged('data-active-patient-id', safePatientId);
     }
 
     return true;
@@ -9527,6 +9551,7 @@ console.info('app.js loaded :: 20251123a');
   };
   const syncExpedienteHeaderContext = async ()=>{
     if(!expHeader) return;
+    if(pane.classList.contains('d-none')) return;
     const runToken = ++headerSyncToken;
     const setNodeText = (node, value)=>{
       if(!node) return;

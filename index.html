@@ -7742,17 +7742,9 @@
     }
 
     function updateP10Polling() {
-      if (!isHistorialTabVisible()) {
-        stopP10Polling();
-        return;
-      }
-      if (!p10PollingTimer) {
-        p10PollingTimer = window.setInterval(function () {
-          if (!p10Loading) {
-            refreshP10();
-          }
-        }, 10000);
-      }
+      // Sin polling automático para consulta activa.
+      // El estado se refresca por eventos explícitos (shown tab, patient change, start/finalize, etc.).
+      stopP10Polling();
     }
 
     function setActiveMode(mode) {
@@ -7872,8 +7864,19 @@
       });
     });
 
+    var p10ObserverLastContextKey = '';
+    var readP10ObserverContextKey = function () {
+      var pid = String((expedientePane && (expedientePane.dataset.patientId || expedientePane.dataset.activePatientId)) || '').trim();
+      var forcedEk = String(forcedEncounterKey || '').trim();
+      return pid + '::' + forcedEk;
+    };
     var observer = new MutationObserver(function () {
       if (isHistorialTabVisible()) {
+        var nextContextKey = readP10ObserverContextKey();
+        if (nextContextKey && nextContextKey === p10ObserverLastContextKey) {
+          return;
+        }
+        p10ObserverLastContextKey = nextContextKey;
         if (observerSyncTimer) {
           window.clearTimeout(observerSyncTimer);
         }
