@@ -3530,38 +3530,34 @@
 
               </div>
               <div class="tab-pane fade" id="t-historial-atencion">
-                <div class="clinical-panel mt-2 p-2">
-                  <div id="mm-p10-bar" class="d-none mb-2" style="position:sticky;top:0;z-index:1020;background:rgba(248,249,250,.95);backdrop-filter:saturate(1.2) blur(2px);">
-                    <div class="alert alert-light border d-flex flex-wrap align-items-center justify-content-between gap-2 py-2 px-3 mb-0">
-                      <div class="d-flex flex-column gap-1">
+                <div class="clinical-panel p-1 pt-0">
+                  <div id="mm-p10-bar" class="d-none mb-1" style="position:sticky;top:0;z-index:1020;background:rgba(248,249,250,.95);backdrop-filter:saturate(1.2) blur(2px);">
+                    <div class="alert alert-light border d-flex flex-wrap align-items-center justify-content-between gap-2 py-1 px-2 mb-0">
+                      <div class="d-flex align-items-center gap-2 flex-wrap">
                         <div class="d-flex align-items-center gap-2 d-none" data-role="p10-on-air">
                           <span aria-hidden="true" style="display:inline-block;width:.8rem;height:.8rem;border-radius:999px;background:#11c26d;box-shadow:0 0 0 .18rem rgba(17,194,109,.18),0 0 14px rgba(17,194,109,.55);"></span>
                           <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none align-baseline" data-action="p10-open-active-encounter">Consulta activa</button>
                         </div>
-                        <div class="small text-secondary" data-role="p10-status-text">No hay consulta activa para este paciente</div>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Subvistas de historial">
+                          <button type="button" class="btn btn-outline-primary active" data-embed-mode="historial">Historial</button>
+                          <button type="button" class="btn btn-outline-primary" data-embed-mode="encounter">Episodio</button>
+                        </div>
                       </div>
                       <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-primary btn-sm" data-action="p10-start-encounter">Iniciar consulta</button>
+                        <button
+                          type="button"
+                          class="btn btn-primary btn-sm"
+                          data-action="open-actividad-clinica"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modalActividadClinica"
+                        >
+                          Registrar actividad clínica
+                        </button>
                         <button type="button" class="btn btn-outline-secondary btn-sm d-none" data-action="p10-finalize-encounter">Cerrar consulta</button>
                       </div>
                     </div>
                   </div>
-                  <div class="d-flex align-items-center justify-content-end mb-2">
-                    <button
-                      type="button"
-                      class="btn btn-primary btn-sm"
-                      data-action="open-actividad-clinica"
-                      data-bs-toggle="modal"
-                      data-bs-target="#modalActividadClinica"
-                    >
-                      Registrar actividad clínica
-                    </button>
-                  </div>
-                  <div class="btn-group btn-group-sm mb-2" role="group" aria-label="Subvistas de historial">
-                    <button type="button" class="btn btn-outline-primary active" data-embed-mode="historial">Historial</button>
-                    <button type="button" class="btn btn-outline-primary" data-embed-mode="encounter">Episodio</button>
-                  </div>
-                  <div id="mm-embed-historial-empty" class="alert alert-info d-none mb-2">Sin paciente activo. Cargando modo demo.</div>
+                  <div id="mm-embed-historial-empty" class="alert alert-info d-none mb-1">Sin paciente activo. Cargando modo demo.</div>
                   <iframe
                     id="mm-embed-historial"
                     title="Historial de atención"
@@ -3813,14 +3809,14 @@
                   </div>
                 </div>
                 <div class="modal fade" id="modalActividadClinicaConsent" tabindex="-1" aria-hidden="true">
-                  <div class="modal-dialog modal-dialog-centered">
+                  <div class="modal-dialog modal-xl modal-dialog-scrollable">
                     <div class="modal-content">
                       <div class="modal-header">
                         <h5 class="modal-title">Consentimiento informado</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body">
-                        <p class="mb-0 text-muted">Funcionalidad en desarrollo.</p>
+                        <div data-role="ac-consent-modal-content"></div>
                       </div>
                     </div>
                   </div>
@@ -7247,6 +7243,7 @@
     var historialPane = document.getElementById(HIST_TAB_ID);
     var iframe = document.getElementById('mm-embed-historial');
     var emptyMsg = document.getElementById('mm-embed-historial-empty');
+    var embedWrapper = historialPane ? historialPane.querySelector('.clinical-panel') : null;
     var p10Bar = document.getElementById('mm-p10-bar');
     var expedientePane = document.getElementById('p-expediente');
     var modeButtons = historialPane ? Array.from(historialPane.querySelectorAll('[data-embed-mode]')) : [];
@@ -7343,6 +7340,26 @@
         return '/modules/clinical/ui/document.php?uuid=' + encodeURIComponent(context.documentUuid) + '&embed=1';
       }
       return '/modules/clinical/ui/historial.php?patient_id=' + encodeURIComponent(context.patientId) + '&embed=1';
+    }
+
+    function setEmbedVisualState(state, message) {
+      if (!embedWrapper) return;
+      var status = String(state || '').trim();
+      embedWrapper.classList.toggle('is-empty', status === 'empty');
+      embedWrapper.classList.toggle('is-error', status === 'error');
+      if (status === 'error' || status === 'empty') {
+        if (emptyMsg) {
+          emptyMsg.classList.remove('d-none');
+          emptyMsg.classList.remove('alert-info');
+          emptyMsg.classList.add('alert-warning');
+          emptyMsg.textContent = String(message || 'No se pudo cargar el historial.').trim();
+        }
+        return;
+      }
+      if (emptyMsg) {
+        emptyMsg.classList.remove('alert-warning');
+        emptyMsg.classList.add('alert-info');
+      }
     }
 
     function padDatePart(value) {
@@ -7771,6 +7788,7 @@
       if (emptyMsg) {
         emptyMsg.classList.toggle('d-none', !useDemo);
       }
+      setEmbedVisualState('', '');
 
       var idValue = activeMode === 'encounter'
         ? context.encounterKey
@@ -7817,7 +7835,23 @@
       updateP10Polling();
     });
     iframe.addEventListener('load', function () {
+      try {
+        var doc = iframe.contentDocument;
+        var body = doc ? doc.body : null;
+        var bodyText = String((body && body.textContent) || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        if (!body || !bodyText || bodyText.indexOf('no se pudo cargar el historial') !== -1) {
+          setEmbedVisualState('error', 'No se pudo cargar el historial.');
+          return;
+        }
+      } catch (_) {
+        setEmbedVisualState('error', 'No se pudo cargar el historial.');
+        return;
+      }
+      setEmbedVisualState('', '');
       updateTimelineFilterVisibility(activeMode);
+    });
+    iframe.addEventListener('error', function () {
+      setEmbedVisualState('error', 'No se pudo cargar el historial.');
     });
 
     var patientInputs = expedientePane.querySelectorAll(

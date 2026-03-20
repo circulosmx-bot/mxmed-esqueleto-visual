@@ -4580,14 +4580,19 @@ console.info('app.js loaded :: 20251123a');
     const targetEl = modalEl.querySelector(targetSelector);
     if(!targetEl) return null;
     const forceVisible = opts.forceVisible === true;
+    const forceShowActive = opts.forceShowActive === true;
     let activeMount = null;
     const restore = ()=>{
       if(!activeMount || !activeMount.sourceEl || !activeMount.parentEl) return;
-      const { sourceEl, parentEl, nextSibling, wasHidden } = activeMount;
+      const { sourceEl, parentEl, nextSibling, wasHidden, hadShowClass, hadActiveClass } = activeMount;
       if(nextSibling && nextSibling.parentNode === parentEl){
         parentEl.insertBefore(sourceEl, nextSibling);
       }else{
         parentEl.appendChild(sourceEl);
+      }
+      if(forceShowActive){
+        sourceEl.classList.toggle('show', hadShowClass === true);
+        sourceEl.classList.toggle('active', hadActiveClass === true);
       }
       if(wasHidden){
         sourceEl.classList.add('d-none');
@@ -4606,10 +4611,15 @@ console.info('app.js loaded :: 20251123a');
         sourceEl,
         parentEl: sourceEl.parentElement,
         nextSibling: sourceEl.nextSibling || null,
-        wasHidden
+        wasHidden,
+        hadShowClass: sourceEl.classList.contains('show'),
+        hadActiveClass: sourceEl.classList.contains('active')
       };
       if(forceVisible){
         sourceEl.classList.remove('d-none');
+      }
+      if(forceShowActive){
+        sourceEl.classList.add('show', 'active');
       }
       targetEl.appendChild(sourceEl);
       return true;
@@ -4627,6 +4637,12 @@ console.info('app.js loaded :: 20251123a');
     '[data-role="ac-adjunto-modal-content"]',
     '#t-estudios [data-est-section-block="ingresar"]',
     { forceVisible: true }
+  );
+  const actividadClinicaConsentPortal = createActividadClinicaPortalMount(
+    actividadClinicaConsentModalEl,
+    '[data-role="ac-consent-modal-content"]',
+    '#t-consent',
+    { forceShowActive: true }
   );
   let notaClinicaModalTimelineObserver = null;
   const noteCaptureQrState = {
@@ -5289,11 +5305,17 @@ console.info('app.js loaded :: 20251123a');
   };
   const openConsentimientoFromActividad = ()=>{
     hideActividadClinicaModal();
-    const opened = showClinicalTab('#t-consent');
+    const mounted = actividadClinicaConsentPortal?.mount?.() === true;
+    if(!mounted){
+      window.alert('No fue posible abrir Consentimiento informado en este momento.');
+      return false;
+    }
+    const opened = showActividadClinicaModalById(actividadClinicaConsentModalEl);
     if(!opened) return false;
     window.requestAnimationFrame(()=>{
-      const newBtn = pane.querySelector('#ci_new_btn');
-      const firstCard = pane.querySelector('#ci_list [data-doc-uuid]');
+      const modalRoot = actividadClinicaConsentModalEl?.querySelector('[data-role="ac-consent-modal-content"]');
+      const newBtn = modalRoot?.querySelector('#ci_new_btn');
+      const firstCard = modalRoot?.querySelector('#ci_list [data-doc-uuid]');
       (newBtn || firstCard)?.focus?.();
     });
     try{

@@ -2218,7 +2218,24 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 .foto-x:hover{ filter:brightness(1.05) }
 
-`n/* Tab-content fallback: asegurar visibilidad del activo */`n.tab-content > .tab-pane{ display:none; }`n.tab-content > .active{ display:block; width:100%; }`n`n/* Altura mínima para panel fotos vacío */`n#t-fotos .fotos-drop{ min-height:160px }`n
+/* Tab-content fallback: asegurar visibilidad del activo */
+#p-expediente .tab-content > .tab-pane{ display:none; }
+#p-expediente .tab-content > .tab-pane.active{ display:block; width:100%; }
+
+/* Embed historial: estado compacto cuando no hay contenido útil o hay error */
+#t-historial-atencion .clinical-panel.is-empty #mm-embed-historial,
+#t-historial-atencion .clinical-panel.is-error #mm-embed-historial{
+  display:none;
+  min-height:0 !important;
+  height:0 !important;
+}
+#t-historial-atencion .clinical-panel.is-empty,
+#t-historial-atencion .clinical-panel.is-error{
+  padding-bottom:.5rem;
+}
+
+/* Altura mínima para panel fotos vacío */
+#t-fotos .fotos-drop{ min-height:160px }
 
 #t-fotos{ min-height:520px }
 
