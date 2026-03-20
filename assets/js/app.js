@@ -9550,10 +9550,12 @@ console.info('app.js loaded :: 20251123a');
       ? window.mxmedShouldSuppressAutoEncounterContext(patientId) === true
       : false;
     if(suppressAutoEncounterContext && resolvedEncounterKey && shouldLogSearchOpenAutoEncounterBlocked(patientId, resolvedEncounterKey)){
-      console.info('[mxmed-search-open] auto encounter blocked', {
-        patient_id: patientId,
-        encounter_key: resolvedEncounterKey
-      });
+      if (window.__MXMED_DEBUG__ === true) {
+        console.info('[mxmed-search-open] auto encounter blocked', {
+          patient_id: patientId,
+          encounter_key: resolvedEncounterKey
+        });
+      }
     }
     const isOperationalEncounter = (typeof window.mxmedIsOperationalEncounterForPatient === 'function')
       ? window.mxmedIsOperationalEncounterForPatient(patientId, resolvedEncounterKey) === true
