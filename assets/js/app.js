@@ -17402,6 +17402,12 @@ function mxResetLogoPreview(){
     }
     if(typeof jumpTo === 'function'){
       jumpTo('p-expediente');
+      window.requestAnimationFrame(()=>{
+        const expPane = document.getElementById('p-expediente');
+        if(!expPane || expPane.classList.contains('d-none')) return;
+        window.__mxmedHeaderSyncOrigin = 'search_open_post_jump';
+        window.dispatchEvent(new Event('patient:selected'));
+      });
     }
     const openOrigin = String(btn.getAttribute('data-open-origin') || 'search_general').trim().toLowerCase();
     if(openOrigin === 'clinical_explicit'){
