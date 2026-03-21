@@ -3530,32 +3530,34 @@
 
               </div>
               <div class="tab-pane fade" id="t-historial-atencion">
-                <div class="clinical-panel p-1 pt-0">
+                <div class="clinical-panel mt-2 p-2">
                   <div id="mm-p10-bar" class="d-none mb-1" style="position:sticky;top:0;z-index:1020;background:rgba(248,249,250,.95);backdrop-filter:saturate(1.2) blur(2px);">
                     <div class="alert alert-light border d-flex flex-wrap align-items-center justify-content-between gap-2 py-1 px-2 mb-0">
-                      <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <div class="d-flex flex-column gap-1">
                         <div class="d-flex align-items-center gap-2 d-none" data-role="p10-on-air">
                           <span aria-hidden="true" style="display:inline-block;width:.8rem;height:.8rem;border-radius:999px;background:#11c26d;box-shadow:0 0 0 .18rem rgba(17,194,109,.18),0 0 14px rgba(17,194,109,.55);"></span>
                           <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none align-baseline" data-action="p10-open-active-encounter">Consulta activa</button>
                         </div>
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Subvistas de historial">
-                          <button type="button" class="btn btn-outline-primary active" data-embed-mode="historial">Historial</button>
-                          <button type="button" class="btn btn-outline-primary" data-embed-mode="encounter">Episodio</button>
-                        </div>
                       </div>
                       <div class="d-flex align-items-center gap-2">
-                        <button
-                          type="button"
-                          class="btn btn-primary btn-sm"
-                          data-action="open-actividad-clinica"
-                          data-bs-toggle="modal"
-                          data-bs-target="#modalActividadClinica"
-                        >
-                          Registrar actividad clínica
-                        </button>
                         <button type="button" class="btn btn-outline-secondary btn-sm d-none" data-action="p10-finalize-encounter">Cerrar consulta</button>
                       </div>
                     </div>
+                  </div>
+                  <div class="mm-ha-topbar mb-1">
+                    <div class="btn-group btn-group-sm mb-0" role="group" aria-label="Subvistas de historial">
+                      <button type="button" class="btn btn-outline-primary active" data-embed-mode="historial">Historial</button>
+                      <button type="button" class="btn btn-outline-primary" data-embed-mode="encounter">Episodio</button>
+                    </div>
+                    <button
+                      type="button"
+                      class="btn btn-primary btn-sm"
+                      data-action="open-actividad-clinica"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalActividadClinica"
+                    >
+                      Registrar actividad clínica
+                    </button>
                   </div>
                   <div id="mm-embed-historial-empty" class="alert alert-info d-none mb-1">Sin paciente activo. Cargando modo demo.</div>
                   <iframe

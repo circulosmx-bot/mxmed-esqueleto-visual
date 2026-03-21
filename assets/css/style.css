@@ -5522,3 +5522,59 @@ body{margin:0;background:var(--mm-fondo-base);}
     display:none !important;
   }
 }
+
+/* Historial de atención: compactación solo del bloque interno (no del header del paciente) */
+#t-historial-atencion .clinical-panel{
+  padding-top:.35rem;
+  padding-bottom:.45rem;
+}
+#t-historial-atencion #mm-p10-bar{
+  margin-bottom:.35rem !important;
+}
+#t-historial-atencion #mm-p10-bar .alert{
+  padding:.35rem .55rem !important;
+}
+#t-historial-atencion .mm-ha-topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.5rem;
+}
+#t-historial-atencion .btn-group[aria-label="Subvistas de historial"]{
+  margin-bottom:.35rem !important;
+}
+#t-historial-atencion .mm-ha-topbar .btn-group[aria-label="Subvistas de historial"]{
+  margin-bottom:0 !important;
+}
+@media (max-width: 767.98px){
+  #t-historial-atencion .mm-ha-topbar{
+    flex-wrap:wrap;
+  }
+  #t-historial-atencion .mm-ha-topbar > .btn[data-action="open-actividad-clinica"]{
+    margin-left:auto;
+  }
+}
+
+/* Guardas de visibilidad para header del expediente (fuera del panel interno de Historial) */
+#p-expediente > .head{
+  display:block !important;
+  visibility:visible !important;
+  opacity:1 !important;
+}
+#p-expediente .head .exp-hdr{
+  display:flex !important;
+  visibility:visible !important;
+}
+#p-expediente .head [data-role="exp-h-patient-name"]{
+  display:inline-block !important;
+  visibility:visible !important;
+}
+#p-expediente .head [data-role="exp-h-age"],
+#p-expediente .head [data-role="exp-h-sex"]{
+  display:inline-flex !important;
+  visibility:visible !important;
+}
+#p-expediente .head [data-role="exp-h-start-enc-btn"]:not(.d-none),
+#p-expediente .head [data-role="exp-h-close-enc-btn"]:not(.d-none){
+  display:inline-flex !important;
+}
