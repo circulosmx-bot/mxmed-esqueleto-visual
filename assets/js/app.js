@@ -16842,6 +16842,12 @@ function mxResetLogoPreview(){
   const summaryInput = studiesPane.querySelector('[data-role="ac-doc-summary"]');
   const eventDatetimeInput = studiesPane.querySelector('[data-role="ac-doc-event-datetime"]');
   const mediaTagSelect = studiesPane.querySelector('[data-role="ac-doc-media-tag"]');
+  const textOnlyInput = studiesPane.querySelector('[data-role="ac-doc-text-only"]');
+  const intentPicker = studiesPane.querySelector('[data-role="ac-doc-intent-picker"]');
+  const intentButtons = Array.from(studiesPane.querySelectorAll('[data-ac-doc-intent-btn]'));
+  const dropFile = studiesPane.querySelector('[data-role="ac-doc-drop-file"]');
+  const dropQr = studiesPane.querySelector('[data-role="ac-doc-drop-qr"]');
+  const dropText = studiesPane.querySelector('[data-role="ac-doc-drop-text"]');
   const saveBtn = studiesPane.querySelector('[data-action="ac-doc-upload-save"]');
   const feedbackEl = studiesPane.querySelector('[data-role="ac-doc-upload-feedback"]');
   const ingresarSectionBtn = studiesPane.querySelector('.est-section-tab[data-est-section="ingresar"]');
@@ -16895,6 +16901,49 @@ function mxResetLogoPreview(){
     }
     return clean(window.mxmedStore?.currentEncounterKey || window.mxmedStore?.activeEncounterKey);
   };
+  const setDocIntent = (intent, opts = {})=>{
+    const normalized = clean(intent).toLowerCase();
+    const targetIntent = (normalized === 'foto' || normalized === 'nota') ? normalized : 'archivo';
+    if(intentPicker){
+      intentPicker.dataset.acDocIntent = targetIntent;
+      intentButtons.forEach((btn)=>{
+        btn.classList.toggle('is-active', clean(btn.getAttribute('data-ac-doc-intent-btn')).toLowerCase() === targetIntent);
+      });
+    }
+    [dropFile, dropQr, dropText].forEach((node)=>{
+      node?.classList.remove('is-intent-active', 'is-intent-related');
+    });
+    let targetBlock = dropFile;
+    let focusNode = null;
+    if(targetIntent === 'foto'){
+      targetBlock = dropQr || dropFile;
+      if(dropQr) dropQr.classList.add('is-intent-active');
+      if(dropFile) dropFile.classList.add('is-intent-related');
+      focusNode = fileInput;
+    }else if(targetIntent === 'nota'){
+      targetBlock = dropText || null;
+      if(dropText) dropText.classList.add('is-intent-active');
+      focusNode = textOnlyInput || null;
+    }else{
+      targetBlock = dropFile || null;
+      if(dropFile) dropFile.classList.add('is-intent-active');
+      if(dropQr) dropQr.classList.add('is-intent-related');
+      focusNode = fileInput;
+    }
+    if(opts.focus === true){
+      try{ targetBlock?.scrollIntoView?.({ block:'nearest', behavior:'smooth' }); }catch(_){}
+      try{ focusNode?.focus?.(); }catch(_){}
+    }
+  };
+  if(intentPicker){
+    intentPicker.addEventListener('click', (event)=>{
+      const btn = event.target.closest('[data-ac-doc-intent-btn]');
+      if(!btn) return;
+      event.preventDefault();
+      setDocIntent(btn.getAttribute('data-ac-doc-intent-btn'), { focus: true });
+    });
+    setDocIntent(intentPicker.dataset.acDocIntent || 'archivo');
+  }
 
   const uploadCanonicalDocument = async ()=>{
     const patientId = resolveActivePatientIdForUpload();

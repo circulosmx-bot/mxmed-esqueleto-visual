@@ -4347,6 +4347,24 @@
                       </div>
                     </div>
                     <div class="est-block-desc">Carga documental rápida para el paciente activo.</div>
+                    <div class="est-intent-picker" data-role="ac-doc-intent-picker" data-ac-doc-intent="archivo">
+                      <div class="est-intent-title">¿Qué quieres guardar del paciente?</div>
+                      <div class="est-intent-sub">Elige la forma más rápida de anexarlo a su archivo clínico.</div>
+                      <div class="est-intent-options">
+                        <button type="button" class="est-intent-btn is-active" data-ac-doc-intent-btn="foto">
+                          <span class="est-intent-btn-title">Foto</span>
+                          <span class="est-intent-btn-sub">Hallazgo, radiografía o documento físico</span>
+                        </button>
+                        <button type="button" class="est-intent-btn" data-ac-doc-intent-btn="archivo">
+                          <span class="est-intent-btn-title">Archivo</span>
+                          <span class="est-intent-btn-sub">PDF, estudio exportado o documento digital</span>
+                        </button>
+                        <button type="button" class="est-intent-btn" data-ac-doc-intent-btn="nota">
+                          <span class="est-intent-btn-title">Nota</span>
+                          <span class="est-intent-btn-sub">Texto breve o resultado manual</span>
+                        </button>
+                      </div>
+                    </div>
                     <div class="row g-2 est-card-body">
                       <div class="col-md-4">
                         <label class="form-label">Tipo</label>
@@ -4365,21 +4383,21 @@
                     </div>
                     <div class="est-upload">
                       <div class="est-upload-grid est-upload-grid-primary">
-                        <div class="est-drop est-drop-primary">
+                        <div class="est-drop est-drop-primary" data-role="ac-doc-drop-file">
                           <div class="est-drop-title">Subir archivo</div>
                           <div class="est-drop-sub">PDF, imagen o exportado</div>
                           <input class="form-control form-control-sm mt-2" type="file" accept="image/*,.pdf,application/pdf" data-role="ac-doc-file">
                           <div class="small text-muted mt-2">Se guarda como documento clínico canónico del paciente activo.</div>
                         </div>
-                        <div class="est-drop est-drop-qr est-drop-secondary">
+                        <div class="est-drop est-drop-qr est-drop-secondary" data-role="ac-doc-drop-qr">
                           <div class="est-drop-title">Capturar con teléfono</div>
                           <div class="est-drop-sub">Escanea este QR y sube la foto desde tu móvil</div>
                           <div class="est-qr-placeholder">QR</div>
                         </div>
-                        <div class="est-drop est-drop-tertiary">
+                        <div class="est-drop est-drop-tertiary" data-role="ac-doc-drop-text">
                           <div class="est-drop-title">Solo texto</div>
                           <div class="est-drop-sub">Resultado en texto + valores clave</div>
-                          <textarea class="form-control form-control-sm" rows="2" placeholder="Resumen del resultado"></textarea>
+                          <textarea class="form-control form-control-sm" rows="2" placeholder="Resumen del resultado" data-role="ac-doc-text-only"></textarea>
                           <div class="row g-1 mt-1">
                             <div class="col-6"><input class="form-control form-control-sm" placeholder="Marcador / valor"></div>
                             <div class="col-6"><input class="form-control form-control-sm" placeholder="Unidad / referencia"></div>
