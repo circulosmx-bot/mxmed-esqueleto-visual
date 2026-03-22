@@ -6191,24 +6191,38 @@ console.info('app.js loaded :: 20251123a');
     }
     return true;
   };
-  const openAdjuntoDocumentoFromActividad = ()=>{
-    hideActividadClinicaModal();
+  const openAdjuntarDocumentoFromActividad = ()=>{
     const mounted = actividadClinicaAdjuntoPortal?.mount?.() === true;
     if(!mounted){
       window.alert('No fue posible abrir Adjuntar documento en este momento.');
       return false;
     }
-    const opened = showActividadClinicaModalById(actividadClinicaAdjuntoModalEl);
-    if(!opened) return false;
-    window.setTimeout(()=>{
-      const fileInput = actividadClinicaAdjuntoModalEl?.querySelector('[data-role="ac-doc-file"]');
-      fileInput?.focus?.();
-    }, 80);
+    const openAdjuntoModal = ()=>{
+      const opened = showActividadClinicaModalById(actividadClinicaAdjuntoModalEl);
+      if(!opened) return false;
+      window.setTimeout(()=>{
+        const fileInput = actividadClinicaAdjuntoModalEl?.querySelector('[data-role="ac-doc-file"]');
+        fileInput?.focus?.();
+      }, 80);
+      return true;
+    };
+    const launcherVisible = !!(actividadClinicaModalEl && actividadClinicaModalEl.classList.contains('show'));
+    if(launcherVisible){
+      const onLauncherHidden = ()=>{
+        openAdjuntoModal();
+      };
+      actividadClinicaModalEl.addEventListener('hidden.bs.modal', onLauncherHidden, { once: true });
+      hideActividadClinicaModal();
+    }else{
+      hideActividadClinicaModal();
+      if(!openAdjuntoModal()) return false;
+    }
     try{
       console.info('[mxmed-actividad-clinica] open adjuntar documento');
     }catch(_){}
     return true;
   };
+  const openAdjuntoDocumentoFromActividad = ()=> openAdjuntarDocumentoFromActividad();
 
   const setupHostProcedureModal = ()=>{
     const modalEl = document.getElementById('modalActividadClinicaProcedimientoHost');
