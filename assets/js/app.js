@@ -5317,11 +5317,33 @@ console.info('app.js loaded :: 20251123a');
   };
   const openRecetaFromActividad = ()=>{
     hideActividadClinicaModal();
-    const opened = showClinicalTab(clinicalTabTargets.notas);
-    if(!opened) return false;
-    const openRecetaBtn = pane.querySelector('#ne_open_rx');
-    if(!openRecetaBtn) return false;
-    window.requestAnimationFrame(()=> openRecetaBtn.click());
+    const modalEl = document.getElementById('modalReceta');
+    const BsModal = window.bootstrap && window.bootstrap.Modal;
+    if(!modalEl || !BsModal) return false;
+    try{
+      // Si el modal vive dentro de un tab oculto (#t-notas), el backdrop se abre
+      // pero el modal queda invisible; moverlo a body evita ese bloqueo visual.
+      let parent = modalEl.parentElement;
+      let insideHiddenPane = false;
+      while(parent && parent !== document.body){
+        if(parent.classList?.contains('tab-pane') && !parent.classList.contains('show')){
+          insideHiddenPane = true;
+          break;
+        }
+        parent = parent.parentElement;
+      }
+      if(insideHiddenPane && modalEl.parentElement !== document.body){
+        document.body.appendChild(modalEl);
+      }
+    }catch(_){}
+    try{
+      const modal = (typeof BsModal.getOrCreateInstance === 'function')
+        ? BsModal.getOrCreateInstance(modalEl)
+        : new BsModal(modalEl);
+      modal.show();
+    }catch(_){
+      return false;
+    }
     try{
       console.info('[mxmed-actividad-clinica] open receta');
     }catch(_){}
