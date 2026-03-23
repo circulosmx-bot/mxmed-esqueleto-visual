@@ -16845,6 +16845,16 @@ function mxResetLogoPreview(){
   const textOnlyInput = studiesPane.querySelector('[data-role="ac-doc-text-only"]');
   const intentPicker = studiesPane.querySelector('[data-role="ac-doc-intent-picker"]');
   const intentButtons = Array.from(studiesPane.querySelectorAll('[data-ac-doc-intent-btn]'));
+  const categoryInput = studiesPane.querySelector('[data-role="ac-doc-category"]');
+  const categoryButtons = Array.from(studiesPane.querySelectorAll('[data-ac-doc-category-btn]'));
+  const wizardRoot = studiesPane.querySelector('[data-role="ac-doc-wizard"]');
+  const wizardPanels = Array.from(studiesPane.querySelectorAll('[data-ac-doc-step-panel]'));
+  const wizardStepIndicator = studiesPane.querySelector('[data-role="ac-doc-wiz-step-indicator"]');
+  const wizardPrevBtn = studiesPane.querySelector('[data-action="ac-doc-wiz-prev"]');
+  const wizardNextBtn = studiesPane.querySelector('[data-action="ac-doc-wiz-next"]');
+  const wizardToggleFullBtn = studiesPane.querySelector('[data-action="ac-doc-wiz-toggle-full"]');
+  const wizardContainer = studiesPane.querySelector('[data-est-section-block="ingresar"]');
+  const adjuntoModalEl = document.getElementById('modalActividadClinicaAdjunto');
   const dropFile = studiesPane.querySelector('[data-role="ac-doc-drop-file"]');
   const dropQr = studiesPane.querySelector('[data-role="ac-doc-drop-qr"]');
   const dropText = studiesPane.querySelector('[data-role="ac-doc-drop-text"]');
@@ -16935,15 +16945,113 @@ function mxResetLogoPreview(){
       try{ focusNode?.focus?.(); }catch(_){}
     }
   };
+  const setDocCategory = (category)=>{
+    const normalized = clean(category).toLowerCase();
+    const allowed = new Set([
+      'estudio_resultado',
+      'documento_externo',
+      'evidencia_clinica',
+      'receta_previa',
+      'consentimiento_formato',
+      'bitacora_hospitalaria',
+      'otro'
+    ]);
+    const value = allowed.has(normalized) ? normalized : '';
+    if(categoryInput) categoryInput.value = value;
+    categoryButtons.forEach((btn)=>{
+      btn.classList.toggle('is-active', clean(btn.getAttribute('data-ac-doc-category-btn')).toLowerCase() === value);
+    });
+  };
+  const WIZARD_MAX_STEP = 5;
+  let wizardStep = 1;
+  let wizardMode = 'guided';
+  const renderWizard = (opts = {})=>{
+    const focus = opts.focus === true;
+    if(!wizardRoot || !wizardPanels.length) return;
+    if(wizardMode === 'full'){
+      wizardRoot.dataset.acDocWizardMode = 'full';
+      if(wizardContainer) wizardContainer.dataset.acDocWizardMode = 'full';
+      wizardPanels.forEach((panel)=> panel.classList.remove('d-none'));
+      if(wizardStepIndicator) wizardStepIndicator.textContent = 'Vista completa';
+      if(wizardToggleFullBtn) wizardToggleFullBtn.textContent = 'Volver a modo guiado';
+      if(saveBtn) saveBtn.classList.remove('d-none');
+      return;
+    }
+    wizardRoot.dataset.acDocWizardMode = 'guided';
+    if(wizardContainer) wizardContainer.dataset.acDocWizardMode = 'guided';
+    wizardStep = Math.max(1, Math.min(WIZARD_MAX_STEP, Number(wizardStep) || 1));
+    wizardPanels.forEach((panel)=>{
+      const panelStep = Number(panel.getAttribute('data-ac-doc-step-panel') || 0);
+      panel.classList.toggle('d-none', panelStep !== wizardStep);
+    });
+    if(wizardStepIndicator){
+      wizardStepIndicator.textContent = `Paso ${wizardStep} de ${WIZARD_MAX_STEP}`;
+    }
+    if(wizardPrevBtn) wizardPrevBtn.classList.toggle('d-none', wizardStep <= 1);
+    if(wizardNextBtn) wizardNextBtn.classList.toggle('d-none', wizardStep >= WIZARD_MAX_STEP);
+    if(saveBtn) saveBtn.classList.toggle('d-none', wizardStep < 4);
+    if(wizardToggleFullBtn) wizardToggleFullBtn.textContent = 'Ver opciones completas';
+    if(wizardStep === 3){
+      setDocIntent(intentPicker?.dataset?.acDocIntent || 'archivo', { focus });
+    }else if(focus){
+      const panel = wizardPanels.find((node)=> Number(node.getAttribute('data-ac-doc-step-panel') || 0) === wizardStep);
+      const focusable = panel?.querySelector('button, input, select, textarea');
+      try{ focusable?.focus?.(); }catch(_){}
+    }
+  };
   if(intentPicker){
     intentPicker.addEventListener('click', (event)=>{
       const btn = event.target.closest('[data-ac-doc-intent-btn]');
       if(!btn) return;
       event.preventDefault();
-      setDocIntent(btn.getAttribute('data-ac-doc-intent-btn'), { focus: true });
+      const shouldFocusCapture = wizardMode === 'full' || wizardStep >= 3;
+      setDocIntent(btn.getAttribute('data-ac-doc-intent-btn'), { focus: shouldFocusCapture });
     });
     setDocIntent(intentPicker.dataset.acDocIntent || 'archivo');
   }
+  if(categoryButtons.length){
+    categoryButtons.forEach((btn)=>{
+      btn.addEventListener('click', (event)=>{
+        event.preventDefault();
+        setDocCategory(btn.getAttribute('data-ac-doc-category-btn'));
+      });
+    });
+  }
+  if(wizardPrevBtn){
+    wizardPrevBtn.addEventListener('click', (event)=>{
+      event.preventDefault();
+      if(wizardMode !== 'guided') return;
+      wizardStep = Math.max(1, wizardStep - 1);
+      renderWizard({ focus: true });
+    });
+  }
+  if(wizardNextBtn){
+    wizardNextBtn.addEventListener('click', (event)=>{
+      event.preventDefault();
+      if(wizardMode !== 'guided') return;
+      wizardStep = Math.min(WIZARD_MAX_STEP, wizardStep + 1);
+      renderWizard({ focus: true });
+    });
+  }
+  if(wizardToggleFullBtn){
+    wizardToggleFullBtn.addEventListener('click', (event)=>{
+      event.preventDefault();
+      wizardMode = wizardMode === 'full' ? 'guided' : 'full';
+      renderWizard({ focus: false });
+    });
+  }
+  if(adjuntoModalEl){
+    adjuntoModalEl.addEventListener('shown.bs.modal', ()=>{
+      wizardMode = 'guided';
+      wizardStep = 1;
+      renderWizard({ focus: false });
+      setDocIntent(intentPicker?.dataset?.acDocIntent || 'archivo');
+    });
+  }
+  if(!clean(categoryInput?.value || '')){
+    setDocCategory('estudio_resultado');
+  }
+  renderWizard({ focus: false });
 
   const uploadCanonicalDocument = async ()=>{
     const patientId = resolveActivePatientIdForUpload();
