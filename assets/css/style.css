@@ -4550,6 +4550,151 @@ body{margin:0;background:var(--mm-fondo-base);}
   padding:10px;
   margin:8px 0 10px;
 }
+[data-est-section-block="ingresar"] .est-wizard-sub{
+  color:#5e6b76;
+  font-size:.8rem;
+  margin:4px 0 8px;
+}
+[data-est-section-block="ingresar"] .est-block-head .est-head-actions-secondary{
+  display:none !important;
+}
+#modalActividadClinicaAdjunto .modal-header-compact-doc{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+#modalActividadClinicaAdjunto .modal-subtitle-inline{
+  margin-left:auto;
+  font-size:.78rem;
+  font-weight:400;
+  color:#6a7783;
+  line-height:1.2;
+}
+[data-est-section-block="ingresar"] .est-block-desc-subtle{
+  font-size:.84rem;
+  font-weight:600;
+  color:#51606d;
+  margin-bottom:8px;
+}
+[data-est-section-block="ingresar"] .est-wizard-step-indicator{
+  font-size:.75rem;
+  font-weight:700;
+  letter-spacing:.02em;
+  text-transform:uppercase;
+  color:#0b5169;
+  margin-bottom:6px;
+}
+[data-est-section-block="ingresar"] .est-wizard-nav{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+[data-est-section-block="ingresar"] .est-classify{
+  border:1px solid #d7e9ef;
+  background:#f9fcff;
+  border-radius:10px;
+  padding:10px;
+}
+[data-est-section-block="ingresar"] .est-doc-preview{
+  border:1px solid #d7e9ef;
+  background:#f8fbfd;
+  border-radius:10px;
+  padding:10px;
+}
+[data-est-section-block="ingresar"] .est-doc-preview-title{
+  font-weight:700;
+  color:#0b3f55;
+  margin-bottom:6px;
+}
+[data-est-section-block="ingresar"] .est-doc-preview-body{
+  color:#29485a;
+  font-size:.85rem;
+}
+[data-est-section-block="ingresar"] .est-doc-preview-thumb{
+  max-height:140px;
+  width:auto;
+  max-width:100%;
+  border-radius:8px;
+  border:1px solid #d5e5ec;
+  display:block;
+}
+[data-est-section-block="ingresar"] .est-doc-preview-file{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+[data-est-section-block="ingresar"] .est-doc-preview-file strong{
+  color:#0b3f55;
+}
+[data-est-section-block="ingresar"] .est-doc-preview-hint{
+  margin-top:6px;
+  font-size:.76rem;
+  color:#667784;
+}
+[data-est-section-block="ingresar"] .est-classify-title{
+  font-weight:700;
+  color:#0b3f55;
+  margin-bottom:8px;
+}
+[data-est-section-block="ingresar"] .est-classify-options{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:8px;
+}
+[data-est-section-block="ingresar"] .est-classify-btn{
+  border:1px solid #cddfe7;
+  background:#fff;
+  border-radius:10px;
+  padding:8px;
+  text-align:left;
+  font-size:.82rem;
+  color:#0b3f55;
+  transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease, background-color .15s ease;
+}
+[data-est-section-block="ingresar"] .est-classify-btn:hover{
+  border-color:#9fc6d3;
+  background:#f7fbfd;
+}
+[data-est-section-block="ingresar"] .est-classify-btn.is-active{
+  border-color:#0b93a8;
+  box-shadow:0 0 0 2px rgba(11,147,168,.2), 0 6px 14px rgba(10,40,58,.08);
+  background:#e9f8fc;
+  transform:translateY(-1px);
+}
+[data-est-section-block="ingresar"] [data-action="ac-doc-wiz-toggle-full"]{
+  font-size:.78rem;
+  font-weight:600;
+}
+[data-est-section-block="ingresar"] .est-classify-other-wrap{
+  position:relative;
+}
+[data-est-section-block="ingresar"] .est-classify-other-wrap .est-classify-btn{
+  width:100%;
+}
+[data-est-section-block="ingresar"] .est-classify-other-input{
+  border:1px solid #0b93a8;
+  background:#f3fbff;
+  box-shadow:0 0 0 2px rgba(11,147,168,.16);
+  color:#0b3f55;
+}
+[data-est-section-block="ingresar"] .est-classify-other-input::placeholder{
+  color:#7a8793;
+}
+[data-est-section-block="ingresar"][data-ac-doc-wizard-mode="full"] .est-wizard-step{
+  display:block !important;
+}
+[data-est-section-block="ingresar"][data-ac-doc-wizard-mode="full"] .est-wizard-step + .est-wizard-step{
+  margin-top:10px;
+}
+[data-est-section-block="ingresar"][data-ac-doc-wizard-mode="full"] [data-action="ac-doc-wiz-prev"],
+[data-est-section-block="ingresar"][data-ac-doc-wizard-mode="full"] [data-action="ac-doc-wiz-next"]{
+  display:none !important;
+}
+[data-est-section-block="ingresar"][data-ac-doc-wizard-mode="full"] [data-action="ac-doc-upload-save"]{
+  display:inline-flex !important;
+}
 [data-est-section-block="ingresar"] .est-intent-title{
   font-weight:700;
   color:#0b3f55;
@@ -4624,6 +4769,12 @@ body{margin:0;background:var(--mm-fondo-base);}
   padding:10px;
 }
 @media (max-width: 991.98px){
+  #modalActividadClinicaAdjunto .modal-subtitle-inline{
+    display:none;
+  }
+  [data-est-section-block="ingresar"] .est-classify-options{
+    grid-template-columns:1fr;
+  }
   [data-est-section-block="ingresar"] .est-intent-options{
     grid-template-columns:1fr;
   }
@@ -5642,12 +5793,33 @@ body{margin:0;background:var(--mm-fondo-base);}
 #t-historial-atencion .mm-ha-topbar .btn-group[aria-label="Subvistas de historial"]{
   margin-bottom:0 !important;
 }
+#modalHistorialExpandido .modal-dialog{
+  max-width:min(1560px, 92vw);
+  margin:1rem auto;
+}
+#modalHistorialExpandido .modal-content{
+  height:calc(100vh - 2rem);
+}
+#modalHistorialExpandido .modal-body{
+  padding:.5rem;
+  overflow:hidden;
+}
+#modalHistorialExpandido #mm-embed-historial-expanded{
+  min-height:100%;
+}
 @media (max-width: 767.98px){
   #t-historial-atencion .mm-ha-topbar{
     flex-wrap:wrap;
   }
-  #t-historial-atencion .mm-ha-topbar > .btn[data-action="open-actividad-clinica"]{
+  #t-historial-atencion .mm-ha-topbar > .d-flex{
     margin-left:auto;
+  }
+  #modalHistorialExpandido .modal-dialog{
+    max-width:calc(100vw - .5rem);
+    margin:.25rem auto;
+  }
+  #modalHistorialExpandido .modal-content{
+    height:calc(100vh - .5rem);
   }
 }
 
@@ -5673,4 +5845,28 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-expediente .head [data-role="exp-h-start-enc-btn"]:not(.d-none),
 #p-expediente .head [data-role="exp-h-close-enc-btn"]:not(.d-none){
   display:inline-flex !important;
+}
+.clinical-card-actions {
+  line-height: 1.2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+  flex-wrap: wrap;
+}
+
+.clinical-card-actions .action-link {
+  cursor: pointer;
+  color: var(--bs-primary);
+  font-weight: 400;
+  text-decoration: none;
+}
+
+.clinical-card-actions .action-link:hover {
+  text-decoration: underline;
+}
+
+#t-historial-atencion .clinical-historial .est-order-studies-line,
+#t-historial-atencion .clinical-historial .est-order-studies-line.is-pending,
+#t-historial-atencion .clinical-historial .est-order-studies-line.is-complete {
+  font-weight: 400;
 }

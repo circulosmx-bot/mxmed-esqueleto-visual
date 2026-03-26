@@ -178,6 +178,211 @@ function timeline_category_summary(array $entries, int $limit = 3): array
     return array_slice($summary, 0, $limit);
 }
 
+function timeline_mix_entries_for_demo(array $entries): array
+{
+    if (count($entries) < 4) {
+        return $entries;
+    }
+    $buckets = [];
+    $order = [];
+    foreach ($entries as $entry) {
+        if (!is_array($entry)) {
+            continue;
+        }
+        $meta = is_array($entry['category_meta'] ?? null) ? $entry['category_meta'] : [];
+        $group = trim((string)($meta['catalog_group'] ?? 'other'));
+        if ($group === '') {
+            $group = 'other';
+        }
+        if (!isset($buckets[$group])) {
+            $buckets[$group] = [];
+            $order[] = $group;
+        }
+        $buckets[$group][] = $entry;
+    }
+    if (count($order) <= 1) {
+        return $entries;
+    }
+    $mixed = [];
+    $safety = 0;
+    while ($safety < 5000) {
+        $safety++;
+        $added = false;
+        foreach ($order as $group) {
+            if (!empty($buckets[$group])) {
+                $mixed[] = array_shift($buckets[$group]);
+                $added = true;
+            }
+        }
+        if (!$added) {
+            break;
+        }
+    }
+    return count($mixed) === count($entries) ? $mixed : $entries;
+}
+
+function timeline_demo_visible_family(array $entry): string
+{
+    $kind = strtolower(trim((string)($entry['kind'] ?? '')));
+    if ($kind === 'appointment') {
+        return 'Cita';
+    }
+    if ($kind === 'encounter') {
+        return 'Consulta';
+    }
+    if ($kind === 'media_bundle') {
+        return 'Documento';
+    }
+
+    $item = is_array($entry['item'] ?? null) ? $entry['item'] : [];
+    $itemType = strtolower(trim((string)($item['item_type'] ?? '')));
+    if ($itemType === 'appointment') {
+        return 'Cita';
+    }
+    if ($itemType === 'encounter') {
+        return 'Consulta';
+    }
+
+    $doc = is_array($item['clinical_document'] ?? null) ? $item['clinical_document'] : [];
+    $payload = is_array($doc['payload'] ?? null) ? $doc['payload'] : [];
+    $file = is_array($payload['file'] ?? null) ? $payload['file'] : [];
+    $docType = strtolower(trim((string)($doc['document_type'] ?? '')));
+    $renderMode = strtolower(trim((string)($doc['render_mode'] ?? ($file['render_mode'] ?? ''))));
+
+    if (in_array($docType, ['note', 'medical_note', 'evolution_note', 'nota_evolucion'], true)) {
+        return 'Nota clínica';
+    }
+    if (in_array($docType, ['lab_order', 'imaging_order', 'order', 'orders', 'lab_result', 'imaging_result', 'result', 'results', 'lab_pdf'], true)) {
+        return 'Estudio';
+    }
+    if (in_array($docType, ['prescription', 'rx'], true)) {
+        return 'Receta';
+    }
+    if (in_array($docType, ['procedure', 'immunization', 'medication_administration', 'wound_care'], true)) {
+        return 'Procedimiento';
+    }
+    if (in_array($docType, ['consentimiento_informado', 'consent_document', 'image', 'pdf', 'text', 'document', 'file'], true)) {
+        return 'Documento';
+    }
+    if (in_array($renderMode, ['image', 'pdf'], true)) {
+        return 'Documento';
+    }
+
+    $meta = is_array($entry['category_meta'] ?? null) ? $entry['category_meta'] : [];
+    $catalogGroup = strtolower(trim((string)($meta['catalog_group'] ?? '')));
+    $subtype = strtolower(trim((string)($meta['subtype'] ?? '')));
+    if ($catalogGroup === 'attention' && $subtype === 'appointment') {
+        return 'Cita';
+    }
+    if ($catalogGroup === 'attention') {
+        return 'Consulta';
+    }
+    if ($catalogGroup === 'studies') {
+        return 'Estudio';
+    }
+    if ($catalogGroup === 'treatment') {
+        return 'Receta';
+    }
+    if ($catalogGroup === 'documents' || $catalogGroup === 'multimedia') {
+        return 'Documento';
+    }
+    if ($catalogGroup === 'clinical') {
+        return 'Consulta';
+    }
+
+    return 'Documento';
+}
+
+function timeline_demo_entry_title_hint(array $entry): string
+{
+    $item = is_array($entry['item'] ?? null) ? $entry['item'] : [];
+    $doc = is_array($item['clinical_document'] ?? null) ? $item['clinical_document'] : [];
+    $payload = is_array($doc['payload'] ?? null) ? $doc['payload'] : [];
+    $parts = [
+        (string)($doc['title'] ?? ''),
+        (string)($payload['title'] ?? ''),
+        (string)($payload['document_title'] ?? ''),
+        (string)($doc['summary'] ?? ''),
+        (string)($entry['event_label'] ?? ''),
+    ];
+    $joined = strtolower(trim(implode(' | ', array_filter(array_map('trim', $parts), static function ($v) {
+        return $v !== '';
+    }))));
+    return $joined;
+}
+
+function timeline_demo_is_auto_cierre_marker(array $entry): bool
+{
+    $item = is_array($entry['item'] ?? null) ? $entry['item'] : [];
+    $doc = is_array($item['clinical_document'] ?? null) ? $item['clinical_document'] : [];
+    $payload = is_array($doc['payload'] ?? null) ? $doc['payload'] : [];
+    $docType = strtolower(trim((string)($doc['document_type'] ?? '')));
+    if (!in_array($docType, ['note', 'nota_evolucion', 'medical_note', 'evolution_note'], true)) {
+        return false;
+    }
+    $source = strtolower(trim((string)($payload['source'] ?? '')));
+    $titleHint = timeline_demo_entry_title_hint($entry);
+    $hasAutoToken = (strpos($titleHint, 'auto') !== false) || (strpos($source, 'auto') !== false);
+    $hasCloseToken = (strpos($titleHint, 'cierre') !== false)
+        || (strpos($titleHint, 'close') !== false)
+        || (strpos($source, 'cierre') !== false)
+        || (strpos($source, 'close') !== false)
+        || (strpos($source, 'final') !== false);
+    return $hasAutoToken && $hasCloseToken;
+}
+
+function timeline_demo_episode_marker_type(array $entry): string
+{
+    $family = timeline_demo_visible_family($entry);
+    if ($family === 'Consulta') {
+        return 'consulta';
+    }
+    if (timeline_demo_is_auto_cierre_marker($entry)) {
+        return 'auto_cierre_note';
+    }
+    return '';
+}
+
+function timeline_limit_demo_episode_markers_per_day(array $entries): array
+{
+    $hasConsultaMarker = false;
+    foreach ($entries as $entry) {
+        if (!is_array($entry)) {
+            continue;
+        }
+        if (timeline_demo_episode_marker_type($entry) === 'consulta') {
+            $hasConsultaMarker = true;
+            break;
+        }
+    }
+
+    $result = [];
+    $consultaSeen = false;
+    $autoCierreSeen = false;
+    foreach ($entries as $entry) {
+        if (!is_array($entry)) {
+            continue;
+        }
+        $markerType = timeline_demo_episode_marker_type($entry);
+        if ($markerType === 'consulta') {
+            if ($consultaSeen) {
+                continue;
+            }
+            $consultaSeen = true;
+        } elseif ($markerType === 'auto_cierre_note') {
+            if ($hasConsultaMarker) {
+                continue;
+            }
+            if ($autoCierreSeen) {
+                continue;
+            }
+            $autoCierreSeen = true;
+        }
+        $result[] = $entry;
+    }
+    return $result;
+}
+
 function timeline_activity_taxonomy_label(array $item, array $meta): string
 {
     $groupLabel = trim((string)($meta['catalog_group_label'] ?? ''));
@@ -237,6 +442,21 @@ function timeline_normalize_label(string $value): string
     ]);
 }
 
+function timeline_is_compact_datetime_text(string $value): bool
+{
+    $text = trim($value);
+    if ($text === '') {
+        return false;
+    }
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $text) === 1) {
+        return true;
+    }
+    if (preg_match('/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::\d{2})?$/', $text) === 1) {
+        return true;
+    }
+    return false;
+}
+
 function timeline_activity_title(array $item, array $meta): string
 {
     $itemType = trim((string)($item['item_type'] ?? ''));
@@ -253,10 +473,13 @@ function timeline_activity_title(array $item, array $meta): string
         return 'Cita';
     }
     if ($group === 'attention' && $subtype === 'encounter') {
-        return 'Atención';
+        return 'Consulta';
     }
     if ($group === 'clinical' && ($subtype === 'note' || $subtype === 'note_evolution' || $documentType === 'note' || $documentType === 'nota_evolucion')) {
-        return 'Nota de evolución';
+        return 'Nota clínica';
+    }
+    if (in_array($documentType, ['prescription', 'rx'], true)) {
+        return 'Receta';
     }
     if ($documentType === 'consentimiento_informado' || $documentType === 'consent_document') {
         return 'Consentimiento informado';
@@ -278,19 +501,40 @@ function timeline_activity_title(array $item, array $meta): string
             if ($mediaTagLabel !== '') {
                 return $mediaTagLabel;
             }
-            return 'Imagen';
+            return 'Documento';
         }
-        return 'Archivo';
+        return 'Documento';
     }
     if ($group === 'clinical') {
-        return 'Documento clínico';
+        return 'Consulta';
     }
     if ($group === 'documents') {
-        return 'Archivo';
+        return 'Documento';
     }
 
     $fallback = trim((string)($meta['subtype_label'] ?? $meta['catalog_group_label'] ?? 'Evento clinico'));
     return $fallback !== '' ? $fallback : 'Evento clinico';
+}
+
+function timeline_human_document_type_label(string $documentType): string
+{
+    $type = strtolower(trim($documentType));
+    if ($type === 'image') {
+        return 'Fotografía';
+    }
+    if ($type === 'pdf' || $type === 'document' || $type === 'file') {
+        return 'Documento';
+    }
+    if ($type === 'text') {
+        return 'Nota';
+    }
+    if ($type === 'lab_result' || $type === 'result') {
+        return 'Estudio';
+    }
+    if ($type === 'imaging' || $type === 'imaging_result') {
+        return 'Estudio de imagen';
+    }
+    return 'Documento';
 }
 
 function timeline_activity_icon(array $item, array $meta): string
@@ -586,6 +830,23 @@ function build_demo_timeline_items(): array
     ];
 }
 
+function timeline_is_demo_local_patient(string $patientId): bool
+{
+    $pid = strtolower(trim($patientId));
+    if ($pid === '') {
+        return false;
+    }
+    if ($pid === 'demo') {
+        return true;
+    }
+    // Pacientes demo locales conservados para QA visual.
+    static $demoLocalIds = [
+        'p_253c0c00eb77', // Adriana Ruiz Salgado
+        'p_f8a91656546b', // Jorge Emiliano Cardenas Mena
+    ];
+    return in_array($pid, $demoLocalIds, true);
+}
+
 $patientId = trim((string)($_GET['patient_id'] ?? ''));
 $appointmentId = trim((string)($_GET['appointment_id'] ?? ''));
 $encounterKey = trim((string)($_GET['encounter_key'] ?? ''));
@@ -739,6 +1000,7 @@ if ($patientId === '' && $encounterKey !== '') {
 }
 
 if ($patientId !== '') {
+    $isDemoPatient = timeline_is_demo_local_patient($patientId);
     if ($patientId === 'demo') {
         $demoItems = build_demo_timeline_items();
         $items = array_values(array_filter($demoItems, static function (array $item) use ($include): bool {
@@ -1123,6 +1385,10 @@ foreach ($renderEntries as $entry) {
     }
 }
 foreach ($dayOrder as $dayKey) {
+    if (($isDemoPatient ?? false) === true) {
+        $entries = timeline_mix_entries_for_demo($dayGroups[$dayKey]['entries']);
+        $dayGroups[$dayKey]['entries'] = timeline_limit_demo_episode_markers_per_day($entries);
+    }
     $dayGroups[$dayKey]['summary'] = timeline_category_summary($dayGroups[$dayKey]['entries']);
 }
 $availableCategoryFilters = array_values($availableCategoryFilters);
@@ -1308,8 +1574,9 @@ $extraHead = <<<'HTML'
       margin-top:.4rem;
     }
     .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic{
-      display:block;
-      gap:0;
+      display:flex;
+      align-items:flex-start;
+      gap:12px;
       border:1px solid #cfe9f0;
       border-radius:12px;
       padding:8px;
@@ -1320,83 +1587,50 @@ $extraHead = <<<'HTML'
       border-color:#cfe9f0;
       box-shadow:none;
     }
-    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic > .mm-activity-icon{
-      display:none;
-    }
     .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic > .mm-activity-body{
       width:100%;
     }
-    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-ico.est-order-ico-svg{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      font-size:32px;
-      line-height:1;
-      border:0;
-      border-radius:12px;
-      padding:8px;
-      color:#fff;
-      min-width:48px;
-      min-height:48px;
-      box-sizing:border-box;
-      background:#00b0c5;
-    }
-    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic.is-study-img .est-order-ico.est-order-ico-svg{
-      background:#ef5070;
-    }
-    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-ico.est-order-ico-svg svg{
-      width:32px;
-      height:32px;
-      display:block;
-      flex-shrink:0;
-    }
-    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic [data-role="diagnostic-icon"][data-document-type="imaging_order"] svg,
-    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic [data-role="diagnostic-icon"][data-document-type="imaging_result"] svg{
-      transform:scale(1.2);
-      transform-origin:center center;
-    }
-    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-ico.est-order-ico-svg .tab-ico.material-symbols-outlined{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      font-size:32px;
-      line-height:1;
-      font-variation-settings:'FILL' 0,'wght' 100,'GRAD' -50,'opsz' 24;
-      color:inherit;
-    }
     .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions{
-      margin-top:6px;
       display:flex;
-      align-items:flex-start;
+      align-items:center;
       justify-content:space-between;
       gap:.5rem 1rem;
-    }
-    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions-left,
-    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions-right{
-      display:flex;
-      flex-wrap:wrap;
-      gap:.35rem .65rem;
-      align-items:center;
-    }
-    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions-right{
+      margin-top:0;
+      flex:0 0 auto;
       margin-left:auto;
-      justify-content:flex-end;
+    }
+    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-line2{
+      margin-top:2px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:.5rem 1rem;
+      flex-wrap:nowrap;
     }
     .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-studies-line{
-      margin-top:2px;
+      margin-top:0;
       font-size:.86rem;
       color:#51607a;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
+      flex:1 1 280px;
+      min-width:0;
+    }
+    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-studies-line.is-pending,
+    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-studies-line.is-complete{
+      color:#6b7280;
+      font-weight:400;
+    }
+    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-studies-line.is-empty{
+      min-height:1px;
     }
     .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-head{
       display:block;
     }
     .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-title{
       display:flex;
-      flex-wrap:wrap;
-      align-items:baseline;
+      align-items:center;
       gap:.4rem;
     }
     .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-date{
@@ -1405,11 +1639,11 @@ $extraHead = <<<'HTML'
       line-height:1.25;
       white-space:nowrap;
     }
-    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions .mm-link-action{
+    .clinical-historial .mm-activity-actions .mm-link-action{
       appearance:none;
       border:0;
       background:transparent;
-      padding:0;
+      padding:.12rem 0;
       margin:0;
       color:#0b5ed7;
       text-decoration:underline;
@@ -1417,9 +1651,54 @@ $extraHead = <<<'HTML'
       font-size:.78rem;
       line-height:1.2;
       cursor:pointer;
+      white-space:nowrap;
     }
-    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions .mm-link-action:hover{
+    .clinical-historial .mm-activity-actions .mm-link-action:hover{
       color:#084298;
+    }
+    .clinical-historial .mm-activity-actions .mm-link-action--integrate{
+      border:1px solid #bfdbfe;
+      border-radius:999px;
+      background:#eff6ff;
+      color:#1d4ed8;
+      text-decoration:none;
+      font-weight:600;
+      padding:.16rem .6rem;
+      line-height:1.2;
+    }
+    .clinical-historial .mm-activity-actions .mm-link-action--integrate:hover{
+      background:#dbeafe;
+      color:#1e40af;
+      text-decoration:none;
+    }
+    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions .mm-link-action--study{
+      border:1px solid #bfdbfe;
+      border-radius:999px;
+      background:#eff6ff;
+      color:#1d4ed8;
+      text-decoration:none;
+      font-weight:500;
+      padding:.16rem .6rem;
+      line-height:1.2;
+    }
+    .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions .mm-link-action--study:hover{
+      background:#dbeafe;
+      color:#1e40af;
+      text-decoration:none;
+    }
+    @media (max-width: 991.98px){
+      .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-line2{
+        align-items:flex-start;
+        flex-wrap:wrap;
+      }
+      .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-studies-line{
+        min-width:100%;
+      }
+      .clinical-historial .mm-activity-item.est-order-card.is-study-diagnostic .est-order-actions{
+        width:100%;
+        justify-content:flex-start;
+        flex-wrap:wrap;
+      }
     }
     .clinical-historial .timeline-taxonomy-chip{
       border-radius:999px;
@@ -1664,6 +1943,54 @@ if (!$embed) {
     <div class="vstack gap-3">
       <?php foreach ($dayOrder as $dayKey): ?>
         <?php $dayGroup = $dayGroups[$dayKey]; ?>
+        <?php
+        $dayRenderEntries = is_array($dayGroup['entries'] ?? null) ? $dayGroup['entries'] : [];
+        if (($isDemoPatient ?? false) === true && !empty($dayRenderEntries)) {
+            $hasConsultaVisible = false;
+            foreach ($dayRenderEntries as $candidateEntry) {
+                if (!is_array($candidateEntry)) {
+                    continue;
+                }
+                $candidateItem = is_array($candidateEntry['item'] ?? null) ? $candidateEntry['item'] : [];
+                $candidateMeta = is_array($candidateEntry['category_meta'] ?? null) ? $candidateEntry['category_meta'] : [];
+                $candidateTitle = trim((string)timeline_activity_title($candidateItem, $candidateMeta));
+                if ($candidateTitle === 'Consulta') {
+                    $hasConsultaVisible = true;
+                    break;
+                }
+            }
+
+            $consultaShown = false;
+            $autoCierreShown = false;
+            $filteredDayEntries = [];
+            foreach ($dayRenderEntries as $candidateEntry) {
+                if (!is_array($candidateEntry)) {
+                    continue;
+                }
+                $candidateItem = is_array($candidateEntry['item'] ?? null) ? $candidateEntry['item'] : [];
+                $candidateMeta = is_array($candidateEntry['category_meta'] ?? null) ? $candidateEntry['category_meta'] : [];
+                $candidateTitle = trim((string)timeline_activity_title($candidateItem, $candidateMeta));
+                $isConsultaVisible = ($candidateTitle === 'Consulta');
+                $isAutoCierreVisible = timeline_demo_is_auto_cierre_marker($candidateEntry)
+                    || stripos($candidateTitle, 'nota clínica auto') === 0 && stripos($candidateTitle, 'cierre') !== false;
+
+                if ($isConsultaVisible) {
+                    if ($consultaShown) {
+                        continue;
+                    }
+                    $consultaShown = true;
+                } elseif ($isAutoCierreVisible) {
+                    if ($hasConsultaVisible || $autoCierreShown) {
+                        continue;
+                    }
+                    $autoCierreShown = true;
+                }
+
+                $filteredDayEntries[] = $candidateEntry;
+            }
+            $dayRenderEntries = $filteredDayEntries;
+        }
+        ?>
         <section class="timeline-day-card" data-day-card="1" data-day-key="<?php echo h((string)$dayGroup['day_key']); ?>">
           <div class="timeline-day-header">
             <div>
@@ -1671,7 +1998,7 @@ if (!$embed) {
             </div>
           </div>
           <div class="timeline-day-events">
-            <?php foreach ($dayGroup['entries'] as $entry): ?>
+            <?php foreach ($dayRenderEntries as $entry): ?>
               <?php
               $entryItem = is_array($entry['item'] ?? null) ? $entry['item'] : [];
               $categoryMeta = is_array($entry['category_meta'] ?? null) ? $entry['category_meta'] : [];
@@ -1739,9 +2066,6 @@ if (!$embed) {
                           <span class="encounter-active-badge">Consulta actual</span>
                         <?php endif; ?>
                       </div>
-                      <?php if ($appointmentClinicalCategory === 'procedimiento' && trim((string)($agenda['start_at'] ?? '')) !== ''): ?>
-                        <div class="mm-activity-meta"><?php echo h((string)$agenda['start_at']); ?></div>
-                      <?php endif; ?>
                       <?php if (trim((string)($item['case_title'] ?? '')) !== ''): ?>
                         <div class="mm-activity-meta">Caso: <?php echo h((string)$item['case_title']); ?></div>
                       <?php endif; ?>
@@ -1754,7 +2078,9 @@ if (!$embed) {
                         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="open-procedure-from-appointment" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>" data-default-title="<?php echo h($appointmentReasonText); ?>" data-default-datetime="<?php echo h((string)($item['event_datetime'] ?? ($agenda['start_at'] ?? ''))); ?>">Agregar detalles</button>
                       <?php endif; ?>
                       <?php if (!$isInActiveCase && $appointmentRef !== ''): ?>
-                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-to-case" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>">Integrar a caso clínico</button>
+                        <div class="clinical-card-actions text-muted small mt-1">
+                          <span class="action-link" data-action="integrate-to-case" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>">Integrar a caso clínico</span>
+                        </div>
                       <?php endif; ?>
                       <?php if (!$isInActiveCase && is_array($activeCase) && $appointmentRef !== ''): ?>
                         <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
@@ -1816,7 +2142,9 @@ if (!$embed) {
                     </div>
                     <div class="mm-activity-actions">
                       <?php if (!$encInActiveCase && $ek !== ''): ?>
-                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-to-case" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>">Integrar a caso clínico</button>
+                        <div class="clinical-card-actions text-muted small mt-1">
+                          <span class="action-link" data-action="integrate-to-case" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>">Integrar a caso clínico</span>
+                        </div>
                       <?php endif; ?>
                       <?php if (!$encInActiveCase && is_array($activeCase) && $ek !== ''): ?>
                         <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
@@ -1840,6 +2168,7 @@ if (!$embed) {
                 $docInActiveCase = (bool)($docItem['is_in_active_case'] ?? false);
                 $docTypeNorm = strtolower(trim((string)($doc['document_type'] ?? '')));
                 $docPayload = is_array($doc['payload'] ?? null) ? $doc['payload'] : [];
+                $docSource = strtolower(trim((string)($docPayload['source'] ?? '')));
                 $docFilePayload = is_array($docPayload['file'] ?? null) ? $docPayload['file'] : [];
                 $docRenderMode = strtolower(trim((string)($doc['render_mode'] ?? ($docFilePayload['render_mode'] ?? ''))));
                 $docIsImage = ($docTypeNorm === 'image' || $docRenderMode === 'image');
@@ -1848,7 +2177,11 @@ if (!$embed) {
                 if ($docOccurredAt !== '' && preg_match('/^\\d{4}-\\d{2}-\\d{2}/', $docOccurredAt, $docDateMatch)) {
                     $docOccurredDate = $docDateMatch[0];
                 }
-                $docDisplayTitle = $entryTitle;
+                $docUserTitle = trim((string)($doc['title'] ?? ($docPayload['title'] ?? ($docPayload['document_title'] ?? ''))));
+                $docCategoryLabel = trim((string)($docPayload['document_category_label'] ?? ($docPayload['category_label'] ?? ($doc['media_tag_label'] ?? ($docPayload['media_tag_label'] ?? '')))));
+                $docSummaryText = trim((string)($doc['summary'] ?? ''));
+                $docTypeHumanLabel = timeline_human_document_type_label($docTypeNorm);
+                $docDisplayTitle = $docUserTitle !== '' ? $docUserTitle : $entryTitle;
                 $docMetaLine1 = '';
                 $docMetaLine2 = '';
                 $docMetaLine3 = '';
@@ -1858,6 +2191,8 @@ if (!$embed) {
                 $isWoundCare = ($docTypeNorm === 'wound_care');
                 $isProcedure = ($docTypeNorm === 'procedure');
                 $isConsentDoc = in_array($docTypeNorm, ['consentimiento_informado', 'consent_document'], true);
+                $isSimpleUploadDoc = in_array($docTypeNorm, ['image', 'pdf', 'text', 'document', 'file'], true);
+                $isAdjuntarFlowDoc = ($docSource === 'actividad_clinica_host');
                 $isStudyOrder = in_array($docTypeNorm, ['lab_order', 'imaging_order', 'order'], true);
                 $isStudyResult = in_array($docTypeNorm, ['lab_result', 'imaging_result', 'result', 'lab_pdf'], true);
                 $isStudyDoc = $isStudyOrder || $isStudyResult;
@@ -1877,6 +2212,10 @@ if (!$embed) {
                     }
                 }
                 $hasLinkedResult = ($linkedResultRef !== '');
+                $studyOrderVisualState = '';
+                if ($isStudyOrder) {
+                    $studyOrderVisualState = $hasLinkedResult ? 'Ver resultados' : 'En espera de resultados';
+                }
                 if ($isStudyDoc) {
                     if ($docTypeNorm === 'lab_order') {
                         $docDisplayTitle = 'Orden de laboratorio';
@@ -1908,7 +2247,6 @@ if (!$embed) {
                     $docMetaLine1 = implode(' · ', $metaParts);
                     if (!$isStudyResult && $docStatus === 'replaced') {
                         $studyStatusLine = 'Orden reemplazada';
-                        $docMetaLine2 = 'Esta orden fue sustituida por una nueva versión.';
                     } elseif (!$isStudyResult && $docStatus === 'active' && $replacementSourceRef !== '') {
                         $studyStatusLine = 'Orden activa (reemplazo)';
                     }
@@ -1927,13 +2265,27 @@ if (!$embed) {
                         $docMetaLine3 = 'Indicación: ' . $indication;
                     }
                     $studyCompactLine = '';
-                    if (!empty($requestedStudies)) {
+                    $studyCompactLineClass = 'est-order-studies-line';
+                    if ($isStudyOrder) {
+                        $studyCompactLine = $studyOrderVisualState;
+                        if ($hasLinkedResult) {
+                            $studyCompactLineClass .= ' is-complete';
+                        } else {
+                            $studyCompactLineClass .= ' is-pending';
+                        }
+                    } elseif (!empty($requestedStudies)) {
                         $preview = array_slice($requestedStudies, 0, 3);
                         $remaining = count($requestedStudies) - count($preview);
                         $studyCompactLine = 'Estudios: ' . implode(', ', $preview);
                         if ($remaining > 0) {
                             $studyCompactLine .= ' y ' . $remaining . ' más';
                         }
+                    }
+                } elseif ($isSimpleUploadDoc && $isAdjuntarFlowDoc) {
+                    $docDisplayTitle = $docUserTitle !== '' ? $docUserTitle : ($docTypeHumanLabel !== '' ? $docTypeHumanLabel : 'Documento');
+                    $docMetaLine1 = $docTypeHumanLabel !== '' ? $docTypeHumanLabel : 'Documento';
+                    if ($docSummaryText !== '' && timeline_normalize_label($docSummaryText) !== timeline_normalize_label($docDisplayTitle)) {
+                        $docMetaLine3 = $docSummaryText;
                     }
                 } elseif ($isConsentDoc) {
                     $consentStatus = strtolower(trim((string)($docPayload['status'] ?? ($docPayload['consent']['status'] ?? 'draft'))));
@@ -2087,6 +2439,21 @@ if (!$embed) {
                     if ($note !== '') {
                         $docMetaLine3 = 'Nota: ' . $note;
                     }
+                } elseif (!$isStudyDoc) {
+                    if ($docCategoryLabel !== '') {
+                        $docMetaLine1 = $docCategoryLabel;
+                    }
+                    if ($docOccurredAt !== '') {
+                        $docMetaLine2 = $docOccurredAt;
+                    }
+                    if ($docSummaryText !== '' && timeline_normalize_label($docSummaryText) !== timeline_normalize_label($docDisplayTitle)) {
+                        $docMetaLine3 = $docSummaryText;
+                    }
+                }
+                foreach (['docMetaLine1', 'docMetaLine2', 'docMetaLine3'] as $metaVar) {
+                    if (timeline_is_compact_datetime_text((string)$$metaVar)) {
+                        $$metaVar = '';
+                    }
                 }
                 $docViewPath = $docIsImage || $isConsentDoc ? '/modules/clinical/ui/viewer.php' : '/modules/clinical/ui/document.php';
                 $docHref = $docUuid !== '' ? $docViewPath . '?' . carry_embed_params(['uuid' => $docUuid]) : '';
@@ -2102,28 +2469,40 @@ if (!$embed) {
                       <?php if ($isStudyDoc): ?>
                         <div class="est-order-head">
                           <div class="est-order-title">
-                            <span class="est-order-ico est-order-ico-svg" aria-hidden="true" data-role="diagnostic-icon" data-document-type="<?php echo h($docTypeNorm); ?>" data-order-area="<?php echo h(($docTypeNorm === 'lab_order' || $docTypeNorm === 'lab_result') ? 'Laboratorio' : 'Imagenología'); ?>"></span>
                             <span><?php echo h($docDisplayTitle); ?></span>
-                            <?php if ($docOccurredDate !== ''): ?>
-                              <span class="est-order-date"><?php echo h($docOccurredDate); ?></span>
+                          </div>
+                        </div>
+                        <div class="est-order-line2">
+                          <?php if (!empty($studyCompactLine)): ?>
+                            <div class="<?php echo h($studyCompactLineClass ?? 'est-order-studies-line'); ?>"><?php echo h($studyCompactLine); ?></div>
+                          <?php else: ?>
+                            <div class="est-order-studies-line is-empty"></div>
+                          <?php endif; ?>
+                          <div class="mm-activity-actions est-order-actions clinical-card-actions text-muted small mt-1">
+                            <?php $hasStudyAction = false; ?>
+                            <?php if ($isStudyOrder && !$hasLinkedResult && $docPrimaryRef !== ''): ?>
+                              <span class="action-link" data-action="open-diagnostic-order-result" data-ref="<?php echo h($docPrimaryRef); ?>">Ingresar resultado</span>
+                              <?php $hasStudyAction = true; ?>
+                              <span class="mx-1">·</span>
+                              <span class="action-link" data-action="open-diagnostic-order-replace" data-ref="<?php echo h($docPrimaryRef); ?>">Reemplazar orden</span>
+                            <?php endif; ?>
+                            <?php if (!$docInActiveCase && $docUuid !== ''): ?>
+                              <?php if ($hasStudyAction): ?>
+                                <span class="mx-1">·</span>
+                              <?php endif; ?>
+                              <span class="action-link" data-action="integrate-to-case" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Integrar a caso clínico</span>
                             <?php endif; ?>
                           </div>
                         </div>
-                        <?php if (!empty($studyCompactLine)): ?>
-                          <div class="est-order-studies-line"><?php echo h($studyCompactLine); ?></div>
-                        <?php endif; ?>
                       <?php else: ?>
                         <div class="mm-activity-title"><?php echo h($docDisplayTitle); ?></div>
-                        <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare || $isProcedure) && $docOccurredAt !== ''): ?>
-                          <div class="mm-activity-meta"><?php echo h($docOccurredAt); ?></div>
-                        <?php endif; ?>
-                        <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare || $isProcedure) && $docMetaLine1 !== ''): ?>
+                        <?php if ($docMetaLine1 !== ''): ?>
                           <div class="mm-activity-meta"><?php echo h($docMetaLine1); ?></div>
                         <?php endif; ?>
-                        <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare || $isProcedure) && $docMetaLine2 !== ''): ?>
+                        <?php if ($docMetaLine2 !== ''): ?>
                           <div class="mm-activity-meta"><?php echo h($docMetaLine2); ?></div>
                         <?php endif; ?>
-                        <?php if (($isImmunization || $isMedicationAdministration || $isWoundCare || $isProcedure) && $docMetaLine3 !== ''): ?>
+                        <?php if ($docMetaLine3 !== ''): ?>
                           <div class="mm-activity-meta"><?php echo h($docMetaLine3); ?></div>
                         <?php endif; ?>
                         <?php if (trim((string)($docItem['case_title'] ?? '')) !== ''): ?>
@@ -2131,25 +2510,13 @@ if (!$embed) {
                         <?php endif; ?>
                       <?php endif; ?>
                     </div>
-                    <div class="mm-activity-actions <?php echo $isStudyDoc ? 'est-order-actions' : ''; ?>">
-                      <?php if ($isStudyDoc): ?>
-                        <div class="est-order-actions-left">
-                          <?php if ($isStudyOrder && $docStatus === 'active' && !$hasLinkedResult && $docPrimaryRef !== ''): ?>
-                            <button type="button" class="mm-link-action" data-action="open-diagnostic-order-result" data-ref="<?php echo h($docPrimaryRef); ?>">Ingresar resultado</button>
-                            <button type="button" class="mm-link-action" data-action="open-diagnostic-order-replace" data-ref="<?php echo h($docPrimaryRef); ?>">Reemplazar orden</button>
-                          <?php endif; ?>
-                        </div>
-                        <div class="est-order-actions-right">
-                          <?php if (!$docInActiveCase && $docUuid !== ''): ?>
-                            <button type="button" class="mm-link-action" data-action="integrate-to-case" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Integrar a caso clínico</button>
-                          <?php endif; ?>
-                        </div>
-                      <?php else: ?>
+                    <?php if (!$isStudyDoc): ?>
+                    <div class="mm-activity-actions clinical-card-actions text-muted small mt-1">
                         <?php if (!$docInActiveCase && $docUuid !== ''): ?>
-                          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-to-case" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Integrar a caso clínico</button>
+                          <span class="action-link" data-action="integrate-to-case" data-item-type="document" data-item-ref="<?php echo h($docUuid); ?>">Integrar a caso clínico</span>
                         <?php endif; ?>
-                      <?php endif; ?>
                     </div>
+                    <?php endif; ?>
                   </div>
                 </article>
               <?php elseif (($entry['kind'] ?? '') === 'media_bundle'): ?>
@@ -2201,9 +2568,9 @@ if (!$embed) {
                         <div class="small text-secondary mt-1"><?php echo h($notesExcerpt); ?></div>
                       <?php endif; ?>
                     </div>
-                    <div class="mm-activity-actions">
+                    <div class="mm-activity-actions clinical-card-actions text-muted small mt-1">
                       <?php if (!$bundleInActiveCase && $bundleUuid !== ''): ?>
-                        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-to-case" data-item-type="document" data-item-ref="<?php echo h($bundleUuid); ?>">Integrar a caso clínico</button>
+                        <span class="action-link" data-action="integrate-to-case" data-item-type="document" data-item-ref="<?php echo h($bundleUuid); ?>">Integrar a caso clínico</span>
                       <?php endif; ?>
                       <?php if (!$bundleInActiveCase && $activeCaseId !== '' && $bundleUuid !== ''): ?>
                         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-success" data-action="assign-case-item" data-case-id="<?php echo h($activeCaseId); ?>" data-item-type="document" data-item-ref="<?php echo h($bundleUuid); ?>">Agregar a caso activo</button>
@@ -4418,7 +4785,7 @@ if (!$embed) {
         : {};
       if (encounterDetailMeta) {
         var metaParts = [];
-        metaParts.push('Atención: ' + String(data.encounter_key || '-'));
+        metaParts.push('Consulta: ' + String(data.encounter_key || '-'));
         metaParts.push('Fecha: ' + String(data.event_datetime || '-'));
         encounterDetailMeta.textContent = metaParts.join(' | ');
         encounterDetailMeta.classList.remove('d-none');
