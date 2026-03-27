@@ -1828,7 +1828,7 @@ if (!$embed) {
 }
 ?>
 <div class="clinical-historial">
-<div class="<?php echo $embed ? 'py-1' : 'container py-4'; ?>">
+<div class="<?php echo $embed ? 'py-1 clinical-historial-embed' : 'container py-4'; ?>">
   <?php if (!$embed): ?>
     <h1 class="h4 mb-1">Historial de atención</h1>
     <p class="text-secondary mb-3">patient_id: <code><?php echo h($patientId !== '' ? $patientId : '-'); ?></code></p>

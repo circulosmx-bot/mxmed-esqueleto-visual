@@ -5793,6 +5793,14 @@ body{margin:0;background:var(--mm-fondo-base);}
 #t-historial-atencion .mm-ha-topbar .btn-group[aria-label="Subvistas de historial"]{
   margin-bottom:0 !important;
 }
+.clinical-historial .clinical-historial-embed .timeline-category-filters{
+  position:sticky;
+  top:0;
+  z-index:10;
+  background:#fff;
+  padding:.3rem 0 .45rem;
+  border-bottom:1px solid #e5edf2;
+}
 #modalHistorialExpandido .modal-dialog{
   max-width:min(1560px, 92vw);
   margin:1rem auto;
@@ -5802,10 +5810,24 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 #modalHistorialExpandido .modal-body{
   padding:.5rem;
-  overflow:hidden;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+  gap:.35rem;
+}
+#modalHistorialExpandido .mm-ha-topbar-expanded{
+  position:sticky;
+  top:0;
+  z-index:12;
+  background:#fff;
+  padding:.35rem .4rem;
+  border:1px solid #d9e8ef;
+  border-radius:.55rem;
+  box-shadow:0 1px 6px rgba(15,23,42,.06);
 }
 #modalHistorialExpandido #mm-embed-historial-expanded{
-  min-height:100%;
+  min-height:calc(100vh - 12.5rem);
+  flex:1 1 auto;
 }
 @media (max-width: 767.98px){
   #t-historial-atencion .mm-ha-topbar{
@@ -5820,6 +5842,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   }
   #modalHistorialExpandido .modal-content{
     height:calc(100vh - .5rem);
+  }
+  #modalHistorialExpandido #mm-embed-historial-expanded{
+    min-height:calc(100vh - 11rem);
   }
 }
 
