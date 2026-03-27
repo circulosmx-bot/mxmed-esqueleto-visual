@@ -3641,7 +3641,7 @@ if (!$embed) {
       var show = activeCaseId !== '' && recentCandidates.length > 0 && !recentSnoozed();
       recentSuggestion.classList.toggle('d-none', !show);
       if (show) {
-        recentSuggestionText.textContent = 'Hay ' + recentCandidates.length + ' episodios sin agrupar en casos clínicos.';
+        recentSuggestionText.textContent = 'Hay ' + recentCandidates.length + ' registros sin agrupar en casos clínicos.';
       }
     }
 
