@@ -10,10 +10,10 @@ function mxmed_clinical_timeline_catalog(): array
 
     $catalog = [
         'attention' => [
-            'label' => 'Atencion',
+            'label' => 'Consulta',
             'priority' => 10,
             'subtypes' => [
-                'encounter' => ['label' => 'Atencion', 'priority' => 10],
+                'encounter' => ['label' => 'Consulta', 'priority' => 10],
                 'appointment' => ['label' => 'Cita', 'priority' => 20],
             ],
         ],
@@ -190,7 +190,7 @@ function mxmed_clinical_timeline_catalog_v11(): array
 {
     return [
         'groups' => [
-            'attention' => ['label' => 'Atencion', 'priority' => 10],
+            'attention' => ['label' => 'Consulta', 'priority' => 10],
             'clinical' => ['label' => 'Clinico', 'priority' => 20],
             'studies' => ['label' => 'Estudios', 'priority' => 30],
             'multimedia' => ['label' => 'Multimedia', 'priority' => 40],

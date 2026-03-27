@@ -3547,17 +3547,26 @@
                   <div class="mm-ha-topbar mb-1">
                     <div class="btn-group btn-group-sm mb-0" role="group" aria-label="Subvistas de historial">
                       <button type="button" class="btn btn-outline-primary active" data-embed-mode="historial">Historial</button>
-                      <button type="button" class="btn btn-outline-primary" data-embed-mode="encounter">Episodio</button>
+                      <button type="button" class="btn btn-outline-primary" data-embed-mode="encounter">Casos clínicos</button>
                     </div>
-                    <button
-                      type="button"
-                      class="btn btn-primary btn-sm"
-                      data-action="open-actividad-clinica"
-                      data-bs-toggle="modal"
-                      data-bs-target="#modalActividadClinica"
-                    >
-                      Registrar actividad clínica
-                    </button>
+                    <div class="d-flex align-items-center gap-2">
+                      <button
+                        type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        data-action="open-historial-expand"
+                      >
+                        Expandir historial
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-primary btn-sm"
+                        data-action="open-actividad-clinica"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalActividadClinica"
+                      >
+                        Registrar actividad clínica
+                      </button>
+                    </div>
                   </div>
                   <div id="mm-embed-historial-empty" class="alert alert-info d-none mb-1">Sin paciente activo. Cargando modo demo.</div>
                   <iframe
@@ -3568,6 +3577,42 @@
                     loading="lazy"
                     referrerpolicy="no-referrer"
                   ></iframe>
+                </div>
+                <div class="modal fade" id="modalHistorialExpandido" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-xl modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Historial de atención (modo expandido)</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                        <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-2">
+                          <div class="btn-group btn-group-sm" role="group" aria-label="Subvistas de historial expandido">
+                            <button type="button" class="btn btn-outline-primary active" data-embed-mode="historial">Historial</button>
+                            <button type="button" class="btn btn-outline-primary" data-embed-mode="encounter">Casos clínicos</button>
+                          </div>
+                          <button
+                            type="button"
+                            class="btn btn-primary btn-sm"
+                            data-action="open-actividad-clinica"
+                          >
+                            Registrar actividad clínica
+                          </button>
+                        </div>
+                        <iframe
+                          id="mm-embed-historial-expanded"
+                          title="Historial de atención expandido"
+                          src="about:blank"
+                          style="width:100%; height:100%; border:0;"
+                          loading="lazy"
+                          referrerpolicy="no-referrer"
+                        ></iframe>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary btn-sm ms-auto" data-bs-dismiss="modal">Volver al panel</button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div class="modal fade" id="modalActividadClinica" tabindex="-1" aria-hidden="true">
                   <div class="modal-dialog modal-dialog-centered">
@@ -3800,8 +3845,9 @@
                 <div class="modal fade" id="modalActividadClinicaAdjunto" tabindex="-1" aria-hidden="true">
                   <div class="modal-dialog modal-lg modal-dialog-scrollable">
                     <div class="modal-content">
-                      <div class="modal-header">
+                      <div class="modal-header modal-header-compact-doc">
                         <h5 class="modal-title">Adjuntar documento</h5>
+                        <span class="modal-subtitle-inline">Guardar documento en Archivo del paciente</span>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body">
@@ -4339,129 +4385,102 @@
                   </div>
 
                   <div class="est-block d-none" data-est-section-block="ingresar">
-                    <div class="est-block-head">
-                      <div class="est-head-actions est-head-actions-secondary">
-                        <button class="btn btn-outline-secondary btn-sm">Ver órdenes abiertas</button>
-                        <button class="btn btn-outline-secondary btn-sm">Imprimir</button>
-                        <button class="btn btn-outline-primary btn-sm">Compartir / QR</button>
-                      </div>
-                    </div>
-                    <div class="est-block-desc">Carga documental rápida para el paciente activo.</div>
-                    <div class="est-intent-picker" data-role="ac-doc-intent-picker" data-ac-doc-intent="archivo">
-                      <div class="est-intent-title">¿Qué quieres guardar del paciente?</div>
-                      <div class="est-intent-sub">Elige la forma más rápida de anexarlo a su archivo clínico.</div>
-                      <div class="est-intent-options">
-                        <button type="button" class="est-intent-btn is-active" data-ac-doc-intent-btn="foto">
-                          <span class="est-intent-btn-title">Foto</span>
-                          <span class="est-intent-btn-sub">Hallazgo, radiografía o documento físico</span>
-                        </button>
-                        <button type="button" class="est-intent-btn" data-ac-doc-intent-btn="archivo">
-                          <span class="est-intent-btn-title">Archivo</span>
-                          <span class="est-intent-btn-sub">PDF, estudio exportado o documento digital</span>
-                        </button>
-                        <button type="button" class="est-intent-btn" data-ac-doc-intent-btn="nota">
-                          <span class="est-intent-btn-title">Nota</span>
-                          <span class="est-intent-btn-sub">Texto breve o resultado manual</span>
-                        </button>
-                      </div>
-                    </div>
-                    <div class="row g-2 est-card-body">
-                      <div class="col-md-4">
-                        <label class="form-label">Tipo</label>
-                        <select class="form-select form-select-sm">
-                          <option>Laboratorio</option><option>Imagenología</option><option>Cardiología</option><option>Endoscopía</option><option>Patología</option><option>Genética</option><option>Funcionales</option><option>Otros</option>
-                        </select>
-                      </div>
-                      <div class="col-md-4">
-                        <label class="form-label">Estudio</label>
-                        <input class="form-control form-control-sm" placeholder="Ej. PCR, TAC, US">
-                      </div>
-                      <div class="col-md-4">
-                        <label class="form-label">Fecha del estudio</label>
-                        <input class="form-control form-control-sm" type="date">
-                      </div>
-                    </div>
-                    <div class="est-upload">
-                      <div class="est-upload-grid est-upload-grid-primary">
-                        <div class="est-drop est-drop-primary" data-role="ac-doc-drop-file">
-                          <div class="est-drop-title">Subir archivo</div>
-                          <div class="est-drop-sub">PDF, imagen o exportado</div>
-                          <input class="form-control form-control-sm mt-2" type="file" accept="image/*,.pdf,application/pdf" data-role="ac-doc-file">
-                          <div class="small text-muted mt-2">Se guarda como documento clínico canónico del paciente activo.</div>
-                        </div>
-                        <div class="est-drop est-drop-qr est-drop-secondary" data-role="ac-doc-drop-qr">
-                          <div class="est-drop-title">Capturar con teléfono</div>
-                          <div class="est-drop-sub">Escanea este QR y sube la foto desde tu móvil</div>
-                          <div class="est-qr-placeholder">QR</div>
-                        </div>
-                        <div class="est-drop est-drop-tertiary" data-role="ac-doc-drop-text">
-                          <div class="est-drop-title">Solo texto</div>
-                          <div class="est-drop-sub">Resultado en texto + valores clave</div>
-                          <textarea class="form-control form-control-sm" rows="2" placeholder="Resumen del resultado" data-role="ac-doc-text-only"></textarea>
-                          <div class="row g-1 mt-1">
-                            <div class="col-6"><input class="form-control form-control-sm" placeholder="Marcador / valor"></div>
-                            <div class="col-6"><input class="form-control form-control-sm" placeholder="Unidad / referencia"></div>
+                    <div class="est-wizard" data-role="ac-doc-wizard" data-ac-doc-wizard-mode="guided" data-ac-doc-step="1">
+                      <div class="est-wizard-step-indicator" data-role="ac-doc-wiz-step-indicator">Paso 1 de 4</div>
+
+                      <section class="est-wizard-step" data-ac-doc-step-panel="1">
+                        <div class="est-intent-picker" data-role="ac-doc-intent-picker" data-ac-doc-intent="archivo">
+                          <div class="est-intent-title" data-role="ac-doc-intent-question">¿Qué quieres anexar al archivo de este paciente?</div>
+                          <div class="est-intent-options">
+                            <button type="button" class="est-intent-btn is-active" data-ac-doc-intent-btn="archivo">
+                              <span class="est-intent-btn-title">Subir archivo o tomar foto</span>
+                              <span class="est-intent-btn-sub">Hallazgo clínico, radiografía, PDF o documento</span>
+                            </button>
+                            <button type="button" class="est-intent-btn" data-ac-doc-intent-btn="nota">
+                              <span class="est-intent-btn-title">Escribir una nota</span>
+                              <span class="est-intent-btn-sub">Texto libre o resultado manual</span>
+                            </button>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                    <div class="est-advanced-toggle-wrap mt-2">
-                      <button
-                        class="btn btn-link btn-sm p-0 text-decoration-none"
-                        type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#estDocAdvancedOptions"
-                        aria-expanded="false"
-                        aria-controls="estDocAdvancedOptions"
-                      >
-                        Opciones clínicas avanzadas
-                      </button>
-                    </div>
-                    <div class="collapse mt-2" id="estDocAdvancedOptions">
-                      <div class="est-advanced-panel">
-                        <div class="row g-2">
-                          <div class="col-md-6">
-                            <label class="form-label">Vincular a orden</label>
-                            <select class="form-select form-select-sm">
-                              <option>Sin orden (carga directa)</option>
-                              <option>#ORD-1245 Preop básico</option>
-                              <option>#ORD-1238 Imagenología</option>
-                            </select>
-                          </div>
-                          <div class="col-md-3">
-                            <label class="form-label">Estado</label>
-                            <select class="form-select form-select-sm">
-                              <option>Pendiente</option><option>Validado</option><option>Archivado</option>
-                            </select>
-                          </div>
-                          <div class="col-md-3">
-                            <label class="form-label">Evento/Episodio</label>
-                            <input class="form-control form-control-sm" placeholder="p.ej. Preop, control trimestral">
-                          </div>
-                          <div class="col-md-12">
-                            <label class="form-label">Resumen (opcional)</label>
-                            <input class="form-control form-control-sm" type="text" maxlength="500" placeholder="Ej. Radiografía de tórax control" data-role="ac-doc-summary">
-                          </div>
-                          <div class="col-md-6">
-                            <label class="form-label mb-1 small">Fecha/hora del evento (opcional)</label>
-                            <input class="form-control form-control-sm" type="datetime-local" data-role="ac-doc-event-datetime">
-                          </div>
-                          <div class="col-md-6">
-                            <label class="form-label mb-1 small">Etiqueta de imagen (solo imagen)</label>
-                            <select class="form-select form-select-sm" data-role="ac-doc-media-tag">
-                              <option value="evidencia_clinica">Evidencia clínica</option>
-                              <option value="estudio_imagen">Estudio de imagen</option>
-                              <option value="documento_apoyo">Documento de apoyo</option>
-                            </select>
+                      </section>
+
+                      <section class="est-wizard-step d-none" data-ac-doc-step-panel="2">
+                        <div class="est-upload">
+                          <div class="est-upload-grid est-upload-grid-primary">
+                            <div class="est-drop est-drop-primary" data-role="ac-doc-drop-file">
+                              <div class="est-drop-title">Subir archivo</div>
+                              <div class="est-drop-sub">PDF, imagen o exportado</div>
+                              <input class="form-control form-control-sm mt-2" type="file" accept="image/*,.pdf,application/pdf" data-role="ac-doc-file">
+                              <div class="small text-muted mt-2">Se guarda como documento clínico canónico del paciente activo.</div>
+                            </div>
+                            <div class="est-drop est-drop-qr est-drop-secondary" data-role="ac-doc-drop-qr">
+                              <div class="est-drop-title">Capturar con teléfono</div>
+                              <div class="est-drop-sub">Escanea este QR y sube la foto desde tu móvil</div>
+                              <div class="est-qr-placeholder">QR</div>
+                            </div>
+                            <div class="est-drop est-drop-tertiary" data-role="ac-doc-drop-text">
+                              <div class="est-drop-title">Escribir nota rápida</div>
+                              <div class="est-drop-sub">Captura un texto breve para anexarlo al expediente</div>
+                              <textarea class="form-control form-control-sm" rows="3" placeholder="Escribe aquí la nota" data-role="ac-doc-note-capture"></textarea>
+                            </div>
                           </div>
                         </div>
+                      </section>
+
+                      <section class="est-wizard-step d-none" data-ac-doc-step-panel="3">
+                        <div class="est-classify">
+                          <div class="est-classify-title">¿Qué es este documento?</div>
+                          <input type="hidden" value="" data-role="ac-doc-category">
+                          <div class="est-classify-options">
+                            <button type="button" class="est-classify-btn" data-ac-doc-category-btn="estudio_resultado">Estudio o resultado</button>
+                            <button type="button" class="est-classify-btn" data-ac-doc-category-btn="documento_externo">Documento externo del paciente</button>
+                            <button type="button" class="est-classify-btn" data-ac-doc-category-btn="evidencia_clinica">Evidencia clínica</button>
+                            <button type="button" class="est-classify-btn" data-ac-doc-category-btn="receta_previa">Receta o tratamiento previo</button>
+                            <button type="button" class="est-classify-btn" data-ac-doc-category-btn="consentimiento_formato">Consentimiento o formato</button>
+                            <button type="button" class="est-classify-btn" data-ac-doc-category-btn="bitacora_hospitalaria">Bitácora / hoja hospitalaria</button>
+                            <div class="est-classify-other-wrap">
+                              <button type="button" class="est-classify-btn" data-ac-doc-category-btn="otro">Otro</button>
+                              <input
+                                type="text"
+                                class="form-control form-control-sm est-classify-other-input d-none"
+                                data-role="ac-doc-category-other-input"
+                                placeholder="Ejemplo: Interconsulta, resumen médico, estudio externo"
+                              >
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+
+                      <section class="est-wizard-step d-none" data-ac-doc-step-panel="4">
+                        <div class="row g-2 est-card-body">
+                          <div class="col-12">
+                            <div class="est-doc-preview" data-role="ac-doc-preview">
+                              <div class="est-doc-preview-title">Vista previa</div>
+                              <div class="est-doc-preview-body" data-role="ac-doc-preview-body">Aún no hay contenido preparado.</div>
+                              <div class="est-doc-preview-hint">Este documento se anexará al historial cuando lo guardes.</div>
+                            </div>
+                          </div>
+                          <div class="col-12">
+                            <div class="est-classify-title mb-1">Dale un nombre corto a este documento</div>
+                          </div>
+                          <div class="col-12">
+                            <label class="form-label">Nombre del documento</label>
+                            <input class="form-control form-control-sm" placeholder="Ejemplo: Póliza de seguro" data-role="ac-doc-title">
+                          </div>
+                          <div class="col-12">
+                            <label class="form-label">Texto complementario (opcional)</label>
+                            <textarea class="form-control form-control-sm" rows="3" placeholder="Agrega información adicional si lo necesitas" data-role="ac-doc-summary"></textarea>
+                          </div>
+                        </div>
+                      </section>
+
+                      <div class="est-wizard-nav mt-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-none" data-action="ac-doc-wiz-prev">Atrás</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-action="ac-doc-wiz-next">Continuar</button>
+                        <button class="btn btn-primary btn-sm d-none" data-action="ac-doc-upload-save">Guardar documento</button>
                       </div>
                     </div>
                     <div class="small mt-2 d-none" data-role="ac-doc-upload-feedback"></div>
-                    <div class="est-card-actions">
-                      <button class="btn btn-outline-secondary btn-sm">Guardar y seguir</button>
-                      <button class="btn btn-primary btn-sm" data-action="ac-doc-upload-save">Guardar documento</button>
-                    </div>
                   </div>
 
                   <div class="est-block d-none" data-est-section-block="previos">
@@ -7277,7 +7296,13 @@
     var historialTabBtn = document.querySelector('[data-bs-target="' + HIST_TAB_TARGET + '"]');
     var historialPane = document.getElementById(HIST_TAB_ID);
     var iframe = document.getElementById('mm-embed-historial');
+    var expandBtn = historialPane ? historialPane.querySelector('[data-action="open-historial-expand"]') : null;
+    var expandModalEl = document.getElementById('modalHistorialExpandido');
+    var expandedIframe = document.getElementById('mm-embed-historial-expanded');
     var emptyMsg = document.getElementById('mm-embed-historial-empty');
+    var expandModal = (expandModalEl && window.bootstrap && window.bootstrap.Modal)
+      ? window.bootstrap.Modal.getOrCreateInstance(expandModalEl)
+      : null;
     var embedWrapper = historialPane ? historialPane.querySelector('.clinical-panel') : null;
     var p10Bar = document.getElementById('mm-p10-bar');
     var expedientePane = document.getElementById('p-expediente');
@@ -7834,19 +7859,53 @@
       lastLoadedKey = nextKey;
     }
 
+    function syncExpandedIframeSrc() {
+      if (!expandedIframe || !iframe) return;
+      var mainSrc = String(iframe.getAttribute('src') || '').trim();
+      if (!mainSrc) {
+        ensureEmbedIframe();
+        mainSrc = String(iframe.getAttribute('src') || '').trim();
+      }
+      if (!mainSrc) return;
+      if (String(expandedIframe.getAttribute('src') || '').trim() === mainSrc) return;
+      expandedIframe.setAttribute('src', mainSrc);
+    }
+
+    function openExpandedHistorial() {
+      if (!expandModal) return;
+      ensureEmbedIframe();
+      syncExpandedIframeSrc();
+      expandModal.show();
+    }
+
     modeButtons.forEach(function (btn) {
       btn.addEventListener('click', function () {
         var mode = btn.getAttribute('data-embed-mode') || 'historial';
         setActiveMode(mode);
-        if (isHistorialTabVisible()) ensureEmbedIframe();
+        if (isHistorialTabVisible()) {
+          ensureEmbedIframe();
+          syncExpandedIframeSrc();
+        }
       });
     });
+
+    if (expandBtn && expandModalEl && expandModal) {
+      expandBtn.addEventListener('click', function () {
+        openExpandedHistorial();
+      });
+      expandModalEl.addEventListener('shown.bs.modal', function () {
+        syncExpandedIframeSrc();
+      });
+    }
 
     historialTabBtn.addEventListener('click', function () {
       if (window.bootstrap && window.bootstrap.Tab) {
         try {
           window.bootstrap.Tab.getOrCreateInstance(historialTabBtn).show();
         } catch (_) {}
+      }
+      if (isHistorialTabVisible()) {
+        openExpandedHistorial();
       }
       window.requestAnimationFrame(function () {
         if (!isHistorialTabVisible()) {
@@ -7860,6 +7919,7 @@
       ensureEmbedIframe();
       refreshP10();
       updateP10Polling();
+      openExpandedHistorial();
     });
     iframe.addEventListener('load', function () {
       try {
@@ -8092,7 +8152,9 @@
     });
 
     window.addEventListener('message', function (event) {
-      if (!event || event.source !== iframe.contentWindow) return;
+      var fromMainIframe = !!(iframe && iframe.contentWindow && event && event.source === iframe.contentWindow);
+      var fromExpandedIframe = !!(expandedIframe && expandedIframe.contentWindow && event && event.source === expandedIframe.contentWindow);
+      if (!fromMainIframe && !fromExpandedIframe) return;
       var data = event.data;
       if (!data || typeof data !== 'object') return;
       if (data.type === 'mxmed:embed:open-diagnostic-document') {

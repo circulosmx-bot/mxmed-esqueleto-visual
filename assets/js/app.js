@@ -4153,7 +4153,7 @@ console.info('app.js loaded :: 20251123a');
   const actividadClinicaNotaQrModalEl = pane.querySelector('#modalActividadClinicaNotaQr');
   const actividadClinicaAdjuntoModalEl = pane.querySelector('#modalActividadClinicaAdjunto');
   const actividadClinicaConsentModalEl = pane.querySelector('#modalActividadClinicaConsent');
-  const actividadClinicaLaunchBtn = pane.querySelector('[data-action="open-actividad-clinica"]');
+  const actividadClinicaLaunchBtns = Array.from(pane.querySelectorAll('[data-action="open-actividad-clinica"]'));
   const actividadClinicaNotaOpenQrBtn = pane.querySelector('[data-action="ac-nota-open-qr-capture"]');
   const actividadClinicaNotaQrStatusEl = pane.querySelector('[data-role="ac-nota-qr-status"]');
   const actividadClinicaNotasCard = pane.querySelector('[data-role="ac-notas-context-card"]');
@@ -4169,10 +4169,10 @@ console.info('app.js loaded :: 20251123a');
   let actividadClinicaContextSyncToken = 0;
   const activeEncounterLookupInFlight = new Map();
   let lastDayInvalid = false;
-  if(actividadClinicaLaunchBtn){
-    actividadClinicaLaunchBtn.removeAttribute('data-bs-toggle');
-    actividadClinicaLaunchBtn.removeAttribute('data-bs-target');
-  }
+  actividadClinicaLaunchBtns.forEach((btn)=>{
+    btn.removeAttribute('data-bs-toggle');
+    btn.removeAttribute('data-bs-target');
+  });
   const normalizeExpGender = (genero)=>{
     const raw = String(genero || '').trim();
     if(!raw) return '';
@@ -5583,23 +5583,25 @@ console.info('app.js loaded :: 20251123a');
   window.mxmedReadMotivoConsulta = readMotivoConsulta;
   window.mxmedHasMinimumPatientProfile = ()=> hasMinimumPatientProfile();
   window.mxmedApplyExpedienteEntryTabRule = (opts)=> applyExpedienteEntryTabRule(opts);
-  actividadClinicaLaunchBtn?.addEventListener('click', (event)=>{
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-    try{
-      const BsModal = window.bootstrap && window.bootstrap.Modal;
-      if(BsModal && actividadClinicaModalEl){
-        const modal = typeof BsModal.getOrCreateInstance === 'function'
-          ? BsModal.getOrCreateInstance(actividadClinicaModalEl)
-          : new BsModal(actividadClinicaModalEl);
-        modal.show();
-        try{
-          console.info('[mxmed-actividad-clinica] launcher open -> modal');
-        }catch(_){}
-      }
-    }catch(_){}
-  }, true);
+  actividadClinicaLaunchBtns.forEach((btn)=>{
+    btn.addEventListener('click', (event)=>{
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      try{
+        const BsModal = window.bootstrap && window.bootstrap.Modal;
+        if(BsModal && actividadClinicaModalEl){
+          const modal = typeof BsModal.getOrCreateInstance === 'function'
+            ? BsModal.getOrCreateInstance(actividadClinicaModalEl)
+            : new BsModal(actividadClinicaModalEl);
+          modal.show();
+          try{
+            console.info('[mxmed-actividad-clinica] launcher open -> modal');
+          }catch(_){}
+        }
+      }catch(_){}
+    }, true);
+  });
   actividadClinicaNotaOpenQrBtn?.addEventListener('click', (event)=>{
     event.preventDefault();
     openNotaCaptureQrModal();
@@ -14253,6 +14255,12 @@ function mxResetLogoPreview(){
     if(type === 'imaging_result') return 'Resultado de imagen';
     return 'Orden diagnóstica';
   }
+  function resolveDiagnosticFamilyTitle(docType){
+    const type = clean(docType).toLowerCase();
+    if(type === 'lab_order' || type === 'lab_result' || type === 'lab_pdf') return 'Estudio de laboratorio';
+    if(type === 'imaging_order' || type === 'imaging_result') return 'Estudio de imagen';
+    return 'Estudio diagnóstico';
+  }
   function buildDiagnosticOrderPreview(row, payload){
     const docType = clean(row?.document_type).toLowerCase();
     const displayTitle = resolveDiagnosticTypeLabel(docType);
@@ -14626,7 +14634,7 @@ function mxResetLogoPreview(){
       const detail = await fetchOrderDocumentDetail(docRef);
       const payload = (detail && typeof detail.payload === 'object') ? detail.payload : {};
       const model = {
-        typeLabel: resolveDiagnosticTypeLabel(detail.documentType),
+        typeLabel: resolveDiagnosticFamilyTitle(detail.documentType),
         area: resolveOrderAreaLabel(detail.documentType, payload),
         dateText: prettyDate(detail.eventDatetime) || detail.eventDatetime || '—',
         priority: resolveOrderPriorityLabel(payload),
@@ -16839,14 +16847,19 @@ function mxResetLogoPreview(){
   studiesPane.dataset.acDocUploadInit = '1';
 
   const fileInput = studiesPane.querySelector('[data-role="ac-doc-file"]');
+  const titleInput = studiesPane.querySelector('[data-role="ac-doc-title"]');
   const summaryInput = studiesPane.querySelector('[data-role="ac-doc-summary"]');
   const eventDatetimeInput = studiesPane.querySelector('[data-role="ac-doc-event-datetime"]');
   const mediaTagSelect = studiesPane.querySelector('[data-role="ac-doc-media-tag"]');
-  const textOnlyInput = studiesPane.querySelector('[data-role="ac-doc-text-only"]');
+  const noteCaptureInput = studiesPane.querySelector('[data-role="ac-doc-note-capture"]');
+  const intentQuestionEl = studiesPane.querySelector('[data-role="ac-doc-intent-question"]');
   const intentPicker = studiesPane.querySelector('[data-role="ac-doc-intent-picker"]');
   const intentButtons = Array.from(studiesPane.querySelectorAll('[data-ac-doc-intent-btn]'));
   const categoryInput = studiesPane.querySelector('[data-role="ac-doc-category"]');
   const categoryButtons = Array.from(studiesPane.querySelectorAll('[data-ac-doc-category-btn]'));
+  const categoryOtherInput = studiesPane.querySelector('[data-role="ac-doc-category-other-input"]');
+  const previewWrap = studiesPane.querySelector('[data-role="ac-doc-preview"]');
+  const previewBody = studiesPane.querySelector('[data-role="ac-doc-preview-body"]');
   const wizardRoot = studiesPane.querySelector('[data-role="ac-doc-wizard"]');
   const wizardPanels = Array.from(studiesPane.querySelectorAll('[data-ac-doc-step-panel]'));
   const wizardStepIndicator = studiesPane.querySelector('[data-role="ac-doc-wiz-step-indicator"]');
@@ -16864,6 +16877,8 @@ function mxResetLogoPreview(){
   if(!fileInput || !saveBtn || !feedbackEl) return;
 
   const clean = (value)=> String(value || '').trim();
+  let previewObjectUrl = '';
+  let previewRenderKey = '';
   const setFeedback = (message, tone = 'muted')=>{
     const text = clean(message);
     const classes = ['text-muted', 'text-success', 'text-danger'];
@@ -16911,6 +16926,23 @@ function mxResetLogoPreview(){
     }
     return clean(window.mxmedStore?.currentEncounterKey || window.mxmedStore?.activeEncounterKey);
   };
+  const resolveActivePatientNameForWizard = ()=>{
+    const fromHeader = clean(document.querySelector('#p-expediente [data-role="exp-h-patient-name"]')?.textContent || '');
+    if(fromHeader && fromHeader.toLowerCase() !== 'paciente') return fromHeader;
+    const expPane = document.getElementById('p-expediente');
+    return [
+      clean(expPane?.querySelector('[data-pac-nombre]')?.value || ''),
+      clean(expPane?.querySelector('[data-pac-apellido-paterno]')?.value || ''),
+      clean(expPane?.querySelector('[data-pac-apellido-materno]')?.value || '')
+    ].filter(Boolean).join(' ').trim();
+  };
+  const refreshIntentQuestion = ()=>{
+    if(!intentQuestionEl) return;
+    const patientName = resolveActivePatientNameForWizard();
+    intentQuestionEl.textContent = patientName
+      ? `¿Qué quieres anexar al archivo de ${patientName}?`
+      : '¿Qué quieres anexar al archivo de este paciente?';
+  };
   const setDocIntent = (intent, opts = {})=>{
     const normalized = clean(intent).toLowerCase();
     const targetIntent = (normalized === 'foto' || normalized === 'nota') ? normalized : 'archivo';
@@ -16933,7 +16965,7 @@ function mxResetLogoPreview(){
     }else if(targetIntent === 'nota'){
       targetBlock = dropText || null;
       if(dropText) dropText.classList.add('is-intent-active');
-      focusNode = textOnlyInput || null;
+      focusNode = noteCaptureInput || null;
     }else{
       targetBlock = dropFile || null;
       if(dropFile) dropFile.classList.add('is-intent-active');
@@ -16945,7 +16977,7 @@ function mxResetLogoPreview(){
       try{ focusNode?.focus?.(); }catch(_){}
     }
   };
-  const setDocCategory = (category)=>{
+  const setDocCategory = (category, opts = {})=>{
     const normalized = clean(category).toLowerCase();
     const allowed = new Set([
       'estudio_resultado',
@@ -16956,27 +16988,115 @@ function mxResetLogoPreview(){
       'bitacora_hospitalaria',
       'otro'
     ]);
-    const value = allowed.has(normalized) ? normalized : '';
-    if(categoryInput) categoryInput.value = value;
+    const isOtherValue = normalized === 'otro' || normalized.indexOf('otro:') === 0;
+    const canonicalValue = isOtherValue ? 'otro' : (allowed.has(normalized) ? normalized : '');
+    if(categoryInput){
+      const rawOther = clean(categoryOtherInput?.value || '');
+      categoryInput.value = (canonicalValue === 'otro' && rawOther)
+        ? `otro:${rawOther}`
+        : canonicalValue;
+    }
     categoryButtons.forEach((btn)=>{
-      btn.classList.toggle('is-active', clean(btn.getAttribute('data-ac-doc-category-btn')).toLowerCase() === value);
+      const btnValue = clean(btn.getAttribute('data-ac-doc-category-btn')).toLowerCase();
+      btn.classList.toggle('is-active', btnValue === canonicalValue);
     });
+    const otherBtn = categoryButtons.find((btn)=> clean(btn.getAttribute('data-ac-doc-category-btn')).toLowerCase() === 'otro');
+    if(otherBtn && categoryOtherInput){
+      const showOtherInput = canonicalValue === 'otro';
+      otherBtn.classList.toggle('d-none', showOtherInput);
+      categoryOtherInput.classList.toggle('d-none', !showOtherInput);
+      if(showOtherInput && opts.focusOther === true){
+        try{ categoryOtherInput.focus(); }catch(_){}
+      }
+    }
   };
-  const WIZARD_MAX_STEP = 5;
+  const resolveCategorySelection = ()=>{
+    const raw = clean(categoryInput?.value || '');
+    if(raw === '') return { key: '', label: '' };
+    if(raw.indexOf('otro:') === 0){
+      const custom = clean(raw.slice(5));
+      return { key: 'otro', label: custom || 'Otro' };
+    }
+    const key = raw;
+    const btn = categoryButtons.find((node)=> clean(node.getAttribute('data-ac-doc-category-btn')).toLowerCase() === key);
+    const label = clean(btn?.textContent || key);
+    return { key, label };
+  };
+  const clearPreviewObjectUrl = ()=>{
+    if(!previewObjectUrl) return;
+    try{ URL.revokeObjectURL(previewObjectUrl); }catch(_){}
+    previewObjectUrl = '';
+  };
+  const renderDocumentPreview = ()=>{
+    if(!previewBody) return;
+    const intent = resolveCurrentIntent();
+    const noteText = clean(noteCaptureInput?.value || '');
+    const file = fileInput?.files && fileInput.files[0] ? fileInput.files[0] : null;
+    const fileSignature = file
+      ? [clean(file.name), String(file.size || 0), String(file.lastModified || 0), clean(file.type)].join('|')
+      : '';
+    const nextKey = [intent, fileSignature, noteText].join('::');
+    if(nextKey === previewRenderKey){
+      return;
+    }
+    previewRenderKey = nextKey;
+    clearPreviewObjectUrl();
+    previewBody.innerHTML = '';
+    if(file){
+      const isImage = String(file.type || '').toLowerCase().startsWith('image/');
+      if(isImage){
+        previewObjectUrl = URL.createObjectURL(file);
+        const img = document.createElement('img');
+        img.className = 'est-doc-preview-thumb';
+        img.alt = 'Vista previa del archivo';
+        img.src = previewObjectUrl;
+        previewBody.appendChild(img);
+      }else{
+        const block = document.createElement('div');
+        block.className = 'est-doc-preview-file';
+        const title = document.createElement('strong');
+        title.textContent = clean(file.name || 'Archivo adjunto');
+        const meta = document.createElement('span');
+        const mime = clean(file.type || 'documento');
+        meta.textContent = mime.toUpperCase();
+        block.appendChild(title);
+        block.appendChild(meta);
+        previewBody.appendChild(block);
+      }
+      return;
+    }
+    if(intent === 'nota' || noteText !== ''){
+      const text = noteText !== '' ? noteText : 'Nota preparada sin contenido aún.';
+      const span = document.createElement('span');
+      span.textContent = text.length > 160 ? `${text.slice(0, 160)}…` : text;
+      previewBody.appendChild(span);
+      return;
+    }
+    const empty = document.createElement('span');
+    empty.textContent = 'Aún no hay contenido preparado.';
+    previewBody.appendChild(empty);
+  };
+  const WIZARD_MAX_STEP = 4;
   let wizardStep = 1;
   let wizardMode = 'guided';
+  const resolveCurrentIntent = ()=> clean(intentPicker?.dataset?.acDocIntent || 'archivo').toLowerCase();
+  const syncCaptureStepForIntent = ()=>{
+    const intent = resolveCurrentIntent();
+    const isFileFlow = intent === 'archivo' || intent === 'foto';
+    const isNota = intent === 'nota';
+    if(dropFile){
+      dropFile.classList.toggle('d-none', isNota);
+    }
+    if(dropQr){
+      dropQr.classList.toggle('d-none', !isFileFlow);
+    }
+    if(dropText){
+      dropText.classList.toggle('d-none', !isNota);
+    }
+  };
   const renderWizard = (opts = {})=>{
     const focus = opts.focus === true;
     if(!wizardRoot || !wizardPanels.length) return;
-    if(wizardMode === 'full'){
-      wizardRoot.dataset.acDocWizardMode = 'full';
-      if(wizardContainer) wizardContainer.dataset.acDocWizardMode = 'full';
-      wizardPanels.forEach((panel)=> panel.classList.remove('d-none'));
-      if(wizardStepIndicator) wizardStepIndicator.textContent = 'Vista completa';
-      if(wizardToggleFullBtn) wizardToggleFullBtn.textContent = 'Volver a modo guiado';
-      if(saveBtn) saveBtn.classList.remove('d-none');
-      return;
-    }
     wizardRoot.dataset.acDocWizardMode = 'guided';
     if(wizardContainer) wizardContainer.dataset.acDocWizardMode = 'guided';
     wizardStep = Math.max(1, Math.min(WIZARD_MAX_STEP, Number(wizardStep) || 1));
@@ -16988,11 +17108,16 @@ function mxResetLogoPreview(){
       wizardStepIndicator.textContent = `Paso ${wizardStep} de ${WIZARD_MAX_STEP}`;
     }
     if(wizardPrevBtn) wizardPrevBtn.classList.toggle('d-none', wizardStep <= 1);
-    if(wizardNextBtn) wizardNextBtn.classList.toggle('d-none', wizardStep >= WIZARD_MAX_STEP);
+    if(wizardNextBtn){
+      const hideNext = wizardStep <= 1 || wizardStep >= WIZARD_MAX_STEP;
+      wizardNextBtn.classList.toggle('d-none', hideNext);
+    }
     if(saveBtn) saveBtn.classList.toggle('d-none', wizardStep < 4);
-    if(wizardToggleFullBtn) wizardToggleFullBtn.textContent = 'Ver opciones completas';
-    if(wizardStep === 3){
+    if(wizardStep === 2){
+      syncCaptureStepForIntent();
       setDocIntent(intentPicker?.dataset?.acDocIntent || 'archivo', { focus });
+    }else if(wizardStep === 4){
+      renderDocumentPreview();
     }else if(focus){
       const panel = wizardPanels.find((node)=> Number(node.getAttribute('data-ac-doc-step-panel') || 0) === wizardStep);
       const focusable = panel?.querySelector('button, input, select, textarea');
@@ -17004,23 +17129,45 @@ function mxResetLogoPreview(){
       const btn = event.target.closest('[data-ac-doc-intent-btn]');
       if(!btn) return;
       event.preventDefault();
-      const shouldFocusCapture = wizardMode === 'full' || wizardStep >= 3;
+      const shouldFocusCapture = wizardStep >= 2;
       setDocIntent(btn.getAttribute('data-ac-doc-intent-btn'), { focus: shouldFocusCapture });
+      syncCaptureStepForIntent();
+      if(wizardMode === 'guided' && wizardStep === 1){
+        wizardStep = 2;
+        renderWizard({ focus: true });
+      }
+      renderDocumentPreview();
     });
     setDocIntent(intentPicker.dataset.acDocIntent || 'archivo');
+    syncCaptureStepForIntent();
   }
   if(categoryButtons.length){
     categoryButtons.forEach((btn)=>{
       btn.addEventListener('click', (event)=>{
         event.preventDefault();
-        setDocCategory(btn.getAttribute('data-ac-doc-category-btn'));
+        const selected = clean(btn.getAttribute('data-ac-doc-category-btn')).toLowerCase();
+        setDocCategory(selected, { focusOther: selected === 'otro' });
+        renderDocumentPreview();
       });
+    });
+  }
+  if(categoryOtherInput){
+    categoryOtherInput.addEventListener('input', ()=>{
+      if(!categoryInput) return;
+      const custom = clean(categoryOtherInput.value);
+      categoryInput.value = custom ? `otro:${custom}` : 'otro';
+      renderDocumentPreview();
+    });
+    categoryOtherInput.addEventListener('blur', ()=>{
+      const custom = clean(categoryOtherInput.value);
+      if(!custom){
+        setDocCategory('otro');
+      }
     });
   }
   if(wizardPrevBtn){
     wizardPrevBtn.addEventListener('click', (event)=>{
       event.preventDefault();
-      if(wizardMode !== 'guided') return;
       wizardStep = Math.max(1, wizardStep - 1);
       renderWizard({ focus: true });
     });
@@ -17028,35 +17175,46 @@ function mxResetLogoPreview(){
   if(wizardNextBtn){
     wizardNextBtn.addEventListener('click', (event)=>{
       event.preventDefault();
-      if(wizardMode !== 'guided') return;
       wizardStep = Math.min(WIZARD_MAX_STEP, wizardStep + 1);
       renderWizard({ focus: true });
-    });
-  }
-  if(wizardToggleFullBtn){
-    wizardToggleFullBtn.addEventListener('click', (event)=>{
-      event.preventDefault();
-      wizardMode = wizardMode === 'full' ? 'guided' : 'full';
-      renderWizard({ focus: false });
     });
   }
   if(adjuntoModalEl){
     adjuntoModalEl.addEventListener('shown.bs.modal', ()=>{
       wizardMode = 'guided';
       wizardStep = 1;
+      refreshIntentQuestion();
       renderWizard({ focus: false });
       setDocIntent(intentPicker?.dataset?.acDocIntent || 'archivo');
+      syncCaptureStepForIntent();
+      renderDocumentPreview();
+    });
+    adjuntoModalEl.addEventListener('hidden.bs.modal', ()=>{
+      clearPreviewObjectUrl();
+      previewRenderKey = '';
     });
   }
   if(!clean(categoryInput?.value || '')){
     setDocCategory('estudio_resultado');
   }
+  refreshIntentQuestion();
+  renderDocumentPreview();
   renderWizard({ focus: false });
 
   const uploadCanonicalDocument = async ()=>{
     const patientId = resolveActivePatientIdForUpload();
     if(!patientId){
       setFeedback('Selecciona un paciente activo antes de adjuntar un documento.', 'error');
+      return;
+    }
+    const documentTitle = clean(titleInput?.value || '');
+    if(!documentTitle){
+      setFeedback('Ingresa un nombre corto para el documento.', 'error');
+      if(wizardMode === 'guided'){
+        wizardStep = WIZARD_MAX_STEP;
+        renderWizard({ focus: true });
+      }
+      try{ titleInput?.focus?.(); }catch(_){}
       return;
     }
     const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
@@ -17069,18 +17227,23 @@ function mxResetLogoPreview(){
       setFeedback('Formato no compatible. Usa imagen o PDF.', 'error');
       return;
     }
-    const summary = clean(summaryInput?.value || '');
+    const noteCaptureText = clean(noteCaptureInput?.value || '');
+    const summaryText = clean(summaryInput?.value || '');
+    const summary = [noteCaptureText, summaryText].filter(Boolean).join(' · ');
     const eventDatetime = toSqlDatetime(eventDatetimeInput?.value || '');
     const encounterKey = resolveOptionalEncounterKeyForUpload();
     const mediaTagKey = clean(mediaTagSelect?.value || 'evidencia_clinica');
     const mediaTagLabel = clean(mediaTagSelect?.selectedOptions?.[0]?.textContent || 'Evidencia clínica');
+    const categorySelection = resolveCategorySelection();
 
     const payload = {
       patient_id: patientId,
       document_type: documentType,
+      title: documentTitle,
       payload: {
         source: 'actividad_clinica_host',
-        filename: clean(file.name || '')
+        filename: clean(file.name || ''),
+        title: documentTitle
       }
     };
     if(summary) payload.summary = summary;
@@ -17091,6 +17254,12 @@ function mxResetLogoPreview(){
       payload.media_tag_label = mediaTagLabel || 'Evidencia clínica';
       payload.payload.media_tag_key = payload.media_tag_key;
       payload.payload.media_tag_label = payload.media_tag_label;
+    }
+    if(categorySelection.key){
+      payload.payload.document_category_key = categorySelection.key;
+    }
+    if(categorySelection.label){
+      payload.payload.document_category_label = categorySelection.label;
     }
 
     const formData = new FormData();
@@ -17139,8 +17308,12 @@ function mxResetLogoPreview(){
       }catch(_){}
 
       fileInput.value = '';
+      if(titleInput) titleInput.value = '';
+      if(noteCaptureInput) noteCaptureInput.value = '';
       if(summaryInput) summaryInput.value = '';
       if(eventDatetimeInput) eventDatetimeInput.value = '';
+      clearPreviewObjectUrl();
+      renderDocumentPreview();
 
       try{
         window.mxmedRegisterEncounterActivity?.('documento_clinico_adjunto', {
@@ -17158,6 +17331,22 @@ function mxResetLogoPreview(){
             source: 'actividad_clinica_adjuntar_documento'
           }
         }));
+      }catch(_){}
+      try{
+        const iframe = document.getElementById('mm-embed-historial');
+        if(iframe){
+          const src = String(iframe.getAttribute('src') || '').trim();
+          if(src && src.indexOf('/modules/clinical/ui/historial.php') !== -1){
+            const next = `${src}${src.indexOf('?') !== -1 ? '&' : '?'}host_doc_refresh=${Date.now()}`;
+            iframe.setAttribute('src', next);
+          }
+        }
+      }catch(_){}
+      try{
+        const modal = (window.bootstrap && window.bootstrap.Modal && typeof window.bootstrap.Modal.getInstance === 'function')
+          ? window.bootstrap.Modal.getInstance(adjuntoModalEl)
+          : null;
+        modal?.hide();
       }catch(_){}
     }catch(err){
       setFeedback(String(err?.message || 'No se pudo adjuntar el documento.'), 'error');
@@ -17189,10 +17378,12 @@ function mxResetLogoPreview(){
       return;
     }
     setFeedback(`Archivo seleccionado: ${file.name} (${docType.toUpperCase()})`);
+    renderDocumentPreview();
     if(ingresarSectionBtn && !ingresarSectionBtn.classList.contains('active')){
       ingresarSectionBtn.click();
     }
   });
+  noteCaptureInput?.addEventListener('input', renderDocumentPreview);
 })();
 
 (function(){

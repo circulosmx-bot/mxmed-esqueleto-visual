@@ -5847,11 +5847,13 @@ body{margin:0;background:var(--mm-fondo-base);}
   display:inline-flex !important;
 }
 .clinical-card-actions {
-  line-height: 1.2;
+  line-height: 1.08;
   display: inline-flex;
-  align-items: center;
-  gap: 0.1rem;
-  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .clinical-card-actions .action-link {
@@ -5859,14 +5861,179 @@ body{margin:0;background:var(--mm-fondo-base);}
   color: var(--bs-primary);
   font-weight: 400;
   text-decoration: none;
+  text-underline-offset: 1px;
+}
+
+.clinical-card-actions .action-link-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: var(--bs-primary);
+  font: inherit;
+  font-weight: 400;
+  line-height: 1.08;
+  text-underline-offset: 1px;
 }
 
 .clinical-card-actions .action-link:hover {
   text-decoration: underline;
 }
 
+.clinical-card-actions .action-link-btn:hover {
+  text-decoration: underline;
+}
+
+.clinical-historial .mm-activity-body {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .3rem;
+}
+
+.clinical-historial .mm-activity-body > .min-w-0 {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.clinical-historial .mm-activity-body > .mm-activity-actions {
+  margin-top: .06rem;
+  margin-left: auto;
+  align-self: flex-start;
+}
+
+.clinical-card-actions .mx-1 {
+  margin-left: .15rem !important;
+  margin-right: .15rem !important;
+  color: #7a8590;
+}
+
+.clinical-historial .est-order-line2 .clinical-card-actions {
+  align-self: center;
+}
+
+.clinical-historial .mm-activity-item.is-document-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid #d9e8ef;
+  border-radius: 12px;
+  padding: 6px 8px;
+  background: #fbfdff;
+}
+
+.clinical-historial .mm-activity-item.is-document-card > .mm-activity-body {
+  width: 100%;
+}
+
+.clinical-historial .mm-activity-item.is-document-card .est-order-head {
+  display: block;
+}
+
+.clinical-historial .mm-activity-item.is-document-card .est-order-title {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.clinical-historial .mm-activity-item.is-document-card .est-order-line2 {
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .35rem .75rem;
+  flex-wrap: nowrap;
+}
+
+.clinical-historial .mm-activity-item.is-document-card .est-doc-studies-line {
+  margin-top: 0;
+  font-size: .84rem;
+  line-height: 1.15;
+  color: #51607a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.clinical-historial .mm-activity-item.is-document-card .est-doc-studies-line.is-empty {
+  min-height: 1px;
+}
+
+.clinical-historial .mm-activity-item.is-document-card .est-order-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .35rem .75rem;
+  margin-top: 0;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+#clinicalDocumentModal .modal-content {
+  border: 1px solid #d9e8ef;
+  border-radius: 12px;
+}
+
+#clinicalDocumentModal .modal-header {
+  padding: .65rem .9rem;
+  border-bottom: 1px solid #e5edf2;
+}
+
+#clinicalDocumentModal .modal-title {
+  font-size: .96rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+#clinicalDocumentModal .modal-body {
+  padding: .8rem .95rem;
+}
+
+#clinicalDocumentModal [data-role="document-viewer-meta"] {
+  font-size: .84rem;
+  line-height: 1.2;
+  color: #64748b;
+}
+
+#clinicalDocumentModal .modal-footer {
+  padding: .55rem .95rem;
+  border-top: 1px solid #e5edf2;
+}
+
 #t-historial-atencion .clinical-historial .est-order-studies-line,
 #t-historial-atencion .clinical-historial .est-order-studies-line.is-pending,
 #t-historial-atencion .clinical-historial .est-order-studies-line.is-complete {
   font-weight: 400;
+}
+
+.clinical-historial .mm-activity-meta--complementary {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #6f7f8c;
+}
+
+@media (max-width: 991.98px) {
+  .clinical-card-actions {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
+  .clinical-historial .mm-activity-item.is-document-card .est-order-line2 {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .clinical-historial .mm-activity-item.is-document-card .est-doc-studies-line {
+    min-width: 100%;
+  }
+
+  .clinical-historial .mm-activity-item.is-document-card .est-order-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
 }
