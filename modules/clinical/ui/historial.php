@@ -149,6 +149,50 @@ function timeline_item_uid(array $item): string
     return md5(json_encode($item, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: serialize($item));
 }
 
+function timeline_item_case_membership_keys(array $item): array
+{
+    $keys = [];
+    $itemType = strtolower(trim((string)($item['item_type'] ?? '')));
+    if ($itemType === '') {
+        return $keys;
+    }
+    $links = is_array($item['links'] ?? null) ? $item['links'] : [];
+    if ($itemType === 'appointment') {
+        $appointmentId = trim((string)($links['appointment_id'] ?? ''));
+        if ($appointmentId !== '') {
+            $keys[] = 'appointment|appt:' . $appointmentId;
+        }
+        $ref = trim((string)($item['ref'] ?? ''));
+        if ($ref !== '') {
+            $keys[] = 'appointment|' . $ref;
+        }
+    } elseif ($itemType === 'encounter') {
+        $encounterKey = trim((string)($item['encounter_key'] ?? ''));
+        if ($encounterKey !== '') {
+            $keys[] = 'encounter|' . $encounterKey;
+        }
+    } elseif ($itemType === 'document') {
+        $docRefCandidates = [
+            trim((string)($links['document_uuid'] ?? '')),
+            trim((string)($item['document_uuid'] ?? '')),
+            trim((string)($item['document_id'] ?? '')),
+        ];
+        $clinicalDoc = is_array($item['clinical_document'] ?? null) ? $item['clinical_document'] : [];
+        $docRefCandidates[] = trim((string)($clinicalDoc['document_uuid'] ?? ''));
+        $docRefCandidates[] = trim((string)($clinicalDoc['id'] ?? ''));
+        foreach ($docRefCandidates as $candidate) {
+            if ($candidate === '') {
+                continue;
+            }
+            $keys[] = 'document|' . $candidate;
+        }
+    }
+
+    return array_values(array_unique(array_filter(array_map(static function ($value): string {
+        return strtolower(trim((string)$value));
+    }, $keys))));
+}
+
 function timeline_category_summary(array $entries, int $limit = 3): array
 {
     $summary = [];
@@ -902,6 +946,8 @@ function timeline_is_demo_local_patient(string $patientId): bool
 $patientId = trim((string)($_GET['patient_id'] ?? ''));
 $appointmentId = trim((string)($_GET['appointment_id'] ?? ''));
 $encounterKey = trim((string)($_GET['encounter_key'] ?? ''));
+$focusCaseId = trim((string)($_GET['case_id'] ?? ''));
+$isCaseEmbed = trim((string)($_GET['case_embed'] ?? '')) === '1';
 $view = strtolower(trim((string)($_GET['view'] ?? 'historial')));
 $allowedViews = ['historial', 'cases'];
 if (!in_array($view, $allowedViews, true)) {
@@ -1156,6 +1202,56 @@ $items = array_values(array_filter($items, static function ($item): bool {
     $itemType = trim((string)($item['item_type'] ?? ''));
     return $itemType === 'appointment' || $itemType === 'encounter' || $itemType === 'document';
 }));
+
+$focusCaseItemMap = [];
+if ($focusCaseId !== '' && $patientId !== '') {
+    $caseItemsUrl = $clinicalApiIndexBase . '/cases/' . rawurlencode($focusCaseId) . '/items?limit=200';
+    $caseItemsContext = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'timeout' => 8,
+            'ignore_errors' => true,
+            'header' => "Accept: application/json\r\n",
+        ],
+    ]);
+    $caseItemsRaw = @file_get_contents($caseItemsUrl, false, $caseItemsContext);
+    if (is_string($caseItemsRaw) && $caseItemsRaw !== '') {
+        $caseItemsDecoded = json_decode($caseItemsRaw, true);
+        if (is_array($caseItemsDecoded) && ($caseItemsDecoded['ok'] ?? false) === true) {
+            $caseItemsList = is_array($caseItemsDecoded['data'] ?? null) ? $caseItemsDecoded['data'] : [];
+            foreach ($caseItemsList as $caseItem) {
+                if (!is_array($caseItem)) {
+                    continue;
+                }
+                $ciType = strtolower(trim((string)($caseItem['item_type'] ?? '')));
+                $ciRef = trim((string)($caseItem['item_ref'] ?? ''));
+                if ($ciType === '' || $ciRef === '') {
+                    continue;
+                }
+                $focusCaseItemMap[$ciType . '|' . strtolower($ciRef)] = true;
+            }
+        }
+    }
+}
+
+if ($focusCaseId !== '') {
+    $items = array_values(array_filter($items, static function ($item) use ($focusCaseId, $focusCaseItemMap): bool {
+        if (!is_array($item)) {
+            return false;
+        }
+        if ($focusCaseItemMap !== []) {
+            $membershipKeys = timeline_item_case_membership_keys($item);
+            foreach ($membershipKeys as $membershipKey) {
+                if (isset($focusCaseItemMap[$membershipKey])) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        $itemCaseId = trim((string)($item['case_id'] ?? ''));
+        return $itemCaseId !== '' && $itemCaseId === $focusCaseId;
+    }));
+}
 
 if ($patientId !== '') {
     $caseUrl = $clinicalApiIndexBase . '/patients/' . rawurlencode($patientId) . '/cases/active';
@@ -1870,6 +1966,7 @@ if (!$embed) {
   <?php endif; ?>
 
   <?php if ($patientId !== ''): ?>
+    <?php if (!$isCaseEmbed): ?>
     <div class="alert alert-info d-none py-2 mb-3" data-role="recent-case-suggestion">
       <div data-role="recent-case-suggestion-text"></div>
       <div class="small text-secondary mt-1" data-role="recent-case-suggestion-subtext">Agrupa los registros en casos clínicos para mantener el expediente organizado.</div>
@@ -1878,6 +1975,7 @@ if (!$embed) {
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="snooze-recent-case-suggestion">No por ahora</button>
       </div>
     </div>
+    <?php endif; ?>
   <?php endif; ?>
 
   <?php if ($resolveErrorMsg !== ''): ?>
@@ -1942,20 +2040,22 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
-    <div class="only-active-case-note d-none" data-role="only-active-case-note">Caso clínico enfocado.</div>
-    <div class="only-active-case-note d-none" data-role="only-active-case-pool-note">Registros disponibles para integrar a este caso.</div>
-    <div class="timeline-category-filters mb-3" data-role="timeline-category-filters">
-      <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Filtros clínicos de historial">
-        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary active" data-action="set-clinical-filter" data-clinical-filter="all">Todo</button>
-        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="cita">Citas</button>
-        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="consulta">Consultas</button>
-        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="receta">Recetas</button>
-        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="procedimiento">Procedimientos</button>
-        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="estudio">Estudios</button>
-        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="documento">Documentos</button>
+    <?php if (!$isCaseEmbed): ?>
+      <div class="only-active-case-note d-none" data-role="only-active-case-note">Caso clínico enfocado.</div>
+      <div class="only-active-case-note d-none" data-role="only-active-case-pool-note">Registros disponibles para integrar a este caso.</div>
+      <div class="timeline-category-filters mb-3" data-role="timeline-category-filters">
+        <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Filtros clínicos de historial">
+          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary active" data-action="set-clinical-filter" data-clinical-filter="all">Todo</button>
+          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="cita">Citas</button>
+          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="consulta">Consultas</button>
+          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="receta">Recetas</button>
+          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="procedimiento">Procedimientos</button>
+          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="estudio">Estudios</button>
+          <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="set-clinical-filter" data-clinical-filter="documento">Documentos</button>
+        </div>
       </div>
-    </div>
-    <div class="alert alert-secondary d-none py-2 mb-3" data-role="case-scope-empty">Sin eventos del filtro seleccionado.</div>
+      <div class="alert alert-secondary d-none py-2 mb-3" data-role="case-scope-empty">Sin eventos del filtro seleccionado.</div>
+    <?php endif; ?>
     <?php
     $studyResultRefByOrderRef = [];
     foreach ($dayOrder as $mapDayKey) {
@@ -3123,7 +3223,7 @@ if (!$embed) {
     var casesTabEmpty = document.querySelector('[data-role="cases-tab-empty"]');
     var casesTabLoading = document.querySelector('[data-role="cases-tab-loading"]');
     var casesTabError = document.querySelector('[data-role="cases-tab-error"]');
-    var caseItemsCache = Object.create(null);
+    var caseEmbedFrameLoaded = Object.create(null);
     var casesModalInstance = null;
     if (casesModalEl && window.bootstrap && window.bootstrap.Modal) {
       casesModalInstance = window.bootstrap.Modal.getOrCreateInstance(casesModalEl);
@@ -4494,25 +4594,11 @@ if (!$embed) {
       return Array.isArray(payload.data) ? payload.data : [];
     }
 
-    async function listCaseItems(caseId) {
+    function buildCaseEmbedSrc(caseId) {
       var id = String(caseId || '').trim();
-      if (!id) return [];
-      if (Object.prototype.hasOwnProperty.call(caseItemsCache, id)) {
-        return Array.isArray(caseItemsCache[id]) ? caseItemsCache[id] : [];
-      }
-      var url = apiBase + '/api/clinical/index.php/cases/' + encodeURIComponent(id) + '/items?limit=200';
-      var payload = await apiJson(url, { method: 'GET' });
-      var list = Array.isArray(payload.data) ? payload.data : [];
-      caseItemsCache[id] = list;
-      return list;
-    }
-
-    function caseItemTypeLabel(itemType) {
-      var type = String(itemType || '').trim().toLowerCase();
-      if (type === 'appointment') return 'Cita';
-      if (type === 'encounter') return 'Consulta';
-      if (type === 'document') return 'Documento';
-      return 'Registro';
+      if (!id || !patientId) return '';
+      return '/modules/clinical/ui/historial.php?patient_id=' + encodeURIComponent(patientId)
+        + '&embed=1&view=historial&case_embed=1&case_id=' + encodeURIComponent(id);
     }
 
     function setCasesModalLoading(flag) {
@@ -4567,9 +4653,11 @@ if (!$embed) {
         var caseId = String(item.case_id || '').trim();
         var title = String(item.title || 'Caso clínico').trim();
         var active = String(item.status || '').trim() === 'active';
-        var itemsCount = (item && item.items_count !== undefined && item.items_count !== null)
+        var itemsCountRaw = (item && item.items_count !== undefined && item.items_count !== null)
           ? String(item.items_count).trim()
           : '';
+        var itemsCount = Number(itemsCountRaw || '0');
+        var hasIntegratedItems = Number.isFinite(itemsCount) && itemsCount > 0;
         if (active) {
           row.classList.add('is-active-case');
         }
@@ -4579,13 +4667,12 @@ if (!$embed) {
           + '    <span class="fw-semibold d-inline-flex align-items-center gap-2"><span>' + escapeHtml(title) + '</span><span class="case-tab-caret" aria-hidden="true">▾</span></span>'
           + '    <button type="button" class="action-link action-link-btn small text-secondary" data-action="rename-case-from-modal" data-case-id="' + escapeHtml(caseId) + '" data-case-title="' + escapeHtml(title) + '">Renombrar</button>'
           + '  </div>'
-          + '  <div class="small text-secondary">#' + escapeHtml(caseId) + ' · ' + escapeHtml(String(item.updated_at || '-').trim()) + (itemsCount !== '' ? ' · items: ' + escapeHtml(itemsCount) : '') + '</div>'
+          + '  <div class="small text-secondary">#' + escapeHtml(caseId) + ' · ' + escapeHtml(String(item.updated_at || '-').trim()) + (itemsCountRaw !== '' ? ' · items: ' + escapeHtml(itemsCountRaw) : '') + '</div>'
           + (active ? '  <div class="small text-secondary mt-1">Caso activo</div>' : '')
           + '</div>'
-          + '<div class="case-tab-items d-none mt-2" data-role="case-items" data-case-id="' + escapeHtml(caseId) + '">'
-          + '  <div class="small text-secondary" data-role="case-items-loading">Cargando registros...</div>'
-          + '  <div class="vstack gap-1 d-none" data-role="case-items-list"></div>'
+          + '<div class="case-tab-items d-none mt-2" data-role="case-items" data-case-id="' + escapeHtml(caseId) + '" data-has-items="' + (hasIntegratedItems ? '1' : '0') + '">'
           + '  <div class="small text-secondary d-none" data-role="case-items-empty">Este caso aún no tiene registros integrados.</div>'
+          + '  <iframe class="case-tab-items-iframe d-none" data-role="case-items-iframe" src="about:blank" loading="lazy" title="Registros del caso clínico"></iframe>'
           + '</div>';
         casesTabList.appendChild(row);
       });
@@ -4610,38 +4697,24 @@ if (!$embed) {
       panel.classList.remove('d-none');
       headEl.setAttribute('aria-expanded', 'true');
       card.classList.add('is-open');
-      var loading = panel.querySelector('[data-role="case-items-loading"]');
-      var listNode = panel.querySelector('[data-role="case-items-list"]');
       var emptyNode = panel.querySelector('[data-role="case-items-empty"]');
-      if (loading) loading.classList.remove('d-none');
-      if (listNode) {
-        listNode.classList.add('d-none');
-        listNode.innerHTML = '';
-      }
+      var iframeNode = panel.querySelector('[data-role="case-items-iframe"]');
+      var hasItems = String(panel.getAttribute('data-has-items') || '').trim() === '1';
       if (emptyNode) emptyNode.classList.add('d-none');
-      try {
-        var items = await listCaseItems(caseId);
-        if (loading) loading.classList.add('d-none');
-        if (!Array.isArray(items) || items.length < 1) {
-          if (emptyNode) emptyNode.classList.remove('d-none');
-          return;
-        }
-        if (!listNode) return;
-        listNode.classList.remove('d-none');
-        items.forEach(function (entry) {
-          var itemType = caseItemTypeLabel(entry && entry.item_type);
-          var itemRef = String(entry && entry.item_ref ? entry.item_ref : '').trim();
-          var createdAt = String(entry && entry.created_at ? entry.created_at : '').trim();
-          var line = document.createElement('div');
-          line.className = 'small text-body-secondary border rounded px-2 py-1';
-          line.textContent = itemType + (itemRef ? ' · ' + itemRef : '') + (createdAt ? ' · ' + createdAt : '');
-          listNode.appendChild(line);
-        });
-      } catch (err) {
-        if (loading) {
-          loading.textContent = err && err.message ? String(err.message) : 'No se pudieron cargar los registros del caso.';
-        }
+      if (!hasItems) {
+        if (emptyNode) emptyNode.classList.remove('d-none');
+        if (iframeNode) iframeNode.classList.add('d-none');
+        return;
       }
+      if (!iframeNode) return;
+      iframeNode.classList.remove('d-none');
+      if (caseEmbedFrameLoaded[caseId] === true) {
+        return;
+      }
+      var nextSrc = buildCaseEmbedSrc(caseId);
+      if (!nextSrc) return;
+      iframeNode.setAttribute('src', nextSrc);
+      caseEmbedFrameLoaded[caseId] = true;
     }
 
     async function loadCasesTab() {
