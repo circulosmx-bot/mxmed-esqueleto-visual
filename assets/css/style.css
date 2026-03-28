@@ -6010,6 +6010,14 @@ body{margin:0;background:var(--mm-fondo-base);}
   padding-top:.5rem;
 }
 
+.clinical-historial [data-role="cases-tab-list"] .case-tab-items-iframe{
+  width:100%;
+  min-height:360px;
+  border:0;
+  border-radius:.4rem;
+  background:#fff;
+}
+
 .clinical-historial [data-role="cases-tab-list"] [data-action="rename-case-from-modal"]{
   background:none;
   border:0;

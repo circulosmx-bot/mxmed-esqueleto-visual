@@ -3522,7 +3522,7 @@ if (!$embed) {
           return;
         }
       }
-      if ((mode === 'encounter' || mode === 'document') && isEmbed && window.parent && window.parent !== window && typeof window.parent.postMessage === 'function') {
+      if ((mode === 'encounter' || mode === 'document') && isEmbed) {
         var payload = { type: 'mxmed:embed:navigate', mode: mode };
         if (mode === 'encounter') {
           var encounterKey = String(itemEl.getAttribute('data-encounter-key') || '').trim();
@@ -3536,20 +3536,33 @@ if (!$embed) {
           if (bundleId) payload.bundle_id = bundleId;
           payload.href = href;
         }
-        window.parent.postMessage(payload, '*');
+        postEmbedPayload(payload);
         return;
       }
       window.location.href = href;
     }
 
+    function postEmbedPayload(payload) {
+      if (!isEmbed || !payload || typeof payload !== 'object') return false;
+      var sent = false;
+      if (window.parent && window.parent !== window && typeof window.parent.postMessage === 'function') {
+        window.parent.postMessage(payload, '*');
+        sent = true;
+      }
+      if (window.top && window.top !== window && window.top !== window.parent && typeof window.top.postMessage === 'function') {
+        window.top.postMessage(payload, '*');
+        sent = true;
+      }
+      return sent;
+    }
+
     function openDiagnosticDocument(ref, summaryHint) {
       var safeRef = String(ref || '').trim();
       if (!safeRef) return;
-      if (isEmbed && window.parent && window.parent !== window && typeof window.parent.postMessage === 'function') {
-        window.parent.postMessage({
+      if (isEmbed && postEmbedPayload({
           type: 'mxmed:embed:open-diagnostic-document',
           document_ref: safeRef
-        }, '*');
+        })) {
         return;
       }
       if (typeof window.mxmedOpenDiagnosticDocumentDetail === 'function') {
@@ -3565,12 +3578,11 @@ if (!$embed) {
       var safeAction = String(action || '').trim();
       var safeRef = String(ref || '').trim();
       if (!safeAction || !safeRef) return;
-      if (isEmbed && window.parent && window.parent !== window && typeof window.parent.postMessage === 'function') {
-        window.parent.postMessage({
+      if (isEmbed && postEmbedPayload({
           type: 'mxmed:embed:diagnostic-order-action',
           action: safeAction,
           document_ref: safeRef
-        }, '*');
+        })) {
         return;
       }
       if (safeAction === 'upload_result' && typeof window.mxmedOpenDiagnosticOrderResultModal === 'function') {
@@ -5751,7 +5763,7 @@ if (!$embed) {
       var mode = String(trigger.getAttribute('data-nav-mode') || '').trim();
       if (mode !== 'encounter' && mode !== 'document') return;
 
-      if (!window.parent || window.parent === window || typeof window.parent.postMessage !== 'function') {
+      if (!isEmbed) {
         return;
       }
 
@@ -5771,7 +5783,7 @@ if (!$embed) {
       }
 
       event.preventDefault();
-      window.parent.postMessage(payload, '*');
+      postEmbedPayload(payload);
     }, true);
 
     document.addEventListener('keydown', function (event) {
