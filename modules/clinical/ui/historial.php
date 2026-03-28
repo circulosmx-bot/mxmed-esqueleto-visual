@@ -3123,6 +3123,7 @@ if (!$embed) {
     var casesTabEmpty = document.querySelector('[data-role="cases-tab-empty"]');
     var casesTabLoading = document.querySelector('[data-role="cases-tab-loading"]');
     var casesTabError = document.querySelector('[data-role="cases-tab-error"]');
+    var caseItemsCache = Object.create(null);
     var casesModalInstance = null;
     if (casesModalEl && window.bootstrap && window.bootstrap.Modal) {
       casesModalInstance = window.bootstrap.Modal.getOrCreateInstance(casesModalEl);
@@ -4493,6 +4494,27 @@ if (!$embed) {
       return Array.isArray(payload.data) ? payload.data : [];
     }
 
+    async function listCaseItems(caseId) {
+      var id = String(caseId || '').trim();
+      if (!id) return [];
+      if (Object.prototype.hasOwnProperty.call(caseItemsCache, id)) {
+        return Array.isArray(caseItemsCache[id]) ? caseItemsCache[id] : [];
+      }
+      var url = apiBase + '/api/clinical/index.php/cases/' + encodeURIComponent(id) + '/items?limit=200';
+      var payload = await apiJson(url, { method: 'GET' });
+      var list = Array.isArray(payload.data) ? payload.data : [];
+      caseItemsCache[id] = list;
+      return list;
+    }
+
+    function caseItemTypeLabel(itemType) {
+      var type = String(itemType || '').trim().toLowerCase();
+      if (type === 'appointment') return 'Cita';
+      if (type === 'encounter') return 'Consulta';
+      if (type === 'document') return 'Documento';
+      return 'Registro';
+    }
+
     function setCasesModalLoading(flag) {
       if (!casesModalLoading) return;
       casesModalLoading.classList.toggle('d-none', !flag);
@@ -4541,7 +4563,7 @@ if (!$embed) {
       casesTabEmpty.classList.toggle('d-none', list.length > 0);
       list.forEach(function (item) {
         var row = document.createElement('div');
-        row.className = 'border rounded p-2 d-flex flex-wrap justify-content-between align-items-center gap-2';
+        row.className = 'border rounded p-2 case-tab-card';
         var caseId = String(item.case_id || '').trim();
         var title = String(item.title || 'Caso clínico').trim();
         var active = String(item.status || '').trim() === 'active';
@@ -4552,16 +4574,74 @@ if (!$embed) {
           row.classList.add('is-active-case');
         }
         row.innerHTML = ''
-          + '<div>'
+          + '<div class="case-tab-head" data-action="toggle-case-items" data-case-id="' + escapeHtml(caseId) + '" role="button" tabindex="0" aria-expanded="false">'
           + '  <div class="d-flex align-items-center justify-content-between gap-2">'
-          + '    <span class="fw-semibold">' + escapeHtml(title) + '</span>'
+          + '    <span class="fw-semibold d-inline-flex align-items-center gap-2"><span>' + escapeHtml(title) + '</span><span class="case-tab-caret" aria-hidden="true">▾</span></span>'
           + '    <button type="button" class="action-link action-link-btn small text-secondary" data-action="rename-case-from-modal" data-case-id="' + escapeHtml(caseId) + '" data-case-title="' + escapeHtml(title) + '">Renombrar</button>'
           + '  </div>'
           + '  <div class="small text-secondary">#' + escapeHtml(caseId) + ' · ' + escapeHtml(String(item.updated_at || '-').trim()) + (itemsCount !== '' ? ' · items: ' + escapeHtml(itemsCount) : '') + '</div>'
           + (active ? '  <div class="small text-secondary mt-1">Caso activo</div>' : '')
+          + '</div>'
+          + '<div class="case-tab-items d-none mt-2" data-role="case-items" data-case-id="' + escapeHtml(caseId) + '">'
+          + '  <div class="small text-secondary" data-role="case-items-loading">Cargando registros...</div>'
+          + '  <div class="vstack gap-1 d-none" data-role="case-items-list"></div>'
+          + '  <div class="small text-secondary d-none" data-role="case-items-empty">Este caso aún no tiene registros integrados.</div>'
           + '</div>';
         casesTabList.appendChild(row);
       });
+    }
+
+    async function toggleCaseItems(headEl) {
+      if (!headEl) return;
+      var caseId = String(headEl.getAttribute('data-case-id') || '').trim();
+      if (!caseId) return;
+      var card = headEl.closest ? headEl.closest('.case-tab-card') : null;
+      if (!card) return;
+      var panel = card.querySelector('[data-role="case-items"]');
+      if (!panel) return;
+      var isOpen = !panel.classList.contains('d-none');
+      if (isOpen) {
+        panel.classList.add('d-none');
+        headEl.setAttribute('aria-expanded', 'false');
+        card.classList.remove('is-open');
+        return;
+      }
+
+      panel.classList.remove('d-none');
+      headEl.setAttribute('aria-expanded', 'true');
+      card.classList.add('is-open');
+      var loading = panel.querySelector('[data-role="case-items-loading"]');
+      var listNode = panel.querySelector('[data-role="case-items-list"]');
+      var emptyNode = panel.querySelector('[data-role="case-items-empty"]');
+      if (loading) loading.classList.remove('d-none');
+      if (listNode) {
+        listNode.classList.add('d-none');
+        listNode.innerHTML = '';
+      }
+      if (emptyNode) emptyNode.classList.add('d-none');
+      try {
+        var items = await listCaseItems(caseId);
+        if (loading) loading.classList.add('d-none');
+        if (!Array.isArray(items) || items.length < 1) {
+          if (emptyNode) emptyNode.classList.remove('d-none');
+          return;
+        }
+        if (!listNode) return;
+        listNode.classList.remove('d-none');
+        items.forEach(function (entry) {
+          var itemType = caseItemTypeLabel(entry && entry.item_type);
+          var itemRef = String(entry && entry.item_ref ? entry.item_ref : '').trim();
+          var createdAt = String(entry && entry.created_at ? entry.created_at : '').trim();
+          var line = document.createElement('div');
+          line.className = 'small text-body-secondary border rounded px-2 py-1';
+          line.textContent = itemType + (itemRef ? ' · ' + itemRef : '') + (createdAt ? ' · ' + createdAt : '');
+          listNode.appendChild(line);
+        });
+      } catch (err) {
+        if (loading) {
+          loading.textContent = err && err.message ? String(err.message) : 'No se pudieron cargar los registros del caso.';
+        }
+      }
     }
 
     async function loadCasesTab() {
@@ -5076,6 +5156,18 @@ if (!$embed) {
         return;
       }
 
+      var toggleCaseItemsBtn = event.target && event.target.closest ? event.target.closest('[data-action="toggle-case-items"]') : null;
+      if (toggleCaseItemsBtn) {
+        var withinRename = event.target && event.target.closest
+          ? event.target.closest('[data-action="rename-case-from-modal"]')
+          : null;
+        if (!withinRename) {
+          event.preventDefault();
+          toggleCaseItems(toggleCaseItemsBtn);
+          return;
+        }
+      }
+
       var openEncounterDetailBtn = event.target && event.target.closest ? event.target.closest('[data-action="open-encounter-detail"]') : null;
       if (openEncounterDetailBtn) {
         event.preventDefault();
@@ -5586,6 +5678,19 @@ if (!$embed) {
     }, true);
 
     document.addEventListener('keydown', function (event) {
+      if (event && (event.key === 'Enter' || event.key === ' ')) {
+        var toggleHead = event.target && event.target.closest ? event.target.closest('[data-action="toggle-case-items"]') : null;
+        if (toggleHead) {
+          var interactive = event.target && event.target.closest
+            ? event.target.closest('button, a, input, textarea, select, label')
+            : null;
+          if (!interactive || interactive === toggleHead) {
+            event.preventDefault();
+            toggleCaseItems(toggleHead);
+            return;
+          }
+        }
+      }
       if (!event || event.key !== 'Escape') return;
       if (encounterDetailModalEl) {
         var encounterVisible = encounterDetailModalEl.classList.contains('show') || encounterDetailModalEl.style.display === 'block';

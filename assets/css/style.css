@@ -5979,6 +5979,37 @@ body{margin:0;background:var(--mm-fondo-base);}
   background: linear-gradient(90deg, rgba(0,176,197,.06) 0%, rgba(0,176,197,0) 36%);
 }
 
+.clinical-historial [data-role="cases-tab-list"] .case-tab-head{
+  cursor:pointer;
+  border-radius:.4rem;
+  transition:background-color .15s ease;
+}
+
+.clinical-historial [data-role="cases-tab-list"] .case-tab-head:hover{
+  background:rgba(15,23,42,.04);
+}
+
+.clinical-historial [data-role="cases-tab-list"] .case-tab-head:focus-visible{
+  outline:2px solid rgba(0,176,197,.45);
+  outline-offset:2px;
+}
+
+.clinical-historial [data-role="cases-tab-list"] .case-tab-caret{
+  font-size:.8rem;
+  color:#7a8590;
+  transform:rotate(-90deg);
+  transition:transform .15s ease;
+}
+
+.clinical-historial [data-role="cases-tab-list"] .case-tab-card.is-open .case-tab-caret{
+  transform:rotate(0deg);
+}
+
+.clinical-historial [data-role="cases-tab-list"] .case-tab-items{
+  border-top:1px dashed rgba(148,163,184,.4);
+  padding-top:.5rem;
+}
+
 .clinical-historial [data-role="cases-tab-list"] [data-action="rename-case-from-modal"]{
   background:none;
   border:0;
