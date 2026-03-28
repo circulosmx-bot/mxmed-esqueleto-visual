@@ -3224,6 +3224,7 @@ if (!$embed) {
     var casesTabLoading = document.querySelector('[data-role="cases-tab-loading"]');
     var casesTabError = document.querySelector('[data-role="cases-tab-error"]');
     var caseEmbedFrameLoaded = Object.create(null);
+    var caseItemsCache = Object.create(null);
     var casesModalInstance = null;
     if (casesModalEl && window.bootstrap && window.bootstrap.Modal) {
       casesModalInstance = window.bootstrap.Modal.getOrCreateInstance(casesModalEl);
@@ -4594,6 +4595,19 @@ if (!$embed) {
       return Array.isArray(payload.data) ? payload.data : [];
     }
 
+    async function listCaseItems(caseId) {
+      var id = String(caseId || '').trim();
+      if (!id) return [];
+      if (Object.prototype.hasOwnProperty.call(caseItemsCache, id)) {
+        return Array.isArray(caseItemsCache[id]) ? caseItemsCache[id] : [];
+      }
+      var url = apiBase + '/api/clinical/index.php/cases/' + encodeURIComponent(id) + '/items?limit=200';
+      var payload = await apiJson(url, { method: 'GET' });
+      var list = Array.isArray(payload.data) ? payload.data : [];
+      caseItemsCache[id] = list;
+      return list;
+    }
+
     function buildCaseEmbedSrc(caseId) {
       var id = String(caseId || '').trim();
       if (!id || !patientId) return '';
@@ -4656,8 +4670,6 @@ if (!$embed) {
         var itemsCountRaw = (item && item.items_count !== undefined && item.items_count !== null)
           ? String(item.items_count).trim()
           : '';
-        var itemsCount = Number(itemsCountRaw || '0');
-        var hasIntegratedItems = Number.isFinite(itemsCount) && itemsCount > 0;
         if (active) {
           row.classList.add('is-active-case');
         }
@@ -4670,8 +4682,9 @@ if (!$embed) {
           + '  <div class="small text-secondary">#' + escapeHtml(caseId) + ' · ' + escapeHtml(String(item.updated_at || '-').trim()) + (itemsCountRaw !== '' ? ' · items: ' + escapeHtml(itemsCountRaw) : '') + '</div>'
           + (active ? '  <div class="small text-secondary mt-1">Caso activo</div>' : '')
           + '</div>'
-          + '<div class="case-tab-items d-none mt-2" data-role="case-items" data-case-id="' + escapeHtml(caseId) + '" data-has-items="' + (hasIntegratedItems ? '1' : '0') + '">'
+          + '<div class="case-tab-items d-none mt-2" data-role="case-items" data-case-id="' + escapeHtml(caseId) + '">'
           + '  <div class="small text-secondary d-none" data-role="case-items-empty">Este caso aún no tiene registros integrados.</div>'
+          + '  <div class="small text-secondary d-none" data-role="case-items-loading">Cargando registros...</div>'
           + '  <iframe class="case-tab-items-iframe d-none" data-role="case-items-iframe" src="about:blank" loading="lazy" title="Registros del caso clínico"></iframe>'
           + '</div>';
         casesTabList.appendChild(row);
@@ -4698,12 +4711,23 @@ if (!$embed) {
       headEl.setAttribute('aria-expanded', 'true');
       card.classList.add('is-open');
       var emptyNode = panel.querySelector('[data-role="case-items-empty"]');
+      var loadingNode = panel.querySelector('[data-role="case-items-loading"]');
       var iframeNode = panel.querySelector('[data-role="case-items-iframe"]');
-      var hasItems = String(panel.getAttribute('data-has-items') || '').trim() === '1';
       if (emptyNode) emptyNode.classList.add('d-none');
-      if (!hasItems) {
-        if (emptyNode) emptyNode.classList.remove('d-none');
-        if (iframeNode) iframeNode.classList.add('d-none');
+      if (loadingNode) loadingNode.classList.remove('d-none');
+      if (loadingNode) loadingNode.textContent = 'Cargando registros...';
+      if (iframeNode) iframeNode.classList.add('d-none');
+      try {
+        var caseItems = await listCaseItems(caseId);
+        if (loadingNode) loadingNode.classList.add('d-none');
+        if (!Array.isArray(caseItems) || caseItems.length < 1) {
+          if (emptyNode) emptyNode.classList.remove('d-none');
+          return;
+        }
+      } catch (err) {
+        if (loadingNode) {
+          loadingNode.textContent = err && err.message ? String(err.message) : 'No se pudieron cargar los registros del caso.';
+        }
         return;
       }
       if (!iframeNode) return;
