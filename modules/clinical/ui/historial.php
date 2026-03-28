@@ -1870,33 +1870,6 @@ if (!$embed) {
   <?php endif; ?>
 
   <?php if ($patientId !== ''): ?>
-    <div class="mm-card mb-3<?php echo $activeCaseId === '' ? ' d-none' : ''; ?>" data-role="case-summary-panel">
-      <div class="body d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <?php if (is_array($activeCase) && $activeCase !== []): ?>
-          <div>
-            <strong><?php echo h((string)($activeCase['title'] ?? 'Caso clínico')); ?></strong>
-          </div>
-          <div class="d-flex flex-wrap gap-2">
-            <span class="small text-secondary align-self-center" data-role="active-case-counter">Items en este caso: <?php echo h((string)$activeCaseItemsCount); ?></span>
-            <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-success" data-action="toggle-only-active-case">Enfocar este caso</button>
-            <button
-              type="button"
-              class="mm-btn mm-btn-sm mm-btn-outline-primary"
-              data-action="rename-active-case"
-              data-case-id="<?php echo h((string)($activeCase['case_id'] ?? '')); ?>"
-            >Renombrar</button>
-            <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-cases-modal" data-role="open-cases-btn">Ver casos</button>
-          </div>
-        <?php else: ?>
-          <div>
-            <span class="text-secondary">Casos clínicos disponibles.</span>
-          </div>
-          <div>
-            <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-cases-modal" data-role="open-cases-btn">Ver casos</button>
-          </div>
-        <?php endif; ?>
-      </div>
-    </div>
     <div class="alert alert-info d-none py-2 mb-3" data-role="recent-case-suggestion">
       <div data-role="recent-case-suggestion-text"></div>
       <div class="small text-secondary mt-1" data-role="recent-case-suggestion-subtext">Agrupa los registros en casos clínicos para mantener el expediente organizado.</div>
@@ -1948,7 +1921,6 @@ if (!$embed) {
         <div class="body">
           <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
             <h2 class="h6 mb-0">Casos clínicos del paciente</h2>
-            <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-cases-modal">Ver casos (modal)</button>
           </div>
           <div class="text-secondary small d-none" data-role="cases-tab-loading">Cargando casos...</div>
           <div class="alert alert-secondary d-none mb-0" data-role="cases-tab-empty">Sin casos clínicos disponibles para este paciente.</div>
@@ -2747,7 +2719,7 @@ if (!$embed) {
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Casos clínicos</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" data-action="close-cases-modal" aria-label="Cerrar"></button>
       </div>
       <div class="modal-body">
         <div id="casesModalLoading" class="text-secondary small d-none">Cargando casos...</div>
@@ -2770,6 +2742,11 @@ if (!$embed) {
       <div class="modal-body">
         <div class="alert alert-danger small d-none" data-role="integrate-case-error"></div>
         <div class="vstack gap-3">
+          <div class="border rounded p-2 bg-light-subtle">
+            <div class="small text-secondary mb-1">Registro</div>
+            <div class="fw-semibold" data-role="integrate-case-context-title">Registro clínico</div>
+            <div class="small text-secondary" data-role="integrate-case-context-type"></div>
+          </div>
           <div>
             <div class="fw-semibold mb-2">Casos existentes</div>
             <div class="text-secondary small mb-2 d-none" data-role="integrate-case-loading">Cargando casos...</div>
@@ -2777,23 +2754,26 @@ if (!$embed) {
             <div class="vstack gap-2" data-role="integrate-case-list"></div>
           </div>
           <div class="border-top pt-3">
-            <div class="fw-semibold mb-2">Crear nuevo caso</div>
-            <label for="clinicalCreateCaseTitle" class="form-label">Nombre del caso</label>
-            <input
-              type="text"
-              class="form-control"
-              id="clinicalCreateCaseTitle"
-              data-role="create-case-title"
-              placeholder="Ej. Fractura tibia y peroné"
-              maxlength="190"
-            >
+            <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="toggle-create-case-section">+ Crear nuevo caso</button>
+            <div class="d-none mt-3" data-role="create-case-section">
+              <label for="clinicalCreateCaseTitle" class="form-label">Nombre del caso</label>
+              <input
+                type="text"
+                class="form-control"
+                id="clinicalCreateCaseTitle"
+                data-role="create-case-title"
+                placeholder="Ej. Fractura tibia y peroné"
+                maxlength="190"
+              >
+              <div class="mt-2">
+                <button type="button" class="btn btn-sm btn-primary" data-action="confirm-create-case">Crear caso e integrar</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-bs-dismiss="modal" data-action="cancel-create-case">Cancelar</button>
-        <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="confirm-integrate-case">Integrar</button>
-        <button type="button" class="btn btn-sm btn-primary" data-action="confirm-create-case">Crear e integrar</button>
       </div>
     </div>
   </div>
@@ -3153,8 +3133,10 @@ if (!$embed) {
     var integrateCaseList = document.querySelector('[data-role="integrate-case-list"]');
     var integrateCaseLoading = document.querySelector('[data-role="integrate-case-loading"]');
     var integrateCaseEmpty = document.querySelector('[data-role="integrate-case-empty"]');
-    var integrateCaseConfirmBtn = document.querySelector('[data-action="confirm-integrate-case"]');
     var createCaseConfirmBtn = document.querySelector('[data-action="confirm-create-case"]');
+    var integrateCaseContextTitle = document.querySelector('[data-role="integrate-case-context-title"]');
+    var integrateCaseContextType = document.querySelector('[data-role="integrate-case-context-type"]');
+    var createCaseSection = document.querySelector('[data-role="create-case-section"]');
     var createCaseModalInstance = null;
     if (createCaseModalEl && window.bootstrap && window.bootstrap.Modal) {
       createCaseModalInstance = window.bootstrap.Modal.getOrCreateInstance(createCaseModalEl);
@@ -3238,7 +3220,7 @@ if (!$embed) {
         hydrateSharedDiagnosticIcons(document);
       }, 250);
     });
-    var onlyActiveCaseBtn = document.querySelector('[data-action="toggle-only-active-case"]');
+    var onlyActiveCaseTrigger = document.querySelector('[data-role="case-summary-focus-trigger"]');
     var onlyActiveCaseNotice = document.querySelector('[data-role="only-active-case-note"]');
     var onlyActiveCasePoolNotice = document.querySelector('[data-role="only-active-case-pool-note"]');
     var categoryFilterWrap = document.querySelector('[data-role="timeline-category-filters"]');
@@ -3603,8 +3585,8 @@ if (!$embed) {
         var showPoolNote = onlyActiveCaseEnabled && activeCaseId !== '' && availableForIntegrationCount > 0;
         onlyActiveCasePoolNotice.classList.toggle('d-none', !showPoolNote);
       }
-      if (onlyActiveCaseBtn) {
-        onlyActiveCaseBtn.textContent = (onlyActiveCaseEnabled && activeCaseId !== '') ? 'Ver todos' : 'Enfocar este caso';
+      if (onlyActiveCaseTrigger) {
+        onlyActiveCaseTrigger.classList.toggle('is-focused', onlyActiveCaseEnabled && activeCaseId !== '');
       }
       applyTimelineCategoryFilter();
       updateDayCardVisibility();
@@ -4523,7 +4505,7 @@ if (!$embed) {
       casesModalEmpty.classList.toggle('d-none', list.length > 0);
       list.forEach(function (item) {
         var row = document.createElement('div');
-        row.className = 'border rounded p-2 d-flex flex-wrap justify-content-between align-items-center gap-2';
+        row.className = 'border rounded p-2';
         var caseId = String(item.case_id || '').trim();
         var title = String(item.title || 'Caso clínico').trim();
         var active = String(item.status || '').trim() === 'active';
@@ -4566,14 +4548,17 @@ if (!$embed) {
         var itemsCount = (item && item.items_count !== undefined && item.items_count !== null)
           ? String(item.items_count).trim()
           : '';
+        if (active) {
+          row.classList.add('is-active-case');
+        }
         row.innerHTML = ''
           + '<div>'
-          + '  <div class="fw-semibold">' + escapeHtml(title) + '</div>'
+          + '  <div class="d-flex align-items-center justify-content-between gap-2">'
+          + '    <span class="fw-semibold">' + escapeHtml(title) + '</span>'
+          + '    <button type="button" class="action-link action-link-btn small text-secondary" data-action="rename-case-from-modal" data-case-id="' + escapeHtml(caseId) + '" data-case-title="' + escapeHtml(title) + '">Renombrar</button>'
+          + '  </div>'
           + '  <div class="small text-secondary">#' + escapeHtml(caseId) + ' · ' + escapeHtml(String(item.updated_at || '-').trim()) + (itemsCount !== '' ? ' · items: ' + escapeHtml(itemsCount) : '') + '</div>'
-          + '</div>'
-          + '<div class="d-flex flex-wrap gap-2">'
-          + (active ? '<span class="badge text-bg-success">Activo</span>' : '<button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="activate-case" data-case-id="' + escapeHtml(caseId) + '">Activar</button>')
-          + '  <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="rename-case-from-modal" data-case-id="' + escapeHtml(caseId) + '" data-case-title="' + escapeHtml(title) + '">Renombrar</button>'
+          + (active ? '  <div class="small text-secondary mt-1">Caso activo</div>' : '')
           + '</div>';
         casesTabList.appendChild(row);
       });
@@ -4648,20 +4633,30 @@ if (!$embed) {
         .replace(/'/g, '&#39;');
     }
 
-    function selectedIntegrateCaseId() {
-      if (!integrateCaseList) return '';
-      var selected = integrateCaseList.querySelector('input[name="integrate_case_id"]:checked');
-      return selected ? String(selected.value || '').trim() : '';
-    }
-
     function syncIntegrateCaseButtons() {
-      if (integrateCaseConfirmBtn) {
-        integrateCaseConfirmBtn.disabled = integrateCaseSubmitting || createCaseSubmitting || !selectedIntegrateCaseId();
-        integrateCaseConfirmBtn.textContent = integrateCaseSubmitting ? 'Integrando...' : 'Integrar';
-      }
       if (createCaseConfirmBtn) {
         createCaseConfirmBtn.disabled = integrateCaseSubmitting || createCaseSubmitting;
-        createCaseConfirmBtn.textContent = createCaseSubmitting ? 'Creando...' : 'Crear e integrar';
+        createCaseConfirmBtn.textContent = createCaseSubmitting ? 'Creando...' : 'Crear caso e integrar';
+      }
+      if (integrateCaseList) {
+        var rowButtons = integrateCaseList.querySelectorAll('[data-action="integrate-case-here"]');
+        rowButtons.forEach(function (btn) {
+          btn.disabled = integrateCaseSubmitting || createCaseSubmitting;
+          btn.textContent = integrateCaseSubmitting ? 'Integrando...' : 'Integrar aquí';
+        });
+      }
+    }
+
+    function setIntegrateCaseContext(context) {
+      var data = context && typeof context === 'object' ? context : {};
+      var title = String(data.label || '').trim();
+      var typeLabel = String(data.typeLabel || '').trim();
+      if (title === '') title = 'Registro clínico';
+      if (integrateCaseContextTitle) {
+        integrateCaseContextTitle.textContent = title;
+      }
+      if (integrateCaseContextType) {
+        integrateCaseContextType.textContent = typeLabel;
       }
     }
 
@@ -4700,7 +4695,7 @@ if (!$embed) {
       var list = Array.isArray(cases) ? cases : [];
       integrateCaseEmpty.classList.toggle('d-none', list.length > 0);
       list.forEach(function (item, index) {
-        var row = document.createElement('label');
+        var row = document.createElement('div');
         row.className = 'border rounded p-2 d-flex gap-3 align-items-start';
         var caseId = String(item.case_id || '').trim();
         var title = String(item.title || 'Caso clínico').trim();
@@ -4712,10 +4707,11 @@ if (!$embed) {
         var checked = (activeCaseId !== '' && caseId === String(activeCaseId))
           || (activeCaseId === '' && index === 0);
         row.innerHTML = ''
-          + '<input class="form-check-input mt-1" type="radio" name="integrate_case_id" value="' + escapeHtml(caseId) + '"' + (checked ? ' checked' : '') + '>'
+          + '<input class="form-check-input mt-1 opacity-50" type="radio" name="integrate_case_id" value="' + escapeHtml(caseId) + '"' + (checked ? ' checked' : '') + ' aria-label="Seleccionar caso ' + escapeHtml(title) + '">'
           + '<div class="flex-grow-1">'
-          + '  <div class="d-flex flex-wrap align-items-center gap-2">'
+          + '  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">'
           + '    <span class="fw-semibold">' + escapeHtml(title) + '</span>'
+          + '    <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-case-here" data-case-id="' + escapeHtml(caseId) + '">Integrar aquí</button>'
           + '  </div>'
           + '  <div class="small text-secondary mt-1">#' + escapeHtml(caseId) + ' · ' + escapeHtml(updatedAt) + (itemsCount !== '' ? ' · items: ' + escapeHtml(itemsCount) : '') + '</div>'
           + '</div>';
@@ -4775,8 +4771,12 @@ if (!$embed) {
       setIntegrateCaseError('');
       integrateCaseSubmitting = false;
       createCaseSubmitting = false;
+      setIntegrateCaseContext(pendingCaseIntegration || null);
       if (createCaseTitleInput) {
         createCaseTitleInput.value = '';
+      }
+      if (createCaseSection) {
+        createCaseSection.classList.add('d-none');
       }
       if (integrateCaseList) {
         integrateCaseList.innerHTML = '';
@@ -4798,6 +4798,9 @@ if (!$embed) {
       setIntegrateCaseError('');
       integrateCaseSubmitting = false;
       createCaseSubmitting = false;
+      if (createCaseSection) {
+        createCaseSection.classList.add('d-none');
+      }
       syncIntegrateCaseButtons();
       if (createCaseModalInstance) {
         createCaseModalInstance.hide();
@@ -4807,13 +4810,15 @@ if (!$embed) {
       }
     }
 
-    async function ensureActiveCaseThenAssign(itemType, itemRef) {
+    async function ensureActiveCaseThenAssign(itemType, itemRef, contextMeta) {
       var nextItemType = String(itemType || '').trim();
       var nextItemRef = String(itemRef || '').trim();
       if (!nextItemType || !nextItemRef) return;
       openCreateCaseModal({
         itemType: nextItemType,
-        itemRef: nextItemRef
+        itemRef: nextItemRef,
+        label: contextMeta && contextMeta.label ? String(contextMeta.label || '').trim() : '',
+        typeLabel: contextMeta && contextMeta.typeLabel ? String(contextMeta.typeLabel || '').trim() : ''
       });
     }
 
@@ -5212,6 +5217,7 @@ if (!$embed) {
         event.preventDefault();
         casesModalEl.classList.remove('show');
         casesModalEl.style.display = 'none';
+        casesModalEl.setAttribute('aria-hidden', 'true');
         return;
       }
 
@@ -5240,19 +5246,31 @@ if (!$embed) {
         return;
       }
 
-      var confirmIntegrateCaseBtn = event.target && event.target.closest ? event.target.closest('[data-action="confirm-integrate-case"]') : null;
-      if (confirmIntegrateCaseBtn) {
+      var integrateCaseHereBtn = event.target && event.target.closest ? event.target.closest('[data-action="integrate-case-here"]') : null;
+      if (integrateCaseHereBtn) {
         event.preventDefault();
         if (!pendingCaseIntegration) {
           setIntegrateCaseError('Selecciona un elemento para integrar.');
           return;
         }
-        var selectedCaseId = selectedIntegrateCaseId();
-        if (!selectedCaseId) {
+        var directCaseId = String(integrateCaseHereBtn.getAttribute('data-case-id') || '').trim();
+        if (!directCaseId) {
           setIntegrateCaseError('Selecciona un caso destino.');
           return;
         }
-        integrateToCase(selectedCaseId, pendingCaseIntegration.itemType, pendingCaseIntegration.itemRef);
+        integrateToCase(directCaseId, pendingCaseIntegration.itemType, pendingCaseIntegration.itemRef);
+        return;
+      }
+
+      var toggleCreateCaseSectionBtn = event.target && event.target.closest ? event.target.closest('[data-action="toggle-create-case-section"]') : null;
+      if (toggleCreateCaseSectionBtn) {
+        event.preventDefault();
+        if (!createCaseSection) return;
+        var willShow = createCaseSection.classList.contains('d-none');
+        createCaseSection.classList.toggle('d-none', !willShow);
+        if (willShow && createCaseTitleInput) {
+          createCaseTitleInput.focus();
+        }
         return;
       }
 
@@ -5474,7 +5492,26 @@ if (!$embed) {
         var integrateItemType = String(integrateBtn.getAttribute('data-item-type') || '').trim();
         var integrateItemRef = String(integrateBtn.getAttribute('data-item-ref') || '').trim();
         if (!integrateItemType || !integrateItemRef) return;
-        ensureActiveCaseThenAssign(integrateItemType, integrateItemRef);
+        var timelineItem = integrateBtn.closest ? integrateBtn.closest('[data-role="timeline-item"]') : null;
+        var visibleTitle = timelineItem
+          ? String(timelineItem.getAttribute('data-visible-title') || '').trim()
+          : '';
+        if (!visibleTitle && timelineItem) {
+          var titleNode = timelineItem.querySelector('.mm-activity-title, .est-order-title span, .est-order-title');
+          if (titleNode) {
+            visibleTitle = String(titleNode.textContent || '').trim();
+          }
+        }
+        var typeLabel = timelineItem
+          ? String(timelineItem.getAttribute('data-document-type-label') || '').trim()
+          : '';
+        if (!typeLabel && timelineItem) {
+          var metaNode = timelineItem.querySelector('.est-doc-studies-line, .mm-activity-meta');
+          if (metaNode) {
+            typeLabel = String(metaNode.textContent || '').trim();
+          }
+        }
+        ensureActiveCaseThenAssign(integrateItemType, integrateItemRef, { label: visibleTitle, typeLabel: typeLabel });
         return;
       }
 
@@ -5564,6 +5601,19 @@ if (!$embed) {
         }
       }
     });
+
+    if (onlyActiveCaseTrigger) {
+      onlyActiveCaseTrigger.addEventListener('keydown', function (event) {
+        if (!event) return;
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        var interactive = event.target && event.target.closest
+          ? event.target.closest('button, a, input, textarea, select, label')
+          : null;
+        if (interactive) return;
+        event.preventDefault();
+        setOnlyActiveCaseEnabled(!onlyActiveCaseEnabled);
+      });
+    }
 
     if (createCaseModalEl) {
       createCaseModalEl.addEventListener('hidden.bs.modal', function () {

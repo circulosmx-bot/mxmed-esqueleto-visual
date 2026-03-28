@@ -5937,6 +5937,65 @@ body{margin:0;background:var(--mm-fondo-base);}
   align-self: center;
 }
 
+.clinical-historial [data-role="case-summary-focus-trigger"]{
+  cursor:pointer;
+  border-radius:.6rem;
+  transition:box-shadow .15s ease, background-color .15s ease;
+}
+
+.clinical-historial [data-role="case-summary-focus-trigger"]:hover{
+  background:rgba(0,176,197,.06);
+}
+
+.clinical-historial [data-role="case-summary-focus-trigger"]:focus-visible{
+  outline:2px solid rgba(0,176,197,.45);
+  outline-offset:2px;
+}
+
+.clinical-historial [data-role="case-summary-focus-trigger"].is-focused{
+  background:rgba(0,176,197,.10);
+  box-shadow:inset 0 0 0 1px rgba(0,176,197,.28);
+}
+
+.clinical-historial [data-role="case-summary-focus-trigger"] [data-action="rename-active-case"]{
+  font-size:.78rem;
+  opacity:.9;
+}
+
+#clinicalCreateCaseModal [data-role="integrate-case-context-title"]{
+  line-height:1.2;
+}
+
+#clinicalCreateCaseModal [data-role="integrate-case-context-type"]:empty{
+  display:none;
+}
+
+#clinicalCreateCaseModal [data-role="integrate-case-list"] .form-check-input{
+  transform:scale(.9);
+}
+
+.clinical-historial [data-role="cases-tab-list"] .is-active-case{
+  border-color: rgba(0, 176, 197, .35) !important;
+  background: linear-gradient(90deg, rgba(0,176,197,.06) 0%, rgba(0,176,197,0) 36%);
+}
+
+.clinical-historial [data-role="cases-tab-list"] [data-action="rename-case-from-modal"]{
+  background:none;
+  border:0;
+  padding:0;
+  margin:0;
+  color:#7a8590;
+  font-size:.78rem;
+  line-height:1.2;
+  text-decoration:none;
+  cursor:pointer;
+}
+
+.clinical-historial [data-role="cases-tab-list"] [data-action="rename-case-from-modal"]:hover{
+  color:#5f6b76;
+  text-decoration:underline;
+}
+
 .clinical-historial .mm-activity-item.is-document-card {
   display: flex;
   align-items: flex-start;
