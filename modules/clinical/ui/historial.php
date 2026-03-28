@@ -902,6 +902,12 @@ function timeline_is_demo_local_patient(string $patientId): bool
 $patientId = trim((string)($_GET['patient_id'] ?? ''));
 $appointmentId = trim((string)($_GET['appointment_id'] ?? ''));
 $encounterKey = trim((string)($_GET['encounter_key'] ?? ''));
+$view = strtolower(trim((string)($_GET['view'] ?? 'historial')));
+$allowedViews = ['historial', 'cases'];
+if (!in_array($view, $allowedViews, true)) {
+    $view = 'historial';
+}
+$isCasesView = ($view === 'cases');
 $include = trim((string)($_GET['include'] ?? 'agenda,clinical'));
 $limit = (int)($_GET['limit'] ?? 20);
 $cursor = trim((string)($_GET['cursor'] ?? ''));
@@ -1530,6 +1536,12 @@ $extraHead = <<<'HTML'
       font-size: .875rem;
       margin-bottom: .75rem;
     }
+    .clinical-historial [data-role="only-active-case-pool-note"]{
+      background:#f8fafc;
+      border-color:rgba(100,116,139,.35);
+      color:#334155;
+      margin-top:-.35rem;
+    }
     .clinical-historial .encounter-doc-preview{
       border: 1px solid rgba(0,0,0,.08);
       border-radius: .5rem;
@@ -1562,6 +1574,16 @@ $extraHead = <<<'HTML'
       display:flex;
       flex-direction:column;
       gap:.45rem;
+    }
+    .clinical-historial .timeline-day-events .mm-activity-item.is-focus-case-item{
+      order:1;
+    }
+    .clinical-historial .timeline-day-events .mm-activity-item.is-focus-available-item{
+      order:2;
+      border-top:1px dashed #cbd5e1;
+      padding-top:.42rem;
+      margin-top:.16rem;
+      background:linear-gradient(90deg, rgba(148,163,184,.08) 0%, rgba(148,163,184,0) 36%);
     }
     .clinical-historial .timeline-event{
       border: 0;
@@ -1856,7 +1878,7 @@ if (!$embed) {
           </div>
           <div class="d-flex flex-wrap gap-2">
             <span class="small text-secondary align-self-center" data-role="active-case-counter">Items en este caso: <?php echo h((string)$activeCaseItemsCount); ?></span>
-            <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-success" data-action="toggle-only-active-case">Ver solo este caso</button>
+            <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-success" data-action="toggle-only-active-case">Enfocar este caso</button>
             <button
               type="button"
               class="mm-btn mm-btn-sm mm-btn-outline-primary"
@@ -1877,7 +1899,7 @@ if (!$embed) {
     </div>
     <div class="alert alert-info d-none py-2 mb-3" data-role="recent-case-suggestion">
       <div data-role="recent-case-suggestion-text"></div>
-      <div class="small text-secondary mt-1" data-role="recent-case-suggestion-subtext">Puedes agruparlos para mantener el expediente organizado.</div>
+      <div class="small text-secondary mt-1" data-role="recent-case-suggestion-subtext">Agrupa los registros en casos clínicos para mantener el expediente organizado.</div>
       <div class="mt-2 d-flex flex-wrap gap-2">
         <button type="button" class="btn btn-sm btn-primary" data-action="assign-recent-to-active-case">Agrupar recientes</button>
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="snooze-recent-case-suggestion">No por ahora</button>
@@ -1921,7 +1943,20 @@ if (!$embed) {
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary d-none" data-action="open-immunization-modal">Registrar vacuna</button>
       </div>
     <?php endif; ?>
-    <?php if (!$hasRenderableItems): ?>
+    <?php if ($isCasesView): ?>
+      <div class="mm-card">
+        <div class="body">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+            <h2 class="h6 mb-0">Casos clínicos del paciente</h2>
+            <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="open-cases-modal">Ver casos (modal)</button>
+          </div>
+          <div class="text-secondary small d-none" data-role="cases-tab-loading">Cargando casos...</div>
+          <div class="alert alert-secondary d-none mb-0" data-role="cases-tab-empty">Sin casos clínicos disponibles para este paciente.</div>
+          <div class="alert alert-danger d-none mb-0" data-role="cases-tab-error"></div>
+          <div class="vstack gap-2" data-role="cases-tab-list"></div>
+        </div>
+      </div>
+    <?php elseif (!$hasRenderableItems): ?>
       <div class="alert alert-secondary">Sin eventos (no hay encuentros ni documentos)</div>
     <?php else: ?>
     <?php if ($cursorNext !== '' || $cursorPrev !== ''): ?>
@@ -1935,7 +1970,8 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
-    <div class="only-active-case-note d-none" data-role="only-active-case-note">Mostrando solo items del caso activo.</div>
+    <div class="only-active-case-note d-none" data-role="only-active-case-note">Caso clínico enfocado.</div>
+    <div class="only-active-case-note d-none" data-role="only-active-case-pool-note">Registros disponibles para integrar a este caso.</div>
     <div class="timeline-category-filters mb-3" data-role="timeline-category-filters">
       <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Filtros clínicos de historial">
         <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary active" data-action="set-clinical-filter" data-clinical-filter="all">Todo</button>
@@ -3096,12 +3132,17 @@ if (!$embed) {
     var currentInclude = <?php echo json_encode($include, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var apiBase = <?php echo json_encode($clinicalApiClientBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var activeCaseId = <?php echo json_encode($activeCaseId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    var isCasesView = <?php echo $isCasesView ? 'true' : 'false'; ?>;
     var isEmbed = <?php echo $embed ? 'true' : 'false'; ?>;
     var onlyActiveCaseStorageKey = 'mxmed_historial_only_active_case:' + String(patientId || '');
     var casesModalEl = document.getElementById('clinicalCasesModal');
     var casesModalList = document.getElementById('casesModalList');
     var casesModalEmpty = document.getElementById('casesModalEmpty');
     var casesModalLoading = document.getElementById('casesModalLoading');
+    var casesTabList = document.querySelector('[data-role="cases-tab-list"]');
+    var casesTabEmpty = document.querySelector('[data-role="cases-tab-empty"]');
+    var casesTabLoading = document.querySelector('[data-role="cases-tab-loading"]');
+    var casesTabError = document.querySelector('[data-role="cases-tab-error"]');
     var casesModalInstance = null;
     if (casesModalEl && window.bootstrap && window.bootstrap.Modal) {
       casesModalInstance = window.bootstrap.Modal.getOrCreateInstance(casesModalEl);
@@ -3199,6 +3240,7 @@ if (!$embed) {
     });
     var onlyActiveCaseBtn = document.querySelector('[data-action="toggle-only-active-case"]');
     var onlyActiveCaseNotice = document.querySelector('[data-role="only-active-case-note"]');
+    var onlyActiveCasePoolNotice = document.querySelector('[data-role="only-active-case-pool-note"]');
     var categoryFilterWrap = document.querySelector('[data-role="timeline-category-filters"]');
     var studyFilterWrap = document.querySelector('[data-role="timeline-study-filters"]');
     var advancedFiltersPanel = document.querySelector('[data-role="advanced-filters-panel"]');
@@ -3522,14 +3564,20 @@ if (!$embed) {
     function applyOnlyActiveCaseFilter() {
       var timelineItems = document.querySelectorAll('[data-role="timeline-item"]');
       var visibleCount = 0;
+      var availableForIntegrationCount = 0;
       timelineItems.forEach(function (item) {
         var inActiveCase = String(item.getAttribute('data-in-active-case') || '').trim() === '1';
+        var caseId = String(item.getAttribute('data-case-id') || '').trim();
+        var hasAnyCase = caseId !== '';
+        var isAvailableForIntegration = !inActiveCase && !hasAnyCase;
         var itemClinicalCategory = String(item.getAttribute('data-clinical-category') || '').trim();
         var itemStudyRole = String(item.getAttribute('data-study-role') || '').trim();
         var hide = false;
 
         if (onlyActiveCaseEnabled && activeCaseId !== '') {
-          hide = !inActiveCase;
+          // En modo enfoque: mostrar caso activo + registros no integrados.
+          // Ocultar eventos de otros casos para reducir ruido visual.
+          hide = !inActiveCase && hasAnyCase;
         }
         if (!hide && clinicalCategoryFilter !== 'all') {
           hide = itemClinicalCategory !== clinicalCategoryFilter;
@@ -3539,15 +3587,24 @@ if (!$embed) {
         }
 
         item.classList.toggle('d-none', hide);
+        item.classList.toggle('is-focus-case-item', onlyActiveCaseEnabled && inActiveCase && !hide);
+        item.classList.toggle('is-focus-available-item', onlyActiveCaseEnabled && isAvailableForIntegration && !hide);
         if (!hide) {
           visibleCount += 1;
+          if (onlyActiveCaseEnabled && isAvailableForIntegration) {
+            availableForIntegrationCount += 1;
+          }
         }
       });
       if (onlyActiveCaseNotice) {
         onlyActiveCaseNotice.classList.toggle('d-none', !onlyActiveCaseEnabled || activeCaseId === '');
       }
+      if (onlyActiveCasePoolNotice) {
+        var showPoolNote = onlyActiveCaseEnabled && activeCaseId !== '' && availableForIntegrationCount > 0;
+        onlyActiveCasePoolNotice.classList.toggle('d-none', !showPoolNote);
+      }
       if (onlyActiveCaseBtn) {
-        onlyActiveCaseBtn.textContent = (onlyActiveCaseEnabled && activeCaseId !== '') ? 'Ver todos' : 'Ver solo este caso';
+        onlyActiveCaseBtn.textContent = (onlyActiveCaseEnabled && activeCaseId !== '') ? 'Ver todos' : 'Enfocar este caso';
       }
       applyTimelineCategoryFilter();
       updateDayCardVisibility();
@@ -4481,6 +4538,67 @@ if (!$embed) {
           + '</div>';
         casesModalList.appendChild(row);
       });
+    }
+
+    function setCasesTabLoading(flag) {
+      if (!casesTabLoading) return;
+      casesTabLoading.classList.toggle('d-none', !flag);
+    }
+
+    function setCasesTabError(message) {
+      if (!casesTabError) return;
+      var text = String(message || '').trim();
+      casesTabError.textContent = text;
+      casesTabError.classList.toggle('d-none', text === '');
+    }
+
+    function renderCasesTab(cases) {
+      if (!casesTabList || !casesTabEmpty) return;
+      var list = Array.isArray(cases) ? cases : [];
+      casesTabList.innerHTML = '';
+      casesTabEmpty.classList.toggle('d-none', list.length > 0);
+      list.forEach(function (item) {
+        var row = document.createElement('div');
+        row.className = 'border rounded p-2 d-flex flex-wrap justify-content-between align-items-center gap-2';
+        var caseId = String(item.case_id || '').trim();
+        var title = String(item.title || 'Caso clínico').trim();
+        var active = String(item.status || '').trim() === 'active';
+        var itemsCount = (item && item.items_count !== undefined && item.items_count !== null)
+          ? String(item.items_count).trim()
+          : '';
+        row.innerHTML = ''
+          + '<div>'
+          + '  <div class="fw-semibold">' + escapeHtml(title) + '</div>'
+          + '  <div class="small text-secondary">#' + escapeHtml(caseId) + ' · ' + escapeHtml(String(item.updated_at || '-').trim()) + (itemsCount !== '' ? ' · items: ' + escapeHtml(itemsCount) : '') + '</div>'
+          + '</div>'
+          + '<div class="d-flex flex-wrap gap-2">'
+          + (active ? '<span class="badge text-bg-success">Activo</span>' : '<button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="activate-case" data-case-id="' + escapeHtml(caseId) + '">Activar</button>')
+          + '  <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="rename-case-from-modal" data-case-id="' + escapeHtml(caseId) + '" data-case-title="' + escapeHtml(title) + '">Renombrar</button>'
+          + '</div>';
+        casesTabList.appendChild(row);
+      });
+    }
+
+    async function loadCasesTab() {
+      if (!isCasesView) return;
+      if (!patientId) {
+        setCasesTabError('patient_id requerido para listar casos.');
+        renderCasesTab([]);
+        return;
+      }
+      setCasesTabLoading(true);
+      setCasesTabError('');
+      try {
+        var cases = await listCases(patientId);
+        knownCasesCount = cases.length;
+        updateCaseSummaryVisibility();
+        renderCasesTab(cases);
+      } catch (err) {
+        renderCasesTab([]);
+        setCasesTabError(err && err.message ? err.message : 'No se pudieron listar casos clínicos.');
+      } finally {
+        setCasesTabLoading(false);
+      }
     }
 
     async function openCasesModal() {
@@ -5565,6 +5683,11 @@ if (!$embed) {
     initActivityTooltips();
     if (currentInclude !== 'agenda,clinical') {
       navigateWithInclude('agenda,clinical');
+      return;
+    }
+    if (isCasesView) {
+      loadCasesTab();
+      bootstrapCaseSummary();
       return;
     }
     populateImmunizationCatalogOptions();
