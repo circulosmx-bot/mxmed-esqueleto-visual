@@ -2214,7 +2214,7 @@ if (!$embed) {
                     $appointmentHref = '/index.html#p-agenda';
                 }
                 ?>
-                <article class="mm-card timeline-event mm-activity-item <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?> <?php echo $appointmentIsActiveEncounter ? 'is-active-encounter' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($itemCaseId); ?>" data-in-active-case="<?php echo $isInActiveCase ? '1' : '0'; ?>" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-clinical-category="<?php echo h(trim((string)($item['clinical_category'] ?? ''))); ?>" data-study-role="<?php echo h(trim((string)($item['study_role'] ?? ''))); ?>" data-href="<?php echo h($appointmentHref); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
+                <article class="mm-card timeline-event mm-activity-item <?php echo $isInActiveCase ? 'is-in-active-case' : ''; ?> <?php echo $appointmentIsActiveEncounter ? 'is-active-encounter' : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($itemCaseId); ?>" data-in-active-case="<?php echo $isInActiveCase ? '1' : '0'; ?>" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>" data-encounter-key="<?php echo h($appointmentEncounterKey); ?>" data-nav-mode="<?php echo ($appointmentHasEncounter && $appointmentEncounterKey !== '') ? 'encounter' : ''; ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-clinical-category="<?php echo h(trim((string)($item['clinical_category'] ?? ''))); ?>" data-study-role="<?php echo h(trim((string)($item['study_role'] ?? ''))); ?>" data-href="<?php echo h($appointmentHref); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
                   <div class="mm-activity-body">
                     <div class="min-w-0 flex-grow-1">
@@ -2239,12 +2239,12 @@ if (!$embed) {
                         <button type="button" class="action-link action-link-btn" data-action="open-procedure-from-appointment" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>" data-default-title="<?php echo h($appointmentReasonText); ?>" data-default-datetime="<?php echo h((string)($item['event_datetime'] ?? ($agenda['start_at'] ?? ''))); ?>">Agregar detalles</button>
                         <?php $appointmentActionCount++; ?>
                       <?php endif; ?>
-                      <?php if (!$isInActiveCase && $appointmentRef !== ''): ?>
+                      <?php if (!$isInActiveCase && $appointmentRef !== '' && !$isCaseEmbed): ?>
                         <?php if ($appointmentActionCount > 0): ?><span class="mx-1">·</span><?php endif; ?>
                         <span class="action-link" data-action="integrate-to-case" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>">Integrar a caso clínico</span>
                         <?php $appointmentActionCount++; ?>
                       <?php endif; ?>
-                      <?php if (!$isInActiveCase && is_array($activeCase) && $appointmentRef !== ''): ?>
+                      <?php if (!$isInActiveCase && is_array($activeCase) && $appointmentRef !== '' && !$isCaseEmbed): ?>
                         <?php if ($appointmentActionCount > 0): ?><span class="mx-1">·</span><?php endif; ?>
                         <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
                           <input type="hidden" name="action" value="add_active_case_appointment">
@@ -2305,11 +2305,11 @@ if (!$embed) {
                     </div>
                     <div class="mm-activity-actions clinical-card-actions text-muted small mt-1">
                       <?php $encounterActionCount = 0; ?>
-                      <?php if (!$encInActiveCase && $ek !== ''): ?>
+                      <?php if (!$encInActiveCase && $ek !== '' && !$isCaseEmbed): ?>
                         <span class="action-link" data-action="integrate-to-case" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>">Integrar a caso clínico</span>
                         <?php $encounterActionCount++; ?>
                       <?php endif; ?>
-                      <?php if (!$encInActiveCase && is_array($activeCase) && $ek !== ''): ?>
+                      <?php if (!$encInActiveCase && is_array($activeCase) && $ek !== '' && !$isCaseEmbed): ?>
                         <?php if ($encounterActionCount > 0): ?><span class="mx-1">·</span><?php endif; ?>
                         <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
                           <input type="hidden" name="action" value="add_active_case_appointment">
@@ -2635,7 +2635,7 @@ if (!$embed) {
                     $studyVisualClass = ' est-order-card ' . (($docTypeNorm === 'lab_order' || $docTypeNorm === 'lab_result') ? 'est-order--lab' : 'est-order--img');
                 }
                 $documentVisualClass = !$isStudyDoc ? ' is-document-card' : '';
-                $showDocIntegrateAction = (!$docInActiveCase && $docUuid !== '');
+                $showDocIntegrateAction = (!$docInActiveCase && $docUuid !== '' && !$isCaseEmbed);
                 ?>
                 <article class="mm-card timeline-event mm-activity-item <?php echo h($studyVisualClass . $documentVisualClass); ?> <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?> <?php echo $isStudyDoc ? 'is-study-diagnostic ' . (($docTypeNorm === 'lab_order' || $docTypeNorm === 'lab_result') ? 'is-study-lab' : 'is-study-img') : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docPrimaryRef); ?>" data-document-id="<?php echo h($docDbId); ?>" data-document-uuid="<?php echo h($docUuid); ?>" data-document-type="<?php echo h($docTypeNorm); ?>" data-document-type-label="<?php echo h($docTypeHumanLabel !== '' ? $docTypeHumanLabel : 'Documento'); ?>" data-visible-title="<?php echo h($docDisplayTitle); ?>" data-result-ref="<?php echo h($linkedResultRef); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-clinical-category="<?php echo h(trim((string)($docItem['clinical_category'] ?? ''))); ?>" data-study-role="<?php echo h(trim((string)($docItem['study_role'] ?? ''))); ?>" data-is-study-doc="<?php echo $isStudyDoc ? '1' : '0'; ?>" data-order-status="<?php echo h($docStatus); ?>" data-order-has-result="<?php echo $hasLinkedResult ? '1' : '0'; ?>" data-replaced-by-ref="<?php echo h($replacedByRef); ?>" data-replacement-source-ref="<?php echo h($replacementSourceRef); ?>" data-related-order-ref="<?php echo h($resultSourceOrderRef); ?>" data-href="<?php echo h($docHref); ?>" data-nav-mode="<?php echo $docHref !== '' ? 'document' : ''; ?>" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>" data-uuid="<?php echo h($docUuid); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
@@ -2661,7 +2661,7 @@ if (!$embed) {
                               <span class="mx-1">·</span>
                               <span class="action-link" data-action="open-diagnostic-order-replace" data-ref="<?php echo h($docPrimaryRef); ?>">Reemplazar orden</span>
                             <?php endif; ?>
-                            <?php if (!$docInActiveCase && $docUuid !== ''): ?>
+                            <?php if (!$docInActiveCase && $docUuid !== '' && !$isCaseEmbed): ?>
                               <?php if ($hasStudyAction): ?>
                                 <span class="mx-1">·</span>
                               <?php endif; ?>
@@ -2751,11 +2751,11 @@ if (!$embed) {
                     </div>
                     <div class="mm-activity-actions clinical-card-actions text-muted small mt-1">
                       <?php $bundleActionCount = 0; ?>
-                      <?php if (!$bundleInActiveCase && $bundleUuid !== ''): ?>
+                      <?php if (!$bundleInActiveCase && $bundleUuid !== '' && !$isCaseEmbed): ?>
                         <span class="action-link" data-action="integrate-to-case" data-item-type="document" data-item-ref="<?php echo h($bundleUuid); ?>">Integrar a caso clínico</span>
                         <?php $bundleActionCount++; ?>
                       <?php endif; ?>
-                      <?php if (!$bundleInActiveCase && $activeCaseId !== '' && $bundleUuid !== ''): ?>
+                      <?php if (!$bundleInActiveCase && $activeCaseId !== '' && $bundleUuid !== '' && !$isCaseEmbed): ?>
                         <?php if ($bundleActionCount > 0): ?><span class="mx-1">·</span><?php endif; ?>
                         <button type="button" class="action-link action-link-btn" data-action="assign-case-item" data-case-id="<?php echo h($activeCaseId); ?>" data-item-type="document" data-item-ref="<?php echo h($bundleUuid); ?>">Agregar a caso activo</button>
                       <?php endif; ?>
@@ -2837,7 +2837,7 @@ if (!$embed) {
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Integrar a caso clínico</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" data-action="cancel-create-case" aria-label="Cerrar"></button>
       </div>
       <div class="modal-body">
         <div class="alert alert-danger small d-none" data-role="integrate-case-error"></div>
@@ -3511,17 +3511,22 @@ if (!$embed) {
 
     function navigateTimelineItem(itemEl) {
       if (!itemEl) return;
-      var href = String(itemEl.getAttribute('data-href') || '').trim();
-      if (!href) return;
       var mode = String(itemEl.getAttribute('data-nav-mode') || '').trim();
       var isStudyDoc = String(itemEl.getAttribute('data-is-study-doc') || '').trim() === '1';
-      if (mode === 'document' && isStudyDoc) {
-        var studyRef = String(itemEl.getAttribute('data-uuid') || itemEl.getAttribute('data-item-ref') || '').trim();
+      if (isStudyDoc) {
+        var studyRef = String(
+          itemEl.getAttribute('data-uuid')
+          || itemEl.getAttribute('data-document-id')
+          || itemEl.getAttribute('data-item-ref')
+          || ''
+        ).trim();
         if (studyRef) {
           openDiagnosticDocument(studyRef, 'Documento diagnóstico');
           return;
         }
       }
+      var href = String(itemEl.getAttribute('data-href') || '').trim();
+      if (!href) return;
       if ((mode === 'encounter' || mode === 'document') && isEmbed) {
         var payload = { type: 'mxmed:embed:navigate', mode: mode };
         if (mode === 'encounter') {
