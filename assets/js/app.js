@@ -5370,9 +5370,12 @@ console.info('app.js loaded :: 20251123a');
     return true;
   };
   const openActividadClinicaFromTratamientoAlias = ()=>{
-    const opened = showClinicalTab(clinicalTabTargets.notas);
+    const opened = showActividadClinicaModalById(actividadClinicaModalEl);
     if(!opened) return false;
-    focusActividadClinicaActions();
+    window.requestAnimationFrame(()=>{
+      const firstAction = actividadClinicaModalEl?.querySelector('[data-action^="actividad-clinica-open-"]');
+      firstAction?.focus?.();
+    });
     try{
       console.info('[mxmed-tratamiento-alias] open actividad clinica');
     }catch(_){}
