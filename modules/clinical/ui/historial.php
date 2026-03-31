@@ -1931,6 +1931,14 @@ $extraHead = <<<'HTML'
       flex: 1 1 auto;
       background: #fff;
     }
+    .integrate-case-row{
+      cursor:pointer;
+      transition:border-color .12s ease, background-color .12s ease;
+    }
+    .integrate-case-row.is-selected{
+      border-color:#9ec5fe !important;
+      background:rgba(13,110,253,.05);
+    }
     .tooltip .tooltip-inner{
       white-space:pre-line;
       text-align:left;
@@ -2239,19 +2247,6 @@ if (!$embed) {
                         <button type="button" class="action-link action-link-btn" data-action="open-procedure-from-appointment" data-appointment-id="<?php echo h($appointmentEpisodeId); ?>" data-default-title="<?php echo h($appointmentReasonText); ?>" data-default-datetime="<?php echo h((string)($item['event_datetime'] ?? ($agenda['start_at'] ?? ''))); ?>">Agregar detalles</button>
                         <?php $appointmentActionCount++; ?>
                       <?php endif; ?>
-                      <?php if (!$isInActiveCase && $appointmentRef !== '' && !$isCaseEmbed): ?>
-                        <?php if ($appointmentActionCount > 0): ?><span class="mx-1">·</span><?php endif; ?>
-                        <span class="action-link" data-action="integrate-to-case" data-item-type="appointment" data-item-ref="<?php echo h($appointmentRef); ?>">Integrar a caso clínico</span>
-                        <?php $appointmentActionCount++; ?>
-                      <?php endif; ?>
-                      <?php if (!$isInActiveCase && is_array($activeCase) && $appointmentRef !== '' && !$isCaseEmbed): ?>
-                        <?php if ($appointmentActionCount > 0): ?><span class="mx-1">·</span><?php endif; ?>
-                        <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
-                          <input type="hidden" name="action" value="add_active_case_appointment">
-                          <input type="hidden" name="encounter_key" value="<?php echo h($appointmentEncounterKey); ?>">
-                          <button type="submit" class="action-link action-link-btn">Agregar a caso activo</button>
-                        </form>
-                      <?php endif; ?>
                     </div>
                   </div>
                 </article>
@@ -2305,18 +2300,6 @@ if (!$embed) {
                     </div>
                     <div class="mm-activity-actions clinical-card-actions text-muted small mt-1">
                       <?php $encounterActionCount = 0; ?>
-                      <?php if (!$encInActiveCase && $ek !== '' && !$isCaseEmbed): ?>
-                        <span class="action-link" data-action="integrate-to-case" data-item-type="encounter" data-item-ref="<?php echo h($ek); ?>">Integrar a caso clínico</span>
-                        <?php $encounterActionCount++; ?>
-                      <?php endif; ?>
-                      <?php if (!$encInActiveCase && is_array($activeCase) && $ek !== '' && !$isCaseEmbed): ?>
-                        <?php if ($encounterActionCount > 0): ?><span class="mx-1">·</span><?php endif; ?>
-                        <form method="post" class="d-inline" onsubmit="return confirm('¿Agregar esta cita al caso activo?');">
-                          <input type="hidden" name="action" value="add_active_case_appointment">
-                          <input type="hidden" name="encounter_key" value="<?php echo h($ek); ?>">
-                          <button type="submit" class="action-link action-link-btn">Agregar a caso activo</button>
-                        </form>
-                      <?php endif; ?>
                     </div>
                   </div>
                 </article>
@@ -2635,7 +2618,9 @@ if (!$embed) {
                     $studyVisualClass = ' est-order-card ' . (($docTypeNorm === 'lab_order' || $docTypeNorm === 'lab_result') ? 'est-order--lab' : 'est-order--img');
                 }
                 $documentVisualClass = !$isStudyDoc ? ' is-document-card' : '';
-                $showDocIntegrateAction = (!$docInActiveCase && $docUuid !== '' && !$isCaseEmbed);
+                $isClinicalNoteDoc = in_array($docTypeNorm, ['clinical_note', 'evolution_note', 'hospital_evolution_note', 'soap_note'], true);
+                $isIntegrableDocument = $isStudyDoc || $isSimpleUploadDoc || $isClinicalNoteDoc;
+                $showDocIntegrateAction = (!$docInActiveCase && $docUuid !== '' && !$isCaseEmbed && $isIntegrableDocument);
                 ?>
                 <article class="mm-card timeline-event mm-activity-item <?php echo h($studyVisualClass . $documentVisualClass); ?> <?php echo $docInActiveCase ? 'is-in-active-case' : ''; ?> <?php echo $isStudyDoc ? 'is-study-diagnostic ' . (($docTypeNorm === 'lab_order' || $docTypeNorm === 'lab_result') ? 'is-study-lab' : 'is-study-img') : ''; ?>" data-timeline-item="1" data-role="timeline-item" data-case-id="<?php echo h($docCaseId); ?>" data-in-active-case="<?php echo $docInActiveCase ? '1' : '0'; ?>" data-item-type="document" data-item-ref="<?php echo h($docPrimaryRef); ?>" data-document-id="<?php echo h($docDbId); ?>" data-document-uuid="<?php echo h($docUuid); ?>" data-document-type="<?php echo h($docTypeNorm); ?>" data-document-type-label="<?php echo h($docTypeHumanLabel !== '' ? $docTypeHumanLabel : 'Documento'); ?>" data-visible-title="<?php echo h($docDisplayTitle); ?>" data-result-ref="<?php echo h($linkedResultRef); ?>" data-category="<?php echo h($entryCategory); ?>" data-subtype="<?php echo h($entrySubtype); ?>" data-catalog-group="<?php echo h($entryCatalogGroup); ?>" data-catalog-phase="<?php echo h($entryCatalogPhase); ?>" data-catalog-group-label="<?php echo h($entryCatalogGroupLabel); ?>" data-catalog-priority="<?php echo $entryCatalogPriority; ?>" data-clinical-category="<?php echo h(trim((string)($docItem['clinical_category'] ?? ''))); ?>" data-study-role="<?php echo h(trim((string)($docItem['study_role'] ?? ''))); ?>" data-is-study-doc="<?php echo $isStudyDoc ? '1' : '0'; ?>" data-order-status="<?php echo h($docStatus); ?>" data-order-has-result="<?php echo $hasLinkedResult ? '1' : '0'; ?>" data-replaced-by-ref="<?php echo h($replacedByRef); ?>" data-replacement-source-ref="<?php echo h($replacementSourceRef); ?>" data-related-order-ref="<?php echo h($resultSourceOrderRef); ?>" data-href="<?php echo h($docHref); ?>" data-nav-mode="<?php echo $docHref !== '' ? 'document' : ''; ?>" data-doc-target="<?php echo $docIsImage ? 'image' : 'document'; ?>" data-uuid="<?php echo h($docUuid); ?>" data-bs-toggle="tooltip" data-bs-title="<?php echo h($entryTooltipText); ?>" title="<?php echo h($entryTooltipFallback); ?>">
                   <div class="mm-activity-icon" aria-hidden="true"><?php echo $entryIcon; ?></div>
@@ -2661,7 +2646,7 @@ if (!$embed) {
                               <span class="mx-1">·</span>
                               <span class="action-link" data-action="open-diagnostic-order-replace" data-ref="<?php echo h($docPrimaryRef); ?>">Reemplazar orden</span>
                             <?php endif; ?>
-                            <?php if (!$docInActiveCase && $docUuid !== '' && !$isCaseEmbed): ?>
+                            <?php if ($showDocIntegrateAction): ?>
                               <?php if ($hasStudyAction): ?>
                                 <span class="mx-1">·</span>
                               <?php endif; ?>
@@ -2754,10 +2739,6 @@ if (!$embed) {
                       <?php if (!$bundleInActiveCase && $bundleUuid !== '' && !$isCaseEmbed): ?>
                         <span class="action-link" data-action="integrate-to-case" data-item-type="document" data-item-ref="<?php echo h($bundleUuid); ?>">Integrar a caso clínico</span>
                         <?php $bundleActionCount++; ?>
-                      <?php endif; ?>
-                      <?php if (!$bundleInActiveCase && $activeCaseId !== '' && $bundleUuid !== '' && !$isCaseEmbed): ?>
-                        <?php if ($bundleActionCount > 0): ?><span class="mx-1">·</span><?php endif; ?>
-                        <button type="button" class="action-link action-link-btn" data-action="assign-case-item" data-case-id="<?php echo h($activeCaseId); ?>" data-item-type="document" data-item-ref="<?php echo h($bundleUuid); ?>">Agregar a caso activo</button>
                       <?php endif; ?>
                     </div>
                   </div>
@@ -3492,6 +3473,8 @@ if (!$embed) {
     var pendingCaseIntegration = null;
     var createCaseSubmitting = false;
     var integrateCaseSubmitting = false;
+    var integrateOwnerCaseId = '';
+    var integrateCasesListCache = [];
     try {
       onlyActiveCaseEnabled = activeCaseId !== '' && localStorage.getItem(onlyActiveCaseStorageKey) === '1';
     } catch (_) {
@@ -4864,33 +4847,42 @@ if (!$embed) {
     function setIntegrateCaseError(message, ownerCaseId) {
       if (!integrateCaseError) return;
       var text = String(message || '').trim();
+      var nextOwnerCaseId = String(ownerCaseId || '').trim();
+      integrateOwnerCaseId = nextOwnerCaseId;
       integrateCaseError.innerHTML = '';
       if (text === '') {
         integrateCaseError.classList.add('d-none');
+        if (integrateCasesListCache.length > 0) {
+          renderIntegrateCases(integrateCasesListCache);
+        }
         return;
       }
       var copy = document.createElement('div');
       copy.textContent = text;
       integrateCaseError.appendChild(copy);
-      if (ownerCaseId) {
+      if (nextOwnerCaseId) {
         var actions = document.createElement('div');
         actions.className = 'd-flex flex-wrap gap-2 mt-2';
         actions.innerHTML = ''
-          + '<button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="activate-owner-case" data-case-id="' + escapeHtml(ownerCaseId) + '">Activar caso #' + escapeHtml(ownerCaseId) + '</button>'
+          + '<button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="activate-owner-case" data-case-id="' + escapeHtml(nextOwnerCaseId) + '">Activar caso #' + escapeHtml(nextOwnerCaseId) + '</button>'
           + '<button type="button" class="mm-btn mm-btn-sm mm-btn-outline-secondary" data-action="dismiss-integrate-case-error">Cerrar</button>';
         integrateCaseError.appendChild(actions);
       }
       integrateCaseError.classList.remove('d-none');
+      if (integrateCasesListCache.length > 0) {
+        renderIntegrateCases(integrateCasesListCache);
+      }
     }
 
     function renderIntegrateCases(cases) {
       if (!integrateCaseList || !integrateCaseEmpty) return;
       integrateCaseList.innerHTML = '';
       var list = Array.isArray(cases) ? cases : [];
+      integrateCasesListCache = list.slice();
       integrateCaseEmpty.classList.toggle('d-none', list.length > 0);
       list.forEach(function (item, index) {
         var row = document.createElement('div');
-        row.className = 'border rounded p-2 d-flex gap-3 align-items-start';
+        row.className = 'border rounded p-2 d-flex gap-3 align-items-start integrate-case-row';
         var caseId = String(item.case_id || '').trim();
         var title = String(item.title || 'Caso clínico').trim();
         var updatedAt = String(item.updated_at || '-').trim();
@@ -4900,18 +4892,35 @@ if (!$embed) {
         var active = String(item.status || '').trim() === 'active';
         var checked = (activeCaseId !== '' && caseId === String(activeCaseId))
           || (activeCaseId === '' && index === 0);
+        var isOwnerCase = integrateOwnerCaseId !== '' && caseId === integrateOwnerCaseId;
+        var rowActionHtml = isOwnerCase
+          ? '<span class="badge text-bg-light border">Ya integrado</span>'
+          : '<button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-case-here" data-case-id="' + escapeHtml(caseId) + '">Integrar aquí</button>';
+        row.setAttribute('data-role', 'integrate-case-row');
+        row.setAttribute('data-action', 'select-integrate-case-row');
+        row.setAttribute('data-case-id', caseId);
         row.innerHTML = ''
           + '<input class="form-check-input mt-1 opacity-50" type="radio" name="integrate_case_id" value="' + escapeHtml(caseId) + '"' + (checked ? ' checked' : '') + ' aria-label="Seleccionar caso ' + escapeHtml(title) + '">'
           + '<div class="flex-grow-1">'
           + '  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">'
           + '    <span class="fw-semibold">' + escapeHtml(title) + '</span>'
-          + '    <button type="button" class="mm-btn mm-btn-sm mm-btn-outline-primary" data-action="integrate-case-here" data-case-id="' + escapeHtml(caseId) + '">Integrar aquí</button>'
+          + '    ' + rowActionHtml
           + '  </div>'
           + '  <div class="small text-secondary mt-1">#' + escapeHtml(caseId) + ' · ' + escapeHtml(updatedAt) + (itemsCount !== '' ? ' · items: ' + escapeHtml(itemsCount) : '') + '</div>'
           + '</div>';
         integrateCaseList.appendChild(row);
       });
+      updateIntegrateCaseSelectionVisual();
       syncIntegrateCaseButtons();
+    }
+
+    function updateIntegrateCaseSelectionVisual() {
+      if (!integrateCaseList) return;
+      var rows = integrateCaseList.querySelectorAll('[data-role="integrate-case-row"]');
+      rows.forEach(function (row) {
+        var radio = row.querySelector('input[name="integrate_case_id"]');
+        row.classList.toggle('is-selected', !!(radio && radio.checked));
+      });
     }
 
     async function activateCase(caseId) {
@@ -5468,6 +5477,23 @@ if (!$embed) {
         return;
       }
 
+      var selectIntegrateCaseRow = event.target && event.target.closest ? event.target.closest('[data-action="select-integrate-case-row"]') : null;
+      if (selectIntegrateCaseRow) {
+        var interactiveInsideRow = event.target && event.target.closest
+          ? event.target.closest('button, a, label, select, textarea, input')
+          : null;
+        if (interactiveInsideRow && interactiveInsideRow !== selectIntegrateCaseRow) {
+          updateIntegrateCaseSelectionVisual();
+          return;
+        }
+        var rowRadio = selectIntegrateCaseRow.querySelector('input[name="integrate_case_id"]');
+        if (!rowRadio) return;
+        rowRadio.checked = true;
+        rowRadio.dispatchEvent(new Event('change', { bubbles: true }));
+        updateIntegrateCaseSelectionVisual();
+        return;
+      }
+
       var toggleCreateCaseSectionBtn = event.target && event.target.closest ? event.target.closest('[data-action="toggle-create-case-section"]') : null;
       if (toggleCreateCaseSectionBtn) {
         event.preventDefault();
@@ -5819,6 +5845,14 @@ if (!$embed) {
           closeDocumentViewerModal();
         }
       }
+    });
+
+    document.addEventListener('change', function (event) {
+      var radio = event.target && event.target.matches && event.target.matches('input[name="integrate_case_id"]')
+        ? event.target
+        : null;
+      if (!radio) return;
+      updateIntegrateCaseSelectionVisual();
     });
 
     if (onlyActiveCaseTrigger) {
