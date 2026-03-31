@@ -8154,9 +8154,27 @@
       renderP10FromCanonicalContext();
     });
 
+    function isFromFrameOrDescendant(rootFrameWindow, sourceWindow) {
+      if (!rootFrameWindow || !sourceWindow) return false;
+      if (sourceWindow === rootFrameWindow) return true;
+      try {
+        var current = sourceWindow;
+        var safety = 0;
+        while (current && safety < 16) {
+          var parent = current.parent;
+          if (!parent || parent === current) break;
+          if (parent === rootFrameWindow) return true;
+          current = parent;
+          safety += 1;
+        }
+      } catch (_) {}
+      return false;
+    }
+
     window.addEventListener('message', function (event) {
-      var fromMainIframe = !!(iframe && iframe.contentWindow && event && event.source === iframe.contentWindow);
-      var fromExpandedIframe = !!(expandedIframe && expandedIframe.contentWindow && event && event.source === expandedIframe.contentWindow);
+      var sourceWindow = event ? event.source : null;
+      var fromMainIframe = !!(iframe && iframe.contentWindow && isFromFrameOrDescendant(iframe.contentWindow, sourceWindow));
+      var fromExpandedIframe = !!(expandedIframe && expandedIframe.contentWindow && isFromFrameOrDescendant(expandedIframe.contentWindow, sourceWindow));
       if (!fromMainIframe && !fromExpandedIframe) return;
       var data = event.data;
       if (!data || typeof data !== 'object') return;
