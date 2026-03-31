@@ -3369,14 +3369,22 @@ function clinical_case_item_type_allowed(string $itemType): bool
     return in_array($itemType, ['encounter', 'document', 'appointment'], true);
 }
 
-function clinical_case_item_find_owner_case(PDO $pdo, string $itemType, string $itemRef): ?int
+function clinical_case_item_find_owner_case(PDO $pdo, string $patientId, string $itemType, string $itemRef): ?int
 {
+    $patientId = trim($patientId);
+    if ($patientId === '') {
+        return null;
+    }
     $stmt = $pdo->prepare("
-        SELECT case_id
-        FROM clinical_case_items
-        WHERE item_type = :t AND item_ref = :r
+        SELECT i.case_id
+        FROM clinical_case_items i
+        INNER JOIN clinical_cases c ON c.case_id = i.case_id
+        WHERE c.patient_id = :patient_id
+          AND i.item_type = :t
+          AND i.item_ref = :r
         LIMIT 1
     ");
+    $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
     $stmt->bindValue(':t', $itemType, PDO::PARAM_STR);
     $stmt->bindValue(':r', $itemRef, PDO::PARAM_STR);
     $stmt->execute();
@@ -5463,7 +5471,12 @@ try {
                 ], 404);
                 return;
             }
-            $ownerCaseId = clinical_case_item_find_owner_case($pdo, $itemType, $itemRef);
+            $ownerCaseId = clinical_case_item_find_owner_case(
+                $pdo,
+                (string)($existingCase['patient_id'] ?? ''),
+                $itemType,
+                $itemRef
+            );
             if ($ownerCaseId !== null && $ownerCaseId !== $caseId) {
                 clinical_send_response([
                     'ok' => false,
