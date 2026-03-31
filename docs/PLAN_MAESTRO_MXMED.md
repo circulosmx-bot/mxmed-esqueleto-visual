@@ -34,6 +34,32 @@ Perfil médico end-to-end:
 - Objetivo inmediato actual: Integración transversal / Casos (Camino 2)
 - Regla: antes de iniciar cualquier trabajo nuevo, revisar esta sección.
 
+## A1.1 Estado operativo actualizado (P15–P16)
+
+- Fecha de actualización: 2026-03-31
+- Rama operativa reciente: `mxmed-p16-modal-actividad-clinica`
+- Fase actual: **P16 (UX/funcional en Historial + Actividad clínica + Casos clínicos)** sobre base estable de P15.
+
+✅ RESUELTO:
+- Estabilidad al abrir Historial de atención en host principal (sin congelamiento operativo reportado en la ruta estable).
+- Eliminación de disparos repetitivos/loops de consulta en rutas críticas de historial (control operacional consolidado en la base estable de P15).
+- Modal expandido de Historial implementado y utilizable desde el flujo actual.
+- Homologación visual progresiva de cards del historial (compactación, jerarquía y consistencia de acciones).
+- Acciones secundarias homologadas en formato tipo link discreto (en lugar de CTAs primarios tipo botón).
+- Limpieza de headers/textos redundantes en bloques clínicos internos de historial.
+- Integración a casos clínicos reforzada:
+  - conflicto `owner_case_id` coherente con lista visible del paciente
+  - estado contextual `Ya integrado` en el caso propietario dentro del modal.
+- Selección de caso mejorada en modal de integración:
+  - selección por radio
+  - selección por click en todo el recuadro de la fila.
+- Separación práctica entre timeline clínico y acciones contextuales (sin mezclar lógica clínica con ornamentación UX).
+
+Pendiente dentro de P16 (abierto):
+- Cerrar consistencia UX final del modal “Integrar a caso clínico” en escenarios borde (conflictos + cambio de caso activo en la misma sesión).
+- Homologación completa card↔detalle para todos los tipos en vista Casos clínicos expandida (paridad 100% con Historial general).
+- Cierre documental de criterios de aceptación P16 para pasar a fase siguiente sin deuda visual residual.
+
 ## A2. Cierre clínico reciente (Encounter/Historial/Timeline)
 
 ### Estado actual (cerrado)
@@ -1687,3 +1713,25 @@ Siguientes pasos recomendados:
 - asociación formal del documento capturado con la nota clínica guardada
 - soporte multi-imagen por sesión/token
 - evaluación de sincronización en tiempo real si el volumen lo requiere
+
+## 🔜 SIGUIENTE POR RESOLVER
+
+### Pendientes reales detectados (fase actual P16)
+- Consolidar cierre funcional del flujo “Integrar a caso clínico” en todos los contextos embebidos (historial base, expandido y casos clínicos).
+- Validar y documentar paridad total de apertura de detalle por tipo de card dentro de “Casos clínicos” (sin excepciones por tipo).
+- Terminar limpieza de acciones contextuales para que no reaparezcan CTAs redundantes por tipo/contexto en futuras iteraciones.
+
+### Mejoras UX aún incompletas
+- Definir criterio final de jerarquía visual entre Historial general vs Casos clínicos (qué acciones viven en cada contexto y cuáles no).
+- Cerrar guía de microcopy unificada para mensajes de integración/conflicto/estado de caso activo.
+- Completar baseline visual de cards/documentos/modales para evitar divergencias entre renderer principal y variantes embebidas.
+
+### Siguientes módulos a intervenir (alineado al plan)
+1. Clinical UI (`modules/clinical/ui/historial.php`): cierre de consistencia de interacción y estados.
+2. Host principal (`index.html` / puente embed): validación final de eventos cross-iframe y aperturas de detalle.
+3. Documentación operativa (`docs/*`): checklist de aceptación P16 y criterios de salida a siguiente fase.
+
+### Riesgos / áreas delicadas
+- Riesgo de regresión en handlers por cambios de markup en cards embebidas.
+- Riesgo de desalineación entre fuente de verdad de casos y estado visual si no se refrescan listas tras conflictos/activación.
+- Riesgo de reintroducir ruido UX al mezclar ajustes visuales con cambios funcionales en el mismo ciclo.
