@@ -4156,6 +4156,7 @@ console.info('app.js loaded :: 20251123a');
   const actividadClinicaLauncherMainEl = pane.querySelector('[data-role="ac-launcher-main"]');
   const actividadClinicaLauncherProcPickerEl = pane.querySelector('[data-role="ac-launcher-proc-picker"]');
   const actividadClinicaLauncherStudiesPickerEl = pane.querySelector('[data-role="ac-launcher-studies-picker"]');
+  const actividadClinicaLauncherStudiesSpecialPickerEl = pane.querySelector('[data-role="ac-launcher-studies-special-picker"]');
   const actividadClinicaLaunchBtns = Array.from(pane.querySelectorAll('[data-action="open-actividad-clinica"]'));
   const actividadClinicaNotaOpenQrBtn = pane.querySelector('[data-action="ac-nota-open-qr-capture"]');
   const actividadClinicaNotaQrStatusEl = pane.querySelector('[data-role="ac-nota-qr-status"]');
@@ -4588,6 +4589,34 @@ console.info('app.js loaded :: 20251123a');
       modal.hide();
     }catch(_){}
   };
+  const cleanupBootstrapModalArtifactsIfIdle = ()=>{
+    try{
+      if(document.querySelector('.modal.show')) return;
+      document.body.classList.remove('modal-open');
+      document.body.style.removeProperty('overflow');
+      document.body.style.removeProperty('padding-right');
+      document.querySelectorAll('.modal-backdrop').forEach((backdrop)=>{
+        backdrop.parentNode?.removeChild(backdrop);
+      });
+    }catch(_){}
+  };
+  const runAfterActividadClinicaLauncherHidden = (callback)=>{
+    const done = typeof callback === 'function' ? callback : ()=>{};
+    if(!actividadClinicaModalEl){
+      done();
+      return;
+    }
+    const launcherVisible = actividadClinicaModalEl.classList.contains('show');
+    if(launcherVisible){
+      actividadClinicaModalEl.addEventListener('hidden.bs.modal', ()=>{
+        done();
+      }, { once: true });
+      hideActividadClinicaModal();
+      return;
+    }
+    hideActividadClinicaModal();
+    done();
+  };
   const showActividadClinicaModalById = (modalEl)=>{
     if(!modalEl) return false;
     const BsModal = window.bootstrap && window.bootstrap.Modal;
@@ -4604,7 +4633,7 @@ console.info('app.js loaded :: 20251123a');
   };
   const setActividadClinicaLauncherView = (view = 'main')=>{
     const requested = sanitizeText(view).toLowerCase();
-    const safeView = requested === 'proc' || requested === 'studies' ? requested : 'main';
+    const safeView = requested === 'proc' || requested === 'studies' || requested === 'studies-special' ? requested : 'main';
     if(actividadClinicaLauncherMainEl){
       actividadClinicaLauncherMainEl.classList.toggle('d-none', safeView !== 'main');
     }
@@ -4613,6 +4642,9 @@ console.info('app.js loaded :: 20251123a');
     }
     if(actividadClinicaLauncherStudiesPickerEl){
       actividadClinicaLauncherStudiesPickerEl.classList.toggle('d-none', safeView !== 'studies');
+    }
+    if(actividadClinicaLauncherStudiesSpecialPickerEl){
+      actividadClinicaLauncherStudiesSpecialPickerEl.classList.toggle('d-none', safeView !== 'studies-special');
     }
   };
   const createActividadClinicaPortalMount = (modalEl, targetSelector, sourceSelector, opts = {})=>{
@@ -5365,11 +5397,29 @@ console.info('app.js loaded :: 20251123a');
     }catch(_){}
     return true;
   };
+  const ACTIVIDAD_CLINICA_SPECIAL_STUDIES = Object.freeze({
+    ecg: { area: 'Cardiología', studyLabel: 'ECG 12 derivaciones' },
+    echo: { area: 'Cardiología', studyLabel: 'Ecocardiograma transtorácico (ETT)' },
+    holter: { area: 'Cardiología', studyLabel: 'Holter / monitorización ECG ambulatoria' },
+    stress_test: { area: 'Cardiología', studyLabel: 'Prueba de esfuerzo (ECG de esfuerzo)' },
+    eeg: { area: 'Funcionales', studyLabel: 'EEG rutinario' },
+    emg: { area: 'Funcionales', studyLabel: 'EMG + Velocidades de conducción nerviosa (VCN)' },
+    spirometry: { area: 'Funcionales', studyLabel: 'Espirometría' },
+    audiometry: { area: 'Funcionales', studyLabel: 'Audiometría tonal' }
+  });
+  const normalizeClinicalToken = (value)=> sanitizeText(value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const openOrdenEstudiosFromActividad = (variant = '')=>{
-    hideActividadClinicaModal();
-    const opened = showClinicalTab(clinicalTabTargets.estudios);
-    if(!opened) return false;
-    window.requestAnimationFrame(()=>{
+    const options = (typeof variant === 'object' && variant !== null) ? variant : {};
+    const variantKey = sanitizeText(options.variant || variant).toLowerCase();
+    const specialStudyKey = sanitizeText(options.studyKey).toLowerCase();
+    const specialConfig = variantKey === 'special' ? (ACTIVIDAD_CLINICA_SPECIAL_STUDIES[specialStudyKey] || null) : null;
+    const areaHint = sanitizeText(options.area || specialConfig?.area || '');
+    const specialStudyLabel = sanitizeText(options.studyLabel || specialConfig?.studyLabel || '');
+    let opened = false;
+    runAfterActividadClinicaLauncherHidden(()=>{
+      opened = showClinicalTab(clinicalTabTargets.estudios);
+      if(!opened) return;
+      window.requestAnimationFrame(()=>{
       try{
         const studiesPane = pane.querySelector('#t-estudios');
         const solicitarBtn = studiesPane?.querySelector('.est-section-tab[data-est-section="solicitar"]');
@@ -5377,11 +5427,17 @@ console.info('app.js loaded :: 20251123a');
           solicitarBtn.click();
         }
         const areaSelect = studiesPane?.querySelector('[data-est-area-select]');
-        const normalizedVariant = sanitizeText(variant).toLowerCase();
+        const indicationField = studiesPane?.querySelector('[data-role="ac-order-indication"]');
+        const normalizedVariant = normalizeClinicalToken(variantKey);
         if(areaSelect){
-          const targetPattern = normalizedVariant === 'img' ? 'imagen' : 'laboratorio';
+          let targetPattern = 'laboratorio';
+          if(normalizedVariant === 'img'){
+            targetPattern = 'imagen';
+          }else if(normalizedVariant === 'special'){
+            targetPattern = normalizeClinicalToken(areaHint || 'funcionales');
+          }
           const targetOption = Array.from(areaSelect.options || []).find((opt)=>{
-            const text = sanitizeText(opt.textContent || '').toLowerCase();
+            const text = normalizeClinicalToken(opt.textContent || '');
             return text.indexOf(targetPattern) !== -1;
           });
           if(targetOption){
@@ -5389,15 +5445,55 @@ console.info('app.js loaded :: 20251123a');
             areaSelect.dispatchEvent(new Event('change', { bubbles: true }));
           }
         }
+        if(specialStudyLabel && indicationField && !sanitizeText(indicationField.value)){
+          indicationField.value = `Estudio especial solicitado: ${specialStudyLabel}`;
+          indicationField.dispatchEvent(new Event('input', { bubbles: true }));
+        }
         const triggerInput = studiesPane?.querySelector('[data-est-open-modal]');
         if(triggerInput){
           triggerInput.focus?.();
           triggerInput.click?.();
         }
+        if(specialStudyLabel){
+          const normalizedStudy = normalizeClinicalToken(specialStudyLabel);
+          const applySpecialSelection = ()=>{
+            const checkboxes = Array.from(studiesPane?.querySelectorAll('input[type="checkbox"][data-est-item]') || []);
+            const targetCheckbox = checkboxes.find((cb)=> normalizeClinicalToken(cb.dataset.estItem || '') === normalizedStudy);
+            if(!targetCheckbox) return false;
+            if(!targetCheckbox.checked){
+              targetCheckbox.checked = true;
+              targetCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            const visibleSearch = Array.from(studiesPane?.querySelectorAll('.modal.show [data-est-lab-search]') || [])[0];
+            if(visibleSearch){
+              visibleSearch.value = specialStudyLabel;
+              visibleSearch.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            return true;
+          };
+          if(!applySpecialSelection()){
+            let tries = 0;
+            const timer = window.setInterval(()=>{
+              tries += 1;
+              if(applySpecialSelection() || tries >= 10){
+                window.clearInterval(timer);
+              }
+            }, 120);
+          }
+        }
       }catch(_){}
+      });
     });
+    if(!opened && actividadClinicaModalEl?.classList.contains('show')){
+      // apertura deferida tras hidden.bs.modal
+      return true;
+    }
+    if(!opened) return false;
     try{
-      console.info('[mxmed-actividad-clinica] open orden estudios', { variant: sanitizeText(variant) || 'lab' });
+      console.info('[mxmed-actividad-clinica] open orden estudios', {
+        variant: sanitizeText(variantKey) || 'lab',
+        special_study: specialStudyLabel || ''
+      });
     }catch(_){}
     return true;
   };
@@ -5661,6 +5757,7 @@ console.info('app.js loaded :: 20251123a');
   });
   actividadClinicaModalEl?.addEventListener('hidden.bs.modal', ()=>{
     setActividadClinicaLauncherView('main');
+    window.setTimeout(cleanupBootstrapModalArtifactsIfIdle, 0);
   });
   actividadClinicaNotaOpenQrBtn?.addEventListener('click', (event)=>{
     event.preventDefault();
@@ -5760,10 +5857,22 @@ console.info('app.js loaded :: 20251123a');
       setActividadClinicaLauncherView('studies');
       return;
     }
+    const studiesSpecialPickerBtn = event.target.closest('[data-action="actividad-clinica-open-estudios-special-picker"]');
+    if(studiesSpecialPickerBtn){
+      event.preventDefault();
+      setActividadClinicaLauncherView('studies-special');
+      return;
+    }
     const studiesBackBtn = event.target.closest('[data-action="actividad-clinica-studies-back"]');
     if(studiesBackBtn){
       event.preventDefault();
       setActividadClinicaLauncherView('main');
+      return;
+    }
+    const studiesSpecialBackBtn = event.target.closest('[data-action="actividad-clinica-studies-special-back"]');
+    if(studiesSpecialBackBtn){
+      event.preventDefault();
+      setActividadClinicaLauncherView('studies');
       return;
     }
     const studiesLabBtn = event.target.closest('[data-action="actividad-clinica-open-estudios-lab"]');
@@ -5776,6 +5885,13 @@ console.info('app.js loaded :: 20251123a');
     if(studiesImgBtn){
       event.preventDefault();
       openOrdenEstudiosFromActividad('img');
+      return;
+    }
+    const studiesSpecialItemBtn = event.target.closest('[data-action="actividad-clinica-open-estudios-special-item"]');
+    if(studiesSpecialItemBtn){
+      event.preventDefault();
+      const studyKey = sanitizeText(studiesSpecialItemBtn.getAttribute('data-study-key') || '').toLowerCase();
+      openOrdenEstudiosFromActividad({ variant: 'special', studyKey });
       return;
     }
     const studiesBtn = event.target.closest('[data-action="actividad-clinica-open-estudios"]');
@@ -14212,6 +14328,20 @@ function mxResetLogoPreview(){
     const label = clean(area).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     if(key === 'lab' || label === 'laboratorio') return 'lab_order';
     if(key === 'imagenologia' || label === 'imagenologia') return 'imaging_order';
+    if(
+      key === 'cardiologia'
+      || key === 'funcionales'
+      || key === 'endoscopia'
+      || key === 'patologia'
+      || key === 'genetica'
+      || key === 'otros'
+      || label === 'cardiologia'
+      || label === 'funcionales'
+      || label === 'endoscopia'
+      || label === 'patologia'
+      || label === 'genetica'
+      || label === 'otros'
+    ) return 'order';
     return '';
   }
   function resolveClinicalDocumentIcon(documentType){
@@ -15501,7 +15631,9 @@ function mxResetLogoPreview(){
     const eventDatetime = nowSqlDateTime();
     const priority = clean(prioritySelect?.value || '');
     const indication = clean(indicationTextarea?.value || '');
-    const title = documentType === 'lab_order' ? 'Orden de laboratorio' : 'Orden de imagen';
+    const title = documentType === 'lab_order'
+      ? 'Orden de laboratorio'
+      : (documentType === 'imaging_order' ? 'Orden de imagen' : 'Orden de estudio especial');
     const summaryParts = [];
     summaryParts.push(`${items.length} estudio${items.length === 1 ? '' : 's'}`);
     if(priority) summaryParts.push(priority);
@@ -16672,6 +16804,7 @@ function mxResetLogoPreview(){
     modalEl?.addEventListener('hidden.bs.modal', ()=>{
       clearOrderReplacementState();
       setModalMode('add', controller);
+      window.setTimeout(cleanupBootstrapModalArtifactsIfIdle, 0);
     });
     controller.applyFilterChip('todos');
     controller.filterList('');
