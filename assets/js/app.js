@@ -4153,6 +4153,8 @@ console.info('app.js loaded :: 20251123a');
   const actividadClinicaNotaQrModalEl = pane.querySelector('#modalActividadClinicaNotaQr');
   const actividadClinicaAdjuntoModalEl = pane.querySelector('#modalActividadClinicaAdjunto');
   const actividadClinicaConsentModalEl = pane.querySelector('#modalActividadClinicaConsent');
+  const actividadClinicaLauncherMainEl = pane.querySelector('[data-role="ac-launcher-main"]');
+  const actividadClinicaLauncherProcPickerEl = pane.querySelector('[data-role="ac-launcher-proc-picker"]');
   const actividadClinicaLaunchBtns = Array.from(pane.querySelectorAll('[data-action="open-actividad-clinica"]'));
   const actividadClinicaNotaOpenQrBtn = pane.querySelector('[data-action="ac-nota-open-qr-capture"]');
   const actividadClinicaNotaQrStatusEl = pane.querySelector('[data-role="ac-nota-qr-status"]');
@@ -4597,6 +4599,15 @@ console.info('app.js loaded :: 20251123a');
       return true;
     }catch(_){
       return false;
+    }
+  };
+  const setActividadClinicaLauncherView = (view = 'main')=>{
+    const safeView = sanitizeText(view).toLowerCase() === 'proc' ? 'proc' : 'main';
+    if(actividadClinicaLauncherMainEl){
+      actividadClinicaLauncherMainEl.classList.toggle('d-none', safeView !== 'main');
+    }
+    if(actividadClinicaLauncherProcPickerEl){
+      actividadClinicaLauncherProcPickerEl.classList.toggle('d-none', safeView !== 'proc');
     }
   };
   const createActividadClinicaPortalMount = (modalEl, targetSelector, sourceSelector, opts = {})=>{
@@ -5370,6 +5381,7 @@ console.info('app.js loaded :: 20251123a');
     return true;
   };
   const openActividadClinicaFromTratamientoAlias = ()=>{
+    setActividadClinicaLauncherView('main');
     const opened = showActividadClinicaModalById(actividadClinicaModalEl);
     if(!opened) return false;
     window.requestAnimationFrame(()=>{
@@ -5594,6 +5606,7 @@ console.info('app.js loaded :: 20251123a');
       try{
         const BsModal = window.bootstrap && window.bootstrap.Modal;
         if(BsModal && actividadClinicaModalEl){
+          setActividadClinicaLauncherView('main');
           const modal = typeof BsModal.getOrCreateInstance === 'function'
             ? BsModal.getOrCreateInstance(actividadClinicaModalEl)
             : new BsModal(actividadClinicaModalEl);
@@ -5604,6 +5617,9 @@ console.info('app.js loaded :: 20251123a');
         }
       }catch(_){}
     }, true);
+  });
+  actividadClinicaModalEl?.addEventListener('hidden.bs.modal', ()=>{
+    setActividadClinicaLauncherView('main');
   });
   actividadClinicaNotaOpenQrBtn?.addEventListener('click', (event)=>{
     event.preventDefault();
@@ -5679,6 +5695,18 @@ console.info('app.js loaded :: 20251123a');
     }
   });
   actividadClinicaModalEl?.addEventListener('click', async (event)=>{
+    const procedurePickerBtn = event.target.closest('[data-action="actividad-clinica-open-procedimiento-picker"]');
+    if(procedurePickerBtn){
+      event.preventDefault();
+      setActividadClinicaLauncherView('proc');
+      return;
+    }
+    const procedureBackBtn = event.target.closest('[data-action="actividad-clinica-proc-back"]');
+    if(procedureBackBtn){
+      event.preventDefault();
+      setActividadClinicaLauncherView('main');
+      return;
+    }
     const noteBtn = event.target.closest('[data-action="actividad-clinica-open-nota"]');
     if(noteBtn){
       event.preventDefault();
@@ -9827,6 +9855,18 @@ console.info('app.js loaded :: 20251123a');
     nonDatosLinks.forEach(btn => {
       const item = btn.closest('.nav-item');
       if (!item) return;
+      if (item.hasAttribute('data-tab-technical')) {
+        item.classList.add('d-none');
+        const technicalTarget = sanitizeText(btn.getAttribute('data-bs-target'));
+        const technicalPane = technicalTarget ? pane.querySelector(technicalTarget) : null;
+        if (technicalPane) {
+          technicalPane.classList.add('d-none');
+          technicalPane.classList.remove('show', 'active');
+        }
+        btn.classList.remove('active');
+        btn.setAttribute('aria-selected', 'false');
+        return;
+      }
       const conditional = String(item.getAttribute('data-tab-conditional') || '').trim();
       const shouldShow = conditional !== 'gineco' || isFemaleExp;
       item.classList.toggle('d-none', !shouldShow);
@@ -9840,6 +9880,17 @@ console.info('app.js loaded :: 20251123a');
       }
       p.classList.remove('d-none');
     });
+    const hasActiveVisiblePane = panes.some((p)=> p.classList.contains('active') && !p.classList.contains('d-none'));
+    if(!hasActiveVisiblePane && datosTabPane){
+      tabs.forEach((btn)=>{
+        const isDatos = btn === datosTabLink;
+        btn.classList.toggle('active', isDatos);
+        btn.setAttribute('aria-selected', isDatos ? 'true' : 'false');
+      });
+      panes.forEach((p)=> p.classList.remove('show', 'active'));
+      datosTabPane.classList.remove('d-none');
+      datosTabPane.classList.add('show', 'active');
+    }
     syncTabRowGridColumns();
   };
 

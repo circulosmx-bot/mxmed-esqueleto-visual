@@ -3622,7 +3622,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body">
-                        <div class="row g-2">
+                        <div class="row g-2" data-role="ac-launcher-main">
                           <div class="col-12">
                             <div class="small fw-semibold text-uppercase text-muted">Documentar consulta</div>
                           </div>
@@ -3644,12 +3644,29 @@
                               <div class="small text-muted">Abre el registro de consentimiento</div>
                             </button>
                           </div>
+                          <div class="col-12">
+                            <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-procedimiento-picker">
+                              <strong>Registrar procedimiento</strong>
+                              <div class="small text-muted">Elige tipo de procedimiento clínico</div>
+                            </button>
+                          </div>
                           <div class="col-12 pt-1">
-                            <div class="small fw-semibold text-uppercase text-muted">Procedimientos y aplicaciones</div>
+                            <div class="small fw-semibold text-uppercase text-muted">Adjuntos y soporte</div>
+                          </div>
+                          <div class="col-12">
+                            <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-adjunto">
+                              <strong>Adjuntar documento</strong>
+                              <div class="small text-muted">Sube imagen o PDF al expediente clínico</div>
+                            </button>
+                          </div>
+                        </div>
+                        <div class="row g-2 d-none" data-role="ac-launcher-proc-picker">
+                          <div class="col-12">
+                            <div class="small fw-semibold text-uppercase text-muted">Selecciona el tipo de procedimiento</div>
                           </div>
                           <div class="col-12">
                             <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-procedimiento">
-                              <strong>Registrar procedimiento</strong>
+                              <strong>Procedimiento general</strong>
                               <div class="small text-muted">Abre el registro de procedimiento</div>
                             </button>
                           </div>
@@ -3671,13 +3688,9 @@
                               <div class="small text-muted">Abre procedimiento con tipo curación</div>
                             </button>
                           </div>
-                          <div class="col-12 pt-1">
-                            <div class="small fw-semibold text-uppercase text-muted">Adjuntos y soporte</div>
-                          </div>
-                          <div class="col-12">
-                            <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-adjunto">
-                              <strong>Adjuntar documento</strong>
-                              <div class="small text-muted">Sube imagen o PDF al expediente clínico</div>
+                          <div class="col-12 pt-2">
+                            <button type="button" class="btn btn-outline-secondary w-100 text-start" data-action="actividad-clinica-proc-back">
+                              Volver a acciones clínicas
                             </button>
                           </div>
                         </div>
