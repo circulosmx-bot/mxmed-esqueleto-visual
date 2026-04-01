@@ -5360,6 +5360,26 @@ console.info('app.js loaded :: 20251123a');
     }catch(_){}
     return true;
   };
+  const openOrdenEstudiosFromActividad = ()=>{
+    hideActividadClinicaModal();
+    const opened = showClinicalTab(clinicalTabTargets.estudios);
+    if(!opened) return false;
+    window.requestAnimationFrame(()=>{
+      try{
+        const studiesPane = pane.querySelector('#t-estudios');
+        const solicitarBtn = studiesPane?.querySelector('.est-section-tab[data-est-section="solicitar"]');
+        if(solicitarBtn && !solicitarBtn.classList.contains('active')){
+          solicitarBtn.click();
+        }
+        const focusTarget = studiesPane?.querySelector('[data-est-open-modal]');
+        focusTarget?.focus?.();
+      }catch(_){}
+    });
+    try{
+      console.info('[mxmed-actividad-clinica] open orden estudios');
+    }catch(_){}
+    return true;
+  };
   const openConsentimientoFromActividad = ()=>{
     hideActividadClinicaModal();
     const mounted = actividadClinicaConsentPortal?.mount?.() === true;
@@ -5711,6 +5731,12 @@ console.info('app.js loaded :: 20251123a');
     if(noteBtn){
       event.preventDefault();
       openNotaClinicaFromActividad();
+      return;
+    }
+    const studiesBtn = event.target.closest('[data-action="actividad-clinica-open-estudios"]');
+    if(studiesBtn){
+      event.preventDefault();
+      openOrdenEstudiosFromActividad();
       return;
     }
     const procedureBtn = event.target.closest('[data-action="actividad-clinica-open-procedimiento"]');
