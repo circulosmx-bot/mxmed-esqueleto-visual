@@ -4155,6 +4155,7 @@ console.info('app.js loaded :: 20251123a');
   const actividadClinicaConsentModalEl = pane.querySelector('#modalActividadClinicaConsent');
   const actividadClinicaLauncherMainEl = pane.querySelector('[data-role="ac-launcher-main"]');
   const actividadClinicaLauncherProcPickerEl = pane.querySelector('[data-role="ac-launcher-proc-picker"]');
+  const actividadClinicaLauncherStudiesPickerEl = pane.querySelector('[data-role="ac-launcher-studies-picker"]');
   const actividadClinicaLaunchBtns = Array.from(pane.querySelectorAll('[data-action="open-actividad-clinica"]'));
   const actividadClinicaNotaOpenQrBtn = pane.querySelector('[data-action="ac-nota-open-qr-capture"]');
   const actividadClinicaNotaQrStatusEl = pane.querySelector('[data-role="ac-nota-qr-status"]');
@@ -4602,12 +4603,16 @@ console.info('app.js loaded :: 20251123a');
     }
   };
   const setActividadClinicaLauncherView = (view = 'main')=>{
-    const safeView = sanitizeText(view).toLowerCase() === 'proc' ? 'proc' : 'main';
+    const requested = sanitizeText(view).toLowerCase();
+    const safeView = requested === 'proc' || requested === 'studies' ? requested : 'main';
     if(actividadClinicaLauncherMainEl){
       actividadClinicaLauncherMainEl.classList.toggle('d-none', safeView !== 'main');
     }
     if(actividadClinicaLauncherProcPickerEl){
       actividadClinicaLauncherProcPickerEl.classList.toggle('d-none', safeView !== 'proc');
+    }
+    if(actividadClinicaLauncherStudiesPickerEl){
+      actividadClinicaLauncherStudiesPickerEl.classList.toggle('d-none', safeView !== 'studies');
     }
   };
   const createActividadClinicaPortalMount = (modalEl, targetSelector, sourceSelector, opts = {})=>{
@@ -5360,7 +5365,7 @@ console.info('app.js loaded :: 20251123a');
     }catch(_){}
     return true;
   };
-  const openOrdenEstudiosFromActividad = ()=>{
+  const openOrdenEstudiosFromActividad = (variant = '')=>{
     hideActividadClinicaModal();
     const opened = showClinicalTab(clinicalTabTargets.estudios);
     if(!opened) return false;
@@ -5371,12 +5376,28 @@ console.info('app.js loaded :: 20251123a');
         if(solicitarBtn && !solicitarBtn.classList.contains('active')){
           solicitarBtn.click();
         }
-        const focusTarget = studiesPane?.querySelector('[data-est-open-modal]');
-        focusTarget?.focus?.();
+        const areaSelect = studiesPane?.querySelector('[data-est-area-select]');
+        const normalizedVariant = sanitizeText(variant).toLowerCase();
+        if(areaSelect){
+          const targetPattern = normalizedVariant === 'img' ? 'imagen' : 'laboratorio';
+          const targetOption = Array.from(areaSelect.options || []).find((opt)=>{
+            const text = sanitizeText(opt.textContent || '').toLowerCase();
+            return text.indexOf(targetPattern) !== -1;
+          });
+          if(targetOption){
+            areaSelect.value = targetOption.value;
+            areaSelect.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+        const triggerInput = studiesPane?.querySelector('[data-est-open-modal]');
+        if(triggerInput){
+          triggerInput.focus?.();
+          triggerInput.click?.();
+        }
       }catch(_){}
     });
     try{
-      console.info('[mxmed-actividad-clinica] open orden estudios');
+      console.info('[mxmed-actividad-clinica] open orden estudios', { variant: sanitizeText(variant) || 'lab' });
     }catch(_){}
     return true;
   };
@@ -5731,6 +5752,30 @@ console.info('app.js loaded :: 20251123a');
     if(noteBtn){
       event.preventDefault();
       openNotaClinicaFromActividad();
+      return;
+    }
+    const studiesPickerBtn = event.target.closest('[data-action="actividad-clinica-open-estudios-picker"]');
+    if(studiesPickerBtn){
+      event.preventDefault();
+      setActividadClinicaLauncherView('studies');
+      return;
+    }
+    const studiesBackBtn = event.target.closest('[data-action="actividad-clinica-studies-back"]');
+    if(studiesBackBtn){
+      event.preventDefault();
+      setActividadClinicaLauncherView('main');
+      return;
+    }
+    const studiesLabBtn = event.target.closest('[data-action="actividad-clinica-open-estudios-lab"]');
+    if(studiesLabBtn){
+      event.preventDefault();
+      openOrdenEstudiosFromActividad('lab');
+      return;
+    }
+    const studiesImgBtn = event.target.closest('[data-action="actividad-clinica-open-estudios-img"]');
+    if(studiesImgBtn){
+      event.preventDefault();
+      openOrdenEstudiosFromActividad('img');
       return;
     }
     const studiesBtn = event.target.closest('[data-action="actividad-clinica-open-estudios"]');

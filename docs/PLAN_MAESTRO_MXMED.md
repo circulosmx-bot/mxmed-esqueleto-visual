@@ -44,10 +44,14 @@ Perfil médico end-to-end:
 - Estabilidad al abrir Historial de atención en host principal (sin congelamiento operativo reportado en la ruta estable).
 - Eliminación de disparos repetitivos/loops de consulta en rutas críticas de historial (control operacional consolidado en la base estable de P15).
 - Modal expandido de Historial implementado y utilizable desde el flujo actual.
+- Robustecimiento del bridge host↔embed en `index.html`:
+  - el shell acepta `postMessage` desde el `contentWindow` raíz del iframe clínico y también desde frames descendientes/anidados;
+  - se endurece el enrutamiento de eventos en vistas embebidas/expandibles y se reducen fallas intermitentes de comunicación.
 - Homologación visual progresiva de cards del historial (compactación, jerarquía y consistencia de acciones).
 - Acciones secundarias homologadas en formato tipo link discreto (en lugar de CTAs primarios tipo botón).
 - Limpieza de headers/textos redundantes en bloques clínicos internos de historial.
 - Integración a casos clínicos reforzada:
+  - búsqueda de `owner_case` acotada al paciente actual en backend (`api/clinical/index.php`), evitando colisiones entre pacientes distintos;
   - conflicto `owner_case_id` coherente con lista visible del paciente
   - estado contextual `Ya integrado` en el caso propietario dentro del modal.
 - Selección de caso mejorada en modal de integración:
@@ -56,6 +60,8 @@ Perfil médico end-to-end:
 - Separación práctica entre timeline clínico y acciones contextuales (sin mezclar lógica clínica con ornamentación UX).
 
 Pendiente dentro de P16 (abierto):
+- Convergencia funcional final hacia Historial de atención como eje operativo único:
+  - desacople técnico de dependencias residuales de `#t-notas` (Actividad clínica) sin romper launchers/modales ya estabilizados.
 - Cerrar consistencia UX final del modal “Integrar a caso clínico” en escenarios borde (conflictos + cambio de caso activo en la misma sesión).
 - Homologación completa card↔detalle para todos los tipos en vista Casos clínicos expandida (paridad 100% con Historial general).
 - Cierre documental de criterios de aceptación P16 para pasar a fase siguiente sin deuda visual residual.
