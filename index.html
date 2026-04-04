@@ -2796,28 +2796,15 @@
           <div class="head">
             <div class="exp-hdr" data-role="exp-header">
               <div class="exp-hdr-left">
-                <div class="exp-hdr-title-row">
-                  <span class="material-symbols-rounded title-ico" aria-hidden="true">person_add</span>
-                  <span class="exp-hdr-title">Mis Pacientes · Expediente Médico</span>
-                </div>
-                <div class="exp-hdr-patient-row">
-                  <span class="exp-hdr-patient-name" data-role="exp-h-patient-name">Paciente</span>
-                  <span class="exp-hdr-chip" data-role="exp-h-age">--</span>
-                  <span class="exp-hdr-chip exp-hdr-chip-sex" data-role="exp-h-sex">--</span>
-                </div>
-                <div class="exp-hdr-last-dx d-none" data-role="exp-h-last-dx"></div>
-              </div>
-              <div class="exp-hdr-right">
-                <div class="exp-hdr-active-wrap d-none" data-role="exp-h-active-wrap">
-                  <span class="exp-hdr-onair-badge d-none" data-role="exp-h-active-enc">CONSULTA ACTIVA</span>
-                  <div class="exp-hdr-active-meta">
-                    <div class="exp-hdr-meta-line" data-role="exp-h-enc-origin"></div>
-                    <div class="exp-hdr-meta-line d-none" data-role="exp-h-enc-start"></div>
+                <div class="mx-section-topbar ne-rx-modal-header" data-role="exp-section-topbar">
+                  <div class="mx-section-topbar-title">
+                    <span class="mx-section-topbar-icon-wrap" data-role="exp-section-topbar-icon" aria-hidden="true">
+                      <span class="material-symbols-rounded mx-section-topbar-icon">person_add</span>
+                    </span>
+                    <span data-role="exp-section-topbar-text">EXPEDIENTE PACIENTE</span>
                   </div>
                 </div>
-                <div class="exp-hdr-neutral d-none" data-role="exp-h-neutral">Sin consulta activa</div>
-                <button type="button" class="btn btn-outline-primary btn-sm d-none" data-role="exp-h-start-enc-btn">Iniciar consulta</button>
-                <button type="button" class="btn btn-success btn-sm d-none" data-role="exp-h-close-enc-btn">Cerrar consulta</button>
+                <div id="exp_clinical_context" class="mx-clinical-header-host" data-clinical-header="slim" data-clinical-layout="shell"></div>
               </div>
             </div>
             <div class="exp-h-active-strip d-none" data-role="exp-h-active-strip">
@@ -6360,6 +6347,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body ne-rx-modal-body">
+                        <div class="mx-clinical-header-host mb-3" id="ne_rx_context" data-clinical-header="slim" data-clinical-layout="modal"></div>
                         <div class="ne-rx-dx mb-3" id="ne_rx_dx_block">
                           <div class="ne-rx-context-head">1. Contexto diagnóstico (obligatorio)</div>
                           <div class="row g-2 align-items-end">
@@ -6379,41 +6367,6 @@
                               <div class="ne-rx-dx-hint">
                                 Este contexto se usará para sugerencias y para guardar la receta como plantilla.
                               </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div class="ne-rx-context mb-3" id="ne_rx_context">
-                          <div class="ne-rx-context-head">2. Contexto clínico (auto)</div>
-                          <div class="ne-rx-context-grid">
-                            <div class="ne-rx-context-item">
-                              <span class="ne-rx-context-ico material-symbols-outlined" aria-hidden="true">person</span>
-                              <span class="ne-rx-context-label">Paciente</span>
-                              <span class="ne-rx-context-value" id="ne_rx_ctx_patient">No registrado</span>
-                            </div>
-                            <div class="ne-rx-context-item">
-                              <span class="ne-rx-context-ico material-symbols-outlined" aria-hidden="true">stethoscope</span>
-                              <span class="ne-rx-context-label">Médico</span>
-                              <span class="ne-rx-context-value" id="ne_rx_ctx_doctor">No registrado</span>
-                            </div>
-                            <div class="ne-rx-context-item">
-                              <span class="ne-rx-context-ico material-symbols-outlined" aria-hidden="true">calendar_month</span>
-                              <span class="ne-rx-context-label">Fecha</span>
-                              <span class="ne-rx-context-value" id="ne_rx_ctx_date">No registrada</span>
-                            </div>
-                            <div class="ne-rx-context-item">
-                              <span class="ne-rx-context-ico material-symbols-outlined" aria-hidden="true">description</span>
-                              <span class="ne-rx-context-label">Consulta</span>
-                              <span class="ne-rx-context-value" id="ne_rx_ctx_encounter">Sin consulta activa</span>
-                            </div>
-                            <div class="ne-rx-context-item ne-rx-context-item-wide">
-                              <span class="ne-rx-context-ico material-symbols-outlined" aria-hidden="true">warning</span>
-                              <span class="ne-rx-context-label">Alergias</span>
-                              <span class="ne-rx-context-value" id="ne_rx_ctx_allergies">Sin alergias registradas</span>
-                            </div>
-                            <div class="ne-rx-context-item ne-rx-context-item-wide">
-                              <span class="ne-rx-context-ico material-symbols-outlined" aria-hidden="true">medication</span>
-                              <span class="ne-rx-context-label">Medicamentos actuales</span>
-                              <span class="ne-rx-context-value" id="ne_rx_ctx_current_meds">Sin medicamentos registrados</span>
                             </div>
                           </div>
                         </div>

@@ -2204,12 +2204,7 @@ console.info('app.js loaded :: 20251123a');
     rxSave: document.getElementById('ne_rx_save'),
     rxFeedback: document.getElementById('ne_rx_feedback'),
     rxOpenDoc: document.getElementById('ne_rx_open_doc'),
-    rxCtxPatient: document.getElementById('ne_rx_ctx_patient'),
-    rxCtxDoctor: document.getElementById('ne_rx_ctx_doctor'),
-    rxCtxDate: document.getElementById('ne_rx_ctx_date'),
-    rxCtxEncounter: document.getElementById('ne_rx_ctx_encounter'),
-    rxCtxAllergies: document.getElementById('ne_rx_ctx_allergies'),
-    rxCtxCurrentMeds: document.getElementById('ne_rx_ctx_current_meds'),
+    rxContext: document.getElementById('ne_rx_context'),
     rxAnalysisSummary: document.getElementById('ne_rx_analysis_summary'),
     rxAnalysisRun: document.getElementById('ne_rx_analysis_run'),
     rxAnalysisConfirm: document.getElementById('ne_rx_analysis_confirm'),
@@ -5303,6 +5298,123 @@ console.info('app.js loaded :: 20251123a');
     return String(entry.appointment_id || entry.appointmentId || '').trim();
   };
   const normalizeRecetaText = (value) => String(value || '').trim();
+  const CLINICAL_SLIM_HEADER_TEMPLATE = `
+    <div class="ne-rx-ch-top">
+      <div class="ne-rx-ch-avatar" aria-hidden="true">
+        <span class="material-symbols-outlined">person</span>
+      </div>
+      <div class="ne-rx-ch-main">
+        <div class="ne-rx-ch-patient-line">
+          <span class="ne-rx-ch-patient-name" data-clinical-field="patient_name">No registrado</span>
+          <span class="ne-rx-ch-sep">·</span>
+          <span class="ne-rx-ch-meta" data-clinical-field="age">-- años</span>
+          <span class="ne-rx-ch-sep">·</span>
+          <span class="ne-rx-ch-meta" data-clinical-field="sex">--</span>
+        </div>
+        <div class="ne-rx-ch-reason" data-clinical-field="clinical_reason">Motivo: Sin motivo registrado</div>
+      </div>
+    </div>
+    <div class="ne-rx-ch-bottom">
+      <div class="ne-rx-ch-item">
+        <span class="material-symbols-outlined ne-rx-ch-ico" aria-hidden="true">calendar_month</span>
+        <span class="ne-rx-ch-value" data-clinical-field="current_date">No registrada</span>
+      </div>
+      <div class="ne-rx-ch-item">
+        <span class="material-symbols-outlined ne-rx-ch-ico" aria-hidden="true">description</span>
+        <div class="mx-ch-enc-wrap">
+          <span class="ne-rx-ch-value" data-clinical-field="encounter_status">Sin consulta activa</span>
+          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="encounter">Iniciar consulta</button>
+        </div>
+      </div>
+      <div class="ne-rx-ch-item">
+        <span class="material-symbols-outlined ne-rx-ch-ico" aria-hidden="true">warning</span>
+        <span class="ne-rx-ch-value" data-clinical-field="allergies">Sin alergias registradas</span>
+      </div>
+      <div class="ne-rx-ch-item ne-rx-ch-item-meds">
+        <span class="material-symbols-outlined ne-rx-ch-ico" aria-hidden="true">medication</span>
+        <span class="ne-rx-ch-value" data-clinical-field="current_medication">Sin medicación actual registrada</span>
+      </div>
+    </div>
+  `.trim();
+  const CLINICAL_HEADER_EMPTY_STATE = {
+    patient_name: 'No registrado',
+    age: '-- años',
+    sex: '--',
+    clinical_reason: 'Sin motivo registrado',
+    current_date: 'No registrada',
+    encounter_status: 'Sin consulta activa',
+    encounter_action_label: '',
+    encounter_action_mode: '',
+    allergies: 'Sin alergias registradas',
+    current_medication: 'Sin medicación actual registrada'
+  };
+  const normalizeClinicalHeaderData = (input = {}) => {
+    const patientName = normalizeRecetaText(input.patient_name);
+    const ageRaw = normalizeRecetaText(input.age || input.patient_age);
+    const sex = normalizeRecetaText(input.sex || input.patient_sex);
+    const clinicalReasonRaw = normalizeRecetaText(input.clinical_reason || input.reason);
+    const currentDate = normalizeRecetaText(input.current_date || input.date);
+    const encounterStatus = normalizeRecetaText(input.encounter_status || input.encounter_id);
+    const allergiesList = Array.isArray(input.allergies) ? input.allergies : [];
+    const currentMedsList = Array.isArray(input.current_medication)
+      ? input.current_medication
+      : (Array.isArray(input.current_medications) ? input.current_medications : []);
+    const allergies = allergiesList
+      .map((entry) => normalizeRecetaText(entry))
+      .filter(Boolean)
+      .join(' · ');
+    const currentMedication = currentMedsList
+      .map((entry) => normalizeRecetaText(entry))
+      .filter(Boolean)
+      .join(' · ');
+    return {
+      patient_name: patientName || CLINICAL_HEADER_EMPTY_STATE.patient_name,
+      age: ageRaw ? (/\banos?\b|\baños?\b/i.test(ageRaw) ? ageRaw : `${ageRaw} años`) : CLINICAL_HEADER_EMPTY_STATE.age,
+      sex: sex || CLINICAL_HEADER_EMPTY_STATE.sex,
+      clinical_reason: clinicalReasonRaw ? `Motivo: ${clinicalReasonRaw}` : `Motivo: ${CLINICAL_HEADER_EMPTY_STATE.clinical_reason}`,
+      current_date: currentDate || CLINICAL_HEADER_EMPTY_STATE.current_date,
+      encounter_status: encounterStatus || CLINICAL_HEADER_EMPTY_STATE.encounter_status,
+      encounter_action_label: normalizeRecetaText(input.encounter_action_label || ''),
+      encounter_action_mode: normalizeRecetaText(input.encounter_action_mode || ''),
+      allergies: allergies || CLINICAL_HEADER_EMPTY_STATE.allergies,
+      current_medication: currentMedication || CLINICAL_HEADER_EMPTY_STATE.current_medication
+    };
+  };
+  const ensureClinicalSlimHeader = (container, opts = {}) => {
+    if (!container) return;
+    if (!container.querySelector('[data-clinical-field="patient_name"]')) {
+      container.innerHTML = CLINICAL_SLIM_HEADER_TEMPLATE;
+    }
+    const layout = String(opts.layout || container.getAttribute('data-clinical-layout') || '').trim().toLowerCase();
+    container.classList.add('ne-rx-clinical-header', 'mx-clinical-header');
+    container.classList.toggle('mx-clinical-header--shell', layout === 'shell');
+    container.classList.toggle('mx-clinical-header--modal', layout !== 'shell');
+  };
+  const renderClinicalSlimHeader = (container, headerData = {}, opts = {}) => {
+    if (!container) return;
+    ensureClinicalSlimHeader(container, opts);
+    const normalized = normalizeClinicalHeaderData(headerData);
+    const fields = Object.keys(CLINICAL_HEADER_EMPTY_STATE);
+    fields.forEach((field) => {
+      const node = container.querySelector(`[data-clinical-field="${field}"]`);
+      if (!node) return;
+      node.textContent = normalized[field];
+    });
+    const actionBtn = container.querySelector('[data-clinical-action="encounter"]');
+    if (actionBtn) {
+      const hasAction = normalized.encounter_action_label !== '' && normalized.encounter_action_mode !== '';
+      actionBtn.classList.toggle('d-none', !hasAction);
+      if (hasAction) {
+        actionBtn.textContent = normalized.encounter_action_label;
+        actionBtn.setAttribute('data-encounter-action-mode', normalized.encounter_action_mode);
+      } else {
+        actionBtn.textContent = '';
+        actionBtn.removeAttribute('data-encounter-action-mode');
+      }
+    }
+  };
+  window.mxmedNormalizeClinicalHeaderData = normalizeClinicalHeaderData;
+  window.mxmedRenderClinicalSlimHeader = renderClinicalSlimHeader;
   const isDefaultDoctorLabel = (name) => {
     const normalized = normalize(String(name || ''));
     return normalized === 'medico' || normalized === 'doctor' || normalized === '';
@@ -5342,6 +5454,7 @@ console.info('app.js loaded :: 20251123a');
     const ctx = ctxInput || resolveRecetaRuntimeContext();
     const patientId = normalizeRecetaText(ctx?.patient_id);
     const encounterKey = normalizeRecetaText(ctx?.encounter_key);
+    const citas = getClinicalCitations();
     const getChipValues = (itemKey) => {
       const chips = Array.from(document.querySelectorAll(`#t-historia [data-hc-item="${itemKey}"] [data-hc-chips] .hc-chip`));
       return chips.map((chip) => {
@@ -5351,20 +5464,30 @@ console.info('app.js loaded :: 20251123a');
       }).filter(Boolean);
     };
     const allergies = getChipValues('alergias');
+    const currentMedsFromHistoria = getChipValues('medicamentos');
     const currentDraft = getRxDraft(patientId);
-    const currentMedications = (Array.isArray(currentDraft.medications) ? currentDraft.medications : [])
+    const currentMedicationsFromDraft = (Array.isArray(currentDraft.medications) ? currentDraft.medications : [])
       .map((item) => String(item?.name || '').trim())
       .filter(Boolean);
+    const currentMedications = currentMedsFromHistoria.length ? currentMedsFromHistoria : currentMedicationsFromDraft;
+    const encounterStatus = encounterKey ? 'Consulta activa' : 'Sin consulta activa';
     return {
       patient_id: patientId || null,
       encounter_id: encounterKey || null,
       patient_name: normalizeRecetaText(ctx?.patient?.nombre_completo),
+      age: normalizeRecetaText(ctx?.patient?.edad),
+      sex: normalizeRecetaText(ctx?.patient?.sexo),
+      clinical_reason: normalizeRecetaText(citas?.motivo_consulta),
       doctor_name: normalizeRecetaText(ctx?.medico?.nombre || ctx?.actor?.nombre_completo),
+      current_date: new Date().toISOString().slice(0, 10),
       date: new Date().toISOString().slice(0, 10),
+      encounter_status: encounterStatus,
       allergies,
-      current_medications: currentMedications
+      current_medications: currentMedications,
+      current_medication: currentMedications
     };
   };
+  window.mxmedBuildClinicalHeaderData = collectPrescriptionClinicalContext;
   window.collectPrescriptionClinicalContext = collectPrescriptionClinicalContext;
 
   const runPrescriptionLocalChecks = (medications = []) => {
@@ -5429,12 +5552,7 @@ console.info('app.js loaded :: 20251123a');
 
   const renderRecetaContextPanel = (ctx) => {
     const prescriptionContext = collectPrescriptionClinicalContext(ctx);
-    if (els.rxCtxPatient) els.rxCtxPatient.textContent = prescriptionContext.patient_name || 'No registrado';
-    if (els.rxCtxDoctor) els.rxCtxDoctor.textContent = prescriptionContext.doctor_name || 'No registrado';
-    if (els.rxCtxDate) els.rxCtxDate.textContent = prescriptionContext.date || 'No registrada';
-    if (els.rxCtxEncounter) els.rxCtxEncounter.textContent = prescriptionContext.encounter_id || 'Sin consulta activa';
-    if (els.rxCtxAllergies) els.rxCtxAllergies.textContent = prescriptionContext.allergies.length ? prescriptionContext.allergies.join(' · ') : 'Sin alergias registradas';
-    if (els.rxCtxCurrentMeds) els.rxCtxCurrentMeds.textContent = prescriptionContext.current_medications.length ? prescriptionContext.current_medications.join(' · ') : 'Sin medicamentos registrados';
+    renderClinicalSlimHeader(els.rxContext, prescriptionContext, { layout: 'modal' });
   };
 
   const mapValidPrescriptionItems = (meds) => {
@@ -6076,6 +6194,8 @@ console.info('app.js loaded :: 20251123a');
   const tabs = Array.from(pane.querySelectorAll('.mm-tabs-row .nav-link'));
   const historialAtencionBtn = pane.querySelector('[data-action="open-historial-atencion"]');
   const tabsWrap = pane.querySelector('[data-exp-tabs]');
+  const expSectionTopbarIcon = pane.querySelector('[data-role="exp-section-topbar-icon"]');
+  const expSectionTopbarText = pane.querySelector('[data-role="exp-section-topbar-text"]');
   if(!tabs.length) return;
 
   const nameInput = pane.querySelector('[data-pac-nombre]');
@@ -6089,17 +6209,11 @@ console.info('app.js loaded :: 20251123a');
   const datosTabLink = pane.querySelector('[data-tab-key="t-datos"]');
   const datosTabPane = pane.querySelector('#t-datos');
   const expHeader = pane.querySelector('[data-role="exp-header"]');
+  const expClinicalContext = pane.querySelector('#exp_clinical_context');
   const expHeaderName = pane.querySelector('[data-role="exp-h-patient-name"]');
   const expHeaderAge = pane.querySelector('[data-role="exp-h-age"]');
   const expHeaderSex = pane.querySelector('[data-role="exp-h-sex"]');
   const expHeaderLastDx = pane.querySelector('[data-role="exp-h-last-dx"]');
-  const expHeaderActiveWrap = pane.querySelector('[data-role="exp-h-active-wrap"]');
-  const expHeaderActiveBadge = pane.querySelector('[data-role="exp-h-active-enc"]');
-  const expHeaderOrigin = pane.querySelector('[data-role="exp-h-enc-origin"]');
-  const expHeaderStart = pane.querySelector('[data-role="exp-h-enc-start"]');
-  const expHeaderNeutral = pane.querySelector('[data-role="exp-h-neutral"]');
-  const expHeaderStartBtn = pane.querySelector('[data-role="exp-h-start-enc-btn"]');
-  const expHeaderCloseBtn = pane.querySelector('[data-role="exp-h-close-enc-btn"]');
   const expHeaderActiveStrip = pane.querySelector('[data-role="exp-h-active-strip"]');
   const expHeaderActiveStripScroll = pane.querySelector('[data-role="exp-h-active-strip-scroll"]');
   const p10StartBtn = document.querySelector('#mm-p10-bar [data-action="p10-start-encounter"]');
@@ -11853,6 +11967,21 @@ console.info('app.js loaded :: 20251123a');
     if(runToken !== headerSyncToken) return;
     const hasPatientContext = !!patientId;
     const hasActiveEncounter = !!encounterKey;
+    if (typeof window.mxmedRenderClinicalSlimHeader === 'function' && expClinicalContext) {
+      const sharedHeaderData = (typeof window.mxmedBuildClinicalHeaderData === 'function')
+        ? window.mxmedBuildClinicalHeaderData()
+        : {};
+      window.mxmedRenderClinicalSlimHeader(expClinicalContext, {
+        ...sharedHeaderData,
+        patient_name: fullName,
+        age: ageText || '--',
+        sex: sexText,
+        clinical_reason: motivoConsulta || '',
+        encounter_status: hasActiveEncounter ? 'Consulta activa' : 'Sin consulta activa',
+        encounter_action_label: hasPatientContext ? (hasActiveEncounter ? 'Cerrar consulta' : 'Iniciar consulta') : '',
+        encounter_action_mode: hasPatientContext ? (hasActiveEncounter ? 'close' : 'start') : ''
+      }, { layout: 'shell' });
+    }
     const hasEntriesForPatient = (typeof window.mxmedHasActiveEntriesForPatient === 'function')
       ? window.mxmedHasActiveEntriesForPatient(patientId)
       : null;
@@ -11885,24 +12014,10 @@ console.info('app.js loaded :: 20251123a');
       }
     }
 
-    toggleNodeHidden(expHeaderActiveWrap, !hasActiveEncounter);
-    toggleNodeHidden(expHeaderActiveBadge, !hasActiveEncounter);
-    toggleNodeHidden(expHeaderNeutral, hasActiveEncounter || !hasPatientContext);
-    toggleNodeHidden(expHeaderStartBtn, hasActiveEncounter || !hasPatientContext);
-    toggleNodeHidden(expHeaderCloseBtn, !hasActiveEncounter);
-
     // 4) Multi-activo (strip actual; conservar sin rediseño)
     renderActiveEncounterStrip({ currentFullName: fullName });
 
     if(!hasActiveEncounter){
-      if(expHeaderOrigin){
-        setNodeText(expHeaderOrigin, '');
-        toggleNodeHidden(expHeaderOrigin, true);
-      }
-      if(expHeaderStart){
-        setNodeText(expHeaderStart, '');
-        toggleNodeHidden(expHeaderStart, true);
-      }
       return;
     }
 
@@ -11937,13 +12052,23 @@ console.info('app.js loaded :: 20251123a');
       }
     }
 
-    if(expHeaderOrigin){
-      setNodeText(expHeaderOrigin, originText);
-      toggleNodeHidden(expHeaderOrigin, !originText);
-    }
-    if(expHeaderStart){
-      setNodeText(expHeaderStart, startText);
-      toggleNodeHidden(expHeaderStart, !startText);
+    if (typeof window.mxmedRenderClinicalSlimHeader === 'function' && expClinicalContext) {
+      const sharedHeaderData = (typeof window.mxmedBuildClinicalHeaderData === 'function')
+        ? window.mxmedBuildClinicalHeaderData()
+        : {};
+      const statusParts = ['Consulta activa'];
+      if (originText) statusParts.push(originText.replace(/^Origen:\s*/i, ''));
+      if (startText) statusParts.push(startText.replace(/^Inicio:\s*/i, ''));
+      window.mxmedRenderClinicalSlimHeader(expClinicalContext, {
+        ...sharedHeaderData,
+        patient_name: fullName,
+        age: ageText || '--',
+        sex: sexText,
+        clinical_reason: motivoConsulta || '',
+        encounter_status: statusParts.join(' · '),
+        encounter_action_label: hasPatientContext ? 'Cerrar consulta' : '',
+        encounter_action_mode: hasPatientContext ? 'close' : ''
+      }, { layout: 'shell' });
     }
   };
   const setCurrentEncounterForPatient = (patientId, encounterKey, opts = {})=>{
@@ -12078,6 +12203,7 @@ console.info('app.js loaded :: 20251123a');
     updateGenderExtra();
     applyPatientGate();
     syncExpedienteHeaderContext();
+    syncExpedienteSectionTopbarTitle();
     if(!ready){
       showFirstAvailable();
     }
@@ -12090,6 +12216,40 @@ console.info('app.js loaded :: 20251123a');
   }));
 
   const getTabIdFromTarget = (target)=> String(target || '').replace(/^#/, '').trim();
+  const getTabDisplayTitle = (btn)=>{
+    if(!btn) return '';
+    const labelNode = btn.querySelector('.tab-lbl') || btn;
+    const raw = String(labelNode.textContent || '').replace(/\s+/g, ' ').trim();
+    if(!raw) return '';
+    return raw.toLocaleUpperCase('es-MX');
+  };
+  const syncExpedienteSectionTopbarIcon = (btn)=>{
+    if(!expSectionTopbarIcon) return;
+    const iconSource = btn ? btn.querySelector('.tab-ico') : null;
+    expSectionTopbarIcon.innerHTML = '';
+    if(iconSource){
+      const iconClone = iconSource.cloneNode(true);
+      if(iconClone.classList){
+        iconClone.classList.remove('tab-ico');
+        iconClone.classList.add('mx-section-topbar-icon');
+      }
+      expSectionTopbarIcon.appendChild(iconClone);
+      return;
+    }
+    const fallback = document.createElement('span');
+    fallback.className = 'material-symbols-rounded mx-section-topbar-icon';
+    fallback.textContent = 'person_add';
+    expSectionTopbarIcon.appendChild(fallback);
+  };
+  const syncExpedienteSectionTopbarTitle = (btn = null)=>{
+    if(!expSectionTopbarText) return;
+    const currentBtn = btn || pane.querySelector('.mm-tabs-row .nav-link.active');
+    syncExpedienteSectionTopbarIcon(currentBtn);
+    const title = getTabDisplayTitle(currentBtn) || 'EXPEDIENTE PACIENTE';
+    if(expSectionTopbarText.textContent !== title){
+      expSectionTopbarText.textContent = title;
+    }
+  };
   const activateWithBootstrap = (btn)=>{
     const BsTab = window.bootstrap && window.bootstrap.Tab;
     if(!BsTab) return false;
@@ -12121,12 +12281,14 @@ console.info('app.js loaded :: 20251123a');
       paneTarget.classList.add('show','active');
     }
     pane.dataset.activeTab = getTabIdFromTarget(target);
+    syncExpedienteSectionTopbarTitle(btn);
   };
   tabLinks.forEach((btn)=>{
     btn.addEventListener('shown.bs.tab', ()=>{
       const target = btn.getAttribute('data-bs-target');
       if(!target) return;
       pane.dataset.activeTab = getTabIdFromTarget(target);
+      syncExpedienteSectionTopbarTitle(btn);
     });
   });
   tabLinks.forEach(btn=>{
@@ -12139,6 +12301,7 @@ console.info('app.js loaded :: 20251123a');
       activateTabPaneManually(btn, target);
     });
   });
+  syncExpedienteSectionTopbarTitle();
 
   historialAtencionBtn?.addEventListener('click', (ev)=>{
     ev.preventDefault();
@@ -12170,16 +12333,20 @@ console.info('app.js loaded :: 20251123a');
     pane.__patientGateInit = true;
   }
 
-  if(expHeaderCloseBtn){
-    expHeaderCloseBtn.addEventListener('click', ()=>{
-      if(!p10FinalizeBtn || p10FinalizeBtn.disabled) return;
-      p10FinalizeBtn.click();
-    });
-  }
-  if(expHeaderStartBtn){
-    expHeaderStartBtn.addEventListener('click', ()=>{
-      if(!p10StartBtn || p10StartBtn.disabled) return;
-      p10StartBtn.click();
+  if(expClinicalContext){
+    expClinicalContext.addEventListener('click', (ev)=>{
+      const trigger = ev.target.closest('[data-clinical-action="encounter"]');
+      if(!trigger) return;
+      const mode = String(trigger.getAttribute('data-encounter-action-mode') || '').trim();
+      if(mode === 'close'){
+        if(!p10FinalizeBtn || p10FinalizeBtn.disabled) return;
+        p10FinalizeBtn.click();
+        return;
+      }
+      if(mode === 'start'){
+        if(!p10StartBtn || p10StartBtn.disabled) return;
+        p10StartBtn.click();
+      }
     });
   }
   if(expHeaderActiveStripScroll){

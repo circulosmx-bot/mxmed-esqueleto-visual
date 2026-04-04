@@ -1559,6 +1559,37 @@ Nota de transición:
   para evitar ambigüedad con perfiles de usuario. El código existente podrá alinearse a esta
   nomenclatura en fases futuras sin bloquear la operación actual.
 
+### REC-F1 — Implementación base de receta clínica (estado actual)
+
+A. Capacidades implementadas (funcionales en UI)
+- autocompletado de medicamento/presentación desde catálogo
+- catálogo híbrido operativo: seed local + memoria del médico + captura manual
+- patrones de administración aplicados por presentación
+- adaptación contextual de dosis/vía/frecuencia/duración/indicaciones por patrón
+- control de rutas válidas por patrón y eliminación de herencias incompatibles
+- reset controlado al cambiar de patrón (sin borrar de forma agresiva cuando el patrón se mantiene)
+- chips de captura rápida integrados al flujo de edición
+- cantidad total inteligente:
+  - autocálculo en patrones autocálculables
+  - modo manual asistido en patrones no autocálculables
+- integración vigente con Historial y Viewer de documentos clínicos
+
+B. Decisiones arquitectónicas consolidadas
+- catálogo desacoplado del runtime principal y preparado para crecimiento por dataset local versionado
+- gobernanza de prescripción basada en patrón de administración (no reglas ad-hoc por medicamento)
+- lógica de receta resuelta en frontend en esta fase, sin backend nuevo dedicado
+- ejecución clínica sin dependencia de APIs externas en tiempo real durante la captura
+
+C. Estado actual
+- la base de receta clínica está implementada y funcional para operación de Fase 1
+- el módulo quedó estable para continuar con fases evolutivas sin reabrir diseño base
+
+D. Pendientes futuros (fase siguiente, sin rediseño)
+- plantillas de receta (guardado y reutilización clínica)
+- validaciones clínicas avanzadas (interacciones, contraindicaciones, reglas terapéuticas)
+- análisis asistido por IA bajo demanda con controles de consentimiento
+- mejora de cobertura de catálogo vía importación masiva normalizada
+
 ## Directrices permanentes del núcleo clínico MXMed
 
 El núcleo clínico de MXMed se organiza bajo la siguiente arquitectura conceptual:
