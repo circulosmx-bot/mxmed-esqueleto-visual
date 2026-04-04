@@ -563,6 +563,9 @@ function timeline_activity_title(array $item, array $meta): string
 function timeline_human_document_type_label(string $documentType): string
 {
     $type = strtolower(trim($documentType));
+    if ($type === 'prescription' || $type === 'rx') {
+        return 'Receta';
+    }
     if ($type === 'image') {
         return 'Fotografía';
     }
@@ -2337,6 +2340,7 @@ if (!$embed) {
                 $isMedicationAdministration = ($docTypeNorm === 'medication_administration');
                 $isWoundCare = ($docTypeNorm === 'wound_care');
                 $isProcedure = ($docTypeNorm === 'procedure');
+                $isPrescriptionDoc = in_array($docTypeNorm, ['prescription', 'rx'], true);
                 $isConsentDoc = in_array($docTypeNorm, ['consentimiento_informado', 'consent_document'], true);
                 $isSimpleUploadDoc = in_array($docTypeNorm, ['image', 'pdf', 'text', 'document', 'file'], true);
                 $isAdjuntarFlowDoc = ($docSource === 'actividad_clinica_host');
@@ -2585,6 +2589,33 @@ if (!$embed) {
                     }
                     if ($note !== '') {
                         $docMetaLine3 = 'Nota: ' . $note;
+                    }
+                } elseif ($isPrescriptionDoc) {
+                    $rxItemsRaw = [];
+                    if (is_array($docPayload['medications'] ?? null)) {
+                        $rxItemsRaw = $docPayload['medications'];
+                    } elseif (is_array($docPayload['prescription']['items'] ?? null)) {
+                        $rxItemsRaw = $docPayload['prescription']['items'];
+                    }
+                    $rxNames = [];
+                    foreach ($rxItemsRaw as $rxItem) {
+                        if (!is_array($rxItem)) {
+                            continue;
+                        }
+                        $rxName = trim((string)($rxItem['name'] ?? ($rxItem['medicamento'] ?? '')));
+                        if ($rxName !== '') {
+                            $rxNames[] = $rxName;
+                        }
+                    }
+                    $docDisplayTitle = $docUserTitle !== '' ? $docUserTitle : 'Receta médica';
+                    if ($docSummaryText !== '' && timeline_normalize_label($docSummaryText) !== timeline_normalize_label($docDisplayTitle)) {
+                        $docMetaLine1 = $docSummaryText;
+                    } elseif ($rxNames !== []) {
+                        $preview = array_slice($rxNames, 0, 2);
+                        $remaining = count($rxNames) - count($preview);
+                        $docMetaLine1 = implode(', ', $preview) . ($remaining > 0 ? (' y ' . $remaining . ' más') : '');
+                    } else {
+                        $docMetaLine1 = 'Receta clínica';
                     }
                 } elseif (!$isStudyDoc) {
                     if ($docCategoryLabel !== '' && !timeline_is_generic_document_label($docCategoryLabel)) {

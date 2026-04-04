@@ -3639,12 +3639,6 @@
                             </button>
                           </div>
                           <div class="col-12">
-                            <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-estudios-picker">
-                              <strong>Orden de estudios</strong>
-                              <div class="small text-muted">Elige tipo de estudio antes de generar la orden</div>
-                            </button>
-                          </div>
-                          <div class="col-12">
                             <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-consent">
                               <strong>Consentimiento informado</strong>
                               <div class="small text-muted">Abre el registro de consentimiento</div>
@@ -3696,28 +3690,6 @@
                           </div>
                           <div class="col-12 pt-2">
                             <button type="button" class="btn btn-outline-secondary w-100 text-start" data-action="actividad-clinica-proc-back">
-                              Volver a acciones clínicas
-                            </button>
-                          </div>
-                        </div>
-                        <div class="row g-2 d-none" data-role="ac-launcher-studies-picker">
-                          <div class="col-12">
-                            <div class="small fw-semibold text-uppercase text-muted">Selecciona el tipo de orden</div>
-                          </div>
-                          <div class="col-12">
-                            <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-estudios-lab">
-                              <strong>Laboratorio</strong>
-                              <div class="small text-muted">Abre el flujo de orden de laboratorio</div>
-                            </button>
-                          </div>
-                          <div class="col-12">
-                            <button type="button" class="btn btn-outline-primary w-100 text-start" data-action="actividad-clinica-open-estudios-img">
-                              <strong>Imagen</strong>
-                              <div class="small text-muted">Abre el flujo de orden de imagenología</div>
-                            </button>
-                          </div>
-                          <div class="col-12 pt-2">
-                            <button type="button" class="btn btn-outline-secondary w-100 text-start" data-action="actividad-clinica-studies-back">
                               Volver a acciones clínicas
                             </button>
                           </div>
@@ -4350,6 +4322,14 @@
                     <div class="row g-3 align-items-start">
                       <div class="col-lg-8">
                         <div class="est-toolbar row g-2 align-items-end">
+                          <div class="col-12" data-role="ac-order-entry-selector">
+                            <div class="small fw-semibold text-uppercase text-muted mb-1">Tipo de orden diagnóstica</div>
+                            <div class="d-flex flex-wrap gap-2">
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-action="ac-order-entry-type" data-order-entry-type="lab">Laboratorio</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-action="ac-order-entry-type" data-order-entry-type="img">Imagen</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" data-action="ac-order-entry-type" data-order-entry-type="special">Estudios especiales</button>
+                            </div>
+                          </div>
                           <div class="col-md-4">
                             <label class="form-label">Tipo</label>
                             <select class="form-select" data-est-area-select>
@@ -4369,6 +4349,22 @@
                           <div class="col-12">
                             <label class="form-label">Indicación clínica</label>
                             <textarea class="form-control" rows="2" placeholder="Motivo o diagnóstico presuntivo" data-role="ac-order-indication"></textarea>
+                          </div>
+                          <div class="col-12 d-none" data-role="ac-special-studies-inline">
+                            <div class="border rounded p-2">
+                              <div class="small fw-semibold text-uppercase text-muted mb-2">Estudios especiales</div>
+                              <div class="small text-muted mb-2">Selecciona un estudio para abrir su catálogo en el módulo de Estudios diagnósticos.</div>
+                              <div class="d-flex flex-wrap gap-2">
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-action="ac-open-special-study" data-study-key="ecg">Electrocardiograma (ECG)</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-action="ac-open-special-study" data-study-key="echo">Ecocardiograma</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-action="ac-open-special-study" data-study-key="holter">Holter</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-action="ac-open-special-study" data-study-key="stress_test">Prueba de esfuerzo</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-action="ac-open-special-study" data-study-key="eeg">Electroencefalograma (EEG)</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-action="ac-open-special-study" data-study-key="emg">Electromiografía (EMG)</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-action="ac-open-special-study" data-study-key="spirometry">Espirometría</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-action="ac-open-special-study" data-study-key="audiometry">Audiometría</button>
+                              </div>
+                            </div>
                           </div>
                           <div class="col-12">
                             <div class="small text-muted d-none" data-role="ac-order-feedback"></div>
@@ -6354,23 +6350,124 @@
 
                 <!-- Modal: Receta (mock funcional local) -->
                 <div class="modal fade" id="modalReceta" tabindex="-1" aria-hidden="true">
-                  <div class="modal-dialog modal-lg modal-dialog-centered">
-                    <div class="modal-content">
-                      <div class="modal-header">
-                        <h5 class="modal-title">Receta</h5>
+                  <div class="modal-dialog modal-xl modal-dialog-scrollable ne-rx-modal-dialog">
+                    <div class="modal-content ne-rx-modal-content">
+                      <div class="modal-header ne-rx-modal-header">
+                        <h5 class="modal-title ne-rx-modal-title">
+                          <span class="material-symbols-outlined ne-rx-modal-title-icon" aria-hidden="true">prescriptions</span>
+                          <span>Receta médica</span>
+                        </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
-                      <div class="modal-body">
+                      <div class="modal-body ne-rx-modal-body">
+                        <div class="ne-rx-dx mb-3" id="ne_rx_dx_block">
+                          <div class="ne-rx-context-head">1. Contexto diagnóstico (obligatorio)</div>
+                          <div class="row g-2 align-items-end">
+                            <div class="col-lg-3 col-md-4">
+                              <label class="form-label mb-1" for="ne_rx_dx_mode">Clasificación clínica</label>
+                              <select class="form-select form-select-sm" id="ne_rx_dx_mode">
+                                <option value="diagnostico">Diagnóstico</option>
+                                <option value="prediagnostico">Prediagnóstico</option>
+                                <option value="sin_diagnostico">Sin diagnóstico definido</option>
+                              </select>
+                            </div>
+                            <div class="col-lg-6 col-md-8">
+                              <label class="form-label mb-1" for="ne_rx_dx_text">Diagnóstico o descripción clínica</label>
+                              <input type="text" class="form-control form-control-sm" id="ne_rx_dx_text" placeholder="Ej. Faringoamigdalitis aguda / dolor lumbar mecánico">
+                            </div>
+                            <div class="col-lg-3">
+                              <div class="ne-rx-dx-hint">
+                                Este contexto se usará para sugerencias y para guardar la receta como plantilla.
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="ne-rx-context mb-3" id="ne_rx_context">
+                          <div class="ne-rx-context-head">2. Contexto clínico (auto)</div>
+                          <div class="ne-rx-context-grid">
+                            <div class="ne-rx-context-item">
+                              <span class="ne-rx-context-ico material-symbols-outlined" aria-hidden="true">person</span>
+                              <span class="ne-rx-context-label">Paciente</span>
+                              <span class="ne-rx-context-value" id="ne_rx_ctx_patient">No registrado</span>
+                            </div>
+                            <div class="ne-rx-context-item">
+                              <span class="ne-rx-context-ico material-symbols-outlined" aria-hidden="true">stethoscope</span>
+                              <span class="ne-rx-context-label">Médico</span>
+                              <span class="ne-rx-context-value" id="ne_rx_ctx_doctor">No registrado</span>
+                            </div>
+                            <div class="ne-rx-context-item">
+                              <span class="ne-rx-context-ico material-symbols-outlined" aria-hidden="true">calendar_month</span>
+                              <span class="ne-rx-context-label">Fecha</span>
+                              <span class="ne-rx-context-value" id="ne_rx_ctx_date">No registrada</span>
+                            </div>
+                            <div class="ne-rx-context-item">
+                              <span class="ne-rx-context-ico material-symbols-outlined" aria-hidden="true">description</span>
+                              <span class="ne-rx-context-label">Consulta</span>
+                              <span class="ne-rx-context-value" id="ne_rx_ctx_encounter">Sin consulta activa</span>
+                            </div>
+                            <div class="ne-rx-context-item ne-rx-context-item-wide">
+                              <span class="ne-rx-context-ico material-symbols-outlined" aria-hidden="true">warning</span>
+                              <span class="ne-rx-context-label">Alergias</span>
+                              <span class="ne-rx-context-value" id="ne_rx_ctx_allergies">Sin alergias registradas</span>
+                            </div>
+                            <div class="ne-rx-context-item ne-rx-context-item-wide">
+                              <span class="ne-rx-context-ico material-symbols-outlined" aria-hidden="true">medication</span>
+                              <span class="ne-rx-context-label">Medicamentos actuales</span>
+                              <span class="ne-rx-context-value" id="ne_rx_ctx_current_meds">Sin medicamentos registrados</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="ne-rx-section-title mb-2">2. Agregar medicamento</div>
                         <div class="ne-rx-grid" id="ne_rx_grid">
                           <!-- filas dinámicas -->
                         </div>
-                        <div class="small d-none mt-2" id="ne_rx_feedback" role="status" aria-live="polite"></div>
-                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="ne_rx_add">Agregar medicamento</button>
+                        <div class="ne-rx-section-title ne-rx-list-title mt-3 mb-2">3. Receta (<span id="ne_rx_count">0</span> medicamentos)</div>
+                        <div class="d-flex justify-content-center align-items-center mt-2 gap-2 flex-wrap ne-rx-add-row">
+                          <button type="button" class="btn btn-outline-primary btn-sm" id="ne_rx_add">+ Agregar medicamento</button>
+                          <div class="small d-none" id="ne_rx_feedback" role="status" aria-live="polite"></div>
+                        </div>
+                        <div class="ne-rx-footer-grid mt-3">
+                          <div class="ne-rx-analysis" id="ne_rx_analysis_block">
+                            <div class="ne-rx-analysis-head d-flex align-items-center justify-content-between gap-2">
+                              <span>Validación rápida</span>
+                              <button type="button" class="btn btn-outline-secondary btn-sm" id="ne_rx_analysis_run" disabled>Analizar receta con IA</button>
+                            </div>
+                            <div class="small text-muted mt-1" id="ne_rx_analysis_summary">Disponible próximamente bajo demanda. Por ahora se muestran validaciones locales básicas.</div>
+                            <div class="small text-muted mt-2" id="ne_rx_analysis_disclaimer">Este análisis es una herramienta de apoyo. El médico es responsable de la interpretación clínica.</div>
+                          </div>
+                          <div class="ne-rx-template-card">
+                            <div class="ne-rx-template-title">¿Desea guardar como plantilla?</div>
+                            <div class="small text-muted mb-2">Al emitir, podrá guardar esta receta como plantilla clínica.</div>
+                            <div class="small fw-semibold" id="ne_rx_template_hint">Plantilla de receta para: Sin diagnóstico definido.</div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="ne_rx_save_template" disabled>Guardar como plantilla de receta</button>
+                          </div>
+                          <div class="ne-rx-emit-wrap">
+                            <button type="button" class="btn btn-primary ne-rx-emit-btn" id="ne_rx_save">Emitir receta</button>
+                            <button type="button" class="btn btn-link btn-sm d-none ne-rx-open-doc-inline" id="ne_rx_open_doc">Ver e imprimir</button>
+                            <div class="small text-muted mt-2">Se guardará en el historial clínico del paciente.</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="modal fade" id="modalRecetaAnalysisConsent" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Análisis asistido por inteligencia artificial</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p class="mb-3">Esta herramienta proporciona observaciones automatizadas basadas en la información disponible, con fines de apoyo clínico.</p>
+                        <p class="mb-3">No sustituye el criterio médico profesional, ni constituye una indicación diagnóstica o terapéutica.</p>
+                        <p class="mb-3">El médico tratante es el único responsable de la evaluación, decisiones e indicaciones en la atención del paciente.</p>
+                        <p class="mb-0">¿Desea continuar con el análisis?</p>
                       </div>
                       <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
-                        <button type="button" class="btn btn-outline-primary d-none" id="ne_rx_open_doc">Ver e imprimir</button>
-                        <button type="button" class="btn btn-primary" id="ne_rx_save">Guardar receta</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="ne_rx_analysis_confirm">Continuar con análisis</button>
                       </div>
                     </div>
                   </div>

@@ -1477,6 +1477,88 @@ Actividad clínica F3
 - desacoplar procedimientos del iframe
 - normalizar catálogo de procedimientos
 
+## REC-CAT-3 — Estrategia de catálogo mexicano importable y normalizado (receta)
+
+Se formaliza la estrategia de evolución del catálogo de medicamentos para evitar
+escalamiento indefinido de un mock manual en runtime.
+
+Problema identificado:
+- el catálogo embebido/manual no escala para cobertura clínica real en México
+- agregar entradas una a una degrada mantenibilidad y trazabilidad
+
+Decisión arquitectónica:
+- runtime de receta consulta un **catálogo local MXMed** (JSON versionado)
+- la **memoria del médico** permanece como capa personalizada adicional
+- la ampliación de cobertura se hará por **importación offline** de datasets
+  transformados al formato canónico MXMed
+
+Fuentes objetivo para expansión:
+- **COFEPRIS**: referencias de registros sanitarios, nombres genéricos,
+  distintivos/comerciales y principios activos
+- **Compendio Nacional de Insumos para la Salud**: base de normalización oficial
+
+Regla operativa:
+- durante la captura de receta no se depende de consultas en vivo a fuentes
+  externas; la búsqueda clínica se resuelve con catálogo local + memoria médica
+
+Artefacto documental asociado:
+- `docs/catalogo-medicamentos-mxmed.md`
+
+Alcance de esta definición:
+- deja asentada la dirección técnica del módulo de receta y catálogo
+- no implica scraping en vivo ni backend nuevo en esta iteración
+
+### REC-ADM-1 — Patrones de administración para receta clínica
+
+Se formaliza una decisión arquitectónica complementaria de Receta:
+la lógica de prescripción en MXMed no debe depender de reglas por
+medicamento individual.
+
+Decisión:
+- cada medicamento/presentación del catálogo se mapea a un **patrón de administración**
+- el patrón define comportamiento clínico-operativo de captura y UX
+- el medicamento hereda ese comportamiento por metadatos, no por lógica ad-hoc
+
+Qué gobierna un patrón de administración:
+- unidad de dosis
+- vías permitidas
+- sugerencias de frecuencia
+- sugerencias de duración
+- sugerencias/hints de indicaciones
+- reglas de UI (campos/chips priorizados, ocultamiento/despriorización contextual)
+
+Patrones base mínimos aprobados:
+- `tableta_oral`
+- `capsula_oral`
+- `suspension_oral`
+- `gotas_orales`
+- `inyectable`
+- `topico`
+- `supositorio`
+- `inhalado`
+
+Reglas operativas:
+1. El catálogo debe incluir metadatos suficientes para mapear perfil:
+   `form`, `route` sugerida y metadata contextual de administración.
+2. Si no existe mapeo confiable, Receta cae a modo manual sin bloquear flujo.
+3. No crear reglas por medicamento individual salvo excepciones clínicas justificadas.
+4. Esta lógica permanece en frontend en la fase actual, sin dependencia backend adicional.
+
+Relación con REC-CAT:
+- REC-CAT define la estrategia de cobertura y fuente de verdad del catálogo.
+- REC-ADM define cómo ese catálogo gobierna la prescripción de forma escalable.
+- Ambos bloques son acoplados por contrato de metadata de presentación.
+
+Riesgos/consideraciones futuras:
+- se requiere gobernanza de metadatos para evitar presentaciones sin perfil
+- habrá casos límite que exigirán override clínico explícito
+- al crecer el catálogo, conviene validar consistencia de perfiles en pipeline de importación
+
+Nota de transición:
+- Se renombra oficialmente el término "perfil de administración" a "patrón de administración"
+  para evitar ambigüedad con perfiles de usuario. El código existente podrá alinearse a esta
+  nomenclatura en fases futuras sin bloquear la operación actual.
+
 ## Directrices permanentes del núcleo clínico MXMed
 
 El núcleo clínico de MXMed se organiza bajo la siguiente arquitectura conceptual:

@@ -2204,6 +2204,20 @@ console.info('app.js loaded :: 20251123a');
     rxSave: document.getElementById('ne_rx_save'),
     rxFeedback: document.getElementById('ne_rx_feedback'),
     rxOpenDoc: document.getElementById('ne_rx_open_doc'),
+    rxCtxPatient: document.getElementById('ne_rx_ctx_patient'),
+    rxCtxDoctor: document.getElementById('ne_rx_ctx_doctor'),
+    rxCtxDate: document.getElementById('ne_rx_ctx_date'),
+    rxCtxEncounter: document.getElementById('ne_rx_ctx_encounter'),
+    rxCtxAllergies: document.getElementById('ne_rx_ctx_allergies'),
+    rxCtxCurrentMeds: document.getElementById('ne_rx_ctx_current_meds'),
+    rxAnalysisSummary: document.getElementById('ne_rx_analysis_summary'),
+    rxAnalysisRun: document.getElementById('ne_rx_analysis_run'),
+    rxAnalysisConfirm: document.getElementById('ne_rx_analysis_confirm'),
+    rxDxMode: document.getElementById('ne_rx_dx_mode'),
+    rxDxText: document.getElementById('ne_rx_dx_text'),
+    rxSaveTemplate: document.getElementById('ne_rx_save_template'),
+    rxCount: document.getElementById('ne_rx_count'),
+    rxTemplateHint: document.getElementById('ne_rx_template_hint'),
 
     docModal: document.getElementById('modalNotaEvolucion'),
     docModalTitle: document.getElementById('ne_doc_modal_title'),
@@ -2217,6 +2231,7 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const citasModal = document.getElementById('modalCitasClinicas');
+  const recetaAnalysisModalEl = document.getElementById('modalRecetaAnalysisConsent');
   const citasBlock = root.querySelector('#ne_citas_block');
   const citasMotivo = document.getElementById('ne_citas_motivo');
   const citasPadecimiento = document.getElementById('ne_citas_padecimiento');
@@ -2820,26 +2835,678 @@ console.info('app.js loaded :: 20251123a');
     return [ta, fc, fr, t, s, d].join(' · ');
   };
 
+  const normalizePrescriptionMedication = (item = {}, fallbackUid = '') => {
+    const uid = String(item?.uid || fallbackUid || `rxm_${Date.now()}`).trim() || `rxm_${Date.now()}`;
+    const source = String(item?.source || '').trim() || 'manual';
+    const safeMeta = (item?.meta && typeof item.meta === 'object') ? { ...item.meta } : {};
+    const quantityMode = String(item?.quantity_mode || safeMeta?.quantity_mode || '').trim();
+    const quantityValue = String(item?.quantity_value || safeMeta?.quantity_value || '').trim();
+    const quantityUnit = String(item?.quantity_unit || safeMeta?.quantity_unit || '').trim();
+    if (quantityMode && !safeMeta.quantity_mode) safeMeta.quantity_mode = quantityMode;
+    if (quantityValue && !safeMeta.quantity_value) safeMeta.quantity_value = quantityValue;
+    if (quantityUnit && !safeMeta.quantity_unit) safeMeta.quantity_unit = quantityUnit;
+    return {
+      uid,
+      source: ['catalog', 'manual', 'doctor_memory'].includes(source) ? source : 'manual',
+      catalog_id: String(item?.catalog_id || '').trim(),
+      doctor_memory_id: String(item?.doctor_memory_id || '').trim(),
+      name: String(item?.name || item?.medicamento || '').trim(),
+      presentation: String(item?.presentation || '').trim(),
+      dose: String(item?.dose || item?.dosis || '').trim(),
+      route: String(item?.route || item?.via || '').trim(),
+      frequency: String(item?.frequency || item?.frecuencia || item?.periodicidad || '').trim(),
+      duration: String(item?.duration || item?.duracion || '').trim(),
+      quantity: String(item?.quantity || item?.cantidad || '').trim(),
+      quantity_mode: quantityMode,
+      quantity_value: quantityValue,
+      quantity_unit: quantityUnit,
+      instructions: String(item?.instructions || item?.indicaciones || '').trim(),
+      private_notes: String(item?.private_notes || '').trim(),
+      meta: safeMeta
+    };
+  };
+  const hasPrescriptionMedicationContent = (item = {}) => {
+    const fields = ['name', 'presentation', 'dose', 'route', 'frequency', 'duration', 'quantity', 'instructions', 'private_notes'];
+    return fields.some((key) => String(item?.[key] || '').trim() !== '');
+  };
+
+  const RX_CATALOG_SEED_URL = '/assets/data/medication_catalog_seed.json';
+  const RX_CATALOG_EMERGENCY_FALLBACK = [
+    {
+      drug_id: 'mxm_paracetamol_fallback',
+      generic_name: 'Paracetamol',
+      brand_names: ['Tempra'],
+      aliases: ['acetaminofen', 'para'],
+      search_terms: ['paracetamol', 'acetaminofen', 'tempra'],
+      therapeutic_group: 'analgesicos',
+      favorite: true,
+      presentations: [
+        { presentation_id: 'tab_500', label: 'Tableta 500 mg', form: 'Tableta', strength: '500 mg', route: 'VO' }
+      ]
+    }
+  ];
+  let rxCatalogSeedEntries = [];
+  let rxCatalogSeedReady = false;
+  let rxCatalogSeedPromise = null;
+
+  const RX_QUICK_FIELD_SUGGESTIONS = {
+    frequency: ['Cada 4 horas', 'Cada 6 horas', 'Cada 8 horas', 'Cada 12 horas', 'Cada 24 horas', '1 vez al día', '2 veces al día', '3 veces al día', 'Antes de alimentos', 'Después de alimentos', 'En caso necesario'],
+    route: ['Vía oral', 'Sublingual', 'Intramuscular', 'Intravenosa', 'Subcutánea', 'Tópica', 'Oftálmica', 'Ótica', 'Nasal', 'Rectal', 'Vaginal', 'Inhalada'],
+    duration: ['1 día', '3 días', '5 días', '7 días', '10 días', '14 días', '21 días', '30 días', 'Uso continuo', 'Dosis única'],
+    instructions: ['Tomar después de alimentos', 'Tomar antes de alimentos', 'Agitar antes de usar', 'No suspender aunque exista mejoría', 'Evitar alcohol', 'Aplicar en área limpia y seca', 'Uso nocturno'],
+    dose: ['1 tableta', '1 cápsula', '5 ml', '10 ml', 'Aplicar capa delgada', '1 ampolleta']
+  };
+  const RX_ROUTE_DISPLAY = {
+    vo: 'Vía oral',
+    oral: 'Vía oral',
+    'via oral': 'Vía oral',
+    sl: 'Sublingual',
+    sublingual: 'Sublingual',
+    im: 'Intramuscular',
+    intramuscular: 'Intramuscular',
+    iv: 'Intravenosa',
+    intravenosa: 'Intravenosa',
+    sc: 'Subcutánea',
+    subcutanea: 'Subcutánea',
+    topica: 'Tópica',
+    oftalmica: 'Oftálmica',
+    otica: 'Ótica',
+    nasal: 'Nasal',
+    rectal: 'Rectal',
+    vaginal: 'Vaginal',
+    inhalada: 'Inhalada'
+  };
+  const RX_ADMINISTRATION_PATTERNS_BASE = {
+    tableta_oral: {
+      label: 'Tableta oral',
+      allowed_routes: ['VO'],
+      default_route: 'VO',
+      dose_unit: 'tableta',
+      default_dose_suggestions: ['1 tableta', '1/2 tableta', '2 tabletas'],
+      default_frequency_suggestions: ['Cada 8 horas', 'Cada 12 horas', 'Cada 24 horas'],
+      default_duration_suggestions: ['3 días', '5 días', '7 días', '14 días'],
+      instruction_hints: ['Tomar después de alimentos', 'Tomar con agua'],
+      ui_rules: { show_route: true, show_dose: true, show_frequency: true, show_duration: true, prefer_single_route: true }
+    },
+    capsula_oral: {
+      label: 'Cápsula oral',
+      allowed_routes: ['VO'],
+      default_route: 'VO',
+      dose_unit: 'cápsula',
+      default_dose_suggestions: ['1 cápsula', '2 cápsulas'],
+      default_frequency_suggestions: ['Cada 8 horas', 'Cada 12 horas', 'Cada 24 horas'],
+      default_duration_suggestions: ['3 días', '5 días', '7 días', '14 días'],
+      instruction_hints: ['Tomar con agua', 'No abrir ni masticar la cápsula'],
+      ui_rules: { show_route: true, show_dose: true, show_frequency: true, show_duration: true, prefer_single_route: true }
+    },
+    suspension_oral: {
+      label: 'Suspensión oral',
+      allowed_routes: ['VO'],
+      default_route: 'VO',
+      dose_unit: 'ml',
+      default_dose_suggestions: ['2.5 ml', '5 ml', '7.5 ml', '10 ml'],
+      default_frequency_suggestions: ['Cada 8 horas', 'Cada 12 horas', 'Cada 24 horas'],
+      default_duration_suggestions: ['3 días', '5 días', '7 días', '10 días'],
+      instruction_hints: ['Agitar antes de usar', 'Medir dosis en ml'],
+      ui_rules: { show_route: true, show_dose: true, show_frequency: true, show_duration: true, prefer_single_route: true }
+    },
+    gotas_orales: {
+      label: 'Gotas orales',
+      allowed_routes: ['VO'],
+      default_route: 'VO',
+      dose_unit: 'gotas/ml',
+      default_dose_suggestions: ['2 gotas', '3 gotas', '5 gotas', '0.5 ml', '1 ml', '2 ml'],
+      default_frequency_suggestions: ['Cada 6 horas', 'Cada 8 horas', 'Cada 12 horas'],
+      default_duration_suggestions: ['3 días', '5 días', '7 días'],
+      instruction_hints: ['Medir dosis en gotas o ml', 'Agitar antes de usar'],
+      ui_rules: { show_route: true, show_dose: true, show_frequency: true, show_duration: true, prefer_single_route: true }
+    },
+    inyectable: {
+      label: 'Inyectable',
+      allowed_routes: ['IM', 'IV', 'SC'],
+      default_route: 'IM',
+      dose_unit: 'ampolleta',
+      default_dose_suggestions: ['1 ampolleta'],
+      default_frequency_suggestions: ['Cada 12 horas', 'Cada 24 horas', 'Dosis única'],
+      default_duration_suggestions: ['Dosis única', '3 días'],
+      instruction_hints: ['Aplicación por personal de salud'],
+      ui_rules: { show_route: true, show_dose: true, show_frequency: true, show_duration: true, prefer_single_route: false }
+    },
+    topico: {
+      label: 'Tópico',
+      allowed_routes: ['Tópica'],
+      default_route: 'Tópica',
+      dose_unit: 'aplicación',
+      default_dose_suggestions: ['Aplicar capa delgada', 'Aplicar cantidad suficiente'],
+      default_frequency_suggestions: ['Cada 12 horas', 'Cada 24 horas', '2 veces al día'],
+      default_duration_suggestions: ['5 días', '7 días', '14 días'],
+      instruction_hints: ['Aplicar en área limpia y seca'],
+      ui_rules: { show_route: true, show_dose: true, show_frequency: true, show_duration: true, prefer_single_route: true }
+    },
+    supositorio: {
+      label: 'Supositorio',
+      allowed_routes: ['Rectal'],
+      default_route: 'Rectal',
+      dose_unit: 'supositorio',
+      default_dose_suggestions: ['1 supositorio'],
+      default_frequency_suggestions: ['Cada 12 horas', 'Cada 24 horas', 'En caso necesario'],
+      default_duration_suggestions: ['1 día', '3 días', '5 días'],
+      instruction_hints: ['Aplicar por vía rectal', 'Lavar manos antes y después de la aplicación'],
+      ui_rules: { show_route: true, show_dose: true, show_frequency: true, show_duration: true, prefer_single_route: true }
+    },
+    inhalado: {
+      label: 'Inhalado',
+      allowed_routes: ['Inhalada'],
+      default_route: 'Inhalada',
+      dose_unit: 'inhalación',
+      default_dose_suggestions: ['1 inhalación', '2 inhalaciones'],
+      default_frequency_suggestions: ['Cada 6 horas', 'Cada 8 horas', 'En caso necesario'],
+      default_duration_suggestions: ['3 días', '5 días', 'Uso continuo'],
+      instruction_hints: ['Inhalar durante el disparo', 'Enjuagar boca tras la aplicación si corresponde'],
+      ui_rules: { show_route: true, show_dose: true, show_frequency: true, show_duration: true, prefer_single_route: true }
+    },
+    nasal: {
+      label: 'Nasal',
+      allowed_routes: ['Nasal'],
+      default_route: 'Nasal',
+      dose_unit: 'aplicación/disparo',
+      default_dose_suggestions: ['1 disparo', '2 disparos', '1 aplicación'],
+      default_frequency_suggestions: ['Cada 12 horas', 'Cada 24 horas', '1 vez al día'],
+      default_duration_suggestions: ['5 días', '7 días', '14 días', 'Uso continuo'],
+      instruction_hints: ['Aplicar por vía nasal', 'Dirigir el disparo hacia pared lateral de la fosa nasal'],
+      ui_rules: { show_route: true, show_dose: true, show_frequency: true, show_duration: true, prefer_single_route: true }
+    }
+  };
+  const RX_ADMINISTRATION_PATTERNS = {
+    ...RX_ADMINISTRATION_PATTERNS_BASE,
+    jarabe_oral: { ...RX_ADMINISTRATION_PATTERNS_BASE.suspension_oral, label: 'Jarabe oral', default_dose_suggestions: ['5 ml', '10 ml', '15 ml'] },
+    gotas_oticas: {
+      ...RX_ADMINISTRATION_PATTERNS_BASE.gotas_orales,
+      label: 'Gotas óticas',
+      allowed_routes: ['Ótica'],
+      default_route: 'Ótica',
+      instruction_hints: ['Aplicar en oído afectado', 'No introducir objetos en el canal auditivo']
+    },
+    gotas_oftalmicas: {
+      ...RX_ADMINISTRATION_PATTERNS_BASE.gotas_orales,
+      label: 'Gotas oftálmicas',
+      allowed_routes: ['Oftálmica'],
+      default_route: 'Oftálmica',
+      default_dose_suggestions: ['1 gota', '2 gotas'],
+      instruction_hints: ['Aplicar en ojo afectado', 'Evitar contacto del gotero con el ojo']
+    },
+    crema_topica: { ...RX_ADMINISTRATION_PATTERNS_BASE.topico, label: 'Crema tópica' },
+    unguento_topico: { ...RX_ADMINISTRATION_PATTERNS_BASE.topico, label: 'Ungüento tópico', default_dose_suggestions: ['Aplicar capa delgada', 'Aplicar capa fina'] },
+    aerosol_inhalado: { ...RX_ADMINISTRATION_PATTERNS_BASE.inhalado, label: 'Aerosol inhalado' },
+    spray_nasal: { ...RX_ADMINISTRATION_PATTERNS_BASE.nasal, label: 'Spray nasal' },
+    ampolleta_im: { ...RX_ADMINISTRATION_PATTERNS_BASE.inyectable, label: 'Ampolleta IM', allowed_routes: ['IM'], default_route: 'IM' },
+    ampolleta_iv: { ...RX_ADMINISTRATION_PATTERNS_BASE.inyectable, label: 'Ampolleta IV', allowed_routes: ['IV'], default_route: 'IV' }
+  };
+  const RX_QUANTITY_AUTO_PATTERNS = new Set(['tableta_oral', 'capsula_oral', 'suspension_oral', 'gotas_orales', 'supositorio']);
+  const RX_QUANTITY_MANUAL_PLACEHOLDERS = {
+    topico: 'Cantidad total (ej. 1 tubo)',
+    crema_topica: 'Cantidad total (ej. 1 tubo)',
+    unguento_topico: 'Cantidad total (ej. 1 tubo)',
+    inhalado: 'Cantidad total (ej. 2 inhaladores)',
+    aerosol_inhalado: 'Cantidad total (ej. 2 inhaladores)',
+    nasal: 'Cantidad total (ej. 1 frasco)',
+    spray_nasal: 'Cantidad total (ej. 1 frasco)',
+    inyectable: 'Cantidad total (ej. 3 ampolletas)',
+    ampolleta_im: 'Cantidad total (ej. 3 ampolletas)',
+    ampolleta_iv: 'Cantidad total (ej. 3 ampolletas)'
+  };
+  // Compatibilidad temporal: el runtime sigue usando nombre legacy en varios puntos.
+  const RX_ADMINISTRATION_PROFILES = RX_ADMINISTRATION_PATTERNS;
+
+  const rxDoctorMemoryStorageKey = (doctorId) => `mxmed_rx_doctor_memory_v1:${doctorId || 'doctor'}`;
+  const rxNormalizeQuery = (value) => String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  const RX_CATALOG_SEARCH_LIMIT = 80;
+  const rxUniqueTextList = (list = []) => {
+    const out = [];
+    const seen = new Set();
+    (Array.isArray(list) ? list : []).forEach((value) => {
+      const raw = String(value || '').trim();
+      if (!raw) return;
+      const key = rxNormalizeQuery(raw);
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      out.push(raw);
+    });
+    return out;
+  };
+  const rxSuggestionSearchable = (item) => [
+    item?.name,
+    item?.presentation,
+    item?.route,
+    ...(Array.isArray(item?.meta?.aliases) ? item.meta.aliases : []),
+    ...(Array.isArray(item?.meta?.brand_names) ? item.meta.brand_names : []),
+    ...(Array.isArray(item?.meta?.search_terms) ? item.meta.search_terms : [])
+  ].map((v) => rxNormalizeQuery(v)).join(' ');
+
+  const normalizeCatalogDrugEntry = (drug = {}) => {
+    const generic = String(drug?.generic_name || '').trim();
+    const drugId = String(drug?.drug_id || '').trim();
+    if (!generic || !drugId) return null;
+    const toTextList = (arr) => rxUniqueTextList(arr);
+    const presentations = (Array.isArray(drug?.presentations) ? drug.presentations : [])
+      .map((presentation, index) => {
+        const presentationId = String(presentation?.presentation_id || '').trim() || `p_${index + 1}`;
+        const label = String(presentation?.label || '').trim();
+        if (!label) return null;
+        return {
+          presentation_id: presentationId,
+          label,
+          form: String(presentation?.form || '').trim(),
+          strength: String(presentation?.strength || '').trim(),
+          route: String(presentation?.route || '').trim(),
+          pack: String(presentation?.pack || '').trim(),
+          allowed_routes: rxUniqueTextList(presentation?.allowed_routes),
+          default_route: String(presentation?.default_route || '').trim(),
+          dose_unit: String(presentation?.dose_unit || '').trim(),
+          administration_pattern: String(presentation?.administration_pattern || '').trim(),
+          default_dose_suggestions: rxUniqueTextList(presentation?.default_dose_suggestions),
+          default_frequency_suggestions: rxUniqueTextList(presentation?.default_frequency_suggestions),
+          default_duration_suggestions: rxUniqueTextList(presentation?.default_duration_suggestions),
+          instruction_hints: rxUniqueTextList(presentation?.instruction_hints)
+        };
+      })
+      .filter(Boolean);
+    if (!presentations.length) return null;
+    const brandNames = toTextList(drug?.brand_names);
+    const aliases = toTextList(drug?.aliases);
+    const activeIngredients = toTextList(drug?.active_ingredients);
+    const searchTerms = rxUniqueTextList([
+      ...(Array.isArray(drug?.search_terms) ? drug.search_terms : []),
+      generic,
+      ...brandNames,
+      ...aliases,
+      ...activeIngredients
+    ]);
+    return {
+      drug_id: drugId,
+      generic_name: generic,
+      brand_names: brandNames,
+      aliases,
+      search_terms: searchTerms,
+      active_ingredients: activeIngredients,
+      source_refs: (Array.isArray(drug?.source_refs) ? drug.source_refs : [])
+        .map((ref) => {
+          if (!ref || typeof ref !== 'object') return null;
+          const source = String(ref?.source || '').trim();
+          const refType = String(ref?.ref_type || '').trim();
+          const refValue = String(ref?.ref_value || '').trim();
+          const notes = String(ref?.notes || '').trim();
+          if (!source && !refType && !refValue && !notes) return null;
+          return {
+            source,
+            ref_type: refType,
+            ref_value: refValue,
+            notes
+          };
+        })
+        .filter(Boolean),
+      therapeutic_group: String(drug?.therapeutic_group || '').trim(),
+      favorite: !!drug?.favorite,
+      presentations
+    };
+  };
+
+  const normalizeCatalogSeedPayload = (payload) => {
+    const rows = Array.isArray(payload?.drugs) ? payload.drugs : [];
+    const normalized = rows
+      .map((row) => normalizeCatalogDrugEntry(row))
+      .filter(Boolean);
+    return normalized.length ? normalized : RX_CATALOG_EMERGENCY_FALLBACK;
+  };
+
+  let rxCatalogSuggestionPool = [];
+  let rxCatalogSearchIndex = [];
+
+  const warmMedicationCatalogSeed = () => {
+    if (rxCatalogSeedReady) return Promise.resolve(rxCatalogSeedEntries);
+    if (rxCatalogSeedPromise) return rxCatalogSeedPromise;
+    rxCatalogSeedPromise = fetch(RX_CATALOG_SEED_URL, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      credentials: 'same-origin'
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`seed_http_${response.status}`);
+        return response.json();
+      })
+      .then((payload) => {
+        rxCatalogSeedEntries = normalizeCatalogSeedPayload(payload);
+        rebuildMedicationCatalogIndex();
+        rxCatalogSeedReady = true;
+        return rxCatalogSeedEntries;
+      })
+      .catch(() => {
+        rxCatalogSeedEntries = RX_CATALOG_EMERGENCY_FALLBACK;
+        rebuildMedicationCatalogIndex();
+        rxCatalogSeedReady = true;
+        return rxCatalogSeedEntries;
+      })
+      .finally(() => {
+        rxCatalogSeedPromise = null;
+      });
+    return rxCatalogSeedPromise;
+  };
+
+  const rxExpandCatalogToSuggestions = (sourceRowsInput = null) => {
+    const out = [];
+    const sourceRows = Array.isArray(sourceRowsInput) && sourceRowsInput.length
+      ? sourceRowsInput
+      : (rxCatalogSeedReady && Array.isArray(rxCatalogSeedEntries) && rxCatalogSeedEntries.length
+        ? rxCatalogSeedEntries
+        : RX_CATALOG_EMERGENCY_FALLBACK);
+    sourceRows.forEach((drug) => {
+      const generic = String(drug?.generic_name || '').trim();
+      const aliases = Array.isArray(drug?.aliases) ? drug.aliases.map((v) => String(v || '').trim()).filter(Boolean) : [];
+      const brands = Array.isArray(drug?.brand_names) ? drug.brand_names.map((v) => String(v || '').trim()).filter(Boolean) : [];
+      const searchTerms = Array.isArray(drug?.search_terms) ? drug.search_terms.map((v) => String(v || '').trim()).filter(Boolean) : [];
+      const presentations = Array.isArray(drug?.presentations) ? drug.presentations : [];
+      presentations.forEach((presentation, idx) => {
+        const label = String(presentation?.label || '').trim();
+        const route = String(presentation?.route || '').trim();
+        const strength = String(presentation?.strength || '').trim();
+        const pack = String(presentation?.pack || '').trim();
+        const allowedRoutes = rxUniqueTextList(presentation?.allowed_routes);
+        const defaultRoute = String(presentation?.default_route || '').trim();
+        const administrationPattern = String(presentation?.administration_pattern || '').trim();
+        const doseUnit = String(presentation?.dose_unit || '').trim();
+        const doseSuggestions = rxUniqueTextList(presentation?.default_dose_suggestions);
+        const frequencySuggestions = rxUniqueTextList(presentation?.default_frequency_suggestions);
+        const durationSuggestions = rxUniqueTextList(presentation?.default_duration_suggestions);
+        const instructionHints = rxUniqueTextList(presentation?.instruction_hints);
+        out.push({
+          source: 'catalog',
+          uid: `rxs_${drug?.drug_id || 'drug'}_${presentation?.presentation_id || idx}`,
+          catalog_id: `${drug?.drug_id || 'drug'}:${presentation?.presentation_id || idx}`,
+          name: generic,
+          presentation: label,
+          route,
+          meta: {
+            favorite: !!drug?.favorite,
+            generic_name: generic,
+            brand_names: brands,
+            aliases,
+            search_terms: searchTerms,
+            form: String(presentation?.form || '').trim(),
+            strength,
+            pack,
+            presentation_id: String(presentation?.presentation_id || '').trim(),
+            allowed_routes: allowedRoutes,
+            default_route: defaultRoute,
+            administration_pattern: administrationPattern,
+            dose_unit: doseUnit,
+            default_dose_suggestions: doseSuggestions,
+            default_frequency_suggestions: frequencySuggestions,
+            default_duration_suggestions: durationSuggestions,
+            instruction_hints: instructionHints,
+            active_ingredients: Array.isArray(drug?.active_ingredients) ? [...drug.active_ingredients] : [],
+            source_refs: Array.isArray(drug?.source_refs) ? [...drug.source_refs] : [],
+            therapeutic_group: String(drug?.therapeutic_group || '').trim()
+          }
+        });
+      });
+    });
+    return out;
+  };
+
+  // Entry point canónico para inyectar datasets externos ya transformados al formato MXMed.
+  // Permite migrar a un catálogo amplio sin acoplar el frontend al origen (COFEPRIS/Compendio/etc.).
+  const loadMedicationCatalog = (data) => {
+    const normalized = normalizeCatalogSeedPayload(data || {});
+    rxCatalogSeedEntries = normalized;
+    rxCatalogSeedReady = true;
+    rebuildMedicationCatalogIndex();
+    return rxCatalogSeedEntries;
+  };
+  window.loadMedicationCatalog = loadMedicationCatalog;
+
+  const rebuildMedicationCatalogIndex = () => {
+    const sourceRows = Array.isArray(rxCatalogSeedEntries) && rxCatalogSeedEntries.length
+      ? rxCatalogSeedEntries
+      : RX_CATALOG_EMERGENCY_FALLBACK;
+    rxCatalogSuggestionPool = rxExpandCatalogToSuggestions(sourceRows)
+      .map((item) => normalizeMedicationSuggestion(item));
+    rxCatalogSearchIndex = rxCatalogSuggestionPool.map((item) => ({
+      item,
+      searchable: rxSuggestionSearchable(item)
+    }));
+  };
+
+  const readDoctorMedicationMemory = () => {
+    const actor = getDoctor();
+    const doctorId = normalizeRecetaText(actor?.user_id) || 'doctor';
+    try {
+      const raw = localStorage.getItem(rxDoctorMemoryStorageKey(doctorId));
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  };
+  const writeDoctorMedicationMemory = (items) => {
+    const actor = getDoctor();
+    const doctorId = normalizeRecetaText(actor?.user_id) || 'doctor';
+    try {
+      localStorage.setItem(rxDoctorMemoryStorageKey(doctorId), JSON.stringify(Array.isArray(items) ? items : []));
+    } catch (_) {}
+  };
+
+  const normalizeMedicationSuggestion = (item = {}) => {
+    const source = String(item?.source || '').trim();
+    const normalizedSource = ['catalog', 'doctor_memory', 'manual'].includes(source) ? source : 'catalog';
+    const normalized = {
+      uid: normalizeRecetaText(item?.uid) || `rxs_${Date.now()}`,
+      source: normalizedSource,
+      catalog_id: normalizeRecetaText(item?.catalog_id),
+      doctor_memory_id: normalizeRecetaText(item?.doctor_memory_id),
+      name: normalizeRecetaText(item?.name),
+      presentation: normalizeRecetaText(item?.presentation),
+      dose: normalizeRecetaText(item?.dose),
+      route: normalizeRecetaText(item?.route),
+      frequency: normalizeRecetaText(item?.frequency),
+      duration: normalizeRecetaText(item?.duration),
+      quantity: normalizeRecetaText(item?.quantity),
+      instructions: normalizeRecetaText(item?.instructions),
+      private_notes: normalizeRecetaText(item?.private_notes),
+      meta: (item?.meta && typeof item.meta === 'object') ? { ...item.meta } : {}
+    };
+    return normalized;
+  };
+  window.normalizeMedicationSuggestion = normalizeMedicationSuggestion;
+
+  const searchMedicationCatalog = (term = '') => {
+    warmMedicationCatalogSeed();
+    const text = rxNormalizeQuery(term);
+    if (!rxCatalogSearchIndex.length) {
+      rebuildMedicationCatalogIndex();
+    }
+    const pool = rxCatalogSuggestionPool;
+    if (!text) return pool.slice(0, RX_CATALOG_SEARCH_LIMIT);
+    return rxCatalogSearchIndex
+      .filter((entry) => entry.searchable.includes(text))
+      .map((entry) => entry.item)
+      .sort((a, b) => {
+        const aSearch = rxSuggestionSearchable(a);
+        const bSearch = rxSuggestionSearchable(b);
+        const aIdx = aSearch.indexOf(text);
+        const bIdx = bSearch.indexOf(text);
+        if (aIdx !== bIdx) return aIdx - bIdx;
+        return a.name.localeCompare(b.name, 'es');
+      })
+      .slice(0, RX_CATALOG_SEARCH_LIMIT);
+  };
+  window.searchMedicationCatalog = searchMedicationCatalog;
+
+  const searchDoctorMedicationMemory = (term = '') => {
+    const text = rxNormalizeQuery(term);
+    return readDoctorMedicationMemory()
+      .map((item) => normalizeMedicationSuggestion({ ...item, source: 'doctor_memory' }))
+      .filter((item) => (text === '' ? true : rxSuggestionSearchable(item).includes(text)))
+      .sort((a, b) => {
+        const aCount = Number(a?.meta?.usage_count || 0);
+        const bCount = Number(b?.meta?.usage_count || 0);
+        if (aCount !== bCount) return bCount - aCount;
+        return a.name.localeCompare(b.name, 'es');
+      });
+  };
+  window.searchDoctorMedicationMemory = searchDoctorMedicationMemory;
+
+  const buildPrescriptionMedicationFromSuggestion = (item) => {
+    const suggestion = normalizeMedicationSuggestion(item || {});
+    return normalizePrescriptionMedication({
+      uid: `rxm_${Date.now()}`,
+      source: suggestion.source,
+      catalog_id: suggestion.catalog_id,
+      doctor_memory_id: suggestion.doctor_memory_id,
+      name: suggestion.name,
+      presentation: suggestion.presentation,
+      dose: suggestion.dose,
+      route: suggestion.route,
+      frequency: suggestion.frequency,
+      duration: suggestion.duration,
+      quantity: suggestion.quantity,
+      instructions: suggestion.instructions,
+      private_notes: suggestion.private_notes,
+      meta: suggestion.meta
+    });
+  };
+  window.buildPrescriptionMedicationFromSuggestion = buildPrescriptionMedicationFromSuggestion;
+
+  const buildPrescriptionMedicationManualDraft = (text = '') => {
+    return normalizePrescriptionMedication({
+      uid: `rxm_${Date.now()}`,
+      source: 'manual',
+      name: normalizeRecetaText(text),
+      meta: { manual_entry: true }
+    });
+  };
+  window.buildPrescriptionMedicationManualDraft = buildPrescriptionMedicationManualDraft;
+
+  const registerMedicationUsageForDoctor = (item = {}) => {
+    const normalized = normalizeMedicationSuggestion({
+      ...item,
+      source: 'doctor_memory'
+    });
+    if (!normalized.name) return;
+    const nowIso = new Date().toISOString();
+    const memory = readDoctorMedicationMemory();
+    const nameKey = normalized.name.toLowerCase();
+    const idx = memory.findIndex((entry) => normalizeRecetaText(entry?.name).toLowerCase() === nameKey);
+    if (idx >= 0) {
+      const existing = normalizeMedicationSuggestion({ ...memory[idx], source: 'doctor_memory' });
+      memory[idx] = {
+        ...existing,
+        ...normalized,
+        doctor_memory_id: existing.doctor_memory_id || normalized.doctor_memory_id || `drx_${Date.now()}`,
+        source: 'doctor_memory',
+        meta: {
+          ...(existing.meta || {}),
+          ...(normalized.meta || {}),
+          usage_count: Number(existing.meta?.usage_count || 0) + 1,
+          last_used_at: nowIso
+        }
+      };
+    } else {
+      memory.unshift({
+        ...normalized,
+        source: 'doctor_memory',
+        doctor_memory_id: normalized.doctor_memory_id || `drx_${Date.now()}`,
+        meta: {
+          ...(normalized.meta || {}),
+          usage_count: 1,
+          last_used_at: nowIso
+        }
+      });
+    }
+    writeDoctorMedicationMemory(memory.slice(0, 80));
+  };
+  window.registerMedicationUsageForDoctor = registerMedicationUsageForDoctor;
+
+  const mergeMedicationSuggestions = (term = '') => {
+    const text = normalizeRecetaText(term);
+    const byRef = new Set();
+    const usedByDoctor = [];
+    const favorites = [];
+    const catalog = [];
+
+    searchDoctorMedicationMemory(text).forEach((item) => {
+      const key = normalizeRecetaText(item.doctor_memory_id || `${item.name}|${item.presentation}`).toLowerCase();
+      if (!key || byRef.has(key)) return;
+      byRef.add(key);
+      if (item.meta?.favorite) {
+        favorites.push(item);
+      } else {
+        usedByDoctor.push(item);
+      }
+    });
+    searchMedicationCatalog(text).forEach((item) => {
+      const key = normalizeRecetaText(item.catalog_id || `${item.name}|${item.presentation}`).toLowerCase();
+      if (!key || byRef.has(key)) return;
+      byRef.add(key);
+      if (item.meta?.favorite) {
+        favorites.push(item);
+      } else {
+        catalog.push(item);
+      }
+    });
+    return [
+      { key: 'used', label: 'Usados por ti', items: usedByDoctor },
+      { key: 'favorites', label: 'Favoritos', items: favorites },
+      { key: 'catalog', label: 'Catálogo', items: catalog },
+      { key: 'manual', label: 'Agregar manualmente', manual_text: text, items: text ? [normalizeMedicationSuggestion({ source: 'manual', name: text })] : [] }
+    ];
+  };
+  window.mergeMedicationSuggestions = mergeMedicationSuggestions;
+
   const getRxDraft = (patientKey) => {
     try {
       const raw = localStorage.getItem(storage.rxKeyForPatient(patientKey));
       const data = raw ? JSON.parse(raw) : null;
-      if (!data || !Array.isArray(data.medicamentos)) return { has_prescription: false, prescription_id: '', medicamentos: [] };
+      if (!data) return { has_prescription: false, prescription_id: '', medications: [], medicamentos: [], diagnostic_context: { mode: 'sin_diagnostico', text: '' } };
+      const rawMeds = Array.isArray(data.medications)
+        ? data.medications
+        : (Array.isArray(data.medicamentos) ? data.medicamentos : []);
+      const medications = rawMeds.map((item, index) => normalizePrescriptionMedication(item, `rxm_${index + 1}`));
+      const diagnosticContext = (data?.diagnostic_context && typeof data.diagnostic_context === 'object')
+        ? {
+          mode: normalizeRecetaText(data.diagnostic_context.mode) || 'sin_diagnostico',
+          text: normalizeRecetaText(data.diagnostic_context.text)
+        }
+        : { mode: 'sin_diagnostico', text: '' };
       return {
-        has_prescription: data.medicamentos.length > 0,
+        has_prescription: medications.length > 0,
         prescription_id: data.prescription_id || '',
-        medicamentos: data.medicamentos
+        medications,
+        medicamentos: medications,
+        diagnostic_context: diagnosticContext
       };
     } catch (_) {
-      return { has_prescription: false, prescription_id: '', medicamentos: [] };
+      return { has_prescription: false, prescription_id: '', medications: [], medicamentos: [], diagnostic_context: { mode: 'sin_diagnostico', text: '' } };
     }
   };
 
-  const setRxDraft = (patientKey, medicamentos) => {
+  const setRxDraft = (patientKey, medications, options = {}) => {
+    const normalized = (Array.isArray(medications) ? medications : [])
+      .map((item, index) => normalizePrescriptionMedication(item, `rxm_${index + 1}`))
+      .filter((item) => hasPrescriptionMedicationContent(item));
+    const diagnosticContext = {
+      mode: normalizeRecetaText(options?.diagnostic_context?.mode) || 'sin_diagnostico',
+      text: normalizeRecetaText(options?.diagnostic_context?.text)
+    };
     try {
       localStorage.setItem(storage.rxKeyForPatient(patientKey), JSON.stringify({
         prescription_id: `rx_${Date.now()}`,
-        medicamentos
+        medications: normalized,
+        medicamentos: normalized,
+        diagnostic_context: diagnosticContext
       }));
     } catch (_) {}
   };
@@ -3000,19 +3667,22 @@ console.info('app.js loaded :: 20251123a');
     lines.push(safeText(p.plan_indicaciones, 'No registrado'));
     lines.push('');
     lines.push('MEDICAMENTOS (RECETA)');
-    if (!Array.isArray(rx.medicamentos) || rx.medicamentos.length === 0) {
+    const rxItems = Array.isArray(rx.medications)
+      ? rx.medications
+      : (Array.isArray(rx.medicamentos) ? rx.medicamentos : []);
+    if (!rxItems.length) {
       lines.push('Sin receta registrada');
     } else {
-      rx.medicamentos.forEach(m => {
+      rxItems.forEach(m => {
         const parts = [
-          (m.medicamento || '').trim(),
-          (m.dosis || '').trim(),
-          (m.via || '').trim(),
-          (m.periodicidad || '').trim(),
-          (m.duracion || '').trim()
+          (m.name || m.medicamento || '').trim(),
+          (m.dose || m.dosis || '').trim(),
+          (m.route || m.via || '').trim(),
+          (m.frequency || m.periodicidad || '').trim(),
+          (m.duration || m.duracion || '').trim()
         ].filter(Boolean);
         const base = parts.join(' · ') || 'Medicamento';
-        const extra = (m.indicaciones || '').trim();
+        const extra = (m.instructions || m.indicaciones || '').trim();
         lines.push(`- ${base}${extra ? ` (${extra})` : ''}`);
       });
     }
@@ -3064,15 +3734,20 @@ console.info('app.js loaded :: 20251123a');
     return 'Nota de evolución';
   };
 
+  const resolvePrescriptionPayloadItems = (payload) => {
+    const rootPayload = (payload && typeof payload === 'object') ? payload : {};
+    const directItems = Array.isArray(rootPayload.medications) ? rootPayload.medications : null;
+    if (directItems) return directItems;
+    const rx = (rootPayload.prescription && typeof rootPayload.prescription === 'object') ? rootPayload.prescription : {};
+    return Array.isArray(rx.items) ? rx.items : [];
+  };
+
   window.buildPrescriptionSummary = function buildPrescriptionSummary(payload) {
-    const rx = (payload && typeof payload === 'object' && payload.prescription && typeof payload.prescription === 'object')
-      ? payload.prescription
-      : {};
-    const items = Array.isArray(rx.items) ? rx.items : [];
+    const items = resolvePrescriptionPayloadItems(payload);
     if (!items.length) return 'Receta médica';
     const visible = items.slice(0, 2).map((item) => {
-      const medicamento = String(item?.medicamento || '').trim();
-      const dosis = String(item?.dosis || '').trim();
+      const medicamento = String(item?.name || item?.medicamento || '').trim();
+      const dosis = String(item?.dose || item?.dosis || '').trim();
       if (!medicamento) return '';
       return dosis ? `${medicamento} ${dosis}` : medicamento;
     }).filter(Boolean);
@@ -3082,12 +3757,12 @@ console.info('app.js loaded :: 20251123a');
 
   const buildPrescriptionRenderedText = (payload, context = {}, actor = {}) => {
     const now = new Date().toLocaleString('es-MX');
-    const rx = (payload && typeof payload === 'object' && payload.prescription && typeof payload.prescription === 'object')
-      ? payload.prescription
-      : {};
-    const items = Array.isArray(rx.items) ? rx.items : [];
-    const patientName = String(payload?.snapshot?.paciente?.nombre_completo || '').trim();
-    const doctorName = String(payload?.snapshot?.medico?.nombre_completo || actor?.nombre_completo || '').trim();
+    const rootPayload = (payload && typeof payload === 'object') ? payload : {};
+    const items = resolvePrescriptionPayloadItems(rootPayload);
+    const contextPayload = (rootPayload.context && typeof rootPayload.context === 'object') ? rootPayload.context : {};
+    const rxLegacy = (rootPayload.prescription && typeof rootPayload.prescription === 'object') ? rootPayload.prescription : {};
+    const patientName = String(contextPayload.patient_name || rootPayload?.snapshot?.paciente?.nombre_completo || '').trim();
+    const doctorName = String(contextPayload.doctor_name || rootPayload?.snapshot?.medico?.nombre_completo || actor?.nombre_completo || '').trim();
     const lines = [];
     lines.push('RECETA MÉDICA');
     lines.push(`Fecha/Hora: ${now}`);
@@ -3100,18 +3775,18 @@ console.info('app.js loaded :: 20251123a');
     } else {
       items.forEach((item) => {
         const parts = [
-          String(item?.medicamento || '').trim(),
-          String(item?.dosis || '').trim(),
-          String(item?.via || '').trim(),
-          String(item?.frecuencia || item?.periodicidad || '').trim(),
-          String(item?.duracion || '').trim()
+          String(item?.name || item?.medicamento || '').trim(),
+          String(item?.dose || item?.dosis || '').trim(),
+          String(item?.route || item?.via || '').trim(),
+          String(item?.frequency || item?.frecuencia || item?.periodicidad || '').trim(),
+          String(item?.duration || item?.duracion || '').trim()
         ].filter(Boolean);
-        const indicaciones = String(item?.indicaciones || '').trim();
+        const indicaciones = String(item?.instructions || item?.indicaciones || '').trim();
         const base = parts.join(' · ') || 'Medicamento';
         lines.push(`- ${base}${indicaciones ? ` (${indicaciones})` : ''}`);
       });
     }
-    const observaciones = String(rx.observaciones || '').trim();
+    const observaciones = String(rootPayload?.analysis?.observations || rxLegacy.observaciones || '').trim();
     if (observaciones) {
       lines.push('');
       lines.push('OBSERVACIONES');
@@ -3214,13 +3889,14 @@ console.info('app.js loaded :: 20251123a');
       els.rxRO.textContent = 'Sin receta registrada';
       return;
     }
-    const text = rx.medicamentos.map(m => {
+    const meds = Array.isArray(rx.medications) ? rx.medications : [];
+    const text = meds.map((m) => {
       const parts = [
-        (m.medicamento || '').trim(),
-        (m.dosis || '').trim(),
-        (m.via || '').trim(),
-        (m.periodicidad || '').trim(),
-        (m.duracion || '').trim()
+        (m.name || '').trim(),
+        (m.dose || '').trim(),
+        (m.route || '').trim(),
+        (m.frequency || '').trim(),
+        (m.duration || '').trim()
       ].filter(Boolean).join(' · ');
       return `• ${parts || 'Medicamento'}`;
     }).join('\n');
@@ -3439,8 +4115,10 @@ console.info('app.js loaded :: 20251123a');
     return dt.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
   };
   const isPrescriptionPayload = (payload) => {
-    const rx = (payload && typeof payload === 'object' && payload.prescription && typeof payload.prescription === 'object')
-      ? payload.prescription
+    const rootPayload = (payload && typeof payload === 'object') ? payload : {};
+    if (Array.isArray(rootPayload.medications)) return true;
+    const rx = (rootPayload.prescription && typeof rootPayload.prescription === 'object')
+      ? rootPayload.prescription
       : null;
     return !!rx;
   };
@@ -3476,21 +4154,23 @@ console.info('app.js loaded :: 20251123a');
   const renderPrescriptionReadLayout = (payload) => {
     if (!els.docRxLayout) return false;
     if (!isPrescriptionPayload(payload)) return false;
-    const rx = payload.prescription || {};
+    const rootPayload = (payload && typeof payload === 'object') ? payload : {};
+    const rx = (rootPayload.prescription && typeof rootPayload.prescription === 'object') ? rootPayload.prescription : {};
+    const payloadContext = (rootPayload.context && typeof rootPayload.context === 'object') ? rootPayload.context : {};
     const snapshot = (payload && typeof payload.snapshot === 'object' && payload.snapshot) ? payload.snapshot : {};
     const paciente = (snapshot && typeof snapshot.paciente === 'object' && snapshot.paciente) ? snapshot.paciente : {};
     const medico = (snapshot && typeof snapshot.medico === 'object' && snapshot.medico) ? snapshot.medico : {};
     const branding = (snapshot && typeof snapshot.branding === 'object' && snapshot.branding) ? snapshot.branding : {};
-    const items = Array.isArray(rx.items) ? rx.items : [];
+    const items = resolvePrescriptionPayloadItems(rootPayload);
     const doctorLogo = normalizeAssetUrl(branding.doctor_logo_url);
     const groupLogo = normalizeAssetUrl(branding.group_logo_url);
-    const doctorName = cleanDocValue(medico.nombre || medico.nombre_completo);
+    const doctorName = cleanDocValue(payloadContext.doctor_name || medico.nombre || medico.nombre_completo);
     const doctorSpecialty = cleanDocValue(medico.especialidad);
     const doctorCedula = cleanDocValue(medico.cedula || medico.cedula_profesional);
-    const patientName = cleanDocValue(paciente.nombre || paciente.nombre_completo);
+    const patientName = cleanDocValue(payloadContext.patient_name || paciente.nombre || paciente.nombre_completo);
     const patientAge = cleanDocValue(paciente.edad);
     const patientSex = cleanDocValue(paciente.sexo);
-    const emittedDate = formatPrescriptionDate(snapshot.generated_at || payload.event_datetime || '');
+    const emittedDate = formatPrescriptionDate(payloadContext.date || snapshot.generated_at || payload.event_datetime || '');
     const observaciones = cleanDocValue(rx.observaciones);
     const consultorios = resolvePrescriptionConsultorios(snapshot);
     const patientMeta = [patientAge ? `Edad: ${patientAge}` : '', patientSex ? `Sexo: ${patientSex}` : ''].filter(Boolean).join(' · ');
@@ -3499,19 +4179,23 @@ console.info('app.js loaded :: 20251123a');
     )).join('');
     const itemsHtml = items.length
       ? items.map((item, index) => {
-        const medicamento = cleanDocValue(item?.medicamento) || `Medicamento ${index + 1}`;
+        const medicamento = cleanDocValue(item?.name || item?.medicamento) || `Medicamento ${index + 1}`;
         const lineaDatos = [
-          cleanDocValue(item?.dosis) ? `Dosis: ${cleanDocValue(item?.dosis)}` : '',
-          cleanDocValue(item?.via) ? `Vía: ${cleanDocValue(item?.via)}` : '',
-          cleanDocValue(item?.frecuencia || item?.periodicidad) ? `Frecuencia: ${cleanDocValue(item?.frecuencia || item?.periodicidad)}` : '',
-          cleanDocValue(item?.duracion) ? `Duración: ${cleanDocValue(item?.duracion)}` : ''
+          cleanDocValue(item?.presentation) ? `Presentación: ${cleanDocValue(item?.presentation)}` : '',
+          cleanDocValue(item?.dose || item?.dosis) ? `Dosis: ${cleanDocValue(item?.dose || item?.dosis)}` : '',
+          cleanDocValue(item?.route || item?.via) ? `Vía: ${cleanDocValue(item?.route || item?.via)}` : '',
+          cleanDocValue(item?.frequency || item?.frecuencia || item?.periodicidad) ? `Frecuencia: ${cleanDocValue(item?.frequency || item?.frecuencia || item?.periodicidad)}` : '',
+          cleanDocValue(item?.duration || item?.duracion) ? `Duración: ${cleanDocValue(item?.duration || item?.duracion)}` : '',
+          cleanDocValue(item?.quantity) ? `Cantidad: ${cleanDocValue(item?.quantity)}` : ''
         ].filter(Boolean).join(' · ');
-        const indicaciones = cleanDocValue(item?.indicaciones);
+        const indicaciones = cleanDocValue(item?.instructions || item?.indicaciones);
+        const privateNotes = cleanDocValue(item?.private_notes);
         return `
           <li class="ne-rx-read-item">
             <div class="ne-rx-read-item-title">${escapeHtml(medicamento)}</div>
             ${lineaDatos ? `<div class="ne-rx-read-item-meta">${escapeHtml(lineaDatos)}</div>` : ''}
             ${indicaciones ? `<div class="ne-rx-read-item-note">${escapeHtml(indicaciones)}</div>` : ''}
+            ${privateNotes ? `<div class="ne-rx-read-item-note text-muted">Nota médica: ${escapeHtml(privateNotes)}</div>` : ''}
           </li>
         `;
       }).join('')
@@ -3728,11 +4412,32 @@ console.info('app.js loaded :: 20251123a');
 
   const renderRxModal = () => {
     if (!els.rxGrid) return;
+    warmMedicationCatalogSeed();
     const ctx = resolveRecetaRuntimeContext();
     const patientKey = ctx.patient_id;
     const rx = getRxDraft(patientKey);
-    const meds = Array.isArray(rx.medicamentos) ? rx.medicamentos : [];
-    els.rxGrid.innerHTML = meds.map((m, idx) => rxRowHtml(idx, m)).join('') || rxRowHtml(0, {});
+    const meds = Array.isArray(rx.medications) ? rx.medications : [];
+    if (!meds.length) {
+      const first = normalizePrescriptionMedication({}, 'rxm_1');
+      first.__existing = false;
+      els.rxGrid.innerHTML = rxRowHtml(0, first);
+    } else {
+      const rowsHtml = meds.map((m, idx) => rxRowHtml(idx, { ...m, __existing: true })).join('');
+      els.rxGrid.innerHTML = rowsHtml;
+    }
+    hydrateRxDiagnosticContext(rx);
+    Array.from(els.rxGrid.querySelectorAll('.ne-rx-row')).forEach((row) => {
+      syncRowControlledStateFromInputs(row);
+      applyMedicationAdministrationContextToRow(row, 'hydrate');
+      updateRxRowSummary(row);
+      const isExisting = row.getAttribute('data-ne-rx-existing') === '1';
+      setRxRowState(row, isExisting ? 'collapsed' : 'expanded');
+    });
+    updateRxTemplateHint();
+    refreshRxRowsVisuals();
+    renderRecetaContextPanel(ctx);
+    resetPrescriptionAnalysisDraft();
+    updateRxAnalysisActionState();
     if (els.rxFeedback) {
       els.rxFeedback.classList.add('d-none');
       els.rxFeedback.classList.remove('text-muted', 'text-success', 'text-danger');
@@ -3741,33 +4446,812 @@ console.info('app.js loaded :: 20251123a');
     setRxOpenDocumentAction('');
   };
 
+  const escapeAttr = (value) => String(value || '').replace(/\"/g, '&quot;');
+  const escapeHtmlLite = (value) => String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  const normalizeRouteToken = (value) => rxNormalizeQuery(value).replace(/\s+/g, ' ').trim();
+  const getRouteDisplayLabel = (value) => {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    const key = normalizeRouteToken(text);
+    return RX_ROUTE_DISPLAY[key] || text;
+  };
+  const toRouteDisplayLabel = (value) => getRouteDisplayLabel(value);
+  const routeEquals = (a, b) => normalizeRouteToken(a) === normalizeRouteToken(b);
+  const renderQuickFieldSuggestions = (fieldKey, optionsOverride = null) => {
+    const options = Array.isArray(optionsOverride)
+      ? optionsOverride
+      : (Array.isArray(RX_QUICK_FIELD_SUGGESTIONS[fieldKey]) ? RX_QUICK_FIELD_SUGGESTIONS[fieldKey] : []);
+    if (!options.length) return '';
+    const chips = options
+      .map((optionRaw) => {
+        const option = (optionRaw && typeof optionRaw === 'object')
+          ? optionRaw
+          : { value: String(optionRaw || ''), label: String(optionRaw || '') };
+        const value = String(option?.value || '').trim();
+        const label = String(option?.label || value).trim();
+        if (!value && !label) return '';
+        return `<button type="button" class="ne-rx-quick-chip" data-action="rx-quick-fill" data-rx-field="${escapeAttr(fieldKey)}" data-rx-value="${escapeAttr(value || label)}">${escapeHtmlLite(label || value)}</button>`;
+      })
+      .filter(Boolean)
+      .join('');
+    return `<div class="ne-rx-quick" data-role="rx-quick-suggestions" data-rx-field="${escapeAttr(fieldKey)}">${chips}</div>`;
+  };
+  const rxNormalizeAdministrationPattern = (value) => rxNormalizeQuery(value).replace(/\s+/g, '_');
+  const getAdministrationPattern = (patternKey = '') => {
+    const key = rxNormalizeAdministrationPattern(patternKey);
+    if (!key) return null;
+    const pattern = RX_ADMINISTRATION_PATTERNS[key] || null;
+    if (!pattern) return null;
+    return { key, ...pattern };
+  };
+  const resolveAdministrationPatternByKeywords = (formText = '', presentationText = '', routeText = '') => {
+    const merged = rxNormalizeQuery(`${formText} ${presentationText}`);
+    const routeNorm = rxNormalizeQuery(routeText);
+    if (merged.includes('supositorio')) return 'supositorio';
+    if (merged.includes('suspension')) return 'suspension_oral';
+    if (merged.includes('jarabe')) return 'jarabe_oral';
+    if (merged.includes('capsula')) return 'capsula_oral';
+    if (merged.includes('tableta') || merged.includes('comprimido')) return 'tableta_oral';
+    if (merged.includes('gota') && (merged.includes('otica') || routeNorm.includes('otica'))) return 'gotas_oticas';
+    if (merged.includes('gota') && (merged.includes('oftalm') || routeNorm.includes('oftalm'))) return 'gotas_oftalmicas';
+    if (merged.includes('gota') && (routeNorm.includes('vo') || routeNorm.includes('oral') || merged.includes('pediatr'))) return 'gotas_orales';
+    if (merged.includes('crema')) return 'crema_topica';
+    if (merged.includes('unguento') || merged.includes('pomada')) return 'unguento_topico';
+    if (merged.includes('spray nasal') || merged.includes('aerosol nasal')) return 'spray_nasal';
+    if (merged.includes('nasal') || routeNorm.includes('nasal')) return 'nasal';
+    if (merged.includes('inhalador') || merged.includes('aerosol') || merged.includes('nebul')) return 'aerosol_inhalado';
+    if (merged.includes('ampolleta')) {
+      if (routeNorm === 'iv') return 'ampolleta_iv';
+      if (routeNorm === 'im') return 'ampolleta_im';
+    }
+    return '';
+  };
+  const resolveAdministrationPattern = (presentation = {}, options = {}) => {
+    const useMetadataPattern = options?.useMetadataPattern !== false;
+    const useMetadataForm = options?.useMetadataForm !== false;
+    const meta = (presentation?.meta && typeof presentation.meta === 'object') ? presentation.meta : {};
+    const patternHint = presentation?.administration_pattern || (useMetadataPattern ? (meta?.administration_pattern || '') : '');
+    const fromHint = getAdministrationPattern(patternHint);
+    if (fromHint) {
+      return { key: fromHint.key, pattern: fromHint, source: 'metadata' };
+    }
+
+    const formText = presentation?.form || (useMetadataForm ? (meta?.form || '') : '');
+    const presentationText = presentation?.label || presentation?.presentation || '';
+    const routeText = presentation?.route || meta?.route || '';
+    const keyByKeyword = resolveAdministrationPatternByKeywords(formText, presentationText, routeText);
+    const fromKeyword = getAdministrationPattern(keyByKeyword);
+    if (fromKeyword) {
+      return { key: fromKeyword.key, pattern: fromKeyword, source: 'keyword' };
+    }
+
+    return { key: '', pattern: null, source: 'manual_fallback' };
+  };
+  const getDoseSuggestionsForPattern = (pattern) => rxUniqueTextList(
+    Array.isArray(pattern?.default_dose_suggestions) ? pattern.default_dose_suggestions : []
+  );
+  const getFrequencySuggestionsForPattern = (pattern) => rxUniqueTextList(
+    Array.isArray(pattern?.default_frequency_suggestions) ? pattern.default_frequency_suggestions : []
+  );
+  const getDurationSuggestionsForPattern = (pattern) => rxUniqueTextList(
+    Array.isArray(pattern?.default_duration_suggestions) ? pattern.default_duration_suggestions : []
+  );
+  const resolveAdministrationProfile = (meta = {}, presentationText = '', routeText = '', options = {}) => {
+    const resolved = resolveAdministrationPattern({
+      meta,
+      label: presentationText || '',
+      route: routeText || '',
+      administration_pattern: meta?.administration_pattern || ''
+    }, options);
+    if (resolved?.pattern) {
+      return { key: resolved.key, profile: resolved.pattern };
+    }
+    return { key: '', profile: null };
+  };
+  const parseRowMeta = (row) => {
+    if (!row) return {};
+    try {
+      const raw = String(row.getAttribute('data-ne-rx-meta') || '').trim();
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return (parsed && typeof parsed === 'object') ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  };
+  const writeRowMeta = (row, metaInput = {}) => {
+    if (!row) return;
+    const next = (metaInput && typeof metaInput === 'object') ? { ...metaInput } : {};
+    row.setAttribute('data-ne-rx-meta', JSON.stringify(next));
+  };
+  const RX_CONTROLLED_FIELDS = ['name', 'presentation', 'dose', 'route', 'frequency', 'duration', 'quantity', 'instructions', 'private_notes'];
+  const rxRowStateStore = new WeakMap();
+  const readRowControlledState = (row) => {
+    if (!row) return {};
+    if (rxRowStateStore.has(row)) {
+      const cached = rxRowStateStore.get(row);
+      return (cached && typeof cached === 'object') ? { ...cached } : {};
+    }
+    try {
+      const raw = String(row.getAttribute('data-ne-rx-controlled') || '').trim();
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return (parsed && typeof parsed === 'object') ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  };
+  const writeRowControlledState = (row, patch = {}) => {
+    if (!row) return;
+    const current = readRowControlledState(row);
+    const next = { ...current };
+    RX_CONTROLLED_FIELDS.forEach((field) => {
+      if (Object.prototype.hasOwnProperty.call(patch, field)) {
+        next[field] = normalizeRecetaText(patch[field]);
+      }
+    });
+    rxRowStateStore.set(row, { ...next });
+    row.setAttribute('data-ne-rx-controlled', JSON.stringify(next));
+  };
+  const syncRowControlledStateFromInputs = (row) => {
+    if (!row) return;
+    const patch = {};
+    RX_CONTROLLED_FIELDS.forEach((field) => {
+      patch[field] = normalizeRecetaText(row.querySelector(`[data-ne-rx="${field}"]`)?.value);
+    });
+    writeRowControlledState(row, patch);
+  };
+  const applyRowControlledStateToInputs = (row) => {
+    if (!row) return;
+    const state = readRowControlledState(row);
+    RX_CONTROLLED_FIELDS.forEach((field) => {
+      const input = row.querySelector(`[data-ne-rx="${field}"]`);
+      if (!input) return;
+      const value = normalizeRecetaText(state[field]);
+      if (value !== '') {
+        input.value = value;
+      }
+    });
+  };
+  const updateRowFieldValue = (row, field, value) => {
+    if (!row || !field) return;
+    const safeValue = String(value || '');
+    const matches = row.querySelectorAll(`[data-ne-rx="${field}"]`);
+    const input = matches[0] || null;
+    writeRowControlledState(row, { [field]: safeValue });
+    if (input) input.value = safeValue;
+  };
+  const setQuickSuggestionsForField = (row, fieldKey, options = null) => {
+    if (!row || !fieldKey) return;
+    const wrap = row.querySelector(`[data-rx-field-wrap="${fieldKey}"]`);
+    if (!wrap) return;
+    const html = renderQuickFieldSuggestions(fieldKey, Array.isArray(options) ? options : null);
+    let holder = wrap.querySelector('[data-role="rx-quick-suggestions"]');
+    if (!html) {
+      holder?.remove?.();
+      wrap.classList.remove('is-quick-active');
+      return;
+    }
+    if (!holder) {
+      wrap.insertAdjacentHTML('beforeend', html);
+      return;
+    }
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const nextNode = tmp.firstElementChild;
+    if (nextNode) holder.replaceWith(nextNode);
+  };
+  const uniqRouteValues = (list = []) => {
+    const seen = new Set();
+    const out = [];
+    list.forEach((raw) => {
+      const value = String(raw || '').trim();
+      if (!value) return;
+      const key = rxNormalizeQuery(value);
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      out.push(value);
+    });
+    return out;
+  };
+  const applyMedicationAdministrationContextToRow = (row, reason = 'auto', options = {}) => {
+    if (!row) return;
+    const controlledState = readRowControlledState(row);
+    const doseInput = row.querySelector('[data-ne-rx="dose"]');
+    const routeInput = row.querySelector('[data-ne-rx="route"]');
+    const frequencyInput = row.querySelector('[data-ne-rx="frequency"]');
+    const durationInput = row.querySelector('[data-ne-rx="duration"]');
+    const quantityInput = row.querySelector('[data-ne-rx="quantity"]');
+    const instructionsInput = row.querySelector('[data-ne-rx="instructions"]');
+    const persistedValues = {
+      dose: normalizeRecetaText(controlledState?.dose || doseInput?.value),
+      route: normalizeRecetaText(controlledState?.route || routeInput?.value),
+      frequency: normalizeRecetaText(controlledState?.frequency || frequencyInput?.value),
+      duration: normalizeRecetaText(controlledState?.duration || durationInput?.value),
+      instructions: normalizeRecetaText(controlledState?.instructions || instructionsInput?.value)
+    };
+    const meta = parseRowMeta(row);
+    const presentation = normalizeRecetaText(row.querySelector('[data-ne-rx="presentation"]')?.value);
+    const routeValue = persistedValues.route;
+    const previousPattern = rxNormalizeAdministrationPattern(
+      options?.previousPatternHint
+      || row.getAttribute('data-ne-rx-pattern-active')
+      || meta?.administration_pattern
+      || ''
+    );
+    const ignoreLegacyMetaPattern = reason === 'presentation_input';
+    const resolved = resolveAdministrationProfile(
+      meta,
+      presentation,
+      routeValue || meta?.route || '',
+      {
+        useMetadataPattern: !ignoreLegacyMetaPattern,
+        useMetadataForm: !ignoreLegacyMetaPattern
+      }
+    );
+    const nextPattern = rxNormalizeAdministrationPattern(resolved?.key || '');
+    const patternChanged = previousPattern !== '' && previousPattern !== nextPattern;
+    if (patternChanged) {
+      const resetFields = ['dose', 'route', 'frequency', 'duration', 'instructions', 'quantity'];
+      const resetPatch = {};
+      resetFields.forEach((field) => {
+        const input = row.querySelector(`[data-ne-rx="${field}"]`);
+        if (input) input.value = '';
+        resetPatch[field] = '';
+      });
+      writeRowControlledState(row, resetPatch);
+      persistedValues.dose = '';
+      persistedValues.route = '';
+      persistedValues.frequency = '';
+      persistedValues.duration = '';
+      persistedValues.instructions = '';
+    }
+    const profile = resolved.profile || {};
+    const legacyMetaRoutes = patternChanged ? [] : [
+      ...(Array.isArray(meta?.allowed_routes) ? meta.allowed_routes : []),
+      normalizeRecetaText(meta?.default_route),
+      normalizeRecetaText(meta?.route)
+    ];
+    let allowedRoutesRaw = uniqRouteValues([
+      ...legacyMetaRoutes,
+      ...(Array.isArray(profile?.allowed_routes) ? profile.allowed_routes : []),
+      normalizeRecetaText(profile?.default_route),
+      normalizeRecetaText(routeValue)
+    ]);
+    const profileAllowedRoutes = uniqRouteValues(
+      Array.isArray(profile?.allowed_routes) ? profile.allowed_routes : []
+    );
+    if (profileAllowedRoutes.length) {
+      // El patron contextual domina: no mezclar rutas heredadas incompatibles.
+      const filtered = allowedRoutesRaw.filter((candidate) =>
+        profileAllowedRoutes.some((allowed) => routeEquals(allowed, candidate))
+      );
+      allowedRoutesRaw = filtered.length ? filtered : profileAllowedRoutes;
+    }
+    const allowedRoutesDisplay = uniqRouteValues(allowedRoutesRaw.map((route) => toRouteDisplayLabel(route)));
+    const hasContextualProfile = !!resolved.key || allowedRoutesRaw.length > 0 || !!profile?.dose_unit || !!meta?.dose_unit;
+    const nextMetaDefaultRoute = patternChanged
+      ? normalizeRecetaText(profile?.default_route || '')
+      : normalizeRecetaText(meta?.default_route || profile?.default_route || '');
+    const nextMeta = {
+      ...meta,
+      administration_pattern: resolved.key || meta?.administration_pattern || '',
+      allowed_routes: allowedRoutesRaw,
+      default_route: nextMetaDefaultRoute,
+      route: patternChanged ? '' : normalizeRecetaText(meta?.route || ''),
+      dose_unit: normalizeRecetaText(meta?.dose_unit || profile?.dose_unit || '')
+    };
+    writeRowMeta(row, nextMeta);
+    row.setAttribute('data-ne-rx-pattern-active', nextPattern);
+    const shouldForceAutoQuantity = patternChanged
+      || reason === 'suggestion'
+      || reason === 'presentation_input'
+      || reason === 'hydrate'
+      || reason === 'add'
+      || reason === 'dose_input'
+      || reason === 'frequency_input'
+      || reason === 'duration_input'
+      || options?.forceQuantityAuto === true;
+    applyQuantityModeForRow(row, nextPattern, { forceAuto: shouldForceAutoQuantity });
+
+    if (routeInput) {
+      const routePlaceholder = allowedRoutesDisplay.length ? `Vía (${allowedRoutesDisplay.join(' / ')})` : 'Vía';
+      routeInput.placeholder = routePlaceholder;
+      const currentRouteValue = normalizeRecetaText(routeInput.value || routeValue);
+      const hasRouteConstraints = allowedRoutesDisplay.length > 0;
+      const currentRouteIsAllowed = !hasRouteConstraints || allowedRoutesDisplay.some((option) => routeEquals(option, currentRouteValue));
+      if (!currentRouteIsAllowed) {
+        routeInput.value = '';
+        writeRowControlledState(row, { route: '' });
+      }
+      const onlyOneRoute = allowedRoutesRaw.length === 1 ? getRouteDisplayLabel(allowedRoutesRaw[0]) : '';
+      const defaultRouteSource = patternChanged
+        ? normalizeRecetaText(profile?.default_route || '')
+        : normalizeRecetaText(meta?.default_route || profile?.default_route || '');
+      const defaultRoute = getRouteDisplayLabel(defaultRouteSource);
+      const pickRoute = onlyOneRoute || defaultRoute;
+      if (pickRoute && hasRouteConstraints) {
+        const routeValid = !normalizeRecetaText(routeInput.value || routeValue) || allowedRoutesDisplay.some((option) => routeEquals(option, routeInput.value || routeValue));
+        if (routeValid || reason === 'suggestion') {
+          routeInput.value = pickRoute;
+        }
+      } else if (routeValue && currentRouteIsAllowed) {
+        routeInput.value = toRouteDisplayLabel(routeValue);
+      }
+    }
+
+    const doseSuggestions = rxUniqueTextList([
+      ...(Array.isArray(meta?.default_dose_suggestions) ? meta.default_dose_suggestions : []),
+      ...getDoseSuggestionsForPattern(profile)
+    ]);
+    const frequencySuggestions = rxUniqueTextList([
+      ...(Array.isArray(meta?.default_frequency_suggestions) ? meta.default_frequency_suggestions : []),
+      ...getFrequencySuggestionsForPattern(profile)
+    ]);
+    const durationSuggestions = rxUniqueTextList([
+      ...(Array.isArray(meta?.default_duration_suggestions) ? meta.default_duration_suggestions : []),
+      ...getDurationSuggestionsForPattern(profile)
+    ]);
+    const instructionHints = rxUniqueTextList([
+      ...(Array.isArray(meta?.instruction_hints) ? meta.instruction_hints : []),
+      ...(Array.isArray(profile?.instruction_hints) ? profile.instruction_hints : [])
+    ]);
+
+    const routeOptions = allowedRoutesDisplay.map((label) => ({ value: label, label }));
+    setQuickSuggestionsForField(
+      row,
+      'route',
+      routeOptions.length ? routeOptions : (hasContextualProfile ? [] : null)
+    );
+    setQuickSuggestionsForField(
+      row,
+      'dose',
+      doseSuggestions.length ? doseSuggestions : (hasContextualProfile ? [] : null)
+    );
+    setQuickSuggestionsForField(
+      row,
+      'frequency',
+      frequencySuggestions.length ? frequencySuggestions : (hasContextualProfile ? [] : null)
+    );
+    setQuickSuggestionsForField(
+      row,
+      'duration',
+      durationSuggestions.length ? durationSuggestions : (hasContextualProfile ? [] : null)
+    );
+    setQuickSuggestionsForField(
+      row,
+      'instructions',
+      instructionHints.length ? instructionHints : (hasContextualProfile ? [] : null)
+    );
+
+    if (instructionsInput) {
+      instructionsInput.placeholder = instructionHints.length
+        ? `Indicaciones al paciente (ej. ${instructionHints[0]})`
+        : 'Indicaciones al paciente';
+    }
+    if (doseInput) {
+      const unit = normalizeRecetaText(meta?.dose_unit || profile?.dose_unit);
+      doseInput.placeholder = unit ? `Dosis (${unit})` : 'Dosis';
+    }
+    // Preserve visible values typed/selected by the clinician after contextual recalculation.
+    if (!patternChanged) {
+      if (doseInput && persistedValues.dose) doseInput.value = persistedValues.dose;
+      if (frequencyInput && persistedValues.frequency) frequencyInput.value = persistedValues.frequency;
+      if (durationInput && persistedValues.duration) durationInput.value = persistedValues.duration;
+      if (instructionsInput && persistedValues.instructions) instructionsInput.value = persistedValues.instructions;
+      if (routeInput && persistedValues.route && !routeInput.value) routeInput.value = toRouteDisplayLabel(persistedValues.route);
+    }
+    const currentControlled = readRowControlledState(row);
+    const nextPatch = {
+      dose: normalizeRecetaText(doseInput?.value),
+      route: normalizeRecetaText(routeInput?.value),
+      quantity: normalizeRecetaText(quantityInput?.value),
+      instructions: normalizeRecetaText(instructionsInput?.value)
+    };
+    const nextFrequency = normalizeRecetaText(frequencyInput?.value);
+    const nextDuration = normalizeRecetaText(durationInput?.value);
+    if (nextFrequency !== '' || normalizeRecetaText(currentControlled?.frequency) === '') {
+      nextPatch.frequency = nextFrequency;
+    }
+    if (nextDuration !== '' || normalizeRecetaText(currentControlled?.duration) === '') {
+      nextPatch.duration = nextDuration;
+    }
+    writeRowControlledState(row, nextPatch);
+    applyRowControlledStateToInputs(row);
+  };
+  const normalizeQuickToken = (value) => normalizeRecetaText(value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const isAutoQuantityPattern = (patternKey = '') => RX_QUANTITY_AUTO_PATTERNS.has(rxNormalizeAdministrationPattern(patternKey));
+  const resolveQuantityUnitForPattern = (patternKey = '', doseText = '') => {
+    const safePattern = rxNormalizeAdministrationPattern(patternKey);
+    const normalizedDose = normalizeQuickToken(doseText);
+    if (safePattern === 'suspension_oral') return 'ml';
+    if (safePattern === 'gotas_orales') {
+      if (normalizedDose.includes('ml')) return 'ml';
+      return 'gotas';
+    }
+    if (safePattern === 'capsula_oral') return 'cápsulas';
+    if (safePattern === 'supositorio') return 'supositorios';
+    if (safePattern === 'tableta_oral') return 'tabletas';
+    return '';
+  };
+  const parseDoseQuantityAmount = (doseText = '', patternKey = '') => {
+    const text = normalizeRecetaText(doseText);
+    if (!text) {
+      return isAutoQuantityPattern(patternKey) ? 1 : null;
+    }
+    const normalized = normalizeQuickToken(text).replace(',', '.');
+    const match = normalized.match(/(\d+(?:\.\d+)?)/);
+    if (!match) {
+      if (isAutoQuantityPattern(patternKey)) return 1;
+      return null;
+    }
+    const value = Number(match[1]);
+    if (!Number.isFinite(value) || value <= 0) return null;
+    return value;
+  };
+  const parseFrequencyPerDay = (frequencyText = '') => {
+    const text = normalizeQuickToken(frequencyText).replace(',', '.');
+    if (!text) return null;
+    const byHours = text.match(/cada\s*(\d+(?:\.\d+)?)\s*h/);
+    if (byHours) {
+      const hours = Number(byHours[1]);
+      if (Number.isFinite(hours) && hours > 0) return 24 / hours;
+    }
+    const byTimesPerDay = text.match(/(\d+(?:\.\d+)?)\s*veces?\s*(?:al|por)\s*dia/);
+    if (byTimesPerDay) {
+      const times = Number(byTimesPerDay[1]);
+      if (Number.isFinite(times) && times > 0) return times;
+    }
+    const onePerDay = text.match(/(\d+(?:\.\d+)?)\s*vez\s*(?:al|por)\s*dia/);
+    if (onePerDay) {
+      const times = Number(onePerDay[1]);
+      if (Number.isFinite(times) && times > 0) return times;
+    }
+    return null;
+  };
+  const parseDurationDays = (durationText = '') => {
+    const text = normalizeQuickToken(durationText).replace(',', '.');
+    if (!text) return null;
+    if (text.includes('dosis unica')) return 1;
+    const byDays = text.match(/(\d+(?:\.\d+)?)\s*dias?/);
+    if (byDays) {
+      const days = Number(byDays[1]);
+      if (Number.isFinite(days) && days > 0) return days;
+    }
+    return null;
+  };
+  const formatQuantityValue = (value, unit = '') => {
+    if (!Number.isFinite(value) || value <= 0) return '';
+    const rounded = Math.abs(value - Math.round(value)) < 0.00001
+      ? String(Math.round(value))
+      : String(Number(value.toFixed(2)));
+    return unit ? `${rounded} ${unit}` : rounded;
+  };
+  const calculateAutoQuantityForRow = (row, patternKey = '') => {
+    if (!row || !isAutoQuantityPattern(patternKey)) return null;
+    const doseText = normalizeRecetaText(row.querySelector('[data-ne-rx="dose"]')?.value);
+    const frequencyText = normalizeRecetaText(row.querySelector('[data-ne-rx="frequency"]')?.value);
+    const durationText = normalizeRecetaText(row.querySelector('[data-ne-rx="duration"]')?.value);
+    const doseAmount = parseDoseQuantityAmount(doseText, patternKey);
+    const frequencyPerDay = parseFrequencyPerDay(frequencyText);
+    const durationDays = parseDurationDays(durationText);
+    if (!(Number.isFinite(doseAmount) && Number.isFinite(frequencyPerDay) && Number.isFinite(durationDays))) return null;
+    const quantityUnit = resolveQuantityUnitForPattern(patternKey, doseText);
+    const quantityValue = doseAmount * frequencyPerDay * durationDays;
+    return {
+      quantity_mode: 'auto',
+      quantity_value: String(Math.abs(quantityValue - Math.round(quantityValue)) < 0.00001 ? Math.round(quantityValue) : Number(quantityValue.toFixed(2))),
+      quantity_unit: quantityUnit,
+      quantity: formatQuantityValue(quantityValue, quantityUnit)
+    };
+  };
+  const applyQuantityModeForRow = (row, patternKey = '', options = {}) => {
+    if (!row) return;
+    const meta = parseRowMeta(row);
+    const quantityInput = row.querySelector('[data-ne-rx="quantity"]');
+    if (!quantityInput) return;
+    let normalizedPattern = rxNormalizeAdministrationPattern(patternKey);
+    if (!normalizedPattern) {
+      normalizedPattern = rxNormalizeAdministrationPattern(
+        row.getAttribute('data-ne-rx-pattern-active')
+        || meta?.administration_pattern
+        || ''
+      );
+    }
+    if (!normalizedPattern) {
+      const presentation = normalizeRecetaText(row.querySelector('[data-ne-rx="presentation"]')?.value);
+      const route = normalizeRecetaText(row.querySelector('[data-ne-rx="route"]')?.value);
+      const resolved = resolveAdministrationProfile(meta, presentation, route || meta?.route || '', {
+        useMetadataPattern: false,
+        useMetadataForm: false
+      });
+      normalizedPattern = rxNormalizeAdministrationPattern(resolved?.key || '');
+    }
+    const forceAuto = options?.forceAuto === true;
+    const autoQuantity = calculateAutoQuantityForRow(row, normalizedPattern);
+    const isAutoPattern = isAutoQuantityPattern(normalizedPattern);
+    const fallbackPlaceholder = RX_QUANTITY_MANUAL_PLACEHOLDERS[normalizedPattern] || 'Cantidad total';
+    if (isAutoPattern) {
+      quantityInput.placeholder = 'Cantidad total (auto calculada)';
+      const allowAutoUpdate = forceAuto || normalizeRecetaText(meta?.quantity_mode) !== 'manual';
+      if (allowAutoUpdate && autoQuantity?.quantity) {
+        quantityInput.value = autoQuantity.quantity;
+        writeRowControlledState(row, { quantity: autoQuantity.quantity });
+        writeRowMeta(row, {
+          ...meta,
+          quantity_mode: 'auto',
+          quantity_value: autoQuantity.quantity_value,
+          quantity_unit: autoQuantity.quantity_unit
+        });
+        return;
+      }
+      writeRowMeta(row, {
+        ...meta,
+        quantity_mode: forceAuto ? 'auto' : (normalizeRecetaText(meta?.quantity_mode) || 'auto'),
+        quantity_value: normalizeRecetaText(meta?.quantity_value),
+        quantity_unit: normalizeRecetaText(meta?.quantity_unit || resolveQuantityUnitForPattern(normalizedPattern, row.querySelector('[data-ne-rx="dose"]')?.value))
+      });
+      return;
+    }
+
+    quantityInput.placeholder = fallbackPlaceholder;
+    writeRowMeta(row, {
+      ...meta,
+      quantity_mode: 'manual',
+      quantity_value: normalizeRecetaText(quantityInput.value),
+      quantity_unit: ''
+    });
+  };
+  const collectRxDiagnosticContext = () => {
+    const mode = normalizeRecetaText(els.rxDxMode?.value) || 'sin_diagnostico';
+    const text = normalizeRecetaText(els.rxDxText?.value);
+    return { mode, text };
+  };
+  const diagnosticModeLabel = (mode) => {
+    if (mode === 'diagnostico') return 'Diagnóstico';
+    if (mode === 'prediagnostico') return 'Prediagnóstico';
+    return 'Sin diagnóstico definido';
+  };
+  const updateRxTemplateHint = () => {
+    if (!els.rxTemplateHint) return;
+    const dx = collectRxDiagnosticContext();
+    const label = diagnosticModeLabel(dx.mode);
+    const suffix = dx.text ? `${label}: ${dx.text}` : label;
+    els.rxTemplateHint.textContent = `Plantilla de receta para: ${suffix}.`;
+  };
+  const hydrateRxDiagnosticContext = (draft) => {
+    const mode = normalizeRecetaText(draft?.diagnostic_context?.mode) || 'sin_diagnostico';
+    const text = normalizeRecetaText(draft?.diagnostic_context?.text);
+    if (els.rxDxMode) els.rxDxMode.value = mode;
+    if (els.rxDxText) els.rxDxText.value = text;
+  };
   const rxRowHtml = (idx, m) => `
-    <div class="ne-rx-row" data-ne-rx-row="${idx}">
-      <input class="form-control form-control-sm" placeholder="Medicamento" data-ne-rx="medicamento" value="${(m.medicamento || '').replace(/\"/g,'&quot;')}">
-      <input class="form-control form-control-sm" placeholder="Dosis" data-ne-rx="dosis" value="${(m.dosis || '').replace(/\"/g,'&quot;')}">
-      <input class="form-control form-control-sm" placeholder="Vía" data-ne-rx="via" value="${(m.via || '').replace(/\"/g,'&quot;')}">
-      <input class="form-control form-control-sm" placeholder="Periodicidad" data-ne-rx="periodicidad" value="${(m.periodicidad || '').replace(/\"/g,'&quot;')}">
-      <input class="form-control form-control-sm" placeholder="Duración" data-ne-rx="duracion" value="${(m.duracion || '').replace(/\"/g,'&quot;')}">
-      <input class="form-control form-control-sm" placeholder="Indicaciones" data-ne-rx="indicaciones" value="${(m.indicaciones || '').replace(/\"/g,'&quot;')}">
-      <button type="button" class="btn btn-outline-danger btn-sm ne-rx-del" data-ne-rx-del aria-label="Eliminar">&times;</button>
+    <div class="ne-rx-row" data-ne-rx-row="${idx}" data-ne-rx-state="expanded" data-ne-rx-existing="${m.__existing ? '1' : '0'}" data-ne-rx-uid="${escapeAttr(m.uid || `rxm_${idx + 1}`)}" data-ne-rx-source="${escapeAttr(m.source || 'manual')}" data-ne-rx-catalog-id="${escapeAttr(m.catalog_id || '')}" data-ne-rx-memory-id="${escapeAttr(m.doctor_memory_id || '')}" data-ne-rx-meta="${escapeAttr(JSON.stringify(m.meta || {}))}">
+      <div class="ne-rx-summary d-none" data-role="rx-row-summary">
+        <div class="ne-rx-summary-main" data-role="rx-summary-main">Medicamento pendiente</div>
+        <div class="ne-rx-summary-meta" data-role="rx-summary-meta"></div>
+        <div class="ne-rx-summary-actions">
+          <button type="button" class="btn btn-link btn-sm p-0" data-ne-rx-edit>Editar</button>
+          <span class="text-muted">·</span>
+          <button type="button" class="btn btn-link btn-sm p-0" data-ne-rx-dup>Duplicar</button>
+          <span class="text-muted">·</span>
+          <button type="button" class="btn btn-link btn-sm p-0 text-danger" data-ne-rx-del>Eliminar</button>
+        </div>
+      </div>
+      <div class="ne-rx-editor" data-role="rx-row-editor">
+        <div class="ne-rx-name-wrap">
+          <input class="form-control form-control-sm" placeholder="Nombre del medicamento" data-ne-rx="name" autocomplete="off" value="${escapeAttr(m.name)}">
+          <div class="ne-rx-suggest d-none" data-role="rx-med-suggestions"></div>
+        </div>
+        <input class="form-control form-control-sm" placeholder="Presentación" data-ne-rx="presentation" value="${escapeAttr(m.presentation)}">
+        <div class="ne-rx-field-wrap" data-rx-field-wrap="dose">
+          <input class="form-control form-control-sm" placeholder="Dosis" data-ne-rx="dose" value="${escapeAttr(m.dose)}">
+          ${renderQuickFieldSuggestions('dose')}
+        </div>
+        <div class="ne-rx-field-wrap" data-rx-field-wrap="route">
+          <input class="form-control form-control-sm" placeholder="Vía" data-ne-rx="route" value="${escapeAttr(m.route)}">
+          ${renderQuickFieldSuggestions('route')}
+        </div>
+        <div class="ne-rx-field-wrap" data-rx-field-wrap="frequency">
+          <input class="form-control form-control-sm" placeholder="Frecuencia" data-ne-rx="frequency" value="${escapeAttr(m.frequency)}">
+          ${renderQuickFieldSuggestions('frequency')}
+        </div>
+        <div class="ne-rx-field-wrap" data-rx-field-wrap="duration">
+          <input class="form-control form-control-sm" placeholder="Duración" data-ne-rx="duration" value="${escapeAttr(m.duration)}">
+          ${renderQuickFieldSuggestions('duration')}
+        </div>
+        <input class="form-control form-control-sm" placeholder="Cantidad total" data-ne-rx="quantity" value="${escapeAttr(m.quantity)}">
+        <div class="ne-rx-field-wrap ne-rx-field-wrap-wide" data-rx-field-wrap="instructions">
+          <input class="form-control form-control-sm" placeholder="Indicaciones al paciente" data-ne-rx="instructions" value="${escapeAttr(m.instructions)}">
+          ${renderQuickFieldSuggestions('instructions')}
+        </div>
+        <input class="form-control form-control-sm" placeholder="Notas médicas privadas" data-ne-rx="private_notes" value="${escapeAttr(m.private_notes)}">
+        <div class="ne-rx-actions">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-ne-rx-cancel>Cancelar</button>
+          <button type="button" class="btn btn-primary btn-sm" data-ne-rx-collapse>Agregar medicamento</button>
+        </div>
+      </div>
     </div>
   `;
+  const updateRxRowSummary = (row) => {
+    if (!row) return;
+    const get = (k) => normalizeRecetaText(row.querySelector(`[data-ne-rx="${k}"]`)?.value);
+    const name = get('name');
+    const presentation = get('presentation');
+    const instructions = get('instructions');
+    const route = get('route');
+    const frequency = get('frequency');
+    const duration = get('duration');
+    const main = [name || 'Medicamento sin nombre', presentation].filter(Boolean).join(' ');
+    const note = instructions ? ` — ${instructions}` : '';
+    const secondary = [
+      route ? `Vía: ${route}` : '',
+      frequency ? `Frecuencia: ${frequency}` : '',
+      duration ? `Duración: ${duration}` : ''
+    ].filter(Boolean).join(' · ');
+    const mainEl = row.querySelector('[data-role="rx-summary-main"]');
+    const metaEl = row.querySelector('[data-role="rx-summary-meta"]');
+    const rowIndex = Array.from(row.parentElement?.querySelectorAll?.('.ne-rx-row') || []).indexOf(row);
+    const summaryWrap = row.querySelector('[data-role="rx-row-summary"]');
+    if (summaryWrap) {
+      summaryWrap.setAttribute('data-rx-order', String((rowIndex >= 0 ? rowIndex : 0) + 1));
+    }
+    if (mainEl) mainEl.textContent = `${main}${note}`;
+    if (metaEl) metaEl.textContent = secondary;
+  };
+  const setRxRowState = (row, nextState = 'expanded') => {
+    if (!row) return;
+    const editor = row.querySelector('[data-role="rx-row-editor"]');
+    const summary = row.querySelector('[data-role="rx-row-summary"]');
+    const collapsed = nextState === 'collapsed';
+    row.setAttribute('data-ne-rx-state', collapsed ? 'collapsed' : 'expanded');
+    if (editor) editor.classList.toggle('d-none', collapsed);
+    if (summary) summary.classList.toggle('d-none', !collapsed);
+    if (collapsed) {
+      updateRxRowSummary(row);
+    } else {
+      row.querySelector('[data-ne-rx="name"]')?.focus?.();
+    }
+  };
 
   const collectRxModal = () => {
     if (!els.rxGrid) return [];
     const rows = Array.from(els.rxGrid.querySelectorAll('.ne-rx-row'));
-    return rows.map(r => {
+    return rows.map((r, index) => {
       const get = (k) => r.querySelector(`[data-ne-rx="${k}"]`)?.value?.trim() || '';
-      return {
-        medicamento: get('medicamento'),
-        dosis: get('dosis'),
-        via: get('via'),
-        periodicidad: get('periodicidad'),
-        duracion: get('duracion'),
-        indicaciones: get('indicaciones')
-      };
-    }).filter(m => Object.values(m).some(v => v));
+      let rowMeta = {};
+      try {
+        const rawMeta = String(r.getAttribute('data-ne-rx-meta') || '').trim();
+        if (rawMeta) {
+          const parsed = JSON.parse(rawMeta);
+          if (parsed && typeof parsed === 'object') {
+            rowMeta = parsed;
+          }
+        }
+      } catch (_) {}
+      return normalizePrescriptionMedication({
+        uid: r.getAttribute('data-ne-rx-uid') || `rxm_${index + 1}`,
+        source: r.getAttribute('data-ne-rx-source') || 'manual',
+        catalog_id: r.getAttribute('data-ne-rx-catalog-id') || '',
+        doctor_memory_id: r.getAttribute('data-ne-rx-memory-id') || '',
+        name: get('name'),
+        presentation: get('presentation'),
+        dose: get('dose'),
+        route: get('route'),
+        frequency: get('frequency'),
+        duration: get('duration'),
+        quantity: get('quantity'),
+        quantity_mode: normalizeRecetaText(rowMeta?.quantity_mode),
+        quantity_value: normalizeRecetaText(rowMeta?.quantity_value),
+        quantity_unit: normalizeRecetaText(rowMeta?.quantity_unit),
+        instructions: get('instructions'),
+        private_notes: get('private_notes'),
+        meta: rowMeta
+      }, `rxm_${index + 1}`);
+    }).filter((m) => hasPrescriptionMedicationContent(m));
   };
+  const updateRxCount = () => {
+    if (!els.rxCount) return;
+    els.rxCount.textContent = String(mapValidPrescriptionItems(collectRxModal()).length);
+  };
+  const refreshRxRowsVisuals = () => {
+    if (!els.rxGrid) return;
+    Array.from(els.rxGrid.querySelectorAll('.ne-rx-row')).forEach((row) => updateRxRowSummary(row));
+    updateRxCount();
+  };
+
+  const hideMedicationSuggestions = (row) => {
+    const list = row?.querySelector('[data-role="rx-med-suggestions"]');
+    if (!list) return;
+    list.classList.add('d-none');
+    list.innerHTML = '';
+  };
+
+  const applyMedicationSuggestionToRow = (row, suggestionInput, manualText = '') => {
+    if (!row) return;
+    const previousMeta = parseRowMeta(row);
+    const previousPatternHint = String(
+      row.getAttribute('data-ne-rx-pattern-active')
+      || previousMeta?.administration_pattern
+      || ''
+    ).trim();
+    const suggestion = normalizeMedicationSuggestion(suggestionInput || {});
+    const medication = suggestion.source === 'manual'
+      ? buildPrescriptionMedicationManualDraft(manualText || suggestion.name)
+      : buildPrescriptionMedicationFromSuggestion(suggestion);
+    if (suggestion.source !== 'manual' && !normalizeRecetaText(medication.name)) {
+      medication.name = normalizeRecetaText(suggestion.name || manualText);
+    }
+    const set = (key, value) => {
+      const input = row.querySelector(`[data-ne-rx="${key}"]`);
+      if (input) input.value = String(value || '');
+    };
+    row.setAttribute('data-ne-rx-source', medication.source || 'manual');
+    row.setAttribute('data-ne-rx-catalog-id', medication.catalog_id || '');
+    row.setAttribute('data-ne-rx-memory-id', medication.doctor_memory_id || '');
+    if (medication.meta && typeof medication.meta === 'object') {
+      row.setAttribute('data-ne-rx-meta', JSON.stringify(medication.meta));
+    } else {
+      row.removeAttribute('data-ne-rx-meta');
+    }
+    set('name', medication.name);
+    set('presentation', medication.presentation);
+    set('dose', medication.dose);
+    set('route', medication.route);
+    set('frequency', medication.frequency);
+    set('duration', medication.duration);
+    set('quantity', medication.quantity);
+    set('instructions', medication.instructions);
+    set('private_notes', medication.private_notes);
+    syncRowControlledStateFromInputs(row);
+    applyMedicationAdministrationContextToRow(row, 'suggestion', { previousPatternHint });
+    updateRxRowSummary(row);
+    hideMedicationSuggestions(row);
+  };
+
+  const renderMedicationSuggestionsForRow = (row, termInput = '') => {
+    const list = row?.querySelector('[data-role="rx-med-suggestions"]');
+    if (!list) return;
+    const term = normalizeRecetaText(termInput);
+    if (!term) {
+      hideMedicationSuggestions(row);
+      return;
+    }
+    const groups = mergeMedicationSuggestions(term);
+    const html = [];
+    groups.forEach((group) => {
+      const items = Array.isArray(group.items) ? group.items : [];
+      if (!items.length) return;
+      html.push(`<div class="ne-rx-suggest-group"><div class="ne-rx-suggest-title">${escapeHtmlLite(group.label)}</div>`);
+      items.forEach((item) => {
+        const normalized = normalizeMedicationSuggestion(item);
+        const brandHint = Array.isArray(normalized.meta?.brand_names) && normalized.meta.brand_names.length
+          ? `Marca: ${String(normalized.meta.brand_names[0] || '').trim()}`
+          : '';
+        const line2 = [normalized.presentation, normalized.route, brandHint].filter(Boolean).join(' · ');
+        if (group.key === 'manual') {
+          html.push(`<button type="button" class="ne-rx-suggest-item is-manual" data-action="rx-med-select-suggestion" data-suggest-source="manual" data-suggest-name="${escapeAttr(term)}">Agregar manualmente "${escapeHtmlLite(term)}"</button>`);
+        } else {
+          html.push(`<button type="button" class="ne-rx-suggest-item" data-action="rx-med-select-suggestion" data-suggest-source="${escapeAttr(normalized.source)}" data-suggest-name="${escapeAttr(normalized.name)}" data-suggest-presentation="${escapeAttr(normalized.presentation)}" data-suggest-dose="${escapeAttr(normalized.dose)}" data-suggest-route="${escapeAttr(normalized.route)}" data-suggest-frequency="${escapeAttr(normalized.frequency)}" data-suggest-duration="${escapeAttr(normalized.duration)}" data-suggest-quantity="${escapeAttr(normalized.quantity)}" data-suggest-instructions="${escapeAttr(normalized.instructions)}" data-suggest-private-notes="${escapeAttr(normalized.private_notes)}" data-suggest-catalog-id="${escapeAttr(normalized.catalog_id)}" data-suggest-memory-id="${escapeAttr(normalized.doctor_memory_id)}" data-suggest-meta="${escapeAttr(JSON.stringify(normalized.meta || {}))}">
+            <span class="ne-rx-suggest-name">${escapeHtmlLite(normalized.name || 'Medicamento')}</span>
+            ${line2 ? `<span class="ne-rx-suggest-meta">${escapeHtmlLite(line2)}</span>` : ''}
+          </button>`);
+        }
+      });
+      html.push('</div>');
+    });
+    if (!html.length) {
+      list.classList.add('d-none');
+      list.innerHTML = '';
+      return;
+    }
+    list.innerHTML = html.join('');
+    list.classList.remove('d-none');
+  };
+
   const setRxFeedback = (message, tone = 'muted') => {
     if (!els.rxFeedback) return;
     const text = String(message || '').trim();
@@ -3853,27 +5337,175 @@ console.info('app.js loaded :: 20251123a');
       }
     };
   };
+
+  const collectPrescriptionClinicalContext = (ctxInput = null) => {
+    const ctx = ctxInput || resolveRecetaRuntimeContext();
+    const patientId = normalizeRecetaText(ctx?.patient_id);
+    const encounterKey = normalizeRecetaText(ctx?.encounter_key);
+    const getChipValues = (itemKey) => {
+      const chips = Array.from(document.querySelectorAll(`#t-historia [data-hc-item="${itemKey}"] [data-hc-chips] .hc-chip`));
+      return chips.map((chip) => {
+        const detail = String(chip.getAttribute('data-details') || '').trim();
+        const label = String(chip.textContent || '').trim();
+        return detail || label;
+      }).filter(Boolean);
+    };
+    const allergies = getChipValues('alergias');
+    const currentDraft = getRxDraft(patientId);
+    const currentMedications = (Array.isArray(currentDraft.medications) ? currentDraft.medications : [])
+      .map((item) => String(item?.name || '').trim())
+      .filter(Boolean);
+    return {
+      patient_id: patientId || null,
+      encounter_id: encounterKey || null,
+      patient_name: normalizeRecetaText(ctx?.patient?.nombre_completo),
+      doctor_name: normalizeRecetaText(ctx?.medico?.nombre || ctx?.actor?.nombre_completo),
+      date: new Date().toISOString().slice(0, 10),
+      allergies,
+      current_medications: currentMedications
+    };
+  };
+  window.collectPrescriptionClinicalContext = collectPrescriptionClinicalContext;
+
+  const runPrescriptionLocalChecks = (medications = []) => {
+    const checks = [];
+    (Array.isArray(medications) ? medications : []).forEach((item, index) => {
+      if (!String(item?.name || '').trim()) {
+        checks.push(`Medicamento ${index + 1}: falta nombre.`);
+      }
+    });
+    return checks;
+  };
+  window.runPrescriptionLocalChecks = runPrescriptionLocalChecks;
+
+  const RX_ANALYSIS_IDLE_MESSAGE = 'Disponible próximamente bajo demanda. Por ahora se muestran validaciones locales básicas.';
+  let rxAnalysisDraftState = {
+    status: 'idle',
+    last_run_at: null,
+    results: {
+      risks: [],
+      precautions: [],
+      observations: []
+    }
+  };
+
+  const renderPrescriptionAnalysisSummary = (analysis = {}) => {
+    if (!els.rxAnalysisSummary) return;
+    const status = String(analysis?.status || '').trim() || 'idle';
+    const checks = Array.isArray(analysis?.checks) ? analysis.checks : [];
+    const observations = Array.isArray(analysis?.results?.observations) ? analysis.results.observations : [];
+    const summaryChecks = observations.length ? observations : checks;
+    if (!summaryChecks.length || status === 'idle') {
+      els.rxAnalysisSummary.textContent = RX_ANALYSIS_IDLE_MESSAGE;
+      return;
+    }
+    const prefix = status === 'completed' ? 'Resultado del análisis' : 'Validaciones locales';
+    els.rxAnalysisSummary.textContent = `${prefix}: ${summaryChecks.join(' ')}`;
+  };
+  window.renderPrescriptionAnalysisSummary = renderPrescriptionAnalysisSummary;
+
+  const validatePrescriptionDraft = (draft = {}) => {
+    const errors = [];
+    if (!draft || !normalizeRecetaText(draft.patient_id)) {
+      errors.push('Falta paciente activo.');
+    }
+    const rawMeds = Array.isArray(draft.raw_medications) ? draft.raw_medications : [];
+    rawMeds.forEach((item, index) => {
+      const hasAnyData = Object.entries(item || {}).some(([key, value]) => {
+        if (key === 'uid' || key === 'name') return false;
+        return normalizeRecetaText(value) !== '';
+      });
+      if (hasAnyData && !normalizeRecetaText(item?.name)) {
+        errors.push(`Medicamento ${index + 1}: nombre obligatorio.`);
+      }
+    });
+    const meds = Array.isArray(draft.medications) ? draft.medications : [];
+    if (!meds.length) {
+      errors.push('Falta al menos un medicamento válido.');
+    }
+    return errors;
+  };
+  window.validatePrescriptionDraft = validatePrescriptionDraft;
+
+  const renderRecetaContextPanel = (ctx) => {
+    const prescriptionContext = collectPrescriptionClinicalContext(ctx);
+    if (els.rxCtxPatient) els.rxCtxPatient.textContent = prescriptionContext.patient_name || 'No registrado';
+    if (els.rxCtxDoctor) els.rxCtxDoctor.textContent = prescriptionContext.doctor_name || 'No registrado';
+    if (els.rxCtxDate) els.rxCtxDate.textContent = prescriptionContext.date || 'No registrada';
+    if (els.rxCtxEncounter) els.rxCtxEncounter.textContent = prescriptionContext.encounter_id || 'Sin consulta activa';
+    if (els.rxCtxAllergies) els.rxCtxAllergies.textContent = prescriptionContext.allergies.length ? prescriptionContext.allergies.join(' · ') : 'Sin alergias registradas';
+    if (els.rxCtxCurrentMeds) els.rxCtxCurrentMeds.textContent = prescriptionContext.current_medications.length ? prescriptionContext.current_medications.join(' · ') : 'Sin medicamentos registrados';
+  };
+
   const mapValidPrescriptionItems = (meds) => {
     const rows = Array.isArray(meds) ? meds : [];
     return rows
-      .map((item) => ({
-        medicamento: normalizeRecetaText(item?.medicamento),
-        dosis: normalizeRecetaText(item?.dosis),
-        via: normalizeRecetaText(item?.via),
-        frecuencia: normalizeRecetaText(item?.periodicidad),
-        periodicidad: normalizeRecetaText(item?.periodicidad),
-        duracion: normalizeRecetaText(item?.duracion),
-        indicaciones: normalizeRecetaText(item?.indicaciones)
+      .map((item, index) => ({
+        uid: normalizeRecetaText(item?.uid) || `rxm_${index + 1}`,
+        source: normalizeRecetaText(item?.source) || 'manual',
+        catalog_id: normalizeRecetaText(item?.catalog_id),
+        doctor_memory_id: normalizeRecetaText(item?.doctor_memory_id),
+        name: normalizeRecetaText(item?.name),
+        presentation: normalizeRecetaText(item?.presentation),
+        dose: normalizeRecetaText(item?.dose),
+        route: normalizeRecetaText(item?.route),
+        frequency: normalizeRecetaText(item?.frequency),
+        duration: normalizeRecetaText(item?.duration),
+        quantity: normalizeRecetaText(item?.quantity),
+        quantity_mode: normalizeRecetaText(item?.quantity_mode || item?.meta?.quantity_mode),
+        quantity_value: normalizeRecetaText(item?.quantity_value || item?.meta?.quantity_value),
+        quantity_unit: normalizeRecetaText(item?.quantity_unit || item?.meta?.quantity_unit),
+        instructions: normalizeRecetaText(item?.instructions),
+        private_notes: normalizeRecetaText(item?.private_notes),
+        meta: (item?.meta && typeof item.meta === 'object') ? { ...item.meta } : {}
       }))
-      .filter((item) => item.medicamento !== '');
+      .filter((item) => item.name !== '');
   };
-  const validateRecetaBlockingErrors = (ctx, validItems) => {
-    const errors = [];
-    if (!ctx?.has_active_patient_context || !normalizeRecetaText(ctx?.patient_id)) errors.push('Falta paciente activo.');
-    if (!normalizeRecetaText(ctx?.medico?.nombre)) errors.push('Falta nombre del médico.');
-    if (!normalizeRecetaText(ctx?.medico?.cedula)) errors.push('Falta cédula profesional.');
-    if (!Array.isArray(validItems) || validItems.length < 1) errors.push('Falta al menos un medicamento válido.');
-    return errors;
+  const resetPrescriptionAnalysisDraft = () => {
+    rxAnalysisDraftState = {
+      status: 'idle',
+      last_run_at: null,
+      results: {
+        risks: [],
+        precautions: [],
+        observations: []
+      }
+    };
+    renderPrescriptionAnalysisSummary(rxAnalysisDraftState);
+  };
+  const updateRxAnalysisActionState = () => {
+    if (!els.rxAnalysisRun) return;
+    const meds = collectRxModal();
+    const hasValidItems = mapValidPrescriptionItems(meds).length > 0;
+    els.rxAnalysisRun.classList.toggle('d-none', !hasValidItems);
+    els.rxAnalysisRun.disabled = !hasValidItems;
+  };
+  const executePrescriptionAssistantAnalysis = () => {
+    const meds = collectRxModal();
+    const validItems = mapValidPrescriptionItems(meds);
+    if (!validItems.length) {
+      setRxFeedback('Agrega al menos un medicamento válido antes de ejecutar el análisis.', 'error');
+      return;
+    }
+    const checks = runPrescriptionLocalChecks(validItems);
+    rxAnalysisDraftState = {
+      status: 'completed',
+      last_run_at: new Date().toISOString(),
+      results: {
+        risks: [],
+        precautions: [],
+        observations: checks
+      }
+    };
+    renderPrescriptionAnalysisSummary(rxAnalysisDraftState);
+    setRxFeedback('Análisis local completado.', 'success');
+  };
+  const validateRecetaBlockingErrors = (ctx, validItems, rawItems = []) => {
+    return validatePrescriptionDraft({
+      patient_id: normalizeRecetaText(ctx?.patient_id),
+      medications: validItems,
+      raw_medications: rawItems
+    });
   };
   const buildRecetaSnapshot = (ctx) => {
     const patient = ctx?.patient || {};
@@ -3998,21 +5630,283 @@ console.info('app.js loaded :: 20251123a');
   els.rxAdd?.addEventListener('click', () => {
     if (!els.rxGrid) return;
     const idx = els.rxGrid.querySelectorAll('.ne-rx-row').length;
-    els.rxGrid.insertAdjacentHTML('beforeend', rxRowHtml(idx, {}));
+    const rowModel = normalizePrescriptionMedication({}, `rxm_${idx + 1}`);
+    rowModel.__existing = false;
+    els.rxGrid.insertAdjacentHTML('beforeend', rxRowHtml(idx, rowModel));
+    const row = els.rxGrid.querySelectorAll('.ne-rx-row')[idx];
+    if (row) {
+      syncRowControlledStateFromInputs(row);
+      applyMedicationAdministrationContextToRow(row, 'add');
+      updateRxRowSummary(row);
+      setRxRowState(row, 'expanded');
+      row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    resetPrescriptionAnalysisDraft();
+    updateRxAnalysisActionState();
+    refreshRxRowsVisuals();
   });
+  const applyQuickFillFromChip = (chipBtn) => {
+    if (!chipBtn) return false;
+    const row = chipBtn.closest('.ne-rx-row');
+    const field = String(chipBtn.getAttribute('data-rx-field') || '').trim();
+    const value = String(chipBtn.getAttribute('data-rx-value') || '').trim();
+    if (!row || !field) return false;
+    const input = row.querySelector(`[data-ne-rx="${field}"]`);
+    if (!input) return false;
+    if (field === 'instructions') {
+      const current = normalizeRecetaText(input.value);
+      const tokenCurrent = normalizeQuickToken(current);
+      const tokenNext = normalizeQuickToken(value);
+      if (!current) {
+        updateRowFieldValue(row, field, value);
+      } else if (tokenCurrent.includes(tokenNext)) {
+        updateRowFieldValue(row, field, current);
+      } else {
+        const needsSeparator = /[.;:]$/.test(current);
+        updateRowFieldValue(row, field, `${current}${needsSeparator ? ' ' : '. '}${value}`);
+      }
+    } else {
+      updateRowFieldValue(row, field, value);
+    }
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    syncRowControlledStateFromInputs(row);
+    input.focus();
+    return true;
+  };
   els.rxGrid?.addEventListener('click', (e) => {
+    const quickFillBtn = e.target.closest('[data-action="rx-quick-fill"]');
+    if (quickFillBtn) {
+      e.preventDefault();
+      applyQuickFillFromChip(quickFillBtn);
+      return;
+    }
+    const suggestionBtn = e.target.closest('[data-action="rx-med-select-suggestion"]');
+    if (suggestionBtn) {
+      e.preventDefault();
+      if (selectMedicationSuggestionFromButton(suggestionBtn)) return;
+    }
     const del = e.target.closest('[data-ne-rx-del]');
-    if (!del) return;
-    del.closest('.ne-rx-row')?.remove();
+    const dup = e.target.closest('[data-ne-rx-dup]');
+    const edit = e.target.closest('[data-ne-rx-edit]');
+    const collapse = e.target.closest('[data-ne-rx-collapse]');
+    const cancel = e.target.closest('[data-ne-rx-cancel]');
+    if (edit) {
+      const row = edit.closest('.ne-rx-row');
+      if (!row) return;
+      setRxRowState(row, 'expanded');
+      return;
+    }
+    if (collapse) {
+      const row = collapse.closest('.ne-rx-row');
+      if (!row) return;
+      const name = normalizeRecetaText(row.querySelector('[data-ne-rx="name"]')?.value);
+      if (!name) {
+        setRxFeedback('Completa al menos el nombre del medicamento para confirmar.', 'error');
+        row.querySelector('[data-ne-rx="name"]')?.focus?.();
+        return;
+      }
+      setRxRowState(row, 'collapsed');
+      setRxFeedback('', 'muted');
+      refreshRxRowsVisuals();
+      return;
+    }
+    if (cancel) {
+      const row = cancel.closest('.ne-rx-row');
+      if (!row) return;
+      const isExisting = row.getAttribute('data-ne-rx-existing') === '1';
+      if (isExisting) {
+        setRxRowState(row, 'collapsed');
+      } else {
+        row.remove();
+      }
+      resetPrescriptionAnalysisDraft();
+      updateRxAnalysisActionState();
+      refreshRxRowsVisuals();
+      return;
+    }
+    if (dup) {
+      const row = dup.closest('.ne-rx-row');
+      if (!row || !els.rxGrid) return;
+      const meds = collectRxModal();
+      const rowUid = String(row.getAttribute('data-ne-rx-uid') || '').trim();
+      const base = meds.find((item) => String(item.uid || '').trim() === rowUid) || null;
+      const idx = els.rxGrid.querySelectorAll('.ne-rx-row').length;
+      const clone = normalizePrescriptionMedication(base || {}, `rxm_${idx + 1}`);
+      clone.uid = `rxm_${Date.now()}_${idx + 1}`;
+      clone.__existing = false;
+      els.rxGrid.insertAdjacentHTML('beforeend', rxRowHtml(idx, clone));
+      const inserted = els.rxGrid.querySelectorAll('.ne-rx-row')[idx];
+      if (inserted) {
+        updateRxRowSummary(inserted);
+        setRxRowState(inserted, 'collapsed');
+      }
+      resetPrescriptionAnalysisDraft();
+      updateRxAnalysisActionState();
+      refreshRxRowsVisuals();
+      return;
+    }
+    if (del) {
+      const rows = els.rxGrid ? els.rxGrid.querySelectorAll('.ne-rx-row') : [];
+      del.closest('.ne-rx-row')?.remove();
+      resetPrescriptionAnalysisDraft();
+      updateRxAnalysisActionState();
+      refreshRxRowsVisuals();
+    }
+  });
+  els.rxGrid?.addEventListener('input', (e) => {
+    const activeRow = e.target.closest('.ne-rx-row');
+    const fieldInput = e.target.closest('[data-ne-rx]');
+    if (activeRow) {
+      if (fieldInput) {
+        const fieldName = String(fieldInput.getAttribute('data-ne-rx') || '').trim();
+        const nextValue = normalizeRecetaText(fieldInput.value);
+        writeRowControlledState(activeRow, { [fieldName]: nextValue });
+      }
+      syncRowControlledStateFromInputs(activeRow);
+      updateRxRowSummary(activeRow);
+    }
+    const nameInput = e.target.closest('[data-ne-rx="name"]');
+    if (nameInput) {
+      const row = nameInput.closest('.ne-rx-row');
+      if (row) {
+        row.setAttribute('data-ne-rx-source', 'manual');
+        row.setAttribute('data-ne-rx-catalog-id', '');
+        row.setAttribute('data-ne-rx-memory-id', '');
+        renderMedicationSuggestionsForRow(row, nameInput.value || '');
+      }
+    }
+    const presentationInput = e.target.closest('[data-ne-rx="presentation"]');
+    if (presentationInput) {
+      const row = presentationInput.closest('.ne-rx-row');
+      if (row) applyMedicationAdministrationContextToRow(row, 'presentation_input');
+    }
+    const doseInput = e.target.closest('[data-ne-rx="dose"]');
+    if (doseInput) {
+      const row = doseInput.closest('.ne-rx-row');
+      if (row) applyMedicationAdministrationContextToRow(row, 'dose_input', { forceQuantityAuto: true });
+    }
+    const frequencyInput = e.target.closest('[data-ne-rx="frequency"]');
+    if (frequencyInput) {
+      const row = frequencyInput.closest('.ne-rx-row');
+      if (row) applyMedicationAdministrationContextToRow(row, 'frequency_input', { forceQuantityAuto: true });
+    }
+    const durationInput = e.target.closest('[data-ne-rx="duration"]');
+    if (durationInput) {
+      const row = durationInput.closest('.ne-rx-row');
+      if (row) applyMedicationAdministrationContextToRow(row, 'duration_input', { forceQuantityAuto: true });
+    }
+    const routeInput = e.target.closest('[data-ne-rx="route"]');
+    if (routeInput) {
+      const row = routeInput.closest('.ne-rx-row');
+      if (row) applyMedicationAdministrationContextToRow(row, 'route_input');
+    }
+    const quantityInput = e.target.closest('[data-ne-rx="quantity"]');
+    if (quantityInput) {
+      const row = quantityInput.closest('.ne-rx-row');
+      if (row) {
+        const rowMeta = parseRowMeta(row);
+        writeRowMeta(row, {
+          ...rowMeta,
+          quantity_mode: 'manual',
+          quantity_value: normalizeRecetaText(quantityInput.value),
+          quantity_unit: normalizeRecetaText(rowMeta?.quantity_unit)
+        });
+      }
+    }
+    resetPrescriptionAnalysisDraft();
+    updateRxAnalysisActionState();
+    refreshRxRowsVisuals();
+  });
+  // Safari/blur race guard: commit chip value on mousedown before focusout collapses quick chips.
+  els.rxGrid?.addEventListener('mousedown', (e) => {
+    const quickFillBtn = e.target.closest('[data-action="rx-quick-fill"]');
+    if (!quickFillBtn) return;
+    e.preventDefault();
+    applyQuickFillFromChip(quickFillBtn);
+  });
+  const selectMedicationSuggestionFromButton = (suggestionBtn) => {
+    const row = suggestionBtn?.closest?.('.ne-rx-row');
+    if (!row) return false;
+    const source = String(suggestionBtn.getAttribute('data-suggest-source') || '').trim();
+    const fallbackNameFromUi = String(suggestionBtn.querySelector('.ne-rx-suggest-name')?.textContent || '').trim();
+    const manualName = String(suggestionBtn.getAttribute('data-suggest-name') || fallbackNameFromUi).trim();
+    let suggestionMeta = {};
+    try {
+      const rawMeta = String(suggestionBtn.getAttribute('data-suggest-meta') || '').trim();
+      if (rawMeta) {
+        const parsedMeta = JSON.parse(rawMeta);
+        if (parsedMeta && typeof parsedMeta === 'object') suggestionMeta = parsedMeta;
+      }
+    } catch (_) {}
+    applyMedicationSuggestionToRow(row, {
+      source,
+      name: manualName,
+      presentation: suggestionBtn.getAttribute('data-suggest-presentation') || '',
+      dose: suggestionBtn.getAttribute('data-suggest-dose') || '',
+      route: suggestionBtn.getAttribute('data-suggest-route') || '',
+      frequency: suggestionBtn.getAttribute('data-suggest-frequency') || '',
+      duration: suggestionBtn.getAttribute('data-suggest-duration') || '',
+      quantity: suggestionBtn.getAttribute('data-suggest-quantity') || '',
+      instructions: suggestionBtn.getAttribute('data-suggest-instructions') || '',
+      private_notes: suggestionBtn.getAttribute('data-suggest-private-notes') || '',
+      catalog_id: suggestionBtn.getAttribute('data-suggest-catalog-id') || '',
+      doctor_memory_id: suggestionBtn.getAttribute('data-suggest-memory-id') || '',
+      meta: suggestionMeta
+    }, manualName);
+    resetPrescriptionAnalysisDraft();
+    updateRxAnalysisActionState();
+    return true;
+  };
+  // Safari and some embedded contexts can emit blur/focusout before click with null relatedTarget.
+  // Selecting on mousedown guarantees the suggestion is applied before the dropdown gets hidden.
+  els.rxGrid?.addEventListener('mousedown', (e) => {
+    const suggestionBtn = e.target.closest('[data-action="rx-med-select-suggestion"]');
+    if (!suggestionBtn) return;
+    e.preventDefault();
+    selectMedicationSuggestionFromButton(suggestionBtn);
+  });
+  els.rxGrid?.addEventListener('focusout', (e) => {
+    const row = e.target.closest('.ne-rx-row');
+    if (!row) return;
+    const related = e.relatedTarget;
+    if (related && row.contains(related)) return;
+    window.setTimeout(() => {
+      hideMedicationSuggestions(row);
+    }, 120);
+    const fieldWrap = e.target.closest('[data-rx-field-wrap]');
+    if (fieldWrap) {
+      const related = e.relatedTarget;
+      if (related && fieldWrap.contains(related)) return;
+      fieldWrap.classList.remove('is-quick-active');
+    }
+  });
+  els.rxGrid?.addEventListener('focusin', (e) => {
+    const nameInput = e.target.closest('[data-ne-rx="name"]');
+    if (!nameInput) return;
+    const row = nameInput.closest('.ne-rx-row');
+    if (!row) return;
+    renderMedicationSuggestionsForRow(row, nameInput.value || '');
+  });
+  els.rxGrid?.addEventListener('focusin', (e) => {
+    const fieldInput = e.target.closest('[data-ne-rx]');
+    if (!fieldInput) return;
+    const field = String(fieldInput.getAttribute('data-ne-rx') || '').trim();
+    const wrap = fieldInput.closest('[data-rx-field-wrap]');
+    if (!wrap || !field || !RX_QUICK_FIELD_SUGGESTIONS[field]) return;
+    wrap.classList.add('is-quick-active');
   });
   els.rxSave?.addEventListener('click', async () => {
     const recetaCtx = resolveRecetaRuntimeContext();
     const patientKey = recetaCtx.patient_id;
     const meds = collectRxModal();
-    setRxDraft(patientKey, meds);
+    const diagnosticContext = collectRxDiagnosticContext();
+    setRxDraft(patientKey, meds, { diagnostic_context: diagnosticContext });
     renderRxSummary(patientKey);
     const validItems = mapValidPrescriptionItems(meds);
-    const blockingErrors = validateRecetaBlockingErrors(recetaCtx, validItems);
+    const blockingErrors = validateRecetaBlockingErrors(recetaCtx, validItems, meds);
+    if ((diagnosticContext.mode === 'diagnostico' || diagnosticContext.mode === 'prediagnostico') && !diagnosticContext.text) {
+      blockingErrors.push('Completa el contexto diagnóstico para emitir la receta.');
+    }
     if (blockingErrors.length) {
       setRxFeedback(blockingErrors.join(' '), 'error');
       setRxOpenDocumentAction('');
@@ -4022,13 +5916,37 @@ console.info('app.js loaded :: 20251123a');
     const actor = recetaCtx.actor;
     const encounterKey = recetaCtx.encounter_key;
     const appointmentId = recetaCtx.appointment_id;
+    const clinicalContext = collectPrescriptionClinicalContext(recetaCtx);
+    const localChecks = runPrescriptionLocalChecks(validItems);
+    if (rxAnalysisDraftState.status === 'completed') {
+      rxAnalysisDraftState = {
+        ...rxAnalysisDraftState,
+        results: {
+          ...(rxAnalysisDraftState.results || {}),
+          observations: localChecks
+        }
+      };
+      renderPrescriptionAnalysisSummary(rxAnalysisDraftState);
+    } else {
+      resetPrescriptionAnalysisDraft();
+    }
     const payload = {
-      contract_version: 1,
-      prescription: {
-        items: validItems,
-        observaciones: ''
+      context: clinicalContext,
+      diagnostic_context: diagnosticContext,
+      medications: validItems,
+      analysis: {
+        status: rxAnalysisDraftState.status || 'idle',
+        last_run_at: rxAnalysisDraftState.last_run_at || null,
+        results: {
+          risks: Array.isArray(rxAnalysisDraftState?.results?.risks) ? rxAnalysisDraftState.results.risks : [],
+          precautions: Array.isArray(rxAnalysisDraftState?.results?.precautions) ? rxAnalysisDraftState.results.precautions : [],
+          observations: Array.isArray(rxAnalysisDraftState?.results?.observations) ? rxAnalysisDraftState.results.observations : localChecks
+        }
       },
-      snapshot: buildRecetaSnapshot(recetaCtx)
+      meta: {
+        source: 'manual',
+        version: 1
+      }
     };
     const context = {
       patient_id: recetaCtx.patient_id,
@@ -4048,6 +5966,8 @@ console.info('app.js loaded :: 20251123a');
     try {
       const { source, document } = await api.saveClinicalDocument({
         type: 'prescription',
+        document_type: 'prescription',
+        title: 'Receta médica',
         context,
         payload,
         actor
@@ -4055,6 +5975,7 @@ console.info('app.js loaded :: 20251123a');
       const savedToken = resolveSavedPrescriptionToken(document);
       setRxFeedback('Receta guardada correctamente.', 'success');
       setRxOpenDocumentAction(savedToken);
+      validItems.forEach((item) => registerMedicationUsageForDoctor(item));
       try{
         window.mxRegisterEncounterActivity?.('receta_guardada', {
           encounterKey,
@@ -4082,7 +6003,7 @@ console.info('app.js loaded :: 20251123a');
     } finally {
       if (els.rxSave) {
         els.rxSave.disabled = false;
-        els.rxSave.textContent = 'Guardar receta';
+        els.rxSave.textContent = 'Emitir receta';
       }
     }
     try{
@@ -4102,6 +6023,42 @@ console.info('app.js loaded :: 20251123a');
     } catch (_) {
       window.location.href = href;
     }
+  });
+  els.rxAnalysisRun?.addEventListener('click', (event) => {
+    event.preventDefault();
+    const meds = collectRxModal();
+    const validItems = mapValidPrescriptionItems(meds);
+    if (!validItems.length) {
+      setRxFeedback('Agrega al menos un medicamento válido antes de ejecutar el análisis.', 'error');
+      updateRxAnalysisActionState();
+      return;
+    }
+    try {
+      const modal = bootstrap?.Modal?.getOrCreateInstance ? bootstrap.Modal.getOrCreateInstance(recetaAnalysisModalEl) : null;
+      modal?.show();
+    } catch (_) {}
+  });
+  els.rxAnalysisConfirm?.addEventListener('click', (event) => {
+    event.preventDefault();
+    try {
+      const modal = bootstrap?.Modal?.getInstance ? bootstrap.Modal.getInstance(recetaAnalysisModalEl) : null;
+      modal?.hide();
+    } catch (_) {}
+    executePrescriptionAssistantAnalysis();
+  });
+  els.rxDxMode?.addEventListener('change', () => {
+    const ctx = resolveRecetaRuntimeContext();
+    setRxDraft(ctx.patient_id, collectRxModal(), { diagnostic_context: collectRxDiagnosticContext() });
+    updateRxTemplateHint();
+  });
+  els.rxDxText?.addEventListener('input', () => {
+    const ctx = resolveRecetaRuntimeContext();
+    setRxDraft(ctx.patient_id, collectRxModal(), { diagnostic_context: collectRxDiagnosticContext() });
+    updateRxTemplateHint();
+  });
+  els.rxSaveTemplate?.addEventListener('click', (event) => {
+    event.preventDefault();
+    setRxFeedback('La función de plantillas quedará habilitada en una siguiente fase.', 'muted');
   });
   // Hook pendientes (cuando tengan confirmación de éxito explícita): estudios, documentos adjuntos y procedimientos.
 
@@ -4155,7 +6112,6 @@ console.info('app.js loaded :: 20251123a');
   const actividadClinicaConsentModalEl = pane.querySelector('#modalActividadClinicaConsent');
   const actividadClinicaLauncherMainEl = pane.querySelector('[data-role="ac-launcher-main"]');
   const actividadClinicaLauncherProcPickerEl = pane.querySelector('[data-role="ac-launcher-proc-picker"]');
-  const actividadClinicaLauncherStudiesPickerEl = pane.querySelector('[data-role="ac-launcher-studies-picker"]');
   const actividadClinicaLaunchBtns = Array.from(pane.querySelectorAll('[data-action="open-actividad-clinica"]'));
   const actividadClinicaNotaOpenQrBtn = pane.querySelector('[data-action="ac-nota-open-qr-capture"]');
   const actividadClinicaNotaQrStatusEl = pane.querySelector('[data-role="ac-nota-qr-status"]');
@@ -4588,6 +6544,75 @@ console.info('app.js loaded :: 20251123a');
       modal.hide();
     }catch(_){}
   };
+  const forceHideActividadClinicaModalElement = ()=>{
+    if(!actividadClinicaModalEl) return;
+    try{
+      actividadClinicaModalEl.classList.remove('show');
+      actividadClinicaModalEl.setAttribute('aria-hidden', 'true');
+      actividadClinicaModalEl.style.display = 'none';
+      actividadClinicaModalEl.removeAttribute('aria-modal');
+      actividadClinicaModalEl.removeAttribute('role');
+    }catch(_){}
+  };
+  const cleanupModalArtifactsIfIdle = ()=>{
+    try{
+      if(document.querySelector('.modal.show')) return;
+      document.body.classList.remove('modal-open');
+      document.body.style.removeProperty('overflow');
+      document.body.style.removeProperty('padding-right');
+      document.querySelectorAll('.modal-backdrop').forEach((node)=>{
+        node.parentNode?.removeChild(node);
+      });
+    }catch(_){}
+  };
+  const closeActividadLauncherDefensive = (cb)=>{
+    const callback = typeof cb === 'function' ? cb : ()=>{};
+    if(!actividadClinicaModalEl){
+      cleanupModalArtifactsIfIdle();
+      callback();
+      return;
+    }
+    try{
+      const BsModal = window.bootstrap && window.bootstrap.Modal;
+      const instance = (BsModal && typeof BsModal.getInstance === 'function')
+        ? BsModal.getInstance(actividadClinicaModalEl)
+        : null;
+      instance?.hide?.();
+    }catch(_){}
+    hideActividadClinicaModal();
+    window.setTimeout(()=>{
+      if(actividadClinicaModalEl.classList.contains('show') || actividadClinicaModalEl.style.display !== 'none'){
+        forceHideActividadClinicaModalElement();
+      }
+      cleanupModalArtifactsIfIdle();
+      callback();
+    }, 90);
+  };
+  const runAfterActividadLauncherHidden = (cb)=>{
+    const callback = typeof cb === 'function' ? cb : ()=>{};
+    if(!actividadClinicaModalEl){
+      cleanupModalArtifactsIfIdle();
+      callback();
+      return;
+    }
+    const isVisible = actividadClinicaModalEl.classList.contains('show');
+    if(isVisible){
+      let settled = false;
+      const finalize = ()=>{
+        if(settled) return;
+        settled = true;
+        cleanupModalArtifactsIfIdle();
+        callback();
+      };
+      actividadClinicaModalEl.addEventListener('hidden.bs.modal', finalize, { once: true });
+      hideActividadClinicaModal();
+      // Fallback defensivo si Bootstrap no emite hidden en una transición rota.
+      window.setTimeout(finalize, 260);
+      return;
+    }
+    cleanupModalArtifactsIfIdle();
+    callback();
+  };
   const showActividadClinicaModalById = (modalEl)=>{
     if(!modalEl) return false;
     const BsModal = window.bootstrap && window.bootstrap.Modal;
@@ -4604,15 +6629,12 @@ console.info('app.js loaded :: 20251123a');
   };
   const setActividadClinicaLauncherView = (view = 'main')=>{
     const requested = sanitizeText(view).toLowerCase();
-    const safeView = requested === 'proc' || requested === 'studies' ? requested : 'main';
+    const safeView = requested === 'proc' ? requested : 'main';
     if(actividadClinicaLauncherMainEl){
       actividadClinicaLauncherMainEl.classList.toggle('d-none', safeView !== 'main');
     }
     if(actividadClinicaLauncherProcPickerEl){
       actividadClinicaLauncherProcPickerEl.classList.toggle('d-none', safeView !== 'proc');
-    }
-    if(actividadClinicaLauncherStudiesPickerEl){
-      actividadClinicaLauncherStudiesPickerEl.classList.toggle('d-none', safeView !== 'studies');
     }
   };
   const createActividadClinicaPortalMount = (modalEl, targetSelector, sourceSelector, opts = {})=>{
@@ -5365,42 +7387,151 @@ console.info('app.js loaded :: 20251123a');
     }catch(_){}
     return true;
   };
+  const ACTIVIDAD_CLINICA_SPECIAL_STUDIES = Object.freeze({
+    ecg: { area: 'Cardiología', studyLabel: 'ECG 12 derivaciones' },
+    echo: { area: 'Cardiología', studyLabel: 'Ecocardiograma transtorácico (ETT)' },
+    holter: { area: 'Cardiología', studyLabel: 'Holter / monitorización ECG ambulatoria' },
+    stress_test: { area: 'Cardiología', studyLabel: 'Prueba de esfuerzo (ECG de esfuerzo)' },
+    eeg: { area: 'Funcionales', studyLabel: 'EEG rutinario' },
+    emg: { area: 'Funcionales', studyLabel: 'EMG + Velocidades de conducción nerviosa (VCN)' },
+    spirometry: { area: 'Funcionales', studyLabel: 'Espirometría' },
+    audiometry: { area: 'Funcionales', studyLabel: 'Audiometría tonal' }
+  });
+  const normalizeClinicalToken = (value)=> sanitizeText(value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const toggleSpecialStudiesInline = (studiesPane, visible)=>{
+    const panel = studiesPane?.querySelector('[data-role="ac-special-studies-inline"]');
+    if(!panel) return;
+    panel.classList.toggle('d-none', !visible);
+  };
+  const pickSpecialStudyInsideStudies = (studiesPane, studyKey)=>{
+    const config = ACTIVIDAD_CLINICA_SPECIAL_STUDIES[sanitizeText(studyKey).toLowerCase()];
+    if(!studiesPane || !config) return false;
+    const areaSelect = studiesPane.querySelector('[data-est-area-select]');
+    const indicationField = studiesPane.querySelector('[data-role="ac-order-indication"]');
+    if(areaSelect){
+      const targetPattern = normalizeClinicalToken(config.area);
+      const targetOption = Array.from(areaSelect.options || []).find((opt)=>{
+        const text = normalizeClinicalToken(opt.textContent || '');
+        return text.indexOf(targetPattern) !== -1;
+      });
+      if(targetOption){
+        areaSelect.value = targetOption.value;
+        areaSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+    if(indicationField && !sanitizeText(indicationField.value)){
+      indicationField.value = `Estudio especial solicitado: ${config.studyLabel}`;
+      indicationField.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    const triggerInput = studiesPane.querySelector('[data-est-open-modal]');
+    if(triggerInput){
+      triggerInput.focus?.();
+      triggerInput.click?.();
+    }
+    const normalizedStudy = normalizeClinicalToken(config.studyLabel);
+    const trySelect = (attempt = 0)=>{
+      const checkboxes = Array.from(studiesPane.querySelectorAll('input[type="checkbox"][data-est-item]'));
+      const targetCheckbox = checkboxes.find((cb)=> normalizeClinicalToken(cb.dataset.estItem || '') === normalizedStudy);
+      if(targetCheckbox){
+        if(!targetCheckbox.checked){
+          targetCheckbox.checked = true;
+          targetCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        const visibleSearch = Array.from(studiesPane.querySelectorAll('.modal.show [data-est-lab-search]'))[0];
+        if(visibleSearch){
+          visibleSearch.value = config.studyLabel;
+          visibleSearch.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        return;
+      }
+      if(attempt >= 5) return;
+      window.setTimeout(()=> trySelect(attempt + 1), 120);
+    };
+    trySelect();
+    return true;
+  };
+  const applyEstudiosEntryType = (studiesPane, type, opts = {})=>{
+    if(!studiesPane) return;
+    const normalizedType = sanitizeText(type).toLowerCase();
+    const autoOpen = opts.autoOpenModal === true;
+    const entryButtons = Array.from(studiesPane.querySelectorAll('[data-action="ac-order-entry-type"]'));
+    entryButtons.forEach((btn)=>{
+      const btnType = sanitizeText(btn.getAttribute('data-order-entry-type') || '').toLowerCase();
+      btn.classList.toggle('active', btnType === normalizedType);
+    });
+    const areaSelect = studiesPane.querySelector('[data-est-area-select]');
+    toggleSpecialStudiesInline(studiesPane, normalizedType === 'special');
+    if(normalizedType === 'special'){
+      const firstSpecialBtn = studiesPane.querySelector('[data-action="ac-open-special-study"]');
+      const specialPanel = studiesPane.querySelector('[data-role="ac-special-studies-inline"]');
+      specialPanel?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+      firstSpecialBtn?.focus?.();
+      return;
+    }
+    if(areaSelect){
+      const targetPattern = normalizedType === 'img' ? 'imagen' : 'laboratorio';
+      const targetOption = Array.from(areaSelect.options || []).find((opt)=>{
+        const text = sanitizeText(opt.textContent || '').toLowerCase();
+        return text.indexOf(targetPattern) !== -1;
+      });
+      if(targetOption){
+        areaSelect.value = targetOption.value;
+        areaSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+    if(autoOpen){
+      const triggerInput = studiesPane.querySelector('[data-est-open-modal]');
+      if(triggerInput){
+        triggerInput.focus?.();
+        triggerInput.click?.();
+      }
+    }
+  };
   const openOrdenEstudiosFromActividad = (variant = '')=>{
-    hideActividadClinicaModal();
-    const opened = showClinicalTab(clinicalTabTargets.estudios);
-    if(!opened) return false;
-    window.requestAnimationFrame(()=>{
-      try{
-        const studiesPane = pane.querySelector('#t-estudios');
-        const solicitarBtn = studiesPane?.querySelector('.est-section-tab[data-est-section="solicitar"]');
-        if(solicitarBtn && !solicitarBtn.classList.contains('active')){
-          solicitarBtn.click();
-        }
-        const areaSelect = studiesPane?.querySelector('[data-est-area-select]');
-        const normalizedVariant = sanitizeText(variant).toLowerCase();
-        if(areaSelect){
-          const targetPattern = normalizedVariant === 'img' ? 'imagen' : 'laboratorio';
-          const targetOption = Array.from(areaSelect.options || []).find((opt)=>{
-            const text = sanitizeText(opt.textContent || '').toLowerCase();
-            return text.indexOf(targetPattern) !== -1;
-          });
-          if(targetOption){
-            areaSelect.value = targetOption.value;
-            areaSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    const normalizedVariant = sanitizeText(variant).toLowerCase();
+    const openStudiesFlow = ()=>{
+      const opened = showClinicalTab(clinicalTabTargets.estudios);
+      if(!opened) return;
+      window.requestAnimationFrame(()=>{
+        try{
+          const studiesPane = pane.querySelector('#t-estudios');
+          const solicitarBtn = studiesPane?.querySelector('.est-section-tab[data-est-section="solicitar"]');
+          if(solicitarBtn && !solicitarBtn.classList.contains('active')){
+            solicitarBtn.click();
           }
-        }
-        const triggerInput = studiesPane?.querySelector('[data-est-open-modal]');
-        if(triggerInput){
-          triggerInput.focus?.();
-          triggerInput.click?.();
-        }
-      }catch(_){}
+          if(!studiesPane) return;
+          const entryType = normalizedVariant === 'img' || normalizedVariant === 'special' ? normalizedVariant : 'lab';
+          applyEstudiosEntryType(studiesPane, entryType, { autoOpenModal: false });
+          const entrySelector = studiesPane.querySelector('[data-role="ac-order-entry-selector"]');
+          const firstEntryBtn = entrySelector?.querySelector('[data-action="ac-order-entry-type"]');
+          firstEntryBtn?.focus?.();
+        }catch(_){}
+      });
+    };
+    closeActividadLauncherDefensive(()=>{
+      openStudiesFlow();
     });
     try{
       console.info('[mxmed-actividad-clinica] open orden estudios', { variant: sanitizeText(variant) || 'lab' });
     }catch(_){}
     return true;
   };
+  pane.querySelector('#t-estudios')?.addEventListener('click', (event)=>{
+    const typeBtn = event.target.closest('[data-action="ac-order-entry-type"]');
+    if(typeBtn){
+      event.preventDefault();
+      const studiesPane = pane.querySelector('#t-estudios');
+      const type = sanitizeText(typeBtn.getAttribute('data-order-entry-type') || '').toLowerCase();
+      applyEstudiosEntryType(studiesPane, type, { autoOpenModal: type !== 'special' });
+      return;
+    }
+    const btn = event.target.closest('[data-action="ac-open-special-study"]');
+    if(!btn) return;
+    event.preventDefault();
+    const studiesPane = pane.querySelector('#t-estudios');
+    const studyKey = sanitizeText(btn.getAttribute('data-study-key') || '').toLowerCase();
+    pickSpecialStudyInsideStudies(studiesPane, studyKey);
+  });
   const openConsentimientoFromActividad = ()=>{
     hideActividadClinicaModal();
     const mounted = actividadClinicaConsentPortal?.mount?.() === true;
@@ -5661,6 +7792,7 @@ console.info('app.js loaded :: 20251123a');
   });
   actividadClinicaModalEl?.addEventListener('hidden.bs.modal', ()=>{
     setActividadClinicaLauncherView('main');
+    window.setTimeout(cleanupModalArtifactsIfIdle, 0);
   });
   actividadClinicaNotaOpenQrBtn?.addEventListener('click', (event)=>{
     event.preventDefault();
@@ -5752,36 +7884,6 @@ console.info('app.js loaded :: 20251123a');
     if(noteBtn){
       event.preventDefault();
       openNotaClinicaFromActividad();
-      return;
-    }
-    const studiesPickerBtn = event.target.closest('[data-action="actividad-clinica-open-estudios-picker"]');
-    if(studiesPickerBtn){
-      event.preventDefault();
-      setActividadClinicaLauncherView('studies');
-      return;
-    }
-    const studiesBackBtn = event.target.closest('[data-action="actividad-clinica-studies-back"]');
-    if(studiesBackBtn){
-      event.preventDefault();
-      setActividadClinicaLauncherView('main');
-      return;
-    }
-    const studiesLabBtn = event.target.closest('[data-action="actividad-clinica-open-estudios-lab"]');
-    if(studiesLabBtn){
-      event.preventDefault();
-      openOrdenEstudiosFromActividad('lab');
-      return;
-    }
-    const studiesImgBtn = event.target.closest('[data-action="actividad-clinica-open-estudios-img"]');
-    if(studiesImgBtn){
-      event.preventDefault();
-      openOrdenEstudiosFromActividad('img');
-      return;
-    }
-    const studiesBtn = event.target.closest('[data-action="actividad-clinica-open-estudios"]');
-    if(studiesBtn){
-      event.preventDefault();
-      openOrdenEstudiosFromActividad();
       return;
     }
     const procedureBtn = event.target.closest('[data-action="actividad-clinica-open-procedimiento"]');

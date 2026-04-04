@@ -1,0 +1,2083 @@
+{
+  "catalog_format": "mxmed.medication.v1",
+  "version": 1,
+  "locale": "mx",
+  "updated_at": "2026-04-02",
+  "sources": [
+    {
+      "source": "mxmed_seed_local",
+      "ref_type": "semilla",
+      "ref_value": "rec-cat-2",
+      "notes": "Semilla inicial local para autocompletado de receta"
+    }
+  ],
+  "drugs": [
+    {
+      "drug_id": "mxm_ambroxol",
+      "generic_name": "Ambroxol",
+      "brand_names": [
+        "Mucosolvan"
+      ],
+      "aliases": [
+        "ambroxol",
+        "mucosolvan"
+      ],
+      "search_terms": [
+        "ambroxol",
+        "mucosolvan"
+      ],
+      "therapeutic_group": "respiratorios",
+      "presentations": [
+        {
+          "presentation_id": "jarabe_30_5",
+          "label": "Jarabe 30 mg/5 ml",
+          "form": "Jarabe",
+          "strength": "30 mg/5 ml",
+          "route": "VO",
+          "pack": ""
+        },
+        {
+          "presentation_id": "tab_30",
+          "label": "Tableta 30 mg",
+          "form": "Tableta",
+          "strength": "30 mg",
+          "route": "VO",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Ambroxol"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_ambroxol",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_amlodipino",
+      "generic_name": "Amlodipino",
+      "brand_names": [
+        "Norvas"
+      ],
+      "aliases": [
+        "amlodipino",
+        "amlodipina"
+      ],
+      "search_terms": [
+        "amlodipino",
+        "norvas"
+      ],
+      "active_ingredients": [
+        "Amlodipino besilato"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "amlodipino",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "antihipertensivos",
+      "presentations": [
+        {
+          "presentation_id": "tab_5",
+          "label": "Tableta 5 mg",
+          "form": "Tableta",
+          "strength": "5 mg",
+          "route": "VO",
+          "pack": "Caja con 30 tabletas"
+        },
+        {
+          "presentation_id": "tab_10",
+          "label": "Tableta 10 mg",
+          "form": "Tableta",
+          "strength": "10 mg",
+          "route": "VO",
+          "pack": "Caja con 30 tabletas"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_amoxicilina",
+      "generic_name": "Amoxicilina",
+      "brand_names": [
+        "Amoxil"
+      ],
+      "aliases": [
+        "amoxi",
+        "amoxicilina"
+      ],
+      "search_terms": [
+        "amoxicilina",
+        "amoxil"
+      ],
+      "therapeutic_group": "antibioticos",
+      "presentations": [
+        {
+          "presentation_id": "cap_500",
+          "label": "Cápsula 500 mg",
+          "form": "Cápsula",
+          "strength": "500 mg",
+          "route": "VO",
+          "pack": ""
+        },
+        {
+          "presentation_id": "susp_250_5",
+          "label": "Suspensión 250 mg/5 ml",
+          "form": "Suspensión",
+          "strength": "250 mg/5 ml",
+          "route": "VO",
+          "pack": "",
+          "allowed_routes": [
+            "VO"
+          ],
+          "default_route": "VO",
+          "dose_unit": "ml",
+          "administration_pattern": "suspension_oral",
+          "default_dose_suggestions": [
+            "2.5 ml",
+            "5 ml",
+            "10 ml"
+          ],
+          "default_frequency_suggestions": [
+            "Cada 8 horas",
+            "Cada 12 horas"
+          ],
+          "default_duration_suggestions": [
+            "5 días",
+            "7 días",
+            "10 días"
+          ],
+          "instruction_hints": [
+            "Agitar antes de usar",
+            "Medir dosis en ml"
+          ]
+        }
+      ],
+      "active_ingredients": [
+        "Amoxicilina"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_amoxicilina",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_amoxi_clav",
+      "generic_name": "Amoxicilina / ácido clavulánico",
+      "brand_names": [
+        "Augmentin"
+      ],
+      "aliases": [
+        "amoxicilina clavulanato",
+        "amoxi clav",
+        "amoxicilina acido clavulanico"
+      ],
+      "search_terms": [
+        "augmentin",
+        "amoxicilina clavulanico",
+        "clavulanato"
+      ],
+      "therapeutic_group": "antibioticos",
+      "presentations": [
+        {
+          "presentation_id": "tab_875_125",
+          "label": "Tableta 875 mg / 125 mg",
+          "form": "Tableta",
+          "strength": "875/125 mg",
+          "route": "VO",
+          "pack": ""
+        },
+        {
+          "presentation_id": "susp_400_57",
+          "label": "Suspensión 400 mg / 57 mg por 5 ml",
+          "form": "Suspensión",
+          "strength": "400/57 mg/5 ml",
+          "route": "VO",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Amoxicilina / ácido clavulánico"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_amoxi_clav",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_azitromicina",
+      "generic_name": "Azitromicina",
+      "brand_names": [
+        "Zitromax"
+      ],
+      "aliases": [
+        "azitro",
+        "azitromicina"
+      ],
+      "search_terms": [
+        "azitromicina",
+        "zitromax"
+      ],
+      "therapeutic_group": "antibioticos",
+      "presentations": [
+        {
+          "presentation_id": "tab_500",
+          "label": "Tableta 500 mg",
+          "form": "Tableta",
+          "strength": "500 mg",
+          "route": "VO",
+          "pack": ""
+        },
+        {
+          "presentation_id": "susp_200_5",
+          "label": "Suspensión 200 mg/5 ml",
+          "form": "Suspensión",
+          "strength": "200 mg/5 ml",
+          "route": "VO",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Azitromicina"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_azitromicina",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_betametasona",
+      "generic_name": "Betametasona",
+      "brand_names": [
+        "Celestone"
+      ],
+      "aliases": [
+        "betametasona",
+        "betamethasone"
+      ],
+      "search_terms": [
+        "betametasona",
+        "celestone"
+      ],
+      "active_ingredients": [
+        "Betametasona"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "betametasona",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "corticoides",
+      "presentations": [
+        {
+          "presentation_id": "tab_0_5",
+          "label": "Tableta 0.5 mg",
+          "form": "Tableta",
+          "strength": "0.5 mg",
+          "route": "VO",
+          "pack": "Caja con 30 tabletas"
+        },
+        {
+          "presentation_id": "amp_4_1",
+          "label": "Ampolleta 4 mg/ml",
+          "form": "Ampolleta",
+          "strength": "4 mg/ml",
+          "route": "IM",
+          "pack": "Caja con 1 ampolleta"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_budesonida",
+      "generic_name": "Budesonida",
+      "brand_names": [
+        "Pulmicort"
+      ],
+      "aliases": [
+        "budesonida",
+        "budesonide"
+      ],
+      "search_terms": [
+        "budesonida",
+        "pulmicort"
+      ],
+      "active_ingredients": [
+        "Budesonida"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "budesonida",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "respiratorios",
+      "presentations": [
+        {
+          "presentation_id": "inh_200",
+          "label": "Inhalador 200 mcg/dosis",
+          "form": "Inhalador",
+          "strength": "200 mcg/dosis",
+          "route": "Inhalada",
+          "pack": "Frasco 200 dosis"
+        },
+        {
+          "presentation_id": "neb_0_5",
+          "label": "Suspensión nebulizable 0.5 mg/2 ml",
+          "form": "Suspensión",
+          "strength": "0.5 mg/2 ml",
+          "route": "Inhalada",
+          "pack": "Caja con 20 ampolletas"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_cefalexina",
+      "generic_name": "Cefalexina",
+      "brand_names": [
+        "Keflex"
+      ],
+      "aliases": [
+        "cefalexina",
+        "cephalexin"
+      ],
+      "search_terms": [
+        "cefalexina",
+        "keflex"
+      ],
+      "therapeutic_group": "antibioticos",
+      "presentations": [
+        {
+          "presentation_id": "cap_500",
+          "label": "Cápsula 500 mg",
+          "form": "Cápsula",
+          "strength": "500 mg",
+          "route": "VO",
+          "pack": ""
+        },
+        {
+          "presentation_id": "susp_250_5",
+          "label": "Suspensión 250 mg/5 ml",
+          "form": "Suspensión",
+          "strength": "250 mg/5 ml",
+          "route": "VO",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Cefalexina"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_cefalexina",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_cetirizina",
+      "generic_name": "Cetirizina",
+      "brand_names": [
+        "Zyrtec"
+      ],
+      "aliases": [
+        "cetirizina",
+        "cetirizine"
+      ],
+      "search_terms": [
+        "cetirizina",
+        "zyrtec"
+      ],
+      "active_ingredients": [
+        "Cetirizina dihidrocloruro"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "cetirizina",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "antihistaminicos",
+      "presentations": [
+        {
+          "presentation_id": "tab_10",
+          "label": "Tableta 10 mg",
+          "form": "Tableta",
+          "strength": "10 mg",
+          "route": "VO",
+          "pack": "Caja con 10 tabletas"
+        },
+        {
+          "presentation_id": "sol_1mg_ml",
+          "label": "Solución oral 1 mg/ml",
+          "form": "Solución",
+          "strength": "1 mg/ml",
+          "route": "VO",
+          "pack": "Frasco 60 ml"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_ciprofloxacino",
+      "generic_name": "Ciprofloxacino",
+      "brand_names": [
+        "Ciproxina",
+        "Cipro"
+      ],
+      "aliases": [
+        "cipro",
+        "ciprofloxacino"
+      ],
+      "search_terms": [
+        "ciprofloxacino",
+        "cipro",
+        "ciproxina"
+      ],
+      "therapeutic_group": "antibioticos",
+      "presentations": [
+        {
+          "presentation_id": "tab_500",
+          "label": "Tableta 500 mg",
+          "form": "Tableta",
+          "strength": "500 mg",
+          "route": "VO",
+          "pack": ""
+        },
+        {
+          "presentation_id": "iv_200",
+          "label": "Solución IV 200 mg/100 ml",
+          "form": "Solución",
+          "strength": "200 mg/100 ml",
+          "route": "IV",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Ciprofloxacino"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_ciprofloxacino",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_claritromicina",
+      "generic_name": "Claritromicina",
+      "brand_names": [
+        "Klaricid"
+      ],
+      "aliases": [
+        "claritromicina"
+      ],
+      "search_terms": [
+        "claritromicina",
+        "klaricid"
+      ],
+      "active_ingredients": [
+        "Claritromicina"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "claritromicina",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "antibioticos",
+      "presentations": [
+        {
+          "presentation_id": "tab_500",
+          "label": "Tableta 500 mg",
+          "form": "Tableta",
+          "strength": "500 mg",
+          "route": "VO",
+          "pack": "Caja con 14 tabletas"
+        },
+        {
+          "presentation_id": "susp_250_5",
+          "label": "Suspensión 250 mg/5 ml",
+          "form": "Suspensión",
+          "strength": "250 mg/5 ml",
+          "route": "VO",
+          "pack": "Frasco 60 ml"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_clotrimazol",
+      "generic_name": "Clotrimazol",
+      "brand_names": [
+        "Canesten"
+      ],
+      "aliases": [
+        "clotrimazol",
+        "clotrimazole"
+      ],
+      "search_terms": [
+        "clotrimazol",
+        "canesten"
+      ],
+      "active_ingredients": [
+        "Clotrimazol"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "clotrimazol",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "dermatologicos",
+      "presentations": [
+        {
+          "presentation_id": "crema_1",
+          "label": "Crema 1%",
+          "form": "Crema",
+          "strength": "1%",
+          "route": "Tópica",
+          "pack": "Tubo 20 g",
+          "allowed_routes": [
+            "Tópica"
+          ],
+          "default_route": "Tópica",
+          "dose_unit": "aplicacion",
+          "administration_pattern": "crema_topica",
+          "default_dose_suggestions": [
+            "Aplicar capa delgada"
+          ],
+          "default_frequency_suggestions": [
+            "Cada 12 horas",
+            "Cada 24 horas"
+          ],
+          "default_duration_suggestions": [
+            "7 días",
+            "14 días"
+          ],
+          "instruction_hints": [
+            "Aplicar en área limpia y seca"
+          ]
+        },
+        {
+          "presentation_id": "sol_1",
+          "label": "Solución tópica 1%",
+          "form": "Solución",
+          "strength": "1%",
+          "route": "Tópica",
+          "pack": "Frasco 30 ml"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_dexametasona",
+      "generic_name": "Dexametasona",
+      "brand_names": [
+        "Decadron"
+      ],
+      "aliases": [
+        "dexa",
+        "dexametasona"
+      ],
+      "search_terms": [
+        "dexametasona",
+        "decadron"
+      ],
+      "therapeutic_group": "corticoides",
+      "presentations": [
+        {
+          "presentation_id": "tab_0_5",
+          "label": "Tableta 0.5 mg",
+          "form": "Tableta",
+          "strength": "0.5 mg",
+          "route": "VO",
+          "pack": ""
+        },
+        {
+          "presentation_id": "amp_4",
+          "label": "Ampolleta 4 mg/ml",
+          "form": "Ampolleta",
+          "strength": "4 mg/ml",
+          "route": "IM",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Dexametasona"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_dexametasona",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_diclofenaco",
+      "generic_name": "Diclofenaco",
+      "brand_names": [
+        "Voltaren"
+      ],
+      "aliases": [
+        "diclofenaco",
+        "diclofenac"
+      ],
+      "search_terms": [
+        "diclofenaco",
+        "voltaren"
+      ],
+      "therapeutic_group": "aines",
+      "presentations": [
+        {
+          "presentation_id": "tab_50",
+          "label": "Tableta 50 mg",
+          "form": "Tableta",
+          "strength": "50 mg",
+          "route": "VO",
+          "pack": "",
+          "allowed_routes": [
+            "VO"
+          ],
+          "default_route": "VO",
+          "dose_unit": "tableta",
+          "administration_pattern": "tableta_oral",
+          "default_dose_suggestions": [
+            "1 tableta"
+          ],
+          "default_frequency_suggestions": [
+            "Cada 8 horas",
+            "Cada 12 horas"
+          ],
+          "default_duration_suggestions": [
+            "3 días",
+            "5 días"
+          ],
+          "instruction_hints": [
+            "Tomar después de alimentos"
+          ]
+        },
+        {
+          "presentation_id": "gel_1",
+          "label": "Gel tópico 1%",
+          "form": "Gel",
+          "strength": "1%",
+          "route": "Tópica",
+          "pack": "",
+          "allowed_routes": [
+            "Tópica"
+          ],
+          "default_route": "Tópica",
+          "dose_unit": "aplicacion",
+          "administration_pattern": "crema_topica",
+          "default_dose_suggestions": [
+            "Aplicar capa delgada"
+          ],
+          "default_frequency_suggestions": [
+            "Cada 12 horas",
+            "Cada 24 horas"
+          ],
+          "default_duration_suggestions": [
+            "5 días",
+            "7 días"
+          ],
+          "instruction_hints": [
+            "Aplicar en área limpia y seca"
+          ]
+        },
+        {
+          "presentation_id": "sup_100",
+          "label": "Supositorio 100 mg",
+          "form": "Supositorio",
+          "strength": "100 mg",
+          "route": "Rectal",
+          "pack": "Caja con 10 supositorios",
+          "allowed_routes": [
+            "Rectal"
+          ],
+          "default_route": "Rectal",
+          "dose_unit": "supositorio",
+          "administration_pattern": "supositorio",
+          "default_dose_suggestions": [
+            "1 supositorio"
+          ],
+          "default_frequency_suggestions": [
+            "Cada 12 horas",
+            "En caso necesario"
+          ],
+          "default_duration_suggestions": [
+            "1 día",
+            "3 días"
+          ],
+          "instruction_hints": [
+            "Aplicar por vía rectal"
+          ]
+        }
+      ],
+      "active_ingredients": [
+        "Diclofenaco"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_diclofenaco",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_enalapril",
+      "generic_name": "Enalapril",
+      "brand_names": [
+        "Renitec"
+      ],
+      "aliases": [
+        "enalapril",
+        "enalapril maleato"
+      ],
+      "search_terms": [
+        "enalapril",
+        "renitec"
+      ],
+      "active_ingredients": [
+        "Enalapril maleato"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "enalapril",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "antihipertensivos",
+      "presentations": [
+        {
+          "presentation_id": "tab_10",
+          "label": "Tableta 10 mg",
+          "form": "Tableta",
+          "strength": "10 mg",
+          "route": "VO",
+          "pack": "Caja con 30 tabletas"
+        },
+        {
+          "presentation_id": "tab_20",
+          "label": "Tableta 20 mg",
+          "form": "Tableta",
+          "strength": "20 mg",
+          "route": "VO",
+          "pack": "Caja con 30 tabletas"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_esomeprazol",
+      "generic_name": "Esomeprazol",
+      "brand_names": [
+        "Nexium"
+      ],
+      "aliases": [
+        "esomeprazol"
+      ],
+      "search_terms": [
+        "esomeprazol",
+        "nexium"
+      ],
+      "active_ingredients": [
+        "Esomeprazol"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "esomeprazol",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "gastrointestinales",
+      "presentations": [
+        {
+          "presentation_id": "cap_20",
+          "label": "Cápsula 20 mg",
+          "form": "Cápsula",
+          "strength": "20 mg",
+          "route": "VO",
+          "pack": "Caja con 14 cápsulas"
+        },
+        {
+          "presentation_id": "cap_40",
+          "label": "Cápsula 40 mg",
+          "form": "Cápsula",
+          "strength": "40 mg",
+          "route": "VO",
+          "pack": "Caja con 14 cápsulas"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_espironolactona",
+      "generic_name": "Espironolactona",
+      "brand_names": [
+        "Aldactone"
+      ],
+      "aliases": [
+        "espironolactona",
+        "spironolactone"
+      ],
+      "search_terms": [
+        "espironolactona",
+        "aldactone"
+      ],
+      "active_ingredients": [
+        "Espironolactona"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "espironolactona",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "diureticos",
+      "presentations": [
+        {
+          "presentation_id": "tab_25",
+          "label": "Tableta 25 mg",
+          "form": "Tableta",
+          "strength": "25 mg",
+          "route": "VO",
+          "pack": "Caja con 30 tabletas"
+        },
+        {
+          "presentation_id": "tab_100",
+          "label": "Tableta 100 mg",
+          "form": "Tableta",
+          "strength": "100 mg",
+          "route": "VO",
+          "pack": "Caja con 20 tabletas"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_furosemida",
+      "generic_name": "Furosemida",
+      "brand_names": [
+        "Lasix"
+      ],
+      "aliases": [
+        "furosemida",
+        "furosemide"
+      ],
+      "search_terms": [
+        "furosemida",
+        "lasix"
+      ],
+      "active_ingredients": [
+        "Furosemida"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "furosemida",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "diureticos",
+      "presentations": [
+        {
+          "presentation_id": "tab_40",
+          "label": "Tableta 40 mg",
+          "form": "Tableta",
+          "strength": "40 mg",
+          "route": "VO",
+          "pack": "Caja con 20 tabletas"
+        },
+        {
+          "presentation_id": "amp_20_2",
+          "label": "Ampolleta 20 mg/2 ml",
+          "form": "Ampolleta",
+          "strength": "20 mg/2 ml",
+          "route": "IV",
+          "pack": "Caja con 5 ampolletas"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_glibenclamida",
+      "generic_name": "Glibenclamida",
+      "brand_names": [
+        "Daonil"
+      ],
+      "aliases": [
+        "glibenclamida",
+        "glyburide"
+      ],
+      "search_terms": [
+        "glibenclamida",
+        "daonil"
+      ],
+      "active_ingredients": [
+        "Glibenclamida"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "glibenclamida",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "antidiabeticos",
+      "presentations": [
+        {
+          "presentation_id": "tab_5",
+          "label": "Tableta 5 mg",
+          "form": "Tableta",
+          "strength": "5 mg",
+          "route": "VO",
+          "pack": "Caja con 50 tabletas"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_hidroclorotiazida",
+      "generic_name": "Hidroclorotiazida",
+      "brand_names": [
+        "Esidrex"
+      ],
+      "aliases": [
+        "hctz",
+        "hidroclorotiazida",
+        "hydrochlorothiazide"
+      ],
+      "search_terms": [
+        "hidroclorotiazida",
+        "hctz",
+        "esidrex"
+      ],
+      "therapeutic_group": "diureticos",
+      "presentations": [
+        {
+          "presentation_id": "tab_12_5",
+          "label": "Tableta 12.5 mg",
+          "form": "Tableta",
+          "strength": "12.5 mg",
+          "route": "VO",
+          "pack": ""
+        },
+        {
+          "presentation_id": "tab_25",
+          "label": "Tableta 25 mg",
+          "form": "Tableta",
+          "strength": "25 mg",
+          "route": "VO",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Hidroclorotiazida"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_hidroclorotiazida",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_hidrocortisona_crema",
+      "generic_name": "Hidrocortisona",
+      "brand_names": [
+        "Locoid"
+      ],
+      "aliases": [
+        "hidrocortisona crema",
+        "hidrocortisona topica"
+      ],
+      "search_terms": [
+        "hidrocortisona",
+        "crema"
+      ],
+      "therapeutic_group": "dermatologicos",
+      "presentations": [
+        {
+          "presentation_id": "crema_1",
+          "label": "Crema tópica 1%",
+          "form": "Crema",
+          "strength": "1%",
+          "route": "Tópica",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Hidrocortisona"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_hidrocortisona_crema",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_ibuprofeno",
+      "generic_name": "Ibuprofeno",
+      "brand_names": [
+        "Advil",
+        "Motrin"
+      ],
+      "aliases": [
+        "ibu",
+        "ibuprofeno"
+      ],
+      "search_terms": [
+        "ibuprofeno",
+        "advil"
+      ],
+      "therapeutic_group": "aines",
+      "presentations": [
+        {
+          "presentation_id": "tab_400",
+          "label": "Tableta 400 mg",
+          "form": "Tableta",
+          "strength": "400 mg",
+          "route": "VO",
+          "pack": ""
+        },
+        {
+          "presentation_id": "tab_600",
+          "label": "Tableta 600 mg",
+          "form": "Tableta",
+          "strength": "600 mg",
+          "route": "VO",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Ibuprofeno"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_ibuprofeno",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_ketorolaco",
+      "generic_name": "Ketorolaco",
+      "brand_names": [
+        "Dolac",
+        "Toradol"
+      ],
+      "aliases": [
+        "ketorolaco trometamina",
+        "ketorolaco"
+      ],
+      "search_terms": [
+        "ketorolaco",
+        "dolac",
+        "toradol"
+      ],
+      "active_ingredients": [
+        "Ketorolaco trometamina"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "ketorolaco",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "aines",
+      "presentations": [
+        {
+          "presentation_id": "tab_10",
+          "label": "Tableta 10 mg",
+          "form": "Tableta",
+          "strength": "10 mg",
+          "route": "VO",
+          "pack": "Caja con 10 tabletas"
+        },
+        {
+          "presentation_id": "amp_30",
+          "label": "Ampolleta 30 mg/ml",
+          "form": "Ampolleta",
+          "strength": "30 mg/ml",
+          "route": "IM",
+          "pack": "Caja con 3 ampolletas"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_loratadina",
+      "generic_name": "Loratadina",
+      "brand_names": [
+        "Clarityne"
+      ],
+      "aliases": [
+        "loratadina",
+        "claritin"
+      ],
+      "search_terms": [
+        "loratadina",
+        "clarityne"
+      ],
+      "therapeutic_group": "antihistaminicos",
+      "presentations": [
+        {
+          "presentation_id": "tab_10",
+          "label": "Tableta 10 mg",
+          "form": "Tableta",
+          "strength": "10 mg",
+          "route": "VO",
+          "pack": ""
+        },
+        {
+          "presentation_id": "jarabe_5_5",
+          "label": "Jarabe 5 mg/5 ml",
+          "form": "Jarabe",
+          "strength": "5 mg/5 ml",
+          "route": "VO",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Loratadina"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_loratadina",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_losartan",
+      "generic_name": "Losartán",
+      "brand_names": [
+        "Cozaar"
+      ],
+      "aliases": [
+        "losartan",
+        "losartan potasico",
+        "losartan potasico"
+      ],
+      "search_terms": [
+        "losartan",
+        "losartan 50",
+        "cozaar"
+      ],
+      "active_ingredients": [
+        "Losartán potásico"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "losartan",
+          "notes": "Pendiente homologar contra fuente oficial"
+        }
+      ],
+      "therapeutic_group": "antihipertensivos",
+      "presentations": [
+        {
+          "presentation_id": "tab_50",
+          "label": "Tableta 50 mg",
+          "form": "Tableta",
+          "strength": "50 mg",
+          "route": "VO",
+          "pack": "Caja con 30 tabletas"
+        },
+        {
+          "presentation_id": "tab_100",
+          "label": "Tableta 100 mg",
+          "form": "Tableta",
+          "strength": "100 mg",
+          "route": "VO",
+          "pack": "Caja con 30 tabletas"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_losartan_hctz",
+      "generic_name": "Losartán / Hidroclorotiazida",
+      "brand_names": [
+        "Hyzaar"
+      ],
+      "aliases": [
+        "losartan hctz",
+        "losartan hidroclorotiazida",
+        "losartan/hidroclorotiazida"
+      ],
+      "search_terms": [
+        "losartan hidroclorotiazida",
+        "hyzaar"
+      ],
+      "therapeutic_group": "antihipertensivos",
+      "presentations": [
+        {
+          "presentation_id": "tab_50_12_5",
+          "label": "Tableta 50 mg / 12.5 mg",
+          "form": "Tableta",
+          "strength": "50/12.5 mg",
+          "route": "VO",
+          "pack": ""
+        },
+        {
+          "presentation_id": "tab_100_25",
+          "label": "Tableta 100 mg / 25 mg",
+          "form": "Tableta",
+          "strength": "100/25 mg",
+          "route": "VO",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Losartán / Hidroclorotiazida"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_losartan_hctz",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_meloxicam",
+      "generic_name": "Meloxicam",
+      "brand_names": [
+        "Mobicox"
+      ],
+      "aliases": [
+        "meloxicam"
+      ],
+      "search_terms": [
+        "meloxicam",
+        "mobicox"
+      ],
+      "active_ingredients": [
+        "Meloxicam"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "meloxicam",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "aines",
+      "presentations": [
+        {
+          "presentation_id": "tab_7_5",
+          "label": "Tableta 7.5 mg",
+          "form": "Tableta",
+          "strength": "7.5 mg",
+          "route": "VO",
+          "pack": "Caja con 10 tabletas"
+        },
+        {
+          "presentation_id": "tab_15",
+          "label": "Tableta 15 mg",
+          "form": "Tableta",
+          "strength": "15 mg",
+          "route": "VO",
+          "pack": "Caja con 10 tabletas"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_metamizol",
+      "generic_name": "Metamizol sódico",
+      "brand_names": [
+        "Neo-Melubrina"
+      ],
+      "aliases": [
+        "dipirona",
+        "metamizol",
+        "metamizol sodico"
+      ],
+      "search_terms": [
+        "metamizol",
+        "dipirona",
+        "neo melubrina"
+      ],
+      "active_ingredients": [
+        "Metamizol sódico"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "metamizol_sodico",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "analgesicos",
+      "presentations": [
+        {
+          "presentation_id": "tab_500",
+          "label": "Tableta 500 mg",
+          "form": "Tableta",
+          "strength": "500 mg",
+          "route": "VO",
+          "pack": "Caja con 20 tabletas"
+        },
+        {
+          "presentation_id": "amp_1g_2ml",
+          "label": "Ampolleta 1 g/2 ml",
+          "form": "Ampolleta",
+          "strength": "1 g/2 ml",
+          "route": "IM",
+          "pack": "Caja con 3 ampolletas"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_metformina",
+      "generic_name": "Metformina",
+      "brand_names": [
+        "Glucophage"
+      ],
+      "aliases": [
+        "metformin",
+        "metformina"
+      ],
+      "search_terms": [
+        "metformina",
+        "glucophage"
+      ],
+      "therapeutic_group": "antidiabeticos",
+      "presentations": [
+        {
+          "presentation_id": "tab_500",
+          "label": "Tableta 500 mg",
+          "form": "Tableta",
+          "strength": "500 mg",
+          "route": "VO",
+          "pack": ""
+        },
+        {
+          "presentation_id": "tab_850",
+          "label": "Tableta 850 mg",
+          "form": "Tableta",
+          "strength": "850 mg",
+          "route": "VO",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Metformina"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_metformina",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_metoclopramida",
+      "generic_name": "Metoclopramida",
+      "brand_names": [
+        "Primperan"
+      ],
+      "aliases": [
+        "metoclopramida"
+      ],
+      "search_terms": [
+        "metoclopramida",
+        "primperan"
+      ],
+      "active_ingredients": [
+        "Metoclopramida"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "metoclopramida",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "gastrointestinales",
+      "presentations": [
+        {
+          "presentation_id": "tab_10",
+          "label": "Tableta 10 mg",
+          "form": "Tableta",
+          "strength": "10 mg",
+          "route": "VO",
+          "pack": "Caja con 20 tabletas"
+        },
+        {
+          "presentation_id": "amp_10_2",
+          "label": "Ampolleta 10 mg/2 ml",
+          "form": "Ampolleta",
+          "strength": "10 mg/2 ml",
+          "route": "IM",
+          "pack": "Caja con 6 ampolletas"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_mometasona",
+      "generic_name": "Mometasona",
+      "brand_names": [
+        "Nasonex",
+        "Elocon"
+      ],
+      "aliases": [
+        "mometasona",
+        "mometa"
+      ],
+      "search_terms": [
+        "mometasona",
+        "nasonex",
+        "elocon"
+      ],
+      "therapeutic_group": "corticoides",
+      "presentations": [
+        {
+          "presentation_id": "spray_nasal",
+          "label": "Spray nasal 50 mcg/dosis",
+          "form": "Spray",
+          "strength": "50 mcg/dosis",
+          "route": "Nasal",
+          "pack": ""
+        },
+        {
+          "presentation_id": "crema_0_1",
+          "label": "Crema tópica 0.1%",
+          "form": "Crema",
+          "strength": "0.1%",
+          "route": "Tópica",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Mometasona"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_mometasona",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_montelukast",
+      "generic_name": "Montelukast",
+      "brand_names": [
+        "Singulair"
+      ],
+      "aliases": [
+        "montelukast",
+        "montelukast sodico"
+      ],
+      "search_terms": [
+        "montelukast",
+        "singulair"
+      ],
+      "active_ingredients": [
+        "Montelukast sódico"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "montelukast",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "respiratorios",
+      "presentations": [
+        {
+          "presentation_id": "tab_10",
+          "label": "Tableta 10 mg",
+          "form": "Tableta",
+          "strength": "10 mg",
+          "route": "VO",
+          "pack": "Caja con 20 tabletas"
+        },
+        {
+          "presentation_id": "tab_mast_4",
+          "label": "Tableta masticable 4 mg",
+          "form": "Tableta masticable",
+          "strength": "4 mg",
+          "route": "VO",
+          "pack": "Caja con 14 tabletas"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_mupirocina",
+      "generic_name": "Mupirocina",
+      "brand_names": [
+        "Bactroban"
+      ],
+      "aliases": [
+        "mupirocina",
+        "mupirocin"
+      ],
+      "search_terms": [
+        "mupirocina",
+        "bactroban"
+      ],
+      "active_ingredients": [
+        "Mupirocina"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mupirocina",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "dermatologicos",
+      "presentations": [
+        {
+          "presentation_id": "ung_2",
+          "label": "Ungüento 2%",
+          "form": "Ungüento",
+          "strength": "2%",
+          "route": "Tópica",
+          "pack": "Tubo 15 g"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_naproxeno",
+      "generic_name": "Naproxeno",
+      "brand_names": [
+        "Flanax"
+      ],
+      "aliases": [
+        "naproxeno",
+        "naproxen"
+      ],
+      "search_terms": [
+        "naproxeno",
+        "flanax"
+      ],
+      "therapeutic_group": "aines",
+      "presentations": [
+        {
+          "presentation_id": "tab_250",
+          "label": "Tableta 250 mg",
+          "form": "Tableta",
+          "strength": "250 mg",
+          "route": "VO",
+          "pack": ""
+        },
+        {
+          "presentation_id": "tab_550",
+          "label": "Tableta 550 mg",
+          "form": "Tableta",
+          "strength": "550 mg",
+          "route": "VO",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Naproxeno"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_naproxeno",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_omeprazol",
+      "generic_name": "Omeprazol",
+      "brand_names": [
+        "Losec"
+      ],
+      "aliases": [
+        "omeprazol",
+        "ome"
+      ],
+      "search_terms": [
+        "omeprazol",
+        "losec"
+      ],
+      "therapeutic_group": "gastrointestinales",
+      "presentations": [
+        {
+          "presentation_id": "cap_20",
+          "label": "Cápsula 20 mg",
+          "form": "Cápsula",
+          "strength": "20 mg",
+          "route": "VO",
+          "pack": "",
+          "allowed_routes": [
+            "VO"
+          ],
+          "default_route": "VO",
+          "dose_unit": "capsula",
+          "administration_pattern": "capsula_oral",
+          "default_dose_suggestions": [
+            "1 cápsula"
+          ],
+          "default_frequency_suggestions": [
+            "Cada 24 horas"
+          ],
+          "default_duration_suggestions": [
+            "14 días",
+            "30 días"
+          ],
+          "instruction_hints": [
+            "Tomar antes de alimentos"
+          ]
+        },
+        {
+          "presentation_id": "cap_40",
+          "label": "Cápsula 40 mg",
+          "form": "Cápsula",
+          "strength": "40 mg",
+          "route": "VO",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Omeprazol"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_omeprazol",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_pantoprazol",
+      "generic_name": "Pantoprazol",
+      "brand_names": [
+        "Pantozol",
+        "Pantoloc"
+      ],
+      "aliases": [
+        "pantoprazol",
+        "panto"
+      ],
+      "search_terms": [
+        "pantoprazol",
+        "pantoloc",
+        "pantozol"
+      ],
+      "therapeutic_group": "gastrointestinales",
+      "presentations": [
+        {
+          "presentation_id": "tab_40",
+          "label": "Tableta 40 mg",
+          "form": "Tableta",
+          "strength": "40 mg",
+          "route": "VO",
+          "pack": ""
+        },
+        {
+          "presentation_id": "iv_40",
+          "label": "Liofilizado 40 mg",
+          "form": "Liofilizado",
+          "strength": "40 mg",
+          "route": "IV",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Pantoprazol"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_pantoprazol",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_paracetamol",
+      "generic_name": "Paracetamol",
+      "brand_names": [
+        "Tempra",
+        "Tylenol",
+        "Panadol"
+      ],
+      "aliases": [
+        "acetaminofen",
+        "acetaminofén",
+        "para"
+      ],
+      "search_terms": [
+        "paracetamol",
+        "acetaminofen",
+        "tempra",
+        "para"
+      ],
+      "active_ingredients": [
+        "Paracetamol"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "paracetamol",
+          "notes": "Pendiente homologar contra Compendio"
+        }
+      ],
+      "therapeutic_group": "analgesicos",
+      "favorite": true,
+      "presentations": [
+        {
+          "presentation_id": "tab_500",
+          "label": "Tableta 500 mg",
+          "form": "Tableta",
+          "strength": "500 mg",
+          "route": "VO",
+          "pack": "Caja con 20 tabletas"
+        },
+        {
+          "presentation_id": "tab_750",
+          "label": "Tableta 750 mg",
+          "form": "Tableta",
+          "strength": "750 mg",
+          "route": "VO",
+          "pack": "Caja con 10 tabletas"
+        },
+        {
+          "presentation_id": "susp_120_5",
+          "label": "Suspensión 120 mg/5 ml",
+          "form": "Suspensión",
+          "strength": "120 mg/5 ml",
+          "route": "VO",
+          "pack": "Frasco 120 ml",
+          "allowed_routes": [
+            "VO"
+          ],
+          "default_route": "VO",
+          "dose_unit": "ml",
+          "administration_pattern": "suspension_oral",
+          "default_dose_suggestions": [
+            "2.5 ml",
+            "5 ml",
+            "7.5 ml"
+          ],
+          "default_frequency_suggestions": [
+            "Cada 6 horas",
+            "Cada 8 horas"
+          ],
+          "default_duration_suggestions": [
+            "3 días",
+            "5 días"
+          ],
+          "instruction_hints": [
+            "Agitar antes de usar"
+          ]
+        },
+        {
+          "presentation_id": "drops_ped",
+          "label": "Gotas pediátricas",
+          "form": "Gotas",
+          "strength": "Pediátrico",
+          "route": "VO",
+          "pack": "Frasco gotero 15 ml",
+          "allowed_routes": [
+            "VO"
+          ],
+          "default_route": "VO",
+          "dose_unit": "gotas/ml",
+          "administration_pattern": "gotas_orales",
+          "default_dose_suggestions": [
+            "2 gotas",
+            "3 gotas",
+            "5 gotas",
+            "0.5 ml",
+            "1 ml",
+            "2 ml"
+          ],
+          "default_frequency_suggestions": [
+            "Cada 6 horas",
+            "Cada 8 horas",
+            "Cada 12 horas"
+          ],
+          "default_duration_suggestions": [
+            "3 días",
+            "5 días",
+            "7 días"
+          ],
+          "instruction_hints": [
+            "Medir dosis en gotas o ml",
+            "Agitar antes de usar"
+          ]
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_prednisona",
+      "generic_name": "Prednisona",
+      "brand_names": [
+        "Meticorten"
+      ],
+      "aliases": [
+        "prednisona",
+        "prednisone"
+      ],
+      "search_terms": [
+        "prednisona",
+        "meticorten"
+      ],
+      "therapeutic_group": "corticoides",
+      "presentations": [
+        {
+          "presentation_id": "tab_5",
+          "label": "Tableta 5 mg",
+          "form": "Tableta",
+          "strength": "5 mg",
+          "route": "VO",
+          "pack": ""
+        },
+        {
+          "presentation_id": "tab_50",
+          "label": "Tableta 50 mg",
+          "form": "Tableta",
+          "strength": "50 mg",
+          "route": "VO",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Prednisona"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_prednisona",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_salbutamol",
+      "generic_name": "Salbutamol",
+      "brand_names": [
+        "Ventolin"
+      ],
+      "aliases": [
+        "albuterol",
+        "salbutamol"
+      ],
+      "search_terms": [
+        "salbutamol",
+        "ventolin",
+        "albuterol"
+      ],
+      "therapeutic_group": "respiratorios",
+      "presentations": [
+        {
+          "presentation_id": "inh_100",
+          "label": "Inhalador 100 mcg/dosis",
+          "form": "Inhalador",
+          "strength": "100 mcg/dosis",
+          "route": "Inhalada",
+          "pack": "",
+          "allowed_routes": [
+            "Inhalada"
+          ],
+          "default_route": "Inhalada",
+          "dose_unit": "inhalacion",
+          "administration_pattern": "aerosol_inhalado",
+          "default_dose_suggestions": [
+            "1 inhalación",
+            "2 inhalaciones"
+          ],
+          "default_frequency_suggestions": [
+            "Cada 6 horas",
+            "En caso necesario"
+          ],
+          "default_duration_suggestions": [
+            "3 días",
+            "5 días",
+            "Uso continuo"
+          ],
+          "instruction_hints": [
+            "Inhalar durante el disparo"
+          ]
+        },
+        {
+          "presentation_id": "sol_neb",
+          "label": "Solución para nebulizar 5 mg/ml",
+          "form": "Solución",
+          "strength": "5 mg/ml",
+          "route": "Inhalada",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Salbutamol"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_salbutamol",
+          "notes": "Semilla local"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_tmp_smx",
+      "generic_name": "Trimetoprima / sulfametoxazol",
+      "brand_names": [
+        "Bactrim"
+      ],
+      "aliases": [
+        "tmp smx",
+        "trimetoprima sulfametoxazol",
+        "cotrimoxazol"
+      ],
+      "search_terms": [
+        "trimetoprima",
+        "sulfametoxazol",
+        "bactrim",
+        "cotrimoxazol"
+      ],
+      "active_ingredients": [
+        "Trimetoprima",
+        "Sulfametoxazol"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "trimetoprima_sulfametoxazol",
+          "notes": "Semilla REC-CAT-5"
+        }
+      ],
+      "therapeutic_group": "antibioticos",
+      "presentations": [
+        {
+          "presentation_id": "tab_160_800",
+          "label": "Tableta 160 mg / 800 mg",
+          "form": "Tableta",
+          "strength": "160/800 mg",
+          "route": "VO",
+          "pack": "Caja con 14 tabletas"
+        },
+        {
+          "presentation_id": "susp_40_200_5",
+          "label": "Suspensión 40 mg / 200 mg por 5 ml",
+          "form": "Suspensión",
+          "strength": "40/200 mg/5 ml",
+          "route": "VO",
+          "pack": "Frasco 120 ml"
+        }
+      ]
+    },
+    {
+      "drug_id": "mxm_aas",
+      "generic_name": "Ácido acetilsalicílico",
+      "brand_names": [
+        "Aspirina"
+      ],
+      "aliases": [
+        "acido acetilsalicilico",
+        "aspirina",
+        "aas"
+      ],
+      "search_terms": [
+        "acido",
+        "aspirina",
+        "acetilsalicilico"
+      ],
+      "therapeutic_group": "analgesicos",
+      "presentations": [
+        {
+          "presentation_id": "tab_100",
+          "label": "Tableta 100 mg",
+          "form": "Tableta",
+          "strength": "100 mg",
+          "route": "VO",
+          "pack": ""
+        },
+        {
+          "presentation_id": "tab_500",
+          "label": "Tableta 500 mg",
+          "form": "Tableta",
+          "strength": "500 mg",
+          "route": "VO",
+          "pack": ""
+        }
+      ],
+      "active_ingredients": [
+        "Ácido acetilsalicílico"
+      ],
+      "source_refs": [
+        {
+          "source": "mxmed_seed_local",
+          "ref_type": "normalizacion",
+          "ref_value": "mxm_aas",
+          "notes": "Semilla local"
+        }
+      ]
+    }
+  ]
+}

@@ -445,6 +445,29 @@ $payloadJson = $payload ? json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAP
 $renderedText = $document ? (string)($content['rendered_text'] ?? '') : '';
 $docTypeNorm = strtolower(trim($docType));
 $isConsentDoc = ($docTypeNorm === 'consentimiento_informado');
+$isPrescriptionDoc = in_array($docTypeNorm, ['prescription', 'rx'], true);
+$prescriptionContext = $isPrescriptionDoc && is_array($payload['context'] ?? null) ? $payload['context'] : [];
+$prescriptionLegacy = $isPrescriptionDoc && is_array($payload['prescription'] ?? null) ? $payload['prescription'] : [];
+$prescriptionItems = [];
+if ($isPrescriptionDoc) {
+    if (is_array($payload['medications'] ?? null)) {
+        $prescriptionItems = $payload['medications'];
+    } elseif (is_array($prescriptionLegacy['items'] ?? null)) {
+        $prescriptionItems = $prescriptionLegacy['items'];
+    }
+}
+$prescriptionAnalysis = $isPrescriptionDoc && is_array($payload['analysis'] ?? null) ? $payload['analysis'] : [];
+$prescriptionPatientName = trim((string)($prescriptionContext['patient_name'] ?? ''));
+$prescriptionDoctorName = trim((string)($prescriptionContext['doctor_name'] ?? ''));
+$prescriptionDate = trim((string)($prescriptionContext['date'] ?? ''));
+$prescriptionEncounter = trim((string)($prescriptionContext['encounter_id'] ?? ''));
+$prescriptionAllergies = is_array($prescriptionContext['allergies'] ?? null) ? $prescriptionContext['allergies'] : [];
+$prescriptionCurrentMeds = is_array($prescriptionContext['current_medications'] ?? null) ? $prescriptionContext['current_medications'] : [];
+$prescriptionAnalysisObservations = [];
+if (is_array($prescriptionAnalysis['results']['observations'] ?? null)) {
+    $prescriptionAnalysisObservations = $prescriptionAnalysis['results']['observations'];
+}
+$prescriptionAnalysisStatus = trim((string)($prescriptionAnalysis['status'] ?? 'idle'));
 $consentBlock = is_array($payload['consent'] ?? null) ? $payload['consent'] : [];
 $consentPatientSnapshot = is_array($payload['patient_snapshot'] ?? null) ? $payload['patient_snapshot'] : [];
 $consentActorSnapshot = is_array($payload['actor_snapshot'] ?? null) ? $payload['actor_snapshot'] : [];
@@ -636,9 +659,46 @@ if (!$embed) {
     margin-top:8px;
   }
   .consent-doc-sign-line{margin-top:28px;border-top:1px solid #9fb6c4;}
+  .rx-view-sheet{
+    background:#fff;
+    border:1px solid #d7eaf2;
+    border-radius:14px;
+    padding:16px;
+    display:grid;
+    gap:12px;
+  }
+  .rx-view-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    border-bottom:1px solid #edf4f8;
+    padding-bottom:8px;
+  }
+  .rx-view-title{font-size:1rem;font-weight:800;color:#0a405f;line-height:1.3;}
+  .rx-view-meta{font-size:.84rem;color:#5d6b74;}
+  .rx-view-section-title{
+    font-size:.8rem;
+    font-weight:800;
+    color:#0a405f;
+    text-transform:uppercase;
+    letter-spacing:.02em;
+    margin-bottom:4px;
+  }
+  .rx-view-text{font-size:.9rem;color:#273b47;line-height:1.45;white-space:pre-wrap;}
+  .rx-view-list{
+    margin:0;
+    padding-left:1rem;
+    display:grid;
+    gap:8px;
+  }
+  .rx-view-item-title{font-weight:700;color:#12344d;}
+  .rx-view-item-meta{font-size:.84rem;color:#546670;}
+  .rx-view-item-note{font-size:.84rem;color:#273b47;}
   @media (max-width: 767.98px){
     .consent-doc-head{flex-direction:column;}
     .consent-doc-sign-grid{grid-template-columns:1fr;}
+    .rx-view-head{flex-direction:column;}
   }
 </style>
 <div class="<?php echo $embed ? 'py-1' : 'container py-4'; ?>">
@@ -757,6 +817,91 @@ if (!$embed) {
         <div><strong>Viewer mode:</strong> <?php echo h($detectedMode); ?></div>
       </div>
     </div>
+
+    <?php if ($isPrescriptionDoc): ?>
+      <article class="rx-view-sheet mb-3">
+        <header class="rx-view-head">
+          <div>
+            <div class="rx-view-title"><?php echo h($displayTitle !== '-' ? $displayTitle : 'Receta médica'); ?></div>
+            <?php if ($prescriptionPatientName !== ''): ?>
+              <div class="rx-view-meta">Paciente: <?php echo h($prescriptionPatientName); ?></div>
+            <?php endif; ?>
+            <?php if ($prescriptionDoctorName !== ''): ?>
+              <div class="rx-view-meta">Médico: <?php echo h($prescriptionDoctorName); ?></div>
+            <?php endif; ?>
+          </div>
+          <div class="text-end">
+            <span class="badge text-bg-secondary"><?php echo h($prescriptionAnalysisStatus !== '' ? $prescriptionAnalysisStatus : 'idle'); ?></span>
+            <?php if ($prescriptionDate !== ''): ?>
+              <div class="rx-view-meta mt-2">Fecha: <?php echo h($prescriptionDate); ?></div>
+            <?php endif; ?>
+            <?php if ($prescriptionEncounter !== ''): ?>
+              <div class="rx-view-meta">Consulta: <?php echo h($prescriptionEncounter); ?></div>
+            <?php endif; ?>
+          </div>
+        </header>
+        <section>
+          <div class="rx-view-section-title">Medicamentos</div>
+          <?php if ($prescriptionItems !== []): ?>
+            <ol class="rx-view-list">
+              <?php foreach ($prescriptionItems as $rxItem): ?>
+                <?php
+                if (!is_array($rxItem)) {
+                    continue;
+                }
+                $rxName = trim((string)($rxItem['name'] ?? ($rxItem['medicamento'] ?? '')));
+                $rxPresentation = trim((string)($rxItem['presentation'] ?? ''));
+                $rxDose = trim((string)($rxItem['dose'] ?? ($rxItem['dosis'] ?? '')));
+                $rxRoute = trim((string)($rxItem['route'] ?? ($rxItem['via'] ?? '')));
+                $rxFrequency = trim((string)($rxItem['frequency'] ?? ($rxItem['frecuencia'] ?? ($rxItem['periodicidad'] ?? ''))));
+                $rxDuration = trim((string)($rxItem['duration'] ?? ($rxItem['duracion'] ?? '')));
+                $rxQuantity = trim((string)($rxItem['quantity'] ?? ''));
+                $rxInstructions = trim((string)($rxItem['instructions'] ?? ($rxItem['indicaciones'] ?? '')));
+                $rxPrivateNotes = trim((string)($rxItem['private_notes'] ?? ''));
+                $rxMetaParts = array_values(array_filter([
+                    $rxPresentation !== '' ? ('Presentación: ' . $rxPresentation) : '',
+                    $rxDose !== '' ? ('Dosis: ' . $rxDose) : '',
+                    $rxRoute !== '' ? ('Vía: ' . $rxRoute) : '',
+                    $rxFrequency !== '' ? ('Frecuencia: ' . $rxFrequency) : '',
+                    $rxDuration !== '' ? ('Duración: ' . $rxDuration) : '',
+                    $rxQuantity !== '' ? ('Cantidad: ' . $rxQuantity) : '',
+                ]));
+                ?>
+                <li>
+                  <div class="rx-view-item-title"><?php echo h($rxName !== '' ? $rxName : 'Medicamento'); ?></div>
+                  <?php if ($rxMetaParts !== []): ?>
+                    <div class="rx-view-item-meta"><?php echo h(implode(' · ', $rxMetaParts)); ?></div>
+                  <?php endif; ?>
+                  <?php if ($rxInstructions !== ''): ?>
+                    <div class="rx-view-item-note"><?php echo h($rxInstructions); ?></div>
+                  <?php endif; ?>
+                  <?php if ($rxPrivateNotes !== ''): ?>
+                    <div class="rx-view-item-note text-muted">Nota médica: <?php echo h($rxPrivateNotes); ?></div>
+                  <?php endif; ?>
+                </li>
+              <?php endforeach; ?>
+            </ol>
+          <?php else: ?>
+            <div class="rx-view-text text-muted">Sin medicamentos registrados.</div>
+          <?php endif; ?>
+        </section>
+        <section>
+          <div class="rx-view-section-title">Contexto clínico</div>
+          <div class="rx-view-text"><?php echo h('Alergias: ' . ($prescriptionAllergies !== [] ? implode(' · ', array_map('strval', $prescriptionAllergies)) : 'Sin alergias registradas')); ?></div>
+          <div class="rx-view-text"><?php echo h('Medicamentos actuales: ' . ($prescriptionCurrentMeds !== [] ? implode(' · ', array_map('strval', $prescriptionCurrentMeds)) : 'Sin medicamentos registrados')); ?></div>
+        </section>
+        <section>
+          <div class="rx-view-section-title">Análisis clínico local</div>
+          <div class="rx-view-text">
+            <?php if ($prescriptionAnalysisObservations !== []): ?>
+              <?php echo h(implode(' ', array_map('strval', $prescriptionAnalysisObservations))); ?>
+            <?php else: ?>
+              Sin observaciones locales. El análisis asistido por IA queda preparado para ejecución bajo demanda.
+            <?php endif; ?>
+          </div>
+        </section>
+      </article>
+    <?php endif; ?>
 
     <?php if ($isConsentDoc): ?>
       <?php
