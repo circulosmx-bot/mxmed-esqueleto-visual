@@ -8752,6 +8752,7 @@ console.info('app.js loaded :: 20251123a');
       list: root.querySelector('#ci_list'),
       empty: root.querySelector('#ci_empty_state'),
       newBtn: root.querySelector('#ci_new_btn'),
+      docsNotice: root.querySelector('#docs_catalog_notice'),
       wizard: root.querySelector('#ci_wizard'),
       notice: root.querySelector('#ci_wizard_notice'),
       ctxNotice: root.querySelector('#ci_context_notice'),
@@ -8867,6 +8868,15 @@ console.info('app.js loaded :: 20251123a');
         { key: 'investigacion', label: 'Investigación clínica', desc: 'Consentimiento para participación en protocolo de investigación.' },
         { key: 'otro', label: 'Otro', desc: 'Consentimiento informado general para procedimiento clínico.' }
       ]
+    };
+    const setDocumentsNotice = (message = '', tone = 'muted')=>{
+      if(!els.docsNotice) return;
+      const text = sanitizeText(message || '');
+      els.docsNotice.textContent = text;
+      els.docsNotice.classList.toggle('d-none', !text);
+      els.docsNotice.classList.toggle('text-muted', tone !== 'success' && tone !== 'error');
+      els.docsNotice.classList.toggle('text-success', tone === 'success');
+      els.docsNotice.classList.toggle('text-danger', tone === 'error');
     };
     const CONSENT_IDENTITY_QR_POLL_INTERVAL_MS = 4000;
     const CONSENT_IDENTITY_QR_MAX_DURATION_MS = 90000;
@@ -10751,6 +10761,22 @@ console.info('app.js loaded :: 20251123a');
     els.newBtn.addEventListener('click', (event)=>{
       event.preventDefault();
       startDraft();
+      setDocumentsNotice('');
+    });
+    root.addEventListener('click', (event)=>{
+      const openConsentBtn = event.target.closest('[data-action="documents-open-consent"]');
+      if(openConsentBtn){
+        event.preventDefault();
+        startDraft();
+        setDocumentsNotice('Se abrió el flujo activo de Consentimiento informado.', 'success');
+        return;
+      }
+      const comingSoonBtn = event.target.closest('[data-action="documents-coming-soon"]');
+      if(comingSoonBtn){
+        event.preventDefault();
+        const label = sanitizeText(comingSoonBtn.querySelector('.docs-launcher-item-title')?.textContent || 'Documento');
+        setDocumentsNotice(`${label}: disponible próximamente.`, 'muted');
+      }
     });
     const bindSharedField = (inputEl, key, options = {})=>{
       if(!inputEl) return;

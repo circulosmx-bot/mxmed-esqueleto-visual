@@ -6701,6 +6701,64 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-expediente .head [data-role="exp-h-close-enc-btn"]:not(.d-none){
   display:inline-flex !important;
 }
+
+/* DOCUMENTOS launcher (tab t-consent) */
+#t-consent .docs-launcher-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:.8rem;
+}
+#t-consent .docs-launcher-group{
+  border:1px solid #d9e4ee;
+  border-radius:.7rem;
+  background:#fff;
+  padding:.65rem;
+}
+#t-consent .docs-launcher-group-title{
+  font-size:.72rem;
+  font-weight:700;
+  letter-spacing:.03em;
+  text-transform:uppercase;
+  color:#4f6478;
+  margin-bottom:.45rem;
+}
+#t-consent .docs-launcher-item{
+  width:100%;
+  border:1px solid #dce7f1;
+  border-radius:.6rem;
+  background:#f9fbfe;
+  padding:.55rem .6rem;
+  text-align:left;
+  display:flex;
+  flex-direction:column;
+  gap:.12rem;
+  margin-bottom:.45rem;
+  cursor:pointer;
+}
+#t-consent .docs-launcher-item:last-child{
+  margin-bottom:0;
+}
+#t-consent .docs-launcher-item-title{
+  font-weight:600;
+  color:#12344e;
+  line-height:1.2;
+}
+#t-consent .docs-launcher-item-desc{
+  font-size:.78rem;
+  color:#678095;
+}
+#t-consent .docs-launcher-item--active{
+  border-color:#8db9f5;
+  background:#eef5ff;
+}
+#t-consent .docs-launcher-item:hover{
+  border-color:#9ec2f1;
+}
+@media (max-width: 991.98px){
+  #t-consent .docs-launcher-grid{
+    grid-template-columns:1fr;
+  }
+}
 .clinical-card-actions {
   line-height: 1.08;
   display: inline-flex;
