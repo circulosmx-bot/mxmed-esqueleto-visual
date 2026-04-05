@@ -12268,13 +12268,16 @@ console.info('app.js loaded :: 20251123a');
   // Refuerzo: asegurar que el click cambie de tab
   const tabLinks = Array.from(document.querySelectorAll('#p-expediente .mm-tabs-row .nav-link'));
   const tabPanes = Array.from(document.querySelectorAll('#p-expediente .tab-content .tab-pane'));
+  const enforceSingleActiveTab = (activeBtn)=>{
+    tabLinks.forEach((btn)=>{
+      const isCurrent = btn === activeBtn;
+      btn.classList.toggle('active', isCurrent);
+      btn.setAttribute('aria-selected', isCurrent ? 'true' : 'false');
+    });
+  };
   const activateTabPaneManually = (btn, target)=>{
     if(!target) return;
-    tabLinks.forEach((b)=>{
-      const isCurrent = b === btn;
-      b.classList.toggle('active', isCurrent);
-      b.setAttribute('aria-selected', isCurrent ? 'true' : 'false');
-    });
+    enforceSingleActiveTab(btn);
     tabPanes.forEach((p)=> p.classList.remove('show','active'));
     const paneTarget = pane.querySelector(target);
     if(paneTarget){
@@ -12287,6 +12290,7 @@ console.info('app.js loaded :: 20251123a');
     btn.addEventListener('shown.bs.tab', ()=>{
       const target = btn.getAttribute('data-bs-target');
       if(!target) return;
+      enforceSingleActiveTab(btn);
       pane.dataset.activeTab = getTabIdFromTarget(target);
       syncExpedienteSectionTopbarTitle(btn);
     });

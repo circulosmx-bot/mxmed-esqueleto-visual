@@ -2820,12 +2820,11 @@
 
                 <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-datos" data-tab-key="t-datos"><span class="tab-ico material-symbols-outlined" aria-hidden="true">id_card</span><span class="tab-lbl tab-lbl-stack tab-lbl-stack-datos"><span class="tab-line">Datos</span><span class="tab-line">Generales</span></span></button></li>
 
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-exploracion" data-tab-key="t-exploracion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">accessibility</span><span class="tab-lbl">Exploración Física</span></button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historia" data-tab-key="t-historia"><span class="tab-ico material-symbols-outlined" aria-hidden="true">menu_book</span><span class="tab-lbl">Historia Clínica</span></button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historial-atencion" data-tab-key="t-historial-atencion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">history</span><span class="tab-lbl tab-lbl-stack tab-lbl-stack-historial"><span class="tab-line">Historial</span><span class="tab-line tab-line-sub">de atención</span></span></button></li>
 
                 <li class="nav-item d-none" data-tab-conditional="gineco"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-gineco" data-tab-key="t-gineco"><span class="tab-ico material-symbols-rounded" aria-hidden="true">pregnant_woman</span><span class="tab-lbl tab-lbl-stack tab-lbl-stack-gineco"><span class="tab-line">Antecedentes</span><span class="tab-line">Gineco</span><span class="tab-line">Obstétricos</span></span></button></li>
-
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-exploracion" data-tab-key="t-exploracion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">accessibility</span><span class="tab-lbl">Exploración Física</span></button></li>
 
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-estudios" data-tab-key="t-estudios"><span class="tab-ico material-symbols-outlined" aria-hidden="true">radiology</span><span class="tab-lbl">Estudios Diagnóstico</span></button></li>
 
@@ -3568,9 +3567,15 @@
                 <div class="modal fade" id="modalHistorialExpandido" tabindex="-1" aria-hidden="true">
                   <div class="modal-dialog modal-xl modal-dialog-centered">
                     <div class="modal-content">
-                      <div class="modal-header">
-                        <h5 class="modal-title">Historial de atención (modo expandido)</h5>
+                      <div class="modal-header ne-rx-modal-header mm-ha-modal-header">
+                        <h5 class="modal-title ne-rx-modal-title">
+                          <span class="material-symbols-outlined ne-rx-modal-title-icon" aria-hidden="true">history</span>
+                          <span>HISTORIAL DE ATENCIÓN</span>
+                        </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="mm-ha-expanded-context-slot">
+                        <div id="mm_hist_exp_context" class="mx-clinical-header-host" data-clinical-header="slim" data-clinical-layout="modal"></div>
                       </div>
                       <div class="modal-body">
                         <div class="mm-ha-topbar-expanded d-flex align-items-center justify-content-between gap-2 flex-wrap mb-2">
@@ -7389,7 +7394,8 @@
     var iframe = document.getElementById('mm-embed-historial');
     var expandBtn = historialPane ? historialPane.querySelector('[data-action="open-historial-expand"]') : null;
     var expandModalEl = document.getElementById('modalHistorialExpandido');
-    var expandedIframe = document.getElementById('mm-embed-historial-expanded');
+    var expandedIframe = expandModalEl ? expandModalEl.querySelector('#mm-embed-historial-expanded') : null;
+    var expandedContextHost = expandModalEl ? expandModalEl.querySelector('#mm_hist_exp_context') : null;
     var emptyMsg = document.getElementById('mm-embed-historial-empty');
     var expandModal = (expandModalEl && window.bootstrap && window.bootstrap.Modal)
       ? window.bootstrap.Modal.getOrCreateInstance(expandModalEl)
@@ -7965,10 +7971,135 @@
       expandedIframe.setAttribute('src', mainSrc);
     }
 
+    function getExpandedClinicalHeaderFallback() {
+      var panel = document.getElementById('p-expediente');
+      var getText = function (selector) {
+        var el = panel ? panel.querySelector(selector) : null;
+        return String((el && (el.value || el.textContent)) || '').trim();
+      };
+      var getHistoryChips = function (itemKey) {
+        try {
+          var root = panel ? panel.querySelector('#t-historia') : null;
+          if (!root) return [];
+          var chips = Array.from(root.querySelectorAll('[data-hc-item="' + itemKey + '"] [data-hc-chips] .hc-chip'));
+          return chips.map(function (chip) {
+            var detail = String(chip.getAttribute('data-details') || '').trim();
+            var label = String(chip.textContent || '').trim();
+            return detail || label;
+          }).filter(Boolean);
+        } catch (_) {
+          return [];
+        }
+      };
+      var names = [
+        getText('[data-pac-nombre]'),
+        getText('[data-pac-apellido-paterno]'),
+        getText('[data-pac-apellido-materno]')
+      ].filter(Boolean).join(' ').trim();
+      var age = getText('[data-dg-edad]');
+      var sexo = getText('input[name="pac-genero"]:checked') || '--';
+      if (sexo === 'F') sexo = 'Femenino';
+      if (sexo === 'M') sexo = 'Masculino';
+      if (sexo === 'O') sexo = 'Otro';
+      var motivo = getText('[data-pac-motivo-consulta]');
+      var allergies = getHistoryChips('alergias');
+      var currentMeds = getHistoryChips('medicamentos');
+      return {
+        patient_name: names || 'Paciente',
+        age: age || '--',
+        sex: sexo || '--',
+        clinical_reason: motivo || '',
+        current_date: new Date().toISOString().slice(0, 10),
+        encounter_status: p10Bar && p10Bar.dataset && String(p10Bar.dataset.encounterKey || '').trim() ? 'Consulta activa' : 'Sin consulta activa',
+        allergies: allergies,
+        current_medication: currentMeds,
+        current_medications: currentMeds
+      };
+    }
+
+    function renderExpandedClinicalHeaderLocal(payload) {
+      if (!expandedContextHost) return;
+      var safePayload = payload && typeof payload === 'object' ? payload : {};
+      var clean = function (value) { return String(value || '').trim(); };
+      var toListText = function (value, fallback) {
+        var list = Array.isArray(value) ? value : [];
+        var txt = list.map(function (entry) { return clean(entry); }).filter(Boolean).join(' · ');
+        return txt || fallback;
+      };
+      var patientName = clean(safePayload.patient_name) || 'No registrado';
+      var ageRaw = clean(safePayload.age || safePayload.patient_age);
+      var sex = clean(safePayload.sex || safePayload.patient_sex) || '--';
+      var reason = clean(safePayload.clinical_reason || safePayload.reason);
+      var date = clean(safePayload.current_date || safePayload.date) || 'No registrada';
+      var status = clean(safePayload.encounter_status || safePayload.encounter_id) || 'Sin consulta activa';
+      var allergies = toListText(
+        Array.isArray(safePayload.allergies) ? safePayload.allergies : [],
+        'Sin alergias registradas'
+      );
+      var meds = toListText(
+        Array.isArray(safePayload.current_medication) ? safePayload.current_medication : (Array.isArray(safePayload.current_medications) ? safePayload.current_medications : []),
+        'Sin medicación actual registrada'
+      );
+      var age = ageRaw ? (/\banos?\b|\baños?\b/i.test(ageRaw) ? ageRaw : ageRaw + ' años') : '-- años';
+      var escapeHtml = function (value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      };
+      expandedContextHost.classList.add('ne-rx-clinical-header', 'mx-clinical-header', 'mx-clinical-header--modal');
+      expandedContextHost.classList.remove('mx-clinical-header--shell');
+      expandedContextHost.innerHTML = [
+        '<div class="ne-rx-ch-top">',
+          '<div class="ne-rx-ch-avatar" aria-hidden="true"><span class="material-symbols-outlined">person</span></div>',
+          '<div class="ne-rx-ch-main">',
+            '<div class="ne-rx-ch-patient-line">',
+              '<span class="ne-rx-ch-patient-name">' + escapeHtml(patientName) + '</span>',
+              '<span class="ne-rx-ch-sep">·</span>',
+              '<span class="ne-rx-ch-meta">' + escapeHtml(age) + '</span>',
+              '<span class="ne-rx-ch-sep">·</span>',
+              '<span class="ne-rx-ch-meta">' + escapeHtml(sex) + '</span>',
+            '</div>',
+            '<div class="ne-rx-ch-reason">Motivo: ' + escapeHtml(reason || 'Sin motivo registrado') + '</div>',
+          '</div>',
+        '</div>',
+        '<div class="ne-rx-ch-bottom">',
+          '<div class="ne-rx-ch-item"><span class="material-symbols-outlined ne-rx-ch-ico" aria-hidden="true">calendar_month</span><span class="ne-rx-ch-value">' + escapeHtml(date) + '</span></div>',
+          '<div class="ne-rx-ch-item"><span class="material-symbols-outlined ne-rx-ch-ico" aria-hidden="true">description</span><span class="ne-rx-ch-value">' + escapeHtml(status) + '</span></div>',
+          '<div class="ne-rx-ch-item"><span class="material-symbols-outlined ne-rx-ch-ico" aria-hidden="true">warning</span><span class="ne-rx-ch-value">' + escapeHtml(allergies) + '</span></div>',
+          '<div class="ne-rx-ch-item ne-rx-ch-item-meds"><span class="material-symbols-outlined ne-rx-ch-ico" aria-hidden="true">medication</span><span class="ne-rx-ch-value">' + escapeHtml(meds) + '</span></div>',
+        '</div>'
+      ].join('');
+    }
+
+    function syncExpandedClinicalHeader() {
+      if (!expandedContextHost) return;
+      var payload = {};
+      if (typeof window.mxmedBuildClinicalHeaderData === 'function') {
+        try { payload = window.mxmedBuildClinicalHeaderData() || {}; } catch (_) { payload = {}; }
+      }
+      if (!payload || typeof payload !== 'object') {
+        payload = {};
+      }
+      if (!String(payload.patient_name || '').trim()) {
+        payload = getExpandedClinicalHeaderFallback();
+      }
+      if (typeof window.mxmedRenderClinicalSlimHeader === 'function') {
+        try {
+          window.mxmedRenderClinicalSlimHeader(expandedContextHost, payload, { layout: 'modal' });
+          return;
+        } catch (_) {}
+      }
+      renderExpandedClinicalHeaderLocal(payload);
+    }
+
     function openExpandedHistorial() {
       if (!expandModal) return;
       ensureEmbedIframe();
       syncExpandedIframeSrc();
+      syncExpandedClinicalHeader();
       expandModal.show();
     }
 
@@ -7989,6 +8120,10 @@
       });
       expandModalEl.addEventListener('shown.bs.modal', function () {
         syncExpandedIframeSrc();
+        syncExpandedClinicalHeader();
+        window.requestAnimationFrame(function () {
+          syncExpandedClinicalHeader();
+        });
       });
     }
 
@@ -8043,12 +8178,14 @@
         if (isHistorialTabVisible()) {
           ensureEmbedIframe();
           refreshP10();
+          syncExpandedClinicalHeader();
         }
       });
       el.addEventListener('change', function () {
         if (isHistorialTabVisible()) {
           ensureEmbedIframe();
           refreshP10();
+          syncExpandedClinicalHeader();
         }
       });
     });
