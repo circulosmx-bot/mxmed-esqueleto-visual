@@ -126,6 +126,57 @@ function clinical_doc_clean_text($value): string {
   return $text;
 }
 
+function clinical_doc_definition_registry(): array {
+  return [
+    'consentimiento_informado' => [
+      'document_type' => 'consentimiento_informado',
+      'title' => 'Consentimiento informado',
+      'subtitle_field' => 'consent.document_title',
+      'blocks' => [
+        'identificacion',
+        'declaracion_legal',
+        'descripcion_procedimiento',
+        'riesgos',
+        'beneficios',
+        'alternativas',
+        'consecuencias_no_aceptar',
+        'firmas',
+        'anexos_identidad',
+      ],
+      'signatures_required' => ['patient_or_representative', 'doctor'],
+      'attachments_allowed' => ['signer_identity'],
+      'render_order' => ['header', 'clinical_content', 'signatures', 'attachments'],
+      'print_profile' => [
+        'font_family' => '"Inter","Helvetica Neue",Arial,sans-serif',
+        'base_font_size_px' => 12,
+        'line_height' => 1.5,
+      ],
+    ],
+  ];
+}
+
+function clinical_doc_get_definition(string $documentType): array {
+  $safe = strtolower(trim($documentType));
+  $registry = clinical_doc_definition_registry();
+  if ($safe !== '' && isset($registry[$safe]) && is_array($registry[$safe])) {
+    return $registry[$safe];
+  }
+  return [
+    'document_type' => $safe !== '' ? $safe : 'unknown',
+    'title' => 'Documento clínico',
+    'subtitle_field' => '',
+    'blocks' => [],
+    'signatures_required' => [],
+    'attachments_allowed' => [],
+    'render_order' => [],
+    'print_profile' => [
+      'font_family' => '"Inter","Helvetica Neue",Arial,sans-serif',
+      'base_font_size_px' => 12,
+      'line_height' => 1.5,
+    ],
+  ];
+}
+
 function clinical_doc_extract_attachment_preview_url(array $payload): string {
   $file = is_array($payload['file'] ?? null) ? $payload['file'] : [];
   $optimized = is_array($file['optimized'] ?? null) ? $file['optimized'] : [];
@@ -287,6 +338,17 @@ $payload = $document && is_array($document['content']['payload'] ?? null) ? $doc
 $payloadJson = $payload ? json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '';
 $renderedText = $document ? (string)($document['content']['rendered_text'] ?? '') : '';
 $docTypeNorm = strtolower(trim($docType));
+$docDefinition = clinical_doc_get_definition($docTypeNorm);
+$docPrintProfile = is_array($docDefinition['print_profile'] ?? null) ? $docDefinition['print_profile'] : [];
+$docPrintFontFamily = clinical_doc_clean_text((string)($docPrintProfile['font_family'] ?? '"Inter","Helvetica Neue",Arial,sans-serif'));
+$docPrintBaseFontSizePx = (int)($docPrintProfile['base_font_size_px'] ?? 12);
+if ($docPrintBaseFontSizePx < 10 || $docPrintBaseFontSizePx > 16) {
+  $docPrintBaseFontSizePx = 12;
+}
+$docPrintLineHeight = (float)($docPrintProfile['line_height'] ?? 1.5);
+if ($docPrintLineHeight < 1.2 || $docPrintLineHeight > 1.8) {
+  $docPrintLineHeight = 1.5;
+}
 $fileMeta = is_array($payload['file'] ?? null) ? $payload['file'] : [];
 $optimizedMeta = is_array($fileMeta['optimized'] ?? null) ? $fileMeta['optimized'] : [];
 $originalMeta = is_array($fileMeta['original'] ?? null) ? $fileMeta['original'] : [];
@@ -615,9 +677,9 @@ if (!$embed) {
     padding:26px 30px;
     display:grid;
     gap:16px;
-    font-family:"Inter","Helvetica Neue",Arial,sans-serif;
-    font-size:12px;
-    line-height:1.5;
+    font-family:<?php echo h($docPrintFontFamily); ?>;
+    font-size:<?php echo (int)$docPrintBaseFontSizePx; ?>px;
+    line-height:<?php echo h(number_format($docPrintLineHeight, 2, '.', '')); ?>;
     color:#111;
   }
   .consent-print-head{

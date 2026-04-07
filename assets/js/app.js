@@ -8955,25 +8955,148 @@ console.info('app.js loaded :: 20251123a');
       },
       templates: [
         { key: 'procedimiento', label: 'Procedimiento invasivo', desc: 'Consentimiento para procedimientos diagnósticos o terapéuticos invasivos.' },
+        { key: 'procedimiento_no_invasivo', label: 'Procedimiento no invasivo', desc: 'Consentimiento para procedimientos clínicos no invasivos.' },
+        { key: 'procedimiento_diagnostico', label: 'Procedimiento diagnóstico', desc: 'Consentimiento para procedimientos con finalidad diagnóstica.' },
+        { key: 'procedimiento_terapeutico', label: 'Procedimiento terapéutico', desc: 'Consentimiento para procedimientos con finalidad terapéutica.' },
         { key: 'anestesia', label: 'Anestesia / sedación', desc: 'Consentimiento para administración de anestesia o sedación.' },
         { key: 'transfusion', label: 'Transfusión', desc: 'Consentimiento para transfusión de hemoderivados.' },
+        { key: 'tratamiento_farmacologico', label: 'Tratamiento farmacológico', desc: 'Consentimiento para manejo terapéutico farmacológico específico.' },
         { key: 'investigacion', label: 'Investigación clínica', desc: 'Consentimiento para participación en protocolo de investigación.' },
         { key: 'otro', label: 'Otro', desc: 'Consentimiento informado general para procedimiento clínico.' }
       ]
     };
+    const CLINICAL_DOCUMENT_DEFINITIONS = Object.freeze({
+      consentimiento_informado: Object.freeze({
+        document_type: 'consentimiento_informado',
+        title: 'Consentimiento informado',
+        subtitle_field: 'consent.document_title',
+        blocks: Object.freeze([
+          'identificacion',
+          'declaracion_legal',
+          'descripcion_procedimiento',
+          'riesgos',
+          'beneficios',
+          'alternativas',
+          'consecuencias_no_aceptar',
+          'firmas',
+          'anexos_identidad'
+        ]),
+        signatures_required: Object.freeze(['patient_or_representative', 'doctor']),
+        attachments_allowed: Object.freeze(['signer_identity']),
+        render_order: Object.freeze([
+          'header',
+          'clinical_content',
+          'signatures',
+          'attachments'
+        ]),
+        print_profile: Object.freeze({
+          font_family: '"Inter", "Helvetica Neue", Arial, sans-serif',
+          base_font_size_px: 12,
+          line_height: 1.5
+        })
+      })
+    });
+    const getClinicalDocumentDefinition = (documentType = '')=>{
+      const key = sanitizeText(documentType || '').toLowerCase();
+      if(key && CLINICAL_DOCUMENT_DEFINITIONS[key]){
+        return CLINICAL_DOCUMENT_DEFINITIONS[key];
+      }
+      return Object.freeze({
+        document_type: key || 'unknown',
+        title: 'Documento clínico',
+        subtitle_field: '',
+        blocks: Object.freeze([]),
+        signatures_required: Object.freeze([]),
+        attachments_allowed: Object.freeze([]),
+        render_order: Object.freeze([]),
+        print_profile: Object.freeze({})
+      });
+    };
+    const buildClinicalCanonicalPayload = ({
+      definition,
+      payload,
+      context,
+      actorUserId,
+      title,
+      subtitle,
+      eventDatetime
+    } = {})=>{
+      const safePayload = (payload && typeof payload === 'object') ? payload : {};
+      const safeContext = (context && typeof context === 'object') ? context : {};
+      const canonical = {
+        meta: {
+          contract_version: 1,
+          document_type: sanitizeText(definition?.document_type || ''),
+          title: sanitizeText(title || definition?.title || ''),
+          subtitle: sanitizeText(subtitle || ''),
+          generated_at: sanitizeText(eventDatetime || formatNowSql()),
+          actor_user_id: sanitizeText(actorUserId || '')
+        },
+        context: {
+          patient_id: sanitizeText(safeContext.patient_id || ''),
+          encounter_id: sanitizeText(safeContext.encounter_id || ''),
+          encounter_key: sanitizeText(safeContext.encounter_key || ''),
+          appointment_id: sanitizeText(safeContext.appointment_id || ''),
+          care_setting: sanitizeText(safeContext.care_setting || '')
+        },
+        content: {
+          blocks_enabled: Array.isArray(definition?.blocks) ? definition.blocks.slice() : [],
+          source_payload_keys: Object.keys(safePayload)
+        },
+        signatures: {
+          required: Array.isArray(definition?.signatures_required) ? definition.signatures_required.slice() : [],
+          payload_key: 'signatures'
+        },
+        attachments: {
+          allowed: Array.isArray(definition?.attachments_allowed) ? definition.attachments_allowed.slice() : [],
+          payload_key: 'attachments'
+        },
+        render: {
+          order: Array.isArray(definition?.render_order) ? definition.render_order.slice() : [],
+          print_profile: (definition?.print_profile && typeof definition.print_profile === 'object')
+            ? { ...definition.print_profile }
+            : {}
+        }
+      };
+      return {
+        ...safePayload,
+        canonical_document: canonical
+      };
+    };
+    const buildClinicalDocumentBody = ({
+      definition,
+      title,
+      summary,
+      context,
+      payload,
+      eventDatetime,
+      actorUserId,
+      source
+    } = {})=>{
+      return {
+        type: sanitizeText(definition?.document_type || ''),
+        document_type: sanitizeText(definition?.document_type || ''),
+        title: sanitizeText(title || definition?.title || ''),
+        summary: sanitizeText(summary || ''),
+        context: (context && typeof context === 'object') ? context : {},
+        payload: (payload && typeof payload === 'object') ? payload : {},
+        event_datetime: sanitizeText(eventDatetime || formatNowSql()),
+        actor: { user_id: sanitizeText(actorUserId || '') },
+        source: sanitizeText(source || 'host_t_documents')
+      };
+    };
     const ciDebugEnabled = (()=> {
       try{
-        const host = String(window.location?.hostname || '').toLowerCase();
         const params = new URLSearchParams(String(window.location?.search || ''));
-        const byHost = host === '127.0.0.1' || host === 'localhost';
         const byQuery = params.get('ci_debug') === '1';
         const byStorage = window.localStorage?.getItem('mxmed:ci_debug') === '1';
-        return byHost || byQuery || byStorage;
+        return byQuery || byStorage;
       }catch(_){
         return false;
       }
     })();
     const pushCiDebug = (message = '', level = 'log', extra = null)=>{
+      if(!ciDebugEnabled) return;
       const text = sanitizeText(message || '');
       const ts = new Date().toLocaleTimeString('es-MX', { hour12: false });
       const line = `[${ts}] ${text}`;
@@ -8984,7 +9107,7 @@ console.info('app.js loaded :: 20251123a');
       }else{
         console.log(line, extra ?? '');
       }
-      if(!ciDebugEnabled || !els.debugPanel || !els.debugLog) return;
+      if(!els.debugPanel || !els.debugLog) return;
       els.debugPanel.classList.remove('d-none');
       const row = document.createElement('div');
       row.textContent = line + (extra ? ` ${sanitizeText(extra?.message || String(extra))}` : '');
@@ -10733,13 +10856,25 @@ console.info('app.js loaded :: 20251123a');
 
     const readPatientContact = ()=>{
       const datosPane = pane.querySelector('#t-datos');
-      const tel = sanitizeText(findFieldByLabel(datosPane, 'telefono celular')?.value || findFieldByLabel(datosPane, 'telefono')?.value || '');
-      const mail = sanitizeText(findFieldByLabel(datosPane, 'correo electronico')?.value || '');
-      const calle = sanitizeText(findFieldByLabel(datosPane, 'calle')?.value || '');
-      const colonia = sanitizeText(findFieldByLabel(datosPane, 'colonia')?.value || '');
-      const municipio = sanitizeText(findFieldByLabel(datosPane, 'municipio')?.value || '');
-      const estado = sanitizeText(findFieldByLabel(datosPane, 'estado')?.value || '');
-      const cp = sanitizeText(findFieldByLabel(datosPane, 'codigo postal')?.value || '');
+      const contactScopes = [datosPane, pane, document];
+      const findByLabels = (labels = [])=>{
+        const keys = Array.isArray(labels) ? labels : [labels];
+        for(const scope of contactScopes){
+          if(!scope) continue;
+          for(const key of keys){
+            const value = sanitizeText(findFieldByLabel(scope, key)?.value || '');
+            if(value) return value;
+          }
+        }
+        return '';
+      };
+      const tel = findByLabels(['telefono celular', 'telefono móvil', 'telefono movil', 'telefono', 'celular']);
+      const mail = findByLabels(['correo electronico', 'correo electrónico', 'email', 'e-mail', 'correo']);
+      const calle = findByLabels('calle');
+      const colonia = findByLabels('colonia');
+      const municipio = findByLabels('municipio');
+      const estado = findByLabels('estado');
+      const cp = findByLabels('codigo postal');
       const domicilio = [calle, colonia, municipio, estado, cp ? `CP ${cp}` : ''].filter(Boolean).join(', ');
       return {
         telefono: tel,
@@ -10935,6 +11070,8 @@ console.info('app.js loaded :: 20251123a');
     const describeTemplate = (key)=>{
       const templateKey = sanitizeText(key);
       const current = state.templates.find((tpl)=> tpl.key === templateKey);
+      // TODO(DOCS-STD): agregar bloque independiente "Riesgos del procedimiento" (captura clínica real)
+      // desacoplado del selector de tipo/contexto, reutilizable para otros documentos clínicos.
       if(templateKey === 'otro'){
         state.form.riesgos = '';
       }else{
@@ -11339,14 +11476,6 @@ console.info('app.js loaded :: 20251123a');
           || {};
         const descriptorText = resolveConsentDescriptorText(payload, summary);
         const isConsentDoc = documentType === 'consentimiento_informado' || !documentType;
-        if(isConsentDoc){
-          pushCiDebug('[RECENTS] consentimiento payload recibido', 'log', {
-            document_uuid: uuid || '(sin uuid)',
-            has_payload: !!payload && Object.keys(payload).length > 0,
-            summary,
-            subtitle_candidate: descriptorText || '(vacío)'
-          });
-        }
         const secondLineHtml = isConsentDoc
           ? `
             <div class="small text-muted d-flex justify-content-between align-items-center gap-2">
@@ -11769,6 +11898,7 @@ console.info('app.js loaded :: 20251123a');
       const doctorInstitution = trimConsentInputValue(state.form.doctor_institution || '');
       const doctorFacility = trimConsentInputValue(state.form.doctor_facility || '');
       const doctorLicense = trimConsentInputValue(state.form.doctor_license || '');
+      const docDefinition = getClinicalDocumentDefinition('consentimiento_informado');
       const firmanteTipo = sanitizeText(state.form.firmante_tipo || 'paciente');
       const firmanteNombre = trimConsentInputValue(state.form.firmante_nombre || '');
       const firmanteParentesco = trimConsentInputValue(state.form.firmante_parentesco || (firmanteTipo === 'paciente' ? 'self' : ''));
@@ -11856,7 +11986,7 @@ console.info('app.js loaded :: 20251123a');
       const doctorSignatureMode = doctorSignatureSource === 'registered_profile'
         ? 'registered_profile'
         : (doctorSignatureSource === 'local_canvas' ? 'drawn_local' : (status === 'granted' ? 'acknowledged' : 'none'));
-      const payload = {
+      let payload = {
         contract_version: 1,
         status,
         text: renderedText,
@@ -11953,6 +12083,15 @@ console.info('app.js loaded :: 20251123a');
         },
         observations: motivo || ''
       };
+      payload = buildClinicalCanonicalPayload({
+        definition: docDefinition,
+        payload,
+        context,
+        actorUserId,
+        title,
+        subtitle: consentTitle || templateLabel || '',
+        eventDatetime: nowSql
+      });
       try{
         const institutionName = doctorInstitution || sanitizeText(
           window.mxmedStore?.institutionName
@@ -12012,17 +12151,16 @@ console.info('app.js loaded :: 20251123a');
       return {
         error: '',
         patientId,
-        body: {
-          type: 'consentimiento_informado',
-          document_type: 'consentimiento_informado',
+        body: buildClinicalDocumentBody({
+          definition: docDefinition,
           title,
           summary,
           context,
           payload,
-          event_datetime: nowSql,
-          actor: { user_id: actorUserId },
+          eventDatetime: nowSql,
+          actorUserId,
           source: 'host_t_consent'
-        }
+        })
       };
     };
 
