@@ -724,8 +724,8 @@ if (!$embed) {
           <button type="button" class="btn btn-outline-secondary btn-sm" data-role="viewer-print">Imprimir</button>
         <?php endif; ?>
         <?php if ($isConsentDoc && $consentPrintableHref !== ''): ?>
-          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($consentPrintableHref); ?>" target="_blank" rel="noopener">Versión imprimible</a>
           <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($consentPrintableHref); ?>" target="_blank" rel="noopener" download>Descargar</a>
+          <?php // TODO(DOCS-UX): agregar botón "Compartir" cuando exista flujo canónico de distribución segura. ?>
         <?php endif; ?>
         <?php if ($bundlePrevHref !== ''): ?>
           <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($bundlePrevHref); ?>">Anterior</a>
@@ -733,7 +733,6 @@ if (!$embed) {
         <?php if ($bundleNextHref !== ''): ?>
           <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($bundleNextHref); ?>">Siguiente</a>
         <?php endif; ?>
-        <a class="btn btn-outline-primary btn-sm" href="<?php echo h($openInNewHref); ?>" target="_blank" rel="noopener">Abrir en pestaña</a>
       </div>
     </div>
   </div>

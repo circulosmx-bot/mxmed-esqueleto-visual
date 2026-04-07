@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "module": "consentimiento_informado",
+  "description": "Base de riesgos clínicos para integración futura en UI/print sin afectar flujo vigente.",
+  "risk_levels": [
+    {
+      "key": "comunes",
+      "label": "Comunes",
+      "severity_hint": "baja",
+      "ui_phrase": "complicaciones leves y transitorias",
+      "legal_phrase": "Eventos adversos esperables de baja severidad, generalmente transitorios y manejables."
+    },
+    {
+      "key": "poco_frecuentes",
+      "label": "Poco frecuentes",
+      "severity_hint": "moderada",
+      "ui_phrase": "riesgos poco frecuentes como infección o sangrado",
+      "legal_phrase": "Eventos adversos de presentación infrecuente, entre ellos infección o sangrado según el procedimiento."
+    },
+    {
+      "key": "raros_graves",
+      "label": "Raros pero graves",
+      "severity_hint": "alta",
+      "ui_phrase": "complicaciones graves que pueden comprometer la vida",
+      "legal_phrase": "Complicaciones graves de ocurrencia rara que pueden comprometer la vida o requerir intervención urgente."
+    }
+  ],
+  "communication_policy": {
+    "avoid_raw_terms_in_ui": [
+      "muerte"
+    ],
+    "use_contextual_language": true,
+    "require_medical_explanation_note": true
+  },
+  "integration_notes": {
+    "wizard": "Pendiente. Integrar como bloque opcional/estructurado posterior al tipo de procedimiento.",
+    "payload": "Pendiente. Guardar por niveles en consent_legal.risk_profile sin romper campo riesgos actual.",
+    "printable": "Pendiente. Renderizar resumen por niveles con redacción contextual aprobada."
+  }
+}
