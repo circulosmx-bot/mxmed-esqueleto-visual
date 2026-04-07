@@ -48,6 +48,40 @@ function h(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+if (!function_exists('clinical_doc_format_date')) {
+    function clinical_doc_format_date(string $value, bool $includeTime = false): string
+    {
+        $safe = trim($value);
+        if ($safe === '') {
+            return '';
+        }
+        $ts = strtotime($safe);
+        if ($ts === false) {
+            return $safe;
+        }
+        $months = [
+            1 => 'Enero',
+            2 => 'Febrero',
+            3 => 'Marzo',
+            4 => 'Abril',
+            5 => 'Mayo',
+            6 => 'Junio',
+            7 => 'Julio',
+            8 => 'Agosto',
+            9 => 'Septiembre',
+            10 => 'Octubre',
+            11 => 'Noviembre',
+            12 => 'Diciembre',
+        ];
+        $month = (string)($months[(int)date('n', $ts)] ?? date('m', $ts));
+        $datePart = date('d', $ts) . '-' . $month . '-' . date('Y', $ts);
+        if (!$includeTime) {
+            return $datePart;
+        }
+        return $datePart . ' - ' . date('H:i:s', $ts);
+    }
+}
+
 function validate_return_to(string $value): ?string
 {
     $value = trim($value);
@@ -445,6 +479,7 @@ $payloadJson = $payload ? json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAP
 $renderedText = $document ? (string)($content['rendered_text'] ?? '') : '';
 $docTypeNorm = strtolower(trim($docType));
 $isConsentDoc = ($docTypeNorm === 'consentimiento_informado');
+$isInformeDoc = ($docTypeNorm === 'informe_medico');
 $isPrescriptionDoc = in_array($docTypeNorm, ['prescription', 'rx'], true);
 $prescriptionContext = $isPrescriptionDoc && is_array($payload['context'] ?? null) ? $payload['context'] : [];
 $prescriptionLegacy = $isPrescriptionDoc && is_array($payload['prescription'] ?? null) ? $payload['prescription'] : [];
@@ -498,6 +533,61 @@ if (is_array($payload['signer_identity_attachments'] ?? null)) {
 $consentBoolLabel = static function ($value): string {
     return $value ? 'Sí' : 'No';
 };
+$docContext = is_array($content['context'] ?? null) ? $content['context'] : [];
+$payloadContext = is_array($payload['context'] ?? null) ? $payload['context'] : [];
+$payloadMeta = is_array($payload['meta'] ?? null) ? $payload['meta'] : [];
+$documentUi = is_array($document['ui'] ?? null) ? $document['ui'] : [];
+$informeReport = is_array($payload['report'] ?? null) ? $payload['report'] : [];
+$informeContent = is_array($payload['content'] ?? null) ? $payload['content'] : [];
+$informePatientSnapshot = is_array($payload['patient_snapshot'] ?? null) ? $payload['patient_snapshot'] : [];
+$informeActorSnapshot = is_array($payload['actor_snapshot'] ?? null) ? $payload['actor_snapshot'] : [];
+$informeSignatures = is_array($payload['signatures'] ?? null) ? $payload['signatures'] : [];
+$informeDoctorSignature = is_array($informeSignatures['doctor'] ?? null) ? $informeSignatures['doctor'] : [];
+$informeDoctorSignatureImage = trim((string)($informeDoctorSignature['image_data'] ?? ''));
+$informeDoctorSignatureSignerName = trim((string)($informeDoctorSignature['signer_name'] ?? ''));
+$informeDoctorSignatureSignedAt = trim((string)($informeDoctorSignature['signed_at'] ?? ''));
+$informeDoctorSignatureSource = trim((string)($informeDoctorSignature['source'] ?? ''));
+$informePatientNameContext = first_non_empty_string(
+    [$informePatientSnapshot, $payloadContext, $docContext, $documentUi, $payloadMeta],
+    ['full_name', 'patient_name', 'name', 'nombre_completo', 'display_name']
+);
+$informePatientAgeContext = first_non_empty_string(
+    [$informePatientSnapshot, $payloadContext, $docContext, $documentUi],
+    ['age', 'edad', 'patient_age']
+);
+$informePatientSexContext = first_non_empty_string(
+    [$informePatientSnapshot, $payloadContext, $docContext, $documentUi],
+    ['sex', 'sexo', 'patient_sex']
+);
+$informeDoctorNameContext = first_non_empty_string(
+    [$informeActorSnapshot, $payloadContext, $docContext, $documentUi, $payloadMeta],
+    ['full_name', 'doctor_name', 'physician_name', 'name', 'doctor_full_name']
+);
+$informeDoctorSpecialtyContext = first_non_empty_string(
+    [$informeActorSnapshot, $payloadContext, $docContext, $documentUi, $payloadMeta],
+    ['specialty', 'specialty_name', 'especialidad', 'doctor_specialty']
+);
+$informeDoctorLicenseContext = first_non_empty_string(
+    [$informeActorSnapshot, $payloadContext, $docContext, $documentUi, $payloadMeta],
+    ['license', 'doctor_license', 'cedula_profesional', 'cedula']
+);
+$informeDoctorSpecialtyLicenseContext = first_non_empty_string(
+    [$informeActorSnapshot, $payloadContext, $docContext, $documentUi, $payloadMeta],
+    ['specialty_license', 'doctor_specialty_license', 'cedula_especialidad']
+);
+$informeDoctorPlaceContext = first_non_empty_string(
+    [$informeActorSnapshot, $payloadContext, $docContext, $documentUi, $payloadMeta],
+    ['place', 'location', 'city', 'doctor_place']
+);
+$informeDoctorInstitutionContext = first_non_empty_string(
+    [$informeActorSnapshot, $payloadContext, $docContext, $documentUi, $payloadMeta],
+    ['institution', 'institution_name', 'doctor_institution']
+);
+$informeDoctorFacilityContext = first_non_empty_string(
+    [$informeActorSnapshot, $payloadContext, $docContext, $documentUi, $payloadMeta],
+    ['facility', 'facility_name', 'clinic', 'clinic_name', 'consultorio', 'doctor_facility']
+);
+$informePrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
 
 $fileMeta = is_array($payload['file'] ?? null) ? $payload['file'] : [];
 $optimizedMeta = is_array($fileMeta['optimized'] ?? null) ? $fileMeta['optimized'] : [];
@@ -661,6 +751,48 @@ if (!$embed) {
     margin-top:8px;
   }
   .consent-doc-sign-line{margin-top:28px;border-top:1px solid #9fb6c4;}
+  .informe-doc-sheet{
+    background:#fff;
+    border:1px solid #d7eaf2;
+    border-radius:14px;
+    padding:16px;
+    display:grid;
+    gap:12px;
+  }
+  .informe-doc-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    border-bottom:1px solid #edf4f8;
+    padding-bottom:8px;
+  }
+  .informe-doc-title{font-size:1rem;font-weight:800;color:#0a405f;line-height:1.3;}
+  .informe-doc-meta{font-size:.84rem;color:#5d6b74;}
+  .informe-doc-section-title{
+    font-size:.8rem;
+    font-weight:800;
+    color:#0a405f;
+    text-transform:uppercase;
+    letter-spacing:.02em;
+    margin-bottom:4px;
+  }
+  .informe-doc-text{font-size:.9rem;color:#273b47;white-space:pre-wrap;line-height:1.45;}
+  .informe-doc-sign{
+    border-top:1px solid #e8f0f5;
+    padding-top:10px;
+  }
+  .informe-doc-sign-image{
+    max-width:220px;
+    max-height:90px;
+    width:100%;
+    object-fit:contain;
+    border:1px dashed #d0dde6;
+    border-radius:8px;
+    background:#fff;
+    margin-top:8px;
+  }
+  .informe-doc-sign-line{margin-top:28px;border-top:1px solid #9fb6c4;}
   .rx-view-sheet{
     background:#fff;
     border:1px solid #d7eaf2;
@@ -700,6 +832,7 @@ if (!$embed) {
   @media (max-width: 767.98px){
     .consent-doc-head{flex-direction:column;}
     .consent-doc-sign-grid{grid-template-columns:1fr;}
+    .informe-doc-head{flex-direction:column;}
     .rx-view-head{flex-direction:column;}
   }
 </style>
@@ -720,11 +853,11 @@ if (!$embed) {
         <?php if ($showDownloadAction): ?>
           <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($mediaSrc); ?>"<?php echo $downloadIsRelative ? ' download' : ''; ?>>Descargar</a>
         <?php endif; ?>
-        <?php if ($isPdf || $isConsentDoc): ?>
+        <?php if ($isPdf || $isConsentDoc || $isInformeDoc): ?>
           <button type="button" class="btn btn-outline-secondary btn-sm" data-role="viewer-print">Imprimir</button>
         <?php endif; ?>
-        <?php if ($isConsentDoc && $consentPrintableHref !== ''): ?>
-          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($consentPrintableHref); ?>" target="_blank" rel="noopener" download>Descargar</a>
+        <?php if (($isConsentDoc && $consentPrintableHref !== '') || ($isInformeDoc && $informePrintableHref !== '')): ?>
+          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($isConsentDoc ? $consentPrintableHref : $informePrintableHref); ?>" target="_blank" rel="noopener" download>Descargar</a>
           <?php // TODO(DOCS-UX): agregar botón "Compartir" cuando exista flujo canónico de distribución segura. ?>
         <?php endif; ?>
         <?php if ($bundlePrevHref !== ''): ?>
@@ -1122,6 +1255,143 @@ if (!$embed) {
       <?php endif; ?>
     <?php endif; ?>
 
+    <?php if ($isInformeDoc): ?>
+      <?php
+      $informeDateOut = clinical_doc_format_date((string)($informeReport['emission_date'] ?? ($informeReport['issued_at'] ?? $date)), true);
+      $informePatientName = trim((string)($informePatientNameContext !== '' ? $informePatientNameContext : 'Paciente'));
+      $informePatientAge = trim((string)$informePatientAgeContext);
+      $informePatientSex = trim((string)$informePatientSexContext);
+      $informePatientMeta = implode(' · ', array_values(array_filter([
+        $informePatientAge !== '' ? ('Edad: ' . $informePatientAge) : '',
+        $informePatientSex !== '' ? ('Sexo: ' . $informePatientSex) : '',
+      ])));
+      $informeDoctorName = trim((string)($informeDoctorNameContext !== '' ? $informeDoctorNameContext : 'Médico tratante'));
+      $informeDoctorSpecialty = trim((string)$informeDoctorSpecialtyContext);
+      $informeDoctorLicense = trim((string)$informeDoctorLicenseContext);
+      $informeDoctorSpecialtyLicense = trim((string)$informeDoctorSpecialtyLicenseContext);
+      $informeDoctorInstitution = trim((string)$informeDoctorInstitutionContext);
+      $informeDoctorFacility = trim((string)$informeDoctorFacilityContext);
+      $informeDoctorPlace = trim((string)$informeDoctorPlaceContext);
+      $informeDoctorMetaRows = array_values(array_filter([
+        $informeDoctorSpecialty !== '' ? $informeDoctorSpecialty : '',
+        $informeDoctorLicense !== '' ? ('Cédula: ' . $informeDoctorLicense) : '',
+        $informeDoctorSpecialtyLicense !== '' ? ('Cédula esp.: ' . $informeDoctorSpecialtyLicense) : '',
+        implode(' · ', array_values(array_filter([
+          $informeDoctorInstitution !== '' ? $informeDoctorInstitution : '',
+          $informeDoctorFacility !== '' ? $informeDoctorFacility : '',
+          $informeDoctorPlace !== '' ? $informeDoctorPlace : '',
+        ]))),
+      ]));
+      $informeReason = trim((string)($informeContent['reason'] ?? ''));
+      $informeCurrentIllness = trim((string)($informeContent['current_illness'] ?? ''));
+      $informeRelevantHistory = trim((string)($informeContent['relevant_history'] ?? ''));
+      $informeClinicalSummary = trim((string)($informeContent['clinical_summary'] ?? ''));
+      $informeFindings = trim((string)($informeContent['findings'] ?? ''));
+      $informeDiagnostic = trim((string)($informeContent['diagnostic_impression'] ?? ''));
+      $informePlan = trim((string)($informeContent['plan'] ?? ''));
+      $informePrognosisRaw = trim((string)($informeContent['prognosis'] ?? ''));
+      $informePrognosisLabelMap = [
+        'favorable' => 'Favorable',
+        'reservado' => 'Reservado',
+        'en_evolucion' => 'En evolución',
+        'condicionado' => 'Condicionado',
+      ];
+      $informePrognosis = (string)($informePrognosisLabelMap[strtolower($informePrognosisRaw)] ?? $informePrognosisRaw);
+      $informeClosing = trim((string)($informeContent['closing_statement'] ?? ''));
+      $informeSignatureSourceLabelMap = [
+        'local_canvas' => 'Firma local',
+        'registered_profile' => 'Firma registrada',
+        'remote_qr' => 'Firma remota',
+      ];
+      $informeSignatureSourceLabel = (string)($informeSignatureSourceLabelMap[$informeDoctorSignatureSource] ?? '');
+      ?>
+      <article class="informe-doc-sheet mb-3">
+        <header class="informe-doc-head">
+          <div>
+            <div class="informe-doc-title"><?php echo h(trim((string)($title !== '' ? $title : 'Informe médico'))); ?></div>
+            <div class="informe-doc-meta">Paciente: <?php echo h($informePatientName); ?></div>
+            <?php if ($informePatientMeta !== ''): ?><div class="informe-doc-meta"><?php echo h($informePatientMeta); ?></div><?php endif; ?>
+            <div class="informe-doc-meta">Médico: <?php echo h($informeDoctorName); ?></div>
+            <?php foreach ($informeDoctorMetaRows as $informeDoctorMetaRow): ?>
+              <div class="informe-doc-meta"><?php echo h((string)$informeDoctorMetaRow); ?></div>
+            <?php endforeach; ?>
+          </div>
+          <div class="text-end">
+            <div class="informe-doc-meta mt-1">Fecha: <?php echo h($informeDateOut !== '' ? $informeDateOut : $date); ?></div>
+          </div>
+        </header>
+        <?php if ($informeReason !== ''): ?>
+          <section>
+            <div class="informe-doc-section-title">Motivo del informe</div>
+            <div class="informe-doc-text"><?php echo nl2br(h($informeReason)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($informeCurrentIllness !== ''): ?>
+          <section>
+            <div class="informe-doc-section-title">Padecimiento actual</div>
+            <div class="informe-doc-text"><?php echo nl2br(h($informeCurrentIllness)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($informeRelevantHistory !== ''): ?>
+          <section>
+            <div class="informe-doc-section-title">Antecedentes relevantes</div>
+            <div class="informe-doc-text"><?php echo nl2br(h($informeRelevantHistory)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($informeClinicalSummary !== ''): ?>
+          <section>
+            <div class="informe-doc-section-title">Resumen clínico</div>
+            <div class="informe-doc-text"><?php echo nl2br(h($informeClinicalSummary)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($informeFindings !== ''): ?>
+          <section>
+            <div class="informe-doc-section-title">Hallazgos / valoración médica</div>
+            <div class="informe-doc-text"><?php echo nl2br(h($informeFindings)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($informeDiagnostic !== ''): ?>
+          <section>
+            <div class="informe-doc-section-title">Impresión diagnóstica / diagnóstico</div>
+            <div class="informe-doc-text"><?php echo nl2br(h($informeDiagnostic)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($informePlan !== ''): ?>
+          <section>
+            <div class="informe-doc-section-title">Plan / manejo / recomendaciones</div>
+            <div class="informe-doc-text"><?php echo nl2br(h($informePlan)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($informePrognosis !== ''): ?>
+          <section>
+            <div class="informe-doc-section-title">Pronóstico</div>
+            <div class="informe-doc-text"><?php echo nl2br(h($informePrognosis)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($informeClosing !== ''): ?>
+          <section>
+            <div class="informe-doc-section-title">Declaración de cierre</div>
+            <div class="informe-doc-text"><?php echo nl2br(h($informeClosing)); ?></div>
+          </section>
+        <?php endif; ?>
+        <section class="informe-doc-sign">
+          <div class="informe-doc-section-title">Firma del médico</div>
+          <?php if ($informeDoctorSignatureImage !== ''): ?>
+            <img class="informe-doc-sign-image" src="<?php echo h($informeDoctorSignatureImage); ?>" alt="Firma del médico">
+            <?php if ($informeDoctorSignatureSignerName !== '' || $informeDoctorSignatureSignedAt !== '' || $informeSignatureSourceLabel !== ''): ?>
+              <div class="informe-doc-meta mt-1">
+                <?php echo h($informeDoctorSignatureSignerName !== '' ? $informeDoctorSignatureSignerName : $informeDoctorName); ?>
+                <?php if ($informeDoctorSignatureSignedAt !== ''): ?><?php echo h(' · ' . $informeDoctorSignatureSignedAt); ?><?php endif; ?>
+                <?php if ($informeSignatureSourceLabel !== ''): ?><?php echo h(' · ' . $informeSignatureSourceLabel); ?><?php endif; ?>
+              </div>
+            <?php endif; ?>
+          <?php else: ?>
+            <div class="informe-doc-sign-line"></div>
+          <?php endif; ?>
+        </section>
+      </article>
+    <?php endif; ?>
+
     <?php if ($externalBlockedMessage !== ''): ?>
       <div class="alert alert-warning"><?php echo h($externalBlockedMessage); ?></div>
     <?php endif; ?>
@@ -1160,18 +1430,18 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
-    <?php if ($renderedText !== ''): ?>
+    <?php if ($renderedText !== '' && (!$isInformeDoc || $debugView)): ?>
       <div class="mm-card mb-3">
-        <div class="head"><h5>Texto renderizado</h5></div>
+        <div class="head"><h5><?php echo $isInformeDoc ? 'Texto renderizado (debug)' : 'Texto renderizado'; ?></h5></div>
         <div class="body">
           <pre class="mb-0 small"><?php echo h($renderedText); ?></pre>
         </div>
       </div>
     <?php endif; ?>
 
-    <?php if ($payloadJson !== '' && (!$isConsentDoc || $debugView)): ?>
+    <?php if ($payloadJson !== '' && ((!$isConsentDoc && !$isInformeDoc) || $debugView)): ?>
       <div class="mm-card">
-        <div class="head"><h5><?php echo $isConsentDoc ? 'Datos técnicos (debug)' : 'Payload (JSON)'; ?></h5></div>
+        <div class="head"><h5><?php echo ($isConsentDoc || $isInformeDoc) ? 'Datos técnicos (debug)' : 'Payload (JSON)'; ?></h5></div>
         <div class="body">
           <pre class="mb-0 small"><?php echo h($payloadJson); ?></pre>
         </div>
