@@ -25,6 +25,53 @@
       "legal_phrase": "Complicaciones graves de ocurrencia rara que pueden comprometer la vida o requerir intervención urgente."
     }
   ],
+  "risk_templates_by_procedure": {
+    "procedimiento": {
+      "comunes": "Molestia local, dolor leve y transitorio, inflamación o sensibilidad temporal en la zona intervenida.",
+      "poco_frecuentes": "Riesgos poco frecuentes como infección local, sangrado moderado o reacción inflamatoria mayor.",
+      "raros_graves": "Complicaciones graves de presentación rara que pueden requerir intervención urgente o manejo hospitalario."
+    },
+    "procedimiento_invasivo": {
+      "comunes": "Dolor postprocedimiento, edema leve, hematoma o malestar transitorio en el sitio intervenido.",
+      "poco_frecuentes": "Riesgos poco frecuentes como infección del sitio, sangrado relevante o lesión local no intencionada.",
+      "raros_graves": "Complicaciones graves de ocurrencia rara que pueden comprometer funciones vitales y requerir tratamiento inmediato."
+    },
+    "procedimiento_no_invasivo": {
+      "comunes": "Molestias leves transitorias, incomodidad durante el procedimiento o irritación local pasajera.",
+      "poco_frecuentes": "Riesgos poco frecuentes como reacción adversa leve al material o preparación previa.",
+      "raros_graves": "Complicaciones graves raras asociadas a condiciones clínicas subyacentes o respuestas inesperadas."
+    },
+    "procedimiento_diagnostico": {
+      "comunes": "Incomodidad temporal, ansiedad situacional o molestias leves relacionadas con la toma de estudio.",
+      "poco_frecuentes": "Riesgos poco frecuentes como reacción al medio de contraste, mareo o sangrado menor en sitios de punción.",
+      "raros_graves": "Complicaciones graves raras que pueden comprometer la estabilidad clínica y requerir atención urgente."
+    },
+    "procedimiento_terapeutico": {
+      "comunes": "Dolor leve, sensibilidad local y efectos transitorios esperables del tratamiento indicado.",
+      "poco_frecuentes": "Riesgos poco frecuentes como respuesta insuficiente, reacción adversa moderada o necesidad de ajuste terapéutico.",
+      "raros_graves": "Complicaciones graves poco comunes que pueden requerir intervención adicional o vigilancia estrecha."
+    },
+    "anestesia": {
+      "comunes": "Somnolencia, náusea leve, mareo o dolor local temporal en el sitio de administración.",
+      "poco_frecuentes": "Riesgos poco frecuentes como reacción alérgica, broncoespasmo o alteraciones hemodinámicas reversibles.",
+      "raros_graves": "Complicaciones graves raras que pueden comprometer la función respiratoria o cardiovascular y requerir manejo inmediato."
+    },
+    "transfusion": {
+      "comunes": "Reacción febril no hemolítica, escalofríos leves o malestar transitorio durante o después de la transfusión.",
+      "poco_frecuentes": "Riesgos poco frecuentes como reacción alérgica moderada, sobrecarga circulatoria o hemólisis leve.",
+      "raros_graves": "Complicaciones graves raras como reacción transfusional severa o compromiso hemodinámico que requiere atención urgente."
+    },
+    "tratamiento_farmacologico": {
+      "comunes": "Efectos secundarios leves y transitorios esperables según el medicamento indicado.",
+      "poco_frecuentes": "Riesgos poco frecuentes como intolerancia, interacción medicamentosa o reacción adversa moderada.",
+      "raros_graves": "Complicaciones graves raras por reacción adversa severa que pueden requerir suspensión inmediata y atención urgente."
+    },
+    "investigacion": {
+      "comunes": "Molestias leves asociadas a procedimientos del protocolo y efectos transitorios esperables.",
+      "poco_frecuentes": "Riesgos poco frecuentes relacionados con intervención, muestreo o medicamento en investigación.",
+      "raros_graves": "Complicaciones graves de baja frecuencia que podrían comprometer la salud y requerir manejo médico inmediato."
+    }
+  },
   "communication_policy": {
     "avoid_raw_terms_in_ui": [
       "muerte"

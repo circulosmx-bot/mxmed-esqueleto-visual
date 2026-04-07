@@ -914,6 +914,26 @@ if (!$embed) {
       $consentBenefits = trim((string)($consentLegalDetails['beneficios_esperados'] ?? ''));
       $consentAlternatives = trim((string)($consentLegalDetails['alternativas'] ?? ''));
       $consentNoAccept = trim((string)($consentLegalDetails['consecuencias_no_aceptar'] ?? ''));
+      $consentRiskProfile = is_array($consentLegalDetails['risk_profile'] ?? null) ? $consentLegalDetails['risk_profile'] : [];
+      $consentRiskComunes = trim((string)(
+        $consentRiskProfile['comunes']['value']
+        ?? $consentRiskProfile['comunes']['ui_phrase']
+        ?? $consentRiskProfile['comunes']['legal_phrase']
+        ?? ''
+      ));
+      $consentRiskPocoFrecuentes = trim((string)(
+        $consentRiskProfile['poco_frecuentes']['value']
+        ?? $consentRiskProfile['poco_frecuentes']['ui_phrase']
+        ?? $consentRiskProfile['poco_frecuentes']['legal_phrase']
+        ?? ''
+      ));
+      $consentRiskRarosGraves = trim((string)(
+        $consentRiskProfile['raros_graves']['value']
+        ?? $consentRiskProfile['raros_graves']['ui_phrase']
+        ?? $consentRiskProfile['raros_graves']['legal_phrase']
+        ?? ''
+      ));
+      $consentHasStructuredRiskProfile = ($consentRiskComunes !== '' || $consentRiskPocoFrecuentes !== '' || $consentRiskRarosGraves !== '');
       $consentContingency = !empty($consentLegalDetails['autorizacion_contingencias']);
       $consentSignerType = trim((string)($consentSigner['tipo'] ?? 'paciente'));
       $consentSignerName = trim((string)($consentSigner['nombre'] ?? $consentPatientName));
@@ -978,6 +998,20 @@ if (!$embed) {
             <?php if ($consentBenefits !== ''): ?><br><br><?php echo nl2br(h('Beneficios esperados: ' . $consentBenefits)); ?><?php endif; ?>
           </div>
         </section>
+        <?php if ($consentHasStructuredRiskProfile): ?>
+          <section>
+            <div class="consent-doc-section-title">Riesgos del procedimiento</div>
+            <?php if ($consentRiskComunes !== ''): ?>
+              <div class="consent-doc-text"><strong>Riesgos comunes:</strong> <?php echo nl2br(h($consentRiskComunes)); ?></div>
+            <?php endif; ?>
+            <?php if ($consentRiskPocoFrecuentes !== ''): ?>
+              <div class="consent-doc-text"><strong>Riesgos poco frecuentes:</strong> <?php echo nl2br(h($consentRiskPocoFrecuentes)); ?></div>
+            <?php endif; ?>
+            <?php if ($consentRiskRarosGraves !== ''): ?>
+              <div class="consent-doc-text"><strong>Complicaciones raras pero graves:</strong> <?php echo nl2br(h($consentRiskRarosGraves)); ?></div>
+            <?php endif; ?>
+          </section>
+        <?php endif; ?>
 
         <?php if ($consentAlternatives !== ''): ?>
           <section>

@@ -8796,6 +8796,9 @@ console.info('app.js loaded :: 20251123a');
       template: root.querySelector('#ci_template'),
       riesgosManualWrap: root.querySelector('#ci_riesgos_manual_wrap'),
       riesgosManual: root.querySelector('#ci_riesgos_manual'),
+      riskCommon: root.querySelector('#ci_risk_common'),
+      riskInfrequent: root.querySelector('#ci_risk_infrequent'),
+      riskRareSerious: root.querySelector('#ci_risk_rare_serious'),
       title: root.querySelector('#ci_title'),
       procedimiento: root.querySelector('#ci_procedimiento'),
       motivo: root.querySelector('#ci_motivo'),
@@ -8824,6 +8827,9 @@ console.info('app.js loaded :: 20251123a');
       fullMotivo: root.querySelector('#ci_full_motivo'),
       fullProcedimiento: root.querySelector('#ci_full_procedimiento'),
       fullRiesgos: root.querySelector('#ci_full_riesgos'),
+      fullRiskCommon: root.querySelector('#ci_full_risk_common'),
+      fullRiskInfrequent: root.querySelector('#ci_full_risk_infrequent'),
+      fullRiskRareSerious: root.querySelector('#ci_full_risk_rare_serious'),
       fullBeneficios: root.querySelector('#ci_full_beneficios'),
       fullAlternativas: root.querySelector('#ci_full_alternativas'),
       fullConsecuencias: root.querySelector('#ci_full_consecuencias'),
@@ -8931,11 +8937,20 @@ console.info('app.js loaded :: 20251123a');
       firmanteAutoFromPatient: false,
       identityFiles: [],
       identityRemoteRefs: [],
+      riskFramework: null,
+      riskUserEdited: {
+        comunes: false,
+        poco_frecuentes: false,
+        raros_graves: false
+      },
       form: {
         title: '',
         motivo: '',
         procedimiento: '',
         riesgos: '',
+        risk_comunes: '',
+        risk_poco_frecuentes: '',
+        risk_raros_graves: '',
         objetivo: '',
         beneficios_esperados: '',
         alternativas: '',
@@ -8964,6 +8979,134 @@ console.info('app.js loaded :: 20251123a');
         { key: 'investigacion', label: 'Investigación clínica', desc: 'Consentimiento para participación en protocolo de investigación.' },
         { key: 'otro', label: 'Otro', desc: 'Consentimiento informado general para procedimiento clínico.' }
       ]
+    };
+    const DEFAULT_CONSENT_RISK_FRAMEWORK = Object.freeze({
+      risk_levels: [
+        {
+          key: 'comunes',
+          label: 'Riesgos comunes',
+          ui_phrase: 'complicaciones leves y transitorias',
+          legal_phrase: 'Eventos adversos esperables de baja severidad, generalmente transitorios y manejables.'
+        },
+        {
+          key: 'poco_frecuentes',
+          label: 'Riesgos poco frecuentes',
+          ui_phrase: 'riesgos poco frecuentes como infección o sangrado',
+          legal_phrase: 'Eventos adversos de presentación infrecuente, entre ellos infección o sangrado según el procedimiento.'
+        },
+        {
+          key: 'raros_graves',
+          label: 'Complicaciones raras pero graves',
+          ui_phrase: 'complicaciones graves que pueden comprometer la vida',
+          legal_phrase: 'Complicaciones graves de ocurrencia rara que pueden comprometer la vida o requerir intervención urgente.'
+        }
+      ]
+    });
+    const normalizeRiskTemplateKey = (value = '')=> sanitizeText(value || '').toLowerCase();
+    const getConsentRiskFrameworkLevelMap = ()=>{
+      const riskLevels = Array.isArray(state.riskFramework?.risk_levels) ? state.riskFramework.risk_levels : [];
+      const fallbackLevels = Array.isArray(DEFAULT_CONSENT_RISK_FRAMEWORK.risk_levels) ? DEFAULT_CONSENT_RISK_FRAMEWORK.risk_levels : [];
+      const source = riskLevels.length ? riskLevels : fallbackLevels;
+      const byKey = new Map();
+      source.forEach((entry)=>{
+        const key = sanitizeText(entry?.key || '').toLowerCase();
+        if(!key) return;
+        byKey.set(key, {
+          label: trimConsentInputValue(entry?.label || ''),
+          ui_phrase: trimConsentInputValue(entry?.ui_phrase || ''),
+          legal_phrase: trimConsentInputValue(entry?.legal_phrase || '')
+        });
+      });
+      return byKey;
+    };
+    const getConsentRiskLevelData = (levelKey = '')=>{
+      const safeKey = sanitizeText(levelKey || '').toLowerCase();
+      const map = getConsentRiskFrameworkLevelMap();
+      return map.get(safeKey) || { label: '', ui_phrase: '', legal_phrase: '' };
+    };
+    const getProcedureRiskTemplate = (templateKey = '')=>{
+      const safeKey = normalizeRiskTemplateKey(templateKey);
+      if(!safeKey) return null;
+      const mapRaw = state.riskFramework?.risk_templates_by_procedure;
+      const source = (mapRaw && typeof mapRaw === 'object') ? mapRaw : {};
+      const aliases = {
+        procedimiento: ['procedimiento', 'procedimiento_invasivo'],
+        procedimiento_no_invasivo: ['procedimiento_no_invasivo'],
+        procedimiento_diagnostico: ['procedimiento_diagnostico'],
+        procedimiento_terapeutico: ['procedimiento_terapeutico'],
+        anestesia: ['anestesia'],
+        transfusion: ['transfusion'],
+        tratamiento_farmacologico: ['tratamiento_farmacologico'],
+        investigacion: ['investigacion']
+      };
+      const candidates = Array.isArray(aliases[safeKey]) ? aliases[safeKey] : [safeKey];
+      for(const candidate of candidates){
+        const raw = source[candidate];
+        if(raw && typeof raw === 'object'){
+          return {
+            comunes: trimConsentInputValue(raw.comunes || ''),
+            poco_frecuentes: trimConsentInputValue(raw.poco_frecuentes || ''),
+            raros_graves: trimConsentInputValue(raw.raros_graves || '')
+          };
+        }
+      }
+      return null;
+    };
+    const applyProcedureRiskSuggestions = (templateKey = '', { force = false } = {})=>{
+      const mapped = getProcedureRiskTemplate(templateKey);
+      const fallback = {
+        comunes: trimConsentInputValue(getConsentRiskLevelData('comunes').ui_phrase || ''),
+        poco_frecuentes: trimConsentInputValue(getConsentRiskLevelData('poco_frecuentes').ui_phrase || ''),
+        raros_graves: trimConsentInputValue(getConsentRiskLevelData('raros_graves').ui_phrase || '')
+      };
+      const next = mapped || fallback;
+      const assignIfAllowed = (stateKey, touchKey, nextValue)=>{
+        const currentValue = trimConsentInputValue(state.form[stateKey] || '');
+        const wasEdited = state.riskUserEdited[touchKey] === true;
+        if(force || (!wasEdited && currentValue === '')){
+          state.form[stateKey] = nextValue || '';
+          return;
+        }
+        if(force || !wasEdited){
+          state.form[stateKey] = nextValue || '';
+        }
+      };
+      assignIfAllowed('risk_comunes', 'comunes', next.comunes || '');
+      assignIfAllowed('risk_poco_frecuentes', 'poco_frecuentes', next.poco_frecuentes || '');
+      assignIfAllowed('risk_raros_graves', 'raros_graves', next.raros_graves || '');
+    };
+    const applyConsentRiskDefaults = ({ force = false } = {})=>{
+      const common = getConsentRiskLevelData('comunes');
+      const infrequent = getConsentRiskLevelData('poco_frecuentes');
+      const rareSerious = getConsentRiskLevelData('raros_graves');
+      if(force || !trimConsentInputValue(state.form.risk_comunes || '')){
+        state.form.risk_comunes = trimConsentInputValue(common.ui_phrase || '');
+      }
+      if(force || !trimConsentInputValue(state.form.risk_poco_frecuentes || '')){
+        state.form.risk_poco_frecuentes = trimConsentInputValue(infrequent.ui_phrase || '');
+      }
+      if(force || !trimConsentInputValue(state.form.risk_raros_graves || '')){
+        state.form.risk_raros_graves = trimConsentInputValue(rareSerious.ui_phrase || '');
+      }
+    };
+    const loadConsentRiskFramework = async ()=>{
+      if(state.riskFramework && typeof state.riskFramework === 'object'){
+        return state.riskFramework;
+      }
+      try{
+        const resp = await fetch('/assets/data/consent_risk_framework.json', {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          credentials: 'same-origin'
+        });
+        const json = await resp.json().catch(()=> null);
+        if(resp.ok && json && typeof json === 'object'){
+          state.riskFramework = json;
+          return state.riskFramework;
+        }
+      }catch(_){}
+      state.riskFramework = DEFAULT_CONSENT_RISK_FRAMEWORK;
+      return state.riskFramework;
     };
     const CLINICAL_DOCUMENT_DEFINITIONS = Object.freeze({
       consentimiento_informado: Object.freeze({
@@ -10619,6 +10762,12 @@ console.info('app.js loaded :: 20251123a');
       if(els.templateDesc) els.templateDesc.textContent = f.riesgos || 'Selecciona una plantilla para ver sus riesgos, beneficios y alternativas.';
       if(els.riesgosManual) els.riesgosManual.value = f.riesgos;
       if(els.fullRiesgos) els.fullRiesgos.value = f.riesgos;
+      if(els.riskCommon) els.riskCommon.value = f.risk_comunes;
+      if(els.fullRiskCommon) els.fullRiskCommon.value = f.risk_comunes;
+      if(els.riskInfrequent) els.riskInfrequent.value = f.risk_poco_frecuentes;
+      if(els.fullRiskInfrequent) els.fullRiskInfrequent.value = f.risk_poco_frecuentes;
+      if(els.riskRareSerious) els.riskRareSerious.value = f.risk_raros_graves;
+      if(els.fullRiskRareSerious) els.fullRiskRareSerious.value = f.risk_raros_graves;
       if(els.beneficiosEsperados) els.beneficiosEsperados.value = f.beneficios_esperados;
       if(els.fullBeneficios) els.fullBeneficios.value = f.beneficios_esperados;
       if(els.alternativas) els.alternativas.value = f.alternativas;
@@ -11070,14 +11219,18 @@ console.info('app.js loaded :: 20251123a');
     const describeTemplate = (key)=>{
       const templateKey = sanitizeText(key);
       const current = state.templates.find((tpl)=> tpl.key === templateKey);
-      // TODO(DOCS-STD): agregar bloque independiente "Riesgos del procedimiento" (captura clínica real)
-      // desacoplado del selector de tipo/contexto, reutilizable para otros documentos clínicos.
       if(templateKey === 'otro'){
         state.form.riesgos = '';
       }else{
         state.form.riesgos = current ? current.desc : '';
       }
+      applyProcedureRiskSuggestions(templateKey, { force: false });
       syncFormStateToInputs();
+      loadConsentRiskFramework().then(()=>{
+        applyProcedureRiskSuggestions(templateKey, { force: false });
+        applyConsentRiskDefaults();
+        syncFormStateToInputs();
+      });
     };
 
     const fillWizardPatientFields = ()=>{
@@ -11112,6 +11265,11 @@ console.info('app.js loaded :: 20251123a');
       state.activeDraftRef = '';
       state.activeDraftLabel = '';
       state.firmanteAutoFromPatient = false;
+      state.riskUserEdited = {
+        comunes: false,
+        poco_frecuentes: false,
+        raros_graves: false
+      };
       state.doctorSignatureHasStroke = false;
       state.doctorSignaturePreferredSource = '';
       state.doctorSignatureSavePrompted = false;
@@ -11123,6 +11281,9 @@ console.info('app.js loaded :: 20251123a');
         motivo: '',
         procedimiento: '',
         riesgos: '',
+        risk_comunes: '',
+        risk_poco_frecuentes: '',
+        risk_raros_graves: '',
         objetivo: '',
         beneficios_esperados: '',
         alternativas: '',
@@ -11140,6 +11301,7 @@ console.info('app.js loaded :: 20251123a');
         testigo_2_nombre: '',
         confirm_informed: false
       };
+      applyConsentRiskDefaults({ force: true });
       clearConsentValidationFeedback();
       syncFormStateToInputs();
       if(els.doctorName){
@@ -11171,9 +11333,15 @@ console.info('app.js loaded :: 20251123a');
       state.draftId = `cons_draft_${Date.now()}`;
       state.activeDraftRef = '';
       state.activeDraftLabel = '';
+      state.riskUserEdited = {
+        comunes: false,
+        poco_frecuentes: false,
+        raros_graves: false
+      };
       renderTemplates();
       fillWizardPatientFields();
       fillWizardDoctorFields({ force: true });
+      applyConsentRiskDefaults();
       syncFormStateToInputs();
       clearConsentValidationFeedback();
       initConsentSignaturePad();
@@ -11199,6 +11367,11 @@ console.info('app.js loaded :: 20251123a');
       showNotice('');
       els.doctorSignatureInlinePrompt?.classList.add('d-none');
       els.wizard.classList.remove('d-none');
+      loadConsentRiskFramework().then(()=>{
+        applyProcedureRiskSuggestions(sanitizeText(els.template?.value || ''), { force: false });
+        applyConsentRiskDefaults();
+        syncFormStateToInputs();
+      });
       return true;
     };
 
@@ -11359,6 +11532,30 @@ console.info('app.js loaded :: 20251123a');
         motivo: normalizeConsentInputRaw(formSnapshot.motivo ?? payload.observations ?? state.form.motivo ?? ''),
         procedimiento: normalizeConsentInputRaw(formSnapshot.procedimiento ?? state.form.procedimiento ?? ''),
         riesgos: normalizeConsentInputRaw(formSnapshot.riesgos ?? payload?.template_snapshot?.body_text ?? state.form.riesgos ?? ''),
+        risk_comunes: normalizeConsentInputRaw(
+          formSnapshot.risk_comunes
+          ?? payload?.consent_legal?.risk_profile?.comunes?.value
+          ?? payload?.consent_legal?.risk_profile?.comunes?.ui_phrase
+          ?? payload?.consent_legal?.risk_profile?.comunes?.legal_phrase
+          ?? state.form.risk_comunes
+          ?? ''
+        ),
+        risk_poco_frecuentes: normalizeConsentInputRaw(
+          formSnapshot.risk_poco_frecuentes
+          ?? payload?.consent_legal?.risk_profile?.poco_frecuentes?.value
+          ?? payload?.consent_legal?.risk_profile?.poco_frecuentes?.ui_phrase
+          ?? payload?.consent_legal?.risk_profile?.poco_frecuentes?.legal_phrase
+          ?? state.form.risk_poco_frecuentes
+          ?? ''
+        ),
+        risk_raros_graves: normalizeConsentInputRaw(
+          formSnapshot.risk_raros_graves
+          ?? payload?.consent_legal?.risk_profile?.raros_graves?.value
+          ?? payload?.consent_legal?.risk_profile?.raros_graves?.ui_phrase
+          ?? payload?.consent_legal?.risk_profile?.raros_graves?.legal_phrase
+          ?? state.form.risk_raros_graves
+          ?? ''
+        ),
         objetivo: normalizeConsentInputRaw(formSnapshot.objetivo ?? state.form.objetivo ?? ''),
         beneficios_esperados: normalizeConsentInputRaw(formSnapshot.beneficios_esperados ?? payload?.consent_legal?.beneficios_esperados ?? state.form.beneficios_esperados ?? ''),
         alternativas: normalizeConsentInputRaw(formSnapshot.alternativas ?? payload?.consent_legal?.alternativas ?? state.form.alternativas ?? ''),
@@ -11386,6 +11583,13 @@ console.info('app.js loaded :: 20251123a');
       state.step = Number(formSnapshot.step || 1) === 2 ? 2 : 1;
       state.mode = sanitizeText(formSnapshot.mode || 'guided') === 'full' ? 'full' : 'guided';
       state.firmanteAutoFromPatient = sanitizeText(state.form.firmante_tipo || '') === 'paciente';
+      state.riskUserEdited = {
+        comunes: false,
+        poco_frecuentes: false,
+        raros_graves: false
+      };
+      applyProcedureRiskSuggestions(draftTemplate, { force: false });
+      applyConsentRiskDefaults();
       const draftDoctorSignature = (payload?.signatures && typeof payload.signatures === 'object' && payload.signatures.doctor && typeof payload.signatures.doctor === 'object')
         ? payload.signatures.doctor
         : null;
@@ -11643,7 +11847,6 @@ console.info('app.js loaded :: 20251123a');
         : `Yo, ${signerName}, en mi carácter de ${signerRoleText}, manifiesto que recibí información suficiente, clara y comprensible sobre el procedimiento propuesto, su finalidad y alcances.`;
 
       const lines = [];
-      lines.push('MXMed');
       lines.push('CONSENTIMIENTO INFORMADO');
       lines.push('');
       lines.push(`Lugar y fecha: ${eventDate}${eventTime ? ` ${eventTime}` : ''}`.trim());
@@ -11716,6 +11919,11 @@ console.info('app.js loaded :: 20251123a');
       const benefits = sanitizeText(data.benefits || '');
       const alternatives = sanitizeText(data.alternatives || '');
       const consequences = sanitizeText(data.consequences || '');
+      const riskProfile = (data.riskProfile && typeof data.riskProfile === 'object') ? data.riskProfile : {};
+      const riskComunes = sanitizeText(riskProfile?.comunes?.value || riskProfile?.comunes?.ui_phrase || riskProfile?.comunes?.legal_phrase || '');
+      const riskPocoFrecuentes = sanitizeText(riskProfile?.poco_frecuentes?.value || riskProfile?.poco_frecuentes?.ui_phrase || riskProfile?.poco_frecuentes?.legal_phrase || '');
+      const riskRarosGraves = sanitizeText(riskProfile?.raros_graves?.value || riskProfile?.raros_graves?.ui_phrase || riskProfile?.raros_graves?.legal_phrase || '');
+      const hasStructuredRiskProfile = !!(riskComunes || riskPocoFrecuentes || riskRarosGraves);
       const contingencyLabel = data.contingency ? 'Sí autorizo' : 'No autorizo';
       const renderedText = sanitizeText(data.renderedText || '');
       const signerTypeLabel = sanitizeText(data.signerTypeLabel || 'Paciente');
@@ -11795,6 +12003,14 @@ console.info('app.js loaded :: 20251123a');
     }).join('')}
   </section>`
         : '';
+      const structuredRiskSectionHtml = hasStructuredRiskProfile
+        ? `<section>
+    <div style="font-size:.92rem;font-weight:700;margin-bottom:4px;">Riesgos del procedimiento</div>
+    ${riskComunes ? `<div style="font-size:.88rem;font-weight:700;margin:8px 0 2px;">Riesgos comunes</div><div style="font-size:.93rem;line-height:1.56;text-align:justify;color:#000;">${lineBreak(riskComunes)}</div>` : ''}
+    ${riskPocoFrecuentes ? `<div style="font-size:.88rem;font-weight:700;margin:8px 0 2px;">Riesgos poco frecuentes</div><div style="font-size:.93rem;line-height:1.56;text-align:justify;color:#000;">${lineBreak(riskPocoFrecuentes)}</div>` : ''}
+    ${riskRarosGraves ? `<div style="font-size:.88rem;font-weight:700;margin:8px 0 2px;">Complicaciones raras pero graves</div><div style="font-size:.93rem;line-height:1.56;text-align:justify;color:#000;">${lineBreak(riskRarosGraves)}</div>` : ''}
+  </section>`
+        : '';
 
       return `
 <article style="background:#fff;border:1px solid #cfd8df;border-radius:8px;padding:24px 28px;display:grid;gap:14px;font-family:'Inter','Helvetica Neue',Arial,sans-serif;font-size:12px;line-height:1.5;color:#111;">
@@ -11823,6 +12039,7 @@ console.info('app.js loaded :: 20251123a');
     <div style="font-size:.92rem;font-weight:700;margin-bottom:4px;">Riesgos</div>
     <div style="font-size:.93rem;line-height:1.56;text-align:justify;color:#000;">${lineBreak(risks || 'Riesgos explicados conforme a criterio médico.')}</div>
   </section>
+  ${structuredRiskSectionHtml}
   <section>
     <div style="font-size:.92rem;font-weight:700;margin-bottom:4px;">Beneficios esperados</div>
     <div style="font-size:.93rem;line-height:1.56;text-align:justify;color:#000;">${lineBreak(benefits || 'Beneficios clínicos esperados conforme al caso.')}</div>
@@ -11898,6 +12115,32 @@ console.info('app.js loaded :: 20251123a');
       const doctorInstitution = trimConsentInputValue(state.form.doctor_institution || '');
       const doctorFacility = trimConsentInputValue(state.form.doctor_facility || '');
       const doctorLicense = trimConsentInputValue(state.form.doctor_license || '');
+      const riskCommonValue = trimConsentInputValue(state.form.risk_comunes || '');
+      const riskInfrequentValue = trimConsentInputValue(state.form.risk_poco_frecuentes || '');
+      const riskRareSeriousValue = trimConsentInputValue(state.form.risk_raros_graves || '');
+      const riskCommonDef = getConsentRiskLevelData('comunes');
+      const riskInfrequentDef = getConsentRiskLevelData('poco_frecuentes');
+      const riskRareSeriousDef = getConsentRiskLevelData('raros_graves');
+      const riskProfile = {
+        comunes: {
+          label: trimConsentInputValue(riskCommonDef.label || 'Riesgos comunes'),
+          ui_phrase: trimConsentInputValue(riskCommonDef.ui_phrase || ''),
+          legal_phrase: trimConsentInputValue(riskCommonDef.legal_phrase || ''),
+          value: riskCommonValue
+        },
+        poco_frecuentes: {
+          label: trimConsentInputValue(riskInfrequentDef.label || 'Riesgos poco frecuentes'),
+          ui_phrase: trimConsentInputValue(riskInfrequentDef.ui_phrase || ''),
+          legal_phrase: trimConsentInputValue(riskInfrequentDef.legal_phrase || ''),
+          value: riskInfrequentValue
+        },
+        raros_graves: {
+          label: trimConsentInputValue(riskRareSeriousDef.label || 'Complicaciones raras pero graves'),
+          ui_phrase: trimConsentInputValue(riskRareSeriousDef.ui_phrase || ''),
+          legal_phrase: trimConsentInputValue(riskRareSeriousDef.legal_phrase || ''),
+          value: riskRareSeriousValue
+        }
+      };
       const docDefinition = getClinicalDocumentDefinition('consentimiento_informado');
       const firmanteTipo = sanitizeText(state.form.firmante_tipo || 'paciente');
       const firmanteNombre = trimConsentInputValue(state.form.firmante_nombre || '');
@@ -12017,6 +12260,7 @@ console.info('app.js loaded :: 20251123a');
           beneficios_esperados: beneficiosEsperados || null,
           alternativas: alternativas || null,
           consecuencias_no_aceptar: consecuenciasNoAceptar || null,
+          risk_profile: riskProfile,
           autorizacion_contingencias: autorizacionContingencias,
           declaracion_lenguaje_claro: true
         },
@@ -12043,6 +12287,9 @@ console.info('app.js loaded :: 20251123a');
           motivo,
           procedimiento,
           riesgos: trimConsentInputValue(state.form.riesgos || ''),
+          risk_comunes: riskCommonValue,
+          risk_poco_frecuentes: riskInfrequentValue,
+          risk_raros_graves: riskRareSeriousValue,
           objetivo,
           beneficios_esperados: beneficiosEsperados,
           alternativas,
@@ -12127,6 +12374,7 @@ console.info('app.js loaded :: 20251123a');
             benefits: beneficiosEsperados || '',
             alternatives: alternativesSafe,
             consequences: consequencesSafe,
+            riskProfile,
             contingency: autorizacionContingencias,
             renderedText: renderedText || '',
             signerTypeLabel: signerTypeLabel || 'Paciente',
@@ -12409,6 +12657,9 @@ console.info('app.js loaded :: 20251123a');
                 benefits: sanitizeText(payload?.consent_legal?.beneficios_esperados || ''),
                 alternatives: sanitizeText(payload?.consent_legal?.alternativas || ''),
                 consequences: sanitizeText(payload?.consent_legal?.consecuencias_no_aceptar || ''),
+                riskProfile: (payload?.consent_legal?.risk_profile && typeof payload.consent_legal.risk_profile === 'object')
+                  ? payload.consent_legal.risk_profile
+                  : null,
                 contingency: !!payload?.consent_legal?.autorizacion_contingencias,
                 renderedText: sanitizeText(payload?.rendered_text || payload?.text || ''),
                 signerTypeLabel: sanitizeText(payload?.firmante?.tipo || 'Paciente'),
@@ -12591,7 +12842,7 @@ console.info('app.js loaded :: 20251123a');
     const bindSharedField = (inputEl, key, options = {})=>{
       if(!inputEl) return;
       const evtName = options.event || ((inputEl.tagName === 'SELECT' || inputEl.type === 'checkbox') ? 'change' : 'input');
-      inputEl.addEventListener(evtName, ()=>{
+      inputEl.addEventListener(evtName, (event)=>{
         clearConsentValidationMarksForKey(key);
         let value;
         if(inputEl.type === 'checkbox'){
@@ -12600,6 +12851,14 @@ console.info('app.js loaded :: 20251123a');
           value = sanitizeText(inputEl.value || '');
         }else{
           value = normalizeConsentInputRaw(inputEl.value || '');
+        }
+        if(typeof options.onUserEdit === 'function'){
+          options.onUserEdit({
+            key,
+            value,
+            event,
+            inputEl
+          });
         }
         updateConsentFormState(key, value);
       });
@@ -12614,6 +12873,24 @@ console.info('app.js loaded :: 20251123a');
     bindSharedField(els.fullObjetivo, 'objetivo');
     bindSharedField(els.fullRiesgos, 'riesgos');
     bindSharedField(els.riesgosManual, 'riesgos');
+    bindSharedField(els.riskCommon, 'risk_comunes', {
+      onUserEdit: ()=>{ state.riskUserEdited.comunes = true; }
+    });
+    bindSharedField(els.fullRiskCommon, 'risk_comunes', {
+      onUserEdit: ()=>{ state.riskUserEdited.comunes = true; }
+    });
+    bindSharedField(els.riskInfrequent, 'risk_poco_frecuentes', {
+      onUserEdit: ()=>{ state.riskUserEdited.poco_frecuentes = true; }
+    });
+    bindSharedField(els.fullRiskInfrequent, 'risk_poco_frecuentes', {
+      onUserEdit: ()=>{ state.riskUserEdited.poco_frecuentes = true; }
+    });
+    bindSharedField(els.riskRareSerious, 'risk_raros_graves', {
+      onUserEdit: ()=>{ state.riskUserEdited.raros_graves = true; }
+    });
+    bindSharedField(els.fullRiskRareSerious, 'risk_raros_graves', {
+      onUserEdit: ()=>{ state.riskUserEdited.raros_graves = true; }
+    });
     bindSharedField(els.beneficiosEsperados, 'beneficios_esperados');
     bindSharedField(els.fullBeneficios, 'beneficios_esperados');
     bindSharedField(els.alternativas, 'alternativas');
@@ -12910,6 +13187,11 @@ console.info('app.js loaded :: 20251123a');
     });
 
     renderTemplates();
+    loadConsentRiskFramework().then(()=>{
+      applyProcedureRiskSuggestions(sanitizeText(els.template?.value || ''), { force: false });
+      applyConsentRiskDefaults();
+      syncFormStateToInputs();
+    });
     initConsentSignaturePad();
     initDoctorSignaturePad();
     renderConsentRemoteSignaturePreview();
