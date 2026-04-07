@@ -584,11 +584,13 @@ function clinical_documents_list_fetch(PDO $pdo, string $patientId, string $docu
     $sql = "
         SELECT
             id,
+            document_uuid,
             title,
             document_type,
             summary,
             event_datetime,
             printable,
+            payload_json,
             JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.snapshot.medico.nombre_completo')) AS doctor_name
         FROM clinical_documents
         WHERE patient_id = :patient_id

@@ -3804,11 +3804,11 @@
                   <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                       <div class="modal-header">
-                        <h5 class="modal-title">Firmar con celular</h5>
+                        <h5 class="modal-title" data-role="ci-signature-qr-title">Firmar con celular</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body">
-                        <p class="small text-muted mb-3">
+                        <p class="small text-muted mb-3" data-role="ci-signature-qr-hint">
                           Escanea este código con tu celular para firmar en pantalla y anexar la firma al consentimiento en curso.
                         </p>
                         <div class="text-center mb-3">
@@ -3843,6 +3843,25 @@
                       <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-action="ci-signature-qr-verify-now">Verificar ahora</button>
                         <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Cerrar</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal fade" id="modalConsentDoctorSignatureSavePrompt" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Guardar firma digitalizada</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p class="mb-0">
+                          ¿Deseas guardar esta firma como tu firma digitalizada para usarla en próximos documentos?
+                        </p>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" id="ci_doctor_signature_prompt_no">No guardar</button>
+                        <button type="button" class="btn btn-primary" id="ci_doctor_signature_prompt_yes">Sí, guardar firma</button>
                       </div>
                     </div>
                   </div>
@@ -6496,74 +6515,125 @@
 
               <div class="tab-pane fade" id="t-consent">
                 <div class="exp-card exp-card--secondary mb-3" id="docs_catalog_panel">
-                  <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
-                    <span>Catálogo de documentos</span>
-                    <span class="small text-muted">Selecciona un documento para iniciar su flujo</span>
+                  <div class="exp-card-title mb-1">
+                    <span>Documentos clínicos</span>
                   </div>
                   <div class="exp-card-body">
-                    <div class="docs-launcher-grid">
-                      <div class="docs-launcher-group">
-                        <div class="docs-launcher-group-title">Médico-legales</div>
-                        <button type="button" class="docs-launcher-item docs-launcher-item--active" data-action="documents-open-consent">
-                          <span class="docs-launcher-item-title">Consentimiento informado</span>
-                          <span class="docs-launcher-item-desc">Disponible y operativo</span>
+                    <p class="docs-catalog-intro mb-3">Selecciona el tipo documental para iniciar su captura o emisión desde este módulo.</p>
+                    <div class="docs-launcher-groups">
+                    <div class="docs-launcher-section mb-3">
+                      <div class="docs-launcher-group-title">Autorizaciones y respaldo médico-legal</div>
+                      <div class="docs-launcher-list" role="list">
+                        <button type="button" class="docs-launcher-row docs-launcher-row--active" data-action="documents-open-consent" data-doc-code="consentimiento_informado" data-doc-title="Consentimiento informado" data-doc-entry="existing-flow" data-doc-status="Ya funcional" data-doc-desc="Documento de autorización para procedimientos y actos clínicos informados.">
+                          <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">fact_check</span>
+                          <span class="docs-launcher-row-main">
+                            <span class="docs-launcher-row-title">Consentimiento informado</span>
+                            <span class="docs-launcher-row-desc">Autorización informada de procedimientos clínicos.</span>
+                          </span>
+                          <span class="docs-launcher-row-status is-ready">Ya funcional</span>
                         </button>
-                        <button type="button" class="docs-launcher-item" data-action="documents-coming-soon">
-                          <span class="docs-launcher-item-title">Responsiva médica</span>
-                          <span class="docs-launcher-item-desc">Próximamente</span>
+                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="responsiva_medica" data-doc-title="Responsiva médica" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Documento de deslinde y aceptación de responsabilidad médica bajo condiciones específicas.">
+                          <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">gavel</span>
+                          <span class="docs-launcher-row-main">
+                            <span class="docs-launcher-row-title">Responsiva médica</span>
+                            <span class="docs-launcher-row-desc">Deslinde y aceptación de responsabilidad.</span>
+                          </span>
+                          <span class="docs-launcher-row-status">Configuración inicial</span>
                         </button>
-                        <button type="button" class="docs-launcher-item" data-action="documents-coming-soon">
-                          <span class="docs-launcher-item-title">Consentimiento multimedia</span>
-                          <span class="docs-launcher-item-desc">Próximamente</span>
-                        </button>
-                      </div>
-                      <div class="docs-launcher-group">
-                        <div class="docs-launcher-group-title">Clínico-administrativos</div>
-                        <button type="button" class="docs-launcher-item" data-action="documents-coming-soon">
-                          <span class="docs-launcher-item-title">Certificado médico</span>
-                          <span class="docs-launcher-item-desc">Próximamente</span>
-                        </button>
-                        <button type="button" class="docs-launcher-item" data-action="documents-coming-soon">
-                          <span class="docs-launcher-item-title">Incapacidad médica</span>
-                          <span class="docs-launcher-item-desc">Próximamente</span>
-                        </button>
-                        <button type="button" class="docs-launcher-item" data-action="documents-coming-soon">
-                          <span class="docs-launcher-item-title">Constancia médica</span>
-                          <span class="docs-launcher-item-desc">Próximamente</span>
-                        </button>
-                        <button type="button" class="docs-launcher-item" data-action="documents-coming-soon">
-                          <span class="docs-launcher-item-title">Informe médico / resumen clínico</span>
-                          <span class="docs-launcher-item-desc">Próximamente</span>
-                        </button>
-                        <button type="button" class="docs-launcher-item" data-action="documents-coming-soon">
-                          <span class="docs-launcher-item-title">Certificados especiales</span>
-                          <span class="docs-launcher-item-desc">Próximamente</span>
-                        </button>
-                      </div>
-                      <div class="docs-launcher-group">
-                        <div class="docs-launcher-group-title">Clínicos operativos</div>
-                        <button type="button" class="docs-launcher-item" data-action="documents-coming-soon">
-                          <span class="docs-launcher-item-title">Interconsulta</span>
-                          <span class="docs-launcher-item-desc">Próximamente</span>
-                        </button>
-                        <button type="button" class="docs-launcher-item" data-action="documents-coming-soon">
-                          <span class="docs-launcher-item-title">Alta médica</span>
-                          <span class="docs-launcher-item-desc">Próximamente</span>
-                        </button>
-                      </div>
-                      <div class="docs-launcher-group">
-                        <div class="docs-launcher-group-title">Otros</div>
-                        <button type="button" class="docs-launcher-item" data-action="documents-coming-soon">
-                          <span class="docs-launcher-item-title">Documento libre / personalizado</span>
-                          <span class="docs-launcher-item-desc">Próximamente</span>
+                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="consentimiento_multimedia" data-doc-title="Consentimiento multimedia" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Consentimiento para uso de imagen, audio o video en contexto clínico y documental.">
+                          <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">videocam</span>
+                          <span class="docs-launcher-row-main">
+                            <span class="docs-launcher-row-title">Consentimiento multimedia</span>
+                            <span class="docs-launcher-row-desc">Uso de imagen, audio y video clínico.</span>
+                          </span>
+                          <span class="docs-launcher-row-status">Configuración inicial</span>
                         </button>
                       </div>
                     </div>
-                    <div class="small text-muted mt-2 d-none" id="docs_catalog_notice"></div>
+                    <div class="docs-launcher-section mb-3">
+                      <div class="docs-launcher-group-title">Constancias y certificaciones</div>
+                      <div class="docs-launcher-list" role="list">
+                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="certificado_medico" data-doc-title="Certificado médico" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Certificación médica de estado de salud para trámites institucionales o laborales.">
+                          <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">description</span>
+                          <span class="docs-launcher-row-main">
+                            <span class="docs-launcher-row-title">Certificado médico</span>
+                            <span class="docs-launcher-row-desc">Certificación de estado de salud.</span>
+                          </span>
+                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                        </button>
+                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="incapacidad_medica" data-doc-title="Incapacidad médica" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Documento de incapacidad temporal para respaldo laboral o institucional.">
+                          <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">event_busy</span>
+                          <span class="docs-launcher-row-main">
+                            <span class="docs-launcher-row-title">Incapacidad médica</span>
+                            <span class="docs-launcher-row-desc">Incapacidad temporal para actividad laboral.</span>
+                          </span>
+                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                        </button>
+                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="constancia_medica" data-doc-title="Constancia médica" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Constancia clínica breve para situaciones administrativas o escolares.">
+                          <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">assignment</span>
+                          <span class="docs-launcher-row-main">
+                            <span class="docs-launcher-row-title">Constancia médica</span>
+                            <span class="docs-launcher-row-desc">Constancia clínica de atención.</span>
+                          </span>
+                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                        </button>
+                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="certificados_especiales" data-doc-title="Certificados especiales" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Certificados médicos para escenarios especiales o formatos normativos específicos.">
+                          <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">workspace_premium</span>
+                          <span class="docs-launcher-row-main">
+                            <span class="docs-launcher-row-title">Certificados especiales</span>
+                            <span class="docs-launcher-row-desc">Formatos especiales normativos.</span>
+                          </span>
+                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="docs-launcher-section mb-3">
+                      <div class="docs-launcher-group-title">Referencia y evolución clínica</div>
+                      <div class="docs-launcher-list" role="list">
+                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="interconsulta" data-doc-title="Interconsulta" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Solicitud de valoración por otra especialidad con información clínica relevante.">
+                          <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">send</span>
+                          <span class="docs-launcher-row-main">
+                            <span class="docs-launcher-row-title">Interconsulta</span>
+                            <span class="docs-launcher-row-desc">Referencia a otra especialidad.</span>
+                          </span>
+                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                        </button>
+                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="informe_medico" data-doc-title="Informe médico" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Resumen clínico estructurado de evolución, hallazgos y conducta médica.">
+                          <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">summarize</span>
+                          <span class="docs-launcher-row-main">
+                            <span class="docs-launcher-row-title">Informe médico</span>
+                            <span class="docs-launcher-row-desc">Resumen clínico de evolución.</span>
+                          </span>
+                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                        </button>
+                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="alta_medica" data-doc-title="Alta médica" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Documento de egreso con indicaciones, seguimiento y cierre clínico.">
+                          <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">exit_to_app</span>
+                          <span class="docs-launcher-row-main">
+                            <span class="docs-launcher-row-title">Alta médica</span>
+                            <span class="docs-launcher-row-desc">Egreso clínico con indicaciones.</span>
+                          </span>
+                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="docs-launcher-section">
+                      <div class="docs-launcher-group-title">Formato flexible</div>
+                      <div class="docs-launcher-list" role="list">
+                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="documento_libre" data-doc-title="Documento libre" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Plantilla abierta para construir documentos clínicos personalizados.">
+                          <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">edit_document</span>
+                          <span class="docs-launcher-row-main">
+                            <span class="docs-launcher-row-title">Documento libre</span>
+                            <span class="docs-launcher-row-desc">Formato clínico personalizado.</span>
+                          </span>
+                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                        </button>
+                      </div>
+                    </div>
+                    </div>
                   </div>
                 </div>
-                <div class="small fw-semibold text-uppercase text-muted mb-2">Consentimiento informado</div>
-                <div class="exp-card exp-card--secondary mb-2" id="ci_primary_panel">
+                <div class="small fw-semibold text-uppercase text-muted mb-2 d-none">Consentimiento informado</div>
+                <div class="exp-card exp-card--secondary mb-2 d-none" id="ci_primary_panel">
                   <div class="exp-card-title d-flex align-items-center justify-content-between gap-2 mb-0">
                     <span>Consentimiento informado (activo)</span>
                     <button type="button" class="btn btn-sm btn-primary exp-mini-btn" id="ci_new_btn">Nuevo consentimiento informado</button>
@@ -6600,11 +6670,11 @@
                         </div>
                         <div class="col-md-4">
                           <label class="form-label" for="ci_pac_tel">Teléfono</label>
-                          <input class="form-control bg-light" id="ci_pac_tel" readonly>
+                          <input class="form-control" id="ci_pac_tel" placeholder="Teléfono de contacto">
                         </div>
                         <div class="col-md-4">
                           <label class="form-label" for="ci_pac_mail">Correo electrónico</label>
-                          <input class="form-control bg-light" id="ci_pac_mail" type="email" readonly>
+                          <input class="form-control" id="ci_pac_mail" type="email" placeholder="Correo electrónico de contacto">
                         </div>
                         <div class="col-md-4">
                           <label class="form-label" for="ci_pac_dom">Domicilio</label>
@@ -6638,17 +6708,18 @@
                         </div>
                         <div class="col-12">
                           <label class="form-label">Riesgos</label>
-                          <div class="alert alert-light py-2 mb-0" id="ci_template_desc">Selecciona una plantilla para ver sus riesgos, beneficios y alternativas.</div>
+                          <select class="form-select" id="ci_template">
+                            <option value="">Selecciona una plantilla</option>
+                          </select>
+                          <div class="small text-muted mt-1" id="ci_template_desc">Selecciona una plantilla para ver sus riesgos, beneficios y alternativas.</div>
+                        </div>
+                        <div class="col-12 d-none" id="ci_riesgos_manual_wrap">
+                          <label class="form-label" for="ci_riesgos_manual">Riesgos (captura manual)</label>
+                          <textarea class="form-control" id="ci_riesgos_manual" rows="3" placeholder="Describe riesgos específicos para este consentimiento."></textarea>
                         </div>
                         <div class="col-12">
                           <label class="form-label" for="ci_objetivo">Objetivo</label>
                           <input class="form-control" id="ci_objetivo" placeholder="Objetivo del procedimiento">
-                        </div>
-                        <div class="col-12 pt-2 border-top">
-                          <label class="form-label" for="ci_template">Plantilla base <span class="text-muted">(opcional)</span></label>
-                          <select class="form-select" id="ci_template">
-                            <option value="">Selecciona una plantilla</option>
-                          </select>
                         </div>
                         <div class="col-12">
                           <label class="form-label" for="ci_beneficios_esperados">Beneficios esperados <span class="text-muted">(opcional)</span></label>
@@ -6698,14 +6769,6 @@
                             <option value="otro">Otro</option>
                           </select>
                         </div>
-                        <div class="col-md-6">
-                          <label class="form-label" for="ci_testigo_1_nombre">Testigo 1 <span class="text-muted">(opcional)</span></label>
-                          <input class="form-control" id="ci_testigo_1_nombre" placeholder="Nombre completo">
-                        </div>
-                        <div class="col-md-6">
-                          <label class="form-label" for="ci_testigo_2_nombre">Testigo 2 <span class="text-muted">(opcional)</span></label>
-                          <input class="form-control" id="ci_testigo_2_nombre" placeholder="Nombre completo">
-                        </div>
                         <div class="col-12">
                           <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="ci_confirm_informed">
@@ -6715,16 +6778,27 @@
                         <div class="col-12" id="ci_signature_slot_step2"></div>
                         <div class="col-12" id="ci_identity_slot_step2"></div>
                         <div class="col-12">
-                          <div class="border rounded p-2">
-                            <div class="small text-muted mb-1">Firma del médico</div>
-                            <div class="fw-semibold" id="ci_doctor_name">Médico tratante</div>
-                            <div class="border-top mt-2" style="max-width:260px;"></div>
+                          <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="ci_enable_witnesses">
+                            <label class="form-check-label" for="ci_enable_witnesses">Agregar testigos</label>
                           </div>
                         </div>
+                        <div class="col-md-6 d-none" id="ci_witnesses_wrap_1">
+                          <label class="form-label" for="ci_testigo_1_nombre">Testigo 1 <span class="text-muted">(opcional)</span></label>
+                          <input class="form-control" id="ci_testigo_1_nombre" placeholder="Nombre completo">
+                        </div>
+                        <div class="col-md-6 d-none" id="ci_witnesses_wrap_2">
+                          <label class="form-label" for="ci_testigo_2_nombre">Testigo 2 <span class="text-muted">(opcional)</span></label>
+                          <input class="form-control" id="ci_testigo_2_nombre" placeholder="Nombre completo">
+                        </div>
+                        <div class="col-12" id="ci_doctor_signature_slot_step2"></div>
                       </div>
                     </div>
 
                     <div id="ci_full_view" class="d-none">
+                      <div class="d-flex justify-content-start mb-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_full_back_to_step1">Volver a datos</button>
+                      </div>
                       <div class="row g-3">
                         <div class="col-12">
                           <label class="form-label" for="ci_full_title">Título</label>
@@ -6797,14 +6871,6 @@
                             <option value="otro">Otro</option>
                           </select>
                         </div>
-                        <div class="col-md-6">
-                          <label class="form-label" for="ci_full_testigo_1">Testigo 1 <span class="text-muted">(opcional)</span></label>
-                          <input class="form-control" id="ci_full_testigo_1" placeholder="Nombre completo">
-                        </div>
-                        <div class="col-md-6">
-                          <label class="form-label" for="ci_full_testigo_2">Testigo 2 <span class="text-muted">(opcional)</span></label>
-                          <input class="form-control" id="ci_full_testigo_2" placeholder="Nombre completo">
-                        </div>
                         <div class="col-12">
                           <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="ci_full_confirm_informed">
@@ -6813,15 +6879,32 @@
                         </div>
                         <div class="col-12" id="ci_signature_slot_full"></div>
                         <div class="col-12" id="ci_identity_slot_full"></div>
+                        <div class="col-12">
+                          <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="ci_full_enable_witnesses">
+                            <label class="form-check-label" for="ci_full_enable_witnesses">Agregar testigos</label>
+                          </div>
+                        </div>
+                        <div class="col-md-6 d-none" id="ci_full_witnesses_wrap_1">
+                          <label class="form-label" for="ci_full_testigo_1">Testigo 1 <span class="text-muted">(opcional)</span></label>
+                          <input class="form-control" id="ci_full_testigo_1" placeholder="Nombre completo">
+                        </div>
+                        <div class="col-md-6 d-none" id="ci_full_witnesses_wrap_2">
+                          <label class="form-label" for="ci_full_testigo_2">Testigo 2 <span class="text-muted">(opcional)</span></label>
+                          <input class="form-control" id="ci_full_testigo_2" placeholder="Nombre completo">
+                        </div>
+                        <div class="col-12" id="ci_doctor_signature_slot_full"></div>
                       </div>
                     </div>
 
                     <div id="ci_signature_block" class="border rounded p-2 d-none">
                       <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                        <div class="small fw-semibold">Firma del paciente / representante</div>
+                        <div class="ci-signature-heading">Firma del paciente / responsable</div>
                         <span class="small text-muted" id="ci_signature_status">Sin firma</span>
                       </div>
-                      <canvas id="ci_signature_canvas" class="w-100 border rounded bg-white" height="180" style="touch-action:none"></canvas>
+                      <div class="mx-signature-pad" data-signature-role="patient">
+                        <canvas id="ci_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
+                      </div>
                       <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
                         <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ci-signature-open-qr">
                           Firmar con celular
@@ -6864,6 +6947,50 @@
                       <div class="small text-success d-none mt-2" data-role="ci-identity-qr-status"></div>
                       <div class="small text-muted mt-2" id="ci_identity_files_list">Sin anexos cargados.</div>
                     </div>
+                    <div id="ci_doctor_signature_block" class="border rounded p-2 d-none mt-2">
+                      <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                        <div class="ci-signature-heading ci-signature-heading--doctor">Firma del médico</div>
+                        <span class="small text-muted" id="ci_doctor_signature_status">Sin firma</span>
+                      </div>
+                      <div class="d-flex flex-wrap gap-3 mb-2">
+                        <div class="form-check mb-0">
+                          <input class="form-check-input" type="radio" name="ci_doctor_signature_source" id="ci_doctor_signature_source_registered" value="registered">
+                          <label class="form-check-label small" for="ci_doctor_signature_source_registered">Usar firma registrada</label>
+                        </div>
+                        <div class="form-check mb-0">
+                          <input class="form-check-input" type="radio" name="ci_doctor_signature_source" id="ci_doctor_signature_source_local" value="local">
+                          <label class="form-check-label small" for="ci_doctor_signature_source_local">Firmar en pantalla</label>
+                        </div>
+                      </div>
+                      <div class="alert alert-light py-2 px-3 small d-none mb-2" id="ci_doctor_signature_registered_wrap">
+                        <div class="fw-semibold mb-1">Firma registrada disponible</div>
+                        <img
+                          id="ci_doctor_signature_registered_preview"
+                          src=""
+                          alt="Firma registrada del médico"
+                          class="img-fluid rounded border bg-white"
+                          style="max-height:140px;object-fit:contain;"
+                        >
+                      </div>
+                      <div class="mx-signature-pad" data-signature-role="doctor">
+                        <canvas id="ci_doctor_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
+                      </div>
+                      <div class="d-flex flex-wrap justify-content-end gap-2 mt-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ci-doctor-signature-open-qr">
+                          Firmar con celular
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="ci_doctor_signature_apply">Aplicar firma del médico</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_doctor_signature_clear">Limpiar firma del médico</button>
+                      </div>
+                      <div class="small text-success d-none mt-2" id="ci_doctor_signature_remote_status"></div>
+                      <div class="alert alert-warning py-2 px-3 d-none mt-2" id="ci_doctor_signature_inline_prompt">
+                        <div class="small mb-2">¿Deseas guardar esta firma como tu firma digitalizada para usarla en próximos documentos?</div>
+                        <div class="d-flex flex-wrap justify-content-end gap-2">
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_doctor_signature_inline_no">No guardar</button>
+                          <button type="button" class="btn btn-primary btn-sm" id="ci_doctor_signature_inline_yes">Sí, guardar firma</button>
+                        </div>
+                      </div>
+                    </div>
 
                     <div class="d-flex justify-content-end gap-2 mt-3">
                       <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_prev" disabled>Anterior</button>
@@ -6873,16 +7000,66 @@
                       <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="ci_cancel">Cancelar</button>
                     </div>
                     <div class="alert alert-danger py-2 mt-2 d-none" id="ci_emit_errors"></div>
+                    <div class="alert alert-secondary py-2 mt-2 d-none" id="ci_debug_panel" aria-live="polite">
+                      <div class="small fw-semibold mb-1">Debug consentimiento (local)</div>
+                      <div class="small" id="ci_debug_log" style="max-height:140px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;"></div>
+                    </div>
                   </div>
                 </div>
 
                 <div class="exp-card exp-card--secondary">
                   <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
-                    <span>Consentimientos emitidos</span>
+                    <span>Documentos recientes</span>
                   </div>
+                  <div class="small text-muted mb-2">Histórico disponible en esta fase: consentimientos informados emitidos.</div>
                   <div class="alert alert-info py-2 mb-3 d-none" id="ci_context_notice">Selecciona paciente</div>
                   <div class="alert alert-light mb-3" id="ci_empty_state">Aún no hay consentimientos para este paciente.</div>
                   <div class="ci-list d-grid gap-2" id="ci_list"></div>
+                </div>
+                <div class="modal fade" id="modalConsentimientoInformado" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Consentimiento informado</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body" id="ci_modal_body_slot"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal fade" id="modalConsentDraftPrompt" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Borrador disponible</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p class="mb-0" id="ci_draft_prompt_text">Hay un borrador guardado. ¿Deseas reabrirlo?</p>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_draft_discard_btn">Descartar borrador y comenzar uno nuevo</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="ci_draft_reopen_btn">Reabrir borrador</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal fade" id="modalDocumentosPlaceholder" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title" id="docs_placeholder_title">Documento clínico</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p class="mb-2" id="docs_placeholder_desc">Este documento se integrará progresivamente al sistema documental clínico.</p>
+                        <div class="small text-muted">El flujo definitivo incluirá captura, emisión y trazabilidad en clinical_documents.</div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 

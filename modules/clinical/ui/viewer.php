@@ -479,6 +479,8 @@ $consentLegalDetails = is_array($payload['consent_legal'] ?? null) ? $payload['c
 $consentSigner = is_array($payload['firmante'] ?? null) ? $payload['firmante'] : [];
 $consentWitnesses = is_array($payload['testigos'] ?? null) ? $payload['testigos'] : [];
 $consentRenderedText = trim((string)($payload['rendered_text'] ?? ($payload['text'] ?? $renderedText)));
+$consentFrozenSnapshot = is_array($payload['frozen_snapshot'] ?? null) ? $payload['frozen_snapshot'] : [];
+$consentFrozenHtml = trim((string)($consentFrozenSnapshot['html'] ?? ''));
 $consentStatus = trim((string)($payload['status'] ?? ($consentBlock['status'] ?? 'draft')));
 $consentPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
 $consentPatientSignature = is_array($consentSignatures['patient'] ?? null) ? $consentSignatures['patient'] : [];
@@ -949,6 +951,9 @@ if (!$embed) {
       $consentBodyText = trim((string)($consentTemplateSnapshot['body_text'] ?? ''));
       $consentStatusBadgeClass = ($consentStatus === 'granted') ? 'text-bg-success' : 'text-bg-secondary';
       ?>
+      <?php if ($consentFrozenHtml !== ''): ?>
+        <div class="mb-3"><?php echo $consentFrozenHtml; ?></div>
+      <?php else: ?>
       <article class="consent-doc-sheet mb-3">
         <header class="consent-doc-head">
           <div>
@@ -1081,6 +1086,7 @@ if (!$embed) {
           </section>
         <?php endif; ?>
       </article>
+      <?php endif; ?>
     <?php endif; ?>
 
     <?php if ($externalBlockedMessage !== ''): ?>

@@ -6703,16 +6703,28 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 
 /* DOCUMENTOS launcher (tab t-consent) */
-#t-consent .docs-launcher-grid{
-  display:grid;
-  grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:.8rem;
+#t-consent .docs-catalog-intro{
+  color:#51697e;
+  font-size:.92rem;
 }
-#t-consent .docs-launcher-group{
-  border:1px solid #d9e4ee;
-  border-radius:.7rem;
-  background:#fff;
-  padding:.65rem;
+#t-consent .docs-launcher-groups{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:.85rem;
+}
+#t-consent .docs-launcher-section{
+  border:1px solid #dce8f3;
+  border-radius:.65rem;
+  background:#fcfdff;
+  padding:.7rem .7rem .75rem;
+}
+#t-consent .docs-launcher-groups .docs-launcher-section{
+  margin-bottom:0 !important;
+}
+#t-consent .docs-launcher-list{
+  display:flex;
+  flex-direction:column;
+  gap:.45rem;
 }
 #t-consent .docs-launcher-group-title{
   font-size:.72rem;
@@ -6720,44 +6732,139 @@ body{margin:0;background:var(--mm-fondo-base);}
   letter-spacing:.03em;
   text-transform:uppercase;
   color:#4f6478;
-  margin-bottom:.45rem;
+  margin-bottom:.55rem;
 }
-#t-consent .docs-launcher-item{
+#t-consent .docs-launcher-row{
   width:100%;
   border:1px solid #dce7f1;
-  border-radius:.6rem;
+  border-radius:.55rem;
   background:#f9fbfe;
-  padding:.55rem .6rem;
+  padding:.6rem .72rem;
   text-align:left;
   display:flex;
-  flex-direction:column;
-  gap:.12rem;
-  margin-bottom:.45rem;
+  align-items:center;
+  gap:.62rem;
   cursor:pointer;
+  transition:border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
 }
-#t-consent .docs-launcher-item:last-child{
-  margin-bottom:0;
+#t-consent .docs-launcher-row:focus-visible,
+#t-consent .docs-launcher-row:hover{
+  border-color:#96bce7;
+  box-shadow:0 3px 10px rgba(16,58,103,.08);
+  background:#f4f9ff;
 }
-#t-consent .docs-launcher-item-title{
+#t-consent .docs-launcher-row-ico{
+  font-size:1.2rem;
+  color:#2e6aa4;
+  line-height:1;
+  flex:0 0 auto;
+}
+#t-consent .docs-launcher-row-main{
+  min-width:0;
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  gap:.08rem;
+}
+#t-consent .docs-launcher-row-title{
   font-weight:600;
   color:#12344e;
   line-height:1.2;
 }
-#t-consent .docs-launcher-item-desc{
+#t-consent .docs-launcher-row-desc{
   font-size:.78rem;
   color:#678095;
+  line-height:1.25;
 }
-#t-consent .docs-launcher-item--active{
+#t-consent .docs-launcher-row--active{
   border-color:#8db9f5;
   background:#eef5ff;
 }
-#t-consent .docs-launcher-item:hover{
-  border-color:#9ec2f1;
+#t-consent .docs-launcher-row-status{
+  width:max-content;
+  flex:0 0 auto;
+  font-size:.72rem;
+  font-weight:600;
+  border-radius:999px;
+  padding:.14rem .5rem;
+  background:#ecf2f8;
+  color:#5a7083;
+  white-space:nowrap;
+}
+#t-consent .docs-launcher-row-status.is-ready{
+  background:#e3f4ea;
+  color:#1f7a4f;
+}
+@media (min-width: 768px){
+  #t-consent .docs-launcher-groups{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:.95rem;
+  }
+}
+@media (max-width: 767.98px){
+  #t-consent .docs-launcher-row{
+    align-items:flex-start;
+    gap:.52rem;
+  }
+  #t-consent .docs-launcher-row-status{
+    margin-top:.1rem;
+  }
+}
+@media (max-width: 575.98px){
+  #t-consent .docs-launcher-row{
+    flex-wrap:wrap;
+  }
+  #t-consent .docs-launcher-row-status{
+    margin-left:1.82rem;
+  }
+}
+#modalConsentimientoInformado .modal-body{
+  padding:.9rem;
+}
+#modalConsentimientoInformado #ci_wizard{
+  margin-bottom:0 !important;
+}
+#ci_signature_block .ci-signature-heading,
+#ci_doctor_signature_block .ci-signature-heading{
+  font-size:1rem;
+  font-weight:700;
+  color:#12344e;
+  line-height:1.2;
+}
+#ci_doctor_signature_block .ci-signature-heading--doctor{
+  font-size:1.04rem;
+}
+/* Signature pad standard (reusable across clinical documents) */
+.mx-signature-pad{
+  width:100%;
+  max-width:620px;
+  margin:0 auto;
+  border:1px solid #d6e2ec;
+  border-radius:.62rem;
+  background:#f8fbff;
+  padding:.5rem;
+}
+.mx-signature-pad__canvas{
+  display:block;
+  width:100%;
+  height:190px;
+  border:1px solid #c9d8e5;
+  border-radius:.52rem;
+  background:#fff;
+}
+@media (max-width: 1199.98px){
+  .mx-signature-pad{max-width:560px;}
 }
 @media (max-width: 991.98px){
-  #t-consent .docs-launcher-grid{
-    grid-template-columns:1fr;
+  .mx-signature-pad{max-width:78%;}
+  .mx-signature-pad__canvas{height:180px;}
+}
+@media (max-width: 767.98px){
+  .mx-signature-pad{
+    max-width:100%;
+    padding:.45rem;
   }
+  .mx-signature-pad__canvas{height:174px;}
 }
 .clinical-card-actions {
   line-height: 1.08;

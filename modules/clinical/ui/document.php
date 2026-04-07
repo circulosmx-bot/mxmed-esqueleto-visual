@@ -126,6 +126,58 @@ function clinical_doc_clean_text($value): string {
   return $text;
 }
 
+function clinical_doc_extract_attachment_preview_url(array $payload): string {
+  $file = is_array($payload['file'] ?? null) ? $payload['file'] : [];
+  $optimized = is_array($file['optimized'] ?? null) ? $file['optimized'] : [];
+  $thumb = is_array($file['thumb'] ?? null) ? $file['thumb'] : [];
+  $original = is_array($file['original'] ?? null) ? $file['original'] : [];
+  $candidate = clinical_doc_clean_text(
+    (string)($optimized['url'] ?? $optimized['path'] ?? '')
+  );
+  if ($candidate === '') {
+    $candidate = clinical_doc_clean_text((string)($thumb['url'] ?? $thumb['path'] ?? ''));
+  }
+  if ($candidate === '') {
+    $candidate = clinical_doc_clean_text((string)($original['url'] ?? $original['path'] ?? ''));
+  }
+  if ($candidate === '') {
+    $candidate = clinical_doc_clean_text((string)($payload['preview_url'] ?? ($payload['file_url'] ?? ($payload['image_url'] ?? ($payload['url'] ?? '')))));
+  }
+  if ($candidate === '') {
+    return '';
+  }
+  return resolve_media_href($candidate);
+}
+
+function clinical_doc_resolve_attachment_reference(string $apiIndexBase, string $token, array &$cache): array {
+  $safeToken = trim($token);
+  if ($safeToken === '') {
+    return ['preview_href' => '', 'document_uuid' => ''];
+  }
+  if (isset($cache[$safeToken]) && is_array($cache[$safeToken])) {
+    return $cache[$safeToken];
+  }
+  if ($apiIndexBase === '') {
+    $cache[$safeToken] = ['preview_href' => '', 'document_uuid' => ''];
+    return $cache[$safeToken];
+  }
+  $url = $apiIndexBase . '/documents/' . rawurlencode($safeToken);
+  $decoded = http_get_json($url, 8);
+  if (($decoded['ok'] ?? false) !== true || !is_array($decoded['data']['document'] ?? null)) {
+    $cache[$safeToken] = ['preview_href' => '', 'document_uuid' => ''];
+    return $cache[$safeToken];
+  }
+  $doc = $decoded['data']['document'];
+  $docUuid = clinical_doc_clean_text((string)($doc['document_uuid'] ?? ($doc['document_id'] ?? '')));
+  $docPayload = is_array($doc['content']['payload'] ?? null) ? $doc['content']['payload'] : [];
+  $previewHref = clinical_doc_extract_attachment_preview_url($docPayload);
+  $cache[$safeToken] = [
+    'preview_href' => $previewHref,
+    'document_uuid' => $docUuid,
+  ];
+  return $cache[$safeToken];
+}
+
 function clinical_doc_format_date(string $value, bool $includeTime = false): string {
   $safe = trim($value);
   if ($safe === '') {
@@ -135,7 +187,26 @@ function clinical_doc_format_date(string $value, bool $includeTime = false): str
   if ($ts === false) {
     return $safe;
   }
-  return $includeTime ? date('Y-m-d H:i:s', $ts) : date('Y-m-d', $ts);
+  $months = [
+    1 => 'Enero',
+    2 => 'Febrero',
+    3 => 'Marzo',
+    4 => 'Abril',
+    5 => 'Mayo',
+    6 => 'Junio',
+    7 => 'Julio',
+    8 => 'Agosto',
+    9 => 'Septiembre',
+    10 => 'Octubre',
+    11 => 'Noviembre',
+    12 => 'Diciembre',
+  ];
+  $month = (string)($months[(int)date('n', $ts)] ?? date('m', $ts));
+  $datePart = date('d', $ts) . '-' . $month . '-' . date('Y', $ts);
+  if (!$includeTime) {
+    return $datePart;
+  }
+  return $datePart . ' - ' . date('H:i:s', $ts);
 }
 
 function http_get_json(string $url, int $timeoutSeconds = 8): array {
@@ -306,10 +377,15 @@ $consentSigner = ($isConsentDoc && is_array($payload['firmante'] ?? null)) ? $pa
 $consentWitnesses = ($isConsentDoc && is_array($payload['testigos'] ?? null)) ? $payload['testigos'] : [];
 $consentSignatures = ($isConsentDoc && is_array($payload['signatures'] ?? null)) ? $payload['signatures'] : [];
 $consentPatientSignature = ($isConsentDoc && is_array($consentSignatures['patient'] ?? null)) ? $consentSignatures['patient'] : [];
+$consentDoctorSignature = ($isConsentDoc && is_array($consentSignatures['doctor'] ?? null)) ? $consentSignatures['doctor'] : [];
 $consentPatientSignatureImage = ($isConsentDoc ? clinical_doc_clean_text((string)($consentPatientSignature['image_data'] ?? '')) : '');
 $consentPatientSignatureSignerName = ($isConsentDoc ? clinical_doc_clean_text((string)($consentPatientSignature['signer_name'] ?? '')) : '');
 $consentPatientSignatureSignedAt = ($isConsentDoc ? clinical_doc_clean_text((string)($consentPatientSignature['signed_at'] ?? '')) : '');
 $consentPatientSignatureSource = ($isConsentDoc ? clinical_doc_clean_text((string)($consentPatientSignature['source'] ?? '')) : '');
+$consentDoctorSignatureImage = ($isConsentDoc ? clinical_doc_clean_text((string)($consentDoctorSignature['image_data'] ?? '')) : '');
+$consentDoctorSignatureSignerName = ($isConsentDoc ? clinical_doc_clean_text((string)($consentDoctorSignature['signer_name'] ?? '')) : '');
+$consentDoctorSignatureSignedAt = ($isConsentDoc ? clinical_doc_clean_text((string)($consentDoctorSignature['signed_at'] ?? '')) : '');
+$consentDoctorSignatureSource = ($isConsentDoc ? clinical_doc_clean_text((string)($consentDoctorSignature['source'] ?? '')) : '');
 $consentIdentityAttachments = [];
 if ($isConsentDoc) {
   if (is_array($payload['signer_identity_attachments'] ?? null)) {
@@ -318,7 +394,70 @@ if ($isConsentDoc) {
     $consentIdentityAttachments = $payload['attachments']['signer_identity'];
   }
 }
+$consentIdentityAttachmentsPrepared = [];
+$consentIdentityHasVisualMedia = false;
+$consentIdentityForceSecondPage = false;
+if ($isConsentDoc && is_array($consentIdentityAttachments) && $consentIdentityAttachments !== []) {
+  $consentAttachmentResolveCache = [];
+  foreach ($consentIdentityAttachments as $index => $attRaw) {
+    if (!is_array($attRaw)) {
+      continue;
+    }
+    $attTitle = clinical_doc_clean_text((string)($attRaw['title'] ?? 'Anexo de identidad'));
+    $attSource = clinical_doc_clean_text((string)($attRaw['source'] ?? ''));
+    $attKind = clinical_doc_clean_text((string)($attRaw['identity_doc_label'] ?? ($attRaw['identity_doc_kind'] ?? '')));
+    $attSourceLabelMap = [
+      'consentimiento_identidad_qr_v1' => 'captura por celular',
+      'consentimiento_identidad_local' => 'carga local',
+    ];
+    $attSourceLabel = (string)($attSourceLabelMap[$attSource] ?? '');
+    $attMeta = implode(' · ', array_values(array_filter([$attKind, $attSourceLabel])));
+    $previewUrl = clinical_doc_clean_text((string)($attRaw['preview_url'] ?? ($attRaw['file_url'] ?? ($attRaw['image_url'] ?? ''))));
+    $previewHref = resolve_media_href($previewUrl);
+    $documentUuidRaw = clinical_doc_clean_text((string)($attRaw['document_uuid'] ?? ''));
+    $documentIdRaw = clinical_doc_clean_text((string)($attRaw['document_id'] ?? ''));
+    if ($previewHref === '' && ($documentUuidRaw !== '' || $documentIdRaw !== '')) {
+      $resolved = clinical_doc_resolve_attachment_reference(
+        $apiIndexBase,
+        $documentUuidRaw !== '' ? $documentUuidRaw : $documentIdRaw,
+        $consentAttachmentResolveCache
+      );
+      if ($previewHref === '' && (string)($resolved['preview_href'] ?? '') !== '') {
+        $previewHref = (string)$resolved['preview_href'];
+      }
+      if ($documentUuidRaw === '' && (string)($resolved['document_uuid'] ?? '') !== '') {
+        $documentUuidRaw = (string)$resolved['document_uuid'];
+      }
+    }
+    $isPdf = (bool)preg_match('/\.pdf(?:\?|$)/i', $previewHref);
+    if ($previewHref !== '') {
+      $consentIdentityHasVisualMedia = true;
+    }
+    if ($isPdf || count($consentIdentityAttachments) > 1) {
+      $consentIdentityForceSecondPage = true;
+    }
+    $consentIdentityAttachmentsPrepared[] = [
+      'index' => $index + 1,
+      'title' => ($attTitle !== '' ? $attTitle : 'Anexo de identidad'),
+      'meta' => $attMeta,
+      'preview_href' => $previewHref,
+      'is_pdf' => $isPdf,
+      'document_uuid' => $documentUuidRaw,
+      'document_id' => $documentIdRaw,
+    ];
+  }
+}
 $consentRenderedText = ($isConsentDoc ? clinical_doc_clean_text((string)($payload['rendered_text'] ?? ($payload['text'] ?? $renderedText))) : '');
+$consentFrozenSnapshot = ($isConsentDoc && is_array($payload['frozen_snapshot'] ?? null)) ? $payload['frozen_snapshot'] : [];
+$consentFrozenHtml = ($isConsentDoc ? trim((string)($consentFrozenSnapshot['html'] ?? '')) : '');
+$consentForceDynamicRender = false;
+if ($isConsentDoc && $consentFrozenHtml !== '' && $consentIdentityHasVisualMedia) {
+  $frozenHasIdentityFallback = stripos($consentFrozenHtml, 'Anexo cargado sin vista previa disponible') !== false
+    || stripos($consentFrozenHtml, 'Anexo asociado (ID interno)') !== false;
+  if ($frozenHasIdentityFallback) {
+    $consentForceDynamicRender = true;
+  }
+}
 $consentStatus = ($isConsentDoc ? clinical_doc_clean_text((string)($payload['status'] ?? ($consentBlock['status'] ?? 'draft'))) : '');
 $consentTitle = ($isConsentDoc ? clinical_doc_clean_text((string)($consentBlock['document_title'] ?? $title)) : '');
 $consentProcedure = ($isConsentDoc ? clinical_doc_clean_text((string)($consentBlock['document_title'] ?? '')) : '');
@@ -357,13 +496,18 @@ $consentSignerTypeLabel = ($isConsentDoc ? (string)($consentSignerTypeLabels[$co
 $consentSignatureSourceLabelMap = [
   'local_canvas' => 'Firma local',
   'remote_qr' => 'Firma remota',
+  'registered_profile' => 'Firma registrada',
 ];
 $consentSignatureSourceLabel = ($isConsentDoc ? (string)($consentSignatureSourceLabelMap[$consentPatientSignatureSource] ?? '') : '');
+$consentDoctorSignatureSourceLabel = ($isConsentDoc ? (string)($consentSignatureSourceLabelMap[$consentDoctorSignatureSource] ?? '') : '');
 $consentWitness1 = ($isConsentDoc && is_array($consentWitnesses[0] ?? null)) ? clinical_doc_clean_text((string)($consentWitnesses[0]['nombre'] ?? '')) : '';
 $consentWitness2 = ($isConsentDoc && is_array($consentWitnesses[1] ?? null)) ? clinical_doc_clean_text((string)($consentWitnesses[1]['nombre'] ?? '')) : '';
 $consentTemplateBody = ($isConsentDoc ? clinical_doc_clean_text((string)($consentTemplateSnapshot['body_text'] ?? '')) : '');
 $consentEmissionDate = ($isConsentDoc ? clinical_doc_format_date((string)($consentBlock['granted_at'] ?? $date), false) : '');
-$consentEmissionTime = ($isConsentDoc ? clinical_doc_format_date((string)($consentBlock['granted_at'] ?? $date), true) : '');
+$consentEmissionDateTime = ($isConsentDoc ? clinical_doc_format_date((string)($consentBlock['granted_at'] ?? $date), true) : '');
+$consentPlace = ($isConsentDoc ? clinical_doc_clean_text((string)($payload['place'] ?? ($payload['context']['location'] ?? ''))) : '');
+$consentInstitution = ($isConsentDoc ? clinical_doc_clean_text((string)($payload['institution']['name'] ?? ($payload['institution_name'] ?? ''))) : '');
+$consentFacility = ($isConsentDoc ? clinical_doc_clean_text((string)($payload['facility']['name'] ?? ($payload['facility_name'] ?? ''))) : '');
 
 require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
@@ -466,59 +610,164 @@ if (!$embed) {
 <style>
   .consent-print-sheet{
     background:#fff;
-    border:1px solid #d7eaf2;
-    border-radius:14px;
-    padding:18px;
+    border:1px solid #d4dbe2;
+    border-radius:6px;
+    padding:26px 30px;
     display:grid;
-    gap:14px;
+    gap:16px;
+    font-family:"Inter","Helvetica Neue",Arial,sans-serif;
+    font-size:12px;
+    line-height:1.5;
+    color:#111;
   }
   .consent-print-head{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    gap:12px;
-    border-bottom:1px solid #edf4f8;
-    padding-bottom:10px;
     break-inside:avoid;
   }
-  .consent-print-title{font-size:1.05rem;font-weight:800;color:#0a405f;line-height:1.3;}
-  .consent-print-meta{font-size:.85rem;color:#5d6b74;}
-  .consent-print-status{font-size:.78rem;font-weight:700;padding:4px 8px;border-radius:999px;background:#eef4f8;color:#0a405f;}
-  .consent-print-status.is-granted{background:#dcfce7;color:#166534;}
-  .consent-print-status.is-draft{background:#f1f5f9;color:#334155;}
+  .consent-print-title-wrap{
+    text-align:center;
+    border-bottom:1px solid #d9e0e5;
+    padding-bottom:12px;
+  }
+  .consent-print-title{
+    font-size:1.1rem;
+    font-weight:700;
+    letter-spacing:.03em;
+    color:#000;
+    line-height:1.3;
+    text-transform:uppercase;
+  }
+  .consent-print-ident{
+    margin-top:10px;
+    font-size:.9rem;
+    line-height:1.48;
+    display:grid;
+    gap:3px;
+  }
+  .consent-print-ident p{
+    margin:0;
+  }
+  .consent-print-ident b{
+    display:inline-block;
+    min-width:112px;
+    font-weight:700;
+  }
+  .consent-print-legal{
+    font-size:.94rem;
+    line-height:1.56;
+    text-align:justify;
+    color:#000;
+  }
+  .consent-print-legal p{margin:0 0 10px;}
   .consent-print-section-title{
-    font-size:.82rem;
-    font-weight:800;
-    color:#0a405f;
+    font-size:.94rem;
+    font-weight:700;
+    color:#000;
+    margin-bottom:6px;
     text-transform:uppercase;
     letter-spacing:.02em;
-    margin-bottom:4px;
   }
-  .consent-print-text{font-size:.9rem;color:#273b47;white-space:pre-wrap;line-height:1.46;}
+  .consent-print-text{
+    font-size:.93rem;
+    color:#000;
+    white-space:pre-wrap;
+    line-height:1.56;
+    text-align:justify;
+  }
+  .consent-print-clinical-section{
+    break-inside:avoid;
+  }
+  .consent-print-identity-attachments{
+    display:grid;
+    gap:12px;
+    break-inside:avoid;
+  }
+  .consent-print-identity-attachments.consider-second-page{
+    page-break-before:auto;
+    break-before:auto;
+  }
+  .consent-print-identity-attachments.force-second-page{
+    page-break-before:always;
+    break-before:page;
+  }
+  .consent-print-identity-item{
+    border:1px solid #d9e0e5;
+    border-radius:8px;
+    padding:10px;
+    background:#fff;
+    display:grid;
+    gap:8px;
+  }
+  .consent-print-identity-label{
+    font-size:.85rem;
+    font-weight:700;
+    color:#111827;
+  }
+  .consent-print-identity-meta{
+    font-size:.8rem;
+    color:#4b5563;
+  }
+  .consent-print-identity-preview{
+    width:100%;
+    max-height:420px;
+    object-fit:contain;
+    border:1px solid #d5dce3;
+    border-radius:6px;
+    background:#fff;
+  }
+  .consent-print-identity-file{
+    width:100%;
+    min-height:380px;
+    border:1px solid #d5dce3;
+    border-radius:6px;
+    background:#fff;
+  }
+  .consent-print-identity-link{
+    font-size:.84rem;
+  }
+  .consent-print-signatures{
+    border-top:1px solid #d9e0e5;
+    padding-top:12px;
+    break-inside:avoid;
+  }
   .consent-print-sign-grid{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:12px;
-    break-inside:avoid;
+    gap:18px 24px;
   }
   .consent-print-sign{
-    border:1px solid #e8f0f5;
-    border-radius:10px;
-    padding:10px;
+    padding-top:4px;
+  }
+  .consent-print-sign-label{
+    font-size:.86rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.02em;
+    margin-bottom:5px;
   }
   .consent-print-sign-image{
-    max-width:220px;
-    max-height:90px;
+    max-width:100%;
+    max-height:160px;
     width:100%;
     object-fit:contain;
-    border:1px dashed #d0dde6;
-    border-radius:8px;
+    border:1px solid #c3ced8;
     background:#fff;
-    margin-top:8px;
   }
-  .consent-print-sign-line{margin-top:32px;border-top:1px solid #9fb6c4;}
+  .consent-print-sign-meta{font-size:.84rem;}
+  .consent-print-sign-extra{font-size:.8rem;color:#4b5563;}
+  .consent-print-sign-line{margin-top:28px;border-top:1px solid #9fb6c4;}
+  .consent-print-sign-name{
+    margin-top:6px;
+    font-size:.93rem;
+    font-weight:700;
+  }
+  .consent-print-sign-doc{
+    font-size:.84rem;
+    color:#374151;
+  }
+  .consent-print-sign-witnesses .consent-print-sign-grid{
+    margin-top:4px;
+  }
   @media (max-width: 991.98px){
-    .consent-print-head{flex-direction:column;align-items:flex-start;}
     .consent-print-sign-grid{grid-template-columns:1fr;}
   }
   @media print{
@@ -531,7 +780,11 @@ if (!$embed) {
       border-radius:0 !important;
       box-shadow:none !important;
       padding:0 !important;
-      gap:10px;
+      gap:12px;
+    }
+    .consent-print-identity-item{
+      border-color:#cfd8df;
+      break-inside:avoid;
     }
   }
 </style>
@@ -697,128 +950,177 @@ if (!$embed) {
         </footer>
       </article>
     <?php elseif ($isConsentDoc): ?>
+      <?php if ($consentFrozenHtml !== '' && !$consentForceDynamicRender): ?>
+        <div class="mb-3"><?php echo $consentFrozenHtml; ?></div>
+      <?php else: ?>
+      <?php
+      $consentDateOut = $consentEmissionDate !== '' ? $consentEmissionDate : clinical_doc_format_date($date, false);
+      $consentPlaceOut = $consentPlace !== '' ? $consentPlace : 'No registrado';
+      $consentInstitutionOut = $consentInstitution !== '' ? $consentInstitution : 'No registrada';
+      $consentFacilityOut = $consentFacility !== '' ? $consentFacility : 'No registrado';
+      $consentPatientOut = $consentPatientName !== '' ? $consentPatientName : 'Paciente no registrado';
+      $consentDoctorOut = $consentDoctorName !== '' ? $consentDoctorName : 'Médico tratante';
+      $consentProcedureOut = $consentProcedure !== '' ? $consentProcedure : 'Sin descripción clínica registrada.';
+      $consentRisksOut = $consentTemplateBody !== '' ? $consentTemplateBody : 'Riesgos explicados conforme a criterio médico tratante.';
+      $consentBenefitsOut = $consentBenefits !== '' ? $consentBenefits : 'Sin beneficios especificados.';
+      $consentAlternativesOut = $consentAlternatives !== '' ? $consentAlternatives : 'Sin alternativas registradas.';
+      $consentNoAcceptOut = $consentNoAccept !== '' ? $consentNoAccept : 'No especificado.';
+      $consentSignerRoleOut = $consentSignerRelation !== '' ? $consentSignerRelation : ($consentSignerTypeLabel !== '' ? $consentSignerTypeLabel : 'paciente');
+      ?>
       <article class="consent-print-sheet">
         <header class="consent-print-head">
-          <div>
-            <div class="consent-print-title"><?php echo h($consentTitle !== '' ? $consentTitle : 'Consentimiento informado'); ?></div>
-            <div class="consent-print-meta">Paciente: <?php echo h($consentPatientName !== '' ? $consentPatientName : 'Paciente'); ?></div>
-            <div class="consent-print-meta">Médico: <?php echo h($consentDoctorName !== '' ? $consentDoctorName : 'Médico tratante'); ?><?php echo $consentDoctorLicense !== '' ? h(' · Cédula: ' . $consentDoctorLicense) : ''; ?></div>
+          <div class="consent-print-title-wrap">
+            <div class="consent-print-title">CONSENTIMIENTO INFORMADO</div>
           </div>
-          <div class="text-end">
-            <span class="consent-print-status <?php echo h(($consentStatus === 'granted') ? 'is-granted' : 'is-draft'); ?>"><?php echo h($consentStatus !== '' ? $consentStatus : 'draft'); ?></span>
-            <div class="consent-print-meta mt-2">Fecha: <?php echo h($consentEmissionDate !== '' ? $consentEmissionDate : clinical_doc_format_date($date, false)); ?></div>
-            <?php if ($consentEmissionTime !== ''): ?>
-              <div class="consent-print-meta"><?php echo h($consentEmissionTime); ?></div>
-            <?php endif; ?>
+          <div class="consent-print-ident">
+            <p><b>Fecha:</b> <?php echo h($consentEmissionDateTime !== '' ? $consentEmissionDateTime : $consentDateOut); ?></p>
+            <p><b>Lugar:</b> <?php echo h($consentPlaceOut); ?></p>
+            <p><b>Institución:</b> <?php echo h($consentInstitutionOut); ?></p>
+            <p><b>Establecimiento médico:</b> <?php echo h($consentFacilityOut); ?></p>
+            <p><b>Paciente:</b> <?php echo h($consentPatientOut); ?></p>
+            <p><b>Médico tratante:</b> <?php echo h($consentDoctorOut); ?><?php echo $consentDoctorLicense !== '' ? h(' · Cédula profesional: ' . $consentDoctorLicense) : ''; ?></p>
           </div>
         </header>
 
-        <section>
-          <div class="consent-print-section-title">Descripción del procedimiento / acto autorizado</div>
-          <div class="consent-print-text"><?php echo nl2br(h($consentProcedure !== '' ? $consentProcedure : 'Sin descripción registrada.')); ?></div>
+        <section class="consent-print-legal">
+          <p>Yo, <?php echo h($consentSignerName !== '' ? $consentSignerName : $consentPatientOut); ?>, en mi carácter de <?php echo h(strtolower($consentSignerRoleOut)); ?>, manifiesto que he recibido información suficiente, comprensible y oportuna sobre el procedimiento o tratamiento propuesto.</p>
+          <p>Declaro que se me explicaron su naturaleza, objetivos, riesgos previsibles, beneficios esperados y alternativas disponibles, resolviendo mis dudas antes de emitir este consentimiento de manera libre y voluntaria.</p>
+          <p>Entiendo que puedo formular preguntas adicionales en cualquier momento y que tengo derecho a revocar este consentimiento antes de la realización del acto clínico, conforme a la normatividad aplicable.</p>
+          <p>Autorización de contingencias médicas: <?php echo h($consentContingency ? 'Sí autorizo' : 'No autorizo'); ?>.</p>
         </section>
 
-        <section>
-          <div class="consent-print-section-title">Riesgos y beneficios esperados</div>
-          <div class="consent-print-text"><?php echo nl2br(h($consentTemplateBody !== '' ? $consentTemplateBody : 'Riesgos explicados conforme a criterio médico.')); ?></div>
-          <?php if ($consentBenefits !== ''): ?>
-            <div class="consent-print-text mt-2"><?php echo nl2br(h('Beneficios esperados: ' . $consentBenefits)); ?></div>
-          <?php endif; ?>
+        <section class="consent-print-clinical-section">
+          <div class="consent-print-section-title">Descripción del procedimiento o tratamiento</div>
+          <div class="consent-print-text"><?php echo nl2br(h($consentProcedureOut)); ?></div>
         </section>
 
-        <?php if ($consentAlternatives !== ''): ?>
-          <section>
-            <div class="consent-print-section-title">Alternativas</div>
-            <div class="consent-print-text"><?php echo nl2br(h($consentAlternatives)); ?></div>
-          </section>
-        <?php endif; ?>
+        <section class="consent-print-clinical-section">
+          <div class="consent-print-section-title">Riesgos</div>
+          <div class="consent-print-text"><?php echo nl2br(h($consentRisksOut)); ?></div>
+        </section>
 
-        <?php if ($consentNoAccept !== ''): ?>
-          <section>
-            <div class="consent-print-section-title">Consecuencias de no realizarlo</div>
-            <div class="consent-print-text"><?php echo nl2br(h($consentNoAccept)); ?></div>
-          </section>
-        <?php endif; ?>
+        <section class="consent-print-clinical-section">
+          <div class="consent-print-section-title">Beneficios esperados</div>
+          <div class="consent-print-text"><?php echo nl2br(h($consentBenefitsOut)); ?></div>
+        </section>
 
-        <section>
-          <div class="consent-print-section-title">Autorización y declaración</div>
-          <div class="consent-print-text">Autorización para atención de contingencias y urgencias: <?php echo h($consentContingency ? 'Sí autorizo' : 'No autorizo'); ?>.</div>
-          <div class="consent-print-text">Declaro que este consentimiento fue explicado en lenguaje claro y que se resolvieron mis dudas antes de firmar.</div>
+        <section class="consent-print-clinical-section">
+          <div class="consent-print-section-title">Alternativas</div>
+          <div class="consent-print-text"><?php echo nl2br(h($consentAlternativesOut)); ?></div>
+        </section>
+
+        <section class="consent-print-clinical-section">
+          <div class="consent-print-section-title">Consecuencias de no aceptar o diferir la atención</div>
+          <div class="consent-print-text"><?php echo nl2br(h($consentNoAcceptOut)); ?></div>
         </section>
 
         <?php if ($consentRenderedText !== ''): ?>
-          <section>
-            <div class="consent-print-section-title">Redacción legal integrada</div>
+          <section class="consent-print-clinical-section">
+            <div class="consent-print-section-title">Declaración legal complementaria</div>
             <div class="consent-print-text"><?php echo nl2br(h($consentRenderedText)); ?></div>
           </section>
         <?php endif; ?>
 
-        <?php if (is_array($consentIdentityAttachments) && $consentIdentityAttachments !== []): ?>
-          <section>
-            <div class="consent-print-section-title">Anexos de identidad del firmante</div>
-            <div class="consent-print-text">
-              <?php
-              $attLines = [];
-              foreach ($consentIdentityAttachments as $index => $att) {
-                $attTitle = clinical_doc_clean_text((string)($att['title'] ?? 'Anexo de identidad'));
-                $attSource = clinical_doc_clean_text((string)($att['source'] ?? ''));
-                $attKind = clinical_doc_clean_text((string)($att['identity_doc_label'] ?? ($att['identity_doc_kind'] ?? '')));
-                $attSourceLabelMap = [
-                  'consentimiento_identidad_qr_v1' => 'captura por celular',
-                  'consentimiento_identidad_local' => 'carga local',
-                ];
-                $attSourceLabel = (string)($attSourceLabelMap[$attSource] ?? '');
-                $meta = implode(' · ', array_values(array_filter([$attKind, $attSourceLabel])));
-                $line = ($index + 1) . '. ' . ($attTitle !== '' ? $attTitle : 'Anexo de identidad');
-                if ($meta !== '') {
-                  $line .= ' (' . $meta . ')';
-                }
-                $attLines[] = $line;
-              }
-              echo nl2br(h(implode("\n", $attLines)));
-              ?>
+        <section class="consent-print-signatures">
+          <div class="consent-print-sign-grid">
+            <div class="consent-print-sign">
+              <div class="consent-print-sign-label"><?php echo h($consentSignerTypeLabel !== '' ? ('Firma de ' . $consentSignerTypeLabel) : 'Firma del paciente o responsable'); ?></div>
+              <?php if ($consentPatientSignatureImage !== ''): ?>
+                <img class="consent-print-sign-image" src="<?php echo h($consentPatientSignatureImage); ?>" alt="Firma del paciente o responsable">
+                <?php if ($consentPatientSignatureSignerName !== '' || $consentPatientSignatureSignedAt !== ''): ?>
+                  <div class="consent-print-sign-meta mt-1">
+                    <?php echo h($consentPatientSignatureSignerName !== '' ? $consentPatientSignatureSignerName : $consentSignerName); ?>
+                    <?php if ($consentPatientSignatureSignedAt !== ''): ?>
+                      <?php echo h(' · ' . $consentPatientSignatureSignedAt); ?>
+                    <?php endif; ?>
+                    <?php if ($consentSignatureSourceLabel !== ''): ?>
+                      <?php echo h(' · ' . $consentSignatureSourceLabel); ?>
+                    <?php endif; ?>
+                  </div>
+                <?php endif; ?>
+              <?php else: ?>
+                <div class="consent-print-sign-line"></div>
+              <?php endif; ?>
+              <div class="consent-print-sign-name"><?php echo h($consentSignerName !== '' ? $consentSignerName : '________________'); ?></div>
+              <?php if ($consentSignerRelation !== ''): ?>
+                <div class="consent-print-sign-doc"><?php echo h($consentSignerRelation); ?></div>
+              <?php endif; ?>
             </div>
+            <div class="consent-print-sign">
+              <div class="consent-print-sign-label">Firma del médico</div>
+              <?php if ($consentDoctorSignatureImage !== ''): ?>
+                <img class="consent-print-sign-image" src="<?php echo h($consentDoctorSignatureImage); ?>" alt="Firma del médico">
+                <?php if ($consentDoctorSignatureSignerName !== '' || $consentDoctorSignatureSignedAt !== ''): ?>
+                  <div class="consent-print-sign-meta mt-1">
+                    <?php echo h($consentDoctorSignatureSignerName !== '' ? $consentDoctorSignatureSignerName : $consentDoctorName); ?>
+                    <?php if ($consentDoctorSignatureSignedAt !== ''): ?>
+                      <?php echo h(' · ' . $consentDoctorSignatureSignedAt); ?>
+                    <?php endif; ?>
+                    <?php if ($consentDoctorSignatureSourceLabel !== ''): ?>
+                      <?php echo h(' · ' . $consentDoctorSignatureSourceLabel); ?>
+                    <?php endif; ?>
+                  </div>
+                <?php endif; ?>
+              <?php else: ?>
+                <div class="consent-print-sign-line"></div>
+              <?php endif; ?>
+              <div class="consent-print-sign-name"><?php echo h($consentDoctorOut); ?></div>
+              <?php if ($consentDoctorLicense !== ''): ?>
+                <div class="consent-print-sign-doc"><?php echo h('Cédula profesional: ' . $consentDoctorLicense); ?></div>
+              <?php endif; ?>
+            </div>
+          </div>
+          <?php if ($consentWitness1 !== '' || $consentWitness2 !== ''): ?>
+            <div class="consent-print-sign-witnesses">
+              <div class="consent-print-sign-grid">
+                <?php if ($consentWitness1 !== ''): ?>
+                  <div class="consent-print-sign">
+                    <div class="consent-print-sign-label">Firma de testigo 1</div>
+                    <div class="consent-print-sign-line"></div>
+                    <div class="consent-print-sign-name"><?php echo h($consentWitness1); ?></div>
+                  </div>
+                <?php endif; ?>
+                <?php if ($consentWitness2 !== ''): ?>
+                  <div class="consent-print-sign">
+                    <div class="consent-print-sign-label">Firma de testigo 2</div>
+                    <div class="consent-print-sign-line"></div>
+                    <div class="consent-print-sign-name"><?php echo h($consentWitness2); ?></div>
+                  </div>
+                <?php endif; ?>
+                </div>
+              </div>
+            </div>
+          <?php endif; ?>
+        </section>
+
+        <?php if (is_array($consentIdentityAttachmentsPrepared) && $consentIdentityAttachmentsPrepared !== []): ?>
+          <section class="consent-print-clinical-section consent-print-identity-attachments <?php echo $consentIdentityForceSecondPage ? 'force-second-page' : ($consentIdentityHasVisualMedia ? 'consider-second-page' : ''); ?>">
+            <div class="consent-print-section-title">Anexos de identidad del firmante</div>
+            <?php foreach ($consentIdentityAttachmentsPrepared as $att): ?>
+              <article class="consent-print-identity-item">
+                <div class="consent-print-identity-label"><?php echo h((string)$att['index']); ?>. <?php echo h((string)$att['title']); ?></div>
+                <?php if ((string)$att['meta'] !== ''): ?>
+                  <div class="consent-print-identity-meta"><?php echo h((string)$att['meta']); ?></div>
+                <?php endif; ?>
+                <?php if ((string)$att['preview_href'] !== '' && (bool)$att['is_pdf']): ?>
+                  <object class="consent-print-identity-file" data="<?php echo h((string)$att['preview_href']); ?>" type="application/pdf">
+                    <p class="consent-print-text">Vista previa PDF no disponible. Abre el anexo en: <a class="consent-print-identity-link" target="_blank" rel="noopener" href="<?php echo h((string)$att['preview_href']); ?>"><?php echo h((string)$att['preview_href']); ?></a></p>
+                  </object>
+                <?php elseif ((string)$att['preview_href'] !== ''): ?>
+                  <img class="consent-print-identity-preview" src="<?php echo h((string)$att['preview_href']); ?>" alt="<?php echo h((string)$att['title']); ?>">
+                <?php elseif ((string)$att['document_uuid'] !== ''): ?>
+                  <div class="consent-print-text">Anexo asociado al expediente: <a class="consent-print-identity-link" target="_blank" rel="noopener" href="/modules/clinical/ui/viewer.php?uuid=<?php echo rawurlencode((string)$att['document_uuid']); ?>"><?php echo h((string)$att['document_uuid']); ?></a></div>
+                <?php elseif ((string)$att['document_id'] !== ''): ?>
+                  <div class="consent-print-text">Anexo asociado (ID interno): <?php echo h((string)$att['document_id']); ?></div>
+                <?php else: ?>
+                  <div class="consent-print-text">Anexo cargado sin vista previa disponible.</div>
+                <?php endif; ?>
+              </article>
+            <?php endforeach; ?>
           </section>
         <?php endif; ?>
-
-        <section class="consent-print-sign-grid">
-          <div class="consent-print-sign">
-            <div class="consent-print-meta"><?php echo h($consentSignerTypeLabel !== '' ? $consentSignerTypeLabel : 'Paciente'); ?></div>
-            <div class="consent-print-text"><?php echo h($consentSignerName !== '' ? $consentSignerName : '________________'); ?><?php echo $consentSignerRelation !== '' ? h(' · ' . $consentSignerRelation) : ''; ?></div>
-            <?php if ($consentPatientSignatureImage !== ''): ?>
-              <img class="consent-print-sign-image" src="<?php echo h($consentPatientSignatureImage); ?>" alt="Firma del paciente o representante">
-              <?php if ($consentPatientSignatureSignerName !== '' || $consentPatientSignatureSignedAt !== ''): ?>
-                <div class="consent-print-meta mt-1">
-                  <?php echo h($consentPatientSignatureSignerName !== '' ? $consentPatientSignatureSignerName : $consentSignerName); ?>
-                  <?php if ($consentPatientSignatureSignedAt !== ''): ?>
-                    <?php echo h(' · ' . $consentPatientSignatureSignedAt); ?>
-                  <?php endif; ?>
-                  <?php if ($consentSignatureSourceLabel !== ''): ?>
-                    <?php echo h(' · ' . $consentSignatureSourceLabel); ?>
-                  <?php endif; ?>
-                </div>
-              <?php endif; ?>
-            <?php else: ?>
-              <div class="consent-print-sign-line"></div>
-            <?php endif; ?>
-          </div>
-          <div class="consent-print-sign">
-            <div class="consent-print-meta">Médico responsable</div>
-            <div class="consent-print-text"><?php echo h($consentDoctorName !== '' ? $consentDoctorName : 'Médico tratante'); ?><?php echo $consentDoctorLicense !== '' ? h(' · Cédula: ' . $consentDoctorLicense) : ''; ?></div>
-            <div class="consent-print-sign-line"></div>
-          </div>
-          <div class="consent-print-sign">
-            <div class="consent-print-meta">Testigo 1</div>
-            <div class="consent-print-text"><?php echo h($consentWitness1 !== '' ? $consentWitness1 : '________________'); ?></div>
-            <div class="consent-print-sign-line"></div>
-          </div>
-          <div class="consent-print-sign">
-            <div class="consent-print-meta">Testigo 2</div>
-            <div class="consent-print-text"><?php echo h($consentWitness2 !== '' ? $consentWitness2 : '________________'); ?></div>
-            <div class="consent-print-sign-line"></div>
-          </div>
-        </section>
       </article>
+      <?php endif; ?>
     <?php else: ?>
     <div class="mm-card mb-3">
       <div class="body small">
