@@ -6598,13 +6598,13 @@
                           </span>
                           <span class="docs-launcher-row-status">Configuración inicial</span>
                         </button>
-                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="informe_medico" data-doc-title="Informe médico" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Resumen clínico estructurado de evolución, hallazgos y conducta médica.">
+                        <button type="button" class="docs-launcher-row docs-launcher-row--active" data-action="documents-open-informe" data-doc-code="informe_medico" data-doc-title="Informe médico" data-doc-entry="existing-flow" data-doc-status="Ya funcional" data-doc-desc="Resumen clínico estructurado de evolución, hallazgos y conducta médica.">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">summarize</span>
                           <span class="docs-launcher-row-main">
                             <span class="docs-launcher-row-title">Informe médico</span>
                             <span class="docs-launcher-row-desc">Resumen clínico de evolución.</span>
                           </span>
-                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                          <span class="docs-launcher-row-status is-ready">Ya funcional</span>
                         </button>
                         <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="alta_medica" data-doc-title="Alta médica" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Documento de egreso con indicaciones, seguimiento y cierre clínico.">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">exit_to_app</span>
@@ -7041,11 +7041,146 @@
                   </div>
                 </div>
 
+                <div class="exp-card d-none mb-3" id="im_wizard">
+                  <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
+                    <span>Nuevo Informe médico</span>
+                    <span class="text-muted small" id="im_step_label">Paso 1 de 4</span>
+                  </div>
+                  <div class="exp-card-body">
+                    <div class="alert alert-warning py-2 d-none" id="im_notice"></div>
+                    <div id="im_step_1">
+                      <div class="row g-3">
+                        <div class="col-md-8">
+                          <label class="form-label" for="im_reason">Motivo del informe</label>
+                          <input class="form-control" id="im_reason" placeholder="Ej. Informe para seguimiento clínico y referencia interinstitucional">
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label" for="im_emission_date">Fecha de emisión</label>
+                          <input class="form-control" id="im_emission_date" type="date">
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label">Paciente</label>
+                          <input class="form-control" id="im_patient_name" readonly>
+                        </div>
+                        <div class="col-md-3">
+                          <label class="form-label">Edad</label>
+                          <input class="form-control" id="im_patient_age" readonly>
+                        </div>
+                        <div class="col-md-3">
+                          <label class="form-label">Sexo</label>
+                          <input class="form-control" id="im_patient_sex" readonly>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="im_step_2" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="im_current_illness">Motivo de atención</label>
+                          <textarea class="form-control" id="im_current_illness" rows="4" placeholder="Problema clínico actual y evolución."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="im_relevant_history">Antecedentes relevantes <span class="text-muted">(opcional)</span></label>
+                          <textarea class="form-control" id="im_relevant_history" rows="3" placeholder="Antecedentes clínicos relevantes para contextualizar el informe."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="im_clinical_summary">Resumen clínico</label>
+                          <textarea class="form-control" id="im_clinical_summary" rows="4" placeholder="Contexto clínico, antecedentes relevantes y evolución breve."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="im_findings">Hallazgos / valoración médica</label>
+                          <textarea class="form-control" id="im_findings" rows="4" placeholder="Exploración, resultados relevantes y valoración clínica."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="im_diagnostic_impression">Impresión diagnóstica / diagnóstico</label>
+                          <textarea class="form-control" id="im_diagnostic_impression" rows="3" placeholder="Diagnóstico, prediagnóstico o juicio clínico."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="im_plan">Plan / manejo / recomendaciones</label>
+                          <textarea class="form-control" id="im_plan" rows="3" placeholder="Tratamiento, indicaciones, seguimiento o recomendaciones."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label" for="im_prognosis">Pronóstico</label>
+                          <select class="form-select" id="im_prognosis">
+                            <option value="">Seleccionar</option>
+                            <option value="favorable">Favorable</option>
+                            <option value="reservado">Reservado</option>
+                            <option value="en_evolucion">En evolución</option>
+                            <option value="condicionado">Condicionado</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="im_step_3" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="im_closing_statement">Declaración de cierre</label>
+                          <textarea class="form-control" id="im_closing_statement" rows="3" placeholder="Cierre formal del informe médico emitido para los fines clínicos correspondientes."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <div class="border rounded p-2">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                              <div class="ci-signature-heading ci-signature-heading--doctor">Firma del médico</div>
+                              <span class="small text-muted" id="im_signature_status">Sin firma</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-3 mb-2">
+                              <div class="form-check mb-0">
+                                <input class="form-check-input" type="radio" name="im_signature_source" id="im_signature_source_registered" value="registered">
+                                <label class="form-check-label small" for="im_signature_source_registered">Usar firma registrada</label>
+                              </div>
+                              <div class="form-check mb-0">
+                                <input class="form-check-input" type="radio" name="im_signature_source" id="im_signature_source_local" value="local">
+                                <label class="form-check-label small" for="im_signature_source_local">Firmar en pantalla</label>
+                              </div>
+                            </div>
+                            <div class="alert alert-light py-2 px-3 small d-none mb-2" id="im_signature_registered_wrap">
+                              <div class="fw-semibold mb-1">Firma registrada disponible</div>
+                              <img
+                                id="im_signature_registered_preview"
+                                src=""
+                                alt="Firma registrada del médico"
+                                class="img-fluid rounded border bg-white"
+                                style="max-height:140px;object-fit:contain;"
+                              >
+                            </div>
+                            <div class="mx-signature-pad" data-signature-role="doctor">
+                              <canvas id="im_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
+                            </div>
+                            <div class="d-flex flex-wrap justify-content-end gap-2 mt-2">
+                              <button type="button" class="btn btn-outline-primary btn-sm" id="im_signature_apply">Aplicar firma del médico</button>
+                              <button type="button" class="btn btn-outline-secondary btn-sm" id="im_signature_clear">Limpiar firma del médico</button>
+                            </div>
+                            <div class="alert alert-warning py-2 px-3 d-none mt-2" id="im_signature_inline_prompt">
+                              <div class="small mb-2">¿Deseas guardar esta firma como tu firma digitalizada para usarla en próximos documentos?</div>
+                              <div class="d-flex flex-wrap justify-content-end gap-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="im_signature_inline_no">No guardar</button>
+                                <button type="button" class="btn btn-primary btn-sm" id="im_signature_inline_yes">Sí, guardar firma</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="im_step_4" class="d-none">
+                      <div class="border rounded p-3 bg-light-subtle">
+                        <div class="small text-uppercase text-muted fw-semibold mb-2">Vista previa</div>
+                        <div id="im_preview" class="small"></div>
+                      </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                      <button type="button" class="btn btn-outline-secondary btn-sm" id="im_prev" disabled>Anterior</button>
+                      <button type="button" class="btn btn-primary btn-sm" id="im_next">Continuar</button>
+                      <button type="button" class="btn btn-success btn-sm d-none" id="im_save">Guardar borrador</button>
+                      <button type="button" class="btn btn-primary btn-sm d-none" id="im_emit">Emitir informe</button>
+                      <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="im_cancel">Cancelar</button>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="exp-card exp-card--secondary">
                   <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
                     <span>Documentos recientes</span>
                   </div>
-                  <div class="small text-muted mb-2">Histórico disponible en esta fase: consentimientos informados emitidos.</div>
+                  <div class="small text-muted mb-2">Histórico disponible en esta fase: consentimientos informados e informes médicos emitidos.</div>
                   <div class="alert alert-info py-2 mb-3 d-none" id="ci_context_notice">Selecciona paciente</div>
                   <div class="alert alert-light mb-3" id="ci_empty_state">Aún no hay consentimientos para este paciente.</div>
                   <div class="ci-list d-grid gap-2" id="ci_list"></div>
@@ -7058,6 +7193,17 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body" id="ci_modal_body_slot"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal fade" id="modalInformeMedico" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Informe médico</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body" id="im_modal_body_slot"></div>
                     </div>
                   </div>
                 </div>

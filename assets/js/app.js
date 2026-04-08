@@ -1,6 +1,176 @@
 ﻿// MXMed app bundle
 console.info('app.js loaded :: 20251123a');
 
+// Doctor profile seed (local test fixture, no backend dependency)
+(function(){
+  if(window.__mxmedDoctorProfileSeedApplied) return;
+
+  const bodyDoctorId = String(document.body?.dataset?.doctorId || '').trim();
+  if(bodyDoctorId && bodyDoctorId !== 'd_demo_01') return;
+
+  const profile = Object.freeze({
+    doctor_id: 'd_demo_01',
+    user_id: 'u_demo_01',
+    full_name: 'Dr. Gregorio Zenteno Macías',
+    first_name: 'Gregorio',
+    last_name: 'Zenteno',
+    middle_name: 'Macías',
+    gender: 'Masculino',
+    specialty_visible: 'Pediatra',
+    specialty_academic: 'Pediatría',
+    professional_license: '1102174',
+    professional_university: 'Universidad Autónoma de Aguascalientes',
+    specialty_license: '0034492',
+    specialty_university: 'Universidad Nacional Autónoma de México',
+    medical_group_internal: 'Grupo Médico Torre Médica CMQ',
+    facility_visible: 'Torre Médica CMQ',
+    location_line: 'Torre Médica CMQ · Aguascalientes, Ags.',
+    location_city: 'Aguascalientes, Ags.',
+    address: {
+      street: 'Quinta Avenida',
+      ext_number: '702',
+      int_number: '104-H',
+      district: 'Fracc. Agricultura',
+      postal_code: '20234',
+      city: 'Aguascalientes',
+      state: 'Aguascalientes'
+    },
+    contact: {
+      phone_main: '4496248518',
+      phone_emergency: '4499132272',
+      whatsapp: '4499187231',
+      email: 'contacto@drzentenopediatra.mx'
+    },
+    services: ['Vacunas', 'Niños', 'Control del Niño Sano']
+  });
+
+  const setInputValue = (id, value, dispatch = true)=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const next = String(value ?? '');
+    if(el.value !== next){
+      el.value = next;
+      if(dispatch){
+        try{ el.dispatchEvent(new Event('input', { bubbles: true })); }catch(_){}
+        try{ el.dispatchEvent(new Event('change', { bubbles: true })); }catch(_){}
+      }
+    }
+  };
+  const setLocalStorageValue = (key, value)=>{
+    try{ window.localStorage?.setItem(key, String(value ?? '')); }catch(_){}
+  };
+  const setLocalStorageJson = (key, value)=>{
+    try{ window.localStorage?.setItem(key, JSON.stringify(value)); }catch(_){}
+  };
+
+  const applyProfileToUiAndStore = ()=>{
+    if(!window.mxmedStore || typeof window.mxmedStore !== 'object'){
+      window.mxmedStore = {};
+    }
+
+    const nameEl = document.querySelector('.user-id .name');
+    if(nameEl) nameEl.textContent = profile.full_name;
+    const specialtyEl = document.getElementById('fs-esp');
+    if(specialtyEl) specialtyEl.textContent = profile.specialty_visible;
+
+    // Perfil médico (datos visibles y de referencia)
+    setInputValue('ced-prof', profile.professional_license);
+    setInputValue('uni-prof', profile.professional_university);
+    setInputValue('ced-esp', profile.specialty_license);
+    setInputValue('uni-esp', profile.specialty_university);
+    setInputValue('dp-correo', profile.contact.email);
+    setInputValue('dp-whatsapp', profile.contact.whatsapp);
+
+    // Consultorio / sede
+    const grpYes = document.getElementById('cons-grupo-si');
+    if(grpYes && !grpYes.checked){
+      grpYes.checked = true;
+      try{ grpYes.dispatchEvent(new Event('change', { bubbles: true })); }catch(_){}
+    }
+    setInputValue('cons-grupo-nombre', profile.medical_group_internal);
+    setInputValue('cons-titulo', profile.facility_visible);
+    setInputValue('cons-calle', profile.address.street);
+    setInputValue('cons-numext', profile.address.ext_number);
+    setInputValue('cons-numint', profile.address.int_number);
+    setInputValue('colonia', profile.address.district);
+    setInputValue('cp', profile.address.postal_code);
+    setInputValue('municipio', profile.address.city);
+    setInputValue('estado', profile.address.state);
+    setInputValue('cons-tel1', profile.contact.phone_main);
+    setInputValue('cons-urg1', profile.contact.phone_emergency);
+    setInputValue('cons-wa', profile.contact.whatsapp);
+
+    // Servicios principales de referencia
+    setInputValue('srv1', profile.services[0] || '');
+    setInputValue('srv2', profile.services[1] || '');
+    setInputValue('srv3', profile.services[2] || '');
+
+    // Persistencia local existente (sin backend nuevo)
+    setLocalStorageValue('dp:ced-prof', profile.professional_license);
+    setLocalStorageValue('dp:uni-prof', profile.professional_university);
+    setLocalStorageValue('dp:ced-esp', profile.specialty_license);
+    setLocalStorageValue('dp:uni-esp', profile.specialty_university);
+    setLocalStorageValue('dp:dp-correo', profile.contact.email);
+    setLocalStorageValue('dp:dp-whatsapp', profile.contact.whatsapp);
+    setLocalStorageValue('dp:esp-1', profile.specialty_visible);
+    setLocalStorageValue('dp:srv1', profile.services[0] || '');
+    setLocalStorageValue('dp:srv2', profile.services[1] || '');
+    setLocalStorageValue('dp:srv3', profile.services[2] || '');
+
+    window.mxmedStore.doctorId = profile.doctor_id;
+    window.mxmedStore.doctor_id = profile.doctor_id;
+    window.mxmedStore.user_id = profile.user_id;
+    window.mxmedStore.doctorName = profile.full_name;
+    window.mxmedStore.doctorSpecialty = profile.specialty_visible;
+    window.mxmedStore.doctorSpecialtyAcademic = profile.specialty_academic;
+    window.mxmedStore.doctorLicense = profile.professional_license;
+    window.mxmedStore.doctorSpecialtyLicense = profile.specialty_license;
+    window.mxmedStore.institutionName = profile.medical_group_internal;
+    window.mxmedStore.facilityName = profile.facility_visible;
+    window.mxmedStore.currentLocation = profile.location_city;
+    window.mxmedStore.locationLine = profile.location_line;
+    window.mxmedStore.doctorProfile = {
+      full_name: profile.full_name,
+      specialty: profile.specialty_visible,
+      specialty_academic: profile.specialty_academic,
+      cedula_profesional: profile.professional_license,
+      cedula_especialidad: profile.specialty_license,
+      university_professional: profile.professional_university,
+      university_specialty: profile.specialty_university,
+      institution_name: profile.medical_group_internal,
+      facility_name: profile.facility_visible,
+      location: profile.location_city,
+      address: { ...profile.address },
+      contact: { ...profile.contact },
+      services: [...profile.services]
+    };
+    window.mxmedStore.context = {
+      ...(window.mxmedStore.context && typeof window.mxmedStore.context === 'object' ? window.mxmedStore.context : {}),
+      location: profile.location_city
+    };
+
+    window.mxmedDoctor = {
+      ...(window.mxmedDoctor && typeof window.mxmedDoctor === 'object' ? window.mxmedDoctor : {}),
+      doctor_id: profile.doctor_id,
+      user_id: profile.user_id,
+      full_name: profile.full_name,
+      specialty: profile.specialty_visible,
+      specialty_academic: profile.specialty_academic,
+      cedula_profesional: profile.professional_license,
+      cedula_especialidad: profile.specialty_license
+    };
+
+    setLocalStorageJson('mxmed.doctor.profile.seed', window.mxmedStore.doctorProfile);
+  };
+
+  window.__mxmedApplyDoctorProfileSeed = applyProfileToUiAndStore;
+  window.__mxmedDoctorProfileSeed = profile;
+  window.__mxmedDoctorProfileSeedApplied = true;
+
+  applyProfileToUiAndStore();
+  document.addEventListener('DOMContentLoaded', applyProfileToUiAndStore, { once: true });
+})();
+
 // P11 single source shim
 (function(){
   if(window.__mxmedPatientSourceShimApplied) return;
@@ -8754,6 +8924,8 @@ console.info('app.js loaded :: 20251123a');
       newBtn: root.querySelector('#ci_new_btn'),
       consentModalEl: pane.querySelector('#modalConsentimientoInformado'),
       consentModalBodySlot: pane.querySelector('#ci_modal_body_slot'),
+      informeModalEl: pane.querySelector('#modalInformeMedico'),
+      informeModalBodySlot: pane.querySelector('#im_modal_body_slot'),
       draftPromptModalEl: pane.querySelector('#modalConsentDraftPrompt'),
       draftPromptText: pane.querySelector('#ci_draft_prompt_text'),
       draftPromptReopenBtn: pane.querySelector('#ci_draft_reopen_btn'),
@@ -8887,11 +9059,51 @@ console.info('app.js loaded :: 20251123a');
       doctorSignatureApply: root.querySelector('#ci_doctor_signature_apply'),
       doctorSignatureClear: root.querySelector('#ci_doctor_signature_clear'),
       doctorSignatureStatus: root.querySelector('#ci_doctor_signature_status'),
-      doctorSignatureRemoteStatus: root.querySelector('#ci_doctor_signature_remote_status')
+      doctorSignatureRemoteStatus: root.querySelector('#ci_doctor_signature_remote_status'),
+      informeWizard: root.querySelector('#im_wizard'),
+      informeStepLabel: root.querySelector('#im_step_label'),
+      informeNotice: root.querySelector('#im_notice'),
+      informeStep1: root.querySelector('#im_step_1'),
+      informeStep2: root.querySelector('#im_step_2'),
+      informeStep3: root.querySelector('#im_step_3'),
+      informeStep4: root.querySelector('#im_step_4'),
+      informeReason: root.querySelector('#im_reason'),
+      informeEmissionDate: root.querySelector('#im_emission_date'),
+      informePatientName: root.querySelector('#im_patient_name'),
+      informePatientAge: root.querySelector('#im_patient_age'),
+      informePatientSex: root.querySelector('#im_patient_sex'),
+      informeClinicalSummary: root.querySelector('#im_clinical_summary'),
+      informeCurrentIllness: root.querySelector('#im_current_illness'),
+      informeRelevantHistory: root.querySelector('#im_relevant_history'),
+      informeFindings: root.querySelector('#im_findings'),
+      informeDiagnosticImpression: root.querySelector('#im_diagnostic_impression'),
+      informePlan: root.querySelector('#im_plan'),
+      informePrognosis: root.querySelector('#im_prognosis'),
+      informeClosingStatement: root.querySelector('#im_closing_statement'),
+      informePreview: root.querySelector('#im_preview'),
+      informePrev: root.querySelector('#im_prev'),
+      informeNext: root.querySelector('#im_next'),
+      informeSave: root.querySelector('#im_save'),
+      informeEmit: root.querySelector('#im_emit'),
+      informeCancel: root.querySelector('#im_cancel'),
+      informeSignatureSourceRegistered: root.querySelector('#im_signature_source_registered'),
+      informeSignatureSourceLocal: root.querySelector('#im_signature_source_local'),
+      informeSignatureRegisteredWrap: root.querySelector('#im_signature_registered_wrap'),
+      informeSignatureRegisteredPreview: root.querySelector('#im_signature_registered_preview'),
+      informeSignatureCanvas: root.querySelector('#im_signature_canvas'),
+      informeSignatureApply: root.querySelector('#im_signature_apply'),
+      informeSignatureClear: root.querySelector('#im_signature_clear'),
+      informeSignatureStatus: root.querySelector('#im_signature_status'),
+      informeSignatureInlinePrompt: root.querySelector('#im_signature_inline_prompt'),
+      informeSignatureInlineYesBtn: root.querySelector('#im_signature_inline_yes'),
+      informeSignatureInlineNoBtn: root.querySelector('#im_signature_inline_no')
     };
     if(!els.list || !els.empty || !els.newBtn || !els.wizard || !els.next || !els.save) return;
     if(els.consentModalBodySlot && els.wizard.parentElement !== els.consentModalBodySlot){
       els.consentModalBodySlot.appendChild(els.wizard);
+    }
+    if(els.informeModalBodySlot && els.informeWizard && els.informeWizard.parentElement !== els.informeModalBodySlot){
+      els.informeModalBodySlot.appendChild(els.informeWizard);
     }
     const hideInternalPrefillField = (fieldId = '')=>{
       const safeId = sanitizeText(fieldId || '');
@@ -8979,6 +9191,26 @@ console.info('app.js loaded :: 20251123a');
         { key: 'investigacion', label: 'Investigación clínica', desc: 'Consentimiento para participación en protocolo de investigación.' },
         { key: 'otro', label: 'Otro', desc: 'Consentimiento informado general para procedimiento clínico.' }
       ]
+    };
+    const informeState = {
+      step: 1,
+      saving: false,
+      signaturePad: null,
+      signatureHasStroke: false,
+      signaturePreferredSource: '',
+      registeredSignatureData: '',
+      form: {
+        emission_date: '',
+        reason: '',
+        current_illness: '',
+        relevant_history: '',
+        clinical_summary: '',
+        findings: '',
+        diagnostic_impression: '',
+        plan: '',
+        prognosis: '',
+        closing_statement: ''
+      }
     };
     const DEFAULT_CONSENT_RISK_FRAMEWORK = Object.freeze({
       risk_levels: [
@@ -9131,6 +9363,39 @@ console.info('app.js loaded :: 20251123a');
           'clinical_content',
           'signatures',
           'attachments'
+        ]),
+        print_profile: Object.freeze({
+          font_family: '"Inter", "Helvetica Neue", Arial, sans-serif',
+          base_font_size_px: 12,
+          line_height: 1.5
+        })
+      }),
+      informe_medico: Object.freeze({
+        document_type: 'informe_medico',
+        title: 'Informe médico',
+        subtitle_field: 'content.reason',
+        blocks: Object.freeze([
+          'encabezado',
+          'datos_paciente',
+          'motivo',
+          'padecimiento_actual',
+          'antecedentes_relevantes',
+          'resumen_clinico',
+          'hallazgos',
+          'impresion_diagnostica',
+          'plan',
+          'pronostico',
+          'cierre',
+          'firma_medico'
+        ]),
+        signatures_required: Object.freeze(['doctor']),
+        attachments_allowed: Object.freeze([]),
+        render_order: Object.freeze([
+          'header',
+          'patient_context',
+          'clinical_content',
+          'closure',
+          'signatures'
         ]),
         print_profile: Object.freeze({
           font_family: '"Inter", "Helvetica Neue", Arial, sans-serif',
@@ -9713,6 +9978,171 @@ console.info('app.js loaded :: 20251123a');
         };
       }
       return null;
+    };
+    const setInformeNotice = (message = '')=>{
+      if(!els.informeNotice) return;
+      const text = sanitizeText(message || '');
+      els.informeNotice.textContent = text;
+      els.informeNotice.classList.toggle('d-none', !text);
+    };
+    const syncInformeSignatureCanvasSize = ()=>{
+      const canvas = els.informeSignatureCanvas;
+      if(!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.max(300, Math.floor(rect.width || 0));
+      const height = Math.max(160, Math.floor(rect.height || 180));
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const targetW = Math.floor(width * dpr);
+      const targetH = Math.floor(height * dpr);
+      if(canvas.width === targetW && canvas.height === targetH){
+        return;
+      }
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+      if(!ctx) return;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#0f172a';
+      informeState.signatureHasStroke = false;
+      if(informeState.signaturePreferredSource === 'local'){
+        informeState.signaturePreferredSource = informeState.registeredSignatureData ? 'registered' : '';
+      }
+    };
+    const updateInformeSignatureStatus = ()=>{
+      if(!els.informeSignatureStatus) return;
+      const hasRegistered = !!informeState.registeredSignatureData;
+      if(informeState.signaturePreferredSource === 'registered' && hasRegistered){
+        els.informeSignatureStatus.textContent = 'Firma registrada seleccionada';
+      }else if(informeState.signaturePreferredSource === 'local' && informeState.signatureHasStroke){
+        els.informeSignatureStatus.textContent = 'Firma local capturada';
+      }else if(hasRegistered){
+        els.informeSignatureStatus.textContent = 'Firma registrada disponible';
+      }else if(informeState.signatureHasStroke){
+        els.informeSignatureStatus.textContent = 'Firma local capturada';
+      }else{
+        els.informeSignatureStatus.textContent = 'Sin firma';
+      }
+      if(els.informeSignatureSourceRegistered){
+        els.informeSignatureSourceRegistered.checked = informeState.signaturePreferredSource === 'registered';
+      }
+      if(els.informeSignatureSourceLocal){
+        els.informeSignatureSourceLocal.checked = informeState.signaturePreferredSource === 'local';
+      }
+    };
+    const refreshInformeRegisteredSignature = ()=>{
+      informeState.registeredSignatureData = readRegisteredDoctorSignature();
+      const hasRegistered = !!informeState.registeredSignatureData;
+      if(els.informeSignatureSourceRegistered){
+        els.informeSignatureSourceRegistered.disabled = !hasRegistered;
+      }
+      if(els.informeSignatureRegisteredWrap){
+        els.informeSignatureRegisteredWrap.classList.toggle('d-none', !hasRegistered);
+      }
+      if(els.informeSignatureRegisteredPreview){
+        if(hasRegistered){
+          els.informeSignatureRegisteredPreview.setAttribute('src', informeState.registeredSignatureData);
+        }else{
+          els.informeSignatureRegisteredPreview.removeAttribute('src');
+        }
+      }
+      if(!hasRegistered && informeState.signaturePreferredSource === 'registered'){
+        informeState.signaturePreferredSource = informeState.signatureHasStroke ? 'local' : '';
+      }
+      if(hasRegistered && !informeState.signaturePreferredSource && !informeState.signatureHasStroke){
+        informeState.signaturePreferredSource = 'registered';
+      }
+      updateInformeSignatureStatus();
+    };
+    const setInformeSignaturePreferredSource = (source = '')=>{
+      const normalized = sanitizeText(source || '').toLowerCase();
+      if(normalized === 'registered' && informeState.registeredSignatureData){
+        informeState.signaturePreferredSource = 'registered';
+      }else if(normalized === 'local' && informeState.signatureHasStroke){
+        informeState.signaturePreferredSource = 'local';
+      }else if(informeState.registeredSignatureData){
+        informeState.signaturePreferredSource = 'registered';
+      }else if(informeState.signatureHasStroke){
+        informeState.signaturePreferredSource = 'local';
+      }else{
+        informeState.signaturePreferredSource = '';
+      }
+      updateInformeSignatureStatus();
+    };
+    const initInformeSignaturePad = ()=>{
+      const canvas = els.informeSignatureCanvas;
+      if(!canvas || canvas.dataset.bound === '1') return;
+      syncInformeSignatureCanvasSize();
+      const ctx = canvas.getContext('2d');
+      if(!ctx) return;
+      const readPoint = (event)=>{
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: (event.clientX - rect.left),
+          y: (event.clientY - rect.top)
+        };
+      };
+      let drawing = false;
+      const start = (event)=>{
+        if(informeState.saving) return;
+        drawing = true;
+        const pt = readPoint(event);
+        ctx.beginPath();
+        ctx.moveTo(pt.x, pt.y);
+        informeState.signatureHasStroke = true;
+        informeState.signaturePreferredSource = 'local';
+        updateInformeSignatureStatus();
+        event.preventDefault();
+      };
+      const move = (event)=>{
+        if(!drawing) return;
+        const pt = readPoint(event);
+        ctx.lineTo(pt.x, pt.y);
+        ctx.stroke();
+        event.preventDefault();
+      };
+      const end = (event)=>{
+        if(!drawing) return;
+        drawing = false;
+        ctx.closePath();
+        event.preventDefault();
+      };
+      canvas.addEventListener('pointerdown', start);
+      canvas.addEventListener('pointermove', move);
+      canvas.addEventListener('pointerup', end);
+      canvas.addEventListener('pointerleave', end);
+      canvas.addEventListener('pointercancel', end);
+      canvas.dataset.bound = '1';
+      informeState.signaturePad = { canvas, ctx };
+      updateInformeSignatureStatus();
+    };
+    const clearInformeSignaturePad = ()=>{
+      const canvas = els.informeSignatureCanvas;
+      if(!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if(!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      informeState.signatureHasStroke = false;
+      if(informeState.signaturePreferredSource === 'local'){
+        informeState.signaturePreferredSource = informeState.registeredSignatureData ? 'registered' : '';
+      }
+      updateInformeSignatureStatus();
+    };
+    const exportInformeSignatureData = ()=>{
+      const canvas = els.informeSignatureCanvas;
+      if(!canvas || !informeState.signatureHasStroke) return '';
+      try{
+        return canvas.toDataURL('image/png');
+      }catch(_){
+        return '';
+      }
     };
 
     const setConsentSignaturePreferredSource = (source = '')=>{
@@ -11033,8 +11463,21 @@ console.info('app.js loaded :: 20251123a');
     };
 
     const readDoctorProfileSnapshot = ()=>{
+      const doctorProfile = (window.mxmedStore?.doctorProfile && typeof window.mxmedStore.doctorProfile === 'object')
+        ? window.mxmedStore.doctorProfile
+        : {};
       const actorName = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
       const license = sanitizeText(document.getElementById('ced-prof')?.value || '');
+      const specialty = sanitizeText(
+        doctorProfile.specialty
+        || document.getElementById('fs-esp')?.textContent
+        || ''
+      );
+      const specialtyLicense = sanitizeText(
+        doctorProfile.cedula_especialidad
+        || document.getElementById('ced-esp')?.value
+        || ''
+      );
       const institution = sanitizeText(
         window.mxmedStore?.institutionName
         || pane?.querySelector('#uni-prof')?.value
@@ -11054,11 +11497,69 @@ console.info('app.js loaded :: 20251123a');
       return {
         actor_name: actorName,
         license,
+        specialty,
+        specialty_license: specialtyLicense,
         institution,
         facility,
         place
       };
     };
+
+    const resolveDoctorBranding = (doctorIdInput = '')=>{
+      const doctorId = sanitizeText(
+        doctorIdInput
+        || window.mxmedStore?.doctorId
+        || window.mxmedStore?.doctor_id
+        || window.mxmedDoctor?.doctor_id
+        || document.body?.dataset?.doctorId
+        || ''
+      );
+      const doctorProfile = (window.mxmedStore?.doctorProfile && typeof window.mxmedStore.doctorProfile === 'object')
+        ? window.mxmedStore.doctorProfile
+        : {};
+      const localLogoPath = doctorId ? `/storage/clinical_uploads/branding/${encodeURIComponent(doctorId)}/logo-opt.webp` : '';
+      const explicitLogo = sanitizeText(
+        doctorProfile.logo_url
+        || window.mxmedStore?.doctorLogoUrl
+        || window.mxmedStore?.doctor_logo_url
+        || window.localStorage?.getItem('mxmed.doctor.logo_url')
+        || ''
+      );
+      const explicitGroupLogo = sanitizeText(
+        doctorProfile.group_logo_url
+        || window.mxmedStore?.groupLogoUrl
+        || window.mxmedStore?.group_logo_url
+        || window.localStorage?.getItem('mxmed.group.logo_url')
+        || ''
+      );
+      const logoUrl = explicitLogo || localLogoPath || '';
+      const facilityVisible = sanitizeText(
+        doctorProfile.facility_name
+        || window.mxmedStore?.facilityName
+        || pane?.querySelector('#cons-titulo')?.value
+        || ''
+      );
+      const locationShort = sanitizeText(
+        doctorProfile.location
+        || window.mxmedStore?.locationLine
+        || window.mxmedStore?.currentLocation
+        || window.mxmedStore?.context?.location
+        || ''
+      );
+      const locationLineVisible = sanitizeText(
+        window.mxmedStore?.locationLine
+        || ((facilityVisible && locationShort) ? `${facilityVisible} · ${locationShort}` : (locationShort || facilityVisible))
+      );
+      return {
+        mode: logoUrl ? 'branded' : 'standard',
+        logo_url: logoUrl || null,
+        group_logo_url: explicitGroupLogo || null,
+        facility_visible: facilityVisible || null,
+        location_line_visible: locationLineVisible || null,
+        logo_local_path: localLogoPath || null
+      };
+    };
+    window.resolveDoctorBranding = resolveDoctorBranding;
 
     const fillWizardDoctorFields = ({ force = false } = {})=>{
       const doctor = readDoctorProfileSnapshot();
@@ -11102,10 +11603,20 @@ console.info('app.js loaded :: 20251123a');
         }, 4500);
       }
     };
-    const askDoctorSignatureSaveDecision = async ()=>{
-      if(els.doctorSignatureInlinePrompt && els.doctorSignatureInlineYesBtn && els.doctorSignatureInlineNoBtn){
+    const askDoctorSignatureSaveDecision = async (options = {})=>{
+      const preferModal = options?.preferModal === true;
+      const inlinePromptEl = options?.inlinePromptEl || els.doctorSignatureInlinePrompt;
+      const inlineYesBtn = options?.inlineYesBtn || els.doctorSignatureInlineYesBtn;
+      const inlineNoBtn = options?.inlineNoBtn || els.doctorSignatureInlineNoBtn;
+      const isInlinePromptInVisibleModal = !!(inlinePromptEl && inlinePromptEl.closest('.modal.show'));
+      const canUseInline = !preferModal
+        && inlinePromptEl
+        && inlineYesBtn
+        && inlineNoBtn
+        && isInlinePromptInVisibleModal;
+      if(canUseInline){
         return await new Promise((resolve)=>{
-          const wrap = els.doctorSignatureInlinePrompt;
+          const wrap = inlinePromptEl;
           let settled = false;
           const finish = (choice)=>{
             if(settled) return;
@@ -11117,11 +11628,11 @@ console.info('app.js loaded :: 20251123a');
           const onYes = (event)=>{ event.preventDefault(); finish(true); };
           const onNo = (event)=>{ event.preventDefault(); finish(false); };
           const cleanup = ()=>{
-            els.doctorSignatureInlineYesBtn?.removeEventListener('click', onYes);
-            els.doctorSignatureInlineNoBtn?.removeEventListener('click', onNo);
+            inlineYesBtn?.removeEventListener('click', onYes);
+            inlineNoBtn?.removeEventListener('click', onNo);
           };
-          els.doctorSignatureInlineYesBtn?.addEventListener('click', onYes);
-          els.doctorSignatureInlineNoBtn?.addEventListener('click', onNo);
+          inlineYesBtn?.addEventListener('click', onYes);
+          inlineNoBtn?.addEventListener('click', onNo);
           wrap.classList.remove('d-none');
           pushCiDebug('[CI] diálogo inline de guardar firma visible');
         });
@@ -11152,6 +11663,7 @@ console.info('app.js loaded :: 20251123a');
         modal.show();
       });
     };
+    const readDoctorPrefillProfile = ()=> readDoctorProfileSnapshot();
 
     const normalizeConsentInputRaw = (value)=> String(value ?? '').replace(/\r\n?/g, '\n');
     const trimConsentInputValue = (value)=> normalizeConsentInputRaw(value).trim();
@@ -11609,12 +12121,455 @@ console.info('app.js loaded :: 20251123a');
       els.wizard.classList.remove('d-none');
     };
 
-    const openConsentViewer = (documentUuid)=>{
+    const openClinicalDocumentViewer = (documentUuid)=>{
       const uuid = sanitizeText(documentUuid);
       if(!uuid) return false;
       const href = `/modules/clinical/ui/viewer.php?uuid=${encodeURIComponent(uuid)}&embed=1`;
       window.open(href, '_blank', 'noopener');
       return true;
+    };
+    const readInformePatientContext = ()=>{
+      const snapshot = readPatientSnapshot();
+      return {
+        name: sanitizeText(snapshot?.full_name || 'Paciente'),
+        age: sanitizeText(snapshot?.age || ''),
+        sex: sanitizeText(snapshot?.sexo || '')
+      };
+    };
+    const syncInformeInputsFromState = ()=>{
+      if(els.informeReason) els.informeReason.value = sanitizeText(informeState.form.reason || '');
+      if(els.informeEmissionDate) els.informeEmissionDate.value = sanitizeText(informeState.form.emission_date || '');
+      if(els.informeCurrentIllness) els.informeCurrentIllness.value = sanitizeText(informeState.form.current_illness || '');
+      if(els.informeRelevantHistory) els.informeRelevantHistory.value = sanitizeText(informeState.form.relevant_history || '');
+      if(els.informeClinicalSummary) els.informeClinicalSummary.value = sanitizeText(informeState.form.clinical_summary || '');
+      if(els.informeFindings) els.informeFindings.value = sanitizeText(informeState.form.findings || '');
+      if(els.informeDiagnosticImpression) els.informeDiagnosticImpression.value = sanitizeText(informeState.form.diagnostic_impression || '');
+      if(els.informePlan) els.informePlan.value = sanitizeText(informeState.form.plan || '');
+      if(els.informePrognosis) els.informePrognosis.value = sanitizeText(informeState.form.prognosis || '');
+      if(els.informeClosingStatement) els.informeClosingStatement.value = sanitizeText(informeState.form.closing_statement || '');
+    };
+    const renderInformePreview = ()=>{
+      if(!els.informePreview) return;
+      const patient = readInformePatientContext();
+      const reason = sanitizeText(informeState.form.reason || '');
+      const currentIllness = sanitizeText(informeState.form.current_illness || '');
+      const relevantHistory = sanitizeText(informeState.form.relevant_history || '');
+      const summary = sanitizeText(informeState.form.clinical_summary || '');
+      const findings = sanitizeText(informeState.form.findings || '');
+      const diagnostic = sanitizeText(informeState.form.diagnostic_impression || '');
+      const plan = sanitizeText(informeState.form.plan || '');
+      const prognosisMap = {
+        favorable: 'Favorable',
+        reservado: 'Reservado',
+        en_evolucion: 'En evolución',
+        condicionado: 'Condicionado'
+      };
+      const prognosis = sanitizeText(prognosisMap[sanitizeText(informeState.form.prognosis || '').toLowerCase()] || informeState.form.prognosis || '');
+      const closing = sanitizeText(informeState.form.closing_statement || '');
+      const emissionDate = formatConsentUiDate(informeState.form.emission_date || '', { withTime: false }) || sanitizeText(informeState.form.emission_date || '');
+      const sections = [
+        reason ? `<div><strong>Motivo:</strong> ${escapeHtml(reason)}</div>` : '',
+        // Future: make this label dynamic by case status (activo/cerrado) if/when that context is available.
+        currentIllness ? `<div class="mt-2"><strong>Motivo de atención:</strong><br>${escapeHtml(currentIllness).replace(/\n/g, '<br>')}</div>` : '',
+        relevantHistory ? `<div class="mt-2"><strong>Antecedentes relevantes:</strong><br>${escapeHtml(relevantHistory).replace(/\n/g, '<br>')}</div>` : '',
+        summary ? `<div class="mt-2"><strong>Resumen clínico:</strong><br>${escapeHtml(summary).replace(/\n/g, '<br>')}</div>` : '',
+        findings ? `<div class="mt-2"><strong>Hallazgos / valoración:</strong><br>${escapeHtml(findings).replace(/\n/g, '<br>')}</div>` : '',
+        diagnostic ? `<div class="mt-2"><strong>Impresión diagnóstica:</strong><br>${escapeHtml(diagnostic).replace(/\n/g, '<br>')}</div>` : '',
+        plan ? `<div class="mt-2"><strong>Plan / recomendaciones:</strong><br>${escapeHtml(plan).replace(/\n/g, '<br>')}</div>` : '',
+        prognosis ? `<div class="mt-2"><strong>Pronóstico:</strong> ${escapeHtml(prognosis)}</div>` : '',
+        closing ? `<div class="mt-2"><strong>Cierre:</strong><br>${escapeHtml(closing).replace(/\n/g, '<br>')}</div>` : ''
+      ].filter(Boolean);
+      els.informePreview.innerHTML = `
+        <div><strong>Informe médico</strong></div>
+        <div class="text-muted">${escapeHtml(patient.name)}${patient.age ? ` · ${escapeHtml(patient.age)} años` : ''}${patient.sex ? ` · ${escapeHtml(patient.sex)}` : ''}</div>
+        <div class="text-muted mb-2">${escapeHtml(emissionDate || 'Sin fecha')}</div>
+        ${sections.join('')}
+      `;
+    };
+    const renderInformeStep = ()=>{
+      if(!els.informeWizard) return;
+      const step = Number(informeState.step || 1);
+      const maxStep = 4;
+      const normalizedStep = Math.min(Math.max(step, 1), maxStep);
+      informeState.step = normalizedStep;
+      if(els.informeStep1) els.informeStep1.classList.toggle('d-none', normalizedStep !== 1);
+      if(els.informeStep2) els.informeStep2.classList.toggle('d-none', normalizedStep !== 2);
+      if(els.informeStep3) els.informeStep3.classList.toggle('d-none', normalizedStep !== 3);
+      if(els.informeStep4) els.informeStep4.classList.toggle('d-none', normalizedStep !== 4);
+      if(els.informeStepLabel) els.informeStepLabel.textContent = `Paso ${normalizedStep} de 4`;
+      if(els.informePrev) els.informePrev.disabled = normalizedStep === 1 || informeState.saving;
+      if(els.informeNext){
+        els.informeNext.classList.toggle('d-none', normalizedStep >= 4);
+        els.informeNext.disabled = informeState.saving;
+      }
+      const showActions = normalizedStep === 4;
+      if(els.informeSave){
+        els.informeSave.classList.toggle('d-none', !showActions);
+        els.informeSave.disabled = informeState.saving;
+      }
+      if(els.informeEmit){
+        els.informeEmit.classList.toggle('d-none', !showActions);
+        els.informeEmit.disabled = informeState.saving;
+      }
+      if(els.informeCancel){
+        els.informeCancel.classList.toggle('d-none', !showActions);
+        els.informeCancel.disabled = informeState.saving;
+      }
+      if(normalizedStep !== 3){
+        els.informeSignatureInlinePrompt?.classList.add('d-none');
+      }
+      if(normalizedStep === 4){
+        renderInformePreview();
+      }
+    };
+    const resetInformeWizard = ()=>{
+      informeState.step = 1;
+      informeState.saving = false;
+      informeState.form = {
+        emission_date: '',
+        reason: '',
+        current_illness: '',
+        relevant_history: '',
+        clinical_summary: '',
+        findings: '',
+        diagnostic_impression: '',
+        plan: '',
+        prognosis: '',
+        closing_statement: ''
+      };
+      informeState.signatureHasStroke = false;
+      informeState.signaturePreferredSource = '';
+      els.informeSignatureInlinePrompt?.classList.add('d-none');
+      setInformeNotice('');
+      clearInformeSignaturePad();
+      refreshInformeRegisteredSignature();
+      syncInformeInputsFromState();
+      renderInformeStep();
+      if(els.informeWizard){
+        els.informeWizard.classList.add('d-none');
+      }
+    };
+    const startInformeDraft = ()=>{
+      const patientId = resolveActivePatientIdForConsent();
+      if(!patientId){
+        setInformeNotice('Selecciona paciente antes de crear el informe médico.');
+        return false;
+      }
+      const patient = readInformePatientContext();
+      if(els.informePatientName) els.informePatientName.value = patient.name;
+      if(els.informePatientAge) els.informePatientAge.value = patient.age;
+      if(els.informePatientSex) els.informePatientSex.value = patient.sex;
+      const today = new Date();
+      const y = String(today.getFullYear());
+      const m = String(today.getMonth() + 1).padStart(2, '0');
+      const d = String(today.getDate()).padStart(2, '0');
+      informeState.form = {
+        emission_date: `${y}-${m}-${d}`,
+        reason: '',
+        current_illness: '',
+        relevant_history: '',
+        clinical_summary: '',
+        findings: '',
+        diagnostic_impression: '',
+        plan: '',
+        prognosis: '',
+        closing_statement: 'Se emite el presente informe médico para los fines clínicos correspondientes.'
+      };
+      informeState.step = 1;
+      informeState.saving = false;
+      informeState.signatureHasStroke = false;
+      informeState.signaturePreferredSource = '';
+      syncInformeInputsFromState();
+      setInformeNotice('');
+      initInformeSignaturePad();
+      syncInformeSignatureCanvasSize();
+      clearInformeSignaturePad();
+      refreshInformeRegisteredSignature();
+      renderInformeStep();
+      if(els.informeWizard){
+        els.informeWizard.classList.remove('d-none');
+      }
+      return true;
+    };
+    const openInformeModal = ()=>{
+      const shouldOpen = startInformeDraft();
+      if(!shouldOpen) return;
+      if(!els.informeModalEl || !window.bootstrap?.Modal) return;
+      try{
+        const modal = window.bootstrap.Modal.getOrCreateInstance(els.informeModalEl);
+        modal.show();
+        window.setTimeout(()=>{ syncInformeSignatureCanvasSize(); }, 40);
+      }catch(_){}
+    };
+    const closeInformeModal = ()=>{
+      if(!els.informeModalEl || !window.bootstrap?.Modal) return;
+      try{
+        window.bootstrap.Modal.getOrCreateInstance(els.informeModalEl)?.hide();
+      }catch(_){}
+    };
+    const getActiveInformeDoctorSignature = (nowSql = '')=>{
+      const signedAt = sanitizeText(nowSql || formatNowSql());
+      const signerName = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
+      if(informeState.signaturePreferredSource === 'registered' && informeState.registeredSignatureData){
+        return {
+          type: 'drawn',
+          role: 'doctor',
+          image_data: informeState.registeredSignatureData,
+          signed_at: signedAt,
+          signer_name: signerName,
+          source: 'registered_profile'
+        };
+      }
+      const localSignature = exportInformeSignatureData();
+      if(localSignature){
+        return {
+          type: 'drawn',
+          role: 'doctor',
+          image_data: localSignature,
+          signed_at: signedAt,
+          signer_name: signerName,
+          source: 'local_canvas'
+        };
+      }
+      return null;
+    };
+    const buildInformeRenderedText = (payload = {})=>{
+      const lines = [];
+      const patientName = sanitizeText(payload?.patient_snapshot?.full_name || 'Paciente');
+      const reason = sanitizeText(payload?.content?.reason || '');
+      const currentIllness = sanitizeText(payload?.content?.current_illness || '');
+      const relevantHistory = sanitizeText(payload?.content?.relevant_history || '');
+      const summary = sanitizeText(payload?.content?.clinical_summary || '');
+      const findings = sanitizeText(payload?.content?.findings || '');
+      const diagnostic = sanitizeText(payload?.content?.diagnostic_impression || '');
+      const plan = sanitizeText(payload?.content?.plan || '');
+      const prognosisMap = {
+        favorable: 'Favorable',
+        reservado: 'Reservado',
+        en_evolucion: 'En evolución',
+        condicionado: 'Condicionado'
+      };
+      const prognosisRaw = sanitizeText(payload?.content?.prognosis || '');
+      const prognosis = sanitizeText(prognosisMap[prognosisRaw.toLowerCase()] || prognosisRaw);
+      const closing = sanitizeText(payload?.content?.closing_statement || '');
+      const doctorName = sanitizeText(payload?.actor_snapshot?.full_name || 'Médico tratante');
+      const doctorLicense = sanitizeText(payload?.actor_snapshot?.license || '');
+      lines.push('INFORME MÉDICO');
+      lines.push('');
+      lines.push(`Paciente: ${patientName}`);
+      if(reason) lines.push(`Motivo: ${reason}`);
+      // Future: dynamic label by case status (active vs closed) without changing key current_illness.
+      if(currentIllness){ lines.push(''); lines.push('Motivo de atención:'); lines.push(currentIllness); }
+      if(relevantHistory){ lines.push(''); lines.push('Antecedentes relevantes:'); lines.push(relevantHistory); }
+      if(summary){ lines.push(''); lines.push('Resumen clínico:'); lines.push(summary); }
+      if(findings){ lines.push(''); lines.push('Hallazgos / valoración médica:'); lines.push(findings); }
+      if(diagnostic){ lines.push(''); lines.push('Impresión diagnóstica / diagnóstico:'); lines.push(diagnostic); }
+      if(plan){ lines.push(''); lines.push('Plan / recomendaciones:'); lines.push(plan); }
+      if(prognosis){ lines.push(''); lines.push('Pronóstico:'); lines.push(prognosis); }
+      if(closing){ lines.push(''); lines.push('Declaración de cierre:'); lines.push(closing); }
+      lines.push('');
+      lines.push(`Médico responsable: ${doctorName}${doctorLicense ? ` · Cédula: ${doctorLicense}` : ''}`);
+      return lines.join('\n');
+    };
+    const buildInformeDocument = async (targetStatus = 'draft')=>{
+      const patientId = resolveActivePatientIdForConsent();
+      if(!patientId){
+        return { error: 'Selecciona paciente antes de emitir el informe médico.' };
+      }
+      const normalizedStatus = targetStatus === 'issued' ? 'issued' : 'draft';
+      const reason = normalizeConsentInputRaw(informeState.form.reason || '');
+      if(normalizedStatus === 'issued' && !reason){
+        return { error: 'Motivo del informe es obligatorio para emitir.' };
+      }
+      const actorUserId = resolveClinicalActorUserId();
+      const actorName = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
+      const nowSql = formatNowSql();
+      let encounterKey = '';
+      if(typeof window.getActiveEncounterKey === 'function'){
+        encounterKey = sanitizeText(window.getActiveEncounterKey());
+      }
+      if(encounterKey && typeof window.mxmedIsOperationalEncounterForPatient === 'function'){
+        const isOperational = window.mxmedIsOperationalEncounterForPatient(patientId, encounterKey) === true;
+        if(!isOperational) encounterKey = '';
+      }
+      let appointmentId = '';
+      if(typeof window.resolveActiveEncounterForPatient === 'function'){
+        const resolved = await window.resolveActiveEncounterForPatient(patientId, { source: 'informe_medico_canonico' }).catch(()=> null);
+        appointmentId = sanitizeText(resolved?.appointmentId || resolved?.appointment_id || '');
+      }
+      const patientSnapshot = readPatientSnapshot();
+      const doctorPrefill = readDoctorPrefillProfile();
+      const doctorBranding = resolveDoctorBranding(actorUserId);
+      const doctorSignature = getActiveInformeDoctorSignature(nowSql);
+      const context = {
+        patient_id: patientId,
+        care_setting: 'consulta'
+      };
+      if(encounterKey) context.encounter_key = encounterKey;
+      if(appointmentId) context.appointment_id = appointmentId;
+      const content = {
+        reason,
+        current_illness: normalizeConsentInputRaw(informeState.form.current_illness || ''),
+        relevant_history: normalizeConsentInputRaw(informeState.form.relevant_history || ''),
+        clinical_summary: normalizeConsentInputRaw(informeState.form.clinical_summary || ''),
+        findings: normalizeConsentInputRaw(informeState.form.findings || ''),
+        diagnostic_impression: normalizeConsentInputRaw(informeState.form.diagnostic_impression || ''),
+        plan: normalizeConsentInputRaw(informeState.form.plan || ''),
+        prognosis: sanitizeText(informeState.form.prognosis || ''),
+        closing_statement: normalizeConsentInputRaw(informeState.form.closing_statement || '')
+      };
+      const payload = {
+        contract_version: 1,
+        status: normalizedStatus,
+        report: {
+          issued_at: nowSql,
+          emission_date: sanitizeText(informeState.form.emission_date || nowSql.slice(0, 10)),
+          title: 'Informe médico'
+        },
+        patient_snapshot: {
+          full_name: sanitizeText(patientSnapshot.full_name || ''),
+          age: sanitizeText(patientSnapshot.age || ''),
+          sex: sanitizeText(patientSnapshot.sexo || ''),
+          identifier: sanitizeText(patientSnapshot.identifier || '')
+        },
+        actor_snapshot: {
+          user_id: actorUserId,
+          full_name: actorName,
+          license: sanitizeText(doctorPrefill.license || ''),
+          specialty: sanitizeText(doctorPrefill.specialty || ''),
+          specialty_license: sanitizeText(doctorPrefill.specialty_license || ''),
+          place: sanitizeText(doctorPrefill.place || ''),
+          institution: sanitizeText(doctorPrefill.institution || ''),
+          facility: sanitizeText(doctorPrefill.facility || '')
+        },
+        branding: {
+          mode: sanitizeText(doctorBranding.mode || 'standard') || 'standard',
+          logo_url_resolved: sanitizeText(doctorBranding.logo_url || ''),
+          group_logo_url_resolved: sanitizeText(doctorBranding.group_logo_url || ''),
+          facility_visible: sanitizeText(doctorBranding.facility_visible || ''),
+          location_line_visible: sanitizeText(doctorBranding.location_line_visible || ''),
+          logo_local_path: sanitizeText(doctorBranding.logo_local_path || '')
+        },
+        content,
+        signatures: {
+          doctor: doctorSignature
+        },
+        form_snapshot: {
+          ...content,
+          emission_date: sanitizeText(informeState.form.emission_date || ''),
+          signature_source: sanitizeText(informeState.signaturePreferredSource || '')
+        }
+      };
+      payload.rendered_text = buildInformeRenderedText(payload);
+      const definition = getClinicalDocumentDefinition('informe_medico');
+      const summary = `${normalizedStatus} · ${reason || 'Informe médico'} · ${payload.report.emission_date || nowSql.slice(0, 10)}`;
+      payload.canonical_document = buildClinicalCanonicalPayload({
+        definition,
+        payload,
+        context,
+        actorUserId,
+        title: 'Informe médico',
+        subtitle: reason,
+        eventDatetime: nowSql
+      }).canonical_document;
+      const body = buildClinicalDocumentBody({
+        definition,
+        title: reason ? `Informe médico — ${reason}` : 'Informe médico',
+        summary,
+        context,
+        payload,
+        eventDatetime: nowSql,
+        actorUserId,
+        source: 'documents_clinicos_informe_medico'
+      });
+      return { patientId, body, normalizedStatus };
+    };
+    const saveInformeDocument = async (status = 'draft')=>{
+      if(informeState.saving) return;
+      informeState.saving = true;
+      setInformeNotice('');
+      if(els.informeSave){
+        els.informeSave.disabled = true;
+        els.informeSave.textContent = 'Guardando...';
+      }
+      if(els.informeEmit){
+        els.informeEmit.disabled = true;
+        els.informeEmit.textContent = 'Emitiendo...';
+      }
+      try{
+        const prepared = await buildInformeDocument(status);
+        if(prepared?.error){
+          throw new Error(prepared.error);
+        }
+        const resp = await fetch('/api/clinical/index.php/documents', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(prepared.body),
+          credentials: 'same-origin'
+        });
+        const json = await resp.json().catch(()=> null);
+        if(!resp.ok || !json || json.ok !== true){
+          const msg = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo guardar el informe médico.';
+          throw new Error(msg);
+        }
+        resetInformeWizard();
+        closeInformeModal();
+        listCanonicalConsents();
+        showCatalogFeedback(
+          prepared.normalizedStatus === 'issued'
+            ? 'Informe médico emitido correctamente.'
+            : 'Borrador de informe médico guardado correctamente.',
+          'success'
+        );
+      }catch(error){
+        setInformeNotice(sanitizeText(error?.message || 'No se pudo guardar el informe médico.'));
+        showCatalogFeedback(sanitizeText(error?.message || 'No se pudo guardar el informe médico.'), 'error');
+      }finally{
+        informeState.saving = false;
+        if(els.informeSave){
+          els.informeSave.disabled = false;
+          els.informeSave.textContent = 'Guardar borrador';
+        }
+        if(els.informeEmit){
+          els.informeEmit.disabled = false;
+          els.informeEmit.textContent = 'Emitir informe';
+        }
+        renderInformeStep();
+      }
+    };
+    const handleInformeDoctorSignatureApply = async ()=>{
+      const signature = exportInformeSignatureData();
+      if(signature){
+        setInformeSignaturePreferredSource('local');
+        if(!informeState.registeredSignatureData){
+          try{
+            const shouldSave = await askDoctorSignatureSaveDecision({
+              inlinePromptEl: els.informeSignatureInlinePrompt,
+              inlineYesBtn: els.informeSignatureInlineYesBtn,
+              inlineNoBtn: els.informeSignatureInlineNoBtn
+            });
+            if(shouldSave){
+              if(persistRegisteredDoctorSignature(signature)){
+                refreshInformeRegisteredSignature();
+                setInformeSignaturePreferredSource('registered');
+                setInformeNotice('Firma del médico guardada como firma digitalizada.');
+                return;
+              }
+            }
+          }catch(_){}
+        }
+        setInformeNotice('Firma del médico aplicada para el informe.');
+        return;
+      }
+      if(informeState.registeredSignatureData){
+        setInformeSignaturePreferredSource('registered');
+        setInformeNotice('Firma registrada del médico aplicada para el informe.');
+        return;
+      }
+      setInformeNotice('Captura la firma del médico o selecciona firma registrada.');
     };
 
     const parseObjectMaybeJson = (value)=>{
@@ -11668,22 +12623,34 @@ console.info('app.js loaded :: 20251123a');
       }
       els.empty.classList.add('d-none');
       list.forEach((doc)=>{
-        const title = sanitizeText(doc.title || doc.summary || 'Consentimiento informado');
+        const documentType = sanitizeText(doc.document_type || '').toLowerCase();
+        const fallbackTitle = documentType === 'informe_medico' ? 'Informe médico' : 'Consentimiento informado';
+        const title = sanitizeText(doc.title || doc.summary || fallbackTitle);
         const summary = sanitizeText(doc.summary || '');
         const dtRaw = sanitizeText(doc.event_datetime || doc.created_at || '');
         const dateText = formatConsentUiDate(dtRaw, { withTime: true }) || '—';
         const status = sanitizeText(doc.status || doc.payload?.consent?.status || 'draft');
         const uuid = sanitizeText(doc.document_uuid || '');
-        const documentType = sanitizeText(doc.document_type || '').toLowerCase();
         const payload = parseObjectMaybeJson(doc.payload)
           || parseObjectMaybeJson(doc.payload_json)
           || {};
         const descriptorText = resolveConsentDescriptorText(payload, summary);
         const isConsentDoc = documentType === 'consentimiento_informado' || !documentType;
-        const secondLineHtml = isConsentDoc
+        const isInformeDoc = documentType === 'informe_medico';
+        const informeDescriptorText = sanitizeText(
+          payload?.content?.reason
+          || payload?.form_snapshot?.reason
+          || summary
+          || ''
+        );
+        const secondLineHtml = (isConsentDoc || isInformeDoc)
           ? `
             <div class="small text-muted d-flex justify-content-between align-items-center gap-2">
-              ${descriptorText ? `<span class="text-truncate" title="${descriptorText.replace(/"/g, '&quot;')}" style="max-width:68%;">${descriptorText.replace(/</g, '&lt;')}</span>` : '<span class="flex-grow-1"></span>'}
+              ${
+                (isConsentDoc ? descriptorText : informeDescriptorText)
+                  ? `<span class="text-truncate" title="${(isConsentDoc ? descriptorText : informeDescriptorText).replace(/"/g, '&quot;')}" style="max-width:68%;">${(isConsentDoc ? descriptorText : informeDescriptorText).replace(/</g, '&lt;')}</span>`
+                  : '<span class="flex-grow-1"></span>'
+              }
               <span class="text-nowrap ms-auto">${dateText.replace(/</g, '&lt;')}</span>
             </div>
           `
@@ -11699,7 +12666,7 @@ console.info('app.js loaded :: 20251123a');
             <span class="badge bg-light text-dark border">${status.replace(/</g, '&lt;')}</span>
           </div>
           ${secondLineHtml}
-          ${summary && !descriptorText ? `<div class="small mt-1">${summary.replace(/</g, '&lt;')}</div>` : ''}
+          ${summary && !(isConsentDoc ? descriptorText : (isInformeDoc ? informeDescriptorText : '')) ? `<div class="small mt-1">${summary.replace(/</g, '&lt;')}</div>` : ''}
           ${uuid ? '<div class="small mt-2"><span class="text-primary">Abrir detalle</span></div>' : ''}
         `;
         els.list.appendChild(card);
@@ -11715,7 +12682,7 @@ console.info('app.js loaded :: 20251123a');
         return;
       }
       try{
-        const url = `/api/clinical/index.php/documents?patient_id=${encodeURIComponent(patientId)}&document_type=consentimiento_informado&limit=50`;
+        const url = `/api/clinical/index.php/documents?patient_id=${encodeURIComponent(patientId)}&limit=80`;
         const resp = await fetch(url, {
           method: 'GET',
           headers: { Accept: 'application/json' },
@@ -11723,6 +12690,7 @@ console.info('app.js loaded :: 20251123a');
         });
         const json = await resp.json().catch(()=> null);
         const items = Array.isArray(json?.data?.items) ? json.data.items : [];
+        const allowedTypes = new Set(['consentimiento_informado', 'informe_medico']);
         const normalized = items.map((item)=>{
           const clinicalDoc = item?.clinical_document && typeof item.clinical_document === 'object' ? item.clinical_document : {};
           const clinicalPayload = parseObjectMaybeJson(clinicalDoc?.payload);
@@ -11738,6 +12706,7 @@ console.info('app.js loaded :: 20251123a');
             || directPayloadJson
             || nestedItemPayload
             || {};
+          const documentType = sanitizeText(clinicalDoc.document_type || item.document_type || '').toLowerCase();
           return {
             document_uuid: sanitizeText(
               clinicalDoc.document_uuid
@@ -11750,11 +12719,12 @@ console.info('app.js loaded :: 20251123a');
             title: clinicalDoc.title || item.title || '',
             summary: clinicalDoc.summary || item.summary || '',
             event_datetime: item.event_datetime || item.occurred_at || '',
-            document_type: sanitizeText(clinicalDoc.document_type || item.document_type || 'consentimiento_informado'),
-            status: payload?.consent?.status || 'draft',
+            document_type: documentType || 'consentimiento_informado',
+            status: payload?.consent?.status || payload?.status || 'draft',
             payload
           };
-        });
+        }).filter((row)=> allowedTypes.has(sanitizeText(row.document_type || '').toLowerCase()));
+        normalized.sort((a, b)=> String(b.event_datetime || '').localeCompare(String(a.event_datetime || '')));
         renderList(normalized);
       }catch(_){
         renderList([]);
@@ -12833,6 +13803,12 @@ console.info('app.js loaded :: 20251123a');
         openConsentModal();
         return;
       }
+      const openInformeBtn = event.target.closest('[data-action="documents-open-informe"]');
+      if(openInformeBtn){
+        event.preventDefault();
+        openInformeModal();
+        return;
+      }
       const placeholderBtn = event.target.closest('[data-action="documents-open-placeholder"]');
       if(placeholderBtn){
         event.preventDefault();
@@ -13074,6 +14050,76 @@ console.info('app.js loaded :: 20251123a');
         pushCiDebug('[CI] emit click handler error', 'error', error);
       });
     });
+    const bindInformeField = (inputEl, key)=>{
+      if(!inputEl) return;
+      const evtName = (inputEl.tagName === 'SELECT' || inputEl.type === 'checkbox') ? 'change' : 'input';
+      inputEl.addEventListener(evtName, ()=>{
+        if(inputEl.type === 'checkbox'){
+          informeState.form[key] = !!inputEl.checked;
+          return;
+        }
+        informeState.form[key] = normalizeConsentInputRaw(inputEl.value || '');
+      });
+    };
+    bindInformeField(els.informeReason, 'reason');
+    bindInformeField(els.informeEmissionDate, 'emission_date');
+    bindInformeField(els.informeCurrentIllness, 'current_illness');
+    bindInformeField(els.informeRelevantHistory, 'relevant_history');
+    bindInformeField(els.informeClinicalSummary, 'clinical_summary');
+    bindInformeField(els.informeFindings, 'findings');
+    bindInformeField(els.informeDiagnosticImpression, 'diagnostic_impression');
+    bindInformeField(els.informePlan, 'plan');
+    bindInformeField(els.informePrognosis, 'prognosis');
+    bindInformeField(els.informeClosingStatement, 'closing_statement');
+    els.informePrev?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      informeState.step = Math.max(1, Number(informeState.step || 1) - 1);
+      renderInformeStep();
+    });
+    els.informeNext?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      informeState.step = Math.min(4, Number(informeState.step || 1) + 1);
+      renderInformeStep();
+    });
+    els.informeCancel?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      resetInformeWizard();
+      closeInformeModal();
+    });
+    els.informeSave?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      saveInformeDocument('draft');
+    });
+    els.informeEmit?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      saveInformeDocument('issued');
+    });
+    els.informeSignatureSourceRegistered?.addEventListener('change', ()=>{
+      if(els.informeSignatureSourceRegistered?.checked){
+        setInformeSignaturePreferredSource('registered');
+      }
+    });
+    els.informeSignatureSourceLocal?.addEventListener('change', ()=>{
+      if(els.informeSignatureSourceLocal?.checked){
+        setInformeSignaturePreferredSource('local');
+      }
+    });
+    els.informeSignatureApply?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      handleInformeDoctorSignatureApply();
+    });
+    els.informeSignatureClear?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      clearInformeSignaturePad();
+      if(informeState.registeredSignatureData){
+        setInformeSignaturePreferredSource('registered');
+      }else{
+        setInformeSignaturePreferredSource('');
+      }
+    });
+    els.informeModalEl?.addEventListener('hidden.bs.modal', ()=>{
+      resetInformeWizard();
+    });
     els.template?.addEventListener('change', (event)=>{
       describeTemplate(event?.target?.value || '');
     });
@@ -13163,19 +14209,22 @@ console.info('app.js loaded :: 20251123a');
         syncConsentSignatureCanvasSize();
         syncDoctorSignatureCanvasSize();
       }
+      if(els.informeWizard && !els.informeWizard.classList.contains('d-none')){
+        syncInformeSignatureCanvasSize();
+      }
     });
     els.list.addEventListener('click', (event)=>{
       const card = event.target.closest('[data-doc-uuid]');
       if(!card) return;
       event.preventDefault();
-      openConsentViewer(card.getAttribute('data-doc-uuid'));
+      openClinicalDocumentViewer(card.getAttribute('data-doc-uuid'));
     });
     els.list.addEventListener('keydown', (event)=>{
       if(event.key !== 'Enter' && event.key !== ' ') return;
       const card = event.target.closest('[data-doc-uuid]');
       if(!card) return;
       event.preventDefault();
-      openConsentViewer(card.getAttribute('data-doc-uuid'));
+      openClinicalDocumentViewer(card.getAttribute('data-doc-uuid'));
     });
 
     window.addEventListener('expediente:patient-changed', ()=>{ listCanonicalConsents(); });
@@ -13201,6 +14250,9 @@ console.info('app.js loaded :: 20251123a');
     updateDoctorSignatureStatus();
     renderIdentityFilesList();
     resetWizard();
+    initInformeSignaturePad();
+    refreshInformeRegisteredSignature();
+    resetInformeWizard();
     listCanonicalConsents();
   };
   setupConsentimientoCanonicoHost();
