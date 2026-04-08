@@ -1,0 +1,181 @@
+/*
+ * MXMed DOC BASE SYSTEM (v1)
+ * Base reusable for clinical documents.
+ *
+ * Safe adoption pattern:
+ * 1) Keep existing document-specific classes.
+ * 2) Add doc-base-* classes to document markup.
+ * 3) Migrate styles incrementally by document.
+ */
+
+:root {
+  --doc-font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --doc-page-width-letter: 21.59cm;
+  --doc-page-pad-y: 2.2cm;
+  --doc-page-pad-x: 2cm;
+  --doc-ink-primary: #0a5168;
+  --doc-ink-secondary: #273b47;
+  --doc-ink-muted: #3f5564;
+}
+
+.doc-base-sheet-frame {
+  background: #eef2f5;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.doc-base-sheet {
+  box-sizing: border-box;
+  width: min(var(--doc-page-width-letter), 100%);
+  margin: 0 auto;
+  background: #fff;
+  padding: var(--doc-page-pad-y) var(--doc-page-pad-x);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  font-family: var(--doc-font-sans);
+  color: var(--doc-ink-secondary);
+}
+
+.doc-base-sheet--letter {
+  --doc-page-width-letter: 21.59cm;
+}
+
+.doc-base-body {
+  display: grid;
+  gap: 8px;
+}
+
+.doc-base-medical-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  border-bottom: none;
+  padding-bottom: 2px;
+}
+
+.doc-base-title {
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: var(--doc-ink-primary);
+  line-height: 1.06;
+  letter-spacing: 0.012em;
+  text-align: center;
+}
+
+.doc-base-title-block {
+  display: grid;
+  gap: 2px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  margin-bottom: 20px;
+}
+
+.doc-base-patient-meta {
+  display: grid;
+  gap: 1px;
+  padding-top: 1px;
+  padding-bottom: 1px;
+  margin-bottom: 10px;
+}
+
+.doc-base-section {
+  margin-bottom: 6px;
+}
+
+.doc-base-section-title {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: var(--doc-ink-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 2px;
+}
+
+.doc-base-text {
+  font-size: 0.84rem;
+  color: var(--doc-ink-secondary);
+  white-space: pre-wrap;
+  line-height: 1.35;
+}
+
+.doc-base-signature {
+  border-top: none;
+  padding-top: 6px;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  text-align: center;
+  margin-bottom: 0;
+}
+
+.doc-base-signature img {
+  max-width: 240px;
+  max-height: 90px;
+  width: 100%;
+  object-fit: contain;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  margin-top: 2px;
+}
+
+.doc-base-signature-meta {
+  font-size: 0.84rem;
+  color: #243746;
+  text-align: center;
+}
+
+/* Print-safe utilities for upcoming documents (Interconsulta/Certificados/Responsiva). */
+@page {
+  size: Letter portrait;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+    color: #000;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .doc-base-print-safe {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+    page-break-before: auto !important;
+    page-break-after: auto !important;
+    break-before: auto !important;
+    break-after: auto !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  .doc-base-sheet-frame {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .doc-base-sheet {
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: var(--doc-page-pad-y) var(--doc-page-pad-x) !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+  }
+}
+

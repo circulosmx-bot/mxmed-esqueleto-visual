@@ -738,6 +738,9 @@ if (!$embed) {
     clinical_embed_start();
 }
 ?>
+<?php if ($isInformeDoc): ?>
+<link rel="stylesheet" href="/assets/css/clinical-doc-base.css">
+<?php endif; ?>
 <style>
   html,body{height:100%;}
   .mm-viewer-shell{height:100vh;display:flex;flex-direction:column;}
@@ -1794,9 +1797,9 @@ if (!$embed) {
       $informePrognosis = (string)($informePrognosisLabelMap[strtolower($informePrognosisRaw)] ?? $informePrognosisRaw);
       $informeClosing = trim((string)($informeContent['closing_statement'] ?? ''));
       ?>
-      <div class="document-sheet-frame mb-3">
-      <article class="informe-doc-sheet document-sheet">
-        <header class="clinical-doc-head informe-doc-head <?php echo h($informeHeaderCfg['class_name']); ?>">
+      <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
+      <article class="informe-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-body doc-base-print-safe">
+        <header class="clinical-doc-head informe-doc-head doc-base-medical-header doc-base-print-safe <?php echo h($informeHeaderCfg['class_name']); ?>">
           <div class="clinical-doc-head-main">
             <div class="clinical-doc-head-doctor">
               <div class="clinical-doc-head-logo-slot <?php echo $informeShowLogo ? '' : 'is-empty'; ?>">
@@ -1822,10 +1825,10 @@ if (!$embed) {
             </div>
           </div>
         </header>
-        <section class="informe-doc-title-block">
-          <div class="informe-doc-title"><?php echo h(trim((string)($title !== '' ? $title : 'Informe médico'))); ?></div>
+        <section class="informe-doc-title-block doc-base-title-block">
+          <div class="informe-doc-title doc-base-title"><?php echo h(trim((string)($title !== '' ? $title : 'Informe médico'))); ?></div>
         </section>
-        <section class="informe-doc-patient-block">
+        <section class="informe-doc-patient-block doc-base-patient-meta">
           <div class="informe-doc-patient-head">
             <div class="informe-doc-patient-line"><strong>Paciente:</strong> <?php echo h($informePatientName); ?></div>
             <div class="informe-doc-date"><strong>Fecha:</strong> <?php echo h($informeDateOut !== '' ? $informeDateOut : $date); ?></div>
@@ -1833,69 +1836,69 @@ if (!$embed) {
           <div class="informe-doc-patient-line"><strong>Edad:</strong> <?php echo h($informePatientAge !== '' ? ($informePatientAge . ' años') : 'No registrada'); ?> · <strong>Sexo:</strong> <?php echo h($informePatientSex !== '' ? $informePatientSex : 'No especificado'); ?></div>
         </section>
         <?php if ($informeReason !== ''): ?>
-          <section class="informe-doc-body-section">
-            <div class="informe-doc-section-title">Motivo del informe</div>
-            <div class="informe-doc-text"><?php echo nl2br(h($informeReason)); ?></div>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Motivo del informe</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($informeReason)); ?></div>
           </section>
         <?php endif; ?>
         <?php if ($informeCurrentIllness !== ''): ?>
-          <section class="informe-doc-body-section">
-            <div class="informe-doc-section-title">Motivo de atención</div>
-            <div class="informe-doc-text"><?php echo nl2br(h($informeCurrentIllness)); ?></div>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Motivo de atención</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($informeCurrentIllness)); ?></div>
           </section>
         <?php endif; ?>
         <?php if ($informeRelevantHistory !== ''): ?>
-          <section class="informe-doc-body-section">
-            <div class="informe-doc-section-title">Antecedentes relevantes</div>
-            <div class="informe-doc-text"><?php echo nl2br(h($informeRelevantHistory)); ?></div>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Antecedentes relevantes</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($informeRelevantHistory)); ?></div>
           </section>
         <?php endif; ?>
         <?php if ($informeClinicalSummary !== ''): ?>
-          <section class="informe-doc-body-section">
-            <div class="informe-doc-section-title">Resumen clínico</div>
-            <div class="informe-doc-text"><?php echo nl2br(h($informeClinicalSummary)); ?></div>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Resumen clínico</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($informeClinicalSummary)); ?></div>
           </section>
         <?php endif; ?>
         <?php if ($informeFindings !== ''): ?>
-          <section class="informe-doc-body-section">
-            <div class="informe-doc-section-title">Hallazgos / valoración médica</div>
-            <div class="informe-doc-text"><?php echo nl2br(h($informeFindings)); ?></div>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Hallazgos / valoración médica</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($informeFindings)); ?></div>
           </section>
         <?php endif; ?>
         <?php if ($informeDiagnostic !== ''): ?>
-          <section class="informe-doc-body-section">
-            <div class="informe-doc-section-title">Impresión diagnóstica / diagnóstico</div>
-            <div class="informe-doc-text"><?php echo nl2br(h($informeDiagnostic)); ?></div>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Impresión diagnóstica / diagnóstico</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($informeDiagnostic)); ?></div>
           </section>
         <?php endif; ?>
         <?php if ($informePlan !== ''): ?>
-          <section class="informe-doc-body-section">
-            <div class="informe-doc-section-title">Plan / manejo / recomendaciones</div>
-            <div class="informe-doc-text"><?php echo nl2br(h($informePlan)); ?></div>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Plan / manejo / recomendaciones</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($informePlan)); ?></div>
           </section>
         <?php endif; ?>
         <?php if ($informePrognosis !== ''): ?>
-          <section class="informe-doc-body-section">
-            <div class="informe-doc-section-title">Pronóstico</div>
-            <div class="informe-doc-text"><?php echo nl2br(h($informePrognosis)); ?></div>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Pronóstico</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($informePrognosis)); ?></div>
           </section>
         <?php endif; ?>
         <?php if ($informeClosing !== ''): ?>
-          <section class="informe-doc-body-section">
-            <div class="informe-doc-section-title">Declaración de cierre</div>
-            <div class="informe-doc-text"><?php echo nl2br(h($informeClosing)); ?></div>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Declaración de cierre</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($informeClosing)); ?></div>
           </section>
         <?php endif; ?>
-        <section class="informe-doc-sign">
-          <div class="informe-doc-section-title">Firma del médico</div>
+        <section class="informe-doc-sign doc-base-signature doc-base-print-safe">
+          <div class="informe-doc-section-title doc-base-section-title">Firma del médico</div>
           <?php if ($informeDoctorSignatureImage !== ''): ?>
             <img class="informe-doc-sign-image" src="<?php echo h($informeDoctorSignatureImage); ?>" alt="Firma del médico">
-            <div class="informe-doc-sign-meta">
+            <div class="informe-doc-sign-meta doc-base-signature-meta">
               <?php echo h($informeDoctorSignatureSignerName !== '' ? $informeDoctorSignatureSignerName : $informeDoctorName); ?>
             </div>
           <?php else: ?>
             <div class="informe-doc-sign-line"></div>
-            <div class="informe-doc-sign-meta">
+            <div class="informe-doc-sign-meta doc-base-signature-meta">
               <?php echo h($informeDoctorName); ?>
             </div>
           <?php endif; ?>
