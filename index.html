@@ -6590,13 +6590,13 @@
                     <div class="docs-launcher-section mb-3">
                       <div class="docs-launcher-group-title">Referencia y evolución clínica</div>
                       <div class="docs-launcher-list" role="list">
-                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="interconsulta" data-doc-title="Interconsulta" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Solicitud de valoración por otra especialidad con información clínica relevante.">
+                        <button type="button" class="docs-launcher-row docs-launcher-row--active" data-action="documents-open-interconsulta" data-doc-code="interconsulta" data-doc-title="Interconsulta" data-doc-entry="existing-flow" data-doc-status="Ya funcional" data-doc-desc="Solicitud de valoración por otra especialidad con información clínica relevante.">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">send</span>
                           <span class="docs-launcher-row-main">
                             <span class="docs-launcher-row-title">Interconsulta</span>
                             <span class="docs-launcher-row-desc">Referencia a otra especialidad.</span>
                           </span>
-                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                          <span class="docs-launcher-row-status is-ready">Ya funcional</span>
                         </button>
                         <button type="button" class="docs-launcher-row docs-launcher-row--active" data-action="documents-open-informe" data-doc-code="informe_medico" data-doc-title="Informe médico" data-doc-entry="existing-flow" data-doc-status="Ya funcional" data-doc-desc="Resumen clínico estructurado de evolución, hallazgos y conducta médica.">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">summarize</span>
@@ -7176,6 +7176,160 @@
                   </div>
                 </div>
 
+                <div class="exp-card d-none mb-3" id="ix_wizard">
+                  <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
+                    <span>Nueva Interconsulta</span>
+                    <span class="text-muted small" id="ix_step_label">Paso 1 de 5</span>
+                  </div>
+                  <div class="exp-card-body">
+                    <div class="alert alert-warning py-2 d-none" id="ix_notice"></div>
+                    <div id="ix_step_1">
+                      <div class="row g-3">
+                        <div class="col-md-6">
+                          <label class="form-label" for="ix_recipient_mode">Tipo de destinatario</label>
+                          <select class="form-select" id="ix_recipient_mode">
+                            <option value="doctor">Médico específico</option>
+                            <option value="service">Especialidad / servicio</option>
+                          </select>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label" for="ix_recipient_source">Origen del destinatario</label>
+                          <select class="form-select" id="ix_recipient_source">
+                            <option value="manual">Captura manual</option>
+                            <option value="mxmed_directory" disabled>Buscar en MXMed (próximamente)</option>
+                          </select>
+                        </div>
+                        <div class="col-md-6" id="ix_wrap_doctor_name">
+                          <label class="form-label" for="ix_doctor_name">Nombre del médico destino</label>
+                          <input class="form-control" id="ix_doctor_name" placeholder="Nombre completo">
+                        </div>
+                        <div class="col-md-6" id="ix_wrap_specialty">
+                          <label class="form-label" for="ix_specialty">Especialidad</label>
+                          <input class="form-control" id="ix_specialty" placeholder="Especialidad clínica">
+                        </div>
+                        <div class="col-md-6 d-none" id="ix_wrap_service">
+                          <label class="form-label" for="ix_service">Especialidad / servicio destino</label>
+                          <input class="form-control" id="ix_service" placeholder="Ej. Cardiología, Medicina interna, Urgencias">
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label" for="ix_facility">Institución / sede <span class="text-muted">(opcional)</span></label>
+                          <input class="form-control" id="ix_facility" placeholder="Hospital, clínica o consultorio">
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label" for="ix_city">Ciudad <span class="text-muted">(opcional)</span></label>
+                          <input class="form-control" id="ix_city" placeholder="Ciudad">
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label" for="ix_contact">Contacto <span class="text-muted">(opcional)</span></label>
+                          <input class="form-control" id="ix_contact" placeholder="Teléfono o correo">
+                        </div>
+                      </div>
+                    </div>
+                    <div id="ix_step_2" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="ix_reason">Motivo de interconsulta</label>
+                          <textarea class="form-control" id="ix_reason" rows="4" placeholder="Describe el motivo clínico de la referencia."></textarea>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="ix_step_3" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="ix_summary">Resumen clínico de referencia</label>
+                          <textarea class="form-control" id="ix_summary" rows="5" placeholder="Contexto clínico relevante para orientar al interconsultante."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="ix_background">Antecedentes relevantes <span class="text-muted">(opcional)</span></label>
+                          <textarea class="form-control" id="ix_background" rows="3" placeholder="Antecedentes clínicos, comorbilidades o datos de contexto relevantes."></textarea>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="ix_step_4" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="ix_request">Solicitud clínica puntual</label>
+                          <textarea class="form-control" id="ix_request" rows="4" placeholder="Especifica la valoración, opinión o intervención solicitada."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="ix_studies">Estudios relevantes <span class="text-muted">(opcional)</span></label>
+                          <textarea class="form-control" id="ix_studies" rows="2" placeholder="Estudios, resultados o datos complementarios para referencia."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="ix_comments">Comentarios al colega <span class="text-muted">(opcional)</span></label>
+                          <textarea class="form-control" id="ix_comments" rows="2" placeholder="Mensaje clínico breve para el interconsultante."></textarea>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="ix_step_5" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="ix_closing">Cierre formal</label>
+                          <textarea class="form-control" id="ix_closing" rows="3" placeholder="Se emite la presente interconsulta para valoración por [destino], con base en el contexto clínico descrito."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="ix_final_note">Observación final del emisor <span class="text-muted">(opcional)</span></label>
+                          <textarea class="form-control" id="ix_final_note" rows="2" placeholder="Observación final opcional."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <div class="border rounded p-2">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                              <div class="ci-signature-heading ci-signature-heading--doctor">Firma del médico emisor</div>
+                              <span class="small text-muted" id="ix_signature_status">Sin firma</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-3 mb-2">
+                              <div class="form-check mb-0">
+                                <input class="form-check-input" type="radio" name="ix_signature_source" id="ix_signature_source_registered" value="registered">
+                                <label class="form-check-label small" for="ix_signature_source_registered">Usar firma registrada</label>
+                              </div>
+                              <div class="form-check mb-0">
+                                <input class="form-check-input" type="radio" name="ix_signature_source" id="ix_signature_source_local" value="local">
+                                <label class="form-check-label small" for="ix_signature_source_local">Firmar en pantalla</label>
+                              </div>
+                              <div class="form-check mb-0">
+                                <input class="form-check-input" type="radio" name="ix_signature_source" id="ix_signature_source_remote" value="remote">
+                                <label class="form-check-label small" for="ix_signature_source_remote">Firmar desde dispositivo móvil</label>
+                              </div>
+                            </div>
+                            <div class="alert alert-light py-2 px-3 small d-none mb-2" id="ix_signature_registered_wrap">
+                              <div class="fw-semibold mb-1">Firma registrada disponible</div>
+                              <img id="ix_signature_registered_preview" src="" alt="Firma registrada del médico" class="img-fluid rounded border bg-white" style="max-height:140px;object-fit:contain;">
+                            </div>
+                            <div class="mx-signature-pad" data-signature-role="doctor">
+                              <canvas id="ix_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
+                            </div>
+                            <div class="d-flex flex-wrap justify-content-end gap-2 mt-2">
+                              <button type="button" class="btn btn-outline-primary btn-sm" id="ix_signature_qr_open">Firmar desde dispositivo móvil</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" id="ix_signature_apply">Aplicar firma del médico</button>
+                              <button type="button" class="btn btn-outline-secondary btn-sm" id="ix_signature_clear">Limpiar firma del médico</button>
+                            </div>
+                            <div class="alert alert-warning py-2 px-3 d-none mt-2" id="ix_signature_inline_prompt">
+                              <div class="small mb-2">¿Deseas guardar esta firma como tu firma digitalizada para usarla en próximos documentos?</div>
+                              <div class="d-flex flex-wrap justify-content-end gap-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="ix_signature_inline_no">No guardar</button>
+                                <button type="button" class="btn btn-primary btn-sm" id="ix_signature_inline_yes">Sí, guardar firma</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-12">
+                          <div class="border rounded p-3 bg-light-subtle">
+                            <div class="small text-uppercase text-muted fw-semibold mb-2">Vista previa</div>
+                            <div id="ix_preview" class="small"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                      <button type="button" class="btn btn-outline-secondary btn-sm" id="ix_prev" disabled>Anterior</button>
+                      <button type="button" class="btn btn-primary btn-sm" id="ix_next">Continuar</button>
+                      <button type="button" class="btn btn-success btn-sm d-none" id="ix_save">Guardar borrador</button>
+                      <button type="button" class="btn btn-primary btn-sm d-none" id="ix_emit">Emitir interconsulta</button>
+                      <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="ix_cancel">Cancelar</button>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="exp-card exp-card--secondary">
                   <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
                     <span>Documentos recientes</span>
@@ -7204,6 +7358,17 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body" id="im_modal_body_slot"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal fade" id="modalInterconsulta" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Interconsulta</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body" id="ix_modal_body_slot"></div>
                     </div>
                   </div>
                 </div>

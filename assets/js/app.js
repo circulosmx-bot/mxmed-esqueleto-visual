@@ -8926,6 +8926,8 @@ console.info('app.js loaded :: 20251123a');
       consentModalBodySlot: pane.querySelector('#ci_modal_body_slot'),
       informeModalEl: pane.querySelector('#modalInformeMedico'),
       informeModalBodySlot: pane.querySelector('#im_modal_body_slot'),
+      interconsultaModalEl: pane.querySelector('#modalInterconsulta'),
+      interconsultaModalBodySlot: pane.querySelector('#ix_modal_body_slot'),
       draftPromptModalEl: pane.querySelector('#modalConsentDraftPrompt'),
       draftPromptText: pane.querySelector('#ci_draft_prompt_text'),
       draftPromptReopenBtn: pane.querySelector('#ci_draft_reopen_btn'),
@@ -9096,7 +9098,53 @@ console.info('app.js loaded :: 20251123a');
       informeSignatureStatus: root.querySelector('#im_signature_status'),
       informeSignatureInlinePrompt: root.querySelector('#im_signature_inline_prompt'),
       informeSignatureInlineYesBtn: root.querySelector('#im_signature_inline_yes'),
-      informeSignatureInlineNoBtn: root.querySelector('#im_signature_inline_no')
+      informeSignatureInlineNoBtn: root.querySelector('#im_signature_inline_no'),
+      interconsultaWizard: root.querySelector('#ix_wizard'),
+      interconsultaStepLabel: root.querySelector('#ix_step_label'),
+      interconsultaNotice: root.querySelector('#ix_notice'),
+      interconsultaStep1: root.querySelector('#ix_step_1'),
+      interconsultaStep2: root.querySelector('#ix_step_2'),
+      interconsultaStep3: root.querySelector('#ix_step_3'),
+      interconsultaStep4: root.querySelector('#ix_step_4'),
+      interconsultaStep5: root.querySelector('#ix_step_5'),
+      interconsultaRecipientMode: root.querySelector('#ix_recipient_mode'),
+      interconsultaRecipientSource: root.querySelector('#ix_recipient_source'),
+      interconsultaDoctorName: root.querySelector('#ix_doctor_name'),
+      interconsultaSpecialty: root.querySelector('#ix_specialty'),
+      interconsultaService: root.querySelector('#ix_service'),
+      interconsultaFacility: root.querySelector('#ix_facility'),
+      interconsultaCity: root.querySelector('#ix_city'),
+      interconsultaContact: root.querySelector('#ix_contact'),
+      interconsultaWrapDoctorName: root.querySelector('#ix_wrap_doctor_name'),
+      interconsultaWrapSpecialty: root.querySelector('#ix_wrap_specialty'),
+      interconsultaWrapService: root.querySelector('#ix_wrap_service'),
+      interconsultaReason: root.querySelector('#ix_reason'),
+      interconsultaSummary: root.querySelector('#ix_summary'),
+      interconsultaBackground: root.querySelector('#ix_background'),
+      interconsultaRequest: root.querySelector('#ix_request'),
+      interconsultaStudies: root.querySelector('#ix_studies'),
+      interconsultaComments: root.querySelector('#ix_comments'),
+      interconsultaClosing: root.querySelector('#ix_closing'),
+      interconsultaFinalNote: root.querySelector('#ix_final_note'),
+      interconsultaPreview: root.querySelector('#ix_preview'),
+      interconsultaPrev: root.querySelector('#ix_prev'),
+      interconsultaNext: root.querySelector('#ix_next'),
+      interconsultaSave: root.querySelector('#ix_save'),
+      interconsultaEmit: root.querySelector('#ix_emit'),
+      interconsultaCancel: root.querySelector('#ix_cancel'),
+      interconsultaSignatureSourceRegistered: root.querySelector('#ix_signature_source_registered'),
+      interconsultaSignatureSourceLocal: root.querySelector('#ix_signature_source_local'),
+      interconsultaSignatureSourceRemote: root.querySelector('#ix_signature_source_remote'),
+      interconsultaSignatureRegisteredWrap: root.querySelector('#ix_signature_registered_wrap'),
+      interconsultaSignatureRegisteredPreview: root.querySelector('#ix_signature_registered_preview'),
+      interconsultaSignatureCanvas: root.querySelector('#ix_signature_canvas'),
+      interconsultaSignatureQrOpen: root.querySelector('#ix_signature_qr_open'),
+      interconsultaSignatureApply: root.querySelector('#ix_signature_apply'),
+      interconsultaSignatureClear: root.querySelector('#ix_signature_clear'),
+      interconsultaSignatureStatus: root.querySelector('#ix_signature_status'),
+      interconsultaSignatureInlinePrompt: root.querySelector('#ix_signature_inline_prompt'),
+      interconsultaSignatureInlineYesBtn: root.querySelector('#ix_signature_inline_yes'),
+      interconsultaSignatureInlineNoBtn: root.querySelector('#ix_signature_inline_no')
     };
     if(!els.list || !els.empty || !els.newBtn || !els.wizard || !els.next || !els.save) return;
     if(els.consentModalBodySlot && els.wizard.parentElement !== els.consentModalBodySlot){
@@ -9104,6 +9152,9 @@ console.info('app.js loaded :: 20251123a');
     }
     if(els.informeModalBodySlot && els.informeWizard && els.informeWizard.parentElement !== els.informeModalBodySlot){
       els.informeModalBodySlot.appendChild(els.informeWizard);
+    }
+    if(els.interconsultaModalBodySlot && els.interconsultaWizard && els.interconsultaWizard.parentElement !== els.interconsultaModalBodySlot){
+      els.interconsultaModalBodySlot.appendChild(els.interconsultaWizard);
     }
     const hideInternalPrefillField = (fieldId = '')=>{
       const safeId = sanitizeText(fieldId || '');
@@ -9210,6 +9261,37 @@ console.info('app.js loaded :: 20251123a');
         plan: '',
         prognosis: '',
         closing_statement: ''
+      }
+    };
+    const interconsultaState = {
+      step: 1,
+      saving: false,
+      signaturePad: null,
+      signatureHasStroke: false,
+      signaturePreferredSource: '',
+      registeredSignatureData: '',
+      remoteSignature: null,
+      form: {
+        recipient_mode: 'doctor',
+        recipient: {
+          source: 'manual',
+          recipient_user_id: '',
+          directory_ref: '',
+          doctor_name: '',
+          specialty: '',
+          service: '',
+          facility: '',
+          city: '',
+          contact: ''
+        },
+        reason: '',
+        summary: '',
+        background: '',
+        request: '',
+        studies: '',
+        comments: '',
+        closing_statement: '',
+        final_note: ''
       }
     };
     const DEFAULT_CONSENT_RISK_FRAMEWORK = Object.freeze({
@@ -9393,6 +9475,36 @@ console.info('app.js loaded :: 20251123a');
         render_order: Object.freeze([
           'header',
           'patient_context',
+          'clinical_content',
+          'closure',
+          'signatures'
+        ]),
+        print_profile: Object.freeze({
+          font_family: '"Inter", "Helvetica Neue", Arial, sans-serif',
+          base_font_size_px: 12,
+          line_height: 1.5
+        })
+      }),
+      interconsulta: Object.freeze({
+        document_type: 'interconsulta',
+        title: 'Interconsulta',
+        subtitle_field: 'content.reason',
+        blocks: Object.freeze([
+          'encabezado',
+          'datos_paciente',
+          'destinatario',
+          'motivo_interconsulta',
+          'resumen_clinico',
+          'solicitud_clinica',
+          'cierre',
+          'firma_medico'
+        ]),
+        signatures_required: Object.freeze(['doctor']),
+        attachments_allowed: Object.freeze([]),
+        render_order: Object.freeze([
+          'header',
+          'patient_context',
+          'recipient',
           'clinical_content',
           'closure',
           'signatures'
@@ -12540,6 +12652,770 @@ console.info('app.js loaded :: 20251123a');
         renderInformeStep();
       }
     };
+    const setInterconsultaNotice = (message = '')=>{
+      if(!els.interconsultaNotice) return;
+      const text = sanitizeText(message || '');
+      els.interconsultaNotice.textContent = text;
+      els.interconsultaNotice.classList.toggle('d-none', !text);
+    };
+    const updateInterconsultaRecipientModeUI = ()=>{
+      const mode = sanitizeText(interconsultaState.form.recipient_mode || 'doctor') || 'doctor';
+      const isService = mode === 'service';
+      els.interconsultaWrapDoctorName?.classList.toggle('d-none', isService);
+      els.interconsultaWrapService?.classList.toggle('d-none', !isService);
+      if(els.interconsultaWrapSpecialty){
+        const label = els.interconsultaWrapSpecialty.querySelector('label');
+        if(label){
+          label.textContent = isService ? 'Médico específico (opcional)' : 'Especialidad';
+        }
+      }
+    };
+    const syncInterconsultaSignatureCanvasSize = ({ preserveDrawing = true } = {})=>{
+      if(!els.interconsultaSignatureCanvas) return;
+      const canvas = els.interconsultaSignatureCanvas;
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.max(300, Math.floor(rect.width || 0));
+      const height = Math.max(160, Math.floor(rect.height || 180));
+      const ratio = Math.max(1, window.devicePixelRatio || 1);
+      const targetW = Math.floor(width * ratio);
+      const targetH = Math.floor(height * ratio);
+      if(canvas.width === targetW && canvas.height === targetH){
+        return;
+      }
+      let snapshot = '';
+      if(preserveDrawing && interconsultaState.signatureHasStroke){
+        try{
+          snapshot = canvas.toDataURL('image/png');
+        }catch(_){
+          snapshot = '';
+        }
+      }
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+      if(!ctx) return;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(ratio, ratio);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2;
+      if(snapshot){
+        const img = new Image();
+        img.onload = ()=>{
+          try{
+            ctx.drawImage(img, 0, 0, width, height);
+            interconsultaState.signatureHasStroke = true;
+            updateInterconsultaSignatureStatus();
+          }catch(_){}
+        };
+        img.src = snapshot;
+      }else{
+        interconsultaState.signatureHasStroke = false;
+        if(interconsultaState.signaturePreferredSource === 'local'){
+          interconsultaState.signaturePreferredSource = interconsultaState.remoteSignature ? 'remote' : '';
+        }
+        updateInterconsultaSignatureStatus();
+      }
+    };
+    const pullInterconsultaDoctorRemoteSignature = ()=>{
+      const remote = (state.doctorRemoteSignature && typeof state.doctorRemoteSignature === 'object')
+        ? state.doctorRemoteSignature
+        : null;
+      const imageData = sanitizeText(remote?.image_data || '');
+      if(!imageData){
+        interconsultaState.remoteSignature = null;
+        if(interconsultaState.signaturePreferredSource === 'remote'){
+          interconsultaState.signaturePreferredSource = interconsultaState.signatureHasStroke ? 'local' : (interconsultaState.registeredSignatureData ? 'registered' : '');
+        }
+        return false;
+      }
+      interconsultaState.remoteSignature = {
+        type: 'drawn',
+        source: 'remote_qr',
+        role: 'doctor',
+        image_data: imageData,
+        signed_at: sanitizeText(remote?.signed_at || formatNowSql()),
+        signer_name: sanitizeText(remote?.signer_name || document.querySelector('.user-id .name')?.textContent || 'Médico tratante'),
+        token: sanitizeText(remote?.token || '')
+      };
+      return true;
+    };
+    const clearInterconsultaRemoteSignature = ()=>{
+      interconsultaState.remoteSignature = null;
+      if(interconsultaState.signaturePreferredSource === 'remote'){
+        if(interconsultaState.registeredSignatureData){
+          interconsultaState.signaturePreferredSource = 'registered';
+        }else if(interconsultaState.signatureHasStroke){
+          interconsultaState.signaturePreferredSource = 'local';
+        }else{
+          interconsultaState.signaturePreferredSource = '';
+        }
+      }
+    };
+    const initInterconsultaSignaturePad = ()=>{
+      const canvas = els.interconsultaSignatureCanvas;
+      if(!canvas || canvas.dataset.bound === '1') return;
+      const rect = canvas.getBoundingClientRect();
+      if(rect.width <= 0 || rect.height <= 0){
+        return;
+      }
+      syncInterconsultaSignatureCanvasSize({ preserveDrawing: false });
+      const ctx = canvas.getContext('2d');
+      if(!ctx) return;
+      const readPoint = (event)=>{
+        const currentRect = canvas.getBoundingClientRect();
+        return {
+          x: (event.clientX - currentRect.left),
+          y: (event.clientY - currentRect.top)
+        };
+      };
+      let drawing = false;
+      const start = (event)=>{
+        if(interconsultaState.saving) return;
+        drawing = true;
+        const pt = readPoint(event);
+        ctx.beginPath();
+        ctx.moveTo(pt.x, pt.y);
+        interconsultaState.signatureHasStroke = true;
+        interconsultaState.signaturePreferredSource = 'local';
+        updateInterconsultaSignatureStatus();
+        event.preventDefault();
+      };
+      const move = (event)=>{
+        if(!drawing) return;
+        const pt = readPoint(event);
+        ctx.lineTo(pt.x, pt.y);
+        ctx.stroke();
+        event.preventDefault();
+      };
+      const end = (event)=>{
+        if(!drawing) return;
+        drawing = false;
+        ctx.closePath();
+        event.preventDefault();
+      };
+      canvas.addEventListener('pointerdown', start);
+      canvas.addEventListener('pointermove', move);
+      canvas.addEventListener('pointerup', end);
+      canvas.addEventListener('pointerleave', end);
+      canvas.addEventListener('pointercancel', end);
+      canvas.dataset.bound = '1';
+      interconsultaState.signaturePad = { canvas, ctx };
+      updateInterconsultaSignatureStatus();
+    };
+    const clearInterconsultaSignaturePad = ()=>{
+      const canvas = els.interconsultaSignatureCanvas;
+      if(!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if(!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      interconsultaState.signatureHasStroke = false;
+      if(interconsultaState.signaturePreferredSource !== 'registered'){
+        interconsultaState.signaturePreferredSource = interconsultaState.remoteSignature ? 'remote' : '';
+      }
+      updateInterconsultaSignatureStatus();
+    };
+    const exportInterconsultaSignatureData = ()=>{
+      const canvas = els.interconsultaSignatureCanvas;
+      if(interconsultaState.signaturePreferredSource === 'registered' && interconsultaState.registeredSignatureData){
+        return interconsultaState.registeredSignatureData;
+      }
+      if(!canvas || !interconsultaState.signatureHasStroke){
+        return '';
+      }
+      try{
+        return canvas.toDataURL('image/png');
+      }catch(_){
+        return '';
+      }
+    };
+    const setInterconsultaSignaturePreferredSource = (source = '')=>{
+      const normalized = sanitizeText(source || '');
+      interconsultaState.signaturePreferredSource = normalized;
+      if(els.interconsultaSignatureSourceRegistered){
+        els.interconsultaSignatureSourceRegistered.checked = normalized === 'registered';
+      }
+      if(els.interconsultaSignatureSourceLocal){
+        els.interconsultaSignatureSourceLocal.checked = normalized === 'local';
+      }
+      if(els.interconsultaSignatureSourceRemote){
+        els.interconsultaSignatureSourceRemote.checked = normalized === 'remote';
+      }
+      if(els.interconsultaSignatureRegisteredWrap){
+        els.interconsultaSignatureRegisteredWrap.classList.toggle('d-none', normalized !== 'registered' || !interconsultaState.registeredSignatureData);
+      }
+      updateInterconsultaSignatureStatus();
+    };
+    const refreshInterconsultaRegisteredSignature = ()=>{
+      interconsultaState.registeredSignatureData = readRegisteredDoctorSignature();
+      if(els.interconsultaSignatureRegisteredPreview){
+        els.interconsultaSignatureRegisteredPreview.src = interconsultaState.registeredSignatureData || '';
+      }
+      if(els.interconsultaSignatureRegisteredWrap){
+        const show = interconsultaState.signaturePreferredSource === 'registered' && !!interconsultaState.registeredSignatureData;
+        els.interconsultaSignatureRegisteredWrap.classList.toggle('d-none', !show);
+      }
+      updateInterconsultaSignatureStatus();
+    };
+    const updateInterconsultaSignatureStatus = ()=>{
+      if(!els.interconsultaSignatureStatus) return;
+      const hasLocal = !!exportInterconsultaSignatureData() && interconsultaState.signaturePreferredSource !== 'registered';
+      const hasRegistered = interconsultaState.signaturePreferredSource === 'registered' && !!interconsultaState.registeredSignatureData;
+      const hasRemote = interconsultaState.signaturePreferredSource === 'remote' && !!interconsultaState.remoteSignature?.image_data;
+      if(hasRemote){
+        els.interconsultaSignatureStatus.textContent = 'Firma remota aplicada';
+        return;
+      }
+      if(hasRegistered){
+        els.interconsultaSignatureStatus.textContent = 'Firma registrada aplicada';
+        return;
+      }
+      if(hasLocal){
+        els.interconsultaSignatureStatus.textContent = 'Firma capturada';
+        return;
+      }
+      els.interconsultaSignatureStatus.textContent = 'Sin firma';
+    };
+    const readInterconsultaRecipientLabel = ()=>{
+      const recipient = interconsultaState.form.recipient || {};
+      const mode = sanitizeText(interconsultaState.form.recipient_mode || 'doctor') || 'doctor';
+      const doctorName = sanitizeText(recipient.doctor_name || '');
+      const specialty = sanitizeText(recipient.specialty || '');
+      const service = sanitizeText(recipient.service || '');
+      if(mode === 'service'){
+        const primary = service || specialty;
+        if(!primary) return 'destino clínico no especificado';
+        if(doctorName){
+          return `${primary} (${doctorName})`;
+        }
+        return primary;
+      }
+      if(doctorName && specialty) return `${doctorName} · ${specialty}`;
+      if(doctorName) return doctorName;
+      if(specialty) return specialty;
+      return 'destino clínico no especificado';
+    };
+    const resolveInterconsultaClosingStatement = ()=>{
+      const current = normalizeConsentInputRaw(interconsultaState.form.closing_statement || '');
+      if(current) return current;
+      const recipientLabel = readInterconsultaRecipientLabel();
+      return `Se emite la presente interconsulta para valoración por ${recipientLabel}, con base en el contexto clínico descrito.`;
+    };
+    const syncInterconsultaInputsFromState = ()=>{
+      const form = interconsultaState.form || {};
+      const recipient = form.recipient || {};
+      if(els.interconsultaRecipientMode) els.interconsultaRecipientMode.value = sanitizeText(form.recipient_mode || 'doctor') || 'doctor';
+      if(els.interconsultaRecipientSource) els.interconsultaRecipientSource.value = sanitizeText(recipient.source || 'manual') || 'manual';
+      if(els.interconsultaDoctorName) els.interconsultaDoctorName.value = sanitizeText(recipient.doctor_name || '');
+      if(els.interconsultaSpecialty) els.interconsultaSpecialty.value = sanitizeText(recipient.specialty || '');
+      if(els.interconsultaService) els.interconsultaService.value = sanitizeText(recipient.service || '');
+      if(els.interconsultaFacility) els.interconsultaFacility.value = sanitizeText(recipient.facility || '');
+      if(els.interconsultaCity) els.interconsultaCity.value = sanitizeText(recipient.city || '');
+      if(els.interconsultaContact) els.interconsultaContact.value = sanitizeText(recipient.contact || '');
+      if(els.interconsultaReason) els.interconsultaReason.value = sanitizeText(form.reason || '');
+      if(els.interconsultaSummary) els.interconsultaSummary.value = sanitizeText(form.summary || '');
+      if(els.interconsultaBackground) els.interconsultaBackground.value = sanitizeText(form.background || '');
+      if(els.interconsultaRequest) els.interconsultaRequest.value = sanitizeText(form.request || '');
+      if(els.interconsultaStudies) els.interconsultaStudies.value = sanitizeText(form.studies || '');
+      if(els.interconsultaComments) els.interconsultaComments.value = sanitizeText(form.comments || '');
+      if(els.interconsultaClosing) els.interconsultaClosing.value = sanitizeText(form.closing_statement || '');
+      if(els.interconsultaFinalNote) els.interconsultaFinalNote.value = sanitizeText(form.final_note || '');
+      pullInterconsultaDoctorRemoteSignature();
+      updateInterconsultaRecipientModeUI();
+      updateInterconsultaSignatureStatus();
+    };
+    const renderInterconsultaPreview = ()=>{
+      if(!els.interconsultaPreview) return;
+      const reason = sanitizeText(interconsultaState.form.reason || '');
+      const summary = sanitizeText(interconsultaState.form.summary || '');
+      const background = sanitizeText(interconsultaState.form.background || '');
+      const request = sanitizeText(interconsultaState.form.request || '');
+      const studies = sanitizeText(interconsultaState.form.studies || '');
+      const comments = sanitizeText(interconsultaState.form.comments || '');
+      const closing = sanitizeText(resolveInterconsultaClosingStatement());
+      const finalNote = sanitizeText(interconsultaState.form.final_note || '');
+      const patient = readInformePatientContext();
+      const recipientLabel = readInterconsultaRecipientLabel();
+      const sections = [
+        reason ? `<div class="mt-2"><strong>Motivo de interconsulta:</strong><br>${escapeHtml(reason).replace(/\n/g, '<br>')}</div>` : '',
+        summary ? `<div class="mt-2"><strong>Resumen clínico:</strong><br>${escapeHtml(summary).replace(/\n/g, '<br>')}</div>` : '',
+        background ? `<div class="mt-2"><strong>Antecedentes relevantes:</strong><br>${escapeHtml(background).replace(/\n/g, '<br>')}</div>` : '',
+        request ? `<div class="mt-2"><strong>Solicitud al interconsultante:</strong><br>${escapeHtml(request).replace(/\n/g, '<br>')}</div>` : '',
+        studies ? `<div class="mt-2"><strong>Estudios relevantes:</strong><br>${escapeHtml(studies).replace(/\n/g, '<br>')}</div>` : '',
+        comments ? `<div class="mt-2"><strong>Comentarios:</strong><br>${escapeHtml(comments).replace(/\n/g, '<br>')}</div>` : '',
+        closing ? `<div class="mt-2"><strong>Cierre formal:</strong><br>${escapeHtml(closing).replace(/\n/g, '<br>')}</div>` : '',
+        finalNote ? `<div class="mt-2"><strong>Observación final:</strong><br>${escapeHtml(finalNote).replace(/\n/g, '<br>')}</div>` : ''
+      ].filter(Boolean);
+      els.interconsultaPreview.innerHTML = `
+        <div><strong>Interconsulta</strong></div>
+        <div class="text-muted">${escapeHtml(patient.name)}${patient.age ? ` · ${escapeHtml(patient.age)} años` : ''}${patient.sex ? ` · ${escapeHtml(patient.sex)}` : ''}</div>
+        <div class="text-muted mb-2">Destino: ${escapeHtml(recipientLabel)}</div>
+        ${sections.join('')}
+      `;
+    };
+    const renderInterconsultaStep = ()=>{
+      if(!els.interconsultaWizard) return;
+      const maxStep = 5;
+      const normalized = Math.min(Math.max(Number(interconsultaState.step || 1), 1), maxStep);
+      interconsultaState.step = normalized;
+      if(els.interconsultaStep1) els.interconsultaStep1.classList.toggle('d-none', normalized !== 1);
+      if(els.interconsultaStep2) els.interconsultaStep2.classList.toggle('d-none', normalized !== 2);
+      if(els.interconsultaStep3) els.interconsultaStep3.classList.toggle('d-none', normalized !== 3);
+      if(els.interconsultaStep4) els.interconsultaStep4.classList.toggle('d-none', normalized !== 4);
+      if(els.interconsultaStep5) els.interconsultaStep5.classList.toggle('d-none', normalized !== 5);
+      if(els.interconsultaStepLabel) els.interconsultaStepLabel.textContent = `Paso ${normalized} de 5`;
+      if(els.interconsultaPrev) els.interconsultaPrev.disabled = normalized === 1 || interconsultaState.saving;
+      if(els.interconsultaNext){
+        els.interconsultaNext.classList.toggle('d-none', normalized >= 5);
+        els.interconsultaNext.disabled = interconsultaState.saving;
+      }
+      const showActions = normalized === 5;
+      if(els.interconsultaSave){
+        els.interconsultaSave.classList.toggle('d-none', !showActions);
+        els.interconsultaSave.disabled = interconsultaState.saving;
+      }
+      if(els.interconsultaEmit){
+        els.interconsultaEmit.classList.toggle('d-none', !showActions);
+        els.interconsultaEmit.disabled = interconsultaState.saving;
+      }
+      if(els.interconsultaCancel){
+        els.interconsultaCancel.classList.toggle('d-none', !showActions);
+        els.interconsultaCancel.disabled = interconsultaState.saving;
+      }
+      if(normalized !== 5){
+        els.interconsultaSignatureInlinePrompt?.classList.add('d-none');
+      }
+      if(normalized === 5){
+        if(!interconsultaState.signaturePad){
+          initInterconsultaSignaturePad();
+        }
+        window.requestAnimationFrame(()=>{
+          syncInterconsultaSignatureCanvasSize({ preserveDrawing: true });
+        });
+        renderInterconsultaPreview();
+      }
+    };
+    const resetInterconsultaWizard = ()=>{
+      interconsultaState.step = 1;
+      interconsultaState.saving = false;
+      interconsultaState.form = {
+        recipient_mode: 'doctor',
+        recipient: {
+          source: 'manual',
+          recipient_user_id: '',
+          directory_ref: '',
+          doctor_name: '',
+          specialty: '',
+          service: '',
+          facility: '',
+          city: '',
+          contact: ''
+        },
+        reason: '',
+        summary: '',
+        background: '',
+        request: '',
+        studies: '',
+        comments: '',
+        closing_statement: '',
+        final_note: ''
+      };
+      interconsultaState.signatureHasStroke = false;
+      interconsultaState.signaturePreferredSource = '';
+      interconsultaState.remoteSignature = null;
+      els.interconsultaSignatureInlinePrompt?.classList.add('d-none');
+      setInterconsultaNotice('');
+      clearInterconsultaSignaturePad();
+      refreshInterconsultaRegisteredSignature();
+      syncInterconsultaInputsFromState();
+      renderInterconsultaStep();
+      if(els.interconsultaWizard){
+        els.interconsultaWizard.classList.add('d-none');
+      }
+    };
+    const startInterconsultaDraft = ()=>{
+      const patientId = resolveActivePatientIdForConsent();
+      if(!patientId){
+        setInterconsultaNotice('Selecciona paciente antes de crear la interconsulta.');
+        return false;
+      }
+      interconsultaState.step = 1;
+      interconsultaState.saving = false;
+      interconsultaState.form = {
+        recipient_mode: 'doctor',
+        recipient: {
+          source: 'manual',
+          recipient_user_id: '',
+          directory_ref: '',
+          doctor_name: '',
+          specialty: '',
+          service: '',
+          facility: '',
+          city: '',
+          contact: ''
+        },
+        reason: '',
+        summary: '',
+        background: '',
+        request: '',
+        studies: '',
+        comments: '',
+        closing_statement: 'Se emite la presente interconsulta para valoración por destino clínico, con base en el contexto clínico descrito.',
+        final_note: ''
+      };
+      interconsultaState.signatureHasStroke = false;
+      interconsultaState.signaturePreferredSource = '';
+      interconsultaState.remoteSignature = null;
+      syncInterconsultaInputsFromState();
+      setInterconsultaNotice('');
+      initInterconsultaSignaturePad();
+      syncInterconsultaSignatureCanvasSize();
+      clearInterconsultaSignaturePad();
+      refreshInterconsultaRegisteredSignature();
+      renderInterconsultaStep();
+      if(els.interconsultaWizard){
+        els.interconsultaWizard.classList.remove('d-none');
+      }
+      return true;
+    };
+    const openInterconsultaModal = ()=>{
+      const shouldOpen = startInterconsultaDraft();
+      if(!shouldOpen) return;
+      if(!els.interconsultaModalEl || !window.bootstrap?.Modal) return;
+      try{
+        const modal = window.bootstrap.Modal.getOrCreateInstance(els.interconsultaModalEl);
+        modal.show();
+        window.setTimeout(()=>{ syncInterconsultaSignatureCanvasSize(); }, 40);
+      }catch(_){}
+    };
+    const closeInterconsultaModal = ()=>{
+      if(!els.interconsultaModalEl || !window.bootstrap?.Modal) return;
+      try{
+        window.bootstrap.Modal.getOrCreateInstance(els.interconsultaModalEl)?.hide();
+      }catch(_){}
+    };
+    const getActiveInterconsultaDoctorSignature = (nowSql = '')=>{
+      const signedAt = sanitizeText(nowSql || formatNowSql());
+      const signerName = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
+      if(interconsultaState.signaturePreferredSource === 'remote' && interconsultaState.remoteSignature){
+        return {
+          type: 'drawn',
+          role: 'doctor',
+          image_data: sanitizeText(interconsultaState.remoteSignature.image_data || ''),
+          signed_at: sanitizeText(interconsultaState.remoteSignature.signed_at || signedAt),
+          signer_name: sanitizeText(interconsultaState.remoteSignature.signer_name || signerName),
+          source: 'remote_qr',
+          token: sanitizeText(interconsultaState.remoteSignature.token || '')
+        };
+      }
+      if(interconsultaState.signaturePreferredSource === 'registered' && interconsultaState.registeredSignatureData){
+        return {
+          type: 'drawn',
+          role: 'doctor',
+          image_data: interconsultaState.registeredSignatureData,
+          signed_at: signedAt,
+          signer_name: signerName,
+          source: 'registered_profile'
+        };
+      }
+      const localSignature = exportInterconsultaSignatureData();
+      if(localSignature){
+        return {
+          type: 'drawn',
+          role: 'doctor',
+          image_data: localSignature,
+          signed_at: signedAt,
+          signer_name: signerName,
+          source: 'local_canvas'
+        };
+      }
+      return null;
+    };
+    const buildInterconsultaRenderedText = (payload = {})=>{
+      const lines = [];
+      const patientName = sanitizeText(payload?.patient_snapshot?.full_name || 'Paciente');
+      const recipientMode = sanitizeText(payload?.recipient?.mode || 'doctor');
+      const recipient = payload?.recipient || {};
+      const recipientLabel = recipientMode === 'service'
+        ? sanitizeText(recipient?.service || recipient?.specialty || '')
+        : sanitizeText(recipient?.doctor_name || recipient?.specialty || '');
+      const reason = sanitizeText(payload?.content?.reason || '');
+      const summary = sanitizeText(payload?.content?.summary || '');
+      const background = sanitizeText(payload?.content?.background || '');
+      const request = sanitizeText(payload?.content?.request || '');
+      const studies = sanitizeText(payload?.content?.studies || '');
+      const comments = sanitizeText(payload?.content?.comments || '');
+      const closing = sanitizeText(payload?.content?.closing_statement || '');
+      const finalNote = sanitizeText(payload?.content?.final_note || '');
+      const doctorName = sanitizeText(payload?.actor_snapshot?.full_name || 'Médico tratante');
+      lines.push('INTERCONSULTA');
+      lines.push('');
+      lines.push(`Paciente: ${patientName}`);
+      if(recipientLabel) lines.push(`Destino: ${recipientLabel}`);
+      if(reason){ lines.push(''); lines.push('Motivo de interconsulta:'); lines.push(reason); }
+      if(summary){ lines.push(''); lines.push('Resumen clínico:'); lines.push(summary); }
+      if(background){ lines.push(''); lines.push('Antecedentes relevantes:'); lines.push(background); }
+      if(request){ lines.push(''); lines.push('Solicitud al interconsultante:'); lines.push(request); }
+      if(studies){ lines.push(''); lines.push('Estudios relevantes:'); lines.push(studies); }
+      if(comments){ lines.push(''); lines.push('Comentarios al colega:'); lines.push(comments); }
+      if(closing){ lines.push(''); lines.push('Cierre formal:'); lines.push(closing); }
+      if(finalNote){ lines.push(''); lines.push('Observación final:'); lines.push(finalNote); }
+      lines.push('');
+      lines.push(`Médico emisor: ${doctorName}`);
+      return lines.join('\n');
+    };
+    const buildInterconsultaDocument = async (targetStatus = 'draft')=>{
+      const patientId = resolveActivePatientIdForConsent();
+      if(!patientId){
+        return { error: 'Selecciona paciente antes de emitir la interconsulta.' };
+      }
+      const normalizedStatus = targetStatus === 'issued' ? 'issued' : 'draft';
+      const recipientMode = sanitizeText(interconsultaState.form.recipient_mode || 'doctor') || 'doctor';
+      const recipient = interconsultaState.form.recipient || {};
+      const doctorName = normalizeConsentInputRaw(recipient.doctor_name || '');
+      const specialty = normalizeConsentInputRaw(recipient.specialty || '');
+      const service = normalizeConsentInputRaw(recipient.service || '');
+      const reason = normalizeConsentInputRaw(interconsultaState.form.reason || '');
+      const summary = normalizeConsentInputRaw(interconsultaState.form.summary || '');
+      const request = normalizeConsentInputRaw(interconsultaState.form.request || '');
+      if(normalizedStatus === 'issued'){
+        if(recipientMode === 'doctor' && !doctorName){
+          return { error: 'Nombre del médico destino es obligatorio para emitir.' };
+        }
+        if(recipientMode === 'service' && !(service || specialty)){
+          return { error: 'Especialidad / servicio destino es obligatorio para emitir.' };
+        }
+        if(!reason) return { error: 'Motivo de interconsulta es obligatorio para emitir.' };
+        if(!summary) return { error: 'Resumen clínico es obligatorio para emitir.' };
+        if(!request) return { error: 'Solicitud clínica puntual es obligatoria para emitir.' };
+      }
+      const actorUserId = resolveClinicalActorUserId();
+      const actorName = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
+      const nowSql = formatNowSql();
+      let encounterKey = '';
+      if(typeof window.getActiveEncounterKey === 'function'){
+        encounterKey = sanitizeText(window.getActiveEncounterKey());
+      }
+      let appointmentId = '';
+      if(typeof window.resolveActiveEncounterForPatient === 'function'){
+        const resolved = await window.resolveActiveEncounterForPatient(patientId, { source: 'interconsulta_canonica' }).catch(()=> null);
+        appointmentId = sanitizeText(resolved?.appointmentId || resolved?.appointment_id || '');
+      }
+      const patientSnapshot = readPatientSnapshot();
+      const doctorPrefill = readDoctorPrefillProfile();
+      const doctorBranding = resolveDoctorBranding(actorUserId);
+      const doctorSignature = getActiveInterconsultaDoctorSignature(nowSql);
+      if(normalizedStatus === 'issued' && !doctorSignature){
+        return { error: 'Captura la firma del médico o selecciona firma registrada.' };
+      }
+      const context = {
+        patient_id: patientId,
+        care_setting: 'consulta'
+      };
+      if(encounterKey) context.encounter_key = encounterKey;
+      if(appointmentId) context.appointment_id = appointmentId;
+      const content = {
+        reason,
+        summary,
+        background: normalizeConsentInputRaw(interconsultaState.form.background || ''),
+        request,
+        studies: normalizeConsentInputRaw(interconsultaState.form.studies || ''),
+        comments: normalizeConsentInputRaw(interconsultaState.form.comments || ''),
+        closing_statement: resolveInterconsultaClosingStatement(),
+        final_note: normalizeConsentInputRaw(interconsultaState.form.final_note || '')
+      };
+      const payload = {
+        contract_version: 1,
+        status: normalizedStatus,
+        report: {
+          issued_at: nowSql,
+          emission_date: nowSql.slice(0, 10),
+          title: 'Interconsulta'
+        },
+        recipient: {
+          mode: recipientMode,
+          source: sanitizeText(recipient.source || 'manual') || 'manual',
+          recipient_user_id: sanitizeText(recipient.recipient_user_id || ''),
+          directory_ref: sanitizeText(recipient.directory_ref || ''),
+          doctor_name: doctorName,
+          specialty,
+          service,
+          facility: normalizeConsentInputRaw(recipient.facility || ''),
+          city: normalizeConsentInputRaw(recipient.city || ''),
+          contact: normalizeConsentInputRaw(recipient.contact || '')
+        },
+        patient_snapshot: {
+          full_name: sanitizeText(patientSnapshot.full_name || ''),
+          age: sanitizeText(patientSnapshot.age || ''),
+          sex: sanitizeText(patientSnapshot.sexo || ''),
+          identifier: sanitizeText(patientSnapshot.identifier || '')
+        },
+        actor_snapshot: {
+          user_id: actorUserId,
+          full_name: actorName,
+          license: sanitizeText(doctorPrefill.license || ''),
+          specialty: sanitizeText(doctorPrefill.specialty || ''),
+          specialty_license: sanitizeText(doctorPrefill.specialty_license || ''),
+          place: sanitizeText(doctorPrefill.place || ''),
+          institution: sanitizeText(doctorPrefill.institution || ''),
+          facility: sanitizeText(doctorPrefill.facility || '')
+        },
+        branding: {
+          mode: sanitizeText(doctorBranding.mode || 'standard') || 'standard',
+          logo_url_resolved: sanitizeText(doctorBranding.logo_url || ''),
+          group_logo_url_resolved: sanitizeText(doctorBranding.group_logo_url || ''),
+          facility_visible: sanitizeText(doctorBranding.facility_visible || ''),
+          location_line_visible: sanitizeText(doctorBranding.location_line_visible || ''),
+          logo_local_path: sanitizeText(doctorBranding.logo_local_path || '')
+        },
+        content,
+        signatures: {
+          doctor: doctorSignature
+        },
+        form_snapshot: {
+          recipient_mode: recipientMode,
+          recipient_source: sanitizeText(recipient.source || 'manual'),
+          recipient_user_id: sanitizeText(recipient.recipient_user_id || ''),
+          directory_ref: sanitizeText(recipient.directory_ref || ''),
+          ...content
+        }
+      };
+      payload.rendered_text = buildInterconsultaRenderedText(payload);
+      const definition = getClinicalDocumentDefinition('interconsulta');
+      const subtitle = reason || (recipientMode === 'service' ? (service || specialty) : doctorName);
+      const summaryLine = `${normalizedStatus} · ${subtitle || 'Interconsulta'} · ${payload.report.emission_date || nowSql.slice(0, 10)}`;
+      payload.canonical_document = buildClinicalCanonicalPayload({
+        definition,
+        payload,
+        context,
+        actorUserId,
+        title: 'Interconsulta',
+        subtitle,
+        eventDatetime: nowSql
+      }).canonical_document;
+      const body = buildClinicalDocumentBody({
+        definition,
+        title: subtitle ? `Interconsulta — ${subtitle}` : 'Interconsulta',
+        summary: summaryLine,
+        context,
+        payload,
+        eventDatetime: nowSql,
+        actorUserId,
+        source: 'documents_clinicos_interconsulta'
+      });
+      return { patientId, body, normalizedStatus };
+    };
+    const saveInterconsultaDocument = async (status = 'draft')=>{
+      if(interconsultaState.saving) return;
+      interconsultaState.saving = true;
+      setInterconsultaNotice('');
+      if(els.interconsultaSave){
+        els.interconsultaSave.disabled = true;
+        els.interconsultaSave.textContent = 'Guardando...';
+      }
+      if(els.interconsultaEmit){
+        els.interconsultaEmit.disabled = true;
+        els.interconsultaEmit.textContent = 'Emitiendo...';
+      }
+      try{
+        const prepared = await buildInterconsultaDocument(status);
+        if(prepared?.error){
+          throw new Error(prepared.error);
+        }
+        const resp = await fetch('/api/clinical/index.php/documents', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(prepared.body),
+          credentials: 'same-origin'
+        });
+        const json = await resp.json().catch(()=> null);
+        if(!resp.ok || !json || json.ok !== true){
+          const msg = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo guardar la interconsulta.';
+          throw new Error(msg);
+        }
+        resetInterconsultaWizard();
+        closeInterconsultaModal();
+        listCanonicalConsents();
+        showCatalogFeedback(
+          prepared.normalizedStatus === 'issued'
+            ? 'Interconsulta emitida correctamente.'
+            : 'Borrador de interconsulta guardado correctamente.',
+          'success'
+        );
+      }catch(error){
+        const message = sanitizeText(error?.message || 'No se pudo guardar la interconsulta.');
+        setInterconsultaNotice(message);
+        showCatalogFeedback(message, 'error');
+      }finally{
+        interconsultaState.saving = false;
+        if(els.interconsultaSave){
+          els.interconsultaSave.disabled = false;
+          els.interconsultaSave.textContent = 'Guardar borrador';
+        }
+        if(els.interconsultaEmit){
+          els.interconsultaEmit.disabled = false;
+          els.interconsultaEmit.textContent = 'Emitir interconsulta';
+        }
+        renderInterconsultaStep();
+      }
+    };
+    const handleInterconsultaDoctorSignatureApply = async ()=>{
+      if(pullInterconsultaDoctorRemoteSignature()){
+        setInterconsultaSignaturePreferredSource('remote');
+        setInterconsultaNotice('Firma remota del médico aplicada para la interconsulta.');
+        return;
+      }
+      const signature = exportInterconsultaSignatureData();
+      if(signature && interconsultaState.signaturePreferredSource !== 'registered'){
+        setInterconsultaSignaturePreferredSource('local');
+        if(!interconsultaState.registeredSignatureData){
+          try{
+            const shouldSave = await askDoctorSignatureSaveDecision({
+              inlinePromptEl: els.interconsultaSignatureInlinePrompt,
+              inlineYesBtn: els.interconsultaSignatureInlineYesBtn,
+              inlineNoBtn: els.interconsultaSignatureInlineNoBtn
+            });
+            if(shouldSave){
+              if(persistRegisteredDoctorSignature(signature)){
+                refreshInterconsultaRegisteredSignature();
+                setInterconsultaSignaturePreferredSource('registered');
+                setInterconsultaNotice('Firma del médico guardada como firma digitalizada.');
+                return;
+              }
+            }
+          }catch(_){}
+        }
+        setInterconsultaNotice('Firma del médico aplicada para la interconsulta.');
+        return;
+      }
+      if(interconsultaState.registeredSignatureData){
+        setInterconsultaSignaturePreferredSource('registered');
+        setInterconsultaNotice('Firma registrada del médico aplicada para la interconsulta.');
+        return;
+      }
+      setInterconsultaNotice('Captura la firma del médico o selecciona firma registrada.');
+    };
+    const openInterconsultaDoctorSignatureQr = async ()=>{
+      try{
+        await openConsentSignatureQrModal('doctor');
+        window.setTimeout(()=>{
+          if(pullInterconsultaDoctorRemoteSignature()){
+            setInterconsultaSignaturePreferredSource('remote');
+            setInterconsultaNotice('Firma remota del médico recibida para la interconsulta.');
+          }
+        }, 250);
+      }catch(error){
+        setInterconsultaNotice(sanitizeText(error?.message || 'No se pudo iniciar firma remota del médico.'));
+      }
+    };
     const handleInformeDoctorSignatureApply = async ()=>{
       const signature = exportInformeSignatureData();
       if(signature){
@@ -12613,6 +13489,20 @@ console.info('app.js loaded :: 20251123a');
       }
       return '';
     };
+    const resolveInterconsultaDescriptorText = (payload, summaryText = '')=>{
+      const safePayload = (payload && typeof payload === 'object') ? payload : {};
+      const content = (safePayload.content && typeof safePayload.content === 'object') ? safePayload.content : {};
+      const formSnapshot = (safePayload.form_snapshot && typeof safePayload.form_snapshot === 'object') ? safePayload.form_snapshot : {};
+      const reason = sanitizeText(content.reason || formSnapshot.reason || '');
+      if(reason) return reason;
+      const recipient = (safePayload.recipient && typeof safePayload.recipient === 'object') ? safePayload.recipient : {};
+      const recipientMode = sanitizeText(recipient.mode || formSnapshot.recipient_mode || 'doctor') || 'doctor';
+      const recipientLabel = recipientMode === 'service'
+        ? sanitizeText(recipient.service || recipient.specialty || '')
+        : sanitizeText(recipient.doctor_name || recipient.specialty || '');
+      if(recipientLabel) return `Destino: ${recipientLabel}`;
+      return sanitizeText(summaryText || '');
+    };
 
     const renderList = (items)=>{
       els.list.innerHTML = '';
@@ -12624,7 +13514,11 @@ console.info('app.js loaded :: 20251123a');
       els.empty.classList.add('d-none');
       list.forEach((doc)=>{
         const documentType = sanitizeText(doc.document_type || '').toLowerCase();
-        const fallbackTitle = documentType === 'informe_medico' ? 'Informe médico' : 'Consentimiento informado';
+        const fallbackTitle = (
+          documentType === 'informe_medico'
+            ? 'Informe médico'
+            : (documentType === 'interconsulta' ? 'Interconsulta' : 'Consentimiento informado')
+        );
         const title = sanitizeText(doc.title || doc.summary || fallbackTitle);
         const summary = sanitizeText(doc.summary || '');
         const dtRaw = sanitizeText(doc.event_datetime || doc.created_at || '');
@@ -12637,18 +13531,20 @@ console.info('app.js loaded :: 20251123a');
         const descriptorText = resolveConsentDescriptorText(payload, summary);
         const isConsentDoc = documentType === 'consentimiento_informado' || !documentType;
         const isInformeDoc = documentType === 'informe_medico';
+        const isInterconsultaDoc = documentType === 'interconsulta';
         const informeDescriptorText = sanitizeText(
           payload?.content?.reason
           || payload?.form_snapshot?.reason
           || summary
           || ''
         );
-        const secondLineHtml = (isConsentDoc || isInformeDoc)
+        const interconsultaDescriptorText = resolveInterconsultaDescriptorText(payload, summary);
+        const secondLineHtml = (isConsentDoc || isInformeDoc || isInterconsultaDoc)
           ? `
             <div class="small text-muted d-flex justify-content-between align-items-center gap-2">
               ${
-                (isConsentDoc ? descriptorText : informeDescriptorText)
-                  ? `<span class="text-truncate" title="${(isConsentDoc ? descriptorText : informeDescriptorText).replace(/"/g, '&quot;')}" style="max-width:68%;">${(isConsentDoc ? descriptorText : informeDescriptorText).replace(/</g, '&lt;')}</span>`
+                (isConsentDoc ? descriptorText : (isInformeDoc ? informeDescriptorText : interconsultaDescriptorText))
+                  ? `<span class="text-truncate" title="${(isConsentDoc ? descriptorText : (isInformeDoc ? informeDescriptorText : interconsultaDescriptorText)).replace(/"/g, '&quot;')}" style="max-width:68%;">${(isConsentDoc ? descriptorText : (isInformeDoc ? informeDescriptorText : interconsultaDescriptorText)).replace(/</g, '&lt;')}</span>`
                   : '<span class="flex-grow-1"></span>'
               }
               <span class="text-nowrap ms-auto">${dateText.replace(/</g, '&lt;')}</span>
@@ -12666,7 +13562,7 @@ console.info('app.js loaded :: 20251123a');
             <span class="badge bg-light text-dark border">${status.replace(/</g, '&lt;')}</span>
           </div>
           ${secondLineHtml}
-          ${summary && !(isConsentDoc ? descriptorText : (isInformeDoc ? informeDescriptorText : '')) ? `<div class="small mt-1">${summary.replace(/</g, '&lt;')}</div>` : ''}
+          ${summary && !(isConsentDoc ? descriptorText : (isInformeDoc ? informeDescriptorText : interconsultaDescriptorText)) ? `<div class="small mt-1">${summary.replace(/</g, '&lt;')}</div>` : ''}
           ${uuid ? '<div class="small mt-2"><span class="text-primary">Abrir detalle</span></div>' : ''}
         `;
         els.list.appendChild(card);
@@ -12690,7 +13586,7 @@ console.info('app.js loaded :: 20251123a');
         });
         const json = await resp.json().catch(()=> null);
         const items = Array.isArray(json?.data?.items) ? json.data.items : [];
-        const allowedTypes = new Set(['consentimiento_informado', 'informe_medico']);
+        const allowedTypes = new Set(['consentimiento_informado', 'informe_medico', 'interconsulta']);
         const normalized = items.map((item)=>{
           const clinicalDoc = item?.clinical_document && typeof item.clinical_document === 'object' ? item.clinical_document : {};
           const clinicalPayload = parseObjectMaybeJson(clinicalDoc?.payload);
@@ -13809,6 +14705,12 @@ console.info('app.js loaded :: 20251123a');
         openInformeModal();
         return;
       }
+      const openInterconsultaBtn = event.target.closest('[data-action="documents-open-interconsulta"]');
+      if(openInterconsultaBtn){
+        event.preventDefault();
+        openInterconsultaModal();
+        return;
+      }
       const placeholderBtn = event.target.closest('[data-action="documents-open-placeholder"]');
       if(placeholderBtn){
         event.preventDefault();
@@ -13995,6 +14897,12 @@ console.info('app.js loaded :: 20251123a');
       if(els.signatureQrModal){
         els.signatureQrModal.style.removeProperty('z-index');
       }
+      if(els.interconsultaWizard && !els.interconsultaWizard.classList.contains('d-none')){
+        if(pullInterconsultaDoctorRemoteSignature()){
+          setInterconsultaSignaturePreferredSource('remote');
+          setInterconsultaNotice('Firma remota del médico aplicada para la interconsulta.');
+        }
+      }
     });
     els.consentModalEl?.addEventListener('hidden.bs.modal', ()=>{
       resetWizard();
@@ -14120,6 +15028,137 @@ console.info('app.js loaded :: 20251123a');
     els.informeModalEl?.addEventListener('hidden.bs.modal', ()=>{
       resetInformeWizard();
     });
+    const bindInterconsultaField = (inputEl, onUpdate, eventName = '')=>{
+      if(!inputEl || typeof onUpdate !== 'function') return;
+      const evtName = eventName || ((inputEl.tagName === 'SELECT' || inputEl.type === 'checkbox') ? 'change' : 'input');
+      inputEl.addEventListener(evtName, ()=>{
+        onUpdate(inputEl);
+      });
+    };
+    bindInterconsultaField(els.interconsultaRecipientMode, (el)=>{
+      interconsultaState.form.recipient_mode = sanitizeText(el.value || 'doctor') || 'doctor';
+      updateInterconsultaRecipientModeUI();
+      renderInterconsultaStep();
+    }, 'change');
+    bindInterconsultaField(els.interconsultaRecipientSource, (el)=>{
+      interconsultaState.form.recipient.source = sanitizeText(el.value || 'manual') || 'manual';
+    }, 'change');
+    bindInterconsultaField(els.interconsultaDoctorName, (el)=>{
+      interconsultaState.form.recipient.doctor_name = normalizeConsentInputRaw(el.value || '');
+    });
+    bindInterconsultaField(els.interconsultaSpecialty, (el)=>{
+      interconsultaState.form.recipient.specialty = normalizeConsentInputRaw(el.value || '');
+    });
+    bindInterconsultaField(els.interconsultaService, (el)=>{
+      interconsultaState.form.recipient.service = normalizeConsentInputRaw(el.value || '');
+    });
+    bindInterconsultaField(els.interconsultaFacility, (el)=>{
+      interconsultaState.form.recipient.facility = normalizeConsentInputRaw(el.value || '');
+    });
+    bindInterconsultaField(els.interconsultaCity, (el)=>{
+      interconsultaState.form.recipient.city = normalizeConsentInputRaw(el.value || '');
+    });
+    bindInterconsultaField(els.interconsultaContact, (el)=>{
+      interconsultaState.form.recipient.contact = normalizeConsentInputRaw(el.value || '');
+    });
+    bindInterconsultaField(els.interconsultaReason, (el)=>{
+      interconsultaState.form.reason = normalizeConsentInputRaw(el.value || '');
+    });
+    bindInterconsultaField(els.interconsultaSummary, (el)=>{
+      interconsultaState.form.summary = normalizeConsentInputRaw(el.value || '');
+    });
+    bindInterconsultaField(els.interconsultaBackground, (el)=>{
+      interconsultaState.form.background = normalizeConsentInputRaw(el.value || '');
+    });
+    bindInterconsultaField(els.interconsultaRequest, (el)=>{
+      interconsultaState.form.request = normalizeConsentInputRaw(el.value || '');
+    });
+    bindInterconsultaField(els.interconsultaStudies, (el)=>{
+      interconsultaState.form.studies = normalizeConsentInputRaw(el.value || '');
+    });
+    bindInterconsultaField(els.interconsultaComments, (el)=>{
+      interconsultaState.form.comments = normalizeConsentInputRaw(el.value || '');
+    });
+    bindInterconsultaField(els.interconsultaClosing, (el)=>{
+      interconsultaState.form.closing_statement = normalizeConsentInputRaw(el.value || '');
+    });
+    bindInterconsultaField(els.interconsultaFinalNote, (el)=>{
+      interconsultaState.form.final_note = normalizeConsentInputRaw(el.value || '');
+    });
+    els.interconsultaPrev?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      interconsultaState.step = Math.max(1, Number(interconsultaState.step || 1) - 1);
+      renderInterconsultaStep();
+    });
+    els.interconsultaNext?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      interconsultaState.step = Math.min(5, Number(interconsultaState.step || 1) + 1);
+      renderInterconsultaStep();
+    });
+    els.interconsultaCancel?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      resetInterconsultaWizard();
+      closeInterconsultaModal();
+    });
+    els.interconsultaSave?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      saveInterconsultaDocument('draft');
+    });
+    els.interconsultaEmit?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      saveInterconsultaDocument('issued');
+    });
+    els.interconsultaSignatureSourceRegistered?.addEventListener('change', ()=>{
+      if(els.interconsultaSignatureSourceRegistered?.checked){
+        setInterconsultaSignaturePreferredSource('registered');
+      }
+    });
+    els.interconsultaSignatureSourceLocal?.addEventListener('change', ()=>{
+      if(els.interconsultaSignatureSourceLocal?.checked){
+        setInterconsultaSignaturePreferredSource('local');
+      }
+    });
+    els.interconsultaSignatureSourceRemote?.addEventListener('change', ()=>{
+      if(els.interconsultaSignatureSourceRemote?.checked){
+        if(pullInterconsultaDoctorRemoteSignature()){
+          setInterconsultaSignaturePreferredSource('remote');
+          setInterconsultaNotice('Firma remota disponible para esta interconsulta.');
+        }else{
+          openInterconsultaDoctorSignatureQr();
+        }
+      }
+    });
+    els.interconsultaSignatureQrOpen?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      openInterconsultaDoctorSignatureQr();
+    });
+    els.interconsultaSignatureApply?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      handleInterconsultaDoctorSignatureApply();
+    });
+    els.interconsultaSignatureClear?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      clearInterconsultaSignaturePad();
+      if(interconsultaState.registeredSignatureData){
+        setInterconsultaSignaturePreferredSource('registered');
+      }else{
+        setInterconsultaSignaturePreferredSource('');
+      }
+    });
+    els.interconsultaModalEl?.addEventListener('hidden.bs.modal', ()=>{
+      resetInterconsultaWizard();
+    });
+    els.interconsultaModalEl?.addEventListener('shown.bs.modal', ()=>{
+      if(!interconsultaState.signaturePad){
+        initInterconsultaSignaturePad();
+      }
+      window.requestAnimationFrame(()=>{
+        syncInterconsultaSignatureCanvasSize({ preserveDrawing: true });
+      });
+      if(pullInterconsultaDoctorRemoteSignature()){
+        setInterconsultaSignaturePreferredSource('remote');
+      }
+    });
     els.template?.addEventListener('change', (event)=>{
       describeTemplate(event?.target?.value || '');
     });
@@ -14212,6 +15251,9 @@ console.info('app.js loaded :: 20251123a');
       if(els.informeWizard && !els.informeWizard.classList.contains('d-none')){
         syncInformeSignatureCanvasSize();
       }
+      if(els.interconsultaWizard && !els.interconsultaWizard.classList.contains('d-none')){
+        syncInterconsultaSignatureCanvasSize();
+      }
     });
     els.list.addEventListener('click', (event)=>{
       const card = event.target.closest('[data-doc-uuid]');
@@ -14253,6 +15295,9 @@ console.info('app.js loaded :: 20251123a');
     initInformeSignaturePad();
     refreshInformeRegisteredSignature();
     resetInformeWizard();
+    initInterconsultaSignaturePad();
+    refreshInterconsultaRegisteredSignature();
+    resetInterconsultaWizard();
     listCanonicalConsents();
   };
   setupConsentimientoCanonicoHost();

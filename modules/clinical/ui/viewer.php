@@ -549,6 +549,7 @@ $renderedText = $document ? (string)($content['rendered_text'] ?? '') : '';
 $docTypeNorm = strtolower(trim($docType));
 $isConsentDoc = ($docTypeNorm === 'consentimiento_informado');
 $isInformeDoc = ($docTypeNorm === 'informe_medico');
+$isInterconsultaDoc = ($docTypeNorm === 'interconsulta');
 $isPrescriptionDoc = in_array($docTypeNorm, ['prescription', 'rx'], true);
 $prescriptionContext = $isPrescriptionDoc && is_array($payload['context'] ?? null) ? $payload['context'] : [];
 $prescriptionLegacy = $isPrescriptionDoc && is_array($payload['prescription'] ?? null) ? $payload['prescription'] : [];
@@ -659,6 +660,7 @@ $informeDoctorFacilityContext = first_non_empty_string(
     ['facility', 'facility_name', 'clinic', 'clinic_name', 'consultorio', 'doctor_facility']
 );
 $informePrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
+$interconsultaPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
 
 $fileMeta = is_array($payload['file'] ?? null) ? $payload['file'] : [];
 $optimizedMeta = is_array($fileMeta['optimized'] ?? null) ? $fileMeta['optimized'] : [];
@@ -1311,11 +1313,11 @@ if (!$embed) {
         <?php if ($showDownloadAction): ?>
           <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($mediaSrc); ?>"<?php echo $downloadIsRelative ? ' download' : ''; ?>>Descargar</a>
         <?php endif; ?>
-        <?php if ($isPdf || $isConsentDoc || $isInformeDoc): ?>
+        <?php if ($isPdf || $isConsentDoc || $isInformeDoc || $isInterconsultaDoc): ?>
           <button type="button" class="btn btn-outline-secondary btn-sm" data-role="viewer-print">Imprimir</button>
         <?php endif; ?>
-        <?php if (($isConsentDoc && $consentPrintableHref !== '') || ($isInformeDoc && $informePrintableHref !== '')): ?>
-          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($isConsentDoc ? $consentPrintableHref : $informePrintableHref); ?>" target="_blank" rel="noopener" download>Descargar</a>
+        <?php if (($isConsentDoc && $consentPrintableHref !== '') || ($isInformeDoc && $informePrintableHref !== '') || ($isInterconsultaDoc && $interconsultaPrintableHref !== '')): ?>
+          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($isConsentDoc ? $consentPrintableHref : ($isInformeDoc ? $informePrintableHref : $interconsultaPrintableHref)); ?>" target="_blank" rel="noopener" download>Descargar</a>
           <?php // TODO(DOCS-UX): agregar botón "Compartir" cuando exista flujo canónico de distribución segura. ?>
         <?php endif; ?>
         <?php if ($bundlePrevHref !== ''): ?>
@@ -1907,6 +1909,191 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
+    <?php if ($isInterconsultaDoc): ?>
+      <?php
+      $interconsultaReport = is_array($payload['report'] ?? null) ? $payload['report'] : [];
+      $interconsultaContent = is_array($payload['content'] ?? null) ? $payload['content'] : [];
+      $interconsultaRecipient = is_array($payload['recipient'] ?? null) ? $payload['recipient'] : [];
+      $interconsultaBranding = is_array($payload['branding'] ?? null) ? $payload['branding'] : [];
+      $interconsultaSignatures = is_array($payload['signatures'] ?? null) ? $payload['signatures'] : [];
+      $interconsultaDoctorSignature = is_array($interconsultaSignatures['doctor'] ?? null) ? $interconsultaSignatures['doctor'] : [];
+      $interconsultaDoctorSignatureImage = trim((string)($interconsultaDoctorSignature['image_data'] ?? ''));
+      $interconsultaDoctorSignatureSignerName = trim((string)($interconsultaDoctorSignature['signer_name'] ?? ''));
+      $interconsultaDateOut = clinical_doc_format_date((string)($interconsultaReport['emission_date'] ?? ($interconsultaReport['issued_at'] ?? $date)), false);
+      $interconsultaPatientName = trim((string)($informePatientNameContext !== '' ? $informePatientNameContext : 'Paciente'));
+      $interconsultaPatientAge = trim((string)$informePatientAgeContext);
+      $interconsultaPatientSex = trim((string)$informePatientSexContext);
+      $interconsultaDoctorName = trim((string)($informeDoctorNameContext !== '' ? $informeDoctorNameContext : 'Médico tratante'));
+      $interconsultaDoctorSpecialty = trim((string)$informeDoctorSpecialtyContext);
+      $interconsultaDoctorLicense = trim((string)$informeDoctorLicenseContext);
+      $interconsultaDoctorSpecialtyLicense = trim((string)$informeDoctorSpecialtyLicenseContext);
+      $interconsultaBrandingMode = trim((string)($interconsultaBranding['mode'] ?? ''));
+      $interconsultaBrandingLogo = trim((string)($interconsultaBranding['logo_url_resolved'] ?? ($interconsultaBranding['logo_url'] ?? '')));
+      $interconsultaTestLogoUrl = '/uploads/doctors/1/logo.png';
+      $interconsultaBrandingFacility = trim((string)($interconsultaBranding['facility_visible'] ?? ''));
+      $interconsultaBrandingLocationLine = trim((string)($interconsultaBranding['location_line_visible'] ?? ''));
+      $interconsultaDoctorFacility = $interconsultaBrandingFacility !== '' ? $interconsultaBrandingFacility : trim((string)$informeDoctorFacilityContext);
+      $interconsultaDoctorPlace = $interconsultaBrandingLocationLine !== '' ? $interconsultaBrandingLocationLine : trim((string)$informeDoctorPlaceContext);
+      $interconsultaDoctorSite = implode(' · ', array_values(array_filter([
+        $interconsultaDoctorFacility !== '' ? $interconsultaDoctorFacility : '',
+        $interconsultaDoctorPlace !== '' ? $interconsultaDoctorPlace : '',
+      ])));
+      $interconsultaDoctorCedulas = implode(' · ', array_values(array_filter([
+        $interconsultaDoctorLicense !== '' ? ('Cédula: ' . $interconsultaDoctorLicense) : '',
+        $interconsultaDoctorSpecialtyLicense !== '' ? ('Cédula esp.: ' . $interconsultaDoctorSpecialtyLicense) : '',
+      ])));
+      $interconsultaHeaderMode = 'standard';
+      if (in_array($interconsultaBrandingMode, ['branded', 'standard', 'legal'], true)) {
+        $interconsultaHeaderMode = $interconsultaBrandingMode;
+      }
+      $interconsultaHeaderCfg = clinical_doc_header_mode($interconsultaHeaderMode);
+      // Keep Interconsulta aligned with Informe logo resolution (same source + same local fallback policy).
+      $interconsultaHeaderLogoUrl = $interconsultaBrandingLogo;
+      if (
+        $interconsultaHeaderLogoUrl === ''
+        || strpos($interconsultaHeaderLogoUrl, '/storage/clinical_uploads/branding/') !== false
+      ) {
+        $interconsultaHeaderLogoUrl = $interconsultaTestLogoUrl;
+      }
+      if ($interconsultaHeaderMode !== 'legal' && $interconsultaHeaderLogoUrl !== '') {
+        $interconsultaHeaderMode = 'branded';
+        $interconsultaHeaderCfg = clinical_doc_header_mode($interconsultaHeaderMode);
+      }
+      $interconsultaShowLogo = ($interconsultaHeaderCfg['allow_logo'] && $interconsultaHeaderLogoUrl !== '');
+      $interconsultaRecipientMode = trim((string)($interconsultaRecipient['mode'] ?? 'doctor'));
+      $interconsultaRecipientName = trim((string)($interconsultaRecipient['doctor_name'] ?? ''));
+      $interconsultaRecipientSpecialty = trim((string)($interconsultaRecipient['specialty'] ?? ''));
+      $interconsultaRecipientService = trim((string)($interconsultaRecipient['service'] ?? ''));
+      $interconsultaRecipientFacility = trim((string)($interconsultaRecipient['facility'] ?? ''));
+      $interconsultaRecipientCity = trim((string)($interconsultaRecipient['city'] ?? ''));
+      $interconsultaRecipientContact = trim((string)($interconsultaRecipient['contact'] ?? ''));
+      if ($interconsultaRecipientMode === 'service') {
+        $interconsultaRecipientPrimary = $interconsultaRecipientService !== '' ? $interconsultaRecipientService : $interconsultaRecipientSpecialty;
+      } else {
+        $interconsultaRecipientPrimary = $interconsultaRecipientName !== '' ? $interconsultaRecipientName : $interconsultaRecipientSpecialty;
+      }
+      $interconsultaRecipientSecondary = implode(' · ', array_values(array_filter([
+        $interconsultaRecipientMode === 'doctor' ? $interconsultaRecipientSpecialty : ($interconsultaRecipientName !== '' ? ('Médico: ' . $interconsultaRecipientName) : ''),
+        $interconsultaRecipientFacility !== '' ? $interconsultaRecipientFacility : '',
+        $interconsultaRecipientCity !== '' ? $interconsultaRecipientCity : '',
+      ])));
+      $interconsultaReason = trim((string)($interconsultaContent['reason'] ?? ''));
+      $interconsultaSummary = trim((string)($interconsultaContent['summary'] ?? ''));
+      $interconsultaBackground = trim((string)($interconsultaContent['background'] ?? ''));
+      $interconsultaRequest = trim((string)($interconsultaContent['request'] ?? ''));
+      $interconsultaStudies = trim((string)($interconsultaContent['studies'] ?? ''));
+      $interconsultaComments = trim((string)($interconsultaContent['comments'] ?? ''));
+      $interconsultaClosing = trim((string)($interconsultaContent['closing_statement'] ?? ''));
+      $interconsultaFinalNote = trim((string)($interconsultaContent['final_note'] ?? ''));
+      ?>
+      <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
+      <article class="informe-doc-sheet interconsulta-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-body doc-base-print-safe">
+        <header class="clinical-doc-head informe-doc-head doc-base-medical-header doc-base-print-safe <?php echo h($interconsultaHeaderCfg['class_name']); ?>">
+          <div class="clinical-doc-head-main">
+            <div class="clinical-doc-head-doctor">
+              <div class="clinical-doc-head-logo-slot <?php echo $interconsultaShowLogo ? '' : 'is-empty'; ?>">
+                <?php if ($interconsultaShowLogo): ?>
+                  <img src="<?php echo h($interconsultaHeaderLogoUrl); ?>" alt="Logo médico" onerror="this.remove();this.parentElement.classList.add('is-empty');">
+                  <span class="clinical-doc-logo-fallback">Logo</span>
+                <?php else: ?>
+                  <span class="clinical-doc-logo-fallback">Logo</span>
+                <?php endif; ?>
+              </div>
+              <div class="clinical-doc-head-main">
+                <div class="clinical-doc-doctor-name"><?php echo h($interconsultaDoctorName); ?></div>
+                <?php if ($interconsultaDoctorSpecialty !== ''): ?><div class="clinical-doc-doctor-specialty"><?php echo h($interconsultaDoctorSpecialty); ?></div><?php endif; ?>
+                <?php if ($interconsultaDoctorCedulas !== ''): ?><div class="clinical-doc-doctor-license"><?php echo h($interconsultaDoctorCedulas); ?></div><?php endif; ?>
+                <?php if ($interconsultaDoctorSite !== ''): ?><div class="clinical-doc-doctor-site"><?php echo h($interconsultaDoctorSite); ?></div><?php endif; ?>
+              </div>
+            </div>
+          </div>
+        </header>
+        <section class="informe-doc-title-block doc-base-title-block">
+          <div class="informe-doc-title doc-base-title">Interconsulta</div>
+        </section>
+        <section class="informe-doc-patient-block doc-base-patient-meta">
+          <div class="informe-doc-patient-head">
+            <div class="informe-doc-patient-line"><strong>Paciente:</strong> <?php echo h($interconsultaPatientName); ?></div>
+            <div class="informe-doc-date"><strong>Fecha:</strong> <?php echo h($interconsultaDateOut !== '' ? $interconsultaDateOut : $date); ?></div>
+          </div>
+          <div class="informe-doc-patient-line"><strong>Edad:</strong> <?php echo h($interconsultaPatientAge !== '' ? ($interconsultaPatientAge . ' años') : 'No registrada'); ?> · <strong>Sexo:</strong> <?php echo h($interconsultaPatientSex !== '' ? $interconsultaPatientSex : 'No especificado'); ?></div>
+        </section>
+        <section class="informe-doc-body-section doc-base-section">
+          <div class="informe-doc-section-title doc-base-section-title">Destino de interconsulta</div>
+          <div class="informe-doc-text doc-base-text"><?php echo h($interconsultaRecipientPrimary !== '' ? $interconsultaRecipientPrimary : 'Destino clínico no especificado'); ?></div>
+          <?php if ($interconsultaRecipientSecondary !== ''): ?>
+            <div class="informe-doc-text doc-base-text"><?php echo h($interconsultaRecipientSecondary); ?></div>
+          <?php endif; ?>
+          <?php if ($interconsultaRecipientContact !== ''): ?>
+            <div class="informe-doc-text doc-base-text"><?php echo h('Contacto: ' . $interconsultaRecipientContact); ?></div>
+          <?php endif; ?>
+        </section>
+        <?php if ($interconsultaReason !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Motivo de interconsulta</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($interconsultaReason)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($interconsultaSummary !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Resumen clínico de referencia</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($interconsultaSummary)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($interconsultaBackground !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Antecedentes relevantes</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($interconsultaBackground)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($interconsultaRequest !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Solicitud al interconsultante</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($interconsultaRequest)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($interconsultaStudies !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Estudios relevantes</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($interconsultaStudies)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($interconsultaComments !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Comentarios al colega</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($interconsultaComments)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($interconsultaClosing !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Declaración de cierre</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($interconsultaClosing)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($interconsultaFinalNote !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Observación final del emisor</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($interconsultaFinalNote)); ?></div>
+          </section>
+        <?php endif; ?>
+        <section class="informe-doc-sign doc-base-signature doc-base-print-safe">
+          <div class="informe-doc-section-title doc-base-section-title">Firma del médico emisor</div>
+          <?php if ($interconsultaDoctorSignatureImage !== ''): ?>
+            <img class="informe-doc-sign-image" src="<?php echo h($interconsultaDoctorSignatureImage); ?>" alt="Firma del médico">
+            <div class="informe-doc-sign-meta doc-base-signature-meta">
+              <?php echo h($interconsultaDoctorSignatureSignerName !== '' ? $interconsultaDoctorSignatureSignerName : $interconsultaDoctorName); ?>
+            </div>
+          <?php else: ?>
+            <div class="informe-doc-sign-line"></div>
+            <div class="informe-doc-sign-meta doc-base-signature-meta">
+              <?php echo h($interconsultaDoctorName); ?>
+            </div>
+          <?php endif; ?>
+        </section>
+      </article>
+      </div>
+    <?php endif; ?>
+
     <?php if ($externalBlockedMessage !== ''): ?>
       <div class="alert alert-warning"><?php echo h($externalBlockedMessage); ?></div>
     <?php endif; ?>
@@ -1945,18 +2132,18 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
-    <?php if ($renderedText !== '' && (!$isInformeDoc || $debugView)): ?>
+    <?php if ($renderedText !== '' && ((!$isInformeDoc && !$isInterconsultaDoc) || $debugView)): ?>
       <div class="mm-card mb-3">
-        <div class="head"><h5><?php echo $isInformeDoc ? 'Texto renderizado (debug)' : 'Texto renderizado'; ?></h5></div>
+        <div class="head"><h5><?php echo ($isInformeDoc || $isInterconsultaDoc) ? 'Texto renderizado (debug)' : 'Texto renderizado'; ?></h5></div>
         <div class="body">
           <pre class="mb-0 small"><?php echo h($renderedText); ?></pre>
         </div>
       </div>
     <?php endif; ?>
 
-    <?php if ($payloadJson !== '' && ((!$isConsentDoc && !$isInformeDoc) || $debugView)): ?>
+    <?php if ($payloadJson !== '' && ((!$isConsentDoc && !$isInformeDoc && !$isInterconsultaDoc) || $debugView)): ?>
       <div class="mm-card">
-        <div class="head"><h5><?php echo ($isConsentDoc || $isInformeDoc) ? 'Datos técnicos (debug)' : 'Payload (JSON)'; ?></h5></div>
+        <div class="head"><h5><?php echo ($isConsentDoc || $isInformeDoc || $isInterconsultaDoc) ? 'Datos técnicos (debug)' : 'Payload (JSON)'; ?></h5></div>
         <div class="body">
           <pre class="mb-0 small"><?php echo h($payloadJson); ?></pre>
         </div>
