@@ -3804,7 +3804,7 @@
                   <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                       <div class="modal-header">
-                        <h5 class="modal-title" data-role="ci-signature-qr-title">Firmar con celular</h5>
+                        <h5 class="modal-title" data-role="ci-signature-qr-title">Firmar desde tu celular</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body">
@@ -6944,13 +6944,10 @@
                         <canvas id="ci_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
                       </div>
                       <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ci-signature-open-qr">
-                          Firmar con celular
+                        <button type="button" class="btn btn-outline-dark btn-sm" data-action="ci-signature-open-qr">
+                          Firmar desde tu celular
                         </button>
-                        <div class="d-flex flex-wrap justify-content-end gap-2">
-                          <button type="button" class="btn btn-outline-primary btn-sm" id="ci_signature_apply">Aplicar firma</button>
-                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_signature_clear">Limpiar firma</button>
-                        </div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm ms-auto" id="ci_signature_clear">Volver a firmar</button>
                       </div>
                       <div class="small text-success d-none mt-2" id="ci_signature_remote_status"></div>
                       <div class="alert alert-success d-none mt-2 mb-0 py-2 px-3" id="ci_signature_remote_preview_wrap">
@@ -6995,10 +6992,6 @@
                           <input class="form-check-input" type="radio" name="ci_doctor_signature_source" id="ci_doctor_signature_source_registered" value="registered">
                           <label class="form-check-label small" for="ci_doctor_signature_source_registered">Usar firma registrada</label>
                         </div>
-                        <div class="form-check mb-0">
-                          <input class="form-check-input" type="radio" name="ci_doctor_signature_source" id="ci_doctor_signature_source_local" value="local">
-                          <label class="form-check-label small" for="ci_doctor_signature_source_local">Firmar en pantalla</label>
-                        </div>
                       </div>
                       <div class="alert alert-light py-2 px-3 small d-none mb-2" id="ci_doctor_signature_registered_wrap">
                         <div class="fw-semibold mb-1">Firma registrada disponible</div>
@@ -7013,12 +7006,11 @@
                       <div class="mx-signature-pad" data-signature-role="doctor">
                         <canvas id="ci_doctor_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
                       </div>
-                      <div class="d-flex flex-wrap justify-content-end gap-2 mt-2">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ci-doctor-signature-open-qr">
-                          Firmar con celular
+                      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+                        <button type="button" class="btn btn-outline-dark btn-sm" data-action="ci-doctor-signature-open-qr">
+                          Firmar desde tu celular
                         </button>
-                        <button type="button" class="btn btn-outline-primary btn-sm" id="ci_doctor_signature_apply">Aplicar firma del médico</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_doctor_signature_clear">Limpiar firma del médico</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm ms-auto" id="ci_doctor_signature_clear">Volver a firmar</button>
                       </div>
                       <div class="small text-success d-none mt-2" id="ci_doctor_signature_remote_status"></div>
                       <div class="alert alert-warning py-2 px-3 d-none mt-2" id="ci_doctor_signature_inline_prompt">
@@ -7283,12 +7275,8 @@
                                 <label class="form-check-label small" for="ix_signature_source_registered">Usar firma registrada</label>
                               </div>
                               <div class="form-check mb-0">
-                                <input class="form-check-input" type="radio" name="ix_signature_source" id="ix_signature_source_local" value="local">
-                                <label class="form-check-label small" for="ix_signature_source_local">Firmar en pantalla</label>
-                              </div>
-                              <div class="form-check mb-0">
                                 <input class="form-check-input" type="radio" name="ix_signature_source" id="ix_signature_source_remote" value="remote">
-                                <label class="form-check-label small" for="ix_signature_source_remote">Firmar desde dispositivo móvil</label>
+                                <label class="form-check-label small" for="ix_signature_source_remote">Firmar desde tu celular</label>
                               </div>
                             </div>
                             <div class="alert alert-light py-2 px-3 small d-none mb-2" id="ix_signature_registered_wrap">
@@ -7298,10 +7286,9 @@
                             <div class="mx-signature-pad" data-signature-role="doctor">
                               <canvas id="ix_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
                             </div>
-                            <div class="d-flex flex-wrap justify-content-end gap-2 mt-2">
-                              <button type="button" class="btn btn-outline-primary btn-sm" id="ix_signature_qr_open">Firmar desde dispositivo móvil</button>
-                              <button type="button" class="btn btn-outline-primary btn-sm" id="ix_signature_apply">Aplicar firma del médico</button>
-                              <button type="button" class="btn btn-outline-secondary btn-sm" id="ix_signature_clear">Limpiar firma del médico</button>
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+                              <button type="button" class="btn btn-outline-dark btn-sm" id="ix_signature_qr_open">Firmar desde tu celular</button>
+                              <button type="button" class="btn btn-outline-secondary btn-sm" id="ix_signature_clear">Volver a firmar</button>
                             </div>
                             <div class="alert alert-warning py-2 px-3 d-none mt-2" id="ix_signature_inline_prompt">
                               <div class="small mb-2">¿Deseas guardar esta firma como tu firma digitalizada para usarla en próximos documentos?</div>
@@ -7437,10 +7424,9 @@
                             <div class="mx-signature-pad">
                               <canvas id="rm_signer_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
                             </div>
-                            <div class="d-flex flex-wrap justify-content-end gap-2 mt-2">
-                              <button type="button" class="btn btn-outline-dark btn-sm" id="rm_signer_signature_qr">Firmar con celular</button>
-                              <button type="button" class="btn btn-outline-primary btn-sm" id="rm_signer_signature_apply">Aplicar firma del firmante</button>
-                              <button type="button" class="btn btn-outline-secondary btn-sm" id="rm_signer_signature_clear">Limpiar firma del firmante</button>
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+                              <button type="button" class="btn btn-outline-dark btn-sm" id="rm_signer_signature_qr">Firmar desde tu celular</button>
+                              <button type="button" class="btn btn-outline-secondary btn-sm" id="rm_signer_signature_clear">Volver a firmar</button>
                             </div>
                             <div class="small text-muted mt-2 d-none" id="rm_signer_signature_remote_status"></div>
                           </div>
@@ -7456,10 +7442,6 @@
                                 <input class="form-check-input" type="radio" name="rm_doctor_signature_source" id="rm_doctor_signature_source_registered" value="registered">
                                 <label class="form-check-label small" for="rm_doctor_signature_source_registered">Usar firma registrada</label>
                               </div>
-                              <div class="form-check mb-0">
-                                <input class="form-check-input" type="radio" name="rm_doctor_signature_source" id="rm_doctor_signature_source_local" value="local">
-                                <label class="form-check-label small" for="rm_doctor_signature_source_local">Firmar en pantalla</label>
-                              </div>
                             </div>
                             <div class="alert alert-light py-2 px-3 small d-none mb-2" id="rm_doctor_signature_registered_wrap">
                               <div class="fw-semibold mb-1">Firma registrada disponible</div>
@@ -7468,10 +7450,9 @@
                             <div class="mx-signature-pad">
                               <canvas id="rm_doctor_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
                             </div>
-                            <div class="d-flex flex-wrap justify-content-end gap-2 mt-2">
-                              <button type="button" class="btn btn-outline-dark btn-sm" id="rm_doctor_signature_qr">Firmar con celular</button>
-                              <button type="button" class="btn btn-outline-primary btn-sm" id="rm_doctor_signature_apply">Aplicar firma del médico</button>
-                              <button type="button" class="btn btn-outline-secondary btn-sm" id="rm_doctor_signature_clear">Limpiar firma del médico</button>
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+                              <button type="button" class="btn btn-outline-dark btn-sm" id="rm_doctor_signature_qr">Firmar desde tu celular</button>
+                              <button type="button" class="btn btn-outline-secondary btn-sm" id="rm_doctor_signature_clear">Volver a firmar</button>
                             </div>
                             <div class="small text-muted mt-2 d-none" id="rm_doctor_signature_remote_status"></div>
                             <div class="alert alert-warning py-2 px-3 d-none mt-2" id="rm_doctor_signature_inline_prompt">
