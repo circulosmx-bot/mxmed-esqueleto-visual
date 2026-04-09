@@ -550,6 +550,7 @@ $docTypeNorm = strtolower(trim($docType));
 $isConsentDoc = ($docTypeNorm === 'consentimiento_informado');
 $isInformeDoc = ($docTypeNorm === 'informe_medico');
 $isInterconsultaDoc = ($docTypeNorm === 'interconsulta');
+$isResponsivaDoc = ($docTypeNorm === 'responsiva_medica');
 $isPrescriptionDoc = in_array($docTypeNorm, ['prescription', 'rx'], true);
 $prescriptionContext = $isPrescriptionDoc && is_array($payload['context'] ?? null) ? $payload['context'] : [];
 $prescriptionLegacy = $isPrescriptionDoc && is_array($payload['prescription'] ?? null) ? $payload['prescription'] : [];
@@ -661,6 +662,7 @@ $informeDoctorFacilityContext = first_non_empty_string(
 );
 $informePrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
 $interconsultaPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
+$responsivaPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
 
 $fileMeta = is_array($payload['file'] ?? null) ? $payload['file'] : [];
 $optimizedMeta = is_array($fileMeta['optimized'] ?? null) ? $fileMeta['optimized'] : [];
@@ -740,7 +742,7 @@ if (!$embed) {
     clinical_embed_start();
 }
 ?>
-<?php if ($isInformeDoc): ?>
+<?php if ($isInformeDoc || $isInterconsultaDoc || $isResponsivaDoc): ?>
 <link rel="stylesheet" href="/assets/css/clinical-doc-base.css">
 <?php endif; ?>
 <style>
@@ -1313,11 +1315,11 @@ if (!$embed) {
         <?php if ($showDownloadAction): ?>
           <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($mediaSrc); ?>"<?php echo $downloadIsRelative ? ' download' : ''; ?>>Descargar</a>
         <?php endif; ?>
-        <?php if ($isPdf || $isConsentDoc || $isInformeDoc || $isInterconsultaDoc): ?>
+        <?php if ($isPdf || $isConsentDoc || $isInformeDoc || $isInterconsultaDoc || $isResponsivaDoc): ?>
           <button type="button" class="btn btn-outline-secondary btn-sm" data-role="viewer-print">Imprimir</button>
         <?php endif; ?>
-        <?php if (($isConsentDoc && $consentPrintableHref !== '') || ($isInformeDoc && $informePrintableHref !== '') || ($isInterconsultaDoc && $interconsultaPrintableHref !== '')): ?>
-          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($isConsentDoc ? $consentPrintableHref : ($isInformeDoc ? $informePrintableHref : $interconsultaPrintableHref)); ?>" target="_blank" rel="noopener" download>Descargar</a>
+        <?php if (($isConsentDoc && $consentPrintableHref !== '') || ($isInformeDoc && $informePrintableHref !== '') || ($isInterconsultaDoc && $interconsultaPrintableHref !== '') || ($isResponsivaDoc && $responsivaPrintableHref !== '')): ?>
+          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($isConsentDoc ? $consentPrintableHref : ($isInformeDoc ? $informePrintableHref : ($isInterconsultaDoc ? $interconsultaPrintableHref : $responsivaPrintableHref))); ?>" target="_blank" rel="noopener" download>Descargar</a>
           <?php // TODO(DOCS-UX): agregar botón "Compartir" cuando exista flujo canónico de distribución segura. ?>
         <?php endif; ?>
         <?php if ($bundlePrevHref !== ''): ?>
@@ -2094,6 +2096,186 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
+    <?php if ($isResponsivaDoc): ?>
+      <?php
+      $responsivaReport = is_array($payload['report'] ?? null) ? $payload['report'] : [];
+      $responsivaContent = is_array($payload['content'] ?? null) ? $payload['content'] : [];
+      $responsivaSigner = is_array($payload['signer'] ?? null) ? $payload['signer'] : [];
+      $responsivaMeta = is_array($payload['responsiva'] ?? null) ? $payload['responsiva'] : [];
+      $responsivaBranding = is_array($payload['branding'] ?? null) ? $payload['branding'] : [];
+      $responsivaSignatures = is_array($payload['signatures'] ?? null) ? $payload['signatures'] : [];
+      $responsivaDoctorSignature = is_array($responsivaSignatures['doctor'] ?? null) ? $responsivaSignatures['doctor'] : [];
+      $responsivaSignerSignature = is_array($responsivaSignatures['signer'] ?? null) ? $responsivaSignatures['signer'] : [];
+      $responsivaDoctorSignatureImage = trim((string)($responsivaDoctorSignature['image_data'] ?? ''));
+      $responsivaDoctorSignatureName = trim((string)($responsivaDoctorSignature['signer_name'] ?? ''));
+      $responsivaSignerSignatureImage = trim((string)($responsivaSignerSignature['image_data'] ?? ''));
+      $responsivaSignerSignatureName = trim((string)($responsivaSignerSignature['signer_name'] ?? ''));
+      $responsivaDateOut = clinical_doc_format_date((string)($responsivaReport['emission_date'] ?? ($responsivaReport['issued_at'] ?? $date)), false);
+      $responsivaPatientName = trim((string)($informePatientNameContext !== '' ? $informePatientNameContext : 'Paciente'));
+      $responsivaPatientAge = trim((string)$informePatientAgeContext);
+      $responsivaPatientSex = trim((string)$informePatientSexContext);
+      $responsivaDoctorName = trim((string)($informeDoctorNameContext !== '' ? $informeDoctorNameContext : 'Médico tratante'));
+      $responsivaDoctorSpecialty = trim((string)$informeDoctorSpecialtyContext);
+      $responsivaDoctorLicense = trim((string)$informeDoctorLicenseContext);
+      $responsivaDoctorSpecialtyLicense = trim((string)$informeDoctorSpecialtyLicenseContext);
+      $responsivaBrandingMode = trim((string)($responsivaBranding['mode'] ?? ''));
+      $responsivaBrandingLogo = trim((string)($responsivaBranding['logo_url_resolved'] ?? ($responsivaBranding['logo_url'] ?? '')));
+      $responsivaTestLogoUrl = '/uploads/doctors/1/logo.png';
+      $responsivaBrandingFacility = trim((string)($responsivaBranding['facility_visible'] ?? ''));
+      $responsivaBrandingLocationLine = trim((string)($responsivaBranding['location_line_visible'] ?? ''));
+      $responsivaDoctorFacility = $responsivaBrandingFacility !== '' ? $responsivaBrandingFacility : trim((string)$informeDoctorFacilityContext);
+      $responsivaDoctorPlace = $responsivaBrandingLocationLine !== '' ? $responsivaBrandingLocationLine : trim((string)$informeDoctorPlaceContext);
+      $responsivaDoctorSite = implode(' · ', array_values(array_filter([
+        $responsivaDoctorFacility !== '' ? $responsivaDoctorFacility : '',
+        $responsivaDoctorPlace !== '' ? $responsivaDoctorPlace : '',
+      ])));
+      $responsivaDoctorCedulas = implode(' · ', array_values(array_filter([
+        $responsivaDoctorLicense !== '' ? ('Cédula: ' . $responsivaDoctorLicense) : '',
+        $responsivaDoctorSpecialtyLicense !== '' ? ('Cédula esp.: ' . $responsivaDoctorSpecialtyLicense) : '',
+      ])));
+      $responsivaHeaderMode = 'standard';
+      if (in_array($responsivaBrandingMode, ['branded', 'standard', 'legal'], true)) {
+        $responsivaHeaderMode = $responsivaBrandingMode;
+      }
+      $responsivaHeaderCfg = clinical_doc_header_mode($responsivaHeaderMode);
+      $responsivaHeaderLogoUrl = $responsivaBrandingLogo;
+      if (
+        $responsivaHeaderLogoUrl === ''
+        || strpos($responsivaHeaderLogoUrl, '/storage/clinical_uploads/branding/') !== false
+      ) {
+        $responsivaHeaderLogoUrl = $responsivaTestLogoUrl;
+      }
+      if ($responsivaHeaderMode !== 'legal' && $responsivaHeaderLogoUrl !== '') {
+        $responsivaHeaderMode = 'branded';
+        $responsivaHeaderCfg = clinical_doc_header_mode($responsivaHeaderMode);
+      }
+      $responsivaShowLogo = ($responsivaHeaderCfg['allow_logo'] && $responsivaHeaderLogoUrl !== '');
+      $responsivaTypeLabel = trim((string)($responsivaMeta['type_label'] ?? 'Responsiva médica'));
+      $responsivaClinicalSituation = trim((string)($responsivaContent['clinical_situation'] ?? ''));
+      $responsivaIndicatedConduct = trim((string)($responsivaContent['indicated_conduct'] ?? ''));
+      $responsivaRelevantRisk = trim((string)($responsivaContent['relevant_risk'] ?? ''));
+      $responsivaDeclarationText = trim((string)($responsivaContent['declaration_text'] ?? ''));
+      $responsivaAdditionalManifestation = trim((string)($responsivaContent['additional_manifestation'] ?? ''));
+      $responsivaClosingStatement = trim((string)($responsivaContent['closing_statement'] ?? ''));
+      $responsivaSignerRole = trim((string)($responsivaSigner['role'] ?? ''));
+      $responsivaSignerName = trim((string)($responsivaSigner['name'] ?? ''));
+      $responsivaSignerCharacter = trim((string)($responsivaSigner['character'] ?? ''));
+      $responsivaSignerRelationship = trim((string)($responsivaSigner['relationship'] ?? ''));
+      $responsivaSignerMeta = implode(' · ', array_values(array_filter([
+        $responsivaSignerRole !== '' ? ucfirst(str_replace('_', ' ', $responsivaSignerRole)) : '',
+        $responsivaSignerCharacter !== '' ? $responsivaSignerCharacter : '',
+        $responsivaSignerRelationship !== '' ? $responsivaSignerRelationship : '',
+      ])));
+      ?>
+      <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
+      <article class="informe-doc-sheet responsiva-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-body doc-base-print-safe">
+        <header class="clinical-doc-head informe-doc-head doc-base-medical-header doc-base-print-safe <?php echo h($responsivaHeaderCfg['class_name']); ?>">
+          <div class="clinical-doc-head-main">
+            <div class="clinical-doc-head-doctor">
+              <div class="clinical-doc-head-logo-slot <?php echo $responsivaShowLogo ? '' : 'is-empty'; ?>">
+                <?php if ($responsivaShowLogo): ?>
+                  <img src="<?php echo h($responsivaHeaderLogoUrl); ?>" alt="Logo médico" onerror="this.remove();this.parentElement.classList.add('is-empty');">
+                  <span class="clinical-doc-logo-fallback">Logo</span>
+                <?php else: ?>
+                  <span class="clinical-doc-logo-fallback">Logo</span>
+                <?php endif; ?>
+              </div>
+              <div class="clinical-doc-head-main">
+                <div class="clinical-doc-doctor-name"><?php echo h($responsivaDoctorName); ?></div>
+                <?php if ($responsivaDoctorSpecialty !== ''): ?><div class="clinical-doc-doctor-specialty"><?php echo h($responsivaDoctorSpecialty); ?></div><?php endif; ?>
+                <?php if ($responsivaDoctorCedulas !== ''): ?><div class="clinical-doc-doctor-license"><?php echo h($responsivaDoctorCedulas); ?></div><?php endif; ?>
+                <?php if ($responsivaDoctorSite !== ''): ?><div class="clinical-doc-doctor-site"><?php echo h($responsivaDoctorSite); ?></div><?php endif; ?>
+              </div>
+            </div>
+          </div>
+        </header>
+        <section class="informe-doc-title-block doc-base-title-block">
+          <div class="informe-doc-title doc-base-title">Responsiva médica</div>
+        </section>
+        <section class="informe-doc-patient-block doc-base-patient-meta">
+          <div class="informe-doc-patient-head">
+            <div class="informe-doc-patient-line"><strong>Paciente:</strong> <?php echo h($responsivaPatientName); ?></div>
+            <div class="informe-doc-date"><strong>Fecha:</strong> <?php echo h($responsivaDateOut !== '' ? $responsivaDateOut : $date); ?></div>
+          </div>
+          <div class="informe-doc-patient-line"><strong>Edad:</strong> <?php echo h($responsivaPatientAge !== '' ? ($responsivaPatientAge . ' años') : 'No registrada'); ?> · <strong>Sexo:</strong> <?php echo h($responsivaPatientSex !== '' ? $responsivaPatientSex : 'No especificado'); ?></div>
+        </section>
+        <section class="informe-doc-body-section doc-base-section">
+          <div class="informe-doc-section-title doc-base-section-title">Tipo de responsiva</div>
+          <div class="informe-doc-text doc-base-text"><?php echo h($responsivaTypeLabel !== '' ? $responsivaTypeLabel : 'Responsiva médica'); ?></div>
+        </section>
+        <?php if ($responsivaClinicalSituation !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Situación clínica</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($responsivaClinicalSituation)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($responsivaIndicatedConduct !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Conducta indicada</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($responsivaIndicatedConduct)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($responsivaRelevantRisk !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Riesgo relevante informado</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($responsivaRelevantRisk)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($responsivaDeclarationText !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Declaración documental</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($responsivaDeclarationText)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($responsivaAdditionalManifestation !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Manifestación adicional</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($responsivaAdditionalManifestation)); ?></div>
+          </section>
+        <?php endif; ?>
+        <section class="informe-doc-body-section doc-base-section">
+          <div class="informe-doc-section-title doc-base-section-title">Firmante principal</div>
+          <div class="informe-doc-text doc-base-text"><?php echo h($responsivaSignerName !== '' ? $responsivaSignerName : 'No registrado'); ?></div>
+          <?php if ($responsivaSignerMeta !== ''): ?>
+            <div class="informe-doc-text doc-base-text"><?php echo h($responsivaSignerMeta); ?></div>
+          <?php endif; ?>
+        </section>
+        <?php if ($responsivaClosingStatement !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Declaración de cierre</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($responsivaClosingStatement)); ?></div>
+          </section>
+        <?php endif; ?>
+        <section class="informe-doc-sign doc-base-signature doc-base-print-safe">
+          <div class="informe-doc-section-title doc-base-section-title">Firma del paciente o responsable</div>
+          <?php if ($responsivaSignerSignatureImage !== ''): ?>
+            <img class="informe-doc-sign-image" src="<?php echo h($responsivaSignerSignatureImage); ?>" alt="Firma del firmante">
+            <div class="informe-doc-sign-meta doc-base-signature-meta">
+              <?php echo h($responsivaSignerSignatureName !== '' ? $responsivaSignerSignatureName : ($responsivaSignerName !== '' ? $responsivaSignerName : 'Firmante principal')); ?>
+            </div>
+          <?php else: ?>
+            <div class="informe-doc-sign-line"></div>
+            <div class="informe-doc-sign-meta doc-base-signature-meta">
+              <?php echo h($responsivaSignerName !== '' ? $responsivaSignerName : 'Firmante principal'); ?>
+            </div>
+          <?php endif; ?>
+          <div class="informe-doc-section-title doc-base-section-title">Firma del médico tratante (opcional)</div>
+          <?php if ($responsivaDoctorSignatureImage !== ''): ?>
+            <img class="informe-doc-sign-image" src="<?php echo h($responsivaDoctorSignatureImage); ?>" alt="Firma del médico">
+            <div class="informe-doc-sign-meta doc-base-signature-meta">
+              <?php echo h($responsivaDoctorSignatureName !== '' ? $responsivaDoctorSignatureName : $responsivaDoctorName); ?>
+            </div>
+          <?php else: ?>
+            <div class="informe-doc-sign-line"></div>
+            <div class="informe-doc-sign-meta doc-base-signature-meta">
+              <?php echo h($responsivaDoctorName); ?>
+            </div>
+          <?php endif; ?>
+        </section>
+      </article>
+      </div>
+    <?php endif; ?>
+
     <?php if ($externalBlockedMessage !== ''): ?>
       <div class="alert alert-warning"><?php echo h($externalBlockedMessage); ?></div>
     <?php endif; ?>
@@ -2132,18 +2314,18 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
-    <?php if ($renderedText !== '' && ((!$isInformeDoc && !$isInterconsultaDoc) || $debugView)): ?>
+    <?php if ($renderedText !== '' && ((!$isInformeDoc && !$isInterconsultaDoc && !$isResponsivaDoc) || $debugView)): ?>
       <div class="mm-card mb-3">
-        <div class="head"><h5><?php echo ($isInformeDoc || $isInterconsultaDoc) ? 'Texto renderizado (debug)' : 'Texto renderizado'; ?></h5></div>
+        <div class="head"><h5><?php echo ($isInformeDoc || $isInterconsultaDoc || $isResponsivaDoc) ? 'Texto renderizado (debug)' : 'Texto renderizado'; ?></h5></div>
         <div class="body">
           <pre class="mb-0 small"><?php echo h($renderedText); ?></pre>
         </div>
       </div>
     <?php endif; ?>
 
-    <?php if ($payloadJson !== '' && ((!$isConsentDoc && !$isInformeDoc && !$isInterconsultaDoc) || $debugView)): ?>
+    <?php if ($payloadJson !== '' && ((!$isConsentDoc && !$isInformeDoc && !$isInterconsultaDoc && !$isResponsivaDoc) || $debugView)): ?>
       <div class="mm-card">
-        <div class="head"><h5><?php echo ($isConsentDoc || $isInformeDoc || $isInterconsultaDoc) ? 'Datos técnicos (debug)' : 'Payload (JSON)'; ?></h5></div>
+        <div class="head"><h5><?php echo ($isConsentDoc || $isInformeDoc || $isInterconsultaDoc || $isResponsivaDoc) ? 'Datos técnicos (debug)' : 'Payload (JSON)'; ?></h5></div>
         <div class="body">
           <pre class="mb-0 small"><?php echo h($payloadJson); ?></pre>
         </div>

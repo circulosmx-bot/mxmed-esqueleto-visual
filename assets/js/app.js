@@ -8928,6 +8928,8 @@ console.info('app.js loaded :: 20251123a');
       informeModalBodySlot: pane.querySelector('#im_modal_body_slot'),
       interconsultaModalEl: pane.querySelector('#modalInterconsulta'),
       interconsultaModalBodySlot: pane.querySelector('#ix_modal_body_slot'),
+      responsivaModalEl: pane.querySelector('#modalResponsivaMedica'),
+      responsivaModalBodySlot: pane.querySelector('#rm_modal_body_slot'),
       draftPromptModalEl: pane.querySelector('#modalConsentDraftPrompt'),
       draftPromptText: pane.querySelector('#ci_draft_prompt_text'),
       draftPromptReopenBtn: pane.querySelector('#ci_draft_reopen_btn'),
@@ -9144,7 +9146,57 @@ console.info('app.js loaded :: 20251123a');
       interconsultaSignatureStatus: root.querySelector('#ix_signature_status'),
       interconsultaSignatureInlinePrompt: root.querySelector('#ix_signature_inline_prompt'),
       interconsultaSignatureInlineYesBtn: root.querySelector('#ix_signature_inline_yes'),
-      interconsultaSignatureInlineNoBtn: root.querySelector('#ix_signature_inline_no')
+      interconsultaSignatureInlineNoBtn: root.querySelector('#ix_signature_inline_no'),
+      responsivaWizard: root.querySelector('#rm_wizard'),
+      responsivaStepLabel: root.querySelector('#rm_step_label'),
+      responsivaNotice: root.querySelector('#rm_notice'),
+      responsivaStep1: root.querySelector('#rm_step_1'),
+      responsivaStep2: root.querySelector('#rm_step_2'),
+      responsivaStep3: root.querySelector('#rm_step_3'),
+      responsivaStep4: root.querySelector('#rm_step_4'),
+      responsivaStep5: root.querySelector('#rm_step_5'),
+      responsivaType: root.querySelector('#rm_type'),
+      responsivaDate: root.querySelector('#rm_date'),
+      responsivaPatientName: root.querySelector('#rm_patient_name'),
+      responsivaPatientAge: root.querySelector('#rm_patient_age'),
+      responsivaPatientSex: root.querySelector('#rm_patient_sex'),
+      responsivaDoctorName: root.querySelector('#rm_doctor_name'),
+      responsivaClinicalSituation: root.querySelector('#rm_clinical_situation'),
+      responsivaIndicatedConduct: root.querySelector('#rm_indicated_conduct'),
+      responsivaRelevantRisk: root.querySelector('#rm_relevant_risk'),
+      responsivaDeclarationText: root.querySelector('#rm_declaration_text'),
+      responsivaAdditionalManifestation: root.querySelector('#rm_additional_manifestation'),
+      responsivaSignerRole: root.querySelector('#rm_signer_role'),
+      responsivaSignerName: root.querySelector('#rm_signer_name'),
+      responsivaSignerCharacterWrap: root.querySelector('#rm_signer_character_wrap'),
+      responsivaSignerRelationshipWrap: root.querySelector('#rm_signer_relationship_wrap'),
+      responsivaSignerCharacter: root.querySelector('#rm_signer_character'),
+      responsivaSignerRelationship: root.querySelector('#rm_signer_relationship'),
+      responsivaPreview: root.querySelector('#rm_preview'),
+      responsivaPrev: root.querySelector('#rm_prev'),
+      responsivaNext: root.querySelector('#rm_next'),
+      responsivaSave: root.querySelector('#rm_save'),
+      responsivaEmit: root.querySelector('#rm_emit'),
+      responsivaCancel: root.querySelector('#rm_cancel'),
+      responsivaSignerSignatureCanvas: root.querySelector('#rm_signer_signature_canvas'),
+      responsivaSignerSignatureQr: root.querySelector('#rm_signer_signature_qr'),
+      responsivaSignerSignatureApply: root.querySelector('#rm_signer_signature_apply'),
+      responsivaSignerSignatureClear: root.querySelector('#rm_signer_signature_clear'),
+      responsivaSignerSignatureStatus: root.querySelector('#rm_signer_signature_status'),
+      responsivaSignerSignatureRemoteStatus: root.querySelector('#rm_signer_signature_remote_status'),
+      responsivaDoctorSignatureSourceRegistered: root.querySelector('#rm_doctor_signature_source_registered'),
+      responsivaDoctorSignatureSourceLocal: root.querySelector('#rm_doctor_signature_source_local'),
+      responsivaDoctorSignatureRegisteredWrap: root.querySelector('#rm_doctor_signature_registered_wrap'),
+      responsivaDoctorSignatureRegisteredPreview: root.querySelector('#rm_doctor_signature_registered_preview'),
+      responsivaDoctorSignatureCanvas: root.querySelector('#rm_doctor_signature_canvas'),
+      responsivaDoctorSignatureQr: root.querySelector('#rm_doctor_signature_qr'),
+      responsivaDoctorSignatureApply: root.querySelector('#rm_doctor_signature_apply'),
+      responsivaDoctorSignatureClear: root.querySelector('#rm_doctor_signature_clear'),
+      responsivaDoctorSignatureStatus: root.querySelector('#rm_doctor_signature_status'),
+      responsivaDoctorSignatureRemoteStatus: root.querySelector('#rm_doctor_signature_remote_status'),
+      responsivaDoctorSignatureInlinePrompt: root.querySelector('#rm_doctor_signature_inline_prompt'),
+      responsivaDoctorSignatureInlineYesBtn: root.querySelector('#rm_doctor_signature_inline_yes'),
+      responsivaDoctorSignatureInlineNoBtn: root.querySelector('#rm_doctor_signature_inline_no')
     };
     if(!els.list || !els.empty || !els.newBtn || !els.wizard || !els.next || !els.save) return;
     if(els.consentModalBodySlot && els.wizard.parentElement !== els.consentModalBodySlot){
@@ -9155,6 +9207,9 @@ console.info('app.js loaded :: 20251123a');
     }
     if(els.interconsultaModalBodySlot && els.interconsultaWizard && els.interconsultaWizard.parentElement !== els.interconsultaModalBodySlot){
       els.interconsultaModalBodySlot.appendChild(els.interconsultaWizard);
+    }
+    if(els.responsivaModalBodySlot && els.responsivaWizard && els.responsivaWizard.parentElement !== els.responsivaModalBodySlot){
+      els.responsivaModalBodySlot.appendChild(els.responsivaWizard);
     }
     const hideInternalPrefillField = (fieldId = '')=>{
       const safeId = sanitizeText(fieldId || '');
@@ -9292,6 +9347,34 @@ console.info('app.js loaded :: 20251123a');
         comments: '',
         closing_statement: '',
         final_note: ''
+      }
+    };
+    const responsivaState = {
+      step: 1,
+      saving: false,
+      declarationEdited: false,
+      signerSignaturePad: null,
+      signerSignatureHasStroke: false,
+      signerSignaturePreferredSource: '',
+      signerRemoteSignature: null,
+      doctorSignaturePad: null,
+      doctorSignatureHasStroke: false,
+      doctorSignaturePreferredSource: '',
+      doctorRemoteSignature: null,
+      doctorRegisteredSignatureData: '',
+      form: {
+        type: 'alta_voluntaria',
+        emission_date: '',
+        clinical_situation: '',
+        indicated_conduct: '',
+        relevant_risk: '',
+        declaration_text: '',
+        additional_manifestation: '',
+        signer_role: 'paciente',
+        signer_name: '',
+        signer_character: '',
+        signer_relationship: '',
+        closing_statement: 'Se deja constancia de que la recomendación médica y sus riesgos fueron explicados en lenguaje claro. El firmante manifiesta su decisión de manera libre e informada, asumiendo la responsabilidad correspondiente. Se emite la presente responsiva para fines clínico-legales.'
       }
     };
     const DEFAULT_CONSENT_RISK_FRAMEWORK = Object.freeze({
@@ -9506,6 +9589,36 @@ console.info('app.js loaded :: 20251123a');
           'patient_context',
           'recipient',
           'clinical_content',
+          'closure',
+          'signatures'
+        ]),
+        print_profile: Object.freeze({
+          font_family: '"Inter", "Helvetica Neue", Arial, sans-serif',
+          base_font_size_px: 12,
+          line_height: 1.5
+        })
+      }),
+      responsiva_medica: Object.freeze({
+        document_type: 'responsiva_medica',
+        title: 'Responsiva médica',
+        subtitle_field: 'responsiva.type_label',
+        blocks: Object.freeze([
+          'encabezado',
+          'datos_paciente',
+          'tipo_responsiva',
+          'contexto_clinico',
+          'declaracion',
+          'firmante',
+          'cierre',
+          'firmas'
+        ]),
+        signatures_required: Object.freeze(['signer', 'doctor']),
+        attachments_allowed: Object.freeze([]),
+        render_order: Object.freeze([
+          'header',
+          'patient_context',
+          'clinical_content',
+          'signer',
           'closure',
           'signatures'
         ]),
@@ -13416,6 +13529,741 @@ console.info('app.js loaded :: 20251123a');
         setInterconsultaNotice(sanitizeText(error?.message || 'No se pudo iniciar firma remota del médico.'));
       }
     };
+    const responsivaTypeLabels = Object.freeze({
+      alta_voluntaria: 'Alta voluntaria',
+      rechazo_manejo: 'Rechazo de estudio / tratamiento / manejo',
+      negativa_hospitalizacion_traslado: 'Negativa a hospitalización o traslado'
+    });
+    const getResponsivaTypeLabel = (value = '')=> sanitizeText(responsivaTypeLabels[sanitizeText(value || '')] || '');
+    const buildResponsivaDeclarationBase = (type = '')=>{
+      const safeType = sanitizeText(type || 'alta_voluntaria') || 'alta_voluntaria';
+      if(safeType === 'rechazo_manejo'){
+        return 'Declaro que recibí información clara sobre los estudios, tratamiento o manejo indicado, incluyendo beneficios y riesgos. De manera libre e informada, manifiesto mi negativa a aceptar la conducta propuesta, asumiendo la responsabilidad correspondiente.';
+      }
+      if(safeType === 'negativa_hospitalizacion_traslado'){
+        return 'Declaro que recibí información clara sobre la indicación de hospitalización y/o traslado, así como sobre los riesgos de no realizarlo. De manera libre e informada, manifiesto mi negativa, asumiendo la responsabilidad correspondiente.';
+      }
+      return 'Declaro que recibí información clara sobre mi situación clínica, la recomendación médica y los riesgos de no continuar la atención indicada. De manera libre e informada, solicito alta voluntaria y asumo la responsabilidad correspondiente.';
+    };
+    const setResponsivaNotice = (message = '')=>{
+      if(!els.responsivaNotice) return;
+      const text = sanitizeText(message || '');
+      els.responsivaNotice.textContent = text;
+      els.responsivaNotice.classList.toggle('d-none', !text);
+    };
+    const setResponsivaSignerRemoteStatus = (message = '', tone = 'muted')=>{
+      if(!els.responsivaSignerSignatureRemoteStatus) return;
+      const text = sanitizeText(message || '');
+      els.responsivaSignerSignatureRemoteStatus.textContent = text;
+      els.responsivaSignerSignatureRemoteStatus.classList.toggle('d-none', !text);
+      els.responsivaSignerSignatureRemoteStatus.classList.toggle('text-success', tone === 'success');
+      els.responsivaSignerSignatureRemoteStatus.classList.toggle('text-danger', tone === 'error');
+      els.responsivaSignerSignatureRemoteStatus.classList.toggle('text-muted', tone !== 'success' && tone !== 'error');
+    };
+    const setResponsivaDoctorRemoteStatus = (message = '', tone = 'muted')=>{
+      if(!els.responsivaDoctorSignatureRemoteStatus) return;
+      const text = sanitizeText(message || '');
+      els.responsivaDoctorSignatureRemoteStatus.textContent = text;
+      els.responsivaDoctorSignatureRemoteStatus.classList.toggle('d-none', !text);
+      els.responsivaDoctorSignatureRemoteStatus.classList.toggle('text-success', tone === 'success');
+      els.responsivaDoctorSignatureRemoteStatus.classList.toggle('text-danger', tone === 'error');
+      els.responsivaDoctorSignatureRemoteStatus.classList.toggle('text-muted', tone !== 'success' && tone !== 'error');
+    };
+    const pullResponsivaSignerRemoteSignature = ()=>{
+      const remote = (state.remoteSignature && typeof state.remoteSignature === 'object')
+        ? state.remoteSignature
+        : null;
+      const imageData = sanitizeText(remote?.image_data || '');
+      if(!imageData){
+        responsivaState.signerRemoteSignature = null;
+        if(responsivaState.signerSignaturePreferredSource === 'remote'){
+          responsivaState.signerSignaturePreferredSource = responsivaState.signerSignatureHasStroke ? 'local' : '';
+        }
+        return false;
+      }
+      responsivaState.signerRemoteSignature = {
+        type: 'drawn',
+        source: 'remote_qr',
+        role: 'signer',
+        image_data: imageData,
+        signed_at: sanitizeText(remote?.signed_at || formatNowSql()),
+        signer_name: sanitizeText(remote?.signer_name || responsivaState.form.signer_name || ''),
+        token: sanitizeText(remote?.token || '')
+      };
+      responsivaState.signerSignaturePreferredSource = 'remote';
+      return true;
+    };
+    const pullResponsivaDoctorRemoteSignature = ()=>{
+      const remote = (state.doctorRemoteSignature && typeof state.doctorRemoteSignature === 'object')
+        ? state.doctorRemoteSignature
+        : null;
+      const imageData = sanitizeText(remote?.image_data || '');
+      if(!imageData){
+        responsivaState.doctorRemoteSignature = null;
+        if(responsivaState.doctorSignaturePreferredSource === 'remote'){
+          if(responsivaState.doctorRegisteredSignatureData){
+            responsivaState.doctorSignaturePreferredSource = 'registered';
+          }else if(responsivaState.doctorSignatureHasStroke){
+            responsivaState.doctorSignaturePreferredSource = 'local';
+          }else{
+            responsivaState.doctorSignaturePreferredSource = '';
+          }
+        }
+        return false;
+      }
+      responsivaState.doctorRemoteSignature = {
+        type: 'drawn',
+        source: 'remote_qr',
+        role: 'doctor',
+        image_data: imageData,
+        signed_at: sanitizeText(remote?.signed_at || formatNowSql()),
+        signer_name: sanitizeText(remote?.signer_name || document.querySelector('.user-id .name')?.textContent || 'Médico tratante'),
+        token: sanitizeText(remote?.token || '')
+      };
+      responsivaState.doctorSignaturePreferredSource = 'remote';
+      return true;
+    };
+    const openResponsivaSignatureQr = async (role = 'patient')=>{
+      try{
+        await openConsentSignatureQrModal(role);
+        window.setTimeout(()=>{
+          if(role === 'doctor'){
+            if(pullResponsivaDoctorRemoteSignature()){
+              setResponsivaDoctorRemoteStatus('Firma remota del médico recibida.', 'success');
+              refreshResponsivaDoctorSignatureStatus();
+              renderResponsivaStep();
+            }
+            return;
+          }
+          if(pullResponsivaSignerRemoteSignature()){
+            setResponsivaSignerRemoteStatus('Firma remota del paciente o responsable recibida.', 'success');
+            refreshResponsivaSignerSignatureStatus();
+            renderResponsivaStep();
+          }
+        }, 250);
+      }catch(error){
+        const message = sanitizeText(error?.message || 'No se pudo iniciar la firma remota.');
+        if(role === 'doctor'){
+          setResponsivaDoctorRemoteStatus(message, 'error');
+        }else{
+          setResponsivaSignerRemoteStatus(message, 'error');
+        }
+      }
+    };
+    const syncResponsivaSignerRoleUi = ()=>{
+      const role = sanitizeText(responsivaState.form.signer_role || 'paciente') || 'paciente';
+      const isPaciente = role === 'paciente';
+      els.responsivaSignerCharacterWrap?.classList.toggle('d-none', isPaciente);
+      els.responsivaSignerRelationshipWrap?.classList.toggle('d-none', isPaciente);
+      if(isPaciente){
+        responsivaState.form.signer_character = '';
+        responsivaState.form.signer_relationship = '';
+      }
+    };
+    const syncResponsivaCanvasSize = (canvas, stateBag, { preserve = true } = {})=>{
+      if(!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.max(300, Math.floor(rect.width || 0));
+      const height = Math.max(160, Math.floor(rect.height || 180));
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const targetW = Math.floor(width * dpr);
+      const targetH = Math.floor(height * dpr);
+      if(canvas.width === targetW && canvas.height === targetH){
+        return;
+      }
+      let snapshot = '';
+      if(preserve && stateBag?.hasStroke){
+        try{ snapshot = canvas.toDataURL('image/png'); }catch(_){ snapshot = ''; }
+      }
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+      if(!ctx) return;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#0f172a';
+      if(snapshot){
+        const img = new Image();
+        img.onload = ()=>{ try{ ctx.drawImage(img, 0, 0, width, height); stateBag.hasStroke = true; }catch(_){} };
+        img.src = snapshot;
+      }else{
+        stateBag.hasStroke = false;
+      }
+    };
+    const bindResponsivaSignatureCanvas = (canvas, stateBag)=>{
+      if(!canvas || canvas.dataset.bound === '1') return;
+      syncResponsivaCanvasSize(canvas, stateBag, { preserve: false });
+      const ctx = canvas.getContext('2d');
+      if(!ctx) return;
+      const point = (event)=>{
+        const rect = canvas.getBoundingClientRect();
+        return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      };
+      let drawing = false;
+      const start = (event)=>{
+        if(responsivaState.saving) return;
+        drawing = true;
+        const p = point(event);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        stateBag.hasStroke = true;
+        event.preventDefault();
+      };
+      const move = (event)=>{
+        if(!drawing) return;
+        const p = point(event);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        event.preventDefault();
+      };
+      const end = (event)=>{
+        if(!drawing) return;
+        drawing = false;
+        ctx.closePath();
+        event.preventDefault();
+      };
+      canvas.addEventListener('pointerdown', start);
+      canvas.addEventListener('pointermove', move);
+      canvas.addEventListener('pointerup', end);
+      canvas.addEventListener('pointerleave', end);
+      canvas.addEventListener('pointercancel', end);
+      canvas.dataset.bound = '1';
+    };
+    const clearResponsivaSignatureCanvas = (canvas, stateBag)=>{
+      if(!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if(!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      stateBag.hasStroke = false;
+    };
+    const exportResponsivaSignature = (canvas, stateBag)=>{
+      if(!canvas || !stateBag?.hasStroke) return '';
+      try{ return canvas.toDataURL('image/png'); }catch(_){ return ''; }
+    };
+    const refreshResponsivaDoctorSignatureStatus = ()=>{
+      if(!els.responsivaDoctorSignatureStatus) return;
+      const hasRemote = responsivaState.doctorSignaturePreferredSource === 'remote' && !!responsivaState.doctorRemoteSignature?.image_data;
+      const hasRegistered = responsivaState.form && responsivaState.doctorSignaturePreferredSource === 'registered' && !!responsivaState.doctorRegisteredSignatureData;
+      const hasLocal = responsivaState.doctorSignatureHasStroke && responsivaState.doctorSignaturePreferredSource !== 'registered' && responsivaState.doctorSignaturePreferredSource !== 'remote';
+      if(hasRemote){
+        els.responsivaDoctorSignatureStatus.textContent = 'Firma remota aplicada';
+        return;
+      }
+      if(hasRegistered){
+        els.responsivaDoctorSignatureStatus.textContent = 'Firma registrada aplicada';
+        return;
+      }
+      if(hasLocal){
+        els.responsivaDoctorSignatureStatus.textContent = 'Firma capturada';
+        return;
+      }
+      els.responsivaDoctorSignatureStatus.textContent = 'Sin firma';
+    };
+    const refreshResponsivaSignerSignatureStatus = ()=>{
+      if(!els.responsivaSignerSignatureStatus) return;
+      const hasRemote = responsivaState.signerSignaturePreferredSource === 'remote' && !!responsivaState.signerRemoteSignature?.image_data;
+      if(hasRemote){
+        els.responsivaSignerSignatureStatus.textContent = 'Firma remota aplicada';
+        return;
+      }
+      if(responsivaState.signerSignatureHasStroke){
+        els.responsivaSignerSignatureStatus.textContent = 'Firma capturada';
+        return;
+      }
+      els.responsivaSignerSignatureStatus.textContent = 'Sin firma';
+    };
+    const refreshResponsivaRegisteredDoctorSignature = ()=>{
+      responsivaState.doctorRegisteredSignatureData = readRegisteredDoctorSignature();
+      if(els.responsivaDoctorSignatureRegisteredPreview){
+        els.responsivaDoctorSignatureRegisteredPreview.src = responsivaState.doctorRegisteredSignatureData || '';
+      }
+      if(els.responsivaDoctorSignatureRegisteredWrap){
+        const show = responsivaState.doctorSignaturePreferredSource === 'registered' && !!responsivaState.doctorRegisteredSignatureData;
+        els.responsivaDoctorSignatureRegisteredWrap.classList.toggle('d-none', !show);
+      }
+      if(!responsivaState.doctorRegisteredSignatureData && responsivaState.doctorSignaturePreferredSource === 'registered'){
+        responsivaState.doctorSignaturePreferredSource = responsivaState.doctorSignatureHasStroke ? 'local' : '';
+      }
+      refreshResponsivaDoctorSignatureStatus();
+    };
+    const setResponsivaDoctorSignatureSource = (source = '')=>{
+      const normalized = sanitizeText(source || '');
+      responsivaState.doctorSignaturePreferredSource = normalized;
+      if(els.responsivaDoctorSignatureSourceRegistered){
+        els.responsivaDoctorSignatureSourceRegistered.checked = normalized === 'registered';
+      }
+      if(els.responsivaDoctorSignatureSourceLocal){
+        els.responsivaDoctorSignatureSourceLocal.checked = normalized === 'local';
+      }
+      if(els.responsivaDoctorSignatureRegisteredWrap){
+        els.responsivaDoctorSignatureRegisteredWrap.classList.toggle('d-none', normalized !== 'registered' || !responsivaState.doctorRegisteredSignatureData);
+      }
+      refreshResponsivaDoctorSignatureStatus();
+    };
+    const readResponsivaPatientContext = ()=>{
+      const patient = readInformePatientContext();
+      if(els.responsivaPatientName) els.responsivaPatientName.value = sanitizeText(patient.name || '');
+      if(els.responsivaPatientAge) els.responsivaPatientAge.value = sanitizeText(patient.age || '');
+      if(els.responsivaPatientSex) els.responsivaPatientSex.value = sanitizeText(patient.sex || '');
+      return patient;
+    };
+    const readResponsivaDoctorName = ()=>{
+      const doctorName = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
+      if(els.responsivaDoctorName) els.responsivaDoctorName.value = doctorName;
+      return doctorName;
+    };
+    const syncResponsivaInputsFromState = ()=>{
+      if(els.responsivaType) els.responsivaType.value = sanitizeText(responsivaState.form.type || 'alta_voluntaria') || 'alta_voluntaria';
+      if(els.responsivaDate) els.responsivaDate.value = sanitizeText(responsivaState.form.emission_date || '');
+      if(els.responsivaClinicalSituation) els.responsivaClinicalSituation.value = sanitizeText(responsivaState.form.clinical_situation || '');
+      if(els.responsivaIndicatedConduct) els.responsivaIndicatedConduct.value = sanitizeText(responsivaState.form.indicated_conduct || '');
+      if(els.responsivaRelevantRisk) els.responsivaRelevantRisk.value = sanitizeText(responsivaState.form.relevant_risk || '');
+      if(els.responsivaDeclarationText) els.responsivaDeclarationText.value = sanitizeText(responsivaState.form.declaration_text || '');
+      if(els.responsivaAdditionalManifestation) els.responsivaAdditionalManifestation.value = sanitizeText(responsivaState.form.additional_manifestation || '');
+      if(els.responsivaSignerRole) els.responsivaSignerRole.value = sanitizeText(responsivaState.form.signer_role || 'paciente') || 'paciente';
+      if(els.responsivaSignerName) els.responsivaSignerName.value = sanitizeText(responsivaState.form.signer_name || '');
+      if(els.responsivaSignerCharacter) els.responsivaSignerCharacter.value = sanitizeText(responsivaState.form.signer_character || '');
+      if(els.responsivaSignerRelationship) els.responsivaSignerRelationship.value = sanitizeText(responsivaState.form.signer_relationship || '');
+      syncResponsivaSignerRoleUi();
+      readResponsivaPatientContext();
+      readResponsivaDoctorName();
+      pullResponsivaSignerRemoteSignature();
+      pullResponsivaDoctorRemoteSignature();
+      refreshResponsivaSignerSignatureStatus();
+      refreshResponsivaDoctorSignatureStatus();
+    };
+    const renderResponsivaPreview = ()=>{
+      if(!els.responsivaPreview) return;
+      const typeLabel = getResponsivaTypeLabel(responsivaState.form.type || '');
+      const patient = readInformePatientContext();
+      const signerRole = sanitizeText(responsivaState.form.signer_role || 'paciente') || 'paciente';
+      els.responsivaPreview.innerHTML = `
+        <div><strong>Responsiva médica</strong></div>
+        <div class="text-muted">${escapeHtml(patient.name || 'Paciente')} · ${escapeHtml(typeLabel || '')}</div>
+        <div class="mt-2"><strong>Situación clínica:</strong><br>${escapeHtml(sanitizeText(responsivaState.form.clinical_situation || '')).replace(/\n/g,'<br>')}</div>
+        <div class="mt-2"><strong>Conducta indicada:</strong><br>${escapeHtml(sanitizeText(responsivaState.form.indicated_conduct || '')).replace(/\n/g,'<br>')}</div>
+        <div class="mt-2"><strong>Riesgo relevante informado:</strong><br>${escapeHtml(sanitizeText(responsivaState.form.relevant_risk || '')).replace(/\n/g,'<br>')}</div>
+        <div class="mt-2"><strong>Declaración:</strong><br>${escapeHtml(sanitizeText(responsivaState.form.declaration_text || '')).replace(/\n/g,'<br>')}</div>
+        ${
+          sanitizeText(responsivaState.form.additional_manifestation || '')
+            ? `<div class="mt-2"><strong>Manifestación adicional:</strong><br>${escapeHtml(sanitizeText(responsivaState.form.additional_manifestation || '')).replace(/\n/g,'<br>')}</div>`
+            : ''
+        }
+        <div class="mt-2 text-muted">Firmante: ${escapeHtml(sanitizeText(responsivaState.form.signer_name || ''))} (${escapeHtml(signerRole)})</div>
+      `;
+    };
+    const renderResponsivaStep = ()=>{
+      const maxStep = 5;
+      const step = Math.min(Math.max(Number(responsivaState.step || 1), 1), maxStep);
+      responsivaState.step = step;
+      if(els.responsivaStep1) els.responsivaStep1.classList.toggle('d-none', step !== 1);
+      if(els.responsivaStep2) els.responsivaStep2.classList.toggle('d-none', step !== 2);
+      if(els.responsivaStep3) els.responsivaStep3.classList.toggle('d-none', step !== 3);
+      if(els.responsivaStep4) els.responsivaStep4.classList.toggle('d-none', step !== 4);
+      if(els.responsivaStep5) els.responsivaStep5.classList.toggle('d-none', step !== 5);
+      if(els.responsivaStepLabel) els.responsivaStepLabel.textContent = `Paso ${step} de 5`;
+      if(els.responsivaPrev) els.responsivaPrev.disabled = step === 1 || responsivaState.saving;
+      if(els.responsivaNext){
+        els.responsivaNext.classList.toggle('d-none', step >= 5);
+        els.responsivaNext.disabled = responsivaState.saving;
+      }
+      const showFinalActions = step === 5;
+      if(els.responsivaSave){
+        els.responsivaSave.classList.toggle('d-none', !showFinalActions);
+        els.responsivaSave.disabled = responsivaState.saving;
+      }
+      if(els.responsivaEmit){
+        els.responsivaEmit.classList.toggle('d-none', !showFinalActions);
+        els.responsivaEmit.disabled = responsivaState.saving;
+      }
+      if(els.responsivaCancel){
+        els.responsivaCancel.classList.toggle('d-none', !showFinalActions);
+        els.responsivaCancel.disabled = responsivaState.saving;
+      }
+      if(step === 5){
+        bindResponsivaSignatureCanvas(els.responsivaSignerSignatureCanvas, {
+          get hasStroke(){ return responsivaState.signerSignatureHasStroke; },
+          set hasStroke(v){
+            responsivaState.signerSignatureHasStroke = !!v;
+            if(v){
+              responsivaState.signerSignaturePreferredSource = 'local';
+            }else if(responsivaState.signerSignaturePreferredSource === 'local'){
+              responsivaState.signerSignaturePreferredSource = responsivaState.signerRemoteSignature ? 'remote' : '';
+            }
+            refreshResponsivaSignerSignatureStatus();
+          }
+        });
+        bindResponsivaSignatureCanvas(els.responsivaDoctorSignatureCanvas, {
+          get hasStroke(){ return responsivaState.doctorSignatureHasStroke; },
+          set hasStroke(v){ responsivaState.doctorSignatureHasStroke = !!v; if(v){ responsivaState.doctorSignaturePreferredSource = 'local'; } refreshResponsivaDoctorSignatureStatus(); }
+        });
+        window.requestAnimationFrame(()=>{
+          syncResponsivaCanvasSize(els.responsivaSignerSignatureCanvas, {
+            get hasStroke(){ return responsivaState.signerSignatureHasStroke; },
+            set hasStroke(v){ responsivaState.signerSignatureHasStroke = !!v; refreshResponsivaSignerSignatureStatus(); }
+          });
+          syncResponsivaCanvasSize(els.responsivaDoctorSignatureCanvas, {
+            get hasStroke(){ return responsivaState.doctorSignatureHasStroke; },
+            set hasStroke(v){ responsivaState.doctorSignatureHasStroke = !!v; refreshResponsivaDoctorSignatureStatus(); }
+          });
+        });
+        renderResponsivaPreview();
+      }
+    };
+    const resetResponsivaWizard = ()=>{
+      responsivaState.step = 1;
+      responsivaState.saving = false;
+      responsivaState.declarationEdited = false;
+      responsivaState.signerSignatureHasStroke = false;
+      responsivaState.signerSignaturePreferredSource = '';
+      responsivaState.signerRemoteSignature = null;
+      responsivaState.doctorSignatureHasStroke = false;
+      responsivaState.doctorSignaturePreferredSource = '';
+      responsivaState.doctorRemoteSignature = null;
+      responsivaState.form = {
+        type: 'alta_voluntaria',
+        emission_date: '',
+        clinical_situation: '',
+        indicated_conduct: '',
+        relevant_risk: '',
+        declaration_text: buildResponsivaDeclarationBase('alta_voluntaria'),
+        additional_manifestation: '',
+        signer_role: 'paciente',
+        signer_name: '',
+        signer_character: '',
+        signer_relationship: '',
+        closing_statement: 'Se deja constancia de que la recomendación médica y sus riesgos fueron explicados en lenguaje claro. El firmante manifiesta su decisión de manera libre e informada, asumiendo la responsabilidad correspondiente. Se emite la presente responsiva para fines clínico-legales.'
+      };
+      setResponsivaNotice('');
+      setResponsivaSignerRemoteStatus('');
+      setResponsivaDoctorRemoteStatus('');
+      clearResponsivaSignatureCanvas(els.responsivaSignerSignatureCanvas, {
+        get hasStroke(){ return responsivaState.signerSignatureHasStroke; },
+        set hasStroke(v){ responsivaState.signerSignatureHasStroke = !!v; }
+      });
+      clearResponsivaSignatureCanvas(els.responsivaDoctorSignatureCanvas, {
+        get hasStroke(){ return responsivaState.doctorSignatureHasStroke; },
+        set hasStroke(v){ responsivaState.doctorSignatureHasStroke = !!v; }
+      });
+      if(els.responsivaWizard){
+        els.responsivaWizard.classList.add('d-none');
+      }
+      syncResponsivaInputsFromState();
+      renderResponsivaStep();
+    };
+    const startResponsivaDraft = ()=>{
+      const patientId = resolveActivePatientIdForConsent();
+      if(!patientId){
+        setResponsivaNotice('Selecciona paciente antes de crear la responsiva.');
+        return false;
+      }
+      resetResponsivaWizard();
+      responsivaState.form.emission_date = formatNowSql().slice(0, 10);
+      const patient = readInformePatientContext();
+      responsivaState.form.signer_name = sanitizeText(patient.name || '');
+      syncResponsivaInputsFromState();
+      refreshResponsivaRegisteredDoctorSignature();
+      if(els.responsivaWizard){
+        els.responsivaWizard.classList.remove('d-none');
+      }
+      return true;
+    };
+    const openResponsivaModal = ()=>{
+      if(!startResponsivaDraft()) return;
+      if(!els.responsivaModalEl || !window.bootstrap?.Modal) return;
+      try{
+        window.bootstrap.Modal.getOrCreateInstance(els.responsivaModalEl).show();
+      }catch(_){}
+    };
+    const closeResponsivaModal = ()=>{
+      if(!els.responsivaModalEl || !window.bootstrap?.Modal) return;
+      try{
+        window.bootstrap.Modal.getOrCreateInstance(els.responsivaModalEl)?.hide();
+      }catch(_){}
+    };
+    const getActiveResponsivaSignerSignature = (nowSql = '')=>{
+      if(responsivaState.signerSignaturePreferredSource === 'remote' && responsivaState.signerRemoteSignature){
+        return {
+          ...responsivaState.signerRemoteSignature,
+          signer_name: sanitizeText(responsivaState.signerRemoteSignature?.signer_name || responsivaState.form.signer_name || ''),
+          signed_at: sanitizeText(responsivaState.signerRemoteSignature?.signed_at || nowSql || formatNowSql())
+        };
+      }
+      const imageData = exportResponsivaSignature(els.responsivaSignerSignatureCanvas, { hasStroke: responsivaState.signerSignatureHasStroke });
+      if(!imageData) return null;
+      return {
+        type: 'drawn',
+        role: 'signer',
+        image_data: imageData,
+        signed_at: sanitizeText(nowSql || formatNowSql()),
+        signer_name: sanitizeText(responsivaState.form.signer_name || ''),
+        source: 'local_canvas'
+      };
+    };
+    const getActiveResponsivaDoctorSignature = (nowSql = '')=>{
+      const signerName = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
+      if(responsivaState.doctorSignaturePreferredSource === 'remote' && responsivaState.doctorRemoteSignature){
+        return {
+          ...responsivaState.doctorRemoteSignature,
+          signer_name: sanitizeText(responsivaState.doctorRemoteSignature?.signer_name || signerName),
+          signed_at: sanitizeText(responsivaState.doctorRemoteSignature?.signed_at || nowSql || formatNowSql())
+        };
+      }
+      if(responsivaState.doctorSignaturePreferredSource === 'registered' && responsivaState.doctorRegisteredSignatureData){
+        return {
+          type: 'drawn',
+          role: 'doctor',
+          image_data: responsivaState.doctorRegisteredSignatureData,
+          signed_at: sanitizeText(nowSql || formatNowSql()),
+          signer_name: signerName,
+          source: 'registered_profile'
+        };
+      }
+      const imageData = exportResponsivaSignature(els.responsivaDoctorSignatureCanvas, { hasStroke: responsivaState.doctorSignatureHasStroke });
+      if(!imageData) return null;
+      return {
+        type: 'drawn',
+        role: 'doctor',
+        image_data: imageData,
+        signed_at: sanitizeText(nowSql || formatNowSql()),
+        signer_name: signerName,
+        source: 'local_canvas'
+      };
+    };
+    const buildResponsivaRenderedText = (payload = {})=>{
+      const lines = [];
+      lines.push('RESPONSIVA MÉDICA');
+      lines.push('');
+      lines.push(`Paciente: ${sanitizeText(payload?.patient_snapshot?.full_name || 'Paciente')}`);
+      lines.push(`Tipo: ${sanitizeText(payload?.responsiva?.type_label || '')}`);
+      lines.push('');
+      lines.push('Situación clínica:');
+      lines.push(sanitizeText(payload?.content?.clinical_situation || ''));
+      lines.push('');
+      lines.push('Conducta indicada:');
+      lines.push(sanitizeText(payload?.content?.indicated_conduct || ''));
+      lines.push('');
+      lines.push('Riesgo relevante informado:');
+      lines.push(sanitizeText(payload?.content?.relevant_risk || ''));
+      lines.push('');
+      lines.push('Declaración:');
+      lines.push(sanitizeText(payload?.content?.declaration_text || ''));
+      if(sanitizeText(payload?.content?.additional_manifestation || '')){
+        lines.push('');
+        lines.push('Manifestación adicional:');
+        lines.push(sanitizeText(payload?.content?.additional_manifestation || ''));
+      }
+      lines.push('');
+      lines.push(`Firmante: ${sanitizeText(payload?.signer?.name || '')} (${sanitizeText(payload?.signer?.role || '')})`);
+      return lines.join('\n');
+    };
+    const buildResponsivaDocument = async (targetStatus = 'draft')=>{
+      const patientId = resolveActivePatientIdForConsent();
+      if(!patientId){
+        return { error: 'Selecciona paciente antes de emitir la responsiva.' };
+      }
+      const normalizedStatus = targetStatus === 'issued' ? 'issued' : 'draft';
+      const type = sanitizeText(responsivaState.form.type || 'alta_voluntaria') || 'alta_voluntaria';
+      const content = {
+        clinical_situation: normalizeConsentInputRaw(responsivaState.form.clinical_situation || ''),
+        indicated_conduct: normalizeConsentInputRaw(responsivaState.form.indicated_conduct || ''),
+        relevant_risk: normalizeConsentInputRaw(responsivaState.form.relevant_risk || ''),
+        declaration_text: normalizeConsentInputRaw(responsivaState.form.declaration_text || ''),
+        additional_manifestation: normalizeConsentInputRaw(responsivaState.form.additional_manifestation || ''),
+        closing_statement: sanitizeText(responsivaState.form.closing_statement || '')
+      };
+      const signerRole = sanitizeText(responsivaState.form.signer_role || 'paciente') || 'paciente';
+      const signerName = normalizeConsentInputRaw(responsivaState.form.signer_name || '');
+      const signerCharacter = normalizeConsentInputRaw(responsivaState.form.signer_character || '');
+      const signerRelationship = normalizeConsentInputRaw(responsivaState.form.signer_relationship || '');
+      const nowSql = formatNowSql();
+      const signerSignature = getActiveResponsivaSignerSignature(nowSql);
+      const doctorSignature = getActiveResponsivaDoctorSignature(nowSql);
+      if(normalizedStatus === 'issued'){
+        if(!type) return { error: 'Tipo de responsiva es obligatorio para emitir.' };
+        if(!content.clinical_situation) return { error: 'Situación clínica es obligatoria para emitir.' };
+        if(!content.declaration_text) return { error: 'Declaración documental es obligatoria para emitir.' };
+        if(!signerName) return { error: 'Nombre del firmante es obligatorio para emitir.' };
+        if(signerRole !== 'paciente' && !signerRelationship){
+          return { error: 'Relación / parentesco del firmante es obligatorio para emitir.' };
+        }
+        if(!signerSignature) return { error: 'Firma del paciente o responsable es obligatoria para emitir.' };
+      }
+      const actorUserId = resolveClinicalActorUserId();
+      const doctorPrefill = readDoctorPrefillProfile();
+      const doctorBranding = resolveDoctorBranding(actorUserId);
+      const patientSnapshot = readPatientSnapshot();
+      const payload = {
+        contract_version: 1,
+        status: normalizedStatus,
+        report: {
+          issued_at: nowSql,
+          emission_date: sanitizeText(responsivaState.form.emission_date || nowSql.slice(0, 10)),
+          title: 'Responsiva médica'
+        },
+        responsiva: {
+          type,
+          type_label: getResponsivaTypeLabel(type)
+        },
+        patient_snapshot: {
+          full_name: sanitizeText(patientSnapshot.full_name || ''),
+          age: sanitizeText(patientSnapshot.age || ''),
+          sex: sanitizeText(patientSnapshot.sexo || ''),
+          identifier: sanitizeText(patientSnapshot.identifier || '')
+        },
+        actor_snapshot: {
+          user_id: actorUserId,
+          full_name: sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante'),
+          license: sanitizeText(doctorPrefill.license || ''),
+          specialty: sanitizeText(doctorPrefill.specialty || ''),
+          specialty_license: sanitizeText(doctorPrefill.specialty_license || ''),
+          place: sanitizeText(doctorPrefill.place || ''),
+          institution: sanitizeText(doctorPrefill.institution || ''),
+          facility: sanitizeText(doctorPrefill.facility || '')
+        },
+        branding: {
+          mode: sanitizeText(doctorBranding.mode || 'standard') || 'standard',
+          logo_url_resolved: sanitizeText(doctorBranding.logo_url || ''),
+          group_logo_url_resolved: sanitizeText(doctorBranding.group_logo_url || ''),
+          facility_visible: sanitizeText(doctorBranding.facility_visible || ''),
+          location_line_visible: sanitizeText(doctorBranding.location_line_visible || ''),
+          logo_local_path: sanitizeText(doctorBranding.logo_local_path || '')
+        },
+        content,
+        signer: {
+          role: signerRole,
+          name: signerName,
+          character: signerCharacter,
+          relationship: signerRelationship
+        },
+        signatures: {
+          signer: signerSignature,
+          doctor: doctorSignature
+        },
+        form_snapshot: {
+          type,
+          signer_role: signerRole,
+          signer_name: signerName,
+          signer_character: signerCharacter,
+          signer_relationship: signerRelationship,
+          ...content
+        }
+      };
+      payload.rendered_text = buildResponsivaRenderedText(payload);
+      const definition = getClinicalDocumentDefinition('responsiva_medica');
+      const context = { patient_id: patientId, care_setting: 'consulta' };
+      const subtitle = getResponsivaTypeLabel(type);
+      payload.canonical_document = buildClinicalCanonicalPayload({
+        definition,
+        payload,
+        context,
+        actorUserId,
+        title: 'Responsiva médica',
+        subtitle,
+        eventDatetime: nowSql
+      }).canonical_document;
+      const body = buildClinicalDocumentBody({
+        definition,
+        title: subtitle ? `Responsiva médica — ${subtitle}` : 'Responsiva médica',
+        summary: `${normalizedStatus} · ${subtitle || 'Responsiva médica'} · ${sanitizeText(payload.report.emission_date || nowSql.slice(0, 10))}`,
+        context,
+        payload,
+        eventDatetime: nowSql,
+        actorUserId,
+        source: 'documents_clinicos_responsiva_medica'
+      });
+      return { patientId, body, normalizedStatus };
+    };
+    const saveResponsivaDocument = async (status = 'draft')=>{
+      if(responsivaState.saving) return;
+      responsivaState.saving = true;
+      setResponsivaNotice('');
+      if(els.responsivaSave){
+        els.responsivaSave.disabled = true;
+        els.responsivaSave.textContent = 'Guardando...';
+      }
+      if(els.responsivaEmit){
+        els.responsivaEmit.disabled = true;
+        els.responsivaEmit.textContent = 'Emitiendo...';
+      }
+      try{
+        const prepared = await buildResponsivaDocument(status);
+        if(prepared?.error){
+          throw new Error(prepared.error);
+        }
+        const resp = await fetch('/api/clinical/index.php/documents', {
+          method: 'POST',
+          headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify(prepared.body),
+          credentials: 'same-origin'
+        });
+        const json = await resp.json().catch(()=> null);
+        if(!resp.ok || !json || json.ok !== true){
+          const msg = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo guardar la responsiva médica.';
+          throw new Error(msg);
+        }
+        resetResponsivaWizard();
+        closeResponsivaModal();
+        listCanonicalConsents();
+        showCatalogFeedback(
+          prepared.normalizedStatus === 'issued'
+            ? 'Responsiva médica emitida correctamente.'
+            : 'Borrador de responsiva médica guardado correctamente.',
+          'success'
+        );
+      }catch(error){
+        const message = sanitizeText(error?.message || 'No se pudo guardar la responsiva médica.');
+        setResponsivaNotice(message);
+        showCatalogFeedback(message, 'error');
+      }finally{
+        responsivaState.saving = false;
+        if(els.responsivaSave){
+          els.responsivaSave.disabled = false;
+          els.responsivaSave.textContent = 'Guardar borrador';
+        }
+        if(els.responsivaEmit){
+          els.responsivaEmit.disabled = false;
+          els.responsivaEmit.textContent = 'Emitir responsiva';
+        }
+        renderResponsivaStep();
+      }
+    };
+    const handleResponsivaDoctorSignatureApply = async ()=>{
+      const localSignature = exportResponsivaSignature(els.responsivaDoctorSignatureCanvas, { hasStroke: responsivaState.doctorSignatureHasStroke });
+      if(localSignature && responsivaState.doctorSignaturePreferredSource !== 'registered'){
+        setResponsivaDoctorSignatureSource('local');
+        if(!responsivaState.doctorRegisteredSignatureData){
+          try{
+            const shouldSave = await askDoctorSignatureSaveDecision({
+              inlinePromptEl: els.responsivaDoctorSignatureInlinePrompt,
+              inlineYesBtn: els.responsivaDoctorSignatureInlineYesBtn,
+              inlineNoBtn: els.responsivaDoctorSignatureInlineNoBtn
+            });
+            if(shouldSave && persistRegisteredDoctorSignature(localSignature)){
+              refreshResponsivaRegisteredDoctorSignature();
+              setResponsivaDoctorSignatureSource('registered');
+              setResponsivaNotice('Firma del médico guardada como firma digitalizada.');
+              return;
+            }
+          }catch(_){}
+        }
+        setResponsivaNotice('Firma del médico aplicada.');
+        return;
+      }
+      if(responsivaState.doctorRegisteredSignatureData){
+        setResponsivaDoctorSignatureSource('registered');
+        setResponsivaNotice('Firma registrada del médico aplicada.');
+        return;
+      }
+      setResponsivaNotice('Puedes omitir la firma del médico. Si deseas incluirla, captura la firma o selecciona firma registrada.');
+    };
     const handleInformeDoctorSignatureApply = async ()=>{
       const signature = exportInformeSignatureData();
       if(signature){
@@ -13503,6 +14351,25 @@ console.info('app.js loaded :: 20251123a');
       if(recipientLabel) return `Destino: ${recipientLabel}`;
       return sanitizeText(summaryText || '');
     };
+    const resolveResponsivaDescriptorText = (payload, summaryText = '')=>{
+      const safePayload = (payload && typeof payload === 'object') ? payload : {};
+      const responsiva = (safePayload.responsiva && typeof safePayload.responsiva === 'object') ? safePayload.responsiva : {};
+      const formSnapshot = (safePayload.form_snapshot && typeof safePayload.form_snapshot === 'object') ? safePayload.form_snapshot : {};
+      const typeLabel = sanitizeText(
+        responsiva.type_label
+        || getResponsivaTypeLabel(responsiva.type || '')
+        || getResponsivaTypeLabel(formSnapshot.type || '')
+        || ''
+      );
+      if(typeLabel) return typeLabel;
+      const clinicalSituation = sanitizeText(
+        safePayload?.content?.clinical_situation
+        || formSnapshot.clinical_situation
+        || ''
+      );
+      if(clinicalSituation) return clinicalSituation;
+      return sanitizeText(summaryText || '');
+    };
 
     const renderList = (items)=>{
       els.list.innerHTML = '';
@@ -13517,7 +14384,11 @@ console.info('app.js loaded :: 20251123a');
         const fallbackTitle = (
           documentType === 'informe_medico'
             ? 'Informe médico'
-            : (documentType === 'interconsulta' ? 'Interconsulta' : 'Consentimiento informado')
+            : (
+              documentType === 'interconsulta'
+                ? 'Interconsulta'
+                : (documentType === 'responsiva_medica' ? 'Responsiva médica' : 'Consentimiento informado')
+            )
         );
         const title = sanitizeText(doc.title || doc.summary || fallbackTitle);
         const summary = sanitizeText(doc.summary || '');
@@ -13532,6 +14403,7 @@ console.info('app.js loaded :: 20251123a');
         const isConsentDoc = documentType === 'consentimiento_informado' || !documentType;
         const isInformeDoc = documentType === 'informe_medico';
         const isInterconsultaDoc = documentType === 'interconsulta';
+        const isResponsivaDoc = documentType === 'responsiva_medica';
         const informeDescriptorText = sanitizeText(
           payload?.content?.reason
           || payload?.form_snapshot?.reason
@@ -13539,12 +14411,13 @@ console.info('app.js loaded :: 20251123a');
           || ''
         );
         const interconsultaDescriptorText = resolveInterconsultaDescriptorText(payload, summary);
-        const secondLineHtml = (isConsentDoc || isInformeDoc || isInterconsultaDoc)
+        const responsivaDescriptorText = resolveResponsivaDescriptorText(payload, summary);
+        const secondLineHtml = (isConsentDoc || isInformeDoc || isInterconsultaDoc || isResponsivaDoc)
           ? `
             <div class="small text-muted d-flex justify-content-between align-items-center gap-2">
               ${
-                (isConsentDoc ? descriptorText : (isInformeDoc ? informeDescriptorText : interconsultaDescriptorText))
-                  ? `<span class="text-truncate" title="${(isConsentDoc ? descriptorText : (isInformeDoc ? informeDescriptorText : interconsultaDescriptorText)).replace(/"/g, '&quot;')}" style="max-width:68%;">${(isConsentDoc ? descriptorText : (isInformeDoc ? informeDescriptorText : interconsultaDescriptorText)).replace(/</g, '&lt;')}</span>`
+                (isConsentDoc ? descriptorText : (isInformeDoc ? informeDescriptorText : (isInterconsultaDoc ? interconsultaDescriptorText : responsivaDescriptorText)))
+                  ? `<span class="text-truncate" title="${(isConsentDoc ? descriptorText : (isInformeDoc ? informeDescriptorText : (isInterconsultaDoc ? interconsultaDescriptorText : responsivaDescriptorText))).replace(/"/g, '&quot;')}" style="max-width:68%;">${(isConsentDoc ? descriptorText : (isInformeDoc ? informeDescriptorText : (isInterconsultaDoc ? interconsultaDescriptorText : responsivaDescriptorText))).replace(/</g, '&lt;')}</span>`
                   : '<span class="flex-grow-1"></span>'
               }
               <span class="text-nowrap ms-auto">${dateText.replace(/</g, '&lt;')}</span>
@@ -13562,7 +14435,7 @@ console.info('app.js loaded :: 20251123a');
             <span class="badge bg-light text-dark border">${status.replace(/</g, '&lt;')}</span>
           </div>
           ${secondLineHtml}
-          ${summary && !(isConsentDoc ? descriptorText : (isInformeDoc ? informeDescriptorText : interconsultaDescriptorText)) ? `<div class="small mt-1">${summary.replace(/</g, '&lt;')}</div>` : ''}
+          ${summary && !(isConsentDoc ? descriptorText : (isInformeDoc ? informeDescriptorText : (isInterconsultaDoc ? interconsultaDescriptorText : responsivaDescriptorText))) ? `<div class="small mt-1">${summary.replace(/</g, '&lt;')}</div>` : ''}
           ${uuid ? '<div class="small mt-2"><span class="text-primary">Abrir detalle</span></div>' : ''}
         `;
         els.list.appendChild(card);
@@ -13586,7 +14459,7 @@ console.info('app.js loaded :: 20251123a');
         });
         const json = await resp.json().catch(()=> null);
         const items = Array.isArray(json?.data?.items) ? json.data.items : [];
-        const allowedTypes = new Set(['consentimiento_informado', 'informe_medico', 'interconsulta']);
+        const allowedTypes = new Set(['consentimiento_informado', 'informe_medico', 'interconsulta', 'responsiva_medica']);
         const normalized = items.map((item)=>{
           const clinicalDoc = item?.clinical_document && typeof item.clinical_document === 'object' ? item.clinical_document : {};
           const clinicalPayload = parseObjectMaybeJson(clinicalDoc?.payload);
@@ -14711,6 +15584,12 @@ console.info('app.js loaded :: 20251123a');
         openInterconsultaModal();
         return;
       }
+      const openResponsivaBtn = event.target.closest('[data-action="documents-open-responsiva"]');
+      if(openResponsivaBtn){
+        event.preventDefault();
+        openResponsivaModal();
+        return;
+      }
       const placeholderBtn = event.target.closest('[data-action="documents-open-placeholder"]');
       if(placeholderBtn){
         event.preventDefault();
@@ -14902,6 +15781,17 @@ console.info('app.js loaded :: 20251123a');
           setInterconsultaSignaturePreferredSource('remote');
           setInterconsultaNotice('Firma remota del médico aplicada para la interconsulta.');
         }
+      }
+      if(els.responsivaWizard && !els.responsivaWizard.classList.contains('d-none')){
+        if(pullResponsivaSignerRemoteSignature()){
+          setResponsivaSignerRemoteStatus('Firma remota del paciente o responsable aplicada.', 'success');
+        }
+        if(pullResponsivaDoctorRemoteSignature()){
+          setResponsivaDoctorRemoteStatus('Firma remota del médico aplicada.', 'success');
+        }
+        refreshResponsivaSignerSignatureStatus();
+        refreshResponsivaDoctorSignatureStatus();
+        renderResponsivaStep();
       }
     });
     els.consentModalEl?.addEventListener('hidden.bs.modal', ()=>{
@@ -15159,6 +16049,170 @@ console.info('app.js loaded :: 20251123a');
         setInterconsultaSignaturePreferredSource('remote');
       }
     });
+    const bindResponsivaField = (inputEl, onUpdate, eventName = '')=>{
+      if(!inputEl || typeof onUpdate !== 'function') return;
+      const evtName = eventName || ((inputEl.tagName === 'SELECT' || inputEl.type === 'checkbox') ? 'change' : 'input');
+      inputEl.addEventListener(evtName, ()=>{
+        onUpdate(inputEl);
+      });
+    };
+    bindResponsivaField(els.responsivaType, (el)=>{
+      const nextType = sanitizeText(el.value || 'alta_voluntaria') || 'alta_voluntaria';
+      responsivaState.form.type = nextType;
+      if(!responsivaState.declarationEdited){
+        responsivaState.form.declaration_text = buildResponsivaDeclarationBase(nextType);
+        if(els.responsivaDeclarationText){
+          els.responsivaDeclarationText.value = responsivaState.form.declaration_text;
+        }
+      }
+      renderResponsivaStep();
+    }, 'change');
+    bindResponsivaField(els.responsivaClinicalSituation, (el)=>{
+      responsivaState.form.clinical_situation = normalizeConsentInputRaw(el.value || '');
+    });
+    bindResponsivaField(els.responsivaIndicatedConduct, (el)=>{
+      responsivaState.form.indicated_conduct = normalizeConsentInputRaw(el.value || '');
+    });
+    bindResponsivaField(els.responsivaRelevantRisk, (el)=>{
+      responsivaState.form.relevant_risk = normalizeConsentInputRaw(el.value || '');
+    });
+    bindResponsivaField(els.responsivaDeclarationText, (el)=>{
+      responsivaState.form.declaration_text = normalizeConsentInputRaw(el.value || '');
+      responsivaState.declarationEdited = true;
+    });
+    bindResponsivaField(els.responsivaAdditionalManifestation, (el)=>{
+      responsivaState.form.additional_manifestation = normalizeConsentInputRaw(el.value || '');
+    });
+    bindResponsivaField(els.responsivaSignerRole, (el)=>{
+      responsivaState.form.signer_role = sanitizeText(el.value || 'paciente') || 'paciente';
+      syncResponsivaSignerRoleUi();
+      renderResponsivaStep();
+    }, 'change');
+    bindResponsivaField(els.responsivaSignerName, (el)=>{
+      responsivaState.form.signer_name = normalizeConsentInputRaw(el.value || '');
+    });
+    bindResponsivaField(els.responsivaSignerCharacter, (el)=>{
+      responsivaState.form.signer_character = normalizeConsentInputRaw(el.value || '');
+    });
+    bindResponsivaField(els.responsivaSignerRelationship, (el)=>{
+      responsivaState.form.signer_relationship = normalizeConsentInputRaw(el.value || '');
+    });
+    els.responsivaPrev?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      responsivaState.step = Math.max(1, Number(responsivaState.step || 1) - 1);
+      renderResponsivaStep();
+    });
+    els.responsivaNext?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      responsivaState.step = Math.min(5, Number(responsivaState.step || 1) + 1);
+      renderResponsivaStep();
+    });
+    els.responsivaCancel?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      resetResponsivaWizard();
+      closeResponsivaModal();
+    });
+    els.responsivaSave?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      saveResponsivaDocument('draft');
+    });
+    els.responsivaEmit?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      saveResponsivaDocument('issued');
+    });
+    els.responsivaSignerSignatureApply?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      pullResponsivaSignerRemoteSignature();
+      if(responsivaState.signerRemoteSignature && responsivaState.signerSignaturePreferredSource === 'remote'){
+        setResponsivaSignerRemoteStatus('Firma remota del paciente o responsable aplicada.', 'success');
+        refreshResponsivaSignerSignatureStatus();
+        renderResponsivaStep();
+        return;
+      }
+      const signature = exportResponsivaSignature(els.responsivaSignerSignatureCanvas, { hasStroke: responsivaState.signerSignatureHasStroke });
+      if(!signature){
+        setResponsivaNotice('Captura la firma del paciente o responsable para continuar.');
+        return;
+      }
+      responsivaState.signerSignaturePreferredSource = 'local';
+      setResponsivaSignerRemoteStatus(responsivaState.signerRemoteSignature ? 'Se usará la firma local aplicada.' : '', 'muted');
+      refreshResponsivaSignerSignatureStatus();
+      setResponsivaNotice('Firma del paciente o responsable aplicada.');
+      renderResponsivaStep();
+    });
+    els.responsivaSignerSignatureQr?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      openResponsivaSignatureQr('patient');
+    });
+    els.responsivaSignerSignatureClear?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      clearResponsivaSignatureCanvas(els.responsivaSignerSignatureCanvas, {
+        get hasStroke(){ return responsivaState.signerSignatureHasStroke; },
+        set hasStroke(v){ responsivaState.signerSignatureHasStroke = !!v; refreshResponsivaSignerSignatureStatus(); }
+      });
+      responsivaState.signerRemoteSignature = null;
+      responsivaState.signerSignaturePreferredSource = '';
+      setResponsivaSignerRemoteStatus('Firma del paciente o responsable limpiada.', 'muted');
+      setResponsivaNotice('Firma del paciente o responsable limpiada.');
+      renderResponsivaStep();
+    });
+    els.responsivaDoctorSignatureSourceRegistered?.addEventListener('change', ()=>{
+      if(els.responsivaDoctorSignatureSourceRegistered?.checked){
+        setResponsivaDoctorSignatureSource('registered');
+      }
+    });
+    els.responsivaDoctorSignatureSourceLocal?.addEventListener('change', ()=>{
+      if(els.responsivaDoctorSignatureSourceLocal?.checked){
+        setResponsivaDoctorSignatureSource('local');
+      }
+    });
+    els.responsivaDoctorSignatureApply?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      pullResponsivaDoctorRemoteSignature();
+      if(responsivaState.doctorRemoteSignature && responsivaState.doctorSignaturePreferredSource === 'remote'){
+        setResponsivaDoctorRemoteStatus('Firma remota del médico aplicada.', 'success');
+        refreshResponsivaDoctorSignatureStatus();
+        renderResponsivaStep();
+        return;
+      }
+      handleResponsivaDoctorSignatureApply();
+    });
+    els.responsivaDoctorSignatureQr?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      openResponsivaSignatureQr('doctor');
+    });
+    els.responsivaDoctorSignatureClear?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      clearResponsivaSignatureCanvas(els.responsivaDoctorSignatureCanvas, {
+        get hasStroke(){ return responsivaState.doctorSignatureHasStroke; },
+        set hasStroke(v){ responsivaState.doctorSignatureHasStroke = !!v; refreshResponsivaDoctorSignatureStatus(); }
+      });
+      responsivaState.doctorRemoteSignature = null;
+      if(responsivaState.doctorRegisteredSignatureData){
+        setResponsivaDoctorSignatureSource('registered');
+      }else{
+        setResponsivaDoctorSignatureSource('');
+      }
+      setResponsivaDoctorRemoteStatus('Firma del médico limpiada.', 'muted');
+      setResponsivaNotice('Firma del médico limpiada.');
+      renderResponsivaStep();
+    });
+    els.responsivaModalEl?.addEventListener('hidden.bs.modal', ()=>{
+      resetResponsivaWizard();
+    });
+    els.responsivaModalEl?.addEventListener('shown.bs.modal', ()=>{
+      window.requestAnimationFrame(()=>{
+        syncResponsivaCanvasSize(els.responsivaSignerSignatureCanvas, {
+          get hasStroke(){ return responsivaState.signerSignatureHasStroke; },
+          set hasStroke(v){ responsivaState.signerSignatureHasStroke = !!v; refreshResponsivaSignerSignatureStatus(); }
+        });
+        syncResponsivaCanvasSize(els.responsivaDoctorSignatureCanvas, {
+          get hasStroke(){ return responsivaState.doctorSignatureHasStroke; },
+          set hasStroke(v){ responsivaState.doctorSignatureHasStroke = !!v; refreshResponsivaDoctorSignatureStatus(); }
+        });
+      });
+      renderResponsivaStep();
+    });
     els.template?.addEventListener('change', (event)=>{
       describeTemplate(event?.target?.value || '');
     });
@@ -15254,6 +16308,16 @@ console.info('app.js loaded :: 20251123a');
       if(els.interconsultaWizard && !els.interconsultaWizard.classList.contains('d-none')){
         syncInterconsultaSignatureCanvasSize();
       }
+      if(els.responsivaWizard && !els.responsivaWizard.classList.contains('d-none')){
+        syncResponsivaCanvasSize(els.responsivaSignerSignatureCanvas, {
+          get hasStroke(){ return responsivaState.signerSignatureHasStroke; },
+          set hasStroke(v){ responsivaState.signerSignatureHasStroke = !!v; refreshResponsivaSignerSignatureStatus(); }
+        });
+        syncResponsivaCanvasSize(els.responsivaDoctorSignatureCanvas, {
+          get hasStroke(){ return responsivaState.doctorSignatureHasStroke; },
+          set hasStroke(v){ responsivaState.doctorSignatureHasStroke = !!v; refreshResponsivaDoctorSignatureStatus(); }
+        });
+      }
     });
     els.list.addEventListener('click', (event)=>{
       const card = event.target.closest('[data-doc-uuid]');
@@ -15298,6 +16362,8 @@ console.info('app.js loaded :: 20251123a');
     initInterconsultaSignaturePad();
     refreshInterconsultaRegisteredSignature();
     resetInterconsultaWizard();
+    refreshResponsivaRegisteredDoctorSignature();
+    resetResponsivaWizard();
     listCanonicalConsents();
   };
   setupConsentimientoCanonicoHost();

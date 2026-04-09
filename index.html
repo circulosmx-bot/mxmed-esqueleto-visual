@@ -6532,13 +6532,13 @@
                           </span>
                           <span class="docs-launcher-row-status is-ready">Ya funcional</span>
                         </button>
-                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="responsiva_medica" data-doc-title="Responsiva médica" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Documento de deslinde y aceptación de responsabilidad médica bajo condiciones específicas.">
+                        <button type="button" class="docs-launcher-row docs-launcher-row--active" data-action="documents-open-responsiva" data-doc-code="responsiva_medica" data-doc-title="Responsiva médica" data-doc-entry="existing-flow" data-doc-status="Ya funcional" data-doc-desc="Documento de deslinde y aceptación de responsabilidad médica bajo condiciones específicas.">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">gavel</span>
                           <span class="docs-launcher-row-main">
                             <span class="docs-launcher-row-title">Responsiva médica</span>
                             <span class="docs-launcher-row-desc">Deslinde y aceptación de responsabilidad.</span>
                           </span>
-                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                          <span class="docs-launcher-row-status is-ready">Ya funcional</span>
                         </button>
                         <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="consentimiento_multimedia" data-doc-title="Consentimiento multimedia" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Consentimiento para uso de imagen, audio o video en contexto clínico y documental.">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">videocam</span>
@@ -7329,12 +7329,177 @@
                     </div>
                   </div>
                 </div>
+                <div class="exp-card d-none mb-3" id="rm_wizard">
+                  <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
+                    <span>Nueva Responsiva médica</span>
+                    <span class="text-muted small" id="rm_step_label">Paso 1 de 5</span>
+                  </div>
+                  <div class="exp-card-body">
+                    <div class="alert alert-warning py-2 d-none" id="rm_notice"></div>
+                    <div id="rm_step_1">
+                      <div class="row g-3">
+                        <div class="col-md-6">
+                          <label class="form-label" for="rm_type">Tipo de responsiva</label>
+                          <select class="form-select" id="rm_type">
+                            <option value="alta_voluntaria">Alta voluntaria</option>
+                            <option value="rechazo_manejo">Rechazo de estudio / tratamiento / manejo</option>
+                            <option value="negativa_hospitalizacion_traslado">Negativa a hospitalización o traslado</option>
+                          </select>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label">Fecha</label>
+                          <input class="form-control" id="rm_date" readonly>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label">Paciente</label>
+                          <input class="form-control" id="rm_patient_name" readonly>
+                        </div>
+                        <div class="col-md-3">
+                          <label class="form-label">Edad</label>
+                          <input class="form-control" id="rm_patient_age" readonly>
+                        </div>
+                        <div class="col-md-3">
+                          <label class="form-label">Sexo</label>
+                          <input class="form-control" id="rm_patient_sex" readonly>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label">Médico emisor</label>
+                          <input class="form-control" id="rm_doctor_name" readonly>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="rm_step_2" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="rm_clinical_situation">Situación clínica</label>
+                          <textarea class="form-control" id="rm_clinical_situation" rows="4" placeholder="Describe de forma breve la situación clínica actual."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="rm_indicated_conduct">Conducta indicada</label>
+                          <textarea class="form-control" id="rm_indicated_conduct" rows="3" placeholder="Conducta o recomendación médica indicada."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="rm_relevant_risk">Riesgo relevante informado</label>
+                          <textarea class="form-control" id="rm_relevant_risk" rows="3" placeholder="Riesgo clínico relevante de la decisión manifestada."></textarea>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="rm_step_3" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="rm_declaration_text">Declaración documental</label>
+                          <textarea class="form-control" id="rm_declaration_text" rows="6" placeholder="Texto base de la responsiva."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="rm_additional_manifestation">Manifestación adicional <span class="text-muted">(opcional)</span></label>
+                          <textarea class="form-control" id="rm_additional_manifestation" rows="3" placeholder="Manifestación adicional breve del firmante o médico."></textarea>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="rm_step_4" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-md-4">
+                          <label class="form-label" for="rm_signer_role">Firmante principal</label>
+                          <select class="form-select" id="rm_signer_role">
+                            <option value="paciente">Paciente</option>
+                            <option value="tutor">Padre / madre / tutor</option>
+                            <option value="responsable">Responsable acompañante</option>
+                          </select>
+                        </div>
+                        <div class="col-md-8">
+                          <label class="form-label" for="rm_signer_name">Nombre del firmante</label>
+                          <input class="form-control" id="rm_signer_name" placeholder="Nombre completo del firmante">
+                        </div>
+                        <div class="col-md-6 d-none" id="rm_signer_character_wrap">
+                          <label class="form-label" for="rm_signer_character">Carácter</label>
+                          <input class="form-control" id="rm_signer_character" placeholder="Ej. Tutor legal, madre, responsable acompañante">
+                        </div>
+                        <div class="col-md-6 d-none" id="rm_signer_relationship_wrap">
+                          <label class="form-label" for="rm_signer_relationship">Relación / parentesco</label>
+                          <input class="form-control" id="rm_signer_relationship" placeholder="Relación con el paciente">
+                        </div>
+                      </div>
+                    </div>
+                    <div id="rm_step_5" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <div class="border rounded p-3 bg-light-subtle">
+                            <div class="small text-uppercase text-muted fw-semibold mb-2">Vista previa</div>
+                            <div id="rm_preview" class="small"></div>
+                          </div>
+                        </div>
+                        <div class="col-12">
+                          <div class="border rounded p-2">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                              <div class="ci-signature-heading">Firma del paciente o responsable <span class="badge text-bg-danger-subtle border border-danger-subtle text-danger-emphasis ms-1">Obligatoria</span></div>
+                              <span class="small text-muted" id="rm_signer_signature_status">Sin firma</span>
+                            </div>
+                            <div class="mx-signature-pad">
+                              <canvas id="rm_signer_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
+                            </div>
+                            <div class="d-flex flex-wrap justify-content-end gap-2 mt-2">
+                              <button type="button" class="btn btn-outline-dark btn-sm" id="rm_signer_signature_qr">Firmar con celular</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" id="rm_signer_signature_apply">Aplicar firma del firmante</button>
+                              <button type="button" class="btn btn-outline-secondary btn-sm" id="rm_signer_signature_clear">Limpiar firma del firmante</button>
+                            </div>
+                            <div class="small text-muted mt-2 d-none" id="rm_signer_signature_remote_status"></div>
+                          </div>
+                        </div>
+                        <div class="col-12">
+                          <div class="border rounded p-2">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                              <div class="ci-signature-heading ci-signature-heading--doctor">Firma del médico tratante <span class="badge text-bg-secondary-subtle border border-secondary-subtle text-secondary-emphasis ms-1">Opcional</span></div>
+                              <span class="small text-muted" id="rm_doctor_signature_status">Sin firma</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-3 mb-2">
+                              <div class="form-check mb-0">
+                                <input class="form-check-input" type="radio" name="rm_doctor_signature_source" id="rm_doctor_signature_source_registered" value="registered">
+                                <label class="form-check-label small" for="rm_doctor_signature_source_registered">Usar firma registrada</label>
+                              </div>
+                              <div class="form-check mb-0">
+                                <input class="form-check-input" type="radio" name="rm_doctor_signature_source" id="rm_doctor_signature_source_local" value="local">
+                                <label class="form-check-label small" for="rm_doctor_signature_source_local">Firmar en pantalla</label>
+                              </div>
+                            </div>
+                            <div class="alert alert-light py-2 px-3 small d-none mb-2" id="rm_doctor_signature_registered_wrap">
+                              <div class="fw-semibold mb-1">Firma registrada disponible</div>
+                              <img id="rm_doctor_signature_registered_preview" src="" alt="Firma registrada del médico" class="img-fluid rounded border bg-white" style="max-height:140px;object-fit:contain;">
+                            </div>
+                            <div class="mx-signature-pad">
+                              <canvas id="rm_doctor_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
+                            </div>
+                            <div class="d-flex flex-wrap justify-content-end gap-2 mt-2">
+                              <button type="button" class="btn btn-outline-dark btn-sm" id="rm_doctor_signature_qr">Firmar con celular</button>
+                              <button type="button" class="btn btn-outline-primary btn-sm" id="rm_doctor_signature_apply">Aplicar firma del médico</button>
+                              <button type="button" class="btn btn-outline-secondary btn-sm" id="rm_doctor_signature_clear">Limpiar firma del médico</button>
+                            </div>
+                            <div class="small text-muted mt-2 d-none" id="rm_doctor_signature_remote_status"></div>
+                            <div class="alert alert-warning py-2 px-3 d-none mt-2" id="rm_doctor_signature_inline_prompt">
+                              <div class="small mb-2">¿Deseas guardar esta firma como tu firma digitalizada para usarla en próximos documentos?</div>
+                              <div class="d-flex flex-wrap justify-content-end gap-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="rm_doctor_signature_inline_no">No guardar</button>
+                                <button type="button" class="btn btn-primary btn-sm" id="rm_doctor_signature_inline_yes">Sí, guardar firma</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                      <button type="button" class="btn btn-outline-secondary btn-sm" id="rm_prev" disabled>Anterior</button>
+                      <button type="button" class="btn btn-primary btn-sm" id="rm_next">Continuar</button>
+                      <button type="button" class="btn btn-success btn-sm d-none" id="rm_save">Guardar borrador</button>
+                      <button type="button" class="btn btn-primary btn-sm d-none" id="rm_emit">Emitir responsiva</button>
+                      <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="rm_cancel">Cancelar</button>
+                    </div>
+                  </div>
+                </div>
 
                 <div class="exp-card exp-card--secondary">
                   <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
                     <span>Documentos recientes</span>
                   </div>
-                  <div class="small text-muted mb-2">Histórico disponible en esta fase: consentimientos informados e informes médicos emitidos.</div>
+                  <div class="small text-muted mb-2">Histórico disponible en esta fase: consentimientos, informes, interconsultas y responsivas emitidas.</div>
                   <div class="alert alert-info py-2 mb-3 d-none" id="ci_context_notice">Selecciona paciente</div>
                   <div class="alert alert-light mb-3" id="ci_empty_state">Aún no hay consentimientos para este paciente.</div>
                   <div class="ci-list d-grid gap-2" id="ci_list"></div>
@@ -7369,6 +7534,17 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body" id="ix_modal_body_slot"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal fade" id="modalResponsivaMedica" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Responsiva médica</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body" id="rm_modal_body_slot"></div>
                     </div>
                   </div>
                 </div>
