@@ -333,6 +333,18 @@ function first_non_empty_string(array $sources, array $keys): string
     return '';
 }
 
+function clinical_doc_uppercase_subject(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+    if (function_exists('mb_strtoupper')) {
+        return (string)mb_strtoupper($value, 'UTF-8');
+    }
+    return strtoupper($value);
+}
+
 function is_allowed_external_url(string $url, array $allowedHosts, string $currentHost): bool
 {
     $url = trim($url);
@@ -1506,6 +1518,7 @@ if (!$embed) {
     <?php if ($isConsentDoc): ?>
       <?php
       $consentDocTitle = trim((string)($consentBlock['document_title'] ?? $title));
+      $consentDocTitleUpper = clinical_doc_uppercase_subject($consentDocTitle !== '' ? $consentDocTitle : 'Consentimiento informado');
       $consentPatientName = trim((string)($consentPatientSnapshot['full_name'] ?? 'Paciente'));
       $consentDoctorName = trim((string)($consentActorSnapshot['full_name'] ?? 'Médico tratante'));
       $consentDoctorLicense = trim((string)($consentActorSnapshot['license'] ?? ''));
@@ -1575,7 +1588,7 @@ if (!$embed) {
       <article class="consent-doc-sheet mb-3">
         <header class="consent-doc-head">
           <div>
-            <div class="consent-doc-title"><?php echo h($consentDocTitle !== '' ? $consentDocTitle : 'Consentimiento informado'); ?></div>
+            <div class="consent-doc-title"><?php echo h($consentDocTitleUpper); ?></div>
             <div class="consent-doc-meta">Paciente: <?php echo h($consentPatientName); ?></div>
             <div class="consent-doc-meta">Médico: <?php echo h($consentDoctorName); ?><?php echo $consentDoctorLicense !== '' ? h(' · Cédula: ' . $consentDoctorLicense) : ''; ?></div>
           </div>
@@ -1785,6 +1798,7 @@ if (!$embed) {
       $informeShowLogo = ($informeHeaderCfg['allow_logo'] && $informeHeaderLogoUrl !== '');
       $informeShowGroupLogo = ($informeBrandingGroupLogo !== '');
       $informeReason = trim((string)($informeContent['reason'] ?? ''));
+      $informeReasonUpper = clinical_doc_uppercase_subject($informeReason);
       $informeCurrentIllness = trim((string)($informeContent['current_illness'] ?? ''));
       $informeRelevantHistory = trim((string)($informeContent['relevant_history'] ?? ''));
       $informeClinicalSummary = trim((string)($informeContent['clinical_summary'] ?? ''));
@@ -1842,7 +1856,7 @@ if (!$embed) {
         <?php if ($informeReason !== ''): ?>
           <section class="informe-doc-body-section doc-base-section">
             <div class="informe-doc-section-title doc-base-section-title">Motivo del informe</div>
-            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($informeReason)); ?></div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($informeReasonUpper)); ?></div>
           </section>
         <?php endif; ?>
         <?php if ($informeCurrentIllness !== ''): ?>
@@ -1979,7 +1993,11 @@ if (!$embed) {
         $interconsultaRecipientFacility !== '' ? $interconsultaRecipientFacility : '',
         $interconsultaRecipientCity !== '' ? $interconsultaRecipientCity : '',
       ])));
-      $interconsultaReason = trim((string)($interconsultaContent['reason'] ?? ''));
+      $interconsultaReasonCanonical = trim((string)($interconsultaContent['reason'] ?? ($interconsultaContent['objective'] ?? '')));
+      if ($interconsultaReasonCanonical === '') {
+        $interconsultaReasonCanonical = trim((string)($interconsultaContent['request'] ?? ''));
+      }
+      $interconsultaReasonUpper = clinical_doc_uppercase_subject($interconsultaReasonCanonical);
       $interconsultaSummary = trim((string)($interconsultaContent['summary'] ?? ''));
       $interconsultaBackground = trim((string)($interconsultaContent['background'] ?? ''));
       $interconsultaRequest = trim((string)($interconsultaContent['request'] ?? ''));
@@ -2030,10 +2048,10 @@ if (!$embed) {
             <div class="informe-doc-text doc-base-text"><?php echo h('Contacto: ' . $interconsultaRecipientContact); ?></div>
           <?php endif; ?>
         </section>
-        <?php if ($interconsultaReason !== ''): ?>
+        <?php if ($interconsultaReasonCanonical !== ''): ?>
           <section class="informe-doc-body-section doc-base-section">
             <div class="informe-doc-section-title doc-base-section-title">Motivo de interconsulta</div>
-            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($interconsultaReason)); ?></div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($interconsultaReasonUpper)); ?></div>
           </section>
         <?php endif; ?>
         <?php if ($interconsultaSummary !== ''): ?>
@@ -2151,6 +2169,7 @@ if (!$embed) {
       }
       $responsivaShowLogo = ($responsivaHeaderCfg['allow_logo'] && $responsivaHeaderLogoUrl !== '');
       $responsivaTypeLabel = trim((string)($responsivaMeta['type_label'] ?? 'Responsiva médica'));
+      $responsivaTypeLabelUpper = clinical_doc_uppercase_subject($responsivaTypeLabel !== '' ? $responsivaTypeLabel : 'Responsiva médica');
       $responsivaClinicalSituation = trim((string)($responsivaContent['clinical_situation'] ?? ''));
       $responsivaIndicatedConduct = trim((string)($responsivaContent['indicated_conduct'] ?? ''));
       $responsivaRelevantRisk = trim((string)($responsivaContent['relevant_risk'] ?? ''));
@@ -2201,7 +2220,7 @@ if (!$embed) {
         </section>
         <section class="informe-doc-body-section doc-base-section">
           <div class="informe-doc-section-title doc-base-section-title">Tipo de responsiva</div>
-          <div class="informe-doc-text doc-base-text"><?php echo h($responsivaTypeLabel !== '' ? $responsivaTypeLabel : 'Responsiva médica'); ?></div>
+          <div class="informe-doc-text doc-base-text"><?php echo h($responsivaTypeLabelUpper); ?></div>
         </section>
         <?php if ($responsivaClinicalSituation !== ''): ?>
           <section class="informe-doc-body-section doc-base-section">

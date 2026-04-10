@@ -3809,7 +3809,7 @@
                       </div>
                       <div class="modal-body">
                         <p class="small text-muted mb-3" data-role="ci-signature-qr-hint">
-                          Escanea este código con tu celular para firmar en pantalla y anexar la firma al consentimiento en curso.
+                          Escanea este código con tu celular para firmar y anexar la firma al consentimiento en curso.
                         </p>
                         <div class="text-center mb-3">
                           <img
@@ -6640,10 +6640,6 @@
                   </div>
                 </div>
                 <div class="exp-card d-none mb-3" id="ci_wizard">
-                  <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
-                    <span>Nuevo Consentimiento Informado</span>
-                    <span class="text-muted small" id="ci_step_label">Paso 1 de 2</span>
-                  </div>
                   <div class="exp-card-body">
                     <div class="alert alert-warning py-2 d-none" id="ci_wizard_notice"></div>
                     <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
@@ -6730,7 +6726,7 @@
                                 <textarea class="form-control" id="ci_risk_infrequent" rows="2" placeholder="riesgos poco frecuentes como infección o sangrado"></textarea>
                               </div>
                               <div class="col-12">
-                                <label class="form-label small text-muted mb-1" for="ci_risk_rare_serious">Complicaciones raras pero graves</label>
+                                <label class="form-label small text-muted mb-1" for="ci_risk_rare_serious">Complicaciones posibles (poco comunes)</label>
                                 <textarea class="form-control" id="ci_risk_rare_serious" rows="2" placeholder="complicaciones graves que pueden comprometer la vida"></textarea>
                               </div>
                             </div>
@@ -6851,7 +6847,7 @@
                                 <textarea class="form-control" id="ci_full_risk_infrequent" rows="2" placeholder="riesgos poco frecuentes como infección o sangrado"></textarea>
                               </div>
                               <div class="col-12">
-                                <label class="form-label small text-muted mb-1" for="ci_full_risk_rare_serious">Complicaciones raras pero graves</label>
+                                <label class="form-label small text-muted mb-1" for="ci_full_risk_rare_serious">Complicaciones posibles (poco comunes)</label>
                                 <textarea class="form-control" id="ci_full_risk_rare_serious" rows="2" placeholder="complicaciones graves que pueden comprometer la vida"></textarea>
                               </div>
                             </div>
@@ -6937,7 +6933,7 @@
 
                     <div id="ci_signature_block" class="border rounded p-2 d-none">
                       <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                        <div class="ci-signature-heading">Firma del paciente / responsable</div>
+                        <div class="ci-signature-heading">Firma del paciente o responsable</div>
                         <span class="small text-muted" id="ci_signature_status">Sin firma</span>
                       </div>
                       <div class="mx-signature-pad" data-signature-role="patient">
@@ -6960,9 +6956,6 @@
                           style="max-height:140px;object-fit:contain;"
                         >
                         <div class="small text-muted mt-1" id="ci_signature_remote_preview_meta"></div>
-                        <div class="mt-2">
-                          <button type="button" class="btn btn-outline-secondary btn-sm" data-action="ci-signature-clear-remote">Limpiar firma remota</button>
-                        </div>
                       </div>
                     </div>
                     <div id="ci_identity_block" class="border rounded p-2 d-none mt-2">
@@ -7022,22 +7015,21 @@
                       </div>
                     </div>
 
-                    <div class="d-flex justify-content-end gap-2 mt-3">
-                      <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_prev" disabled>Anterior</button>
-                      <button type="button" class="btn btn-primary btn-sm" id="ci_next">Continuar</button>
-                      <button type="button" class="btn btn-success btn-sm d-none" id="ci_save">Guardar borrador</button>
-                      <button type="button" class="btn btn-primary btn-sm d-none" id="ci_emit">Emitir consentimiento</button>
-                      <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="ci_cancel">Cancelar</button>
+                    <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
+                      <span class="text-muted small" id="ci_step_label">Paso 1 de 2</span>
+                      <div class="d-flex flex-wrap justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="ci_prev" disabled>Anterior</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="ci_next">Continuar</button>
+                        <button type="button" class="btn btn-success btn-sm d-none" id="ci_save">Guardar borrador</button>
+                        <button type="button" class="btn btn-primary btn-sm d-none" id="ci_emit">Emitir consentimiento</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="ci_cancel">Cancelar</button>
+                      </div>
                     </div>
                     <div class="alert alert-danger py-2 mt-2 d-none" id="ci_emit_errors"></div>
                   </div>
                 </div>
 
                 <div class="exp-card d-none mb-3" id="im_wizard">
-                  <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
-                    <span>Nuevo Informe médico</span>
-                    <span class="text-muted small" id="im_step_label">Paso 1 de 4</span>
-                  </div>
                   <div class="exp-card-body">
                     <div class="alert alert-warning py-2 d-none" id="im_notice"></div>
                     <div id="im_step_1">
@@ -7066,10 +7058,6 @@
                     </div>
                     <div id="im_step_2" class="d-none">
                       <div class="row g-3">
-                        <div class="col-12">
-                          <label class="form-label" for="im_current_illness">Motivo de atención</label>
-                          <textarea class="form-control" id="im_current_illness" rows="4" placeholder="Problema clínico actual y evolución."></textarea>
-                        </div>
                         <div class="col-12">
                           <label class="form-label" for="im_relevant_history">Antecedentes relevantes <span class="text-muted">(opcional)</span></label>
                           <textarea class="form-control" id="im_relevant_history" rows="3" placeholder="Antecedentes clínicos relevantes para contextualizar el informe."></textarea>
@@ -7119,10 +7107,6 @@
                                 <input class="form-check-input" type="radio" name="im_signature_source" id="im_signature_source_registered" value="registered">
                                 <label class="form-check-label small" for="im_signature_source_registered">Usar firma registrada</label>
                               </div>
-                              <div class="form-check mb-0">
-                                <input class="form-check-input" type="radio" name="im_signature_source" id="im_signature_source_local" value="local">
-                                <label class="form-check-label small" for="im_signature_source_local">Firmar en pantalla</label>
-                              </div>
                             </div>
                             <div class="alert alert-light py-2 px-3 small d-none mb-2" id="im_signature_registered_wrap">
                               <div class="fw-semibold mb-1">Firma registrada disponible</div>
@@ -7137,9 +7121,9 @@
                             <div class="mx-signature-pad" data-signature-role="doctor">
                               <canvas id="im_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
                             </div>
-                            <div class="d-flex flex-wrap justify-content-end gap-2 mt-2">
-                              <button type="button" class="btn btn-outline-primary btn-sm" id="im_signature_apply">Aplicar firma del médico</button>
-                              <button type="button" class="btn btn-outline-secondary btn-sm" id="im_signature_clear">Limpiar firma del médico</button>
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+                              <button type="button" class="btn btn-outline-dark btn-sm" id="im_signature_qr_open">Firmar desde tu celular</button>
+                              <button type="button" class="btn btn-outline-secondary btn-sm" id="im_signature_clear">Volver a firmar</button>
                             </div>
                             <div class="alert alert-warning py-2 px-3 d-none mt-2" id="im_signature_inline_prompt">
                               <div class="small mb-2">¿Deseas guardar esta firma como tu firma digitalizada para usarla en próximos documentos?</div>
@@ -7158,21 +7142,20 @@
                         <div id="im_preview" class="small"></div>
                       </div>
                     </div>
-                    <div class="d-flex justify-content-end gap-2 mt-3">
-                      <button type="button" class="btn btn-outline-secondary btn-sm" id="im_prev" disabled>Anterior</button>
-                      <button type="button" class="btn btn-primary btn-sm" id="im_next">Continuar</button>
-                      <button type="button" class="btn btn-success btn-sm d-none" id="im_save">Guardar borrador</button>
-                      <button type="button" class="btn btn-primary btn-sm d-none" id="im_emit">Emitir informe</button>
-                      <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="im_cancel">Cancelar</button>
+                    <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
+                      <span class="text-muted small" id="im_step_label">Paso 1 de 4</span>
+                      <div class="d-flex flex-wrap justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="im_prev" disabled>Anterior</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="im_next">Continuar</button>
+                        <button type="button" class="btn btn-success btn-sm d-none" id="im_save">Guardar borrador</button>
+                        <button type="button" class="btn btn-primary btn-sm d-none" id="im_emit">Emitir informe</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="im_cancel">Cancelar</button>
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 <div class="exp-card d-none mb-3" id="ix_wizard">
-                  <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
-                    <span>Nueva Interconsulta</span>
-                    <span class="text-muted small" id="ix_step_label">Paso 1 de 5</span>
-                  </div>
                   <div class="exp-card-body">
                     <div class="alert alert-warning py-2 d-none" id="ix_notice"></div>
                     <div id="ix_step_1">
@@ -7234,6 +7217,7 @@
                         <div class="col-12">
                           <label class="form-label" for="ix_background">Antecedentes relevantes <span class="text-muted">(opcional)</span></label>
                           <textarea class="form-control" id="ix_background" rows="3" placeholder="Antecedentes clínicos, comorbilidades o datos de contexto relevantes."></textarea>
+                          <div class="form-text">Campo complementario: úsalo solo para antecedentes que ayuden a contextualizar el resumen clínico.</div>
                         </div>
                       </div>
                     </div>
@@ -7266,7 +7250,7 @@
                         <div class="col-12">
                           <div class="border rounded p-2">
                             <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                              <div class="ci-signature-heading ci-signature-heading--doctor">Firma del médico emisor</div>
+                              <div class="ci-signature-heading ci-signature-heading--doctor">Firma del médico tratante</div>
                               <span class="small text-muted" id="ix_signature_status">Sin firma</span>
                             </div>
                             <div class="d-flex flex-wrap gap-3 mb-2">
@@ -7307,20 +7291,19 @@
                         </div>
                       </div>
                     </div>
-                    <div class="d-flex justify-content-end gap-2 mt-3">
-                      <button type="button" class="btn btn-outline-secondary btn-sm" id="ix_prev" disabled>Anterior</button>
-                      <button type="button" class="btn btn-primary btn-sm" id="ix_next">Continuar</button>
-                      <button type="button" class="btn btn-success btn-sm d-none" id="ix_save">Guardar borrador</button>
-                      <button type="button" class="btn btn-primary btn-sm d-none" id="ix_emit">Emitir interconsulta</button>
-                      <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="ix_cancel">Cancelar</button>
+                    <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
+                      <span class="text-muted small" id="ix_step_label">Paso 1 de 5</span>
+                      <div class="d-flex flex-wrap justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="ix_prev" disabled>Anterior</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="ix_next">Continuar</button>
+                        <button type="button" class="btn btn-success btn-sm d-none" id="ix_save">Guardar borrador</button>
+                        <button type="button" class="btn btn-primary btn-sm d-none" id="ix_emit">Emitir interconsulta</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="ix_cancel">Cancelar</button>
+                      </div>
                     </div>
                   </div>
                 </div>
                 <div class="exp-card d-none mb-3" id="rm_wizard">
-                  <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
-                    <span>Nueva Responsiva médica</span>
-                    <span class="text-muted small" id="rm_step_label">Paso 1 de 5</span>
-                  </div>
                   <div class="exp-card-body">
                     <div class="alert alert-warning py-2 d-none" id="rm_notice"></div>
                     <div id="rm_step_1">
@@ -7331,7 +7314,12 @@
                             <option value="alta_voluntaria">Alta voluntaria</option>
                             <option value="rechazo_manejo">Rechazo de estudio / tratamiento / manejo</option>
                             <option value="negativa_hospitalizacion_traslado">Negativa a hospitalización o traslado</option>
+                            <option value="otro">Otro</option>
                           </select>
+                        </div>
+                        <div class="col-md-6 d-none" id="rm_type_other_wrap">
+                          <label class="form-label" for="rm_type_other">Especifica el tipo de responsiva</label>
+                          <input class="form-control" id="rm_type_other" placeholder="Describe el tipo de responsiva">
                         </div>
                         <div class="col-md-6">
                           <label class="form-label">Fecha</label>
@@ -7362,7 +7350,7 @@
                           <textarea class="form-control" id="rm_clinical_situation" rows="4" placeholder="Describe de forma breve la situación clínica actual."></textarea>
                         </div>
                         <div class="col-12">
-                          <label class="form-label" for="rm_indicated_conduct">Conducta indicada</label>
+                          <label class="form-label" for="rm_indicated_conduct">Indicación médica</label>
                           <textarea class="form-control" id="rm_indicated_conduct" rows="3" placeholder="Conducta o recomendación médica indicada."></textarea>
                         </div>
                         <div class="col-12">
@@ -7374,12 +7362,17 @@
                     <div id="rm_step_3" class="d-none">
                       <div class="row g-3">
                         <div class="col-12">
-                          <label class="form-label" for="rm_declaration_text">Declaración documental</label>
+                          <label class="form-label" for="rm_declaration_text">Declaración y argumento del paciente o responsable</label>
                           <textarea class="form-control" id="rm_declaration_text" rows="6" placeholder="Texto base de la responsiva."></textarea>
+                          <div class="form-text">Este es el bloque principal de manifestación legal del documento.</div>
                         </div>
                         <div class="col-12">
                           <label class="form-label" for="rm_additional_manifestation">Manifestación adicional <span class="text-muted">(opcional)</span></label>
                           <textarea class="form-control" id="rm_additional_manifestation" rows="3" placeholder="Manifestación adicional breve del firmante o médico."></textarea>
+                          <div class="form-text">Úsalo solo para aclaraciones breves adicionales al texto principal.</div>
+                        </div>
+                        <div class="col-12">
+                          <div class="form-text">El cierre formal institucional se agrega automáticamente en el documento final.</div>
                         </div>
                       </div>
                     </div>
@@ -7466,12 +7459,15 @@
                         </div>
                       </div>
                     </div>
-                    <div class="d-flex justify-content-end gap-2 mt-3">
-                      <button type="button" class="btn btn-outline-secondary btn-sm" id="rm_prev" disabled>Anterior</button>
-                      <button type="button" class="btn btn-primary btn-sm" id="rm_next">Continuar</button>
-                      <button type="button" class="btn btn-success btn-sm d-none" id="rm_save">Guardar borrador</button>
-                      <button type="button" class="btn btn-primary btn-sm d-none" id="rm_emit">Emitir responsiva</button>
-                      <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="rm_cancel">Cancelar</button>
+                    <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
+                      <span class="text-muted small" id="rm_step_label">Paso 1 de 5</span>
+                      <div class="d-flex flex-wrap justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="rm_prev" disabled>Anterior</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="rm_next">Continuar</button>
+                        <button type="button" class="btn btn-success btn-sm d-none" id="rm_save">Guardar borrador</button>
+                        <button type="button" class="btn btn-primary btn-sm d-none" id="rm_emit">Emitir responsiva</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="rm_cancel">Cancelar</button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -7480,17 +7476,20 @@
                   <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
                     <span>Documentos recientes</span>
                   </div>
-                  <div class="small text-muted mb-2">Histórico disponible en esta fase: consentimientos, informes, interconsultas y responsivas emitidas.</div>
+                  <div class="small text-muted mb-2">Histórico disponible en esta fase: consentimientos, informes, interconsultas y responsivas médicas.</div>
                   <div class="alert alert-info py-2 mb-3 d-none" id="ci_context_notice">Selecciona paciente</div>
-                  <div class="alert alert-light mb-3" id="ci_empty_state">Aún no hay consentimientos para este paciente.</div>
+                  <div class="alert alert-light mb-3" id="ci_empty_state">Aún no hay documentos clínicos para este paciente.</div>
                   <div class="ci-list d-grid gap-2" id="ci_list"></div>
                 </div>
                 <div class="modal fade" id="modalConsentimientoInformado" tabindex="-1" aria-hidden="true">
                   <div class="modal-dialog modal-xl modal-dialog-scrollable">
                     <div class="modal-content">
-                      <div class="modal-header">
-                        <h5 class="modal-title">Consentimiento informado</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      <div class="modal-header mx-doc-modal-header">
+                        <h5 class="modal-title mx-doc-modal-title">
+                          <span class="material-symbols-outlined mx-doc-modal-title-icon" aria-hidden="true">fact_check</span>
+                          <span>Consentimiento informado</span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body" id="ci_modal_body_slot"></div>
                     </div>
@@ -7499,9 +7498,12 @@
                 <div class="modal fade" id="modalInformeMedico" tabindex="-1" aria-hidden="true">
                   <div class="modal-dialog modal-xl modal-dialog-scrollable">
                     <div class="modal-content">
-                      <div class="modal-header">
-                        <h5 class="modal-title">Informe médico</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      <div class="modal-header mx-doc-modal-header">
+                        <h5 class="modal-title mx-doc-modal-title">
+                          <span class="material-symbols-outlined mx-doc-modal-title-icon" aria-hidden="true">summarize</span>
+                          <span>Informe médico</span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body" id="im_modal_body_slot"></div>
                     </div>
@@ -7510,9 +7512,12 @@
                 <div class="modal fade" id="modalInterconsulta" tabindex="-1" aria-hidden="true">
                   <div class="modal-dialog modal-xl modal-dialog-scrollable">
                     <div class="modal-content">
-                      <div class="modal-header">
-                        <h5 class="modal-title">Interconsulta</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      <div class="modal-header mx-doc-modal-header">
+                        <h5 class="modal-title mx-doc-modal-title">
+                          <span class="material-symbols-outlined mx-doc-modal-title-icon" aria-hidden="true">send</span>
+                          <span>Interconsulta</span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body" id="ix_modal_body_slot"></div>
                     </div>
@@ -7521,9 +7526,12 @@
                 <div class="modal fade" id="modalResponsivaMedica" tabindex="-1" aria-hidden="true">
                   <div class="modal-dialog modal-xl modal-dialog-scrollable">
                     <div class="modal-content">
-                      <div class="modal-header">
-                        <h5 class="modal-title">Responsiva médica</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      <div class="modal-header mx-doc-modal-header">
+                        <h5 class="modal-title mx-doc-modal-title">
+                          <span class="material-symbols-outlined mx-doc-modal-title-icon" aria-hidden="true">gavel</span>
+                          <span>Responsiva médica</span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body" id="rm_modal_body_slot"></div>
                     </div>
@@ -7546,12 +7554,35 @@
                     </div>
                   </div>
                 </div>
+                <div class="modal fade" id="modalDocSessionRecovery" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header mx-doc-modal-header">
+                        <h5 class="modal-title mx-doc-modal-title">
+                          <span class="material-symbols-outlined mx-doc-modal-title-icon" aria-hidden="true">history</span>
+                          <span>Recuperar captura reciente</span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p class="mb-0" id="doc_session_recovery_text">Encontramos una captura reciente sin emitir. ¿Deseas continuarla?</p>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="doc_session_recovery_discard_btn">Empezar de nuevo</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="doc_session_recovery_continue_btn">Continuar captura</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <div class="modal fade" id="modalDocumentosPlaceholder" tabindex="-1" aria-hidden="true">
                   <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
-                      <div class="modal-header">
-                        <h5 class="modal-title" id="docs_placeholder_title">Documento clínico</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      <div class="modal-header mx-doc-modal-header">
+                        <h5 class="modal-title mx-doc-modal-title">
+                          <span class="material-symbols-outlined mx-doc-modal-title-icon" aria-hidden="true">description</span>
+                          <span id="docs_placeholder_title">Documento clínico</span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body">
                         <p class="mb-2" id="docs_placeholder_desc">Este documento se integrará progresivamente al sistema documental clínico.</p>
