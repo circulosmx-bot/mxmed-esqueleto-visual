@@ -6553,13 +6553,13 @@
                     <div class="docs-launcher-section mb-3">
                       <div class="docs-launcher-group-title">Constancias y certificaciones</div>
                       <div class="docs-launcher-list" role="list">
-                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="certificado_medico" data-doc-title="Certificado médico" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Certificación médica de estado de salud para trámites institucionales o laborales.">
+                        <button type="button" class="docs-launcher-row docs-launcher-row--active" data-action="documents-open-certificado" data-doc-code="certificado_medico" data-doc-title="Certificado médico" data-doc-entry="existing-flow" data-doc-status="Ya funcional" data-doc-desc="Emisión de constancias y certificados médicos breves con estructura clínica formal.">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">description</span>
                           <span class="docs-launcher-row-main">
                             <span class="docs-launcher-row-title">Certificado médico</span>
                             <span class="docs-launcher-row-desc">Certificación de estado de salud.</span>
                           </span>
-                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                          <span class="docs-launcher-row-status is-ready">Ya funcional</span>
                         </button>
                         <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="incapacidad_medica" data-doc-title="Incapacidad médica" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Documento de incapacidad temporal para respaldo laboral o institucional.">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">event_busy</span>
@@ -6770,7 +6770,7 @@
                         <div class="col-md-4">
                           <label class="form-label" for="ci_firmante_parentesco">Relación / parentesco</label>
                           <select class="form-select" id="ci_firmante_parentesco">
-                            <option value="self">Self (paciente)</option>
+                            <option value="self">Paciente (firma propia)</option>
                             <option value="padre">Padre</option>
                             <option value="madre">Madre</option>
                             <option value="conyuge">Cónyuge</option>
@@ -6891,7 +6891,7 @@
                         <div class="col-md-4">
                           <label class="form-label" for="ci_full_firmante_parentesco">Relación / parentesco</label>
                           <select class="form-select" id="ci_full_firmante_parentesco">
-                            <option value="self">Self (paciente)</option>
+                            <option value="self">Paciente (firma propia)</option>
                             <option value="padre">Padre</option>
                             <option value="madre">Madre</option>
                             <option value="conyuge">Cónyuge</option>
@@ -7471,12 +7471,178 @@
                     </div>
                   </div>
                 </div>
+                <div class="exp-card d-none mb-3" id="cm_wizard">
+                  <div class="exp-card-body">
+                    <div class="alert alert-warning py-2 d-none" id="cm_notice"></div>
+                    <div id="cm_step_1">
+                      <div class="row g-3">
+                        <div class="col-md-6">
+                          <label class="form-label" for="cm_type">Tipo de certificado</label>
+                          <select class="form-select" id="cm_type">
+                            <option value="certificado_general">Certificado médico general</option>
+                            <option value="constancia_atencion">Constancia de atención médica</option>
+                            <option value="reposo_medico">Constancia de incapacidad temporal</option>
+                          </select>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label">Fecha</label>
+                          <input class="form-control" id="cm_date" readonly>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label">Paciente</label>
+                          <input class="form-control" id="cm_patient_name" readonly>
+                        </div>
+                        <div class="col-md-3">
+                          <label class="form-label">Edad</label>
+                          <input class="form-control" id="cm_patient_age" readonly>
+                        </div>
+                        <div class="col-md-3">
+                          <label class="form-label">Sexo</label>
+                          <input class="form-control" id="cm_patient_sex" readonly>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label">Médico emisor</label>
+                          <input class="form-control" id="cm_doctor_name" readonly>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="cm_step_2" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="cm_purpose_select">Destinatario</label>
+                          <select class="form-select" id="cm_purpose_select">
+                            <option value="">Seleccionar (opcional)</option>
+                            <option value="A quien corresponda">A quien corresponda</option>
+                            <option value="Institución educativa">Institución educativa</option>
+                            <option value="Centro de trabajo">Centro de trabajo</option>
+                            <option value="Trámite administrativo">Trámite administrativo</option>
+                            <option value="Uso personal">Uso personal</option>
+                            <option value="__other__">Otro</option>
+                          </select>
+                        </div>
+                        <div class="col-12 d-none" id="cm_wrap_purpose_other">
+                          <label class="form-label" for="cm_purpose_other" id="cm_purpose_detail_label">Especificar destinatario</label>
+                          <input class="form-control" id="cm_purpose_other" placeholder="Ej. Dirección de recursos humanos, coordinación escolar, etc.">
+                        </div>
+                      </div>
+                    </div>
+                    <div id="cm_step_3" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-md-6" id="cm_wrap_care_date">
+                          <label class="form-label" for="cm_care_date">Fecha de atención</label>
+                          <input type="date" class="form-control" id="cm_care_date">
+                          <div class="small text-muted mt-1 d-none" id="cm_care_date_display"></div>
+                        </div>
+                        <div class="col-md-6 d-none" id="cm_wrap_rest_days">
+                          <label class="form-label" for="cm_rest_days">Días de reposo</label>
+                          <input type="number" min="1" max="30" class="form-control" id="cm_rest_days" placeholder="Ej. 3">
+                        </div>
+                        <div class="col-md-6 d-none" id="cm_wrap_rest_start_date">
+                          <label class="form-label" for="cm_rest_start_date">Inicio de reposo</label>
+                          <input type="date" class="form-control" id="cm_rest_start_date">
+                          <div class="small text-muted mt-1 d-none" id="cm_rest_start_date_display"></div>
+                        </div>
+                        <div class="col-md-6 d-none" id="cm_wrap_rest_end_date">
+                          <label class="form-label" for="cm_rest_end_date">Fin de reposo</label>
+                          <input type="date" class="form-control" id="cm_rest_end_date" readonly>
+                          <div class="small text-muted mt-1 d-none" id="cm_rest_end_date_display"></div>
+                        </div>
+                        <div class="col-md-6 d-none" id="cm_wrap_general_condition">
+                          <label class="form-label" for="cm_general_condition">Condición general</label>
+                          <select class="form-select" id="cm_general_condition">
+                            <option value="">Seleccionar</option>
+                            <option value="estable">Estable</option>
+                            <option value="en_control">En control médico</option>
+                            <option value="apto_general">Apto en evaluación general</option>
+                          </select>
+                        </div>
+                        <div class="col-12 d-none" id="cm_wrap_general_note">
+                          <label class="form-label" for="cm_general_note">Complemento breve <span class="text-muted">(opcional)</span></label>
+                          <input class="form-control" id="cm_general_note" placeholder="Aclaración breve para el certificado general.">
+                        </div>
+                        <div class="col-12 d-none" id="cm_wrap_return_note">
+                          <label class="form-label" for="cm_return_note">Nota de reincorporación <span class="text-muted">(opcional)</span></label>
+                          <input class="form-control" id="cm_return_note" placeholder="Ej. Reincorporación a actividades al término del reposo.">
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="cm_declaration_text">Declaración principal del certificado</label>
+                          <textarea class="form-control" id="cm_declaration_text" rows="5" placeholder="Texto declarativo del certificado."></textarea>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="cm_step_4" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="cm_observations">Observaciones <span class="text-muted">(opcional)</span></label>
+                          <textarea class="form-control" id="cm_observations" rows="3" placeholder="Observaciones breves adicionales."></textarea>
+                        </div>
+                        <div class="col-12" id="cm_wrap_validity_note">
+                          <label class="form-label" for="cm_validity_note">Vigencia / alcance <span class="text-muted">(opcional)</span></label>
+                          <input class="form-control" id="cm_validity_note" placeholder="Ej. Válido para justificar inasistencia por el periodo indicado.">
+                        </div>
+                      </div>
+                    </div>
+                    <div id="cm_step_5" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <div class="border rounded p-3 bg-light-subtle">
+                            <div class="small text-uppercase text-muted fw-semibold mb-2">Vista previa</div>
+                            <div id="cm_preview" class="small"></div>
+                          </div>
+                        </div>
+                        <div class="col-12">
+                          <div class="border rounded p-2">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                              <div class="ci-signature-heading ci-signature-heading--doctor">Firma del médico <span class="badge text-bg-danger-subtle border border-danger-subtle text-danger-emphasis ms-1">Obligatoria</span></div>
+                              <span class="small text-muted" id="cm_signature_status">Sin firma</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-3 mb-2">
+                              <div class="form-check mb-0">
+                                <input class="form-check-input" type="radio" name="cm_signature_source" id="cm_signature_source_registered" value="registered">
+                                <label class="form-check-label small" for="cm_signature_source_registered">Usar firma registrada</label>
+                              </div>
+                            </div>
+                            <div class="alert alert-light py-2 px-3 small d-none mb-2" id="cm_signature_registered_wrap">
+                              <div class="fw-semibold mb-1">Firma registrada disponible</div>
+                              <img id="cm_signature_registered_preview" src="" alt="Firma registrada del médico" class="img-fluid rounded border bg-white" style="max-height:140px;object-fit:contain;">
+                            </div>
+                            <div class="mx-signature-pad">
+                              <canvas id="cm_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
+                            </div>
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+                              <button type="button" class="btn btn-outline-dark btn-sm" id="cm_signature_qr_open">Firmar desde tu celular</button>
+                              <button type="button" class="btn btn-outline-secondary btn-sm" id="cm_signature_clear">Volver a firmar</button>
+                            </div>
+                            <div class="small text-muted mt-2 d-none" id="cm_signature_remote_status"></div>
+                            <div class="alert alert-warning py-2 px-3 d-none mt-2" id="cm_signature_inline_prompt">
+                              <div class="small mb-2">¿Deseas guardar esta firma como tu firma digitalizada para usarla en próximos documentos?</div>
+                              <div class="d-flex flex-wrap justify-content-end gap-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="cm_signature_inline_no">No guardar</button>
+                                <button type="button" class="btn btn-primary btn-sm" id="cm_signature_inline_yes">Sí, guardar firma</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
+                      <span class="text-muted small" id="cm_step_label">Paso 1 de 5</span>
+                      <div class="d-flex flex-wrap justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="cm_prev" disabled>Anterior</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="cm_next">Continuar</button>
+                        <button type="button" class="btn btn-success btn-sm d-none" id="cm_save">Guardar borrador</button>
+                        <button type="button" class="btn btn-primary btn-sm d-none" id="cm_emit">Emitir certificado</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="cm_cancel">Cancelar</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 <div class="exp-card exp-card--secondary">
                   <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
                     <span>Documentos recientes</span>
                   </div>
-                  <div class="small text-muted mb-2">Histórico disponible en esta fase: consentimientos, informes, interconsultas y responsivas médicas.</div>
+                  <div class="small text-muted mb-2">Histórico disponible en esta fase: consentimientos, informes, interconsultas, responsivas y certificados médicos.</div>
                   <div class="alert alert-info py-2 mb-3 d-none" id="ci_context_notice">Selecciona paciente</div>
                   <div class="alert alert-light mb-3" id="ci_empty_state">Aún no hay documentos clínicos para este paciente.</div>
                   <div class="ci-list d-grid gap-2" id="ci_list"></div>
@@ -7534,6 +7700,20 @@
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body" id="rm_modal_body_slot"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal fade" id="modalCertificadoMedico" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                      <div class="modal-header mx-doc-modal-header">
+                        <h5 class="modal-title mx-doc-modal-title">
+                          <span class="material-symbols-outlined mx-doc-modal-title-icon" aria-hidden="true">badge</span>
+                          <span>Certificado médico</span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body" id="cm_modal_body_slot"></div>
                     </div>
                   </div>
                 </div>
