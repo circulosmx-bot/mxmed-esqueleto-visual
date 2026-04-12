@@ -10,7 +10,8 @@
 
 :root {
   --doc-font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
-  --doc-page-width-letter: 21.59cm;
+  --doc-page-width-letter: 8.5in;
+  --doc-page-height-letter: 11in;
   --doc-page-pad-y: 2.2cm;
   --doc-page-pad-x: 2cm;
   --doc-ink-primary: #0a5168;
@@ -27,6 +28,7 @@
 .doc-base-sheet {
   box-sizing: border-box;
   width: min(var(--doc-page-width-letter), 100%);
+  min-height: var(--doc-page-height-letter);
   margin: 0 auto;
   background: #fff;
   padding: var(--doc-page-pad-y) var(--doc-page-pad-x);
@@ -36,7 +38,12 @@
 }
 
 .doc-base-sheet--letter {
-  --doc-page-width-letter: 21.59cm;
+  --doc-page-width-letter: 8.5in;
+  --doc-page-height-letter: 11in;
+  width: 8.5in;
+  min-height: 11in;
+  margin: 0 auto;
+  background: #fff;
 }
 
 .doc-base-body {
@@ -168,9 +175,10 @@
   }
 
   .doc-base-sheet {
-    width: auto !important;
-    max-width: none !important;
-    margin: 0 !important;
+    width: 8.5in !important;
+    max-width: 8.5in !important;
+    min-height: 11in !important;
+    margin: 0 auto !important;
     padding: var(--doc-page-pad-y) var(--doc-page-pad-x) !important;
     box-shadow: none !important;
     border: none !important;
@@ -178,4 +186,3 @@
     background: #fff !important;
   }
 }
-

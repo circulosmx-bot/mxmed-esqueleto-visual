@@ -9223,18 +9223,20 @@ console.info('app.js loaded :: 20251123a');
       certificadoRestStartDate: root.querySelector('#cm_rest_start_date'),
       certificadoRestEndDate: root.querySelector('#cm_rest_end_date'),
       certificadoGeneralCondition: root.querySelector('#cm_general_condition'),
-      certificadoGeneralNote: root.querySelector('#cm_general_note'),
       certificadoReturnNote: root.querySelector('#cm_return_note'),
       certificadoDeclarationText: root.querySelector('#cm_declaration_text'),
       certificadoObservations: root.querySelector('#cm_observations'),
-      certificadoValidityNote: root.querySelector('#cm_validity_note'),
+      certificadoValidityTermOptions: Array.from(root.querySelectorAll('input[name="cm_validity_term_option"]')),
+      certificadoValidityTermOtherWrap: root.querySelector('#cm_wrap_validity_term_other'),
+      certificadoValidityTermOther: root.querySelector('#cm_validity_term_other'),
+      certificadoUsageNote: root.querySelector('#cm_usage_note'),
       certificadoWrapValidityNote: root.querySelector('#cm_wrap_validity_note'),
+      certificadoWrapUsageNote: root.querySelector('#cm_wrap_usage_note'),
       certificadoWrapCareDate: root.querySelector('#cm_wrap_care_date'),
       certificadoWrapRestDays: root.querySelector('#cm_wrap_rest_days'),
       certificadoWrapRestStartDate: root.querySelector('#cm_wrap_rest_start_date'),
       certificadoWrapRestEndDate: root.querySelector('#cm_wrap_rest_end_date'),
       certificadoWrapGeneralCondition: root.querySelector('#cm_wrap_general_condition'),
-      certificadoWrapGeneralNote: root.querySelector('#cm_wrap_general_note'),
       certificadoWrapReturnNote: root.querySelector('#cm_wrap_return_note'),
       certificadoPreview: root.querySelector('#cm_preview'),
       certificadoPrev: root.querySelector('#cm_prev'),
@@ -9460,6 +9462,13 @@ console.info('app.js loaded :: 20251123a');
       'Centro de trabajo': 'Nombre del centro de trabajo',
       '__other__': 'Especificar destinatario'
     });
+    const CERTIFICATE_VALIDITY_PRESET_VALUES = Object.freeze([
+      '3 días',
+      '7 días',
+      '15 días',
+      '30 días'
+    ]);
+    const CERTIFICATE_DEFAULT_OBSERVATIONS = 'Sin hallazgos clínicos adicionales de relevancia al momento de la valoración.';
     const CERTIFICATE_STANDARD_CLOSING = 'Se expide el presente certificado a solicitud del interesado, para los fines que estime convenientes.';
     const certificadoState = {
       step: 1,
@@ -9473,18 +9482,19 @@ console.info('app.js loaded :: 20251123a');
       form: {
         type: 'certificado_general',
         emission_date: '',
-        purpose: '',
-        purpose_selection: '',
+        purpose: 'A quien corresponda',
+        purpose_selection: 'A quien corresponda',
         purpose_detail: '',
         care_date: '',
         rest_days: '',
         rest_start_date: '',
         rest_end_date: '',
         return_note: '',
-        general_condition: '',
-        general_note: '',
+        general_condition: 'apto_general',
         declaration_text: '',
         observations: '',
+        validity_term: '7 días',
+        usage_note: '',
         validity_note: '',
         closing_statement: CERTIFICATE_STANDARD_CLOSING
       }
@@ -14854,6 +14864,50 @@ console.info('app.js loaded :: 20251123a');
       }
       return `Hago constar que ${patientName} recibió atención médica en la fecha indicada.`;
     };
+    const composeCertificateValidityUsageText = ({ validityTerm = '', usageNote = '', legacy = '' } = {})=>{
+      const cleanChunk = (value = '')=> String(value || '').replace(/[.\s]+$/g, '').trim();
+      const term = cleanChunk(validityTerm);
+      const usage = cleanChunk(usageNote);
+      if(term && usage){
+        return `Válido por ${term} a partir de la fecha de emisión. Documento emitido ${usage}.`;
+      }
+      if(term){
+        return `Válido por ${term} a partir de la fecha de emisión.`;
+      }
+      if(usage){
+        return `Documento emitido ${usage}.`;
+      }
+      return sanitizeText(legacy || '');
+    };
+    const syncCertificadoValidityUiFromState = ()=>{
+      const current = sanitizeText(certificadoState.form.validity_term || '');
+      const usePreset = CERTIFICATE_VALIDITY_PRESET_VALUES.includes(current);
+      const selectedValue = usePreset ? current : (current ? '__other__' : '');
+      (els.certificadoValidityTermOptions || []).forEach((option)=>{
+        if(!option) return;
+        option.checked = sanitizeText(option.value || '') === selectedValue;
+      });
+      const showOther = selectedValue === '__other__';
+      els.certificadoValidityTermOtherWrap?.classList.toggle('d-none', !showOther);
+      if(els.certificadoValidityTermOther){
+        els.certificadoValidityTermOther.value = showOther ? current : '';
+      }
+    };
+    const applyCertificadoValidityFromInputs = ()=>{
+      const selected = (els.certificadoValidityTermOptions || []).find((option)=> option?.checked);
+      const selectedValue = sanitizeText(selected?.value || '');
+      if(selectedValue === '__other__'){
+        const otherValue = normalizeConsentInputRaw(els.certificadoValidityTermOther?.value || '');
+        certificadoState.form.validity_term = otherValue;
+        els.certificadoValidityTermOtherWrap?.classList.remove('d-none');
+        return;
+      }
+      certificadoState.form.validity_term = normalizeConsentInputRaw(selectedValue);
+      if(els.certificadoValidityTermOther){
+        els.certificadoValidityTermOther.value = '';
+      }
+      els.certificadoValidityTermOtherWrap?.classList.add('d-none');
+    };
     const syncCertificadoTypeUi = ()=>{
       const type = sanitizeText(certificadoState.form.type || 'certificado_general') || 'certificado_general';
       const isConstancia = type === 'constancia_atencion';
@@ -14865,13 +14919,13 @@ console.info('app.js loaded :: 20251123a');
       els.certificadoWrapRestEndDate?.classList.toggle('d-none', !isReposo);
       els.certificadoWrapReturnNote?.classList.toggle('d-none', !isReposo);
       els.certificadoWrapGeneralCondition?.classList.toggle('d-none', !isGeneral);
-      els.certificadoWrapGeneralNote?.classList.toggle('d-none', !isGeneral);
       els.certificadoWrapValidityNote?.classList.toggle('d-none', isReposo);
+      els.certificadoWrapUsageNote?.classList.toggle('d-none', isReposo);
+      if(isReposo){
+        els.certificadoValidityTermOtherWrap?.classList.add('d-none');
+      }
       if(isReposo){
         certificadoState.form.validity_note = sanitizeText(certificadoState.form.rest_end_date || '');
-        if(els.certificadoValidityNote){
-          els.certificadoValidityNote.value = certificadoState.form.validity_note;
-        }
       }
     };
     const syncCertificadoDateDisplays = ()=>{
@@ -14916,9 +14970,6 @@ console.info('app.js loaded :: 20251123a');
       if(els.certificadoRestEndDate) els.certificadoRestEndDate.value = out;
       if((sanitizeText(certificadoState.form.type || '') || 'certificado_general') === 'reposo_medico'){
         certificadoState.form.validity_note = out;
-        if(els.certificadoValidityNote){
-          els.certificadoValidityNote.value = out;
-        }
       }
       syncCertificadoDateDisplays();
     };
@@ -15126,6 +15177,9 @@ console.info('app.js loaded :: 20251123a');
       const purpose = sanitizeText(certificadoState.form.purpose || '');
       let selected = sanitizeText(certificadoState.form.purpose_selection || '');
       let detail = sanitizeText(certificadoState.form.purpose_detail || '');
+      if(!selected && !purpose){
+        selected = 'A quien corresponda';
+      }
       if(!selected){
         if(CERTIFICATE_PURPOSE_PRESET_VALUES.includes(purpose)){
           selected = purpose;
@@ -15191,10 +15245,10 @@ console.info('app.js loaded :: 20251123a');
       if(els.certificadoRestEndDate) els.certificadoRestEndDate.value = sanitizeText(certificadoState.form.rest_end_date || '');
       if(els.certificadoReturnNote) els.certificadoReturnNote.value = sanitizeText(certificadoState.form.return_note || '');
       if(els.certificadoGeneralCondition) els.certificadoGeneralCondition.value = sanitizeText(certificadoState.form.general_condition || '');
-      if(els.certificadoGeneralNote) els.certificadoGeneralNote.value = sanitizeText(certificadoState.form.general_note || '');
       if(els.certificadoDeclarationText) els.certificadoDeclarationText.value = sanitizeText(certificadoState.form.declaration_text || '');
       if(els.certificadoObservations) els.certificadoObservations.value = sanitizeText(certificadoState.form.observations || '');
-      if(els.certificadoValidityNote) els.certificadoValidityNote.value = sanitizeText(certificadoState.form.validity_note || '');
+      syncCertificadoValidityUiFromState();
+      if(els.certificadoUsageNote) els.certificadoUsageNote.value = sanitizeText(certificadoState.form.usage_note || '');
       syncCertificadoTypeUi();
       computeCertificateRestEndDate();
       syncCertificadoDateDisplays();
@@ -15209,7 +15263,11 @@ console.info('app.js loaded :: 20251123a');
       const observations = sanitizeText(certificadoState.form.observations || '');
       const validity = type === 'reposo_medico'
         ? (sanitizeText(certificadoState.form.rest_end_date || '') || sanitizeText(certificadoState.form.validity_note || ''))
-        : sanitizeText(certificadoState.form.validity_note || '');
+        : composeCertificateValidityUsageText({
+          validityTerm: sanitizeText(certificadoState.form.validity_term || ''),
+          usageNote: sanitizeText(certificadoState.form.usage_note || ''),
+          legacy: sanitizeText(certificadoState.form.validity_note || '')
+        });
       const restInfo = type === 'reposo_medico'
         ? `Reposo: ${sanitizeText(certificadoState.form.rest_days || '') || '—'} día(s) · ${(formatConsentUiDate(certificadoState.form.rest_start_date || '', { withTime: false }) || sanitizeText(certificadoState.form.rest_start_date || '') || '—')} a ${(formatConsentUiDate(certificadoState.form.rest_end_date || '', { withTime: false }) || sanitizeText(certificadoState.form.rest_end_date || '') || '—')}`
         : '';
@@ -15226,7 +15284,7 @@ console.info('app.js loaded :: 20251123a');
         restInfo ? `<div>${restInfo}</div>` : '',
         conditionInfo ? `<div>${conditionInfo}</div>` : '',
         declaration ? `<div class="mt-2"><strong>Declaración:</strong><br>${declaration.replace(/\n/g, '<br>')}</div>` : '',
-        validity ? `<div class="mt-2"><strong>Vigencia / alcance:</strong> ${validity}</div>` : '',
+        validity ? `<div class="mt-2"><strong>Vigencia y uso:</strong> ${validity}</div>` : '',
         observations ? `<div class="mt-2"><strong>Observaciones:</strong> ${observations.replace(/\n/g, '<br>')}</div>` : ''
       ].filter(Boolean);
       els.certificadoPreview.innerHTML = rows.join('');
@@ -15287,9 +15345,10 @@ console.info('app.js loaded :: 20251123a');
         rest_end_date: sanitizeText(certificadoState.form.rest_end_date || ''),
         return_note: normalizeConsentInputRaw(certificadoState.form.return_note || ''),
         general_condition: sanitizeText(certificadoState.form.general_condition || ''),
-        general_note: normalizeConsentInputRaw(certificadoState.form.general_note || ''),
         declaration_text: normalizeConsentInputRaw(certificadoState.form.declaration_text || ''),
         observations: normalizeConsentInputRaw(certificadoState.form.observations || ''),
+        validity_term: normalizeConsentInputRaw(certificadoState.form.validity_term || ''),
+        usage_note: normalizeConsentInputRaw(certificadoState.form.usage_note || ''),
         validity_note: normalizeConsentInputRaw(certificadoState.form.validity_note || '')
       }
     });
@@ -15304,9 +15363,10 @@ console.info('app.js loaded :: 20251123a');
         form.rest_start_date,
         form.return_note,
         form.general_condition,
-        form.general_note,
         form.declaration_text,
         form.observations,
+        form.validity_term,
+        form.usage_note,
         form.validity_note
       ].some((value)=> trimConsentInputValue(value || '') !== '');
     };
@@ -15326,9 +15386,10 @@ console.info('app.js loaded :: 20251123a');
         rest_end_date: sanitizeText(form.rest_end_date ?? certificadoState.form.rest_end_date ?? ''),
         return_note: normalizeConsentInputRaw(form.return_note ?? certificadoState.form.return_note ?? ''),
         general_condition: sanitizeText(form.general_condition ?? certificadoState.form.general_condition ?? ''),
-        general_note: normalizeConsentInputRaw(form.general_note ?? certificadoState.form.general_note ?? ''),
         declaration_text: normalizeConsentInputRaw(form.declaration_text ?? certificadoState.form.declaration_text ?? ''),
         observations: normalizeConsentInputRaw(form.observations ?? certificadoState.form.observations ?? ''),
+        validity_term: normalizeConsentInputRaw(form.validity_term ?? certificadoState.form.validity_term ?? ''),
+        usage_note: normalizeConsentInputRaw(form.usage_note ?? certificadoState.form.usage_note ?? ''),
         validity_note: normalizeConsentInputRaw(form.validity_note ?? certificadoState.form.validity_note ?? '')
       };
       certificadoState.step = Math.min(Math.max(Number(safe.step || 1), 1), 5);
@@ -15342,18 +15403,19 @@ console.info('app.js loaded :: 20251123a');
       certificadoState.form = {
         type: 'certificado_general',
         emission_date: '',
-        purpose: '',
-        purpose_selection: '',
+        purpose: 'A quien corresponda',
+        purpose_selection: 'A quien corresponda',
         purpose_detail: '',
         care_date: '',
         rest_days: '',
         rest_start_date: '',
         rest_end_date: '',
         return_note: '',
-        general_condition: '',
-        general_note: '',
-        declaration_text: '',
-        observations: '',
+        general_condition: 'apto_general',
+        declaration_text: buildCertificateDeclarationBase('certificado_general'),
+        observations: CERTIFICATE_DEFAULT_OBSERVATIONS,
+        validity_term: '7 días',
+        usage_note: '',
         validity_note: '',
         closing_statement: CERTIFICATE_STANDARD_CLOSING
       };
@@ -15394,18 +15456,19 @@ console.info('app.js loaded :: 20251123a');
       certificadoState.form = {
         type: 'certificado_general',
         emission_date: nowDate,
-        purpose: '',
-        purpose_selection: '',
+        purpose: 'A quien corresponda',
+        purpose_selection: 'A quien corresponda',
         purpose_detail: '',
         care_date: nowDate,
         rest_days: '',
         rest_start_date: nowDate,
         rest_end_date: '',
         return_note: '',
-        general_condition: '',
-        general_note: '',
+        general_condition: 'apto_general',
         declaration_text: buildCertificateDeclarationBase('certificado_general'),
-        observations: '',
+        observations: CERTIFICATE_DEFAULT_OBSERVATIONS,
+        validity_term: '7 días',
+        usage_note: '',
         validity_note: '',
         closing_statement: CERTIFICATE_STANDARD_CLOSING
       };
@@ -15494,7 +15557,11 @@ console.info('app.js loaded :: 20251123a');
       const certTypeLabel = sanitizeText(getCertificateTypeLabel(certType) || payload?.certificate?.type_label || 'CERTIFICADO MÉDICO');
       const certValidity = certType === 'reposo_medico'
         ? (sanitizeText(payload?.content?.rest_end_date || '') || sanitizeText(payload?.content?.validity_note || ''))
-        : sanitizeText(payload?.content?.validity_note || '');
+        : composeCertificateValidityUsageText({
+          validityTerm: sanitizeText(payload?.content?.validity_term || ''),
+          usageNote: sanitizeText(payload?.content?.usage_note || ''),
+          legacy: sanitizeText(payload?.content?.validity_note || '')
+        });
       const certPurpose = sanitizeText(payload?.certificate?.purpose || '') || sanitizeText(payload?.certificate?.purpose_category || '');
       const lines = [];
       lines.push(certTypeLabel.toUpperCase());
@@ -15508,7 +15575,7 @@ console.info('app.js loaded :: 20251123a');
       lines.push(sanitizeText(payload?.content?.declaration_text || ''));
       if(certValidity){
         lines.push('');
-        lines.push(`Vigencia / alcance: ${certValidity}`);
+        lines.push(`Vigencia y uso: ${certValidity}`);
       }
       if(sanitizeText(payload?.content?.observations || '')){
         lines.push('');
@@ -15527,6 +15594,15 @@ console.info('app.js loaded :: 20251123a');
       const typeLabel = getCertificateTypeLabel(type) || 'Certificado médico';
       const declaration = normalizeConsentInputRaw(certificadoState.form.declaration_text || '');
       const signature = getActiveCertificadoDoctorSignature(formatNowSql());
+      const validityTerm = normalizeConsentInputRaw(certificadoState.form.validity_term || '');
+      const usageNote = normalizeConsentInputRaw(certificadoState.form.usage_note || '');
+      const validityLegacy = (type === 'reposo_medico')
+        ? sanitizeText(certificadoState.form.rest_end_date || certificadoState.form.validity_note || '')
+        : composeCertificateValidityUsageText({
+          validityTerm,
+          usageNote,
+          legacy: normalizeConsentInputRaw(certificadoState.form.validity_note || '')
+        });
       const content = {
         declaration_text: declaration,
         care_date: sanitizeText(certificadoState.form.care_date || ''),
@@ -15536,11 +15612,10 @@ console.info('app.js loaded :: 20251123a');
         return_note: normalizeConsentInputRaw(certificadoState.form.return_note || ''),
         general_condition: sanitizeText(certificadoState.form.general_condition || ''),
         general_condition_label: getCertificateGeneralConditionLabel(certificadoState.form.general_condition),
-        general_note: normalizeConsentInputRaw(certificadoState.form.general_note || ''),
         observations: normalizeConsentInputRaw(certificadoState.form.observations || ''),
-        validity_note: (type === 'reposo_medico')
-          ? sanitizeText(certificadoState.form.rest_end_date || certificadoState.form.validity_note || '')
-          : normalizeConsentInputRaw(certificadoState.form.validity_note || ''),
+        validity_term: validityTerm,
+        usage_note: usageNote,
+        validity_note: validityLegacy,
         closing_statement: sanitizeText(certificadoState.form.closing_statement || '')
       };
       if(normalizedStatus === 'issued'){
@@ -17741,9 +17816,6 @@ console.info('app.js loaded :: 20251123a');
       }
       renderCertificadoStep();
     }, 'change');
-    bindCertificadoField(els.certificadoGeneralNote, (el)=>{
-      certificadoState.form.general_note = normalizeConsentInputRaw(el.value || '');
-    });
     bindCertificadoField(els.certificadoReturnNote, (el)=>{
       certificadoState.form.return_note = normalizeConsentInputRaw(el.value || '');
     });
@@ -17754,8 +17826,16 @@ console.info('app.js loaded :: 20251123a');
     bindCertificadoField(els.certificadoObservations, (el)=>{
       certificadoState.form.observations = normalizeConsentInputRaw(el.value || '');
     });
-    bindCertificadoField(els.certificadoValidityNote, (el)=>{
-      certificadoState.form.validity_note = normalizeConsentInputRaw(el.value || '');
+    (els.certificadoValidityTermOptions || []).forEach((option)=>{
+      bindCertificadoField(option, ()=>{
+        applyCertificadoValidityFromInputs();
+      }, 'change');
+    });
+    bindCertificadoField(els.certificadoValidityTermOther, ()=>{
+      applyCertificadoValidityFromInputs();
+    });
+    bindCertificadoField(els.certificadoUsageNote, (el)=>{
+      certificadoState.form.usage_note = normalizeConsentInputRaw(el.value || '');
     });
     els.certificadoPrev?.addEventListener('click', (event)=>{
       event.preventDefault();

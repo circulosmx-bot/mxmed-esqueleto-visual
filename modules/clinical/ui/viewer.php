@@ -563,6 +563,12 @@ $isConsentDoc = ($docTypeNorm === 'consentimiento_informado');
 $isInformeDoc = ($docTypeNorm === 'informe_medico');
 $isInterconsultaDoc = ($docTypeNorm === 'interconsulta');
 $isResponsivaDoc = ($docTypeNorm === 'responsiva_medica');
+$isCertificadoDoc = in_array($docTypeNorm, [
+    'certificado_medico',
+    'certificado_medico_general',
+    'constancia_atencion',
+    'constancia_incapacidad',
+], true);
 $isPrescriptionDoc = in_array($docTypeNorm, ['prescription', 'rx'], true);
 $prescriptionContext = $isPrescriptionDoc && is_array($payload['context'] ?? null) ? $payload['context'] : [];
 $prescriptionLegacy = $isPrescriptionDoc && is_array($payload['prescription'] ?? null) ? $payload['prescription'] : [];
@@ -675,6 +681,7 @@ $informeDoctorFacilityContext = first_non_empty_string(
 $informePrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
 $interconsultaPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
 $responsivaPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
+$certificadoPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
 
 $fileMeta = is_array($payload['file'] ?? null) ? $payload['file'] : [];
 $optimizedMeta = is_array($fileMeta['optimized'] ?? null) ? $fileMeta['optimized'] : [];
@@ -754,7 +761,7 @@ if (!$embed) {
     clinical_embed_start();
 }
 ?>
-<?php if ($isInformeDoc || $isInterconsultaDoc || $isResponsivaDoc): ?>
+<?php if ($isInformeDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc): ?>
 <link rel="stylesheet" href="/assets/css/clinical-doc-base.css">
 <?php endif; ?>
 <style>
@@ -848,15 +855,22 @@ if (!$embed) {
   }
   .document-sheet{
     box-sizing:border-box;
-    width:min(21.59cm, 100%);
+    width:min(8.5in, 100%);
+    min-height:11in;
     margin:0 auto;
     background:#fff;
-    padding:2.5cm 2.2cm;
+    padding:var(--doc-page-pad-y, 2.2cm) var(--doc-page-pad-x, 2cm);
     box-shadow:0 10px 24px rgba(15, 23, 42, 0.08);
   }
   .informe-doc-sheet{
     display:grid;
     gap:8px;
+  }
+  .certificado-doc-sheet{
+    display:block;
+    gap:2px;
+    align-content:start;
+    align-items:start;
   }
   .clinical-doc-head{
     display:flex;
@@ -998,6 +1012,18 @@ if (!$embed) {
     gap:2px;
     margin-bottom:20px;
   }
+  .certificado-doc-sheet .informe-doc-title-block,
+  .certificado-doc-sheet .doc-base-title-block{
+    margin-top:0;
+    margin-bottom:6px;
+    padding-top:0;
+    padding-bottom:4px;
+  }
+  .certificado-doc-sheet .informe-doc-title,
+  .certificado-doc-sheet .doc-base-title{
+    margin:0;
+    line-height:1.25;
+  }
   .informe-doc-date{
     font-size:.9rem;
     color:#203848;
@@ -1031,6 +1057,36 @@ if (!$embed) {
   .informe-doc-patient-line{
     font-size:.9rem;
     color:#213645;
+  }
+  .certificado-doc-sheet .informe-doc-patient-block{
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:0;
+    row-gap:0;
+    align-content:start;
+    align-items:start;
+  }
+  .certificado-doc-sheet .informe-doc-patient-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    margin:0;
+    padding:0;
+    margin-bottom:0;
+    padding-bottom:0;
+  }
+  .certificado-doc-sheet .informe-doc-patient-line,
+  .certificado-doc-sheet .informe-doc-date{
+    margin:0;
+    padding:0;
+    line-height:1.2;
+  }
+  .certificado-doc-sheet .informe-doc-patient-head + .informe-doc-patient-line{
+    margin-top:0;
+    padding-top:0;
   }
   .informe-doc-patient-line strong{color:#0a5168;}
   .informe-doc-meta{font-size:.84rem;color:#5d6b74;}
@@ -1152,6 +1208,7 @@ if (!$embed) {
     }
     .document-sheet{
       width:100%;
+      min-height:auto;
       padding:1.1rem 1rem;
       box-shadow:none;
     }
@@ -1223,10 +1280,12 @@ if (!$embed) {
       visibility:visible !important;
       opacity:1 !important;
       position:static !important;
-      width:auto !important;
-      max-width:none !important;
-      margin:0 !important;
-      padding:2.2cm 2cm !important;
+      box-sizing:border-box !important;
+      width:8.5in !important;
+      max-width:8.5in !important;
+      min-height:11in !important;
+      margin:0 auto !important;
+      padding:var(--doc-page-pad-y, 2.2cm) var(--doc-page-pad-x, 2cm) !important;
       box-shadow:none !important;
       border:none !important;
       border-radius:0 !important;
@@ -1236,7 +1295,6 @@ if (!$embed) {
       page-break-after:auto !important;
       break-before:auto !important;
       break-after:auto !important;
-      min-height:auto !important;
       height:auto !important;
     }
     .informe-doc-sheet{
@@ -1280,6 +1338,38 @@ if (!$embed) {
     .informe-doc-title{font-size:15.5pt;}
     .informe-doc-title-block{margin-bottom:14px;}
     .informe-doc-patient-block{margin-bottom:8px;}
+    .certificado-doc-sheet{
+      display:block !important;
+      gap:2px !important;
+      align-content:start !important;
+      align-items:start !important;
+    }
+    .certificado-doc-sheet .informe-doc-title-block,
+    .certificado-doc-sheet .doc-base-title-block{
+      margin-top:0 !important;
+      margin-bottom:6px !important;
+      padding-top:0 !important;
+      padding-bottom:4px !important;
+    }
+    .certificado-doc-sheet .informe-doc-title,
+    .certificado-doc-sheet .doc-base-title{
+      margin:0 !important;
+      line-height:1.2 !important;
+    }
+    .certificado-doc-sheet .informe-doc-patient-block{
+      margin:0 !important;
+      padding:0 !important;
+      gap:0 !important;
+      row-gap:0 !important;
+      margin-bottom:6px !important;
+    }
+    .certificado-doc-sheet .informe-doc-patient-head,
+    .certificado-doc-sheet .informe-doc-patient-line,
+    .certificado-doc-sheet .informe-doc-date{
+      margin:0 !important;
+      padding:0 !important;
+      line-height:1.2 !important;
+    }
     .clinical-doc-doctor-name{font-size:16pt;}
     .clinical-doc-doctor-specialty{font-size:11pt;}
     .clinical-doc-doctor-license,
@@ -1327,11 +1417,11 @@ if (!$embed) {
         <?php if ($showDownloadAction): ?>
           <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($mediaSrc); ?>"<?php echo $downloadIsRelative ? ' download' : ''; ?>>Descargar</a>
         <?php endif; ?>
-        <?php if ($isPdf || $isConsentDoc || $isInformeDoc || $isInterconsultaDoc || $isResponsivaDoc): ?>
+        <?php if ($isPdf || $isConsentDoc || $isInformeDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc): ?>
           <button type="button" class="btn btn-outline-secondary btn-sm" data-role="viewer-print">Imprimir</button>
         <?php endif; ?>
-        <?php if (($isConsentDoc && $consentPrintableHref !== '') || ($isInformeDoc && $informePrintableHref !== '') || ($isInterconsultaDoc && $interconsultaPrintableHref !== '') || ($isResponsivaDoc && $responsivaPrintableHref !== '')): ?>
-          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($isConsentDoc ? $consentPrintableHref : ($isInformeDoc ? $informePrintableHref : ($isInterconsultaDoc ? $interconsultaPrintableHref : $responsivaPrintableHref))); ?>" target="_blank" rel="noopener" download>Descargar</a>
+        <?php if (($isConsentDoc && $consentPrintableHref !== '') || ($isInformeDoc && $informePrintableHref !== '') || ($isInterconsultaDoc && $interconsultaPrintableHref !== '') || ($isResponsivaDoc && $responsivaPrintableHref !== '') || ($isCertificadoDoc && $certificadoPrintableHref !== '')): ?>
+          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($isConsentDoc ? $consentPrintableHref : ($isInformeDoc ? $informePrintableHref : ($isInterconsultaDoc ? $interconsultaPrintableHref : ($isResponsivaDoc ? $responsivaPrintableHref : $certificadoPrintableHref)))); ?>" target="_blank" rel="noopener" download>Descargar</a>
           <?php // TODO(DOCS-UX): agregar botón "Compartir" cuando exista flujo canónico de distribución segura. ?>
         <?php endif; ?>
         <?php if ($bundlePrevHref !== ''): ?>
@@ -1816,7 +1906,7 @@ if (!$embed) {
       $informeClosing = trim((string)($informeContent['closing_statement'] ?? ''));
       ?>
       <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
-      <article class="informe-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-body doc-base-print-safe">
+      <article class="informe-doc-sheet certificado-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-body doc-base-print-safe">
         <header class="clinical-doc-head informe-doc-head doc-base-medical-header doc-base-print-safe <?php echo h($informeHeaderCfg['class_name']); ?>">
           <div class="clinical-doc-head-main">
             <div class="clinical-doc-head-doctor">
@@ -2295,6 +2385,134 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
+    <?php if ($isCertificadoDoc): ?>
+      <?php
+      $certReport = is_array($payload['report'] ?? null) ? $payload['report'] : [];
+      $certCertificate = is_array($payload['certificate'] ?? null) ? $payload['certificate'] : [];
+      $certContent = is_array($payload['content'] ?? null) ? $payload['content'] : [];
+      $certBranding = is_array($payload['branding'] ?? null) ? $payload['branding'] : [];
+      $certPatientSnapshot = is_array($payload['patient_snapshot'] ?? null) ? $payload['patient_snapshot'] : [];
+      $certActorSnapshot = is_array($payload['actor_snapshot'] ?? null) ? $payload['actor_snapshot'] : [];
+      $certSignatures = is_array($payload['signatures'] ?? null) ? $payload['signatures'] : [];
+      $certDoctorSignature = is_array($certSignatures['doctor'] ?? null) ? $certSignatures['doctor'] : [];
+      $certDoctorSignatureImage = trim((string)($certDoctorSignature['image_data'] ?? ''));
+      $certDoctorSignatureName = trim((string)($certDoctorSignature['signer_name'] ?? ''));
+      $certTypeLabel = trim((string)($certCertificate['type_label'] ?? $title));
+      $certDateOut = clinical_doc_format_date((string)($certReport['emission_date'] ?? ($certReport['issued_at'] ?? $date)), false);
+      $certPatientName = trim((string)($certPatientSnapshot['full_name'] ?? $informePatientNameContext ?: 'Paciente'));
+      $certPatientAge = trim((string)($certPatientSnapshot['age'] ?? $informePatientAgeContext));
+      $certPatientSex = trim((string)($certPatientSnapshot['sex'] ?? ($certPatientSnapshot['sexo'] ?? $informePatientSexContext)));
+      $certDoctorName = trim((string)($certActorSnapshot['full_name'] ?? $informeDoctorNameContext ?: 'Médico tratante'));
+      $certDoctorSpecialty = trim((string)($certActorSnapshot['specialty'] ?? ($certActorSnapshot['specialty_name'] ?? $informeDoctorSpecialtyContext)));
+      $certDoctorLicense = trim((string)($certActorSnapshot['license'] ?? $informeDoctorLicenseContext));
+      $certDoctorSpecialtyLicense = trim((string)($certActorSnapshot['specialty_license'] ?? $informeDoctorSpecialtyLicenseContext));
+      $certBrandingMode = trim((string)($certBranding['mode'] ?? ''));
+      $certBrandingLogo = trim((string)($certBranding['logo_url_resolved'] ?? ($certBranding['logo_url'] ?? '')));
+      $certBrandingFacility = trim((string)($certBranding['facility_visible'] ?? ''));
+      $certBrandingLocationLine = trim((string)($certBranding['location_line_visible'] ?? ''));
+      $certDoctorFacility = $certBrandingFacility !== '' ? $certBrandingFacility : trim((string)$informeDoctorFacilityContext);
+      $certDoctorPlace = $certBrandingLocationLine !== '' ? $certBrandingLocationLine : trim((string)$informeDoctorPlaceContext);
+      $certDoctorSite = $certBrandingLocationLine !== ''
+        ? $certBrandingLocationLine
+        : implode(' · ', array_values(array_filter([
+          $certDoctorFacility !== '' ? $certDoctorFacility : '',
+          $certDoctorPlace !== '' ? $certDoctorPlace : '',
+        ])));
+      $certDoctorCedulas = implode(' · ', array_values(array_filter([
+        $certDoctorLicense !== '' ? ('Cédula: ' . $certDoctorLicense) : '',
+        $certDoctorSpecialtyLicense !== '' ? ('Cédula esp.: ' . $certDoctorSpecialtyLicense) : '',
+      ])));
+      $certHeaderMode = 'standard';
+      if (in_array($certBrandingMode, ['branded', 'standard', 'legal'], true)) {
+        $certHeaderMode = $certBrandingMode;
+      }
+      $certHeaderCfg = clinical_doc_header_mode($certHeaderMode);
+      $certFallbackLogoUrl = '/uploads/doctors/1/logo.png';
+      $certHeaderLogoUrl = $certBrandingLogo;
+      if (
+        $certHeaderLogoUrl === ''
+        || strpos($certHeaderLogoUrl, '/storage/clinical_uploads/branding/') !== false
+      ) {
+        $certHeaderLogoUrl = $certFallbackLogoUrl;
+      }
+      if ($certHeaderMode !== 'legal' && $certHeaderLogoUrl !== '') {
+        $certHeaderMode = 'branded';
+        $certHeaderCfg = clinical_doc_header_mode($certHeaderMode);
+      }
+      $certShowLogo = ($certHeaderCfg['allow_logo'] && $certHeaderLogoUrl !== '');
+      $certAgeOut = $certPatientAge;
+      if ($certAgeOut !== '' && !preg_match('/\banos?\b|\baños?\b/i', $certAgeOut)) {
+        $certAgeOut .= ' años';
+      }
+      $certBodyParts = [];
+      $certPush = static function (array &$bag, string $text): void {
+        $safe = trim($text);
+        if ($safe === '') {
+            return;
+        }
+        $bag[] = $safe;
+      };
+      $certPush($certBodyParts, (string)($certContent['declaration_text'] ?? ''));
+      $certPush($certBodyParts, (string)($certContent['return_note'] ?? ''));
+      $certPush($certBodyParts, (string)($certContent['validity_note'] ?? ''));
+      $certPush($certBodyParts, (string)($certContent['observations'] ?? ''));
+      if ($certBodyParts === [] && trim($renderedText) !== '') {
+        $certPush($certBodyParts, $renderedText);
+      }
+      ?>
+      <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
+      <article class="informe-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-body doc-base-print-safe">
+        <header class="clinical-doc-head informe-doc-head doc-base-medical-header doc-base-print-safe <?php echo h($certHeaderCfg['class_name']); ?>">
+          <div class="clinical-doc-head-main">
+            <div class="clinical-doc-head-doctor">
+              <div class="clinical-doc-head-logo-slot <?php echo $certShowLogo ? '' : 'is-empty'; ?>">
+                <?php if ($certShowLogo): ?>
+                  <img src="<?php echo h($certHeaderLogoUrl); ?>" alt="Logo médico" onerror="this.remove();this.parentElement.classList.add('is-empty');">
+                  <span class="clinical-doc-logo-fallback">Logo</span>
+                <?php else: ?>
+                  <span class="clinical-doc-logo-fallback">Logo</span>
+                <?php endif; ?>
+              </div>
+              <div class="clinical-doc-head-main">
+                <div class="clinical-doc-doctor-name"><?php echo h($certDoctorName); ?></div>
+                <?php if ($certDoctorSpecialty !== ''): ?><div class="clinical-doc-doctor-specialty"><?php echo h($certDoctorSpecialty); ?></div><?php endif; ?>
+                <?php if ($certDoctorCedulas !== ''): ?><div class="clinical-doc-doctor-license"><?php echo h($certDoctorCedulas); ?></div><?php endif; ?>
+                <?php if ($certDoctorSite !== ''): ?><div class="clinical-doc-doctor-site"><?php echo h($certDoctorSite); ?></div><?php endif; ?>
+              </div>
+            </div>
+          </div>
+        </header>
+        <section class="informe-doc-title-block doc-base-title-block">
+          <div class="informe-doc-title doc-base-title"><?php echo h($certTypeLabel !== '' ? $certTypeLabel : 'Certificado médico'); ?></div>
+        </section>
+        <section class="informe-doc-patient-block doc-base-patient-meta">
+          <div class="informe-doc-patient-head">
+            <div class="informe-doc-patient-line"><strong>Paciente:</strong> <?php echo h($certPatientName); ?></div>
+            <div class="informe-doc-date"><strong>Fecha:</strong> <?php echo h($certDateOut !== '' ? $certDateOut : $date); ?></div>
+          </div>
+          <div class="informe-doc-patient-line"><strong>Edad:</strong> <?php echo h($certAgeOut !== '' ? $certAgeOut : 'No registrada'); ?> · <strong>Sexo:</strong> <?php echo h($certPatientSex !== '' ? $certPatientSex : 'No especificado'); ?></div>
+        </section>
+        <?php if (!empty($certBodyParts)): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <?php foreach ($certBodyParts as $certPart): ?>
+              <div class="informe-doc-text doc-base-text"><?php echo nl2br(h((string)$certPart)); ?></div>
+            <?php endforeach; ?>
+          </section>
+        <?php endif; ?>
+        <section class="informe-doc-sign doc-base-signature doc-base-print-safe">
+          <div class="informe-doc-section-title doc-base-section-title">Firma del médico</div>
+          <?php if ($certDoctorSignatureImage !== ''): ?>
+            <img class="informe-doc-sign-image" src="<?php echo h($certDoctorSignatureImage); ?>" alt="Firma del médico">
+            <div class="informe-doc-sign-meta doc-base-signature-meta"><?php echo h($certDoctorSignatureName !== '' ? $certDoctorSignatureName : $certDoctorName); ?></div>
+          <?php else: ?>
+            <div class="informe-doc-sign-line"></div>
+            <div class="informe-doc-sign-meta doc-base-signature-meta"><?php echo h($certDoctorName); ?></div>
+          <?php endif; ?>
+        </section>
+      </article>
+      </div>
+    <?php endif; ?>
+
     <?php if ($externalBlockedMessage !== ''): ?>
       <div class="alert alert-warning"><?php echo h($externalBlockedMessage); ?></div>
     <?php endif; ?>
@@ -2333,18 +2551,18 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
-    <?php if ($renderedText !== '' && ((!$isInformeDoc && !$isInterconsultaDoc && !$isResponsivaDoc) || $debugView)): ?>
+    <?php if ($renderedText !== '' && ((!$isInformeDoc && !$isInterconsultaDoc && !$isResponsivaDoc && !$isCertificadoDoc) || $debugView)): ?>
       <div class="mm-card mb-3">
-        <div class="head"><h5><?php echo ($isInformeDoc || $isInterconsultaDoc || $isResponsivaDoc) ? 'Texto renderizado (debug)' : 'Texto renderizado'; ?></h5></div>
+        <div class="head"><h5><?php echo ($isInformeDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc) ? 'Texto renderizado (debug)' : 'Texto renderizado'; ?></h5></div>
         <div class="body">
           <pre class="mb-0 small"><?php echo h($renderedText); ?></pre>
         </div>
       </div>
     <?php endif; ?>
 
-    <?php if ($payloadJson !== '' && ((!$isConsentDoc && !$isInformeDoc && !$isInterconsultaDoc && !$isResponsivaDoc) || $debugView)): ?>
+    <?php if ($payloadJson !== '' && ((!$isConsentDoc && !$isInformeDoc && !$isInterconsultaDoc && !$isResponsivaDoc && !$isCertificadoDoc) || $debugView)): ?>
       <div class="mm-card">
-        <div class="head"><h5><?php echo ($isConsentDoc || $isInformeDoc || $isInterconsultaDoc || $isResponsivaDoc) ? 'Datos técnicos (debug)' : 'Payload (JSON)'; ?></h5></div>
+        <div class="head"><h5><?php echo ($isConsentDoc || $isInformeDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc) ? 'Datos técnicos (debug)' : 'Payload (JSON)'; ?></h5></div>
         <div class="body">
           <pre class="mb-0 small"><?php echo h($payloadJson); ?></pre>
         </div>

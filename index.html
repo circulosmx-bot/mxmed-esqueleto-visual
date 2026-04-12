@@ -7485,7 +7485,7 @@
                           </select>
                         </div>
                         <div class="col-md-6">
-                          <label class="form-label">Fecha</label>
+                          <label class="form-label">Fecha de emisión</label>
                           <input class="form-control" id="cm_date" readonly>
                         </div>
                         <div class="col-md-6">
@@ -7511,7 +7511,6 @@
                         <div class="col-12">
                           <label class="form-label" for="cm_purpose_select">Destinatario</label>
                           <select class="form-select" id="cm_purpose_select">
-                            <option value="">Seleccionar (opcional)</option>
                             <option value="A quien corresponda">A quien corresponda</option>
                             <option value="Institución educativa">Institución educativa</option>
                             <option value="Centro de trabajo">Centro de trabajo</option>
@@ -7550,15 +7549,10 @@
                         <div class="col-md-6 d-none" id="cm_wrap_general_condition">
                           <label class="form-label" for="cm_general_condition">Condición general</label>
                           <select class="form-select" id="cm_general_condition">
-                            <option value="">Seleccionar</option>
                             <option value="estable">Estable</option>
                             <option value="en_control">En control médico</option>
                             <option value="apto_general">Apto en evaluación general</option>
                           </select>
-                        </div>
-                        <div class="col-12 d-none" id="cm_wrap_general_note">
-                          <label class="form-label" for="cm_general_note">Complemento breve <span class="text-muted">(opcional)</span></label>
-                          <input class="form-control" id="cm_general_note" placeholder="Aclaración breve para el certificado general.">
                         </div>
                         <div class="col-12 d-none" id="cm_wrap_return_note">
                           <label class="form-label" for="cm_return_note">Nota de reincorporación <span class="text-muted">(opcional)</span></label>
@@ -7574,11 +7568,40 @@
                       <div class="row g-3">
                         <div class="col-12">
                           <label class="form-label" for="cm_observations">Observaciones <span class="text-muted">(opcional)</span></label>
-                          <textarea class="form-control" id="cm_observations" rows="3" placeholder="Observaciones breves adicionales."></textarea>
+                          <textarea class="form-control" id="cm_observations" rows="3" placeholder="Sin datos de alarma al momento de la valoración. Se recomienda seguimiento en caso necesario."></textarea>
                         </div>
                         <div class="col-12" id="cm_wrap_validity_note">
-                          <label class="form-label" for="cm_validity_note">Vigencia / alcance <span class="text-muted">(opcional)</span></label>
-                          <input class="form-control" id="cm_validity_note" placeholder="Ej. Válido para justificar inasistencia por el periodo indicado.">
+                          <label class="form-label d-block">Vigencia <span class="text-muted">(opcional)</span></label>
+                          <div class="d-flex flex-wrap gap-3">
+                            <div class="form-check mb-0">
+                              <input class="form-check-input" type="radio" name="cm_validity_term_option" id="cm_validity_term_3" value="3 días">
+                              <label class="form-check-label" for="cm_validity_term_3">3 días</label>
+                            </div>
+                            <div class="form-check mb-0">
+                              <input class="form-check-input" type="radio" name="cm_validity_term_option" id="cm_validity_term_7" value="7 días">
+                              <label class="form-check-label" for="cm_validity_term_7">7 días</label>
+                            </div>
+                            <div class="form-check mb-0">
+                              <input class="form-check-input" type="radio" name="cm_validity_term_option" id="cm_validity_term_15" value="15 días">
+                              <label class="form-check-label" for="cm_validity_term_15">15 días</label>
+                            </div>
+                            <div class="form-check mb-0">
+                              <input class="form-check-input" type="radio" name="cm_validity_term_option" id="cm_validity_term_30" value="30 días">
+                              <label class="form-check-label" for="cm_validity_term_30">30 días</label>
+                            </div>
+                            <div class="form-check mb-0">
+                              <input class="form-check-input" type="radio" name="cm_validity_term_option" id="cm_validity_term_other_option" value="__other__">
+                              <label class="form-check-label" for="cm_validity_term_other_option">Otra</label>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-12 d-none" id="cm_wrap_validity_term_other">
+                          <label class="form-label" for="cm_validity_term_other">Especificar vigencia</label>
+                          <input class="form-control" id="cm_validity_term_other" placeholder="Ej. 10 días">
+                        </div>
+                        <div class="col-12" id="cm_wrap_usage_note">
+                          <label class="form-label" for="cm_usage_note">Uso del documento <span class="text-muted">(opcional)</span></label>
+                          <textarea class="form-control" id="cm_usage_note" rows="2" placeholder="Ej. Para fines laborales"></textarea>
                         </div>
                       </div>
                     </div>
