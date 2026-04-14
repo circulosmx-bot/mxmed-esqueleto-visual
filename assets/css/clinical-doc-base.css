@@ -17,6 +17,11 @@
   --doc-ink-primary: #0a5168;
   --doc-ink-secondary: #273b47;
   --doc-ink-muted: #3f5564;
+  --doc-header-block-gap: 16px;
+  --doc-title-patient-gap: 2em;
+  --doc-patient-body-gap: 14px;
+  --doc-footer-block-gap: 8px;
+  --doc-footer-offset-lines: 2.6rem;
 }
 
 .doc-base-sheet-frame {
@@ -35,6 +40,8 @@
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
   font-family: var(--doc-font-sans);
   color: var(--doc-ink-secondary);
+  display: flex;
+  flex-direction: column;
 }
 
 .doc-base-sheet--letter {
@@ -47,8 +54,59 @@
 }
 
 .doc-base-body {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  flex: 1 1 auto;
+  gap: 0;
+}
+
+.doc-base-sheet-inner {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+
+.doc-base-header-block {
+  margin-bottom: var(--doc-header-block-gap);
+}
+
+.doc-base-title-block-wrap {
+  margin-bottom: var(--doc-title-patient-gap);
+}
+
+.doc-base-title-block-wrap > .doc-base-title,
+.doc-base-title-block-wrap > .doc-base-title-block,
+.doc-base-title-block-wrap > .informe-doc-title-block {
+  margin-bottom: 0 !important;
+}
+
+.doc-base-patient-block-wrap {
+  margin-bottom: var(--doc-patient-body-gap);
+}
+
+.doc-base-patient-block-wrap > .doc-base-patient-meta,
+.doc-base-patient-block-wrap > .informe-doc-patient-block {
+  margin-bottom: 0 !important;
+}
+
+.doc-base-body-block {
+  display: block;
+}
+
+.doc-base-body-block .doc-base-section:last-of-type {
+  margin-bottom: 0;
+}
+
+.doc-base-flex-spacer {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.doc-base-footer-block {
+  margin-top: var(--doc-footer-block-gap);
+  transform: translateY(var(--doc-footer-offset-lines));
 }
 
 .doc-base-medical-header {
@@ -60,28 +118,29 @@
 }
 
 .doc-base-title {
-  font-size: 1.35rem;
-  font-weight: 900;
+  font-size: 1.04rem;
+  font-weight: 800;
   color: var(--doc-ink-primary);
-  line-height: 1.06;
-  letter-spacing: 0.012em;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
   text-align: center;
+  text-transform: uppercase;
 }
 
 .doc-base-title-block {
-  display: grid;
-  gap: 2px;
-  padding-top: 2px;
-  padding-bottom: 2px;
-  margin-bottom: 20px;
+  display: block;
+  gap: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
 }
 
 .doc-base-patient-meta {
-  display: grid;
-  gap: 1px;
-  padding-top: 1px;
-  padding-bottom: 1px;
-  margin-bottom: 10px;
+  display: block;
+  gap: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
 }
 
 .doc-base-section {
@@ -129,6 +188,33 @@
   font-size: 0.84rem;
   color: #243746;
   text-align: center;
+}
+
+.doc-base-footer {
+  margin-top: 0;
+  padding-top: 6px;
+  border-top: 1px solid rgba(10, 81, 104, 0.16);
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  text-align: left;
+  color: var(--doc-ink-muted);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.doc-base-footer-logo img {
+  max-height: 47px;
+  max-width: 216px;
+  width: auto;
+  object-fit: contain;
+}
+
+.doc-base-footer-group {
+  font-weight: 600;
+  color: var(--doc-ink-secondary);
 }
 
 /* Print-safe utilities for upcoming documents (Interconsulta/Certificados/Responsiva). */
@@ -184,5 +270,11 @@
     border: none !important;
     border-radius: 0 !important;
     background: #fff !important;
+  }
+
+  /* Keep visual footer offset only on screen; in print it can overflow to a blank 2nd page. */
+  .doc-base-footer-block {
+    transform: none !important;
+    margin-top: 0 !important;
   }
 }

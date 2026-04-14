@@ -43,6 +43,110 @@ function mxClearHorarioInputs(inputs){
 }
 
 (function(){
+  const resolveActiveDoctorId = ()=>{
+    const candidates = [
+      (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : ''),
+      window.mxmedStore?.doctorId,
+      window.mxmedStore?.doctor_id,
+      window.mxmedStore?.doctorProfile?.doctor_id,
+      window.mxmedDoctor?.doctor_id,
+      window.mxmedDoctor?.id,
+      document.body?.dataset?.doctorId
+    ];
+    for(const candidate of candidates){
+      const doctorId = String(candidate || '').trim();
+      if(doctorId) return doctorId;
+    }
+    return '';
+  };
+  const resolveGroupLogoStorageKey = ()=>{
+    const doctorId = resolveActiveDoctorId();
+    if(!doctorId) return '';
+    return `mxmed.group.logo_url:${doctorId}`;
+  };
+  const normalizeGroupLogoUrl = (raw)=>{
+    const text = String(raw || '').trim();
+    if(!text) return '';
+    if(/^https?:\/\//i.test(text) || /^data:image\//i.test(text) || /^blob:/i.test(text)) return text;
+    return text.startsWith('/') ? text : `/${text.replace(/^\/+/, '')}`;
+  };
+  const persistGroupLogoUrl = (raw)=>{
+    if(typeof window.mxPersistGroupLogoUrl === 'function'){
+      return window.mxPersistGroupLogoUrl(raw, { clear: !normalizeGroupLogoUrl(raw) });
+    }
+    const value = normalizeGroupLogoUrl(raw);
+    const scopedKey = resolveGroupLogoStorageKey();
+    try{
+      window.localStorage?.removeItem('mxmed.group.logo_url');
+      if(scopedKey){
+        if(value) window.localStorage?.setItem(scopedKey, value);
+        else window.localStorage?.removeItem(scopedKey);
+      }
+    }catch(_){ }
+    try{
+      if(!window.mxmedStore || typeof window.mxmedStore !== 'object'){
+        window.mxmedStore = {};
+      }
+      window.mxmedStore.group_logo_url = value;
+      window.mxmedStore.groupLogoUrl = value;
+      window.mxmedStore.group_logo_doctor_id = resolveActiveDoctorId();
+      window.mxmedStore.group_logo_storage_key = scopedKey || '';
+      if(window.mxmedStore.doctorProfile && typeof window.mxmedStore.doctorProfile === 'object'){
+        window.mxmedStore.doctorProfile.group_logo_url = value;
+      }
+    }catch(_){ }
+    return value;
+  };
+  const readPersistedGroupLogoUrl = ()=>{
+    if(typeof window.mxReadPersistedGroupLogoUrl === 'function'){
+      return normalizeGroupLogoUrl(window.mxReadPersistedGroupLogoUrl() || '');
+    }
+    try{
+      const activeDoctorId = resolveActiveDoctorId();
+      const storeDoctorId = String(window.mxmedStore?.group_logo_doctor_id || '').trim();
+      const fromStore = normalizeGroupLogoUrl(window.mxmedStore?.group_logo_url || window.mxmedStore?.groupLogoUrl || '');
+      if(fromStore && activeDoctorId && storeDoctorId && activeDoctorId === storeDoctorId){
+        return fromStore;
+      }
+      const scopedKey = resolveGroupLogoStorageKey();
+      if(!scopedKey) return '';
+      return normalizeGroupLogoUrl(window.localStorage?.getItem(scopedKey) || '');
+    }catch(_){
+      return '';
+    }
+  };
+  const hydrateGroupLogoPreview = ()=>{
+    const saved = readPersistedGroupLogoUrl();
+    if(!saved){
+      const activeSource = typeof window.mxGetLogoSource === 'function'
+        ? String(window.mxGetLogoSource() || '')
+        : '';
+      if(activeSource === 'manual' && typeof window.mxResetLogoPreview === 'function'){
+        window.mxResetLogoPreview();
+      }
+      return;
+    }
+    const img = document.getElementById('cons-logo-img');
+    const prev = document.getElementById('cons-logo-prev');
+    const slot = document.getElementById('cons-logo-slot');
+    if(!img) return;
+    if(!(img.getAttribute('src') || '').trim()){
+      img.src = saved;
+    }
+    if(prev){
+      prev.removeAttribute('hidden');
+      prev.style.display = 'flex';
+    }
+    if(slot){
+      slot.classList.add('show-preview', 'has-logo');
+      const drop = slot.querySelector('.logo-slot-drop');
+      if(drop){ drop.setAttribute('hidden','hidden'); }
+    }
+    try{ window.mxSetLogoSource?.('manual'); }catch(_){ }
+    try{ window.mxToggleLogoManualMsg?.(true); }catch(_){ }
+    try{ window.mxToggleLogoSyncMsg?.(false); }catch(_){ }
+    persistGroupLogoUrl(saved);
+  };
 
   // Consultorio: modal para confirmar agregar otro consultorio
   document.getElementById('btn-consul-add')?.addEventListener('click', function(e){
@@ -494,6 +598,13 @@ function mxClearHorarioInputs(inputs){
           mxSetLogoSource('manual');
           mxToggleLogoManualMsg(true);
           mxToggleLogoSyncMsg(false);
+          try{
+            if(typeof window.mxPersistGroupLogoUrl === 'function'){
+              window.mxPersistGroupLogoUrl(img.src);
+            }else{
+              persistGroupLogoUrl(img.src);
+            }
+          }catch(_){ }
         }
         if(inputId === 'cons-foto'){ toggleFotoPrincipalMsg(true); }
       };
@@ -524,6 +635,13 @@ function mxClearHorarioInputs(inputs){
           mxResetLogoPreview();
           mxToggleLogoManualMsg(false);
           mxToggleLogoSyncMsg(false);
+          try{
+            if(typeof window.mxPersistGroupLogoUrl === 'function'){
+              window.mxPersistGroupLogoUrl('', { clear: true });
+            }else{
+              persistGroupLogoUrl('');
+            }
+          }catch(_){ }
         };
         confirmLogoManualRemoval(clearLogo);
       });
@@ -535,6 +653,19 @@ function mxClearHorarioInputs(inputs){
       const el = document.getElementById('modalQR');
       if(window.bootstrap && el){ new bootstrap.Modal(el).show(); }
     }); }
+
+    if(inputId === 'cons-logo'){
+      try{
+        const current = (img.getAttribute('src') || '').trim();
+        if(current){
+          if(typeof window.mxPersistGroupLogoUrl === 'function'){
+            window.mxPersistGroupLogoUrl(current);
+          }else{
+            persistGroupLogoUrl(current);
+          }
+        }
+      }catch(_){ }
+    }
   }
 
   window.mxSetupUploadBox = setupUploadBox;
@@ -543,7 +674,5 @@ function mxClearHorarioInputs(inputs){
   if(logoDrop){
     window._mx_logoDropTemplate = logoDrop.outerHTML;
   }
+  hydrateGroupLogoPreview();
 })();
-
-
-

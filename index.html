@@ -7680,15 +7680,17 @@
                         <div class="border rounded overflow-hidden bg-white mb-3 d-none" id="cm_final_preview_viewer_wrap">
                           <iframe id="cm_final_preview_iframe" title="Vista final del certificado" style="width:100%;height:68vh;border:0;"></iframe>
                         </div>
-                        <div class="border rounded bg-white p-3 p-md-4 d-none" id="cm_final_preview_doc">
-                          <div class="small text-uppercase text-muted fw-semibold mb-2" id="cm_final_doc_title">Certificado médico</div>
-                          <div class="small mb-1"><strong>Paciente:</strong> <span id="cm_final_patient_name">-</span></div>
-                          <div class="small mb-3"><strong>Edad:</strong> <span id="cm_final_patient_age">-</span> · <strong>Sexo:</strong> <span id="cm_final_patient_sex">-</span> · <strong>Fecha:</strong> <span id="cm_final_emission_date">-</span></div>
-                          <div class="small mb-2 d-none" id="cm_final_recipient_wrap">
-                            <strong>Destinatario:</strong> <span id="cm_final_recipient">-</span>
-                          </div>
-                          <div class="small lh-base" id="cm_final_editable_body" contenteditable="false"></div>
-                          <div class="small text-muted mt-3"><strong>Firma del médico:</strong> <span id="cm_final_signature_state">Sin firma</span></div>
+                        <div class="cm-final-sheet-frame d-none" id="cm_final_preview_doc">
+                          <article class="cm-final-sheet">
+                            <div class="small text-uppercase text-muted fw-semibold mb-2" id="cm_final_doc_title">Certificado médico</div>
+                            <div class="small mb-1"><strong>Paciente:</strong> <span id="cm_final_patient_name">-</span></div>
+                            <div class="small mb-3"><strong>Edad:</strong> <span id="cm_final_patient_age">-</span> · <strong>Sexo:</strong> <span id="cm_final_patient_sex">-</span> · <strong>Fecha:</strong> <span id="cm_final_emission_date">-</span></div>
+                            <div class="small mb-2 d-none" id="cm_final_recipient_wrap">
+                              <strong>Destinatario:</strong> <span id="cm_final_recipient">-</span>
+                            </div>
+                            <div class="small lh-base" id="cm_final_editable_body" contenteditable="false"></div>
+                            <div class="small text-muted mt-3"><strong>Firma del médico:</strong> <span id="cm_final_signature_state">Sin firma</span></div>
+                          </article>
                         </div>
                         <div class="d-flex flex-wrap justify-content-end gap-2 mt-3">
                           <button type="button" class="btn btn-outline-primary btn-sm" id="cm_final_edit">Editar texto</button>

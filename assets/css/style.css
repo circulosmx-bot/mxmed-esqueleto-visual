@@ -6864,8 +6864,29 @@ body{margin:0;background:var(--mm-fondo-base);}
     max-width:100%;
     padding:.45rem;
   }
-  .mx-signature-pad__canvas{height:174px;}
+.mx-signature-pad__canvas{height:174px;}
 }
+
+.cm-final-sheet-frame{
+  background:#eef2f5;
+  border:1px solid #d7eaf2;
+  border-radius:14px;
+  padding:12px;
+  overflow:auto;
+  max-height:70vh;
+  margin-bottom:1rem;
+}
+
+.cm-final-sheet{
+  box-sizing:border-box;
+  width:8.5in;
+  min-height:11in;
+  margin:0 auto;
+  background:#fff;
+  padding:2.2cm 2cm;
+  box-shadow:0 10px 24px rgba(15,23,42,.08);
+}
+
 .clinical-card-actions {
   line-height: 1.08;
   display: inline-flex;

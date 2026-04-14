@@ -12138,10 +12138,22 @@ console.info('app.js loaded :: 20251123a');
         doctorProfile.group_logo_url
         || window.mxmedStore?.groupLogoUrl
         || window.mxmedStore?.group_logo_url
-        || window.localStorage?.getItem('mxmed.group.logo_url')
+        || window.mxReadPersistedGroupLogoUrl?.()
         || ''
       );
-      const logoUrl = explicitLogo || localLogoPath || '';
+      const normalizeDocAssetUrl = (raw)=>{
+        const value = sanitizeText(raw || '');
+        if(!value) return '';
+        if (/^(https?:\/\/|data:image\/|blob:)/i.test(value)) return value;
+        return value.startsWith('/') ? value : `/${value.replace(/^\/+/, '')}`;
+      };
+      const consultorioGroupLogo = normalizeDocAssetUrl(
+        document.getElementById('cons-logo-img')?.getAttribute('src')
+        || document.getElementById('cons-logo-img')?.src
+        || ''
+      );
+      const logoUrl = normalizeDocAssetUrl(explicitLogo || localLogoPath || '');
+      const groupLogoUrl = normalizeDocAssetUrl(explicitGroupLogo || consultorioGroupLogo || '');
       const facilityVisible = sanitizeText(
         doctorProfile.facility_name
         || window.mxmedStore?.facilityName
@@ -12159,10 +12171,71 @@ console.info('app.js loaded :: 20251123a');
         window.mxmedStore?.locationLine
         || ((facilityVisible && locationShort) ? `${facilityVisible} · ${locationShort}` : (locationShort || facilityVisible))
       );
+      const groupName = sanitizeText(
+        doctorProfile.medical_group_internal
+        || doctorProfile.group_name
+        || doctorProfile.institution_name
+        || window.mxmedStore?.institutionName
+        || pane?.querySelector('#cons-grupo-nombre')?.value
+        || ''
+      );
+      const consultorioPhone = sanitizeText(
+        doctorProfile.contact?.phone_main
+        || window.mxmedStore?.consultorioPhone
+        || window.mxmedStore?.clinicPhone
+        || pane?.querySelector('#cons-tel1')?.value
+        || ''
+      );
+      const addressStreet = sanitizeText(
+        doctorProfile.address?.street
+        || pane?.querySelector('#cons-calle')?.value
+        || ''
+      );
+      const addressExterior = sanitizeText(
+        doctorProfile.address?.ext_number
+        || pane?.querySelector('#cons-numext')?.value
+        || ''
+      );
+      const addressInterior = sanitizeText(
+        doctorProfile.address?.int_number
+        || pane?.querySelector('#cons-numint')?.value
+        || ''
+      );
+      const addressNeighborhood = sanitizeText(
+        doctorProfile.address?.district
+        || pane?.querySelector('#colonia')?.value
+        || ''
+      );
+      const addressCity = sanitizeText(
+        doctorProfile.address?.city
+        || pane?.querySelector('#municipio')?.value
+        || ''
+      );
+      const addressState = sanitizeText(
+        doctorProfile.address?.state
+        || pane?.querySelector('#estado')?.value
+        || ''
+      );
+      const addressLine = [
+        sanitizeText([addressStreet, addressExterior && `No. ${addressExterior}`].filter(Boolean).join(' ')),
+        addressInterior ? `Int. ${addressInterior}` : '',
+        addressNeighborhood,
+        addressCity,
+        addressState
+      ].filter(Boolean).join(', ');
       return {
         mode: logoUrl ? 'branded' : 'standard',
         logo_url: logoUrl || null,
-        group_logo_url: explicitGroupLogo || null,
+        group_logo_url: groupLogoUrl || null,
+        group_name: groupName || null,
+        consultorio_phone: consultorioPhone || null,
+        street: addressStreet || null,
+        exterior_number: addressExterior || null,
+        interior_number: addressInterior || null,
+        neighborhood: addressNeighborhood || null,
+        city: addressCity || null,
+        state: addressState || null,
+        address_line: addressLine || null,
         facility_visible: facilityVisible || null,
         location_line_visible: locationLineVisible || null,
         logo_local_path: localLogoPath || null
@@ -16209,6 +16282,39 @@ console.info('app.js loaded :: 20251123a');
       const doctorBranding = resolveDoctorBranding(actorUserId);
       const patientSnapshot = readPatientSnapshot();
       const nowSql = formatNowSql();
+      const readConsultorioField = (name, id)=>{
+        const fromName = document.querySelector(`[name="${name}"]`)?.value;
+        const fromId = document.getElementById(id)?.value;
+        return sanitizeText(fromName || fromId || '');
+      };
+      const consultorioPhone = readConsultorioField('cons-tel1', 'cons-tel1');
+      const consultorioStreet = readConsultorioField('cons-calle', 'cons-calle');
+      const consultorioExt = readConsultorioField('cons-numext', 'cons-numext');
+      const consultorioInt = readConsultorioField('cons-numint', 'cons-numint');
+      const consultorioNeighborhood = readConsultorioField('colonia', 'colonia');
+      const consultorioCity = readConsultorioField('municipio', 'municipio');
+      const consultorioState = readConsultorioField('estado', 'estado');
+      const consultorioGroupName = readConsultorioField('cons-grupo-nombre', 'cons-grupo-nombre');
+      const normalizeDocAssetUrl = (raw)=>{
+        const value = sanitizeText(raw || '');
+        if(!value) return '';
+        if (/^(https?:\/\/|data:image\/|blob:)/i.test(value)) return value;
+        return value.startsWith('/') ? value : `/${value.replace(/^\/+/, '')}`;
+      };
+      const groupLogo = normalizeDocAssetUrl(
+        window.mxmedStore?.group_logo_url
+        || window.mxmedStore?.groupLogoUrl
+        || window.mxReadPersistedGroupLogoUrl?.()
+        || ''
+      );
+      console.log('GROUP LOGO URL', groupLogo);
+      const consultorioAddressLine = [
+        sanitizeText([consultorioStreet, consultorioExt ? `No. ${consultorioExt}` : ''].filter(Boolean).join(' ')),
+        consultorioInt ? `Int. ${consultorioInt}` : '',
+        consultorioNeighborhood,
+        consultorioCity,
+        consultorioState
+      ].filter(Boolean).join(', ');
       const payload = {
         contract_version: 1,
         status: normalizedStatus,
@@ -16244,7 +16350,16 @@ console.info('app.js loaded :: 20251123a');
         branding: {
           mode: sanitizeText(doctorBranding.mode || 'standard') || 'standard',
           logo_url_resolved: sanitizeText(doctorBranding.logo_url || ''),
-          group_logo_url_resolved: sanitizeText(doctorBranding.group_logo_url || ''),
+          group_logo_url_resolved: groupLogo,
+          group_name: consultorioGroupName,
+          consultorio_phone: consultorioPhone,
+          street: consultorioStreet,
+          exterior_number: consultorioExt,
+          interior_number: consultorioInt,
+          neighborhood: consultorioNeighborhood,
+          city: consultorioCity,
+          state: consultorioState,
+          address_line: consultorioAddressLine,
           facility_visible: sanitizeText(doctorBranding.facility_visible || ''),
           location_line_visible: sanitizeText(doctorBranding.location_line_visible || ''),
           logo_local_path: sanitizeText(doctorBranding.logo_local_path || '')
@@ -21082,10 +21197,13 @@ console.info('app.js loaded :: 20251123a');
 
     const uploadLogo = document.querySelector('.mf-upload[data-type="logo"]');
 
-    if(img && s.logo_url){
-
-      img.src = s.logo_url;
-
+    if(img){
+      if(s.logo_url){
+        img.src = s.logo_url;
+        try{ window.mxPersistGroupLogoUrl?.(s.logo_url); }catch(_){ }
+      }else{
+        try{ window.mxPersistGroupLogoUrl?.('', { clear: true }); }catch(_){ }
+      }
     }
 
     if(prev){
@@ -21201,6 +21319,7 @@ console.info('app.js loaded :: 20251123a');
   function removeAssocUI(){
 
     mxResetLogoPreview();
+    try{ window.mxPersistGroupLogoUrl?.('', { clear: true }); }catch(_){ }
 
     mxToggleLogoSyncMsg(false);
 
@@ -22079,6 +22198,123 @@ function mxGetLogoSlot(){
 
 }
 
+function mxNormalizeGroupLogoUrl(raw){
+  const text = String(raw || '').trim();
+  if(!text) return '';
+  if(/^https?:\/\//i.test(text) || /^data:image\//i.test(text) || /^blob:/i.test(text)) return text;
+  return text.startsWith('/') ? text : `/${text.replace(/^\/+/, '')}`;
+}
+
+function mxResolveActiveDoctorId(){
+  const candidates = [
+    (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : ''),
+    window.mxmedStore?.doctorId,
+    window.mxmedStore?.doctor_id,
+    window.mxmedStore?.doctorProfile?.doctor_id,
+    window.mxmedDoctor?.doctor_id,
+    window.mxmedDoctor?.id,
+    document.body?.dataset?.doctorId
+  ];
+  for(const candidate of candidates){
+    const doctorId = String(candidate || '').trim();
+    if(doctorId) return doctorId;
+  }
+  return '';
+}
+
+function mxGroupLogoStorageKey(doctorIdInput = ''){
+  const doctorId = String(doctorIdInput || mxResolveActiveDoctorId() || '').trim();
+  if(!doctorId) return '';
+  return `mxmed.group.logo_url:${doctorId}`;
+}
+
+function mxPersistGroupLogoUrl(raw, options = {}){
+  const clear = options && options.clear === true;
+  const value = clear ? '' : mxNormalizeGroupLogoUrl(raw);
+  const doctorId = mxResolveActiveDoctorId();
+  const scopedKey = mxGroupLogoStorageKey(doctorId);
+  try{
+    // Legacy global key cleanup to prevent cross-user contamination.
+    window.localStorage?.removeItem('mxmed.group.logo_url');
+    if(scopedKey){
+      if(clear || !value){
+        window.localStorage?.removeItem(scopedKey);
+      }else{
+        window.localStorage?.setItem(scopedKey, value);
+      }
+    }
+  }catch(_){ }
+  try{
+    if(!window.mxmedStore || typeof window.mxmedStore !== 'object'){
+      window.mxmedStore = {};
+    }
+    window.mxmedStore.group_logo_url = value;
+    window.mxmedStore.groupLogoUrl = value;
+    window.mxmedStore.group_logo_doctor_id = doctorId || '';
+    window.mxmedStore.group_logo_storage_key = scopedKey || '';
+    if(window.mxmedStore.doctorProfile && typeof window.mxmedStore.doctorProfile === 'object'){
+      window.mxmedStore.doctorProfile.group_logo_url = value;
+    }
+  }catch(_){ }
+  return value;
+}
+
+function mxReadPersistedGroupLogoUrl(){
+  const activeDoctorId = mxResolveActiveDoctorId();
+  const storeDoctorId = String(window.mxmedStore?.group_logo_doctor_id || '').trim();
+  const fromStore = mxNormalizeGroupLogoUrl(window.mxmedStore?.group_logo_url || window.mxmedStore?.groupLogoUrl || '');
+  if(fromStore && activeDoctorId && storeDoctorId && activeDoctorId === storeDoctorId){
+    return fromStore;
+  }
+  try{
+    const scopedKey = mxGroupLogoStorageKey(activeDoctorId);
+    if(!scopedKey) return '';
+    return mxNormalizeGroupLogoUrl(window.localStorage?.getItem(scopedKey) || '');
+  }catch(_){
+    return '';
+  }
+}
+
+window.mxPersistGroupLogoUrl = mxPersistGroupLogoUrl;
+window.mxReadPersistedGroupLogoUrl = mxReadPersistedGroupLogoUrl;
+
+function mxHydrateGroupLogoPreviewFromStorage(){
+  const persisted = mxReadPersistedGroupLogoUrl();
+  if(!persisted){
+    const activeSource = typeof window.mxGetLogoSource === 'function'
+      ? String(window.mxGetLogoSource() || '')
+      : '';
+    if(activeSource === 'manual' && typeof window.mxResetLogoPreview === 'function'){
+      window.mxResetLogoPreview();
+    }
+    return;
+  }
+  const img = document.getElementById('cons-logo-img');
+  const prev = document.getElementById('cons-logo-prev');
+  const slot = document.getElementById('cons-logo-slot');
+  if(!img || (img.getAttribute('src') || '').trim()) return;
+  img.src = persisted;
+  if(prev){
+    prev.removeAttribute('hidden');
+    prev.style.display = 'flex';
+  }
+  if(slot){
+    slot.classList.add('show-preview', 'has-logo');
+    const drop = slot.querySelector('.logo-slot-drop');
+    if(drop){ drop.setAttribute('hidden', 'hidden'); }
+  }
+  try{ mxPersistGroupLogoUrl(persisted); }catch(_){ }
+  mxSetLogoSource('manual');
+  mxToggleLogoManualMsg(true);
+  mxToggleLogoSyncMsg(false);
+}
+
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', mxHydrateGroupLogoPreviewFromStorage, { once:true });
+}else{
+  mxHydrateGroupLogoPreviewFromStorage();
+}
+
 window._mx_logoDropTemplate = window._mx_logoDropTemplate || '';
 
 function mxSetLogoSource(mode){
@@ -22254,6 +22490,7 @@ function mxResetLogoPreview(){
   }
 
   mxSetLogoSource('');
+  try{ mxPersistGroupLogoUrl('', { clear: true }); }catch(_){ }
 
 }
 

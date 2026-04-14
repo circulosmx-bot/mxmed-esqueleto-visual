@@ -345,6 +345,123 @@ function clinical_doc_uppercase_subject(string $value): string
     return strtoupper($value);
 }
 
+function clinical_doc_compact_address(array $sources): string
+{
+    $street = first_non_empty_string($sources, ['street', 'address_street', 'calle']);
+    $ext = first_non_empty_string($sources, ['exterior_number', 'exterior', 'numero_exterior', 'num_ext']);
+    $int = first_non_empty_string($sources, ['interior_number', 'interior', 'numero_interior', 'num_int']);
+    $neighborhood = first_non_empty_string($sources, ['neighborhood', 'colony', 'colonia']);
+    $city = first_non_empty_string($sources, ['city', 'municipality', 'ciudad']);
+    $state = first_non_empty_string($sources, ['state', 'estado']);
+
+    $streetBlock = trim(implode(' ', array_values(array_filter([
+        $street,
+        $ext !== '' ? ('#' . $ext) : '',
+        $int !== '' ? ('Int. ' . $int) : '',
+    ], static fn($v) => trim((string)$v) !== ''))));
+
+    if ($streetBlock !== '' || $neighborhood !== '' || $city !== '' || $state !== '') {
+        return implode(', ', array_values(array_filter([
+            $streetBlock,
+            $neighborhood,
+            $city,
+            $state,
+        ], static fn($v) => trim((string)$v) !== '')));
+    }
+
+    return first_non_empty_string($sources, [
+        'address_line_visible',
+        'address_line',
+        'full_address',
+        'address',
+        'domicilio',
+        'clinic_address',
+        'consultorio_address',
+    ]);
+}
+
+function clinical_doc_build_footer_data(array $payload, array $context = []): array
+{
+    $branding = is_array($payload['branding'] ?? null) ? (array)$payload['branding'] : [];
+    $actor = is_array($payload['actor_snapshot'] ?? null) ? (array)$payload['actor_snapshot'] : [];
+    $form = is_array($payload['form_snapshot'] ?? null) ? (array)$payload['form_snapshot'] : [];
+    $sources = [$branding, $actor, $form, $context];
+
+    $groupLogo = first_non_empty_string($sources, [
+        'group_logo_url_resolved',
+        'group_logo_url',
+        'group_logo',
+        'logo_group_url',
+        'group_logo_local_path',
+    ]);
+
+    $groupName = first_non_empty_string($sources, [
+        'group_name',
+        'medical_group_name',
+        'group_label',
+        'organization_name',
+        'institution_name',
+        'doctor_institution',
+        'institution',
+    ]);
+
+    $phone = first_non_empty_string($sources, [
+        'consultorio_phone',
+        'consulting_room_phone',
+        'clinic_contact_phone',
+        'clinic_phone',
+        'phone_visible',
+        'contact_phone',
+        'contact_number',
+        'phone',
+        'telefono',
+        'telephone',
+    ]);
+
+    $address = clinical_doc_compact_address($sources);
+
+    return [
+        'logo' => $groupLogo,
+        'group_name' => $groupName,
+        'phone' => $phone,
+        'address' => $address,
+        'has_content' => ($groupLogo !== '' || $groupName !== '' || $phone !== '' || $address !== ''),
+    ];
+}
+
+function clinical_doc_render_footer(array $data): string
+{
+    $logo = trim((string)($data['logo'] ?? ''));
+    $groupName = trim((string)($data['group_name'] ?? ''));
+    $phone = trim((string)($data['phone'] ?? ''));
+    $address = trim((string)($data['address'] ?? ''));
+    $hasContent = ($logo !== '' || $groupName !== '' || $phone !== '' || $address !== '');
+    if (!$hasContent) {
+        return '';
+    }
+
+    ob_start();
+    ?>
+    <footer class="doc-base-footer doc-base-print-safe">
+      <?php if ($logo !== ''): ?>
+        <div class="doc-base-footer-logo">
+          <img src="<?php echo h($logo); ?>" alt="Logo del grupo médico" onerror="var wrap=this.closest('.doc-base-footer-logo'); if(wrap){wrap.remove();}">
+        </div>
+      <?php endif; ?>
+      <?php if ($groupName !== ''): ?>
+        <div class="doc-base-footer-line doc-base-footer-group"><?php echo h($groupName); ?></div>
+      <?php endif; ?>
+      <?php if ($phone !== ''): ?>
+        <div class="doc-base-footer-line">Tel. consultorio: <?php echo h($phone); ?></div>
+      <?php endif; ?>
+      <?php if ($address !== ''): ?>
+        <div class="doc-base-footer-line"><?php echo h($address); ?></div>
+      <?php endif; ?>
+    </footer>
+    <?php
+    return (string)ob_get_clean();
+}
+
 function is_allowed_external_url(string $url, array $allowedHosts, string $currentHost): bool
 {
     $url = trim($url);
@@ -680,6 +797,34 @@ $informeDoctorFacilityContext = first_non_empty_string(
     [$informeActorSnapshot, $payloadContext, $docContext, $documentUi, $payloadMeta],
     ['facility', 'facility_name', 'clinic', 'clinic_name', 'consultorio', 'doctor_facility']
 );
+$informeDoctorPhoneContext = first_non_empty_string(
+    [$informeActorSnapshot, $informeBranding, $payloadContext, $docContext, $documentUi, $payloadMeta],
+    ['consultorio_phone', 'clinic_phone', 'contact_phone', 'phone', 'telefono']
+);
+$informeAddressStreetContext = first_non_empty_string(
+    [$informeActorSnapshot, $informeBranding, $payloadContext, $docContext, $documentUi, $payloadMeta],
+    ['street', 'address_street', 'calle']
+);
+$informeAddressExteriorContext = first_non_empty_string(
+    [$informeActorSnapshot, $informeBranding, $payloadContext, $docContext, $documentUi, $payloadMeta],
+    ['exterior_number', 'exterior', 'numero_exterior', 'num_ext']
+);
+$informeAddressInteriorContext = first_non_empty_string(
+    [$informeActorSnapshot, $informeBranding, $payloadContext, $docContext, $documentUi, $payloadMeta],
+    ['interior_number', 'interior', 'numero_interior', 'num_int']
+);
+$informeAddressNeighborhoodContext = first_non_empty_string(
+    [$informeActorSnapshot, $informeBranding, $payloadContext, $docContext, $documentUi, $payloadMeta],
+    ['neighborhood', 'colony', 'colonia']
+);
+$informeAddressCityContext = first_non_empty_string(
+    [$informeActorSnapshot, $informeBranding, $payloadContext, $docContext, $documentUi, $payloadMeta],
+    ['city', 'ciudad', 'municipality']
+);
+$informeAddressStateContext = first_non_empty_string(
+    [$informeActorSnapshot, $informeBranding, $payloadContext, $docContext, $documentUi, $payloadMeta],
+    ['state', 'estado']
+);
 $informePrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
 $interconsultaPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
 $responsivaPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
@@ -865,15 +1010,18 @@ if (!$embed) {
     box-shadow:0 10px 24px rgba(15, 23, 42, 0.08);
   }
   .informe-doc-sheet{
-    display:grid;
-    gap:8px;
-  }
-  .certificado-doc-sheet.informe-doc-sheet{
-    display:block;
+    display:flex;
+    flex-direction:column;
     gap:0;
-    grid-template-rows:none;
     align-content:start;
-    align-items:start;
+    align-items:stretch;
+    min-height:11in;
+  }
+  .informe-doc-sheet > .doc-base-sheet-inner{
+    display:flex;
+    flex-direction:column;
+    flex:1 1 auto;
+    min-height:100%;
   }
   .clinical-doc-head{
     display:flex;
@@ -1006,103 +1154,39 @@ if (!$embed) {
   .informe-doc-head .clinical-doc-head-logo-slot.is-empty .clinical-doc-logo-fallback{
     display:block;
   }
-  .informe-doc-title{font-size:1.35rem;font-weight:900;color:#0a5168;line-height:1.06;letter-spacing:.012em;text-align:center;}
+  .informe-doc-title{
+    font-size:1.04rem;
+    font-weight:800;
+    color:#0a5168;
+    line-height:1.2;
+    letter-spacing:.02em;
+    text-align:center;
+    text-transform:uppercase;
+  }
   .informe-doc-title-block{
     border-bottom:none;
-    padding-top:2px;
-    padding-bottom:2px;
-    display:grid;
-    gap:2px;
-    margin-bottom:20px;
-  }
-  .certificado-doc-sheet .informe-doc-title-block,
-  .certificado-doc-sheet .doc-base-title-block{
-    margin:0 0 12px 0 !important;
-    padding:0 !important;
-    min-height:0 !important;
-  }
-  .certificado-doc-sheet .informe-doc-title,
-  .certificado-doc-sheet .doc-base-title{
-    margin:0 !important;
-    padding:0 !important;
-    min-height:0 !important;
-    line-height:1.2 !important;
-  }
-  .informe-doc-date{
-    font-size:.9rem;
-    color:#203848;
-    text-align:right;
-    justify-self:end;
-    white-space:nowrap;
-  }
-  .informe-doc-date strong{color:#0a5168;}
-  .informe-doc-patient-head{
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap:12px;
-  }
-  .informe-doc-patient-head .informe-doc-patient-line{
-    flex:1 1 auto;
-    min-width:0;
-  }
-  .informe-doc-patient-head .informe-doc-date{
-    flex:0 0 auto;
-    margin-left:auto;
+    padding-top:0;
+    padding-bottom:0;
+    display:block;
+    gap:0;
+    margin-bottom:0;
   }
   .informe-doc-patient-block{
-    display:grid;
-    gap:1px;
+    display:block;
+    gap:0;
     border-bottom:none;
-    padding-top:1px;
-    padding-bottom:1px;
-    margin-bottom:10px;
+    padding-top:0;
+    padding-bottom:0;
+    margin-bottom:0;
   }
   .informe-doc-patient-line{
-    font-size:.9rem;
+    font-size:.88rem;
     color:#213645;
+    line-height:1.3;
+    margin:0 0 3px 0;
+    text-align:left;
   }
-  .certificado-doc-sheet .informe-doc-patient-block{
-    margin:0 0 12px 0 !important;
-    padding:0 !important;
-    min-height:0 !important;
-    display:flex;
-    flex-direction:column;
-    gap:0 !important;
-    row-gap:0 !important;
-    align-content:start;
-    align-items:start;
-  }
-  .certificado-doc-sheet .informe-doc-patient-head{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    gap:12px;
-    margin:0 !important;
-    padding:0 !important;
-    margin-bottom:0 !important;
-    padding-bottom:0 !important;
-    min-height:0 !important;
-    line-height:1.2 !important;
-  }
-  .certificado-doc-sheet .informe-doc-patient-line,
-  .certificado-doc-sheet .informe-doc-date{
-    margin:0 !important;
-    padding:0 !important;
-    min-height:0 !important;
-    line-height:1.2 !important;
-  }
-  .certificado-doc-sheet .informe-doc-patient-head + .informe-doc-patient-line{
-    margin-top:0 !important;
-    padding-top:0 !important;
-  }
-  .certificado-doc-sheet .informe-doc-patient-head > *,
-  .certificado-doc-sheet .informe-doc-patient-line > *{
-    margin:0 !important;
-    padding:0 !important;
-    min-height:0 !important;
-    line-height:inherit !important;
-  }
+  .informe-doc-patient-line:last-child{margin-bottom:0;}
   .informe-doc-patient-line strong{color:#0a5168;}
   .informe-doc-meta{font-size:.84rem;color:#5d6b74;}
   .informe-doc-section-title{
@@ -1215,15 +1299,6 @@ if (!$embed) {
       height:52px;
       min-height:52px;
     }
-    .informe-doc-patient-head{
-      flex-wrap:wrap;
-      gap:4px;
-    }
-    .informe-doc-patient-head .informe-doc-date{
-      width:100%;
-      text-align:left;
-      margin-left:0;
-    }
     .document-sheet-frame{
       padding:8px;
       border-radius:10px;
@@ -1233,6 +1308,16 @@ if (!$embed) {
       min-height:auto;
       padding:1.1rem 1rem;
       box-shadow:none;
+    }
+    .certificado-doc-sheet.document-sheet{
+      width:8.5in;
+      max-width:8.5in;
+      min-height:11in;
+      padding:var(--doc-page-pad-y, 2.2cm) var(--doc-page-pad-x, 2cm);
+      box-shadow:0 10px 24px rgba(15, 23, 42, 0.08);
+    }
+    .document-sheet-frame{
+      overflow:auto;
     }
     .rx-view-head{flex-direction:column;}
   }
@@ -1320,7 +1405,10 @@ if (!$embed) {
       height:auto !important;
     }
     .informe-doc-sheet{
-      display:block !important;
+      display:flex !important;
+      flex-direction:column !important;
+      align-content:start !important;
+      align-items:stretch !important;
       visibility:visible !important;
       opacity:1 !important;
       position:static !important;
@@ -1330,8 +1418,14 @@ if (!$embed) {
       page-break-after:auto !important;
       break-before:auto !important;
       break-after:auto !important;
-      min-height:auto !important;
+      min-height:0 !important;
       height:auto !important;
+    }
+    .informe-doc-sheet > .doc-base-sheet-inner{
+      display:flex !important;
+      flex-direction:column !important;
+      flex:1 1 auto !important;
+      min-height:0 !important;
     }
     .informe-doc-head,
     .informe-doc-title-block,
@@ -1357,60 +1451,13 @@ if (!$embed) {
       break-inside:avoid;
       page-break-inside:avoid;
     }
-    .informe-doc-title{font-size:15.5pt;}
+    .informe-doc-title{font-size:13.2pt;}
     .informe-doc-title-block{margin-bottom:14px;}
     .informe-doc-patient-block{margin-bottom:8px;}
-    .certificado-doc-sheet.informe-doc-sheet{
-      display:block !important;
-      gap:0 !important;
-      grid-template-rows:none !important;
-      align-content:start !important;
-      align-items:start !important;
-    }
-    .certificado-doc-sheet .informe-doc-title-block,
-    .certificado-doc-sheet .doc-base-title-block{
-      margin:0 0 12px 0 !important;
-      padding:0 !important;
-      min-height:0 !important;
-    }
-    .certificado-doc-sheet .informe-doc-title,
-    .certificado-doc-sheet .doc-base-title{
-      margin:0 !important;
-      padding:0 !important;
-      min-height:0 !important;
-      line-height:1.2 !important;
-    }
-    .certificado-doc-sheet .informe-doc-patient-block{
-      margin:0 0 12px 0 !important;
-      padding:0 !important;
-      gap:0 !important;
-      row-gap:0 !important;
-      min-height:0 !important;
-    }
-    .certificado-doc-sheet .informe-doc-patient-head,
-    .certificado-doc-sheet .informe-doc-patient-line,
-    .certificado-doc-sheet .informe-doc-date{
-      margin:0 !important;
-      padding:0 !important;
-      min-height:0 !important;
-      line-height:1.2 !important;
-    }
-    .certificado-doc-sheet .informe-doc-patient-head + .informe-doc-patient-line{
-      margin-top:0 !important;
-      padding-top:0 !important;
-    }
-    .certificado-doc-sheet .informe-doc-patient-head > *,
-    .certificado-doc-sheet .informe-doc-patient-line > *{
-      margin:0 !important;
-      padding:0 !important;
-      min-height:0 !important;
-      line-height:inherit !important;
-    }
     .clinical-doc-doctor-name{font-size:16pt;}
     .clinical-doc-doctor-specialty{font-size:11pt;}
     .clinical-doc-doctor-license,
     .clinical-doc-doctor-site,
-    .informe-doc-date,
     .informe-doc-patient-line,
     .informe-doc-section-title,
     .informe-doc-text,
@@ -1907,6 +1954,20 @@ if (!$embed) {
         $informeDoctorLicense !== '' ? ('Cédula: ' . $informeDoctorLicense) : '',
         $informeDoctorSpecialtyLicense !== '' ? ('Cédula esp.: ' . $informeDoctorSpecialtyLicense) : '',
       ])));
+      $informeFooterData = clinical_doc_build_footer_data($payload, [
+        'doctor_user_id' => trim((string)($payload['actor_snapshot']['user_id'] ?? '')),
+        'group_name' => $informeDoctorInstitution,
+        'consultorio_phone' => $informeDoctorPhoneContext,
+        'street' => $informeAddressStreetContext,
+        'exterior_number' => $informeAddressExteriorContext,
+        'interior_number' => $informeAddressInteriorContext,
+        'neighborhood' => $informeAddressNeighborhoodContext,
+        'city' => $informeAddressCityContext,
+        'state' => $informeAddressStateContext,
+        'facility_visible' => $informeDoctorFacility,
+        'address_line_visible' => $informeDoctorPlace,
+      ]);
+      $informeFooterHtml = clinical_doc_render_footer($informeFooterData);
       // Base reusable header modes: branded | standard | legal
       $informeHeaderMode = 'standard';
       if (in_array($informeBrandingMode, ['branded', 'standard', 'legal'], true)) {
@@ -1947,8 +2008,9 @@ if (!$embed) {
       $informeClosing = trim((string)($informeContent['closing_statement'] ?? ''));
       ?>
       <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
-      <article class="informe-doc-sheet certificado-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-body doc-base-print-safe">
-        <header class="clinical-doc-head informe-doc-head doc-base-medical-header doc-base-print-safe <?php echo h($informeHeaderCfg['class_name']); ?>">
+      <article class="informe-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-print-safe">
+        <div class="doc-base-sheet-inner doc-base-body">
+        <header class="clinical-doc-head informe-doc-head doc-base-medical-header doc-base-header-block doc-base-print-safe <?php echo h($informeHeaderCfg['class_name']); ?>">
           <div class="clinical-doc-head-main">
             <div class="clinical-doc-head-doctor">
               <div class="clinical-doc-head-logo-slot <?php echo $informeShowLogo ? '' : 'is-empty'; ?>">
@@ -1974,16 +2036,19 @@ if (!$embed) {
             </div>
           </div>
         </header>
-        <section class="informe-doc-title-block doc-base-title-block">
-          <div class="informe-doc-title doc-base-title"><?php echo h(trim((string)($title !== '' ? $title : 'Informe médico'))); ?></div>
-        </section>
-        <section class="informe-doc-patient-block doc-base-patient-meta">
-          <div class="informe-doc-patient-head">
+        <div class="doc-base-title-block-wrap">
+          <section class="informe-doc-title-block doc-base-title-block">
+            <div class="informe-doc-title doc-base-title"><?php echo h(trim((string)($title !== '' ? $title : 'Informe médico'))); ?></div>
+          </section>
+        </div>
+        <div class="doc-base-patient-block-wrap">
+          <section class="informe-doc-patient-block doc-base-patient-meta">
             <div class="informe-doc-patient-line"><strong>Paciente:</strong> <?php echo h($informePatientName); ?></div>
-            <div class="informe-doc-date"><strong>Fecha:</strong> <?php echo h($informeDateOut !== '' ? $informeDateOut : $date); ?></div>
-          </div>
-          <div class="informe-doc-patient-line"><strong>Edad:</strong> <?php echo h($informePatientAge !== '' ? ($informePatientAge . ' años') : 'No registrada'); ?> · <strong>Sexo:</strong> <?php echo h($informePatientSex !== '' ? $informePatientSex : 'No especificado'); ?></div>
-        </section>
+            <div class="informe-doc-patient-line"><strong>Edad:</strong> <?php echo h($informePatientAge !== '' ? ($informePatientAge . ' años') : 'No registrada'); ?> · <strong>Sexo:</strong> <?php echo h($informePatientSex !== '' ? $informePatientSex : 'No especificado'); ?></div>
+            <div class="informe-doc-patient-line"><strong>Fecha:</strong> <?php echo h($informeDateOut !== '' ? $informeDateOut : $date); ?></div>
+          </section>
+        </div>
+        <div class="doc-base-body-block">
         <?php if ($informeReason !== ''): ?>
           <section class="informe-doc-body-section doc-base-section">
             <div class="informe-doc-section-title doc-base-section-title">Motivo del informe</div>
@@ -2052,6 +2117,14 @@ if (!$embed) {
             </div>
           <?php endif; ?>
         </section>
+        </div>
+        <div class="doc-base-flex-spacer" aria-hidden="true"></div>
+        <?php if ($informeFooterHtml !== ''): ?>
+          <div class="doc-base-footer-block">
+            <?php echo $informeFooterHtml; ?>
+          </div>
+        <?php endif; ?>
+        </div>
       </article>
       </div>
     <?php endif; ?>
@@ -2089,6 +2162,20 @@ if (!$embed) {
         $interconsultaDoctorLicense !== '' ? ('Cédula: ' . $interconsultaDoctorLicense) : '',
         $interconsultaDoctorSpecialtyLicense !== '' ? ('Cédula esp.: ' . $interconsultaDoctorSpecialtyLicense) : '',
       ])));
+      $interconsultaFooterData = clinical_doc_build_footer_data($payload, [
+        'doctor_user_id' => trim((string)($payload['actor_snapshot']['user_id'] ?? '')),
+        'group_name' => $informeDoctorInstitutionContext ?? '',
+        'consultorio_phone' => $informeDoctorPhoneContext,
+        'street' => $informeAddressStreetContext,
+        'exterior_number' => $informeAddressExteriorContext,
+        'interior_number' => $informeAddressInteriorContext,
+        'neighborhood' => $informeAddressNeighborhoodContext,
+        'city' => $informeAddressCityContext,
+        'state' => $informeAddressStateContext,
+        'facility_visible' => $interconsultaDoctorFacility,
+        'address_line_visible' => $interconsultaDoctorPlace,
+      ]);
+      $interconsultaFooterHtml = clinical_doc_render_footer($interconsultaFooterData);
       $interconsultaHeaderMode = 'standard';
       if (in_array($interconsultaBrandingMode, ['branded', 'standard', 'legal'], true)) {
         $interconsultaHeaderMode = $interconsultaBrandingMode;
@@ -2138,8 +2225,9 @@ if (!$embed) {
       $interconsultaFinalNote = trim((string)($interconsultaContent['final_note'] ?? ''));
       ?>
       <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
-      <article class="informe-doc-sheet interconsulta-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-body doc-base-print-safe">
-        <header class="clinical-doc-head informe-doc-head doc-base-medical-header doc-base-print-safe <?php echo h($interconsultaHeaderCfg['class_name']); ?>">
+      <article class="informe-doc-sheet interconsulta-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-print-safe">
+        <div class="doc-base-sheet-inner doc-base-body">
+        <header class="clinical-doc-head informe-doc-head doc-base-medical-header doc-base-header-block doc-base-print-safe <?php echo h($interconsultaHeaderCfg['class_name']); ?>">
           <div class="clinical-doc-head-main">
             <div class="clinical-doc-head-doctor">
               <div class="clinical-doc-head-logo-slot <?php echo $interconsultaShowLogo ? '' : 'is-empty'; ?>">
@@ -2159,16 +2247,19 @@ if (!$embed) {
             </div>
           </div>
         </header>
-        <section class="informe-doc-title-block doc-base-title-block">
-          <div class="informe-doc-title doc-base-title">Interconsulta</div>
-        </section>
-        <section class="informe-doc-patient-block doc-base-patient-meta">
-          <div class="informe-doc-patient-head">
+        <div class="doc-base-title-block-wrap">
+          <section class="informe-doc-title-block doc-base-title-block">
+            <div class="informe-doc-title doc-base-title">Interconsulta</div>
+          </section>
+        </div>
+        <div class="doc-base-patient-block-wrap">
+          <section class="informe-doc-patient-block doc-base-patient-meta">
             <div class="informe-doc-patient-line"><strong>Paciente:</strong> <?php echo h($interconsultaPatientName); ?></div>
-            <div class="informe-doc-date"><strong>Fecha:</strong> <?php echo h($interconsultaDateOut !== '' ? $interconsultaDateOut : $date); ?></div>
-          </div>
-          <div class="informe-doc-patient-line"><strong>Edad:</strong> <?php echo h($interconsultaPatientAge !== '' ? ($interconsultaPatientAge . ' años') : 'No registrada'); ?> · <strong>Sexo:</strong> <?php echo h($interconsultaPatientSex !== '' ? $interconsultaPatientSex : 'No especificado'); ?></div>
-        </section>
+            <div class="informe-doc-patient-line"><strong>Edad:</strong> <?php echo h($interconsultaPatientAge !== '' ? ($interconsultaPatientAge . ' años') : 'No registrada'); ?> · <strong>Sexo:</strong> <?php echo h($interconsultaPatientSex !== '' ? $interconsultaPatientSex : 'No especificado'); ?></div>
+            <div class="informe-doc-patient-line"><strong>Fecha:</strong> <?php echo h($interconsultaDateOut !== '' ? $interconsultaDateOut : $date); ?></div>
+          </section>
+        </div>
+        <div class="doc-base-body-block">
         <section class="informe-doc-body-section doc-base-section">
           <div class="informe-doc-section-title doc-base-section-title">Destino de interconsulta</div>
           <div class="informe-doc-text doc-base-text"><?php echo h($interconsultaRecipientPrimary !== '' ? $interconsultaRecipientPrimary : 'Destino clínico no especificado'); ?></div>
@@ -2241,6 +2332,14 @@ if (!$embed) {
             </div>
           <?php endif; ?>
         </section>
+        </div>
+        <div class="doc-base-flex-spacer" aria-hidden="true"></div>
+        <?php if ($interconsultaFooterHtml !== ''): ?>
+          <div class="doc-base-footer-block">
+            <?php echo $interconsultaFooterHtml; ?>
+          </div>
+        <?php endif; ?>
+        </div>
       </article>
       </div>
     <?php endif; ?>
@@ -2282,6 +2381,20 @@ if (!$embed) {
         $responsivaDoctorLicense !== '' ? ('Cédula: ' . $responsivaDoctorLicense) : '',
         $responsivaDoctorSpecialtyLicense !== '' ? ('Cédula esp.: ' . $responsivaDoctorSpecialtyLicense) : '',
       ])));
+      $responsivaFooterData = clinical_doc_build_footer_data($payload, [
+        'doctor_user_id' => trim((string)($payload['actor_snapshot']['user_id'] ?? '')),
+        'group_name' => $informeDoctorInstitutionContext ?? '',
+        'consultorio_phone' => $informeDoctorPhoneContext,
+        'street' => $informeAddressStreetContext,
+        'exterior_number' => $informeAddressExteriorContext,
+        'interior_number' => $informeAddressInteriorContext,
+        'neighborhood' => $informeAddressNeighborhoodContext,
+        'city' => $informeAddressCityContext,
+        'state' => $informeAddressStateContext,
+        'facility_visible' => $responsivaDoctorFacility,
+        'address_line_visible' => $responsivaDoctorPlace,
+      ]);
+      $responsivaFooterHtml = clinical_doc_render_footer($responsivaFooterData);
       $responsivaHeaderMode = 'standard';
       if (in_array($responsivaBrandingMode, ['branded', 'standard', 'legal'], true)) {
         $responsivaHeaderMode = $responsivaBrandingMode;
@@ -2318,8 +2431,9 @@ if (!$embed) {
       ])));
       ?>
       <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
-      <article class="informe-doc-sheet responsiva-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-body doc-base-print-safe">
-        <header class="clinical-doc-head informe-doc-head doc-base-medical-header doc-base-print-safe <?php echo h($responsivaHeaderCfg['class_name']); ?>">
+      <article class="informe-doc-sheet responsiva-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-print-safe">
+        <div class="doc-base-sheet-inner doc-base-body">
+        <header class="clinical-doc-head informe-doc-head doc-base-medical-header doc-base-header-block doc-base-print-safe <?php echo h($responsivaHeaderCfg['class_name']); ?>">
           <div class="clinical-doc-head-main">
             <div class="clinical-doc-head-doctor">
               <div class="clinical-doc-head-logo-slot <?php echo $responsivaShowLogo ? '' : 'is-empty'; ?>">
@@ -2339,16 +2453,19 @@ if (!$embed) {
             </div>
           </div>
         </header>
-        <section class="informe-doc-title-block doc-base-title-block">
-          <div class="informe-doc-title doc-base-title">Responsiva médica</div>
-        </section>
-        <section class="informe-doc-patient-block doc-base-patient-meta">
-          <div class="informe-doc-patient-head">
+        <div class="doc-base-title-block-wrap">
+          <section class="informe-doc-title-block doc-base-title-block">
+            <div class="informe-doc-title doc-base-title">Responsiva médica</div>
+          </section>
+        </div>
+        <div class="doc-base-patient-block-wrap">
+          <section class="informe-doc-patient-block doc-base-patient-meta">
             <div class="informe-doc-patient-line"><strong>Paciente:</strong> <?php echo h($responsivaPatientName); ?></div>
-            <div class="informe-doc-date"><strong>Fecha:</strong> <?php echo h($responsivaDateOut !== '' ? $responsivaDateOut : $date); ?></div>
-          </div>
-          <div class="informe-doc-patient-line"><strong>Edad:</strong> <?php echo h($responsivaPatientAge !== '' ? ($responsivaPatientAge . ' años') : 'No registrada'); ?> · <strong>Sexo:</strong> <?php echo h($responsivaPatientSex !== '' ? $responsivaPatientSex : 'No especificado'); ?></div>
-        </section>
+            <div class="informe-doc-patient-line"><strong>Edad:</strong> <?php echo h($responsivaPatientAge !== '' ? ($responsivaPatientAge . ' años') : 'No registrada'); ?> · <strong>Sexo:</strong> <?php echo h($responsivaPatientSex !== '' ? $responsivaPatientSex : 'No especificado'); ?></div>
+            <div class="informe-doc-patient-line"><strong>Fecha:</strong> <?php echo h($responsivaDateOut !== '' ? $responsivaDateOut : $date); ?></div>
+          </section>
+        </div>
+        <div class="doc-base-body-block">
         <section class="informe-doc-body-section doc-base-section">
           <div class="informe-doc-section-title doc-base-section-title">Tipo de responsiva</div>
           <div class="informe-doc-text doc-base-text"><?php echo h($responsivaTypeLabelUpper); ?></div>
@@ -2422,6 +2539,14 @@ if (!$embed) {
             </div>
           <?php endif; ?>
         </section>
+        </div>
+        <div class="doc-base-flex-spacer" aria-hidden="true"></div>
+        <?php if ($responsivaFooterHtml !== ''): ?>
+          <div class="doc-base-footer-block">
+            <?php echo $responsivaFooterHtml; ?>
+          </div>
+        <?php endif; ?>
+        </div>
       </article>
       </div>
     <?php endif; ?>
@@ -2465,6 +2590,20 @@ if (!$embed) {
         $certDoctorLicense !== '' ? ('Cédula: ' . $certDoctorLicense) : '',
         $certDoctorSpecialtyLicense !== '' ? ('Cédula esp.: ' . $certDoctorSpecialtyLicense) : '',
       ])));
+      $certFooterData = clinical_doc_build_footer_data($payload, [
+        'doctor_user_id' => trim((string)($payload['actor_snapshot']['user_id'] ?? '')),
+        'group_name' => $informeDoctorInstitutionContext ?? '',
+        'consultorio_phone' => $informeDoctorPhoneContext,
+        'street' => $informeAddressStreetContext,
+        'exterior_number' => $informeAddressExteriorContext,
+        'interior_number' => $informeAddressInteriorContext,
+        'neighborhood' => $informeAddressNeighborhoodContext,
+        'city' => $informeAddressCityContext,
+        'state' => $informeAddressStateContext,
+        'facility_visible' => $certDoctorFacility,
+        'address_line_visible' => $certDoctorPlace,
+      ]);
+      $certFooterHtml = clinical_doc_render_footer($certFooterData);
       $certHeaderMode = 'standard';
       if (in_array($certBrandingMode, ['branded', 'standard', 'legal'], true)) {
         $certHeaderMode = $certBrandingMode;
@@ -2580,8 +2719,9 @@ if (!$embed) {
       }
       ?>
       <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
-      <article class="informe-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-body doc-base-print-safe">
-        <header class="clinical-doc-head informe-doc-head doc-base-medical-header doc-base-print-safe <?php echo h($certHeaderCfg['class_name']); ?>">
+      <article class="informe-doc-sheet certificado-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-print-safe">
+        <div class="doc-base-sheet-inner doc-base-body">
+        <header class="clinical-doc-head informe-doc-head doc-base-medical-header doc-base-header-block doc-base-print-safe <?php echo h($certHeaderCfg['class_name']); ?>">
           <div class="clinical-doc-head-main">
             <div class="clinical-doc-head-doctor">
               <div class="clinical-doc-head-logo-slot <?php echo $certShowLogo ? '' : 'is-empty'; ?>">
@@ -2606,16 +2746,19 @@ if (!$embed) {
             <div class="informe-doc-text doc-base-text"><?php echo h($certRecipientHeader); ?></div>
           </section>
         <?php endif; ?>
-        <section class="informe-doc-title-block doc-base-title-block">
-          <div class="informe-doc-title doc-base-title"><?php echo h($certTypeLabel !== '' ? $certTypeLabel : 'Certificado médico'); ?></div>
-        </section>
-        <section class="informe-doc-patient-block doc-base-patient-meta">
-          <div class="informe-doc-patient-head">
+        <div class="doc-base-title-block-wrap">
+          <section class="informe-doc-title-block doc-base-title-block">
+            <div class="informe-doc-title doc-base-title"><?php echo h($certTypeLabel !== '' ? $certTypeLabel : 'Certificado médico'); ?></div>
+          </section>
+        </div>
+        <div class="doc-base-patient-block-wrap">
+          <section class="informe-doc-patient-block doc-base-patient-meta">
             <div class="informe-doc-patient-line"><strong>Paciente:</strong> <?php echo h($certPatientName); ?></div>
-            <div class="informe-doc-date"><strong>Fecha:</strong> <?php echo h($certDateOut !== '' ? $certDateOut : $date); ?></div>
-          </div>
-          <div class="informe-doc-patient-line"><strong>Edad:</strong> <?php echo h($certAgeOut !== '' ? $certAgeOut : 'No registrada'); ?> · <strong>Sexo:</strong> <?php echo h($certPatientSex !== '' ? $certPatientSex : 'No especificado'); ?></div>
-        </section>
+            <div class="informe-doc-patient-line"><strong>Edad:</strong> <?php echo h($certAgeOut !== '' ? $certAgeOut : 'No registrada'); ?> · <strong>Sexo:</strong> <?php echo h($certPatientSex !== '' ? $certPatientSex : 'No especificado'); ?></div>
+            <div class="informe-doc-patient-line"><strong>Fecha:</strong> <?php echo h($certDateOut !== '' ? $certDateOut : $date); ?></div>
+          </section>
+        </div>
+        <div class="doc-base-body-block">
         <?php if ($certUseEditedRendered || !empty($certBodyParts)): ?>
           <section class="informe-doc-body-section doc-base-section">
             <div class="cert-editable-box" data-role="cert-editable-body">
@@ -2641,6 +2784,14 @@ if (!$embed) {
             <div class="informe-doc-sign-meta doc-base-signature-meta"><?php echo h($certDoctorName); ?></div>
           <?php endif; ?>
         </section>
+        </div>
+        <div class="doc-base-flex-spacer" aria-hidden="true"></div>
+        <?php if ($certFooterHtml !== ''): ?>
+          <div class="doc-base-footer-block">
+            <?php echo $certFooterHtml; ?>
+          </div>
+        <?php endif; ?>
+        </div>
       </article>
       </div>
     <?php endif; ?>
