@@ -17,6 +17,10 @@
   --doc-ink-primary: #0a5168;
   --doc-ink-secondary: #273b47;
   --doc-ink-muted: #3f5564;
+  --doc-body-line-height: 1.5;
+  --doc-body-paragraph-gap: 1em;
+  --doc-signature-top-gap: 1.15em;
+  --doc-signature-bottom-gap: 0.95em;
   --doc-header-block-gap: 16px;
   --doc-title-patient-gap: 2em;
   --doc-patient-body-gap: 14px;
@@ -160,17 +164,34 @@
   font-size: 0.84rem;
   color: var(--doc-ink-secondary);
   white-space: pre-wrap;
-  line-height: 1.35;
+  line-height: var(--doc-body-line-height);
+  text-align: left;
+}
+
+.doc-base-body-block .doc-base-text p {
+  margin: 0 0 var(--doc-body-paragraph-gap);
+}
+
+.doc-base-body-block .doc-base-text p:last-child {
+  margin-bottom: 0;
 }
 
 .doc-base-signature {
   border-top: none;
-  padding-top: 6px;
+  padding-top: 0;
   display: grid;
   justify-items: center;
-  gap: 3px;
+  gap: 5px;
   text-align: center;
-  margin-bottom: 0;
+  margin-top: var(--doc-signature-top-gap);
+  margin-bottom: var(--doc-signature-bottom-gap);
+}
+
+.doc-base-signature .doc-base-section-title {
+  font-size: 0.76rem;
+  letter-spacing: 0.045em;
+  margin-bottom: 4px;
+  text-align: center;
 }
 
 .doc-base-signature img {
@@ -185,7 +206,8 @@
 }
 
 .doc-base-signature-meta {
-  font-size: 0.84rem;
+  font-size: 0.86rem;
+  font-weight: 600;
   color: #243746;
   text-align: center;
 }
@@ -270,6 +292,11 @@
     border: none !important;
     border-radius: 0 !important;
     background: #fff !important;
+  }
+
+  .doc-base-signature {
+    margin-top: 0.85em !important;
+    margin-bottom: 0.7em !important;
   }
 
   /* Keep visual footer offset only on screen; in print it can overflow to a blank 2nd page. */

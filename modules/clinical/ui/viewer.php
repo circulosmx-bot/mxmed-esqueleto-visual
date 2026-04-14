@@ -680,6 +680,7 @@ $renderedTextEditedFlag = (int)($content['edited_flag'] ?? 0);
 $docTypeNorm = strtolower(trim($docType));
 $isConsentDoc = ($docTypeNorm === 'consentimiento_informado');
 $isInformeDoc = ($docTypeNorm === 'informe_medico');
+$isNotaDoc = ($docTypeNorm === 'nota_medica');
 $isInterconsultaDoc = ($docTypeNorm === 'interconsulta');
 $isResponsivaDoc = ($docTypeNorm === 'responsiva_medica');
 $isCertificadoDoc = in_array($docTypeNorm, [
@@ -826,6 +827,7 @@ $informeAddressStateContext = first_non_empty_string(
     ['state', 'estado']
 );
 $informePrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
+$notaPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
 $interconsultaPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
 $responsivaPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
 $certificadoPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
@@ -908,7 +910,7 @@ if (!$embed) {
     clinical_embed_start();
 }
 ?>
-<?php if ($isInformeDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc): ?>
+<?php if ($isInformeDoc || $isNotaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc): ?>
 <link rel="stylesheet" href="/assets/css/clinical-doc-base.css">
 <?php endif; ?>
 <style>
@@ -1197,7 +1199,7 @@ if (!$embed) {
     letter-spacing:.03em;
     margin-bottom:2px;
   }
-  .informe-doc-text{font-size:.84rem;color:#273b47;white-space:pre-wrap;line-height:1.35;}
+  .informe-doc-text{font-size:.84rem;color:#273b47;white-space:pre-wrap;line-height:1.5;text-align:left;}
   .informe-doc-body-section{
     border-bottom:none;
     padding-bottom:0;
@@ -1208,10 +1210,18 @@ if (!$embed) {
   }
   .informe-doc-sign{
     border-top:none;
-    padding-top:6px;
+    padding-top:0;
     display:grid;
     justify-items:center;
-    gap:3px;
+    gap:5px;
+    text-align:center;
+    margin-top:1.15em;
+    margin-bottom:.95em;
+  }
+  .informe-doc-sign .informe-doc-section-title{
+    font-size:.76rem;
+    letter-spacing:.045em;
+    margin-bottom:4px;
     text-align:center;
   }
   .informe-doc-sign-image{
@@ -1226,7 +1236,8 @@ if (!$embed) {
   }
   .informe-doc-sign-line{margin-top:8px;border-top:1px solid #9fb6c4;min-width:220px;}
   .informe-doc-sign-meta{
-    font-size:.84rem;
+    font-size:.86rem;
+    font-weight:600;
     color:#243746;
     text-align:center;
   }
@@ -1442,8 +1453,13 @@ if (!$embed) {
       break-after:auto !important;
       min-height:auto !important;
       height:auto !important;
-      margin-bottom:0 !important;
+      margin-bottom:.55em !important;
       padding-bottom:0 !important;
+    }
+    .informe-doc-sign .informe-doc-section-title{
+      font-size:10.1pt;
+      letter-spacing:.045em;
+      margin-bottom:3px;
     }
     .informe-doc-head .clinical-doc-head-logo-slot,
     .informe-doc-sign-image{
@@ -1500,11 +1516,25 @@ if (!$embed) {
         <?php if ($showDownloadAction): ?>
           <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($mediaSrc); ?>"<?php echo $downloadIsRelative ? ' download' : ''; ?>>Descargar</a>
         <?php endif; ?>
-        <?php if ($isPdf || $isConsentDoc || $isInformeDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc): ?>
+        <?php if ($isPdf || $isConsentDoc || $isInformeDoc || $isNotaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc): ?>
           <button type="button" class="btn btn-outline-secondary btn-sm" data-role="viewer-print">Imprimir</button>
         <?php endif; ?>
-        <?php if (($isConsentDoc && $consentPrintableHref !== '') || ($isInformeDoc && $informePrintableHref !== '') || ($isInterconsultaDoc && $interconsultaPrintableHref !== '') || ($isResponsivaDoc && $responsivaPrintableHref !== '') || ($isCertificadoDoc && $certificadoPrintableHref !== '')): ?>
-          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($isConsentDoc ? $consentPrintableHref : ($isInformeDoc ? $informePrintableHref : ($isInterconsultaDoc ? $interconsultaPrintableHref : ($isResponsivaDoc ? $responsivaPrintableHref : $certificadoPrintableHref)))); ?>" target="_blank" rel="noopener" download>Descargar</a>
+        <?php if (($isConsentDoc && $consentPrintableHref !== '') || ($isInformeDoc && $informePrintableHref !== '') || ($isNotaDoc && $notaPrintableHref !== '') || ($isInterconsultaDoc && $interconsultaPrintableHref !== '') || ($isResponsivaDoc && $responsivaPrintableHref !== '') || ($isCertificadoDoc && $certificadoPrintableHref !== '')): ?>
+          <?php
+            $docPrintableHref = $consentPrintableHref;
+            if ($isInformeDoc) {
+              $docPrintableHref = $informePrintableHref;
+            } elseif ($isNotaDoc) {
+              $docPrintableHref = $notaPrintableHref;
+            } elseif ($isInterconsultaDoc) {
+              $docPrintableHref = $interconsultaPrintableHref;
+            } elseif ($isResponsivaDoc) {
+              $docPrintableHref = $responsivaPrintableHref;
+            } elseif ($isCertificadoDoc) {
+              $docPrintableHref = $certificadoPrintableHref;
+            }
+          ?>
+          <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($docPrintableHref); ?>" target="_blank" rel="noopener" download>Descargar</a>
           <?php // TODO(DOCS-UX): agregar botón "Compartir" cuando exista flujo canónico de distribución segura. ?>
         <?php endif; ?>
         <?php if ($isCertificadoDoc && $uuid !== '' && (!$embed || $allowInlineEdit)): ?>
@@ -2122,6 +2152,238 @@ if (!$embed) {
         <?php if ($informeFooterHtml !== ''): ?>
           <div class="doc-base-footer-block">
             <?php echo $informeFooterHtml; ?>
+          </div>
+        <?php endif; ?>
+        </div>
+      </article>
+      </div>
+    <?php endif; ?>
+
+    <?php if ($isNotaDoc): ?>
+      <?php
+      $notaReport = is_array($payload['report'] ?? null) ? $payload['report'] : [];
+      $notaData = is_array($payload['note'] ?? null) ? $payload['note'] : [];
+      $notaContent = is_array($payload['content'] ?? null) ? $payload['content'] : [];
+      $notaBranding = is_array($payload['branding'] ?? null) ? $payload['branding'] : [];
+      $notaPatientSnapshot = is_array($payload['patient_snapshot'] ?? null) ? $payload['patient_snapshot'] : [];
+      $notaActorSnapshot = is_array($payload['actor_snapshot'] ?? null) ? $payload['actor_snapshot'] : [];
+      $notaSignatures = is_array($payload['signatures'] ?? null) ? $payload['signatures'] : [];
+      $notaDoctorSignature = is_array($notaSignatures['doctor'] ?? null) ? $notaSignatures['doctor'] : [];
+      $notaDoctorSignatureImage = trim((string)($notaDoctorSignature['image_data'] ?? ''));
+      $notaDoctorSignatureName = trim((string)($notaDoctorSignature['signer_name'] ?? ''));
+      $notaDateOut = clinical_doc_format_date((string)($notaReport['emission_date'] ?? ($notaReport['issued_at'] ?? $date)), false);
+      $notaPatientName = trim((string)($informePatientNameContext !== '' ? $informePatientNameContext : ($notaPatientSnapshot['full_name'] ?? 'Paciente')));
+      $notaPatientAge = trim((string)($informePatientAgeContext !== '' ? $informePatientAgeContext : ($notaPatientSnapshot['age'] ?? '')));
+      $notaPatientSex = trim((string)($informePatientSexContext !== '' ? $informePatientSexContext : ($notaPatientSnapshot['sex'] ?? '')));
+      $notaDoctorName = trim((string)($informeDoctorNameContext !== '' ? $informeDoctorNameContext : ($notaActorSnapshot['full_name'] ?? 'Médico tratante')));
+      $notaDoctorSpecialty = trim((string)($informeDoctorSpecialtyContext !== '' ? $informeDoctorSpecialtyContext : ($notaActorSnapshot['specialty'] ?? '')));
+      $notaDoctorLicense = trim((string)($informeDoctorLicenseContext !== '' ? $informeDoctorLicenseContext : ($notaActorSnapshot['license'] ?? '')));
+      $notaDoctorSpecialtyLicense = trim((string)($informeDoctorSpecialtyLicenseContext !== '' ? $informeDoctorSpecialtyLicenseContext : ($notaActorSnapshot['specialty_license'] ?? '')));
+      $notaDoctorInstitution = trim((string)($informeDoctorInstitutionContext !== '' ? $informeDoctorInstitutionContext : ($notaActorSnapshot['institution'] ?? '')));
+      $notaDoctorFacility = trim((string)($informeDoctorFacilityContext !== '' ? $informeDoctorFacilityContext : ($notaActorSnapshot['facility'] ?? '')));
+      $notaDoctorPlace = trim((string)($informeDoctorPlaceContext !== '' ? $informeDoctorPlaceContext : ($notaActorSnapshot['place'] ?? '')));
+      $notaBrandingMode = trim((string)($notaBranding['mode'] ?? ''));
+      $notaBrandingLogo = trim((string)($notaBranding['logo_url_resolved'] ?? ($notaBranding['logo_url'] ?? '')));
+      $notaBrandingFacility = trim((string)($notaBranding['facility_visible'] ?? ''));
+      $notaBrandingLocationLine = trim((string)($notaBranding['location_line_visible'] ?? ''));
+      if ($notaBrandingFacility !== '') {
+        $notaDoctorFacility = $notaBrandingFacility;
+      }
+      if ($notaBrandingLocationLine !== '') {
+        $notaDoctorPlace = $notaBrandingLocationLine;
+      }
+      $notaDoctorSite = $notaBrandingLocationLine !== ''
+        ? $notaBrandingLocationLine
+        : implode(' · ', array_values(array_filter([
+          $notaDoctorFacility !== '' ? $notaDoctorFacility : '',
+          $notaDoctorPlace !== '' ? $notaDoctorPlace : '',
+        ])));
+      $notaDoctorCedulas = implode(' · ', array_values(array_filter([
+        $notaDoctorLicense !== '' ? ('Cédula: ' . $notaDoctorLicense) : '',
+        $notaDoctorSpecialtyLicense !== '' ? ('Cédula esp.: ' . $notaDoctorSpecialtyLicense) : '',
+      ])));
+      $notaFooterData = clinical_doc_build_footer_data($payload, [
+        'doctor_user_id' => trim((string)($payload['actor_snapshot']['user_id'] ?? '')),
+        'group_name' => $notaDoctorInstitution,
+        'consultorio_phone' => $informeDoctorPhoneContext,
+        'street' => $informeAddressStreetContext,
+        'exterior_number' => $informeAddressExteriorContext,
+        'interior_number' => $informeAddressInteriorContext,
+        'neighborhood' => $informeAddressNeighborhoodContext,
+        'city' => $informeAddressCityContext,
+        'state' => $informeAddressStateContext,
+        'facility_visible' => $notaDoctorFacility,
+        'address_line_visible' => $notaDoctorPlace,
+      ]);
+      $notaFooterHtml = clinical_doc_render_footer($notaFooterData);
+      $notaHeaderMode = 'standard';
+      if (in_array($notaBrandingMode, ['branded', 'standard', 'legal'], true)) {
+        $notaHeaderMode = $notaBrandingMode;
+      }
+      $notaHeaderCfg = clinical_doc_header_mode($notaHeaderMode);
+      $notaFallbackLogoUrl = '/uploads/doctors/1/logo.png';
+      $notaHeaderLogoUrl = $notaBrandingLogo;
+      if ($notaHeaderLogoUrl === '' || strpos($notaHeaderLogoUrl, '/storage/clinical_uploads/branding/') !== false) {
+        $notaHeaderLogoUrl = $notaFallbackLogoUrl;
+      }
+      if ($notaHeaderMode !== 'legal' && $notaHeaderLogoUrl !== '') {
+        $notaHeaderMode = 'branded';
+        $notaHeaderCfg = clinical_doc_header_mode($notaHeaderMode);
+      }
+      $notaShowLogo = ($notaHeaderCfg['allow_logo'] && $notaHeaderLogoUrl !== '');
+      $notaTypeLabel = trim((string)($notaData['type_label'] ?? $title));
+      if ($notaTypeLabel === '') {
+        $notaTypeRaw = trim((string)($notaData['type'] ?? ($notaContent['tipo_nota'] ?? '')));
+        $notaTypeMap = [
+          'consulta_inicial' => 'Consulta inicial',
+          'nota_evolucion' => 'Nota de evolución',
+          'nota_subsecuente' => 'Nota subsecuente',
+        ];
+        $notaTypeLabel = (string)($notaTypeMap[strtolower($notaTypeRaw)] ?? 'Nota médica');
+      }
+      $notaMotivoConsulta = trim((string)($notaContent['motivo_consulta'] ?? ''));
+      $notaPadecimientoActual = trim((string)($notaContent['padecimiento_actual'] ?? ''));
+      $notaSintomasRelevantes = trim((string)($notaContent['sintomas_relevantes'] ?? ''));
+      $notaTiempoEvolucion = trim((string)($notaContent['tiempo_evolucion'] ?? ''));
+      $notaInfoPaciente = trim((string)($notaContent['informacion_referida_paciente'] ?? ''));
+      $notaSignosVitales = trim((string)($notaContent['signos_vitales'] ?? ''));
+      $notaExploracionFisica = trim((string)($notaContent['exploracion_fisica'] ?? ''));
+      $notaResultadosRelevantes = trim((string)($notaContent['resultados_relevantes'] ?? ''));
+      $notaImpresionDiagnostica = trim((string)($notaContent['impresion_diagnostica'] ?? ''));
+      $notaAnalisisClinico = trim((string)($notaContent['analisis_clinico'] ?? ''));
+      $notaTratamientoIndicaciones = trim((string)($notaContent['tratamiento_indicaciones'] ?? ''));
+      $notaEstudiosSugeridos = trim((string)($notaContent['estudios_sugeridos'] ?? ''));
+      $notaSeguimiento = trim((string)($notaContent['seguimiento'] ?? ''));
+      ?>
+      <div class="document-sheet-frame doc-base-sheet-frame doc-base-print-safe mb-3">
+      <article class="informe-doc-sheet nota-doc-sheet document-sheet doc-base-sheet doc-base-sheet--letter doc-base-print-safe">
+        <div class="doc-base-sheet-inner doc-base-body">
+        <header class="clinical-doc-head informe-doc-head doc-base-medical-header doc-base-header-block doc-base-print-safe <?php echo h($notaHeaderCfg['class_name']); ?>">
+          <div class="clinical-doc-head-main">
+            <div class="clinical-doc-head-doctor">
+              <div class="clinical-doc-head-logo-slot <?php echo $notaShowLogo ? '' : 'is-empty'; ?>">
+                <?php if ($notaShowLogo): ?>
+                  <img src="<?php echo h($notaHeaderLogoUrl); ?>" alt="Logo médico" onerror="this.remove();this.parentElement.classList.add('is-empty');">
+                  <span class="clinical-doc-logo-fallback">Logo</span>
+                <?php else: ?>
+                  <span class="clinical-doc-logo-fallback">Logo</span>
+                <?php endif; ?>
+              </div>
+              <div class="clinical-doc-head-main">
+                <div class="clinical-doc-doctor-name"><?php echo h($notaDoctorName); ?></div>
+                <?php if ($notaDoctorSpecialty !== ''): ?><div class="clinical-doc-doctor-specialty"><?php echo h($notaDoctorSpecialty); ?></div><?php endif; ?>
+                <?php if ($notaDoctorCedulas !== ''): ?><div class="clinical-doc-doctor-license"><?php echo h($notaDoctorCedulas); ?></div><?php endif; ?>
+                <?php if ($notaDoctorSite !== ''): ?><div class="clinical-doc-doctor-site"><?php echo h($notaDoctorSite); ?></div><?php endif; ?>
+              </div>
+            </div>
+          </div>
+        </header>
+        <div class="doc-base-title-block-wrap">
+          <section class="informe-doc-title-block doc-base-title-block">
+            <div class="informe-doc-title doc-base-title"><?php echo h(trim((string)($title !== '' ? $title : 'Nota médica'))); ?></div>
+          </section>
+        </div>
+        <div class="doc-base-patient-block-wrap">
+          <section class="informe-doc-patient-block doc-base-patient-meta">
+            <div class="informe-doc-patient-line"><strong>Paciente:</strong> <?php echo h($notaPatientName); ?></div>
+            <div class="informe-doc-patient-line"><strong>Edad:</strong> <?php echo h($notaPatientAge !== '' ? ($notaPatientAge . ' años') : 'No registrada'); ?> · <strong>Sexo:</strong> <?php echo h($notaPatientSex !== '' ? $notaPatientSex : 'No especificado'); ?></div>
+            <div class="informe-doc-patient-line"><strong>Fecha:</strong> <?php echo h($notaDateOut !== '' ? $notaDateOut : $date); ?> · <strong>Tipo:</strong> <?php echo h($notaTypeLabel); ?></div>
+          </section>
+        </div>
+        <div class="doc-base-body-block">
+        <?php if ($notaMotivoConsulta !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Motivo de consulta</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($notaMotivoConsulta)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($notaPadecimientoActual !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Padecimiento actual</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($notaPadecimientoActual)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($notaSintomasRelevantes !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Síntomas relevantes</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($notaSintomasRelevantes)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($notaTiempoEvolucion !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Tiempo de evolución</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($notaTiempoEvolucion)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($notaInfoPaciente !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Información referida por paciente</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($notaInfoPaciente)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($notaSignosVitales !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Signos vitales</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($notaSignosVitales)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($notaExploracionFisica !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Exploración física</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($notaExploracionFisica)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($notaResultadosRelevantes !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Resultados relevantes</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($notaResultadosRelevantes)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($notaImpresionDiagnostica !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Impresión diagnóstica</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($notaImpresionDiagnostica)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($notaAnalisisClinico !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Análisis clínico</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($notaAnalisisClinico)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($notaTratamientoIndicaciones !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Plan de manejo</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($notaTratamientoIndicaciones)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($notaEstudiosSugeridos !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Estudios sugeridos</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($notaEstudiosSugeridos)); ?></div>
+          </section>
+        <?php endif; ?>
+        <?php if ($notaSeguimiento !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-section-title doc-base-section-title">Seguimiento</div>
+            <div class="informe-doc-text doc-base-text"><?php echo nl2br(h($notaSeguimiento)); ?></div>
+          </section>
+        <?php endif; ?>
+        <section class="informe-doc-sign doc-base-signature doc-base-print-safe">
+          <div class="informe-doc-section-title doc-base-section-title">Médico tratante</div>
+          <?php if ($notaDoctorSignatureImage !== ''): ?>
+            <img class="informe-doc-sign-image" src="<?php echo h($notaDoctorSignatureImage); ?>" alt="Firma del médico">
+            <div class="informe-doc-sign-meta doc-base-signature-meta"><?php echo h($notaDoctorSignatureName !== '' ? $notaDoctorSignatureName : $notaDoctorName); ?></div>
+          <?php else: ?>
+            <div class="informe-doc-sign-line"></div>
+            <div class="informe-doc-sign-meta doc-base-signature-meta"><?php echo h($notaDoctorName); ?></div>
+          <?php endif; ?>
+        </section>
+        </div>
+        <div class="doc-base-flex-spacer" aria-hidden="true"></div>
+        <?php if ($notaFooterHtml !== ''): ?>
+          <div class="doc-base-footer-block">
+            <?php echo $notaFooterHtml; ?>
           </div>
         <?php endif; ?>
         </div>
@@ -2834,18 +3096,18 @@ if (!$embed) {
       </div>
     <?php endif; ?>
 
-    <?php if ($renderedText !== '' && ((!$isInformeDoc && !$isInterconsultaDoc && !$isResponsivaDoc && !$isCertificadoDoc) || $debugView)): ?>
+    <?php if ($renderedText !== '' && ((!$isInformeDoc && !$isNotaDoc && !$isInterconsultaDoc && !$isResponsivaDoc && !$isCertificadoDoc) || $debugView)): ?>
       <div class="mm-card mb-3">
-        <div class="head"><h5><?php echo ($isInformeDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc) ? 'Texto renderizado (debug)' : 'Texto renderizado'; ?></h5></div>
+        <div class="head"><h5><?php echo ($isInformeDoc || $isNotaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc) ? 'Texto renderizado (debug)' : 'Texto renderizado'; ?></h5></div>
         <div class="body">
           <pre class="mb-0 small"><?php echo h($renderedText); ?></pre>
         </div>
       </div>
     <?php endif; ?>
 
-    <?php if ($payloadJson !== '' && ((!$isConsentDoc && !$isInformeDoc && !$isInterconsultaDoc && !$isResponsivaDoc && !$isCertificadoDoc) || $debugView)): ?>
+    <?php if ($payloadJson !== '' && ((!$isConsentDoc && !$isInformeDoc && !$isNotaDoc && !$isInterconsultaDoc && !$isResponsivaDoc && !$isCertificadoDoc) || $debugView)): ?>
       <div class="mm-card">
-        <div class="head"><h5><?php echo ($isConsentDoc || $isInformeDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc) ? 'Datos técnicos (debug)' : 'Payload (JSON)'; ?></h5></div>
+        <div class="head"><h5><?php echo ($isConsentDoc || $isInformeDoc || $isNotaDoc || $isInterconsultaDoc || $isResponsivaDoc || $isCertificadoDoc) ? 'Datos técnicos (debug)' : 'Payload (JSON)'; ?></h5></div>
         <div class="body">
           <pre class="mb-0 small"><?php echo h($payloadJson); ?></pre>
         </div>

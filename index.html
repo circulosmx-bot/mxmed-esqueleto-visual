@@ -6561,7 +6561,7 @@
                           </span>
                           <span class="docs-launcher-row-status is-ready">Ya funcional</span>
                         </button>
-                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="incapacidad_medica" data-doc-title="Incapacidad médica" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Documento de incapacidad temporal para respaldo laboral o institucional.">
+                        <button type="button" class="docs-launcher-row d-none" data-action="documents-open-placeholder" data-doc-code="incapacidad_medica" data-doc-title="Incapacidad médica" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Documento de incapacidad temporal para respaldo laboral o institucional." data-doc-hidden="certificado_subtipo">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">event_busy</span>
                           <span class="docs-launcher-row-main">
                             <span class="docs-launcher-row-title">Incapacidad médica</span>
@@ -6569,7 +6569,7 @@
                           </span>
                           <span class="docs-launcher-row-status">Configuración inicial</span>
                         </button>
-                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="constancia_medica" data-doc-title="Constancia médica" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Constancia clínica breve para situaciones administrativas o escolares.">
+                        <button type="button" class="docs-launcher-row d-none" data-action="documents-open-placeholder" data-doc-code="constancia_medica" data-doc-title="Constancia médica" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Constancia clínica breve para situaciones administrativas o escolares." data-doc-hidden="certificado_subtipo">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">assignment</span>
                           <span class="docs-launcher-row-main">
                             <span class="docs-launcher-row-title">Constancia médica</span>
@@ -6603,6 +6603,14 @@
                           <span class="docs-launcher-row-main">
                             <span class="docs-launcher-row-title">Informe médico</span>
                             <span class="docs-launcher-row-desc">Resumen clínico de evolución.</span>
+                          </span>
+                          <span class="docs-launcher-row-status is-ready">Ya funcional</span>
+                        </button>
+                        <button type="button" class="docs-launcher-row docs-launcher-row--active" data-action="documents-open-nota" data-doc-code="nota_medica" data-doc-title="Nota médica" data-doc-entry="existing-flow" data-doc-status="Ya funcional" data-doc-desc="Nota clínica estructurada de consulta, evolución y plan de manejo.">
+                          <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">clinical_notes</span>
+                          <span class="docs-launcher-row-main">
+                            <span class="docs-launcher-row-title">Nota médica</span>
+                            <span class="docs-launcher-row-desc">Registro clínico por consulta y evolución.</span>
                           </span>
                           <span class="docs-launcher-row-status is-ready">Ya funcional</span>
                         </button>
@@ -7303,6 +7311,172 @@
                     </div>
                   </div>
                 </div>
+
+                <div class="exp-card d-none mb-3" id="nm_wizard">
+                  <div class="exp-card-body">
+                    <div class="alert alert-warning py-2 d-none" id="nm_notice"></div>
+                    <div id="nm_step_1">
+                      <div class="row g-3">
+                        <div class="col-md-4">
+                          <label class="form-label" for="nm_date">Fecha</label>
+                          <input class="form-control" id="nm_date" type="date">
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label" for="nm_note_type">Tipo de nota</label>
+                          <select class="form-select" id="nm_note_type">
+                            <option value="consulta_inicial">Consulta inicial</option>
+                            <option value="nota_evolucion">Nota de evolución</option>
+                            <option value="nota_subsecuente">Nota subsecuente</option>
+                          </select>
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label">Médico</label>
+                          <input class="form-control" id="nm_doctor_name" readonly>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="nm_motivo_consulta">Motivo de consulta</label>
+                          <textarea class="form-control" id="nm_motivo_consulta" rows="3" placeholder="Paciente refiere dolor abdominal de 48 horas de evolución, acompañado de náusea."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label">Paciente</label>
+                          <input class="form-control" id="nm_patient_name" readonly>
+                        </div>
+                        <div class="col-md-3">
+                          <label class="form-label">Edad</label>
+                          <input class="form-control" id="nm_patient_age" readonly>
+                        </div>
+                        <div class="col-md-3">
+                          <label class="form-label">Sexo</label>
+                          <input class="form-control" id="nm_patient_sex" readonly>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="nm_step_2" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="nm_padecimiento_actual">Padecimiento actual</label>
+                          <textarea class="form-control" id="nm_padecimiento_actual" rows="4" placeholder="Cuadro clínico actual con evolución y síntomas predominantes."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label" for="nm_sintomas_relevantes">Síntomas relevantes</label>
+                          <textarea class="form-control" id="nm_sintomas_relevantes" rows="3" placeholder="Dolor abdominal tipo cólico, náusea y distensión leve."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label" for="nm_tiempo_evolucion">Tiempo de evolución</label>
+                          <input class="form-control" id="nm_tiempo_evolucion" placeholder="Ej. 48 horas">
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="nm_info_paciente">Información referida por paciente</label>
+                          <textarea class="form-control" id="nm_info_paciente" rows="3" placeholder="Niega fiebre, vómito y antecedente reciente de alimentos en mal estado."></textarea>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="nm_step_3" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="nm_signos_vitales">Signos vitales</label>
+                          <textarea class="form-control" id="nm_signos_vitales" rows="3" placeholder="TA 110/70 mmHg, FC 84 lpm, FR 18 rpm, Temp 36.7°C, SatO2 98%."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="nm_exploracion_fisica">Exploración física</label>
+                          <textarea class="form-control" id="nm_exploracion_fisica" rows="4" placeholder="Abdomen blando, dolor a la palpación en mesogastrio, sin datos de irritación peritoneal."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="nm_resultados_relevantes">Resultados relevantes</label>
+                          <textarea class="form-control" id="nm_resultados_relevantes" rows="3" placeholder="Sin estudios de laboratorio o gabinete al momento de la valoración."></textarea>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="nm_step_4" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="nm_impresion_diagnostica">Impresión diagnóstica</label>
+                          <textarea class="form-control" id="nm_impresion_diagnostica" rows="4" placeholder="Gastroenteritis aguda no complicada."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="nm_analisis_clinico">Análisis clínico</label>
+                          <textarea class="form-control" id="nm_analisis_clinico" rows="4" placeholder="Cuadro compatible con proceso gastrointestinal agudo sin datos de alarma."></textarea>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="nm_step_5" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="nm_tratamiento_indicaciones">Tratamiento e indicaciones</label>
+                          <textarea class="form-control" id="nm_tratamiento_indicaciones" rows="4" placeholder="Reposo relativo, hidratación oral, dieta blanda y paracetamol en caso de dolor."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="nm_estudios_sugeridos">Estudios sugeridos <span class="text-muted">(opcional)</span></label>
+                          <textarea class="form-control" id="nm_estudios_sugeridos" rows="3" placeholder="Biometría hemática y química sanguínea si persiste sintomatología."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="nm_seguimiento">Seguimiento</label>
+                          <textarea class="form-control" id="nm_seguimiento" rows="3" placeholder="Revaloración en 48 horas o antes si presenta datos de alarma."></textarea>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="nm_step_6" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <div class="border rounded p-2">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                              <div class="ci-signature-heading ci-signature-heading--doctor">Firma del médico</div>
+                              <span class="small text-muted" id="nm_signature_status">Sin firma</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-3 mb-2">
+                              <div class="form-check mb-0">
+                                <input class="form-check-input" type="radio" name="nm_signature_source" id="nm_signature_source_registered" value="registered">
+                                <label class="form-check-label small" for="nm_signature_source_registered">Usar firma registrada</label>
+                              </div>
+                            </div>
+                            <div class="alert alert-light py-2 px-3 small d-none mb-2" id="nm_signature_registered_wrap">
+                              <div class="fw-semibold mb-1">Firma registrada disponible</div>
+                              <img
+                                id="nm_signature_registered_preview"
+                                src=""
+                                alt="Firma registrada del médico"
+                                class="img-fluid rounded border bg-white"
+                                style="max-height:140px;object-fit:contain;"
+                              >
+                            </div>
+                            <div class="mx-signature-pad" data-signature-role="doctor">
+                              <canvas id="nm_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
+                            </div>
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+                              <button type="button" class="btn btn-outline-dark btn-sm" id="nm_signature_qr_open">Firmar desde tu celular</button>
+                              <button type="button" class="btn btn-outline-secondary btn-sm" id="nm_signature_clear">Volver a firmar</button>
+                            </div>
+                            <div class="small text-muted mt-2 d-none" id="nm_signature_remote_status"></div>
+                            <div class="alert alert-warning py-2 px-3 d-none mt-2" id="nm_signature_inline_prompt">
+                              <div class="small mb-2">¿Deseas guardar esta firma como tu firma digitalizada para usarla en próximos documentos?</div>
+                              <div class="d-flex flex-wrap justify-content-end gap-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="nm_signature_inline_no">No guardar</button>
+                                <button type="button" class="btn btn-primary btn-sm" id="nm_signature_inline_yes">Sí, guardar firma</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="nm_step_7" class="d-none">
+                      <div class="border rounded p-3 bg-light-subtle">
+                        <div class="small text-uppercase text-muted fw-semibold mb-2">Vista final editable</div>
+                        <textarea class="form-control" id="nm_final_text" rows="18" placeholder="La redacción final de la nota médica aparecerá aquí para revisión antes de emitir."></textarea>
+                        <div class="small text-muted mt-2"><strong>Firma del médico:</strong> <span id="nm_final_signature_state">Sin firma</span></div>
+                      </div>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
+                      <span class="text-muted small" id="nm_step_label">Paso 1 de 7</span>
+                      <div class="d-flex flex-wrap justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="nm_prev" disabled>Anterior</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="nm_next">Continuar</button>
+                        <button type="button" class="btn btn-success btn-sm d-none" id="nm_save">Guardar borrador</button>
+                        <button type="button" class="btn btn-primary btn-sm d-none" id="nm_emit">Emitir nota</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="nm_cancel">Cancelar</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <div class="exp-card d-none mb-3" id="rm_wizard">
                   <div class="exp-card-body">
                     <div class="alert alert-warning py-2 d-none" id="rm_notice"></div>
@@ -7717,7 +7891,7 @@
                   <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
                     <span>Documentos recientes</span>
                   </div>
-                  <div class="small text-muted mb-2">Histórico disponible en esta fase: consentimientos, informes, interconsultas, responsivas y certificados médicos.</div>
+                  <div class="small text-muted mb-2">Histórico disponible en esta fase: consentimientos, informes, notas médicas, interconsultas, responsivas y certificados médicos.</div>
                   <div class="alert alert-info py-2 mb-3 d-none" id="ci_context_notice">Selecciona paciente</div>
                   <div class="alert alert-light mb-3" id="ci_empty_state">Aún no hay documentos clínicos para este paciente.</div>
                   <div class="ci-list d-grid gap-2" id="ci_list"></div>
@@ -7761,6 +7935,20 @@
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body" id="ix_modal_body_slot"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal fade" id="modalNotaMedica" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                      <div class="modal-header mx-doc-modal-header">
+                        <h5 class="modal-title mx-doc-modal-title">
+                          <span class="material-symbols-outlined mx-doc-modal-title-icon" aria-hidden="true">clinical_notes</span>
+                          <span>Nota médica</span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body" id="nm_modal_body_slot"></div>
                     </div>
                   </div>
                 </div>
