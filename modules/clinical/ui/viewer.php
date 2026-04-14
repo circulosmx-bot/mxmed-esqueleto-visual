@@ -449,6 +449,7 @@ $returnTo = validate_return_to((string)($_GET['return_to'] ?? ''));
 $returnToClean = $returnTo !== null ? normalize_return_to($returnTo) : '';
 $backHref = $returnToClean !== '' ? $returnToClean : 'javascript:history.back()';
 $embedQueryFlag = trim((string)($_GET['embed'] ?? '')) === '1' ? '1' : '';
+$allowInlineEdit = trim((string)($_GET['allow_edit'] ?? '')) === '1';
 $debugView = trim((string)($_GET['debug'] ?? '')) === '1';
 $errorMessage = '';
 $document = null;
@@ -558,6 +559,7 @@ $mode = strtolower(trim((string)($_GET['mode'] ?? '')));
 $isFullscreenMode = ($mode === 'fullscreen');
 $payloadJson = $payload ? json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '';
 $renderedText = $document ? (string)($content['rendered_text'] ?? '') : '';
+$renderedTextEditedFlag = (int)($content['edited_flag'] ?? 0);
 $docTypeNorm = strtolower(trim($docType));
 $isConsentDoc = ($docTypeNorm === 'consentimiento_informado');
 $isInformeDoc = ($docTypeNorm === 'informe_medico');
@@ -866,9 +868,10 @@ if (!$embed) {
     display:grid;
     gap:8px;
   }
-  .certificado-doc-sheet{
+  .certificado-doc-sheet.informe-doc-sheet{
     display:block;
-    gap:2px;
+    gap:0;
+    grid-template-rows:none;
     align-content:start;
     align-items:start;
   }
@@ -1014,15 +1017,16 @@ if (!$embed) {
   }
   .certificado-doc-sheet .informe-doc-title-block,
   .certificado-doc-sheet .doc-base-title-block{
-    margin-top:0;
-    margin-bottom:6px;
-    padding-top:0;
-    padding-bottom:4px;
+    margin:0 0 12px 0 !important;
+    padding:0 !important;
+    min-height:0 !important;
   }
   .certificado-doc-sheet .informe-doc-title,
   .certificado-doc-sheet .doc-base-title{
-    margin:0;
-    line-height:1.25;
+    margin:0 !important;
+    padding:0 !important;
+    min-height:0 !important;
+    line-height:1.2 !important;
   }
   .informe-doc-date{
     font-size:.9rem;
@@ -1059,12 +1063,13 @@ if (!$embed) {
     color:#213645;
   }
   .certificado-doc-sheet .informe-doc-patient-block{
-    margin:0;
-    padding:0;
+    margin:0 0 12px 0 !important;
+    padding:0 !important;
+    min-height:0 !important;
     display:flex;
     flex-direction:column;
-    gap:0;
-    row-gap:0;
+    gap:0 !important;
+    row-gap:0 !important;
     align-content:start;
     align-items:start;
   }
@@ -1073,20 +1078,30 @@ if (!$embed) {
     justify-content:space-between;
     align-items:flex-start;
     gap:12px;
-    margin:0;
-    padding:0;
-    margin-bottom:0;
-    padding-bottom:0;
+    margin:0 !important;
+    padding:0 !important;
+    margin-bottom:0 !important;
+    padding-bottom:0 !important;
+    min-height:0 !important;
+    line-height:1.2 !important;
   }
   .certificado-doc-sheet .informe-doc-patient-line,
   .certificado-doc-sheet .informe-doc-date{
-    margin:0;
-    padding:0;
-    line-height:1.2;
+    margin:0 !important;
+    padding:0 !important;
+    min-height:0 !important;
+    line-height:1.2 !important;
   }
   .certificado-doc-sheet .informe-doc-patient-head + .informe-doc-patient-line{
-    margin-top:0;
-    padding-top:0;
+    margin-top:0 !important;
+    padding-top:0 !important;
+  }
+  .certificado-doc-sheet .informe-doc-patient-head > *,
+  .certificado-doc-sheet .informe-doc-patient-line > *{
+    margin:0 !important;
+    padding:0 !important;
+    min-height:0 !important;
+    line-height:inherit !important;
   }
   .informe-doc-patient-line strong{color:#0a5168;}
   .informe-doc-meta{font-size:.84rem;color:#5d6b74;}
@@ -1130,6 +1145,13 @@ if (!$embed) {
     font-size:.84rem;
     color:#243746;
     text-align:center;
+  }
+  .cert-editable-box.is-editing{
+    outline:2px solid #1e3a8a;
+    outline-offset:2px;
+    border-radius:6px;
+    padding:4px;
+    background:#fff;
   }
   .rx-view-sheet{
     background:#fff;
@@ -1338,37 +1360,51 @@ if (!$embed) {
     .informe-doc-title{font-size:15.5pt;}
     .informe-doc-title-block{margin-bottom:14px;}
     .informe-doc-patient-block{margin-bottom:8px;}
-    .certificado-doc-sheet{
+    .certificado-doc-sheet.informe-doc-sheet{
       display:block !important;
-      gap:2px !important;
+      gap:0 !important;
+      grid-template-rows:none !important;
       align-content:start !important;
       align-items:start !important;
     }
     .certificado-doc-sheet .informe-doc-title-block,
     .certificado-doc-sheet .doc-base-title-block{
-      margin-top:0 !important;
-      margin-bottom:6px !important;
-      padding-top:0 !important;
-      padding-bottom:4px !important;
+      margin:0 0 12px 0 !important;
+      padding:0 !important;
+      min-height:0 !important;
     }
     .certificado-doc-sheet .informe-doc-title,
     .certificado-doc-sheet .doc-base-title{
       margin:0 !important;
+      padding:0 !important;
+      min-height:0 !important;
       line-height:1.2 !important;
     }
     .certificado-doc-sheet .informe-doc-patient-block{
-      margin:0 !important;
+      margin:0 0 12px 0 !important;
       padding:0 !important;
       gap:0 !important;
       row-gap:0 !important;
-      margin-bottom:6px !important;
+      min-height:0 !important;
     }
     .certificado-doc-sheet .informe-doc-patient-head,
     .certificado-doc-sheet .informe-doc-patient-line,
     .certificado-doc-sheet .informe-doc-date{
       margin:0 !important;
       padding:0 !important;
+      min-height:0 !important;
       line-height:1.2 !important;
+    }
+    .certificado-doc-sheet .informe-doc-patient-head + .informe-doc-patient-line{
+      margin-top:0 !important;
+      padding-top:0 !important;
+    }
+    .certificado-doc-sheet .informe-doc-patient-head > *,
+    .certificado-doc-sheet .informe-doc-patient-line > *{
+      margin:0 !important;
+      padding:0 !important;
+      min-height:0 !important;
+      line-height:inherit !important;
     }
     .clinical-doc-doctor-name{font-size:16pt;}
     .clinical-doc-doctor-specialty{font-size:11pt;}
@@ -1423,6 +1459,11 @@ if (!$embed) {
         <?php if (($isConsentDoc && $consentPrintableHref !== '') || ($isInformeDoc && $informePrintableHref !== '') || ($isInterconsultaDoc && $interconsultaPrintableHref !== '') || ($isResponsivaDoc && $responsivaPrintableHref !== '') || ($isCertificadoDoc && $certificadoPrintableHref !== '')): ?>
           <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($isConsentDoc ? $consentPrintableHref : ($isInformeDoc ? $informePrintableHref : ($isInterconsultaDoc ? $interconsultaPrintableHref : ($isResponsivaDoc ? $responsivaPrintableHref : $certificadoPrintableHref)))); ?>" target="_blank" rel="noopener" download>Descargar</a>
           <?php // TODO(DOCS-UX): agregar botón "Compartir" cuando exista flujo canónico de distribución segura. ?>
+        <?php endif; ?>
+        <?php if ($isCertificadoDoc && $uuid !== '' && (!$embed || $allowInlineEdit)): ?>
+          <button type="button" class="btn btn-outline-primary btn-sm" data-role="cert-edit-start">Editar documento</button>
+          <button type="button" class="btn btn-success btn-sm d-none" data-role="cert-edit-save">Guardar cambios</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm d-none" data-role="cert-edit-cancel">Cancelar</button>
         <?php endif; ?>
         <?php if ($bundlePrevHref !== ''): ?>
           <a class="btn btn-outline-secondary btn-sm" href="<?php echo h($bundlePrevHref); ?>">Anterior</a>
@@ -2390,6 +2431,7 @@ if (!$embed) {
       $certReport = is_array($payload['report'] ?? null) ? $payload['report'] : [];
       $certCertificate = is_array($payload['certificate'] ?? null) ? $payload['certificate'] : [];
       $certContent = is_array($payload['content'] ?? null) ? $payload['content'] : [];
+      $certFormSnapshot = is_array($payload['form_snapshot'] ?? null) ? $payload['form_snapshot'] : [];
       $certBranding = is_array($payload['branding'] ?? null) ? $payload['branding'] : [];
       $certPatientSnapshot = is_array($payload['patient_snapshot'] ?? null) ? $payload['patient_snapshot'] : [];
       $certActorSnapshot = is_array($payload['actor_snapshot'] ?? null) ? $payload['actor_snapshot'] : [];
@@ -2397,6 +2439,7 @@ if (!$embed) {
       $certDoctorSignature = is_array($certSignatures['doctor'] ?? null) ? $certSignatures['doctor'] : [];
       $certDoctorSignatureImage = trim((string)($certDoctorSignature['image_data'] ?? ''));
       $certDoctorSignatureName = trim((string)($certDoctorSignature['signer_name'] ?? ''));
+      $certType = trim((string)($certCertificate['type'] ?? ''));
       $certTypeLabel = trim((string)($certCertificate['type_label'] ?? $title));
       $certDateOut = clinical_doc_format_date((string)($certReport['emission_date'] ?? ($certReport['issued_at'] ?? $date)), false);
       $certPatientName = trim((string)($certPatientSnapshot['full_name'] ?? $informePatientNameContext ?: 'Paciente'));
@@ -2444,7 +2487,28 @@ if (!$embed) {
       if ($certAgeOut !== '' && !preg_match('/\banos?\b|\baños?\b/i', $certAgeOut)) {
         $certAgeOut .= ' años';
       }
+      $certUsageNote = trim((string)($certContent['usage_note'] ?? ''));
+      $certPurpose = trim((string)($certCertificate['purpose'] ?? ''));
+      $certPurposeCategory = trim((string)($certCertificate['purpose_category'] ?? ''));
+      $certPurposeDetail = trim((string)($certFormSnapshot['purpose_detail'] ?? ''));
+      $certRecipientHeader = trim((string)($certContent['recipient_header'] ?? ''));
+      $certEditedRenderedRaw = trim($renderedText);
+      $certUseEditedRendered = ($renderedTextEditedFlag === 1 && $certEditedRenderedRaw !== '');
+      $certEditedRenderedSafe = '';
+      if ($certUseEditedRendered) {
+        $certEditedRenderedSafe = strip_tags($certEditedRenderedRaw, '<p><br><strong><em>');
+        $certEditedRenderedSafe = preg_replace('/<(p|strong|em)\b[^>]*>/i', '<$1>', (string)$certEditedRenderedSafe) ?? '';
+        $certEditedRenderedSafe = preg_replace('/<br\s*\/?>/i', '<br>', (string)$certEditedRenderedSafe) ?? '';
+      }
       $certBodyParts = [];
+      $certBodySeen = [];
+      $certNormalize = static function (string $text): string {
+        $normalized = preg_replace('/\s+/u', ' ', trim($text));
+        if ($normalized === null) {
+          $normalized = trim($text);
+        }
+        return strtolower($normalized);
+      };
       $certPush = static function (array &$bag, string $text): void {
         $safe = trim($text);
         if ($safe === '') {
@@ -2452,11 +2516,66 @@ if (!$embed) {
         }
         $bag[] = $safe;
       };
-      $certPush($certBodyParts, (string)($certContent['declaration_text'] ?? ''));
-      $certPush($certBodyParts, (string)($certContent['return_note'] ?? ''));
-      $certPush($certBodyParts, (string)($certContent['validity_note'] ?? ''));
-      $certPush($certBodyParts, (string)($certContent['observations'] ?? ''));
-      if ($certBodyParts === [] && trim($renderedText) !== '') {
+      $certPushUnique = static function (array &$bag, array &$seen, callable $normalize, string $text) use ($certPush): void {
+        $safe = trim($text);
+        if ($safe === '') {
+          return;
+        }
+        $key = $normalize($safe);
+        if ($key !== '' && isset($seen[$key])) {
+          return;
+        }
+        if ($key !== '') {
+          $seen[$key] = true;
+        }
+        $certPush($bag, $safe);
+      };
+      $certDeclaration = trim((string)($certContent['declaration_text'] ?? ''));
+      $certReturnNote = trim((string)($certContent['return_note'] ?? ''));
+      $certObservations = trim((string)($certContent['observations'] ?? ''));
+      $certClosing = trim((string)($certContent['closing_statement'] ?? ''));
+      $certValidityNote = trim((string)($certContent['validity_note'] ?? ''));
+      if ($certType === 'certificado_general' && $certValidityNote === '' && trim((string)($certContent['validity_term'] ?? '')) !== '') {
+        $certValidityNote = 'El presente certificado tiene una vigencia de ' . trim((string)$certContent['validity_term']) . ' a partir de la fecha de emisión.';
+      }
+      if ($certClosing === '') {
+        $recipientText = $certRecipientHeader;
+        if ($certPurposeCategory === 'Centro de trabajo' && $certPurposeDetail !== '') {
+          $recipientText = trim($certPurposeDetail);
+        } elseif ($certPurposeCategory === 'Institución educativa' && $certPurposeDetail !== '') {
+          $recipientText = trim($certPurposeDetail);
+        } elseif ($certPurposeCategory === '__other__' && $certPurposeDetail !== '') {
+          $recipientText = trim($certPurposeDetail);
+        } elseif ($certPurpose !== '' && !in_array($certPurpose, ['A quien corresponda', 'Institución educativa', 'Centro de trabajo', 'Trámite administrativo', 'Uso personal'], true)) {
+          $recipientText = trim($certPurpose);
+        }
+        $usageClean = trim((string)(preg_replace('/^\s*para\s+/iu', '', $certUsageNote) ?? $certUsageNote));
+        $usageClean = trim((string)(preg_replace('/[.\s]+$/u', '', $usageClean) ?? $usageClean));
+        $recipientClean = trim((string)(preg_replace('/[.\s]+$/u', '', $recipientText) ?? $recipientText));
+        $certClosingSubject = in_array($certType, ['constancia_atencion', 'reposo_medico'], true)
+          ? 'la presente constancia'
+          : 'la presente certificación';
+        if ($recipientClean !== '') {
+          $certClosing = 'Se extiende el presente para los fines que correspondan.';
+          $certRecipientHeader = $recipientClean;
+        } else {
+          $certClosing = $usageClean !== ''
+            ? ('Se extiende ' . $certClosingSubject . ' para ' . $usageClean . '.')
+            : ('Se extiende ' . $certClosingSubject . ' para los fines legales que correspondan.');
+        }
+      }
+      if (!$certUseEditedRendered) {
+        $certPushUnique($certBodyParts, $certBodySeen, $certNormalize, $certDeclaration);
+        if ($certType === 'reposo_medico') {
+          $certPushUnique($certBodyParts, $certBodySeen, $certNormalize, $certReturnNote);
+        }
+        if ($certType === 'certificado_general') {
+          $certPushUnique($certBodyParts, $certBodySeen, $certNormalize, $certValidityNote);
+          $certPushUnique($certBodyParts, $certBodySeen, $certNormalize, $certObservations);
+        }
+        $certPushUnique($certBodyParts, $certBodySeen, $certNormalize, $certClosing);
+      }
+      if (!$certUseEditedRendered && $certBodyParts === [] && trim($renderedText) !== '') {
         $certPush($certBodyParts, $renderedText);
       }
       ?>
@@ -2482,6 +2601,11 @@ if (!$embed) {
             </div>
           </div>
         </header>
+        <?php if ($certRecipientHeader !== ''): ?>
+          <section class="informe-doc-body-section doc-base-section">
+            <div class="informe-doc-text doc-base-text"><?php echo h($certRecipientHeader); ?></div>
+          </section>
+        <?php endif; ?>
         <section class="informe-doc-title-block doc-base-title-block">
           <div class="informe-doc-title doc-base-title"><?php echo h($certTypeLabel !== '' ? $certTypeLabel : 'Certificado médico'); ?></div>
         </section>
@@ -2492,11 +2616,19 @@ if (!$embed) {
           </div>
           <div class="informe-doc-patient-line"><strong>Edad:</strong> <?php echo h($certAgeOut !== '' ? $certAgeOut : 'No registrada'); ?> · <strong>Sexo:</strong> <?php echo h($certPatientSex !== '' ? $certPatientSex : 'No especificado'); ?></div>
         </section>
-        <?php if (!empty($certBodyParts)): ?>
+        <?php if ($certUseEditedRendered || !empty($certBodyParts)): ?>
           <section class="informe-doc-body-section doc-base-section">
-            <?php foreach ($certBodyParts as $certPart): ?>
-              <div class="informe-doc-text doc-base-text"><?php echo nl2br(h((string)$certPart)); ?></div>
-            <?php endforeach; ?>
+            <div class="cert-editable-box" data-role="cert-editable-body">
+              <div class="informe-doc-text doc-base-text" data-role="cert-editable-content">
+                <?php if ($certUseEditedRendered): ?>
+                  <?php echo $certEditedRenderedSafe; ?>
+                <?php else: ?>
+                  <?php foreach ($certBodyParts as $certPart): ?>
+                    <p><?php echo nl2br(h((string)$certPart)); ?></p>
+                  <?php endforeach; ?>
+                <?php endif; ?>
+              </div>
+            </div>
           </section>
         <?php endif; ?>
         <section class="informe-doc-sign doc-base-signature doc-base-print-safe">
@@ -2596,6 +2728,100 @@ if (!$embed) {
         window.open(<?php echo json_encode($openInNewHref, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>, '_blank', 'noopener');
       }
     }, true);
+
+    var certStartBtn = document.querySelector('[data-role="cert-edit-start"]');
+    var certSaveBtn = document.querySelector('[data-role="cert-edit-save"]');
+    var certCancelBtn = document.querySelector('[data-role="cert-edit-cancel"]');
+    var certEditableBox = document.querySelector('[data-role="cert-editable-body"]');
+    var certEditableContent = document.querySelector('[data-role="cert-editable-content"]');
+    var certDocToken = <?php echo json_encode($uuid, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    var certEditOriginalHtml = '';
+    var certEditing = false;
+
+    function certSetEditUi(editing) {
+      certEditing = !!editing;
+      if (certEditableContent) {
+        certEditableContent.setAttribute('contenteditable', certEditing ? 'true' : 'false');
+      }
+      if (certEditableBox) {
+        certEditableBox.classList.toggle('is-editing', certEditing);
+      }
+      if (certStartBtn) certStartBtn.classList.toggle('d-none', certEditing);
+      if (certSaveBtn) certSaveBtn.classList.toggle('d-none', !certEditing);
+      if (certCancelBtn) certCancelBtn.classList.toggle('d-none', !certEditing);
+    }
+
+    function certSanitizeEditableHtml(rawHtml) {
+      var parser = new DOMParser();
+      var doc = parser.parseFromString('<div>' + String(rawHtml || '') + '</div>', 'text/html');
+      var root = doc.body.firstElementChild;
+      if (!root) return '';
+      var allowed = { P: true, BR: true, STRONG: true, EM: true };
+      var walker = doc.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, null);
+      var toProcess = [];
+      while (walker.nextNode()) toProcess.push(walker.currentNode);
+      toProcess.forEach(function (node) {
+        var tag = String(node.tagName || '').toUpperCase();
+        if (!allowed[tag]) {
+          var text = doc.createTextNode(node.textContent || '');
+          if (node.parentNode) node.parentNode.replaceChild(text, node);
+          return;
+        }
+        Array.from(node.attributes || []).forEach(function (attr) {
+          node.removeAttribute(attr.name);
+        });
+      });
+      return String(root.innerHTML || '').trim();
+    }
+
+    if (certStartBtn && certSaveBtn && certCancelBtn && certEditableContent && certDocToken) {
+      certSetEditUi(false);
+
+      certStartBtn.addEventListener('click', function (event) {
+        event.preventDefault();
+        certEditOriginalHtml = certEditableContent.innerHTML;
+        certSetEditUi(true);
+        certEditableContent.focus();
+      });
+
+      certCancelBtn.addEventListener('click', function (event) {
+        event.preventDefault();
+        certEditableContent.innerHTML = certEditOriginalHtml;
+        certSetEditUi(false);
+      });
+
+      certSaveBtn.addEventListener('click', async function (event) {
+        event.preventDefault();
+        if (!certEditing) return;
+        var safeHtml = certSanitizeEditableHtml(certEditableContent.innerHTML);
+        certSaveBtn.disabled = true;
+        certCancelBtn.disabled = true;
+        try {
+          var resp = await fetch('/api/clinical/index.php/documents/' + encodeURIComponent(certDocToken), {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              rendered_text: safeHtml
+            })
+          });
+          var json = await resp.json().catch(function () { return null; });
+          if (!resp.ok || !json || json.ok !== true) {
+            throw new Error((json && (json.message || json.error)) || ('HTTP ' + resp.status));
+          }
+          certEditableContent.innerHTML = safeHtml;
+          certEditOriginalHtml = safeHtml;
+          certSetEditUi(false);
+        } catch (err) {
+          window.alert('No se pudieron guardar los cambios del documento.');
+        } finally {
+          certSaveBtn.disabled = false;
+          certCancelBtn.disabled = false;
+        }
+      });
+    } else if (certStartBtn) {
+      certStartBtn.classList.add('d-none');
+    }
   })();
 </script>
 <?php if ($embed): ?>

@@ -701,6 +701,26 @@ function clinical_documents_get_by_token_fetch(PDO $pdo, string $token): ?array
     return clinical_documents_get_by_uuid_fetch($pdo, $safe);
 }
 
+function clinical_sanitize_rendered_text_html(string $raw): string
+{
+    $html = trim($raw);
+    if ($html === '') {
+        return '';
+    }
+
+    $html = (string)preg_replace('#<\s*(script|style)\b[^>]*>.*?<\s*/\s*\1\s*>#is', '', $html);
+    $html = strip_tags($html, '<p><br><strong><em>');
+    $html = (string)preg_replace('/<(p|strong|em)\b[^>]*>/i', '<$1>', $html);
+    $html = (string)preg_replace('/<br\s*\/?>/i', '<br>', $html);
+    $html = trim($html);
+
+    if ($html === '') {
+        return '';
+    }
+
+    return $html;
+}
+
 function clinical_document_extract_related_order_refs(array $payload): array
 {
     $candidates = [
@@ -7639,6 +7659,125 @@ try {
                 ],
             ], 200);
             return;
+        }
+
+        if ($method === 'PATCH' && count($segments) === 2) {
+            $documentToken = trim((string)$segments[1]);
+            if ($documentToken === '') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'document id or uuid required',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'PATCH',
+                        'route' => 'documents/{id_or_uuid}',
+                        'source' => 'clinical_documents_pdo',
+                    ],
+                ], 400);
+                return;
+            }
+
+            $bodyResult = clinical_read_json_body();
+            if (($bodyResult['ok'] ?? false) !== true) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => (string)($bodyResult['error'] ?? 'invalid body'),
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'PATCH',
+                        'route' => 'documents/{id_or_uuid}',
+                        'source' => 'clinical_documents_pdo',
+                    ],
+                ], 400);
+                return;
+            }
+            $body = is_array($bodyResult['data'] ?? null) ? (array)$bodyResult['data'] : [];
+            $renderedTextRaw = (string)($body['rendered_text'] ?? '');
+            $renderedText = clinical_sanitize_rendered_text_html($renderedTextRaw);
+
+            try {
+                $pdo = clinical_documents_pdo();
+                $document = clinical_documents_get_by_token_fetch($pdo, $documentToken);
+                if (!is_array($document)) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'not_found',
+                        'message' => 'Documento no encontrado',
+                        'data' => null,
+                        'meta' => [
+                            'method' => 'PATCH',
+                            'route' => 'documents/{id_or_uuid}',
+                            'source' => 'clinical_documents_pdo',
+                        ],
+                    ], 404);
+                    return;
+                }
+                $docId = (int)($document['document_db_id'] ?? 0);
+                if ($docId <= 0) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'not_found',
+                        'message' => 'Documento no encontrado',
+                        'data' => null,
+                        'meta' => [
+                            'method' => 'PATCH',
+                            'route' => 'documents/{id_or_uuid}',
+                            'source' => 'clinical_documents_pdo',
+                        ],
+                    ], 404);
+                    return;
+                }
+                $actorUserId = clinical_request_actor_user_id($body);
+                if ($actorUserId === '') {
+                    $actorUserId = 'viewer_editor';
+                }
+                $now = gmdate('Y-m-d H:i:s');
+                $stmt = $pdo->prepare("
+                    UPDATE clinical_documents
+                    SET rendered_text = :rendered_text,
+                        edited_flag = 1,
+                        updated_at = :updated_at,
+                        updated_by_user_id = :updated_by_user_id
+                    WHERE id = :id
+                ");
+                $stmt->bindValue(':rendered_text', $renderedText, PDO::PARAM_STR);
+                $stmt->bindValue(':updated_at', $now, PDO::PARAM_STR);
+                $stmt->bindValue(':updated_by_user_id', $actorUserId, PDO::PARAM_STR);
+                $stmt->bindValue(':id', $docId, PDO::PARAM_INT);
+                $stmt->execute();
+
+                $updated = clinical_documents_get_fetch($pdo, $docId);
+                clinical_send_response([
+                    'ok' => true,
+                    'error' => null,
+                    'message' => 'document updated',
+                    'data' => [
+                        'document' => $updated,
+                    ],
+                    'meta' => [
+                        'method' => 'PATCH',
+                        'route' => 'documents/{id_or_uuid}',
+                        'source' => 'clinical_documents_pdo',
+                    ],
+                ], 200);
+                return;
+            } catch (Throwable $e) {
+                $msg = trim((string)$e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => ($msg !== '') ? $msg : 'server error',
+                    'data' => null,
+                    'meta' => [
+                        'method' => 'PATCH',
+                        'route' => 'documents/{id_or_uuid}',
+                        'source' => 'clinical_documents_pdo',
+                    ],
+                ], 500);
+                return;
+            }
         }
 
         clinical_send_response([

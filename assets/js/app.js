@@ -9205,6 +9205,25 @@ console.info('app.js loaded :: 20251123a');
       certificadoStep3: root.querySelector('#cm_step_3'),
       certificadoStep4: root.querySelector('#cm_step_4'),
       certificadoStep5: root.querySelector('#cm_step_5'),
+      certificadoStep5Capture: root.querySelector('#cm_step_5_capture'),
+      certificadoStep5Final: root.querySelector('#cm_step_5_final'),
+      certificadoFinalModeLabel: root.querySelector('#cm_final_mode_label'),
+      certificadoFinalPreviewViewerWrap: root.querySelector('#cm_final_preview_viewer_wrap'),
+      certificadoFinalPreviewFrame: root.querySelector('#cm_final_preview_iframe'),
+      certificadoFinalPreviewDoc: root.querySelector('#cm_final_preview_doc'),
+      certificadoFinalDocTitle: root.querySelector('#cm_final_doc_title'),
+      certificadoFinalPatientName: root.querySelector('#cm_final_patient_name'),
+      certificadoFinalPatientAge: root.querySelector('#cm_final_patient_age'),
+      certificadoFinalPatientSex: root.querySelector('#cm_final_patient_sex'),
+      certificadoFinalEmissionDate: root.querySelector('#cm_final_emission_date'),
+      certificadoFinalRecipientWrap: root.querySelector('#cm_final_recipient_wrap'),
+      certificadoFinalRecipient: root.querySelector('#cm_final_recipient'),
+      certificadoFinalEditableBody: root.querySelector('#cm_final_editable_body'),
+      certificadoFinalSignatureState: root.querySelector('#cm_final_signature_state'),
+      certificadoFinalEdit: root.querySelector('#cm_final_edit'),
+      certificadoFinalSave: root.querySelector('#cm_final_save'),
+      certificadoFinalEmit: root.querySelector('#cm_final_emit'),
+      certificadoFinalBack: root.querySelector('#cm_final_back'),
       certificadoType: root.querySelector('#cm_type'),
       certificadoDate: root.querySelector('#cm_date'),
       certificadoCareDateDisplay: root.querySelector('#cm_care_date_display'),
@@ -9225,11 +9244,15 @@ console.info('app.js loaded :: 20251123a');
       certificadoGeneralCondition: root.querySelector('#cm_general_condition'),
       certificadoReturnNote: root.querySelector('#cm_return_note'),
       certificadoDeclarationText: root.querySelector('#cm_declaration_text'),
+      certificadoObservationsModeOptions: Array.from(root.querySelectorAll('input[name="cm_observations_mode"]')),
+      certificadoWrapObservations: root.querySelector('#cm_wrap_observations'),
       certificadoObservations: root.querySelector('#cm_observations'),
       certificadoValidityTermOptions: Array.from(root.querySelectorAll('input[name="cm_validity_term_option"]')),
       certificadoValidityTermOtherWrap: root.querySelector('#cm_wrap_validity_term_other'),
       certificadoValidityTermOther: root.querySelector('#cm_validity_term_other'),
-      certificadoUsageNote: root.querySelector('#cm_usage_note'),
+      certificadoUsageNoteSelect: root.querySelector('#cm_usage_note_select'),
+      certificadoWrapUsageNoteOther: root.querySelector('#cm_wrap_usage_note_other'),
+      certificadoUsageNoteOther: root.querySelector('#cm_usage_note_other'),
       certificadoWrapValidityNote: root.querySelector('#cm_wrap_validity_note'),
       certificadoWrapUsageNote: root.querySelector('#cm_wrap_usage_note'),
       certificadoWrapCareDate: root.querySelector('#cm_wrap_care_date'),
@@ -9468,11 +9491,39 @@ console.info('app.js loaded :: 20251123a');
       '15 días',
       '30 días'
     ]);
-    const CERTIFICATE_DEFAULT_OBSERVATIONS = 'Sin hallazgos clínicos adicionales de relevancia al momento de la valoración.';
-    const CERTIFICATE_STANDARD_CLOSING = 'Se expide el presente certificado a solicitud del interesado, para los fines que estime convenientes.';
+    const CERTIFICATE_USAGE_LABELS = Object.freeze({
+      laboral: 'fines laborales',
+      escolar: 'trámite escolar',
+      inasistencia: 'justificar su inasistencia',
+      administrativo: 'trámite administrativo'
+    });
+    const CERTIFICATE_USAGE_OPTION_LABELS = Object.freeze({
+      laboral: 'Trámite laboral',
+      escolar: 'Trámite escolar',
+      inasistencia: 'Justificación de inasistencia',
+      administrativo: 'Trámite administrativo',
+      otro: 'Otro'
+    });
+    const CERTIFICATE_USAGE_ALLOWED_BY_TYPE = Object.freeze({
+      certificado_general: Object.freeze(['laboral', 'escolar', 'administrativo', 'otro']),
+      constancia_atencion: Object.freeze(['inasistencia', 'escolar', 'laboral', 'otro']),
+      reposo_medico: Object.freeze(['inasistencia', 'laboral', 'escolar', 'otro'])
+    });
+    const CERTIFICATE_USAGE_SUGGESTED_BY_TYPE = Object.freeze({
+      certificado_general: 'administrativo',
+      constancia_atencion: 'inasistencia',
+      reposo_medico: 'inasistencia'
+    });
+    const CERTIFICATE_STANDARD_CLOSING = 'Se extiende la presente certificación para los fines legales que correspondan.';
     const certificadoState = {
       step: 1,
       saving: false,
+      finalPhase: false,
+      finalIntent: 'draft',
+      finalDocUuid: '',
+      finalRenderMode: 'local',
+      finalRenderedText: '',
+      finalEditing: false,
       declarationEdited: false,
       signaturePad: null,
       signatureHasStroke: false,
@@ -9492,12 +9543,16 @@ console.info('app.js loaded :: 20251123a');
         return_note: '',
         general_condition: 'apto_general',
         declaration_text: '',
+        observations_mode: '',
         observations: '',
         validity_term: '7 días',
+        usage_note_type: '',
+        usage_note_custom: '',
         usage_note: '',
         validity_note: '',
         closing_statement: CERTIFICATE_STANDARD_CLOSING
-      }
+      },
+      usageNoteUserSelected: false
     };
     const DEFAULT_CONSENT_RISK_FRAMEWORK = Object.freeze({
       risk_levels: [
@@ -14855,29 +14910,242 @@ console.info('app.js loaded :: 20251123a');
     };
     const buildCertificateDeclarationBase = (type = '')=>{
       const patientName = sanitizeText(els.certificadoPatientName?.value || 'el paciente');
+      const patientSex = sanitizeText(els.certificadoPatientSex?.value || '');
+      const sexNorm = patientSex.toLowerCase();
+      const patientRef = /fem|mujer|\bf\b/.test(sexNorm)
+        ? `la paciente ${patientName}`
+        : (/masc|hombre|\bm\b/.test(sexNorm) ? `el paciente ${patientName}` : `la paciente ${patientName}`);
       const safeType = sanitizeText(type || 'certificado_general') || 'certificado_general';
+      const restDays = sanitizeText(certificadoState.form.rest_days || '');
+      const restStart = formatConsentUiDate(certificadoState.form.rest_start_date || '', { withTime: false }) || sanitizeText(certificadoState.form.rest_start_date || '');
+      const careDate = formatConsentUiDate(certificadoState.form.care_date || '', { withTime: false }) || sanitizeText(certificadoState.form.care_date || '');
       if(safeType === 'reposo_medico'){
-        return `Hago constar que ${patientName} requiere reposo médico por el periodo indicado, a partir de la fecha de inicio señalada, con recomendación de vigilancia clínica y seguimiento médico.`;
+        let restChunk = '';
+        if(restDays && restStart){
+          restChunk = ` por ${restDays} día(s) a partir del ${restStart}`;
+        }else if(restDays){
+          restChunk = ` por ${restDays} día(s)`;
+        }else if(restStart){
+          restChunk = ` a partir del ${restStart}`;
+        }
+        return `El que suscribe, médico cirujano, hace constar que ${patientRef} fue valorada clínicamente, determinándose que requiere incapacidad temporal${restChunk}.`;
       }
       if(safeType === 'certificado_general'){
-        return `Hago constar que ${patientName} fue valorado(a) clínicamente; al momento de la revisión presenta estado de salud acorde con la valoración realizada y se considera apto(a) en el alcance de este certificado.`;
+        return `El que suscribe, médico cirujano, hace constar que ${patientRef} fue valorada clínicamente, encontrándose en condiciones de salud adecuadas para sus actividades habituales.`;
       }
-      return `Hago constar que ${patientName} recibió atención médica en la fecha indicada.`;
+      const careDateChunk = careDate ? ` el día ${careDate}` : '';
+      return `El que suscribe, médico cirujano, hace constar que ${patientRef} recibió atención médica en consulta${careDateChunk}.`;
     };
     const composeCertificateValidityUsageText = ({ validityTerm = '', usageNote = '', legacy = '' } = {})=>{
       const cleanChunk = (value = '')=> String(value || '').replace(/[.\s]+$/g, '').trim();
       const term = cleanChunk(validityTerm);
-      const usage = cleanChunk(usageNote);
-      if(term && usage){
-        return `Válido por ${term} a partir de la fecha de emisión. Documento emitido ${usage}.`;
-      }
       if(term){
-        return `Válido por ${term} a partir de la fecha de emisión.`;
-      }
-      if(usage){
-        return `Documento emitido ${usage}.`;
+        return `El presente certificado tiene una vigencia de ${term} a partir de la fecha de emisión.`;
       }
       return sanitizeText(legacy || '');
+    };
+    const normalizeCertificateUsageText = (value = '')=>{
+      const clean = normalizeConsentInputRaw(value || '');
+      if(!clean) return '';
+      return clean.replace(/^para\s+/i, '').trim();
+    };
+    const inferCertificateUsageTypeFromText = (value = '')=>{
+      const clean = normalizeCertificateUsageText(value).toLowerCase();
+      if(!clean) return '';
+      if(clean === 'fines laborales') return 'laboral';
+      if(clean === 'trámite escolar' || clean === 'tramite escolar') return 'escolar';
+      if(clean === 'justificar su inasistencia' || clean === 'justificación de inasistencia' || clean === 'justificacion de inasistencia') return 'inasistencia';
+      if(clean === 'trámite administrativo' || clean === 'tramite administrativo') return 'administrativo';
+      return 'otro';
+    };
+    const resolveCertificateUsageText = ({ type = '', custom = '', legacy = '' } = {})=>{
+      const cleanType = sanitizeText(type || '');
+      if(cleanType && cleanType !== 'otro' && Object.prototype.hasOwnProperty.call(CERTIFICATE_USAGE_LABELS, cleanType)){
+        return CERTIFICATE_USAGE_LABELS[cleanType];
+      }
+      const customText = normalizeCertificateUsageText(custom);
+      if(cleanType === 'otro'){
+        return customText;
+      }
+      const legacyText = normalizeCertificateUsageText(legacy);
+      if(!legacyText) return '';
+      const inferred = inferCertificateUsageTypeFromText(legacyText);
+      if(inferred && inferred !== 'otro' && Object.prototype.hasOwnProperty.call(CERTIFICATE_USAGE_LABELS, inferred)){
+        return CERTIFICATE_USAGE_LABELS[inferred];
+      }
+      return legacyText;
+    };
+    const resolveCertificateRecipientHeaderText = ({ category = '', purpose = '', detail = '' } = {})=>{
+      const cat = sanitizeText(category || '');
+      const purposeClean = normalizeConsentInputRaw(purpose || '');
+      const detailClean = normalizeConsentInputRaw(detail || '');
+      const generic = new Set([
+        'A quien corresponda',
+        'Institución educativa',
+        'Centro de trabajo',
+        'Trámite administrativo',
+        'Uso personal'
+      ]);
+      if(cat === 'Centro de trabajo' && detailClean){
+        return detailClean;
+      }
+      if(cat === 'Institución educativa' && detailClean){
+        return detailClean;
+      }
+      if(cat === '__other__' && detailClean){
+        return detailClean;
+      }
+      if(purposeClean && !generic.has(purposeClean)){
+        return purposeClean;
+      }
+      return '';
+    };
+    const resolveAllowedUsageByContext = (certificateType = '', recipientCategory = '')=>{
+      const safeType = sanitizeText(certificateType || 'certificado_general') || 'certificado_general';
+      const base = CERTIFICATE_USAGE_ALLOWED_BY_TYPE[safeType] || CERTIFICATE_USAGE_ALLOWED_BY_TYPE.certificado_general;
+      const cat = sanitizeText(recipientCategory || '');
+      if(cat === 'Centro de trabajo'){
+        return base.filter((value)=> value === 'laboral' || value === 'otro');
+      }
+      if(cat === 'Institución educativa'){
+        return base.filter((value)=> value === 'escolar' || value === 'inasistencia');
+      }
+      return base;
+    };
+    const getSuggestedCertificateUsageType = (certificateType = '')=>{
+      const safeType = sanitizeText(certificateType || 'certificado_general') || 'certificado_general';
+      return sanitizeText(CERTIFICATE_USAGE_SUGGESTED_BY_TYPE[safeType] || '');
+    };
+    const composeCertificatePurposeSentence = ({ hasRecipientHeader = false, usageText = '', type = '' } = {})=>{
+      const usage = normalizeCertificateUsageText(usageText);
+      if(hasRecipientHeader){
+        return 'Se extiende el presente para los fines que correspondan.';
+      }
+      const normalizedType = sanitizeText(type || '');
+      const subject = normalizedType === 'constancia_atencion' || normalizedType === 'reposo_medico'
+        ? 'la presente constancia'
+        : 'la presente certificación';
+      if(usage){
+        return `Se extiende ${subject} para ${usage}.`;
+      }
+      return `Se extiende ${subject} para los fines legales que correspondan.`;
+    };
+    const syncCertificadoUsageUiFromState = ()=>{
+      const currentType = sanitizeText(certificadoState.form.type || 'certificado_general') || 'certificado_general';
+      const allowedUsage = new Set(resolveAllowedUsageByContext(currentType, certificadoState.form.purpose_selection));
+      let type = sanitizeText(certificadoState.form.usage_note_type || '');
+      let custom = normalizeConsentInputRaw(certificadoState.form.usage_note_custom || '');
+      const legacy = normalizeConsentInputRaw(certificadoState.form.usage_note || '');
+      if(!type && (custom || legacy)){
+        const inferred = inferCertificateUsageTypeFromText(custom || legacy);
+        type = inferred;
+        if(inferred === 'otro'){
+          custom = normalizeCertificateUsageText(custom || legacy);
+        }else if(inferred){
+          custom = '';
+        }
+      }
+      if(type !== 'otro' && !Object.prototype.hasOwnProperty.call(CERTIFICATE_USAGE_LABELS, type)){
+        type = '';
+      }
+      if(!type && !custom && !legacy && !certificadoState.usageNoteUserSelected){
+        const suggested = getSuggestedCertificateUsageType(currentType);
+        if(suggested && allowedUsage.has(suggested)){
+          type = suggested;
+        }
+      }
+      if(els.certificadoUsageNoteSelect){
+        const optionList = Array.from(els.certificadoUsageNoteSelect.options || []);
+        optionList.forEach((opt)=>{
+          const value = sanitizeText(opt?.value || '');
+          if(!value) return;
+          const keepSelectedLegacy = value === type && !!type;
+          const show = allowedUsage.has(value) || keepSelectedLegacy;
+          opt.hidden = !show;
+          opt.disabled = !show;
+        });
+        if(type && !Array.from(els.certificadoUsageNoteSelect.options || []).some((opt)=> sanitizeText(opt?.value || '') === type)){
+          const fallbackOption = document.createElement('option');
+          fallbackOption.value = type;
+          fallbackOption.textContent = CERTIFICATE_USAGE_OPTION_LABELS[type] || type;
+          els.certificadoUsageNoteSelect.appendChild(fallbackOption);
+        }
+      }
+      if(els.certificadoUsageNoteSelect){
+        els.certificadoUsageNoteSelect.value = type;
+      }
+      const showOther = type === 'otro';
+      els.certificadoWrapUsageNoteOther?.classList.toggle('d-none', !showOther);
+      if(els.certificadoUsageNoteOther){
+        els.certificadoUsageNoteOther.disabled = !showOther;
+        els.certificadoUsageNoteOther.value = showOther ? custom : '';
+      }
+      certificadoState.form.usage_note_type = type;
+      certificadoState.form.usage_note_custom = showOther ? custom : '';
+      certificadoState.form.usage_note = resolveCertificateUsageText({
+        type,
+        custom: certificadoState.form.usage_note_custom,
+        legacy
+      });
+    };
+    const applyCertificadoUsageFromInputs = ()=>{
+      const selected = sanitizeText(els.certificadoUsageNoteSelect?.value || '');
+      const currentType = sanitizeText(certificadoState.form.type || 'certificado_general') || 'certificado_general';
+      const allowedUsage = new Set(resolveAllowedUsageByContext(currentType, certificadoState.form.purpose_selection));
+      const safeSelected = allowedUsage.has(selected) || selected === 'otro' ? selected : '';
+      const custom = normalizeConsentInputRaw(els.certificadoUsageNoteOther?.value || '');
+      certificadoState.form.usage_note_type = safeSelected;
+      certificadoState.form.usage_note_custom = safeSelected === 'otro' ? custom : '';
+      certificadoState.usageNoteUserSelected = true;
+      certificadoState.form.usage_note = resolveCertificateUsageText({
+        type: safeSelected,
+        custom: certificadoState.form.usage_note_custom
+      });
+      syncCertificadoUsageUiFromState();
+    };
+    const alignCertificadoUsageWithContext = ()=>{
+      const currentType = sanitizeText(certificadoState.form.type || 'certificado_general') || 'certificado_general';
+      const allowedUsageList = resolveAllowedUsageByContext(currentType, certificadoState.form.purpose_selection);
+      const allowedUsage = new Set(allowedUsageList);
+      const currentUsageType = sanitizeText(certificadoState.form.usage_note_type || '');
+      if(currentUsageType && !allowedUsage.has(currentUsageType)){
+        const suggested = getSuggestedCertificateUsageType(currentType);
+        const fallback = allowedUsage.has(suggested)
+          ? suggested
+          : (allowedUsageList[0] || '');
+        certificadoState.form.usage_note_type = fallback;
+        certificadoState.form.usage_note_custom = '';
+        certificadoState.form.usage_note = resolveCertificateUsageText({ type: fallback });
+        certificadoState.usageNoteUserSelected = false;
+      }else if(!currentUsageType && !certificadoState.usageNoteUserSelected){
+        const suggested = getSuggestedCertificateUsageType(currentType);
+        const fallback = allowedUsage.has(suggested)
+          ? suggested
+          : (allowedUsageList[0] || '');
+        certificadoState.form.usage_note_type = fallback;
+        certificadoState.form.usage_note = resolveCertificateUsageText({ type: fallback });
+      }
+      syncCertificadoUsageUiFromState();
+    };
+    const getCertificadoObservationsOutput = ({ mode = '', observations = '' } = {})=>{
+      const cleanMode = sanitizeText(mode || '');
+      const cleanObservations = normalizeConsentInputRaw(observations || '');
+      if(cleanMode === 'present'){
+        return cleanObservations;
+      }
+      return cleanObservations;
+    };
+    const syncCertificadoObservationsUiFromState = ()=>{
+      const mode = sanitizeText(certificadoState.form.observations_mode || '');
+      (els.certificadoObservationsModeOptions || []).forEach((option)=>{
+        if(!option) return;
+        option.checked = sanitizeText(option.value || '') === mode;
+      });
+      const showObservations = mode === 'present';
+      els.certificadoWrapObservations?.classList.toggle('d-none', !showObservations);
+      if(els.certificadoObservations){
+        els.certificadoObservations.disabled = !showObservations;
+      }
     };
     const syncCertificadoValidityUiFromState = ()=>{
       const current = sanitizeText(certificadoState.form.validity_term || '');
@@ -14921,6 +15189,9 @@ console.info('app.js loaded :: 20251123a');
       els.certificadoWrapGeneralCondition?.classList.toggle('d-none', !isGeneral);
       els.certificadoWrapValidityNote?.classList.toggle('d-none', isReposo);
       els.certificadoWrapUsageNote?.classList.toggle('d-none', isReposo);
+      if(isReposo){
+        els.certificadoWrapUsageNoteOther?.classList.add('d-none');
+      }
       if(isReposo){
         els.certificadoValidityTermOtherWrap?.classList.add('d-none');
       }
@@ -15236,6 +15507,9 @@ console.info('app.js loaded :: 20251123a');
       }
     };
     const syncCertificadoInputsFromState = ()=>{
+      if(!sanitizeText(certificadoState.form.observations_mode || '') && trimConsentInputValue(certificadoState.form.observations || '') !== ''){
+        certificadoState.form.observations_mode = 'present';
+      }
       if(els.certificadoType) els.certificadoType.value = sanitizeText(certificadoState.form.type || 'certificado_general') || 'certificado_general';
       if(els.certificadoDate) els.certificadoDate.value = sanitizeText(certificadoState.form.emission_date || '');
       syncCertificadoPurposeUiFromState();
@@ -15247,8 +15521,9 @@ console.info('app.js loaded :: 20251123a');
       if(els.certificadoGeneralCondition) els.certificadoGeneralCondition.value = sanitizeText(certificadoState.form.general_condition || '');
       if(els.certificadoDeclarationText) els.certificadoDeclarationText.value = sanitizeText(certificadoState.form.declaration_text || '');
       if(els.certificadoObservations) els.certificadoObservations.value = sanitizeText(certificadoState.form.observations || '');
+      syncCertificadoObservationsUiFromState();
       syncCertificadoValidityUiFromState();
-      if(els.certificadoUsageNote) els.certificadoUsageNote.value = sanitizeText(certificadoState.form.usage_note || '');
+      syncCertificadoUsageUiFromState();
       syncCertificadoTypeUi();
       computeCertificateRestEndDate();
       syncCertificadoDateDisplays();
@@ -15260,7 +15535,10 @@ console.info('app.js loaded :: 20251123a');
       const typeLabel = getCertificateTypeLabel(type) || 'Certificado médico';
       const purpose = sanitizeText(certificadoState.form.purpose || '');
       const declaration = sanitizeText(certificadoState.form.declaration_text || '');
-      const observations = sanitizeText(certificadoState.form.observations || '');
+      const observations = sanitizeText(getCertificadoObservationsOutput({
+        mode: certificadoState.form.observations_mode,
+        observations: certificadoState.form.observations
+      }));
       const validity = type === 'reposo_medico'
         ? (sanitizeText(certificadoState.form.rest_end_date || '') || sanitizeText(certificadoState.form.validity_note || ''))
         : composeCertificateValidityUsageText({
@@ -15289,6 +15567,153 @@ console.info('app.js loaded :: 20251123a');
       ].filter(Boolean);
       els.certificadoPreview.innerHTML = rows.join('');
     };
+    const certEscapeHtml = (value = '')=> String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+    const certRenderedTextToHtml = (value = '')=>{
+      const text = normalizeConsentInputRaw(value || '');
+      if(!text) return '<p class="mb-0"></p>';
+      const blocks = text
+        .split(/\n{2,}/)
+        .map((part)=> part.trim())
+        .filter(Boolean);
+      if(!blocks.length){
+        return `<p class="mb-0">${certEscapeHtml(text).replace(/\n/g, '<br>')}</p>`;
+      }
+      return blocks
+        .map((part)=> `<p class="mb-2">${certEscapeHtml(part).replace(/\n/g, '<br>')}</p>`)
+        .join('');
+    };
+    const buildCertificadoViewerHref = (uuid = '')=>{
+      const safeUuid = sanitizeText(uuid || '');
+      if(!safeUuid) return '';
+      return `/modules/clinical/ui/viewer.php?uuid=${encodeURIComponent(safeUuid)}&embed=1&allow_edit=1`;
+    };
+    const clickCertificadoViewerButton = (selector = '')=>{
+      const frame = els.certificadoFinalPreviewFrame;
+      if(!frame || !selector) return false;
+      try{
+        const doc = frame.contentDocument || frame.contentWindow?.document;
+        const btn = doc?.querySelector(selector);
+        if(!btn || btn.disabled) return false;
+        btn.click();
+        return true;
+      }catch(_){
+        return false;
+      }
+    };
+    const fetchLatestCertificadoUuid = async (patientId = '')=>{
+      const safePatientId = sanitizeText(patientId || '');
+      if(!safePatientId) return '';
+      const resp = await fetch(`/api/clinical/index.php/documents?patient_id=${encodeURIComponent(safePatientId)}&document_type=certificado_medico&limit=5`, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin'
+      });
+      const json = await resp.json().catch(()=> null);
+      if(!resp.ok || !json || json.ok !== true){
+        return '';
+      }
+      const items = Array.isArray(json?.data?.items) ? json.data.items : [];
+      if(!items.length) return '';
+      return sanitizeText(items[0]?.document_uuid || '');
+    };
+    const getCertificadoFinalRenderedTextFromDom = ()=>{
+      const html = String(els.certificadoFinalEditableBody?.innerHTML || '').trim();
+      if(!html) return '';
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
+      const root = doc.body.firstElementChild;
+      if(!root) return '';
+      const out = [];
+      const children = Array.from(root.children || []);
+      if(children.length){
+        children.forEach((node)=>{
+          const tag = sanitizeText(node.tagName || '').toLowerCase();
+          if(tag === 'p'){
+            const value = normalizeConsentInputRaw(node.textContent || '');
+            if(value) out.push(value);
+          }else{
+            const value = normalizeConsentInputRaw(node.textContent || '');
+            if(value) out.push(value);
+          }
+        });
+      }else{
+        const flat = normalizeConsentInputRaw(root.textContent || '');
+        if(flat) out.push(flat);
+      }
+      return out.join('\n\n');
+    };
+    const renderCertificadoFinalDocument = ({ renderedText = '', preserveBody = false } = {})=>{
+      const type = sanitizeText(certificadoState.form.type || 'certificado_general') || 'certificado_general';
+      const typeLabel = getCertificateTypeLabel(type) || 'Certificado médico';
+      const patientName = sanitizeText(els.certificadoPatientName?.value || 'Paciente');
+      const patientAge = sanitizeText(els.certificadoPatientAge?.value || 'No registrada');
+      const patientSex = sanitizeText(els.certificadoPatientSex?.value || 'No especificado');
+      const emissionDate = formatConsentUiDate(certificadoState.form.emission_date || '', { withTime: false }) || sanitizeText(certificadoState.form.emission_date || '');
+      const recipient = resolveCertificateRecipientHeaderText({
+        category: sanitizeText(certificadoState.form.purpose_selection || ''),
+        purpose: normalizeConsentInputRaw(certificadoState.form.purpose || ''),
+        detail: normalizeConsentInputRaw(certificadoState.form.purpose_detail || '')
+      });
+      if(els.certificadoFinalDocTitle) els.certificadoFinalDocTitle.textContent = typeLabel;
+      if(els.certificadoFinalPatientName) els.certificadoFinalPatientName.textContent = patientName || '-';
+      if(els.certificadoFinalPatientAge) els.certificadoFinalPatientAge.textContent = patientAge || '-';
+      if(els.certificadoFinalPatientSex) els.certificadoFinalPatientSex.textContent = patientSex || '-';
+      if(els.certificadoFinalEmissionDate) els.certificadoFinalEmissionDate.textContent = emissionDate || '-';
+      if(els.certificadoFinalRecipientWrap){
+        const showRecipient = !!recipient;
+        els.certificadoFinalRecipientWrap.classList.toggle('d-none', !showRecipient);
+        if(showRecipient && els.certificadoFinalRecipient){
+          els.certificadoFinalRecipient.textContent = recipient;
+        }
+      }
+      const hasRemote = certificadoState.signaturePreferredSource === 'remote' && !!certificadoState.remoteSignature?.image_data;
+      const hasRegistered = certificadoState.signaturePreferredSource === 'registered' && !!certificadoState.registeredSignatureData;
+      const hasLocal = certificadoState.signatureHasStroke && certificadoState.signaturePreferredSource !== 'registered' && certificadoState.signaturePreferredSource !== 'remote';
+      if(els.certificadoFinalSignatureState){
+        els.certificadoFinalSignatureState.textContent = hasRemote
+          ? 'Firma remota aplicada'
+          : (hasRegistered ? 'Firma registrada aplicada' : (hasLocal ? 'Firma capturada' : 'Sin firma'));
+      }
+      if(els.certificadoFinalEditableBody && !(preserveBody && certificadoState.finalEditing)){
+        els.certificadoFinalEditableBody.innerHTML = certRenderedTextToHtml(renderedText);
+      }
+    };
+    const setCertificadoFinalPhase = ({ active = false, intent = 'draft', docUuid = '', renderMode = 'local' } = {})=>{
+      certificadoState.finalPhase = !!active;
+      certificadoState.finalIntent = intent === 'issued' ? 'issued' : 'draft';
+      certificadoState.finalDocUuid = sanitizeText(docUuid || certificadoState.finalDocUuid || '');
+      certificadoState.finalRenderMode = (renderMode === 'viewer' && certificadoState.finalDocUuid) ? 'viewer' : 'local';
+      if(!certificadoState.finalPhase){
+        certificadoState.finalEditing = false;
+      } else {
+        if(els.certificadoFinalPreviewViewerWrap){
+          els.certificadoFinalPreviewViewerWrap.classList.toggle('d-none', certificadoState.finalRenderMode !== 'viewer');
+        }
+        if(els.certificadoFinalPreviewDoc){
+          els.certificadoFinalPreviewDoc.classList.toggle('d-none', certificadoState.finalRenderMode === 'viewer');
+        }
+        if(certificadoState.finalRenderMode === 'viewer' && els.certificadoFinalPreviewFrame){
+          const href = buildCertificadoViewerHref(certificadoState.finalDocUuid);
+          if(href) els.certificadoFinalPreviewFrame.src = href;
+        }
+        renderCertificadoFinalDocument({ renderedText: certificadoState.finalRenderedText, preserveBody: true });
+      }
+    };
+    const syncCertificadoFinalInlineEdits = async ()=>{
+      if(!certificadoState.finalEditing || !els.certificadoFinalEditableBody) return;
+      certificadoState.finalRenderedText = getCertificadoFinalRenderedTextFromDom();
+      els.certificadoFinalEditableBody.setAttribute('contenteditable', 'false');
+      certificadoState.finalEditing = false;
+      if(els.certificadoFinalEdit){
+        els.certificadoFinalEdit.textContent = 'Editar texto';
+      }
+      renderCertificadoFinalDocument({ renderedText: certificadoState.finalRenderedText });
+    };
     const renderCertificadoStep = ()=>{
       const normalized = Math.min(Math.max(Number(certificadoState.step || 1), 1), 5);
       certificadoState.step = normalized;
@@ -15298,7 +15723,9 @@ console.info('app.js loaded :: 20251123a');
       els.certificadoStep4?.classList.toggle('d-none', normalized !== 4);
       els.certificadoStep5?.classList.toggle('d-none', normalized !== 5);
       if(els.certificadoStepLabel){
-        els.certificadoStepLabel.textContent = `Paso ${normalized} de 5`;
+        els.certificadoStepLabel.textContent = (normalized === 5 && certificadoState.finalPhase)
+          ? 'Revisión final del documento'
+          : `Paso ${normalized} de 5`;
       }
       if(els.certificadoPrev){
         els.certificadoPrev.disabled = normalized <= 1;
@@ -15306,7 +15733,7 @@ console.info('app.js loaded :: 20251123a');
       if(els.certificadoNext){
         els.certificadoNext.classList.toggle('d-none', normalized >= 5);
       }
-      const showActions = normalized === 5;
+      const showActions = normalized === 5 && !certificadoState.finalPhase;
       if(els.certificadoSave){
         els.certificadoSave.classList.toggle('d-none', !showActions);
         els.certificadoSave.disabled = certificadoState.saving;
@@ -15319,15 +15746,59 @@ console.info('app.js loaded :: 20251123a');
         els.certificadoCancel.classList.toggle('d-none', !showActions);
         els.certificadoCancel.disabled = certificadoState.saving;
       }
+      if(els.certificadoPrev){
+        els.certificadoPrev.classList.toggle('d-none', normalized === 5 && certificadoState.finalPhase);
+      }
+      if(els.certificadoStep5Capture){
+        const showCapture = normalized === 5 && !certificadoState.finalPhase;
+        els.certificadoStep5Capture.classList.toggle('d-none', !showCapture);
+      }
+      if(els.certificadoStep5Final){
+        const showFinal = normalized === 5 && certificadoState.finalPhase;
+        els.certificadoStep5Final.classList.toggle('d-none', !showFinal);
+      }
+      if(els.certificadoFinalModeLabel){
+        els.certificadoFinalModeLabel.textContent = certificadoState.finalIntent === 'issued'
+          ? 'Revisa el documento final y, si necesitas, edita el texto antes de emitir.'
+          : 'Revisa el documento final y, si necesitas, edita el texto antes de cerrar el borrador.';
+      }
+      if(els.certificadoFinalEmit){
+        const showEmit = normalized === 5 && certificadoState.finalPhase && certificadoState.finalIntent === 'issued';
+        els.certificadoFinalEmit.classList.toggle('d-none', !showEmit);
+        els.certificadoFinalEmit.disabled = certificadoState.saving;
+      }
+      if(els.certificadoFinalSave){
+        const showSave = normalized === 5 && certificadoState.finalPhase;
+        els.certificadoFinalSave.classList.toggle('d-none', !showSave);
+        els.certificadoFinalSave.disabled = certificadoState.saving;
+      }
+      if(els.certificadoFinalEdit){
+        const showEdit = normalized === 5 && certificadoState.finalPhase;
+        els.certificadoFinalEdit.classList.toggle('d-none', !showEdit);
+        els.certificadoFinalEdit.disabled = certificadoState.saving;
+        els.certificadoFinalEdit.textContent = certificadoState.finalRenderMode === 'viewer'
+          ? 'Editar texto'
+          : (certificadoState.finalEditing ? 'Guardar texto' : 'Editar texto');
+      }
+      if(els.certificadoFinalBack){
+        const showBack = normalized === 5 && certificadoState.finalPhase;
+        els.certificadoFinalBack.classList.toggle('d-none', !showBack);
+        els.certificadoFinalBack.disabled = certificadoState.saving;
+      }
       if(normalized !== 5){
         els.certificadoSignatureInlinePrompt?.classList.add('d-none');
       }
-      if(normalized === 5){
+      if(normalized === 5 && !certificadoState.finalPhase){
         if(!certificadoState.signaturePad){
           initCertificadoSignaturePad();
         }
         window.requestAnimationFrame(()=> syncCertificadoSignatureCanvasSize({ preserveDrawing: true }));
         renderCertificadoPreview();
+      } else if(normalized === 5 && certificadoState.finalPhase){
+        if(certificadoState.finalRenderMode !== 'viewer' && els.certificadoFinalEditableBody){
+          els.certificadoFinalEditableBody.setAttribute('contenteditable', certificadoState.finalEditing ? 'true' : 'false');
+        }
+        renderCertificadoFinalDocument({ renderedText: certificadoState.finalRenderedText, preserveBody: true });
       }
       window.requestAnimationFrame(()=> refreshAutosaveChecksIn(els.certificadoWizard));
     };
@@ -15346,10 +15817,14 @@ console.info('app.js loaded :: 20251123a');
         return_note: normalizeConsentInputRaw(certificadoState.form.return_note || ''),
         general_condition: sanitizeText(certificadoState.form.general_condition || ''),
         declaration_text: normalizeConsentInputRaw(certificadoState.form.declaration_text || ''),
+        observations_mode: sanitizeText(certificadoState.form.observations_mode || ''),
         observations: normalizeConsentInputRaw(certificadoState.form.observations || ''),
         validity_term: normalizeConsentInputRaw(certificadoState.form.validity_term || ''),
+        usage_note_type: sanitizeText(certificadoState.form.usage_note_type || ''),
+        usage_note_custom: normalizeConsentInputRaw(certificadoState.form.usage_note_custom || ''),
         usage_note: normalizeConsentInputRaw(certificadoState.form.usage_note || ''),
-        validity_note: normalizeConsentInputRaw(certificadoState.form.validity_note || '')
+        validity_note: normalizeConsentInputRaw(certificadoState.form.validity_note || ''),
+        usage_note_user_selected: certificadoState.usageNoteUserSelected ? '1' : ''
       }
     });
     const hasCertificadoTempContent = (snapshot = null)=>{
@@ -15364,10 +15839,14 @@ console.info('app.js loaded :: 20251123a');
         form.return_note,
         form.general_condition,
         form.declaration_text,
+        form.observations_mode,
         form.observations,
         form.validity_term,
+        form.usage_note_type,
+        form.usage_note_custom,
         form.usage_note,
-        form.validity_note
+        form.validity_note,
+        form.usage_note_user_selected
       ].some((value)=> trimConsentInputValue(value || '') !== '');
     };
     const applyCertificadoTempSnapshot = (snapshot = null)=>{
@@ -15387,11 +15866,21 @@ console.info('app.js loaded :: 20251123a');
         return_note: normalizeConsentInputRaw(form.return_note ?? certificadoState.form.return_note ?? ''),
         general_condition: sanitizeText(form.general_condition ?? certificadoState.form.general_condition ?? ''),
         declaration_text: normalizeConsentInputRaw(form.declaration_text ?? certificadoState.form.declaration_text ?? ''),
+        observations_mode: sanitizeText(form.observations_mode ?? certificadoState.form.observations_mode ?? ''),
         observations: normalizeConsentInputRaw(form.observations ?? certificadoState.form.observations ?? ''),
         validity_term: normalizeConsentInputRaw(form.validity_term ?? certificadoState.form.validity_term ?? ''),
+        usage_note_type: sanitizeText(form.usage_note_type ?? certificadoState.form.usage_note_type ?? ''),
+        usage_note_custom: normalizeConsentInputRaw(form.usage_note_custom ?? certificadoState.form.usage_note_custom ?? ''),
         usage_note: normalizeConsentInputRaw(form.usage_note ?? certificadoState.form.usage_note ?? ''),
         validity_note: normalizeConsentInputRaw(form.validity_note ?? certificadoState.form.validity_note ?? '')
       };
+      certificadoState.usageNoteUserSelected = trimConsentInputValue(form.usage_note_user_selected || '') === '1'
+        || trimConsentInputValue(certificadoState.form.usage_note_type || '') !== ''
+        || trimConsentInputValue(certificadoState.form.usage_note_custom || '') !== ''
+        || trimConsentInputValue(certificadoState.form.usage_note || '') !== '';
+      if(!certificadoState.form.observations_mode && trimConsentInputValue(certificadoState.form.observations || '') !== ''){
+        certificadoState.form.observations_mode = 'present';
+      }
       certificadoState.step = Math.min(Math.max(Number(safe.step || 1), 1), 5);
       syncCertificadoInputsFromState();
       renderCertificadoStep();
@@ -15399,7 +15888,14 @@ console.info('app.js loaded :: 20251123a');
     const resetCertificadoWizard = ()=>{
       certificadoState.step = 1;
       certificadoState.saving = false;
+      certificadoState.finalPhase = false;
+      certificadoState.finalIntent = 'draft';
+      certificadoState.finalDocUuid = '';
+      certificadoState.finalRenderMode = 'local';
+      certificadoState.finalRenderedText = '';
+      certificadoState.finalEditing = false;
       certificadoState.declarationEdited = false;
+      certificadoState.usageNoteUserSelected = false;
       certificadoState.form = {
         type: 'certificado_general',
         emission_date: '',
@@ -15413,8 +15909,11 @@ console.info('app.js loaded :: 20251123a');
         return_note: '',
         general_condition: 'apto_general',
         declaration_text: buildCertificateDeclarationBase('certificado_general'),
-        observations: CERTIFICATE_DEFAULT_OBSERVATIONS,
+        observations_mode: '',
+        observations: '',
         validity_term: '7 días',
+        usage_note_type: '',
+        usage_note_custom: '',
         usage_note: '',
         validity_note: '',
         closing_statement: CERTIFICATE_STANDARD_CLOSING
@@ -15428,6 +15927,10 @@ console.info('app.js loaded :: 20251123a');
       clearCertificadoSignaturePad();
       refreshCertificadoRegisteredSignature();
       syncCertificadoInputsFromState();
+      renderCertificadoFinalDocument({ renderedText: '' });
+      if(els.certificadoFinalPreviewFrame){
+        els.certificadoFinalPreviewFrame.src = 'about:blank';
+      }
       renderCertificadoStep();
       if(els.certificadoWizard){
         els.certificadoWizard.classList.add('d-none');
@@ -15452,7 +15955,14 @@ console.info('app.js loaded :: 20251123a');
       const nowDate = `${y}-${m}-${d}`;
       certificadoState.step = 1;
       certificadoState.saving = false;
+      certificadoState.finalPhase = false;
+      certificadoState.finalIntent = 'draft';
+      certificadoState.finalDocUuid = '';
+      certificadoState.finalRenderMode = 'local';
+      certificadoState.finalRenderedText = '';
+      certificadoState.finalEditing = false;
       certificadoState.declarationEdited = false;
+      certificadoState.usageNoteUserSelected = false;
       certificadoState.form = {
         type: 'certificado_general',
         emission_date: nowDate,
@@ -15466,8 +15976,11 @@ console.info('app.js loaded :: 20251123a');
         return_note: '',
         general_condition: 'apto_general',
         declaration_text: buildCertificateDeclarationBase('certificado_general'),
-        observations: CERTIFICATE_DEFAULT_OBSERVATIONS,
+        observations_mode: '',
+        observations: '',
         validity_term: '7 días',
+        usage_note_type: '',
+        usage_note_custom: '',
         usage_note: '',
         validity_note: '',
         closing_statement: CERTIFICATE_STANDARD_CLOSING
@@ -15476,6 +15989,10 @@ console.info('app.js loaded :: 20251123a');
       certificadoState.signaturePreferredSource = '';
       certificadoState.remoteSignature = null;
       syncCertificadoInputsFromState();
+      renderCertificadoFinalDocument({ renderedText: '' });
+      if(els.certificadoFinalPreviewFrame){
+        els.certificadoFinalPreviewFrame.src = 'about:blank';
+      }
       initCertificadoSignaturePad();
       syncCertificadoSignatureCanvasSize({ preserveDrawing: false });
       clearCertificadoSignaturePad();
@@ -15555,36 +16072,55 @@ console.info('app.js loaded :: 20251123a');
     const buildCertificadoRenderedText = (payload = {})=>{
       const certType = sanitizeText(payload?.certificate?.type || '');
       const certTypeLabel = sanitizeText(getCertificateTypeLabel(certType) || payload?.certificate?.type_label || 'CERTIFICADO MÉDICO');
-      const certValidity = certType === 'reposo_medico'
-        ? (sanitizeText(payload?.content?.rest_end_date || '') || sanitizeText(payload?.content?.validity_note || ''))
-        : composeCertificateValidityUsageText({
+      const certValidity = certType === 'certificado_general'
+        ? composeCertificateValidityUsageText({
           validityTerm: sanitizeText(payload?.content?.validity_term || ''),
           usageNote: sanitizeText(payload?.content?.usage_note || ''),
           legacy: sanitizeText(payload?.content?.validity_note || '')
-        });
-      const certPurpose = sanitizeText(payload?.certificate?.purpose || '') || sanitizeText(payload?.certificate?.purpose_category || '');
+        })
+        : '';
+      const certRecipientHeader = resolveCertificateRecipientHeaderText({
+        category: sanitizeText(payload?.certificate?.purpose_category || ''),
+        purpose: sanitizeText(payload?.certificate?.purpose || ''),
+        detail: sanitizeText(payload?.form_snapshot?.purpose_detail || '')
+      });
+      const certPurpose = composeCertificatePurposeSentence({
+        hasRecipientHeader: !!certRecipientHeader,
+        usageText: sanitizeText(payload?.content?.usage_note || ''),
+        type: certType
+      });
       const lines = [];
+      if(certRecipientHeader){
+        lines.push(certRecipientHeader);
+        lines.push('');
+      }
       lines.push(certTypeLabel.toUpperCase());
       lines.push('');
       lines.push(`Paciente: ${sanitizeText(payload?.patient_snapshot?.full_name || 'Paciente')}`);
-      if(certPurpose){
-        lines.push(`Destinatario: ${certPurpose}`);
+      const declaration = sanitizeText(payload?.content?.declaration_text || '');
+      if(declaration){
+        lines.push('');
+        lines.push(declaration);
       }
-      lines.push('');
-      lines.push('Declaración:');
-      lines.push(sanitizeText(payload?.content?.declaration_text || ''));
       if(certValidity){
         lines.push('');
-        lines.push(`Vigencia y uso: ${certValidity}`);
+        lines.push(certValidity);
       }
-      if(sanitizeText(payload?.content?.observations || '')){
+      if(certPurpose){
         lines.push('');
-        lines.push('Observaciones:');
-        lines.push(sanitizeText(payload.content.observations || ''));
+        lines.push(certPurpose);
+      }
+      const observationsOutput = sanitizeText(getCertificadoObservationsOutput({
+        mode: sanitizeText(payload?.content?.observations_mode || ''),
+        observations: sanitizeText(payload?.content?.observations || '')
+      }));
+      if(observationsOutput && certType === 'certificado_general'){
+        lines.push('');
+        lines.push(observationsOutput);
       }
       return lines.join('\n');
     };
-    const buildCertificadoDocument = async (targetStatus = 'draft')=>{
+    const buildCertificadoDocument = async (targetStatus = 'draft', { renderedTextOverride = '' } = {})=>{
       const patientId = resolveActivePatientIdForConsent();
       if(!patientId){
         return { error: 'Selecciona paciente antes de emitir el certificado.' };
@@ -15594,15 +16130,39 @@ console.info('app.js loaded :: 20251123a');
       const typeLabel = getCertificateTypeLabel(type) || 'Certificado médico';
       const declaration = normalizeConsentInputRaw(certificadoState.form.declaration_text || '');
       const signature = getActiveCertificadoDoctorSignature(formatNowSql());
+      const observationsMode = sanitizeText(certificadoState.form.observations_mode || '');
+      const observationsOutput = normalizeConsentInputRaw(getCertificadoObservationsOutput({
+        mode: observationsMode,
+        observations: certificadoState.form.observations
+      }));
       const validityTerm = normalizeConsentInputRaw(certificadoState.form.validity_term || '');
-      const usageNote = normalizeConsentInputRaw(certificadoState.form.usage_note || '');
-      const validityLegacy = (type === 'reposo_medico')
-        ? sanitizeText(certificadoState.form.rest_end_date || certificadoState.form.validity_note || '')
-        : composeCertificateValidityUsageText({
+      const usageNoteType = sanitizeText(certificadoState.form.usage_note_type || '');
+      const usageNoteCustom = normalizeConsentInputRaw(certificadoState.form.usage_note_custom || '');
+      const usageNote = normalizeConsentInputRaw(resolveCertificateUsageText({
+        type: usageNoteType,
+        custom: usageNoteCustom,
+        legacy: certificadoState.form.usage_note || ''
+      }));
+      const recipientHeaderText = resolveCertificateRecipientHeaderText({
+        category: sanitizeText(certificadoState.form.purpose_selection || ''),
+        purpose: normalizeConsentInputRaw(certificadoState.form.purpose || ''),
+        detail: normalizeConsentInputRaw(certificadoState.form.purpose_detail || '')
+      });
+      const validityLegacy = type === 'certificado_general'
+        ? composeCertificateValidityUsageText({
           validityTerm,
           usageNote,
           legacy: normalizeConsentInputRaw(certificadoState.form.validity_note || '')
-        });
+        })
+        : '';
+      const purposeSentence = composeCertificatePurposeSentence({
+        hasRecipientHeader: !!recipientHeaderText,
+        usageText: usageNote,
+        type
+      });
+      const observationsForDoc = (type === 'certificado_general' && observationsMode === 'present')
+        ? observationsOutput
+        : '';
       const content = {
         declaration_text: declaration,
         care_date: sanitizeText(certificadoState.form.care_date || ''),
@@ -15612,11 +16172,15 @@ console.info('app.js loaded :: 20251123a');
         return_note: normalizeConsentInputRaw(certificadoState.form.return_note || ''),
         general_condition: sanitizeText(certificadoState.form.general_condition || ''),
         general_condition_label: getCertificateGeneralConditionLabel(certificadoState.form.general_condition),
-        observations: normalizeConsentInputRaw(certificadoState.form.observations || ''),
+        observations_mode: observationsMode,
+        observations: observationsForDoc,
         validity_term: validityTerm,
+        usage_note_type: usageNoteType,
+        usage_note_custom: usageNoteCustom,
         usage_note: usageNote,
+        recipient_header: recipientHeaderText,
         validity_note: validityLegacy,
-        closing_statement: sanitizeText(certificadoState.form.closing_statement || '')
+        closing_statement: purposeSentence
       };
       if(normalizedStatus === 'issued'){
         if(!type) return { error: 'Tipo de certificado es obligatorio para emitir.' };
@@ -15629,6 +16193,12 @@ console.info('app.js loaded :: 20251123a');
         }
         if(type === 'certificado_general' && !sanitizeText(content.general_condition || '') && !declaration){
           return { error: 'Selecciona condición general o captura declaración válida para emitir.' };
+        }
+        if(observationsMode === 'present' && !observationsOutput){
+          return { error: 'Captura los hallazgos clínicos adicionales o selecciona “Sin hallazgos clínicos relevantes”.' };
+        }
+        if(usageNoteType === 'otro' && !usageNote){
+          return { error: 'Especifica el uso del documento cuando selecciones “Otro”.' };
         }
         if(!signature){
           return { error: 'Firma del médico es obligatoria para emitir.' };
@@ -15651,7 +16221,9 @@ console.info('app.js loaded :: 20251123a');
           type,
           type_label: typeLabel,
           purpose: normalizeConsentInputRaw(certificadoState.form.purpose || ''),
-          purpose_category: sanitizeText(certificadoState.form.purpose_selection || '')
+          purpose_category: sanitizeText(certificadoState.form.purpose_selection || ''),
+          usage_type: usageNoteType,
+          usage_custom: usageNoteCustom
         },
         patient_snapshot: {
           full_name: sanitizeText(patientSnapshot.full_name || ''),
@@ -15687,7 +16259,8 @@ console.info('app.js loaded :: 20251123a');
           ...content
         }
       };
-      payload.rendered_text = buildCertificadoRenderedText(payload);
+      const renderedOverride = normalizeConsentInputRaw(renderedTextOverride || '');
+      payload.rendered_text = renderedOverride || buildCertificadoRenderedText(payload);
       const definition = getClinicalDocumentDefinition('certificado_medico');
       const context = { patient_id: patientId, care_setting: 'consulta' };
       const subtitle = typeLabel;
@@ -15712,7 +16285,10 @@ console.info('app.js loaded :: 20251123a');
       });
       return { patientId, body, normalizedStatus };
     };
-    const saveCertificadoDocument = async (status = 'draft')=>{
+    const saveCertificadoDocument = async (status = 'draft', options = {})=>{
+      const opts = (options && typeof options === 'object') ? options : {};
+      const closeOnSuccess = opts.closeOnSuccess !== false;
+      const renderedTextOverride = normalizeConsentInputRaw(opts.renderedTextOverride || '');
       if(certificadoState.saving) return;
       certificadoState.saving = true;
       setCertificadoNotice('');
@@ -15725,7 +16301,7 @@ console.info('app.js loaded :: 20251123a');
         els.certificadoEmit.textContent = 'Emitiendo...';
       }
       try{
-        const prepared = await buildCertificadoDocument(status);
+        const prepared = await buildCertificadoDocument(status, { renderedTextOverride });
         if(prepared?.error){
           throw new Error(prepared.error);
         }
@@ -15743,17 +16319,109 @@ console.info('app.js loaded :: 20251123a');
         if(prepared.normalizedStatus === 'issued'){
           clearDocModalTempSession({ documentType: 'certificado_medico', patientId: prepared.patientId });
         }
-        resetCertificadoWizard();
-        closeCertificadoModal();
         listCanonicalConsents();
-        showCatalogFeedback(
-          prepared.normalizedStatus === 'issued'
-            ? 'Certificado médico emitido correctamente.'
-            : 'Borrador de certificado médico guardado correctamente.',
-          'success'
-        );
+        const successMessage = prepared.normalizedStatus === 'issued'
+          ? 'Certificado médico emitido correctamente.'
+          : 'Borrador de certificado médico guardado correctamente.';
+        if(closeOnSuccess){
+          resetCertificadoWizard();
+          closeCertificadoModal();
+          showCatalogFeedback(successMessage, 'success');
+        }else{
+          setCertificadoNotice(successMessage);
+        }
+        return {
+          json,
+          prepared
+        };
       }catch(error){
         const message = sanitizeText(error?.message || 'No se pudo guardar el certificado médico.');
+        setCertificadoNotice(message);
+        showCatalogFeedback(message, 'error');
+        return null;
+      }finally{
+        certificadoState.saving = false;
+        if(els.certificadoSave){
+          els.certificadoSave.disabled = false;
+          els.certificadoSave.textContent = 'Guardar borrador';
+        }
+        if(els.certificadoEmit){
+          els.certificadoEmit.disabled = false;
+          els.certificadoEmit.textContent = 'Emitir certificado';
+        }
+        renderCertificadoStep();
+      }
+    };
+    const resolveCreatedCertificadoUuid = (responseJson = null)=>{
+      return sanitizeText(
+        responseJson?.data?.document?.document_uuid
+        || responseJson?.data?.document_uuid
+        || responseJson?.data?.item?.document_uuid
+        || responseJson?.data?.document?.uuid
+        || ''
+      );
+    };
+    const resolvePreparedCertificateRenderedText = (prepared = null)=>{
+      let payloadObj = null;
+      try{
+        const raw = sanitizeText(prepared?.body?.payload_json || '');
+        payloadObj = raw ? JSON.parse(raw) : null;
+      }catch(_){
+        payloadObj = null;
+      }
+      const fromPayload = normalizeConsentInputRaw(payloadObj?.rendered_text || '');
+      if(fromPayload) return fromPayload;
+      if(payloadObj && typeof payloadObj === 'object'){
+        return normalizeConsentInputRaw(buildCertificadoRenderedText(payloadObj));
+      }
+      return normalizeConsentInputRaw(prepared?.body?.rendered_text || '');
+    };
+    const prepareCertificadoFinalPhase = async (intent = 'draft')=>{
+      if(certificadoState.saving) return;
+      const finalIntent = intent === 'issued' ? 'issued' : 'draft';
+      certificadoState.saving = true;
+      setCertificadoNotice('');
+      if(els.certificadoSave){
+        els.certificadoSave.disabled = true;
+        els.certificadoSave.textContent = 'Preparando...';
+      }
+      if(els.certificadoEmit){
+        els.certificadoEmit.disabled = true;
+        els.certificadoEmit.textContent = 'Preparando...';
+      }
+      try{
+        const prepared = await buildCertificadoDocument('draft');
+        if(prepared?.error){
+          throw new Error(prepared.error);
+        }
+        const resp = await fetch('/api/clinical/index.php/documents', {
+          method: 'POST',
+          headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify(prepared.body),
+          credentials: 'same-origin'
+        });
+        const json = await resp.json().catch(()=> null);
+        if(!resp.ok || !json || json.ok !== true){
+          const msg = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo preparar el certificado.';
+          throw new Error(msg);
+        }
+        let docUuid = resolveCreatedCertificadoUuid(json);
+        if(!docUuid){
+          docUuid = await fetchLatestCertificadoUuid(prepared.patientId);
+        }
+        certificadoState.finalRenderedText = resolvePreparedCertificateRenderedText(prepared);
+        certificadoState.finalEditing = false;
+        setCertificadoFinalPhase({
+          active: true,
+          intent: finalIntent,
+          docUuid,
+          renderMode: docUuid ? 'viewer' : 'local'
+        });
+        certificadoState.step = 5;
+        renderCertificadoStep();
+        listCanonicalConsents();
+      }catch(error){
+        const message = sanitizeText(error?.message || 'No se pudo preparar la revisión final del certificado.');
         setCertificadoNotice(message);
         showCatalogFeedback(message, 'error');
       }finally{
@@ -17769,6 +18437,7 @@ console.info('app.js loaded :: 20251123a');
     bindCertificadoField(els.certificadoType, (el)=>{
       const nextType = sanitizeText(el.value || 'certificado_general') || 'certificado_general';
       certificadoState.form.type = nextType;
+      alignCertificadoUsageWithContext();
       if(!certificadoState.declarationEdited){
         certificadoState.form.declaration_text = buildCertificateDeclarationBase(nextType);
         if(els.certificadoDeclarationText){
@@ -17780,10 +18449,12 @@ console.info('app.js loaded :: 20251123a');
     }, 'change');
     bindCertificadoField(els.certificadoPurposeSelect, ()=>{
       applyCertificadoPurposeFromInputs();
+      alignCertificadoUsageWithContext();
       renderCertificadoStep();
     }, 'change');
     bindCertificadoField(els.certificadoPurposeOther, ()=>{
       applyCertificadoPurposeFromInputs();
+      alignCertificadoUsageWithContext();
       renderCertificadoStep();
     }, 'input');
     bindCertificadoField(els.certificadoCareDate, (el)=>{
@@ -17823,6 +18494,13 @@ console.info('app.js loaded :: 20251123a');
       certificadoState.form.declaration_text = normalizeConsentInputRaw(el.value || '');
       certificadoState.declarationEdited = true;
     });
+    (els.certificadoObservationsModeOptions || []).forEach((option)=>{
+      bindCertificadoField(option, (el)=>{
+        certificadoState.form.observations_mode = sanitizeText(el.value || '');
+        syncCertificadoObservationsUiFromState();
+        renderCertificadoStep();
+      }, 'change');
+    });
     bindCertificadoField(els.certificadoObservations, (el)=>{
       certificadoState.form.observations = normalizeConsentInputRaw(el.value || '');
     });
@@ -17834,8 +18512,13 @@ console.info('app.js loaded :: 20251123a');
     bindCertificadoField(els.certificadoValidityTermOther, ()=>{
       applyCertificadoValidityFromInputs();
     });
-    bindCertificadoField(els.certificadoUsageNote, (el)=>{
-      certificadoState.form.usage_note = normalizeConsentInputRaw(el.value || '');
+    bindCertificadoField(els.certificadoUsageNoteSelect, ()=>{
+      applyCertificadoUsageFromInputs();
+      renderCertificadoStep();
+    }, 'change');
+    bindCertificadoField(els.certificadoUsageNoteOther, ()=>{
+      applyCertificadoUsageFromInputs();
+      renderCertificadoStep();
     });
     els.certificadoPrev?.addEventListener('click', (event)=>{
       event.preventDefault();
@@ -17866,11 +18549,98 @@ console.info('app.js loaded :: 20251123a');
     });
     els.certificadoSave?.addEventListener('click', (event)=>{
       event.preventDefault();
-      saveCertificadoDocument('draft');
+      prepareCertificadoFinalPhase('draft');
     });
     els.certificadoEmit?.addEventListener('click', (event)=>{
       event.preventDefault();
-      saveCertificadoDocument('issued');
+      prepareCertificadoFinalPhase('issued');
+    });
+    els.certificadoFinalEdit?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      if(!certificadoState.finalPhase) return;
+      if(certificadoState.finalRenderMode === 'viewer'){
+        clickCertificadoViewerButton('[data-role="cert-edit-start"]:not(.d-none)');
+        return;
+      }
+      if(!els.certificadoFinalEditableBody) return;
+      if(certificadoState.finalEditing){
+        syncCertificadoFinalInlineEdits().catch(()=>{});
+      }else{
+        certificadoState.finalEditing = true;
+        els.certificadoFinalEditableBody.setAttribute('contenteditable', 'true');
+        els.certificadoFinalEditableBody.focus();
+      }
+      renderCertificadoStep();
+    });
+    els.certificadoFinalBack?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      setCertificadoFinalPhase({ active: false, intent: certificadoState.finalIntent, docUuid: certificadoState.finalDocUuid });
+      renderCertificadoStep();
+    });
+    els.certificadoFinalSave?.addEventListener('click', async (event)=>{
+      event.preventDefault();
+      if(certificadoState.saving) return;
+      try{
+        if(certificadoState.finalRenderMode === 'viewer'){
+          clickCertificadoViewerButton('[data-role="cert-edit-save"]:not(.d-none)');
+          await new Promise((resolve)=> window.setTimeout(resolve, 450));
+        }else{
+          await syncCertificadoFinalInlineEdits();
+        }
+        if(certificadoState.finalRenderMode !== 'viewer' && certificadoState.finalDocUuid){
+          const patchResp = await fetch(`/api/clinical/index.php/documents/${encodeURIComponent(certificadoState.finalDocUuid)}`, {
+            method: 'PATCH',
+            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ rendered_text: certificadoState.finalRenderedText })
+          });
+          const patchJson = await patchResp.json().catch(()=> null);
+          if(!patchResp.ok || !patchJson || patchJson.ok !== true){
+            throw new Error(sanitizeText(patchJson?.message || patchJson?.error || `HTTP ${patchResp.status}`) || 'No se pudieron guardar los cambios de texto.');
+          }
+        }
+        listCanonicalConsents();
+        setCertificadoNotice('Borrador de certificado guardado correctamente.');
+        showCatalogFeedback('Borrador de certificado guardado correctamente.', 'success');
+      }catch(error){
+        const message = sanitizeText(error?.message || 'No se pudo guardar el borrador del certificado.');
+        setCertificadoNotice(message);
+        showCatalogFeedback(message, 'error');
+      }
+    });
+    els.certificadoFinalEmit?.addEventListener('click', async (event)=>{
+      event.preventDefault();
+      if(certificadoState.saving) return;
+      try{
+        if(certificadoState.finalRenderMode === 'viewer'){
+          clickCertificadoViewerButton('[data-role="cert-edit-save"]:not(.d-none)');
+          await new Promise((resolve)=> window.setTimeout(resolve, 450));
+        }else{
+          await syncCertificadoFinalInlineEdits();
+        }
+        if(certificadoState.finalDocUuid){
+          const latestResp = await fetch(`/api/clinical/index.php/documents/${encodeURIComponent(certificadoState.finalDocUuid)}`, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin'
+          });
+          const latestJson = await latestResp.json().catch(()=> null);
+          if(latestResp.ok && latestJson && latestJson.ok === true){
+            const serverRendered = normalizeConsentInputRaw(latestJson?.data?.document?.content?.rendered_text || '');
+            if(serverRendered){
+              certificadoState.finalRenderedText = serverRendered;
+            }
+          }
+        }
+        await saveCertificadoDocument('issued', {
+          closeOnSuccess: true,
+          renderedTextOverride: certificadoState.finalRenderedText
+        });
+      }catch(error){
+        const message = sanitizeText(error?.message || 'No se pudo emitir el certificado.');
+        setCertificadoNotice(message);
+        showCatalogFeedback(message, 'error');
+      }
     });
     els.certificadoSignatureSourceRegistered?.addEventListener('change', ()=>{
       if(els.certificadoSignatureSourceRegistered?.checked){

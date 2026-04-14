@@ -7567,8 +7567,21 @@
                     <div id="cm_step_4" class="d-none">
                       <div class="row g-3">
                         <div class="col-12">
-                          <label class="form-label" for="cm_observations">Observaciones <span class="text-muted">(opcional)</span></label>
-                          <textarea class="form-control" id="cm_observations" rows="3" placeholder="Sin datos de alarma al momento de la valoración. Se recomienda seguimiento en caso necesario."></textarea>
+                          <label class="form-label d-block">Hallazgos clínicos adicionales</label>
+                          <div class="d-flex flex-wrap gap-3">
+                            <div class="form-check mb-0">
+                              <input class="form-check-input" type="radio" name="cm_observations_mode" id="cm_observations_mode_none" value="none">
+                              <label class="form-check-label" for="cm_observations_mode_none">Sin hallazgos clínicos relevantes</label>
+                            </div>
+                            <div class="form-check mb-0">
+                              <input class="form-check-input" type="radio" name="cm_observations_mode" id="cm_observations_mode_present" value="present">
+                              <label class="form-check-label" for="cm_observations_mode_present">Existen hallazgos clínicos</label>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-12 d-none" id="cm_wrap_observations">
+                          <label class="form-label" for="cm_observations">Detalle de hallazgos clínicos</label>
+                          <textarea class="form-control" id="cm_observations" rows="3" placeholder="Describe de forma breve y clínicamente relevante los hallazgos adicionales identificados."></textarea>
                         </div>
                         <div class="col-12" id="cm_wrap_validity_note">
                           <label class="form-label d-block">Vigencia <span class="text-muted">(opcional)</span></label>
@@ -7600,13 +7613,25 @@
                           <input class="form-control" id="cm_validity_term_other" placeholder="Ej. 10 días">
                         </div>
                         <div class="col-12" id="cm_wrap_usage_note">
-                          <label class="form-label" for="cm_usage_note">Uso del documento <span class="text-muted">(opcional)</span></label>
-                          <textarea class="form-control" id="cm_usage_note" rows="2" placeholder="Ej. Para fines laborales"></textarea>
+                          <label class="form-label" for="cm_usage_note_select">Uso del documento <span class="text-muted">(opcional)</span></label>
+                          <select class="form-select" id="cm_usage_note_select">
+                            <option value="">Seleccionar</option>
+                            <option value="laboral">Trámite laboral</option>
+                            <option value="escolar">Trámite escolar</option>
+                            <option value="inasistencia">Justificación de inasistencia</option>
+                            <option value="administrativo">Trámite administrativo</option>
+                            <option value="otro">Otro</option>
+                          </select>
+                          <div class="form-text">Se sugieren opciones compatibles con el tipo de documento.</div>
+                        </div>
+                        <div class="col-12 d-none" id="cm_wrap_usage_note_other">
+                          <label class="form-label" for="cm_usage_note_other">Especificar uso del documento</label>
+                          <input class="form-control" id="cm_usage_note_other" placeholder="Ej. Para trámite ante aseguradora">
                         </div>
                       </div>
                     </div>
                     <div id="cm_step_5" class="d-none">
-                      <div class="row g-3">
+                      <div class="row g-3" id="cm_step_5_capture">
                         <div class="col-12">
                           <div class="border rounded p-3 bg-light-subtle">
                             <div class="small text-uppercase text-muted fw-semibold mb-2">Vista previa</div>
@@ -7645,6 +7670,31 @@
                               </div>
                             </div>
                           </div>
+                        </div>
+                      </div>
+                      <div class="d-none" id="cm_step_5_final">
+                        <div class="border rounded p-3 bg-light-subtle mb-3">
+                          <div class="small text-uppercase text-muted fw-semibold mb-1">Documento final</div>
+                          <div class="small text-muted" id="cm_final_mode_label">Revisión final del documento generado.</div>
+                        </div>
+                        <div class="border rounded overflow-hidden bg-white mb-3 d-none" id="cm_final_preview_viewer_wrap">
+                          <iframe id="cm_final_preview_iframe" title="Vista final del certificado" style="width:100%;height:68vh;border:0;"></iframe>
+                        </div>
+                        <div class="border rounded bg-white p-3 p-md-4 d-none" id="cm_final_preview_doc">
+                          <div class="small text-uppercase text-muted fw-semibold mb-2" id="cm_final_doc_title">Certificado médico</div>
+                          <div class="small mb-1"><strong>Paciente:</strong> <span id="cm_final_patient_name">-</span></div>
+                          <div class="small mb-3"><strong>Edad:</strong> <span id="cm_final_patient_age">-</span> · <strong>Sexo:</strong> <span id="cm_final_patient_sex">-</span> · <strong>Fecha:</strong> <span id="cm_final_emission_date">-</span></div>
+                          <div class="small mb-2 d-none" id="cm_final_recipient_wrap">
+                            <strong>Destinatario:</strong> <span id="cm_final_recipient">-</span>
+                          </div>
+                          <div class="small lh-base" id="cm_final_editable_body" contenteditable="false"></div>
+                          <div class="small text-muted mt-3"><strong>Firma del médico:</strong> <span id="cm_final_signature_state">Sin firma</span></div>
+                        </div>
+                        <div class="d-flex flex-wrap justify-content-end gap-2 mt-3">
+                          <button type="button" class="btn btn-outline-primary btn-sm" id="cm_final_edit">Editar texto</button>
+                          <button type="button" class="btn btn-success btn-sm" id="cm_final_save">Guardar borrador</button>
+                          <button type="button" class="btn btn-primary btn-sm d-none" id="cm_final_emit">Emitir certificado</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="cm_final_back">Volver</button>
                         </div>
                       </div>
                     </div>
