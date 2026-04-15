@@ -85,11 +85,12 @@ function showPanel(id){
   const pane = document.getElementById(id);
   if(pane){
     const vp = document.getElementById('viewport');
-    const forcePanels = ['p-suscripcion','p-expediente','p-pac-archivo','p-pac-recetas','p-facturacion','p-paquetes','p-Notificaciones'];
-    if(forcePanels.includes(id) && vp && pane.parentElement !== vp){
+    // Reubicar cualquier panel activo dentro del viewport visible.
+    if(vp && pane.parentElement !== vp){
       vp.appendChild(pane);
     }
     pane.classList.remove('d-none');
+    const forcePanels = ['p-suscripcion','p-expediente','p-pac-archivo','p-pac-recetas','p-facturacion','p-paquetes','p-Notificaciones'];
     if(forcePanels.includes(id)){
       pane.style.display = 'block';
       pane.style.visibility = 'visible';
@@ -103,6 +104,15 @@ function showPanel(id){
     const activeTab = pane.querySelector('.nav-tabs .active');
     if(tabs.length && !activeTab){
       try{ new bootstrap.Tab(tabs[0]).show(); }catch(_){ }
+    }
+    if(id === 'p-ag-admin'){
+      const rect = pane.getBoundingClientRect();
+      console.info('AGENDA TEST: panel live info', {
+        parent_id: pane.parentElement?.id || '',
+        parent_tag: pane.parentElement?.tagName || '',
+        width: rect.width,
+        height: rect.height
+      });
     }
   }else{
     $('#'+id).removeClass('d-none');

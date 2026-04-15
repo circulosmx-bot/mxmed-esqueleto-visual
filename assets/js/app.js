@@ -175,7 +175,11 @@ console.info('app.js loaded :: 20251123a');
 (function(){
   const panelId = 'p-ag-admin';
   const panel = document.getElementById(panelId);
-  if(!panel) return;
+  if(!panel){
+    console.warn('AGENDA TEST: panel no encontrado', panelId);
+    return;
+  }
+  console.info('AGENDA TEST: panel encontrado', panelId, panel);
 
   const els = {
     doctor: panel.querySelector('#ag_doctor_filter'),
@@ -186,11 +190,30 @@ console.info('app.js loaded :: 20251123a');
     calendar: panel.querySelector('#ag_calendar'),
     hint: panel.querySelector('#ag_filters_hint')
   };
+  console.info('AGENDA TEST: calendar container encontrado', !!els.calendar, els.calendar);
+
+  const logPanelVisibility = ()=>{
+    const visible = !!panel && !panel.classList.contains('d-none');
+    console.info('AGENDA TEST: panel visible', visible, {
+      className: panel.className,
+      display: window.getComputedStyle(panel).display
+    });
+  };
+
+  const ensureTestBlock = ()=>{
+    const testBlock = panel.querySelector('#ag_test_block');
+    if(testBlock){
+      console.info('AGENDA TEST: bloque insertado', true, testBlock);
+    }else{
+      console.warn('AGENDA TEST: bloque insertado', false);
+    }
+  };
 
   let calendar = null;
   let consultoriosRequestCtrl = null;
   let appointmentsRequestCtrl = null;
   let initialized = false;
+  let visibilityObserver = null;
 
   const sanitizeText = (value)=> String(value ?? '').trim();
   const normalizeDateTime = (value)=>{
@@ -203,6 +226,19 @@ console.info('app.js loaded :: 20251123a');
     const txt = sanitizeText(value);
     if(!txt) return '';
     return txt.length > max ? `${txt.slice(0, max - 1)}…` : txt;
+  };
+  const isNumericId = (value)=> /^\d+$/.test(sanitizeText(value));
+  const formatYmdLocal = (date)=>{
+    const d = (date instanceof Date) ? date : new Date(date);
+    const yyyy = String(d.getFullYear()).padStart(4, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+  const toIsoLike = (value)=>{
+    const raw = sanitizeText(value);
+    if(!raw) return '';
+    return raw.includes('T') ? raw : raw.replace(' ', 'T');
   };
 
   const setError = (message)=>{
@@ -250,6 +286,16 @@ console.info('app.js loaded :: 20251123a');
     return shortText([base, modality, status].filter(Boolean).join(' · '), 86);
   };
 
+  const getAvailabilityConsultorioId = ()=>{
+    const selected = sanitizeText(els.consultorio?.value || '');
+    if(isNumericId(selected)) return selected;
+    if(!els.consultorio) return '';
+    const firstNumeric = Array.from(els.consultorio.options || [])
+      .map((opt)=> sanitizeText(opt.value))
+      .find((value)=> isNumericId(value));
+    return sanitizeText(firstNumeric || '');
+  };
+
   const mapAppointmentToEvent = (row)=>{
     const status = sanitizeText(row?.status || '').toLowerCase();
     const statusColorMap = {
@@ -271,6 +317,25 @@ console.info('app.js loaded :: 20251123a');
         modality: sanitizeText(row?.modality || ''),
         status: sanitizeText(row?.status || ''),
         channel_origin: sanitizeText(row?.channel_origin || '')
+      }
+    };
+  };
+
+  const mapAvailabilityWindowToEvent = (windowItem, dayYmd, consultorioId)=>{
+    const startRaw = sanitizeText(windowItem?.start_at || '');
+    const endRaw = sanitizeText(windowItem?.end_at || '');
+    if(!startRaw || !endRaw) return null;
+    return {
+      id: `availability:${consultorioId}:${dayYmd}:${startRaw}:${endRaw}`,
+      start: toIsoLike(startRaw),
+      end: toIsoLike(endRaw),
+      display: 'background',
+      classNames: ['mx-ag-availability-bg'],
+      color: 'rgba(25, 135, 84, 0.12)',
+      extendedProps: {
+        event_type: 'availability',
+        consultorio_id: consultorioId,
+        date: dayYmd
       }
     };
   };
@@ -351,6 +416,78 @@ console.info('app.js loaded :: 20251123a');
     return json.data.map(mapAppointmentToEvent).filter((event)=> !!event.start);
   };
 
+  const fetchAvailabilityEvents = async (fetchInfo)=>{
+    const doctorId = getDoctorId();
+    const consultorioId = getAvailabilityConsultorioId();
+    if(!isNumericId(doctorId) || !isNumericId(consultorioId)){
+      return {
+        events: [],
+        meta: { skipped: true, reason: 'availability_requires_numeric_ids' }
+      };
+    }
+
+    const dayDates = [];
+    const cursor = new Date(fetchInfo.start);
+    const limitDate = new Date(fetchInfo.end);
+    while (cursor < limitDate) {
+      dayDates.push(formatYmdLocal(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    const uniqueDays = Array.from(new Set(dayDates));
+    if(!uniqueDays.length){
+      return { events: [], meta: { skipped: true, reason: 'no_visible_days' } };
+    }
+
+    const requests = uniqueDays.map(async (dateYmd)=>{
+      const params = new URLSearchParams({
+        doctor_id: doctorId,
+        consultorio_id: consultorioId,
+        date: dateYmd,
+        slot_minutes: '30'
+      });
+      const resp = await fetch(`/api/agenda/index.php/availability?${params.toString()}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+      });
+      const json = await resp.json().catch(()=> null);
+      return { dateYmd, json };
+    });
+
+    const responses = await Promise.all(requests);
+    const events = [];
+    let slotsCount = 0;
+    let hasWarning = '';
+
+    responses.forEach(({ dateYmd, json })=>{
+      if(!json || json.ok !== true){
+        const code = sanitizeText(json?.error || '');
+        const msg = sanitizeText(json?.message || '');
+        if(!hasWarning && (code || msg)){
+          hasWarning = msg || code || 'No se pudo cargar disponibilidad';
+        }
+        return;
+      }
+      const windows = Array.isArray(json?.data?.windows) ? json.data.windows : [];
+      const slots = Array.isArray(json?.data?.slots) ? json.data.slots : [];
+      slotsCount += slots.length;
+      windows.forEach((windowItem)=>{
+        const event = mapAvailabilityWindowToEvent(windowItem, dateYmd, consultorioId);
+        if(event) events.push(event);
+      });
+    });
+
+    return {
+      events,
+      meta: {
+        skipped: false,
+        slots_count: slotsCount,
+        warning: hasWarning,
+        consultorio_id_used: consultorioId
+      }
+    };
+  };
+
   const initCalendar = ()=>{
     if(calendar || !els.calendar) return;
     if(!window.FullCalendar || typeof window.FullCalendar.Calendar !== 'function'){
@@ -382,8 +519,27 @@ console.info('app.js loaded :: 20251123a');
       },
       events: async (fetchInfo, successCallback, failureCallback)=>{
         try{
-          const events = await fetchAppointments(fetchInfo);
-          successCallback(events);
+          const [appointmentEvents, availabilityResult] = await Promise.all([
+            fetchAppointments(fetchInfo),
+            fetchAvailabilityEvents(fetchInfo)
+          ]);
+          const availabilityEvents = Array.isArray(availabilityResult?.events) ? availabilityResult.events : [];
+          successCallback([...availabilityEvents, ...appointmentEvents]);
+          if(els.hint){
+            if(availabilityResult?.meta?.skipped){
+              els.hint.textContent = 'Disponibilidad: pendiente (doctor/consultorio numérico requerido por backend).';
+            }else{
+              const slotsCount = Number(availabilityResult?.meta?.slots_count || 0);
+              const consultorioUsed = sanitizeText(availabilityResult?.meta?.consultorio_id_used || '');
+              els.hint.textContent = consultorioUsed
+                ? `Disponibilidad activa · ${slotsCount} slots libres en rango visible · consultorio ${consultorioUsed}`
+                : `Disponibilidad activa · ${slotsCount} slots libres en rango visible`;
+            }
+          }
+          const warning = sanitizeText(availabilityResult?.meta?.warning || '');
+          if(warning){
+            setError(`Disponibilidad: ${warning}`);
+          }
         }catch(err){
           if(err?.name === 'AbortError'){
             successCallback([]);
@@ -437,6 +593,11 @@ console.info('app.js loaded :: 20251123a');
     }
   };
 
+  const ensureAgendaVisibleRender = async ({ forceConsultorios = false } = {})=>{
+    if(!panel || panel.classList.contains('d-none')) return;
+    await refreshCalendar({ forceConsultorios });
+  };
+
   const bindEvents = ()=>{
     if(initialized) return;
     initialized = true;
@@ -452,36 +613,48 @@ console.info('app.js loaded :: 20251123a');
       refreshCalendar({ forceConsultorios: false }).catch(()=> null);
     });
 
-    document.querySelectorAll('.menu-sub-btn[data-panel="p-ag-admin"], .menu-main[data-panel="p-ag-admin"]').forEach((btn)=>{
+    document.querySelectorAll('.menu-sub-btn[data-panel="p-ag-admin"]').forEach((btn)=>{
       btn.addEventListener('click', ()=>{
         window.setTimeout(()=>{
-          refreshCalendar({ forceConsultorios: true }).catch(()=> null);
+          logPanelVisibility();
+          ensureTestBlock();
+          ensureAgendaVisibleRender({ forceConsultorios: true }).catch(()=> null);
         }, 120);
       });
     });
 
-    const originalShowPanel = (typeof window.showPanel === 'function') ? window.showPanel : null;
-    if(originalShowPanel && !originalShowPanel.__mxmedAgendaWrapped){
-      const wrapped = function(id){
-        const result = originalShowPanel.apply(this, arguments);
-        if(String(id || '').trim() === panelId){
-          window.setTimeout(()=>{
-            refreshCalendar({ forceConsultorios: true }).catch(()=> null);
-          }, 80);
-        }
-        return result;
-      };
-      wrapped.__mxmedAgendaWrapped = true;
-      window.showPanel = wrapped;
+    document.querySelectorAll('.menu-main[data-group="agenda"], .menu-sub[data-group="agenda"] .menu-sub-btn').forEach((btn)=>{
+      btn.addEventListener('click', ()=>{
+        window.setTimeout(()=>{
+          logPanelVisibility();
+          ensureTestBlock();
+          ensureAgendaVisibleRender({ forceConsultorios: true }).catch(()=> null);
+        }, 160);
+      });
+    });
+
+    if(window.MutationObserver && !visibilityObserver){
+      visibilityObserver = new MutationObserver(()=>{
+        if(panel.classList.contains('d-none')) return;
+        logPanelVisibility();
+        ensureTestBlock();
+        ensureAgendaVisibleRender({ forceConsultorios: false }).catch(()=> null);
+      });
+      visibilityObserver.observe(panel, { attributes: true, attributeFilter: ['class', 'style'] });
     }
   };
 
   const start = ()=>{
     bindEvents();
     syncDoctorInput();
+    logPanelVisibility();
+    ensureTestBlock();
+    initCalendar();
     const isVisible = panel && !panel.classList.contains('d-none');
     if(isVisible){
-      refreshCalendar({ forceConsultorios: true }).catch(()=> null);
+      logPanelVisibility();
+      ensureTestBlock();
+      ensureAgendaVisibleRender({ forceConsultorios: true }).catch(()=> null);
     }
   };
 

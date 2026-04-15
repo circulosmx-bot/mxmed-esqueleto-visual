@@ -220,6 +220,35 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 
 .mm-main{flex:1 1 auto;}
+#viewport{
+  width: 100%;
+  min-width: 0;
+  min-height: 620px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.mm-main{
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* Paneles clínicos/administrativos dentro del viewport (sin depender de hijo directo) */
+#viewport [id^="p-"].mm-card{
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+#viewport [id^="p-"].mm-card:not(.d-none){
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 620px;
+  flex: 1 1 auto;
+}
+#viewport [id^="p-"].mm-card.d-none{
+  flex: 0 0 auto;
+}
 
 
 
@@ -1041,6 +1070,12 @@ body{margin:0;background:var(--mm-fondo-base);}
   .mm-grid{flex-direction:column;}
 
   .mm-sidebar{width:auto;flex:1 1 auto;}
+  .mm-main{
+    width: 100%;
+  }
+  #viewport{
+    min-height: 520px;
+  }
 
 }
 
@@ -5071,6 +5106,28 @@ body{margin:0;background:var(--mm-fondo-base);}
 .dg-date-year .form-select::-webkit-calendar-picker-indicator{ display:none !important; }
 
 /* Agenda Frontend v1 */
+#p-ag-admin:not(.d-none){
+  width: 100%;
+  min-width: 0;
+}
+#p-ag-admin:not(.d-none) .body{
+  width: 100%;
+  min-height: 760px;
+  overflow: visible;
+}
+#agendaFrontendV1{
+  width: 100%;
+  min-width: 0;
+  min-height: 700px;
+}
+#agendaFrontendV1 > [class*="col-"]{
+  min-width: 0;
+}
+.mx-agenda-v1 #ag_test_block{
+  display: block;
+  width: 100%;
+  min-height: 96px;
+}
 .mx-agenda-v1 .form-label{
   font-weight: 600;
   color: #0b3750;
@@ -5084,6 +5141,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 #ag_calendar{
   min-height: 640px;
+  width: 100%;
+  display: block;
 }
 .mx-agenda-calendar-wrap .fc .fc-toolbar-title{
   font-size: 1rem;
@@ -5103,6 +5162,25 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mx-agenda-calendar-wrap .fc .fc-col-header-cell-cushion{
   color: #284f66;
   font-weight: 600;
+}
+.mx-agenda-calendar-wrap .fc-bg-event.mx-ag-availability-bg{
+  background: rgba(25, 135, 84, 0.14) !important;
+  border: none !important;
+}
+.mx-ag-legend{
+  width: 14px;
+  height: 10px;
+  display: inline-block;
+  border-radius: 2px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.mx-ag-legend--busy{
+  background: #0d6efd;
+}
+.mx-ag-legend--available{
+  background: rgba(25, 135, 84, 0.35);
+  border: 1px solid rgba(25, 135, 84, 0.45);
 }
 .dg-date-year .material-symbols-outlined,
 .dg-date-year .material-symbols-rounded{ display:none !important; }
