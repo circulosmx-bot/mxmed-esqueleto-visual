@@ -8928,6 +8928,8 @@ console.info('app.js loaded :: 20251123a');
       informeModalBodySlot: pane.querySelector('#im_modal_body_slot'),
       notaModalEl: pane.querySelector('#modalNotaMedica'),
       notaModalBodySlot: pane.querySelector('#nm_modal_body_slot'),
+      altaModalEl: pane.querySelector('#modalAltaMedica'),
+      altaModalBodySlot: pane.querySelector('#am_modal_body_slot'),
       interconsultaModalEl: pane.querySelector('#modalInterconsulta'),
       interconsultaModalBodySlot: pane.querySelector('#ix_modal_body_slot'),
       responsivaModalEl: pane.querySelector('#modalResponsivaMedica'),
@@ -9153,6 +9155,50 @@ console.info('app.js loaded :: 20251123a');
       notaSignatureInlinePrompt: root.querySelector('#nm_signature_inline_prompt'),
       notaSignatureInlineYesBtn: root.querySelector('#nm_signature_inline_yes'),
       notaSignatureInlineNoBtn: root.querySelector('#nm_signature_inline_no'),
+      altaWizard: root.querySelector('#am_wizard'),
+      altaStepLabel: root.querySelector('#am_step_label'),
+      altaNotice: root.querySelector('#am_notice'),
+      altaStep1: root.querySelector('#am_step_1'),
+      altaStep2: root.querySelector('#am_step_2'),
+      altaStep3: root.querySelector('#am_step_3'),
+      altaStep4: root.querySelector('#am_step_4'),
+      altaStep5: root.querySelector('#am_step_5'),
+      altaStep6: root.querySelector('#am_step_6'),
+      altaStep7: root.querySelector('#am_step_7'),
+      altaDate: root.querySelector('#am_date'),
+      altaDischargeType: root.querySelector('#am_discharge_type'),
+      altaMotivoEgreso: root.querySelector('#am_motivo_egreso'),
+      altaPatientName: root.querySelector('#am_patient_name'),
+      altaPatientAge: root.querySelector('#am_patient_age'),
+      altaPatientSex: root.querySelector('#am_patient_sex'),
+      altaDoctorName: root.querySelector('#am_doctor_name'),
+      altaResumenEvolucion: root.querySelector('#am_resumen_evolucion'),
+      altaDiagnosticoFinal: root.querySelector('#am_diagnostico_final'),
+      altaEstadoPaciente: root.querySelector('#am_estado_paciente'),
+      altaDatosRelevantes: root.querySelector('#am_datos_relevantes'),
+      altaTratamiento: root.querySelector('#am_tratamiento'),
+      altaCuidadosGenerales: root.querySelector('#am_cuidados_generales'),
+      altaSignosAlarma: root.querySelector('#am_signos_alarma'),
+      altaCitaControl: root.querySelector('#am_cita_control'),
+      altaRecomendaciones: root.querySelector('#am_recomendaciones'),
+      altaFinalText: root.querySelector('#am_final_text'),
+      altaFinalSignatureState: root.querySelector('#am_final_signature_state'),
+      altaPrev: root.querySelector('#am_prev'),
+      altaNext: root.querySelector('#am_next'),
+      altaSave: root.querySelector('#am_save'),
+      altaEmit: root.querySelector('#am_emit'),
+      altaCancel: root.querySelector('#am_cancel'),
+      altaSignatureSourceRegistered: root.querySelector('#am_signature_source_registered'),
+      altaSignatureRegisteredWrap: root.querySelector('#am_signature_registered_wrap'),
+      altaSignatureRegisteredPreview: root.querySelector('#am_signature_registered_preview'),
+      altaSignatureCanvas: root.querySelector('#am_signature_canvas'),
+      altaSignatureQrOpen: root.querySelector('#am_signature_qr_open'),
+      altaSignatureClear: root.querySelector('#am_signature_clear'),
+      altaSignatureStatus: root.querySelector('#am_signature_status'),
+      altaSignatureRemoteStatus: root.querySelector('#am_signature_remote_status'),
+      altaSignatureInlinePrompt: root.querySelector('#am_signature_inline_prompt'),
+      altaSignatureInlineYesBtn: root.querySelector('#am_signature_inline_yes'),
+      altaSignatureInlineNoBtn: root.querySelector('#am_signature_inline_no'),
       interconsultaWizard: root.querySelector('#ix_wizard'),
       interconsultaStepLabel: root.querySelector('#ix_step_label'),
       interconsultaNotice: root.querySelector('#ix_notice'),
@@ -9338,6 +9384,9 @@ console.info('app.js loaded :: 20251123a');
     if(els.notaModalBodySlot && els.notaWizard && els.notaWizard.parentElement !== els.notaModalBodySlot){
       els.notaModalBodySlot.appendChild(els.notaWizard);
     }
+    if(els.altaModalBodySlot && els.altaWizard && els.altaWizard.parentElement !== els.altaModalBodySlot){
+      els.altaModalBodySlot.appendChild(els.altaWizard);
+    }
     if(els.interconsultaModalBodySlot && els.interconsultaWizard && els.interconsultaWizard.parentElement !== els.interconsultaModalBodySlot){
       els.interconsultaModalBodySlot.appendChild(els.interconsultaWizard);
     }
@@ -9489,6 +9538,38 @@ console.info('app.js loaded :: 20251123a');
         final_text: ''
       }
     };
+    const altaTypeLabels = Object.freeze({
+      mejoria: 'Mejoría',
+      voluntaria: 'Voluntaria',
+      administrativa: 'Administrativa',
+      referencia: 'Referencia'
+    });
+    const altaState = {
+      step: 1,
+      saving: false,
+      finalEdited: false,
+      signaturePad: null,
+      signatureHasStroke: false,
+      localSignatureData: '',
+      signaturePreferredSource: '',
+      registeredSignatureData: '',
+      remoteSignature: null,
+      form: {
+        fecha_alta: '',
+        tipo_alta: 'mejoria',
+        motivo_egreso: '',
+        resumen_evolucion: '',
+        diagnostico_final: '',
+        estado_paciente: '',
+        datos_relevantes: '',
+        tratamiento: '',
+        cuidados_generales: '',
+        signos_alarma: '',
+        cita_control: '',
+        recomendaciones: '',
+        final_text: ''
+      }
+    };
     const notaEmitValidationRules = [
       {
         key: 'motivo_consulta',
@@ -9554,8 +9635,74 @@ console.info('app.js loaded :: 20251123a');
         isMissing: ()=> !normalizeConsentInputRaw(notaState.form.final_text || '')
       }
     ];
+    const altaEmitValidationRules = [
+      {
+        key: 'motivo_egreso',
+        label: 'Motivo de egreso',
+        step: 1,
+        selector: '#am_motivo_egreso',
+        message: 'Este campo es obligatorio',
+        notice: 'Motivo de egreso es obligatorio para emitir.',
+        isMissing: ()=> !normalizeConsentInputRaw(altaState.form.motivo_egreso || '')
+      },
+      {
+        key: 'resumen_evolucion',
+        label: 'Resumen clínico',
+        step: 2,
+        selector: '#am_resumen_evolucion',
+        message: 'Este campo es obligatorio',
+        notice: 'Resumen clínico es obligatorio para emitir.',
+        isMissing: ()=> !normalizeConsentInputRaw(altaState.form.resumen_evolucion || '')
+      },
+      {
+        key: 'diagnostico_final',
+        label: 'Diagnóstico final',
+        step: 2,
+        selector: '#am_diagnostico_final',
+        message: 'Este campo es obligatorio',
+        notice: 'Diagnóstico final es obligatorio para emitir.',
+        isMissing: ()=> !normalizeConsentInputRaw(altaState.form.diagnostico_final || '')
+      },
+      {
+        key: 'estado_paciente',
+        label: 'Estado actual',
+        step: 3,
+        selector: '#am_estado_paciente',
+        message: 'Este campo es obligatorio',
+        notice: 'Estado actual del paciente es obligatorio para emitir.',
+        isMissing: ()=> !normalizeConsentInputRaw(altaState.form.estado_paciente || '')
+      },
+      {
+        key: 'tratamiento',
+        label: 'Tratamiento',
+        step: 4,
+        selector: '#am_tratamiento',
+        message: 'Este campo es obligatorio',
+        notice: 'Tratamiento es obligatorio para emitir.',
+        isMissing: ()=> !normalizeConsentInputRaw(altaState.form.tratamiento || '')
+      },
+      {
+        key: 'doctor_signature',
+        label: 'Firma del médico',
+        step: 6,
+        selector: '#am_signature_canvas',
+        message: 'Este campo es obligatorio',
+        notice: 'Firma del médico es obligatoria para emitir.',
+        isMissing: ()=> !getActiveAltaDoctorSignature(formatNowSql())
+      },
+      {
+        key: 'final_text',
+        label: 'Vista final editable',
+        step: 7,
+        selector: '#am_final_text',
+        message: 'Este campo es obligatorio',
+        notice: 'La vista final editable no puede emitirse vacía.',
+        isMissing: ()=> !normalizeConsentInputRaw(altaState.form.final_text || '')
+      }
+    ];
     const wizardEmitValidationRulesByDocument = Object.freeze({
-      nota_medica: notaEmitValidationRules
+      nota_medica: notaEmitValidationRules,
+      alta_medica: altaEmitValidationRules
     });
     const interconsultaState = {
       step: 1,
@@ -9911,6 +10058,35 @@ console.info('app.js loaded :: 20251123a');
           'objetivo',
           'impresion_clinica',
           'plan_manejo',
+          'cierre'
+        ]),
+        signatures_required: Object.freeze(['doctor']),
+        attachments_allowed: Object.freeze([]),
+        render_order: Object.freeze([
+          'header',
+          'patient_context',
+          'clinical_content',
+          'closure',
+          'signatures'
+        ]),
+        print_profile: Object.freeze({
+          font_family: '"Inter", "Helvetica Neue", Arial, sans-serif',
+          base_font_size_px: 12,
+          line_height: 1.5
+        })
+      }),
+      alta_medica: Object.freeze({
+        document_type: 'alta_medica',
+        title: 'Alta médica',
+        subtitle_field: 'content.motivo_egreso',
+        blocks: Object.freeze([
+          'encabezado',
+          'datos_paciente',
+          'contexto_alta',
+          'resumen_clinico',
+          'estado_actual',
+          'indicaciones',
+          'seguimiento',
           'cierre'
         ]),
         signatures_required: Object.freeze(['doctor']),
@@ -14431,6 +14607,770 @@ console.info('app.js loaded :: 20251123a');
         renderNotaStep();
       }
     };
+    const getAltaTypeLabel = (value = '')=>{
+      const key = sanitizeText(value || '').toLowerCase();
+      return sanitizeText(altaTypeLabels[key] || '') || 'Mejoría';
+    };
+    const buildAltaFinalTextFromForm = (form = null)=>{
+      const source = (form && typeof form === 'object') ? form : altaState.form;
+      const lines = [];
+      const pushSection = (title, value)=>{
+        const safe = normalizeConsentInputRaw(value || '');
+        if(!safe) return;
+        lines.push(`${title}:`);
+        lines.push(safe);
+        lines.push('');
+      };
+      pushSection('Motivo de egreso', source.motivo_egreso);
+      pushSection('Resumen clínico', source.resumen_evolucion);
+      pushSection('Diagnóstico final', source.diagnostico_final);
+      pushSection('Estado actual', source.estado_paciente);
+      pushSection('Datos relevantes', source.datos_relevantes);
+      pushSection('Indicaciones - Tratamiento', source.tratamiento);
+      pushSection('Indicaciones - Cuidados generales', source.cuidados_generales);
+      pushSection('Indicaciones - Signos de alarma', source.signos_alarma);
+      pushSection('Seguimiento - Cita de control', source.cita_control);
+      pushSection('Seguimiento - Recomendaciones', source.recomendaciones);
+      return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+    };
+    const syncAltaInputsFromState = ()=>{
+      if(els.altaDate) els.altaDate.value = sanitizeText(altaState.form.fecha_alta || '');
+      if(els.altaDischargeType) els.altaDischargeType.value = sanitizeText(altaState.form.tipo_alta || 'mejoria') || 'mejoria';
+      if(els.altaMotivoEgreso) els.altaMotivoEgreso.value = sanitizeText(altaState.form.motivo_egreso || '');
+      if(els.altaResumenEvolucion) els.altaResumenEvolucion.value = sanitizeText(altaState.form.resumen_evolucion || '');
+      if(els.altaDiagnosticoFinal) els.altaDiagnosticoFinal.value = sanitizeText(altaState.form.diagnostico_final || '');
+      if(els.altaEstadoPaciente) els.altaEstadoPaciente.value = sanitizeText(altaState.form.estado_paciente || '');
+      if(els.altaDatosRelevantes) els.altaDatosRelevantes.value = sanitizeText(altaState.form.datos_relevantes || '');
+      if(els.altaTratamiento) els.altaTratamiento.value = sanitizeText(altaState.form.tratamiento || '');
+      if(els.altaCuidadosGenerales) els.altaCuidadosGenerales.value = sanitizeText(altaState.form.cuidados_generales || '');
+      if(els.altaSignosAlarma) els.altaSignosAlarma.value = sanitizeText(altaState.form.signos_alarma || '');
+      if(els.altaCitaControl) els.altaCitaControl.value = sanitizeText(altaState.form.cita_control || '');
+      if(els.altaRecomendaciones) els.altaRecomendaciones.value = sanitizeText(altaState.form.recomendaciones || '');
+      if(els.altaFinalText) els.altaFinalText.value = normalizeConsentInputRaw(altaState.form.final_text || '');
+    };
+    const setAltaNotice = (message = '')=>{
+      if(!els.altaNotice) return;
+      const text = sanitizeText(message || '');
+      els.altaNotice.textContent = text;
+      els.altaNotice.classList.toggle('d-none', !text);
+    };
+    const setAltaRemoteStatus = (message = '', tone = 'muted')=>{
+      if(!els.altaSignatureRemoteStatus) return;
+      const text = sanitizeText(message || '');
+      els.altaSignatureRemoteStatus.textContent = text;
+      els.altaSignatureRemoteStatus.classList.toggle('d-none', !text);
+      els.altaSignatureRemoteStatus.classList.toggle('text-success', tone === 'success');
+      els.altaSignatureRemoteStatus.classList.toggle('text-danger', tone === 'error');
+      els.altaSignatureRemoteStatus.classList.toggle('text-muted', tone !== 'success' && tone !== 'error');
+    };
+    const updateAltaSignatureStatus = ()=>{
+      let label = 'Sin firma';
+      if(altaState.signaturePreferredSource === 'remote' && altaState.remoteSignature){
+        label = 'Firma remota aplicada';
+      } else if(altaState.signaturePreferredSource === 'registered' && altaState.registeredSignatureData){
+        label = 'Firma registrada aplicada';
+      } else if(altaState.signatureHasStroke){
+        label = 'Firma local capturada';
+      }
+      if(els.altaSignatureStatus){
+        els.altaSignatureStatus.textContent = label;
+      }
+      if(els.altaFinalSignatureState){
+        els.altaFinalSignatureState.textContent = label;
+      }
+      if(label !== 'Sin firma'){
+        clearWizardFieldError('alta_medica', 'doctor_signature');
+      }
+    };
+    const syncAltaSignatureCanvasSize = ({ preserveDrawing = true } = {})=>{
+      if(!els.altaSignatureCanvas) return;
+      const canvas = els.altaSignatureCanvas;
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.max(300, Math.floor(rect.width || 0));
+      const height = Math.max(160, Math.floor(rect.height || 180));
+      const ratio = Math.max(1, window.devicePixelRatio || 1);
+      const targetW = Math.floor(width * ratio);
+      const targetH = Math.floor(height * ratio);
+      if(canvas.width === targetW && canvas.height === targetH){
+        return;
+      }
+      let snapshot = '';
+      if(preserveDrawing && altaState.signatureHasStroke){
+        try{ snapshot = canvas.toDataURL('image/png'); }catch(_){ snapshot = ''; }
+      }
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+      if(!ctx) return;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(ratio, ratio);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2;
+      if(snapshot){
+        const img = new Image();
+        img.onload = ()=>{
+          try{
+            ctx.drawImage(img, 0, 0, width, height);
+            altaState.signatureHasStroke = true;
+            updateAltaSignatureStatus();
+          }catch(_){}
+        };
+        img.src = snapshot;
+      }else{
+        altaState.signatureHasStroke = false;
+        if(altaState.signaturePreferredSource === 'local'){
+          altaState.signaturePreferredSource = altaState.remoteSignature ? 'remote' : (altaState.registeredSignatureData ? 'registered' : '');
+        }
+        updateAltaSignatureStatus();
+      }
+    };
+    const initAltaSignaturePad = ()=>{
+      const canvas = els.altaSignatureCanvas;
+      if(!canvas || altaState.signaturePad) return;
+      const ctx = canvas.getContext('2d');
+      if(!ctx) return;
+      const start = (event)=>{
+        if(altaState.saving) return;
+        event.preventDefault();
+        drawing = true;
+        const p = getPoint(event);
+        last = p;
+        altaState.signatureHasStroke = true;
+        altaState.signaturePreferredSource = 'local';
+        altaState.remoteSignature = null;
+        setAltaRemoteStatus('', 'muted');
+        updateAltaSignatureStatus();
+      };
+      const move = (event)=>{
+        if(!drawing) return;
+        event.preventDefault();
+        const p = getPoint(event);
+        if(!last){ last = p; return; }
+        ctx.beginPath();
+        ctx.moveTo(last.x, last.y);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        last = p;
+      };
+      const end = (event)=>{
+        if(!drawing) return;
+        event.preventDefault();
+        drawing = false;
+        last = null;
+        altaState.localSignatureData = exportAltaSignatureData();
+        updateAltaSignatureStatus();
+      };
+      const getPoint = (event)=>{
+        const rect = canvas.getBoundingClientRect();
+        const touch = event.touches?.[0] || event.changedTouches?.[0];
+        const clientX = touch ? touch.clientX : event.clientX;
+        const clientY = touch ? touch.clientY : event.clientY;
+        return { x: clientX - rect.left, y: clientY - rect.top };
+      };
+      let drawing = false;
+      let last = null;
+      canvas.addEventListener('mousedown', start);
+      canvas.addEventListener('mousemove', move);
+      window.addEventListener('mouseup', end);
+      canvas.addEventListener('mouseleave', end);
+      canvas.addEventListener('touchstart', start, { passive: false });
+      canvas.addEventListener('touchmove', move, { passive: false });
+      canvas.addEventListener('touchend', end, { passive: false });
+      canvas.addEventListener('touchcancel', end, { passive: false });
+      altaState.signaturePad = { canvas, ctx };
+      syncAltaSignatureCanvasSize({ preserveDrawing: false });
+    };
+    const clearAltaSignaturePad = ()=>{
+      const canvas = els.altaSignatureCanvas;
+      if(!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if(!ctx) return;
+      syncAltaSignatureCanvasSize({ preserveDrawing: false });
+      const rect = canvas.getBoundingClientRect();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, rect.width || canvas.width, rect.height || canvas.height);
+      altaState.signatureHasStroke = false;
+      altaState.localSignatureData = '';
+      if(altaState.signaturePreferredSource !== 'registered'){
+        altaState.signaturePreferredSource = altaState.remoteSignature ? 'remote' : '';
+      }
+      updateAltaSignatureStatus();
+    };
+    const exportAltaSignatureData = ()=>{
+      const canvas = els.altaSignatureCanvas;
+      if(altaState.signaturePreferredSource === 'registered' && altaState.registeredSignatureData){
+        return altaState.registeredSignatureData;
+      }
+      if(altaState.signaturePreferredSource === 'remote' && altaState.remoteSignature?.image_data){
+        return normalizeSignatureImageData(altaState.remoteSignature.image_data || '');
+      }
+      if(altaState.localSignatureData){
+        return normalizeSignatureImageData(altaState.localSignatureData);
+      }
+      if(!canvas || !altaState.signatureHasStroke) return '';
+      try{
+        const data = canvas.toDataURL('image/png');
+        altaState.localSignatureData = normalizeSignatureImageData(data);
+        return altaState.localSignatureData;
+      }catch(_){
+        return '';
+      }
+    };
+    const setAltaSignaturePreferredSource = (source = '')=>{
+      const normalized = sanitizeText(source || '').toLowerCase();
+      altaState.signaturePreferredSource = normalized;
+      if(els.altaSignatureSourceRegistered){
+        els.altaSignatureSourceRegistered.checked = normalized === 'registered';
+      }
+      if(els.altaSignatureRegisteredWrap){
+        const show = normalized === 'registered' && !!altaState.registeredSignatureData;
+        els.altaSignatureRegisteredWrap.classList.toggle('d-none', !show);
+      }
+      updateAltaSignatureStatus();
+    };
+    const refreshAltaRegisteredSignature = ()=>{
+      altaState.registeredSignatureData = readRegisteredDoctorSignature();
+      if(els.altaSignatureRegisteredPreview){
+        els.altaSignatureRegisteredPreview.src = altaState.registeredSignatureData || '';
+      }
+      if(els.altaSignatureSourceRegistered){
+        els.altaSignatureSourceRegistered.disabled = !altaState.registeredSignatureData;
+      }
+      if(els.altaSignatureRegisteredWrap){
+        const show = altaState.signaturePreferredSource === 'registered' && !!altaState.registeredSignatureData;
+        els.altaSignatureRegisteredWrap.classList.toggle('d-none', !show);
+      }
+      if(!altaState.registeredSignatureData && altaState.signaturePreferredSource === 'registered'){
+        altaState.signaturePreferredSource = altaState.signatureHasStroke ? 'local' : '';
+      }
+      if(altaState.registeredSignatureData && !altaState.signaturePreferredSource && !altaState.signatureHasStroke){
+        altaState.signaturePreferredSource = 'registered';
+      }
+      updateAltaSignatureStatus();
+    };
+    const pullAltaDoctorRemoteSignature = ()=>{
+      const remote = (state.doctorRemoteSignature && typeof state.doctorRemoteSignature === 'object')
+        ? state.doctorRemoteSignature
+        : null;
+      const imageData = sanitizeText(remote?.image_data || '');
+      if(!imageData){
+        altaState.remoteSignature = null;
+        if(altaState.signaturePreferredSource === 'remote'){
+          altaState.signaturePreferredSource = altaState.signatureHasStroke ? 'local' : (altaState.registeredSignatureData ? 'registered' : '');
+        }
+        updateAltaSignatureStatus();
+        return false;
+      }
+      altaState.remoteSignature = {
+        type: 'drawn',
+        source: 'remote_qr',
+        role: 'doctor',
+        image_data: imageData,
+        signed_at: sanitizeText(remote?.signed_at || formatNowSql()),
+        signer_name: sanitizeText(remote?.signer_name || document.querySelector('.user-id .name')?.textContent || 'Médico tratante'),
+        token: sanitizeText(remote?.token || '')
+      };
+      altaState.signaturePreferredSource = 'remote';
+      altaState.signatureHasStroke = false;
+      altaState.localSignatureData = '';
+      updateAltaSignatureStatus();
+      return true;
+    };
+    const getActiveAltaDoctorSignature = (nowSql = '')=>{
+      const signedAt = sanitizeText(nowSql || formatNowSql());
+      const signerName = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
+      if(altaState.signaturePreferredSource === 'remote' && altaState.remoteSignature){
+        return {
+          type: 'drawn',
+          role: 'doctor',
+          image_data: sanitizeText(altaState.remoteSignature.image_data || ''),
+          signed_at: sanitizeText(altaState.remoteSignature.signed_at || signedAt),
+          signer_name: sanitizeText(altaState.remoteSignature.signer_name || signerName),
+          source: 'remote_qr',
+          token: sanitizeText(altaState.remoteSignature.token || '')
+        };
+      }
+      if(altaState.signaturePreferredSource === 'registered' && altaState.registeredSignatureData){
+        return {
+          type: 'drawn',
+          role: 'doctor',
+          image_data: altaState.registeredSignatureData,
+          signed_at: signedAt,
+          signer_name: signerName,
+          source: 'registered_profile'
+        };
+      }
+      const localSignature = exportAltaSignatureData();
+      if(localSignature){
+        return {
+          type: 'drawn',
+          role: 'doctor',
+          image_data: localSignature,
+          signed_at: signedAt,
+          signer_name: signerName,
+          source: 'local_canvas'
+        };
+      }
+      return null;
+    };
+    const runAltaEmitGuidedValidation = ()=>{
+      return runWizardGuidedValidation({
+        documentType: 'alta_medica',
+        rules: wizardEmitValidationRulesByDocument.alta_medica || [],
+        setStep: (nextStep)=>{
+          altaState.step = Math.min(Math.max(Number(nextStep || 1), 1), 7);
+        },
+        renderStep: ()=> renderAltaStep(),
+        setNotice: (message)=> setAltaNotice(message)
+      });
+    };
+    const ensureAltaFinalText = ({ force = false } = {})=>{
+      if(force || !altaState.finalEdited || !trimConsentInputValue(altaState.form.final_text || '')){
+        altaState.form.final_text = buildAltaFinalTextFromForm(altaState.form);
+        if(els.altaFinalText) els.altaFinalText.value = altaState.form.final_text;
+      }
+    };
+    const renderAltaStep = ()=>{
+      if(!els.altaWizard) return;
+      const maxStep = 7;
+      let normalizedStep = Math.min(Math.max(Number(altaState.step || 1), 1), maxStep);
+      if(normalizedStep === 7 && !getActiveAltaDoctorSignature(formatNowSql())){
+        normalizedStep = 6;
+        setAltaNotice('Captura la firma del médico para continuar a la vista final editable.');
+      }
+      altaState.step = normalizedStep;
+      els.altaStep1?.classList.toggle('d-none', normalizedStep !== 1);
+      els.altaStep2?.classList.toggle('d-none', normalizedStep !== 2);
+      els.altaStep3?.classList.toggle('d-none', normalizedStep !== 3);
+      els.altaStep4?.classList.toggle('d-none', normalizedStep !== 4);
+      els.altaStep5?.classList.toggle('d-none', normalizedStep !== 5);
+      els.altaStep6?.classList.toggle('d-none', normalizedStep !== 6);
+      els.altaStep7?.classList.toggle('d-none', normalizedStep !== 7);
+      if(els.altaStepLabel) els.altaStepLabel.textContent = `Paso ${normalizedStep} de 7`;
+      if(els.altaPrev){
+        els.altaPrev.disabled = normalizedStep <= 1 || altaState.saving;
+      }
+      if(els.altaNext){
+        els.altaNext.classList.toggle('d-none', normalizedStep >= 7);
+        els.altaNext.disabled = altaState.saving;
+      }
+      const showActions = normalizedStep === 7;
+      if(els.altaSave){
+        els.altaSave.classList.toggle('d-none', !showActions);
+        els.altaSave.disabled = altaState.saving;
+      }
+      if(els.altaEmit){
+        els.altaEmit.classList.toggle('d-none', !showActions);
+        els.altaEmit.disabled = altaState.saving;
+      }
+      if(els.altaCancel){
+        els.altaCancel.classList.toggle('d-none', !showActions);
+        els.altaCancel.disabled = altaState.saving;
+      }
+      if(normalizedStep === 6){
+        if(!altaState.signaturePad){
+          initAltaSignaturePad();
+        }
+        window.requestAnimationFrame(()=> syncAltaSignatureCanvasSize({ preserveDrawing: true }));
+      }
+      if(normalizedStep === 7){
+        ensureAltaFinalText();
+      }
+      window.requestAnimationFrame(()=> refreshAutosaveChecksIn(els.altaWizard));
+    };
+    const buildAltaTempSnapshot = ()=>({
+      step: Number(altaState.step || 1) || 1,
+      final_edited: altaState.finalEdited ? '1' : '',
+      signature_source: sanitizeText(altaState.signaturePreferredSource || ''),
+      form: {
+        fecha_alta: sanitizeText(altaState.form.fecha_alta || ''),
+        tipo_alta: sanitizeText(altaState.form.tipo_alta || 'mejoria') || 'mejoria',
+        motivo_egreso: normalizeConsentInputRaw(altaState.form.motivo_egreso || ''),
+        resumen_evolucion: normalizeConsentInputRaw(altaState.form.resumen_evolucion || ''),
+        diagnostico_final: normalizeConsentInputRaw(altaState.form.diagnostico_final || ''),
+        estado_paciente: normalizeConsentInputRaw(altaState.form.estado_paciente || ''),
+        datos_relevantes: normalizeConsentInputRaw(altaState.form.datos_relevantes || ''),
+        tratamiento: normalizeConsentInputRaw(altaState.form.tratamiento || ''),
+        cuidados_generales: normalizeConsentInputRaw(altaState.form.cuidados_generales || ''),
+        signos_alarma: normalizeConsentInputRaw(altaState.form.signos_alarma || ''),
+        cita_control: normalizeConsentInputRaw(altaState.form.cita_control || ''),
+        recomendaciones: normalizeConsentInputRaw(altaState.form.recomendaciones || ''),
+        final_text: normalizeConsentInputRaw(altaState.form.final_text || '')
+      }
+    });
+    const hasAltaTempContent = (snapshot = null)=>{
+      const form = (snapshot?.form && typeof snapshot.form === 'object') ? snapshot.form : {};
+      return [
+        form.motivo_egreso,
+        form.resumen_evolucion,
+        form.diagnostico_final,
+        form.estado_paciente,
+        form.datos_relevantes,
+        form.tratamiento,
+        form.cuidados_generales,
+        form.signos_alarma,
+        form.cita_control,
+        form.recomendaciones,
+        form.final_text
+      ].some((value)=> trimConsentInputValue(value || '') !== '');
+    };
+    const applyAltaTempSnapshot = (snapshot = null)=>{
+      const safe = (snapshot && typeof snapshot === 'object') ? snapshot : {};
+      const form = (safe.form && typeof safe.form === 'object') ? safe.form : {};
+      altaState.form = {
+        ...altaState.form,
+        fecha_alta: sanitizeText(form.fecha_alta ?? altaState.form.fecha_alta ?? ''),
+        tipo_alta: sanitizeText(form.tipo_alta ?? altaState.form.tipo_alta ?? 'mejoria') || 'mejoria',
+        motivo_egreso: normalizeConsentInputRaw(form.motivo_egreso ?? altaState.form.motivo_egreso ?? ''),
+        resumen_evolucion: normalizeConsentInputRaw(form.resumen_evolucion ?? altaState.form.resumen_evolucion ?? ''),
+        diagnostico_final: normalizeConsentInputRaw(form.diagnostico_final ?? altaState.form.diagnostico_final ?? ''),
+        estado_paciente: normalizeConsentInputRaw(form.estado_paciente ?? altaState.form.estado_paciente ?? ''),
+        datos_relevantes: normalizeConsentInputRaw(form.datos_relevantes ?? altaState.form.datos_relevantes ?? ''),
+        tratamiento: normalizeConsentInputRaw(form.tratamiento ?? altaState.form.tratamiento ?? ''),
+        cuidados_generales: normalizeConsentInputRaw(form.cuidados_generales ?? altaState.form.cuidados_generales ?? ''),
+        signos_alarma: normalizeConsentInputRaw(form.signos_alarma ?? altaState.form.signos_alarma ?? ''),
+        cita_control: normalizeConsentInputRaw(form.cita_control ?? altaState.form.cita_control ?? ''),
+        recomendaciones: normalizeConsentInputRaw(form.recomendaciones ?? altaState.form.recomendaciones ?? ''),
+        final_text: normalizeConsentInputRaw(form.final_text ?? altaState.form.final_text ?? '')
+      };
+      altaState.finalEdited = trimConsentInputValue(safe.final_edited || '') === '1'
+        || trimConsentInputValue(altaState.form.final_text || '') !== '';
+      altaState.signaturePreferredSource = sanitizeText(safe.signature_source || altaState.signaturePreferredSource || '');
+      altaState.step = Math.min(Math.max(Number(safe.step || 1), 1), 7);
+      syncAltaInputsFromState();
+      refreshAltaRegisteredSignature();
+      renderAltaStep();
+    };
+    const resetAltaWizard = ()=>{
+      clearWizardErrors('alta_medica');
+      altaState.step = 1;
+      altaState.saving = false;
+      altaState.finalEdited = false;
+      altaState.signatureHasStroke = false;
+      altaState.localSignatureData = '';
+      altaState.signaturePreferredSource = '';
+      altaState.remoteSignature = null;
+      altaState.form = {
+        fecha_alta: '',
+        tipo_alta: 'mejoria',
+        motivo_egreso: '',
+        resumen_evolucion: '',
+        diagnostico_final: '',
+        estado_paciente: '',
+        datos_relevantes: '',
+        tratamiento: '',
+        cuidados_generales: '',
+        signos_alarma: '',
+        cita_control: '',
+        recomendaciones: '',
+        final_text: ''
+      };
+      setAltaNotice('');
+      setAltaRemoteStatus('', 'muted');
+      els.altaSignatureInlinePrompt?.classList.add('d-none');
+      syncAltaInputsFromState();
+      clearAltaSignaturePad();
+      refreshAltaRegisteredSignature();
+      renderAltaStep();
+      if(els.altaWizard){
+        els.altaWizard.classList.add('d-none');
+      }
+    };
+    const startAltaDraft = ()=>{
+      const patientId = resolveActivePatientIdForConsent();
+      if(!patientId){
+        setAltaNotice('Selecciona paciente antes de crear el alta médica.');
+        return false;
+      }
+      clearWizardErrors('alta_medica');
+      const patient = readInformePatientContext();
+      if(els.altaPatientName) els.altaPatientName.value = patient.name;
+      if(els.altaPatientAge) els.altaPatientAge.value = patient.age;
+      if(els.altaPatientSex) els.altaPatientSex.value = patient.sex;
+      if(els.altaDoctorName){
+        els.altaDoctorName.value = sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante');
+      }
+      const today = new Date();
+      const y = String(today.getFullYear());
+      const m = String(today.getMonth() + 1).padStart(2, '0');
+      const d = String(today.getDate()).padStart(2, '0');
+      const nowDate = `${y}-${m}-${d}`;
+      altaState.step = 1;
+      altaState.saving = false;
+      altaState.finalEdited = false;
+      altaState.signatureHasStroke = false;
+      altaState.localSignatureData = '';
+      altaState.signaturePreferredSource = '';
+      altaState.remoteSignature = null;
+      altaState.form = {
+        fecha_alta: nowDate,
+        tipo_alta: 'mejoria',
+        motivo_egreso: '',
+        resumen_evolucion: '',
+        diagnostico_final: '',
+        estado_paciente: '',
+        datos_relevantes: '',
+        tratamiento: '',
+        cuidados_generales: '',
+        signos_alarma: '',
+        cita_control: '',
+        recomendaciones: '',
+        final_text: ''
+      };
+      ensureAltaFinalText({ force: true });
+      setAltaNotice('');
+      setAltaRemoteStatus('', 'muted');
+      els.altaSignatureInlinePrompt?.classList.add('d-none');
+      syncAltaInputsFromState();
+      initAltaSignaturePad();
+      syncAltaSignatureCanvasSize({ preserveDrawing: false });
+      clearAltaSignaturePad();
+      refreshAltaRegisteredSignature();
+      renderAltaStep();
+      if(els.altaWizard){
+        els.altaWizard.classList.remove('d-none');
+      }
+      return true;
+    };
+    const openAltaModal = async ()=>{
+      if(!startAltaDraft()) return;
+      const patientId = resolveActivePatientIdForConsent();
+      const tempSession = getDocModalTempSession({ documentType: 'alta_medica', patientId });
+      if(tempSession?.snapshot){
+        const decision = await askDocModalTempRecoveryDecision({
+          documentLabel: 'Alta médica',
+          savedAt: tempSession.saved_at
+        });
+        if(decision === 'continue'){
+          applyAltaTempSnapshot(tempSession.snapshot);
+          setAltaNotice('Se recuperó tu captura temporal reciente.');
+        }else{
+          clearDocModalTempSession({ documentType: 'alta_medica', patientId });
+        }
+      }
+      if(!els.altaModalEl || !window.bootstrap?.Modal) return;
+      try{
+        window.bootstrap.Modal.getOrCreateInstance(els.altaModalEl).show();
+      }catch(_){}
+    };
+    const closeAltaModal = ()=>{
+      if(!els.altaModalEl || !window.bootstrap?.Modal) return;
+      try{
+        window.bootstrap.Modal.getOrCreateInstance(els.altaModalEl)?.hide();
+      }catch(_){}
+    };
+    const buildAltaRenderedText = (payload = {})=>{
+      const lines = [];
+      const content = (payload?.content && typeof payload.content === 'object') ? payload.content : {};
+      const alta = (payload?.alta && typeof payload.alta === 'object') ? payload.alta : {};
+      const patientName = sanitizeText(payload?.patient_snapshot?.full_name || 'Paciente');
+      const altaTypeLabel = sanitizeText(alta.type_label || getAltaTypeLabel(alta.type || 'mejoria'));
+      lines.push('ALTA MÉDICA');
+      lines.push('');
+      lines.push(`Paciente: ${patientName}`);
+      const emissionDate = sanitizeText(payload?.report?.emission_date || '');
+      if(emissionDate){
+        lines.push(`Fecha: ${formatConsentUiDate(emissionDate, { withTime: false }) || emissionDate}`);
+      }
+      if(altaTypeLabel){
+        lines.push(`Tipo de alta: ${altaTypeLabel}`);
+      }
+      const pushSection = (title, value)=>{
+        const safe = normalizeConsentInputRaw(value || '');
+        if(!safe) return;
+        lines.push('');
+        lines.push(`${title}:`);
+        lines.push(safe);
+      };
+      pushSection('Motivo de egreso', content.motivo_egreso);
+      pushSection('Resumen clínico', content.resumen_evolucion);
+      pushSection('Diagnóstico final', content.diagnostico_final);
+      pushSection('Estado actual', content.estado_paciente);
+      pushSection('Datos relevantes', content.datos_relevantes);
+      pushSection('Indicaciones - Tratamiento', content.tratamiento);
+      pushSection('Indicaciones - Cuidados generales', content.cuidados_generales);
+      pushSection('Indicaciones - Signos de alarma', content.signos_alarma);
+      pushSection('Seguimiento - Cita de control', content.cita_control);
+      pushSection('Seguimiento - Recomendaciones', content.recomendaciones);
+      return lines.join('\n');
+    };
+    const buildAltaDocument = async (targetStatus = 'draft')=>{
+      const patientId = resolveActivePatientIdForConsent();
+      if(!patientId){
+        return { error: 'Selecciona paciente antes de emitir el alta médica.' };
+      }
+      const normalizedStatus = targetStatus === 'issued' ? 'issued' : 'draft';
+      const actorUserId = resolveClinicalActorUserId();
+      const nowSql = formatNowSql();
+      const patientSnapshot = readPatientSnapshot();
+      const doctorPrefill = readDoctorPrefillProfile();
+      const doctorBranding = resolveDoctorBranding(actorUserId);
+      const tipoAlta = sanitizeText(altaState.form.tipo_alta || 'mejoria') || 'mejoria';
+      const finalText = normalizeConsentInputRaw(altaState.form.final_text || buildAltaFinalTextFromForm(altaState.form));
+      const signature = getActiveAltaDoctorSignature(nowSql);
+      if(normalizedStatus === 'issued'){
+        if(!normalizeConsentInputRaw(altaState.form.motivo_egreso || '')) return { error: 'Motivo de egreso es obligatorio para emitir.' };
+        if(!normalizeConsentInputRaw(altaState.form.resumen_evolucion || '')) return { error: 'Resumen clínico es obligatorio para emitir.' };
+        if(!normalizeConsentInputRaw(altaState.form.diagnostico_final || '')) return { error: 'Diagnóstico final es obligatorio para emitir.' };
+        if(!normalizeConsentInputRaw(altaState.form.estado_paciente || '')) return { error: 'Estado actual del paciente es obligatorio para emitir.' };
+        if(!normalizeConsentInputRaw(altaState.form.tratamiento || '')) return { error: 'Tratamiento es obligatorio para emitir.' };
+        if(!finalText) return { error: 'La vista final editable no puede emitirse vacía.' };
+        if(!signature) return { error: 'Firma del médico es obligatoria para emitir.' };
+      }
+      const content = {
+        tipo_alta: tipoAlta,
+        tipo_alta_label: getAltaTypeLabel(tipoAlta),
+        motivo_egreso: normalizeConsentInputRaw(altaState.form.motivo_egreso || ''),
+        resumen_evolucion: normalizeConsentInputRaw(altaState.form.resumen_evolucion || ''),
+        diagnostico_final: normalizeConsentInputRaw(altaState.form.diagnostico_final || ''),
+        estado_paciente: normalizeConsentInputRaw(altaState.form.estado_paciente || ''),
+        datos_relevantes: normalizeConsentInputRaw(altaState.form.datos_relevantes || ''),
+        tratamiento: normalizeConsentInputRaw(altaState.form.tratamiento || ''),
+        cuidados_generales: normalizeConsentInputRaw(altaState.form.cuidados_generales || ''),
+        signos_alarma: normalizeConsentInputRaw(altaState.form.signos_alarma || ''),
+        cita_control: normalizeConsentInputRaw(altaState.form.cita_control || ''),
+        recomendaciones: normalizeConsentInputRaw(altaState.form.recomendaciones || '')
+      };
+      const payload = {
+        contract_version: 1,
+        status: normalizedStatus,
+        report: {
+          issued_at: nowSql,
+          emission_date: sanitizeText(altaState.form.fecha_alta || nowSql.slice(0, 10)),
+          title: 'Alta médica'
+        },
+        alta: {
+          type: tipoAlta,
+          type_label: getAltaTypeLabel(tipoAlta)
+        },
+        patient_snapshot: {
+          full_name: sanitizeText(patientSnapshot.full_name || ''),
+          age: sanitizeText(patientSnapshot.age || ''),
+          sex: sanitizeText(patientSnapshot.sexo || ''),
+          identifier: sanitizeText(patientSnapshot.identifier || '')
+        },
+        actor_snapshot: {
+          user_id: actorUserId,
+          full_name: sanitizeText(document.querySelector('.user-id .name')?.textContent || 'Médico tratante'),
+          license: sanitizeText(doctorPrefill.license || ''),
+          specialty: sanitizeText(doctorPrefill.specialty || ''),
+          specialty_license: sanitizeText(doctorPrefill.specialty_license || ''),
+          place: sanitizeText(doctorPrefill.place || ''),
+          institution: sanitizeText(doctorPrefill.institution || ''),
+          facility: sanitizeText(doctorPrefill.facility || '')
+        },
+        branding: {
+          mode: sanitizeText(doctorBranding.mode || 'standard') || 'standard',
+          logo_url_resolved: sanitizeText(doctorBranding.logo_url || ''),
+          group_logo_url_resolved: sanitizeText(doctorBranding.group_logo_url || ''),
+          facility_visible: sanitizeText(doctorBranding.facility_visible || ''),
+          location_line_visible: sanitizeText(doctorBranding.location_line_visible || ''),
+          logo_local_path: sanitizeText(doctorBranding.logo_local_path || '')
+        },
+        content,
+        signatures: {
+          doctor: signature
+        },
+        form_snapshot: {
+          fecha_alta: sanitizeText(altaState.form.fecha_alta || ''),
+          ...content,
+          final_text: finalText,
+          signature_source: sanitizeText(altaState.signaturePreferredSource || '')
+        }
+      };
+      payload.rendered_text = finalText || buildAltaRenderedText(payload);
+      const definition = getClinicalDocumentDefinition('alta_medica');
+      const context = { patient_id: patientId, care_setting: 'consulta' };
+      payload.canonical_document = buildClinicalCanonicalPayload({
+        definition,
+        payload,
+        context,
+        actorUserId,
+        title: 'Alta médica',
+        subtitle: normalizeConsentInputRaw(altaState.form.motivo_egreso || ''),
+        eventDatetime: nowSql
+      }).canonical_document;
+      const body = buildClinicalDocumentBody({
+        definition,
+        title: `Alta médica — ${getAltaTypeLabel(tipoAlta)}`,
+        summary: `${normalizedStatus} · ${getAltaTypeLabel(tipoAlta)} · ${sanitizeText(payload.report.emission_date || nowSql.slice(0, 10))}`,
+        context,
+        payload,
+        eventDatetime: nowSql,
+        actorUserId,
+        source: 'documents_clinicos_alta_medica'
+      });
+      return { patientId, body, normalizedStatus };
+    };
+    const saveAltaDocument = async (status = 'draft')=>{
+      if(altaState.saving) return;
+      if(status === 'issued'){
+        const validation = runAltaEmitGuidedValidation();
+        if(!validation.ok){
+          const noticeText = sanitizeText(validation?.rule?.notice || 'Completa los campos obligatorios para emitir.');
+          showCatalogFeedback(noticeText, 'error');
+          return;
+        }
+      }
+      altaState.saving = true;
+      setAltaNotice('');
+      if(els.altaSave){
+        els.altaSave.disabled = true;
+        els.altaSave.textContent = 'Guardando...';
+      }
+      if(els.altaEmit){
+        els.altaEmit.disabled = true;
+        els.altaEmit.textContent = 'Emitiendo...';
+      }
+      try{
+        const prepared = await buildAltaDocument(status);
+        if(prepared?.error){
+          throw new Error(prepared.error);
+        }
+        const resp = await fetch('/api/clinical/index.php/documents', {
+          method: 'POST',
+          headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify(prepared.body),
+          credentials: 'same-origin'
+        });
+        const json = await resp.json().catch(()=> null);
+        if(!resp.ok || !json || json.ok !== true){
+          const msg = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo guardar el alta médica.';
+          throw new Error(msg);
+        }
+        if(prepared.normalizedStatus === 'issued'){
+          clearDocModalTempSession({ documentType: 'alta_medica', patientId: prepared.patientId });
+        }
+        resetAltaWizard();
+        closeAltaModal();
+        listCanonicalConsents();
+        showCatalogFeedback(
+          prepared.normalizedStatus === 'issued'
+            ? 'Alta médica emitida correctamente.'
+            : 'Borrador de alta médica guardado correctamente.',
+          'success'
+        );
+      }catch(error){
+        const message = sanitizeText(error?.message || 'No se pudo guardar el alta médica.');
+        setAltaNotice(message);
+        showCatalogFeedback(message, 'error');
+      }finally{
+        altaState.saving = false;
+        if(els.altaSave){
+          els.altaSave.disabled = false;
+          els.altaSave.textContent = 'Guardar borrador';
+        }
+        if(els.altaEmit){
+          els.altaEmit.disabled = false;
+          els.altaEmit.textContent = 'Emitir alta';
+        }
+        renderAltaStep();
+      }
+    };
     const setInterconsultaNotice = (message = '')=>{
       if(!els.interconsultaNotice) return;
       const text = sanitizeText(message || '');
@@ -17754,6 +18694,24 @@ console.info('app.js loaded :: 20251123a');
       }
       return 'Sin motivo registrado';
     };
+    const resolveAltaDescriptorText = (payload, summaryText = '')=>{
+      const safePayload = (payload && typeof payload === 'object') ? payload : {};
+      const content = (safePayload.content && typeof safePayload.content === 'object') ? safePayload.content : {};
+      const formSnapshot = (safePayload.form_snapshot && typeof safePayload.form_snapshot === 'object') ? safePayload.form_snapshot : {};
+      const motivo = sanitizeText(content.motivo_egreso || formSnapshot.motivo_egreso || '');
+      if(motivo){
+        return truncateRecentDocDescriptor(motivo, 80);
+      }
+      const renderedText = String(safePayload.rendered_text || '').split(/\r?\n/).map((line)=> sanitizeText(line)).find(Boolean) || '';
+      if(renderedText){
+        return truncateRecentDocDescriptor(renderedText, 80);
+      }
+      const summary = sanitizeText(summaryText || '');
+      if(summary){
+        return truncateRecentDocDescriptor(summary, 80);
+      }
+      return 'Sin motivo registrado';
+    };
 
     const renderList = (items)=>{
       els.list.innerHTML = '';
@@ -17772,12 +18730,16 @@ console.info('app.js loaded :: 20251123a');
               documentType === 'nota_medica'
                 ? 'Nota médica'
                 : (
+              documentType === 'alta_medica'
+                ? 'Alta médica'
+                : (
               documentType === 'interconsulta'
                 ? 'Interconsulta'
                 : (documentType === 'responsiva_medica'
                   ? 'Responsiva médica'
                   : (documentType === 'certificado_medico' ? 'Certificado médico' : 'Consentimiento informado'))
                 )
+              )
             )
         );
         const title = sanitizeText(doc.title || doc.summary || fallbackTitle);
@@ -17793,6 +18755,7 @@ console.info('app.js loaded :: 20251123a');
         const isConsentDoc = documentType === 'consentimiento_informado' || !documentType;
         const isInformeDoc = documentType === 'informe_medico';
         const isNotaDoc = documentType === 'nota_medica';
+        const isAltaDoc = documentType === 'alta_medica';
         const isInterconsultaDoc = documentType === 'interconsulta';
         const isResponsivaDoc = documentType === 'responsiva_medica';
         const isCertificadoDoc = documentType === 'certificado_medico';
@@ -17806,16 +18769,19 @@ console.info('app.js loaded :: 20251123a');
         const responsivaDescriptorText = resolveResponsivaDescriptorText(payload, summary);
         const certificadoDescriptorText = resolveCertificadoDescriptorText(payload, summary);
         const notaDescriptorText = resolveNotaDescriptorText(payload, summary);
+        const altaDescriptorText = resolveAltaDescriptorText(payload, summary);
         const descriptorForLine = isConsentDoc
           ? descriptorText
           : (isInformeDoc
             ? informeDescriptorText
             : (isNotaDoc
               ? notaDescriptorText
+              : (isAltaDoc
+                ? altaDescriptorText
               : (isInterconsultaDoc
               ? interconsultaDescriptorText
-              : (isResponsivaDoc ? responsivaDescriptorText : (isCertificadoDoc ? certificadoDescriptorText : '')))));
-        const secondLineHtml = (isConsentDoc || isInformeDoc || isNotaDoc || isInterconsultaDoc || isResponsivaDoc || isCertificadoDoc)
+              : (isResponsivaDoc ? responsivaDescriptorText : (isCertificadoDoc ? certificadoDescriptorText : ''))))));
+        const secondLineHtml = (isConsentDoc || isInformeDoc || isNotaDoc || isAltaDoc || isInterconsultaDoc || isResponsivaDoc || isCertificadoDoc)
           ? `
             <div class="small text-muted d-flex justify-content-between align-items-center gap-2">
               ${
@@ -17862,7 +18828,7 @@ console.info('app.js loaded :: 20251123a');
         });
         const json = await resp.json().catch(()=> null);
         const items = Array.isArray(json?.data?.items) ? json.data.items : [];
-        const allowedTypes = new Set(['consentimiento_informado', 'informe_medico', 'nota_medica', 'interconsulta', 'responsiva_medica', 'certificado_medico']);
+        const allowedTypes = new Set(['consentimiento_informado', 'informe_medico', 'nota_medica', 'alta_medica', 'interconsulta', 'responsiva_medica', 'certificado_medico']);
         const normalized = items.map((item)=>{
           const clinicalDoc = item?.clinical_document && typeof item.clinical_document === 'object' ? item.clinical_document : {};
           const clinicalPayload = parseObjectMaybeJson(clinicalDoc?.payload);
@@ -18968,6 +19934,12 @@ console.info('app.js loaded :: 20251123a');
         openNotaModal();
         return;
       }
+      const openAltaBtn = event.target.closest('[data-action="documents-open-alta"]');
+      if(openAltaBtn){
+        event.preventDefault();
+        openAltaModal();
+        return;
+      }
       const openInterconsultaBtn = event.target.closest('[data-action="documents-open-interconsulta"]');
       if(openInterconsultaBtn){
         event.preventDefault();
@@ -19202,6 +20174,13 @@ console.info('app.js loaded :: 20251123a');
         }
         updateNotaSignatureStatus();
         renderNotaStep();
+      }
+      if(els.altaWizard && !els.altaWizard.classList.contains('d-none')){
+        if(pullAltaDoctorRemoteSignature()){
+          setAltaRemoteStatus('Firma remota del médico aplicada.', 'success');
+        }
+        updateAltaSignatureStatus();
+        renderAltaStep();
       }
     });
     els.consentModalEl?.addEventListener('hidden.bs.modal', ()=>{
@@ -19514,6 +20493,151 @@ console.info('app.js loaded :: 20251123a');
         setNotaSignaturePreferredSource('remote');
       }
       renderNotaStep();
+    });
+    const bindAltaField = (inputEl, key, eventName = '')=>{
+      if(!inputEl) return;
+      const evtName = eventName || ((inputEl.tagName === 'SELECT' || inputEl.type === 'checkbox') ? 'change' : 'input');
+      inputEl.addEventListener(evtName, ()=>{
+        if(key === 'fecha_alta' || key === 'tipo_alta'){
+          altaState.form[key] = sanitizeText(inputEl.value || '');
+        }else{
+          altaState.form[key] = normalizeConsentInputRaw(inputEl.value || '');
+        }
+        if(key === 'final_text'){
+          altaState.finalEdited = trimConsentInputValue(altaState.form.final_text || '') !== '';
+        }else if(key !== 'fecha_alta' && key !== 'tipo_alta' && !altaState.finalEdited && Number(altaState.step || 1) >= 6){
+          altaState.form.final_text = buildAltaFinalTextFromForm(altaState.form);
+          if(els.altaFinalText) els.altaFinalText.value = altaState.form.final_text;
+        }
+        clearWizardFieldError('alta_medica', key);
+        const patientId = resolveActivePatientIdForConsent();
+        scheduleDocModalTempSessionSave({
+          documentType: 'alta_medica',
+          patientId,
+          buildSnapshot: buildAltaTempSnapshot
+        });
+      });
+    };
+    bindAltaField(els.altaDate, 'fecha_alta', 'change');
+    bindAltaField(els.altaDischargeType, 'tipo_alta', 'change');
+    bindAltaField(els.altaMotivoEgreso, 'motivo_egreso');
+    bindAltaField(els.altaResumenEvolucion, 'resumen_evolucion');
+    bindAltaField(els.altaDiagnosticoFinal, 'diagnostico_final');
+    bindAltaField(els.altaEstadoPaciente, 'estado_paciente');
+    bindAltaField(els.altaDatosRelevantes, 'datos_relevantes');
+    bindAltaField(els.altaTratamiento, 'tratamiento');
+    bindAltaField(els.altaCuidadosGenerales, 'cuidados_generales');
+    bindAltaField(els.altaSignosAlarma, 'signos_alarma');
+    bindAltaField(els.altaCitaControl, 'cita_control');
+    bindAltaField(els.altaRecomendaciones, 'recomendaciones');
+    bindAltaField(els.altaFinalText, 'final_text');
+    els.altaPrev?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      altaState.step = Math.max(1, Number(altaState.step || 1) - 1);
+      renderAltaStep();
+      const patientId = resolveActivePatientIdForConsent();
+      scheduleDocModalTempSessionSave({
+        documentType: 'alta_medica',
+        patientId,
+        buildSnapshot: buildAltaTempSnapshot
+      });
+    });
+    els.altaNext?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      const current = Number(altaState.step || 1);
+      if(current === 6){
+        const signature = getActiveAltaDoctorSignature(formatNowSql());
+        if(!signature){
+          setAltaNotice('Captura la firma del médico para continuar a la vista final editable.');
+          renderAltaStep();
+          return;
+        }
+        setAltaNotice('');
+      }
+      altaState.step = Math.min(7, current + 1);
+      if(Number(altaState.step || 1) === 7){
+        ensureAltaFinalText();
+      }
+      renderAltaStep();
+      const patientId = resolveActivePatientIdForConsent();
+      scheduleDocModalTempSessionSave({
+        documentType: 'alta_medica',
+        patientId,
+        buildSnapshot: buildAltaTempSnapshot
+      });
+    });
+    els.altaCancel?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      resetAltaWizard();
+      closeAltaModal();
+    });
+    els.altaSave?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      saveAltaDocument('draft');
+    });
+    els.altaEmit?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      saveAltaDocument('issued');
+    });
+    els.altaSignatureSourceRegistered?.addEventListener('change', ()=>{
+      if(els.altaSignatureSourceRegistered?.checked){
+        setAltaSignaturePreferredSource('registered');
+      }
+    });
+    els.altaSignatureQrOpen?.addEventListener('click', async (event)=>{
+      event.preventDefault();
+      try{
+        await openConsentSignatureQrModal('doctor');
+        window.setTimeout(()=>{
+          if(pullAltaDoctorRemoteSignature()){
+            setAltaRemoteStatus('Firma remota del médico aplicada.', 'success');
+            renderAltaStep();
+          }
+        }, 250);
+      }catch(error){
+        setAltaNotice(sanitizeText(error?.message || 'No se pudo iniciar firma remota del médico.'));
+      }
+    });
+    els.altaSignatureClear?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      clearAltaSignaturePad();
+      altaState.remoteSignature = null;
+      if(altaState.registeredSignatureData){
+        setAltaSignaturePreferredSource('registered');
+      }else{
+        setAltaSignaturePreferredSource('');
+      }
+      setAltaRemoteStatus('Firma del médico limpiada.', 'muted');
+      renderAltaStep();
+    });
+    els.altaSignatureInlineYesBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      els.altaSignatureInlinePrompt?.classList.add('d-none');
+    });
+    els.altaSignatureInlineNoBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      els.altaSignatureInlinePrompt?.classList.add('d-none');
+    });
+    els.altaModalEl?.addEventListener('hidden.bs.modal', ()=>{
+      const patientId = resolveActivePatientIdForConsent();
+      cancelDocModalTempSessionSave({ documentType: 'alta_medica', patientId });
+      const snapshot = buildAltaTempSnapshot();
+      if(patientId && hasAltaTempContent(snapshot)){
+        setDocModalTempSession({ documentType: 'alta_medica', patientId, snapshot });
+      }else{
+        clearDocModalTempSession({ documentType: 'alta_medica', patientId });
+      }
+      resetAltaWizard();
+    });
+    els.altaModalEl?.addEventListener('shown.bs.modal', ()=>{
+      if(!altaState.signaturePad){
+        initAltaSignaturePad();
+      }
+      window.requestAnimationFrame(()=> syncAltaSignatureCanvasSize({ preserveDrawing: true }));
+      if(pullAltaDoctorRemoteSignature()){
+        setAltaSignaturePreferredSource('remote');
+      }
+      renderAltaStep();
     });
     const bindInterconsultaField = (inputEl, onUpdate, eventName = '')=>{
       if(!inputEl || typeof onUpdate !== 'function') return;

@@ -6614,13 +6614,13 @@
                           </span>
                           <span class="docs-launcher-row-status is-ready">Ya funcional</span>
                         </button>
-                        <button type="button" class="docs-launcher-row" data-action="documents-open-placeholder" data-doc-code="alta_medica" data-doc-title="Alta médica" data-doc-entry="placeholder-flow" data-doc-status="Configuración inicial" data-doc-desc="Documento de egreso con indicaciones, seguimiento y cierre clínico.">
+                        <button type="button" class="docs-launcher-row docs-launcher-row--active" data-action="documents-open-alta" data-doc-code="alta_medica" data-doc-title="Alta médica" data-doc-entry="existing-flow" data-doc-status="Ya funcional" data-doc-desc="Documento de egreso con indicaciones, seguimiento y cierre clínico.">
                           <span class="docs-launcher-row-ico material-symbols-outlined" aria-hidden="true">exit_to_app</span>
                           <span class="docs-launcher-row-main">
                             <span class="docs-launcher-row-title">Alta médica</span>
                             <span class="docs-launcher-row-desc">Egreso clínico con indicaciones.</span>
                           </span>
-                          <span class="docs-launcher-row-status">Configuración inicial</span>
+                          <span class="docs-launcher-row-status is-ready">Ya funcional</span>
                         </button>
                       </div>
                     </div>
@@ -7477,6 +7477,161 @@
                     </div>
                   </div>
                 </div>
+                <div class="exp-card d-none mb-3" id="am_wizard">
+                  <div class="exp-card-body">
+                    <div class="alert alert-warning py-2 d-none" id="am_notice"></div>
+                    <div id="am_step_1">
+                      <div class="row g-3">
+                        <div class="col-md-4">
+                          <label class="form-label" for="am_date">Fecha de alta</label>
+                          <input class="form-control" id="am_date" type="date">
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label" for="am_discharge_type">Tipo de alta</label>
+                          <select class="form-select" id="am_discharge_type">
+                            <option value="mejoria">Mejoría</option>
+                            <option value="voluntaria">Voluntaria</option>
+                            <option value="administrativa">Administrativa</option>
+                            <option value="referencia">Referencia</option>
+                          </select>
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label">Médico emisor</label>
+                          <input class="form-control" id="am_doctor_name" readonly>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="am_motivo_egreso">Motivo de egreso</label>
+                          <textarea class="form-control" id="am_motivo_egreso" rows="3" placeholder="Paciente egresa por mejoría clínica, sin datos de alarma y con indicaciones de seguimiento."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label">Paciente</label>
+                          <input class="form-control" id="am_patient_name" readonly>
+                        </div>
+                        <div class="col-md-3">
+                          <label class="form-label">Edad</label>
+                          <input class="form-control" id="am_patient_age" readonly>
+                        </div>
+                        <div class="col-md-3">
+                          <label class="form-label">Sexo</label>
+                          <input class="form-control" id="am_patient_sex" readonly>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="am_step_2" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="am_resumen_evolucion">Resumen clínico</label>
+                          <textarea class="form-control" id="am_resumen_evolucion" rows="4" placeholder="Evolución favorable durante estancia, con control sintomático y mejoría clínica progresiva."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="am_diagnostico_final">Diagnóstico final</label>
+                          <textarea class="form-control" id="am_diagnostico_final" rows="4" placeholder="Diagnóstico principal al egreso y diagnósticos asociados relevantes."></textarea>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="am_step_3" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="am_estado_paciente">Estado actual del paciente</label>
+                          <textarea class="form-control" id="am_estado_paciente" rows="4" placeholder="Paciente estable, orientado, hemodinámicamente compensado."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="am_datos_relevantes">Datos relevantes</label>
+                          <textarea class="form-control" id="am_datos_relevantes" rows="4" placeholder="Sin fiebre, tolera vía oral, dolor controlado, sin signos de dificultad respiratoria."></textarea>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="am_step_4" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="am_tratamiento">Tratamiento</label>
+                          <textarea class="form-control" id="am_tratamiento" rows="4" placeholder="Paracetamol 500 mg VO cada 8 horas por 3 días."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="am_cuidados_generales">Cuidados generales</label>
+                          <textarea class="form-control" id="am_cuidados_generales" rows="4" placeholder="Reposo relativo, hidratación adecuada y dieta blanda por 48 horas."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="am_signos_alarma">Signos de alarma</label>
+                          <textarea class="form-control" id="am_signos_alarma" rows="3" placeholder="Acudir a urgencias si presenta fiebre persistente, vómito o dolor intenso."></textarea>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="am_step_5" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label" for="am_cita_control">Cita de control</label>
+                          <textarea class="form-control" id="am_cita_control" rows="3" placeholder="Cita de control en consulta externa en 7 días."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label" for="am_recomendaciones">Recomendaciones</label>
+                          <textarea class="form-control" id="am_recomendaciones" rows="4" placeholder="Mantener apego al tratamiento e indicar vigilancia de síntomas en domicilio."></textarea>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="am_step_6" class="d-none">
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <div class="border rounded p-2">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                              <div class="ci-signature-heading ci-signature-heading--doctor">Firma del médico</div>
+                              <span class="small text-muted" id="am_signature_status">Sin firma</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-3 mb-2">
+                              <div class="form-check mb-0">
+                                <input class="form-check-input" type="radio" name="am_signature_source" id="am_signature_source_registered" value="registered">
+                                <label class="form-check-label small" for="am_signature_source_registered">Usar firma registrada</label>
+                              </div>
+                            </div>
+                            <div class="alert alert-light py-2 px-3 small d-none mb-2" id="am_signature_registered_wrap">
+                              <div class="fw-semibold mb-1">Firma registrada disponible</div>
+                              <img
+                                id="am_signature_registered_preview"
+                                src=""
+                                alt="Firma registrada del médico"
+                                class="img-fluid rounded border bg-white"
+                                style="max-height:140px;object-fit:contain;"
+                              >
+                            </div>
+                            <div class="mx-signature-pad" data-signature-role="doctor">
+                              <canvas id="am_signature_canvas" class="mx-signature-pad__canvas" height="180" style="touch-action:none"></canvas>
+                            </div>
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+                              <button type="button" class="btn btn-outline-dark btn-sm" id="am_signature_qr_open">Firmar desde tu celular</button>
+                              <button type="button" class="btn btn-outline-secondary btn-sm" id="am_signature_clear">Volver a firmar</button>
+                            </div>
+                            <div class="small text-muted mt-2 d-none" id="am_signature_remote_status"></div>
+                            <div class="alert alert-warning py-2 px-3 d-none mt-2" id="am_signature_inline_prompt">
+                              <div class="small mb-2">¿Deseas guardar esta firma como tu firma digitalizada para usarla en próximos documentos?</div>
+                              <div class="d-flex flex-wrap justify-content-end gap-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="am_signature_inline_no">No guardar</button>
+                                <button type="button" class="btn btn-primary btn-sm" id="am_signature_inline_yes">Sí, guardar firma</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="am_step_7" class="d-none">
+                      <div class="border rounded p-3 bg-light-subtle">
+                        <div class="small text-uppercase text-muted fw-semibold mb-2">Vista final editable</div>
+                        <textarea class="form-control" id="am_final_text" rows="18" placeholder="La redacción final del alta médica aparecerá aquí para revisión antes de emitir."></textarea>
+                        <div class="small text-muted mt-2"><strong>Firma del médico:</strong> <span id="am_final_signature_state">Sin firma</span></div>
+                      </div>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
+                      <span class="text-muted small" id="am_step_label">Paso 1 de 7</span>
+                      <div class="d-flex flex-wrap justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="am_prev" disabled>Anterior</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="am_next">Continuar</button>
+                        <button type="button" class="btn btn-success btn-sm d-none" id="am_save">Guardar borrador</button>
+                        <button type="button" class="btn btn-primary btn-sm d-none" id="am_emit">Emitir alta</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="am_cancel">Cancelar</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="exp-card d-none mb-3" id="rm_wizard">
                   <div class="exp-card-body">
                     <div class="alert alert-warning py-2 d-none" id="rm_notice"></div>
@@ -7891,7 +8046,7 @@
                   <div class="exp-card-title d-flex align-items-center justify-content-between gap-2">
                     <span>Documentos recientes</span>
                   </div>
-                  <div class="small text-muted mb-2">Histórico disponible en esta fase: consentimientos, informes, notas médicas, interconsultas, responsivas y certificados médicos.</div>
+                  <div class="small text-muted mb-2">Histórico disponible en esta fase: consentimientos, informes, notas médicas, altas médicas, interconsultas, responsivas y certificados médicos.</div>
                   <div class="alert alert-info py-2 mb-3 d-none" id="ci_context_notice">Selecciona paciente</div>
                   <div class="alert alert-light mb-3" id="ci_empty_state">Aún no hay documentos clínicos para este paciente.</div>
                   <div class="ci-list d-grid gap-2" id="ci_list"></div>
@@ -7949,6 +8104,20 @@
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                       </div>
                       <div class="modal-body" id="nm_modal_body_slot"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal fade" id="modalAltaMedica" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                      <div class="modal-header mx-doc-modal-header">
+                        <h5 class="modal-title mx-doc-modal-title">
+                          <span class="material-symbols-outlined mx-doc-modal-title-icon" aria-hidden="true">exit_to_app</span>
+                          <span>Alta médica</span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body" id="am_modal_body_slot"></div>
                     </div>
                   </div>
                 </div>
