@@ -171,6 +171,327 @@ console.info('app.js loaded :: 20251123a');
   document.addEventListener('DOMContentLoaded', applyProfileToUiAndStore, { once: true });
 })();
 
+// Agenda Frontend v1 (FullCalendar + backend appointments)
+(function(){
+  const panelId = 'p-ag-admin';
+  const panel = document.getElementById(panelId);
+  if(!panel) return;
+
+  const els = {
+    doctor: panel.querySelector('#ag_doctor_filter'),
+    consultorio: panel.querySelector('#ag_consultorio_filter'),
+    refresh: panel.querySelector('#ag_refresh_btn'),
+    error: panel.querySelector('#ag_error_box'),
+    loading: panel.querySelector('#ag_loading_box'),
+    calendar: panel.querySelector('#ag_calendar'),
+    hint: panel.querySelector('#ag_filters_hint')
+  };
+
+  let calendar = null;
+  let consultoriosRequestCtrl = null;
+  let appointmentsRequestCtrl = null;
+  let initialized = false;
+
+  const sanitizeText = (value)=> String(value ?? '').trim();
+  const normalizeDateTime = (value)=>{
+    const raw = sanitizeText(value);
+    if(!raw) return '';
+    return raw.includes('T') ? raw : raw.replace(' ', 'T');
+  };
+  const toLabel = (value)=> sanitizeText(value).replace(/_/g, ' ');
+  const shortText = (value, max = 72)=>{
+    const txt = sanitizeText(value);
+    if(!txt) return '';
+    return txt.length > max ? `${txt.slice(0, max - 1)}…` : txt;
+  };
+
+  const setError = (message)=>{
+    if(!els.error) return;
+    const msg = sanitizeText(message);
+    if(!msg){
+      els.error.classList.add('d-none');
+      els.error.textContent = '';
+      return;
+    }
+    els.error.textContent = msg;
+    els.error.classList.remove('d-none');
+  };
+
+  const setLoading = (isLoading)=>{
+    if(!els.loading) return;
+    els.loading.classList.toggle('d-none', !isLoading);
+  };
+
+  const getDoctorId = ()=>{
+    const inputVal = sanitizeText(els.doctor?.value || '');
+    if(inputVal) return inputVal;
+    return sanitizeText(
+      window.mxmedStore?.doctor_id
+      || window.mxmedStore?.doctorId
+      || window.mxmedDoctor?.doctor_id
+      || document.body?.dataset?.doctorId
+      || ''
+    );
+  };
+
+  const syncDoctorInput = ()=>{
+    if(!els.doctor) return;
+    const doctorId = getDoctorId();
+    if(doctorId && !sanitizeText(els.doctor.value)){
+      els.doctor.value = doctorId;
+    }
+  };
+
+  const buildAppointmentTitle = (row)=>{
+    const patientId = sanitizeText(row?.patient_id || '');
+    const modality = toLabel(row?.modality || '');
+    const status = toLabel(row?.status || '');
+    const base = patientId ? `Paciente ${patientId}` : 'Cita';
+    return shortText([base, modality, status].filter(Boolean).join(' · '), 86);
+  };
+
+  const mapAppointmentToEvent = (row)=>{
+    const status = sanitizeText(row?.status || '').toLowerCase();
+    const statusColorMap = {
+      confirmed: '#198754',
+      pending: '#0d6efd',
+      cancelled: '#6c757d',
+      no_show: '#dc3545'
+    };
+    return {
+      id: sanitizeText(row?.appointment_id || ''),
+      title: buildAppointmentTitle(row),
+      start: normalizeDateTime(row?.start_at || ''),
+      end: normalizeDateTime(row?.end_at || ''),
+      color: statusColorMap[status] || '#005684',
+      extendedProps: {
+        doctor_id: sanitizeText(row?.doctor_id || ''),
+        consultorio_id: sanitizeText(row?.consultorio_id || ''),
+        patient_id: sanitizeText(row?.patient_id || ''),
+        modality: sanitizeText(row?.modality || ''),
+        status: sanitizeText(row?.status || ''),
+        channel_origin: sanitizeText(row?.channel_origin || '')
+      }
+    };
+  };
+
+  const fetchConsultorios = async ()=>{
+    if(!els.consultorio) return;
+    const doctorId = getDoctorId();
+    const previous = sanitizeText(els.consultorio.value || '');
+
+    if(consultoriosRequestCtrl){
+      try{ consultoriosRequestCtrl.abort(); }catch(_){}
+    }
+    consultoriosRequestCtrl = new AbortController();
+
+    els.consultorio.innerHTML = '<option value="">Todos los consultorios</option>';
+    if(!doctorId){
+      return;
+    }
+
+    try{
+      const url = `/api/agenda/index.php/consultorios?doctor_id=${encodeURIComponent(doctorId)}`;
+      const resp = await fetch(url, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        signal: consultoriosRequestCtrl.signal
+      });
+      const json = await resp.json().catch(()=> null);
+      if(!json || json.ok !== true || !Array.isArray(json.data)){
+        return;
+      }
+      const options = json.data.map((item)=>{
+        const id = sanitizeText(item?.consultorio_id || item?.id || item?.consultorioId || '');
+        if(!id) return '';
+        const name = sanitizeText(item?.nombre || item?.title || item?.titulo || item?.name || `Consultorio ${id}`);
+        return `<option value="${id.replace(/"/g, '&quot;')}">${name.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</option>`;
+      }).filter(Boolean);
+      els.consultorio.insertAdjacentHTML('beforeend', options.join(''));
+      if(previous){
+        const exists = Array.from(els.consultorio.options).some((opt)=> sanitizeText(opt.value) === previous);
+        if(exists) els.consultorio.value = previous;
+      }
+    }catch(err){
+      if(err?.name === 'AbortError') return;
+      console.warn('[Agenda v1] consultorios fetch error', err);
+    }
+  };
+
+  const fetchAppointments = async (fetchInfo)=>{
+    const doctorId = getDoctorId();
+    const consultorioId = sanitizeText(els.consultorio?.value || '');
+    const params = new URLSearchParams();
+    params.set('from', fetchInfo.start.toISOString());
+    params.set('to', fetchInfo.end.toISOString());
+    params.set('limit', '300');
+    if(doctorId) params.set('doctor_id', doctorId);
+    if(consultorioId) params.set('consultorio_id', consultorioId);
+
+    if(appointmentsRequestCtrl){
+      try{ appointmentsRequestCtrl.abort(); }catch(_){}
+    }
+    appointmentsRequestCtrl = new AbortController();
+    setLoading(true);
+    setError('');
+
+    const resp = await fetch(`/api/agenda/index.php/appointments?${params.toString()}`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      credentials: 'same-origin',
+      signal: appointmentsRequestCtrl.signal
+    });
+    const json = await resp.json().catch(()=> null);
+    setLoading(false);
+    if(!json || json.ok !== true || !Array.isArray(json.data)){
+      const message = sanitizeText(json?.message || json?.error || '');
+      throw new Error(message || 'No se pudieron cargar las citas de agenda.');
+    }
+    return json.data.map(mapAppointmentToEvent).filter((event)=> !!event.start);
+  };
+
+  const initCalendar = ()=>{
+    if(calendar || !els.calendar) return;
+    if(!window.FullCalendar || typeof window.FullCalendar.Calendar !== 'function'){
+      setError('No se pudo inicializar FullCalendar en esta sesión.');
+      return;
+    }
+
+    calendar = new window.FullCalendar.Calendar(els.calendar, {
+      locale: 'es',
+      initialView: 'timeGridWeek',
+      nowIndicator: true,
+      allDaySlot: false,
+      slotMinTime: '06:00:00',
+      slotMaxTime: '22:00:00',
+      slotDuration: '00:30:00',
+      expandRows: true,
+      firstDay: 1,
+      height: 'auto',
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'timeGridDay,timeGridWeek,dayGridMonth'
+      },
+      buttonText: {
+        today: 'Hoy',
+        day: 'Día',
+        week: 'Semana',
+        month: 'Mes'
+      },
+      events: async (fetchInfo, successCallback, failureCallback)=>{
+        try{
+          const events = await fetchAppointments(fetchInfo);
+          successCallback(events);
+        }catch(err){
+          if(err?.name === 'AbortError'){
+            successCallback([]);
+            return;
+          }
+          const message = sanitizeText(err?.message || '') || 'No se pudo cargar la agenda.';
+          setError(message);
+          failureCallback(err);
+        }finally{
+          setLoading(false);
+        }
+      },
+      eventTimeFormat: {
+        hour: '2-digit',
+        minute: '2-digit',
+        meridiem: false
+      },
+      eventClick: (info)=>{
+        const props = info.event.extendedProps || {};
+        const details = [
+          `Cita: ${sanitizeText(info.event.id || '-')}`,
+          `Paciente: ${sanitizeText(props.patient_id || '-')}`,
+          `Estado: ${sanitizeText(props.status || '-')}`,
+          `Modalidad: ${sanitizeText(props.modality || '-')}`,
+          `Canal: ${sanitizeText(props.channel_origin || '-')}`
+        ];
+        window.alert(details.join('\n'));
+      }
+    });
+
+    calendar.render();
+  };
+
+  const refreshCalendar = async ({ forceConsultorios = false } = {})=>{
+    syncDoctorInput();
+    if(forceConsultorios){
+      await fetchConsultorios();
+    }
+    initCalendar();
+    if(calendar){
+      calendar.refetchEvents();
+      window.setTimeout(()=>{
+        try{ calendar.updateSize(); }catch(_){}
+      }, 50);
+    }
+    if(els.hint){
+      const consultorioId = sanitizeText(els.consultorio?.value || '');
+      els.hint.textContent = consultorioId
+        ? `Filtrando por consultorio ${consultorioId}`
+        : 'Mostrando semana clínica';
+    }
+  };
+
+  const bindEvents = ()=>{
+    if(initialized) return;
+    initialized = true;
+
+    els.refresh?.addEventListener('click', ()=>{
+      refreshCalendar({ forceConsultorios: false }).catch(()=> null);
+    });
+
+    els.doctor?.addEventListener('change', ()=>{
+      refreshCalendar({ forceConsultorios: true }).catch(()=> null);
+    });
+    els.consultorio?.addEventListener('change', ()=>{
+      refreshCalendar({ forceConsultorios: false }).catch(()=> null);
+    });
+
+    document.querySelectorAll('.menu-sub-btn[data-panel="p-ag-admin"], .menu-main[data-panel="p-ag-admin"]').forEach((btn)=>{
+      btn.addEventListener('click', ()=>{
+        window.setTimeout(()=>{
+          refreshCalendar({ forceConsultorios: true }).catch(()=> null);
+        }, 120);
+      });
+    });
+
+    const originalShowPanel = (typeof window.showPanel === 'function') ? window.showPanel : null;
+    if(originalShowPanel && !originalShowPanel.__mxmedAgendaWrapped){
+      const wrapped = function(id){
+        const result = originalShowPanel.apply(this, arguments);
+        if(String(id || '').trim() === panelId){
+          window.setTimeout(()=>{
+            refreshCalendar({ forceConsultorios: true }).catch(()=> null);
+          }, 80);
+        }
+        return result;
+      };
+      wrapped.__mxmedAgendaWrapped = true;
+      window.showPanel = wrapped;
+    }
+  };
+
+  const start = ()=>{
+    bindEvents();
+    syncDoctorInput();
+    const isVisible = panel && !panel.classList.contains('d-none');
+    if(isVisible){
+      refreshCalendar({ forceConsultorios: true }).catch(()=> null);
+    }
+  };
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  }else{
+    start();
+  }
+})();
+
 // P11 single source shim
 (function(){
   if(window.__mxmedPatientSourceShimApplied) return;

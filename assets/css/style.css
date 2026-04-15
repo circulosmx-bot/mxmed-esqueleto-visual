@@ -5069,6 +5069,41 @@ body{margin:0;background:var(--mm-fondo-base);}
 .dg-date-year .save-ok{ display:none !important; }
 .dg-date-year .form-select::-ms-expand{ display:none; }
 .dg-date-year .form-select::-webkit-calendar-picker-indicator{ display:none !important; }
+
+/* Agenda Frontend v1 */
+.mx-agenda-v1 .form-label{
+  font-weight: 600;
+  color: #0b3750;
+}
+.mx-agenda-calendar-wrap{
+  border: 1px solid #d7e4ec;
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+  min-height: 680px;
+}
+#ag_calendar{
+  min-height: 640px;
+}
+.mx-agenda-calendar-wrap .fc .fc-toolbar-title{
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0b3750;
+}
+.mx-agenda-calendar-wrap .fc .fc-button-primary{
+  background: #005684;
+  border-color: #005684;
+}
+.mx-agenda-calendar-wrap .fc .fc-button-primary:not(:disabled).fc-button-active,
+.mx-agenda-calendar-wrap .fc .fc-button-primary:not(:disabled):active{
+  background: #003f62;
+  border-color: #003f62;
+}
+.mx-agenda-calendar-wrap .fc .fc-timegrid-slot-label-cushion,
+.mx-agenda-calendar-wrap .fc .fc-col-header-cell-cushion{
+  color: #284f66;
+  font-weight: 600;
+}
 .dg-date-year .material-symbols-outlined,
 .dg-date-year .material-symbols-rounded{ display:none !important; }
 .dg-date-year::after{ content:none !important; }
