@@ -148,6 +148,12 @@ console.info('app.js loaded :: 20251123a');
       ...(window.mxmedStore.context && typeof window.mxmedStore.context === 'object' ? window.mxmedStore.context : {}),
       location: profile.location_city
     };
+    window.mxmedStore.activeProfessionalContext = {
+      ...(window.mxmedStore.activeProfessionalContext && typeof window.mxmedStore.activeProfessionalContext === 'object' ? window.mxmedStore.activeProfessionalContext : {}),
+      doctor_id: profile.doctor_id,
+      user_id: profile.user_id,
+      default_consultorio_name: profile.facility_visible || ''
+    };
 
     window.mxmedDoctor = {
       ...(window.mxmedDoctor && typeof window.mxmedDoctor === 'object' ? window.mxmedDoctor : {}),
@@ -171,6 +177,118 @@ console.info('app.js loaded :: 20251123a');
   document.addEventListener('DOMContentLoaded', applyProfileToUiAndStore, { once: true });
 })();
 
+// Active professional context bridge (shared source of truth)
+(function(){
+  if(window.__mxmedActiveProfessionalContextBridgeApplied) return;
+  window.__mxmedActiveProfessionalContextBridgeApplied = true;
+
+  const clean = (value)=> String(value ?? '').trim();
+
+  const pickDefaultConsultorio = (list = [], preferredId = '')=>{
+    const normalized = Array.isArray(list) ? list : [];
+    const safePreferred = clean(preferredId);
+    if(!normalized.length){
+      return { id: '', name: '' };
+    }
+    if(safePreferred){
+      const preferred = normalized.find((item)=> clean(item?.id || item?.consultorio_id) === safePreferred);
+      if(preferred){
+        return {
+          id: clean(preferred.id || preferred.consultorio_id || ''),
+          name: clean(preferred.name || preferred.nombre || preferred.title || preferred.consultorio_name || preferred.label || '')
+        };
+      }
+    }
+    const flagged = normalized.find((item)=>{
+      const raw = item?.is_default ?? item?.default ?? item?.is_primary ?? item?.principal ?? item?.predeterminado ?? item?.default_consultorio ?? item?.consultorio_default;
+      return raw === true || raw === 1 || raw === '1' || String(raw).toLowerCase() === 'true' || String(raw).toLowerCase() === 'si';
+    });
+    const chosen = flagged || normalized[0];
+    return {
+      id: clean(chosen?.id || chosen?.consultorio_id || ''),
+      name: clean(chosen?.name || chosen?.nombre || chosen?.title || chosen?.consultorio_name || chosen?.label || '')
+    };
+  };
+
+  const ensureStore = ()=>{
+    if(!window.mxmedStore || typeof window.mxmedStore !== 'object'){
+      window.mxmedStore = {};
+    }
+    if(!window.mxmedStore.activeProfessionalContext || typeof window.mxmedStore.activeProfessionalContext !== 'object'){
+      window.mxmedStore.activeProfessionalContext = {};
+    }
+    return window.mxmedStore.activeProfessionalContext;
+  };
+
+  const resolve = ()=>{
+    const ctx = ensureStore();
+    const doctorId = clean(
+      ctx.doctor_id
+      || window.mxmedStore?.doctor_id
+      || window.mxmedStore?.doctorId
+      || window.mxmedStore?.doctorProfile?.doctor_id
+      || window.mxmedDoctor?.doctor_id
+      || document.body?.dataset?.doctorId
+      || ''
+    );
+    const userId = clean(
+      ctx.user_id
+      || window.mxmedStore?.user_id
+      || window.mxmedDoctor?.user_id
+      || ''
+    );
+    const defaultConsultorioId = clean(
+      ctx.default_consultorio_id
+      || window.mxmedStore?.default_consultorio_id
+      || window.mxmedStore?.defaultConsultorioId
+      || ''
+    );
+    const defaultConsultorioName = clean(
+      ctx.default_consultorio_name
+      || window.mxmedStore?.default_consultorio_name
+      || window.mxmedStore?.defaultConsultorioName
+      || window.mxmedStore?.facilityName
+      || ''
+    );
+    return {
+      doctor_id: doctorId,
+      user_id: userId,
+      default_consultorio_id: defaultConsultorioId,
+      default_consultorio_name: defaultConsultorioName,
+      consultorios: Array.isArray(ctx.consultorios) ? ctx.consultorios : []
+    };
+  };
+
+  const updateConsultorios = (consultorios = [])=>{
+    const ctx = ensureStore();
+    const normalized = (Array.isArray(consultorios) ? consultorios : []).map((item)=>({
+      id: clean(item?.id || item?.consultorio_id || item?.consultorioId || item?.id_consultorio || item?.consultorioIdPk || ''),
+      name: clean(item?.name || item?.nombre || item?.title || item?.consultorio_name || item?.titulo || item?.label || item?.nombre_consultorio || ''),
+      is_default: item?.is_default ?? item?.default ?? item?.is_primary ?? item?.principal ?? item?.predeterminado ?? item?.default_consultorio ?? item?.consultorio_default ?? null
+    })).filter((item)=> item.id);
+
+    const current = resolve();
+    const picked = pickDefaultConsultorio(normalized, current.default_consultorio_id);
+    ctx.consultorios = normalized;
+    if(current.doctor_id) ctx.doctor_id = current.doctor_id;
+    if(current.user_id) ctx.user_id = current.user_id;
+    if(picked.id){
+      ctx.default_consultorio_id = picked.id;
+      window.mxmedStore.default_consultorio_id = picked.id;
+      window.mxmedStore.defaultConsultorioId = picked.id;
+    }
+    if(picked.name){
+      ctx.default_consultorio_name = picked.name;
+      window.mxmedStore.default_consultorio_name = picked.name;
+      window.mxmedStore.defaultConsultorioName = picked.name;
+    }
+    return resolve();
+  };
+
+  window.mxmedResolveActiveProfessionalContext = resolve;
+  window.mxmedUpdateActiveProfessionalConsultorios = updateConsultorios;
+})();
+
 // Agenda Frontend v1 (FullCalendar + backend appointments)
 (function(){
   const panelId = 'p-ag-admin';
@@ -184,14 +302,31 @@ console.info('app.js loaded :: 20251123a');
     error: panel.querySelector('#ag_error_box'),
     loading: panel.querySelector('#ag_loading_box'),
     calendar: panel.querySelector('#ag_calendar'),
-    hint: panel.querySelector('#ag_filters_hint')
+    hint: panel.querySelector('#ag_filters_hint'),
+    createModalEl: panel.querySelector('#ag_new_appointment_modal'),
+    createError: panel.querySelector('#ag_create_error_box'),
+    patientId: panel.querySelector('#ag_patient_id_input'),
+    startAt: panel.querySelector('#ag_start_input'),
+    endAt: panel.querySelector('#ag_end_input'),
+    modality: panel.querySelector('#ag_modality_input'),
+    consultorioModal: panel.querySelector('#ag_consultorio_modal'),
+    channel: panel.querySelector('#ag_channel_input'),
+    activePatientBox: panel.querySelector('#ag_active_patient_box'),
+    activePatientText: panel.querySelector('#ag_active_patient_text'),
+    useActivePatientYes: panel.querySelector('#ag_use_active_patient_yes'),
+    useActivePatientNo: panel.querySelector('#ag_use_active_patient_no'),
+    createSubmit: panel.querySelector('#ag_create_submit_btn')
   };
 
   let calendar = null;
+  let createModal = null;
   let consultoriosRequestCtrl = null;
   let appointmentsRequestCtrl = null;
   let initialized = false;
   let visibilityObserver = null;
+  let createRequestInFlight = false;
+  let createActivePatientMode = 'manual';
+  let activePatientContextId = '';
 
   const sanitizeText = (value)=> String(value ?? '').trim();
   const normalizeDateTime = (value)=>{
@@ -217,6 +352,112 @@ console.info('app.js loaded :: 20251123a');
     const raw = sanitizeText(value);
     if(!raw) return '';
     return raw.includes('T') ? raw : raw.replace(' ', 'T');
+  };
+  const toSqlDateTimeLocal = (value)=>{
+    const d = (value instanceof Date) ? value : new Date(value);
+    if(Number.isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    return `${y}-${m}-${day} ${hh}:${mm}:${ss}`;
+  };
+  const toDateTimeLocalInput = (value)=>{
+    const d = (value instanceof Date) ? value : new Date(value);
+    if(Number.isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${day}T${hh}:${mm}`;
+  };
+  const resolveActivePatientId = ()=>{
+    return sanitizeText(
+      (typeof window.resolveActivePatientId === 'function' ? window.resolveActivePatientId() : '')
+      || window.mxmedStore?.currentPatientId
+      || window.mxmedStore?.activePatientId
+      || window.__MXMED_ACTIVE_PATIENT_ID
+      || document.getElementById('p-expediente')?.dataset?.patientId
+      || document.getElementById('p-expediente')?.getAttribute?.('data-patient-id')
+      || ''
+    );
+  };
+  const normalizeConsultorioOption = (item)=>{
+    const id = sanitizeText(
+      item?.id
+      || item?.consultorio_id
+      || item?.consultorioId
+      || item?.id_consultorio
+      || item?.consultorioIdPk
+      || ''
+    );
+    const label = sanitizeText(
+      item?.name
+      || item?.nombre
+      || item?.title
+      || item?.consultorio_name
+      || item?.alias
+      || item?.titulo
+      || item?.nombre_consultorio
+      || item?.label
+      || ''
+    ) || (id ? `Consultorio #${id}` : 'Consultorio sin nombre');
+    if(!id) return null;
+    return { id, label };
+  };
+  const CONSULTORIO_PROFILE_ONLY_VALUE = '__ctx_consultorio_profile__';
+  const CONSULTORIO_UNAVAILABLE_VALUE = '__consultorio_unavailable__';
+  const setConsultorioUnavailableState = (message = 'No se pudieron cargar consultorios')=>{
+    const safeMessage = sanitizeText(message) || 'No se pudieron cargar consultorios';
+    if(els.consultorio){
+      const escaped = safeMessage.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      els.consultorio.innerHTML = `<option value="">Todos los consultorios</option><option value="${CONSULTORIO_UNAVAILABLE_VALUE}">${escaped}</option>`;
+      els.consultorio.value = CONSULTORIO_UNAVAILABLE_VALUE;
+    }
+    if(els.consultorioModal){
+      els.consultorioModal.innerHTML = '<option value="" disabled selected>No hay consultorios disponibles</option>';
+    }
+  };
+  const applyConsultorioFallbackFromActiveContext = ()=>{
+    if(!els.consultorio) return false;
+    const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
+      ? window.mxmedResolveActiveProfessionalContext()
+      : null;
+    const fallbackId = sanitizeText(
+      activeProfessional?.default_consultorio_id
+      || window.mxmedStore?.default_consultorio_id
+      || window.mxmedStore?.defaultConsultorioId
+      || ''
+    );
+    const fallbackName = sanitizeText(
+      activeProfessional?.default_consultorio_name
+      || window.mxmedStore?.facilityName
+      || window.mxmedStore?.doctorProfile?.facility_name
+      || ''
+    );
+    if(!fallbackName){
+      return false;
+    }
+    const optionValue = fallbackId || CONSULTORIO_PROFILE_ONLY_VALUE;
+    const optionLabel = fallbackName;
+    const hasSameOption = Array.from(els.consultorio.options || []).some((opt)=>{
+      return sanitizeText(opt.value) === optionValue && sanitizeText(opt.textContent || '') === optionLabel;
+    });
+    if(!hasSameOption){
+      const optionHtml = `<option value="${optionValue.replace(/"/g, '&quot;')}">${optionLabel.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</option>`;
+      els.consultorio.insertAdjacentHTML('beforeend', optionHtml);
+    }
+    if(!sanitizeText(els.consultorio.value || '') || sanitizeText(els.consultorio.value || '') === CONSULTORIO_UNAVAILABLE_VALUE){
+      els.consultorio.value = optionValue;
+    }
+    syncCreateConsultorioOptions();
+    if(els.consultorioModal && (!sanitizeText(els.consultorioModal.value || '') || sanitizeText(els.consultorioModal.value || '') === CONSULTORIO_UNAVAILABLE_VALUE)){
+      els.consultorioModal.value = optionValue;
+    }
+    return true;
   };
 
   const AgendaApiClient = {
@@ -248,6 +489,19 @@ console.info('app.js loaded :: 20251123a');
         signal
       });
       return resp.json().catch(()=> null);
+    },
+    async createAppointment(payload){
+      const resp = await fetch('/api/agenda/index.php/appointments', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload || {})
+      });
+      return {
+        ok: resp.ok,
+        status: resp.status,
+        json: await resp.json().catch(()=> null)
+      };
     }
   };
 
@@ -267,13 +521,281 @@ console.info('app.js loaded :: 20251123a');
     if(!els.loading) return;
     els.loading.classList.toggle('d-none', !isLoading);
   };
+  const setCreateError = (message)=>{
+    if(!els.createError) return;
+    const msg = sanitizeText(message);
+    if(!msg){
+      els.createError.classList.add('d-none');
+      els.createError.textContent = '';
+      return;
+    }
+    els.createError.textContent = msg;
+    els.createError.classList.remove('d-none');
+  };
+  const resolveActorId = ()=>{
+    const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
+      ? window.mxmedResolveActiveProfessionalContext()
+      : null;
+    return sanitizeText(
+      activeProfessional?.doctor_id
+      || activeProfessional?.user_id
+      || window.mxmedStore?.doctor_id
+      || window.mxmedStore?.doctorId
+      || window.mxmedStore?.user_id
+      || window.mxmedDoctor?.doctor_id
+      || window.mxmedDoctor?.user_id
+      || ''
+    );
+  };
+  const resolveConsultorioId = ()=>{
+    const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
+      ? window.mxmedResolveActiveProfessionalContext()
+      : null;
+    const raw = sanitizeText(els.consultorioModal?.value || '')
+      || sanitizeText(els.consultorio?.value || '')
+      || sanitizeText(activeProfessional?.default_consultorio_id || '')
+      || getAvailabilityConsultorioId();
+    if(raw === CONSULTORIO_PROFILE_ONLY_VALUE || raw === CONSULTORIO_UNAVAILABLE_VALUE){
+      return '';
+    }
+    return raw;
+  };
+  const syncCreateConsultorioOptions = ()=>{
+    if(!els.consultorioModal || !els.consultorio) return;
+    const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
+      ? window.mxmedResolveActiveProfessionalContext()
+      : null;
+    const previousModal = sanitizeText(els.consultorioModal.value || '');
+    const sourceOptions = Array.from(els.consultorio.options || [])
+      .map((opt)=> ({ value: sanitizeText(opt.value), label: sanitizeText(opt.textContent || '') }))
+      .filter((opt)=> opt.value && opt.value !== CONSULTORIO_UNAVAILABLE_VALUE);
+    els.consultorioModal.innerHTML = '';
+
+    const selectedGlobal = sanitizeText(els.consultorio.value || '');
+    const contextDefault = sanitizeText(activeProfessional?.default_consultorio_id || '');
+    const candidate = selectedGlobal || previousModal || contextDefault || '';
+
+    if(sourceOptions.length === 0){
+      const unavailableOption = document.createElement('option');
+      unavailableOption.value = '';
+      unavailableOption.textContent = 'No hay consultorios disponibles';
+      unavailableOption.disabled = true;
+      unavailableOption.selected = true;
+      els.consultorioModal.appendChild(unavailableOption);
+      return;
+    }
+
+    if(sourceOptions.length > 1){
+      const chooseOption = document.createElement('option');
+      chooseOption.value = '';
+      chooseOption.textContent = '— Elegir consultorio —';
+      chooseOption.disabled = true;
+      chooseOption.selected = true;
+      els.consultorioModal.appendChild(chooseOption);
+    }
+
+    sourceOptions.forEach((opt)=>{
+      const optionEl = document.createElement('option');
+      optionEl.value = opt.value;
+      optionEl.textContent = opt.label || `Consultorio ${opt.value}`;
+      els.consultorioModal.appendChild(optionEl);
+    });
+
+    if(sourceOptions.length === 1){
+      els.consultorioModal.value = sourceOptions[0].value;
+      return;
+    }
+
+    if(candidate){
+      const exists = sourceOptions.some((opt)=> opt.value === candidate);
+      if(exists){
+        els.consultorioModal.value = candidate;
+      }
+    }
+  };
+  const setActivePatientMode = (mode = 'manual')=>{
+    createActivePatientMode = (mode === 'active') ? 'active' : 'manual';
+    if(els.useActivePatientYes){
+      els.useActivePatientYes.classList.toggle('btn-primary', createActivePatientMode === 'active');
+      els.useActivePatientYes.classList.toggle('btn-outline-secondary', createActivePatientMode !== 'active');
+    }
+    if(els.useActivePatientNo){
+      els.useActivePatientNo.classList.toggle('btn-primary', createActivePatientMode === 'manual');
+      els.useActivePatientNo.classList.toggle('btn-outline-secondary', createActivePatientMode !== 'manual');
+    }
+    if(createActivePatientMode === 'active' && activePatientContextId){
+      if(els.patientId) els.patientId.value = activePatientContextId;
+      if(els.patientId) els.patientId.setAttribute('readonly', 'readonly');
+      return;
+    }
+    if(els.patientId) els.patientId.removeAttribute('readonly');
+    if(createActivePatientMode === 'manual' && els.patientId && sanitizeText(els.patientId.value) === activePatientContextId){
+      els.patientId.value = '';
+    }
+  };
+  const syncActivePatientPrompt = ()=>{
+    activePatientContextId = resolveActivePatientId();
+    if(!els.activePatientBox || !els.activePatientText) return;
+    if(!activePatientContextId){
+      els.activePatientBox.classList.add('d-none');
+      setActivePatientMode('manual');
+      return;
+    }
+    els.activePatientBox.classList.remove('d-none');
+    els.activePatientText.textContent = `Paciente activo detectado: ${activePatientContextId}. ¿Deseas usar este paciente para la cita?`;
+    setActivePatientMode('manual');
+  };
+  const resetCreateForm = ()=>{
+    setCreateError('');
+    syncActivePatientPrompt();
+    if(els.patientId) els.patientId.value = '';
+    if(els.startAt) els.startAt.value = '';
+    if(els.endAt) els.endAt.value = '';
+    if(els.modality) els.modality.value = 'in_person';
+    if(els.channel) els.channel.value = 'agenda_frontend_v1';
+    syncCreateConsultorioOptions();
+    if(els.consultorioModal && !sanitizeText(els.consultorioModal.value || '')){
+      const fallback = getAvailabilityConsultorioId();
+      if(fallback) els.consultorioModal.value = fallback;
+    }
+    if(els.createSubmit){
+      els.createSubmit.disabled = false;
+      els.createSubmit.textContent = 'Guardar cita';
+    }
+    createRequestInFlight = false;
+  };
+  const isSelectionAvailable = (startDate, endDate)=>{
+    if(!calendar || !startDate || !endDate) return false;
+    const events = calendar.getEvents();
+    const availabilityWindows = events.filter((ev)=> ev.display === 'background' && sanitizeText(ev.extendedProps?.event_type || '') === 'availability');
+    const hasAvailabilityLayer = availabilityWindows.length > 0;
+    const insideAvailability = !hasAvailabilityLayer || availabilityWindows.some((ev)=>{
+      const evStart = ev.start;
+      const evEnd = ev.end;
+      return !!(evStart && evEnd && startDate >= evStart && endDate <= evEnd);
+    });
+    const overlapsBusy = events.some((ev)=>{
+      if(ev.display === 'background') return false;
+      const evStart = ev.start;
+      const evEnd = ev.end;
+      return !!(evStart && evEnd && startDate < evEnd && endDate > evStart);
+    });
+    return insideAvailability && !overlapsBusy;
+  };
+  const openCreateModalFromSelection = (selection)=>{
+    if(!els.createModalEl || !window.bootstrap?.Modal) return;
+    const start = selection?.start instanceof Date ? selection.start : new Date(selection?.start || '');
+    const end = selection?.end instanceof Date ? selection.end : new Date(selection?.end || '');
+    if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())){
+      setError('Selecciona un rango de horario válido para crear la cita.');
+      return;
+    }
+    if(end <= start){
+      setError('El horario seleccionado no es válido para crear la cita.');
+      return;
+    }
+    if(start < new Date()){
+      setError('No es posible crear citas en horarios pasados.');
+      if(calendar && typeof calendar.unselect === 'function'){
+        try{ calendar.unselect(); }catch(_){}
+      }
+      return;
+    }
+    if(!isSelectionAvailable(start, end)){
+      setError('Selecciona un horario disponible para crear la cita.');
+      return;
+    }
+    resetCreateForm();
+    if(els.startAt) els.startAt.value = toDateTimeLocalInput(start);
+    if(els.endAt) els.endAt.value = toDateTimeLocalInput(end);
+    const consultorioId = resolveConsultorioId();
+    if(els.consultorioModal && consultorioId) els.consultorioModal.value = consultorioId;
+    createModal = createModal || window.bootstrap.Modal.getOrCreateInstance(els.createModalEl);
+    createModal.show();
+  };
+  // Extension point (fase siguiente): buscar próxima cita disponible con /availability
+  const openNextAvailableSlotFinder = ()=>{
+    return null;
+  };
+  const handleCreateSubmit = async ()=>{
+    if(createRequestInFlight) return;
+    const doctorId = getDoctorId();
+    const consultorioId = resolveConsultorioId();
+    const patientId = sanitizeText(els.patientId?.value || '');
+    const startInput = sanitizeText(els.startAt?.value || '');
+    const endInput = sanitizeText(els.endAt?.value || '');
+    const modality = sanitizeText(els.modality?.value || 'in_person') || 'in_person';
+    const channelOrigin = sanitizeText(els.channel?.value || 'agenda_frontend_v1') || 'agenda_frontend_v1';
+    const actorId = resolveActorId();
+
+    if(!doctorId) return setCreateError('No se pudo resolver doctor_id.');
+    if(!consultorioId) return setCreateError('No se pudo resolver un consultorio operativo. Verifica el catálogo de consultorios del médico activo.');
+    if(!patientId) return setCreateError('Paciente (ID) es obligatorio.');
+    if(!startInput || !endInput) return setCreateError('Inicio y fin son obligatorios.');
+
+    const startSql = toSqlDateTimeLocal(startInput);
+    const endSql = toSqlDateTimeLocal(endInput);
+    if(!startSql || !endSql) return setCreateError('Formato de fecha/hora inválido.');
+    if(new Date(endInput).getTime() <= new Date(startInput).getTime()){
+      return setCreateError('La hora de fin debe ser mayor a la de inicio.');
+    }
+    if(!actorId) return setCreateError('No se pudo resolver created_by_id.');
+
+    const payload = {
+      doctor_id: doctorId,
+      consultorio_id: consultorioId,
+      patient_id: patientId,
+      start_at: startSql,
+      end_at: endSql,
+      modality: modality,
+      channel_origin: channelOrigin,
+      created_by_role: 'doctor',
+      created_by_id: actorId
+    };
+
+    createRequestInFlight = true;
+    if(els.createSubmit){
+      els.createSubmit.disabled = true;
+      els.createSubmit.textContent = 'Guardando...';
+    }
+    setCreateError('');
+
+    try{
+      const result = await AgendaApiClient.createAppointment(payload);
+      const json = result?.json || null;
+      if(!result?.ok || !json || json.ok !== true){
+        const msg = sanitizeText(json?.message || json?.error || `HTTP ${result?.status || 500}`) || 'No se pudo crear la cita.';
+        setCreateError(msg);
+        return;
+      }
+      createModal = createModal || window.bootstrap.Modal.getOrCreateInstance(els.createModalEl);
+      createModal.hide();
+      resetCreateForm();
+      await refreshCalendar({ forceConsultorios: false });
+    }catch(_){
+      setCreateError('No se pudo crear la cita.');
+    }finally{
+      createRequestInFlight = false;
+      if(els.createSubmit){
+        els.createSubmit.disabled = false;
+        els.createSubmit.textContent = 'Guardar cita';
+      }
+    }
+  };
 
   const getDoctorId = ()=>{
+    const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
+      ? window.mxmedResolveActiveProfessionalContext()
+      : null;
     const inputVal = sanitizeText(els.doctor?.value || '');
     if(inputVal) return inputVal;
     return sanitizeText(
-      window.mxmedStore?.doctor_id
+      activeProfessional?.doctor_id
+      || (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : '')
+      || window.mxmedStore?.doctor_id
       || window.mxmedStore?.doctorId
+      || window.mxmedStore?.currentUserId
+      || window.mxmedStore?.userId
       || window.mxmedDoctor?.doctor_id
       || document.body?.dataset?.doctorId
       || ''
@@ -371,23 +893,57 @@ console.info('app.js loaded :: 20251123a');
         signal: consultoriosRequestCtrl.signal
       });
       if(!json || json.ok !== true || !Array.isArray(json.data)){
+        const usedFallback = applyConsultorioFallbackFromActiveContext();
+        if(!usedFallback){
+          setConsultorioUnavailableState('No se pudieron cargar consultorios');
+        }
         return;
       }
-      const options = json.data.map((item)=>{
-        const id = sanitizeText(item?.consultorio_id || item?.id || item?.consultorioId || '');
-        if(!id) return '';
-        const name = sanitizeText(item?.nombre || item?.title || item?.titulo || item?.name || `Consultorio ${id}`);
-        return `<option value="${id.replace(/"/g, '&quot;')}">${name.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</option>`;
-      }).filter(Boolean);
+      const normalizedOptions = json.data.map(normalizeConsultorioOption).filter(Boolean);
+      const options = normalizedOptions.map((opt)=>{
+        return `<option value="${opt.id.replace(/"/g, '&quot;')}">${opt.label.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</option>`;
+      });
       els.consultorio.insertAdjacentHTML('beforeend', options.join(''));
+      const professionalContext = (typeof window.mxmedUpdateActiveProfessionalConsultorios === 'function')
+        ? window.mxmedUpdateActiveProfessionalConsultorios(json.data)
+        : null;
       if(previous){
         const exists = Array.from(els.consultorio.options).some((opt)=> sanitizeText(opt.value) === previous);
         if(exists) els.consultorio.value = previous;
       }
+      if(!sanitizeText(els.consultorio.value || '')){
+        const contextDefault = sanitizeText(professionalContext?.default_consultorio_id || '');
+        if(contextDefault){
+          const exists = Array.from(els.consultorio.options).some((opt)=> sanitizeText(opt.value) === contextDefault);
+          if(exists) els.consultorio.value = contextDefault;
+        }
+      }
+      syncCreateConsultorioOptions();
+      if(sourceOptionsLength(els.consultorio) === 1){
+        const singleValue = sanitizeText(Array.from(els.consultorio.options).find((opt)=> sanitizeText(opt.value))?.value || '');
+        if(singleValue){
+          els.consultorio.value = singleValue;
+          if(els.consultorioModal) els.consultorioModal.value = singleValue;
+        }
+      }
+      if(sourceOptionsLength(els.consultorio) === 0){
+        const usedFallback = applyConsultorioFallbackFromActiveContext();
+        if(!usedFallback){
+          setConsultorioUnavailableState('No se pudieron cargar consultorios');
+        }
+      }
     }catch(err){
       if(err?.name === 'AbortError') return;
+      const usedFallback = applyConsultorioFallbackFromActiveContext();
+      if(!usedFallback){
+        setConsultorioUnavailableState('No se pudieron cargar consultorios');
+      }
       console.warn('[Agenda v1] consultorios fetch error', err);
     }
+  };
+  const sourceOptionsLength = (selectEl)=>{
+    if(!selectEl) return 0;
+    return Array.from(selectEl.options || []).filter((opt)=> sanitizeText(opt.value)).length;
   };
 
   const fetchAppointments = async (fetchInfo)=>{
@@ -496,6 +1052,8 @@ console.info('app.js loaded :: 20251123a');
     calendar = new window.FullCalendar.Calendar(els.calendar, {
       locale: 'es',
       initialView: 'timeGridWeek',
+      selectable: true,
+      selectMirror: true,
       nowIndicator: true,
       allDaySlot: false,
       slotMinTime: '06:00:00',
@@ -549,6 +1107,9 @@ console.info('app.js loaded :: 20251123a');
         }finally{
           setLoading(false);
         }
+      },
+      select: (selectionInfo)=>{
+        openCreateModalFromSelection(selectionInfo);
       },
       eventTimeFormat: {
         hour: '2-digit',
@@ -608,7 +1169,29 @@ console.info('app.js loaded :: 20251123a');
       refreshCalendar({ forceConsultorios: true }).catch(()=> null);
     });
     els.consultorio?.addEventListener('change', ()=>{
+      syncCreateConsultorioOptions();
       refreshCalendar({ forceConsultorios: false }).catch(()=> null);
+    });
+    els.consultorioModal?.addEventListener('change', ()=>{
+      const chosen = sanitizeText(els.consultorioModal?.value || '');
+      if(chosen && els.consultorio){
+        els.consultorio.value = chosen;
+      }
+    });
+    els.useActivePatientYes?.addEventListener('click', ()=>{
+      setActivePatientMode('active');
+    });
+    els.useActivePatientNo?.addEventListener('click', ()=>{
+      setActivePatientMode('manual');
+    });
+    els.createSubmit?.addEventListener('click', ()=>{
+      handleCreateSubmit().catch(()=> null);
+    });
+    els.createModalEl?.addEventListener('hidden.bs.modal', ()=>{
+      resetCreateForm();
+      if(calendar && typeof calendar.unselect === 'function'){
+        try{ calendar.unselect(); }catch(_){}
+      }
     });
 
     document.querySelectorAll('.menu-sub-btn[data-panel="p-ag-admin"]').forEach((btn)=>{
@@ -639,6 +1222,7 @@ console.info('app.js loaded :: 20251123a');
   const start = ()=>{
     bindEvents();
     syncDoctorInput();
+    syncActivePatientPrompt();
     initCalendar();
     const isVisible = panel && !panel.classList.contains('d-none');
     if(isVisible){

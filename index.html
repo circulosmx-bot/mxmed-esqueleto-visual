@@ -2740,6 +2740,65 @@
               </div>
             </div>
 
+            <div class="modal fade" id="ag_new_appointment_modal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Nueva cita</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div id="ag_create_error_box" class="alert alert-danger d-none py-2 mb-3"></div>
+                    <div class="row g-3">
+                      <div class="col-12 d-none" id="ag_active_patient_box">
+                        <div class="alert alert-warning py-2 mb-0">
+                          <div class="fw-semibold mb-2" id="ag_active_patient_text">Paciente activo detectado.</div>
+                          <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-sm btn-primary" id="ag_use_active_patient_yes">Sí, usar paciente activo</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="ag_use_active_patient_no">No, capturar otro paciente</button>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label" for="ag_patient_id_input">Paciente (ID)</label>
+                        <input type="text" class="form-control" id="ag_patient_id_input" placeholder="ID de paciente">
+                        <div class="form-text">Captura el ID de paciente existente en el sistema.</div>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="ag_start_input">Inicio</label>
+                        <input type="datetime-local" class="form-control" id="ag_start_input">
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="ag_end_input">Fin</label>
+                        <input type="datetime-local" class="form-control" id="ag_end_input">
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="ag_modality_input">Modalidad</label>
+                        <select class="form-select" id="ag_modality_input">
+                          <option value="in_person">Presencial</option>
+                          <option value="videoconsulta">Videoconsulta</option>
+                        </select>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="ag_consultorio_modal">Seleccionar consultorio</label>
+                        <select class="form-select" id="ag_consultorio_modal">
+                          <option value="" disabled selected>No hay consultorios disponibles</option>
+                        </select>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="ag_channel_input">Canal</label>
+                        <input type="text" class="form-control" id="ag_channel_input" value="agenda_frontend_v1">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="ag_create_submit_btn">Guardar cita</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
 
         </section>
