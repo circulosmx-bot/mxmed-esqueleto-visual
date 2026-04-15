@@ -5123,11 +5123,6 @@ body{margin:0;background:var(--mm-fondo-base);}
 #agendaFrontendV1 > [class*="col-"]{
   min-width: 0;
 }
-.mx-agenda-v1 #ag_test_block{
-  display: block;
-  width: 100%;
-  min-height: 96px;
-}
 .mx-agenda-v1 .form-label{
   font-weight: 600;
   color: #0b3750;

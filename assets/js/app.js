@@ -175,11 +175,7 @@ console.info('app.js loaded :: 20251123a');
 (function(){
   const panelId = 'p-ag-admin';
   const panel = document.getElementById(panelId);
-  if(!panel){
-    console.warn('AGENDA TEST: panel no encontrado', panelId);
-    return;
-  }
-  console.info('AGENDA TEST: panel encontrado', panelId, panel);
+  if(!panel) return;
 
   const els = {
     doctor: panel.querySelector('#ag_doctor_filter'),
@@ -189,24 +185,6 @@ console.info('app.js loaded :: 20251123a');
     loading: panel.querySelector('#ag_loading_box'),
     calendar: panel.querySelector('#ag_calendar'),
     hint: panel.querySelector('#ag_filters_hint')
-  };
-  console.info('AGENDA TEST: calendar container encontrado', !!els.calendar, els.calendar);
-
-  const logPanelVisibility = ()=>{
-    const visible = !!panel && !panel.classList.contains('d-none');
-    console.info('AGENDA TEST: panel visible', visible, {
-      className: panel.className,
-      display: window.getComputedStyle(panel).display
-    });
-  };
-
-  const ensureTestBlock = ()=>{
-    const testBlock = panel.querySelector('#ag_test_block');
-    if(testBlock){
-      console.info('AGENDA TEST: bloque insertado', true, testBlock);
-    }else{
-      console.warn('AGENDA TEST: bloque insertado', false);
-    }
   };
 
   let calendar = null;
@@ -239,6 +217,38 @@ console.info('app.js loaded :: 20251123a');
     const raw = sanitizeText(value);
     if(!raw) return '';
     return raw.includes('T') ? raw : raw.replace(' ', 'T');
+  };
+
+  const AgendaApiClient = {
+    async getAppointments({ params, signal }){
+      const qs = (params instanceof URLSearchParams) ? params.toString() : String(params || '');
+      const resp = await fetch(`/api/agenda/index.php/appointments?${qs}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        signal
+      });
+      return resp.json().catch(()=> null);
+    },
+    async getConsultorios({ doctorId, signal }){
+      const resp = await fetch(`/api/agenda/index.php/consultorios?doctor_id=${encodeURIComponent(doctorId)}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        signal
+      });
+      return resp.json().catch(()=> null);
+    },
+    async getAvailability({ params, signal }){
+      const qs = (params instanceof URLSearchParams) ? params.toString() : String(params || '');
+      const resp = await fetch(`/api/agenda/index.php/availability?${qs}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        signal
+      });
+      return resp.json().catch(()=> null);
+    }
   };
 
   const setError = (message)=>{
@@ -356,14 +366,10 @@ console.info('app.js loaded :: 20251123a');
     }
 
     try{
-      const url = `/api/agenda/index.php/consultorios?doctor_id=${encodeURIComponent(doctorId)}`;
-      const resp = await fetch(url, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' },
-        credentials: 'same-origin',
+      const json = await AgendaApiClient.getConsultorios({
+        doctorId,
         signal: consultoriosRequestCtrl.signal
       });
-      const json = await resp.json().catch(()=> null);
       if(!json || json.ok !== true || !Array.isArray(json.data)){
         return;
       }
@@ -401,13 +407,10 @@ console.info('app.js loaded :: 20251123a');
     setLoading(true);
     setError('');
 
-    const resp = await fetch(`/api/agenda/index.php/appointments?${params.toString()}`, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' },
-      credentials: 'same-origin',
+    const json = await AgendaApiClient.getAppointments({
+      params,
       signal: appointmentsRequestCtrl.signal
     });
-    const json = await resp.json().catch(()=> null);
     setLoading(false);
     if(!json || json.ok !== true || !Array.isArray(json.data)){
       const message = sanitizeText(json?.message || json?.error || '');
@@ -445,12 +448,7 @@ console.info('app.js loaded :: 20251123a');
         date: dateYmd,
         slot_minutes: '30'
       });
-      const resp = await fetch(`/api/agenda/index.php/availability?${params.toString()}`, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' },
-        credentials: 'same-origin'
-      });
-      const json = await resp.json().catch(()=> null);
+      const json = await AgendaApiClient.getAvailability({ params });
       return { dateYmd, json };
     });
 
@@ -616,8 +614,6 @@ console.info('app.js loaded :: 20251123a');
     document.querySelectorAll('.menu-sub-btn[data-panel="p-ag-admin"]').forEach((btn)=>{
       btn.addEventListener('click', ()=>{
         window.setTimeout(()=>{
-          logPanelVisibility();
-          ensureTestBlock();
           ensureAgendaVisibleRender({ forceConsultorios: true }).catch(()=> null);
         }, 120);
       });
@@ -626,8 +622,6 @@ console.info('app.js loaded :: 20251123a');
     document.querySelectorAll('.menu-main[data-group="agenda"], .menu-sub[data-group="agenda"] .menu-sub-btn').forEach((btn)=>{
       btn.addEventListener('click', ()=>{
         window.setTimeout(()=>{
-          logPanelVisibility();
-          ensureTestBlock();
           ensureAgendaVisibleRender({ forceConsultorios: true }).catch(()=> null);
         }, 160);
       });
@@ -636,8 +630,6 @@ console.info('app.js loaded :: 20251123a');
     if(window.MutationObserver && !visibilityObserver){
       visibilityObserver = new MutationObserver(()=>{
         if(panel.classList.contains('d-none')) return;
-        logPanelVisibility();
-        ensureTestBlock();
         ensureAgendaVisibleRender({ forceConsultorios: false }).catch(()=> null);
       });
       visibilityObserver.observe(panel, { attributes: true, attributeFilter: ['class', 'style'] });
@@ -647,13 +639,9 @@ console.info('app.js loaded :: 20251123a');
   const start = ()=>{
     bindEvents();
     syncDoctorInput();
-    logPanelVisibility();
-    ensureTestBlock();
     initCalendar();
     const isVisible = panel && !panel.classList.contains('d-none');
     if(isVisible){
-      logPanelVisibility();
-      ensureTestBlock();
       ensureAgendaVisibleRender({ forceConsultorios: true }).catch(()=> null);
     }
   };
