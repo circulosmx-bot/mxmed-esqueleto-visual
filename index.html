@@ -7559,9 +7559,25 @@
                     </div>
                     <div id="am_step_5" class="d-none">
                       <div class="row g-3">
+                        <div class="col-md-4">
+                          <label class="form-label" for="am_followup_date">Fecha de control</label>
+                          <input class="form-control" id="am_followup_date" type="date">
+                        </div>
+                        <div class="col-md-4">
+                          <label class="form-label" for="am_followup_time">Hora de control</label>
+                          <input class="form-control" id="am_followup_time" type="time">
+                        </div>
                         <div class="col-12">
-                          <label class="form-label" for="am_cita_control">Cita de control</label>
-                          <textarea class="form-control" id="am_cita_control" rows="3" placeholder="Cita de control en consulta externa en 7 días."></textarea>
+                          <label class="form-label" for="am_followup_note">Motivo de control</label>
+                          <textarea class="form-control" id="am_followup_note" rows="3" placeholder="Control de evolución clínica posterior al alta médica."></textarea>
+                        </div>
+                        <div class="col-12">
+                          <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="am_create_agenda_event">
+                            <label class="form-check-label" for="am_create_agenda_event">Registrar esta cita en Agenda</label>
+                          </div>
+                          <div class="small text-muted mt-1">Opcional. Si activas esta opción, se intentará crear una cita real vinculada al paciente.</div>
+                          <div class="small d-none mt-1" id="am_agenda_status"></div>
                         </div>
                         <div class="col-12">
                           <label class="form-label" for="am_recomendaciones">Recomendaciones</label>

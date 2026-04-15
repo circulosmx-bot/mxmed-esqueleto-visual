@@ -2486,7 +2486,17 @@ if (!$embed) {
       $altaTratamiento = trim((string)($altaContent['tratamiento'] ?? ''));
       $altaCuidadosGenerales = trim((string)($altaContent['cuidados_generales'] ?? ''));
       $altaSignosAlarma = trim((string)($altaContent['signos_alarma'] ?? ''));
+      $altaFollowupDate = trim((string)($altaContent['followup_date'] ?? ''));
+      $altaFollowupTime = trim((string)($altaContent['followup_time'] ?? ''));
+      $altaFollowupNote = trim((string)($altaContent['followup_note'] ?? ''));
       $altaCitaControl = trim((string)($altaContent['cita_control'] ?? ''));
+      $altaFollowupDateLabel = clinical_doc_format_date($altaFollowupDate, false);
+      $altaFollowupDateOut = $altaFollowupDateLabel !== '' ? $altaFollowupDateLabel : $altaFollowupDate;
+      $altaFollowupTimeOut = $altaFollowupTime !== '' ? substr($altaFollowupTime, 0, 5) : '';
+      $altaFollowupLine = trim(implode(' · ', array_values(array_filter([
+        $altaFollowupDateOut !== '' ? $altaFollowupDateOut : '',
+        $altaFollowupTimeOut !== '' ? $altaFollowupTimeOut : '',
+      ]))));
       $altaRecomendaciones = trim((string)($altaContent['recomendaciones'] ?? ''));
       $altaIndicacionesText = implode("\n", array_values(array_filter([
         $altaTratamiento !== '' ? ('Tratamiento: ' . $altaTratamiento) : '',
@@ -2494,7 +2504,8 @@ if (!$embed) {
         $altaSignosAlarma !== '' ? ('Signos de alarma: ' . $altaSignosAlarma) : '',
       ])));
       $altaSeguimientoText = implode("\n", array_values(array_filter([
-        $altaCitaControl !== '' ? ('Cita de control: ' . $altaCitaControl) : '',
+        $altaFollowupLine !== '' ? ('Cita de control: ' . $altaFollowupLine) : ($altaCitaControl !== '' ? ('Cita de control: ' . $altaCitaControl) : ''),
+        $altaFollowupNote !== '' ? ('Seguimiento: ' . $altaFollowupNote) : '',
         $altaRecomendaciones !== '' ? ('Recomendaciones: ' . $altaRecomendaciones) : '',
       ])));
       ?>

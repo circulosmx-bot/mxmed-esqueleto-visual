@@ -9179,7 +9179,11 @@ console.info('app.js loaded :: 20251123a');
       altaTratamiento: root.querySelector('#am_tratamiento'),
       altaCuidadosGenerales: root.querySelector('#am_cuidados_generales'),
       altaSignosAlarma: root.querySelector('#am_signos_alarma'),
-      altaCitaControl: root.querySelector('#am_cita_control'),
+      altaFollowupDate: root.querySelector('#am_followup_date'),
+      altaFollowupTime: root.querySelector('#am_followup_time'),
+      altaFollowupNote: root.querySelector('#am_followup_note'),
+      altaCreateAgendaEvent: root.querySelector('#am_create_agenda_event'),
+      altaAgendaStatus: root.querySelector('#am_agenda_status'),
       altaRecomendaciones: root.querySelector('#am_recomendaciones'),
       altaFinalText: root.querySelector('#am_final_text'),
       altaFinalSignatureState: root.querySelector('#am_final_signature_state'),
@@ -9565,7 +9569,11 @@ console.info('app.js loaded :: 20251123a');
         tratamiento: '',
         cuidados_generales: '',
         signos_alarma: '',
-        cita_control: '',
+        followup_date: '',
+        followup_time: '',
+        followup_note: '',
+        create_agenda_event: false,
+        agenda_event_id: '',
         recomendaciones: '',
         final_text: ''
       }
@@ -9680,6 +9688,24 @@ console.info('app.js loaded :: 20251123a');
         message: 'Este campo es obligatorio',
         notice: 'Tratamiento es obligatorio para emitir.',
         isMissing: ()=> !normalizeConsentInputRaw(altaState.form.tratamiento || '')
+      },
+      {
+        key: 'followup_date',
+        label: 'Fecha de control',
+        step: 5,
+        selector: '#am_followup_date',
+        message: 'Este campo es obligatorio',
+        notice: 'Indica la fecha de control para registrar la cita en Agenda.',
+        isMissing: ()=> !!altaState.form.create_agenda_event && !sanitizeText(altaState.form.followup_date || '')
+      },
+      {
+        key: 'followup_time',
+        label: 'Hora de control',
+        step: 5,
+        selector: '#am_followup_time',
+        message: 'Este campo es obligatorio',
+        notice: 'Indica la hora de control para registrar la cita en Agenda.',
+        isMissing: ()=> !!altaState.form.create_agenda_event && !sanitizeText(altaState.form.followup_time || '')
       },
       {
         key: 'doctor_signature',
@@ -14629,7 +14655,12 @@ console.info('app.js loaded :: 20251123a');
       pushSection('Indicaciones - Tratamiento', source.tratamiento);
       pushSection('Indicaciones - Cuidados generales', source.cuidados_generales);
       pushSection('Indicaciones - Signos de alarma', source.signos_alarma);
-      pushSection('Seguimiento - Cita de control', source.cita_control);
+      const followupDate = sanitizeText(source.followup_date || '');
+      const followupTime = sanitizeText(source.followup_time || '').slice(0, 5);
+      const followupDateLabel = followupDate ? (formatConsentUiDate(followupDate, { withTime: false }) || followupDate) : '';
+      const followupLine = [followupDateLabel, followupTime].filter(Boolean).join(' · ');
+      pushSection('Seguimiento - Cita de control', normalizeConsentInputRaw(followupLine));
+      pushSection('Seguimiento - Motivo de control', source.followup_note);
       pushSection('Seguimiento - Recomendaciones', source.recomendaciones);
       return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
     };
@@ -14644,7 +14675,10 @@ console.info('app.js loaded :: 20251123a');
       if(els.altaTratamiento) els.altaTratamiento.value = sanitizeText(altaState.form.tratamiento || '');
       if(els.altaCuidadosGenerales) els.altaCuidadosGenerales.value = sanitizeText(altaState.form.cuidados_generales || '');
       if(els.altaSignosAlarma) els.altaSignosAlarma.value = sanitizeText(altaState.form.signos_alarma || '');
-      if(els.altaCitaControl) els.altaCitaControl.value = sanitizeText(altaState.form.cita_control || '');
+      if(els.altaFollowupDate) els.altaFollowupDate.value = sanitizeText(altaState.form.followup_date || '');
+      if(els.altaFollowupTime) els.altaFollowupTime.value = sanitizeText(altaState.form.followup_time || '');
+      if(els.altaFollowupNote) els.altaFollowupNote.value = sanitizeText(altaState.form.followup_note || '');
+      if(els.altaCreateAgendaEvent) els.altaCreateAgendaEvent.checked = !!altaState.form.create_agenda_event;
       if(els.altaRecomendaciones) els.altaRecomendaciones.value = sanitizeText(altaState.form.recomendaciones || '');
       if(els.altaFinalText) els.altaFinalText.value = normalizeConsentInputRaw(altaState.form.final_text || '');
     };
@@ -14662,6 +14696,15 @@ console.info('app.js loaded :: 20251123a');
       els.altaSignatureRemoteStatus.classList.toggle('text-success', tone === 'success');
       els.altaSignatureRemoteStatus.classList.toggle('text-danger', tone === 'error');
       els.altaSignatureRemoteStatus.classList.toggle('text-muted', tone !== 'success' && tone !== 'error');
+    };
+    const setAltaAgendaStatus = (message = '', tone = 'muted')=>{
+      if(!els.altaAgendaStatus) return;
+      const text = sanitizeText(message || '');
+      els.altaAgendaStatus.textContent = text;
+      els.altaAgendaStatus.classList.toggle('d-none', !text);
+      els.altaAgendaStatus.classList.toggle('text-success', tone === 'success');
+      els.altaAgendaStatus.classList.toggle('text-danger', tone === 'error');
+      els.altaAgendaStatus.classList.toggle('text-muted', tone !== 'success' && tone !== 'error');
     };
     const updateAltaSignatureStatus = ()=>{
       let label = 'Sin firma';
@@ -14980,6 +15023,14 @@ console.info('app.js loaded :: 20251123a');
       if(normalizedStep === 7){
         ensureAltaFinalText();
       }
+      if(normalizedStep === 5){
+        const agendaEventId = sanitizeText(altaState.form.agenda_event_id || '');
+        if(agendaEventId){
+          setAltaAgendaStatus(`Cita ya registrada en Agenda (${agendaEventId}).`, 'success');
+        }else if(!altaState.form.create_agenda_event){
+          setAltaAgendaStatus('', 'muted');
+        }
+      }
       window.requestAnimationFrame(()=> refreshAutosaveChecksIn(els.altaWizard));
     };
     const buildAltaTempSnapshot = ()=>({
@@ -14997,7 +15048,11 @@ console.info('app.js loaded :: 20251123a');
         tratamiento: normalizeConsentInputRaw(altaState.form.tratamiento || ''),
         cuidados_generales: normalizeConsentInputRaw(altaState.form.cuidados_generales || ''),
         signos_alarma: normalizeConsentInputRaw(altaState.form.signos_alarma || ''),
-        cita_control: normalizeConsentInputRaw(altaState.form.cita_control || ''),
+        followup_date: sanitizeText(altaState.form.followup_date || ''),
+        followup_time: sanitizeText(altaState.form.followup_time || ''),
+        followup_note: normalizeConsentInputRaw(altaState.form.followup_note || ''),
+        create_agenda_event: altaState.form.create_agenda_event ? '1' : '',
+        agenda_event_id: sanitizeText(altaState.form.agenda_event_id || ''),
         recomendaciones: normalizeConsentInputRaw(altaState.form.recomendaciones || ''),
         final_text: normalizeConsentInputRaw(altaState.form.final_text || '')
       }
@@ -15013,7 +15068,9 @@ console.info('app.js loaded :: 20251123a');
         form.tratamiento,
         form.cuidados_generales,
         form.signos_alarma,
-        form.cita_control,
+        form.followup_date,
+        form.followup_time,
+        form.followup_note,
         form.recomendaciones,
         form.final_text
       ].some((value)=> trimConsentInputValue(value || '') !== '');
@@ -15033,7 +15090,13 @@ console.info('app.js loaded :: 20251123a');
         tratamiento: normalizeConsentInputRaw(form.tratamiento ?? altaState.form.tratamiento ?? ''),
         cuidados_generales: normalizeConsentInputRaw(form.cuidados_generales ?? altaState.form.cuidados_generales ?? ''),
         signos_alarma: normalizeConsentInputRaw(form.signos_alarma ?? altaState.form.signos_alarma ?? ''),
-        cita_control: normalizeConsentInputRaw(form.cita_control ?? altaState.form.cita_control ?? ''),
+        followup_date: sanitizeText(form.followup_date ?? altaState.form.followup_date ?? ''),
+        followup_time: sanitizeText(form.followup_time ?? altaState.form.followup_time ?? ''),
+        followup_note: normalizeConsentInputRaw(form.followup_note ?? altaState.form.followup_note ?? ''),
+        create_agenda_event: ['1', 'true', 'si', 'yes'].includes(
+          String(form.create_agenda_event ?? (altaState.form.create_agenda_event ? '1' : '')).trim().toLowerCase()
+        ),
+        agenda_event_id: sanitizeText(form.agenda_event_id ?? altaState.form.agenda_event_id ?? ''),
         recomendaciones: normalizeConsentInputRaw(form.recomendaciones ?? altaState.form.recomendaciones ?? ''),
         final_text: normalizeConsentInputRaw(form.final_text ?? altaState.form.final_text ?? '')
       };
@@ -15065,12 +15128,17 @@ console.info('app.js loaded :: 20251123a');
         tratamiento: '',
         cuidados_generales: '',
         signos_alarma: '',
-        cita_control: '',
+        followup_date: '',
+        followup_time: '',
+        followup_note: '',
+        create_agenda_event: false,
+        agenda_event_id: '',
         recomendaciones: '',
         final_text: ''
       };
       setAltaNotice('');
       setAltaRemoteStatus('', 'muted');
+      setAltaAgendaStatus('', 'muted');
       els.altaSignatureInlinePrompt?.classList.add('d-none');
       syncAltaInputsFromState();
       clearAltaSignaturePad();
@@ -15117,13 +15185,18 @@ console.info('app.js loaded :: 20251123a');
         tratamiento: '',
         cuidados_generales: '',
         signos_alarma: '',
-        cita_control: '',
+        followup_date: '',
+        followup_time: '',
+        followup_note: '',
+        create_agenda_event: false,
+        agenda_event_id: '',
         recomendaciones: '',
         final_text: ''
       };
       ensureAltaFinalText({ force: true });
       setAltaNotice('');
       setAltaRemoteStatus('', 'muted');
+      setAltaAgendaStatus('', 'muted');
       els.altaSignatureInlinePrompt?.classList.add('d-none');
       syncAltaInputsFromState();
       initAltaSignaturePad();
@@ -15194,9 +15267,129 @@ console.info('app.js loaded :: 20251123a');
       pushSection('Indicaciones - Tratamiento', content.tratamiento);
       pushSection('Indicaciones - Cuidados generales', content.cuidados_generales);
       pushSection('Indicaciones - Signos de alarma', content.signos_alarma);
-      pushSection('Seguimiento - Cita de control', content.cita_control);
+      const followupDate = sanitizeText(content.followup_date || '');
+      const followupTime = sanitizeText(content.followup_time || '');
+      const followupDateLabel = followupDate ? (formatConsentUiDate(followupDate, { withTime: false }) || followupDate) : '';
+      const followupTimeLabel = followupTime ? followupTime.slice(0, 5) : '';
+      const followupLine = [followupDateLabel, followupTimeLabel].filter(Boolean).join(' · ');
+      pushSection('Seguimiento - Cita de control', normalizeConsentInputRaw(followupLine || content.cita_control || ''));
+      pushSection('Seguimiento - Motivo de control', content.followup_note);
       pushSection('Seguimiento - Recomendaciones', content.recomendaciones);
       return lines.join('\n');
+    };
+    let agendaConsultorioByDoctor = Object.create(null);
+    const resolveAltaFollowupDateTime = (form = null)=>{
+      const source = (form && typeof form === 'object') ? form : altaState.form;
+      const dateRaw = sanitizeText(source.followup_date || '');
+      const timeRaw = sanitizeText(source.followup_time || '').slice(0, 5);
+      if(!dateRaw || !timeRaw) return { startAt: '', endAt: '', label: '' };
+      const localDate = new Date(`${dateRaw}T${timeRaw}:00`);
+      if(Number.isNaN(localDate.getTime())) return { startAt: '', endAt: '', label: '' };
+      const endDate = new Date(localDate.getTime() + 30 * 60 * 1000);
+      const toSql = (value)=>{
+        const y = value.getFullYear();
+        const m = String(value.getMonth() + 1).padStart(2, '0');
+        const d = String(value.getDate()).padStart(2, '0');
+        const hh = String(value.getHours()).padStart(2, '0');
+        const mm = String(value.getMinutes()).padStart(2, '0');
+        const ss = String(value.getSeconds()).padStart(2, '0');
+        return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
+      };
+      return {
+        startAt: toSql(localDate),
+        endAt: toSql(endDate),
+        label: `${formatConsentUiDate(dateRaw, { withTime: false }) || dateRaw} · ${timeRaw}`
+      };
+    };
+    const resolveAgendaConsultorioId = async (doctorId = '')=>{
+      const safeDoctorId = sanitizeText(doctorId || '');
+      if(!safeDoctorId) return '';
+      if(agendaConsultorioByDoctor[safeDoctorId]){
+        return agendaConsultorioByDoctor[safeDoctorId];
+      }
+      try{
+        const resp = await fetch(`/api/agenda/index.php/consultorios?doctor_id=${encodeURIComponent(safeDoctorId)}`, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          credentials: 'same-origin'
+        });
+        const json = await resp.json().catch(()=> null);
+        if(!resp.ok || !json || json.ok !== true || !Array.isArray(json.data) || json.data.length === 0){
+          return '';
+        }
+        const first = (json.data.find((item)=> item && typeof item === 'object') || {});
+        const consultorioId = sanitizeText(
+          first.consultorio_id
+          || first.id
+          || first.consultorioId
+          || ''
+        );
+        if(consultorioId){
+          agendaConsultorioByDoctor[safeDoctorId] = consultorioId;
+          return consultorioId;
+        }
+      }catch(_){}
+      return '';
+    };
+    const createAltaAgendaAppointment = async ({ patientId = '', actorUserId = '' } = {})=>{
+      if(!altaState.form.create_agenda_event){
+        return { ok: true, skipped: true };
+      }
+      if(sanitizeText(altaState.form.agenda_event_id || '')){
+        return { ok: true, skipped: true, appointmentId: sanitizeText(altaState.form.agenda_event_id || '') };
+      }
+      const followup = resolveAltaFollowupDateTime(altaState.form);
+      if(!followup.startAt || !followup.endAt){
+        return { ok: false, error: 'Configura fecha y hora de control para registrar la cita en Agenda.' };
+      }
+      const doctorId = sanitizeText(
+        window.mxmedStore?.doctor_id
+        || window.mxmedStore?.doctorId
+        || window.mxmedDoctor?.doctor_id
+        || ''
+      );
+      if(!doctorId){
+        return { ok: false, error: 'No se pudo resolver el médico para registrar la cita en Agenda.' };
+      }
+      const consultorioId = await resolveAgendaConsultorioId(doctorId);
+      if(!consultorioId){
+        return { ok: false, error: 'No se encontró consultorio disponible para registrar la cita en Agenda.' };
+      }
+      const motive = normalizeConsentInputRaw(
+        altaState.form.followup_note
+        || altaState.form.recomendaciones
+        || 'Cita de control posterior a alta médica.'
+      );
+      const payload = {
+        doctor_id: doctorId,
+        consultorio_id: consultorioId,
+        patient_id: sanitizeText(patientId || ''),
+        start_at: followup.startAt,
+        end_at: followup.endAt,
+        modality: 'in_person',
+        channel_origin: 'alta_medica',
+        created_by_role: 'doctor',
+        created_by_id: sanitizeText(actorUserId || doctorId),
+        reason_text: motive
+      };
+      try{
+        const resp = await fetch('/api/agenda/index.php/appointments', {
+          method: 'POST',
+          headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          credentials: 'same-origin'
+        });
+        const json = await resp.json().catch(()=> null);
+        if(!resp.ok || !json || json.ok !== true){
+          const msg = sanitizeText(json?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo registrar la cita en Agenda.';
+          return { ok: false, error: msg };
+        }
+        const appointmentId = sanitizeText(json?.data?.appointment_id || '');
+        altaState.form.agenda_event_id = appointmentId;
+        return { ok: true, appointmentId, label: followup.label };
+      }catch(_){
+        return { ok: false, error: 'No se pudo registrar la cita en Agenda.' };
+      }
     };
     const buildAltaDocument = async (targetStatus = 'draft')=>{
       const patientId = resolveActivePatientIdForConsent();
@@ -15218,9 +15411,14 @@ console.info('app.js loaded :: 20251123a');
         if(!normalizeConsentInputRaw(altaState.form.diagnostico_final || '')) return { error: 'Diagnóstico final es obligatorio para emitir.' };
         if(!normalizeConsentInputRaw(altaState.form.estado_paciente || '')) return { error: 'Estado actual del paciente es obligatorio para emitir.' };
         if(!normalizeConsentInputRaw(altaState.form.tratamiento || '')) return { error: 'Tratamiento es obligatorio para emitir.' };
+        if(altaState.form.create_agenda_event){
+          if(!sanitizeText(altaState.form.followup_date || '')) return { error: 'Fecha de control es obligatoria para registrar cita en Agenda.' };
+          if(!sanitizeText(altaState.form.followup_time || '')) return { error: 'Hora de control es obligatoria para registrar cita en Agenda.' };
+        }
         if(!finalText) return { error: 'La vista final editable no puede emitirse vacía.' };
         if(!signature) return { error: 'Firma del médico es obligatoria para emitir.' };
       }
+      const followup = resolveAltaFollowupDateTime(altaState.form);
       const content = {
         tipo_alta: tipoAlta,
         tipo_alta_label: getAltaTypeLabel(tipoAlta),
@@ -15232,7 +15430,12 @@ console.info('app.js loaded :: 20251123a');
         tratamiento: normalizeConsentInputRaw(altaState.form.tratamiento || ''),
         cuidados_generales: normalizeConsentInputRaw(altaState.form.cuidados_generales || ''),
         signos_alarma: normalizeConsentInputRaw(altaState.form.signos_alarma || ''),
-        cita_control: normalizeConsentInputRaw(altaState.form.cita_control || ''),
+        followup_date: sanitizeText(altaState.form.followup_date || ''),
+        followup_time: sanitizeText(altaState.form.followup_time || ''),
+        followup_note: normalizeConsentInputRaw(altaState.form.followup_note || ''),
+        cita_control: normalizeConsentInputRaw(followup.label || ''),
+        create_agenda_event: altaState.form.create_agenda_event ? '1' : '0',
+        agenda_event_id: sanitizeText(altaState.form.agenda_event_id || ''),
         recomendaciones: normalizeConsentInputRaw(altaState.form.recomendaciones || '')
       };
       const payload = {
@@ -15327,6 +15530,19 @@ console.info('app.js loaded :: 20251123a');
         els.altaEmit.textContent = 'Emitiendo...';
       }
       try{
+        setAltaAgendaStatus('', 'muted');
+        if(altaState.form.create_agenda_event && !sanitizeText(altaState.form.agenda_event_id || '')){
+          const agendaResult = await createAltaAgendaAppointment({
+            patientId: resolveActivePatientIdForConsent(),
+            actorUserId: resolveClinicalActorUserId()
+          });
+          if(!agendaResult.ok){
+            throw new Error(agendaResult.error || 'No se pudo registrar la cita en Agenda.');
+          }
+          if(agendaResult.appointmentId){
+            setAltaAgendaStatus(`Cita registrada en Agenda (${agendaResult.appointmentId}).`, 'success');
+          }
+        }
         const prepared = await buildAltaDocument(status);
         if(prepared?.error){
           throw new Error(prepared.error);
@@ -15350,8 +15566,12 @@ console.info('app.js loaded :: 20251123a');
         listCanonicalConsents();
         showCatalogFeedback(
           prepared.normalizedStatus === 'issued'
-            ? 'Alta médica emitida correctamente.'
-            : 'Borrador de alta médica guardado correctamente.',
+            ? (altaState.form.create_agenda_event
+              ? 'Alta médica emitida y cita registrada en Agenda.'
+              : 'Alta médica emitida correctamente.')
+            : (altaState.form.create_agenda_event
+              ? 'Borrador de alta médica guardado y cita registrada en Agenda.'
+              : 'Borrador de alta médica guardado correctamente.'),
           'success'
         );
       }catch(error){
@@ -20498,13 +20718,18 @@ console.info('app.js loaded :: 20251123a');
       if(!inputEl) return;
       const evtName = eventName || ((inputEl.tagName === 'SELECT' || inputEl.type === 'checkbox') ? 'change' : 'input');
       inputEl.addEventListener(evtName, ()=>{
-        if(key === 'fecha_alta' || key === 'tipo_alta'){
+        if(key === 'fecha_alta' || key === 'tipo_alta' || key === 'followup_date' || key === 'followup_time'){
           altaState.form[key] = sanitizeText(inputEl.value || '');
         }else{
           altaState.form[key] = normalizeConsentInputRaw(inputEl.value || '');
         }
         if(key === 'final_text'){
           altaState.finalEdited = trimConsentInputValue(altaState.form.final_text || '') !== '';
+        }else if(key === 'followup_date' || key === 'followup_time' || key === 'followup_note'){
+          if(sanitizeText(altaState.form.agenda_event_id || '')){
+            altaState.form.agenda_event_id = '';
+            setAltaAgendaStatus('Se actualizó seguimiento. La cita se volverá a registrar con los nuevos datos.', 'muted');
+          }
         }else if(key !== 'fecha_alta' && key !== 'tipo_alta' && !altaState.finalEdited && Number(altaState.step || 1) >= 6){
           altaState.form.final_text = buildAltaFinalTextFromForm(altaState.form);
           if(els.altaFinalText) els.altaFinalText.value = altaState.form.final_text;
@@ -20528,9 +20753,26 @@ console.info('app.js loaded :: 20251123a');
     bindAltaField(els.altaTratamiento, 'tratamiento');
     bindAltaField(els.altaCuidadosGenerales, 'cuidados_generales');
     bindAltaField(els.altaSignosAlarma, 'signos_alarma');
-    bindAltaField(els.altaCitaControl, 'cita_control');
+    bindAltaField(els.altaFollowupDate, 'followup_date', 'change');
+    bindAltaField(els.altaFollowupTime, 'followup_time', 'change');
+    bindAltaField(els.altaFollowupNote, 'followup_note');
     bindAltaField(els.altaRecomendaciones, 'recomendaciones');
     bindAltaField(els.altaFinalText, 'final_text');
+    els.altaCreateAgendaEvent?.addEventListener('change', ()=>{
+      altaState.form.create_agenda_event = !!els.altaCreateAgendaEvent?.checked;
+      if(!altaState.form.create_agenda_event){
+        altaState.form.agenda_event_id = '';
+        clearWizardFieldError('alta_medica', 'followup_date');
+        clearWizardFieldError('alta_medica', 'followup_time');
+        setAltaAgendaStatus('', 'muted');
+      }
+      const patientId = resolveActivePatientIdForConsent();
+      scheduleDocModalTempSessionSave({
+        documentType: 'alta_medica',
+        patientId,
+        buildSnapshot: buildAltaTempSnapshot
+      });
+    });
     els.altaPrev?.addEventListener('click', (event)=>{
       event.preventDefault();
       altaState.step = Math.max(1, Number(altaState.step || 1) - 1);
