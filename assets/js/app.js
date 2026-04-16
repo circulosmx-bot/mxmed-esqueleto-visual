@@ -340,6 +340,26 @@ console.info('app.js loaded :: 20251123a');
     if(!txt) return '';
     return txt.length > max ? `${txt.slice(0, max - 1)}…` : txt;
   };
+  const normalizeAgendaTimeValue = (value)=>{
+    const raw = sanitizeText(value);
+    if(!raw) return '';
+    const match = raw.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if(!match) return '';
+    const hh = Number(match[1]);
+    const mm = Number(match[2]);
+    const ss = Number(match[3] || 0);
+    if(hh < 0 || hh > 23 || mm < 0 || mm > 59 || ss < 0 || ss > 59) return '';
+    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+  };
+  const resolveAgendaStartVisibleTime = ()=>{
+    const fromStore = normalizeAgendaTimeValue(
+      window.mxmedStore?.agendaStartVisibleTime
+      || window.mxmedStore?.agendaWorkdayStart
+      || window.mxmedStore?.agenda_start_time
+      || ''
+    );
+    return fromStore || '08:00:00';
+  };
   const isNumericId = (value)=> /^\d+$/.test(sanitizeText(value));
   const formatYmdLocal = (date)=>{
     const d = (date instanceof Date) ? date : new Date(date);
@@ -812,10 +832,135 @@ console.info('app.js loaded :: 20251123a');
 
   const buildAppointmentTitle = (row)=>{
     const patientId = sanitizeText(row?.patient_id || '');
+    const patientName = sanitizeText(row?.patient_name || row?.patient_full_name || '');
     const modality = toLabel(row?.modality || '');
     const status = toLabel(row?.status || '');
-    const base = patientId ? `Paciente ${patientId}` : 'Cita';
+    const base = patientName || (patientId ? `Paciente ${patientId}` : 'Cita');
     return shortText([base, modality, status].filter(Boolean).join(' · '), 86);
+  };
+
+  const isAgendaDemoContext = ()=>{
+    const doctorId = sanitizeText(getDoctorId() || '').toLowerCase();
+    if(doctorId === 'd_demo_01') return true;
+    const flag = sanitizeText(window.localStorage?.getItem?.('mxmed.agenda.demo_mode') || '').toLowerCase();
+    return flag === '1' || flag === 'true' || flag === 'on';
+  };
+  const seededRandomFactory = (seedInput)=>{
+    let seed = 0;
+    const src = String(seedInput || 'mxmed-agenda-seed');
+    for(let i = 0; i < src.length; i += 1){
+      seed = (seed * 31 + src.charCodeAt(i)) >>> 0;
+    }
+    return ()=>{
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+  };
+  const plusMinutes = (baseDate, minutes)=>{
+    return new Date(baseDate.getTime() + (Number(minutes || 0) * 60000));
+  };
+  const formatSqlDateTime = (dateValue)=>{
+    const d = new Date(dateValue);
+    if(Number.isNaN(d.getTime())) return '';
+    const yyyy = String(d.getFullYear()).padStart(4, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+  };
+  const pickWeighted = (rng, list = [])=>{
+    const total = list.reduce((acc, item)=> acc + Number(item?.weight || 0), 0);
+    if(total <= 0) return list[0]?.value || '';
+    const mark = rng() * total;
+    let run = 0;
+    for(const item of list){
+      run += Number(item?.weight || 0);
+      if(mark <= run) return item?.value;
+    }
+    return list[list.length - 1]?.value || '';
+  };
+  const buildDemoAppointments = (fetchInfo)=>{
+    const start = new Date(fetchInfo.start);
+    const end = new Date(fetchInfo.end);
+    if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
+    const names = [
+      'Santiago García', 'Patricia Martínez', 'Jorge Ríos', 'Laura Jiménez', 'Antonio Pérez',
+      'Cecilia González', 'Ramón Villegas', 'Mariana Rivera', 'José Martínez', 'Elena Vargas',
+      'Francisco Méndez', 'Ana Gutiérrez', 'Javier García', 'Karen Nieto', 'Sonia Ramírez'
+    ];
+    const types = ['primera vez', 'seguimiento', 'chequeo', 'control', 'videoconsulta', 'valoración', 'procedimiento breve'];
+    const statuses = [
+      { value: 'confirmed', weight: 36 },
+      { value: 'pending', weight: 24 },
+      { value: 'in_consulta', weight: 14 },
+      { value: 'cancelled', weight: 10 },
+      { value: 'no_show', weight: 8 },
+      { value: 'finalizada', weight: 8 }
+    ];
+    const durations = [
+      { value: 30, weight: 56 },
+      { value: 45, weight: 22 },
+      { value: 15, weight: 12 },
+      { value: 60, weight: 10 }
+    ];
+    const dayLoad = {
+      1: { target: 0.50, gapPool: [15, 15, 30, 30, 45] }, // lunes media
+      2: { target: 0.58, gapPool: [15, 15, 15, 30, 30] }, // martes media-alta
+      3: { target: 0.66, gapPool: [15, 15, 15, 15, 30] }, // miércoles alta
+      4: { target: 0.58, gapPool: [15, 15, 15, 30, 30] }, // jueves media-alta
+      5: { target: 0.50, gapPool: [15, 15, 30, 30, 45] }, // viernes media
+      6: { target: 0.36, gapPool: [30, 30, 45, 45, 60] }, // sábado baja-media
+      0: { target: 0.12, gapPool: [45, 60, 60] } // domingo baja
+    };
+
+    const rows = [];
+    let seq = 0;
+    const cursor = new Date(start);
+    cursor.setHours(0, 0, 0, 0);
+    while(cursor < end){
+      const day = new Date(cursor);
+      const dow = day.getDay();
+      const cfg = dayLoad[dow] || dayLoad[1];
+      const rng = seededRandomFactory(`agenda-demo-${formatYmdLocal(day)}`);
+      const dayStart = new Date(day);
+      dayStart.setHours(8, 0, 0, 0);
+      const dayEnd = new Date(day);
+      dayEnd.setHours(dow === 6 ? 17 : 20, 0, 0, 0);
+      const totalMinutes = Math.max(0, Math.floor((dayEnd - dayStart) / 60000));
+      const targetMinutes = Math.floor(totalMinutes * cfg.target);
+      let booked = 0;
+      let eventStart = new Date(dayStart);
+
+      while(eventStart < dayEnd && booked < targetMinutes){
+        const duration = Number(pickWeighted(rng, durations) || 30);
+        const eventEnd = plusMinutes(eventStart, duration);
+        if(eventEnd > dayEnd) break;
+
+        const name = names[Math.floor(rng() * names.length)] || `Paciente ${seq + 1}`;
+        const modality = types[Math.floor(rng() * types.length)] || 'seguimiento';
+        const status = pickWeighted(rng, statuses) || 'confirmed';
+        rows.push({
+          appointment_id: `demo-${formatYmdLocal(day)}-${seq}`,
+          patient_id: `P-DEMO-${String(seq + 1).padStart(3, '0')}`,
+          patient_name: name,
+          modality,
+          status,
+          start_at: formatSqlDateTime(eventStart),
+          end_at: formatSqlDateTime(eventEnd),
+          channel_origin: 'agenda_demo_mode'
+        });
+        seq += 1;
+        booked += duration;
+        const gap = cfg.gapPool[Math.floor(rng() * cfg.gapPool.length)] || 30;
+        eventStart = plusMinutes(eventEnd, gap);
+      }
+
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return rows;
   };
 
   const getAvailabilityConsultorioId = ()=>{
@@ -834,7 +979,9 @@ console.info('app.js loaded :: 20251123a');
       confirmed: '#198754',
       pending: '#0d6efd',
       cancelled: '#6c757d',
-      no_show: '#dc3545'
+      no_show: '#dc3545',
+      in_consulta: '#20a46b',
+      finalizada: '#5f6f82'
     };
     return {
       id: sanitizeText(row?.appointment_id || ''),
@@ -947,6 +1094,9 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const fetchAppointments = async (fetchInfo)=>{
+    if(isAgendaDemoContext()){
+      return buildDemoAppointments(fetchInfo).map(mapAppointmentToEvent).filter((event)=> !!event.start);
+    }
     const doctorId = getDoctorId();
     const consultorioId = sanitizeText(els.consultorio?.value || '');
     const params = new URLSearchParams();
@@ -1056,8 +1206,9 @@ console.info('app.js loaded :: 20251123a');
       selectMirror: true,
       nowIndicator: true,
       allDaySlot: false,
-      slotMinTime: '06:00:00',
+      slotMinTime: resolveAgendaStartVisibleTime(),
       slotMaxTime: '22:00:00',
+      scrollTime: resolveAgendaStartVisibleTime(),
       slotDuration: '00:30:00',
       expandRows: true,
       firstDay: 1,
