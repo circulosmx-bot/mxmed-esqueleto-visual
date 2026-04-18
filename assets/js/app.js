@@ -387,7 +387,9 @@ console.info('app.js loaded :: 20251123a');
     error: panel.querySelector('#ag_error_box'),
     loading: panel.querySelector('#ag_loading_box'),
     calendar: panel.querySelector('#ag_calendar'),
+    calendarWrap: panel.querySelector('#ag_calendar_wrap'),
     hint: panel.querySelector('#ag_filters_hint'),
+    hoursToggle: panel.querySelector('#ag_hours_toggle_btn'),
     createModalEl: panel.querySelector('#ag_new_appointment_modal'),
     createError: panel.querySelector('#ag_create_error_box'),
     patientId: panel.querySelector('#ag_patient_id_input'),
@@ -412,8 +414,15 @@ console.info('app.js loaded :: 20251123a');
   let createRequestInFlight = false;
   let createActivePatientMode = 'manual';
   let activePatientContextId = '';
+  let weeklyHoursExpanded = false;
 
   const sanitizeText = (value)=> String(value ?? '').trim();
+  const escapeHtml = (value)=> String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
   const normalizeDateTime = (value)=>{
     const raw = sanitizeText(value);
     if(!raw) return '';
@@ -444,6 +453,16 @@ console.info('app.js loaded :: 20251123a');
       || ''
     );
     return fromStore || '08:00:00';
+  };
+  const resolveAgendaSlotMinutes = ()=>{
+    // Base demo estable en 30 min. Preparado para futura parametrización.
+    return 30;
+  };
+  const toFcDurationFromMinutes = (minutes)=>{
+    const safe = Math.max(5, Math.min(240, Number.parseInt(String(minutes || 30), 10) || 30));
+    const hh = String(Math.floor(safe / 60)).padStart(2, '0');
+    const mm = String(safe % 60).padStart(2, '0');
+    return `${hh}:${mm}:00`;
   };
   const isNumericId = (value)=> /^\d+$/.test(sanitizeText(value));
   const formatYmdLocal = (date)=>{
@@ -923,6 +942,25 @@ console.info('app.js loaded :: 20251123a');
     const base = patientName || (patientId ? `Paciente ${patientId}` : 'Cita');
     return shortText([base, modality, status].filter(Boolean).join(' · '), 86);
   };
+  const resolveAppointmentStatusMeta = (rawStatus = '')=>{
+    const normalized = sanitizeText(rawStatus).toLowerCase();
+    if(normalized === 'in_consulta' || normalized === 'en_consulta' || normalized === 'en consulta'){
+      return { key: 'in-consulta', label: 'En consulta' };
+    }
+    if(normalized === 'pending' || normalized === 'pendiente'){
+      return { key: 'pending', label: 'Pendiente' };
+    }
+    if(normalized === 'cancelled' || normalized === 'canceled' || normalized === 'cancelada'){
+      return { key: 'cancelled', label: 'Cancelada' };
+    }
+    if(normalized === 'no_show' || normalized === 'no show' || normalized === 'no-show' || normalized === 'no asistió' || normalized === 'no asistio'){
+      return { key: 'no-show', label: 'No show' };
+    }
+    if(normalized === 'finalizada' || normalized === 'completed' || normalized === 'finished'){
+      return { key: 'finished', label: 'Finalizada' };
+    }
+    return { key: 'confirmed', label: 'Confirmada' };
+  };
 
   const isAgendaDemoContext = ()=>{
     const doctorId = sanitizeText(getDoctorId() || '').toLowerCase();
@@ -943,6 +981,18 @@ console.info('app.js loaded :: 20251123a');
   };
   const plusMinutes = (baseDate, minutes)=>{
     return new Date(baseDate.getTime() + (Number(minutes || 0) * 60000));
+  };
+  const alignDateToSlotGrid = (baseDate, slotMinutes)=>{
+    const safeSlot = Math.max(5, Number.parseInt(String(slotMinutes || 30), 10) || 30);
+    const aligned = new Date(baseDate);
+    if(Number.isNaN(aligned.getTime())) return baseDate;
+    aligned.setSeconds(0, 0);
+    const totalMinutes = (aligned.getHours() * 60) + aligned.getMinutes();
+    const remainder = totalMinutes % safeSlot;
+    if(remainder !== 0){
+      aligned.setMinutes(aligned.getMinutes() + (safeSlot - remainder));
+    }
+    return aligned;
   };
   const formatSqlDateTime = (dateValue)=>{
     const d = new Date(dateValue);
@@ -984,20 +1034,17 @@ console.info('app.js loaded :: 20251123a');
       { value: 'no_show', weight: 8 },
       { value: 'finalizada', weight: 8 }
     ];
-    const durations = [
-      { value: 30, weight: 56 },
-      { value: 45, weight: 22 },
-      { value: 15, weight: 12 },
-      { value: 60, weight: 10 }
-    ];
+    const slotMinutes = resolveAgendaSlotMinutes();
     const dayLoad = {
-      1: { target: 0.50, gapPool: [15, 15, 30, 30, 45] }, // lunes media
-      2: { target: 0.58, gapPool: [15, 15, 15, 30, 30] }, // martes media-alta
-      3: { target: 0.66, gapPool: [15, 15, 15, 15, 30] }, // miércoles alta
-      4: { target: 0.58, gapPool: [15, 15, 15, 30, 30] }, // jueves media-alta
-      5: { target: 0.50, gapPool: [15, 15, 30, 30, 45] }, // viernes media
-      6: { target: 0.36, gapPool: [30, 30, 45, 45, 60] }, // sábado baja-media
-      0: { target: 0.12, gapPool: [45, 60, 60] } // domingo baja
+      // Saturación demo orientada a agenda cargada en slots consecutivos.
+      // El gap=0 permite ocupar ambos medios bloques (:00 y :30) en configuración de 30 min.
+      1: { target: 0.78, gapPool: [0, 0, 0, slotMinutes, slotMinutes] }, // lunes alta
+      2: { target: 0.84, gapPool: [0, 0, 0, 0, slotMinutes] }, // martes muy alta
+      3: { target: 0.88, gapPool: [0, 0, 0, 0, slotMinutes] }, // miércoles saturada
+      4: { target: 0.84, gapPool: [0, 0, 0, 0, slotMinutes] }, // jueves muy alta
+      5: { target: 0.76, gapPool: [0, 0, slotMinutes, slotMinutes, slotMinutes * 2] }, // viernes alta
+      6: { target: 0.52, gapPool: [0, slotMinutes, slotMinutes, slotMinutes * 2] }, // sábado media
+      0: { target: 0.16, gapPool: [slotMinutes, slotMinutes * 2] } // domingo baja
     };
 
     const rows = [];
@@ -1013,16 +1060,9 @@ console.info('app.js loaded :: 20251123a');
       dayStart.setHours(8, 0, 0, 0);
       const dayEnd = new Date(day);
       dayEnd.setHours(dow === 6 ? 17 : 20, 0, 0, 0);
-      const totalMinutes = Math.max(0, Math.floor((dayEnd - dayStart) / 60000));
-      const targetMinutes = Math.floor(totalMinutes * cfg.target);
-      let booked = 0;
-      let eventStart = new Date(dayStart);
-
-      while(eventStart < dayEnd && booked < targetMinutes){
-        const duration = Number(pickWeighted(rng, durations) || 30);
-        const eventEnd = plusMinutes(eventStart, duration);
-        if(eventEnd > dayEnd) break;
-
+      const pushDemoRow = (eventStartDate, eventDurationMinutes)=>{
+        const eventEnd = plusMinutes(eventStartDate, eventDurationMinutes);
+        if(eventEnd > dayEnd) return false;
         const name = names[Math.floor(rng() * names.length)] || `Paciente ${seq + 1}`;
         const modality = types[Math.floor(rng() * types.length)] || 'seguimiento';
         const status = pickWeighted(rng, statuses) || 'confirmed';
@@ -1032,20 +1072,126 @@ console.info('app.js loaded :: 20251123a');
           patient_name: name,
           modality,
           status,
-          start_at: formatSqlDateTime(eventStart),
+          start_at: formatSqlDateTime(eventStartDate),
           end_at: formatSqlDateTime(eventEnd),
           channel_origin: 'agenda_demo_mode'
         });
         seq += 1;
-        booked += duration;
-        const gap = cfg.gapPool[Math.floor(rng() * cfg.gapPool.length)] || 30;
-        eventStart = plusMinutes(eventEnd, gap);
+        return true;
+      };
+
+      // En 30 minutos, saturar explícitamente el tramo visible (08:00–15:00)
+      // usando ambos subslots (:00 y :30) con alta frecuencia.
+      if(slotMinutes === 30){
+        const visibleWindowEnd = new Date(day);
+        visibleWindowEnd.setHours(15, 0, 0, 0);
+        const denseEnd = (visibleWindowEnd < dayEnd) ? visibleWindowEnd : dayEnd;
+        let hourCursor = new Date(dayStart);
+
+        while(hourCursor < denseEnd){
+          const slot00 = new Date(hourCursor);
+          const slot30 = plusMinutes(slot00, 30);
+          if(slot30 > denseEnd) break;
+
+          const patternRoll = rng();
+          let include00 = true;
+          let include30 = true;
+          if(patternRoll < 0.16){
+            include00 = false;
+          }else if(patternRoll < 0.32){
+            include30 = false;
+          }
+          if(!include00 && !include30){
+            include00 = true;
+          }
+
+          if(include00) pushDemoRow(slot00, slotMinutes);
+          if(include30) pushDemoRow(slot30, slotMinutes);
+
+          hourCursor = plusMinutes(hourCursor, 60);
+        }
+
+        // Fuera del tramo principal visible: mantener actividad con menor densidad.
+        let tailCursor = alignDateToSlotGrid(denseEnd, slotMinutes);
+        const tailDensityByDay = {
+          1: 0.58, // lunes
+          2: 0.62, // martes
+          3: 0.66, // miércoles
+          4: 0.62, // jueves
+          5: 0.54, // viernes
+          6: 0.38, // sábado
+          0: 0.18  // domingo
+        };
+        const tailDensity = Number(tailDensityByDay[dow] ?? 0.55);
+        while(tailCursor < dayEnd){
+          if(rng() <= tailDensity){
+            pushDemoRow(tailCursor, slotMinutes);
+          }
+          tailCursor = plusMinutes(tailCursor, slotMinutes);
+        }
+      }else{
+        const totalMinutes = Math.max(0, Math.floor((dayEnd - dayStart) / 60000));
+        const targetMinutes = Math.floor(totalMinutes * cfg.target);
+        let booked = 0;
+        let eventStart = new Date(dayStart);
+
+        while(eventStart < dayEnd && booked < targetMinutes){
+          const duration = Number(slotMinutes || 30);
+          const eventEnd = plusMinutes(eventStart, duration);
+          if(eventEnd > dayEnd) break;
+          if(pushDemoRow(eventStart, duration)){
+            booked += duration;
+          }
+          const gap = cfg.gapPool[Math.floor(rng() * cfg.gapPool.length)] || duration;
+          const nextStartCandidate = plusMinutes(eventEnd, gap);
+          // Mantiene la demo estrictamente alineada a la granularidad activa (15/20/30/60).
+          eventStart = alignDateToSlotGrid(nextStartCandidate, slotMinutes);
+        }
       }
 
       cursor.setDate(cursor.getDate() + 1);
     }
 
     return rows;
+  };
+  const applyWeeklyHoursState = ()=>{
+    const wrap = els.calendarWrap;
+    const btn = els.hoursToggle;
+    if(!wrap) return;
+    const viewType = String(calendar?.view?.type || '');
+    const isWeekView = viewType === 'timeGridWeek';
+    const baseStart = resolveAgendaStartVisibleTime();
+    const collapsedMax = '12:00:00';
+    const expandedMax = '22:00:00';
+    const collapsedContentHeight = 920;
+
+    wrap.classList.remove('weekly-hours-collapsed', 'weekly-hours-expanded');
+    if(btn){
+      btn.classList.toggle('d-none', !isWeekView);
+      btn.disabled = !isWeekView;
+    }
+    if(!isWeekView){
+      if(calendar){
+        calendar.setOption('slotMinTime', baseStart);
+        calendar.setOption('slotMaxTime', expandedMax);
+        calendar.setOption('contentHeight', 'auto');
+        try{ calendar.updateSize(); }catch(_){}
+      }
+      return;
+    }
+
+    if(calendar){
+      calendar.setOption('slotMinTime', baseStart);
+      calendar.setOption('slotMaxTime', weeklyHoursExpanded ? expandedMax : collapsedMax);
+      calendar.setOption('contentHeight', weeklyHoursExpanded ? 'auto' : collapsedContentHeight);
+      try{ calendar.updateSize(); }catch(_){}
+    }
+
+    wrap.classList.add(weeklyHoursExpanded ? 'weekly-hours-expanded' : 'weekly-hours-collapsed');
+    if(btn){
+      btn.textContent = weeklyHoursExpanded ? 'Ver menos horas' : 'Ver más horas';
+      btn.setAttribute('aria-expanded', weeklyHoursExpanded ? 'true' : 'false');
+    }
   };
 
   const getAvailabilityConsultorioId = ()=>{
@@ -1060,6 +1206,7 @@ console.info('app.js loaded :: 20251123a');
 
   const mapAppointmentToEvent = (row)=>{
     const status = sanitizeText(row?.status || '').toLowerCase();
+    const statusMeta = resolveAppointmentStatusMeta(status);
     const statusColorMap = {
       confirmed: '#198754',
       pending: '#0d6efd',
@@ -1068,21 +1215,109 @@ console.info('app.js loaded :: 20251123a');
       in_consulta: '#20a46b',
       finalizada: '#5f6f82'
     };
+    const patientDisplay = sanitizeText(row?.patient_name || row?.patient_full_name || '')
+      || (sanitizeText(row?.patient_id || '') ? `Paciente ${sanitizeText(row?.patient_id || '')}` : 'Paciente');
     return {
       id: sanitizeText(row?.appointment_id || ''),
       title: buildAppointmentTitle(row),
       start: normalizeDateTime(row?.start_at || ''),
       end: normalizeDateTime(row?.end_at || ''),
       color: statusColorMap[status] || '#005684',
+      classNames: ['mx-ag-event', `mx-ag-status--${statusMeta.key}`],
       extendedProps: {
         doctor_id: sanitizeText(row?.doctor_id || ''),
         consultorio_id: sanitizeText(row?.consultorio_id || ''),
         patient_id: sanitizeText(row?.patient_id || ''),
+        patient_display: patientDisplay,
+        status_label: statusMeta.label,
+        status_key: statusMeta.key,
         modality: sanitizeText(row?.modality || ''),
         status: sanitizeText(row?.status || ''),
         channel_origin: sanitizeText(row?.channel_origin || '')
       }
     };
+  };
+
+  const enrichMonthSummaryMetadata = (events = [])=>{
+    const grouped = new Map();
+    const safeEvents = Array.isArray(events) ? events : [];
+    safeEvents.forEach((event)=>{
+      if(!event || event.display === 'background') return;
+      const start = sanitizeText(event.start || '');
+      if(!start) return;
+      const dayKey = start.slice(0, 10);
+      if(!dayKey) return;
+      if(!grouped.has(dayKey)) grouped.set(dayKey, []);
+      grouped.get(dayKey).push(event);
+    });
+
+    grouped.forEach((list)=>{
+      list.sort((a, b)=>{
+        const aTime = new Date(a.start || '').getTime();
+        const bTime = new Date(b.start || '').getTime();
+        if(Number.isNaN(aTime) && Number.isNaN(bTime)) return 0;
+        if(Number.isNaN(aTime)) return 1;
+        if(Number.isNaN(bTime)) return -1;
+        return aTime - bTime;
+      });
+      const total = list.length;
+      list.forEach((event, index)=>{
+        if(!event.extendedProps || typeof event.extendedProps !== 'object'){
+          event.extendedProps = {};
+        }
+        event.extendedProps.month_day_index = index;
+        event.extendedProps.month_day_total = total;
+      });
+    });
+
+    return safeEvents;
+  };
+
+  const buildMonthSummaryEvents = (events = [])=>{
+    const grouped = new Map();
+    const safeEvents = Array.isArray(events) ? events : [];
+    safeEvents.forEach((event)=>{
+      if(!event || event.display === 'background') return;
+      const startRaw = sanitizeText(event.start || '');
+      if(!startRaw) return;
+      const dayKey = startRaw.slice(0, 10);
+      if(!dayKey) return;
+      if(!grouped.has(dayKey)) grouped.set(dayKey, []);
+      grouped.get(dayKey).push(event);
+    });
+
+    const summaryEvents = [];
+    grouped.forEach((list, dayKey)=>{
+      if(!Array.isArray(list) || !list.length) return;
+      list.sort((a, b)=>{
+        const aTime = new Date(a.start || '').getTime();
+        const bTime = new Date(b.start || '').getTime();
+        if(Number.isNaN(aTime) && Number.isNaN(bTime)) return 0;
+        if(Number.isNaN(aTime)) return 1;
+        if(Number.isNaN(bTime)) return -1;
+        return aTime - bTime;
+      });
+      const first = list[0];
+      const total = list.length;
+      const patient = sanitizeText(first?.extendedProps?.patient_display || first?.title || 'Paciente');
+      const extra = Math.max(0, total - 1);
+      const extraLabel = extra > 0 ? ` y ${extra} cita${extra === 1 ? '' : 's'} más` : '';
+      summaryEvents.push({
+        id: `month-summary:${dayKey}`,
+        title: `${patient}${extraLabel}`,
+        start: dayKey,
+        allDay: true,
+        classNames: ['mx-ag-month-summary-event'],
+        extendedProps: {
+          month_summary: true,
+          month_summary_primary: patient,
+          month_summary_extra_label: extraLabel
+        }
+      });
+    });
+
+    summaryEvents.sort((a, b)=> sanitizeText(a.start).localeCompare(sanitizeText(b.start)));
+    return summaryEvents;
   };
 
   const mapAvailabilityWindowToEvent = (windowItem, dayYmd, consultorioId)=>{
@@ -1180,7 +1415,8 @@ console.info('app.js loaded :: 20251123a');
 
   const fetchAppointments = async (fetchInfo)=>{
     if(isAgendaDemoContext()){
-      return buildDemoAppointments(fetchInfo).map(mapAppointmentToEvent).filter((event)=> !!event.start);
+      const events = buildDemoAppointments(fetchInfo).map(mapAppointmentToEvent).filter((event)=> !!event.start);
+      return enrichMonthSummaryMetadata(events);
     }
     const doctorId = getDoctorId();
     const consultorioId = sanitizeText(els.consultorio?.value || '');
@@ -1207,7 +1443,8 @@ console.info('app.js loaded :: 20251123a');
       const message = sanitizeText(json?.message || json?.error || '');
       throw new Error(message || 'No se pudieron cargar las citas de agenda.');
     }
-    return json.data.map(mapAppointmentToEvent).filter((event)=> !!event.start);
+    const events = json.data.map(mapAppointmentToEvent).filter((event)=> !!event.start);
+    return enrichMonthSummaryMetadata(events);
   };
 
   const fetchAvailabilityEvents = async (fetchInfo)=>{
@@ -1232,12 +1469,13 @@ console.info('app.js loaded :: 20251123a');
       return { events: [], meta: { skipped: true, reason: 'no_visible_days' } };
     }
 
+    const slotMinutes = resolveAgendaSlotMinutes();
     const requests = uniqueDays.map(async (dateYmd)=>{
       const params = new URLSearchParams({
         doctor_id: doctorId,
         consultorio_id: consultorioId,
         date: dateYmd,
-        slot_minutes: '30'
+        slot_minutes: String(slotMinutes)
       });
       const json = await AgendaApiClient.getAvailability({ params });
       return { dateYmd, json };
@@ -1284,9 +1522,13 @@ console.info('app.js loaded :: 20251123a');
       return;
     }
 
+    const slotMinutes = resolveAgendaSlotMinutes();
+    const slotDuration = toFcDurationFromMinutes(slotMinutes);
+    const slotLabelInterval = '01:00:00';
     calendar = new window.FullCalendar.Calendar(els.calendar, {
       locale: 'es',
       initialView: 'timeGridWeek',
+      hiddenDays: [0],
       selectable: true,
       selectMirror: true,
       nowIndicator: true,
@@ -1294,10 +1536,16 @@ console.info('app.js loaded :: 20251123a');
       slotMinTime: resolveAgendaStartVisibleTime(),
       slotMaxTime: '22:00:00',
       scrollTime: resolveAgendaStartVisibleTime(),
-      slotDuration: '00:30:00',
-      expandRows: true,
+      // Preparado para futura configuración de granularidad (15/20/30/60/120 min).
+      slotDuration,
+      // Mantiene arrastre/selección exactamente en la misma fracción del slot activo.
+      snapDuration: slotDuration,
+      // Evita estirar filas para llenar alto del contenedor y mantiene proporción geométrica exacta por slot.
+      expandRows: false,
+      slotLabelInterval,
       firstDay: 1,
       height: 'auto',
+      dayMaxEvents: 1,
       headerToolbar: {
         left: 'prev,next today',
         center: 'title',
@@ -1311,15 +1559,29 @@ console.info('app.js loaded :: 20251123a');
       },
       events: async (fetchInfo, successCallback, failureCallback)=>{
         try{
+          const currentView = String(calendar?.view?.type || '');
+          const appointmentEventsPromise = fetchAppointments(fetchInfo);
+          const availabilityPromise = currentView === 'dayGridMonth'
+            ? Promise.resolve({ events: [], meta: { skipped: true, reason: 'availability_not_used_in_month' } })
+            : fetchAvailabilityEvents(fetchInfo);
           const [appointmentEvents, availabilityResult] = await Promise.all([
-            fetchAppointments(fetchInfo),
-            fetchAvailabilityEvents(fetchInfo)
+            appointmentEventsPromise,
+            availabilityPromise
           ]);
           const availabilityEvents = Array.isArray(availabilityResult?.events) ? availabilityResult.events : [];
-          successCallback([...availabilityEvents, ...appointmentEvents]);
+          if(currentView === 'dayGridMonth'){
+            successCallback(buildMonthSummaryEvents(appointmentEvents));
+          }else{
+            successCallback([...availabilityEvents, ...appointmentEvents]);
+          }
           if(els.hint){
             if(availabilityResult?.meta?.skipped){
-              els.hint.textContent = 'Disponibilidad: pendiente (doctor/consultorio numérico requerido por backend).';
+              const skipReason = sanitizeText(availabilityResult?.meta?.reason || '');
+              if(skipReason === 'availability_not_used_in_month'){
+                els.hint.textContent = 'Resumen mensual de citas';
+              }else{
+                els.hint.textContent = 'Disponibilidad: pendiente (doctor/consultorio numérico requerido por backend).';
+              }
             }else{
               const slotsCount = Number(availabilityResult?.meta?.slots_count || 0);
               const consultorioUsed = sanitizeText(availabilityResult?.meta?.consultorio_id_used || '');
@@ -1344,6 +1606,41 @@ console.info('app.js loaded :: 20251123a');
           setLoading(false);
         }
       },
+      eventContent: (arg)=>{
+        if(arg.event.display === 'background'){
+          return { html: '' };
+        }
+        const props = arg.event.extendedProps || {};
+        const viewType = String(arg.view?.type || '');
+        if(viewType === 'dayGridMonth'){
+          const patient = sanitizeText(props.month_summary_primary || props.patient_display || arg.event.title || 'Paciente');
+          const extraLabel = sanitizeText(props.month_summary_extra_label || '');
+          const hasExtra = extraLabel.length > 0;
+          const titleText = `${patient}${extraLabel}`;
+          return {
+            html: `
+              <div class="mx-ag-month-summary" title="${escapeHtml(titleText)}">
+                <span class="mx-ag-month-primary">${escapeHtml(patient)}</span>${hasExtra ? `<span class="mx-ag-month-more">${escapeHtml(extraLabel)}</span>` : ''}
+              </div>
+            `
+          };
+        }
+        const patient = sanitizeText(props.patient_display || arg.event.title || 'Paciente');
+        const statusLabel = sanitizeText(props.status_label || 'Confirmada');
+        return {
+          html: `
+            <div class="mx-ag-event-cell">
+              <div class="mx-ag-event-title">${escapeHtml(patient)}</div>
+              <div class="mx-ag-event-state">${escapeHtml(statusLabel)}</div>
+            </div>
+          `
+        };
+      },
+      dateClick: (info)=>{
+        if(String(info?.view?.type || '') === 'dayGridMonth' && calendar){
+          calendar.changeView('timeGridDay', info.date);
+        }
+      },
       select: (selectionInfo)=>{
         openCreateModalFromSelection(selectionInfo);
       },
@@ -1362,10 +1659,17 @@ console.info('app.js loaded :: 20251123a');
           `Canal: ${sanitizeText(props.channel_origin || '-')}`
         ];
         window.alert(details.join('\n'));
+      },
+      datesSet: ()=>{
+        applyWeeklyHoursState();
+        window.setTimeout(()=>{
+          try{ calendar.updateSize(); }catch(_){}
+        }, 0);
       }
     });
 
     calendar.render();
+    applyWeeklyHoursState();
   };
 
   const refreshCalendar = async ({ forceConsultorios = false } = {})=>{
@@ -1413,6 +1717,13 @@ console.info('app.js loaded :: 20251123a');
       if(chosen && els.consultorio){
         els.consultorio.value = chosen;
       }
+    });
+    els.hoursToggle?.addEventListener('click', ()=>{
+      weeklyHoursExpanded = !weeklyHoursExpanded;
+      applyWeeklyHoursState();
+      window.setTimeout(()=>{
+        try{ calendar?.updateSize(); }catch(_){}
+      }, 0);
     });
     els.useActivePatientYes?.addEventListener('click', ()=>{
       setActivePatientMode('active');

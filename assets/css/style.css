@@ -200,6 +200,13 @@ body{margin:0;background:var(--mm-fondo-base);}
 /* ================== LAYOUT PRINCIPAL ================== */
 
 .mm-wrap{background:linear-gradient(180deg,#00b0c5 0%, #00a2b5 100%);}
+.mm-wrap .mm-grid.page{
+  max-width: none;
+  margin-inline: 0;
+  width: 100%;
+  padding-inline-start: 0;
+  padding-inline-end: 18px;
+}
 
 .mm-grid{
 
@@ -219,6 +226,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
   display:flex; flex-direction:column; gap:10px;
   transition: width .24s ease, flex-basis .24s ease;
+  margin-inline-start: 0;
 
 }
 
@@ -5189,13 +5197,13 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 #p-ag-admin:not(.d-none) .body{
   width: 100%;
-  min-height: 760px;
-  overflow: visible;
+  min-height: min(860px, calc(100vh - 190px));
+  overflow: hidden;
 }
 #agendaFrontendV1{
   width: 100%;
   min-width: 0;
-  min-height: 700px;
+  min-height: 0;
 }
 #agendaFrontendV1 > [class*="col-"]{
   min-width: 0;
@@ -5209,10 +5217,23 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-radius: 12px;
   background: #fff;
   padding: 10px;
-  min-height: 680px;
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+.mx-agenda-calendar-wrap.weekly-hours-collapsed{
+  height: clamp(700px, 78vh, 980px);
+  min-height: 700px;
+  max-height: 980px;
+}
+.mx-agenda-calendar-wrap.weekly-hours-expanded{
+  height: clamp(760px, 88vh, 980px);
+  min-height: 760px;
 }
 #ag_calendar{
-  min-height: 640px;
+  min-height: 0;
+  height: 100%;
   width: 100%;
   display: block;
 }
@@ -5235,9 +5256,188 @@ body{margin:0;background:var(--mm-fondo-base);}
   color: #284f66;
   font-weight: 600;
 }
+.mx-agenda-calendar-wrap .fc .fc-timegrid-event .fc-event-time{
+  display: none !important;
+}
+.mx-agenda-calendar-wrap .fc .fc-timegrid-event .fc-event-title{
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.mx-agenda-calendar-wrap .fc .fc-event-main{
+  overflow: hidden;
+}
+.mx-agenda-calendar-wrap .fc .fc-timegrid-event{
+  margin: 0 !important;
+  margin-bottom: 0 !important; /* FullCalendar default = 1px; provoca invasión visual entre medias horas */
+}
+.mx-agenda-calendar-wrap .fc .fc-timegrid-event .fc-event-main{
+  padding: 0 !important; /* evita altura extra interna en eventos de 30 min */
+}
+.mx-agenda-calendar-wrap .fc .fc-timegrid-event-harness-inset .fc-timegrid-event{
+  box-shadow: none !important; /* evita borde fantasma que cruza visualmente la línea divisoria */
+}
+.mx-agenda-calendar-wrap .fc .fc-timegrid-slot,
+.mx-agenda-calendar-wrap .fc .fc-timegrid-event{
+  box-sizing: border-box;
+}
+.mx-agenda-calendar-wrap .fc :is(.fc-timeGridWeek-view, .fc-timeGridDay-view) .fc-timegrid-slot,
+.mx-agenda-calendar-wrap .fc :is(.fc-timeGridWeek-view, .fc-timeGridDay-view) .fc-timegrid-slot-lane{
+  height: 63px;
+}
+
+.mx-agenda-calendar-wrap .fc :is(.fc-timeGridWeek-view, .fc-timeGridDay-view) .fc-timegrid-slot-lane{
+  box-shadow: inset 0 -12px 0 #f4f7f9;
+}
+
+.mx-agenda-calendar-wrap .fc :is(.fc-timeGridWeek-view, .fc-timeGridDay-view) .fc-timegrid-event{
+  box-shadow: 0 0 0 6px #f4f7f9;
+}
+
+.mx-agenda-calendar-wrap .fc :is(.fc-timeGridWeek-view, .fc-timeGridDay-view) .fc-timegrid-event-harness-inset .fc-timegrid-event{
+  box-shadow: 0 0 0 6px #f4f7f9 !important;
+}
+
+.mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .fc-daygrid-day-frame{
+  padding: 6px 6px 8px;
+  min-height: 116px;
+}
+
+.mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .fc-daygrid-day-top{
+  margin-bottom: 4px;
+}
+
+.mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .fc-daygrid-day-number{
+  font-weight: 700;
+  font-size: .86rem;
+  color: #204b63;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+
+.mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .fc-daygrid-event-harness{
+  margin-top: 3px;
+}
+
+.mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .fc-daygrid-event{
+  min-height: 24px;
+  padding: 2px 7px;
+  border-radius: 8px;
+  font-size: .76rem;
+  line-height: 1.25;
+  border: 0;
+  background: #e9f3fa;
+  color: #1b445c;
+  box-shadow: none;
+}
+
+.mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .fc-daygrid-more-link{
+  display: none !important;
+}
+
+.mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .fc-daygrid-day.fc-day-today{
+  background: #f0f7fc;
+}
+
+.mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .fc-daygrid-day.fc-day-today .fc-daygrid-day-number{
+  color: #0b4d78;
+  background: #d9ebf8;
+}
+
+.mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .fc-daygrid-day.fc-day-other{
+  background: #fafcfd;
+}
+
+.mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .fc-daygrid-day.fc-day-other .fc-daygrid-day-number{
+  color: #8da3b0;
+}
+
+.mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .fc-daygrid-day.fc-day-other .fc-daygrid-event{
+  opacity: .7;
+}
+
+.mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .mx-ag-month-summary{
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .mx-ag-month-primary{
+  font-weight: 700;
+}
+
+.mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .mx-ag-month-more{
+  font-weight: 500;
+  color: #5f7787;
+}
+.mx-ag-event-cell{
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 1px 4px;
+  overflow: hidden;
+}
+.mx-ag-event-title{
+  font-size: .9rem;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mx-ag-event-state{
+  font-size: .76rem;
+  font-weight: 600;
+  line-height: 1.1;
+  opacity: .92;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mx-agenda-calendar-wrap .fc .fc-scrollgrid{
+  width: 100%;
+}
+.mx-agenda-calendar-wrap .fc .fc-scrollgrid-sync-table{
+  width: 100% !important;
+  table-layout: fixed;
+}
+.mx-agenda-calendar-wrap .fc .fc-timegrid-cols table,
+.mx-agenda-calendar-wrap .fc .fc-col-header table{
+  table-layout: fixed;
+}
 .mx-agenda-calendar-wrap .fc-bg-event.mx-ag-availability-bg{
   background: rgba(25, 135, 84, 0.14) !important;
   border: none !important;
+}
+.mx-ag-hours-toggle-wrap{
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+  min-height: 20px;
+}
+.mx-ag-hours-toggle{
+  border: 0;
+  background: transparent;
+  color: #2f6283;
+  font-size: .84rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.mx-ag-hours-toggle:hover,
+.mx-ag-hours-toggle:focus-visible{
+  color: #0b4d78;
+  outline: none;
 }
 .mx-ag-legend{
   width: 14px;
