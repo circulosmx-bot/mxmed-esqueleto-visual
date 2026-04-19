@@ -398,11 +398,30 @@ console.info('app.js loaded :: 20251123a');
     modality: panel.querySelector('#ag_modality_input'),
     consultorioModal: panel.querySelector('#ag_consultorio_modal'),
     channel: panel.querySelector('#ag_channel_input'),
+    patientSearchQuery: panel.querySelector('#ag_patient_search_query'),
+    patientSearchBtn: panel.querySelector('#ag_patient_search_btn'),
+    patientSearchResults: panel.querySelector('#ag_patient_search_results'),
+    patientSearchMsg: panel.querySelector('#ag_patient_search_msg'),
+    patientNewToggle: panel.querySelector('#ag_patient_new_toggle'),
+    patientNewWrap: panel.querySelector('#ag_patient_new_wrap'),
+    patientNewName: panel.querySelector('#ag_patient_new_name'),
+    patientNewPhone: panel.querySelector('#ag_patient_new_phone'),
+    patientNewEmail: panel.querySelector('#ag_patient_new_email'),
     activePatientBox: panel.querySelector('#ag_active_patient_box'),
     activePatientText: panel.querySelector('#ag_active_patient_text'),
     useActivePatientYes: panel.querySelector('#ag_use_active_patient_yes'),
     useActivePatientNo: panel.querySelector('#ag_use_active_patient_no'),
-    createSubmit: panel.querySelector('#ag_create_submit_btn')
+    createSubmit: panel.querySelector('#ag_create_submit_btn'),
+    workspaceShell: panel.querySelector('.mx-ag-workspace-shell'),
+    cellMenu: panel.querySelector('#ag_cell_menu'),
+    cellMenuNewAppointment: panel.querySelector('#ag_cell_menu_new_appointment'),
+    cellMenuBlockSlot: panel.querySelector('#ag_cell_menu_block_slot'),
+    nextSlotsModalEl: panel.querySelector('#ag_next_slots_modal'),
+    nextSlotsError: panel.querySelector('#ag_next_slots_error'),
+    nextSlotsLoading: panel.querySelector('#ag_next_slots_loading'),
+    nextSlotsResults: panel.querySelector('#ag_next_slots_results'),
+    nextSlotsEmpty: panel.querySelector('#ag_next_slots_empty'),
+    nextSlotsMoreBtn: panel.querySelector('#ag_next_slots_more_btn')
   };
 
   let calendar = null;
@@ -413,8 +432,16 @@ console.info('app.js loaded :: 20251123a');
   let visibilityObserver = null;
   let createRequestInFlight = false;
   let createActivePatientMode = 'manual';
+  let createPatientMode = 'existing';
   let activePatientContextId = '';
   let weeklyHoursExpanded = false;
+  let patientSearchDebounceTimer = null;
+  let patientIndexCache = null;
+  let patientIndexPromise = null;
+  let nextSlotsModal = null;
+  let nextAvailableCursor = null;
+  let nextAvailableLastOptions = [];
+  let cellMenuSelection = null;
 
   const sanitizeText = (value)=> String(value ?? '').trim();
   const escapeHtml = (value)=> String(value ?? '')
@@ -457,6 +484,167 @@ console.info('app.js loaded :: 20251123a');
   const resolveAgendaSlotMinutes = ()=>{
     // Base demo estable en 30 min. Preparado para futura parametrización.
     return 30;
+  };
+  const normalizeText = (value)=>{
+    const txt = sanitizeText(value).toLowerCase();
+    if(!txt) return '';
+    return txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+  };
+  const toStartOfDay = (dateValue)=>{
+    const d = (dateValue instanceof Date) ? new Date(dateValue.getTime()) : new Date(dateValue);
+    if(Number.isNaN(d.getTime())) return null;
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+  const toAddDays = (dateValue, days = 0)=>{
+    const d = toStartOfDay(dateValue);
+    if(!d) return null;
+    d.setDate(d.getDate() + Number(days || 0));
+    return d;
+  };
+  const toRangeKey = (startDate, endDate)=>{
+    const startSql = toSqlDateTimeLocal(startDate);
+    const endSql = toSqlDateTimeLocal(endDate);
+    if(!startSql || !endSql) return '';
+    return `${startSql}__${endSql}`;
+  };
+  const setPatientSearchMsg = (message = '', tone = 'muted')=>{
+    if(!els.patientSearchMsg) return;
+    const msg = sanitizeText(message);
+    if(!msg){
+      els.patientSearchMsg.classList.add('d-none');
+      els.patientSearchMsg.textContent = '';
+      return;
+    }
+    els.patientSearchMsg.classList.remove('d-none');
+    els.patientSearchMsg.classList.toggle('text-danger', tone === 'danger');
+    els.patientSearchMsg.classList.toggle('text-success', tone === 'success');
+    els.patientSearchMsg.classList.toggle('text-muted', tone !== 'danger' && tone !== 'success');
+    els.patientSearchMsg.textContent = msg;
+  };
+  const clearPatientSearchResults = ()=>{
+    if(els.patientSearchResults) els.patientSearchResults.innerHTML = '';
+    setPatientSearchMsg('');
+  };
+  const normalizePatientsIndexPayload = (payload)=>{
+    if(!payload || payload.ok !== true) return [];
+    const raw = Array.isArray(payload.data)
+      ? payload.data
+      : (Array.isArray(payload.data?.items) ? payload.data.items : []);
+    return raw
+      .filter((item)=> item && typeof item === 'object')
+      .map((item)=>({
+        patient_id: sanitizeText(item.patient_id || item.id || item.patientId || ''),
+        display_name: sanitizeText(item.nombre_completo || item.display_name || item.name || ''),
+        curp: sanitizeText(item.curp || '')
+      }))
+      .filter((item)=> item.patient_id);
+  };
+  const fetchPatientIndex = async ()=>{
+    if(Array.isArray(patientIndexCache)) return patientIndexCache;
+    if(patientIndexPromise) return patientIndexPromise;
+    patientIndexPromise = AgendaApiClient.getPatientsIndex({})
+      .then((json)=>{
+        if(!json || json.ok !== true){
+          throw new Error(sanitizeText(json?.message || json?.error || 'No se pudo cargar pacientes.'));
+        }
+        const list = normalizePatientsIndexPayload(json);
+        patientIndexCache = list;
+        return list;
+      })
+      .finally(()=>{
+        patientIndexPromise = null;
+      });
+    return patientIndexPromise;
+  };
+  const switchCreatePatientMode = (mode = 'existing')=>{
+    createPatientMode = (mode === 'new') ? 'new' : 'existing';
+    const isNew = createPatientMode === 'new';
+    if(els.patientNewWrap) els.patientNewWrap.classList.toggle('d-none', !isNew);
+    if(els.patientNewToggle){
+      els.patientNewToggle.textContent = isNew ? 'Usar paciente existente' : 'Usar paciente nuevo';
+      els.patientNewToggle.classList.toggle('btn-outline-secondary', !isNew);
+      els.patientNewToggle.classList.toggle('btn-outline-primary', isNew);
+    }
+    if(isNew){
+      if(els.patientId){
+        els.patientId.value = '';
+        els.patientId.removeAttribute('readonly');
+      }
+      setActivePatientMode('manual');
+    }else{
+      if(els.patientNewName) els.patientNewName.value = '';
+      if(els.patientNewPhone) els.patientNewPhone.value = '';
+      if(els.patientNewEmail) els.patientNewEmail.value = '';
+    }
+  };
+  const hideCellMenu = ()=>{
+    if(els.cellMenu) els.cellMenu.classList.add('d-none');
+    cellMenuSelection = null;
+  };
+  const isCellAvailableForCreate = (startDate, endDate)=>{
+    if(!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return false;
+    if(!(endDate instanceof Date) || Number.isNaN(endDate.getTime())) return false;
+    if(startDate < new Date()) return false;
+    return isSelectionAvailable(startDate, endDate);
+  };
+  const openCellMenu = ({ start, end, jsEvent })=>{
+    if(!els.cellMenu || !els.calendarWrap) return;
+    cellMenuSelection = { start, end };
+    const wrapRect = els.calendarWrap.getBoundingClientRect();
+    const clickX = Number(jsEvent?.clientX || wrapRect.left + 20);
+    const clickY = Number(jsEvent?.clientY || wrapRect.top + 20);
+    const relativeX = Math.max(8, clickX - wrapRect.left - 4);
+    const relativeY = Math.max(8, clickY - wrapRect.top - 4);
+    els.cellMenu.style.left = `${relativeX}px`;
+    els.cellMenu.style.top = `${relativeY}px`;
+    els.cellMenu.classList.remove('d-none');
+  };
+  const setNextSlotsError = (message = '')=>{
+    if(!els.nextSlotsError) return;
+    const msg = sanitizeText(message);
+    if(!msg){
+      els.nextSlotsError.classList.add('d-none');
+      els.nextSlotsError.textContent = '';
+      return;
+    }
+    els.nextSlotsError.textContent = msg;
+    els.nextSlotsError.classList.remove('d-none');
+  };
+  const setNextSlotsLoading = (isLoading)=>{
+    if(!els.nextSlotsLoading) return;
+    els.nextSlotsLoading.classList.toggle('d-none', !isLoading);
+  };
+  const setNextSlotsEmpty = (show)=>{
+    if(!els.nextSlotsEmpty) return;
+    els.nextSlotsEmpty.classList.toggle('d-none', !show);
+  };
+  const renderNextSlotOptions = (options = [])=>{
+    if(!els.nextSlotsResults) return;
+    if(!Array.isArray(options) || !options.length){
+      els.nextSlotsResults.innerHTML = '';
+      setNextSlotsEmpty(true);
+      return;
+    }
+    setNextSlotsEmpty(false);
+    els.nextSlotsResults.innerHTML = options.map((item, idx)=>{
+      const startDate = item.start instanceof Date ? item.start : new Date(item.start);
+      const endDate = item.end instanceof Date ? item.end : new Date(item.end);
+      const startLabel = startDate.toLocaleString('es-MX', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+      const endLabel = endDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+      return `
+        <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-ag-next-slot-index="${idx}">
+          <span>${escapeHtml(startLabel)} - ${escapeHtml(endLabel)}</span>
+          <span class="badge text-bg-primary">Elegir</span>
+        </button>
+      `;
+    }).join('');
+  };
+  const setWorkspaceButtonActive = (targetPanelId = panelId)=>{
+    if(!els.workspaceShell) return;
+    els.workspaceShell.querySelectorAll('[data-ag-work-panel]').forEach((btn)=>{
+      btn.classList.toggle('is-active', sanitizeText(btn.getAttribute('data-ag-work-panel')) === sanitizeText(targetPanelId));
+    });
   };
   const toFcDurationFromMinutes = (minutes)=>{
     const safe = Math.max(5, Math.min(240, Number.parseInt(String(minutes || 30), 10) || 30));
@@ -626,6 +814,20 @@ console.info('app.js loaded :: 20251123a');
         status: resp.status,
         json: await resp.json().catch(()=> null)
       };
+    },
+    async getPatientsIndex({ signal } = {}){
+      const base = (typeof window.resolvePatientsSearchUrl === 'function')
+        ? window.resolvePatientsSearchUrl()
+        : '/api/patients/index.php/patients';
+      const url = new URL(base, window.location.origin);
+      url.searchParams.set('limit', '300');
+      const resp = await fetch(url.toString(), {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        signal
+      });
+      return resp.json().catch(()=> null);
     }
   };
 
@@ -747,6 +949,10 @@ console.info('app.js loaded :: 20251123a');
       els.useActivePatientNo.classList.toggle('btn-primary', createActivePatientMode === 'manual');
       els.useActivePatientNo.classList.toggle('btn-outline-secondary', createActivePatientMode !== 'manual');
     }
+    if(createPatientMode === 'new'){
+      if(els.patientId) els.patientId.removeAttribute('readonly');
+      return;
+    }
     if(createActivePatientMode === 'active' && activePatientContextId){
       if(els.patientId) els.patientId.value = activePatientContextId;
       if(els.patientId) els.patientId.setAttribute('readonly', 'readonly');
@@ -772,11 +978,14 @@ console.info('app.js loaded :: 20251123a');
   const resetCreateForm = ()=>{
     setCreateError('');
     syncActivePatientPrompt();
+    switchCreatePatientMode('existing');
     if(els.patientId) els.patientId.value = '';
     if(els.startAt) els.startAt.value = '';
     if(els.endAt) els.endAt.value = '';
     if(els.modality) els.modality.value = 'in_person';
     if(els.channel) els.channel.value = 'agenda_frontend_v1';
+    clearPatientSearchResults();
+    if(els.patientSearchQuery) els.patientSearchQuery.value = '';
     syncCreateConsultorioOptions();
     if(els.consultorioModal && !sanitizeText(els.consultorioModal.value || '')){
       const fallback = getAvailabilityConsultorioId();
@@ -788,12 +997,68 @@ console.info('app.js loaded :: 20251123a');
     }
     createRequestInFlight = false;
   };
+  const matchesPatientSearch = (entry, queryNorm)=>{
+    if(!queryNorm) return true;
+    const display = normalizeText(entry.display_name || '');
+    const curp = normalizeText(entry.curp || '');
+    const pid = normalizeText(entry.patient_id || '');
+    return display.includes(queryNorm) || curp.includes(queryNorm) || pid.includes(queryNorm);
+  };
+  const renderPatientSearchResults = (items = [])=>{
+    if(!els.patientSearchResults) return;
+    if(!Array.isArray(items) || !items.length){
+      els.patientSearchResults.innerHTML = '';
+      setPatientSearchMsg('Sin resultados para esta búsqueda.');
+      return;
+    }
+    els.patientSearchResults.innerHTML = items.map((item, idx)=>{
+      const pid = sanitizeText(item.patient_id || '');
+      const display = sanitizeText(item.display_name || pid || 'Paciente');
+      const curp = sanitizeText(item.curp || '');
+      return `
+        <button type="button" class="list-group-item list-group-item-action mx-ag-patient-result" data-ag-patient-select="${idx}" data-ag-patient-id="${escapeHtml(pid)}" data-ag-patient-name="${escapeHtml(display)}">
+          <div class="fw-semibold">${escapeHtml(display)}</div>
+          <small>ID: ${escapeHtml(pid)}${curp ? ` · CURP: ${escapeHtml(curp)}` : ''}</small>
+        </button>
+      `;
+    }).join('');
+    setPatientSearchMsg(`Resultados: ${items.length}`, 'success');
+  };
+  const runPatientSearch = async ()=>{
+    const rawQuery = sanitizeText(els.patientSearchQuery?.value || '');
+    if(rawQuery.length < 2){
+      clearPatientSearchResults();
+      setPatientSearchMsg('Escribe al menos 2 caracteres para buscar.');
+      return;
+    }
+    if(els.patientSearchBtn){
+      els.patientSearchBtn.disabled = true;
+      els.patientSearchBtn.textContent = 'Buscando…';
+    }
+    try{
+      const list = await fetchPatientIndex();
+      const queryNorm = normalizeText(rawQuery);
+      const matches = list.filter((entry)=> matchesPatientSearch(entry, queryNorm)).slice(0, 12);
+      renderPatientSearchResults(matches);
+    }catch(err){
+      clearPatientSearchResults();
+      setPatientSearchMsg(sanitizeText(err?.message || 'No se pudo buscar pacientes.'), 'danger');
+    }finally{
+      if(els.patientSearchBtn){
+        els.patientSearchBtn.disabled = false;
+        els.patientSearchBtn.textContent = 'Buscar';
+      }
+    }
+  };
   const isSelectionAvailable = (startDate, endDate)=>{
     if(!calendar || !startDate || !endDate) return false;
     const events = calendar.getEvents();
     const availabilityWindows = events.filter((ev)=> ev.display === 'background' && sanitizeText(ev.extendedProps?.event_type || '') === 'availability');
     const hasAvailabilityLayer = availabilityWindows.length > 0;
-    const insideAvailability = !hasAvailabilityLayer || availabilityWindows.some((ev)=>{
+    if(!hasAvailabilityLayer){
+      return false;
+    }
+    const insideAvailability = availabilityWindows.some((ev)=>{
       const evStart = ev.start;
       const evEnd = ev.end;
       return !!(evStart && evEnd && startDate >= evStart && endDate <= evEnd);
@@ -808,6 +1073,7 @@ console.info('app.js loaded :: 20251123a');
   };
   const openCreateModalFromSelection = (selection)=>{
     if(!els.createModalEl || !window.bootstrap?.Modal) return;
+    hideCellMenu();
     const start = selection?.start instanceof Date ? selection.start : new Date(selection?.start || '');
     const end = selection?.end instanceof Date ? selection.end : new Date(selection?.end || '');
     if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())){
@@ -837,15 +1103,135 @@ console.info('app.js loaded :: 20251123a');
     createModal = createModal || window.bootstrap.Modal.getOrCreateInstance(els.createModalEl);
     createModal.show();
   };
-  // Extension point (fase siguiente): buscar próxima cita disponible con /availability
+  const collectNextAvailableSlots = async ({ afterDate, limit = 3 })=>{
+    if(isAgendaDemoContext()){
+      const slotMinutes = resolveAgendaSlotMinutes();
+      const options = [];
+      const after = new Date(afterDate || Date.now());
+      const baseDate = toStartOfDay(after);
+      if(!baseDate || Number.isNaN(after.getTime())) return options;
+      let daysScanned = 0;
+      while(options.length < limit && daysScanned < 180){
+        const dayDate = toAddDays(baseDate, daysScanned);
+        const dow = dayDate.getDay();
+        const dayStart = new Date(dayDate);
+        dayStart.setHours(8, 0, 0, 0);
+        const dayEnd = new Date(dayDate);
+        dayEnd.setHours(dow === 6 ? 17 : 20, 0, 0, 0);
+
+        const demoRows = buildDemoAppointments({ start: dayStart, end: dayEnd });
+        const bookedRanges = demoRows
+          .map((row)=>{
+            const start = new Date(toIsoLike(row?.start_at || ''));
+            const end = new Date(toIsoLike(row?.end_at || ''));
+            if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+            return { start, end };
+          })
+          .filter(Boolean);
+
+        let slotCursor = alignDateToSlotGrid(dayStart, slotMinutes);
+        while(options.length < limit && slotCursor < dayEnd){
+          const slotEnd = plusMinutes(slotCursor, slotMinutes);
+          if(slotEnd <= after){
+            slotCursor = plusMinutes(slotCursor, slotMinutes);
+            continue;
+          }
+          const overlapsBusy = bookedRanges.some((range)=> slotCursor < range.end && slotEnd > range.start);
+          if(!overlapsBusy){
+            const key = toRangeKey(slotCursor, slotEnd);
+            if(key && !options.some((item)=> item.key === key)){
+              options.push({
+                key,
+                start: new Date(slotCursor),
+                end: new Date(slotEnd),
+                consultorio_id: sanitizeText(getAvailabilityConsultorioId() || '')
+              });
+            }
+          }
+          slotCursor = plusMinutes(slotCursor, slotMinutes);
+        }
+        daysScanned += 1;
+      }
+      return options.slice(0, limit);
+    }
+
+    const doctorId = getDoctorId();
+    const consultorioId = getAvailabilityConsultorioId();
+    if(!isNumericId(doctorId) || !isNumericId(consultorioId)){
+      throw new Error('Doctor/consultorio no disponibles para buscar siguientes citas.');
+    }
+    const slotMinutes = resolveAgendaSlotMinutes();
+    const options = [];
+    const baseDate = toStartOfDay(afterDate || new Date());
+    if(!baseDate) return options;
+    let daysScanned = 0;
+    while(options.length < limit && daysScanned < 180){
+      const dayDate = toAddDays(baseDate, daysScanned);
+      const dayYmd = formatYmdLocal(dayDate);
+      const params = new URLSearchParams({
+        doctor_id: doctorId,
+        consultorio_id: consultorioId,
+        date: dayYmd,
+        slot_minutes: String(slotMinutes)
+      });
+      const json = await AgendaApiClient.getAvailability({ params });
+      if(json?.ok === true && Array.isArray(json?.data?.slots)){
+        json.data.slots.forEach((slot)=>{
+          if(options.length >= limit) return;
+          const start = new Date(toIsoLike(slot?.start_at || ''));
+          const end = new Date(toIsoLike(slot?.end_at || ''));
+          if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return;
+          if(start <= new Date(afterDate || Date.now())) return;
+          const key = toRangeKey(start, end);
+          if(options.some((item)=> item.key === key)) return;
+          options.push({ key, start, end, consultorio_id: consultorioId });
+        });
+      }
+      daysScanned += 1;
+    }
+    return options.slice(0, limit);
+  };
+  const loadNextAvailableSlots = async ({ resetCursor = false } = {})=>{
+    if(resetCursor || !(nextAvailableCursor instanceof Date)){
+      const today = toStartOfDay(new Date());
+      nextAvailableCursor = toAddDays(today, 1);
+    }
+    setNextSlotsError('');
+    setNextSlotsLoading(true);
+    if(els.nextSlotsMoreBtn) els.nextSlotsMoreBtn.disabled = true;
+    try{
+      const options = await collectNextAvailableSlots({
+        afterDate: nextAvailableCursor,
+        limit: 3
+      });
+      nextAvailableLastOptions = options;
+      renderNextSlotOptions(options);
+      if(options.length){
+        const last = options[options.length - 1];
+        nextAvailableCursor = new Date(last.start.getTime() + 60 * 1000);
+      }
+    }catch(err){
+      setNextSlotsError(sanitizeText(err?.message || 'No se pudo consultar disponibilidad.'));
+      renderNextSlotOptions([]);
+    }finally{
+      setNextSlotsLoading(false);
+      if(els.nextSlotsMoreBtn) els.nextSlotsMoreBtn.disabled = false;
+    }
+  };
   const openNextAvailableSlotFinder = ()=>{
-    return null;
+    if(!els.nextSlotsModalEl || !window.bootstrap?.Modal) return;
+    nextSlotsModal = nextSlotsModal || window.bootstrap.Modal.getOrCreateInstance(els.nextSlotsModalEl);
+    nextSlotsModal.show();
+    loadNextAvailableSlots({ resetCursor: true }).catch(()=> null);
   };
   const handleCreateSubmit = async ()=>{
     if(createRequestInFlight) return;
     const doctorId = getDoctorId();
     const consultorioId = resolveConsultorioId();
     const patientId = sanitizeText(els.patientId?.value || '');
+    const newPatientName = sanitizeText(els.patientNewName?.value || '');
+    const newPatientPhone = sanitizeText(els.patientNewPhone?.value || '');
+    const newPatientEmail = sanitizeText(els.patientNewEmail?.value || '');
     const startInput = sanitizeText(els.startAt?.value || '');
     const endInput = sanitizeText(els.endAt?.value || '');
     const modality = sanitizeText(els.modality?.value || 'in_person') || 'in_person';
@@ -854,7 +1240,10 @@ console.info('app.js loaded :: 20251123a');
 
     if(!doctorId) return setCreateError('No se pudo resolver doctor_id.');
     if(!consultorioId) return setCreateError('No se pudo resolver un consultorio operativo. Verifica el catálogo de consultorios del médico activo.');
-    if(!patientId) return setCreateError('Paciente (ID) es obligatorio.');
+    if(createPatientMode === 'new' && !newPatientName){
+      return setCreateError('Nombre completo es obligatorio para paciente nuevo.');
+    }
+    if(createPatientMode !== 'new' && !patientId) return setCreateError('Paciente (ID) es obligatorio.');
     if(!startInput || !endInput) return setCreateError('Inicio y fin son obligatorios.');
 
     const startSql = toSqlDateTimeLocal(startInput);
@@ -868,7 +1257,6 @@ console.info('app.js loaded :: 20251123a');
     const payload = {
       doctor_id: doctorId,
       consultorio_id: consultorioId,
-      patient_id: patientId,
       start_at: startSql,
       end_at: endSql,
       modality: modality,
@@ -876,6 +1264,22 @@ console.info('app.js loaded :: 20251123a');
       created_by_role: 'doctor',
       created_by_id: actorId
     };
+    if(createPatientMode === 'new'){
+      const contacts = [];
+      if(newPatientPhone){
+        contacts.push({ type: 'phone', value: newPatientPhone });
+      }
+      if(newPatientEmail){
+        contacts.push({ type: 'email', value: newPatientEmail });
+      }
+      payload.patient = {
+        display_name: newPatientName,
+        doctor_id: doctorId,
+        ...(contacts.length ? { contacts } : {})
+      };
+    }else{
+      payload.patient_id = patientId;
+    }
 
     createRequestInFlight = true;
     if(els.createSubmit){
@@ -1035,16 +1439,18 @@ console.info('app.js loaded :: 20251123a');
       { value: 'finalizada', weight: 8 }
     ];
     const slotMinutes = resolveAgendaSlotMinutes();
+    const todayStart = toStartOfDay(new Date());
+    const demoWindowStart = toAddDays(todayStart, -21);
+    const demoWindowEnd = toAddDays(todayStart, 92);
     const dayLoad = {
-      // Saturación demo orientada a agenda cargada en slots consecutivos.
-      // El gap=0 permite ocupar ambos medios bloques (:00 y :30) en configuración de 30 min.
-      1: { target: 0.78, gapPool: [0, 0, 0, slotMinutes, slotMinutes] }, // lunes alta
-      2: { target: 0.84, gapPool: [0, 0, 0, 0, slotMinutes] }, // martes muy alta
-      3: { target: 0.88, gapPool: [0, 0, 0, 0, slotMinutes] }, // miércoles saturada
-      4: { target: 0.84, gapPool: [0, 0, 0, 0, slotMinutes] }, // jueves muy alta
-      5: { target: 0.76, gapPool: [0, 0, slotMinutes, slotMinutes, slotMinutes * 2] }, // viernes alta
-      6: { target: 0.52, gapPool: [0, slotMinutes, slotMinutes, slotMinutes * 2] }, // sábado media
-      0: { target: 0.16, gapPool: [slotMinutes, slotMinutes * 2] } // domingo baja
+      // Distribución operativa para QA (~65% reservado con huecos utilizables).
+      1: { target: 0.64, gapPool: [0, slotMinutes, slotMinutes, slotMinutes * 2] }, // lunes
+      2: { target: 0.66, gapPool: [0, slotMinutes, slotMinutes, slotMinutes * 2] }, // martes
+      3: { target: 0.68, gapPool: [0, slotMinutes, slotMinutes, slotMinutes * 2] }, // miércoles
+      4: { target: 0.66, gapPool: [0, slotMinutes, slotMinutes, slotMinutes * 2] }, // jueves
+      5: { target: 0.62, gapPool: [slotMinutes, slotMinutes, slotMinutes * 2] }, // viernes
+      6: { target: 0.46, gapPool: [slotMinutes, slotMinutes * 2, slotMinutes * 2] }, // sábado
+      0: { target: 0.18, gapPool: [slotMinutes * 2, slotMinutes * 3] } // domingo
     };
 
     const rows = [];
@@ -1053,6 +1459,10 @@ console.info('app.js loaded :: 20251123a');
     cursor.setHours(0, 0, 0, 0);
     while(cursor < end){
       const day = new Date(cursor);
+      if((demoWindowStart && day < demoWindowStart) || (demoWindowEnd && day > demoWindowEnd)){
+        cursor.setDate(cursor.getDate() + 1);
+        continue;
+      }
       const dow = day.getDay();
       const cfg = dayLoad[dow] || dayLoad[1];
       const rng = seededRandomFactory(`agenda-demo-${formatYmdLocal(day)}`);
@@ -1080,54 +1490,25 @@ console.info('app.js loaded :: 20251123a');
         return true;
       };
 
-      // En 30 minutos, saturar explícitamente el tramo visible (08:00–15:00)
-      // usando ambos subslots (:00 y :30) con alta frecuencia.
+      // En 30 minutos, poblar ambos subslots (:00/:30) con carga operativa.
       if(slotMinutes === 30){
         const visibleWindowEnd = new Date(day);
         visibleWindowEnd.setHours(15, 0, 0, 0);
-        const denseEnd = (visibleWindowEnd < dayEnd) ? visibleWindowEnd : dayEnd;
-        let hourCursor = new Date(dayStart);
-
-        while(hourCursor < denseEnd){
-          const slot00 = new Date(hourCursor);
-          const slot30 = plusMinutes(slot00, 30);
-          if(slot30 > denseEnd) break;
-
-          const patternRoll = rng();
-          let include00 = true;
-          let include30 = true;
-          if(patternRoll < 0.16){
-            include00 = false;
-          }else if(patternRoll < 0.32){
-            include30 = false;
+        let slotCursor = alignDateToSlotGrid(dayStart, slotMinutes);
+        while(slotCursor < dayEnd){
+          const inPrimaryWindow = slotCursor < visibleWindowEnd;
+          const jitter = (rng() - 0.5) * 0.12;
+          const baseChance = Number(cfg.target || 0.65) + (inPrimaryWindow ? 0.01 : -0.07) + jitter;
+          const bookingChance = Math.max(0.18, Math.min(0.84, baseChance));
+          if(rng() <= bookingChance){
+            pushDemoRow(slotCursor, slotMinutes);
           }
-          if(!include00 && !include30){
-            include00 = true;
+          // Pequeños huecos no ofertados para realismo operativo.
+          if(inPrimaryWindow && rng() < 0.05){
+            slotCursor = plusMinutes(slotCursor, slotMinutes * 2);
+            continue;
           }
-
-          if(include00) pushDemoRow(slot00, slotMinutes);
-          if(include30) pushDemoRow(slot30, slotMinutes);
-
-          hourCursor = plusMinutes(hourCursor, 60);
-        }
-
-        // Fuera del tramo principal visible: mantener actividad con menor densidad.
-        let tailCursor = alignDateToSlotGrid(denseEnd, slotMinutes);
-        const tailDensityByDay = {
-          1: 0.58, // lunes
-          2: 0.62, // martes
-          3: 0.66, // miércoles
-          4: 0.62, // jueves
-          5: 0.54, // viernes
-          6: 0.38, // sábado
-          0: 0.18  // domingo
-        };
-        const tailDensity = Number(tailDensityByDay[dow] ?? 0.55);
-        while(tailCursor < dayEnd){
-          if(rng() <= tailDensity){
-            pushDemoRow(tailCursor, slotMinutes);
-          }
-          tailCursor = plusMinutes(tailCursor, slotMinutes);
+          slotCursor = plusMinutes(slotCursor, slotMinutes);
         }
       }else{
         const totalMinutes = Math.max(0, Math.floor((dayEnd - dayStart) / 60000));
@@ -1207,6 +1588,11 @@ console.info('app.js loaded :: 20251123a');
   const mapAppointmentToEvent = (row)=>{
     const status = sanitizeText(row?.status || '').toLowerCase();
     const statusMeta = resolveAppointmentStatusMeta(status);
+    const startAt = normalizeDateTime(row?.start_at || '');
+    const endAt = normalizeDateTime(row?.end_at || '');
+    const endAtDate = new Date(endAt);
+    const nowTs = Date.now();
+    const isPast = !!(endAt && !Number.isNaN(endAtDate.getTime()) && endAtDate.getTime() < nowTs);
     const statusColorMap = {
       confirmed: '#198754',
       pending: '#0d6efd',
@@ -1220,10 +1606,10 @@ console.info('app.js loaded :: 20251123a');
     return {
       id: sanitizeText(row?.appointment_id || ''),
       title: buildAppointmentTitle(row),
-      start: normalizeDateTime(row?.start_at || ''),
-      end: normalizeDateTime(row?.end_at || ''),
+      start: startAt,
+      end: endAt,
       color: statusColorMap[status] || '#005684',
-      classNames: ['mx-ag-event', `mx-ag-status--${statusMeta.key}`],
+      classNames: ['mx-ag-event', `mx-ag-status--${statusMeta.key}`, ...(isPast ? ['mx-ag-event--past'] : [])],
       extendedProps: {
         doctor_id: sanitizeText(row?.doctor_id || ''),
         consultorio_id: sanitizeText(row?.consultorio_id || ''),
@@ -1231,6 +1617,7 @@ console.info('app.js loaded :: 20251123a');
         patient_display: patientDisplay,
         status_label: statusMeta.label,
         status_key: statusMeta.key,
+        is_past: isPast,
         modality: sanitizeText(row?.modality || ''),
         status: sanitizeText(row?.status || ''),
         channel_origin: sanitizeText(row?.channel_origin || '')
@@ -1637,12 +2024,33 @@ console.info('app.js loaded :: 20251123a');
         };
       },
       dateClick: (info)=>{
-        if(String(info?.view?.type || '') === 'dayGridMonth' && calendar){
+        const viewType = String(info?.view?.type || '');
+        if(viewType === 'dayGridMonth' && calendar){
           calendar.changeView('timeGridDay', info.date);
+          return;
+        }
+        if(viewType === 'timeGridWeek' || viewType === 'timeGridDay'){
+          const slotMinutes = resolveAgendaSlotMinutes();
+          const start = new Date(info.date);
+          const end = new Date(start.getTime() + (slotMinutes * 60 * 1000));
+          if(!isCellAvailableForCreate(start, end)){
+            hideCellMenu();
+            return;
+          }
+          openCellMenu({ start, end, jsEvent: info.jsEvent });
         }
       },
       select: (selectionInfo)=>{
-        openCreateModalFromSelection(selectionInfo);
+        const start = selectionInfo?.start instanceof Date ? selectionInfo.start : new Date(selectionInfo?.start || '');
+        const end = selectionInfo?.end instanceof Date ? selectionInfo.end : new Date(selectionInfo?.end || '');
+        if(!isCellAvailableForCreate(start, end)){
+          hideCellMenu();
+          return;
+        }
+        openCellMenu({ start, end, jsEvent: selectionInfo?.jsEvent });
+        if(calendar && typeof calendar.unselect === 'function'){
+          try{ calendar.unselect(); }catch(_){}
+        }
       },
       eventTimeFormat: {
         hour: '2-digit',
@@ -1661,6 +2069,7 @@ console.info('app.js loaded :: 20251123a');
         window.alert(details.join('\n'));
       },
       datesSet: ()=>{
+        hideCellMenu();
         applyWeeklyHoursState();
         window.setTimeout(()=>{
           try{ calendar.updateSize(); }catch(_){}
@@ -1736,8 +2145,84 @@ console.info('app.js loaded :: 20251123a');
     });
     els.createModalEl?.addEventListener('hidden.bs.modal', ()=>{
       resetCreateForm();
+      hideCellMenu();
       if(calendar && typeof calendar.unselect === 'function'){
         try{ calendar.unselect(); }catch(_){}
+      }
+    });
+    els.patientSearchBtn?.addEventListener('click', ()=>{
+      runPatientSearch().catch(()=> null);
+    });
+    els.patientSearchQuery?.addEventListener('keydown', (event)=>{
+      if(event.key === 'Enter'){
+        event.preventDefault();
+        runPatientSearch().catch(()=> null);
+      }
+    });
+    els.patientSearchQuery?.addEventListener('input', ()=>{
+      if(patientSearchDebounceTimer){
+        window.clearTimeout(patientSearchDebounceTimer);
+      }
+      patientSearchDebounceTimer = window.setTimeout(()=>{
+        runPatientSearch().catch(()=> null);
+      }, 260);
+    });
+    els.patientSearchResults?.addEventListener('click', (event)=>{
+      const btn = event.target.closest('[data-ag-patient-id]');
+      if(!btn) return;
+      const patientId = sanitizeText(btn.getAttribute('data-ag-patient-id') || '');
+      const patientName = sanitizeText(btn.getAttribute('data-ag-patient-name') || '');
+      if(!patientId) return;
+      switchCreatePatientMode('existing');
+      if(els.patientId){
+        els.patientId.value = patientId;
+        els.patientId.removeAttribute('readonly');
+      }
+      setPatientSearchMsg(`Paciente seleccionado: ${patientName || patientId}`, 'success');
+    });
+    els.patientNewToggle?.addEventListener('click', ()=>{
+      switchCreatePatientMode(createPatientMode === 'new' ? 'existing' : 'new');
+    });
+    els.cellMenuNewAppointment?.addEventListener('click', ()=>{
+      if(!cellMenuSelection) return;
+      openCreateModalFromSelection(cellMenuSelection);
+    });
+    els.cellMenuBlockSlot?.addEventListener('click', ()=>{
+      setError('Bloqueo de horario: preparado para siguiente fase de integración.');
+      hideCellMenu();
+    });
+    els.nextSlotsMoreBtn?.addEventListener('click', ()=>{
+      loadNextAvailableSlots({ resetCursor: false }).catch(()=> null);
+    });
+    els.nextSlotsModalEl?.addEventListener('hidden.bs.modal', ()=>{
+      setNextSlotsError('');
+      setNextSlotsLoading(false);
+      setNextSlotsEmpty(false);
+      if(els.nextSlotsResults) els.nextSlotsResults.innerHTML = '';
+      nextAvailableLastOptions = [];
+    });
+    els.nextSlotsResults?.addEventListener('click', (event)=>{
+      const target = event.target.closest('[data-ag-next-slot-index]');
+      if(!target) return;
+      const idx = Number(target.getAttribute('data-ag-next-slot-index'));
+      const choice = nextAvailableLastOptions[idx];
+      if(!choice) return;
+      if(nextSlotsModal){
+        nextSlotsModal.hide();
+      }
+      if(calendar){
+        try{ calendar.changeView('timeGridDay', choice.start); }catch(_){}
+      }
+      window.setTimeout(()=>{
+        openCreateModalFromSelection({ start: choice.start, end: choice.end });
+      }, 80);
+    });
+    document.addEventListener('click', (event)=>{
+      if(!els.cellMenu || els.cellMenu.classList.contains('d-none')) return;
+      const insideMenu = event.target.closest('#ag_cell_menu');
+      const insideCalendar = event.target.closest('#ag_calendar');
+      if(!insideMenu && !insideCalendar){
+        hideCellMenu();
       }
     });
 
@@ -1764,6 +2249,33 @@ console.info('app.js loaded :: 20251123a');
       });
       visibilityObserver.observe(panel, { attributes: true, attributeFilter: ['class', 'style'] });
     }
+
+    els.workspaceShell?.addEventListener('click', (event)=>{
+      const target = event.target.closest('[data-ag-work-action], [data-ag-work-panel]');
+      if(!target) return;
+      event.preventDefault();
+
+      const panelTarget = sanitizeText(target.getAttribute('data-ag-work-panel') || '');
+      if(panelTarget){
+        if(typeof window.openGroup === 'function'){
+          try{ window.openGroup('agenda'); }catch(_){}
+        }
+        if(typeof window.jumpTo === 'function'){
+          window.jumpTo(panelTarget);
+        }
+        return;
+      }
+
+      const action = sanitizeText(target.getAttribute('data-ag-work-action') || '');
+      if(action === 'next-available'){
+        openNextAvailableSlotFinder();
+      }
+    });
+
+    window.addEventListener('mxmed:workspace-mode', (event)=>{
+      const currentPanelId = sanitizeText(event?.detail?.panelId || '');
+      setWorkspaceButtonActive(currentPanelId || panelId);
+    });
   };
 
   const start = ()=>{
@@ -1771,6 +2283,7 @@ console.info('app.js loaded :: 20251123a');
     syncDoctorInput();
     syncActivePatientPrompt();
     initCalendar();
+    setWorkspaceButtonActive(panelId);
     const isVisible = panel && !panel.classList.contains('d-none');
     if(isVisible){
       ensureAgendaVisibleRender({ forceConsultorios: true }).catch(()=> null);
