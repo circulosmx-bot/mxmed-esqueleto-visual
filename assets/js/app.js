@@ -651,8 +651,8 @@ console.info('app.js loaded :: 20251123a');
         <button type="button" class="mx-ag-slot-action-btn is-primary" data-ag-slot-action="new">Nueva cita</button>
         <button type="button" class="mx-ag-slot-more-btn" data-ag-slot-action="more" aria-expanded="false" aria-label="Más opciones">⋯</button>
       </div>
-      <div class="mx-ag-slot-more-menu d-none" data-role="slot-more-menu">
-        <button type="button" class="mx-ag-slot-action-btn is-secondary" data-ag-slot-action="block">Bloquear horario (próximamente)</button>
+      <div class="mx-ag-slot-more-menu" data-role="slot-more-menu" aria-hidden="true">
+        <button type="button" class="mx-ag-slot-action-btn is-secondary" data-ag-slot-action="block">Bloquear horario</button>
       </div>
     `;
     panelEl.addEventListener('click', (event)=>{
@@ -662,9 +662,10 @@ console.info('app.js loaded :: 20251123a');
       const action = sanitizeText(actionBtn.getAttribute('data-ag-slot-action') || '');
       if(action === 'more'){
         const moreMenu = panelEl.querySelector('[data-role="slot-more-menu"]');
-        const isOpen = !!(moreMenu && !moreMenu.classList.contains('d-none'));
+        const isOpen = !!(moreMenu && moreMenu.classList.contains('is-open'));
         if(moreMenu){
-          moreMenu.classList.toggle('d-none', isOpen);
+          moreMenu.classList.toggle('is-open', !isOpen);
+          moreMenu.setAttribute('aria-hidden', isOpen ? 'true' : 'false');
         }
         actionBtn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
         panelEl.classList.toggle('is-more-open', !isOpen);
