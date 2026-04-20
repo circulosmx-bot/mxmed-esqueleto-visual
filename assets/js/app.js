@@ -648,7 +648,12 @@ console.info('app.js loaded :: 20251123a');
     panelEl.setAttribute('aria-label', 'Acciones de slot disponible');
     panelEl.innerHTML = `
       <div class="mx-ag-slot-action-main">
-        <button type="button" class="mx-ag-slot-action-btn is-primary" data-ag-slot-action="new">Nueva cita</button>
+        <button type="button" class="mx-ag-slot-action-btn is-primary" data-ag-slot-action="new">
+          <span class="mx-ag-slot-action-plus-wrap" aria-hidden="true">
+            <span class="mx-ag-slot-action-plus-circle">+</span>
+          </span>
+          <span class="mx-ag-slot-action-label">Nueva cita</span>
+        </button>
         <button type="button" class="mx-ag-slot-more-btn" data-ag-slot-action="more" aria-expanded="false" aria-label="Más opciones">⋯</button>
       </div>
       <div class="mx-ag-slot-more-menu" data-role="slot-more-menu" aria-hidden="true">
