@@ -647,15 +647,29 @@ console.info('app.js loaded :: 20251123a');
     panelEl.setAttribute('role', 'menu');
     panelEl.setAttribute('aria-label', 'Acciones de slot disponible');
     panelEl.innerHTML = `
-      <div class="mx-ag-slot-action-title">Slot activo</div>
-      <button type="button" class="mx-ag-slot-action-btn" data-ag-slot-action="new">Nueva cita</button>
-      <button type="button" class="mx-ag-slot-action-btn is-disabled" data-ag-slot-action="block" disabled>Bloquear horario (próximamente)</button>
+      <div class="mx-ag-slot-action-main">
+        <button type="button" class="mx-ag-slot-action-btn is-primary" data-ag-slot-action="new">Nueva cita</button>
+        <button type="button" class="mx-ag-slot-more-btn" data-ag-slot-action="more" aria-expanded="false" aria-label="Más opciones">⋯</button>
+      </div>
+      <div class="mx-ag-slot-more-menu d-none" data-role="slot-more-menu">
+        <button type="button" class="mx-ag-slot-action-btn is-secondary" data-ag-slot-action="block">Bloquear horario (próximamente)</button>
+      </div>
     `;
     panelEl.addEventListener('click', (event)=>{
       event.stopPropagation();
       const actionBtn = event.target.closest('[data-ag-slot-action]');
       if(!actionBtn) return;
       const action = sanitizeText(actionBtn.getAttribute('data-ag-slot-action') || '');
+      if(action === 'more'){
+        const moreMenu = panelEl.querySelector('[data-role="slot-more-menu"]');
+        const isOpen = !!(moreMenu && !moreMenu.classList.contains('d-none'));
+        if(moreMenu){
+          moreMenu.classList.toggle('d-none', isOpen);
+        }
+        actionBtn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+        panelEl.classList.toggle('is-more-open', !isOpen);
+        return;
+      }
       if(action === 'new'){
         if(!cellMenuSelection) return;
         openCreateModalFromSelection(cellMenuSelection);
@@ -663,7 +677,7 @@ console.info('app.js loaded :: 20251123a');
       }
       if(action === 'block'){
         setError('Bloqueo de horario: preparado para siguiente fase de integración.');
-        hideCellMenu();
+        return;
       }
     });
     panelEl.addEventListener('mousedown', (event)=> event.stopPropagation());
