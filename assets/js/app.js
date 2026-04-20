@@ -452,6 +452,7 @@ console.info('app.js loaded :: 20251123a');
   let activeSlotActionPanel = null;
   let activeBlockedEventId = '';
   let activeBlockConflictIds = new Set();
+  let activeBlockConflictItems = [];
   const NEXT_AVAILABLE_FLOW_ENABLED = false;
   const AGENDA_SLOT_DEBUG = true;
   const BLOCK_REASON_OPTIONS = Object.freeze([
@@ -771,12 +772,40 @@ console.info('app.js loaded :: 20251123a');
   };
   const clearBlockFlowVisualState = ({ rerender = false } = {})=>{
     setBlockFlowOverlayActive(false);
+    activeBlockConflictItems = [];
     if(activeBlockConflictIds.size > 0){
       activeBlockConflictIds = new Set();
       if(rerender){
         rerenderCalendarEvents();
       }
     }
+  };
+  const ensurePanelVisibleInViewport = (panelEl, { anchorRatio = 0.35 } = {})=>{
+    if(!(panelEl instanceof HTMLElement)) return;
+    const rect = panelEl.getBoundingClientRect();
+    if(rect.height <= 0 || window.innerHeight <= 0) return;
+    const viewportH = window.innerHeight;
+    const topSafe = 14;
+    const bottomSafe = 14;
+    const isAbove = rect.top < topSafe;
+    const isBelow = rect.bottom > (viewportH - bottomSafe);
+    if(!isAbove && !isBelow) return;
+
+    const targetTop = Math.max(topSafe, Math.min(viewportH * anchorRatio, viewportH - rect.height - bottomSafe));
+    const delta = rect.top - targetTop;
+    if(Math.abs(delta) < 6) return;
+
+    const currentY = window.scrollY || window.pageYOffset || 0;
+    window.scrollTo({
+      top: Math.max(0, currentY + delta),
+      behavior: 'smooth'
+    });
+  };
+  const schedulePanelViewportCheck = (panelEl, delay = 24)=>{
+    if(!(panelEl instanceof HTMLElement)) return;
+    window.setTimeout(()=>{
+      ensurePanelVisibleInViewport(panelEl, { anchorRatio: 0.36 });
+    }, delay);
   };
   const collectConflictingAppointmentsInRange = (startDate, endDate)=>{
     if(!calendar || !(startDate instanceof Date) || !(endDate instanceof Date)) return [];
@@ -790,6 +819,10 @@ console.info('app.js loaded :: 20251123a');
       const evStart = ev.start;
       const evEnd = ev.end;
       return !!(evStart && evEnd && startDate < evEnd && endDate > evStart);
+    }).sort((a, b)=>{
+      const aTime = a?.start instanceof Date ? a.start.getTime() : Number.POSITIVE_INFINITY;
+      const bTime = b?.start instanceof Date ? b.start.getTime() : Number.POSITIVE_INFINITY;
+      return aTime - bTime;
     });
   };
   const findTimeGridColumnFrame = (slotStartDate)=>{
@@ -873,10 +906,16 @@ console.info('app.js loaded :: 20251123a');
             <button type="button" class="mx-ag-slot-warning-btn" data-ag-slot-action="view-conflicts">Ver citas</button>
           </div>
         </div>
+        <div class="mx-ag-slot-block-help d-none" data-role="slot-block-help"></div>
+        <div class="mx-ag-slot-block-conflicts d-none" data-role="slot-block-conflicts">
+          <div class="mx-ag-slot-block-conflicts-title">Citas afectadas</div>
+          <div class="mx-ag-slot-block-conflicts-list" data-role="slot-block-conflicts-list"></div>
+        </div>
       </div>
     `;
     panelEl.dataset.blockReasonKey = BLOCK_REASON_OPTIONS[0]?.key || 'comida';
     panelEl.dataset.blockReasonLabel = BLOCK_REASON_OPTIONS[0]?.label || 'Comida';
+    panelEl.dataset.showConflicts = '0';
     const syncBlockFormState = ()=>{
       const blockForm = panelEl.querySelector('[data-role="slot-block-form"]');
       const isBlockOpen = !!(blockForm && !blockForm.classList.contains('d-none'));
@@ -894,6 +933,48 @@ console.info('app.js loaded :: 20251123a');
       panelEl.classList.toggle('is-block-open', isBlockOpen);
       setBlockFlowOverlayActive(isBlockOpen);
     };
+    const setBlockHelp = (message = '')=>{
+      const helpEl = panelEl.querySelector('[data-role="slot-block-help"]');
+      if(!helpEl) return;
+      const safe = sanitizeText(message);
+      if(!safe){
+        helpEl.classList.add('d-none');
+        helpEl.textContent = '';
+        return;
+      }
+      helpEl.textContent = safe;
+      helpEl.classList.remove('d-none');
+    };
+    const renderConflictList = (items = [])=>{
+      const wrap = panelEl.querySelector('[data-role="slot-block-conflicts"]');
+      const listEl = panelEl.querySelector('[data-role="slot-block-conflicts-list"]');
+      const shouldShow = panelEl.dataset.showConflicts === '1';
+      if(!wrap || !listEl){
+        return;
+      }
+      if(!shouldShow || !Array.isArray(items) || !items.length){
+        wrap.classList.add('d-none');
+        listEl.innerHTML = '';
+        return;
+      }
+      listEl.innerHTML = items.map((item)=>{
+        const startLabel = item.start instanceof Date
+          ? item.start.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false })
+          : '--:--';
+        const patient = sanitizeText(item.patient || 'Paciente');
+        const status = sanitizeText(item.status || 'Confirmada');
+        return `
+          <div class="mx-ag-slot-conflict-item">
+            <div class="mx-ag-slot-conflict-time">${escapeHtml(startLabel)}</div>
+            <div class="mx-ag-slot-conflict-meta">
+              <div class="mx-ag-slot-conflict-patient">${escapeHtml(patient)}</div>
+              <div class="mx-ag-slot-conflict-status">${escapeHtml(status)}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      wrap.classList.remove('d-none');
+    };
     const updateBlockConflictState = ()=>{
       const blockForm = panelEl.querySelector('[data-role="slot-block-form"]');
       const warningWrap = panelEl.querySelector('[data-role="slot-block-warning"]');
@@ -909,6 +990,8 @@ console.info('app.js loaded :: 20251123a');
         if(confirmBtn){
           confirmBtn.disabled = false;
         }
+        activeBlockConflictItems = [];
+        renderConflictList([]);
         if(activeBlockConflictIds.size > 0){
           activeBlockConflictIds = new Set();
           rerenderCalendarEvents();
@@ -933,6 +1016,12 @@ console.info('app.js loaded :: 20251123a');
         invalidRange = true;
       }
       const conflicts = invalidRange ? [] : collectConflictingAppointmentsInRange(slotStart, blockEnd);
+      activeBlockConflictItems = conflicts.map((ev)=>({
+        id: sanitizeText(ev.id || ''),
+        start: ev.start instanceof Date ? new Date(ev.start) : null,
+        patient: sanitizeText(ev.extendedProps?.patient_display || ev.title || 'Paciente'),
+        status: sanitizeText(ev.extendedProps?.status_label || 'Confirmada')
+      }));
       const nextIds = new Set(conflicts.map((ev)=> sanitizeText(ev.id || '')).filter(Boolean));
       if(!areIdSetsEqual(activeBlockConflictIds, nextIds)){
         activeBlockConflictIds = nextIds;
@@ -950,15 +1039,25 @@ console.info('app.js loaded :: 20251123a');
           ? 'Este rango incluye citas existentes (1 cita afectada)'
           : `Este rango incluye citas existentes (${nextIds.size} citas afectadas)`;
       }
+      if(!hasConflicts){
+        panelEl.dataset.showConflicts = '0';
+      }
+      renderConflictList(activeBlockConflictItems);
       panelEl.classList.toggle('has-block-conflict', hasConflicts);
+      if(isBlockOpen){
+        schedulePanelViewportCheck(panelEl, 20);
+      }
     };
     const openBlockForm = ()=>{
       const blockForm = panelEl.querySelector('[data-role="slot-block-form"]');
       if(!blockForm) return;
       blockForm.classList.remove('d-none');
       blockForm.setAttribute('aria-hidden', 'false');
+      panelEl.dataset.showConflicts = '0';
+      setBlockHelp('');
       syncBlockFormState();
       updateBlockConflictState();
+      schedulePanelViewportCheck(panelEl, 30);
     };
     const closeBlockForm = ()=>{
       const blockForm = panelEl.querySelector('[data-role="slot-block-form"]');
@@ -966,6 +1065,8 @@ console.info('app.js loaded :: 20251123a');
       blockForm.classList.add('d-none');
       blockForm.setAttribute('aria-hidden', 'true');
       syncBlockFormState();
+      panelEl.dataset.showConflicts = '0';
+      setBlockHelp('');
       updateBlockConflictState();
     };
     const confirmBlock = ()=>{
@@ -994,6 +1095,8 @@ console.info('app.js loaded :: 20251123a');
       const appointmentConflicts = collectConflictingAppointmentsInRange(slotStart, blockEnd);
       if(appointmentConflicts.length){
         setError('Este rango incluye citas existentes. Ajusta el rango antes de confirmar.');
+        panelEl.dataset.showConflicts = '1';
+        setBlockHelp('');
         updateBlockConflictState();
         return;
       }
@@ -1067,6 +1170,7 @@ console.info('app.js loaded :: 20251123a');
         }
         actionBtn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
         panelEl.classList.toggle('is-more-open', !isOpen);
+        schedulePanelViewportCheck(panelEl, 18);
         return;
       }
       if(action === 'new'){
@@ -1083,25 +1187,65 @@ console.info('app.js loaded :: 20251123a');
         return;
       }
       if(action === 'adjust-range'){
+        panelEl.dataset.showConflicts = '1';
+        const slotStart = cellMenuSelection?.start instanceof Date ? new Date(cellMenuSelection.start) : null;
+        const firstConflict = activeBlockConflictItems[0] || null;
         const modeUntil = panelEl.querySelector('input[data-role="slot-block-mode"][value="until"]');
-        if(modeUntil){
+        const endSelect = panelEl.querySelector('[data-role="slot-block-end"]');
+        if(modeUntil && endSelect){
           modeUntil.checked = true;
           syncBlockFormState();
-          updateBlockConflictState();
-          const endSelect = panelEl.querySelector('[data-role="slot-block-end"]');
-          endSelect?.focus?.();
+          if(slotStart && firstConflict?.start instanceof Date){
+            const desiredEndSql = toSqlDateTimeLocal(firstConflict.start);
+            const candidates = Array.from(endSelect.options || []);
+            const exactOption = candidates.find((opt)=> sanitizeText(opt.value) === desiredEndSql);
+            if(exactOption){
+              endSelect.value = exactOption.value;
+              setBlockHelp('Se ajustó el rango al último horario disponible antes de las citas existentes.');
+            }else{
+              const fallback = candidates.find((opt)=>{
+                const dt = parseDateTimeLocalSafe(sanitizeText(opt.value || ''));
+                return dt && dt > slotStart && dt <= firstConflict.start;
+              });
+              if(fallback){
+                endSelect.value = fallback.value;
+                setBlockHelp('Se ajustó el rango al último horario disponible antes de las citas existentes.');
+              }else{
+                setBlockHelp('No hay un rango libre previo al primer conflicto. Ajusta manualmente.');
+              }
+            }
+            updateBlockConflictState();
+          }else{
+            updateBlockConflictState();
+          }
+          endSelect.focus?.();
         }
+        schedulePanelViewportCheck(panelEl, 28);
         return;
       }
       if(action === 'view-conflicts'){
+        if(!activeBlockConflictItems.length){
+          setBlockHelp('No hay citas en conflicto para el rango actual.');
+          panelEl.dataset.showConflicts = '0';
+          renderConflictList([]);
+          return;
+        }
+        panelEl.dataset.showConflicts = '1';
+        setBlockHelp('');
+        renderConflictList(activeBlockConflictItems);
         const firstId = Array.from(activeBlockConflictIds)[0] || '';
-        if(firstId && els.calendarWrap){
-          const firstEventEl = Array.from(els.calendarWrap.querySelectorAll('.fc .fc-event'))
-            .find((node)=> sanitizeText(node.getAttribute('data-event-id') || '') === firstId);
+        const firstConflict = activeBlockConflictItems[0] || null;
+        if(firstConflict?.start instanceof Date && calendar){
+          const hh = String(firstConflict.start.getHours()).padStart(2, '0');
+          const mm = String(firstConflict.start.getMinutes()).padStart(2, '0');
+          try{ calendar.scrollToTime(`${hh}:${mm}:00`); }catch(_){}
+        }else if(firstId && els.calendarWrap){
+          const firstEventEl = els.calendarWrap.querySelector('.mx-ag-event-cell.is-block-conflict');
           if(firstEventEl){
             try{ firstEventEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); }catch(_){}
           }
         }
+        schedulePanelViewportCheck(panelEl, 38);
         return;
       }
       if(action === 'confirm-block'){
@@ -1206,6 +1350,7 @@ console.info('app.js loaded :: 20251123a');
         slotTime: `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}:00`
       });
     }
+    schedulePanelViewportCheck(activeSlotActionPanel, 26);
   };
   const setNextSlotsError = (message = '')=>{
     if(!els.nextSlotsError) return;
