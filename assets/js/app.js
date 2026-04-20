@@ -449,8 +449,16 @@ console.info('app.js loaded :: 20251123a');
   let cellMenuSelection = null;
   let activeSlotActionHost = null;
   let activeSlotActionPanel = null;
+  let activeBlockedEventId = '';
   const NEXT_AVAILABLE_FLOW_ENABLED = false;
   const AGENDA_SLOT_DEBUG = true;
+  const BLOCK_REASON_OPTIONS = Object.freeze([
+    { key: 'comida', label: 'Comida' },
+    { key: 'procedimiento', label: 'Procedimiento' },
+    { key: 'personal', label: 'Personal' },
+    { key: 'no_disponible', label: 'No disponible' },
+    { key: 'otro', label: 'Otro' }
+  ]);
 
   const sanitizeText = (value)=> String(value ?? '').trim();
   const escapeHtml = (value)=> String(value ?? '')
@@ -538,6 +546,115 @@ console.info('app.js loaded :: 20251123a');
     if(!startSql || !endSql) return '';
     return `${startSql}__${endSql}`;
   };
+  const resolveBlockedSlotsStorageKey = ()=>{
+    const doctorId = sanitizeText(getDoctorId() || 'doctor');
+    const consultorioId = sanitizeText(resolveConsultorioId() || getAvailabilityConsultorioId() || 'all');
+    return `mxmed.agenda.blocked_slots.v1:${doctorId}:${consultorioId}`;
+  };
+  const normalizeBlockedSlotRecord = (row = null)=>{
+    if(!row || typeof row !== 'object') return null;
+    const blockId = sanitizeText(row.block_id || row.id || '');
+    const startAt = sanitizeText(row.start_at || '');
+    const endAt = sanitizeText(row.end_at || '');
+    const reasonKey = sanitizeText(row.reason_key || '');
+    const reasonLabel = sanitizeText(row.reason_label || '');
+    const reasonNote = sanitizeText(row.reason_note || '');
+    if(!blockId || !startAt || !endAt) return null;
+    const start = parseDateTimeLocalSafe(startAt);
+    const end = parseDateTimeLocalSafe(endAt);
+    if(!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start){
+      return null;
+    }
+    return {
+      block_id: blockId,
+      start_at: toSqlDateTimeLocal(start),
+      end_at: toSqlDateTimeLocal(end),
+      reason_key: reasonKey || 'otro',
+      reason_label: reasonLabel || 'Otro',
+      reason_note: reasonNote,
+      created_at: sanitizeText(row.created_at || toSqlDateTimeLocal(new Date()))
+    };
+  };
+  const readBlockedSlots = ()=>{
+    try{
+      const raw = window.localStorage?.getItem(resolveBlockedSlotsStorageKey()) || '[]';
+      const parsed = JSON.parse(raw);
+      if(!Array.isArray(parsed)) return [];
+      return parsed.map((row)=> normalizeBlockedSlotRecord(row)).filter(Boolean);
+    }catch(_){
+      return [];
+    }
+  };
+  const writeBlockedSlots = (rows = [])=>{
+    const normalized = (Array.isArray(rows) ? rows : []).map((row)=> normalizeBlockedSlotRecord(row)).filter(Boolean);
+    try{
+      window.localStorage?.setItem(resolveBlockedSlotsStorageKey(), JSON.stringify(normalized));
+    }catch(_){}
+    return normalized;
+  };
+  const removeBlockedSlotById = (blockId = '')=>{
+    const safeId = sanitizeText(blockId);
+    if(!safeId) return false;
+    const current = readBlockedSlots();
+    const next = current.filter((row)=> sanitizeText(row.block_id) !== safeId);
+    writeBlockedSlots(next);
+    return next.length !== current.length;
+  };
+  const getBlockedSlotUntilOptions = (startDate)=>{
+    if(!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return [];
+    const slotMinutes = resolveAgendaSlotMinutes();
+    const endMinutes = timeToMinutes(resolveAgendaEndVisibleTime());
+    const options = [];
+    if(endMinutes === null) return options;
+    let cursor = plusMinutes(startDate, slotMinutes);
+    while(cursor.getFullYear() === startDate.getFullYear()
+      && cursor.getMonth() === startDate.getMonth()
+      && cursor.getDate() === startDate.getDate()){
+      const cursorMinutes = (cursor.getHours() * 60) + cursor.getMinutes();
+      if(cursorMinutes > endMinutes) break;
+      options.push({
+        value: toSqlDateTimeLocal(cursor),
+        label: cursor.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false })
+      });
+      cursor = plusMinutes(cursor, slotMinutes);
+    }
+    return options;
+  };
+  const mapBlockedSlotToEvent = (row = null)=>{
+    const normalized = normalizeBlockedSlotRecord(row);
+    if(!normalized) return null;
+    const reasonLabel = sanitizeText(normalized.reason_label || 'Sin motivo');
+    const reasonNote = sanitizeText(normalized.reason_note || '');
+    return {
+      id: `blocked:${normalized.block_id}`,
+      title: 'Horario bloqueado',
+      start: toIsoLike(normalized.start_at),
+      end: toIsoLike(normalized.end_at),
+      color: '#8fa0ad',
+      classNames: ['mx-ag-event', 'mx-ag-blocked-event'],
+      extendedProps: {
+        event_type: 'blocked_slot',
+        block_id: normalized.block_id,
+        block_reason_key: sanitizeText(normalized.reason_key || ''),
+        block_reason_label: reasonLabel,
+        block_reason_note: reasonNote
+      }
+    };
+  };
+  const collectBlockedSlotEvents = (fetchInfo)=>{
+    const safeStart = fetchInfo?.start instanceof Date ? fetchInfo.start : new Date(fetchInfo?.start || '');
+    const safeEnd = fetchInfo?.end instanceof Date ? fetchInfo.end : new Date(fetchInfo?.end || '');
+    if(Number.isNaN(safeStart.getTime()) || Number.isNaN(safeEnd.getTime())) return [];
+    return readBlockedSlots()
+      .filter((row)=>{
+        const start = parseDateTimeLocalSafe(row.start_at);
+        const end = parseDateTimeLocalSafe(row.end_at);
+        if(!start || !end) return false;
+        return start < safeEnd && end > safeStart;
+      })
+      .map((row)=> mapBlockedSlotToEvent(row))
+      .filter(Boolean);
+  };
   const setPatientSearchMsg = (message = '', tone = 'muted')=>{
     if(!els.patientSearchMsg) return;
     const msg = sanitizeText(message);
@@ -623,6 +740,16 @@ console.info('app.js loaded :: 20251123a');
     activeSlotActionHost = null;
     cellMenuSelection = null;
   };
+  const rerenderCalendarEvents = ()=>{
+    if(!calendar) return;
+    if(typeof calendar.rerenderEvents === 'function'){
+      try{
+        calendar.rerenderEvents();
+        return;
+      }catch(_){}
+    }
+    try{ calendar.refetchEvents(); }catch(_){}
+  };
   const findTimeGridColumnFrame = (slotStartDate)=>{
     if(!els.calendarWrap || !(slotStartDate instanceof Date) || Number.isNaN(slotStartDate.getTime())) return null;
     const dayKey = formatYmdLocal(slotStartDate);
@@ -642,6 +769,15 @@ console.info('app.js loaded :: 20251123a');
     return (slat instanceof HTMLElement) ? slat : null;
   };
   const buildSlotActionPanel = ()=>{
+    const start = cellMenuSelection?.start instanceof Date ? new Date(cellMenuSelection.start) : null;
+    const end = cellMenuSelection?.end instanceof Date ? new Date(cellMenuSelection.end) : null;
+    const untilOptions = getBlockedSlotUntilOptions(start);
+    const blockReasonsHtml = BLOCK_REASON_OPTIONS.map((item, idx)=>{
+      const isActive = idx === 0;
+      return `
+        <button type="button" class="mx-ag-slot-chip${isActive ? ' is-active' : ''}" data-role="slot-block-reason" data-reason-key="${escapeHtml(item.key)}" data-reason-label="${escapeHtml(item.label)}">${escapeHtml(item.label)}</button>
+      `;
+    }).join('');
     const panelEl = document.createElement('div');
     panelEl.className = 'mx-ag-slot-action-layer';
     panelEl.setAttribute('role', 'menu');
@@ -659,7 +795,141 @@ console.info('app.js loaded :: 20251123a');
       <div class="mx-ag-slot-more-menu" data-role="slot-more-menu" aria-hidden="true">
         <button type="button" class="mx-ag-slot-action-btn is-secondary" data-ag-slot-action="block">Bloquear horario</button>
       </div>
+      <div class="mx-ag-slot-block-form d-none" data-role="slot-block-form" aria-hidden="true">
+        <div class="mx-ag-slot-block-title">Bloquear horario</div>
+        <div class="mx-ag-slot-block-mode" role="radiogroup" aria-label="Tipo de bloqueo">
+          <label class="mx-ag-slot-radio">
+            <input type="radio" name="ag_slot_block_mode" value="single" data-role="slot-block-mode" checked>
+            <span>Solo este horario</span>
+          </label>
+          <label class="mx-ag-slot-radio">
+            <input type="radio" name="ag_slot_block_mode" value="until" data-role="slot-block-mode">
+            <span>Hasta cierta hora</span>
+          </label>
+        </div>
+        <div class="mx-ag-slot-block-end d-none" data-role="slot-block-end-wrap">
+          <label for="ag_slot_block_end_select" class="mx-ag-slot-field-label">Hora final</label>
+          <select id="ag_slot_block_end_select" class="mx-ag-slot-select" data-role="slot-block-end">
+            ${untilOptions.length ? untilOptions.map((opt)=> `<option value="${escapeHtml(opt.value)}">${escapeHtml(opt.label)}</option>`).join('') : '<option value="">Sin opciones</option>'}
+          </select>
+        </div>
+        <div class="mx-ag-slot-field-label">Motivo</div>
+        <div class="mx-ag-slot-chips" data-role="slot-block-reasons">
+          ${blockReasonsHtml}
+        </div>
+        <div class="mx-ag-slot-block-other d-none" data-role="slot-block-other-wrap">
+          <input type="text" class="mx-ag-slot-input" data-role="slot-block-other-input" maxlength="60" placeholder="Especifica motivo">
+        </div>
+        <div class="mx-ag-slot-block-actions">
+          <button type="button" class="mx-ag-slot-block-btn is-cancel" data-ag-slot-action="cancel-block">Cancelar</button>
+          <button type="button" class="mx-ag-slot-block-btn is-confirm" data-ag-slot-action="confirm-block">Confirmar bloqueo</button>
+        </div>
+      </div>
     `;
+    panelEl.dataset.blockReasonKey = BLOCK_REASON_OPTIONS[0]?.key || 'comida';
+    panelEl.dataset.blockReasonLabel = BLOCK_REASON_OPTIONS[0]?.label || 'Comida';
+    const syncBlockFormState = ()=>{
+      const blockForm = panelEl.querySelector('[data-role="slot-block-form"]');
+      const isBlockOpen = !!(blockForm && !blockForm.classList.contains('d-none'));
+      const blockModeInput = panelEl.querySelector('input[data-role="slot-block-mode"]:checked');
+      const mode = sanitizeText(blockModeInput?.value || 'single');
+      const endWrap = panelEl.querySelector('[data-role="slot-block-end-wrap"]');
+      const reasonKey = sanitizeText(panelEl.dataset.blockReasonKey || '');
+      const otherWrap = panelEl.querySelector('[data-role="slot-block-other-wrap"]');
+      if(endWrap){
+        endWrap.classList.toggle('d-none', !(isBlockOpen && mode === 'until'));
+      }
+      if(otherWrap){
+        otherWrap.classList.toggle('d-none', !(isBlockOpen && reasonKey === 'otro'));
+      }
+      panelEl.classList.toggle('is-block-open', isBlockOpen);
+    };
+    const openBlockForm = ()=>{
+      const blockForm = panelEl.querySelector('[data-role="slot-block-form"]');
+      if(!blockForm) return;
+      blockForm.classList.remove('d-none');
+      blockForm.setAttribute('aria-hidden', 'false');
+      syncBlockFormState();
+    };
+    const closeBlockForm = ()=>{
+      const blockForm = panelEl.querySelector('[data-role="slot-block-form"]');
+      if(!blockForm) return;
+      blockForm.classList.add('d-none');
+      blockForm.setAttribute('aria-hidden', 'true');
+      syncBlockFormState();
+    };
+    const confirmBlock = ()=>{
+      const slotStart = cellMenuSelection?.start instanceof Date ? new Date(cellMenuSelection.start) : null;
+      const slotEnd = cellMenuSelection?.end instanceof Date ? new Date(cellMenuSelection.end) : null;
+      if(!slotStart || !slotEnd || Number.isNaN(slotStart.getTime()) || Number.isNaN(slotEnd.getTime())){
+        setError('No se pudo resolver el horario a bloquear.');
+        return;
+      }
+      const modeInput = panelEl.querySelector('input[data-role="slot-block-mode"]:checked');
+      const mode = sanitizeText(modeInput?.value || 'single');
+      const endSelect = panelEl.querySelector('[data-role="slot-block-end"]');
+      let blockEnd = new Date(slotEnd);
+      if(mode === 'until'){
+        const selectedEnd = parseDateTimeLocalSafe(sanitizeText(endSelect?.value || ''));
+        if(!selectedEnd || Number.isNaN(selectedEnd.getTime())){
+          setError('Selecciona una hora final válida para el bloqueo.');
+          return;
+        }
+        blockEnd = selectedEnd;
+      }
+      if(blockEnd <= slotStart){
+        setError('La hora final del bloqueo debe ser mayor a la inicial.');
+        return;
+      }
+      if(!isSelectionAvailable(slotStart, blockEnd)){
+        setError('El rango seleccionado incluye horarios ocupados o no disponibles.');
+        return;
+      }
+      const reasonKey = sanitizeText(panelEl.dataset.blockReasonKey || '');
+      const reasonLabel = sanitizeText(panelEl.dataset.blockReasonLabel || '');
+      const otherInput = panelEl.querySelector('[data-role="slot-block-other-input"]');
+      const reasonNote = (reasonKey === 'otro') ? sanitizeText(otherInput?.value || '') : '';
+      if(reasonKey === 'otro' && !reasonNote){
+        setError('Escribe un motivo breve para el bloqueo.');
+        return;
+      }
+      const rows = readBlockedSlots();
+      const blockId = `blk_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      rows.push({
+        block_id: blockId,
+        start_at: toSqlDateTimeLocal(slotStart),
+        end_at: toSqlDateTimeLocal(blockEnd),
+        reason_key: reasonKey || 'otro',
+        reason_label: (reasonKey === 'otro' ? 'Otro' : (reasonLabel || 'Otro')),
+        reason_note: reasonNote,
+        created_at: toSqlDateTimeLocal(new Date())
+      });
+      writeBlockedSlots(rows);
+      activeBlockedEventId = '';
+      hideCellMenu();
+      rerenderCalendarEvents();
+      setError('');
+    };
+    panelEl.addEventListener('click', (event)=>{
+      const chip = event.target.closest('[data-role="slot-block-reason"]');
+      if(!chip) return;
+      event.stopPropagation();
+      const reasonKey = sanitizeText(chip.getAttribute('data-reason-key') || '');
+      const reasonLabel = sanitizeText(chip.getAttribute('data-reason-label') || '');
+      panelEl.querySelectorAll('[data-role="slot-block-reason"]').forEach((btn)=>{
+        btn.classList.toggle('is-active', btn === chip);
+      });
+      panelEl.dataset.blockReasonKey = reasonKey;
+      panelEl.dataset.blockReasonLabel = reasonLabel;
+      syncBlockFormState();
+    });
+    panelEl.addEventListener('change', (event)=>{
+      const modeInput = event.target.closest('[data-role="slot-block-mode"]');
+      if(modeInput){
+        event.stopPropagation();
+        syncBlockFormState();
+      }
+    });
     panelEl.addEventListener('click', (event)=>{
       event.stopPropagation();
       const actionBtn = event.target.closest('[data-ag-slot-action]');
@@ -682,7 +952,15 @@ console.info('app.js loaded :: 20251123a');
         return;
       }
       if(action === 'block'){
-        setError('Bloqueo de horario: preparado para siguiente fase de integración.');
+        openBlockForm();
+        return;
+      }
+      if(action === 'cancel-block'){
+        closeBlockForm();
+        return;
+      }
+      if(action === 'confirm-block'){
+        confirmBlock();
         return;
       }
     });
@@ -2123,9 +2401,12 @@ console.info('app.js loaded :: 20251123a');
       });
       const first = list[0];
       const total = list.length;
-      const patient = sanitizeText(first?.extendedProps?.patient_display || first?.title || 'Paciente');
+      const firstType = sanitizeText(first?.extendedProps?.event_type || '');
+      const patient = (firstType === 'blocked_slot')
+        ? 'Horario bloqueado'
+        : sanitizeText(first?.extendedProps?.patient_display || first?.title || 'Paciente');
       const extra = Math.max(0, total - 1);
-      const extraLabel = extra > 0 ? ` y ${extra} cita${extra === 1 ? '' : 's'} más` : '';
+      const extraLabel = extra > 0 ? ` y ${extra} más` : '';
       summaryEvents.push({
         id: `month-summary:${dayKey}`,
         title: `${patient}${extraLabel}`,
@@ -2238,9 +2519,19 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const fetchAppointments = async (fetchInfo)=>{
+    const blockedEvents = collectBlockedSlotEvents(fetchInfo);
     if(isAgendaDemoContext()){
       const events = buildDemoAppointments(fetchInfo).map(mapAppointmentToEvent).filter((event)=> !!event.start);
-      return enrichMonthSummaryMetadata(events);
+      const merged = [...events, ...blockedEvents];
+      merged.sort((a, b)=>{
+        const aTime = new Date(a.start || '').getTime();
+        const bTime = new Date(b.start || '').getTime();
+        if(Number.isNaN(aTime) && Number.isNaN(bTime)) return 0;
+        if(Number.isNaN(aTime)) return 1;
+        if(Number.isNaN(bTime)) return -1;
+        return aTime - bTime;
+      });
+      return enrichMonthSummaryMetadata(merged);
     }
     const doctorId = getDoctorId();
     const consultorioId = sanitizeText(els.consultorio?.value || '');
@@ -2268,7 +2559,16 @@ console.info('app.js loaded :: 20251123a');
       throw new Error(message || 'No se pudieron cargar las citas de agenda.');
     }
     const events = json.data.map(mapAppointmentToEvent).filter((event)=> !!event.start);
-    return enrichMonthSummaryMetadata(events);
+    const merged = [...events, ...blockedEvents];
+    merged.sort((a, b)=>{
+      const aTime = new Date(a.start || '').getTime();
+      const bTime = new Date(b.start || '').getTime();
+      if(Number.isNaN(aTime) && Number.isNaN(bTime)) return 0;
+      if(Number.isNaN(aTime)) return 1;
+      if(Number.isNaN(bTime)) return -1;
+      return aTime - bTime;
+    });
+    return enrichMonthSummaryMetadata(merged);
   };
 
   const fetchAvailabilityEvents = async (fetchInfo)=>{
@@ -2439,6 +2739,7 @@ console.info('app.js loaded :: 20251123a');
           return { html: '' };
         }
         const props = arg.event.extendedProps || {};
+        const eventType = sanitizeText(props.event_type || '');
         const viewType = String(arg.view?.type || '');
         if(viewType === 'dayGridMonth'){
           const patient = sanitizeText(props.month_summary_primary || props.patient_display || arg.event.title || 'Paciente');
@@ -2449,6 +2750,19 @@ console.info('app.js loaded :: 20251123a');
             html: `
               <div class="mx-ag-month-summary" title="${escapeHtml(titleText)}">
                 <span class="mx-ag-month-primary">${escapeHtml(patient)}</span>${hasExtra ? `<span class="mx-ag-month-more">${escapeHtml(extraLabel)}</span>` : ''}
+              </div>
+            `
+          };
+        }
+        if(eventType === 'blocked_slot'){
+          const reasonLabel = sanitizeText(props.block_reason_note || props.block_reason_label || '');
+          const isActiveBlock = sanitizeText(activeBlockedEventId || '') === sanitizeText(arg.event.id || '');
+          return {
+            html: `
+              <div class="mx-ag-blocked-event-cell${isActiveBlock ? ' is-active' : ''}">
+                <div class="mx-ag-blocked-event-title">Horario bloqueado</div>
+                ${reasonLabel ? `<div class="mx-ag-blocked-event-reason">${escapeHtml(reasonLabel)}</div>` : ''}
+                ${isActiveBlock ? `<button type="button" class="mx-ag-blocked-event-remove" data-ag-block-action="remove" data-ag-block-id="${escapeHtml(sanitizeText(props.block_id || ''))}">Quitar bloqueo</button>` : ''}
               </div>
             `
           };
@@ -2472,6 +2786,10 @@ console.info('app.js loaded :: 20251123a');
           });
         }
         const viewType = String(info?.view?.type || '');
+        if(activeBlockedEventId){
+          activeBlockedEventId = '';
+          rerenderCalendarEvents();
+        }
         if(calendar && typeof calendar.unselect === 'function'){
           try{ calendar.unselect(); }catch(_){}
         }
@@ -2512,6 +2830,10 @@ console.info('app.js loaded :: 20251123a');
         const start = selectionInfo?.start instanceof Date ? selectionInfo.start : new Date(selectionInfo?.start || '');
         const end = selectionInfo?.end instanceof Date ? selectionInfo.end : new Date(selectionInfo?.end || '');
         const currentView = String(calendar?.view?.type || '');
+        if(activeBlockedEventId){
+          activeBlockedEventId = '';
+          rerenderCalendarEvents();
+        }
         if(currentView === 'timeGridWeek' && nextSlotFocus){
           if(isNextSlotFocusSelection(start, end)){
             const opened = openCreateModalFromSelection({ start, end }, { bypassAvailabilityCheck: true });
@@ -2536,6 +2858,17 @@ console.info('app.js loaded :: 20251123a');
       },
       eventClick: (info)=>{
         const props = info.event.extendedProps || {};
+        if(sanitizeText(props.event_type || '') === 'blocked_slot'){
+          if(info.jsEvent?.target?.closest?.('[data-ag-block-action="remove"]')){
+            return;
+          }
+          info.jsEvent?.preventDefault?.();
+          hideCellMenu();
+          const clickedId = sanitizeText(info.event.id || '');
+          activeBlockedEventId = (sanitizeText(activeBlockedEventId) === clickedId) ? '' : clickedId;
+          rerenderCalendarEvents();
+          return;
+        }
         const details = [
           `Cita: ${sanitizeText(info.event.id || '-')}`,
           `Paciente: ${sanitizeText(props.patient_id || '-')}`,
@@ -2547,6 +2880,7 @@ console.info('app.js loaded :: 20251123a');
       },
       datesSet: ()=>{
         hideCellMenu();
+        activeBlockedEventId = '';
         if(String(calendar?.view?.type || '') !== 'timeGridWeek'){
           clearNextSlotFocus();
         }
@@ -2742,6 +3076,19 @@ console.info('app.js loaded :: 20251123a');
       }
     }, true);
     els.calendarWrap?.addEventListener('click', (event)=>{
+      const removeBtn = event.target.closest('[data-ag-block-action="remove"]');
+      if(!removeBtn) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const blockId = sanitizeText(removeBtn.getAttribute('data-ag-block-id') || '');
+      if(!blockId) return;
+      const removed = removeBlockedSlotById(blockId);
+      activeBlockedEventId = '';
+      if(removed){
+        rerenderCalendarEvents();
+      }
+    }, true);
+    els.calendarWrap?.addEventListener('click', (event)=>{
       if(!NEXT_AVAILABLE_FLOW_ENABLED) return;
       if(!nextSlotFocus) return;
       const focusTarget = event.target.closest('.mx-ag-next-focus-slot');
@@ -2765,6 +3112,13 @@ console.info('app.js loaded :: 20251123a');
       if(!insideMenu && !insideCalendar){
         hideCellMenu();
       }
+    });
+    document.addEventListener('click', (event)=>{
+      if(!activeBlockedEventId) return;
+      const insideBlockedEvent = event.target.closest('.mx-ag-blocked-event-cell');
+      if(insideBlockedEvent) return;
+      activeBlockedEventId = '';
+      rerenderCalendarEvents();
     });
 
     document.querySelectorAll('.menu-sub-btn[data-panel="p-ag-admin"]').forEach((btn)=>{

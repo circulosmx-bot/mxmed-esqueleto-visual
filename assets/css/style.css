@@ -5466,6 +5466,126 @@ body{margin:0;background:var(--mm-fondo-base);}
   opacity: .58;
   cursor: not-allowed;
 }
+.mx-ag-slot-block-form{
+  display: grid;
+  gap: 5px;
+  padding-top: 1px;
+}
+.mx-ag-slot-block-title{
+  font-size: .68rem;
+  font-weight: 700;
+  color: #39566a;
+  line-height: 1.15;
+}
+.mx-ag-slot-block-mode{
+  display: grid;
+  gap: 3px;
+}
+.mx-ag-slot-radio{
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: .68rem;
+  font-weight: 500;
+  color: #425c6d;
+  line-height: 1.2;
+}
+.mx-ag-slot-radio input{
+  margin: 0;
+  accent-color: #00a13a;
+}
+.mx-ag-slot-field-label{
+  font-size: .64rem;
+  font-weight: 600;
+  color: #4d6574;
+  line-height: 1.1;
+}
+.mx-ag-slot-select,
+.mx-ag-slot-input{
+  width: 100%;
+  min-height: 24px;
+  border: 1px solid #cfdde7;
+  border-radius: 6px;
+  background: #fff;
+  color: #2f4d60;
+  padding: 0 7px;
+  font-size: .69rem;
+  line-height: 1;
+}
+.mx-ag-slot-select:focus-visible,
+.mx-ag-slot-input:focus-visible{
+  outline: none;
+  border-color: #9ec3d8;
+  box-shadow: 0 0 0 1px rgba(122, 171, 198, 0.28);
+}
+.mx-ag-slot-chips{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.mx-ag-slot-chip{
+  border: 1px solid #d5e2eb;
+  background: rgba(246, 250, 253, 0.94);
+  color: #496273;
+  border-radius: 999px;
+  min-height: 20px;
+  padding: 0 8px;
+  font-size: .64rem;
+  font-weight: 600;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color .14s ease, border-color .14s ease, color .14s ease;
+}
+.mx-ag-slot-chip:hover,
+.mx-ag-slot-chip:focus-visible{
+  outline: none;
+  background: #edf4f9;
+  border-color: #bdcfdb;
+  color: #315366;
+}
+.mx-ag-slot-chip.is-active{
+  border-color: #9dc53f;
+  background: rgba(0, 191, 0, 0.13);
+  color: #1f5b1f;
+}
+.mx-ag-slot-block-actions{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+.mx-ag-slot-block-btn{
+  border: 1px solid #d2dee7;
+  background: #f7fafc;
+  color: #436072;
+  border-radius: 6px;
+  min-height: 24px;
+  padding: 0 7px;
+  font-size: .66rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: background-color .14s ease, border-color .14s ease, color .14s ease;
+}
+.mx-ag-slot-block-btn:hover,
+.mx-ag-slot-block-btn:focus-visible{
+  outline: none;
+  background: #eef4f8;
+  border-color: #bfd2df;
+}
+.mx-ag-slot-block-btn.is-confirm{
+  border-color: #00a93b;
+  background: #00bf00;
+  color: #fff;
+}
+.mx-ag-slot-block-btn.is-confirm:hover,
+.mx-ag-slot-block-btn.is-confirm:focus-visible{
+  border-color: #009d34;
+  background: #00ad00;
+}
+.mx-ag-slot-action-layer.is-block-open{
+  gap: 4px;
+}
 .mx-agenda-v1 #ag_patient_search_results{
   max-height: 180px;
   overflow: auto;
@@ -5678,6 +5798,55 @@ body{margin:0;background:var(--mm-fondo-base);}
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.mx-agenda-calendar-wrap .fc .fc-timegrid-event.mx-ag-blocked-event,
+.mx-agenda-calendar-wrap .fc .fc-daygrid-event.mx-ag-blocked-event{
+  background: #c9d3dc !important;
+  border-color: #9caab7 !important;
+  color: #354654 !important;
+}
+.mx-ag-blocked-event-cell{
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+  padding: 2px 4px;
+  box-sizing: border-box;
+}
+.mx-ag-blocked-event-title{
+  font-size: .76rem;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mx-ag-blocked-event-reason{
+  font-size: .68rem;
+  font-weight: 500;
+  line-height: 1.1;
+  opacity: .92;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mx-ag-blocked-event-remove{
+  justify-self: start;
+  border: 0;
+  background: rgba(255, 255, 255, 0.78);
+  color: #3f4f5d;
+  border-radius: 5px;
+  min-height: 18px;
+  padding: 0 6px;
+  font-size: .62rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.mx-ag-blocked-event-remove:hover,
+.mx-ag-blocked-event-remove:focus-visible{
+  outline: none;
+  background: rgba(255, 255, 255, 0.92);
+  color: #2c3f4f;
 }
 .mx-agenda-calendar-wrap .fc .fc-timegrid-event.mx-ag-event--past,
 .mx-agenda-calendar-wrap .fc .fc-daygrid-event.mx-ag-event--past{
