@@ -5317,7 +5317,21 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mx-agenda-calendar-wrap .fc .fc-timegrid-col-frame.is-slot-action-open{
   position: relative;
   overflow: hidden;
-  z-index: 9;
+  z-index: 14;
+}
+.mx-ag-slot-action-portal{
+  position: absolute;
+  z-index: 22;
+  pointer-events: none;
+}
+.mx-agenda-calendar-wrap.mx-ag-block-flow-active::after{
+  content: "";
+  position: absolute;
+  inset: 10px;
+  background: rgba(24, 38, 50, 0.26);
+  border-radius: 10px;
+  z-index: 10;
+  pointer-events: auto;
 }
 .mx-ag-slot-action-layer,
 .mx-ag-slot-action-panel{
@@ -5333,7 +5347,8 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 1px 3px rgba(17, 45, 64, 0.08);
-  z-index: 12;
+  z-index: 23;
+  pointer-events: auto;
 }
 .mx-ag-slot-action-main{
   display: grid;
@@ -5555,6 +5570,43 @@ body{margin:0;background:var(--mm-fondo-base);}
   grid-template-columns: 1fr 1fr;
   gap: 5px;
 }
+.mx-ag-slot-block-warning{
+  margin-top: 1px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  background: rgba(255, 235, 236, 0.94);
+  border: 1px solid rgba(232, 132, 135, 0.5);
+  display: grid;
+  gap: 4px;
+}
+.mx-ag-slot-block-warning-text{
+  color: #8f2d37;
+  font-size: .64rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.mx-ag-slot-block-warning-actions{
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.mx-ag-slot-warning-btn{
+  border: 1px solid rgba(194, 109, 117, 0.38);
+  background: rgba(255, 245, 246, 0.9);
+  color: #7a3942;
+  border-radius: 999px;
+  min-height: 18px;
+  padding: 0 6px;
+  font-size: .61rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.mx-ag-slot-warning-btn:hover,
+.mx-ag-slot-warning-btn:focus-visible{
+  outline: none;
+  background: rgba(255, 238, 240, 0.95);
+  border-color: rgba(179, 91, 101, 0.45);
+}
 .mx-ag-slot-block-btn{
   border: 1px solid #d2dee7;
   background: #f7fafc;
@@ -5585,6 +5637,10 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 .mx-ag-slot-action-layer.is-block-open{
   gap: 4px;
+}
+.mx-ag-slot-action-layer.has-block-conflict .mx-ag-slot-block-btn.is-confirm{
+  opacity: .45;
+  cursor: not-allowed;
 }
 .mx-agenda-v1 #ag_patient_search_results{
   max-height: 180px;
@@ -5789,6 +5845,11 @@ body{margin:0;background:var(--mm-fondo-base);}
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.mx-ag-event-cell.is-block-conflict{
+  background: rgba(220, 53, 69, 0.16);
+  border: 1px solid rgba(220, 53, 69, 0.46);
+  border-radius: 6px;
 }
 .mx-ag-event-state{
   font-size: .76rem;

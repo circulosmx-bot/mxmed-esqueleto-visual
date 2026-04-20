@@ -448,8 +448,10 @@ console.info('app.js loaded :: 20251123a');
   let nextSlotFocus = null;
   let cellMenuSelection = null;
   let activeSlotActionHost = null;
+  let activeSlotActionPortal = null;
   let activeSlotActionPanel = null;
   let activeBlockedEventId = '';
+  let activeBlockConflictIds = new Set();
   const NEXT_AVAILABLE_FLOW_ENABLED = false;
   const AGENDA_SLOT_DEBUG = true;
   const BLOCK_REASON_OPTIONS = Object.freeze([
@@ -733,12 +735,17 @@ console.info('app.js loaded :: 20251123a');
     if(activeSlotActionPanel && activeSlotActionPanel.parentNode){
       activeSlotActionPanel.parentNode.removeChild(activeSlotActionPanel);
     }
+    if(activeSlotActionPortal && activeSlotActionPortal.parentNode){
+      activeSlotActionPortal.parentNode.removeChild(activeSlotActionPortal);
+    }
     if(activeSlotActionHost){
       activeSlotActionHost.classList.remove('is-slot-action-open');
     }
+    activeSlotActionPortal = null;
     activeSlotActionPanel = null;
     activeSlotActionHost = null;
     cellMenuSelection = null;
+    clearBlockFlowVisualState({ rerender: true });
   };
   const rerenderCalendarEvents = ()=>{
     if(!calendar) return;
@@ -749,6 +756,41 @@ console.info('app.js loaded :: 20251123a');
       }catch(_){}
     }
     try{ calendar.refetchEvents(); }catch(_){}
+  };
+  const areIdSetsEqual = (a, b)=>{
+    if(!(a instanceof Set) || !(b instanceof Set)) return false;
+    if(a.size !== b.size) return false;
+    for(const id of a){
+      if(!b.has(id)) return false;
+    }
+    return true;
+  };
+  const setBlockFlowOverlayActive = (isActive)=>{
+    if(!els.calendarWrap) return;
+    els.calendarWrap.classList.toggle('mx-ag-block-flow-active', !!isActive);
+  };
+  const clearBlockFlowVisualState = ({ rerender = false } = {})=>{
+    setBlockFlowOverlayActive(false);
+    if(activeBlockConflictIds.size > 0){
+      activeBlockConflictIds = new Set();
+      if(rerender){
+        rerenderCalendarEvents();
+      }
+    }
+  };
+  const collectConflictingAppointmentsInRange = (startDate, endDate)=>{
+    if(!calendar || !(startDate instanceof Date) || !(endDate instanceof Date)) return [];
+    if(Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || endDate <= startDate) return [];
+    return calendar.getEvents().filter((ev)=>{
+      if(!ev || ev.display === 'background') return false;
+      const evId = sanitizeText(ev.id || '');
+      if(evId.startsWith('__ag_next_focus_')) return false;
+      const evType = sanitizeText(ev.extendedProps?.event_type || '');
+      if(evType === 'focus_marker' || evType === 'blocked_slot') return false;
+      const evStart = ev.start;
+      const evEnd = ev.end;
+      return !!(evStart && evEnd && startDate < evEnd && endDate > evStart);
+    });
   };
   const findTimeGridColumnFrame = (slotStartDate)=>{
     if(!els.calendarWrap || !(slotStartDate instanceof Date) || Number.isNaN(slotStartDate.getTime())) return null;
@@ -824,6 +866,13 @@ console.info('app.js loaded :: 20251123a');
           <button type="button" class="mx-ag-slot-block-btn is-cancel" data-ag-slot-action="cancel-block">Cancelar</button>
           <button type="button" class="mx-ag-slot-block-btn is-confirm" data-ag-slot-action="confirm-block">Confirmar bloqueo</button>
         </div>
+        <div class="mx-ag-slot-block-warning d-none" data-role="slot-block-warning">
+          <div class="mx-ag-slot-block-warning-text" data-role="slot-block-warning-text">Este rango incluye citas existentes</div>
+          <div class="mx-ag-slot-block-warning-actions">
+            <button type="button" class="mx-ag-slot-warning-btn" data-ag-slot-action="adjust-range">Ajustar rango</button>
+            <button type="button" class="mx-ag-slot-warning-btn" data-ag-slot-action="view-conflicts">Ver citas</button>
+          </div>
+        </div>
       </div>
     `;
     panelEl.dataset.blockReasonKey = BLOCK_REASON_OPTIONS[0]?.key || 'comida';
@@ -843,6 +892,65 @@ console.info('app.js loaded :: 20251123a');
         otherWrap.classList.toggle('d-none', !(isBlockOpen && reasonKey === 'otro'));
       }
       panelEl.classList.toggle('is-block-open', isBlockOpen);
+      setBlockFlowOverlayActive(isBlockOpen);
+    };
+    const updateBlockConflictState = ()=>{
+      const blockForm = panelEl.querySelector('[data-role="slot-block-form"]');
+      const warningWrap = panelEl.querySelector('[data-role="slot-block-warning"]');
+      const warningText = panelEl.querySelector('[data-role="slot-block-warning-text"]');
+      const confirmBtn = panelEl.querySelector('[data-ag-slot-action="confirm-block"]');
+      const slotStart = cellMenuSelection?.start instanceof Date ? new Date(cellMenuSelection.start) : null;
+      const slotEnd = cellMenuSelection?.end instanceof Date ? new Date(cellMenuSelection.end) : null;
+      const isBlockOpen = !!(blockForm && !blockForm.classList.contains('d-none'));
+      if(!(slotStart instanceof Date) || !(slotEnd instanceof Date) || !isBlockOpen){
+        if(warningWrap){
+          warningWrap.classList.add('d-none');
+        }
+        if(confirmBtn){
+          confirmBtn.disabled = false;
+        }
+        if(activeBlockConflictIds.size > 0){
+          activeBlockConflictIds = new Set();
+          rerenderCalendarEvents();
+        }
+        panelEl.classList.remove('has-block-conflict');
+        return;
+      }
+      const modeInput = panelEl.querySelector('input[data-role="slot-block-mode"]:checked');
+      const mode = sanitizeText(modeInput?.value || 'single');
+      const endSelect = panelEl.querySelector('[data-role="slot-block-end"]');
+      let blockEnd = new Date(slotEnd);
+      let invalidRange = false;
+      if(mode === 'until'){
+        const selectedEnd = parseDateTimeLocalSafe(sanitizeText(endSelect?.value || ''));
+        if(selectedEnd && !Number.isNaN(selectedEnd.getTime())){
+          blockEnd = selectedEnd;
+        }else{
+          invalidRange = true;
+        }
+      }
+      if(blockEnd <= slotStart){
+        invalidRange = true;
+      }
+      const conflicts = invalidRange ? [] : collectConflictingAppointmentsInRange(slotStart, blockEnd);
+      const nextIds = new Set(conflicts.map((ev)=> sanitizeText(ev.id || '')).filter(Boolean));
+      if(!areIdSetsEqual(activeBlockConflictIds, nextIds)){
+        activeBlockConflictIds = nextIds;
+        rerenderCalendarEvents();
+      }
+      const hasConflicts = nextIds.size > 0;
+      if(confirmBtn){
+        confirmBtn.disabled = invalidRange || hasConflicts;
+      }
+      if(warningWrap){
+        warningWrap.classList.toggle('d-none', !hasConflicts);
+      }
+      if(warningText && hasConflicts){
+        warningText.textContent = nextIds.size === 1
+          ? 'Este rango incluye citas existentes (1 cita afectada)'
+          : `Este rango incluye citas existentes (${nextIds.size} citas afectadas)`;
+      }
+      panelEl.classList.toggle('has-block-conflict', hasConflicts);
     };
     const openBlockForm = ()=>{
       const blockForm = panelEl.querySelector('[data-role="slot-block-form"]');
@@ -850,6 +958,7 @@ console.info('app.js loaded :: 20251123a');
       blockForm.classList.remove('d-none');
       blockForm.setAttribute('aria-hidden', 'false');
       syncBlockFormState();
+      updateBlockConflictState();
     };
     const closeBlockForm = ()=>{
       const blockForm = panelEl.querySelector('[data-role="slot-block-form"]');
@@ -857,6 +966,7 @@ console.info('app.js loaded :: 20251123a');
       blockForm.classList.add('d-none');
       blockForm.setAttribute('aria-hidden', 'true');
       syncBlockFormState();
+      updateBlockConflictState();
     };
     const confirmBlock = ()=>{
       const slotStart = cellMenuSelection?.start instanceof Date ? new Date(cellMenuSelection.start) : null;
@@ -879,6 +989,12 @@ console.info('app.js loaded :: 20251123a');
       }
       if(blockEnd <= slotStart){
         setError('La hora final del bloqueo debe ser mayor a la inicial.');
+        return;
+      }
+      const appointmentConflicts = collectConflictingAppointmentsInRange(slotStart, blockEnd);
+      if(appointmentConflicts.length){
+        setError('Este rango incluye citas existentes. Ajusta el rango antes de confirmar.');
+        updateBlockConflictState();
         return;
       }
       if(!isSelectionAvailable(slotStart, blockEnd)){
@@ -928,6 +1044,13 @@ console.info('app.js loaded :: 20251123a');
       if(modeInput){
         event.stopPropagation();
         syncBlockFormState();
+        updateBlockConflictState();
+        return;
+      }
+      const endSelect = event.target.closest('[data-role="slot-block-end"]');
+      if(endSelect){
+        event.stopPropagation();
+        updateBlockConflictState();
       }
     });
     panelEl.addEventListener('click', (event)=>{
@@ -957,6 +1080,28 @@ console.info('app.js loaded :: 20251123a');
       }
       if(action === 'cancel-block'){
         closeBlockForm();
+        return;
+      }
+      if(action === 'adjust-range'){
+        const modeUntil = panelEl.querySelector('input[data-role="slot-block-mode"][value="until"]');
+        if(modeUntil){
+          modeUntil.checked = true;
+          syncBlockFormState();
+          updateBlockConflictState();
+          const endSelect = panelEl.querySelector('[data-role="slot-block-end"]');
+          endSelect?.focus?.();
+        }
+        return;
+      }
+      if(action === 'view-conflicts'){
+        const firstId = Array.from(activeBlockConflictIds)[0] || '';
+        if(firstId && els.calendarWrap){
+          const firstEventEl = Array.from(els.calendarWrap.querySelectorAll('.fc .fc-event'))
+            .find((node)=> sanitizeText(node.getAttribute('data-event-id') || '') === firstId);
+          if(firstEventEl){
+            try{ firstEventEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); }catch(_){}
+          }
+        }
         return;
       }
       if(action === 'confirm-block'){
@@ -1033,9 +1178,19 @@ console.info('app.js loaded :: 20251123a');
     }
     activeSlotActionHost = frame;
     activeSlotActionHost.classList.add('is-slot-action-open');
+    const wrapRect = els.calendarWrap.getBoundingClientRect();
+    const frameRect = frame.getBoundingClientRect();
+    const portal = document.createElement('div');
+    portal.className = 'mx-ag-slot-action-portal';
+    portal.style.left = `${Math.round(frameRect.left - wrapRect.left)}px`;
+    portal.style.top = `${Math.round(frameRect.top - wrapRect.top)}px`;
+    portal.style.width = `${Math.round(frameRect.width)}px`;
+    portal.style.height = `${Math.round(frameRect.height)}px`;
+    activeSlotActionPortal = portal;
     activeSlotActionPanel = buildSlotActionPanel();
-    activeSlotActionHost.appendChild(activeSlotActionPanel);
-    const mounted = positionSlotActionPanel({ frame: activeSlotActionHost, slotStartDate: start, jsEvent });
+    activeSlotActionPortal.appendChild(activeSlotActionPanel);
+    els.calendarWrap.appendChild(activeSlotActionPortal);
+    const mounted = positionSlotActionPanel({ frame: activeSlotActionPortal, slotStartDate: start, jsEvent });
     if(!mounted){
       hideCellMenu();
       return;
@@ -2769,9 +2924,11 @@ console.info('app.js loaded :: 20251123a');
         }
         const patient = sanitizeText(props.patient_display || arg.event.title || 'Paciente');
         const statusLabel = sanitizeText(props.status_label || 'Confirmada');
+        const eventId = sanitizeText(arg.event.id || '');
+        const isBlockConflict = eventId && activeBlockConflictIds.has(eventId);
         return {
           html: `
-            <div class="mx-ag-event-cell">
+            <div class="mx-ag-event-cell${isBlockConflict ? ' is-block-conflict' : ''}">
               <div class="mx-ag-event-title">${escapeHtml(patient)}</div>
               <div class="mx-ag-event-state">${escapeHtml(statusLabel)}</div>
             </div>
@@ -2784,6 +2941,14 @@ console.info('app.js loaded :: 20251123a');
             view: String(info?.view?.type || ''),
             date: info?.dateStr || info?.date?.toISOString?.() || ''
           });
+        }
+        const blockFlowOpen = !!(activeSlotActionPanel && activeSlotActionPanel.classList.contains('is-block-open'));
+        if(blockFlowOpen){
+          const insidePanel = !!info?.jsEvent?.target?.closest?.('.mx-ag-slot-action-layer');
+          if(!insidePanel){
+            hideCellMenu();
+            return;
+          }
         }
         const viewType = String(info?.view?.type || '');
         if(activeBlockedEventId){
@@ -2826,6 +2991,13 @@ console.info('app.js loaded :: 20251123a');
             start: selectionInfo?.startStr || selectionInfo?.start?.toISOString?.() || '',
             end: selectionInfo?.endStr || selectionInfo?.end?.toISOString?.() || ''
           });
+        }
+        if(activeSlotActionPanel && activeSlotActionPanel.classList.contains('is-block-open')){
+          hideCellMenu();
+          if(calendar && typeof calendar.unselect === 'function'){
+            try{ calendar.unselect(); }catch(_){}
+          }
+          return;
         }
         const start = selectionInfo?.start instanceof Date ? selectionInfo.start : new Date(selectionInfo?.start || '');
         const end = selectionInfo?.end instanceof Date ? selectionInfo.end : new Date(selectionInfo?.end || '');
@@ -3107,8 +3279,15 @@ console.info('app.js loaded :: 20251123a');
       const hasFloatingMenuOpen = !!(els.cellMenu && !els.cellMenu.classList.contains('d-none'));
       const hasInlineMenuOpen = !!activeSlotActionPanel;
       if(!hasFloatingMenuOpen && !hasInlineMenuOpen) return;
+      const blockFlowOpen = !!(activeSlotActionPanel && activeSlotActionPanel.classList.contains('is-block-open'));
       const insideMenu = event.target.closest('#ag_cell_menu') || event.target.closest('.mx-ag-slot-action-layer');
       const insideCalendar = event.target.closest('#ag_calendar');
+      if(blockFlowOpen){
+        if(!insideMenu){
+          hideCellMenu();
+        }
+        return;
+      }
       if(!insideMenu && !insideCalendar){
         hideCellMenu();
       }
