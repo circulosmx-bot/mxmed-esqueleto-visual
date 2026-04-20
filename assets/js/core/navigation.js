@@ -117,6 +117,18 @@ function showPanel(id){
   }else{
     $('#'+id).removeClass('d-none');
   }
+  const isAgendaWorkspace = /^p-ag-/.test(String(id || ''));
+  const grid = document.querySelector('.mm-grid.page') || document.querySelector('.mm-grid');
+  document.body.classList.toggle('is-agenda-workspace', isAgendaWorkspace);
+  if(grid){
+    grid.classList.toggle('is-agenda-workspace', isAgendaWorkspace);
+  }
+  window.dispatchEvent(new CustomEvent('mxmed:workspace-mode', {
+    detail: {
+      workspace: isAgendaWorkspace ? 'agenda' : 'default',
+      panelId: String(id || '')
+    }
+  }));
 }
 $('.menu-sub-btn').on('click', function(){
   $('.menu-sub-btn').removeClass('active');

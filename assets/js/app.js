@@ -385,6 +385,7 @@ console.info('app.js loaded :: 20251123a');
     consultorio: panel.querySelector('#ag_consultorio_filter'),
     refresh: panel.querySelector('#ag_refresh_btn'),
     error: panel.querySelector('#ag_error_box'),
+    nextFocusHint: panel.querySelector('#ag_next_focus_hint'),
     loading: panel.querySelector('#ag_loading_box'),
     calendar: panel.querySelector('#ag_calendar'),
     calendarWrap: panel.querySelector('#ag_calendar_wrap'),
@@ -421,6 +422,7 @@ console.info('app.js loaded :: 20251123a');
     nextSlotsLoading: panel.querySelector('#ag_next_slots_loading'),
     nextSlotsResults: panel.querySelector('#ag_next_slots_results'),
     nextSlotsEmpty: panel.querySelector('#ag_next_slots_empty'),
+    nextSlotsPrevBtn: panel.querySelector('#ag_next_slots_prev_btn'),
     nextSlotsMoreBtn: panel.querySelector('#ag_next_slots_more_btn')
   };
 
@@ -440,8 +442,15 @@ console.info('app.js loaded :: 20251123a');
   let patientIndexPromise = null;
   let nextSlotsModal = null;
   let nextAvailableCursor = null;
+  let nextAvailableForwardCursor = null;
+  let nextAvailablePrevStack = [];
   let nextAvailableLastOptions = [];
+  let nextSlotFocus = null;
   let cellMenuSelection = null;
+  let activeSlotActionHost = null;
+  let activeSlotActionPanel = null;
+  const NEXT_AVAILABLE_FLOW_ENABLED = false;
+  const AGENDA_SLOT_DEBUG = true;
 
   const sanitizeText = (value)=> String(value ?? '').trim();
   const escapeHtml = (value)=> String(value ?? '')
@@ -480,6 +489,27 @@ console.info('app.js loaded :: 20251123a');
       || ''
     );
     return fromStore || '08:00:00';
+  };
+  const resolveAgendaEndVisibleTime = ()=>{
+    const fromStore = normalizeAgendaTimeValue(
+      window.mxmedStore?.agendaEndVisibleTime
+      || window.mxmedStore?.agendaWorkdayEnd
+      || window.mxmedStore?.agenda_end_time
+      || ''
+    );
+    return fromStore || '20:00:00';
+  };
+  const timeToMinutes = (value)=>{
+    const normalized = normalizeAgendaTimeValue(value);
+    if(!normalized) return null;
+    const [hh, mm] = normalized.split(':').map((v)=> Number(v || 0));
+    return (hh * 60) + mm;
+  };
+  const minutesToTime = (minutes)=>{
+    const safe = Math.max(0, Math.min(24 * 60, Number(minutes || 0)));
+    const hh = String(Math.floor(safe / 60)).padStart(2, '0');
+    const mm = String(safe % 60).padStart(2, '0');
+    return `${hh}:${mm}:00`;
   };
   const resolveAgendaSlotMinutes = ()=>{
     // Base demo estable en 30 min. Preparado para futura parametrización.
@@ -579,26 +609,150 @@ console.info('app.js loaded :: 20251123a');
     }
   };
   const hideCellMenu = ()=>{
+    if(AGENDA_SLOT_DEBUG){
+      console.info('AGENDA SLOT CLICK: hiding menu');
+    }
     if(els.cellMenu) els.cellMenu.classList.add('d-none');
+    if(activeSlotActionPanel && activeSlotActionPanel.parentNode){
+      activeSlotActionPanel.parentNode.removeChild(activeSlotActionPanel);
+    }
+    if(activeSlotActionHost){
+      activeSlotActionHost.classList.remove('is-slot-action-open');
+    }
+    activeSlotActionPanel = null;
+    activeSlotActionHost = null;
     cellMenuSelection = null;
+  };
+  const findTimeGridColumnFrame = (slotStartDate)=>{
+    if(!els.calendarWrap || !(slotStartDate instanceof Date) || Number.isNaN(slotStartDate.getTime())) return null;
+    const dayKey = formatYmdLocal(slotStartDate);
+    if(!dayKey) return null;
+    const col = els.calendarWrap.querySelector(`.fc .fc-timegrid-col[data-date="${dayKey}"]`);
+    if(!(col instanceof Element)) return null;
+    const frame = col.querySelector('.fc-timegrid-col-frame');
+    return (frame instanceof Element) ? frame : null;
+  };
+  const findSlatForDate = (slotStartDate)=>{
+    if(!els.calendarWrap || !(slotStartDate instanceof Date) || Number.isNaN(slotStartDate.getTime())) return null;
+    const hh = String(slotStartDate.getHours()).padStart(2, '0');
+    const mm = String(slotStartDate.getMinutes()).padStart(2, '0');
+    const ss = '00';
+    const slatKey = `${hh}:${mm}:${ss}`;
+    const slat = els.calendarWrap.querySelector(`.fc .fc-timegrid-slot[data-time="${slatKey}"]`);
+    return (slat instanceof HTMLElement) ? slat : null;
+  };
+  const buildSlotActionPanel = ()=>{
+    const panelEl = document.createElement('div');
+    panelEl.className = 'mx-ag-slot-action-layer';
+    panelEl.setAttribute('role', 'menu');
+    panelEl.setAttribute('aria-label', 'Acciones de slot disponible');
+    panelEl.innerHTML = `
+      <div class="mx-ag-slot-action-title">Slot activo</div>
+      <button type="button" class="mx-ag-slot-action-btn" data-ag-slot-action="new">Nueva cita</button>
+      <button type="button" class="mx-ag-slot-action-btn is-disabled" data-ag-slot-action="block" disabled>Bloquear horario (próximamente)</button>
+    `;
+    panelEl.addEventListener('click', (event)=>{
+      event.stopPropagation();
+      const actionBtn = event.target.closest('[data-ag-slot-action]');
+      if(!actionBtn) return;
+      const action = sanitizeText(actionBtn.getAttribute('data-ag-slot-action') || '');
+      if(action === 'new'){
+        if(!cellMenuSelection) return;
+        openCreateModalFromSelection(cellMenuSelection);
+        return;
+      }
+      if(action === 'block'){
+        setError('Bloqueo de horario: preparado para siguiente fase de integración.');
+        hideCellMenu();
+      }
+    });
+    panelEl.addEventListener('mousedown', (event)=> event.stopPropagation());
+    panelEl.addEventListener('mouseup', (event)=> event.stopPropagation());
+    return panelEl;
+  };
+  const positionSlotActionPanel = ({ frame, slotStartDate, jsEvent })=>{
+    if(!(frame instanceof HTMLElement) || !(activeSlotActionPanel instanceof HTMLElement)) return false;
+    const frameRect = frame.getBoundingClientRect();
+    if(frameRect.height <= 0) return false;
+    const slat = findSlatForDate(slotStartDate);
+    let top = 8;
+    if(slat){
+      const slatRect = slat.getBoundingClientRect();
+      top = Math.round(slatRect.top - frameRect.top) + 3;
+    }else if(jsEvent && Number.isFinite(jsEvent.clientY)){
+      top = Math.round(Number(jsEvent.clientY) - frameRect.top - 14);
+    }
+    const panelHeight = Math.max(44, Math.round(activeSlotActionPanel.getBoundingClientRect().height || 0));
+    const maxTop = Math.max(8, Math.round(frameRect.height - panelHeight - 8));
+    const clampedTop = Math.min(Math.max(8, top), maxTop);
+    activeSlotActionPanel.style.top = `${clampedTop}px`;
+    return true;
+  };
+  const isWithinDemoServiceWindow = (startDate, endDate)=>{
+    if(!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return false;
+    if(!(endDate instanceof Date) || Number.isNaN(endDate.getTime())) return false;
+    const startDay = startDate.getDay();
+    const endDay = endDate.getDay();
+    if(startDay !== endDay) return false;
+    if(startDay === 0) return false; // domingo no laborable en demo
+    const startMins = (startDate.getHours() * 60) + startDate.getMinutes();
+    const endMins = (endDate.getHours() * 60) + endDate.getMinutes();
+    const windowStart = 8 * 60;
+    const windowEnd = (startDay === 6 ? 17 : 20) * 60;
+    return startMins >= windowStart && endMins <= windowEnd;
   };
   const isCellAvailableForCreate = (startDate, endDate)=>{
     if(!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return false;
     if(!(endDate instanceof Date) || Number.isNaN(endDate.getTime())) return false;
     if(startDate < new Date()) return false;
+    if(AGENDA_SLOT_DEBUG){
+      console.info('AGENDA SLOT CLICK: validating cell', {
+        start: startDate.toISOString?.() || String(startDate),
+        end: endDate.toISOString?.() || String(endDate)
+      });
+    }
     return isSelectionAvailable(startDate, endDate);
   };
   const openCellMenu = ({ start, end, jsEvent })=>{
-    if(!els.cellMenu || !els.calendarWrap) return;
+    if(!els.calendarWrap){
+      if(AGENDA_SLOT_DEBUG){
+        console.warn('AGENDA SLOT CLICK: menu element not found', {
+          hasWrap: !!els.calendarWrap
+        });
+      }
+      return;
+    }
+    hideCellMenu();
     cellMenuSelection = { start, end };
-    const wrapRect = els.calendarWrap.getBoundingClientRect();
-    const clickX = Number(jsEvent?.clientX || wrapRect.left + 20);
-    const clickY = Number(jsEvent?.clientY || wrapRect.top + 20);
-    const relativeX = Math.max(8, clickX - wrapRect.left - 4);
-    const relativeY = Math.max(8, clickY - wrapRect.top - 4);
-    els.cellMenu.style.left = `${relativeX}px`;
-    els.cellMenu.style.top = `${relativeY}px`;
-    els.cellMenu.classList.remove('d-none');
+    const frame = findTimeGridColumnFrame(start);
+    if(!(frame instanceof HTMLElement)){
+      if(AGENDA_SLOT_DEBUG){
+        console.warn('AGENDA SLOT CLICK: column frame not found for slot', {
+          slotDate: formatYmdLocal(start)
+        });
+      }
+      return;
+    }
+    activeSlotActionHost = frame;
+    activeSlotActionHost.classList.add('is-slot-action-open');
+    activeSlotActionPanel = buildSlotActionPanel();
+    activeSlotActionHost.appendChild(activeSlotActionPanel);
+    const mounted = positionSlotActionPanel({ frame: activeSlotActionHost, slotStartDate: start, jsEvent });
+    if(!mounted){
+      hideCellMenu();
+      return;
+    }
+    if(els.cellMenu){
+      els.cellMenu.classList.add('d-none');
+    }
+    if(AGENDA_SLOT_DEBUG){
+      const col = frame.closest('.fc-timegrid-col');
+      console.info('AGENDA SLOT CLICK: opening menu', {
+        inlineLayer: true,
+        slotDate: sanitizeText(col?.getAttribute('data-date') || ''),
+        slotTime: `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}:00`
+      });
+    }
   };
   const setNextSlotsError = (message = '')=>{
     if(!els.nextSlotsError) return;
@@ -618,6 +772,185 @@ console.info('app.js loaded :: 20251123a');
   const setNextSlotsEmpty = (show)=>{
     if(!els.nextSlotsEmpty) return;
     els.nextSlotsEmpty.classList.toggle('d-none', !show);
+  };
+  const collectBookedRangesFromRows = (rows = [])=>{
+    return (Array.isArray(rows) ? rows : [])
+      .map((row)=>{
+        const start = parseDateTimeLocalSafe(row?.start_at || '');
+        const end = parseDateTimeLocalSafe(row?.end_at || '');
+        if(!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+        return { start, end };
+      })
+      .filter(Boolean);
+  };
+  const isBusyRangeInCalendar = (startDate, endDate)=>{
+    if(!calendar || !(startDate instanceof Date) || !(endDate instanceof Date)) return false;
+    const events = calendar.getEvents();
+    return events.some((ev)=>{
+      if(ev.display === 'background') return false;
+      const evId = sanitizeText(ev.id || '');
+      if(evId.startsWith('__ag_next_focus_')) return false;
+      const evStart = ev.start;
+      const evEnd = ev.end;
+      return !!(evStart && evEnd && startDate < evEnd && endDate > evStart);
+    });
+  };
+  const getFocusedSlotEl = ()=>{
+    if(!els.calendarWrap) return null;
+    const candidates = Array.from(els.calendarWrap.querySelectorAll('.fc .mx-ag-next-focus-slot'));
+    if(!candidates.length) return null;
+    const visible = candidates.find((el)=>{
+      const inTimeGrid = !!el.closest('.fc-timegrid-body');
+      if(!inTimeGrid) return false;
+      const rect = el.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    });
+    return visible || candidates[0] || null;
+  };
+  const renderNextFocusInlineMessage = ()=>{
+    if(!els.calendarWrap) return;
+    els.calendarWrap.querySelectorAll('.mx-ag-next-focus-inline').forEach((el)=> el.remove());
+    if(!nextSlotFocus) return;
+    const slotEl = getFocusedSlotEl();
+    if(!slotEl) return;
+    const anchorEl = slotEl.classList.contains('fc-bg-event')
+      ? slotEl
+      : (slotEl.querySelector('.fc-bg-event') || slotEl);
+    const badge = document.createElement('div');
+    badge.className = 'mx-ag-next-focus-inline';
+    badge.innerHTML = '<div class="mx-ag-next-focus-title">Cita disponible</div><div class="mx-ag-next-focus-sub">Haz clic para asignarla</div>';
+    anchorEl.appendChild(badge);
+  };
+  const scrollFocusedSlotIntoView = ({ behavior = 'auto' } = {})=>{
+    if(!els.calendarWrap) return false;
+    const slotEl = getFocusedSlotEl();
+    if(!slotEl) return false;
+    const scroller = slotEl.closest('.fc-scroller')
+      || els.calendarWrap.querySelector('.fc-timegrid-body .fc-scroller')
+      || els.calendarWrap.querySelector('.fc-scroller');
+    if(!(scroller instanceof HTMLElement)){
+      try{
+        slotEl.scrollIntoView({ block: 'center', behavior });
+        return true;
+      }catch(_){
+        return false;
+      }
+    }
+    const slotRect = slotEl.getBoundingClientRect();
+    const scrollerRect = scroller.getBoundingClientRect();
+    const currentTop = Number(scroller.scrollTop || 0);
+    const delta = slotRect.top - scrollerRect.top;
+    const target = Math.max(0, Math.round(currentTop + delta - ((scrollerRect.height - slotRect.height) / 2)));
+    try{
+      scroller.scrollTo({ top: target, behavior });
+      return true;
+    }catch(_){
+      scroller.scrollTop = target;
+      return true;
+    }
+  };
+  const syncNextFocusViewport = ({ behavior = 'auto', attempts = 8 } = {})=>{
+    if(!nextSlotFocus) return;
+    const slotReady = !!getFocusedSlotEl();
+    if(slotReady){
+      const start = nextSlotFocus.start instanceof Date ? nextSlotFocus.start : new Date(nextSlotFocus.start || '');
+      const end = nextSlotFocus.end instanceof Date ? nextSlotFocus.end : new Date(nextSlotFocus.end || '');
+      if(!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && isBusyRangeInCalendar(start, end)){
+        clearNextSlotFocus();
+        setError('El slot sugerido ya fue ocupado. Selecciona otra opción disponible.');
+        return;
+      }
+      scrollFocusedSlotIntoView({ behavior });
+      renderNextFocusInlineMessage();
+      return;
+    }
+    if(attempts <= 0) return;
+    window.setTimeout(()=>{
+      syncNextFocusViewport({ behavior, attempts: attempts - 1 });
+    }, 45);
+  };
+  const setNextSlotFocusHint = (message = '')=>{
+    if(els.nextFocusHint){
+      els.nextFocusHint.classList.add('d-none');
+      els.nextFocusHint.textContent = '';
+    }
+    const msg = sanitizeText(message);
+    if(!msg) return;
+    renderNextFocusInlineMessage();
+  };
+  const clearNextSlotFocus = ({ clearHint = true } = {})=>{
+    nextSlotFocus = null;
+    if(els.calendarWrap){
+      els.calendarWrap.classList.remove('mx-ag-next-focus-active');
+    }
+    if(calendar){
+      const focusEvent = calendar.getEventById('__ag_next_focus_slot__');
+      if(focusEvent){
+        try{ focusEvent.remove(); }catch(_){}
+      }
+      const focusMarker = calendar.getEventById('__ag_next_focus_marker__');
+      if(focusMarker){
+        try{ focusMarker.remove(); }catch(_){}
+      }
+    }
+    if(clearHint){
+      setNextSlotFocusHint('');
+    }
+    if(els.calendarWrap){
+      els.calendarWrap.querySelectorAll('.mx-ag-next-focus-inline').forEach((el)=> el.remove());
+    }
+  };
+  const applyNextSlotFocusToCalendar = ()=>{
+    if(!calendar || !els.calendarWrap){
+      return;
+    }
+    const focusEvent = calendar.getEventById('__ag_next_focus_slot__');
+    if(focusEvent){
+      try{ focusEvent.remove(); }catch(_){}
+    }
+    const focusMarker = calendar.getEventById('__ag_next_focus_marker__');
+    if(focusMarker){
+      try{ focusMarker.remove(); }catch(_){}
+    }
+    if(!nextSlotFocus){
+      els.calendarWrap.classList.remove('mx-ag-next-focus-active');
+      setNextSlotFocusHint('');
+      return;
+    }
+    const start = nextSlotFocus.start instanceof Date ? nextSlotFocus.start : new Date(nextSlotFocus.start || '');
+    const end = nextSlotFocus.end instanceof Date ? nextSlotFocus.end : new Date(nextSlotFocus.end || '');
+    if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())){
+      clearNextSlotFocus();
+      return;
+    }
+    try{
+      calendar.addEvent({
+        id: '__ag_next_focus_slot__',
+        start,
+        end,
+        display: 'background',
+        classNames: ['mx-ag-next-focus-slot'],
+        backgroundColor: 'rgba(13, 110, 253, 0.38)'
+      });
+      calendar.addEvent({
+        id: '__ag_next_focus_marker__',
+        start,
+        end,
+        title: '',
+        editable: false,
+        overlap: true,
+        classNames: ['mx-ag-next-focus-marker'],
+        extendedProps: { event_type: 'focus_marker' }
+      });
+      els.calendarWrap.classList.add('mx-ag-next-focus-active');
+      setNextSlotFocusHint('Esta es la cita disponible seleccionada. Haz clic en el slot resaltado para asignarla.');
+      syncNextFocusViewport({ behavior: 'auto' });
+    }catch(_){}
+  };
+  const isNextSlotFocusSelection = (startDate, endDate)=>{
+    if(!nextSlotFocus) return false;
+    const candidateKey = toRangeKey(startDate, endDate);
+    return !!(candidateKey && candidateKey === sanitizeText(nextSlotFocus.key || ''));
   };
   const renderNextSlotOptions = (options = [])=>{
     if(!els.nextSlotsResults) return;
@@ -675,6 +1008,27 @@ console.info('app.js loaded :: 20251123a');
     const mm = String(d.getMinutes()).padStart(2, '0');
     const ss = String(d.getSeconds()).padStart(2, '0');
     return `${y}-${m}-${day} ${hh}:${mm}:${ss}`;
+  };
+  const parseDateTimeLocalSafe = (value)=>{
+    const raw = sanitizeText(value);
+    if(!raw) return null;
+    // Parseo determinístico local para evitar corrimientos de día por timezone.
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/);
+    if(m){
+      const dt = new Date(
+        Number(m[1]),
+        Number(m[2]) - 1,
+        Number(m[3]),
+        Number(m[4]),
+        Number(m[5]),
+        Number(m[6] || 0),
+        0
+      );
+      if(!Number.isNaN(dt.getTime())) return dt;
+    }
+    const fallback = new Date(toIsoLike(raw));
+    if(Number.isNaN(fallback.getTime())) return null;
+    return fallback;
   };
   const toDateTimeLocalInput = (value)=>{
     const d = (value instanceof Date) ? value : new Date(value);
@@ -1055,9 +1409,6 @@ console.info('app.js loaded :: 20251123a');
     const events = calendar.getEvents();
     const availabilityWindows = events.filter((ev)=> ev.display === 'background' && sanitizeText(ev.extendedProps?.event_type || '') === 'availability');
     const hasAvailabilityLayer = availabilityWindows.length > 0;
-    if(!hasAvailabilityLayer){
-      return false;
-    }
     const insideAvailability = availabilityWindows.some((ev)=>{
       const evStart = ev.start;
       const evEnd = ev.end;
@@ -1065,13 +1416,39 @@ console.info('app.js loaded :: 20251123a');
     });
     const overlapsBusy = events.some((ev)=>{
       if(ev.display === 'background') return false;
+      const evId = sanitizeText(ev.id || '');
+      if(evId.startsWith('__ag_next_focus_')) return false;
+      if(sanitizeText(ev.extendedProps?.event_type || '') === 'focus_marker') return false;
       const evStart = ev.start;
       const evEnd = ev.end;
       return !!(evStart && evEnd && startDate < evEnd && endDate > evStart);
     });
-    return insideAvailability && !overlapsBusy;
+    if(AGENDA_SLOT_DEBUG){
+      console.info('AGENDA SLOT CLICK: availability check', {
+        hasAvailabilityLayer,
+        insideAvailability,
+        overlapsBusy,
+        isDemo: isAgendaDemoContext(),
+        eventsCount: events.length
+      });
+    }
+    if(hasAvailabilityLayer){
+      return insideAvailability && !overlapsBusy;
+    }
+    // Fallback controlado SOLO para demo: sin availability backend, usa horario demo + no traslape.
+    if(isAgendaDemoContext()){
+      const insideDemoWindow = isWithinDemoServiceWindow(startDate, endDate);
+      if(AGENDA_SLOT_DEBUG){
+        console.info('AGENDA SLOT CLICK: demo fallback', {
+          insideDemoWindow,
+          overlapsBusy
+        });
+      }
+      return insideDemoWindow && !overlapsBusy;
+    }
+    return false;
   };
-  const openCreateModalFromSelection = (selection)=>{
+  const openCreateModalFromSelection = (selection, { bypassAvailabilityCheck = false } = {})=>{
     if(!els.createModalEl || !window.bootstrap?.Modal) return;
     hideCellMenu();
     const start = selection?.start instanceof Date ? selection.start : new Date(selection?.start || '');
@@ -1091,9 +1468,9 @@ console.info('app.js loaded :: 20251123a');
       }
       return;
     }
-    if(!isSelectionAvailable(start, end)){
+    if(!bypassAvailabilityCheck && !isSelectionAvailable(start, end)){
       setError('Selecciona un horario disponible para crear la cita.');
-      return;
+      return false;
     }
     resetCreateForm();
     if(els.startAt) els.startAt.value = toDateTimeLocalInput(start);
@@ -1102,6 +1479,7 @@ console.info('app.js loaded :: 20251123a');
     if(els.consultorioModal && consultorioId) els.consultorioModal.value = consultorioId;
     createModal = createModal || window.bootstrap.Modal.getOrCreateInstance(els.createModalEl);
     createModal.show();
+    return true;
   };
   const collectNextAvailableSlots = async ({ afterDate, limit = 3 })=>{
     if(isAgendaDemoContext()){
@@ -1120,14 +1498,7 @@ console.info('app.js loaded :: 20251123a');
         dayEnd.setHours(dow === 6 ? 17 : 20, 0, 0, 0);
 
         const demoRows = buildDemoAppointments({ start: dayStart, end: dayEnd });
-        const bookedRanges = demoRows
-          .map((row)=>{
-            const start = new Date(toIsoLike(row?.start_at || ''));
-            const end = new Date(toIsoLike(row?.end_at || ''));
-            if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
-            return { start, end };
-          })
-          .filter(Boolean);
+        const bookedRanges = collectBookedRangesFromRows(demoRows);
 
         let slotCursor = alignDateToSlotGrid(dayStart, slotMinutes);
         while(options.length < limit && slotCursor < dayEnd){
@@ -1144,6 +1515,7 @@ console.info('app.js loaded :: 20251123a');
                 key,
                 start: new Date(slotCursor),
                 end: new Date(slotEnd),
+                day_key: formatYmdLocal(slotCursor),
                 consultorio_id: sanitizeText(getAvailabilityConsultorioId() || '')
               });
             }
@@ -1157,6 +1529,10 @@ console.info('app.js loaded :: 20251123a');
 
     const doctorId = getDoctorId();
     const consultorioId = getAvailabilityConsultorioId();
+    const consultorioFilterForAppointments = (()=>{
+      const selected = sanitizeText(els.consultorio?.value || '');
+      return isNumericId(selected) ? selected : '';
+    })();
     if(!isNumericId(doctorId) || !isNumericId(consultorioId)){
       throw new Error('Doctor/consultorio no disponibles para buscar siguientes citas.');
     }
@@ -1168,23 +1544,48 @@ console.info('app.js loaded :: 20251123a');
     while(options.length < limit && daysScanned < 180){
       const dayDate = toAddDays(baseDate, daysScanned);
       const dayYmd = formatYmdLocal(dayDate);
+      const dayStart = new Date(dayDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(dayDate);
+      dayEnd.setHours(23, 59, 59, 999);
       const params = new URLSearchParams({
         doctor_id: doctorId,
         consultorio_id: consultorioId,
         date: dayYmd,
         slot_minutes: String(slotMinutes)
       });
-      const json = await AgendaApiClient.getAvailability({ params });
+      const [json, appointmentsJson] = await Promise.all([
+        AgendaApiClient.getAvailability({ params }),
+        AgendaApiClient.getAppointments({
+          params: (()=> {
+            const appointmentsParams = new URLSearchParams({
+              from: dayStart.toISOString(),
+              to: dayEnd.toISOString(),
+              limit: '300',
+              doctor_id: doctorId
+            });
+            if(consultorioFilterForAppointments){
+              appointmentsParams.set('consultorio_id', consultorioFilterForAppointments);
+            }
+            return appointmentsParams;
+          })()
+        })
+      ]);
+      const bookedRanges = (appointmentsJson?.ok === true && Array.isArray(appointmentsJson?.data))
+        ? collectBookedRangesFromRows(appointmentsJson.data)
+        : [];
       if(json?.ok === true && Array.isArray(json?.data?.slots)){
         json.data.slots.forEach((slot)=>{
           if(options.length >= limit) return;
-          const start = new Date(toIsoLike(slot?.start_at || ''));
-          const end = new Date(toIsoLike(slot?.end_at || ''));
-          if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return;
+          const start = parseDateTimeLocalSafe(slot?.start_at || '');
+          const end = parseDateTimeLocalSafe(slot?.end_at || '');
+          if(!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return;
           if(start <= new Date(afterDate || Date.now())) return;
+          const overlapsBusy = bookedRanges.some((range)=> start < range.end && end > range.start);
+          if(overlapsBusy) return;
           const key = toRangeKey(start, end);
           if(options.some((item)=> item.key === key)) return;
-          options.push({ key, start, end, consultorio_id: consultorioId });
+          options.push({ key, start, end, day_key: formatYmdLocal(start), consultorio_id: consultorioId });
         });
       }
       daysScanned += 1;
@@ -1195,27 +1596,36 @@ console.info('app.js loaded :: 20251123a');
     if(resetCursor || !(nextAvailableCursor instanceof Date)){
       const today = toStartOfDay(new Date());
       nextAvailableCursor = toAddDays(today, 1);
+      nextAvailablePrevStack = [];
+      nextAvailableForwardCursor = null;
     }
     setNextSlotsError('');
     setNextSlotsLoading(true);
+    if(els.nextSlotsPrevBtn) els.nextSlotsPrevBtn.disabled = true;
     if(els.nextSlotsMoreBtn) els.nextSlotsMoreBtn.disabled = true;
     try{
+      const queryCursor = new Date(nextAvailableCursor);
       const options = await collectNextAvailableSlots({
-        afterDate: nextAvailableCursor,
+        afterDate: queryCursor,
         limit: 3
       });
       nextAvailableLastOptions = options;
       renderNextSlotOptions(options);
       if(options.length){
         const last = options[options.length - 1];
-        nextAvailableCursor = new Date(last.start.getTime() + 60 * 1000);
+        nextAvailableForwardCursor = new Date(last.start.getTime() + 60 * 1000);
+      }else{
+        nextAvailableForwardCursor = null;
       }
+      nextAvailableCursor = queryCursor;
+      if(els.nextSlotsPrevBtn) els.nextSlotsPrevBtn.disabled = nextAvailablePrevStack.length === 0;
     }catch(err){
       setNextSlotsError(sanitizeText(err?.message || 'No se pudo consultar disponibilidad.'));
       renderNextSlotOptions([]);
+      nextAvailableForwardCursor = null;
     }finally{
       setNextSlotsLoading(false);
-      if(els.nextSlotsMoreBtn) els.nextSlotsMoreBtn.disabled = false;
+      if(els.nextSlotsMoreBtn) els.nextSlotsMoreBtn.disabled = !(nextAvailableForwardCursor instanceof Date);
     }
   };
   const openNextAvailableSlotFinder = ()=>{
@@ -1542,8 +1952,15 @@ console.info('app.js loaded :: 20251123a');
     const viewType = String(calendar?.view?.type || '');
     const isWeekView = viewType === 'timeGridWeek';
     const baseStart = resolveAgendaStartVisibleTime();
-    const collapsedMax = '12:00:00';
-    const expandedMax = '22:00:00';
+    const expandedMax = resolveAgendaEndVisibleTime();
+    const startMinutes = timeToMinutes(baseStart);
+    const endMinutes = timeToMinutes(expandedMax);
+    const collapsedTarget = (startMinutes !== null) ? (startMinutes + 240) : null; // 4 horas visibles
+    const collapsedMax = minutesToTime(
+      (endMinutes !== null && collapsedTarget !== null)
+        ? Math.min(endMinutes, collapsedTarget)
+        : 720
+    );
     const collapsedContentHeight = 920;
 
     wrap.classList.remove('weekly-hours-collapsed', 'weekly-hours-expanded');
@@ -1917,7 +2334,8 @@ console.info('app.js loaded :: 20251123a');
       initialView: 'timeGridWeek',
       hiddenDays: [0],
       selectable: true,
-      selectMirror: true,
+      // Evita pseudo-eventos al seleccionar celdas vacías (no simular citas).
+      selectMirror: false,
       nowIndicator: true,
       allDaySlot: false,
       slotMinTime: resolveAgendaStartVisibleTime(),
@@ -1997,6 +2415,9 @@ console.info('app.js loaded :: 20251123a');
         if(arg.event.display === 'background'){
           return { html: '' };
         }
+        if(arg.isMirror){
+          return { html: '' };
+        }
         const props = arg.event.extendedProps || {};
         const viewType = String(arg.view?.type || '');
         if(viewType === 'dayGridMonth'){
@@ -2024,8 +2445,18 @@ console.info('app.js loaded :: 20251123a');
         };
       },
       dateClick: (info)=>{
+        if(AGENDA_SLOT_DEBUG){
+          console.info('AGENDA SLOT CLICK: entered dateClick', {
+            view: String(info?.view?.type || ''),
+            date: info?.dateStr || info?.date?.toISOString?.() || ''
+          });
+        }
         const viewType = String(info?.view?.type || '');
+        if(calendar && typeof calendar.unselect === 'function'){
+          try{ calendar.unselect(); }catch(_){}
+        }
         if(viewType === 'dayGridMonth' && calendar){
+          clearNextSlotFocus();
           calendar.changeView('timeGridDay', info.date);
           return;
         }
@@ -2033,6 +2464,16 @@ console.info('app.js loaded :: 20251123a');
           const slotMinutes = resolveAgendaSlotMinutes();
           const start = new Date(info.date);
           const end = new Date(start.getTime() + (slotMinutes * 60 * 1000));
+          if(viewType === 'timeGridWeek' && nextSlotFocus){
+            if(isNextSlotFocusSelection(start, end)){
+              const opened = openCreateModalFromSelection({ start, end }, { bypassAvailabilityCheck: true });
+              if(opened){
+                clearNextSlotFocus();
+              }
+              return;
+            }
+            return;
+          }
           if(!isCellAvailableForCreate(start, end)){
             hideCellMenu();
             return;
@@ -2041,13 +2482,29 @@ console.info('app.js loaded :: 20251123a');
         }
       },
       select: (selectionInfo)=>{
+        if(AGENDA_SLOT_DEBUG){
+          console.info('AGENDA SLOT CLICK: entered select', {
+            view: String(calendar?.view?.type || ''),
+            start: selectionInfo?.startStr || selectionInfo?.start?.toISOString?.() || '',
+            end: selectionInfo?.endStr || selectionInfo?.end?.toISOString?.() || ''
+          });
+        }
         const start = selectionInfo?.start instanceof Date ? selectionInfo.start : new Date(selectionInfo?.start || '');
         const end = selectionInfo?.end instanceof Date ? selectionInfo.end : new Date(selectionInfo?.end || '');
-        if(!isCellAvailableForCreate(start, end)){
-          hideCellMenu();
+        const currentView = String(calendar?.view?.type || '');
+        if(currentView === 'timeGridWeek' && nextSlotFocus){
+          if(isNextSlotFocusSelection(start, end)){
+            const opened = openCreateModalFromSelection({ start, end }, { bypassAvailabilityCheck: true });
+            if(opened){
+              clearNextSlotFocus();
+            }
+          }
+          if(calendar && typeof calendar.unselect === 'function'){
+            try{ calendar.unselect(); }catch(_){}
+          }
           return;
         }
-        openCellMenu({ start, end, jsEvent: selectionInfo?.jsEvent });
+        hideCellMenu();
         if(calendar && typeof calendar.unselect === 'function'){
           try{ calendar.unselect(); }catch(_){}
         }
@@ -2070,7 +2527,12 @@ console.info('app.js loaded :: 20251123a');
       },
       datesSet: ()=>{
         hideCellMenu();
+        if(String(calendar?.view?.type || '') !== 'timeGridWeek'){
+          clearNextSlotFocus();
+        }
         applyWeeklyHoursState();
+        applyNextSlotFocusToCalendar();
+        window.setTimeout(()=> syncNextFocusViewport({ behavior: 'auto' }), 0);
         window.setTimeout(()=>{
           try{ calendar.updateSize(); }catch(_){}
         }, 0);
@@ -2146,6 +2608,7 @@ console.info('app.js loaded :: 20251123a');
     els.createModalEl?.addEventListener('hidden.bs.modal', ()=>{
       resetCreateForm();
       hideCellMenu();
+      clearNextSlotFocus();
       if(calendar && typeof calendar.unselect === 'function'){
         try{ calendar.unselect(); }catch(_){}
       }
@@ -2192,6 +2655,20 @@ console.info('app.js loaded :: 20251123a');
       hideCellMenu();
     });
     els.nextSlotsMoreBtn?.addEventListener('click', ()=>{
+      if(!NEXT_AVAILABLE_FLOW_ENABLED) return;
+      if(!(nextAvailableForwardCursor instanceof Date)) return;
+      if(nextAvailableCursor instanceof Date){
+        nextAvailablePrevStack.push(new Date(nextAvailableCursor));
+      }
+      nextAvailableCursor = new Date(nextAvailableForwardCursor);
+      loadNextAvailableSlots({ resetCursor: false }).catch(()=> null);
+    });
+    els.nextSlotsPrevBtn?.addEventListener('click', ()=>{
+      if(!NEXT_AVAILABLE_FLOW_ENABLED) return;
+      if(!nextAvailablePrevStack.length) return;
+      const previousCursor = nextAvailablePrevStack.pop();
+      if(!(previousCursor instanceof Date) || Number.isNaN(previousCursor.getTime())) return;
+      nextAvailableCursor = previousCursor;
       loadNextAvailableSlots({ resetCursor: false }).catch(()=> null);
     });
     els.nextSlotsModalEl?.addEventListener('hidden.bs.modal', ()=>{
@@ -2200,8 +2677,13 @@ console.info('app.js loaded :: 20251123a');
       setNextSlotsEmpty(false);
       if(els.nextSlotsResults) els.nextSlotsResults.innerHTML = '';
       nextAvailableLastOptions = [];
+      nextAvailablePrevStack = [];
+      nextAvailableForwardCursor = null;
+      if(els.nextSlotsPrevBtn) els.nextSlotsPrevBtn.disabled = true;
+      if(els.nextSlotsMoreBtn) els.nextSlotsMoreBtn.disabled = false;
     });
     els.nextSlotsResults?.addEventListener('click', (event)=>{
+      if(!NEXT_AVAILABLE_FLOW_ENABLED) return;
       const target = event.target.closest('[data-ag-next-slot-index]');
       if(!target) return;
       const idx = Number(target.getAttribute('data-ag-next-slot-index'));
@@ -2210,16 +2692,55 @@ console.info('app.js loaded :: 20251123a');
       if(nextSlotsModal){
         nextSlotsModal.hide();
       }
+      nextSlotFocus = {
+        start: choice.start instanceof Date ? new Date(choice.start) : new Date(choice.start || ''),
+        end: choice.end instanceof Date ? new Date(choice.end) : new Date(choice.end || '')
+      };
+      nextSlotFocus.key = toRangeKey(nextSlotFocus.start, nextSlotFocus.end);
+      nextSlotFocus.day_key = sanitizeText(choice?.day_key || '') || formatYmdLocal(nextSlotFocus.start);
       if(calendar){
-        try{ calendar.changeView('timeGridDay', choice.start); }catch(_){}
+        try{
+          weeklyHoursExpanded = true;
+          applyWeeklyHoursState();
+          calendar.changeView('timeGridWeek', nextSlotFocus.start);
+        }catch(_){}
       }
       window.setTimeout(()=>{
-        openCreateModalFromSelection({ start: choice.start, end: choice.end });
-      }, 80);
+        if(calendar && nextSlotFocus?.start instanceof Date && !Number.isNaN(nextSlotFocus.start.getTime())){
+          const hh = String(nextSlotFocus.start.getHours()).padStart(2, '0');
+          const mm = String(nextSlotFocus.start.getMinutes()).padStart(2, '0');
+          try{ calendar.scrollToTime(`${hh}:${mm}:00`); }catch(_){}
+        }
+        applyNextSlotFocusToCalendar();
+        window.setTimeout(()=> syncNextFocusViewport({ behavior: 'smooth' }), 30);
+      }, 120);
     });
+    els.calendarWrap?.addEventListener('scroll', ()=>{
+      if(!NEXT_AVAILABLE_FLOW_ENABLED) return;
+      if(nextSlotFocus){
+        renderNextFocusInlineMessage();
+      }
+    }, true);
+    els.calendarWrap?.addEventListener('click', (event)=>{
+      if(!NEXT_AVAILABLE_FLOW_ENABLED) return;
+      if(!nextSlotFocus) return;
+      const focusTarget = event.target.closest('.mx-ag-next-focus-slot');
+      if(!focusTarget) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const opened = openCreateModalFromSelection({
+        start: nextSlotFocus.start,
+        end: nextSlotFocus.end
+      }, { bypassAvailabilityCheck: true });
+      if(opened){
+        clearNextSlotFocus();
+      }
+    }, true);
     document.addEventListener('click', (event)=>{
-      if(!els.cellMenu || els.cellMenu.classList.contains('d-none')) return;
-      const insideMenu = event.target.closest('#ag_cell_menu');
+      const hasFloatingMenuOpen = !!(els.cellMenu && !els.cellMenu.classList.contains('d-none'));
+      const hasInlineMenuOpen = !!activeSlotActionPanel;
+      if(!hasFloatingMenuOpen && !hasInlineMenuOpen) return;
+      const insideMenu = event.target.closest('#ag_cell_menu') || event.target.closest('.mx-ag-slot-action-layer');
       const insideCalendar = event.target.closest('#ag_calendar');
       if(!insideMenu && !insideCalendar){
         hideCellMenu();
@@ -2268,7 +2789,9 @@ console.info('app.js loaded :: 20251123a');
 
       const action = sanitizeText(target.getAttribute('data-ag-work-action') || '');
       if(action === 'next-available'){
-        openNextAvailableSlotFinder();
+        clearNextSlotFocus();
+        setError('Buscar siguiente cita disponible estará disponible en la siguiente fase.');
+        return;
       }
     });
 
@@ -2283,6 +2806,25 @@ console.info('app.js loaded :: 20251123a');
     syncDoctorInput();
     syncActivePatientPrompt();
     initCalendar();
+    if(AGENDA_SLOT_DEBUG){
+      console.info('AGENDA SLOT CLICK: menu bootstrap state', {
+        hasCellMenu: !!els.cellMenu,
+        hasCalendarWrap: !!els.calendarWrap,
+        demoContext: isAgendaDemoContext()
+      });
+    }
+    clearNextSlotFocus();
+    if(els.nextSlotsModalEl){
+      try{ window.bootstrap?.Modal?.getOrCreateInstance(els.nextSlotsModalEl)?.hide(); }catch(_){}
+    }
+    if(els.workspaceShell){
+      const nextBtn = els.workspaceShell.querySelector('[data-ag-work-action="next-available"]');
+      if(nextBtn){
+        nextBtn.classList.add('d-none');
+        nextBtn.setAttribute('aria-hidden', 'true');
+        nextBtn.setAttribute('tabindex', '-1');
+      }
+    }
     setWorkspaceButtonActive(panelId);
     const isVisible = panel && !panel.classList.contains('d-none');
     if(isVisible){

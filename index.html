@@ -2708,6 +2708,25 @@
 
           <div class="body">
 
+            <div class="mx-ag-workspace-shell" aria-label="Submenú operativo de agenda">
+              <button type="button" class="mx-ag-workspace-btn is-active" data-ag-work-panel="p-ag-admin">
+                <span class="material-symbols-rounded" aria-hidden="true">calendar_month</span>
+                Agenda
+              </button>
+              <button type="button" class="mx-ag-workspace-btn d-none" data-ag-work-action="next-available" disabled aria-hidden="true" tabindex="-1">
+                <span class="material-symbols-rounded" aria-hidden="true">calendar_clock</span>
+                Buscar siguiente cita disponible
+              </button>
+              <button type="button" class="mx-ag-workspace-btn" data-ag-work-panel="p-ag-ajustes">
+                <span class="material-symbols-rounded" aria-hidden="true">settings</span>
+                Configuración
+              </button>
+              <button type="button" class="mx-ag-workspace-btn" data-ag-work-panel="p-ag-operadores">
+                <span class="material-symbols-rounded" aria-hidden="true">support_agent</span>
+                Operadores
+              </button>
+            </div>
+
             <div class="row g-3 mx-agenda-v1" id="agendaFrontendV1">
               <div class="col-12">
                 <div class="alert alert-info py-2 mb-0">
@@ -2738,9 +2757,14 @@
               </div>
               <div class="col-12">
                 <div id="ag_error_box" class="alert alert-danger d-none py-2 mb-2"></div>
+                <div id="ag_next_focus_hint" class="alert alert-primary d-none py-2 mb-2"></div>
                 <div id="ag_loading_box" class="small text-muted d-none mb-2">Cargando citas…</div>
                 <div id="ag_calendar_wrap" class="mx-agenda-calendar-wrap">
                   <div id="ag_calendar"></div>
+                  <div id="ag_cell_menu" class="mx-ag-cell-menu d-none" role="menu" aria-label="Acciones de celda disponible">
+                    <button type="button" class="mx-ag-cell-menu-btn" id="ag_cell_menu_new_appointment">Nueva cita</button>
+                    <button type="button" class="mx-ag-cell-menu-btn is-disabled" id="ag_cell_menu_block_slot" disabled>Bloquear horario (próximamente)</button>
+                  </div>
                 </div>
                 <div class="mx-ag-hours-toggle-wrap">
                   <button type="button" class="mx-ag-hours-toggle" id="ag_hours_toggle_btn" aria-expanded="false">
@@ -2770,9 +2794,36 @@
                         </div>
                       </div>
                       <div class="col-12">
+                        <label class="form-label" for="ag_patient_search_query">Buscar paciente</label>
+                        <div class="input-group">
+                          <input type="text" class="form-control" id="ag_patient_search_query" placeholder="Nombre, CURP o ID">
+                          <button type="button" class="btn btn-outline-primary" id="ag_patient_search_btn">Buscar</button>
+                        </div>
+                        <div class="form-text">La búsqueda ocurre dentro del modal de Agenda.</div>
+                        <div id="ag_patient_search_results" class="list-group mt-2"></div>
+                        <div id="ag_patient_search_msg" class="small text-muted mt-1 d-none"></div>
+                      </div>
+                      <div class="col-12">
                         <label class="form-label" for="ag_patient_id_input">Paciente (ID)</label>
                         <input type="text" class="form-control" id="ag_patient_id_input" placeholder="ID de paciente">
-                        <div class="form-text">Captura el ID de paciente existente en el sistema.</div>
+                        <div class="form-text">Puedes capturar el ID manualmente o seleccionarlo desde búsqueda.</div>
+                      </div>
+                      <div class="col-12">
+                        <div class="d-flex align-items-center justify-content-between">
+                          <label class="form-label mb-0" for="ag_patient_new_toggle">Paciente nuevo</label>
+                          <button type="button" class="btn btn-sm btn-outline-secondary" id="ag_patient_new_toggle">Usar paciente nuevo</button>
+                        </div>
+                        <div id="ag_patient_new_wrap" class="row g-2 mt-1 d-none">
+                          <div class="col-12">
+                            <input type="text" class="form-control" id="ag_patient_new_name" placeholder="Nombre completo">
+                          </div>
+                          <div class="col-md-6">
+                            <input type="text" class="form-control" id="ag_patient_new_phone" placeholder="Teléfono">
+                          </div>
+                          <div class="col-md-6">
+                            <input type="email" class="form-control" id="ag_patient_new_email" placeholder="Correo electrónico (opcional)">
+                          </div>
+                        </div>
                       </div>
                       <div class="col-md-6">
                         <label class="form-label" for="ag_start_input">Inicio</label>
@@ -2804,6 +2855,28 @@
                   <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-primary" id="ag_create_submit_btn">Guardar cita</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal fade" id="ag_next_slots_modal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Siguiente cita disponible</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div id="ag_next_slots_error" class="alert alert-danger d-none py-2 mb-2"></div>
+                    <div id="ag_next_slots_loading" class="small text-muted d-none mb-2">Buscando disponibilidad real…</div>
+                    <div id="ag_next_slots_results" class="list-group"></div>
+                    <div id="ag_next_slots_empty" class="small text-muted d-none mt-2">No se encontraron opciones disponibles.</div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" id="ag_next_slots_prev_btn">Ver 3 anteriores</button>
+                    <button type="button" class="btn btn-outline-secondary" id="ag_next_slots_more_btn">Ver siguientes 3</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
                   </div>
                 </div>
               </div>
