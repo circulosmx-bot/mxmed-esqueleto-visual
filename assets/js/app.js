@@ -413,6 +413,8 @@ console.info('app.js loaded :: 20251123a');
     blockConfirmBtn: panel.querySelector('#ag_block_confirm_btn'),
     blockCancelBtn: panel.querySelector('#ag_block_cancel_btn'),
     patientId: panel.querySelector('#ag_patient_id_input'),
+    startInfoTime: panel.querySelector('#ag_start_info_time'),
+    startInfoDate: panel.querySelector('#ag_start_info_date'),
     startAt: panel.querySelector('#ag_start_input'),
     endAt: panel.querySelector('#ag_end_input'),
     modality: panel.querySelector('#ag_modality_input'),
@@ -424,7 +426,9 @@ console.info('app.js loaded :: 20251123a');
     patientSearchMsg: panel.querySelector('#ag_patient_search_msg'),
     patientNewToggle: panel.querySelector('#ag_patient_new_toggle'),
     patientNewWrap: panel.querySelector('#ag_patient_new_wrap'),
-    patientNewName: panel.querySelector('#ag_patient_new_name'),
+    patientNewFirstName: panel.querySelector('#ag_patient_new_first_name'),
+    patientNewLastName1: panel.querySelector('#ag_patient_new_last_name_1'),
+    patientNewLastName2: panel.querySelector('#ag_patient_new_last_name_2'),
     patientNewPhone: panel.querySelector('#ag_patient_new_phone'),
     patientNewEmail: panel.querySelector('#ag_patient_new_email'),
     activePatientBox: panel.querySelector('#ag_active_patient_box'),
@@ -476,8 +480,18 @@ console.info('app.js loaded :: 20251123a');
     eventRescheduleBackBtn: panel.querySelector('#ag_event_reschedule_back_btn'),
     eventRescheduleConfirmBtn: panel.querySelector('#ag_event_reschedule_confirm_btn'),
     eventCancelWrap: panel.querySelector('#ag_event_cancel_wrap'),
+    eventCancelPrompt: panel.querySelector('#ag_event_cancel_prompt'),
     eventCancelBackBtn: panel.querySelector('#ag_event_cancel_back_btn'),
     eventCancelConfirmBtn: panel.querySelector('#ag_event_cancel_confirm_btn'),
+    eventCancelPostHint: panel.querySelector('#ag_event_cancel_post_hint'),
+    eventCancelPostActions: panel.querySelector('#ag_event_cancel_post_actions'),
+    eventCancelPostWaitlistBtn: panel.querySelector('#ag_event_cancel_post_waitlist_btn'),
+    eventCancelPostNewBtn: panel.querySelector('#ag_event_cancel_post_new_btn'),
+    eventCancelWaitlistWrap: panel.querySelector('#ag_event_cancel_waitlist_wrap'),
+    eventCancelWaitlistLoading: panel.querySelector('#ag_event_cancel_waitlist_loading'),
+    eventCancelWaitlistEmpty: panel.querySelector('#ag_event_cancel_waitlist_empty'),
+    eventCancelWaitlistList: panel.querySelector('#ag_event_cancel_waitlist_list'),
+    eventCloseBtn: panel.querySelector('#ag_event_close_btn'),
     eventRescheduleBtn: panel.querySelector('#ag_event_reschedule_btn'),
     eventCancelBtn: panel.querySelector('#ag_event_cancel_btn')
   };
@@ -517,6 +531,10 @@ console.info('app.js loaded :: 20251123a');
   let eventActionPendingReschedule = null;
   let eventActionRescheduleBusy = false;
   let eventActionCurrentSection = 'detail';
+  let eventActionIsCancelled = false;
+  let eventCancelPostActionsEnabled = false;
+  let eventCancelPostWaitlistLoaded = false;
+  let eventCancelPostWaitlistBusy = false;
   let eventRescheduleMonthOptions = [];
   let eventRescheduleMonthCursor = null;
   let eventRescheduleSelectedDayKey = '';
@@ -534,6 +552,7 @@ console.info('app.js loaded :: 20251123a');
   let blockModalShowConflicts = false;
   const NEXT_AVAILABLE_FLOW_ENABLED = false;
   const AGENDA_SLOT_DEBUG = true;
+  const AGENDA_CANCEL_DEBUG = true;
   const BLOCK_REASON_OPTIONS = Object.freeze([
     { key: 'comida', label: 'Comida' },
     { key: 'procedimiento', label: 'Procedimiento' },
@@ -543,6 +562,12 @@ console.info('app.js loaded :: 20251123a');
   ]);
 
   const sanitizeText = (value)=> String(value ?? '').trim();
+  const logAgendaCancelFlow = (label = '', details = {})=>{
+    if(!AGENDA_CANCEL_DEBUG) return;
+    try{
+      console.info(`AGENDA CANCEL FLOW: ${label}`, details);
+    }catch(_){}
+  };
   const escapeHtml = (value)=> String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -802,7 +827,9 @@ console.info('app.js loaded :: 20251123a');
       }
       setActivePatientMode('manual');
     }else{
-      if(els.patientNewName) els.patientNewName.value = '';
+      if(els.patientNewFirstName) els.patientNewFirstName.value = '';
+      if(els.patientNewLastName1) els.patientNewLastName1.value = '';
+      if(els.patientNewLastName2) els.patientNewLastName2.value = '';
       if(els.patientNewPhone) els.patientNewPhone.value = '';
       if(els.patientNewEmail) els.patientNewEmail.value = '';
     }
@@ -828,6 +855,12 @@ console.info('app.js loaded :: 20251123a');
     clearBlockFlowVisualState({ rerender: true });
   };
   const hideEventActionPanel = ()=>{
+    logAgendaCancelFlow('hideEventActionPanel:begin', {
+      activeEventActionId,
+      section: eventActionCurrentSection,
+      isCancelled: eventActionIsCancelled,
+      postActionsEnabled: eventCancelPostActionsEnabled
+    });
     if(eventActionsModal){
       try{ eventActionsModal.hide(); }catch(_){}
     }
@@ -843,9 +876,8 @@ console.info('app.js loaded :: 20251123a');
     activeEventActionRef = null;
     activeEventActionAppointmentId = '';
     eventActionOriginalRange = null;
-    eventActionPendingReschedule = null;
-    eventActionRescheduleBusy = false;
-    eventActionCurrentSection = 'detail';
+    resetEventActionModalState();
+    logAgendaCancelFlow('hideEventActionPanel:end');
   };
   const setEventActionError = (message = '')=>{
     if(!els.eventActionError) return;
@@ -870,6 +902,212 @@ console.info('app.js loaded :: 20251123a');
     }
     els.eventRescheduleNote.classList.add('alert-info');
     els.eventRescheduleNote.textContent = 'Selecciona fecha y hora válidas para continuar.';
+  };
+  const resetEventCancelPostActions = ()=>{
+    eventCancelPostActionsEnabled = false;
+    eventCancelPostWaitlistLoaded = false;
+    eventCancelPostWaitlistBusy = false;
+    if(els.eventCancelPostHint){
+      els.eventCancelPostHint.classList.add('d-none');
+    }
+    if(els.eventCancelPostActions){
+      els.eventCancelPostActions.classList.add('d-none');
+    }
+    if(els.eventCancelWaitlistWrap){
+      els.eventCancelWaitlistWrap.classList.add('d-none');
+    }
+    if(els.eventCancelWaitlistLoading){
+      els.eventCancelWaitlistLoading.classList.add('d-none');
+    }
+    if(els.eventCancelWaitlistEmpty){
+      els.eventCancelWaitlistEmpty.classList.add('d-none');
+      els.eventCancelWaitlistEmpty.textContent = 'No hay pacientes en lista de espera para este contexto.';
+    }
+    if(els.eventCancelWaitlistList){
+      els.eventCancelWaitlistList.innerHTML = '';
+    }
+    if(els.eventCancelPrompt){
+      els.eventCancelPrompt.classList.remove('alert-success');
+      els.eventCancelPrompt.classList.add('alert-warning');
+      els.eventCancelPrompt.textContent = '¿Confirmas cancelar esta cita?';
+    }
+    if(els.eventCancelPostWaitlistBtn){
+      els.eventCancelPostWaitlistBtn.disabled = false;
+      els.eventCancelPostWaitlistBtn.textContent = 'Asignar desde lista de espera';
+    }
+    if(els.eventCancelConfirmBtn){
+      els.eventCancelConfirmBtn.disabled = false;
+      els.eventCancelConfirmBtn.textContent = 'Sí, cancelar';
+    }
+  };
+  const setEventCancelPostActionsEnabled = (enabled)=>{
+    eventCancelPostActionsEnabled = !!enabled;
+    if(els.eventCancelPostHint){
+      els.eventCancelPostHint.classList.toggle('d-none', !eventCancelPostActionsEnabled);
+    }
+    if(els.eventCancelPostActions){
+      els.eventCancelPostActions.classList.toggle('d-none', !eventCancelPostActionsEnabled);
+    }
+    if(els.eventCancelBackBtn){
+      els.eventCancelBackBtn.classList.toggle('d-none', eventCancelPostActionsEnabled);
+    }
+    if(els.eventCancelConfirmBtn){
+      els.eventCancelConfirmBtn.classList.toggle('d-none', eventCancelPostActionsEnabled);
+    }
+    if(els.eventCancelPrompt){
+      if(eventCancelPostActionsEnabled){
+        els.eventCancelPrompt.classList.remove('alert-warning');
+        els.eventCancelPrompt.classList.add('alert-success');
+        els.eventCancelPrompt.textContent = 'Cita cancelada correctamente.';
+      }else{
+        els.eventCancelPrompt.classList.remove('alert-success');
+        els.eventCancelPrompt.classList.add('alert-warning');
+        els.eventCancelPrompt.textContent = '¿Confirmas cancelar esta cita?';
+      }
+    }
+  };
+  const resetEventActionModalState = ()=>{
+    eventActionCurrentSection = 'detail';
+    eventActionIsCancelled = false;
+    eventActionPendingReschedule = null;
+    eventActionRescheduleBusy = false;
+    eventRescheduleMonthOptions = [];
+    eventRescheduleMonthCursor = null;
+    eventRescheduleSelectedDayKey = '';
+    eventRescheduleSelectedStart = null;
+    setEventActionError('');
+    setEventActionRescheduleNote('');
+    setEventResolutionNote('');
+    resetEventCancelPostActions();
+    if(els.eventRescheduleConfirmBtn){
+      els.eventRescheduleConfirmBtn.disabled = true;
+    }
+    renderEventRescheduleSummary();
+    if(els.eventActionDetailWrap){
+      els.eventActionDetailWrap.classList.remove('d-none');
+    }
+    if(els.eventRescheduleWrap){
+      els.eventRescheduleWrap.classList.add('d-none');
+    }
+    if(els.eventCancelWrap){
+      els.eventCancelWrap.classList.add('d-none');
+    }
+  };
+  const resolveEventCancelledFlag = (eventRef = null)=>{
+    const props = eventRef?.extendedProps || {};
+    const statusKeyNorm = normalizeText(sanitizeText(props.status_key || props.status || ''));
+    const statusLabelNorm = normalizeText(sanitizeText(props.status_label || props.status || ''));
+    return statusKeyNorm.includes('cancel') || statusLabelNorm.includes('cancel');
+  };
+  const syncEventActionCancelledFlag = ()=>{
+    eventActionIsCancelled = resolveEventCancelledFlag(activeEventActionRef);
+    return eventActionIsCancelled;
+  };
+  const getEventActionSlotSelection = ()=>{
+    const start = eventActionOriginalRange?.start instanceof Date ? new Date(eventActionOriginalRange.start) : null;
+    const end = eventActionOriginalRange?.end instanceof Date ? new Date(eventActionOriginalRange.end) : null;
+    if(!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start){
+      return null;
+    }
+    return { start, end };
+  };
+  const buildWaitlistAssignPayload = (entry = {})=>{
+    const slot = getEventActionSlotSelection();
+    if(!slot) return null;
+    const doctorId = sanitizeText(entry?.doctor_id || activeEventActionRef?.extendedProps?.doctor_id || getDoctorId() || '');
+    const consultorioId = sanitizeText(entry?.consultorio_id || activeEventActionRef?.extendedProps?.consultorio_id || getAvailabilityConsultorioId() || '');
+    const slotMinutes = Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
+    if(!doctorId || !consultorioId) return null;
+    return {
+      doctor_id: doctorId,
+      consultorio_id: consultorioId,
+      start_at: toSqlDateTimeLocal(slot.start),
+      end_at: toSqlDateTimeLocal(slot.end),
+      slot_minutes: slotMinutes,
+      modality: sanitizeText(activeEventActionRef?.extendedProps?.modality || '') || 'waitlist',
+      actor_role: 'doctor',
+      actor_id: resolveActorId() || 'ui',
+      channel_origin: 'agenda_frontend_v1'
+    };
+  };
+  const renderEventCancelWaitlistEntries = (entries = [])=>{
+    if(!els.eventCancelWaitlistList) return;
+    const list = Array.isArray(entries) ? entries : [];
+    if(!list.length){
+      if(els.eventCancelWaitlistEmpty){
+        els.eventCancelWaitlistEmpty.classList.remove('d-none');
+      }
+      els.eventCancelWaitlistList.innerHTML = '';
+      return;
+    }
+    if(els.eventCancelWaitlistEmpty){
+      els.eventCancelWaitlistEmpty.classList.add('d-none');
+    }
+    const html = list.map((entry)=>{
+      const id = sanitizeText(entry?.id || '');
+      const name = sanitizeText(entry?.patient_name || '') || `Paciente ${sanitizeText(entry?.patient_id || '') || '--'}`;
+      const phone = sanitizeText(entry?.patient_phone || '');
+      const status = sanitizeText(entry?.status || 'active');
+      const doctorId = sanitizeText(entry?.doctor_id || '');
+      const consultorioId = sanitizeText(entry?.consultorio_id || '');
+      return `
+        <button
+          type="button"
+          class="list-group-item list-group-item-action d-flex justify-content-between align-items-start"
+          data-ag-waitlist-assign="${escapeHtml(id)}"
+          data-ag-waitlist-doctor="${escapeHtml(doctorId)}"
+          data-ag-waitlist-consultorio="${escapeHtml(consultorioId)}"
+        >
+          <span class="text-start">
+            <span class="d-block fw-semibold">${escapeHtml(name)}</span>
+            <span class="small text-muted">${escapeHtml(phone || 'Sin teléfono')} · ${escapeHtml(status)}</span>
+          </span>
+          <span class="small fw-semibold text-primary">Asignar</span>
+        </button>
+      `;
+    }).join('');
+    els.eventCancelWaitlistList.innerHTML = html;
+  };
+  const loadEventCancelWaitlist = async ()=>{
+    if(eventCancelPostWaitlistBusy) return;
+    if(!els.eventCancelWaitlistWrap) return;
+    const doctorId = sanitizeText(activeEventActionRef?.extendedProps?.doctor_id || getDoctorId() || '');
+    const consultorioId = sanitizeText(activeEventActionRef?.extendedProps?.consultorio_id || getAvailabilityConsultorioId() || '');
+    if(!doctorId || !consultorioId){
+      if(els.eventCancelWaitlistEmpty){
+        els.eventCancelWaitlistEmpty.textContent = 'No hay contexto médico/consultorio para consultar lista de espera.';
+        els.eventCancelWaitlistEmpty.classList.remove('d-none');
+      }
+      els.eventCancelWaitlistWrap.classList.remove('d-none');
+      return;
+    }
+    eventCancelPostWaitlistBusy = true;
+    if(els.eventCancelWaitlistWrap) els.eventCancelWaitlistWrap.classList.remove('d-none');
+    if(els.eventCancelWaitlistLoading) els.eventCancelWaitlistLoading.classList.remove('d-none');
+    if(els.eventCancelWaitlistEmpty) els.eventCancelWaitlistEmpty.classList.add('d-none');
+    if(els.eventCancelPostWaitlistBtn){
+      els.eventCancelPostWaitlistBtn.disabled = true;
+      els.eventCancelPostWaitlistBtn.textContent = 'Cargando...';
+    }
+    try{
+      const result = await AgendaApiClient.getWaitlistEntries({ doctorId, consultorioId, status: 'active' });
+      const rows = (result?.ok && result?.json?.ok === true && Array.isArray(result?.json?.data)) ? result.json.data : [];
+      renderEventCancelWaitlistEntries(rows);
+      eventCancelPostWaitlistLoaded = true;
+    }catch(_){
+      if(els.eventCancelWaitlistEmpty){
+        els.eventCancelWaitlistEmpty.textContent = 'No se pudo cargar la lista de espera.';
+        els.eventCancelWaitlistEmpty.classList.remove('d-none');
+      }
+      if(els.eventCancelWaitlistList) els.eventCancelWaitlistList.innerHTML = '';
+    }finally{
+      if(els.eventCancelWaitlistLoading) els.eventCancelWaitlistLoading.classList.add('d-none');
+      if(els.eventCancelPostWaitlistBtn){
+        els.eventCancelPostWaitlistBtn.disabled = false;
+        els.eventCancelPostWaitlistBtn.textContent = 'Asignar desde lista de espera';
+      }
+      eventCancelPostWaitlistBusy = false;
+    }
   };
   const setEventResolutionNote = (message = '', tone = 'muted')=>{
     if(!els.eventResolutionNote) return;
@@ -917,7 +1155,15 @@ console.info('app.js loaded :: 20251123a');
     const isReschedule = key === 'reschedule';
     const isCancel = key === 'cancel';
     const isDetail = !isReschedule && !isCancel;
+    const cancelledFlag = syncEventActionCancelledFlag();
     eventActionCurrentSection = isReschedule ? 'reschedule' : (isCancel ? 'cancel' : 'detail');
+    logAgendaCancelFlow('setEventActionSection', {
+      requested: key || 'detail',
+      applied: eventActionCurrentSection,
+      cancelledFlag,
+      activeEventActionId,
+      appointmentId: activeEventActionAppointmentId
+    });
     if(els.eventActionDetailWrap){
       els.eventActionDetailWrap.classList.toggle('d-none', !isDetail);
     }
@@ -927,6 +1173,9 @@ console.info('app.js loaded :: 20251123a');
     if(els.eventCancelWrap){
       els.eventCancelWrap.classList.toggle('d-none', !isCancel);
     }
+    if(!isCancel){
+      resetEventCancelPostActions();
+    }
     if(els.eventResolutionWrap){
       const overdueOpen = isOverdueOpenFromProps(activeEventActionRef?.extendedProps || {});
       els.eventResolutionWrap.classList.toggle('d-none', !isDetail || !overdueOpen);
@@ -934,12 +1183,21 @@ console.info('app.js loaded :: 20251123a');
     if(els.eventRescheduleBtn){
       els.eventRescheduleBtn.classList.toggle('btn-primary', isReschedule);
       els.eventRescheduleBtn.classList.toggle('btn-outline-secondary', !isReschedule);
-      els.eventRescheduleBtn.classList.toggle('d-none', isReschedule);
+      els.eventRescheduleBtn.classList.toggle('d-none', isReschedule || isCancel);
     }
     if(els.eventCancelBtn){
       els.eventCancelBtn.classList.remove('btn-primary', 'btn-outline-secondary', 'btn-danger');
       els.eventCancelBtn.classList.add('btn-outline-secondary');
-      els.eventCancelBtn.classList.toggle('d-none', isReschedule);
+      els.eventCancelBtn.classList.toggle('d-none', isReschedule || isCancel || cancelledFlag);
+    }
+    if(els.eventCloseBtn){
+      els.eventCloseBtn.classList.toggle('d-none', !isDetail);
+    }
+    if(els.eventCancelBackBtn){
+      els.eventCancelBackBtn.classList.toggle('d-none', !isCancel);
+    }
+    if(els.eventCancelConfirmBtn){
+      els.eventCancelConfirmBtn.classList.toggle('d-none', !isCancel);
     }
     if(!isReschedule){
       eventActionPendingReschedule = null;
@@ -951,6 +1209,7 @@ console.info('app.js loaded :: 20251123a');
     if(!calendar || !(candidateStart instanceof Date) || !(candidateEnd instanceof Date)) return [];
     return calendar.getEvents().filter((ev)=>{
       if(!ev || ev.display === 'background') return false;
+      if(!isEventOperationallyBusy(ev)) return false;
       const evId = sanitizeText(ev.id || '');
       if(evId === activeEventActionId || evId.startsWith('__ag_next_focus_')) return false;
       const evType = sanitizeText(ev.extendedProps?.event_type || '');
@@ -1182,7 +1441,7 @@ console.info('app.js loaded :: 20251123a');
   };
   const applyEventReschedule = async ()=>{
     if(eventActionRescheduleBusy || !eventActionPendingReschedule || !activeEventActionRef) return;
-    const appointmentId = sanitizeText(activeEventActionAppointmentId || activeEventActionRef?.id || '');
+    const appointmentId = sanitizeText(activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef));
     if(!appointmentId) return;
     eventActionRescheduleBusy = true;
     setEventActionError('');
@@ -1224,11 +1483,53 @@ console.info('app.js loaded :: 20251123a');
       eventActionRescheduleBusy = false;
     }
   };
+  const resolveEventAppointmentId = (eventRef = null)=>{
+    const props = eventRef?.extendedProps || {};
+    return sanitizeText(
+      props.appointment_id
+      || props.source_appointment_id
+      || props.linked_appointment_id
+      || props.appointmentId
+      || eventRef?.id
+      || ''
+    );
+  };
   const applyEventCancel = async ()=>{
-    const appointmentId = sanitizeText(activeEventActionAppointmentId || activeEventActionRef?.id || '');
+    const appointmentId = sanitizeText(activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef));
     if(!appointmentId) return;
+    logAgendaCancelFlow('cancel:confirm-click', {
+      activeEventActionId,
+      appointmentId,
+      section: eventActionCurrentSection,
+      postActionsEnabled: eventCancelPostActionsEnabled
+    });
     setEventActionError('');
     try{
+      if(els.eventCancelConfirmBtn){
+        els.eventCancelConfirmBtn.disabled = true;
+        els.eventCancelConfirmBtn.textContent = 'Cancelando...';
+      }
+      if(isAgendaDemoContext()){
+        if(activeEventActionRef){
+          applyLocalEventStatus(activeEventActionRef, 'cancelled');
+        }
+        setError('');
+        eventActionIsCancelled = true;
+        logAgendaCancelFlow('cancel:success-demo', {
+          activeEventActionId,
+          appointmentId
+        });
+        setEventCancelPostActionsEnabled(true);
+        logAgendaCancelFlow('cancel:post-state-enabled', {
+          activeEventActionId,
+          appointmentId,
+          postActionsEnabled: eventCancelPostActionsEnabled
+        });
+        if(els.eventCancelWaitlistWrap){
+          els.eventCancelWaitlistWrap.classList.add('d-none');
+        }
+        return;
+      }
       const payload = {
         motivo_code: 'user_cancel',
         motivo_text: '',
@@ -1242,17 +1543,39 @@ console.info('app.js loaded :: 20251123a');
       if(!result?.ok || !result?.json || result.json.ok !== true){
         const msg = sanitizeText(result?.json?.message || result?.json?.error || `HTTP ${result?.status || 500}`) || 'No se pudo cancelar la cita.';
         setEventActionError(msg);
+        if(els.eventCancelConfirmBtn){
+          els.eventCancelConfirmBtn.disabled = false;
+          els.eventCancelConfirmBtn.textContent = 'Sí, cancelar';
+        }
         return;
       }
-      hideEventActionPanel();
+      eventActionIsCancelled = true;
+      logAgendaCancelFlow('cancel:success-backend', {
+        activeEventActionId,
+        appointmentId,
+        responseOk: !!result?.ok
+      });
       setError('');
       await refreshCalendar({ forceConsultorios: false });
+      setEventCancelPostActionsEnabled(true);
+      logAgendaCancelFlow('cancel:post-state-enabled', {
+        activeEventActionId,
+        appointmentId,
+        postActionsEnabled: eventCancelPostActionsEnabled
+      });
+      if(els.eventCancelWaitlistWrap){
+        els.eventCancelWaitlistWrap.classList.add('d-none');
+      }
     }catch(_){
       setEventActionError('No se pudo cancelar la cita.');
+      if(els.eventCancelConfirmBtn){
+        els.eventCancelConfirmBtn.disabled = false;
+        els.eventCancelConfirmBtn.textContent = 'Sí, cancelar';
+      }
     }
   };
   const applyEventNoShow = async ()=>{
-    const appointmentId = sanitizeText(activeEventActionAppointmentId || activeEventActionRef?.id || '');
+    const appointmentId = sanitizeText(activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef));
     if(!appointmentId) return;
     setEventActionError('');
     setEventResolutionNote('');
@@ -1384,12 +1707,22 @@ console.info('app.js loaded :: 20251123a');
     hideCellMenu();
     const eventId = sanitizeText(eventRef?.id || '');
     if(!eventId) return;
+    resetEventActionModalState();
+    logAgendaCancelFlow('openEventActionModal:begin', {
+      prevEventId: activeEventActionId,
+      nextEventId: eventId,
+      section,
+      prevAppointmentId: activeEventActionAppointmentId
+    });
     activeEventActionId = eventId;
     activeEventActionRef = eventRef;
     const props = eventRef.extendedProps || {};
-    activeEventActionAppointmentId = sanitizeText(props.appointment_id || eventRef?.id || '');
+    activeEventActionAppointmentId = resolveEventAppointmentId(eventRef);
     const patient = sanitizeText(props.patient_display || eventRef.title || 'Paciente');
     const status = sanitizeText(props.status_label || 'Confirmada');
+    const statusKeyNorm = normalizeText(sanitizeText(props.status_key || ''));
+    const statusNorm = normalizeText(status);
+    eventActionIsCancelled = statusKeyNorm === 'canceled' || statusKeyNorm === 'cancelled' || statusNorm.includes('cancel');
     const overdueOpen = isOverdueOpenFromProps(props);
     const consultorio = sanitizeText(props.consultorio_id || '');
     const reason = sanitizeText(
@@ -1405,18 +1738,11 @@ console.info('app.js loaded :: 20251123a');
       ? Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000))
       : Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
     eventActionOriginalRange = { start, end };
-    eventActionPendingReschedule = null;
-    eventActionRescheduleBusy = false;
-    setEventActionError('');
-    setEventActionRescheduleNote('');
-    setEventResolutionNote('');
     if(els.eventActionSubtitle){
       els.eventActionSubtitle.textContent = `${patient || 'Paciente'} · ${formatAppointmentDateRangeLabel(start, end)}`;
     }
     if(els.eventActionStatusBadge){
-      const statusKeyNorm = normalizeText(sanitizeText(props.status_key || ''));
       const visualKeyNorm = normalizeText(sanitizeText(props.visual_key || ''));
-      const statusNorm = normalizeText(status);
       const isConfirmed = statusNorm.includes('confirm');
       const isPending = statusNorm.includes('pend');
       const isInProgress = statusNorm.includes('curso') || statusNorm.includes('progress') || statusNorm.includes('consulta') || statusKeyNorm.includes('in-progress');
@@ -1473,12 +1799,20 @@ console.info('app.js loaded :: 20251123a');
     }
     eventActionsModal = eventActionsModal || window.bootstrap.Modal.getOrCreateInstance(els.eventActionsModalEl);
     eventActionsModal.show();
+    logAgendaCancelFlow('openEventActionModal:shown', {
+      activeEventActionId,
+      section: eventActionCurrentSection,
+      appointmentId: activeEventActionAppointmentId,
+      isCancelled: eventActionIsCancelled,
+      modalShown: els.eventActionsModalEl?.classList.contains('show') === true
+    });
   };
   const collectConflictingAppointmentsInRange = (startDate, endDate)=>{
     if(!calendar || !(startDate instanceof Date) || !(endDate instanceof Date)) return [];
     if(Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || endDate <= startDate) return [];
     return calendar.getEvents().filter((ev)=>{
       if(!ev || ev.display === 'background') return false;
+      if(!isEventOperationallyBusy(ev)) return false;
       const evId = sanitizeText(ev.id || '');
       if(evId.startsWith('__ag_next_focus_')) return false;
       const evType = sanitizeText(ev.extendedProps?.event_type || '');
@@ -2076,6 +2410,12 @@ console.info('app.js loaded :: 20251123a');
     });
     panelEl.addEventListener('click', (event)=>{
       event.stopPropagation();
+      const isCancelTraceMode = sanitizeText(cellMenuSelection?.source || '') === 'cancel_trace';
+      const interactiveTarget = event.target.closest('button, input, select, textarea, label, a, [data-role], [data-ag-slot-action]');
+      if(isCancelTraceMode && !interactiveTarget){
+        hideCellMenu();
+        return;
+      }
       const actionBtn = event.target.closest('[data-ag-slot-action]');
       if(!actionBtn) return;
       const action = sanitizeText(actionBtn.getAttribute('data-ag-slot-action') || '');
@@ -2225,7 +2565,7 @@ console.info('app.js loaded :: 20251123a');
     }
     return isSelectionAvailable(startDate, endDate);
   };
-  const openCellMenu = ({ start, end, jsEvent })=>{
+  const openCellMenu = ({ start, end, jsEvent, source = '' })=>{
     if(!els.calendarWrap){
       if(AGENDA_SLOT_DEBUG){
         console.warn('AGENDA SLOT CLICK: menu element not found', {
@@ -2236,7 +2576,9 @@ console.info('app.js loaded :: 20251123a');
     }
     hideCellMenu();
     hideEventActionPanel();
-    cellMenuSelection = { start, end };
+    const sourceKey = sanitizeText(source);
+    const isCancelTraceSource = sourceKey === 'cancel_trace';
+    cellMenuSelection = { start, end, source: sourceKey };
     const frame = findTimeGridColumnFrame(start);
     if(!(frame instanceof HTMLElement)){
       if(AGENDA_SLOT_DEBUG){
@@ -2252,6 +2594,18 @@ console.info('app.js loaded :: 20251123a');
     const frameRect = frame.getBoundingClientRect();
     const portal = document.createElement('div');
     portal.className = 'mx-ag-slot-action-portal';
+    if(isCancelTraceSource){
+      portal.classList.add('is-cancel-trace-source');
+      portal.addEventListener('click', (event)=>{
+        const insideActionLayer = !!event.target.closest('.mx-ag-slot-action-layer');
+        if(insideActionLayer){
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        hideCellMenu();
+      });
+    }
     portal.style.left = `${Math.round(frameRect.left - wrapRect.left)}px`;
     portal.style.top = `${Math.round(frameRect.top - wrapRect.top)}px`;
     portal.style.width = `${Math.round(frameRect.width)}px`;
@@ -2299,6 +2653,7 @@ console.info('app.js loaded :: 20251123a');
   };
   const collectBookedRangesFromRows = (rows = [])=>{
     return (Array.isArray(rows) ? rows : [])
+      .filter((row)=> isRowOperationallyBusy(row))
       .map((row)=>{
         const start = parseDateTimeLocalSafe(row?.start_at || '');
         const end = parseDateTimeLocalSafe(row?.end_at || '');
@@ -2314,6 +2669,7 @@ console.info('app.js loaded :: 20251123a');
       if(ev.display === 'background') return false;
       const evId = sanitizeText(ev.id || '');
       if(evId.startsWith('__ag_next_focus_')) return false;
+      if(!isEventOperationallyBusy(ev)) return false;
       const evStart = ev.start;
       const evEnd = ev.end;
       return !!(evStart && evEnd && startDate < evEnd && endDate > evStart);
@@ -2745,6 +3101,37 @@ console.info('app.js loaded :: 20251123a');
         json: await resp.json().catch(()=> null)
       };
     },
+    async getWaitlistEntries({ doctorId = '', consultorioId = '', status = 'active', signal } = {}){
+      const params = new URLSearchParams();
+      if(sanitizeText(doctorId)) params.set('doctor_id', sanitizeText(doctorId));
+      if(sanitizeText(consultorioId)) params.set('consultorio_id', sanitizeText(consultorioId));
+      if(sanitizeText(status)) params.set('status', sanitizeText(status));
+      const resp = await fetch(`/api/agenda/index.php/waitlist?${params.toString()}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        signal
+      });
+      return {
+        ok: resp.ok,
+        status: resp.status,
+        json: await resp.json().catch(()=> null)
+      };
+    },
+    async assignWaitlistEntry(waitlistId, payload){
+      const safeId = encodeURIComponent(String(waitlistId || '').trim());
+      const resp = await fetch(`/api/agenda/index.php/waitlist/${safeId}/assign`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload || {})
+      });
+      return {
+        ok: resp.ok,
+        status: resp.status,
+        json: await resp.json().catch(()=> null)
+      };
+    },
     async getPatientsIndex({ signal } = {}){
       const base = (typeof window.resolvePatientsSearchUrl === 'function')
         ? window.resolvePatientsSearchUrl()
@@ -2910,6 +3297,8 @@ console.info('app.js loaded :: 20251123a');
     syncActivePatientPrompt();
     switchCreatePatientMode('existing');
     if(els.patientId) els.patientId.value = '';
+    if(els.startInfoTime) els.startInfoTime.textContent = '--:--';
+    if(els.startInfoDate) els.startInfoDate.textContent = '--';
     if(els.startAt) els.startAt.value = '';
     if(els.endAt) els.endAt.value = '';
     if(els.modality) els.modality.value = 'in_person';
@@ -2926,6 +3315,22 @@ console.info('app.js loaded :: 20251123a');
       els.createSubmit.textContent = 'Guardar cita';
     }
     createRequestInFlight = false;
+  };
+  const syncCreateStartInfoFromDate = (dateValue)=>{
+    const date = dateValue instanceof Date ? new Date(dateValue) : new Date(dateValue || '');
+    if(Number.isNaN(date.getTime())) return false;
+    if(els.startInfoTime){
+      els.startInfoTime.textContent = date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+    if(els.startInfoDate){
+      els.startInfoDate.textContent = date.toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      });
+    }
+    if(els.startAt) els.startAt.value = toDateTimeLocalInput(date);
+    return true;
   };
   const matchesPatientSearch = (entry, queryNorm)=>{
     if(!queryNorm) return true;
@@ -2995,6 +3400,7 @@ console.info('app.js loaded :: 20251123a');
       const evId = sanitizeText(ev.id || '');
       if(evId.startsWith('__ag_next_focus_')) return false;
       if(sanitizeText(ev.extendedProps?.event_type || '') === 'focus_marker') return false;
+      if(!isEventOperationallyBusy(ev)) return false;
       const evStart = ev.start;
       const evEnd = ev.end;
       return !!(evStart && evEnd && startDate < evEnd && endDate > evStart);
@@ -3049,8 +3455,10 @@ console.info('app.js loaded :: 20251123a');
       return false;
     }
     resetCreateForm();
-    if(els.startAt) els.startAt.value = toDateTimeLocalInput(start);
-    if(els.endAt) els.endAt.value = toDateTimeLocalInput(end);
+    syncCreateStartInfoFromDate(start);
+    const slotMinutes = Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
+    const computedEnd = plusMinutes(start, slotMinutes);
+    if(els.endAt) els.endAt.value = toDateTimeLocalInput(computedEnd);
     const consultorioId = resolveConsultorioId();
     if(els.consultorioModal && consultorioId) els.consultorioModal.value = consultorioId;
     createModal = createModal || window.bootstrap.Modal.getOrCreateInstance(els.createModalEl);
@@ -3215,29 +3623,37 @@ console.info('app.js loaded :: 20251123a');
     const doctorId = getDoctorId();
     const consultorioId = resolveConsultorioId();
     const patientId = sanitizeText(els.patientId?.value || '');
-    const newPatientName = sanitizeText(els.patientNewName?.value || '');
+    const newPatientFirstName = sanitizeText(els.patientNewFirstName?.value || '');
+    const newPatientLastName1 = sanitizeText(els.patientNewLastName1?.value || '');
+    const newPatientLastName2 = sanitizeText(els.patientNewLastName2?.value || '');
+    const newPatientDisplayName = [newPatientFirstName, newPatientLastName1, newPatientLastName2].filter(Boolean).join(' ');
     const newPatientPhone = sanitizeText(els.patientNewPhone?.value || '');
     const newPatientEmail = sanitizeText(els.patientNewEmail?.value || '');
     const startInput = sanitizeText(els.startAt?.value || '');
-    const endInput = sanitizeText(els.endAt?.value || '');
     const modality = sanitizeText(els.modality?.value || 'in_person') || 'in_person';
     const channelOrigin = sanitizeText(els.channel?.value || 'agenda_frontend_v1') || 'agenda_frontend_v1';
     const actorId = resolveActorId();
 
     if(!doctorId) return setCreateError('No se pudo resolver doctor_id.');
     if(!consultorioId) return setCreateError('No se pudo resolver un consultorio operativo. Verifica el catálogo de consultorios del médico activo.');
-    if(createPatientMode === 'new' && !newPatientName){
-      return setCreateError('Nombre completo es obligatorio para paciente nuevo.');
+    if(createPatientMode === 'new' && (!newPatientFirstName || !newPatientLastName1)){
+      return setCreateError('Nombre(s) y primer apellido son obligatorios para paciente nuevo.');
     }
     if(createPatientMode !== 'new' && !patientId) return setCreateError('Paciente (ID) es obligatorio.');
-    if(!startInput || !endInput) return setCreateError('Inicio y fin son obligatorios.');
+    if(!startInput) return setCreateError('Inicio es obligatorio.');
+    const configuredDurationMinutes = Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
+    const startDate = parseDateTimeLocalSafe(startInput);
+    if(!(startDate instanceof Date) || Number.isNaN(startDate.getTime())){
+      return setCreateError('Formato de fecha/hora inválido.');
+    }
+    const computedEndDate = plusMinutes(startDate, configuredDurationMinutes);
+    const endInput = toDateTimeLocalInput(computedEndDate);
+    if(els.endAt) els.endAt.value = endInput;
+    if(els.startAt) els.startAt.value = startInput;
 
     const startSql = toSqlDateTimeLocal(startInput);
     const endSql = toSqlDateTimeLocal(endInput);
     if(!startSql || !endSql) return setCreateError('Formato de fecha/hora inválido.');
-    if(new Date(endInput).getTime() <= new Date(startInput).getTime()){
-      return setCreateError('La hora de fin debe ser mayor a la de inicio.');
-    }
     if(!actorId) return setCreateError('No se pudo resolver created_by_id.');
 
     const payload = {
@@ -3259,7 +3675,7 @@ console.info('app.js loaded :: 20251123a');
         contacts.push({ type: 'email', value: newPatientEmail });
       }
       payload.patient = {
-        display_name: newPatientName,
+        display_name: newPatientDisplayName,
         doctor_id: doctorId,
         ...(contacts.length ? { contacts } : {})
       };
@@ -3396,6 +3812,19 @@ console.info('app.js loaded :: 20251123a');
       return { key: 'no-show', label: 'No show' };
     }
     return { key: 'pending', label: 'Pendiente' };
+  };
+  const isCancelledStatusKey = (statusKey = '')=>{
+    const normalized = sanitizeText(statusKey).toLowerCase().replace(/\s+/g, '_');
+    return normalized === 'cancelled' || normalized === 'canceled' || normalized === 'cancelada' || normalized === 'cancelado';
+  };
+  const isRowOperationallyBusy = (row = {})=>{
+    const statusMeta = resolveAppointmentStatusMeta(sanitizeText(row?.status || ''));
+    return !isCancelledStatusKey(statusMeta.key);
+  };
+  const isEventOperationallyBusy = (eventRef = null)=>{
+    const props = eventRef?.extendedProps || {};
+    const statusKey = sanitizeText(props.status_key_real || props.status_key || props.status || '');
+    return !isCancelledStatusKey(statusKey);
   };
 
   const isAgendaDemoContext = ()=>{
@@ -3848,6 +4277,42 @@ console.info('app.js loaded :: 20251123a');
       && statusMeta.key === 'no-show'
       && !isPast
     );
+    const patientDisplay = sanitizeText(row?.patient_name || row?.patient_full_name || '')
+      || (sanitizeText(row?.patient_id || '') ? `Paciente ${sanitizeText(row?.patient_id || '')}` : 'Paciente');
+    // Agenda operativa híbrida: toda cita cancelada libera el slot para operación
+    // y conserva una huella histórica discreta/clickeable.
+    if(statusMeta.key === 'cancelled'){
+      return {
+        id: `cancel-trace:${sanitizeText(row?.appointment_id || '')}`,
+        title: `Cancelada: ${patientDisplay}`,
+        start: startAt,
+        end: endAt,
+        color: 'transparent',
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+        textColor: '#6a7782',
+        classNames: ['mx-ag-cancel-trace-event'],
+        extendedProps: {
+          appointment_id: sanitizeText(row?.appointment_id || ''),
+          doctor_id: sanitizeText(row?.doctor_id || ''),
+          consultorio_id: sanitizeText(row?.consultorio_id || ''),
+          patient_id: sanitizeText(row?.patient_id || ''),
+          start_at: sanitizeText(row?.start_at || ''),
+          end_at: sanitizeText(row?.end_at || ''),
+          patient_display: patientDisplay,
+          status_label: 'Cancelada',
+          status_key: 'cancelled',
+          status_key_real: 'cancelled',
+          is_past: isPast,
+          visual_key: 'cancelled',
+          patient_flag_type: patientFlagType,
+          modality: sanitizeText(row?.modality || ''),
+          status: sanitizeText(row?.status || ''),
+          channel_origin: channelOrigin,
+          event_type: 'cancel_trace'
+        }
+      };
+    }
     const visualStatusKey = isSyntheticFutureNoShow ? 'finished' : statusMeta.key;
     const displayStatusLabel = isSyntheticFutureNoShow ? 'Pasada' : statusMeta.label;
     const visual = resolveAppointmentColor({
@@ -3855,8 +4320,6 @@ console.info('app.js loaded :: 20251123a');
       isPast,
       patientFlagType
     });
-    const patientDisplay = sanitizeText(row?.patient_name || row?.patient_full_name || '')
-      || (sanitizeText(row?.patient_id || '') ? `Paciente ${sanitizeText(row?.patient_id || '')}` : 'Paciente');
     return {
       id: sanitizeText(row?.appointment_id || ''),
       title: buildAppointmentTitle(row),
@@ -3928,6 +4391,7 @@ console.info('app.js loaded :: 20251123a');
     const safeEvents = Array.isArray(events) ? events : [];
     safeEvents.forEach((event)=>{
       if(!event || event.display === 'background') return;
+      if(sanitizeText(event?.extendedProps?.event_type || '') === 'cancel_trace') return;
       const startRaw = sanitizeText(event.start || '');
       if(!startRaw) return;
       const dayKey = startRaw.slice(0, 10);
@@ -4075,7 +4539,7 @@ console.info('app.js loaded :: 20251123a');
   const fetchAppointments = async (fetchInfo)=>{
     const blockedEvents = collectBlockedSlotEvents(fetchInfo);
     if(isAgendaDemoContext()){
-      const events = buildDemoAppointments(fetchInfo).map(mapAppointmentToEvent).filter((event)=> !!event.start);
+      const events = buildDemoAppointments(fetchInfo).map(mapAppointmentToEvent).filter((event)=> !!(event && event.start));
       const demoBlocked = buildDemoBlockedSlotEvents(fetchInfo);
       const merged = [...events, ...blockedEvents, ...demoBlocked];
       merged.sort((a, b)=>{
@@ -4114,7 +4578,7 @@ console.info('app.js loaded :: 20251123a');
       throw new Error(message || 'No se pudieron cargar las citas de agenda.');
     }
     const flaggedRows = await enrichRowsWithPatientFlagType(json.data, { signal: appointmentsRequestCtrl?.signal });
-    const events = flaggedRows.map(mapAppointmentToEvent).filter((event)=> !!event.start);
+    const events = flaggedRows.map(mapAppointmentToEvent).filter((event)=> !!(event && event.start));
     const merged = [...events, ...blockedEvents];
     merged.sort((a, b)=>{
       const aTime = new Date(a.start || '').getTime();
@@ -4323,6 +4787,21 @@ console.info('app.js loaded :: 20251123a');
             `
           };
         }
+        if(eventType === 'cancel_trace'){
+          const patient = sanitizeText(props.patient_display || 'Paciente');
+          const traceEventId = sanitizeText(arg.event.id || '');
+          const traceAppointmentId = sanitizeText(props.appointment_id || '');
+          return {
+            html: `
+              <button
+                type="button"
+                class="mx-ag-cancelled-chip"
+                data-ag-cancel-trace-id="${escapeHtml(traceEventId)}"
+                data-ag-cancel-appointment-id="${escapeHtml(traceAppointmentId)}"
+              >Cancelada: ${escapeHtml(patient)}</button>
+            `
+          };
+        }
         const patient = sanitizeText(props.patient_display || arg.event.title || 'Paciente');
         const statusLabel = sanitizeText(props.status_label || 'Confirmada');
         const eventId = sanitizeText(arg.event.id || '');
@@ -4441,6 +4920,27 @@ console.info('app.js loaded :: 20251123a');
           }
           return;
         }
+        if(sanitizeText(props.event_type || '') === 'cancel_trace'){
+          const clickTarget = info.jsEvent?.target;
+          const chipTarget = clickTarget?.closest?.('.mx-ag-cancelled-chip');
+          if(chipTarget){
+            info.jsEvent?.preventDefault?.();
+            info.jsEvent?.stopPropagation?.();
+            openEventActionModal(info.event, 'detail');
+            return;
+          }
+          // Fuera de la huella: comportamiento normal de slot libre.
+          const start = info.event.start instanceof Date ? new Date(info.event.start) : new Date(info.event.start || '');
+          const end = info.event.end instanceof Date ? new Date(info.event.end) : new Date(info.event.end || '');
+          if(!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end > start){
+            if(isCellAvailableForCreate(start, end)){
+              openCellMenu({ start, end, jsEvent: info.jsEvent, source: 'cancel_trace' });
+            }
+          }
+          info.jsEvent?.preventDefault?.();
+          info.jsEvent?.stopPropagation?.();
+          return;
+        }
         if(sanitizeText(props.event_type || '') === 'blocked_slot'){
           if(info.jsEvent?.target?.closest?.('[data-ag-block-action="remove"]')){
             return;
@@ -4452,7 +4952,14 @@ console.info('app.js loaded :: 20251123a');
           rerenderCalendarEvents();
           return;
         }
-        hideEventActionPanel();
+        logAgendaCancelFlow('eventClick', {
+          eventId: sanitizeText(info.event?.id || ''),
+          appointmentId: resolveEventAppointmentId(info.event),
+          modalWasShown: els.eventActionsModalEl?.classList.contains('show') === true,
+          previousEventId: activeEventActionId,
+          previousAppointmentId: activeEventActionAppointmentId,
+          previousSection: eventActionCurrentSection
+        });
         openEventActionModal(info.event, 'detail');
       },
       datesSet: ()=>{
@@ -4637,6 +5144,14 @@ console.info('app.js loaded :: 20251123a');
     });
     els.eventCancelBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
+      const isCancelledNow = syncEventActionCancelledFlag();
+      logAgendaCancelFlow('click:eventCancelBtn', {
+        activeEventActionId,
+        appointmentId: activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef),
+        section: eventActionCurrentSection,
+        isCancelledNow
+      });
+      if(isCancelledNow) return;
       setEventActionSection('cancel');
     });
     els.eventMarkInProgressBtn?.addEventListener('click', (event)=>{
@@ -4653,6 +5168,11 @@ console.info('app.js loaded :: 20251123a');
     });
     els.eventMarkCancelBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
+      logAgendaCancelFlow('click:eventMarkCancelBtn', {
+        activeEventActionId,
+        appointmentId: activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef),
+        section: eventActionCurrentSection
+      });
       setEventActionSection('cancel');
     });
     els.eventRescheduleDays?.addEventListener('click', (event)=>{
@@ -4686,37 +5206,108 @@ console.info('app.js loaded :: 20251123a');
     });
     els.eventCancelBackBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
+      logAgendaCancelFlow('click:eventCancelBackBtn', {
+        activeEventActionId,
+        appointmentId: activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef),
+        section: eventActionCurrentSection
+      });
       setEventActionSection('detail');
     });
     els.eventCancelConfirmBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
       applyEventCancel().catch(()=> null);
     });
+    els.eventCancelPostNewBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      const slot = getEventActionSlotSelection();
+      if(!slot){
+        setEventActionError('No se pudo resolver el horario cancelado.');
+        return;
+      }
+      hideEventActionPanel();
+      const opened = openCreateModalFromSelection(slot, { bypassAvailabilityCheck: true });
+      if(!opened){
+        setError('No se pudo abrir el flujo de nueva cita para este horario.');
+      }
+    });
+    els.eventCancelPostWaitlistBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      loadEventCancelWaitlist().catch(()=> null);
+    });
+    els.eventCancelWaitlistList?.addEventListener('click', (event)=>{
+      const btn = event.target.closest('[data-ag-waitlist-assign]');
+      if(!btn) return;
+      event.preventDefault();
+      const waitlistId = sanitizeText(btn.getAttribute('data-ag-waitlist-assign') || '');
+      if(!waitlistId || eventCancelPostWaitlistBusy) return;
+      const selectedEntry = Array.from(els.eventCancelWaitlistList?.querySelectorAll('[data-ag-waitlist-assign]') || [])
+        .map((el)=> ({ id: sanitizeText(el.getAttribute('data-ag-waitlist-assign') || ''), el }))
+        .find((item)=> item.id === waitlistId);
+      if(selectedEntry?.el){
+        selectedEntry.el.setAttribute('disabled', 'disabled');
+      }
+      const rowData = {
+        id: waitlistId,
+        doctor_id: sanitizeText(btn.getAttribute('data-ag-waitlist-doctor') || activeEventActionRef?.extendedProps?.doctor_id || getDoctorId() || ''),
+        consultorio_id: sanitizeText(btn.getAttribute('data-ag-waitlist-consultorio') || activeEventActionRef?.extendedProps?.consultorio_id || getAvailabilityConsultorioId() || '')
+      };
+      const payload = buildWaitlistAssignPayload(rowData);
+      if(!payload){
+        setEventActionError('No se pudo preparar la asignación desde lista de espera.');
+        if(selectedEntry?.el){
+          selectedEntry.el.removeAttribute('disabled');
+        }
+        return;
+      }
+      eventCancelPostWaitlistBusy = true;
+      const assignLabel = selectedEntry?.el?.querySelector('.text-primary');
+      if(assignLabel) assignLabel.textContent = 'Asignando...';
+      AgendaApiClient.assignWaitlistEntry(waitlistId, payload).then(async (result)=>{
+        if(!result?.ok || !result?.json || result.json.ok !== true){
+          const msg = sanitizeText(result?.json?.message || result?.json?.error || `HTTP ${result?.status || 500}`) || 'No se pudo asignar desde lista de espera.';
+          setEventActionError(msg);
+          return;
+        }
+        hideEventActionPanel();
+        setError('');
+        await refreshCalendar({ forceConsultorios: false });
+      }).catch(()=>{
+        setEventActionError('No se pudo asignar desde lista de espera.');
+      }).finally(()=>{
+        eventCancelPostWaitlistBusy = false;
+        if(selectedEntry?.el){
+          selectedEntry.el.removeAttribute('disabled');
+        }
+        if(assignLabel) assignLabel.textContent = 'Asignar';
+      });
+    });
+    els.eventActionsModalEl?.addEventListener('hide.bs.modal', ()=>{
+      logAgendaCancelFlow('hide:eventActionsModal', {
+        activeEventActionId,
+        appointmentId: activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef),
+        section: eventActionCurrentSection,
+        isCancelled: eventActionIsCancelled
+      });
+    });
     els.eventActionsModalEl?.addEventListener('hidden.bs.modal', ()=>{
+      logAgendaCancelFlow('hidden:eventActionsModal:before-reset', {
+        activeEventActionId,
+        appointmentId: activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef),
+        section: eventActionCurrentSection,
+        isCancelled: eventActionIsCancelled,
+        postActionsEnabled: eventCancelPostActionsEnabled
+      });
       activeEventActionId = '';
       activeEventActionRef = null;
       activeEventActionAppointmentId = '';
       eventActionOriginalRange = null;
-      eventActionPendingReschedule = null;
-      eventActionRescheduleBusy = false;
-      eventActionCurrentSection = 'detail';
-      eventRescheduleMonthOptions = [];
-      eventRescheduleMonthCursor = null;
-      eventRescheduleSelectedDayKey = '';
-      eventRescheduleSelectedStart = null;
-      setEventActionError('');
-      setEventActionRescheduleNote('');
-      setEventResolutionNote('');
-      if(els.eventRescheduleConfirmBtn){
-        els.eventRescheduleConfirmBtn.disabled = true;
-      }
-      renderEventRescheduleSummary();
-      if(els.eventRescheduleWrap){
-        els.eventRescheduleWrap.classList.add('d-none');
-      }
-      if(els.eventCancelWrap){
-        els.eventCancelWrap.classList.add('d-none');
-      }
+      resetEventActionModalState();
+      logAgendaCancelFlow('hidden:eventActionsModal:after-reset', {
+        activeEventActionId,
+        section: eventActionCurrentSection,
+        isCancelled: eventActionIsCancelled,
+        postActionsEnabled: eventCancelPostActionsEnabled
+      });
     });
     els.patientSearchBtn?.addEventListener('click', ()=>{
       runPatientSearch().catch(()=> null);

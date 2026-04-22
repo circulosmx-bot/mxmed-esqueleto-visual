@@ -2814,8 +2814,17 @@
                           <button type="button" class="btn btn-sm btn-outline-secondary" id="ag_patient_new_toggle">Usar paciente nuevo</button>
                         </div>
                         <div id="ag_patient_new_wrap" class="row g-2 mt-1 d-none">
-                          <div class="col-12">
-                            <input type="text" class="form-control" id="ag_patient_new_name" placeholder="Nombre completo">
+                          <div class="col-md-4">
+                            <label class="form-label mb-1" for="ag_patient_new_first_name">Nombre(s)</label>
+                            <input type="text" class="form-control" id="ag_patient_new_first_name" placeholder="Nombre(s)">
+                          </div>
+                          <div class="col-md-4">
+                            <label class="form-label mb-1" for="ag_patient_new_last_name_1">Primer apellido</label>
+                            <input type="text" class="form-control" id="ag_patient_new_last_name_1" placeholder="Primer apellido">
+                          </div>
+                          <div class="col-md-4">
+                            <label class="form-label mb-1" for="ag_patient_new_last_name_2">Segundo apellido</label>
+                            <input type="text" class="form-control" id="ag_patient_new_last_name_2" placeholder="Segundo apellido">
                           </div>
                           <div class="col-md-6">
                             <input type="text" class="form-control" id="ag_patient_new_phone" placeholder="Teléfono">
@@ -2825,13 +2834,20 @@
                           </div>
                         </div>
                       </div>
-                      <div class="col-md-6">
-                        <label class="form-label" for="ag_start_input">Inicio</label>
-                        <input type="datetime-local" class="form-control" id="ag_start_input">
-                      </div>
-                      <div class="col-md-6">
-                        <label class="form-label" for="ag_end_input">Fin</label>
-                        <input type="datetime-local" class="form-control" id="ag_end_input">
+                      <div class="col-12">
+                        <label class="form-label d-block mb-2">Inicio</label>
+                        <div class="row g-2">
+                          <div class="col-md-4 col-12">
+                            <div class="small text-muted">Hora</div>
+                            <div class="fw-semibold" id="ag_start_info_time">--:--</div>
+                          </div>
+                          <div class="col-md-8 col-12">
+                            <div class="small text-muted">Fecha</div>
+                            <div class="fw-semibold" id="ag_start_info_date">--</div>
+                          </div>
+                        </div>
+                        <input type="hidden" id="ag_start_input">
+                        <input type="hidden" id="ag_end_input">
                       </div>
                       <div class="col-md-6">
                         <label class="form-label" for="ag_modality_input">Modalidad</label>
@@ -3027,17 +3043,30 @@
                     </div>
 
                     <div id="ag_event_cancel_wrap" class="d-none mt-3" data-view="cancel">
-                      <div class="alert alert-warning py-2 mb-2">¿Confirmas cancelar esta cita?</div>
-                      <div class="d-flex justify-content-end gap-2">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_cancel_back_btn">Volver</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="ag_event_cancel_confirm_btn">Sí, cancelar</button>
+                      <div id="ag_event_cancel_prompt" class="alert alert-warning py-2 mb-2">¿Confirmas cancelar esta cita?</div>
+                      <div id="ag_event_cancel_post_hint" class="alert alert-info py-2 mt-3 mb-2 d-none">
+                        Cita cancelada. ¿Cómo deseas ocupar este horario?
+                      </div>
+                      <div id="ag_event_cancel_post_actions" class="d-none">
+                        <div class="d-flex flex-wrap gap-2">
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_cancel_post_waitlist_btn">Asignar desde lista de espera</button>
+                          <button type="button" class="btn btn-primary btn-sm" id="ag_event_cancel_post_new_btn">Nueva cita en este horario</button>
+                        </div>
+                      </div>
+                      <div id="ag_event_cancel_waitlist_wrap" class="d-none mt-3">
+                        <div class="small text-muted mb-2">Lista de espera activa para este médico/consultorio</div>
+                        <div id="ag_event_cancel_waitlist_loading" class="small text-muted d-none mb-2">Cargando lista de espera…</div>
+                        <div id="ag_event_cancel_waitlist_empty" class="small text-muted d-none mb-2">No hay pacientes en lista de espera para este contexto.</div>
+                        <div id="ag_event_cancel_waitlist_list" class="list-group"></div>
                       </div>
                     </div>
                   </div>
                   <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-outline-secondary" id="ag_event_close_btn" data-bs-dismiss="modal">Cerrar</button>
                     <button type="button" class="btn btn-outline-secondary" id="ag_event_cancel_btn">Cancelar cita</button>
                     <button type="button" class="btn btn-primary" id="ag_event_reschedule_btn">Reprogramar</button>
+                    <button type="button" class="btn btn-outline-secondary d-none" id="ag_event_cancel_back_btn">Volver</button>
+                    <button type="button" class="btn btn-primary d-none" id="ag_event_cancel_confirm_btn">Sí, cancelar</button>
                   </div>
                 </div>
               </div>
