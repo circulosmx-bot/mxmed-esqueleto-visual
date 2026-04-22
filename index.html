@@ -2860,6 +2860,66 @@
               </div>
             </div>
 
+            <div class="modal fade" id="ag_block_slot_modal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Bloquear horario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div id="ag_block_error_box" class="alert alert-danger d-none py-2 mb-3"></div>
+                    <div id="ag_block_help_box" class="alert alert-info d-none py-2 mb-3"></div>
+                    <div class="row g-3">
+                      <div class="col-12">
+                        <div class="small text-muted">Horario base</div>
+                        <div class="fw-semibold" id="ag_block_range_base">--</div>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label d-block mb-2">Tipo de bloqueo</label>
+                        <div class="d-grid gap-2">
+                          <label class="d-inline-flex align-items-center gap-2">
+                            <input type="radio" name="ag_block_mode" value="single" id="ag_block_mode_single" checked>
+                            <span>Solo este horario</span>
+                          </label>
+                          <label class="d-inline-flex align-items-center gap-2">
+                            <input type="radio" name="ag_block_mode" value="until" id="ag_block_mode_until">
+                            <span>Hasta cierta hora</span>
+                          </label>
+                        </div>
+                      </div>
+                      <div class="col-12 d-none" id="ag_block_end_wrap">
+                        <label class="form-label" for="ag_block_end_select">Hora final</label>
+                        <select class="form-select" id="ag_block_end_select"></select>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label d-block mb-2">Motivo</label>
+                        <div class="mx-ag-block-modal-chips" id="ag_block_reason_chips"></div>
+                      </div>
+                      <div class="col-12 d-none" id="ag_block_other_wrap">
+                        <input type="text" class="form-control" id="ag_block_other_input" maxlength="60" placeholder="Especifica motivo">
+                      </div>
+                      <div class="col-12 d-none" id="ag_block_warning_wrap">
+                        <div class="alert alert-warning py-2 mb-2" id="ag_block_warning_text">Este rango incluye citas existentes</div>
+                        <div class="d-flex flex-wrap gap-2">
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_block_adjust_btn">Ajustar rango</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_block_view_conflicts_btn">Ver citas</button>
+                        </div>
+                      </div>
+                      <div class="col-12 d-none" id="ag_block_conflicts_wrap">
+                        <div class="small text-uppercase fw-semibold text-muted mb-2">Citas afectadas</div>
+                        <div id="ag_block_conflicts_list" class="mx-ag-slot-block-conflicts-list"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" id="ag_block_cancel_btn" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="ag_block_confirm_btn">Confirmar bloqueo</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="modal fade" id="ag_next_slots_modal" tabindex="-1" aria-hidden="true">
               <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
@@ -2877,6 +2937,107 @@
                     <button type="button" class="btn btn-outline-secondary" id="ag_next_slots_prev_btn">Ver 3 anteriores</button>
                     <button type="button" class="btn btn-outline-secondary" id="ag_next_slots_more_btn">Ver siguientes 3</button>
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal fade" id="ag_event_actions_modal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <div class="w-100">
+                      <div class="d-flex align-items-start justify-content-between gap-2">
+                        <h5 class="modal-title mb-0">Detalle de cita</h5>
+                        <span class="badge text-bg-secondary" id="ag_event_action_status_badge">--</span>
+                      </div>
+                      <div class="small text-muted mt-1" id="ag_event_action_subtitle">Paciente · fecha · hora</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div id="ag_event_action_error_box" class="alert alert-danger d-none py-2 mb-3"></div>
+                    <div id="ag_event_detail_wrap" class="mx-ag-modal-stack" data-view="detail">
+                      <div>
+                        <div class="small text-muted">Paciente</div>
+                        <div class="fw-semibold" id="ag_event_action_patient">--</div>
+                      </div>
+                      <div>
+                        <div class="small text-muted">Horario</div>
+                        <div class="fw-semibold" id="ag_event_action_time">--</div>
+                      </div>
+                      <div>
+                        <div class="small text-muted">Duración</div>
+                        <div class="fw-semibold" id="ag_event_action_duration">--</div>
+                      </div>
+                      <div>
+                        <div class="small text-muted">Estado</div>
+                        <div class="fw-semibold" id="ag_event_action_status">--</div>
+                      </div>
+                      <div id="ag_event_action_reason_wrap" class="d-none">
+                        <div class="small text-muted">Motivo</div>
+                        <div class="fw-semibold" id="ag_event_action_reason">--</div>
+                      </div>
+                      <div id="ag_event_action_consultorio_wrap" class="d-none">
+                        <div class="small text-muted">Consultorio</div>
+                        <div class="fw-semibold" id="ag_event_action_consultorio">--</div>
+                      </div>
+                      <div id="ag_event_resolution_wrap" class="d-none">
+                        <div class="small text-muted mb-1">Resolución operativa</div>
+                        <div class="mx-ag-event-resolution-actions">
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_mark_in_progress_btn">Marcar en curso</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_mark_finished_btn">Finalizar</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_mark_cancel_btn">Cancelar</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_mark_no_show_btn">No show</button>
+                        </div>
+                        <div id="ag_event_resolution_note" class="small text-muted mt-2 d-none"></div>
+                      </div>
+                    </div>
+
+                    <div id="ag_event_reschedule_wrap" class="d-none" data-view="reschedule">
+                      <div id="ag_event_reschedule_note" class="alert d-none py-2 mb-0"></div>
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <div class="mx-ag-reschedule-calendar">
+                            <div class="mx-ag-reschedule-calendar-head">
+                              <div class="mx-ag-reschedule-calendar-month" id="ag_event_reschedule_month_label">--</div>
+                              <div class="mx-ag-reschedule-calendar-nav">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_reschedule_month_prev">Mes anterior</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_reschedule_month_next">Siguiente mes</button>
+                              </div>
+                            </div>
+                            <div class="mx-ag-reschedule-calendar-weekdays" aria-hidden="true">
+                              <span>dom</span><span>lun</span><span>mar</span><span>mié</span><span>jue</span><span>vie</span><span>sáb</span>
+                            </div>
+                            <div id="ag_event_reschedule_days" class="mx-ag-reschedule-days"></div>
+                          </div>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label mb-2">Horas disponibles</label>
+                          <div id="ag_event_reschedule_hours" class="mx-ag-reschedule-hours"></div>
+                        </div>
+                      </div>
+                      <div id="ag_event_reschedule_confirm_wrap" class="mt-2">
+                        <div class="mx-ag-event-reschedule-summary d-none" id="ag_event_reschedule_confirm_copy"></div>
+                        <div class="d-flex justify-content-end gap-2">
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_reschedule_back_btn">Cancelar</button>
+                          <button type="button" class="btn btn-primary btn-sm" id="ag_event_reschedule_confirm_btn" disabled>Confirmar reprogramación</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div id="ag_event_cancel_wrap" class="d-none mt-3" data-view="cancel">
+                      <div class="alert alert-warning py-2 mb-2">¿Confirmas cancelar esta cita?</div>
+                      <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_cancel_back_btn">Volver</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="ag_event_cancel_confirm_btn">Sí, cancelar</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-outline-secondary" id="ag_event_cancel_btn">Cancelar cita</button>
+                    <button type="button" class="btn btn-primary" id="ag_event_reschedule_btn">Reprogramar</button>
                   </div>
                 </div>
               </div>

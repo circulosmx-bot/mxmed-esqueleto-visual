@@ -393,6 +393,25 @@ console.info('app.js loaded :: 20251123a');
     hoursToggle: panel.querySelector('#ag_hours_toggle_btn'),
     createModalEl: panel.querySelector('#ag_new_appointment_modal'),
     createError: panel.querySelector('#ag_create_error_box'),
+    blockModalEl: panel.querySelector('#ag_block_slot_modal'),
+    blockError: panel.querySelector('#ag_block_error_box'),
+    blockHelp: panel.querySelector('#ag_block_help_box'),
+    blockRangeBase: panel.querySelector('#ag_block_range_base'),
+    blockModeSingle: panel.querySelector('#ag_block_mode_single'),
+    blockModeUntil: panel.querySelector('#ag_block_mode_until'),
+    blockEndWrap: panel.querySelector('#ag_block_end_wrap'),
+    blockEndSelect: panel.querySelector('#ag_block_end_select'),
+    blockReasonChips: panel.querySelector('#ag_block_reason_chips'),
+    blockOtherWrap: panel.querySelector('#ag_block_other_wrap'),
+    blockOtherInput: panel.querySelector('#ag_block_other_input'),
+    blockWarningWrap: panel.querySelector('#ag_block_warning_wrap'),
+    blockWarningText: panel.querySelector('#ag_block_warning_text'),
+    blockAdjustBtn: panel.querySelector('#ag_block_adjust_btn'),
+    blockViewConflictsBtn: panel.querySelector('#ag_block_view_conflicts_btn'),
+    blockConflictsWrap: panel.querySelector('#ag_block_conflicts_wrap'),
+    blockConflictsList: panel.querySelector('#ag_block_conflicts_list'),
+    blockConfirmBtn: panel.querySelector('#ag_block_confirm_btn'),
+    blockCancelBtn: panel.querySelector('#ag_block_cancel_btn'),
     patientId: panel.querySelector('#ag_patient_id_input'),
     startAt: panel.querySelector('#ag_start_input'),
     endAt: panel.querySelector('#ag_end_input'),
@@ -423,11 +442,50 @@ console.info('app.js loaded :: 20251123a');
     nextSlotsResults: panel.querySelector('#ag_next_slots_results'),
     nextSlotsEmpty: panel.querySelector('#ag_next_slots_empty'),
     nextSlotsPrevBtn: panel.querySelector('#ag_next_slots_prev_btn'),
-    nextSlotsMoreBtn: panel.querySelector('#ag_next_slots_more_btn')
+    nextSlotsMoreBtn: panel.querySelector('#ag_next_slots_more_btn'),
+    eventActionsModalEl: panel.querySelector('#ag_event_actions_modal'),
+    eventActionError: panel.querySelector('#ag_event_action_error_box'),
+    eventActionSubtitle: panel.querySelector('#ag_event_action_subtitle'),
+    eventActionStatusBadge: panel.querySelector('#ag_event_action_status_badge'),
+    eventActionDetailWrap: panel.querySelector('#ag_event_detail_wrap'),
+    eventActionPatient: panel.querySelector('#ag_event_action_patient'),
+    eventActionTime: panel.querySelector('#ag_event_action_time'),
+    eventActionDuration: panel.querySelector('#ag_event_action_duration'),
+    eventActionStatus: panel.querySelector('#ag_event_action_status'),
+    eventActionReasonWrap: panel.querySelector('#ag_event_action_reason_wrap'),
+    eventActionReason: panel.querySelector('#ag_event_action_reason'),
+    eventActionConsultorioWrap: panel.querySelector('#ag_event_action_consultorio_wrap'),
+    eventActionConsultorio: panel.querySelector('#ag_event_action_consultorio'),
+    eventResolutionWrap: panel.querySelector('#ag_event_resolution_wrap'),
+    eventResolutionNote: panel.querySelector('#ag_event_resolution_note'),
+    eventMarkInProgressBtn: panel.querySelector('#ag_event_mark_in_progress_btn'),
+    eventMarkFinishedBtn: panel.querySelector('#ag_event_mark_finished_btn'),
+    eventMarkCancelBtn: panel.querySelector('#ag_event_mark_cancel_btn'),
+    eventMarkNoShowBtn: panel.querySelector('#ag_event_mark_no_show_btn'),
+    eventRescheduleWrap: panel.querySelector('#ag_event_reschedule_wrap'),
+    eventRescheduleMonthLabel: panel.querySelector('#ag_event_reschedule_month_label'),
+    eventRescheduleMonthPrevBtn: panel.querySelector('#ag_event_reschedule_month_prev'),
+    eventRescheduleMonthNextBtn: panel.querySelector('#ag_event_reschedule_month_next'),
+    eventRescheduleDays: panel.querySelector('#ag_event_reschedule_days'),
+    eventRescheduleHours: panel.querySelector('#ag_event_reschedule_hours'),
+    eventRescheduleNote: panel.querySelector('#ag_event_reschedule_note'),
+    eventRescheduleContinueWrap: panel.querySelector('#ag_event_reschedule_continue_wrap'),
+    eventRescheduleContinueBtn: panel.querySelector('#ag_event_reschedule_continue_btn'),
+    eventRescheduleConfirmWrap: panel.querySelector('#ag_event_reschedule_confirm_wrap'),
+    eventRescheduleConfirmCopy: panel.querySelector('#ag_event_reschedule_confirm_copy'),
+    eventRescheduleBackBtn: panel.querySelector('#ag_event_reschedule_back_btn'),
+    eventRescheduleConfirmBtn: panel.querySelector('#ag_event_reschedule_confirm_btn'),
+    eventCancelWrap: panel.querySelector('#ag_event_cancel_wrap'),
+    eventCancelBackBtn: panel.querySelector('#ag_event_cancel_back_btn'),
+    eventCancelConfirmBtn: panel.querySelector('#ag_event_cancel_confirm_btn'),
+    eventRescheduleBtn: panel.querySelector('#ag_event_reschedule_btn'),
+    eventCancelBtn: panel.querySelector('#ag_event_cancel_btn')
   };
 
   let calendar = null;
   let createModal = null;
+  let blockSlotModal = null;
+  let eventActionsModal = null;
   let consultoriosRequestCtrl = null;
   let appointmentsRequestCtrl = null;
   let initialized = false;
@@ -450,9 +508,30 @@ console.info('app.js loaded :: 20251123a');
   let activeSlotActionHost = null;
   let activeSlotActionPortal = null;
   let activeSlotActionPanel = null;
+  let activeEventActionPortal = null;
+  let activeEventActionPanel = null;
+  let activeEventActionId = '';
+  let activeEventActionRef = null;
+  let activeEventActionAppointmentId = '';
+  let eventActionOriginalRange = null;
+  let eventActionPendingReschedule = null;
+  let eventActionRescheduleBusy = false;
+  let eventActionCurrentSection = 'detail';
+  let eventRescheduleMonthOptions = [];
+  let eventRescheduleMonthCursor = null;
+  let eventRescheduleSelectedDayKey = '';
+  let eventRescheduleSelectedStart = null;
+  const getCurrentMonthStart = ()=> startOfMonth(new Date());
   let activeBlockedEventId = '';
   let activeBlockConflictIds = new Set();
   let activeBlockConflictItems = [];
+  const patientFlagTypeCache = new Map();
+  const patientFlagRequestCache = new Map();
+  let patientFlagsEndpointAvailable = true;
+  let blockModalSelection = null;
+  let blockModalReasonKey = 'comida';
+  let blockModalReasonLabel = 'Comida';
+  let blockModalShowConflicts = false;
   const NEXT_AVAILABLE_FLOW_ENABLED = false;
   const AGENDA_SLOT_DEBUG = true;
   const BLOCK_REASON_OPTIONS = Object.freeze([
@@ -633,7 +712,7 @@ console.info('app.js loaded :: 20251123a');
       title: 'Horario bloqueado',
       start: toIsoLike(normalized.start_at),
       end: toIsoLike(normalized.end_at),
-      color: '#8fa0ad',
+      color: '#999DA0',
       classNames: ['mx-ag-event', 'mx-ag-blocked-event'],
       extendedProps: {
         event_type: 'blocked_slot',
@@ -748,6 +827,488 @@ console.info('app.js loaded :: 20251123a');
     cellMenuSelection = null;
     clearBlockFlowVisualState({ rerender: true });
   };
+  const hideEventActionPanel = ()=>{
+    if(eventActionsModal){
+      try{ eventActionsModal.hide(); }catch(_){}
+    }
+    if(activeEventActionPanel && activeEventActionPanel.parentNode){
+      activeEventActionPanel.parentNode.removeChild(activeEventActionPanel);
+    }
+    if(activeEventActionPortal && activeEventActionPortal.parentNode){
+      activeEventActionPortal.parentNode.removeChild(activeEventActionPortal);
+    }
+    activeEventActionPortal = null;
+    activeEventActionPanel = null;
+    activeEventActionId = '';
+    activeEventActionRef = null;
+    activeEventActionAppointmentId = '';
+    eventActionOriginalRange = null;
+    eventActionPendingReschedule = null;
+    eventActionRescheduleBusy = false;
+    eventActionCurrentSection = 'detail';
+  };
+  const setEventActionError = (message = '')=>{
+    if(!els.eventActionError) return;
+    const safe = sanitizeText(message);
+    if(!safe){
+      els.eventActionError.classList.add('d-none');
+      els.eventActionError.textContent = '';
+      return;
+    }
+    els.eventActionError.textContent = safe;
+    els.eventActionError.classList.remove('d-none');
+  };
+  const setEventActionRescheduleNote = (message = '', tone = 'info')=>{
+    if(!els.eventRescheduleNote) return;
+    const hasMessage = !!sanitizeText(message);
+    els.eventRescheduleNote.classList.remove('d-none', 'alert-danger', 'alert-success');
+    if(!hasMessage){
+      els.eventRescheduleNote.classList.add('d-none');
+      els.eventRescheduleNote.classList.remove('alert-info');
+      els.eventRescheduleNote.textContent = '';
+      return;
+    }
+    els.eventRescheduleNote.classList.add('alert-info');
+    els.eventRescheduleNote.textContent = 'Selecciona fecha y hora válidas para continuar.';
+  };
+  const setEventResolutionNote = (message = '', tone = 'muted')=>{
+    if(!els.eventResolutionNote) return;
+    const safe = sanitizeText(message);
+    els.eventResolutionNote.classList.remove('d-none', 'text-muted', 'text-success', 'text-danger');
+    if(!safe){
+      els.eventResolutionNote.classList.add('d-none');
+      els.eventResolutionNote.textContent = '';
+      return;
+    }
+    const mappedTone = (tone === 'success' || tone === 'danger') ? tone : 'muted';
+    els.eventResolutionNote.classList.add(mappedTone === 'success' ? 'text-success' : (mappedTone === 'danger' ? 'text-danger' : 'text-muted'));
+    els.eventResolutionNote.textContent = safe;
+  };
+  const isOverdueOpenFromProps = (props = {})=>{
+    const statusKey = sanitizeText(props?.status_key || '');
+    const isPastRaw = props?.is_past;
+    const isPast = isPastRaw === true || isPastRaw === 1 || isPastRaw === '1' || String(isPastRaw || '').toLowerCase() === 'true';
+    return isPast && (statusKey === 'pending' || statusKey === 'confirmed');
+  };
+  const applyLocalEventStatus = (eventRef, rawStatus = '')=>{
+    if(!(eventRef && typeof eventRef.setExtendedProp === 'function')) return false;
+    const statusMeta = resolveAppointmentStatusMeta(rawStatus);
+    const endAt = eventRef.end instanceof Date ? new Date(eventRef.end) : new Date(eventRef?.extendedProps?.end_at || '');
+    const isPast = !Number.isNaN(endAt.getTime()) && endAt.getTime() < Date.now();
+    const visual = resolveAppointmentColor({
+      statusKey: statusMeta.key,
+      isPast,
+      patientFlagType: eventRef?.extendedProps?.patient_flag_type || ''
+    });
+    const statusLabel = statusMeta.label;
+    eventRef.setExtendedProp('status', sanitizeText(rawStatus));
+    eventRef.setExtendedProp('status_key', statusMeta.key);
+    eventRef.setExtendedProp('status_label', statusLabel);
+    eventRef.setExtendedProp('visual_key', visual.visualKey);
+    try{
+      eventRef.setProp('backgroundColor', visual.backgroundColor);
+      eventRef.setProp('borderColor', visual.borderColor);
+      eventRef.setProp('textColor', visual.textColor);
+    }catch(_){}
+    return true;
+  };
+  const setEventActionSection = (section = '')=>{
+    const key = sanitizeText(section);
+    const isReschedule = key === 'reschedule';
+    const isCancel = key === 'cancel';
+    const isDetail = !isReschedule && !isCancel;
+    eventActionCurrentSection = isReschedule ? 'reschedule' : (isCancel ? 'cancel' : 'detail');
+    if(els.eventActionDetailWrap){
+      els.eventActionDetailWrap.classList.toggle('d-none', !isDetail);
+    }
+    if(els.eventRescheduleWrap){
+      els.eventRescheduleWrap.classList.toggle('d-none', !isReschedule);
+    }
+    if(els.eventCancelWrap){
+      els.eventCancelWrap.classList.toggle('d-none', !isCancel);
+    }
+    if(els.eventResolutionWrap){
+      const overdueOpen = isOverdueOpenFromProps(activeEventActionRef?.extendedProps || {});
+      els.eventResolutionWrap.classList.toggle('d-none', !isDetail || !overdueOpen);
+    }
+    if(els.eventRescheduleBtn){
+      els.eventRescheduleBtn.classList.toggle('btn-primary', isReschedule);
+      els.eventRescheduleBtn.classList.toggle('btn-outline-secondary', !isReschedule);
+      els.eventRescheduleBtn.classList.toggle('d-none', isReschedule);
+    }
+    if(els.eventCancelBtn){
+      els.eventCancelBtn.classList.remove('btn-primary', 'btn-outline-secondary', 'btn-danger');
+      els.eventCancelBtn.classList.add('btn-outline-secondary');
+      els.eventCancelBtn.classList.toggle('d-none', isReschedule);
+    }
+    if(!isReschedule){
+      eventActionPendingReschedule = null;
+      if(els.eventRescheduleConfirmBtn) els.eventRescheduleConfirmBtn.disabled = true;
+      setEventActionRescheduleNote('');
+    }
+  };
+  const collectEventRescheduleConflicts = (candidateStart, candidateEnd)=>{
+    if(!calendar || !(candidateStart instanceof Date) || !(candidateEnd instanceof Date)) return [];
+    return calendar.getEvents().filter((ev)=>{
+      if(!ev || ev.display === 'background') return false;
+      const evId = sanitizeText(ev.id || '');
+      if(evId === activeEventActionId || evId.startsWith('__ag_next_focus_')) return false;
+      const evType = sanitizeText(ev.extendedProps?.event_type || '');
+      if(evType === 'focus_marker') return false;
+      const evStart = ev.start;
+      const evEnd = ev.end;
+      return !!(evStart && evEnd && candidateStart < evEnd && candidateEnd > evStart);
+    });
+  };
+  const buildRescheduleDayLabel = (date)=>{
+    if(!(date instanceof Date) || Number.isNaN(date.getTime())) return '--';
+    return date.toLocaleDateString('es-MX', { day: '2-digit' });
+  };
+  const startOfMonth = (dateValue)=>{
+    const d = (dateValue instanceof Date) ? new Date(dateValue) : new Date(dateValue || Date.now());
+    if(Number.isNaN(d.getTime())) return null;
+    d.setDate(1);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+  const addMonths = (dateValue, delta = 0)=>{
+    const base = startOfMonth(dateValue);
+    if(!base) return null;
+    base.setMonth(base.getMonth() + Number(delta || 0));
+    return base;
+  };
+  const buildRescheduleTimeLabel = (date)=>{
+    if(!(date instanceof Date) || Number.isNaN(date.getTime())) return '--:--';
+    return date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+  const resolveServiceWindowForDay = (dayDate)=>{
+    const startTime = normalizeAgendaTimeValue(resolveAgendaStartVisibleTime()) || '08:00:00';
+    const endTime = normalizeAgendaTimeValue(resolveAgendaEndVisibleTime()) || '20:00:00';
+    const [startH, startM] = startTime.split(':').map((v)=> Number(v || 0));
+    const [endH, endM] = endTime.split(':').map((v)=> Number(v || 0));
+    const dayStart = new Date(dayDate);
+    dayStart.setHours(startH, startM, 0, 0);
+    const dayEnd = new Date(dayDate);
+    dayEnd.setHours(endH, endM, 0, 0);
+    return { dayStart, dayEnd };
+  };
+  const buildRescheduleSlotsForDay = (dayDate)=>{
+    const now = new Date();
+    const slotMinutes = Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
+    const { dayStart, dayEnd } = resolveServiceWindowForDay(dayDate);
+    const slots = [];
+    let cursor = alignDateToSlotGrid(dayStart, slotMinutes);
+    while(cursor < dayEnd){
+      const slotStart = new Date(cursor);
+      const slotEnd = plusMinutes(slotStart, slotMinutes);
+      if(slotStart >= now && slotEnd <= dayEnd && isSelectionAvailable(slotStart, slotEnd)){
+        slots.push(new Date(slotStart));
+      }
+      cursor = plusMinutes(cursor, slotMinutes);
+    }
+    return slots;
+  };
+  const buildRescheduleMonthOptions = (monthDate)=>{
+    const base = startOfMonth(monthDate);
+    if(!base) return [];
+    const today = toStartOfDay(new Date());
+    const year = base.getFullYear();
+    const month = base.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const options = [];
+    for(let day = 1; day <= daysInMonth; day += 1){
+      const date = new Date(year, month, day, 0, 0, 0, 0);
+      const key = formatYmdLocal(date);
+      const isPast = !!(today && date < today);
+      let slots = [];
+      if(!isPast){
+        slots = buildRescheduleSlotsForDay(date);
+      }
+      options.push({
+        key,
+        date,
+        isPast,
+        slots,
+        hasAvailability: slots.length > 0
+      });
+    }
+    return options;
+  };
+  const renderRescheduleHours = ()=>{
+    if(!els.eventRescheduleHours) return;
+    const selectedDay = eventRescheduleMonthOptions.find((day)=> day.key === eventRescheduleSelectedDayKey);
+    if(!selectedDay){
+      els.eventRescheduleHours.innerHTML = '<span class="small text-muted">Elige una fecha con horarios disponibles.</span>';
+      return;
+    }
+    if(!selectedDay.slots.length){
+      els.eventRescheduleHours.innerHTML = '<span class="small text-muted">Sin horarios disponibles para este día.</span>';
+      return;
+    }
+    els.eventRescheduleHours.innerHTML = selectedDay.slots.map((slot)=>{
+      const iso = toDateTimeLocalInput(slot);
+      const isActive = eventRescheduleSelectedStart instanceof Date && eventRescheduleSelectedStart.getTime() === slot.getTime();
+      return `<button type="button" class="mx-ag-reschedule-chip${isActive ? ' is-active' : ''}" data-ag-reschedule-slot="${escapeHtml(iso)}">${escapeHtml(buildRescheduleTimeLabel(slot))}</button>`;
+    }).join('');
+  };
+  const renderRescheduleDays = ()=>{
+    if(!els.eventRescheduleDays) return;
+    if(els.eventRescheduleMonthLabel && eventRescheduleMonthCursor instanceof Date){
+      els.eventRescheduleMonthLabel.textContent = eventRescheduleMonthCursor.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+    }
+    if(els.eventRescheduleMonthPrevBtn){
+      const currentMonth = getCurrentMonthStart();
+      const canGoPrev = !!(eventRescheduleMonthCursor && currentMonth && eventRescheduleMonthCursor.getTime() > currentMonth.getTime());
+      els.eventRescheduleMonthPrevBtn.disabled = !canGoPrev;
+      els.eventRescheduleMonthPrevBtn.setAttribute('aria-disabled', canGoPrev ? 'false' : 'true');
+    }
+    const firstWeekday = eventRescheduleMonthCursor instanceof Date ? new Date(eventRescheduleMonthCursor).getDay() : 0;
+    const leading = Array.from({ length: firstWeekday }, ()=> '<div class="mx-ag-reschedule-day-cell is-empty" aria-hidden="true"></div>');
+    const daysHtml = eventRescheduleMonthOptions.map((day)=>{
+      const isActive = day.key === eventRescheduleSelectedDayKey;
+      const isAvailable = !!day.hasAvailability;
+      const cls = day.isPast
+        ? 'is-past'
+        : (isAvailable ? 'is-available' : 'is-unavailable');
+      return `<button type="button" class="mx-ag-reschedule-day-cell ${cls}${isActive ? ' is-selected' : ''}" data-ag-reschedule-day="${escapeHtml(day.key)}" ${isAvailable ? '' : 'disabled'}>${escapeHtml(buildRescheduleDayLabel(day.date))}</button>`;
+    }).join('');
+    els.eventRescheduleDays.innerHTML = `${leading.join('')}${daysHtml}`;
+    renderRescheduleHours();
+  };
+  const initEventRescheduleSelector = ()=>{
+    const baseMonth = startOfMonth(eventActionOriginalRange?.start || new Date()) || startOfMonth(new Date());
+    const currentMonth = startOfMonth(new Date()) || baseMonth;
+    eventRescheduleMonthCursor = (baseMonth && currentMonth && baseMonth < currentMonth) ? currentMonth : baseMonth;
+    eventRescheduleMonthOptions = buildRescheduleMonthOptions(eventRescheduleMonthCursor);
+    const originalStartFromSource = parseDateTimeLocalSafe(sanitizeText(activeEventActionRef?.extendedProps?.start_at || ''));
+    const originalDayKey = (()=> {
+      if(originalStartFromSource instanceof Date && !Number.isNaN(originalStartFromSource.getTime())){
+        return formatYmdLocal(originalStartFromSource);
+      }
+      if(eventActionOriginalRange?.start instanceof Date && !Number.isNaN(eventActionOriginalRange.start.getTime())){
+        return formatYmdLocal(eventActionOriginalRange.start);
+      }
+      return '';
+    })();
+    const originalDayOption = originalDayKey
+      ? eventRescheduleMonthOptions.find((day)=> day.key === originalDayKey)
+      : null;
+    const firstAvailable = eventRescheduleMonthOptions.find((day)=> day.hasAvailability);
+    eventRescheduleSelectedDayKey = originalDayOption?.key || firstAvailable?.key || '';
+    if(originalDayOption?.hasAvailability){
+      if(originalStartFromSource instanceof Date && !Number.isNaN(originalStartFromSource.getTime())){
+        eventRescheduleSelectedStart = new Date(originalStartFromSource);
+      }else if(eventActionOriginalRange?.start instanceof Date && !Number.isNaN(eventActionOriginalRange.start.getTime())){
+        eventRescheduleSelectedStart = new Date(eventActionOriginalRange.start);
+      }else{
+        eventRescheduleSelectedStart = null;
+      }
+    }else{
+      eventRescheduleSelectedStart = null;
+    }
+    renderRescheduleDays();
+  };
+  const navigateToRescheduledWeek = (startDate)=>{
+    if(!calendar || !(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return;
+    try{
+      calendar.changeView('timeGridWeek', startDate);
+    }catch(_){}
+    const hh = String(startDate.getHours()).padStart(2, '0');
+    const mm = String(startDate.getMinutes()).padStart(2, '0');
+    try{
+      calendar.scrollToTime(`${hh}:${mm}:00`);
+    }catch(_){}
+  };
+  const applyDemoEventReschedule = async ({ start, end })=>{
+    if(!(activeEventActionRef && typeof activeEventActionRef.setStart === 'function' && typeof activeEventActionRef.setEnd === 'function')){
+      throw new Error('No se pudo actualizar la cita demo.');
+    }
+    activeEventActionRef.setStart(start);
+    activeEventActionRef.setEnd(end);
+    hideEventActionPanel();
+    navigateToRescheduledWeek(start);
+    setError('');
+  };
+  const renderEventRescheduleSummary = ()=>{
+    if(!els.eventRescheduleConfirmCopy) return;
+    const patient = sanitizeText(activeEventActionRef?.extendedProps?.patient_display || activeEventActionRef?.title || 'Paciente');
+    const previousLabel = formatAppointmentDateRangeLabel(eventActionOriginalRange?.start, eventActionOriginalRange?.end);
+    if(!(eventActionPendingReschedule?.start instanceof Date) || !(eventActionPendingReschedule?.end instanceof Date)){
+      els.eventRescheduleConfirmCopy.innerHTML = '';
+      els.eventRescheduleConfirmCopy.classList.add('d-none');
+      return;
+    }
+    const nextLabel = formatAppointmentDateRangeLabel(eventActionPendingReschedule.start, eventActionPendingReschedule.end);
+    els.eventRescheduleConfirmCopy.innerHTML = `
+      <div class="mx-ag-event-reschedule-summary-copy">${escapeHtml(patient)} ha sido reprogramada a:</div>
+      <div class="mx-ag-event-reschedule-summary-main">${escapeHtml(nextLabel)}</div>
+      <div class="mx-ag-event-reschedule-summary-prev">(antes: ${escapeHtml(previousLabel)})</div>
+    `;
+    els.eventRescheduleConfirmCopy.classList.remove('d-none');
+  };
+  const validateEventRescheduleCandidate = ()=>{
+    const configuredDurationMinutes = Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
+    const candidateStart = eventRescheduleSelectedStart instanceof Date ? new Date(eventRescheduleSelectedStart) : null;
+    const candidateEnd = candidateStart ? plusMinutes(candidateStart, configuredDurationMinutes) : null;
+    eventActionPendingReschedule = null;
+    if(els.eventRescheduleConfirmBtn){
+      els.eventRescheduleConfirmBtn.disabled = true;
+    }
+    if(!candidateStart || !candidateEnd || Number.isNaN(candidateStart.getTime()) || Number.isNaN(candidateEnd.getTime())){
+      setEventActionRescheduleNote('Selecciona fecha y hora válidas para continuar.', 'info');
+      renderEventRescheduleSummary();
+      return false;
+    }
+    const changed = !!(eventActionOriginalRange?.start && eventActionOriginalRange?.end
+      && (candidateStart.getTime() !== eventActionOriginalRange.start.getTime() || candidateEnd.getTime() !== eventActionOriginalRange.end.getTime()));
+    if(!changed){
+      setEventActionRescheduleNote('Selecciona un horario diferente al actual.', 'info');
+      renderEventRescheduleSummary();
+      return false;
+    }
+    const conflicts = collectEventRescheduleConflicts(candidateStart, candidateEnd);
+    if(conflicts.length){
+      setEventActionRescheduleNote('El nuevo horario entra en conflicto con otra cita existente.', 'danger');
+      renderEventRescheduleSummary();
+      return false;
+    }
+    eventActionPendingReschedule = { start: candidateStart, end: candidateEnd };
+    setEventActionRescheduleNote('Nuevo horario válido. Confirma para aplicar la reprogramación.', 'success');
+    if(els.eventRescheduleConfirmBtn){
+      els.eventRescheduleConfirmBtn.disabled = false;
+    }
+    renderEventRescheduleSummary();
+    return true;
+  };
+  const applyEventReschedule = async ()=>{
+    if(eventActionRescheduleBusy || !eventActionPendingReschedule || !activeEventActionRef) return;
+    const appointmentId = sanitizeText(activeEventActionAppointmentId || activeEventActionRef?.id || '');
+    if(!appointmentId) return;
+    eventActionRescheduleBusy = true;
+    setEventActionError('');
+    try{
+      const nextStart = new Date(eventActionPendingReschedule.start);
+      const nextEnd = new Date(eventActionPendingReschedule.end);
+      if(isAgendaDemoContext()){
+        await applyDemoEventReschedule({ start: nextStart, end: nextEnd });
+        return;
+      }
+      const payload = {
+        appointment_id: appointmentId,
+        from_start_at: toSqlDateTimeLocal(eventActionOriginalRange?.start),
+        from_end_at: toSqlDateTimeLocal(eventActionOriginalRange?.end),
+        to_start_at: toSqlDateTimeLocal(nextStart),
+        to_end_at: toSqlDateTimeLocal(nextEnd),
+        motivo_code: 'user_reschedule',
+        motivo_text: '',
+        notify_patient: false,
+        contact_method: 'none',
+        actor_role: 'doctor',
+        actor_id: resolveActorId() || 'ui',
+        channel_origin: 'agenda_frontend_v1'
+      };
+      const result = await AgendaApiClient.rescheduleAppointment(appointmentId, payload);
+      if(!result?.ok || !result?.json || result.json.ok !== true){
+        const msg = sanitizeText(result?.json?.message || result?.json?.error || `HTTP ${result?.status || 500}`) || 'No se pudo reprogramar la cita.';
+        setEventActionError(msg);
+        return;
+      }
+      hideEventActionPanel();
+      navigateToRescheduledWeek(nextStart);
+      setError('');
+      await refreshCalendar({ forceConsultorios: false });
+      navigateToRescheduledWeek(nextStart);
+    }catch(_){
+      setEventActionError('No se pudo reprogramar la cita.');
+    }finally{
+      eventActionRescheduleBusy = false;
+    }
+  };
+  const applyEventCancel = async ()=>{
+    const appointmentId = sanitizeText(activeEventActionAppointmentId || activeEventActionRef?.id || '');
+    if(!appointmentId) return;
+    setEventActionError('');
+    try{
+      const payload = {
+        motivo_code: 'user_cancel',
+        motivo_text: '',
+        actor_role: 'doctor',
+        actor_id: resolveActorId() || 'ui',
+        channel_origin: 'agenda_frontend_v1',
+        notify_patient: false,
+        contact_method: 'none'
+      };
+      const result = await AgendaApiClient.cancelAppointment(appointmentId, payload);
+      if(!result?.ok || !result?.json || result.json.ok !== true){
+        const msg = sanitizeText(result?.json?.message || result?.json?.error || `HTTP ${result?.status || 500}`) || 'No se pudo cancelar la cita.';
+        setEventActionError(msg);
+        return;
+      }
+      hideEventActionPanel();
+      setError('');
+      await refreshCalendar({ forceConsultorios: false });
+    }catch(_){
+      setEventActionError('No se pudo cancelar la cita.');
+    }
+  };
+  const applyEventNoShow = async ()=>{
+    const appointmentId = sanitizeText(activeEventActionAppointmentId || activeEventActionRef?.id || '');
+    if(!appointmentId) return;
+    setEventActionError('');
+    setEventResolutionNote('');
+    try{
+      if(isAgendaDemoContext()){
+        if(activeEventActionRef){
+          applyLocalEventStatus(activeEventActionRef, 'no_show');
+          openEventActionModal(activeEventActionRef, 'detail');
+          setEventResolutionNote('Cita marcada como No show (demo).', 'success');
+        }
+        return;
+      }
+      const payload = {
+        motivo_code: 'user_no_show',
+        motivo_text: '',
+        actor_role: 'doctor',
+        actor_id: resolveActorId() || 'ui',
+        channel_origin: 'agenda_frontend_v1',
+        notify_patient: false,
+        contact_method: 'none'
+      };
+      const result = await AgendaApiClient.noShowAppointment(appointmentId, payload);
+      if(!result?.ok || !result?.json || result.json.ok !== true){
+        const msg = sanitizeText(result?.json?.message || result?.json?.error || `HTTP ${result?.status || 500}`) || 'No se pudo marcar como No show.';
+        setEventActionError(msg);
+        return;
+      }
+      hideEventActionPanel();
+      setError('');
+      await refreshCalendar({ forceConsultorios: false });
+    }catch(_){
+      setEventActionError('No se pudo marcar como No show.');
+    }
+  };
+  const applyEventInProgress = ()=>{
+    setEventActionError('');
+    if(!activeEventActionRef) return;
+    if(!isAgendaDemoContext()){
+      setEventResolutionNote('“Marcar en curso” requiere endpoint de estado operativo en Agenda API.', 'muted');
+      return;
+    }
+    applyLocalEventStatus(activeEventActionRef, 'in_consulta');
+    openEventActionModal(activeEventActionRef, 'detail');
+    setEventResolutionNote('Cita marcada en curso (demo).', 'success');
+  };
+  const applyEventFinished = ()=>{
+    setEventActionError('');
+    if(!activeEventActionRef) return;
+    if(!isAgendaDemoContext()){
+      setEventResolutionNote('“Finalizar” requiere endpoint de estado operativo en Agenda API.', 'muted');
+      return;
+    }
+    applyLocalEventStatus(activeEventActionRef, 'finalizada');
+    openEventActionModal(activeEventActionRef, 'detail');
+    setEventResolutionNote('Cita marcada finalizada (demo).', 'success');
+  };
   const rerenderCalendarEvents = ()=>{
     if(!calendar) return;
     if(typeof calendar.rerenderEvents === 'function'){
@@ -807,6 +1368,112 @@ console.info('app.js loaded :: 20251123a');
       ensurePanelVisibleInViewport(panelEl, { anchorRatio: 0.36 });
     }, delay);
   };
+  const formatAppointmentDateRangeLabel = (startDate, endDate)=>{
+    const start = startDate instanceof Date ? startDate : new Date(startDate || '');
+    const end = endDate instanceof Date ? endDate : new Date(endDate || '');
+    if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())){
+      return 'Horario no disponible';
+    }
+    const dayLabel = start.toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short' });
+    const startLabel = start.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const endLabel = end.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return `${dayLabel} · ${startLabel} - ${endLabel}`;
+  };
+  const openEventActionModal = (eventRef, section = 'detail')=>{
+    if(!(eventRef && els.eventActionsModalEl && window.bootstrap?.Modal)) return;
+    hideCellMenu();
+    const eventId = sanitizeText(eventRef?.id || '');
+    if(!eventId) return;
+    activeEventActionId = eventId;
+    activeEventActionRef = eventRef;
+    const props = eventRef.extendedProps || {};
+    activeEventActionAppointmentId = sanitizeText(props.appointment_id || eventRef?.id || '');
+    const patient = sanitizeText(props.patient_display || eventRef.title || 'Paciente');
+    const status = sanitizeText(props.status_label || 'Confirmada');
+    const overdueOpen = isOverdueOpenFromProps(props);
+    const consultorio = sanitizeText(props.consultorio_id || '');
+    const reason = sanitizeText(
+      props.reason_note
+      || props.reason_label
+      || props.motivo
+      || props.notes
+      || ''
+    );
+    const start = eventRef.start instanceof Date ? new Date(eventRef.start) : null;
+    const end = eventRef.end instanceof Date ? new Date(eventRef.end) : null;
+    const durationMinutes = (start instanceof Date && end instanceof Date)
+      ? Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000))
+      : Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
+    eventActionOriginalRange = { start, end };
+    eventActionPendingReschedule = null;
+    eventActionRescheduleBusy = false;
+    setEventActionError('');
+    setEventActionRescheduleNote('');
+    setEventResolutionNote('');
+    if(els.eventActionSubtitle){
+      els.eventActionSubtitle.textContent = `${patient || 'Paciente'} · ${formatAppointmentDateRangeLabel(start, end)}`;
+    }
+    if(els.eventActionStatusBadge){
+      const statusKeyNorm = normalizeText(sanitizeText(props.status_key || ''));
+      const visualKeyNorm = normalizeText(sanitizeText(props.visual_key || ''));
+      const statusNorm = normalizeText(status);
+      const isConfirmed = statusNorm.includes('confirm');
+      const isPending = statusNorm.includes('pend');
+      const isInProgress = statusNorm.includes('curso') || statusNorm.includes('progress') || statusNorm.includes('consulta') || statusKeyNorm.includes('in-progress');
+      const isFinished = statusNorm.includes('finaliz') || statusNorm.includes('finished') || statusKeyNorm.includes('finished');
+      const isCancelled = statusNorm.includes('cancel');
+      const isNoShow = statusNorm.includes('no show') || statusNorm.includes('no-show') || statusNorm.includes('no_show') || statusKeyNorm.includes('no-show');
+      const isRescheduled = statusNorm.includes('reprogram') || statusNorm.includes('reschedul') || statusNorm.includes('reagend') || statusKeyNorm.includes('rescheduled');
+      const isBlacklist = visualKeyNorm.includes('blacklist');
+      const isGraylist = visualKeyNorm.includes('graylist');
+      const shouldRenderHeaderBadge = isConfirmed || isPending || isInProgress || isFinished || isCancelled || isNoShow || isRescheduled || isBlacklist || isGraylist;
+      if(shouldRenderHeaderBadge){
+        let badgeKey = 'pending';
+        if(isBlacklist) badgeKey = 'blacklist';
+        else if(isGraylist) badgeKey = 'graylist';
+        else if(isConfirmed) badgeKey = 'confirmed';
+        else if(isPending) badgeKey = 'pending';
+        else if(isInProgress) badgeKey = 'in-progress';
+        else if(isFinished) badgeKey = 'finished';
+        else if(isCancelled) badgeKey = 'cancelled';
+        else if(isNoShow) badgeKey = 'no-show';
+        else if(isRescheduled) badgeKey = 'rescheduled';
+        els.eventActionStatusBadge.classList.remove('d-none');
+        els.eventActionStatusBadge.textContent = status || '--';
+        els.eventActionStatusBadge.className = `badge mx-ag-status-badge mx-ag-status-badge--${badgeKey}`;
+      }else{
+        // Agenda: no mostrar badge de cabecera para estados fuera del modelo operativo.
+        els.eventActionStatusBadge.textContent = '';
+        els.eventActionStatusBadge.className = 'badge mx-ag-status-badge d-none';
+      }
+    }
+    if(els.eventActionPatient) els.eventActionPatient.textContent = patient || '--';
+    if(els.eventActionTime) els.eventActionTime.textContent = formatAppointmentDateRangeLabel(start, end);
+    if(els.eventActionDuration) els.eventActionDuration.textContent = `${durationMinutes} min`;
+    if(els.eventActionStatus) els.eventActionStatus.textContent = status || '--';
+    if(els.eventActionReason) els.eventActionReason.textContent = reason || '--';
+    if(els.eventActionReasonWrap){
+      els.eventActionReasonWrap.classList.toggle('d-none', !reason);
+    }
+    if(els.eventActionConsultorio) els.eventActionConsultorio.textContent = consultorio || '--';
+    if(els.eventActionConsultorioWrap){
+      els.eventActionConsultorioWrap.classList.toggle('d-none', !consultorio);
+    }
+    if(els.eventResolutionWrap){
+      els.eventResolutionWrap.classList.toggle('d-none', !overdueOpen);
+    }
+    if(els.eventRescheduleConfirmBtn) els.eventRescheduleConfirmBtn.disabled = true;
+    renderEventRescheduleSummary();
+    if(els.eventCancelWrap) els.eventCancelWrap.classList.add('d-none');
+    const normalizedSection = sanitizeText(section || 'detail') || 'detail';
+    setEventActionSection(normalizedSection);
+    if(normalizedSection === 'reschedule'){
+      initEventRescheduleSelector();
+      validateEventRescheduleCandidate();
+    }
+    eventActionsModal = eventActionsModal || window.bootstrap.Modal.getOrCreateInstance(els.eventActionsModalEl);
+    eventActionsModal.show();
+  };
   const collectConflictingAppointmentsInRange = (startDate, endDate)=>{
     if(!calendar || !(startDate instanceof Date) || !(endDate instanceof Date)) return [];
     if(Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || endDate <= startDate) return [];
@@ -824,6 +1491,257 @@ console.info('app.js loaded :: 20251123a');
       const bTime = b?.start instanceof Date ? b.start.getTime() : Number.POSITIVE_INFINITY;
       return aTime - bTime;
     });
+  };
+  const setBlockModalError = (message = '')=>{
+    if(!els.blockError) return;
+    const msg = sanitizeText(message);
+    if(!msg){
+      els.blockError.classList.add('d-none');
+      els.blockError.textContent = '';
+      return;
+    }
+    els.blockError.textContent = msg;
+    els.blockError.classList.remove('d-none');
+  };
+  const setBlockModalHelp = (message = '')=>{
+    if(!els.blockHelp) return;
+    const msg = sanitizeText(message);
+    if(!msg){
+      els.blockHelp.classList.add('d-none');
+      els.blockHelp.textContent = '';
+      return;
+    }
+    els.blockHelp.textContent = msg;
+    els.blockHelp.classList.remove('d-none');
+  };
+  const renderBlockModalReasonChips = ()=>{
+    if(!els.blockReasonChips) return;
+    els.blockReasonChips.innerHTML = BLOCK_REASON_OPTIONS.map((item)=>{
+      const isActive = item.key === blockModalReasonKey;
+      return `<button type="button" class="mx-ag-slot-chip${isActive ? ' is-active' : ''}" data-ag-block-reason="${escapeHtml(item.key)}" data-ag-block-reason-label="${escapeHtml(item.label)}">${escapeHtml(item.label)}</button>`;
+    }).join('');
+  };
+  const renderBlockModalConflictList = ()=>{
+    if(!els.blockConflictsWrap || !els.blockConflictsList) return;
+    const shouldShow = blockModalShowConflicts && Array.isArray(activeBlockConflictItems) && activeBlockConflictItems.length > 0;
+    if(!shouldShow){
+      els.blockConflictsWrap.classList.add('d-none');
+      els.blockConflictsList.innerHTML = '';
+      return;
+    }
+    els.blockConflictsList.innerHTML = activeBlockConflictItems.map((item)=>{
+      const startLabel = item.start instanceof Date
+        ? item.start.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false })
+        : '--:--';
+      return `
+        <div class="mx-ag-slot-conflict-item">
+          <div class="mx-ag-slot-conflict-time">${escapeHtml(startLabel)}</div>
+          <div class="mx-ag-slot-conflict-meta">
+            <div class="mx-ag-slot-conflict-patient">${escapeHtml(sanitizeText(item.patient || 'Paciente'))}</div>
+            <div class="mx-ag-slot-conflict-status">${escapeHtml(sanitizeText(item.status || 'Confirmada'))}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    els.blockConflictsWrap.classList.remove('d-none');
+  };
+  const getBlockModalRange = ()=>{
+    const slotStart = blockModalSelection?.start instanceof Date ? new Date(blockModalSelection.start) : null;
+    const slotEnd = blockModalSelection?.end instanceof Date ? new Date(blockModalSelection.end) : null;
+    if(!(slotStart instanceof Date) || !(slotEnd instanceof Date) || Number.isNaN(slotStart.getTime()) || Number.isNaN(slotEnd.getTime())){
+      return { slotStart: null, slotEnd: null, blockEnd: null, invalidRange: true };
+    }
+    let blockEnd = new Date(slotEnd);
+    let invalidRange = false;
+    if(els.blockModeUntil?.checked){
+      const selectedEnd = parseDateTimeLocalSafe(sanitizeText(els.blockEndSelect?.value || ''));
+      if(selectedEnd && !Number.isNaN(selectedEnd.getTime())){
+        blockEnd = selectedEnd;
+      }else{
+        invalidRange = true;
+      }
+    }
+    if(blockEnd <= slotStart){
+      invalidRange = true;
+    }
+    return { slotStart, slotEnd, blockEnd, invalidRange };
+  };
+  const syncBlockModalFormState = ()=>{
+    const isUntil = !!els.blockModeUntil?.checked;
+    if(els.blockEndWrap){
+      els.blockEndWrap.classList.toggle('d-none', !isUntil);
+    }
+    if(els.blockOtherWrap){
+      els.blockOtherWrap.classList.toggle('d-none', blockModalReasonKey !== 'otro');
+    }
+  };
+  const updateBlockModalConflictState = ()=>{
+    const { slotStart, blockEnd, invalidRange } = getBlockModalRange();
+    if(!(slotStart instanceof Date) || !(blockEnd instanceof Date) || invalidRange){
+      activeBlockConflictItems = [];
+      if(activeBlockConflictIds.size){
+        activeBlockConflictIds = new Set();
+        rerenderCalendarEvents();
+      }
+      if(els.blockConfirmBtn){
+        els.blockConfirmBtn.disabled = true;
+      }
+      if(els.blockWarningWrap){
+        els.blockWarningWrap.classList.add('d-none');
+      }
+      renderBlockModalConflictList();
+      return;
+    }
+    const conflicts = collectConflictingAppointmentsInRange(slotStart, blockEnd);
+    activeBlockConflictItems = conflicts.map((ev)=>({
+      id: sanitizeText(ev.id || ''),
+      start: ev.start instanceof Date ? new Date(ev.start) : null,
+      patient: sanitizeText(ev.extendedProps?.patient_display || ev.title || 'Paciente'),
+      status: sanitizeText(ev.extendedProps?.status_label || 'Confirmada')
+    }));
+    const nextIds = new Set(activeBlockConflictItems.map((item)=> sanitizeText(item.id || '')).filter(Boolean));
+    if(!areIdSetsEqual(activeBlockConflictIds, nextIds)){
+      activeBlockConflictIds = nextIds;
+      rerenderCalendarEvents();
+    }
+    const hasConflicts = nextIds.size > 0;
+    if(!hasConflicts){
+      blockModalShowConflicts = false;
+    }
+    if(els.blockConfirmBtn){
+      els.blockConfirmBtn.disabled = hasConflicts;
+    }
+    if(els.blockWarningWrap){
+      els.blockWarningWrap.classList.toggle('d-none', !hasConflicts);
+    }
+    if(els.blockWarningText && hasConflicts){
+      els.blockWarningText.textContent = nextIds.size === 1
+        ? 'Este rango incluye citas existentes (1 cita afectada)'
+        : `Este rango incluye citas existentes (${nextIds.size} citas afectadas)`;
+    }
+    renderBlockModalConflictList();
+  };
+  const openBlockModalFromSelection = (selection)=>{
+    if(!els.blockModalEl || !window.bootstrap?.Modal) return false;
+    const start = selection?.start instanceof Date ? new Date(selection.start) : new Date(selection?.start || '');
+    const end = selection?.end instanceof Date ? new Date(selection.end) : new Date(selection?.end || '');
+    if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start){
+      setError('No se pudo resolver el horario a bloquear.');
+      return false;
+    }
+    blockSlotModal = blockSlotModal || window.bootstrap.Modal.getOrCreateInstance(els.blockModalEl);
+    blockModalSelection = { start, end };
+    blockModalReasonKey = BLOCK_REASON_OPTIONS[0]?.key || 'comida';
+    blockModalReasonLabel = BLOCK_REASON_OPTIONS[0]?.label || 'Comida';
+    blockModalShowConflicts = false;
+    setBlockModalError('');
+    setBlockModalHelp('');
+    if(els.blockRangeBase){
+      els.blockRangeBase.textContent = formatAppointmentDateRangeLabel(start, end);
+    }
+    if(els.blockModeSingle){
+      els.blockModeSingle.checked = true;
+    }
+    if(els.blockEndSelect){
+      const options = getBlockedSlotUntilOptions(start);
+      els.blockEndSelect.innerHTML = options.length
+        ? options.map((opt)=> `<option value="${escapeHtml(opt.value)}">${escapeHtml(opt.label)}</option>`).join('')
+        : '<option value="">Sin opciones</option>';
+    }
+    if(els.blockOtherInput){
+      els.blockOtherInput.value = '';
+    }
+    renderBlockModalReasonChips();
+    syncBlockModalFormState();
+    updateBlockModalConflictState();
+    blockSlotModal.show();
+    return true;
+  };
+  const handleBlockAdjustRange = ()=>{
+    const { slotStart } = getBlockModalRange();
+    const firstConflict = activeBlockConflictItems[0] || null;
+    if(!(slotStart instanceof Date) || !(firstConflict?.start instanceof Date) || !els.blockModeUntil || !els.blockEndSelect){
+      setBlockModalHelp('No fue posible ajustar automáticamente. Ajusta manualmente el rango.');
+      return;
+    }
+    els.blockModeUntil.checked = true;
+    syncBlockModalFormState();
+    const desiredEndSql = toSqlDateTimeLocal(firstConflict.start);
+    const candidates = Array.from(els.blockEndSelect.options || []);
+    const exact = candidates.find((opt)=> sanitizeText(opt.value || '') === desiredEndSql);
+    if(exact){
+      els.blockEndSelect.value = exact.value;
+      setBlockModalHelp('Se ajustó el rango al último horario disponible antes de las citas existentes.');
+    }else{
+      const fallback = candidates.find((opt)=>{
+        const dt = parseDateTimeLocalSafe(sanitizeText(opt.value || ''));
+        return dt && dt > slotStart && dt <= firstConflict.start;
+      });
+      if(fallback){
+        els.blockEndSelect.value = fallback.value;
+        setBlockModalHelp('Se ajustó el rango al último horario disponible antes de las citas existentes.');
+      }else{
+        setBlockModalHelp('No hay un rango libre previo al primer conflicto. Ajusta manualmente.');
+      }
+    }
+    blockModalShowConflicts = false;
+    updateBlockModalConflictState();
+  };
+  const handleBlockViewConflicts = ()=>{
+    if(!activeBlockConflictItems.length){
+      blockModalShowConflicts = false;
+      renderBlockModalConflictList();
+      setBlockModalHelp('No hay citas en conflicto para el rango actual.');
+      return;
+    }
+    setBlockModalHelp('');
+    blockModalShowConflicts = true;
+    renderBlockModalConflictList();
+    const firstConflict = activeBlockConflictItems[0] || null;
+    if(firstConflict?.start instanceof Date && calendar){
+      const hh = String(firstConflict.start.getHours()).padStart(2, '0');
+      const mm = String(firstConflict.start.getMinutes()).padStart(2, '0');
+      try{ calendar.scrollToTime(`${hh}:${mm}:00`); }catch(_){}
+    }
+  };
+  const handleBlockConfirm = ()=>{
+    const { slotStart, blockEnd, invalidRange } = getBlockModalRange();
+    if(!(slotStart instanceof Date) || !(blockEnd instanceof Date) || invalidRange){
+      setBlockModalError('Selecciona una hora final válida para el bloqueo.');
+      return;
+    }
+    const appointmentConflicts = collectConflictingAppointmentsInRange(slotStart, blockEnd);
+    if(appointmentConflicts.length){
+      setBlockModalError('Este rango incluye citas existentes. Ajusta el rango antes de confirmar.');
+      blockModalShowConflicts = true;
+      updateBlockModalConflictState();
+      return;
+    }
+    if(!isSelectionAvailable(slotStart, blockEnd)){
+      setBlockModalError('El rango seleccionado incluye horarios ocupados o no disponibles.');
+      return;
+    }
+    const reasonNote = (blockModalReasonKey === 'otro') ? sanitizeText(els.blockOtherInput?.value || '') : '';
+    if(blockModalReasonKey === 'otro' && !reasonNote){
+      setBlockModalError('Escribe un motivo breve para el bloqueo.');
+      return;
+    }
+    const rows = readBlockedSlots();
+    const blockId = `blk_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    rows.push({
+      block_id: blockId,
+      start_at: toSqlDateTimeLocal(slotStart),
+      end_at: toSqlDateTimeLocal(blockEnd),
+      reason_key: blockModalReasonKey || 'otro',
+      reason_label: (blockModalReasonKey === 'otro' ? 'Otro' : (blockModalReasonLabel || 'Otro')),
+      reason_note: reasonNote,
+      created_at: toSqlDateTimeLocal(new Date())
+    });
+    writeBlockedSlots(rows);
+    activeBlockedEventId = '';
+    setError('');
+    blockSlotModal?.hide();
+    rerenderCalendarEvents();
   };
   const findTimeGridColumnFrame = (slotStartDate)=>{
     if(!els.calendarWrap || !(slotStartDate instanceof Date) || Number.isNaN(slotStartDate.getTime())) return null;
@@ -1179,7 +2097,14 @@ console.info('app.js loaded :: 20251123a');
         return;
       }
       if(action === 'block'){
-        openBlockForm();
+        if(cellMenuSelection){
+          const selection = {
+            start: cellMenuSelection.start instanceof Date ? new Date(cellMenuSelection.start) : new Date(cellMenuSelection.start || ''),
+            end: cellMenuSelection.end instanceof Date ? new Date(cellMenuSelection.end) : new Date(cellMenuSelection.end || '')
+          };
+          hideCellMenu();
+          openBlockModalFromSelection(selection);
+        }
         return;
       }
       if(action === 'cancel-block'){
@@ -1310,6 +2235,7 @@ console.info('app.js loaded :: 20251123a');
       return;
     }
     hideCellMenu();
+    hideEventActionPanel();
     cellMenuSelection = { start, end };
     const frame = findTimeGridColumnFrame(start);
     if(!(frame instanceof HTMLElement)){
@@ -1754,8 +2680,60 @@ console.info('app.js loaded :: 20251123a');
       });
       return resp.json().catch(()=> null);
     },
+    async getPatientFlags({ patientId, signal }){
+      const safePatientId = encodeURIComponent(String(patientId || '').trim());
+      const resp = await fetch(`/api/agenda/index.php/patients/${safePatientId}/flags?active_only=1&limit=50`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        signal
+      });
+      return resp.json().catch(()=> null);
+    },
     async createAppointment(payload){
       const resp = await fetch('/api/agenda/index.php/appointments', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload || {})
+      });
+      return {
+        ok: resp.ok,
+        status: resp.status,
+        json: await resp.json().catch(()=> null)
+      };
+    },
+    async rescheduleAppointment(appointmentId, payload){
+      const safeId = encodeURIComponent(String(appointmentId || '').trim());
+      const resp = await fetch(`/api/agenda/index.php/appointments/${safeId}/reschedule`, {
+        method: 'PATCH',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload || {})
+      });
+      return {
+        ok: resp.ok,
+        status: resp.status,
+        json: await resp.json().catch(()=> null)
+      };
+    },
+    async cancelAppointment(appointmentId, payload){
+      const safeId = encodeURIComponent(String(appointmentId || '').trim());
+      const resp = await fetch(`/api/agenda/index.php/appointments/${safeId}/cancel`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload || {})
+      });
+      return {
+        ok: resp.ok,
+        status: resp.status,
+        json: await resp.json().catch(()=> null)
+      };
+    },
+    async noShowAppointment(appointmentId, payload){
+      const safeId = encodeURIComponent(String(appointmentId || '').trim());
+      const resp = await fetch(`/api/agenda/index.php/appointments/${safeId}/no_show`, {
         method: 'POST',
         headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -2355,23 +3333,69 @@ console.info('app.js loaded :: 20251123a');
     return shortText([base, modality, status].filter(Boolean).join(' · '), 86);
   };
   const resolveAppointmentStatusMeta = (rawStatus = '')=>{
-    const normalized = sanitizeText(rawStatus).toLowerCase();
-    if(normalized === 'in_consulta' || normalized === 'en_consulta' || normalized === 'en consulta'){
-      return { key: 'in-consulta', label: 'En consulta' };
-    }
-    if(normalized === 'pending' || normalized === 'pendiente'){
+    const normalized = sanitizeText(rawStatus).toLowerCase().replace(/\s+/g, '_');
+    // Normalización frontend: conserva compatibilidad con valores legacy del backend.
+    if(
+      normalized === 'pending'
+      || normalized === 'pendiente'
+      || normalized === 'sin_confirmacion'
+      || normalized === 'sin-confirmacion'
+      || normalized === 'unconfirmed'
+    ){
       return { key: 'pending', label: 'Pendiente' };
     }
-    if(normalized === 'cancelled' || normalized === 'canceled' || normalized === 'cancelada'){
-      return { key: 'cancelled', label: 'Cancelada' };
+    if(
+      normalized === 'confirmed'
+      || normalized === 'confirmada'
+      || normalized === 'confirmado'
+    ){
+      return { key: 'confirmed', label: 'Confirmada' };
     }
-    if(normalized === 'no_show' || normalized === 'no show' || normalized === 'no-show' || normalized === 'no asistió' || normalized === 'no asistio'){
-      return { key: 'no-show', label: 'No show' };
+    if(
+      normalized === 'in_consulta'
+      || normalized === 'en_consulta'
+      || normalized === 'en_curso'
+      || normalized === 'in_progress'
+      || normalized === 'consulta_activa'
+    ){
+      return { key: 'in-progress', label: 'En curso' };
     }
-    if(normalized === 'finalizada' || normalized === 'completed' || normalized === 'finished'){
+    if(
+      normalized === 'finalizada'
+      || normalized === 'completed'
+      || normalized === 'finished'
+      || normalized === 'consulta_cerrada'
+    ){
       return { key: 'finished', label: 'Finalizada' };
     }
-    return { key: 'confirmed', label: 'Confirmada' };
+    if(
+      normalized === 'cancelled'
+      || normalized === 'canceled'
+      || normalized === 'cancelada'
+      || normalized === 'cancelado'
+    ){
+      return { key: 'cancelled', label: 'Cancelada' };
+    }
+    if(
+      normalized === 'reprogramada'
+      || normalized === 'reprogramado'
+      || normalized === 'reagendada'
+      || normalized === 'reagendado'
+      || normalized === 'rescheduled'
+      || normalized === 'reschedule'
+    ){
+      return { key: 'rescheduled', label: 'Reprogramada' };
+    }
+    if(
+      normalized === 'no_show'
+      || normalized === 'no-show'
+      || normalized === 'no_asistio'
+      || normalized === 'no_asistió'
+      || normalized === 'ausente'
+    ){
+      return { key: 'no-show', label: 'No show' };
+    }
+    return { key: 'pending', label: 'Pendiente' };
   };
 
   const isAgendaDemoContext = ()=>{
@@ -2428,6 +3452,174 @@ console.info('app.js loaded :: 20251123a');
     }
     return list[list.length - 1]?.value || '';
   };
+  const normalizePatientFlagType = (rawFlagType = '')=>{
+    const normalized = sanitizeText(rawFlagType).toLowerCase().replace(/\s+/g, '_');
+    if(normalized === 'black' || normalized === 'blacklist' || normalized === 'lista_negra' || normalized === 'lista-negra'){
+      return 'black';
+    }
+    if(
+      normalized === 'grey'
+      || normalized === 'gray'
+      || normalized === 'greylist'
+      || normalized === 'graylist'
+      || normalized === 'lista_gris'
+      || normalized === 'lista-gris'
+    ){
+      return 'grey';
+    }
+    return '';
+  };
+  const resolvePatientFlagMetaFromList = (flags = [])=>{
+    const list = Array.isArray(flags) ? flags : [];
+    const byAppointmentId = {};
+    let hasBlack = false;
+    let hasGrey = false;
+    for(const row of list){
+      const type = normalizePatientFlagType(row?.flag_type || row?.type || '');
+      const sourceAppointmentId = sanitizeText(
+        row?.source_appointment_id
+        || row?.appointment_id
+        || row?.linked_appointment_id
+        || ''
+      );
+      if(type === 'black'){
+        hasBlack = true;
+      }else if(type === 'grey'){
+        hasGrey = true;
+      }
+      if(sourceAppointmentId && type){
+        const previous = sanitizeText(byAppointmentId[sourceAppointmentId] || '');
+        // Prioridad por cita ligada: black > grey.
+        if(!previous || previous === 'grey'){
+          byAppointmentId[sourceAppointmentId] = type === 'black' ? 'black' : 'grey';
+        }
+      }
+    }
+    return {
+      anyType: hasBlack ? 'black' : (hasGrey ? 'grey' : ''),
+      byAppointmentId
+    };
+  };
+  const resolvePatientFlagMeta = async (patientId = '', { signal } = {})=>{
+    const safePatientId = sanitizeText(patientId);
+    if(!safePatientId || !patientFlagsEndpointAvailable){
+      return { anyType: '', byAppointmentId: {} };
+    }
+    if(patientFlagTypeCache.has(safePatientId)){
+      const cached = patientFlagTypeCache.get(safePatientId);
+      return (cached && typeof cached === 'object')
+        ? cached
+        : { anyType: '', byAppointmentId: {} };
+    }
+    if(patientFlagRequestCache.has(safePatientId)){
+      try{
+        return await patientFlagRequestCache.get(safePatientId);
+      }catch(_){
+        return { anyType: '', byAppointmentId: {} };
+      }
+    }
+    const request = (async ()=>{
+      try{
+        const json = await AgendaApiClient.getPatientFlags({ patientId: safePatientId, signal });
+        if(json?.ok === true && Array.isArray(json?.data)){
+          const resolved = resolvePatientFlagMetaFromList(json.data);
+          patientFlagTypeCache.set(safePatientId, resolved);
+          return resolved;
+        }
+        const errorCode = sanitizeText(json?.error || '').toLowerCase();
+        if(errorCode === 'db_not_ready'){
+          patientFlagsEndpointAvailable = false;
+        }
+      }catch(err){
+        if(err?.name !== 'AbortError'){
+          console.warn('[Agenda v1] patient flags fetch error', err);
+        }
+      }
+      const fallback = { anyType: '', byAppointmentId: {} };
+      patientFlagTypeCache.set(safePatientId, fallback);
+      return fallback;
+    })();
+    patientFlagRequestCache.set(safePatientId, request);
+    try{
+      return await request;
+    }finally{
+      patientFlagRequestCache.delete(safePatientId);
+    }
+  };
+  const enrichRowsWithPatientFlagType = async (rows = [], { signal } = {})=>{
+    const safeRows = Array.isArray(rows) ? rows : [];
+    if(!safeRows.length || !patientFlagsEndpointAvailable) return safeRows;
+    const uniquePatients = Array.from(new Set(
+      safeRows.map((row)=> sanitizeText(row?.patient_id || '')).filter(Boolean)
+    ));
+    if(!uniquePatients.length) return safeRows;
+    await Promise.all(uniquePatients.map((patientId)=> resolvePatientFlagMeta(patientId, { signal })));
+    return safeRows.map((row)=>{
+      const patientId = sanitizeText(row?.patient_id || '');
+      const appointmentId = sanitizeText(row?.appointment_id || '');
+      const cachedMeta = patientId ? patientFlagTypeCache.get(patientId) : null;
+      const linkedType = sanitizeText(cachedMeta?.byAppointmentId?.[appointmentId] || '');
+      const anyType = sanitizeText(cachedMeta?.anyType || '');
+      return {
+        ...row,
+        patient_flag_type: linkedType || sanitizeText(row?.patient_flag_type || ''),
+        patient_flag_any_type: anyType || sanitizeText(row?.patient_flag_any_type || '')
+      };
+    });
+  };
+  const AGENDA_STATUS_COLOR_MAP = Object.freeze({
+    pending: { background: '#66D0DD', border: '#66D0DD', text: '#FFFFFF' },
+    confirmed: { background: '#00B0C5', border: '#00B0C5', text: '#FFFFFF' },
+    'in-progress': { background: '#0098AE', border: '#0098AE', text: '#FFFFFF' },
+    finished: { background: '#B2E8EE', border: '#B2E8EE', text: '#00B0C5' },
+    cancelled: { background: '#FF2C22', border: '#FF2C22', text: '#FFFFFF' },
+    'no-show': { background: '#E86A1A', border: '#E86A1A', text: '#FFFFFF' },
+    rescheduled: { background: '#8494D8', border: '#8494D8', text: '#FFFFFF' },
+    blacklist: { background: '#000000', border: '#000000', text: '#FFFFFF' },
+    graylist: { background: '#36454F', border: '#36454F', text: '#FFFFFF' }
+  });
+  const resolveAppointmentColor = ({ statusKey = '', isPast = false, patientFlagType = '' } = {})=>{
+    const safeStatusKey = sanitizeText(statusKey);
+    const safeFlagType = normalizePatientFlagType(patientFlagType);
+    const isCancelled = safeStatusKey === 'cancelled';
+    const isNoShow = safeStatusKey === 'no-show';
+    const hasLinkedPriorityList = isPast && (safeFlagType === 'black' || safeFlagType === 'grey');
+    const isPastVisual = isPast && !hasLinkedPriorityList && !isCancelled && !isNoShow;
+    let visualKey = safeStatusKey;
+    if(hasLinkedPriorityList && safeFlagType === 'black') visualKey = 'blacklist';
+    else if(hasLinkedPriorityList && safeFlagType === 'grey') visualKey = 'graylist';
+    else if(isCancelled) visualKey = 'cancelled';
+    // Ajuste UX: no_show vencido se representa con paleta de cita pasada.
+    else if(isNoShow && isPast) visualKey = 'finished';
+    else if(isNoShow) visualKey = 'no-show';
+    else if(isPastVisual) visualKey = 'finished';
+    const palette = AGENDA_STATUS_COLOR_MAP[visualKey] || { background: '#005684', border: '#005684', text: '#FFFFFF' };
+    return {
+      visualKey,
+      isPastVisual,
+      backgroundColor: palette.background,
+      borderColor: palette.border,
+      textColor: palette.text
+    };
+  };
+  const buildDemoBlockedSlotEvents = (fetchInfo)=>{
+    const start = fetchInfo?.start instanceof Date ? new Date(fetchInfo.start) : new Date(fetchInfo?.start || '');
+    const end = fetchInfo?.end instanceof Date ? new Date(fetchInfo.end) : new Date(fetchInfo?.end || '');
+    if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
+    const base = toStartOfDay(toAddDays(new Date(), -7));
+    base.setHours(11, 0, 0, 0);
+    const blockedEnd = plusMinutes(base, resolveAgendaSlotMinutes());
+    if(!(base < end && blockedEnd > start)) return [];
+    const block = mapBlockedSlotToEvent({
+      block_id: `demo-block-${formatYmdLocal(base)}`,
+      start_at: formatSqlDateTime(base),
+      end_at: formatSqlDateTime(blockedEnd),
+      reason_key: 'personal',
+      reason_label: 'Personal',
+      reason_note: 'Bloqueo demo QA'
+    });
+    return block ? [block] : [];
+  };
   const buildDemoAppointments = (fetchInfo)=>{
     const start = new Date(fetchInfo.start);
     const end = new Date(fetchInfo.end);
@@ -2478,18 +3670,27 @@ console.info('app.js loaded :: 20251123a');
       dayStart.setHours(8, 0, 0, 0);
       const dayEnd = new Date(day);
       dayEnd.setHours(dow === 6 ? 17 : 20, 0, 0, 0);
-      const pushDemoRow = (eventStartDate, eventDurationMinutes)=>{
+      const pushDemoRow = (eventStartDate, eventDurationMinutes, overrides = null)=>{
         const eventEnd = plusMinutes(eventStartDate, eventDurationMinutes);
         if(eventEnd > dayEnd) return false;
         const name = names[Math.floor(rng() * names.length)] || `Paciente ${seq + 1}`;
         const modality = types[Math.floor(rng() * types.length)] || 'seguimiento';
         const status = pickWeighted(rng, statuses) || 'confirmed';
+        const override = (overrides && typeof overrides === 'object') ? overrides : null;
+        let resolvedStatus = sanitizeText(override?.status || status);
+        const isPastSlot = eventEnd.getTime() < Date.now();
+        // Corrección quirúrgica QA:
+        // en demo no permitimos "no_show" para slots no pasados.
+        if(resolveAppointmentStatusMeta(resolvedStatus).key === 'no-show' && !isPastSlot){
+          resolvedStatus = (rng() < 0.58) ? 'pending' : 'confirmed';
+        }
         rows.push({
           appointment_id: `demo-${formatYmdLocal(day)}-${seq}`,
           patient_id: `P-DEMO-${String(seq + 1).padStart(3, '0')}`,
-          patient_name: name,
-          modality,
-          status,
+          patient_name: sanitizeText(override?.patient_name || name),
+          modality: sanitizeText(override?.modality || modality),
+          status: resolvedStatus,
+          patient_flag_type: sanitizeText(override?.patient_flag_type || ''),
           start_at: formatSqlDateTime(eventStartDate),
           end_at: formatSqlDateTime(eventEnd),
           channel_origin: 'agenda_demo_mode'
@@ -2536,6 +3737,33 @@ console.info('app.js loaded :: 20251123a');
           // Mantiene la demo estrictamente alineada a la granularidad activa (15/20/30/60).
           eventStart = alignDateToSlotGrid(nextStartCandidate, slotMinutes);
         }
+      }
+
+      const ymd = formatYmdLocal(day);
+      const blackDate = formatYmdLocal(toAddDays(todayStart, -8));
+      const greyDate = formatYmdLocal(toAddDays(todayStart, -9));
+      const cancelDate = formatYmdLocal(toAddDays(todayStart, -10));
+      const pastA = formatYmdLocal(toAddDays(todayStart, -11));
+      const pastB = formatYmdLocal(toAddDays(todayStart, -12));
+      if(ymd === blackDate){
+        const demoStart = new Date(day); demoStart.setHours(9, 30, 0, 0);
+        pushDemoRow(demoStart, slotMinutes, { status: 'confirmed', patient_flag_type: 'black', patient_name: 'Paciente Lista Negra' });
+      }
+      if(ymd === greyDate){
+        const demoStart = new Date(day); demoStart.setHours(10, 0, 0, 0);
+        pushDemoRow(demoStart, slotMinutes, { status: 'pending', patient_flag_type: 'grey', patient_name: 'Paciente Lista Gris' });
+      }
+      if(ymd === cancelDate){
+        const demoStart = new Date(day); demoStart.setHours(10, 30, 0, 0);
+        pushDemoRow(demoStart, slotMinutes, { status: 'cancelled', patient_name: 'Cita Cancelada QA' });
+      }
+      if(ymd === pastA){
+        const demoStart = new Date(day); demoStart.setHours(8, 30, 0, 0);
+        pushDemoRow(demoStart, slotMinutes, { status: 'confirmed', patient_name: 'Pasada Normal 1' });
+      }
+      if(ymd === pastB){
+        const demoStart = new Date(day); demoStart.setHours(9, 0, 0, 0);
+        pushDemoRow(demoStart, slotMinutes, { status: 'pending', patient_name: 'Pasada Normal 2' });
       }
 
       cursor.setDate(cursor.getDate() + 1);
@@ -2603,19 +3831,30 @@ console.info('app.js loaded :: 20251123a');
   const mapAppointmentToEvent = (row)=>{
     const status = sanitizeText(row?.status || '').toLowerCase();
     const statusMeta = resolveAppointmentStatusMeta(status);
+    const patientFlagType = normalizePatientFlagType(
+      row?.patient_flag_type
+      || row?.flag_type
+      || row?.patient_flag
+      || ''
+    );
     const startAt = normalizeDateTime(row?.start_at || '');
     const endAt = normalizeDateTime(row?.end_at || '');
     const endAtDate = new Date(endAt);
     const nowTs = Date.now();
     const isPast = !!(endAt && !Number.isNaN(endAtDate.getTime()) && endAtDate.getTime() < nowTs);
-    const statusColorMap = {
-      confirmed: '#198754',
-      pending: '#0d6efd',
-      cancelled: '#6c757d',
-      no_show: '#dc3545',
-      in_consulta: '#20a46b',
-      finalizada: '#5f6f82'
-    };
+    const channelOrigin = sanitizeText(row?.channel_origin || '');
+    const isSyntheticFutureNoShow = (
+      channelOrigin === 'agenda_demo_mode'
+      && statusMeta.key === 'no-show'
+      && !isPast
+    );
+    const visualStatusKey = isSyntheticFutureNoShow ? 'finished' : statusMeta.key;
+    const displayStatusLabel = isSyntheticFutureNoShow ? 'Pasada' : statusMeta.label;
+    const visual = resolveAppointmentColor({
+      statusKey: visualStatusKey,
+      isPast,
+      patientFlagType
+    });
     const patientDisplay = sanitizeText(row?.patient_name || row?.patient_full_name || '')
       || (sanitizeText(row?.patient_id || '') ? `Paciente ${sanitizeText(row?.patient_id || '')}` : 'Paciente');
     return {
@@ -2623,16 +3862,25 @@ console.info('app.js loaded :: 20251123a');
       title: buildAppointmentTitle(row),
       start: startAt,
       end: endAt,
-      color: statusColorMap[status] || '#005684',
-      classNames: ['mx-ag-event', `mx-ag-status--${statusMeta.key}`, ...(isPast ? ['mx-ag-event--past'] : [])],
+      color: visual.backgroundColor,
+      backgroundColor: visual.backgroundColor,
+      borderColor: visual.borderColor,
+      textColor: visual.textColor,
+      classNames: ['mx-ag-event', `mx-ag-status--${visualStatusKey}`, `mx-ag-visual--${visual.visualKey}`, ...(visual.isPastVisual ? ['mx-ag-event--past'] : [])],
       extendedProps: {
+        appointment_id: sanitizeText(row?.appointment_id || ''),
         doctor_id: sanitizeText(row?.doctor_id || ''),
         consultorio_id: sanitizeText(row?.consultorio_id || ''),
         patient_id: sanitizeText(row?.patient_id || ''),
+        start_at: sanitizeText(row?.start_at || ''),
+        end_at: sanitizeText(row?.end_at || ''),
         patient_display: patientDisplay,
-        status_label: statusMeta.label,
-        status_key: statusMeta.key,
+        status_label: displayStatusLabel,
+        status_key: visualStatusKey,
+        status_key_real: statusMeta.key,
         is_past: isPast,
+        visual_key: visual.visualKey,
+        patient_flag_type: patientFlagType,
         modality: sanitizeText(row?.modality || ''),
         status: sanitizeText(row?.status || ''),
         channel_origin: sanitizeText(row?.channel_origin || '')
@@ -2707,12 +3955,18 @@ console.info('app.js loaded :: 20251123a');
         : sanitizeText(first?.extendedProps?.patient_display || first?.title || 'Paciente');
       const extra = Math.max(0, total - 1);
       const extraLabel = extra > 0 ? ` y ${extra} más` : '';
+      const firstStatusClass = (Array.isArray(first?.classNames) ? first.classNames : [])
+        .find((className)=> sanitizeText(className).startsWith('mx-ag-status--'));
+      const summaryClassNames = ['mx-ag-month-summary-event'];
+      if(firstStatusClass) summaryClassNames.push(firstStatusClass);
+      const firstColor = sanitizeText(first?.color || '');
       summaryEvents.push({
         id: `month-summary:${dayKey}`,
         title: `${patient}${extraLabel}`,
         start: dayKey,
         allDay: true,
-        classNames: ['mx-ag-month-summary-event'],
+        ...(firstColor ? { color: firstColor } : {}),
+        classNames: summaryClassNames,
         extendedProps: {
           month_summary: true,
           month_summary_primary: patient,
@@ -2822,7 +4076,8 @@ console.info('app.js loaded :: 20251123a');
     const blockedEvents = collectBlockedSlotEvents(fetchInfo);
     if(isAgendaDemoContext()){
       const events = buildDemoAppointments(fetchInfo).map(mapAppointmentToEvent).filter((event)=> !!event.start);
-      const merged = [...events, ...blockedEvents];
+      const demoBlocked = buildDemoBlockedSlotEvents(fetchInfo);
+      const merged = [...events, ...blockedEvents, ...demoBlocked];
       merged.sort((a, b)=>{
         const aTime = new Date(a.start || '').getTime();
         const bTime = new Date(b.start || '').getTime();
@@ -2858,7 +4113,8 @@ console.info('app.js loaded :: 20251123a');
       const message = sanitizeText(json?.message || json?.error || '');
       throw new Error(message || 'No se pudieron cargar las citas de agenda.');
     }
-    const events = json.data.map(mapAppointmentToEvent).filter((event)=> !!event.start);
+    const flaggedRows = await enrichRowsWithPatientFlagType(json.data, { signal: appointmentsRequestCtrl?.signal });
+    const events = flaggedRows.map(mapAppointmentToEvent).filter((event)=> !!event.start);
     const merged = [...events, ...blockedEvents];
     merged.sort((a, b)=>{
       const aTime = new Date(a.start || '').getTime();
@@ -3087,6 +4343,7 @@ console.info('app.js loaded :: 20251123a');
             date: info?.dateStr || info?.date?.toISOString?.() || ''
           });
         }
+        hideEventActionPanel();
         const blockFlowOpen = !!(activeSlotActionPanel && activeSlotActionPanel.classList.contains('is-block-open'));
         if(blockFlowOpen){
           const insidePanel = !!info?.jsEvent?.target?.closest?.('.mx-ag-slot-action-layer');
@@ -3137,6 +4394,7 @@ console.info('app.js loaded :: 20251123a');
             end: selectionInfo?.endStr || selectionInfo?.end?.toISOString?.() || ''
           });
         }
+        hideEventActionPanel();
         if(activeSlotActionPanel && activeSlotActionPanel.classList.contains('is-block-open')){
           hideCellMenu();
           if(calendar && typeof calendar.unselect === 'function'){
@@ -3175,6 +4433,14 @@ console.info('app.js loaded :: 20251123a');
       },
       eventClick: (info)=>{
         const props = info.event.extendedProps || {};
+        if(props.month_summary === true){
+          const start = info.event.start instanceof Date ? info.event.start : new Date(info.event.start || '');
+          if(calendar && !Number.isNaN(start.getTime())){
+            clearNextSlotFocus();
+            calendar.changeView('timeGridDay', start);
+          }
+          return;
+        }
         if(sanitizeText(props.event_type || '') === 'blocked_slot'){
           if(info.jsEvent?.target?.closest?.('[data-ag-block-action="remove"]')){
             return;
@@ -3186,17 +4452,15 @@ console.info('app.js loaded :: 20251123a');
           rerenderCalendarEvents();
           return;
         }
-        const details = [
-          `Cita: ${sanitizeText(info.event.id || '-')}`,
-          `Paciente: ${sanitizeText(props.patient_id || '-')}`,
-          `Estado: ${sanitizeText(props.status || '-')}`,
-          `Modalidad: ${sanitizeText(props.modality || '-')}`,
-          `Canal: ${sanitizeText(props.channel_origin || '-')}`
-        ];
-        window.alert(details.join('\n'));
+        hideEventActionPanel();
+        openEventActionModal(info.event, 'detail');
       },
       datesSet: ()=>{
         hideCellMenu();
+        hideEventActionPanel();
+        if(blockSlotModal){
+          try{ blockSlotModal.hide(); }catch(_){}
+        }
         activeBlockedEventId = '';
         if(String(calendar?.view?.type || '') !== 'timeGridWeek'){
           clearNextSlotFocus();
@@ -3282,6 +4546,176 @@ console.info('app.js loaded :: 20251123a');
       clearNextSlotFocus();
       if(calendar && typeof calendar.unselect === 'function'){
         try{ calendar.unselect(); }catch(_){}
+      }
+    });
+    els.blockModeSingle?.addEventListener('change', ()=>{
+      syncBlockModalFormState();
+      updateBlockModalConflictState();
+    });
+    els.blockModeUntil?.addEventListener('change', ()=>{
+      syncBlockModalFormState();
+      updateBlockModalConflictState();
+    });
+    els.blockEndSelect?.addEventListener('change', ()=>{
+      updateBlockModalConflictState();
+    });
+    els.blockReasonChips?.addEventListener('click', (event)=>{
+      const chip = event.target.closest('[data-ag-block-reason]');
+      if(!chip) return;
+      event.preventDefault();
+      blockModalReasonKey = sanitizeText(chip.getAttribute('data-ag-block-reason') || '');
+      blockModalReasonLabel = sanitizeText(chip.getAttribute('data-ag-block-reason-label') || '');
+      renderBlockModalReasonChips();
+      syncBlockModalFormState();
+    });
+    els.blockAdjustBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      handleBlockAdjustRange();
+    });
+    els.blockViewConflictsBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      handleBlockViewConflicts();
+    });
+    els.blockConfirmBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      setBlockModalError('');
+      handleBlockConfirm();
+    });
+    els.blockModalEl?.addEventListener('hidden.bs.modal', ()=>{
+      blockModalSelection = null;
+      blockModalShowConflicts = false;
+      setBlockModalError('');
+      setBlockModalHelp('');
+      clearBlockFlowVisualState({ rerender: true });
+      if(els.blockConflictsWrap){
+        els.blockConflictsWrap.classList.add('d-none');
+      }
+      if(els.blockConflictsList){
+        els.blockConflictsList.innerHTML = '';
+      }
+      if(calendar && typeof calendar.unselect === 'function'){
+        try{ calendar.unselect(); }catch(_){}
+      }
+    });
+    els.eventRescheduleBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      if(eventActionCurrentSection === 'reschedule') return;
+      setEventActionSection('reschedule');
+      initEventRescheduleSelector();
+      validateEventRescheduleCandidate();
+    });
+    els.eventRescheduleMonthNextBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      const nextMonth = addMonths(eventRescheduleMonthCursor || new Date(), 1);
+      if(!nextMonth) return;
+      eventRescheduleMonthCursor = nextMonth;
+      eventRescheduleMonthOptions = buildRescheduleMonthOptions(eventRescheduleMonthCursor);
+      const selectedInMonth = eventRescheduleMonthOptions.find((day)=> day.key === eventRescheduleSelectedDayKey && day.hasAvailability);
+      if(!selectedInMonth){
+        const firstAvailable = eventRescheduleMonthOptions.find((day)=> day.hasAvailability);
+        eventRescheduleSelectedDayKey = firstAvailable?.key || '';
+        eventRescheduleSelectedStart = null;
+      }
+      renderRescheduleDays();
+      validateEventRescheduleCandidate();
+    });
+    els.eventRescheduleMonthPrevBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      const previousMonth = addMonths(eventRescheduleMonthCursor || new Date(), -1);
+      const currentMonth = getCurrentMonthStart();
+      if(!previousMonth || !currentMonth || previousMonth.getTime() < currentMonth.getTime()) return;
+      eventRescheduleMonthCursor = previousMonth;
+      eventRescheduleMonthOptions = buildRescheduleMonthOptions(eventRescheduleMonthCursor);
+      const selectedInMonth = eventRescheduleMonthOptions.find((day)=> day.key === eventRescheduleSelectedDayKey && day.hasAvailability);
+      if(!selectedInMonth){
+        const firstAvailable = eventRescheduleMonthOptions.find((day)=> day.hasAvailability);
+        eventRescheduleSelectedDayKey = firstAvailable?.key || '';
+        eventRescheduleSelectedStart = null;
+      }
+      renderRescheduleDays();
+      validateEventRescheduleCandidate();
+    });
+    els.eventCancelBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      setEventActionSection('cancel');
+    });
+    els.eventMarkInProgressBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      applyEventInProgress();
+    });
+    els.eventMarkFinishedBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      applyEventFinished();
+    });
+    els.eventMarkNoShowBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      applyEventNoShow().catch(()=> null);
+    });
+    els.eventMarkCancelBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      setEventActionSection('cancel');
+    });
+    els.eventRescheduleDays?.addEventListener('click', (event)=>{
+      const btn = event.target.closest('[data-ag-reschedule-day]');
+      if(!btn) return;
+      const dayKey = sanitizeText(btn.getAttribute('data-ag-reschedule-day') || '');
+      const day = eventRescheduleMonthOptions.find((item)=> item.key === dayKey);
+      if(!day || !day.hasAvailability) return;
+      eventRescheduleSelectedDayKey = dayKey;
+      eventRescheduleSelectedStart = null;
+      renderRescheduleDays();
+      validateEventRescheduleCandidate();
+    });
+    els.eventRescheduleHours?.addEventListener('click', (event)=>{
+      const btn = event.target.closest('[data-ag-reschedule-slot]');
+      if(!btn) return;
+      const iso = sanitizeText(btn.getAttribute('data-ag-reschedule-slot') || '');
+      const selected = parseDateTimeLocalSafe(iso);
+      if(!selected || Number.isNaN(selected.getTime())) return;
+      eventRescheduleSelectedStart = selected;
+      renderRescheduleHours();
+      validateEventRescheduleCandidate();
+    });
+    els.eventRescheduleBackBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      setEventActionSection('detail');
+    });
+    els.eventRescheduleConfirmBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      applyEventReschedule().catch(()=> null);
+    });
+    els.eventCancelBackBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      setEventActionSection('detail');
+    });
+    els.eventCancelConfirmBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      applyEventCancel().catch(()=> null);
+    });
+    els.eventActionsModalEl?.addEventListener('hidden.bs.modal', ()=>{
+      activeEventActionId = '';
+      activeEventActionRef = null;
+      activeEventActionAppointmentId = '';
+      eventActionOriginalRange = null;
+      eventActionPendingReschedule = null;
+      eventActionRescheduleBusy = false;
+      eventActionCurrentSection = 'detail';
+      eventRescheduleMonthOptions = [];
+      eventRescheduleMonthCursor = null;
+      eventRescheduleSelectedDayKey = '';
+      eventRescheduleSelectedStart = null;
+      setEventActionError('');
+      setEventActionRescheduleNote('');
+      setEventResolutionNote('');
+      if(els.eventRescheduleConfirmBtn){
+        els.eventRescheduleConfirmBtn.disabled = true;
+      }
+      renderEventRescheduleSummary();
+      if(els.eventRescheduleWrap){
+        els.eventRescheduleWrap.classList.add('d-none');
+      }
+      if(els.eventCancelWrap){
+        els.eventCancelWrap.classList.add('d-none');
       }
     });
     els.patientSearchBtn?.addEventListener('click', ()=>{
@@ -3387,6 +4821,9 @@ console.info('app.js loaded :: 20251123a');
       }, 120);
     });
     els.calendarWrap?.addEventListener('scroll', ()=>{
+      if(activeEventActionPanel){
+        hideEventActionPanel();
+      }
       if(!NEXT_AVAILABLE_FLOW_ENABLED) return;
       if(nextSlotFocus){
         renderNextFocusInlineMessage();
@@ -3423,18 +4860,27 @@ console.info('app.js loaded :: 20251123a');
     document.addEventListener('click', (event)=>{
       const hasFloatingMenuOpen = !!(els.cellMenu && !els.cellMenu.classList.contains('d-none'));
       const hasInlineMenuOpen = !!activeSlotActionPanel;
-      if(!hasFloatingMenuOpen && !hasInlineMenuOpen) return;
+      const hasEventMenuOpen = !!activeEventActionPanel;
+      if(!hasFloatingMenuOpen && !hasInlineMenuOpen && !hasEventMenuOpen) return;
       const blockFlowOpen = !!(activeSlotActionPanel && activeSlotActionPanel.classList.contains('is-block-open'));
-      const insideMenu = event.target.closest('#ag_cell_menu') || event.target.closest('.mx-ag-slot-action-layer');
+      const insideMenu = event.target.closest('#ag_cell_menu') || event.target.closest('.mx-ag-slot-action-layer') || event.target.closest('.mx-ag-event-action-layer');
       const insideCalendar = event.target.closest('#ag_calendar');
       if(blockFlowOpen){
         if(!insideMenu){
           hideCellMenu();
         }
+        if(hasEventMenuOpen && !event.target.closest('.mx-ag-event-action-layer')){
+          hideEventActionPanel();
+        }
         return;
       }
       if(!insideMenu && !insideCalendar){
         hideCellMenu();
+        hideEventActionPanel();
+        return;
+      }
+      if(hasEventMenuOpen && !event.target.closest('.mx-ag-event-action-layer') && !event.target.closest('.fc-event')){
+        hideEventActionPanel();
       }
     });
     document.addEventListener('click', (event)=>{
