@@ -6284,6 +6284,15 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-weight: 500;
   color: #5f7787;
 }
+.mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .fc-daygrid-event.mx-ag-month-cancel-trace{
+  background: rgba(153, 157, 160, 0.14);
+  border-color: rgba(106, 119, 130, 0.34);
+  color: #6a7782;
+}
+.mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .fc-daygrid-event.mx-ag-month-cancel-trace .mx-ag-month-primary{
+  color: #6a7782;
+  font-weight: 600;
+}
 .mx-ag-event-cell{
   display: flex;
   flex-direction: column;

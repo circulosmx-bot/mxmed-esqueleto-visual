@@ -4415,7 +4415,6 @@ console.info('app.js loaded :: 20251123a');
     const safeEvents = Array.isArray(events) ? events : [];
     safeEvents.forEach((event)=>{
       if(!event || event.display === 'background') return;
-      if(sanitizeText(event?.extendedProps?.event_type || '') === 'cancel_trace') return;
       const startRaw = sanitizeText(event.start || '');
       if(!startRaw) return;
       const dayKey = startRaw.slice(0, 10);
@@ -4427,7 +4426,7 @@ console.info('app.js loaded :: 20251123a');
     const summaryEvents = [];
     grouped.forEach((list, dayKey)=>{
       if(!Array.isArray(list) || !list.length) return;
-      list.sort((a, b)=>{
+      const sorted = [...list].sort((a, b)=>{
         const aTime = new Date(a.start || '').getTime();
         const bTime = new Date(b.start || '').getTime();
         if(Number.isNaN(aTime) && Number.isNaN(bTime)) return 0;
@@ -4435,10 +4434,16 @@ console.info('app.js loaded :: 20251123a');
         if(Number.isNaN(bTime)) return -1;
         return aTime - bTime;
       });
-      const first = list[0];
-      const total = list.length;
+      const nonTrace = sorted.filter((ev)=> sanitizeText(ev?.extendedProps?.event_type || '') !== 'cancel_trace');
+      const traceOnly = nonTrace.length === 0;
+      const sourceList = traceOnly ? sorted : nonTrace;
+      if(!sourceList.length) return;
+      const first = sourceList[0];
+      const total = sourceList.length;
       const firstType = sanitizeText(first?.extendedProps?.event_type || '');
-      const patient = (firstType === 'blocked_slot')
+      const patient = traceOnly
+        ? `Cancelada: ${sanitizeText(first?.extendedProps?.patient_display || 'Paciente')}`
+        : (firstType === 'blocked_slot')
         ? 'Horario bloqueado'
         : sanitizeText(first?.extendedProps?.patient_display || first?.title || 'Paciente');
       const extra = Math.max(0, total - 1);
@@ -4447,6 +4452,7 @@ console.info('app.js loaded :: 20251123a');
         .find((className)=> sanitizeText(className).startsWith('mx-ag-status--'));
       const summaryClassNames = ['mx-ag-month-summary-event'];
       if(firstStatusClass) summaryClassNames.push(firstStatusClass);
+      if(traceOnly) summaryClassNames.push('mx-ag-month-cancel-trace');
       const firstColor = sanitizeText(first?.color || '');
       summaryEvents.push({
         id: `month-summary:${dayKey}`,
