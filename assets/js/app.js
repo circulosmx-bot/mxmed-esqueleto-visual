@@ -1150,6 +1150,27 @@ console.info('app.js loaded :: 20251123a');
     }catch(_){}
     return true;
   };
+  const applyLocalCancelledTrace = (eventRef)=>{
+    if(!(eventRef && typeof eventRef.setExtendedProp === 'function')) return false;
+    const props = eventRef.extendedProps || {};
+    const patientDisplay = sanitizeText(props.patient_display || eventRef.title || 'Paciente');
+    const statusRaw = sanitizeText(props.status || 'cancelled') || 'cancelled';
+    eventRef.setExtendedProp('status', statusRaw);
+    eventRef.setExtendedProp('status_label', 'Cancelada');
+    eventRef.setExtendedProp('status_key', 'cancelled');
+    eventRef.setExtendedProp('status_key_real', 'cancelled');
+    eventRef.setExtendedProp('visual_key', 'cancelled');
+    eventRef.setExtendedProp('patient_display', patientDisplay);
+    eventRef.setExtendedProp('event_type', 'cancel_trace');
+    try{
+      eventRef.setProp('title', `Cancelada: ${patientDisplay}`);
+      eventRef.setProp('backgroundColor', 'transparent');
+      eventRef.setProp('borderColor', 'transparent');
+      eventRef.setProp('textColor', '#6a7782');
+      eventRef.setProp('classNames', ['mx-ag-cancel-trace-event']);
+    }catch(_){}
+    return true;
+  };
   const setEventActionSection = (section = '')=>{
     const key = sanitizeText(section);
     const isReschedule = key === 'reschedule';
@@ -1511,7 +1532,7 @@ console.info('app.js loaded :: 20251123a');
       }
       if(isAgendaDemoContext()){
         if(activeEventActionRef){
-          applyLocalEventStatus(activeEventActionRef, 'cancelled');
+          applyLocalCancelledTrace(activeEventActionRef);
         }
         setError('');
         eventActionIsCancelled = true;
@@ -1550,6 +1571,9 @@ console.info('app.js loaded :: 20251123a');
         return;
       }
       eventActionIsCancelled = true;
+      if(activeEventActionRef){
+        applyLocalCancelledTrace(activeEventActionRef);
+      }
       logAgendaCancelFlow('cancel:success-backend', {
         activeEventActionId,
         appointmentId,
