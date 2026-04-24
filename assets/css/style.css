@@ -6124,6 +6124,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   background: #fff;
   padding: 10px;
   min-height: 0;
+  height: clamp(700px, 78vh, 980px);
+  min-height: 700px;
+  max-height: 980px;
   width: 100%;
   max-width: 100%;
   overflow: hidden;
@@ -6136,6 +6139,8 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mx-agenda-calendar-wrap.weekly-hours-expanded{
   height: clamp(760px, 88vh, 980px);
   min-height: 760px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 #ag_calendar{
   min-height: 0;

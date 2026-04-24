@@ -14,6 +14,7 @@ class PatientFlagsController
 {
     private ?PatientFlagsRepository $repository = null;
     private ?string $dbError = null;
+    private array $actorContext = [];
 
     public function __construct()
     {
@@ -23,6 +24,11 @@ class PatientFlagsController
         } catch (\RuntimeException $e) {
             $this->dbError = 'patient flags not ready';
         }
+    }
+
+    public function setActorContext(array $context = []): void
+    {
+        $this->actorContext = $context;
     }
 
     public function index(string $patientId, array $params = [])

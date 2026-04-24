@@ -4,6 +4,8 @@ require_once __DIR__ . '/../../modules/agenda/controllers/ConsultoriosController
 require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentEventsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/PatientFlagsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AvailabilityController.php';
+require_once __DIR__ . '/../../modules/agenda/controllers/ScheduleController.php';
+require_once __DIR__ . '/../../modules/agenda/controllers/AgendaSettingsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentWriteController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/WaitlistController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/PublicAppointmentsController.php';
@@ -14,12 +16,17 @@ use Agenda\Controllers\ConsultoriosController;
 use Agenda\Controllers\AppointmentEventsController;
 use Agenda\Controllers\PatientFlagsController;
 use Agenda\Controllers\AvailabilityController;
+use Agenda\Controllers\ScheduleController;
+use Agenda\Controllers\AgendaSettingsController;
 use Agenda\Controllers\AppointmentWriteController;
 use Agenda\Controllers\WaitlistController;
 use Agenda\Controllers\PublicAppointmentsController;
 use Agenda\Controllers\PublicOtpController;
 
 header('Content-Type: application/json');
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 set_error_handler(function ($severity, $message, $file, $line) {
     throw new \ErrorException($message, 0, $severity, $file, $line);
@@ -83,6 +90,142 @@ function read_json_body(): array
     return is_array($decoded) ? $decoded : [];
 }
 
+function bool_env_flag($value): bool
+{
+    $raw = strtolower(trim((string)($value ?? '')));
+    return in_array($raw, ['1', 'true', 'yes', 'on'], true);
+}
+
+function is_public_agenda_route(array $segments): bool
+{
+    return (($segments[0] ?? '') === 'public');
+}
+
+function is_private_agenda_route(array $segments): bool
+{
+    return in_array(($segments[0] ?? ''), [
+        'appointments',
+        'patients',
+        'consultorios',
+        'availability',
+        'schedule',
+        'settings',
+        'waitlist',
+    ], true);
+}
+
+function unauthorized_response(string $message = 'unauthorized', array $meta = []): array
+{
+    return [
+        'ok' => false,
+        'error' => 'unauthorized',
+        'message' => $message,
+        'data' => null,
+        'meta' => (object)$meta,
+    ];
+}
+
+function forbidden_response(string $message = 'forbidden', array $meta = []): array
+{
+    return [
+        'ok' => false,
+        'error' => 'forbidden',
+        'message' => $message,
+        'data' => null,
+        'meta' => (object)$meta,
+    ];
+}
+
+function resolveAgendaActorContext(array $segments, array $query = []): array
+{
+    $modeRaw = strtolower(trim((string)(getenv('MXMED_AGENDA_AUTH_MODE') ?: '')));
+    $strictMode = bool_env_flag(getenv('MXMED_AGENDA_AUTH_REQUIRED'))
+        || in_array($modeRaw, ['strict', 'enforce'], true);
+    $compatMode = !$strictMode;
+
+    $headers = function_exists('getallheaders') ? (array)getallheaders() : [];
+    $headerUserId = trim((string)($headers['X-User-Id'] ?? $headers['x-user-id'] ?? ''));
+
+    $sessionUserId = trim((string)(
+        $_SESSION['user_id']
+        ?? $_SESSION['mxmed_user_id']
+        ?? $_SESSION['auth_user_id']
+        ?? ''
+    ));
+    $sessionDoctorId = trim((string)(
+        $_SESSION['doctor_id']
+        ?? $_SESSION['active_doctor_id']
+        ?? $_SESSION['mxmed_doctor_id']
+        ?? ''
+    ));
+
+    $queryDoctorId = trim((string)($query['doctor_id'] ?? ''));
+    $contextUserId = $sessionUserId !== '' ? $sessionUserId : $headerUserId;
+    $contextDoctorId = $sessionDoctorId !== '' ? $sessionDoctorId : $queryDoctorId;
+
+    if ($contextUserId === '' && $strictMode) {
+        return [
+            'ok' => false,
+            'response' => unauthorized_response('authentication required', [
+                'auth_mode' => 'strict',
+                'route' => ($segments[0] ?? ''),
+            ]),
+        ];
+    }
+
+    if ($contextDoctorId === '' && $strictMode) {
+        return [
+            'ok' => false,
+            'response' => forbidden_response('doctor scope required', [
+                'auth_mode' => 'strict',
+                'route' => ($segments[0] ?? ''),
+            ]),
+        ];
+    }
+
+    $warnings = [];
+    if ($sessionDoctorId !== '' && $queryDoctorId !== '' && $sessionDoctorId !== $queryDoctorId) {
+        if ($strictMode) {
+            return [
+                'ok' => false,
+                'response' => forbidden_response('doctor scope mismatch', [
+                    'auth_mode' => 'strict',
+                    'doctor_id_session' => $sessionDoctorId,
+                    'doctor_id_requested' => $queryDoctorId,
+                ]),
+            ];
+        }
+        $warnings[] = [
+            'type' => 'doctor_scope_mismatch',
+            'doctor_id_session' => $sessionDoctorId,
+            'doctor_id_requested' => $queryDoctorId,
+        ];
+    }
+
+    if ($contextUserId === '' && $compatMode) {
+        $contextUserId = 'compat_dev';
+    }
+
+    return [
+        'ok' => true,
+        'context' => [
+            'mode' => $compatMode ? 'compat' : 'strict',
+            'strict' => $strictMode,
+            'compat' => $compatMode,
+            'user_id' => $contextUserId,
+            'doctor_id' => $contextDoctorId,
+            'warnings' => $warnings,
+        ],
+    ];
+}
+
+function apply_actor_context($controller, array $actorContext): void
+{
+    if (is_object($controller) && method_exists($controller, 'setActorContext')) {
+        $controller->setActorContext($actorContext);
+    }
+}
+
 try {
     $path = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
     $script = trim($_SERVER['SCRIPT_NAME'] ?? '', '/');
@@ -95,7 +238,34 @@ try {
     $segments = array_values(array_filter(explode('/', trim($relative, '/'))));
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
+    $actorContext = null;
+    if (is_private_agenda_route($segments) && !is_public_agenda_route($segments)) {
+        $contextResult = resolveAgendaActorContext($segments, $_GET);
+        if (!$contextResult['ok']) {
+            $response = normalize_response($contextResult['response']);
+            $errorCode = (string)($response['error'] ?? '');
+            $status = $errorCode === 'unauthorized' ? 401 : 403;
+            http_response_code($status);
+            $json = json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if ($json === false) {
+                $json = json_encode([
+                    'ok' => false,
+                    'error' => 'db_error',
+                    'message' => 'database error',
+                    'data' => null,
+                    'meta' => (object)[],
+                ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            }
+            echo $json;
+            exit;
+        }
+        $actorContext = (array)($contextResult['context'] ?? []);
+    }
+
     $controller = new AppointmentsController();
+    if (is_array($actorContext)) {
+        apply_actor_context($controller, $actorContext);
+    }
     $response = [
         'ok' => false,
         'error' => 'not_implemented',
@@ -108,6 +278,9 @@ try {
         case 'appointments':
             if ($method === 'POST' && !isset($segments[1])) {
                 $writes = new AppointmentWriteController();
+                if (is_array($actorContext)) {
+                    apply_actor_context($writes, $actorContext);
+                }
                 $response = $writes->create();
                 break;
             }
@@ -115,16 +288,25 @@ try {
                 $sub = $segments[2] ?? '';
                 if ($method === 'PATCH' && $sub === 'reschedule') {
                     $writes = new AppointmentWriteController();
+                    if (is_array($actorContext)) {
+                        apply_actor_context($writes, $actorContext);
+                    }
                     $response = $writes->reschedule($segments[1]);
                     break;
                 }
                 if ($method === 'POST' && $sub === 'cancel') {
                     $writes = new AppointmentWriteController();
+                    if (is_array($actorContext)) {
+                        apply_actor_context($writes, $actorContext);
+                    }
                     $response = $writes->cancel($segments[1]);
                     break;
                 }
                 if ($method === 'POST' && ($sub === 'no_show' || $sub === 'no-show')) {
                     $writes = new AppointmentWriteController();
+                    if (is_array($actorContext)) {
+                        apply_actor_context($writes, $actorContext);
+                    }
                     $response = $writes->noShow($segments[1]);
                     break;
                 }
@@ -132,6 +314,9 @@ try {
                     $response = $controller->show($segments[1]);
                 } elseif ($sub === 'events') {
                     $events = new AppointmentEventsController();
+                    if (is_array($actorContext)) {
+                        apply_actor_context($events, $actorContext);
+                    }
                     $response = $events->index($segments[1], $_GET);
                 } else {
                     $response = [
@@ -149,6 +334,9 @@ try {
         case 'patients':
             if (isset($segments[1]) && $segments[1] !== '' && ($segments[2] ?? '') === 'flags') {
                 $flags = new PatientFlagsController();
+                if (is_array($actorContext)) {
+                    apply_actor_context($flags, $actorContext);
+                }
                 $response = $flags->index($segments[1], $_GET);
             } else {
                 $response = [
@@ -162,11 +350,67 @@ try {
             break;
         case 'consultorios':
             $consultorios = new ConsultoriosController();
-            $response = $consultorios->index($_GET);
+            if (is_array($actorContext)) {
+                apply_actor_context($consultorios, $actorContext);
+            }
+            if ($method === 'GET') {
+                $response = $consultorios->index($_GET);
+            } elseif ($method === 'PUT') {
+                $response = $consultorios->update(read_json_body());
+            } else {
+                $response = [
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'route not found',
+                    'data' => null,
+                    'meta' => (object)[],
+                ];
+            }
             break;
         case 'availability':
             $availability = new AvailabilityController();
+            if (is_array($actorContext)) {
+                apply_actor_context($availability, $actorContext);
+            }
             $response = $availability->index($_GET);
+            break;
+        case 'schedule':
+            $schedule = new ScheduleController();
+            if (is_array($actorContext)) {
+                apply_actor_context($schedule, $actorContext);
+            }
+            if ($method === 'GET') {
+                $response = $schedule->index($_GET);
+            } elseif ($method === 'PUT') {
+                $response = $schedule->update(read_json_body());
+            } else {
+                $response = [
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'route not found',
+                    'data' => null,
+                    'meta' => (object)[],
+                ];
+            }
+            break;
+        case 'settings':
+            $settings = new AgendaSettingsController();
+            if (is_array($actorContext)) {
+                apply_actor_context($settings, $actorContext);
+            }
+            if ($method === 'GET') {
+                $response = $settings->index($_GET);
+            } elseif ($method === 'PUT') {
+                $response = $settings->update(read_json_body());
+            } else {
+                $response = [
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'route not found',
+                    'data' => null,
+                    'meta' => (object)[],
+                ];
+            }
             break;
         case 'public':
             if ($method === 'GET' && ($segments[1] ?? '') === 'availability' && !isset($segments[2])) {
@@ -208,6 +452,9 @@ try {
             break;
         case 'waitlist':
             $waitlist = new WaitlistController();
+            if (is_array($actorContext)) {
+                apply_actor_context($waitlist, $actorContext);
+            }
             $entryId = $segments[1] ?? '';
             $sub = $segments[2] ?? '';
             if ($method === 'GET' && !$entryId) {
@@ -262,7 +509,15 @@ try {
         $response['meta'] = (object)$metaArr;
     }
 
-    $status = (($response['error'] ?? null) === 'not_implemented') ? 501 : 200;
+    $errorCode = (string)($response['error'] ?? '');
+    $statusMap = [
+        'unauthorized' => 401,
+        'forbidden' => 403,
+        'invalid_params' => 400,
+        'not_found' => 404,
+        'not_implemented' => 501,
+    ];
+    $status = $statusMap[$errorCode] ?? 200;
     http_response_code($status);
 
     $json = json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);

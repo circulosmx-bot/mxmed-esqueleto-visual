@@ -14,6 +14,7 @@ class AppointmentEventsController
 {
     private ?AppointmentEventsRepository $repository = null;
     private ?string $dbError = null;
+    private array $actorContext = [];
 
     public function __construct()
     {
@@ -27,6 +28,11 @@ class AppointmentEventsController
                 $this->dbError = $e->getMessage();
             }
         }
+    }
+
+    public function setActorContext(array $context = []): void
+    {
+        $this->actorContext = $context;
     }
 
     public function index(string $appointmentId, array $params = [])

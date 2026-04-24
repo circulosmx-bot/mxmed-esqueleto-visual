@@ -199,7 +199,7 @@
 
 </head>
 
-<body data-doctor-id="d_demo_01" data-user-id="u_demo_01">
+<body data-doctor-id="1" data-user-id="u_legacy_1" data-doctor-name="Leticia Muñoz Alfaro">
 
 
 
@@ -2617,27 +2617,30 @@
 
             <div class="row g-3">
 
-              <div class="col-md-3"><label class="form-label">Duración de cita</label><select class="form-select"><option>20 min</option><option>30 min</option><option>40 min</option></select></div>
+              <div class="col-md-3"><label class="form-label" for="ag_cfg_duration_min">Duración de cita</label><select class="form-select" id="ag_cfg_duration_min"><option value="20">20 min</option><option value="30" selected>30 min</option><option value="40">40 min</option></select></div>
 
-              <div class="col-md-3"><label class="form-label">Tiempo entre citas</label><select class="form-select"><option>0 min</option><option>10 min</option><option>15 min</option></select></div>
+              <div class="col-md-3"><label class="form-label" for="ag_cfg_gap_min">Tiempo entre citas</label><select class="form-select" id="ag_cfg_gap_min"><option value="0" selected>0 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div>
 
-              <div class="col-md-3"><label class="form-label">Canales</label><select class="form-select" multiple><option>Presencial</option><option>Telemedicina</option></select></div>
+              <div class="col-md-3"><label class="form-label" for="ag_cfg_channels">Canales</label><select class="form-select" id="ag_cfg_channels" multiple><option value="in_person">Presencial</option><option value="videoconsulta">Telemedicina</option></select></div>
 
-              <div class="col-md-3"><label class="form-label">Política de cancelación</label><select class="form-select"><option>24h</option><option>48h</option></select></div>
-
-
-
-              <div class="col-md-6"><label class="form-label">Horario (L-V)</label><input class="form-control" placeholder="09:00-14:00, 16:00-19:00"></div>
-
-              <div class="col-md-6"><label class="form-label">Horario (Sáb)</label><input class="form-control" placeholder="09:00-13:00"></div>
+              <div class="col-md-3"><label class="form-label" for="ag_cfg_cancel_policy_h">Política de cancelación</label><select class="form-select" id="ag_cfg_cancel_policy_h"><option value="24" selected>24h</option><option value="48">48h</option></select></div>
 
 
 
-              <div class="col-12"><label class="form-label">Recordatorios</label>
+              <div class="col-md-6"><label class="form-label">Horario (L-V)</label><input class="form-control" id="ag_cfg_schedule_week_text" placeholder="09:00-14:00, 16:00-19:00"></div>
 
-                <textarea class="form-control" rows="3" placeholder="Plantilla SMS/Email de recordatorio
+              <div class="col-md-6"><label class="form-label">Horario (Sáb)</label><input class="form-control" id="ag_cfg_schedule_sat_text" placeholder="09:00-13:00"></div>
+
+
+
+              <div class="col-12"><label class="form-label" for="ag_cfg_reminder_template">Recordatorios</label>
+
+                <textarea class="form-control" id="ag_cfg_reminder_template" rows="3" placeholder="Plantilla SMS/Email de recordatorio
 "></textarea>
 
+              </div>
+              <div class="col-12">
+                <div class="small text-muted" id="ag_cfg_sync_note">Configuración operativa de Agenda.</div>
               </div>
 
             </div>
@@ -2999,12 +3002,12 @@
                         <div class="fw-semibold" id="ag_event_action_consultorio">--</div>
                       </div>
                       <div id="ag_event_resolution_wrap" class="d-none">
-                        <div class="small text-muted mb-1">Resolución operativa</div>
+                        <div class="small text-muted mb-1" id="ag_event_resolution_title">Resolución de cita</div>
                         <div class="mx-ag-event-resolution-actions">
                           <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_mark_in_progress_btn">Marcar en curso</button>
-                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_mark_finished_btn">Finalizar</button>
-                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_mark_cancel_btn">Cancelar</button>
-                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_mark_no_show_btn">No show</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_mark_finished_btn">Paciente atendido</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_mark_cancel_btn">Paciente canceló tarde</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_mark_no_show_btn">Paciente no asistió</button>
                         </div>
                         <div id="ag_event_resolution_note" class="small text-muted mt-2 d-none"></div>
                       </div>

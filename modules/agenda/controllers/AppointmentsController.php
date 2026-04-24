@@ -12,6 +12,7 @@ class AppointmentsController
 {
     private ?AppointmentsRepository $repository = null;
     private ?string $dbError = null;
+    private array $actorContext = [];
 
     public function __construct()
     {
@@ -21,6 +22,11 @@ class AppointmentsController
         } catch (\RuntimeException $e) {
             $this->dbError = $e->getMessage();
         }
+    }
+
+    public function setActorContext(array $context = []): void
+    {
+        $this->actorContext = $context;
     }
 
     public function index(array $params = [])
@@ -40,7 +46,27 @@ class AppointmentsController
             return $this->error('invalid_params', 'from/to must be valid datetimes', ['from' => $from, 'to' => $to]);
         }
 
-        $doctorId = $params['doctor_id'] ?? null;
+        $doctorIdRequested = trim((string)($params['doctor_id'] ?? ''));
+        $doctorIdContext = trim((string)($this->actorContext['doctor_id'] ?? ''));
+        $strictMode = ($this->actorContext['strict'] ?? false) === true;
+        $doctorId = $doctorIdRequested !== '' ? $doctorIdRequested : null;
+        $metaWarnings = [];
+        if ($doctorIdContext !== '') {
+            if ($doctorIdRequested !== '' && $doctorIdRequested !== $doctorIdContext) {
+                if ($strictMode) {
+                    return $this->error('forbidden', 'doctor scope mismatch', [
+                        'doctor_id_requested' => $doctorIdRequested,
+                        'doctor_id_context' => $doctorIdContext,
+                    ]);
+                }
+                $metaWarnings[] = [
+                    'type' => 'doctor_scope_mismatch',
+                    'doctor_id_requested' => $doctorIdRequested,
+                    'doctor_id_context' => $doctorIdContext,
+                ];
+            }
+            $doctorId = $doctorIdContext;
+        }
         $consultorioId = $params['consultorio_id'] ?? null;
         $limit = isset($params['limit']) ? min(500, (int)$params['limit']) : 200;
 
@@ -66,7 +92,13 @@ class AppointmentsController
             'error' => null,
             'message' => '',
             'data' => $data,
-            'meta' => (object)['count' => count($data)],
+            'meta' => (object)[
+                'count' => count($data),
+                'doctor_id_effective' => $doctorId,
+                'doctor_id_requested' => ($doctorIdRequested !== '' ? $doctorIdRequested : null),
+                'auth_mode' => trim((string)($this->actorContext['mode'] ?? '')),
+                'auth_warnings' => $metaWarnings,
+            ],
         ];
     }
 
@@ -95,12 +127,33 @@ class AppointmentsController
         if (!$row) {
             return $this->error('not_found', 'appointment not found');
         }
+        $doctorIdContext = trim((string)($this->actorContext['doctor_id'] ?? ''));
+        $strictMode = ($this->actorContext['strict'] ?? false) === true;
+        $rowDoctorId = trim((string)($row['doctor_id'] ?? ''));
+        $warnings = [];
+        if ($doctorIdContext !== '' && $rowDoctorId !== '' && $rowDoctorId !== $doctorIdContext) {
+            if ($strictMode) {
+                return $this->error('forbidden', 'appointment out of doctor scope', [
+                    'doctor_id_context' => $doctorIdContext,
+                    'doctor_id_appointment' => $rowDoctorId,
+                    'appointment_id' => $id,
+                ]);
+            }
+            $warnings[] = [
+                'type' => 'doctor_scope_mismatch',
+                'doctor_id_context' => $doctorIdContext,
+                'doctor_id_appointment' => $rowDoctorId,
+            ];
+        }
         return [
             'ok' => true,
             'error' => null,
             'message' => '',
             'data' => $row,
-            'meta' => (object)[],
+            'meta' => (object)[
+                'auth_mode' => trim((string)($this->actorContext['mode'] ?? '')),
+                'auth_warnings' => $warnings,
+            ],
         ];
     }
 

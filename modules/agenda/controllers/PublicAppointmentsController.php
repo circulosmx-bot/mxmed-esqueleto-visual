@@ -1,6 +1,7 @@
 <?php
 namespace Agenda\Controllers;
 
+use Agenda\Helpers\DoctorIdentity as DoctorIdentity;
 use Agenda\Repositories\ConsultoriosRepository;
 use Agenda\Repositories\PublicOtpRepository;
 use Agenda\Services\DevOtpSender;
@@ -15,6 +16,7 @@ use RuntimeException;
 require_once __DIR__ . '/../repositories/ConsultoriosRepository.php';
 require_once __DIR__ . '/../repositories/PublicOtpRepository.php';
 require_once __DIR__ . '/../services/OtpSender.php';
+require_once __DIR__ . '/../helpers/doctor_identity.php';
 require_once __DIR__ . '/AvailabilityController.php';
 require_once __DIR__ . '/AppointmentWriteController.php';
 require_once __DIR__ . '/../config/agenda.php';
@@ -56,7 +58,12 @@ class PublicAppointmentsController
             return $this->error('invalid_params', 'invalid payload', ['fields' => $validation['errors']]);
         }
 
-        $doctorId = (string)$validation['doctor_id'];
+        $doctorId = $this->resolveCanonicalDoctorId((string)$validation['doctor_id']);
+        if ($doctorId === '') {
+            return $this->error('invalid_params', 'invalid payload', [
+                'fields' => ['doctor_id' => 'required'],
+            ]);
+        }
         $consultorioId = $this->resolveConsultorioId($doctorId, $payload['consultorio_id'] ?? null);
 
         if (!$this->isValidNumeric($consultorioId)) {
@@ -69,6 +76,18 @@ class PublicAppointmentsController
         try {
             $this->ensureOtpTable();
         } catch (\Throwable $e) {
+            return $this->error('db_error', 'database error');
+        }
+
+        try {
+            $doctorIdForOtpStorage = $this->resolveDoctorIdForOtpStorage($doctorId);
+        } catch (RuntimeException $e) {
+            if ($e->getMessage() === 'doctor_id_legacy_alias_required') {
+                return $this->error('invalid_params', 'doctor_id has no legacy alias mapping for otp storage', [
+                    'fields' => ['doctor_id' => 'legacy_alias_required'],
+                    'doctor_id' => $doctorId,
+                ]);
+            }
             return $this->error('db_error', 'database error');
         }
 
@@ -119,7 +138,7 @@ class PublicAppointmentsController
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute([
                 'id' => $requestId,
-                'doctor_id' => (int)$doctorId,
+                'doctor_id' => $doctorIdForOtpStorage,
                 'consultorio_id' => (int)$consultorioId,
                 'start_at' => (string)$validation['start_at'],
                 'end_at' => (string)$validation['end_at'],
@@ -283,7 +302,14 @@ class PublicAppointmentsController
             ]);
         }
 
-        $doctorId = (string)$validated['doctor_id'];
+        $doctorId = $this->resolveCanonicalDoctorId((string)$validated['doctor_id']);
+        if ($doctorId === '') {
+            return $this->error('invalid_params', 'invalid payload', [
+                'route' => 'public_reserve',
+                'fields' => ['doctor_id' => 'required'],
+            ]);
+        }
+        $validated['doctor_id'] = $doctorId;
         $consultorioId = $this->resolveConsultorioId($doctorId, $payload['consultorio_id'] ?? null);
         if (!$this->isValidNumeric($consultorioId)) {
             return $this->error('invalid_params', 'consultorio_id must be numeric', [
@@ -436,7 +462,9 @@ class PublicAppointmentsController
             ]);
         }
 
-        if ((string)($otpRow['doctor_id'] ?? '') !== (string)($flow['doctor_id'] ?? '')) {
+        $otpDoctorCanonical = $this->resolveCanonicalDoctorId((string)($otpRow['doctor_id'] ?? ''));
+        $flowDoctorCanonical = $this->resolveCanonicalDoctorId((string)($flow['doctor_id'] ?? ''));
+        if ($otpDoctorCanonical === '' || $flowDoctorCanonical === '' || $otpDoctorCanonical !== $flowDoctorCanonical) {
             return $this->error('otp_mismatch', 'otp does not match appointment', [
                 'route' => 'public_confirm',
                 'appointment_id' => $appointmentId,
@@ -695,8 +723,8 @@ public function cancel(array $payload = []): array
         $errors = [];
 
         $doctorId = trim((string)($payload['doctor_id'] ?? ''));
-        if (!$this->isValidNumeric($doctorId)) {
-            $errors['doctor_id'] = 'required_numeric';
+        if ($doctorId === '') {
+            $errors['doctor_id'] = 'required';
         }
 
         $startAt = $this->normalizeDateTime((string)($payload['start_at'] ?? ''));
@@ -1326,8 +1354,8 @@ private function updateFlowConfirmationAudit(array $flow, array $otpMeta = []): 
         $errors = [];
 
         $doctorId = trim((string)($payload['doctor_id'] ?? ''));
-        if (!$this->isValidNumeric($doctorId)) {
-            $errors['doctor_id'] = 'required_numeric';
+        if ($doctorId === '') {
+            $errors['doctor_id'] = 'required';
         }
 
         $patientName = trim((string)($payload['patient_name'] ?? ''));
@@ -1580,7 +1608,7 @@ private function updateFlowConfirmationAudit(array $flow, array $otpMeta = []): 
 
         $sql = 'CREATE TABLE IF NOT EXISTS ' . self::OTP_TABLE . ' (
             id VARCHAR(36) NOT NULL,
-            doctor_id INT NOT NULL,
+            doctor_id VARCHAR(64) NOT NULL,
             consultorio_id INT NOT NULL,
             start_at DATETIME NOT NULL,
             end_at DATETIME NOT NULL,
@@ -1602,6 +1630,73 @@ private function updateFlowConfirmationAudit(array $flow, array $otpMeta = []): 
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
 
         $this->pdo->exec($sql);
+    }
+
+    private function resolveCanonicalDoctorId(string $doctorId): string
+    {
+        $raw = trim($doctorId);
+        if ($raw === '') {
+            return '';
+        }
+        if (!$this->pdo) {
+            return $raw;
+        }
+        try {
+            return DoctorIdentity\resolveCanonicalDoctorId($this->pdo, $raw);
+        } catch (\Throwable $e) {
+            return $raw;
+        }
+    }
+
+    private function resolveDoctorIdForOtpStorage(string $canonicalDoctorId): string
+    {
+        $canonical = $this->resolveCanonicalDoctorId($canonicalDoctorId);
+        if ($canonical === '') {
+            throw new RuntimeException('doctor_id required');
+        }
+        if (!$this->pdo) {
+            return $canonical;
+        }
+
+        $columnType = $this->getOtpDoctorIdColumnType();
+        $isNumericStorage = str_contains(strtolower($columnType), 'int');
+        if (!$isNumericStorage) {
+            return $canonical;
+        }
+
+        $legacyNumeric = DoctorIdentity\resolveLegacyDoctorIdForCanonical(
+            $this->pdo,
+            $canonical,
+            static fn(string $value): bool => ctype_digit($value)
+        );
+        if ($legacyNumeric === '') {
+            throw new RuntimeException('doctor_id_legacy_alias_required');
+        }
+        return $legacyNumeric;
+    }
+
+    private function getOtpDoctorIdColumnType(): string
+    {
+        if (!$this->pdo) {
+            return '';
+        }
+        try {
+            $stmt = $this->pdo->prepare(
+                'SELECT COLUMN_TYPE
+                 FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME = :table
+                   AND COLUMN_NAME = :column
+                 LIMIT 1'
+            );
+            $stmt->execute([
+                'table' => self::OTP_TABLE,
+                'column' => 'doctor_id',
+            ]);
+            return (string)($stmt->fetchColumn() ?: '');
+        } catch (\Throwable $e) {
+            return '';
+        }
     }
 
     private function resolveConsultorioId(string $doctorId, $requestedConsultorioId): ?string

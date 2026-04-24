@@ -6,6 +6,7 @@ use Agenda\Repositories\OverrideRepository;
 use Agenda\Repositories\AppointmentCollisionsRepository;
 use Agenda\Repositories\ConsultoriosRepository;
 use Agenda\Services\HolidayMxProvider;
+use Agenda\Helpers\DoctorIdentity as DoctorIdentity;
 use Agenda\Helpers as DbHelpers;
 use DateTime;
 use DateTimeImmutable;
@@ -19,6 +20,7 @@ require_once __DIR__ . '/../repositories/OverrideRepository.php';
 require_once __DIR__ . '/../repositories/AppointmentCollisionsRepository.php';
 require_once __DIR__ . '/../repositories/ConsultoriosRepository.php';
 require_once __DIR__ . '/../services/HolidayMxProvider.php';
+require_once __DIR__ . '/../helpers/doctor_identity.php';
 require_once __DIR__ . '/../config/agenda.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
 
@@ -38,6 +40,9 @@ class AvailabilityController
     private ?AppointmentCollisionsRepository $collisionRepo = null;
     private bool $collisionsEnabled = false;
     private array $config = [];
+    private ?PDO $pdo = null;
+    private array $actorContext = [];
+    private array $contextWarnings = [];
 
     public function __construct()
     {
@@ -51,6 +56,7 @@ class AvailabilityController
         // 1) Conexión + repo base (capa A)
         try {
             $pdo = mxmed_pdo();
+            $this->pdo = $pdo;
             $this->repository = new AvailabilityRepository($pdo);
         } catch (RuntimeException $e) {
             // incluye: "availability base schedule not ready"
@@ -110,8 +116,14 @@ class AvailabilityController
         }
     }
 
+    public function setActorContext(array $context = []): void
+    {
+        $this->actorContext = $context;
+    }
+
     public function index(array $params = [])
     {
+        $this->contextWarnings = [];
         // QA not_ready mantiene el contrato previo
         if ($this->qaNotReady) {
             return $this->error('db_not_ready', 'availability base schedule not ready');
@@ -125,19 +137,36 @@ class AvailabilityController
             return $this->error('db_not_ready', 'availability base schedule not ready');
         }
 
-        $doctorId = $params['doctor_id'] ?? null;
+        $doctorIdRequested = trim((string)($params['doctor_id'] ?? ''));
+        $doctorScope = $this->resolveDoctorScope($doctorIdRequested, true);
+        if (!$doctorScope['ok']) {
+            return $this->error(
+                (string)$doctorScope['error'],
+                (string)$doctorScope['message'],
+                (array)($doctorScope['meta'] ?? [])
+            );
+        }
+        $doctorId = (string)$doctorScope['doctor_id'];
         $consultorioId = $params['consultorio_id'] ?? null;
         $date = $params['date'] ?? null;
 
+        if ($this->pdo) {
+            try {
+                $doctorId = DoctorIdentity\resolveCanonicalDoctorId($this->pdo, $doctorId);
+            } catch (\Throwable $e) {
+                $doctorId = (string)$doctorScope['doctor_id'];
+            }
+        }
+
         $meta = [
             'doctor_id' => $doctorId,
+            'doctor_id_requested' => ($doctorIdRequested !== '' ? $doctorIdRequested : null),
             'consultorio_id' => $consultorioId,
             'date' => $date,
+            'auth_mode' => trim((string)($this->actorContext['mode'] ?? '')),
+            'auth_warnings' => $this->contextWarnings,
         ];
 
-        if (!$this->isValidNumeric($doctorId)) {
-            return $this->error('invalid_params', 'doctor_id must be numeric', $meta);
-        }
         if (!$this->isValidNumeric($consultorioId)) {
             return $this->error('invalid_params', 'consultorio_id must be numeric', $meta);
         }
@@ -254,6 +283,25 @@ class AvailabilityController
             ? array_values(array_unique(array_map(fn($override) => $override['type'], $overrides)))
             : [];
 
+        $metaOut = $this->buildMeta(
+            $doctorId,
+            $consultorioId,
+            $date,
+            $isHoliday,
+            $holidayName,
+            $isOverride,
+            $overrideTypes,
+            $overridesEnabled,
+            $collisionsEnabled,
+            count($busyIntervals),
+            $windowsBeforeCollisions,
+            count($slots),
+            $slotMinutes
+        );
+        $metaOut['doctor_id_requested'] = ($doctorIdRequested !== '' ? $doctorIdRequested : null);
+        $metaOut['auth_mode'] = trim((string)($this->actorContext['mode'] ?? ''));
+        $metaOut['auth_warnings'] = $this->contextWarnings;
+
         return $this->success(
             [
                 'date' => $date,
@@ -263,21 +311,7 @@ class AvailabilityController
                 'windows' => $windows,
                 'slots' => $slots,
             ],
-            $this->buildMeta(
-                $doctorId,
-                $consultorioId,
-                $date,
-                $isHoliday,
-                $holidayName,
-                $isOverride,
-                $overrideTypes,
-                $overridesEnabled,
-                $collisionsEnabled,
-                count($busyIntervals),
-                $windowsBeforeCollisions,
-                count($slots),
-                $slotMinutes
-            )
+            $metaOut
         );
     }
 
@@ -302,23 +336,36 @@ class AvailabilityController
             return $this->error('db_not_ready', 'availability base schedule not ready');
         }
 
-        $doctorId = $params['doctor_id'] ?? null;
+        $doctorIdRequested = trim((string)($params['doctor_id'] ?? ''));
+        $doctorId = $doctorIdRequested;
         $requestedConsultorioId = $params['consultorio_id'] ?? null;
         $mode = strtolower(trim((string)($params['mode'] ?? 'next')));
         if ($mode === '') {
             $mode = 'next';
         }
+        if ($doctorIdRequested === '') {
+            return $this->error('invalid_params', 'doctor_id is required', [
+                'doctor_id' => null,
+                'consultorio_id' => $requestedConsultorioId,
+                'mode' => $mode,
+                'consultorio_id_used' => null,
+            ]);
+        }
+        if ($this->pdo) {
+            try {
+                $doctorId = DoctorIdentity\resolveCanonicalDoctorId($this->pdo, $doctorIdRequested);
+            } catch (\Throwable $e) {
+                $doctorId = $doctorIdRequested;
+            }
+        }
 
         $meta = [
             'doctor_id' => $doctorId,
+            'doctor_id_requested' => $doctorIdRequested,
             'consultorio_id' => $requestedConsultorioId,
             'mode' => $mode,
             'consultorio_id_used' => null,
         ];
-
-        if (!$this->isValidNumeric($doctorId)) {
-            return $this->error('invalid_params', 'doctor_id must be numeric', $meta);
-        }
 
         $consultorioId = $this->resolvePublicConsultorioId((string)$doctorId, $requestedConsultorioId);
         if (!$this->isValidNumeric($consultorioId)) {
@@ -665,6 +712,44 @@ class AvailabilityController
             'ok' => true,
             'slots' => $slots,
         ];
+    }
+
+    private function resolveDoctorScope(string $doctorIdRequested, bool $doctorIsRequired): array
+    {
+        $doctorIdContext = trim((string)($this->actorContext['doctor_id'] ?? ''));
+        $strictMode = ($this->actorContext['strict'] ?? false) === true;
+        if ($doctorIdContext !== '') {
+            if ($doctorIdRequested !== '' && $doctorIdRequested !== $doctorIdContext) {
+                if ($strictMode) {
+                    return [
+                        'ok' => false,
+                        'error' => 'forbidden',
+                        'message' => 'doctor scope mismatch',
+                        'meta' => [
+                            'doctor_id_requested' => $doctorIdRequested,
+                            'doctor_id_context' => $doctorIdContext,
+                        ],
+                    ];
+                }
+                $this->contextWarnings[] = [
+                    'type' => 'doctor_scope_mismatch',
+                    'doctor_id_requested' => $doctorIdRequested,
+                    'doctor_id_context' => $doctorIdContext,
+                ];
+            }
+            return ['ok' => true, 'doctor_id' => $doctorIdContext];
+        }
+        if ($doctorIsRequired && $doctorIdRequested === '') {
+            return [
+                'ok' => false,
+                'error' => 'invalid_params',
+                'message' => 'doctor_id is required',
+                'meta' => [
+                    'doctor_id' => null,
+                ],
+            ];
+        }
+        return ['ok' => true, 'doctor_id' => $doctorIdRequested];
     }
 
     private function error(string $code, string $message, array $meta = [])

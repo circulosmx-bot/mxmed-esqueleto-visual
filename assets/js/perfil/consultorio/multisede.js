@@ -675,4 +675,263 @@ function mxClearHorarioInputs(inputs){
     window._mx_logoDropTemplate = logoDrop.outerHTML;
   }
   hydrateGroupLogoPreview();
+
+  // ===== Persistencia real de datos generales de Consultorio (backend) =====
+  (function setupConsultorioPersistence(){
+    const root = document.getElementById('p-consultorio');
+    if(!root) return;
+
+    let hydrateInProgress = false;
+    const saveTimers = new Map();
+    const hydratedRows = new Set();
+
+    const clean = (value)=> String(value ?? '').trim();
+    const resolveDoctorId = ()=> clean(resolveActiveDoctorId());
+    const getPaneByIndex = (idx)=> document.getElementById(`sede${idx}`);
+    const parsePaneIndex = (pane)=>{
+      const m = /^sede(\d+)$/.exec(String(pane?.id || ''));
+      return m ? Number(m[1]) : 1;
+    };
+    const paneExists = (idx)=> !!getPaneByIndex(idx);
+    const ensurePane = (idx)=>{
+      if(idx <= 1) return getPaneByIndex(1);
+      if(!paneExists(idx) && typeof window._mx_createConsultorio === 'function'){
+        window._mx_createConsultorio(idx);
+      }
+      return getPaneByIndex(idx);
+    };
+    const getField = (pane, selector)=> pane?.querySelector(selector);
+    const setValue = (el, value)=>{
+      if(!el) return;
+      const next = clean(value);
+      if(el.value !== next){
+        el.value = next;
+      }
+    };
+    const readPreviewUrl = (pane, selector)=>{
+      const img = pane?.querySelector(selector);
+      const src = clean(img?.getAttribute('src') || img?.src || '');
+      if(!src) return '';
+      if(/^data:image\//i.test(src)) return src;
+      try{
+        const u = new URL(src, window.location.origin);
+        return u.href;
+      }catch(_){
+        return src;
+      }
+    };
+    const applyPreview = (pane, selector, srcValue)=>{
+      const src = clean(srcValue);
+      if(!src) return;
+      const img = pane?.querySelector(selector);
+      if(!img) return;
+      img.src = src;
+      const preview = img.closest('[hidden], .logo-slot-preview, .mf-prev');
+      if(preview){
+        preview.removeAttribute('hidden');
+        preview.style.display = 'flex';
+      }
+      const slot = img.closest('.logo-slot, .foto-slot');
+      if(slot){
+        slot.classList.add('show-preview', 'has-logo');
+      }
+      const drop = slot?.querySelector('.logo-slot-drop');
+      if(drop){
+        drop.setAttribute('hidden', 'hidden');
+      }
+    };
+    const collectPanePayload = (idx)=>{
+      const pane = ensurePane(idx);
+      if(!pane) return null;
+      const tel1 = clean(getField(pane, '[id^="cons-tel1"]')?.value || '');
+      const tel2 = clean(getField(pane, '[id^="cons-tel2"]')?.value || '');
+      const tel3 = clean(getField(pane, '[id^="cons-tel3"]')?.value || '');
+      const urg1 = clean(getField(pane, '[id^="cons-urg1"]')?.value || '');
+      const urg2 = clean(getField(pane, '[id^="cons-urg2"]')?.value || '');
+      return {
+        doctor_id: resolveDoctorId(),
+        consultorio_id: String(idx),
+        titulo: clean(getField(pane, '[id^="cons-titulo"]')?.value || ''),
+        grupo_nombre: clean(getField(pane, '[id^="cons-grupo-nombre"]')?.value || ''),
+        calle: clean(getField(pane, '[id^="cons-calle"]')?.value || ''),
+        num_ext: clean(getField(pane, '[id^="cons-numext"]')?.value || ''),
+        num_int: clean(getField(pane, '[id^="cons-numint"]')?.value || ''),
+        cp: clean(getField(pane, '[id^="cp"]')?.value || ''),
+        colonia: clean(getField(pane, '[id^="colonia"]')?.value || ''),
+        municipio: clean(getField(pane, '[id^="municipio"]')?.value || ''),
+        estado: clean(getField(pane, '[id^="estado"]')?.value || ''),
+        telefonos: [tel1, tel2, tel3].filter(Boolean),
+        whatsapp: clean(getField(pane, '[id^="cons-wa"]')?.value || ''),
+        urgencias: [urg1, urg2].filter(Boolean),
+        logo_url: readPreviewUrl(pane, '.logo-slot-preview img, .mf-upload[data-type="logo"] .mf-prev img'),
+        foto_url: readPreviewUrl(pane, '.foto-slot .mf-prev img')
+      };
+    };
+    const hasMeaningfulData = (payload)=>{
+      if(!payload) return false;
+      return [
+        payload.titulo,
+        payload.grupo_nombre,
+        payload.calle,
+        payload.num_ext,
+        payload.num_int,
+        payload.cp,
+        payload.colonia,
+        payload.municipio,
+        payload.estado,
+        payload.whatsapp,
+        payload.logo_url,
+        payload.foto_url,
+        ...(Array.isArray(payload.telefonos) ? payload.telefonos : []),
+        ...(Array.isArray(payload.urgencias) ? payload.urgencias : [])
+      ].some((value)=> clean(value) !== '');
+    };
+
+    const apiGetConsultorios = async (doctorId)=>{
+      const resp = await fetch(`/api/agenda/index.php/consultorios?doctor_id=${encodeURIComponent(doctorId)}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+      });
+      return resp.json().catch(()=> null);
+    };
+    const apiSaveConsultorio = async (payload)=>{
+      const resp = await fetch('/api/agenda/index.php/consultorios', {
+        method: 'PUT',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload || {})
+      });
+      return {
+        ok: resp.ok,
+        status: resp.status,
+        json: await resp.json().catch(()=> null)
+      };
+    };
+
+    const applyRowToPane = (row)=>{
+      const idx = Number(clean(row?.consultorio_id || row?.id || '1')) || 1;
+      const pane = ensurePane(idx);
+      if(!pane) return;
+      setValue(getField(pane, '[id^="cons-titulo"]'), row?.titulo || row?.name || '');
+      setValue(getField(pane, '[id^="cons-grupo-nombre"]'), row?.grupo_nombre || '');
+      setValue(getField(pane, '[id^="cons-calle"]'), row?.calle || '');
+      setValue(getField(pane, '[id^="cons-numext"]'), row?.num_ext || '');
+      setValue(getField(pane, '[id^="cons-numint"]'), row?.num_int || '');
+      setValue(getField(pane, '[id^="cp"]'), row?.cp || '');
+      setValue(getField(pane, '[id^="municipio"]'), row?.municipio || '');
+      setValue(getField(pane, '[id^="estado"]'), row?.estado || '');
+      const coloniaEl = getField(pane, '[id^="colonia"]');
+      if(coloniaEl && clean(row?.colonia || '')){
+        if(coloniaEl.tagName === 'SELECT'){
+          const val = clean(row.colonia);
+          const exists = Array.from(coloniaEl.options || []).some((opt)=> clean(opt.value) === val);
+          if(!exists){
+            const option = document.createElement('option');
+            option.value = val;
+            option.textContent = val;
+            coloniaEl.appendChild(option);
+          }
+          coloniaEl.value = val;
+        } else {
+          coloniaEl.value = clean(row.colonia);
+        }
+      }
+      const tels = Array.isArray(row?.telefonos) ? row.telefonos : [];
+      setValue(getField(pane, '[id^="cons-tel1"]'), tels[0] || '');
+      setValue(getField(pane, '[id^="cons-tel2"]'), tels[1] || '');
+      setValue(getField(pane, '[id^="cons-tel3"]'), tels[2] || '');
+      setValue(getField(pane, '[id^="cons-wa"]'), row?.whatsapp || '');
+      const urgs = Array.isArray(row?.urgencias) ? row.urgencias : [];
+      setValue(getField(pane, '[id^="cons-urg1"]'), urgs[0] || '');
+      setValue(getField(pane, '[id^="cons-urg2"]'), urgs[1] || '');
+      applyPreview(pane, '.logo-slot-preview img, .mf-upload[data-type="logo"] .mf-prev img', row?.logo_url || '');
+      applyPreview(pane, '.foto-slot .mf-prev img', row?.foto_url || '');
+    };
+
+    const savePaneNow = async (idx)=>{
+      const payload = collectPanePayload(idx);
+      if(!payload || !payload.doctor_id) return;
+      if(!hasMeaningfulData(payload) && hydratedRows.has(String(idx))) return;
+      const result = await apiSaveConsultorio(payload);
+      if(result?.ok && result?.json?.ok){
+        hydratedRows.add(String(idx));
+      }
+    };
+    const queueSavePane = (idx, delay = 420)=>{
+      if(hydrateInProgress) return;
+      const key = String(idx || 1);
+      if(saveTimers.has(key)){
+        window.clearTimeout(saveTimers.get(key));
+      }
+      const timer = window.setTimeout(()=>{
+        savePaneNow(Number(key)).catch(()=> null);
+      }, delay);
+      saveTimers.set(key, timer);
+    };
+
+    const hydrateFromBackend = async ()=>{
+      const doctorId = resolveDoctorId();
+      if(!doctorId) return;
+      hydrateInProgress = true;
+      try{
+        const json = await apiGetConsultorios(doctorId);
+        const rows = Array.isArray(json?.data) ? json.data : [];
+        rows.forEach((row)=>{
+          const cid = clean(row?.consultorio_id || row?.id || '');
+          if(cid) hydratedRows.add(cid);
+          applyRowToPane(row);
+        });
+        const paneIds = getConsultorioSlots();
+        paneIds.forEach((idx)=>{
+          const key = String(idx);
+          if(hydratedRows.has(key)) return;
+          const draft = collectPanePayload(idx);
+          if(hasMeaningfulData(draft)){
+            queueSavePane(idx, 80);
+          }
+        });
+      }catch(_){
+        // Mantener UX operativa aunque backend no responda.
+      }finally{
+        hydrateInProgress = false;
+      }
+    };
+
+    root.addEventListener('input', (event)=>{
+      const target = event.target;
+      if(!(target instanceof HTMLElement)) return;
+      const pane = target.closest('.tab-pane[id^="sede"]');
+      if(!pane) return;
+      if(!target.matches('input, select, textarea')) return;
+      const idx = parsePaneIndex(pane);
+      queueSavePane(idx);
+    }, true);
+
+    root.addEventListener('change', (event)=>{
+      const target = event.target;
+      if(!(target instanceof HTMLElement)) return;
+      const pane = target.closest('.tab-pane[id^="sede"]');
+      if(!pane) return;
+      const idx = parsePaneIndex(pane);
+      queueSavePane(idx, 120);
+    }, true);
+
+    root.addEventListener('click', (event)=>{
+      const target = event.target;
+      if(!(target instanceof HTMLElement)) return;
+      if(!target.closest('.foto-x')) return;
+      const pane = target.closest('.tab-pane[id^="sede"]');
+      if(!pane) return;
+      const idx = parsePaneIndex(pane);
+      queueSavePane(idx, 220);
+    }, true);
+
+    const boot = ()=>{ hydrateFromBackend().catch(()=> null); };
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', ()=>{ window.setTimeout(boot, 60); }, { once:true });
+    }else{
+      window.setTimeout(boot, 60);
+    }
+  })();
 })();

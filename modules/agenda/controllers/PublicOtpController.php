@@ -1,6 +1,7 @@
 <?php
 namespace Agenda\Controllers;
 
+use Agenda\Helpers\DoctorIdentity as DoctorIdentity;
 use Agenda\Repositories\PublicOtpRepository;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -8,6 +9,7 @@ use PDOException;
 use RuntimeException;
 
 require_once __DIR__ . '/../repositories/PublicOtpRepository.php';
+require_once __DIR__ . '/../helpers/doctor_identity.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
 
 class PublicOtpController
@@ -18,11 +20,13 @@ class PublicOtpController
 
     private ?PublicOtpRepository $repository = null;
     private ?string $dbError = null;
+    private ?\PDO $pdo = null;
 
     public function __construct()
     {
         try {
             $pdo = mxmed_pdo();
+            $this->pdo = $pdo;
             $this->repository = new PublicOtpRepository($pdo);
         } catch (RuntimeException $e) {
             $this->dbError = 'database error';
@@ -42,8 +46,8 @@ class PublicOtpController
         $contactValue = trim((string)($body['contact_value'] ?? ''));
 
         $errors = [];
-        if ($doctorIdRaw === '' || !$this->isNumericString($doctorIdRaw)) {
-            $errors['doctor_id'] = 'required_numeric';
+        if ($doctorIdRaw === '') {
+            $errors['doctor_id'] = 'required';
         }
 
         if (!in_array($contactType, ['sms', 'email'], true)) {
@@ -64,6 +68,20 @@ class PublicOtpController
                 'fields' => $errors,
             ]);
         }
+        $doctorIdCanonical = $doctorIdRaw;
+        if ($this->pdo) {
+            try {
+                $doctorIdCanonical = DoctorIdentity\resolveCanonicalDoctorId($this->pdo, $doctorIdRaw);
+            } catch (\Throwable $e) {
+                $doctorIdCanonical = $doctorIdRaw;
+            }
+        }
+        if ($doctorIdCanonical === '') {
+            return $this->error('invalid_params', 'invalid payload', [
+                'route' => 'public_otp_request',
+                'fields' => ['doctor_id' => 'required'],
+            ]);
+        }
 
         $code = $this->generateCode();
         $codeHash = password_hash($code, PASSWORD_DEFAULT);
@@ -76,12 +94,21 @@ class PublicOtpController
 
         try {
             $otpId = $this->repository->createOtp(
-                (int)$doctorIdRaw,
+                $doctorIdCanonical,
                 $contactType,
                 $contactValue,
                 $codeHash,
                 $expiresAt->format('Y-m-d H:i:s')
             );
+        } catch (RuntimeException $e) {
+            if ($e->getMessage() === 'doctor_id_legacy_alias_required') {
+                return $this->error('invalid_params', 'doctor_id has no legacy alias mapping for otp storage', [
+                    'route' => 'public_otp_request',
+                    'fields' => ['doctor_id' => 'legacy_alias_required'],
+                    'doctor_id' => $doctorIdCanonical,
+                ]);
+            }
+            return $this->error('db_error', 'database error', ['route' => 'public_otp_request']);
         } catch (PDOException $e) {
             return $this->error('db_error', 'database error', ['route' => 'public_otp_request']);
         } catch (\Throwable $e) {
@@ -90,6 +117,7 @@ class PublicOtpController
 
         $meta = [
             'route' => 'public_otp_request',
+            'doctor_id' => $doctorIdCanonical,
         ];
 
         if ($this->isQaModeEnabled()) {

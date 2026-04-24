@@ -28,6 +28,8 @@ class AppointmentWriteController
     private bool $dbConnectionError = false;
     private ?\PDO $pdo = null;
     private array $agendaConfig = [];
+    private array $actorContext = [];
+    private array $contextWarnings = [];
 
     public function __construct()
     {
@@ -53,6 +55,11 @@ class AppointmentWriteController
         }
     }
 
+    public function setActorContext(array $context = []): void
+    {
+        $this->actorContext = $context;
+    }
+
     public function create(): array
     {
         $payload = $this->getPayload();
@@ -61,6 +68,11 @@ class AppointmentWriteController
 
     public function createFromPayload(array $payload): array
     {
+        $scopeError = $this->applyCreateScope($payload);
+        if (is_array($scopeError)) {
+            return $scopeError;
+        }
+
         // Auto-create patient if missing patient_id and patient info is provided
         if (!isset($payload['patient_id'])) {
             $patientInput = $payload['patient'] ?? null;
@@ -198,6 +210,23 @@ class AppointmentWriteController
             return $this->notImplemented();
         }
 
+        $context = $this->fetchAppointmentContext($appointmentId);
+        if (!$context['ok']) {
+            return $this->error(
+                (string)$context['error'],
+                (string)$context['message'],
+                (array)($context['meta'] ?? [])
+            );
+        }
+        $scopeError = $this->assertDoctorScope((string)$context['doctor_id'], $appointmentId);
+        if (is_array($scopeError)) {
+            return $scopeError;
+        }
+        $payloadScopeError = $this->assertPayloadDoctorScope($payload, (string)$context['doctor_id']);
+        if (is_array($payloadScopeError)) {
+            return $payloadScopeError;
+        }
+
         try {
             $result = $this->repository->cancelAppointment($appointmentId, $payload);
         } catch (RuntimeException $e) {
@@ -279,6 +308,23 @@ class AppointmentWriteController
             return $this->notImplemented();
         }
 
+        $context = $this->fetchAppointmentContext($appointmentId);
+        if (!$context['ok']) {
+            return $this->error(
+                (string)$context['error'],
+                (string)$context['message'],
+                (array)($context['meta'] ?? [])
+            );
+        }
+        $scopeError = $this->assertDoctorScope((string)$context['doctor_id'], $appointmentId);
+        if (is_array($scopeError)) {
+            return $scopeError;
+        }
+        $payloadScopeError = $this->assertPayloadDoctorScope($payload, (string)$context['doctor_id']);
+        if (is_array($payloadScopeError)) {
+            return $payloadScopeError;
+        }
+
         try {
             $result = $this->repository->markNoShow($appointmentId, $payload);
         } catch (RuntimeException $e) {
@@ -354,6 +400,14 @@ class AppointmentWriteController
                 (string)$context['message'],
                 (array)($context['meta'] ?? [])
             );
+        }
+        $scopeError = $this->assertDoctorScope((string)$context['doctor_id'], $appointmentId);
+        if (is_array($scopeError)) {
+            return $scopeError;
+        }
+        $payloadScopeError = $this->assertPayloadDoctorScope($payload, (string)$context['doctor_id']);
+        if (is_array($payloadScopeError)) {
+            return $payloadScopeError;
         }
 
         $guard = $this->checkAvailabilityRange(
@@ -1014,6 +1068,10 @@ class AppointmentWriteController
 
     private function success(array $data, array $meta = []): array
     {
+        $meta['auth_context'] = $this->buildAuthMeta();
+        if (!empty($this->contextWarnings)) {
+            $meta['auth_warnings'] = $this->contextWarnings;
+        }
         $meta['qa_mode_seen'] = $this->getQaMode();
         return [
             'ok' => true,
@@ -1030,6 +1088,10 @@ class AppointmentWriteController
     private function error(string $code, string $message, $meta = []): array
     {
         $arr = is_array($meta) ? $meta : (array)$meta;
+        $arr['auth_context'] = $this->buildAuthMeta();
+        if (!empty($this->contextWarnings)) {
+            $arr['auth_warnings'] = $this->contextWarnings;
+        }
         $arr['qa_mode_seen'] = $this->getQaMode();
         return [
             'ok' => false,
@@ -1086,6 +1148,116 @@ class AppointmentWriteController
             ];
         }
 
+        return null;
+    }
+
+    private function actorDoctorId(): string
+    {
+        return trim((string)($this->actorContext['doctor_id'] ?? ''));
+    }
+
+    private function actorUserId(): string
+    {
+        return trim((string)($this->actorContext['user_id'] ?? ''));
+    }
+
+    private function isStrictScopeMode(): bool
+    {
+        return ($this->actorContext['strict'] ?? false) === true;
+    }
+
+    private function applyCreateScope(array &$payload): ?array
+    {
+        $contextDoctorId = $this->actorDoctorId();
+        if ($contextDoctorId === '') {
+            return null;
+        }
+
+        $requestedDoctorId = trim((string)($payload['doctor_id'] ?? ''));
+        if ($requestedDoctorId !== '' && $requestedDoctorId !== $contextDoctorId) {
+            if ($this->isStrictScopeMode()) {
+                return $this->error('forbidden', 'doctor scope mismatch', [
+                    'doctor_id_context' => $contextDoctorId,
+                    'doctor_id_requested' => $requestedDoctorId,
+                ]);
+            }
+            $this->contextWarnings[] = [
+                'type' => 'doctor_scope_mismatch',
+                'doctor_id_context' => $contextDoctorId,
+                'doctor_id_requested' => $requestedDoctorId,
+                'action' => 'payload_overridden',
+            ];
+        }
+        $payload['doctor_id'] = $contextDoctorId;
+
+        if (!isset($payload['created_by_id']) || trim((string)$payload['created_by_id']) === '') {
+            $actorUserId = $this->actorUserId();
+            if ($actorUserId !== '') {
+                $payload['created_by_id'] = $actorUserId;
+            }
+        }
+        return null;
+    }
+
+    private function assertDoctorScope(string $appointmentDoctorId, string $appointmentId): ?array
+    {
+        $contextDoctorId = $this->actorDoctorId();
+        if ($contextDoctorId === '' || $appointmentDoctorId === '' || $appointmentDoctorId === $contextDoctorId) {
+            return null;
+        }
+
+        if ($this->isStrictScopeMode()) {
+            return $this->error('forbidden', 'appointment out of doctor scope', [
+                'appointment_id' => $appointmentId,
+                'doctor_id_context' => $contextDoctorId,
+                'doctor_id_appointment' => $appointmentDoctorId,
+            ]);
+        }
+
+        $this->contextWarnings[] = [
+            'type' => 'doctor_scope_mismatch',
+            'appointment_id' => $appointmentId,
+            'doctor_id_context' => $contextDoctorId,
+            'doctor_id_appointment' => $appointmentDoctorId,
+            'action' => 'compat_allowed',
+        ];
+        return null;
+    }
+
+    private function buildAuthMeta(): array
+    {
+        return [
+            'mode' => trim((string)($this->actorContext['mode'] ?? '')),
+            'strict' => $this->isStrictScopeMode(),
+            'user_id' => $this->actorUserId(),
+            'doctor_id' => $this->actorDoctorId(),
+        ];
+    }
+
+    private function assertPayloadDoctorScope(array $payload, string $effectiveDoctorId): ?array
+    {
+        $doctorExpected = trim((string)$effectiveDoctorId);
+        if ($doctorExpected === '') {
+            return null;
+        }
+        $doctorRequested = trim((string)($payload['doctor_id'] ?? ''));
+        if ($doctorRequested === '' || $doctorRequested === $doctorExpected) {
+            return null;
+        }
+
+        if ($this->isStrictScopeMode()) {
+            return $this->error('forbidden', 'doctor scope mismatch', [
+                'doctor_id_expected' => $doctorExpected,
+                'doctor_id_requested' => $doctorRequested,
+            ]);
+        }
+
+        $this->contextWarnings[] = [
+            'type' => 'doctor_scope_mismatch',
+            'doctor_id_expected' => $doctorExpected,
+            'doctor_id_requested' => $doctorRequested,
+            'action' => 'compat_ignored_payload',
+        ];
         return null;
     }
 }

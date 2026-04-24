@@ -22,6 +22,8 @@ class WaitlistController
     private ?string $dbError = null;
     private ?\PDO $pdo = null;
     private bool $qaNotReady = false;
+    private array $actorContext = [];
+    private array $contextWarnings = [];
 
     public function __construct()
     {
@@ -46,31 +48,59 @@ class WaitlistController
         }
     }
 
+    public function setActorContext(array $context = []): void
+    {
+        $this->actorContext = $context;
+    }
+
     public function index(array $params = []): array
     {
+        $this->contextWarnings = [];
         $notReady = $this->ensureReady();
         if ($notReady) {
             return $notReady;
         }
 
+        $doctorIdRequested = trim((string)($params['doctor_id'] ?? ''));
+        $doctorScope = $this->resolveDoctorScope($doctorIdRequested, false);
+        if (!$doctorScope['ok']) {
+            return $this->error((string)$doctorScope['error'], (string)$doctorScope['message'], (array)($doctorScope['meta'] ?? []));
+        }
+        $doctorId = $doctorScope['doctor_id'] ?? null;
+        if (is_string($doctorId) && $doctorId === '') {
+            $doctorId = null;
+        }
+
         $status = $params['status'] ?? 'active';
         $entries = $this->repository->listEntries([
-            'doctor_id' => $params['doctor_id'] ?? null,
+            'doctor_id' => $doctorId,
             'consultorio_id' => $params['consultorio_id'] ?? null,
             'status' => $status,
         ]);
 
-        return $this->success($entries, ['count' => count($entries), 'status' => $status]);
+        return $this->success($entries, [
+            'count' => count($entries),
+            'status' => $status,
+            'doctor_id_effective' => $doctorId,
+            'doctor_id_requested' => ($doctorIdRequested !== '' ? $doctorIdRequested : null),
+        ]);
     }
 
     public function store(): array
     {
+        $this->contextWarnings = [];
         $notReady = $this->ensureReady();
         if ($notReady) {
             return $notReady;
         }
 
         $payload = $this->getPayload();
+        $doctorIdRequested = trim((string)($payload['doctor_id'] ?? ''));
+        $doctorScope = $this->resolveDoctorScope($doctorIdRequested, true);
+        if (!$doctorScope['ok']) {
+            return $this->error((string)$doctorScope['error'], (string)$doctorScope['message'], (array)($doctorScope['meta'] ?? []));
+        }
+        $payload['doctor_id'] = (string)$doctorScope['doctor_id'];
         $errors = $this->validateCreate($payload);
         if (!empty($errors)) {
             return $this->error('invalid_params', 'invalid payload for waitlist', $errors);
@@ -91,7 +121,11 @@ class WaitlistController
             return $this->error('db_error', 'database error');
         }
 
-        return $this->success($entry, ['write' => 'create']);
+        return $this->success($entry, [
+            'write' => 'create',
+            'doctor_id_effective' => $payload['doctor_id'],
+            'doctor_id_requested' => ($doctorIdRequested !== '' ? $doctorIdRequested : null),
+        ]);
     }
 
     public function update(string $id): array
@@ -125,6 +159,7 @@ class WaitlistController
 
     public function assign(string $id): array
     {
+        $this->contextWarnings = [];
         $notReady = $this->ensureReady();
         if ($notReady) {
             return $notReady;
@@ -140,17 +175,44 @@ class WaitlistController
             return $this->error('not_found', 'waitlist entry not found');
         }
 
+        $entryDoctorId = trim((string)($entry['doctor_id'] ?? ''));
+        $entryScope = $this->assertEntryDoctorScope($entryDoctorId, $id);
+        if (!$entryScope['ok']) {
+            return $this->error((string)$entryScope['error'], (string)$entryScope['message'], (array)($entryScope['meta'] ?? []));
+        }
+
         if (!in_array($entry['status'], ['active', 'contacted', 'accepted'], true)) {
             return $this->error('invalid_params', 'waitlist entry is not eligible for assign', ['status' => $entry['status']]);
         }
 
         $payload = $this->getPayload();
+        $doctorIdRequested = trim((string)($payload['doctor_id'] ?? ''));
+        $doctorScope = $this->resolveDoctorScope($doctorIdRequested, true);
+        if (!$doctorScope['ok']) {
+            return $this->error((string)$doctorScope['error'], (string)$doctorScope['message'], (array)($doctorScope['meta'] ?? []));
+        }
+        $payload['doctor_id'] = (string)$doctorScope['doctor_id'];
         $errors = $this->validateAssign($payload);
         if (!empty($errors)) {
             return $this->error('invalid_params', 'invalid payload for waitlist assign', $errors);
         }
 
-        if ((string)$payload['doctor_id'] !== (string)$entry['doctor_id'] || (string)$payload['consultorio_id'] !== (string)$entry['consultorio_id']) {
+        if ((string)$payload['doctor_id'] !== (string)$entry['doctor_id']) {
+            $strictMode = ($this->actorContext['strict'] ?? false) === true;
+            if ($strictMode) {
+                return $this->error('forbidden', 'doctor scope mismatch', [
+                    'entry_doctor_id' => $entry['doctor_id'],
+                    'payload_doctor_id' => $payload['doctor_id'],
+                ]);
+            }
+            $this->contextWarnings[] = [
+                'type' => 'doctor_scope_mismatch',
+                'entry_doctor_id' => (string)$entry['doctor_id'],
+                'payload_doctor_id' => (string)$payload['doctor_id'],
+            ];
+            $payload['doctor_id'] = (string)$entry['doctor_id'];
+        }
+        if ((string)$payload['consultorio_id'] !== (string)$entry['consultorio_id']) {
             return $this->error('invalid_params', 'doctor or consultorio mismatch', [
                 'entry_doctor_id' => $entry['doctor_id'],
                 'entry_consultorio_id' => $entry['consultorio_id'],
@@ -227,7 +289,11 @@ class WaitlistController
             'appointment_id' => $result['appointment_id'],
         ];
 
-        return $this->success($response, array_merge(['write' => 'assign'], $eventsMeta));
+        return $this->success($response, array_merge([
+            'write' => 'assign',
+            'doctor_id_effective' => $payload['doctor_id'],
+            'doctor_id_requested' => ($doctorIdRequested !== '' ? $doctorIdRequested : null),
+        ], $eventsMeta));
     }
 
     private function validateCreate(array $payload): array
@@ -294,6 +360,70 @@ class WaitlistController
         return null;
     }
 
+    private function resolveDoctorScope(string $doctorIdRequested, bool $doctorIsRequired): array
+    {
+        $doctorIdContext = trim((string)($this->actorContext['doctor_id'] ?? ''));
+        $strictMode = ($this->actorContext['strict'] ?? false) === true;
+        if ($doctorIdContext !== '') {
+            if ($doctorIdRequested !== '' && $doctorIdRequested !== $doctorIdContext) {
+                if ($strictMode) {
+                    return [
+                        'ok' => false,
+                        'error' => 'forbidden',
+                        'message' => 'doctor scope mismatch',
+                        'meta' => [
+                            'doctor_id_requested' => $doctorIdRequested,
+                            'doctor_id_context' => $doctorIdContext,
+                        ],
+                    ];
+                }
+                $this->contextWarnings[] = [
+                    'type' => 'doctor_scope_mismatch',
+                    'doctor_id_requested' => $doctorIdRequested,
+                    'doctor_id_context' => $doctorIdContext,
+                ];
+            }
+            return ['ok' => true, 'doctor_id' => $doctorIdContext];
+        }
+        if ($doctorIsRequired && $doctorIdRequested === '') {
+            return [
+                'ok' => false,
+                'error' => 'invalid_params',
+                'message' => 'doctor_id is required',
+                'meta' => [],
+            ];
+        }
+        return ['ok' => true, 'doctor_id' => $doctorIdRequested];
+    }
+
+    private function assertEntryDoctorScope(string $entryDoctorId, string $entryId): array
+    {
+        $doctorIdContext = trim((string)($this->actorContext['doctor_id'] ?? ''));
+        if ($doctorIdContext === '' || $entryDoctorId === '' || $entryDoctorId === $doctorIdContext) {
+            return ['ok' => true];
+        }
+        $strictMode = ($this->actorContext['strict'] ?? false) === true;
+        if ($strictMode) {
+            return [
+                'ok' => false,
+                'error' => 'forbidden',
+                'message' => 'waitlist entry out of doctor scope',
+                'meta' => [
+                    'waitlist_id' => $entryId,
+                    'doctor_id_context' => $doctorIdContext,
+                    'doctor_id_entry' => $entryDoctorId,
+                ],
+            ];
+        }
+        $this->contextWarnings[] = [
+            'type' => 'doctor_scope_mismatch',
+            'waitlist_id' => $entryId,
+            'doctor_id_context' => $doctorIdContext,
+            'doctor_id_entry' => $entryDoctorId,
+        ];
+        return ['ok' => true];
+    }
+
     private function resolvePatientId(array $entry): ?string
     {
         if (!empty($entry['patient_id'])) {
@@ -351,6 +481,7 @@ class WaitlistController
 
     private function success(array $data, array $meta = []): array
     {
+        $meta = $this->appendAuthMeta($meta);
         $meta['qa_mode_seen'] = $this->getQaMode();
         return [
             'ok' => true,
@@ -363,6 +494,7 @@ class WaitlistController
 
     private function error(string $code, string $message, array $meta = []): array
     {
+        $meta = $this->appendAuthMeta($meta);
         $meta['qa_mode_seen'] = $this->getQaMode();
         return [
             'ok' => false,
@@ -423,5 +555,12 @@ class WaitlistController
             ];
         }
         return null;
+    }
+
+    private function appendAuthMeta(array $meta): array
+    {
+        $meta['auth_mode'] = trim((string)($this->actorContext['mode'] ?? ''));
+        $meta['auth_warnings'] = $this->contextWarnings;
+        return $meta;
     }
 }
