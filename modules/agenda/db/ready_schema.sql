@@ -69,6 +69,21 @@ CREATE TABLE IF NOT EXISTS `agenda_patient_flags` (
   KEY `idx_flags_patient` (`patient_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `agenda_patient_incidents` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `patient_id` VARCHAR(64) NOT NULL,
+  `doctor_id` VARCHAR(64) NOT NULL,
+  `appointment_id` VARCHAR(64) NOT NULL,
+  `incident_type` ENUM('no_show','late_cancel') NOT NULL,
+  `origin` ENUM('manual','auto') NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_patient_incidents_patient` (`patient_id`),
+  KEY `idx_patient_incidents_doctor` (`doctor_id`),
+  KEY `idx_patient_incidents_appointment` (`appointment_id`),
+  KEY `idx_patient_incidents_type_created` (`incident_type`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `agenda_public_appointment_flows` (
   `flow_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `appointment_id` VARCHAR(64) NOT NULL,

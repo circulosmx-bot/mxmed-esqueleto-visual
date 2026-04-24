@@ -3,6 +3,7 @@ require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentsController
 require_once __DIR__ . '/../../modules/agenda/controllers/ConsultoriosController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentEventsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/PatientFlagsController.php';
+require_once __DIR__ . '/../../modules/agenda/controllers/PatientBehaviorController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AvailabilityController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/ScheduleController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AgendaSettingsController.php';
@@ -15,6 +16,7 @@ use Agenda\Controllers\AppointmentsController;
 use Agenda\Controllers\ConsultoriosController;
 use Agenda\Controllers\AppointmentEventsController;
 use Agenda\Controllers\PatientFlagsController;
+use Agenda\Controllers\PatientBehaviorController;
 use Agenda\Controllers\AvailabilityController;
 use Agenda\Controllers\ScheduleController;
 use Agenda\Controllers\AgendaSettingsController;
@@ -338,6 +340,12 @@ try {
                     apply_actor_context($flags, $actorContext);
                 }
                 $response = $flags->index($segments[1], $_GET);
+            } elseif (isset($segments[1]) && $segments[1] !== '' && ($segments[2] ?? '') === 'behavior' && $method === 'GET') {
+                $behavior = new PatientBehaviorController();
+                if (is_array($actorContext)) {
+                    apply_actor_context($behavior, $actorContext);
+                }
+                $response = $behavior->show($segments[1], $_GET);
             } else {
                 $response = [
                     'ok' => false,

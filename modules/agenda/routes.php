@@ -2,6 +2,7 @@
 return [
     'GET /agenda/appointments' => 'AppointmentsController@index',
     'GET /agenda/appointments/{id}' => 'AppointmentsController@show',
+    'GET /agenda/patients/{patient_id}/behavior' => 'PatientBehaviorController@show',
     'GET /agenda/consultorios' => 'ConsultoriosController@index',
     'PUT /agenda/consultorios' => 'ConsultoriosController@update',
     'GET /agenda/schedule' => 'ScheduleController@index',

@@ -628,6 +628,16 @@ console.info('app.js loaded :: 20251123a');
   const patientFlagTypeCache = new Map();
   const patientFlagRequestCache = new Map();
   let patientFlagsEndpointAvailable = true;
+  const patientBehaviorCache = new Map();
+  const patientBehaviorRequestCache = new Map();
+  let patientBehaviorEndpointAvailable = true;
+  let createBehaviorLookupTimer = null;
+  let createBehaviorLookupSeq = 0;
+  let createBehaviorLookupCtrl = null;
+  let eventBehaviorLookupSeq = 0;
+  let eventBehaviorLookupCtrl = null;
+  let createPatientBehaviorNoticeWrap = null;
+  let eventPatientBehaviorNoticeWrap = null;
   let blockModalSelection = null;
   let blockModalReasonKey = 'comida';
   let blockModalReasonLabel = 'Comida';
@@ -648,6 +658,11 @@ console.info('app.js loaded :: 20251123a');
     if(!AGENDA_CANCEL_DEBUG) return;
     try{
       console.info(`AGENDA CANCEL FLOW: ${label}`, details);
+    }catch(_){}
+  };
+  const logAgendaNoShowDebug = (label = '', details = {})=>{
+    try{
+      console.info(`AGENDA NO_SHOW DEBUG: ${label}`, details);
     }catch(_){}
   };
   const escapeHtml = (value)=> String(value ?? '')
@@ -937,12 +952,14 @@ console.info('app.js loaded :: 20251123a');
         els.patientId.removeAttribute('readonly');
       }
       setActivePatientMode('manual');
+      clearCreatePatientBehaviorNotice();
     }else{
       if(els.patientNewFirstName) els.patientNewFirstName.value = '';
       if(els.patientNewLastName1) els.patientNewLastName1.value = '';
       if(els.patientNewLastName2) els.patientNewLastName2.value = '';
       if(els.patientNewPhone) els.patientNewPhone.value = '';
       if(els.patientNewEmail) els.patientNewEmail.value = '';
+      queueCreatePatientBehaviorNoticeRefresh(90);
     }
   };
   const hideCellMenu = ()=>{
@@ -1089,6 +1106,7 @@ console.info('app.js loaded :: 20251123a');
     setEventActionError('');
     setEventActionRescheduleNote('');
     setEventResolutionNote('');
+    clearEventPatientBehaviorNotice();
     resetEventCancelPostActions();
     if(els.eventRescheduleConfirmBtn){
       els.eventRescheduleConfirmBtn.disabled = true;
@@ -1838,27 +1856,27 @@ console.info('app.js loaded :: 20251123a');
   };
   const applyEventNoShow = async ()=>{
     const appointmentId = sanitizeText(activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef));
-    if(!appointmentId) return;
+    if(!appointmentId){
+      setEventActionError('No se pudo identificar la cita para marcar inasistencia.');
+      return;
+    }
     setEventActionError('');
     setEventResolutionNote('');
     try{
-      if(isAgendaDemoContext()){
-        if(activeEventActionRef){
-          applyLocalEventStatus(activeEventActionRef, 'no_show');
-          openEventActionModal(activeEventActionRef, 'detail');
-          setEventResolutionNote('Cita marcada como “Paciente no asistió” (demo).', 'success');
-        }
-        return;
-      }
+      const actorId = sanitizeText(
+        (typeof getUserId === 'function' ? getUserId() : '')
+        || resolveActorId()
+        || 'u_legacy_1'
+      );
+      const doctorId = sanitizeText(activeEventActionRef?.extendedProps?.doctor_id || getDoctorId() || '');
       const payload = {
-        motivo_code: 'user_no_show',
-        motivo_text: '',
-        actor_role: 'doctor',
-        actor_id: resolveActorId() || 'ui',
-        channel_origin: 'agenda_frontend_v1',
-        notify_patient: false,
-        contact_method: 'none'
+        actor_role: 'operator',
+        actor_id: actorId,
+        channel_origin: 'agenda_frontend_v1'
       };
+      if(doctorId){
+        payload.doctor_id = doctorId;
+      }
       const result = await AgendaApiClient.noShowAppointment(appointmentId, payload);
       if(!result?.ok || !result?.json || result.json.ok !== true){
         const msg = sanitizeText(result?.json?.message || result?.json?.error || `HTTP ${result?.status || 500}`) || 'No se pudo marcar como “Paciente no asistió”.';
@@ -1980,6 +1998,7 @@ console.info('app.js loaded :: 20251123a');
     activeEventActionRef = eventRef;
     const props = eventRef.extendedProps || {};
     activeEventActionAppointmentId = resolveEventAppointmentId(eventRef);
+    const patientId = sanitizeText(props.patient_id || '');
     const patient = sanitizeText(props.patient_display || eventRef.title || 'Paciente');
     const status = sanitizeText(props.status_label || 'Confirmada');
     const statusKeyNorm = normalizeText(sanitizeText(props.status_key_real || props.status_key || props.status || ''));
@@ -2050,6 +2069,7 @@ console.info('app.js loaded :: 20251123a');
     if(els.eventActionConsultorioWrap){
       els.eventActionConsultorioWrap.classList.toggle('d-none', !consultorio);
     }
+    refreshEventPatientBehaviorNotice(patientId).catch(()=> null);
     if(els.eventResolutionWrap){
       const actionVisibility = resolveEventActionVisibility(eventRef);
       els.eventResolutionWrap.classList.toggle('d-none', !actionVisibility.showResolutionWrap);
@@ -3388,6 +3408,27 @@ console.info('app.js loaded :: 20251123a');
       });
       return resp.json().catch(()=> null);
     },
+    async getPatientBehavior({ patientId, signal }){
+      const safePatientId = encodeURIComponent(String(patientId || '').trim());
+      const doctorId = sanitizeText(getDoctorId() || '');
+      if(!doctorId){
+        return {
+          ok: false,
+          error: 'doctor_scope_missing',
+          message: 'doctor scope required',
+          data: null,
+          meta: {}
+        };
+      }
+      const qs = new URLSearchParams({ doctor_id: doctorId }).toString();
+      const resp = await fetch(`/api/agenda/index.php/patients/${safePatientId}/behavior?${qs}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        signal
+      });
+      return resp.json().catch(()=> null);
+    },
     async createAppointment(payload){
       const resp = await fetch('/api/agenda/index.php/appointments', {
         method: 'POST',
@@ -3431,17 +3472,39 @@ console.info('app.js loaded :: 20251123a');
     },
     async noShowAppointment(appointmentId, payload){
       const safeId = encodeURIComponent(String(appointmentId || '').trim());
-      const resp = await fetch(`/api/agenda/index.php/appointments/${safeId}/no_show`, {
-        method: 'POST',
-        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify(payload || {})
+      const url = `/api/agenda/index.php/appointments/${safeId}/no_show`;
+      logAgendaNoShowDebug('api:no-show:request', {
+        appointmentId: safeId,
+        url
       });
-      return {
-        ok: resp.ok,
-        status: resp.status,
-        json: await resp.json().catch(()=> null)
-      };
+      try{
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(payload || {})
+        });
+        const json = await resp.json().catch(()=> null);
+        logAgendaNoShowDebug('api:no-show:response', {
+          appointmentId: safeId,
+          url,
+          httpStatus: Number(resp.status || 0),
+          ok: !!resp.ok,
+          responseJson: json
+        });
+        return {
+          ok: resp.ok,
+          status: resp.status,
+          json
+        };
+      }catch(err){
+        logAgendaNoShowDebug('api:no-show:error', {
+          appointmentId: safeId,
+          url,
+          error: sanitizeText(err?.message || err || 'request_failed')
+        });
+        throw err;
+      }
     },
     async getWaitlistEntries({ doctorId = '', consultorioId = '', status = 'active', signal } = {}){
       const params = new URLSearchParams();
@@ -3733,17 +3796,20 @@ console.info('app.js loaded :: 20251123a');
     }
     if(createPatientMode === 'new'){
       if(els.patientId) els.patientId.removeAttribute('readonly');
+      clearCreatePatientBehaviorNotice();
       return;
     }
     if(createActivePatientMode === 'active' && activePatientContextId){
       if(els.patientId) els.patientId.value = activePatientContextId;
       if(els.patientId) els.patientId.setAttribute('readonly', 'readonly');
+      queueCreatePatientBehaviorNoticeRefresh(0);
       return;
     }
     if(els.patientId) els.patientId.removeAttribute('readonly');
     if(createActivePatientMode === 'manual' && els.patientId && sanitizeText(els.patientId.value) === activePatientContextId){
       els.patientId.value = '';
     }
+    queueCreatePatientBehaviorNoticeRefresh(90);
   };
   const syncActivePatientPrompt = ()=>{
     activePatientContextId = resolveActivePatientId();
@@ -3751,6 +3817,7 @@ console.info('app.js loaded :: 20251123a');
     if(!activePatientContextId){
       els.activePatientBox.classList.add('d-none');
       setActivePatientMode('manual');
+      clearCreatePatientBehaviorNotice();
       return;
     }
     els.activePatientBox.classList.remove('d-none');
@@ -3759,6 +3826,7 @@ console.info('app.js loaded :: 20251123a');
   };
   const resetCreateForm = ()=>{
     setCreateError('');
+    clearCreatePatientBehaviorNotice();
     syncActivePatientPrompt();
     switchCreatePatientMode('existing');
     if(els.patientId) els.patientId.value = '';
@@ -3928,6 +3996,7 @@ console.info('app.js loaded :: 20251123a');
     if(els.consultorioModal && consultorioId) els.consultorioModal.value = consultorioId;
     createModal = createModal || window.bootstrap.Modal.getOrCreateInstance(els.createModalEl);
     createModal.show();
+    queueCreatePatientBehaviorNoticeRefresh(60);
     return true;
   };
   const collectNextAvailableSlots = async ({ afterDate, limit = 3 })=>{
@@ -4470,6 +4539,264 @@ console.info('app.js loaded :: 20251123a');
         patient_flag_any_type: anyType || sanitizeText(row?.patient_flag_any_type || '')
       };
     });
+  };
+  const normalizePatientBehaviorRiskLevel = (rawRiskLevel = '')=>{
+    const normalized = sanitizeText(rawRiskLevel).toLowerCase();
+    if(normalized === 'warning') return 'warning';
+    if(normalized === 'risk') return 'risk';
+    if(normalized === 'high_risk' || normalized === 'high-risk' || normalized === 'highrisk') return 'high_risk';
+    return 'normal';
+  };
+  const normalizePatientBehaviorPayload = (rawData = null)=>{
+    if(!rawData || typeof rawData !== 'object'){
+      return {
+        no_show_count: 0,
+        late_cancel_count: 0,
+        risk_level: 'normal',
+        recommendation: ''
+      };
+    }
+    const noShowCount = Number.parseInt(String(rawData.no_show_count ?? 0), 10);
+    const lateCancelCount = Number.parseInt(String(rawData.late_cancel_count ?? 0), 10);
+    return {
+      no_show_count: Number.isFinite(noShowCount) ? Math.max(0, noShowCount) : 0,
+      late_cancel_count: Number.isFinite(lateCancelCount) ? Math.max(0, lateCancelCount) : 0,
+      risk_level: normalizePatientBehaviorRiskLevel(rawData.risk_level),
+      recommendation: sanitizeText(rawData.recommendation || '')
+    };
+  };
+  const resolvePatientBehaviorNoticeConfig = (riskLevel = '')=>{
+    const safeRiskLevel = normalizePatientBehaviorRiskLevel(riskLevel);
+    if(safeRiskLevel === 'warning'){
+      return {
+        alertClasses: ['alert-info'],
+        message: 'Este paciente tiene antecedentes recientes de cancelación o inasistencia.'
+      };
+    }
+    if(safeRiskLevel === 'risk'){
+      return {
+        alertClasses: ['alert-warning'],
+        message: 'Recomendación: validar disponibilidad y compromiso del paciente antes de confirmar.'
+      };
+    }
+    if(safeRiskLevel === 'high_risk'){
+      return {
+        alertClasses: ['alert-danger'],
+        message: 'Este paciente requiere validación operativa antes de agendar nuevas citas.'
+      };
+    }
+    return null;
+  };
+  const ensureCreatePatientBehaviorNoticeWrap = ()=>{
+    if(createPatientBehaviorNoticeWrap && createPatientBehaviorNoticeWrap.isConnected){
+      return createPatientBehaviorNoticeWrap;
+    }
+    const anchor = els.patientId?.closest('.col-12') || els.activePatientBox || els.createError;
+    const parent = anchor?.parentNode;
+    if(!(parent instanceof HTMLElement)) return null;
+    const existing = parent.querySelector('#ag_patient_behavior_notice_create');
+    if(existing instanceof HTMLElement){
+      createPatientBehaviorNoticeWrap = existing;
+      return createPatientBehaviorNoticeWrap;
+    }
+    const wrap = document.createElement('div');
+    wrap.id = 'ag_patient_behavior_notice_create';
+    wrap.className = 'col-12 d-none';
+    wrap.innerHTML = '<div class="alert py-2 mb-0" data-role="ag-patient-behavior-alert" role="status" aria-live="polite"></div>';
+    if(anchor?.nextSibling){
+      parent.insertBefore(wrap, anchor.nextSibling);
+    }else{
+      parent.appendChild(wrap);
+    }
+    createPatientBehaviorNoticeWrap = wrap;
+    return createPatientBehaviorNoticeWrap;
+  };
+  const ensureEventPatientBehaviorNoticeWrap = ()=>{
+    if(eventPatientBehaviorNoticeWrap && eventPatientBehaviorNoticeWrap.isConnected){
+      return eventPatientBehaviorNoticeWrap;
+    }
+    if(!(els.eventActionDetailWrap instanceof HTMLElement)) return null;
+    const existing = els.eventActionDetailWrap.querySelector('#ag_patient_behavior_notice_event');
+    if(existing instanceof HTMLElement){
+      eventPatientBehaviorNoticeWrap = existing;
+      return eventPatientBehaviorNoticeWrap;
+    }
+    const wrap = document.createElement('div');
+    wrap.id = 'ag_patient_behavior_notice_event';
+    wrap.className = 'd-none';
+    wrap.innerHTML = '<div class="alert py-2 mb-0" data-role="ag-patient-behavior-alert" role="status" aria-live="polite"></div>';
+    if(els.eventResolutionWrap instanceof HTMLElement){
+      els.eventActionDetailWrap.insertBefore(wrap, els.eventResolutionWrap);
+    }else{
+      els.eventActionDetailWrap.appendChild(wrap);
+    }
+    eventPatientBehaviorNoticeWrap = wrap;
+    return eventPatientBehaviorNoticeWrap;
+  };
+  const applyPatientBehaviorNotice = (wrapEl, behavior = null)=>{
+    if(!(wrapEl instanceof HTMLElement)) return;
+    const alertEl = wrapEl.querySelector('[data-role="ag-patient-behavior-alert"]');
+    if(!(alertEl instanceof HTMLElement)) return;
+    const normalized = normalizePatientBehaviorPayload(behavior);
+    const config = resolvePatientBehaviorNoticeConfig(normalized.risk_level);
+    alertEl.classList.remove('alert-info', 'alert-warning', 'alert-danger', 'alert-secondary', 'alert-light', 'border');
+    if(!config){
+      wrapEl.classList.add('d-none');
+      alertEl.textContent = '';
+      return;
+    }
+    const statsLine = `No asistencias: ${normalized.no_show_count} · Cancelaciones tardías: ${normalized.late_cancel_count}.`;
+    const recommendation = sanitizeText(normalized.recommendation || '');
+    const recommendationLine = recommendation && recommendation !== config.message
+      ? `<div class="small mt-1">${escapeHtml(recommendation)}</div>`
+      : '';
+    config.alertClasses.forEach((className)=> alertEl.classList.add(className));
+    alertEl.innerHTML = `
+      <div class="fw-semibold">${escapeHtml(config.message)}</div>
+      <div class="small mt-1">${escapeHtml(statsLine)}</div>
+      ${recommendationLine}
+    `;
+    wrapEl.classList.remove('d-none');
+  };
+  const clearCreatePatientBehaviorNotice = ()=>{
+    if(createBehaviorLookupTimer){
+      window.clearTimeout(createBehaviorLookupTimer);
+      createBehaviorLookupTimer = null;
+    }
+    if(createBehaviorLookupCtrl){
+      try{ createBehaviorLookupCtrl.abort(); }catch(_){}
+      createBehaviorLookupCtrl = null;
+    }
+    createBehaviorLookupSeq += 1;
+    applyPatientBehaviorNotice(ensureCreatePatientBehaviorNoticeWrap(), null);
+  };
+  const clearEventPatientBehaviorNotice = ()=>{
+    if(eventBehaviorLookupCtrl){
+      try{ eventBehaviorLookupCtrl.abort(); }catch(_){}
+      eventBehaviorLookupCtrl = null;
+    }
+    eventBehaviorLookupSeq += 1;
+    applyPatientBehaviorNotice(ensureEventPatientBehaviorNoticeWrap(), null);
+  };
+  const resolvePatientBehavior = async (patientId = '', { signal } = {})=>{
+    const safePatientId = sanitizeText(patientId);
+    if(!safePatientId || !patientBehaviorEndpointAvailable){
+      return normalizePatientBehaviorPayload(null);
+    }
+    if(patientBehaviorCache.has(safePatientId)){
+      return normalizePatientBehaviorPayload(patientBehaviorCache.get(safePatientId));
+    }
+    if(patientBehaviorRequestCache.has(safePatientId)){
+      try{
+        const cachedPending = await patientBehaviorRequestCache.get(safePatientId);
+        return normalizePatientBehaviorPayload(cachedPending);
+      }catch(_){
+        return normalizePatientBehaviorPayload(null);
+      }
+    }
+    const request = (async ()=>{
+      try{
+        const json = await AgendaApiClient.getPatientBehavior({ patientId: safePatientId, signal });
+        if(json?.ok === true && json?.data && typeof json.data === 'object'){
+          const resolved = normalizePatientBehaviorPayload(json.data);
+          patientBehaviorCache.set(safePatientId, resolved);
+          return resolved;
+        }
+        const errorCode = sanitizeText(json?.error || '').toLowerCase();
+        if(errorCode === 'doctor_scope_missing'){
+          return normalizePatientBehaviorPayload(null);
+        }
+        if(errorCode === 'db_not_ready'){
+          patientBehaviorEndpointAvailable = false;
+        }
+      }catch(err){
+        if(err?.name !== 'AbortError'){
+          console.warn('[Agenda v1] patient behavior fetch error', err);
+        }
+      }
+      const fallback = normalizePatientBehaviorPayload(null);
+      patientBehaviorCache.set(safePatientId, fallback);
+      return fallback;
+    })();
+    patientBehaviorRequestCache.set(safePatientId, request);
+    try{
+      const result = await request;
+      return normalizePatientBehaviorPayload(result);
+    }finally{
+      patientBehaviorRequestCache.delete(safePatientId);
+    }
+  };
+  const resolveCreatePatientBehaviorPatientId = ()=>{
+    if(createPatientMode === 'new') return '';
+    if(createActivePatientMode === 'active' && activePatientContextId){
+      return sanitizeText(activePatientContextId);
+    }
+    return sanitizeText(els.patientId?.value || '');
+  };
+  const refreshCreatePatientBehaviorNotice = async ({ patientId = '' } = {})=>{
+    const safePatientId = sanitizeText(patientId || resolveCreatePatientBehaviorPatientId());
+    const currentSeq = ++createBehaviorLookupSeq;
+    if(createBehaviorLookupCtrl){
+      try{ createBehaviorLookupCtrl.abort(); }catch(_){}
+      createBehaviorLookupCtrl = null;
+    }
+    if(!safePatientId || createPatientMode === 'new'){
+      applyPatientBehaviorNotice(ensureCreatePatientBehaviorNoticeWrap(), null);
+      return;
+    }
+    const ctrl = new AbortController();
+    createBehaviorLookupCtrl = ctrl;
+    try{
+      const behavior = await resolvePatientBehavior(safePatientId, { signal: ctrl.signal });
+      if(currentSeq !== createBehaviorLookupSeq) return;
+      applyPatientBehaviorNotice(ensureCreatePatientBehaviorNoticeWrap(), behavior);
+    }catch(err){
+      if(err?.name !== 'AbortError'){
+        applyPatientBehaviorNotice(ensureCreatePatientBehaviorNoticeWrap(), null);
+      }
+    }finally{
+      if(createBehaviorLookupCtrl === ctrl){
+        createBehaviorLookupCtrl = null;
+      }
+    }
+  };
+  const queueCreatePatientBehaviorNoticeRefresh = (delay = 220)=>{
+    if(createBehaviorLookupTimer){
+      window.clearTimeout(createBehaviorLookupTimer);
+      createBehaviorLookupTimer = null;
+    }
+    const safeDelay = Math.max(0, Number.parseInt(String(delay || 0), 10) || 0);
+    createBehaviorLookupTimer = window.setTimeout(()=>{
+      createBehaviorLookupTimer = null;
+      refreshCreatePatientBehaviorNotice().catch(()=> null);
+    }, safeDelay);
+  };
+  const refreshEventPatientBehaviorNotice = async (patientId = '')=>{
+    const safePatientId = sanitizeText(patientId);
+    const currentSeq = ++eventBehaviorLookupSeq;
+    if(eventBehaviorLookupCtrl){
+      try{ eventBehaviorLookupCtrl.abort(); }catch(_){}
+      eventBehaviorLookupCtrl = null;
+    }
+    if(!safePatientId){
+      applyPatientBehaviorNotice(ensureEventPatientBehaviorNoticeWrap(), null);
+      return;
+    }
+    const ctrl = new AbortController();
+    eventBehaviorLookupCtrl = ctrl;
+    try{
+      const behavior = await resolvePatientBehavior(safePatientId, { signal: ctrl.signal });
+      if(currentSeq !== eventBehaviorLookupSeq) return;
+      applyPatientBehaviorNotice(ensureEventPatientBehaviorNoticeWrap(), behavior);
+    }catch(err){
+      if(err?.name !== 'AbortError'){
+        applyPatientBehaviorNotice(ensureEventPatientBehaviorNoticeWrap(), null);
+      }
+    }finally{
+      if(eventBehaviorLookupCtrl === ctrl){
+        eventBehaviorLookupCtrl = null;
+      }
+    }
   };
   const AGENDA_STATUS_COLOR_MAP = Object.freeze({
     pending: { background: '#66D0DD', border: '#66D0DD', text: '#FFFFFF' },
@@ -5743,7 +6070,33 @@ console.info('app.js loaded :: 20251123a');
     });
     els.eventMarkNoShowBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
-      applyEventNoShow().catch(()=> null);
+      const appointmentId = sanitizeText(activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef));
+      const channelOrigin = sanitizeText(activeEventActionRef?.extendedProps?.channel_origin || '').toLowerCase();
+      const eventId = sanitizeText(activeEventActionRef?.id || '').toLowerCase();
+      const demoContext = isAgendaDemoContext();
+      const appointmentIdNorm = sanitizeText(appointmentId).toLowerCase();
+      const isDemoSyntheticEvent = (
+        appointmentIdNorm.startsWith('demo-')
+        || eventId.startsWith('demo-')
+        || channelOrigin === 'agenda_demo_mode'
+      );
+      try{
+        console.log('AGENDA NO_SHOW CLICK', appointmentId);
+      }catch(_){}
+      logAgendaNoShowDebug('click:eventMarkNoShowBtn', {
+        appointmentId,
+        eventId,
+        hasActiveEventRef: !!activeEventActionRef,
+        channelOrigin,
+        demoContext,
+        isDemoSyntheticEvent
+      });
+      applyEventNoShow().catch((err)=>{
+        logAgendaNoShowDebug('click:eventMarkNoShowBtn:unhandled-error', {
+          appointmentId,
+          error: sanitizeText(err?.message || err || 'unknown_error')
+        });
+      });
     });
     els.eventMarkCancelBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
@@ -5917,6 +6270,13 @@ console.info('app.js loaded :: 20251123a');
         els.patientId.removeAttribute('readonly');
       }
       setPatientSearchMsg(`Paciente seleccionado: ${patientName || patientId}`, 'success');
+      queueCreatePatientBehaviorNoticeRefresh(0);
+    });
+    els.patientId?.addEventListener('input', ()=>{
+      queueCreatePatientBehaviorNoticeRefresh(240);
+    });
+    els.patientId?.addEventListener('change', ()=>{
+      queueCreatePatientBehaviorNoticeRefresh(0);
     });
     els.patientNewToggle?.addEventListener('click', ()=>{
       switchCreatePatientMode(createPatientMode === 'new' ? 'existing' : 'new');

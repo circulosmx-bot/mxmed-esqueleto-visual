@@ -4,6 +4,7 @@ return [
     'appointments_table' => 'agenda_appointments',
     'appointment_events_table' => 'agenda_appointment_events',
     'patient_flags_table' => 'agenda_patient_flags',
+    'patient_incidents_table' => 'agenda_patient_incidents',
     'waitlist_entries_table' => 'agenda_waitlist_entries',
     'appointment_pk' => 'appointment_id',
     'late_cancel_hours' => null,

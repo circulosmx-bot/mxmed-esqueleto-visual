@@ -273,7 +273,14 @@ class AppointmentWriteController
 
     public function noShow(string $appointmentId): array
     {
+        $this->logNoShowDebug('enter noShow', [
+            'appointment_id' => $appointmentId,
+        ]);
         $payload = $this->getPayload();
+        $this->logNoShowDebug('payload received', [
+            'appointment_id' => $appointmentId,
+            'payload_keys' => array_keys($payload),
+        ]);
         if (!isset($payload['motivo_code']) && isset($payload['reason_code'])) {
             $payload['motivo_code'] = $payload['reason_code'];
         }
@@ -290,6 +297,10 @@ class AppointmentWriteController
 
         $errors = $this->validateNoShow($appointmentId, $payload);
         if ($errors) {
+            $this->logNoShowDebug('validation failed', [
+                'appointment_id' => $appointmentId,
+                'errors' => $errors,
+            ]);
             return $this->error('invalid_params', 'invalid payload for no_show', $errors);
         }
 
@@ -309,6 +320,11 @@ class AppointmentWriteController
         }
 
         $context = $this->fetchAppointmentContext($appointmentId);
+        $this->logNoShowDebug('appointment context fetched', [
+            'appointment_id' => $appointmentId,
+            'context_ok' => (bool)($context['ok'] ?? false),
+            'doctor_id_effective' => (string)($context['doctor_id'] ?? ''),
+        ]);
         if (!$context['ok']) {
             return $this->error(
                 (string)$context['error'],
@@ -318,16 +334,38 @@ class AppointmentWriteController
         }
         $scopeError = $this->assertDoctorScope((string)$context['doctor_id'], $appointmentId);
         if (is_array($scopeError)) {
+            $this->logNoShowDebug('scope error before markNoShow', [
+                'appointment_id' => $appointmentId,
+                'scope_error' => $scopeError['error'] ?? 'forbidden',
+            ]);
             return $scopeError;
         }
         $payloadScopeError = $this->assertPayloadDoctorScope($payload, (string)$context['doctor_id']);
         if (is_array($payloadScopeError)) {
+            $this->logNoShowDebug('payload scope error before markNoShow', [
+                'appointment_id' => $appointmentId,
+                'scope_error' => $payloadScopeError['error'] ?? 'forbidden',
+            ]);
             return $payloadScopeError;
         }
 
         try {
+            $this->logNoShowDebug('before markNoShow', [
+                'appointment_id' => $appointmentId,
+                'doctor_id_effective' => (string)$context['doctor_id'],
+            ]);
             $result = $this->repository->markNoShow($appointmentId, $payload);
+            $this->logNoShowDebug('after markNoShow', [
+                'appointment_id' => $appointmentId,
+                'events_appended' => (int)($result['events_appended'] ?? -1),
+                'flags_appended' => (int)($result['flags_appended'] ?? -1),
+                'already_no_show' => (bool)($result['already_no_show'] ?? false),
+            ]);
         } catch (RuntimeException $e) {
+            $this->logNoShowDebug('markNoShow runtime exception', [
+                'appointment_id' => $appointmentId,
+                'message' => $e->getMessage(),
+            ]);
             $message = $e->getMessage();
             if ($message === 'appointment not found') {
                 return $this->error('not_found', 'appointment not found');
@@ -337,8 +375,16 @@ class AppointmentWriteController
             }
             return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
         } catch (PDOException $e) {
+            $this->logNoShowDebug('markNoShow pdo exception', [
+                'appointment_id' => $appointmentId,
+                'message' => $e->getMessage(),
+            ]);
             return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
         } catch (\Throwable $e) {
+            $this->logNoShowDebug('markNoShow throwable', [
+                'appointment_id' => $appointmentId,
+                'message' => $e->getMessage(),
+            ]);
             return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
         }
 
@@ -365,6 +411,9 @@ class AppointmentWriteController
             'contact_method' => $contactMethod,
         ];
         if (!empty($result['already_no_show'])) {
+            $this->logNoShowDebug('before response JSON (already_no_show)', [
+                'appointment_id' => $appointmentId,
+            ]);
             return [
                 'ok' => true,
                 'error' => null,
@@ -373,6 +422,9 @@ class AppointmentWriteController
                 'meta' => (object)$meta,
             ];
         }
+        $this->logNoShowDebug('before response JSON (success)', [
+            'appointment_id' => $appointmentId,
+        ]);
         return $this->success($data, $meta);
     }
 
@@ -1259,5 +1311,18 @@ class AppointmentWriteController
             'action' => 'compat_ignored_payload',
         ];
         return null;
+    }
+
+    private function logNoShowDebug(string $label, array $meta = []): void
+    {
+        $payload = [
+            'label' => $label,
+            'meta' => $meta,
+        ];
+        $encoded = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($encoded === false) {
+            $encoded = $label;
+        }
+        error_log('AGENDA NO_SHOW BACKEND DEBUG: ' . $encoded);
     }
 }

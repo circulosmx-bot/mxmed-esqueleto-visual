@@ -2,6 +2,7 @@
 namespace Agenda\Repositories;
 
 use Agenda\Repositories\PatientFlagsWriteRepository;
+use Agenda\Repositories\PatientIncidentsWriteRepository;
 use Agenda\Services\ClinicalEncounterBridge;
 use DateTime;
 use DateTimeZone;
@@ -11,6 +12,7 @@ use RuntimeException;
 use Throwable;
 
 require_once __DIR__ . '/../repositories/PatientFlagsWriteRepository.php';
+require_once __DIR__ . '/../repositories/PatientIncidentsWriteRepository.php';
 require_once __DIR__ . '/../services/ClinicalEncounterBridge.php';
 
 class AppointmentWriteRepository
@@ -21,6 +23,7 @@ class AppointmentWriteRepository
     private ?string $appointmentPk = null;
     private array $columnsCache = [];
     private ?PatientFlagsWriteRepository $patientFlagsRepository = null;
+    private ?PatientIncidentsWriteRepository $patientIncidentsRepository = null;
     private ?ClinicalEncounterBridge $clinicalEncounterBridge = null;
     private const TIMEZONE = 'America/Mexico_City';
     private const LATE_CANCEL_THRESHOLD_MINUTES = 1080;
@@ -39,6 +42,15 @@ class AppointmentWriteRepository
             } catch (RuntimeException $e) {
                 // swallow: flags table missing or not ready, cancel should continue
                 $this->patientFlagsRepository = null;
+            }
+        }
+        $patientIncidentsDriven = trim((string)($config['patient_incidents_table'] ?? ''));
+        if ($patientIncidentsDriven !== '') {
+            try {
+                $this->patientIncidentsRepository = new PatientIncidentsWriteRepository($this->pdo);
+            } catch (RuntimeException $e) {
+                // swallow: incidents table missing or not ready, write flows must continue
+                $this->patientIncidentsRepository = null;
             }
         }
         $this->clinicalEncounterBridge = new ClinicalEncounterBridge($config);
@@ -470,14 +482,18 @@ class AppointmentWriteRepository
         ];
         $this->insert($this->eventsTable, $eventData);
 
+        $patientId = $this->resolvePatientIdForFlag($current, $payload);
+        $doctorId = $this->resolveDoctorIdForIncident($current, $payload);
+
         $flagAppended = $this->maybeAppendFlag(
-            $this->resolvePatientIdForFlag($current, $payload),
+            $patientId,
             'grey',
             'late_cancel',
             $appointmentId,
             $payload,
             'auto: late_cancel'
         );
+        $this->maybeAppendIncident($patientId, $doctorId, $appointmentId, 'late_cancel', 'auto');
 
         return ['event_appended' => 1, 'flag_appended' => $flagAppended];
     }
@@ -503,17 +519,29 @@ class AppointmentWriteRepository
 
     public function markNoShow(string $appointmentId, array $payload): array
     {
+        $this->logNoShowBackendDebug('enter markNoShow', [
+            'appointment_id' => $appointmentId,
+        ]);
         $this->ensureAppointmentsTable();
         $this->ensureEventsTable();
         $pkColumn = $this->appointmentPk ?: 'appointment_id';
         $this->ensurePrimaryKeyColumn($pkColumn);
 
+        $this->applyNoShowLockTimeoutGuard();
         $current = $this->fetchAppointment($appointmentId, $pkColumn);
+        $this->logNoShowBackendDebug('appointment loaded', [
+            'appointment_id' => $appointmentId,
+            'doctor_id_effective' => (string)($current['doctor_id'] ?? ''),
+            'patient_id' => (string)($current['patient_id'] ?? ''),
+        ]);
         $observedAt = $payload['observed_at'] ?? (new DateTime('now', new DateTimeZone(self::TIMEZONE)))->format('Y-m-d H:i:s');
         $columns = $this->getColumns($this->appointmentsTable);
         $statusExists = in_array('status', $columns, true);
         $statusValue = strtolower((string)($current['status'] ?? ''));
         if (($statusExists && $statusValue === 'no_show') || $this->eventExists($appointmentId, 'appointment_no_show')) {
+            $this->logNoShowBackendDebug('early already_no_show', [
+                'appointment_id' => $appointmentId,
+            ]);
             return [
                 'appointment_id' => $appointmentId,
                 'start_at' => $current['start_at'] ?? null,
@@ -529,27 +557,93 @@ class AppointmentWriteRepository
             ];
         }
 
+        $this->logNoShowBackendDebug('before begin transaction', [
+            'appointment_id' => $appointmentId,
+        ]);
         $this->pdo->beginTransaction();
         try {
+            $this->logNoShowBackendDebug('before update appointment status', [
+                'appointment_id' => $appointmentId,
+            ]);
             $this->updateStatusIfExists($pkColumn, $appointmentId, 'no_show');
+            $this->logNoShowBackendDebug('after update appointment status', [
+                'appointment_id' => $appointmentId,
+            ]);
+            $this->logNoShowBackendDebug('before insert event', [
+                'appointment_id' => $appointmentId,
+            ]);
             $this->appendNoShowEvent($appointmentId, $payload, $current, $observedAt);
+            $this->logNoShowBackendDebug('after insert event', [
+                'appointment_id' => $appointmentId,
+            ]);
+            $patientId = $this->resolvePatientIdForFlag($current, $payload);
+            $doctorId = $this->resolveDoctorIdForIncident($current, $payload);
+            $this->logNoShowBackendDebug('resolved patient/doctor for flag+incident', [
+                'appointment_id' => $appointmentId,
+                'patient_id' => (string)$patientId,
+                'doctor_id' => (string)$doctorId,
+            ]);
+            $this->logNoShowBackendDebug('before insert flag', [
+                'appointment_id' => $appointmentId,
+            ]);
             $flagAppended = $this->maybeAppendFlag(
-                $this->resolvePatientIdForFlag($current, $payload),
+                $patientId,
                 'black',
                 'no_show',
                 $appointmentId,
                 $payload,
                 'auto: no_show'
             );
+            $this->logNoShowBackendDebug('after insert flag', [
+                'appointment_id' => $appointmentId,
+                'flag_appended' => (int)$flagAppended,
+            ]);
+            $this->logNoShowBackendDebug('before insert incident', [
+                'appointment_id' => $appointmentId,
+            ]);
+            $this->maybeAppendIncident($patientId, $doctorId, $appointmentId, 'no_show', 'manual');
+            $this->logNoShowBackendDebug('after insert incident', [
+                'appointment_id' => $appointmentId,
+            ]);
+            $this->logNoShowBackendDebug('before commit', [
+                'appointment_id' => $appointmentId,
+            ]);
             $this->pdo->commit();
+            $this->logNoShowBackendDebug('after commit', [
+                'appointment_id' => $appointmentId,
+            ]);
         } catch (PDOException $e) {
-            $this->pdo->rollBack();
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            $this->logNoShowBackendDebug('pdo exception in markNoShow', [
+                'appointment_id' => $appointmentId,
+                'message' => $e->getMessage(),
+            ]);
             throw $e;
         } catch (RuntimeException $e) {
-            $this->pdo->rollBack();
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            $this->logNoShowBackendDebug('runtime exception in markNoShow', [
+                'appointment_id' => $appointmentId,
+                'message' => $e->getMessage(),
+            ]);
+            throw $e;
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            $this->logNoShowBackendDebug('throwable in markNoShow', [
+                'appointment_id' => $appointmentId,
+                'message' => $e->getMessage(),
+            ]);
             throw $e;
         }
 
+        $this->logNoShowBackendDebug('before return markNoShow', [
+            'appointment_id' => $appointmentId,
+        ]);
         return [
             'appointment_id' => $appointmentId,
             'start_at' => $current['start_at'] ?? null,
@@ -595,13 +689,24 @@ class AppointmentWriteRepository
         string $notes
     ): int {
         if (!$this->patientFlagsRepository) {
+            $this->logNoShowBackendDebug('flag skipped repository not available', [
+                'appointment_id' => $appointmentId,
+            ]);
             return 0;
         }
         if (!$patientId) {
+            $this->logNoShowBackendDebug('flag skipped missing patient_id', [
+                'appointment_id' => $appointmentId,
+            ]);
             return 0;
         }
         try {
             if ($this->patientFlagsRepository->flagExists($patientId, $reasonCode)) {
+                $this->logNoShowBackendDebug('flag skipped already exists', [
+                    'appointment_id' => $appointmentId,
+                    'patient_id' => $patientId,
+                    'reason_code' => $reasonCode,
+                ]);
                 return 0;
             }
             $this->patientFlagsRepository->appendFlag([
@@ -616,6 +721,12 @@ class AppointmentWriteRepository
             ]);
             return 1;
         } catch (Throwable $e) {
+            $this->logNoShowBackendDebug('flag append failed (non-blocking)', [
+                'appointment_id' => $appointmentId,
+                'patient_id' => $patientId,
+                'reason_code' => $reasonCode,
+                'message' => $e->getMessage(),
+            ]);
             return 0;
         }
     }
@@ -629,6 +740,90 @@ class AppointmentWriteRepository
             return (string)$payload['patient_id'];
         }
         return null;
+    }
+
+    private function resolveDoctorIdForIncident(array $current, array $payload): ?string
+    {
+        if (!empty($current['doctor_id'])) {
+            return (string)$current['doctor_id'];
+        }
+        if (!empty($payload['doctor_id'])) {
+            return (string)$payload['doctor_id'];
+        }
+        return null;
+    }
+
+    private function maybeAppendIncident(
+        ?string $patientId,
+        ?string $doctorId,
+        string $appointmentId,
+        string $incidentType,
+        string $origin
+    ): int {
+        if (!$this->patientIncidentsRepository) {
+            $this->logNoShowBackendDebug('incident skipped repository not available', [
+                'appointment_id' => $appointmentId,
+            ]);
+            return 0;
+        }
+        if (!$patientId || !$doctorId) {
+            $this->logNoShowBackendDebug('incident skipped missing patient/doctor scope', [
+                'appointment_id' => $appointmentId,
+                'patient_id' => (string)$patientId,
+                'doctor_id' => (string)$doctorId,
+            ]);
+            return 0;
+        }
+        try {
+            $this->patientIncidentsRepository->appendIncident([
+                'patient_id' => $patientId,
+                'doctor_id' => $doctorId,
+                'appointment_id' => $appointmentId,
+                'incident_type' => $incidentType,
+                'origin' => $origin,
+            ]);
+            return 1;
+        } catch (Throwable $e) {
+            $this->logNoShowBackendDebug('incident append failed (non-blocking)', [
+                'appointment_id' => $appointmentId,
+                'patient_id' => $patientId,
+                'doctor_id' => $doctorId,
+                'incident_type' => $incidentType,
+                'message' => $e->getMessage(),
+            ]);
+            return 0;
+        }
+    }
+
+    private function applyNoShowLockTimeoutGuard(): void
+    {
+        try {
+            $this->pdo->exec('SET SESSION innodb_lock_wait_timeout = 5');
+        } catch (Throwable $e) {
+            $this->logNoShowBackendDebug('failed to set innodb_lock_wait_timeout', [
+                'message' => $e->getMessage(),
+            ]);
+        }
+        try {
+            $this->pdo->exec('SET SESSION lock_wait_timeout = 5');
+        } catch (Throwable $e) {
+            $this->logNoShowBackendDebug('failed to set lock_wait_timeout', [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function logNoShowBackendDebug(string $label, array $meta = []): void
+    {
+        $payload = [
+            'label' => $label,
+            'meta' => $meta,
+        ];
+        $encoded = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($encoded === false) {
+            $encoded = $label;
+        }
+        error_log('AGENDA NO_SHOW BACKEND DEBUG: ' . $encoded);
     }
 
     private function eventExists(string $appointmentId, string $eventType): bool
