@@ -108,6 +108,18 @@ class ScheduleController
         }
 
         try {
+            $conflict = $this->detectScheduleConflict($doctorId, $consultorioId, $segments);
+            if ($conflict !== null) {
+                $message = 'El médico ya tiene horario asignado en otro consultorio en ese rango';
+                if (($conflict['conflict_scope'] ?? '') === 'same_consultorio') {
+                    $message = 'El horario tiene tramos traslapados en el mismo consultorio';
+                }
+                return $this->error(
+                    'conflict',
+                    $message,
+                    $conflict
+                );
+            }
             $this->repository->replaceWeeklySchedule($doctorId, $consultorioId, $segments);
             $rows = $this->repository->listByDoctorConsultorio($doctorId, $consultorioId);
         } catch (\RuntimeException $e) {
@@ -222,6 +234,112 @@ class ScheduleController
             return ((int)$a['weekday'] <=> (int)$b['weekday']);
         });
         return [$segments, $errors];
+    }
+
+    private function detectScheduleConflict(string $doctorId, string $consultorioId, array $segments): ?array
+    {
+        if (empty($segments)) {
+            return null;
+        }
+
+        $segmentsByWeekday = [];
+        foreach ($segments as $segment) {
+            $weekday = (int)($segment['weekday'] ?? 0);
+            if ($weekday < 1 || $weekday > 7) {
+                continue;
+            }
+            $start = (string)($segment['start_time'] ?? '');
+            $end = (string)($segment['end_time'] ?? '');
+            if ($start === '' || $end === '') {
+                continue;
+            }
+            $segmentsByWeekday[$weekday][] = [
+                'start_time' => $start,
+                'end_time' => $end,
+            ];
+        }
+
+        foreach ($segmentsByWeekday as $weekday => $windows) {
+            usort($windows, function (array $a, array $b) {
+                return strcmp((string)$a['start_time'], (string)$b['start_time']);
+            });
+            $prev = null;
+            foreach ($windows as $window) {
+                if ($prev !== null && $this->windowsOverlap($window, $prev)) {
+                    return [
+                        'consultorio_id_conflict' => $consultorioId,
+                        'weekday' => (int)$weekday,
+                        'incoming_window' => $window,
+                        'conflict_window' => $prev,
+                        'conflict_scope' => 'same_consultorio',
+                    ];
+                }
+                $prev = $window;
+            }
+        }
+
+        $weekdays = array_keys($segmentsByWeekday);
+        if (empty($weekdays)) {
+            return null;
+        }
+
+        $existingRows = $this->repository->listByDoctor($doctorId);
+        foreach ($segments as $incoming) {
+            $incomingWeekday = (int)($incoming['weekday'] ?? 0);
+            $incomingStart = (string)($incoming['start_time'] ?? '');
+            $incomingEnd = (string)($incoming['end_time'] ?? '');
+            if ($incomingWeekday < 1 || $incomingWeekday > 7 || $incomingStart === '' || $incomingEnd === '') {
+                continue;
+            }
+            foreach ($existingRows as $existing) {
+                $existingConsultorioId = trim((string)($existing['consultorio_id'] ?? ''));
+                if ($existingConsultorioId === '' || $existingConsultorioId === $consultorioId) {
+                    continue;
+                }
+                if (($existing['is_active'] ?? true) === false) {
+                    continue;
+                }
+                if ((int)($existing['weekday'] ?? 0) !== $incomingWeekday) {
+                    continue;
+                }
+                $existingWindow = [
+                    'start_time' => (string)($existing['start_time'] ?? ''),
+                    'end_time' => (string)($existing['end_time'] ?? ''),
+                ];
+                if ($existingWindow['start_time'] === '' || $existingWindow['end_time'] === '') {
+                    continue;
+                }
+                if ($this->windowsOverlap(
+                    ['start_time' => $incomingStart, 'end_time' => $incomingEnd],
+                    $existingWindow
+                )) {
+                    return [
+                        'consultorio_id_conflict' => $existingConsultorioId,
+                        'weekday' => $incomingWeekday,
+                        'incoming_window' => [
+                            'start_time' => $incomingStart,
+                            'end_time' => $incomingEnd,
+                        ],
+                        'conflict_window' => $existingWindow,
+                        'conflict_scope' => 'other_consultorio',
+                    ];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function windowsOverlap(array $a, array $b): bool
+    {
+        $aStart = (string)($a['start_time'] ?? '');
+        $aEnd = (string)($a['end_time'] ?? '');
+        $bStart = (string)($b['start_time'] ?? '');
+        $bEnd = (string)($b['end_time'] ?? '');
+        if ($aStart === '' || $aEnd === '' || $bStart === '' || $bEnd === '') {
+            return false;
+        }
+        return ($aStart < $bEnd) && ($aEnd > $bStart);
     }
 
     private function groupRowsByDay(array $rows): array

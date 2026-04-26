@@ -589,6 +589,11 @@ class AppointmentWriteController
         if (isset($payload['notify_patient']) && !in_array($payload['notify_patient'], ['0', '1', 0, 1, true, false, 'true', 'false'], true)) {
             $errors['notify_patient'] = $payload['notify_patient'];
         }
+        if (array_key_exists('apply_late_cancel_flag', $payload)
+            && !in_array($payload['apply_late_cancel_flag'], ['0', '1', 0, 1, true, false, 'true', 'false'], true)
+        ) {
+            $errors['apply_late_cancel_flag'] = 'apply_late_cancel_flag invalid';
+        }
         $contactMethod = $payload['contact_method'] ?? 'none';
         if (!is_string($contactMethod) || trim($contactMethod) === '') {
             $errors['contact_method'] = 'contact_method invalid';

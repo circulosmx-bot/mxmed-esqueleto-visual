@@ -109,12 +109,37 @@ class ConsultoriosController
             }
             return array_values(array_unique($out));
         };
+        $cleanFloat = static function ($value): ?float {
+            if ($value === null || $value === '') {
+                return null;
+            }
+            if (!is_numeric($value)) {
+                return null;
+            }
+            $num = (float)$value;
+            return is_finite($num) ? $num : null;
+        };
+        $normalizeGeocodeSource = static function ($value): ?string {
+            $raw = trim((string)($value ?? ''));
+            if ($raw === '') {
+                return null;
+            }
+            $safe = strtolower($raw);
+            if (!in_array($safe, ['auto_geocoded', 'manual_adjusted', 'device'], true)) {
+                return null;
+            }
+            return $safe;
+        };
+
+        $visibleName = $cleanText($payload['nombre_visible'] ?? ($payload['titulo'] ?? null));
+        $baseName = $cleanText($payload['nombre_base'] ?? ($payload['grupo_nombre'] ?? null));
 
         $record = [
             'doctor_id' => $doctorId,
             'consultorio_id' => $consultorioId,
-            'titulo' => $cleanText($payload['titulo'] ?? null),
-            'grupo_nombre' => $cleanText($payload['grupo_nombre'] ?? null),
+            'group_id' => $cleanText($payload['group_id'] ?? null),
+            'titulo' => $visibleName,
+            'grupo_nombre' => $baseName,
             'calle' => $cleanText($payload['calle'] ?? null),
             'num_ext' => $cleanText($payload['num_ext'] ?? null),
             'num_int' => $cleanText($payload['num_int'] ?? null),
@@ -127,6 +152,9 @@ class ConsultoriosController
             'urgencias_json' => json_encode($cleanArray($payload['urgencias'] ?? []), JSON_UNESCAPED_UNICODE),
             'logo_url' => $cleanText($payload['logo_url'] ?? null),
             'foto_url' => $cleanText($payload['foto_url'] ?? null),
+            'lat' => $cleanFloat($payload['lat'] ?? null),
+            'lng' => $cleanFloat($payload['lng'] ?? null),
+            'geocode_source' => $normalizeGeocodeSource($payload['geocode_source'] ?? null),
         ];
 
         try {
@@ -206,14 +234,60 @@ class ConsultoriosController
 
         $consultorioId = trim((string)($row['consultorio_id'] ?? $row['id'] ?? ''));
         $titulo = trim((string)($row['titulo'] ?? $row['name'] ?? $row['consultorio_name'] ?? ''));
+        $lat = (isset($row['lat']) && $row['lat'] !== null && $row['lat'] !== '') ? (float)$row['lat'] : null;
+        $lng = (isset($row['lng']) && $row['lng'] !== null && $row['lng'] !== '') ? (float)$row['lng'] : null;
+        $geocodeSource = trim((string)($row['geocode_source'] ?? ''));
+        $addressParts = [
+            trim((string)($row['calle'] ?? '')) . (
+                trim((string)($row['num_ext'] ?? '')) !== ''
+                    ? ' ' . trim((string)($row['num_ext'] ?? ''))
+                    : ''
+            ),
+            trim((string)($row['colonia'] ?? '')),
+            trim((string)($row['cp'] ?? '')),
+            trim((string)($row['municipio'] ?? '')),
+            trim((string)($row['estado'] ?? '')),
+            'México',
+        ];
+        $addressParts = array_values(array_filter(array_map(static function ($part): string {
+            return trim((string)$part);
+        }, $addressParts), static function ($part): bool {
+            return $part !== '';
+        }));
+        $addressCompact = implode(', ', $addressParts);
+
+        $hasConfirmedCoordinates = (
+            $lat !== null
+            && $lng !== null
+            && $geocodeSource === 'manual_adjusted'
+        );
+        $publicMapIframeUrl = '';
+        $publicMapSource = 'none';
+        if ($hasConfirmedCoordinates) {
+            $publicMapIframeUrl = sprintf(
+                'https://www.google.com/maps?q=%s,%s&z=17&output=embed',
+                rawurlencode(number_format($lat, 7, '.', '')),
+                rawurlencode(number_format($lng, 7, '.', ''))
+            );
+            $publicMapSource = 'coordinates_confirmed';
+        } elseif ($addressCompact !== '') {
+            $publicMapIframeUrl = sprintf(
+                'https://www.google.com/maps?q=%s&z=15&output=embed',
+                rawurlencode($addressCompact)
+            );
+            $publicMapSource = 'address_fallback';
+        }
 
         return [
             'doctor_id' => trim((string)($row['doctor_id'] ?? '')),
             'consultorio_id' => $consultorioId,
             'id' => $consultorioId,
+            'group_id' => trim((string)($row['group_id'] ?? '')),
             'titulo' => $titulo,
+            'nombre_visible' => $titulo,
             'name' => $titulo,
             'grupo_nombre' => trim((string)($row['grupo_nombre'] ?? '')),
+            'nombre_base' => trim((string)($row['grupo_nombre'] ?? '')),
             'calle' => trim((string)($row['calle'] ?? '')),
             'num_ext' => trim((string)($row['num_ext'] ?? '')),
             'num_int' => trim((string)($row['num_int'] ?? '')),
@@ -226,6 +300,14 @@ class ConsultoriosController
             'urgencias' => $toList($row['urgencias_json'] ?? null),
             'logo_url' => trim((string)($row['logo_url'] ?? '')),
             'foto_url' => trim((string)($row['foto_url'] ?? '')),
+            'lat' => $lat,
+            'lng' => $lng,
+            'geocode_source' => $geocodeSource,
+            'geocode_updated_at' => $row['geocode_updated_at'] ?? null,
+            'address_compact' => $addressCompact,
+            'public_map_has_confirmed_coords' => $hasConfirmedCoordinates,
+            'public_map_iframe_url' => $publicMapIframeUrl,
+            'public_map_source' => $publicMapSource,
             'created_at' => $row['created_at'] ?? null,
             'updated_at' => $row['updated_at'] ?? null,
         ];

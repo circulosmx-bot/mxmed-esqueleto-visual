@@ -247,12 +247,19 @@ class AppointmentWriteRepository
 
         $cancelledAt = (new DateTime('now', new DateTimeZone(self::TIMEZONE)))->format('Y-m-d H:i:s');
         $lateCancelResult = ['event_appended' => 0, 'flag_appended' => 0];
+        $applyLateCancelFlag = $this->resolveOptionalBoolean($payload['apply_late_cancel_flag'] ?? null);
 
         $this->pdo->beginTransaction();
         try {
             $this->updateCancelFields($pkColumn, $appointmentId, 'canceled', $cancelledAt);
             $eventId = $this->appendCancelEvent($appointmentId, $payload, $current);
-            $lateCancelResult = $this->appendLateCancelEventIfNeeded($appointmentId, $payload, $current, $cancelledAt);
+            $lateCancelResult = $this->appendLateCancelEventIfNeeded(
+                $appointmentId,
+                $payload,
+                $current,
+                $cancelledAt,
+                $applyLateCancelFlag
+            );
             $this->pdo->commit();
         } catch (PDOException $e) {
             $this->pdo->rollBack();
@@ -445,7 +452,13 @@ class AppointmentWriteRepository
         return bin2hex(random_bytes(12));
     }
 
-    private function appendLateCancelEventIfNeeded(string $appointmentId, array $payload, array $current, string $cancelledAt): array
+    private function appendLateCancelEventIfNeeded(
+        string $appointmentId,
+        array $payload,
+        array $current,
+        string $cancelledAt,
+        ?bool $applyLateCancelFlag
+    ): array
     {
         $startAt = $current['start_at'] ?? null;
         if (!$startAt) {
@@ -458,6 +471,9 @@ class AppointmentWriteRepository
         }
         $diffMinutes = (int)(($startDt->getTimestamp() - $cancelledDt->getTimestamp()) / 60);
         if ($diffMinutes < 0 || $diffMinutes >= self::LATE_CANCEL_THRESHOLD_MINUTES) {
+            return ['event_appended' => 0, 'flag_appended' => 0];
+        }
+        if ($applyLateCancelFlag !== true) {
             return ['event_appended' => 0, 'flag_appended' => 0];
         }
         if ($this->eventExists($appointmentId, 'appointment_late_cancel')) {
@@ -496,6 +512,20 @@ class AppointmentWriteRepository
         $this->maybeAppendIncident($patientId, $doctorId, $appointmentId, 'late_cancel', 'auto');
 
         return ['event_appended' => 1, 'flag_appended' => $flagAppended];
+    }
+
+    private function resolveOptionalBoolean($value): ?bool
+    {
+        if ($value === null) {
+            return null;
+        }
+        if (in_array($value, [true, 1, '1', 'true'], true)) {
+            return true;
+        }
+        if (in_array($value, [false, 0, '0', 'false'], true)) {
+            return false;
+        }
+        return null;
     }
 
     private function bridgeClinicalEncounterIfCompleted(array $appointmentData): void

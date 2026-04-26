@@ -1377,15 +1377,33 @@
 
                   </div>
 
-                  <div class="col-md-6"><label class="form-label">Nombre de la sede</label><input class="form-control"/></div>
-
-                  <div class="col-md-6"><label class="form-label">Horario</label><input class="form-control" placeholder="Lun-Vie 9:00-14:00, 16:00-19:00"/></div>
-
-                  <div class="col-md-6"><label class="form-label">Notas</label><input class="form-control" placeholder="Accesibilidad, estacionamiento, etc."/></div>
-
                   <!-- NUEVOS CAMPOS DE CONSULTORIO (A) -->
 
-                  <!-- Grupo médico: pregunta y radios alineados en la misma línea -->
+                  <div class="col-md-7"><label class="form-label" for="cons-calle">Calle</label><input id="cons-calle" class="form-control"/></div>
+
+                  <div class="col-md-2"><label class="form-label" for="cons-numext">Número Ext.</label><input id="cons-numext" class="form-control" maxlength="6"/></div>
+
+                  <div class="col-md-2"><label class="form-label" for="cons-numint">Número Int.</label><input id="cons-numint" class="form-control" maxlength="5"/></div>
+
+                  <div class="col-md-1"><label class="form-label" for="cons-piso">Piso</label><input id="cons-piso" class="form-control" maxlength="3"/></div>
+
+                  <!-- Mapa: mover justo después de la franja de Calle y reducir altura al 50% -->
+
+                  <div class="col-12"><label class="form-label">ubicación</label>
+
+                    <div class="ratio ratio-16x9 rounded border" style="--bs-aspect-ratio:28.125%; border-color:var(--mm-borde-input)!important;">
+
+                      <!-- Mapa embebido sin API key usando coordenadas (evita 400 de pb incompleto) -->
+
+                      <iframe id="cons-map-frame" src="https://www.google.com/maps?q=21.882,-102.296&z=13&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="ubicación de la sede"></iframe>
+
+                    </div>
+
+                    <small class="text-muted">En plan gratuito el mapa no usa GPS; en planes de pago sí.</small>
+
+                  </div>
+
+                  <!-- Grupo médico: después del domicilio y ubicación -->
 
                   <div class="col-12">
 
@@ -1393,7 +1411,7 @@
 
                       <div class="grupo-medico-bar">
 
-                        <span class="form-label m-0">¿Tu consultorio está en un Grupo Médico?</span>
+                        <span class="form-label m-0">¿Tu consultorio forma parte de un grupo médico?</span>
 
                       </div>
 
@@ -1421,34 +1439,18 @@
 
                   </div>
 
-                  <!-- Línea: nombre del grupo + título del consultorio -->
+                  <div class="col-12 col-md-6" data-cons-group-name-wrap="1"><label class="form-label" for="cons-grupo-nombre">Nombre del grupo médico</label><input id="cons-grupo-nombre" class="form-control" placeholder="Ejemplo Grupo Médico Central" disabled/></div>
 
-                  <div class="col-12 col-md-6"><label class="form-label" for="cons-grupo-nombre">Nombre del grupo médico</label><input id="cons-grupo-nombre" class="form-control" placeholder="Ejemplo Grupo Médico Central" disabled/></div>
+                  <div class="col-12 col-md-6" data-cons-visible-name-wrap="1">
+                    <label class="form-label" for="cons-titulo">Nombre visible del consultorio</label>
+                    <input id="cons-titulo" class="form-control" placeholder="Ejemplo Consultorio Hospital Central"/>
+                    <div id="cons-base-name-hint" class="form-text d-none"></div>
+                  </div>
 
-                  <div class="col-12 col-md-6"><label class="form-label" for="cons-titulo">Dale un título a este consultorio</label><input id="cons-titulo" class="form-control" placeholder="Ejemplo Consultorio Hospital Central"/></div>
-
-                  <div class="col-md-7"><label class="form-label" for="cons-calle">Calle</label><input id="cons-calle" class="form-control"/></div>
-
-                  <div class="col-md-2"><label class="form-label" for="cons-numext">Número Ext.</label><input id="cons-numext" class="form-control" maxlength="6"/></div>
-
-                  <div class="col-md-2"><label class="form-label" for="cons-numint">Número Int.</label><input id="cons-numint" class="form-control" maxlength="5"/></div>
-
-                  <div class="col-md-1"><label class="form-label" for="cons-piso">Piso</label><input id="cons-piso" class="form-control" maxlength="3"/></div>
-
-                  <!-- Mapa: mover justo después de la franja de Calle y reducir altura al 50% -->
-
-                  <div class="col-12"><label class="form-label">ubicación</label>
-
-                    <div class="ratio ratio-16x9 rounded border" style="--bs-aspect-ratio:28.125%; border-color:var(--mm-borde-input)!important;">
-
-                      <!-- Mapa embebido sin API key usando coordenadas (evita 400 de pb incompleto) -->
-
-                      <iframe id="cons-map-frame" src="https://www.google.com/maps?q=21.882,-102.296&z=13&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="ubicación de la sede"></iframe>
-
-                    </div>
-
-                    <small class="text-muted">En plan gratuito el mapa no usa GPS; en planes de pago sí.</small>
-
+                  <div class="col-12">
+                    <label class="form-label">Indicaciones para llegar al consultorio</label>
+                    <input class="form-control" placeholder="Ejemplo: Frente al parque central, segundo piso, arriba de farmacia."/>
+                    <div class="form-text">Ejemplo: Frente al parque central, segundo piso, arriba de farmacia.</div>
                   </div>
 
                   
@@ -2627,9 +2629,13 @@
 
 
 
-              <div class="col-md-6"><label class="form-label">Horario (L-V)</label><input class="form-control" id="ag_cfg_schedule_week_text" placeholder="09:00-14:00, 16:00-19:00"></div>
-
-              <div class="col-md-6"><label class="form-label">Horario (Sáb)</label><input class="form-control" id="ag_cfg_schedule_sat_text" placeholder="09:00-13:00"></div>
+              <div class="col-12">
+                <label class="form-label mb-1">Horario de atención (fuente oficial)</label>
+                <div class="border rounded p-3 bg-light-subtle">
+                  <div class="small text-muted mb-2" id="ag_cfg_schedule_summary_text">Sin horario cargado para el consultorio seleccionado.</div>
+                  <button type="button" class="btn btn-outline-primary btn-sm" id="ag_cfg_edit_schedule_btn">Editar horario del consultorio</button>
+                </div>
+              </div>
 
 
 
@@ -3069,6 +3075,7 @@
                     <button type="button" class="btn btn-outline-secondary" id="ag_event_cancel_btn">Cancelar cita</button>
                     <button type="button" class="btn btn-primary" id="ag_event_reschedule_btn">Reprogramar</button>
                     <button type="button" class="btn btn-outline-secondary d-none" id="ag_event_cancel_back_btn">Volver</button>
+                    <button type="button" class="btn btn-outline-secondary d-none" id="ag_event_cancel_confirm_no_flag_btn">Cancelar sin antecedente</button>
                     <button type="button" class="btn btn-primary d-none" id="ag_event_cancel_confirm_btn">Sí, cancelar</button>
                   </div>
                 </div>

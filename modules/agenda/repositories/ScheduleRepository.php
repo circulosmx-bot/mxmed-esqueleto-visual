@@ -58,6 +58,37 @@ class ScheduleRepository
         return $result;
     }
 
+    public function listByDoctor(string $doctorId): array
+    {
+        $this->ensureTable();
+        $stmt = $this->pdo->prepare(sprintf(
+            'SELECT * FROM %s WHERE doctor_id = :doctor_id',
+            $this->table
+        ));
+        $stmt->execute([
+            'doctor_id' => $doctorId,
+        ]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $result = [];
+        foreach ($rows as $row) {
+            $weekday = $this->extractWeekday($row);
+            $start = $this->extractTime($row, self::START_KEYS);
+            $end = $this->extractTime($row, self::END_KEYS);
+            $consultorioId = trim((string)($row['consultorio_id'] ?? ''));
+            if ($weekday === null || !$start || !$end || $consultorioId === '') {
+                continue;
+            }
+            $result[] = [
+                'consultorio_id' => $consultorioId,
+                'weekday' => $weekday,
+                'start_time' => $start,
+                'end_time' => $end,
+                'is_active' => isset($row['is_active']) ? ((int)$row['is_active'] === 1) : true,
+            ];
+        }
+        return $result;
+    }
+
     public function replaceWeeklySchedule(string $doctorId, string $consultorioId, array $segments): void
     {
         $this->ensureTable();

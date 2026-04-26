@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../modules/agenda/controllers/ConsultoriosController
 require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentEventsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/PatientFlagsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/PatientBehaviorController.php';
+require_once __DIR__ . '/../../modules/agenda/controllers/MedicalGroupsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AvailabilityController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/ScheduleController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AgendaSettingsController.php';
@@ -17,6 +18,7 @@ use Agenda\Controllers\ConsultoriosController;
 use Agenda\Controllers\AppointmentEventsController;
 use Agenda\Controllers\PatientFlagsController;
 use Agenda\Controllers\PatientBehaviorController;
+use Agenda\Controllers\MedicalGroupsController;
 use Agenda\Controllers\AvailabilityController;
 use Agenda\Controllers\ScheduleController;
 use Agenda\Controllers\AgendaSettingsController;
@@ -113,6 +115,7 @@ function is_private_agenda_route(array $segments): bool
         'schedule',
         'settings',
         'waitlist',
+        'medical-groups',
     ], true);
 }
 
@@ -448,6 +451,35 @@ try {
             } elseif ($method === 'POST' && ($segments[1] ?? '') === 'appointments' && ($segments[2] ?? '') === 'verify' && !isset($segments[3])) {
                 $publicAppointments = new PublicAppointmentsController();
                 $response = $publicAppointments->verify(read_json_body());
+            } else {
+                $response = [
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'route not found',
+                    'data' => null,
+                    'meta' => (object)[],
+                ];
+            }
+            break;
+        case 'medical-groups':
+            $medicalGroups = new MedicalGroupsController();
+            if (is_array($actorContext)) {
+                apply_actor_context($medicalGroups, $actorContext);
+            }
+            if ($method === 'GET' && ($segments[1] ?? '') === 'search') {
+                $response = $medicalGroups->search($_GET);
+            } elseif ($method === 'POST' && !isset($segments[1])) {
+                $response = $medicalGroups->create(read_json_body());
+            } elseif ($method === 'GET' && ($segments[1] ?? '') === 'pending') {
+                $response = $medicalGroups->pending($_GET);
+            } elseif ($method === 'POST' && isset($segments[1]) && ($segments[2] ?? '') === 'join') {
+                $response = $medicalGroups->join((string)$segments[1], read_json_body());
+            } elseif ($method === 'POST' && isset($segments[1]) && ($segments[2] ?? '') === 'approve') {
+                $response = $medicalGroups->approve((string)$segments[1], read_json_body());
+            } elseif ($method === 'POST' && isset($segments[1]) && ($segments[2] ?? '') === 'reject') {
+                $response = $medicalGroups->reject((string)$segments[1], read_json_body());
+            } elseif ($method === 'POST' && isset($segments[1]) && ($segments[2] ?? '') === 'merge') {
+                $response = $medicalGroups->merge((string)$segments[1], read_json_body());
             } else {
                 $response = [
                     'ok' => false,

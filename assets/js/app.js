@@ -551,6 +551,7 @@ console.info('app.js loaded :: 20251123a');
     eventCancelWrap: panel.querySelector('#ag_event_cancel_wrap'),
     eventCancelPrompt: panel.querySelector('#ag_event_cancel_prompt'),
     eventCancelBackBtn: panel.querySelector('#ag_event_cancel_back_btn'),
+    eventCancelConfirmNoFlagBtn: panel.querySelector('#ag_event_cancel_confirm_no_flag_btn'),
     eventCancelConfirmBtn: panel.querySelector('#ag_event_cancel_confirm_btn'),
     eventCancelPostHint: panel.querySelector('#ag_event_cancel_post_hint'),
     eventCancelPostActions: panel.querySelector('#ag_event_cancel_post_actions'),
@@ -568,8 +569,8 @@ console.info('app.js loaded :: 20251123a');
     cfgChannels: document.getElementById('ag_cfg_channels'),
     cfgCancelPolicyHours: document.getElementById('ag_cfg_cancel_policy_h'),
     cfgReminderTemplate: document.getElementById('ag_cfg_reminder_template'),
-    cfgScheduleWeekText: document.getElementById('ag_cfg_schedule_week_text'),
-    cfgScheduleSatText: document.getElementById('ag_cfg_schedule_sat_text'),
+    cfgScheduleSummaryText: document.getElementById('ag_cfg_schedule_summary_text'),
+    cfgEditScheduleBtn: document.getElementById('ag_cfg_edit_schedule_btn'),
     cfgSyncNote: document.getElementById('ag_cfg_sync_note')
   };
 
@@ -600,6 +601,7 @@ console.info('app.js loaded :: 20251123a');
   let activeSlotActionHost = null;
   let activeSlotActionPortal = null;
   let activeSlotActionPanel = null;
+  let suppressCellMenuAutoHideUntil = 0;
   let activeEventActionPortal = null;
   let activeEventActionPanel = null;
   let activeEventActionId = '';
@@ -613,6 +615,7 @@ console.info('app.js loaded :: 20251123a');
   let eventCancelPostActionsEnabled = false;
   let eventCancelPostWaitlistLoaded = false;
   let eventCancelPostWaitlistBusy = false;
+  let eventCancelLateWindow = false;
   let eventRescheduleMonthOptions = [];
   let eventRescheduleMonthCursor = null;
   let eventRescheduleSelectedDayKey = '';
@@ -645,6 +648,8 @@ console.info('app.js loaded :: 20251123a');
   const NEXT_AVAILABLE_FLOW_ENABLED = false;
   const AGENDA_SLOT_DEBUG = true;
   const AGENDA_CANCEL_DEBUG = true;
+  const AGENDA_SLOT_FORCE_OPEN_TRACE = true;
+  const AGENDA_LATE_CANCEL_THRESHOLD_MINUTES = 1080;
   const BLOCK_REASON_OPTIONS = Object.freeze([
     { key: 'comida', label: 'Comida' },
     { key: 'procedimiento', label: 'Procedimiento' },
@@ -658,6 +663,11 @@ console.info('app.js loaded :: 20251123a');
     if(!AGENDA_CANCEL_DEBUG) return;
     try{
       console.info(`AGENDA CANCEL FLOW: ${label}`, details);
+    }catch(_){}
+  };
+  const logAgendaSlotClickDebug = (label = '', details = {})=>{
+    try{
+      console.info(`AGENDA SLOT CLICK DEBUG: ${label}`, details);
     }catch(_){}
   };
   const logAgendaNoShowDebug = (label = '', details = {})=>{
@@ -962,7 +972,16 @@ console.info('app.js loaded :: 20251123a');
       queueCreatePatientBehaviorNoticeRefresh(90);
     }
   };
-  const hideCellMenu = ()=>{
+  const hideCellMenu = (reason = '')=>{
+    console.warn('AGENDA SLOT TRACE: hideCellMenu', {
+      reason: sanitizeText(reason || '') || 'unspecified'
+    });
+    logAgendaSlotClickDebug('hideCellMenu called', {
+      reason: sanitizeText(reason || '') || 'unspecified',
+      hadInlineMenuOpen: !!activeSlotActionPanel,
+      hadFloatingMenuOpen: !!(els.cellMenu && !els.cellMenu.classList.contains('d-none')),
+      hadSelection: !!cellMenuSelection
+    });
     if(AGENDA_SLOT_DEBUG){
       console.info('AGENDA SLOT CLICK: hiding menu');
     }
@@ -980,6 +999,7 @@ console.info('app.js loaded :: 20251123a');
     activeSlotActionPanel = null;
     activeSlotActionHost = null;
     cellMenuSelection = null;
+    suppressCellMenuAutoHideUntil = 0;
     clearBlockFlowVisualState({ rerender: true });
   };
   const hideEventActionPanel = ()=>{
@@ -1031,10 +1051,31 @@ console.info('app.js loaded :: 20251123a');
     els.eventRescheduleNote.classList.add('alert-info');
     els.eventRescheduleNote.textContent = 'Selecciona fecha y hora válidas para continuar.';
   };
+  const resolveEventCancelStartDate = ()=>{
+    let start = eventActionOriginalRange?.start instanceof Date ? new Date(eventActionOriginalRange.start) : null;
+    if(!(start instanceof Date) || Number.isNaN(start.getTime())){
+      if(activeEventActionRef?.start instanceof Date){
+        start = new Date(activeEventActionRef.start);
+      }else{
+        start = parseDateTimeLocalSafe(sanitizeText(activeEventActionRef?.extendedProps?.start_at || ''));
+      }
+    }
+    if(!(start instanceof Date) || Number.isNaN(start.getTime())){
+      return null;
+    }
+    return start;
+  };
+  const isActiveEventWithinLateCancelWindow = ()=>{
+    const start = resolveEventCancelStartDate();
+    if(!(start instanceof Date)) return false;
+    const diffMinutes = Math.floor((start.getTime() - Date.now()) / 60000);
+    return diffMinutes >= 0 && diffMinutes < AGENDA_LATE_CANCEL_THRESHOLD_MINUTES;
+  };
   const resetEventCancelPostActions = ()=>{
     eventCancelPostActionsEnabled = false;
     eventCancelPostWaitlistLoaded = false;
     eventCancelPostWaitlistBusy = false;
+    eventCancelLateWindow = false;
     if(els.eventCancelPostHint){
       els.eventCancelPostHint.classList.add('d-none');
     }
@@ -1063,6 +1104,11 @@ console.info('app.js loaded :: 20251123a');
       els.eventCancelPostWaitlistBtn.disabled = false;
       els.eventCancelPostWaitlistBtn.textContent = 'Asignar desde lista de espera';
     }
+    if(els.eventCancelConfirmNoFlagBtn){
+      els.eventCancelConfirmNoFlagBtn.disabled = false;
+      els.eventCancelConfirmNoFlagBtn.textContent = 'Cancelar sin antecedente';
+      els.eventCancelConfirmNoFlagBtn.classList.add('d-none');
+    }
     if(els.eventCancelConfirmBtn){
       els.eventCancelConfirmBtn.disabled = false;
       els.eventCancelConfirmBtn.textContent = 'Sí, cancelar';
@@ -1078,9 +1124,23 @@ console.info('app.js loaded :: 20251123a');
     }
     if(els.eventCancelBackBtn){
       els.eventCancelBackBtn.classList.toggle('d-none', eventCancelPostActionsEnabled);
+      els.eventCancelBackBtn.disabled = false;
+      els.eventCancelBackBtn.textContent = 'Volver';
+    }
+    if(els.eventCancelConfirmNoFlagBtn){
+      const showNoFlagOption = !eventCancelPostActionsEnabled
+        && eventActionCurrentSection === 'cancel'
+        && eventCancelLateWindow;
+      els.eventCancelConfirmNoFlagBtn.classList.toggle('d-none', !showNoFlagOption);
+      els.eventCancelConfirmNoFlagBtn.disabled = false;
+      els.eventCancelConfirmNoFlagBtn.textContent = 'Cancelar sin antecedente';
     }
     if(els.eventCancelConfirmBtn){
       els.eventCancelConfirmBtn.classList.toggle('d-none', eventCancelPostActionsEnabled);
+      els.eventCancelConfirmBtn.disabled = false;
+      els.eventCancelConfirmBtn.textContent = eventCancelLateWindow
+        ? 'Cancelar y marcar lista gris'
+        : 'Sí, cancelar';
     }
     if(els.eventCancelPrompt){
       if(eventCancelPostActionsEnabled){
@@ -1090,7 +1150,9 @@ console.info('app.js loaded :: 20251123a');
       }else{
         els.eventCancelPrompt.classList.remove('alert-success');
         els.eventCancelPrompt.classList.add('alert-warning');
-        els.eventCancelPrompt.textContent = '¿Confirmas cancelar esta cita?';
+        els.eventCancelPrompt.textContent = eventCancelLateWindow
+          ? 'Esta cancelación ocurre con poca anticipación. ¿Deseas marcarla como antecedente de cancelación tardía?'
+          : '¿Confirmas cancelar esta cita?';
       }
     }
   };
@@ -1415,6 +1477,9 @@ console.info('app.js loaded :: 20251123a');
     }
     if(!isCancel){
       resetEventCancelPostActions();
+    }else{
+      eventCancelLateWindow = isActiveEventWithinLateCancelWindow();
+      setEventCancelPostActionsEnabled(false);
     }
     if(els.eventResolutionTitle){
       if(actionVisibility.isPastUnresolved){
@@ -1475,6 +1540,12 @@ console.info('app.js loaded :: 20251123a');
     }
     if(els.eventCancelConfirmBtn){
       els.eventCancelConfirmBtn.classList.toggle('d-none', !isCancel);
+    }
+    if(els.eventCancelConfirmNoFlagBtn){
+      els.eventCancelConfirmNoFlagBtn.classList.toggle(
+        'd-none',
+        !isCancel || !eventCancelLateWindow || eventCancelPostActionsEnabled
+      );
     }
     if(!isReschedule){
       eventActionPendingReschedule = null;
@@ -1771,20 +1842,34 @@ console.info('app.js loaded :: 20251123a');
       || ''
     );
   };
-  const applyEventCancel = async ()=>{
+  const applyEventCancel = async ({ applyLateCancelFlag = null } = {})=>{
     const appointmentId = sanitizeText(activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef));
     if(!appointmentId) return;
+    const lateCancelDecision = (applyLateCancelFlag === true || applyLateCancelFlag === false)
+      ? applyLateCancelFlag
+      : (eventCancelLateWindow ? true : null);
     logAgendaCancelFlow('cancel:confirm-click', {
       activeEventActionId,
       appointmentId,
       section: eventActionCurrentSection,
-      postActionsEnabled: eventCancelPostActionsEnabled
+      postActionsEnabled: eventCancelPostActionsEnabled,
+      lateCancelWindow: eventCancelLateWindow,
+      applyLateCancelFlag: lateCancelDecision
     });
     setEventActionError('');
     try{
       if(els.eventCancelConfirmBtn){
         els.eventCancelConfirmBtn.disabled = true;
         els.eventCancelConfirmBtn.textContent = 'Cancelando...';
+      }
+      if(els.eventCancelConfirmNoFlagBtn){
+        els.eventCancelConfirmNoFlagBtn.disabled = true;
+        if(lateCancelDecision === false){
+          els.eventCancelConfirmNoFlagBtn.textContent = 'Cancelando...';
+        }
+      }
+      if(els.eventCancelBackBtn){
+        els.eventCancelBackBtn.disabled = true;
       }
       if(isAgendaDemoContext()){
         if(activeEventActionRef){
@@ -1816,14 +1901,14 @@ console.info('app.js loaded :: 20251123a');
         notify_patient: false,
         contact_method: 'none'
       };
+      if(lateCancelDecision === true || lateCancelDecision === false){
+        payload.apply_late_cancel_flag = lateCancelDecision;
+      }
       const result = await AgendaApiClient.cancelAppointment(appointmentId, payload);
       if(!result?.ok || !result?.json || result.json.ok !== true){
         const msg = sanitizeText(result?.json?.message || result?.json?.error || `HTTP ${result?.status || 500}`) || 'No se pudo cancelar la cita.';
         setEventActionError(msg);
-        if(els.eventCancelConfirmBtn){
-          els.eventCancelConfirmBtn.disabled = false;
-          els.eventCancelConfirmBtn.textContent = 'Sí, cancelar';
-        }
+        setEventCancelPostActionsEnabled(false);
         return;
       }
       eventActionIsCancelled = true;
@@ -1848,10 +1933,7 @@ console.info('app.js loaded :: 20251123a');
       }
     }catch(_){
       setEventActionError('No se pudo cancelar la cita.');
-      if(els.eventCancelConfirmBtn){
-        els.eventCancelConfirmBtn.disabled = false;
-        els.eventCancelConfirmBtn.textContent = 'Sí, cancelar';
-      }
+      setEventCancelPostActionsEnabled(false);
     }
   };
   const applyEventNoShow = async ()=>{
@@ -2842,16 +2924,48 @@ console.info('app.js loaded :: 20251123a');
   const isCellAvailableForCreate = (startDate, endDate)=>{
     if(!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return false;
     if(!(endDate instanceof Date) || Number.isNaN(endDate.getTime())) return false;
+    if(endDate <= startDate) return false;
     if(startDate < new Date()) return false;
+    const diagnostics = evaluateSlotRangeDiagnostics(startDate, endDate);
+    const strictAvailable = computeStrictSelectionAvailability(diagnostics, startDate, endDate);
+    const relaxedAvailable = !diagnostics.overlapsBusy;
     if(AGENDA_SLOT_DEBUG){
       console.info('AGENDA SLOT CLICK: validating cell', {
         start: startDate.toISOString?.() || String(startDate),
-        end: endDate.toISOString?.() || String(endDate)
+        end: endDate.toISOString?.() || String(endDate),
+        strictAvailable,
+        relaxedAvailable,
+        overlapsBusy: diagnostics.overlapsBusy,
+        insideAvailability: diagnostics.insideAvailability,
+        hasAvailabilityLayer: diagnostics.hasAvailabilityLayer
       });
     }
-    return isSelectionAvailable(startDate, endDate);
+    logAgendaSlotClickDebug('cell guard evaluated', {
+      start: startDate.toISOString?.() || '',
+      end: endDate.toISOString?.() || '',
+      strictAvailable,
+      relaxedAvailable,
+      overlapsBusy: diagnostics.overlapsBusy,
+      insideAvailability: diagnostics.insideAvailability,
+      hasAvailabilityLayer: diagnostics.hasAvailabilityLayer
+    });
+    // UX rule: permitimos abrir menú en slot vacío aunque availability layer no confirme.
+    // El bloqueo estricto se mantiene al confirmar acciones (create/block) y por backend.
+    return relaxedAvailable;
   };
   const openCellMenu = ({ start, end, jsEvent, source = '' })=>{
+    console.warn('AGENDA SLOT TRACE: openCellMenu ENTER', {
+      start: start?.toISOString?.() || String(start || ''),
+      end: end?.toISOString?.() || String(end || ''),
+      source: sanitizeText(source || ''),
+      hasCalendarWrap: !!els.calendarWrap
+    });
+    logAgendaSlotClickDebug('openCellMenu requested', {
+      source: sanitizeText(source || ''),
+      start: start?.toISOString?.() || '',
+      end: end?.toISOString?.() || '',
+      hasCalendarWrap: !!els.calendarWrap
+    });
     if(!els.calendarWrap){
       if(AGENDA_SLOT_DEBUG){
         console.warn('AGENDA SLOT CLICK: menu element not found', {
@@ -2867,6 +2981,14 @@ console.info('app.js loaded :: 20251123a');
     cellMenuSelection = { start, end, source: sourceKey };
     const frame = findTimeGridColumnFrame(start);
     if(!(frame instanceof HTMLElement)){
+      console.warn('AGENDA SLOT TRACE: openCellMenu blocked (frame not found)', {
+        start: start?.toISOString?.() || String(start || ''),
+        source: sanitizeText(sourceKey || '')
+      });
+      logAgendaSlotClickDebug('openCellMenu blocked: frame not found', {
+        start: start?.toISOString?.() || '',
+        source: sourceKey
+      });
       if(AGENDA_SLOT_DEBUG){
         console.warn('AGENDA SLOT CLICK: column frame not found for slot', {
           slotDate: formatYmdLocal(start)
@@ -2900,11 +3022,26 @@ console.info('app.js loaded :: 20251123a');
     activeSlotActionPanel = buildSlotActionPanel();
     activeSlotActionPortal.appendChild(activeSlotActionPanel);
     els.calendarWrap.appendChild(activeSlotActionPortal);
+    console.warn('AGENDA SLOT TRACE: openCellMenu DOM', {
+      exists: !!activeSlotActionPanel,
+      display: activeSlotActionPanel?.style?.display || '',
+      className: activeSlotActionPanel?.className || '',
+      rect: activeSlotActionPanel?.getBoundingClientRect?.() || null
+    });
     const mounted = positionSlotActionPanel({ frame: activeSlotActionPortal, slotStartDate: start, jsEvent });
     if(!mounted){
+      console.warn('AGENDA SLOT TRACE: openCellMenu blocked (panel not mounted)', {
+        start: start?.toISOString?.() || String(start || ''),
+        source: sanitizeText(sourceKey || '')
+      });
+      logAgendaSlotClickDebug('openCellMenu blocked: panel not mounted', {
+        start: start?.toISOString?.() || '',
+        source: sourceKey
+      });
       hideCellMenu();
       return;
     }
+    suppressCellMenuAutoHideUntil = Date.now() + 220;
     if(els.cellMenu){
       els.cellMenu.classList.add('d-none');
     }
@@ -2916,6 +3053,45 @@ console.info('app.js loaded :: 20251123a');
         slotTime: `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}:00`
       });
     }
+    const panelRect = activeSlotActionPanel?.getBoundingClientRect?.();
+    const portalRect = activeSlotActionPortal?.getBoundingClientRect?.();
+    const panelStyle = activeSlotActionPanel ? window.getComputedStyle(activeSlotActionPanel) : null;
+    const portalStyle = activeSlotActionPortal ? window.getComputedStyle(activeSlotActionPortal) : null;
+    logAgendaSlotClickDebug('openCellMenu shown', {
+      source: sourceKey,
+      start: start?.toISOString?.() || '',
+      end: end?.toISOString?.() || '',
+      panelRect: panelRect ? {
+        top: Math.round(panelRect.top),
+        left: Math.round(panelRect.left),
+        width: Math.round(panelRect.width),
+        height: Math.round(panelRect.height)
+      } : null,
+      portalRect: portalRect ? {
+        top: Math.round(portalRect.top),
+        left: Math.round(portalRect.left),
+        width: Math.round(portalRect.width),
+        height: Math.round(portalRect.height)
+      } : null,
+      panelComputed: panelStyle ? {
+        display: panelStyle.display,
+        visibility: panelStyle.visibility,
+        opacity: panelStyle.opacity,
+        zIndex: panelStyle.zIndex
+      } : null,
+      portalComputed: portalStyle ? {
+        display: portalStyle.display,
+        visibility: portalStyle.visibility,
+        opacity: portalStyle.opacity,
+        zIndex: portalStyle.zIndex
+      } : null
+    });
+    console.warn('AGENDA SLOT TRACE: openCellMenu DOM', {
+      exists: !!activeSlotActionPanel,
+      display: panelStyle?.display || '',
+      className: activeSlotActionPanel?.className || '',
+      rect: activeSlotActionPanel?.getBoundingClientRect?.() || null
+    });
     schedulePanelViewportCheck(activeSlotActionPanel, 26);
   };
   const setNextSlotsError = (message = '')=>{
@@ -3693,6 +3869,116 @@ console.info('app.js loaded :: 20251123a');
     );
     els.cfgSyncNote.textContent = msg || 'Configuración operativa de Agenda.';
   };
+  const formatScheduleSummaryTime = (value)=>{
+    const raw = sanitizeText(value);
+    const m = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if(!m) return raw;
+    const hh = Number(m[1] || 0);
+    const mm = Number(m[2] || 0);
+    if(!Number.isFinite(hh) || !Number.isFinite(mm)) return raw;
+    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  };
+  const formatAgendaScheduleSummary = (days = [])=>{
+    const weekdayLabel = {
+      1: 'Lunes',
+      2: 'Martes',
+      3: 'Miércoles',
+      4: 'Jueves',
+      5: 'Viernes',
+      6: 'Sábado',
+      7: 'Domingo'
+    };
+    if(!Array.isArray(days) || !days.length){
+      return 'Sin horario de atención configurado para este consultorio.';
+    }
+    const parts = [];
+    days.forEach((day)=>{
+      const weekday = Number(day?.weekday || 0);
+      const label = weekdayLabel[weekday];
+      if(!label) return;
+      const windows = Array.isArray(day?.windows) ? day.windows : [];
+      const normalized = windows
+        .map((window)=>({
+          start: formatScheduleSummaryTime(window?.start_time || ''),
+          end: formatScheduleSummaryTime(window?.end_time || '')
+        }))
+        .filter((window)=> window.start && window.end);
+      if(!normalized.length) return;
+      const ranges = normalized.map((window)=> `${window.start}-${window.end}`).join(' · ');
+      parts.push(`${label}: ${ranges}`);
+    });
+    if(!parts.length){
+      return 'Sin horario de atención configurado para este consultorio.';
+    }
+    return parts.join(' | ');
+  };
+  const setAgendaScheduleSummaryText = (message = '', tone = 'muted')=>{
+    if(!els.cfgScheduleSummaryText) return;
+    const msg = sanitizeText(message) || 'Sin horario de atención configurado para este consultorio.';
+    els.cfgScheduleSummaryText.classList.remove('text-muted', 'text-danger', 'text-success');
+    els.cfgScheduleSummaryText.classList.add(
+      tone === 'danger' ? 'text-danger' : (tone === 'success' ? 'text-success' : 'text-muted')
+    );
+    els.cfgScheduleSummaryText.textContent = msg;
+  };
+  const hydrateAgendaScheduleSummary = async ({ doctorId, consultorioId })=>{
+    if(!doctorId || !consultorioId){
+      setAgendaScheduleSummaryText('Selecciona consultorio activo para ver su horario oficial.', 'danger');
+      return;
+    }
+    try{
+      const json = await AgendaApiClient.getSchedule({ doctorId, consultorioId });
+      if(!json || json.ok !== true || !Array.isArray(json?.data?.days)){
+        const msg = sanitizeText(json?.message || json?.error || 'No se pudo cargar horario oficial del consultorio.');
+        setAgendaScheduleSummaryText(msg || 'No se pudo cargar horario oficial del consultorio.', 'danger');
+        return;
+      }
+      setAgendaScheduleSummaryText(formatAgendaScheduleSummary(json.data.days), 'success');
+    }catch(_){
+      setAgendaScheduleSummaryText('No se pudo cargar horario oficial del consultorio.', 'danger');
+    }
+  };
+  const openConsultorioScheduleEditorFromSettings = ()=>{
+    const { consultorioId } = getAgendaSettingsContext();
+    try{
+      if(typeof window.openGroup === 'function'){
+        window.openGroup('perfil');
+      }
+      if(typeof window.jumpTo === 'function'){
+        window.jumpTo('p-consultorio');
+      }else{
+        document.querySelector('.menu-sub-btn[data-panel="p-consultorio"]')?.click();
+      }
+    }catch(_){
+      document.querySelector('.menu-sub-btn[data-panel="p-consultorio"]')?.click();
+    }
+    window.setTimeout(()=>{
+      const targetId = sanitizeText(consultorioId || '');
+      const targetNumeric = Number(targetId || 0);
+      let tabBtn = targetId
+        ? document.querySelector(`#p-consultorio [data-bs-target="#sede${targetId}"]`)
+        : null;
+      if(!tabBtn && Number.isInteger(targetNumeric) && targetNumeric > 1 && typeof window._mx_createConsultorio === 'function'){
+        try{ window._mx_createConsultorio(targetNumeric); }catch(_){}
+        tabBtn = document.querySelector(`#p-consultorio [data-bs-target="#sede${targetNumeric}"]`);
+      }
+      if(tabBtn){
+        try{
+          if(window.bootstrap?.Tab){
+            new window.bootstrap.Tab(tabBtn).show();
+          }else{
+            tabBtn.click();
+          }
+        }catch(_){
+          tabBtn.click();
+        }
+      }
+      const activeCard = document.querySelector('#p-consultorio .tab-pane.show.active .sched-card');
+      if(activeCard){
+        try{ activeCard.scrollIntoView({ behavior: 'smooth', block: 'start' }); }catch(_){}
+      }
+    }, 80);
+  };
   const readAgendaSettingsPayloadFromUi = ()=>{
     const channels = Array.from(els.cfgChannels?.selectedOptions || [])
       .map((opt)=> sanitizeText(opt.value || ''))
@@ -3764,11 +4050,13 @@ console.info('app.js loaded :: 20251123a');
     agendaSettingsContextKey = contextKey;
     if(!doctorId || !consultorioId){
       setAgendaSettingsNote('Selecciona doctor/consultorio activo para cargar configuración.', 'danger');
+      setAgendaScheduleSummaryText('Selecciona consultorio activo para ver su horario oficial.', 'danger');
       return;
     }
     agendaSettingsHydrating = true;
     setAgendaSettingsNote('Cargando configuración de Agenda...', 'muted');
     try{
+      await hydrateAgendaScheduleSummary({ doctorId, consultorioId });
       const json = await AgendaApiClient.getAgendaSettings({ doctorId, consultorioId });
       if(!json || json.ok !== true || !json.data){
         const msg = sanitizeText(json?.message || json?.error || 'No se pudo cargar configuración de Agenda.');
@@ -3918,8 +4206,17 @@ console.info('app.js loaded :: 20251123a');
       }
     }
   };
-  const isSelectionAvailable = (startDate, endDate)=>{
-    if(!calendar || !startDate || !endDate) return false;
+  const evaluateSlotRangeDiagnostics = (startDate, endDate)=>{
+    if(!calendar || !startDate || !endDate){
+      return {
+        hasCalendar: !!calendar,
+        hasAvailabilityLayer: false,
+        insideAvailability: false,
+        overlapsBusy: false,
+        isDemo: isAgendaDemoContext(),
+        eventsCount: 0
+      };
+    }
     const events = calendar.getEvents();
     const availabilityWindows = events.filter((ev)=> ev.display === 'background' && sanitizeText(ev.extendedProps?.event_type || '') === 'availability');
     const hasAvailabilityLayer = availabilityWindows.length > 0;
@@ -3938,30 +4235,54 @@ console.info('app.js loaded :: 20251123a');
       const evEnd = ev.end;
       return !!(evStart && evEnd && startDate < evEnd && endDate > evStart);
     });
-    if(AGENDA_SLOT_DEBUG){
-      console.info('AGENDA SLOT CLICK: availability check', {
-        hasAvailabilityLayer,
-        insideAvailability,
-        overlapsBusy,
-        isDemo: isAgendaDemoContext(),
-        eventsCount: events.length
-      });
-    }
-    if(hasAvailabilityLayer){
-      return insideAvailability && !overlapsBusy;
+    return {
+      hasCalendar: true,
+      hasAvailabilityLayer,
+      insideAvailability,
+      overlapsBusy,
+      isDemo: isAgendaDemoContext(),
+      eventsCount: events.length
+    };
+  };
+  const computeStrictSelectionAvailability = (diagnostics, startDate, endDate)=>{
+    if(!diagnostics?.hasCalendar) return false;
+    if(diagnostics.hasAvailabilityLayer){
+      return diagnostics.insideAvailability && !diagnostics.overlapsBusy;
     }
     // Fallback controlado SOLO para demo: sin availability backend, usa horario demo + no traslape.
-    if(isAgendaDemoContext()){
+    if(diagnostics.isDemo){
       const insideDemoWindow = isWithinDemoServiceWindow(startDate, endDate);
       if(AGENDA_SLOT_DEBUG){
         console.info('AGENDA SLOT CLICK: demo fallback', {
           insideDemoWindow,
-          overlapsBusy
+          overlapsBusy: diagnostics.overlapsBusy
         });
       }
-      return insideDemoWindow && !overlapsBusy;
+      return insideDemoWindow && !diagnostics.overlapsBusy;
     }
     return false;
+  };
+  const isSelectionAvailable = (startDate, endDate)=>{
+    const diagnostics = evaluateSlotRangeDiagnostics(startDate, endDate);
+    if(AGENDA_SLOT_DEBUG){
+      console.info('AGENDA SLOT CLICK: availability check', {
+        hasAvailabilityLayer: diagnostics.hasAvailabilityLayer,
+        insideAvailability: diagnostics.insideAvailability,
+        overlapsBusy: diagnostics.overlapsBusy,
+        isDemo: diagnostics.isDemo,
+        eventsCount: diagnostics.eventsCount
+      });
+    }
+    logAgendaSlotClickDebug('availability check', {
+      start: startDate?.toISOString?.() || '',
+      end: endDate?.toISOString?.() || '',
+      hasAvailabilityLayer: diagnostics.hasAvailabilityLayer,
+      insideAvailability: diagnostics.insideAvailability,
+      overlapsBusy: diagnostics.overlapsBusy,
+      isDemo: diagnostics.isDemo,
+      eventsCount: diagnostics.eventsCount
+    });
+    return computeStrictSelectionAvailability(diagnostics, startDate, endDate);
   };
   const openCreateModalFromSelection = (selection, { bypassAvailabilityCheck = false } = {})=>{
     if(!els.createModalEl || !window.bootstrap?.Modal) return;
@@ -5696,9 +6017,15 @@ console.info('app.js loaded :: 20251123a');
         };
       },
       dateClick: (info)=>{
+        console.warn('AGENDA SLOT TRACE: dateClick', info);
+        const viewType = String(info?.view?.type || '');
+        logAgendaSlotClickDebug('dateClick received', {
+          view: viewType,
+          date: info?.dateStr || info?.date?.toISOString?.() || ''
+        });
         if(AGENDA_SLOT_DEBUG){
           console.info('AGENDA SLOT CLICK: entered dateClick', {
-            view: String(info?.view?.type || ''),
+            view: viewType,
             date: info?.dateStr || info?.date?.toISOString?.() || ''
           });
         }
@@ -5707,11 +6034,14 @@ console.info('app.js loaded :: 20251123a');
         if(blockFlowOpen){
           const insidePanel = !!info?.jsEvent?.target?.closest?.('.mx-ag-slot-action-layer');
           if(!insidePanel){
+            logAgendaSlotClickDebug('dateClick blocked: block flow open', {
+              view: viewType,
+              insidePanel: false
+            });
             hideCellMenu();
             return;
           }
         }
-        const viewType = String(info?.view?.type || '');
         if(activeBlockedEventId){
           activeBlockedEventId = '';
           rerenderCalendarEvents();
@@ -5720,6 +6050,9 @@ console.info('app.js loaded :: 20251123a');
           try{ calendar.unselect(); }catch(_){}
         }
         if(viewType === 'dayGridMonth' && calendar){
+          logAgendaSlotClickDebug('dateClick month->day transition', {
+            date: info?.dateStr || info?.date?.toISOString?.() || ''
+          });
           clearNextSlotFocus();
           calendar.changeView('timeGridDay', info.date);
           return;
@@ -5728,59 +6061,145 @@ console.info('app.js loaded :: 20251123a');
           const slotMinutes = resolveAgendaSlotMinutes();
           const start = new Date(info.date);
           const end = new Date(start.getTime() + (slotMinutes * 60 * 1000));
+          if(AGENDA_SLOT_FORCE_OPEN_TRACE){
+            console.warn('AGENDA SLOT TRACE: dateClick FORCE openCellMenu', {
+              start: start?.toISOString?.() || '',
+              end: end?.toISOString?.() || '',
+              view: viewType
+            });
+            openCellMenu({ start, end, jsEvent: info.jsEvent, source: 'force_dateClick' });
+            return;
+          }
           if(viewType === 'timeGridWeek' && nextSlotFocus){
             if(isNextSlotFocusSelection(start, end)){
+              logAgendaSlotClickDebug('dateClick nextSlotFocus matched', {
+                start: start.toISOString(),
+                end: end.toISOString()
+              });
               const opened = openCreateModalFromSelection({ start, end }, { bypassAvailabilityCheck: true });
               if(opened){
                 clearNextSlotFocus();
               }
               return;
             }
+            logAgendaSlotClickDebug('dateClick blocked: nextSlotFocus mismatch', {
+              start: start.toISOString(),
+              end: end.toISOString()
+            });
             return;
           }
-          if(!isCellAvailableForCreate(start, end)){
+          const available = isCellAvailableForCreate(start, end);
+          logAgendaSlotClickDebug('dateClick availability evaluated', {
+            start: start.toISOString(),
+            end: end.toISOString(),
+            available
+          });
+          if(!available){
+            logAgendaSlotClickDebug('dateClick blocked: slot unavailable', {
+              start: start.toISOString(),
+              end: end.toISOString()
+            });
             hideCellMenu();
             return;
           }
+          logAgendaSlotClickDebug('dateClick opening menu', {
+            start: start.toISOString(),
+            end: end.toISOString()
+          });
           openCellMenu({ start, end, jsEvent: info.jsEvent });
         }
       },
       select: (selectionInfo)=>{
+        console.warn('AGENDA SLOT TRACE: select', selectionInfo);
+        const start = selectionInfo?.start instanceof Date ? selectionInfo.start : new Date(selectionInfo?.start || '');
+        const end = selectionInfo?.end instanceof Date ? selectionInfo.end : new Date(selectionInfo?.end || '');
+        const currentView = String(calendar?.view?.type || '');
+        logAgendaSlotClickDebug('select received', {
+          view: currentView,
+          start: start?.toISOString?.() || selectionInfo?.startStr || '',
+          end: end?.toISOString?.() || selectionInfo?.endStr || ''
+        });
         if(AGENDA_SLOT_DEBUG){
           console.info('AGENDA SLOT CLICK: entered select', {
-            view: String(calendar?.view?.type || ''),
+            view: currentView,
             start: selectionInfo?.startStr || selectionInfo?.start?.toISOString?.() || '',
             end: selectionInfo?.endStr || selectionInfo?.end?.toISOString?.() || ''
           });
         }
         hideEventActionPanel();
         if(activeSlotActionPanel && activeSlotActionPanel.classList.contains('is-block-open')){
+          logAgendaSlotClickDebug('select blocked: block flow open', {
+            view: currentView
+          });
           hideCellMenu();
           if(calendar && typeof calendar.unselect === 'function'){
             try{ calendar.unselect(); }catch(_){}
           }
           return;
         }
-        const start = selectionInfo?.start instanceof Date ? selectionInfo.start : new Date(selectionInfo?.start || '');
-        const end = selectionInfo?.end instanceof Date ? selectionInfo.end : new Date(selectionInfo?.end || '');
-        const currentView = String(calendar?.view?.type || '');
         if(activeBlockedEventId){
           activeBlockedEventId = '';
           rerenderCalendarEvents();
         }
+        if(AGENDA_SLOT_FORCE_OPEN_TRACE && (currentView === 'timeGridWeek' || currentView === 'timeGridDay')){
+          console.warn('AGENDA SLOT TRACE: select FORCE openCellMenu', {
+            start: start?.toISOString?.() || '',
+            end: end?.toISOString?.() || '',
+            view: currentView
+          });
+          openCellMenu({ start, end, jsEvent: selectionInfo?.jsEvent, source: 'force_select' });
+          if(calendar && typeof calendar.unselect === 'function'){
+            try{ calendar.unselect(); }catch(_){}
+          }
+          return;
+        }
         if(currentView === 'timeGridWeek' && nextSlotFocus){
           if(isNextSlotFocusSelection(start, end)){
+            logAgendaSlotClickDebug('select nextSlotFocus matched', {
+              start: start?.toISOString?.() || '',
+              end: end?.toISOString?.() || ''
+            });
             const opened = openCreateModalFromSelection({ start, end }, { bypassAvailabilityCheck: true });
             if(opened){
               clearNextSlotFocus();
             }
+          }else{
+            logAgendaSlotClickDebug('select blocked: nextSlotFocus mismatch', {
+              start: start?.toISOString?.() || '',
+              end: end?.toISOString?.() || ''
+            });
           }
           if(calendar && typeof calendar.unselect === 'function'){
             try{ calendar.unselect(); }catch(_){}
           }
           return;
         }
-        hideCellMenu();
+        if(currentView === 'timeGridWeek' || currentView === 'timeGridDay'){
+          const available = isCellAvailableForCreate(start, end);
+          logAgendaSlotClickDebug('select availability evaluated', {
+            start: start?.toISOString?.() || '',
+            end: end?.toISOString?.() || '',
+            available
+          });
+          if(available){
+            logAgendaSlotClickDebug('select opening menu', {
+              start: start?.toISOString?.() || '',
+              end: end?.toISOString?.() || ''
+            });
+            openCellMenu({ start, end, jsEvent: selectionInfo?.jsEvent });
+          }else{
+            logAgendaSlotClickDebug('select blocked: slot unavailable', {
+              start: start?.toISOString?.() || '',
+              end: end?.toISOString?.() || ''
+            });
+            hideCellMenu();
+          }
+        }else{
+          logAgendaSlotClickDebug('select ignored: unsupported view', {
+            view: currentView
+          });
+          hideCellMenu();
+        }
         if(calendar && typeof calendar.unselect === 'function'){
           try{ calendar.unselect(); }catch(_){}
         }
@@ -5937,6 +6356,10 @@ console.info('app.js loaded :: 20251123a');
         el.addEventListener('input', ()=> queuePersistAgendaSettings());
         el.addEventListener('change', ()=> queuePersistAgendaSettings(220));
       });
+    els.cfgEditScheduleBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      openConsultorioScheduleEditorFromSettings();
+    });
     els.hoursToggle?.addEventListener('click', ()=>{
       weeklyHoursExpanded = !weeklyHoursExpanded;
       applyWeeklyHoursState();
@@ -6147,7 +6570,13 @@ console.info('app.js loaded :: 20251123a');
     });
     els.eventCancelConfirmBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
-      applyEventCancel().catch(()=> null);
+      applyEventCancel({
+        applyLateCancelFlag: eventCancelLateWindow ? true : null
+      }).catch(()=> null);
+    });
+    els.eventCancelConfirmNoFlagBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      applyEventCancel({ applyLateCancelFlag: false }).catch(()=> null);
     });
     els.eventCancelPostNewBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
@@ -6392,12 +6821,39 @@ console.info('app.js loaded :: 20251123a');
       const hasInlineMenuOpen = !!activeSlotActionPanel;
       const hasEventMenuOpen = !!activeEventActionPanel;
       if(!hasFloatingMenuOpen && !hasInlineMenuOpen && !hasEventMenuOpen) return;
+      const autoHideSuppressed = hasInlineMenuOpen && Date.now() < suppressCellMenuAutoHideUntil;
       const blockFlowOpen = !!(activeSlotActionPanel && activeSlotActionPanel.classList.contains('is-block-open'));
       const insideMenu = event.target.closest('#ag_cell_menu') || event.target.closest('.mx-ag-slot-action-layer') || event.target.closest('.mx-ag-event-action-layer');
-      const insideCalendar = event.target.closest('#ag_calendar');
+      const insideCalendar = event.target.closest('#ag_calendar') || event.target.closest('#ag_calendar_wrap');
+      console.warn('AGENDA SLOT TRACE: document click while menu open', {
+        hasFloatingMenuOpen,
+        hasInlineMenuOpen,
+        hasEventMenuOpen,
+        blockFlowOpen,
+        autoHideSuppressed,
+        insideMenu: !!insideMenu,
+        insideCalendar: !!insideCalendar,
+        targetClass: sanitizeText(event.target?.className || '')
+      });
+      logAgendaSlotClickDebug('document click while menu open', {
+        hasFloatingMenuOpen,
+        hasInlineMenuOpen,
+        hasEventMenuOpen,
+        blockFlowOpen,
+        autoHideSuppressed,
+        insideMenu: !!insideMenu,
+        insideCalendar: !!insideCalendar,
+        targetClass: sanitizeText(event.target?.className || '')
+      });
+      if(autoHideSuppressed){
+        console.warn('AGENDA SLOT TRACE: hideCellMenu suppressed', {
+          msRemaining: Math.max(0, suppressCellMenuAutoHideUntil - Date.now())
+        });
+        return;
+      }
       if(blockFlowOpen){
         if(!insideMenu){
-          hideCellMenu();
+          hideCellMenu('document_click_outside_block_flow');
         }
         if(hasEventMenuOpen && !event.target.closest('.mx-ag-event-action-layer')){
           hideEventActionPanel();
@@ -6405,7 +6861,7 @@ console.info('app.js loaded :: 20251123a');
         return;
       }
       if(!insideMenu && !insideCalendar){
-        hideCellMenu();
+        hideCellMenu('document_click_outside_calendar');
         hideEventActionPanel();
         return;
       }
@@ -7457,8 +7913,9 @@ console.info('app.js loaded :: 20251123a');
 (function(){
 
   const body = document.getElementById('sched-body');
+  const consultorioPanel = document.getElementById('p-consultorio');
 
-  if(body){
+  if(body || consultorioPanel){
     // Fuente oficial: backend consultorio_schedule (+ overrides en disponibilidad).
     const DAYS = [
       { key: 'mon', weekday: 1, label: 'Lunes' },
@@ -7477,6 +7934,10 @@ console.info('app.js loaded :: 20251123a');
     let loading = false;
     let loadedOnce = false;
     let currentContextKey = '';
+    let activeBody = null;
+    let activeCopyBtn = null;
+    let activeClearBtn = null;
+    let activePane = null;
     const apiGetSchedule = async ({ doctorId, consultorioId })=>{
       const qs = new URLSearchParams({
         doctor_id: String(doctorId || '').trim(),
@@ -7513,20 +7974,123 @@ console.info('app.js loaded :: 20251123a');
       if(hh < 0 || hh > 23 || mm < 0 || mm > 59 || ss < 0 || ss > 59) return '';
       return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
     };
-    const showNote = (message = '', tone = 'muted')=>{
-      let note = document.getElementById('sched-sync-note');
+    const resolveActiveConsultorioPane = ()=>{
+      const active = consultorioPanel?.querySelector('.tab-pane[id^="sede"].show.active') || null;
+      if(active && active.querySelector('tbody[id^="sched-body"]')) return active;
+      const fallback = consultorioPanel?.querySelector('.tab-pane[id^="sede"] tbody[id^="sched-body"]')?.closest('.tab-pane[id^="sede"]') || null;
+      return fallback;
+    };
+    const resolveConsultorioIdFromPane = (pane)=>{
+      const paneId = String(pane?.id || '').trim();
+      const match = /^sede(\d+)$/.exec(paneId);
+      if(!match) return '';
+      return String(Number(match[1]) || '').trim();
+    };
+    const resolveScheduleDom = ()=>{
+      const pane = resolveActiveConsultorioPane();
+      const bodyEl = pane?.querySelector('tbody[id^="sched-body"]') || document.getElementById('sched-body');
+      const copyBtn = pane?.querySelector('button[id^="sched-copy-mon"]') || document.getElementById('sched-copy-mon');
+      const clearBtn = pane?.querySelector('button[id^="sched-clear"]') || document.getElementById('sched-clear');
+      return { pane, bodyEl, copyBtn, clearBtn };
+    };
+    const ensureNoteNode = ()=>{
+      const card = activeBody?.closest('.sched-card');
+      if(!card) return null;
+      let note = card.querySelector('[data-sched-sync-note="1"]');
       if(!note){
         note = document.createElement('div');
-        note.id = 'sched-sync-note';
+        note.dataset.schedSyncNote = '1';
         note.className = 'small mt-2 text-muted';
-        const card = body.closest('.sched-card');
-        if(card) card.appendChild(note);
+        card.appendChild(note);
       }
+      return note;
+    };
+    const showNote = (message = '', tone = 'muted')=>{
+      const note = ensureNoteNode();
+      if(!note) return;
       note.classList.remove('text-muted', 'text-danger', 'text-success');
       note.classList.add(
         tone === 'danger' ? 'text-danger' : (tone === 'success' ? 'text-success' : 'text-muted')
       );
       note.textContent = String(message || '');
+    };
+    const mountActiveScheduleGrid = ()=>{
+      const dom = resolveScheduleDom();
+      if(!dom.bodyEl) return false;
+      if(activeBody === dom.bodyEl) return true;
+      if(saveTimer){
+        window.clearTimeout(saveTimer);
+        saveTimer = null;
+      }
+      rowRefs.clear();
+      activeBody = dom.bodyEl;
+      activeCopyBtn = dom.copyBtn || null;
+      activeClearBtn = dom.clearBtn || null;
+      activePane = dom.pane || null;
+      activeBody.innerHTML = '';
+      const paneKeyRaw = String(activePane?.id || 'sede1');
+      const paneKey = paneKeyRaw.replace(/[^a-zA-Z0-9_-]/g, '_');
+      DAYS.forEach((day)=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${day.label}</td>
+      <td><input type="checkbox" class="form-check-input" id="sch-act-${paneKey}-${day.key}"></td>
+      <td><div class="d-flex align-items-center gap-1"><input type="time" class="form-control form-control-sm" id="sch-a1-${paneKey}-${day.key}" placeholder="${DEFAULT_TIMES.a1}"><span>-</span><input type="time" class="form-control form-control-sm" id="sch-b1-${paneKey}-${day.key}" placeholder="${DEFAULT_TIMES.b1}"></div></td>
+      <td><div class="d-flex align-items-center gap-1"><input type="time" class="form-control form-control-sm" id="sch-a2-${paneKey}-${day.key}" placeholder="${DEFAULT_TIMES.a2}"><span>-</span><input type="time" class="form-control form-control-sm" id="sch-b2-${paneKey}-${day.key}" placeholder="${DEFAULT_TIMES.b2}"></div></td>`;
+        activeBody.appendChild(tr);
+        const ref = {
+          tr,
+          act: tr.querySelector(`#sch-act-${paneKey}-${day.key}`),
+          a1: tr.querySelector(`#sch-a1-${paneKey}-${day.key}`),
+          b1: tr.querySelector(`#sch-b1-${paneKey}-${day.key}`),
+          a2: tr.querySelector(`#sch-a2-${paneKey}-${day.key}`),
+          b2: tr.querySelector(`#sch-b2-${paneKey}-${day.key}`)
+        };
+        rowRefs.set(day.key, ref);
+        state[day.key] = { act: false, a1: '', b1: '', a2: '', b2: '' };
+
+        ref.act.addEventListener('change', ()=>{
+          if(ref.act.checked){
+            if(!normalizeTime(ref.a1.value)) ref.a1.value = DEFAULT_TIMES.a1;
+            if(!normalizeTime(ref.b1.value)) ref.b1.value = DEFAULT_TIMES.b1;
+          }else{
+            ref.a1.value = '';
+            ref.b1.value = '';
+            ref.a2.value = '';
+            ref.b2.value = '';
+          }
+          updateStateFromRow(day.key);
+          queuePersist();
+        });
+        [ref.a1, ref.b1, ref.a2, ref.b2].forEach((input)=>{
+          input.addEventListener('input', ()=>{
+            if(normalizeTime(input.value) && !ref.act.checked){
+              ref.act.checked = true;
+            }
+            updateStateFromRow(day.key);
+            queuePersist();
+          });
+          input.addEventListener('change', ()=>{
+            updateStateFromRow(day.key);
+            queuePersist();
+          });
+        });
+      });
+      if(activeCopyBtn){
+        activeCopyBtn.onclick = ()=>{
+          const monday = { ...(state.mon || { act: false, a1: '', b1: '', a2: '', b2: '' }) };
+          ['tue', 'wed', 'thu', 'fri'].forEach((key)=>{ state[key] = { ...monday }; });
+          applyStateToRows();
+          persistSchedule().catch(()=> null);
+        };
+      }
+      if(activeClearBtn){
+        activeClearBtn.onclick = ()=>{
+          clearState();
+          persistSchedule().catch(()=> null);
+        };
+      }
+      applyStateToRows();
+      return true;
     };
     const resolveScheduleContext = ()=>{
       const doctorId = String(
@@ -7539,9 +8103,11 @@ console.info('app.js loaded :: 20251123a');
       const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
         ? window.mxmedResolveActiveProfessionalContext()
         : null;
+      const paneConsultorioId = resolveConsultorioIdFromPane(activePane || resolveActiveConsultorioPane());
       const consultorioEl = document.getElementById('ag_consultorio_filter');
       const consultorioId = String(
-        consultorioEl?.value
+        paneConsultorioId
+        || consultorioEl?.value
         || activeProfessional?.default_consultorio_id
         || window.mxmedStore?.consultorio_id
         || window.mxmedStore?.default_consultorio_id
@@ -7555,10 +8121,8 @@ console.info('app.js loaded :: 20251123a');
           if(el) el.disabled = !enabled;
         });
       });
-      ['sched-copy-mon', 'sched-clear'].forEach((id)=>{
-        const btn = document.getElementById(id);
-        if(btn) btn.disabled = !enabled;
-      });
+      if(activeCopyBtn) activeCopyBtn.disabled = !enabled;
+      if(activeClearBtn) activeClearBtn.disabled = !enabled;
     };
     const markRow = (ref)=>{
       if(!ref) return;
@@ -7617,11 +8181,13 @@ console.info('app.js loaded :: 20251123a');
         };
       });
     };
-    const persistSchedule = async ()=>{
+    const persistSchedule = async (forcedContext = null)=>{
       if(loading || saving) return;
-      const { doctorId, consultorioId } = resolveScheduleContext();
+      const context = forcedContext || resolveScheduleContext();
+      const doctorId = String(context?.doctorId || '').trim();
+      const consultorioId = String(context?.consultorioId || '').trim();
       if(!doctorId || !consultorioId){
-        showNote('Define doctor/consultorio activo para guardar horarios oficiales.', 'danger');
+        showNote('Define doctor/consultorio activo en esta sección para guardar horarios oficiales.', 'danger');
         return;
       }
       saving = true;
@@ -7644,10 +8210,14 @@ console.info('app.js loaded :: 20251123a');
       }
     };
     const queuePersist = ()=>{
+      const contextSnapshot = resolveScheduleContext();
       if(saveTimer) window.clearTimeout(saveTimer);
-      saveTimer = window.setTimeout(()=>{ persistSchedule().catch(()=> null); }, 420);
+      saveTimer = window.setTimeout(()=>{ persistSchedule(contextSnapshot).catch(()=> null); }, 420);
     };
     const hydrateFromBackend = async ()=>{
+      if(!mountActiveScheduleGrid()){
+        return;
+      }
       const { doctorId, consultorioId } = resolveScheduleContext();
       const contextKey = `${doctorId}::${consultorioId}`;
       if(contextKey === currentContextKey && loadedOnce) return;
@@ -7655,7 +8225,7 @@ console.info('app.js loaded :: 20251123a');
       if(!doctorId || !consultorioId){
         clearState();
         setFormEnabled(false);
-        showNote('Selecciona contexto válido (doctor/consultorio) para editar horario oficial.', 'danger');
+        showNote('Selecciona un consultorio activo en esta sección para editar horario oficial.', 'danger');
         return;
       }
       loading = true;
@@ -7698,67 +8268,24 @@ console.info('app.js loaded :: 20251123a');
         loading = false;
       }
     };
-
-    body.innerHTML = '';
-    DAYS.forEach((day)=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${day.label}</td>
-      <td><input type="checkbox" class="form-check-input" id="sch-act-${day.key}"></td>
-      <td><div class="d-flex align-items-center gap-1"><input type="time" class="form-control form-control-sm" id="sch-a1-${day.key}" placeholder="${DEFAULT_TIMES.a1}"><span>-</span><input type="time" class="form-control form-control-sm" id="sch-b1-${day.key}" placeholder="${DEFAULT_TIMES.b1}"></div></td>
-      <td><div class="d-flex align-items-center gap-1"><input type="time" class="form-control form-control-sm" id="sch-a2-${day.key}" placeholder="${DEFAULT_TIMES.a2}"><span>-</span><input type="time" class="form-control form-control-sm" id="sch-b2-${day.key}" placeholder="${DEFAULT_TIMES.b2}"></div></td>`;
-      body.appendChild(tr);
-      const ref = {
-        tr,
-        act: tr.querySelector(`#sch-act-${day.key}`),
-        a1: tr.querySelector(`#sch-a1-${day.key}`),
-        b1: tr.querySelector(`#sch-b1-${day.key}`),
-        a2: tr.querySelector(`#sch-a2-${day.key}`),
-        b2: tr.querySelector(`#sch-b2-${day.key}`)
-      };
-      rowRefs.set(day.key, ref);
-      state[day.key] = { act: false, a1: '', b1: '', a2: '', b2: '' };
-
-      ref.act.addEventListener('change', ()=>{
-        if(ref.act.checked){
-          if(!normalizeTime(ref.a1.value)) ref.a1.value = DEFAULT_TIMES.a1;
-          if(!normalizeTime(ref.b1.value)) ref.b1.value = DEFAULT_TIMES.b1;
-        }else{
-          ref.a1.value = '';
-          ref.b1.value = '';
-          ref.a2.value = '';
-          ref.b2.value = '';
-        }
-        updateStateFromRow(day.key);
-        queuePersist();
-      });
-      [ref.a1, ref.b1, ref.a2, ref.b2].forEach((input)=>{
-        input.addEventListener('input', ()=>{
-          if(normalizeTime(input.value) && !ref.act.checked){
-            ref.act.checked = true;
-          }
-          updateStateFromRow(day.key);
-          queuePersist();
-        });
-        input.addEventListener('change', ()=>{
-          updateStateFromRow(day.key);
-          queuePersist();
-        });
-      });
+    const handleConsultorioTabSwitch = ()=>{
+      currentContextKey = '';
+      loadedOnce = false;
+      hydrateFromBackend().catch(()=> null);
+    };
+    document.querySelector('#p-consultorio .mm-tabs-embed')?.addEventListener('shown.bs.tab', (event)=>{
+      const target = event.target instanceof Element ? event.target : null;
+      const targetPane = String(target?.getAttribute('data-bs-target') || '');
+      if(!targetPane.startsWith('#sede')) return;
+      handleConsultorioTabSwitch();
     });
-
-    document.getElementById('sched-copy-mon')?.addEventListener('click', ()=>{
-      const monday = { ...(state.mon || { act: false, a1: '', b1: '', a2: '', b2: '' }) };
-      ['tue', 'wed', 'thu', 'fri'].forEach((key)=>{ state[key] = { ...monday }; });
-      applyStateToRows();
-      persistSchedule().catch(()=> null);
+    document.querySelector('#p-consultorio .mm-tabs-embed')?.addEventListener('click', (event)=>{
+      const btn = event.target instanceof Element ? event.target.closest('[data-bs-target^="#sede"]') : null;
+      if(!btn) return;
+      window.setTimeout(()=>{ handleConsultorioTabSwitch(); }, 0);
     });
-    document.getElementById('sched-clear')?.addEventListener('click', ()=>{
-      clearState();
-      persistSchedule().catch(()=> null);
-    });
-
     const consultorioFilter = document.getElementById('ag_consultorio_filter');
-    consultorioFilter?.addEventListener('change', ()=>{ hydrateFromBackend().catch(()=> null); });
+    consultorioFilter?.addEventListener('change', ()=>{ handleConsultorioTabSwitch(); });
     window.setTimeout(()=>{ hydrateFromBackend().catch(()=> null); }, 0);
     return;
 
@@ -8215,6 +8742,7 @@ console.info('app.js loaded :: 20251123a');
     const debounce = (fn, ms)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn.apply(null,a), ms); } };
 
     const update = debounce(()=>{
+      if(window.__mxmedConsultorioMapManaged === true) return;
 
       const addr = buildAddress();
 
@@ -8474,20 +9002,44 @@ console.info('app.js loaded :: 20251123a');
 
   // Grupo Medico: habilitar/deshabilitar campo segun radios
   (function setupGrupoMedico(){
+    if(window.__mxmedConsultorioGroupManaged !== false){
+      return;
+    }
     const rSi = document.getElementById('cons-grupo-si');
     const rNo = document.getElementById('cons-grupo-no');
     const grp = document.getElementById('cons-grupo-nombre');
+    const hint = document.getElementById('cons-base-name-hint');
+    const grpWrap = grp?.closest('[class*="col-"]');
     if(!rSi || !rNo || !grp) return;
+    const syncHint = ()=>{
+      const groupName = (grp.value || '').trim();
+      if(!hint) return;
+      if(rSi.checked && groupName){
+        hint.textContent = `Pertenece a: ${groupName}`;
+        hint.classList.remove('d-none');
+      }else{
+        hint.textContent = '';
+        hint.classList.add('d-none');
+      }
+    };
     const sync = ()=>{
       if(rSi.checked){
+        if(grpWrap) grpWrap.classList.remove('d-none');
         grp.removeAttribute('disabled');
-        grp.focus();
+        grp.setAttribute('readonly','readonly');
+        grp.setAttribute('aria-readonly','true');
       }else{
+        if(grpWrap) grpWrap.classList.add('d-none');
         grp.setAttribute('disabled','disabled');
+        grp.removeAttribute('readonly');
+        grp.removeAttribute('aria-readonly');
       }
+      syncHint();
     };
     rSi.addEventListener('change', sync);
     rNo.addEventListener('change', sync);
+    grp.addEventListener('input', syncHint);
+    grp.addEventListener('change', syncHint);
     sync();
   })();
 
@@ -30370,8 +30922,12 @@ console.info('app.js loaded :: 20251123a');
 // ===== Sugerencia de Grupo Medico y sincronizacion de logotipo (demo) =====
 
 (function setupGrupoMedicoSuggest(){
+  if(window.__mxmedConsultorioGroupManaged !== false){
+    return;
+  }
 
-  const keyAssoc = 'grupo_MÃƒÂ©dico_assoc';
+  let assocState = null;
+  let searchReqSeq = 0;
 
 
 
@@ -30394,40 +30950,6 @@ console.info('app.js loaded :: 20251123a');
     };
 
   }
-
-
-
-  function suggestGroup(addr){
-
-    const hasCore = addr.cp && addr.col && addr.mun && addr.edo;
-
-    if(!hasCore) return null;
-
-    const logo = 'data:image/svg+xml;utf8,'+
-
-      '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240">'+
-
-      '<rect width="100%" height="100%" fill="%2300ADC1"/>'+
-
-      '<text x="50%" y="55%" font-size="96" text-anchor="middle" fill="white" font-family="Arial">GM</text>'+
-
-      '</svg>';
-
-    return {
-
-      id: 'demo-123',
-
-      nombre: 'Grupo M\u00E9dico Central',
-
-      addr: [addr.col, addr.mun, addr.edo].filter(Boolean).join(', '),
-
-      logo_url: logo
-
-    };
-
-  }
-
-
 
   function showModal(s){
 
@@ -30490,9 +31012,6 @@ console.info('app.js loaded :: 20251123a');
 
 
   function decline(_s, modal){
-
-    try{ localStorage.setItem(keyAssoc+':decline', JSON.stringify({ when: Date.now(), addr: getAddr() })); }catch(_){ }
-
     modal?.hide();
 
   }
@@ -30582,17 +31101,10 @@ console.info('app.js loaded :: 20251123a');
 
       let current = s;
 
-      try{
-
-        const stored = JSON.parse(localStorage.getItem(keyAssoc)||'null');
-
-        if(stored) current = stored;
-
-      }catch(_){ }
+      if(assocState) current = assocState;
 
       openUnlinkModal(current, ()=>{
-
-        try{ localStorage.removeItem(keyAssoc); localStorage.removeItem(keyAssoc+':decline'); }catch(_){ }
+        assocState = null;
 
         removeAssocUI();
 
@@ -30839,55 +31351,53 @@ console.info('app.js loaded :: 20251123a');
 
 
 
-  function buildDemoLogo(text, color){
-
-    const svg =
-
-      `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240">`+
-
-      `<rect width="100%" height="100%" rx="28" fill="${color}"/>`+
-
-      `<text x="50%" y="55%" font-size="72" text-anchor="middle" fill="white" font-family="Arial,Helvetica,sans-serif">${text}</text>`+
-
-      `</svg>`;
-    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  function resolveDoctorIdForGroups(){
+    const candidates = [
+      (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : ''),
+      window.mxmedStore?.doctor_id,
+      window.mxmedStore?.doctorId,
+      window.mxmedStore?.doctorProfile?.doctor_id,
+      window.mxmedDoctor?.doctor_id,
+      document.body?.dataset?.doctorId
+    ];
+    for(const candidate of candidates){
+      const value = String(candidate || '').trim();
+      if(value) return value;
+    }
+    return '';
   }
-  const DEMO_GROUPS = [
-    {
-      id:'grp-star',
-      nombre:'Star M\u00e9dica',
-      calle:'Av. Aguascalientes',
-      numext:'1420',
-      addr:'Aguascalientes Centro',
-      logo_url: 'assets/img/star medica.svg'
-    },
-    {
-      id:'grp-san-juan',
-      nombre:'M\u00e9dica San Juan',
-      calle:'Adolfo L\u00f3pez Mateos',
-      numext:'892',
-      addr:'Zona Centro',
-      logo_url: 'assets/img/medica san juan.png'
-    }
-  ];
 
+  async function listMatches(addr, query = ''){
+    const doctorId = resolveDoctorIdForGroups();
+    const params = new URLSearchParams();
+    const q = String(query || '').trim();
+    if(q) params.set('q', q);
+    if(addr?.cp) params.set('cp', String(addr.cp).trim());
+    if(addr?.col) params.set('colonia', String(addr.col).trim());
+    if(doctorId) params.set('doctor_id', doctorId);
+    const qs = params.toString();
+    const url = `/api/agenda/index.php/medical-groups/search${qs ? `?${qs}` : ''}`;
 
-  function listMatches(addr){
-
-    if(addr && addr.col){
-
-      // Priorizar grupo dependiendo de la colonia (demostraci?n simple)
-
-      if(/centro/i.test(addr.col)){
-
-        return DEMO_GROUPS;
-
+    try{
+      const resp = await fetch(url, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: { 'Accept':'application/json' }
+      });
+      const json = await resp.json().catch(()=>null);
+      if(!resp.ok || !json || json.ok !== true || !Array.isArray(json.data)){
+        return [];
       }
-
+      return json.data.map((row)=>({
+        id: String(row?.group_id || '').trim(),
+        nombre: String(row?.display_name || '').trim(),
+        addr: '',
+        logo_url: String(row?.logo_url_approved || '').trim(),
+        status: String(row?.status || '').trim()
+      })).filter((item)=> item.id && item.nombre);
+    }catch(_){
+      return [];
     }
-
-    return DEMO_GROUPS;
-
   }
 
 
@@ -30898,7 +31408,9 @@ console.info('app.js loaded :: 20251123a');
 
     if(!tit) return;
 
-    tit.value = 'Consultorio ' + (name || '');
+    if((tit.value || '').trim() !== '') return;
+
+    tit.value = (name || '').trim();
 
     tit.dataset.autofill = '1';
 
@@ -30988,7 +31500,7 @@ console.info('app.js loaded :: 20251123a');
 
     fillConsultorioTitle(group.nombre);
 
-    try{ localStorage.setItem(keyAssoc, JSON.stringify(group)); }catch(_){ }
+    assocState = group ? { ...group } : null;
 
     applyAssocUI(group);
 
@@ -30998,21 +31510,24 @@ console.info('app.js loaded :: 20251123a');
 
     clearTimeout(debounceT);
 
-    debounceT = setTimeout(()=>{
+    debounceT = setTimeout(async ()=>{
 
       if(window._mx_suggestBusy) return;
 
       const a = getAddr();
 
-      const matches = listMatches(a);
+      const currentSeq = ++searchReqSeq;
+      const grp = document.getElementById('cons-grupo-nombre');
+      const query = (grp?.value || '').trim();
+      const matches = await listMatches(a, query);
+      if(currentSeq !== searchReqSeq) return;
 
       try{ window._mx_lastGroupMatches = matches; }catch(_){ }
 
       const rSi = document.getElementById('cons-grupo-si');
 
-      const grp = document.getElementById('cons-grupo-nombre');
-
       if(rSi && rSi.checked && grp === document.activeElement){ if(matches && matches.length){ showInline(matches, grp); } }
+      else { hideInline(); }
 
     }, 400);
 
@@ -31021,14 +31536,7 @@ console.info('app.js loaded :: 20251123a');
 
 
   function init(){
-
-    try{
-
-      const saved = JSON.parse(localStorage.getItem(keyAssoc)||'null');
-
-      if(saved) applyAssocUI(saved);
-
-    }catch(_){ }
+    if(assocState) applyAssocUI(assocState);
 
     ;['cp','colonia','municipio','estado','cons-calle','cons-numext'].forEach(id=>{
 
@@ -31046,7 +31554,12 @@ console.info('app.js loaded :: 20251123a');
 
     if(grp){
 
-      grp.addEventListener('focus', ()=>{ if(!(rSi && rSi.checked)) return; const a=getAddr(); const m=listMatches(a); if(m && m.length){ showInline(m, grp); } });
+      grp.addEventListener('focus', async ()=>{
+        if(!(rSi && rSi.checked)) return;
+        const a = getAddr();
+        const m = await listMatches(a, (grp.value || '').trim());
+        if(m && m.length){ showInline(m, grp); }
+      });
 
       grp.addEventListener('input', ()=> hideInline());
 
@@ -31054,7 +31567,16 @@ console.info('app.js loaded :: 20251123a');
 
     }
 
-    if(rSi){ rSi.addEventListener('change', ()=>{ if(suppressGroupChange) return; if(rSi.checked && grp){ const a=getAddr(); const m=listMatches(a); if(m && m.length){ showInline(m, grp); grp.focus(); } }}); }
+    if(rSi){
+      rSi.addEventListener('change', async ()=>{
+        if(suppressGroupChange) return;
+        if(rSi.checked && grp){
+          const a = getAddr();
+          const m = await listMatches(a, (grp.value || '').trim());
+          if(m && m.length){ showInline(m, grp); grp.focus(); }
+        }
+      });
+    }
 
     // Si el usuario teclea en el t?tulo, deja de ser autogenerado
 
@@ -31070,13 +31592,12 @@ console.info('app.js loaded :: 20251123a');
 
       // Si hay asociaci?n vigente, confirmar desvincular
 
-      let saved=null; try{ saved = JSON.parse(localStorage.getItem(keyAssoc)||'null'); }catch(_){ saved=null; }
+      const saved = assocState;
 
       if(saved){
 
         openUnlinkModal(saved, ()=>{
-
-          try{ localStorage.removeItem(keyAssoc); localStorage.removeItem(keyAssoc+':decline'); }catch(_){ }
+          assocState = null;
 
           removeAssocUI();
 
@@ -31241,10 +31762,6 @@ console.info('app.js loaded :: 20251123a');
       try{
 
         // Limpiar claves principales usadas en esta secci?n
-
-        localStorage.removeItem('grupo_MÃƒÂ©dico_assoc');
-
-        localStorage.removeItem('grupo_MÃƒÂ©dico_assoc:decline');
 
         localStorage.removeItem('mxmed_cons_schedules');
 
@@ -31534,28 +32051,10 @@ function mxResolveActiveDoctorId(){
   return '';
 }
 
-function mxGroupLogoStorageKey(doctorIdInput = ''){
-  const doctorId = String(doctorIdInput || mxResolveActiveDoctorId() || '').trim();
-  if(!doctorId) return '';
-  return `mxmed.group.logo_url:${doctorId}`;
-}
-
 function mxPersistGroupLogoUrl(raw, options = {}){
   const clear = options && options.clear === true;
   const value = clear ? '' : mxNormalizeGroupLogoUrl(raw);
   const doctorId = mxResolveActiveDoctorId();
-  const scopedKey = mxGroupLogoStorageKey(doctorId);
-  try{
-    // Legacy global key cleanup to prevent cross-user contamination.
-    window.localStorage?.removeItem('mxmed.group.logo_url');
-    if(scopedKey){
-      if(clear || !value){
-        window.localStorage?.removeItem(scopedKey);
-      }else{
-        window.localStorage?.setItem(scopedKey, value);
-      }
-    }
-  }catch(_){ }
   try{
     if(!window.mxmedStore || typeof window.mxmedStore !== 'object'){
       window.mxmedStore = {};
@@ -31563,7 +32062,7 @@ function mxPersistGroupLogoUrl(raw, options = {}){
     window.mxmedStore.group_logo_url = value;
     window.mxmedStore.groupLogoUrl = value;
     window.mxmedStore.group_logo_doctor_id = doctorId || '';
-    window.mxmedStore.group_logo_storage_key = scopedKey || '';
+    window.mxmedStore.group_logo_storage_key = '';
     if(window.mxmedStore.doctorProfile && typeof window.mxmedStore.doctorProfile === 'object'){
       window.mxmedStore.doctorProfile.group_logo_url = value;
     }
@@ -31578,13 +32077,7 @@ function mxReadPersistedGroupLogoUrl(){
   if(fromStore && activeDoctorId && storeDoctorId && activeDoctorId === storeDoctorId){
     return fromStore;
   }
-  try{
-    const scopedKey = mxGroupLogoStorageKey(activeDoctorId);
-    if(!scopedKey) return '';
-    return mxNormalizeGroupLogoUrl(window.localStorage?.getItem(scopedKey) || '');
-  }catch(_){
-    return '';
-  }
+  return '';
 }
 
 window.mxPersistGroupLogoUrl = mxPersistGroupLogoUrl;

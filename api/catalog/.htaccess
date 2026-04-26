@@ -1,0 +1,5 @@
+RewriteEngine On
+
+# Permite ruta amigable: /api/catalog/cp/45030
+RewriteRule ^cp/([0-9]{5})/?$ index.php/cp/$1 [L,QSA]
+RewriteRule ^cp/?$ index.php/cp [L,QSA]
