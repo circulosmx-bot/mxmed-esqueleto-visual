@@ -247,50 +247,118 @@ console.info('app.js loaded :: 20251123a');
 (function(){
   const grid = document.querySelector('.mm-grid.page') || document.querySelector('.mm-grid');
   const sidebar = document.getElementById('mmSidebar');
-  if(!grid || !sidebar) return;
+  const body = document.body;
+  if(!grid || !sidebar || !body) return;
 
-  const STORAGE_KEY = 'mxmed.shell.sidebar.expanded';
+  const STORAGE_KEY = 'mxmed.sidebar.state';
+  const LEGACY_STORAGE_KEY = 'mxmed.shell.sidebar.expanded';
   const toggleBtn = sidebar.querySelector('[data-action="sidebar-toggle"]');
   const desktopQuery = window.matchMedia('(min-width: 993px)');
   let expanded = false;
+  let resizeEmitTimer = null;
 
   const isDesktop = ()=> desktopQuery.matches;
-  const readPersistedExpanded = ()=>{
-    try{
-      const raw = String(window.localStorage?.getItem(STORAGE_KEY) || '').trim().toLowerCase();
-      return raw === '1' || raw === 'true';
-    }catch(_){
-      return false;
-    }
+  const normalizedState = (raw)=>{
+    const value = String(raw || '').trim().toLowerCase();
+    return value === 'expanded' ? 'expanded' : 'collapsed';
   };
-  const persistExpanded = (value)=>{
+  const readPersistedState = ()=>{
     try{
-      window.localStorage?.setItem(STORAGE_KEY, value ? '1' : '0');
+      const raw = String(window.localStorage?.getItem(STORAGE_KEY) || '').trim();
+      if(raw){
+        return normalizedState(raw);
+      }
+      const legacy = String(window.localStorage?.getItem(LEGACY_STORAGE_KEY) || '').trim().toLowerCase();
+      if(legacy === '1' || legacy === 'true'){
+        return 'expanded';
+      }
+      if(legacy === '0' || legacy === 'false'){
+        return 'collapsed';
+      }
+    }catch(_){}
+    return 'expanded';
+  };
+  const persistState = (nextState)=>{
+    try{
+      window.localStorage?.setItem(STORAGE_KEY, nextState);
+      window.localStorage?.setItem(LEGACY_STORAGE_KEY, nextState === 'expanded' ? '1' : '0');
     }catch(_){}
   };
+  const updateNavTooltips = ()=>{
+    const shouldShowTitle = isDesktop() && !expanded;
+    sidebar.querySelectorAll('.menu-main, .menu-sub-btn').forEach((node)=>{
+      if(!node) return;
+      const currentTitle = String(node.getAttribute('data-label-title') || '').trim();
+      if(!currentTitle){
+        const derived = String(
+          node.querySelector('.ttl')?.textContent
+          || node.querySelector('.l1')?.textContent
+          || node.textContent
+          || ''
+        ).trim();
+        if(derived){
+          node.setAttribute('data-label-title', derived);
+        }
+      }
+      const label = String(node.getAttribute('data-label-title') || '').trim();
+      if(!label) return;
+      if(shouldShowTitle){
+        node.setAttribute('title', label);
+      }else{
+        node.removeAttribute('title');
+      }
+    });
+  };
+  const emitSidebarToggle = ()=>{
+    if(resizeEmitTimer){
+      window.clearTimeout(resizeEmitTimer);
+    }
+    resizeEmitTimer = window.setTimeout(()=>{
+      window.dispatchEvent(new CustomEvent('mxmed:sidebar-toggled', {
+        detail: {
+          state: expanded ? 'expanded' : 'collapsed',
+          expanded
+        }
+      }));
+    }, 120);
+  };
   const syncClasses = ()=>{
+    const collapsed = !expanded;
     if(!isDesktop()){
       grid.classList.remove('is-sidebar-collapsed', 'is-sidebar-expanded');
+      body.classList.remove('mx-sidebar-collapsed', 'mx-sidebar-expanded');
       if(toggleBtn){
         toggleBtn.setAttribute('aria-expanded', 'false');
         toggleBtn.setAttribute('aria-label', 'Expandir menú lateral');
       }
+      updateNavTooltips();
       return;
     }
     grid.classList.toggle('is-sidebar-expanded', expanded);
-    grid.classList.toggle('is-sidebar-collapsed', !expanded);
+    grid.classList.toggle('is-sidebar-collapsed', collapsed);
+    body.classList.toggle('mx-sidebar-expanded', expanded);
+    body.classList.toggle('mx-sidebar-collapsed', collapsed);
     if(toggleBtn){
       toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
       toggleBtn.setAttribute('aria-label', expanded ? 'Colapsar menú lateral' : 'Expandir menú lateral');
+      toggleBtn.setAttribute('title', expanded ? 'Colapsar menú lateral' : 'Expandir menú lateral');
+    }
+    updateNavTooltips();
+  };
+  const setExpanded = (next, { persist = true, silent = false } = {})=>{
+    const nextExpanded = !!next;
+    const changed = nextExpanded !== expanded;
+    expanded = nextExpanded;
+    syncClasses();
+    if(persist){
+      persistState(expanded ? 'expanded' : 'collapsed');
+    }
+    if(!silent && changed){
+      emitSidebarToggle();
     }
   };
-  const setExpanded = (next, { persist = true } = {})=>{
-    expanded = !!next;
-    syncClasses();
-    if(persist) persistExpanded(expanded);
-  };
 
-  setExpanded(readPersistedExpanded(), { persist: false });
+  setExpanded(readPersistedState() === 'expanded', { persist: false, silent: true });
 
   toggleBtn?.addEventListener('click', (event)=>{
     event.preventDefault();
@@ -622,6 +690,7 @@ console.info('app.js loaded :: 20251123a');
   let eventRescheduleSelectedStart = null;
   let agendaSettingsHydrating = false;
   let agendaSettingsSaveTimer = null;
+  let sidebarResizeTimer = null;
   let agendaSettingsContextKey = '';
   let agendaSettingsLoaded = false;
   const getCurrentMonthStart = ()=> startOfMonth(new Date());
@@ -6931,6 +7000,16 @@ console.info('app.js loaded :: 20251123a');
     window.addEventListener('mxmed:workspace-mode', (event)=>{
       const currentPanelId = sanitizeText(event?.detail?.panelId || '');
       setWorkspaceButtonActive(currentPanelId || panelId);
+    });
+
+    window.addEventListener('mxmed:sidebar-toggled', ()=>{
+      if(!calendar || panel.classList.contains('d-none')) return;
+      if(sidebarResizeTimer){
+        window.clearTimeout(sidebarResizeTimer);
+      }
+      sidebarResizeTimer = window.setTimeout(()=>{
+        stabilizeCalendarViewport();
+      }, 160);
     });
   };
 
