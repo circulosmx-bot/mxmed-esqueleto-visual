@@ -110,3 +110,18 @@ Esta carpeta agrupa los componentes técnicos básicos del módulo Agenda Médic
   - `not_found` con `message: "appointment not found"` cuando la cita no existe  
   - `db_error` con `message: "database error"` en cualquier otro fallo  
 - **Respuestas exitosas:** devuelven `meta.write=no_show`, `meta.events_appended=1`, `meta.flag_appended` (0/1) y `notify_patient`/`contact_method`. Flags no bloquean la operación.
+
+## Ubicación pública del consultorio (base preparada)
+
+- **Captura/corrección en admin:** `assets/js/perfil/consultorio/multisede.js` usa Leaflet para mover pin y confirmar ubicación.
+- **Fuente de verdad operativa:** `consultorios.lat`, `consultorios.lng`, `consultorios.geocode_source`, `consultorios.geocode_updated_at`.
+- **Regla de confirmación:** coordenadas se consideran confirmadas cuando `geocode_source = manual_adjusted`.
+- **Helper reusable (backend):** `modules/agenda/helpers/consultorio_map.php` expone utilidades para construir URL de mapa público:
+  - coordenadas confirmadas -> `https://www.google.com/maps?q={lat},{lng}&z=17&output=embed`
+  - sin coordenadas confirmadas -> fallback visual por dirección textual (sin persistencia adicional).
+- **Contratos de salida en consultorios API (`GET /consultorios`):**
+  - `public_map_has_confirmed_coords`
+  - `public_map_iframe_url`
+  - `public_map_source` (`coordinates_confirmed` / `address_fallback` / `none`)
+  - `address_compact`
+- **Nota de producto:** el perfil público futuro debe consumir `lat/lng` confirmados como fuente principal y no requiere Google Maps API Key para este iframe.

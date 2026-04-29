@@ -3,8 +3,10 @@ namespace Agenda\Controllers;
 
 use Agenda\Repositories\ConsultoriosRepository;
 use PDOException;
+use function Agenda\Helpers\ConsultorioMap\buildConsultorioPublicMapPayload;
 
 require_once __DIR__ . '/../repositories/ConsultoriosRepository.php';
+require_once __DIR__ . '/../helpers/consultorio_map.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
 
 class ConsultoriosController
@@ -234,49 +236,14 @@ class ConsultoriosController
 
         $consultorioId = trim((string)($row['consultorio_id'] ?? $row['id'] ?? ''));
         $titulo = trim((string)($row['titulo'] ?? $row['name'] ?? $row['consultorio_name'] ?? ''));
-        $lat = (isset($row['lat']) && $row['lat'] !== null && $row['lat'] !== '') ? (float)$row['lat'] : null;
-        $lng = (isset($row['lng']) && $row['lng'] !== null && $row['lng'] !== '') ? (float)$row['lng'] : null;
-        $geocodeSource = trim((string)($row['geocode_source'] ?? ''));
-        $addressParts = [
-            trim((string)($row['calle'] ?? '')) . (
-                trim((string)($row['num_ext'] ?? '')) !== ''
-                    ? ' ' . trim((string)($row['num_ext'] ?? ''))
-                    : ''
-            ),
-            trim((string)($row['colonia'] ?? '')),
-            trim((string)($row['cp'] ?? '')),
-            trim((string)($row['municipio'] ?? '')),
-            trim((string)($row['estado'] ?? '')),
-            'México',
-        ];
-        $addressParts = array_values(array_filter(array_map(static function ($part): string {
-            return trim((string)$part);
-        }, $addressParts), static function ($part): bool {
-            return $part !== '';
-        }));
-        $addressCompact = implode(', ', $addressParts);
-
-        $hasConfirmedCoordinates = (
-            $lat !== null
-            && $lng !== null
-            && $geocodeSource === 'manual_adjusted'
-        );
-        $publicMapIframeUrl = '';
-        $publicMapSource = 'none';
-        if ($hasConfirmedCoordinates) {
-            $publicMapIframeUrl = sprintf(
-                'https://www.google.com/maps?q=%s,%s&z=17&output=embed',
-                rawurlencode(number_format($lat, 7, '.', '')),
-                rawurlencode(number_format($lng, 7, '.', ''))
-            );
-            $publicMapSource = 'coordinates_confirmed';
-        } elseif ($addressCompact !== '') {
-            $publicMapIframeUrl = sprintf(
-                'https://www.google.com/maps?q=%s&z=15&output=embed',
-                rawurlencode($addressCompact)
-            );
-            $publicMapSource = 'address_fallback';
-        }
+        $publicMap = buildConsultorioPublicMapPayload($row);
+        $lat = $publicMap['lat'];
+        $lng = $publicMap['lng'];
+        $geocodeSource = trim((string)($publicMap['geocode_source'] ?? ''));
+        $addressCompact = trim((string)($publicMap['address_compact'] ?? ''));
+        $hasConfirmedCoordinates = (bool)($publicMap['public_map_has_confirmed_coords'] ?? false);
+        $publicMapIframeUrl = trim((string)($publicMap['public_map_iframe_url'] ?? ''));
+        $publicMapSource = trim((string)($publicMap['public_map_source'] ?? ''));
 
         return [
             'doctor_id' => trim((string)($row['doctor_id'] ?? '')),
