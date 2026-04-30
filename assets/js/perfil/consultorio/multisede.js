@@ -43,6 +43,15 @@ function mxClearHorarioInputs(inputs){
 }
 
 (function(){
+  const CONSULTORIO_MAP_DEBUG = false;
+  try{
+    console.warn('MXM CONSULTORIO DEBUG:', {
+      event: 'multisede_module_loaded',
+      file: 'assets/js/perfil/consultorio/multisede.js',
+      href: String(window.location?.href || ''),
+      ts: new Date().toISOString()
+    });
+  }catch(_){ }
   const resolveActiveDoctorId = ()=>{
     const candidates = [
       (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : ''),
@@ -176,6 +185,7 @@ function mxClearHorarioInputs(inputs){
 
   // Generalizado: crear consultorio N (2..3)
   function createConsultorio(n){
+    try{ console.warn('MXM CONSULTORIO DEBUG:', { event: 'create_consultorio_start', index: n, ts: new Date().toISOString() }); }catch(_){ }
     if(n < 2) return null; if(n > 3){ alert('Puedes registrar hasta 3 consultorios.'); return null; }
     const nav = document.querySelector('#p-consultorio .mm-tabs-embed');
     const tabContent = document.querySelector('#p-consultorio .tab-content');
@@ -198,8 +208,31 @@ function mxClearHorarioInputs(inputs){
       });
       // renombrar ids con sufijo n
       const sfx = String(n);
-      const ids = ['cp','colonia','mensaje-cp','municipio','estado','cons-grupo-si','cons-grupo-no','cons-grupo-nombre','cons-titulo','cons-base-name-hint','cons-calle','cons-numext','cons-numint','cons-piso','cons-tel1','cons-tel2','cons-tel3','cons-wa','cons-wa-sync','cons-urg1','cons-urg2','sched-body','sched-copy-mon','sched-clear','cons-foto','cons-foto-prev','cons-foto-img','cons-map','cons-map-frame','cons-lat','cons-lng'];
+      const ids = ['cp','colonia','mensaje-cp','municipio','estado','cons-grupo-si','cons-grupo-no','cons-grupo-nombre','cons-titulo','cons-base-name-hint','cons-calle','cons-numext','cons-numint','cons-piso','cons-tel1','cons-tel2','cons-tel3','cons-wa','cons-wa-sync','cons-urg1','cons-urg2','sched-body','sched-copy-mon','sched-clear','cons-foto','cons-foto-prev','cons-foto-img','cons-foto-slot','cons-map','cons-map-frame','cons-lat','cons-lng','cons-logo','cons-logo-slot','cons-logo-prev','cons-logo-img','cons-logo-del','cons-logo-sync','cons-logo-manual'];
       ids.forEach(base=>{ const el = pane.querySelector('#'+base); if(el){ el.id = base + (base==='sched-body'||base==='sched-copy-mon'||base==='sched-clear' ? '-'+sfx : sfx); const lab = pane.querySelector(`label[for="${base}"]`); if(lab) lab.setAttribute('for', el.id); } });
+      const logoDropPane = pane.querySelector('.logo-slot-drop[data-preview-target="cons-logo-prev"]');
+      if(logoDropPane){
+        logoDropPane.setAttribute('data-preview-target', `cons-logo-prev${sfx}`);
+      }
+      // Evitar herencia visual de previews desde sede1 (logo/foto/mapa).
+      const logoPreviewImg = pane.querySelector(`#cons-logo-img${sfx}`);
+      const logoPreviewWrap = pane.querySelector(`#cons-logo-prev${sfx}`);
+      const fotoPreviewImg = pane.querySelector(`#cons-foto-img${sfx}`);
+      const fotoPreviewWrap = pane.querySelector(`#cons-foto-prev${sfx}`);
+      if(logoPreviewImg){ logoPreviewImg.removeAttribute('src'); logoPreviewImg.src = ''; }
+      if(fotoPreviewImg){ fotoPreviewImg.removeAttribute('src'); fotoPreviewImg.src = ''; }
+      if(logoPreviewWrap){ logoPreviewWrap.setAttribute('hidden', 'hidden'); logoPreviewWrap.style.display = 'none'; }
+      if(fotoPreviewWrap){ fotoPreviewWrap.setAttribute('hidden', 'hidden'); fotoPreviewWrap.style.display = 'none'; }
+      const logoSlot = pane.querySelector(`#cons-logo-slot${sfx}`);
+      const fotoSlot = pane.querySelector(`#cons-foto-slot${sfx}`);
+      if(logoSlot){
+        logoSlot.classList.remove('show-preview', 'has-logo');
+        const drop = logoSlot.querySelector('.logo-slot-drop');
+        if(drop){ drop.removeAttribute('hidden'); }
+      }
+      if(fotoSlot){
+        fotoSlot.classList.remove('show-preview', 'has-logo');
+      }
       const groupNo = pane.querySelector(`#cons-grupo-no${sfx}`);
       const groupYes = pane.querySelector(`#cons-grupo-si${sfx}`);
       const groupName = pane.querySelector(`#cons-grupo-nombre${sfx}`);
@@ -210,6 +243,28 @@ function mxClearHorarioInputs(inputs){
       if(groupNo) groupNo.checked = true;
       if(groupYes) groupYes.checked = false;
       if(groupNameWrap) groupNameWrap.classList.add('d-none');
+      // Limpiar artefactos dinámicos del mapa clonados desde sede 1.
+      pane.querySelectorAll('[data-map-geocode-status-for],[data-map-address-debug-for],[data-map-controls-for],[data-map-leaflet-for],[data-map-google-for]').forEach((node)=>{
+        node.remove();
+      });
+      const ratio = pane.querySelector('.ratio');
+      if(ratio){
+        delete ratio._mxMapResizeObserverBound;
+      }
+      const mapFrame = pane.querySelector('iframe[id^="cons-map-frame"]');
+      if(mapFrame){
+        mapFrame.classList.remove('d-none');
+        mapFrame.removeAttribute('data-map-geocode-bound');
+      }
+      // Asegurar estado de mapa independiente para el nuevo consultorio.
+      try{
+        consultorioMapRefreshers.delete(String(n));
+        consultorioMapInvalidators.delete(String(n));
+        consultorioMapLastAddress.delete(String(n));
+        consultorioGeoStateByIndex.delete(String(n));
+        consultorioGoogleMapsByIndex.delete(String(n));
+        consultorioMapGoogleUpgraders.delete(String(n));
+      }catch(_){ }
       if(placeholderRef){ placeholderRef.replaceWith(pane); }
       else { tabContent.appendChild(pane); }
     }
@@ -240,9 +295,37 @@ function mxClearHorarioInputs(inputs){
     try{ setupCpAuto({ cp:'cp'+n, colonia:'colonia'+n, msg:'mensaje-cp'+n, mun:'municipio'+n, est:'estado'+n }); }catch(_){ }
     try{ const cp=document.getElementById('cp'+n), col=document.getElementById('colonia'+n); if(cp&&col){ cp.addEventListener('blur', ()=>{ col.focus(); }); } }catch(_){ }
     try{ if(window._mx_phone_bind){ window._mx_phone_bind(pane); } }catch(_){ }
+    try{ if(typeof window.mxSetupUploadBox === 'function'){ $$('.mf-upload', pane).forEach(window.mxSetupUploadBox); } }catch(_){ }
     try{ const wa=document.getElementById('cons-wa'+n), cb=document.getElementById('cons-wa-sync'+n), dg=document.getElementById('dp-whatsapp'); if(cb&&wa){ const fill=()=>{ if(dg){ wa.value=dg.value||''; wa.dispatchEvent(new Event('input')); } }; const toggle=()=>{ if(cb.checked){ wa.disabled=true; wa.placeholder='+52 ...'; fill(); } else { wa.disabled=false; wa.value=''; wa.placeholder='otro numero Whatsapp'; } }; cb.addEventListener('change',toggle); if(dg) dg.addEventListener('input',()=>{ if(cb.checked) fill(); }); toggle(); } }catch(_){ }
-    try{ if(window._mx_setupSchedulesFor){ window._mx_setupSchedulesFor(pane,'-'+n); } }catch(_){ }
+    // Evitar helper legado que inyecta horarios default en panes clonados.
     try{ bindConsultorioMapByIndex(n); }catch(_){ }
+    try{
+      const root = document.getElementById('p-consultorio');
+      root?.dispatchEvent(new CustomEvent('mx:consultorio-pane-created', { detail: { index: n } }));
+      const paneDebug = document.getElementById(`sede${n}`);
+      console.warn('MXM CONSULTORIO DEBUG:', {
+        event: 'create_consultorio_done',
+        index: n,
+        pane_id: `sede${n}`,
+        map_id: paneDebug?.querySelector('[id^="cons-map-frame"]')?.id || '',
+        logo_input_id: paneDebug?.querySelector('input[id^="cons-logo"]')?.id || '',
+        foto_input_id: paneDebug?.querySelector('input[id^="cons-foto"]')?.id || '',
+        cp_id: paneDebug?.querySelector('input[id^="cp"]')?.id || '',
+        calle_id: paneDebug?.querySelector('input[id^="cons-calle"]')?.id || ''
+      });
+      window.setTimeout(()=>{
+        try{
+          const recalcBtn = paneDebug?.querySelector(`[data-map-recalc-for="cons-map-frame${n}"]`);
+          console.warn('MXM CONSULTORIO DEBUG:', {
+            event: 'post_create_recalc_button_check',
+            index: n,
+            exists: !!recalcBtn,
+            class_name: recalcBtn?.className || '',
+            display: recalcBtn ? window.getComputedStyle(recalcBtn).display : null
+          });
+        }catch(_){ }
+      }, 250);
+    }catch(_){ }
     syncAddTabVisibility();
     return {pane, btn};
   }
@@ -307,11 +390,31 @@ function mxClearHorarioInputs(inputs){
     return null;
   }
   document.getElementById('modalConsulAddYes')?.addEventListener('click', function(){
+    try{ console.warn('MXM CONSULTORIO DEBUG:', { event: 'click_add_consultorio_confirm' }); }catch(_){ }
     const el = document.getElementById('modalConsulAdd');
     if(window.bootstrap && el){ bootstrap.Modal.getInstance(el)?.hide(); }
     const next = nextConsultorioIndex();
     if(!next){ syncAddTabVisibility(); return; }
     if(window._mx_createConsultorio) window._mx_createConsultorio(next); else createSede2IfNeeded();
+    try{
+      if(next === 2){
+        const pane = document.getElementById('sede2');
+        const recalcBtn = pane?.querySelector('[data-map-recalc-for="cons-map-frame2"]');
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'consultorio2_creation_runtime_audit',
+          paneIndex: 2,
+          consultorio_id: '2',
+          paneId: String(pane?.id || 'sede2'),
+          recalcButtonExists: !!recalcBtn,
+          mapContainerId: pane?.querySelector('[id^="cons-map-frame"]')?.id || '',
+          put_triggered: false,
+          put_ok: false,
+          put_status: 0,
+          backend_consultorio_id: '',
+          backend_error: 'pending_put'
+        });
+      }
+    }catch(_){ }
     try{ initAutosave(); }catch(_){ }
   });
 
@@ -431,6 +534,378 @@ function mxClearHorarioInputs(inputs){
   setupCpAuto({ cp:'cp', colonia:'colonia', msg:'mensaje-cp', mun:'municipio', est:'estado' });
 
   window.__mxmedConsultorioMapManaged = true;
+  const googleMapsJsBootstrapState = {
+    started: false,
+    enabled: false,
+    loaded: false,
+    key_source: '',
+    message: '',
+    error: ''
+  };
+  let googleMapsJsBootstrapPromise = null;
+  const consultorioGoogleMapsByIndex = new Map();
+  const consultorioMapGoogleUpgraders = new Map();
+  const logGoogleMapDebug = (event = '', payload = {})=>{
+    try{
+      console.warn('MXM GOOGLE MAP DEBUG:', { event, ...payload });
+    }catch(_){ }
+  };
+
+  function refreshGoogleMapsProviderNotes(){
+    try{
+      const notes = Array.from(document.querySelectorAll('[data-map-provider-note-for]'));
+      if(!notes.length) return;
+      notes.forEach((node)=>{
+        if(!node) return;
+        if(googleMapsJsBootstrapState.enabled === false && googleMapsJsBootstrapState.started){
+          node.textContent = googleMapsJsBootstrapState.message || 'Google Maps JS no configurado';
+          return;
+        }
+        if(googleMapsJsBootstrapState.enabled === true && googleMapsJsBootstrapState.loaded === false && googleMapsJsBootstrapState.error){
+          node.textContent = 'Google Maps no cargó';
+          return;
+        }
+        if(googleMapsJsBootstrapState.enabled === true && googleMapsJsBootstrapState.loaded === true){
+          node.textContent = 'Google Maps JS preparado para la siguiente fase. Mapa actual: Leaflet.';
+          return;
+        }
+        node.textContent = 'Preparando Google Maps JS...';
+      });
+    }catch(_){ }
+  }
+
+  function getDoctorIdForMapBootstrap(){
+    try{
+      const bodyDoctor = String(document.body?.dataset?.doctorId || '').trim();
+      if(bodyDoctor) return bodyDoctor;
+      if(typeof resolveActiveDoctorId === 'function'){
+        const active = String(resolveActiveDoctorId() || '').trim();
+        if(active) return active;
+      }
+      const storeCandidates = [
+        window.mxmedStore?.doctorId,
+        window.mxmedStore?.doctor_id,
+        window.mxmedStore?.doctorProfile?.doctor_id,
+        window.mxmedDoctor?.doctor_id
+      ];
+      for(const candidate of storeCandidates){
+        const v = String(candidate || '').trim();
+        if(v) return v;
+      }
+      if(typeof window.resolveDoctorId === 'function'){
+        const resolved = String(window.resolveDoctorId() || '').trim();
+        if(resolved) return resolved;
+      }
+    }catch(_){ }
+    return '';
+  }
+
+  async function loadGoogleMapsJsLibraryAsync(baseUrl, apiKey){
+    if(window.google && window.google.maps){
+      logGoogleMapDebug('google_script_loaded', { source: 'already_present' });
+      return true;
+    }
+    const existing = document.getElementById('mxm-google-maps-js-loader');
+    if(existing){
+      await new Promise((resolve, reject)=>{
+        const done = ()=> resolve(true);
+        const fail = ()=> reject(new Error('google_maps_js_script_failed'));
+        existing.addEventListener('load', done, { once: true });
+        existing.addEventListener('error', fail, { once: true });
+      }).catch(()=> false);
+      logGoogleMapDebug('google_script_loaded', {
+        source: 'existing_script',
+        google_exists: !!window.google,
+        maps_exists: !!window.google?.maps
+      });
+      return !!(window.google && window.google.maps);
+    }
+    await new Promise((resolve, reject)=>{
+      const script = document.createElement('script');
+      script.id = 'mxm-google-maps-js-loader';
+      script.async = true;
+      script.defer = true;
+      script.src = `${String(baseUrl || 'https://maps.googleapis.com/maps/api/js')}?key=${encodeURIComponent(String(apiKey || '').trim())}&libraries=marker`;
+      script.onload = ()=>{
+        logGoogleMapDebug('google_script_loaded', {
+          source: 'injected_script',
+          src: script.src,
+          google_exists: !!window.google,
+          maps_exists: !!window.google?.maps
+        });
+        resolve(true);
+      };
+      script.onerror = ()=>{
+        logGoogleMapDebug('google_script_error', {
+          source: 'injected_script',
+          src: script.src
+        });
+        reject(new Error('google_maps_js_script_failed'));
+      };
+      document.head.appendChild(script);
+      logGoogleMapDebug('google_script_injected', { src: script.src });
+    });
+    return !!(window.google && window.google.maps);
+  }
+
+  function initGoogleMapByIndex(index = 1){
+    const idx = Number(index || 1) || 1;
+    const ids = resolveConsultorioMapIdsByIndex(idx);
+    const frame = document.getElementById(ids.frame);
+    const ratio = frame?.parentElement || null;
+    if(!frame || !ratio){
+      logGoogleMapDebug('google_init_fallback_leaflet', {
+        reason: 'missing_frame_or_container',
+        consultorio_index: idx,
+        frame_id: ids.frame
+      });
+      return { ok:false, reason:'missing_frame' };
+    }
+    const rect = ratio?.getBoundingClientRect?.() || { width: 0, height: 0 };
+    logGoogleMapDebug('google_container_dimensions', {
+      consultorio_index: idx,
+      frame_id: ids.frame,
+      width: Number(rect.width || 0),
+      height: Number(rect.height || 0)
+    });
+    logGoogleMapDebug('google_init_attempt', {
+      consultorio_index: idx,
+      frame_id: ids.frame,
+      enabled: !!googleMapsJsBootstrapState.enabled,
+      loaded: !!googleMapsJsBootstrapState.loaded,
+      google_exists: !!window.google,
+      maps_exists: !!window.google?.maps
+    });
+    const googleReady = !!(
+      googleMapsJsBootstrapState.enabled
+      && googleMapsJsBootstrapState.loaded
+      && window.google
+      && window.google.maps
+      && typeof window.google.maps.Map === 'function'
+    );
+    if(!googleReady){
+      logGoogleMapDebug('google_init_fallback_leaflet', {
+        reason: 'google_not_ready',
+        consultorio_index: idx,
+        frame_id: ids.frame,
+        enabled: !!googleMapsJsBootstrapState.enabled,
+        loaded: !!googleMapsJsBootstrapState.loaded,
+        google_exists: !!window.google,
+        maps_exists: !!window.google?.maps
+      });
+      return { ok:false, reason:'google_not_ready' };
+    }
+    const existing = consultorioGoogleMapsByIndex.get(String(idx));
+    if(existing?.map && existing?.marker){
+      logGoogleMapDebug('google_init_success', {
+        consultorio_index: idx,
+        frame_id: ids.frame,
+        reused: true
+      });
+      return { ok:true, provider:'google', ...existing };
+    }
+
+    let mapNode = ratio.querySelector(`[data-map-google-for="${frame.id}"]`);
+    if(!mapNode){
+      mapNode = document.createElement('div');
+      mapNode.setAttribute('data-map-google-for', frame.id);
+      mapNode.style.width = '100%';
+      mapNode.style.height = '100%';
+      mapNode.style.position = 'absolute';
+      mapNode.style.top = '0';
+      mapNode.style.left = '0';
+      mapNode.style.zIndex = '3';
+      ratio.appendChild(mapNode);
+    }
+
+    const center = { lat: 21.882, lng: -102.296 };
+    const map = new window.google.maps.Map(mapNode, {
+      center,
+      zoom: 13,
+      draggable: true,
+      streetViewControl: false,
+      mapTypeControl: false,
+      fullscreenControl: false
+    });
+    const marker = new window.google.maps.Marker({
+      map,
+      position: center,
+      draggable: true
+    });
+
+    const runtime = {
+      map,
+      marker,
+      mapNode,
+      provider: 'google'
+    };
+    consultorioGoogleMapsByIndex.set(String(idx), runtime);
+    logGoogleMapDebug('google_init_success', {
+      consultorio_index: idx,
+      frame_id: ids.frame,
+      reused: false
+    });
+    return { ok:true, ...runtime };
+  }
+  window.initGoogleMapByIndex = initGoogleMapByIndex;
+
+  function upgradeExistingPanesToGoogle(){
+    const discovered = new Set();
+    try{
+      Array.from(consultorioMapGoogleUpgraders.keys()).forEach((k)=> discovered.add(Number(k) || 1));
+      Array.from(document.querySelectorAll('iframe[id^="cons-map-frame"]')).forEach((frame)=>{
+        const id = String(frame?.id || '');
+        const suffix = id.replace('cons-map-frame', '').trim();
+        const idx = suffix === '' ? 1 : Number(suffix);
+        if(Number.isFinite(idx) && idx >= 1) discovered.add(idx);
+      });
+    }catch(_){ }
+    const indexes = Array.from(discovered).filter((n)=> Number.isFinite(n) && n >= 1).sort((a,b)=> a-b);
+    logGoogleMapDebug('google_upgrade_existing_panes_start', {
+      indexes
+    });
+    indexes.forEach((index)=>{
+      const upgrader = consultorioMapGoogleUpgraders.get(String(index));
+      if(typeof upgrader !== 'function'){
+        logGoogleMapDebug('google_upgrade_pane_failed', {
+          consultorio_index: Number(index || 1),
+          reason: 'upgrader_missing'
+        });
+        return;
+      }
+      logGoogleMapDebug('google_upgrade_pane_attempt', {
+        consultorio_index: Number(index || 1)
+      });
+      try{
+        const upgraded = upgrader();
+        if(upgraded){
+          logGoogleMapDebug('google_upgrade_pane_success', {
+            consultorio_index: Number(index || 1)
+          });
+        }else{
+          logGoogleMapDebug('google_upgrade_pane_failed', {
+            consultorio_index: Number(index || 1),
+            reason: 'upgrade_returned_false'
+          });
+        }
+      }catch(err){
+        logGoogleMapDebug('google_upgrade_pane_failed', {
+          consultorio_index: Number(index || 1),
+          reason: String(err?.message || 'upgrade_exception')
+        });
+      }
+    });
+  }
+
+  async function bootstrapGoogleMapsJs(){
+    if(googleMapsJsBootstrapPromise) return googleMapsJsBootstrapPromise;
+    googleMapsJsBootstrapState.started = true;
+    googleMapsJsBootstrapPromise = (async ()=>{
+      let doctorId = getDoctorIdForMapBootstrap();
+      if(!doctorId){
+        await new Promise((resolve)=> window.setTimeout(resolve, 160));
+        doctorId = getDoctorIdForMapBootstrap();
+      }
+      const qs = doctorId ? `?doctor_id=${encodeURIComponent(doctorId)}` : '';
+      let response = null;
+      let body = null;
+      logGoogleMapDebug('google_config_request', {
+        endpoint: `/api/agenda/index.php/geocode/google-js-config${qs}`,
+        doctor_id: doctorId || ''
+      });
+      try{
+        response = await fetch(`/api/agenda/index.php/geocode/google-js-config${qs}`, {
+          method: 'GET',
+          credentials: 'same-origin',
+          headers: { 'Accept': 'application/json' }
+        });
+        body = await response.json().catch(()=> null);
+        logGoogleMapDebug('google_config_response', {
+          status: Number(response?.status || 0),
+          ok: response?.ok === true && body?.ok === true,
+          enabled: !!body?.data?.enabled,
+          key_source: String(body?.meta?.key_source || ''),
+          key_prefix: String(body?.meta?.key_prefix || ''),
+          key_length: Number(body?.meta?.key_length || 0),
+          error: String(body?.error || ''),
+          message: String(body?.message || '')
+        });
+      }catch(err){
+        logGoogleMapDebug('google_config_response', {
+          status: 0,
+          ok: false,
+          enabled: false,
+          error: String(err?.message || 'request_failed')
+        });
+      }
+
+      const enabled = !!(
+        response?.ok
+        && body?.ok === true
+        && body?.data?.enabled === true
+        && String(body?.data?.api_key || '').trim() !== ''
+      );
+
+      if(!enabled){
+        googleMapsJsBootstrapState.enabled = false;
+        googleMapsJsBootstrapState.loaded = false;
+        googleMapsJsBootstrapState.key_source = String(body?.meta?.key_source || 'none');
+        googleMapsJsBootstrapState.message = 'Google Maps JS no configurado';
+        googleMapsJsBootstrapState.error = '';
+        try{
+          console.warn('MXM CONSULTORIO DEBUG:', {
+            event: 'google_maps_js_bootstrap_not_configured',
+            key_source: googleMapsJsBootstrapState.key_source,
+            http_status: Number(response?.status || 0)
+          });
+        }catch(_){ }
+        refreshGoogleMapsProviderNotes();
+        logGoogleMapDebug('google_init_fallback_leaflet', {
+          reason: 'config_not_enabled',
+          doctor_id: doctorId || '',
+          key_source: googleMapsJsBootstrapState.key_source || ''
+        });
+        return googleMapsJsBootstrapState;
+      }
+
+      const key = String(body?.data?.api_key || '').trim();
+      const libUrl = String(body?.data?.library_url || 'https://maps.googleapis.com/maps/api/js').trim();
+      googleMapsJsBootstrapState.enabled = true;
+      googleMapsJsBootstrapState.key_source = String(body?.meta?.key_source || '');
+      try{
+        const loaded = await loadGoogleMapsJsLibraryAsync(libUrl, key);
+        googleMapsJsBootstrapState.loaded = !!loaded;
+        googleMapsJsBootstrapState.message = loaded ? 'Google Maps JS cargado (preparado para fase siguiente).' : 'Google Maps JS no pudo cargarse';
+        googleMapsJsBootstrapState.error = loaded ? '' : 'script_not_loaded';
+      }catch(err){
+        googleMapsJsBootstrapState.loaded = false;
+        googleMapsJsBootstrapState.message = 'Google Maps JS no pudo cargarse';
+        googleMapsJsBootstrapState.error = String(err?.message || 'script_error');
+      }
+      refreshGoogleMapsProviderNotes();
+      if(!googleMapsJsBootstrapState.loaded){
+        logGoogleMapDebug('google_init_fallback_leaflet', {
+          reason: googleMapsJsBootstrapState.error || 'script_not_loaded'
+        });
+      }else{
+        upgradeExistingPanesToGoogle();
+      }
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'google_maps_js_bootstrap_result',
+          enabled: googleMapsJsBootstrapState.enabled,
+          loaded: googleMapsJsBootstrapState.loaded,
+          key_source: googleMapsJsBootstrapState.key_source,
+          message: googleMapsJsBootstrapState.message,
+          error: googleMapsJsBootstrapState.error || ''
+        });
+      }catch(_){ }
+      return googleMapsJsBootstrapState;
+    })();
+    return googleMapsJsBootstrapPromise;
+  }
+
+  bootstrapGoogleMapsJs().catch(()=>{});
 
   const consultorioMapRefreshers = new Map();
   const consultorioMapInvalidators = new Map();
@@ -447,6 +922,8 @@ function mxClearHorarioInputs(inputs){
     const raw = String(value || '').trim().toLowerCase();
     if(raw === 'manual_adjusted') return 'manual_adjusted';
     if(raw === 'auto_geocoded') return 'auto_geocoded';
+    if(raw === 'google_suggested') return 'google_suggested';
+    if(raw === 'google_confirmed') return 'google_confirmed';
     if(raw === 'device') return 'device';
     return '';
   }
@@ -597,28 +1074,61 @@ function mxClearHorarioInputs(inputs){
     let controls = host.querySelector(selector);
     if(!controls){
       controls = document.createElement('div');
-      controls.className = 'd-flex flex-wrap align-items-center justify-content-between gap-2 mt-2';
+      controls.className = 'd-flex flex-column gap-2 mt-2';
       controls.setAttribute('data-map-controls-for', frame.id);
       const helper = document.createElement('div');
       helper.className = 'form-text m-0';
       helper.setAttribute('data-map-helper-for', frame.id);
       helper.textContent = 'Si la ubicación no es exacta, arrastra el pin al punto correcto y confirma la ubicación.';
+      const providerNote = document.createElement('div');
+      providerNote.className = 'form-text text-muted m-0';
+      providerNote.setAttribute('data-map-provider-note-for', frame.id);
+      providerNote.textContent = '';
+      const refWrap = document.createElement('div');
+      refWrap.className = 'd-flex flex-column gap-1';
+      refWrap.setAttribute('data-map-reference-wrap-for', frame.id);
+      const refLabel = document.createElement('label');
+      refLabel.className = 'form-label m-0 small';
+      refLabel.setAttribute('for', `${frame.id}-map-reference`);
+      refLabel.textContent = 'Referencia para ubicar mejor (opcional)';
+      const refInput = document.createElement('input');
+      refInput.type = 'text';
+      refInput.className = 'form-control form-control-sm';
+      refInput.id = `${frame.id}-map-reference`;
+      refInput.placeholder = 'Ej. Hospital Médica Norte, Torre B, esquina con Av. Universidad';
+      refInput.setAttribute('data-map-reference-input-for', frame.id);
+      refWrap.appendChild(refLabel);
+      refWrap.appendChild(refInput);
+      const actions = document.createElement('div');
+      actions.className = 'd-flex flex-wrap align-items-center gap-2';
+      const recalcBtn = document.createElement('button');
+      recalcBtn.type = 'button';
+      recalcBtn.className = 'btn btn-outline-secondary btn-sm';
+      recalcBtn.setAttribute('data-map-recalc-for', frame.id);
+      recalcBtn.textContent = 'Buscar ubicación con Google';
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'btn btn-outline-primary btn-sm';
       btn.setAttribute('data-map-confirm-for', frame.id);
       btn.textContent = 'Confirmar ubicación';
-      const recalcBtn = document.createElement('button');
-      recalcBtn.type = 'button';
-      recalcBtn.className = 'btn btn-outline-secondary btn-sm d-none';
-      recalcBtn.setAttribute('data-map-recalc-for', frame.id);
-      recalcBtn.textContent = 'Recalcular ubicación';
-      const actions = document.createElement('div');
-      actions.className = 'd-flex flex-wrap align-items-center gap-2';
       actions.appendChild(recalcBtn);
       actions.appendChild(btn);
+      const helpBlock = document.createElement('div');
+      helpBlock.className = 'form-text text-muted';
+      helpBlock.setAttribute('data-map-help-block-for', frame.id);
+      helpBlock.innerHTML = [
+        '<div><strong>¿El pin no está en el lugar correcto?</strong></div>',
+        '<div>- Mueve el pin manualmente.</div>',
+        '<div>- Intenta con otro número cercano.</div>',
+        '<div>- Busca por nombre del hospital, torre médica o plaza.</div>',
+        '<div>- Usa una esquina cercana.</div>',
+        '<div>- Confirma el pin cuando esté correcto.</div>'
+      ].join('');
       controls.appendChild(helper);
+      controls.appendChild(providerNote);
+      controls.appendChild(refWrap);
       controls.appendChild(actions);
+      controls.appendChild(helpBlock);
       host.appendChild(controls);
     }
     const button = controls.querySelector(`[data-map-confirm-for="${frame.id}"]`);
@@ -629,7 +1139,26 @@ function mxClearHorarioInputs(inputs){
     if(recalcButton && typeof onRecalculate === 'function'){
       recalcButton.onclick = onRecalculate;
     }
+    const providerNoteNode = controls.querySelector(`[data-map-provider-note-for="${frame.id}"]`);
+    if(providerNoteNode){
+      if(googleMapsJsBootstrapState.enabled === false && googleMapsJsBootstrapState.started){
+        providerNoteNode.textContent = googleMapsJsBootstrapState.message || 'Google Maps JS no configurado';
+      }else if(googleMapsJsBootstrapState.enabled === true && googleMapsJsBootstrapState.loaded === false && googleMapsJsBootstrapState.error){
+        providerNoteNode.textContent = 'Google Maps no cargó';
+      }else if(googleMapsJsBootstrapState.enabled === true && googleMapsJsBootstrapState.loaded === true){
+        providerNoteNode.textContent = 'Google Maps JS preparado para la siguiente fase. Mapa actual: Leaflet.';
+      }else{
+        providerNoteNode.textContent = 'Preparando Google Maps JS...';
+      }
+    }
     return { controls, button, recalcButton };
+  }
+
+  function getConsultorioMapReferenceByIds(ids){
+    const frameId = String(ids?.frame || '').trim();
+    if(!frameId) return '';
+    const input = document.querySelector(`[data-map-reference-input-for="${frameId}"]`);
+    return String(input?.value || '').trim();
   }
 
   function buildGeocodeQueriesByIds(ids){
@@ -640,6 +1169,7 @@ function mxClearHorarioInputs(inputs){
     const cp = read(ids.cp);
     const municipio = read(ids.municipio);
     const estado = read(ids.estado);
+    const reference = getConsultorioMapReferenceByIds(ids);
     const calleNum = [calle, numExt].filter(Boolean).join(' ').trim();
     const out = [];
     const pushQuery = (parts, required = [])=>{
@@ -649,8 +1179,12 @@ function mxClearHorarioInputs(inputs){
         out.push(query);
       }
     };
+    pushQuery([calleNum, colonia, cp, municipio, estado, reference, 'México'], [calleNum]);   // 0
     pushQuery([calleNum, colonia, cp, municipio, estado, 'México'], [calleNum]);              // 1
     pushQuery([calle, colonia, cp, municipio, estado, 'México'], [calle]);                    // 2
+    pushQuery([calleNum, municipio, estado, 'México'], [calleNum, municipio]);                // 2b
+    pushQuery([calle, municipio, estado, 'México'], [calle, municipio]);                      // 2c
+    pushQuery([reference, colonia, cp, municipio, estado, 'México'], [reference]);            // 2d
     pushQuery([colonia, cp, municipio, estado, 'México'], [colonia, cp]);                     // 3
     pushQuery([cp, municipio, estado, 'México'], [cp]);                                        // 4
     return out;
@@ -665,261 +1199,159 @@ function mxClearHorarioInputs(inputs){
     if(!queryList.length){
       return null;
     }
-    const expectedParts = getConsultorioAddressPartsByIds(ids);
-    const expectedState = normalizeGeoText(expectedParts.estado || '');
-    const expectedMunicipio = normalizeGeoText(expectedParts.municipio || '');
-    const expectedCp = String(expectedParts.cp || '').trim();
-    const expectedColonia = normalizeGeoText(expectedParts.colonia || '');
-    const expectedStreet = normalizeGeoText([expectedParts.calle || '', expectedParts.num_ext || ''].filter(Boolean).join(' ').trim());
-
-    const classifyCandidate = (item = {}, query = '', endpoint = '', requestUrl = '')=>{
-      const lat = Number(item?.lat);
-      const lng = Number(item?.lon);
-      if(!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-      const addr = (item && typeof item.address === 'object') ? item.address : {};
-      const displayName = String(item?.display_name || '').trim();
-      const typeRaw = String(item?.type || '').trim().toLowerCase();
-      const classRaw = String(item?.class || '').trim().toLowerCase();
-      const importance = Number(item?.importance);
-      const hasPostcode = !!String(addr?.postcode || '').trim();
-      const hasColonia = [
-        addr?.suburb,
-        addr?.neighbourhood,
-        addr?.quarter,
-        addr?.city_district,
-        addr?.residential,
-        addr?.hamlet
-      ].some((v)=> String(v || '').trim() !== '');
-      const hasStreet = [
-        addr?.road,
-        addr?.pedestrian,
-        addr?.footway,
-        addr?.path,
-        addr?.house_number
-      ].some((v)=> String(v || '').trim() !== '');
-      const hasHouseNumber = String(addr?.house_number || '').trim() !== '';
-      const genericType = ['city', 'municipality', 'state', 'county', 'province', 'town', 'village', 'administrative'];
-      const isGeneric = !hasStreet && !hasColonia && !hasPostcode
-        && (genericType.includes(typeRaw) || classRaw === 'boundary' || classRaw === 'place');
-      const isPrecise = (hasColonia || hasPostcode) && !isGeneric;
-      let score = 0;
-      if(hasColonia) score += 30;
-      if(hasPostcode) score += 25;
-      if(hasStreet) score += 35;
-      if(hasHouseNumber) score += 20;
-      if(Number.isFinite(importance)) score += Math.round(Math.max(0, Math.min(1, importance)) * 10);
-      const displayNorm = normalizeGeoText(displayName);
-      const stateNorm = normalizeGeoText(addr?.state || addr?.state_district || '');
-      const cityNorm = normalizeGeoText(
-        addr?.city || addr?.town || addr?.village || addr?.municipality || addr?.county || addr?.city_district || ''
-      );
-      const suburbNorm = normalizeGeoText(
-        addr?.suburb || addr?.neighbourhood || addr?.quarter || addr?.residential || ''
-      );
-      const postcodeRaw = String(addr?.postcode || '').trim();
-      const haystack = [displayNorm, stateNorm, cityNorm, suburbNorm].join(' ');
-      const matchesState = expectedState ? haystack.includes(expectedState) : null;
-      const matchesMunicipio = expectedMunicipio ? haystack.includes(expectedMunicipio) : null;
-      const matchesCp = expectedCp ? (postcodeRaw === expectedCp || displayNorm.includes(expectedCp)) : null;
-      const matchesColonia = expectedColonia ? haystack.includes(expectedColonia) : null;
-      const matchesStreet = expectedStreet ? haystack.includes(normalizeGeoText(expectedParts.calle || '')) : null;
-      let contextScore = 0;
-      if(matchesState === true) contextScore += 60;
-      if(matchesState === false) contextScore -= 120;
-      if(matchesMunicipio === true) contextScore += 35;
-      if(matchesMunicipio === false) contextScore -= 45;
-      if(matchesCp === true) contextScore += 40;
-      if(matchesCp === false) contextScore -= 18;
-      if(matchesColonia === true) contextScore += 25;
-      if(matchesStreet === true) contextScore += 18;
-      score += contextScore;
-      const contextConflict = (
-        (expectedState !== '' && matchesState === false)
-        || (expectedState === '' && expectedCp !== '' && matchesCp === false)
-      );
+    const logGeocodeDebug = (event, extra = {})=>{
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event,
+          consultorio_index: Number(ids?.index || 1),
+          frame_id: String(ids?.frame || ''),
+          ...extra
+        });
+      }catch(_){ }
+    };
+    const summarizeResponse = (result)=>{
+      const candidates = Array.isArray(result?.data?.candidates) ? result.data.candidates : [];
+      const first = candidates[0] || null;
       return {
-        lat,
-        lng,
-        display_name: displayName,
-        importance: Number.isFinite(importance) ? importance : null,
-        type: typeRaw,
-        class: classRaw,
-        has_colonia: hasColonia,
-        has_cp: hasPostcode,
-        has_street: hasStreet,
-        has_house_number: hasHouseNumber,
-        is_precise: isPrecise,
-        is_generic: isGeneric,
-        score,
-        context_score: contextScore,
-        context_conflict: contextConflict,
-        matches_state: matchesState,
-        matches_municipio: matchesMunicipio,
-        matches_cp: matchesCp,
-        matches_colonia: matchesColonia,
-        matches_street: matchesStreet,
-        query,
-        endpoint,
-        request_url: requestUrl,
-        raw: item
+        ok: !!result?.ok,
+        status: Number(result?.status || 0),
+        candidates_count: candidates.length,
+        first_candidate: first ? {
+          lat: Number(first?.lat || NaN),
+          lng: Number(first?.lng || NaN),
+          accuracy: String(first?.accuracy || ''),
+          place_id: String(first?.place_id || ''),
+          formatted_address: String(first?.formatted_address || '').trim()
+        } : null,
+        error: String(result?.error || '').trim(),
+        message: String(result?.message || '').trim()
       };
     };
-
-    const allCandidates = [];
-    const pushCandidatesFromResponse = (data, query, endpoint, requestUrl)=>{
-      const list = Array.isArray(data) ? data : [];
-      list.forEach((item)=>{
-        const candidate = classifyCandidate(item, query, endpoint, requestUrl);
-        if(candidate) allCandidates.push(candidate);
+    const requestGoogleGeocode = async (query)=>{
+      const doctorIdEffective = String(
+        (typeof resolveDoctorId === 'function' ? resolveDoctorId() : '')
+        || (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : '')
+        || document.body?.dataset?.doctorId
+        || ''
+      ).trim();
+      const payload = {
+        query,
+        doctor_id: doctorIdEffective,
+        consultorio_id: String(Number(ids?.index || 1) || 1),
+      };
+      const url = '/api/agenda/index.php/geocode/google';
+      logGeocodeDebug('geocode_request_start', {
+        provider: 'google',
+        endpoint: url,
+        query,
       });
-      const first = allCandidates[allCandidates.length - list.length] || null;
-      try{
-        console.warn('CONSULTORIO MAP GEOCODE RESULT DEBUG:', {
-          action: 'response',
-          direction_sent: query,
-          endpoint,
-          request_url: requestUrl,
-          response: data,
-          lat_lng: first ? { lat: first.lat, lng: first.lng } : null,
-          display_name: first?.display_name || '',
-          importance: first?.importance ?? null,
-          type: first?.type || '',
-          class: first?.class || '',
-          contains_colonia: !!first?.has_colonia,
-          contains_cp: !!first?.has_cp,
-          contains_street: !!first?.has_street
-        });
-      }catch(_){ }
-      return list.length > 0;
-    };
-
-    const fetchJson = async (url, headers = {})=>{
-      const ctrl = new AbortController();
-      const timeout = window.setTimeout(()=> ctrl.abort(), 9000);
       try{
         const resp = await fetch(url, {
-          method: 'GET',
-          headers: { 'Accept': 'application/json', ...headers },
-          signal: ctrl.signal
+          method: 'POST',
+          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(payload),
         });
-        if(!resp.ok) return null;
-        return await resp.json().catch(()=> null);
+        const json = await resp.json().catch(()=> null);
+        const data = (json && typeof json === 'object') ? json : {};
+        const normalized = {
+          ok: resp.ok && data.ok === true,
+          status: Number(resp.status || 0),
+          data: data.data || null,
+          error: String(data.error || '').trim(),
+          message: String(data.message || '').trim(),
+        };
+        logGeocodeDebug('geocode_response_status', {
+          provider: 'google',
+          query,
+          status: Number(resp.status || 0),
+          ok: normalized.ok
+        });
+        logGeocodeDebug('geocode_response_body_summary', {
+          provider: 'google',
+          query,
+          summary: summarizeResponse(normalized)
+        });
+        return normalized;
       }catch(_){
-        return null;
-      }finally{
-        window.clearTimeout(timeout);
+        const failed = { ok:false, status:0, data:null, error:'network_error', message:'No se pudo ubicar automáticamente.' };
+        logGeocodeDebug('geocode_response_status', {
+          provider: 'google',
+          query,
+          status: 0,
+          ok: false
+        });
+        logGeocodeDebug('geocode_response_body_summary', {
+          provider: 'google',
+          query,
+          summary: summarizeResponse(failed)
+        });
+        return failed;
       }
     };
-
+    const scoreAccuracy = (accuracyRaw)=>{
+      const accuracy = String(accuracyRaw || '').toUpperCase();
+      if(accuracy === 'ROOFTOP') return 100;
+      if(accuracy === 'RANGE_INTERPOLATED') return 80;
+      if(accuracy === 'GEOMETRIC_CENTER') return 60;
+      if(accuracy === 'APPROXIMATE') return 40;
+      return 20;
+    };
+    const chooseCandidate = (candidates = [])=>{
+      if(!Array.isArray(candidates) || !candidates.length) return null;
+      const normalized = candidates.map((row)=>({
+        lat: Number(row?.lat),
+        lng: Number(row?.lng),
+        formatted_address: String(row?.formatted_address || '').trim(),
+        accuracy: String(row?.accuracy || '').trim(),
+        place_id: String(row?.place_id || '').trim(),
+      })).filter((row)=> Number.isFinite(row.lat) && Number.isFinite(row.lng));
+      if(!normalized.length) return null;
+      normalized.sort((a,b)=> scoreAccuracy(b.accuracy) - scoreAccuracy(a.accuracy));
+      return normalized[0];
+    };
     for(const query of queryList){
-      const proxyUrl = `./geocode-proxy.php?q=${encodeURIComponent(query)}`;
-      const proxyData = await fetchJson(proxyUrl);
-      const gotProxy = pushCandidatesFromResponse(proxyData, query, 'proxy', proxyUrl);
-      if(!gotProxy){
-        const params = new URLSearchParams({
-          q: query,
-          format: 'jsonv2',
-          addressdetails: '1',
-          limit: '5',
-          countrycodes: 'mx'
-        });
-        const directUrl = `https://nominatim.openstreetmap.org/search?${params.toString()}`;
-        const directData = await fetchJson(directUrl, {
-          'Accept-Language': 'es-MX,es;q=0.9,en;q=0.8'
-        });
-        pushCandidatesFromResponse(directData, query, 'direct', directUrl);
+      const googleResult = await requestGoogleGeocode(query);
+      if(!googleResult.ok){
+        continue;
       }
-    }
-
-    if(!allCandidates.length){
-      try{
-        console.warn('CONSULTORIO MAP GEOCODE RESULT DEBUG:', {
-          action: 'no_candidates',
-          directions_sent: queryList
-        });
-      }catch(_){ }
-      return null;
-    }
-
-    const contextFiltered = allCandidates.filter((c)=> !c.context_conflict);
-    const usable = contextFiltered.length ? contextFiltered : allCandidates;
-    const precise = usable.filter((c)=> c.is_precise).sort((a, b)=> b.score - a.score);
-    const generic = usable.filter((c)=> !c.is_precise).sort((a, b)=> b.score - a.score);
-    const chosen = precise[0] || generic[0];
-    if(!chosen){
-      return null;
-    }
-    if(chosen.context_conflict){
-      try{
-        console.warn('CONSULTORIO MAP GEOCODE RESULT DEBUG:', {
-          action: 'selected_conflict_discarded',
-          expected: {
-            estado: expectedParts.estado || '',
-            municipio: expectedParts.municipio || '',
-            cp: expectedParts.cp || ''
-          },
-          selected: {
-            display_name: chosen?.display_name || '',
-            matches_state: chosen?.matches_state,
-            matches_municipio: chosen?.matches_municipio
-          }
-        });
-      }catch(_){ }
-      return null;
-    }
-    try{
-      console.warn('CONSULTORIO MAP GEOCODE RESULT DEBUG:', {
-        action: 'selected',
-        directions_sent: queryList,
-        expected: {
-          estado: expectedParts.estado || '',
-          municipio: expectedParts.municipio || '',
-          cp: expectedParts.cp || '',
-          colonia: expectedParts.colonia || ''
-        },
-        selected: {
-          lat: chosen?.lat,
-          lng: chosen?.lng,
-          display_name: chosen?.display_name || '',
-          importance: chosen?.importance ?? null,
-          type: chosen?.type || '',
-          class: chosen?.class || '',
-          contains_colonia: !!chosen?.has_colonia,
-          contains_cp: !!chosen?.has_cp,
-          contains_street: !!chosen?.has_street,
-          is_precise: !!chosen?.is_precise,
-          is_generic: !!chosen?.is_generic,
-          score: chosen?.score ?? null,
-          context_score: chosen?.context_score ?? null,
-          context_conflict: !!chosen?.context_conflict,
-          matches_state: chosen?.matches_state,
-          matches_municipio: chosen?.matches_municipio,
-          matches_cp: chosen?.matches_cp,
-          matches_colonia: chosen?.matches_colonia,
-          endpoint: chosen?.endpoint || '',
-          request_url: chosen?.request_url || '',
-          direction_sent: chosen?.query || ''
-        }
+      const candidates = Array.isArray(googleResult?.data?.candidates) ? googleResult.data.candidates : [];
+      const chosen = chooseCandidate(candidates);
+      if(!chosen) continue;
+      const precise = scoreAccuracy(chosen.accuracy) >= 80;
+      logGeocodeDebug('geocode_candidate_selected', {
+        provider: 'google',
+        direction_sent: query,
+        lat: chosen.lat,
+        lng: chosen.lng,
+        accuracy: chosen.accuracy,
+        place_id: chosen.place_id,
+        formatted_address: chosen.formatted_address,
       });
-    }catch(_){ }
-
-    if(!chosen) return null;
-    return {
-      lat: chosen.lat,
-      lng: chosen.lng,
-      precise: !!chosen.is_precise,
-      fallback: !chosen.is_precise,
-      display_name: chosen.display_name || '',
-      importance: chosen.importance,
-      type: chosen.type || '',
-      class: chosen.class || '',
-      has_colonia: !!chosen.has_colonia,
-      has_cp: !!chosen.has_cp,
-      has_street: !!chosen.has_street,
-      endpoint: chosen.endpoint || '',
-      query: chosen.query || '',
-      request_url: chosen.request_url || ''
-    };
+      return {
+        lat: chosen.lat,
+        lng: chosen.lng,
+        precise,
+        fallback: !precise,
+        display_name: chosen.formatted_address,
+        importance: null,
+        type: chosen.accuracy || '',
+        class: 'google',
+        has_colonia: true,
+        has_cp: true,
+        has_street: true,
+        endpoint: 'google',
+        query,
+        request_url: '/api/agenda/index.php/geocode/google',
+        accuracy: chosen.accuracy,
+        place_id: chosen.place_id,
+      };
+    }
+    logGeocodeDebug('geocode_no_result', {
+      provider: 'google',
+      directions_sent: queryList
+    });
+    return null;
   }
 
   function bindConsultorioMapByIndex(index = 1){
@@ -927,11 +1359,28 @@ function mxClearHorarioInputs(inputs){
     const frame = document.getElementById(ids.frame);
     if(!frame) return;
     if(frame.dataset.mapGeocodeBound === '1'){
+      const upgrader = consultorioMapGoogleUpgraders.get(String(ids.index));
+      if(
+        googleMapsJsBootstrapState.enabled
+        && googleMapsJsBootstrapState.loaded
+        && typeof upgrader === 'function'
+      ){
+        try{
+          const upgraded = upgrader();
+          if(upgraded){
+            logGoogleMapDebug('google_provider_active', {
+              consultorio_index: ids.index,
+              frame_id: ids.frame,
+              provider: 'google'
+            });
+          }
+        }catch(_){ }
+      }
       try{
-        console.warn('CONSULTORIO MAP ZOOM DEBUG:', {
-          action: 'bind.skip_already_bound',
-          map_id: ids.frame,
-          source: 'bind'
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'map_bind_skipped_already_bound',
+          consultorio_index: ids.index,
+          frame_id: ids.frame,
         });
       }catch(_){ }
       return;
@@ -944,13 +1393,14 @@ function mxClearHorarioInputs(inputs){
       if(!statusNode) return;
       const safe = String(text || '').trim();
       statusNode.textContent = safe;
-      statusNode.classList.remove('d-none', 'text-warning', 'text-success', 'text-muted');
+      statusNode.classList.remove('d-none', 'text-warning', 'text-success', 'text-muted', 'mx-map-status-loading');
       if(!safe){
         statusNode.classList.add('d-none');
         return;
       }
       if(type === 'warning') statusNode.classList.add('text-warning');
       else if(type === 'success') statusNode.classList.add('text-success');
+      else if(type === 'loading') statusNode.classList.add('mx-map-status-loading');
       else statusNode.classList.add('text-muted');
     };
     const readAddressParts = ()=>{
@@ -981,6 +1431,7 @@ function mxClearHorarioInputs(inputs){
       addressDebugNode.textContent = `Dirección enviada (${reason || 'map'}): ${safeAddress} · CP:${cp} · Colonia:${colonia} · Municipio:${municipio} · Estado:${estado} · Calle:${calle} ${numExt}`.trim();
     };
     const logAddressDebug = (reason = 'unknown', address = '')=>{
+      if(!CONSULTORIO_MAP_DEBUG) return;
       try{
         const addr = readAddressParts();
         const finalAddress = String(address || buildConsultorioAddressByIds(ids) || '').trim();
@@ -1012,6 +1463,7 @@ function mxClearHorarioInputs(inputs){
       }catch(_){ }
     };
     const logMapSourceDebug = (reason = 'unknown', extra = {})=>{
+      if(!CONSULTORIO_MAP_DEBUG) return;
       try{
         const addr = readAddressParts();
         const geo = getConsultorioGeoState(ids.index);
@@ -1035,11 +1487,14 @@ function mxClearHorarioInputs(inputs){
 
     let leafletMap = null;
     let leafletMarker = null;
+    let googleMap = null;
+    let googleMarker = null;
     const ratio = frame.parentElement;
     const mapKey = String(ids.index);
     let geocodeSeq = 0;
     let renderProbeTimer = 0;
     let lastRenderProbeStartedAt = 0;
+    const MAP_VERBOSE_RUNTIME_DEBUG = false;
     let lastViewState = { lat: null, lng: null, zoom: 13 };
     const clearLastViewState = ()=>{
       lastViewState = { lat: null, lng: null, zoom: 13 };
@@ -1081,6 +1536,7 @@ function mxClearHorarioInputs(inputs){
       };
     };
     const logRenderDebug = (payload = {})=>{
+      if(!MAP_VERBOSE_RUNTIME_DEBUG) return;
       try{
         console.warn('CONSULTORIO MAP RENDER DEBUG:', {
           map_id: ids.frame,
@@ -1089,18 +1545,53 @@ function mxClearHorarioInputs(inputs){
       }catch(_){ }
     };
     const logZoomDebug = (payload = {})=>{
+      if(!MAP_VERBOSE_RUNTIME_DEBUG) return;
       try{
-        const mapZoom = (leafletMap && typeof leafletMap.getZoom === 'function')
-          ? leafletMap.getZoom()
-          : null;
+        const mapZoom = (googleMap && typeof googleMap.getZoom === 'function')
+          ? googleMap.getZoom()
+          : ((leafletMap && typeof leafletMap.getZoom === 'function')
+            ? leafletMap.getZoom()
+            : null);
         console.warn('CONSULTORIO MAP ZOOM DEBUG:', {
           map_id: ids.frame,
+          provider: (googleMap && googleMarker) ? 'google' : 'leaflet',
           ...payload,
           map_zoom_now: mapZoom
         });
       }catch(_){ }
     };
     const logSetView = (lat, lng, zoom, source, extra = {})=>{
+      if(googleMap && typeof googleMap.setCenter === 'function'){
+        const before = (typeof googleMap.getZoom === 'function') ? googleMap.getZoom() : null;
+        logZoomDebug({
+          action: 'setView.before',
+          source,
+          lat,
+          lng,
+          zoom_requested: zoom,
+          zoom_before: before,
+          provider: 'google',
+          ...extra
+        });
+        try{
+          googleMap.setCenter({ lat: Number(lat), lng: Number(lng) });
+          if(Number.isFinite(Number(zoom)) && typeof googleMap.setZoom === 'function'){
+            googleMap.setZoom(Number(zoom));
+          }
+        }catch(_){ }
+        const after = (typeof googleMap.getZoom === 'function') ? googleMap.getZoom() : null;
+        logZoomDebug({
+          action: 'setView.after',
+          source,
+          lat,
+          lng,
+          zoom_requested: zoom,
+          zoom_after: after,
+          provider: 'google',
+          ...extra
+        });
+        return;
+      }
       if(!(leafletMap && typeof leafletMap.setView === 'function')) return;
       const before = (typeof leafletMap.getZoom === 'function') ? leafletMap.getZoom() : null;
       if(shouldSkipSetView(lat, lng, zoom)){
@@ -1139,6 +1630,30 @@ function mxClearHorarioInputs(inputs){
       });
     };
     const logSetZoom = (zoom, source, extra = {})=>{
+      if(googleMap && typeof googleMap.setZoom === 'function'){
+        const before = (typeof googleMap.getZoom === 'function') ? googleMap.getZoom() : null;
+        logZoomDebug({
+          action: 'setZoom.before',
+          source,
+          zoom_requested: zoom,
+          zoom_before: before,
+          provider: 'google',
+          ...extra
+        });
+        try{
+          googleMap.setZoom(Number(zoom));
+        }catch(_){ }
+        const after = (typeof googleMap.getZoom === 'function') ? googleMap.getZoom() : null;
+        logZoomDebug({
+          action: 'setZoom.after',
+          source,
+          zoom_requested: zoom,
+          zoom_after: after,
+          provider: 'google',
+          ...extra
+        });
+        return;
+      }
       if(!(leafletMap && typeof leafletMap.setZoom === 'function')) return;
       const before = (typeof leafletMap.getZoom === 'function') ? leafletMap.getZoom() : null;
       logZoomDebug({
@@ -1161,6 +1676,13 @@ function mxClearHorarioInputs(inputs){
       });
     };
     const runForcedPostRenderZoom = (lat, lng, source = 'unknown')=>{
+      if(googleMap && Number.isFinite(lat) && Number.isFinite(lng)){
+        logSetView(lat, lng, 17, `${source}:force_google`);
+        window.setTimeout(()=>{
+          logSetView(lat, lng, 17, `${source}:force_google_timeout_250`);
+        }, 250);
+        return;
+      }
       if(!(leafletMap && Number.isFinite(lat) && Number.isFinite(lng))) return;
       logZoomDebug({
         action: 'force_zoom.sequence.start',
@@ -1228,6 +1750,51 @@ function mxClearHorarioInputs(inputs){
       }, 250);
     };
     const leafletReady = !!(window.L && typeof window.L.map === 'function' && ratio);
+    const googleReady = !!(
+      ratio
+      && googleMapsJsBootstrapState.enabled
+      && googleMapsJsBootstrapState.loaded
+      && window.google
+      && window.google.maps
+    );
+    if(googleReady){
+      const googleRuntime = initGoogleMapByIndex(ids.index);
+      if(googleRuntime?.ok){
+        googleMap = googleRuntime.map || null;
+        googleMarker = googleRuntime.marker || null;
+        frame.classList.add('d-none');
+        const legacyLeafletNode = ratio?.querySelector?.(`[data-map-leaflet-for="${frame.id}"]`);
+        if(legacyLeafletNode){
+          legacyLeafletNode.style.display = 'none';
+          legacyLeafletNode.style.pointerEvents = 'none';
+        }
+        try{
+          console.warn('MXM CONSULTORIO DEBUG:', {
+            event: 'map_provider_selected',
+            consultorio_index: ids.index,
+            frame_id: ids.frame,
+            provider: 'google'
+          });
+        }catch(_){ }
+        logGoogleMapDebug('google_provider_active', {
+          consultorio_index: ids.index,
+          frame_id: ids.frame,
+          provider: 'google'
+        });
+      }else{
+        logGoogleMapDebug('google_init_fallback_leaflet', {
+          reason: String(googleRuntime?.reason || 'google_runtime_not_ok'),
+          consultorio_index: ids.index,
+          frame_id: ids.frame
+        });
+      }
+    }else{
+      logGoogleMapDebug('google_init_fallback_leaflet', {
+        reason: 'google_bootstrap_not_ready',
+        consultorio_index: ids.index,
+        frame_id: ids.frame
+      });
+    }
     const reapplyLastView = (delay = 150)=>{
       if(!(leafletMap && typeof leafletMap.setView === 'function')) return;
       if(isGeocodeInFlight()){
@@ -1273,8 +1840,22 @@ function mxClearHorarioInputs(inputs){
         });
       }, Math.max(0, Number(delay || 0)));
     };
-    const safeInvalidate = (source = 'unknown')=>{
+    const safeInvalidate = (source = 'unknown', options = {})=>{
+      if(googleMap && window.google?.maps?.event){
+        try{
+          window.google.maps.event.trigger(googleMap, 'resize');
+          if(Number.isFinite(lastViewState.lat) && Number.isFinite(lastViewState.lng)){
+            googleMap.setCenter({ lat: Number(lastViewState.lat), lng: Number(lastViewState.lng) });
+            if(Number.isFinite(Number(lastViewState.zoom)) && typeof googleMap.setZoom === 'function'){
+              googleMap.setZoom(Number(lastViewState.zoom));
+            }
+          }
+        }catch(_){ }
+        return;
+      }
       if(!(leafletMap && typeof leafletMap.invalidateSize === 'function')) return;
+      const lightMode = !!options.light;
+      const noReapply = !!options.noReapply;
       const before = (typeof leafletMap.getZoom === 'function') ? leafletMap.getZoom() : null;
       logZoomDebug({
         action: 'invalidateSize.before',
@@ -1292,6 +1873,9 @@ function mxClearHorarioInputs(inputs){
           });
         });
       }catch(_){ }
+      if(lightMode){
+        return;
+      }
       window.setTimeout(()=>{
         try{ leafletMap.invalidateSize(false); }catch(_){ }
         const zoomAfter120 = (typeof leafletMap.getZoom === 'function') ? leafletMap.getZoom() : null;
@@ -1310,6 +1894,9 @@ function mxClearHorarioInputs(inputs){
           zoom_after: zoomAfter260
         });
       }, 260);
+      if(noReapply){
+        return;
+      }
       if(isGeocodeInFlight()){
         logZoomDebug({
           action: 'reapply.skip_geocode_inflight',
@@ -1320,9 +1907,10 @@ function mxClearHorarioInputs(inputs){
       }
     };
     const scheduleRenderProbe = (source = 'unknown', maxAttempts = 10)=>{
-      if(isNoisyProbeSource(source)){
+      const noisySource = isNoisyProbeSource(source);
+      if(noisySource){
         const now = Date.now();
-        if(now - lastRenderProbeStartedAt < 320){
+        if(now - lastRenderProbeStartedAt < 950){
           return;
         }
         lastRenderProbeStartedAt = now;
@@ -1341,9 +1929,12 @@ function mxClearHorarioInputs(inputs){
           attempt: attempts,
           ...state
         });
-        if(leafletMap && state.can_render){
-          safeInvalidate(`${source}:visible`);
-          if(!isNoisyProbeSource(source)){
+        if((leafletMap || googleMap) && state.can_render){
+          safeInvalidate(`${source}:visible`, {
+            light: noisySource,
+            noReapply: noisySource
+          });
+          if(!noisySource){
             window.setTimeout(()=> safeInvalidate(`${source}:visible_120`), 120);
             window.setTimeout(()=> safeInvalidate(`${source}:visible_260`), 260);
           }
@@ -1358,7 +1949,7 @@ function mxClearHorarioInputs(inputs){
       };
       run();
     };
-    if(leafletReady){
+    if(!googleMap && leafletReady){
       let mapNode = ratio.querySelector(`[data-map-leaflet-for="${frame.id}"]`);
       if(!mapNode){
         mapNode = document.createElement('div');
@@ -1420,7 +2011,12 @@ function mxClearHorarioInputs(inputs){
     const applyMapPoint = (lat, lng, zoom = 17, source = 'unknown')=>{
       if(!Number.isFinite(lat) || !Number.isFinite(lng)) return;
       lastViewState = { lat, lng, zoom };
-      if(leafletMap && leafletMarker){
+      if(googleMap && googleMarker){
+        try{
+          googleMarker.setPosition({ lat: Number(lat), lng: Number(lng) });
+        }catch(_){ }
+        logSetView(lat, lng, zoom, source, { marker_updated: true });
+      }else if(leafletMap && leafletMarker){
         const point = [lat, lng];
         leafletMarker.setLatLng(point);
         logSetView(lat, lng, zoom, source, { marker_updated: true });
@@ -1492,10 +2088,42 @@ function mxClearHorarioInputs(inputs){
         }
       }catch(_){ }
     };
-    const controls = ensureConsultorioMapControls(frame, ()=>{
+    const syncGeoInputs = (lat, lng, source = '')=>{
+      const suffix = ids.index > 1 ? String(ids.index) : '';
+      const latInput = document.getElementById(`cons-lat${suffix}`);
+      const lngInput = document.getElementById(`cons-lng${suffix}`);
+      if(latInput) latInput.value = Number.isFinite(lat) ? String(Number(lat).toFixed(7)) : '';
+      if(lngInput) lngInput.value = Number.isFinite(lng) ? String(Number(lng).toFixed(7)) : '';
+      try{
+        if(latInput) latInput.setAttribute('data-geocode-source', String(source || ''));
+        if(lngInput) lngInput.setAttribute('data-geocode-source', String(source || ''));
+      }catch(_){ }
+    };
+    const controls = ensureConsultorioMapControls(frame, async ()=>{
       const current = getConsultorioGeoState(ids.index);
-      let lat = toFiniteNumber(current.pending_lat);
-      let lng = toFiniteNumber(current.pending_lng);
+      let lat = null;
+      let lng = null;
+      let coordsFromGoogleMarker = false;
+      if(googleMarker && typeof googleMarker.getPosition === 'function'){
+        const pos = googleMarker.getPosition?.();
+        const markerLat = Number(pos?.lat?.());
+        const markerLng = Number(pos?.lng?.());
+        if(Number.isFinite(markerLat) && Number.isFinite(markerLng)){
+          lat = markerLat;
+          lng = markerLng;
+          coordsFromGoogleMarker = true;
+          logGoogleMapDebug('google_confirm_location_marker_coords', {
+            consultorio_index: ids.index,
+            frame_id: ids.frame,
+            lat,
+            lng
+          });
+        }
+      }
+      if(!Number.isFinite(lat) || !Number.isFinite(lng)){
+        lat = toFiniteNumber(current.pending_lat);
+        lng = toFiniteNumber(current.pending_lng);
+      }
       if(!Number.isFinite(lat) || !Number.isFinite(lng)){
         lat = toFiniteNumber(current.lat);
         lng = toFiniteNumber(current.lng);
@@ -1505,12 +2133,36 @@ function mxClearHorarioInputs(inputs){
         logMapSourceDebug('confirm_without_point');
         return;
       }
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'map_confirm_location_click',
+          consultorio_index: ids.index,
+          frame_id: ids.frame,
+          lat,
+          lng
+        });
+      }catch(_){ }
       const addressNow = buildConsultorioAddressByIds(ids);
+      const sourceBeforeConfirm = normalizeGeocodeSource(current.source || '');
+      const currentLat = toFiniteNumber(current.lat);
+      const currentLng = toFiniteNumber(current.lng);
+      const markerMovedSinceCurrent = (
+        coordsFromGoogleMarker
+        && Number.isFinite(currentLat)
+        && Number.isFinite(currentLng)
+        && (Math.abs(Number(lat) - Number(currentLat)) > 0.0000001
+          || Math.abs(Number(lng) - Number(currentLng)) > 0.0000001)
+      );
+      const sourceToPersist = (current.manual_dirty === true)
+        ? 'manual_adjusted'
+        : (markerMovedSinceCurrent
+            ? 'manual_adjusted'
+            : (sourceBeforeConfirm === 'google_suggested' ? 'google_confirmed' : 'manual_adjusted'));
       applyMapPoint(lat, lng, 17, 'confirm');
       setConsultorioGeoState(ids.index, {
         lat,
         lng,
-        source: 'manual_adjusted',
+        source: sourceToPersist,
         geocode_updated_at: new Date().toISOString(),
         manual_confirmed: true,
         manual_dirty: false,
@@ -1518,13 +2170,41 @@ function mxClearHorarioInputs(inputs){
         pending_lat: null,
         pending_lng: null,
       });
+      syncGeoInputs(lat, lng, sourceToPersist);
       syncPublicMapSnapshot({
         ...getConsultorioGeoState(ids.index),
         lat,
         lng,
-        source: 'manual_adjusted',
+        source: sourceToPersist,
       });
       showStatus('Ubicación ajustada manualmente.', 'success');
+      const persistFn = (typeof window.mxPersistMapCoordsNow === 'function')
+        ? window.mxPersistMapCoordsNow
+        : null;
+      if(!persistFn){
+        logGoogleMapDebug('google_confirm_location_response', {
+          consultorio_index: ids.index,
+          frame_id: ids.frame,
+          status: 0,
+          ok: false,
+          response_consultorio_id: '',
+          response_error: 'persist_function_not_available'
+        });
+        showStatus('No se pudo guardar la ubicación manual. Intenta nuevamente.', 'warning');
+        return;
+      }
+      const saveResult = await persistFn(ids.index, 'map_confirm_manual');
+      logGoogleMapDebug('google_confirm_location_response', {
+        consultorio_index: ids.index,
+        frame_id: ids.frame,
+        status: Number(saveResult?.status || 0),
+        ok: !!(saveResult?.ok && saveResult?.json?.ok),
+        response_consultorio_id: String(saveResult?.json?.data?.consultorio_id || ''),
+        response_error: String(saveResult?.json?.error || saveResult?.json?.message || '')
+      });
+      if(!(saveResult?.ok && saveResult?.json?.ok)){
+        showStatus('No se pudo guardar la ubicación manual. Intenta confirmar nuevamente.', 'warning');
+      }
       logMapSourceDebug('confirm_manual_point', {
         lat_used: lat,
         lng_used: lng,
@@ -1536,6 +2216,17 @@ function mxClearHorarioInputs(inputs){
       }
     }, ()=>{
       const addressNow = buildConsultorioAddressByIds(ids);
+      const referenceNow = getConsultorioMapReferenceByIds(ids);
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'map_recalculate_click',
+          consultorio_index: ids.index,
+          frame_id: ids.frame,
+          address: addressNow,
+          reference: referenceNow
+        });
+      }catch(_){ }
+      showStatus('Ubicando consultorio...', 'loading');
       clearLastViewState();
       setConsultorioGeoState(ids.index, {
         lat: null,
@@ -1550,6 +2241,7 @@ function mxClearHorarioInputs(inputs){
         geocode_fallback: false,
         geocode_inflight: true,
       });
+      logAddressDebug('recalculate_click', addressNow);
       logMapSourceDebug('recalculate_click', {
         address: addressNow,
         chosen_by: 'address'
@@ -1558,6 +2250,28 @@ function mxClearHorarioInputs(inputs){
     });
     const confirmBtn = controls?.button || null;
     const recalcBtn = controls?.recalcButton || null;
+    const providerNoteNode = controls?.controls?.querySelector?.(`[data-map-provider-note-for="${frame.id}"]`) || null;
+    if(providerNoteNode){
+      if(googleMap && googleMarker){
+        providerNoteNode.textContent = 'Google Maps activo';
+      }else if(googleMapsJsBootstrapState.enabled === true && googleMapsJsBootstrapState.loaded === false && googleMapsJsBootstrapState.error){
+        providerNoteNode.textContent = 'Google Maps no cargó';
+      }else{
+        providerNoteNode.textContent = 'Fallback Leaflet';
+      }
+    }
+    try{
+      console.warn('MXM CONSULTORIO DEBUG:', {
+        event: 'map_controls_bound',
+        consultorio_index: ids.index,
+        frame_id: ids.frame,
+        has_confirm_btn: !!confirmBtn,
+        has_recalc_btn: !!recalcBtn,
+        provider: (googleMap && googleMarker) ? 'google' : 'leaflet',
+        recalc_btn_display: recalcBtn ? window.getComputedStyle(recalcBtn).display : null,
+        recalc_btn_class: recalcBtn?.className || ''
+      });
+    }catch(_){ }
     const refreshActionButtons = ()=>{
       const current = getConsultorioGeoState(ids.index);
       const hasAddress = buildConsultorioAddressByIds(ids) !== '';
@@ -1568,20 +2282,12 @@ function mxClearHorarioInputs(inputs){
         );
       }
       if(recalcBtn){
-        const shouldShowRecalc = !!(
-          hasAddress && (
-            current.requires_recalc
-            || current.manual_confirmed
-            || current.geocode_fallback
-            || !Number.isFinite(toFiniteNumber(current.lat))
-            || !Number.isFinite(toFiniteNumber(current.lng))
-          )
-        );
-        recalcBtn.classList.toggle('d-none', !shouldShowRecalc);
+        recalcBtn.classList.remove('d-none');
+        recalcBtn.disabled = !hasAddress;
       }
     };
 
-    const markManualDirty = (lat, lng)=>{
+    const markManualDirty = (lat, lng, sourceEvent = 'dragend')=>{
       applyMapPoint(lat, lng, 18, 'manual');
       setConsultorioGeoState(ids.index, {
         pending_lat: lat,
@@ -1589,6 +2295,25 @@ function mxClearHorarioInputs(inputs){
         manual_dirty: true,
         requires_recalc: false,
       });
+      syncGeoInputs(lat, lng, 'manual_adjusted');
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'map_marker_dragend',
+          source_event: sourceEvent,
+          consultorio_index: ids.index,
+          frame_id: ids.frame,
+          lat,
+          lng
+        });
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'map_manual_coords_selected',
+          consultorio_index: ids.index,
+          frame_id: ids.frame,
+          lat,
+          lng,
+          geocode_source: 'manual_adjusted'
+        });
+      }catch(_){ }
       showStatus('Ubicación ajustada manualmente. Presiona “Confirmar ubicación” para guardar.', 'success');
       logMapSourceDebug('manual_drag', {
         lat_used: lat,
@@ -1598,17 +2323,83 @@ function mxClearHorarioInputs(inputs){
       refreshActionButtons();
     };
 
-    if(leafletMarker){
+    const bindGoogleInteractions = ()=>{
+      if(!(googleMarker && googleMap)) return;
+      const runtime = consultorioGoogleMapsByIndex.get(String(ids.index)) || {};
+      if(runtime._mxListenersBound === true){
+        return;
+      }
+      runtime._mxListenersBound = true;
+      consultorioGoogleMapsByIndex.set(String(ids.index), runtime);
+      googleMarker.addListener('dragend', ()=>{
+        const pos = googleMarker.getPosition?.();
+        const lat = Number(pos?.lat?.());
+        const lng = Number(pos?.lng?.());
+        if(!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        logGoogleMapDebug('google_marker_dragend_coords', {
+          consultorio_index: ids.index,
+          frame_id: ids.frame,
+          lat,
+          lng
+        });
+        markManualDirty(lat, lng, 'dragend');
+      });
+      googleMap.addListener('click', (evt)=>{
+        const lat = Number(evt?.latLng?.lat?.());
+        const lng = Number(evt?.latLng?.lng?.());
+        if(!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        try{
+          googleMarker.setPosition({ lat, lng });
+        }catch(_){ }
+        markManualDirty(lat, lng, 'map_click');
+      });
+    };
+    const upgradePaneToGoogle = ()=>{
+      const runtime = initGoogleMapByIndex(ids.index);
+      if(!runtime?.ok){
+        return false;
+      }
+      googleMap = runtime.map || null;
+      googleMarker = runtime.marker || null;
+      frame.classList.add('d-none');
+      const legacyLeafletNode = ratio?.querySelector?.(`[data-map-leaflet-for="${frame.id}"]`);
+      if(legacyLeafletNode){
+        legacyLeafletNode.style.display = 'none';
+        legacyLeafletNode.style.pointerEvents = 'none';
+      }
+      bindGoogleInteractions();
+      const note = controls?.controls?.querySelector?.(`[data-map-provider-note-for="${frame.id}"]`) || null;
+      if(note){
+        note.textContent = 'Google Maps activo';
+      }
+      const current = getConsultorioGeoState(ids.index);
+      const latCurrent = toFiniteNumber(current.pending_lat ?? current.lat);
+      const lngCurrent = toFiniteNumber(current.pending_lng ?? current.lng);
+      if(Number.isFinite(latCurrent) && Number.isFinite(lngCurrent)){
+        applyMapPoint(Number(latCurrent), Number(lngCurrent), 17, 'google_upgrade_sync');
+      }
+      logGoogleMapDebug('google_provider_active', {
+        consultorio_index: ids.index,
+        frame_id: ids.frame,
+        provider: 'google'
+      });
+      return true;
+    };
+    consultorioMapGoogleUpgraders.set(String(ids.index), upgradePaneToGoogle);
+
+    if(googleMarker && googleMap){
+      bindGoogleInteractions();
+    }else if(leafletMarker){
       leafletMarker.on('dragend', ()=>{
         const ll = leafletMarker.getLatLng();
         if(!ll) return;
-        markManualDirty(Number(ll.lat), Number(ll.lng));
+        markManualDirty(Number(ll.lat), Number(ll.lng), 'dragend');
       });
       leafletMap.on('click', (evt)=>{
         const ll = evt?.latlng;
         if(!ll) return;
         leafletMarker.setLatLng(ll);
-        markManualDirty(Number(ll.lat), Number(ll.lng));
+        markManualDirty(Number(ll.lat), Number(ll.lng), 'map_click');
       });
     }
 
@@ -1637,13 +2428,19 @@ function mxClearHorarioInputs(inputs){
       }
       consultorioMapLastAddress.set(String(ids.index), address);
 
-      if(current.manual_confirmed && force !== true){
+      const currentSource = normalizeGeocodeSource(current.source || '');
+      const currentIsConfirmed = (
+        current.manual_confirmed === true
+        || currentSource === 'manual_adjusted'
+        || currentSource === 'google_confirmed'
+      );
+      if(currentIsConfirmed && force !== true){
         if(current.confirmed_address !== address){
           setConsultorioGeoState(ids.index, {
             requires_recalc: true,
             geocode_inflight: false,
           });
-          showStatus('La dirección cambió. Se conserva la ubicación manual hasta que pulses “Recalcular ubicación”.', 'warning');
+          showStatus('La dirección cambió. Se conserva la ubicación confirmada hasta que pulses “Buscar ubicación con Google”.', 'warning');
           logMapSourceDebug('resolve_address_changed_manual_locked', {
             address,
             chosen_by: 'manual_locked'
@@ -1653,11 +2450,11 @@ function mxClearHorarioInputs(inputs){
         }
       }
 
-      if(current.manual_confirmed && current.confirmed_address === address
+      if(currentIsConfirmed && current.confirmed_address === address
         && Number.isFinite(current.lat) && Number.isFinite(current.lng)){
         applyMapPoint(Number(current.lat), Number(current.lng), 17, 'manual_saved');
         setConsultorioGeoState(ids.index, { geocode_inflight: false });
-        showStatus('Ubicación ajustada manualmente.', 'success');
+        showStatus('Ubicación confirmada.', 'success');
         logMapSourceDebug('resolve_use_manual_saved', {
           lat_used: Number(current.lat),
           lng_used: Number(current.lng),
@@ -1676,8 +2473,18 @@ function mxClearHorarioInputs(inputs){
       }
 
       const requestId = ++geocodeSeq;
+      showStatus('Ubicando consultorio...', 'loading');
       setConsultorioGeoState(ids.index, { geocode_inflight: true });
       logAddressDebug('recalculate_request', address);
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'map_geocode_query_built',
+          consultorio_index: ids.index,
+          frame_id: ids.frame,
+          request_id: requestId,
+          address
+        });
+      }catch(_){ }
       logMapSourceDebug('resolve_geocode_request', { address, request_id: requestId });
       const geo = await geocodeConsultorioAddress(address, ids);
       if(requestId !== geocodeSeq){
@@ -1686,10 +2493,13 @@ function mxClearHorarioInputs(inputs){
       }
       if(geo){
         if(geo.precise){
+          showStatus('Buscando ubicación...', 'loading');
+          const geocodeUpdatedAt = new Date().toISOString();
           setConsultorioGeoState(ids.index, {
             lat: geo.lat,
             lng: geo.lng,
-            source: 'auto_geocoded',
+            source: 'google_suggested',
+            geocode_updated_at: geocodeUpdatedAt,
             manual_dirty: false,
             manual_confirmed: false,
             confirmed_address: '',
@@ -1703,15 +2513,28 @@ function mxClearHorarioInputs(inputs){
             ...getConsultorioGeoState(ids.index),
             lat: geo.lat,
             lng: geo.lng,
-            source: 'auto_geocoded',
+            source: 'google_suggested',
           });
-          applyMapPoint(geo.lat, geo.lng, 17, 'geocode');
+          syncGeoInputs(geo.lat, geo.lng, 'google_suggested');
+          applyMapPoint(geo.lat, geo.lng, 17, 'google_suggested');
+          try{
+            console.warn('MXM CONSULTORIO DEBUG:', {
+              event: 'map_marker_updated',
+              consultorio_index: ids.index,
+              frame_id: ids.frame,
+              lat: Number(geo.lat),
+              lng: Number(geo.lng),
+              source: 'google_suggested',
+              endpoint: geo.endpoint || '',
+              query: geo.query || ''
+            });
+          }catch(_){ }
           runForcedPostRenderZoom(geo.lat, geo.lng, 'geocode');
-          showStatus('', 'info');
+          showStatus('Ubicación aproximada encontrada. Ajusta el pin si es necesario.', 'success');
           logMapSourceDebug('resolve_geocode_precise', {
             lat_used: geo.lat,
             lng_used: geo.lng,
-            geocode_source: 'auto_geocoded',
+            geocode_source: 'google_suggested',
             chosen_by: 'address',
             endpoint: geo.endpoint || '',
             query: geo.query || ''
@@ -1723,7 +2546,7 @@ function mxClearHorarioInputs(inputs){
         setConsultorioGeoState(ids.index, {
           lat: geo.lat,
           lng: geo.lng,
-          source: 'auto_geocoded',
+          source: 'google_suggested',
           manual_dirty: false,
           manual_confirmed: false,
           confirmed_address: '',
@@ -1737,10 +2560,24 @@ function mxClearHorarioInputs(inputs){
           ...getConsultorioGeoState(ids.index),
           lat: geo.lat,
           lng: geo.lng,
-          source: 'auto_geocoded',
+          source: 'google_suggested',
         });
-        applyMapPoint(geo.lat, geo.lng, 13, 'geocode_fallback_generic');
-        showStatus('No pudimos ubicar exactamente esta dirección. Ajusta el pin manualmente en el mapa.', 'warning');
+        showStatus('Buscando ubicación...', 'loading');
+        syncGeoInputs(geo.lat, geo.lng, 'google_suggested');
+        applyMapPoint(geo.lat, geo.lng, 15, 'google_suggested_generic');
+        try{
+          console.warn('MXM CONSULTORIO DEBUG:', {
+            event: 'map_marker_updated',
+            consultorio_index: ids.index,
+            frame_id: ids.frame,
+            lat: Number(geo.lat),
+            lng: Number(geo.lng),
+            source: 'google_suggested',
+            endpoint: geo.endpoint || '',
+            query: geo.query || ''
+          });
+        }catch(_){ }
+        showStatus('Ubicación aproximada encontrada. Verifica que el pin esté en el acceso correcto del consultorio.', 'warning');
         logMapSourceDebug('resolve_geocode_generic_fallback', {
           lat_used: geo.lat,
           lng_used: geo.lng,
@@ -1760,11 +2597,11 @@ function mxClearHorarioInputs(inputs){
         });
         setConsultorioMapFrameByAddress(frame, address, 13);
       }
-      if(current.manual_confirmed && Number.isFinite(current.lat) && Number.isFinite(current.lng)){
+      if(currentIsConfirmed && Number.isFinite(current.lat) && Number.isFinite(current.lng)){
         applyMapPoint(Number(current.lat), Number(current.lng), 17, 'manual_restore_on_geocode_fail');
         setConsultorioGeoState(ids.index, { geocode_inflight: false });
         syncPublicMapSnapshot();
-        showStatus('Ubicación ajustada manualmente.', 'success');
+        showStatus('Ubicación confirmada.', 'success');
         logMapSourceDebug('resolve_geocode_fail_keep_manual', {
           lat_used: Number(current.lat),
           lng_used: Number(current.lng),
@@ -1773,34 +2610,26 @@ function mxClearHorarioInputs(inputs){
         refreshActionButtons();
         return;
       }
-      const fallbackPoint = resolveConsultorioContextFallback(readAddressParts());
       setConsultorioGeoState(ids.index, {
-        lat: fallbackPoint.lat,
-        lng: fallbackPoint.lng,
-        source: '',
         geocode_fallback: true,
         geocode_inflight: false,
-        manual_dirty: false,
-        manual_confirmed: false,
       });
-      syncPublicMapSnapshot({
-        ...getConsultorioGeoState(ids.index),
-        lat: Number(fallbackPoint.lat),
-        lng: Number(fallbackPoint.lng),
-        source: '',
-      });
-      applyMapPoint(
-        Number(fallbackPoint.lat),
-        Number(fallbackPoint.lng),
-        Number(fallbackPoint.zoom || 13),
-        `geocode_fail_context_${fallbackPoint.label || 'fallback'}`
-      );
-      showStatus('No pudimos ubicar exactamente esta dirección. Puedes ajustar los datos o usar ubicación manual.', 'warning');
+      showStatus('No se pudo ubicar automáticamente. Puedes mover el pin manualmente o intentar con otra referencia.', 'warning');
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'geocode_no_result',
+          consultorio_index: ids.index,
+          frame_id: ids.frame,
+          fallback_label: 'none',
+          fallback_lat: null,
+          fallback_lng: null
+        });
+      }catch(_){ }
       logMapSourceDebug('resolve_geocode_fail_no_point', {
         chosen_by: 'fallback',
-        lat_used: Number(fallbackPoint.lat),
-        lng_used: Number(fallbackPoint.lng),
-        fallback_label: fallbackPoint.label || ''
+        lat_used: null,
+        lng_used: null,
+        fallback_label: 'none'
       });
       refreshActionButtons();
     };
@@ -1838,6 +2667,8 @@ function mxClearHorarioInputs(inputs){
         debouncedResolve();
       });
       field.addEventListener('change', debouncedResolve);
+      field.addEventListener('input', refreshActionButtons);
+      field.addEventListener('change', refreshActionButtons);
     });
 
     const pane = frame.closest('.tab-pane');
@@ -1885,8 +2716,31 @@ function mxClearHorarioInputs(inputs){
 
     const latStored = toFiniteNumber(state.lat);
     const lngStored = toFiniteNumber(state.lng);
-    if(Number.isFinite(latStored) && Number.isFinite(lngStored)){
-      applyMapPoint(latStored, lngStored, 17, 'saved');
+      if(Number.isFinite(latStored) && Number.isFinite(lngStored)){
+        applyMapPoint(latStored, lngStored, 17, 'saved');
+      logGoogleMapDebug('google_hydrate_saved_coords', {
+        consultorio_index: ids.index,
+        frame_id: ids.frame,
+        lat: Number(latStored),
+        lng: Number(lngStored),
+        source: normalizeGeocodeSource(state.source || '')
+      });
+      syncGeoInputs(latStored, lngStored, normalizeGeocodeSource(state.source || ''));
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'hydrate_map_coords',
+          consultorio_index: ids.index,
+          frame_id: ids.frame,
+          lat: latStored,
+          lng: lngStored
+        });
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'hydrate_map_source',
+          consultorio_index: ids.index,
+          frame_id: ids.frame,
+          geocode_source: normalizeGeocodeSource(state.source || '')
+        });
+      }catch(_){ }
       syncPublicMapSnapshot({
         ...state,
         lat: latStored,
@@ -1897,7 +2751,7 @@ function mxClearHorarioInputs(inputs){
         lng_used: lngStored,
         chosen_by: 'saved'
       });
-      if(normalizeGeocodeSource(state.source) === 'manual_adjusted'){
+      if(['manual_adjusted', 'google_confirmed'].includes(normalizeGeocodeSource(state.source))){
         showStatus('Ubicación ajustada manualmente.', 'success');
       }
     }else{
@@ -1916,12 +2770,26 @@ function mxClearHorarioInputs(inputs){
     const hasManualConfirmedSavedPoint = (
       Number.isFinite(latStored)
       && Number.isFinite(lngStored)
-      && normalizeGeocodeSource(state.source) === 'manual_adjusted'
+      && ['manual_adjusted', 'google_confirmed'].includes(normalizeGeocodeSource(state.source))
     );
     window.setTimeout(()=>{
       scheduleRenderProbe('bind_timeout_120', 8);
       if(!hasManualConfirmedSavedPoint){
+        showStatus('Ubicando consultorio...', 'loading');
         debouncedResolve();
+      }else{
+        logGoogleMapDebug('google_skip_geocode_saved_coords', {
+          consultorio_index: ids.index,
+          frame_id: ids.frame,
+          source: normalizeGeocodeSource(state.source || '')
+        });
+        try{
+          console.warn('MXM CONSULTORIO DEBUG:', {
+            event: 'map_skip_auto_geocode_because_manual',
+            consultorio_index: ids.index,
+            frame_id: ids.frame
+          });
+        }catch(_){ }
       }
     }, 120);
   }
@@ -1943,11 +2811,25 @@ function mxClearHorarioInputs(inputs){
     const hasManualConfirmedSavedPoint = (
       Number.isFinite(latStored)
       && Number.isFinite(lngStored)
-      && normalizeGeocodeSource(state.source) === 'manual_adjusted'
+      && ['manual_adjusted', 'google_confirmed'].includes(normalizeGeocodeSource(state.source))
     );
     const runner = consultorioMapRefreshers.get(String(Number(index || 1)));
     if(typeof runner !== 'function') return;
-    if(hasManualConfirmedSavedPoint) return;
+    if(hasManualConfirmedSavedPoint){
+      logGoogleMapDebug('google_skip_geocode_saved_coords', {
+        consultorio_index: Number(index || 1),
+        frame_id: ids.frame,
+        source: normalizeGeocodeSource(state.source || '')
+      });
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'map_skip_auto_geocode_because_manual',
+          consultorio_index: Number(index || 1),
+          frame_id: ids.frame
+        });
+      }catch(_){ }
+      return;
+    }
     window.setTimeout(()=>{ runner(); }, Math.max(0, Number(delay || 0)));
   }
 
@@ -1963,10 +2845,22 @@ function mxClearHorarioInputs(inputs){
     map.forEach(([from,to])=>{ const el = pane2.querySelector('#'+from); if(el){ el.id = to; const label = pane2.querySelector('label[for="'+from+'"]'); if(label) label.setAttribute('for', to); } });
     // Inicializar listeners en el nuevo set
     setupCpAuto({ cp:'cp2', colonia:'colonia2', msg:'mensaje-cp2', mun:'municipio2', est:'estado2' });
-    bindConsultorioMapByIndex(2);
+    if(googleMapsJsBootstrapPromise && typeof googleMapsJsBootstrapPromise.finally === 'function'){
+      googleMapsJsBootstrapPromise.finally(()=>{
+        bindConsultorioMapByIndex(2);
+      });
+    }else{
+      bindConsultorioMapByIndex(2);
+    }
     return ret;
   };
-  bindConsultorioMapByIndex(1);
+  if(googleMapsJsBootstrapPromise && typeof googleMapsJsBootstrapPromise.finally === 'function'){
+    googleMapsJsBootstrapPromise.finally(()=>{
+      bindConsultorioMapByIndex(1);
+    });
+  }else{
+    bindConsultorioMapByIndex(1);
+  }
 
   const $$ = (s,c=document)=>Array.from(c.querySelectorAll(s));
 
@@ -2026,6 +2920,8 @@ function mxClearHorarioInputs(inputs){
     modal.show();
   }
   function setupUploadBox(box){
+    if(!box || box.dataset.uploadBound === '1') return;
+    box.dataset.uploadBound = '1';
     const input = box.querySelector('.mf-input');
     if(!input) return;
     let prev  = box.querySelector('.mf-prev');
@@ -2073,7 +2969,7 @@ function mxClearHorarioInputs(inputs){
           slot.classList.add('has-logo');
         }
         if(box.dataset.type === 'logo'){ box.classList.add('has-logo'); }
-        if(inputId === 'cons-logo'){
+        if(inputId.startsWith('cons-logo')){
           const drop = slot?.querySelector('.logo-slot-drop');
           if(drop){ drop.setAttribute('hidden','hidden'); }
           mxSetLogoSource('manual');
@@ -2087,13 +2983,13 @@ function mxClearHorarioInputs(inputs){
             }
           }catch(_){ }
         }
-        if(inputId === 'cons-foto'){ toggleFotoPrincipalMsg(true); }
+        if(inputId.startsWith('cons-foto')){ toggleFotoPrincipalMsg(true); }
       };
       r.readAsDataURL(file);
     }
 
     const delBtn = prev.querySelector('.foto-x');
-    if(delBtn && inputId === 'cons-foto'){
+    if(delBtn && inputId.startsWith('cons-foto')){
       delBtn.addEventListener('click', ev=>{
         ev.preventDefault();
         ev.stopPropagation();
@@ -2107,13 +3003,26 @@ function mxClearHorarioInputs(inputs){
         confirmFotoPrincipalRemoval(clearFoto);
       });
     }
-    if(delBtn && inputId === 'cons-logo'){
+    if(delBtn && inputId.startsWith('cons-logo')){
       delBtn.addEventListener('click', ev=>{
         if(mxGetLogoSource() !== 'manual') return;
         ev.preventDefault();
         ev.stopPropagation();
         const clearLogo = ()=>{
-          mxResetLogoPreview();
+          if(inputId === 'cons-logo' && typeof window.mxResetLogoPreview === 'function'){
+            window.mxResetLogoPreview();
+          }else{
+            img.src = '';
+            prev.style.display = 'none';
+            prev.setAttribute('hidden','hidden');
+            input.value = '';
+            const slot = box.closest('.logo-slot');
+            if(slot){
+              slot.classList.remove('show-preview', 'has-logo');
+              const drop = slot.querySelector('.logo-slot-drop');
+              if(drop){ drop.removeAttribute('hidden'); }
+            }
+          }
           mxToggleLogoManualMsg(false);
           mxToggleLogoSyncMsg(false);
           try{
@@ -2135,7 +3044,7 @@ function mxClearHorarioInputs(inputs){
       if(window.bootstrap && el){ new bootstrap.Modal(el).show(); }
     }); }
 
-    if(inputId === 'cons-logo'){
+    if(inputId.startsWith('cons-logo')){
       try{
         const current = (img.getAttribute('src') || '').trim();
         if(current){
@@ -2165,7 +3074,10 @@ function mxClearHorarioInputs(inputs){
 
     let hydrateInProgress = false;
     const saveTimers = new Map();
+    const saveReasons = new Map();
+    const consultorioCreateAuditLogged = new Set();
     const hydratedRows = new Set();
+    const pendingHydratedRows = new Map();
     const groupStateByPane = new Map();
     const groupSearchTimers = new Map();
     const groupSearchRequestSeq = new Map();
@@ -2179,6 +3091,10 @@ function mxClearHorarioInputs(inputs){
     const clean = (value)=> String(value ?? '').trim();
     const resolveDoctorId = ()=> clean(resolveActiveDoctorId());
     const getPaneByIndex = (idx)=> document.getElementById(`sede${idx}`);
+    const isPanePlaceholder = (pane)=> String(pane?.dataset?.consulPlaceholder || '') === 'true';
+    const hasPaneTabButton = (idx)=>{
+      return !!document.querySelector(`#p-consultorio [data-bs-target="#sede${idx}"]`);
+    };
     const parsePaneIndex = (pane)=>{
       const m = /^sede(\d+)$/.exec(String(pane?.id || ''));
       return m ? Number(m[1]) : 1;
@@ -2186,7 +3102,13 @@ function mxClearHorarioInputs(inputs){
     const getWhatsappField = (pane)=>{
       return getField(pane, 'input[id^="cons-wa"]');
     };
-    const paneExists = (idx)=> !!getPaneByIndex(idx);
+    const paneExists = (idx)=>{
+      const pane = getPaneByIndex(idx);
+      if(!pane) return false;
+      if(isPanePlaceholder(pane)) return false;
+      if(idx > 1 && !hasPaneTabButton(idx)) return false;
+      return true;
+    };
     const ensurePane = (idx)=>{
       if(idx <= 1) return getPaneByIndex(1);
       if(!paneExists(idx) && typeof window._mx_createConsultorio === 'function'){
@@ -2195,7 +3117,9 @@ function mxClearHorarioInputs(inputs){
       return getPaneByIndex(idx);
     };
     const getField = (pane, selector)=> pane?.querySelector(selector);
+    const CONSULTORIO_GROUP_DEBUG = false;
     const logConsultorioGroupDebug = (label = '', pane = null, extra = {})=>{
+      if(!CONSULTORIO_GROUP_DEBUG) return;
       try{
         if(!pane) return;
         const paneId = String(pane.id || '');
@@ -2237,21 +3161,68 @@ function mxClearHorarioInputs(inputs){
     };
     const setValue = (el, value)=>{
       if(!el) return;
+      if(document.activeElement === el){
+        return;
+      }
       const next = clean(value);
       if(el.value !== next){
         el.value = next;
       }
     };
+    const paneHasActiveEditor = (pane)=>{
+      const active = document.activeElement;
+      if(!(active instanceof HTMLElement)) return false;
+      if(!pane || !pane.contains(active)) return false;
+      return active.matches('input, textarea, select');
+    };
+    const flushPendingHydrationForPane = (pane)=>{
+      if(!pane || paneHasActiveEditor(pane)) return;
+      const idx = parsePaneIndex(pane);
+      const key = String(idx || 1);
+      const pending = pendingHydratedRows.get(key);
+      if(!pending || typeof pending !== 'object') return;
+      pendingHydratedRows.delete(key);
+      applyRowToPane(pending);
+    };
+    const isInvalidImageSnapshotUrl = (value)=>{
+      const raw = clean(value);
+      if(!raw) return true;
+      const lower = raw.toLowerCase();
+      if(lower === 'about:blank') return true;
+      try{
+        const parsed = new URL(raw, window.location.origin);
+        const pathname = clean(parsed.pathname || '');
+        const isLocalRootOrIndex = pathname === '/' || pathname === '/index.html' || pathname.endsWith('/index.html');
+        const sameOrigin = parsed.origin === window.location.origin;
+        if(sameOrigin && isLocalRootOrIndex){
+          return true;
+        }
+      }catch(_){}
+      return false;
+    };
+    const isMeaningfulImageSnapshotUrl = (value)=>{
+      const raw = clean(value);
+      if(isInvalidImageSnapshotUrl(raw)) return false;
+      if(/^data:image\//i.test(raw)) return true;
+      try{
+        const parsed = new URL(raw, window.location.origin);
+        const pathname = clean(parsed.pathname || '').toLowerCase();
+        const ext = pathname.split('.').pop() || '';
+        if(['png','jpg','jpeg','webp','gif','bmp','svg'].includes(ext)) return true;
+        if(pathname.includes('/uploads/')) return true;
+      }catch(_){}
+      return false;
+    };
     const readPreviewUrl = (pane, selector)=>{
       const img = pane?.querySelector(selector);
-      const src = clean(img?.getAttribute('src') || img?.src || '');
-      if(!src) return '';
-      if(/^data:image\//i.test(src)) return src;
+      const attrSrc = clean(img?.getAttribute('src') || '');
+      if(!attrSrc) return '';
+      if(/^data:image\//i.test(attrSrc)) return attrSrc;
       try{
-        const u = new URL(src, window.location.origin);
-        return u.href;
+        const u = new URL(attrSrc, window.location.origin);
+        return isMeaningfulImageSnapshotUrl(u.href) ? u.href : '';
       }catch(_){
-        return src;
+        return '';
       }
     };
     const applyPreview = (pane, selector, srcValue)=>{
@@ -2520,17 +3491,22 @@ function mxClearHorarioInputs(inputs){
       const lat = toFiniteNumber(geo.lat);
       const lng = toFiniteNumber(geo.lng);
       const source = normalizeGeocodeSource(geo.source);
-      // Persistir coordenadas solo cuando el usuario confirmó explícitamente la ubicación.
-      // Evita guardar como ubicación real un punto automático genérico (centro de ciudad).
-      if(Number.isFinite(lat) && Number.isFinite(lng) && source === 'manual_adjusted'){
+      // Solo persistir coordenadas confirmadas por usuario.
+      const allowPersistConfirmed = ['manual_adjusted', 'google_confirmed', 'device'].includes(source);
+      if(Number.isFinite(lat) && Number.isFinite(lng) && allowPersistConfirmed){
         payload.lat = Number(lat.toFixed(7));
         payload.lng = Number(lng.toFixed(7));
         payload.geocode_source = source;
+        if(clean(geo?.geocode_updated_at || '') !== ''){
+          payload.geocode_updated_at = clean(geo.geocode_updated_at || '');
+        }
       }
       return payload;
     };
     const hasMeaningfulData = (payload)=>{
       if(!payload) return false;
+      const safeLogoUrl = isMeaningfulImageSnapshotUrl(payload.logo_url) ? clean(payload.logo_url) : '';
+      const safeFotoUrl = isMeaningfulImageSnapshotUrl(payload.foto_url) ? clean(payload.foto_url) : '';
       return [
         payload.titulo,
         payload.grupo_nombre,
@@ -2542,33 +3518,196 @@ function mxClearHorarioInputs(inputs){
         payload.municipio,
         payload.estado,
         payload.whatsapp,
-        payload.logo_url,
-        payload.foto_url,
+        safeLogoUrl,
+        safeFotoUrl,
         ...(Array.isArray(payload.telefonos) ? payload.telefonos : []),
         ...(Array.isArray(payload.urgencias) ? payload.urgencias : [])
-      ].some((value)=> clean(value) !== '');
+      ].some((value)=> clean(value) !== '')
+      || (
+        Number.isFinite(Number(payload?.lat))
+        && Number.isFinite(Number(payload?.lng))
+        && clean(payload?.geocode_source || '') !== ''
+      );
     };
 
     const apiGetConsultorios = async (doctorId)=>{
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'api_get_consultorios_request',
+          method: 'GET',
+          endpoint: '/api/agenda/index.php/consultorios',
+          doctor_id: doctorId
+        });
+      }catch(_){ }
       const resp = await fetch(`/api/agenda/index.php/consultorios?doctor_id=${encodeURIComponent(doctorId)}`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin'
       });
-      return resp.json().catch(()=> null);
+      const json = await resp.json().catch(()=> null);
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'api_get_consultorios_response',
+          status: resp.status,
+          ok: resp.ok,
+          total_rows: Array.isArray(json?.data) ? json.data.length : null,
+          consultorio_ids: Array.isArray(json?.data) ? json.data.map((row)=> String(row?.consultorio_id || row?.id || '')) : []
+        });
+      }catch(_){ }
+      return json;
     };
     const apiSaveConsultorio = async (payload)=>{
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'api_save_consultorio_request',
+          method: 'PUT',
+          endpoint: '/api/agenda/index.php/consultorios',
+          payload: {
+            doctor_id: payload?.doctor_id || '',
+            consultorio_id: payload?.consultorio_id || '',
+            titulo: payload?.titulo || '',
+            cp: payload?.cp || '',
+            colonia: payload?.colonia || '',
+            calle: payload?.calle || '',
+            lat: payload?.lat ?? null,
+            lng: payload?.lng ?? null
+          }
+        });
+      }catch(_){ }
       const resp = await fetch('/api/agenda/index.php/consultorios', {
         method: 'PUT',
         headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify(payload || {})
       });
+      const json = await resp.json().catch(()=> null);
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'api_save_consultorio_response',
+          status: resp.status,
+          ok: resp.ok,
+          response_ok: json?.ok === true,
+          consultorio_id_saved: String(json?.data?.consultorio_id || ''),
+          doctor_id_saved: String(json?.data?.doctor_id || ''),
+          row_exists_after_save: json?.meta?.row_exists_after_save === true
+        });
+      }catch(_){ }
       return {
         ok: resp.ok,
         status: resp.status,
-        json: await resp.json().catch(()=> null)
+        json
       };
+    };
+    const persistMapCoordsNow = async (idx, reason = 'map_confirm_manual')=>{
+      const consultorioIndex = Number(idx || 1) || 1;
+      const geo = getConsultorioGeoState(consultorioIndex);
+      const doctorId = clean(resolveDoctorId()) || clean(document.body?.dataset?.doctorId || '');
+      const consultorioId = String(consultorioIndex);
+      const lat = toFiniteNumber(geo?.lat);
+      const lng = toFiniteNumber(geo?.lng);
+      const source = normalizeGeocodeSource(geo?.source || '');
+      const geocodeUpdatedAt = clean(geo?.geocode_updated_at || '');
+      if(
+        !doctorId
+        || !consultorioId
+        || !Number.isFinite(lat)
+        || !Number.isFinite(lng)
+        || !['manual_adjusted', 'google_confirmed'].includes(source)
+      ){
+        return { ok:false, status:0, json:{ ok:false, error:'invalid_manual_map_payload' } };
+      }
+      const payload = {
+        doctor_id: doctorId,
+        consultorio_id: consultorioId,
+        lat: Number(lat.toFixed(7)),
+        lng: Number(lng.toFixed(7)),
+        geocode_source: source,
+      };
+      if(geocodeUpdatedAt !== ''){
+        payload.geocode_updated_at = geocodeUpdatedAt;
+      }
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'map_confirm_location_payload',
+          reason,
+          payload
+        });
+      }catch(_){ }
+      logGoogleMapDebug('google_confirm_location_payload', {
+        consultorio_index: consultorioIndex,
+        reason,
+        payload
+      });
+      const result = await apiSaveConsultorio(payload);
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'map_confirm_location_response',
+          reason,
+          consultorio_index: consultorioIndex,
+          status: Number(result?.status || 0),
+          ok: !!(result?.ok && result?.json?.ok),
+          response_consultorio_id: String(result?.json?.data?.consultorio_id || ''),
+          response_error: clean(result?.json?.error || result?.json?.message || '')
+        });
+      }catch(_){ }
+      if(result?.ok && result?.json?.ok){
+        hydratedRows.add(String(consultorioIndex));
+      }
+      return result;
+    };
+    window.mxPersistMapCoordsNow = persistMapCoordsNow;
+    const materializeConsultorioRow = async (idx, reason = 'pane_created')=>{
+      const consultorioId = String(Number(idx || 0) || '');
+      if(!consultorioId) return null;
+      const doctorId = clean(resolveDoctorId()) || clean(document.body?.dataset?.doctorId || '');
+      const payload = {
+        doctor_id: doctorId,
+        consultorio_id: consultorioId,
+        titulo: '',
+        nombre_visible: '',
+      };
+      const pane = ensurePane(Number(consultorioId));
+      const recalcBtn = pane?.querySelector(`[data-map-recalc-for="cons-map-frame${consultorioId === '1' ? '' : consultorioId}"]`);
+      if(!payload.doctor_id){
+        try{
+          console.warn('MXM CONSULTORIO DEBUG:', {
+            event: 'consultorio2_creation_runtime_audit',
+            paneIndex: Number(consultorioId),
+            consultorio_id: consultorioId,
+            paneId: String(pane?.id || ''),
+            recalcButtonExists: !!recalcBtn,
+            mapContainerId: pane?.querySelector('[id^="cons-map-frame"]')?.id || '',
+            put_triggered: false,
+            put_ok: false,
+            put_status: 0,
+            backend_consultorio_id: '',
+            backend_error: 'doctor_id_missing_before_put',
+            reason,
+          });
+        }catch(_){ }
+        return null;
+      }
+      const result = await apiSaveConsultorio(payload);
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'consultorio2_creation_runtime_audit',
+          paneIndex: Number(consultorioId),
+          consultorio_id: consultorioId,
+          paneId: String(pane?.id || ''),
+          recalcButtonExists: !!recalcBtn,
+          mapContainerId: pane?.querySelector('[id^="cons-map-frame"]')?.id || '',
+          put_triggered: true,
+          put_ok: !!(result?.ok && result?.json?.ok),
+          put_status: Number(result?.status || 0),
+          backend_consultorio_id: String(result?.json?.data?.consultorio_id || ''),
+          backend_error: clean(result?.json?.error || result?.json?.message || ''),
+          reason,
+        });
+      }catch(_){ }
+      if(result?.ok && result?.json?.ok){
+        hydratedRows.add(consultorioId);
+      }
+      return result;
     };
     const apiSearchMedicalGroups = async ({ doctorId, q, cp, colonia, limit = 8 } = {})=>{
       const params = new URLSearchParams();
@@ -2887,6 +4026,7 @@ function mxClearHorarioInputs(inputs){
       const ids = resolveConsultorioMapIdsByIndex(idx);
       const resolvedAddress = buildConsultorioAddressByIds(ids);
       if(Number.isFinite(geoLat) && Number.isFinite(geoLng)){
+        const isConfirmedSource = ['manual_adjusted', 'google_confirmed'].includes(geoSource);
         setConsultorioGeoState(idx, {
           lat: geoLat,
           lng: geoLng,
@@ -2895,12 +4035,27 @@ function mxClearHorarioInputs(inputs){
           persisted_lat: geoLat,
           persisted_lng: geoLng,
           persisted_source: geoSource || 'auto_geocoded',
-          manual_confirmed: geoSource === 'manual_adjusted',
-          confirmed_address: geoSource === 'manual_adjusted' ? resolvedAddress : '',
+          manual_confirmed: isConfirmedSource,
+          confirmed_address: isConfirmedSource ? resolvedAddress : '',
           manual_dirty: false,
           pending_lat: null,
           pending_lng: null,
         });
+        try{
+          console.warn('MXM CONSULTORIO DEBUG:', {
+            event: 'hydrate_map_coords',
+            consultorio_index: idx,
+            frame_id: ids.frame,
+            lat: geoLat,
+            lng: geoLng
+          });
+          console.warn('MXM CONSULTORIO DEBUG:', {
+            event: 'hydrate_map_source',
+            consultorio_index: idx,
+            frame_id: ids.frame,
+            geocode_source: geoSource || 'auto_geocoded'
+          });
+        }catch(_){ }
       }else{
         setConsultorioGeoState(idx, {
           lat: null,
@@ -2923,7 +4078,44 @@ function mxClearHorarioInputs(inputs){
 
     const savePaneNow = async (idx)=>{
       const payload = collectPanePayload(idx);
-      if(!payload || !payload.doctor_id) return;
+      if(!payload || !payload.doctor_id){
+        try{
+          if(idx === 2){
+            const pane = ensurePane(2);
+            const recalcBtn = pane?.querySelector('[data-map-recalc-for="cons-map-frame2"]');
+            console.warn('MXM CONSULTORIO DEBUG:', {
+              event: 'consultorio2_creation_runtime_audit',
+              paneIndex: 2,
+              consultorio_id: String(payload?.consultorio_id || '2'),
+              paneId: String(pane?.id || 'sede2'),
+              recalcButtonExists: !!recalcBtn,
+              mapContainerId: pane?.querySelector('[id^="cons-map-frame"]')?.id || '',
+              put_triggered: false,
+              put_ok: false,
+              put_status: 0,
+              backend_consultorio_id: '',
+              backend_error: 'missing_doctor_id'
+            });
+          }
+        }catch(_){ }
+        return;
+      }
+      const saveReason = clean(saveReasons.get(String(idx)) || '');
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'save_pane_now_start',
+          consultorio_index: idx,
+          reason: saveReason || 'generic',
+          payload: {
+            doctor_id: payload.doctor_id,
+            consultorio_id: payload.consultorio_id,
+            titulo: payload.titulo,
+            cp: payload.cp,
+            colonia: payload.colonia,
+            calle: payload.calle
+          }
+        });
+      }catch(_){ }
       const pane = ensurePane(idx);
       const hasGroup = !!getField(pane, 'input[id^="cons-grupo-si"]')?.checked;
       if(!hasGroup){
@@ -2940,13 +4132,67 @@ function mxClearHorarioInputs(inputs){
         hydratedRows.add(String(idx));
         const row = result?.json?.data;
         if(row && typeof row === 'object'){
-          applyRowToPane(row);
+          if(paneHasActiveEditor(pane)){
+            pendingHydratedRows.set(String(idx), row);
+          }else{
+            applyRowToPane(row);
+          }
         }
       }
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'save_pane_now_done',
+          consultorio_index: idx,
+          reason: saveReason || 'generic',
+          result_ok: !!(result?.ok && result?.json?.ok),
+          response_consultorio_id: String(result?.json?.data?.consultorio_id || '')
+        });
+        if(saveReason === 'map_geocode_precise' || saveReason === 'map_confirm_manual'){
+          console.warn('MXM CONSULTORIO DEBUG:', {
+            event: 'map_coords_saved',
+            consultorio_index: idx,
+            consultorio_id: String(payload?.consultorio_id || ''),
+            put_ok: !!(result?.ok && result?.json?.ok),
+            put_status: Number(result?.status || 0),
+            lat: Number(payload?.lat || NaN),
+            lng: Number(payload?.lng || NaN),
+            geocode_source: clean(payload?.geocode_source || '')
+          });
+        }
+        if(idx === 2 && saveReason === 'pane_created' && !consultorioCreateAuditLogged.has('2')){
+          const pane = ensurePane(2);
+          const address = buildConsultorioAddressByIds(resolveConsultorioMapIdsByIndex(2));
+          const recalcBtn = pane?.querySelector('[data-map-recalc-for="cons-map-frame2"]');
+          console.warn('MXM CONSULTORIO DEBUG:', {
+            event: 'consultorio2_creation_runtime_audit',
+            paneIndex: 2,
+            consultorio_id: String(payload.consultorio_id || ''),
+            paneId: String(pane?.id || 'sede2'),
+            recalcButtonExists: !!recalcBtn,
+            mapContainerId: pane?.querySelector('[id^="cons-map-frame"]')?.id || '',
+            domicilio_usado: address,
+            put_triggered: true,
+            put_ok: !!(result?.ok && result?.json?.ok),
+            put_status: Number(result?.status || 0),
+            backend_consultorio_id: String(result?.json?.data?.consultorio_id || ''),
+            backend_error: clean(result?.json?.error || result?.json?.message || '')
+          });
+          consultorioCreateAuditLogged.add('2');
+        }
+      }catch(_){ }
     };
-    const queueSavePane = (idx, delay = 420)=>{
-      if(hydrateInProgress) return;
+    const queueSavePane = (idx, delay = 420, reason = 'generic')=>{
+      if(hydrateInProgress && reason !== 'pane_created') return;
       const key = String(idx || 1);
+      saveReasons.set(key, clean(reason || 'generic') || 'generic');
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'queue_save_pane',
+          consultorio_index: Number(key),
+          delay,
+          reason: saveReasons.get(key)
+        });
+      }catch(_){ }
       if(saveTimers.has(key)){
         window.clearTimeout(saveTimers.get(key));
       }
@@ -2963,6 +4209,24 @@ function mxClearHorarioInputs(inputs){
       try{
         const json = await apiGetConsultorios(doctorId);
         const rows = Array.isArray(json?.data) ? json.data : [];
+        try{
+          console.warn('MXM CONSULTORIO DEBUG:', {
+            event: 'hydrate_rows_received',
+            doctor_id: doctorId,
+            total_rows: rows.length,
+            consultorio_ids: rows.map((row)=> String(row?.consultorio_id || row?.id || '')),
+            rows_summary: rows.map((row)=>({
+              consultorio_id: String(row?.consultorio_id || row?.id || ''),
+              titulo: clean(row?.titulo || row?.nombre_visible || ''),
+              calle: clean(row?.calle || ''),
+              cp: clean(row?.cp || ''),
+              colonia: clean(row?.colonia || ''),
+              lat: toFiniteNumber(row?.lat),
+              lng: toFiniteNumber(row?.lng),
+              updated_at: clean(row?.updated_at || ''),
+            }))
+          });
+        }catch(_){ }
         rows.forEach((row)=>{
           const cid = clean(row?.consultorio_id || row?.id || '');
           if(cid) hydratedRows.add(cid);
@@ -3069,8 +4333,13 @@ function mxClearHorarioInputs(inputs){
       const target = event.target;
       if(!(target instanceof HTMLElement)) return;
       const targetId = clean(target.id || '');
-      if(!targetId.startsWith('cons-grupo-nombre')) return;
-      window.setTimeout(()=>{ closeGroupSuggest(); }, 120);
+      const pane = target.closest('.tab-pane[id^="sede"]');
+      if(targetId.startsWith('cons-grupo-nombre')){
+        window.setTimeout(()=>{ closeGroupSuggest(); }, 120);
+      }
+      if(pane){
+        window.setTimeout(()=>{ flushPendingHydrationForPane(pane); }, 120);
+      }
     }, true);
 
     root.addEventListener('click', (event)=>{
@@ -3082,6 +4351,20 @@ function mxClearHorarioInputs(inputs){
       const idx = parsePaneIndex(pane);
       queueSavePane(idx, 220);
     }, true);
+    root.addEventListener('mx:consultorio-pane-created', (event)=>{
+      const idx = Number(event?.detail?.index || 0);
+      if(!Number.isFinite(idx) || idx <= 1) return;
+      try{
+        console.warn('MXM CONSULTORIO DEBUG:', {
+          event: 'pane_created_event_received',
+          consultorio_index: idx
+        });
+      }catch(_){ }
+      window.setTimeout(()=>{
+        materializeConsultorioRow(idx, 'pane_created_immediate').catch(()=> null);
+        queueSavePane(idx, 140, 'pane_created');
+      }, 60);
+    });
 
     root.querySelectorAll('.tab-pane[id^="sede"]').forEach((pane)=>{
       syncConsultorioNameModel(pane, { autofill: false });

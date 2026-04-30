@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/ConsultoriosController.php';
+require_once __DIR__ . '/../../modules/agenda/controllers/GoogleGeocodeController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentEventsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/PatientFlagsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/PatientBehaviorController.php';
@@ -15,6 +16,7 @@ require_once __DIR__ . '/../../modules/agenda/controllers/PublicOtpController.ph
 
 use Agenda\Controllers\AppointmentsController;
 use Agenda\Controllers\ConsultoriosController;
+use Agenda\Controllers\GoogleGeocodeController;
 use Agenda\Controllers\AppointmentEventsController;
 use Agenda\Controllers\PatientFlagsController;
 use Agenda\Controllers\PatientBehaviorController;
@@ -116,6 +118,7 @@ function is_private_agenda_route(array $segments): bool
         'settings',
         'waitlist',
         'medical-groups',
+        'geocode',
     ], true);
 }
 
@@ -368,6 +371,25 @@ try {
                 $response = $consultorios->index($_GET);
             } elseif ($method === 'PUT') {
                 $response = $consultorios->update(read_json_body());
+            } else {
+                $response = [
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'route not found',
+                    'data' => null,
+                    'meta' => (object)[],
+                ];
+            }
+            break;
+        case 'geocode':
+            $geocode = new GoogleGeocodeController();
+            if (is_array($actorContext)) {
+                apply_actor_context($geocode, $actorContext);
+            }
+            if ($method === 'POST' && ($segments[1] ?? '') === 'google') {
+                $response = $geocode->search(read_json_body());
+            } elseif ($method === 'GET' && ($segments[1] ?? '') === 'google-js-config') {
+                $response = $geocode->mapsJsConfig($_GET);
             } else {
                 $response = [
                     'ok' => false,

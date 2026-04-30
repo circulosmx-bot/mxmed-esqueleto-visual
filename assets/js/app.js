@@ -252,7 +252,9 @@ console.info('app.js loaded :: 20251123a');
 
   const STORAGE_KEY = 'mxmed.sidebar.state';
   const LEGACY_STORAGE_KEY = 'mxmed.shell.sidebar.expanded';
-  const toggleBtn = sidebar.querySelector('[data-action="sidebar-toggle"]');
+  const sidebarToggleBtn = sidebar.querySelector('[data-action="sidebar-toggle"]');
+  const headerToggleBtn = document.querySelector('[data-action="sidebar-toggle-proxy"]');
+  const toggleButtons = [sidebarToggleBtn, headerToggleBtn].filter(Boolean);
   const desktopQuery = window.matchMedia('(min-width: 993px)');
   let expanded = false;
   let resizeEmitTimer = null;
@@ -327,10 +329,10 @@ console.info('app.js loaded :: 20251123a');
     if(!isDesktop()){
       grid.classList.remove('is-sidebar-collapsed', 'is-sidebar-expanded');
       body.classList.remove('mx-sidebar-collapsed', 'mx-sidebar-expanded');
-      if(toggleBtn){
-        toggleBtn.setAttribute('aria-expanded', 'false');
-        toggleBtn.setAttribute('aria-label', 'Expandir menú lateral');
-      }
+      toggleButtons.forEach((btn)=>{
+        btn.setAttribute('aria-expanded', 'false');
+        btn.setAttribute('aria-label', 'Expandir menú lateral');
+      });
       updateNavTooltips();
       return;
     }
@@ -338,11 +340,11 @@ console.info('app.js loaded :: 20251123a');
     grid.classList.toggle('is-sidebar-collapsed', collapsed);
     body.classList.toggle('mx-sidebar-expanded', expanded);
     body.classList.toggle('mx-sidebar-collapsed', collapsed);
-    if(toggleBtn){
-      toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-      toggleBtn.setAttribute('aria-label', expanded ? 'Colapsar menú lateral' : 'Expandir menú lateral');
-      toggleBtn.setAttribute('title', expanded ? 'Colapsar menú lateral' : 'Expandir menú lateral');
-    }
+    toggleButtons.forEach((btn)=>{
+      btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      btn.setAttribute('aria-label', expanded ? 'Colapsar menú lateral' : 'Expandir menú lateral');
+      btn.setAttribute('title', expanded ? 'Colapsar menú lateral' : 'Expandir menú lateral');
+    });
     updateNavTooltips();
   };
   const setExpanded = (next, { persist = true, silent = false } = {})=>{
@@ -360,10 +362,12 @@ console.info('app.js loaded :: 20251123a');
 
   setExpanded(readPersistedState() === 'expanded', { persist: false, silent: true });
 
-  toggleBtn?.addEventListener('click', (event)=>{
-    event.preventDefault();
-    event.stopPropagation();
-    setExpanded(!expanded);
+  toggleButtons.forEach((btn)=>{
+    btn.addEventListener('click', (event)=>{
+      event.preventDefault();
+      event.stopPropagation();
+      setExpanded(!expanded);
+    });
   });
 
   document.addEventListener('click', (event)=>{
@@ -715,9 +719,10 @@ console.info('app.js loaded :: 20251123a');
   let blockModalReasonLabel = 'Comida';
   let blockModalShowConflicts = false;
   const NEXT_AVAILABLE_FLOW_ENABLED = false;
-  const AGENDA_SLOT_DEBUG = true;
-  const AGENDA_CANCEL_DEBUG = true;
-  const AGENDA_SLOT_FORCE_OPEN_TRACE = true;
+  const AGENDA_SLOT_DEBUG = false;
+  const AGENDA_CANCEL_DEBUG = false;
+  const AGENDA_SLOT_FORCE_OPEN_TRACE = false;
+  const CONSULTORIO_SCHEDULE_DEBUG = false;
   const AGENDA_LATE_CANCEL_THRESHOLD_MINUTES = 1080;
   const BLOCK_REASON_OPTIONS = Object.freeze([
     { key: 'comida', label: 'Comida' },
@@ -735,8 +740,15 @@ console.info('app.js loaded :: 20251123a');
     }catch(_){}
   };
   const logAgendaSlotClickDebug = (label = '', details = {})=>{
+    if(!AGENDA_SLOT_DEBUG) return;
     try{
       console.info(`AGENDA SLOT CLICK DEBUG: ${label}`, details);
+    }catch(_){}
+  };
+  const logAgendaSlotTrace = (label = '', details = {})=>{
+    if(!AGENDA_SLOT_DEBUG) return;
+    try{
+      console.warn(`AGENDA SLOT TRACE: ${label}`, details);
     }catch(_){}
   };
   const logAgendaNoShowDebug = (label = '', details = {})=>{
@@ -1042,7 +1054,7 @@ console.info('app.js loaded :: 20251123a');
     }
   };
   const hideCellMenu = (reason = '')=>{
-    console.warn('AGENDA SLOT TRACE: hideCellMenu', {
+    logAgendaSlotTrace('hideCellMenu', {
       reason: sanitizeText(reason || '') || 'unspecified'
     });
     logAgendaSlotClickDebug('hideCellMenu called', {
@@ -3023,7 +3035,7 @@ console.info('app.js loaded :: 20251123a');
     return relaxedAvailable;
   };
   const openCellMenu = ({ start, end, jsEvent, source = '' })=>{
-    console.warn('AGENDA SLOT TRACE: openCellMenu ENTER', {
+    logAgendaSlotTrace('openCellMenu ENTER', {
       start: start?.toISOString?.() || String(start || ''),
       end: end?.toISOString?.() || String(end || ''),
       source: sanitizeText(source || ''),
@@ -3050,7 +3062,7 @@ console.info('app.js loaded :: 20251123a');
     cellMenuSelection = { start, end, source: sourceKey };
     const frame = findTimeGridColumnFrame(start);
     if(!(frame instanceof HTMLElement)){
-      console.warn('AGENDA SLOT TRACE: openCellMenu blocked (frame not found)', {
+      logAgendaSlotTrace('openCellMenu blocked (frame not found)', {
         start: start?.toISOString?.() || String(start || ''),
         source: sanitizeText(sourceKey || '')
       });
@@ -3091,7 +3103,7 @@ console.info('app.js loaded :: 20251123a');
     activeSlotActionPanel = buildSlotActionPanel();
     activeSlotActionPortal.appendChild(activeSlotActionPanel);
     els.calendarWrap.appendChild(activeSlotActionPortal);
-    console.warn('AGENDA SLOT TRACE: openCellMenu DOM', {
+    logAgendaSlotTrace('openCellMenu DOM', {
       exists: !!activeSlotActionPanel,
       display: activeSlotActionPanel?.style?.display || '',
       className: activeSlotActionPanel?.className || '',
@@ -3099,7 +3111,7 @@ console.info('app.js loaded :: 20251123a');
     });
     const mounted = positionSlotActionPanel({ frame: activeSlotActionPortal, slotStartDate: start, jsEvent });
     if(!mounted){
-      console.warn('AGENDA SLOT TRACE: openCellMenu blocked (panel not mounted)', {
+      logAgendaSlotTrace('openCellMenu blocked (panel not mounted)', {
         start: start?.toISOString?.() || String(start || ''),
         source: sanitizeText(sourceKey || '')
       });
@@ -3155,7 +3167,7 @@ console.info('app.js loaded :: 20251123a');
         zIndex: portalStyle.zIndex
       } : null
     });
-    console.warn('AGENDA SLOT TRACE: openCellMenu DOM', {
+    logAgendaSlotTrace('openCellMenu DOM', {
       exists: !!activeSlotActionPanel,
       display: panelStyle?.display || '',
       className: activeSlotActionPanel?.className || '',
@@ -6086,7 +6098,7 @@ console.info('app.js loaded :: 20251123a');
         };
       },
       dateClick: (info)=>{
-        console.warn('AGENDA SLOT TRACE: dateClick', info);
+        logAgendaSlotTrace('dateClick', info);
         const viewType = String(info?.view?.type || '');
         logAgendaSlotClickDebug('dateClick received', {
           view: viewType,
@@ -6131,7 +6143,7 @@ console.info('app.js loaded :: 20251123a');
           const start = new Date(info.date);
           const end = new Date(start.getTime() + (slotMinutes * 60 * 1000));
           if(AGENDA_SLOT_FORCE_OPEN_TRACE){
-            console.warn('AGENDA SLOT TRACE: dateClick FORCE openCellMenu', {
+            logAgendaSlotTrace('dateClick FORCE openCellMenu', {
               start: start?.toISOString?.() || '',
               end: end?.toISOString?.() || '',
               view: viewType
@@ -6179,7 +6191,7 @@ console.info('app.js loaded :: 20251123a');
         }
       },
       select: (selectionInfo)=>{
-        console.warn('AGENDA SLOT TRACE: select', selectionInfo);
+        logAgendaSlotTrace('select', selectionInfo);
         const start = selectionInfo?.start instanceof Date ? selectionInfo.start : new Date(selectionInfo?.start || '');
         const end = selectionInfo?.end instanceof Date ? selectionInfo.end : new Date(selectionInfo?.end || '');
         const currentView = String(calendar?.view?.type || '');
@@ -6211,7 +6223,7 @@ console.info('app.js loaded :: 20251123a');
           rerenderCalendarEvents();
         }
         if(AGENDA_SLOT_FORCE_OPEN_TRACE && (currentView === 'timeGridWeek' || currentView === 'timeGridDay')){
-          console.warn('AGENDA SLOT TRACE: select FORCE openCellMenu', {
+          logAgendaSlotTrace('select FORCE openCellMenu', {
             start: start?.toISOString?.() || '',
             end: end?.toISOString?.() || '',
             view: currentView
@@ -6894,7 +6906,7 @@ console.info('app.js loaded :: 20251123a');
       const blockFlowOpen = !!(activeSlotActionPanel && activeSlotActionPanel.classList.contains('is-block-open'));
       const insideMenu = event.target.closest('#ag_cell_menu') || event.target.closest('.mx-ag-slot-action-layer') || event.target.closest('.mx-ag-event-action-layer');
       const insideCalendar = event.target.closest('#ag_calendar') || event.target.closest('#ag_calendar_wrap');
-      console.warn('AGENDA SLOT TRACE: document click while menu open', {
+      logAgendaSlotTrace('document click while menu open', {
         hasFloatingMenuOpen,
         hasInlineMenuOpen,
         hasEventMenuOpen,
@@ -6915,7 +6927,7 @@ console.info('app.js loaded :: 20251123a');
         targetClass: sanitizeText(event.target?.className || '')
       });
       if(autoHideSuppressed){
-        console.warn('AGENDA SLOT TRACE: hideCellMenu suppressed', {
+        logAgendaSlotTrace('hideCellMenu suppressed', {
           msRemaining: Math.max(0, suppressCellMenuAutoHideUntil - Date.now())
         });
         return;
@@ -7993,6 +8005,14 @@ console.info('app.js loaded :: 20251123a');
 
   const body = document.getElementById('sched-body');
   const consultorioPanel = document.getElementById('p-consultorio');
+  try{
+    console.warn('MXM CONSULTORIO DEBUG:', {
+      event: 'app_js_consultorio_block_loaded',
+      has_sched_body: !!body,
+      has_consultorio_panel: !!consultorioPanel,
+      file: 'assets/js/app.js'
+    });
+  }catch(_){ }
 
   if(body || consultorioPanel){
     // Fuente oficial: backend consultorio_schedule (+ overrides en disponibilidad).
@@ -8113,8 +8133,8 @@ console.info('app.js loaded :: 20251123a');
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${day.label}</td>
       <td><input type="checkbox" class="form-check-input" id="sch-act-${paneKey}-${day.key}"></td>
-      <td><div class="d-flex align-items-center gap-1"><input type="time" class="form-control form-control-sm" id="sch-a1-${paneKey}-${day.key}" placeholder="${DEFAULT_TIMES.a1}"><span>-</span><input type="time" class="form-control form-control-sm" id="sch-b1-${paneKey}-${day.key}" placeholder="${DEFAULT_TIMES.b1}"></div></td>
-      <td><div class="d-flex align-items-center gap-1"><input type="time" class="form-control form-control-sm" id="sch-a2-${paneKey}-${day.key}" placeholder="${DEFAULT_TIMES.a2}"><span>-</span><input type="time" class="form-control form-control-sm" id="sch-b2-${paneKey}-${day.key}" placeholder="${DEFAULT_TIMES.b2}"></div></td>`;
+      <td><div class="sched-time-slot"><div class="d-flex align-items-center gap-1"><input type="time" class="form-control form-control-sm" id="sch-a1-${paneKey}-${day.key}" placeholder="${DEFAULT_TIMES.a1}"><span>-</span><input type="time" class="form-control form-control-sm" id="sch-b1-${paneKey}-${day.key}" placeholder="${DEFAULT_TIMES.b1}"></div><div class="sched-empty-label">— Sin horario —</div></div></td>
+      <td><div class="sched-time-slot"><div class="d-flex align-items-center gap-1"><input type="time" class="form-control form-control-sm" id="sch-a2-${paneKey}-${day.key}" placeholder="${DEFAULT_TIMES.a2}"><span>-</span><input type="time" class="form-control form-control-sm" id="sch-b2-${paneKey}-${day.key}" placeholder="${DEFAULT_TIMES.b2}"></div><div class="sched-empty-label">— Sin horario —</div></div></td>`;
         activeBody.appendChild(tr);
         const ref = {
           tr,
@@ -8122,16 +8142,56 @@ console.info('app.js loaded :: 20251123a');
           a1: tr.querySelector(`#sch-a1-${paneKey}-${day.key}`),
           b1: tr.querySelector(`#sch-b1-${paneKey}-${day.key}`),
           a2: tr.querySelector(`#sch-a2-${paneKey}-${day.key}`),
-          b2: tr.querySelector(`#sch-b2-${paneKey}-${day.key}`)
+          b2: tr.querySelector(`#sch-b2-${paneKey}-${day.key}`),
+          turno1Slot: tr.children[2]?.querySelector('.sched-time-slot') || null,
+          turno2Slot: tr.children[3]?.querySelector('.sched-time-slot') || null
         };
         rowRefs.set(day.key, ref);
         state[day.key] = { act: false, a1: '', b1: '', a2: '', b2: '' };
 
+        const bindEmptySlotActivator = (slot, startInput, endInput)=>{
+          if(!slot || !startInput || !endInput) return;
+          slot.addEventListener('click', (event)=>{
+            if(!slot.classList.contains('is-empty')) return;
+            const target = event.target instanceof HTMLElement ? event.target : null;
+            if(target && (target.matches('input') || target.closest('input'))) return;
+            slot.classList.remove('is-empty');
+            window.setTimeout(()=>{ try{ startInput.focus(); }catch(_){ } }, 0);
+          });
+        };
+        const bindTurnoBlurNormalizer = (slot, startInput, endInput)=>{
+          if(!slot || !startInput || !endInput) return;
+          const normalizeOnBlur = ()=>{
+            window.setTimeout(()=>{
+              const activeEl = document.activeElement;
+              if(activeEl instanceof HTMLElement && slot.contains(activeEl)) return;
+              const startVal = normalizeTime(startInput.value);
+              const endVal = normalizeTime(endInput.value);
+              const hasStart = !!startVal;
+              const hasEnd = !!endVal;
+              if(hasStart === hasEnd){
+                updateStateFromRow(day.key);
+                return;
+              }
+              const hadAny = !!(startInput.value || endInput.value);
+              startInput.value = '';
+              endInput.value = '';
+              updateStateFromRow(day.key);
+              if(hadAny){
+                queuePersist();
+              }
+            }, 0);
+          };
+          startInput.addEventListener('blur', normalizeOnBlur);
+          endInput.addEventListener('blur', normalizeOnBlur);
+        };
+        bindEmptySlotActivator(ref.turno1Slot, ref.a1, ref.b1);
+        bindEmptySlotActivator(ref.turno2Slot, ref.a2, ref.b2);
+        bindTurnoBlurNormalizer(ref.turno1Slot, ref.a1, ref.b1);
+        bindTurnoBlurNormalizer(ref.turno2Slot, ref.a2, ref.b2);
+
         ref.act.addEventListener('change', ()=>{
-          if(ref.act.checked){
-            if(!normalizeTime(ref.a1.value)) ref.a1.value = DEFAULT_TIMES.a1;
-            if(!normalizeTime(ref.b1.value)) ref.b1.value = DEFAULT_TIMES.b1;
-          }else{
+          if(!ref.act.checked){
             ref.a1.value = '';
             ref.b1.value = '';
             ref.a2.value = '';
@@ -8142,15 +8202,15 @@ console.info('app.js loaded :: 20251123a');
         });
         [ref.a1, ref.b1, ref.a2, ref.b2].forEach((input)=>{
           input.addEventListener('input', ()=>{
-            if(normalizeTime(input.value) && !ref.act.checked){
-              ref.act.checked = true;
-            }
             updateStateFromRow(day.key);
             queuePersist();
           });
           input.addEventListener('change', ()=>{
             updateStateFromRow(day.key);
             queuePersist();
+          });
+          input.addEventListener('blur', ()=>{
+            window.setTimeout(()=>{ updateStateFromRow(day.key); }, 0);
           });
         });
       });
@@ -8205,8 +8265,32 @@ console.info('app.js loaded :: 20251123a');
     };
     const markRow = (ref)=>{
       if(!ref) return;
-      const hasValues = [ref.a1, ref.b1, ref.a2, ref.b2].some((inp)=> !!normalizeTime(inp?.value || ''));
-      ref.tr.classList.toggle('sched-defined', !!(ref.act?.checked || hasValues));
+      const turno1Ready = !!(normalizeTime(ref.a1?.value || '') && normalizeTime(ref.b1?.value || ''));
+      const turno2Ready = !!(normalizeTime(ref.a2?.value || '') && normalizeTime(ref.b2?.value || ''));
+      const turno1HasAny = !!String(ref.a1?.value || '').trim() || !!String(ref.b1?.value || '').trim();
+      const turno2HasAny = !!String(ref.a2?.value || '').trim() || !!String(ref.b2?.value || '').trim();
+      const slot1Focused = !!(ref.turno1Slot && ref.turno1Slot.contains(document.activeElement));
+      const slot2Focused = !!(ref.turno2Slot && ref.turno2Slot.contains(document.activeElement));
+      const isDefined = !!(turno1Ready || turno2Ready);
+      ref.tr.classList.toggle('sched-defined', isDefined);
+      ref.tr.classList.toggle('sched-empty', !isDefined);
+      if(ref.turno1Slot) ref.turno1Slot.classList.toggle('is-empty', !(turno1Ready || turno1HasAny || slot1Focused));
+      if(ref.turno2Slot) ref.turno2Slot.classList.toggle('is-empty', !(turno2Ready || turno2HasAny || slot2Focused));
+      if(CONSULTORIO_SCHEDULE_DEBUG){
+        try{
+          const rowId = ref.act?.id || '';
+          const dayKey = String(rowId).replace(/^sch-act-[^-]+-/, '');
+          console.warn('MXM CONSULTORIO DEBUG:', {
+            event: 'schedule_row_render_state',
+            row_id: rowId,
+            day_key: dayKey,
+            turno1_ready: turno1Ready,
+            turno2_ready: turno2Ready,
+            turno1_empty_visible: !!ref.turno1Slot?.classList.contains('is-empty'),
+            turno2_empty_visible: !!ref.turno2Slot?.classList.contains('is-empty')
+          });
+        }catch(_){ }
+      }
     };
     const updateStateFromRow = (dayKey)=>{
       const ref = rowRefs.get(dayKey);
@@ -8696,6 +8780,13 @@ console.info('app.js loaded :: 20251123a');
 
 
 (function initMap(){
+    // Aislamiento Fase A:
+    // Si el módulo multisede está presente, el mapa lo gestiona exclusivamente multisede.js.
+    // Evitamos doble binding legacy de app.js.
+    const hasMultisedeScript = !!document.querySelector('script[src*="perfil/consultorio/multisede.js"]');
+    if(window.__mxmedConsultorioMapManaged === true || hasMultisedeScript){
+      return;
+    }
     if(!(window.L && typeof L.map === 'function')) return; // si no hay Leaflet, usamos iframe fallback m?s abajo
 
     // Configs para ambos panes

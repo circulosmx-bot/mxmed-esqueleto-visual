@@ -57,6 +57,25 @@ class ConsultoriosRepository
     public function upsertConsultorio(array $payload): void
     {
         $this->ensureTable();
+        $groupIdIsSet = (int)($payload['group_id_is_set'] ?? 1);
+        $tituloIsSet = (int)($payload['titulo_is_set'] ?? 1);
+        $grupoNombreIsSet = (int)($payload['grupo_nombre_is_set'] ?? 1);
+        $calleIsSet = (int)($payload['calle_is_set'] ?? 1);
+        $numExtIsSet = (int)($payload['num_ext_is_set'] ?? 1);
+        $numIntIsSet = (int)($payload['num_int_is_set'] ?? 1);
+        $cpIsSet = (int)($payload['cp_is_set'] ?? 1);
+        $coloniaIsSet = (int)($payload['colonia_is_set'] ?? 1);
+        $municipioIsSet = (int)($payload['municipio_is_set'] ?? 1);
+        $estadoIsSet = (int)($payload['estado_is_set'] ?? 1);
+        $telefonosIsSet = (int)($payload['telefonos_json_is_set'] ?? 1);
+        $whatsappIsSet = (int)($payload['whatsapp_is_set'] ?? 1);
+        $urgenciasIsSet = (int)($payload['urgencias_json_is_set'] ?? 1);
+        $logoUrlIsSet = (int)($payload['logo_url_is_set'] ?? 1);
+        $fotoUrlIsSet = (int)($payload['foto_url_is_set'] ?? 1);
+        $latIsSet = (int)($payload['lat_is_set'] ?? 1);
+        $lngIsSet = (int)($payload['lng_is_set'] ?? 1);
+        $geocodeSourceIsSet = (int)($payload['geocode_source_is_set'] ?? 1);
+        $geocodeUpdatedAtIsSet = (int)($payload['geocode_updated_at_is_set'] ?? 0);
         $sql = 'INSERT INTO consultorios (
             doctor_id, consultorio_id, group_id, titulo, grupo_nombre,
             calle, num_ext, num_int, cp, colonia, municipio, estado,
@@ -68,32 +87,68 @@ class ConsultoriosRepository
             :telefonos_json, :whatsapp, :urgencias_json, :logo_url, :foto_url,
             :lat, :lng, :geocode_source,
             CASE
+                WHEN :geocode_updated_at_is_set = 1 THEN :geocode_updated_at
                 WHEN :lat IS NOT NULL AND :lng IS NOT NULL THEN NOW()
                 ELSE NULL
             END,
             NOW()
         )
         ON DUPLICATE KEY UPDATE
-            group_id = VALUES(group_id),
-            titulo = VALUES(titulo),
-            grupo_nombre = VALUES(grupo_nombre),
-            calle = VALUES(calle),
-            num_ext = VALUES(num_ext),
-            num_int = VALUES(num_int),
-            cp = VALUES(cp),
-            colonia = VALUES(colonia),
-            municipio = VALUES(municipio),
-            estado = VALUES(estado),
-            telefonos_json = VALUES(telefonos_json),
-            whatsapp = VALUES(whatsapp),
-            urgencias_json = VALUES(urgencias_json),
-            logo_url = VALUES(logo_url),
-            foto_url = VALUES(foto_url),
-            lat = COALESCE(VALUES(lat), lat),
-            lng = COALESCE(VALUES(lng), lng),
-            geocode_source = COALESCE(VALUES(geocode_source), geocode_source),
+            group_id = CASE WHEN :group_id_is_set = 1 THEN VALUES(group_id) ELSE group_id END,
+            titulo = CASE WHEN :titulo_is_set = 1 THEN VALUES(titulo) ELSE titulo END,
+            grupo_nombre = CASE WHEN :grupo_nombre_is_set = 1 THEN VALUES(grupo_nombre) ELSE grupo_nombre END,
+            calle = CASE WHEN :calle_is_set = 1 THEN VALUES(calle) ELSE calle END,
+            num_ext = CASE WHEN :num_ext_is_set = 1 THEN VALUES(num_ext) ELSE num_ext END,
+            num_int = CASE WHEN :num_int_is_set = 1 THEN VALUES(num_int) ELSE num_int END,
+            cp = CASE WHEN :cp_is_set = 1 THEN VALUES(cp) ELSE cp END,
+            colonia = CASE WHEN :colonia_is_set = 1 THEN VALUES(colonia) ELSE colonia END,
+            municipio = CASE WHEN :municipio_is_set = 1 THEN VALUES(municipio) ELSE municipio END,
+            estado = CASE WHEN :estado_is_set = 1 THEN VALUES(estado) ELSE estado END,
+            telefonos_json = CASE WHEN :telefonos_json_is_set = 1 THEN VALUES(telefonos_json) ELSE telefonos_json END,
+            whatsapp = CASE WHEN :whatsapp_is_set = 1 THEN VALUES(whatsapp) ELSE whatsapp END,
+            urgencias_json = CASE WHEN :urgencias_json_is_set = 1 THEN VALUES(urgencias_json) ELSE urgencias_json END,
+            logo_url = CASE WHEN :logo_url_is_set = 1 THEN VALUES(logo_url) ELSE logo_url END,
+            foto_url = CASE WHEN :foto_url_is_set = 1 THEN VALUES(foto_url) ELSE foto_url END,
+            lat = CASE
+                WHEN :lat_is_set = 1
+                     AND :geocode_updated_at_is_set = 1
+                     AND consultorios.geocode_updated_at IS NOT NULL
+                     AND :geocode_updated_at IS NOT NULL
+                     AND :geocode_updated_at < consultorios.geocode_updated_at
+                    THEN lat
+                WHEN :lat_is_set = 1 THEN VALUES(lat)
+                ELSE lat
+            END,
+            lng = CASE
+                WHEN :lng_is_set = 1
+                     AND :geocode_updated_at_is_set = 1
+                     AND consultorios.geocode_updated_at IS NOT NULL
+                     AND :geocode_updated_at IS NOT NULL
+                     AND :geocode_updated_at < consultorios.geocode_updated_at
+                    THEN lng
+                WHEN :lng_is_set = 1 THEN VALUES(lng)
+                ELSE lng
+            END,
+            geocode_source = CASE
+                WHEN :geocode_source_is_set = 1
+                     AND :geocode_updated_at_is_set = 1
+                     AND consultorios.geocode_updated_at IS NOT NULL
+                     AND :geocode_updated_at IS NOT NULL
+                     AND :geocode_updated_at < consultorios.geocode_updated_at
+                    THEN geocode_source
+                WHEN :geocode_source_is_set = 1 THEN VALUES(geocode_source)
+                ELSE geocode_source
+            END,
             geocode_updated_at = CASE
-                WHEN VALUES(lat) IS NOT NULL AND VALUES(lng) IS NOT NULL THEN NOW()
+                WHEN :geocode_updated_at_is_set = 1
+                     AND consultorios.geocode_updated_at IS NOT NULL
+                     AND :geocode_updated_at IS NOT NULL
+                     AND :geocode_updated_at < consultorios.geocode_updated_at
+                    THEN geocode_updated_at
+                WHEN :geocode_updated_at_is_set = 1 THEN :geocode_updated_at
+                WHEN (:lat_is_set = 1 OR :lng_is_set = 1 OR :geocode_source_is_set = 1)
+                     AND VALUES(lat) IS NOT NULL AND VALUES(lng) IS NOT NULL THEN NOW()
+                WHEN (:lat_is_set = 1 OR :lng_is_set = 1) AND (VALUES(lat) IS NULL OR VALUES(lng) IS NULL) THEN NULL
                 ELSE geocode_updated_at
             END,
             updated_at = NOW()';
@@ -119,6 +174,26 @@ class ConsultoriosRepository
             'lat' => $payload['lat'] ?? null,
             'lng' => $payload['lng'] ?? null,
             'geocode_source' => $payload['geocode_source'] ?? null,
+            'geocode_updated_at' => $payload['geocode_updated_at'] ?? null,
+            'group_id_is_set' => $groupIdIsSet,
+            'titulo_is_set' => $tituloIsSet,
+            'grupo_nombre_is_set' => $grupoNombreIsSet,
+            'calle_is_set' => $calleIsSet,
+            'num_ext_is_set' => $numExtIsSet,
+            'num_int_is_set' => $numIntIsSet,
+            'cp_is_set' => $cpIsSet,
+            'colonia_is_set' => $coloniaIsSet,
+            'municipio_is_set' => $municipioIsSet,
+            'estado_is_set' => $estadoIsSet,
+            'telefonos_json_is_set' => $telefonosIsSet,
+            'whatsapp_is_set' => $whatsappIsSet,
+            'urgencias_json_is_set' => $urgenciasIsSet,
+            'logo_url_is_set' => $logoUrlIsSet,
+            'foto_url_is_set' => $fotoUrlIsSet,
+            'lat_is_set' => $latIsSet,
+            'lng_is_set' => $lngIsSet,
+            'geocode_source_is_set' => $geocodeSourceIsSet,
+            'geocode_updated_at_is_set' => $geocodeUpdatedAtIsSet,
         ]);
     }
 

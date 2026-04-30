@@ -7,6 +7,7 @@ plan-*
 FSD_*
 MODULO*
 api/mxmed-db.config.php
+api/mxmed-google.config.php
 .DS_Store
 **/.DS_Store
 !docs/modulo_a_pacientes_expedientes_consentimientos_v1.md

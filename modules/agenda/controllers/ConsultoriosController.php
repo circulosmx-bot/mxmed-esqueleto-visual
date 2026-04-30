@@ -121,42 +121,105 @@ class ConsultoriosController
             $num = (float)$value;
             return is_finite($num) ? $num : null;
         };
+        $normalizeDateTime = static function ($value): ?string {
+            $raw = trim((string)($value ?? ''));
+            if ($raw === '') {
+                return null;
+            }
+            $ts = strtotime($raw);
+            if ($ts === false) {
+                return null;
+            }
+            return gmdate('Y-m-d H:i:s', $ts);
+        };
         $normalizeGeocodeSource = static function ($value): ?string {
             $raw = trim((string)($value ?? ''));
             if ($raw === '') {
                 return null;
             }
             $safe = strtolower($raw);
-            if (!in_array($safe, ['auto_geocoded', 'manual_adjusted', 'device'], true)) {
+            if (!in_array($safe, ['auto_geocoded', 'manual_adjusted', 'device', 'google_suggested', 'google_confirmed'], true)) {
                 return null;
             }
             return $safe;
         };
+        $hasAnyKey = static function (array $source, array $keys): bool {
+            foreach ($keys as $key) {
+                if (array_key_exists($key, $source)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        $pickValueByKeys = static function (array $source, array $keys, $default = null) {
+            foreach ($keys as $key) {
+                if (array_key_exists($key, $source)) {
+                    return $source[$key];
+                }
+            }
+            return $default;
+        };
 
-        $visibleName = $cleanText($payload['nombre_visible'] ?? ($payload['titulo'] ?? null));
-        $baseName = $cleanText($payload['nombre_base'] ?? ($payload['grupo_nombre'] ?? null));
+        $visibleNameIsSet = $hasAnyKey($payload, ['nombre_visible', 'titulo']);
+        $baseNameIsSet = $hasAnyKey($payload, ['nombre_base', 'grupo_nombre']);
+        $visibleName = $visibleNameIsSet
+            ? $cleanText($pickValueByKeys($payload, ['nombre_visible', 'titulo']))
+            : null;
+        $baseName = $baseNameIsSet
+            ? $cleanText($pickValueByKeys($payload, ['nombre_base', 'grupo_nombre']))
+            : null;
+        $telefonosIsSet = array_key_exists('telefonos', $payload);
+        $urgenciasIsSet = array_key_exists('urgencias', $payload);
+        $latIsSet = array_key_exists('lat', $payload);
+        $lngIsSet = array_key_exists('lng', $payload);
+        $geocodeSourceIsSet = array_key_exists('geocode_source', $payload);
+        $geocodeUpdatedAtIsSet = array_key_exists('geocode_updated_at', $payload);
 
         $record = [
             'doctor_id' => $doctorId,
             'consultorio_id' => $consultorioId,
-            'group_id' => $cleanText($payload['group_id'] ?? null),
+            'group_id' => array_key_exists('group_id', $payload) ? $cleanText($payload['group_id']) : null,
+            'group_id_is_set' => array_key_exists('group_id', $payload) ? 1 : 0,
             'titulo' => $visibleName,
+            'titulo_is_set' => $visibleNameIsSet ? 1 : 0,
             'grupo_nombre' => $baseName,
-            'calle' => $cleanText($payload['calle'] ?? null),
-            'num_ext' => $cleanText($payload['num_ext'] ?? null),
-            'num_int' => $cleanText($payload['num_int'] ?? null),
-            'cp' => $cleanText($payload['cp'] ?? null),
-            'colonia' => $cleanText($payload['colonia'] ?? null),
-            'municipio' => $cleanText($payload['municipio'] ?? null),
-            'estado' => $cleanText($payload['estado'] ?? null),
-            'telefonos_json' => json_encode($cleanArray($payload['telefonos'] ?? []), JSON_UNESCAPED_UNICODE),
-            'whatsapp' => $cleanText($payload['whatsapp'] ?? null),
-            'urgencias_json' => json_encode($cleanArray($payload['urgencias'] ?? []), JSON_UNESCAPED_UNICODE),
-            'logo_url' => $cleanText($payload['logo_url'] ?? null),
-            'foto_url' => $cleanText($payload['foto_url'] ?? null),
-            'lat' => $cleanFloat($payload['lat'] ?? null),
-            'lng' => $cleanFloat($payload['lng'] ?? null),
-            'geocode_source' => $normalizeGeocodeSource($payload['geocode_source'] ?? null),
+            'grupo_nombre_is_set' => $baseNameIsSet ? 1 : 0,
+            'calle' => array_key_exists('calle', $payload) ? $cleanText($payload['calle']) : null,
+            'calle_is_set' => array_key_exists('calle', $payload) ? 1 : 0,
+            'num_ext' => array_key_exists('num_ext', $payload) ? $cleanText($payload['num_ext']) : null,
+            'num_ext_is_set' => array_key_exists('num_ext', $payload) ? 1 : 0,
+            'num_int' => array_key_exists('num_int', $payload) ? $cleanText($payload['num_int']) : null,
+            'num_int_is_set' => array_key_exists('num_int', $payload) ? 1 : 0,
+            'cp' => array_key_exists('cp', $payload) ? $cleanText($payload['cp']) : null,
+            'cp_is_set' => array_key_exists('cp', $payload) ? 1 : 0,
+            'colonia' => array_key_exists('colonia', $payload) ? $cleanText($payload['colonia']) : null,
+            'colonia_is_set' => array_key_exists('colonia', $payload) ? 1 : 0,
+            'municipio' => array_key_exists('municipio', $payload) ? $cleanText($payload['municipio']) : null,
+            'municipio_is_set' => array_key_exists('municipio', $payload) ? 1 : 0,
+            'estado' => array_key_exists('estado', $payload) ? $cleanText($payload['estado']) : null,
+            'estado_is_set' => array_key_exists('estado', $payload) ? 1 : 0,
+            'telefonos_json' => $telefonosIsSet
+                ? json_encode($cleanArray($payload['telefonos'] ?? []), JSON_UNESCAPED_UNICODE)
+                : null,
+            'telefonos_json_is_set' => $telefonosIsSet ? 1 : 0,
+            'whatsapp' => array_key_exists('whatsapp', $payload) ? $cleanText($payload['whatsapp']) : null,
+            'whatsapp_is_set' => array_key_exists('whatsapp', $payload) ? 1 : 0,
+            'urgencias_json' => $urgenciasIsSet
+                ? json_encode($cleanArray($payload['urgencias'] ?? []), JSON_UNESCAPED_UNICODE)
+                : null,
+            'urgencias_json_is_set' => $urgenciasIsSet ? 1 : 0,
+            'logo_url' => array_key_exists('logo_url', $payload) ? $cleanText($payload['logo_url']) : null,
+            'logo_url_is_set' => array_key_exists('logo_url', $payload) ? 1 : 0,
+            'foto_url' => array_key_exists('foto_url', $payload) ? $cleanText($payload['foto_url']) : null,
+            'foto_url_is_set' => array_key_exists('foto_url', $payload) ? 1 : 0,
+            'lat' => $latIsSet ? $cleanFloat($payload['lat']) : null,
+            'lat_is_set' => $latIsSet ? 1 : 0,
+            'lng' => $lngIsSet ? $cleanFloat($payload['lng']) : null,
+            'lng_is_set' => $lngIsSet ? 1 : 0,
+            'geocode_source' => $geocodeSourceIsSet ? $normalizeGeocodeSource($payload['geocode_source']) : null,
+            'geocode_source_is_set' => $geocodeSourceIsSet ? 1 : 0,
+            'geocode_updated_at' => $geocodeUpdatedAtIsSet ? $normalizeDateTime($payload['geocode_updated_at']) : null,
+            'geocode_updated_at_is_set' => $geocodeUpdatedAtIsSet ? 1 : 0,
         ];
 
         try {
@@ -181,6 +244,7 @@ class ConsultoriosController
                 'doctor_id_requested' => ($doctorIdRequested !== '' ? $doctorIdRequested : null),
                 'auth_mode' => trim((string)($this->actorContext['mode'] ?? '')),
                 'auth_warnings' => $this->contextWarnings,
+                'row_exists_after_save' => is_array($saved),
             ],
         ];
     }

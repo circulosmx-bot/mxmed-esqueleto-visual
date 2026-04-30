@@ -115,7 +115,19 @@ Esta carpeta agrupa los componentes técnicos básicos del módulo Agenda Médic
 
 - **Captura/corrección en admin:** `assets/js/perfil/consultorio/multisede.js` usa Leaflet para mover pin y confirmar ubicación.
 - **Fuente de verdad operativa:** `consultorios.lat`, `consultorios.lng`, `consultorios.geocode_source`, `consultorios.geocode_updated_at`.
-- **Regla de confirmación:** coordenadas se consideran confirmadas cuando `geocode_source = manual_adjusted`.
+- **Regla de confirmación:** coordenadas se consideran confirmadas cuando `geocode_source` es `manual_adjusted` o `google_confirmed`.
+- **Búsqueda automática (privada):** `POST /api/agenda/index.php/geocode/google` (proxy backend, sin exponer API key en frontend).
+  - Configuración de API key por variable de entorno (prioridad):
+    - `MXMED_GOOGLE_GEOCODE_API_KEY`
+    - `GOOGLE_GEOCODING_API_KEY`
+    - `GOOGLE_MAPS_API_KEY`
+- **Bootstrap Google Maps JS (privado, Fase B):** `GET /api/agenda/index.php/geocode/google-js-config`.
+  - Entrega configuración para cargar Google Maps JavaScript API desde frontend.
+  - Prioridad de key frontend (se expone al navegador):
+    - `MXMED_GOOGLE_MAPS_JS_API_KEY`
+    - `GOOGLE_MAPS_JS_API_KEY`
+    - `api/mxmed-google.config.php` -> `google_maps_js_api_key`
+  - Si no hay key configurada, frontend mantiene Leaflet y muestra estado: `Google Maps JS no configurado`.
 - **Helper reusable (backend):** `modules/agenda/helpers/consultorio_map.php` expone utilidades para construir URL de mapa público:
   - coordenadas confirmadas -> `https://www.google.com/maps?q={lat},{lng}&z=17&output=embed`
   - sin coordenadas confirmadas -> fallback visual por dirección textual (sin persistencia adicional).

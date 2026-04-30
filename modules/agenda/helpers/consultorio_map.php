@@ -92,7 +92,7 @@ function buildConsultorioPublicMapPayload(array $row): array
     $addressCompact = buildConsultorioAddressCompactFromRow($row);
     $hasConfirmedCoordinates = (
         isCoordinatePairValid($lat, $lng)
-        && $geocodeSource === 'manual_adjusted'
+        && in_array($geocodeSource, ['manual_adjusted', 'google_confirmed'], true)
     );
 
     $iframeUrl = '';
@@ -115,4 +115,3 @@ function buildConsultorioPublicMapPayload(array $row): array
         'public_map_source' => $mapSource,
     ];
 }
-
