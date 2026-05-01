@@ -2605,6 +2605,231 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-weight:600;
 }
 
+.mx-cons-map-host{
+  position:relative;
+  isolation:isolate;
+}
+
+.consultorio-map-shell{
+  position:relative !important;
+  overflow:hidden !important;
+}
+
+.mx-cons-map-overlay-layer{
+  position:absolute;
+  top:0;
+  right:0;
+  bottom:0;
+  left:0;
+  z-index:8;
+  pointer-events:none;
+  background:transparent;
+}
+
+.consultorio-map-ui-layer{
+  position:absolute !important;
+  inset:0 !important;
+  z-index:99999 !important;
+  pointer-events:none !important;
+}
+
+.mx-cons-map-pin-hint{
+  position:absolute;
+  top:12px;
+  left:12px;
+  z-index:5;
+  width:auto;
+  height:auto;
+  max-width:320px;
+  display:inline-block;
+  padding:10px 14px;
+  border-radius:10px;
+  background:rgba(11,55,80,.82);
+  color:#fff;
+  font-size:.96rem;
+  line-height:1.2;
+  font-weight:600;
+  white-space:normal;
+  pointer-events:none;
+  box-shadow:0 4px 12px rgba(0,0,0,.18);
+}
+
+.mx-cons-map-help-compact{
+  font-size:.78rem;
+  margin-top:.15rem;
+}
+
+.mx-cons-map-confirm-btn{
+  min-height:38px;
+  padding:.45rem .9rem;
+  font-weight:700;
+}
+
+.map-confirm-btn{
+  position:absolute;
+  bottom:16px;
+  right:16px;
+  z-index:9999;
+  width:auto;
+  max-width:220px;
+  padding:10px 16px;
+  border-radius:999px;
+  font-size:14px;
+  font-weight:500;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  pointer-events:auto;
+}
+
+/* En .ratio, Bootstrap fuerza width/height 100% a hijos directos.
+   Este override mantiene el CTA como botón compacto flotante. */
+.consultorio-map-shell > .map-confirm-btn,
+.consultorio-map-shell .map-confirm-btn,
+.consultorio-map-shell > .mx-cons-map-confirm-floating,
+.consultorio-map-shell .mx-cons-map-confirm-floating,
+.consultorio-map-shell > [data-map-confirm-floating-for],
+.consultorio-map-shell [data-map-confirm-floating-for]{
+  display:inline-flex !important;
+  visibility:visible !important;
+  opacity:1 !important;
+  position:absolute !important;
+  right:16px !important;
+  bottom:16px !important;
+  left:auto !important;
+  top:auto !important;
+  inset:auto !important;
+  width:auto !important;
+  height:auto !important;
+  min-width:0 !important;
+  max-width:220px !important;
+  min-height:42px !important;
+  max-height:48px !important;
+  padding:10px 16px !important;
+  border-radius:999px !important;
+  align-items:center !important;
+  justify-content:center !important;
+  line-height:1.2 !important;
+  white-space:nowrap !important;
+  float:none !important;
+  margin:0 !important;
+  z-index:9999 !important;
+  pointer-events:auto !important;
+  cursor:pointer !important;
+}
+
+.consultorio-map-ui-layer .map-confirm-btn,
+.consultorio-map-ui-layer .mx-cons-map-confirm-floating,
+.consultorio-map-ui-layer [data-map-confirm-floating-for]{
+  position:absolute !important;
+  right:16px !important;
+  bottom:16px !important;
+  left:auto !important;
+  top:auto !important;
+  width:auto !important;
+  height:auto !important;
+  min-height:42px !important;
+  padding:10px 16px !important;
+  border-radius:999px !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  z-index:100000 !important;
+  pointer-events:auto !important;
+  cursor:pointer !important;
+  white-space:nowrap !important;
+}
+
+.mx-cons-map-confirm-floating{
+  position:absolute;
+  right:16px;
+  bottom:16px;
+  z-index:9999;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:auto;
+  height:auto;
+  min-height:44px;
+  padding:12px 18px;
+  border-radius:999px;
+  transform:none;
+  box-shadow:0 8px 20px rgba(0,0,0,.24);
+  pointer-events:auto;
+  cursor:pointer;
+  user-select:none;
+  touch-action:manipulation;
+  white-space:nowrap;
+}
+
+.mx-cons-map-confirm-floating *{
+  pointer-events:none;
+}
+
+.mx-cons-map-confirm-floating[disabled],
+.mx-cons-map-confirm-floating.is-saving{
+  opacity:.92;
+  cursor:default;
+}
+
+.mx-cons-map-confirm-floating.is-saved{
+  box-shadow:0 0 0 2px rgba(16,130,78,.2), 0 8px 20px rgba(0,0,0,.2);
+}
+
+.map-confirm-btn.is-loading,
+.mx-cons-map-confirm-floating.is-loading{
+  opacity:.8 !important;
+  cursor:wait !important;
+}
+
+.map-confirm-btn.is-success,
+.mx-cons-map-confirm-floating.is-success{
+  background:#fff !important;
+  color:#28a745 !important;
+  border:1px solid #28a745 !important;
+  box-shadow:0 4px 12px rgba(40,167,69,.18) !important;
+  cursor:default !important;
+  pointer-events:none !important;
+}
+
+.mx-cons-map-recalc-btn{
+  min-height:38px;
+}
+
+.mx-cons-map-gps-btn{
+  min-height:38px;
+}
+
+.mx-cons-map-floating-status{
+  position:absolute;
+  top:12px;
+  right:12px;
+  z-index:5;
+  max-width:340px;
+  width:auto;
+  height:auto;
+  padding:8px 12px;
+  border-radius:999px;
+  background:rgba(17,24,39,.88);
+  color:#fff;
+  font-size:.82rem;
+  line-height:1.25;
+  font-weight:600;
+  text-align:center;
+  pointer-events:none;
+  transform:none;
+  box-shadow:0 6px 18px rgba(0,0,0,.2);
+}
+
+.mx-cons-map-floating-status.is-warning{
+  background:rgba(184,98,0,.9);
+}
+
+.mx-cons-map-floating-status.is-success{
+  background:rgba(16,130,78,.9);
+}
+
 
 
 /* Botón eliminar consultorio en pane secundario */

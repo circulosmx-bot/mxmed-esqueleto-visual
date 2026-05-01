@@ -23,6 +23,7 @@ class ConsultoriosRepository
         }
         $this->ensureGroupIdSupport();
         $this->ensureGeocodeColumns();
+        $this->ensureImageColumnsCapacity();
     }
 
     private function tableExists(string $name): bool
@@ -313,6 +314,36 @@ class ConsultoriosRepository
         if (!$this->columnExists('consultorios', 'geocode_updated_at')) {
             $this->pdo->exec('ALTER TABLE consultorios ADD COLUMN geocode_updated_at DATETIME DEFAULT NULL AFTER geocode_source');
         }
+    }
+
+    private function ensureImageColumnsCapacity(): void
+    {
+        $logoType = $this->columnDataType('consultorios', 'logo_url');
+        if ($logoType !== '' && strtolower($logoType) !== 'longtext') {
+            $this->pdo->exec('ALTER TABLE consultorios MODIFY COLUMN logo_url LONGTEXT DEFAULT NULL');
+        }
+        $fotoType = $this->columnDataType('consultorios', 'foto_url');
+        if ($fotoType !== '' && strtolower($fotoType) !== 'longtext') {
+            $this->pdo->exec('ALTER TABLE consultorios MODIFY COLUMN foto_url LONGTEXT DEFAULT NULL');
+        }
+    }
+
+    private function columnDataType(string $table, string $column): string
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT DATA_TYPE
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = :table
+                AND column_name = :column
+              LIMIT 1'
+        );
+        $stmt->execute([
+            'table' => $table,
+            'column' => $column,
+        ]);
+        $type = $stmt->fetchColumn();
+        return is_string($type) ? trim($type) : '';
     }
 
     private function columnExists(string $table, string $column): bool

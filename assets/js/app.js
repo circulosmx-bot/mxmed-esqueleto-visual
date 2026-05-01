@@ -8006,7 +8006,7 @@ console.info('app.js loaded :: 20251123a');
   const body = document.getElementById('sched-body');
   const consultorioPanel = document.getElementById('p-consultorio');
   try{
-    console.warn('MXM CONSULTORIO DEBUG:', {
+    false && console.warn('MXM CONSULTORIO DEBUG:', {
       event: 'app_js_consultorio_block_loaded',
       has_sched_body: !!body,
       has_consultorio_panel: !!consultorioPanel,
@@ -8280,7 +8280,7 @@ console.info('app.js loaded :: 20251123a');
         try{
           const rowId = ref.act?.id || '';
           const dayKey = String(rowId).replace(/^sch-act-[^-]+-/, '');
-          console.warn('MXM CONSULTORIO DEBUG:', {
+          false && console.warn('MXM CONSULTORIO DEBUG:', {
             event: 'schedule_row_render_state',
             row_id: rowId,
             day_key: dayKey,
