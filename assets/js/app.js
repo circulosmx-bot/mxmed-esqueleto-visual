@@ -642,8 +642,7 @@ console.info('app.js loaded :: 20251123a');
     cfgCancelPolicyHours: document.getElementById('ag_cfg_cancel_policy_h'),
     cfgReminderTemplate: document.getElementById('ag_cfg_reminder_template'),
     remindersPanel: document.getElementById('ag_reminders_panel'),
-    remindersAddBtn: document.getElementById('ag_reminders_add'),
-    remindersExtraWrap: document.getElementById('ag_reminders_extra'),
+    reminderChannelLimitNote: document.getElementById('ag_channel_limit_note'),
     cfgScheduleSummaryText: document.getElementById('ag_cfg_schedule_summary_text'),
     cfgEditScheduleBtn: document.getElementById('ag_cfg_edit_schedule_btn'),
     cfgScheduleSelectorWrap: document.getElementById('ag_cfg_schedule_selector_wrap'),
@@ -705,19 +704,19 @@ console.info('app.js loaded :: 20251123a');
   let agendaSettingsContextKey = '';
   let agendaSettingsLoaded = false;
   const DEFAULT_AGENDA_REMINDER_SETTINGS = Object.freeze({
-    reminders: ['24h', '2h'],
+    reminderBefore: '24h',
     channels: ['whatsapp'],
     confirmation: {
       request: true,
-      allowCancel: true,
-      allowReschedule: true
+      allowCancel: false,
+      allowReschedule: false
     },
     noResponseAction: 'pending'
   });
   const AGENDA_REMINDER_TEMPLATE_VERSION = 1;
   let agendaReminderSettings = null;
   let agendaReminderMessageTemplate = '';
-  let agendaReminderExtraCount = 0;
+  let agendaReminderLimitNoteTimer = null;
   let agendaConsultorioRows = [];
   const getCurrentMonthStart = ()=> startOfMonth(new Date());
   let activeBlockedEventId = '';
@@ -755,6 +754,48 @@ console.info('app.js loaded :: 20251123a');
   ]);
 
   const sanitizeText = (value)=> String(value ?? '').trim();
+  const normalizeAgendaConfigHistoryPayload = (state = {})=>{
+    if(!state || typeof state !== 'object') return { view: 'agenda-config-root' };
+    const view = sanitizeText(state.view || '');
+    if(!view) return { view: 'agenda-config-root' };
+    const payload = { view };
+    const consultorioId = sanitizeText(state.consultorioId || '');
+    if(consultorioId) payload.consultorioId = consultorioId;
+    const dayKey = sanitizeText(state.dayKey || '');
+    if(dayKey) payload.dayKey = dayKey;
+    const turnRaw = Number(state.turn);
+    if(Number.isFinite(turnRaw) && (turnRaw === 1 || turnRaw === 2)){
+      payload.turn = turnRaw;
+    }
+    return payload;
+  };
+  const isSameAgendaConfigHistoryState = (a, b)=>{
+    const left = normalizeAgendaConfigHistoryPayload(a || {});
+    const right = normalizeAgendaConfigHistoryPayload(b || {});
+    return (
+      left.view === right.view
+      && sanitizeText(left.consultorioId || '') === sanitizeText(right.consultorioId || '')
+      && sanitizeText(left.dayKey || '') === sanitizeText(right.dayKey || '')
+      && Number(left.turn || 0) === Number(right.turn || 0)
+    );
+  };
+  const pushAgendaConfigState = (state = {}, options = {})=>{
+    if(!(window.history && typeof window.history.pushState === 'function')) return;
+    const payload = normalizeAgendaConfigHistoryPayload(state);
+    const currentState = window.history.state || {};
+    const currentPayload = currentState?.mxmAgendaConfig || null;
+    if(options.force !== true && isSameAgendaConfigHistoryState(currentPayload, payload)){
+      return;
+    }
+    try{
+      window.history.pushState({
+        ...currentState,
+        mxmAgendaConfig: payload
+      }, '');
+    }catch(_){}
+  };
+  window.mxmPushAgendaConfigState = pushAgendaConfigState;
+  window.mxmNormalizeAgendaConfigHistoryPayload = normalizeAgendaConfigHistoryPayload;
   const logAgendaCancelFlow = (label = '', details = {})=>{
     if(!AGENDA_CANCEL_DEBUG) return;
     try{
@@ -4041,19 +4082,22 @@ console.info('app.js loaded :: 20251123a');
     els.cfgSyncNote.classList.add(
       tone === 'danger' ? 'text-danger' : (tone === 'success' ? 'text-success' : 'text-muted')
     );
-    els.cfgSyncNote.textContent = msg || 'Configuración operativa de Agenda.';
+    els.cfgSyncNote.textContent = msg;
   };
-  const AGENDA_BASE_REMINDER_VALUES = Object.freeze(['24h', '2h', '30m']);
-  const AGENDA_EXTRA_REMINDER_CANDIDATES = Object.freeze([
-    { value: '12h', label: '12 horas antes' },
-    { value: '1h', label: '1 hora antes' },
-    { value: '15m', label: '15 minutos antes' }
-  ]);
+  const AGENDA_REMINDER_BEFORE_VALUES = Object.freeze(['24h', '12h']);
+  const AGENDA_REMINDER_CHANNEL_VALUES = Object.freeze(['whatsapp', 'email', 'sms', 'call']);
+  const AGENDA_REMINDER_MAX_CHANNELS = 2;
   const cloneAgendaReminderDefaults = ()=> JSON.parse(JSON.stringify(DEFAULT_AGENDA_REMINDER_SETTINGS));
   const normalizeAgendaReminderSettings = (raw = {})=>{
     const fallback = cloneAgendaReminderDefaults();
-    const reminders = Array.isArray(raw?.reminders) ? raw.reminders : fallback.reminders;
-    const channels = Array.isArray(raw?.channels) ? raw.channels : fallback.channels;
+    const legacyReminders = Array.isArray(raw?.reminders) ? raw.reminders : [];
+    const rawReminderBefore = sanitizeText(raw?.reminderBefore || '');
+    const reminderBefore = AGENDA_REMINDER_BEFORE_VALUES.includes(rawReminderBefore)
+      ? rawReminderBefore
+      : (legacyReminders.map((v)=> sanitizeText(v)).find((v)=> AGENDA_REMINDER_BEFORE_VALUES.includes(v)) || fallback.reminderBefore);
+    const hasChannelsArray = Array.isArray(raw?.channels);
+    const channelsRaw = hasChannelsArray ? raw.channels : fallback.channels;
+    const channels = Array.from(new Set(channelsRaw.map((v)=> sanitizeText(v)).filter((v)=> AGENDA_REMINDER_CHANNEL_VALUES.includes(v)))).slice(0, AGENDA_REMINDER_MAX_CHANNELS);
     const confirmation = (raw?.confirmation && typeof raw.confirmation === 'object')
       ? raw.confirmation
       : fallback.confirmation;
@@ -4062,8 +4106,8 @@ console.info('app.js loaded :: 20251123a');
       ? noResponseActionRaw
       : 'pending';
     return {
-      reminders: Array.from(new Set(reminders.map((v)=> sanitizeText(v)).filter(Boolean))),
-      channels: Array.from(new Set(channels.map((v)=> sanitizeText(v)).filter(Boolean))),
+      reminderBefore: reminderBefore || fallback.reminderBefore,
+      channels: (hasChannelsArray || channels.length) ? channels : fallback.channels,
       confirmation: {
         request: !!confirmation.request,
         allowCancel: !!confirmation.allowCancel,
@@ -4118,73 +4162,49 @@ console.info('app.js loaded :: 20251123a');
       });
     }
   };
-  const reminderLabelFromValue = (value = '')=>{
-    const safe = sanitizeText(value).toLowerCase();
-    if(!safe) return '';
-    if(safe.endsWith('h')){
-      const hours = Number.parseInt(safe, 10);
-      if(Number.isFinite(hours) && hours > 0){
-        return `${hours} ${hours === 1 ? 'hora' : 'horas'} antes`;
-      }
+  const showAgendaReminderChannelLimitNote = ()=>{
+    if(!els.reminderChannelLimitNote) return;
+    if(agendaReminderLimitNoteTimer){
+      window.clearTimeout(agendaReminderLimitNoteTimer);
     }
-    if(safe.endsWith('m')){
-      const minutes = Number.parseInt(safe, 10);
-      if(Number.isFinite(minutes) && minutes > 0){
-        return `${minutes} minutos antes`;
-      }
-    }
-    return `${safe} antes`;
+    els.reminderChannelLimitNote.classList.remove('d-none');
+    agendaReminderLimitNoteTimer = window.setTimeout(()=>{
+      els.reminderChannelLimitNote?.classList.add('d-none');
+    }, 1800);
   };
-  const addExtraReminderOption = ({ value = '', label = '', checked = false } = {})=>{
-    if(!els.remindersExtraWrap) return null;
-    const safeValue = sanitizeText(value);
-    if(!safeValue) return null;
-    const existing = els.remindersExtraWrap.querySelector(`[data-ag-reminder-value="${safeValue}"]`);
-    if(existing){
-      existing.checked = checked || existing.checked;
-      return existing;
+  const enforceAgendaReminderChannelLimit = (changedInput = null)=>{
+    if(!els.remindersPanel) return true;
+    const checkedChannels = Array.from(
+      els.remindersPanel.querySelectorAll('input[type="checkbox"][data-ag-channel-value]:checked')
+    );
+    if(checkedChannels.length <= AGENDA_REMINDER_MAX_CHANNELS){
+      els.reminderChannelLimitNote?.classList.add('d-none');
+      return true;
     }
-    const wrapper = document.createElement('label');
-    wrapper.className = 'ag-reminders-option';
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.className = 'form-check-input';
-    input.checked = !!checked;
-    input.setAttribute('data-ag-reminder-value', safeValue);
-    const text = document.createElement('span');
-    text.textContent = sanitizeText(label) || reminderLabelFromValue(safeValue);
-    wrapper.appendChild(input);
-    wrapper.appendChild(text);
-    els.remindersExtraWrap.appendChild(wrapper);
-    agendaReminderExtraCount += 1;
-    return input;
-  };
-  const renderReminderExtraOptionsFromState = (settings = {})=>{
-    if(!els.remindersExtraWrap) return;
-    els.remindersExtraWrap.innerHTML = '';
-    agendaReminderExtraCount = 0;
-    const selected = new Set(Array.isArray(settings?.reminders) ? settings.reminders.map((v)=> sanitizeText(v)) : []);
-    selected.forEach((value)=>{
-      if(!value || AGENDA_BASE_REMINDER_VALUES.includes(value)) return;
-      addExtraReminderOption({ value, checked: true });
-    });
+    if(changedInput && changedInput.checked){
+      changedInput.checked = false;
+    }else{
+      checkedChannels.slice(AGENDA_REMINDER_MAX_CHANNELS).forEach((input)=>{ input.checked = false; });
+    }
+    showAgendaReminderChannelLimitNote();
+    return false;
   };
   const readAgendaReminderSettingsFromUi = ()=>{
     const fallback = cloneAgendaReminderDefaults();
     if(!els.remindersPanel){
       return fallback;
     }
-    const reminderValues = Array.from(
-      els.remindersPanel.querySelectorAll('input[type="checkbox"][data-ag-reminder-value]:checked')
-    ).map((input)=> sanitizeText(input.getAttribute('data-ag-reminder-value') || '')).filter(Boolean);
+    const reminderBefore = sanitizeText(
+      els.remindersPanel.querySelector('input[name="ag_reminder_before"]:checked')?.getAttribute('data-ag-reminder-before') || fallback.reminderBefore
+    );
     const channelValues = Array.from(
       els.remindersPanel.querySelectorAll('input[type="checkbox"][data-ag-channel-value]:checked')
-    ).map((input)=> sanitizeText(input.getAttribute('data-ag-channel-value') || '')).filter(Boolean);
+    ).map((input)=> sanitizeText(input.getAttribute('data-ag-channel-value') || '')).filter((value)=> AGENDA_REMINDER_CHANNEL_VALUES.includes(value));
     const noResponseAction = sanitizeText(
       els.remindersPanel.querySelector('input[name="ag_no_response_action"]:checked')?.value || 'pending'
     );
     return normalizeAgendaReminderSettings({
-      reminders: reminderValues,
+      reminderBefore,
       channels: channelValues,
       confirmation: {
         request: !!els.remindersPanel.querySelector('#ag_confirm_request')?.checked,
@@ -4197,12 +4217,10 @@ console.info('app.js loaded :: 20251123a');
   const applyAgendaReminderSettingsToUi = (settings = {})=>{
     if(!els.remindersPanel) return;
     const normalized = normalizeAgendaReminderSettings(settings);
-    const reminderSet = new Set(normalized.reminders);
     const channelSet = new Set(normalized.channels);
-    renderReminderExtraOptionsFromState(normalized);
-    Array.from(els.remindersPanel.querySelectorAll('input[type="checkbox"][data-ag-reminder-value]')).forEach((input)=>{
-      const value = sanitizeText(input.getAttribute('data-ag-reminder-value') || '');
-      input.checked = reminderSet.has(value);
+    Array.from(els.remindersPanel.querySelectorAll('input[name="ag_reminder_before"][data-ag-reminder-before]')).forEach((input)=>{
+      const value = sanitizeText(input.getAttribute('data-ag-reminder-before') || '');
+      input.checked = (value === normalized.reminderBefore);
     });
     Array.from(els.remindersPanel.querySelectorAll('input[type="checkbox"][data-ag-channel-value]')).forEach((input)=>{
       const value = sanitizeText(input.getAttribute('data-ag-channel-value') || '');
@@ -4222,24 +4240,7 @@ console.info('app.js loaded :: 20251123a');
     if(els.cfgReminderTemplate){
       els.cfgReminderTemplate.value = serializeAgendaReminderSettings(normalized, agendaReminderMessageTemplate);
     }
-  };
-  const addNextAgendaReminderOption = ()=>{
-    if(!els.remindersExtraWrap) return false;
-    const existingValues = new Set(
-      Array.from(els.remindersPanel?.querySelectorAll('input[data-ag-reminder-value]') || [])
-        .map((input)=> sanitizeText(input.getAttribute('data-ag-reminder-value') || ''))
-        .filter(Boolean)
-    );
-    let candidate = AGENDA_EXTRA_REMINDER_CANDIDATES.find((item)=> !existingValues.has(item.value));
-    if(!candidate){
-      agendaReminderExtraCount += 1;
-      const suffix = agendaReminderExtraCount;
-      candidate = { value: `custom_${suffix}`, label: `Recordatorio extra ${suffix}` };
-    }
-    const input = addExtraReminderOption({ value: candidate.value, label: candidate.label, checked: true });
-    if(!input) return false;
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-    return true;
+    enforceAgendaReminderChannelLimit();
   };
   const formatScheduleSummaryTime = (value)=>{
     const raw = sanitizeText(value);
@@ -4261,7 +4262,7 @@ console.info('app.js loaded :: 20251123a');
       7: 'Domingo'
     };
     if(!Array.isArray(days) || !days.length){
-      return 'Sin horario de atención configurado para este consultorio.';
+      return '';
     }
     const parts = [];
     days.forEach((day)=>{
@@ -4280,13 +4281,115 @@ console.info('app.js loaded :: 20251123a');
       parts.push(`${label}: ${ranges}`);
     });
     if(!parts.length){
-      return 'Sin horario de atención configurado para este consultorio.';
+      return '';
     }
     return parts.join(' | ');
   };
+  let scheduleSelectorViewMode = 'overview';
+  let scheduleSelectorActiveConsultorioId = '';
+  const getScheduleHistoryStateSnapshot = ()=>{
+    const current = window.history?.state || {};
+    return {
+      view: sanitizeText(current?.mxmAgendaConfigView || ''),
+      consultorioId: sanitizeText(current?.consultorioId || '')
+    };
+  };
+  const pushScheduleHistoryState = (view, consultorioId = '', options = {})=>{
+    if(!(window.history && typeof window.history.pushState === 'function')) return;
+    const nextView = sanitizeText(view || '');
+    if(!nextView) return;
+    const nextConsultorioId = sanitizeText(consultorioId || '');
+    const current = getScheduleHistoryStateSnapshot();
+    if(current.view === nextView && current.consultorioId === nextConsultorioId){
+      return;
+    }
+    const nextState = {
+      ...(window.history.state || {}),
+      mxmAgendaConfigView: nextView
+    };
+    if('mxmAgendaConfig' in nextState){
+      delete nextState.mxmAgendaConfig;
+    }
+    if(nextConsultorioId){
+      nextState.consultorioId = nextConsultorioId;
+    }else if('consultorioId' in nextState){
+      delete nextState.consultorioId;
+    }
+    try{
+      window.history.pushState(nextState, '');
+    }catch(_){}
+  };
+  const replaceScheduleHistoryState = (view, consultorioId = '')=>{
+    if(!(window.history && typeof window.history.replaceState === 'function')) return;
+    const nextView = sanitizeText(view || '');
+    if(!nextView) return;
+    const nextConsultorioId = sanitizeText(consultorioId || '');
+    const nextState = {
+      ...(window.history.state || {}),
+      mxmAgendaConfigView: nextView
+    };
+    if('mxmAgendaConfig' in nextState){
+      delete nextState.mxmAgendaConfig;
+    }
+    if(nextConsultorioId){
+      nextState.consultorioId = nextConsultorioId;
+    }else if('consultorioId' in nextState){
+      delete nextState.consultorioId;
+    }
+    try{
+      window.history.replaceState(nextState, '');
+    }catch(_){}
+  };
+  const showScheduleSelectorOverview = (options = {})=>{
+    scheduleSelectorViewMode = 'overview';
+    scheduleSelectorActiveConsultorioId = '';
+    if(typeof window.openGroup === 'function'){
+      try{ window.openGroup('agenda'); }catch(_){}
+    }
+    if(typeof window.jumpTo === 'function'){
+      try{ window.jumpTo('p-ag-ajustes'); }catch(_){}
+    }else{
+      document.querySelector('.menu-sub-btn[data-panel="p-ag-ajustes"]')?.click();
+    }
+    renderAgendaScheduleEditorSelector();
+    if(options.pushHistory !== false){
+      pushScheduleHistoryState('schedule-overview', '');
+    }
+  };
+  const scrollToScheduleGroup = ()=>{
+    const el = document.getElementById('ag_cfg_group_schedule');
+    if(!el) return;
+    const y = el.getBoundingClientRect().top + window.pageYOffset - 80;
+    window.scrollTo({
+      top: y,
+      behavior: 'smooth'
+    });
+  };
+  window.scrollToScheduleGroup = scrollToScheduleGroup;
+  const showScheduleConsultorioEditor = (consultorioId, options = {})=>{
+    const targetConsultorioId = sanitizeText(
+      consultorioId
+      || getAgendaSettingsContext().consultorioId
+      || els.consultorio?.value
+      || ''
+    );
+    if(!targetConsultorioId){
+      showScheduleSelectorOverview(options);
+      return;
+    }
+    scheduleSelectorViewMode = 'consultorio';
+    scheduleSelectorActiveConsultorioId = targetConsultorioId;
+    openConsultorioScheduleEditorFromSettings(targetConsultorioId, { pushHistory: false });
+    renderAgendaScheduleEditorSelector();
+    if(options.pushHistory !== false){
+      pushScheduleHistoryState('schedule-consultorio', targetConsultorioId);
+    }
+  };
+  window.showScheduleSelectorOverview = showScheduleSelectorOverview;
+  window.showScheduleConsultorioEditor = showScheduleConsultorioEditor;
   const setAgendaScheduleSummaryText = (message = '', tone = 'muted')=>{
     if(!els.cfgScheduleSummaryText) return;
-    const msg = sanitizeText(message) || 'Sin horario de atención configurado para este consultorio.';
+    const msg = sanitizeText(message);
     els.cfgScheduleSummaryText.classList.remove('text-muted', 'text-danger', 'text-success');
     els.cfgScheduleSummaryText.classList.add(
       tone === 'danger' ? 'text-danger' : (tone === 'success' ? 'text-success' : 'text-muted')
@@ -4297,6 +4400,12 @@ console.info('app.js loaded :: 20251123a');
     if(!els.cfgEditScheduleBtn || !els.cfgScheduleSelectorWrap || !els.cfgScheduleSelectorButtons) return;
     const consultorios = listAgendaConfigConsultorios();
     const hasMultiple = consultorios.length > 1;
+    const { consultorioId: contextConsultorioId } = getAgendaSettingsContext();
+    const activeConsultorioId = sanitizeText(
+      scheduleSelectorActiveConsultorioId
+      || contextConsultorioId
+      || ''
+    );
 
     els.cfgEditScheduleBtn.classList.toggle('d-none', hasMultiple);
     els.cfgScheduleSelectorWrap.classList.toggle('d-none', !hasMultiple);
@@ -4305,26 +4414,45 @@ console.info('app.js loaded :: 20251123a');
     }
 
     if(els.cfgScheduleSelectorText){
-      els.cfgScheduleSelectorText.textContent = 'Los horarios se configuran por consultorio para evitar cruces entre sedes. Selecciona el consultorio que deseas editar.';
+      els.cfgScheduleSelectorText.textContent = 'Selecciona un consultorio para continuar.';
     }
     els.cfgScheduleSelectorButtons.innerHTML = '';
     consultorios.forEach((item)=>{
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'btn btn-outline-primary btn-sm';
+      btn.className = 'schedule-consultorio-btn';
+      btn.classList.toggle('active', sanitizeText(item.id) === sanitizeText(activeConsultorioId));
       btn.textContent = item.label;
       btn.setAttribute('data-consultorio-id', item.id);
       btn.setAttribute('data-index', String(item.index));
       btn.addEventListener('click', (event)=>{
         event.preventDefault();
-        openConsultorioScheduleEditorFromSettings(item.id);
+        showScheduleConsultorioEditor(item.id, { pushHistory: true });
       });
       els.cfgScheduleSelectorButtons.appendChild(btn);
     });
+    if(scheduleSelectorViewMode === 'consultorio'){
+      const backBtn = document.createElement('button');
+      backBtn.type = 'button';
+      backBtn.className = 'schedule-back-to-overview';
+      backBtn.textContent = '← VOLVER';
+      backBtn.addEventListener('click', (event)=>{
+        event.preventDefault();
+        const current = window.history?.state || {};
+        if(String(current?.mxmAgendaConfigView || '') === 'schedule-consultorio' && window.history && typeof window.history.back === 'function'){
+          window.history.back();
+          window.setTimeout(()=>{ scrollToScheduleGroup(); }, 100);
+          return;
+        }
+        showScheduleSelectorOverview({ pushHistory: false });
+        window.setTimeout(()=>{ scrollToScheduleGroup(); }, 100);
+      });
+      els.cfgScheduleSelectorButtons.appendChild(backBtn);
+    }
   };
   const hydrateAgendaScheduleSummary = async ({ doctorId, consultorioId })=>{
     if(!doctorId || !consultorioId){
-      setAgendaScheduleSummaryText('Selecciona consultorio activo para ver su horario oficial.', 'danger');
+      setAgendaScheduleSummaryText('', 'danger');
       return;
     }
     try{
@@ -4339,7 +4467,7 @@ console.info('app.js loaded :: 20251123a');
       setAgendaScheduleSummaryText('No se pudo cargar horario oficial del consultorio.', 'danger');
     }
   };
-  const openConsultorioScheduleEditorFromSettings = (targetConsultorioId = '')=>{
+  const openConsultorioScheduleEditorFromSettings = (targetConsultorioId = '', options = {})=>{
     const context = getAgendaSettingsContext();
     const consultorioId = sanitizeText(targetConsultorioId || context.consultorioId || '');
     if(consultorioId){
@@ -4394,6 +4522,22 @@ console.info('app.js loaded :: 20251123a');
       }, 130);
     }, 80);
   };
+  window.mxmOpenConsultorioScheduleEditorFromSettings = (targetConsultorioId = '', options = {})=>{
+    openConsultorioScheduleEditorFromSettings(targetConsultorioId, options);
+  };
+  window.mxmShowAgendaConfigRootView = (options = {})=>{
+    if(typeof window.openGroup === 'function'){
+      try{ window.openGroup('agenda'); }catch(_){}
+    }
+    if(typeof window.jumpTo === 'function'){
+      try{ window.jumpTo('p-ag-ajustes'); }catch(_){}
+    }else{
+      document.querySelector('.menu-sub-btn[data-panel="p-ag-ajustes"]')?.click();
+    }
+    if(options.pushHistory !== false){
+      pushScheduleHistoryState('schedule-overview', '');
+    }
+  };
   const readAgendaSettingsPayloadFromUi = ()=>{
     const channels = Array.from(els.cfgChannels?.selectedOptions || [])
       .map((opt)=> sanitizeText(opt.value || ''))
@@ -4445,7 +4589,7 @@ console.info('app.js loaded :: 20251123a');
       return;
     }
     if(!consultorioId){
-      setAgendaSettingsNote('La configuración aplica a la agenda del médico seleccionado.', 'muted');
+      setAgendaSettingsNote('', 'muted');
       return;
     }
     const payload = readAgendaSettingsPayloadFromUi();
@@ -4481,8 +4625,8 @@ console.info('app.js loaded :: 20251123a');
       return;
     }
     if(!consultorioId){
-      setAgendaSettingsNote('La configuración aplica a la agenda del médico seleccionado.', 'muted');
-      setAgendaScheduleSummaryText('Selecciona consultorio activo para ver su horario oficial.', 'muted');
+      setAgendaSettingsNote('', 'muted');
+      setAgendaScheduleSummaryText('', 'muted');
       return;
     }
     agendaSettingsHydrating = true;
@@ -6879,6 +7023,14 @@ console.info('app.js loaded :: 20251123a');
   const bindEvents = ()=>{
     if(initialized) return;
     initialized = true;
+    const currentHistory = window.history?.state || {};
+    const currentView = sanitizeText(currentHistory?.mxmAgendaConfigView || '');
+    scheduleSelectorViewMode = currentView === 'schedule-consultorio' ? 'consultorio' : 'overview';
+    scheduleSelectorActiveConsultorioId = sanitizeText(currentHistory?.consultorioId || '');
+    if(!currentView){
+      replaceScheduleHistoryState('schedule-overview', '');
+    }
+    renderAgendaScheduleEditorSelector();
     const initialReminderPayload = parseAgendaReminderPayloadFromTemplate(String(els.cfgReminderTemplate?.value || ''));
     agendaReminderMessageTemplate = String(initialReminderPayload?.messageTemplate || '').trim();
     applyAgendaReminderSettingsToUi(initialReminderPayload?.settings || cloneAgendaReminderDefaults());
@@ -6892,6 +7044,7 @@ console.info('app.js loaded :: 20251123a');
     });
     els.consultorio?.addEventListener('change', ()=>{
       syncCreateConsultorioOptions();
+      renderAgendaScheduleEditorSelector();
       refreshCalendar({ forceConsultorios: false }).catch(()=> null);
       hydrateAgendaSettings({ force: true }).catch(()=> null);
     });
@@ -6908,23 +7061,16 @@ console.info('app.js loaded :: 20251123a');
         el.addEventListener('change', ()=> queuePersistAgendaSettings(220));
       });
     if(els.remindersPanel){
-      els.remindersPanel.addEventListener('change', ()=>{
+      els.remindersPanel.addEventListener('change', (event)=>{
+        const changedInput = event?.target?.closest?.('input[data-ag-channel-value]') || null;
+        if(changedInput){
+          enforceAgendaReminderChannelLimit(changedInput);
+        }
         agendaReminderSettings = readAgendaReminderSettingsFromUi();
         window.agendaReminderSettings = normalizeAgendaReminderSettings(agendaReminderSettings);
         queuePersistAgendaSettings(220);
       });
     }
-    els.remindersAddBtn?.addEventListener('click', (event)=>{
-      event.preventDefault();
-      const created = addNextAgendaReminderOption();
-      if(!created){
-        queuePersistAgendaSettings(220);
-        return;
-      }
-      agendaReminderSettings = readAgendaReminderSettingsFromUi();
-      window.agendaReminderSettings = normalizeAgendaReminderSettings(agendaReminderSettings);
-      queuePersistAgendaSettings(220);
-    });
     els.cfgDurationMin?.addEventListener('change', ()=>{
       syncCalendarSlotGranularity();
       if(calendar){
@@ -6937,7 +7083,8 @@ console.info('app.js loaded :: 20251123a');
     });
     els.cfgEditScheduleBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
-      openConsultorioScheduleEditorFromSettings();
+      const { consultorioId } = getAgendaSettingsContext();
+      showScheduleConsultorioEditor(consultorioId, { pushHistory: true });
     });
     els.hoursToggle?.addEventListener('click', ()=>{
       weeklyHoursExpanded = !weeklyHoursExpanded;
@@ -7473,6 +7620,14 @@ console.info('app.js loaded :: 20251123a');
         }, 160);
       });
     });
+    document.querySelectorAll('.menu-sub-btn[data-panel="p-ag-ajustes"]').forEach((btn)=>{
+      btn.addEventListener('click', ()=>{
+        scheduleSelectorViewMode = 'overview';
+        scheduleSelectorActiveConsultorioId = '';
+        renderAgendaScheduleEditorSelector();
+        replaceScheduleHistoryState('schedule-overview', '');
+      });
+    });
 
     if(window.MutationObserver && !visibilityObserver){
       visibilityObserver = new MutationObserver(()=>{
@@ -7492,6 +7647,12 @@ console.info('app.js loaded :: 20251123a');
 
         const panelTarget = sanitizeText(target.getAttribute('data-ag-work-panel') || '');
         if(panelTarget){
+          if(panelTarget === 'p-ag-ajustes'){
+            scheduleSelectorViewMode = 'overview';
+            scheduleSelectorActiveConsultorioId = '';
+            renderAgendaScheduleEditorSelector();
+            replaceScheduleHistoryState('schedule-overview', '');
+          }
           if(typeof window.openGroup === 'function'){
             try{ window.openGroup('agenda'); }catch(_){}
           }
@@ -7523,6 +7684,21 @@ console.info('app.js loaded :: 20251123a');
         stabilizeCalendarViewport();
       }, 160);
     });
+    if(!window.__mxmAgendaScheduleSimplePopstateBound){
+      window.__mxmAgendaScheduleSimplePopstateBound = true;
+      window.addEventListener('popstate', (event)=>{
+        const state = event?.state || {};
+        const view = sanitizeText(state?.mxmAgendaConfigView || '');
+        if(view === 'schedule-overview'){
+          showScheduleSelectorOverview({ pushHistory: false });
+          window.setTimeout(()=>{ scrollToScheduleGroup(); }, 100);
+          return;
+        }
+        if(view === 'schedule-consultorio'){
+          showScheduleConsultorioEditor(state?.consultorioId, { pushHistory: false });
+        }
+      });
+    }
   };
 
   const start = ()=>{
@@ -8544,6 +8720,56 @@ console.info('app.js loaded :: 20251123a');
     let activeClearBtn = null;
     let activePane = null;
     let activeScheduleConsultorioId = '';
+    let scheduleHistoryPushSuppressed = false;
+    let scheduleHistoryPushSuppressTimer = null;
+    const suppressScheduleHistoryPush = (durationMs = 520)=>{
+      scheduleHistoryPushSuppressed = true;
+      if(scheduleHistoryPushSuppressTimer){
+        window.clearTimeout(scheduleHistoryPushSuppressTimer);
+      }
+      scheduleHistoryPushSuppressTimer = window.setTimeout(()=>{
+        scheduleHistoryPushSuppressed = false;
+      }, Math.max(80, Number(durationMs) || 520));
+    };
+    const pushAgendaConfigStateSafe = (state = {}, options = {})=>{
+      if(options.pushHistory === false) return;
+      if(scheduleHistoryPushSuppressed) return;
+      const view = String(state?.view || '').trim();
+      if(!view) return;
+      if(view === 'agenda-config-schedule-picker'){
+        return;
+      }
+      const mappedView = view === 'agenda-config-schedule-consultorio'
+        ? 'schedule-consultorio'
+        : (view === 'agenda-config-root' || view === 'agenda-config-schedule'
+          ? 'schedule-overview'
+          : '');
+      if(!mappedView) return;
+      if(!(window.history && typeof window.history.pushState === 'function')) return;
+      const nextConsultorioId = String(state?.consultorioId || '').trim();
+      const current = window.history.state || {};
+      if(
+        String(current?.mxmAgendaConfigView || '') === mappedView
+        && String(current?.consultorioId || '') === nextConsultorioId
+      ){
+        return;
+      }
+      const nextState = {
+        ...current,
+        mxmAgendaConfigView: mappedView
+      };
+      if('mxmAgendaConfig' in nextState){
+        delete nextState.mxmAgendaConfig;
+      }
+      if(nextConsultorioId){
+        nextState.consultorioId = nextConsultorioId;
+      }else if('consultorioId' in nextState){
+        delete nextState.consultorioId;
+      }
+      try{
+        window.history.pushState(nextState, '');
+      }catch(_){}
+    };
     const apiGetSchedule = async ({ doctorId, consultorioId })=>{
       const qs = new URLSearchParams({
         doctor_id: String(doctorId || '').trim(),
@@ -8939,7 +9165,7 @@ console.info('app.js loaded :: 20251123a');
       schedulePickerRoot = root;
       return root;
     };
-    const openScheduleTimePicker = (dayKey, turn, consultorioId = '')=>{
+    const openScheduleTimePicker = (dayKey, turn, consultorioId = '', options = {})=>{
       if(!dayKey) return;
       const turnNum = Number(turn);
       if(!(turnNum === 1 || turnNum === 2)) return;
@@ -8971,6 +9197,72 @@ console.info('app.js loaded :: 20251123a');
       setSelectValueSafe(refs.endMinute, em, '00');
       schedulePickerContext = { dayKey, turn: turnNum, consultorioId: targetConsultorioId };
       picker.classList.remove('d-none');
+      pushAgendaConfigStateSafe({
+        view: 'agenda-config-schedule-picker',
+        consultorioId: targetConsultorioId,
+        dayKey,
+        turn: turnNum
+      }, options);
+    };
+    const showAgendaConfigRoot = (options = {})=>{
+      hideScheduleTimePicker();
+      suppressScheduleHistoryPush();
+      if(typeof window.mxmShowAgendaConfigRootView === 'function'){
+        window.mxmShowAgendaConfigRootView({ pushHistory: false });
+      }else{
+        if(typeof window.openGroup === 'function'){
+          try{ window.openGroup('agenda'); }catch(_){}
+        }
+        if(typeof window.jumpTo === 'function'){
+          try{ window.jumpTo('p-ag-ajustes'); }catch(_){}
+        }else{
+          document.querySelector('.menu-sub-btn[data-panel="p-ag-ajustes"]')?.click();
+        }
+      }
+      pushAgendaConfigStateSafe({ view: 'agenda-config-root' }, options);
+    };
+    const showScheduleBaseView = (options = {})=>{
+      hideScheduleTimePicker();
+      suppressScheduleHistoryPush();
+      if(typeof window.mxmOpenConsultorioScheduleEditorFromSettings === 'function'){
+        window.mxmOpenConsultorioScheduleEditorFromSettings('', { pushHistory: false });
+      }else{
+        if(typeof window.openGroup === 'function'){
+          try{ window.openGroup('perfil'); }catch(_){}
+        }
+        if(typeof window.jumpTo === 'function'){
+          try{ window.jumpTo('p-consultorio'); }catch(_){}
+        }else{
+          document.querySelector('.menu-sub-btn[data-panel="p-consultorio"]')?.click();
+        }
+      }
+      pushAgendaConfigStateSafe({ view: 'agenda-config-schedule' }, options);
+    };
+    const showConsultorioSchedule = (consultorioId = '', options = {})=>{
+      const targetConsultorioId = String(consultorioId || getActiveConsultorioId() || '').trim();
+      showScheduleBaseView({ pushHistory: false });
+      suppressScheduleHistoryPush(900);
+      if(targetConsultorioId){
+        const agendaFilter = document.getElementById('ag_consultorio_filter');
+        if(agendaFilter) agendaFilter.value = targetConsultorioId;
+        const tabBtn = document.querySelector(`#p-consultorio .mm-tabs-embed [data-bs-target="#sede${targetConsultorioId}"]`);
+        if(tabBtn){
+          try{
+            if(window.bootstrap?.Tab){
+              new window.bootstrap.Tab(tabBtn).show();
+            }else{
+              tabBtn.click();
+            }
+          }catch(_){
+            try{ tabBtn.click(); }catch(_){}
+          }
+        }
+      }
+      handleConsultorioTabSwitch(targetConsultorioId, { pushHistory: false });
+      pushAgendaConfigStateSafe({
+        view: 'agenda-config-schedule-consultorio',
+        consultorioId: targetConsultorioId
+      }, options);
     };
     window.__mxmScheduleOpenPickerHandler = (dayKey, turn)=>{
       const turnNum = Number(turn) === 2 ? 2 : 1;
@@ -9780,7 +10072,7 @@ console.info('app.js loaded :: 20251123a');
         loading = false;
       }
     };
-    const handleConsultorioTabSwitch = (forcedConsultorioId = '')=>{
+    const handleConsultorioTabSwitch = (forcedConsultorioId = '', options = {})=>{
       const forcedId = String(forcedConsultorioId || '').trim();
       if(forcedId){
         const pane = document.getElementById(`sede${forcedId}`);
@@ -9796,6 +10088,10 @@ console.info('app.js loaded :: 20251123a');
       if(!loadedScheduleConsultorioIds.has(targetConsultorioId)){
         hydrateFromBackend({ consultorioId: targetConsultorioId }).catch(()=> null);
       }
+      pushAgendaConfigStateSafe({
+        view: 'agenda-config-schedule-consultorio',
+        consultorioId: targetConsultorioId
+      }, options);
     };
     if(!window.__mxScheduleClearDelegatedBound){
       window.__mxScheduleClearDelegatedBound = true;
@@ -9828,6 +10124,43 @@ console.info('app.js loaded :: 20251123a');
       if(selectedId) activeScheduleConsultorioId = selectedId;
       handleConsultorioTabSwitch(selectedId);
     });
+    if(!window.__mxmAgendaConfigPopstateBound){
+      window.__mxmAgendaConfigPopstateBound = true;
+      window.addEventListener('popstate', (event)=>{
+        if(event?.state && typeof event.state === 'object' && String(event.state.mxmAgendaConfigView || '').trim()){
+          return;
+        }
+        const state = event?.state?.mxmAgendaConfig;
+        if(!state || typeof state !== 'object') return;
+        const view = String(state.view || '').trim();
+        if(!view) return;
+        if(view === 'agenda-config-root'){
+          showAgendaConfigRoot({ pushHistory: false });
+          return;
+        }
+        if(view === 'agenda-config-schedule'){
+          showScheduleBaseView({ pushHistory: false });
+          return;
+        }
+        if(view === 'agenda-config-schedule-consultorio'){
+          const consultorioId = String(state.consultorioId || '').trim();
+          showConsultorioSchedule(consultorioId, { pushHistory: false });
+          return;
+        }
+        if(view === 'agenda-config-schedule-picker'){
+          const consultorioId = String(state.consultorioId || '').trim();
+          const dayKey = String(state.dayKey || '').trim();
+          const turnNum = Number(state.turn) === 2 ? 2 : 1;
+          showConsultorioSchedule(consultorioId, { pushHistory: false });
+          if(dayKey){
+            suppressScheduleHistoryPush(900);
+            window.setTimeout(()=>{
+              openScheduleTimePicker(dayKey, turnNum, consultorioId, { pushHistory: false });
+            }, 120);
+          }
+        }
+      });
+    }
     window.setTimeout(()=>{ hydrateFromBackend({ force: true }).catch(()=> null); }, 0);
     return;
 

@@ -3577,13 +3577,19 @@ function mxClearHorarioInputs(inputs){
       otherIndexes.forEach((otherIdx)=>{
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = 'btn btn-sm mx-cons-horarios-switch-btn schedule-consultorio-switch';
+        button.className = 'mx-cons-horarios-switch-btn schedule-consultorio-btn';
         button.setAttribute('data-cons-horarios-jump', '1');
         button.setAttribute('data-consultorio-id', String(otherIdx));
         button.setAttribute('data-index', String(otherIdx));
         button.textContent = getConsultorioNameByIndex(otherIdx);
         switcher.appendChild(button);
       });
+      const backBtn = document.createElement('button');
+      backBtn.type = 'button';
+      backBtn.className = 'schedule-back-to-overview';
+      backBtn.setAttribute('data-cons-horarios-back', '1');
+      backBtn.textContent = '← VOLVER';
+      switcher.appendChild(backBtn);
       switcher.removeAttribute('hidden');
     };
     function refreshScheduleHeaders(){
@@ -4871,6 +4877,42 @@ function mxClearHorarioInputs(inputs){
         );
         if(Number.isFinite(nextIdx) && nextIdx > 0){
           openConsultorioScheduleByIndex(nextIdx);
+        }
+        return;
+      }
+      const scheduleBackBtn = target.closest('[data-cons-horarios-back]');
+      if(scheduleBackBtn instanceof HTMLElement){
+        event.preventDefault();
+        const current = window.history?.state || {};
+        if(
+          String(current?.mxmAgendaConfigView || '') === 'schedule-consultorio'
+          && window.history
+          && typeof window.history.back === 'function'
+        ){
+          window.history.back();
+          window.setTimeout(()=>{
+            if(typeof window.scrollToScheduleGroup === 'function'){
+              window.scrollToScheduleGroup();
+            }
+          }, 100);
+          return;
+        }
+        if(typeof window.showScheduleSelectorOverview === 'function'){
+          window.showScheduleSelectorOverview({ pushHistory: false });
+          window.setTimeout(()=>{
+            if(typeof window.scrollToScheduleGroup === 'function'){
+              window.scrollToScheduleGroup();
+            }
+          }, 100);
+          return;
+        }
+        if(typeof window.openGroup === 'function'){
+          try{ window.openGroup('agenda'); }catch(_){ }
+        }
+        if(typeof window.jumpTo === 'function'){
+          try{ window.jumpTo('p-ag-ajustes'); }catch(_){ }
+        }else{
+          document.querySelector('.menu-sub-btn[data-panel="p-ag-ajustes"]')?.click();
         }
         return;
       }
