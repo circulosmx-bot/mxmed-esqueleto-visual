@@ -4356,16 +4356,32 @@ console.info('app.js loaded :: 20251123a');
       pushScheduleHistoryState('schedule-overview', '');
     }
   };
-  const scrollToScheduleGroup = ()=>{
+  function mxmScrollToScheduleGroup(){
     const el = document.getElementById('ag_cfg_group_schedule');
     if(!el) return;
-    const y = el.getBoundingClientRect().top + window.pageYOffset - 80;
-    window.scrollTo({
-      top: y,
-      behavior: 'smooth'
-    });
-  };
-  window.scrollToScheduleGroup = scrollToScheduleGroup;
+    const targetY = el.getBoundingClientRect().top + window.pageYOffset - 35;
+    const startY = window.pageYOffset;
+    const distance = targetY - startY;
+    const duration = 650;
+    const startTime = performance.now();
+    const easeInOutCubic = (t)=>(
+      t < 0.5
+        ? 4 * t * t * t
+        : 1 - Math.pow(-2 * t + 2, 3) / 2
+    );
+    const step = (currentTime)=>{
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = easeInOutCubic(progress);
+      window.scrollTo(0, startY + distance * eased);
+      if(progress < 1){
+        window.requestAnimationFrame(step);
+      }
+    };
+    window.requestAnimationFrame(step);
+  }
+  window.mxmScrollToScheduleGroup = mxmScrollToScheduleGroup;
+  window.scrollToScheduleGroup = mxmScrollToScheduleGroup;
   const showScheduleConsultorioEditor = (consultorioId, options = {})=>{
     const targetConsultorioId = sanitizeText(
       consultorioId
@@ -4441,11 +4457,11 @@ console.info('app.js loaded :: 20251123a');
         const current = window.history?.state || {};
         if(String(current?.mxmAgendaConfigView || '') === 'schedule-consultorio' && window.history && typeof window.history.back === 'function'){
           window.history.back();
-          window.setTimeout(()=>{ scrollToScheduleGroup(); }, 100);
+          window.setTimeout(()=>{ mxmScrollToScheduleGroup(); }, 120);
           return;
         }
         showScheduleSelectorOverview({ pushHistory: false });
-        window.setTimeout(()=>{ scrollToScheduleGroup(); }, 100);
+        window.setTimeout(()=>{ mxmScrollToScheduleGroup(); }, 120);
       });
       els.cfgScheduleSelectorButtons.appendChild(backBtn);
     }
@@ -7691,7 +7707,7 @@ console.info('app.js loaded :: 20251123a');
         const view = sanitizeText(state?.mxmAgendaConfigView || '');
         if(view === 'schedule-overview'){
           showScheduleSelectorOverview({ pushHistory: false });
-          window.setTimeout(()=>{ scrollToScheduleGroup(); }, 100);
+          window.setTimeout(()=>{ mxmScrollToScheduleGroup(); }, 120);
           return;
         }
         if(view === 'schedule-consultorio'){

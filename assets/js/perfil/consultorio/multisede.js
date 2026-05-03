@@ -4891,19 +4891,23 @@ function mxClearHorarioInputs(inputs){
         ){
           window.history.back();
           window.setTimeout(()=>{
-            if(typeof window.scrollToScheduleGroup === 'function'){
+            if(typeof window.mxmScrollToScheduleGroup === 'function'){
+              window.mxmScrollToScheduleGroup();
+            }else if(typeof window.scrollToScheduleGroup === 'function'){
               window.scrollToScheduleGroup();
             }
-          }, 100);
+          }, 120);
           return;
         }
         if(typeof window.showScheduleSelectorOverview === 'function'){
           window.showScheduleSelectorOverview({ pushHistory: false });
           window.setTimeout(()=>{
-            if(typeof window.scrollToScheduleGroup === 'function'){
+            if(typeof window.mxmScrollToScheduleGroup === 'function'){
+              window.mxmScrollToScheduleGroup();
+            }else if(typeof window.scrollToScheduleGroup === 'function'){
               window.scrollToScheduleGroup();
             }
-          }, 100);
+          }, 120);
           return;
         }
         if(typeof window.openGroup === 'function'){
