@@ -5700,6 +5700,94 @@ body{margin:0;background:var(--mm-fondo-base);}
 .dg-date-year .form-select::-webkit-calendar-picker-indicator{ display:none !important; }
 
 /* Agenda Frontend v1 */
+.ag-reminders-panel{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.ag-reminders-card{
+  background:#fff;
+  border:1px solid rgba(0, 91, 127, 0.14);
+  border-radius:12px;
+  padding:14px 16px;
+  box-shadow:0 1px 3px rgba(16, 24, 40, 0.04);
+}
+
+.ag-reminders-title{
+  color:#0f172a;
+  font-weight:800;
+  letter-spacing:.01em;
+}
+
+.ag-reminders-block-title{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  color:#005B7F;
+  font-weight:800;
+  font-size:.95rem;
+  margin-bottom:10px;
+}
+
+.ag-reminders-title-icon{
+  font-size:1.05rem;
+  line-height:1;
+}
+
+.ag-reminders-help{
+  color:#5f6b7a;
+  font-size:.86rem;
+  line-height:1.45;
+}
+
+.ag-reminders-option{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  margin-bottom:8px;
+  color:#111827;
+  font-size:.92rem;
+}
+
+.ag-reminders-option .form-check-input{
+  margin-top:2px;
+}
+
+.ag-reminders-add{
+  font-size:.85rem;
+  font-weight:700;
+  text-decoration:none;
+}
+
+.ag-reminders-add:hover{
+  text-decoration:underline;
+}
+
+.ag-reminders-extra{
+  margin-top:2px;
+}
+
+.ag-reminders-preview{
+  border-color:rgba(0, 176, 197, 0.28);
+  background:linear-gradient(180deg, rgba(0, 176, 197, 0.06) 0%, rgba(255, 255, 255, 1) 100%);
+}
+
+.ag-reminders-preview-message{
+  border:1px dashed rgba(0, 91, 127, 0.28);
+  border-radius:10px;
+  background:#fff;
+  padding:12px;
+  font-size:.9rem;
+  line-height:1.45;
+  color:#1f2937;
+}
+
+@media (max-width: 768px){
+  .ag-reminders-card{
+    padding:12px;
+  }
+}
 #p-ag-admin:not(.d-none){
   width: 100%;
   min-width: 0;

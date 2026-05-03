@@ -2625,11 +2625,120 @@
 
 
 
-              <div class="col-12"><label class="form-label" for="ag_cfg_reminder_template">Recordatorios</label>
+              <div class="col-12">
+                <div class="ag-reminders-panel" id="ag_reminders_panel">
+                  <div class="ag-reminders-card">
+                    <h6 class="ag-reminders-title mb-1">Recordatorios y confirmaciones</h6>
+                    <p class="ag-reminders-help mb-0">
+                      Configura cómo el sistema avisará al paciente antes de su cita y cómo podrá confirmar su asistencia.
+                    </p>
+                  </div>
 
-                <textarea class="form-control" id="ag_cfg_reminder_template" rows="3" placeholder="Plantilla SMS/Email de recordatorio
-"></textarea>
+                  <div class="ag-reminders-card">
+                    <div class="ag-reminders-block-title">
+                      <span class="material-symbols-rounded ag-reminders-title-icon" aria-hidden="true">schedule</span>
+                      Recordatorios previos
+                    </div>
+                    <label class="ag-reminders-option">
+                      <input type="checkbox" class="form-check-input" data-ag-reminder-value="24h" id="ag_reminder_24h" checked>
+                      <span>24 horas antes</span>
+                    </label>
+                    <label class="ag-reminders-option">
+                      <input type="checkbox" class="form-check-input" data-ag-reminder-value="2h" id="ag_reminder_2h" checked>
+                      <span>2 horas antes</span>
+                    </label>
+                    <label class="ag-reminders-option">
+                      <input type="checkbox" class="form-check-input" data-ag-reminder-value="30m" id="ag_reminder_30m">
+                      <span>30 minutos antes</span>
+                    </label>
+                    <button type="button" class="btn btn-link btn-sm px-0 ag-reminders-add" id="ag_reminders_add">
+                      + Agregar otro recordatorio
+                    </button>
+                    <div class="ag-reminders-extra" id="ag_reminders_extra"></div>
+                  </div>
 
+                  <div class="ag-reminders-card">
+                    <div class="ag-reminders-block-title">
+                      <span class="material-symbols-rounded ag-reminders-title-icon" aria-hidden="true">send</span>
+                      Canales de envío
+                    </div>
+                    <label class="ag-reminders-option">
+                      <input type="checkbox" class="form-check-input" data-ag-channel-value="whatsapp" id="ag_channel_whatsapp" checked>
+                      <span>WhatsApp</span>
+                    </label>
+                    <label class="ag-reminders-option">
+                      <input type="checkbox" class="form-check-input" data-ag-channel-value="sms" id="ag_channel_sms">
+                      <span>SMS</span>
+                    </label>
+                    <label class="ag-reminders-option">
+                      <input type="checkbox" class="form-check-input" data-ag-channel-value="email" id="ag_channel_email">
+                      <span>Correo electrónico</span>
+                    </label>
+                    <label class="ag-reminders-option">
+                      <input type="checkbox" class="form-check-input" data-ag-channel-value="call" id="ag_channel_call">
+                      <span>Llamada automática</span>
+                    </label>
+                    <p class="ag-reminders-help mb-0">
+                      El canal principal recomendado es WhatsApp. Los demás canales podrán usarse como respaldo.
+                    </p>
+                  </div>
+
+                  <div class="ag-reminders-card">
+                    <div class="ag-reminders-block-title">
+                      <span class="material-symbols-rounded ag-reminders-title-icon" aria-hidden="true">verified_user</span>
+                      Confirmación del paciente
+                    </div>
+                    <label class="ag-reminders-option">
+                      <input type="checkbox" class="form-check-input" id="ag_confirm_request" checked>
+                      <span>Solicitar confirmación de asistencia</span>
+                    </label>
+                    <label class="ag-reminders-option">
+                      <input type="checkbox" class="form-check-input" id="ag_confirm_cancel" checked>
+                      <span>Permitir cancelar desde el mensaje</span>
+                    </label>
+                    <label class="ag-reminders-option">
+                      <input type="checkbox" class="form-check-input" id="ag_confirm_reschedule" checked>
+                      <span>Permitir solicitar reprogramación</span>
+                    </label>
+                  </div>
+
+                  <div class="ag-reminders-card">
+                    <div class="ag-reminders-block-title">
+                      <span class="material-symbols-rounded ag-reminders-title-icon" aria-hidden="true">pending_actions</span>
+                      Si el paciente no responde
+                    </div>
+                    <label class="ag-reminders-option">
+                      <input type="radio" class="form-check-input" name="ag_no_response_action" value="pending" id="ag_no_response_pending" checked>
+                      <span>Mantener cita como pendiente de confirmar</span>
+                    </label>
+                    <label class="ag-reminders-option">
+                      <input type="radio" class="form-check-input" name="ag_no_response_action" value="operator" id="ag_no_response_operator">
+                      <span>Avisar al operador</span>
+                    </label>
+                    <label class="ag-reminders-option">
+                      <input type="radio" class="form-check-input" name="ag_no_response_action" value="none" id="ag_no_response_none">
+                      <span>No realizar ninguna acción automática</span>
+                    </label>
+                  </div>
+
+                  <div class="ag-reminders-card ag-reminders-preview">
+                    <div class="ag-reminders-block-title">
+                      <span class="material-symbols-rounded ag-reminders-title-icon" aria-hidden="true">chat</span>
+                      Vista previa del mensaje
+                    </div>
+                    <div class="ag-reminders-preview-message">
+                      Hola Ana López, le recordamos su cita con Dr. Juan Pérez el martes 12 de mayo a las 10:00 hrs en Consultorio MAC Norte.
+                      <br><br>
+                      Responda:
+                      <br>1 Confirmar
+                      <br>2 Reprogramar
+                      <br>3 Cancelar
+                    </div>
+                  </div>
+                </div>
+
+                <label class="form-label d-none" for="ag_cfg_reminder_template">Recordatorios</label>
+                <textarea class="form-control d-none" id="ag_cfg_reminder_template" rows="3" placeholder="Plantilla SMS/Email de recordatorio"></textarea>
               </div>
               <div class="col-12">
                 <div class="small text-muted" id="ag_cfg_sync_note">Configuración operativa de Agenda.</div>

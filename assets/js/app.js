@@ -641,6 +641,9 @@ console.info('app.js loaded :: 20251123a');
     cfgChannels: document.getElementById('ag_cfg_channels'),
     cfgCancelPolicyHours: document.getElementById('ag_cfg_cancel_policy_h'),
     cfgReminderTemplate: document.getElementById('ag_cfg_reminder_template'),
+    remindersPanel: document.getElementById('ag_reminders_panel'),
+    remindersAddBtn: document.getElementById('ag_reminders_add'),
+    remindersExtraWrap: document.getElementById('ag_reminders_extra'),
     cfgScheduleSummaryText: document.getElementById('ag_cfg_schedule_summary_text'),
     cfgEditScheduleBtn: document.getElementById('ag_cfg_edit_schedule_btn'),
     cfgScheduleSelectorWrap: document.getElementById('ag_cfg_schedule_selector_wrap'),
@@ -701,6 +704,20 @@ console.info('app.js loaded :: 20251123a');
   let sidebarResizeTimer = null;
   let agendaSettingsContextKey = '';
   let agendaSettingsLoaded = false;
+  const DEFAULT_AGENDA_REMINDER_SETTINGS = Object.freeze({
+    reminders: ['24h', '2h'],
+    channels: ['whatsapp'],
+    confirmation: {
+      request: true,
+      allowCancel: true,
+      allowReschedule: true
+    },
+    noResponseAction: 'pending'
+  });
+  const AGENDA_REMINDER_TEMPLATE_VERSION = 1;
+  let agendaReminderSettings = null;
+  let agendaReminderMessageTemplate = '';
+  let agendaReminderExtraCount = 0;
   let agendaConsultorioRows = [];
   const getCurrentMonthStart = ()=> startOfMonth(new Date());
   let activeBlockedEventId = '';
@@ -4026,6 +4043,204 @@ console.info('app.js loaded :: 20251123a');
     );
     els.cfgSyncNote.textContent = msg || 'Configuración operativa de Agenda.';
   };
+  const AGENDA_BASE_REMINDER_VALUES = Object.freeze(['24h', '2h', '30m']);
+  const AGENDA_EXTRA_REMINDER_CANDIDATES = Object.freeze([
+    { value: '12h', label: '12 horas antes' },
+    { value: '1h', label: '1 hora antes' },
+    { value: '15m', label: '15 minutos antes' }
+  ]);
+  const cloneAgendaReminderDefaults = ()=> JSON.parse(JSON.stringify(DEFAULT_AGENDA_REMINDER_SETTINGS));
+  const normalizeAgendaReminderSettings = (raw = {})=>{
+    const fallback = cloneAgendaReminderDefaults();
+    const reminders = Array.isArray(raw?.reminders) ? raw.reminders : fallback.reminders;
+    const channels = Array.isArray(raw?.channels) ? raw.channels : fallback.channels;
+    const confirmation = (raw?.confirmation && typeof raw.confirmation === 'object')
+      ? raw.confirmation
+      : fallback.confirmation;
+    const noResponseActionRaw = sanitizeText(raw?.noResponseAction || fallback.noResponseAction);
+    const noResponseAction = ['pending', 'operator', 'none'].includes(noResponseActionRaw)
+      ? noResponseActionRaw
+      : 'pending';
+    return {
+      reminders: Array.from(new Set(reminders.map((v)=> sanitizeText(v)).filter(Boolean))),
+      channels: Array.from(new Set(channels.map((v)=> sanitizeText(v)).filter(Boolean))),
+      confirmation: {
+        request: !!confirmation.request,
+        allowCancel: !!confirmation.allowCancel,
+        allowReschedule: !!confirmation.allowReschedule
+      },
+      noResponseAction
+    };
+  };
+  const parseAgendaReminderPayloadFromTemplate = (template = '')=>{
+    const raw = String(template || '').trim();
+    if(!raw){
+      return {
+        settings: cloneAgendaReminderDefaults(),
+        messageTemplate: ''
+      };
+    }
+    try{
+      const json = JSON.parse(raw);
+      if(json && typeof json === 'object'){
+        const hasSettingsObject = !!(json?.settings && typeof json.settings === 'object');
+        if(hasSettingsObject){
+          return {
+            settings: normalizeAgendaReminderSettings(json.settings),
+            messageTemplate: String(json?.message_template || '').trim()
+          };
+        }
+        return {
+          settings: normalizeAgendaReminderSettings(json),
+          messageTemplate: String(json?.message_template || '').trim()
+        };
+      }
+    }catch(_){}
+    return {
+      settings: cloneAgendaReminderDefaults(),
+      messageTemplate: raw
+    };
+  };
+  const serializeAgendaReminderSettings = (settings = {}, messageTemplate = '')=>{
+    const normalized = normalizeAgendaReminderSettings(settings);
+    const payload = {
+      version: AGENDA_REMINDER_TEMPLATE_VERSION,
+      message_template: String(messageTemplate || '').trim(),
+      settings: normalized
+    };
+    try{
+      return JSON.stringify(payload);
+    }catch(_){
+      return JSON.stringify({
+        version: AGENDA_REMINDER_TEMPLATE_VERSION,
+        message_template: '',
+        settings: cloneAgendaReminderDefaults()
+      });
+    }
+  };
+  const reminderLabelFromValue = (value = '')=>{
+    const safe = sanitizeText(value).toLowerCase();
+    if(!safe) return '';
+    if(safe.endsWith('h')){
+      const hours = Number.parseInt(safe, 10);
+      if(Number.isFinite(hours) && hours > 0){
+        return `${hours} ${hours === 1 ? 'hora' : 'horas'} antes`;
+      }
+    }
+    if(safe.endsWith('m')){
+      const minutes = Number.parseInt(safe, 10);
+      if(Number.isFinite(minutes) && minutes > 0){
+        return `${minutes} minutos antes`;
+      }
+    }
+    return `${safe} antes`;
+  };
+  const addExtraReminderOption = ({ value = '', label = '', checked = false } = {})=>{
+    if(!els.remindersExtraWrap) return null;
+    const safeValue = sanitizeText(value);
+    if(!safeValue) return null;
+    const existing = els.remindersExtraWrap.querySelector(`[data-ag-reminder-value="${safeValue}"]`);
+    if(existing){
+      existing.checked = checked || existing.checked;
+      return existing;
+    }
+    const wrapper = document.createElement('label');
+    wrapper.className = 'ag-reminders-option';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.className = 'form-check-input';
+    input.checked = !!checked;
+    input.setAttribute('data-ag-reminder-value', safeValue);
+    const text = document.createElement('span');
+    text.textContent = sanitizeText(label) || reminderLabelFromValue(safeValue);
+    wrapper.appendChild(input);
+    wrapper.appendChild(text);
+    els.remindersExtraWrap.appendChild(wrapper);
+    agendaReminderExtraCount += 1;
+    return input;
+  };
+  const renderReminderExtraOptionsFromState = (settings = {})=>{
+    if(!els.remindersExtraWrap) return;
+    els.remindersExtraWrap.innerHTML = '';
+    agendaReminderExtraCount = 0;
+    const selected = new Set(Array.isArray(settings?.reminders) ? settings.reminders.map((v)=> sanitizeText(v)) : []);
+    selected.forEach((value)=>{
+      if(!value || AGENDA_BASE_REMINDER_VALUES.includes(value)) return;
+      addExtraReminderOption({ value, checked: true });
+    });
+  };
+  const readAgendaReminderSettingsFromUi = ()=>{
+    const fallback = cloneAgendaReminderDefaults();
+    if(!els.remindersPanel){
+      return fallback;
+    }
+    const reminderValues = Array.from(
+      els.remindersPanel.querySelectorAll('input[type="checkbox"][data-ag-reminder-value]:checked')
+    ).map((input)=> sanitizeText(input.getAttribute('data-ag-reminder-value') || '')).filter(Boolean);
+    const channelValues = Array.from(
+      els.remindersPanel.querySelectorAll('input[type="checkbox"][data-ag-channel-value]:checked')
+    ).map((input)=> sanitizeText(input.getAttribute('data-ag-channel-value') || '')).filter(Boolean);
+    const noResponseAction = sanitizeText(
+      els.remindersPanel.querySelector('input[name="ag_no_response_action"]:checked')?.value || 'pending'
+    );
+    return normalizeAgendaReminderSettings({
+      reminders: reminderValues,
+      channels: channelValues,
+      confirmation: {
+        request: !!els.remindersPanel.querySelector('#ag_confirm_request')?.checked,
+        allowCancel: !!els.remindersPanel.querySelector('#ag_confirm_cancel')?.checked,
+        allowReschedule: !!els.remindersPanel.querySelector('#ag_confirm_reschedule')?.checked
+      },
+      noResponseAction
+    });
+  };
+  const applyAgendaReminderSettingsToUi = (settings = {})=>{
+    if(!els.remindersPanel) return;
+    const normalized = normalizeAgendaReminderSettings(settings);
+    const reminderSet = new Set(normalized.reminders);
+    const channelSet = new Set(normalized.channels);
+    renderReminderExtraOptionsFromState(normalized);
+    Array.from(els.remindersPanel.querySelectorAll('input[type="checkbox"][data-ag-reminder-value]')).forEach((input)=>{
+      const value = sanitizeText(input.getAttribute('data-ag-reminder-value') || '');
+      input.checked = reminderSet.has(value);
+    });
+    Array.from(els.remindersPanel.querySelectorAll('input[type="checkbox"][data-ag-channel-value]')).forEach((input)=>{
+      const value = sanitizeText(input.getAttribute('data-ag-channel-value') || '');
+      input.checked = channelSet.has(value);
+    });
+    const requestInput = els.remindersPanel.querySelector('#ag_confirm_request');
+    const cancelInput = els.remindersPanel.querySelector('#ag_confirm_cancel');
+    const rescheduleInput = els.remindersPanel.querySelector('#ag_confirm_reschedule');
+    if(requestInput) requestInput.checked = !!normalized.confirmation.request;
+    if(cancelInput) cancelInput.checked = !!normalized.confirmation.allowCancel;
+    if(rescheduleInput) rescheduleInput.checked = !!normalized.confirmation.allowReschedule;
+    const radio = els.remindersPanel.querySelector(`input[name="ag_no_response_action"][value="${normalized.noResponseAction}"]`)
+      || els.remindersPanel.querySelector('input[name="ag_no_response_action"][value="pending"]');
+    if(radio) radio.checked = true;
+    agendaReminderSettings = normalized;
+    window.agendaReminderSettings = normalizeAgendaReminderSettings(normalized);
+    if(els.cfgReminderTemplate){
+      els.cfgReminderTemplate.value = serializeAgendaReminderSettings(normalized, agendaReminderMessageTemplate);
+    }
+  };
+  const addNextAgendaReminderOption = ()=>{
+    if(!els.remindersExtraWrap) return false;
+    const existingValues = new Set(
+      Array.from(els.remindersPanel?.querySelectorAll('input[data-ag-reminder-value]') || [])
+        .map((input)=> sanitizeText(input.getAttribute('data-ag-reminder-value') || ''))
+        .filter(Boolean)
+    );
+    let candidate = AGENDA_EXTRA_REMINDER_CANDIDATES.find((item)=> !existingValues.has(item.value));
+    if(!candidate){
+      agendaReminderExtraCount += 1;
+      const suffix = agendaReminderExtraCount;
+      candidate = { value: `custom_${suffix}`, label: `Recordatorio extra ${suffix}` };
+    }
+    const input = addExtraReminderOption({ value: candidate.value, label: candidate.label, checked: true });
+    if(!input) return false;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  };
   const formatScheduleSummaryTime = (value)=>{
     const raw = sanitizeText(value);
     const m = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
@@ -4183,13 +4398,23 @@ console.info('app.js loaded :: 20251123a');
     const channels = Array.from(els.cfgChannels?.selectedOptions || [])
       .map((opt)=> sanitizeText(opt.value || ''))
       .filter(Boolean);
+    const reminderSettings = readAgendaReminderSettingsFromUi();
+    agendaReminderSettings = normalizeAgendaReminderSettings(reminderSettings);
+    window.agendaReminderSettings = normalizeAgendaReminderSettings(agendaReminderSettings);
+    const reminderTemplate = serializeAgendaReminderSettings(
+      agendaReminderSettings,
+      agendaReminderMessageTemplate
+    );
+    if(els.cfgReminderTemplate){
+      els.cfgReminderTemplate.value = reminderTemplate;
+    }
     return {
       appointment_duration_min: Number(els.cfgDurationMin?.value || 30) || 30,
       // Mantener compatibilidad backend: el buffer se fija en 0 desde UI.
       gap_between_appointments_min: 0,
       channels,
       cancellation_policy_hours: sanitizeText(els.cfgCancelPolicyHours?.value || '') || null,
-      reminder_template: String(els.cfgReminderTemplate?.value || '').trim()
+      reminder_template: reminderTemplate
     };
   };
   const applyAgendaSettingsToUi = (data = {})=>{
@@ -4201,9 +4426,10 @@ console.info('app.js loaded :: 20251123a');
       const val = sanitizeText(data?.cancellation_policy_hours ?? '');
       els.cfgCancelPolicyHours.value = val || '24';
     }
-    if(els.cfgReminderTemplate){
-      els.cfgReminderTemplate.value = String(data?.reminder_template || '');
-    }
+    const reminderTemplate = String(data?.reminder_template || '');
+    const parsedReminderPayload = parseAgendaReminderPayloadFromTemplate(reminderTemplate);
+    agendaReminderMessageTemplate = String(parsedReminderPayload?.messageTemplate || '').trim();
+    applyAgendaReminderSettingsToUi(parsedReminderPayload?.settings || cloneAgendaReminderDefaults());
     if(els.cfgChannels){
       const chosen = new Set(Array.isArray(data?.channels) ? data.channels.map((v)=> sanitizeText(v)) : []);
       Array.from(els.cfgChannels.options || []).forEach((opt)=>{
@@ -6653,6 +6879,9 @@ console.info('app.js loaded :: 20251123a');
   const bindEvents = ()=>{
     if(initialized) return;
     initialized = true;
+    const initialReminderPayload = parseAgendaReminderPayloadFromTemplate(String(els.cfgReminderTemplate?.value || ''));
+    agendaReminderMessageTemplate = String(initialReminderPayload?.messageTemplate || '').trim();
+    applyAgendaReminderSettingsToUi(initialReminderPayload?.settings || cloneAgendaReminderDefaults());
 
     els.refresh?.addEventListener('click', ()=>{
       refreshCalendar({ forceConsultorios: false }).catch(()=> null);
@@ -6678,6 +6907,24 @@ console.info('app.js loaded :: 20251123a');
         el.addEventListener('input', ()=> queuePersistAgendaSettings());
         el.addEventListener('change', ()=> queuePersistAgendaSettings(220));
       });
+    if(els.remindersPanel){
+      els.remindersPanel.addEventListener('change', ()=>{
+        agendaReminderSettings = readAgendaReminderSettingsFromUi();
+        window.agendaReminderSettings = normalizeAgendaReminderSettings(agendaReminderSettings);
+        queuePersistAgendaSettings(220);
+      });
+    }
+    els.remindersAddBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      const created = addNextAgendaReminderOption();
+      if(!created){
+        queuePersistAgendaSettings(220);
+        return;
+      }
+      agendaReminderSettings = readAgendaReminderSettingsFromUi();
+      window.agendaReminderSettings = normalizeAgendaReminderSettings(agendaReminderSettings);
+      queuePersistAgendaSettings(220);
+    });
     els.cfgDurationMin?.addEventListener('change', ()=>{
       syncCalendarSlotGranularity();
       if(calendar){
