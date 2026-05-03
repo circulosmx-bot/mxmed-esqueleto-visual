@@ -2587,11 +2587,67 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 .sched-time-slot{ position:relative; min-height:36px; }
 
+.schedule-time-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width: 148px;
+  min-height: 34px;
+  padding: 6px 12px;
+  border:1px solid #b8dfe6;
+  border-radius:999px;
+  background:#fff;
+  color:#15606d;
+  font-size:.9rem;
+  font-weight:600;
+  line-height:1.2;
+  cursor:pointer;
+}
+
+.schedule-time-pill.is-empty{
+  color:#5f6b75;
+  border-style:dashed;
+}
+
+.schedule-time-pill.morning{
+  border-color:#f6d68f;
+  background:#fff9ea;
+  color:#915c00;
+}
+
+.schedule-time-pill.afternoon{
+  border-color:#b8c8f2;
+  background:#f3f6ff;
+  color:#2f4f9f;
+}
+
+.schedule-time-pill.continuous{
+  border-color:#b7ead2;
+  background:#eefbf4;
+  color:#1b6f4f;
+}
+
+.schedule-time-pill.has-conflict{
+  border-color:#dc3545;
+  background:rgba(220, 53, 69, 0.08);
+}
+
 .sched-time-slot .sched-empty-label{
   display:none;
-  font-size:.78rem;
-  color:#6c757d;
+  font-size:.86rem;
+  color:#5f6b75;
+  font-weight:600;
+  letter-spacing:.02em;
   line-height:1.2;
+}
+
+.schedule-empty-time{
+  color:#6c757d;
+  font-weight:500;
+}
+
+.schedule-separator{
+  margin:0 4px;
 }
 
 .sched-time-slot.is-empty .d-flex{ display:none !important; }
@@ -2599,6 +2655,108 @@ body{margin:0;background:var(--mm-fondo-base);}
 .sched-time-slot.is-empty .sched-empty-label{ display:block; }
 
 .sched-table tr.sched-empty td{ background:#fbfdfe; }
+
+.sched-time-slot .sched-apply-next{
+  padding: 0;
+  margin-top: .25rem;
+  font-size: .72rem;
+  font-weight: 600;
+  color: #008ea0;
+  text-decoration: none;
+}
+
+.sched-time-slot .sched-apply-next:hover,
+.sched-time-slot .sched-apply-next:focus{
+  color: #006f7d;
+  text-decoration: underline;
+}
+
+.schedule-apply-following{
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.sched-time-slot .schedule-apply-following{
+  margin-left: 5px;
+  margin-top: 0;
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+.schedule-remove-turn{
+  margin-left: 6px;
+  border: 0;
+  background: transparent;
+  color: #dc3545;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.schedule-remove-turn:hover{
+  color: #b02a37;
+}
+
+.mx-sched-picker-backdrop{
+  position: fixed;
+  inset: 0;
+  z-index: 1065;
+  background: rgba(8, 20, 32, 0.35);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 16px;
+}
+
+.mx-sched-picker-popover{
+  width: min(100%, 420px);
+  background:#fff;
+  border-radius:12px;
+  border:1px solid #dbe7f2;
+  box-shadow:0 12px 30px rgba(0, 0, 0, 0.2);
+  padding:14px;
+}
+
+.mx-sched-picker-title{
+  font-size:1rem;
+  font-weight:700;
+  margin-bottom:10px;
+}
+
+.mx-sched-picker-grid{
+  display:grid;
+  gap:10px;
+  grid-template-columns:1fr 1fr;
+}
+
+.mx-sched-picker-label{
+  display:block;
+  font-size:.8rem;
+  color:#5f6b75;
+  margin-bottom:4px;
+}
+
+.mx-sched-picker-row{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.mx-sched-picker-row select{
+  min-width: 72px;
+}
+
+.mx-sched-picker-actions{
+  margin-top:12px;
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+}
 
 .mx-map-status-loading{
   color:#0d6efd !important;
@@ -9077,5 +9235,97 @@ body{margin:0;background:var(--mm-fondo-base);}
     width: 100%;
     justify-content: flex-start;
     flex-wrap: wrap;
+  }
+}
+
+/* Consultorios · Horarios header separado (activo + switches) */
+.mx-cons-horarios-head,
+.schedule-consultorio-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.schedule-consultorio-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mx-cons-horarios-active,
+.schedule-consultorio-active,
+.mx-cons-horarios-head [data-cons-horarios-title] {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: #00AFC2;
+  color: #ffffff;
+  font-weight: 850;
+  font-size: 1.15rem;
+  letter-spacing: .01em;
+  text-transform: uppercase;
+  cursor: default;
+  pointer-events: none;
+}
+
+.schedule-section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #005B7F;
+  font-weight: 800;
+  font-size: .98rem;
+}
+
+.schedule-section-icon {
+  font-size: 2em;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.mx-cons-horarios-switcher,
+.schedule-consultorio-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mx-cons-horarios-switch-btn,
+.schedule-consultorio-switch {
+  border: 1px solid #00AFC2;
+  background: #ffffff;
+  color: #005B7F;
+  border-radius: 9px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mx-cons-horarios-switch-btn:hover,
+.mx-cons-horarios-switch-btn:focus,
+.schedule-consultorio-switch:hover,
+.schedule-consultorio-switch:focus {
+  background: rgba(0, 175, 194, 0.08);
+  border-color: #00AFC2;
+  color: #005B7F;
+}
+
+@media (max-width: 767.98px) {
+  .mx-cons-horarios-active,
+  .schedule-consultorio-active,
+  .mx-cons-horarios-head [data-cons-horarios-title] {
+    width: 100%;
+  }
+
+  .schedule-consultorio-title-row {
+    align-items: flex-start;
   }
 }

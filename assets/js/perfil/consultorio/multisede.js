@@ -163,6 +163,43 @@ function mxClearHorarioInputs(inputs){
     return ids;
   }
 
+  function normalizeConsultorioTitle(raw){
+    return String(raw ?? '').replace(/\s+/g, ' ').trim();
+  }
+
+  function getConsultorioFallbackLabel(index){
+    const idx = Number(index || 1) || 1;
+    if(idx === 1) return 'CONSULTORIO PRINCIPAL';
+    if(idx === 2) return 'SEGUNDO CONSULTORIO';
+    if(idx === 3) return 'TERCER CONSULTORIO';
+    return `CONSULTORIO ${idx}`;
+  }
+
+  function getConsultorioDisplayName(rowOrValue, index = 1){
+    const idx = Number(index || 1) || 1;
+    const raw = (rowOrValue && typeof rowOrValue === 'object')
+      ? (rowOrValue.nombre_visible ?? rowOrValue.titulo ?? rowOrValue.name ?? '')
+      : rowOrValue;
+    const visibleName = normalizeConsultorioTitle(raw);
+    if(!visibleName) return getConsultorioFallbackLabel(idx);
+
+    const hasConsultorioWord = /\bconsultorio\b/i.test(visibleName);
+    if(hasConsultorioWord){
+      return visibleName.toUpperCase();
+    }
+    return `CONSULTORIO ${visibleName}`.toUpperCase();
+  }
+
+  function updateConsultorioTabLabel(index, rowOrValue = ''){
+    const idx = Number(index || 1) || 1;
+    const btn = document.querySelector(`#p-consultorio [data-bs-target="#sede${idx}"]`);
+    if(!btn) return;
+    const label = btn.querySelector('.tab-lbl');
+    if(!label) return;
+    label.textContent = getConsultorioDisplayName(rowOrValue, idx);
+  }
+  window.getConsultorioDisplayName = getConsultorioDisplayName;
+
   function syncAddTabVisibility(){
     const addBtn = document.getElementById('btn-consul-add');
     if(!addBtn) return;
@@ -283,11 +320,11 @@ function mxClearHorarioInputs(inputs){
     if(!btn){
       const li = document.createElement('li'); li.className='nav-item';
       btn = document.createElement('button'); btn.className='nav-link'; btn.type='button'; btn.setAttribute('data-bs-toggle','pill'); btn.setAttribute('data-bs-target','#sede'+n);
-      const ord = (n===2?'SEGUNDO':(n===3?'TERCER':''));
-      btn.innerHTML = '<span class="tab-ico material-symbols-rounded" aria-hidden="true">apartment</span><span class="tab-lbl">'+ord+'<br>CONSULTORIO</span>';
+      btn.innerHTML = '<span class="tab-ico material-symbols-rounded" aria-hidden="true">apartment</span><span class="tab-lbl"></span>';
       const addLi = document.getElementById('btn-consul-add')?.closest('li'); if(addLi){ nav.insertBefore(li, addLi); } else { nav.appendChild(li); }
       li.appendChild(btn);
     }
+    updateConsultorioTabLabel(n, '');
     // insertar barra de eliminar en pane secundario
     try{
       if(n>1 && !pane.querySelector('.cons-delbar')){
@@ -431,6 +468,7 @@ function mxClearHorarioInputs(inputs){
   });
 
   syncAddTabVisibility();
+  [1,2,3].forEach((idx)=> updateConsultorioTabLabel(idx, ''));
 
   // ====== CP -> Colonias (SEPOMEX) ======
   // Inicializa auto-llenado para un conjunto de controles
@@ -3470,6 +3508,90 @@ function mxClearHorarioInputs(inputs){
       return getPaneByIndex(idx);
     };
     const getField = (pane, selector)=> pane?.querySelector(selector);
+    const getScheduleHeaderNodes = (pane)=>{
+      if(!pane) return { head: null, title: null, switcher: null };
+      const head = pane.querySelector('[data-cons-horarios-head]');
+      if(!head) return { head: null, title: null, switcher: null };
+      return {
+        head,
+        title: head.querySelector('[data-cons-horarios-title]'),
+        switcher: head.querySelector('[data-cons-horarios-switcher]')
+      };
+    };
+    const getConsultorioNameByIndex = (idx)=>{
+      const pane = getPaneByIndex(idx);
+      const visibleName = clean(getField(pane, 'input[id^="cons-titulo"]')?.value || '');
+      return getConsultorioDisplayName(visibleName, idx);
+    };
+    const scrollToConsultorioSchedule = (idx)=>{
+      const pane = getPaneByIndex(idx);
+      if(!pane) return;
+      const anchor = pane.querySelector('[data-consultorio-section="horarios"]')
+        || pane.querySelector('.sched-card');
+      if(!anchor) return;
+      if(anchor instanceof HTMLElement){
+        anchor.style.scrollMarginTop = '90px';
+      }
+      try{
+        anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }catch(_){ }
+    };
+    const openConsultorioScheduleByIndex = (idx)=>{
+      const numericIdx = Number(idx || 1) || 1;
+      const tabBtn = root.querySelector(`[data-bs-target="#sede${numericIdx}"]`);
+      if(!tabBtn) return;
+      try{
+        if(window.bootstrap?.Tab){
+          window.bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+        }else{
+          tabBtn.click();
+        }
+      }catch(_){
+        tabBtn.click();
+      }
+      window.setTimeout(()=>{
+        scrollToConsultorioSchedule(numericIdx);
+        refreshScheduleHeaders();
+      }, 130);
+    };
+    const renderScheduleHeaderForPane = (pane)=>{
+      if(!pane) return;
+      const idx = parsePaneIndex(pane);
+      const { title, switcher } = getScheduleHeaderNodes(pane);
+      if(!title || !switcher) return;
+
+      const currentName = getConsultorioNameByIndex(idx);
+      title.textContent = currentName;
+
+      const consultorioIndexes = getConsultorioSlots()
+        .filter((n)=> paneExists(n))
+        .sort((a,b)=> a - b);
+      const otherIndexes = consultorioIndexes.filter((n)=> n !== idx);
+
+      switcher.innerHTML = '';
+      if(!otherIndexes.length){
+        switcher.setAttribute('hidden', 'hidden');
+        return;
+      }
+
+      otherIndexes.forEach((otherIdx)=>{
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-sm mx-cons-horarios-switch-btn schedule-consultorio-switch';
+        button.setAttribute('data-cons-horarios-jump', '1');
+        button.setAttribute('data-consultorio-id', String(otherIdx));
+        button.setAttribute('data-index', String(otherIdx));
+        button.textContent = getConsultorioNameByIndex(otherIdx);
+        switcher.appendChild(button);
+      });
+      switcher.removeAttribute('hidden');
+    };
+    function refreshScheduleHeaders(){
+      root.querySelectorAll('.tab-pane[id^="sede"]').forEach((pane)=>{
+        if(isPanePlaceholder(pane)) return;
+        renderScheduleHeaderForPane(pane);
+      });
+    }
     const CONSULTORIO_GROUP_DEBUG = false;
     const logConsultorioGroupDebug = (label = '', pane = null, extra = {})=>{
       if(!CONSULTORIO_GROUP_DEBUG) return;
@@ -3803,6 +3925,9 @@ function mxClearHorarioInputs(inputs){
           baseNameHint.classList.add('d-none');
         }
       }
+
+      const idx = parsePaneIndex(pane);
+      updateConsultorioTabLabel(idx, visibleNameInput?.value || '');
 
       if(shouldAutofill && hasGroup && baseName !== '' && visibleNameInput){
         const currentVisibleName = clean(visibleNameInput.value || '');
@@ -4333,6 +4458,7 @@ function mxClearHorarioInputs(inputs){
       const groupId = clean(row?.group_id || '');
       const visibleName = row?.nombre_visible || row?.titulo || row?.name || '';
       setValue(getField(pane, '[id^="cons-titulo"]'), visibleName);
+      updateConsultorioTabLabel(idx, visibleName);
       setValue(getField(pane, '[id^="cons-grupo-nombre"]'), baseName);
       if(groupId || clean(baseName)){
         setPaneGroupState(idx, {
@@ -4441,6 +4567,7 @@ function mxClearHorarioInputs(inputs){
         });
       }
       syncConsultorioNameModel(pane, { autofill: false });
+      refreshScheduleHeaders();
       refreshConsultorioMapByIndex(idx, 90);
     };
 
@@ -4639,6 +4766,11 @@ function mxClearHorarioInputs(inputs){
       if(!pane) return;
       if(!target.matches('input, select, textarea')) return;
       const targetId = clean(target.id || '');
+      if(targetId.startsWith('cons-titulo')){
+        const idx = parsePaneIndex(pane);
+        updateConsultorioTabLabel(idx, target.value || '');
+        refreshScheduleHeaders();
+      }
       if(targetId.startsWith('cons-grupo-si') || targetId.startsWith('cons-grupo-no')){
         logConsultorioGroupDebug('input.group.radio.skipAutosave', pane, {
           target_id: targetId,
@@ -4729,6 +4861,19 @@ function mxClearHorarioInputs(inputs){
     root.addEventListener('click', (event)=>{
       const target = event.target;
       if(!(target instanceof HTMLElement)) return;
+      const scheduleJumpBtn = target.closest('[data-cons-horarios-jump]');
+      if(scheduleJumpBtn instanceof HTMLElement){
+        event.preventDefault();
+        const nextIdx = Number(
+          scheduleJumpBtn.getAttribute('data-index')
+          || scheduleJumpBtn.getAttribute('data-consultorio-id')
+          || '0'
+        );
+        if(Number.isFinite(nextIdx) && nextIdx > 0){
+          openConsultorioScheduleByIndex(nextIdx);
+        }
+        return;
+      }
       if(!target.closest('.foto-x')) return;
       const pane = target.closest('.tab-pane[id^="sede"]');
       if(!pane) return;
@@ -4747,12 +4892,19 @@ function mxClearHorarioInputs(inputs){
       window.setTimeout(()=>{
         materializeConsultorioRow(idx, 'pane_created_immediate').catch(()=> null);
         queueSavePane(idx, 140, 'pane_created');
+        refreshScheduleHeaders();
       }, 60);
+    });
+
+    root.querySelector('.mm-tabs-embed')?.addEventListener('shown.bs.tab', ()=>{
+      window.setTimeout(()=>{ refreshScheduleHeaders(); }, 40);
     });
 
     root.querySelectorAll('.tab-pane[id^="sede"]').forEach((pane)=>{
       syncConsultorioNameModel(pane, { autofill: false });
+      updateConsultorioTabLabel(parsePaneIndex(pane), getField(pane, 'input[id^="cons-titulo"]')?.value || '');
     });
+    refreshScheduleHeaders();
 
     const boot = ()=>{ hydrateFromBackend().catch(()=> null); };
     if(document.readyState === 'loading'){

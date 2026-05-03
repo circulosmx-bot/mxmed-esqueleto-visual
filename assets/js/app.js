@@ -643,6 +643,9 @@ console.info('app.js loaded :: 20251123a');
     cfgReminderTemplate: document.getElementById('ag_cfg_reminder_template'),
     cfgScheduleSummaryText: document.getElementById('ag_cfg_schedule_summary_text'),
     cfgEditScheduleBtn: document.getElementById('ag_cfg_edit_schedule_btn'),
+    cfgScheduleSelectorWrap: document.getElementById('ag_cfg_schedule_selector_wrap'),
+    cfgScheduleSelectorText: document.getElementById('ag_cfg_schedule_selector_text'),
+    cfgScheduleSelectorButtons: document.getElementById('ag_cfg_schedule_selector_buttons'),
     cfgSyncNote: document.getElementById('ag_cfg_sync_note')
   };
 
@@ -660,6 +663,7 @@ console.info('app.js loaded :: 20251123a');
   let activePatientContextId = '';
   let weeklyHoursExpanded = false;
   let visibleScheduleRange = null;
+  let consultorioScheduleVisibleRange = null;
   let patientSearchDebounceTimer = null;
   let patientIndexCache = null;
   let patientIndexPromise = null;
@@ -697,6 +701,7 @@ console.info('app.js loaded :: 20251123a');
   let sidebarResizeTimer = null;
   let agendaSettingsContextKey = '';
   let agendaSettingsLoaded = false;
+  let agendaConsultorioRows = [];
   const getCurrentMonthStart = ()=> startOfMonth(new Date());
   let activeBlockedEventId = '';
   let activeBlockConflictIds = new Set();
@@ -714,6 +719,7 @@ console.info('app.js loaded :: 20251123a');
   let eventBehaviorLookupCtrl = null;
   let createPatientBehaviorNoticeWrap = null;
   let eventPatientBehaviorNoticeWrap = null;
+  let scheduleBusinessHoursRequestCtrl = null;
   let blockModalSelection = null;
   let blockModalReasonKey = 'comida';
   let blockModalReasonLabel = 'Comida';
@@ -722,7 +728,6 @@ console.info('app.js loaded :: 20251123a');
   const AGENDA_SLOT_DEBUG = false;
   const AGENDA_CANCEL_DEBUG = false;
   const AGENDA_SLOT_FORCE_OPEN_TRACE = false;
-  const CONSULTORIO_SCHEDULE_DEBUG = false;
   const AGENDA_LATE_CANCEL_THRESHOLD_MINUTES = 1080;
   const BLOCK_REASON_OPTIONS = Object.freeze([
     { key: 'comida', label: 'Comida' },
@@ -829,22 +834,35 @@ console.info('app.js loaded :: 20251123a');
     const fallbackMax = resolveAgendaEndVisibleTime();
     const fallbackMinMinutes = timeToMinutes(fallbackMin);
     const fallbackMaxMinutes = timeToMinutes(fallbackMax);
+    const scheduleMeta = (consultorioScheduleVisibleRange && typeof consultorioScheduleVisibleRange === 'object')
+      ? consultorioScheduleVisibleRange
+      : null;
+    const scheduleMinMinutes = timeToMinutes(scheduleMeta?.minTime || '');
+    const scheduleMaxMinutes = timeToMinutes(scheduleMeta?.maxTime || '');
+    const hasScheduleRange = scheduleMinMinutes !== null
+      && scheduleMaxMinutes !== null
+      && scheduleMaxMinutes > scheduleMinMinutes;
     const meta = (visibleScheduleRange && typeof visibleScheduleRange === 'object') ? visibleScheduleRange : null;
     const metaMinMinutes = timeToMinutes(meta?.minTime || '');
     const metaMaxMinutes = timeToMinutes(meta?.maxTime || '');
     const hasMetaRange = metaMinMinutes !== null && metaMaxMinutes !== null && metaMaxMinutes > metaMinMinutes;
-    const minMinutes = hasMetaRange ? metaMinMinutes : (fallbackMinMinutes ?? (8 * 60));
-    const maxMinutes = hasMetaRange
+    const minMinutes = hasScheduleRange
+      ? scheduleMinMinutes
+      : (hasMetaRange ? metaMinMinutes : (fallbackMinMinutes ?? (8 * 60)));
+    const maxMinutes = hasScheduleRange
+      ? scheduleMaxMinutes
+      : (hasMetaRange
       ? metaMaxMinutes
-      : Math.max((fallbackMaxMinutes ?? (20 * 60)), minMinutes + 60);
+      : Math.max((fallbackMaxMinutes ?? (20 * 60)), minMinutes + 60));
     return {
       minTime: minutesToTime(minMinutes),
       maxTime: minutesToTime(maxMinutes),
-      source: hasMetaRange ? 'availability' : 'fallback_store'
+      source: hasScheduleRange ? 'consultorio_schedule' : (hasMetaRange ? 'availability' : 'fallback_store')
     };
   };
   const resolveAgendaSlotMinutes = ()=>{
-    // Base demo estable en 30 min. Preparado para futura parametrización.
+    const raw = Number.parseInt(String(els.cfgDurationMin?.value || ''), 10);
+    if([20, 30, 40, 60].includes(raw)) return raw;
     return 30;
   };
   const normalizeText = (value)=>{
@@ -3397,8 +3415,9 @@ console.info('app.js loaded :: 20251123a');
     }).join('');
   };
   const setWorkspaceButtonActive = (targetPanelId = panelId)=>{
-    if(!els.workspaceShell) return;
-    els.workspaceShell.querySelectorAll('[data-ag-work-panel]').forEach((btn)=>{
+    const buttons = Array.from(document.querySelectorAll('.mx-ag-workspace-shell [data-ag-work-panel]'));
+    if(!buttons.length) return;
+    buttons.forEach((btn)=>{
       btn.classList.toggle('is-active', sanitizeText(btn.getAttribute('data-ag-work-panel')) === sanitizeText(targetPanelId));
     });
   };
@@ -3496,6 +3515,63 @@ console.info('app.js loaded :: 20251123a');
     ) || (id ? `Consultorio #${id}` : 'Consultorio sin nombre');
     if(!id) return null;
     return { id, label };
+  };
+  const resolveConsultorioDisplayName = (item, index)=>{
+    const idx = Number(index || 1) || 1;
+    const fallback = idx === 1
+      ? 'CONSULTORIO PRINCIPAL'
+      : (idx === 2 ? 'SEGUNDO CONSULTORIO' : (idx === 3 ? 'TERCER CONSULTORIO' : `CONSULTORIO ${idx}`));
+    if(typeof window.getConsultorioDisplayName === 'function'){
+      const viaHelper = sanitizeText(window.getConsultorioDisplayName(item || {}, idx));
+      if(viaHelper) return viaHelper;
+    }
+    const raw = sanitizeText(
+      item?.nombre_visible
+      || item?.titulo
+      || item?.name
+      || item?.nombre
+      || item?.label
+      || ''
+    );
+    if(!raw) return fallback;
+    const hasConsultorio = /\bconsultorio\b/i.test(raw);
+    const label = hasConsultorio ? raw : `Consultorio ${raw}`;
+    return sanitizeText(label).toUpperCase() || fallback;
+  };
+  const normalizeConsultorioIndex = (value)=>{
+    const n = Number.parseInt(String(value || ''), 10);
+    return Number.isFinite(n) && n > 0 ? n : 1;
+  };
+  const listAgendaConfigConsultorios = ()=>{
+    const rows = Array.isArray(agendaConsultorioRows) ? agendaConsultorioRows : [];
+    if(rows.length){
+      return rows
+        .map((row)=>{
+          const id = sanitizeText(row?.consultorio_id || row?.id || '');
+          if(!id) return null;
+          const index = normalizeConsultorioIndex(id);
+          return {
+            id,
+            index,
+            label: resolveConsultorioDisplayName(row, index)
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b)=> a.index - b.index);
+    }
+    const fallback = Array.from(els.consultorio?.options || [])
+      .map((opt)=> ({ id: sanitizeText(opt.value || ''), label: sanitizeText(opt.textContent || '') }))
+      .filter((opt)=> opt.id && opt.id !== CONSULTORIO_UNAVAILABLE_VALUE && opt.id !== CONSULTORIO_PROFILE_ONLY_VALUE)
+      .map((opt)=>{
+        const index = normalizeConsultorioIndex(opt.id);
+        return {
+          id: opt.id,
+          index,
+          label: resolveConsultorioDisplayName({ titulo: opt.label }, index)
+        };
+      })
+      .sort((a, b)=> a.index - b.index);
+    return fallback;
   };
   const CONSULTORIO_PROFILE_ONLY_VALUE = '__ctx_consultorio_profile__';
   const CONSULTORIO_UNAVAILABLE_VALUE = '__consultorio_unavailable__';
@@ -4002,6 +4078,35 @@ console.info('app.js loaded :: 20251123a');
     );
     els.cfgScheduleSummaryText.textContent = msg;
   };
+  const renderAgendaScheduleEditorSelector = ()=>{
+    if(!els.cfgEditScheduleBtn || !els.cfgScheduleSelectorWrap || !els.cfgScheduleSelectorButtons) return;
+    const consultorios = listAgendaConfigConsultorios();
+    const hasMultiple = consultorios.length > 1;
+
+    els.cfgEditScheduleBtn.classList.toggle('d-none', hasMultiple);
+    els.cfgScheduleSelectorWrap.classList.toggle('d-none', !hasMultiple);
+    if(!hasMultiple){
+      return;
+    }
+
+    if(els.cfgScheduleSelectorText){
+      els.cfgScheduleSelectorText.textContent = 'Los horarios se configuran por consultorio para evitar cruces entre sedes. Selecciona el consultorio que deseas editar.';
+    }
+    els.cfgScheduleSelectorButtons.innerHTML = '';
+    consultorios.forEach((item)=>{
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-outline-primary btn-sm';
+      btn.textContent = item.label;
+      btn.setAttribute('data-consultorio-id', item.id);
+      btn.setAttribute('data-index', String(item.index));
+      btn.addEventListener('click', (event)=>{
+        event.preventDefault();
+        openConsultorioScheduleEditorFromSettings(item.id);
+      });
+      els.cfgScheduleSelectorButtons.appendChild(btn);
+    });
+  };
   const hydrateAgendaScheduleSummary = async ({ doctorId, consultorioId })=>{
     if(!doctorId || !consultorioId){
       setAgendaScheduleSummaryText('Selecciona consultorio activo para ver su horario oficial.', 'danger');
@@ -4019,8 +4124,13 @@ console.info('app.js loaded :: 20251123a');
       setAgendaScheduleSummaryText('No se pudo cargar horario oficial del consultorio.', 'danger');
     }
   };
-  const openConsultorioScheduleEditorFromSettings = ()=>{
-    const { consultorioId } = getAgendaSettingsContext();
+  const openConsultorioScheduleEditorFromSettings = (targetConsultorioId = '')=>{
+    const context = getAgendaSettingsContext();
+    const consultorioId = sanitizeText(targetConsultorioId || context.consultorioId || '');
+    if(consultorioId){
+      if(els.consultorio) els.consultorio.value = consultorioId;
+      if(els.consultorioModal) els.consultorioModal.value = consultorioId;
+    }
     try{
       if(typeof window.openGroup === 'function'){
         window.openGroup('perfil');
@@ -4054,10 +4164,19 @@ console.info('app.js loaded :: 20251123a');
           tabBtn.click();
         }
       }
-      const activeCard = document.querySelector('#p-consultorio .tab-pane.show.active .sched-card');
-      if(activeCard){
-        try{ activeCard.scrollIntoView({ behavior: 'smooth', block: 'start' }); }catch(_){}
-      }
+      window.setTimeout(()=>{
+        const pane = targetId
+          ? document.getElementById(`sede${targetId}`)
+          : document.querySelector('#p-consultorio .tab-pane.show.active');
+        const horariosAnchor = pane?.querySelector('[data-consultorio-section="horarios"]')
+          || pane?.querySelector('.sched-card')
+          || document.querySelector('#p-consultorio .tab-pane.show.active [data-consultorio-section="horarios"]')
+          || document.querySelector('#p-consultorio .tab-pane.show.active .sched-card');
+        if(horariosAnchor){
+          try{ horariosAnchor.style.scrollMarginTop = '90px'; }catch(_){}
+          try{ horariosAnchor.scrollIntoView({ behavior: 'smooth', block: 'start' }); }catch(_){}
+        }
+      }, 130);
     }, 80);
   };
   const readAgendaSettingsPayloadFromUi = ()=>{
@@ -4066,7 +4185,8 @@ console.info('app.js loaded :: 20251123a');
       .filter(Boolean);
     return {
       appointment_duration_min: Number(els.cfgDurationMin?.value || 30) || 30,
-      gap_between_appointments_min: Number(els.cfgGapMin?.value || 0) || 0,
+      // Mantener compatibilidad backend: el buffer se fija en 0 desde UI.
+      gap_between_appointments_min: 0,
       channels,
       cancellation_policy_hours: sanitizeText(els.cfgCancelPolicyHours?.value || '') || null,
       reminder_template: String(els.cfgReminderTemplate?.value || '').trim()
@@ -4076,10 +4196,6 @@ console.info('app.js loaded :: 20251123a');
     if(els.cfgDurationMin){
       const val = sanitizeText(data?.appointment_duration_min ?? '');
       if(val) els.cfgDurationMin.value = val;
-    }
-    if(els.cfgGapMin){
-      const val = sanitizeText(data?.gap_between_appointments_min ?? '');
-      if(val) els.cfgGapMin.value = val;
     }
     if(els.cfgCancelPolicyHours){
       const val = sanitizeText(data?.cancellation_policy_hours ?? '');
@@ -4098,8 +4214,12 @@ console.info('app.js loaded :: 20251123a');
   const persistAgendaSettingsNow = async ()=>{
     if(agendaSettingsHydrating) return;
     const { doctorId, consultorioId } = getAgendaSettingsContext();
-    if(!doctorId || !consultorioId){
-      setAgendaSettingsNote('Selecciona doctor/consultorio activo para guardar configuración.', 'danger');
+    if(!doctorId){
+      setAgendaSettingsNote('No se encontró médico activo para guardar configuración.', 'danger');
+      return;
+    }
+    if(!consultorioId){
+      setAgendaSettingsNote('La configuración aplica a la agenda del médico seleccionado.', 'muted');
       return;
     }
     const payload = readAgendaSettingsPayloadFromUi();
@@ -4129,9 +4249,14 @@ console.info('app.js loaded :: 20251123a');
     const contextKey = `${doctorId}::${consultorioId}`;
     if(!force && agendaSettingsLoaded && contextKey === agendaSettingsContextKey) return;
     agendaSettingsContextKey = contextKey;
-    if(!doctorId || !consultorioId){
-      setAgendaSettingsNote('Selecciona doctor/consultorio activo para cargar configuración.', 'danger');
-      setAgendaScheduleSummaryText('Selecciona consultorio activo para ver su horario oficial.', 'danger');
+    if(!doctorId){
+      setAgendaSettingsNote('No se encontró médico activo para cargar configuración.', 'danger');
+      setAgendaScheduleSummaryText('No se encontró médico activo.', 'danger');
+      return;
+    }
+    if(!consultorioId){
+      setAgendaSettingsNote('La configuración aplica a la agenda del médico seleccionado.', 'muted');
+      setAgendaScheduleSummaryText('Selecciona consultorio activo para ver su horario oficial.', 'muted');
       return;
     }
     agendaSettingsHydrating = true;
@@ -4145,6 +4270,14 @@ console.info('app.js loaded :: 20251123a');
         return;
       }
       applyAgendaSettingsToUi(json.data);
+      syncCalendarSlotGranularity();
+      if(calendar){
+        visibleScheduleRange = null;
+        calendar.refetchEvents();
+        window.setTimeout(()=>{
+          try{ calendar.updateSize(); }catch(_){}
+        }, 0);
+      }
       setAgendaSettingsNote('Configuración de Agenda sincronizada con backend.', 'success');
       agendaSettingsLoaded = true;
     }catch(_){
@@ -5506,6 +5639,96 @@ console.info('app.js loaded :: 20251123a');
       .find((value)=> isNumericId(value));
     return sanitizeText(firstNumeric || '');
   };
+  const mapScheduleWeekdayToFullCalendar = (weekday)=>{
+    const safe = Number(weekday || 0);
+    if(!Number.isFinite(safe) || safe < 1 || safe > 7) return null;
+    return safe === 7 ? 0 : safe;
+  };
+  const buildFullCalendarBusinessHoursFromSchedule = (scheduleState)=>{
+    const days = Array.isArray(scheduleState?.days)
+      ? scheduleState.days
+      : (Array.isArray(scheduleState) ? scheduleState : []);
+    const businessHours = [];
+    let minMinutes = null;
+    let maxMinutes = null;
+
+    days.forEach((dayRow)=>{
+      const dayIndex = mapScheduleWeekdayToFullCalendar(dayRow?.weekday);
+      if(dayIndex === null) return;
+      const windows = Array.isArray(dayRow?.windows) ? dayRow.windows : [];
+      windows.forEach((windowRow)=>{
+        const startTime = normalizeAgendaTimeValue(
+          sanitizeText(windowRow?.start_time || windowRow?.start || '')
+        );
+        const endTime = normalizeAgendaTimeValue(
+          sanitizeText(windowRow?.end_time || windowRow?.end || '')
+        );
+        if(!startTime || !endTime) return;
+        const startMinutes = timeToMinutes(startTime);
+        const endMinutes = timeToMinutes(endTime);
+        if(startMinutes === null || endMinutes === null || endMinutes <= startMinutes) return;
+        businessHours.push({
+          daysOfWeek: [dayIndex],
+          startTime: startTime.slice(0, 5),
+          endTime: endTime.slice(0, 5)
+        });
+        minMinutes = minMinutes === null ? startMinutes : Math.min(minMinutes, startMinutes);
+        maxMinutes = maxMinutes === null ? endMinutes : Math.max(maxMinutes, endMinutes);
+      });
+    });
+
+    const hasRange = minMinutes !== null && maxMinutes !== null && maxMinutes > minMinutes;
+    return {
+      businessHours,
+      minTime: hasRange ? minutesToTime(minMinutes) : '',
+      maxTime: hasRange ? minutesToTime(maxMinutes) : '',
+      hasRange
+    };
+  };
+  const applyCalendarBusinessHoursForActiveConsultorio = async ()=>{
+    if(!calendar) return;
+    const doctorId = sanitizeText(getDoctorId() || '');
+    const consultorioId = sanitizeText(getAvailabilityConsultorioId() || '');
+    if(!isNumericId(doctorId) || !isNumericId(consultorioId)){
+      consultorioScheduleVisibleRange = null;
+      calendar.setOption('businessHours', false);
+      return;
+    }
+    if(scheduleBusinessHoursRequestCtrl){
+      try{ scheduleBusinessHoursRequestCtrl.abort(); }catch(_){}
+    }
+    scheduleBusinessHoursRequestCtrl = new AbortController();
+    try{
+      const json = await AgendaApiClient.getSchedule({
+        doctorId,
+        consultorioId,
+        signal: scheduleBusinessHoursRequestCtrl.signal
+      });
+      if(!json || json.ok !== true || !Array.isArray(json?.data?.days)){
+        consultorioScheduleVisibleRange = null;
+        calendar.setOption('businessHours', false);
+        return;
+      }
+      const parsed = buildFullCalendarBusinessHoursFromSchedule(json.data);
+      consultorioScheduleVisibleRange = parsed.hasRange
+        ? { minTime: parsed.minTime, maxTime: parsed.maxTime }
+        : null;
+      calendar.setOption('businessHours', parsed.businessHours.length ? parsed.businessHours : false);
+      if(parsed.hasRange){
+        calendar.setOption('slotMinTime', parsed.minTime);
+        calendar.setOption('slotMaxTime', parsed.maxTime);
+      }else{
+        calendar.setOption('slotMinTime', resolveAgendaStartVisibleTime());
+        calendar.setOption('slotMaxTime', resolveAgendaEndVisibleTime());
+      }
+    }catch(err){
+      if(err?.name === 'AbortError') return;
+      consultorioScheduleVisibleRange = null;
+      calendar.setOption('businessHours', false);
+    }finally{
+      scheduleBusinessHoursRequestCtrl = null;
+    }
+  };
 
   const mapAppointmentToEvent = (row)=>{
     const status = sanitizeText(row?.status || '').toLowerCase();
@@ -5729,6 +5952,8 @@ console.info('app.js loaded :: 20251123a');
     consultoriosRequestCtrl = new AbortController();
 
     els.consultorio.innerHTML = '<option value="">Todos los consultorios</option>';
+    agendaConsultorioRows = [];
+    renderAgendaScheduleEditorSelector();
     if(!doctorId){
       return;
     }
@@ -5739,13 +5964,16 @@ console.info('app.js loaded :: 20251123a');
         signal: consultoriosRequestCtrl.signal
       });
       if(!json || json.ok !== true || !Array.isArray(json.data)){
+        agendaConsultorioRows = [];
         const usedFallback = applyConsultorioFallbackFromActiveContext();
         const usedLegacyFallback = applyLegacyAgendaConsultorioFallback();
+        renderAgendaScheduleEditorSelector();
         if(!usedFallback && !usedLegacyFallback){
           setConsultorioUnavailableState('No se pudieron cargar consultorios');
         }
         return;
       }
+      agendaConsultorioRows = json.data.slice();
       const normalizedOptions = json.data.map(normalizeConsultorioOption).filter(Boolean);
       const options = normalizedOptions.map((opt)=>{
         return `<option value="${opt.id.replace(/"/g, '&quot;')}">${opt.label.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</option>`;
@@ -5780,10 +6008,13 @@ console.info('app.js loaded :: 20251123a');
           setConsultorioUnavailableState('No se pudieron cargar consultorios');
         }
       }
+      renderAgendaScheduleEditorSelector();
     }catch(err){
       if(err?.name === 'AbortError') return;
+      agendaConsultorioRows = [];
       const usedFallback = applyConsultorioFallbackFromActiveContext();
       const usedLegacyFallback = applyLegacyAgendaConsultorioFallback();
+      renderAgendaScheduleEditorSelector();
       if(!usedFallback && !usedLegacyFallback){
         setConsultorioUnavailableState('No se pudieron cargar consultorios');
       }
@@ -5952,6 +6183,7 @@ console.info('app.js loaded :: 20251123a');
       slotMinTime: resolveAgendaStartVisibleTime(),
       slotMaxTime: '22:00:00',
       scrollTime: resolveAgendaStartVisibleTime(),
+      businessHours: false,
       // Preparado para futura configuración de granularidad (15/20/30/60/120 min).
       slotDuration,
       // Mantiene arrastre/selección exactamente en la misma fracción del slot activo.
@@ -6366,6 +6598,13 @@ console.info('app.js loaded :: 20251123a');
     applyWeeklyHoursState();
   };
 
+  const syncCalendarSlotGranularity = ()=>{
+    if(!calendar) return;
+    const slotDuration = toFcDurationFromMinutes(resolveAgendaSlotMinutes());
+    try{ calendar.setOption('slotDuration', slotDuration); }catch(_){}
+    try{ calendar.setOption('snapDuration', slotDuration); }catch(_){}
+  };
+
   const refreshCalendar = async ({ forceConsultorios = false } = {})=>{
     syncDoctorInput();
     if(forceConsultorios){
@@ -6373,6 +6612,8 @@ console.info('app.js loaded :: 20251123a');
     }
     initCalendar();
     if(calendar){
+      await applyCalendarBusinessHoursForActiveConsultorio();
+      syncCalendarSlotGranularity();
       visibleScheduleRange = null;
       calendar.refetchEvents();
       window.setTimeout(()=>{
@@ -6431,12 +6672,22 @@ console.info('app.js loaded :: 20251123a');
         els.consultorio.value = chosen;
       }
     });
-    [els.cfgDurationMin, els.cfgGapMin, els.cfgChannels, els.cfgCancelPolicyHours, els.cfgReminderTemplate]
+    [els.cfgDurationMin, els.cfgChannels, els.cfgCancelPolicyHours, els.cfgReminderTemplate]
       .filter(Boolean)
       .forEach((el)=>{
         el.addEventListener('input', ()=> queuePersistAgendaSettings());
         el.addEventListener('change', ()=> queuePersistAgendaSettings(220));
       });
+    els.cfgDurationMin?.addEventListener('change', ()=>{
+      syncCalendarSlotGranularity();
+      if(calendar){
+        visibleScheduleRange = null;
+        calendar.refetchEvents();
+        window.setTimeout(()=>{
+          try{ calendar.updateSize(); }catch(_){}
+        }, 0);
+      }
+    });
     els.cfgEditScheduleBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
       openConsultorioScheduleEditorFromSettings();
@@ -6985,29 +7236,31 @@ console.info('app.js loaded :: 20251123a');
       visibilityObserver.observe(panel, { attributes: true, attributeFilter: ['class', 'style'] });
     }
 
-    els.workspaceShell?.addEventListener('click', (event)=>{
-      const target = event.target.closest('[data-ag-work-action], [data-ag-work-panel]');
-      if(!target) return;
-      event.preventDefault();
+    if(!window.__mxmedAgendaWorkspaceNavDelegated){
+      window.__mxmedAgendaWorkspaceNavDelegated = true;
+      document.addEventListener('click', (event)=>{
+        const target = event.target.closest('.mx-ag-workspace-shell [data-ag-work-action], .mx-ag-workspace-shell [data-ag-work-panel]');
+        if(!target) return;
+        event.preventDefault();
 
-      const panelTarget = sanitizeText(target.getAttribute('data-ag-work-panel') || '');
-      if(panelTarget){
-        if(typeof window.openGroup === 'function'){
-          try{ window.openGroup('agenda'); }catch(_){}
+        const panelTarget = sanitizeText(target.getAttribute('data-ag-work-panel') || '');
+        if(panelTarget){
+          if(typeof window.openGroup === 'function'){
+            try{ window.openGroup('agenda'); }catch(_){}
+          }
+          if(typeof window.jumpTo === 'function'){
+            window.jumpTo(panelTarget);
+          }
+          return;
         }
-        if(typeof window.jumpTo === 'function'){
-          window.jumpTo(panelTarget);
-        }
-        return;
-      }
 
-      const action = sanitizeText(target.getAttribute('data-ag-work-action') || '');
-      if(action === 'next-available'){
-        clearNextSlotFocus();
-        setError('Buscar siguiente cita disponible estará disponible en la siguiente fase.');
-        return;
-      }
-    });
+        const action = sanitizeText(target.getAttribute('data-ag-work-action') || '');
+        if(action === 'next-available'){
+          clearNextSlotFocus();
+          setError('Buscar siguiente cita disponible estará disponible en la siguiente fase.');
+        }
+      });
+    }
 
     window.addEventListener('mxmed:workspace-mode', (event)=>{
       const currentPanelId = sanitizeText(event?.detail?.panelId || '');
@@ -7048,14 +7301,11 @@ console.info('app.js loaded :: 20251123a');
     if(els.nextSlotsModalEl){
       try{ window.bootstrap?.Modal?.getOrCreateInstance(els.nextSlotsModalEl)?.hide(); }catch(_){}
     }
-    if(els.workspaceShell){
-      const nextBtn = els.workspaceShell.querySelector('[data-ag-work-action="next-available"]');
-      if(nextBtn){
-        nextBtn.classList.add('d-none');
-        nextBtn.setAttribute('aria-hidden', 'true');
-        nextBtn.setAttribute('tabindex', '-1');
-      }
-    }
+    Array.from(document.querySelectorAll('.mx-ag-workspace-shell [data-ag-work-action="next-available"]')).forEach((nextBtn)=>{
+      nextBtn.classList.add('d-none');
+      nextBtn.setAttribute('aria-hidden', 'true');
+      nextBtn.setAttribute('tabindex', '-1');
+    });
     setWorkspaceButtonActive(panelId);
     hydrateAgendaSettings({ force: true }).catch(()=> null);
     const isVisible = panel && !panel.classList.contains('d-none');
@@ -8025,18 +8275,28 @@ console.info('app.js loaded :: 20251123a');
       { key: 'sat', weekday: 6, label: 'Sábado' },
       { key: 'sun', weekday: 7, label: 'Domingo' }
     ];
-    const DEFAULT_TIMES = { a1: '09:00', b1: '14:00', a2: '16:00', b2: '20:00' };
+    const WORKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+    const EMPTY_TIME_DISPLAY = '--:--';
+    const EMPTY_SLOT_DISPLAY = `${EMPTY_TIME_DISPLAY} - ${EMPTY_TIME_DISPLAY}`;
+    const ARTIFICIAL_EMPTY_TIMES = new Set(['12:30']);
     const rowRefs = new Map();
-    const state = {};
-    let saveTimer = null;
+    const createEmptyScheduleRow = ()=> ({ act: false, a1: '', b1: '', a2: '', b2: '', edit1: false, edit2: false });
+    const createEmptyScheduleState = ()=>{
+      const next = {};
+      DAYS.forEach((day)=>{ next[day.key] = createEmptyScheduleRow(); });
+      return next;
+    };
+    const scheduleStateByConsultorio = Object.create(null);
+    const saveTimersByConsultorio = new Map();
     let saving = false;
     let loading = false;
-    let loadedOnce = false;
-    let currentContextKey = '';
+    const loadedScheduleContextKeys = new Set();
+    const loadedScheduleConsultorioIds = new Set();
     let activeBody = null;
     let activeCopyBtn = null;
     let activeClearBtn = null;
     let activePane = null;
+    let activeScheduleConsultorioId = '';
     const apiGetSchedule = async ({ doctorId, consultorioId })=>{
       const qs = new URLSearchParams({
         doctor_id: String(doctorId || '').trim(),
@@ -8063,21 +8323,39 @@ console.info('app.js loaded :: 20251123a');
       };
     };
 
-    const normalizeTime = (value)=>{
+    const parseTimeParts = (value)=>{
       const raw = String(value || '').trim();
       const match = raw.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
-      if(!match) return '';
+      if(!match) return null;
       const hh = Number(match[1] || 0);
       const mm = Number(match[2] || 0);
       const ss = Number(match[3] || 0);
-      if(hh < 0 || hh > 23 || mm < 0 || mm > 59 || ss < 0 || ss > 59) return '';
+      if(hh < 0 || hh > 23 || mm < 0 || mm > 59 || ss < 0 || ss > 59) return null;
       return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
     };
-    const resolveActiveConsultorioPane = ()=>{
-      const active = consultorioPanel?.querySelector('.tab-pane[id^="sede"].show.active') || null;
-      if(active && active.querySelector('tbody[id^="sched-body"]')) return active;
-      const fallback = consultorioPanel?.querySelector('.tab-pane[id^="sede"] tbody[id^="sched-body"]')?.closest('.tab-pane[id^="sede"]') || null;
-      return fallback;
+    const isValidScheduleTime = (value, options = {})=>{
+      const normalized = parseTimeParts(value);
+      if(!normalized) return false;
+      if(options.allowArtificial === true) return true;
+      return !ARTIFICIAL_EMPTY_TIMES.has(normalized);
+    };
+    const normalizeTime = (value, options = {})=>{
+      const normalized = parseTimeParts(value);
+      if(!normalized) return '';
+      if(options.allowArtificial === true) return normalized;
+      return ARTIFICIAL_EMPTY_TIMES.has(normalized) ? '' : normalized;
+    };
+    const formatScheduleTimeOrDash = (value, options = {})=>{
+      const normalized = normalizeTime(value, options);
+      return normalized || EMPTY_TIME_DISPLAY;
+    };
+    const isTurnoValidFromState = (rowState, turnoKey)=>{
+      const start = normalizeTime(turnoKey === 'turno1' ? rowState?.a1 : rowState?.a2, { allowArtificial: true });
+      const end = normalizeTime(turnoKey === 'turno1' ? rowState?.b1 : rowState?.b2, { allowArtificial: true });
+      return !!(isValidScheduleTime(start, { allowArtificial: true }) && isValidScheduleTime(end, { allowArtificial: true }) && start < end);
+    };
+    const enforceNoTimeInputsOnEmptyRows = ()=>{
+      // El render de turnos ya no usa input[type="time"] en celdas vacías.
     };
     const resolveConsultorioIdFromPane = (pane)=>{
       const paneId = String(pane?.id || '').trim();
@@ -8085,12 +8363,127 @@ console.info('app.js loaded :: 20251123a');
       if(!match) return '';
       return String(Number(match[1]) || '').trim();
     };
+    const resolveConsultorioIdFromTabButton = (btn)=>{
+      const fromDataset = String(btn?.getAttribute?.('data-consultorio-id') || '').trim();
+      if(fromDataset) return fromDataset;
+      const target = String(btn?.getAttribute?.('data-bs-target') || '').trim();
+      const match = /^#sede(\d+)$/.exec(target);
+      if(!match) return '';
+      return String(Number(match[1]) || '').trim();
+    };
+    const resolveActiveConsultorioIdFromTabs = ()=>{
+      const selectedBtn = consultorioPanel?.querySelector('.mm-tabs-embed [data-bs-target^="#sede"][aria-selected="true"]')
+        || consultorioPanel?.querySelector('.mm-tabs-embed [data-bs-target^="#sede"].active');
+      return resolveConsultorioIdFromTabButton(selectedBtn);
+    };
+    const resolveActiveConsultorioPane = ()=>{
+      if(activeScheduleConsultorioId){
+        const paneByStoredId = consultorioPanel?.querySelector(`.tab-pane#sede${activeScheduleConsultorioId}`);
+        if(paneByStoredId && paneByStoredId.querySelector('tbody[id^="sched-body"]')) return paneByStoredId;
+      }
+      const activeTabConsultorioId = resolveActiveConsultorioIdFromTabs();
+      if(activeTabConsultorioId){
+        const paneByTab = consultorioPanel?.querySelector(`.tab-pane#sede${activeTabConsultorioId}`);
+        if(paneByTab && paneByTab.querySelector('tbody[id^="sched-body"]')) return paneByTab;
+      }
+      const active = consultorioPanel?.querySelector('.tab-pane[id^="sede"].show.active') || null;
+      if(active && active.querySelector('tbody[id^="sched-body"]')) return active;
+      const filterConsultorioId = String(document.getElementById('ag_consultorio_filter')?.value || '').trim();
+      if(filterConsultorioId){
+        const safeFilterId = filterConsultorioId.replace(/[^0-9A-Za-z_-]/g, '');
+        const paneByFilter = safeFilterId
+          ? consultorioPanel?.querySelector(`.tab-pane#sede${safeFilterId}`)
+          : null;
+        if(paneByFilter && paneByFilter.querySelector('tbody[id^="sched-body"]')) return paneByFilter;
+      }
+      if(activePane && activePane.querySelector('tbody[id^="sched-body"]')) return activePane;
+      const fallback = consultorioPanel?.querySelector('.tab-pane[id^="sede"] tbody[id^="sched-body"]')?.closest('.tab-pane[id^="sede"]') || null;
+      return fallback;
+    };
+    const getActiveConsultorioId = ()=>{
+      const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
+        ? window.mxmedResolveActiveProfessionalContext()
+        : null;
+      const resolvedPane = resolveActiveConsultorioPane();
+      const fromStored = String(activeScheduleConsultorioId || '').trim();
+      const fromTab = resolveActiveConsultorioIdFromTabs();
+      return String(
+        fromStored
+        || fromTab
+        || resolveConsultorioIdFromPane(resolvedPane || activePane)
+        || document.getElementById('ag_consultorio_filter')?.value
+        || activeProfessional?.default_consultorio_id
+        || window.mxmedStore?.consultorio_id
+        || window.mxmedStore?.default_consultorio_id
+        || ''
+      ).trim();
+    };
+    const getScheduleStateForConsultorio = (consultorioId)=>{
+      const key = String(consultorioId || getActiveConsultorioId() || '1').trim();
+      if(!key) return null;
+      if(!scheduleStateByConsultorio[key]){
+        scheduleStateByConsultorio[key] = createEmptyScheduleState();
+      }
+      return scheduleStateByConsultorio[key];
+    };
+    const logScheduleStateRefCheck = ()=>{
+      const c1 = scheduleStateByConsultorio['1'] || null;
+      const c2 = scheduleStateByConsultorio['2'] || null;
+      const c3 = scheduleStateByConsultorio['3'] || null;
+      console.log('MXM_STATE_REF_CHECK', {
+        c1eqc2: !!(c1 && c2 && c1 === c2),
+        c1eqc3: !!(c1 && c3 && c1 === c3),
+        c2eqc3: !!(c2 && c3 && c2 === c3)
+      });
+    };
+    const getActiveConsultorioScheduleState = ()=>{
+      const consultorioId = getActiveConsultorioId();
+      if(!consultorioId) return null;
+      return getScheduleStateForConsultorio(consultorioId);
+    };
+    const state = new Proxy({}, {
+      get(_target, prop){
+        const activeState = getActiveConsultorioScheduleState();
+        return activeState ? activeState[prop] : undefined;
+      },
+      set(_target, prop, value){
+        const activeState = getActiveConsultorioScheduleState();
+        if(!activeState) return true;
+        activeState[prop] = value;
+        return true;
+      },
+      ownKeys(){
+        const activeState = getActiveConsultorioScheduleState();
+        return activeState ? Reflect.ownKeys(activeState) : [];
+      },
+      getOwnPropertyDescriptor(){
+        return { enumerable: true, configurable: true };
+      }
+    });
     const resolveScheduleDom = ()=>{
       const pane = resolveActiveConsultorioPane();
-      const bodyEl = pane?.querySelector('tbody[id^="sched-body"]') || document.getElementById('sched-body');
-      const copyBtn = pane?.querySelector('button[id^="sched-copy-mon"]') || document.getElementById('sched-copy-mon');
-      const clearBtn = pane?.querySelector('button[id^="sched-clear"]') || document.getElementById('sched-clear');
+      const bodyInPane = pane?.querySelector('tbody[id^="sched-body"]') || null;
+      const copyInPane = pane?.querySelector('button[id^="sched-copy-mon"]') || null;
+      const clearInPane = pane?.querySelector('button[id^="sched-clear"]') || null;
+      const bodyEl = pane ? bodyInPane : document.getElementById('sched-body');
+      const copyBtn = pane ? copyInPane : document.getElementById('sched-copy-mon');
+      const clearBtn = pane ? clearInPane : document.getElementById('sched-clear');
       return { pane, bodyEl, copyBtn, clearBtn };
+    };
+    const getSchedulePaneIndex = (pane)=>{
+      const paneId = String(pane?.id || '').trim();
+      const match = /^sede(\d+)$/.exec(paneId);
+      const idx = match ? Number(match[1] || 0) : 0;
+      return Number.isFinite(idx) && idx > 0 ? idx : 1;
+    };
+    const syncScheduleActionButtonsContext = ()=>{
+      const paneIndex = getSchedulePaneIndex(activePane);
+      const consultorioId = String(resolveConsultorioIdFromPane(activePane) || paneIndex || '');
+      if(activeClearBtn){
+        activeClearBtn.setAttribute('data-action', 'clear-consultorio-schedule');
+        activeClearBtn.setAttribute('data-map-index', String(paneIndex));
+        activeClearBtn.setAttribute('data-consultorio-id', consultorioId);
+      }
     };
     const ensureNoteNode = ()=>{
       const card = activeBody?.closest('.sched-card');
@@ -8113,13 +8506,324 @@ console.info('app.js loaded :: 20251123a');
       );
       note.textContent = String(message || '');
     };
+    const ensureValidationNoteNode = ()=>{
+      const card = activeBody?.closest('.sched-card');
+      if(!card) return null;
+      let note = card.querySelector('[data-sched-validation-note="1"]');
+      if(!note){
+        note = document.createElement('div');
+        note.dataset.schedValidationNote = '1';
+        note.className = 'small mt-1 text-muted';
+        card.appendChild(note);
+      }
+      return note;
+    };
+    const showValidationNote = (message = '', tone = 'muted')=>{
+      const note = ensureValidationNoteNode();
+      if(!note) return;
+      const text = String(message || '').trim();
+      note.classList.remove('text-muted', 'text-danger', 'text-success');
+      note.classList.add(
+        tone === 'danger' ? 'text-danger' : (tone === 'success' ? 'text-success' : 'text-muted')
+      );
+      note.textContent = text;
+      note.classList.toggle('d-none', !text);
+    };
+    let schedulePickerRoot = null;
+    let schedulePickerContext = null;
+    const buildHourOptions = ()=>{
+      return Array.from({ length: 24 }, (_, n)=> String(n).padStart(2, '0'));
+    };
+    const buildMinuteOptions = ()=>{
+      const slot = Number.parseInt(String((typeof resolveAgendaSlotMinutes === 'function' ? resolveAgendaSlotMinutes() : 10) || 10), 10);
+      const step = Number.isFinite(slot) && slot > 0 && slot <= 60 ? slot : 10;
+      const values = [];
+      for(let m = 0; m < 60; m += step){
+        values.push(String(m).padStart(2, '0'));
+      }
+      return values.length ? values : ['00'];
+    };
+    const setSelectValueSafe = (select, value, fallback)=>{
+      if(!select) return;
+      const target = String(value || '').trim();
+      const opt = Array.from(select.options || []).find((item)=> String(item.value || '') === target);
+      select.value = opt ? target : String(fallback || select.options?.[0]?.value || '');
+    };
+    const buildTimeFromSelects = (hourSel, minuteSel)=>{
+      const hh = String(hourSel?.value || '').trim();
+      const mm = String(minuteSel?.value || '').trim();
+      const maybe = parseTimeParts(`${hh}:${mm}`);
+      return maybe || '';
+    };
+    const hideScheduleTimePicker = ()=>{
+      if(schedulePickerRoot){
+        schedulePickerRoot.classList.add('d-none');
+      }
+      schedulePickerContext = null;
+    };
+    const ensureScheduleTimePicker = ()=>{
+      if(schedulePickerRoot && schedulePickerRoot.__mxPickerReady){
+        return schedulePickerRoot;
+      }
+      const root = document.createElement('div');
+      root.className = 'mx-sched-picker-backdrop d-none';
+      root.innerHTML = `
+        <div class="mx-sched-picker-popover" role="dialog" aria-modal="true" aria-label="Seleccionar horario">
+          <div class="mx-sched-picker-title">Seleccionar horario</div>
+          <div class="mx-sched-picker-grid">
+            <div>
+              <label class="mx-sched-picker-label">Inicio</label>
+              <div class="mx-sched-picker-row">
+                <select class="form-select form-select-sm" data-role="start-hour"></select>
+                <span>:</span>
+                <select class="form-select form-select-sm" data-role="start-minute"></select>
+              </div>
+            </div>
+            <div>
+              <label class="mx-sched-picker-label">Fin</label>
+              <div class="mx-sched-picker-row">
+                <select class="form-select form-select-sm" data-role="end-hour"></select>
+                <span>:</span>
+                <select class="form-select form-select-sm" data-role="end-minute"></select>
+              </div>
+            </div>
+          </div>
+          <div class="mx-sched-picker-actions">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-role="cancel">Cancelar</button>
+            <button type="button" class="btn btn-primary btn-sm" data-role="save">Guardar horario</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(root);
+      const startHour = root.querySelector('[data-role="start-hour"]');
+      const startMinute = root.querySelector('[data-role="start-minute"]');
+      const endHour = root.querySelector('[data-role="end-hour"]');
+      const endMinute = root.querySelector('[data-role="end-minute"]');
+      const saveBtn = root.querySelector('[data-role="save"]');
+      const cancelBtn = root.querySelector('[data-role="cancel"]');
+      const fillOptions = ()=>{
+        const hours = buildHourOptions();
+        const minutes = buildMinuteOptions();
+        [startHour, endHour].forEach((sel)=>{
+          if(!sel) return;
+          sel.innerHTML = hours.map((v)=> `<option value="${v}">${v}</option>`).join('');
+        });
+        [startMinute, endMinute].forEach((sel)=>{
+          if(!sel) return;
+          sel.innerHTML = minutes.map((v)=> `<option value="${v}">${v}</option>`).join('');
+        });
+      };
+      fillOptions();
+      cancelBtn?.addEventListener('click', ()=>{
+        hideScheduleTimePicker();
+      });
+      root.addEventListener('click', (event)=>{
+        if(event.target === root){
+          hideScheduleTimePicker();
+        }
+      });
+      saveBtn?.addEventListener('click', ()=>{
+        if(!schedulePickerContext) return;
+        const { dayKey, turn, consultorioId } = schedulePickerContext;
+        const turnNum = Number(turn);
+        const scheduleState = getScheduleStateForConsultorio(consultorioId);
+        if(!scheduleState) return;
+        const start = buildTimeFromSelects(startHour, startMinute);
+        const end = buildTimeFromSelects(endHour, endMinute);
+        if(!start || !end || !(start < end)){
+          showNote('Selecciona un rango de hora válido.', 'danger');
+          return;
+        }
+        const state = scheduleState[dayKey] || createEmptyScheduleRow();
+        console.log('MXM_SAVE_TURN_TARGET', {
+          dayKey,
+          turn: turnNum,
+          target: turnNum === 1 ? 'a1/b1' : (turnNum === 2 ? 'a2/b2' : 'invalid'),
+          start,
+          end
+        });
+        console.log('MXM_PICKER_SAVE_BEFORE', {
+          dayKey,
+          turn: turnNum,
+          consultorioId,
+          start,
+          end,
+          stateBefore: JSON.parse(JSON.stringify(state))
+        });
+        if(turnNum === 1){
+          state.act = true;
+          state.a1 = start;
+          state.b1 = end;
+          state.edit1 = false;
+        }else if(turnNum === 2){
+          state.act = true;
+          state.a2 = start;
+          state.b2 = end;
+          state.edit2 = false;
+        }else{
+          console.error('MXM_PICKER_SAVE_INVALID_TURN', { dayKey, turn: turnNum, consultorioId });
+          return;
+        }
+        normalizeAfternoonBlock(state);
+        const t1s = normalizeTime(state.a1, { allowArtificial: true });
+        const t1e = normalizeTime(state.b1, { allowArtificial: true });
+        const t2s = normalizeTime(state.a2, { allowArtificial: true });
+        const t2e = normalizeTime(state.b2, { allowArtificial: true });
+        const t1Valid = !!(t1s && t1e && t1s < t1e);
+        const t2Valid = !!(t2s && t2e && t2s < t2e);
+        if(t1Valid && t2Valid && !(t1e <= t2s || t2e <= t1s)){
+          showNote('Turno 1 y Turno 2 no pueden traslaparse.', 'danger');
+          return;
+        }
+        state.act = t1Valid || t2Valid;
+        scheduleState[dayKey] = state;
+        console.log('MXM_PICKER_SAVE_AFTER', {
+          dayKey,
+          turn: turnNum,
+          consultorioId,
+          stateAfter: JSON.parse(JSON.stringify(scheduleState[dayKey] || {}))
+        });
+        hideScheduleTimePicker();
+        applyStateToRows(consultorioId);
+        queuePersist(consultorioId);
+      });
+      root.__mxPickerReady = true;
+      root.__mxPickerRefs = { startHour, startMinute, endHour, endMinute, fillOptions };
+      schedulePickerRoot = root;
+      return root;
+    };
+    const openScheduleTimePicker = (dayKey, turn, consultorioId = '')=>{
+      if(!dayKey) return;
+      const turnNum = Number(turn);
+      if(!(turnNum === 1 || turnNum === 2)) return;
+      const targetConsultorioId = String(consultorioId || getActiveConsultorioId() || '').trim();
+      if(targetConsultorioId) activeScheduleConsultorioId = targetConsultorioId;
+      console.log('MXM_SCHEDULE_FN_DEBUG', {
+        fn: 'openScheduleTimePicker',
+        consultorioId: targetConsultorioId,
+        activeConsultorioId: getActiveConsultorioId()
+      });
+      console.log('MXM_PICKER_OPEN', {
+        dayKey,
+        turn: turnNum,
+        consultorioId: targetConsultorioId
+      });
+      const scheduleState = getScheduleStateForConsultorio(targetConsultorioId);
+      if(!scheduleState) return;
+      const picker = ensureScheduleTimePicker();
+      const refs = picker.__mxPickerRefs || {};
+      refs.fillOptions?.();
+      const row = scheduleState[dayKey] || createEmptyScheduleRow();
+      const start = normalizeTime(turnNum === 1 ? row.a1 : row.a2, { allowArtificial: true }) || '09:00';
+      const end = normalizeTime(turnNum === 1 ? row.b1 : row.b2, { allowArtificial: true }) || '14:00';
+      const [sh = '09', sm = '00'] = start.split(':');
+      const [eh = '14', em = '00'] = end.split(':');
+      setSelectValueSafe(refs.startHour, sh, '09');
+      setSelectValueSafe(refs.startMinute, sm, '00');
+      setSelectValueSafe(refs.endHour, eh, '14');
+      setSelectValueSafe(refs.endMinute, em, '00');
+      schedulePickerContext = { dayKey, turn: turnNum, consultorioId: targetConsultorioId };
+      picker.classList.remove('d-none');
+    };
+    window.__mxmScheduleOpenPickerHandler = (dayKey, turn)=>{
+      const turnNum = Number(turn) === 2 ? 2 : 1;
+      openScheduleTimePicker(dayKey, turnNum, getActiveConsultorioId());
+    };
+    if(!window.__mxmScheduleDelegationBound && !window.__mxmSchedulePickerDelegationBound){
+      window.__mxmScheduleDelegationBound = true;
+      window.__mxmSchedulePickerDelegationBound = true;
+      document.addEventListener('click', function(ev){
+        const rawTarget = ev.target;
+        const target = rawTarget && rawTarget.nodeType === 1
+          ? rawTarget
+          : (rawTarget && rawTarget.parentElement ? rawTarget.parentElement : null);
+        if(!(target instanceof Element)) return;
+        const removeBtn = target.closest('.schedule-remove-turn');
+        if(removeBtn){
+          ev.preventDefault();
+          ev.stopPropagation();
+          const element = removeBtn;
+          const dayKey = String(removeBtn.getAttribute('data-day-key') || '').trim();
+          const turn = Number.parseInt(String(removeBtn.getAttribute('data-turn') || '').trim(), 10);
+          const datasetConsultorioId = String(removeBtn.getAttribute('data-consultorio-id') || '').trim();
+          const activeConsultorioId = getActiveConsultorioId();
+          const consultorioId = String(datasetConsultorioId || activeConsultorioId || '').trim();
+          if(!dayKey || !Number.isFinite(turn)) return;
+          console.log('MXM_SCHEDULE_CLICK_DEBUG', {
+            action: 'remove',
+            datasetConsultorioId,
+            activeConsultorioId,
+            dayKey,
+            turn,
+            element,
+            closestPane: element.closest('[data-consultorio-id], .consultorio-pane, .tab-pane')
+          });
+          removeScheduleTurn(dayKey, turn, consultorioId);
+          return;
+        }
+        const applyBtn = target.closest('.schedule-apply-following');
+        if(applyBtn){
+          ev.preventDefault();
+          ev.stopPropagation();
+          const element = applyBtn;
+          const dayKeyApply = String(applyBtn.getAttribute('data-day-key') || '').trim();
+          const turnApply = Number.parseInt(String(applyBtn.getAttribute('data-turn') || '').trim(), 10);
+          const startApply = String(applyBtn.getAttribute('data-start') || '').trim();
+          const endApply = String(applyBtn.getAttribute('data-end') || '').trim();
+          const datasetConsultorioId = String(applyBtn.getAttribute('data-consultorio-id') || '').trim();
+          const activeConsultorioId = getActiveConsultorioId();
+          const consultorioId = String(datasetConsultorioId || activeConsultorioId || '').trim();
+          if(!startApply || !endApply){
+            console.error('MXM_APPLY_NO_DATASET_TIME', applyBtn);
+            return;
+          }
+          if(!dayKeyApply || !Number.isFinite(turnApply)) return;
+          console.log('MXM_SCHEDULE_CLICK_DEBUG', {
+            action: 'apply',
+            datasetConsultorioId,
+            activeConsultorioId,
+            dayKey: dayKeyApply,
+            turn: turnApply,
+            element,
+            closestPane: element.closest('[data-consultorio-id], .consultorio-pane, .tab-pane')
+          });
+          applyScheduleToWeekdays(dayKeyApply, turnApply, startApply, endApply, consultorioId);
+          return;
+        }
+        const pill = target.closest('.schedule-time-pill');
+        if(!pill) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        const element = pill;
+        const dayKey = String(pill.getAttribute('data-day-key') || '').trim();
+        const turn = Number.parseInt(String(pill.getAttribute('data-turn') || '').trim(), 10);
+        const datasetConsultorioId = String(pill.getAttribute('data-consultorio-id') || '').trim();
+        const activeConsultorioId = getActiveConsultorioId();
+        const consultorioId = String(datasetConsultorioId || activeConsultorioId || '').trim();
+        if(!dayKey || !Number.isFinite(turn)) return;
+        console.log('MXM_SCHEDULE_CLICK_DEBUG', {
+          action: 'pill',
+          datasetConsultorioId,
+          activeConsultorioId,
+          dayKey,
+          turn,
+          element,
+          closestPane: element.closest('[data-consultorio-id], .consultorio-pane, .tab-pane')
+        });
+        const turnNum = Number(turn) === 2 ? 2 : 1;
+        openScheduleTimePicker(dayKey, turnNum, consultorioId);
+      }, true);
+    }
     const mountActiveScheduleGrid = ()=>{
       const dom = resolveScheduleDom();
       if(!dom.bodyEl) return false;
-      if(activeBody === dom.bodyEl) return true;
-      if(saveTimer){
-        window.clearTimeout(saveTimer);
-        saveTimer = null;
+      if(activeBody === dom.bodyEl){
+        activeCopyBtn = dom.copyBtn || activeCopyBtn;
+        activeClearBtn = dom.clearBtn || activeClearBtn;
+        activePane = dom.pane || activePane;
+        activeScheduleConsultorioId = String(resolveConsultorioIdFromPane(activePane) || activeScheduleConsultorioId || '').trim();
+        syncScheduleActionButtonsContext();
+        return true;
       }
       rowRefs.clear();
       activeBody = dom.bodyEl;
@@ -8129,106 +8833,71 @@ console.info('app.js loaded :: 20251123a');
       activeBody.innerHTML = '';
       const paneKeyRaw = String(activePane?.id || 'sede1');
       const paneKey = paneKeyRaw.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const consultorioIdForPane = String(resolveConsultorioIdFromPane(activePane) || getActiveConsultorioId() || '').trim();
+      activeScheduleConsultorioId = consultorioIdForPane;
+      const activeScheduleState = getActiveConsultorioScheduleState();
       DAYS.forEach((day)=>{
         const tr = document.createElement('tr');
+        tr.setAttribute('data-consultorio-id', consultorioIdForPane);
         tr.innerHTML = `<td>${day.label}</td>
       <td><input type="checkbox" class="form-check-input" id="sch-act-${paneKey}-${day.key}"></td>
-      <td><div class="sched-time-slot"><div class="d-flex align-items-center gap-1"><input type="time" class="form-control form-control-sm" id="sch-a1-${paneKey}-${day.key}" placeholder="${DEFAULT_TIMES.a1}"><span>-</span><input type="time" class="form-control form-control-sm" id="sch-b1-${paneKey}-${day.key}" placeholder="${DEFAULT_TIMES.b1}"></div><div class="sched-empty-label">— Sin horario —</div></div></td>
-      <td><div class="sched-time-slot"><div class="d-flex align-items-center gap-1"><input type="time" class="form-control form-control-sm" id="sch-a2-${paneKey}-${day.key}" placeholder="${DEFAULT_TIMES.a2}"><span>-</span><input type="time" class="form-control form-control-sm" id="sch-b2-${paneKey}-${day.key}" placeholder="${DEFAULT_TIMES.b2}"></div><div class="sched-empty-label">— Sin horario —</div></div></td>`;
+      <td><div class="sched-time-slot"><button type="button" class="schedule-time-pill" data-schedule-pill="${day.key}" data-day-key="${day.key}" data-turn="1" data-turno="turno1">${EMPTY_SLOT_DISPLAY}</button><button type="button" class="schedule-remove-turn d-none" data-day-key="${day.key}" data-turn="1" aria-label="Eliminar horario">×</button><button type="button" class="btn btn-link btn-sm sched-apply-next schedule-apply-following d-none" data-sched-apply-next="${day.key}" data-day-key="${day.key}" data-turn="1" data-turno="turno1">APLICAR A DÍAS SIGUIENTES</button></div></td>
+      <td><div class="sched-time-slot"><button type="button" class="schedule-time-pill" data-schedule-pill="${day.key}" data-day-key="${day.key}" data-turn="2" data-turno="turno2">${EMPTY_SLOT_DISPLAY}</button><button type="button" class="schedule-remove-turn d-none" data-day-key="${day.key}" data-turn="2" aria-label="Eliminar horario">×</button><button type="button" class="btn btn-link btn-sm sched-apply-next schedule-apply-following d-none" data-sched-apply-next="${day.key}" data-day-key="${day.key}" data-turn="2" data-turno="turno2">APLICAR A DÍAS SIGUIENTES</button></div></td>`;
         activeBody.appendChild(tr);
         const ref = {
           tr,
+          dayKey: day.key,
           act: tr.querySelector(`#sch-act-${paneKey}-${day.key}`),
-          a1: tr.querySelector(`#sch-a1-${paneKey}-${day.key}`),
-          b1: tr.querySelector(`#sch-b1-${paneKey}-${day.key}`),
-          a2: tr.querySelector(`#sch-a2-${paneKey}-${day.key}`),
-          b2: tr.querySelector(`#sch-b2-${paneKey}-${day.key}`),
           turno1Slot: tr.children[2]?.querySelector('.sched-time-slot') || null,
-          turno2Slot: tr.children[3]?.querySelector('.sched-time-slot') || null
+          turno2Slot: tr.children[3]?.querySelector('.sched-time-slot') || null,
+          turno1Pill: tr.children[2]?.querySelector('[data-turno="turno1"][data-schedule-pill]') || null,
+          turno2Pill: tr.children[3]?.querySelector('[data-turno="turno2"][data-schedule-pill]') || null,
+          turno1Remove: tr.children[2]?.querySelector('button.schedule-remove-turn[data-turn="1"]') || null,
+          turno2Remove: tr.children[3]?.querySelector('button.schedule-remove-turn[data-turn="2"]') || null,
+          turno1Apply: tr.children[2]?.querySelector('button.sched-apply-next[data-turno="turno1"]') || null,
+          turno2Apply: tr.children[3]?.querySelector('button.sched-apply-next[data-turno="turno2"]') || null
         };
+        if(ref.act) ref.act.setAttribute('data-day-active', '1');
         rowRefs.set(day.key, ref);
-        state[day.key] = { act: false, a1: '', b1: '', a2: '', b2: '' };
-
-        const bindEmptySlotActivator = (slot, startInput, endInput)=>{
-          if(!slot || !startInput || !endInput) return;
-          slot.addEventListener('click', (event)=>{
-            if(!slot.classList.contains('is-empty')) return;
-            const target = event.target instanceof HTMLElement ? event.target : null;
-            if(target && (target.matches('input') || target.closest('input'))) return;
-            slot.classList.remove('is-empty');
-            window.setTimeout(()=>{ try{ startInput.focus(); }catch(_){ } }, 0);
-          });
-        };
-        const bindTurnoBlurNormalizer = (slot, startInput, endInput)=>{
-          if(!slot || !startInput || !endInput) return;
-          const normalizeOnBlur = ()=>{
-            window.setTimeout(()=>{
-              const activeEl = document.activeElement;
-              if(activeEl instanceof HTMLElement && slot.contains(activeEl)) return;
-              const startVal = normalizeTime(startInput.value);
-              const endVal = normalizeTime(endInput.value);
-              const hasStart = !!startVal;
-              const hasEnd = !!endVal;
-              if(hasStart === hasEnd){
-                updateStateFromRow(day.key);
-                return;
-              }
-              const hadAny = !!(startInput.value || endInput.value);
-              startInput.value = '';
-              endInput.value = '';
-              updateStateFromRow(day.key);
-              if(hadAny){
-                queuePersist();
-              }
-            }, 0);
-          };
-          startInput.addEventListener('blur', normalizeOnBlur);
-          endInput.addEventListener('blur', normalizeOnBlur);
-        };
-        bindEmptySlotActivator(ref.turno1Slot, ref.a1, ref.b1);
-        bindEmptySlotActivator(ref.turno2Slot, ref.a2, ref.b2);
-        bindTurnoBlurNormalizer(ref.turno1Slot, ref.a1, ref.b1);
-        bindTurnoBlurNormalizer(ref.turno2Slot, ref.a2, ref.b2);
-
+        if(activeScheduleState && !activeScheduleState[day.key]){
+          activeScheduleState[day.key] = createEmptyScheduleRow();
+        }
         ref.act.addEventListener('change', ()=>{
+          const scheduleState = getScheduleStateForConsultorio(consultorioIdForPane);
+          if(!scheduleState) return;
           if(!ref.act.checked){
-            ref.a1.value = '';
-            ref.b1.value = '';
-            ref.a2.value = '';
-            ref.b2.value = '';
+            scheduleState[day.key] = createEmptyScheduleRow();
+            applyStateToRows(consultorioIdForPane);
+            queuePersist(consultorioIdForPane);
+            return;
+          }else{
+            const prev = scheduleState[day.key] || createEmptyScheduleRow();
+            scheduleState[day.key] = { ...prev, act: true, edit1: true, edit2: false };
+            openScheduleTimePicker(day.key, 1, consultorioIdForPane);
           }
-          updateStateFromRow(day.key);
-          queuePersist();
-        });
-        [ref.a1, ref.b1, ref.a2, ref.b2].forEach((input)=>{
-          input.addEventListener('input', ()=>{
-            updateStateFromRow(day.key);
-            queuePersist();
-          });
-          input.addEventListener('change', ()=>{
-            updateStateFromRow(day.key);
-            queuePersist();
-          });
-          input.addEventListener('blur', ()=>{
-            window.setTimeout(()=>{ updateStateFromRow(day.key); }, 0);
-          });
+          applyStateToRows(consultorioIdForPane);
+          const row = scheduleState[day.key] || {};
+          if(hasValidWindow(row.a1, row.b1) || hasValidWindow(row.a2, row.b2)){
+            queuePersist(consultorioIdForPane);
+          }
         });
       });
       if(activeCopyBtn){
         activeCopyBtn.onclick = ()=>{
-          const monday = { ...(state.mon || { act: false, a1: '', b1: '', a2: '', b2: '' }) };
-          ['tue', 'wed', 'thu', 'fri'].forEach((key)=>{ state[key] = { ...monday }; });
-          applyStateToRows();
-          persistSchedule().catch(()=> null);
+          const scheduleState = getScheduleStateForConsultorio(consultorioIdForPane);
+          if(!scheduleState) return;
+          const monday = { ...(scheduleState.mon || createEmptyScheduleRow()) };
+          ['tue', 'wed', 'thu', 'fri'].forEach((key)=>{ scheduleState[key] = { ...monday }; });
+          applyStateToRows(consultorioIdForPane);
+          const contextSnapshot = resolveScheduleContext();
+          contextSnapshot.consultorioId = consultorioIdForPane;
+          persistSchedule(contextSnapshot).catch(()=> null);
         };
       }
-      if(activeClearBtn){
-        activeClearBtn.onclick = ()=>{
-          clearState();
-          persistSchedule().catch(()=> null);
-        };
-      }
-      applyStateToRows();
+      if(activeClearBtn) activeClearBtn.onclick = null;
+      syncScheduleActionButtonsContext();
+      applyStateToRows(consultorioIdForPane);
+      enforceNoTimeInputsOnEmptyRows();
       return true;
     };
     const resolveScheduleContext = ()=>{
@@ -8239,93 +8908,437 @@ console.info('app.js loaded :: 20251123a');
         || window.mxmedDoctor?.doctor_id
         || ''
       ).trim();
-      const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
-        ? window.mxmedResolveActiveProfessionalContext()
-        : null;
-      const paneConsultorioId = resolveConsultorioIdFromPane(activePane || resolveActiveConsultorioPane());
-      const consultorioEl = document.getElementById('ag_consultorio_filter');
-      const consultorioId = String(
-        paneConsultorioId
-        || consultorioEl?.value
-        || activeProfessional?.default_consultorio_id
-        || window.mxmedStore?.consultorio_id
-        || window.mxmedStore?.default_consultorio_id
-        || ''
-      ).trim();
+      const consultorioId = getActiveConsultorioId();
       return { doctorId, consultorioId };
     };
     const setFormEnabled = (enabled)=>{
       rowRefs.forEach((ref)=>{
-        [ref.act, ref.a1, ref.b1, ref.a2, ref.b2].forEach((el)=>{
+        [ref.act, ref.turno1Pill, ref.turno2Pill].forEach((el)=>{
           if(el) el.disabled = !enabled;
         });
+        if(ref.turno1Remove) ref.turno1Remove.disabled = !enabled;
+        if(ref.turno2Remove) ref.turno2Remove.disabled = !enabled;
+        if(ref.turno1Apply) ref.turno1Apply.disabled = !enabled;
+        if(ref.turno2Apply) ref.turno2Apply.disabled = !enabled;
       });
       if(activeCopyBtn) activeCopyBtn.disabled = !enabled;
       if(activeClearBtn) activeClearBtn.disabled = !enabled;
     };
-    const markRow = (ref)=>{
-      if(!ref) return;
-      const turno1Ready = !!(normalizeTime(ref.a1?.value || '') && normalizeTime(ref.b1?.value || ''));
-      const turno2Ready = !!(normalizeTime(ref.a2?.value || '') && normalizeTime(ref.b2?.value || ''));
-      const turno1HasAny = !!String(ref.a1?.value || '').trim() || !!String(ref.b1?.value || '').trim();
-      const turno2HasAny = !!String(ref.a2?.value || '').trim() || !!String(ref.b2?.value || '').trim();
-      const slot1Focused = !!(ref.turno1Slot && ref.turno1Slot.contains(document.activeElement));
-      const slot2Focused = !!(ref.turno2Slot && ref.turno2Slot.contains(document.activeElement));
-      const isDefined = !!(turno1Ready || turno2Ready);
-      ref.tr.classList.toggle('sched-defined', isDefined);
-      ref.tr.classList.toggle('sched-empty', !isDefined);
-      if(ref.turno1Slot) ref.turno1Slot.classList.toggle('is-empty', !(turno1Ready || turno1HasAny || slot1Focused));
-      if(ref.turno2Slot) ref.turno2Slot.classList.toggle('is-empty', !(turno2Ready || turno2HasAny || slot2Focused));
-      if(CONSULTORIO_SCHEDULE_DEBUG){
-        try{
-          const rowId = ref.act?.id || '';
-          const dayKey = String(rowId).replace(/^sch-act-[^-]+-/, '');
-          false && console.warn('MXM CONSULTORIO DEBUG:', {
-            event: 'schedule_row_render_state',
-            row_id: rowId,
-            day_key: dayKey,
-            turno1_ready: turno1Ready,
-            turno2_ready: turno2Ready,
-            turno1_empty_visible: !!ref.turno1Slot?.classList.contains('is-empty'),
-            turno2_empty_visible: !!ref.turno2Slot?.classList.contains('is-empty')
-          });
-        }catch(_){ }
+    const getNextWorkdayKeys = (dayKey)=>{
+      const idx = WORKDAY_KEYS.indexOf(String(dayKey || '').trim());
+      if(idx < 0) return [];
+      return WORKDAY_KEYS.slice(idx + 1);
+    };
+    const hasValidWindow = (start, end)=>{
+      const s = normalizeTime(start, { allowArtificial: true });
+      const e = normalizeTime(end, { allowArtificial: true });
+      return !!(isValidScheduleTime(s, { allowArtificial: true }) && isValidScheduleTime(e, { allowArtificial: true }) && s < e);
+    };
+    const isAfternoonStart = (start)=>{
+      const normalized = normalizeTime(start, { allowArtificial: true });
+      return !!(typeof normalized === 'string' && normalized >= '12:00');
+    };
+    const normalizeAfternoonBlock = (rowState)=>{
+      if(!rowState || typeof rowState !== 'object') return;
+      const a1 = normalizeTime(rowState.a1, { allowArtificial: true });
+      const b1 = normalizeTime(rowState.b1, { allowArtificial: true });
+      const a2 = normalizeTime(rowState.a2, { allowArtificial: true });
+      const b2 = normalizeTime(rowState.b2, { allowArtificial: true });
+      const hasTurn1 = !!(a1 && b1 && a1 < b1);
+      const hasTurn2 = !!(a2 && b2 && a2 < b2);
+      if(hasTurn1 && !hasTurn2 && isAfternoonStart(a1)){
+        rowState.a2 = a1;
+        rowState.b2 = b1;
+        rowState.a1 = '';
+        rowState.b1 = '';
+        rowState.edit1 = false;
+        rowState.edit2 = false;
+        rowState.act = true;
       }
     };
-    const updateStateFromRow = (dayKey)=>{
-      const ref = rowRefs.get(dayKey);
-      if(!ref) return;
-      state[dayKey] = {
-        act: !!ref.act.checked,
-        a1: normalizeTime(ref.a1.value),
-        b1: normalizeTime(ref.b1.value),
-        a2: normalizeTime(ref.a2.value),
-        b2: normalizeTime(ref.b2.value)
-      };
-      markRow(ref);
+    const normalizeConsultorioScheduleState = (scheduleState)=>{
+      if(!scheduleState || typeof scheduleState !== 'object') return;
+      DAYS.forEach((day)=>{
+        const dayKey = String(day?.key || '').trim();
+        if(!dayKey) return;
+        const row = scheduleState[dayKey] || createEmptyScheduleRow();
+        normalizeAfternoonBlock(row);
+        scheduleState[dayKey] = row;
+      });
     };
-    const applyStateToRows = ()=>{
+    const timeToMinutes = (value)=>{
+      const raw = String(value || '').trim();
+      if(!raw || !raw.includes(':')) return null;
+      const parts = raw.split(':');
+      if(parts.length < 2) return null;
+      const h = Number(parts[0]);
+      const m = Number(parts[1]);
+      if(!Number.isFinite(h) || !Number.isFinite(m)) return null;
+      return (h * 60) + m;
+    };
+    const rangesOverlap = (aStart, aEnd, bStart, bEnd)=>{
+      const as = timeToMinutes(aStart);
+      const ae = timeToMinutes(aEnd);
+      const bs = timeToMinutes(bStart);
+      const be = timeToMinutes(bEnd);
+      if([as, ae, bs, be].some((v)=> v === null || Number.isNaN(v))) return false;
+      return as < be && bs < ae;
+    };
+    const getTurnType = (start, end)=>{
+      const s = normalizeTime(start, { allowArtificial: true });
+      const e = normalizeTime(end, { allowArtificial: true });
+      if(!s || !e) return 'empty';
+      if(s < '12:00' && e <= '15:00') return 'morning';
+      if(s >= '12:00') return 'afternoon';
+      if(s < '12:00' && e > '15:00') return 'continuous';
+      return 'unknown';
+    };
+    const resolveFirstScheduledDayKeyByTurn = (turnoKey = 'turno1', consultorioId = '')=>{
+      const scheduleState = getScheduleStateForConsultorio(consultorioId || getActiveConsultorioId());
+      if(!scheduleState) return '';
+      const isTurno2 = turnoKey === 'turno2';
+      for(const day of DAYS){
+        const dayKey = String(day?.key || '').trim();
+        if(!dayKey) continue;
+        const row = scheduleState[dayKey] || {};
+        const start = isTurno2 ? row.a2 : row.a1;
+        const end = isTurno2 ? row.b2 : row.b1;
+        if(hasValidWindow(start, end)) return dayKey;
+      }
+      return '';
+    };
+    const hasTimeOverlap = (aStart, aEnd, bStart, bEnd)=>{
+      if(!hasValidWindow(aStart, aEnd) || !hasValidWindow(bStart, bEnd)) return false;
+      const as = normalizeTime(aStart, { allowArtificial: true });
+      const ae = normalizeTime(aEnd, { allowArtificial: true });
+      const bs = normalizeTime(bStart, { allowArtificial: true });
+      const be = normalizeTime(bEnd, { allowArtificial: true });
+      return rangesOverlap(as, ae, bs, be);
+    };
+    let scheduleValidationSnapshot = {
+      validated: false,
+      conflicts: [],
+      conflictKeys: new Set()
+    };
+    const resolveConsultorioLabel = (consultorioId)=>{
+      const id = String(consultorioId || '').trim();
+      if(!id) return 'Consultorio';
+      const tabBtn = document.querySelector(`#p-consultorio .mm-tabs-embed [data-bs-target="#sede${id}"]`);
+      const label = String(tabBtn?.textContent || '').trim().replace(/\s+/g, ' ');
+      return label || `Consultorio ${id}`;
+    };
+    const collectScheduleBlocksByConsultorio = ()=>{
+      const blocks = [];
+      Object.entries(scheduleStateByConsultorio || {}).forEach(([consultorioId, scheduleState])=>{
+        if(!scheduleState || typeof scheduleState !== 'object') return;
+        DAYS.forEach((day)=>{
+          const dayKey = String(day?.key || '').trim();
+          if(!dayKey) return;
+          const row = scheduleState[dayKey] || {};
+          const t1s = normalizeTime(row.a1, { allowArtificial: true });
+          const t1e = normalizeTime(row.b1, { allowArtificial: true });
+          const t2s = normalizeTime(row.a2, { allowArtificial: true });
+          const t2e = normalizeTime(row.b2, { allowArtificial: true });
+          if(hasValidWindow(t1s, t1e)){
+            blocks.push({ consultorioId: String(consultorioId), dayKey, turn: 1, start: t1s, end: t1e });
+          }
+          if(hasValidWindow(t2s, t2e)){
+            blocks.push({ consultorioId: String(consultorioId), dayKey, turn: 2, start: t2s, end: t2e });
+          }
+        });
+      });
+      return blocks;
+    };
+    const findScheduleConflicts = ()=>{
+      const blocks = collectScheduleBlocksByConsultorio();
+      const conflicts = [];
+      const conflictKeys = new Set();
+      for(let i = 0; i < blocks.length; i += 1){
+        for(let j = i + 1; j < blocks.length; j += 1){
+          const a = blocks[i];
+          const b = blocks[j];
+          if(a.dayKey !== b.dayKey) continue;
+          if(String(a.consultorioId) === String(b.consultorioId)) continue;
+          if(!rangesOverlap(a.start, a.end, b.start, b.end)) continue;
+          conflicts.push({ a, b });
+          conflictKeys.add(`${a.consultorioId}|${a.dayKey}|${a.turn}`);
+          conflictKeys.add(`${b.consultorioId}|${b.dayKey}|${b.turn}`);
+        }
+      }
+      return { conflicts, conflictKeys };
+    };
+    const renderScheduleValidationMessage = ()=>{
+      const next = findScheduleConflicts();
+      scheduleValidationSnapshot = {
+        validated: true,
+        conflicts: next.conflicts,
+        conflictKeys: next.conflictKeys
+      };
+      const total = next.conflicts.length;
+      if(total <= 0){
+        showValidationNote('✔ Sin conflictos de horario detectados.', 'success');
+        return scheduleValidationSnapshot;
+      }
+      if(total === 1){
+        const first = next.conflicts[0];
+        const dayDef = DAYS.find((day)=> day.key === first.a.dayKey);
+        const dayLabel = String(dayDef?.label || first.a.dayKey || '').trim();
+        const aLabel = resolveConsultorioLabel(first.a.consultorioId);
+        const bLabel = resolveConsultorioLabel(first.b.consultorioId);
+        showValidationNote(
+          `⚠ Hay conflictos de horario entre consultorios. Revisa los bloques marcados. Conflicto: ${dayLabel}, ${aLabel} ${first.a.start}-${first.a.end} y ${bLabel} ${first.b.start}-${first.b.end}.`,
+          'danger'
+        );
+        return scheduleValidationSnapshot;
+      }
+      showValidationNote(`⚠ Hay conflictos de horario entre consultorios. Revisa los bloques marcados. ${total} conflictos detectados entre consultorios.`, 'danger');
+      return scheduleValidationSnapshot;
+    };
+    const removeScheduleTurn = (dayKey, turn, consultorioId = '')=>{
+      const targetConsultorioId = String(consultorioId || getActiveConsultorioId() || '').trim();
+      console.log('MXM_SCHEDULE_FN_DEBUG', {
+        fn: 'removeScheduleTurn',
+        consultorioId: targetConsultorioId,
+        activeConsultorioId: getActiveConsultorioId()
+      });
+      const scheduleState = getScheduleStateForConsultorio(targetConsultorioId);
+      if(!scheduleState) return;
+      const key = String(dayKey || '').trim();
+      const turnNum = Number(turn);
+      if(!key || !Number.isFinite(turnNum)) return;
+      const row = scheduleState[key];
+      if(!row) return;
+      if(turnNum === 1){
+        row.a1 = '';
+        row.b1 = '';
+        row.edit1 = false;
+      }
+      if(turnNum === 2){
+        row.a2 = '';
+        row.b2 = '';
+        row.edit2 = false;
+      }
+      row.act = !!(hasValidWindow(row.a1, row.b1) || hasValidWindow(row.a2, row.b2));
+      scheduleState[key] = row;
+      applyStateToRows(targetConsultorioId);
+      queuePersist(targetConsultorioId);
+    };
+    const applyScheduleToWeekdays = (sourceDayKey, turn, startRaw = '', endRaw = '', consultorioId = '')=>{
+      const targetConsultorioId = String(consultorioId || getActiveConsultorioId() || '').trim();
+      console.log('MXM_SCHEDULE_FN_DEBUG', {
+        fn: 'applyScheduleToWeekdays',
+        consultorioId: targetConsultorioId,
+        activeConsultorioId: getActiveConsultorioId()
+      });
+      const turnNum = Number(turn);
+      if(turnNum === 1){
+        applyTurnoToNextWorkdays(sourceDayKey, 'turno1', startRaw, endRaw, targetConsultorioId);
+        return;
+      }
+      if(turnNum === 2){
+        applyTurnoToNextWorkdays(sourceDayKey, 'turno2', startRaw, endRaw, targetConsultorioId);
+      }
+    };
+    const applyTurnoToNextWorkdays = (sourceDayKey, turnoKey, startRaw = '', endRaw = '', consultorioId = '')=>{
+      if(turnoKey !== 'turno1' && turnoKey !== 'turno2') return;
+      const targetConsultorioId = String(consultorioId || getActiveConsultorioId() || '').trim();
+      const scheduleState = getScheduleStateForConsultorio(targetConsultorioId);
+      if(!scheduleState) return;
+      let nextDays = DAYS
+        .filter((day)=> Number(day?.weekday || 0) >= 1 && Number(day?.weekday || 0) <= 5)
+        .map((day)=> String(day?.key || '').trim())
+        .filter((dayKey)=> dayKey && scheduleState[dayKey]);
+      if(!nextDays.length){
+        nextDays = DAYS
+          .filter((day)=>{
+            const label = String(day?.label || day?.name || day?.title || '').toLowerCase();
+            return ['lunes', 'martes', 'miércoles', 'miercoles', 'jueves', 'viernes'].some((d)=> label.includes(d));
+          })
+          .map((day)=> String(day?.key || day?.id || day?.value || day?.dayKey || '').trim())
+          .filter((dayKey)=> dayKey && scheduleState[dayKey]);
+      }
+      if(!nextDays.length) return;
+      const source = scheduleState[sourceDayKey] || {};
+      const start = normalizeTime(startRaw, { allowArtificial: true });
+      const end = normalizeTime(endRaw, { allowArtificial: true });
+      if(!hasValidWindow(start, end)){
+        console.error('MXM_APPLY_FOLLOWING_NO_SOURCE_TIME', { sourceDayKey, sourceState: source, startRaw, endRaw });
+        return;
+      }
+
+      const conflictDay = nextDays.find((dayKey)=>{
+        const row = scheduleState[dayKey] || createEmptyScheduleRow();
+        if(turnoKey === 'turno1'){
+          return hasTimeOverlap(start, end, row.a2, row.b2);
+        }
+        return hasTimeOverlap(row.a1, row.b1, start, end);
+      });
+      if(conflictDay){
+        showNote('Turno 1 y Turno 2 no pueden traslaparse. Ajusta el horario antes de aplicar.', 'danger');
+        return;
+      }
+
+      nextDays.forEach((dayKey)=>{
+        const row = scheduleState[dayKey] || createEmptyScheduleRow();
+        if(turnoKey === 'turno1'){
+          row.a1 = start;
+          row.b1 = end;
+          row.edit1 = false;
+        }else{
+          row.a2 = start;
+          row.b2 = end;
+          row.edit2 = false;
+        }
+        row.act = true;
+        normalizeAfternoonBlock(row);
+        scheduleState[dayKey] = row;
+      });
+
+      applyStateToRows(targetConsultorioId);
+      queuePersist(targetConsultorioId);
+      showNote(turnoKey === 'turno2'
+        ? 'Horario de Turno 2 aplicado de lunes a viernes.'
+        : 'Horario de Turno 1 aplicado de lunes a viernes.', 'success');
+    };
+    const markRow = (ref, renderMeta = {}, consultorioId = '')=>{
+      if(!ref) return;
+      const targetConsultorioId = String(consultorioId || getActiveConsultorioId() || '').trim();
+      const scheduleState = getScheduleStateForConsultorio(targetConsultorioId);
+      const rowState = scheduleState?.[ref.dayKey] || createEmptyScheduleRow();
+      const dayActive = !!rowState.act;
+      const turno1Start = normalizeTime(rowState.a1, { allowArtificial: true });
+      const turno1End = normalizeTime(rowState.b1, { allowArtificial: true });
+      const turno2Start = normalizeTime(rowState.a2, { allowArtificial: true });
+      const turno2End = normalizeTime(rowState.b2, { allowArtificial: true });
+      const hasValidTurn1 = !!(isValidScheduleTime(turno1Start, { allowArtificial: true }) && isValidScheduleTime(turno1End, { allowArtificial: true }) && turno1Start < turno1End);
+      const hasValidTurn2 = !!(isValidScheduleTime(turno2Start, { allowArtificial: true }) && isValidScheduleTime(turno2End, { allowArtificial: true }) && turno2Start < turno2End);
+      console.log('MXM_RENDER_FIXED_COLUMNS', {
+        dayKey: ref.dayKey,
+        consultorioId: targetConsultorioId,
+        turn1: { start: rowState.a1 || '', end: rowState.b1 || '' },
+        turn2: { start: rowState.a2 || '', end: rowState.b2 || '' }
+      });
+      const blockCount = (hasValidTurn1 ? 1 : 0) + (hasValidTurn2 ? 1 : 0);
+      const renderTurnCell = (slotRef, turnNum, startRaw, endRaw)=>{
+        const start = normalizeTime(startRaw, { allowArtificial: true });
+        const end = normalizeTime(endRaw, { allowArtificial: true });
+        const hasBlock = hasValidWindow(start, end);
+        const startDisplay = hasBlock ? formatScheduleTimeOrDash(start) : EMPTY_TIME_DISPLAY;
+        const endDisplay = hasBlock ? formatScheduleTimeOrDash(end) : EMPTY_TIME_DISPLAY;
+        const shouldShowApply = hasBlock && ref.dayKey === 'mon';
+        const turnType = hasBlock ? getTurnType(start, end) : 'empty';
+        const turnIcon = turnType === 'morning'
+          ? '☀️'
+          : (turnType === 'afternoon'
+            ? '🌙'
+            : (turnType === 'continuous' ? '⏱️' : ''));
+        const hasConflict = hasBlock && scheduleValidationSnapshot?.conflictKeys instanceof Set
+          ? scheduleValidationSnapshot.conflictKeys.has(`${targetConsultorioId}|${ref.dayKey}|${turnNum}`)
+          : false;
+
+        if(slotRef.pill){
+          slotRef.pill.textContent = hasBlock
+            ? `${turnIcon ? `${turnIcon} ` : ''}${startDisplay} - ${endDisplay}`
+            : `${startDisplay} - ${endDisplay}`;
+          slotRef.pill.classList.toggle('is-empty', !hasBlock);
+          slotRef.pill.classList.toggle('morning', turnType === 'morning');
+          slotRef.pill.classList.toggle('afternoon', turnType === 'afternoon');
+          slotRef.pill.classList.toggle('continuous', turnType === 'continuous');
+          slotRef.pill.classList.toggle('has-conflict', !!hasConflict);
+          slotRef.pill.setAttribute('data-day-key', ref.dayKey);
+          slotRef.pill.setAttribute('data-turn', String(turnNum));
+          slotRef.pill.setAttribute('data-consultorio-id', targetConsultorioId);
+          slotRef.pill.setAttribute('data-start', hasBlock ? start : '');
+          slotRef.pill.setAttribute('data-end', hasBlock ? end : '');
+          slotRef.pill.setAttribute('aria-label', `Turno ${turnNum} ${dayActive ? 'activo' : 'inactivo'} ${startDisplay} a ${endDisplay}`);
+        }
+        if(slotRef.remove){
+          slotRef.remove.setAttribute('data-day-key', ref.dayKey);
+          slotRef.remove.setAttribute('data-turn', String(turnNum));
+          slotRef.remove.setAttribute('data-consultorio-id', targetConsultorioId);
+          slotRef.remove.classList.toggle('d-none', !hasBlock);
+        }
+        if(slotRef.apply){
+          slotRef.apply.setAttribute('data-day-key', ref.dayKey);
+          slotRef.apply.setAttribute('data-turn', String(turnNum));
+          slotRef.apply.setAttribute('data-consultorio-id', targetConsultorioId);
+          slotRef.apply.setAttribute('data-start', hasBlock ? start : '');
+          slotRef.apply.setAttribute('data-end', hasBlock ? end : '');
+          slotRef.apply.disabled = false;
+          slotRef.apply.classList.toggle('d-none', !shouldShowApply);
+        }
+        if(slotRef.slot){
+          slotRef.slot.classList.toggle('is-empty', !hasBlock);
+        }
+      };
+
+      renderTurnCell({
+        slot: ref.turno1Slot,
+        pill: ref.turno1Pill,
+        remove: ref.turno1Remove,
+        apply: ref.turno1Apply
+      }, 1, turno1Start, turno1End);
+      renderTurnCell({
+        slot: ref.turno2Slot,
+        pill: ref.turno2Pill,
+        remove: ref.turno2Remove,
+        apply: ref.turno2Apply
+      }, 2, turno2Start, turno2End);
+
+      const isDefined = blockCount > 0;
+      ref.tr.classList.toggle('sched-defined', isDefined);
+      ref.tr.classList.toggle('sched-empty', !isDefined);
+    };
+    const applyStateToRows = (consultorioId = '')=>{
+      const targetConsultorioId = String(consultorioId || getActiveConsultorioId() || '').trim();
+      if(targetConsultorioId) activeScheduleConsultorioId = targetConsultorioId;
+      console.log('MXM_SCHEDULE_FN_DEBUG', {
+        fn: 'applyStateToRows',
+        consultorioId: targetConsultorioId,
+        activeConsultorioId: getActiveConsultorioId()
+      });
+      const scheduleState = getScheduleStateForConsultorio(targetConsultorioId);
+      if(!scheduleState) return;
+      normalizeConsultorioScheduleState(scheduleState);
+      console.log('MXM_RENDER_CONSULTORIO_STATE', {
+        consultorioId: targetConsultorioId,
+        state: JSON.parse(JSON.stringify(scheduleState))
+      });
+      renderScheduleValidationMessage();
+      const renderMeta = {
+        firstTurn1DayKey: resolveFirstScheduledDayKeyByTurn('turno1', targetConsultorioId),
+        firstTurn2DayKey: resolveFirstScheduledDayKeyByTurn('turno2', targetConsultorioId)
+      };
       DAYS.forEach((day)=>{
         const ref = rowRefs.get(day.key);
-        const row = state[day.key] || { act: false, a1: '', b1: '', a2: '', b2: '' };
+        const row = scheduleState[day.key] || createEmptyScheduleRow();
         if(!ref) return;
         ref.act.checked = !!row.act;
-        ref.a1.value = normalizeTime(row.a1);
-        ref.b1.value = normalizeTime(row.b1);
-        ref.a2.value = normalizeTime(row.a2);
-        ref.b2.value = normalizeTime(row.b2);
-        markRow(ref);
+        markRow(ref, renderMeta, targetConsultorioId);
       });
+      enforceNoTimeInputsOnEmptyRows();
     };
-    const clearState = ()=>{
+    const clearState = (consultorioId = '')=>{
+      const targetState = consultorioId
+        ? getScheduleStateForConsultorio(consultorioId)
+        : getActiveConsultorioScheduleState();
+      if(!targetState) return;
+      hideScheduleTimePicker();
       DAYS.forEach((day)=>{
-        state[day.key] = { act: false, a1: '', b1: '', a2: '', b2: '' };
+        targetState[day.key] = createEmptyScheduleRow();
       });
-      applyStateToRows();
+      const activeConsultorioId = getActiveConsultorioId();
+      if(!consultorioId || consultorioId === activeConsultorioId){
+        applyStateToRows(activeConsultorioId);
+      }
     };
-    const buildPayloadDays = ()=>{
+    const buildPayloadDays = (consultorioId = '')=>{
+      const targetState = consultorioId
+        ? getScheduleStateForConsultorio(consultorioId)
+        : getActiveConsultorioScheduleState();
+      if(!targetState) return [];
       return DAYS.map((day)=>{
-        const row = state[day.key] || {};
+        const row = targetState[day.key] || {};
         const windows = [];
         const firstStart = normalizeTime(row.a1);
         const firstEnd = normalizeTime(row.b1);
@@ -8344,9 +9357,10 @@ console.info('app.js loaded :: 20251123a');
         };
       });
     };
-    const persistSchedule = async (forcedContext = null)=>{
+    const persistSchedule = async (forcedContext = null, options = {})=>{
       if(loading || saving) return;
       const context = forcedContext || resolveScheduleContext();
+      const successMessage = String(options?.successMessage || '').trim();
       const doctorId = String(context?.doctorId || '').trim();
       const consultorioId = String(context?.consultorioId || '').trim();
       if(!doctorId || !consultorioId){
@@ -8358,52 +9372,132 @@ console.info('app.js loaded :: 20251123a');
         const result = await apiSaveSchedule({
           doctor_id: doctorId,
           consultorio_id: consultorioId,
-          days: buildPayloadDays()
+          days: buildPayloadDays(consultorioId)
         });
         if(!(result?.ok && result?.json?.ok === true)){
           const msg = String(result?.json?.message || result?.json?.error || 'No se pudo guardar horario de atención.');
           showNote(msg, 'danger');
           return;
         }
-        showNote('Horario guardado en configuración oficial del backend.', 'success');
+        showNote(successMessage || 'Horarios guardados correctamente.', 'success');
+        renderScheduleValidationMessage();
       }catch(_){
         showNote('No se pudo guardar horario de atención.', 'danger');
       }finally{
         saving = false;
       }
     };
-    const queuePersist = ()=>{
+    const queuePersist = (consultorioId = '')=>{
       const contextSnapshot = resolveScheduleContext();
-      if(saveTimer) window.clearTimeout(saveTimer);
-      saveTimer = window.setTimeout(()=>{ persistSchedule(contextSnapshot).catch(()=> null); }, 420);
+      const targetConsultorioId = String(consultorioId || contextSnapshot.consultorioId || getActiveConsultorioId() || '').trim();
+      if(targetConsultorioId) activeScheduleConsultorioId = targetConsultorioId;
+      console.log('MXM_SCHEDULE_FN_DEBUG', {
+        fn: 'queuePersist',
+        consultorioId: targetConsultorioId,
+        activeConsultorioId: getActiveConsultorioId()
+      });
+      contextSnapshot.consultorioId = targetConsultorioId;
+      console.log('MXM_ACTIVE_CONSULTORIO_FOR_SCHEDULE', targetConsultorioId);
+      const targetScheduleState = getScheduleStateForConsultorio(targetConsultorioId);
+      normalizeConsultorioScheduleState(targetScheduleState);
+      console.log('MXM_ACTIVE_SCHEDULE_STATE_KEYS', Object.keys(targetScheduleState || {}));
+      renderScheduleValidationMessage();
+      const existingTimer = saveTimersByConsultorio.get(targetConsultorioId);
+      if(existingTimer) window.clearTimeout(existingTimer);
+      const timerId = window.setTimeout(()=>{
+        saveTimersByConsultorio.delete(targetConsultorioId);
+        persistSchedule(contextSnapshot).catch(()=> null);
+      }, 420);
+      saveTimersByConsultorio.set(targetConsultorioId, timerId);
     };
-    const hydrateFromBackend = async ()=>{
+    const updateConsultorioScheduleUI = (index)=>{
+      const idx = Number(index || 0);
+      if(!Number.isFinite(idx) || idx <= 0) return;
+      const activeIdx = getSchedulePaneIndex(activePane);
+      if(activeIdx !== idx) return;
+      applyStateToRows(String(idx));
+    };
+    const persistConsultorioSchedule = async (index)=>{
+      const idx = Number(index || 0);
+      if(!Number.isFinite(idx) || idx <= 0) return;
+      const activeIdx = getSchedulePaneIndex(activePane);
+      if(activeIdx !== idx) return;
+      const contextSnapshot = resolveScheduleContext();
+      await persistSchedule(contextSnapshot, { successMessage: 'Horarios limpiados correctamente.' }).catch(()=> null);
+    };
+    const handleClearConsultorioSchedule = async (index)=>{
+      const idx = Number(index || 0);
+      if(!Number.isFinite(idx) || idx <= 0) return;
+      const confirmed = window.confirm('¿Deseas limpiar todos los horarios de este consultorio?');
+      if(!confirmed) return;
+      hideScheduleTimePicker();
+      if(document.activeElement instanceof HTMLElement){
+        try{ document.activeElement.blur(); }catch(_){ }
+      }
+      mountActiveScheduleGrid();
+      const activeIdx = getSchedulePaneIndex(activePane);
+      if(activeIdx !== idx) return;
+      const pane = document.getElementById(`sede${idx}`);
+      if(!pane) return;
+      const timeInputs = Array.from(
+        pane.querySelectorAll('tbody[id^="sched-body"] input[type="time"]')
+      );
+      const dayChecks = Array.from(
+        pane.querySelectorAll('tbody[id^="sched-body"] input[id^="sch-act-"]')
+      );
+      timeInputs.forEach((input)=>{
+        input.value = '';
+        input.defaultValue = '';
+        input.removeAttribute('value');
+        input.removeAttribute('data-user-edited');
+        input.setAttribute('placeholder', '--:--');
+      });
+      dayChecks.forEach((chk)=>{
+        chk.checked = false;
+      });
+      clearState(String(idx));
+      pane.querySelectorAll('.sched-time-slot').forEach((slot)=>{
+        slot.classList.add('is-empty');
+      });
+      updateConsultorioScheduleUI(idx);
+      await persistConsultorioSchedule(idx);
+    };
+    const hydrateFromBackend = async (options = {})=>{
       if(!mountActiveScheduleGrid()){
         return;
       }
-      const { doctorId, consultorioId } = resolveScheduleContext();
+      const requestedConsultorioId = String(options?.consultorioId || '').trim();
+      const forceHydrate = options?.force === true;
+      const { doctorId, consultorioId: resolvedConsultorioId } = resolveScheduleContext();
+      const consultorioId = String(requestedConsultorioId || resolvedConsultorioId || '').trim();
+      console.log('MXM_ACTIVE_CONSULTORIO_FOR_SCHEDULE', getActiveConsultorioId());
+      console.log('MXM_ACTIVE_SCHEDULE_STATE_KEYS', Object.keys(getActiveConsultorioScheduleState() || {}));
       const contextKey = `${doctorId}::${consultorioId}`;
-      if(contextKey === currentContextKey && loadedOnce) return;
-      currentContextKey = contextKey;
       if(!doctorId || !consultorioId){
-        clearState();
         setFormEnabled(false);
         showNote('Selecciona un consultorio activo en esta sección para editar horario oficial.', 'danger');
+        showValidationNote('');
+        return;
+      }
+      if(!forceHydrate && (loadedScheduleConsultorioIds.has(consultorioId) || loadedScheduleContextKeys.has(contextKey))){
+        applyStateToRows(consultorioId);
+        setFormEnabled(true);
+        showNote('Horario local cargado para este consultorio.', 'muted');
         return;
       }
       loading = true;
       setFormEnabled(false);
       showNote('Cargando horario oficial...', 'muted');
+      showValidationNote('');
       try{
         const json = await apiGetSchedule({ doctorId, consultorioId });
         if(!json || json.ok !== true || !Array.isArray(json?.data?.days)){
-          clearState();
           setFormEnabled(true);
           const msg = String(json?.message || json?.error || 'No se pudo leer horario oficial.');
           showNote(msg, 'danger');
           return;
         }
-        clearState();
+        const nextState = createEmptyScheduleState();
         json.data.days.forEach((day)=>{
           const weekday = Number(day?.weekday || 0);
           const rowDef = DAYS.find((item)=> item.weekday === weekday);
@@ -8411,45 +9505,83 @@ console.info('app.js loaded :: 20251123a');
           const windows = Array.isArray(day?.windows) ? day.windows : [];
           const first = windows[0] || {};
           const second = windows[1] || {};
-          state[rowDef.key] = {
+          nextState[rowDef.key] = {
             act: !!day?.active && windows.length > 0,
             a1: normalizeTime(first?.start_time || ''),
             b1: normalizeTime(first?.end_time || ''),
             a2: normalizeTime(second?.start_time || ''),
-            b2: normalizeTime(second?.end_time || '')
+            b2: normalizeTime(second?.end_time || ''),
+            edit1: false,
+            edit2: false
           };
         });
-        applyStateToRows();
+        normalizeConsultorioScheduleState(nextState);
+        scheduleStateByConsultorio[consultorioId] = nextState;
+        loadedScheduleContextKeys.add(contextKey);
+        loadedScheduleConsultorioIds.add(consultorioId);
+        logScheduleStateRefCheck();
+        if(getActiveConsultorioId() === consultorioId){
+          applyStateToRows(consultorioId);
+          enforceNoTimeInputsOnEmptyRows();
+        }
         setFormEnabled(true);
-        showNote('Horario oficial sincronizado desde backend.', 'success');
-        loadedOnce = true;
+        showNote('Horarios guardados correctamente.', 'success');
       }catch(_){
-        clearState();
         setFormEnabled(true);
         showNote('No se pudo cargar horario oficial.', 'danger');
       }finally{
         loading = false;
       }
     };
-    const handleConsultorioTabSwitch = ()=>{
-      currentContextKey = '';
-      loadedOnce = false;
-      hydrateFromBackend().catch(()=> null);
+    const handleConsultorioTabSwitch = (forcedConsultorioId = '')=>{
+      const forcedId = String(forcedConsultorioId || '').trim();
+      if(forcedId){
+        const pane = document.getElementById(`sede${forcedId}`);
+        if(pane) activePane = pane;
+        activeScheduleConsultorioId = forcedId;
+      }else{
+        const fromTab = resolveActiveConsultorioIdFromTabs();
+        if(fromTab) activeScheduleConsultorioId = fromTab;
+      }
+      const targetConsultorioId = String(forcedId || activeScheduleConsultorioId || getActiveConsultorioId() || '').trim();
+      mountActiveScheduleGrid();
+      applyStateToRows(targetConsultorioId);
+      if(!loadedScheduleConsultorioIds.has(targetConsultorioId)){
+        hydrateFromBackend({ consultorioId: targetConsultorioId }).catch(()=> null);
+      }
     };
+    if(!window.__mxScheduleClearDelegatedBound){
+      window.__mxScheduleClearDelegatedBound = true;
+      document.addEventListener('click', function(evt){
+        const btn = evt.target instanceof Element
+          ? evt.target.closest('[data-action="clear-consultorio-schedule"]')
+          : null;
+        if(!btn) return;
+        evt.preventDefault();
+        const index = Number(btn.getAttribute('data-map-index') || btn.getAttribute('data-consultorio-id') || '');
+        if(!Number.isFinite(index)) return;
+        handleClearConsultorioSchedule(index).catch(()=> null);
+      });
+    }
     document.querySelector('#p-consultorio .mm-tabs-embed')?.addEventListener('shown.bs.tab', (event)=>{
       const target = event.target instanceof Element ? event.target : null;
       const targetPane = String(target?.getAttribute('data-bs-target') || '');
       if(!targetPane.startsWith('#sede')) return;
-      handleConsultorioTabSwitch();
+      handleConsultorioTabSwitch(targetPane.replace(/^#sede/, ''));
     });
     document.querySelector('#p-consultorio .mm-tabs-embed')?.addEventListener('click', (event)=>{
       const btn = event.target instanceof Element ? event.target.closest('[data-bs-target^="#sede"]') : null;
       if(!btn) return;
-      window.setTimeout(()=>{ handleConsultorioTabSwitch(); }, 0);
+      const paneTarget = String(btn.getAttribute('data-bs-target') || '').replace(/^#sede/, '');
+      window.setTimeout(()=>{ handleConsultorioTabSwitch(paneTarget); }, 0);
     });
     const consultorioFilter = document.getElementById('ag_consultorio_filter');
-    consultorioFilter?.addEventListener('change', ()=>{ handleConsultorioTabSwitch(); });
-    window.setTimeout(()=>{ hydrateFromBackend().catch(()=> null); }, 0);
+    consultorioFilter?.addEventListener('change', ()=>{
+      const selectedId = String(consultorioFilter.value || '').trim();
+      if(selectedId) activeScheduleConsultorioId = selectedId;
+      handleConsultorioTabSwitch(selectedId);
+    });
+    window.setTimeout(()=>{ hydrateFromBackend({ force: true }).catch(()=> null); }, 0);
     return;
 
     const dias = [

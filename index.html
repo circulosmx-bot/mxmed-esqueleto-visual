@@ -1438,9 +1438,18 @@
 
                   <div class="col-12">
 
-                    <label class="form-label">Horario de atención</label>
+                    <div class="mb-2 mx-cons-horarios-head schedule-consultorio-header" data-cons-horarios-head="1">
+                      <div class="schedule-consultorio-title-row">
+                        <div class="mx-cons-horarios-active schedule-consultorio-active" data-cons-horarios-title></div>
+                        <div class="schedule-section-label">
+                          <span class="schedule-section-icon">🕒</span>
+                          <span>Horario de atención</span>
+                        </div>
+                      </div>
+                      <div class="mx-cons-horarios-switcher schedule-consultorio-switches" data-cons-horarios-switcher hidden></div>
+                    </div>
 
-                    <div class="card p-3 sched-card">
+                    <div class="card p-3 sched-card" data-consultorio-section="horarios" style="scroll-margin-top:90px;">
 
                       <div class="d-flex justify-content-between align-items-center mb-2">
 
@@ -1460,7 +1469,7 @@
 
                         <table class="table table-sm align-middle sched-table">
 
-                          <thead><tr><th style="width:110px;">Día</th><th>Activo</th><th>Turno 1</th><th>Turno 2 (opcional)</th></tr></thead>
+                          <thead><tr><th style="width:110px;">Día</th><th>Activo</th><th>☀️ Turno matutino</th><th>🌙 Turno vespertino (opcional)</th></tr></thead>
 
                           <tbody id="sched-body"></tbody>
 
@@ -2575,12 +2584,24 @@
           <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">manage_history</span>Mi Agenda · Configuración</h5></div>
 
           <div class="body">
+            <div class="mx-ag-workspace-shell" aria-label="Submenú operativo de agenda">
+              <button type="button" class="mx-ag-workspace-btn" data-ag-work-panel="p-ag-admin">
+                <span class="material-symbols-rounded" aria-hidden="true">event</span>
+                Agenda
+              </button>
+              <button type="button" class="mx-ag-workspace-btn is-active" data-ag-work-panel="p-ag-ajustes">
+                <span class="material-symbols-rounded" aria-hidden="true">settings</span>
+                Configuración
+              </button>
+              <button type="button" class="mx-ag-workspace-btn" data-ag-work-panel="p-ag-operadores">
+                <span class="material-symbols-rounded" aria-hidden="true">support_agent</span>
+                Operadores
+              </button>
+            </div>
 
             <div class="row g-3">
 
-              <div class="col-md-3"><label class="form-label" for="ag_cfg_duration_min">Duración de cita</label><select class="form-select" id="ag_cfg_duration_min"><option value="20">20 min</option><option value="30" selected>30 min</option><option value="40">40 min</option></select></div>
-
-              <div class="col-md-3"><label class="form-label" for="ag_cfg_gap_min">Tiempo entre citas</label><select class="form-select" id="ag_cfg_gap_min"><option value="0" selected>0 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div>
+              <div class="col-md-3"><label class="form-label" for="ag_cfg_duration_min">Duración de cita</label><select class="form-select" id="ag_cfg_duration_min"><option value="20">20 min</option><option value="30" selected>30 min</option><option value="40">40 min</option><option value="60">60 min</option></select></div>
 
               <div class="col-md-3"><label class="form-label" for="ag_cfg_channels">Canales</label><select class="form-select" id="ag_cfg_channels" multiple><option value="in_person">Presencial</option><option value="videoconsulta">Telemedicina</option></select></div>
 
@@ -2593,6 +2614,12 @@
                 <div class="border rounded p-3 bg-light-subtle">
                   <div class="small text-muted mb-2" id="ag_cfg_schedule_summary_text">Sin horario cargado para el consultorio seleccionado.</div>
                   <button type="button" class="btn btn-outline-primary btn-sm" id="ag_cfg_edit_schedule_btn">Editar horario del consultorio</button>
+                  <div class="mt-2 d-none" id="ag_cfg_schedule_selector_wrap">
+                    <div class="small text-muted mb-2" id="ag_cfg_schedule_selector_text">
+                      Los horarios se configuran por consultorio para evitar cruces entre sedes. Selecciona el consultorio que deseas editar.
+                    </div>
+                    <div class="d-flex flex-wrap gap-2" id="ag_cfg_schedule_selector_buttons"></div>
+                  </div>
                 </div>
               </div>
 
@@ -2623,6 +2650,20 @@
           <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">support_agent</span>Mi Agenda · Administrar Operadores</h5></div>
 
           <div class="body">
+            <div class="mx-ag-workspace-shell" aria-label="Submenú operativo de agenda">
+              <button type="button" class="mx-ag-workspace-btn" data-ag-work-panel="p-ag-admin">
+                <span class="material-symbols-rounded" aria-hidden="true">event</span>
+                Agenda
+              </button>
+              <button type="button" class="mx-ag-workspace-btn" data-ag-work-panel="p-ag-ajustes">
+                <span class="material-symbols-rounded" aria-hidden="true">settings</span>
+                Configuración
+              </button>
+              <button type="button" class="mx-ag-workspace-btn is-active" data-ag-work-panel="p-ag-operadores">
+                <span class="material-symbols-rounded" aria-hidden="true">support_agent</span>
+                Operadores
+              </button>
+            </div>
 
             <div class="row g-3">
 

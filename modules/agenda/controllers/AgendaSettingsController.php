@@ -92,7 +92,7 @@ class AgendaSettingsController
             return trim((string)$v);
         }, $channels))));
         $reminderTemplate = trim((string)($payload['reminder_template'] ?? ''));
-        if (!in_array($duration, [20, 30, 40], true)) {
+        if (!in_array($duration, [20, 30, 40, 60], true)) {
             $duration = 30;
         }
         if (!in_array($gap, [0, 10, 15], true)) {
