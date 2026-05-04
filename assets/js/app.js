@@ -718,6 +718,8 @@ console.info('app.js loaded :: 20251123a');
   let agendaReminderMessageTemplate = '';
   let agendaReminderLimitNoteTimer = null;
   let agendaConsultorioRows = [];
+  let activeAgendaConsultorioId = '';
+  let agendaConsultorioSyncInFlight = false;
   const getCurrentMonthStart = ()=> startOfMonth(new Date());
   let activeBlockedEventId = '';
   let activeBlockConflictIds = new Set();
@@ -3644,6 +3646,14 @@ console.info('app.js loaded :: 20251123a');
       els.consultorioModal.innerHTML = '<option value="" disabled selected>No hay consultorios disponibles</option>';
     }
   };
+  const normalizeAgendaConsultorioIdValue = (value)=>{
+    const safeValue = sanitizeText(value || '');
+    if(!safeValue) return '';
+    if(safeValue === CONSULTORIO_UNAVAILABLE_VALUE || safeValue === CONSULTORIO_PROFILE_ONLY_VALUE){
+      return '';
+    }
+    return safeValue;
+  };
   const applyConsultorioFallbackFromActiveContext = ()=>{
     if(!els.consultorio) return false;
     const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
@@ -4395,6 +4405,10 @@ console.info('app.js loaded :: 20251123a');
     }
     scheduleSelectorViewMode = 'consultorio';
     scheduleSelectorActiveConsultorioId = targetConsultorioId;
+    setActiveAgendaConsultorio(targetConsultorioId, {
+      source: 'schedule-selector',
+      syncScheduleSelector: false
+    }).catch(()=> null);
     openConsultorioScheduleEditorFromSettings(targetConsultorioId, { pushHistory: false });
     renderAgendaScheduleEditorSelector();
     if(options.pushHistory !== false){
@@ -4489,6 +4503,7 @@ console.info('app.js loaded :: 20251123a');
     if(consultorioId){
       if(els.consultorio) els.consultorio.value = consultorioId;
       if(els.consultorioModal) els.consultorioModal.value = consultorioId;
+      activeAgendaConsultorioId = consultorioId;
     }
     try{
       if(typeof window.openGroup === 'function'){
@@ -6015,6 +6030,8 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const getAvailabilityConsultorioId = ()=>{
+    const active = normalizeAgendaConsultorioIdValue(activeAgendaConsultorioId);
+    if(isNumericId(active)) return active;
     const selected = sanitizeText(els.consultorio?.value || '');
     if(isNumericId(selected)) return selected;
     const doctorId = sanitizeText(getDoctorId() || '');
@@ -6024,6 +6041,89 @@ console.info('app.js loaded :: 20251123a');
       .map((opt)=> sanitizeText(opt.value))
       .find((value)=> isNumericId(value));
     return sanitizeText(firstNumeric || '');
+  };
+  const setActiveAgendaConsultorio = async (consultorioId, options = {})=>{
+    const source = sanitizeText(options?.source || 'unknown');
+    const previousConsultorioId = normalizeAgendaConsultorioIdValue(activeAgendaConsultorioId);
+    let nextConsultorioId = normalizeAgendaConsultorioIdValue(consultorioId);
+    if(!nextConsultorioId){
+      nextConsultorioId = normalizeAgendaConsultorioIdValue(els.consultorio?.value || '');
+    }
+    if(!nextConsultorioId){
+      nextConsultorioId = normalizeAgendaConsultorioIdValue(previousConsultorioId);
+    }
+
+    if(options?.syncFilter !== false && els.consultorio && nextConsultorioId){
+      const currentFilterValue = sanitizeText(els.consultorio.value || '');
+      if(currentFilterValue !== nextConsultorioId){
+        const hasOption = Array.from(els.consultorio.options || []).some((opt)=> sanitizeText(opt.value) === nextConsultorioId);
+        if(hasOption){
+          els.consultorio.value = nextConsultorioId;
+        }
+      }
+    }
+    if(options?.syncModal !== false && els.consultorioModal && nextConsultorioId){
+      const hasModalOption = Array.from(els.consultorioModal.options || []).some((opt)=> sanitizeText(opt.value) === nextConsultorioId);
+      if(hasModalOption && sanitizeText(els.consultorioModal.value || '') !== nextConsultorioId){
+        els.consultorioModal.value = nextConsultorioId;
+      }
+    }
+
+    activeAgendaConsultorioId = nextConsultorioId;
+
+    if(options?.syncCreateOptions !== false){
+      syncCreateConsultorioOptions();
+    }
+    if(options?.syncScheduleSelector !== false){
+      scheduleSelectorActiveConsultorioId = sanitizeText(nextConsultorioId || '');
+      renderAgendaScheduleEditorSelector();
+    }
+    if(els.hint){
+      els.hint.textContent = nextConsultorioId
+        ? `Filtrando por consultorio ${nextConsultorioId}`
+        : 'Mostrando semana clínica';
+    }
+
+    console.log('MXM AGENDA CONSULTORIO SYNC', {
+      source,
+      consultorioId: nextConsultorioId,
+      previousConsultorioId,
+      filterValue: sanitizeText(els.consultorio?.value || '')
+    });
+
+    const shouldRefreshCalendar = options?.refreshCalendar !== false;
+    const forceRefresh = options?.forceRefresh === true;
+    const changed = nextConsultorioId !== previousConsultorioId;
+    if(!shouldRefreshCalendar || !calendar || (!changed && !forceRefresh)){
+      return nextConsultorioId;
+    }
+    if(agendaConsultorioSyncInFlight){
+      return nextConsultorioId;
+    }
+
+    agendaConsultorioSyncInFlight = true;
+    try{
+      await applyCalendarBusinessHoursForActiveConsultorio();
+      syncCalendarSlotGranularity();
+      visibleScheduleRange = null;
+      if(typeof calendar.refetchEvents === 'function'){
+        calendar.refetchEvents();
+      }
+      if(typeof calendar.updateSize === 'function'){
+        window.setTimeout(()=>{
+          try{ calendar.updateSize(); }catch(_){}
+        }, 0);
+      }
+    }finally{
+      agendaConsultorioSyncInFlight = false;
+    }
+    return nextConsultorioId;
+  };
+  window.mxmSetActiveAgendaConsultorio = (consultorioId, options = {})=>{
+    return setActiveAgendaConsultorio(consultorioId, options);
+  };
+  window.mxmGetActiveAgendaConsultorio = ()=>{
+    return sanitizeText(activeAgendaConsultorioId || getAvailabilityConsultorioId() || '');
   };
   const mapScheduleWeekdayToFullCalendar = (weekday)=>{
     const safe = Number(weekday || 0);
@@ -6341,6 +6441,10 @@ console.info('app.js loaded :: 20251123a');
     agendaConsultorioRows = [];
     renderAgendaScheduleEditorSelector();
     if(!doctorId){
+      setActiveAgendaConsultorio('', {
+        source: 'fetch_consultorios_no_doctor',
+        refreshCalendar: false
+      }).catch(()=> null);
       return;
     }
 
@@ -6395,6 +6499,10 @@ console.info('app.js loaded :: 20251123a');
         }
       }
       renderAgendaScheduleEditorSelector();
+      setActiveAgendaConsultorio(sanitizeText(els.consultorio?.value || ''), {
+        source: 'fetch_consultorios_success',
+        refreshCalendar: false
+      }).catch(()=> null);
     }catch(err){
       if(err?.name === 'AbortError') return;
       agendaConsultorioRows = [];
@@ -6404,6 +6512,10 @@ console.info('app.js loaded :: 20251123a');
       if(!usedFallback && !usedLegacyFallback){
         setConsultorioUnavailableState('No se pudieron cargar consultorios');
       }
+      setActiveAgendaConsultorio(sanitizeText(els.consultorio?.value || ''), {
+        source: 'fetch_consultorios_error',
+        refreshCalendar: false
+      }).catch(()=> null);
       console.warn('[Agenda v1] consultorios fetch error', err);
     }
   };
@@ -7059,10 +7171,18 @@ console.info('app.js loaded :: 20251123a');
       refreshCalendar({ forceConsultorios: true }).catch(()=> null);
     });
     els.consultorio?.addEventListener('change', ()=>{
-      syncCreateConsultorioOptions();
-      renderAgendaScheduleEditorSelector();
-      refreshCalendar({ forceConsultorios: false }).catch(()=> null);
+      const selectedId = sanitizeText(els.consultorio?.value || '');
+      setActiveAgendaConsultorio(selectedId, {
+        source: 'ag_consultorio_filter_change'
+      }).catch(()=> null);
       hydrateAgendaSettings({ force: true }).catch(()=> null);
+    });
+    window.addEventListener('mxm:agenda-consultorio-change', (event)=>{
+      const consultorioId = sanitizeText(event?.detail?.consultorioId || '');
+      if(!consultorioId) return;
+      setActiveAgendaConsultorio(consultorioId, {
+        source: sanitizeText(event?.detail?.source || 'custom-event')
+      }).catch(()=> null);
     });
     els.consultorioModal?.addEventListener('change', ()=>{
       const chosen = sanitizeText(els.consultorioModal?.value || '');
@@ -7720,6 +7840,10 @@ console.info('app.js loaded :: 20251123a');
   const start = ()=>{
     bindEvents();
     syncDoctorInput();
+    setActiveAgendaConsultorio(sanitizeText(els.consultorio?.value || ''), {
+      source: 'agenda_start',
+      refreshCalendar: false
+    }).catch(()=> null);
     syncActivePatientPrompt();
     try{
       initCalendar();
@@ -10099,6 +10223,12 @@ console.info('app.js loaded :: 20251123a');
         if(fromTab) activeScheduleConsultorioId = fromTab;
       }
       const targetConsultorioId = String(forcedId || activeScheduleConsultorioId || getActiveConsultorioId() || '').trim();
+      if(typeof window.mxmSetActiveAgendaConsultorio === 'function' && targetConsultorioId){
+        window.mxmSetActiveAgendaConsultorio(targetConsultorioId, {
+          source: 'schedule_tab_switch',
+          syncScheduleSelector: false
+        }).catch(()=> null);
+      }
       mountActiveScheduleGrid();
       applyStateToRows(targetConsultorioId);
       if(!loadedScheduleConsultorioIds.has(targetConsultorioId)){
@@ -10138,6 +10268,12 @@ console.info('app.js loaded :: 20251123a');
     consultorioFilter?.addEventListener('change', ()=>{
       const selectedId = String(consultorioFilter.value || '').trim();
       if(selectedId) activeScheduleConsultorioId = selectedId;
+      if(typeof window.mxmSetActiveAgendaConsultorio === 'function'){
+        window.mxmSetActiveAgendaConsultorio(selectedId, {
+          source: 'schedule_filter_change',
+          syncScheduleSelector: false
+        }).catch(()=> null);
+      }
       handleConsultorioTabSwitch(selectedId);
     });
     if(!window.__mxmAgendaConfigPopstateBound){

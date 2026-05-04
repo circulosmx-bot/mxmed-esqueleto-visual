@@ -3541,6 +3541,14 @@ function mxClearHorarioInputs(inputs){
       const tabBtn = root.querySelector(`[data-bs-target="#sede${numericIdx}"]`);
       if(!tabBtn) return;
       try{
+        window.dispatchEvent(new CustomEvent('mxm:agenda-consultorio-change', {
+          detail: {
+            consultorioId: String(numericIdx),
+            source: 'multisede_schedule_switch'
+          }
+        }));
+      }catch(_){}
+      try{
         if(window.bootstrap?.Tab){
           window.bootstrap.Tab.getOrCreateInstance(tabBtn).show();
         }else{
@@ -4942,7 +4950,19 @@ function mxClearHorarioInputs(inputs){
       }, 60);
     });
 
-    root.querySelector('.mm-tabs-embed')?.addEventListener('shown.bs.tab', ()=>{
+    root.querySelector('.mm-tabs-embed')?.addEventListener('shown.bs.tab', (event)=>{
+      const target = event?.target instanceof HTMLElement ? event.target : null;
+      const consultorioTarget = String(target?.getAttribute('data-bs-target') || '').match(/^#sede(\d+)$/);
+      if(consultorioTarget && consultorioTarget[1]){
+        try{
+          window.dispatchEvent(new CustomEvent('mxm:agenda-consultorio-change', {
+            detail: {
+              consultorioId: String(Number(consultorioTarget[1]) || ''),
+              source: 'multisede_tab_shown'
+            }
+          }));
+        }catch(_){}
+      }
       window.setTimeout(()=>{ refreshScheduleHeaders(); }, 40);
     });
 
