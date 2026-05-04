@@ -6925,22 +6925,36 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mx-agenda-calendar-wrap.mx-ag-custom-week-active #ag_calendar{
   display: none !important;
 }
+.mx-agenda-calendar-wrap.mx-ag-custom-week-active,
+.mx-agenda-calendar-wrap.mx-ag-custom-week-active.weekly-hours-collapsed,
+.mx-agenda-calendar-wrap.mx-ag-custom-week-active.weekly-hours-expanded{
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  padding-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
 .mx-ag-custom-week-root{
   position: relative;
   margin-top: 10px;
   width: 100%;
-  min-height: 220px;
+  min-height: 0;
   display: block;
   visibility: visible;
   opacity: 1;
   overflow-x: auto;
-  overflow-y: auto;
+  overflow-y: visible;
   z-index: 3;
+  flex: 0 0 auto;
 }
 .mx-ag-custom-week-grid{
   display: grid;
   gap: 10px;
   min-width: 860px;
+  align-content: start;
 }
 .mxm-custom-week-grid{
   display: grid;
@@ -6975,7 +6989,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   border: 1px solid #e2edf3;
   border-radius: 10px;
   background: #ffffff;
-  min-height: 160px;
+  min-height: 0;
   padding: 8px;
   display: grid;
   align-content: start;

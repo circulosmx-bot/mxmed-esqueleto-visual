@@ -1262,13 +1262,16 @@ console.info('app.js loaded :: 20251123a');
         return;
       }
 
-      const bounds = resolveCustomWeekHourBounds();
       const compactRange = resolveVisibleScheduleRange();
       const expandedRange = resolveExpandedVisibleScheduleRange();
-      const rangeUsedForRender = {
-        minTime: minutesToTime(bounds.min),
-        maxTime: minutesToTime(bounds.max),
-        mode: weeklyHoursExpanded ? 'expanded' : 'compact'
+      const selectedConsultorioMode = isAgendaAllConsultoriosMode() ? 'all' : 'specific';
+      const compactMin = timeToMinutes(compactRange?.minTime || '') ?? (8 * 60);
+      const compactMax = timeToMinutes(compactRange?.maxTime || '') ?? (20 * 60);
+      const expandedMin = timeToMinutes(expandedRange?.minTime || '') ?? compactMin;
+      const expandedMax = timeToMinutes(expandedRange?.maxTime || '') ?? compactMax;
+      const baseBounds = {
+        min: Math.max(0, Math.min(compactMin, expandedMin)),
+        max: Math.max(expandedMin + 30, expandedMax)
       };
       const eventSource = resolveCustomWeekEventSource();
       const allEvents = Array.isArray(eventSource?.events) ? eventSource.events : [];
@@ -1287,7 +1290,7 @@ console.info('app.js loaded :: 20251123a');
       let skippedByInactiveDay = 0;
       let skippedOutOfVisibleDays = 0;
       allEvents.forEach((eventRef)=>{
-        if(!isEventInCustomWeekTimeBounds(eventRef, bounds)){
+        if(!isEventInCustomWeekTimeBounds(eventRef, baseBounds)){
           skippedOutOfBounds += 1;
           return;
         }
@@ -1321,6 +1324,13 @@ console.info('app.js loaded :: 20251123a');
         byDay.get(key).push(eventRef);
       });
 
+      const wrapHeight = Number(els.calendarWrap?.getBoundingClientRect?.().height || 0);
+      const rootHeightBeforeRender = Number(root.getBoundingClientRect?.().height || 0);
+      const availableHeight = Math.max(220, Math.round((wrapHeight || rootHeightBeforeRender || 620) - 240));
+      const cardEstimatedHeight = 48;
+      const maxCardsPerColumn = Math.max(8, Math.floor(availableHeight / Math.max(1, cardEstimatedHeight)));
+      let hiddenCardsIfCompact = 0;
+
       const headerHtml = days.map((date, idx)=>{
         const title = getCustomWeekDayHeaderLabel(date, idx);
         const dateLabel = formatAgendaHeaderDateLabel(date);
@@ -1333,6 +1343,8 @@ console.info('app.js loaded :: 20251123a');
       }).join('');
 
       let renderedSlots = 0;
+      let currentCardsPerColumn = 0;
+      let totalHiddenCards = 0;
       const bodyHtml = days.map((date)=>{
         const key = formatYmdLocal(date);
         const rows = (byDay.get(key) || []).sort((a, b)=>{
@@ -1340,7 +1352,16 @@ console.info('app.js loaded :: 20251123a');
           const bTs = b?.start ? new Date(b.start).getTime() : 0;
           return aTs - bTs;
         });
-        const cards = rows
+        const renderableRows = rows.filter((eventRef)=>{
+          const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
+          return eventType !== 'availability';
+        });
+        const compactVisibleRows = renderableRows.slice(0, maxCardsPerColumn);
+        const rowsForDisplay = weeklyHoursExpanded ? renderableRows : compactVisibleRows;
+        hiddenCardsIfCompact += Math.max(0, renderableRows.length - compactVisibleRows.length);
+        totalHiddenCards += Math.max(0, renderableRows.length - rowsForDisplay.length);
+        currentCardsPerColumn = Math.max(currentCardsPerColumn, rowsForDisplay.length);
+        const cards = rowsForDisplay
           .map((eventRef)=>{
             const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
             const start = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
@@ -1367,9 +1388,6 @@ console.info('app.js loaded :: 20251123a');
                   <div class="mx-ag-custom-slot-consultorio">${escapeHtml(consultorioLabel.toUpperCase())}</div>
                 </button>
               `;
-            }
-            if(eventType === 'availability'){
-              return '';
             }
             renderedSlots += 1;
             const patient = sanitizeText(
@@ -1409,14 +1427,19 @@ console.info('app.js loaded :: 20251123a');
       const domCards = Array.from(root.querySelectorAll('.mx-ag-custom-slot-card, .mxm-custom-week-card'));
       const firstCard = domCards[0] || null;
       const firstColumn = firstCard?.closest('.mx-ag-custom-week-col, .mxm-custom-week-column') || null;
+      const gridEl = root.querySelector('.mx-ag-custom-week-grid, .mxm-custom-week-grid');
       const rootStyle = window.getComputedStyle(root);
       const firstCardStyle = firstCard ? window.getComputedStyle(firstCard) : null;
       const firstColumnStyle = firstColumn ? window.getComputedStyle(firstColumn) : null;
+      const wrapHeightForDom = Number(els.calendarWrap?.getBoundingClientRect?.().height || 0);
+      const rootHeight = Number(root.getBoundingClientRect?.().height || 0);
+      const gridHeight = Number(gridEl?.getBoundingClientRect?.().height || 0);
+      const extraSpaceDetected = Math.max(0, Math.round(wrapHeightForDom - Math.max(rootHeight, gridHeight)));
       console.log('MXM CUSTOM WEEK DOM DEBUG', {
         rootFound: !!root,
         rootDisplay: sanitizeText(rootStyle?.display || ''),
         rootVisibility: sanitizeText(rootStyle?.visibility || ''),
-        rootHeight: Number(root.getBoundingClientRect?.().height || 0),
+        rootHeight,
         cardsCreated: renderedSlots,
         cardsInDom: domCards.length,
         firstCardText: firstCard ? sanitizeText(firstCard.textContent || '').slice(0, 120) : '',
@@ -1425,6 +1448,12 @@ console.info('app.js loaded :: 20251123a');
         firstCardHeight: firstCard ? Number(firstCard.getBoundingClientRect?.().height || 0) : 0,
         parentColumnDisplay: sanitizeText(firstColumnStyle?.display || ''),
         parentColumnHeight: firstColumn ? Number(firstColumn.getBoundingClientRect?.().height || 0) : 0
+      });
+      console.log('MXM CUSTOM WEEK HEIGHT DEBUG', {
+        rootHeight,
+        gridHeight,
+        wrapHeight: wrapHeightForDom,
+        extraSpaceDetected
       });
       const firstFive = allEvents.slice(0, 5).map((eventRef)=>{
         const start = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
@@ -1450,8 +1479,33 @@ console.info('app.js loaded :: 20251123a');
         : (allEvents.length === 0
           ? `event_source_${sanitizeText(eventSource?.source || 'unknown')}_empty`
           : 'all_events_filtered_or_out_of_range');
+      const rangeUsedForRender = weeklyHoursExpanded
+        ? {
+          minTime: minutesToTime(baseBounds.min),
+          maxTime: minutesToTime(baseBounds.max),
+          mode: 'expanded'
+        }
+        : {
+          minTime: compactRange?.minTime || minutesToTime(compactMin),
+          maxTime: compactRange?.maxTime || minutesToTime(compactMax),
+          mode: 'compact'
+        };
+      const showMoreButton = hiddenCardsIfCompact > 0;
+      if(els.hoursToggle){
+        els.hoursToggle.classList.toggle('d-none', !showMoreButton);
+        els.hoursToggle.disabled = !showMoreButton;
+        els.hoursToggle.textContent = weeklyHoursExpanded ? 'Ver menos horas' : 'Ver más horas';
+        els.hoursToggle.setAttribute('aria-expanded', weeklyHoursExpanded ? 'true' : 'false');
+      }
       console.log('MXM CUSTOM WEEK HOURS DEBUG', {
         isExpanded: weeklyHoursExpanded,
+        selectedConsultorioMode,
+        availableHeight,
+        cardEstimatedHeight,
+        maxCardsPerColumn,
+        currentCardsPerColumn,
+        totalHiddenCards,
+        showMoreButton,
         compactRange,
         expandedRange,
         rangeUsedForRender,
