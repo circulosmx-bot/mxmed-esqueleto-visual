@@ -6919,6 +6919,142 @@ body{margin:0;background:var(--mm-fondo-base);}
   max-width: 100%;
   overflow: hidden;
 }
+.mx-agenda-calendar-wrap.mx-ag-custom-week-active .fc .fc-view-harness{
+  display: none !important;
+}
+.mx-agenda-calendar-wrap.mx-ag-custom-week-active #ag_calendar{
+  display: none !important;
+}
+.mx-ag-custom-week-root{
+  position: relative;
+  margin-top: 10px;
+  width: 100%;
+  min-height: 220px;
+  display: block;
+  visibility: visible;
+  opacity: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+  z-index: 3;
+}
+.mx-ag-custom-week-grid{
+  display: grid;
+  gap: 10px;
+  min-width: 860px;
+}
+.mxm-custom-week-grid{
+  display: grid;
+}
+.mx-ag-custom-week-head,
+.mx-ag-custom-week-body{
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+.mxm-custom-week-body{
+  display: grid;
+}
+.mx-ag-custom-week-col-head{
+  border: 1px solid #dbe7ee;
+  border-radius: 10px;
+  background: #f7fafc;
+  padding: 8px 6px;
+  text-align: center;
+}
+.mx-ag-custom-week-col-title{
+  font-size: .82rem;
+  font-weight: 800;
+  color: #1b4861;
+}
+.mx-ag-custom-week-col-date{
+  font-size: .74rem;
+  font-weight: 700;
+  color: #4a6f84;
+}
+.mx-ag-custom-week-col{
+  border: 1px solid #e2edf3;
+  border-radius: 10px;
+  background: #ffffff;
+  min-height: 160px;
+  padding: 8px;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+.mxm-custom-week-column{
+  display: grid;
+}
+.mx-ag-custom-slot-card{
+  border: 0;
+  border-radius: 8px;
+  padding: 5px 6px;
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+.mxm-custom-week-card{
+  display: grid;
+  visibility: visible;
+  opacity: 1;
+}
+.mx-ag-custom-slot-top{
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+}
+.mx-ag-custom-slot-time{
+  font-size: 1.08rem;
+  font-weight: 900;
+  line-height: 1.05;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.mx-ag-custom-slot-primary{
+  font-size: .76rem;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mx-ag-custom-slot-consultorio{
+  font-size: .65rem;
+  font-weight: 600;
+  line-height: 1.1;
+  text-transform: uppercase;
+  color: #3f5d6f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mx-ag-custom-slot-card.is-available{
+  background: rgba(25, 135, 84, 0.14);
+  color: #0f5132;
+}
+.mx-ag-custom-slot-card.is-occupied{
+  background: #eef5fb;
+  color: #1c4863;
+}
+.mx-ag-custom-week-empty-day{
+  font-size: .74rem;
+  font-weight: 600;
+  color: #8296a4;
+}
+.mx-ag-custom-week-loading,
+.mx-ag-custom-week-empty{
+  padding: 12px;
+  font-size: .82rem;
+  font-weight: 600;
+  color: #6d8393;
+}
+@media (max-width: 991px){
+  .mx-ag-custom-week-grid{
+    min-width: 760px;
+  }
+}
 .mx-agenda-calendar-wrap.weekly-hours-collapsed{
   height: clamp(700px, 78vh, 980px);
   min-height: 700px;
@@ -6954,6 +7090,22 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mx-agenda-calendar-wrap .fc .fc-col-header-cell-cushion{
   color: #284f66;
   font-weight: 600;
+  text-decoration: none !important;
+}
+.mx-agenda-calendar-wrap .fc .fc-col-header-cell-cushion:hover,
+.mx-agenda-calendar-wrap .fc .fc-col-header-cell-cushion:focus-visible{
+  text-decoration: none !important;
+}
+.mx-agenda-calendar-wrap .fc :is(.fc-timeGridWeek-view, .fc-timeGridDay-view) .fc-timegrid-axis,
+.mx-agenda-calendar-wrap .fc :is(.fc-timeGridWeek-view, .fc-timeGridDay-view) .fc-timegrid-slot-label{
+  display:none !important;
+}
+.mx-agenda-calendar-wrap .fc :is(.fc-timeGridWeek-view, .fc-timeGridDay-view) .fc-timegrid-axis{
+  width:0 !important;
+  min-width:0 !important;
+  max-width:0 !important;
+  padding:0 !important;
+  border:0 !important;
 }
 .mx-agenda-calendar-wrap .fc .fc-timegrid-event .fc-event-time{
   display: none !important;
@@ -6989,11 +7141,34 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 
 .mx-agenda-calendar-wrap .fc :is(.fc-timeGridWeek-view, .fc-timeGridDay-view) .fc-timegrid-event{
-  box-shadow: 0 0 0 6px #f4f7f9;
+  box-shadow: none !important;
 }
 
 .mx-agenda-calendar-wrap .fc :is(.fc-timeGridWeek-view, .fc-timeGridDay-view) .fc-timegrid-event-harness-inset .fc-timegrid-event{
-  box-shadow: 0 0 0 6px #f4f7f9 !important;
+  box-shadow: none !important;
+}
+.mx-agenda-calendar-wrap .fc :is(.fc-timeGridWeek-view, .fc-timeGridDay-view) .fc-timegrid-event-harness{
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+.mxm-agenda-day-head{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  min-height:44px;
+  line-height:1.1;
+}
+.mxm-agenda-day-title{
+  font-size:.84rem;
+  font-weight:800;
+  color:#1b4861;
+}
+.mxm-agenda-day-date{
+  font-size:.74rem;
+  font-weight:700;
+  color:#4a6f84;
 }
 
 .mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .fc-daygrid-day-frame{
@@ -7106,10 +7281,66 @@ body{margin:0;background:var(--mm-fondo-base);}
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.mx-ag-slot-card{
+  display:grid;
+  gap:2px;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  padding:3px 6px;
+  border-radius:8px;
+  box-sizing:border-box;
+  overflow:hidden;
+}
+.mx-ag-slot-top{
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+  min-width:0;
+}
+.mx-ag-slot-time{
+  font-size:1.2rem;
+  font-weight:900;
+  line-height:1.1;
+  white-space:nowrap;
+  flex:0 0 auto;
+}
+.mx-ag-slot-primary{
+  font-size:.78rem;
+  font-weight:700;
+  line-height:1.15;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  min-width:0;
+  flex:1 1 auto;
+}
+.mx-ag-slot-consultorio{
+  font-size:.66rem;
+  font-weight:600;
+  line-height:1.1;
+  opacity:.92;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  text-transform:uppercase;
+  letter-spacing:.01em;
+  margin-top:4px;
+}
+.mx-ag-slot-card.is-available{
+  background:rgba(25, 135, 84, 0.14);
+}
+.mx-ag-slot-card.is-occupied{
+  background:transparent;
+}
 .mx-ag-event-cell.is-block-conflict{
   background: rgba(220, 53, 69, 0.16);
   border: 1px solid rgba(220, 53, 69, 0.46);
   border-radius: 6px;
+}
+.mx-ag-slot-card.is-block-conflict{
+  background: rgba(220, 53, 69, 0.16);
+  border: 1px solid rgba(220, 53, 69, 0.46);
 }
 .mx-ag-event-state{
   font-size: .76rem;
@@ -7223,6 +7454,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   background: transparent !important;
   padding: 0 2px;
   pointer-events: auto !important;
+}
+.mx-agenda-calendar-wrap .fc .fc-timegrid-event.fc-event-mirror{
+  box-shadow:none !important;
 }
 .mx-ag-cancelled-chip{
   display: inline-flex;
