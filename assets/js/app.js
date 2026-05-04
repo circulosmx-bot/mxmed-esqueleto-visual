@@ -671,14 +671,35 @@ console.info('app.js loaded :: 20251123a');
   let consultorioScheduleActiveDays = null;
   let consultorioScheduleDaysKnown = false;
   let consultorioScheduleLoadedForConsultorioId = '';
+  let customWeekAnchorDate = null;
   let agendaRollingStartDate = null;
   let customWeekRoot = null;
   let customWeekPendingRaf = 0;
   let agendaLatestEventsForCustomWeek = [];
   let customWeekLastForcedRefetchAt = 0;
+  let customWeekOperationalContextCache = null;
+  let customWeekLastRenderedDays = [];
+  let customWeekIncludeAnchorEvenIfInactive = true;
+  let customWeekVisibleDaysAction = 'init';
+  let lastCalendarViewType = '';
+  let customWeekAvailabilityRequests = 0;
+  let customWeekAppointmentsRequests = 0;
+  let customWeekLastEventsRangeKey = '';
+  let customWeekExpectedRangeKey = '';
+  let customWeekLastBridgeMeta = {
+    rangeStart: '',
+    rangeEnd: '',
+    mode: '',
+    consultoriosIncluded: [],
+    availabilityByDate: {},
+    skippedByDate: {},
+    appointmentsByDate: {},
+    activeWeekdays: []
+  };
   let availabilityOmitConsultorioSupport = null;
   let globalAgendaExpandedVisibleRange = null;
   let globalAgendaExpandedVisibleRangeLoading = false;
+  let agendaConsultoriosReady = false;
   let patientSearchDebounceTimer = null;
   let patientIndexCache = null;
   let patientIndexPromise = null;
@@ -956,6 +977,7 @@ console.info('app.js loaded :: 20251123a');
     let maxMinutes = null;
     let rangesFound = 0;
     let hasSaturdaySchedule = false;
+    const activeDaysUnion = new Set();
 
     const responses = await Promise.allSettled(
       consultorios.map((consultorioId)=>{
@@ -983,6 +1005,14 @@ console.info('app.js loaded :: 20251123a');
         }
       }
       const parsed = buildFullCalendarBusinessHoursFromSchedule(json.data);
+      if(Array.isArray(parsed?.activeDays)){
+        parsed.activeDays.forEach((day)=>{
+          const num = Number(day);
+          if(Number.isInteger(num) && num >= 0 && num <= 6){
+            activeDaysUnion.add(num);
+          }
+        });
+      }
       if(!parsed?.hasRange){
         return;
       }
@@ -1006,7 +1036,8 @@ console.info('app.js loaded :: 20251123a');
       source: 'all_consultorios_schedule',
       consultoriosCount: consultorios.length,
       consultoriosWithRange: rangesFound,
-      hasSaturdaySchedule
+      hasSaturdaySchedule,
+      activeDays: Array.from(activeDaysUnion).sort((a, b)=> a - b)
     };
   };
   const ensureGlobalAgendaExpandedVisibleRange = async ({ force = false } = {})=>{
@@ -1074,26 +1105,427 @@ console.info('app.js loaded :: 20251123a');
     return String(viewType || '') === 'timeGridWeek' ? 0 : 1;
   };
   const resolveAgendaRollingStartDate = ({ forceToday = false } = {})=>{
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = toLocalDayDate(new Date());
     const shouldReset = forceToday
-      || !(agendaRollingStartDate instanceof Date)
-      || Number.isNaN(agendaRollingStartDate.getTime());
+      || !(customWeekAnchorDate instanceof Date)
+      || Number.isNaN(customWeekAnchorDate.getTime());
     if(shouldReset){
-      agendaRollingStartDate = new Date(today);
+      customWeekAnchorDate = new Date(today || new Date());
     }
-    return new Date(agendaRollingStartDate);
+    agendaRollingStartDate = new Date(customWeekAnchorDate);
+    return new Date(customWeekAnchorDate);
   };
-  const resolveAgendaRollingWeekVisibleRange = (_currentDateLike, daysVisible = 6)=>{
+  const setCustomWeekAnchorDate = (dateLike)=>{
+    const next = toLocalDayDate(dateLike);
+    if(!next){
+      return resolveAgendaRollingStartDate({ forceToday: true });
+    }
+    customWeekAnchorDate = new Date(next);
+    agendaRollingStartDate = new Date(next);
+    return new Date(next);
+  };
+  const shiftCustomWeekAnchorDate = (days = 0)=>{
+    const current = resolveAgendaRollingStartDate();
+    const next = addLocalDays(current, Number(days || 0));
+    return setCustomWeekAnchorDate(next || current);
+  };
+  const resolveCustomWeekActiveWeekdaysContext = ()=>{
+    const consultorioMode = isAgendaAllConsultoriosMode() ? 'all' : 'specific';
+    const activeWeekdays = new Set();
+    let known = consultorioScheduleDaysKnown === true;
+    let source = 'unknown';
+    if(consultorioScheduleActiveDays instanceof Set){
+      consultorioScheduleActiveDays.forEach((day)=>{
+        const num = Number(day);
+        if(Number.isInteger(num) && num >= 0 && num <= 6){
+          activeWeekdays.add(num);
+        }
+      });
+      if(activeWeekdays.size > 0 || consultorioScheduleDaysKnown === true){
+        source = 'consultorio_schedule_active_days';
+      }
+    }
+    if(
+      consultorioMode === 'all'
+      && activeWeekdays.size === 0
+      && Array.isArray(globalAgendaExpandedVisibleRange?.activeDays)
+    ){
+      globalAgendaExpandedVisibleRange.activeDays.forEach((day)=>{
+        const num = Number(day);
+        if(Number.isInteger(num) && num >= 0 && num <= 6){
+          activeWeekdays.add(num);
+        }
+      });
+      known = true;
+      source = 'global_union_active_days';
+    }
+    if(
+      consultorioMode === 'all'
+      && activeWeekdays.size === 0
+      && customWeekLastBridgeMeta
+      && typeof customWeekLastBridgeMeta === 'object'
+      && customWeekLastBridgeMeta.availabilityByDate
+      && typeof customWeekLastBridgeMeta.availabilityByDate === 'object'
+    ){
+      Object.entries(customWeekLastBridgeMeta.availabilityByDate).forEach(([dateKey, countRaw])=>{
+        const count = Number(countRaw || 0);
+        if(!(count > 0)) return;
+        const weekday = resolveFcWeekdayFromDateYmd(dateKey);
+        if(Number.isInteger(weekday) && weekday >= 0 && weekday <= 6){
+          activeWeekdays.add(weekday);
+        }
+      });
+      if(activeWeekdays.size > 0){
+        known = true;
+        source = 'bridge_availability_union_days';
+      }
+    }
+    if(
+      activeWeekdays.size === 0
+      && consultorioScheduleDaysKnown === true
+      && consultorioScheduleStrictInactiveDays instanceof Set
+    ){
+      [0, 1, 2, 3, 4, 5, 6].forEach((day)=>{
+        if(!consultorioScheduleStrictInactiveDays.has(day)){
+          activeWeekdays.add(day);
+        }
+      });
+      known = true;
+      source = 'strict_inactive_days_complement';
+    }
+    return {
+      consultorioMode,
+      activeWeekdays,
+      activeDaysKnown: known,
+      source
+    };
+  };
+  const normalizeCustomWeekDateKeySet = (rows = [])=>{
+    const set = new Set();
+    (Array.isArray(rows) ? rows : []).forEach((row)=>{
+      const raw = sanitizeText(
+        row?.date
+        || row?.day
+        || row?.day_key
+        || row?.dateYmd
+        || row
+        || ''
+      );
+      if(/^\d{4}-\d{2}-\d{2}$/.test(raw)){
+        set.add(raw);
+        return;
+      }
+      const parsed = toLocalDayDate(raw);
+      if(parsed instanceof Date && !Number.isNaN(parsed.getTime())){
+        set.add(formatYmdLocal(parsed));
+      }
+    });
+    return set;
+  };
+  const resolveCustomWeekOperationalExclusionsContext = ({ consultorioMode = 'specific', consultorioId = '' } = {})=>{
+    const op = (window.mxmAgendaOperationalExclusions && typeof window.mxmAgendaOperationalExclusions === 'object')
+      ? window.mxmAgendaOperationalExclusions
+      : {};
+    const globalHolidayDates = normalizeCustomWeekDateKeySet(
+      op.holidays || []
+    );
+    const globalBlockedDates = normalizeCustomWeekDateKeySet(
+      op.blockedDays || []
+    );
+    const globalVacationDates = normalizeCustomWeekDateKeySet(
+      op.vacationDays || []
+    );
+    const byConsultorioRows = (op.blockedByConsultorio && typeof op.blockedByConsultorio === 'object')
+      ? op.blockedByConsultorio
+      : {};
+    const byConsultorioDates = new Set();
+    const safeConsultorioId = sanitizeText(consultorioId || '');
+    if(consultorioMode === 'all'){
+      Object.values(byConsultorioRows).forEach((value)=>{
+        normalizeCustomWeekDateKeySet(value).forEach((dateKey)=> byConsultorioDates.add(dateKey));
+      });
+    }else if(safeConsultorioId){
+      normalizeCustomWeekDateKeySet(byConsultorioRows[safeConsultorioId]).forEach((dateKey)=> byConsultorioDates.add(dateKey));
+    }
+    return {
+      holidayDateKeys: globalHolidayDates,
+      blockedDateKeys: globalBlockedDates,
+      blockedByConsultorioDateKeys: byConsultorioDates,
+      vacationDateKeys: globalVacationDates
+    };
+  };
+  const isCustomWeekDayOperative = (dateLike, context = {})=>{
+    const date = toLocalDayDate(dateLike);
+    if(!(date instanceof Date) || Number.isNaN(date.getTime())){
+      return {
+        operative: false,
+        reason: 'invalid_date',
+        weekday: null,
+        dateKey: ''
+      };
+    }
+    const dateKey = formatYmdLocal(date);
+    const weekday = Number(date.getDay());
+    const activeWeekdays = (context.activeWeekdays instanceof Set) ? context.activeWeekdays : new Set();
+    const hasActiveDays = activeWeekdays.size > 0;
+    const hasActiveSchedule = hasActiveDays ? activeWeekdays.has(weekday) : false;
+    if(!hasActiveSchedule){
+      return {
+        operative: false,
+        reason: 'no_active_schedule',
+        weekday,
+        dateKey
+      };
+    }
+    const holidayDateKeys = (context.holidayDateKeys instanceof Set) ? context.holidayDateKeys : new Set();
+    if(holidayDateKeys.has(dateKey)){
+      return {
+        operative: false,
+        reason: 'holiday',
+        weekday,
+        dateKey
+      };
+    }
+    const blockedDateKeys = (context.blockedDateKeys instanceof Set) ? context.blockedDateKeys : new Set();
+    if(blockedDateKeys.has(dateKey)){
+      return {
+        operative: false,
+        reason: 'blocked_day',
+        weekday,
+        dateKey
+      };
+    }
+    const blockedByConsultorioDateKeys = (context.blockedByConsultorioDateKeys instanceof Set)
+      ? context.blockedByConsultorioDateKeys
+      : new Set();
+    if(blockedByConsultorioDateKeys.has(dateKey)){
+      return {
+        operative: false,
+        reason: 'blocked_by_consultorio',
+        weekday,
+        dateKey
+      };
+    }
+    const vacationDateKeys = (context.vacationDateKeys instanceof Set) ? context.vacationDateKeys : new Set();
+    if(vacationDateKeys.has(dateKey)){
+      return {
+        operative: false,
+        reason: 'vacation_or_absence',
+        weekday,
+        dateKey
+      };
+    }
+    return {
+      operative: true,
+      reason: 'active_schedule',
+      weekday,
+      dateKey
+    };
+  };
+  const resolveCustomWeekVisibleDaysMeta = (options = {})=>{
+    const anchorDate = resolveAgendaRollingStartDate();
+    const context = resolveCustomWeekActiveWeekdaysContext();
+    const consultorioId = sanitizeText(getAvailabilityConsultorioId() || '');
+    const exclusions = resolveCustomWeekOperationalExclusionsContext({
+      consultorioMode: context.consultorioMode,
+      consultorioId
+    });
+    const includeAnchorEvenIfInactive = customWeekIncludeAnchorEvenIfInactive === true;
+    const visibleDays = [];
+    if(anchorDate instanceof Date && !Number.isNaN(anchorDate.getTime())){
+      for(let index = 0; index < 6; index += 1){
+        const day = addLocalDays(anchorDate, index);
+        if(day instanceof Date && !Number.isNaN(day.getTime())){
+          visibleDays.push(day);
+        }
+      }
+    }
+    const reasonByDay = {};
+    visibleDays.forEach((day, index)=>{
+      reasonByDay[formatYmdLocal(day)] = index === 0
+        ? (includeAnchorEvenIfInactive ? 'anchor_contextual' : 'anchor_fixed')
+        : 'calendar_block';
+    });
+    const operationalContext = {
+      consultorioMode: context.consultorioMode,
+      consultorioId,
+      activeWeekdays: context.activeWeekdays,
+      activeDaysKnown: context.activeDaysKnown,
+      holidayDateKeys: exclusions.holidayDateKeys,
+      blockedDateKeys: exclusions.blockedDateKeys,
+      blockedByConsultorioDateKeys: exclusions.blockedByConsultorioDateKeys,
+      vacationDateKeys: exclusions.vacationDateKeys
+    };
+    customWeekOperationalContextCache = operationalContext;
+    console.log('MXM CUSTOM WEEK VISIBLE DAYS DEBUG', {
+      action: sanitizeText(customWeekVisibleDaysAction || 'init'),
+      anchorDate: anchorDate instanceof Date ? anchorDate.toISOString() : '',
+      includeAnchorEvenIfInactive,
+      consultorioMode: context.consultorioMode,
+      activeWeekdays: Array.from(context.activeWeekdays).sort((a, b)=> a - b),
+      activeDaysSource: context.source,
+      activeDaysKnown: context.activeDaysKnown === true,
+      holidayDates: Array.from(exclusions.holidayDateKeys),
+      blockedDates: Array.from(exclusions.blockedDateKeys),
+      blockedByConsultorioDates: Array.from(exclusions.blockedByConsultorioDateKeys),
+      vacationDates: Array.from(exclusions.vacationDateKeys),
+      finalColumnsCount: visibleDays.length,
+      visibleDays: visibleDays.map((day)=> formatYmdLocal(day)),
+      skippedDays: [],
+      reasonByDay
+    });
+    return {
+      anchorDate,
+      includeAnchorEvenIfInactive,
+      consultorioMode: context.consultorioMode,
+      activeWeekdays: context.activeWeekdays,
+      activeDaysKnown: context.activeDaysKnown,
+      operationalContext,
+      visibleDays,
+      skippedDays: [],
+      reasonByDay
+    };
+  };
+  const resolveCustomWeekRangeFromAnchor = (anchorDateLike = null, daysVisible = 6, options = {})=>{
     const safeDaysVisible = Math.max(1, Number.parseInt(String(daysVisible || 6), 10) || 6);
-    const base = resolveAgendaRollingStartDate();
-    if(!(base instanceof Date) || Number.isNaN(base.getTime())){
+    const anchor = toLocalDayDate(anchorDateLike || resolveAgendaRollingStartDate());
+    if(!(anchor instanceof Date) || Number.isNaN(anchor.getTime())){
       return null;
     }
-    const start = new Date(base);
-    const end = new Date(base);
-    end.setDate(end.getDate() + safeDaysVisible);
-    return { start, end };
+    const action = sanitizeText(options?.action || customWeekVisibleDaysAction || 'init') || 'init';
+    const skipSundays = action === 'prev' || action === 'next';
+    const startDate = new Date(anchor);
+    const visibleDays = [];
+    let cursor = new Date(startDate);
+    let guard = 0;
+    while(visibleDays.length < safeDaysVisible && guard < 60){
+      if(!(skipSundays && Number(cursor.getDay()) === 0)){
+        visibleDays.push(new Date(cursor));
+      }
+      const nextCursor = addLocalDays(cursor, 1);
+      if(!(nextCursor instanceof Date) || Number.isNaN(nextCursor.getTime())){
+        break;
+      }
+      cursor = nextCursor;
+      guard += 1;
+    }
+    if(!visibleDays.length){
+      visibleDays.push(new Date(startDate));
+    }
+    const firstVisible = toLocalDayDate(visibleDays[0]) || startDate;
+    const lastVisible = toLocalDayDate(visibleDays[visibleDays.length - 1]) || firstVisible;
+    const endDate = addLocalDays(lastVisible, 1);
+    if(!(endDate instanceof Date) || Number.isNaN(endDate.getTime())){
+      return null;
+    }
+    const rangeKey = `${formatYmdLocal(firstVisible)}__${formatYmdLocal(endDate)}`;
+    return {
+      anchorDate: new Date(anchor),
+      startDate: new Date(firstVisible),
+      endDate,
+      visibleDays,
+      rangeKey
+    };
+  };
+  const resolveAgendaRollingWeekVisibleRange = (_currentDateLike, daysVisible = 6)=>{
+    const range = resolveCustomWeekRangeFromAnchor(resolveAgendaRollingStartDate(), daysVisible);
+    if(!range) return null;
+    return {
+      start: new Date(range.startDate),
+      end: new Date(range.endDate)
+    };
+  };
+  const syncCustomWeekToolbarTitle = ()=>{
+    if(!calendar || !isCustomWeekActive()) return;
+    const range = resolveCustomWeekRangeFromAnchor(resolveAgendaRollingStartDate(), 6);
+    const start = range?.startDate instanceof Date ? range.startDate : null;
+    const end = range?.endDate instanceof Date ? range.endDate : null;
+    if(!(start instanceof Date) || !(end instanceof Date)) return;
+    const customTitle = formatAgendaCustomWeekTitle(start, end);
+    if(customTitle){
+      const titleEl = els.calendarWrap?.querySelector?.('.fc .fc-toolbar-title');
+      if(titleEl instanceof HTMLElement){
+        titleEl.textContent = customTitle;
+      }
+      const customTitleEl = ensureCustomWeekRoot()?.querySelector?.('[data-custom-week-nav-title]');
+      if(customTitleEl instanceof HTMLElement){
+        customTitleEl.textContent = customTitle;
+      }
+    }
+  };
+  const toCustomWeekRangeKey = (startLike, endLike)=>{
+    const start = toLocalDayDate(startLike);
+    const end = toLocalDayDate(endLike);
+    if(!(start instanceof Date) || Number.isNaN(start.getTime())) return '';
+    if(!(end instanceof Date) || Number.isNaN(end.getTime())) return '';
+    return `${formatYmdLocal(start)}__${formatYmdLocal(end)}`;
+  };
+  const logCustomWeekNavigationDebug = ({ action = 'unknown', oldAnchorDate = null, newAnchorDate = null } = {})=>{
+    const range = resolveCustomWeekRangeFromAnchor(resolveAgendaRollingStartDate(), 6);
+    const visibleStart = range?.startDate instanceof Date ? range.startDate.toISOString() : '';
+    const visibleEnd = range?.endDate instanceof Date ? range.endDate.toISOString() : '';
+    const renderedCards = ensureCustomWeekRoot()?.querySelectorAll?.('.mx-ag-custom-slot-card')?.length || 0;
+    console.log('MXM CUSTOM WEEK NAV DEBUG', {
+      action: sanitizeText(action || 'unknown'),
+      oldAnchorDate: oldAnchorDate instanceof Date ? oldAnchorDate.toISOString() : '',
+      newAnchorDate: newAnchorDate instanceof Date ? newAnchorDate.toISOString() : '',
+      visibleStart,
+      visibleEnd,
+      availabilityRequests: customWeekAvailabilityRequests,
+      appointmentsRequests: customWeekAppointmentsRequests,
+      renderedCards
+    });
+  };
+  const renderCustomWeekNavBarHtml = ()=>{
+    const range = resolveCustomWeekRangeFromAnchor(resolveAgendaRollingStartDate(), 6);
+    const title = (range?.startDate instanceof Date && range?.endDate instanceof Date)
+      ? formatAgendaCustomWeekTitle(range.startDate, range.endDate)
+      : '';
+    return `
+      <div class="mx-ag-custom-week-nav" role="group" aria-label="Navegación semanal">
+        <button type="button"
+          class="mx-ag-custom-week-nav-btn"
+          data-custom-week-nav="prev"
+          aria-label="Semana anterior">←</button>
+        <div class="mx-ag-custom-week-nav-title" data-custom-week-nav-title>${escapeHtml(title || 'Semana')}</div>
+        <button type="button"
+          class="mx-ag-custom-week-nav-btn"
+          data-custom-week-nav="next"
+          aria-label="Semana siguiente">→</button>
+      </div>
+    `;
+  };
+  const navigateCustomWeekByOffset = (direction = 'next')=>{
+    if(!calendar) return;
+    const action = direction === 'prev' ? 'prev' : 'next';
+    customWeekVisibleDaysAction = action;
+    customWeekIncludeAnchorEvenIfInactive = false;
+    const currentViewType = String(calendar.view?.type || '');
+    if(currentViewType !== 'timeGridWeek'){
+      if(action === 'prev'){
+        try{ calendar.prev(); }catch(_){}
+      }else{
+        try{ calendar.next(); }catch(_){}
+      }
+      return;
+    }
+    const oldAnchor = resolveAgendaRollingStartDate();
+    const shiftedAnchor = shiftCustomWeekAnchorDate(action === 'prev' ? -6 : 6);
+    let newAnchor = shiftedAnchor;
+    if(newAnchor instanceof Date && !Number.isNaN(newAnchor.getTime()) && Number(newAnchor.getDay()) === 0){
+      const adjusted = addLocalDays(newAnchor, action === 'next' ? 1 : -1);
+      if(adjusted instanceof Date && !Number.isNaN(adjusted.getTime())){
+        newAnchor = setCustomWeekAnchorDate(adjusted);
+      }
+    }
+    try{
+      calendar.changeView('timeGridWeek', newAnchor);
+    }catch(_){}
+    window.setTimeout(()=>{
+      syncCustomWeekToolbarTitle();
+      scheduleCustomWeekRender();
+      logCustomWeekNavigationDebug({ action, oldAnchorDate: oldAnchor, newAnchorDate: newAnchor });
+    }, 60);
   };
   const ensureCustomWeekRoot = ()=>{
     if(customWeekRoot instanceof HTMLElement && customWeekRoot.isConnected){
@@ -1116,15 +1548,8 @@ console.info('app.js loaded :: 20251123a');
     return String(calendar?.view?.type || '') === 'timeGridWeek';
   };
   const resolveCustomWeekDays = ()=>{
-    const range = resolveAgendaRollingWeekVisibleRange(null, 6);
-    const days = [];
-    if(!(range?.start instanceof Date) || !(range?.end instanceof Date)) return days;
-    const cursor = new Date(range.start);
-    while(cursor < range.end){
-      days.push(new Date(cursor));
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    return days;
+    const range = resolveCustomWeekRangeFromAnchor(resolveAgendaRollingStartDate(), 6);
+    return Array.isArray(range?.visibleDays) ? range.visibleDays : [];
   };
   const resolveCustomWeekHourBounds = ()=>{
     const compactRange = resolveVisibleScheduleRange();
@@ -1145,10 +1570,12 @@ console.info('app.js loaded :: 20251123a');
       max: Math.max(compactStart + 30, compactEnd)
     };
   };
-  const getCustomWeekDayHeaderLabel = (date, dayIndex)=>{
+  const getCustomWeekDayHeaderLabel = (date)=>{
     if(!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
-    if(dayIndex === 0) return 'Hoy';
-    if(dayIndex === 1) return 'Mañana';
+    const today = toLocalDayDate(new Date());
+    const tomorrow = addLocalDays(today, 1);
+    if(today && isSameLocalDay(date, today)) return 'Hoy';
+    if(tomorrow && isSameLocalDay(date, tomorrow)) return 'Mañana';
     return capitalizeAgendaLabel(
       new Intl.DateTimeFormat('es-MX', { weekday: 'long' }).format(date)
     );
@@ -1161,14 +1588,29 @@ console.info('app.js loaded :: 20251123a');
     const endMin = (endDate.getHours() * 60) + endDate.getMinutes();
     return startMin < bounds.max && endMin > bounds.min;
   };
+  const resolveCurrentCustomWeekOperationalContext = ()=>{
+    const freshMeta = resolveCustomWeekVisibleDaysMeta();
+    const freshContext = freshMeta?.operationalContext;
+    if(freshContext && typeof freshContext === 'object'){
+      return freshContext;
+    }
+    return (customWeekOperationalContextCache && typeof customWeekOperationalContextCache === 'object')
+      ? customWeekOperationalContextCache
+      : null;
+  };
   const shouldRenderAvailabilityEventInCustomWeek = (eventRef)=>{
     const startDate = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
     if(Number.isNaN(startDate.getTime())) return false;
-    const weekday = Number(startDate.getDay());
-    if(consultorioScheduleStrictInactiveDays instanceof Set && consultorioScheduleStrictInactiveDays.has(weekday)){
-      return false;
+    const context = resolveCurrentCustomWeekOperationalContext();
+    if(!context || typeof context !== 'object'){
+      return true;
     }
-    return true;
+    const activeSet = (context.activeWeekdays instanceof Set) ? context.activeWeekdays : null;
+    if(!activeSet || activeSet.size === 0){
+      return true;
+    }
+    const operative = isCustomWeekDayOperative(startDate, context || {});
+    return operative.operative === true;
   };
   const scheduleCustomWeekRender = ()=>{
     if(customWeekPendingRaf){
@@ -1243,17 +1685,39 @@ console.info('app.js loaded :: 20251123a');
     if(!isCustomWeekActive()){
       root.classList.add('d-none');
       els.calendarWrap?.classList.remove('mx-ag-custom-week-active');
+      customWeekLastRenderedDays = [];
       return;
     }
 
     root.classList.remove('d-none');
     els.calendarWrap?.classList.add('mx-ag-custom-week-active');
+    const scope = resolveAgendaAvailabilityConsultorioScope();
+    const consultoriosIncluded = Array.isArray(scope?.consultorios)
+      ? scope.consultorios.filter((id)=> isNumericId(id))
+      : [];
+    const shouldWaitConsultorios = isAgendaAllConsultoriosMode()
+      && agendaConsultoriosReady !== true
+      && consultoriosIncluded.length === 0;
+    if(shouldWaitConsultorios){
+      root.innerHTML = `
+        ${renderCustomWeekNavBarHtml()}
+        <div class="mx-ag-custom-week-loading">Cargando consultorios...</div>
+      `;
+      console.log('MXM CUSTOM WEEK DEBUG', {
+        phase: 'waiting_consultorios',
+        hasRoot: true,
+        consultoriosIncluded,
+        allMode: true
+      });
+      return;
+    }
     root.innerHTML = '<div class="mx-ag-custom-week-loading">Cargando disponibilidad...</div>';
 
     try{
-      const days = resolveCustomWeekDays();
+      const weekRange = resolveCustomWeekRangeFromAnchor(resolveAgendaRollingStartDate(), 6);
+      const days = Array.isArray(weekRange?.visibleDays) ? weekRange.visibleDays : [];
       if(!days.length){
-        root.innerHTML = '<div class="mx-ag-custom-week-empty">Sin datos para mostrar.</div>';
+        root.innerHTML = '<div class="mx-ag-custom-week-empty">No hay disponibilidad en este rango.</div>';
         console.log('MXM CUSTOM WEEK DEBUG', {
           phase: 'no_days',
           hasRoot: true,
@@ -1275,6 +1739,8 @@ console.info('app.js loaded :: 20251123a');
       };
       const eventSource = resolveCustomWeekEventSource();
       const allEvents = Array.isArray(eventSource?.events) ? eventSource.events : [];
+      const currentRangeKey = sanitizeText(weekRange?.rangeKey || '');
+      const hasRangeMismatch = !!currentRangeKey && currentRangeKey !== customWeekLastEventsRangeKey;
       if(!allEvents.length && calendar && isCustomWeekActive()){
         const now = Date.now();
         if((now - customWeekLastForcedRefetchAt) > 1500){
@@ -1282,8 +1748,32 @@ console.info('app.js loaded :: 20251123a');
           try{ calendar.refetchEvents(); }catch(_){}
         }
       }
-      const byDay = new Map(days.map((date)=> [formatYmdLocal(date), []]));
+      if(hasRangeMismatch && calendar && isCustomWeekActive()){
+        root.innerHTML = '<div class="mx-ag-custom-week-loading">Cargando disponibilidad...</div>';
+        console.log('MXM CUSTOM WEEK DEBUG', {
+          phase: 'waiting_fresh_cache',
+          expectedRangeKey: currentRangeKey,
+          cacheRangeKey: customWeekLastEventsRangeKey
+        });
+        console.log('MXM CUSTOM WEEK RANGE SINGLE SOURCE', {
+          anchorDate: weekRange?.anchorDate instanceof Date ? weekRange.anchorDate.toISOString() : '',
+          visibleDays: days.map((date)=> formatYmdLocal(date)),
+          startDate: weekRange?.startDate instanceof Date ? weekRange.startDate.toISOString() : '',
+          endDate: weekRange?.endDate instanceof Date ? weekRange.endDate.toISOString() : '',
+          rangeKey: currentRangeKey,
+          fetchRange: {
+            start: weekRange?.startDate instanceof Date ? weekRange.startDate.toISOString() : '',
+            end: weekRange?.endDate instanceof Date ? weekRange.endDate.toISOString() : ''
+          },
+          cacheRangeKey: customWeekLastEventsRangeKey,
+          titleRange: (weekRange?.startDate instanceof Date && weekRange?.endDate instanceof Date)
+            ? formatAgendaCustomWeekTitle(weekRange.startDate, weekRange.endDate)
+            : ''
+        });
+        return;
+      }
       const insideRangeEvents = [];
+      const filteredRows = [];
       let availabilityReceived = 0;
       let appointmentsReceived = 0;
       let skippedOutOfBounds = 0;
@@ -1310,10 +1800,6 @@ console.info('app.js loaded :: 20251123a');
         const startDate = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
         if(Number.isNaN(startDate.getTime())) return;
         const key = formatYmdLocal(startDate);
-        if(!byDay.has(key)){
-          skippedOutOfVisibleDays += 1;
-          return;
-        }
         insideRangeEvents.push({
           type: eventType || 'appointment',
           start: startDate.toISOString(),
@@ -1321,7 +1807,7 @@ console.info('app.js loaded :: 20251123a');
             ? eventRef.end.toISOString()
             : ''
         });
-        byDay.get(key).push(eventRef);
+        filteredRows.push({ key, eventRef });
       });
 
       const wrapHeight = Number(els.calendarWrap?.getBoundingClientRect?.().height || 0);
@@ -1330,9 +1816,45 @@ console.info('app.js loaded :: 20251123a');
       const cardEstimatedHeight = 48;
       const maxCardsPerColumn = Math.max(8, Math.floor(availableHeight / Math.max(1, cardEstimatedHeight)));
       let hiddenCardsIfCompact = 0;
+      const finalDays = days.slice(0, 6);
+      if(finalDays.length < 6){
+        const baseAnchor = toLocalDayDate(resolveAgendaRollingStartDate());
+        const fallbackBase = finalDays.length ? toLocalDayDate(finalDays[0]) : baseAnchor;
+        if(fallbackBase instanceof Date && !Number.isNaN(fallbackBase.getTime())){
+          for(let index = finalDays.length; index < 6; index += 1){
+            const nextDay = addLocalDays(fallbackBase, index);
+            if(nextDay instanceof Date && !Number.isNaN(nextDay.getTime())){
+              finalDays.push(nextDay);
+            }
+          }
+        }
+      }
+      if(!finalDays.length){
+        customWeekLastRenderedDays = [];
+        root.innerHTML = `
+          ${renderCustomWeekNavBarHtml()}
+          <div class="mx-ag-custom-week-empty">No hay disponibilidad en este rango.</div>
+        `;
+        return;
+      }
+      const finalDayKeys = new Set(finalDays.map((date)=> formatYmdLocal(date)));
+      const byDay = new Map(finalDays.map((date)=> [formatYmdLocal(date), []]));
+      filteredRows.forEach(({ key, eventRef })=>{
+        if(!finalDayKeys.has(key)){
+          skippedOutOfVisibleDays += 1;
+          return;
+        }
+        byDay.get(key)?.push(eventRef);
+      });
+      customWeekLastRenderedDays = finalDays.map((date)=> new Date(date));
+      const finalStart = toLocalDayDate(finalDays[0]);
+      const finalEnd = addLocalDays(toLocalDayDate(finalDays[finalDays.length - 1]), 1);
+      const finalRangeTitle = (finalStart && finalEnd)
+        ? formatAgendaCustomWeekTitle(finalStart, finalEnd)
+        : 'Semana';
 
-      const headerHtml = days.map((date, idx)=>{
-        const title = getCustomWeekDayHeaderLabel(date, idx);
+      const headerHtml = finalDays.map((date)=>{
+        const title = getCustomWeekDayHeaderLabel(date);
         const dateLabel = formatAgendaHeaderDateLabel(date);
         return `
           <div class="mx-ag-custom-week-col-head">
@@ -1345,7 +1867,27 @@ console.info('app.js loaded :: 20251123a');
       let renderedSlots = 0;
       let currentCardsPerColumn = 0;
       let totalHiddenCards = 0;
-      const bodyHtml = days.map((date)=>{
+      const columnsWithCards = [];
+      const columnsWithoutCards = [];
+      const operationalContext = resolveCurrentCustomWeekOperationalContext() || {};
+      const activeWeekdaysDebug = Array.isArray(customWeekLastBridgeMeta?.activeWeekdays) && customWeekLastBridgeMeta.activeWeekdays.length
+        ? customWeekLastBridgeMeta.activeWeekdays
+        : Array.from((operationalContext?.activeWeekdays instanceof Set) ? operationalContext.activeWeekdays : []).sort((a, b)=> a - b);
+      const availabilityByDateDebug = (customWeekLastBridgeMeta && typeof customWeekLastBridgeMeta === 'object')
+        ? (customWeekLastBridgeMeta.availabilityByDate || {})
+        : {};
+      const skippedByDateDebug = (customWeekLastBridgeMeta && typeof customWeekLastBridgeMeta === 'object')
+        ? (customWeekLastBridgeMeta.skippedByDate || {})
+        : {};
+      const appointmentsByDateDebug = (customWeekLastBridgeMeta && typeof customWeekLastBridgeMeta === 'object')
+        ? (customWeekLastBridgeMeta.appointmentsByDate || {})
+        : {};
+      const availabilityRequestRangeDebug = {
+        start: sanitizeText(customWeekLastBridgeMeta?.rangeStart || ''),
+        end: sanitizeText(customWeekLastBridgeMeta?.rangeEnd || '')
+      };
+      const columnsCount = Math.max(1, Number(finalDays.length || 0));
+      const bodyHtml = finalDays.map((date)=>{
         const key = formatYmdLocal(date);
         const rows = (byDay.get(key) || []).sort((a, b)=>{
           const aTs = a?.start ? new Date(a.start).getTime() : 0;
@@ -1361,6 +1903,59 @@ console.info('app.js loaded :: 20251123a');
         hiddenCardsIfCompact += Math.max(0, renderableRows.length - compactVisibleRows.length);
         totalHiddenCards += Math.max(0, renderableRows.length - rowsForDisplay.length);
         currentCardsPerColumn = Math.max(currentCardsPerColumn, rowsForDisplay.length);
+        if(rowsForDisplay.length){
+          columnsWithCards.push(key);
+        }else{
+          columnsWithoutCards.push(key);
+          const weekday = Number(date.getDay());
+          const scheduleInfo = isCustomWeekDayOperative(date, operationalContext || {});
+          const scheduleReason = sanitizeText(scheduleInfo?.reason || '');
+          const activeWeekdaysSetForDebug = new Set(
+            (Array.isArray(activeWeekdaysDebug) ? activeWeekdaysDebug : [])
+              .map((day)=> Number(day))
+              .filter((day)=> Number.isInteger(day) && day >= 0 && day <= 6)
+          );
+          let hasScheduleForDay = scheduleInfo?.operative === true;
+          if(
+            !hasScheduleForDay
+            && scheduleReason === 'no_active_schedule'
+            && activeWeekdaysSetForDebug.has(weekday)
+          ){
+            hasScheduleForDay = true;
+          }
+          const availabilitySlotsReceivedForDate = Number(availabilityByDateDebug[key] || 0);
+          const appointmentsReceivedForDate = Number(appointmentsByDateDebug[key] || 0);
+          const skippedSlotsForDate = Number(skippedByDateDebug[key] || 0);
+          const cacheMissing = !!currentRangeKey && currentRangeKey !== customWeekLastEventsRangeKey;
+          let reason = 'unknown';
+          if(cacheMissing){
+            reason = 'cache_missing';
+          }else if(!hasScheduleForDay){
+            if(scheduleReason === 'holiday'){
+              reason = 'holiday';
+            }else if(scheduleReason === 'blocked_day' || scheduleReason === 'blocked_by_consultorio' || scheduleReason === 'vacation_or_absence'){
+              reason = 'blocked_day';
+            }else{
+              reason = 'no_schedule';
+            }
+          }else if(availabilitySlotsReceivedForDate === 0 && appointmentsReceivedForDate === 0 && skippedSlotsForDate === 0){
+            reason = 'no_slots_returned';
+          }else if(availabilitySlotsReceivedForDate > 0 || appointmentsReceivedForDate > 0 || skippedSlotsForDate > 0){
+            reason = 'all_slots_filtered';
+          }
+          console.log('MXM CUSTOM WEEK EMPTY DAY DEBUG', {
+            date: key,
+            weekday,
+            consultorioMode: selectedConsultorioMode,
+            activeWeekdays: activeWeekdaysDebug,
+            hasScheduleForDay,
+            availabilityRequestRange: availabilityRequestRangeDebug,
+            availabilitySlotsReceivedForDate,
+            appointmentsReceivedForDate,
+            skippedSlotsForDate,
+            reason
+          });
+        }
         const cards = rowsForDisplay
           .map((eventRef)=>{
             const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
@@ -1419,11 +2014,38 @@ console.info('app.js loaded :: 20251123a');
       }).join('');
 
       root.innerHTML = `
-        <div class="mx-ag-custom-week-grid mxm-custom-week-grid">
+        ${renderCustomWeekNavBarHtml()}
+        <div class="mx-ag-custom-week-grid mxm-custom-week-grid" style="--mxm-custom-week-columns:${columnsCount};">
           <div class="mx-ag-custom-week-head">${headerHtml}</div>
           <div class="mx-ag-custom-week-body mxm-custom-week-body">${bodyHtml}</div>
         </div>
       `;
+      const navTitleEl = root.querySelector('[data-custom-week-nav-title]');
+      if(navTitleEl instanceof HTMLElement){
+        navTitleEl.textContent = finalRangeTitle;
+      }
+      const anchorForLog = resolveAgendaRollingStartDate();
+      console.log('MXM CUSTOM WEEK VISIBLE DAYS DEBUG', {
+        action: sanitizeText(customWeekVisibleDaysAction || 'init'),
+        anchorDate: anchorForLog instanceof Date ? anchorForLog.toISOString() : '',
+        finalColumnsCount: columnsCount,
+        visibleDays: finalDays.map((date)=> formatYmdLocal(date)),
+        columnsWithoutCards,
+        columnsWithCards
+      });
+      console.log('MXM CUSTOM WEEK RANGE SINGLE SOURCE', {
+        anchorDate: weekRange?.anchorDate instanceof Date ? weekRange.anchorDate.toISOString() : '',
+        visibleDays: finalDays.map((date)=> formatYmdLocal(date)),
+        startDate: weekRange?.startDate instanceof Date ? weekRange.startDate.toISOString() : '',
+        endDate: weekRange?.endDate instanceof Date ? weekRange.endDate.toISOString() : '',
+        rangeKey: sanitizeText(weekRange?.rangeKey || ''),
+        fetchRange: {
+          start: weekRange?.startDate instanceof Date ? weekRange.startDate.toISOString() : '',
+          end: weekRange?.endDate instanceof Date ? weekRange.endDate.toISOString() : ''
+        },
+        cacheRangeKey: customWeekLastEventsRangeKey,
+        titleRange: finalRangeTitle
+      });
       const domCards = Array.from(root.querySelectorAll('.mx-ag-custom-slot-card, .mxm-custom-week-card'));
       const firstCard = domCards[0] || null;
       const firstColumn = firstCard?.closest('.mx-ag-custom-week-col, .mxm-custom-week-column') || null;
@@ -1468,12 +2090,8 @@ console.info('app.js loaded :: 20251123a');
       const eventTypes = Array.from(new Set(
         allEvents.map((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') || 'appointment')
       ));
-      const visibleStart = days[0] instanceof Date ? days[0].toISOString() : '';
-      const visibleEndDate = days[days.length - 1] instanceof Date ? new Date(days[days.length - 1]) : null;
-      if(visibleEndDate){
-        visibleEndDate.setDate(visibleEndDate.getDate() + 1);
-      }
-      const visibleEnd = visibleEndDate ? visibleEndDate.toISOString() : '';
+      const visibleStart = weekRange?.startDate instanceof Date ? weekRange.startDate.toISOString() : '';
+      const visibleEnd = weekRange?.endDate instanceof Date ? weekRange.endDate.toISOString() : '';
       const reason = renderedSlots > 0
         ? ''
         : (allEvents.length === 0
@@ -1529,7 +2147,7 @@ console.info('app.js loaded :: 20251123a');
         }).length,
         visibleStart,
         visibleEnd,
-        daysGenerated: days.length,
+        daysGenerated: finalDays.length,
         availabilityReceived,
         appointmentsReceived,
         slotsRendered: renderedSlots,
@@ -4422,13 +5040,31 @@ console.info('app.js loaded :: 20251123a');
     },
     async getAvailability({ params, signal }){
       const qs = (params instanceof URLSearchParams) ? params.toString() : String(params || '');
+      console.log('MXM AVAILABILITY REQUEST DEBUG', {
+        source: 'AgendaApiClient.getAvailability',
+        stage: 'request',
+        endpoint: '/api/agenda/index.php/availability',
+        query: qs,
+        headers: { Accept: 'application/json' }
+      });
       const resp = await fetch(`/api/agenda/index.php/availability?${qs}`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
         signal
       });
-      return resp.json().catch(()=> null);
+      const payload = await resp.json().catch(()=> null);
+      console.log('MXM AVAILABILITY REQUEST DEBUG', {
+        source: 'AgendaApiClient.getAvailability',
+        stage: 'response',
+        endpoint: '/api/agenda/index.php/availability',
+        query: qs,
+        status: Number(resp.status || 0),
+        ok: resp.ok === true,
+        error: sanitizeText(payload?.error || ''),
+        message: sanitizeText(payload?.message || '')
+      });
+      return payload;
     },
     async getSchedule({ doctorId, consultorioId, signal }){
       const qs = new URLSearchParams({
@@ -6781,6 +7417,7 @@ console.info('app.js loaded :: 20251123a');
     consultorioScheduleDaysKnown = false;
     consultorioScheduleLoadedForConsultorioId = sanitizeText(nextConsultorioId || '');
     consultorioScheduleActiveDays = null;
+    customWeekOperationalContextCache = null;
 
     if(options?.syncCreateOptions !== false){
       syncCreateConsultorioOptions();
@@ -7055,14 +7692,25 @@ console.info('app.js loaded :: 20251123a');
     const consultorioId = sanitizeText(getAvailabilityConsultorioId() || '');
     const scope = resolveAgendaAvailabilityConsultorioScope();
     const isAllMode = scope.mode === 'all';
+    customWeekOperationalContextCache = null;
     consultorioScheduleLoadedForConsultorioId = sanitizeText(consultorioId || '');
     consultorioScheduleDaysKnown = false;
     if(isAllMode){
       await ensureGlobalAgendaExpandedVisibleRange({ force: true }).catch(()=> null);
+      const globalActiveDays = Array.isArray(globalAgendaExpandedVisibleRange?.activeDays)
+        ? globalAgendaExpandedVisibleRange.activeDays
+          .map((day)=> Number(day))
+          .filter((day)=> Number.isInteger(day) && day >= 0 && day <= 6)
+        : [];
+      const previousActiveDays = (consultorioScheduleActiveDays instanceof Set)
+        ? Array.from(consultorioScheduleActiveDays).filter((day)=> Number.isInteger(day) && day >= 0 && day <= 6)
+        : [];
+      const activeDaysSet = new Set(globalActiveDays.length ? globalActiveDays : previousActiveDays);
+      const strictInactive = [0, 1, 2, 3, 4, 5, 6].filter((day)=> !activeDaysSet.has(day));
       consultorioScheduleVisibleRange = null;
-      consultorioScheduleStrictInactiveDays = new Set();
-      consultorioScheduleActiveDays = null;
-      consultorioScheduleDaysKnown = false;
+      consultorioScheduleStrictInactiveDays = new Set(strictInactive);
+      consultorioScheduleActiveDays = activeDaysSet;
+      consultorioScheduleDaysKnown = activeDaysSet.size > 0;
       consultorioScheduleLoadedForConsultorioId = '';
       consultorioScheduleHiddenDays = ensureCurrentDayVisibleInHiddenDays(
         applyGlobalSaturdayVisibilityToHiddenDays([])
@@ -7075,7 +7723,8 @@ console.info('app.js loaded :: 20251123a');
         stage: 'apply_business_hours',
         mode: 'all',
         consultoriosIncluded: scope.consultorios,
-        hiddenDays: consultorioScheduleHiddenDays
+        hiddenDays: consultorioScheduleHiddenDays,
+        activeDays: Array.from(activeDaysSet).sort((a, b)=> a - b)
       });
       return;
     }
@@ -7186,6 +7835,23 @@ console.info('app.js loaded :: 20251123a');
     if(Number.isNaN(date.getTime())) return null;
     return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
   };
+  const toLocalDayDate = (dateLike)=>{
+    const date = (dateLike instanceof Date) ? new Date(dateLike.getTime()) : new Date(dateLike || '');
+    if(Number.isNaN(date.getTime())) return null;
+    date.setHours(0, 0, 0, 0);
+    return date;
+  };
+  const addLocalDays = (dateLike, days = 0)=>{
+    const base = toLocalDayDate(dateLike);
+    if(!base) return null;
+    base.setDate(base.getDate() + Number(days || 0));
+    return base;
+  };
+  const isSameLocalDay = (leftLike, rightLike)=>{
+    const left = startOfLocalDayMs(leftLike);
+    const right = startOfLocalDayMs(rightLike);
+    return left !== null && right !== null && left === right;
+  };
   const formatAgendaHeaderDateLabel = (dateLike)=>{
     const date = (dateLike instanceof Date) ? dateLike : new Date(dateLike || '');
     if(Number.isNaN(date.getTime())) return '';
@@ -7209,6 +7875,30 @@ console.info('app.js loaded :: 20251123a');
     return capitalizeAgendaLabel(
       new Intl.DateTimeFormat('es-MX', { weekday: 'long' }).format(date)
     );
+  };
+  const formatAgendaCustomWeekTitle = (startDateLike, endExclusiveLike)=>{
+    const startDate = toLocalDayDate(startDateLike);
+    const endExclusive = toLocalDayDate(endExclusiveLike);
+    if(!startDate || !endExclusive) return '';
+    const endDate = addLocalDays(endExclusive, -1);
+    if(!endDate) return '';
+    const startDay = String(startDate.getDate()).padStart(2, '0');
+    const endDay = String(endDate.getDate()).padStart(2, '0');
+    const startMonth = capitalizeAgendaLabel(
+      new Intl.DateTimeFormat('es-MX', { month: 'long' }).format(startDate)
+    );
+    const endMonth = capitalizeAgendaLabel(
+      new Intl.DateTimeFormat('es-MX', { month: 'long' }).format(endDate)
+    );
+    const startYear = startDate.getFullYear();
+    const endYear = endDate.getFullYear();
+    if(startYear === endYear && startMonth === endMonth){
+      return `${startDay} – ${endDay} ${startMonth} ${startYear}`;
+    }
+    if(startYear === endYear){
+      return `${startDay} ${startMonth} – ${endDay} ${endMonth} ${startYear}`;
+    }
+    return `${startDay} ${startMonth} ${startYear} – ${endDay} ${endMonth} ${endYear}`;
   };
 
   const mapAppointmentToEvent = (row)=>{
@@ -7455,6 +8145,7 @@ console.info('app.js loaded :: 20251123a');
     if(!els.consultorio) return;
     const doctorId = getDoctorId();
     const previous = sanitizeText(els.consultorio.value || '');
+    agendaConsultoriosReady = false;
 
     if(consultoriosRequestCtrl){
       try{ consultoriosRequestCtrl.abort(); }catch(_){}
@@ -7466,6 +8157,7 @@ console.info('app.js loaded :: 20251123a');
     globalAgendaExpandedVisibleRange = null;
     renderAgendaScheduleEditorSelector();
     if(!doctorId){
+      agendaConsultoriosReady = true;
       setActiveAgendaConsultorio('', {
         source: 'fetch_consultorios_no_doctor',
         refreshCalendar: false
@@ -7480,6 +8172,7 @@ console.info('app.js loaded :: 20251123a');
       });
       if(!json || json.ok !== true || !Array.isArray(json.data)){
         agendaConsultorioRows = [];
+        agendaConsultoriosReady = true;
         const usedFallback = applyConsultorioFallbackFromActiveContext();
         const usedLegacyFallback = applyLegacyAgendaConsultorioFallback();
         renderAgendaScheduleEditorSelector();
@@ -7489,6 +8182,7 @@ console.info('app.js loaded :: 20251123a');
         return;
       }
       agendaConsultorioRows = json.data.slice();
+      agendaConsultoriosReady = true;
       const normalizedOptions = json.data.map(normalizeConsultorioOption).filter(Boolean);
       const options = normalizedOptions.map((opt)=>{
         return `<option value="${opt.id.replace(/"/g, '&quot;')}">${opt.label.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</option>`;
@@ -7524,9 +8218,14 @@ console.info('app.js loaded :: 20251123a');
         mode: sanitizeText(els.consultorio?.value || '') === '' ? 'all' : 'specific',
         includedConsultorios: listAgendaConfigConsultorios().map((row)=> sanitizeText(row?.id || ''))
       });
+      if(calendar && isCustomWeekActive()){
+        try{ calendar.refetchEvents(); }catch(_){}
+        scheduleCustomWeekRender();
+      }
     }catch(err){
       if(err?.name === 'AbortError') return;
       agendaConsultorioRows = [];
+      agendaConsultoriosReady = true;
       const usedFallback = applyConsultorioFallbackFromActiveContext();
       const usedLegacyFallback = applyLegacyAgendaConsultorioFallback();
       renderAgendaScheduleEditorSelector();
@@ -7546,6 +8245,10 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const fetchAppointments = async (fetchInfo)=>{
+    const isCustomWeekFetch = String(calendar?.view?.type || '') === 'timeGridWeek';
+    if(isCustomWeekFetch){
+      customWeekAppointmentsRequests += 1;
+    }
     const blockedEvents = collectBlockedSlotEvents(fetchInfo);
     if(isAgendaDemoContext()){
       const events = buildDemoAppointments(fetchInfo).map(mapAppointmentToEvent).filter((event)=> !!(event && event.start));
@@ -7601,6 +8304,10 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const fetchAvailabilityEvents = async (fetchInfo)=>{
+    const isCustomWeekFetch = String(calendar?.view?.type || '') === 'timeGridWeek';
+    if(isCustomWeekFetch){
+      customWeekAvailabilityRequests += 1;
+    }
     const doctorId = getDoctorId();
     const scope = resolveAgendaAvailabilityConsultorioScope();
     const mode = scope.mode === 'all' ? 'all' : 'specific';
@@ -7609,22 +8316,62 @@ console.info('app.js loaded :: 20251123a');
     if(mode === 'specific' && consultorioIds.length === 0 && isNumericId(activeSpecific)){
       consultorioIds = [activeSpecific];
     }
+    const requestStartIso = fetchInfo?.start instanceof Date ? fetchInfo.start.toISOString() : '';
+    const requestEndIso = fetchInfo?.end instanceof Date ? fetchInfo.end.toISOString() : '';
+    const logAvailabilityRequestDebug = ({ dateYmd = '', consultorioId = '', params = null, route = '' } = {})=>{
+      const paramsObj = (params instanceof URLSearchParams) ? params : new URLSearchParams(params || {});
+      const query = paramsObj.toString();
+      console.log('MXM AVAILABILITY REQUEST DEBUG', {
+        source: 'fetchAvailabilityEvents',
+        doctor_id: sanitizeText(doctorId || ''),
+        consultorio_id: sanitizeText(consultorioId || ''),
+        mode,
+        startDate: requestStartIso,
+        endDate: requestEndIso,
+        date: sanitizeText(dateYmd || ''),
+        route: sanitizeText(route || ''),
+        query,
+        endpoint: `/api/agenda/index.php/availability?${query}`,
+        headers: { Accept: 'application/json' }
+      });
+    };
     if(!isNumericId(doctorId)){
       return {
         events: [],
-        meta: { skipped: true, reason: 'availability_requires_numeric_ids' }
+        meta: {
+          skipped: true,
+          reason: 'availability_requires_numeric_ids',
+          consultorio_mode: mode,
+          consultorios_included: consultorioIds,
+          request_start: requestStartIso,
+          request_end: requestEndIso
+        }
       };
     }
     if(mode === 'specific' && !consultorioIds.length){
       return {
         events: [],
-        meta: { skipped: true, reason: 'availability_requires_specific_consultorio_id' }
+        meta: {
+          skipped: true,
+          reason: 'availability_requires_specific_consultorio_id',
+          consultorio_mode: mode,
+          consultorios_included: consultorioIds,
+          request_start: requestStartIso,
+          request_end: requestEndIso
+        }
       };
     }
     if(mode === 'all' && !consultorioIds.length){
       return {
         events: [],
-        meta: { skipped: true, reason: 'availability_requires_consultorios_for_all_mode' }
+        meta: {
+          skipped: true,
+          reason: 'availability_requires_consultorios_for_all_mode',
+          consultorio_mode: mode,
+          consultorios_included: consultorioIds,
+          request_start: requestStartIso,
+          request_end: requestEndIso
+        }
       };
     }
 
@@ -7637,40 +8384,26 @@ console.info('app.js loaded :: 20251123a');
     }
     const uniqueDays = Array.from(new Set(dayDates));
     if(!uniqueDays.length){
-      return { events: [], meta: { skipped: true, reason: 'no_visible_days' } };
+      return {
+        events: [],
+        meta: {
+          skipped: true,
+          reason: 'no_visible_days',
+          consultorio_mode: mode,
+          consultorios_included: consultorioIds,
+          request_start: requestStartIso,
+          request_end: requestEndIso
+        }
+      };
     }
 
     const slotMinutes = resolveAgendaSlotMinutes();
     let requests = [];
     let usedOmitConsultorioRoute = false;
-    if(mode === 'all' && availabilityOmitConsultorioSupport !== false){
-      try{
-        const probeDate = sanitizeText(uniqueDays[0] || '');
-        if(probeDate){
-          const probeParams = new URLSearchParams({
-            doctor_id: doctorId,
-            date: probeDate,
-            slot_minutes: String(slotMinutes)
-          });
-          const probeJson = await AgendaApiClient.getAvailability({ params: probeParams });
-          const probeHasData = !!(probeJson && probeJson.ok === true && (
-            Array.isArray(probeJson?.data?.slots) || Array.isArray(probeJson?.data?.windows)
-          ));
-          if(probeHasData){
-            usedOmitConsultorioRoute = true;
-            availabilityOmitConsultorioSupport = true;
-          }else if(availabilityOmitConsultorioSupport === null){
-            availabilityOmitConsultorioSupport = false;
-          }
-        }
-      }catch(_){
-        if(availabilityOmitConsultorioSupport === null){
-          availabilityOmitConsultorioSupport = false;
-        }
-      }
-    }
-    if(mode === 'all' && availabilityOmitConsultorioSupport === true){
-      usedOmitConsultorioRoute = true;
+    // Backend privado /availability requiere consultorio_id numérico.
+    // Se desactiva explícitamente la ruta "omit consultorio" para evitar 400 invalid_params.
+    if(mode === 'all'){
+      availabilityOmitConsultorioSupport = false;
     }
     if(mode === 'all' && usedOmitConsultorioRoute){
       requests = uniqueDays.map(async (dateYmd)=>{
@@ -7678,6 +8411,12 @@ console.info('app.js loaded :: 20251123a');
           doctor_id: doctorId,
           date: dateYmd,
           slot_minutes: String(slotMinutes)
+        });
+        logAvailabilityRequestDebug({
+          dateYmd,
+          consultorioId: '',
+          params,
+          route: 'all_omit_consultorio'
         });
         const json = await AgendaApiClient.getAvailability({ params });
         return { dateYmd, consultorioId: '', json };
@@ -7690,6 +8429,12 @@ console.info('app.js loaded :: 20251123a');
             consultorio_id: consultorioId,
             date: dateYmd,
             slot_minutes: String(slotMinutes)
+          });
+          logAvailabilityRequestDebug({
+            dateYmd,
+            consultorioId,
+            params,
+            route: 'all_per_consultorio'
           });
           const json = await AgendaApiClient.getAvailability({ params });
           return { dateYmd, consultorioId, json };
@@ -7704,6 +8449,12 @@ console.info('app.js loaded :: 20251123a');
           date: dateYmd,
           slot_minutes: String(slotMinutes)
         });
+        logAvailabilityRequestDebug({
+          dateYmd,
+          consultorioId,
+          params,
+          route: 'specific'
+        });
         const json = await AgendaApiClient.getAvailability({ params });
         return { dateYmd, consultorioId, json };
       });
@@ -7717,6 +8468,9 @@ console.info('app.js loaded :: 20251123a');
     let hasWarning = '';
     let minVisibleMinutes = null;
     let maxVisibleMinutes = null;
+    const availabilitySlotsReceivedByDate = {};
+    const availabilitySlotsRenderedByDate = {};
+    const availabilitySlotsSkippedByDate = {};
     const renderedDatesSet = new Set();
     const availabilityCalls = [];
 
@@ -7735,11 +8489,25 @@ console.info('app.js loaded :: 20251123a');
       availabilityCalls.push({
         date: dateYmd,
         consultorioId: sanitizeText(consultorioId || ''),
-        ok: !!(json && json.ok === true)
+        ok: !!(json && json.ok === true),
+        error: sanitizeText(json?.error || ''),
+        message: sanitizeText(json?.message || '')
       });
       if(!json || json.ok !== true){
         const code = sanitizeText(json?.error || '');
         const msg = sanitizeText(json?.message || '');
+        console.log('MXM AVAILABILITY REQUEST DEBUG', {
+          source: 'fetchAvailabilityEvents',
+          stage: 'day_response_rejected',
+          doctor_id: sanitizeText(doctorId || ''),
+          consultorio_id: sanitizeText(consultorioId || ''),
+          mode,
+          date: sanitizeText(dateYmd || ''),
+          startDate: requestStartIso,
+          endDate: requestEndIso,
+          error: code,
+          message: msg
+        });
         if(!hasWarning && (code || msg)){
           hasWarning = msg || code || 'No se pudo cargar disponibilidad';
         }
@@ -7748,6 +8516,7 @@ console.info('app.js loaded :: 20251123a');
       const windows = Array.isArray(json?.data?.windows) ? json.data.windows : [];
       const slots = Array.isArray(json?.data?.slots) ? json.data.slots : [];
       slotsReceivedTotal += slots.length;
+      availabilitySlotsReceivedByDate[dateYmd] = Number(availabilitySlotsReceivedByDate[dateYmd] || 0) + slots.length;
       windows.forEach((windowItem)=>{
         const eventConsultorioId = sanitizeText(
           windowItem?.consultorio_id
@@ -7788,6 +8557,7 @@ console.info('app.js loaded :: 20251123a');
         });
         if(mode !== 'all' && !slotCheck.allowed){
           slotsSkippedNoScheduleTotal += 1;
+          availabilitySlotsSkippedByDate[dateYmd] = Number(availabilitySlotsSkippedByDate[dateYmd] || 0) + 1;
           return;
         }
         const slotEvent = mapAvailabilitySlotToEvent(slotItem, dateYmd, eventConsultorioId);
@@ -7795,6 +8565,7 @@ console.info('app.js loaded :: 20251123a');
         if(shouldRender){
           events.push(slotEvent);
           slotsCount += 1;
+          availabilitySlotsRenderedByDate[dateYmd] = Number(availabilitySlotsRenderedByDate[dateYmd] || 0) + 1;
           renderedDatesSet.add(String(dateYmd));
         }
       });
@@ -7868,7 +8639,12 @@ console.info('app.js loaded :: 20251123a');
         omit_consultorio_support: availabilityOmitConsultorioSupport,
         visible_min_time: hasVisibleRange ? minutesToTime(minVisibleMinutes) : '',
         visible_max_time: hasVisibleRange ? minutesToTime(maxVisibleMinutes) : '',
-        has_visible_schedule_range: hasVisibleRange
+        has_visible_schedule_range: hasVisibleRange,
+        request_start: fetchInfo?.start instanceof Date ? fetchInfo.start.toISOString() : '',
+        request_end: fetchInfo?.end instanceof Date ? fetchInfo.end.toISOString() : '',
+        availability_slots_received_by_date: availabilitySlotsReceivedByDate,
+        availability_slots_rendered_by_date: availabilitySlotsRenderedByDate,
+        availability_slots_skipped_by_date: availabilitySlotsSkippedByDate
       }
     };
   };
@@ -7879,7 +8655,14 @@ console.info('app.js loaded :: 20251123a');
       setError('No se pudo inicializar FullCalendar en esta sesión.');
       return;
     }
-    resolveAgendaRollingStartDate({ forceToday: true });
+    customWeekVisibleDaysAction = 'init';
+    customWeekIncludeAnchorEvenIfInactive = true;
+    const initAnchor = resolveAgendaRollingStartDate({ forceToday: true });
+    logCustomWeekNavigationDebug({
+      action: 'init',
+      oldAnchorDate: initAnchor,
+      newAnchorDate: initAnchor
+    });
 
     const slotMinutes = resolveAgendaSlotMinutes();
     const slotDuration = toFcDurationFromMinutes(slotMinutes);
@@ -7907,8 +8690,22 @@ console.info('app.js loaded :: 20251123a');
       firstDay: resolveAgendaFirstDayByView('timeGridWeek'),
       height: 'auto',
       dayMaxEvents: 1,
+      customButtons: {
+        mxmPrev: {
+          text: '‹',
+          click: ()=>{
+            navigateCustomWeekByOffset('prev');
+          }
+        },
+        mxmNext: {
+          text: '›',
+          click: ()=>{
+            navigateCustomWeekByOffset('next');
+          }
+        }
+      },
       headerToolbar: {
-        left: 'prev,next',
+        left: 'mxmPrev,mxmNext',
         center: 'title',
         right: 'timeGridDay,timeGridWeek,dayGridMonth'
       },
@@ -7950,10 +8747,25 @@ console.info('app.js loaded :: 20251123a');
       events: async (fetchInfo, successCallback, failureCallback)=>{
         try{
           const currentView = String(calendar?.view?.type || '');
-          const appointmentEventsPromise = fetchAppointments(fetchInfo);
+          const anchorRange = currentView === 'timeGridWeek'
+            ? resolveCustomWeekRangeFromAnchor(resolveAgendaRollingStartDate(), 6)
+            : null;
+          const rangeStart = anchorRange?.startDate instanceof Date
+            ? new Date(anchorRange.startDate)
+            : (fetchInfo?.start instanceof Date ? new Date(fetchInfo.start) : new Date(fetchInfo?.start || ''));
+          const rangeEnd = anchorRange?.endDate instanceof Date
+            ? new Date(anchorRange.endDate)
+            : (fetchInfo?.end instanceof Date ? new Date(fetchInfo.end) : new Date(fetchInfo?.end || ''));
+          const requestRange = {
+            start: rangeStart,
+            end: rangeEnd
+          };
+          const expectedRangeKey = sanitizeText(anchorRange?.rangeKey || toCustomWeekRangeKey(rangeStart, rangeEnd));
+          customWeekExpectedRangeKey = expectedRangeKey;
+          const appointmentEventsPromise = fetchAppointments(requestRange);
           const availabilityPromise = currentView === 'dayGridMonth'
             ? Promise.resolve({ events: [], meta: { skipped: true, reason: 'availability_not_used_in_month' } })
-            : fetchAvailabilityEvents(fetchInfo);
+            : fetchAvailabilityEvents(requestRange);
           const [appointmentEvents, availabilityResult] = await Promise.all([
             appointmentEventsPromise,
             availabilityPromise
@@ -7970,7 +8782,33 @@ console.info('app.js loaded :: 20251123a');
             successCallback(buildMonthSummaryEvents(appointmentEvents));
           }else{
             const mergedEvents = [...availabilityEvents, ...appointmentEvents];
+            const appointmentCountsByDate = {};
+            (Array.isArray(appointmentEvents) ? appointmentEvents : []).forEach((eventRef)=>{
+              const startDate = eventRef?.start instanceof Date
+                ? eventRef.start
+                : new Date(eventRef?.start || '');
+              if(Number.isNaN(startDate.getTime())) return;
+              const key = formatYmdLocal(startDate);
+              appointmentCountsByDate[key] = Number(appointmentCountsByDate[key] || 0) + 1;
+            });
             setLatestEventsForCustomWeek(mergedEvents);
+            customWeekLastEventsRangeKey = expectedRangeKey;
+            customWeekLastBridgeMeta = {
+              rangeStart: requestRange.start instanceof Date ? requestRange.start.toISOString() : '',
+              rangeEnd: requestRange.end instanceof Date ? requestRange.end.toISOString() : '',
+              mode: sanitizeText(availabilityResult?.meta?.consultorio_mode || ''),
+              consultoriosIncluded: Array.isArray(availabilityResult?.meta?.consultorios_included)
+                ? availabilityResult.meta.consultorios_included.map((id)=> sanitizeText(id || '')).filter(Boolean)
+                : [],
+              availabilityByDate: {
+                ...(availabilityResult?.meta?.availability_slots_received_by_date || {})
+              },
+              skippedByDate: {
+                ...(availabilityResult?.meta?.availability_slots_skipped_by_date || {})
+              },
+              appointmentsByDate: appointmentCountsByDate,
+              activeWeekdays: Array.from(resolveCustomWeekActiveWeekdaysContext().activeWeekdays).sort((a, b)=> a - b)
+            };
             const bridgeEventTypes = Array.from(new Set(
               mergedEvents.map((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') || 'appointment')
             ));
@@ -7988,6 +8826,8 @@ console.info('app.js loaded :: 20251123a');
               };
             });
             console.log('MXM CUSTOM WEEK EVENT BRIDGE', {
+              visibleStart: requestRange.start instanceof Date ? requestRange.start.toISOString() : '',
+              visibleEnd: requestRange.end instanceof Date ? requestRange.end.toISOString() : '',
               mode: sanitizeText(availabilityResult?.meta?.consultorio_mode || ''),
               consultoriosIncluded: Array.isArray(availabilityResult?.meta?.consultorios_included)
                 ? availabilityResult.meta.consultorios_included
@@ -7999,8 +8839,33 @@ console.info('app.js loaded :: 20251123a');
               appointmentsReceived: Array.isArray(appointmentEvents) ? appointmentEvents.length : 0,
               finalEventsCount: mergedEvents.length,
               customWeekCacheCount: Array.isArray(agendaLatestEventsForCustomWeek) ? agendaLatestEventsForCustomWeek.length : 0,
+              rangeKeyStored: customWeekLastEventsRangeKey,
+              rangeKeyExpected: expectedRangeKey || customWeekExpectedRangeKey || '',
               eventTypes: bridgeEventTypes,
               firstFiveEvents: bridgeFirstFive
+            });
+            console.log('MXM CUSTOM WEEK RANGE SINGLE SOURCE', {
+              anchorDate: anchorRange?.anchorDate instanceof Date ? anchorRange.anchorDate.toISOString() : '',
+              visibleDays: Array.isArray(anchorRange?.visibleDays) ? anchorRange.visibleDays.map((date)=> formatYmdLocal(date)) : [],
+              startDate: requestRange.start instanceof Date ? requestRange.start.toISOString() : '',
+              endDate: requestRange.end instanceof Date ? requestRange.end.toISOString() : '',
+              rangeKey: expectedRangeKey,
+              fetchRange: {
+                start: requestRange.start instanceof Date ? requestRange.start.toISOString() : '',
+                end: requestRange.end instanceof Date ? requestRange.end.toISOString() : ''
+              },
+              cacheRangeKey: customWeekLastEventsRangeKey,
+              titleRange: (requestRange.start instanceof Date && requestRange.end instanceof Date)
+                ? formatAgendaCustomWeekTitle(requestRange.start, requestRange.end)
+                : ''
+            });
+            console.log('MXM CUSTOM WEEK EVENT BRIDGE', {
+              rangeKey: customWeekLastEventsRangeKey,
+              rangeStart: customWeekLastBridgeMeta.rangeStart,
+              rangeEnd: customWeekLastBridgeMeta.rangeEnd,
+              availabilityByDate: customWeekLastBridgeMeta.availabilityByDate,
+              skippedByDate: customWeekLastBridgeMeta.skippedByDate,
+              appointmentsByDate: customWeekLastBridgeMeta.appointmentsByDate
             });
             successCallback(mergedEvents);
             if(isCustomWeekActive()){
@@ -8033,7 +8898,7 @@ console.info('app.js loaded :: 20251123a');
         }catch(err){
           visibleScheduleRange = null;
           if(err?.name === 'AbortError'){
-            successCallback([]);
+            successCallback(Array.isArray(agendaLatestEventsForCustomWeek) ? agendaLatestEventsForCustomWeek : []);
             return;
           }
           const message = sanitizeText(err?.message || '') || 'No se pudo cargar la agenda.';
@@ -8406,6 +9271,18 @@ console.info('app.js loaded :: 20251123a');
         hideEventActionPanel();
         visibleScheduleRange = null;
         const currentViewType = String(calendar?.view?.type || '');
+        const previousViewType = sanitizeText(lastCalendarViewType || '');
+        if(currentViewType === 'timeGridWeek' && previousViewType !== 'timeGridWeek'){
+          customWeekVisibleDaysAction = 'init';
+          customWeekIncludeAnchorEvenIfInactive = true;
+        }
+        if(currentViewType === 'timeGridWeek'){
+          const range = resolveCustomWeekRangeFromAnchor(resolveAgendaRollingStartDate(), 6);
+          customWeekExpectedRangeKey = sanitizeText(range?.rangeKey || '');
+        }else{
+          customWeekExpectedRangeKey = '';
+        }
+        lastCalendarViewType = currentViewType;
         if(blockSlotModal){
           try{ blockSlotModal.hide(); }catch(_){}
         }
@@ -8415,6 +9292,9 @@ console.info('app.js loaded :: 20251123a');
         }
         applyWeeklyHoursState();
         scheduleCustomWeekRender();
+        if(currentViewType === 'timeGridWeek'){
+          syncCustomWeekToolbarTitle();
+        }
         applyNextSlotFocusToCalendar();
         window.setTimeout(()=> syncNextFocusViewport({ behavior: 'auto' }), 0);
         window.setTimeout(()=>{
@@ -8426,6 +9306,7 @@ console.info('app.js loaded :: 20251123a');
     calendar.render();
     applyWeeklyHoursState();
     scheduleCustomWeekRender();
+    syncCustomWeekToolbarTitle();
   };
 
   const syncCalendarSlotGranularity = ()=>{
@@ -8575,6 +9456,16 @@ console.info('app.js loaded :: 20251123a');
       scheduleCustomWeekRender();
     });
     ensureCustomWeekRoot()?.addEventListener('click', (event)=>{
+      const navBtn = event.target.closest('[data-custom-week-nav]');
+      if(navBtn){
+        event.preventDefault();
+        event.stopPropagation();
+        const action = sanitizeText(navBtn.getAttribute('data-custom-week-nav') || '');
+        if(action === 'prev' || action === 'next'){
+          navigateCustomWeekByOffset(action);
+        }
+        return;
+      }
       const card = event.target.closest('.mx-ag-custom-slot-card');
       if(!card) return;
       event.preventDefault();
