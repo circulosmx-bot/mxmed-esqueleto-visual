@@ -2612,10 +2612,92 @@
                   </div>
                 </div>
                 <div class="ag-config-group-card">
-                  <div class="row g-3">
-                    <div class="col-md-4"><label class="form-label" for="ag_cfg_duration_min">Duración de cita</label><select class="form-select" id="ag_cfg_duration_min"><option value="20">20 min</option><option value="30" selected>30 min</option><option value="40">40 min</option><option value="60">60 min</option></select></div>
-                    <div class="col-md-4"><label class="form-label" for="ag_cfg_channels">Canales</label><select class="form-select" id="ag_cfg_channels" multiple><option value="in_person">Presencial</option><option value="videoconsulta">Telemedicina</option></select></div>
-                    <div class="col-md-4"><label class="form-label" for="ag_cfg_cancel_policy_h">Política de cancelación</label><select class="form-select" id="ag_cfg_cancel_policy_h"><option value="24" selected>24h</option><option value="48">48h</option></select></div>
+                  <div class="ag-reminders-panel ag-config-check-panel">
+                    <select class="form-select d-none" id="ag_cfg_duration_min" aria-hidden="true" tabindex="-1">
+                      <option value="15">15 min</option>
+                      <option value="30" selected>30 min</option>
+                      <option value="45">45 min</option>
+                      <option value="60">60 min</option>
+                    </select>
+                    <select class="form-select d-none" id="ag_cfg_channels" multiple aria-hidden="true" tabindex="-1">
+                      <option value="whatsapp" selected>WhatsApp</option>
+                      <option value="email">Correo</option>
+                      <option value="sms">SMS</option>
+                      <option value="call">Llamada</option>
+                    </select>
+                    <select class="form-select d-none" id="ag_cfg_cancel_policy_h" aria-hidden="true" tabindex="-1">
+                      <option value="24" selected>Mantener</option>
+                      <option value="48">Avisar operador</option>
+                    </select>
+
+                    <div class="ag-reminders-grid ag-config-check-grid">
+                      <div class="ag-reminders-card">
+                        <div class="ag-reminders-block-title">Modalidad de consulta</div>
+                        <label class="ag-reminders-option">
+                          <input type="checkbox" class="form-check-input" data-ag-cfg-modality value="in_person" checked>
+                          <span>Presencial</span>
+                        </label>
+                        <label class="ag-reminders-option">
+                          <input type="checkbox" class="form-check-input" data-ag-cfg-modality value="videoconsulta">
+                          <span>VideoConsulta</span>
+                        </label>
+                      </div>
+
+                      <div class="ag-reminders-card">
+                        <div class="ag-reminders-block-title">Duración de cita</div>
+                        <label class="ag-reminders-option ag-cfg-duration-option is-future-option">
+                          <input type="radio" class="form-check-input" name="ag_cfg_duration_choice" data-ag-cfg-duration value="15">
+                          <span>15 minutos</span>
+                        </label>
+                        <label class="ag-reminders-option">
+                          <input type="radio" class="form-check-input" name="ag_cfg_duration_choice" data-ag-cfg-duration value="30" checked>
+                          <span>30 minutos</span>
+                        </label>
+                        <label class="ag-reminders-option ag-cfg-duration-option is-future-option">
+                          <input type="radio" class="form-check-input" name="ag_cfg_duration_choice" data-ag-cfg-duration value="45">
+                          <span>45 minutos</span>
+                        </label>
+                        <label class="ag-reminders-option">
+                          <input type="radio" class="form-check-input" name="ag_cfg_duration_choice" data-ag-cfg-duration value="60">
+                          <span>60 minutos</span>
+                        </label>
+                      </div>
+
+                      <div class="ag-reminders-card">
+                        <div class="ag-reminders-block-title">Canales</div>
+                        <div class="ag-options-two-cols">
+                          <label class="ag-reminders-option">
+                            <input type="checkbox" class="form-check-input" data-ag-cfg-channel value="whatsapp">
+                            <span>WhatsApp</span>
+                          </label>
+                          <label class="ag-reminders-option">
+                            <input type="checkbox" class="form-check-input" data-ag-cfg-channel value="email">
+                            <span>Correo</span>
+                          </label>
+                          <label class="ag-reminders-option">
+                            <input type="checkbox" class="form-check-input" data-ag-cfg-channel value="sms">
+                            <span>SMS</span>
+                          </label>
+                          <label class="ag-reminders-option">
+                            <input type="checkbox" class="form-check-input" data-ag-cfg-channel value="call">
+                            <span>Llamada</span>
+                          </label>
+                        </div>
+                        <p class="ag-reminders-help text-danger d-none mb-0" id="ag_cfg_channel_limit_note">Puedes seleccionar solo 1 canal.</p>
+                      </div>
+
+                      <div class="ag-reminders-card">
+                        <div class="ag-reminders-block-title">Políticas de cancelación</div>
+                        <label class="ag-reminders-option">
+                          <input type="radio" class="form-check-input" name="ag_cfg_cancel_policy_choice" data-ag-cfg-cancel value="24" checked>
+                          <span>Mantener</span>
+                        </label>
+                        <label class="ag-reminders-option">
+                          <input type="radio" class="form-check-input" name="ag_cfg_cancel_policy_choice" data-ag-cfg-cancel value="48">
+                          <span>Avisar operador</span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </section>
@@ -2663,102 +2745,134 @@
                 </div>
                 <div class="ag-config-group-card">
                   <div class="ag-reminders-panel" id="ag_reminders_panel">
-                    <div class="ag-reminders-grid">
-                      <div class="ag-reminders-card">
-                        <div class="ag-reminders-block-title">
-                          <span class="material-symbols-rounded ag-reminders-title-icon" aria-hidden="true">schedule</span>
-                          Recordatorios previos
-                        </div>
-                        <label class="ag-reminders-option">
-                          <input type="radio" class="form-check-input" name="ag_reminder_before" data-ag-reminder-before="24h" id="ag_reminder_24h" checked>
-                          <span>24 horas antes</span>
-                        </label>
-                        <label class="ag-reminders-option">
-                          <input type="radio" class="form-check-input" name="ag_reminder_before" data-ag-reminder-before="12h" id="ag_reminder_12h">
-                          <span>12 horas antes</span>
-                        </label>
+                    <div class="ag-reminders-card ag-reminders-preview ag-reminders-preview-full">
+                      <div class="ag-reminders-block-title">
+                        <span class="material-symbols-rounded ag-reminders-title-icon" aria-hidden="true">chat</span>
+                        Vista previa del mensaje
                       </div>
-
-                      <div class="ag-reminders-card">
-                        <div class="ag-reminders-block-title">
-                          <span class="material-symbols-rounded ag-reminders-title-icon" aria-hidden="true">send</span>
-                          Canales de envío
+                      <div class="ag-reminders-preview-sim ag-reminders-preview-sim--integrated" id="ag_reminders_preview_message">
+                      <div class="ag-reminders-preview-col ag-reminders-preview-col--left">
+                        <div class="ag-reminders-preview-control-stack">
+                          <div class="ag-reminders-card ag-reminders-preview-config-card">
+                            <div class="ag-reminders-block-title">
+                              <span class="material-symbols-rounded ag-reminders-title-icon" aria-hidden="true">schedule</span>
+                              Recordatorios previos
+                            </div>
+                            <label class="ag-reminders-option">
+                              <input type="radio" class="form-check-input" name="ag_reminder_before" data-ag-reminder-before="24h" id="ag_reminder_24h" checked>
+                              <span>24 horas antes</span>
+                            </label>
+                            <label class="ag-reminders-option">
+                              <input type="radio" class="form-check-input" name="ag_reminder_before" data-ag-reminder-before="12h" id="ag_reminder_12h">
+                              <span>12 horas antes</span>
+                            </label>
+                          </div>
+                          <div class="ag-reminders-card ag-reminders-preview-config-card">
+                            <div class="ag-reminders-block-title">
+                              <span class="material-symbols-rounded ag-reminders-title-icon" aria-hidden="true">send</span>
+                              Canales de envío
+                            </div>
+                            <div class="ag-options-two-cols">
+                              <label class="ag-reminders-option">
+                                <input type="checkbox" class="form-check-input" data-ag-channel-value="whatsapp" id="ag_channel_whatsapp" checked>
+                                <span>WhatsApp</span>
+                              </label>
+                              <label class="ag-reminders-option">
+                                <input type="checkbox" class="form-check-input" data-ag-channel-value="email" id="ag_channel_email">
+                                <span>Correo electrónico</span>
+                              </label>
+                              <label class="ag-reminders-option">
+                                <input type="checkbox" class="form-check-input" data-ag-channel-value="sms" id="ag_channel_sms">
+                                <span>SMS</span>
+                              </label>
+                              <label class="ag-reminders-option">
+                                <input type="checkbox" class="form-check-input" data-ag-channel-value="call" id="ag_channel_call">
+                                <span>Llamada automática</span>
+                              </label>
+                            </div>
+                            <p class="ag-reminders-help text-danger d-none mb-2" id="ag_channel_limit_note">
+                              Puedes seleccionar hasta 2 canales.
+                            </p>
+                            <p class="ag-reminders-help mb-0">
+                              El canal principal recomendado es WhatsApp. Los demás canales podrán usarse como respaldo.
+                            </p>
+                          </div>
+                          <div class="ag-reminders-card ag-reminders-preview-config-card">
+                            <div class="ag-reminders-block-title">
+                              <span class="material-symbols-rounded ag-reminders-title-icon" aria-hidden="true">verified_user</span>
+                              Confirmación del paciente
+                            </div>
+                            <label class="ag-reminders-option">
+                              <input type="checkbox" class="form-check-input" id="ag_confirm_request" checked>
+                              <span>Solicitar confirmación de asistencia</span>
+                            </label>
+                            <label class="ag-reminders-option">
+                              <input type="checkbox" class="form-check-input" id="ag_confirm_cancel" checked>
+                              <span>Permitir cancelar desde el mensaje</span>
+                            </label>
+                            <label class="ag-reminders-option">
+                              <input type="checkbox" class="form-check-input" id="ag_confirm_reschedule" checked>
+                              <span>Permitir solicitar reprogramación</span>
+                            </label>
+                          </div>
+                          <div class="ag-reminders-card ag-reminders-preview-config-card">
+                            <div class="ag-reminders-block-title">
+                              <span class="material-symbols-rounded ag-reminders-title-icon" aria-hidden="true">pending_actions</span>
+                              Si el paciente no responde
+                            </div>
+                            <label class="ag-reminders-option">
+                              <input type="radio" class="form-check-input" name="ag_no_response_action" value="pending" id="ag_no_response_pending" checked>
+                              <span>Mantener cita como pendiente de confirmar</span>
+                            </label>
+                            <label class="ag-reminders-option">
+                              <input type="radio" class="form-check-input" name="ag_no_response_action" value="operator" id="ag_no_response_operator">
+                              <span>Avisar al operador</span>
+                            </label>
+                            <label class="ag-reminders-option">
+                              <input type="radio" class="form-check-input" name="ag_no_response_action" value="none" id="ag_no_response_none">
+                              <span>No realizar ninguna acción automática</span>
+                            </label>
+                          </div>
                         </div>
-                        <label class="ag-reminders-option">
-                          <input type="checkbox" class="form-check-input" data-ag-channel-value="whatsapp" id="ag_channel_whatsapp" checked>
-                          <span>WhatsApp</span>
-                        </label>
-                        <label class="ag-reminders-option">
-                          <input type="checkbox" class="form-check-input" data-ag-channel-value="email" id="ag_channel_email">
-                          <span>Correo electrónico</span>
-                        </label>
-                        <label class="ag-reminders-option">
-                          <input type="checkbox" class="form-check-input" data-ag-channel-value="sms" id="ag_channel_sms">
-                          <span>SMS</span>
-                        </label>
-                        <label class="ag-reminders-option">
-                          <input type="checkbox" class="form-check-input" data-ag-channel-value="call" id="ag_channel_call">
-                          <span>Llamada automática</span>
-                        </label>
-                        <p class="ag-reminders-help text-danger d-none mb-2" id="ag_channel_limit_note">
-                          Puedes seleccionar hasta 2 canales.
-                        </p>
-                        <p class="ag-reminders-help mb-0">
-                          El canal principal recomendado es WhatsApp. Los demás canales podrán usarse como respaldo.
-                        </p>
                       </div>
-
-                      <div class="ag-reminders-card">
-                        <div class="ag-reminders-block-title">
-                          <span class="material-symbols-rounded ag-reminders-title-icon" aria-hidden="true">verified_user</span>
-                          Confirmación del paciente
+                      <div class="ag-reminders-preview-col ag-reminders-preview-col--right">
+                        <div class="ag-reminders-preview-phone">
+                          <div class="ag-reminders-preview-phone-status">
+                            <div class="ag-reminders-preview-phone-status-time">9:41</div>
+                            <div class="ag-reminders-preview-phone-status-icons" aria-hidden="true">
+                              <span>▮▮▮</span>
+                              <span>◉</span>
+                              <span>▰</span>
+                            </div>
+                          </div>
+                          <div class="ag-reminders-preview-phone-head">
+                            <div class="ag-reminders-preview-phone-contact">
+                              <span class="ag-reminders-preview-phone-avatar">MM</span>
+                              <div>
+                                <div class="ag-reminders-preview-phone-title">México Médico</div>
+                                <div class="ag-reminders-preview-phone-subtitle">en línea</div>
+                              </div>
+                            </div>
+                            <div class="ag-reminders-preview-phone-head-icons" aria-hidden="true">
+                              <span>📹</span>
+                              <span>📞</span>
+                              <span>⋮</span>
+                            </div>
+                          </div>
+                          <div class="ag-reminders-preview-phone-body">
+                            <div class="ag-reminders-preview-phone-bubble" id="ag_reminders_preview_text_phone"></div>
+                            <div class="ag-reminders-preview-phone-actions" id="ag_reminders_preview_actions_phone"></div>
+                            <div class="ag-reminders-preview-phone-result d-none" id="ag_reminders_preview_result_phone"></div>
+                          </div>
+                          <div class="ag-reminders-preview-phone-input">
+                            <span class="ag-reminders-preview-phone-input-icon" aria-hidden="true">◯</span>
+                            <span class="ag-reminders-preview-phone-input-text">Escribe un mensaje...</span>
+                            <span class="ag-reminders-preview-phone-input-icon" aria-hidden="true">⌁</span>
+                            <span class="ag-reminders-preview-phone-input-mic" aria-hidden="true">🎤</span>
+                          </div>
                         </div>
-                        <label class="ag-reminders-option">
-                          <input type="checkbox" class="form-check-input" id="ag_confirm_request" checked>
-                          <span>Solicitar confirmación de asistencia</span>
-                        </label>
-                        <label class="ag-reminders-option">
-                          <input type="checkbox" class="form-check-input" id="ag_confirm_cancel">
-                          <span>Permitir cancelar desde el mensaje</span>
-                        </label>
-                        <label class="ag-reminders-option">
-                          <input type="checkbox" class="form-check-input" id="ag_confirm_reschedule">
-                          <span>Permitir solicitar reprogramación</span>
-                        </label>
                       </div>
-
-                      <div class="ag-reminders-card">
-                        <div class="ag-reminders-block-title">
-                          <span class="material-symbols-rounded ag-reminders-title-icon" aria-hidden="true">pending_actions</span>
-                          Si el paciente no responde
-                        </div>
-                        <label class="ag-reminders-option">
-                          <input type="radio" class="form-check-input" name="ag_no_response_action" value="pending" id="ag_no_response_pending" checked>
-                          <span>Mantener cita como pendiente de confirmar</span>
-                        </label>
-                        <label class="ag-reminders-option">
-                          <input type="radio" class="form-check-input" name="ag_no_response_action" value="operator" id="ag_no_response_operator">
-                          <span>Avisar al operador</span>
-                        </label>
-                        <label class="ag-reminders-option">
-                          <input type="radio" class="form-check-input" name="ag_no_response_action" value="none" id="ag_no_response_none">
-                          <span>No realizar ninguna acción automática</span>
-                        </label>
                       </div>
-                    </div>
-
-                  <div class="ag-reminders-card ag-reminders-preview ag-reminders-preview-full">
-                    <div class="ag-reminders-block-title">
-                      <span class="material-symbols-rounded ag-reminders-title-icon" aria-hidden="true">chat</span>
-                      Vista previa del mensaje
-                    </div>
-                    <div class="ag-reminders-preview-message">
-                      Hola Ana López, le recordamos su cita con Dr. Juan Pérez el martes 12 de mayo a las 10:00 hrs en Consultorio MAC Norte.
-                      <br><br>
-                      Responda:
-                      <br>1 Confirmar
-                      <br>2 Reprogramar
-                      <br>3 Cancelar
                     </div>
                   </div>
                 </div>

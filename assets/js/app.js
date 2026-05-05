@@ -640,6 +640,7 @@ console.info('app.js loaded :: 20251123a');
     cfgGapMin: document.getElementById('ag_cfg_gap_min'),
     cfgChannels: document.getElementById('ag_cfg_channels'),
     cfgCancelPolicyHours: document.getElementById('ag_cfg_cancel_policy_h'),
+    cfgChannelLimitNote: document.getElementById('ag_cfg_channel_limit_note'),
     cfgReminderTemplate: document.getElementById('ag_cfg_reminder_template'),
     remindersPanel: document.getElementById('ag_reminders_panel'),
     reminderChannelLimitNote: document.getElementById('ag_channel_limit_note'),
@@ -742,8 +743,8 @@ console.info('app.js loaded :: 20251123a');
     channels: ['whatsapp'],
     confirmation: {
       request: true,
-      allowCancel: false,
-      allowReschedule: false
+      allowCancel: true,
+      allowReschedule: true
     },
     noResponseAction: 'pending'
   });
@@ -751,6 +752,7 @@ console.info('app.js loaded :: 20251123a');
   let agendaReminderSettings = null;
   let agendaReminderMessageTemplate = '';
   let agendaReminderLimitNoteTimer = null;
+  let agendaReminderPreviewSelection = '';
   let agendaConsultorioRows = [];
   let activeAgendaConsultorioId = '';
   let agendaConsultorioSyncInFlight = false;
@@ -5416,6 +5418,7 @@ console.info('app.js loaded :: 20251123a');
   const AGENDA_REMINDER_BEFORE_VALUES = Object.freeze(['24h', '12h']);
   const AGENDA_REMINDER_CHANNEL_VALUES = Object.freeze(['whatsapp', 'email', 'sms', 'call']);
   const AGENDA_REMINDER_MAX_CHANNELS = 2;
+  const AGENDA_CFG_MAX_CHANNELS = 1;
   const cloneAgendaReminderDefaults = ()=> JSON.parse(JSON.stringify(DEFAULT_AGENDA_REMINDER_SETTINGS));
   const normalizeAgendaReminderSettings = (raw = {})=>{
     const fallback = cloneAgendaReminderDefaults();
@@ -5569,7 +5572,120 @@ console.info('app.js loaded :: 20251123a');
     if(els.cfgReminderTemplate){
       els.cfgReminderTemplate.value = serializeAgendaReminderSettings(normalized, agendaReminderMessageTemplate);
     }
+    agendaReminderPreviewSelection = '';
     enforceAgendaReminderChannelLimit();
+    renderAgendaReminderPreviewFromUi();
+  };
+  const getAgendaReminderPreviewOptions = ()=>{
+    if(!els.remindersPanel) return [];
+    const request = !!els.remindersPanel.querySelector('#ag_confirm_request')?.checked;
+    const allowCancel = !!els.remindersPanel.querySelector('#ag_confirm_cancel')?.checked;
+    const allowReschedule = !!els.remindersPanel.querySelector('#ag_confirm_reschedule')?.checked;
+    const options = [];
+    if(request){
+      options.push({
+        key: 'confirm',
+        icon: '✔',
+        iconClass: 'is-confirm',
+        patientText: 'Confirmo mi asistencia a la cita.',
+        systemText: 'Gracias, tu asistencia ha sido confirmada.'
+      });
+    }
+    if(allowCancel){
+      options.push({
+        key: 'cancel',
+        icon: '❌',
+        iconClass: 'is-cancel',
+        patientText: 'Solicito cancelar la cita.',
+        systemText: 'Tu solicitud de cancelación ha sido enviada.'
+      });
+    }
+    if(allowReschedule){
+      options.push({
+        key: 'reschedule',
+        icon: '🔁',
+        iconClass: 'is-reschedule',
+        patientText: 'Solicito mover mi cita a otra fecha.',
+        systemText: 'Un operador se pondrá en contacto para reprogramar.'
+      });
+    }
+    return options;
+  };
+  const renderAgendaReminderPreviewInteraction = ()=>{
+    const actionsPhoneWrap = document.getElementById('ag_reminders_preview_actions_phone');
+    const resultPhoneWrap = document.getElementById('ag_reminders_preview_result_phone');
+    if(!actionsPhoneWrap || !resultPhoneWrap){
+      return;
+    }
+    const options = getAgendaReminderPreviewOptions();
+    const renderActionButtons = (list = [])=> list.map((opt)=>{
+      const isActive = agendaReminderPreviewSelection === opt.key;
+      return `
+        <button type="button" class="ag-reminders-preview-action-btn is-phone ${isActive ? 'is-active' : ''}" data-ag-preview-action="${escapeHtml(opt.key)}">
+          <span class="ag-reminders-preview-action-icon ${escapeHtml(opt.iconClass)}">${escapeHtml(opt.icon)}</span>
+          <span>${escapeHtml(opt.patientText)}</span>
+        </button>
+      `;
+    }).join('');
+    if(!options.length){
+      actionsPhoneWrap.innerHTML = '<p class="ag-reminders-preview-empty">Sin respuestas activas.</p>';
+      resultPhoneWrap.classList.add('d-none');
+      resultPhoneWrap.innerHTML = '';
+      agendaReminderPreviewSelection = '';
+      return;
+    }
+    const activeKeys = new Set(options.map((opt)=> opt.key));
+    if(!activeKeys.has(agendaReminderPreviewSelection)){
+      agendaReminderPreviewSelection = '';
+      resultPhoneWrap.classList.add('d-none');
+      resultPhoneWrap.innerHTML = '';
+    }
+    actionsPhoneWrap.innerHTML = renderActionButtons(options);
+    if(!agendaReminderPreviewSelection){
+      return;
+    }
+    const selected = options.find((opt)=> opt.key === agendaReminderPreviewSelection);
+    if(!selected){
+      return;
+    }
+    resultPhoneWrap.classList.remove('d-none');
+    resultPhoneWrap.innerHTML = `
+      <div class="ag-reminders-preview-phone-chat-line is-patient">${escapeHtml(selected.patientText)}</div>
+      <div class="ag-reminders-preview-phone-chat-line is-system">${escapeHtml(selected.systemText)}</div>
+    `;
+  };
+  const handleAgendaReminderPreviewAction = (actionKey = '')=>{
+    const nextAction = sanitizeText(actionKey || '');
+    if(!nextAction) return;
+    agendaReminderPreviewSelection = nextAction;
+    renderAgendaReminderPreviewInteraction();
+  };
+  const renderAgendaReminderPreviewFromUi = ()=>{
+    const phoneTextEl = document.getElementById('ag_reminders_preview_text_phone');
+    if(!phoneTextEl) return;
+    const resolveAgendaReminderDoctorName = ()=>{
+      const fromStore = sanitizeText(window.mxmedStore?.doctorName || '');
+      if(fromStore) return fromStore;
+      const fromDoctor = sanitizeText(window.mxmedDoctor?.full_name || '');
+      if(fromDoctor) return fromDoctor;
+      const fromProfile = sanitizeText(window.mxmedStore?.doctorProfile?.full_name || '');
+      if(fromProfile) return fromProfile;
+      const fromHeader = sanitizeText(document.querySelector('.user-id .name')?.textContent || '');
+      if(fromHeader) return fromHeader;
+      return 'tu médico';
+    };
+    const doctorName = resolveAgendaReminderDoctorName();
+    const doctorRef = doctorName === 'tu médico'
+      ? 'tu médico'
+      : `Dr. ${doctorName.replace(/^dr\.?\s*/i, '').trim()}`;
+    const messageHtml = `
+      Hola Ana López, te recordamos tu cita con ${escapeHtml(doctorRef)} el martes 12 de mayo a las 10:00 hrs en Consultorio MAC Norte.
+      <br><br>
+      Responde para confirmar tu asistencia o administrar tu cita:
+      <div class="ag-reminders-preview-phone-msg-time">10:00</div>
+    `;
+    phoneTextEl.innerHTML = messageHtml;
+    renderAgendaReminderPreviewInteraction();
   };
   const formatScheduleSummaryTime = (value)=>{
     const raw = sanitizeText(value);
@@ -5889,6 +6005,25 @@ console.info('app.js loaded :: 20251123a');
     }
   };
   const readAgendaSettingsPayloadFromUi = ()=>{
+    const selectedCfgDuration = panel.querySelector('input[data-ag-cfg-duration]:checked');
+    if(selectedCfgDuration && els.cfgDurationMin){
+      els.cfgDurationMin.value = sanitizeText(selectedCfgDuration.value || '') || '30';
+    }
+    const selectedCfgCancel = panel.querySelector('input[data-ag-cfg-cancel]:checked');
+    if(selectedCfgCancel && els.cfgCancelPolicyHours){
+      els.cfgCancelPolicyHours.value = sanitizeText(selectedCfgCancel.value || '') || '24';
+    }
+    const cfgChannelInputs = Array.from(panel.querySelectorAll('input[data-ag-cfg-channel]'));
+    if(cfgChannelInputs.length && els.cfgChannels){
+      const selectedValues = cfgChannelInputs
+        .filter((node)=> node.checked)
+        .map((node)=> sanitizeText(node.value || ''))
+        .filter(Boolean)
+        .slice(0, AGENDA_CFG_MAX_CHANNELS);
+      Array.from(els.cfgChannels.options || []).forEach((opt)=>{
+        opt.selected = selectedValues.includes(sanitizeText(opt.value || ''));
+      });
+    }
     const channels = Array.from(els.cfgChannels?.selectedOptions || [])
       .map((opt)=> sanitizeText(opt.value || ''))
       .filter(Boolean);
@@ -5915,20 +6050,40 @@ console.info('app.js loaded :: 20251123a');
     if(els.cfgDurationMin){
       const val = sanitizeText(data?.appointment_duration_min ?? '');
       if(val) els.cfgDurationMin.value = val;
+      const durationInput = Array.from(panel.querySelectorAll('input[data-ag-cfg-duration]'))
+        .find((node)=> sanitizeText(node.value || '') === sanitizeText(els.cfgDurationMin.value || '30'));
+      if(durationInput){
+        durationInput.checked = true;
+      }
     }
     if(els.cfgCancelPolicyHours){
       const val = sanitizeText(data?.cancellation_policy_hours ?? '');
       els.cfgCancelPolicyHours.value = val || '24';
+      const cancelInput = Array.from(panel.querySelectorAll('input[data-ag-cfg-cancel]'))
+        .find((node)=> sanitizeText(node.value || '') === sanitizeText(els.cfgCancelPolicyHours.value || '24'));
+      if(cancelInput){
+        cancelInput.checked = true;
+      }
     }
     const reminderTemplate = String(data?.reminder_template || '');
     const parsedReminderPayload = parseAgendaReminderPayloadFromTemplate(reminderTemplate);
     agendaReminderMessageTemplate = String(parsedReminderPayload?.messageTemplate || '').trim();
     applyAgendaReminderSettingsToUi(parsedReminderPayload?.settings || cloneAgendaReminderDefaults());
     if(els.cfgChannels){
-      const chosen = new Set(Array.isArray(data?.channels) ? data.channels.map((v)=> sanitizeText(v)) : []);
+      const chosenValues = Array.isArray(data?.channels)
+        ? data.channels.map((v)=> sanitizeText(v)).filter(Boolean).slice(0, AGENDA_CFG_MAX_CHANNELS)
+        : [];
+      const chosen = new Set(chosenValues);
       Array.from(els.cfgChannels.options || []).forEach((opt)=>{
         opt.selected = chosen.has(sanitizeText(opt.value || ''));
       });
+      Array.from(panel.querySelectorAll('input[data-ag-cfg-channel]')).forEach((input)=>{
+        input.checked = chosen.has(sanitizeText(input.value || ''));
+      });
+      const cfgSelectedCount = Array.from(panel.querySelectorAll('input[data-ag-cfg-channel]:checked')).length;
+      if(els.cfgChannelLimitNote){
+        els.cfgChannelLimitNote.classList.toggle('d-none', cfgSelectedCount <= AGENDA_CFG_MAX_CHANNELS);
+      }
     }
   };
   const persistAgendaSettingsNow = async ()=>{
@@ -9411,6 +9566,44 @@ console.info('app.js loaded :: 20251123a');
         el.addEventListener('input', ()=> queuePersistAgendaSettings());
         el.addEventListener('change', ()=> queuePersistAgendaSettings(220));
       });
+    panel.querySelectorAll('input[data-ag-cfg-duration]').forEach((input)=>{
+      input.addEventListener('change', ()=>{
+        if(!input.checked || !els.cfgDurationMin) return;
+        els.cfgDurationMin.value = sanitizeText(input.value || '30') || '30';
+        els.cfgDurationMin.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    });
+    panel.querySelectorAll('input[data-ag-cfg-cancel]').forEach((input)=>{
+      input.addEventListener('change', ()=>{
+        if(!input.checked || !els.cfgCancelPolicyHours) return;
+        els.cfgCancelPolicyHours.value = sanitizeText(input.value || '24') || '24';
+        els.cfgCancelPolicyHours.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    });
+    panel.querySelectorAll('input[data-ag-cfg-channel]').forEach((input)=>{
+      input.addEventListener('change', ()=>{
+        const channelInputs = Array.from(panel.querySelectorAll('input[data-ag-cfg-channel]'));
+        const selectedBeforeLimit = channelInputs.filter((node)=> node.checked);
+        if(selectedBeforeLimit.length > AGENDA_CFG_MAX_CHANNELS){
+          input.checked = false;
+        }
+        const selectedValues = channelInputs
+          .filter((node)=> node.checked)
+          .map((node)=> sanitizeText(node.value || ''))
+          .filter(Boolean)
+          .slice(0, AGENDA_CFG_MAX_CHANNELS);
+        if(els.cfgChannels){
+          Array.from(els.cfgChannels.options || []).forEach((opt)=>{
+            opt.selected = selectedValues.includes(sanitizeText(opt.value || ''));
+          });
+          els.cfgChannels.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        if(els.cfgChannelLimitNote){
+          const overLimit = selectedBeforeLimit.length > AGENDA_CFG_MAX_CHANNELS;
+          els.cfgChannelLimitNote.classList.toggle('d-none', !overLimit);
+        }
+      });
+    });
     if(els.remindersPanel){
       els.remindersPanel.addEventListener('change', (event)=>{
         const changedInput = event?.target?.closest?.('input[data-ag-channel-value]') || null;
@@ -9419,7 +9612,14 @@ console.info('app.js loaded :: 20251123a');
         }
         agendaReminderSettings = readAgendaReminderSettingsFromUi();
         window.agendaReminderSettings = normalizeAgendaReminderSettings(agendaReminderSettings);
+        renderAgendaReminderPreviewFromUi();
         queuePersistAgendaSettings(220);
+      });
+      els.remindersPanel.addEventListener('click', (event)=>{
+        const actionBtn = event?.target?.closest?.('[data-ag-preview-action]');
+        if(!actionBtn) return;
+        event.preventDefault();
+        handleAgendaReminderPreviewAction(actionBtn.getAttribute('data-ag-preview-action') || '');
       });
     }
     els.cfgDurationMin?.addEventListener('change', ()=>{
