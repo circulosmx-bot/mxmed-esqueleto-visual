@@ -6467,8 +6467,8 @@ body{margin:0;background:var(--mm-fondo-base);}
   right: 6px;
   top: 6px;
   display: grid;
-  gap: 3px;
-  padding: 4px;
+  gap: 4px;
+  padding: 5px;
   border: 1px solid rgba(198, 217, 230, 0.65);
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.94);
@@ -6831,7 +6831,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mx-ag-slot-action-main{
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 4px;
+  gap: 6px;
   align-items: stretch;
 }
 .mx-ag-slot-more-btn{
@@ -7400,6 +7400,16 @@ body{margin:0;background:var(--mm-fondo-base);}
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.mx-ag-custom-slot-hint{
+  font-size: .62rem;
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: .01em;
+  opacity: .88;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .mx-ag-custom-slot-consultorio{
   font-size: .65rem;
   font-weight: 600;
@@ -7415,6 +7425,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   color: #0f5132;
 }
 .mx-ag-custom-slot-card.is-available .mx-ag-custom-slot-primary,
+.mx-ag-custom-slot-card.is-available .mx-ag-custom-slot-hint,
 .mx-ag-custom-slot-card.is-available .mx-ag-custom-slot-consultorio{
   color: #ffffff;
 }
@@ -7422,9 +7433,18 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mx-ag-custom-slot-card.is-available:focus-visible .mx-ag-custom-slot-primary{
   color: #0f5132;
 }
+.mx-ag-custom-slot-card.is-available:hover .mx-ag-custom-slot-hint,
+.mx-ag-custom-slot-card.is-available:focus-visible .mx-ag-custom-slot-hint{
+  color: #2d5a46;
+  opacity: .84;
+}
 .mx-ag-custom-slot-card.is-available:hover .mx-ag-custom-slot-consultorio,
 .mx-ag-custom-slot-card.is-available:focus-visible .mx-ag-custom-slot-consultorio{
   color: #3f5d6f;
+}
+.mx-ag-custom-slot-card.is-available:hover,
+.mx-ag-custom-slot-card.is-available:focus-visible{
+  background: rgba(25, 135, 84, 0.2);
 }
 .mx-ag-custom-slot-card.is-occupied{
   background: #eef5fb;
@@ -7707,6 +7727,14 @@ body{margin:0;background:var(--mm-fondo-base);}
   min-width:0;
   flex:1 1 auto;
 }
+.mx-ag-slot-hint{
+  font-size:.62rem;
+  line-height:1.1;
+  font-weight:600;
+  letter-spacing:.01em;
+  opacity:.84;
+  margin-top:1px;
+}
 .mx-ag-slot-consultorio{
   font-size:.66rem;
   font-weight:600;
@@ -7721,6 +7749,23 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 .mx-ag-slot-card.is-available{
   background:rgba(25, 135, 84, 0.14);
+}
+.mx-ag-slot-card.is-available .mx-ag-slot-primary,
+.mx-ag-slot-card.is-available .mx-ag-slot-hint,
+.mx-ag-slot-card.is-available .mx-ag-slot-consultorio{
+  color:#ffffff;
+}
+.mx-ag-slot-card.is-available:hover{
+  background:rgba(25, 135, 84, 0.2);
+}
+.mx-ag-slot-card.is-available:hover .mx-ag-slot-primary{
+  color:#0f5132;
+}
+.mx-ag-slot-card.is-available:hover .mx-ag-slot-hint{
+  color:#2d5a46;
+}
+.mx-ag-slot-card.is-available:hover .mx-ag-slot-consultorio{
+  color:#3f5d6f;
 }
 .mx-ag-slot-card.is-occupied{
   background:transparent;
