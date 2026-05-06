@@ -559,6 +559,7 @@ console.info('app.js loaded :: 20251123a');
     endAt: panel.querySelector('#ag_end_input'),
     modality: panel.querySelector('#ag_modality_input'),
     consultorioModal: panel.querySelector('#ag_consultorio_modal'),
+    consultorioModalInfo: panel.querySelector('#ag_consultorio_modal_info'),
     channel: panel.querySelector('#ag_channel_input'),
     patientSearchQuery: panel.querySelector('#ag_patient_search_query'),
     patientSearchBtn: panel.querySelector('#ag_patient_search_btn'),
@@ -571,6 +572,13 @@ console.info('app.js loaded :: 20251123a');
     patientNewLastName2: panel.querySelector('#ag_patient_new_last_name_2'),
     patientNewPhone: panel.querySelector('#ag_patient_new_phone'),
     patientNewEmail: panel.querySelector('#ag_patient_new_email'),
+    patientBirthdate: panel.querySelector('#ag_patient_birthdate_input'),
+    patientBirthDay: panel.querySelector('#ag_patient_birth_day'),
+    patientBirthMonth: panel.querySelector('#ag_patient_birth_month'),
+    patientBirthYear: panel.querySelector('#ag_patient_birth_year'),
+    patientBirthdateHint: panel.querySelector('#ag_patient_birthdate_hint'),
+    patientBirthdateRow: panel.querySelector('#ag_patient_birthdate_row'),
+    patientBirthdateInfo: panel.querySelector('#ag_patient_birthdate_info'),
     activePatientBox: panel.querySelector('#ag_active_patient_box'),
     activePatientText: panel.querySelector('#ag_active_patient_text'),
     useActivePatientYes: panel.querySelector('#ag_use_active_patient_yes'),
@@ -708,12 +716,20 @@ console.info('app.js loaded :: 20251123a');
   let patientSearchDebounceTimer = null;
   let patientIndexCache = null;
   let patientIndexPromise = null;
+  const patientDetailsCache = new Map();
+  let createSelectionContext = {
+    consultorioId: '',
+    source: '',
+    startAt: '',
+    endAt: ''
+  };
   let nextSlotsModal = null;
   let nextAvailableCursor = null;
   let nextAvailableForwardCursor = null;
   let nextAvailablePrevStack = [];
   let nextAvailableLastOptions = [];
   let nextSlotFocus = null;
+  let nextSlotFocusClearTimer = 0;
   let cellMenuSelection = null;
   let activeSlotActionHost = null;
   let activeSlotActionPortal = null;
@@ -2123,12 +2139,15 @@ console.info('app.js loaded :: 20251123a');
             if(eventType === 'availability_slot'){
               renderedSlots += 1;
               const slotConsultorioId = sanitizeText(eventRef?.extendedProps?.consultorio_id || '');
+              const slotRangeKey = toRangeKey(start, end);
+              const isFocusedSlot = slotRangeKey && slotRangeKey === sanitizeText(nextSlotFocus?.key || '');
               return `
                 <button type="button"
-                  class="mx-ag-custom-slot-card mxm-custom-week-card is-available"
+                  class="mx-ag-custom-slot-card mxm-custom-week-card is-available${isFocusedSlot ? ' is-focus-suggested' : ''}"
                   data-slot-kind="available"
                   data-slot-start="${escapeAttrSafe(start.toISOString())}"
                   data-slot-end="${escapeAttrSafe(end.toISOString())}"
+                  data-slot-range-key="${escapeAttrSafe(slotRangeKey)}"
                   data-slot-consultorio-id="${escapeAttrSafe(slotConsultorioId)}">
                   <div class="mx-ag-custom-slot-top">
                     <span class="mx-ag-custom-slot-time">${escapeHtml(timeLabel)}</span>
@@ -2178,6 +2197,11 @@ console.info('app.js loaded :: 20251123a');
       const navTitleEl = root.querySelector('[data-custom-week-nav-title]');
       if(navTitleEl instanceof HTMLElement){
         navTitleEl.textContent = finalRangeTitle;
+      }
+      if(nextSlotFocus){
+        window.setTimeout(()=>{
+          syncNextFocusViewport({ behavior: 'smooth', attempts: 4 });
+        }, 0);
       }
       const anchorForLog = resolveAgendaRollingStartDate();
       console.log('MXM CUSTOM WEEK VISIBLE DAYS DEBUG', {
@@ -2498,9 +2522,19 @@ console.info('app.js loaded :: 20251123a');
       .map((item)=>({
         patient_id: sanitizeText(item.patient_id || item.id || item.patientId || ''),
         display_name: sanitizeText(item.nombre_completo || item.display_name || item.name || ''),
-        curp: sanitizeText(item.curp || '')
+        curp: sanitizeText(item.curp || ''),
+        birthdate: toDateOnlyYmd(item.birthdate || item.fecha_nacimiento || item.dob || '')
       }))
       .filter((item)=> item.patient_id);
+  };
+  const normalizePatientDetailPayload = (payload)=>{
+    if(!payload || payload.ok !== true || !payload.data || typeof payload.data !== 'object') return null;
+    const data = payload.data;
+    return {
+      patient_id: sanitizeText(data.patient_id || ''),
+      display_name: sanitizeText(data.display_name || data.nombre_completo || data.name || ''),
+      birthdate: toDateOnlyYmd(data.birthdate || data.fecha_nacimiento || data.dob || '')
+    };
   };
   const fetchPatientIndex = async ()=>{
     if(Array.isArray(patientIndexCache)) return patientIndexCache;
@@ -2519,20 +2553,66 @@ console.info('app.js loaded :: 20251123a');
       });
     return patientIndexPromise;
   };
+  const fetchPatientDetailById = async (patientId = '')=>{
+    const safePatientId = sanitizeText(patientId || '');
+    if(!safePatientId) return null;
+    if(patientDetailsCache.has(safePatientId)){
+      return patientDetailsCache.get(safePatientId) || null;
+    }
+    try{
+      const json = await AgendaApiClient.getPatientById(safePatientId, {});
+      const detail = normalizePatientDetailPayload(json);
+      patientDetailsCache.set(safePatientId, detail);
+      return detail;
+    }catch(_){
+      patientDetailsCache.set(safePatientId, null);
+      return null;
+    }
+  };
+  const applyExistingPatientSelection = async ({ patientId = '', patientName = '', birthdate = '' } = {})=>{
+    const safePatientId = sanitizeText(patientId || '');
+    const safePatientName = sanitizeText(patientName || '');
+    if(!safePatientId) return;
+    switchCreatePatientMode('existing');
+    if(els.patientId){
+      els.patientId.value = safePatientId;
+      els.patientId.removeAttribute('readonly');
+    }
+    setPatientSearchMsg(`Paciente seleccionado: ${safePatientName || 'Paciente existente'}`, 'success');
+    setCreatePatientBirthdateFieldVisible(false);
+    setCreatePatientBirthdate('', { readOnly: true });
+    const knownBirthdate = toDateOnlyYmd(birthdate || '');
+    setCreatePatientBirthdateInfo(knownBirthdate, knownBirthdate ? '' : '');
+    queueCreatePatientBehaviorNoticeRefresh(0);
+    if(knownBirthdate) return;
+    const detail = await fetchPatientDetailById(safePatientId);
+    const detailBirthdate = toDateOnlyYmd(detail?.birthdate || '');
+    if(detailBirthdate){
+      setCreatePatientBirthdateInfo(detailBirthdate, '');
+    }else{
+      setCreatePatientBirthdateInfo('', '');
+    }
+  };
   const switchCreatePatientMode = (mode = 'existing')=>{
     createPatientMode = (mode === 'new') ? 'new' : 'existing';
     const isNew = createPatientMode === 'new';
     if(els.patientNewWrap) els.patientNewWrap.classList.toggle('d-none', !isNew);
     if(els.patientNewToggle){
-      els.patientNewToggle.textContent = isNew ? 'Usar paciente existente' : 'Usar paciente nuevo';
-      els.patientNewToggle.classList.toggle('btn-outline-secondary', !isNew);
-      els.patientNewToggle.classList.toggle('btn-outline-primary', isNew);
+      els.patientNewToggle.textContent = 'Paciente nuevo';
+      els.patientNewToggle.classList.toggle('is-active', isNew);
+      els.patientNewToggle.setAttribute('aria-pressed', isNew ? 'true' : 'false');
     }
     if(isNew){
       if(els.patientId){
         els.patientId.value = '';
         els.patientId.removeAttribute('readonly');
       }
+      setCreatePatientBirthdateInfo('', '');
+      setCreatePatientBirthdateFieldVisible(true);
+      setCreatePatientBirthdate('', {
+        readOnly: false,
+        hint: ''
+      });
       setActivePatientMode('manual');
       clearCreatePatientBehaviorNotice();
     }else{
@@ -2541,6 +2621,11 @@ console.info('app.js loaded :: 20251123a');
       if(els.patientNewLastName2) els.patientNewLastName2.value = '';
       if(els.patientNewPhone) els.patientNewPhone.value = '';
       if(els.patientNewEmail) els.patientNewEmail.value = '';
+      setCreatePatientBirthdateFieldVisible(false);
+      setCreatePatientBirthdate('', {
+        readOnly: true,
+        hint: ''
+      });
       queueCreatePatientBehaviorNoticeRefresh(90);
     }
   };
@@ -4725,6 +4810,38 @@ console.info('app.js loaded :: 20251123a');
     });
     return visible || candidates[0] || null;
   };
+  const getFocusedCustomWeekSlotEl = ()=>{
+    if(!nextSlotFocus) return null;
+    const root = ensureCustomWeekRoot();
+    if(!(root instanceof HTMLElement)) return null;
+    const targetKey = sanitizeText(nextSlotFocus.key || '');
+    if(!targetKey) return null;
+    const candidates = Array.from(root.querySelectorAll('.mx-ag-custom-slot-card[data-slot-range-key]'));
+    if(!candidates.length) return null;
+    return candidates.find((node)=> sanitizeText(node.getAttribute('data-slot-range-key') || '') === targetKey) || null;
+  };
+  const scrollFocusedCustomWeekSlotIntoView = ({ behavior = 'smooth' } = {})=>{
+    const slotEl = getFocusedCustomWeekSlotEl();
+    if(!(slotEl instanceof HTMLElement)) return false;
+    try{
+      slotEl.scrollIntoView({ block: 'center', inline: 'nearest', behavior });
+      return true;
+    }catch(_){
+      return false;
+    }
+  };
+  const scheduleNextSlotFocusAutoClear = (delayMs = 9000)=>{
+    if(nextSlotFocusClearTimer){
+      try{ window.clearTimeout(nextSlotFocusClearTimer); }catch(_){}
+      nextSlotFocusClearTimer = 0;
+    }
+    const safeDelay = Math.max(1200, Number(delayMs || 0) || 9000);
+    nextSlotFocusClearTimer = window.setTimeout(()=>{
+      nextSlotFocusClearTimer = 0;
+      clearNextSlotFocus();
+      scheduleCustomWeekRender();
+    }, safeDelay);
+  };
   const renderNextFocusInlineMessage = ()=>{
     if(!els.calendarWrap) return;
     els.calendarWrap.querySelectorAll('.mx-ag-next-focus-inline').forEach((el)=> el.remove());
@@ -4769,8 +4886,9 @@ console.info('app.js loaded :: 20251123a');
   };
   const syncNextFocusViewport = ({ behavior = 'auto', attempts = 8 } = {})=>{
     if(!nextSlotFocus) return;
-    const slotReady = !!getFocusedSlotEl();
-    if(slotReady){
+    const fcSlotReady = !!getFocusedSlotEl();
+    const customWeekSlotReady = !!getFocusedCustomWeekSlotEl();
+    if(fcSlotReady || customWeekSlotReady){
       const start = nextSlotFocus.start instanceof Date ? nextSlotFocus.start : new Date(nextSlotFocus.start || '');
       const end = nextSlotFocus.end instanceof Date ? nextSlotFocus.end : new Date(nextSlotFocus.end || '');
       if(!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && isBusyRangeInCalendar(start, end)){
@@ -4778,8 +4896,15 @@ console.info('app.js loaded :: 20251123a');
         setError('El slot sugerido ya fue ocupado. Selecciona otra opción disponible.');
         return;
       }
-      scrollFocusedSlotIntoView({ behavior });
-      renderNextFocusInlineMessage();
+      if(customWeekSlotReady){
+        scrollFocusedCustomWeekSlotIntoView({
+          behavior: behavior === 'auto' ? 'smooth' : behavior
+        });
+      }
+      if(fcSlotReady){
+        scrollFocusedSlotIntoView({ behavior });
+        renderNextFocusInlineMessage();
+      }
       return;
     }
     if(attempts <= 0) return;
@@ -4797,6 +4922,10 @@ console.info('app.js loaded :: 20251123a');
     renderNextFocusInlineMessage();
   };
   const clearNextSlotFocus = ({ clearHint = true } = {})=>{
+    if(nextSlotFocusClearTimer){
+      try{ window.clearTimeout(nextSlotFocusClearTimer); }catch(_){}
+      nextSlotFocusClearTimer = 0;
+    }
     nextSlotFocus = null;
     if(els.calendarWrap){
       els.calendarWrap.classList.remove('mx-ag-next-focus-active');
@@ -4883,19 +5012,39 @@ console.info('app.js loaded :: 20251123a');
       const endDate = item.end instanceof Date ? item.end : new Date(item.end);
       const startLabel = startDate.toLocaleString('es-MX', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
       const endLabel = endDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+      const consultorioId = sanitizeText(item?.consultorio_id || '');
+      const consultorioLabel = normalizeConsultorioDisplayLabel(
+        sanitizeText(item?.consultorio_name || '') || (consultorioId ? resolveAgendaConsultorioLabelById(consultorioId) : ''),
+        consultorioId
+      );
+      const rowLabel = consultorioLabel
+        ? `${startLabel} - ${endLabel} · ${consultorioLabel}`
+        : `${startLabel} - ${endLabel}`;
       return `
-        <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-ag-next-slot-index="${idx}">
-          <span>${escapeHtml(startLabel)} - ${escapeHtml(endLabel)}</span>
-          <span class="badge text-bg-primary">Elegir</span>
-        </button>
+        <div class="list-group-item d-flex justify-content-between align-items-center gap-2" data-ag-next-slot-index="${idx}">
+          <button type="button" class="btn btn-link text-start p-0 flex-grow-1 mx-ag-next-slot-focus" data-ag-next-slot-action="focus">
+            ${escapeHtml(rowLabel)}
+          </button>
+          <button type="button" class="btn btn-sm btn-primary" data-ag-next-slot-action="choose">Elegir</button>
+        </div>
       `;
     }).join('');
   };
-  const setWorkspaceButtonActive = (targetPanelId = panelId)=>{
-    const buttons = Array.from(document.querySelectorAll('.mx-ag-workspace-shell [data-ag-work-panel]'));
+  const setWorkspaceButtonActive = (targetPanelId = panelId, targetAction = '')=>{
+    const buttons = Array.from(document.querySelectorAll('.mx-ag-workspace-shell [data-ag-work-panel], .mx-ag-workspace-shell [data-ag-work-action]'));
     if(!buttons.length) return;
+    const safePanelId = sanitizeText(targetPanelId || panelId);
+    const safeAction = sanitizeText(targetAction || '');
     buttons.forEach((btn)=>{
-      btn.classList.toggle('is-active', sanitizeText(btn.getAttribute('data-ag-work-panel')) === sanitizeText(targetPanelId));
+      const panelTarget = sanitizeText(btn.getAttribute('data-ag-work-panel') || '');
+      const actionTarget = sanitizeText(btn.getAttribute('data-ag-work-action') || '');
+      let active = false;
+      if(safeAction){
+        active = actionTarget === safeAction;
+      }else{
+        active = panelTarget === safePanelId;
+      }
+      btn.classList.toggle('is-active', active);
     });
   };
   const toFcDurationFromMinutes = (minutes)=>{
@@ -5457,6 +5606,16 @@ console.info('app.js loaded :: 20251123a');
         signal
       });
       return resp.json().catch(()=> null);
+    },
+    async getPatientById(patientId, { signal } = {}){
+      const safePatientId = encodeURIComponent(String(patientId || '').trim());
+      const resp = await fetch(`/api/patients/index.php/patients/${safePatientId}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        signal
+      });
+      return resp.json().catch(()=> null);
     }
   };
 
@@ -5487,6 +5646,225 @@ console.info('app.js loaded :: 20251123a');
     els.createError.textContent = msg;
     els.createError.classList.remove('d-none');
   };
+  const toDateOnlyYmd = (value)=>{
+    const raw = sanitizeText(value || '');
+    if(!raw) return '';
+    if(/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    const parsed = new Date(raw);
+    if(Number.isNaN(parsed.getTime())) return '';
+    const yyyy = String(parsed.getFullYear()).padStart(4, '0');
+    const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+    const dd = String(parsed.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+  const CREATE_PATIENT_BIRTH_MONTHS = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+  const populateCreateBirthdateSelectors = ()=>{
+    const daySelect = els.patientBirthDay;
+    const monthSelect = els.patientBirthMonth;
+    const yearSelect = els.patientBirthYear;
+    if(!(daySelect && monthSelect && yearSelect)) return;
+    if((daySelect.options?.length || 0) <= 1){
+      const dayOptions = ['<option value="">Día</option>'];
+      for(let day = 1; day <= 31; day += 1){
+        const dayValue = String(day).padStart(2, '0');
+        dayOptions.push(`<option value="${dayValue}">${dayValue}</option>`);
+      }
+      daySelect.innerHTML = dayOptions.join('');
+    }
+    if((monthSelect.options?.length || 0) <= 1){
+      const monthOptions = ['<option value="">Mes</option>'];
+      CREATE_PATIENT_BIRTH_MONTHS.forEach((label, index)=>{
+        const monthValue = String(index + 1).padStart(2, '0');
+        monthOptions.push(`<option value="${monthValue}">${escapeHtml(label)}</option>`);
+      });
+      monthSelect.innerHTML = monthOptions.join('');
+    }
+    if((yearSelect.options?.length || 0) <= 1){
+      const currentYear = Number(new Date().getFullYear() || 2026);
+      const yearOptions = ['<option value="">Año</option>'];
+      for(let year = currentYear; year >= currentYear - 115; year -= 1){
+        yearOptions.push(`<option value="${year}">${year}</option>`);
+      }
+      yearSelect.innerHTML = yearOptions.join('');
+    }
+  };
+  const syncCreateBirthdateHiddenInputFromSelectors = ()=>{
+    populateCreateBirthdateSelectors();
+    const day = sanitizeText(els.patientBirthDay?.value || '');
+    const month = sanitizeText(els.patientBirthMonth?.value || '');
+    const year = sanitizeText(els.patientBirthYear?.value || '');
+    if(!(els.patientBirthdate instanceof HTMLElement)) return '';
+    if(/^\d{2}$/.test(day) && /^\d{2}$/.test(month) && /^\d{4}$/.test(year)){
+      els.patientBirthdate.value = `${year}-${month}-${day}`;
+      return els.patientBirthdate.value;
+    }
+    els.patientBirthdate.value = '';
+    return '';
+  };
+  const setCreateBirthdateSelectorsFromYmd = (value = '')=>{
+    populateCreateBirthdateSelectors();
+    const safeDate = toDateOnlyYmd(value);
+    const match = safeDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const yearValue = match ? match[1] : '';
+    const monthValue = match ? match[2] : '';
+    const dayValue = match ? match[3] : '';
+    if(els.patientBirthDay){
+      els.patientBirthDay.value = dayValue;
+    }
+    if(els.patientBirthMonth){
+      els.patientBirthMonth.value = monthValue;
+    }
+    if(els.patientBirthYear){
+      els.patientBirthYear.value = yearValue;
+      if(yearValue && !Array.from(els.patientBirthYear.options || []).some((opt)=> sanitizeText(opt.value || '') === yearValue)){
+        const opt = document.createElement('option');
+        opt.value = yearValue;
+        opt.textContent = yearValue;
+        els.patientBirthYear.appendChild(opt);
+        els.patientBirthYear.value = yearValue;
+      }
+    }
+    syncCreateBirthdateHiddenInputFromSelectors();
+  };
+  const setCreatePatientBirthdate = (value = '', { readOnly = true, hint = '' } = {})=>{
+    const safeDate = toDateOnlyYmd(value);
+    if(els.patientBirthdate){
+      els.patientBirthdate.value = safeDate;
+      if(readOnly){
+        els.patientBirthdate.setAttribute('readonly', 'readonly');
+      }else{
+        els.patientBirthdate.removeAttribute('readonly');
+      }
+    }
+    setCreateBirthdateSelectorsFromYmd(safeDate);
+    if(els.patientBirthDay){
+      els.patientBirthDay.disabled = !!readOnly;
+    }
+    if(els.patientBirthMonth){
+      els.patientBirthMonth.disabled = !!readOnly;
+    }
+    if(els.patientBirthYear){
+      els.patientBirthYear.disabled = !!readOnly;
+    }
+    if(els.patientBirthdateHint){
+      const nextHint = sanitizeText(hint || '');
+      els.patientBirthdateHint.textContent = nextHint;
+      els.patientBirthdateHint.classList.toggle('d-none', !nextHint);
+    }
+  };
+  const setCreatePatientBirthdateFieldVisible = (isVisible = false)=>{
+    if(!els.patientBirthdateRow) return;
+    els.patientBirthdateRow.classList.toggle('d-none', !isVisible);
+  };
+  const setCreatePatientBirthdateInfo = (value = '', message = '')=>{
+    if(!els.patientBirthdateInfo) return;
+    const safeDate = toDateOnlyYmd(value);
+    const text = sanitizeText(message || '');
+    if(!safeDate && !text){
+      els.patientBirthdateInfo.classList.add('d-none');
+      els.patientBirthdateInfo.textContent = '';
+      return;
+    }
+    let dateLabel = safeDate;
+    if(safeDate){
+      const parsed = new Date(`${safeDate}T00:00:00`);
+      if(!Number.isNaN(parsed.getTime())){
+        dateLabel = parsed.toLocaleDateString('es-MX', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric'
+        });
+      }
+    }
+    const label = text || `Fecha de nacimiento registrada: ${dateLabel}`;
+    els.patientBirthdateInfo.textContent = label;
+    els.patientBirthdateInfo.classList.remove('d-none');
+  };
+  const normalizeConsultorioDisplayLabel = (label = '', consultorioId = '')=>{
+    const safeLabel = sanitizeText(label || '');
+    const safeId = sanitizeText(consultorioId || '');
+    let normalized = safeLabel.replace(/^\s*consultorio\s*[:\-]?\s*/i, '').trim();
+    if(!normalized){
+      normalized = safeId ? `#${safeId}` : 'Sin consultorio seleccionado';
+    }
+    return normalized;
+  };
+  const resolveCurrentAgendaWorkspacePanelId = ()=>{
+    const visiblePane = document.querySelector('#agenda .pane:not(.d-none)');
+    return sanitizeText(visiblePane?.id || panelId);
+  };
+  const resolveCreateActorRole = ()=>{
+    const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
+      ? window.mxmedResolveActiveProfessionalContext()
+      : null;
+    const rawRole = sanitizeText(
+      activeProfessional?.role
+      || window.mxmedStore?.role
+      || window.mxmedStore?.user_role
+      || window.mxmedDoctor?.role
+      || document.body?.dataset?.userRole
+      || ''
+    ).toLowerCase();
+    if(rawRole.includes('patient') || rawRole.includes('paciente')) return 'patient';
+    if(rawRole.includes('operator') || rawRole.includes('operador') || rawRole.includes('assistant')) return 'operator';
+    if(rawRole.includes('system') || rawRole.includes('sistema')) return 'system';
+    if(rawRole.includes('doctor') || rawRole.includes('medico')) return 'doctor';
+    const workspacePanelId = resolveCurrentAgendaWorkspacePanelId();
+    if(workspacePanelId === 'p-ag-operadores') return 'operator';
+    return 'doctor';
+  };
+  const resolveCreateChannelOrigin = (source = '')=>{
+    const safeSource = sanitizeText(source || '').toLowerCase();
+    const role = resolveCreateActorRole();
+    if(role === 'patient') return 'agenda_public_profile';
+    if(role === 'operator') return 'agenda_operator_console';
+    if(role === 'system') return 'agenda_system';
+    if(safeSource === 'next_available' || safeSource === 'next-focus'){
+      return 'agenda_next_available';
+    }
+    return 'agenda_frontend_v1';
+  };
+  const syncCreateConsultorioInfo = (consultorioId = '')=>{
+    if(!els.consultorioModalInfo) return;
+    const safeId = sanitizeText(consultorioId || '');
+    if(!safeId){
+      els.consultorioModalInfo.value = 'Sin consultorio seleccionado';
+      return;
+    }
+    const consultorioLabel = normalizeConsultorioDisplayLabel(resolveAgendaConsultorioLabelById(safeId), safeId);
+    els.consultorioModalInfo.value = consultorioLabel;
+  };
+  const formatCreateAppointmentDateLabel = (dateValue)=>{
+    const date = dateValue instanceof Date ? new Date(dateValue) : new Date(dateValue || '');
+    if(Number.isNaN(date.getTime())) return null;
+    const weekday = capitalizeAgendaLabel(
+      new Intl.DateTimeFormat('es-MX', { weekday: 'long' }).format(date)
+    );
+    const day = new Intl.DateTimeFormat('es-MX', { day: '2-digit' }).format(date);
+    const month = capitalizeAgendaLabel(
+      new Intl.DateTimeFormat('es-MX', { month: 'long' }).format(date)
+    );
+    const year = new Intl.DateTimeFormat('es-MX', { year: 'numeric' }).format(date);
+    return {
+      mainLabel: `${weekday}, ${day} de ${month}`,
+      yearLabel: year,
+      fullLabel: `${weekday}, ${day} de ${month} ${year}`
+    };
+  };
+  const setCreateSelectionContext = ({ consultorioId = '', source = '', startAt = '', endAt = '' } = {})=>{
+    createSelectionContext = {
+      consultorioId: sanitizeText(consultorioId || ''),
+      source: sanitizeText(source || ''),
+      startAt: sanitizeText(startAt || ''),
+      endAt: sanitizeText(endAt || '')
+    };
+    if(els.channel){
+      els.channel.value = resolveCreateChannelOrigin(createSelectionContext.source);
+    }
+  };
   const resolveActorId = ()=>{
     const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
       ? window.mxmedResolveActiveProfessionalContext()
@@ -5506,11 +5884,19 @@ console.info('app.js loaded :: 20251123a');
     const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
       ? window.mxmedResolveActiveProfessionalContext()
       : null;
-    const raw = sanitizeText(els.consultorioModal?.value || '')
+    const raw = sanitizeText(createSelectionContext.consultorioId || '')
+      || sanitizeText(els.consultorioModal?.value || '')
       || sanitizeText(els.consultorio?.value || '')
       || sanitizeText(activeProfessional?.default_consultorio_id || '')
       || getAvailabilityConsultorioId();
-    if(raw === CONSULTORIO_PROFILE_ONLY_VALUE || raw === CONSULTORIO_UNAVAILABLE_VALUE){
+    const normalizedRaw = raw.toLowerCase();
+    if(
+      raw === CONSULTORIO_PROFILE_ONLY_VALUE
+      || raw === CONSULTORIO_UNAVAILABLE_VALUE
+      || normalizedRaw === 'all'
+      || normalizedRaw === 'todos'
+      || normalizedRaw === '__all__'
+    ){
       return '';
     }
     return raw;
@@ -5537,6 +5923,7 @@ console.info('app.js loaded :: 20251123a');
       unavailableOption.disabled = true;
       unavailableOption.selected = true;
       els.consultorioModal.appendChild(unavailableOption);
+      syncCreateConsultorioInfo('');
       return;
     }
 
@@ -5558,6 +5945,7 @@ console.info('app.js loaded :: 20251123a');
 
     if(sourceOptions.length === 1){
       els.consultorioModal.value = sourceOptions[0].value;
+      syncCreateConsultorioInfo(sourceOptions[0].value);
       return;
     }
 
@@ -5567,6 +5955,7 @@ console.info('app.js loaded :: 20251123a');
         els.consultorioModal.value = candidate;
       }
     }
+    syncCreateConsultorioInfo(sanitizeText(els.consultorioModal.value || ''));
   };
   const getAgendaSettingsContext = ()=>{
     const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
@@ -5919,6 +6308,109 @@ console.info('app.js loaded :: 20251123a');
   let scheduleSelectorActiveConsultorioId = '';
   let agendaScheduleImmersivePanelEl = null;
   let agendaScheduleImmersiveNavGuardBound = false;
+  const AGENDA_CFG_SECTION_DEFAULT = 'details';
+  const AGENDA_CFG_SECTION_KEYS = new Set(['details', 'schedule', 'reminders']);
+  let agendaConfigActiveSection = AGENDA_CFG_SECTION_DEFAULT;
+  const resolveAgendaConfigSections = ()=>{
+    return Array.from(document.querySelectorAll('#p-ag-ajustes [data-ag-cfg-section]'));
+  };
+  const normalizeAgendaConfigSectionKey = (value = '')=>{
+    const raw = sanitizeText(value || '').toLowerCase();
+    return AGENDA_CFG_SECTION_KEYS.has(raw) ? raw : '';
+  };
+  const setAgendaConfigSection = (sectionKey = '', options = {})=>{
+    const sections = resolveAgendaConfigSections();
+    if(!sections.length) return '';
+    const availableKeys = sections
+      .map((section)=> normalizeAgendaConfigSectionKey(section.getAttribute('data-ag-cfg-section') || ''))
+      .filter(Boolean);
+    const fallbackKey = availableKeys.includes(AGENDA_CFG_SECTION_DEFAULT)
+      ? AGENDA_CFG_SECTION_DEFAULT
+      : (availableKeys[0] || '');
+    const normalizedRequested = normalizeAgendaConfigSectionKey(sectionKey);
+    const nextKey = availableKeys.includes(normalizedRequested) ? normalizedRequested : fallbackKey;
+    if(!nextKey) return '';
+    agendaConfigActiveSection = nextKey;
+    sections.forEach((section)=>{
+      const key = normalizeAgendaConfigSectionKey(section.getAttribute('data-ag-cfg-section') || '');
+      const active = key === nextKey;
+      section.classList.toggle('is-active', active);
+      section.classList.toggle('is-collapsed', !active);
+      section.setAttribute('data-expanded', active ? '1' : '0');
+      const trigger = section.querySelector('[data-ag-cfg-section-trigger]');
+      if(trigger){
+        trigger.setAttribute('aria-expanded', active ? 'true' : 'false');
+      }
+      const content = section.querySelector('[data-ag-cfg-section-content]');
+      if(content){
+        if(active){
+          content.removeAttribute('hidden');
+        }else{
+          content.setAttribute('hidden', 'hidden');
+        }
+      }
+    });
+    return nextKey;
+  };
+  const collapseAgendaConfigSections = ()=>{
+    const sections = resolveAgendaConfigSections();
+    if(!sections.length) return;
+    agendaConfigActiveSection = '';
+    sections.forEach((section)=>{
+      section.classList.remove('is-active');
+      section.classList.add('is-collapsed');
+      section.setAttribute('data-expanded', '0');
+      const trigger = section.querySelector('[data-ag-cfg-section-trigger]');
+      if(trigger){
+        trigger.setAttribute('aria-expanded', 'false');
+      }
+      const content = section.querySelector('[data-ag-cfg-section-content]');
+      if(content){
+        content.setAttribute('hidden', 'hidden');
+      }
+    });
+  };
+  const bindAgendaConfigSectionAccordion = ()=>{
+    if(window.__mxmAgendaConfigSectionAccordionBound) return;
+    window.__mxmAgendaConfigSectionAccordionBound = true;
+    document.addEventListener('click', (event)=>{
+      const trigger = event.target instanceof Element
+        ? event.target.closest('#p-ag-ajustes [data-ag-cfg-section-trigger]')
+        : null;
+      if(!trigger) return;
+      event.preventDefault();
+      const section = trigger.closest('[data-ag-cfg-section]');
+      const key = normalizeAgendaConfigSectionKey(section?.getAttribute('data-ag-cfg-section') || '');
+      if(!key) return;
+      if(key === agendaConfigActiveSection){
+        collapseAgendaConfigSections();
+        return;
+      }
+      setAgendaConfigSection(key, { syncScheduleSelector: true });
+    });
+    document.addEventListener('keydown', (event)=>{
+      if(event.key !== 'Enter' && event.key !== ' ') return;
+      const trigger = event.target instanceof Element
+        ? event.target.closest('#p-ag-ajustes [data-ag-cfg-section-trigger]')
+        : null;
+      if(!trigger) return;
+      event.preventDefault();
+      const section = trigger.closest('[data-ag-cfg-section]');
+      const key = normalizeAgendaConfigSectionKey(section?.getAttribute('data-ag-cfg-section') || '');
+      if(!key) return;
+      if(key === agendaConfigActiveSection){
+        collapseAgendaConfigSections();
+        return;
+      }
+      setAgendaConfigSection(key, { syncScheduleSelector: true });
+    });
+  };
+  window.mxmSetAgendaConfigSection = (sectionKey = '', options = {})=>{
+    return setAgendaConfigSection(sectionKey, options);
+  };
+  window.mxmCollapseAgendaConfigSections = ()=>{
+    collapseAgendaConfigSections();
+  };
   const getAgendaImmersiveHeaderNodes = ()=>{
     const panelEl = agendaScheduleImmersivePanelEl || document.getElementById('ag_schedule_immersive_panel');
     const head = panelEl?.querySelector('[data-cons-horarios-head]') || null;
@@ -5982,14 +6474,15 @@ console.info('app.js loaded :: 20251123a');
       if(!isAgendaScheduleImmersivePanelOpen()) return;
       const target = event.target;
       if(!(target instanceof Element)) return;
-      const navBtn = target.closest('.menu-sub-btn[data-panel], .mx-ag-workspace-btn[data-ag-work-panel]');
+      const navBtn = target.closest('.menu-sub-btn[data-panel], .mx-ag-workspace-btn[data-ag-work-panel], .mx-ag-workspace-btn[data-ag-work-action]');
       if(!navBtn) return;
       const panelTarget = sanitizeText(
         navBtn.getAttribute('data-panel')
         || navBtn.getAttribute('data-ag-work-panel')
         || ''
       );
-      if(panelTarget === 'p-ag-ajustes') return;
+      const actionTarget = sanitizeText(navBtn.getAttribute('data-ag-work-action') || '');
+      if(panelTarget === 'p-ag-ajustes' && !actionTarget) return;
       closeAgendaScheduleImmersivePanel();
     }, true);
   };
@@ -6143,6 +6636,7 @@ console.info('app.js loaded :: 20251123a');
     }catch(_){}
   };
   const showScheduleSelectorOverview = (options = {})=>{
+    setAgendaConfigSection('schedule');
     scheduleSelectorViewMode = 'overview';
     scheduleSelectorActiveConsultorioId = '';
     closeAgendaScheduleImmersivePanel();
@@ -6186,6 +6680,7 @@ console.info('app.js loaded :: 20251123a');
   window.mxmScrollToScheduleGroup = mxmScrollToScheduleGroup;
   window.scrollToScheduleGroup = mxmScrollToScheduleGroup;
   const showScheduleConsultorioEditor = (consultorioId, options = {})=>{
+    setAgendaConfigSection('schedule');
     const source = sanitizeText(options?.source || 'agenda');
     const targetConsultorioId = sanitizeText(
       consultorioId
@@ -6553,12 +7048,29 @@ console.info('app.js loaded :: 20251123a');
     }
     if(createPatientMode === 'new'){
       if(els.patientId) els.patientId.removeAttribute('readonly');
+      setCreatePatientBirthdateFieldVisible(true);
+      setCreatePatientBirthdateInfo('', '');
+      setCreatePatientBirthdate(els.patientBirthdate?.value || '', {
+        readOnly: false,
+        hint: ''
+      });
       clearCreatePatientBehaviorNotice();
       return;
     }
     if(createActivePatientMode === 'active' && activePatientContextId){
       if(els.patientId) els.patientId.value = activePatientContextId;
       if(els.patientId) els.patientId.setAttribute('readonly', 'readonly');
+      setCreatePatientBirthdateFieldVisible(false);
+      setCreatePatientBirthdate('', { readOnly: true });
+      setCreatePatientBirthdateInfo('', 'Consultando fecha de nacimiento del paciente activo...');
+      fetchPatientDetailById(activePatientContextId).then((detail)=>{
+        const detailBirthdate = toDateOnlyYmd(detail?.birthdate || '');
+        if(detailBirthdate){
+          setCreatePatientBirthdateInfo(detailBirthdate, '');
+        }else{
+          setCreatePatientBirthdateInfo('', 'El paciente activo no tiene fecha de nacimiento registrada.');
+        }
+      }).catch(()=> null);
       queueCreatePatientBehaviorNoticeRefresh(0);
       return;
     }
@@ -6566,6 +7078,9 @@ console.info('app.js loaded :: 20251123a');
     if(createActivePatientMode === 'manual' && els.patientId && sanitizeText(els.patientId.value) === activePatientContextId){
       els.patientId.value = '';
     }
+    setCreatePatientBirthdateFieldVisible(false);
+    setCreatePatientBirthdate('', { readOnly: true });
+    setCreatePatientBirthdateInfo('', '');
     queueCreatePatientBehaviorNoticeRefresh(90);
   };
   const syncActivePatientPrompt = ()=>{
@@ -6578,10 +7093,16 @@ console.info('app.js loaded :: 20251123a');
       return;
     }
     els.activePatientBox.classList.remove('d-none');
-    els.activePatientText.textContent = `Paciente activo detectado: ${activePatientContextId}. ¿Deseas usar este paciente para la cita?`;
+    els.activePatientText.textContent = 'Paciente activo detectado. ¿Deseas usar este paciente para la cita?';
     setActivePatientMode('manual');
   };
   const resetCreateForm = ()=>{
+    setCreateSelectionContext({
+      consultorioId: '',
+      source: '',
+      startAt: '',
+      endAt: ''
+    });
     setCreateError('');
     clearCreatePatientBehaviorNotice();
     syncActivePatientPrompt();
@@ -6592,7 +7113,13 @@ console.info('app.js loaded :: 20251123a');
     if(els.startAt) els.startAt.value = '';
     if(els.endAt) els.endAt.value = '';
     if(els.modality) els.modality.value = 'in_person';
-    if(els.channel) els.channel.value = 'agenda_frontend_v1';
+    setCreatePatientBirthdateFieldVisible(false);
+    setCreatePatientBirthdate('', {
+      readOnly: true,
+      hint: ''
+    });
+    setCreatePatientBirthdateInfo('', '');
+    if(els.channel) els.channel.value = resolveCreateChannelOrigin('agenda_slot');
     clearPatientSearchResults();
     if(els.patientSearchQuery) els.patientSearchQuery.value = '';
     syncCreateConsultorioOptions();
@@ -6600,24 +7127,39 @@ console.info('app.js loaded :: 20251123a');
       const fallback = getAvailabilityConsultorioId();
       if(fallback) els.consultorioModal.value = fallback;
     }
+    syncCreateConsultorioInfo(sanitizeText(els.consultorioModal?.value || ''));
     if(els.createSubmit){
       els.createSubmit.disabled = false;
       els.createSubmit.textContent = 'Guardar cita';
     }
     createRequestInFlight = false;
   };
-  const syncCreateStartInfoFromDate = (dateValue)=>{
+  const syncCreateStartInfoFromDate = (dateValue, endDateValue = null)=>{
     const date = dateValue instanceof Date ? new Date(dateValue) : new Date(dateValue || '');
     if(Number.isNaN(date.getTime())) return false;
+    const endDate = endDateValue instanceof Date ? new Date(endDateValue) : new Date(endDateValue || '');
+    const hasEndDate = !Number.isNaN(endDate.getTime()) && endDate > date;
+    const timeStartLabel = date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const timeEndLabel = hasEndDate
+      ? endDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false })
+      : '';
     if(els.startInfoTime){
-      els.startInfoTime.textContent = date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+      els.startInfoTime.textContent = hasEndDate
+        ? `${timeStartLabel} - ${timeEndLabel} h`
+        : `${timeStartLabel} h`;
     }
     if(els.startInfoDate){
-      els.startInfoDate.textContent = date.toLocaleDateString('es-MX', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-      });
+      const dateLabel = formatCreateAppointmentDateLabel(date);
+      if(dateLabel && typeof dateLabel === 'object'){
+        els.startInfoDate.innerHTML = `
+          <span class="ag-create-start-main">${escapeHtml(dateLabel.mainLabel)}</span>
+          <span class="ag-create-start-year">${escapeHtml(dateLabel.yearLabel)}</span>
+        `;
+        els.startInfoDate.setAttribute('aria-label', dateLabel.fullLabel);
+      }else{
+        els.startInfoDate.textContent = '--';
+        els.startInfoDate.removeAttribute('aria-label');
+      }
     }
     if(els.startAt) els.startAt.value = toDateTimeLocalInput(date);
     return true;
@@ -6639,11 +7181,11 @@ console.info('app.js loaded :: 20251123a');
     els.patientSearchResults.innerHTML = items.map((item, idx)=>{
       const pid = sanitizeText(item.patient_id || '');
       const display = sanitizeText(item.display_name || pid || 'Paciente');
-      const curp = sanitizeText(item.curp || '');
+      const birthdate = toDateOnlyYmd(item.birthdate || '');
       return `
-        <button type="button" class="list-group-item list-group-item-action mx-ag-patient-result" data-ag-patient-select="${idx}" data-ag-patient-id="${escapeHtml(pid)}" data-ag-patient-name="${escapeHtml(display)}">
+        <button type="button" class="list-group-item list-group-item-action mx-ag-patient-result" data-ag-patient-select="${idx}" data-ag-patient-id="${escapeHtml(pid)}" data-ag-patient-name="${escapeHtml(display)}" data-ag-patient-birthdate="${escapeAttrSafe(birthdate)}">
           <div class="fw-semibold">${escapeHtml(display)}</div>
-          <small>ID: ${escapeHtml(pid)}${curp ? ` · CURP: ${escapeHtml(curp)}` : ''}</small>
+          <small>Paciente existente</small>
         </button>
       `;
     }).join('');
@@ -6778,13 +7320,26 @@ console.info('app.js loaded :: 20251123a');
       return false;
     }
     resetCreateForm();
-    syncCreateStartInfoFromDate(start);
     const slotMinutes = Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
-    const computedEnd = plusMinutes(start, slotMinutes);
+    const computedEnd = (end instanceof Date && !Number.isNaN(end.getTime()) && end > start)
+      ? new Date(end)
+      : plusMinutes(start, slotMinutes);
+    syncCreateStartInfoFromDate(start, computedEnd);
     if(els.endAt) els.endAt.value = toDateTimeLocalInput(computedEnd);
     const slotConsultorioId = sanitizeText(selection?.consultorio_id || selection?.consultorioId || '');
     const consultorioId = slotConsultorioId || resolveConsultorioId();
-    if(els.consultorioModal && consultorioId) els.consultorioModal.value = consultorioId;
+    if(!consultorioId){
+      setError('No se pudo resolver el consultorio del horario seleccionado.');
+      return false;
+    }
+    setCreateSelectionContext({
+      consultorioId,
+      source: sanitizeText(selection?.source || 'agenda_slot'),
+      startAt: toSqlDateTimeLocal(start),
+      endAt: toSqlDateTimeLocal(computedEnd)
+    });
+    if(els.consultorioModal) els.consultorioModal.value = consultorioId;
+    syncCreateConsultorioInfo(consultorioId);
     createModal = createModal || window.bootstrap.Modal.getOrCreateInstance(els.createModalEl);
     createModal.show();
     queueCreatePatientBehaviorNoticeRefresh(60);
@@ -6820,12 +7375,14 @@ console.info('app.js loaded :: 20251123a');
           if(!overlapsBusy){
             const key = toRangeKey(slotCursor, slotEnd);
             if(key && !options.some((item)=> item.key === key)){
+              const consultorioId = sanitizeText(getAvailabilityConsultorioId() || '');
               options.push({
                 key,
                 start: new Date(slotCursor),
                 end: new Date(slotEnd),
                 day_key: formatYmdLocal(slotCursor),
-                consultorio_id: sanitizeText(getAvailabilityConsultorioId() || '')
+                consultorio_id: consultorioId,
+                consultorio_name: consultorioId ? resolveAgendaConsultorioLabelById(consultorioId) : ''
               });
             }
           }
@@ -6837,18 +7394,31 @@ console.info('app.js loaded :: 20251123a');
     }
 
     const doctorId = getDoctorId();
-    const consultorioId = getAvailabilityConsultorioId();
+    const availabilityScope = resolveAgendaAvailabilityConsultorioScope();
+    const allMode = sanitizeText(availabilityScope?.mode || '') === 'all';
+    const consultorioIds = allMode
+      ? Array.from(new Set((Array.isArray(availabilityScope?.consultorios) ? availabilityScope.consultorios : [])
+        .map((id)=> sanitizeText(id || ''))
+        .filter((id)=> isNumericId(id))))
+      : (()=>{
+        const fromScope = sanitizeText((Array.isArray(availabilityScope?.consultorios) ? availabilityScope.consultorios[0] : '') || '');
+        if(isNumericId(fromScope)) return [fromScope];
+        const fallbackId = sanitizeText(getAvailabilityConsultorioId() || '');
+        return isNumericId(fallbackId) ? [fallbackId] : [];
+      })();
     const consultorioFilterForAppointments = (()=>{
       const selected = sanitizeText(els.consultorio?.value || '');
       return isNumericId(selected) ? selected : '';
     })();
-    if(!isNumericId(doctorId) || !isNumericId(consultorioId)){
+    if(!isNumericId(doctorId) || !consultorioIds.length){
       throw new Error('Doctor/consultorio no disponibles para buscar siguientes citas.');
     }
+
     const slotMinutes = resolveAgendaSlotMinutes();
     const options = [];
     const baseDate = toStartOfDay(afterDate || new Date());
     if(!baseDate) return options;
+    const queryAfterDate = new Date(afterDate || Date.now());
     let daysScanned = 0;
     while(options.length < limit && daysScanned < 180){
       const dayDate = toAddDays(baseDate, daysScanned);
@@ -6857,14 +7427,23 @@ console.info('app.js loaded :: 20251123a');
       dayStart.setHours(0, 0, 0, 0);
       const dayEnd = new Date(dayDate);
       dayEnd.setHours(23, 59, 59, 999);
-      const params = new URLSearchParams({
-        doctor_id: doctorId,
-        consultorio_id: consultorioId,
-        date: dayYmd,
-        slot_minutes: String(slotMinutes)
+
+      const availabilityRequests = consultorioIds.map((consultorioId)=> {
+        const params = new URLSearchParams({
+          doctor_id: doctorId,
+          consultorio_id: consultorioId,
+          date: dayYmd,
+          slot_minutes: String(slotMinutes)
+        });
+        return AgendaApiClient.getAvailability({ params }).then((json)=> ({
+          consultorio_id: consultorioId,
+          consultorio_name: resolveAgendaConsultorioLabelById(consultorioId),
+          json
+        }));
       });
-      const [json, appointmentsJson] = await Promise.all([
-        AgendaApiClient.getAvailability({ params }),
+
+      const [availabilityResults, appointmentsJson] = await Promise.all([
+        Promise.all(availabilityRequests),
         AgendaApiClient.getAppointments({
           params: (()=> {
             const appointmentsParams = new URLSearchParams({
@@ -6880,23 +7459,51 @@ console.info('app.js loaded :: 20251123a');
           })()
         })
       ]);
+
       const bookedRanges = (appointmentsJson?.ok === true && Array.isArray(appointmentsJson?.data))
         ? collectBookedRangesFromRows(appointmentsJson.data)
         : [];
-      if(json?.ok === true && Array.isArray(json?.data?.slots)){
-        json.data.slots.forEach((slot)=>{
-          if(options.length >= limit) return;
+
+      const dayCandidates = [];
+      availabilityResults.forEach((result)=>{
+        if(result?.json?.ok !== true || !Array.isArray(result?.json?.data?.slots)) return;
+        result.json.data.slots.forEach((slot)=>{
           const start = parseDateTimeLocalSafe(slot?.start_at || '');
           const end = parseDateTimeLocalSafe(slot?.end_at || '');
           if(!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return;
-          if(start <= new Date(afterDate || Date.now())) return;
+          if(start <= queryAfterDate) return;
           const overlapsBusy = bookedRanges.some((range)=> start < range.end && end > range.start);
           if(overlapsBusy) return;
-          const key = toRangeKey(start, end);
-          if(options.some((item)=> item.key === key)) return;
-          options.push({ key, start, end, day_key: formatYmdLocal(start), consultorio_id: consultorioId });
+          const rangeKey = toRangeKey(start, end);
+          if(!rangeKey) return;
+          const consultorioId = sanitizeText(result?.consultorio_id || '');
+          const dedupeKey = `${rangeKey}::${consultorioId}`;
+          dayCandidates.push({
+            dedupeKey,
+            key: rangeKey,
+            start,
+            end,
+            day_key: formatYmdLocal(start),
+            consultorio_id: consultorioId,
+            consultorio_name: sanitizeText(result?.consultorio_name || '')
+          });
         });
-      }
+      });
+
+      dayCandidates.sort((a, b)=>{
+        const diff = a.start.getTime() - b.start.getTime();
+        if(diff !== 0) return diff;
+        return sanitizeText(a.consultorio_id || '').localeCompare(sanitizeText(b.consultorio_id || ''));
+      });
+
+      dayCandidates.forEach((candidate)=>{
+        if(options.length >= limit) return;
+        if(options.some((item)=> sanitizeText(item?.dedupeKey || '') === sanitizeText(candidate?.dedupeKey || ''))){
+          return;
+        }
+        options.push(candidate);
+      });
+
       daysScanned += 1;
     }
     return options.slice(0, limit);
@@ -6954,17 +7561,21 @@ console.info('app.js loaded :: 20251123a');
     const newPatientDisplayName = [newPatientFirstName, newPatientLastName1, newPatientLastName2].filter(Boolean).join(' ');
     const newPatientPhone = sanitizeText(els.patientNewPhone?.value || '');
     const newPatientEmail = sanitizeText(els.patientNewEmail?.value || '');
+    const newPatientBirthdate = toDateOnlyYmd(els.patientBirthdate?.value || '');
     const startInput = sanitizeText(els.startAt?.value || '');
     const modality = sanitizeText(els.modality?.value || 'in_person') || 'in_person';
-    const channelOrigin = sanitizeText(els.channel?.value || 'agenda_frontend_v1') || 'agenda_frontend_v1';
-    const actorId = resolveActorId();
+    const actorRole = resolveCreateActorRole();
+    const channelOrigin = resolveCreateChannelOrigin(createSelectionContext.source);
+    const actorId = resolveActorId() || doctorId;
 
     if(!doctorId) return setCreateError('No se pudo resolver doctor_id.');
     if(!consultorioId) return setCreateError('No se pudo resolver un consultorio operativo. Verifica el catálogo de consultorios del médico activo.');
     if(createPatientMode === 'new' && (!newPatientFirstName || !newPatientLastName1)){
       return setCreateError('Nombre(s) y primer apellido son obligatorios para paciente nuevo.');
     }
-    if(createPatientMode !== 'new' && !patientId) return setCreateError('Paciente (ID) es obligatorio.');
+    if(createPatientMode !== 'new' && !patientId){
+      return setCreateError('Selecciona un paciente existente o utiliza “Nuevo paciente”.');
+    }
     if(!startInput) return setCreateError('Inicio es obligatorio.');
     const configuredDurationMinutes = Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
     const startDate = parseDateTimeLocalSafe(startInput);
@@ -6988,7 +7599,7 @@ console.info('app.js loaded :: 20251123a');
       end_at: endSql,
       modality: modality,
       channel_origin: channelOrigin,
-      created_by_role: 'doctor',
+      created_by_role: actorRole,
       created_by_id: actorId
     };
     if(createPatientMode === 'new'){
@@ -7002,6 +7613,7 @@ console.info('app.js loaded :: 20251123a');
       payload.patient = {
         display_name: newPatientDisplayName,
         doctor_id: doctorId,
+        ...(newPatientBirthdate ? { birthdate: newPatientBirthdate } : {}),
         ...(contacts.length ? { contacts } : {})
       };
     }else{
@@ -9482,20 +10094,7 @@ console.info('app.js loaded :: 20251123a');
             }
           }
           if(els.hint){
-            if(availabilityResult?.meta?.skipped){
-              const skipReason = sanitizeText(availabilityResult?.meta?.reason || '');
-              if(skipReason === 'availability_not_used_in_month'){
-                els.hint.textContent = 'Resumen mensual de citas';
-              }else{
-                els.hint.textContent = 'Disponibilidad: pendiente (doctor/consultorio numérico requerido por backend).';
-              }
-            }else{
-              const slotsCount = Number(availabilityResult?.meta?.slots_count || 0);
-              const consultorioUsed = sanitizeText(availabilityResult?.meta?.consultorio_id_used || '');
-              els.hint.textContent = consultorioUsed
-                ? `Disponibilidad activa · ${slotsCount} slots libres en rango visible · consultorio ${consultorioUsed}`
-                : `Disponibilidad activa · ${slotsCount} slots libres en rango visible`;
-            }
+            els.hint.textContent = '';
           }
           const warning = sanitizeText(availabilityResult?.meta?.warning || '');
           if(warning){
@@ -9681,7 +10280,12 @@ console.info('app.js loaded :: 20251123a');
                 start: start.toISOString(),
                 end: end.toISOString()
               });
-              const opened = openCreateModalFromSelection({ start, end }, { bypassAvailabilityCheck: true });
+              const opened = openCreateModalFromSelection({
+                start,
+                end,
+                consultorio_id: sanitizeText(nextSlotFocus?.consultorio_id || ''),
+                source: 'next-focus'
+              }, { bypassAvailabilityCheck: true });
               if(opened){
                 clearNextSlotFocus();
               }
@@ -9764,7 +10368,12 @@ console.info('app.js loaded :: 20251123a');
               start: start?.toISOString?.() || '',
               end: end?.toISOString?.() || ''
             });
-            const opened = openCreateModalFromSelection({ start, end }, { bypassAvailabilityCheck: true });
+            const opened = openCreateModalFromSelection({
+              start,
+              end,
+              consultorio_id: sanitizeText(nextSlotFocus?.consultorio_id || ''),
+              source: 'next-focus'
+            }, { bypassAvailabilityCheck: true });
             if(opened){
               clearNextSlotFocus();
             }
@@ -10019,10 +10628,14 @@ console.info('app.js loaded :: 20251123a');
     if(!currentView){
       replaceScheduleHistoryState('schedule-overview', '');
     }
+    bindAgendaConfigSectionAccordion();
+    collapseAgendaConfigSections();
     renderAgendaScheduleEditorSelector();
     const initialReminderPayload = parseAgendaReminderPayloadFromTemplate(String(els.cfgReminderTemplate?.value || ''));
     agendaReminderMessageTemplate = String(initialReminderPayload?.messageTemplate || '').trim();
     applyAgendaReminderSettingsToUi(initialReminderPayload?.settings || cloneAgendaReminderDefaults());
+    populateCreateBirthdateSelectors();
+    syncCreateBirthdateHiddenInputFromSelectors();
 
     els.refresh?.addEventListener('click', ()=>{
       refreshCalendar({ forceConsultorios: false }).catch(()=> null);
@@ -10184,7 +10797,7 @@ console.info('app.js loaded :: 20251123a');
         if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start){
           return;
         }
-        openCreateModalFromSelection({ start, end, consultorio_id: consultorioId });
+        openCreateModalFromSelection({ start, end, consultorio_id: consultorioId, source: 'custom_week_slot' });
         return;
       }
       if(kind === 'occupied'){
@@ -10520,14 +11133,13 @@ console.info('app.js loaded :: 20251123a');
       if(!btn) return;
       const patientId = sanitizeText(btn.getAttribute('data-ag-patient-id') || '');
       const patientName = sanitizeText(btn.getAttribute('data-ag-patient-name') || '');
+      const patientBirthdate = sanitizeText(btn.getAttribute('data-ag-patient-birthdate') || '');
       if(!patientId) return;
-      switchCreatePatientMode('existing');
-      if(els.patientId){
-        els.patientId.value = patientId;
-        els.patientId.removeAttribute('readonly');
-      }
-      setPatientSearchMsg(`Paciente seleccionado: ${patientName || patientId}`, 'success');
-      queueCreatePatientBehaviorNoticeRefresh(0);
+      applyExistingPatientSelection({
+        patientId,
+        patientName,
+        birthdate: patientBirthdate
+      }).catch(()=> null);
     });
     els.patientId?.addEventListener('input', ()=>{
       queueCreatePatientBehaviorNoticeRefresh(240);
@@ -10535,6 +11147,13 @@ console.info('app.js loaded :: 20251123a');
     els.patientId?.addEventListener('change', ()=>{
       queueCreatePatientBehaviorNoticeRefresh(0);
     });
+    [els.patientBirthDay, els.patientBirthMonth, els.patientBirthYear]
+      .filter(Boolean)
+      .forEach((selectNode)=>{
+        selectNode.addEventListener('change', ()=>{
+          syncCreateBirthdateHiddenInputFromSelectors();
+        });
+      });
     els.patientNewToggle?.addEventListener('click', ()=>{
       switchCreatePatientMode(createPatientMode === 'new' ? 'existing' : 'new');
     });
@@ -10547,7 +11166,6 @@ console.info('app.js loaded :: 20251123a');
       hideCellMenu();
     });
     els.nextSlotsMoreBtn?.addEventListener('click', ()=>{
-      if(!NEXT_AVAILABLE_FLOW_ENABLED) return;
       if(!(nextAvailableForwardCursor instanceof Date)) return;
       if(nextAvailableCursor instanceof Date){
         nextAvailablePrevStack.push(new Date(nextAvailableCursor));
@@ -10556,7 +11174,6 @@ console.info('app.js loaded :: 20251123a');
       loadNextAvailableSlots({ resetCursor: false }).catch(()=> null);
     });
     els.nextSlotsPrevBtn?.addEventListener('click', ()=>{
-      if(!NEXT_AVAILABLE_FLOW_ENABLED) return;
       if(!nextAvailablePrevStack.length) return;
       const previousCursor = nextAvailablePrevStack.pop();
       if(!(previousCursor instanceof Date) || Number.isNaN(previousCursor.getTime())) return;
@@ -10573,39 +11190,114 @@ console.info('app.js loaded :: 20251123a');
       nextAvailableForwardCursor = null;
       if(els.nextSlotsPrevBtn) els.nextSlotsPrevBtn.disabled = true;
       if(els.nextSlotsMoreBtn) els.nextSlotsMoreBtn.disabled = false;
+      setWorkspaceButtonActive('p-ag-admin');
     });
     els.nextSlotsResults?.addEventListener('click', (event)=>{
-      if(!NEXT_AVAILABLE_FLOW_ENABLED) return;
       const target = event.target.closest('[data-ag-next-slot-index]');
       if(!target) return;
+      const actionTarget = event.target.closest('[data-ag-next-slot-action]');
+      if(!actionTarget) return;
+      const action = sanitizeText(actionTarget.getAttribute('data-ag-next-slot-action') || '');
       const idx = Number(target.getAttribute('data-ag-next-slot-index'));
       const choice = nextAvailableLastOptions[idx];
       if(!choice) return;
-      if(nextSlotsModal){
-        nextSlotsModal.hide();
-      }
-      nextSlotFocus = {
-        start: choice.start instanceof Date ? new Date(choice.start) : new Date(choice.start || ''),
-        end: choice.end instanceof Date ? new Date(choice.end) : new Date(choice.end || '')
-      };
-      nextSlotFocus.key = toRangeKey(nextSlotFocus.start, nextSlotFocus.end);
-      nextSlotFocus.day_key = sanitizeText(choice?.day_key || '') || formatYmdLocal(nextSlotFocus.start);
-      if(calendar){
-        try{
-          weeklyHoursExpanded = true;
-          applyWeeklyHoursState();
-          calendar.changeView('timeGridWeek', nextSlotFocus.start);
-        }catch(_){}
-      }
-      window.setTimeout(()=>{
-        if(calendar && nextSlotFocus?.start instanceof Date && !Number.isNaN(nextSlotFocus.start.getTime())){
-          const hh = String(nextSlotFocus.start.getHours()).padStart(2, '0');
-          const mm = String(nextSlotFocus.start.getMinutes()).padStart(2, '0');
-          try{ calendar.scrollToTime(`${hh}:${mm}:00`); }catch(_){}
+      const selectedStart = choice.start instanceof Date ? new Date(choice.start) : new Date(choice.start || '');
+      const selectedEnd = choice.end instanceof Date ? new Date(choice.end) : new Date(choice.end || '');
+      const selectedConsultorioId = sanitizeText(choice?.consultorio_id || '');
+      const openSuggestedSelection = ()=>{
+        const opened = openCreateModalFromSelection({
+          start: selectedStart,
+          end: selectedEnd,
+          consultorio_id: selectedConsultorioId,
+          source: 'next_available'
+        }, { bypassAvailabilityCheck: true });
+        if(opened){
+          clearNextSlotFocus();
+          return true;
         }
-        applyNextSlotFocusToCalendar();
-        window.setTimeout(()=> syncNextFocusViewport({ behavior: 'smooth' }), 30);
-      }, 120);
+        return false;
+      };
+      const fallbackToFocusedSlot = ()=>{
+        nextSlotFocus = {
+          start: selectedStart,
+          end: selectedEnd,
+          consultorio_id: selectedConsultorioId,
+          consultorio_name: sanitizeText(choice?.consultorio_name || '')
+        };
+        nextSlotFocus.key = toRangeKey(nextSlotFocus.start, nextSlotFocus.end);
+        nextSlotFocus.day_key = sanitizeText(choice?.day_key || '') || formatYmdLocal(nextSlotFocus.start);
+        customWeekVisibleDaysAction = 'next_available_focus';
+        customWeekIncludeAnchorEvenIfInactive = false;
+        const focusAnchor = setCustomWeekAnchorDate(nextSlotFocus.start);
+        if(calendar){
+          try{
+            weeklyHoursExpanded = true;
+            applyWeeklyHoursState();
+            calendar.changeView('timeGridWeek', focusAnchor || nextSlotFocus.start);
+            if(isCustomWeekActive()){
+              try{ calendar.refetchEvents(); }catch(_){}
+            }
+          }catch(_){}
+        }
+        scheduleNextSlotFocusAutoClear(9000);
+        window.setTimeout(()=>{
+          if(calendar && nextSlotFocus?.start instanceof Date && !Number.isNaN(nextSlotFocus.start.getTime())){
+            const hh = String(nextSlotFocus.start.getHours()).padStart(2, '0');
+            const mm = String(nextSlotFocus.start.getMinutes()).padStart(2, '0');
+            try{ calendar.scrollToTime(`${hh}:${mm}:00`); }catch(_){}
+          }
+          applyNextSlotFocusToCalendar();
+          scheduleCustomWeekRender();
+          syncCustomWeekToolbarTitle();
+          window.setTimeout(()=> syncNextFocusViewport({ behavior: 'smooth' }), 30);
+        }, 120);
+      };
+
+      const closeNextAvailableModalAndRun = (callback)=>{
+        const modalEl = els.nextSlotsModalEl;
+        if(modalEl && nextSlotsModal){
+          const handleHidden = ()=>{
+            callback();
+          };
+          modalEl.addEventListener('hidden.bs.modal', handleHidden, { once: true });
+          try{
+            nextSlotsModal.hide();
+            return true;
+          }catch(_){
+            modalEl.removeEventListener('hidden.bs.modal', handleHidden);
+          }
+        }
+        return false;
+      };
+
+      if(action === 'focus'){
+        const handled = closeNextAvailableModalAndRun(()=>{
+          fallbackToFocusedSlot();
+        });
+        if(!handled){
+          fallbackToFocusedSlot();
+        }
+        return;
+      }
+
+      const modalEl = els.nextSlotsModalEl;
+      if(modalEl && nextSlotsModal){
+        const handleHidden = ()=>{
+          if(!openSuggestedSelection()){
+            fallbackToFocusedSlot();
+          }
+        };
+        modalEl.addEventListener('hidden.bs.modal', handleHidden, { once: true });
+        try{
+          nextSlotsModal.hide();
+          return;
+        }catch(_){
+          modalEl.removeEventListener('hidden.bs.modal', handleHidden);
+        }
+      }
+      if(!openSuggestedSelection()){
+        fallbackToFocusedSlot();
+      }
     });
     els.calendarWrap?.addEventListener('scroll', ()=>{
       if(activeEventActionPanel){
@@ -10630,7 +11322,6 @@ console.info('app.js loaded :: 20251123a');
       }
     }, true);
     els.calendarWrap?.addEventListener('click', (event)=>{
-      if(!NEXT_AVAILABLE_FLOW_ENABLED) return;
       if(!nextSlotFocus) return;
       const focusTarget = event.target.closest('.mx-ag-next-focus-slot');
       if(!focusTarget) return;
@@ -10638,7 +11329,9 @@ console.info('app.js loaded :: 20251123a');
       event.stopPropagation();
       const opened = openCreateModalFromSelection({
         start: nextSlotFocus.start,
-        end: nextSlotFocus.end
+        end: nextSlotFocus.end,
+        consultorio_id: sanitizeText(nextSlotFocus?.consultorio_id || ''),
+        source: 'next-focus'
       }, { bypassAvailabilityCheck: true });
       if(opened){
         clearNextSlotFocus();
@@ -10724,6 +11417,7 @@ console.info('app.js loaded :: 20251123a');
     });
     document.querySelectorAll('.menu-sub-btn[data-panel="p-ag-ajustes"]').forEach((btn)=>{
       btn.addEventListener('click', ()=>{
+        collapseAgendaConfigSections();
         scheduleSelectorViewMode = 'overview';
         scheduleSelectorActiveConsultorioId = '';
         renderAgendaScheduleEditorSelector();
@@ -10753,6 +11447,7 @@ console.info('app.js loaded :: 20251123a');
         const panelTarget = sanitizeText(target.getAttribute('data-ag-work-panel') || '');
         if(panelTarget){
           if(panelTarget === 'p-ag-ajustes'){
+            collapseAgendaConfigSections();
             scheduleSelectorViewMode = 'overview';
             scheduleSelectorActiveConsultorioId = '';
             renderAgendaScheduleEditorSelector();
@@ -10770,7 +11465,21 @@ console.info('app.js loaded :: 20251123a');
         const action = sanitizeText(target.getAttribute('data-ag-work-action') || '');
         if(action === 'next-available'){
           clearNextSlotFocus();
-          setError('Buscar siguiente cita disponible estará disponible en la siguiente fase.');
+          if(typeof window.openGroup === 'function'){
+            try{ window.openGroup('agenda'); }catch(_){}
+          }
+          if(typeof window.jumpTo === 'function'){
+            try{ window.jumpTo('p-ag-admin'); }catch(_){}
+          }else{
+            document.querySelector('.menu-sub-btn[data-panel="p-ag-admin"]')?.click();
+          }
+          setWorkspaceButtonActive('p-ag-admin', 'next-available');
+          window.setTimeout(()=>{
+            ensureAgendaVisibleRender({ forceConsultorios: false }).catch(()=> null);
+            if(typeof openNextAvailableSlotFinder === 'function'){
+              openNextAvailableSlotFinder();
+            }
+          }, 120);
         }
       });
     }
@@ -10836,11 +11545,6 @@ console.info('app.js loaded :: 20251123a');
     if(els.nextSlotsModalEl){
       try{ window.bootstrap?.Modal?.getOrCreateInstance(els.nextSlotsModalEl)?.hide(); }catch(_){}
     }
-    Array.from(document.querySelectorAll('.mx-ag-workspace-shell [data-ag-work-action="next-available"]')).forEach((nextBtn)=>{
-      nextBtn.classList.add('d-none');
-      nextBtn.setAttribute('aria-hidden', 'true');
-      nextBtn.setAttribute('tabindex', '-1');
-    });
     setWorkspaceButtonActive(panelId);
     hydrateAgendaSettings({ force: true }).catch(()=> null);
     const isVisible = panel && !panel.classList.contains('d-none');

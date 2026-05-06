@@ -2584,10 +2584,14 @@
           <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">manage_history</span>Mi Agenda · Configuración</h5></div>
 
           <div class="body">
-            <div class="mx-ag-workspace-shell" aria-label="Submenú operativo de agenda">
+            <div class="mx-ag-workspace-shell mx-ag-workspace-shell--agenda" aria-label="Submenú operativo de agenda">
               <button type="button" class="mx-ag-workspace-btn" data-ag-work-panel="p-ag-admin">
                 <span class="material-symbols-rounded" aria-hidden="true">event</span>
-                Agenda
+                Agenda semanal
+              </button>
+              <button type="button" class="mx-ag-workspace-btn" data-ag-work-action="next-available">
+                <span class="material-symbols-rounded" aria-hidden="true">calendar_clock</span>
+                Buscar cita
               </button>
               <button type="button" class="mx-ag-workspace-btn is-active" data-ag-work-panel="p-ag-ajustes">
                 <span class="material-symbols-rounded" aria-hidden="true">settings</span>
@@ -2600,8 +2604,8 @@
             </div>
 
             <div class="ag-config-groups">
-              <section class="ag-config-group ag-config-group--blue" aria-label="Grupo 1 Detalles de la consulta">
-                <div class="ag-config-group-head">
+              <section class="ag-config-group ag-config-group--blue" data-ag-cfg-section="details" aria-label="Grupo 1 Detalles de la consulta">
+                <div class="ag-config-group-head" data-ag-cfg-section-trigger role="button" tabindex="0" aria-expanded="false">
                   <div class="ag-config-group-badge">1</div>
                   <div class="material-symbols-rounded ag-config-group-icon" aria-hidden="true">assignment</div>
                   <div class="ag-config-group-copy">
@@ -2611,7 +2615,7 @@
                     </p>
                   </div>
                 </div>
-                <div class="ag-config-group-card">
+                <div class="ag-config-group-card" data-ag-cfg-section-content>
                   <div class="ag-reminders-panel ag-config-check-panel">
                     <select class="form-select d-none" id="ag_cfg_duration_min" aria-hidden="true" tabindex="-1">
                       <option value="15">15 min</option>
@@ -2702,8 +2706,8 @@
                 </div>
               </section>
 
-              <section id="ag_cfg_group_schedule" class="ag-config-group ag-config-group--teal" aria-label="Grupo 2 Horarios y consultorios">
-                <div class="ag-config-group-head">
+              <section id="ag_cfg_group_schedule" class="ag-config-group ag-config-group--teal" data-ag-cfg-section="schedule" aria-label="Grupo 2 Horarios y consultorios">
+                <div class="ag-config-group-head" data-ag-cfg-section-trigger role="button" tabindex="0" aria-expanded="false">
                   <div class="ag-config-group-badge">2</div>
                   <div class="material-symbols-rounded ag-config-group-icon" aria-hidden="true">schedule</div>
                   <div class="ag-config-group-copy">
@@ -2711,7 +2715,7 @@
                     <p class="ag-config-group-desc mb-0">Si tienes múltiples consultorios, asegúrate de no duplicar horarios.</p>
                   </div>
                 </div>
-                <div class="ag-config-group-card">
+                <div class="ag-config-group-card" data-ag-cfg-section-content>
                   <label class="form-label mb-1"></label>
                   <div class="ag-config-schedule-card">
                     <div class="mt-2 d-none" id="ag_cfg_schedule_selector_wrap">
@@ -2727,8 +2731,8 @@
                 </div>
               </section>
 
-              <section class="ag-config-group ag-config-group--violet" aria-label="Grupo 3 Recordatorios y confirmaciones">
-                <div class="ag-config-group-head">
+              <section class="ag-config-group ag-config-group--violet" data-ag-cfg-section="reminders" aria-label="Grupo 3 Recordatorios y confirmaciones">
+                <div class="ag-config-group-head" data-ag-cfg-section-trigger role="button" tabindex="0" aria-expanded="false">
                   <div class="ag-config-group-badge">3</div>
                   <div class="ag-config-group-icon" aria-hidden="true">
                     <svg class="ag-config-group-icon-svg" viewBox="0 0 24 24" focusable="false">
@@ -2743,7 +2747,7 @@
                     </p>
                   </div>
                 </div>
-                <div class="ag-config-group-card">
+                <div class="ag-config-group-card" data-ag-cfg-section-content>
                   <div class="ag-reminders-panel" id="ag_reminders_panel">
                     <div class="ag-reminders-card ag-reminders-preview ag-reminders-preview-full">
                       <div class="ag-reminders-block-title">
@@ -2896,10 +2900,14 @@
           <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">support_agent</span>Mi Agenda · Administrar Operadores</h5></div>
 
           <div class="body">
-            <div class="mx-ag-workspace-shell" aria-label="Submenú operativo de agenda">
+            <div class="mx-ag-workspace-shell mx-ag-workspace-shell--agenda" aria-label="Submenú operativo de agenda">
               <button type="button" class="mx-ag-workspace-btn" data-ag-work-panel="p-ag-admin">
                 <span class="material-symbols-rounded" aria-hidden="true">event</span>
-                Agenda
+                Agenda semanal
+              </button>
+              <button type="button" class="mx-ag-workspace-btn" data-ag-work-action="next-available">
+                <span class="material-symbols-rounded" aria-hidden="true">calendar_clock</span>
+                Buscar cita
               </button>
               <button type="button" class="mx-ag-workspace-btn" data-ag-work-panel="p-ag-ajustes">
                 <span class="material-symbols-rounded" aria-hidden="true">settings</span>
@@ -2963,14 +2971,14 @@
 
           <div class="body">
 
-            <div class="mx-ag-workspace-shell" aria-label="Submenú operativo de agenda">
+            <div class="mx-ag-workspace-shell mx-ag-workspace-shell--agenda" aria-label="Submenú operativo de agenda">
               <button type="button" class="mx-ag-workspace-btn is-active" data-ag-work-panel="p-ag-admin">
                 <span class="material-symbols-rounded" aria-hidden="true">calendar_month</span>
-                Agenda
+                Agenda semanal
               </button>
-              <button type="button" class="mx-ag-workspace-btn d-none" data-ag-work-action="next-available" disabled aria-hidden="true" tabindex="-1">
+              <button type="button" class="mx-ag-workspace-btn" data-ag-work-action="next-available">
                 <span class="material-symbols-rounded" aria-hidden="true">calendar_clock</span>
-                Buscar siguiente cita disponible
+                Buscar cita
               </button>
               <button type="button" class="mx-ag-workspace-btn" data-ag-work-panel="p-ag-ajustes">
                 <span class="material-symbols-rounded" aria-hidden="true">settings</span>
@@ -2982,31 +2990,24 @@
               </button>
             </div>
 
-            <div class="row g-3 mx-agenda-v1" id="agendaFrontendV1">
-              <div class="col-12">
-                <div class="alert alert-info py-2 mb-0">
-                  Agenda Frontend v1: visualización de citas reales del backend.
-                </div>
+            <div class="row g-2 mx-agenda-v1" id="agendaFrontendV1">
+              <div class="col-12 d-none">
+                <input type="hidden" id="ag_doctor_filter">
               </div>
-              <div class="col-md-4">
-                <label class="form-label" for="ag_doctor_filter">Médico (doctor_id)</label>
-                <input class="form-control" id="ag_doctor_filter" placeholder="Doctor ID">
-              </div>
-              <div class="col-md-4">
+              <div class="col-md-6">
                 <label class="form-label" for="ag_consultorio_filter">Consultorio</label>
                 <select class="form-select" id="ag_consultorio_filter">
                   <option value="">Todos los consultorios</option>
                 </select>
               </div>
-              <div class="col-md-4 d-flex align-items-end">
+              <div class="col-md-6 d-flex align-items-end">
                 <button type="button" class="btn btn-primary me-2" id="ag_refresh_btn">
                   <i class="bi bi-arrow-clockwise"></i> Refrescar agenda
                 </button>
-                <span class="small text-muted" id="ag_filters_hint">Semana clínica</span>
+                <span class="small text-muted d-none" id="ag_filters_hint" aria-hidden="true"></span>
               </div>
               <div class="col-12">
                 <div class="d-flex flex-wrap gap-3 small text-muted">
-                  <span><span class="mx-ag-legend mx-ag-legend--busy"></span> Citas ocupadas</span>
                   <span><span class="mx-ag-legend mx-ag-legend--available"></span> Disponibilidad real</span>
                 </div>
               </div>
@@ -3051,22 +3052,18 @@
                       <div class="col-12">
                         <label class="form-label" for="ag_patient_search_query">Buscar paciente</label>
                         <div class="input-group">
-                          <input type="text" class="form-control" id="ag_patient_search_query" placeholder="Nombre, CURP o ID">
-                          <button type="button" class="btn btn-outline-primary" id="ag_patient_search_btn">Buscar</button>
+                          <input type="text" class="form-control" id="ag_patient_search_query" placeholder="Nombre o CURP">
+                          <button type="button" class="btn mx-ag-btn-new-patient" id="ag_patient_search_btn">Buscar</button>
                         </div>
-                        <div class="form-text">La búsqueda ocurre dentro del modal de Agenda.</div>
                         <div id="ag_patient_search_results" class="list-group mt-2"></div>
                         <div id="ag_patient_search_msg" class="small text-muted mt-1 d-none"></div>
                       </div>
-                      <div class="col-12">
-                        <label class="form-label" for="ag_patient_id_input">Paciente (ID)</label>
-                        <input type="text" class="form-control" id="ag_patient_id_input" placeholder="ID de paciente">
-                        <div class="form-text">Puedes capturar el ID manualmente o seleccionarlo desde búsqueda.</div>
+                      <div class="col-12 d-none">
+                        <input type="hidden" id="ag_patient_id_input">
                       </div>
                       <div class="col-12">
-                        <div class="d-flex align-items-center justify-content-between">
-                          <label class="form-label mb-0" for="ag_patient_new_toggle">Paciente nuevo</label>
-                          <button type="button" class="btn btn-sm btn-outline-secondary" id="ag_patient_new_toggle">Usar paciente nuevo</button>
+                        <div class="d-flex justify-content-start">
+                          <button type="button" class="btn btn-sm mx-ag-btn-new-patient" id="ag_patient_new_toggle">Paciente nuevo</button>
                         </div>
                         <div id="ag_patient_new_wrap" class="row g-2 mt-1 d-none">
                           <div class="col-md-4">
@@ -3088,17 +3085,39 @@
                             <input type="email" class="form-control" id="ag_patient_new_email" placeholder="Correo electrónico (opcional)">
                           </div>
                         </div>
+                        <div class="row g-2 mt-2 d-none" id="ag_patient_birthdate_row">
+                          <div class="col-12">
+                            <label class="form-label mb-1">Fecha de nacimiento</label>
+                          </div>
+                          <div class="col-md-4 col-12">
+                            <select class="form-select" id="ag_patient_birth_day">
+                              <option value="">Día</option>
+                            </select>
+                          </div>
+                          <div class="col-md-4 col-12">
+                            <select class="form-select" id="ag_patient_birth_month">
+                              <option value="">Mes</option>
+                            </select>
+                          </div>
+                          <div class="col-md-4 col-12">
+                            <select class="form-select" id="ag_patient_birth_year">
+                              <option value="">Año</option>
+                            </select>
+                          </div>
+                          <input type="hidden" id="ag_patient_birthdate_input">
+                          <div id="ag_patient_birthdate_hint" class="form-text d-none"></div>
+                        </div>
+                        <div id="ag_patient_birthdate_info" class="small text-muted mt-2 d-none"></div>
                       </div>
                       <div class="col-12">
-                        <label class="form-label d-block mb-2">Inicio</label>
                         <div class="row g-2">
-                          <div class="col-md-4 col-12">
-                            <div class="small text-muted">Hora</div>
-                            <div class="fw-semibold" id="ag_start_info_time">--:--</div>
-                          </div>
-                          <div class="col-md-8 col-12">
+                          <div class="col-12">
                             <div class="small text-muted">Fecha</div>
-                            <div class="fw-semibold" id="ag_start_info_date">--</div>
+                            <div class="fw-semibold ag-create-start-date" id="ag_start_info_date">--</div>
+                          </div>
+                          <div class="col-12">
+                            <div class="small text-muted">Hora</div>
+                            <div class="fw-semibold ag-create-start-time" id="ag_start_info_time">--:--</div>
                           </div>
                         </div>
                         <input type="hidden" id="ag_start_input">
@@ -3112,14 +3131,14 @@
                         </select>
                       </div>
                       <div class="col-md-6">
-                        <label class="form-label" for="ag_consultorio_modal">Seleccionar consultorio</label>
-                        <select class="form-select" id="ag_consultorio_modal">
+                        <label class="form-label" for="ag_consultorio_modal_info">Consultorio</label>
+                        <input type="text" class="form-control" id="ag_consultorio_modal_info" readonly>
+                        <select class="form-select d-none" id="ag_consultorio_modal" aria-hidden="true" tabindex="-1">
                           <option value="" disabled selected>No hay consultorios disponibles</option>
                         </select>
                       </div>
-                      <div class="col-md-6">
-                        <label class="form-label" for="ag_channel_input">Canal</label>
-                        <input type="text" class="form-control" id="ag_channel_input" value="agenda_frontend_v1">
+                      <div class="col-12 d-none">
+                        <input type="hidden" id="ag_channel_input" value="agenda_frontend_v1">
                       </div>
                     </div>
                   </div>
