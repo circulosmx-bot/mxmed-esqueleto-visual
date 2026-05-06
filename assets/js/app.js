@@ -5917,6 +5917,178 @@ console.info('app.js loaded :: 20251123a');
   };
   let scheduleSelectorViewMode = 'overview';
   let scheduleSelectorActiveConsultorioId = '';
+  let agendaScheduleImmersivePanelEl = null;
+  let agendaScheduleImmersiveNavGuardBound = false;
+  const getAgendaImmersiveHeaderNodes = ()=>{
+    const panelEl = agendaScheduleImmersivePanelEl || document.getElementById('ag_schedule_immersive_panel');
+    const head = panelEl?.querySelector('[data-cons-horarios-head]') || null;
+    if(!head) return { head: null, title: null, switcher: null };
+    return {
+      head,
+      title: head.querySelector('[data-cons-horarios-title]') || null,
+      switcher: head.querySelector('[data-cons-horarios-switcher]') || null
+    };
+  };
+  const renderAgendaImmersiveConsultorioSwitches = (consultorioId = '')=>{
+    const nodes = getAgendaImmersiveHeaderNodes();
+    if(!nodes.head || !nodes.title || !nodes.switcher) return;
+    const activeId = sanitizeText(
+      consultorioId
+      || scheduleSelectorActiveConsultorioId
+      || getAgendaSettingsContext().consultorioId
+      || ''
+    );
+    const consultorios = listAgendaConfigConsultorios();
+    const activeItem = consultorios.find((item)=> sanitizeText(item.id) === activeId) || null;
+    if(activeItem){
+      nodes.title.textContent = activeItem.label;
+    }
+    nodes.switcher.innerHTML = '';
+    const others = consultorios.filter((item)=> sanitizeText(item.id) !== activeId);
+    others.forEach((item)=>{
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'mx-cons-horarios-switch-btn schedule-consultorio-btn';
+      btn.setAttribute('data-cons-horarios-jump', '1');
+      btn.setAttribute('data-consultorio-id', sanitizeText(item.id));
+      btn.setAttribute('data-index', sanitizeText(item.index || item.id));
+      btn.textContent = item.label;
+      btn.addEventListener('click', (event)=>{
+        event.preventDefault();
+        showScheduleConsultorioEditor(item.id, {
+          pushHistory: true,
+          source: 'agenda'
+        });
+      });
+      nodes.switcher.appendChild(btn);
+    });
+    const backBtn = document.createElement('button');
+    backBtn.type = 'button';
+    backBtn.className = 'schedule-back-to-overview';
+    backBtn.setAttribute('data-cons-horarios-back', '1');
+    backBtn.textContent = '← VOLVER';
+    backBtn.addEventListener('click', (event)=>{
+      event.preventDefault();
+      showScheduleSelectorOverview({ pushHistory: true });
+      window.setTimeout(()=>{ mxmScrollToScheduleGroup(); }, 120);
+    });
+    nodes.switcher.appendChild(backBtn);
+    nodes.switcher.removeAttribute('hidden');
+  };
+  const bindAgendaImmersiveNavGuard = ()=>{
+    if(agendaScheduleImmersiveNavGuardBound) return;
+    agendaScheduleImmersiveNavGuardBound = true;
+    document.addEventListener('click', (event)=>{
+      if(!isAgendaScheduleImmersivePanelOpen()) return;
+      const target = event.target;
+      if(!(target instanceof Element)) return;
+      const navBtn = target.closest('.menu-sub-btn[data-panel], .mx-ag-workspace-btn[data-ag-work-panel]');
+      if(!navBtn) return;
+      const panelTarget = sanitizeText(
+        navBtn.getAttribute('data-panel')
+        || navBtn.getAttribute('data-ag-work-panel')
+        || ''
+      );
+      if(panelTarget === 'p-ag-ajustes') return;
+      closeAgendaScheduleImmersivePanel();
+    }, true);
+  };
+  const mountAgendaScheduleImmersiveEditor = (consultorioId = '')=>{
+    const panelEl = agendaScheduleImmersivePanelEl || document.getElementById('ag_schedule_immersive_panel');
+    if(!panelEl) return false;
+    const stageEl = panelEl.querySelector('#ag_schedule_immersive_stage');
+    if(!stageEl) return false;
+    stageEl.innerHTML = '';
+    if(typeof window.mxmMountConsultorioScheduleEditorInHost !== 'function'){
+      stageEl.innerHTML = '<div class="ag-schedule-immersive-error">No se pudo montar el editor de horarios.</div>';
+      return false;
+    }
+    const mounted = window.mxmMountConsultorioScheduleEditorInHost({
+      consultorioId: sanitizeText(consultorioId || ''),
+      hostElement: stageEl,
+      source: 'agenda'
+    });
+    if(!mounted){
+      stageEl.innerHTML = '<div class="ag-schedule-immersive-error">No se pudo cargar el editor de horarios para este consultorio.</div>';
+      return false;
+    }
+    renderAgendaImmersiveConsultorioSwitches(consultorioId);
+    return true;
+  };
+  const unmountAgendaScheduleImmersiveEditor = ()=>{
+    if(typeof window.mxmUnmountConsultorioScheduleEditorFromHost === 'function'){
+      try{
+        window.mxmUnmountConsultorioScheduleEditorFromHost({
+          source: 'agenda'
+        });
+      }catch(_){}
+    }
+  };
+  const goToAgendaWeeklyViewFromImmersive = ()=>{
+    unmountAgendaScheduleImmersiveEditor();
+    closeAgendaScheduleImmersivePanel();
+    scheduleSelectorViewMode = 'overview';
+    scheduleSelectorActiveConsultorioId = '';
+    renderAgendaScheduleEditorSelector();
+    replaceScheduleHistoryState('schedule-overview', '');
+    if(typeof window.openGroup === 'function'){
+      try{ window.openGroup('agenda'); }catch(_){}
+    }
+    if(typeof window.jumpTo === 'function'){
+      try{ window.jumpTo('p-ag-admin'); }catch(_){}
+    }else{
+      document.querySelector('.menu-sub-btn[data-panel="p-ag-admin"]')?.click();
+    }
+    window.setTimeout(()=>{
+      ensureAgendaVisibleRender({ forceConsultorios: false }).catch(()=> null);
+      scheduleCustomWeekRender();
+      setWorkspaceButtonActive('p-ag-admin');
+    }, 90);
+  };
+  const ensureAgendaScheduleImmersivePanel = ()=>{
+    if(agendaScheduleImmersivePanelEl && document.body.contains(agendaScheduleImmersivePanelEl)){
+      return agendaScheduleImmersivePanelEl;
+    }
+    const host = document.querySelector('#ag_cfg_group_schedule .ag-config-group-card');
+    if(!host) return null;
+    const panelEl = document.createElement('section');
+    panelEl.id = 'ag_schedule_immersive_panel';
+    panelEl.className = 'ag-schedule-immersive-panel d-none';
+    panelEl.setAttribute('aria-live', 'polite');
+    panelEl.innerHTML = `
+      <div class="ag-schedule-immersive-stage" id="ag_schedule_immersive_stage"></div>
+    `;
+    host.appendChild(panelEl);
+    agendaScheduleImmersivePanelEl = panelEl;
+    bindAgendaImmersiveNavGuard();
+    return panelEl;
+  };
+  const isAgendaScheduleImmersivePanelOpen = ()=>{
+    const panelEl = agendaScheduleImmersivePanelEl || document.getElementById('ag_schedule_immersive_panel');
+    return !!(panelEl && !panelEl.classList.contains('d-none'));
+  };
+  const closeAgendaScheduleImmersivePanel = ()=>{
+    const panelEl = agendaScheduleImmersivePanelEl || document.getElementById('ag_schedule_immersive_panel');
+    if(!panelEl) return;
+    unmountAgendaScheduleImmersiveEditor();
+    panelEl.classList.add('d-none');
+    panelEl.removeAttribute('data-open');
+    if(typeof renderAgendaScheduleEditorSelector === 'function'){
+      renderAgendaScheduleEditorSelector();
+    }
+  };
+  const openAgendaScheduleImmersivePanel = ({ consultorioId = '', source = 'agenda' } = {})=>{
+    const panelEl = ensureAgendaScheduleImmersivePanel();
+    if(!panelEl) return;
+    const safeConsultorioId = sanitizeText(consultorioId || '');
+    panelEl.setAttribute('data-source', sanitizeText(source || 'agenda'));
+    panelEl.classList.remove('d-none');
+    panelEl.setAttribute('data-open', '1');
+    mountAgendaScheduleImmersiveEditor(safeConsultorioId);
+    if(typeof renderAgendaScheduleEditorSelector === 'function'){
+      renderAgendaScheduleEditorSelector();
+    }
+  };
   const getScheduleHistoryStateSnapshot = ()=>{
     const current = window.history?.state || {};
     return {
@@ -5973,6 +6145,7 @@ console.info('app.js loaded :: 20251123a');
   const showScheduleSelectorOverview = (options = {})=>{
     scheduleSelectorViewMode = 'overview';
     scheduleSelectorActiveConsultorioId = '';
+    closeAgendaScheduleImmersivePanel();
     if(typeof window.openGroup === 'function'){
       try{ window.openGroup('agenda'); }catch(_){}
     }
@@ -6013,6 +6186,7 @@ console.info('app.js loaded :: 20251123a');
   window.mxmScrollToScheduleGroup = mxmScrollToScheduleGroup;
   window.scrollToScheduleGroup = mxmScrollToScheduleGroup;
   const showScheduleConsultorioEditor = (consultorioId, options = {})=>{
+    const source = sanitizeText(options?.source || 'agenda');
     const targetConsultorioId = sanitizeText(
       consultorioId
       || getAgendaSettingsContext().consultorioId
@@ -6029,7 +6203,10 @@ console.info('app.js loaded :: 20251123a');
     }
     scheduleSelectorViewMode = 'consultorio';
     scheduleSelectorActiveConsultorioId = targetConsultorioId;
-    openConsultorioScheduleEditorFromSettings(targetConsultorioId, { pushHistory: false });
+    openConsultorioScheduleEditorFromSettings(targetConsultorioId, {
+      pushHistory: false,
+      source
+    });
     renderAgendaScheduleEditorSelector();
     if(options.pushHistory !== false){
       pushScheduleHistoryState('schedule-consultorio', targetConsultorioId);
@@ -6048,6 +6225,11 @@ console.info('app.js loaded :: 20251123a');
   };
   const renderAgendaScheduleEditorSelector = ()=>{
     if(!els.cfgEditScheduleBtn || !els.cfgScheduleSelectorWrap || !els.cfgScheduleSelectorButtons) return;
+    if(isAgendaScheduleImmersivePanelOpen()){
+      els.cfgEditScheduleBtn.classList.add('d-none');
+      els.cfgScheduleSelectorWrap.classList.add('d-none');
+      return;
+    }
     const consultorios = listAgendaConfigConsultorios();
     const hasMultiple = consultorios.length > 1;
     const { consultorioId: contextConsultorioId } = getAgendaSettingsContext();
@@ -6077,7 +6259,10 @@ console.info('app.js loaded :: 20251123a');
       btn.setAttribute('data-index', String(item.index));
       btn.addEventListener('click', (event)=>{
         event.preventDefault();
-        showScheduleConsultorioEditor(item.id, { pushHistory: true });
+        showScheduleConsultorioEditor(item.id, {
+          pushHistory: true,
+          source: 'agenda'
+        });
       });
       els.cfgScheduleSelectorButtons.appendChild(btn);
     });
@@ -6120,10 +6305,21 @@ console.info('app.js loaded :: 20251123a');
   const openConsultorioScheduleEditorFromSettings = (targetConsultorioId = '', options = {})=>{
     const context = getAgendaSettingsContext();
     const consultorioId = sanitizeText(targetConsultorioId || context.consultorioId || '');
+    const source = sanitizeText(options?.source || 'consultorios');
     logAgendaConfigContamSnapshot('open_schedule_editor_from_settings', {
       targetConsultorioId: consultorioId,
-      pushHistory: options?.pushHistory !== false
+      pushHistory: options?.pushHistory !== false,
+      source
     });
+    if(source === 'agenda'){
+      openAgendaScheduleImmersivePanel({
+        consultorioId,
+        source
+      });
+      window.setTimeout(()=>{ mxmScrollToScheduleGroup(); }, 90);
+      return;
+    }
+    closeAgendaScheduleImmersivePanel();
     try{
       if(typeof window.openGroup === 'function'){
         window.openGroup('perfil');
@@ -9940,7 +10136,10 @@ console.info('app.js loaded :: 20251123a');
     els.cfgEditScheduleBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
       const { consultorioId } = getAgendaSettingsContext();
-      showScheduleConsultorioEditor(consultorioId, { pushHistory: true });
+      showScheduleConsultorioEditor(consultorioId, {
+        pushHistory: true,
+        source: 'agenda'
+      });
     });
     els.hoursToggle?.addEventListener('click', async ()=>{
       const nextExpanded = !weeklyHoursExpanded;
@@ -10601,7 +10800,10 @@ console.info('app.js loaded :: 20251123a');
           return;
         }
         if(view === 'schedule-consultorio'){
-          showScheduleConsultorioEditor(state?.consultorioId, { pushHistory: false });
+          showScheduleConsultorioEditor(state?.consultorioId, {
+            pushHistory: false,
+            source: 'agenda'
+          });
         }
       });
     }
@@ -11630,8 +11832,58 @@ console.info('app.js loaded :: 20251123a');
     let activeClearBtn = null;
     let activePane = null;
     let activeScheduleConsultorioId = '';
+    let scheduleResolveConsultorioHint = '';
+    let scheduleDomOverride = null;
+    let scheduleImmersiveHostSnapshot = null;
     let scheduleHistoryPushSuppressed = false;
     let scheduleHistoryPushSuppressTimer = null;
+    const SCHEDULE_TAB_DIAG = true;
+    const logScheduleTabDiag = (label = '', payload = {})=>{
+      if(!SCHEDULE_TAB_DIAG) return;
+      try{
+        console.groupCollapsed(`MXM SCHEDULE TAB DIAG :: ${label}`);
+        console.log(payload);
+        console.groupEnd();
+      }catch(_){}
+    };
+    const logScheduleContamSafe = (phase = '', details = {})=>{
+      try{
+        if(typeof logAgendaConfigContamSnapshot === 'function'){
+          logAgendaConfigContamSnapshot(phase, details);
+          return;
+        }
+      }catch(_){}
+      try{
+        if(typeof window.logAgendaConfigContamSnapshot === 'function'){
+          window.logAgendaConfigContamSnapshot(phase, details);
+        }
+      }catch(_){}
+    };
+    const buildSchedulePaneDomSnapshot = ()=>{
+      const panes = Array.from(consultorioPanel?.querySelectorAll('.tab-pane[id^="sede"]') || []);
+      return panes.map((pane)=>{
+        const paneId = String(pane?.id || '').trim();
+        const tbody = pane.querySelector('tbody[id^="sched-body"]');
+        const schedCard = pane.querySelector('.sched-card');
+        const header = pane.querySelector('[data-cons-horarios-head]');
+        const rowHost = pane.querySelector('.row.g-3');
+        const isActive = pane.classList.contains('active') || pane.classList.contains('show');
+        const computed = pane instanceof HTMLElement ? window.getComputedStyle(pane) : null;
+        return {
+          paneId,
+          consultorioId: String(resolveConsultorioIdFromPane(pane) || '').trim(),
+          paneActive: !!isActive,
+          paneDisplay: String(computed?.display || ''),
+          paneVisibility: String(computed?.visibility || ''),
+          hasHeader: !!header,
+          hasSchedCard: !!schedCard,
+          hasSchedBody: !!tbody,
+          schedBodyId: String(tbody?.id || ''),
+          schedRowsCount: Number(tbody?.querySelectorAll('tr').length || 0),
+          hasRowHost: !!rowHost
+        };
+      });
+    };
     const suppressScheduleHistoryPush = (durationMs = 520)=>{
       scheduleHistoryPushSuppressed = true;
       if(scheduleHistoryPushSuppressTimer){
@@ -11760,28 +12012,38 @@ console.info('app.js loaded :: 20251123a');
       return resolveConsultorioIdFromTabButton(selectedBtn);
     };
     const resolveActiveConsultorioPane = ()=>{
-      if(activeScheduleConsultorioId){
-        const paneByStoredId = consultorioPanel?.querySelector(`.tab-pane#sede${activeScheduleConsultorioId}`);
-        if(paneByStoredId && paneByStoredId.querySelector('tbody[id^="sched-body"]')) return paneByStoredId;
+      const hintedConsultorioId = String(scheduleResolveConsultorioHint || '').trim();
+      if(hintedConsultorioId){
+        const hintedPane = consultorioPanel?.querySelector(`.tab-pane#sede${hintedConsultorioId}`) || null;
+        if(hintedPane) return hintedPane;
       }
+      if(scheduleDomOverride?.bodyEl){
+        const overridePane = scheduleDomOverride.pane || null;
+        if(overridePane) return overridePane;
+      }
+      const activeShown = consultorioPanel?.querySelector('.tab-pane[id^="sede"].show.active') || null;
+      if(activeShown) return activeShown;
       const activeTabConsultorioId = resolveActiveConsultorioIdFromTabs();
       if(activeTabConsultorioId){
         const paneByTab = consultorioPanel?.querySelector(`.tab-pane#sede${activeTabConsultorioId}`);
-        if(paneByTab && paneByTab.querySelector('tbody[id^="sched-body"]')) return paneByTab;
+        if(paneByTab) return paneByTab;
       }
-      const active = consultorioPanel?.querySelector('.tab-pane[id^="sede"].show.active') || null;
-      if(active && active.querySelector('tbody[id^="sched-body"]')) return active;
+      if(activeScheduleConsultorioId){
+        const paneByStoredId = consultorioPanel?.querySelector(`.tab-pane#sede${activeScheduleConsultorioId}`);
+        if(paneByStoredId) return paneByStoredId;
+      }
       const filterConsultorioId = String(document.getElementById('ag_consultorio_filter')?.value || '').trim();
       if(filterConsultorioId){
         const safeFilterId = filterConsultorioId.replace(/[^0-9A-Za-z_-]/g, '');
         const paneByFilter = safeFilterId
           ? consultorioPanel?.querySelector(`.tab-pane#sede${safeFilterId}`)
           : null;
-        if(paneByFilter && paneByFilter.querySelector('tbody[id^="sched-body"]')) return paneByFilter;
+        if(paneByFilter) return paneByFilter;
       }
-      if(activePane && activePane.querySelector('tbody[id^="sched-body"]')) return activePane;
+      if(activePane) return activePane;
       const fallback = consultorioPanel?.querySelector('.tab-pane[id^="sede"] tbody[id^="sched-body"]')?.closest('.tab-pane[id^="sede"]') || null;
-      return fallback;
+      if(fallback) return fallback;
+      return consultorioPanel?.querySelector('.tab-pane[id^="sede"]') || null;
     };
     const getActiveConsultorioId = ()=>{
       const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
@@ -11790,10 +12052,23 @@ console.info('app.js loaded :: 20251123a');
       const resolvedPane = resolveActiveConsultorioPane();
       const fromStored = String(activeScheduleConsultorioId || '').trim();
       const fromTab = resolveActiveConsultorioIdFromTabs();
+      const fromPane = String(resolveConsultorioIdFromPane(resolvedPane || activePane) || '').trim();
+      if(scheduleDomOverride?.bodyEl){
+        return String(
+          fromStored
+          || fromPane
+          || fromTab
+          || document.getElementById('ag_consultorio_filter')?.value
+          || activeProfessional?.default_consultorio_id
+          || window.mxmedStore?.consultorio_id
+          || window.mxmedStore?.default_consultorio_id
+          || ''
+        ).trim();
+      }
       return String(
-        fromStored
+        fromPane
         || fromTab
-        || resolveConsultorioIdFromPane(resolvedPane || activePane)
+        || fromStored
         || document.getElementById('ag_consultorio_filter')?.value
         || activeProfessional?.default_consultorio_id
         || window.mxmedStore?.consultorio_id
@@ -11844,7 +12119,58 @@ console.info('app.js loaded :: 20251123a');
       }
     });
     const resolveScheduleDom = ()=>{
+      const ensureScheduleMarkupForPane = (pane)=>{
+        if(!pane) return;
+        const hasBody = !!pane.querySelector('tbody[id^="sched-body"]');
+        if(hasBody) return;
+        const consultorioId = String(resolveConsultorioIdFromPane(pane) || '1').trim() || '1';
+        const suffix = consultorioId === '1' ? '' : `-${consultorioId}`;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'col-12';
+        wrapper.innerHTML = `
+          <div class="mb-2 mx-cons-horarios-head schedule-consultorio-header" data-cons-horarios-head="1">
+            <div class="schedule-consultorio-title-row">
+              <div class="mx-cons-horarios-active schedule-consultorio-active" data-cons-horarios-title></div>
+              <div class="schedule-section-label">
+                <span class="schedule-section-icon">🕒</span>
+                <span>Horario de atención</span>
+              </div>
+            </div>
+            <div class="mx-cons-horarios-switcher schedule-consultorio-switches" data-cons-horarios-switcher hidden></div>
+          </div>
+          <div class="card p-3 sched-card" data-consultorio-section="horarios" style="scroll-margin-top:90px;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <strong style="color:#005684;font-size:120%;">Indica tus días de atención y define horarios por día.</strong>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm text-white" style="background:#00ADC1;border-color:#00ADC1;font-weight:700;" id="sched-copy-mon${suffix}">Copiar lunes a todos</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="sched-clear${suffix}">Limpiar</button>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm align-middle sched-table">
+                <thead><tr><th style="width:110px;">Día</th><th>Activo</th><th>☀️ Turno matutino</th><th>🌙 Turno vespertino (opcional)</th></tr></thead>
+                <tbody id="sched-body${suffix}"></tbody>
+              </table>
+            </div>
+          </div>
+        `;
+        const rowHost = pane.querySelector('.row.g-3');
+        if(rowHost){
+          rowHost.appendChild(wrapper);
+        }else{
+          pane.appendChild(wrapper);
+        }
+      };
+      if(scheduleDomOverride?.bodyEl){
+        return {
+          pane: scheduleDomOverride.pane || null,
+          bodyEl: scheduleDomOverride.bodyEl,
+          copyBtn: scheduleDomOverride.copyBtn || null,
+          clearBtn: scheduleDomOverride.clearBtn || null
+        };
+      }
       const pane = resolveActiveConsultorioPane();
+      ensureScheduleMarkupForPane(pane);
       const bodyInPane = pane?.querySelector('tbody[id^="sched-body"]') || null;
       const copyInPane = pane?.querySelector('button[id^="sched-copy-mon"]') || null;
       const clearInPane = pane?.querySelector('button[id^="sched-clear"]') || null;
@@ -11852,6 +12178,90 @@ console.info('app.js loaded :: 20251123a');
       const copyBtn = pane ? copyInPane : document.getElementById('sched-copy-mon');
       const clearBtn = pane ? clearInPane : document.getElementById('sched-clear');
       return { pane, bodyEl, copyBtn, clearBtn };
+    };
+    const unmountScheduleEditorFromExternalHost = ()=>{
+      if(!scheduleImmersiveHostSnapshot?.node) return false;
+      const snapshot = scheduleImmersiveHostSnapshot;
+      scheduleImmersiveHostSnapshot = null;
+      scheduleDomOverride = null;
+      rowRefs.clear();
+      activeBody = null;
+      activeCopyBtn = null;
+      activeClearBtn = null;
+      try{
+        const parent = snapshot.parent;
+        const nextSibling = snapshot.nextSibling;
+        const node = snapshot.node;
+        if(parent){
+          if(nextSibling && nextSibling.parentNode === parent){
+            parent.insertBefore(node, nextSibling);
+          }else{
+            parent.appendChild(node);
+          }
+        }
+        const switcher = node?.querySelector?.('[data-cons-horarios-switcher]');
+        if(switcher){
+          switcher.innerHTML = '';
+          switcher.setAttribute('hidden', 'hidden');
+        }
+      }catch(_){}
+      return true;
+    };
+    const mountScheduleEditorIntoExternalHost = ({ consultorioId = '', hostElement = null } = {})=>{
+      const host = (hostElement instanceof Element) ? hostElement : null;
+      if(!host) return false;
+      const targetConsultorioId = String(consultorioId || getActiveConsultorioId() || '').trim();
+      if(!targetConsultorioId) return false;
+      unmountScheduleEditorFromExternalHost();
+      const pane = document.getElementById(`sede${targetConsultorioId}`)
+        || resolveActiveConsultorioPane();
+      const scheduleSection = pane?.querySelector('[data-consultorio-section="horarios"]')?.closest('.col-12')
+        || pane?.querySelector('.sched-card')?.closest('.col-12')
+        || null;
+      if(!scheduleSection) return false;
+      const parent = scheduleSection.parentElement || null;
+      const nextSibling = scheduleSection.nextSibling || null;
+      scheduleImmersiveHostSnapshot = {
+        node: scheduleSection,
+        parent,
+        nextSibling,
+        pane,
+        consultorioId: targetConsultorioId
+      };
+      host.appendChild(scheduleSection);
+      const bodyEl = scheduleSection.querySelector('tbody[id^="sched-body"]');
+      if(!bodyEl){
+        unmountScheduleEditorFromExternalHost();
+        return false;
+      }
+      const copyBtn = scheduleSection.querySelector('button[id^="sched-copy-mon"]') || null;
+      const clearBtn = scheduleSection.querySelector('button[id^="sched-clear"]') || null;
+      scheduleDomOverride = {
+        pane,
+        bodyEl,
+        copyBtn,
+        clearBtn
+      };
+      activeScheduleConsultorioId = targetConsultorioId;
+      activePane = pane || activePane;
+      activeBody = null;
+      rowRefs.clear();
+      mountActiveScheduleGrid();
+      hydrateFromBackend({ consultorioId: targetConsultorioId }).catch(()=> null);
+      applyStateToRows(targetConsultorioId);
+      return true;
+    };
+    window.mxmMountConsultorioScheduleEditorInHost = ({ consultorioId = '', hostElement = null, source = '' } = {})=>{
+      if(String(source || '').trim() !== 'agenda'){
+        return false;
+      }
+      return mountScheduleEditorIntoExternalHost({ consultorioId, hostElement });
+    };
+    window.mxmUnmountConsultorioScheduleEditorFromHost = ({ source = '' } = {})=>{
+      if(String(source || '').trim() && String(source || '').trim() !== 'agenda'){
+        return false;
+      }
+      return unmountScheduleEditorFromExternalHost();
     };
     const getSchedulePaneIndex = (pane)=>{
       const paneId = String(pane?.id || '').trim();
@@ -11944,6 +12354,24 @@ console.info('app.js loaded :: 20251123a');
       }
       schedulePickerContext = null;
     };
+    const ensureSchedulePaneContext = (consultorioId = '')=>{
+      const targetConsultorioId = String(consultorioId || '').trim();
+      if(!targetConsultorioId) return;
+      if(scheduleDomOverride?.bodyEl){
+        activeScheduleConsultorioId = targetConsultorioId;
+        return;
+      }
+      const pane = consultorioPanel?.querySelector(`.tab-pane#sede${targetConsultorioId}`) || null;
+      if(!pane) return;
+      activePane = pane;
+      activeScheduleConsultorioId = targetConsultorioId;
+      scheduleResolveConsultorioHint = targetConsultorioId;
+      try{
+        mountActiveScheduleGrid();
+      }finally{
+        scheduleResolveConsultorioHint = '';
+      }
+    };
     const ensureScheduleTimePicker = ()=>{
       if(schedulePickerRoot && schedulePickerRoot.__mxPickerReady){
         return schedulePickerRoot;
@@ -12009,6 +12437,7 @@ console.info('app.js loaded :: 20251123a');
         if(!schedulePickerContext) return;
         const { dayKey, turn, consultorioId } = schedulePickerContext;
         const turnNum = Number(turn);
+        ensureSchedulePaneContext(consultorioId);
         const scheduleState = getScheduleStateForConsultorio(consultorioId);
         if(!scheduleState) return;
         const start = buildTimeFromSelects(startHour, startMinute);
@@ -12080,6 +12509,7 @@ console.info('app.js loaded :: 20251123a');
       const turnNum = Number(turn);
       if(!(turnNum === 1 || turnNum === 2)) return;
       const targetConsultorioId = String(consultorioId || getActiveConsultorioId() || '').trim();
+      ensureSchedulePaneContext(targetConsultorioId);
       if(targetConsultorioId) activeScheduleConsultorioId = targetConsultorioId;
       console.log('MXM_SCHEDULE_FN_DEBUG', {
         fn: 'openScheduleTimePicker',
@@ -12193,8 +12623,12 @@ console.info('app.js loaded :: 20251123a');
           const dayKey = String(removeBtn.getAttribute('data-day-key') || '').trim();
           const turn = Number.parseInt(String(removeBtn.getAttribute('data-turn') || '').trim(), 10);
           const datasetConsultorioId = String(removeBtn.getAttribute('data-consultorio-id') || '').trim();
+          const paneConsultorioId = String(
+            resolveConsultorioIdFromPane(removeBtn.closest('.tab-pane[id^="sede"]'))
+            || ''
+          ).trim();
           const activeConsultorioId = getActiveConsultorioId();
-          const consultorioId = String(datasetConsultorioId || activeConsultorioId || '').trim();
+          const consultorioId = String(datasetConsultorioId || paneConsultorioId || activeConsultorioId || '').trim();
           if(!dayKey || !Number.isFinite(turn)) return;
           console.log('MXM_SCHEDULE_CLICK_DEBUG', {
             action: 'remove',
@@ -12218,8 +12652,12 @@ console.info('app.js loaded :: 20251123a');
           const startApply = String(applyBtn.getAttribute('data-start') || '').trim();
           const endApply = String(applyBtn.getAttribute('data-end') || '').trim();
           const datasetConsultorioId = String(applyBtn.getAttribute('data-consultorio-id') || '').trim();
+          const paneConsultorioId = String(
+            resolveConsultorioIdFromPane(applyBtn.closest('.tab-pane[id^="sede"]'))
+            || ''
+          ).trim();
           const activeConsultorioId = getActiveConsultorioId();
-          const consultorioId = String(datasetConsultorioId || activeConsultorioId || '').trim();
+          const consultorioId = String(datasetConsultorioId || paneConsultorioId || activeConsultorioId || '').trim();
           if(!startApply || !endApply){
             console.error('MXM_APPLY_NO_DATASET_TIME', applyBtn);
             return;
@@ -12245,8 +12683,12 @@ console.info('app.js loaded :: 20251123a');
         const dayKey = String(pill.getAttribute('data-day-key') || '').trim();
         const turn = Number.parseInt(String(pill.getAttribute('data-turn') || '').trim(), 10);
         const datasetConsultorioId = String(pill.getAttribute('data-consultorio-id') || '').trim();
+        const paneConsultorioId = String(
+          resolveConsultorioIdFromPane(pill.closest('.tab-pane[id^="sede"]'))
+          || ''
+        ).trim();
         const activeConsultorioId = getActiveConsultorioId();
-        const consultorioId = String(datasetConsultorioId || activeConsultorioId || '').trim();
+        const consultorioId = String(datasetConsultorioId || paneConsultorioId || activeConsultorioId || '').trim();
         if(!dayKey || !Number.isFinite(turn)) return;
         console.log('MXM_SCHEDULE_CLICK_DEBUG', {
           action: 'pill',
@@ -12264,7 +12706,7 @@ console.info('app.js loaded :: 20251123a');
     const mountActiveScheduleGrid = ()=>{
       const dom = resolveScheduleDom();
       if(!dom.bodyEl) return false;
-      if(activeBody === dom.bodyEl){
+      if(activeBody === dom.bodyEl && rowRefs.size > 0){
         activeCopyBtn = dom.copyBtn || activeCopyBtn;
         activeClearBtn = dom.clearBtn || activeClearBtn;
         activePane = dom.pane || activePane;
@@ -12543,6 +12985,7 @@ console.info('app.js loaded :: 20251123a');
     };
     const removeScheduleTurn = (dayKey, turn, consultorioId = '')=>{
       const targetConsultorioId = String(consultorioId || getActiveConsultorioId() || '').trim();
+      ensureSchedulePaneContext(targetConsultorioId);
       console.log('MXM_SCHEDULE_FN_DEBUG', {
         fn: 'removeScheduleTurn',
         consultorioId: targetConsultorioId,
@@ -12572,6 +13015,7 @@ console.info('app.js loaded :: 20251123a');
     };
     const applyScheduleToWeekdays = (sourceDayKey, turn, startRaw = '', endRaw = '', consultorioId = '')=>{
       const targetConsultorioId = String(consultorioId || getActiveConsultorioId() || '').trim();
+      ensureSchedulePaneContext(targetConsultorioId);
       console.log('MXM_SCHEDULE_FN_DEBUG', {
         fn: 'applyScheduleToWeekdays',
         consultorioId: targetConsultorioId,
@@ -12962,6 +13406,12 @@ console.info('app.js loaded :: 20251123a');
             edit2: false
           };
         });
+        logScheduleTabDiag('hydrate_payload_and_mapping', {
+          consultorioId,
+          contextKey,
+          payloadDays: Array.isArray(json?.data?.days) ? json.data.days : [],
+          mappedRows: JSON.parse(JSON.stringify(nextState))
+        });
         normalizeConsultorioScheduleState(nextState);
         scheduleStateByConsultorio[consultorioId] = nextState;
         loadedScheduleContextKeys.add(contextKey);
@@ -12983,7 +13433,13 @@ console.info('app.js loaded :: 20251123a');
     const handleConsultorioTabSwitch = (forcedConsultorioId = '', options = {})=>{
       const forcedId = String(forcedConsultorioId || '').trim();
       if(forcedId){
-        const pane = document.getElementById(`sede${forcedId}`);
+        let pane = document.getElementById(`sede${forcedId}`);
+        if(!pane && Number.isFinite(Number(forcedId)) && Number(forcedId) > 1 && typeof window._mx_createConsultorio === 'function'){
+          try{
+            window._mx_createConsultorio(Number(forcedId));
+            pane = document.getElementById(`sede${forcedId}`);
+          }catch(_){}
+        }
         if(pane) activePane = pane;
         activeScheduleConsultorioId = forcedId;
       }else{
@@ -12991,16 +13447,53 @@ console.info('app.js loaded :: 20251123a');
         if(fromTab) activeScheduleConsultorioId = fromTab;
       }
       const targetConsultorioId = String(forcedId || activeScheduleConsultorioId || getActiveConsultorioId() || '').trim();
-      logAgendaConfigContamSnapshot('schedule_tab_switch_in_config', {
+      logScheduleContamSafe('schedule_tab_switch_in_config', {
         forcedConsultorioId: forcedId,
         targetConsultorioId,
         pushHistory: options?.pushHistory !== false
       });
-      mountActiveScheduleGrid();
-      applyStateToRows(targetConsultorioId);
-      if(!loadedScheduleConsultorioIds.has(targetConsultorioId)){
-        hydrateFromBackend({ consultorioId: targetConsultorioId }).catch(()=> null);
+      const resolvedPaneBefore = resolveActiveConsultorioPane();
+      logScheduleTabDiag('tab_switch_before_mount', {
+        tabActiveId: resolveActiveConsultorioIdFromTabs(),
+        forcedConsultorioId: forcedId,
+        targetConsultorioId,
+        consultorioIdUsedByRender: getActiveConsultorioId(),
+        paneUsedId: String(resolvedPaneBefore?.id || ''),
+        hostTbodyId: String(resolvedPaneBefore?.querySelector('tbody[id^="sched-body"]')?.id || ''),
+        activePaneId: String(activePane?.id || ''),
+        activeBodyId: String(activeBody?.id || ''),
+        rowRefsSize: rowRefs.size,
+        rowRefKeys: Array.from(rowRefs.keys()),
+        stateSnapshot: JSON.parse(JSON.stringify(scheduleStateByConsultorio[targetConsultorioId] || {})),
+        panesSnapshot: buildSchedulePaneDomSnapshot()
+      });
+      scheduleResolveConsultorioHint = targetConsultorioId;
+      try{
+        mountActiveScheduleGrid();
+        if(rowRefs.size <= 0){
+          activeBody = null;
+          mountActiveScheduleGrid();
+        }
+        applyStateToRows(targetConsultorioId);
+        if(!loadedScheduleConsultorioIds.has(targetConsultorioId)){
+          hydrateFromBackend({ consultorioId: targetConsultorioId }).catch(()=> null);
+        }
+      }finally{
+        scheduleResolveConsultorioHint = '';
       }
+      const resolvedPaneAfter = resolveActiveConsultorioPane();
+      logScheduleTabDiag('tab_switch_after_mount', {
+        targetConsultorioId,
+        consultorioIdUsedByRender: getActiveConsultorioId(),
+        paneUsedId: String(resolvedPaneAfter?.id || ''),
+        hostTbodyId: String(resolvedPaneAfter?.querySelector('tbody[id^="sched-body"]')?.id || ''),
+        activePaneId: String(activePane?.id || ''),
+        activeBodyId: String(activeBody?.id || ''),
+        rowRefsSize: rowRefs.size,
+        rowRefKeys: Array.from(rowRefs.keys()),
+        stateSnapshot: JSON.parse(JSON.stringify(scheduleStateByConsultorio[targetConsultorioId] || {})),
+        panesSnapshot: buildSchedulePaneDomSnapshot()
+      });
       pushAgendaConfigStateSafe({
         view: 'agenda-config-schedule-consultorio',
         consultorioId: targetConsultorioId
@@ -13031,6 +13524,37 @@ console.info('app.js loaded :: 20251123a');
       const paneTarget = String(btn.getAttribute('data-bs-target') || '').replace(/^#sede/, '');
       window.setTimeout(()=>{ handleConsultorioTabSwitch(paneTarget); }, 0);
     });
+    if(!window.__mxmConsultorioSchedulePanelOpenSyncBound){
+      window.__mxmConsultorioSchedulePanelOpenSyncBound = true;
+      document.addEventListener('click', (event)=>{
+        const target = event.target instanceof Element
+          ? event.target.closest('.menu-sub-btn[data-panel="p-consultorio"]')
+          : null;
+        if(!target) return;
+        window.setTimeout(()=>{
+          handleConsultorioTabSwitch('', { pushHistory: false });
+        }, 0);
+      }, true);
+    }
+    if(!window.__mxmConsultorioScheduleTabEventBridgeBound){
+      window.__mxmConsultorioScheduleTabEventBridgeBound = true;
+      window.addEventListener('mxm:agenda-consultorio-change', (event)=>{
+        const consultorioId = String(event?.detail?.consultorioId || '').trim();
+        const source = String(event?.detail?.source || '').trim();
+        if(!consultorioId || !source.startsWith('multisede_')) return;
+        window.setTimeout(()=>{
+          handleConsultorioTabSwitch(consultorioId, { pushHistory: false });
+          logScheduleTabDiag('multisede_event_bridge_after_switch', {
+            consultorioId,
+            source,
+            panesSnapshot: buildSchedulePaneDomSnapshot(),
+            activePaneId: String(activePane?.id || ''),
+            activeBodyId: String(activeBody?.id || ''),
+            rowRefsSize: rowRefs.size
+          });
+        }, 0);
+      });
+    }
     const consultorioFilter = document.getElementById('ag_consultorio_filter');
     consultorioFilter?.addEventListener('change', ()=>{
       const selectedId = String(consultorioFilter.value || '').trim();

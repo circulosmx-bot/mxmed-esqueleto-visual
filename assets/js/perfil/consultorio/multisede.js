@@ -250,6 +250,14 @@ function mxClearHorarioInputs(inputs){
       const sfx = String(n);
       const ids = ['cp','colonia','mensaje-cp','municipio','estado','cons-grupo-si','cons-grupo-no','cons-grupo-nombre','cons-titulo','cons-base-name-hint','cons-calle','cons-numext','cons-numint','cons-piso','cons-tel1','cons-tel2','cons-tel3','cons-wa','cons-wa-sync','cons-urg1','cons-urg2','sched-body','sched-copy-mon','sched-clear','cons-foto','cons-foto-prev','cons-foto-img','cons-foto-slot','cons-map','cons-map-frame','cons-lat','cons-lng','cons-logo','cons-logo-slot','cons-logo-prev','cons-logo-img','cons-logo-del','cons-logo-sync','cons-logo-manual'];
       ids.forEach(base=>{ const el = pane.querySelector('#'+base); if(el){ el.id = base + (base==='sched-body'||base==='sched-copy-mon'||base==='sched-clear' ? '-'+sfx : sfx); const lab = pane.querySelector(`label[for="${base}"]`); if(lab) lab.setAttribute('for', el.id); } });
+      // Evita arrastrar filas/horarios renderizados del consultorio origen al clon.
+      try{
+        const clonedSchedBody = pane.querySelector(`#sched-body-${sfx}`);
+        if(clonedSchedBody){
+          clonedSchedBody.innerHTML = '';
+        }
+        pane.querySelectorAll('[data-sched-sync-note="1"], [data-sched-validation-note="1"]').forEach((node)=> node.remove());
+      }catch(_){ }
       pane.querySelectorAll('.mf-upload').forEach((uploadBox)=>{
         // Un clon puede heredar el flag y quedar sin listeners en sede 2/3.
         uploadBox.removeAttribute('data-upload-bound');
@@ -3570,35 +3578,10 @@ function mxClearHorarioInputs(inputs){
 
       const currentName = getConsultorioNameByIndex(idx);
       title.textContent = currentName;
-
-      const consultorioIndexes = getConsultorioSlots()
-        .filter((n)=> paneExists(n))
-        .sort((a,b)=> a - b);
-      const otherIndexes = consultorioIndexes.filter((n)=> n !== idx);
-
+      // En Consultorios cada sede ya vive en su propio tab, por lo que no se
+      // muestran switches internos entre consultorios en este contexto.
       switcher.innerHTML = '';
-      if(!otherIndexes.length){
-        switcher.setAttribute('hidden', 'hidden');
-        return;
-      }
-
-      otherIndexes.forEach((otherIdx)=>{
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'mx-cons-horarios-switch-btn schedule-consultorio-btn';
-        button.setAttribute('data-cons-horarios-jump', '1');
-        button.setAttribute('data-consultorio-id', String(otherIdx));
-        button.setAttribute('data-index', String(otherIdx));
-        button.textContent = getConsultorioNameByIndex(otherIdx);
-        switcher.appendChild(button);
-      });
-      const backBtn = document.createElement('button');
-      backBtn.type = 'button';
-      backBtn.className = 'schedule-back-to-overview';
-      backBtn.setAttribute('data-cons-horarios-back', '1');
-      backBtn.textContent = '← VOLVER';
-      switcher.appendChild(backBtn);
-      switcher.removeAttribute('hidden');
+      switcher.setAttribute('hidden', 'hidden');
     };
     function refreshScheduleHeaders(){
       root.querySelectorAll('.tab-pane[id^="sede"]').forEach((pane)=>{

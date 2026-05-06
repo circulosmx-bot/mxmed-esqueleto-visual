@@ -5895,6 +5895,39 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 .schedule-back-to-overview .arrow{ color:#007a8a; }
 
+.ag-schedule-immersive-panel{
+  margin-top:4px;
+  border:1px solid rgba(0, 91, 127, 0.18);
+  border-radius:12px;
+  background:#ffffff;
+  box-shadow:0 10px 24px rgba(0, 35, 50, 0.08);
+  overflow:hidden;
+}
+
+.ag-schedule-immersive-stage{
+  margin-top:0;
+  min-height:96px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  padding:10px 12px 12px;
+}
+
+.ag-schedule-immersive-loading,
+.ag-schedule-immersive-error{
+  font-size:.9rem;
+  font-weight:600;
+  color:#39586a;
+}
+
+.ag-schedule-immersive-error{
+  color:#b42318;
+}
+
+.ag-schedule-immersive-stage .sched-card{
+  margin-bottom:0;
+}
+
 .ag-reminders-panel{
   display:flex;
   flex-direction:column;
