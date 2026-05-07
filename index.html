@@ -3241,36 +3241,42 @@
                         <h5 class="modal-title mb-0">Detalle de cita</h5>
                         <span class="badge text-bg-secondary" id="ag_event_action_status_badge">--</span>
                       </div>
-                      <div class="small text-muted mt-1" id="ag_event_action_subtitle">Paciente · fecha · hora</div>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                   </div>
                   <div class="modal-body">
                     <div id="ag_event_action_error_box" class="alert alert-danger d-none py-2 mb-3"></div>
                     <div id="ag_event_detail_wrap" class="mx-ag-modal-stack" data-view="detail">
-                      <div>
-                        <div class="small text-muted">Paciente</div>
-                        <div class="fw-semibold" id="ag_event_action_patient">--</div>
+                      <div class="mx-ag-event-detail-field">
+                        <div class="mx-ag-event-detail-label">Paciente</div>
+                        <div class="mx-ag-event-detail-value" id="ag_event_action_patient">--</div>
                       </div>
-                      <div>
-                        <div class="small text-muted">Horario</div>
-                        <div class="fw-semibold" id="ag_event_action_time">--</div>
+                      <div class="mx-ag-event-detail-field mx-ag-event-detail-field--datetime">
+                        <div class="mx-ag-event-detail-label">Fecha y hora</div>
+                        <div class="mx-ag-event-detail-value" id="ag_event_action_time">--</div>
                       </div>
-                      <div>
-                        <div class="small text-muted">Duración</div>
-                        <div class="fw-semibold" id="ag_event_action_duration">--</div>
+                      <div class="mx-ag-event-detail-field">
+                        <div class="mx-ag-event-detail-label">Duración</div>
+                        <div class="mx-ag-event-detail-value" id="ag_event_action_duration">--</div>
                       </div>
-                      <div>
-                        <div class="small text-muted">Estado</div>
-                        <div class="fw-semibold" id="ag_event_action_status">--</div>
+                      <div class="mx-ag-event-detail-field">
+                        <div class="mx-ag-event-detail-label">Estado</div>
+                        <div class="mx-ag-event-detail-value" id="ag_event_action_status">--</div>
                       </div>
-                      <div id="ag_event_action_reason_wrap" class="d-none">
-                        <div class="small text-muted">Motivo</div>
-                        <div class="fw-semibold" id="ag_event_action_reason">--</div>
+                      <div id="ag_event_action_reason_wrap" class="mx-ag-event-detail-field d-none">
+                        <div class="mx-ag-event-detail-label">Motivo</div>
+                        <div class="mx-ag-event-detail-value" id="ag_event_action_reason">--</div>
                       </div>
-                      <div id="ag_event_action_consultorio_wrap" class="d-none">
-                        <div class="small text-muted">Consultorio</div>
-                        <div class="fw-semibold" id="ag_event_action_consultorio">--</div>
+                      <div id="ag_event_action_consultorio_wrap" class="mx-ag-event-detail-field">
+                        <div class="mx-ag-event-detail-label">Consultorio</div>
+                        <div class="mx-ag-event-detail-value" id="ag_event_action_consultorio">--</div>
+                      </div>
+                      <div id="ag_event_timeline_wrap" class="mx-ag-event-timeline-wrap">
+                        <div class="mx-ag-event-timeline-title">Historial de la cita</div>
+                        <div id="ag_event_timeline_loading" class="small text-muted d-none">Cargando historial…</div>
+                        <div id="ag_event_timeline_error" class="small text-danger d-none">No fue posible cargar el historial de esta cita.</div>
+                        <div id="ag_event_timeline_empty" class="small text-muted d-none">Sin eventos registrados.</div>
+                        <div id="ag_event_timeline_list" class="mx-ag-event-timeline-list"></div>
                       </div>
                       <div id="ag_event_resolution_wrap" class="d-none">
                         <div class="small text-muted mb-1" id="ag_event_resolution_title">Resolución de cita</div>

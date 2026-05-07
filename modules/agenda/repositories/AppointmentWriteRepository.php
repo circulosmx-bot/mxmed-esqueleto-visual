@@ -163,6 +163,8 @@ class AppointmentWriteRepository
         $this->ensurePrimaryKeyColumn($pkColumn);
 
         $current = $this->fetchAppointment($appointmentId, $pkColumn);
+        $notifyPatient = $this->resolveOptionalBoolean($payload['notify_patient'] ?? null) === true ? 1 : 0;
+        $payload['notify_patient'] = $notifyPatient;
 
         $this->pdo->beginTransaction();
         try {
@@ -188,7 +190,7 @@ class AppointmentWriteRepository
             'to_end_at' => $payload['to_end_at'],
             'motivo_code' => $payload['motivo_code'] ?? null,
             'motivo_text' => $payload['motivo_text'] ?? null,
-            'notify_patient' => isset($payload['notify_patient']) ? (int)$payload['notify_patient'] : 0,
+            'notify_patient' => $notifyPatient,
             'contact_method' => $payload['contact_method'] ?? 'whatsapp',
         ];
     }

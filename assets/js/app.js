@@ -597,7 +597,6 @@ console.info('app.js loaded :: 20251123a');
     nextSlotsMoreBtn: panel.querySelector('#ag_next_slots_more_btn'),
     eventActionsModalEl: panel.querySelector('#ag_event_actions_modal'),
     eventActionError: panel.querySelector('#ag_event_action_error_box'),
-    eventActionSubtitle: panel.querySelector('#ag_event_action_subtitle'),
     eventActionStatusBadge: panel.querySelector('#ag_event_action_status_badge'),
     eventActionDetailWrap: panel.querySelector('#ag_event_detail_wrap'),
     eventActionPatient: panel.querySelector('#ag_event_action_patient'),
@@ -608,6 +607,11 @@ console.info('app.js loaded :: 20251123a');
     eventActionReason: panel.querySelector('#ag_event_action_reason'),
     eventActionConsultorioWrap: panel.querySelector('#ag_event_action_consultorio_wrap'),
     eventActionConsultorio: panel.querySelector('#ag_event_action_consultorio'),
+    eventTimelineWrap: panel.querySelector('#ag_event_timeline_wrap'),
+    eventTimelineLoading: panel.querySelector('#ag_event_timeline_loading'),
+    eventTimelineError: panel.querySelector('#ag_event_timeline_error'),
+    eventTimelineEmpty: panel.querySelector('#ag_event_timeline_empty'),
+    eventTimelineList: panel.querySelector('#ag_event_timeline_list'),
     eventResolutionWrap: panel.querySelector('#ag_event_resolution_wrap'),
     eventResolutionTitle: panel.querySelector('#ag_event_resolution_title'),
     eventResolutionNote: panel.querySelector('#ag_event_resolution_note'),
@@ -745,6 +749,8 @@ console.info('app.js loaded :: 20251123a');
   let eventActionRescheduleBusy = false;
   let eventActionCurrentSection = 'detail';
   let eventActionIsCancelled = false;
+  let eventTimelineLookupSeq = 0;
+  let eventTimelineLookupCtrl = null;
   let eventCancelPostActionsEnabled = false;
   let eventCancelPostWaitlistLoaded = false;
   let eventCancelPostWaitlistBusy = false;
@@ -753,6 +759,9 @@ console.info('app.js loaded :: 20251123a');
   let eventRescheduleMonthCursor = null;
   let eventRescheduleSelectedDayKey = '';
   let eventRescheduleSelectedStart = null;
+  const eventRescheduleAvailabilityCache = new Map();
+  const eventRescheduleAvailabilityInFlight = new Map();
+  let eventRescheduleAvailabilityLoadNonce = 0;
   let agendaSettingsHydrating = false;
   let agendaSettingsSaveTimer = null;
   let sidebarResizeTimer = null;
@@ -2813,6 +2822,190 @@ console.info('app.js loaded :: 20251123a');
       }
     }
   };
+  const abortEventTimelineLookup = ()=>{
+    if(eventTimelineLookupCtrl){
+      try{ eventTimelineLookupCtrl.abort(); }catch(_){}
+      eventTimelineLookupCtrl = null;
+    }
+    eventTimelineLookupSeq += 1;
+  };
+  const setEventTimelineLoading = (isLoading = false)=>{
+    if(!(els.eventTimelineLoading instanceof HTMLElement)) return;
+    els.eventTimelineLoading.classList.toggle('d-none', !isLoading);
+  };
+  const setEventTimelineError = (message = '')=>{
+    if(!(els.eventTimelineError instanceof HTMLElement)) return;
+    const safeMessage = sanitizeText(message);
+    if(!safeMessage){
+      els.eventTimelineError.textContent = '';
+      els.eventTimelineError.classList.add('d-none');
+      return;
+    }
+    els.eventTimelineError.textContent = safeMessage;
+    els.eventTimelineError.classList.remove('d-none');
+  };
+  const setEventTimelineEmpty = (isEmpty = false)=>{
+    if(!(els.eventTimelineEmpty instanceof HTMLElement)) return;
+    els.eventTimelineEmpty.classList.toggle('d-none', !isEmpty);
+  };
+  const resolveEventTimelineActorLabel = (rawRole = '')=>{
+    const normalized = normalizeText(rawRole);
+    if(!normalized) return '';
+    if(normalized.includes('doctor') || normalized.includes('medic')) return 'Médico';
+    if(normalized.includes('operator') || normalized.includes('operador') || normalized.includes('assistant')) return 'Operador';
+    if(normalized.includes('patient') || normalized.includes('paciente')) return 'Paciente';
+    if(normalized.includes('system') || normalized.includes('sistema')) return 'Sistema';
+    return '';
+  };
+  const resolveEventTimelineTypeLabel = (rawType = '')=>{
+    const normalized = normalizeText(rawType);
+    if(!normalized) return 'Actualización de cita';
+    if(normalized.includes('create') || normalized.includes('created') || normalized.includes('reserve') || normalized.includes('book') || normalized.includes('alta')){
+      return 'Cita creada';
+    }
+    if(normalized.includes('cancel')) return 'Cita cancelada';
+    if(normalized.includes('resched') || normalized.includes('reprogram') || normalized.includes('reagend')) return 'Cita reprogramada';
+    if(normalized.includes('no_show') || normalized.includes('noshow') || normalized.includes('no-show') || normalized.includes('no asist')){
+      return 'Paciente no asistió';
+    }
+    if(normalized.includes('confirm')) return 'Cita confirmada';
+    if((normalized.includes('waitlist') && normalized.includes('assign')) || (normalized.includes('assign') && normalized.includes('wait'))){
+      return 'Asignada desde lista de espera';
+    }
+    if(normalized.includes('status') || normalized.includes('state')) return 'Estado actualizado';
+    if(normalized.includes('in_progress') || normalized.includes('en_curso') || normalized.includes('in progress')) return 'Cita en curso';
+    if(normalized.includes('finish') || normalized.includes('finaliz') || normalized.includes('complete')) return 'Cita finalizada';
+    return 'Actualización de cita';
+  };
+  const resolveEventTimelineSummary = (eventItem = {})=>{
+    const reasonText = sanitizeText(
+      eventItem?.motivo_text
+      || eventItem?.reason_text
+      || eventItem?.reason
+      || eventItem?.description
+      || eventItem?.notes
+      || eventItem?.note
+      || eventItem?.summary
+      || eventItem?.message
+      || ''
+    );
+    if(reasonText) return reasonText;
+    const fromStatus = sanitizeText(eventItem?.status_from || eventItem?.from_status || eventItem?.previous_status || '');
+    const toStatus = sanitizeText(eventItem?.status_to || eventItem?.to_status || eventItem?.next_status || eventItem?.status || '');
+    if(fromStatus && toStatus && normalizeText(fromStatus) !== normalizeText(toStatus)){
+      const fromLabel = sanitizeText(resolveAppointmentStatusMeta(fromStatus)?.label || fromStatus);
+      const toLabel = sanitizeText(resolveAppointmentStatusMeta(toStatus)?.label || toStatus);
+      return `Estado: ${fromLabel} → ${toLabel}`;
+    }
+    if(toStatus){
+      const toLabel = sanitizeText(resolveAppointmentStatusMeta(toStatus)?.label || toStatus);
+      if(toLabel) return `Estado: ${toLabel}`;
+    }
+    return '';
+  };
+  const formatEventTimelineTimestamp = (rawValue = '')=>{
+    const safeRaw = sanitizeText(rawValue);
+    if(!safeRaw) return '--';
+    const parsed = parseDateTimeLocalSafe(safeRaw) || new Date(safeRaw);
+    if(!(parsed instanceof Date) || Number.isNaN(parsed.getTime())) return '--';
+    const datePart = parsed.toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+    const timePart = parsed.toLocaleTimeString('es-MX', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    return `${datePart} · ${timePart} h`;
+  };
+  const renderEventTimelineItems = (items = [])=>{
+    if(!(els.eventTimelineList instanceof HTMLElement)) return;
+    const rows = Array.isArray(items) ? items : [];
+    if(!rows.length){
+      els.eventTimelineList.innerHTML = '';
+      return;
+    }
+    const html = rows.map((eventItem)=>{
+      const whenLabel = formatEventTimelineTimestamp(
+        eventItem?.timestamp
+        || eventItem?.created_at
+        || eventItem?.updated_at
+        || ''
+      );
+      const eventTypeLabel = resolveEventTimelineTypeLabel(eventItem?.event_type || '');
+      const summary = resolveEventTimelineSummary(eventItem);
+      const actorLabel = resolveEventTimelineActorLabel(eventItem?.actor_role || '');
+      const actorLine = actorLabel ? `<div class="mx-ag-event-timeline-meta">Registrado por ${escapeHtml(actorLabel)}</div>` : '';
+      const summaryLine = summary ? `<div class="mx-ag-event-timeline-summary">${escapeHtml(summary)}</div>` : '';
+      return `
+        <article class="mx-ag-event-timeline-item">
+          <div class="mx-ag-event-timeline-head">
+            <div class="mx-ag-event-timeline-type">${escapeHtml(eventTypeLabel)}</div>
+            <div class="mx-ag-event-timeline-time">${escapeHtml(whenLabel)}</div>
+          </div>
+          ${actorLine}
+          ${summaryLine}
+        </article>
+      `;
+    }).join('');
+    els.eventTimelineList.innerHTML = html;
+  };
+  const resetEventTimelineState = ()=>{
+    setEventTimelineLoading(false);
+    setEventTimelineError('');
+    setEventTimelineEmpty(false);
+    renderEventTimelineItems([]);
+  };
+  const loadEventTimeline = async (appointmentId = '')=>{
+    if(!(els.eventTimelineWrap instanceof HTMLElement)) return;
+    const safeAppointmentId = sanitizeText(appointmentId);
+    const appointmentIdNorm = normalizeText(safeAppointmentId);
+    abortEventTimelineLookup();
+    resetEventTimelineState();
+    if(!safeAppointmentId){
+      setEventTimelineEmpty(true);
+      return;
+    }
+    if(isAgendaDemoContext() || appointmentIdNorm.startsWith('demo-') || appointmentIdNorm.startsWith('mock-')){
+      setEventTimelineEmpty(true);
+      return;
+    }
+    const seq = eventTimelineLookupSeq;
+    const ctrl = new AbortController();
+    eventTimelineLookupCtrl = ctrl;
+    setEventTimelineLoading(true);
+    try{
+      const result = await AgendaApiClient.getAppointmentEvents({
+        appointmentId: safeAppointmentId,
+        limit: 200,
+        signal: ctrl.signal
+      });
+      if(seq !== eventTimelineLookupSeq) return;
+      setEventTimelineLoading(false);
+      if(!result?.ok || result?.json?.ok !== true){
+        const errorMessage = sanitizeText(result?.json?.message || result?.json?.error || '') || 'No fue posible cargar el historial de esta cita.';
+        setEventTimelineError(errorMessage);
+        return;
+      }
+      const items = Array.isArray(result?.json?.data) ? result.json.data : [];
+      if(!items.length){
+        setEventTimelineEmpty(true);
+        return;
+      }
+      renderEventTimelineItems(items);
+    }catch(err){
+      if(err?.name === 'AbortError') return;
+      if(seq !== eventTimelineLookupSeq) return;
+      setEventTimelineLoading(false);
+      setEventTimelineError('No fue posible cargar el historial de esta cita.');
+    }finally{
+      if(eventTimelineLookupCtrl === ctrl){
+        eventTimelineLookupCtrl = null;
+      }
+    }
+  };
   const resetEventActionModalState = ()=>{
     eventActionCurrentSection = 'detail';
     eventActionIsCancelled = false;
@@ -2825,6 +3018,8 @@ console.info('app.js loaded :: 20251123a');
     setEventActionError('');
     setEventActionRescheduleNote('');
     setEventResolutionNote('');
+    abortEventTimelineLookup();
+    resetEventTimelineState();
     clearEventPatientBehaviorNotice();
     resetEventCancelPostActions();
     if(els.eventRescheduleConfirmBtn){
@@ -3224,6 +3419,180 @@ console.info('app.js loaded :: 20251123a');
       return !!(evStart && evEnd && candidateStart < evEnd && candidateEnd > evStart);
     });
   };
+  const buildRescheduleAvailabilityCacheKey = (doctorId = '', consultorioId = '', dateYmd = '', slotMinutes = 30)=>{
+    return [
+      sanitizeText(doctorId || ''),
+      sanitizeText(consultorioId || ''),
+      sanitizeText(dateYmd || ''),
+      String(Math.max(1, Number(slotMinutes || 30)))
+    ].join('::');
+  };
+  const resolveEventRescheduleContext = ()=>{
+    const doctorId = sanitizeText(getDoctorId() || '');
+    const fromEvent = sanitizeText(
+      activeEventActionRef?.extendedProps?.consultorio_id
+      || activeEventActionRef?.extendedProps?.consultorioId
+      || ''
+    );
+    const fallbackConsultorio = sanitizeText(getAvailabilityConsultorioId() || '');
+    const consultorioId = isNumericId(fromEvent)
+      ? fromEvent
+      : (isNumericId(fallbackConsultorio) ? fallbackConsultorio : '');
+    const slotMinutes = Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
+    return {
+      doctorId,
+      consultorioId,
+      slotMinutes
+    };
+  };
+  const resolveRescheduleCachedAvailability = (dateYmd = '')=>{
+    const { doctorId, consultorioId, slotMinutes } = resolveEventRescheduleContext();
+    if(!isNumericId(doctorId) || !isNumericId(consultorioId)){
+      return null;
+    }
+    const key = buildRescheduleAvailabilityCacheKey(doctorId, consultorioId, dateYmd, slotMinutes);
+    const entry = eventRescheduleAvailabilityCache.get(key);
+    return entry && typeof entry === 'object' ? entry : null;
+  };
+  const isDateInsideCurrentCalendarRange = (dayDate)=>{
+    if(!(dayDate instanceof Date) || Number.isNaN(dayDate.getTime())) return false;
+    const rangeStart = customWeekLastBridgeMeta?.rangeStart ? new Date(customWeekLastBridgeMeta.rangeStart) : null;
+    const rangeEnd = customWeekLastBridgeMeta?.rangeEnd ? new Date(customWeekLastBridgeMeta.rangeEnd) : null;
+    if(!(rangeStart instanceof Date) || Number.isNaN(rangeStart.getTime()) || !(rangeEnd instanceof Date) || Number.isNaN(rangeEnd.getTime())){
+      return false;
+    }
+    const dayStart = toStartOfDay(dayDate);
+    if(!(dayStart instanceof Date) || Number.isNaN(dayStart.getTime())) return false;
+    return dayStart >= rangeStart && dayStart < rangeEnd;
+  };
+  const buildRescheduleSlotsFromCalendarRange = (dayDate)=>{
+    const now = new Date();
+    const slotMinutes = Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
+    const { dayStart, dayEnd } = resolveServiceWindowForDay(dayDate);
+    const slots = [];
+    let cursor = alignDateToSlotGrid(dayStart, slotMinutes);
+    while(cursor < dayEnd){
+      const slotStart = new Date(cursor);
+      const slotEnd = plusMinutes(slotStart, slotMinutes);
+      if(slotStart >= now && slotEnd <= dayEnd && isSelectionAvailable(slotStart, slotEnd)){
+        slots.push(new Date(slotStart));
+      }
+      cursor = plusMinutes(cursor, slotMinutes);
+    }
+    return slots;
+  };
+  const loadRescheduleAvailabilityForDate = async (dateYmd = '', { force = false } = {})=>{
+    const dateKey = sanitizeText(dateYmd || '');
+    if(!dateKey) return null;
+    const { doctorId, consultorioId, slotMinutes } = resolveEventRescheduleContext();
+    if(!isNumericId(doctorId) || !isNumericId(consultorioId)){
+      return {
+        status: 'error',
+        slots: [],
+        message: 'No se pudo resolver doctor/consultorio para reprogramar.'
+      };
+    }
+    const cacheKey = buildRescheduleAvailabilityCacheKey(doctorId, consultorioId, dateKey, slotMinutes);
+    if(!force){
+      const cached = eventRescheduleAvailabilityCache.get(cacheKey);
+      if(cached && typeof cached === 'object' && (cached.status === 'ready' || cached.status === 'error')){
+        return cached;
+      }
+      const inFlight = eventRescheduleAvailabilityInFlight.get(cacheKey);
+      if(inFlight){
+        return inFlight;
+      }
+    }
+    eventRescheduleAvailabilityCache.set(cacheKey, {
+      status: 'loading',
+      slots: [],
+      message: ''
+    });
+    const requestPromise = (async ()=>{
+      try{
+        const params = new URLSearchParams({
+          doctor_id: doctorId,
+          consultorio_id: consultorioId,
+          date: dateKey,
+          slot_minutes: String(slotMinutes)
+        });
+        const json = await AgendaApiClient.getAvailability({ params });
+        if(!json || json.ok !== true){
+          const message = sanitizeText(json?.message || json?.error || 'No fue posible cargar disponibilidad para esta fecha.');
+          const failedState = { status: 'error', slots: [], message };
+          eventRescheduleAvailabilityCache.set(cacheKey, failedState);
+          return failedState;
+        }
+        const now = new Date();
+        const slots = (Array.isArray(json?.data?.slots) ? json.data.slots : [])
+          .map((slot)=> parseDateTimeLocalSafe(slot?.start_at || ''))
+          .filter((start)=> start instanceof Date && !Number.isNaN(start.getTime()))
+          .filter((start)=> start >= now)
+          .sort((a, b)=> a.getTime() - b.getTime());
+        const readyState = { status: 'ready', slots, message: '' };
+        eventRescheduleAvailabilityCache.set(cacheKey, readyState);
+        return readyState;
+      }catch(_){
+        const failedState = {
+          status: 'error',
+          slots: [],
+          message: 'No fue posible cargar disponibilidad para esta fecha.'
+        };
+        eventRescheduleAvailabilityCache.set(cacheKey, failedState);
+        return failedState;
+      }finally{
+        eventRescheduleAvailabilityInFlight.delete(cacheKey);
+      }
+    })();
+    eventRescheduleAvailabilityInFlight.set(cacheKey, requestPromise);
+    return requestPromise;
+  };
+  const loadRescheduleAvailabilityForMonth = async (monthDate)=>{
+    const base = startOfMonth(monthDate);
+    if(!base) return;
+    const { doctorId, consultorioId, slotMinutes } = resolveEventRescheduleContext();
+    if(!isNumericId(doctorId) || !isNumericId(consultorioId)){
+      return;
+    }
+    const nonce = ++eventRescheduleAvailabilityLoadNonce;
+    const today = toStartOfDay(new Date());
+    const year = base.getFullYear();
+    const month = base.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const pending = [];
+    for(let day = 1; day <= daysInMonth; day += 1){
+      const date = new Date(year, month, day, 0, 0, 0, 0);
+      if(today && date < today){
+        continue;
+      }
+      const dateYmd = formatYmdLocal(date);
+      const cacheKey = buildRescheduleAvailabilityCacheKey(doctorId, consultorioId, dateYmd, slotMinutes);
+      const cached = eventRescheduleAvailabilityCache.get(cacheKey);
+      if(cached && typeof cached === 'object' && cached.status === 'ready'){
+        continue;
+      }
+      eventRescheduleAvailabilityCache.set(cacheKey, { status: 'loading', slots: [], message: '' });
+      pending.push(loadRescheduleAvailabilityForDate(dateYmd));
+    }
+    if(pending.length){
+      eventRescheduleMonthOptions = buildRescheduleMonthOptions(eventRescheduleMonthCursor);
+      renderRescheduleDays();
+      validateEventRescheduleCandidate();
+    }
+    await Promise.allSettled(pending);
+    if(nonce !== eventRescheduleAvailabilityLoadNonce) return;
+    eventRescheduleMonthOptions = buildRescheduleMonthOptions(eventRescheduleMonthCursor);
+    const selectedDay = eventRescheduleMonthOptions.find((day)=> day.key === eventRescheduleSelectedDayKey);
+    if(!(selectedDay && selectedDay.hasAvailability)){
+      const firstAvailable = eventRescheduleMonthOptions.find((day)=> day.hasAvailability);
+      if(firstAvailable){
+        eventRescheduleSelectedDayKey = firstAvailable.key;
+        eventRescheduleSelectedStart = null;
+      }
+    }
+    renderRescheduleDays();
+    validateEventRescheduleCandidate();
+  };
   const buildRescheduleDayLabel = (date)=>{
     if(!(date instanceof Date) || Number.isNaN(date.getTime())) return '--';
     return date.toLocaleDateString('es-MX', { day: '2-digit' });
@@ -3257,20 +3626,23 @@ console.info('app.js loaded :: 20251123a');
     return { dayStart, dayEnd };
   };
   const buildRescheduleSlotsForDay = (dayDate)=>{
-    const now = new Date();
-    const slotMinutes = Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
-    const { dayStart, dayEnd } = resolveServiceWindowForDay(dayDate);
-    const slots = [];
-    let cursor = alignDateToSlotGrid(dayStart, slotMinutes);
-    while(cursor < dayEnd){
-      const slotStart = new Date(cursor);
-      const slotEnd = plusMinutes(slotStart, slotMinutes);
-      if(slotStart >= now && slotEnd <= dayEnd && isSelectionAvailable(slotStart, slotEnd)){
-        slots.push(new Date(slotStart));
-      }
-      cursor = plusMinutes(cursor, slotMinutes);
+    if(!(dayDate instanceof Date) || Number.isNaN(dayDate.getTime())) return [];
+    const dateYmd = formatYmdLocal(dayDate);
+    const cached = resolveRescheduleCachedAvailability(dateYmd);
+    if(cached && cached.status === 'ready'){
+      return Array.isArray(cached.slots)
+        ? cached.slots
+          .map((slot)=> slot instanceof Date ? new Date(slot) : new Date(slot || ''))
+          .filter((slot)=> !Number.isNaN(slot.getTime()))
+        : [];
     }
-    return slots;
+    if(cached && (cached.status === 'loading' || cached.status === 'error')){
+      return [];
+    }
+    if(isDateInsideCurrentCalendarRange(dayDate)){
+      return buildRescheduleSlotsFromCalendarRange(dayDate);
+    }
+    return [];
   };
   const buildRescheduleMonthOptions = (monthDate)=>{
     const base = startOfMonth(monthDate);
@@ -3285,15 +3657,25 @@ console.info('app.js loaded :: 20251123a');
       const key = formatYmdLocal(date);
       const isPast = !!(today && date < today);
       let slots = [];
+      let isLoading = false;
+      let loadError = '';
       if(!isPast){
         slots = buildRescheduleSlotsForDay(date);
+        const availabilityState = resolveRescheduleCachedAvailability(key);
+        if(availabilityState?.status === 'loading'){
+          isLoading = true;
+        }else if(availabilityState?.status === 'error'){
+          loadError = sanitizeText(availabilityState?.message || 'No fue posible cargar disponibilidad para esta fecha.');
+        }
       }
       options.push({
         key,
         date,
         isPast,
         slots,
-        hasAvailability: slots.length > 0
+        hasAvailability: slots.length > 0,
+        isLoading,
+        loadError
       });
     }
     return options;
@@ -3303,6 +3685,14 @@ console.info('app.js loaded :: 20251123a');
     const selectedDay = eventRescheduleMonthOptions.find((day)=> day.key === eventRescheduleSelectedDayKey);
     if(!selectedDay){
       els.eventRescheduleHours.innerHTML = '<span class="small text-muted">Elige una fecha con horarios disponibles.</span>';
+      return;
+    }
+    if(selectedDay.isLoading){
+      els.eventRescheduleHours.innerHTML = '<span class="small text-muted">Cargando disponibilidad...</span>';
+      return;
+    }
+    if(selectedDay.loadError){
+      els.eventRescheduleHours.innerHTML = `<span class="small text-muted">${escapeHtml(selectedDay.loadError)}</span>`;
       return;
     }
     if(!selectedDay.slots.length){
@@ -3333,13 +3723,14 @@ console.info('app.js loaded :: 20251123a');
       const isAvailable = !!day.hasAvailability;
       const cls = day.isPast
         ? 'is-past'
-        : (isAvailable ? 'is-available' : 'is-unavailable');
-      return `<button type="button" class="mx-ag-reschedule-day-cell ${cls}${isActive ? ' is-selected' : ''}" data-ag-reschedule-day="${escapeHtml(day.key)}" ${isAvailable ? '' : 'disabled'}>${escapeHtml(buildRescheduleDayLabel(day.date))}</button>`;
+        : (day.isLoading ? 'is-loading' : (isAvailable ? 'is-available' : 'is-unavailable'));
+      return `<button type="button" class="mx-ag-reschedule-day-cell ${cls}${isActive ? ' is-selected' : ''}" data-ag-reschedule-day="${escapeHtml(day.key)}" ${(isAvailable && !day.isLoading) ? '' : 'disabled'}>${escapeHtml(buildRescheduleDayLabel(day.date))}</button>`;
     }).join('');
     els.eventRescheduleDays.innerHTML = `${leading.join('')}${daysHtml}`;
     renderRescheduleHours();
   };
   const initEventRescheduleSelector = ()=>{
+    eventRescheduleAvailabilityLoadNonce += 1;
     const baseMonth = startOfMonth(eventActionOriginalRange?.start || new Date()) || startOfMonth(new Date());
     const currentMonth = startOfMonth(new Date()) || baseMonth;
     eventRescheduleMonthCursor = (baseMonth && currentMonth && baseMonth < currentMonth) ? currentMonth : baseMonth;
@@ -3371,6 +3762,7 @@ console.info('app.js loaded :: 20251123a');
       eventRescheduleSelectedStart = null;
     }
     renderRescheduleDays();
+    loadRescheduleAvailabilityForMonth(eventRescheduleMonthCursor).catch(()=> null);
   };
   const navigateToRescheduledWeek = (startDate)=>{
     if(!calendar || !(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return;
@@ -3539,6 +3931,7 @@ console.info('app.js loaded :: 20251123a');
           appointmentId
         });
         setEventCancelPostActionsEnabled(true);
+        loadEventTimeline(appointmentId).catch(()=> null);
         logAgendaCancelFlow('cancel:post-state-enabled', {
           activeEventActionId,
           appointmentId,
@@ -3580,6 +3973,7 @@ console.info('app.js loaded :: 20251123a');
       setError('');
       await refreshCalendar({ forceConsultorios: false });
       setEventCancelPostActionsEnabled(true);
+      loadEventTimeline(appointmentId).catch(()=> null);
       logAgendaCancelFlow('cancel:post-state-enabled', {
         activeEventActionId,
         appointmentId,
@@ -3721,6 +4115,40 @@ console.info('app.js loaded :: 20251123a');
     const endLabel = end.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
     return `${dayLabel} · ${startLabel} - ${endLabel}`;
   };
+  const formatAppointmentDetailDateTime = (startDate, endDate)=>{
+    const start = startDate instanceof Date ? new Date(startDate) : new Date(startDate || '');
+    const end = endDate instanceof Date ? new Date(endDate) : new Date(endDate || '');
+    if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())){
+      return null;
+    }
+    const dateLabel = formatCreateAppointmentDateLabel(start);
+    if(!(dateLabel && typeof dateLabel === 'object')){
+      return null;
+    }
+    const startLabel = start.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const endLabel = end.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return {
+      dateLabel,
+      timeLabel: `${startLabel} - ${endLabel} h`
+    };
+  };
+  const syncEventActionTimeField = (startDate, endDate)=>{
+    if(!els.eventActionTime) return;
+    const detail = formatAppointmentDetailDateTime(startDate, endDate);
+    if(!detail){
+      els.eventActionTime.textContent = formatAppointmentDateRangeLabel(startDate, endDate);
+      els.eventActionTime.removeAttribute('aria-label');
+      return;
+    }
+    els.eventActionTime.innerHTML = `
+      <div class="ag-event-time-date">
+        <span class="ag-event-time-main">${escapeHtml(detail.dateLabel.mainLabel)}</span>
+        <span class="ag-event-time-year">${escapeHtml(detail.dateLabel.yearLabel)}</span>
+      </div>
+      <div class="ag-event-time-hours">${escapeHtml(detail.timeLabel)}</div>
+    `;
+    els.eventActionTime.setAttribute('aria-label', `${detail.dateLabel.fullLabel} · ${detail.timeLabel}`);
+  };
   const openEventActionModal = (eventRef, section = 'detail')=>{
     if(!(eventRef && els.eventActionsModalEl && window.bootstrap?.Modal)) return;
     hideCellMenu();
@@ -3743,7 +4171,19 @@ console.info('app.js loaded :: 20251123a');
     const statusKeyNorm = normalizeText(sanitizeText(props.status_key_real || props.status_key || props.status || ''));
     const statusNorm = normalizeText(status);
     eventActionIsCancelled = statusKeyNorm === 'canceled' || statusKeyNorm === 'cancelled' || statusNorm.includes('cancel');
-    const consultorio = sanitizeText(props.consultorio_id || '');
+    const consultorioId = sanitizeText(props.consultorio_id || props.consultorioId || '');
+    const consultorioName = sanitizeText(
+      props.consultorio_name
+      || props.consultorio_label
+      || props.consultorio
+      || ''
+    );
+    const consultorio = (consultorioId || consultorioName)
+      ? normalizeConsultorioDisplayLabel(
+        consultorioName || resolveAgendaConsultorioLabelById(consultorioId),
+        consultorioId
+      )
+      : '--';
     const reason = sanitizeText(
       props.reason_note
       || props.reason_label
@@ -3757,9 +4197,6 @@ console.info('app.js loaded :: 20251123a');
       ? Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000))
       : Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
     eventActionOriginalRange = { start, end };
-    if(els.eventActionSubtitle){
-      els.eventActionSubtitle.textContent = `${patient || 'Paciente'} · ${formatAppointmentDateRangeLabel(start, end)}`;
-    }
     if(els.eventActionStatusBadge){
       const visualKeyNorm = normalizeText(sanitizeText(props.visual_key || ''));
       const isConfirmed = statusNorm.includes('confirm');
@@ -3797,7 +4234,7 @@ console.info('app.js loaded :: 20251123a');
       }
     }
     if(els.eventActionPatient) els.eventActionPatient.textContent = patient || '--';
-    if(els.eventActionTime) els.eventActionTime.textContent = formatAppointmentDateRangeLabel(start, end);
+    syncEventActionTimeField(start, end);
     if(els.eventActionDuration) els.eventActionDuration.textContent = `${durationMinutes} min`;
     if(els.eventActionStatus) els.eventActionStatus.textContent = status || '--';
     if(els.eventActionReason) els.eventActionReason.textContent = reason || '--';
@@ -3805,10 +4242,9 @@ console.info('app.js loaded :: 20251123a');
       els.eventActionReasonWrap.classList.toggle('d-none', !reason);
     }
     if(els.eventActionConsultorio) els.eventActionConsultorio.textContent = consultorio || '--';
-    if(els.eventActionConsultorioWrap){
-      els.eventActionConsultorioWrap.classList.toggle('d-none', !consultorio);
-    }
+    if(els.eventActionConsultorioWrap) els.eventActionConsultorioWrap.classList.remove('d-none');
     refreshEventPatientBehaviorNotice(patientId).catch(()=> null);
+    loadEventTimeline(activeEventActionAppointmentId).catch(()=> null);
     if(els.eventResolutionWrap){
       const actionVisibility = resolveEventActionVisibility(eventRef);
       els.eventResolutionWrap.classList.toggle('d-none', !actionVisibility.showResolutionWrap);
@@ -5561,6 +5997,27 @@ console.info('app.js loaded :: 20251123a');
         });
         throw err;
       }
+    },
+    async getAppointmentEvents({ appointmentId = '', limit = 120, signal } = {}){
+      const safeId = encodeURIComponent(String(appointmentId || '').trim());
+      const params = new URLSearchParams();
+      const safeLimit = Number.parseInt(String(limit || 120), 10);
+      if(Number.isFinite(safeLimit) && safeLimit > 0){
+        params.set('limit', String(Math.min(500, Math.max(1, safeLimit))));
+      }
+      const qs = params.toString();
+      const url = `/api/agenda/index.php/appointments/${safeId}/events${qs ? `?${qs}` : ''}`;
+      const resp = await fetch(url, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        signal
+      });
+      return {
+        ok: resp.ok,
+        status: resp.status,
+        json: await resp.json().catch(()=> null)
+      };
     },
     async getWaitlistEntries({ doctorId = '', consultorioId = '', status = 'active', signal } = {}){
       const params = new URLSearchParams();
@@ -10885,6 +11342,7 @@ console.info('app.js loaded :: 20251123a');
       event.preventDefault();
       const nextMonth = addMonths(eventRescheduleMonthCursor || new Date(), 1);
       if(!nextMonth) return;
+      eventRescheduleAvailabilityLoadNonce += 1;
       eventRescheduleMonthCursor = nextMonth;
       eventRescheduleMonthOptions = buildRescheduleMonthOptions(eventRescheduleMonthCursor);
       const selectedInMonth = eventRescheduleMonthOptions.find((day)=> day.key === eventRescheduleSelectedDayKey && day.hasAvailability);
@@ -10895,12 +11353,14 @@ console.info('app.js loaded :: 20251123a');
       }
       renderRescheduleDays();
       validateEventRescheduleCandidate();
+      loadRescheduleAvailabilityForMonth(eventRescheduleMonthCursor).catch(()=> null);
     });
     els.eventRescheduleMonthPrevBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
       const previousMonth = addMonths(eventRescheduleMonthCursor || new Date(), -1);
       const currentMonth = getCurrentMonthStart();
       if(!previousMonth || !currentMonth || previousMonth.getTime() < currentMonth.getTime()) return;
+      eventRescheduleAvailabilityLoadNonce += 1;
       eventRescheduleMonthCursor = previousMonth;
       eventRescheduleMonthOptions = buildRescheduleMonthOptions(eventRescheduleMonthCursor);
       const selectedInMonth = eventRescheduleMonthOptions.find((day)=> day.key === eventRescheduleSelectedDayKey && day.hasAvailability);
@@ -10911,6 +11371,7 @@ console.info('app.js loaded :: 20251123a');
       }
       renderRescheduleDays();
       validateEventRescheduleCandidate();
+      loadRescheduleAvailabilityForMonth(eventRescheduleMonthCursor).catch(()=> null);
     });
     els.eventCancelBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
