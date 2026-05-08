@@ -585,6 +585,8 @@ console.info('app.js loaded :: 20251123a');
     useActivePatientNo: panel.querySelector('#ag_use_active_patient_no'),
     createSubmit: panel.querySelector('#ag_create_submit_btn'),
     workspaceShell: panel.querySelector('.mx-ag-workspace-shell'),
+    viewModeSwitch: panel.querySelector('#ag_view_mode_switch'),
+    viewModeButtons: Array.from(panel.querySelectorAll('[data-ag-view-mode]')),
     cellMenu: panel.querySelector('#ag_cell_menu'),
     cellMenuNewAppointment: panel.querySelector('#ag_cell_menu_new_appointment'),
     cellMenuBlockSlot: panel.querySelector('#ag_cell_menu_block_slot'),
@@ -698,6 +700,7 @@ console.info('app.js loaded :: 20251123a');
   let customWeekIncludeAnchorEvenIfInactive = true;
   let customWeekVisibleDaysAction = 'init';
   let lastCalendarViewType = '';
+  let agendaViewMode = 'week';
   let customWeekAvailabilityRequests = 0;
   let customWeekAppointmentsRequests = 0;
   let customWeekLastEventsRangeKey = '';
@@ -1792,6 +1795,21 @@ console.info('app.js loaded :: 20251123a');
       renderCustomWeekView();
     });
   };
+  const forceCustomWeekRefetchIfNeeded = ({ reason = '', minIntervalMs = 900 } = {})=>{
+    if(!calendar || !isCustomWeekActive()) return false;
+    const now = Date.now();
+    if((now - customWeekLastForcedRefetchAt) <= Math.max(0, Number(minIntervalMs || 0))){
+      return false;
+    }
+    customWeekLastForcedRefetchAt = now;
+    console.log('MXM CUSTOM WEEK DEBUG', {
+      phase: 'forced_refetch',
+      reason: sanitizeText(reason || 'unknown'),
+      minIntervalMs: Math.max(0, Number(minIntervalMs || 0))
+    });
+    try{ calendar.refetchEvents(); }catch(_){}
+    return true;
+  };
   const toCustomWeekDateSafe = (value)=>{
     if(value instanceof Date){
       return Number.isNaN(value.getTime()) ? null : new Date(value.getTime());
@@ -2224,13 +2242,18 @@ console.info('app.js loaded :: 20251123a');
       const hasRangeMismatch = !!currentRangeKey && currentRangeKey !== customWeekLastEventsRangeKey;
       const hasScopeMismatch = !!currentScopeKey && currentScopeKey !== customWeekLastEventsScopeKey;
       if(!allEvents.length && calendar && isCustomWeekActive()){
-        const now = Date.now();
-        if((now - customWeekLastForcedRefetchAt) > 1500){
-          customWeekLastForcedRefetchAt = now;
-          try{ calendar.refetchEvents(); }catch(_){}
-        }
+        forceCustomWeekRefetchIfNeeded({
+          reason: 'custom_week_empty_cache',
+          minIntervalMs: 1200
+        });
       }
       if((hasRangeMismatch || hasScopeMismatch) && calendar && isCustomWeekActive()){
+        forceCustomWeekRefetchIfNeeded({
+          reason: hasRangeMismatch && hasScopeMismatch
+            ? 'custom_week_range_and_scope_mismatch'
+            : (hasRangeMismatch ? 'custom_week_range_mismatch' : 'custom_week_scope_mismatch'),
+          minIntervalMs: 900
+        });
         root.innerHTML = '<div class="mx-ag-custom-week-loading">Cargando disponibilidad...</div>';
         console.log('MXM CUSTOM WEEK DEBUG', {
           phase: 'waiting_fresh_cache',
@@ -5885,6 +5908,136 @@ console.info('app.js loaded :: 20251123a');
         </div>
       `;
     }).join('');
+  };
+  const normalizeAgendaViewMode = (value = '')=>{
+    const raw = sanitizeText(value || '').toLowerCase();
+    if(raw === 'day') return 'day';
+    if(raw === 'month') return 'month';
+    return 'week';
+  };
+  // Rescate por fases:
+  // Semana custom es la vista operativa estable actual.
+  // Día/Mes siguen existiendo en FullCalendar, pero quedan deshabilitadas temporalmente.
+  const isAgendaViewModeTemporarilyDisabled = (mode = '')=>{
+    const safeMode = normalizeAgendaViewMode(mode);
+    return safeMode === 'day' || safeMode === 'month';
+  };
+  const resolveAgendaViewModeFromCalendarView = (viewType = '')=>{
+    const safeView = sanitizeText(viewType || '');
+    if(safeView === 'timeGridDay') return 'day';
+    if(safeView === 'dayGridMonth') return 'month';
+    return 'week';
+  };
+  const syncAgendaViewModeButtons = (mode = 'week')=>{
+    const normalizedMode = normalizeAgendaViewMode(mode);
+    const safeMode = isAgendaViewModeTemporarilyDisabled(normalizedMode) ? 'week' : normalizedMode;
+    if(!Array.isArray(els.viewModeButtons) || !els.viewModeButtons.length) return;
+    els.viewModeButtons.forEach((btn)=>{
+      const btnMode = normalizeAgendaViewMode(btn?.getAttribute?.('data-ag-view-mode') || '');
+      const disabledByPhase = isAgendaViewModeTemporarilyDisabled(btnMode);
+      const disabledTitle = sanitizeText(btn?.getAttribute?.('data-ag-view-disabled-title') || 'Vista en preparación');
+      const active = !disabledByPhase && btnMode === safeMode;
+      btn.classList.toggle('is-active', active);
+      btn.classList.toggle('is-disabled', disabledByPhase);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      btn.setAttribute('aria-disabled', disabledByPhase ? 'true' : 'false');
+      if(disabledByPhase){
+        btn.setAttribute('title', disabledTitle || 'Vista en preparación');
+      }else{
+        btn.removeAttribute('title');
+      }
+    });
+  };
+  const resolveAgendaViewAnchorDate = ()=>{
+    const currentViewType = String(calendar?.view?.type || '');
+    if(currentViewType === 'timeGridWeek'){
+      return resolveAgendaRollingStartDate();
+    }
+    const currentDate = (calendar && typeof calendar.getDate === 'function')
+      ? calendar.getDate()
+      : null;
+    if(currentDate instanceof Date && !Number.isNaN(currentDate.getTime())){
+      return currentDate;
+    }
+    return resolveAgendaRollingStartDate();
+  };
+  // Puente de rescate UX:
+  // Semana usa render custom y es la única vista operativa en esta fase.
+  // Día/Mes se conservan en código, pero quedan deshabilitadas temporalmente.
+  const setAgendaViewMode = (mode = 'week', options = {})=>{
+    const allowAutoFallback = options?.allowAutoFallback !== false;
+    const safeMode = normalizeAgendaViewMode(mode);
+    if(isAgendaViewModeTemporarilyDisabled(safeMode)){
+      agendaViewMode = 'week';
+      syncAgendaViewModeButtons('week');
+      if(calendar){
+        const currentMode = resolveAgendaViewModeFromCalendarView(String(calendar?.view?.type || ''));
+        if(currentMode !== 'week'){
+          return setAgendaViewMode('week', { allowAutoFallback: false });
+        }
+      }
+      return 'week';
+    }
+    agendaViewMode = safeMode;
+    syncAgendaViewModeButtons(safeMode);
+    if(!calendar){
+      return safeMode;
+    }
+
+    const currentViewType = String(calendar?.view?.type || '');
+    const currentMode = resolveAgendaViewModeFromCalendarView(currentViewType);
+    if(currentMode === safeMode){
+      if(safeMode === 'week'){
+        syncCustomWeekToolbarTitle();
+      }
+      scheduleCustomWeekRender();
+      return safeMode;
+    }
+
+    const anchorDate = resolveAgendaViewAnchorDate();
+    let targetView = 'timeGridWeek';
+    if(safeMode === 'day'){
+      targetView = 'timeGridDay';
+    }else if(safeMode === 'month'){
+      targetView = 'dayGridMonth';
+    }else{
+      customWeekVisibleDaysAction = 'view_switch';
+      customWeekIncludeAnchorEvenIfInactive = true;
+      setCustomWeekAnchorDate(anchorDate);
+      const targetRange = resolveCustomWeekRangeFromAnchor(resolveAgendaRollingStartDate(), 6);
+      customWeekExpectedRangeKey = sanitizeText(targetRange?.rangeKey || '');
+      customWeekExpectedScopeKey = resolveCustomWeekScopeKey();
+    }
+
+    try{
+      calendar.changeView(targetView, anchorDate);
+    }catch(_){
+      if(safeMode !== 'week' && allowAutoFallback){
+        return setAgendaViewMode('week', { allowAutoFallback: false });
+      }
+    }
+
+    if(safeMode === 'week'){
+      window.setTimeout(()=>{
+        forceCustomWeekRefetchIfNeeded({
+          reason: 'view_mode_switch_to_week',
+          minIntervalMs: 0
+        });
+        syncCustomWeekToolbarTitle();
+        scheduleCustomWeekRender();
+      }, 0);
+    }else{
+      scheduleCustomWeekRender();
+      if(allowAutoFallback){
+        window.setTimeout(()=>{
+          const liveMode = resolveAgendaViewModeFromCalendarView(String(calendar?.view?.type || ''));
+          if(liveMode !== safeMode){
+            setAgendaViewMode('week', { allowAutoFallback: false });
+          }
+        }, 140);
+      }
+    }
+    return safeMode;
   };
   const setWorkspaceButtonActive = (targetPanelId = panelId, targetAction = '')=>{
     const buttons = Array.from(document.querySelectorAll('.mx-ag-workspace-shell [data-ag-work-panel], .mx-ag-workspace-shell [data-ag-work-action]'));
@@ -12034,10 +12187,24 @@ console.info('app.js loaded :: 20251123a');
         hideEventActionPanel();
         visibleScheduleRange = null;
         const currentViewType = String(calendar?.view?.type || '');
+        const currentMode = resolveAgendaViewModeFromCalendarView(currentViewType);
+        if(isAgendaViewModeTemporarilyDisabled(currentMode)){
+          // Protección defensiva: si una vista no operativa se activa por otra vía, volver a Semana.
+          window.setTimeout(()=>{
+            setAgendaViewMode('week', { allowAutoFallback: false });
+          }, 0);
+          return;
+        }
+        agendaViewMode = currentMode;
+        syncAgendaViewModeButtons(currentMode);
         const previousViewType = sanitizeText(lastCalendarViewType || '');
         if(currentViewType === 'timeGridWeek' && previousViewType !== 'timeGridWeek'){
           customWeekVisibleDaysAction = 'init';
           customWeekIncludeAnchorEvenIfInactive = true;
+          forceCustomWeekRefetchIfNeeded({
+            reason: 'dateset_enter_week_from_other_view',
+            minIntervalMs: 0
+          });
         }
         if(currentViewType === 'timeGridWeek'){
           const range = resolveCustomWeekRangeFromAnchor(resolveAgendaRollingStartDate(), 6);
@@ -12184,6 +12351,17 @@ console.info('app.js loaded :: 20251123a');
         source: 'ag_consultorio_filter_change'
       }).catch(()=> null);
       hydrateAgendaSettings({ force: true }).catch(()=> null);
+    });
+    els.viewModeSwitch?.addEventListener('click', (event)=>{
+      const btn = event.target.closest('[data-ag-view-mode]');
+      if(!btn) return;
+      event.preventDefault();
+      const nextMode = sanitizeText(btn.getAttribute('data-ag-view-mode') || '');
+      if(isAgendaViewModeTemporarilyDisabled(nextMode)){
+        syncAgendaViewModeButtons('week');
+        return;
+      }
+      setAgendaViewMode(nextMode);
     });
     window.addEventListener('mxm:agenda-consultorio-change', (event)=>{
       const consultorioId = sanitizeText(event?.detail?.consultorioId || '');
@@ -13085,6 +13263,7 @@ console.info('app.js loaded :: 20251123a');
 
   const start = ()=>{
     bindEvents();
+    syncAgendaViewModeButtons(agendaViewMode);
     syncDoctorInput();
     setActiveAgendaConsultorio(sanitizeText(els.consultorio?.value || ''), {
       source: 'agenda_start',
