@@ -717,6 +717,15 @@ console.info('app.js loaded :: 20251123a');
     appointmentsByDate: {},
     activeWeekdays: []
   };
+  let customWeekSharedVisibleState = {
+    anchorDate: null,
+    startDate: null,
+    endDate: null,
+    visibleDays: [],
+    rangeKey: '',
+    scopeKey: '',
+    events: []
+  };
   let availabilityOmitConsultorioSupport = null;
   let globalAgendaExpandedVisibleRange = null;
   let globalAgendaExpandedVisibleRangeLoading = false;
@@ -1175,6 +1184,15 @@ console.info('app.js loaded :: 20251123a');
     customWeekExpectedRangeKey = '';
     customWeekLastEventsScopeKey = '';
     customWeekExpectedScopeKey = '';
+    customWeekSharedVisibleState = {
+      anchorDate: null,
+      startDate: null,
+      endDate: null,
+      visibleDays: [],
+      rangeKey: '',
+      scopeKey: '',
+      events: []
+    };
     customWeekLastBridgeMeta = {
       rangeStart: '',
       rangeEnd: '',
@@ -1422,23 +1440,8 @@ console.info('app.js loaded :: 20251123a');
       vacationDateKeys: exclusions.vacationDateKeys
     };
     customWeekOperationalContextCache = operationalContext;
-    console.log('MXM CUSTOM WEEK VISIBLE DAYS DEBUG', {
-      action: sanitizeText(customWeekVisibleDaysAction || 'init'),
-      anchorDate: anchorDate instanceof Date ? anchorDate.toISOString() : '',
-      includeAnchorEvenIfInactive,
-      consultorioMode: context.consultorioMode,
-      activeWeekdays: Array.from(context.activeWeekdays).sort((a, b)=> a - b),
-      activeDaysSource: context.source,
-      activeDaysKnown: context.activeDaysKnown === true,
-      holidayDates: Array.from(exclusions.holidayDateKeys),
-      blockedDates: Array.from(exclusions.blockedDateKeys),
-      blockedByConsultorioDates: Array.from(exclusions.blockedByConsultorioDateKeys),
-      vacationDates: Array.from(exclusions.vacationDateKeys),
-      finalColumnsCount: visibleDays.length,
-      visibleDays: visibleDays.map((day)=> formatYmdLocal(day)),
-      skippedDays: [],
-      reasonByDay
-    });
+    // QA note: el snapshot principal de visibleDays se emite al final del render semanal
+    // para reducir ruido en consola durante navegaciones rápidas.
     return {
       anchorDate,
       includeAnchorEvenIfInactive,
@@ -2170,6 +2173,68 @@ console.info('app.js loaded :: 20251123a');
       events: cached.map((eventRef)=> normalizeEventForCustomWeek(eventRef)).filter(Boolean)
     };
   };
+  const updateCustomWeekSharedVisibleState = ({ weekRange = null, visibleDays = [], events = [] } = {})=>{
+    const safeVisibleDays = Array.isArray(visibleDays) ? visibleDays : [];
+    const normalizedEvents = (Array.isArray(events) ? events : [])
+      .map((eventRef)=> normalizeEventForCustomWeek(eventRef))
+      .filter(Boolean);
+    customWeekSharedVisibleState = {
+      anchorDate: weekRange?.anchorDate instanceof Date ? new Date(weekRange.anchorDate) : null,
+      startDate: weekRange?.startDate instanceof Date ? new Date(weekRange.startDate) : null,
+      endDate: weekRange?.endDate instanceof Date ? new Date(weekRange.endDate) : null,
+      visibleDays: safeVisibleDays.map((day)=> toLocalDayDate(day)).filter((day)=> day instanceof Date),
+      rangeKey: sanitizeText(weekRange?.rangeKey || ''),
+      scopeKey: sanitizeText(resolveCustomWeekScopeKey() || ''),
+      events: normalizedEvents
+    };
+  };
+  const resolveCustomWeekSharedVisibleState = ()=>{
+    const state = customWeekSharedVisibleState;
+    if(!state || typeof state !== 'object') return null;
+    if(!(state.startDate instanceof Date) || !(state.endDate instanceof Date)) return null;
+    if(!Array.isArray(state.events) || state.events.length === 0) return null;
+    return state;
+  };
+  const isAvailabilitySlotEventType = (eventType = '')=> sanitizeText(eventType || '') === 'availability_slot';
+  const isTechnicalNonCardEventType = (eventType = '')=>{
+    const safeType = sanitizeText(eventType || '');
+    return safeType === 'availability' || safeType === 'focus_marker' || safeType === 'cancel_trace' || safeType === 'blocked_slot';
+  };
+  const hasAgendaCardRequiredData = (eventRef)=>{
+    const props = (eventRef?.extendedProps && typeof eventRef.extendedProps === 'object') ? eventRef.extendedProps : {};
+    const eventType = sanitizeText(props?.event_type || '');
+    const start = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
+    const end = eventRef?.end instanceof Date ? eventRef.end : new Date(eventRef?.end || '');
+    if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start){
+      return false;
+    }
+    if(isAvailabilitySlotEventType(eventType)){
+      return true;
+    }
+    if(isTechnicalNonCardEventType(eventType)){
+      return false;
+    }
+    const patientName = resolveEventPatientDisplayName(props, eventRef);
+    return !!patientName;
+  };
+  const sanitizeDayEventsForCardRender = (eventsInput = [])=>{
+    const safeEvents = Array.isArray(eventsInput) ? eventsInput : [];
+    return safeEvents.filter((eventRef)=> hasAgendaCardRequiredData(eventRef));
+  };
+  const filterEventsByLocalDay = (eventsInput = [], dayLike = null)=>{
+    const dayStart = toLocalDayDate(dayLike);
+    const dayEnd = addLocalDays(dayStart, 1);
+    if(!(dayStart instanceof Date) || !(dayEnd instanceof Date)){
+      return Array.isArray(eventsInput) ? eventsInput : [];
+    }
+    const safeEvents = Array.isArray(eventsInput) ? eventsInput : [];
+    return safeEvents.filter((eventRef)=>{
+      const start = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
+      const end = eventRef?.end instanceof Date ? eventRef.end : new Date(eventRef?.end || '');
+      if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+      return start < dayEnd && end > dayStart;
+    });
+  };
   const renderCustomWeekView = ()=>{
     const root = ensureCustomWeekRoot();
     const hasRoot = root instanceof HTMLElement;
@@ -2340,12 +2405,22 @@ console.info('app.js loaded :: 20251123a');
       }
       if(!finalDays.length){
         customWeekLastRenderedDays = [];
+        updateCustomWeekSharedVisibleState({
+          weekRange,
+          visibleDays: [],
+          events: []
+        });
         root.innerHTML = `
           ${renderCustomWeekNavBarHtml()}
           <div class="mx-ag-custom-week-empty">No hay disponibilidad en este rango.</div>
         `;
         return;
       }
+      updateCustomWeekSharedVisibleState({
+        weekRange,
+        visibleDays: finalDays,
+        events: allEvents
+      });
       const finalDayKeys = new Set(finalDays.map((date)=> formatYmdLocal(date)));
       const byDay = new Map(finalDays.map((date)=> [formatYmdLocal(date), []]));
       filteredRows.forEach(({ key, eventRef })=>{
@@ -2584,14 +2659,16 @@ console.info('app.js loaded :: 20251123a');
         }, 0);
       }
       const anchorForLog = resolveAgendaRollingStartDate();
-      console.log('MXM CUSTOM WEEK VISIBLE DAYS DEBUG', {
-        action: sanitizeText(customWeekVisibleDaysAction || 'init'),
-        anchorDate: anchorForLog instanceof Date ? anchorForLog.toISOString() : '',
-        finalColumnsCount: columnsCount,
-        visibleDays: finalDays.map((date)=> formatYmdLocal(date)),
-        columnsWithoutCards,
-        columnsWithCards
-      });
+      if(isAgendaQaDemoModeEnabled()){
+        console.log('MXM CUSTOM WEEK VISIBLE DAYS DEBUG', {
+          action: sanitizeText(customWeekVisibleDaysAction || 'init'),
+          anchorDate: anchorForLog instanceof Date ? anchorForLog.toISOString() : '',
+          finalColumnsCount: columnsCount,
+          visibleDays: finalDays.map((date)=> formatYmdLocal(date)),
+          columnsWithoutCards,
+          columnsWithCards
+        });
+      }
       console.log('MXM CUSTOM WEEK RANGE SINGLE SOURCE', {
         anchorDate: weekRange?.anchorDate instanceof Date ? weekRange.anchorDate.toISOString() : '',
         visibleDays: finalDays.map((date)=> formatYmdLocal(date)),
@@ -5917,7 +5994,7 @@ console.info('app.js loaded :: 20251123a');
   };
   // Rescate por fases:
   // Semana custom es la vista operativa estable actual.
-  // Día/Mes siguen existiendo en FullCalendar, pero quedan deshabilitadas temporalmente.
+  // Día/Mes existen en FullCalendar, pero quedan deshabilitadas temporalmente.
   const isAgendaViewModeTemporarilyDisabled = (mode = '')=>{
     const safeMode = normalizeAgendaViewMode(mode);
     return safeMode === 'day' || safeMode === 'month';
@@ -5961,9 +6038,37 @@ console.info('app.js loaded :: 20251123a');
     }
     return resolveAgendaRollingStartDate();
   };
+  const prepareNativeAgendaViewRender = ()=>{
+    // Semana custom se dibuja fuera de FullCalendar; para Día debemos
+    // limpiar cualquier estado visual previo y dejar visible el contenedor nativo.
+    const root = ensureCustomWeekRoot();
+    if(root instanceof HTMLElement){
+      root.classList.add('d-none');
+    }
+    els.calendarWrap?.classList.remove('mx-ag-custom-week-active');
+    try{ calendar?.render?.(); }catch(_){}
+    try{ calendar?.updateSize?.(); }catch(_){}
+  };
+  const syncNativeAgendaToolbarViewGuards = ()=>{
+    if(!(els.calendarWrap instanceof HTMLElement)) return;
+    // Día/Mes quedan bloqueadas temporalmente (rescate pendiente); Semana sigue operativa.
+    const dayBtn = els.calendarWrap.querySelector('.fc-timeGridDay-button');
+    if(dayBtn instanceof HTMLButtonElement){
+      dayBtn.disabled = true;
+      dayBtn.setAttribute('aria-disabled', 'true');
+      dayBtn.title = 'Vista en preparación';
+    }
+    const monthBtn = els.calendarWrap.querySelector('.fc-dayGridMonth-button');
+    if(monthBtn instanceof HTMLButtonElement){
+      monthBtn.disabled = true;
+      monthBtn.setAttribute('aria-disabled', 'true');
+      monthBtn.title = 'Vista en preparación';
+    }
+  };
   // Puente de rescate UX:
-  // Semana usa render custom y es la única vista operativa en esta fase.
-  // Día/Mes se conservan en código, pero quedan deshabilitadas temporalmente.
+  // Semana usa render custom estable.
+  // Día reutiliza FullCalendar nativo existente.
+  // Mes se conserva en código, pero queda deshabilitada temporalmente.
   const setAgendaViewMode = (mode = 'week', options = {})=>{
     const allowAutoFallback = options?.allowAutoFallback !== false;
     const safeMode = normalizeAgendaViewMode(mode);
@@ -5997,6 +6102,7 @@ console.info('app.js loaded :: 20251123a');
     const anchorDate = resolveAgendaViewAnchorDate();
     let targetView = 'timeGridWeek';
     if(safeMode === 'day'){
+      prepareNativeAgendaViewRender();
       targetView = 'timeGridDay';
     }else if(safeMode === 'month'){
       targetView = 'dayGridMonth';
@@ -6019,6 +6125,7 @@ console.info('app.js loaded :: 20251123a');
 
     if(safeMode === 'week'){
       window.setTimeout(()=>{
+        syncNativeAgendaToolbarViewGuards();
         forceCustomWeekRefetchIfNeeded({
           reason: 'view_mode_switch_to_week',
           minIntervalMs: 0
@@ -6028,6 +6135,14 @@ console.info('app.js loaded :: 20251123a');
       }, 0);
     }else{
       scheduleCustomWeekRender();
+      window.setTimeout(()=>{
+        syncNativeAgendaToolbarViewGuards();
+        try{ calendar.updateSize(); }catch(_){}
+        applyWeeklyHoursState();
+      }, 0);
+      window.setTimeout(()=>{
+        try{ calendar.updateSize(); }catch(_){}
+      }, 140);
       if(allowAutoFallback){
         window.setTimeout(()=>{
           const liveMode = resolveAgendaViewModeFromCalendarView(String(calendar?.view?.type || ''));
@@ -10146,6 +10261,15 @@ console.info('app.js loaded :: 20251123a');
     customWeekExpectedRangeKey = '';
     customWeekLastEventsScopeKey = '';
     customWeekExpectedScopeKey = '';
+    customWeekSharedVisibleState = {
+      anchorDate: null,
+      startDate: null,
+      endDate: null,
+      visibleDays: [],
+      rangeKey: '',
+      scopeKey: '',
+      events: []
+    };
 
     if(options?.syncCreateOptions !== false){
       syncCreateConsultorioOptions();
@@ -11593,20 +11717,33 @@ console.info('app.js loaded :: 20251123a');
       events: async (fetchInfo, successCallback, failureCallback)=>{
         try{
           const currentView = String(calendar?.view?.type || '');
+          const isDayDemoMode = currentView === 'timeGridDay' && isAgendaQaDemoModeEnabled();
+          const dayVisibleDate = isDayDemoMode
+            ? toLocalDayDate(fetchInfo?.start || calendar?.getDate?.() || new Date())
+            : null;
+          const sharedWeekState = isDayDemoMode ? resolveCustomWeekSharedVisibleState() : null;
           const anchorRange = currentView === 'timeGridWeek'
             ? resolveCustomWeekRangeFromAnchor(resolveAgendaRollingStartDate(), 6)
             : null;
-          const rangeStart = anchorRange?.startDate instanceof Date
+          const rangeStart = (isDayDemoMode && sharedWeekState?.startDate instanceof Date)
+            ? new Date(sharedWeekState.startDate)
+            : anchorRange?.startDate instanceof Date
             ? new Date(anchorRange.startDate)
             : (fetchInfo?.start instanceof Date ? new Date(fetchInfo.start) : new Date(fetchInfo?.start || ''));
-          const rangeEnd = anchorRange?.endDate instanceof Date
+          const rangeEnd = (isDayDemoMode && sharedWeekState?.endDate instanceof Date)
+            ? new Date(sharedWeekState.endDate)
+            : anchorRange?.endDate instanceof Date
             ? new Date(anchorRange.endDate)
             : (fetchInfo?.end instanceof Date ? new Date(fetchInfo.end) : new Date(fetchInfo?.end || ''));
           const requestRange = {
             start: rangeStart,
             end: rangeEnd
           };
-          const expectedRangeKey = sanitizeText(anchorRange?.rangeKey || toCustomWeekRangeKey(rangeStart, rangeEnd));
+          const expectedRangeKey = sanitizeText(
+            anchorRange?.rangeKey
+            || sanitizeText(sharedWeekState?.rangeKey || '')
+            || toCustomWeekRangeKey(rangeStart, rangeEnd)
+          );
           const expectedScopeKey = resolveCustomWeekScopeKey();
           customWeekExpectedRangeKey = expectedRangeKey;
           customWeekExpectedScopeKey = expectedScopeKey;
@@ -11631,6 +11768,7 @@ console.info('app.js loaded :: 20251123a');
             successCallback(buildMonthSummaryEvents(appointmentEvents));
           }else{
             const mergedEvents = [...availabilityEvents, ...appointmentEvents];
+            let nativeRenderEvents = mergedEvents;
             const appointmentCountsByDate = {};
             (Array.isArray(appointmentEvents) ? appointmentEvents : []).forEach((eventRef)=>{
               const startDate = eventRef?.start instanceof Date
@@ -11640,7 +11778,24 @@ console.info('app.js loaded :: 20251123a');
               const key = formatYmdLocal(startDate);
               appointmentCountsByDate[key] = Number(appointmentCountsByDate[key] || 0) + 1;
             });
-            setLatestEventsForCustomWeek(mergedEvents);
+            const shouldRefreshWeekCacheFromThisFetch = (
+              currentView === 'timeGridWeek'
+              || !isDayDemoMode
+              || !sharedWeekState
+            );
+            if(shouldRefreshWeekCacheFromThisFetch){
+              setLatestEventsForCustomWeek(mergedEvents);
+            }
+            if(isDayDemoMode && dayVisibleDate instanceof Date){
+              // Día no recalcula el dataset demo: reutiliza el cache final de Semana
+              // (misma ancla/rango compartido) y solo filtra por fecha visible.
+              const sharedEvents = (sharedWeekState && Array.isArray(sharedWeekState.events) && sharedWeekState.events.length)
+                ? sharedWeekState.events
+                : resolveCustomWeekEventSource().events;
+              nativeRenderEvents = sanitizeDayEventsForCardRender(
+                filterEventsByLocalDay(sharedEvents, dayVisibleDate)
+              );
+            }
             customWeekLastEventsRangeKey = expectedRangeKey;
             customWeekLastEventsScopeKey = expectedScopeKey;
             customWeekLastBridgeMeta = {
@@ -11687,7 +11842,7 @@ console.info('app.js loaded :: 20251123a');
               availabilitySlotsReceived: Number(availabilityResult?.meta?.slots_received || 0),
               availabilitySlotsMapped: Number(availabilityResult?.meta?.slots_mapped || 0),
               appointmentsReceived: Array.isArray(appointmentEvents) ? appointmentEvents.length : 0,
-              finalEventsCount: mergedEvents.length,
+              finalEventsCount: nativeRenderEvents.length,
               customWeekCacheCount: Array.isArray(agendaLatestEventsForCustomWeek) ? agendaLatestEventsForCustomWeek.length : 0,
               rangeKeyStored: customWeekLastEventsRangeKey,
               rangeKeyExpected: expectedRangeKey || customWeekExpectedRangeKey || '',
@@ -11721,8 +11876,8 @@ console.info('app.js loaded :: 20251123a');
               skippedByDate: customWeekLastBridgeMeta.skippedByDate,
               appointmentsByDate: customWeekLastBridgeMeta.appointmentsByDate
             });
-            updateAgendaOriginCatalogVisibility(mergedEvents);
-            successCallback(mergedEvents);
+            updateAgendaOriginCatalogVisibility(nativeRenderEvents);
+            successCallback(nativeRenderEvents);
             if(isCustomWeekActive()){
               scheduleCustomWeekRender();
             }
@@ -12197,6 +12352,7 @@ console.info('app.js loaded :: 20251123a');
         }
         agendaViewMode = currentMode;
         syncAgendaViewModeButtons(currentMode);
+        syncNativeAgendaToolbarViewGuards();
         const previousViewType = sanitizeText(lastCalendarViewType || '');
         if(currentViewType === 'timeGridWeek' && previousViewType !== 'timeGridWeek'){
           customWeekVisibleDaysAction = 'init';
@@ -12238,6 +12394,7 @@ console.info('app.js loaded :: 20251123a');
     calendar.render();
     applyWeeklyHoursState();
     scheduleCustomWeekRender();
+    syncNativeAgendaToolbarViewGuards();
     syncCustomWeekToolbarTitle();
   };
 
