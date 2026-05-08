@@ -1,0 +1,254 @@
+{
+  "chromium_demo": {
+    "visibleCards": 48,
+    "colGap": "12px",
+    "overlap": 40,
+    "hasOverflowX": false,
+    "wrapOverflowX": "visible",
+    "wrapOverflowY": "visible",
+    "badgeCount": 0,
+    "legendDots": 5,
+    "sample": [
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user is-past is-demo-qa",
+        "height": 52,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "center"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--operator is-past is-demo-qa",
+        "height": 52,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "center"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--web-patient is-past is-demo-qa",
+        "height": 52,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "center"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--ai is-past is-demo-qa",
+        "height": 52,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "center"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+        "height": 52,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "center"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user is-past is-demo-qa",
+        "height": 52,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "center"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+        "height": 52,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "center"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "height": 55,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "left"
+      }
+    ]
+  },
+  "webkit_demo": {
+    "visibleCards": 48,
+    "colGap": "12px",
+    "overlap": 40,
+    "hasOverflowX": false,
+    "wrapOverflowX": "visible",
+    "wrapOverflowY": "visible",
+    "badgeCount": 0,
+    "legendDots": 5,
+    "sample": [
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user is-past is-demo-qa",
+        "height": 52,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "center"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--operator is-past is-demo-qa",
+        "height": 52,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "center"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--web-patient is-past is-demo-qa",
+        "height": 52,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "center"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--ai is-past is-demo-qa",
+        "height": 52,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "center"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+        "height": 52,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "center"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+        "height": 52,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "center"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "height": 55,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "left"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "height": 55,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "left"
+      }
+    ]
+  },
+  "chromium_no_demo": {
+    "visibleCards": 48,
+    "colGap": "12px",
+    "overlap": 40,
+    "hasOverflowX": false,
+    "wrapOverflowX": "visible",
+    "wrapOverflowY": "visible",
+    "badgeCount": 0,
+    "legendDots": 5,
+    "sample": [
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "height": 55,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "left"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "height": 55,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "left"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "height": 55,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "left"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "height": 55,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "left"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "height": 55,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "left"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "height": 55,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "left"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "height": 55,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "left"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "height": 55,
+        "paddingTop": "8px",
+        "paddingBottom": "8px",
+        "topDisplay": "flex",
+        "topJustify": "space-between",
+        "primaryAlign": "left"
+      }
+    ]
+  }
+}

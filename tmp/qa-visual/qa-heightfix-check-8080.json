@@ -1,0 +1,394 @@
+{
+  "chromium_demo": {
+    "counts": {
+      "total": 48,
+      "available": 31,
+      "reserved": 17
+    },
+    "availableHeights": {
+      "min": 56,
+      "max": 56,
+      "unique": [
+        56
+      ]
+    },
+    "reservedHeights": {
+      "min": 56,
+      "max": 56,
+      "unique": [
+        56
+      ]
+    },
+    "sameHeightRange": true,
+    "rowAlignment": [
+      {
+        "time": "09:00",
+        "count": 6,
+        "spread": 0
+      },
+      {
+        "time": "09:30",
+        "count": 6,
+        "spread": 0
+      },
+      {
+        "time": "10:00",
+        "count": 6,
+        "spread": 0
+      },
+      {
+        "time": "10:30",
+        "count": 6,
+        "spread": 0
+      },
+      {
+        "time": "11:00",
+        "count": 6,
+        "spread": 0
+      },
+      {
+        "time": "11:30",
+        "count": 6,
+        "spread": 0
+      },
+      {
+        "time": "12:00",
+        "count": 6,
+        "spread": 0
+      },
+      {
+        "time": "12:30",
+        "count": 6,
+        "spread": 0
+      }
+    ],
+    "rowMaxSpread": 0,
+    "colChecks": [
+      {
+        "col": 0,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 1,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 2,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 3,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 4,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 5,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      }
+    ],
+    "colMinGapAll": 12,
+    "colOverlaps": 0,
+    "hasOverflowX": false,
+    "sampleReserved": [
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px",
+        "beforeWidth": "10px",
+        "beforeHeight": 56,
+        "beforeContent": "\"\"",
+        "beforeBorderRadius": "8px 0px 0px 8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px",
+        "beforeWidth": "10px",
+        "beforeHeight": 56,
+        "beforeContent": "\"\"",
+        "beforeBorderRadius": "8px 0px 0px 8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px",
+        "beforeWidth": "10px",
+        "beforeHeight": 56,
+        "beforeContent": "\"\"",
+        "beforeBorderRadius": "8px 0px 0px 8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px",
+        "beforeWidth": "10px",
+        "beforeHeight": 56,
+        "beforeContent": "\"\"",
+        "beforeBorderRadius": "8px 0px 0px 8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px",
+        "beforeWidth": "10px",
+        "beforeHeight": 56,
+        "beforeContent": "\"\"",
+        "beforeBorderRadius": "8px 0px 0px 8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px",
+        "beforeWidth": "10px",
+        "beforeHeight": 56,
+        "beforeContent": "\"\"",
+        "beforeBorderRadius": "8px 0px 0px 8px"
+      }
+    ],
+    "sampleAvailable": [
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px"
+      }
+    ],
+    "legendDots": 5,
+    "badgeCount": 0
+  },
+  "webkit_demo": {
+    "counts": {
+      "total": 48,
+      "available": 30,
+      "reserved": 18
+    },
+    "availableHeights": {
+      "min": 56,
+      "max": 56,
+      "unique": [
+        56
+      ]
+    },
+    "reservedHeights": {
+      "min": 56,
+      "max": 56,
+      "unique": [
+        56
+      ]
+    },
+    "sameHeightRange": true,
+    "rowAlignment": [
+      {
+        "time": "09:00",
+        "count": 6,
+        "spread": 0
+      },
+      {
+        "time": "09:30",
+        "count": 6,
+        "spread": 0
+      },
+      {
+        "time": "10:00",
+        "count": 6,
+        "spread": 0
+      },
+      {
+        "time": "10:30",
+        "count": 6,
+        "spread": 0
+      },
+      {
+        "time": "11:00",
+        "count": 6,
+        "spread": 0
+      },
+      {
+        "time": "11:30",
+        "count": 6,
+        "spread": 0
+      },
+      {
+        "time": "12:00",
+        "count": 6,
+        "spread": 0
+      },
+      {
+        "time": "12:30",
+        "count": 6,
+        "spread": 0
+      }
+    ],
+    "rowMaxSpread": 0,
+    "colChecks": [
+      {
+        "col": 0,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 1,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 2,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 3,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 4,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 5,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      }
+    ],
+    "colMinGapAll": 12,
+    "colOverlaps": 0,
+    "hasOverflowX": false,
+    "sampleReserved": [
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px",
+        "beforeWidth": "10px",
+        "beforeHeight": 56,
+        "beforeContent": "\"\"",
+        "beforeBorderRadius": "8px 0px 0px 8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px",
+        "beforeWidth": "10px",
+        "beforeHeight": 56,
+        "beforeContent": "\"\"",
+        "beforeBorderRadius": "8px 0px 0px 8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px",
+        "beforeWidth": "10px",
+        "beforeHeight": 56,
+        "beforeContent": "\"\"",
+        "beforeBorderRadius": "8px 0px 0px 8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px",
+        "beforeWidth": "10px",
+        "beforeHeight": 56,
+        "beforeContent": "\"\"",
+        "beforeBorderRadius": "8px 0px 0px 8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px",
+        "beforeWidth": "10px",
+        "beforeHeight": 56,
+        "beforeContent": "\"\"",
+        "beforeBorderRadius": "8px 0px 0px 8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px",
+        "beforeWidth": "10px",
+        "beforeHeight": 56,
+        "beforeContent": "\"\"",
+        "beforeBorderRadius": "8px 0px 0px 8px"
+      }
+    ],
+    "sampleAvailable": [
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px"
+      },
+      {
+        "h": 56,
+        "pt": "8px",
+        "pb": "8px"
+      }
+    ],
+    "legendDots": 5,
+    "badgeCount": 0
+  }
+}

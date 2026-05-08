@@ -1,0 +1,173 @@
+{
+  "chromium": {
+    "counts": {
+      "all": 48,
+      "available": 31,
+      "occupied": 17
+    },
+    "heights": {
+      "avgAvailable": 56,
+      "avgOccupied": 56,
+      "available": [
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56
+      ],
+      "occupied": [
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56
+      ]
+    },
+    "styles": {
+      "time": {
+        "fontSize": "19.84px",
+        "lineHeight": "20.832px",
+        "fontWeight": "900"
+      },
+      "primaryAvailable": {
+        "fontSize": "15.04px",
+        "lineHeight": "15.04px"
+      },
+      "primaryOccupied": {
+        "fontSize": "12.48px",
+        "lineHeight": "14.976px"
+      },
+      "availCard": {
+        "height": "56px",
+        "minHeight": "56px"
+      },
+      "occCard": {
+        "height": "56px",
+        "minHeight": "56px"
+      }
+    }
+  },
+  "webkit": {
+    "counts": {
+      "all": 48,
+      "available": 30,
+      "occupied": 18
+    },
+    "heights": {
+      "avgAvailable": 56,
+      "avgOccupied": 56,
+      "available": [
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56
+      ],
+      "occupied": [
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56
+      ]
+    },
+    "styles": {
+      "time": {
+        "fontSize": "19.84px",
+        "lineHeight": "20.831999px",
+        "fontWeight": "900"
+      },
+      "primaryAvailable": {
+        "fontSize": "15.04px",
+        "lineHeight": "15.04px"
+      },
+      "primaryOccupied": {
+        "fontSize": "12.48px",
+        "lineHeight": "14.976px"
+      },
+      "availCard": {
+        "height": "56px",
+        "minHeight": "56px"
+      },
+      "occCard": {
+        "height": "56px",
+        "minHeight": "56px"
+      }
+    }
+  }
+}

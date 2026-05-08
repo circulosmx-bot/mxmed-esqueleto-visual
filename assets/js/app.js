@@ -636,6 +636,7 @@ console.info('app.js loaded :: 20251123a');
     eventCancelPrompt: panel.querySelector('#ag_event_cancel_prompt'),
     eventCancelBackBtn: panel.querySelector('#ag_event_cancel_back_btn'),
     eventCancelConfirmNoFlagBtn: panel.querySelector('#ag_event_cancel_confirm_no_flag_btn'),
+    eventCancelConfirmBlackBtn: panel.querySelector('#ag_event_cancel_confirm_black_btn'),
     eventCancelConfirmBtn: panel.querySelector('#ag_event_cancel_confirm_btn'),
     eventCancelPostHint: panel.querySelector('#ag_event_cancel_post_hint'),
     eventCancelPostActions: panel.querySelector('#ag_event_cancel_post_actions'),
@@ -1736,11 +1737,12 @@ console.info('app.js loaded :: 20251123a');
     if(!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
     const today = toLocalDayDate(new Date());
     const tomorrow = addLocalDays(today, 1);
-    if(today && isSameLocalDay(date, today)) return 'Hoy';
-    if(tomorrow && isSameLocalDay(date, tomorrow)) return 'Mañana';
-    return capitalizeAgendaLabel(
+    const weekdayLabel = capitalizeAgendaLabel(
       new Intl.DateTimeFormat('es-MX', { weekday: 'long' }).format(date)
     );
+    if(today && isSameLocalDay(date, today)) return `Hoy ${weekdayLabel}`;
+    if(tomorrow && isSameLocalDay(date, tomorrow)) return `Mañana ${weekdayLabel}`;
+    return weekdayLabel;
   };
   const isEventInCustomWeekTimeBounds = (eventRef, bounds)=>{
     const startDate = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
@@ -1827,11 +1829,321 @@ console.info('app.js loaded :: 20251123a');
       }
     };
   };
-  const setLatestEventsForCustomWeek = (eventsInput)=>{
-    const rawEvents = Array.isArray(eventsInput) ? eventsInput : [];
-    agendaLatestEventsForCustomWeek = rawEvents
+  const isAgendaQaDemoModeEnabled = ()=>{
+    try{
+      const params = new URLSearchParams(window.location?.search || '');
+      const flag = sanitizeText(params.get('agenda_demo') || '').toLowerCase();
+      return flag === '1' || flag === 'true' || flag === 'on';
+    }catch(_){
+      return false;
+    }
+  };
+  const syncAgendaQaDemoVisualMode = ()=>{
+    const enabled = isAgendaQaDemoModeEnabled();
+    try{
+      document.documentElement?.classList.toggle('mx-ag-demo-qa-mode', enabled);
+      document.body?.classList.toggle('mx-ag-demo-qa-mode', enabled);
+    }catch(_){}
+    return enabled;
+  };
+  syncAgendaQaDemoVisualMode();
+  const resolveAgendaQaDemoWindow = ()=>{
+    const todayAnchor = toLocalDayDate(new Date());
+    if(!(todayAnchor instanceof Date) || Number.isNaN(todayAnchor.getTime())){
+      return null;
+    }
+    const weekRanges = [];
+    let cursorAnchor = new Date(todayAnchor);
+    for(let index = 0; index < 3; index += 1){
+      const range = resolveCustomWeekRangeFromAnchor(cursorAnchor, 6);
+      if(!(range?.startDate instanceof Date) || !(range?.endDate instanceof Date)){
+        break;
+      }
+      weekRanges.push(range);
+      cursorAnchor = new Date(range.endDate);
+    }
+    if(!weekRanges.length){
+      return null;
+    }
+    const firstRange = weekRanges[0];
+    const lastRange = weekRanges[weekRanges.length - 1];
+    return {
+      startDate: new Date(firstRange.startDate),
+      endDate: new Date(lastRange.endDate)
+    };
+  };
+  const isAgendaQaDemoDateInWindow = (dateLike, demoWindow = null)=>{
+    const dayDate = toLocalDayDate(dateLike);
+    if(!(dayDate instanceof Date) || Number.isNaN(dayDate.getTime())){
+      return false;
+    }
+    if(dayDate.getDay() === 0){
+      return false;
+    }
+    if(!(demoWindow?.startDate instanceof Date) || !(demoWindow?.endDate instanceof Date)){
+      return false;
+    }
+    return dayDate >= demoWindow.startDate && dayDate < demoWindow.endDate;
+  };
+  const injectAgendaDemoAppointmentsForQa = (eventsInput = [])=>{
+    const safeEvents = (Array.isArray(eventsInput) ? eventsInput : [])
       .map((eventRef)=> normalizeEventForCustomWeek(eventRef))
       .filter(Boolean);
+    const demoQaModeEnabled = syncAgendaQaDemoVisualMode();
+    if(!demoQaModeEnabled){
+      return safeEvents;
+    }
+    const availabilitySlots = safeEvents.filter((eventRef)=>{
+      const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
+      return eventType === 'availability_slot';
+    });
+    if(!availabilitySlots.length){
+      return safeEvents;
+    }
+    const demoWindow = resolveAgendaQaDemoWindow();
+    if(!demoWindow){
+      return safeEvents;
+    }
+    const availabilitySlotsInWindow = availabilitySlots.filter((eventRef)=>{
+      return isAgendaQaDemoDateInWindow(eventRef?.start, demoWindow);
+    });
+    if(!availabilitySlotsInWindow.length){
+      return safeEvents;
+    }
+    const toSlotKey = (eventRef)=>{
+      const startTs = eventRef?.start instanceof Date ? eventRef.start.getTime() : NaN;
+      const endTs = eventRef?.end instanceof Date ? eventRef.end.getTime() : NaN;
+      if(Number.isNaN(startTs) || Number.isNaN(endTs)) return '';
+      const consultorioId = sanitizeText(eventRef?.extendedProps?.consultorio_id || '');
+      return `${consultorioId}__${startTs}__${endTs}`;
+    };
+    const occupiedSlotKeys = new Set();
+    safeEvents.forEach((eventRef)=>{
+      const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
+      if(
+        eventType === 'availability'
+        || eventType === 'availability_slot'
+        || eventType === 'focus_marker'
+        || eventType === 'cancel_trace'
+      ){
+        return;
+      }
+      const key = toSlotKey(eventRef);
+      if(key){
+        occupiedSlotKeys.add(key);
+      }
+    });
+    const availableCandidates = availabilitySlotsInWindow.filter((eventRef)=>{
+      const key = toSlotKey(eventRef);
+      return !!key && !occupiedSlotKeys.has(key);
+    });
+    if(!availableCandidates.length){
+      return safeEvents;
+    }
+    const patients = [
+      'JUAN PÉREZ LÓPEZ',
+      'MARÍA LÓPEZ RAMÍREZ',
+      'ANA SOFÍA HERNÁNDEZ',
+      'CARLOS GÓMEZ VARGAS',
+      'LAURA MARTÍNEZ DÍAZ',
+      'ROBERTO SÁNCHEZ LUNA',
+      'MIGUEL ÁNGEL RUIZ',
+      'VERÓNICA GUTIÉRREZ',
+      'KARLA JIMÉNEZ TORRES',
+      'PAOLA CRUZ MENDOZA',
+      'LUCÍA FERNÁNDEZ',
+      'DIEGO HERNÁNDEZ RÍOS'
+    ];
+    const origins = [
+      { origin_visual_key: 'user', channel_origin: 'doctor', created_by_role: 'doctor', actor_role: 'doctor' },
+      { origin_visual_key: 'operator-01', channel_origin: 'operator', created_by_role: 'operator', actor_role: 'operator', operator_slot: 1, operator_id: 'qa_operator_01', created_by_id: 'qa_operator_01' },
+      { origin_visual_key: 'operator-02', channel_origin: 'operator', created_by_role: 'operator', actor_role: 'operator', operator_slot: 2, operator_id: 'qa_operator_02', created_by_id: 'qa_operator_02' },
+      { origin_visual_key: 'web-patient', channel_origin: 'public_profile', created_by_role: 'patient', actor_role: 'patient' },
+      { origin_visual_key: 'ai', channel_origin: 'ai_operator', created_by_role: 'ai_operator', actor_role: 'ai_operator' },
+      { origin_visual_key: 'call-center', channel_origin: 'call_center', created_by_role: 'call_center', actor_role: 'call_center' }
+    ];
+    const targetOccupiedCount = Math.max(1, Math.round(availabilitySlotsInWindow.length * 0.35));
+    const currentOccupiedCount = Math.max(0, availabilitySlotsInWindow.length - availableCandidates.length);
+    let injectCount = Math.min(
+      availableCandidates.length,
+      Math.max(0, targetOccupiedCount - currentOccupiedCount)
+    );
+    const minimumOriginSample = Math.min(origins.length, availableCandidates.length);
+    // Forzar variedad de orígenes en demo QA (si hay slots suficientes).
+    injectCount = Math.max(injectCount, minimumOriginSample);
+    if(injectCount <= 0){
+      return safeEvents;
+    }
+    const seedSource = availabilitySlotsInWindow
+      .slice(0, 12)
+      .map((slot)=> `${formatYmdLocal(slot.start)}-${slot.start.getHours()}:${slot.start.getMinutes()}`)
+      .join('|');
+    let seed = 0;
+    for(let i = 0; i < seedSource.length; i += 1){
+      seed = (seed * 31 + seedSource.charCodeAt(i)) >>> 0;
+    }
+    const rng = ()=>{
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+    const sortedByStart = availableCandidates.slice().sort((a, b)=>{
+      const aTime = a?.start instanceof Date ? a.start.getTime() : NaN;
+      const bTime = b?.start instanceof Date ? b.start.getTime() : NaN;
+      if(Number.isNaN(aTime) && Number.isNaN(bTime)) return 0;
+      if(Number.isNaN(aTime)) return 1;
+      if(Number.isNaN(bTime)) return -1;
+      return aTime - bTime;
+    });
+    const currentWeekRange = resolveCustomWeekRangeFromAnchor(resolveAgendaRollingStartDate(), 6);
+    const inCurrentVisibleWeek = (
+      currentWeekRange?.startDate instanceof Date
+      && currentWeekRange?.endDate instanceof Date
+    )
+      ? sortedByStart.filter((slot)=>{
+          const start = slot?.start instanceof Date ? slot.start : null;
+          return !!start && start >= currentWeekRange.startDate && start < currentWeekRange.endDate;
+        })
+      : [];
+    const isPrimeVisualHour = (slot)=>{
+      const start = slot?.start instanceof Date ? slot.start : null;
+      if(!start) return false;
+      const hour = Number(start.getHours());
+      return hour >= 9 && hour <= 14;
+    };
+    const currentWeekPrimeSlots = inCurrentVisibleWeek.filter((slot)=> isPrimeVisualHour(slot));
+    const forcedOriginSource = currentWeekPrimeSlots.length >= minimumOriginSample
+      ? currentWeekPrimeSlots
+      : (inCurrentVisibleWeek.length >= minimumOriginSample ? inCurrentVisibleWeek : sortedByStart);
+    const forcedOriginSlots = forcedOriginSource.slice(0, minimumOriginSample);
+    const forcedKeys = new Set(forcedOriginSlots.map((slot)=> toSlotKey(slot)).filter(Boolean));
+    const remainingCandidates = availableCandidates.filter((slot)=> !forcedKeys.has(toSlotKey(slot)));
+    const shuffled = remainingCandidates.slice().sort(()=> rng() - 0.5);
+    const selected = [
+      ...forcedOriginSlots,
+      ...shuffled.slice(0, Math.max(0, injectCount - forcedOriginSlots.length))
+    ];
+    const selectedKeys = new Set(selected.map((slot)=> toSlotKey(slot)).filter(Boolean));
+    const injectedRows = selected.map((slot, index)=>{
+      const patientName = patients[Math.floor(rng() * patients.length)] || patients[index % patients.length];
+      const isForcedOriginSlot = index < forcedOriginSlots.length;
+      const origin = isForcedOriginSlot
+        ? origins[index % origins.length]
+        : origins[Math.floor(rng() * origins.length)];
+      const consultorioId = sanitizeText(slot?.extendedProps?.consultorio_id || '');
+      const consultorioLabel = sanitizeText(
+        slot?.extendedProps?.consultorio_label
+        || resolveAgendaConsultorioLabelById(consultorioId)
+        || ''
+      );
+      return {
+        id: `qa-demo-${formatYmdLocal(slot.start)}-${String(index).padStart(3, '0')}`,
+        start: new Date(slot.start),
+        end: new Date(slot.end),
+        title: patientName,
+        extendedProps: {
+          appointment_id: '',
+          event_type: 'demo_qa_appointment',
+          qa_demo: true,
+          patient_name: patientName,
+          patient_display_name: patientName,
+          patient_full_name: patientName,
+          consultorio_id: consultorioId,
+          consultorio_label: consultorioLabel,
+          status_label: 'Confirmada',
+          status_key: 'confirmed',
+          status_key_real: 'confirmed',
+          origin_visual_key: sanitizeText(origin.origin_visual_key || ''),
+          operator_slot: sanitizeText(origin.operator_slot ?? ''),
+          operator_id: sanitizeText(origin.operator_id || ''),
+          created_by_id: sanitizeText(origin.created_by_id || ''),
+          channel_origin: sanitizeText(origin.channel_origin || ''),
+          created_by_role: sanitizeText(origin.created_by_role || ''),
+          actor_role: sanitizeText(origin.actor_role || '')
+        }
+      };
+    });
+    if(isAgendaQaDemoModeEnabled()){
+      const countByOrigin = injectedRows.reduce((acc, row)=>{
+        const key = sanitizeText(row?.extendedProps?.origin_visual_key || '') || 'user';
+        acc[key] = Number(acc[key] || 0) + 1;
+        return acc;
+      }, {});
+      const windowStart = demoWindow?.startDate instanceof Date ? formatYmdLocal(demoWindow.startDate) : '';
+      const windowEndExclusive = demoWindow?.endDate instanceof Date ? formatYmdLocal(demoWindow.endDate) : '';
+      console.groupCollapsed('MXM AGENDA DEMO ORIGIN QA');
+      console.table([{
+        windowStart,
+        windowEndExclusive,
+        availabilitySlotsInWindow: availabilitySlotsInWindow.length,
+        availableCandidates: availableCandidates.length,
+        injectCount,
+        forcedOriginSample: minimumOriginSample,
+        forcedOriginSource: (
+          forcedOriginSource === currentWeekPrimeSlots
+            ? 'current_week_prime_hours'
+            : (forcedOriginSource === inCurrentVisibleWeek ? 'current_week_any_hour' : 'global_window_fallback')
+        ),
+        forcedCurrentWeekCandidates: inCurrentVisibleWeek.length
+      }]);
+      console.table(Object.entries(countByOrigin).map(([originKey, count])=>({
+        originKey,
+        count
+      })));
+      console.table(injectedRows.slice(0, 20).map((row)=>({
+        start: row?.start instanceof Date ? row.start.toISOString() : '',
+        consultorio: sanitizeText(row?.extendedProps?.consultorio_label || ''),
+        patient: sanitizeText(row?.extendedProps?.patient_display_name || ''),
+        origin: sanitizeText(row?.extendedProps?.origin_visual_key || ''),
+        channel_origin: sanitizeText(row?.extendedProps?.channel_origin || ''),
+        created_by_role: sanitizeText(row?.extendedProps?.created_by_role || '')
+      })));
+      console.groupEnd();
+    }
+    const filteredBase = safeEvents.filter((eventRef)=>{
+      const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
+      if(eventType !== 'availability_slot'){
+        return true;
+      }
+      const key = toSlotKey(eventRef);
+      return !key || !selectedKeys.has(key);
+    });
+    return [...filteredBase, ...injectedRows].sort((a, b)=>{
+      const aTime = a?.start instanceof Date ? a.start.getTime() : NaN;
+      const bTime = b?.start instanceof Date ? b.start.getTime() : NaN;
+      if(Number.isNaN(aTime) && Number.isNaN(bTime)) return 0;
+      if(Number.isNaN(aTime)) return 1;
+      if(Number.isNaN(bTime)) return -1;
+      return aTime - bTime;
+    });
+  };
+  const setLatestEventsForCustomWeek = (eventsInput)=>{
+    const rawEvents = Array.isArray(eventsInput) ? eventsInput : [];
+    const normalized = rawEvents
+      .map((eventRef)=> normalizeEventForCustomWeek(eventRef))
+      .filter(Boolean);
+    agendaLatestEventsForCustomWeek = injectAgendaDemoAppointmentsForQa(normalized);
+    updateAgendaOriginCatalogVisibility(agendaLatestEventsForCustomWeek);
+  };
+  const updateAgendaOriginCatalogVisibility = (eventsInput = [])=>{
+    const fallbackItem = document.getElementById('ag_origin_item_operator_fallback');
+    if(!(fallbackItem instanceof HTMLElement)) return;
+    const safeEvents = Array.isArray(eventsInput) ? eventsInput : [];
+    const hasGenericOperator = safeEvents.some((eventRef)=>{
+      const props = (eventRef?.extendedProps && typeof eventRef.extendedProps === 'object') ? eventRef.extendedProps : null;
+      if(!props) return false;
+      const eventType = normalizeText(sanitizeText(props.event_type || ''));
+      if(
+        eventType === 'availability'
+        || eventType === 'availability_slot'
+        || eventType === 'focus_marker'
+        || eventType === 'cancel_trace'
+        || eventType === 'blocked_slot'
+      ){
+        return false;
+      }
+      return resolveAppointmentOriginVisualKey(props) === 'operator';
+    });
+    fallbackItem.classList.toggle('d-none', !hasGenericOperator);
   };
   const resolveCustomWeekEventSource = ()=>{
     const cached = Array.isArray(agendaLatestEventsForCustomWeek) ? agendaLatestEventsForCustomWeek : [];
@@ -2133,6 +2445,7 @@ console.info('app.js loaded :: 20251123a');
             reason
           });
         }
+        const renderNowTs = Date.now();
         const cards = rowsForDisplay
           .map((eventRef)=>{
             const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
@@ -2140,50 +2453,85 @@ console.info('app.js loaded :: 20251123a');
             const end = eventRef?.end instanceof Date ? eventRef.end : new Date(eventRef?.end || '');
             if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
             const timeLabel = formatAgendaEventSlotTime(start);
-            const consultorioLabel = sanitizeText(
-              eventRef?.extendedProps?.consultorio_label
-              || resolveAgendaConsultorioLabelById(eventRef?.extendedProps?.consultorio_id || '')
-              || ''
-            ) || 'Consultorio';
+            const isPastRange = end.getTime() < renderNowTs;
+            const consultorioIdSafe = sanitizeText(eventRef?.extendedProps?.consultorio_id || '');
+            const consultorioLabel = normalizeConsultorioDisplayLabel(
+              sanitizeText(
+                eventRef?.extendedProps?.consultorio_label
+                || resolveAgendaConsultorioLabelById(consultorioIdSafe)
+                || ''
+              ),
+              consultorioIdSafe
+            );
             if(eventType === 'availability_slot'){
               renderedSlots += 1;
               const slotConsultorioId = sanitizeText(eventRef?.extendedProps?.consultorio_id || '');
               const slotRangeKey = toRangeKey(start, end);
               const isFocusedSlot = slotRangeKey && slotRangeKey === sanitizeText(nextSlotFocus?.key || '');
+              const availableClass = `mx-ag-custom-slot-card mxm-custom-week-card is-available${isPastRange ? ' is-past' : ''}${isFocusedSlot ? ' is-focus-suggested' : ''}`;
+              const pastAttrs = isPastRange ? 'disabled aria-disabled="true" tabindex="-1"' : '';
               return `
                 <button type="button"
-                  class="mx-ag-custom-slot-card mxm-custom-week-card is-available${isFocusedSlot ? ' is-focus-suggested' : ''}"
+                  class="${availableClass}"
                   data-slot-kind="available"
+                  ${pastAttrs}
                   data-slot-start="${escapeAttrSafe(start.toISOString())}"
                   data-slot-end="${escapeAttrSafe(end.toISOString())}"
                   data-slot-range-key="${escapeAttrSafe(slotRangeKey)}"
-                  data-slot-consultorio-id="${escapeAttrSafe(slotConsultorioId)}">
+                  data-slot-consultorio-id="${escapeAttrSafe(slotConsultorioId)}"
+                  data-slot-consultorio-name="${escapeAttrSafe(consultorioLabel)}">
                   <div class="mx-ag-custom-slot-top">
                     <span class="mx-ag-custom-slot-time">${escapeHtml(timeLabel)}</span>
-                    <span class="mx-ag-custom-slot-primary">Disponible</span>
+                    <span class="mx-ag-custom-slot-consultorio">${escapeHtml(consultorioLabel.toUpperCase())}</span>
                   </div>
-                  <div class="mx-ag-custom-slot-hint">Haz clic para agendar</div>
-                  <div class="mx-ag-custom-slot-consultorio">${escapeHtml(consultorioLabel.toUpperCase())}</div>
+                  <div class="mx-ag-custom-slot-primary">DISPONIBLE</div>
                 </button>
               `;
             }
             renderedSlots += 1;
-            const patient = sanitizeText(
-              eventRef?.extendedProps?.patient_display
-              || eventRef?.title
-              || (eventType === 'blocked_slot' ? 'Horario bloqueado' : 'Paciente')
-            );
+            const isBlockedSlot = eventType === 'blocked_slot';
+            const isDemoQaAppointment = eventType === 'demo_qa_appointment' || eventRef?.extendedProps?.qa_demo === true;
+            const resolvedPatient = isBlockedSlot
+              ? 'Horario bloqueado'
+              : resolveEventPatientDisplayName(eventRef?.extendedProps || {}, eventRef);
+            const patient = resolvedPatient === 'Paciente sin nombre' ? 'Paciente' : resolvedPatient;
+            const originVisualKey = resolveAppointmentOriginVisualKey(eventRef?.extendedProps || {});
             const eventId = sanitizeText(eventRef?.id || '');
+            const statusKeyNorm = normalizeText(
+              sanitizeText(
+                eventRef?.extendedProps?.status_key_real
+                || eventRef?.extendedProps?.status_key
+                || eventRef?.extendedProps?.status
+                || ''
+              )
+            );
+            const patientFlagType = normalizePatientFlagType(eventRef?.extendedProps?.patient_flag_type || '');
+            const isCancelledStatus = statusKeyNorm.includes('cancel');
+            const isNoShowStatus = (
+              statusKeyNorm === 'no_show'
+              || statusKeyNorm === 'no-show'
+              || statusKeyNorm.includes('no_show')
+              || statusKeyNorm.includes('no-show')
+              || statusKeyNorm.includes('no_asist')
+              || statusKeyNorm.includes('ausente')
+            );
+            const hasPriorityBehavior = patientFlagType === 'black' || patientFlagType === 'grey';
+            const isPastVisual = !!(isPastRange && !isCancelledStatus && !isNoShowStatus && !hasPriorityBehavior && !isBlockedSlot);
+            const occupiedClass = isBlockedSlot
+              ? 'mx-ag-custom-slot-card mxm-custom-week-card is-blocked'
+              : `mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--${escapeAttrSafe(originVisualKey)}${isPastVisual ? ' is-past' : ''}${isDemoQaAppointment ? ' is-demo-qa' : ''}`;
+            const slotKind = isDemoQaAppointment ? 'demo-occupied' : 'occupied';
             return `
               <button type="button"
-                class="mx-ag-custom-slot-card mxm-custom-week-card is-occupied"
-                data-slot-kind="occupied"
-                data-event-id="${escapeAttrSafe(eventId)}">
+                class="${occupiedClass}"
+                data-slot-kind="${slotKind}"
+                data-origin-visual-key="${escapeAttrSafe(originVisualKey)}"
+                ${isDemoQaAppointment ? 'data-slot-demo="1"' : `data-event-id="${escapeAttrSafe(eventId)}"`}>
                 <div class="mx-ag-custom-slot-top">
                   <span class="mx-ag-custom-slot-time">${escapeHtml(timeLabel)}</span>
-                  <span class="mx-ag-custom-slot-primary">${escapeHtml(patient)}</span>
+                  <span class="mx-ag-custom-slot-consultorio">${escapeHtml(consultorioLabel.toUpperCase())}</span>
                 </div>
-                <div class="mx-ag-custom-slot-consultorio">${escapeHtml(consultorioLabel.toUpperCase())}</div>
+                <div class="mx-ag-custom-slot-primary">${escapeHtml(patient.toUpperCase())}</div>
               </button>
             `;
           })
@@ -2545,10 +2893,10 @@ console.info('app.js loaded :: 20251123a');
       birthdate: toDateOnlyYmd(data.birthdate || data.fecha_nacimiento || data.dob || '')
     };
   };
-  const fetchPatientIndex = async ()=>{
+  const fetchPatientIndex = async ({ signal } = {})=>{
     if(Array.isArray(patientIndexCache)) return patientIndexCache;
     if(patientIndexPromise) return patientIndexPromise;
-    patientIndexPromise = AgendaApiClient.getPatientsIndex({})
+    patientIndexPromise = AgendaApiClient.getPatientsIndex({ signal })
       .then((json)=>{
         if(!json || json.ok !== true){
           throw new Error(sanitizeText(json?.message || json?.error || 'No se pudo cargar pacientes.'));
@@ -2562,14 +2910,14 @@ console.info('app.js loaded :: 20251123a');
       });
     return patientIndexPromise;
   };
-  const fetchPatientDetailById = async (patientId = '')=>{
+  const fetchPatientDetailById = async (patientId = '', { signal } = {})=>{
     const safePatientId = sanitizeText(patientId || '');
     if(!safePatientId) return null;
     if(patientDetailsCache.has(safePatientId)){
       return patientDetailsCache.get(safePatientId) || null;
     }
     try{
-      const json = await AgendaApiClient.getPatientById(safePatientId, {});
+      const json = await AgendaApiClient.getPatientById(safePatientId, { signal });
       const detail = normalizePatientDetailPayload(json);
       patientDetailsCache.set(safePatientId, detail);
       return detail;
@@ -2772,12 +3120,17 @@ console.info('app.js loaded :: 20251123a');
     }
     if(els.eventCancelConfirmNoFlagBtn){
       els.eventCancelConfirmNoFlagBtn.disabled = false;
-      els.eventCancelConfirmNoFlagBtn.textContent = 'Cancelar sin antecedente';
+      els.eventCancelConfirmNoFlagBtn.textContent = 'Cancelar sin marcar paciente';
       els.eventCancelConfirmNoFlagBtn.classList.add('d-none');
+    }
+    if(els.eventCancelConfirmBlackBtn){
+      els.eventCancelConfirmBlackBtn.disabled = false;
+      els.eventCancelConfirmBlackBtn.textContent = 'Cancelar y marcar lista negra';
+      els.eventCancelConfirmBlackBtn.classList.add('d-none');
     }
     if(els.eventCancelConfirmBtn){
       els.eventCancelConfirmBtn.disabled = false;
-      els.eventCancelConfirmBtn.textContent = 'Sí, cancelar';
+      els.eventCancelConfirmBtn.textContent = 'Cancelar y marcar lista gris';
     }
   };
   const setEventCancelPostActionsEnabled = (enabled)=>{
@@ -2796,17 +3149,23 @@ console.info('app.js loaded :: 20251123a');
     if(els.eventCancelConfirmNoFlagBtn){
       const showNoFlagOption = !eventCancelPostActionsEnabled
         && eventActionCurrentSection === 'cancel'
-        && eventCancelLateWindow;
+        && !eventActionIsCancelled;
       els.eventCancelConfirmNoFlagBtn.classList.toggle('d-none', !showNoFlagOption);
       els.eventCancelConfirmNoFlagBtn.disabled = false;
-      els.eventCancelConfirmNoFlagBtn.textContent = 'Cancelar sin antecedente';
+      els.eventCancelConfirmNoFlagBtn.textContent = 'Cancelar sin marcar paciente';
+    }
+    if(els.eventCancelConfirmBlackBtn){
+      const showBlackOption = !eventCancelPostActionsEnabled
+        && eventActionCurrentSection === 'cancel'
+        && !eventActionIsCancelled;
+      els.eventCancelConfirmBlackBtn.classList.toggle('d-none', !showBlackOption);
+      els.eventCancelConfirmBlackBtn.disabled = false;
+      els.eventCancelConfirmBlackBtn.textContent = 'Cancelar y marcar lista negra';
     }
     if(els.eventCancelConfirmBtn){
       els.eventCancelConfirmBtn.classList.toggle('d-none', eventCancelPostActionsEnabled);
       els.eventCancelConfirmBtn.disabled = false;
-      els.eventCancelConfirmBtn.textContent = eventCancelLateWindow
-        ? 'Cancelar y marcar lista gris'
-        : 'Sí, cancelar';
+      els.eventCancelConfirmBtn.textContent = 'Cancelar y marcar lista gris';
     }
     if(els.eventCancelPrompt){
       if(eventCancelPostActionsEnabled){
@@ -2816,9 +3175,7 @@ console.info('app.js loaded :: 20251123a');
       }else{
         els.eventCancelPrompt.classList.remove('alert-success');
         els.eventCancelPrompt.classList.add('alert-warning');
-        els.eventCancelPrompt.textContent = eventCancelLateWindow
-          ? 'Esta cancelación ocurre con poca anticipación. ¿Deseas marcarla como antecedente de cancelación tardía?'
-          : '¿Confirmas cancelar esta cita?';
+        els.eventCancelPrompt.textContent = 'Selecciona cómo deseas cancelar esta cita.';
       }
     }
   };
@@ -2867,6 +3224,12 @@ console.info('app.js loaded :: 20251123a');
     if(normalized.includes('resched') || normalized.includes('reprogram') || normalized.includes('reagend')) return 'Cita reprogramada';
     if(normalized.includes('no_show') || normalized.includes('noshow') || normalized.includes('no-show') || normalized.includes('no asist')){
       return 'Paciente no asistió';
+    }
+    if(normalized.includes('cancel') && (normalized.includes('blacklist') || normalized.includes('lista_negra') || normalized.includes('negra'))){
+      return 'Paciente marcado en lista negra';
+    }
+    if(normalized.includes('cancel') && (normalized.includes('greylist') || normalized.includes('graylist') || normalized.includes('lista_gris') || normalized.includes('gris'))){
+      return 'Paciente marcado en lista gris';
     }
     if(normalized.includes('confirm')) return 'Cita confirmada';
     if((normalized.includes('waitlist') && normalized.includes('assign')) || (normalized.includes('assign') && normalized.includes('wait'))){
@@ -3146,6 +3509,8 @@ console.info('app.js loaded :: 20251123a');
     const consultorioId = sanitizeText(entry?.consultorio_id || activeEventActionRef?.extendedProps?.consultorio_id || getAvailabilityConsultorioId() || '');
     const slotMinutes = Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
     if(!doctorId || !consultorioId) return null;
+    const actorRole = resolveCreateActorRole();
+    const actorId = resolveActorId() || 'ui';
     return {
       doctor_id: doctorId,
       consultorio_id: consultorioId,
@@ -3153,9 +3518,9 @@ console.info('app.js loaded :: 20251123a');
       end_at: toSqlDateTimeLocal(slot.end),
       slot_minutes: slotMinutes,
       modality: sanitizeText(activeEventActionRef?.extendedProps?.modality || '') || 'waitlist',
-      actor_role: 'doctor',
-      actor_id: resolveActorId() || 'ui',
-      channel_origin: 'agenda_frontend_v1'
+      actor_role: actorRole,
+      actor_id: actorId,
+      channel_origin: resolveCreateChannelOrigin('waitlist_assign')
     };
   };
   const renderEventCancelWaitlistEntries = (entries = [])=>{
@@ -3281,7 +3646,7 @@ console.info('app.js loaded :: 20251123a');
   const applyLocalCancelledTrace = (eventRef)=>{
     if(!(eventRef && typeof eventRef.setExtendedProp === 'function')) return false;
     const props = eventRef.extendedProps || {};
-    const patientDisplay = sanitizeText(props.patient_display || eventRef.title || 'Paciente');
+    const patientDisplay = resolveEventPatientDisplayName(props, eventRef);
     const statusRaw = sanitizeText(props.status || 'cancelled') || 'cancelled';
     eventRef.setExtendedProp('status', statusRaw);
     eventRef.setExtendedProp('status_label', 'Cancelada');
@@ -3396,7 +3761,13 @@ console.info('app.js loaded :: 20251123a');
     if(els.eventCancelConfirmNoFlagBtn){
       els.eventCancelConfirmNoFlagBtn.classList.toggle(
         'd-none',
-        !isCancel || !eventCancelLateWindow || eventCancelPostActionsEnabled
+        !isCancel || eventCancelPostActionsEnabled
+      );
+    }
+    if(els.eventCancelConfirmBlackBtn){
+      els.eventCancelConfirmBlackBtn.classList.toggle(
+        'd-none',
+        !isCancel || eventCancelPostActionsEnabled
       );
     }
     if(!isReschedule){
@@ -3787,7 +4158,7 @@ console.info('app.js loaded :: 20251123a');
   };
   const renderEventRescheduleSummary = ()=>{
     if(!els.eventRescheduleConfirmCopy) return;
-    const patient = sanitizeText(activeEventActionRef?.extendedProps?.patient_display || activeEventActionRef?.title || 'Paciente');
+    const patient = resolveEventPatientDisplayName(activeEventActionRef?.extendedProps || {}, activeEventActionRef);
     const previousLabel = formatAppointmentDateRangeLabel(eventActionOriginalRange?.start, eventActionOriginalRange?.end);
     if(!(eventActionPendingReschedule?.start instanceof Date) || !(eventActionPendingReschedule?.end instanceof Date)){
       els.eventRescheduleConfirmCopy.innerHTML = '';
@@ -3859,9 +4230,9 @@ console.info('app.js loaded :: 20251123a');
         motivo_text: '',
         notify_patient: false,
         contact_method: 'none',
-        actor_role: 'doctor',
+        actor_role: resolveCreateActorRole(),
         actor_id: resolveActorId() || 'ui',
-        channel_origin: 'agenda_frontend_v1'
+        channel_origin: resolveCreateChannelOrigin('reschedule')
       };
       const result = await AgendaApiClient.rescheduleAppointment(appointmentId, payload);
       if(!result?.ok || !result?.json || result.json.ok !== true){
@@ -3891,19 +4262,30 @@ console.info('app.js loaded :: 20251123a');
       || ''
     );
   };
-  const applyEventCancel = async ({ applyLateCancelFlag = null } = {})=>{
+  const normalizeCancelFlagChoice = (value = '')=>{
+    const normalized = normalizeText(sanitizeText(value || ''));
+    if(!normalized) return 'none';
+    if(['grey', 'gray', 'gris', 'lista-gris', 'listagris'].includes(normalized)) return 'grey';
+    if(['black', 'negra', 'negro', 'lista-negra', 'listanegra'].includes(normalized)) return 'black';
+    return 'none';
+  };
+  const applyEventCancel = async ({ applyLateCancelFlag = null, cancelFlagType = '' } = {})=>{
     const appointmentId = sanitizeText(activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef));
     if(!appointmentId) return;
+    const cancelFlagChoice = normalizeCancelFlagChoice(cancelFlagType);
     const lateCancelDecision = (applyLateCancelFlag === true || applyLateCancelFlag === false)
       ? applyLateCancelFlag
-      : (eventCancelLateWindow ? true : null);
+      : (cancelFlagChoice === 'grey'
+        ? true
+        : ((cancelFlagChoice === 'none' || cancelFlagChoice === 'black') ? false : (eventCancelLateWindow ? true : null)));
     logAgendaCancelFlow('cancel:confirm-click', {
       activeEventActionId,
       appointmentId,
       section: eventActionCurrentSection,
       postActionsEnabled: eventCancelPostActionsEnabled,
       lateCancelWindow: eventCancelLateWindow,
-      applyLateCancelFlag: lateCancelDecision
+      applyLateCancelFlag: lateCancelDecision,
+      cancelFlagType: cancelFlagChoice
     });
     setEventActionError('');
     try{
@@ -3915,6 +4297,12 @@ console.info('app.js loaded :: 20251123a');
         els.eventCancelConfirmNoFlagBtn.disabled = true;
         if(lateCancelDecision === false){
           els.eventCancelConfirmNoFlagBtn.textContent = 'Cancelando...';
+        }
+      }
+      if(els.eventCancelConfirmBlackBtn){
+        els.eventCancelConfirmBlackBtn.disabled = true;
+        if(cancelFlagChoice === 'black'){
+          els.eventCancelConfirmBlackBtn.textContent = 'Cancelando...';
         }
       }
       if(els.eventCancelBackBtn){
@@ -3945,12 +4333,13 @@ console.info('app.js loaded :: 20251123a');
       const payload = {
         motivo_code: 'user_cancel',
         motivo_text: '',
-        actor_role: 'doctor',
+        actor_role: resolveCreateActorRole(),
         actor_id: resolveActorId() || 'ui',
-        channel_origin: 'agenda_frontend_v1',
+        channel_origin: resolveCreateChannelOrigin('cancel'),
         notify_patient: false,
         contact_method: 'none'
       };
+      payload.cancel_flag_type = cancelFlagChoice;
       if(lateCancelDecision === true || lateCancelDecision === false){
         payload.apply_late_cancel_flag = lateCancelDecision;
       }
@@ -4002,10 +4391,11 @@ console.info('app.js loaded :: 20251123a');
         || 'u_legacy_1'
       );
       const doctorId = sanitizeText(activeEventActionRef?.extendedProps?.doctor_id || getDoctorId() || '');
+      const actorRole = resolveCreateActorRole();
       const payload = {
-        actor_role: 'operator',
+        actor_role: actorRole,
         actor_id: actorId,
-        channel_origin: 'agenda_frontend_v1'
+        channel_origin: resolveCreateChannelOrigin('no_show')
       };
       if(doctorId){
         payload.doctor_id = doctorId;
@@ -4149,6 +4539,30 @@ console.info('app.js loaded :: 20251123a');
     `;
     els.eventActionTime.setAttribute('aria-label', `${detail.dateLabel.fullLabel} · ${detail.timeLabel}`);
   };
+  const hydrateEventActionPatientDisplay = async (patientId = '', appointmentId = '', fallbackLabel = '')=>{
+    const safePatientId = sanitizeText(patientId || '');
+    const safeAppointmentId = sanitizeText(appointmentId || '');
+    if(!safePatientId) return;
+    const detail = await fetchPatientDetailById(safePatientId);
+    if(safeAppointmentId && sanitizeText(activeEventActionAppointmentId || '') !== safeAppointmentId){
+      return;
+    }
+    const detailName = sanitizeText(detail?.display_name || '');
+    if(detailName && !isTechnicalPatientDisplayValue(detailName)){
+      if(els.eventActionPatient){
+        els.eventActionPatient.textContent = detailName;
+      }
+      if(activeEventActionRef && typeof activeEventActionRef.setExtendedProp === 'function'){
+        try{
+          activeEventActionRef.setExtendedProp('patient_display', detailName);
+        }catch(_){}
+      }
+      return;
+    }
+    if(els.eventActionPatient && isTechnicalPatientDisplayValue(fallbackLabel)){
+      els.eventActionPatient.textContent = 'Paciente sin nombre';
+    }
+  };
   const openEventActionModal = (eventRef, section = 'detail')=>{
     if(!(eventRef && els.eventActionsModalEl && window.bootstrap?.Modal)) return;
     hideCellMenu();
@@ -4166,7 +4580,7 @@ console.info('app.js loaded :: 20251123a');
     const props = eventRef.extendedProps || {};
     activeEventActionAppointmentId = resolveEventAppointmentId(eventRef);
     const patientId = sanitizeText(props.patient_id || '');
-    const patient = sanitizeText(props.patient_display || eventRef.title || 'Paciente');
+    const patient = resolveEventPatientDisplayName(props, eventRef);
     const status = sanitizeText(props.status_label || 'Confirmada');
     const statusKeyNorm = normalizeText(sanitizeText(props.status_key_real || props.status_key || props.status || ''));
     const statusNorm = normalizeText(status);
@@ -4233,7 +4647,12 @@ console.info('app.js loaded :: 20251123a');
         els.eventActionStatusBadge.className = 'badge mx-ag-status-badge d-none';
       }
     }
-    if(els.eventActionPatient) els.eventActionPatient.textContent = patient || '--';
+    if(els.eventActionPatient) els.eventActionPatient.textContent = patient || 'Paciente sin nombre';
+    hydrateEventActionPatientDisplay(
+      patientId,
+      sanitizeText(activeEventActionAppointmentId || ''),
+      patient
+    ).catch(()=> null);
     syncEventActionTimeField(start, end);
     if(els.eventActionDuration) els.eventActionDuration.textContent = `${durationMinutes} min`;
     if(els.eventActionStatus) els.eventActionStatus.textContent = status || '--';
@@ -4391,7 +4810,7 @@ console.info('app.js loaded :: 20251123a');
     activeBlockConflictItems = conflicts.map((ev)=>({
       id: sanitizeText(ev.id || ''),
       start: ev.start instanceof Date ? new Date(ev.start) : null,
-      patient: sanitizeText(ev.extendedProps?.patient_display || ev.title || 'Paciente'),
+      patient: resolveEventPatientDisplayName(ev?.extendedProps || {}, ev),
       status: sanitizeText(ev.extendedProps?.status_label || 'Confirmada')
     }));
     const nextIds = new Set(activeBlockConflictItems.map((item)=> sanitizeText(item.id || '')).filter(Boolean));
@@ -4732,7 +5151,7 @@ console.info('app.js loaded :: 20251123a');
       activeBlockConflictItems = conflicts.map((ev)=>({
         id: sanitizeText(ev.id || ''),
         start: ev.start instanceof Date ? new Date(ev.start) : null,
-        patient: sanitizeText(ev.extendedProps?.patient_display || ev.title || 'Paciente'),
+        patient: resolveEventPatientDisplayName(ev?.extendedProps || {}, ev),
         status: sanitizeText(ev.extendedProps?.status_label || 'Confirmada')
       }));
       const nextIds = new Set(conflicts.map((ev)=> sanitizeText(ev.id || '')).filter(Boolean));
@@ -5045,7 +5464,7 @@ console.info('app.js loaded :: 20251123a');
     // Regla operativa: no permitir interacción fuera de disponibilidad/horario real.
     return strictAvailable;
   };
-  const openCellMenu = ({ start, end, consultorioId = '', jsEvent, source = '' })=>{
+  const openCellMenu = ({ start, end, consultorioId = '', consultorioName = '', jsEvent, source = '' })=>{
     logAgendaSlotTrace('openCellMenu ENTER', {
       start: start?.toISOString?.() || String(start || ''),
       end: end?.toISOString?.() || String(end || ''),
@@ -5074,7 +5493,8 @@ console.info('app.js loaded :: 20251123a');
       start,
       end,
       source: sourceKey,
-      consultorio_id: sanitizeText(consultorioId || '')
+      consultorio_id: sanitizeText(consultorioId || ''),
+      consultorio_name: sanitizeText(consultorioName || '')
     };
     const frame = findTimeGridColumnFrame(start);
     if(!(frame instanceof HTMLElement)){
@@ -5592,6 +6012,9 @@ console.info('app.js loaded :: 20251123a');
       || item?.titulo
       || item?.name
       || item?.nombre
+      || item?.consultorio_name
+      || item?.nombre_consultorio
+      || item?.alias
       || item?.label
       || ''
     );
@@ -5688,19 +6111,78 @@ console.info('app.js loaded :: 20251123a');
       consultorios: isNumericId(selectedNormalized) ? [selectedNormalized] : []
     };
   };
+  const isGenericConsultorioLabel = (label = '')=>{
+    const safe = normalizeText(sanitizeText(label || ''));
+    if(!safe) return false;
+    if(/^consultorio\s*\d+$/.test(safe)) return true;
+    if(/^consultorio\s*#\s*\d+$/.test(safe)) return true;
+    if(/^#\s*\d+$/.test(safe)) return true;
+    if(/^\d+$/.test(safe)) return true;
+    if(/^(primer|segundo|tercer|cuarto|quinto|sexto)\s+consultorio$/.test(safe)) return true;
+    return false;
+  };
+  const resolveConsultorioLabelFromProfilePane = (consultorioId = '')=>{
+    const safeId = sanitizeText(consultorioId || '');
+    if(!isNumericId(safeId)) return '';
+    const pane = document.getElementById(`sede${safeId}`);
+    if(!(pane instanceof HTMLElement)) return '';
+    const raw = sanitizeText(
+      pane.querySelector('input[id^="cons-titulo"]')?.value
+      || pane.querySelector('[data-consultorio-name]')?.textContent
+      || ''
+    );
+    if(!raw) return '';
+    const viaHelper = (typeof window.getConsultorioDisplayName === 'function')
+      ? sanitizeText(window.getConsultorioDisplayName(raw, Number.parseInt(safeId, 10) || 1))
+      : raw;
+    const candidate = sanitizeText(viaHelper || raw);
+    return isGenericConsultorioLabel(candidate) ? '' : candidate;
+  };
   const resolveAgendaConsultorioLabelById = (consultorioId)=>{
     const safeId = sanitizeText(consultorioId || '');
     if(!safeId){
       return 'Consultorio';
     }
     const fromList = listAgendaConfigConsultorios().find((item)=> sanitizeText(item?.id || '') === safeId);
-    if(fromList && sanitizeText(fromList.label)){
-      return sanitizeText(fromList.label);
+    const fromListLabel = sanitizeText(fromList?.label || '');
+    if(fromListLabel && !isGenericConsultorioLabel(fromListLabel)){
+      return fromListLabel;
+    }
+    const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
+      ? window.mxmedResolveActiveProfessionalContext()
+      : null;
+    const fromContextList = (Array.isArray(activeProfessional?.consultorios) ? activeProfessional.consultorios : [])
+      .find((item)=> sanitizeText(item?.id || item?.consultorio_id || '') === safeId);
+    const fromContextName = sanitizeText(
+      fromContextList?.name
+      || fromContextList?.nombre
+      || fromContextList?.consultorio_name
+      || fromContextList?.title
+      || fromContextList?.label
+      || ''
+    );
+    if(fromContextName && !isGenericConsultorioLabel(fromContextName)){
+      return fromContextName;
+    }
+    const contextDefaultName = (
+      sanitizeText(activeProfessional?.default_consultorio_id || '') === safeId
+      ? sanitizeText(activeProfessional?.default_consultorio_name || '')
+      : ''
+    );
+    if(contextDefaultName && !isGenericConsultorioLabel(contextDefaultName)){
+      return contextDefaultName;
     }
     const fromSelect = Array.from(els.consultorio?.options || [])
       .find((opt)=> sanitizeText(opt.value || '') === safeId);
     if(fromSelect && sanitizeText(fromSelect.textContent || '')){
-      return sanitizeText(fromSelect.textContent || '');
+      const optionLabel = sanitizeText(fromSelect.textContent || '');
+      if(agendaConsultoriosReady === true || !isGenericConsultorioLabel(optionLabel)){
+        return optionLabel;
+      }
+    }
+    const fromProfilePane = resolveConsultorioLabelFromProfilePane(safeId);
+    if(fromProfilePane){
+      return fromProfilePane;
     }
     return `Consultorio ${safeId}`;
   };
@@ -6244,8 +6726,17 @@ console.info('app.js loaded :: 20251123a');
     const safeLabel = sanitizeText(label || '');
     const safeId = sanitizeText(consultorioId || '');
     let normalized = safeLabel.replace(/^\s*consultorio\s*[:\-]?\s*/i, '').trim();
+    if((!normalized || isGenericConsultorioLabel(normalized)) && safeId){
+      const resolved = sanitizeText(resolveAgendaConsultorioLabelById(safeId) || '');
+      if(resolved && !isGenericConsultorioLabel(resolved)){
+        normalized = resolved.replace(/^\s*consultorio\s*[:\-]?\s*/i, '').trim();
+      }
+    }
+    if(isGenericConsultorioLabel(normalized)){
+      normalized = '';
+    }
     if(!normalized){
-      normalized = safeId ? `#${safeId}` : 'Sin consultorio seleccionado';
+      normalized = safeId ? 'Sin nombre disponible' : 'Sin consultorio seleccionado';
     }
     return normalized;
   };
@@ -6276,22 +6767,39 @@ console.info('app.js loaded :: 20251123a');
   const resolveCreateChannelOrigin = (source = '')=>{
     const safeSource = sanitizeText(source || '').toLowerCase();
     const role = resolveCreateActorRole();
-    if(role === 'patient') return 'agenda_public_profile';
-    if(role === 'operator') return 'agenda_operator_console';
-    if(role === 'system') return 'agenda_system';
-    if(safeSource === 'next_available' || safeSource === 'next-focus'){
-      return 'agenda_next_available';
+    if(
+      safeSource.includes('call_center')
+      || safeSource.includes('call-center')
+      || safeSource.includes('telefono')
+      || safeSource.includes('phone')
+    ){
+      return 'call_center';
     }
-    return 'agenda_frontend_v1';
+    if(
+      safeSource.includes('ai')
+      || safeSource.includes('ia')
+      || safeSource.includes('bot')
+      || safeSource.includes('agent')
+    ){
+      return 'ai_operator';
+    }
+    if(role === 'patient') return 'public_profile';
+    if(role === 'operator') return 'operator';
+    if(role === 'system') return 'internal_user';
+    return 'doctor';
   };
-  const syncCreateConsultorioInfo = (consultorioId = '')=>{
+  const syncCreateConsultorioInfo = (consultorioId = '', preferredLabel = '')=>{
     if(!els.consultorioModalInfo) return;
     const safeId = sanitizeText(consultorioId || '');
+    const safePreferred = sanitizeText(preferredLabel || '');
     if(!safeId){
       els.consultorioModalInfo.value = 'Sin consultorio seleccionado';
       return;
     }
-    const consultorioLabel = normalizeConsultorioDisplayLabel(resolveAgendaConsultorioLabelById(safeId), safeId);
+    const consultorioLabel = normalizeConsultorioDisplayLabel(
+      (!isGenericConsultorioLabel(safePreferred) ? safePreferred : '') || resolveAgendaConsultorioLabelById(safeId),
+      safeId
+    );
     els.consultorioModalInfo.value = consultorioLabel;
   };
   const formatCreateAppointmentDateLabel = (dateValue)=>{
@@ -6336,6 +6844,49 @@ console.info('app.js loaded :: 20251123a');
       || window.mxmedDoctor?.user_id
       || ''
     );
+  };
+  const resolveOperatorIdentityContext = ()=>{
+    const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
+      ? window.mxmedResolveActiveProfessionalContext()
+      : null;
+    const activeCtx = (window.mxmedStore?.activeProfessionalContext && typeof window.mxmedStore.activeProfessionalContext === 'object')
+      ? window.mxmedStore.activeProfessionalContext
+      : {};
+    const operatorId = sanitizeText(
+      activeProfessional?.operator_id
+      || activeProfessional?.operatorId
+      || activeCtx?.operator_id
+      || activeCtx?.operatorId
+      || activeCtx?.operator_user_id
+      || activeCtx?.operatorUserId
+      || activeCtx?.user_id
+      || activeProfessional?.user_id
+      || ''
+    );
+    const operatorSlot = normalizeOperatorSlotNumber(
+      activeProfessional?.operator_slot
+      || activeProfessional?.operatorSlot
+      || activeProfessional?.operator_number
+      || activeProfessional?.operatorNumber
+      || activeCtx?.operator_slot
+      || activeCtx?.operatorSlot
+      || activeCtx?.operator_number
+      || activeCtx?.operatorNumber
+      || ''
+    );
+    const operatorAlias = sanitizeText(
+      activeProfessional?.operator_alias
+      || activeProfessional?.operatorAlias
+      || activeCtx?.operator_alias
+      || activeCtx?.operatorAlias
+      || activeProfessional?.full_name
+      || ''
+    );
+    return {
+      operatorId,
+      operatorSlot,
+      operatorAlias
+    };
   };
   const resolveConsultorioId = ()=>{
     const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
@@ -7784,6 +8335,7 @@ console.info('app.js loaded :: 20251123a');
     syncCreateStartInfoFromDate(start, computedEnd);
     if(els.endAt) els.endAt.value = toDateTimeLocalInput(computedEnd);
     const slotConsultorioId = sanitizeText(selection?.consultorio_id || selection?.consultorioId || '');
+    const slotConsultorioName = sanitizeText(selection?.consultorio_name || selection?.consultorioName || '');
     const consultorioId = slotConsultorioId || resolveConsultorioId();
     if(!consultorioId){
       setError('No se pudo resolver el consultorio del horario seleccionado.');
@@ -7796,7 +8348,7 @@ console.info('app.js loaded :: 20251123a');
       endAt: toSqlDateTimeLocal(computedEnd)
     });
     if(els.consultorioModal) els.consultorioModal.value = consultorioId;
-    syncCreateConsultorioInfo(consultorioId);
+    syncCreateConsultorioInfo(consultorioId, slotConsultorioName);
     createModal = createModal || window.bootstrap.Modal.getOrCreateInstance(els.createModalEl);
     createModal.show();
     queueCreatePatientBehaviorNoticeRefresh(60);
@@ -8024,6 +8576,7 @@ console.info('app.js loaded :: 20251123a');
     const actorRole = resolveCreateActorRole();
     const channelOrigin = resolveCreateChannelOrigin(createSelectionContext.source);
     const actorId = resolveActorId() || doctorId;
+    const operatorIdentity = resolveOperatorIdentityContext();
 
     if(!doctorId) return setCreateError('No se pudo resolver doctor_id.');
     if(!consultorioId) return setCreateError('No se pudo resolver un consultorio operativo. Verifica el catálogo de consultorios del médico activo.');
@@ -8059,6 +8612,22 @@ console.info('app.js loaded :: 20251123a');
       created_by_role: actorRole,
       created_by_id: actorId
     };
+    if(actorRole === 'operator'){
+      const operatorId = sanitizeText(operatorIdentity?.operatorId || actorId || '');
+      const operatorSlot = normalizeOperatorSlotNumber(operatorIdentity?.operatorSlot);
+      const operatorAlias = sanitizeText(operatorIdentity?.operatorAlias || '');
+      if(operatorId){
+        payload.operator_id = operatorId;
+      }
+      if(operatorSlot === 1 || operatorSlot === 2){
+        payload.operator_slot = operatorSlot;
+        payload.operator_number = operatorSlot;
+        payload.origin_visual_key = toOperatorVisualKey(operatorSlot);
+      }
+      if(operatorAlias){
+        payload.operator_alias = operatorAlias;
+      }
+    }
     if(createPatientMode === 'new'){
       const contacts = [];
       if(newPatientPhone){
@@ -8143,12 +8712,409 @@ console.info('app.js loaded :: 20251123a');
     }
   };
 
+  const isTechnicalPatientDisplayValue = (value = '')=>{
+    const safe = sanitizeText(value || '');
+    if(!safe) return true;
+    const normalized = normalizeText(safe);
+    if(!normalized) return true;
+    if(/^p_[a-z0-9]+$/i.test(normalized)) return true;
+    if(/^paciente\s+p_[a-z0-9]+$/i.test(normalized)) return true;
+    if(/^patient[_-]?id$/i.test(normalized)) return true;
+    if(/^patient[_-]?ref$/i.test(normalized)) return true;
+    if(/^patientid$/i.test(normalized) || /^patientref$/i.test(normalized)) return true;
+    if(/^#?\d+$/.test(normalized)) return true;
+    if(/^paciente\s+#?\d+$/.test(normalized)) return true;
+    return false;
+  };
+  const buildPatientNameFromParts = (source = {})=>{
+    const first = sanitizeText(
+      source?.first_name
+      || source?.nombres
+      || source?.nombre
+      || source?.name
+      || ''
+    );
+    const last1 = sanitizeText(
+      source?.last_name
+      || source?.last_name_1
+      || source?.apellido_paterno
+      || source?.primer_apellido
+      || ''
+    );
+    const last2 = sanitizeText(
+      source?.last_name_2
+      || source?.apellido_materno
+      || source?.segundo_apellido
+      || ''
+    );
+    return [first, last1, last2].filter(Boolean).join(' ').trim();
+  };
+  const resolveEventPatientDisplayName = (props = {}, eventRef = null)=>{
+    const titleHead = sanitizeText(String(eventRef?.title || '').split('·')[0] || '');
+    const nestedPatient = (props?.patient && typeof props.patient === 'object') ? props.patient : null;
+    const fromParts = buildPatientNameFromParts(props);
+    const fromNestedParts = buildPatientNameFromParts(nestedPatient || {});
+    const candidates = [
+      sanitizeText(props?.patient_name || ''),
+      sanitizeText(props?.patient_full_name || ''),
+      sanitizeText(props?.patient_display_name || ''),
+      sanitizeText(props?.nombre_paciente || ''),
+      sanitizeText(props?.display_name || ''),
+      sanitizeText(nestedPatient?.patient_name || ''),
+      sanitizeText(nestedPatient?.patient_full_name || ''),
+      sanitizeText(nestedPatient?.patient_display_name || ''),
+      sanitizeText(nestedPatient?.nombre_paciente || ''),
+      sanitizeText(nestedPatient?.display_name || nestedPatient?.name || ''),
+      fromParts,
+      fromNestedParts,
+      sanitizeText(props?.patient_display || ''),
+      titleHead
+    ];
+    for(const candidate of candidates){
+      if(!candidate) continue;
+      if(isTechnicalPatientDisplayValue(candidate)) continue;
+      return candidate;
+    }
+    return 'Paciente sin nombre';
+  };
+  const normalizeOperatorSlotNumber = (value)=>{
+    const raw = normalizeText(value);
+    if(!raw) return null;
+    if(raw === '1' || raw === '01' || raw === 'uno' || raw === 'primero' || raw === 'first') return 1;
+    if(raw === '2' || raw === '02' || raw === 'dos' || raw === 'segundo' || raw === 'second') return 2;
+    if(/^(operator|operador|operadora)[\s\-_]*0?1$/.test(raw)) return 1;
+    if(/^(operator|operador|operadora)[\s\-_]*0?2$/.test(raw)) return 2;
+    if(/^(slot|numero|number|nro|no)[\s\-_#]*0?1$/.test(raw)) return 1;
+    if(/^(slot|numero|number|nro|no)[\s\-_#]*0?2$/.test(raw)) return 2;
+    return null;
+  };
+  const resolveOperatorVisualKeyFromExplicitValue = (value = '')=>{
+    const raw = normalizeText(value);
+    if(!raw) return '';
+    if(
+      raw === 'operator-01'
+      || raw === 'operator_01'
+      || raw === 'operator01'
+      || raw === 'operador-01'
+      || raw === 'operador_01'
+      || raw === 'operador01'
+      || raw === 'operadora-01'
+      || raw === 'operadora_01'
+      || raw === 'operadora01'
+    ){
+      return 'operator-01';
+    }
+    if(
+      raw === 'operator-02'
+      || raw === 'operator_02'
+      || raw === 'operator02'
+      || raw === 'operador-02'
+      || raw === 'operador_02'
+      || raw === 'operador02'
+      || raw === 'operadora-02'
+      || raw === 'operadora_02'
+      || raw === 'operadora02'
+    ){
+      return 'operator-02';
+    }
+    return '';
+  };
+  const toOperatorVisualKey = (slotNumber = null)=>{
+    if(slotNumber === 1) return 'operator-01';
+    if(slotNumber === 2) return 'operator-02';
+    return 'operator';
+  };
+  const collectAgendaOperatorSlotMap = ()=>{
+    const slotMap = new Map();
+    const addEntriesFromSource = (source)=>{
+      if(!source) return;
+      const entries = [];
+      if(Array.isArray(source)){
+        source.forEach((item, index)=>{
+          entries.push({ item, key: '', index });
+        });
+      }else if(source && typeof source === 'object'){
+        Object.entries(source).forEach(([key, item], index)=>{
+          entries.push({ item, key, index });
+        });
+      }
+      const total = entries.length;
+      entries.forEach(({ item, key, index })=>{
+        const row = item && typeof item === 'object' ? item : {};
+        const id = sanitizeText(
+          row?.operator_id
+          || row?.operatorId
+          || row?.id
+          || row?.user_id
+          || row?.userId
+          || row?.created_by_id
+          || row?.actor_id
+          || row?.value
+          || key
+          || ''
+        );
+        let slot = normalizeOperatorSlotNumber(
+          row?.operator_slot
+          || row?.operatorSlot
+          || row?.operator_number
+          || row?.operatorNumber
+          || row?.slot
+          || row?.number
+          || row?.position
+          || row?.order
+          || row?.index
+          || row?.value
+          || ''
+        );
+        if(!slot && total === 2){
+          slot = index === 0 ? 1 : (index === 1 ? 2 : null);
+        }
+        if(!id || !slot) return;
+        slotMap.set(normalizeText(id), slot);
+      });
+    };
+    const activeCtx = (window.mxmedStore?.activeProfessionalContext && typeof window.mxmedStore.activeProfessionalContext === 'object')
+      ? window.mxmedStore.activeProfessionalContext
+      : {};
+    [
+      window.mxmedStore?.operator_slots,
+      window.mxmedStore?.operatorSlots,
+      window.mxmedStore?.agenda_operator_slots,
+      window.mxmedStore?.agendaOperatorSlots,
+      window.mxmedStore?.operators,
+      window.mxmedStore?.agendaOperators,
+      activeCtx?.operator_slots,
+      activeCtx?.operatorSlots,
+      activeCtx?.operators
+    ].forEach((source)=> addEntriesFromSource(source));
+    return slotMap;
+  };
+  const resolveOperatorSlotFromConfiguredId = (idValue = '')=>{
+    const safeId = normalizeText(idValue);
+    if(!safeId) return null;
+    const slotMap = collectAgendaOperatorSlotMap();
+    if(!slotMap.has(safeId)) return null;
+    const resolved = Number(slotMap.get(safeId) || 0);
+    if(resolved === 1) return 1;
+    if(resolved === 2) return 2;
+    return null;
+  };
+  const resolveAppointmentOriginVisualKey = (props = {})=>{
+    const explicitOrigin = normalizeText(sanitizeText(
+      props?.origin_visual_key
+      || props?.origin
+      || props?.source
+      || props?.appointment_origin
+      || ''
+    ));
+    const explicitOperatorVisual = resolveOperatorVisualKeyFromExplicitValue(explicitOrigin);
+    if(explicitOperatorVisual){
+      return explicitOperatorVisual;
+    }
+    let explicitOperatorGeneric = false;
+    if(explicitOrigin){
+      if(explicitOrigin === 'user' || explicitOrigin === 'doctor' || explicitOrigin === 'medico'){
+        return 'user';
+      }
+      if(explicitOrigin === 'operator' || explicitOrigin === 'operadora' || explicitOrigin === 'operador'){
+        explicitOperatorGeneric = true;
+      }
+      if(
+        explicitOrigin === 'web-patient'
+        || explicitOrigin === 'web_patient'
+        || explicitOrigin === 'patient_web'
+        || explicitOrigin === 'public_profile'
+      ){
+        return 'web-patient';
+      }
+      if(explicitOrigin === 'ai' || explicitOrigin === 'ai_operator' || explicitOrigin === 'operador_ia'){
+        return 'ai';
+      }
+      if(
+        explicitOrigin === 'call-center'
+        || explicitOrigin === 'call_center'
+        || explicitOrigin === 'callcenter'
+      ){
+        return 'call-center';
+      }
+    }
+    const slotFromPayload = normalizeOperatorSlotNumber(
+      props?.operator_slot
+      || props?.operatorSlot
+      || props?.operator_number
+      || props?.operatorNumber
+      || props?.operator_index
+      || props?.operatorIndex
+      || props?.operator_no
+      || props?.operatorNo
+      || props?.operator
+      || ''
+    );
+    if(slotFromPayload === 1 || slotFromPayload === 2){
+      return toOperatorVisualKey(slotFromPayload);
+    }
+    const operatorId = sanitizeText(
+      props?.operator_id
+      || props?.operatorId
+      || props?.operator_user_id
+      || props?.operatorUserId
+      || ''
+    );
+    const channelOrigin = normalizeText(sanitizeText(props?.channel_origin || ''));
+    const createdByRole = normalizeText(sanitizeText(props?.created_by_role || ''));
+    const actorRole = normalizeText(sanitizeText(props?.actor_role || ''));
+    const createdById = sanitizeText(props?.created_by_id || '');
+    const haystack = `${channelOrigin} ${createdByRole} ${actorRole}`.trim();
+    if(
+      haystack.includes('call_center')
+      || haystack.includes('callcenter')
+      || haystack.includes('call-center')
+      || haystack.includes('contact_center')
+      || haystack.includes('contactcenter')
+      || haystack.includes('phone')
+      || haystack.includes('telefono')
+      || haystack.includes('telefonico')
+    ){
+      return 'call-center';
+    }
+    if(
+      haystack.includes('assistant_ai')
+      || haystack.includes('ai_operator')
+      || haystack.includes('operador_ia')
+      || haystack.includes('operador-ia')
+      || haystack.includes('agenda_ai')
+      || haystack.includes('agenda-ia')
+      || /(^|\s)(ai|ia)(\s|$)/.test(haystack)
+      || haystack.includes('agent')
+      || haystack.includes('bot')
+    ){
+      return 'ai';
+    }
+    if(
+      haystack.includes('agenda_public_profile')
+      || haystack.includes('public_profile')
+      || haystack.includes('web_profile')
+      || haystack.includes('public_web')
+      || haystack.includes('public')
+      || haystack.includes('perfil_publico')
+      || haystack.includes('paciente_web')
+      || haystack.includes('web_patient')
+      || haystack.includes('patient_web')
+      || (haystack.includes('patient') && !haystack.includes('operator'))
+    ){
+      return 'web-patient';
+    }
+    const operatorContextDetected = (
+      explicitOperatorGeneric
+      || haystack.includes('agenda_operator_console')
+      || haystack.includes('operator_console')
+      || haystack.includes('operadora')
+      || haystack.includes('operador')
+      || haystack.includes('assistant')
+      || haystack.includes('operator')
+    );
+    if(operatorContextDetected){
+      const slotFromOperatorId = resolveOperatorSlotFromConfiguredId(operatorId);
+      if(slotFromOperatorId === 1 || slotFromOperatorId === 2){
+        return toOperatorVisualKey(slotFromOperatorId);
+      }
+      const slotFromCreatorId = resolveOperatorSlotFromConfiguredId(createdById);
+      if(slotFromCreatorId === 1 || slotFromCreatorId === 2){
+        return toOperatorVisualKey(slotFromCreatorId);
+      }
+      return 'operator';
+    }
+    if(!haystack){
+      return 'user';
+    }
+    return 'user';
+  };
+  const enrichRowsWithPatientDisplayName = async (rows = [], { signal } = {})=>{
+    const safeRows = Array.isArray(rows) ? rows : [];
+    if(!safeRows.length) return safeRows;
+    const unresolvedIds = [];
+    const resolvedMap = new Map();
+
+    safeRows.forEach((row)=>{
+      const resolved = resolveEventPatientDisplayName({
+        patient_name: sanitizeText(row?.patient_name || ''),
+        patient_full_name: sanitizeText(row?.patient_full_name || ''),
+        patient_display_name: sanitizeText(row?.patient_display_name || row?.display_name || ''),
+        nombre_paciente: sanitizeText(row?.nombre_paciente || ''),
+        first_name: sanitizeText(row?.first_name || row?.nombre || row?.nombres || ''),
+        last_name: sanitizeText(row?.last_name || row?.last_name_1 || row?.apellido_paterno || ''),
+        last_name_2: sanitizeText(row?.last_name_2 || row?.apellido_materno || ''),
+        patient_display: sanitizeText(row?.patient_display || ''),
+        patient: (row?.patient && typeof row.patient === 'object') ? row.patient : null
+      }, null);
+      const patientId = sanitizeText(row?.patient_id || row?.patient_ref || '');
+      if(resolved && resolved !== 'Paciente sin nombre'){
+        if(patientId) resolvedMap.set(patientId, resolved);
+        return;
+      }
+      if(patientId) unresolvedIds.push(patientId);
+    });
+
+    const uniqueMissingIds = Array.from(new Set(unresolvedIds));
+    if(uniqueMissingIds.length){
+      try{
+        const indexRows = await fetchPatientIndex({ signal });
+        const byId = new Map((Array.isArray(indexRows) ? indexRows : []).map((entry)=>[
+          sanitizeText(entry?.patient_id || ''),
+          sanitizeText(entry?.display_name || '')
+        ]));
+        uniqueMissingIds.forEach((patientId)=>{
+          if(resolvedMap.has(patientId)) return;
+          const displayName = sanitizeText(byId.get(patientId) || '');
+          if(displayName && !isTechnicalPatientDisplayValue(displayName)){
+            resolvedMap.set(patientId, displayName);
+          }
+        });
+      }catch(_){
+        // best effort: fallback to patient detail below
+      }
+    }
+
+    const stillMissingIds = uniqueMissingIds.filter((patientId)=> !resolvedMap.has(patientId));
+    if(stillMissingIds.length){
+      await Promise.all(stillMissingIds.map(async (patientId)=>{
+        try{
+          const detail = await fetchPatientDetailById(patientId, { signal });
+          const displayName = sanitizeText(detail?.display_name || '');
+          if(displayName && !isTechnicalPatientDisplayValue(displayName)){
+            resolvedMap.set(patientId, displayName);
+          }
+        }catch(_){}
+      }));
+    }
+
+    return safeRows.map((row)=>{
+      const patientId = sanitizeText(row?.patient_id || row?.patient_ref || '');
+      const mappedName = patientId ? sanitizeText(resolvedMap.get(patientId) || '') : '';
+      if(!mappedName) return row;
+      return {
+        ...row,
+        patient_name: sanitizeText(row?.patient_name || '') || mappedName,
+        patient_full_name: sanitizeText(row?.patient_full_name || '') || mappedName,
+        patient_display_name: sanitizeText(row?.patient_display_name || row?.display_name || '') || mappedName
+      };
+    });
+  };
+
   const buildAppointmentTitle = (row)=>{
-    const patientId = sanitizeText(row?.patient_id || '');
-    const patientName = sanitizeText(row?.patient_name || row?.patient_full_name || '');
+    const patientName = resolveEventPatientDisplayName({
+      patient_name: sanitizeText(row?.patient_name || ''),
+      patient_full_name: sanitizeText(row?.patient_full_name || ''),
+      patient_display_name: sanitizeText(row?.patient_display_name || row?.display_name || ''),
+      nombre_paciente: sanitizeText(row?.nombre_paciente || ''),
+      first_name: sanitizeText(row?.first_name || row?.nombre || row?.nombres || ''),
+      last_name: sanitizeText(row?.last_name || row?.last_name_1 || row?.apellido_paterno || ''),
+      last_name_2: sanitizeText(row?.last_name_2 || row?.apellido_materno || ''),
+      patient_display: sanitizeText(row?.patient_display || '')
+    }, null);
     const modality = toLabel(row?.modality || '');
     const status = toLabel(row?.status || '');
-    const base = patientName || (patientId ? `Paciente ${patientId}` : 'Cita');
+    const base = patientName || 'Paciente sin nombre';
     return shortText([base, modality, status].filter(Boolean).join(' · '), 86);
   };
   const resolveAppointmentStatusMeta = (rawStatus = '')=>{
@@ -9503,12 +10469,12 @@ console.info('app.js loaded :: 20251123a');
     const startYear = startDate.getFullYear();
     const endYear = endDate.getFullYear();
     if(startYear === endYear && startMonth === endMonth){
-      return `${startDay} – ${endDay} ${startMonth} ${startYear}`;
+      return `Semana ${startDay} – ${endDay} ${startMonth} ${startYear}`;
     }
     if(startYear === endYear){
-      return `${startDay} ${startMonth} – ${endDay} ${endMonth} ${startYear}`;
+      return `Semana ${startDay} ${startMonth} – ${endDay} ${endMonth} ${startYear}`;
     }
-    return `${startDay} ${startMonth} ${startYear} – ${endDay} ${endMonth} ${endYear}`;
+    return `Semana ${startDay} ${startMonth} ${startYear} – ${endDay} ${endMonth} ${endYear}`;
   };
 
   const mapAppointmentToEvent = (row)=>{
@@ -9531,10 +10497,31 @@ console.info('app.js loaded :: 20251123a');
       && statusMeta.key === 'no-show'
       && !isPast
     );
-    const patientDisplay = sanitizeText(row?.patient_name || row?.patient_full_name || '')
-      || (sanitizeText(row?.patient_id || '') ? `Paciente ${sanitizeText(row?.patient_id || '')}` : 'Paciente');
+    const patientDisplay = resolveEventPatientDisplayName({
+      patient_name: sanitizeText(row?.patient_name || ''),
+      patient_full_name: sanitizeText(row?.patient_full_name || ''),
+      patient_display_name: sanitizeText(row?.patient_display_name || row?.display_name || ''),
+      nombre_paciente: sanitizeText(row?.nombre_paciente || ''),
+      first_name: sanitizeText(row?.first_name || row?.nombre || row?.nombres || ''),
+      last_name: sanitizeText(row?.last_name || row?.last_name_1 || row?.apellido_paterno || ''),
+      last_name_2: sanitizeText(row?.last_name_2 || row?.apellido_materno || ''),
+      patient_display: sanitizeText(row?.patient_display || '')
+    }, null);
     const consultorioId = sanitizeText(row?.consultorio_id || '');
     const consultorioLabel = resolveAgendaConsultorioLabelById(consultorioId);
+    const originVisualKey = resolveAppointmentOriginVisualKey({
+      channel_origin: sanitizeText(row?.channel_origin || ''),
+      created_by_role: sanitizeText(row?.created_by_role || ''),
+      created_by_id: sanitizeText(row?.created_by_id || ''),
+      actor_role: sanitizeText(row?.actor_role || ''),
+      operator_id: sanitizeText(row?.operator_id || ''),
+      operator_slot: sanitizeText(row?.operator_slot || ''),
+      operator_number: sanitizeText(row?.operator_number || ''),
+      operator_alias: sanitizeText(row?.operator_alias || ''),
+      origin_visual_key: sanitizeText(row?.origin_visual_key || ''),
+      origin: sanitizeText(row?.origin || ''),
+      source: sanitizeText(row?.source || '')
+    });
     // Agenda operativa híbrida: toda cita cancelada libera el slot para operación
     // y conserva una huella histórica discreta/clickeable.
     if(statusMeta.key === 'cancelled'){
@@ -9554,6 +10541,13 @@ console.info('app.js loaded :: 20251123a');
           consultorio_id: consultorioId,
           consultorio_label: consultorioLabel,
           patient_id: sanitizeText(row?.patient_id || ''),
+          patient_name: sanitizeText(row?.patient_name || ''),
+          patient_full_name: sanitizeText(row?.patient_full_name || ''),
+          patient_display_name: sanitizeText(row?.patient_display_name || row?.display_name || ''),
+          nombre_paciente: sanitizeText(row?.nombre_paciente || ''),
+          first_name: sanitizeText(row?.first_name || row?.nombre || row?.nombres || ''),
+          last_name: sanitizeText(row?.last_name || row?.last_name_1 || row?.apellido_paterno || ''),
+          last_name_2: sanitizeText(row?.last_name_2 || row?.apellido_materno || ''),
           start_at: sanitizeText(row?.start_at || ''),
           end_at: sanitizeText(row?.end_at || ''),
           patient_display: patientDisplay,
@@ -9566,6 +10560,16 @@ console.info('app.js loaded :: 20251123a');
           modality: sanitizeText(row?.modality || ''),
           status: sanitizeText(row?.status || ''),
           channel_origin: channelOrigin,
+          created_by_role: sanitizeText(row?.created_by_role || ''),
+          created_by_id: sanitizeText(row?.created_by_id || ''),
+          actor_role: sanitizeText(row?.actor_role || ''),
+          operator_id: sanitizeText(row?.operator_id || ''),
+          operator_slot: sanitizeText(row?.operator_slot || ''),
+          operator_number: sanitizeText(row?.operator_number || ''),
+          operator_alias: sanitizeText(row?.operator_alias || ''),
+          origin: sanitizeText(row?.origin || ''),
+          source: sanitizeText(row?.source || ''),
+          origin_visual_key: originVisualKey,
           event_type: 'cancel_trace'
         }
       };
@@ -9593,6 +10597,13 @@ console.info('app.js loaded :: 20251123a');
         consultorio_id: consultorioId,
         consultorio_label: consultorioLabel,
         patient_id: sanitizeText(row?.patient_id || ''),
+        patient_name: sanitizeText(row?.patient_name || ''),
+        patient_full_name: sanitizeText(row?.patient_full_name || ''),
+        patient_display_name: sanitizeText(row?.patient_display_name || row?.display_name || ''),
+        nombre_paciente: sanitizeText(row?.nombre_paciente || ''),
+        first_name: sanitizeText(row?.first_name || row?.nombre || row?.nombres || ''),
+        last_name: sanitizeText(row?.last_name || row?.last_name_1 || row?.apellido_paterno || ''),
+        last_name_2: sanitizeText(row?.last_name_2 || row?.apellido_materno || ''),
         start_at: sanitizeText(row?.start_at || ''),
         end_at: sanitizeText(row?.end_at || ''),
         patient_display: patientDisplay,
@@ -9604,7 +10615,17 @@ console.info('app.js loaded :: 20251123a');
         patient_flag_type: patientFlagType,
         modality: sanitizeText(row?.modality || ''),
         status: sanitizeText(row?.status || ''),
-        channel_origin: sanitizeText(row?.channel_origin || '')
+        channel_origin: sanitizeText(row?.channel_origin || ''),
+        created_by_role: sanitizeText(row?.created_by_role || ''),
+        created_by_id: sanitizeText(row?.created_by_id || ''),
+        actor_role: sanitizeText(row?.actor_role || ''),
+        operator_id: sanitizeText(row?.operator_id || ''),
+        operator_slot: sanitizeText(row?.operator_slot || ''),
+        operator_number: sanitizeText(row?.operator_number || ''),
+        operator_alias: sanitizeText(row?.operator_alias || ''),
+        origin: sanitizeText(row?.origin || ''),
+        source: sanitizeText(row?.source || ''),
+        origin_visual_key: originVisualKey
       }
     };
   };
@@ -9676,10 +10697,10 @@ console.info('app.js loaded :: 20251123a');
       const total = sourceList.length;
       const firstType = sanitizeText(first?.extendedProps?.event_type || '');
       const patient = traceOnly
-        ? `Cancelada: ${sanitizeText(first?.extendedProps?.patient_display || 'Paciente')}`
+        ? `Cancelada: ${resolveEventPatientDisplayName(first?.extendedProps || {}, first)}`
         : (firstType === 'blocked_slot')
         ? 'Horario bloqueado'
-        : sanitizeText(first?.extendedProps?.patient_display || first?.title || 'Paciente');
+        : resolveEventPatientDisplayName(first?.extendedProps || {}, first);
       const extra = Math.max(0, total - 1);
       const extraLabel = extra > 0 ? ` y ${extra} más` : '';
       const firstStatusClass = (Array.isArray(first?.classNames) ? first.classNames : [])
@@ -9934,7 +10955,8 @@ console.info('app.js loaded :: 20251123a');
       const message = sanitizeText(json?.message || json?.error || '');
       throw new Error(message || 'No se pudieron cargar las citas de agenda.');
     }
-    const flaggedRows = await enrichRowsWithPatientFlagType(appointmentRows, { signal: appointmentsRequestCtrl?.signal });
+    const namedRows = await enrichRowsWithPatientDisplayName(appointmentRows, { signal: appointmentsRequestCtrl?.signal });
+    const flaggedRows = await enrichRowsWithPatientFlagType(namedRows, { signal: appointmentsRequestCtrl?.signal });
     const events = flaggedRows.map(mapAppointmentToEvent).filter((event)=> !!(event && event.start));
     const merged = [...events, ...blockedEvents];
     merged.sort((a, b)=>{
@@ -10452,6 +11474,7 @@ console.info('app.js loaded :: 20251123a');
             : null;
           const availabilityEvents = Array.isArray(availabilityResult?.events) ? availabilityResult.events : [];
           if(currentView === 'dayGridMonth'){
+            updateAgendaOriginCatalogVisibility(appointmentEvents);
             successCallback(buildMonthSummaryEvents(appointmentEvents));
           }else{
             const mergedEvents = [...availabilityEvents, ...appointmentEvents];
@@ -10545,6 +11568,7 @@ console.info('app.js loaded :: 20251123a');
               skippedByDate: customWeekLastBridgeMeta.skippedByDate,
               appointmentsByDate: customWeekLastBridgeMeta.appointmentsByDate
             });
+            updateAgendaOriginCatalogVisibility(mergedEvents);
             successCallback(mergedEvents);
             if(isCustomWeekActive()){
               scheduleCustomWeekRender();
@@ -10572,7 +11596,9 @@ console.info('app.js loaded :: 20251123a');
               (!expectedRangeKey || expectedRangeKey === cacheRangeKey)
               && (!expectedScopeKey || expectedScopeKey === cacheScopeKey)
             );
-            successCallback(canUseCache ? cached : []);
+            const eventsForCallback = canUseCache ? cached : [];
+            updateAgendaOriginCatalogVisibility(eventsForCallback);
+            successCallback(eventsForCallback);
             return;
           }
           const message = sanitizeText(err?.message || '') || 'No se pudo cargar la agenda.';
@@ -10596,7 +11622,9 @@ console.info('app.js loaded :: 20251123a');
         const eventType = sanitizeText(props.event_type || '');
         const viewType = String(arg.view?.type || '');
         if(viewType === 'dayGridMonth'){
-          const patient = sanitizeText(props.month_summary_primary || props.patient_display || arg.event.title || 'Paciente');
+          const monthSummaryPrimary = sanitizeText(props.month_summary_primary || '');
+          const resolvedPatient = resolveEventPatientDisplayName(props, arg.event);
+          const patient = (!isTechnicalPatientDisplayValue(monthSummaryPrimary) ? monthSummaryPrimary : '') || resolvedPatient;
           const extraLabel = sanitizeText(props.month_summary_extra_label || '');
           const hasExtra = extraLabel.length > 0;
           const titleText = `${patient}${extraLabel}`;
@@ -10622,7 +11650,7 @@ console.info('app.js loaded :: 20251123a');
           };
         }
         if(eventType === 'cancel_trace'){
-          const patient = sanitizeText(props.patient_display || 'Paciente');
+          const patient = resolveEventPatientDisplayName(props, arg.event);
           const traceEventId = sanitizeText(arg.event.id || '');
           const traceAppointmentId = sanitizeText(props.appointment_id || '');
           return {
@@ -10637,42 +11665,77 @@ console.info('app.js loaded :: 20251123a');
           };
         }
         if(eventType === 'availability_slot'){
-          const consultorioLabel = sanitizeText(
-            props.consultorio_label
-            || resolveAgendaConsultorioLabelById(props.consultorio_id || '')
-            || ''
+          const consultorioIdSafe = sanitizeText(props.consultorio_id || '');
+          const consultorioLabel = normalizeConsultorioDisplayLabel(
+            sanitizeText(
+              props.consultorio_label
+              || resolveAgendaConsultorioLabelById(consultorioIdSafe)
+              || ''
+            ),
+            consultorioIdSafe
           );
           const slotTime = formatAgendaEventSlotTime(arg.event.start);
+          const slotEnd = arg.event.end instanceof Date ? arg.event.end : new Date(arg.event.end || '');
+          const isPastSlot = !Number.isNaN(slotEnd.getTime()) && slotEnd.getTime() < Date.now();
           return {
             html: `
-              <div class="mx-ag-slot-card is-available">
+              <div class="mx-ag-slot-card is-available${isPastSlot ? ' is-past' : ''}">
                 <div class="mx-ag-slot-top">
                   <div class="mx-ag-slot-time">${escapeHtml(slotTime)}</div>
-                  <div class="mx-ag-slot-primary">Disponible</div>
+                  <div class="mx-ag-slot-consultorio">${escapeHtml(consultorioLabel.toUpperCase())}</div>
                 </div>
-                <div class="mx-ag-slot-hint">Haz clic para agendar</div>
-                <div class="mx-ag-slot-consultorio">${escapeHtml(consultorioLabel || 'Consultorio')}</div>
+                <div class="mx-ag-slot-primary">DISPONIBLE</div>
               </div>
             `
           };
         }
-        const patient = sanitizeText(props.patient_display || arg.event.title || 'Paciente');
-        const consultorioLabel = sanitizeText(
-          props.consultorio_label
-          || resolveAgendaConsultorioLabelById(props.consultorio_id || '')
-          || ''
+        const resolvedPatient = resolveEventPatientDisplayName(props, arg.event);
+        const patient = resolvedPatient === 'Paciente sin nombre' ? 'Paciente' : resolvedPatient;
+        const consultorioIdSafe = sanitizeText(props.consultorio_id || '');
+        const consultorioLabel = normalizeConsultorioDisplayLabel(
+          sanitizeText(
+            props.consultorio_label
+            || resolveAgendaConsultorioLabelById(consultorioIdSafe)
+            || ''
+          ),
+          consultorioIdSafe
         );
         const slotTime = formatAgendaEventSlotTime(arg.event.start);
         const eventId = sanitizeText(arg.event.id || '');
         const isBlockConflict = eventId && activeBlockConflictIds.has(eventId);
+        const originVisualKey = resolveAppointmentOriginVisualKey(props);
+        const slotEnd = arg.event.end instanceof Date ? arg.event.end : new Date(arg.event.end || '');
+        const isPastRange = !Number.isNaN(slotEnd.getTime()) && slotEnd.getTime() < Date.now();
+        const statusKeyNorm = normalizeText(
+          sanitizeText(props.status_key_real || props.status_key || props.status || '')
+        );
+        const eventTypeRaw = sanitizeText(props.event_type || '');
+        const channelOriginRaw = sanitizeText(props.channel_origin || '');
+        const isDemoQaAppointment = (
+          props.qa_demo === true
+          || eventTypeRaw === 'demo_qa_appointment'
+          || channelOriginRaw === 'agenda_demo_mode'
+        );
+        const patientFlagType = normalizePatientFlagType(props.patient_flag_type || '');
+        const isCancelledStatus = statusKeyNorm.includes('cancel');
+        const isNoShowStatus = (
+          statusKeyNorm === 'no_show'
+          || statusKeyNorm === 'no-show'
+          || statusKeyNorm.includes('no_show')
+          || statusKeyNorm.includes('no-show')
+          || statusKeyNorm.includes('no_asist')
+          || statusKeyNorm.includes('ausente')
+        );
+        const hasPriorityBehavior = patientFlagType === 'black' || patientFlagType === 'grey';
+        const isPastVisual = !!(isPastRange && !isCancelledStatus && !isNoShowStatus && !hasPriorityBehavior);
         return {
           html: `
-            <div class="mx-ag-slot-card is-occupied${isBlockConflict ? ' is-block-conflict' : ''}">
+            <div class="mx-ag-slot-card is-occupied mx-ag-slot-origin--${escapeHtml(originVisualKey)}${isPastVisual ? ' is-past' : ''}${isBlockConflict ? ' is-block-conflict' : ''}${isDemoQaAppointment ? ' is-demo-qa' : ''}" data-origin-visual-key="${escapeHtml(originVisualKey)}">
               <div class="mx-ag-slot-top">
                 <div class="mx-ag-slot-time">${escapeHtml(slotTime)}</div>
-                <div class="mx-ag-slot-primary">${escapeHtml(patient)}</div>
+                <div class="mx-ag-slot-consultorio">${escapeHtml(consultorioLabel.toUpperCase())}</div>
               </div>
-              <div class="mx-ag-slot-consultorio">${escapeHtml(consultorioLabel || 'Consultorio')}</div>
+              <div class="mx-ag-slot-primary">${escapeHtml(patient.toUpperCase())}</div>
             </div>
           `
         };
@@ -10741,6 +11804,7 @@ console.info('app.js loaded :: 20251123a');
                 start,
                 end,
                 consultorio_id: sanitizeText(nextSlotFocus?.consultorio_id || ''),
+                consultorio_name: sanitizeText(nextSlotFocus?.consultorio_name || ''),
                 source: 'next-focus'
               }, { bypassAvailabilityCheck: true });
               if(opened){
@@ -10829,6 +11893,7 @@ console.info('app.js loaded :: 20251123a');
               start,
               end,
               consultorio_id: sanitizeText(nextSlotFocus?.consultorio_id || ''),
+              consultorio_name: sanitizeText(nextSlotFocus?.consultorio_name || ''),
               source: 'next-focus'
             }, { bypassAvailabilityCheck: true });
             if(opened){
@@ -10903,8 +11968,20 @@ console.info('app.js loaded :: 20251123a');
           const start = info.event.start instanceof Date ? new Date(info.event.start) : new Date(info.event.start || '');
           const end = info.event.end instanceof Date ? new Date(info.event.end) : new Date(info.event.end || '');
           const consultorioId = sanitizeText(props.consultorio_id || '');
-          if(!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end > start){
-            openCellMenu({ start, end, consultorioId, jsEvent: info.jsEvent, source: 'availability_slot' });
+          const consultorioName = sanitizeText(
+            props.consultorio_name
+            || props.consultorio_label
+            || ''
+          );
+          if(!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end > start && isCellAvailableForCreate(start, end)){
+            openCellMenu({
+              start,
+              end,
+              consultorioId,
+              consultorioName,
+              jsEvent: info.jsEvent,
+              source: 'availability_slot'
+            });
           }
           info.jsEvent?.preventDefault?.();
           info.jsEvent?.stopPropagation?.();
@@ -11246,15 +12323,28 @@ console.info('app.js loaded :: 20251123a');
       event.stopPropagation();
       const kind = sanitizeText(card.getAttribute('data-slot-kind') || '');
       if(kind === 'available'){
+        if(card.matches(':disabled') || card.getAttribute('aria-disabled') === 'true'){
+          return;
+        }
         const startRaw = sanitizeText(card.getAttribute('data-slot-start') || '');
         const endRaw = sanitizeText(card.getAttribute('data-slot-end') || '');
         const consultorioId = sanitizeText(card.getAttribute('data-slot-consultorio-id') || '');
+        const consultorioName = sanitizeText(card.getAttribute('data-slot-consultorio-name') || '');
         const start = new Date(startRaw);
         const end = new Date(endRaw);
         if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start){
           return;
         }
-        openCreateModalFromSelection({ start, end, consultorio_id: consultorioId, source: 'custom_week_slot' });
+        openCreateModalFromSelection({
+          start,
+          end,
+          consultorio_id: consultorioId,
+          consultorio_name: consultorioName,
+          source: 'custom_week_slot'
+        });
+        return;
+      }
+      if(kind === 'demo-occupied'){
         return;
       }
       if(kind === 'occupied'){
@@ -11473,12 +12563,23 @@ console.info('app.js loaded :: 20251123a');
     els.eventCancelConfirmBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
       applyEventCancel({
-        applyLateCancelFlag: eventCancelLateWindow ? true : null
+        applyLateCancelFlag: true,
+        cancelFlagType: 'grey'
       }).catch(()=> null);
     });
     els.eventCancelConfirmNoFlagBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
-      applyEventCancel({ applyLateCancelFlag: false }).catch(()=> null);
+      applyEventCancel({
+        applyLateCancelFlag: false,
+        cancelFlagType: 'none'
+      }).catch(()=> null);
+    });
+    els.eventCancelConfirmBlackBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      applyEventCancel({
+        applyLateCancelFlag: false,
+        cancelFlagType: 'black'
+      }).catch(()=> null);
     });
     els.eventCancelPostNewBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
@@ -11665,11 +12766,13 @@ console.info('app.js loaded :: 20251123a');
       const selectedStart = choice.start instanceof Date ? new Date(choice.start) : new Date(choice.start || '');
       const selectedEnd = choice.end instanceof Date ? new Date(choice.end) : new Date(choice.end || '');
       const selectedConsultorioId = sanitizeText(choice?.consultorio_id || '');
+      const selectedConsultorioName = sanitizeText(choice?.consultorio_name || '');
       const openSuggestedSelection = ()=>{
         const opened = openCreateModalFromSelection({
           start: selectedStart,
           end: selectedEnd,
           consultorio_id: selectedConsultorioId,
+          consultorio_name: selectedConsultorioName,
           source: 'next_available'
         }, { bypassAvailabilityCheck: true });
         if(opened){
@@ -11683,7 +12786,7 @@ console.info('app.js loaded :: 20251123a');
           start: selectedStart,
           end: selectedEnd,
           consultorio_id: selectedConsultorioId,
-          consultorio_name: sanitizeText(choice?.consultorio_name || '')
+          consultorio_name: selectedConsultorioName
         };
         nextSlotFocus.key = toRangeKey(nextSlotFocus.start, nextSlotFocus.end);
         nextSlotFocus.day_key = sanitizeText(choice?.day_key || '') || formatYmdLocal(nextSlotFocus.start);
@@ -11792,6 +12895,7 @@ console.info('app.js loaded :: 20251123a');
         start: nextSlotFocus.start,
         end: nextSlotFocus.end,
         consultorio_id: sanitizeText(nextSlotFocus?.consultorio_id || ''),
+        consultorio_name: sanitizeText(nextSlotFocus?.consultorio_name || ''),
         source: 'next-focus'
       }, { bypassAvailabilityCheck: true });
       if(opened){

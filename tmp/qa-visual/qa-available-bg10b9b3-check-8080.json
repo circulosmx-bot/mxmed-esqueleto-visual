@@ -1,0 +1,94 @@
+{
+  "chromium": {
+    "demo": {
+      "counts": {
+        "all": 48,
+        "available": 31,
+        "occupied": 17,
+        "blocked": 0
+      },
+      "availableBg": "rgba(137, 157, 145, 0.16)",
+      "occupiedBg": "rgb(15, 95, 142)",
+      "blockedBg": "",
+      "availableText": {
+        "time": "rgb(111, 130, 122)",
+        "consultorio": "rgb(111, 130, 122)",
+        "primary": "rgb(111, 130, 122)"
+      },
+      "occupiedText": {
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)"
+      },
+      "availableHoverBg": "rgba(137, 157, 145, 0.16)"
+    },
+    "nodemo": {
+      "counts": {
+        "all": 48,
+        "available": 46,
+        "occupied": 2,
+        "blocked": 0
+      },
+      "availableBg": "rgba(137, 157, 145, 0.16)",
+      "occupiedBg": "rgb(15, 95, 142)",
+      "blockedBg": "",
+      "availableText": {
+        "time": "rgb(111, 130, 122)",
+        "consultorio": "rgb(111, 130, 122)",
+        "primary": "rgb(111, 130, 122)"
+      },
+      "occupiedText": {
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)"
+      },
+      "availableHoverBg": "rgba(137, 157, 145, 0.16)"
+    }
+  },
+  "webkit": {
+    "demo": {
+      "counts": {
+        "all": 48,
+        "available": 30,
+        "occupied": 18,
+        "blocked": 0
+      },
+      "availableBg": "rgba(137, 157, 145, 0.16)",
+      "occupiedBg": "rgb(15, 95, 142)",
+      "blockedBg": "",
+      "availableText": {
+        "time": "rgb(111, 130, 122)",
+        "consultorio": "rgb(111, 130, 122)",
+        "primary": "rgb(111, 130, 122)"
+      },
+      "occupiedText": {
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)"
+      },
+      "availableHoverBg": "rgba(137, 157, 145, 0.16)"
+    },
+    "nodemo": {
+      "counts": {
+        "all": 48,
+        "available": 46,
+        "occupied": 2,
+        "blocked": 0
+      },
+      "availableBg": "rgba(137, 157, 145, 0.16)",
+      "occupiedBg": "rgb(15, 95, 142)",
+      "blockedBg": "",
+      "availableText": {
+        "time": "rgb(111, 130, 122)",
+        "consultorio": "rgb(111, 130, 122)",
+        "primary": "rgb(111, 130, 122)"
+      },
+      "occupiedText": {
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)"
+      },
+      "availableHoverBg": "rgba(137, 157, 145, 0.16)"
+    }
+  }
+}

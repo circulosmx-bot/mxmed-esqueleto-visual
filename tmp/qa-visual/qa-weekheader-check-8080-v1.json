@@ -1,0 +1,62 @@
+{
+  "chromium": {
+    "titleText": "Semana 07 – 13 Mayo 2026",
+    "titleHasSemanaPrefix": true,
+    "titleFontSizePx": "21.28px",
+    "titleLineHeightPx": "23.408px",
+    "titleCentered": true,
+    "columnTitles": [
+      "Hoy Jueves",
+      "Mañana Viernes",
+      "Sábado",
+      "Lunes",
+      "Martes",
+      "Miércoles"
+    ],
+    "columnDates": [
+      "07 Mayo",
+      "08 Mayo",
+      "09 Mayo",
+      "11 Mayo",
+      "12 Mayo",
+      "13 Mayo"
+    ],
+    "todayLabel": "Hoy Jueves",
+    "tomorrowLabel": "Mañana Viernes",
+    "othersSample": [
+      "Sábado",
+      "Lunes",
+      "Martes"
+    ]
+  },
+  "webkit": {
+    "titleText": "Semana 07 – 13 Mayo 2026",
+    "titleHasSemanaPrefix": true,
+    "titleFontSizePx": "21.280001px",
+    "titleLineHeightPx": "23.408001px",
+    "titleCentered": true,
+    "columnTitles": [
+      "Hoy Jueves",
+      "Mañana Viernes",
+      "Sábado",
+      "Lunes",
+      "Martes",
+      "Miércoles"
+    ],
+    "columnDates": [
+      "07 Mayo",
+      "08 Mayo",
+      "09 Mayo",
+      "11 Mayo",
+      "12 Mayo",
+      "13 Mayo"
+    ],
+    "todayLabel": "Hoy Jueves",
+    "tomorrowLabel": "Mañana Viernes",
+    "othersSample": [
+      "Sábado",
+      "Lunes",
+      "Martes"
+    ]
+  }
+}

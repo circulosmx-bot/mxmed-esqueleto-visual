@@ -178,7 +178,15 @@ function mxClearHorarioInputs(inputs){
   function getConsultorioDisplayName(rowOrValue, index = 1){
     const idx = Number(index || 1) || 1;
     const raw = (rowOrValue && typeof rowOrValue === 'object')
-      ? (rowOrValue.nombre_visible ?? rowOrValue.titulo ?? rowOrValue.name ?? '')
+      ? (rowOrValue.nombre_visible
+        ?? rowOrValue.titulo
+        ?? rowOrValue.name
+        ?? rowOrValue.nombre
+        ?? rowOrValue.consultorio_name
+        ?? rowOrValue.nombre_consultorio
+        ?? rowOrValue.label
+        ?? rowOrValue.alias
+        ?? '')
       : rowOrValue;
     const visibleName = normalizeConsultorioTitle(raw);
     if(!visibleName) return getConsultorioFallbackLabel(idx);

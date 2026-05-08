@@ -1,0 +1,22 @@
+{
+  "chromium": {
+    "navWidth": 311.21875,
+    "titleWidth": 258.578125,
+    "titleFontSize": "21.28px",
+    "overlaps": {
+      "prev": false,
+      "next": false
+    },
+    "titleCentered": false
+  },
+  "webkit": {
+    "navWidth": 311.21875,
+    "titleWidth": 258.578125,
+    "titleFontSize": "21.280001px",
+    "overlaps": {
+      "prev": false,
+      "next": false
+    },
+    "titleCentered": false
+  }
+}

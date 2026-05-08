@@ -1,0 +1,42 @@
+{
+  "colChecks": [
+    {
+      "col": 0,
+      "cards": 8,
+      "minGap": 12,
+      "overlapCount": 0
+    },
+    {
+      "col": 1,
+      "cards": 8,
+      "minGap": 12,
+      "overlapCount": 0
+    },
+    {
+      "col": 2,
+      "cards": 8,
+      "minGap": 12,
+      "overlapCount": 0
+    },
+    {
+      "col": 3,
+      "cards": 8,
+      "minGap": 12,
+      "overlapCount": 0
+    },
+    {
+      "col": 4,
+      "cards": 8,
+      "minGap": 12,
+      "overlapCount": 0
+    },
+    {
+      "col": 5,
+      "cards": 8,
+      "minGap": 12,
+      "overlapCount": 0
+    }
+  ],
+  "allOverlaps": 0,
+  "minGapAll": 12
+}

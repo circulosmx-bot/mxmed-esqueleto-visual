@@ -8,6 +8,7 @@ class AppointmentsRepository
 {
     private PDO $pdo;
     private string $table;
+    private array $columnsCache = [];
 
     public function __construct(PDO $pdo)
     {
@@ -34,8 +35,37 @@ class AppointmentsRepository
     public function listByRange(string $from, string $to, ?string $doctorId = null, ?string $consultorioId = null, int $limit = 200): array
     {
         $this->ensureTable();
+        $columns = $this->getColumns($this->table);
+        $selectFields = [
+            'appointment_id',
+            'doctor_id',
+            'consultorio_id',
+            'patient_id',
+            'start_at',
+            'end_at',
+            'modality',
+            'status',
+        ];
+        foreach ([
+            'channel_origin',
+            'created_by_role',
+            'created_by_id',
+            'operator_id',
+            'operator_slot',
+            'operator_number',
+            'operator_alias',
+            'origin_visual_key',
+            'source',
+            'origin',
+        ] as $optionalField) {
+            if (in_array($optionalField, $columns, true)) {
+                $selectFields[] = $optionalField;
+            }
+        }
+        $selectSql = implode(', ', $selectFields);
         $sql = sprintf(
-            'SELECT appointment_id, doctor_id, consultorio_id, patient_id, start_at, end_at, modality, status, channel_origin FROM %s WHERE start_at < :to AND end_at > :from',
+            'SELECT %s FROM %s WHERE start_at < :to AND end_at > :from',
+            $selectSql,
             $this->table
         );
         $params = ['from' => $from, 'to' => $to];
@@ -57,6 +87,18 @@ class AppointmentsRepository
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function getColumns(string $table): array
+    {
+        if (!isset($this->columnsCache[$table])) {
+            $stmt = $this->pdo->prepare(
+                'SELECT column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = :table'
+            );
+            $stmt->execute(['table' => $table]);
+            $this->columnsCache[$table] = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        }
+        return $this->columnsCache[$table];
     }
 
     public function getById(string $id): ?array

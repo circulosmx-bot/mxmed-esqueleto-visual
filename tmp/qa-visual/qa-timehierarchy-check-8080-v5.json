@@ -1,0 +1,189 @@
+{
+  "chromium": {
+    "counts": {
+      "all": 40,
+      "available": 25,
+      "occupied": 15
+    },
+    "heights": {
+      "avgAvailable": 56.625,
+      "avgOccupied": 56,
+      "available": [
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625
+      ],
+      "occupied": [
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56
+      ]
+    },
+    "rowTopSpreadFirstRows": [],
+    "styles": {
+      "time": {
+        "fontSize": "19.84px",
+        "lineHeight": "20.832px",
+        "fontWeight": "900"
+      },
+      "consult": {
+        "fontSize": "10.24px",
+        "lineHeight": "11.264px"
+      },
+      "availCard": {
+        "height": "56.625px",
+        "minHeight": "56px",
+        "appearance": "none",
+        "webkitAppearance": "none",
+        "outline": "3px",
+        "paddingTop": "5px",
+        "paddingBottom": "5px"
+      },
+      "occCard": {
+        "height": "56px",
+        "minHeight": "56px",
+        "appearance": "none",
+        "webkitAppearance": "none",
+        "outline": "0px",
+        "paddingTop": "5px",
+        "paddingBottom": "5px"
+      }
+    }
+  },
+  "webkit": {
+    "counts": {
+      "all": 48,
+      "available": 30,
+      "occupied": 18
+    },
+    "heights": {
+      "avgAvailable": 56.5938,
+      "avgOccupied": 56,
+      "available": [
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938
+      ],
+      "occupied": [
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56
+      ]
+    },
+    "rowTopSpreadFirstRows": [
+      0,
+      0.594,
+      1.188,
+      1.781,
+      2.375,
+      2.969,
+      2.969,
+      3.563
+    ],
+    "styles": {
+      "time": {
+        "fontSize": "19.84px",
+        "lineHeight": "20.831999px",
+        "fontWeight": "900"
+      },
+      "consult": {
+        "fontSize": "10.24px",
+        "lineHeight": "11.264px"
+      },
+      "availCard": {
+        "height": "56.59375px",
+        "minHeight": "56px",
+        "appearance": "none",
+        "webkitAppearance": "none",
+        "outline": "3px",
+        "paddingTop": "5px",
+        "paddingBottom": "5px"
+      },
+      "occCard": {
+        "height": "56px",
+        "minHeight": "56px",
+        "appearance": "none",
+        "webkitAppearance": "none",
+        "outline": "0px",
+        "paddingTop": "5px",
+        "paddingBottom": "5px"
+      }
+    }
+  }
+}

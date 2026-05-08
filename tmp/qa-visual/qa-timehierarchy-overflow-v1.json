@@ -1,0 +1,20 @@
+{
+  "chromium": {
+    "cards": 48,
+    "overflows": {
+      "cards": 0,
+      "time": 0,
+      "consultorio": 0,
+      "primary": 1
+    }
+  },
+  "webkit": {
+    "cards": 48,
+    "overflows": {
+      "cards": 0,
+      "time": 0,
+      "consultorio": 0,
+      "primary": 1
+    }
+  }
+}

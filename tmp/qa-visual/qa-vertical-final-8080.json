@@ -1,0 +1,194 @@
+{
+  "chromium_demo": {
+    "colGap": "12px",
+    "sample": [
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user is-past is-demo-qa",
+        "height": 52.27,
+        "paddingTop": "8px",
+        "paddingBottom": "8px"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--operator is-past is-demo-qa",
+        "height": 52.27,
+        "paddingTop": "8px",
+        "paddingBottom": "8px"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--web-patient is-past is-demo-qa",
+        "height": 52.27,
+        "paddingTop": "8px",
+        "paddingBottom": "8px"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--ai is-past is-demo-qa",
+        "height": 52.27,
+        "paddingTop": "8px",
+        "paddingBottom": "8px"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+        "height": 52.27,
+        "paddingTop": "8px",
+        "paddingBottom": "8px"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user is-past is-demo-qa",
+        "height": 52.27,
+        "paddingTop": "8px",
+        "paddingBottom": "8px"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+        "height": 52.27,
+        "paddingTop": "8px",
+        "paddingBottom": "8px"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "height": 55.34,
+        "paddingTop": "8px",
+        "paddingBottom": "8px"
+      }
+    ],
+    "colChecks": [
+      {
+        "col": 0,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 1,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 2,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 3,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 4,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 5,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      }
+    ],
+    "minGapAll": 12,
+    "allOverlaps": 0,
+    "hasOverflowX": false,
+    "legendDots": 5,
+    "badgeCount": 0
+  },
+  "webkit_demo": {
+    "colGap": "12px",
+    "sample": [
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user is-past is-demo-qa",
+        "height": 52.23,
+        "paddingTop": "8px",
+        "paddingBottom": "8px"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--operator is-past is-demo-qa",
+        "height": 52.23,
+        "paddingTop": "8px",
+        "paddingBottom": "8px"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--web-patient is-past is-demo-qa",
+        "height": 52.23,
+        "paddingTop": "8px",
+        "paddingBottom": "8px"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--ai is-past is-demo-qa",
+        "height": 52.23,
+        "paddingTop": "8px",
+        "paddingBottom": "8px"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+        "height": 52.23,
+        "paddingTop": "8px",
+        "paddingBottom": "8px"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+        "height": 52.23,
+        "paddingTop": "8px",
+        "paddingBottom": "8px"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "height": 55.31,
+        "paddingTop": "8px",
+        "paddingBottom": "8px"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "height": 55.31,
+        "paddingTop": "8px",
+        "paddingBottom": "8px"
+      }
+    ],
+    "colChecks": [
+      {
+        "col": 0,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 1,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 2,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 3,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 4,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      },
+      {
+        "col": 5,
+        "cards": 8,
+        "minGap": 12,
+        "overlapCount": 0
+      }
+    ],
+    "minGapAll": 12,
+    "allOverlaps": 0,
+    "hasOverflowX": false,
+    "legendDots": 5,
+    "badgeCount": 0
+  }
+}

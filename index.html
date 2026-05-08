@@ -135,7 +135,7 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
-<link rel="stylesheet" href="assets/css/style.css?v=codex-2" />
+<link rel="stylesheet" href="assets/css/style.css?v=qa-visual-20260507c" />
 
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
 
@@ -3007,8 +3007,15 @@
                 <span class="small text-muted d-none" id="ag_filters_hint" aria-hidden="true"></span>
               </div>
               <div class="col-12">
-                <div class="d-flex flex-wrap gap-3 small text-muted">
-                  <span><span class="mx-ag-legend mx-ag-legend--available"></span> Disponibilidad real</span>
+                <div class="d-flex flex-wrap gap-3 small text-muted mx-ag-origin-catalog-row" id="ag_origin_catalog">
+                  <span class="mx-ag-origin-label">Origen de la cita:</span>
+                  <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--user"></span>Usuario / Médico</span>
+                  <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--operator-01"></span>Operador 01</span>
+                  <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--operator-02"></span>Operador 02</span>
+                  <span class="mx-ag-origin-item d-none" id="ag_origin_item_operator_fallback"><span class="mx-ag-origin-dot mx-ag-origin-dot--operator"></span>Operadora</span>
+                  <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--web-patient"></span>Paciente vía perfil web</span>
+                  <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--ai"></span>Operador IA</span>
+                  <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--call-center"></span>Call Center</span>
                 </div>
               </div>
               <div class="col-12">
@@ -3125,15 +3132,15 @@
                       </div>
                       <div class="col-md-6">
                         <label class="form-label" for="ag_modality_input">Modalidad</label>
-                        <select class="form-select" id="ag_modality_input">
+                        <select class="form-select no-check" id="ag_modality_input">
                           <option value="in_person">Presencial</option>
                           <option value="videoconsulta">Videoconsulta</option>
                         </select>
                       </div>
                       <div class="col-md-6">
                         <label class="form-label" for="ag_consultorio_modal_info">Consultorio</label>
-                        <input type="text" class="form-control" id="ag_consultorio_modal_info" readonly>
-                        <select class="form-select d-none" id="ag_consultorio_modal" aria-hidden="true" tabindex="-1">
+                        <input type="text" class="form-control no-check" id="ag_consultorio_modal_info" readonly>
+                        <select class="form-select d-none no-check" id="ag_consultorio_modal" aria-hidden="true" tabindex="-1">
                           <option value="" disabled selected>No hay consultorios disponibles</option>
                         </select>
                       </div>
@@ -3346,7 +3353,8 @@
                     <button type="button" class="btn btn-outline-secondary" id="ag_event_cancel_btn">Cancelar cita</button>
                     <button type="button" class="btn btn-primary" id="ag_event_reschedule_btn">Reprogramar</button>
                     <button type="button" class="btn btn-outline-secondary d-none" id="ag_event_cancel_back_btn">Volver</button>
-                    <button type="button" class="btn btn-outline-secondary d-none" id="ag_event_cancel_confirm_no_flag_btn">Cancelar sin antecedente</button>
+                    <button type="button" class="btn btn-outline-secondary d-none" id="ag_event_cancel_confirm_no_flag_btn">Cancelar sin marcar paciente</button>
+                    <button type="button" class="btn btn-outline-dark d-none" id="ag_event_cancel_confirm_black_btn">Cancelar y marcar lista negra</button>
                     <button type="button" class="btn btn-primary d-none" id="ag_event_cancel_confirm_btn">Sí, cancelar</button>
                   </div>
                 </div>
@@ -9219,7 +9227,7 @@
 <script src="assets/js/core/identity.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
 
-<script src="assets/js/app.js?v=20260429j"></script>
+<script src="assets/js/app.js?v=qa-visual-20260507c"></script>
 <script src="assets/js/perfil/datos-generales.js"></script>
 <script src="assets/js/perfil/formacion.js"></script>
 

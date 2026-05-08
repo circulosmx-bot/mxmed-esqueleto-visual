@@ -75,6 +75,11 @@ class AppointmentWriteRepository
             'channel_origin' => $payload['channel_origin'],
             'created_by_role' => $payload['created_by_role'],
             'created_by_id' => $payload['created_by_id'],
+            'operator_id' => $payload['operator_id'] ?? null,
+            'operator_slot' => $payload['operator_slot'] ?? null,
+            'operator_number' => $payload['operator_number'] ?? null,
+            'operator_alias' => $payload['operator_alias'] ?? null,
+            'origin_visual_key' => $payload['origin_visual_key'] ?? null,
             'created_at' => $createdAt,
         ];
 
@@ -249,7 +254,9 @@ class AppointmentWriteRepository
 
         $cancelledAt = (new DateTime('now', new DateTimeZone(self::TIMEZONE)))->format('Y-m-d H:i:s');
         $lateCancelResult = ['event_appended' => 0, 'flag_appended' => 0];
+        $manualCancelFlagResult = ['event_appended' => 0, 'flag_appended' => 0];
         $applyLateCancelFlag = $this->resolveOptionalBoolean($payload['apply_late_cancel_flag'] ?? null);
+        $cancelFlagType = $this->normalizeCancelFlagType($payload['cancel_flag_type'] ?? null);
 
         $this->pdo->beginTransaction();
         try {
@@ -261,6 +268,12 @@ class AppointmentWriteRepository
                 $current,
                 $cancelledAt,
                 $applyLateCancelFlag
+            );
+            $manualCancelFlagResult = $this->appendManualCancelFlagIfNeeded(
+                $appointmentId,
+                $payload,
+                $current,
+                $cancelFlagType
             );
             $this->pdo->commit();
         } catch (PDOException $e) {
@@ -283,7 +296,8 @@ class AppointmentWriteRepository
             'cancelled_at' => $cancelledAt,
             'event_id' => $eventId ?? null,
             'events_appended' => 1,
-            'flags_appended' => $lateCancelResult['flag_appended'] ?? 0,
+            'flags_appended' => (int)($lateCancelResult['flag_appended'] ?? 0) + (int)($manualCancelFlagResult['flag_appended'] ?? 0),
+            'cancel_flag_type_applied' => $cancelFlagType,
         ];
     }
 
@@ -528,6 +542,68 @@ class AppointmentWriteRepository
             return false;
         }
         return null;
+    }
+    private function normalizeCancelFlagType($value): string
+    {
+        $normalized = strtolower(trim((string)($value ?? '')));
+        if ($normalized === '' || $normalized === 'none') {
+            return 'none';
+        }
+        if (in_array($normalized, ['grey', 'gray', 'gris', 'lista_gris'], true)) {
+            return 'grey';
+        }
+        if (in_array($normalized, ['black', 'negra', 'lista_negra'], true)) {
+            return 'black';
+        }
+        return 'none';
+    }
+    private function appendManualCancelFlagIfNeeded(
+        string $appointmentId,
+        array $payload,
+        array $current,
+        string $cancelFlagType
+    ): array
+    {
+        if (!in_array($cancelFlagType, ['grey', 'black'], true)) {
+            return ['event_appended' => 0, 'flag_appended' => 0];
+        }
+
+        $reasonCode = $cancelFlagType === 'black' ? 'cancel_blacklist' : 'cancel_greylist';
+        $eventType = $cancelFlagType === 'black' ? 'appointment_cancel_blacklist' : 'appointment_cancel_greylist';
+        $flagType = $cancelFlagType === 'black' ? 'black' : 'grey';
+
+        $eventData = [
+            'event_id' => $this->generateId(),
+            'appointment_id' => $appointmentId,
+            'event_type' => $eventType,
+            'timestamp' => (new DateTime('now', new DateTimeZone(self::TIMEZONE)))->format('Y-m-d H:i:s'),
+            'from_datetime' => $current['start_at'] ?? null,
+            'from_start_at' => $current['start_at'] ?? null,
+            'from_end_at' => $current['end_at'] ?? null,
+            'motivo_code' => $reasonCode,
+            'motivo_text' => $payload['motivo_text'] ?? null,
+            'notify_patient' => isset($payload['notify_patient']) ? (int)$payload['notify_patient'] : 0,
+            'contact_method' => $payload['contact_method'] ?? 'none',
+            'actor_role' => $payload['actor_role'] ?? $payload['created_by_role'] ?? null,
+            'actor_id' => $payload['actor_id'] ?? $payload['created_by_id'] ?? null,
+            'channel_origin' => $payload['channel_origin'] ?? null,
+        ];
+        $this->insert($this->eventsTable, $eventData);
+
+        $patientId = $this->resolvePatientIdForFlag($current, $payload);
+        $doctorId = $this->resolveDoctorIdForIncident($current, $payload);
+
+        $flagAppended = $this->maybeAppendFlag(
+            $patientId,
+            $flagType,
+            $reasonCode,
+            $appointmentId,
+            $payload,
+            'manual: ' . $reasonCode
+        );
+        $this->maybeAppendIncident($patientId, $doctorId, $appointmentId, $reasonCode, 'manual');
+
+        return ['event_appended' => 1, 'flag_appended' => $flagAppended];
     }
 
     private function bridgeClinicalEncounterIfCompleted(array $appointmentData): void

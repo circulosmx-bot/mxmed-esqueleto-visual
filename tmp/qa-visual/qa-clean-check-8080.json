@@ -1,0 +1,233 @@
+{
+  "chromium_demo": {
+    "demoCount": 15,
+    "badgeCount": 0,
+    "legendCount": 5,
+    "originCount": 5,
+    "sample": [
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user is-past is-demo-qa",
+        "borderTopWidth": "0px",
+        "outlineWidth": "0px",
+        "boxShadow": "none",
+        "transform": "none",
+        "overflow": "hidden",
+        "beforeWidth": "14px",
+        "beforeBg": "rgb(47, 128, 237)",
+        "beforeShadow": "none",
+        "beforeFilter": "none",
+        "beforeOpacity": "1"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--operator is-past is-demo-qa",
+        "borderTopWidth": "0px",
+        "outlineWidth": "0px",
+        "boxShadow": "none",
+        "transform": "none",
+        "overflow": "hidden",
+        "beforeWidth": "14px",
+        "beforeBg": "rgb(19, 184, 181)",
+        "beforeShadow": "none",
+        "beforeFilter": "none",
+        "beforeOpacity": "1"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--web-patient is-past is-demo-qa",
+        "borderTopWidth": "0px",
+        "outlineWidth": "0px",
+        "boxShadow": "none",
+        "transform": "none",
+        "overflow": "hidden",
+        "beforeWidth": "14px",
+        "beforeBg": "rgb(92, 184, 92)",
+        "beforeShadow": "none",
+        "beforeFilter": "none",
+        "beforeOpacity": "1"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--ai is-past is-demo-qa",
+        "borderTopWidth": "0px",
+        "outlineWidth": "0px",
+        "boxShadow": "none",
+        "transform": "none",
+        "overflow": "hidden",
+        "beforeWidth": "14px",
+        "beforeBg": "rgb(126, 87, 194)",
+        "beforeShadow": "none",
+        "beforeFilter": "none",
+        "beforeOpacity": "1"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+        "borderTopWidth": "0px",
+        "outlineWidth": "0px",
+        "boxShadow": "none",
+        "transform": "none",
+        "overflow": "hidden",
+        "beforeWidth": "14px",
+        "beforeBg": "rgb(245, 124, 0)",
+        "beforeShadow": "none",
+        "beforeFilter": "none",
+        "beforeOpacity": "1"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user is-past is-demo-qa",
+        "borderTopWidth": "0px",
+        "outlineWidth": "0px",
+        "boxShadow": "none",
+        "transform": "none",
+        "overflow": "hidden",
+        "beforeWidth": "14px",
+        "beforeBg": "rgb(47, 128, 237)",
+        "beforeShadow": "none",
+        "beforeFilter": "none",
+        "beforeOpacity": "1"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+        "borderTopWidth": "0px",
+        "outlineWidth": "0px",
+        "boxShadow": "none",
+        "transform": "none",
+        "overflow": "hidden",
+        "beforeWidth": "14px",
+        "beforeBg": "rgb(245, 124, 0)",
+        "beforeShadow": "none",
+        "beforeFilter": "none",
+        "beforeOpacity": "1"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-demo-qa",
+        "borderTopWidth": "0px",
+        "outlineWidth": "0px",
+        "boxShadow": "none",
+        "transform": "none",
+        "overflow": "hidden",
+        "beforeWidth": "14px",
+        "beforeBg": "rgb(245, 124, 0)",
+        "beforeShadow": "none",
+        "beforeFilter": "none",
+        "beforeOpacity": "1"
+      }
+    ]
+  },
+  "webkit_demo": {
+    "demoCount": 16,
+    "badgeCount": 0,
+    "legendCount": 5,
+    "originCount": 5,
+    "sample": [
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user is-past is-demo-qa",
+        "borderTopWidth": "0px",
+        "outlineWidth": "0px",
+        "boxShadow": "none",
+        "transform": "none",
+        "overflow": "hidden",
+        "beforeWidth": "14px",
+        "beforeBg": "rgb(47, 128, 237)",
+        "beforeShadow": "none",
+        "beforeFilter": "none",
+        "beforeOpacity": "1"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--operator is-past is-demo-qa",
+        "borderTopWidth": "0px",
+        "outlineWidth": "0px",
+        "boxShadow": "none",
+        "transform": "none",
+        "overflow": "hidden",
+        "beforeWidth": "14px",
+        "beforeBg": "rgb(19, 184, 181)",
+        "beforeShadow": "none",
+        "beforeFilter": "none",
+        "beforeOpacity": "1"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--web-patient is-past is-demo-qa",
+        "borderTopWidth": "0px",
+        "outlineWidth": "0px",
+        "boxShadow": "none",
+        "transform": "none",
+        "overflow": "hidden",
+        "beforeWidth": "14px",
+        "beforeBg": "rgb(92, 184, 92)",
+        "beforeShadow": "none",
+        "beforeFilter": "none",
+        "beforeOpacity": "1"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--ai is-past is-demo-qa",
+        "borderTopWidth": "0px",
+        "outlineWidth": "0px",
+        "boxShadow": "none",
+        "transform": "none",
+        "overflow": "hidden",
+        "beforeWidth": "14px",
+        "beforeBg": "rgb(126, 87, 194)",
+        "beforeShadow": "none",
+        "beforeFilter": "none",
+        "beforeOpacity": "1"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+        "borderTopWidth": "0px",
+        "outlineWidth": "0px",
+        "boxShadow": "none",
+        "transform": "none",
+        "overflow": "hidden",
+        "beforeWidth": "14px",
+        "beforeBg": "rgb(245, 124, 0)",
+        "beforeShadow": "none",
+        "beforeFilter": "none",
+        "beforeOpacity": "1"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+        "borderTopWidth": "0px",
+        "outlineWidth": "0px",
+        "boxShadow": "none",
+        "transform": "none",
+        "overflow": "hidden",
+        "beforeWidth": "14px",
+        "beforeBg": "rgb(245, 124, 0)",
+        "beforeShadow": "none",
+        "beforeFilter": "none",
+        "beforeOpacity": "1"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--ai is-demo-qa",
+        "borderTopWidth": "0px",
+        "outlineWidth": "0px",
+        "boxShadow": "none",
+        "transform": "none",
+        "overflow": "hidden",
+        "beforeWidth": "14px",
+        "beforeBg": "rgb(126, 87, 194)",
+        "beforeShadow": "none",
+        "beforeFilter": "none",
+        "beforeOpacity": "1"
+      },
+      {
+        "className": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--operator is-demo-qa",
+        "borderTopWidth": "0px",
+        "outlineWidth": "0px",
+        "boxShadow": "none",
+        "transform": "none",
+        "overflow": "hidden",
+        "beforeWidth": "14px",
+        "beforeBg": "rgb(19, 184, 181)",
+        "beforeShadow": "none",
+        "beforeFilter": "none",
+        "beforeOpacity": "1"
+      }
+    ]
+  },
+  "chromium_no_demo": {
+    "demoCount": 0,
+    "badgeCount": 0,
+    "legendCount": 5,
+    "originCount": 0,
+    "sample": []
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "chromium": {
+    "counts": {
+      "all": 0,
+      "available": 0,
+      "occupied": 0
+    },
+    "heights": {
+      "available": [],
+      "occupied": [],
+      "avgAvailable": 0,
+      "avgOccupied": 0
+    },
+    "styles": {
+      "card": null,
+      "time": null,
+      "consult": null,
+      "primaryAvailable": null,
+      "primaryOccupied": null
+    },
+    "rowTopSpreadFirstRows": []
+  },
+  "webkit": {
+    "counts": {
+      "all": 0,
+      "available": 0,
+      "occupied": 0
+    },
+    "heights": {
+      "available": [],
+      "occupied": [],
+      "avgAvailable": 0,
+      "avgOccupied": 0
+    },
+    "styles": {
+      "card": null,
+      "time": null,
+      "consult": null,
+      "primaryAvailable": null,
+      "primaryOccupied": null
+    },
+    "rowTopSpreadFirstRows": []
+  }
+}

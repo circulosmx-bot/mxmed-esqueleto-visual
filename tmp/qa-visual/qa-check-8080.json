@@ -1,0 +1,67 @@
+{
+  "chromium_demo": {
+    "hasPanelVisible": true,
+    "occupiedCount": 19,
+    "demoOccupiedCount": 15,
+    "badgeCount": 0,
+    "hasLegend": true,
+    "legendDotCount": 5,
+    "visibleOriginKeys": [
+      "user",
+      "operator",
+      "web-patient",
+      "ai",
+      "call-center"
+    ],
+    "visibleOriginCount": 5,
+    "firstCardBeforeWidth": "22px",
+    "firstCardBeforeBg": "rgb(47, 128, 237)",
+    "firstPrimaryTextAlign": "center",
+    "firstTopJustifyContent": "space-between",
+    "firstTopDisplay": "flex",
+    "hasDemoClassOnHtml": true,
+    "styleHref": "http://127.0.0.1:8080/assets/css/style.css?v=dev-1778192761427"
+  },
+  "webkit_demo": {
+    "hasPanelVisible": true,
+    "occupiedCount": 20,
+    "demoOccupiedCount": 16,
+    "badgeCount": 0,
+    "hasLegend": true,
+    "legendDotCount": 5,
+    "visibleOriginKeys": [
+      "user",
+      "operator",
+      "web-patient",
+      "ai",
+      "call-center"
+    ],
+    "visibleOriginCount": 5,
+    "firstCardBeforeWidth": "22px",
+    "firstCardBeforeBg": "rgb(47, 128, 237)",
+    "firstPrimaryTextAlign": "center",
+    "firstTopJustifyContent": "space-between",
+    "firstTopDisplay": "flex",
+    "hasDemoClassOnHtml": true,
+    "styleHref": "http://127.0.0.1:8080/assets/css/style.css?v=dev-1778192770310"
+  },
+  "chromium_no_demo": {
+    "hasPanelVisible": true,
+    "occupiedCount": 4,
+    "demoOccupiedCount": 0,
+    "badgeCount": 0,
+    "hasLegend": true,
+    "legendDotCount": 5,
+    "visibleOriginKeys": [
+      "user"
+    ],
+    "visibleOriginCount": 1,
+    "firstCardBeforeWidth": "10px",
+    "firstCardBeforeBg": "rgb(47, 128, 237)",
+    "firstPrimaryTextAlign": "center",
+    "firstTopJustifyContent": "space-between",
+    "firstTopDisplay": "flex",
+    "hasDemoClassOnHtml": false,
+    "styleHref": "http://127.0.0.1:8080/assets/css/style.css?v=dev-1778192777939"
+  }
+}

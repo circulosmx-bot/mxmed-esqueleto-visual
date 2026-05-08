@@ -1,0 +1,44 @@
+{
+  "chrome(chromium)": {
+    "weekTitle": "Semana 07 – 13 Mayo 2026",
+    "weekTitleFontSize": "21.28px",
+    "weekTitleCentered": true,
+    "todayLabel": "Hoy Jueves",
+    "tomorrowLabel": "Mañana Viernes",
+    "otherLabels": [
+      "Sábado",
+      "Lunes",
+      "Martes",
+      "Miércoles"
+    ],
+    "dates": [
+      "07 Mayo",
+      "08 Mayo",
+      "09 Mayo",
+      "11 Mayo",
+      "12 Mayo",
+      "13 Mayo"
+    ]
+  },
+  "safari(webkit)": {
+    "weekTitle": "Semana 07 – 13 Mayo 2026",
+    "weekTitleFontSize": "21.280001px",
+    "weekTitleCentered": true,
+    "todayLabel": "Hoy Jueves",
+    "tomorrowLabel": "Mañana Viernes",
+    "otherLabels": [
+      "Sábado",
+      "Lunes",
+      "Martes",
+      "Miércoles"
+    ],
+    "dates": [
+      "07 Mayo",
+      "08 Mayo",
+      "09 Mayo",
+      "11 Mayo",
+      "12 Mayo",
+      "13 Mayo"
+    ]
+  }
+}

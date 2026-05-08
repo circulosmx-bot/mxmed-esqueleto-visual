@@ -189,6 +189,9 @@ class AppointmentWriteController
             $payload['notify_patient'] = false;
         }
         $payload['notify_patient'] = $this->normalizeBoolean($payload['notify_patient']);
+        if (!isset($payload['cancel_flag_type']) && isset($payload['flag_type'])) {
+            $payload['cancel_flag_type'] = $payload['flag_type'];
+        }
         if (!isset($payload['contact_method'])) {
             $payload['contact_method'] = 'none';
         }
@@ -256,6 +259,7 @@ class AppointmentWriteController
             'write' => 'cancel',
             'events_appended' => $result['events_appended'],
             'flags_appended' => $result['flags_appended'] ?? 0,
+            'cancel_flag_type_applied' => $result['cancel_flag_type_applied'] ?? 'none',
             'notify_patient' => $result['notify_patient'],
             'contact_method' => $result['contact_method'],
         ];
@@ -593,6 +597,12 @@ class AppointmentWriteController
             && !in_array($payload['apply_late_cancel_flag'], ['0', '1', 0, 1, true, false, 'true', 'false'], true)
         ) {
             $errors['apply_late_cancel_flag'] = 'apply_late_cancel_flag invalid';
+        }
+        if (array_key_exists('cancel_flag_type', $payload)) {
+            $flagType = strtolower(trim((string)$payload['cancel_flag_type']));
+            if ($flagType !== '' && !in_array($flagType, ['none', 'grey', 'gray', 'black', 'gris', 'negra'], true)) {
+                $errors['cancel_flag_type'] = 'cancel_flag_type invalid';
+            }
         }
         $contactMethod = $payload['contact_method'] ?? 'none';
         if (!is_string($contactMethod) || trim($contactMethod) === '') {

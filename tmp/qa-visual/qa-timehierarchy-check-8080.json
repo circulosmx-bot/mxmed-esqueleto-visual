@@ -1,0 +1,293 @@
+{
+  "chromium_demo": {
+    "counts": {
+      "total": 48,
+      "available": 31,
+      "reserved": 17
+    },
+    "uniqueTimeFontSizes": [
+      "19.84px"
+    ],
+    "uniqueTimeLineHeights": [
+      "20.832px"
+    ],
+    "overflowIssues": {
+      "time": 0,
+      "consultorio": 0,
+      "primary": 0,
+      "cardX": 0
+    },
+    "rowMaxSpread": 17.25,
+    "sample": [
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user is-past is-demo-qa",
+        "cardH": 56,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.832px",
+        "consFont": "10.24px",
+        "priFont": "12.48px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--operator is-past is-demo-qa",
+        "cardH": 56,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.832px",
+        "consFont": "10.24px",
+        "priFont": "12.48px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--web-patient is-past is-demo-qa",
+        "cardH": 56,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.832px",
+        "consFont": "10.24px",
+        "priFont": "12.48px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--ai is-past is-demo-qa",
+        "cardH": 56,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.832px",
+        "consFont": "10.24px",
+        "priFont": "12.48px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+        "cardH": 56,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.832px",
+        "consFont": "10.24px",
+        "priFont": "12.48px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user is-past is-demo-qa",
+        "cardH": 56,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.832px",
+        "consFont": "10.24px",
+        "priFont": "12.48px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+        "cardH": 56,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.832px",
+        "consFont": "10.24px",
+        "priFont": "12.48px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "cardH": 58.88,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.832px",
+        "consFont": "10.24px",
+        "priFont": "15.04px"
+      }
+    ],
+    "legendDots": 5,
+    "badgeCount": 0,
+    "hasDemoClass": true
+  },
+  "webkit_demo": {
+    "counts": {
+      "total": 48,
+      "available": 30,
+      "reserved": 18
+    },
+    "uniqueTimeFontSizes": [
+      "19.84px"
+    ],
+    "uniqueTimeLineHeights": [
+      "20.831999px"
+    ],
+    "overflowIssues": {
+      "time": 0,
+      "consultorio": 0,
+      "primary": 0,
+      "cardX": 0
+    },
+    "rowMaxSpread": 17.06,
+    "sample": [
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user is-past is-demo-qa",
+        "cardH": 56,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.831999px",
+        "consFont": "10.24px",
+        "priFont": "12.48px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--operator is-past is-demo-qa",
+        "cardH": 56,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.831999px",
+        "consFont": "10.24px",
+        "priFont": "12.48px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--web-patient is-past is-demo-qa",
+        "cardH": 56,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.831999px",
+        "consFont": "10.24px",
+        "priFont": "12.48px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--ai is-past is-demo-qa",
+        "cardH": 56,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.831999px",
+        "consFont": "10.24px",
+        "priFont": "12.48px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+        "cardH": 56,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.831999px",
+        "consFont": "10.24px",
+        "priFont": "12.48px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+        "cardH": 56,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.831999px",
+        "consFont": "10.24px",
+        "priFont": "12.48px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "cardH": 58.84,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.831999px",
+        "consFont": "10.24px",
+        "priFont": "15.04px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "cardH": 58.84,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.831999px",
+        "consFont": "10.24px",
+        "priFont": "15.04px"
+      }
+    ],
+    "legendDots": 5,
+    "badgeCount": 0,
+    "hasDemoClass": true
+  },
+  "chromium_no_demo": {
+    "counts": {
+      "total": 48,
+      "available": 46,
+      "reserved": 2
+    },
+    "uniqueTimeFontSizes": [
+      "19.84px"
+    ],
+    "uniqueTimeLineHeights": [
+      "20.832px"
+    ],
+    "overflowIssues": {
+      "time": 0,
+      "consultorio": 0,
+      "primary": 0,
+      "cardX": 0
+    },
+    "rowMaxSpread": 2.88,
+    "sample": [
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "cardH": 58.88,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.832px",
+        "consFont": "10.24px",
+        "priFont": "15.04px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "cardH": 58.88,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.832px",
+        "consFont": "10.24px",
+        "priFont": "15.04px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "cardH": 58.88,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.832px",
+        "consFont": "10.24px",
+        "priFont": "15.04px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "cardH": 58.88,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.832px",
+        "consFont": "10.24px",
+        "priFont": "15.04px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "cardH": 58.88,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.832px",
+        "consFont": "10.24px",
+        "priFont": "15.04px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "cardH": 58.88,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.832px",
+        "consFont": "10.24px",
+        "priFont": "15.04px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "cardH": 58.88,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.832px",
+        "consFont": "10.24px",
+        "priFont": "15.04px"
+      },
+      {
+        "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-available is-past",
+        "cardH": 58.88,
+        "timeFont": "19.84px",
+        "timeWeight": "900",
+        "timeLineHeight": "20.832px",
+        "consFont": "10.24px",
+        "priFont": "15.04px"
+      }
+    ],
+    "legendDots": 5,
+    "badgeCount": 0,
+    "hasDemoClass": false
+  }
+}

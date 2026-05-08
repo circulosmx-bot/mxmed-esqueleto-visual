@@ -230,3 +230,36 @@
    2) Unificar bloqueo de horario (una sola entrada UX) y definir contrato write de overrides.  
    3) Activar panel Operadores solo cuando exista matriz de permisos cerrada.  
    4) Definir y conectar bridge clínico explícito (abrir expediente / iniciar consulta) con reglas de privacidad por médico.
+
+## Contrato de origen de cita para visualización en Agenda
+
+### Campos operativos (fuente de verdad)
+- `channel_origin` (preferente para clasificación visual).
+- `created_by_role` (complementario para clasificación/fallback).
+- `created_by_id` (auditoría operativa, no visual principal).
+- Compatibilidad de lectura adicional: `origin` / `source` (si existen en la fila).
+
+### Prioridad de resolución visual (SPA)
+1. `origin_visual_key` explícito (si viene en el evento).
+2. `channel_origin`.
+3. `created_by_role` / `actor_role`.
+4. `origin` / `source`.
+5. Fallback `user`.
+
+### Valores oficiales esperados
+- Usuario / Médico: `doctor`, `medico`, `user`, `internal_user`.
+- Operadora: `operator`, `operadora`, `assistant`.
+- Paciente vía perfil web: `public_profile`, `web_profile`, `patient_web`, `public`, `patient`.
+- Operador IA: `ai_operator`, `ai`, `ia`, `bot`, `agent`.
+- Call Center: `call_center`, `call-center`, `phone`, `telefono`.
+
+### Mapeo de color de franja
+- `user` -> `#2F80ED`
+- `operator` -> `#13B8B5`
+- `web-patient` -> `#5CB85C`
+- `ai` -> `#7E57C2`
+- `call-center` -> `#F57C00`
+
+### Notas
+- Este contrato es operativo/auditable para origen de cita (no dato clínico sensible).
+- En `GET /appointments`, el backend debe exponer al menos `channel_origin`, y cuando exista, también `created_by_role`/`created_by_id`.

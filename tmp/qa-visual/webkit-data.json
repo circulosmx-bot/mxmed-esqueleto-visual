@@ -1,0 +1,109 @@
+{
+  "modeHtml": true,
+  "modeBody": true,
+  "styleCss": [
+    "http://127.0.0.1:8765/assets/css/style.css?v=dev-1778191318291"
+  ],
+  "occupiedCount": 20,
+  "occupiedByOrigin": {
+    "user": 5,
+    "operator": 5,
+    "web-patient": 2,
+    "ai": 6,
+    "call-center": 2
+  },
+  "viewportCount": 18,
+  "viewportByOrigin": {
+    "user": 3,
+    "operator": 5,
+    "web-patient": 2,
+    "ai": 6,
+    "call-center": 2
+  },
+  "sample": [
+    {
+      "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user is-past is-demo-qa",
+      "beforeWidth": "22px",
+      "beforeBg": "rgb(47, 128, 237)",
+      "beforeZ": "2",
+      "overflow": "hidden"
+    },
+    {
+      "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--operator is-past is-demo-qa",
+      "beforeWidth": "22px",
+      "beforeBg": "rgb(19, 184, 181)",
+      "beforeZ": "2",
+      "overflow": "hidden"
+    },
+    {
+      "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--web-patient is-past is-demo-qa",
+      "beforeWidth": "22px",
+      "beforeBg": "rgb(92, 184, 92)",
+      "beforeZ": "2",
+      "overflow": "hidden"
+    },
+    {
+      "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--ai is-past is-demo-qa",
+      "beforeWidth": "22px",
+      "beforeBg": "rgb(126, 87, 194)",
+      "beforeZ": "2",
+      "overflow": "hidden"
+    },
+    {
+      "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+      "beforeWidth": "22px",
+      "beforeBg": "rgb(245, 124, 0)",
+      "beforeZ": "2",
+      "overflow": "hidden"
+    },
+    {
+      "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa",
+      "beforeWidth": "22px",
+      "beforeBg": "rgb(245, 124, 0)",
+      "beforeZ": "2",
+      "overflow": "hidden"
+    },
+    {
+      "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user",
+      "beforeWidth": "10px",
+      "beforeBg": "rgb(47, 128, 237)",
+      "beforeZ": "auto",
+      "overflow": "hidden"
+    },
+    {
+      "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--ai is-demo-qa",
+      "beforeWidth": "22px",
+      "beforeBg": "rgb(126, 87, 194)",
+      "beforeZ": "2",
+      "overflow": "hidden"
+    },
+    {
+      "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--operator is-demo-qa",
+      "beforeWidth": "22px",
+      "beforeBg": "rgb(19, 184, 181)",
+      "beforeZ": "2",
+      "overflow": "hidden"
+    },
+    {
+      "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--ai is-demo-qa",
+      "beforeWidth": "22px",
+      "beforeBg": "rgb(126, 87, 194)",
+      "beforeZ": "2",
+      "overflow": "hidden"
+    },
+    {
+      "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--operator is-demo-qa",
+      "beforeWidth": "22px",
+      "beforeBg": "rgb(19, 184, 181)",
+      "beforeZ": "2",
+      "overflow": "hidden"
+    },
+    {
+      "cls": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user",
+      "beforeWidth": "10px",
+      "beforeBg": "rgb(47, 128, 237)",
+      "beforeZ": "auto",
+      "overflow": "hidden"
+    }
+  ]
+}

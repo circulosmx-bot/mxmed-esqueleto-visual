@@ -1,0 +1,514 @@
+{
+  "chromium_demo": {
+    "counts": {
+      "available": 30,
+      "reserved": 17,
+      "total": 48
+    },
+    "availableSamples": [
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      }
+    ],
+    "reservedSamples": [
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user is-past is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--operator is-past is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--web-patient is-past is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--ai is-past is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user is-past is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--web-patient is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-demo-qa"
+      }
+    ],
+    "availableBgUnique": [
+      "rgb(33, 173, 162)"
+    ],
+    "reservedBgUnique": [
+      "rgb(15, 95, 142)"
+    ],
+    "availableHoverBg": "rgb(33, 173, 162)",
+    "reservedStripeSample": {
+      "width": "10px",
+      "bg": "rgb(47, 128, 237)",
+      "borderRadius": "8px 0px 0px 8px"
+    },
+    "legendDots": 5,
+    "badgeCount": 0,
+    "hasDemoClass": true
+  },
+  "webkit_demo": {
+    "counts": {
+      "available": 28,
+      "reserved": 18,
+      "total": 48
+    },
+    "availableSamples": [
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      }
+    ],
+    "reservedSamples": [
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user is-past is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--operator is-past is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--web-patient is-past is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--ai is-past is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--call-center is-past is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--ai is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--operator is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--ai is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--operator is-demo-qa"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user"
+      }
+    ],
+    "availableBgUnique": [
+      "rgb(33, 173, 162)"
+    ],
+    "reservedBgUnique": [
+      "rgb(15, 95, 142)"
+    ],
+    "availableHoverBg": "rgb(33, 173, 162)",
+    "reservedStripeSample": {
+      "width": "10px",
+      "bg": "rgb(47, 128, 237)",
+      "borderRadius": "8px 0px 0px 8px"
+    },
+    "legendDots": 5,
+    "badgeCount": 0,
+    "hasDemoClass": true
+  },
+  "chromium_no_demo": {
+    "counts": {
+      "available": 38,
+      "reserved": 2,
+      "total": 48
+    },
+    "availableSamples": [
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      },
+      {
+        "bg": "rgb(33, 173, 162)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-available"
+      }
+    ],
+    "reservedSamples": [
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user"
+      },
+      {
+        "bg": "rgb(15, 95, 142)",
+        "time": "rgb(255, 255, 255)",
+        "consultorio": "rgb(255, 255, 255)",
+        "primary": "rgb(255, 255, 255)",
+        "kind": "mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--user"
+      }
+    ],
+    "availableBgUnique": [
+      "rgb(33, 173, 162)"
+    ],
+    "reservedBgUnique": [
+      "rgb(15, 95, 142)"
+    ],
+    "availableHoverBg": "rgb(33, 173, 162)",
+    "reservedStripeSample": {
+      "width": "10px",
+      "bg": "rgb(47, 128, 237)",
+      "borderRadius": "8px 0px 0px 8px"
+    },
+    "legendDots": 5,
+    "badgeCount": 0,
+    "hasDemoClass": false
+  }
+}

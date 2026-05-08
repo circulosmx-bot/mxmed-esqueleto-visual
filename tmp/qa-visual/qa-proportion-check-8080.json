@@ -1,0 +1,144 @@
+{
+  "chromium_demo": {
+    "occupiedCount": 19,
+    "beforeWidthSet": [
+      "10px"
+    ],
+    "beforeWidthSample": [
+      "10px",
+      "10px",
+      "10px",
+      "10px",
+      "10px",
+      "10px",
+      "10px",
+      "10px",
+      "10px",
+      "10px",
+      "10px",
+      "10px"
+    ],
+    "colStyles": [
+      {
+        "border": "0px none rgb(33, 37, 41)",
+        "background": "rgba(0, 0, 0, 0)",
+        "paddingLeft": "2px",
+        "paddingRight": "2px",
+        "gap": "6px"
+      },
+      {
+        "border": "0px none rgb(33, 37, 41)",
+        "background": "rgba(0, 0, 0, 0)",
+        "paddingLeft": "2px",
+        "paddingRight": "2px",
+        "gap": "6px"
+      },
+      {
+        "border": "0px none rgb(33, 37, 41)",
+        "background": "rgba(0, 0, 0, 0)",
+        "paddingLeft": "2px",
+        "paddingRight": "2px",
+        "gap": "6px"
+      }
+    ],
+    "firstColCardWidthRatio": 0.9804,
+    "overlapIssues": 0,
+    "hasHOverflow": false,
+    "gridWidth": 1267,
+    "wrapWidth": 1289,
+    "visibleOriginCount": 5,
+    "legendDots": 5
+  },
+  "webkit_demo": {
+    "occupiedCount": 20,
+    "beforeWidthSet": [
+      "10px"
+    ],
+    "beforeWidthSample": [
+      "10px",
+      "10px",
+      "10px",
+      "10px",
+      "10px",
+      "10px",
+      "10px",
+      "10px",
+      "10px",
+      "10px",
+      "10px",
+      "10px"
+    ],
+    "colStyles": [
+      {
+        "border": "0px none rgb(33, 37, 41)",
+        "background": "rgba(0, 0, 0, 0)",
+        "paddingLeft": "2px",
+        "paddingRight": "2px",
+        "gap": "6px"
+      },
+      {
+        "border": "0px none rgb(33, 37, 41)",
+        "background": "rgba(0, 0, 0, 0)",
+        "paddingLeft": "2px",
+        "paddingRight": "2px",
+        "gap": "6px"
+      },
+      {
+        "border": "0px none rgb(33, 37, 41)",
+        "background": "rgba(0, 0, 0, 0)",
+        "paddingLeft": "2px",
+        "paddingRight": "2px",
+        "gap": "6px"
+      }
+    ],
+    "firstColCardWidthRatio": 0.9804,
+    "overlapIssues": 0,
+    "hasHOverflow": false,
+    "gridWidth": 1267,
+    "wrapWidth": 1289,
+    "visibleOriginCount": 5,
+    "legendDots": 5
+  },
+  "chromium_no_demo": {
+    "occupiedCount": 4,
+    "beforeWidthSet": [
+      "10px"
+    ],
+    "beforeWidthSample": [
+      "10px",
+      "10px",
+      "10px",
+      "10px"
+    ],
+    "colStyles": [
+      {
+        "border": "0px none rgb(33, 37, 41)",
+        "background": "rgba(0, 0, 0, 0)",
+        "paddingLeft": "2px",
+        "paddingRight": "2px",
+        "gap": "6px"
+      },
+      {
+        "border": "0px none rgb(33, 37, 41)",
+        "background": "rgba(0, 0, 0, 0)",
+        "paddingLeft": "2px",
+        "paddingRight": "2px",
+        "gap": "6px"
+      },
+      {
+        "border": "0px none rgb(33, 37, 41)",
+        "background": "rgba(0, 0, 0, 0)",
+        "paddingLeft": "2px",
+        "paddingRight": "2px",
+        "gap": "6px"
+      }
+    ],
+    "firstColCardWidthRatio": 0.9804,
+    "overlapIssues": 0,
+    "hasHOverflow": false,
+    "gridWidth": 1267,
+    "wrapWidth": 1289,
+    "visibleOriginCount": 1,
+    "legendDots": 5
+  }
+}

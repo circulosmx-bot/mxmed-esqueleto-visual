@@ -1,0 +1,203 @@
+{
+  "chromium": {
+    "counts": {
+      "all": 48,
+      "available": 31,
+      "occupied": 17
+    },
+    "heights": {
+      "available": [
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625,
+        56.625
+      ],
+      "occupied": [
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56
+      ],
+      "avgAvailable": 56.625,
+      "avgOccupied": 56
+    },
+    "styles": {
+      "card": {
+        "minHeight": "56px",
+        "height": "56px",
+        "paddingTop": "5px",
+        "paddingBottom": "5px",
+        "rowGap": "10px",
+        "boxSizing": "border-box",
+        "alignContent": "center"
+      },
+      "time": {
+        "fontSize": "19.84px",
+        "lineHeight": "20.832px",
+        "fontWeight": "900"
+      },
+      "consult": {
+        "fontSize": "10.24px",
+        "lineHeight": "11.264px"
+      },
+      "primaryAvailable": {
+        "fontSize": "15.04px",
+        "lineHeight": "15.792px"
+      },
+      "primaryOccupied": {
+        "fontSize": "12.48px",
+        "lineHeight": "14.976px"
+      }
+    },
+    "rowTopSpreadFirstRows": [
+      0,
+      0.625,
+      1.25,
+      1.875,
+      2.5,
+      3.125,
+      3.125,
+      3.75
+    ]
+  },
+  "webkit": {
+    "counts": {
+      "all": 48,
+      "available": 30,
+      "occupied": 18
+    },
+    "heights": {
+      "available": [
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938,
+        56.5938
+      ],
+      "occupied": [
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56,
+        56
+      ],
+      "avgAvailable": 56.5938,
+      "avgOccupied": 56
+    },
+    "styles": {
+      "card": {
+        "minHeight": "56px",
+        "height": "56px",
+        "paddingTop": "5px",
+        "paddingBottom": "5px",
+        "rowGap": "10px",
+        "boxSizing": "border-box",
+        "alignContent": "center"
+      },
+      "time": {
+        "fontSize": "19.84px",
+        "lineHeight": "20.831999px",
+        "fontWeight": "900"
+      },
+      "consult": {
+        "fontSize": "10.24px",
+        "lineHeight": "11.264px"
+      },
+      "primaryAvailable": {
+        "fontSize": "15.04px",
+        "lineHeight": "15.792px"
+      },
+      "primaryOccupied": {
+        "fontSize": "12.48px",
+        "lineHeight": "14.976px"
+      }
+    },
+    "rowTopSpreadFirstRows": [
+      0,
+      0.594,
+      1.188,
+      1.781,
+      2.375,
+      2.969,
+      2.969,
+      3.563
+    ]
+  }
+}

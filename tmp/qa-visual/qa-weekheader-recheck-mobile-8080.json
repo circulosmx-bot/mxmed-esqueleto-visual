@@ -1,0 +1,14 @@
+{
+  "chrome(chromium)": {
+    "centered": true,
+    "prevInside": true,
+    "nextInside": true,
+    "titleText": "Semana 07 – 13 Mayo 2026"
+  },
+  "safari(webkit)": {
+    "centered": true,
+    "prevInside": true,
+    "nextInside": true,
+    "titleText": "Semana 07 – 13 Mayo 2026"
+  }
+}

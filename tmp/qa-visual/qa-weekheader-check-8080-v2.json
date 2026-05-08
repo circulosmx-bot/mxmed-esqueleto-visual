@@ -1,0 +1,114 @@
+{
+  "desktop": {
+    "chromium": {
+      "titleText": "Semana 07 – 13 Mayo 2026",
+      "fontSize": "21.28px",
+      "lineHeight": "23.408px",
+      "centerDelta": 0,
+      "centered": true,
+      "nextInside": true,
+      "prevInside": true,
+      "columnTitles": [
+        "Hoy Jueves",
+        "Mañana Viernes",
+        "Sábado",
+        "Lunes",
+        "Martes",
+        "Miércoles"
+      ],
+      "columnDates": [
+        "07 Mayo",
+        "08 Mayo",
+        "09 Mayo",
+        "11 Mayo",
+        "12 Mayo",
+        "13 Mayo"
+      ],
+      "todayLabel": "Hoy Jueves",
+      "tomorrowLabel": "Mañana Viernes"
+    },
+    "webkit": {
+      "titleText": "Semana 07 – 13 Mayo 2026",
+      "fontSize": "21.280001px",
+      "lineHeight": "23.408001px",
+      "centerDelta": 0,
+      "centered": true,
+      "nextInside": true,
+      "prevInside": true,
+      "columnTitles": [
+        "Hoy Jueves",
+        "Mañana Viernes",
+        "Sábado",
+        "Lunes",
+        "Martes",
+        "Miércoles"
+      ],
+      "columnDates": [
+        "07 Mayo",
+        "08 Mayo",
+        "09 Mayo",
+        "11 Mayo",
+        "12 Mayo",
+        "13 Mayo"
+      ],
+      "todayLabel": "Hoy Jueves",
+      "tomorrowLabel": "Mañana Viernes"
+    }
+  },
+  "mobile": {
+    "chromium": {
+      "titleText": "Semana 07 – 13 Mayo 2026",
+      "fontSize": "21.28px",
+      "lineHeight": "23.408px",
+      "centerDelta": 0,
+      "centered": true,
+      "nextInside": true,
+      "prevInside": true,
+      "columnTitles": [
+        "Hoy Jueves",
+        "Mañana Viernes",
+        "Sábado",
+        "Lunes",
+        "Martes",
+        "Miércoles"
+      ],
+      "columnDates": [
+        "07 Mayo",
+        "08 Mayo",
+        "09 Mayo",
+        "11 Mayo",
+        "12 Mayo",
+        "13 Mayo"
+      ],
+      "todayLabel": "Hoy Jueves",
+      "tomorrowLabel": "Mañana Viernes"
+    },
+    "webkit": {
+      "titleText": "Semana 07 – 13 Mayo 2026",
+      "fontSize": "21.280001px",
+      "lineHeight": "23.408001px",
+      "centerDelta": 0,
+      "centered": true,
+      "nextInside": true,
+      "prevInside": true,
+      "columnTitles": [
+        "Hoy Jueves",
+        "Mañana Viernes",
+        "Sábado",
+        "Lunes",
+        "Martes",
+        "Miércoles"
+      ],
+      "columnDates": [
+        "07 Mayo",
+        "08 Mayo",
+        "09 Mayo",
+        "11 Mayo",
+        "12 Mayo",
+        "13 Mayo"
+      ],
+      "todayLabel": "Hoy Jueves",
+      "tomorrowLabel": "Mañana Viernes"
+    }
+  }
+}

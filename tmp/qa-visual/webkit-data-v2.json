@@ -1,0 +1,17 @@
+{
+  "style": [
+    "http://127.0.0.1:8765/assets/css/style.css?v=dev-1778191598925"
+  ],
+  "app": [
+    "http://127.0.0.1:8765/assets/js/app.js?v=qa-visual-20260507c"
+  ],
+  "qaModeHtml": true,
+  "qaModeBody": true,
+  "viewportByOrigin": {
+    "user": 3,
+    "operator": 5,
+    "web-patient": 2,
+    "ai": 6,
+    "call-center": 2
+  }
+}
