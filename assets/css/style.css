@@ -7755,18 +7755,18 @@ body{margin:0;background:var(--mm-fondo-base);}
   background: #0fa7a1;
 }
 .mx-ag-custom-slot-card.is-available.is-past{
-  background: rgba(137, 157, 145, 0.16);
-  color: #6f827a;
+  background: #898989;
+  color: #F9F9F9;
   cursor: not-allowed;
 }
 .mx-ag-custom-slot-card.is-available.is-past .mx-ag-custom-slot-time,
 .mx-ag-custom-slot-card.is-available.is-past .mx-ag-custom-slot-consultorio,
 .mx-ag-custom-slot-card.is-available.is-past .mx-ag-custom-slot-primary{
-  color: #6f827a;
+  color: #F9F9F9;
 }
 .mx-ag-custom-slot-card.is-available.is-past:hover,
 .mx-ag-custom-slot-card.is-available.is-past:focus-visible{
-  background: rgba(137, 157, 145, 0.16);
+  background: #898989;
 }
 .mx-ag-custom-slot-card.is-occupied{
   background: #0f5f8e;
@@ -7792,7 +7792,13 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-radius: 8px 0 0 8px;
 }
 .mx-ag-custom-slot-card.is-occupied.is-past{
-  background: #6a8196;
+  background: #708090;
+  color: #F9F9F9;
+}
+.mx-ag-custom-slot-card.is-occupied.is-past .mx-ag-custom-slot-time,
+.mx-ag-custom-slot-card.is-occupied.is-past .mx-ag-custom-slot-consultorio,
+.mx-ag-custom-slot-card.is-occupied.is-past .mx-ag-custom-slot-primary{
+  color: #F9F9F9;
 }
 .mx-ag-custom-slot-card.is-occupied.is-past::before{
   opacity: .58;
@@ -7949,6 +7955,70 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-size:.74rem;
   font-weight:700;
   color:#4a6f84;
+}
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-toolbar.fc-header-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:18px;
+  width:fit-content;
+  max-width:100%;
+  margin:2px 0 8px;
+  margin-inline:auto;
+}
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-toolbar.fc-header-toolbar .fc-toolbar-chunk{
+  display:flex;
+  align-items:center;
+}
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-toolbar-title{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  line-height:1.05;
+  gap:2px;
+  margin:0;
+  font-size:0 !important;
+}
+.mxm-agenda-day-toolbar-title-main{
+  display:block;
+  font-size:1.95rem;
+  font-weight:800;
+  color:#0f4f77;
+}
+.mxm-agenda-day-toolbar-title-date{
+  display:block;
+  font-size:1.8rem;
+  font-weight:800;
+  color:#0f4f77;
+}
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-mxmPrev-button,
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-mxmNext-button{
+  min-width:56px;
+  height:56px;
+  border-radius:12px;
+  font-size:1.55rem;
+  line-height:1;
+  padding:0 14px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+@media (min-width: 1280px){
+  .mx-agenda-calendar-wrap.is-day-view .fc .fc-toolbar.fc-header-toolbar{
+    gap:24px;
+  }
+}
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-timeGridDay-button,
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-timeGridWeek-button,
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-dayGridMonth-button{
+  display:none !important;
+}
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-scrollgrid-section-header{
+  display:none;
+}
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-timegrid-body{
+  border-top:1px solid #d8e8f2;
 }
 
 .mx-agenda-calendar-wrap .fc .fc-dayGridMonth-view .fc-daygrid-day-frame{
@@ -8173,16 +8243,16 @@ body{margin:0;background:var(--mm-fondo-base);}
   color:#ffffff;
 }
 .mx-ag-slot-card.is-available.is-past{
-  background:rgba(137, 157, 145, 0.16);
+  background:#898989;
   cursor:not-allowed;
 }
 .mx-ag-slot-card.is-available.is-past .mx-ag-slot-time,
 .mx-ag-slot-card.is-available.is-past .mx-ag-slot-consultorio,
 .mx-ag-slot-card.is-available.is-past .mx-ag-slot-primary{
-  color:#6f827a;
+  color:#F9F9F9;
 }
 .mx-ag-slot-card.is-available.is-past:hover{
-  background:rgba(137, 157, 145, 0.16);
+  background:#898989;
 }
 .mx-ag-slot-card.is-occupied{
   background:#0f5f8e;
@@ -8208,10 +8278,27 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-radius:8px 0 0 8px;
 }
 .mx-ag-slot-card.is-occupied.is-past{
-  background:#6a8196;
+  background:#708090;
+  color:#F9F9F9;
+}
+.mx-ag-slot-card.is-occupied.is-past .mx-ag-slot-time,
+.mx-ag-slot-card.is-occupied.is-past .mx-ag-slot-consultorio,
+.mx-ag-slot-card.is-occupied.is-past .mx-ag-slot-primary{
+  color:#F9F9F9;
 }
 .mx-ag-slot-card.is-occupied.is-past::before{
   opacity:.58;
+}
+/* Unifica el color del wrapper nativo de FullCalendar cuando la card interna ya está marcada como pasada. */
+.mx-agenda-calendar-wrap .fc .fc-timegrid-event:has(.mx-ag-slot-card.is-available.is-past){
+  background:#898989 !important;
+  border-color:#898989 !important;
+  color:#F9F9F9 !important;
+}
+.mx-agenda-calendar-wrap .fc .fc-timegrid-event:has(.mx-ag-slot-card.is-occupied.is-past){
+  background:#708090 !important;
+  border-color:#708090 !important;
+  color:#F9F9F9 !important;
 }
 .mx-ag-slot-card.is-demo-qa{
   cursor: default;
@@ -8248,7 +8335,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 .mx-ag-demo-qa-mode .mx-ag-slot-card.is-demo-qa.is-past,
 .mx-ag-demo-qa-mode .mx-ag-custom-slot-card.is-demo-qa.is-past{
-  background: #0f5f8e;
+  background: #708090;
 }
 .mx-ag-demo-qa-mode .mx-ag-slot-card.is-demo-qa.is-past .mx-ag-slot-time,
 .mx-ag-demo-qa-mode .mx-ag-slot-card.is-demo-qa.is-past .mx-ag-slot-consultorio,
@@ -8256,7 +8343,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mx-ag-demo-qa-mode .mx-ag-custom-slot-card.is-demo-qa.is-past .mx-ag-custom-slot-time,
 .mx-ag-demo-qa-mode .mx-ag-custom-slot-card.is-demo-qa.is-past .mx-ag-custom-slot-consultorio,
 .mx-ag-demo-qa-mode .mx-ag-custom-slot-card.is-demo-qa.is-past .mx-ag-custom-slot-primary{
-  color: #ffffff;
+  color: #F9F9F9;
 }
 .mx-ag-demo-qa-mode .mx-ag-slot-card.is-demo-qa.mx-ag-slot-origin--user,
 .mx-ag-demo-qa-mode .mx-ag-custom-slot-card.is-demo-qa.mx-ag-slot-origin--user{
@@ -8417,6 +8504,20 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mx-agenda-calendar-wrap .fc .fc-timegrid-event.mx-ag-visual--finished .mx-ag-event-state,
 .mx-agenda-calendar-wrap .fc .fc-daygrid-event.mx-ag-visual--finished .mx-ag-event-state{
   color: #00B0C5 !important;
+}
+/* Prioridad final: toda cita pasada normal debe renderizarse en #708090
+   aunque existan colores inline por status/origen en el wrapper de FullCalendar. */
+.mx-agenda-calendar-wrap .fc .fc-timegrid-event.mx-ag-event--past:not(.mx-ag-status--cancelled):not(.mx-ag-status--no-show):not(.mx-ag-visual--blacklist):not(.mx-ag-visual--graylist):not(.mx-ag-blocked-event):not(.mx-ag-cancel-trace-event),
+.mx-agenda-calendar-wrap .fc .fc-daygrid-event.mx-ag-event--past:not(.mx-ag-status--cancelled):not(.mx-ag-status--no-show):not(.mx-ag-visual--blacklist):not(.mx-ag-visual--graylist):not(.mx-ag-blocked-event):not(.mx-ag-cancel-trace-event){
+  background: #708090 !important;
+  border-color: #708090 !important;
+  color: #F9F9F9 !important;
+}
+.mx-agenda-calendar-wrap .fc .fc-timegrid-event.mx-ag-event--past:not(.mx-ag-status--cancelled):not(.mx-ag-status--no-show):not(.mx-ag-visual--blacklist):not(.mx-ag-visual--graylist):not(.mx-ag-blocked-event):not(.mx-ag-cancel-trace-event) .mx-ag-event-title,
+.mx-agenda-calendar-wrap .fc .fc-daygrid-event.mx-ag-event--past:not(.mx-ag-status--cancelled):not(.mx-ag-status--no-show):not(.mx-ag-visual--blacklist):not(.mx-ag-visual--graylist):not(.mx-ag-blocked-event):not(.mx-ag-cancel-trace-event) .mx-ag-event-title,
+.mx-agenda-calendar-wrap .fc .fc-timegrid-event.mx-ag-event--past:not(.mx-ag-status--cancelled):not(.mx-ag-status--no-show):not(.mx-ag-visual--blacklist):not(.mx-ag-visual--graylist):not(.mx-ag-blocked-event):not(.mx-ag-cancel-trace-event) .mx-ag-event-state,
+.mx-agenda-calendar-wrap .fc .fc-daygrid-event.mx-ag-event--past:not(.mx-ag-status--cancelled):not(.mx-ag-status--no-show):not(.mx-ag-visual--blacklist):not(.mx-ag-visual--graylist):not(.mx-ag-blocked-event):not(.mx-ag-cancel-trace-event) .mx-ag-event-state{
+  color: #F9F9F9 !important;
 }
 .mx-agenda-calendar-wrap .fc .fc-timegrid-event.mx-ag-blocked-event .mx-ag-blocked-event-title,
 .mx-agenda-calendar-wrap .fc .fc-daygrid-event.mx-ag-blocked-event .mx-ag-blocked-event-title,

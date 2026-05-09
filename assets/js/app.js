@@ -707,6 +707,7 @@ console.info('app.js loaded :: 20251123a');
   let customWeekExpectedRangeKey = '';
   let customWeekLastEventsScopeKey = '';
   let customWeekExpectedScopeKey = '';
+  let agendaToolbarLayoutMode = '';
   let customWeekLastBridgeMeta = {
     rangeStart: '',
     rangeEnd: '',
@@ -2377,6 +2378,11 @@ console.info('app.js loaded :: 20251123a');
     };
   };
   const isAvailabilitySlotEventType = (eventType = '')=> sanitizeText(eventType || '') === 'availability_slot';
+  const isAvailabilitySlotElapsed = (startLike, nowTs = Date.now())=>{
+    const start = startLike instanceof Date ? startLike : new Date(startLike || '');
+    if(Number.isNaN(start.getTime())) return false;
+    return start.getTime() < Number(nowTs || Date.now());
+  };
   const isTechnicalNonCardEventType = (eventType = '')=>{
     const safeType = sanitizeText(eventType || '');
     return safeType === 'availability' || safeType === 'focus_marker' || safeType === 'cancel_trace' || safeType === 'blocked_slot';
@@ -2998,7 +3004,7 @@ console.info('app.js loaded :: 20251123a');
             const end = eventRef?.end instanceof Date ? eventRef.end : new Date(eventRef?.end || '');
             if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
             const timeLabel = formatAgendaEventSlotTime(start);
-            const isPastRange = end.getTime() < renderNowTs;
+            const isPastByStart = isAvailabilitySlotElapsed(start, renderNowTs);
             const consultorioIdSafe = sanitizeText(eventRef?.extendedProps?.consultorio_id || '');
             const consultorioLabel = normalizeConsultorioDisplayLabel(
               sanitizeText(
@@ -3013,8 +3019,10 @@ console.info('app.js loaded :: 20251123a');
               const slotConsultorioId = sanitizeText(eventRef?.extendedProps?.consultorio_id || '');
               const slotRangeKey = toRangeKey(start, end);
               const isFocusedSlot = slotRangeKey && slotRangeKey === sanitizeText(nextSlotFocus?.key || '');
-              const availableClass = `mx-ag-custom-slot-card mxm-custom-week-card is-available${isPastRange ? ' is-past' : ''}${isFocusedSlot ? ' is-focus-suggested' : ''}`;
-              const pastAttrs = isPastRange ? 'disabled aria-disabled="true" tabindex="-1"' : '';
+              const isElapsedSlot = isAvailabilitySlotElapsed(start, renderNowTs);
+              const availableClass = `mx-ag-custom-slot-card mxm-custom-week-card is-available${isElapsedSlot ? ' is-past' : ''}${isFocusedSlot ? ' is-focus-suggested' : ''}`;
+              const pastAttrs = isElapsedSlot ? 'disabled aria-disabled="true" tabindex="-1"' : '';
+              const availabilityLabel = isElapsedSlot ? 'EXPIRADA' : 'DISPONIBLE';
               return `
                 <button type="button"
                   class="${availableClass}"
@@ -3029,7 +3037,7 @@ console.info('app.js loaded :: 20251123a');
                     <span class="mx-ag-custom-slot-time">${escapeHtml(timeLabel)}</span>
                     <span class="mx-ag-custom-slot-consultorio">${escapeHtml(consultorioLabel.toUpperCase())}</span>
                   </div>
-                  <div class="mx-ag-custom-slot-primary">DISPONIBLE</div>
+                  <div class="mx-ag-custom-slot-primary">${availabilityLabel}</div>
                 </button>
               `;
             }
@@ -3061,7 +3069,9 @@ console.info('app.js loaded :: 20251123a');
               || statusKeyNorm.includes('ausente')
             );
             const hasPriorityBehavior = patientFlagType === 'black' || patientFlagType === 'grey';
-            const isPastVisual = !!(isPastRange && !isCancelledStatus && !isNoShowStatus && !hasPriorityBehavior && !isBlockedSlot);
+            // Regla UX: en citas ocupadas, "pasada" debe ganar sobre origen y patient_flag_type.
+            // Excepciones visuales: canceladas y bloqueos.
+            const isPastVisual = !!(isPastByStart && !isCancelledStatus && !isBlockedSlot);
             const occupiedClass = isBlockedSlot
               ? 'mx-ag-custom-slot-card mxm-custom-week-card is-blocked'
               : `mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--${escapeAttrSafe(originVisualKey)}${isPastVisual ? ' is-past' : ''}${isDemoQaAppointment ? ' is-demo-qa' : ''}`;
@@ -6464,6 +6474,54 @@ console.info('app.js loaded :: 20251123a');
     if(safeView === 'timeGridDay') return 'day';
     if(safeView === 'dayGridMonth') return 'month';
     return 'week';
+  };
+  const syncAgendaCalendarViewClasses = (viewType = '')=>{
+    if(!(els.calendarWrap instanceof HTMLElement)) return;
+    const mode = resolveAgendaViewModeFromCalendarView(viewType || String(calendar?.view?.type || ''));
+    els.calendarWrap.classList.toggle('is-day-view', mode === 'day');
+    els.calendarWrap.classList.toggle('is-week-view', mode === 'week');
+    els.calendarWrap.classList.toggle('is-month-view', mode === 'month');
+  };
+  const syncAgendaToolbarLayoutByView = (viewType = '')=>{
+    if(!calendar) return;
+    const mode = resolveAgendaViewModeFromCalendarView(viewType || String(calendar?.view?.type || ''));
+    const nextLayoutMode = mode === 'day' ? 'day' : 'default';
+    if(agendaToolbarLayoutMode === nextLayoutMode) return;
+    const nextHeaderToolbar = nextLayoutMode === 'day'
+      ? {
+          left: 'mxmPrev',
+          center: 'title',
+          right: 'mxmNext'
+        }
+      : {
+          left: 'mxmPrev,mxmNext',
+          center: 'title',
+          right: 'timeGridDay,timeGridWeek,dayGridMonth'
+        };
+    try{
+      calendar.setOption('headerToolbar', nextHeaderToolbar);
+      agendaToolbarLayoutMode = nextLayoutMode;
+    }catch(_){}
+  };
+  const syncAgendaDayToolbarTitle = (dateLike = null)=>{
+    if(!calendar || !(els.calendarWrap instanceof HTMLElement)) return;
+    const mode = resolveAgendaViewModeFromCalendarView(String(calendar?.view?.type || ''));
+    if(mode !== 'day') return;
+    const titleEl = els.calendarWrap.querySelector('.fc .fc-toolbar-title');
+    if(!(titleEl instanceof HTMLElement)) return;
+    const dayDate = toLocalDayDate(dateLike || calendar.getDate?.() || new Date());
+    if(!(dayDate instanceof Date) || Number.isNaN(dayDate.getTime())) return;
+    const today = toLocalDayDate(new Date());
+    const titleLabel = (today && isSameLocalDay(dayDate, today))
+      ? 'Hoy'
+      : capitalizeAgendaLabel(
+        new Intl.DateTimeFormat('es-MX', { weekday: 'long' }).format(dayDate)
+      );
+    const dateLabel = formatAgendaHeaderDateLabel(dayDate);
+    titleEl.innerHTML = `
+      <span class="mxm-agenda-day-toolbar-title-main">${escapeHtml(titleLabel)}</span>
+      <span class="mxm-agenda-day-toolbar-title-date">${escapeHtml(dateLabel)}</span>
+    `;
   };
   const syncAgendaViewModeButtons = (mode = 'week')=>{
     const normalizedMode = normalizeAgendaViewMode(mode);
@@ -12656,16 +12714,16 @@ console.info('app.js loaded :: 20251123a');
             consultorioIdSafe
           );
           const slotTime = formatAgendaEventSlotTime(arg.event.start);
-          const slotEnd = arg.event.end instanceof Date ? arg.event.end : new Date(arg.event.end || '');
-          const isPastSlot = !Number.isNaN(slotEnd.getTime()) && slotEnd.getTime() < Date.now();
+          const isElapsedSlot = isAvailabilitySlotElapsed(arg.event.start);
+          const availabilityLabel = isElapsedSlot ? 'EXPIRADA' : 'DISPONIBLE';
           return {
             html: `
-              <div class="mx-ag-slot-card is-available${isPastSlot ? ' is-past' : ''}">
+              <div class="mx-ag-slot-card is-available${isElapsedSlot ? ' is-past' : ''}">
                 <div class="mx-ag-slot-top">
                   <div class="mx-ag-slot-time">${escapeHtml(slotTime)}</div>
                   <div class="mx-ag-slot-consultorio">${escapeHtml(consultorioLabel.toUpperCase())}</div>
                 </div>
-                <div class="mx-ag-slot-primary">DISPONIBLE</div>
+                <div class="mx-ag-slot-primary">${availabilityLabel}</div>
               </div>
             `
           };
@@ -12685,8 +12743,7 @@ console.info('app.js loaded :: 20251123a');
         const eventId = sanitizeText(arg.event.id || '');
         const isBlockConflict = eventId && activeBlockConflictIds.has(eventId);
         const originVisualKey = resolveAppointmentOriginVisualKey(props);
-        const slotEnd = arg.event.end instanceof Date ? arg.event.end : new Date(arg.event.end || '');
-        const isPastRange = !Number.isNaN(slotEnd.getTime()) && slotEnd.getTime() < Date.now();
+        const isPastByStart = isAvailabilitySlotElapsed(arg.event.start);
         const statusKeyNorm = normalizeText(
           sanitizeText(props.status_key_real || props.status_key || props.status || '')
         );
@@ -12708,7 +12765,9 @@ console.info('app.js loaded :: 20251123a');
           || statusKeyNorm.includes('ausente')
         );
         const hasPriorityBehavior = patientFlagType === 'black' || patientFlagType === 'grey';
-        const isPastVisual = !!(isPastRange && !isCancelledStatus && !isNoShowStatus && !hasPriorityBehavior);
+        // Regla UX: en citas ocupadas, "pasada" debe ganar sobre origen y patient_flag_type.
+        // Excepción visual: canceladas.
+        const isPastVisual = !!(isPastByStart && !isCancelledStatus);
         return {
           html: `
             <div class="mx-ag-slot-card is-occupied mx-ag-slot-origin--${escapeHtml(originVisualKey)}${isPastVisual ? ' is-past' : ''}${isBlockConflict ? ' is-block-conflict' : ''}${isDemoQaAppointment ? ' is-demo-qa' : ''}" data-origin-visual-key="${escapeHtml(originVisualKey)}">
@@ -13028,6 +13087,8 @@ console.info('app.js loaded :: 20251123a');
         }
         agendaViewMode = currentMode;
         syncAgendaViewModeButtons(currentMode);
+        syncAgendaCalendarViewClasses(currentViewType);
+        syncAgendaToolbarLayoutByView(currentViewType);
         syncNativeAgendaToolbarViewGuards();
         const previousViewType = sanitizeText(lastCalendarViewType || '');
         if(currentViewType === 'timeGridWeek' && previousViewType !== 'timeGridWeek'){
@@ -13070,6 +13131,8 @@ console.info('app.js loaded :: 20251123a');
             });
           }
           try{ calendar.refetchEvents(); }catch(_){}
+          window.setTimeout(()=> syncAgendaDayToolbarTitle(dayAnchor), 0);
+          window.setTimeout(()=> syncAgendaDayToolbarTitle(dayAnchor), 120);
         }
         lastCalendarViewType = currentViewType;
         if(blockSlotModal){
@@ -13088,11 +13151,16 @@ console.info('app.js loaded :: 20251123a');
         window.setTimeout(()=> syncNextFocusViewport({ behavior: 'auto' }), 0);
         window.setTimeout(()=>{
           try{ calendar.updateSize(); }catch(_){}
+          if(currentViewType === 'timeGridDay'){
+            syncAgendaDayToolbarTitle(resolveAgendaViewAnchorDate());
+          }
         }, 0);
       }
     });
 
     calendar.render();
+    syncAgendaCalendarViewClasses(String(calendar?.view?.type || ''));
+    syncAgendaToolbarLayoutByView(String(calendar?.view?.type || ''));
     applyWeeklyHoursState();
     scheduleCustomWeekRender();
     syncNativeAgendaToolbarViewGuards();
