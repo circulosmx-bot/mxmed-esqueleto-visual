@@ -726,6 +726,7 @@ console.info('app.js loaded :: 20251123a');
     scopeKey: '',
     events: []
   };
+  let agendaDaySlotMinOverride = '';
   let availabilityOmitConsultorioSupport = null;
   let globalAgendaExpandedVisibleRange = null;
   let globalAgendaExpandedVisibleRangeLoading = false;
@@ -1193,6 +1194,8 @@ console.info('app.js loaded :: 20251123a');
       scopeKey: '',
       events: []
     };
+    syncAgendaViewModeButtons(agendaViewMode);
+    syncNativeAgendaToolbarViewGuards();
     customWeekLastBridgeMeta = {
       rangeStart: '',
       rangeEnd: '',
@@ -1501,6 +1504,33 @@ console.info('app.js loaded :: 20251123a');
       start: new Date(range.startDate),
       end: new Date(range.endDate)
     };
+  };
+  const isLocalDayInsideRange = (dayLike = null, startLike = null, endLike = null)=>{
+    const day = toLocalDayDate(dayLike);
+    const start = toLocalDayDate(startLike);
+    const end = toLocalDayDate(endLike);
+    if(!(day instanceof Date) || Number.isNaN(day.getTime())) return false;
+    if(!(start instanceof Date) || Number.isNaN(start.getTime())) return false;
+    if(!(end instanceof Date) || Number.isNaN(end.getTime())) return false;
+    const dayTs = day.getTime();
+    return dayTs >= start.getTime() && dayTs < end.getTime();
+  };
+  const resolveCustomWeekRangeForDayProjection = (dayLike = null)=>{
+    const day = toLocalDayDate(dayLike);
+    if(!(day instanceof Date) || Number.isNaN(day.getTime())){
+      return null;
+    }
+    const candidates = [day, addLocalDays(day, -1)].filter((candidate)=>{
+      return candidate instanceof Date && !Number.isNaN(candidate.getTime());
+    });
+    for(const candidate of candidates){
+      const range = resolveCustomWeekRangeFromAnchor(candidate, 6);
+      if(range && isLocalDayInsideRange(day, range.startDate, range.endDate)){
+        return range;
+      }
+    }
+    // Fallback defensivo para días atípicos (ej. domingo ancla): mantener Día operativa.
+    return resolveCustomWeekRangeFromAnchor(day, 6, { skipSundays: false });
   };
   const syncCustomWeekToolbarTitle = ()=>{
     if(!calendar || !isCustomWeekActive()) return;
@@ -2191,9 +2221,160 @@ console.info('app.js loaded :: 20251123a');
   const resolveCustomWeekSharedVisibleState = ()=>{
     const state = customWeekSharedVisibleState;
     if(!state || typeof state !== 'object') return null;
+    if(!(state.anchorDate instanceof Date) || Number.isNaN(state.anchorDate.getTime())) return null;
     if(!(state.startDate instanceof Date) || !(state.endDate instanceof Date)) return null;
-    if(!Array.isArray(state.events) || state.events.length === 0) return null;
+    if(!Array.isArray(state.visibleDays) || state.visibleDays.length === 0) return null;
+    if(!sanitizeText(state.rangeKey || '')) return null;
+    if(!Array.isArray(state.events)) return null;
     return state;
+  };
+  const isSharedWeekSnapshotCoveringLocalDay = (state = null, dayLike = null)=>{
+    if(!state || typeof state !== 'object') return false;
+    const dayDate = toLocalDayDate(dayLike);
+    if(!(dayDate instanceof Date) || Number.isNaN(dayDate.getTime())) return false;
+    const dayKey = formatYmdLocal(dayDate);
+    if(!dayKey) return false;
+    const snapshotScopeKey = sanitizeText(state.scopeKey || '');
+    const liveScopeKey = resolveCustomWeekScopeKey();
+    if(liveScopeKey && snapshotScopeKey && liveScopeKey !== snapshotScopeKey){
+      return false;
+    }
+    if(isLocalDayInsideRange(dayDate, state.startDate, state.endDate)){
+      return true;
+    }
+    // Compatibilidad: si falta rango válido, usar visibleDays como fallback.
+    const snapshotDayKeys = new Set(
+      Array.isArray(state.visibleDays)
+        ? state.visibleDays
+          .map((day)=> toLocalDayDate(day))
+          .filter((day)=> day instanceof Date)
+          .map((day)=> formatYmdLocal(day))
+        : []
+    );
+    return snapshotDayKeys.has(dayKey);
+  };
+  const hydrateCustomWeekSharedVisibleStateFromWeekCache = ({ weekRange = null, allowEmptyEvents = true } = {})=>{
+    const safeWeekRange = (
+      weekRange
+      && weekRange.anchorDate instanceof Date
+      && weekRange.startDate instanceof Date
+      && weekRange.endDate instanceof Date
+      && Array.isArray(weekRange.visibleDays)
+      && weekRange.visibleDays.length > 0
+      && sanitizeText(weekRange.rangeKey || '')
+    )
+      ? weekRange
+      : resolveCustomWeekRangeFromAnchor(resolveAgendaRollingStartDate(), 6);
+    if(!safeWeekRange){
+      return false;
+    }
+    const cachedEvents = resolveCustomWeekEventSource().events;
+    if(!allowEmptyEvents && (!Array.isArray(cachedEvents) || cachedEvents.length === 0)){
+      return false;
+    }
+    updateCustomWeekSharedVisibleState({
+      weekRange: safeWeekRange,
+      visibleDays: safeWeekRange.visibleDays,
+      events: cachedEvents
+    });
+    return true;
+  };
+  const hydrateSharedWeekSnapshotForDayProjection = async (dayLike = null)=>{
+    const dayDate = toLocalDayDate(dayLike);
+    if(!(dayDate instanceof Date) || Number.isNaN(dayDate.getTime())){
+      return { ok: false, reason: 'invalid_day' };
+    }
+    const targetWeekRange = resolveCustomWeekRangeForDayProjection(dayDate);
+    if(!targetWeekRange){
+      return { ok: false, reason: 'invalid_target_week_range' };
+    }
+    const targetRangeKey = sanitizeText(targetWeekRange.rangeKey || '');
+    const targetScopeKey = resolveCustomWeekScopeKey();
+    const cacheRangeKey = sanitizeText(customWeekLastEventsRangeKey || '');
+    const cacheScopeKey = sanitizeText(customWeekLastEventsScopeKey || '');
+    const cacheScopeMatches = (!targetScopeKey || !cacheScopeKey || targetScopeKey === cacheScopeKey);
+    const hasMatchingCache = (
+      !!targetRangeKey
+      && targetRangeKey === cacheRangeKey
+      && cacheScopeMatches
+    );
+    if(hasMatchingCache){
+      const hydrated = hydrateCustomWeekSharedVisibleStateFromWeekCache({
+        weekRange: targetWeekRange,
+        allowEmptyEvents: true
+      });
+      const stateFromCache = resolveCustomWeekSharedVisibleState();
+      if(hydrated && isSharedWeekSnapshotCoveringLocalDay(stateFromCache, dayDate)){
+        return { ok: true, source: 'cache', state: stateFromCache };
+      }
+    }
+
+    const requestRange = {
+      start: new Date(targetWeekRange.startDate),
+      end: new Date(targetWeekRange.endDate)
+    };
+    const [appointmentEvents, availabilityResult] = await Promise.all([
+      fetchAppointments(requestRange),
+      fetchAvailabilityEvents(requestRange)
+    ]);
+    const availabilityMeta = availabilityResult?.meta || {};
+    const hasRealRange = availabilityMeta?.has_visible_schedule_range === true;
+    const rangeMin = normalizeAgendaTimeValue(sanitizeText(availabilityMeta?.visible_min_time || ''));
+    const rangeMax = normalizeAgendaTimeValue(sanitizeText(availabilityMeta?.visible_max_time || ''));
+    visibleScheduleRange = (hasRealRange && rangeMin && rangeMax)
+      ? { minTime: rangeMin, maxTime: rangeMax }
+      : null;
+    const availabilityEvents = Array.isArray(availabilityResult?.events) ? availabilityResult.events : [];
+    const mergedEvents = [...availabilityEvents, ...appointmentEvents];
+    setLatestEventsForCustomWeek(mergedEvents);
+    customWeekLastEventsRangeKey = targetRangeKey || toCustomWeekRangeKey(requestRange.start, requestRange.end);
+    customWeekLastEventsScopeKey = targetScopeKey;
+    const appointmentCountsByDate = {};
+    (Array.isArray(appointmentEvents) ? appointmentEvents : []).forEach((eventRef)=>{
+      const startDate = eventRef?.start instanceof Date
+        ? eventRef.start
+        : new Date(eventRef?.start || '');
+      if(Number.isNaN(startDate.getTime())) return;
+      const key = formatYmdLocal(startDate);
+      appointmentCountsByDate[key] = Number(appointmentCountsByDate[key] || 0) + 1;
+    });
+    customWeekLastBridgeMeta = {
+      rangeStart: requestRange.start instanceof Date ? requestRange.start.toISOString() : '',
+      rangeEnd: requestRange.end instanceof Date ? requestRange.end.toISOString() : '',
+      mode: sanitizeText(availabilityResult?.meta?.consultorio_mode || ''),
+      consultoriosIncluded: Array.isArray(availabilityResult?.meta?.consultorios_included)
+        ? availabilityResult.meta.consultorios_included.map((id)=> sanitizeText(id || '')).filter(Boolean)
+        : [],
+      availabilityByDate: {
+        ...(availabilityResult?.meta?.availability_slots_received_by_date || {})
+      },
+      skippedByDate: {
+        ...(availabilityResult?.meta?.availability_slots_skipped_by_date || {})
+      },
+      appointmentsByDate: appointmentCountsByDate,
+      activeWeekdays: Array.from(resolveCustomWeekActiveWeekdaysContext().activeWeekdays).sort((a, b)=> a - b)
+    };
+    updateCustomWeekSharedVisibleState({
+      weekRange: targetWeekRange,
+      visibleDays: targetWeekRange.visibleDays,
+      events: resolveCustomWeekEventSource().events
+    });
+    const hydratedState = resolveCustomWeekSharedVisibleState();
+    const covered = isSharedWeekSnapshotCoveringLocalDay(hydratedState, dayDate);
+    if(!covered){
+      return {
+        ok: false,
+        reason: 'snapshot_not_covering_day_after_hydration',
+        state: hydratedState,
+        rangeKey: customWeekLastEventsRangeKey
+      };
+    }
+    return {
+      ok: true,
+      source: hasMatchingCache ? 'cache_refetch' : 'network',
+      state: hydratedState,
+      rangeKey: customWeekLastEventsRangeKey
+    };
   };
   const isAvailabilitySlotEventType = (eventType = '')=> sanitizeText(eventType || '') === 'availability_slot';
   const isTechnicalNonCardEventType = (eventType = '')=>{
@@ -2220,6 +2401,268 @@ console.info('app.js loaded :: 20251123a');
   const sanitizeDayEventsForCardRender = (eventsInput = [])=>{
     const safeEvents = Array.isArray(eventsInput) ? eventsInput : [];
     return safeEvents.filter((eventRef)=> hasAgendaCardRequiredData(eventRef));
+  };
+  const resolveAgendaDaySlotMinOverrideFromEvents = (eventsInput = [])=>{
+    const safeEvents = Array.isArray(eventsInput) ? eventsInput : [];
+    let minMinutes = null;
+    safeEvents.forEach((eventRef)=>{
+      const start = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
+      if(Number.isNaN(start.getTime())) return;
+      const minutes = (start.getHours() * 60) + start.getMinutes();
+      minMinutes = (minMinutes === null) ? minutes : Math.min(minMinutes, minutes);
+    });
+    if(minMinutes === null) return '';
+    const slotSize = Math.max(5, Number.parseInt(String(resolveAgendaSlotMinutes() || 30), 10) || 30);
+    const alignedMin = Math.max(0, Math.floor(minMinutes / slotSize) * slotSize);
+    return minutesToTime(alignedMin);
+  };
+  const toAgendaDaySlotKey = (eventRef)=>{
+    const start = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
+    const end = eventRef?.end instanceof Date ? eventRef.end : new Date(eventRef?.end || '');
+    if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
+    const consultorioId = sanitizeText(eventRef?.extendedProps?.consultorio_id || '');
+    return `${consultorioId}__${start.getTime()}__${end.getTime()}`;
+  };
+  const collapseDaySlotCollisions = (eventsInput = [])=>{
+    const safeEvents = Array.isArray(eventsInput) ? eventsInput : [];
+    const occupiedKeys = new Set();
+    safeEvents.forEach((eventRef)=>{
+      const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
+      if(
+        eventType === 'availability'
+        || eventType === 'availability_slot'
+        || eventType === 'focus_marker'
+        || eventType === 'cancel_trace'
+      ){
+        return;
+      }
+      const slotKey = toAgendaDaySlotKey(eventRef);
+      if(slotKey){
+        occupiedKeys.add(slotKey);
+      }
+    });
+    return safeEvents.filter((eventRef)=>{
+      const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
+      if(eventType !== 'availability_slot') return true;
+      const slotKey = toAgendaDaySlotKey(eventRef);
+      return !slotKey || !occupiedKeys.has(slotKey);
+    });
+  };
+  const dedupeDaySnapshotEvents = (eventsInput = [])=>{
+    const safeEvents = Array.isArray(eventsInput) ? eventsInput : [];
+    const seen = new Set();
+    return safeEvents.filter((eventRef)=>{
+      const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
+      const slotKey = toAgendaDaySlotKey(eventRef);
+      const eventId = sanitizeText(eventRef?.id || '');
+      const signature = `${eventType}__${eventId}__${slotKey}`;
+      if(seen.has(signature)){
+        return false;
+      }
+      seen.add(signature);
+      return true;
+    });
+  };
+  const AGENDA_DAY_0508_DEBUG_KEY = '2026-05-08';
+  const AGENDA_DAY_0508_EXPECTED_PATIENTS = [
+    'Rubén López González',
+    'María López Ramírez',
+    'Lucía Fernández',
+    'Ana Sofía Hernández',
+    'Juan Pérez López',
+    'Verónica Gutiérrez'
+  ];
+  const isEventOverlappingLocalDay = (eventRef, dayLike = null)=>{
+    const dayStart = toLocalDayDate(dayLike);
+    const dayEnd = addLocalDays(dayStart, 1);
+    if(!(dayStart instanceof Date) || !(dayEnd instanceof Date)) return false;
+    const start = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
+    const end = eventRef?.end instanceof Date ? eventRef.end : new Date(eventRef?.end || '');
+    if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+    return start < dayEnd && end > dayStart;
+  };
+  const resolveDaySnapshotDebugBucket = (eventRef)=>{
+    const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
+    if(eventType === 'availability_slot') return 'availability_slot';
+    if(eventType === 'availability') return 'availability_window';
+    if(eventType === 'focus_marker' || eventType === 'cancel_trace' || eventType === 'blocked_slot'){
+      return 'technical';
+    }
+    return 'reserved';
+  };
+  const toDaySnapshotDebugSignature = (eventRef)=>{
+    const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
+    const slotKey = toAgendaDaySlotKey(eventRef);
+    const eventId = sanitizeText(eventRef?.id || '');
+    return `${eventType}__${eventId}__${slotKey}`;
+  };
+  const resolveDaySanitizeExclusionReason = (eventRef)=>{
+    const props = (eventRef?.extendedProps && typeof eventRef.extendedProps === 'object') ? eventRef.extendedProps : {};
+    const eventType = sanitizeText(props?.event_type || '');
+    const start = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
+    const end = eventRef?.end instanceof Date ? eventRef.end : new Date(eventRef?.end || '');
+    if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())){
+      return 'invalid_datetime';
+    }
+    if(end <= start){
+      return 'invalid_range_end_lte_start';
+    }
+    if(isAvailabilitySlotEventType(eventType)){
+      return '';
+    }
+    if(isTechnicalNonCardEventType(eventType)){
+      return `technical_event_type_${eventType || 'unknown'}`;
+    }
+    const patientName = resolveEventPatientDisplayName(props, eventRef);
+    if(!patientName){
+      return 'missing_patient_name';
+    }
+    return '';
+  };
+  const toDaySnapshotDebugRow = (eventRef, options = {})=>{
+    const props = (eventRef?.extendedProps && typeof eventRef.extendedProps === 'object') ? eventRef.extendedProps : {};
+    const start = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
+    const end = eventRef?.end instanceof Date ? eventRef.end : new Date(eventRef?.end || '');
+    const consultorioId = sanitizeText(props.consultorio_id || '');
+    const consultorioName = sanitizeText(
+      props.consultorio_label
+      || props.consultorio_name
+      || resolveAgendaConsultorioLabelById(consultorioId)
+      || ''
+    );
+    const patientName = resolveEventPatientDisplayName(props, eventRef);
+    const eventType = sanitizeText(props.event_type || '');
+    return {
+      id: sanitizeText(eventRef?.id || ''),
+      title: sanitizeText(eventRef?.title || ''),
+      type: eventType || 'appointment',
+      start: Number.isNaN(start.getTime()) ? '' : start.toISOString(),
+      end: Number.isNaN(end.getTime()) ? '' : end.toISOString(),
+      consultorio_id: consultorioId,
+      consultorio_name: consultorioName,
+      patient_name: sanitizeText(patientName || ''),
+      status: sanitizeText(props.status_key_real || props.status_key || props.status || ''),
+      origin_visual_key: sanitizeText(
+        props.origin_visual_key
+        || resolveAppointmentOriginVisualKey(props)
+        || ''
+      ),
+      slotKey: toAgendaDaySlotKey(eventRef),
+      bucket: sanitizeText(options.bucket || resolveDaySnapshotDebugBucket(eventRef)),
+      motivo_exclusion: sanitizeText(options.motivo_exclusion || '')
+    };
+  };
+  const buildDaySnapshotExclusionMap = (sourceEvents = [], targetEvents = [], reasonResolver = null)=>{
+    const source = Array.isArray(sourceEvents) ? sourceEvents : [];
+    const target = Array.isArray(targetEvents) ? targetEvents : [];
+    const targetSignatures = new Set(target.map((eventRef)=> toDaySnapshotDebugSignature(eventRef)));
+    const map = new Map();
+    source.forEach((eventRef)=>{
+      const signature = toDaySnapshotDebugSignature(eventRef);
+      if(targetSignatures.has(signature)) return;
+      const reason = typeof reasonResolver === 'function'
+        ? sanitizeText(reasonResolver(eventRef) || '')
+        : '';
+      map.set(signature, reason || 'excluded_in_next_stage');
+    });
+    return map;
+  };
+  const debugAgendaDay0508Snapshot = ({ label = '', events = [], exclusionMap = null } = {})=>{
+    const safeLabel = sanitizeText(label || '');
+    if(!safeLabel) return;
+    const safeEvents = Array.isArray(events) ? events : [];
+    const safeExclusionMap = (exclusionMap instanceof Map) ? exclusionMap : new Map();
+    const rows = safeEvents.map((eventRef)=>{
+      const signature = toDaySnapshotDebugSignature(eventRef);
+      return toDaySnapshotDebugRow(eventRef, {
+        motivo_exclusion: sanitizeText(safeExclusionMap.get(signature) || '')
+      });
+    });
+    const counters = rows.reduce((acc, row)=>{
+      const key = sanitizeText(row.bucket || 'unknown') || 'unknown';
+      acc[key] = Number(acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    try{
+      if(!window.__MXM_DAY_0508_SNAPSHOTS || typeof window.__MXM_DAY_0508_SNAPSHOTS !== 'object'){
+        window.__MXM_DAY_0508_SNAPSHOTS = {};
+      }
+      window.__MXM_DAY_0508_SNAPSHOTS[safeLabel] = {
+        counters: {
+          total: rows.length,
+          reserved: Number(counters.reserved || 0),
+          availability_slot: Number(counters.availability_slot || 0),
+          availability_window: Number(counters.availability_window || 0),
+          technical: Number(counters.technical || 0)
+        },
+        rows
+      };
+    }catch(_){}
+    try{
+      console.groupCollapsed(`%c${safeLabel}`, 'color:#0b7d77;font-weight:700;');
+      console.table([{
+        total: rows.length,
+        reserved: Number(counters.reserved || 0),
+        availability_slot: Number(counters.availability_slot || 0),
+        availability_window: Number(counters.availability_window || 0),
+        technical: Number(counters.technical || 0)
+      }]);
+      console.table(rows);
+      console.groupEnd();
+    }catch(_){}
+  };
+  const debugAgendaDay0508ExpectedPatients = (stageMap = {})=>{
+    const normalizedStages = ['RAW', 'AFTER_FILTER', 'AFTER_SANITIZE', 'AFTER_COLLAPSE_DEDUPE'];
+    const stageRows = {};
+    normalizedStages.forEach((stageKey)=>{
+      stageRows[stageKey] = Array.isArray(stageMap?.[stageKey]) ? stageMap[stageKey] : [];
+    });
+    const presenceByStage = {};
+    normalizedStages.forEach((stageKey)=>{
+      const rows = stageRows[stageKey];
+      const set = new Set(
+        rows
+          .filter((row)=> sanitizeText(row?.bucket || '') === 'reserved')
+          .map((row)=> normalizeText(row?.patient_name || ''))
+          .filter(Boolean)
+      );
+      presenceByStage[stageKey] = set;
+    });
+    const reportRows = AGENDA_DAY_0508_EXPECTED_PATIENTS.map((patientName)=>{
+      const normalizedName = normalizeText(patientName);
+      const raw = presenceByStage.RAW.has(normalizedName);
+      const afterFilter = presenceByStage.AFTER_FILTER.has(normalizedName);
+      const afterSanitize = presenceByStage.AFTER_SANITIZE.has(normalizedName);
+      const afterCollapse = presenceByStage.AFTER_COLLAPSE_DEDUPE.has(normalizedName);
+      let disappearsAt = '';
+      if(raw && !afterFilter){
+        disappearsAt = 'AFTER_FILTER_LOCAL_DAY';
+      }else if(afterFilter && !afterSanitize){
+        disappearsAt = 'AFTER_SANITIZE';
+      }else if(afterSanitize && !afterCollapse){
+        disappearsAt = 'AFTER_COLLAPSE_DEDUPE';
+      }else if(!raw){
+        disappearsAt = 'NOT_IN_SHARED_SNAPSHOT_RAW';
+      }else{
+        disappearsAt = 'PRESENT_IN_FINAL_DAY';
+      }
+      return {
+        patient_name: patientName,
+        in_raw: raw,
+        in_after_filter: afterFilter,
+        in_after_sanitize: afterSanitize,
+        in_after_collapse_dedupe: afterCollapse,
+        disappears_at: disappearsAt
+      };
+    });
+    try{
+      window.__MXM_DAY_0508_EXPECTED_TRACK = reportRows;
+    }catch(_){}
+    try{
+      console.groupCollapsed('%cDAY_0508_EXPECTED_PATIENT_TRACK', 'color:#b54708;font-weight:700;');
+      console.table(reportRows);
+      console.groupEnd();
+    }catch(_){}
   };
   const filterEventsByLocalDay = (eventsInput = [], dayLike = null)=>{
     const dayStart = toLocalDayDate(dayLike);
@@ -2410,6 +2853,8 @@ console.info('app.js loaded :: 20251123a');
           visibleDays: [],
           events: []
         });
+        syncAgendaViewModeButtons(agendaViewMode);
+        syncNativeAgendaToolbarViewGuards();
         root.innerHTML = `
           ${renderCustomWeekNavBarHtml()}
           <div class="mx-ag-custom-week-empty">No hay disponibilidad en este rango.</div>
@@ -2421,6 +2866,8 @@ console.info('app.js loaded :: 20251123a');
         visibleDays: finalDays,
         events: allEvents
       });
+      syncAgendaViewModeButtons(agendaViewMode);
+      syncNativeAgendaToolbarViewGuards();
       const finalDayKeys = new Set(finalDays.map((date)=> formatYmdLocal(date)));
       const byDay = new Map(finalDays.map((date)=> [formatYmdLocal(date), []]));
       filteredRows.forEach(({ key, eventRef })=>{
@@ -5992,12 +6439,25 @@ console.info('app.js loaded :: 20251123a');
     if(raw === 'month') return 'month';
     return 'week';
   };
+  const isAgendaDayViewSnapshotReady = ()=>{
+    const state = resolveCustomWeekSharedVisibleState();
+    if(!state) return false;
+    const scopeKey = resolveCustomWeekScopeKey();
+    const stateScopeKey = sanitizeText(state.scopeKey || '');
+    if(scopeKey && stateScopeKey && scopeKey !== stateScopeKey){
+      return false;
+    }
+    return true;
+  };
   // Rescate por fases:
-  // Semana custom es la vista operativa estable actual.
-  // Día/Mes existen en FullCalendar, pero quedan deshabilitadas temporalmente.
+  // Semana custom mantiene el ownership total del snapshot estable.
+  // Día solo se habilita como lectura de ese snapshot.
+  // Mes permanece deshabilitada hasta fase posterior.
   const isAgendaViewModeTemporarilyDisabled = (mode = '')=>{
     const safeMode = normalizeAgendaViewMode(mode);
-    return safeMode === 'day' || safeMode === 'month';
+    if(safeMode === 'month') return true;
+    if(safeMode === 'day') return !isAgendaDayViewSnapshotReady();
+    return false;
   };
   const resolveAgendaViewModeFromCalendarView = (viewType = '')=>{
     const safeView = sanitizeText(viewType || '');
@@ -6051,12 +6511,19 @@ console.info('app.js loaded :: 20251123a');
   };
   const syncNativeAgendaToolbarViewGuards = ()=>{
     if(!(els.calendarWrap instanceof HTMLElement)) return;
-    // Día/Mes quedan bloqueadas temporalmente (rescate pendiente); Semana sigue operativa.
+    // Semana custom sigue estable.
+    // Día solo se habilita cuando existe snapshot semanal válido.
+    // Mes queda pendiente de rescate.
     const dayBtn = els.calendarWrap.querySelector('.fc-timeGridDay-button');
+    const dayDisabled = !isAgendaDayViewSnapshotReady();
     if(dayBtn instanceof HTMLButtonElement){
-      dayBtn.disabled = true;
-      dayBtn.setAttribute('aria-disabled', 'true');
-      dayBtn.title = 'Vista en preparación';
+      dayBtn.disabled = dayDisabled;
+      dayBtn.setAttribute('aria-disabled', dayDisabled ? 'true' : 'false');
+      if(dayDisabled){
+        dayBtn.title = 'Disponible cuando cargue Semana';
+      }else{
+        dayBtn.removeAttribute('title');
+      }
     }
     const monthBtn = els.calendarWrap.querySelector('.fc-dayGridMonth-button');
     if(monthBtn instanceof HTMLButtonElement){
@@ -6066,8 +6533,8 @@ console.info('app.js loaded :: 20251123a');
     }
   };
   // Puente de rescate UX:
-  // Semana usa render custom estable.
-  // Día reutiliza FullCalendar nativo existente.
+  // Semana conserva ownership del snapshot/cache y render custom estable.
+  // Día usa FullCalendar nativo solo como proyección de lectura del snapshot semanal.
   // Mes se conserva en código, pero queda deshabilitada temporalmente.
   const setAgendaViewMode = (mode = 'week', options = {})=>{
     const allowAutoFallback = options?.allowAutoFallback !== false;
@@ -6102,11 +6569,43 @@ console.info('app.js loaded :: 20251123a');
     const anchorDate = resolveAgendaViewAnchorDate();
     let targetView = 'timeGridWeek';
     if(safeMode === 'day'){
+      // Día reutiliza el snapshot de Semana; antes de proyectar, hidratamos
+      // el shared state desde el cache estable de Semana para evitar lecturas parciales.
+      const dayWeekRange = resolveCustomWeekRangeForDayProjection(anchorDate);
+      const dayRangeKey = sanitizeText(dayWeekRange?.rangeKey || '');
+      const cacheRangeKey = sanitizeText(customWeekLastEventsRangeKey || '');
+      const dayScopeKey = resolveCustomWeekScopeKey();
+      const cacheScopeKey = sanitizeText(customWeekLastEventsScopeKey || '');
+      const canReuseCacheSnapshot = (
+        !!dayRangeKey
+        && dayRangeKey === cacheRangeKey
+        && (!dayScopeKey || !cacheScopeKey || dayScopeKey === cacheScopeKey)
+      );
+      if(canReuseCacheSnapshot){
+        hydrateCustomWeekSharedVisibleStateFromWeekCache({
+          weekRange: dayWeekRange,
+          allowEmptyEvents: false
+        });
+      }
+      const sharedWeekState = resolveCustomWeekSharedVisibleState();
+      if(!sharedWeekState){
+        console.warn('MXM AGENDA DAY SNAPSHOT GUARD', {
+          reason: 'switch_blocked_missing_week_snapshot'
+        });
+        agendaViewMode = 'week';
+        syncAgendaViewModeButtons('week');
+        if(allowAutoFallback){
+          return setAgendaViewMode('week', { allowAutoFallback: false });
+        }
+        return 'week';
+      }
       prepareNativeAgendaViewRender();
       targetView = 'timeGridDay';
     }else if(safeMode === 'month'){
+      agendaDaySlotMinOverride = '';
       targetView = 'dayGridMonth';
     }else{
+      agendaDaySlotMinOverride = '';
       customWeekVisibleDaysAction = 'view_switch';
       customWeekIncludeAnchorEvenIfInactive = true;
       setCustomWeekAnchorDate(anchorDate);
@@ -10106,6 +10605,7 @@ console.info('app.js loaded :: 20251123a');
     if(!wrap) return;
     const viewType = String(calendar?.view?.type || '');
     const isTimeGridView = viewType === 'timeGridWeek' || viewType === 'timeGridDay';
+    const isDayView = viewType === 'timeGridDay';
     const compactRange = resolveVisibleScheduleRange();
     const expandedRange = resolveExpandedVisibleScheduleRange();
     const baseStart = compactRange.minTime;
@@ -10114,6 +10614,12 @@ console.info('app.js loaded :: 20251123a');
     const compactSource = sanitizeText(compactRange?.source || '');
     const expandedSource = sanitizeText(expandedRange?.source || '');
     const effectiveStart = weeklyHoursExpanded ? expandedMin : baseStart;
+    const daySlotMinOverride = (
+      isDayView
+      ? normalizeAgendaTimeValue(agendaDaySlotMinOverride || '')
+      : ''
+    );
+    const effectiveStartForView = daySlotMinOverride || effectiveStart;
     const startMinutes = timeToMinutes(baseStart);
     const expandedStartMinutes = timeToMinutes(expandedMin);
     const endMinutes = timeToMinutes(expandedMaxFromStore);
@@ -10143,6 +10649,7 @@ console.info('app.js loaded :: 20251123a');
       btn.disabled = !isTimeGridView || !hasExpandableRange;
     }
     if(!isTimeGridView){
+      agendaDaySlotMinOverride = '';
       if(calendar){
         calendar.setOption('slotMinTime', baseStart);
         calendar.setOption('slotMaxTime', expandedMax);
@@ -10157,7 +10664,7 @@ console.info('app.js loaded :: 20251123a');
     }
 
     if(calendar){
-      calendar.setOption('slotMinTime', effectiveStart);
+      calendar.setOption('slotMinTime', effectiveStartForView);
       calendar.setOption('slotMaxTime', weeklyHoursExpanded ? expandedMax : collapsedMax);
       calendar.setOption('contentHeight', weeklyHoursExpanded ? 'auto' : collapsedContentHeight);
       try{ calendar.updateSize(); }catch(_){}
@@ -10165,7 +10672,7 @@ console.info('app.js loaded :: 20251123a');
       if(weeklyHoursExpanded){
         console.log('MXM AGENDA HOURS EXPAND', {
           source: expandedSource || compactSource || 'unknown',
-          minTime: effectiveStart,
+          minTime: effectiveStartForView,
           maxTime: expandedMax,
           compactMinTime: baseStart,
           compactMaxTime: collapsedMax,
@@ -10175,11 +10682,11 @@ console.info('app.js loaded :: 20251123a');
         // Mantiene la vista anclada al inicio operativo real del consultorio activo
         // para evitar caer en bloques globales vacíos al expandir.
         window.setTimeout(()=>{
-          try{ calendar.scrollToTime(baseStart); }catch(_){}
+          try{ calendar.scrollToTime(effectiveStartForView); }catch(_){}
         }, 24);
       }else{
         window.setTimeout(()=>{
-          try{ calendar.scrollToTime(baseStart); }catch(_){}
+          try{ calendar.scrollToTime(effectiveStartForView); }catch(_){}
         }, 24);
       }
     }
@@ -10270,6 +10777,8 @@ console.info('app.js loaded :: 20251123a');
       scopeKey: '',
       events: []
     };
+    syncAgendaViewModeButtons(agendaViewMode);
+    syncNativeAgendaToolbarViewGuards();
 
     if(options?.syncCreateOptions !== false){
       syncCreateConsultorioOptions();
@@ -11717,22 +12226,185 @@ console.info('app.js loaded :: 20251123a');
       events: async (fetchInfo, successCallback, failureCallback)=>{
         try{
           const currentView = String(calendar?.view?.type || '');
-          const isDayDemoMode = currentView === 'timeGridDay' && isAgendaQaDemoModeEnabled();
-          const dayVisibleDate = isDayDemoMode
-            ? toLocalDayDate(fetchInfo?.start || calendar?.getDate?.() || new Date())
-            : null;
-          const sharedWeekState = isDayDemoMode ? resolveCustomWeekSharedVisibleState() : null;
-          const anchorRange = currentView === 'timeGridWeek'
+          const isWeekView = currentView === 'timeGridWeek';
+          const isDayView = currentView === 'timeGridDay';
+          const isMonthView = currentView === 'dayGridMonth';
+
+          if(isDayView){
+            // Puente Fase A:
+            // Día no recalcula Agenda. Solo proyecta el snapshot estable de Semana.
+            let sharedWeekState = resolveCustomWeekSharedVisibleState();
+            const dayVisibleDate = toLocalDayDate(calendar?.getDate?.() || fetchInfo?.start || new Date());
+            const dayVisibleKey = dayVisibleDate instanceof Date ? formatYmdLocal(dayVisibleDate) : '';
+            const dayVisibleStartStrKey = sanitizeText(fetchInfo?.startStr || '').slice(0, 10);
+            const shouldDebugDay0508 = (
+              isAgendaQaDemoModeEnabled()
+              && (
+                dayVisibleKey === AGENDA_DAY_0508_DEBUG_KEY
+                || dayVisibleStartStrKey === AGENDA_DAY_0508_DEBUG_KEY
+              )
+            );
+            let hasValidSnapshot = (
+              !!sharedWeekState
+              && !!dayVisibleKey
+              && isSharedWeekSnapshotCoveringLocalDay(sharedWeekState, dayVisibleDate)
+            );
+            if(!hasValidSnapshot){
+              const hydrationResult = await hydrateSharedWeekSnapshotForDayProjection(dayVisibleDate);
+              sharedWeekState = resolveCustomWeekSharedVisibleState();
+              hasValidSnapshot = (
+                hydrationResult?.ok === true
+                && !!sharedWeekState
+                && isSharedWeekSnapshotCoveringLocalDay(sharedWeekState, dayVisibleDate)
+              );
+            }
+            const snapshotVisibleDayKeys = new Set(
+              Array.isArray(sharedWeekState?.visibleDays)
+                ? sharedWeekState.visibleDays
+                  .map((day)=> toLocalDayDate(day))
+                  .filter((day)=> day instanceof Date)
+                  .map((day)=> formatYmdLocal(day))
+                : []
+            );
+            const snapshotScopeKey = sanitizeText(sharedWeekState?.scopeKey || '');
+            const liveScopeKey = resolveCustomWeekScopeKey();
+            const snapshotRangeKey = sanitizeText(sharedWeekState?.rangeKey || '');
+            if(!hasValidSnapshot){
+              console.warn('MXM AGENDA DAY SNAPSHOT GUARD', {
+                reason: 'missing_or_mismatched_week_snapshot_after_hydration',
+                dayVisibleKey,
+                snapshotRangeKey,
+                snapshotScopeKey,
+                liveScopeKey,
+                snapshotVisibleDays: Array.from(snapshotVisibleDayKeys)
+              });
+              updateAgendaOriginCatalogVisibility([]);
+              successCallback([]);
+              if(els.hint){
+                els.hint.textContent = '';
+              }
+              window.setTimeout(()=> applyWeeklyHoursState(), 0);
+              return;
+            }
+            const daySharedRaw = (Array.isArray(sharedWeekState?.events) ? sharedWeekState.events : []).filter((eventRef)=>{
+              return isEventOverlappingLocalDay(eventRef, dayVisibleDate);
+            });
+            const dayAfterFilter = filterEventsByLocalDay(sharedWeekState.events, dayVisibleDate);
+            const dayAfterSanitize = sanitizeDayEventsForCardRender(dayAfterFilter);
+            const dayFinalForCalendar = sanitizeDayEventsForCardRender(
+              dedupeDaySnapshotEvents(
+                collapseDaySlotCollisions(dayAfterFilter)
+              )
+            );
+            agendaDaySlotMinOverride = resolveAgendaDaySlotMinOverrideFromEvents(dayFinalForCalendar);
+            if(shouldDebugDay0508){
+              try{
+                console.groupCollapsed('%cDAY_0508_DEBUG_CONTEXT', 'color:#155eef;font-weight:700;');
+                console.table([{
+                  dayVisibleKey,
+                  dayVisibleStartStrKey,
+                  dayVisibleDateISO: dayVisibleDate instanceof Date ? dayVisibleDate.toISOString() : '',
+                  calendarDateISO: (calendar?.getDate?.() instanceof Date && !Number.isNaN(calendar.getDate().getTime()))
+                    ? calendar.getDate().toISOString()
+                    : ''
+                }]);
+                console.groupEnd();
+              }catch(_){}
+              const exclusionRawToFilter = buildDaySnapshotExclusionMap(
+                daySharedRaw,
+                dayAfterFilter,
+                (eventRef)=>{
+                  const start = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
+                  const end = eventRef?.end instanceof Date ? eventRef.end : new Date(eventRef?.end || '');
+                  if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())){
+                    return 'invalid_datetime_before_filter';
+                  }
+                  return 'excluded_by_filter_local_day';
+                }
+              );
+              const exclusionFilterToSanitize = buildDaySnapshotExclusionMap(
+                dayAfterFilter,
+                dayAfterSanitize,
+                (eventRef)=> resolveDaySanitizeExclusionReason(eventRef)
+              );
+              const collapseDiagnostic = (Array.isArray(dayAfterSanitize) ? dayAfterSanitize : []);
+              const occupiedKeysForCollapse = new Set();
+              collapseDiagnostic.forEach((eventRef)=>{
+                const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
+                if(
+                  eventType === 'availability'
+                  || eventType === 'availability_slot'
+                  || eventType === 'focus_marker'
+                  || eventType === 'cancel_trace'
+                ){
+                  return;
+                }
+                const slotKey = toAgendaDaySlotKey(eventRef);
+                if(slotKey){
+                  occupiedKeysForCollapse.add(slotKey);
+                }
+              });
+              const signatureSeen = new Set();
+              const exclusionSanitizeToFinal = buildDaySnapshotExclusionMap(
+                dayAfterSanitize,
+                dayFinalForCalendar,
+                (eventRef)=>{
+                  const signature = toDaySnapshotDebugSignature(eventRef);
+                  const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
+                  const slotKey = toAgendaDaySlotKey(eventRef);
+                  const duplicate = signatureSeen.has(signature);
+                  signatureSeen.add(signature);
+                  if(duplicate){
+                    return 'deduped_duplicate_signature';
+                  }
+                  if(eventType === 'availability_slot' && slotKey && occupiedKeysForCollapse.has(slotKey)){
+                    return 'collapsed_by_reserved_slot_collision';
+                  }
+                  return 'excluded_in_collapse_or_dedupe';
+                }
+              );
+              debugAgendaDay0508Snapshot({
+                label: 'DAY_0508_SHARED_SNAPSHOT_RAW',
+                events: daySharedRaw,
+                exclusionMap: exclusionRawToFilter
+              });
+              debugAgendaDay0508Snapshot({
+                label: 'DAY_0508_AFTER_FILTER_LOCAL_DAY',
+                events: dayAfterFilter,
+                exclusionMap: exclusionFilterToSanitize
+              });
+              debugAgendaDay0508Snapshot({
+                label: 'DAY_0508_AFTER_SANITIZE',
+                events: dayAfterSanitize,
+                exclusionMap: exclusionSanitizeToFinal
+              });
+              debugAgendaDay0508Snapshot({
+                label: 'DAY_0508_AFTER_COLLAPSE_DEDUPE',
+                events: dayFinalForCalendar
+              });
+              debugAgendaDay0508ExpectedPatients({
+                RAW: daySharedRaw.map((eventRef)=> toDaySnapshotDebugRow(eventRef)),
+                AFTER_FILTER: dayAfterFilter.map((eventRef)=> toDaySnapshotDebugRow(eventRef)),
+                AFTER_SANITIZE: dayAfterSanitize.map((eventRef)=> toDaySnapshotDebugRow(eventRef)),
+                AFTER_COLLAPSE_DEDUPE: dayFinalForCalendar.map((eventRef)=> toDaySnapshotDebugRow(eventRef))
+              });
+            }
+            updateAgendaOriginCatalogVisibility(dayFinalForCalendar);
+            successCallback(dayFinalForCalendar);
+            if(els.hint){
+              els.hint.textContent = '';
+            }
+            window.setTimeout(()=> applyWeeklyHoursState(), 0);
+            return;
+          }
+
+          const anchorRange = isWeekView
             ? resolveCustomWeekRangeFromAnchor(resolveAgendaRollingStartDate(), 6)
             : null;
-          const rangeStart = (isDayDemoMode && sharedWeekState?.startDate instanceof Date)
-            ? new Date(sharedWeekState.startDate)
-            : anchorRange?.startDate instanceof Date
+          const rangeStart = anchorRange?.startDate instanceof Date
             ? new Date(anchorRange.startDate)
             : (fetchInfo?.start instanceof Date ? new Date(fetchInfo.start) : new Date(fetchInfo?.start || ''));
-          const rangeEnd = (isDayDemoMode && sharedWeekState?.endDate instanceof Date)
-            ? new Date(sharedWeekState.endDate)
-            : anchorRange?.endDate instanceof Date
+          const rangeEnd = anchorRange?.endDate instanceof Date
             ? new Date(anchorRange.endDate)
             : (fetchInfo?.end instanceof Date ? new Date(fetchInfo.end) : new Date(fetchInfo?.end || ''));
           const requestRange = {
@@ -11741,14 +12413,18 @@ console.info('app.js loaded :: 20251123a');
           };
           const expectedRangeKey = sanitizeText(
             anchorRange?.rangeKey
-            || sanitizeText(sharedWeekState?.rangeKey || '')
             || toCustomWeekRangeKey(rangeStart, rangeEnd)
           );
           const expectedScopeKey = resolveCustomWeekScopeKey();
-          customWeekExpectedRangeKey = expectedRangeKey;
-          customWeekExpectedScopeKey = expectedScopeKey;
+          if(isWeekView){
+            customWeekExpectedRangeKey = expectedRangeKey;
+            customWeekExpectedScopeKey = expectedScopeKey;
+          }else{
+            customWeekExpectedRangeKey = '';
+            customWeekExpectedScopeKey = '';
+          }
           const appointmentEventsPromise = fetchAppointments(requestRange);
-          const availabilityPromise = currentView === 'dayGridMonth'
+          const availabilityPromise = isMonthView
             ? Promise.resolve({ events: [], meta: { skipped: true, reason: 'availability_not_used_in_month' } })
             : fetchAvailabilityEvents(requestRange);
           const [appointmentEvents, availabilityResult] = await Promise.all([
@@ -11763,12 +12439,12 @@ console.info('app.js loaded :: 20251123a');
             ? { minTime: rangeMin, maxTime: rangeMax }
             : null;
           const availabilityEvents = Array.isArray(availabilityResult?.events) ? availabilityResult.events : [];
-          if(currentView === 'dayGridMonth'){
+          if(isMonthView){
             updateAgendaOriginCatalogVisibility(appointmentEvents);
             successCallback(buildMonthSummaryEvents(appointmentEvents));
           }else{
             const mergedEvents = [...availabilityEvents, ...appointmentEvents];
-            let nativeRenderEvents = mergedEvents;
+            const nativeRenderEvents = mergedEvents;
             const appointmentCountsByDate = {};
             (Array.isArray(appointmentEvents) ? appointmentEvents : []).forEach((eventRef)=>{
               const startDate = eventRef?.start instanceof Date
@@ -11778,23 +12454,15 @@ console.info('app.js loaded :: 20251123a');
               const key = formatYmdLocal(startDate);
               appointmentCountsByDate[key] = Number(appointmentCountsByDate[key] || 0) + 1;
             });
-            const shouldRefreshWeekCacheFromThisFetch = (
-              currentView === 'timeGridWeek'
-              || !isDayDemoMode
-              || !sharedWeekState
-            );
-            if(shouldRefreshWeekCacheFromThisFetch){
+            // Ownership explícito: solo Semana puede refrescar cache/snapshot base.
+            if(isWeekView){
               setLatestEventsForCustomWeek(mergedEvents);
-            }
-            if(isDayDemoMode && dayVisibleDate instanceof Date){
-              // Día no recalcula el dataset demo: reutiliza el cache final de Semana
-              // (misma ancla/rango compartido) y solo filtra por fecha visible.
-              const sharedEvents = (sharedWeekState && Array.isArray(sharedWeekState.events) && sharedWeekState.events.length)
-                ? sharedWeekState.events
-                : resolveCustomWeekEventSource().events;
-              nativeRenderEvents = sanitizeDayEventsForCardRender(
-                filterEventsByLocalDay(sharedEvents, dayVisibleDate)
-              );
+              // Semana mantiene ownership del snapshot compartido incluso si la
+              // respuesta llega cuando el usuario ya cambió a Día.
+              hydrateCustomWeekSharedVisibleStateFromWeekCache({
+                weekRange: anchorRange,
+                allowEmptyEvents: true
+              });
             }
             customWeekLastEventsRangeKey = expectedRangeKey;
             customWeekLastEventsScopeKey = expectedScopeKey;
@@ -11878,6 +12546,11 @@ console.info('app.js loaded :: 20251123a');
             });
             updateAgendaOriginCatalogVisibility(nativeRenderEvents);
             successCallback(nativeRenderEvents);
+            if(isWeekView && String(calendar?.view?.type || '') === 'timeGridDay'){
+              // Si Día ya está activo cuando termina la hidratación semanal,
+              // re-proyectar Día sin requerir "Refrescar agenda" manual.
+              try{ calendar.refetchEvents(); }catch(_){}
+            }
             if(isCustomWeekActive()){
               scheduleCustomWeekRender();
             }
@@ -11889,7 +12562,7 @@ console.info('app.js loaded :: 20251123a');
           if(warning){
             setError(`Disponibilidad: ${warning}`);
           }
-          if(currentView === 'timeGridWeek' || currentView === 'timeGridDay'){
+          if(isWeekView){
             window.setTimeout(()=> applyWeeklyHoursState(), 0);
           }
         }catch(err){
@@ -12344,11 +13017,14 @@ console.info('app.js loaded :: 20251123a');
         const currentViewType = String(calendar?.view?.type || '');
         const currentMode = resolveAgendaViewModeFromCalendarView(currentViewType);
         if(isAgendaViewModeTemporarilyDisabled(currentMode)){
-          // Protección defensiva: si una vista no operativa se activa por otra vía, volver a Semana.
-          window.setTimeout(()=>{
-            setAgendaViewMode('week', { allowAutoFallback: false });
-          }, 0);
-          return;
+          // Protección defensiva: si Mes se activa por otra vía, volver a Semana.
+          // Día se mantiene operativa y su snapshot se valida/hidrata en su propio flujo.
+          if(currentMode === 'month'){
+            window.setTimeout(()=>{
+              setAgendaViewMode('week', { allowAutoFallback: false });
+            }, 0);
+            return;
+          }
         }
         agendaViewMode = currentMode;
         syncAgendaViewModeButtons(currentMode);
@@ -12369,6 +13045,31 @@ console.info('app.js loaded :: 20251123a');
         }else{
           customWeekExpectedRangeKey = '';
           customWeekExpectedScopeKey = '';
+        }
+        if(currentViewType !== 'timeGridDay'){
+          agendaDaySlotMinOverride = '';
+        }
+        if(currentViewType === 'timeGridDay'){
+          // Día es proyección de lectura del snapshot semanal:
+          // en cada navegación interna Día↔Día intenta rehidratar snapshot del rango objetivo y refetchea.
+          const dayAnchor = resolveAgendaViewAnchorDate();
+          const sharedRange = resolveCustomWeekRangeForDayProjection(dayAnchor);
+          const targetRangeKey = sanitizeText(sharedRange?.rangeKey || '');
+          const cacheRangeKey = sanitizeText(customWeekLastEventsRangeKey || '');
+          const targetScopeKey = resolveCustomWeekScopeKey();
+          const cacheScopeKey = sanitizeText(customWeekLastEventsScopeKey || '');
+          const canReuseCacheSnapshot = (
+            !!targetRangeKey
+            && targetRangeKey === cacheRangeKey
+            && (!targetScopeKey || !cacheScopeKey || targetScopeKey === cacheScopeKey)
+          );
+          if(canReuseCacheSnapshot){
+            hydrateCustomWeekSharedVisibleStateFromWeekCache({
+              weekRange: sharedRange,
+              allowEmptyEvents: true
+            });
+          }
+          try{ calendar.refetchEvents(); }catch(_){}
         }
         lastCalendarViewType = currentViewType;
         if(blockSlotModal){
