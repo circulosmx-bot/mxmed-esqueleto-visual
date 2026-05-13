@@ -1653,16 +1653,35 @@ console.info('app.js loaded :: 20251123a');
     return `
       <div class="mx-ag-custom-week-nav" role="group" aria-label="Navegación semanal">
         <button type="button"
-          class="mx-ag-custom-week-nav-btn"
+          class="mx-ag-custom-week-nav-btn mx-ag-nav-arrow mx-ag-nav-arrow--prev"
           data-custom-week-nav="prev"
-          aria-label="Semana anterior">←</button>
+          aria-label="Semana anterior"><i class="bi bi-chevron-left mxm-agenda-day-nav-icon" aria-hidden="true"></i></button>
         <div class="mx-ag-custom-week-nav-title" data-custom-week-nav-title>${escapeHtml(title || 'Semana')}</div>
         <button type="button"
-          class="mx-ag-custom-week-nav-btn"
+          class="mx-ag-custom-week-nav-btn mx-ag-nav-arrow mx-ag-nav-arrow--next"
           data-custom-week-nav="next"
-          aria-label="Semana siguiente">→</button>
+          aria-label="Semana siguiente"><i class="bi bi-chevron-right mxm-agenda-day-nav-icon" aria-hidden="true"></i></button>
       </div>
     `;
+  };
+  const syncAgendaNavArrows = ()=>{
+    if(!(els.calendarWrap instanceof HTMLElement)) return;
+    const buttonDefs = [
+      { selector: '.fc .fc-mxmPrev-button', direction: 'prev', label: 'Anterior' },
+      { selector: '.fc .fc-mxmNext-button', direction: 'next', label: 'Siguiente' }
+    ];
+    buttonDefs.forEach(({ selector, direction, label })=>{
+      const btn = els.calendarWrap.querySelector(selector);
+      if(!(btn instanceof HTMLButtonElement)) return;
+      btn.classList.add('mx-ag-nav-arrow', direction === 'prev' ? 'mx-ag-nav-arrow--prev' : 'mx-ag-nav-arrow--next');
+      btn.setAttribute('aria-label', label);
+      const currentIcon = btn.querySelector('.mxm-agenda-day-nav-icon');
+      if(currentIcon instanceof HTMLElement){
+        currentIcon.className = `bi ${direction === 'prev' ? 'bi-chevron-left' : 'bi-chevron-right'} mxm-agenda-day-nav-icon`;
+      }else{
+        btn.innerHTML = `<i class="bi ${direction === 'prev' ? 'bi-chevron-left' : 'bi-chevron-right'} mxm-agenda-day-nav-icon" aria-hidden="true"></i>`;
+      }
+    });
   };
   const navigateCustomWeekByOffset = (direction = 'next')=>{
     if(!calendar) return;
@@ -2703,6 +2722,7 @@ console.info('app.js loaded :: 20251123a');
 
     root.classList.remove('d-none');
     els.calendarWrap?.classList.add('mx-ag-custom-week-active');
+    const hasStableRender = !!root.querySelector('.mx-ag-custom-week-grid');
     const scope = resolveAgendaAvailabilityConsultorioScope();
     const consultoriosIncluded = Array.isArray(scope?.consultorios)
       ? scope.consultorios.filter((id)=> isNumericId(id))
@@ -2711,10 +2731,9 @@ console.info('app.js loaded :: 20251123a');
       && agendaConsultoriosReady !== true
       && consultoriosIncluded.length === 0;
     if(shouldWaitConsultorios){
-      root.innerHTML = `
-        ${renderCustomWeekNavBarHtml()}
-        <div class="mx-ag-custom-week-loading">Cargando consultorios...</div>
-      `;
+      if(!hasStableRender){
+        root.innerHTML = `${renderCustomWeekNavBarHtml()}`;
+      }
       console.log('MXM CUSTOM WEEK DEBUG', {
         phase: 'waiting_consultorios',
         hasRoot: true,
@@ -2723,7 +2742,9 @@ console.info('app.js loaded :: 20251123a');
       });
       return;
     }
-    root.innerHTML = '<div class="mx-ag-custom-week-loading">Cargando disponibilidad...</div>';
+    if(!hasStableRender && !root.innerHTML.trim()){
+      root.innerHTML = `${renderCustomWeekNavBarHtml()}`;
+    }
 
     try{
       const weekRange = resolveCustomWeekRangeFromAnchor(resolveAgendaRollingStartDate(), 6);
@@ -2768,7 +2789,6 @@ console.info('app.js loaded :: 20251123a');
             : (hasRangeMismatch ? 'custom_week_range_mismatch' : 'custom_week_scope_mismatch'),
           minIntervalMs: 900
         });
-        root.innerHTML = '<div class="mx-ag-custom-week-loading">Cargando disponibilidad...</div>';
         console.log('MXM CUSTOM WEEK DEBUG', {
           phase: 'waiting_fresh_cache',
           expectedRangeKey: currentRangeKey,
@@ -6501,6 +6521,7 @@ console.info('app.js loaded :: 20251123a');
     try{
       calendar.setOption('headerToolbar', nextHeaderToolbar);
       agendaToolbarLayoutMode = nextLayoutMode;
+      window.setTimeout(()=> syncAgendaNavArrows(), 0);
     }catch(_){}
   };
   const syncAgendaDayToolbarTitle = (dateLike = null)=>{
@@ -6569,6 +6590,7 @@ console.info('app.js loaded :: 20251123a');
   };
   const syncNativeAgendaToolbarViewGuards = ()=>{
     if(!(els.calendarWrap instanceof HTMLElement)) return;
+    syncAgendaNavArrows();
     // Semana custom sigue estable.
     // Día solo se habilita cuando existe snapshot semanal válido.
     // Mes queda pendiente de rescate.
@@ -7396,8 +7418,14 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const setLoading = (isLoading)=>{
-    if(!els.loading) return;
-    els.loading.classList.toggle('d-none', !isLoading);
+    if(els.loading){
+      // UX: no exponer textos de carga invasivos en Agenda.
+      // El estado se conserva solo a nivel interno y con indicador sutil del contenedor.
+      els.loading.classList.add('d-none');
+    }
+    if(els.calendarWrap){
+      els.calendarWrap.classList.toggle('mx-ag-loading', !!isLoading);
+    }
   };
   const setCreateError = (message)=>{
     if(!els.createError) return;

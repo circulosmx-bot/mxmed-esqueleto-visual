@@ -135,7 +135,7 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,0,0&icon_names=check_small" />
 
-<link rel="stylesheet" href="assets/css/style.css?v=qa-visual-20260507c" />
+<link rel="stylesheet" href="assets/css/style.css?v=qa-visual-20260510-day-simple-b" />
 
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
 
@@ -3001,9 +3001,8 @@
                 <input type="hidden" id="ag_doctor_filter">
               </div>
               <div class="col-md-6">
-                <label class="form-label" for="ag_consultorio_filter">Consultorio</label>
-                <select class="form-select" id="ag_consultorio_filter">
-                  <option value="">Todos los consultorios</option>
+                <select class="form-select" id="ag_consultorio_filter" aria-label="Filtro de consultorio">
+                  <option value="">Consultorio</option>
                 </select>
               </div>
               <div class="col-md-6 d-flex align-items-end">
@@ -3032,7 +3031,17 @@
                   <div id="ag_calendar"></div>
                   <div id="ag_cell_menu" class="mx-ag-cell-menu d-none" role="menu" aria-label="Acciones de celda disponible">
                     <button type="button" class="mx-ag-cell-menu-btn" id="ag_cell_menu_new_appointment">Nueva cita</button>
-                    <button type="button" class="mx-ag-cell-menu-btn is-disabled" id="ag_cell_menu_block_slot" disabled>Bloquear horario (próximamente)</button>
+                    <button type="button" class="mx-ag-cell-menu-btn" id="ag_cell_menu_block_slot">Bloquear horario</button>
+                  </div>
+                  <div id="ag_day_head_menu" class="mx-ag-day-head-menu d-none" role="menu" aria-label="Acciones del día">
+                    <button type="button" class="mx-ag-day-head-menu-btn" id="ag_day_head_block_btn">Bloquear día completo</button>
+                    <button type="button" class="mx-ag-day-head-menu-btn" id="ag_day_head_view_btn">Ver disponibilidad del día</button>
+                    <button type="button" class="mx-ag-day-head-menu-btn is-muted" id="ag_day_head_close_btn">Cerrar</button>
+                  </div>
+                  <div id="ag_custom_slot_menu" class="mx-ag-day-head-menu mx-ag-slot-quick-menu d-none" role="menu" aria-label="Acciones de horario disponible">
+                    <button type="button" class="mx-ag-day-head-menu-btn" id="ag_custom_slot_new_btn">Nueva cita</button>
+                    <button type="button" class="mx-ag-day-head-menu-btn" id="ag_custom_slot_block_btn">Bloquear horario</button>
+                    <button type="button" class="mx-ag-day-head-menu-btn is-muted" id="ag_custom_slot_close_btn">Cerrar</button>
                   </div>
                 </div>
                 <div class="mx-ag-hours-toggle-wrap">
@@ -3053,32 +3062,67 @@
                   <div class="modal-body">
                     <div id="ag_create_error_box" class="alert alert-danger d-none py-2 mb-3"></div>
                     <div class="row g-3">
-                      <div class="col-12 d-none" id="ag_active_patient_box">
-                        <div class="alert alert-warning py-2 mb-0">
-                          <div class="fw-semibold mb-2" id="ag_active_patient_text">Paciente activo detectado.</div>
-                          <div class="d-flex flex-wrap gap-2">
-                            <button type="button" class="btn btn-sm btn-primary" id="ag_use_active_patient_yes">Sí, usar paciente activo</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="ag_use_active_patient_no">No, capturar otro paciente</button>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-12">
-                        <label class="form-label" for="ag_patient_search_query">Buscar paciente</label>
-                        <div class="input-group">
-                          <input type="text" class="form-control" id="ag_patient_search_query" placeholder="Nombre o CURP">
-                          <button type="button" class="btn mx-ag-btn-new-patient" id="ag_patient_search_btn">Buscar</button>
-                        </div>
-                        <div id="ag_patient_search_results" class="list-group mt-2"></div>
-                        <div id="ag_patient_search_msg" class="small text-muted mt-1 d-none"></div>
-                      </div>
                       <div class="col-12 d-none">
                         <input type="hidden" id="ag_patient_id_input">
                       </div>
                       <div class="col-12">
-                        <div class="d-flex justify-content-start">
-                          <button type="button" class="btn btn-sm mx-ag-btn-new-patient" id="ag_patient_new_toggle">Paciente nuevo</button>
+                        <section class="mx-ag-create-context-card" aria-label="Contexto de la cita">
+                          <div class="mx-ag-create-context-grid">
+                            <div class="mx-ag-create-context-item">
+                              <div class="mx-ag-create-context-label">Fecha</div>
+                              <div class="fw-semibold ag-create-start-date" id="ag_start_info_date">--</div>
+                            </div>
+                            <div class="mx-ag-create-context-item">
+                              <div class="mx-ag-create-context-label">Hora</div>
+                              <div class="fw-semibold ag-create-start-time" id="ag_start_info_time">--:--</div>
+                            </div>
+                          </div>
+                          <div class="mx-ag-create-context-grid is-secondary">
+                            <div class="mx-ag-create-context-item">
+                              <label class="form-label" for="ag_modality_input">Modalidad</label>
+                              <select class="form-select no-check" id="ag_modality_input">
+                                <option value="in_person">Presencial</option>
+                                <option value="videoconsulta">Videoconsulta</option>
+                              </select>
+                            </div>
+                            <div class="mx-ag-create-context-item">
+                              <label class="form-label" for="ag_consultorio_modal_info">Consultorio</label>
+                              <input type="text" class="form-control no-check" id="ag_consultorio_modal_info" readonly>
+                              <select class="form-select d-none no-check" id="ag_consultorio_modal" aria-hidden="true" tabindex="-1">
+                                <option value="" disabled selected>No hay consultorios disponibles</option>
+                              </select>
+                            </div>
+                          </div>
+                          <input type="hidden" id="ag_start_input">
+                          <input type="hidden" id="ag_end_input">
+                        </section>
+                      </div>
+                      <div class="col-12">
+                        <div class="mx-ag-patient-mode-switch" role="tablist" aria-label="Tipo de paciente para la cita">
+                          <button type="button" class="mx-ag-patient-mode-btn is-active" id="ag_patient_mode_existing_btn" data-ag-patient-mode="existing" aria-selected="true">Paciente registrado</button>
+                          <button type="button" class="mx-ag-patient-mode-btn" id="ag_patient_mode_new_btn" data-ag-patient-mode="new" aria-selected="false">Paciente nuevo</button>
                         </div>
-                        <div id="ag_patient_new_wrap" class="row g-2 mt-1 d-none">
+                      </div>
+                      <div class="col-12" id="ag_patient_existing_wrap">
+                        <div id="ag_active_patient_box" class="d-none">
+                          <div class="alert alert-warning py-2 mb-2">
+                            <div class="fw-semibold mb-2" id="ag_active_patient_text">Paciente activo detectado.</div>
+                            <div class="d-flex flex-wrap gap-2">
+                              <button type="button" class="btn btn-sm btn-primary" id="ag_use_active_patient_yes">Sí, usar paciente activo</button>
+                              <button type="button" class="btn btn-sm btn-outline-secondary" id="ag_use_active_patient_no">No, capturar otro paciente</button>
+                            </div>
+                          </div>
+                        </div>
+                        <label class="form-label" for="ag_patient_search_query">Buscar paciente registrado</label>
+                        <div class="input-group">
+                          <input type="text" class="form-control no-check" data-no-check="1" id="ag_patient_search_query" placeholder="Nombre, Apellido ó Teléfono">
+                          <button type="button" class="btn mx-ag-btn-new-patient" id="ag_patient_search_btn">Filtrar</button>
+                        </div>
+                        <div id="ag_patient_search_results" class="list-group mt-2"></div>
+                        <div id="ag_patient_search_msg" class="small text-muted mt-1 d-none"></div>
+                      </div>
+                      <div class="col-12 d-none" id="ag_patient_new_wrap">
+                        <div class="row g-2">
                           <div class="col-md-4">
                             <label class="form-label mb-1" for="ag_patient_new_first_name">Nombre(s)</label>
                             <input type="text" class="form-control" id="ag_patient_new_first_name" placeholder="Nombre(s)">
@@ -3091,10 +3135,17 @@
                             <label class="form-label mb-1" for="ag_patient_new_last_name_2">Segundo apellido</label>
                             <input type="text" class="form-control" id="ag_patient_new_last_name_2" placeholder="Segundo apellido">
                           </div>
-                          <div class="col-md-6">
+                          <div class="col-md-4">
+                            <select class="form-select" id="ag_patient_new_sex" aria-label="Sexo del paciente">
+                              <option value="" selected>Sexo</option>
+                              <option value="M">Masculino</option>
+                              <option value="F">Femenino</option>
+                            </select>
+                          </div>
+                          <div class="col-md-4">
                             <input type="text" class="form-control" id="ag_patient_new_phone" placeholder="Teléfono">
                           </div>
-                          <div class="col-md-6">
+                          <div class="col-md-4">
                             <input type="email" class="form-control" id="ag_patient_new_email" placeholder="Correo electrónico (opcional)">
                           </div>
                         </div>
@@ -3123,32 +3174,14 @@
                         <div id="ag_patient_birthdate_info" class="small text-muted mt-2 d-none"></div>
                       </div>
                       <div class="col-12">
-                        <div class="row g-2">
-                          <div class="col-12">
-                            <div class="small text-muted">Fecha</div>
-                            <div class="fw-semibold ag-create-start-date" id="ag_start_info_date">--</div>
-                          </div>
-                          <div class="col-12">
-                            <div class="small text-muted">Hora</div>
-                            <div class="fw-semibold ag-create-start-time" id="ag_start_info_time">--:--</div>
-                          </div>
-                        </div>
-                        <input type="hidden" id="ag_start_input">
-                        <input type="hidden" id="ag_end_input">
-                      </div>
-                      <div class="col-md-6">
-                        <label class="form-label" for="ag_modality_input">Modalidad</label>
-                        <select class="form-select no-check" id="ag_modality_input">
-                          <option value="in_person">Presencial</option>
-                          <option value="videoconsulta">Videoconsulta</option>
-                        </select>
-                      </div>
-                      <div class="col-md-6">
-                        <label class="form-label" for="ag_consultorio_modal_info">Consultorio</label>
-                        <input type="text" class="form-control no-check" id="ag_consultorio_modal_info" readonly>
-                        <select class="form-select d-none no-check" id="ag_consultorio_modal" aria-hidden="true" tabindex="-1">
-                          <option value="" disabled selected>No hay consultorios disponibles</option>
-                        </select>
+                        <label class="form-label" for="ag_appointment_reason_input">Motivo de la cita <span class="text-muted">(opcional)</span></label>
+                        <textarea
+                          class="form-control no-check"
+                          id="ag_appointment_reason_input"
+                          rows="2"
+                          maxlength="600"
+                          placeholder="Describe brevemente el motivo de la consulta"
+                        ></textarea>
                       </div>
                       <div class="col-12 d-none">
                         <input type="hidden" id="ag_channel_input" value="agenda_frontend_v1">
@@ -3158,6 +3191,50 @@
                   <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-primary" id="ag_create_submit_btn">Guardar cita</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal fade" id="ag_patient_shared_phone_modal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <div class="modal-header mx-ag-shared-phone-header">
+                    <div class="mx-ag-shared-phone-header-copy">
+                      <div class="mx-ag-shared-phone-number" id="ag_patient_shared_phone_number">--</div>
+                      <div class="mx-ag-shared-phone-header-title">Este teléfono ya ha sido asignado a los siguientes pacientes</div>
+                      <div class="mx-ag-shared-phone-header-subtitle">Selecciona un paciente de la lista o agrega uno nuevo a este número.</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                  </div>
+                  <div class="modal-body pt-2 pb-3">
+                    <div id="ag_patient_shared_phone_notice" class="mx-ag-shared-phone-notice d-none" role="status" aria-live="polite">
+                      <div class="mx-ag-shared-phone-title">Pacientes vinculados a este número</div>
+                      <div id="ag_patient_shared_phone_list" class="mx-ag-shared-phone-list"></div>
+                      <div class="mx-ag-shared-phone-continue-wrap">
+                        <button type="button" class="btn btn-outline-primary w-100" id="ag_patient_shared_phone_continue_btn">Agregar otro paciente a este número</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal fade" id="ag_patient_lookup_modal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <div class="modal-header mx-ag-shared-phone-header">
+                    <div class="mx-ag-shared-phone-header-copy">
+                      <div class="mx-ag-shared-phone-header-title mx-ag-patient-lookup-header-title">Pacientes encontrados</div>
+                      <div class="mx-ag-shared-phone-header-subtitle">Selecciona el paciente correcto para asignarlo a la cita.</div>
+                      <div id="ag_patient_lookup_context" class="mx-ag-patient-lookup-context d-none"></div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                  </div>
+                  <div class="modal-body pt-2 pb-3">
+                    <div id="ag_patient_lookup_notice" class="mx-ag-shared-phone-notice d-none" role="status" aria-live="polite">
+                      <div id="ag_patient_lookup_list" class="mx-ag-shared-phone-list"></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -3248,44 +3325,68 @@
             <div class="modal fade" id="ag_event_actions_modal" tabindex="-1" aria-hidden="true">
               <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
-                  <div class="modal-header">
-                    <div class="w-100">
-                      <div class="d-flex align-items-start justify-content-between gap-2">
+                  <div class="modal-header mx-ag-event-header">
+                    <div class="mx-ag-event-header-main">
+                      <div class="mx-ag-event-title-cluster">
+                        <span class="mx-ag-event-title-icon" aria-hidden="true"><i class="bi bi-calendar2-check"></i></span>
                         <h5 class="modal-title mb-0">Detalle de cita</h5>
-                        <span class="badge text-bg-secondary" id="ag_event_action_status_badge">--</span>
                       </div>
+                      <span class="badge text-bg-secondary" id="ag_event_action_status_badge">--</span>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                   </div>
                   <div class="modal-body">
                     <div id="ag_event_action_error_box" class="alert alert-danger d-none py-2 mb-3"></div>
                     <div id="ag_event_detail_wrap" class="mx-ag-modal-stack" data-view="detail">
-                      <div class="mx-ag-event-detail-field">
-                        <div class="mx-ag-event-detail-label">Paciente</div>
-                        <div class="mx-ag-event-detail-value" id="ag_event_action_patient">--</div>
-                      </div>
-                      <div class="mx-ag-event-detail-field mx-ag-event-detail-field--datetime">
-                        <div class="mx-ag-event-detail-label">Fecha y hora</div>
-                        <div class="mx-ag-event-detail-value" id="ag_event_action_time">--</div>
-                      </div>
-                      <div class="mx-ag-event-detail-field">
-                        <div class="mx-ag-event-detail-label">Duración</div>
-                        <div class="mx-ag-event-detail-value" id="ag_event_action_duration">--</div>
-                      </div>
-                      <div class="mx-ag-event-detail-field">
-                        <div class="mx-ag-event-detail-label">Estado</div>
-                        <div class="mx-ag-event-detail-value" id="ag_event_action_status">--</div>
-                      </div>
-                      <div id="ag_event_action_reason_wrap" class="mx-ag-event-detail-field d-none">
-                        <div class="mx-ag-event-detail-label">Motivo</div>
-                        <div class="mx-ag-event-detail-value" id="ag_event_action_reason">--</div>
-                      </div>
-                      <div id="ag_event_action_consultorio_wrap" class="mx-ag-event-detail-field">
-                        <div class="mx-ag-event-detail-label">Consultorio</div>
-                        <div class="mx-ag-event-detail-value" id="ag_event_action_consultorio">--</div>
+                      <section class="mx-ag-event-patient-hero">
+                        <div class="mx-ag-event-patient-avatar" aria-hidden="true">
+                          <img id="ag_event_action_avatar_img" class="mx-ag-event-patient-avatar-image" alt="Avatar de paciente" />
+                        </div>
+                        <div class="mx-ag-event-patient-summary">
+                          <div class="mx-ag-event-overline">Paciente</div>
+                          <div class="mx-ag-event-patient-name" id="ag_event_action_patient">--</div>
+                          <div class="mx-ag-event-patient-meta">
+                            <span class="mx-ag-event-meta-chip"><i class="bi bi-telephone"></i><span id="ag_event_action_phone">--</span></span>
+                            <span class="mx-ag-event-meta-chip"><i class="bi bi-calendar3"></i><span id="ag_event_action_birth">--</span></span>
+                          </div>
+                        </div>
+                        <div class="mx-ag-event-datetime-card mx-ag-event-detail-field--datetime">
+                          <div class="mx-ag-event-overline">Fecha y hora</div>
+                          <div class="mx-ag-event-detail-value" id="ag_event_action_time">--</div>
+                        </div>
+                      </section>
+                      <section class="mx-ag-event-kpi-grid">
+                        <article id="ag_event_action_consultorio_wrap" class="mx-ag-event-kpi-card">
+                          <div class="mx-ag-event-kpi-icon" aria-hidden="true"><i class="bi bi-hospital"></i></div>
+                          <div class="mx-ag-event-kpi-body">
+                            <div class="mx-ag-event-kpi-label">Consultorio</div>
+                            <div class="mx-ag-event-kpi-value" id="ag_event_action_consultorio">--</div>
+                          </div>
+                        </article>
+                        <article class="mx-ag-event-kpi-card">
+                          <div class="mx-ag-event-kpi-icon" aria-hidden="true"><i class="bi bi-diagram-2"></i></div>
+                          <div class="mx-ag-event-kpi-body">
+                            <div class="mx-ag-event-kpi-label">Origen de la cita</div>
+                            <div class="mx-ag-event-kpi-value mx-ag-event-origin-value">
+                              <span class="mx-ag-origin-dot mx-ag-origin-dot--user" id="ag_event_action_origin_dot"></span>
+                              <span id="ag_event_action_origin">--</span>
+                            </div>
+                          </div>
+                        </article>
+                        <article class="mx-ag-event-kpi-card">
+                          <div class="mx-ag-event-kpi-icon" aria-hidden="true"><i class="bi bi-shield-check"></i></div>
+                          <div class="mx-ag-event-kpi-body">
+                            <div class="mx-ag-event-kpi-label">Estado</div>
+                            <div class="mx-ag-event-kpi-value" id="ag_event_action_status">--</div>
+                          </div>
+                        </article>
+                      </section>
+                      <div id="ag_event_action_reason_wrap" class="mx-ag-event-reason-card d-none">
+                        <div class="mx-ag-event-reason-label"><i class="bi bi-chat-left-text"></i> Motivo</div>
+                        <div class="mx-ag-event-reason-value" id="ag_event_action_reason">--</div>
                       </div>
                       <div id="ag_event_timeline_wrap" class="mx-ag-event-timeline-wrap">
-                        <div class="mx-ag-event-timeline-title">Historial de la cita</div>
+                        <div class="mx-ag-event-timeline-title"><i class="bi bi-clock-history"></i> Historial de la cita</div>
                         <div id="ag_event_timeline_loading" class="small text-muted d-none">Cargando historial…</div>
                         <div id="ag_event_timeline_error" class="small text-danger d-none">No fue posible cargar el historial de esta cita.</div>
                         <div id="ag_event_timeline_empty" class="small text-muted d-none">Sin eventos registrados.</div>
@@ -3355,9 +3456,10 @@
                     </div>
                   </div>
                   <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" id="ag_event_close_btn" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="button" class="btn btn-outline-secondary" id="ag_event_cancel_btn">Cancelar cita</button>
-                    <button type="button" class="btn btn-primary" id="ag_event_reschedule_btn">Reprogramar</button>
+                    <button type="button" class="btn btn-outline-secondary" id="ag_event_close_btn" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> Cerrar</button>
+                    <button type="button" class="btn btn-outline-primary d-none" id="ag_event_confirm_btn"><i class="bi bi-check-circle"></i> Confirmar cita</button>
+                    <button type="button" class="btn btn-outline-secondary" id="ag_event_cancel_btn"><i class="bi bi-trash3"></i> Cancelar cita</button>
+                    <button type="button" class="btn btn-primary" id="ag_event_reschedule_btn"><i class="bi bi-calendar2-plus"></i> Reprogramar</button>
                     <button type="button" class="btn btn-outline-secondary d-none" id="ag_event_cancel_back_btn">Volver</button>
                     <button type="button" class="btn btn-outline-secondary d-none" id="ag_event_cancel_confirm_no_flag_btn">Cancelar sin marcar paciente</button>
                     <button type="button" class="btn btn-outline-dark d-none" id="ag_event_cancel_confirm_black_btn">Cancelar y marcar lista negra</button>
@@ -9233,7 +9335,7 @@
 <script src="assets/js/core/identity.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
 
-<script src="assets/js/app.js?v=qa-visual-20260507c"></script>
+<script src="assets/js/app.js?v=qa-visual-20260511-day-nav-operational"></script>
 <script src="assets/js/perfil/datos-generales.js"></script>
 <script src="assets/js/perfil/formacion.js"></script>
 
