@@ -13176,7 +13176,11 @@ console.info('app.js loaded :: 20251123a');
 
   const refreshCalendar = async ({ forceConsultorios = false } = {})=>{
     syncDoctorInput();
-    if(forceConsultorios){
+    const shouldBootstrapConsultorios = (
+      agendaConsultoriosReady !== true
+      || sourceOptionsLength(els.consultorio) === 0
+    );
+    if(forceConsultorios || shouldBootstrapConsultorios){
       await fetchConsultorios();
     }
     initCalendar();
