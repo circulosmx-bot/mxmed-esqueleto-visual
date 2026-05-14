@@ -522,8 +522,10 @@ console.info('app.js loaded :: 20251123a');
 
   const els = {
     doctor: panel.querySelector('#ag_doctor_filter'),
+    agendaFrontendV1: panel.querySelector('#agendaFrontendV1'),
     consultorio: panel.querySelector('#ag_consultorio_filter'),
     refresh: panel.querySelector('#ag_refresh_btn'),
+    originCatalog: panel.querySelector('#ag_origin_catalog'),
     error: panel.querySelector('#ag_error_box'),
     nextFocusHint: panel.querySelector('#ag_next_focus_hint'),
     loading: panel.querySelector('#ag_loading_box'),
@@ -719,7 +721,9 @@ console.info('app.js loaded :: 20251123a');
   let customWeekAnchorDate = null;
   let agendaRollingStartDate = null;
   let customWeekRoot = null;
+  let customDayRoot = null;
   let customWeekPendingRaf = 0;
+  let customDayMiniMonthCursor = null;
   let agendaLatestEventsForCustomWeek = [];
   let customWeekLastForcedRefetchAt = 0;
   let customWeekOperationalContextCache = null;
@@ -1836,8 +1840,40 @@ console.info('app.js loaded :: 20251123a');
     customWeekRoot = root;
     return customWeekRoot;
   };
+  const ensureCustomDayRoot = ()=>{
+    if(customDayRoot instanceof HTMLElement && customDayRoot.isConnected){
+      return customDayRoot;
+    }
+    if(!(els.calendarWrap instanceof HTMLElement)) return null;
+    const existing = els.calendarWrap.querySelector('#ag_custom_day_root');
+    if(existing){
+      customDayRoot = existing;
+      return customDayRoot;
+    }
+    const root = document.createElement('div');
+    root.id = 'ag_custom_day_root';
+    root.className = 'mx-ag-custom-day-root d-none';
+    els.calendarWrap.appendChild(root);
+    customDayRoot = root;
+    return customDayRoot;
+  };
   const isCustomWeekActive = ()=>{
     return String(calendar?.view?.type || '') === 'timeGridWeek';
+  };
+  const isCustomDayActive = ()=>{
+    return String(calendar?.view?.type || '') === 'timeGridDay';
+  };
+  const syncCustomDayLegacyRowsVisibility = (enabled = false)=>{
+    const setState = (element, active)=>{
+      if(!(element instanceof HTMLElement)) return;
+      const col = element.closest('.col-md-6, .col-12');
+      if(col instanceof HTMLElement){
+        col.classList.toggle('mx-ag-day-hide-on-custom', !!active);
+      }
+    };
+    setState(els.consultorio, enabled);
+    setState(els.refresh, enabled);
+    setState(els.originCatalog, enabled);
   };
   const resolveCustomWeekDays = ()=>{
     const range = resolveCustomWeekRangeFromAnchor(resolveAgendaRollingStartDate(), 6);
@@ -2876,16 +2912,413 @@ console.info('app.js loaded :: 20251123a');
       return start < dayEnd && end > dayStart;
     });
   };
+  const resolveCustomDayViewHeaderLabel = (dateLike = null)=>{
+    const dayDate = toLocalDayDate(dateLike || calendar?.getDate?.() || new Date());
+    if(!(dayDate instanceof Date) || Number.isNaN(dayDate.getTime())){
+      return 'Vista del día';
+    }
+    const today = toLocalDayDate(new Date());
+    const weekdayLabel = capitalizeAgendaLabel(
+      new Intl.DateTimeFormat('es-MX', { weekday: 'long' }).format(dayDate)
+    );
+    const dayLabel = String(dayDate.getDate()).padStart(2, '0');
+    const monthLabel = capitalizeAgendaLabel(
+      new Intl.DateTimeFormat('es-MX', { month: 'long' }).format(dayDate)
+    );
+    if(today && isSameLocalDay(today, dayDate)){
+      return `Hoy ${weekdayLabel} ${dayLabel} ${monthLabel}`;
+    }
+    const yearLabel = String(dayDate.getFullYear());
+    return `${weekdayLabel} ${dayLabel} de ${monthLabel} ${yearLabel}`;
+  };
+  const resolveCustomDayViewScopeLabel = ()=>{
+    if(isAgendaAllConsultoriosMode()){
+      return 'Todos los consultorios';
+    }
+    const consultorioId = sanitizeText(getAvailabilityConsultorioId() || '');
+    const consultorioName = sanitizeText(resolveAgendaConsultorioLabelById(consultorioId) || '');
+    return consultorioName || 'Consultorio';
+  };
+  const resolveCustomDayRenderableEvents = (dayDate = null)=>{
+    const safeDay = toLocalDayDate(dayDate || calendar?.getDate?.() || new Date());
+    if(!(safeDay instanceof Date) || Number.isNaN(safeDay.getTime())){
+      return [];
+    }
+    const calendarEvents = (calendar && typeof calendar.getEvents === 'function')
+      ? calendar.getEvents().map((eventRef)=> normalizeEventForCustomWeek(eventRef)).filter(Boolean)
+      : [];
+    let dayEvents = filterEventsByLocalDay(calendarEvents, safeDay);
+    if(!dayEvents.length){
+      const sharedState = resolveCustomWeekSharedVisibleState();
+      const sharedEvents = Array.isArray(sharedState?.events) ? sharedState.events : [];
+      dayEvents = filterEventsByLocalDay(sharedEvents, safeDay);
+    }
+    const safeEvents = sanitizeDayEventsForCardRender(dayEvents);
+    const collapsed = collapseDaySlotCollisions(safeEvents);
+    const deduped = dedupeDaySnapshotEvents(collapsed);
+    return deduped.sort((left, right)=>{
+      const leftStart = left?.start instanceof Date ? left.start.getTime() : new Date(left?.start || '').getTime();
+      const rightStart = right?.start instanceof Date ? right.start.getTime() : new Date(right?.start || '').getTime();
+      if(leftStart !== rightStart){
+        return leftStart - rightStart;
+      }
+      const eventTypeWeight = (eventRef)=>{
+        const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
+        if(eventType === 'blocked_slot') return 0;
+        if(eventType === 'availability_slot') return 2;
+        return 1;
+      };
+      const weightDiff = eventTypeWeight(left) - eventTypeWeight(right);
+      if(weightDiff !== 0) return weightDiff;
+      return sanitizeText(left?.id || '').localeCompare(sanitizeText(right?.id || ''));
+    });
+  };
+  const buildCustomDayMiniMonthActivityMap = (monthDate = null)=>{
+    const monthStart = startOfMonth(monthDate || new Date());
+    if(!(monthStart instanceof Date) || Number.isNaN(monthStart.getTime())){
+      return new Map();
+    }
+    const monthEnd = addMonths(monthStart, 1);
+    const state = resolveCustomWeekSharedVisibleState();
+    const source = Array.isArray(state?.events) ? state.events : [];
+    const activityMap = new Map();
+    source.forEach((eventRef)=>{
+      const start = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
+      if(Number.isNaN(start.getTime())) return;
+      if(monthEnd instanceof Date && start >= monthEnd) return;
+      if(start < monthStart) return;
+      const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
+      if(eventType === 'availability' || eventType === 'focus_marker' || eventType === 'cancel_trace'){
+        return;
+      }
+      const key = formatYmdLocal(start);
+      activityMap.set(key, Number(activityMap.get(key) || 0) + 1);
+    });
+    return activityMap;
+  };
+  const buildCustomDayMiniMonthHtml = ({ selectedDate = null, monthCursor = null } = {})=>{
+    const safeSelected = toLocalDayDate(selectedDate || new Date());
+    const monthStart = startOfMonth(monthCursor || safeSelected || new Date());
+    if(!(safeSelected instanceof Date) || !(monthStart instanceof Date)){
+      return '';
+    }
+    const activityMap = buildCustomDayMiniMonthActivityMap(monthStart);
+    const monthTitle = capitalizeAgendaLabel(
+      new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' }).format(monthStart)
+    );
+    const weekLabels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+    const firstWeekdayMondayBase = (Number(monthStart.getDay()) + 6) % 7;
+    const gridStart = addLocalDays(monthStart, -firstWeekdayMondayBase);
+    const today = toLocalDayDate(new Date());
+    const daysHtml = Array.from({ length: 42 }).map((_, idx)=>{
+      const dayDate = addLocalDays(gridStart, idx);
+      if(!(dayDate instanceof Date) || Number.isNaN(dayDate.getTime())){
+        return '';
+      }
+      const dayKey = formatYmdLocal(dayDate);
+      const inMonth = dayDate.getMonth() === monthStart.getMonth();
+      const isSelected = isSameLocalDay(dayDate, safeSelected);
+      const isToday = today && isSameLocalDay(dayDate, today);
+      const hasActivity = Number(activityMap.get(dayKey) || 0) > 0;
+      return `
+        <button type="button"
+          class="mx-ag-day-mini-cell${inMonth ? '' : ' is-out'}${isSelected ? ' is-selected' : ''}${isToday ? ' is-today' : ''}"
+          data-day-mini-date="${escapeAttrSafe(dayKey)}"
+          aria-pressed="${isSelected ? 'true' : 'false'}">
+          <span class="mx-ag-day-mini-num">${escapeHtml(String(dayDate.getDate()))}</span>
+          ${hasActivity ? '<span class="mx-ag-day-mini-dot" aria-hidden="true"></span>' : ''}
+        </button>
+      `;
+    }).join('');
+    return `
+      <section class="mx-ag-day-mini-calendar" aria-label="Calendario mensual">
+        <div class="mx-ag-day-mini-head">
+          <button type="button" class="mx-ag-day-mini-nav" data-day-mini-nav="prev" aria-label="Mes anterior"><i class="bi bi-chevron-left"></i></button>
+          <div class="mx-ag-day-mini-title">${escapeHtml(monthTitle)}</div>
+          <button type="button" class="mx-ag-day-mini-nav" data-day-mini-nav="next" aria-label="Mes siguiente"><i class="bi bi-chevron-right"></i></button>
+        </div>
+        <div class="mx-ag-day-mini-weekdays">${weekLabels.map((label)=> `<span>${escapeHtml(label)}</span>`).join('')}</div>
+        <div class="mx-ag-day-mini-grid">${daysHtml}</div>
+      </section>
+    `;
+  };
+  const buildCustomDaySlotCardHtml = (eventRef, nowTs = Date.now())=>{
+    const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
+    const start = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
+    const end = eventRef?.end instanceof Date ? eventRef.end : new Date(eventRef?.end || '');
+    if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start){
+      return '';
+    }
+    const timeLabel = formatAgendaEventSlotTime(start);
+    const consultorioIdSafe = sanitizeText(eventRef?.extendedProps?.consultorio_id || '');
+    const consultorioLabel = normalizeConsultorioDisplayLabel(
+      sanitizeText(
+        eventRef?.extendedProps?.consultorio_label
+        || resolveAgendaConsultorioLabelById(consultorioIdSafe)
+        || ''
+      ),
+      consultorioIdSafe
+    );
+    if(eventType === 'availability_slot'){
+      const slotRangeKey = toRangeKey(start, end);
+      const isElapsedSlot = isAvailabilitySlotElapsed(start, nowTs);
+      const availabilityLabel = isElapsedSlot ? 'EXPIRADA' : 'DISPONIBLE';
+      const cardClass = `mx-ag-custom-slot-card mxm-custom-week-card is-available${isElapsedSlot ? ' is-past' : ''}`;
+      const pastAttrs = isElapsedSlot ? 'disabled aria-disabled="true" tabindex="-1"' : '';
+      return `
+        <button type="button"
+          class="${cardClass}"
+          data-slot-kind="available"
+          ${pastAttrs}
+          data-slot-start="${escapeAttrSafe(start.toISOString())}"
+          data-slot-end="${escapeAttrSafe(end.toISOString())}"
+          data-slot-range-key="${escapeAttrSafe(slotRangeKey)}"
+          data-slot-consultorio-id="${escapeAttrSafe(consultorioIdSafe)}"
+          data-slot-consultorio-name="${escapeAttrSafe(consultorioLabel)}">
+          <div class="mx-ag-custom-slot-top">
+            <span class="mx-ag-custom-slot-time">${escapeHtml(timeLabel)}</span>
+            <span class="mx-ag-custom-slot-consultorio">${escapeHtml(consultorioLabel.toUpperCase())}</span>
+          </div>
+          <div class="mx-ag-custom-slot-primary">${availabilityLabel}</div>
+        </button>
+      `;
+    }
+    const isBlockedSlot = eventType === 'blocked_slot';
+    const resolvedPatient = isBlockedSlot
+      ? ((isRangeLikelyFullDayBlock(start, end) || eventRef?.extendedProps?.block_is_full_day === true) ? 'Día bloqueado' : 'Horario bloqueado')
+      : resolveEventPatientDisplayName(eventRef?.extendedProps || {}, eventRef);
+    const patient = resolvedPatient === 'Paciente sin nombre' ? 'Paciente' : resolvedPatient;
+    const originVisualKey = resolveAppointmentOriginVisualKey(eventRef?.extendedProps || {});
+    const isDemoQaAppointment = eventType === 'demo_qa_appointment' || eventRef?.extendedProps?.qa_demo === true;
+    const statusKeyNorm = normalizeText(
+      sanitizeText(
+        eventRef?.extendedProps?.status_key_real
+        || eventRef?.extendedProps?.status_key
+        || eventRef?.extendedProps?.status
+        || ''
+      )
+    );
+    const isCancelledStatus = statusKeyNorm.includes('cancel');
+    const isPastVisual = !!(isAvailabilitySlotElapsed(start, nowTs) && !isCancelledStatus && !isBlockedSlot);
+    const occupiedClass = isBlockedSlot
+      ? 'mx-ag-custom-slot-card mxm-custom-week-card is-blocked'
+      : `mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--${escapeAttrSafe(originVisualKey)}${isPastVisual ? ' is-past' : ''}${isDemoQaAppointment ? ' is-demo-qa' : ''}`;
+    const slotKind = isBlockedSlot
+      ? 'blocked'
+      : (isDemoQaAppointment ? 'demo-occupied' : 'occupied');
+    const eventId = sanitizeText(eventRef?.id || '');
+    const blockId = normalizeBlockedSlotIdCandidate(eventRef?.extendedProps?.block_id || eventId);
+    const slotRangeAttrs = isBlockedSlot
+      ? `data-slot-start="${escapeAttrSafe(start.toISOString())}" data-slot-end="${escapeAttrSafe(end.toISOString())}"`
+      : '';
+    const eventIdAttr = eventId ? `data-event-id="${escapeAttrSafe(eventId)}"` : '';
+    return `
+      <button type="button"
+        class="${occupiedClass}"
+        data-slot-kind="${slotKind}"
+        data-origin-visual-key="${escapeAttrSafe(originVisualKey)}"
+        ${isDemoQaAppointment ? 'data-slot-demo="1"' : ''}
+        ${eventIdAttr}
+        ${isBlockedSlot ? `data-block-id="${escapeAttrSafe(blockId)}"` : ''}
+        ${slotRangeAttrs}>
+        <div class="mx-ag-custom-slot-top">
+          <span class="mx-ag-custom-slot-time">${escapeHtml(timeLabel)}</span>
+          <span class="mx-ag-custom-slot-consultorio">${escapeHtml(consultorioLabel.toUpperCase())}</span>
+        </div>
+        <div class="mx-ag-custom-slot-primary">${escapeHtml(patient.toUpperCase())}</div>
+      </button>
+    `;
+  };
+  const renderCustomDayView = ()=>{
+    const root = ensureCustomDayRoot();
+    if(!(root instanceof HTMLElement)) return;
+    if(!isCustomDayActive()){
+      root.classList.add('d-none');
+      els.calendarWrap?.classList.remove('mx-ag-custom-day-active');
+      els.agendaFrontendV1?.classList.remove('mx-ag-day-layout-active');
+      syncCustomDayLegacyRowsVisibility(false);
+      return;
+    }
+    const selectedDate = toLocalDayDate(calendar?.getDate?.() || resolveAgendaViewAnchorDate() || new Date());
+    if(!(selectedDate instanceof Date) || Number.isNaN(selectedDate.getTime())){
+      root.classList.add('d-none');
+      return;
+    }
+    const selectedDayKey = formatYmdLocal(selectedDate);
+    if(!(customDayMiniMonthCursor instanceof Date) || Number.isNaN(customDayMiniMonthCursor.getTime())){
+      customDayMiniMonthCursor = startOfMonth(selectedDate);
+    }
+    if(selectedDate.getFullYear() !== customDayMiniMonthCursor.getFullYear() || selectedDate.getMonth() !== customDayMiniMonthCursor.getMonth()){
+      customDayMiniMonthCursor = startOfMonth(selectedDate);
+    }
+    const dayEvents = resolveCustomDayRenderableEvents(selectedDate);
+    const nowTs = Date.now();
+    let totalAppointments = 0;
+    let totalBlocked = 0;
+    let totalAvailable = 0;
+    const morningRows = [];
+    const afternoonRows = [];
+    dayEvents.forEach((eventRef)=>{
+      const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
+      const start = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
+      if(Number.isNaN(start.getTime())) return;
+      if(eventType === 'availability_slot'){
+        if(!isAvailabilitySlotElapsed(start, nowTs)){
+          totalAvailable += 1;
+        }
+      }else if(eventType === 'blocked_slot'){
+        totalBlocked += 1;
+      }else if(eventType !== 'availability' && eventType !== 'focus_marker' && eventType !== 'cancel_trace'){
+        totalAppointments += 1;
+      }
+      const row = {
+        start,
+        timeLabel: formatAgendaEventSlotTime(start),
+        cardHtml: buildCustomDaySlotCardHtml(eventRef, nowTs)
+      };
+      if(!row.cardHtml) return;
+      if(start.getHours() < 14){
+        morningRows.push(row);
+      }else{
+        afternoonRows.push(row);
+      }
+    });
+    const renderSectionRows = (rows = [], emptyLabel = 'Sin horarios en este bloque')=>{
+      if(!rows.length){
+        return `<div class="mx-ag-day-empty">${escapeHtml(emptyLabel)}</div>`;
+      }
+      return rows.map((row)=>{
+        return `
+          <div class="mx-ag-day-row">
+            <div class="mx-ag-day-row-time">${escapeHtml(row.timeLabel)}</div>
+            <div class="mx-ag-day-row-card">${row.cardHtml}</div>
+          </div>
+        `;
+      }).join('');
+    };
+    const selectedDateLabel = capitalizeAgendaLabel(
+      new Intl.DateTimeFormat('es-MX', {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      }).format(selectedDate)
+    );
+    const consultorioFilterOptions = Array.from(els.consultorio?.options || []).map((opt)=>{
+      const value = sanitizeText(opt.value || '');
+      const label = sanitizeText(opt.textContent || '');
+      if(!label) return '';
+      const selected = value === sanitizeText(els.consultorio?.value || '') ? ' selected' : '';
+      return `<option value="${escapeAttrSafe(value)}"${selected}>${escapeHtml(label)}</option>`;
+    }).filter(Boolean).join('');
+    const originItems = Array.from(els.originCatalog?.querySelectorAll?.('.mx-ag-origin-item') || []).map((item)=>{
+      if(item.classList.contains('d-none')) return '';
+      const labelText = sanitizeText(item.textContent || '');
+      const dotEl = item.querySelector('.mx-ag-origin-dot');
+      const dotClasses = dotEl
+        ? Array.from(dotEl.classList || [])
+          .map((name)=> sanitizeText(name || ''))
+          .filter((name)=> name && name !== 'mx-ag-origin-dot')
+          .join(' ')
+        : '';
+      if(!labelText) return '';
+      return `
+        <span class="mx-ag-origin-item">
+          <span class="mx-ag-origin-dot ${escapeAttrSafe(dotClasses)}"></span>${escapeHtml(labelText)}
+        </span>
+      `;
+    }).filter(Boolean).join('');
+    const originCatalogContent = originItems
+      ? `<div class="mx-ag-origin-label">Origen de la cita:</div><div class="mx-ag-day-origin-list">${originItems}</div>`
+      : '';
+    root.classList.remove('d-none');
+    els.calendarWrap?.classList.add('mx-ag-custom-day-active');
+    els.agendaFrontendV1?.classList.add('mx-ag-day-layout-active');
+    syncCustomDayLegacyRowsVisibility(true);
+    root.innerHTML = `
+      <div class="mx-ag-day-layout">
+        <aside class="mx-ag-day-sidebar">
+          ${buildCustomDayMiniMonthHtml({ selectedDate, monthCursor: customDayMiniMonthCursor })}
+          <section class="mx-ag-day-sidebar-card">
+            <div class="mx-ag-day-sidebar-title">Día seleccionado</div>
+            <div class="mx-ag-day-sidebar-date">${escapeHtml(selectedDateLabel)}</div>
+            <div class="mx-ag-day-sidebar-now">${isSameLocalDay(selectedDate, new Date()) ? 'Hoy' : ''}</div>
+          </section>
+          <section class="mx-ag-day-sidebar-card">
+            <label class="mx-ag-day-sidebar-title" for="ag_day_sidebar_consultorio">Consultorio</label>
+            <select id="ag_day_sidebar_consultorio" class="form-select form-select-sm mx-ag-day-sidebar-select" data-day-consultorio-filter>
+              ${consultorioFilterOptions}
+            </select>
+            ${originCatalogContent ? `<div class="mx-ag-day-origin">${originCatalogContent}</div>` : ''}
+            <button type="button" class="btn btn-primary mx-ag-day-refresh" data-day-refresh>
+              <i class="bi bi-arrow-clockwise"></i> Refrescar agenda
+            </button>
+          </section>
+        </aside>
+        <section class="mx-ag-day-main">
+          <header class="mx-ag-day-main-head">
+            <div class="mx-ag-day-main-title-wrap">
+              <div class="mx-ag-day-main-head-actions">
+                <button type="button" class="mx-ag-day-today-btn" data-day-jump-today>Hoy</button>
+                <button type="button" class="mx-ag-day-head-trigger mx-ag-day-main-title" data-day-head-trigger data-day-key="${escapeAttrSafe(selectedDayKey)}">
+                  ${escapeHtml(resolveCustomDayViewHeaderLabel(selectedDate))}
+                </button>
+              </div>
+              <div class="mx-ag-day-main-subtitle">Vista del día · ${escapeHtml(resolveCustomDayViewScopeLabel())}</div>
+            </div>
+            <div class="mx-ag-day-counters">
+              <article class="mx-ag-day-counter"><div class="mx-ag-day-counter-label">Citas</div><div class="mx-ag-day-counter-value">${totalAppointments}</div></article>
+              <article class="mx-ag-day-counter"><div class="mx-ag-day-counter-label">Bloqueos</div><div class="mx-ag-day-counter-value">${totalBlocked}</div></article>
+              <article class="mx-ag-day-counter is-accent"><div class="mx-ag-day-counter-label">Disponibles</div><div class="mx-ag-day-counter-value">${totalAvailable}</div></article>
+            </div>
+          </header>
+          <div class="mx-ag-day-columns">
+            <section class="mx-ag-day-column">
+              <div class="mx-ag-day-column-head">
+                <h4>Mañana</h4>
+                <span>08:00 - 14:00</span>
+              </div>
+              <div class="mx-ag-day-column-body">${renderSectionRows(morningRows)}</div>
+            </section>
+            <section class="mx-ag-day-column">
+              <div class="mx-ag-day-column-head">
+                <h4>Tarde</h4>
+                <span>14:00 - 20:00</span>
+              </div>
+              <div class="mx-ag-day-column-body">${renderSectionRows(afternoonRows)}</div>
+            </section>
+          </div>
+        </section>
+      </div>
+    `;
+  };
   const renderCustomWeekView = ()=>{
     const root = ensureCustomWeekRoot();
+    const dayRoot = ensureCustomDayRoot();
     const hasRoot = root instanceof HTMLElement;
+    const dayActive = isCustomDayActive();
     console.log('MXM CUSTOM WEEK DEBUG', {
       phase: 'start',
       hasRoot,
       activeView: String(calendar?.view?.type || ''),
       customWeekActive: isCustomWeekActive()
     });
+    if(dayActive){
+      if(root instanceof HTMLElement){
+        root.classList.add('d-none');
+      }
+      els.calendarWrap?.classList.remove('mx-ag-custom-week-active');
+      customWeekLastRenderedDays = [];
+      renderCustomDayView();
+      return;
+    }
     if(!hasRoot) return;
+    if(dayRoot instanceof HTMLElement){
+      dayRoot.classList.add('d-none');
+    }
+    els.calendarWrap?.classList.remove('mx-ag-custom-day-active');
+    els.agendaFrontendV1?.classList.remove('mx-ag-day-layout-active');
+    syncCustomDayLegacyRowsVisibility(false);
     if(!isCustomWeekActive()){
       root.classList.add('d-none');
       els.calendarWrap?.classList.remove('mx-ag-custom-week-active');
@@ -3329,7 +3762,7 @@ console.info('app.js loaded :: 20251123a');
               ? 'blocked'
               : (isDemoQaAppointment ? 'demo-occupied' : 'occupied');
             const blockIdAttr = isBlockedSlot
-              ? `data-block-id="${escapeAttrSafe(sanitizeText(eventRef?.extendedProps?.block_id || '').replace(/^blocked:/, ''))}"`
+              ? `data-block-id="${escapeAttrSafe(normalizeBlockedSlotIdCandidate(eventRef?.extendedProps?.block_id || eventId))}"`
               : '';
             const slotRangeAttrs = isBlockedSlot
               ? `data-slot-start="${escapeAttrSafe(start.toISOString())}" data-slot-end="${escapeAttrSafe(end.toISOString())}"`
@@ -3887,6 +4320,13 @@ console.info('app.js loaded :: 20251123a');
     return isRangeLikelyFullDayBlock(startValue, endValue)
       ? 'Desbloquear bloque completo del día'
       : 'Desbloquear bloque completo del rango';
+  };
+  const normalizeBlockedSlotIdCandidate = (value = '')=>{
+    const safeValue = sanitizeText(value || '');
+    if(!safeValue) return '';
+    return safeValue
+      .replace(/^blocked:/, '')
+      .replace(/__part_\d+$/, '');
   };
   const resolveBlockUnlockConfirmMessage = ({ isDayBlock = false } = {})=>{
     return isDayBlock
@@ -4991,7 +5431,7 @@ console.info('app.js loaded :: 20251123a');
       consultorio_id: sanitizeText(selection?.consultorio_id || ''),
       consultorio_name: sanitizeText(selection?.consultorio_name || ''),
       source: sanitizeText(selection?.source || 'custom_week_slot'),
-      block_id: sanitizeText(selection?.block_id || ''),
+      block_id: normalizeBlockedSlotIdCandidate(selection?.block_id || ''),
       menu_mode: menuMode,
       unblock_label: unblockLabel
     };
@@ -6928,6 +7368,18 @@ console.info('app.js loaded :: 20251123a');
       }catch(_){}
     }
     try{ calendar.refetchEvents(); }catch(_){}
+  };
+  const refreshCalendarAfterBlockedSlotMutation = ()=>{
+    if(!calendar){
+      scheduleCustomWeekRender();
+      return;
+    }
+    try{
+      calendar.refetchEvents();
+    }catch(_){
+      rerenderCalendarEvents();
+    }
+    scheduleCustomWeekRender();
   };
   const areIdSetsEqual = (a, b)=>{
     if(!(a instanceof Set) || !(b instanceof Set)) return false;
@@ -9529,13 +9981,19 @@ console.info('app.js loaded :: 20251123a');
     return resolveAgendaRollingStartDate();
   };
   const prepareNativeAgendaViewRender = ()=>{
-    // Semana custom se dibuja fuera de FullCalendar; para Día debemos
-    // limpiar cualquier estado visual previo y dejar visible el contenedor nativo.
-    const root = ensureCustomWeekRoot();
-    if(root instanceof HTMLElement){
-      root.classList.add('d-none');
+    // Limpia render custom previo antes de una transición de vista.
+    const weekRoot = ensureCustomWeekRoot();
+    const dayRoot = ensureCustomDayRoot();
+    if(weekRoot instanceof HTMLElement){
+      weekRoot.classList.add('d-none');
+    }
+    if(dayRoot instanceof HTMLElement){
+      dayRoot.classList.add('d-none');
     }
     els.calendarWrap?.classList.remove('mx-ag-custom-week-active');
+    els.calendarWrap?.classList.remove('mx-ag-custom-day-active');
+    els.agendaFrontendV1?.classList.remove('mx-ag-day-layout-active');
+    syncCustomDayLegacyRowsVisibility(false);
     try{ calendar?.render?.(); }catch(_){}
     try{ calendar?.updateSize?.(); }catch(_){}
   };
@@ -15913,6 +16371,7 @@ console.info('app.js loaded :: 20251123a');
             ? 'Desbloquear bloque completo del día'
             : 'Desbloquear bloque completo del rango';
           const blockStateLabel = isFullDayBlock ? 'DÍA BLOQUEADO' : 'HORARIO BLOQUEADO';
+          const blockIdAttr = normalizeBlockedSlotIdCandidate(props.block_id || arg.event?.id || '');
           return {
             html: `
               <div class="mx-ag-blocked-event-wrap${isActiveBlock ? ' is-active' : ''}">
@@ -15923,7 +16382,7 @@ console.info('app.js loaded :: 20251123a');
                   </div>
                   <div class="mx-ag-slot-primary">${blockStateLabel}</div>
                   ${reasonLabel ? `<div class="mx-ag-slot-block-reason">${escapeHtml(reasonLabel)}</div>` : ''}
-                  ${isActiveBlock ? `<button type="button" class="mx-ag-blocked-event-remove mx-ag-slot-block-remove" data-ag-block-action="remove" data-ag-block-id="${escapeHtml(sanitizeText(props.block_id || ''))}" data-ag-block-kind="${isFullDayBlock ? 'day' : 'slot'}">${escapeHtml(unlockLabel)}</button>` : ''}
+                  ${isActiveBlock ? `<button type="button" class="mx-ag-blocked-event-remove mx-ag-slot-block-remove" data-ag-block-action="remove" data-ag-block-id="${escapeHtml(blockIdAttr)}" data-ag-block-kind="${isFullDayBlock ? 'day' : 'slot'}">${escapeHtml(unlockLabel)}</button>` : ''}
                 </div>
               </div>
             `
@@ -16308,7 +16767,7 @@ console.info('app.js loaded :: 20251123a');
           info.jsEvent?.stopPropagation?.();
           const start = info.event.start instanceof Date ? new Date(info.event.start) : new Date(info.event.start || '');
           const end = info.event.end instanceof Date ? new Date(info.event.end) : new Date(info.event.end || '');
-          const blockId = sanitizeText(props.block_id || sanitizeText(info.event.id || '').replace(/^blocked:/, ''));
+          const blockId = normalizeBlockedSlotIdCandidate(props.block_id || info.event.id || '');
           const opened = openCustomSlotQuickMenu({
             selection: {
               start,
@@ -16774,7 +17233,11 @@ console.info('app.js loaded :: 20251123a');
       if(kind === 'blocked'){
         const startRaw = sanitizeText(card.getAttribute('data-slot-start') || '');
         const endRaw = sanitizeText(card.getAttribute('data-slot-end') || '');
-        const blockId = sanitizeText(card.getAttribute('data-block-id') || '').replace(/^blocked:/, '');
+        const blockId = normalizeBlockedSlotIdCandidate(
+          card.getAttribute('data-block-id')
+          || card.getAttribute('data-event-id')
+          || ''
+        );
         const start = new Date(startRaw);
         const end = new Date(endRaw);
         if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start || !blockId){
@@ -16788,6 +17251,159 @@ console.info('app.js loaded :: 20251123a');
             menu_mode: 'blocked',
             unblock_label: resolveBlockUnlockLabelFromRange(start, end),
             source: 'custom_week_blocked'
+          },
+          anchorEl: card,
+          jsEvent: event
+        });
+        return;
+      }
+      if(kind === 'demo-occupied'){
+        return;
+      }
+      if(kind === 'occupied'){
+        hideCustomSlotQuickMenu();
+        hideDayHeadMenu();
+        hideCellMenu();
+        const eventId = sanitizeText(card.getAttribute('data-event-id') || '');
+        if(eventId && calendar){
+          const ev = calendar.getEventById(eventId);
+          if(ev){
+            openEventActionModal(ev, 'detail');
+          }
+        }
+      }
+    });
+    ensureCustomDayRoot()?.addEventListener('change', (event)=>{
+      const consultorioSelect = event.target?.closest?.('[data-day-consultorio-filter]');
+      if(!(consultorioSelect instanceof HTMLSelectElement)) return;
+      const selectedValue = sanitizeText(consultorioSelect.value || '');
+      void setActiveAgendaConsultorio(selectedValue, {
+        source: 'custom_day_sidebar_filter',
+        syncFilter: true,
+        forceRefresh: true
+      }).catch(()=> null);
+    });
+    ensureCustomDayRoot()?.addEventListener('click', (event)=>{
+      const miniMonthNav = event.target.closest('[data-day-mini-nav]');
+      if(miniMonthNav){
+        event.preventDefault();
+        event.stopPropagation();
+        const action = sanitizeText(miniMonthNav.getAttribute('data-day-mini-nav') || '');
+        const base = startOfMonth(customDayMiniMonthCursor || resolveAgendaViewAnchorDate() || new Date());
+        if(base instanceof Date && !Number.isNaN(base.getTime())){
+          customDayMiniMonthCursor = addMonths(base, action === 'prev' ? -1 : 1) || base;
+          scheduleCustomWeekRender();
+        }
+        return;
+      }
+      const miniMonthDay = event.target.closest('[data-day-mini-date]');
+      if(miniMonthDay){
+        event.preventDefault();
+        event.stopPropagation();
+        const dayKey = sanitizeText(miniMonthDay.getAttribute('data-day-mini-date') || '').slice(0, 10);
+        if(!dayKey) return;
+        const dayDate = toLocalDayDate(dayKey);
+        if(!(dayDate instanceof Date) || Number.isNaN(dayDate.getTime())) return;
+        customDayMiniMonthCursor = startOfMonth(dayDate);
+        if(calendar){
+          try{ calendar.changeView('timeGridDay', dayDate); }catch(_){}
+        }
+        return;
+      }
+      const todayBtn = event.target.closest('[data-day-jump-today]');
+      if(todayBtn){
+        event.preventDefault();
+        event.stopPropagation();
+        const today = toLocalDayDate(new Date());
+        if(today instanceof Date && !Number.isNaN(today.getTime())){
+          customDayMiniMonthCursor = startOfMonth(today);
+          if(calendar){
+            try{ calendar.changeView('timeGridDay', today); }catch(_){}
+          }
+        }
+        return;
+      }
+      const refreshBtn = event.target.closest('[data-day-refresh]');
+      if(refreshBtn){
+        event.preventDefault();
+        event.stopPropagation();
+        refreshCalendar({ forceConsultorios: false }).catch(()=> null);
+        return;
+      }
+      const dayHeadTrigger = event.target.closest('[data-day-head-trigger]');
+      if(dayHeadTrigger){
+        event.preventDefault();
+        event.stopPropagation();
+        const dayKey = sanitizeText(dayHeadTrigger.getAttribute('data-day-key') || '').slice(0, 10);
+        if(!dayKey) return;
+        const selection = buildDaySlotSelectionFromDayKey(dayKey);
+        const consultorioId = sanitizeText(selection?.consultorio_id || getAvailabilityConsultorioId() || '');
+        const consultorioName = sanitizeText(
+          selection?.consultorio_name
+          || resolveAgendaConsultorioLabelById(consultorioId)
+          || ''
+        );
+        openDayHeadMenu({
+          dayKey,
+          consultorioId,
+          consultorioName,
+          anchorEl: dayHeadTrigger,
+          jsEvent: event
+        });
+        return;
+      }
+      const card = event.target.closest('.mx-ag-custom-slot-card');
+      if(!card) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const kind = sanitizeText(card.getAttribute('data-slot-kind') || '');
+      if(kind === 'available'){
+        if(card.matches(':disabled') || card.getAttribute('aria-disabled') === 'true'){
+          return;
+        }
+        const startRaw = sanitizeText(card.getAttribute('data-slot-start') || '');
+        const endRaw = sanitizeText(card.getAttribute('data-slot-end') || '');
+        const consultorioId = sanitizeText(card.getAttribute('data-slot-consultorio-id') || '');
+        const consultorioName = sanitizeText(card.getAttribute('data-slot-consultorio-name') || '');
+        const start = new Date(startRaw);
+        const end = new Date(endRaw);
+        if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start){
+          return;
+        }
+        openCustomSlotQuickMenu({
+          selection: {
+            start,
+            end,
+            consultorio_id: consultorioId,
+            consultorio_name: consultorioName,
+            source: 'custom_day_slot'
+          },
+          anchorEl: card,
+          jsEvent: event
+        });
+        return;
+      }
+      if(kind === 'blocked'){
+        const startRaw = sanitizeText(card.getAttribute('data-slot-start') || '');
+        const endRaw = sanitizeText(card.getAttribute('data-slot-end') || '');
+        const blockId = normalizeBlockedSlotIdCandidate(
+          card.getAttribute('data-block-id')
+          || card.getAttribute('data-event-id')
+          || ''
+        );
+        const start = new Date(startRaw);
+        const end = new Date(endRaw);
+        if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start || !blockId){
+          return;
+        }
+        openCustomSlotQuickMenu({
+          selection: {
+            start,
+            end,
+            block_id: blockId,
+            menu_mode: 'blocked',
+            unblock_label: resolveBlockUnlockLabelFromRange(start, end),
+            source: 'custom_day_blocked'
           },
           anchorEl: card,
           jsEvent: event
@@ -16880,7 +17496,7 @@ console.info('app.js loaded :: 20251123a');
       event.stopPropagation();
       const selection = customSlotMenuSelection ? { ...customSlotMenuSelection } : null;
       hideCustomSlotQuickMenu();
-      const blockId = sanitizeText(selection?.block_id || '');
+      const blockId = normalizeBlockedSlotIdCandidate(selection?.block_id || '');
       if(!blockId) return;
       const unlockLabel = sanitizeText(selection?.unblock_label || 'Desbloquear bloque completo del rango');
       const confirmMessage = resolveBlockUnlockConfirmMessage({
@@ -16890,7 +17506,7 @@ console.info('app.js loaded :: 20251123a');
       const removed = removeBlockedSlotById(blockId);
       activeBlockedEventId = '';
       if(removed){
-        rerenderCalendarEvents();
+        refreshCalendarAfterBlockedSlotMutation();
       }
     });
     els.customSlotCloseBtn?.addEventListener('click', (event)=>{
@@ -17629,7 +18245,7 @@ console.info('app.js loaded :: 20251123a');
       if(!removeBtn) return;
       event.preventDefault();
       event.stopPropagation();
-      const blockId = sanitizeText(removeBtn.getAttribute('data-ag-block-id') || '');
+      const blockId = normalizeBlockedSlotIdCandidate(removeBtn.getAttribute('data-ag-block-id') || '');
       if(!blockId) return;
       const blockKind = sanitizeText(removeBtn.getAttribute('data-ag-block-kind') || '');
       const confirmMessage = resolveBlockUnlockConfirmMessage({
@@ -17639,7 +18255,7 @@ console.info('app.js loaded :: 20251123a');
       const removed = removeBlockedSlotById(blockId);
       activeBlockedEventId = '';
       if(removed){
-        rerenderCalendarEvents();
+        refreshCalendarAfterBlockedSlotMutation();
       }
     }, true);
     els.calendarWrap?.addEventListener('click', (event)=>{
