@@ -8689,6 +8689,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   box-shadow: none;
   padding: 8px 6px;
   text-align: center;
+  cursor: pointer;
 }
 .mx-ag-custom-week-col-title{
   font-size: 1.23rem;
@@ -9026,6 +9027,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   gap:2px;
   min-height:44px;
   line-height:1.1;
+}
+.mxm-agenda-day-head[data-day-key]{
+  cursor: pointer;
 }
 .mxm-agenda-day-title{
   font-size:.84rem;

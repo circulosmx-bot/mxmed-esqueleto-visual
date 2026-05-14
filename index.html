@@ -3031,16 +3031,17 @@
                   <div id="ag_calendar"></div>
                   <div id="ag_cell_menu" class="mx-ag-cell-menu d-none" role="menu" aria-label="Acciones de celda disponible">
                     <button type="button" class="mx-ag-cell-menu-btn" id="ag_cell_menu_new_appointment">Nueva cita</button>
-                    <button type="button" class="mx-ag-cell-menu-btn" id="ag_cell_menu_block_slot">Bloquear horario</button>
+                    <button type="button" class="mx-ag-cell-menu-btn" id="ag_cell_menu_block_slot">Bloquear</button>
                   </div>
                   <div id="ag_day_head_menu" class="mx-ag-day-head-menu d-none" role="menu" aria-label="Acciones del día">
-                    <button type="button" class="mx-ag-day-head-menu-btn" id="ag_day_head_block_btn">Bloquear día completo</button>
-                    <button type="button" class="mx-ag-day-head-menu-btn" id="ag_day_head_view_btn">Ver disponibilidad del día</button>
+                    <button type="button" class="mx-ag-day-head-menu-btn" id="ag_day_head_block_btn">Bloquear todo el día</button>
+                    <button type="button" class="mx-ag-day-head-menu-btn" id="ag_day_head_view_btn">Bloquear de horario a horario</button>
                     <button type="button" class="mx-ag-day-head-menu-btn is-muted" id="ag_day_head_close_btn">Cerrar</button>
                   </div>
                   <div id="ag_custom_slot_menu" class="mx-ag-day-head-menu mx-ag-slot-quick-menu d-none" role="menu" aria-label="Acciones de horario disponible">
                     <button type="button" class="mx-ag-day-head-menu-btn" id="ag_custom_slot_new_btn">Nueva cita</button>
-                    <button type="button" class="mx-ag-day-head-menu-btn" id="ag_custom_slot_block_btn">Bloquear horario</button>
+                    <button type="button" class="mx-ag-day-head-menu-btn" id="ag_custom_slot_block_btn">Bloquear</button>
+                    <button type="button" class="mx-ag-day-head-menu-btn d-none" id="ag_custom_slot_unblock_btn">Desbloquear horario</button>
                     <button type="button" class="mx-ag-day-head-menu-btn is-muted" id="ag_custom_slot_close_btn">Cerrar</button>
                   </div>
                 </div>
@@ -3260,11 +3261,11 @@
                         <div class="d-grid gap-2">
                           <label class="d-inline-flex align-items-center gap-2">
                             <input type="radio" name="ag_block_mode" value="single" id="ag_block_mode_single" checked>
-                            <span>Solo este horario</span>
+                            <span id="ag_block_mode_single_label">Solo este horario</span>
                           </label>
                           <label class="d-inline-flex align-items-center gap-2">
                             <input type="radio" name="ag_block_mode" value="until" id="ag_block_mode_until">
-                            <span>Hasta cierta hora</span>
+                            <span id="ag_block_mode_until_label">Hasta cierta hora</span>
                           </label>
                         </div>
                       </div>
