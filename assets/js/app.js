@@ -565,7 +565,10 @@ console.info('app.js loaded :: 20251123a');
     patientSearchBtn: panel.querySelector('#ag_patient_search_btn'),
     patientSearchResults: panel.querySelector('#ag_patient_search_results'),
     patientSearchMsg: panel.querySelector('#ag_patient_search_msg'),
+    patientModeExistingBtn: panel.querySelector('#ag_patient_mode_existing_btn'),
+    patientModeNewBtn: panel.querySelector('#ag_patient_mode_new_btn'),
     patientNewToggle: panel.querySelector('#ag_patient_new_toggle'),
+    patientExistingWrap: panel.querySelector('#ag_patient_existing_wrap'),
     patientNewWrap: panel.querySelector('#ag_patient_new_wrap'),
     patientNewFirstName: panel.querySelector('#ag_patient_new_first_name'),
     patientNewLastName1: panel.querySelector('#ag_patient_new_last_name_1'),
@@ -583,6 +586,15 @@ console.info('app.js loaded :: 20251123a');
     activePatientText: panel.querySelector('#ag_active_patient_text'),
     useActivePatientYes: panel.querySelector('#ag_use_active_patient_yes'),
     useActivePatientNo: panel.querySelector('#ag_use_active_patient_no'),
+    patientSharedPhoneModalEl: panel.querySelector('#ag_patient_shared_phone_modal'),
+    patientSharedPhoneNumber: panel.querySelector('#ag_patient_shared_phone_number'),
+    patientSharedPhoneNotice: panel.querySelector('#ag_patient_shared_phone_notice'),
+    patientSharedPhoneList: panel.querySelector('#ag_patient_shared_phone_list'),
+    patientSharedPhoneContinueBtn: panel.querySelector('#ag_patient_shared_phone_continue_btn'),
+    patientLookupModalEl: panel.querySelector('#ag_patient_lookup_modal'),
+    patientLookupContext: panel.querySelector('#ag_patient_lookup_context'),
+    patientLookupNotice: panel.querySelector('#ag_patient_lookup_notice'),
+    patientLookupList: panel.querySelector('#ag_patient_lookup_list'),
     createSubmit: panel.querySelector('#ag_create_submit_btn'),
     workspaceShell: panel.querySelector('.mx-ag-workspace-shell'),
     viewModeSwitch: panel.querySelector('#ag_view_mode_switch'),
@@ -601,10 +613,15 @@ console.info('app.js loaded :: 20251123a');
     eventActionError: panel.querySelector('#ag_event_action_error_box'),
     eventActionStatusBadge: panel.querySelector('#ag_event_action_status_badge'),
     eventActionDetailWrap: panel.querySelector('#ag_event_detail_wrap'),
+    eventActionAvatarImg: panel.querySelector('#ag_event_action_avatar_img'),
     eventActionPatient: panel.querySelector('#ag_event_action_patient'),
+    eventActionPhone: panel.querySelector('#ag_event_action_phone'),
+    eventActionBirth: panel.querySelector('#ag_event_action_birth'),
     eventActionTime: panel.querySelector('#ag_event_action_time'),
     eventActionDuration: panel.querySelector('#ag_event_action_duration'),
     eventActionStatus: panel.querySelector('#ag_event_action_status'),
+    eventActionOriginDot: panel.querySelector('#ag_event_action_origin_dot'),
+    eventActionOrigin: panel.querySelector('#ag_event_action_origin'),
     eventActionReasonWrap: panel.querySelector('#ag_event_action_reason_wrap'),
     eventActionReason: panel.querySelector('#ag_event_action_reason'),
     eventActionConsultorioWrap: panel.querySelector('#ag_event_action_consultorio_wrap'),
@@ -733,9 +750,19 @@ console.info('app.js loaded :: 20251123a');
   let globalAgendaExpandedVisibleRangeLoading = false;
   let agendaConsultoriosReady = false;
   let patientSearchDebounceTimer = null;
+  let patientSharedPhoneDebounceTimer = null;
   let patientIndexCache = null;
   let patientIndexPromise = null;
   const patientDetailsCache = new Map();
+  let patientLookupModal = null;
+  let patientSharedPhoneModal = null;
+  let patientLookupEntries = [];
+  let patientLookupSelectedId = '';
+  let patientLookupContextQuery = '';
+  let patientSharedPhoneEntries = [];
+  let patientSharedPhoneSelectedId = '';
+  let patientSharedPhoneCurrentDigits = '';
+  let patientSharedPhoneBypassDigits = '';
   let createSelectionContext = {
     consultorioId: '',
     source: '',
@@ -774,6 +801,7 @@ console.info('app.js loaded :: 20251123a');
   let eventRescheduleMonthCursor = null;
   let eventRescheduleSelectedDayKey = '';
   let eventRescheduleSelectedStart = null;
+  let eventRescheduleSelectedSlotKey = '';
   const eventRescheduleAvailabilityCache = new Map();
   const eventRescheduleAvailabilityInFlight = new Map();
   let eventRescheduleAvailabilityLoadNonce = 0;
@@ -3446,6 +3474,39 @@ console.info('app.js loaded :: 20251123a');
     if(els.patientSearchResults) els.patientSearchResults.innerHTML = '';
     setPatientSearchMsg('');
   };
+  const normalizePhoneDigits = (value = '')=>{
+    return sanitizeText(value || '').replace(/\D+/g, '');
+  };
+  const resolvePatientPhoneCandidatesFromRaw = (item = {})=>{
+    const candidates = [];
+    const pushCandidate = (value)=>{
+      const digits = normalizePhoneDigits(value);
+      if(!digits) return;
+      candidates.push(digits);
+    };
+    [
+      item.phone,
+      item.telefono,
+      item['teléfono'],
+      item.mobile,
+      item.cellphone,
+      item.celular,
+      item.phone_number,
+      item.contact_phone
+    ].forEach(pushCandidate);
+    const contacts = Array.isArray(item.contacts) ? item.contacts : [];
+    contacts.forEach((contact)=>{
+      if(!(contact && typeof contact === 'object')) return;
+      const type = normalizeText(contact.type || contact.contact_type || '');
+      if(type && !type.includes('phone') && !type.includes('telefono') && !type.includes('tel')) return;
+      pushCandidate(contact.value);
+      pushCandidate(contact.phone);
+      pushCandidate(contact.telefono);
+      pushCandidate(contact.phone_number);
+      pushCandidate(contact.value_masked);
+    });
+    return Array.from(new Set(candidates)).sort((a, b)=> b.length - a.length);
+  };
   const normalizePatientsIndexPayload = (payload)=>{
     if(!payload || payload.ok !== true) return [];
     const raw = Array.isArray(payload.data)
@@ -3457,7 +3518,9 @@ console.info('app.js loaded :: 20251123a');
         patient_id: sanitizeText(item.patient_id || item.id || item.patientId || ''),
         display_name: sanitizeText(item.nombre_completo || item.display_name || item.name || ''),
         curp: sanitizeText(item.curp || ''),
-        birthdate: toDateOnlyYmd(item.birthdate || item.fecha_nacimiento || item.dob || '')
+        birthdate: toDateOnlyYmd(item.birthdate || item.fecha_nacimiento || item.dob || ''),
+        contacts: Array.isArray(item.contacts) ? item.contacts : [],
+        phone_candidates: resolvePatientPhoneCandidatesFromRaw(item)
       }))
       .filter((item)=> item.patient_id);
   };
@@ -3467,7 +3530,10 @@ console.info('app.js loaded :: 20251123a');
     return {
       patient_id: sanitizeText(data.patient_id || ''),
       display_name: sanitizeText(data.display_name || data.nombre_completo || data.name || ''),
-      birthdate: toDateOnlyYmd(data.birthdate || data.fecha_nacimiento || data.dob || '')
+      birthdate: toDateOnlyYmd(data.birthdate || data.fecha_nacimiento || data.dob || ''),
+      sex: sanitizeText(data.sex || data.sexo || data.gender || ''),
+      contacts: Array.isArray(data.contacts) ? data.contacts : [],
+      phone_candidates: resolvePatientPhoneCandidatesFromRaw(data)
     };
   };
   const fetchPatientIndex = async ({ signal } = {})=>{
@@ -3530,7 +3596,16 @@ console.info('app.js loaded :: 20251123a');
   const switchCreatePatientMode = (mode = 'existing')=>{
     createPatientMode = (mode === 'new') ? 'new' : 'existing';
     const isNew = createPatientMode === 'new';
+    if(els.patientExistingWrap) els.patientExistingWrap.classList.toggle('d-none', isNew);
     if(els.patientNewWrap) els.patientNewWrap.classList.toggle('d-none', !isNew);
+    if(els.patientModeExistingBtn){
+      els.patientModeExistingBtn.classList.toggle('is-active', !isNew);
+      els.patientModeExistingBtn.setAttribute('aria-selected', !isNew ? 'true' : 'false');
+    }
+    if(els.patientModeNewBtn){
+      els.patientModeNewBtn.classList.toggle('is-active', isNew);
+      els.patientModeNewBtn.setAttribute('aria-selected', isNew ? 'true' : 'false');
+    }
     if(els.patientNewToggle){
       els.patientNewToggle.textContent = 'Paciente nuevo';
       els.patientNewToggle.classList.toggle('is-active', isNew);
@@ -3562,6 +3637,436 @@ console.info('app.js loaded :: 20251123a');
       });
       queueCreatePatientBehaviorNoticeRefresh(90);
     }
+  };
+  const resolvePatientLookupDisplayName = (entry = {})=>{
+    return sanitizeText(entry.display_name || entry.nombre_completo || entry.name || entry.patient_id || 'Paciente');
+  };
+  const resolvePatientSexMeta = (value = '')=>{
+    const raw = normalizeText(value || '');
+    if(!raw) return { key: '', label: 'Sexo no disponible' };
+    if(raw === 'm' || raw.includes('masc') || raw.includes('male') || raw.includes('hombre')){
+      return { key: 'male', label: 'Hombre' };
+    }
+    if(raw === 'f' || raw.includes('fem') || raw.includes('female') || raw.includes('mujer')){
+      return { key: 'female', label: 'Mujer' };
+    }
+    return { key: '', label: sanitizeText(value || 'Sexo no disponible') };
+  };
+  const resolvePatientAgeFromBirthdate = (birthdate = '')=>{
+    const safeDate = toDateOnlyYmd(birthdate || '');
+    if(!safeDate) return null;
+    const parsed = new Date(`${safeDate}T00:00:00`);
+    if(Number.isNaN(parsed.getTime())) return null;
+    const now = new Date();
+    let age = now.getFullYear() - parsed.getFullYear();
+    const monthDiff = now.getMonth() - parsed.getMonth();
+    if(monthDiff < 0 || (monthDiff === 0 && now.getDate() < parsed.getDate())){
+      age -= 1;
+    }
+    if(!Number.isFinite(age) || age < 0 || age > 130) return null;
+    return age;
+  };
+  const resolvePatientAvatarBySexAndAge = ({ sex = '', birthdate = '' } = {})=>{
+    const sexMeta = resolvePatientSexMeta(sex);
+    const age = resolvePatientAgeFromBirthdate(birthdate);
+    const isFemale = sexMeta.key === 'female';
+    const isMale = sexMeta.key === 'male';
+    if(Number.isFinite(age)){
+      if(age >= 3 && age <= 10){
+        return isFemale ? 'assets/img/patients/avatars/girl.png' : 'assets/img/patients/avatars/boy.png';
+      }
+      if(age >= 11 && age <= 21){
+        if(isFemale) return 'assets/img/patients/avatars/young-female.png';
+        return 'assets/img/patients/avatars/young-male.png';
+      }
+    }
+    if(isFemale) return 'assets/img/patients/avatars/female.png';
+    if(isMale) return 'assets/img/patients/avatars/male.png';
+    return 'assets/img/patients/avatars/male.png';
+  };
+  const formatPhoneDigitsForHuman = (digits = '')=>{
+    const safe = normalizePhoneDigits(digits);
+    if(safe.length === 10){
+      return `${safe.slice(0, 3)} ${safe.slice(3, 6)} ${safe.slice(6)}`;
+    }
+    return safe;
+  };
+  const resolvePatientPhoneLabelFromEntry = (entry = {})=>{
+    const contacts = Array.isArray(entry.contacts) ? entry.contacts : [];
+    const primaryPhoneContact = contacts.find((contact)=>{
+      const type = normalizeText(contact?.type || contact?.contact_type || '');
+      return type.includes('phone') || type.includes('tel');
+    }) || null;
+    const maskedFromContact = sanitizeText(primaryPhoneContact?.value_masked || '');
+    if(maskedFromContact) return maskedFromContact;
+    const candidate = resolvePatientPhoneCandidatesFromEntry(entry).find((digits)=> digits.length >= 4) || '';
+    if(!candidate) return 'Teléfono no disponible';
+    return candidate.length === 10 ? formatPhoneDigitsForHuman(candidate) : `******${candidate.slice(-4)}`;
+  };
+  const buildPatientIdentityMetaLabel = (entry = {})=>{
+    const sexMeta = resolvePatientSexMeta(entry.sex || entry.gender || '');
+    const age = resolvePatientAgeFromBirthdate(entry.birthdate || '');
+    const phoneLabel = resolvePatientPhoneLabelFromEntry(entry);
+    const ageLabel = Number.isFinite(age) ? `${age} años` : 'Edad no disponible';
+    return `${sexMeta.label} · ${ageLabel} · ${phoneLabel}`;
+  };
+  const resolveEventActionPhoneLabelFromEntry = (entry = {})=>{
+    const label = sanitizeText(resolvePatientPhoneLabelFromEntry(entry) || '');
+    if(!label || normalizeText(label) === 'telefono no disponible'){
+      return '--';
+    }
+    return label;
+  };
+  const formatEventActionBirthLabel = ({ birthdate = '', sex = '' } = {})=>{
+    const safeBirthdate = toDateOnlyYmd(birthdate || '');
+    const sexMeta = resolvePatientSexMeta(sex || '');
+    const details = [];
+    if(sexMeta.key){
+      details.push(sexMeta.label);
+    }
+    if(safeBirthdate){
+      const parsed = new Date(`${safeBirthdate}T00:00:00`);
+      let birthLabel = safeBirthdate;
+      if(!Number.isNaN(parsed.getTime())){
+        birthLabel = parsed.toLocaleDateString('es-MX', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        });
+      }
+      const age = resolvePatientAgeFromBirthdate(safeBirthdate);
+      details.push(Number.isFinite(age) ? `${birthLabel} (${age} años)` : birthLabel);
+    }
+    if(!details.length) return '--';
+    return details.join(' · ');
+  };
+  const getDoctorLastNameForAgenda = ()=>{
+    const rawDoctorName = sanitizeText(
+      window.mxmedStore?.doctorProfile?.full_name
+      || window.mxmedStore?.doctorName
+      || window.mxmedDoctor?.full_name
+      || document.querySelector('.user-id .name')?.textContent
+      || ''
+    ).replace(/^dr?a?\.?\s*/i, '').trim();
+    if(!rawDoctorName) return 'Médico';
+    const parts = rawDoctorName.split(/\s+/).filter(Boolean);
+    if(parts.length >= 2) return parts[parts.length - 2];
+    return parts[0];
+  };
+  const resolveDoctorAgendaPrefix = ()=>{
+    const doctorSex = sanitizeText(
+      window.mxmedStore?.doctorProfile?.gender
+      || window.mxmedStore?.doctorProfile?.sex
+      || window.mxmedStore?.gender
+      || window.mxmedDoctor?.gender
+      || ''
+    );
+    const sexMeta = resolvePatientSexMeta(doctorSex);
+    return sexMeta.key === 'female' ? 'Dra.' : 'Dr.';
+  };
+  const resolveEventActionOriginMeta = (props = {})=>{
+    const visualKey = sanitizeText(resolveAppointmentOriginVisualKey(props) || 'user') || 'user';
+    if(visualKey === 'operator-01') return { visualKey, label: 'Operador 01' };
+    if(visualKey === 'operator-02') return { visualKey, label: 'Operador 02' };
+    if(visualKey === 'operator') return { visualKey, label: 'Operadora' };
+    if(visualKey === 'web-patient') return { visualKey, label: 'Paciente vía perfil web' };
+    if(visualKey === 'ai') return { visualKey, label: 'Operador IA' };
+    if(visualKey === 'call-center') return { visualKey, label: 'Call Center' };
+    const doctorLastName = getDoctorLastNameForAgenda();
+    return {
+      visualKey: 'user',
+      label: `${resolveDoctorAgendaPrefix()} ${doctorLastName}`
+    };
+  };
+  const syncEventActionPatientIdentityDisplay = ({
+    name = '',
+    phone = '',
+    sex = '',
+    birthdate = ''
+  } = {})=>{
+    const safeName = sanitizeText(name || '') || 'Paciente sin nombre';
+    const safePhone = sanitizeText(phone || '') || '--';
+    const safeBirth = formatEventActionBirthLabel({ birthdate, sex });
+    const avatarSrc = resolvePatientAvatarBySexAndAge({ sex, birthdate });
+    if(els.eventActionPatient){
+      els.eventActionPatient.textContent = safeName;
+    }
+    if(els.eventActionPhone){
+      els.eventActionPhone.textContent = safePhone;
+    }
+    if(els.eventActionBirth){
+      els.eventActionBirth.textContent = safeBirth;
+    }
+    if(els.eventActionAvatarImg){
+      els.eventActionAvatarImg.src = avatarSrc;
+      els.eventActionAvatarImg.alt = `Avatar de ${safeName}`;
+    }
+  };
+  const resolveEventActionPatientSeed = (props = {}, eventRef = null)=>{
+    const nestedPatient = (props?.patient && typeof props.patient === 'object') ? props.patient : {};
+    const fallbackName = resolveEventPatientDisplayName(props, eventRef);
+    const safeName = sanitizeText(fallbackName || '') || 'Paciente sin nombre';
+    const birthdate = toDateOnlyYmd(
+      props?.patient_birthdate
+      || props?.birthdate
+      || props?.fecha_nacimiento
+      || props?.dob
+      || nestedPatient?.birthdate
+      || nestedPatient?.fecha_nacimiento
+      || nestedPatient?.dob
+      || ''
+    );
+    const sex = sanitizeText(
+      props?.patient_sex
+      || props?.patient_gender
+      || props?.sex
+      || props?.sexo
+      || props?.gender
+      || nestedPatient?.sex
+      || nestedPatient?.sexo
+      || nestedPatient?.gender
+      || ''
+    );
+    const mergedPhoneEntry = {
+      ...nestedPatient,
+      ...props,
+      contacts: Array.isArray(nestedPatient?.contacts)
+        ? nestedPatient.contacts
+        : (Array.isArray(props?.contacts) ? props.contacts : [])
+    };
+    const phone = resolveEventActionPhoneLabelFromEntry(mergedPhoneEntry);
+    return {
+      name: safeName,
+      phone,
+      sex,
+      birthdate,
+      contacts: Array.isArray(mergedPhoneEntry.contacts) ? mergedPhoneEntry.contacts : [],
+      rawEntry: mergedPhoneEntry
+    };
+  };
+  const setCreateIdentityOverlayState = (isOpen = false)=>{
+    if(!els.createModalEl) return;
+    els.createModalEl.classList.toggle('mx-ag-create-modal-identity-open', !!isOpen);
+  };
+  const syncCreateIdentityOverlayState = ()=>{
+    const hasOpenIdentityModal = [els.patientLookupModalEl, els.patientSharedPhoneModalEl]
+      .some((modalEl)=> modalEl && modalEl.classList.contains('show'));
+    setCreateIdentityOverlayState(hasOpenIdentityModal);
+  };
+  const ensureCreateIdentityModals = ()=>{
+    if(!window.bootstrap?.Modal) return;
+    if(els.patientLookupModalEl){
+      patientLookupModal = patientLookupModal || window.bootstrap.Modal.getOrCreateInstance(els.patientLookupModalEl);
+    }
+    if(els.patientSharedPhoneModalEl){
+      patientSharedPhoneModal = patientSharedPhoneModal || window.bootstrap.Modal.getOrCreateInstance(els.patientSharedPhoneModalEl);
+    }
+  };
+  const resetLookupSelectionState = ()=>{
+    patientLookupSelectedId = '';
+    if(els.patientLookupModalEl) els.patientLookupModalEl.classList.remove('is-confirm-mode');
+    if(els.patientLookupNotice) els.patientLookupNotice.classList.remove('is-confirm-mode');
+  };
+  const resetSharedPhoneSelectionState = ()=>{
+    patientSharedPhoneSelectedId = '';
+    if(els.patientSharedPhoneModalEl) els.patientSharedPhoneModalEl.classList.remove('is-confirm-mode');
+    if(els.patientSharedPhoneNotice) els.patientSharedPhoneNotice.classList.remove('is-confirm-mode');
+  };
+  const renderIdentityPatientCard = (entry = {}, { scope = 'lookup', selectedId = '' } = {})=>{
+    const patientId = sanitizeText(entry.patient_id || '');
+    const isSelected = patientId && patientId === sanitizeText(selectedId || '');
+    const displayName = resolvePatientLookupDisplayName(entry);
+    const avatarSrc = resolvePatientAvatarBySexAndAge({
+      sex: entry.sex || entry.gender || '',
+      birthdate: entry.birthdate || ''
+    });
+    const metaLabel = buildPatientIdentityMetaLabel(entry);
+    return `
+      <div class="mx-ag-shared-phone-entry${isSelected ? ' is-selected' : ''}" data-ag-identity-entry="${escapeAttrSafe(patientId)}" data-ag-identity-scope="${escapeAttrSafe(scope)}">
+        <button type="button" class="mx-ag-shared-phone-item" data-ag-identity-select="${escapeAttrSafe(patientId)}" data-ag-identity-scope="${escapeAttrSafe(scope)}">
+          <span class="mx-ag-shared-phone-avatar">
+            <img src="${escapeAttrSafe(avatarSrc)}" alt="${escapeAttrSafe(displayName)}">
+          </span>
+          <span class="mx-ag-shared-phone-item-body">
+            <span class="mx-ag-shared-phone-item-name">${escapeHtml(displayName)}</span>
+            <span class="mx-ag-shared-phone-item-meta">${escapeHtml(metaLabel)}</span>
+          </span>
+          <span class="mx-ag-shared-phone-item-chevron" aria-hidden="true">›</span>
+        </button>
+        <div class="mx-ag-shared-phone-inline-confirm${isSelected ? '' : ' d-none'}" data-ag-identity-confirm="${escapeAttrSafe(patientId)}" data-ag-identity-scope="${escapeAttrSafe(scope)}">
+          <div class="mx-ag-shared-phone-inline-question">¿Este es el paciente que deseas asignar a la cita?</div>
+          <div class="mx-ag-shared-phone-inline-actions">
+            <button type="button" class="btn btn-primary btn-sm" data-ag-identity-confirm-yes="${escapeAttrSafe(patientId)}" data-ag-identity-scope="${escapeAttrSafe(scope)}">Sí</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-ag-identity-confirm-no="${escapeAttrSafe(patientId)}" data-ag-identity-scope="${escapeAttrSafe(scope)}">No</button>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+  const renderPatientLookupList = ()=>{
+    if(!els.patientLookupList) return;
+    const cardsHtml = patientLookupEntries
+      .map((entry)=> renderIdentityPatientCard(entry, { scope: 'lookup', selectedId: patientLookupSelectedId }))
+      .join('');
+    els.patientLookupList.innerHTML = cardsHtml;
+  };
+  const renderSharedPhoneList = ()=>{
+    if(!els.patientSharedPhoneList) return;
+    const cardsHtml = patientSharedPhoneEntries
+      .map((entry)=> renderIdentityPatientCard(entry, { scope: 'shared_phone', selectedId: patientSharedPhoneSelectedId }))
+      .join('');
+    els.patientSharedPhoneList.innerHTML = cardsHtml;
+  };
+  const setLookupConfirmSelection = (patientId = '')=>{
+    patientLookupSelectedId = sanitizeText(patientId || '');
+    if(els.patientLookupModalEl){
+      els.patientLookupModalEl.classList.toggle('is-confirm-mode', !!patientLookupSelectedId);
+    }
+    if(els.patientLookupNotice){
+      els.patientLookupNotice.classList.toggle('is-confirm-mode', !!patientLookupSelectedId);
+    }
+    renderPatientLookupList();
+  };
+  const setSharedPhoneConfirmSelection = (patientId = '')=>{
+    patientSharedPhoneSelectedId = sanitizeText(patientId || '');
+    if(els.patientSharedPhoneModalEl){
+      els.patientSharedPhoneModalEl.classList.toggle('is-confirm-mode', !!patientSharedPhoneSelectedId);
+    }
+    if(els.patientSharedPhoneNotice){
+      els.patientSharedPhoneNotice.classList.toggle('is-confirm-mode', !!patientSharedPhoneSelectedId);
+    }
+    renderSharedPhoneList();
+  };
+  const closePatientLookupModal = ()=>{
+    if(patientLookupModal){
+      try{ patientLookupModal.hide(); }catch(_){}
+    }
+  };
+  const closeSharedPhoneModal = ()=>{
+    if(patientSharedPhoneModal){
+      try{ patientSharedPhoneModal.hide(); }catch(_){}
+    }
+  };
+  const enrichPatientEntriesForIdentityModal = async (entries = [])=>{
+    const input = Array.isArray(entries) ? entries : [];
+    const enriched = await Promise.all(input.map(async (entry)=>{
+      const safePatientId = sanitizeText(entry?.patient_id || '');
+      const mergedBase = {
+        ...entry,
+        patient_id: safePatientId,
+        display_name: resolvePatientLookupDisplayName(entry),
+        contacts: Array.isArray(entry?.contacts) ? entry.contacts : [],
+        sex: sanitizeText(entry?.sex || entry?.gender || ''),
+        birthdate: toDateOnlyYmd(entry?.birthdate || '')
+      };
+      if(!safePatientId){
+        return mergedBase;
+      }
+      const detail = await fetchPatientDetailById(safePatientId);
+      if(!detail) return mergedBase;
+      const merged = {
+        ...mergedBase,
+        display_name: sanitizeText(detail.display_name || mergedBase.display_name || ''),
+        birthdate: toDateOnlyYmd(detail.birthdate || mergedBase.birthdate || ''),
+        sex: sanitizeText(detail.sex || mergedBase.sex || ''),
+        contacts: Array.isArray(detail.contacts) && detail.contacts.length ? detail.contacts : mergedBase.contacts
+      };
+      merged.phone_candidates = resolvePatientPhoneCandidatesFromEntry(merged);
+      return merged;
+    }));
+    return enriched.filter((entry)=> sanitizeText(entry?.patient_id || ''));
+  };
+  const openPatientLookupModal = async (matches = [], { query = '' } = {})=>{
+    ensureCreateIdentityModals();
+    if(!patientLookupModal || !els.patientLookupNotice || !els.patientLookupList) return false;
+    patientLookupContextQuery = sanitizeText(query || '');
+    const normalizedMatches = await enrichPatientEntriesForIdentityModal(matches);
+    patientLookupEntries = normalizedMatches;
+    if(!patientLookupEntries.length){
+      resetLookupSelectionState();
+      if(els.patientLookupNotice){
+        els.patientLookupNotice.classList.add('d-none');
+      }
+      if(els.patientLookupList){
+        els.patientLookupList.innerHTML = '';
+      }
+      return false;
+    }
+    resetLookupSelectionState();
+    if(els.patientLookupContext){
+      const normalizedDigits = normalizePhoneDigits(patientLookupContextQuery);
+      if(normalizedDigits.length >= 4){
+        const phoneLabel = normalizedDigits.length === 10 ? formatPhoneDigitsForHuman(normalizedDigits) : normalizedDigits;
+        els.patientLookupContext.innerHTML = `<span class="mx-ag-patient-lookup-phone">${escapeHtml(phoneLabel)}</span>`;
+        els.patientLookupContext.classList.remove('d-none');
+      }else{
+        els.patientLookupContext.textContent = '';
+        els.patientLookupContext.classList.add('d-none');
+      }
+    }
+    renderPatientLookupList();
+    els.patientLookupNotice.classList.remove('d-none');
+    setCreateIdentityOverlayState(true);
+    patientLookupModal.show();
+    return true;
+  };
+  const openSharedPhoneModal = async (phoneDigits = '', matches = [])=>{
+    ensureCreateIdentityModals();
+    if(!patientSharedPhoneModal || !els.patientSharedPhoneNotice || !els.patientSharedPhoneList) return false;
+    const safeDigits = normalizePhoneDigits(phoneDigits);
+    const normalizedMatches = await enrichPatientEntriesForIdentityModal(matches);
+    if(!safeDigits || !normalizedMatches.length){
+      resetSharedPhoneSelectionState();
+      if(els.patientSharedPhoneNotice) els.patientSharedPhoneNotice.classList.add('d-none');
+      if(els.patientSharedPhoneList) els.patientSharedPhoneList.innerHTML = '';
+      return false;
+    }
+    patientSharedPhoneCurrentDigits = safeDigits;
+    patientSharedPhoneEntries = normalizedMatches;
+    if(els.patientSharedPhoneNumber){
+      els.patientSharedPhoneNumber.textContent = formatPhoneDigitsForHuman(safeDigits);
+    }
+    resetSharedPhoneSelectionState();
+    renderSharedPhoneList();
+    els.patientSharedPhoneNotice.classList.remove('d-none');
+    setCreateIdentityOverlayState(true);
+    patientSharedPhoneModal.show();
+    return true;
+  };
+  const findPatientsByExactPhoneDigits = async (phoneDigits = '')=>{
+    const normalizedPhone = normalizePhoneDigits(phoneDigits);
+    if(normalizedPhone.length !== 10) return [];
+    const list = await fetchPatientIndex();
+    const matches = list.filter((entry)=>{
+      const candidates = resolvePatientPhoneCandidatesFromEntry(entry);
+      return candidates.some((candidate)=> phoneTokenMatchesCandidate(normalizedPhone, candidate));
+    });
+    return matches;
+  };
+  const runSharedPhoneIdentityCheck = async ({ force = false } = {})=>{
+    if(createPatientMode !== 'new') return { opened: false, matches: [] };
+    const phoneDigits = normalizePhoneDigits(els.patientNewPhone?.value || '');
+    if(phoneDigits !== patientSharedPhoneCurrentDigits && phoneDigits !== patientSharedPhoneBypassDigits){
+      patientSharedPhoneBypassDigits = '';
+    }
+    if(phoneDigits.length !== 10){
+      if(!force){
+        closeSharedPhoneModal();
+      }
+      return { opened: false, matches: [] };
+    }
+    if(!force && phoneDigits === patientSharedPhoneBypassDigits){
+      return { opened: false, matches: [] };
+    }
+    const matches = await findPatientsByExactPhoneDigits(phoneDigits);
+    if(!matches.length){
+      if(!force){
+        closeSharedPhoneModal();
+      }
+      return { opened: false, matches: [] };
+    }
+    const opened = await openSharedPhoneModal(phoneDigits, matches);
+    return { opened, matches };
   };
   const hideCellMenu = (reason = '')=>{
     logAgendaSlotTrace('hideCellMenu', {
@@ -3817,6 +4322,51 @@ console.info('app.js loaded :: 20251123a');
     if(normalized.includes('finish') || normalized.includes('finaliz') || normalized.includes('complete')) return 'Cita finalizada';
     return 'Actualización de cita';
   };
+  const resolveEventTimelineVisualMeta = (eventItem = {})=>{
+    const typeNorm = normalizeText(eventItem?.event_type || '');
+    const statusToNorm = normalizeText(
+      sanitizeText(eventItem?.status_to || eventItem?.to_status || eventItem?.next_status || eventItem?.status || '')
+    );
+    const statusFromNorm = normalizeText(
+      sanitizeText(eventItem?.status_from || eventItem?.from_status || eventItem?.previous_status || '')
+    );
+    const statusNorm = statusToNorm || statusFromNorm;
+    if(typeNorm.includes('waitlist') && typeNorm.includes('assign')){
+      return { itemClass: 'mx-ag-event-timeline-item--waitlist', icon: 'bi-people' };
+    }
+    if(typeNorm.includes('resched') || typeNorm.includes('reprogram') || typeNorm.includes('reagend')){
+      return { itemClass: 'mx-ag-event-timeline-item--rescheduled', icon: 'bi-arrow-repeat' };
+    }
+    if(typeNorm.includes('cancel') || statusNorm.includes('cancel')){
+      return { itemClass: 'mx-ag-event-timeline-item--cancelled', icon: 'bi-x-lg' };
+    }
+    if(
+      typeNorm.includes('no_show')
+      || typeNorm.includes('noshow')
+      || typeNorm.includes('no-show')
+      || statusNorm.includes('no_show')
+      || statusNorm.includes('no-show')
+      || statusNorm.includes('no asist')
+    ){
+      return { itemClass: 'mx-ag-event-timeline-item--no-show', icon: 'bi-person-x' };
+    }
+    if(typeNorm.includes('finish') || typeNorm.includes('finaliz') || typeNorm.includes('complete') || statusNorm.includes('finished')){
+      return { itemClass: 'mx-ag-event-timeline-item--finished', icon: 'bi-check2' };
+    }
+    if(typeNorm.includes('confirm') || statusNorm.includes('confirm')){
+      return { itemClass: 'mx-ag-event-timeline-item--confirmed', icon: 'bi-check2-circle' };
+    }
+    if(typeNorm.includes('blacklist') || statusNorm.includes('blacklist')){
+      return { itemClass: 'mx-ag-event-timeline-item--blacklist', icon: 'bi-slash-circle' };
+    }
+    if(typeNorm.includes('graylist') || typeNorm.includes('greylist') || statusNorm.includes('graylist') || statusNorm.includes('greylist')){
+      return { itemClass: 'mx-ag-event-timeline-item--graylist', icon: 'bi-dash-circle' };
+    }
+    if(typeNorm.includes('create') || typeNorm.includes('created') || typeNorm.includes('reserve') || typeNorm.includes('book') || typeNorm.includes('alta')){
+      return { itemClass: '', icon: 'bi-plus-lg' };
+    }
+    return { itemClass: '', icon: 'bi-clock-history' };
+  };
   const resolveEventTimelineSummary = (eventItem = {})=>{
     const reasonText = sanitizeText(
       eventItem?.motivo_text
@@ -3877,16 +4427,22 @@ console.info('app.js loaded :: 20251123a');
       const eventTypeLabel = resolveEventTimelineTypeLabel(eventItem?.event_type || '');
       const summary = resolveEventTimelineSummary(eventItem);
       const actorLabel = resolveEventTimelineActorLabel(eventItem?.actor_role || '');
+      const visualMeta = resolveEventTimelineVisualMeta(eventItem);
       const actorLine = actorLabel ? `<div class="mx-ag-event-timeline-meta">Registrado por ${escapeHtml(actorLabel)}</div>` : '';
       const summaryLine = summary ? `<div class="mx-ag-event-timeline-summary">${escapeHtml(summary)}</div>` : '';
       return `
-        <article class="mx-ag-event-timeline-item">
-          <div class="mx-ag-event-timeline-head">
-            <div class="mx-ag-event-timeline-type">${escapeHtml(eventTypeLabel)}</div>
-            <div class="mx-ag-event-timeline-time">${escapeHtml(whenLabel)}</div>
+        <article class="mx-ag-event-timeline-item ${escapeHtml(visualMeta.itemClass)}">
+          <div class="mx-ag-event-timeline-node" aria-hidden="true">
+            <i class="bi ${escapeHtml(visualMeta.icon)}"></i>
           </div>
-          ${actorLine}
-          ${summaryLine}
+          <div class="mx-ag-event-timeline-content">
+            <div class="mx-ag-event-timeline-head">
+              <div class="mx-ag-event-timeline-type">${escapeHtml(eventTypeLabel)}</div>
+              <div class="mx-ag-event-timeline-time">${escapeHtml(whenLabel)}</div>
+            </div>
+            ${actorLine}
+            ${summaryLine}
+          </div>
         </article>
       `;
     }).join('');
@@ -3955,6 +4511,7 @@ console.info('app.js loaded :: 20251123a');
     eventRescheduleMonthCursor = null;
     eventRescheduleSelectedDayKey = '';
     eventRescheduleSelectedStart = null;
+    eventRescheduleSelectedSlotKey = '';
     setEventActionError('');
     setEventActionRescheduleNote('');
     setEventResolutionNote('');
@@ -4349,6 +4906,7 @@ console.info('app.js loaded :: 20251123a');
     }
     if(!isReschedule){
       eventActionPendingReschedule = null;
+      eventRescheduleSelectedSlotKey = '';
       if(els.eventRescheduleConfirmBtn) els.eventRescheduleConfirmBtn.disabled = true;
       setEventActionRescheduleNote('');
     }
@@ -4367,38 +4925,144 @@ console.info('app.js loaded :: 20251123a');
       return !!(evStart && evEnd && candidateStart < evEnd && candidateEnd > evStart);
     });
   };
-  const buildRescheduleAvailabilityCacheKey = (doctorId = '', consultorioId = '', dateYmd = '', slotMinutes = 30)=>{
+  const buildRescheduleAvailabilityCacheKey = (doctorId = '', consultorioScopeKey = '', dateYmd = '', slotMinutes = 30)=>{
     return [
       sanitizeText(doctorId || ''),
-      sanitizeText(consultorioId || ''),
+      sanitizeText(consultorioScopeKey || ''),
       sanitizeText(dateYmd || ''),
       String(Math.max(1, Number(slotMinutes || 30)))
     ].join('::');
   };
+  const resolveEventRescheduleDurationMinutes = ()=>{
+    const fallbackMinutes = Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
+    const start = eventActionOriginalRange?.start instanceof Date ? new Date(eventActionOriginalRange.start) : null;
+    const end = eventActionOriginalRange?.end instanceof Date ? new Date(eventActionOriginalRange.end) : null;
+    if(start instanceof Date && end instanceof Date && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end > start){
+      const duration = Math.round((end.getTime() - start.getTime()) / 60000);
+      if(Number.isFinite(duration) && duration > 0){
+        return Math.max(1, duration);
+      }
+    }
+    const fromProps = Number(
+      activeEventActionRef?.extendedProps?.duration_minutes
+      || activeEventActionRef?.extendedProps?.duration
+      || activeEventActionRef?.extendedProps?.slot_minutes
+      || 0
+    );
+    if(Number.isFinite(fromProps) && fromProps > 0){
+      return Math.max(1, Math.round(fromProps));
+    }
+    return fallbackMinutes;
+  };
+  const resolveAgendaConsultorioIdByLabel = (label = '')=>{
+    const target = normalizeText(label || '');
+    if(!target) return '';
+    const fromConfig = listAgendaConfigConsultorios().find((row)=>{
+      const rowLabel = normalizeText(row?.label || '');
+      return rowLabel === target || rowLabel.includes(target) || target.includes(rowLabel);
+    });
+    const candidateFromConfig = sanitizeText(fromConfig?.id || '');
+    if(isNumericId(candidateFromConfig)) return candidateFromConfig;
+    const fromSelect = Array.from(els.consultorio?.options || []).find((opt)=>{
+      const value = sanitizeText(opt?.value || '');
+      if(!isNumericId(value)) return false;
+      const optionLabel = normalizeText(opt?.textContent || '');
+      return optionLabel === target || optionLabel.includes(target) || target.includes(optionLabel);
+    });
+    const candidateFromSelect = sanitizeText(fromSelect?.value || '');
+    if(isNumericId(candidateFromSelect)) return candidateFromSelect;
+    return '';
+  };
   const resolveEventRescheduleContext = ()=>{
-    const doctorId = sanitizeText(getDoctorId() || '');
+    const doctorIdFromEvent = sanitizeText(
+      activeEventActionRef?.extendedProps?.doctor_id
+      || activeEventActionRef?.extendedProps?.doctorId
+      || ''
+    );
+    const doctorId = isNumericId(doctorIdFromEvent)
+      ? doctorIdFromEvent
+      : sanitizeText(getDoctorId() || '');
     const fromEvent = sanitizeText(
       activeEventActionRef?.extendedProps?.consultorio_id
       || activeEventActionRef?.extendedProps?.consultorioId
       || ''
     );
-    const fallbackConsultorio = sanitizeText(getAvailabilityConsultorioId() || '');
-    const consultorioId = isNumericId(fromEvent)
+    const fromEventLabel = sanitizeText(
+      activeEventActionRef?.extendedProps?.consultorio_name
+      || activeEventActionRef?.extendedProps?.consultorio_label
+      || activeEventActionRef?.extendedProps?.consultorio
+      || ''
+    );
+    const fromEventByLabel = resolveAgendaConsultorioIdByLabel(fromEventLabel);
+    const fallbackConsultorio = sanitizeText(resolveConsultorioId() || getAvailabilityConsultorioId() || '');
+    const consultorioIdFromEvent = isNumericId(fromEvent)
       ? fromEvent
-      : (isNumericId(fallbackConsultorio) ? fallbackConsultorio : '');
-    const slotMinutes = Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
+      : (isNumericId(fromEventByLabel) ? fromEventByLabel : '');
+    const filterConsultorioRaw = sanitizeText(els.consultorio?.value || '');
+    const filterConsultorioNormalized = normalizeAgendaConsultorioIdValue(filterConsultorioRaw);
+    const consultorioIdFromFilter = isNumericId(filterConsultorioNormalized) ? filterConsultorioNormalized : '';
+    const consultorioId = consultorioIdFromEvent || consultorioIdFromFilter || (isNumericId(fallbackConsultorio) ? fallbackConsultorio : '');
+    const consultorioScopeIds = Array.from(new Set([
+      ...listAgendaConfigConsultorios()
+        .map((row)=> sanitizeText(row?.id || ''))
+        .filter((id)=> isNumericId(id)),
+      consultorioIdFromEvent,
+      consultorioIdFromFilter,
+      (isNumericId(fallbackConsultorio) ? fallbackConsultorio : ''),
+      consultorioId
+    ].filter((id)=> isNumericId(id))));
+    const consultorioScopeKey = consultorioScopeIds.join(',');
+    const slotMinutes = resolveEventRescheduleDurationMinutes();
     return {
       doctorId,
       consultorioId,
-      slotMinutes
+      slotMinutes,
+      consultorioScopeIds,
+      consultorioScopeKey,
+      consultorioIdFromEvent,
+      consultorioIdFromFilter,
+      consultorioFilterRaw: filterConsultorioRaw
+    };
+  };
+  const buildRescheduleSlotKey = ({ start = null, end = null, consultorioId = '' } = {})=>{
+    const startSafe = start instanceof Date && !Number.isNaN(start.getTime()) ? toSqlDateTimeLocal(start) : '';
+    const endSafe = end instanceof Date && !Number.isNaN(end.getTime()) ? toSqlDateTimeLocal(end) : '';
+    const consultorioSafe = sanitizeText(consultorioId || '');
+    if(!startSafe || !endSafe || !consultorioSafe) return '';
+    return `${startSafe}::${endSafe}::${consultorioSafe}`;
+  };
+  const buildRescheduleSlotRecord = ({
+    start = null,
+    end = null,
+    consultorioId = '',
+    consultorioName = ''
+  } = {})=>{
+    const startSafe = start instanceof Date ? new Date(start) : new Date(start || '');
+    const endSafe = end instanceof Date ? new Date(end) : new Date(end || '');
+    const consultorioSafe = sanitizeText(consultorioId || '');
+    if(Number.isNaN(startSafe.getTime()) || Number.isNaN(endSafe.getTime()) || !isNumericId(consultorioSafe)){
+      return null;
+    }
+    const slotKey = buildRescheduleSlotKey({
+      start: startSafe,
+      end: endSafe,
+      consultorioId: consultorioSafe
+    });
+    if(!slotKey) return null;
+    return {
+      slotKey,
+      start: startSafe,
+      end: endSafe,
+      consultorio_id: consultorioSafe,
+      consultorio_name: sanitizeText(consultorioName || resolveAgendaConsultorioLabelById(consultorioSafe) || '')
     };
   };
   const resolveRescheduleCachedAvailability = (dateYmd = '')=>{
-    const { doctorId, consultorioId, slotMinutes } = resolveEventRescheduleContext();
-    if(!isNumericId(doctorId) || !isNumericId(consultorioId)){
+    const { doctorId, consultorioScopeKey, slotMinutes, consultorioScopeIds } = resolveEventRescheduleContext();
+    if(!isNumericId(doctorId) || !consultorioScopeIds.length){
       return null;
     }
-    const key = buildRescheduleAvailabilityCacheKey(doctorId, consultorioId, dateYmd, slotMinutes);
+    const key = buildRescheduleAvailabilityCacheKey(doctorId, consultorioScopeKey, dateYmd, slotMinutes);
     const entry = eventRescheduleAvailabilityCache.get(key);
     return entry && typeof entry === 'object' ? entry : null;
   };
@@ -4415,7 +5079,8 @@ console.info('app.js loaded :: 20251123a');
   };
   const buildRescheduleSlotsFromCalendarRange = (dayDate)=>{
     const now = new Date();
-    const slotMinutes = Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
+    const rescheduleContext = resolveEventRescheduleContext();
+    const slotMinutes = Math.max(1, Number(resolveEventRescheduleDurationMinutes() || 30));
     const { dayStart, dayEnd } = resolveServiceWindowForDay(dayDate);
     const slots = [];
     let cursor = alignDateToSlotGrid(dayStart, slotMinutes);
@@ -4423,7 +5088,20 @@ console.info('app.js loaded :: 20251123a');
       const slotStart = new Date(cursor);
       const slotEnd = plusMinutes(slotStart, slotMinutes);
       if(slotStart >= now && slotEnd <= dayEnd && isSelectionAvailable(slotStart, slotEnd)){
-        slots.push(new Date(slotStart));
+        const fallbackConsultorioId = sanitizeText(
+          rescheduleContext.consultorioId
+          || rescheduleContext.consultorioIdFromEvent
+          || ''
+        );
+        const record = buildRescheduleSlotRecord({
+          start: slotStart,
+          end: slotEnd,
+          consultorioId: fallbackConsultorioId,
+          consultorioName: resolveAgendaConsultorioLabelById(fallbackConsultorioId)
+        });
+        if(record){
+          slots.push(record);
+        }
       }
       cursor = plusMinutes(cursor, slotMinutes);
     }
@@ -4432,15 +5110,22 @@ console.info('app.js loaded :: 20251123a');
   const loadRescheduleAvailabilityForDate = async (dateYmd = '', { force = false } = {})=>{
     const dateKey = sanitizeText(dateYmd || '');
     if(!dateKey) return null;
-    const { doctorId, consultorioId, slotMinutes } = resolveEventRescheduleContext();
-    if(!isNumericId(doctorId) || !isNumericId(consultorioId)){
+    const { doctorId, consultorioScopeIds, consultorioScopeKey, slotMinutes } = resolveEventRescheduleContext();
+    if(!isNumericId(doctorId) || !consultorioScopeIds.length){
+      console.warn('MXM RESCHEDULE AVAILABILITY DEBUG', {
+        stage: 'invalid_context',
+        date: dateKey,
+        doctor_id: doctorId,
+        consultorio_ids: consultorioScopeIds,
+        slot_minutes: slotMinutes
+      });
       return {
         status: 'error',
         slots: [],
         message: 'No se pudo resolver doctor/consultorio para reprogramar.'
       };
     }
-    const cacheKey = buildRescheduleAvailabilityCacheKey(doctorId, consultorioId, dateKey, slotMinutes);
+    const cacheKey = buildRescheduleAvailabilityCacheKey(doctorId, consultorioScopeKey, dateKey, slotMinutes);
     if(!force){
       const cached = eventRescheduleAvailabilityCache.get(cacheKey);
       if(cached && typeof cached === 'object' && (cached.status === 'ready' || cached.status === 'error')){
@@ -4458,25 +5143,97 @@ console.info('app.js loaded :: 20251123a');
     });
     const requestPromise = (async ()=>{
       try{
-        const params = new URLSearchParams({
-          doctor_id: doctorId,
-          consultorio_id: consultorioId,
-          date: dateKey,
-          slot_minutes: String(slotMinutes)
+        const requests = consultorioScopeIds.map((consultorioId)=> {
+          const params = new URLSearchParams({
+            doctor_id: doctorId,
+            consultorio_id: consultorioId,
+            date: dateKey,
+            slot_minutes: String(slotMinutes)
+          });
+          if(dateKey === '2026-05-16'){
+            console.info('MXM RESCHEDULE AVAILABILITY REQUEST DEBUG', {
+              date: dateKey,
+              url: `/api/agenda/index.php/availability?${params.toString()}`,
+              doctor_id: doctorId,
+              consultorio_id: consultorioId,
+              slot_minutes: slotMinutes
+            });
+          }
+          return AgendaApiClient.getAvailability({ params })
+            .then((json)=> ({
+              consultorio_id: consultorioId,
+              consultorio_name: resolveAgendaConsultorioLabelById(consultorioId),
+              json
+            }))
+            .catch(()=> ({
+              consultorio_id: consultorioId,
+              consultorio_name: resolveAgendaConsultorioLabelById(consultorioId),
+              json: { ok: false, error: 'network_error', message: 'No fue posible cargar disponibilidad.' }
+            }));
         });
-        const json = await AgendaApiClient.getAvailability({ params });
-        if(!json || json.ok !== true){
-          const message = sanitizeText(json?.message || json?.error || 'No fue posible cargar disponibilidad para esta fecha.');
+        const responses = await Promise.all(requests);
+        const successfulResponses = responses.filter((entry)=> entry?.json?.ok === true);
+        if(!successfulResponses.length){
+          const firstError = responses.find((entry)=> entry?.json?.ok !== true)?.json || null;
+          const message = sanitizeText(firstError?.message || firstError?.error || 'No fue posible cargar disponibilidad para esta fecha.');
           const failedState = { status: 'error', slots: [], message };
           eventRescheduleAvailabilityCache.set(cacheKey, failedState);
           return failedState;
         }
         const now = new Date();
-        const slots = (Array.isArray(json?.data?.slots) ? json.data.slots : [])
-          .map((slot)=> parseDateTimeLocalSafe(slot?.start_at || ''))
-          .filter((start)=> start instanceof Date && !Number.isNaN(start.getTime()))
-          .filter((start)=> start >= now)
-          .sort((a, b)=> a.getTime() - b.getTime());
+        const dedupe = new Map();
+        successfulResponses.forEach((entry)=>{
+          const consultorioId = sanitizeText(entry?.consultorio_id || '');
+          const consultorioName = sanitizeText(entry?.consultorio_name || '');
+          const slotsRaw = Array.isArray(entry?.json?.data?.slots) ? entry.json.data.slots : [];
+          slotsRaw.forEach((slotRaw)=>{
+            const start = parseDateTimeLocalSafe(slotRaw?.start_at || '');
+            const end = parseDateTimeLocalSafe(slotRaw?.end_at || '');
+            if(!(start instanceof Date) || Number.isNaN(start.getTime()) || !(end instanceof Date) || Number.isNaN(end.getTime())) return;
+            if(start < now) return;
+            const record = buildRescheduleSlotRecord({
+              start,
+              end,
+              consultorioId,
+              consultorioName
+            });
+            if(!record) return;
+            dedupe.set(record.slotKey, record);
+          });
+        });
+        const slots = Array.from(dedupe.values())
+          .sort((a, b)=> {
+            const diff = a.start.getTime() - b.start.getTime();
+            if(diff !== 0) return diff;
+            return sanitizeText(a.consultorio_name || '').localeCompare(sanitizeText(b.consultorio_name || ''));
+          });
+        if(dateKey === '2026-05-16'){
+          console.info('MXM RESCHEDULE AVAILABILITY RESPONSE DEBUG', {
+            date: dateKey,
+            consultorio_ids: consultorioScopeIds,
+            responses: responses.map((entry)=> ({
+              consultorio_id: sanitizeText(entry?.consultorio_id || ''),
+              ok: entry?.json?.ok === true,
+              slots_raw_count: Array.isArray(entry?.json?.data?.slots) ? entry.json.data.slots.length : 0,
+              message: sanitizeText(entry?.json?.message || entry?.json?.error || '')
+            })),
+            slots_filtered_count: slots.length,
+            slots_preview: slots.slice(0, 8).map((slot)=> ({
+              start_at: toSqlDateTimeLocal(slot.start),
+              end_at: toSqlDateTimeLocal(slot.end),
+              consultorio_id: sanitizeText(slot.consultorio_id || ''),
+              consultorio_name: sanitizeText(slot.consultorio_name || '')
+            }))
+          });
+        }
+        console.info('MXM RESCHEDULE AVAILABILITY DEBUG', {
+          stage: 'ready',
+          date: dateKey,
+          doctor_id: doctorId,
+          consultorio_ids: consultorioScopeIds,
+          slot_minutes: slotMinutes,
+          slots: slots.length
+        });
         const readyState = { status: 'ready', slots, message: '' };
         eventRescheduleAvailabilityCache.set(cacheKey, readyState);
         return readyState;
@@ -4498,8 +5255,8 @@ console.info('app.js loaded :: 20251123a');
   const loadRescheduleAvailabilityForMonth = async (monthDate)=>{
     const base = startOfMonth(monthDate);
     if(!base) return;
-    const { doctorId, consultorioId, slotMinutes } = resolveEventRescheduleContext();
-    if(!isNumericId(doctorId) || !isNumericId(consultorioId)){
+    const { doctorId, consultorioScopeIds, consultorioScopeKey, slotMinutes } = resolveEventRescheduleContext();
+    if(!isNumericId(doctorId) || !consultorioScopeIds.length){
       return;
     }
     const nonce = ++eventRescheduleAvailabilityLoadNonce;
@@ -4507,6 +5264,16 @@ console.info('app.js loaded :: 20251123a');
     const year = base.getFullYear();
     const month = base.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
+    console.info('MXM RESCHEDULE MONTH DEBUG', {
+      doctor_id: doctorId,
+      consultorio_ids: consultorioScopeIds,
+      consultorio_scope_key: consultorioScopeKey,
+      slot_minutes: slotMinutes,
+      month_cursor: formatYmdLocal(base),
+      month_days: daysInMonth,
+      range_start: `${formatYmdLocal(base)} 00:00:00`,
+      range_end: `${formatYmdLocal(new Date(year, month, daysInMonth, 0, 0, 0, 0))} 23:59:59`
+    });
     const pending = [];
     for(let day = 1; day <= daysInMonth; day += 1){
       const date = new Date(year, month, day, 0, 0, 0, 0);
@@ -4514,7 +5281,7 @@ console.info('app.js loaded :: 20251123a');
         continue;
       }
       const dateYmd = formatYmdLocal(date);
-      const cacheKey = buildRescheduleAvailabilityCacheKey(doctorId, consultorioId, dateYmd, slotMinutes);
+      const cacheKey = buildRescheduleAvailabilityCacheKey(doctorId, consultorioScopeKey, dateYmd, slotMinutes);
       const cached = eventRescheduleAvailabilityCache.get(cacheKey);
       if(cached && typeof cached === 'object' && cached.status === 'ready'){
         continue;
@@ -4536,6 +5303,7 @@ console.info('app.js loaded :: 20251123a');
       if(firstAvailable){
         eventRescheduleSelectedDayKey = firstAvailable.key;
         eventRescheduleSelectedStart = null;
+        eventRescheduleSelectedSlotKey = '';
       }
     }
     renderRescheduleDays();
@@ -4580,8 +5348,18 @@ console.info('app.js loaded :: 20251123a');
     if(cached && cached.status === 'ready'){
       return Array.isArray(cached.slots)
         ? cached.slots
-          .map((slot)=> slot instanceof Date ? new Date(slot) : new Date(slot || ''))
-          .filter((slot)=> !Number.isNaN(slot.getTime()))
+          .map((slot)=>{
+            if(slot && typeof slot === 'object' && slot.start){
+              return buildRescheduleSlotRecord({
+                start: slot.start,
+                end: slot.end,
+                consultorioId: slot.consultorio_id,
+                consultorioName: slot.consultorio_name
+              });
+            }
+            return null;
+          })
+          .filter(Boolean)
         : [];
     }
     if(cached && (cached.status === 'loading' || cached.status === 'error')){
@@ -4595,6 +5373,7 @@ console.info('app.js loaded :: 20251123a');
   const buildRescheduleMonthOptions = (monthDate)=>{
     const base = startOfMonth(monthDate);
     if(!base) return [];
+    const rescheduleContext = resolveEventRescheduleContext();
     const today = toStartOfDay(new Date());
     const year = base.getFullYear();
     const month = base.getMonth();
@@ -4623,8 +5402,38 @@ console.info('app.js loaded :: 20251123a');
         slots,
         hasAvailability: slots.length > 0,
         isLoading,
-        loadError
+        loadError,
+        disableReason: isPast
+          ? 'past_day'
+          : (isLoading
+            ? 'loading_availability'
+            : (loadError
+              ? 'availability_error'
+              : (slots.length > 0 ? '' : 'no_slots_available')))
       });
+      if(Number(date.getDay()) === 6){
+        const availabilityState = resolveRescheduleCachedAvailability(key);
+        console.info('MXM RESCHEDULE SATURDAY DEBUG', {
+          date: key,
+          doctor_id: rescheduleContext.doctorId,
+          consultorio_ids: rescheduleContext.consultorioScopeIds,
+          slot_minutes: rescheduleContext.slotMinutes,
+          cache_status: sanitizeText(availabilityState?.status || ''),
+          slots: slots.length,
+          hasAvailability: slots.length > 0,
+          disableReason: isPast
+            ? 'past_day'
+            : (isLoading
+              ? 'loading_availability'
+              : (loadError
+                ? 'availability_error'
+                : (slots.length > 0 ? '' : 'no_slots_available'))),
+          weekday_js_getDay: Number(date.getDay()),
+          isPast,
+          isLoading,
+          loadError: sanitizeText(loadError || '')
+        });
+      }
     }
     return options;
   };
@@ -4644,13 +5453,36 @@ console.info('app.js loaded :: 20251123a');
       return;
     }
     if(!selectedDay.slots.length){
+      if(selectedDay.key === '2026-05-16'){
+        console.info('MXM RESCHEDULE CHIPS DEBUG', {
+          date: selectedDay.key,
+          slots: 0,
+          reason: 'no_slots_for_selected_day'
+        });
+      }
       els.eventRescheduleHours.innerHTML = '<span class="small text-muted">Sin horarios disponibles para este día.</span>';
       return;
     }
+    if(selectedDay.key === '2026-05-16'){
+      console.info('MXM RESCHEDULE CHIPS DEBUG', {
+        date: selectedDay.key,
+        slots: selectedDay.slots.length,
+        slots_preview: selectedDay.slots.slice(0, 8).map((slot)=> ({
+          start_at: toSqlDateTimeLocal(slot?.start),
+          end_at: toSqlDateTimeLocal(slot?.end),
+          consultorio_id: sanitizeText(slot?.consultorio_id || ''),
+          consultorio_name: sanitizeText(slot?.consultorio_name || '')
+        }))
+      });
+    }
     els.eventRescheduleHours.innerHTML = selectedDay.slots.map((slot)=>{
-      const iso = toDateTimeLocalInput(slot);
-      const isActive = eventRescheduleSelectedStart instanceof Date && eventRescheduleSelectedStart.getTime() === slot.getTime();
-      return `<button type="button" class="mx-ag-reschedule-chip${isActive ? ' is-active' : ''}" data-ag-reschedule-slot="${escapeHtml(iso)}">${escapeHtml(buildRescheduleTimeLabel(slot))}</button>`;
+      const slotKey = sanitizeText(slot?.slotKey || '');
+      const start = slot?.start instanceof Date ? slot.start : null;
+      const consultorioLabel = sanitizeText(slot?.consultorio_name || '');
+      const isActive = slotKey && slotKey === sanitizeText(eventRescheduleSelectedSlotKey || '');
+      const chipMain = start ? buildRescheduleTimeLabel(start) : '--:--';
+      const chipLabel = consultorioLabel ? `${chipMain} · ${consultorioLabel}` : chipMain;
+      return `<button type="button" class="mx-ag-reschedule-chip${isActive ? ' is-active' : ''}" data-ag-reschedule-slot="${escapeHtml(slotKey)}">${escapeHtml(chipLabel)}</button>`;
     }).join('');
   };
   const renderRescheduleDays = ()=>{
@@ -4672,6 +5504,18 @@ console.info('app.js loaded :: 20251123a');
       const cls = day.isPast
         ? 'is-past'
         : (day.isLoading ? 'is-loading' : (isAvailable ? 'is-available' : 'is-unavailable'));
+      if(day.key === '2026-05-16'){
+        console.info('MXM RESCHEDULE DAY CELL DEBUG', {
+          date: day.key,
+          weekday_js_getDay: Number(day?.date?.getDay?.() ?? -1),
+          isPast: !!day.isPast,
+          isLoading: !!day.isLoading,
+          hasAvailability: !!day.hasAvailability,
+          slots: Array.isArray(day.slots) ? day.slots.length : 0,
+          loadError: sanitizeText(day.loadError || ''),
+          disableReason: sanitizeText(day.disableReason || '')
+        });
+      }
       return `<button type="button" class="mx-ag-reschedule-day-cell ${cls}${isActive ? ' is-selected' : ''}" data-ag-reschedule-day="${escapeHtml(day.key)}" ${(isAvailable && !day.isLoading) ? '' : 'disabled'}>${escapeHtml(buildRescheduleDayLabel(day.date))}</button>`;
     }).join('');
     els.eventRescheduleDays.innerHTML = `${leading.join('')}${daysHtml}`;
@@ -4682,6 +5526,34 @@ console.info('app.js loaded :: 20251123a');
     const baseMonth = startOfMonth(eventActionOriginalRange?.start || new Date()) || startOfMonth(new Date());
     const currentMonth = startOfMonth(new Date()) || baseMonth;
     eventRescheduleMonthCursor = (baseMonth && currentMonth && baseMonth < currentMonth) ? currentMonth : baseMonth;
+    const rescheduleContext = resolveEventRescheduleContext();
+    console.info('MXM RESCHEDULE OPEN DEBUG', {
+      appointment_id: sanitizeText(activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef)),
+      patient_id: sanitizeText(activeEventActionRef?.extendedProps?.patient_id || ''),
+      doctor_id_context: sanitizeText(rescheduleContext.doctorId || ''),
+      doctor_id_event: sanitizeText(activeEventActionRef?.extendedProps?.doctor_id || ''),
+      consultorio_id_context: sanitizeText(rescheduleContext.consultorioId || ''),
+      consultorio_id_from_event: sanitizeText(rescheduleContext.consultorioIdFromEvent || ''),
+      consultorio_id_from_filter: sanitizeText(rescheduleContext.consultorioIdFromFilter || ''),
+      consultorio_filter_raw: sanitizeText(rescheduleContext.consultorioFilterRaw || ''),
+      consultorio_id_event: sanitizeText(
+        activeEventActionRef?.extendedProps?.consultorio_id
+        || activeEventActionRef?.extendedProps?.consultorioId
+        || ''
+      ),
+      consultorio_label_event: sanitizeText(
+        activeEventActionRef?.extendedProps?.consultorio_name
+        || activeEventActionRef?.extendedProps?.consultorio_label
+        || activeEventActionRef?.extendedProps?.consultorio
+        || ''
+      ),
+      consultorio_label_context: sanitizeText(resolveAgendaConsultorioLabelById(rescheduleContext.consultorioId) || ''),
+      consultorio_scope_ids: Array.isArray(rescheduleContext.consultorioScopeIds) ? rescheduleContext.consultorioScopeIds : [],
+      duration_minutes_context: Number(rescheduleContext.slotMinutes || 0),
+      current_appointment_start: toSqlDateTimeLocal(eventActionOriginalRange?.start),
+      current_appointment_end: toSqlDateTimeLocal(eventActionOriginalRange?.end),
+      month_cursor: eventRescheduleMonthCursor instanceof Date ? formatYmdLocal(eventRescheduleMonthCursor) : ''
+    });
     eventRescheduleMonthOptions = buildRescheduleMonthOptions(eventRescheduleMonthCursor);
     const originalStartFromSource = parseDateTimeLocalSafe(sanitizeText(activeEventActionRef?.extendedProps?.start_at || ''));
     const originalDayKey = (()=> {
@@ -4699,15 +5571,35 @@ console.info('app.js loaded :: 20251123a');
     const firstAvailable = eventRescheduleMonthOptions.find((day)=> day.hasAvailability);
     eventRescheduleSelectedDayKey = originalDayOption?.key || firstAvailable?.key || '';
     if(originalDayOption?.hasAvailability){
-      if(originalStartFromSource instanceof Date && !Number.isNaN(originalStartFromSource.getTime())){
-        eventRescheduleSelectedStart = new Date(originalStartFromSource);
-      }else if(eventActionOriginalRange?.start instanceof Date && !Number.isNaN(eventActionOriginalRange.start.getTime())){
-        eventRescheduleSelectedStart = new Date(eventActionOriginalRange.start);
+      const originalConsultorioId = sanitizeText(
+        activeEventActionRef?.extendedProps?.consultorio_id
+        || activeEventActionRef?.extendedProps?.consultorioId
+        || rescheduleContext.consultorioId
+        || ''
+      );
+      const originalStartCandidate = (originalStartFromSource instanceof Date && !Number.isNaN(originalStartFromSource.getTime()))
+        ? originalStartFromSource
+        : ((eventActionOriginalRange?.start instanceof Date && !Number.isNaN(eventActionOriginalRange.start.getTime()))
+          ? eventActionOriginalRange.start
+          : null);
+      const matchedOriginalSlot = originalStartCandidate
+        ? originalDayOption.slots.find((slot)=> {
+          if(!(slot?.start instanceof Date) || Number.isNaN(slot.start.getTime())) return false;
+          if(slot.start.getTime() !== originalStartCandidate.getTime()) return false;
+          const slotConsultorioId = sanitizeText(slot?.consultorio_id || '');
+          return !originalConsultorioId || slotConsultorioId === originalConsultorioId;
+        })
+        : null;
+      if(matchedOriginalSlot){
+        eventRescheduleSelectedStart = new Date(matchedOriginalSlot.start);
+        eventRescheduleSelectedSlotKey = sanitizeText(matchedOriginalSlot.slotKey || '');
       }else{
         eventRescheduleSelectedStart = null;
+        eventRescheduleSelectedSlotKey = '';
       }
     }else{
       eventRescheduleSelectedStart = null;
+      eventRescheduleSelectedSlotKey = '';
     }
     renderRescheduleDays();
     loadRescheduleAvailabilityForMonth(eventRescheduleMonthCursor).catch(()=> null);
@@ -4723,12 +5615,24 @@ console.info('app.js loaded :: 20251123a');
       calendar.scrollToTime(`${hh}:${mm}:00`);
     }catch(_){}
   };
-  const applyDemoEventReschedule = async ({ start, end })=>{
+  const applyDemoEventReschedule = async ({ start, end, consultorioId = '', consultorioName = '' })=>{
     if(!(activeEventActionRef && typeof activeEventActionRef.setStart === 'function' && typeof activeEventActionRef.setEnd === 'function')){
       throw new Error('No se pudo actualizar la cita demo.');
     }
     activeEventActionRef.setStart(start);
     activeEventActionRef.setEnd(end);
+    if(typeof activeEventActionRef.setExtendedProp === 'function'){
+      const safeConsultorioId = sanitizeText(consultorioId || '');
+      const safeConsultorioName = sanitizeText(consultorioName || resolveAgendaConsultorioLabelById(safeConsultorioId) || '');
+      if(safeConsultorioId){
+        activeEventActionRef.setExtendedProp('consultorio_id', safeConsultorioId);
+      }
+      if(safeConsultorioName){
+        activeEventActionRef.setExtendedProp('consultorio_name', safeConsultorioName);
+        activeEventActionRef.setExtendedProp('consultorio_label', safeConsultorioName);
+        activeEventActionRef.setExtendedProp('consultorio', safeConsultorioName);
+      }
+    }
     hideEventActionPanel();
     navigateToRescheduledWeek(start);
     setError('');
@@ -4743,16 +5647,40 @@ console.info('app.js loaded :: 20251123a');
       return;
     }
     const nextLabel = formatAppointmentDateRangeLabel(eventActionPendingReschedule.start, eventActionPendingReschedule.end);
+    const previousConsultorioLabel = sanitizeText(
+      activeEventActionRef?.extendedProps?.consultorio_name
+      || activeEventActionRef?.extendedProps?.consultorio_label
+      || activeEventActionRef?.extendedProps?.consultorio
+      || resolveAgendaConsultorioLabelById(
+        activeEventActionRef?.extendedProps?.consultorio_id
+        || activeEventActionRef?.extendedProps?.consultorioId
+        || ''
+      )
+      || ''
+    );
+    const nextConsultorioLabel = sanitizeText(eventActionPendingReschedule?.consultorio_name || '');
+    const consultorioChanged = (
+      sanitizeText(eventActionPendingReschedule?.consultorio_id || '')
+      && sanitizeText(activeEventActionRef?.extendedProps?.consultorio_id || activeEventActionRef?.extendedProps?.consultorioId || '')
+      && sanitizeText(eventActionPendingReschedule?.consultorio_id || '') !== sanitizeText(activeEventActionRef?.extendedProps?.consultorio_id || activeEventActionRef?.extendedProps?.consultorioId || '')
+    );
     els.eventRescheduleConfirmCopy.innerHTML = `
       <div class="mx-ag-event-reschedule-summary-copy">${escapeHtml(patient)} ha sido reprogramada a:</div>
       <div class="mx-ag-event-reschedule-summary-main">${escapeHtml(nextLabel)}</div>
-      <div class="mx-ag-event-reschedule-summary-prev">(antes: ${escapeHtml(previousLabel)})</div>
+      ${nextConsultorioLabel ? `<div class="mx-ag-event-reschedule-summary-consultorio">Consultorio: ${escapeHtml(nextConsultorioLabel)}</div>` : ''}
+      <div class="mx-ag-event-reschedule-summary-prev">Antes: ${escapeHtml(previousLabel)}</div>
+      ${previousConsultorioLabel ? `<div class="mx-ag-event-reschedule-summary-prev">Consultorio: ${escapeHtml(previousConsultorioLabel)}</div>` : ''}
+      ${consultorioChanged && nextConsultorioLabel && previousConsultorioLabel
+        ? `<div class="mx-ag-event-reschedule-summary-warning">El consultorio cambiará de ${escapeHtml(previousConsultorioLabel)} a ${escapeHtml(nextConsultorioLabel)}.</div>`
+        : ''}
     `;
     els.eventRescheduleConfirmCopy.classList.remove('d-none');
   };
   const validateEventRescheduleCandidate = ()=>{
-    const configuredDurationMinutes = Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
-    const candidateStart = eventRescheduleSelectedStart instanceof Date ? new Date(eventRescheduleSelectedStart) : null;
+    const configuredDurationMinutes = Math.max(1, Number(resolveEventRescheduleDurationMinutes() || 30));
+    const selectedDay = eventRescheduleMonthOptions.find((day)=> day.key === eventRescheduleSelectedDayKey);
+    const selectedSlot = selectedDay?.slots?.find((slot)=> sanitizeText(slot?.slotKey || '') === sanitizeText(eventRescheduleSelectedSlotKey || '')) || null;
+    const candidateStart = selectedSlot?.start instanceof Date ? new Date(selectedSlot.start) : null;
     const candidateEnd = candidateStart ? plusMinutes(candidateStart, configuredDurationMinutes) : null;
     eventActionPendingReschedule = null;
     if(els.eventRescheduleConfirmBtn){
@@ -4776,7 +5704,12 @@ console.info('app.js loaded :: 20251123a');
       renderEventRescheduleSummary();
       return false;
     }
-    eventActionPendingReschedule = { start: candidateStart, end: candidateEnd };
+    eventActionPendingReschedule = {
+      start: candidateStart,
+      end: candidateEnd,
+      consultorio_id: sanitizeText(selectedSlot?.consultorio_id || ''),
+      consultorio_name: sanitizeText(selectedSlot?.consultorio_name || '')
+    };
     setEventActionRescheduleNote('Nuevo horario válido. Confirma para aplicar la reprogramación.', 'success');
     if(els.eventRescheduleConfirmBtn){
       els.eventRescheduleConfirmBtn.disabled = false;
@@ -4794,7 +5727,12 @@ console.info('app.js loaded :: 20251123a');
       const nextStart = new Date(eventActionPendingReschedule.start);
       const nextEnd = new Date(eventActionPendingReschedule.end);
       if(isAgendaDemoContext()){
-        await applyDemoEventReschedule({ start: nextStart, end: nextEnd });
+        await applyDemoEventReschedule({
+          start: nextStart,
+          end: nextEnd,
+          consultorioId: sanitizeText(eventActionPendingReschedule?.consultorio_id || ''),
+          consultorioName: sanitizeText(eventActionPendingReschedule?.consultorio_name || '')
+        });
         return;
       }
       const payload = {
@@ -4803,6 +5741,7 @@ console.info('app.js loaded :: 20251123a');
         from_end_at: toSqlDateTimeLocal(eventActionOriginalRange?.end),
         to_start_at: toSqlDateTimeLocal(nextStart),
         to_end_at: toSqlDateTimeLocal(nextEnd),
+        to_consultorio_id: sanitizeText(eventActionPendingReschedule?.consultorio_id || ''),
         motivo_code: 'user_reschedule',
         motivo_text: '',
         notify_patient: false,
@@ -5116,28 +6055,55 @@ console.info('app.js loaded :: 20251123a');
     `;
     els.eventActionTime.setAttribute('aria-label', `${detail.dateLabel.fullLabel} · ${detail.timeLabel}`);
   };
-  const hydrateEventActionPatientDisplay = async (patientId = '', appointmentId = '', fallbackLabel = '')=>{
+  const hydrateEventActionPatientDisplay = async (patientId = '', appointmentId = '', fallbackLabel = '', seedIdentity = null)=>{
     const safePatientId = sanitizeText(patientId || '');
     const safeAppointmentId = sanitizeText(appointmentId || '');
-    if(!safePatientId) return;
+    const identitySeed = (seedIdentity && typeof seedIdentity === 'object')
+      ? seedIdentity
+      : resolveEventActionPatientSeed(activeEventActionRef?.extendedProps || {}, activeEventActionRef);
+    const fallbackName = sanitizeText(identitySeed?.name || fallbackLabel || '');
+    syncEventActionPatientIdentityDisplay({
+      name: fallbackName,
+      phone: sanitizeText(identitySeed?.phone || ''),
+      sex: sanitizeText(identitySeed?.sex || ''),
+      birthdate: toDateOnlyYmd(identitySeed?.birthdate || '')
+    });
+    if(!safePatientId){
+      if(els.eventActionPatient && isTechnicalPatientDisplayValue(fallbackName)){
+        els.eventActionPatient.textContent = 'Paciente sin nombre';
+      }
+      return;
+    }
     const detail = await fetchPatientDetailById(safePatientId);
     if(safeAppointmentId && sanitizeText(activeEventActionAppointmentId || '') !== safeAppointmentId){
       return;
     }
     const detailName = sanitizeText(detail?.display_name || '');
-    if(detailName && !isTechnicalPatientDisplayValue(detailName)){
-      if(els.eventActionPatient){
-        els.eventActionPatient.textContent = detailName;
-      }
-      if(activeEventActionRef && typeof activeEventActionRef.setExtendedProp === 'function'){
-        try{
-          activeEventActionRef.setExtendedProp('patient_display', detailName);
-        }catch(_){}
-      }
-      return;
+    const resolvedName = (detailName && !isTechnicalPatientDisplayValue(detailName))
+      ? detailName
+      : (fallbackName && !isTechnicalPatientDisplayValue(fallbackName) ? fallbackName : 'Paciente sin nombre');
+    const mergedSex = sanitizeText(detail?.sex || identitySeed?.sex || '');
+    const mergedBirthdate = toDateOnlyYmd(detail?.birthdate || identitySeed?.birthdate || '');
+    const mergedPhoneEntry = {
+      ...(identitySeed?.rawEntry && typeof identitySeed.rawEntry === 'object' ? identitySeed.rawEntry : {}),
+      ...(detail && typeof detail === 'object' ? detail : {})
+    };
+    if(Array.isArray(detail?.contacts) && detail.contacts.length){
+      mergedPhoneEntry.contacts = detail.contacts;
+    }else if(Array.isArray(identitySeed?.contacts)){
+      mergedPhoneEntry.contacts = identitySeed.contacts;
     }
-    if(els.eventActionPatient && isTechnicalPatientDisplayValue(fallbackLabel)){
-      els.eventActionPatient.textContent = 'Paciente sin nombre';
+    const mergedPhone = resolveEventActionPhoneLabelFromEntry(mergedPhoneEntry);
+    syncEventActionPatientIdentityDisplay({
+      name: resolvedName,
+      phone: mergedPhone,
+      sex: mergedSex,
+      birthdate: mergedBirthdate
+    });
+    if(detailName && !isTechnicalPatientDisplayValue(detailName) && activeEventActionRef && typeof activeEventActionRef.setExtendedProp === 'function'){
+      try{
+        activeEventActionRef.setExtendedProp('patient_display', detailName);
+      }catch(_){}
     }
   };
   const openEventActionModal = (eventRef, section = 'detail')=>{
@@ -5158,6 +6124,7 @@ console.info('app.js loaded :: 20251123a');
     activeEventActionAppointmentId = resolveEventAppointmentId(eventRef);
     const patientId = sanitizeText(props.patient_id || '');
     const patient = resolveEventPatientDisplayName(props, eventRef);
+    const patientIdentitySeed = resolveEventActionPatientSeed(props, eventRef);
     const status = sanitizeText(props.status_label || 'Confirmada');
     const statusKeyNorm = normalizeText(sanitizeText(props.status_key_real || props.status_key || props.status || ''));
     const statusNorm = normalizeText(status);
@@ -5224,15 +6191,29 @@ console.info('app.js loaded :: 20251123a');
         els.eventActionStatusBadge.className = 'badge mx-ag-status-badge d-none';
       }
     }
-    if(els.eventActionPatient) els.eventActionPatient.textContent = patient || 'Paciente sin nombre';
+    syncEventActionPatientIdentityDisplay({
+      name: sanitizeText(patientIdentitySeed?.name || patient || 'Paciente sin nombre'),
+      phone: sanitizeText(patientIdentitySeed?.phone || ''),
+      sex: sanitizeText(patientIdentitySeed?.sex || ''),
+      birthdate: toDateOnlyYmd(patientIdentitySeed?.birthdate || '')
+    });
     hydrateEventActionPatientDisplay(
       patientId,
       sanitizeText(activeEventActionAppointmentId || ''),
-      patient
+      patient,
+      patientIdentitySeed
     ).catch(()=> null);
     syncEventActionTimeField(start, end);
     if(els.eventActionDuration) els.eventActionDuration.textContent = `${durationMinutes} min`;
     if(els.eventActionStatus) els.eventActionStatus.textContent = status || '--';
+    const originMeta = resolveEventActionOriginMeta(props);
+    if(els.eventActionOrigin){
+      els.eventActionOrigin.textContent = sanitizeText(originMeta.label || '--') || '--';
+    }
+    if(els.eventActionOriginDot){
+      const visualKey = sanitizeText(originMeta.visualKey || 'user') || 'user';
+      els.eventActionOriginDot.className = `mx-ag-origin-dot mx-ag-origin-dot--${visualKey}`;
+    }
     if(els.eventActionReason) els.eventActionReason.textContent = reason || '--';
     if(els.eventActionReasonWrap){
       els.eventActionReasonWrap.classList.toggle('d-none', !reason);
@@ -7384,7 +8365,7 @@ console.info('app.js loaded :: 20251123a');
         ? window.resolvePatientsSearchUrl()
         : '/api/patients/index.php/patients';
       const url = new URL(base, window.location.origin);
-      url.searchParams.set('limit', '300');
+      url.searchParams.set('limit', '200');
       const resp = await fetch(url.toString(), {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
@@ -7589,7 +8570,15 @@ console.info('app.js loaded :: 20251123a');
       normalized = '';
     }
     if(!normalized){
-      normalized = safeId ? 'Sin nombre disponible' : 'Sin consultorio seleccionado';
+      if(safeId){
+        const fallbackLabel = sanitizeText(resolveAgendaConsultorioLabelById(safeId) || '');
+        if(fallbackLabel){
+          normalized = fallbackLabel.replace(/^\s*consultorio\s*[:\-]?\s*/i, '').trim();
+        }
+      }
+      if(!normalized){
+        normalized = safeId ? `Consultorio ${safeId}` : 'Sin consultorio seleccionado';
+      }
     }
     return normalized;
   };
@@ -8947,15 +9936,10 @@ console.info('app.js loaded :: 20251123a');
   const syncActivePatientPrompt = ()=>{
     activePatientContextId = resolveActivePatientId();
     if(!els.activePatientBox || !els.activePatientText) return;
-    if(!activePatientContextId){
-      els.activePatientBox.classList.add('d-none');
-      setActivePatientMode('manual');
-      clearCreatePatientBehaviorNotice();
-      return;
-    }
-    els.activePatientBox.classList.remove('d-none');
-    els.activePatientText.textContent = 'Paciente activo detectado. ¿Deseas usar este paciente para la cita?';
+    // UX Agenda Nueva cita: no sugerir paciente activo en este flujo.
+    els.activePatientBox.classList.add('d-none');
     setActivePatientMode('manual');
+    clearCreatePatientBehaviorNotice();
   };
   const resetCreateForm = ()=>{
     setCreateSelectionContext({
@@ -8982,7 +9966,27 @@ console.info('app.js loaded :: 20251123a');
     setCreatePatientBirthdateInfo('', '');
     if(els.channel) els.channel.value = resolveCreateChannelOrigin('agenda_slot');
     clearPatientSearchResults();
+    patientLookupEntries = [];
+    patientLookupSelectedId = '';
+    patientLookupContextQuery = '';
+    patientSharedPhoneEntries = [];
+    patientSharedPhoneSelectedId = '';
+    patientSharedPhoneCurrentDigits = '';
+    patientSharedPhoneBypassDigits = '';
+    if(patientSharedPhoneDebounceTimer){
+      window.clearTimeout(patientSharedPhoneDebounceTimer);
+      patientSharedPhoneDebounceTimer = null;
+    }
+    resetLookupSelectionState();
+    resetSharedPhoneSelectionState();
+    closePatientLookupModal();
+    closeSharedPhoneModal();
+    syncCreateIdentityOverlayState();
     if(els.patientSearchQuery) els.patientSearchQuery.value = '';
+    if(els.patientSearchBtn){
+      els.patientSearchBtn.disabled = false;
+      els.patientSearchBtn.textContent = 'Filtrar';
+    }
     syncCreateConsultorioOptions();
     if(els.consultorioModal && !sanitizeText(els.consultorioModal.value || '')){
       const fallback = getAvailabilityConsultorioId();
@@ -9025,12 +10029,50 @@ console.info('app.js loaded :: 20251123a');
     if(els.startAt) els.startAt.value = toDateTimeLocalInput(date);
     return true;
   };
-  const matchesPatientSearch = (entry, queryNorm)=>{
-    if(!queryNorm) return true;
-    const display = normalizeText(entry.display_name || '');
-    const curp = normalizeText(entry.curp || '');
-    const pid = normalizeText(entry.patient_id || '');
-    return display.includes(queryNorm) || curp.includes(queryNorm) || pid.includes(queryNorm);
+  const resolvePatientPhoneCandidatesFromEntry = (entry = {})=>{
+    const directCandidates = Array.isArray(entry.phone_candidates) ? entry.phone_candidates : [];
+    const contactCandidates = resolvePatientPhoneCandidatesFromRaw(entry);
+    return Array.from(new Set([...directCandidates, ...contactCandidates]))
+      .filter((digits)=> digits.length >= 4)
+      .sort((a, b)=> b.length - a.length);
+  };
+  const phoneTokenMatchesCandidate = (tokenDigits = '', candidateDigits = '')=>{
+    const token = normalizePhoneDigits(tokenDigits);
+    const candidate = normalizePhoneDigits(candidateDigits);
+    if(!token || !candidate) return false;
+    if(token.length === 10 && candidate.length === 10){
+      return token === candidate;
+    }
+    if(token.length === 10 && candidate.length < 10){
+      return token.endsWith(candidate);
+    }
+    if(token.length >= 4 && token.length < 10){
+      return candidate.includes(token) || token.endsWith(candidate);
+    }
+    return token === candidate;
+  };
+  const toPatientSearchTokens = (query = '')=>{
+    return normalizeText(query)
+      .split(' ')
+      .map((token)=> token.trim())
+      .filter(Boolean);
+  };
+  const matchesPatientSearch = (entry, rawQuery = '')=>{
+    const tokens = toPatientSearchTokens(rawQuery);
+    if(!tokens.length) return true;
+    const haystack = normalizeText([
+      entry.display_name,
+      entry.curp,
+      entry.patient_id
+    ].filter(Boolean).join(' '));
+    const phoneCandidates = resolvePatientPhoneCandidatesFromEntry(entry);
+    return tokens.every((token)=>{
+      const tokenDigits = normalizePhoneDigits(token);
+      if(tokenDigits.length >= 4){
+        return phoneCandidates.some((candidate)=> phoneTokenMatchesCandidate(tokenDigits, candidate));
+      }
+      return haystack.includes(token);
+    });
   };
   const renderPatientSearchResults = (items = [])=>{
     if(!els.patientSearchResults) return;
@@ -9039,18 +10081,8 @@ console.info('app.js loaded :: 20251123a');
       setPatientSearchMsg('Sin resultados para esta búsqueda.');
       return;
     }
-    els.patientSearchResults.innerHTML = items.map((item, idx)=>{
-      const pid = sanitizeText(item.patient_id || '');
-      const display = sanitizeText(item.display_name || pid || 'Paciente');
-      const birthdate = toDateOnlyYmd(item.birthdate || '');
-      return `
-        <button type="button" class="list-group-item list-group-item-action mx-ag-patient-result" data-ag-patient-select="${idx}" data-ag-patient-id="${escapeHtml(pid)}" data-ag-patient-name="${escapeHtml(display)}" data-ag-patient-birthdate="${escapeAttrSafe(birthdate)}">
-          <div class="fw-semibold">${escapeHtml(display)}</div>
-          <small>Paciente existente</small>
-        </button>
-      `;
-    }).join('');
-    setPatientSearchMsg(`Resultados: ${items.length}`, 'success');
+    els.patientSearchResults.innerHTML = '';
+    setPatientSearchMsg(`Resultados encontrados: ${items.length}.`, 'success');
   };
   const runPatientSearch = async ()=>{
     const rawQuery = sanitizeText(els.patientSearchQuery?.value || '');
@@ -9065,16 +10097,21 @@ console.info('app.js loaded :: 20251123a');
     }
     try{
       const list = await fetchPatientIndex();
-      const queryNorm = normalizeText(rawQuery);
-      const matches = list.filter((entry)=> matchesPatientSearch(entry, queryNorm)).slice(0, 12);
+      const matches = list.filter((entry)=> matchesPatientSearch(entry, rawQuery)).slice(0, 12);
       renderPatientSearchResults(matches);
+      if(matches.length){
+        const opened = await openPatientLookupModal(matches, { query: rawQuery });
+        if(!opened){
+          setPatientSearchMsg('No se pudo abrir la selección de pacientes. Intenta nuevamente.', 'danger');
+        }
+      }
     }catch(err){
       clearPatientSearchResults();
       setPatientSearchMsg(sanitizeText(err?.message || 'No se pudo buscar pacientes.'), 'danger');
     }finally{
       if(els.patientSearchBtn){
         els.patientSearchBtn.disabled = false;
-        els.patientSearchBtn.textContent = 'Buscar';
+        els.patientSearchBtn.textContent = 'Filtrar';
       }
     }
   };
@@ -9188,7 +10225,14 @@ console.info('app.js loaded :: 20251123a');
     syncCreateStartInfoFromDate(start, computedEnd);
     if(els.endAt) els.endAt.value = toDateTimeLocalInput(computedEnd);
     const slotConsultorioId = sanitizeText(selection?.consultorio_id || selection?.consultorioId || '');
-    const slotConsultorioName = sanitizeText(selection?.consultorio_name || selection?.consultorioName || '');
+    const slotConsultorioName = sanitizeText(
+      selection?.consultorio_name
+      || selection?.consultorioName
+      || selection?.consultorio_label
+      || selection?.consultorioLabel
+      || selection?.consultorio
+      || ''
+    );
     const consultorioId = slotConsultorioId || resolveConsultorioId();
     if(!consultorioId){
       setError('No se pudo resolver el consultorio del horario seleccionado.');
@@ -9433,6 +10477,16 @@ console.info('app.js loaded :: 20251123a');
 
     if(!doctorId) return setCreateError('No se pudo resolver doctor_id.');
     if(!consultorioId) return setCreateError('No se pudo resolver un consultorio operativo. Verifica el catálogo de consultorios del médico activo.');
+    if(createPatientMode === 'new'){
+      const maybePhoneDigits = normalizePhoneDigits(newPatientPhone);
+      if(maybePhoneDigits.length === 10){
+        const sharedIdentity = await runSharedPhoneIdentityCheck({ force: true });
+        if(sharedIdentity?.opened){
+          setCreateError('');
+          return;
+        }
+      }
+    }
     if(createPatientMode === 'new' && (!newPatientFirstName || !newPatientLastName1)){
       return setCreateError('Nombre(s) y primer apellido son obligatorios para paciente nuevo.');
     }
@@ -13571,11 +14625,12 @@ console.info('app.js loaded :: 20251123a');
       eventRescheduleAvailabilityLoadNonce += 1;
       eventRescheduleMonthCursor = nextMonth;
       eventRescheduleMonthOptions = buildRescheduleMonthOptions(eventRescheduleMonthCursor);
+      eventRescheduleSelectedStart = null;
+      eventRescheduleSelectedSlotKey = '';
       const selectedInMonth = eventRescheduleMonthOptions.find((day)=> day.key === eventRescheduleSelectedDayKey && day.hasAvailability);
       if(!selectedInMonth){
         const firstAvailable = eventRescheduleMonthOptions.find((day)=> day.hasAvailability);
         eventRescheduleSelectedDayKey = firstAvailable?.key || '';
-        eventRescheduleSelectedStart = null;
       }
       renderRescheduleDays();
       validateEventRescheduleCandidate();
@@ -13589,11 +14644,12 @@ console.info('app.js loaded :: 20251123a');
       eventRescheduleAvailabilityLoadNonce += 1;
       eventRescheduleMonthCursor = previousMonth;
       eventRescheduleMonthOptions = buildRescheduleMonthOptions(eventRescheduleMonthCursor);
+      eventRescheduleSelectedStart = null;
+      eventRescheduleSelectedSlotKey = '';
       const selectedInMonth = eventRescheduleMonthOptions.find((day)=> day.key === eventRescheduleSelectedDayKey && day.hasAvailability);
       if(!selectedInMonth){
         const firstAvailable = eventRescheduleMonthOptions.find((day)=> day.hasAvailability);
         eventRescheduleSelectedDayKey = firstAvailable?.key || '';
-        eventRescheduleSelectedStart = null;
       }
       renderRescheduleDays();
       validateEventRescheduleCandidate();
@@ -13666,16 +14722,20 @@ console.info('app.js loaded :: 20251123a');
       if(!day || !day.hasAvailability) return;
       eventRescheduleSelectedDayKey = dayKey;
       eventRescheduleSelectedStart = null;
+      eventRescheduleSelectedSlotKey = '';
       renderRescheduleDays();
       validateEventRescheduleCandidate();
     });
     els.eventRescheduleHours?.addEventListener('click', (event)=>{
       const btn = event.target.closest('[data-ag-reschedule-slot]');
       if(!btn) return;
-      const iso = sanitizeText(btn.getAttribute('data-ag-reschedule-slot') || '');
-      const selected = parseDateTimeLocalSafe(iso);
-      if(!selected || Number.isNaN(selected.getTime())) return;
-      eventRescheduleSelectedStart = selected;
+      const slotKey = sanitizeText(btn.getAttribute('data-ag-reschedule-slot') || '');
+      if(!slotKey) return;
+      const selectedDay = eventRescheduleMonthOptions.find((day)=> day.key === eventRescheduleSelectedDayKey);
+      const selectedSlot = selectedDay?.slots?.find((slot)=> sanitizeText(slot?.slotKey || '') === slotKey) || null;
+      if(!(selectedSlot?.start instanceof Date) || Number.isNaN(selectedSlot.start.getTime())) return;
+      eventRescheduleSelectedSlotKey = slotKey;
+      eventRescheduleSelectedStart = new Date(selectedSlot.start);
       renderRescheduleHours();
       validateEventRescheduleCandidate();
     });
@@ -13839,6 +14899,120 @@ console.info('app.js loaded :: 20251123a');
         birthdate: patientBirthdate
       }).catch(()=> null);
     });
+    const queueSharedPhoneIdentityCheck = (force = false)=>{
+      if(patientSharedPhoneDebounceTimer){
+        window.clearTimeout(patientSharedPhoneDebounceTimer);
+      }
+      if(force){
+        runSharedPhoneIdentityCheck({ force: true }).catch(()=> null);
+        return;
+      }
+      patientSharedPhoneDebounceTimer = window.setTimeout(()=>{
+        runSharedPhoneIdentityCheck({ force: false }).catch(()=> null);
+      }, 220);
+    };
+    els.patientNewPhone?.addEventListener('input', ()=>{
+      queueSharedPhoneIdentityCheck(false);
+    });
+    els.patientNewPhone?.addEventListener('change', ()=>{
+      queueSharedPhoneIdentityCheck(true);
+    });
+    els.patientNewPhone?.addEventListener('blur', ()=>{
+      queueSharedPhoneIdentityCheck(true);
+    });
+    els.patientLookupList?.addEventListener('click', (event)=>{
+      const selectBtn = event.target.closest('[data-ag-identity-select]');
+      if(selectBtn){
+        event.preventDefault();
+        const patientId = sanitizeText(selectBtn.getAttribute('data-ag-identity-select') || '');
+        if(patientId){
+          setLookupConfirmSelection(patientId);
+        }
+        return;
+      }
+      const confirmYesBtn = event.target.closest('[data-ag-identity-confirm-yes]');
+      if(confirmYesBtn){
+        event.preventDefault();
+        const patientId = sanitizeText(confirmYesBtn.getAttribute('data-ag-identity-confirm-yes') || '');
+        if(!patientId) return;
+        const selectedEntry = patientLookupEntries.find((entry)=> sanitizeText(entry?.patient_id || '') === patientId) || null;
+        applyExistingPatientSelection({
+          patientId,
+          patientName: resolvePatientLookupDisplayName(selectedEntry || {}),
+          birthdate: toDateOnlyYmd(selectedEntry?.birthdate || '')
+        }).catch(()=> null);
+        closePatientLookupModal();
+        return;
+      }
+      const confirmNoBtn = event.target.closest('[data-ag-identity-confirm-no]');
+      if(confirmNoBtn){
+        event.preventDefault();
+        setLookupConfirmSelection('');
+      }
+    });
+    els.patientSharedPhoneList?.addEventListener('click', (event)=>{
+      const selectBtn = event.target.closest('[data-ag-identity-select]');
+      if(selectBtn){
+        event.preventDefault();
+        const patientId = sanitizeText(selectBtn.getAttribute('data-ag-identity-select') || '');
+        if(patientId){
+          setSharedPhoneConfirmSelection(patientId);
+        }
+        return;
+      }
+      const confirmYesBtn = event.target.closest('[data-ag-identity-confirm-yes]');
+      if(confirmYesBtn){
+        event.preventDefault();
+        const patientId = sanitizeText(confirmYesBtn.getAttribute('data-ag-identity-confirm-yes') || '');
+        if(!patientId) return;
+        const selectedEntry = patientSharedPhoneEntries.find((entry)=> sanitizeText(entry?.patient_id || '') === patientId) || null;
+        applyExistingPatientSelection({
+          patientId,
+          patientName: resolvePatientLookupDisplayName(selectedEntry || {}),
+          birthdate: toDateOnlyYmd(selectedEntry?.birthdate || '')
+        }).catch(()=> null);
+        patientSharedPhoneBypassDigits = '';
+        closeSharedPhoneModal();
+        return;
+      }
+      const confirmNoBtn = event.target.closest('[data-ag-identity-confirm-no]');
+      if(confirmNoBtn){
+        event.preventDefault();
+        setSharedPhoneConfirmSelection('');
+      }
+    });
+    els.patientSharedPhoneContinueBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      const digits = normalizePhoneDigits(els.patientNewPhone?.value || patientSharedPhoneCurrentDigits || '');
+      if(digits.length === 10){
+        patientSharedPhoneBypassDigits = digits;
+      }
+      closeSharedPhoneModal();
+    });
+    els.patientLookupModalEl?.addEventListener('show.bs.modal', ()=>{
+      setCreateIdentityOverlayState(true);
+    });
+    els.patientLookupModalEl?.addEventListener('hidden.bs.modal', ()=>{
+      resetLookupSelectionState();
+      patientLookupEntries = [];
+      if(els.patientLookupList) els.patientLookupList.innerHTML = '';
+      if(els.patientLookupNotice) els.patientLookupNotice.classList.add('d-none');
+      if(els.patientLookupContext){
+        els.patientLookupContext.classList.add('d-none');
+        els.patientLookupContext.textContent = '';
+      }
+      syncCreateIdentityOverlayState();
+    });
+    els.patientSharedPhoneModalEl?.addEventListener('show.bs.modal', ()=>{
+      setCreateIdentityOverlayState(true);
+    });
+    els.patientSharedPhoneModalEl?.addEventListener('hidden.bs.modal', ()=>{
+      resetSharedPhoneSelectionState();
+      patientSharedPhoneEntries = [];
+      if(els.patientSharedPhoneList) els.patientSharedPhoneList.innerHTML = '';
+      if(els.patientSharedPhoneNotice) els.patientSharedPhoneNotice.classList.add('d-none');
+      syncCreateIdentityOverlayState();
+    });
     els.patientId?.addEventListener('input', ()=>{
       queueCreatePatientBehaviorNoticeRefresh(240);
     });
@@ -13852,6 +15026,12 @@ console.info('app.js loaded :: 20251123a');
           syncCreateBirthdateHiddenInputFromSelectors();
         });
       });
+    els.patientModeExistingBtn?.addEventListener('click', ()=>{
+      switchCreatePatientMode('existing');
+    });
+    els.patientModeNewBtn?.addEventListener('click', ()=>{
+      switchCreatePatientMode('new');
+    });
     els.patientNewToggle?.addEventListener('click', ()=>{
       switchCreatePatientMode(createPatientMode === 'new' ? 'existing' : 'new');
     });
