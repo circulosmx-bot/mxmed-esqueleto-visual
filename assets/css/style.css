@@ -8997,18 +8997,27 @@ body{margin:0;background:var(--mm-fondo-base);}
   margin-top: 4px !important;
   margin-bottom: 4px !important;
 }
-.mx-agenda-calendar-wrap.is-day-view .fc .fc-timegrid-event{
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-timegrid-event:not(.mx-ag-blocked-event){
   margin-bottom: 0 !important;
   background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
   outline: 0 !important;
 }
-.mx-agenda-calendar-wrap.is-day-view .fc .fc-timegrid-event.fc-v-event,
-.mx-agenda-calendar-wrap.is-day-view .fc .fc-timegrid-event .fc-event-main{
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-timegrid-event.fc-v-event:not(.mx-ag-blocked-event),
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-timegrid-event:not(.mx-ag-blocked-event) .fc-event-main{
   border: 0 !important;
   box-shadow: none !important;
   background: transparent !important;
+}
+/* Día: el gris lo pinta la card interna, no el wrapper full-width de FullCalendar. */
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-timegrid-event.mx-ag-blocked-event,
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-timegrid-event.mx-ag-blocked-event .fc-event-main{
+  background: transparent !important;
+  border-color: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
 }
 .mx-agenda-calendar-wrap.is-day-view .fc .fc-timegrid-slot-lane{
   box-shadow: none !important;
@@ -9065,6 +9074,14 @@ body{margin:0;background:var(--mm-fondo-base);}
   margin:0;
   font-size:0 !important;
   white-space:nowrap;
+}
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-toolbar-title[data-day-key]{
+  cursor: pointer;
+  user-select: none;
+}
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-toolbar-title[data-day-key]:hover .mxm-agenda-day-toolbar-title-main,
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-toolbar-title[data-day-key]:hover .mxm-agenda-day-toolbar-title-date{
+  color: #0b3f60;
 }
 .mxm-agenda-day-toolbar-title-main{
   display:inline-block;
@@ -9441,6 +9458,36 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mx-ag-slot-card.is-occupied.is-past::before{
   opacity:.58;
 }
+.mx-ag-slot-card.is-blocked{
+  background:#999da0;
+  color:#ffffff;
+}
+.mx-ag-slot-card.is-blocked .mx-ag-slot-time,
+.mx-ag-slot-card.is-blocked .mx-ag-slot-consultorio,
+.mx-ag-slot-card.is-blocked .mx-ag-slot-primary{
+  color:#ffffff;
+}
+.mx-ag-slot-card.is-blocked .mx-ag-slot-primary{
+  text-align:left;
+  justify-self:stretch;
+  font-size:.95rem;
+  line-height:1;
+  letter-spacing:.01em;
+}
+.mx-ag-slot-block-reason{
+  font-size:.76rem;
+  font-weight:600;
+  line-height:1.1;
+  color:#ffffff;
+  opacity:.95;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.mx-ag-slot-block-remove{
+  justify-self:start;
+  margin-top:2px;
+}
 /* Unifica el color del wrapper nativo de FullCalendar cuando la card interna ya está marcada como pasada. */
 .mx-agenda-calendar-wrap .fc .fc-timegrid-event:has(.mx-ag-slot-card.is-available.is-past){
   background:#898989 !important;
@@ -9452,9 +9499,15 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-color:#708090 !important;
   color:#F9F9F9 !important;
 }
+.mx-agenda-calendar-wrap .fc .fc-timegrid-event:has(.mx-ag-slot-card.is-blocked){
+  background:#999da0 !important;
+  border-color:#999da0 !important;
+  color:#F9F9F9 !important;
+}
 /* Día: evita que el wrapper de FullCalendar pinte una barra completa detrás de la card acortada. */
 .mx-agenda-calendar-wrap.is-day-view .fc .fc-timegrid-event:has(.mx-ag-slot-card.is-available.is-past),
-.mx-agenda-calendar-wrap.is-day-view .fc .fc-timegrid-event:has(.mx-ag-slot-card.is-occupied.is-past){
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-timegrid-event:has(.mx-ag-slot-card.is-occupied.is-past),
+.mx-agenda-calendar-wrap.is-day-view .fc .fc-timegrid-event:has(.mx-ag-slot-card.is-blocked){
   background: transparent !important;
   border-color: transparent !important;
   color: inherit !important;
