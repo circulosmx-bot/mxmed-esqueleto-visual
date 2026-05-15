@@ -3267,7 +3267,7 @@ console.info('app.js loaded :: 20251123a');
         <aside class="mx-ag-day-sidebar">
           ${buildCustomDayMiniMonthHtml({ selectedDate, monthCursor: customDayMiniMonthCursor })}
           <section class="mx-ag-day-sidebar-card mx-ag-day-now-card" data-day-reset-today role="button" tabindex="0" aria-label="Volver a hoy">
-            <div class="mx-ag-day-now-kicker">Hoy es</div>
+            <div class="mx-ag-day-now-kicker"><span class="material-symbols-rounded mx-ag-current-day-arrow" aria-hidden="true">arrow_forward_ios</span> Hoy es</div>
             <div class="mx-ag-day-now-date-main" data-day-now-date></div>
             <div class="mx-ag-day-now-time" data-day-now-time></div>
           </section>
@@ -3286,7 +3286,7 @@ console.info('app.js loaded :: 20251123a');
             <div class="mx-ag-day-main-title-wrap">
               <div class="mx-ag-day-main-head-actions">
                 <button type="button" class="mx-ag-day-head-trigger mx-ag-day-main-title" data-day-head-trigger data-day-key="${escapeAttrSafe(selectedDayKey)}">
-                  ${isSelectedDayToday ? '<span class="mx-ag-current-day-arrow" aria-hidden="true">&gt;</span>' : ''}
+                  ${isSelectedDayToday ? '<span class="material-symbols-rounded mx-ag-current-day-arrow" aria-hidden="true">arrow_forward_ios</span>' : ''}
                   ${escapeHtml(resolveCustomDayViewHeaderLabel(selectedDate))}
                 </button>
               </div>
@@ -3582,7 +3582,7 @@ console.info('app.js loaded :: 20251123a');
         return `
           <div class="mx-ag-custom-week-col-head" data-day-key="${escapeAttrSafe(dayKey)}">
             <div class="mx-ag-custom-week-col-title">
-              ${isCurrentDay ? '<span class="mx-ag-current-day-arrow" aria-hidden="true">&gt;</span>' : ''}
+              ${isCurrentDay ? '<span class="material-symbols-rounded mx-ag-current-day-arrow" aria-hidden="true">arrow_forward_ios</span>' : ''}
               ${escapeHtml(title)}
             </div>
             <div class="mx-ag-custom-week-col-date">${escapeHtml(dateLabel)}</div>
