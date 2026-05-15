@@ -4702,9 +4702,7 @@ console.info('app.js loaded :: 20251123a');
     }
     if(els.blockModeUntilLabel){
       if(allowFullDayToggle){
-        els.blockModeUntilLabel.textContent = sourceMode === 'day_header'
-          ? `Bloquear de ${slotStartLabel} hasta hora final`
-          : `Bloquear desde ${slotStartLabel} hasta hora final`;
+        els.blockModeUntilLabel.textContent = `Desde ${slotStartLabel} hasta`;
       }else{
         els.blockModeUntilLabel.textContent = 'Hasta cierta hora';
       }
@@ -8482,8 +8480,15 @@ console.info('app.js loaded :: 20251123a');
     syncBlockModalUiCopy();
     const fullDaySelected = !!(blockModalUiContext?.allowFullDayToggle && els.blockModeSingle?.checked);
     const isUntil = !!els.blockModeUntil?.checked && !fullDaySelected;
+    const isSingleChecked = !!els.blockModeSingle?.checked;
     if(els.blockEndWrap){
       els.blockEndWrap.classList.toggle('d-none', !isUntil);
+    }
+    if(els.blockModalEl){
+      const untilCard = els.blockModalEl.querySelector('[data-ag-block-card="until"]');
+      const singleCard = els.blockModalEl.querySelector('[data-ag-block-card="single"]');
+      untilCard?.classList.toggle('is-selected', isUntil);
+      singleCard?.classList.toggle('is-selected', isSingleChecked);
     }
     if(els.blockOtherWrap){
       els.blockOtherWrap.classList.toggle('d-none', blockModalReasonKey !== 'otro');

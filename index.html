@@ -3260,20 +3260,36 @@
                       </div>
                       <div class="col-12">
                         <label class="form-label d-block mb-2">Tipo de bloqueo</label>
-                        <div class="d-grid gap-2">
-                          <label class="d-inline-flex align-items-center gap-2">
-                            <input type="radio" name="ag_block_mode" value="single" id="ag_block_mode_single" checked>
-                            <span id="ag_block_mode_single_label">Solo este horario</span>
-                          </label>
-                          <label class="d-inline-flex align-items-center gap-2">
-                            <input type="radio" name="ag_block_mode" value="until" id="ag_block_mode_until">
-                            <span id="ag_block_mode_until_label">Hasta cierta hora</span>
-                          </label>
+                        <div class="mx-ag-block-type-stack">
+                          <div class="mx-ag-block-type-card mx-ag-block-type-card--range" data-ag-block-card="until">
+                            <label class="mx-ag-block-type-head" for="ag_block_mode_until">
+                              <input type="radio" name="ag_block_mode" value="until" id="ag_block_mode_until">
+                              <div class="mx-ag-block-type-copy">
+                                <div class="mx-ag-block-type-title">Bloquear rango de horario</div>
+                                <p class="mx-ag-block-type-desc">Bloquea desde la hora seleccionada hasta el final de la última ventana operativa del día.</p>
+                              </div>
+                            </label>
+                            <div class="mx-ag-block-range-wrap d-none" id="ag_block_end_wrap">
+                              <label class="visually-hidden" for="ag_block_end_select">Hora final</label>
+                              <div class="mx-ag-block-range-row">
+                                <span class="mx-ag-block-range-prefix" id="ag_block_mode_until_label">Desde --:-- hasta</span>
+                                <select class="form-select" id="ag_block_end_select"></select>
+                                <span class="mx-ag-block-range-suffix">(Hora final)</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="mx-ag-block-type-divider" aria-hidden="true"><span>o</span></div>
+                          <div class="mx-ag-block-type-card mx-ag-block-type-card--fullday" data-ag-block-card="single">
+                            <label class="mx-ag-block-type-head" for="ag_block_mode_single">
+                              <input type="radio" name="ag_block_mode" value="single" id="ag_block_mode_single" checked>
+                              <div class="mx-ag-block-type-copy">
+                                <div class="mx-ag-block-type-title" id="ag_block_mode_single_label">Bloquear todo el día</div>
+                                <p class="mx-ag-block-type-desc">Bloquea todas las ventanas operativas del día seleccionado.</p>
+                              </div>
+                              <span class="mx-ag-block-type-icon" aria-hidden="true"><i class="bi bi-calendar2-check"></i></span>
+                            </label>
+                          </div>
                         </div>
-                      </div>
-                      <div class="col-12 d-none" id="ag_block_end_wrap">
-                        <label class="form-label" for="ag_block_end_select">Hora final</label>
-                        <select class="form-select" id="ag_block_end_select"></select>
                       </div>
                       <div class="col-12">
                         <label class="form-label d-block mb-2">Motivo</label>
