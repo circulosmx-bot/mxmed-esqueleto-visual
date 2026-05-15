@@ -869,8 +869,8 @@ console.info('app.js loaded :: 20251123a');
   let blockModalSelection = null;
   let blockSelectionSnapshot = null;
   let blockModalUiContext = null;
-  let blockModalReasonKey = 'comida';
-  let blockModalReasonLabel = 'Comida';
+  let blockModalReasonKey = 'procedimiento';
+  let blockModalReasonLabel = 'Procedimiento';
   let blockModalShowConflicts = false;
   const NEXT_AVAILABLE_FLOW_ENABLED = false;
   const AGENDA_SLOT_DEBUG = false;
@@ -879,10 +879,8 @@ console.info('app.js loaded :: 20251123a');
   const AGENDA_SLOT_FORCE_OPEN_TRACE = false;
   const AGENDA_LATE_CANCEL_THRESHOLD_MINUTES = 1080;
   const BLOCK_REASON_OPTIONS = Object.freeze([
-    { key: 'comida', label: 'Comida' },
     { key: 'procedimiento', label: 'Procedimiento' },
     { key: 'personal', label: 'Personal' },
-    { key: 'no_disponible', label: 'No disponible' },
     { key: 'otro', label: 'Otro' }
   ]);
 
@@ -1180,6 +1178,32 @@ console.info('app.js loaded :: 20251123a');
       }
     });
     return Array.from(set).sort((a, b)=> a - b);
+  };
+  const resolveAgendaHiddenDaysForView = (hiddenDays = [], viewType = '')=>{
+    const normalized = normalizeHiddenDays(hiddenDays);
+    const safeViewType = sanitizeText(viewType || String(calendar?.view?.type || ''));
+    if(safeViewType === 'timeGridDay'){
+      // Vista Día debe permitir navegar/visualizar domingos y feriados.
+      return [];
+    }
+    return normalized;
+  };
+  const applyAgendaHiddenDaysForCurrentView = (hiddenDays = [])=>{
+    if(!calendar) return normalizeHiddenDays(hiddenDays);
+    const next = resolveAgendaHiddenDaysForView(hiddenDays, String(calendar?.view?.type || ''));
+    const current = normalizeHiddenDays(
+      (typeof calendar?.getOption === 'function')
+        ? calendar.getOption('hiddenDays')
+        : []
+    );
+    const isSame = (
+      current.length === next.length
+      && current.every((day, index)=> day === next[index])
+    );
+    if(!isSame){
+      try{ calendar.setOption('hiddenDays', next); }catch(_){}
+    }
+    return next;
   };
   const applyGlobalSaturdayVisibilityToHiddenDays = (hiddenDays = [])=>{
     const next = normalizeHiddenDays(hiddenDays);
@@ -3258,6 +3282,27 @@ console.info('app.js loaded :: 20251123a');
       const selected = value === sanitizeText(els.consultorio?.value || '') ? ' selected' : '';
       return `<option value="${escapeAttrSafe(value)}"${selected}>${escapeHtml(label)}</option>`;
     }).filter(Boolean).join('');
+    const hasRenderableRows = (morningRows.length + afternoonRows.length) > 0;
+    const dayBodyHtml = hasRenderableRows
+      ? `
+          <div class="mx-ag-day-columns">
+            <section class="mx-ag-day-column">
+              <div class="mx-ag-day-column-head">
+                <h4>Mañana</h4>
+                <span>08:00 - 14:00</span>
+              </div>
+              <div class="mx-ag-day-column-body">${renderSectionRows(morningRows)}</div>
+            </section>
+            <section class="mx-ag-day-column">
+              <div class="mx-ag-day-column-head">
+                <h4>Tarde</h4>
+                <span>14:00 - 20:00</span>
+              </div>
+              <div class="mx-ag-day-column-body">${renderSectionRows(afternoonRows)}</div>
+            </section>
+          </div>
+        `
+      : `<div class="mx-ag-custom-day-empty-state">No hay horarios disponibles para este día.</div>`;
     root.classList.remove('d-none');
     els.calendarWrap?.classList.add('mx-ag-custom-day-active');
     els.agendaFrontendV1?.classList.add('mx-ag-day-layout-active');
@@ -3298,22 +3343,7 @@ console.info('app.js loaded :: 20251123a');
               <article class="mx-ag-day-counter is-accent"><div class="mx-ag-day-counter-label">Disponibles</div><div class="mx-ag-day-counter-value">${totalAvailable}</div></article>
             </div>
           </header>
-          <div class="mx-ag-day-columns">
-            <section class="mx-ag-day-column">
-              <div class="mx-ag-day-column-head">
-                <h4>Mañana</h4>
-                <span>08:00 - 14:00</span>
-              </div>
-              <div class="mx-ag-day-column-body">${renderSectionRows(morningRows)}</div>
-            </section>
-            <section class="mx-ag-day-column">
-              <div class="mx-ag-day-column-head">
-                <h4>Tarde</h4>
-                <span>14:00 - 20:00</span>
-              </div>
-              <div class="mx-ag-day-column-body">${renderSectionRows(afternoonRows)}</div>
-            </section>
-          </div>
+          ${dayBodyHtml}
         </section>
       </div>
     `;
@@ -4043,6 +4073,24 @@ console.info('app.js loaded :: 20251123a');
     const safeScopeId = sanitizeText(consultorioScopeId || 'all') || 'all';
     return `mxmed.agenda.blocked_slots.v1:${safeDoctorId}:${safeScopeId}`;
   };
+  const KNOWN_LEGACY_BLOCKED_SLOT_DAY_KEYS = new Set(['2026-05-17']);
+  const legacyBlockedSlotCleanupSessionByDay = new Set();
+  const resolveBlockedSlotsStorageKeysAcrossScopes = ()=>{
+    const doctorId = sanitizeText(getDoctorId() || 'doctor') || 'doctor';
+    const currentScopeId = resolveBlockedSlotsStorageScopeId();
+    const scopeKeys = new Set([
+      resolveBlockedSlotsStorageKey(),
+      buildBlockedSlotsStorageKey(doctorId, 'all')
+    ]);
+    if(sanitizeText(currentScopeId || '')){
+      scopeKeys.add(buildBlockedSlotsStorageKey(doctorId, sanitizeText(currentScopeId || '')));
+    }
+    listAgendaConfigConsultorios()
+      .map((row)=> sanitizeText(row?.id || ''))
+      .filter((id)=> isNumericId(id))
+      .forEach((id)=> scopeKeys.add(buildBlockedSlotsStorageKey(doctorId, id)));
+    return Array.from(scopeKeys);
+  };
   const normalizeBlockedSlotRecord = (row = null)=>{
     if(!row || typeof row !== 'object') return null;
     const blockId = sanitizeText(row.block_id || row.id || '');
@@ -4087,17 +4135,7 @@ console.info('app.js loaded :: 20251123a');
     return readBlockedSlotsFromStorageKey(resolveBlockedSlotsStorageKey());
   };
   const readBlockedSlotsAcrossScopes = ()=>{
-    const doctorId = sanitizeText(getDoctorId() || 'doctor') || 'doctor';
-    const currentScopeId = resolveBlockedSlotsStorageScopeId();
-    const scopeIds = new Set(['all']);
-    if(sanitizeText(currentScopeId || '')){
-      scopeIds.add(sanitizeText(currentScopeId || ''));
-    }
-    listAgendaConfigConsultorios()
-      .map((row)=> sanitizeText(row?.id || ''))
-      .filter((id)=> isNumericId(id))
-      .forEach((id)=> scopeIds.add(id));
-    const storageKeys = Array.from(scopeIds).map((scopeId)=> buildBlockedSlotsStorageKey(doctorId, scopeId));
+    const storageKeys = resolveBlockedSlotsStorageKeysAcrossScopes();
     const dedupe = new Set();
     const rows = [];
     storageKeys.forEach((key)=>{
@@ -4118,6 +4156,170 @@ console.info('app.js loaded :: 20251123a');
       rows,
       storageKeys
     };
+  };
+  const diagnoseBlockedSlotsForDayAcrossScopes = (dayKey = '')=>{
+    const safeDayKey = sanitizeText(dayKey || '').slice(0, 10);
+    const storageKeys = resolveBlockedSlotsStorageKeysAcrossScopes();
+    const rows = [];
+    storageKeys.forEach((storageKey)=>{
+      const sourceRows = readBlockedSlotsFromStorageKey(storageKey);
+      sourceRows.forEach((row)=>{
+        const start = parseDateTimeLocalSafe(sanitizeText(row?.start_at || ''));
+        const end = parseDateTimeLocalSafe(sanitizeText(row?.end_at || ''));
+        if(!(start instanceof Date) || !(end instanceof Date) || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start){
+          return;
+        }
+        const rowDayKey = formatYmdLocal(start);
+        if(safeDayKey && rowDayKey !== safeDayKey){
+          return;
+        }
+        const consultorioId = sanitizeText(row?.consultorio_id || '');
+        const blockId = sanitizeText(row?.block_id || '');
+        const durationMinutes = Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000));
+        rows.push({
+          storageKey,
+          block_id: blockId,
+          consultorio_id: consultorioId,
+          start_at: toSqlDateTimeLocal(start),
+          end_at: toSqlDateTimeLocal(end),
+          dayKey: rowDayKey,
+          duration_minutes: durationMinutes,
+          full_day_like: isRangeLikelyFullDayBlock(start, end),
+          consultorio_missing: !isNumericId(consultorioId)
+        });
+      });
+    });
+    return {
+      dayKey: safeDayKey,
+      storageKeys,
+      rows,
+      total: rows.length,
+      missingConsultorioCount: rows.filter((row)=> row.consultorio_missing).length,
+      fullDayLikeCount: rows.filter((row)=> row.full_day_like).length
+    };
+  };
+  const cleanupKnownLegacyBlockedSlotsForDayAcrossScopes = ({
+    dayKey = '',
+    operationalContext = null,
+    reason = 'legacy_cleanup_known_day'
+  } = {})=>{
+    const safeDayKey = sanitizeText(dayKey || '').slice(0, 10);
+    if(!safeDayKey || !KNOWN_LEGACY_BLOCKED_SLOT_DAY_KEYS.has(safeDayKey)){
+      return {
+        changed: false,
+        skipped: true,
+        reason: 'day_not_whitelisted',
+        dayKey: safeDayKey,
+        removedRows: [],
+        removedBlockIds: []
+      };
+    }
+    const dayDate = toLocalDayDate(safeDayKey);
+    const context = (operationalContext && typeof operationalContext === 'object')
+      ? operationalContext
+      : (resolveCurrentCustomWeekOperationalContext() || {});
+    const op = isCustomWeekDayOperative(dayDate, context);
+    const opReason = sanitizeText(op?.reason || '');
+    const isNonOperativeForCleanup = (
+      op?.operative !== true
+      && (opReason === 'no_active_schedule' || opReason === 'holiday')
+    );
+    if(!isNonOperativeForCleanup){
+      return {
+        changed: false,
+        skipped: true,
+        reason: 'day_is_operative_or_not_target_reason',
+        dayKey: safeDayKey,
+        removedRows: [],
+        removedBlockIds: []
+      };
+    }
+    const diagnosticsBefore = diagnoseBlockedSlotsForDayAcrossScopes(safeDayKey);
+    const storageKeys = Array.isArray(diagnosticsBefore?.storageKeys) ? diagnosticsBefore.storageKeys : [];
+    const slotMinutes = Math.max(5, Number.parseInt(String(resolveAgendaSlotMinutes() || 30), 10) || 30);
+    const removedRows = [];
+    let changed = false;
+    storageKeys.forEach((storageKey)=>{
+      const rows = readBlockedSlotsFromStorageKey(storageKey);
+      if(!rows.length) return;
+      const nextRows = rows.filter((row)=>{
+        const start = parseDateTimeLocalSafe(sanitizeText(row?.start_at || ''));
+        const end = parseDateTimeLocalSafe(sanitizeText(row?.end_at || ''));
+        if(!(start instanceof Date) || !(end instanceof Date) || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start){
+          return true;
+        }
+        const rowDayKey = formatYmdLocal(start);
+        if(rowDayKey !== safeDayKey){
+          return true;
+        }
+        const consultorioId = sanitizeText(row?.consultorio_id || '');
+        const durationMinutes = Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000));
+        const fullDayLike = isRangeLikelyFullDayBlock(start, end);
+        const looksLegacy = (
+          !isNumericId(consultorioId)
+          || fullDayLike
+          || durationMinutes >= (slotMinutes * 2)
+        );
+        if(!looksLegacy){
+          return true;
+        }
+        removedRows.push({
+          storageKey,
+          block_id: sanitizeText(row?.block_id || ''),
+          consultorio_id: consultorioId,
+          start_at: toSqlDateTimeLocal(start),
+          end_at: toSqlDateTimeLocal(end),
+          duration_minutes: durationMinutes,
+          full_day_like: fullDayLike
+        });
+        return false;
+      });
+      if(nextRows.length !== rows.length){
+        changed = true;
+        try{
+          window.localStorage?.setItem(storageKey, JSON.stringify(nextRows));
+        }catch(_){}
+      }
+    });
+    const removedBlockIds = Array.from(new Set(
+      removedRows.map((row)=> sanitizeText(row?.block_id || '')).filter(Boolean)
+    ));
+    try{
+      console.info('MXM BLOCK LEGACY DAY CLEANUP DEBUG', {
+        action: 'cleanup_known_legacy_day',
+        reason: sanitizeText(reason || ''),
+        dayKey: safeDayKey,
+        operational_reason: opReason,
+        diagnostics_before: {
+          total: Number(diagnosticsBefore?.total || 0),
+          missing_consultorio: Number(diagnosticsBefore?.missingConsultorioCount || 0),
+          full_day_like: Number(diagnosticsBefore?.fullDayLikeCount || 0)
+        },
+        removed_count: removedRows.length,
+        removed_block_ids: removedBlockIds,
+        removed_rows: removedRows
+      });
+    }catch(_){}
+    return {
+      changed,
+      skipped: false,
+      reason: sanitizeText(reason || ''),
+      dayKey: safeDayKey,
+      diagnosticsBefore,
+      removedRows,
+      removedBlockIds
+    };
+  };
+  window.mxmAgendaDiagnoseBlockedSlotsDay = (dayKey = '')=>{
+    return diagnoseBlockedSlotsForDayAcrossScopes(dayKey);
+  };
+  window.mxmAgendaCleanupLegacyBlockedSlotsDay = (options = {})=>{
+    const safeOptions = (options && typeof options === 'object') ? options : {};
+    return cleanupKnownLegacyBlockedSlotsForDayAcrossScopes({
+      dayKey: sanitizeText(safeOptions.dayKey || ''),
+      operationalContext: safeOptions.operationalContext || null,
+      reason: sanitizeText(safeOptions.reason || 'console')
+    });
   };
   const writeBlockedSlots = (rows = [])=>{
     const normalized = (Array.isArray(rows) ? rows : []).map((row)=> normalizeBlockedSlotRecord(row)).filter(Boolean);
@@ -4256,18 +4458,7 @@ console.info('app.js loaded :: 20251123a');
   const removeBlockedSlotById = (blockId = '')=>{
     const safeId = sanitizeText(blockId);
     if(!safeId) return false;
-    const currentStorageKey = resolveBlockedSlotsStorageKey();
-    const doctorId = sanitizeText(getDoctorId() || 'doctor') || 'doctor';
-    const scopeKeys = new Set([currentStorageKey]);
-    const currentScopeId = resolveBlockedSlotsStorageScopeId();
-    if(sanitizeText(currentScopeId || '')){
-      scopeKeys.add(buildBlockedSlotsStorageKey(doctorId, sanitizeText(currentScopeId || '')));
-    }
-    scopeKeys.add(buildBlockedSlotsStorageKey(doctorId, 'all'));
-    listAgendaConfigConsultorios()
-      .map((row)=> sanitizeText(row?.id || ''))
-      .filter((id)=> isNumericId(id))
-      .forEach((id)=> scopeKeys.add(buildBlockedSlotsStorageKey(doctorId, id)));
+    const scopeKeys = new Set(resolveBlockedSlotsStorageKeysAcrossScopes());
     let removed = false;
     scopeKeys.forEach((storageKey)=>{
       const current = readBlockedSlotsFromStorageKey(storageKey);
@@ -7403,10 +7594,37 @@ console.info('app.js loaded :: 20251123a');
     }
     try{ calendar.refetchEvents(); }catch(_){}
   };
-  const refreshCalendarAfterBlockedSlotMutation = ()=>{
+  const refreshCalendarAfterBlockedSlotMutation = (options = {})=>{
+    const safeOptions = (options && typeof options === 'object') ? options : {};
+    const mutation = sanitizeText(safeOptions.mutation || '');
+    const source = sanitizeText(safeOptions.source || '');
+    const dayKey = sanitizeText(safeOptions.dayKey || '').slice(0, 10);
+    const currentViewType = String(calendar?.view?.type || '');
+    const isDayView = currentViewType === 'timeGridDay';
     if(!calendar){
       scheduleCustomWeekRender();
+      if(isDayView){
+        try{
+          console.info('MXM DAY RERENDER AFTER MUTATION DEBUG', {
+            stage: 'no_calendar_schedule_only',
+            mutation,
+            source,
+            dayKey
+          });
+        }catch(_){}
+      }
       return;
+    }
+    if(isDayView){
+      try{
+        console.info('MXM DAY RERENDER AFTER MUTATION DEBUG', {
+          stage: 'before_refetch',
+          mutation,
+          source,
+          dayKey,
+          viewType: currentViewType
+        });
+      }catch(_){}
     }
     try{
       calendar.refetchEvents();
@@ -7414,6 +7632,26 @@ console.info('app.js loaded :: 20251123a');
       rerenderCalendarEvents();
     }
     scheduleCustomWeekRender();
+    if(isDayView){
+      window.setTimeout(()=>{
+        if(!isCustomDayActive()) return;
+        scheduleCustomWeekRender();
+      }, 90);
+      window.setTimeout(()=>{
+        if(!isCustomDayActive()) return;
+        renderCustomDayView();
+        try{
+          console.info('MXM DAY RERENDER AFTER MUTATION DEBUG', {
+            stage: 'post_mutation_render',
+            mutation,
+            source,
+            dayKey,
+            viewType: String(calendar?.view?.type || ''),
+            calendarEvents: (typeof calendar?.getEvents === 'function') ? calendar.getEvents().length : 0
+          });
+        }catch(_){}
+      }, 220);
+    }
   };
   const areIdSetsEqual = (a, b)=>{
     if(!(a instanceof Set) || !(b instanceof Set)) return false;
@@ -8374,8 +8612,8 @@ console.info('app.js loaded :: 20251123a');
       consultorio_name: sanitizeText(snapshot?.consultorio_label || selection?.consultorio_name || selection?.consultorioName || '')
     };
     const fullDayWindows = hydrateBlockModalOperationalContext();
-    blockModalReasonKey = BLOCK_REASON_OPTIONS[0]?.key || 'comida';
-    blockModalReasonLabel = BLOCK_REASON_OPTIONS[0]?.label || 'Comida';
+    blockModalReasonKey = BLOCK_REASON_OPTIONS[0]?.key || 'procedimiento';
+    blockModalReasonLabel = BLOCK_REASON_OPTIONS[0]?.label || 'Procedimiento';
     blockModalShowConflicts = false;
     setBlockModalError('');
     const shouldShowOperationalHelp = sanitizeText(blockModalUiContext?.source || '') === 'day_header';
@@ -8572,7 +8810,24 @@ console.info('app.js loaded :: 20251123a');
       || resolveAgendaConsultorioLabelById(blockConsultorioIdRaw)
       || ''
     );
+    const forceAllConsultoriosForDayFullBlock = (
+      isFullDayBlockAction
+      && String(calendar?.view?.type || '') === 'timeGridDay'
+      && isAgendaAllConsultoriosMode()
+    );
     const resolveBlockOwnership = ()=>{
+      if(forceAllConsultoriosForDayFullBlock){
+        const scopeIds = resolveBlockingTargetConsultorioIds('');
+        if(scopeIds.length){
+          return {
+            mode: 'expanded_all_consultorios',
+            entries: scopeIds.map((consultorioId)=>({
+              consultorio_id: consultorioId,
+              consultorio_label: sanitizeText(resolveAgendaConsultorioLabelById(consultorioId) || '')
+            }))
+          };
+        }
+      }
       if(isNumericId(blockConsultorioIdRaw)){
         return {
           mode: 'specific_consultorio',
@@ -8891,28 +9146,23 @@ console.info('app.js loaded :: 20251123a');
     activeBlockedEventId = '';
     setError('');
     blockSlotModal?.hide();
-    if(calendar){
+    if(String(calendar?.view?.type || '') === 'timeGridDay'){
       try{
-        calendar.refetchEvents();
-        if(isFullDayBlockAction){
-          console.info('MXM BLOCK FULL DAY REFRESH DEBUG', {
-            strategy: 'calendar.refetchEvents',
-            dayKey
-          });
-        }
-      }catch(_){
-        rerenderCalendarEvents();
-        if(isFullDayBlockAction){
-          console.info('MXM BLOCK FULL DAY REFRESH DEBUG', {
-            strategy: 'rerenderCalendarEvents_fallback',
-            dayKey
-          });
-        }
-      }
-    }else{
-      rerenderCalendarEvents();
+        console.info('MXM DAY BLOCK MUTATION DEBUG', {
+          action: isFullDayBlockAction ? 'confirm_full_day' : 'confirm_range',
+          dayKey,
+          source: sanitizeText(blockModalUiContext?.source || ''),
+          ownership_mode: sanitizeText(ownership?.mode || ''),
+          ownership_consultorios: Array.from(ownershipConsultorioIds),
+          payload_rows: blockPayloads.length
+        });
+      }catch(_){}
     }
-    scheduleCustomWeekRender();
+    refreshCalendarAfterBlockedSlotMutation({
+      mutation: isFullDayBlockAction ? 'block_full_day' : 'block_range',
+      source: sanitizeText(blockModalUiContext?.source || 'slot'),
+      dayKey
+    });
     if(isFullDayBlockAction){
       window.setTimeout(()=>{
         const dayRowsCount = readBlockedSlots().filter((row)=>{
@@ -9031,8 +9281,8 @@ console.info('app.js loaded :: 20251123a');
         </div>
       </div>
     `;
-    panelEl.dataset.blockReasonKey = BLOCK_REASON_OPTIONS[0]?.key || 'comida';
-    panelEl.dataset.blockReasonLabel = BLOCK_REASON_OPTIONS[0]?.label || 'Comida';
+    panelEl.dataset.blockReasonKey = BLOCK_REASON_OPTIONS[0]?.key || 'procedimiento';
+    panelEl.dataset.blockReasonLabel = BLOCK_REASON_OPTIONS[0]?.label || 'Procedimiento';
     panelEl.dataset.showConflicts = '0';
     const syncBlockFormState = ()=>{
       const blockForm = panelEl.querySelector('[data-role="slot-block-form"]');
@@ -10081,7 +10331,19 @@ console.info('app.js loaded :: 20251123a');
 
     const currentViewType = String(calendar?.view?.type || '');
     const currentMode = resolveAgendaViewModeFromCalendarView(currentViewType);
+    if(currentViewType === 'timeGridDay'){
+      // Día siempre debe poder visualizar domingo/feriados.
+      applyAgendaHiddenDaysForCurrentView([]);
+    }else{
+      // Semana (y otras vistas) conservan reglas operativas.
+      applyAgendaHiddenDaysForCurrentView(consultorioScheduleHiddenDays);
+    }
     if(currentMode === safeMode){
+      if(safeMode === 'day'){
+        applyAgendaHiddenDaysForCurrentView([]);
+      }else if(safeMode === 'week'){
+        applyAgendaHiddenDaysForCurrentView(consultorioScheduleHiddenDays);
+      }
       if(safeMode === 'week'){
         syncCustomWeekToolbarTitle();
       }
@@ -10139,6 +10401,14 @@ console.info('app.js loaded :: 20251123a');
       const targetRange = resolveCustomWeekRangeFromAnchor(resolveAgendaRollingStartDate(), 6);
       customWeekExpectedRangeKey = sanitizeText(targetRange?.rangeKey || '');
       customWeekExpectedScopeKey = resolveCustomWeekScopeKey();
+    }
+
+    if(safeMode === 'day'){
+      // Solo en Día: permitir que FullCalendar no oculte domingos/feriados.
+      applyAgendaHiddenDaysForCurrentView([]);
+    }else if(safeMode === 'week'){
+      // Semana conserva su comportamiento operativo actual.
+      applyAgendaHiddenDaysForCurrentView(consultorioScheduleHiddenDays);
     }
 
     try{
@@ -14787,7 +15057,7 @@ console.info('app.js loaded :: 20251123a');
         applyGlobalSaturdayVisibilityToHiddenDays([])
       );
       calendar.setOption('businessHours', false);
-      calendar.setOption('hiddenDays', consultorioScheduleHiddenDays);
+      applyAgendaHiddenDaysForCurrentView(consultorioScheduleHiddenDays);
       calendar.setOption('slotMinTime', resolveAgendaStartVisibleTime());
       calendar.setOption('slotMaxTime', resolveAgendaEndVisibleTime());
       console.log('MXM CONSULTORIOS ALL DEBUG', {
@@ -14808,7 +15078,7 @@ console.info('app.js loaded :: 20251123a');
         applyGlobalSaturdayVisibilityToHiddenDays([0])
       );
       calendar.setOption('businessHours', false);
-      calendar.setOption('hiddenDays', consultorioScheduleHiddenDays);
+      applyAgendaHiddenDaysForCurrentView(consultorioScheduleHiddenDays);
       calendar.setOption('slotMinTime', resolveAgendaStartVisibleTime());
       calendar.setOption('slotMaxTime', resolveAgendaEndVisibleTime());
       return;
@@ -14832,7 +15102,7 @@ console.info('app.js loaded :: 20251123a');
           applyGlobalSaturdayVisibilityToHiddenDays([0])
         );
         calendar.setOption('businessHours', false);
-        calendar.setOption('hiddenDays', consultorioScheduleHiddenDays);
+        applyAgendaHiddenDaysForCurrentView(consultorioScheduleHiddenDays);
         calendar.setOption('slotMinTime', resolveAgendaStartVisibleTime());
         calendar.setOption('slotMaxTime', resolveAgendaEndVisibleTime());
         return;
@@ -14857,7 +15127,7 @@ console.info('app.js loaded :: 20251123a');
         )
       );
       calendar.setOption('businessHours', parsed.businessHours.length ? parsed.businessHours : false);
-      calendar.setOption('hiddenDays', consultorioScheduleHiddenDays);
+      applyAgendaHiddenDaysForCurrentView(consultorioScheduleHiddenDays);
       if(parsed.hasRange){
         calendar.setOption('slotMinTime', parsed.minTime);
         calendar.setOption('slotMaxTime', parsed.maxTime);
@@ -14875,7 +15145,7 @@ console.info('app.js loaded :: 20251123a');
         applyGlobalSaturdayVisibilityToHiddenDays([0])
       );
       calendar.setOption('businessHours', false);
-      calendar.setOption('hiddenDays', consultorioScheduleHiddenDays);
+      applyAgendaHiddenDaysForCurrentView(consultorioScheduleHiddenDays);
       calendar.setOption('slotMinTime', resolveAgendaStartVisibleTime());
       calendar.setOption('slotMaxTime', resolveAgendaEndVisibleTime());
     }finally{
@@ -16009,14 +16279,52 @@ console.info('app.js loaded :: 20251123a');
             const daySharedRaw = (Array.isArray(sharedWeekState?.events) ? sharedWeekState.events : []).filter((eventRef)=>{
               return isEventOverlappingLocalDay(eventRef, dayVisibleDate);
             });
-            const dayAfterFilter = filterEventsByLocalDay(sharedWeekState.events, dayVisibleDate);
+            const dayAfterFilterRaw = filterEventsByLocalDay(sharedWeekState.events, dayVisibleDate);
             const dayStart = toLocalDayDate(dayVisibleDate);
             const dayEnd = addLocalDays(dayStart, 1);
+            const dayOperationalContext = resolveCurrentCustomWeekOperationalContext() || {};
+            const dayOperativeInfo = isCustomWeekDayOperative(dayVisibleDate, dayOperationalContext);
+            const dayOperativeReason = sanitizeText(dayOperativeInfo?.reason || '');
+            const hasReliableOperationalContext = (
+              dayOperationalContext?.activeDaysKnown === true
+              || dayOperationalContext?.activeWeekdays instanceof Set
+            );
+            const dayIsNonOperativeBySchedule = (
+              hasReliableOperationalContext
+              && dayOperativeInfo?.operative !== true
+              && (
+                dayOperativeReason === 'no_active_schedule'
+                || dayOperativeReason === 'holiday'
+              )
+            );
+            let legacyCleanupResult = null;
+            if(dayIsNonOperativeBySchedule && KNOWN_LEGACY_BLOCKED_SLOT_DAY_KEYS.has(dayVisibleKey) && !legacyBlockedSlotCleanupSessionByDay.has(dayVisibleKey)){
+              legacyCleanupResult = cleanupKnownLegacyBlockedSlotsForDayAcrossScopes({
+                dayKey: dayVisibleKey,
+                operationalContext: dayOperationalContext,
+                reason: 'auto_day_projection_non_operative_known_legacy'
+              });
+              legacyBlockedSlotCleanupSessionByDay.add(dayVisibleKey);
+            }
+            const removedLegacyBlockIds = new Set(
+              Array.isArray(legacyCleanupResult?.removedBlockIds)
+                ? legacyCleanupResult.removedBlockIds.map((value)=> sanitizeText(value || '')).filter(Boolean)
+                : []
+            );
+            const dayAfterFilter = dayAfterFilterRaw.filter((eventRef)=>{
+              if(sanitizeText(eventRef?.extendedProps?.event_type || '') !== 'blocked_slot'){
+                return true;
+              }
+              const blockId = normalizeBlockedSlotIdCandidate(eventRef?.extendedProps?.block_id || eventRef?.id || '');
+              if(!blockId) return true;
+              return !removedLegacyBlockIds.has(blockId);
+            });
+            const shouldUseCrossScopeBlockedFallback = !dayIsNonOperativeBySchedule;
             const dayBlockedEvents = collectBlockedSlotEvents({
               start: dayStart,
               end: dayEnd
             }, {
-              includeCrossScopeFallback: true
+              includeCrossScopeFallback: shouldUseCrossScopeBlockedFallback
             });
             const dayMergedRaw = dedupeDaySnapshotEvents([
               ...(Array.isArray(dayAfterFilter) ? dayAfterFilter : []),
@@ -16031,7 +16339,11 @@ console.info('app.js loaded :: 20251123a');
             const blockedCardsAfterCollapse = dayFinalForCalendar.filter((eventRef)=>{
               return sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot';
             }).length;
-            if(blockedCardsAfterCollapse === 0 && dayBlockedEvents.length > 0){
+            if(
+              blockedCardsAfterCollapse === 0
+              && dayBlockedEvents.length > 0
+              && shouldUseCrossScopeBlockedFallback
+            ){
               dayFinalForCalendar = sanitizeDayEventsForCardRender(
                 dedupeDaySnapshotEvents(dayBlockedEvents).map((eventRef)=> ensureBlockedSlotEventVisualState(eventRef))
               );
@@ -16842,6 +17154,13 @@ console.info('app.js loaded :: 20251123a');
         visibleScheduleRange = null;
         const currentViewType = String(calendar?.view?.type || '');
         const currentMode = resolveAgendaViewModeFromCalendarView(currentViewType);
+        if(currentViewType === 'timeGridDay'){
+          // Día permite navegar y visualizar domingos/feriados.
+          applyAgendaHiddenDaysForCurrentView([]);
+        }else{
+          // Semana mantiene el filtro operativo existente.
+          applyAgendaHiddenDaysForCurrentView(consultorioScheduleHiddenDays);
+        }
         if(isAgendaViewModeTemporarilyDisabled(currentMode)){
           // Protección defensiva: si Mes se activa por otra vía, volver a Semana.
           // Día se mantiene operativa y su snapshot se valida/hidrata en su propio flujo.
@@ -17576,7 +17895,19 @@ console.info('app.js loaded :: 20251123a');
       const removed = removeBlockedSlotById(blockId);
       activeBlockedEventId = '';
       if(removed){
-        refreshCalendarAfterBlockedSlotMutation();
+        try{
+          console.info('MXM DAY UNBLOCK MUTATION DEBUG', {
+            source: 'custom_day_slot_menu',
+            blockId,
+            dayKey: formatYmdLocal(selection?.start || resolveAgendaViewAnchorDate() || new Date()),
+            viewType: String(calendar?.view?.type || '')
+          });
+        }catch(_){}
+        refreshCalendarAfterBlockedSlotMutation({
+          mutation: 'unblock',
+          source: 'custom_day_slot_menu',
+          dayKey: formatYmdLocal(selection?.start || resolveAgendaViewAnchorDate() || new Date())
+        });
       }
     });
     els.customSlotCloseBtn?.addEventListener('click', (event)=>{
@@ -18325,7 +18656,19 @@ console.info('app.js loaded :: 20251123a');
       const removed = removeBlockedSlotById(blockId);
       activeBlockedEventId = '';
       if(removed){
-        refreshCalendarAfterBlockedSlotMutation();
+        try{
+          console.info('MXM DAY UNBLOCK MUTATION DEBUG', {
+            source: 'calendar_blocked_action',
+            blockId,
+            dayKey: formatYmdLocal(resolveAgendaViewAnchorDate() || new Date()),
+            viewType: String(calendar?.view?.type || '')
+          });
+        }catch(_){}
+        refreshCalendarAfterBlockedSlotMutation({
+          mutation: 'unblock',
+          source: 'calendar_blocked_action',
+          dayKey: formatYmdLocal(resolveAgendaViewAnchorDate() || new Date())
+        });
       }
     }, true);
     els.calendarWrap?.addEventListener('click', (event)=>{
