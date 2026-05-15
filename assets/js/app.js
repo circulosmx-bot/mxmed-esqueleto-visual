@@ -1732,12 +1732,12 @@ console.info('app.js loaded :: 20251123a');
         <button type="button"
           class="mx-ag-custom-week-nav-btn mx-ag-nav-arrow mx-ag-nav-arrow--prev"
           data-custom-week-nav="prev"
-          aria-label="Semana anterior"><i class="bi bi-chevron-left mxm-agenda-day-nav-icon" aria-hidden="true"></i></button>
+          aria-label="Semana anterior"><span class="material-symbols-rounded mxm-agenda-day-nav-icon mxm-agenda-day-nav-icon--prev" aria-hidden="true">arrow_forward_ios</span></button>
         <div class="mx-ag-custom-week-nav-title" data-custom-week-nav-title>${escapeHtml(title || 'Semana')}</div>
         <button type="button"
           class="mx-ag-custom-week-nav-btn mx-ag-nav-arrow mx-ag-nav-arrow--next"
           data-custom-week-nav="next"
-          aria-label="Semana siguiente"><i class="bi bi-chevron-right mxm-agenda-day-nav-icon" aria-hidden="true"></i></button>
+          aria-label="Semana siguiente"><span class="material-symbols-rounded mxm-agenda-day-nav-icon mxm-agenda-day-nav-icon--next" aria-hidden="true">arrow_forward_ios</span></button>
       </div>
     `;
   };
@@ -1754,9 +1754,10 @@ console.info('app.js loaded :: 20251123a');
       btn.setAttribute('aria-label', label);
       const currentIcon = btn.querySelector('.mxm-agenda-day-nav-icon');
       if(currentIcon instanceof HTMLElement){
-        currentIcon.className = `bi ${direction === 'prev' ? 'bi-chevron-left' : 'bi-chevron-right'} mxm-agenda-day-nav-icon`;
+        currentIcon.className = `material-symbols-rounded mxm-agenda-day-nav-icon ${direction === 'prev' ? 'mxm-agenda-day-nav-icon--prev' : 'mxm-agenda-day-nav-icon--next'}`;
+        currentIcon.textContent = 'arrow_forward_ios';
       }else{
-        btn.innerHTML = `<i class="bi ${direction === 'prev' ? 'bi-chevron-left' : 'bi-chevron-right'} mxm-agenda-day-nav-icon" aria-hidden="true"></i>`;
+        btn.innerHTML = `<span class="material-symbols-rounded mxm-agenda-day-nav-icon ${direction === 'prev' ? 'mxm-agenda-day-nav-icon--prev' : 'mxm-agenda-day-nav-icon--next'}" aria-hidden="true">arrow_forward_ios</span>`;
       }
     });
   };
@@ -3010,7 +3011,9 @@ console.info('app.js loaded :: 20251123a');
     const firstWeekdayMondayBase = (Number(monthStart.getDay()) + 6) % 7;
     const gridStart = addLocalDays(monthStart, -firstWeekdayMondayBase);
     const today = toLocalDayDate(new Date());
-    const daysHtml = Array.from({ length: 42 }).map((_, idx)=>{
+    const monthDays = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
+    const totalCells = firstWeekdayMondayBase + monthDays;
+    const daysHtml = Array.from({ length: totalCells }).map((_, idx)=>{
       const dayDate = addLocalDays(gridStart, idx);
       if(!(dayDate instanceof Date) || Number.isNaN(dayDate.getTime())){
         return '';
@@ -3211,26 +3214,6 @@ console.info('app.js loaded :: 20251123a');
       const selected = value === sanitizeText(els.consultorio?.value || '') ? ' selected' : '';
       return `<option value="${escapeAttrSafe(value)}"${selected}>${escapeHtml(label)}</option>`;
     }).filter(Boolean).join('');
-    const originItems = Array.from(els.originCatalog?.querySelectorAll?.('.mx-ag-origin-item') || []).map((item)=>{
-      if(item.classList.contains('d-none')) return '';
-      const labelText = sanitizeText(item.textContent || '');
-      const dotEl = item.querySelector('.mx-ag-origin-dot');
-      const dotClasses = dotEl
-        ? Array.from(dotEl.classList || [])
-          .map((name)=> sanitizeText(name || ''))
-          .filter((name)=> name && name !== 'mx-ag-origin-dot')
-          .join(' ')
-        : '';
-      if(!labelText) return '';
-      return `
-        <span class="mx-ag-origin-item">
-          <span class="mx-ag-origin-dot ${escapeAttrSafe(dotClasses)}"></span>${escapeHtml(labelText)}
-        </span>
-      `;
-    }).filter(Boolean).join('');
-    const originCatalogContent = originItems
-      ? `<div class="mx-ag-origin-label">Origen de la cita:</div><div class="mx-ag-day-origin-list">${originItems}</div>`
-      : '';
     root.classList.remove('d-none');
     els.calendarWrap?.classList.add('mx-ag-custom-day-active');
     els.agendaFrontendV1?.classList.add('mx-ag-day-layout-active');
@@ -3249,7 +3232,6 @@ console.info('app.js loaded :: 20251123a');
             <select id="ag_day_sidebar_consultorio" class="form-select form-select-sm mx-ag-day-sidebar-select" data-day-consultorio-filter>
               ${consultorioFilterOptions}
             </select>
-            ${originCatalogContent ? `<div class="mx-ag-day-origin">${originCatalogContent}</div>` : ''}
             <button type="button" class="btn btn-primary mx-ag-day-refresh" data-day-refresh>
               <i class="bi bi-arrow-clockwise"></i> Refrescar agenda
             </button>

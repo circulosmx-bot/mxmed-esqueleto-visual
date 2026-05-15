@@ -2990,10 +2990,22 @@
               </button>
             </div>
 
-            <div class="mx-ag-view-switch" id="ag_view_mode_switch" role="group" aria-label="Cambiar vista de agenda">
-              <button type="button" class="mx-ag-view-pill" data-ag-view-mode="day" data-ag-view-disabled-title="Vista en preparación" aria-pressed="false" aria-disabled="true">Día</button>
-              <button type="button" class="mx-ag-view-pill is-active" data-ag-view-mode="week" aria-pressed="true">Semana</button>
-              <button type="button" class="mx-ag-view-pill" data-ag-view-mode="month" data-ag-view-disabled-title="Vista en preparación" aria-pressed="false" aria-disabled="true">Mes</button>
+            <div class="mx-ag-view-head">
+              <div class="mx-ag-view-switch" id="ag_view_mode_switch" role="group" aria-label="Cambiar vista de agenda">
+                <button type="button" class="mx-ag-view-pill" data-ag-view-mode="day" data-ag-view-disabled-title="Vista en preparación" aria-pressed="false" aria-disabled="true">Día</button>
+                <button type="button" class="mx-ag-view-pill is-active" data-ag-view-mode="week" aria-pressed="true">Semana</button>
+                <button type="button" class="mx-ag-view-pill" data-ag-view-mode="month" data-ag-view-disabled-title="Vista en preparación" aria-pressed="false" aria-disabled="true">Mes</button>
+              </div>
+              <div class="d-flex flex-wrap gap-3 small text-muted mx-ag-origin-catalog-row" id="ag_origin_catalog">
+                <span class="mx-ag-origin-label">Origen de la cita:</span>
+                <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--user"></span>Usuario / Médico</span>
+                <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--operator-01"></span>Operador 01</span>
+                <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--operator-02"></span>Operador 02</span>
+                <span class="mx-ag-origin-item d-none" id="ag_origin_item_operator_fallback"><span class="mx-ag-origin-dot mx-ag-origin-dot--operator"></span>Operadora</span>
+                <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--web-patient"></span>Paciente vía perfil web</span>
+                <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--ai"></span>Operador IA</span>
+                <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--call-center"></span>Call Center</span>
+              </div>
             </div>
 
             <div class="row g-2 mx-agenda-v1" id="agendaFrontendV1">
@@ -3010,18 +3022,6 @@
                   <i class="bi bi-arrow-clockwise"></i> Refrescar agenda
                 </button>
                 <span class="small text-muted d-none" id="ag_filters_hint" aria-hidden="true"></span>
-              </div>
-              <div class="col-12">
-                <div class="d-flex flex-wrap gap-3 small text-muted mx-ag-origin-catalog-row" id="ag_origin_catalog">
-                  <span class="mx-ag-origin-label">Origen de la cita:</span>
-                  <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--user"></span>Usuario / Médico</span>
-                  <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--operator-01"></span>Operador 01</span>
-                  <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--operator-02"></span>Operador 02</span>
-                  <span class="mx-ag-origin-item d-none" id="ag_origin_item_operator_fallback"><span class="mx-ag-origin-dot mx-ag-origin-dot--operator"></span>Operadora</span>
-                  <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--web-patient"></span>Paciente vía perfil web</span>
-                  <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--ai"></span>Operador IA</span>
-                  <span class="mx-ag-origin-item"><span class="mx-ag-origin-dot mx-ag-origin-dot--call-center"></span>Call Center</span>
-                </div>
               </div>
               <div class="col-12">
                 <div id="ag_error_box" class="alert alert-danger d-none py-2 mb-2"></div>
