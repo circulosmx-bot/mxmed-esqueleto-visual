@@ -724,6 +724,8 @@ console.info('app.js loaded :: 20251123a');
   let customDayRoot = null;
   let customWeekPendingRaf = 0;
   let customDayMiniMonthCursor = null;
+  let customDayNowTickerId = 0;
+  const CUSTOM_DAY_MINI_MONTH_MIN_DATE = new Date(2026, 0, 1);
   let agendaLatestEventsForCustomWeek = [];
   let customWeekLastForcedRefetchAt = 0;
   let customWeekOperationalContextCache = null;
@@ -2916,9 +2918,8 @@ console.info('app.js loaded :: 20251123a');
   const resolveCustomDayViewHeaderLabel = (dateLike = null)=>{
     const dayDate = toLocalDayDate(dateLike || calendar?.getDate?.() || new Date());
     if(!(dayDate instanceof Date) || Number.isNaN(dayDate.getTime())){
-      return 'Vista del día';
+      return '';
     }
-    const today = toLocalDayDate(new Date());
     const weekdayLabel = capitalizeAgendaLabel(
       new Intl.DateTimeFormat('es-MX', { weekday: 'long' }).format(dayDate)
     );
@@ -2926,9 +2927,6 @@ console.info('app.js loaded :: 20251123a');
     const monthLabel = capitalizeAgendaLabel(
       new Intl.DateTimeFormat('es-MX', { month: 'long' }).format(dayDate)
     );
-    if(today && isSameLocalDay(today, dayDate)){
-      return `Hoy ${weekdayLabel} ${dayLabel} ${monthLabel}`;
-    }
     const yearLabel = String(dayDate.getFullYear());
     return `${weekdayLabel} ${dayLabel} de ${monthLabel} ${yearLabel}`;
   };
@@ -3008,6 +3006,15 @@ console.info('app.js loaded :: 20251123a');
       new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' }).format(monthStart)
     );
     const weekLabels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+    const minMonthStart = startOfMonth(CUSTOM_DAY_MINI_MONTH_MIN_DATE);
+    const prevDisabled = !!(
+      minMonthStart instanceof Date
+      && !Number.isNaN(minMonthStart.getTime())
+      && monthStart.getFullYear() === minMonthStart.getFullYear()
+      && monthStart.getMonth() === minMonthStart.getMonth()
+    );
+    const prevDisabledAttr = prevDisabled ? ' disabled aria-disabled="true" tabindex="-1"' : '';
+    const prevDisabledClass = prevDisabled ? ' is-disabled' : '';
     const firstWeekdayMondayBase = (Number(monthStart.getDay()) + 6) % 7;
     const gridStart = addLocalDays(monthStart, -firstWeekdayMondayBase);
     const today = toLocalDayDate(new Date());
@@ -3036,7 +3043,7 @@ console.info('app.js loaded :: 20251123a');
     return `
       <section class="mx-ag-day-mini-calendar" aria-label="Calendario mensual">
         <div class="mx-ag-day-mini-head">
-          <button type="button" class="mx-ag-day-mini-nav" data-day-mini-nav="prev" aria-label="Mes anterior"><i class="bi bi-chevron-left"></i></button>
+          <button type="button" class="mx-ag-day-mini-nav${prevDisabledClass}" data-day-mini-nav="prev" aria-label="Mes anterior"${prevDisabledAttr}><i class="bi bi-chevron-left"></i></button>
           <div class="mx-ag-day-mini-title">${escapeHtml(monthTitle)}</div>
           <button type="button" class="mx-ag-day-mini-nav" data-day-mini-nav="next" aria-label="Mes siguiente"><i class="bi bi-chevron-right"></i></button>
         </div>
@@ -3132,11 +3139,59 @@ console.info('app.js loaded :: 20251123a');
       </button>
     `;
   };
+  const formatCustomDayNowDateLabel = (now = new Date())=>{
+    const safeNow = now instanceof Date ? now : new Date(now || '');
+    if(Number.isNaN(safeNow.getTime())) return '';
+    const weekday = capitalizeAgendaLabel(
+      new Intl.DateTimeFormat('es-MX', { weekday: 'long' }).format(safeNow)
+    );
+    const month = capitalizeAgendaLabel(
+      new Intl.DateTimeFormat('es-MX', { month: 'long' }).format(safeNow)
+    );
+    return `${weekday} ${safeNow.getDate()} de ${month}`;
+  };
+  const formatCustomDayNowTimeLabel = (now = new Date())=>{
+    const safeNow = now instanceof Date ? now : new Date(now || '');
+    if(Number.isNaN(safeNow.getTime())) return '';
+    return new Intl.DateTimeFormat('es-MX', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
+      .format(safeNow)
+      .replace(/\s+/g, '')
+      .replace(/\./g, '')
+      .toLowerCase();
+  };
+  const syncCustomDayNowCard = ()=>{
+    const root = ensureCustomDayRoot();
+    if(!(root instanceof HTMLElement)) return;
+    const dateEl = root.querySelector('[data-day-now-date]');
+    const timeEl = root.querySelector('[data-day-now-time]');
+    if(!(dateEl instanceof HTMLElement) || !(timeEl instanceof HTMLElement)) return;
+    const now = new Date();
+    dateEl.textContent = formatCustomDayNowDateLabel(now);
+    timeEl.textContent = formatCustomDayNowTimeLabel(now);
+  };
+  const stopCustomDayNowTicker = ()=>{
+    if(customDayNowTickerId){
+      try{ window.clearInterval(customDayNowTickerId); }catch(_){}
+      customDayNowTickerId = 0;
+    }
+  };
+  const ensureCustomDayNowTicker = ()=>{
+    if(customDayNowTickerId) return;
+    customDayNowTickerId = window.setInterval(()=>{
+      syncCustomDayNowCard();
+    }, 30000);
+  };
   const renderCustomDayView = ()=>{
     const root = ensureCustomDayRoot();
     if(!(root instanceof HTMLElement)) return;
     if(!isCustomDayActive()){
       root.classList.add('d-none');
+      stopCustomDayNowTicker();
+      customDayMiniMonthCursor = null;
       els.calendarWrap?.classList.remove('mx-ag-custom-day-active');
       els.agendaFrontendV1?.classList.remove('mx-ag-day-layout-active');
       syncCustomDayLegacyRowsVisibility(false);
@@ -3148,10 +3203,8 @@ console.info('app.js loaded :: 20251123a');
       return;
     }
     const selectedDayKey = formatYmdLocal(selectedDate);
+    const isSelectedDayToday = !!isSameLocalDay(selectedDate, new Date());
     if(!(customDayMiniMonthCursor instanceof Date) || Number.isNaN(customDayMiniMonthCursor.getTime())){
-      customDayMiniMonthCursor = startOfMonth(selectedDate);
-    }
-    if(selectedDate.getFullYear() !== customDayMiniMonthCursor.getFullYear() || selectedDate.getMonth() !== customDayMiniMonthCursor.getMonth()){
       customDayMiniMonthCursor = startOfMonth(selectedDate);
     }
     const dayEvents = resolveCustomDayRenderableEvents(selectedDate);
@@ -3193,20 +3246,11 @@ console.info('app.js loaded :: 20251123a');
       return rows.map((row)=>{
         return `
           <div class="mx-ag-day-row">
-            <div class="mx-ag-day-row-time">${escapeHtml(row.timeLabel)}</div>
             <div class="mx-ag-day-row-card">${row.cardHtml}</div>
           </div>
         `;
       }).join('');
     };
-    const selectedDateLabel = capitalizeAgendaLabel(
-      new Intl.DateTimeFormat('es-MX', {
-        weekday: 'long',
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-      }).format(selectedDate)
-    );
     const consultorioFilterOptions = Array.from(els.consultorio?.options || []).map((opt)=>{
       const value = sanitizeText(opt.value || '');
       const label = sanitizeText(opt.textContent || '');
@@ -3222,10 +3266,10 @@ console.info('app.js loaded :: 20251123a');
       <div class="mx-ag-day-layout">
         <aside class="mx-ag-day-sidebar">
           ${buildCustomDayMiniMonthHtml({ selectedDate, monthCursor: customDayMiniMonthCursor })}
-          <section class="mx-ag-day-sidebar-card">
-            <div class="mx-ag-day-sidebar-title">Día seleccionado</div>
-            <div class="mx-ag-day-sidebar-date">${escapeHtml(selectedDateLabel)}</div>
-            <div class="mx-ag-day-sidebar-now">${isSameLocalDay(selectedDate, new Date()) ? 'Hoy' : ''}</div>
+          <section class="mx-ag-day-sidebar-card mx-ag-day-now-card" data-day-reset-today role="button" tabindex="0" aria-label="Volver a hoy">
+            <div class="mx-ag-day-now-kicker">Hoy es</div>
+            <div class="mx-ag-day-now-date-main" data-day-now-date></div>
+            <div class="mx-ag-day-now-time" data-day-now-time></div>
           </section>
           <section class="mx-ag-day-sidebar-card">
             <label class="mx-ag-day-sidebar-title" for="ag_day_sidebar_consultorio">Consultorio</label>
@@ -3241,12 +3285,12 @@ console.info('app.js loaded :: 20251123a');
           <header class="mx-ag-day-main-head">
             <div class="mx-ag-day-main-title-wrap">
               <div class="mx-ag-day-main-head-actions">
-                <button type="button" class="mx-ag-day-today-btn" data-day-jump-today>Hoy</button>
                 <button type="button" class="mx-ag-day-head-trigger mx-ag-day-main-title" data-day-head-trigger data-day-key="${escapeAttrSafe(selectedDayKey)}">
+                  ${isSelectedDayToday ? '<span class="mx-ag-current-day-arrow" aria-hidden="true">&gt;</span>' : ''}
                   ${escapeHtml(resolveCustomDayViewHeaderLabel(selectedDate))}
                 </button>
               </div>
-              <div class="mx-ag-day-main-subtitle">Vista del día · ${escapeHtml(resolveCustomDayViewScopeLabel())}</div>
+              <div class="mx-ag-day-main-subtitle">${escapeHtml(resolveCustomDayViewScopeLabel())}</div>
             </div>
             <div class="mx-ag-day-counters">
               <article class="mx-ag-day-counter"><div class="mx-ag-day-counter-label">Citas</div><div class="mx-ag-day-counter-value">${totalAppointments}</div></article>
@@ -3273,6 +3317,8 @@ console.info('app.js loaded :: 20251123a');
         </section>
       </div>
     `;
+    syncCustomDayNowCard();
+    ensureCustomDayNowTicker();
   };
   const renderCustomWeekView = ()=>{
     const root = ensureCustomWeekRoot();
@@ -3298,6 +3344,7 @@ console.info('app.js loaded :: 20251123a');
     if(dayRoot instanceof HTMLElement){
       dayRoot.classList.add('d-none');
     }
+    stopCustomDayNowTicker();
     els.calendarWrap?.classList.remove('mx-ag-custom-day-active');
     els.agendaFrontendV1?.classList.remove('mx-ag-day-layout-active');
     syncCustomDayLegacyRowsVisibility(false);
@@ -3526,13 +3573,18 @@ console.info('app.js loaded :: 20251123a');
         ? formatAgendaCustomWeekTitle(finalStart, finalEnd)
         : 'Semana';
 
+      const todayRef = toLocalDayDate(new Date());
       const headerHtml = finalDays.map((date)=>{
         const title = getCustomWeekDayHeaderLabel(date);
         const dateLabel = formatAgendaHeaderDateLabel(date);
         const dayKey = formatYmdLocal(date);
+        const isCurrentDay = !!(todayRef && isSameLocalDay(date, todayRef));
         return `
           <div class="mx-ag-custom-week-col-head" data-day-key="${escapeAttrSafe(dayKey)}">
-            <div class="mx-ag-custom-week-col-title">${escapeHtml(title)}</div>
+            <div class="mx-ag-custom-week-col-title">
+              ${isCurrentDay ? '<span class="mx-ag-current-day-arrow" aria-hidden="true">&gt;</span>' : ''}
+              ${escapeHtml(title)}
+            </div>
             <div class="mx-ag-custom-week-col-date">${escapeHtml(dateLabel)}</div>
           </div>
         `;
@@ -10037,11 +10089,9 @@ console.info('app.js loaded :: 20251123a');
       return safeMode;
     }
 
-    // Regla operativa: al entrar a Semana, el primer día visible debe volver a "hoy".
-    // La navegación prev/next dentro de Semana conserva su propia ancla dinámica.
-    const anchorDate = (safeMode === 'week')
-      ? resolveAgendaRollingStartDate({ forceToday: true })
-      : resolveAgendaViewAnchorDate();
+    // Al cambiar de vista, conservar el ancla activa (Día<->Semana)
+    // para mantener continuidad sobre la fecha en contexto.
+    const anchorDate = resolveAgendaViewAnchorDate();
     let targetView = 'timeGridWeek';
     if(safeMode === 'day'){
       // Día reutiliza el snapshot de Semana; antes de proyectar, hidratamos
@@ -16809,7 +16859,8 @@ console.info('app.js loaded :: 20251123a');
         syncNativeAgendaToolbarViewGuards();
         const previousViewType = sanitizeText(lastCalendarViewType || '');
         if(currentViewType === 'timeGridWeek' && previousViewType !== 'timeGridWeek'){
-          setCustomWeekAnchorDate(new Date());
+          const enteredWeekAnchor = toLocalDayDate(calendar?.getDate?.() || new Date());
+          setCustomWeekAnchorDate(enteredWeekAnchor || new Date());
           customWeekVisibleDaysAction = 'init';
           customWeekIncludeAnchorEvenIfInactive = true;
           forceCustomWeekRefetchIfNeeded({
@@ -16833,6 +16884,7 @@ console.info('app.js loaded :: 20251123a');
           // Día es proyección de lectura del snapshot semanal:
           // en cada navegación interna Día↔Día intenta rehidratar snapshot del rango objetivo y refetchea.
           const dayAnchor = resolveAgendaViewAnchorDate();
+          setCustomWeekAnchorDate(dayAnchor);
           const sharedRange = resolveCustomWeekRangeForDayProjection(dayAnchor);
           const targetRangeKey = sanitizeText(sharedRange?.rangeKey || '');
           const cacheRangeKey = sanitizeText(customWeekLastEventsRangeKey || '');
@@ -17265,6 +17317,13 @@ console.info('app.js loaded :: 20251123a');
         forceRefresh: true
       }).catch(()=> null);
     });
+    ensureCustomDayRoot()?.addEventListener('keydown', (event)=>{
+      const nowCard = event.target?.closest?.('[data-day-reset-today]');
+      if(!(nowCard instanceof HTMLElement)) return;
+      if(event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      nowCard.click();
+    });
     ensureCustomDayRoot()?.addEventListener('click', (event)=>{
       const miniMonthNav = event.target.closest('[data-day-mini-nav]');
       if(miniMonthNav){
@@ -17273,7 +17332,19 @@ console.info('app.js loaded :: 20251123a');
         const action = sanitizeText(miniMonthNav.getAttribute('data-day-mini-nav') || '');
         const base = startOfMonth(customDayMiniMonthCursor || resolveAgendaViewAnchorDate() || new Date());
         if(base instanceof Date && !Number.isNaN(base.getTime())){
-          customDayMiniMonthCursor = addMonths(base, action === 'prev' ? -1 : 1) || base;
+          let nextCursor = addMonths(base, action === 'prev' ? -1 : 1) || base;
+          if(action === 'prev'){
+            const minMonthStart = startOfMonth(CUSTOM_DAY_MINI_MONTH_MIN_DATE);
+            if(
+              minMonthStart instanceof Date
+              && !Number.isNaN(minMonthStart.getTime())
+              && (nextCursor.getFullYear() < minMonthStart.getFullYear()
+                || (nextCursor.getFullYear() === minMonthStart.getFullYear() && nextCursor.getMonth() < minMonthStart.getMonth()))
+            ){
+              nextCursor = minMonthStart;
+            }
+          }
+          customDayMiniMonthCursor = nextCursor;
           scheduleCustomWeekRender();
         }
         return;
@@ -17287,8 +17358,25 @@ console.info('app.js loaded :: 20251123a');
         const dayDate = toLocalDayDate(dayKey);
         if(!(dayDate instanceof Date) || Number.isNaN(dayDate.getTime())) return;
         customDayMiniMonthCursor = startOfMonth(dayDate);
+        setCustomWeekAnchorDate(dayDate);
         if(calendar){
           try{ calendar.changeView('timeGridDay', dayDate); }catch(_){}
+        }
+        return;
+      }
+      const nowCard = event.target.closest('[data-day-reset-today]');
+      if(nowCard){
+        event.preventDefault();
+        event.stopPropagation();
+        const today = toLocalDayDate(new Date());
+        if(today instanceof Date && !Number.isNaN(today.getTime())){
+          customDayMiniMonthCursor = startOfMonth(today);
+          setCustomWeekAnchorDate(today);
+          customWeekVisibleDaysAction = 'init';
+          customWeekIncludeAnchorEvenIfInactive = true;
+          if(calendar){
+            try{ calendar.changeView('timeGridDay', today); }catch(_){}
+          }
         }
         return;
       }
