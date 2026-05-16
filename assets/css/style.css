@@ -7582,42 +7582,138 @@ body{margin:0;background:var(--mm-fondo-base);}
   color: #4f6a7c;
   margin-bottom: .14rem;
 }
-#ag_new_appointment_modal .mx-ag-patient-mode-switch{
+#ag_new_appointment_modal .mx-ag-patient-type-shell{
+  border-top: 1px solid #dfeaf1;
+  padding-top: .45rem;
+}
+#ag_new_appointment_modal .mx-ag-patient-type-title{
+  font-size: 1.05rem;
+  line-height: 1.15;
+  font-weight: 800;
+  color: #173f57;
+}
+#ag_new_appointment_modal .mx-ag-patient-type-subtitle{
+  margin-top: .22rem;
+  margin-bottom: .55rem;
+  font-size: .9rem;
+  color: #526d7d;
+  font-weight: 600;
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-item{
+  border: 1px solid #d5e5ee;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-item + .mx-ag-patient-accordion-item{
+  margin-top: .52rem;
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-item.is-accent-blue{
+  border-color: #9fd9f3;
+  background: #f7fbff;
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-item.is-accent-purple{
+  border-color: #d7cdf5;
+  background: #faf8ff;
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-item.is-active{
+  box-shadow: 0 8px 18px rgba(14, 86, 120, .10);
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-item.is-accent-blue.is-active{
+  border-color: #4ca7de;
+  background: #f2f9ff;
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-item.is-accent-purple.is-active{
+  border-color: #9e83dd;
+  background: #f7f3ff;
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-toggle{
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .45rem;
+  grid-template-columns: 34px 26px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: .62rem;
+  padding: .7rem .8rem;
+  color: #214c64;
 }
-#ag_new_appointment_modal .mx-ag-patient-mode-btn{
-  border: 1px solid #12b6c8;
-  border-radius: 10px;
-  background: #12b6c8;
-  color: #ffffff;
-  min-height: 36px;
-  padding: .38rem .62rem;
-  font-size: .88rem;
-  font-weight: 700;
-  transition: border-color .18s ease, background-color .18s ease, color .18s ease, box-shadow .18s ease;
-}
-#ag_new_appointment_modal .mx-ag-patient-mode-btn:hover{
-  background: #0ea6b6;
-  border-color: #0ea6b6;
-  color: #ffffff;
-}
-#ag_new_appointment_modal .mx-ag-patient-mode-btn:focus-visible{
+#ag_new_appointment_modal .mx-ag-patient-accordion-toggle:focus-visible{
   outline: none;
-  border-color: #12b6c8;
-  box-shadow: 0 0 0 .12rem rgba(18, 182, 200, .22);
+  box-shadow: inset 0 0 0 2px rgba(16, 125, 181, .28);
 }
-#ag_new_appointment_modal .mx-ag-patient-mode-btn.is-active{
-  background: #ffffff;
-  border-color: #c9dee8;
-  color: #214f66;
-  box-shadow: 0 8px 16px rgba(18, 182, 200, .18);
+#ag_new_appointment_modal .mx-ag-patient-accordion-badge{
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #20557a;
+  background: rgba(74, 167, 222, .18);
 }
-#ag_new_appointment_modal .mx-ag-patient-mode-btn.is-active:hover{
-  background: #ffffff;
-  border-color: #b8d6e5;
-  color: #214f66;
+#ag_new_appointment_modal .mx-ag-patient-accordion-item.is-accent-purple .mx-ag-patient-accordion-badge{
+  color: #6246b3;
+  background: rgba(137, 106, 212, .18);
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-icon{
+  font-size: 1.25rem;
+  line-height: 1;
+  color: #1275b0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-item.is-accent-purple .mx-ag-patient-accordion-icon{
+  color: #6d52b8;
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-copy{
+  min-width: 0;
+  display: grid;
+  gap: .1rem;
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-title{
+  font-size: 1.03rem;
+  line-height: 1.15;
+  font-weight: 800;
+  color: #19455e;
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-item.is-accent-purple .mx-ag-patient-accordion-title{
+  color: #4d3d92;
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-desc{
+  font-size: .82rem;
+  line-height: 1.28;
+  color: #5a7587;
+  font-weight: 600;
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-chevron{
+  font-size: 1.04rem;
+  color: #1f6d95;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .18s ease;
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-item.is-accent-purple .mx-ag-patient-accordion-chevron{
+  color: #6a53b8;
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-toggle.is-active .mx-ag-patient-accordion-chevron{
+  transform: rotate(180deg);
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-body{
+  border-top: 1px solid rgba(23, 87, 121, .14);
+  padding: .68rem .8rem .74rem;
+  background: rgba(255, 255, 255, .7);
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-item.is-accent-purple .mx-ag-patient-accordion-body{
+  border-top-color: rgba(106, 83, 184, .18);
+}
+#ag_new_appointment_modal .mx-ag-patient-accordion-body .form-label{
+  font-size: .88rem;
 }
 #ag_new_appointment_modal.mx-ag-create-modal-identity-open .modal-content{
   opacity: .9;
@@ -8644,7 +8740,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 .mx-ag-custom-week-nav-title{
   text-align: center;
-  font-size: 1.24rem;
+  font-size: 1.36rem;
   line-height: 1.1;
   font-weight: 800;
   color: #114761;
@@ -8660,6 +8756,15 @@ body{margin:0;background:var(--mm-fondo-base);}
   justify-content: center;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.mx-ag-custom-week-nav-title .mx-ag-custom-week-month{
+  font-size: 1.3em;
+  font-weight: 900;
+  letter-spacing: .01em;
+  margin-inline: .22em;
+}
+.mx-ag-custom-week-nav-title .mx-ag-custom-week-year{
+  font-size: 1.13em;
 }
 .mx-ag-custom-day-nav{
   margin-bottom: 10px;
@@ -8786,10 +8891,11 @@ body{margin:0;background:var(--mm-fondo-base);}
   gap: 14px;
   width: 100%;
   align-items: start;
+  margin-top: -5px;
 }
 .mx-ag-day-sidebar{
   display: grid;
-  gap: 10px;
+  gap: 8px;
   align-content: start;
 }
 .mx-ag-day-mini-calendar{
@@ -8989,7 +9095,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   color: #114761;
 }
 .mx-ag-day-sidebar-select{
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 .mx-ag-day-origin{
   border-top: 1px solid #e5eef4;
@@ -9012,7 +9118,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   color: #34586a;
 }
 .mx-ag-day-refresh{
-  margin-top: 10px;
+  margin-top: 8px;
   width: 100%;
 }
 .mx-ag-day-main{
@@ -9025,17 +9131,20 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 .mx-ag-day-main-head{
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 12px 14px 10px;
+  padding: 8px 14px 6px;
   background: rgba(16, 185, 179, .20);
   border-bottom: 1px solid #e7eff5;
 }
 .mx-ag-day-main-title-wrap{
   flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .mx-ag-day-main-head-actions{
   display: flex;
@@ -9050,6 +9159,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   gap: 80px;
   margin-left: auto;
   margin-right: 50px;
+  margin-top: 16px;
 }
 .mx-ag-day-today-btn{
   border: 0;
@@ -9092,6 +9202,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
 }
 .mx-ag-day-counter{
   min-width: 92px;
@@ -12849,12 +12960,214 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 
 /* Agenda · Buscar siguiente cita disponible */
-.mx-ag-next-slot-focus{
-  color: inherit;
-  text-decoration: none;
+.mx-ag-next-slots-modal .modal-header{
+  border-bottom: 1px solid #dceaf2;
 }
-
-.mx-ag-next-slot-focus:hover,
-.mx-ag-next-slot-focus:focus-visible{
-  text-decoration: underline;
+.mx-ag-next-slots-modal-header{
+  padding: 14px 18px 12px;
+}
+.mx-ag-next-slots-header-main{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.mx-ag-next-slots-header-icon{
+  width: 50px;
+  height: 50px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #10b9b3 0%, #0f8fb0 100%);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex: 0 0 auto;
+}
+.mx-ag-next-slots-header-copy{
+  min-width: 0;
+}
+.mx-ag-next-slots-header-copy .modal-title{
+  font-size: 2rem;
+  line-height: 1.05;
+  font-weight: 800;
+  color: #103f59;
+  margin: 0;
+}
+.mx-ag-next-slots-header-subtitle{
+  margin-top: 5px;
+  font-size: 1.02rem;
+  color: #4e6778;
+  font-weight: 600;
+}
+.mx-ag-next-slots-modal-body{
+  padding: 14px 18px 12px;
+}
+.mx-ag-next-slots-results{
+  display: grid;
+  gap: 10px;
+}
+.mx-ag-next-slot-card{
+  border: 1px solid #d9e8f2;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(11, 77, 105, .06);
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+.mx-ag-next-slot-focus-area{
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, .75fr);
+  align-items: center;
+  gap: 12px;
+  border-radius: 10px;
+}
+.mx-ag-next-slot-focus-area:hover,
+.mx-ag-next-slot-focus-area:focus-visible{
+  background: #f6fbff;
+  outline: none;
+}
+.mx-ag-next-slot-ico{
+  width: 62px;
+  height: 62px;
+  border-radius: 14px;
+  background: #edf7fc;
+  color: #1078ad;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+.mx-ag-next-slot-main,
+.mx-ag-next-slot-consultorio,
+.mx-ag-next-slot-duration{
+  min-width: 0;
+}
+.mx-ag-next-slot-label{
+  font-size: .82rem;
+  line-height: 1.1;
+  font-weight: 800;
+  color: #5c7486;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  margin-bottom: 4px;
+}
+.mx-ag-next-slot-date{
+  font-size: 1.08rem;
+  line-height: 1.15;
+  color: #133f58;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+.mx-ag-next-slot-time{
+  font-size: 2.02rem;
+  line-height: 1.04;
+  color: #0b7ba3;
+  font-weight: 900;
+}
+.mx-ag-next-slot-consultorio-name{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.02rem;
+  color: #113f59;
+  font-weight: 800;
+}
+.mx-ag-next-slot-consultorio-name i{
+  color: #2689b5;
+  font-size: 1.1rem;
+}
+.mx-ag-next-slot-duration-value{
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 1.02rem;
+  color: #27485b;
+  font-weight: 700;
+}
+.mx-ag-next-slot-duration-value i{
+  font-size: 1.05rem;
+  color: #5f798b;
+}
+.mx-ag-next-slot-actions{
+  display: inline-flex;
+  align-items: center;
+}
+.mx-ag-next-slot-choose{
+  min-width: 116px;
+  border-radius: 10px;
+  min-height: 46px;
+  font-size: 1.02rem;
+  font-weight: 800;
+}
+.mx-ag-next-slots-info-note{
+  margin-top: 12px;
+  border: 1px solid #d5e8f4;
+  border-radius: 11px;
+  background: #eef8ff;
+  color: #0d6289;
+  font-size: .95rem;
+  line-height: 1.3;
+  font-weight: 600;
+  padding: 9px 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mx-ag-next-slots-info-note i{
+  font-size: 1.05rem;
+}
+.mx-ag-next-slots-modal-footer{
+  border-top: 1px solid #dceaf2;
+  gap: 8px;
+  padding: 11px 18px;
+}
+.mx-ag-next-slots-modal-footer .btn{
+  min-height: 40px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+@media (max-width: 991.98px){
+  .mx-ag-next-slot-card{
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .mx-ag-next-slot-focus-area{
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 10px;
+  }
+  .mx-ag-next-slot-ico{
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    font-size: 1.65rem;
+  }
+  .mx-ag-next-slot-consultorio,
+  .mx-ag-next-slot-duration{
+    grid-column: 2;
+  }
+  .mx-ag-next-slot-actions{
+    justify-content: flex-start;
+  }
+  .mx-ag-next-slot-time{
+    font-size: 1.65rem;
+  }
+}
+@media (max-width: 575.98px){
+  .mx-ag-next-slots-header-copy .modal-title{
+    font-size: 1.45rem;
+  }
+  .mx-ag-next-slots-header-subtitle{
+    font-size: .92rem;
+  }
 }

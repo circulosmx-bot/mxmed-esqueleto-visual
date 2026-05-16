@@ -3101,80 +3101,118 @@
                         </section>
                       </div>
                       <div class="col-12">
-                        <div class="mx-ag-patient-mode-switch" role="tablist" aria-label="Tipo de paciente para la cita">
-                          <button type="button" class="mx-ag-patient-mode-btn is-active" id="ag_patient_mode_existing_btn" data-ag-patient-mode="existing" aria-selected="true">Paciente registrado</button>
-                          <button type="button" class="mx-ag-patient-mode-btn" id="ag_patient_mode_new_btn" data-ag-patient-mode="new" aria-selected="false">Paciente nuevo</button>
-                        </div>
-                      </div>
-                      <div class="col-12" id="ag_patient_existing_wrap">
-                        <div id="ag_active_patient_box" class="d-none">
-                          <div class="alert alert-warning py-2 mb-2">
-                            <div class="fw-semibold mb-2" id="ag_active_patient_text">Paciente activo detectado.</div>
-                            <div class="d-flex flex-wrap gap-2">
-                              <button type="button" class="btn btn-sm btn-primary" id="ag_use_active_patient_yes">Sí, usar paciente activo</button>
-                              <button type="button" class="btn btn-sm btn-outline-secondary" id="ag_use_active_patient_no">No, capturar otro paciente</button>
+                        <section class="mx-ag-patient-type-shell" aria-label="Tipo de paciente para la cita">
+                          <div class="mx-ag-patient-type-title">Tipo de paciente</div>
+                          <div class="mx-ag-patient-type-subtitle">Selecciona el tipo de paciente para continuar.</div>
+
+                          <article class="mx-ag-patient-accordion-item is-accent-purple is-active" id="ag_patient_existing_accordion">
+                            <button
+                              type="button"
+                              class="mx-ag-patient-accordion-toggle is-active"
+                              id="ag_patient_mode_existing_btn"
+                              data-ag-patient-mode="existing"
+                              aria-selected="true"
+                              aria-expanded="true"
+                              aria-controls="ag_patient_existing_wrap">
+                              <span class="mx-ag-patient-accordion-badge">2</span>
+                              <span class="mx-ag-patient-accordion-icon" aria-hidden="true"><i class="bi bi-person-vcard"></i></span>
+                              <span class="mx-ag-patient-accordion-copy">
+                                <span class="mx-ag-patient-accordion-title">Paciente registrado</span>
+                                <span class="mx-ag-patient-accordion-desc">Buscar un paciente que ya existe en el sistema.</span>
+                              </span>
+                              <span class="mx-ag-patient-accordion-chevron" aria-hidden="true"><i class="bi bi-chevron-down"></i></span>
+                            </button>
+                            <div class="mx-ag-patient-accordion-body" id="ag_patient_existing_wrap">
+                              <div id="ag_active_patient_box" class="d-none">
+                                <div class="alert alert-warning py-2 mb-2">
+                                  <div class="fw-semibold mb-2" id="ag_active_patient_text">Paciente activo detectado.</div>
+                                  <div class="d-flex flex-wrap gap-2">
+                                    <button type="button" class="btn btn-sm btn-primary" id="ag_use_active_patient_yes">Sí, usar paciente activo</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="ag_use_active_patient_no">No, capturar otro paciente</button>
+                                  </div>
+                                </div>
+                              </div>
+                              <label class="form-label" for="ag_patient_search_query">Buscar paciente registrado</label>
+                              <div class="input-group">
+                                <input type="text" class="form-control no-check" data-no-check="1" id="ag_patient_search_query" placeholder="Nombre, Apellido ó Teléfono">
+                                <button type="button" class="btn mx-ag-btn-new-patient" id="ag_patient_search_btn">Filtrar</button>
+                              </div>
+                              <div id="ag_patient_search_results" class="list-group mt-2"></div>
+                              <div id="ag_patient_search_msg" class="small text-muted mt-1 d-none"></div>
                             </div>
-                          </div>
-                        </div>
-                        <label class="form-label" for="ag_patient_search_query">Buscar paciente registrado</label>
-                        <div class="input-group">
-                          <input type="text" class="form-control no-check" data-no-check="1" id="ag_patient_search_query" placeholder="Nombre, Apellido ó Teléfono">
-                          <button type="button" class="btn mx-ag-btn-new-patient" id="ag_patient_search_btn">Filtrar</button>
-                        </div>
-                        <div id="ag_patient_search_results" class="list-group mt-2"></div>
-                        <div id="ag_patient_search_msg" class="small text-muted mt-1 d-none"></div>
-                      </div>
-                      <div class="col-12 d-none" id="ag_patient_new_wrap">
-                        <div class="row g-2">
-                          <div class="col-md-4">
-                            <label class="form-label mb-1" for="ag_patient_new_first_name">Nombre(s)</label>
-                            <input type="text" class="form-control" id="ag_patient_new_first_name" placeholder="Nombre(s)">
-                          </div>
-                          <div class="col-md-4">
-                            <label class="form-label mb-1" for="ag_patient_new_last_name_1">Primer apellido</label>
-                            <input type="text" class="form-control" id="ag_patient_new_last_name_1" placeholder="Primer apellido">
-                          </div>
-                          <div class="col-md-4">
-                            <label class="form-label mb-1" for="ag_patient_new_last_name_2">Segundo apellido</label>
-                            <input type="text" class="form-control" id="ag_patient_new_last_name_2" placeholder="Segundo apellido">
-                          </div>
-                          <div class="col-md-4">
-                            <select class="form-select" id="ag_patient_new_sex" aria-label="Sexo del paciente">
-                              <option value="" selected>Sexo</option>
-                              <option value="M">Masculino</option>
-                              <option value="F">Femenino</option>
-                            </select>
-                          </div>
-                          <div class="col-md-4">
-                            <input type="text" class="form-control" id="ag_patient_new_phone" placeholder="Teléfono">
-                          </div>
-                          <div class="col-md-4">
-                            <input type="email" class="form-control" id="ag_patient_new_email" placeholder="Correo electrónico (opcional)">
-                          </div>
-                        </div>
-                        <div class="row g-2 mt-2 d-none" id="ag_patient_birthdate_row">
-                          <div class="col-12">
-                            <label class="form-label mb-1">Fecha de nacimiento</label>
-                          </div>
-                          <div class="col-md-4 col-12">
-                            <select class="form-select" id="ag_patient_birth_day">
-                              <option value="">Día</option>
-                            </select>
-                          </div>
-                          <div class="col-md-4 col-12">
-                            <select class="form-select" id="ag_patient_birth_month">
-                              <option value="">Mes</option>
-                            </select>
-                          </div>
-                          <div class="col-md-4 col-12">
-                            <select class="form-select" id="ag_patient_birth_year">
-                              <option value="">Año</option>
-                            </select>
-                          </div>
-                          <input type="hidden" id="ag_patient_birthdate_input">
-                          <div id="ag_patient_birthdate_hint" class="form-text d-none"></div>
-                        </div>
-                        <div id="ag_patient_birthdate_info" class="small text-muted mt-2 d-none"></div>
+                          </article>
+
+                          <article class="mx-ag-patient-accordion-item is-accent-blue" id="ag_patient_new_accordion">
+                            <button
+                              type="button"
+                              class="mx-ag-patient-accordion-toggle"
+                              id="ag_patient_mode_new_btn"
+                              data-ag-patient-mode="new"
+                              aria-selected="false"
+                              aria-expanded="false"
+                              aria-controls="ag_patient_new_wrap">
+                              <span class="mx-ag-patient-accordion-badge">1</span>
+                              <span class="mx-ag-patient-accordion-icon" aria-hidden="true"><i class="bi bi-person-plus"></i></span>
+                              <span class="mx-ag-patient-accordion-copy">
+                                <span class="mx-ag-patient-accordion-title">Paciente nuevo</span>
+                                <span class="mx-ag-patient-accordion-desc">Registrar un paciente que aún no existe en el sistema.</span>
+                              </span>
+                              <span class="mx-ag-patient-accordion-chevron" aria-hidden="true"><i class="bi bi-chevron-down"></i></span>
+                            </button>
+                            <div class="mx-ag-patient-accordion-body d-none" id="ag_patient_new_wrap">
+                              <div class="row g-2">
+                                <div class="col-md-4">
+                                  <label class="form-label mb-1" for="ag_patient_new_first_name">Nombre(s)</label>
+                                  <input type="text" class="form-control" id="ag_patient_new_first_name" placeholder="Nombre(s)">
+                                </div>
+                                <div class="col-md-4">
+                                  <label class="form-label mb-1" for="ag_patient_new_last_name_1">Primer apellido</label>
+                                  <input type="text" class="form-control" id="ag_patient_new_last_name_1" placeholder="Primer apellido">
+                                </div>
+                                <div class="col-md-4">
+                                  <label class="form-label mb-1" for="ag_patient_new_last_name_2">Segundo apellido</label>
+                                  <input type="text" class="form-control" id="ag_patient_new_last_name_2" placeholder="Segundo apellido">
+                                </div>
+                                <div class="col-md-4">
+                                  <select class="form-select" id="ag_patient_new_sex" aria-label="Sexo del paciente">
+                                    <option value="" selected>Sexo</option>
+                                    <option value="M">Masculino</option>
+                                    <option value="F">Femenino</option>
+                                  </select>
+                                </div>
+                                <div class="col-md-4">
+                                  <input type="text" class="form-control" id="ag_patient_new_phone" placeholder="Teléfono">
+                                </div>
+                                <div class="col-md-4">
+                                  <input type="email" class="form-control" id="ag_patient_new_email" placeholder="Correo electrónico (opcional)">
+                                </div>
+                              </div>
+                              <div class="row g-2 mt-2 d-none" id="ag_patient_birthdate_row">
+                                <div class="col-12">
+                                  <label class="form-label mb-1">Fecha de nacimiento</label>
+                                </div>
+                                <div class="col-md-4 col-12">
+                                  <select class="form-select" id="ag_patient_birth_day">
+                                    <option value="">Día</option>
+                                  </select>
+                                </div>
+                                <div class="col-md-4 col-12">
+                                  <select class="form-select" id="ag_patient_birth_month">
+                                    <option value="">Mes</option>
+                                  </select>
+                                </div>
+                                <div class="col-md-4 col-12">
+                                  <select class="form-select" id="ag_patient_birth_year">
+                                    <option value="">Año</option>
+                                  </select>
+                                </div>
+                                <input type="hidden" id="ag_patient_birthdate_input">
+                                <div id="ag_patient_birthdate_hint" class="form-text d-none"></div>
+                              </div>
+                              <div id="ag_patient_birthdate_info" class="small text-muted mt-2 d-none"></div>
+                            </div>
+                          </article>
+                        </section>
                       </div>
                       <div class="col-12">
                         <label class="form-label" for="ag_appointment_reason_input">Motivo de la cita <span class="text-muted">(opcional)</span></label>
@@ -3321,18 +3359,28 @@
 
             <div class="modal fade" id="ag_next_slots_modal" tabindex="-1" aria-hidden="true">
               <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content">
-                  <div class="modal-header">
-                    <h5 class="modal-title">Siguiente cita disponible</h5>
+                <div class="modal-content mx-ag-next-slots-modal">
+                  <div class="modal-header mx-ag-next-slots-modal-header">
+                    <div class="mx-ag-next-slots-header-main">
+                      <span class="mx-ag-next-slots-header-icon" aria-hidden="true"><i class="bi bi-calendar2-check"></i></span>
+                      <div class="mx-ag-next-slots-header-copy">
+                        <h5 class="modal-title">Siguiente cita disponible</h5>
+                        <div class="mx-ag-next-slots-header-subtitle">Selecciona el horario que mejor se ajuste para tu paciente.</div>
+                      </div>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                   </div>
-                  <div class="modal-body">
+                  <div class="modal-body mx-ag-next-slots-modal-body">
                     <div id="ag_next_slots_error" class="alert alert-danger d-none py-2 mb-2"></div>
                     <div id="ag_next_slots_loading" class="small text-muted d-none mb-2">Buscando disponibilidad real…</div>
-                    <div id="ag_next_slots_results" class="list-group"></div>
+                    <div id="ag_next_slots_results" class="mx-ag-next-slots-results"></div>
                     <div id="ag_next_slots_empty" class="small text-muted d-none mt-2">No se encontraron opciones disponibles.</div>
+                    <div class="mx-ag-next-slots-info-note">
+                      <i class="bi bi-info-circle" aria-hidden="true"></i>
+                      <span>Las citas mostradas están basadas en tu configuración actual de consultorio y duración.</span>
+                    </div>
                   </div>
-                  <div class="modal-footer">
+                  <div class="modal-footer mx-ag-next-slots-modal-footer">
                     <button type="button" class="btn btn-outline-secondary" id="ag_next_slots_prev_btn">Ver 3 anteriores</button>
                     <button type="button" class="btn btn-outline-secondary" id="ag_next_slots_more_btn">Ver siguientes 3</button>
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>

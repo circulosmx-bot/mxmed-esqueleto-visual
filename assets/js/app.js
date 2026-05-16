@@ -1621,7 +1621,7 @@ console.info('app.js loaded :: 20251123a');
       }
       const customTitleEl = ensureCustomWeekRoot()?.querySelector?.('[data-custom-week-nav-title]');
       if(customTitleEl instanceof HTMLElement){
-        customTitleEl.textContent = customTitle;
+        customTitleEl.innerHTML = decorateAgendaCustomWeekTitleHtml(customTitle);
       }
     }
   };
@@ -1759,7 +1759,7 @@ console.info('app.js loaded :: 20251123a');
           class="mx-ag-custom-week-nav-btn mx-ag-nav-arrow mx-ag-nav-arrow--prev"
           data-custom-week-nav="prev"
           aria-label="Semana anterior"><span class="material-symbols-rounded mxm-agenda-day-nav-icon mxm-agenda-day-nav-icon--prev" aria-hidden="true">arrow_forward_ios</span></button>
-        <div class="mx-ag-custom-week-nav-title" data-custom-week-nav-title>${escapeHtml(title || 'Semana')}</div>
+        <div class="mx-ag-custom-week-nav-title" data-custom-week-nav-title>${decorateAgendaCustomWeekTitleHtml(title || 'Semana')}</div>
         <button type="button"
           class="mx-ag-custom-week-nav-btn mx-ag-nav-arrow mx-ag-nav-arrow--next"
           data-custom-week-nav="next"
@@ -3875,7 +3875,7 @@ console.info('app.js loaded :: 20251123a');
       `;
       const navTitleEl = root.querySelector('[data-custom-week-nav-title]');
       if(navTitleEl instanceof HTMLElement){
-        navTitleEl.textContent = finalRangeTitle;
+        navTitleEl.innerHTML = decorateAgendaCustomWeekTitleHtml(finalRangeTitle);
       }
       if(nextSlotFocus){
         window.setTimeout(()=>{
@@ -5010,13 +5010,23 @@ console.info('app.js loaded :: 20251123a');
     const isNew = createPatientMode === 'new';
     if(els.patientExistingWrap) els.patientExistingWrap.classList.toggle('d-none', isNew);
     if(els.patientNewWrap) els.patientNewWrap.classList.toggle('d-none', !isNew);
+    const existingAccordion = els.patientModeExistingBtn?.closest?.('.mx-ag-patient-accordion-item');
+    const newAccordion = els.patientModeNewBtn?.closest?.('.mx-ag-patient-accordion-item');
     if(els.patientModeExistingBtn){
       els.patientModeExistingBtn.classList.toggle('is-active', !isNew);
       els.patientModeExistingBtn.setAttribute('aria-selected', !isNew ? 'true' : 'false');
+      els.patientModeExistingBtn.setAttribute('aria-expanded', !isNew ? 'true' : 'false');
     }
     if(els.patientModeNewBtn){
       els.patientModeNewBtn.classList.toggle('is-active', isNew);
       els.patientModeNewBtn.setAttribute('aria-selected', isNew ? 'true' : 'false');
+      els.patientModeNewBtn.setAttribute('aria-expanded', isNew ? 'true' : 'false');
+    }
+    if(existingAccordion instanceof HTMLElement){
+      existingAccordion.classList.toggle('is-active', !isNew);
+    }
+    if(newAccordion instanceof HTMLElement){
+      newAccordion.classList.toggle('is-active', isNew);
     }
     if(els.patientNewToggle){
       els.patientNewToggle.textContent = 'Paciente nuevo';
@@ -10138,22 +10148,45 @@ console.info('app.js loaded :: 20251123a');
     els.nextSlotsResults.innerHTML = options.map((item, idx)=>{
       const startDate = item.start instanceof Date ? item.start : new Date(item.start);
       const endDate = item.end instanceof Date ? item.end : new Date(item.end);
-      const startLabel = startDate.toLocaleString('es-MX', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+      const weekdayLabel = capitalizeAgendaLabel(
+        new Intl.DateTimeFormat('es-MX', { weekday: 'long' }).format(startDate)
+      );
+      const monthLabel = capitalizeAgendaLabel(
+        new Intl.DateTimeFormat('es-MX', { month: 'long' }).format(startDate)
+      );
+      const dateLabel = `${weekdayLabel}, ${startDate.getDate()} de ${monthLabel} ${startDate.getFullYear()}`;
+      const startLabel = startDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
       const endLabel = endDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+      const timeRangeLabel = `${startLabel} - ${endLabel} h`;
+      const durationMinutes = Math.max(0, Math.round((endDate.getTime() - startDate.getTime()) / 60000));
       const consultorioId = sanitizeText(item?.consultorio_id || '');
       const consultorioLabel = normalizeConsultorioDisplayLabel(
         sanitizeText(item?.consultorio_name || '') || (consultorioId ? resolveAgendaConsultorioLabelById(consultorioId) : ''),
         consultorioId
       );
-      const rowLabel = consultorioLabel
-        ? `${startLabel} - ${endLabel} · ${consultorioLabel}`
-        : `${startLabel} - ${endLabel}`;
       return `
-        <div class="list-group-item d-flex justify-content-between align-items-center gap-2" data-ag-next-slot-index="${idx}">
-          <button type="button" class="btn btn-link text-start p-0 flex-grow-1 mx-ag-next-slot-focus" data-ag-next-slot-action="focus">
-            ${escapeHtml(rowLabel)}
+        <div class="mx-ag-next-slot-card" data-ag-next-slot-index="${idx}">
+          <button type="button" class="mx-ag-next-slot-focus-area" data-ag-next-slot-action="focus" aria-label="Resaltar horario en agenda">
+            <div class="mx-ag-next-slot-ico" aria-hidden="true"><i class="bi bi-calendar2-check"></i></div>
+            <div class="mx-ag-next-slot-main">
+              <div class="mx-ag-next-slot-label">Fecha y hora</div>
+              <div class="mx-ag-next-slot-date">${escapeHtml(dateLabel)}</div>
+              <div class="mx-ag-next-slot-time">${escapeHtml(timeRangeLabel)}</div>
+            </div>
+            <div class="mx-ag-next-slot-consultorio">
+              <div class="mx-ag-next-slot-label">Consultorio</div>
+              <div class="mx-ag-next-slot-consultorio-name"><i class="bi bi-hospital" aria-hidden="true"></i><span>${escapeHtml(consultorioLabel || 'Sin consultorio')}</span></div>
+            </div>
+            <div class="mx-ag-next-slot-duration">
+              <div class="mx-ag-next-slot-label">Duración</div>
+              <div class="mx-ag-next-slot-duration-value"><i class="bi bi-clock" aria-hidden="true"></i><span>${escapeHtml(`${durationMinutes} min`)}</span></div>
+            </div>
           </button>
-          <button type="button" class="btn btn-sm btn-primary" data-ag-next-slot-action="choose">Elegir</button>
+          <div class="mx-ag-next-slot-actions">
+            <button type="button" class="btn btn-primary mx-ag-next-slot-choose" data-ag-next-slot-action="choose">
+              Elegir
+            </button>
+          </div>
         </div>
       `;
     }).join('');
@@ -15251,10 +15284,10 @@ console.info('app.js loaded :: 20251123a');
     const endDay = String(endDate.getDate()).padStart(2, '0');
     const startMonth = capitalizeAgendaLabel(
       new Intl.DateTimeFormat('es-MX', { month: 'long' }).format(startDate)
-    );
+    ).toLocaleUpperCase('es-MX');
     const endMonth = capitalizeAgendaLabel(
       new Intl.DateTimeFormat('es-MX', { month: 'long' }).format(endDate)
-    );
+    ).toLocaleUpperCase('es-MX');
     const startYear = startDate.getFullYear();
     const endYear = endDate.getFullYear();
     if(startYear === endYear && startMonth === endMonth){
@@ -15264,6 +15297,18 @@ console.info('app.js loaded :: 20251123a');
       return `Semana ${startDay} ${startMonth} – ${endDay} ${endMonth} ${startYear}`;
     }
     return `Semana ${startDay} ${startMonth} ${startYear} – ${endDay} ${endMonth} ${endYear}`;
+  };
+  const decorateAgendaCustomWeekTitleHtml = (titleRaw = '')=>{
+    const safeTitle = escapeHtml(sanitizeText(titleRaw || ''));
+    if(!safeTitle) return '';
+    const withMonthHighlight = safeTitle.replace(
+      /\b(ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|SEPTIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE)\b/g,
+      '<span class="mx-ag-custom-week-month">$1</span>'
+    );
+    return withMonthHighlight.replace(
+      /\b((?:19|20)\d{2})\b/g,
+      '<span class="mx-ag-custom-week-year">$1</span>'
+    );
   };
 
   const mapAppointmentToEvent = (row)=>{
