@@ -2920,47 +2920,264 @@
                 Operadores
               </button>
             </div>
+            <div class="mx-ag-ops-shell" id="ag_ops_shell">
+              <div class="mx-ag-ops-layout" id="ag_ops_layout">
+                <section class="mx-ag-ops-main-panel" aria-labelledby="ag_ops_list_title">
+                  <header class="mx-ag-ops-main-head">
+                    <div>
+                      <h6 id="ag_ops_list_title">Operadores registrados</h6>
+                      <p>Administra aquí los operadores con acceso a tu consultorio.</p>
+                    </div>
+                    <button type="button" class="btn btn-primary mx-ag-ops-add-btn" id="ag_ops_add_btn">
+                      <span class="material-symbols-rounded" aria-hidden="true">person_add</span>
+                      Agregar operador
+                    </button>
+                  </header>
 
-            <div class="row g-3">
+                  <div class="mx-ag-ops-empty d-none" id="ag_ops_empty_state">
+                    <div class="mx-ag-ops-empty-copy">
+                      <h6>Registrar operador</h6>
+                      <p>Aún no hay operadores registrados. Usa el panel derecho para crear el primero.</p>
+                    </div>
+                    <button type="button" class="btn btn-primary mx-ag-ops-empty-btn" id="ag_ops_empty_cta">Registrar operador</button>
+                  </div>
 
-              <div class="col-md-6">
+                  <div class="mx-ag-ops-list" id="ag_ops_list" role="list"></div>
 
-                <label class="form-label">Invitar operador</label>
+                  <section class="mx-ag-ops-archived" id="ag_ops_archived_section" aria-labelledby="ag_ops_archived_title">
+                    <button type="button" class="mx-ag-ops-archived-toggle" id="ag_ops_archived_toggle" aria-expanded="false" aria-controls="ag_ops_archived_panel">
+                      <span>
+                        <strong id="ag_ops_archived_title">Operadores archivados</strong>
+                        <small>Consulta histórica de operadores sin acceso activo.</small>
+                      </span>
+                      <span class="mx-ag-ops-archived-count" id="ag_ops_archived_count">0</span>
+                      <span class="material-symbols-rounded mx-ag-ops-archived-chevron" aria-hidden="true">expand_more</span>
+                    </button>
+                    <div class="mx-ag-ops-archived-panel d-none" id="ag_ops_archived_panel" role="region" aria-live="polite">
+                      <div class="mx-ag-ops-archived-list" id="ag_ops_archived_list"></div>
+                    </div>
+                  </section>
 
-                <div class="input-group">
+                  <section class="mx-ag-ops-summary-secondary" aria-labelledby="ag_ops_summary_title">
+                    <h6 id="ag_ops_summary_title">Resumen de operadores</h6>
+                    <div class="mx-ag-ops-summary-grid">
+                      <article class="mx-ag-ops-kpi-card">
+                        <span class="mx-ag-ops-kpi-label">Operadores activos</span>
+                        <strong class="mx-ag-ops-kpi-value" id="ag_ops_active_value">0/2</strong>
+                      </article>
+                      <article class="mx-ag-ops-kpi-card">
+                        <span class="mx-ag-ops-kpi-label">Cupo disponible</span>
+                        <strong class="mx-ag-ops-kpi-value" id="ag_ops_available_value">0</strong>
+                      </article>
+                      <article class="mx-ag-ops-kpi-card">
+                        <span class="mx-ag-ops-kpi-label">Máximo permitido</span>
+                        <strong class="mx-ag-ops-kpi-value" id="ag_ops_max_allowed_value">3</strong>
+                      </article>
+                      <article class="mx-ag-ops-kpi-card">
+                        <span class="mx-ag-ops-kpi-label">Invitaciones pendientes</span>
+                        <strong class="mx-ag-ops-kpi-value" id="ag_ops_pending_value">0</strong>
+                      </article>
+                    </div>
+                    <p class="mx-ag-ops-summary-alert" id="ag_ops_limit_notice" aria-live="polite"></p>
+                  </section>
+                </section>
 
-                  <input class="form-control" placeholder="correo@ejemplo.com"><button class="btn btn-primary">Invitar</button>
+                <aside class="mx-ag-ops-side-panel" aria-labelledby="ag_ops_form_title">
+                  <div class="mx-ag-ops-form-head">
+                    <span class="mx-ag-ops-form-icon material-symbols-rounded" aria-hidden="true">person_add</span>
+                    <h5 id="ag_ops_form_title">Agregar operador</h5>
+                  </div>
+                  <div class="mx-ag-ops-form-body">
+                    <p class="mx-ag-ops-modal-subtitle">Define datos, acceso y permisos operativos del asistente.</p>
+                    <div class="mx-ag-ops-modal-error d-none" id="ag_ops_modal_error" role="alert"></div>
+                    <div class="mx-ag-ops-accordion" id="ag_ops_modal_accordion">
+                      <article class="mx-ag-ops-accordion-item is-active" data-ops-accordion-item="general">
+                        <button type="button" class="mx-ag-ops-accordion-toggle" data-ops-accordion-toggle="general">
+                          <span class="mx-ag-ops-accordion-index">1</span>
+                          <span class="mx-ag-ops-accordion-copy">
+                            <strong>Datos generales</strong>
+                            <small>Información básica del operador.</small>
+                          </span>
+                          <span class="material-symbols-rounded mx-ag-ops-accordion-chevron" aria-hidden="true">expand_more</span>
+                        </button>
+                        <div class="mx-ag-ops-accordion-body">
+                          <input type="hidden" id="ag_ops_edit_id">
+                          <div class="row g-3">
+                            <div class="col-md-7">
+                              <label class="form-label" for="ag_ops_full_name">Nombre completo</label>
+                              <input type="text" class="form-control" id="ag_ops_full_name" placeholder="Nombre y apellidos">
+                            </div>
+                            <div class="col-md-5">
+                              <label class="form-label" for="ag_ops_gender">Género</label>
+                              <select class="form-select" id="ag_ops_gender">
+                                <option value="">Selecciona</option>
+                                <option value="femenino">Femenino</option>
+                                <option value="masculino">Masculino</option>
+                                <option value="otro">Otro</option>
+                              </select>
+                            </div>
+                            <div class="col-md-6">
+                              <label class="form-label" for="ag_ops_phone">Teléfono móvil</label>
+                              <input type="tel" class="form-control" id="ag_ops_phone" placeholder="999 123 4567">
+                            </div>
+                            <div class="col-md-6">
+                              <label class="form-label" for="ag_ops_email">Correo electrónico</label>
+                              <input type="email" class="form-control" id="ag_ops_email" placeholder="operador@correo.com">
+                            </div>
+                            <div class="col-md-6">
+                              <label class="form-label" for="ag_ops_alias">Alias (visible en sistema)</label>
+                              <input type="text" class="form-control" id="ag_ops_alias" placeholder="Operador 01">
+                            </div>
+                            <div class="col-md-6">
+                              <label class="form-label" for="ag_ops_role">Rol</label>
+                              <select class="form-select" id="ag_ops_role">
+                                <option value="operator">Operador</option>
+                                <option value="assistant">Asistente</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      </article>
 
-                </div>
+                      <article class="mx-ag-ops-accordion-item" data-ops-accordion-item="access">
+                        <button type="button" class="mx-ag-ops-accordion-toggle" data-ops-accordion-toggle="access">
+                          <span class="mx-ag-ops-accordion-index">2</span>
+                          <span class="mx-ag-ops-accordion-copy">
+                            <strong>Acceso al sistema</strong>
+                            <small>Usuario y contraseña para acceso.</small>
+                          </span>
+                          <span class="material-symbols-rounded mx-ag-ops-accordion-chevron" aria-hidden="true">expand_more</span>
+                        </button>
+                        <div class="mx-ag-ops-accordion-body d-none">
+                          <div class="row g-3">
+                            <div class="col-md-6">
+                              <label class="form-label" for="ag_ops_login">Usuario login</label>
+                              <input type="text" class="form-control" id="ag_ops_login" placeholder="usuario.operador">
+                            </div>
+                            <div class="col-md-6">
+                              <label class="form-label" for="ag_ops_temp_password">Contraseña temporal</label>
+                              <input type="text" class="form-control" id="ag_ops_temp_password" placeholder="Temporal segura">
+                            </div>
+                            <div class="col-12">
+                              <label class="form-check mx-ag-ops-check">
+                                <input class="form-check-input" type="checkbox" id="ag_ops_force_change" checked>
+                                <span class="form-check-label">Solicitar cambio de contraseña al primer acceso</span>
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      </article>
 
+                      <article class="mx-ag-ops-accordion-item" data-ops-accordion-item="permissions">
+                        <button type="button" class="mx-ag-ops-accordion-toggle" data-ops-accordion-toggle="permissions">
+                          <span class="mx-ag-ops-accordion-index">3</span>
+                          <span class="mx-ag-ops-accordion-copy">
+                            <strong>Permisos</strong>
+                            <small>Selecciona los módulos a los que tendrá acceso.</small>
+                          </span>
+                          <span class="material-symbols-rounded mx-ag-ops-accordion-chevron" aria-hidden="true">expand_more</span>
+                        </button>
+                        <div class="mx-ag-ops-accordion-body d-none">
+                          <div class="mx-ag-ops-permissions-grid">
+                            <label class="mx-ag-ops-permission-card">
+                              <span class="mx-ag-ops-permission-copy">
+                                <strong>Agenda</strong>
+                                <small>Gestiona citas, reprogramación y bloqueos.</small>
+                              </span>
+                              <input type="checkbox" id="ag_ops_perm_agenda" checked>
+                            </label>
+                            <label class="mx-ag-ops-permission-card">
+                              <span class="mx-ag-ops-permission-copy">
+                                <strong>Pacientes</strong>
+                                <small>Datos generales y exploración física.</small>
+                              </span>
+                              <input type="checkbox" id="ag_ops_perm_patients" checked>
+                            </label>
+                            <label class="mx-ag-ops-permission-card">
+                              <span class="mx-ag-ops-permission-copy">
+                                <strong>Facturar</strong>
+                                <small>Facturación de honorarios médicos.</small>
+                              </span>
+                              <input type="checkbox" id="ag_ops_perm_billing">
+                            </label>
+                            <label class="mx-ag-ops-permission-card">
+                              <span class="mx-ag-ops-permission-copy">
+                                <strong>Comprobante de pago</strong>
+                                <small>Acreditar anualidad del perfil médico.</small>
+                              </span>
+                              <input type="checkbox" id="ag_ops_perm_payment_proof">
+                            </label>
+                          </div>
+                        </div>
+                      </article>
+                    </div>
+                  </div>
+                  <div class="mx-ag-ops-form-footer">
+                    <button type="button" class="btn btn-outline-secondary" id="ag_ops_form_cancel_btn">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="ag_ops_save_btn">Guardar operador</button>
+                  </div>
+                </aside>
               </div>
-
-              <div class="col-12">
-
-                <div class="table-responsive">
-
-                  <table class="table table-sm">
-
-                    <thead><tr><th>Nombre</th><th>Rol</th><th>Permisos</th><th>Estatus</th><th>Acciónes</th></tr></thead>
-
-                    <tbody>
-
-                      <tr><td>María López</td><td>Operador</td><td>Agenda, Pacientes</td><td>Activo</td><td><button class="btn btn-outline-secondary btn-sm">Editar</button></td></tr>
-
-                      <tr><td>C. Ramírez</td><td>Asistente</td><td>Agenda</td><td>Invitado</td><td><button class="btn btn-outline-secondary btn-sm">Reenviar</button></td></tr>
-
-                    </tbody>
-
-                  </table>
-
-                </div>
-
-              </div>
-
             </div>
 
-          </div>
+            <div class="modal fade mx-ag-ops-archive-verify-modal" id="ag_ops_archive_verify_modal" tabindex="-1" aria-labelledby="ag_ops_archive_verify_title" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="ag_ops_archive_verify_title">Confirmar eliminación de operador</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                  </div>
+                  <div class="modal-body">
+                    <p class="mx-ag-ops-archive-verify-copy">
+                      Este operador dejará de tener acceso al sistema y será movido a Operadores archivados.
+                    </p>
+                    <p class="mx-ag-ops-archive-verify-channel">
+                      Ingresa el código de 6 dígitos enviado por SMS o correo electrónico.
+                    </p>
+                    <div class="otp-inputs mx-ag-ops-archive-otp" data-op-archive-otp-group>
+                      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-op-archive-otp-input>
+                      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-op-archive-otp-input>
+                      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-op-archive-otp-input>
+                      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-op-archive-otp-input>
+                      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-op-archive-otp-input>
+                      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" data-op-archive-otp-input>
+                    </div>
+                    <p class="mx-ag-ops-archive-verify-hint" id="ag_ops_archive_verify_hint">Ingresa un código numérico de 6 dígitos.</p>
+                    <p class="mx-ag-ops-archive-verify-error d-none" id="ag_ops_archive_verify_error" role="alert">Ingresa un código válido de 6 dígitos para continuar.</p>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="ag_ops_archive_verify_confirm_btn" disabled>Confirmar eliminación</button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
+            <div class="modal fade mx-ag-ops-history-modal" id="ag_ops_history_modal" tabindex="-1" aria-labelledby="ag_ops_history_title" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <div class="mx-ag-ops-history-header-copy">
+                      <h5 class="modal-title" id="ag_ops_history_title">Historial de acciones</h5>
+                      <p class="mx-ag-ops-history-subtitle" id="ag_ops_history_subtitle">Consulta las acciones recientes del operador.</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="mx-ag-ops-history-summary">
+                      <strong id="ag_ops_history_operator_name">Operador</strong>
+                      <span id="ag_ops_history_count">0 acciones</span>
+                    </div>
+                    <div class="mx-ag-ops-history-list" id="ag_ops_history_list" role="list"></div>
+                    <p class="mx-ag-ops-history-empty d-none" id="ag_ops_history_empty">No hay acciones registradas para este operador.</p>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
 

@@ -19012,6 +19012,1185 @@ console.info('app.js loaded :: 20251123a');
   }
 })();
 
+// Agenda · Operadores (frontend UX scaffold, backend-safe)
+(function(){
+  const panel = document.getElementById('p-ag-operadores');
+  if(!panel) return;
+
+  const clean = (value)=> String(value == null ? '' : value).trim();
+  const escapeHtml = (value)=> clean(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  const STATUS_META = {
+    active: { label: 'Activo', className: 'is-active' },
+    paused: { label: 'Acceso pausado', className: 'is-paused' },
+    pending: { label: 'Invitado pendiente', className: 'is-pending' }
+  };
+
+  const PERMISSION_META = {
+    agenda: { label: 'Agenda', detail: 'Citas y bloqueos de horario' },
+    patients: { label: 'Pacientes', detail: 'Datos generales' },
+    billing: { label: 'Facturar', detail: 'Honorarios médicos a pacientes' },
+    payment_proof: { label: 'Comprobante de pago', detail: 'Acreditar anualidad' }
+  };
+
+  const MODEL = {
+    plan_standard_limit: 2,
+    plan_absolute_limit: 3,
+    operators: [
+      {
+        operator_id: 'op-001',
+        operator_label: 'Operador 01',
+        alias: 'Mary',
+        full_name: 'María López García',
+        phone: '999 245 8901',
+        email: 'maria.lopez@correo.com',
+        gender: 'femenino',
+        role: 'operator',
+        status: 'active',
+        permissions: ['agenda', 'patients', 'billing', 'payment_proof'],
+        login: 'operador01',
+        force_password_change: false,
+        last_access: '2026-05-16T09:12:00-06:00',
+        audit_meta: {
+          module: 'Agenda',
+          action: 'Reprogramó cita',
+          entity: 'Cita #A-1209',
+          at: '2026-05-16T09:12:00-06:00'
+        }
+      },
+      {
+        operator_id: 'op-002',
+        operator_label: 'Operador 02',
+        alias: 'Carlos',
+        full_name: 'Carlos Ramírez Hernández',
+        phone: '999 310 4412',
+        email: 'carlos.ramirez@correo.com',
+        gender: 'masculino',
+        role: 'assistant',
+        status: 'paused',
+        permissions: ['agenda', 'patients', 'billing', 'payment_proof'],
+        login: 'asistente02',
+        force_password_change: false,
+        last_access: '2026-05-02T18:45:00-06:00',
+        audit_meta: {
+          module: 'Operadores',
+          action: 'Acceso pausado',
+          entity: 'Cuenta del asistente',
+          at: '2026-05-02T18:45:00-06:00'
+        }
+      }
+    ],
+    archived_operators: [],
+    audit_trail: []
+  };
+
+  const els = {
+    list: panel.querySelector('#ag_ops_list'),
+    emptyState: panel.querySelector('#ag_ops_empty_state'),
+    emptyCta: panel.querySelector('#ag_ops_empty_cta'),
+    activeValue: panel.querySelector('#ag_ops_active_value'),
+    pendingValue: panel.querySelector('#ag_ops_pending_value'),
+    availableValue: panel.querySelector('#ag_ops_available_value'),
+    maxAllowedValue: panel.querySelector('#ag_ops_max_allowed_value'),
+    limitNotice: panel.querySelector('#ag_ops_limit_notice'),
+    addBtn: panel.querySelector('#ag_ops_add_btn'),
+    archivedSection: panel.querySelector('#ag_ops_archived_section'),
+    archivedToggle: panel.querySelector('#ag_ops_archived_toggle'),
+    archivedCount: panel.querySelector('#ag_ops_archived_count'),
+    archivedPanel: panel.querySelector('#ag_ops_archived_panel'),
+    archivedList: panel.querySelector('#ag_ops_archived_list'),
+    sidePanel: panel.querySelector('.mx-ag-ops-side-panel'),
+    formTitle: panel.querySelector('#ag_ops_form_title'),
+    modalError: panel.querySelector('#ag_ops_modal_error'),
+    saveBtn: panel.querySelector('#ag_ops_save_btn'),
+    formCancelBtn: panel.querySelector('#ag_ops_form_cancel_btn'),
+    editId: panel.querySelector('#ag_ops_edit_id'),
+    fullName: panel.querySelector('#ag_ops_full_name'),
+    gender: panel.querySelector('#ag_ops_gender'),
+    alias: panel.querySelector('#ag_ops_alias'),
+    phone: panel.querySelector('#ag_ops_phone'),
+    email: panel.querySelector('#ag_ops_email'),
+    role: panel.querySelector('#ag_ops_role'),
+    login: panel.querySelector('#ag_ops_login'),
+    tempPassword: panel.querySelector('#ag_ops_temp_password'),
+    forceChange: panel.querySelector('#ag_ops_force_change'),
+    permissions: {
+      agenda: panel.querySelector('#ag_ops_perm_agenda'),
+      patients: panel.querySelector('#ag_ops_perm_patients'),
+      billing: panel.querySelector('#ag_ops_perm_billing'),
+      payment_proof: panel.querySelector('#ag_ops_perm_payment_proof')
+    },
+    accordion: panel.querySelector('#ag_ops_modal_accordion'),
+    archiveVerifyModalEl: panel.querySelector('#ag_ops_archive_verify_modal'),
+    archiveVerifyInputs: Array.from(panel.querySelectorAll('[data-op-archive-otp-input]')),
+    archiveVerifyConfirmBtn: panel.querySelector('#ag_ops_archive_verify_confirm_btn'),
+    archiveVerifyError: panel.querySelector('#ag_ops_archive_verify_error'),
+    historyModalEl: panel.querySelector('#ag_ops_history_modal'),
+    historySubtitle: panel.querySelector('#ag_ops_history_subtitle'),
+    historyOperatorName: panel.querySelector('#ag_ops_history_operator_name'),
+    historyCount: panel.querySelector('#ag_ops_history_count'),
+    historyList: panel.querySelector('#ag_ops_history_list'),
+    historyEmpty: panel.querySelector('#ag_ops_history_empty')
+  };
+
+  if(!els.list || !els.saveBtn || !els.accordion) return;
+
+  const ensureArray = (list)=> Array.isArray(list) ? list : [];
+  const nowIso = ()=> new Date().toISOString();
+  const archiveVerifyState = {
+    pendingOperatorId: '',
+    modalInstance: null
+  };
+  const historyState = {
+    activeOperatorId: '',
+    modalInstance: null
+  };
+  const toTimestamp = (value)=>{
+    const raw = clean(value);
+    if(!raw) return 0;
+    const date = new Date(raw);
+    const stamp = date.getTime();
+    return Number.isFinite(stamp) ? stamp : 0;
+  };
+
+  const formatDateTimeLabel = (value)=>{
+    const raw = clean(value);
+    if(!raw) return 'Sin registro de acceso';
+    const date = new Date(raw);
+    if(Number.isNaN(date.getTime())) return 'Sin registro de acceso';
+    return date.toLocaleString('es-MX', {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const normalizePermissions = (list)=>{
+    const seen = new Set();
+    const normalized = [];
+    ensureArray(list).forEach((key)=>{
+      const safeKey = clean(key).toLowerCase();
+      if(!PERMISSION_META[safeKey] || seen.has(safeKey)) return;
+      seen.add(safeKey);
+      normalized.push(safeKey);
+    });
+    return normalized;
+  };
+
+  const statusMeta = (status)=> STATUS_META[clean(status).toLowerCase()] || STATUS_META.pending;
+  const permissionMeta = (permission)=> PERMISSION_META[clean(permission).toLowerCase()] || null;
+  const permissionLabel = (permission)=> clean(permissionMeta(permission)?.label || 'Permiso');
+  const resolveOperatorLabel = (operator, index)=>{
+    const explicitLabel = clean(
+      operator?.operator_label
+      || operator?.system_label
+      || operator?.display_label
+    );
+    if(explicitLabel) return explicitLabel;
+    const alias = clean(operator?.alias);
+    if(/^(operador|asistente)\s*\d+/i.test(alias)){
+      return alias;
+    }
+    const role = clean(operator?.role).toLowerCase() === 'assistant' ? 'Asistente' : 'Operador';
+    const ordinal = String((Number(index) || 0) + 1).padStart(2, '0');
+    return `${role} ${ordinal}`;
+  };
+  const resolveVisibleAlias = (operator, operatorLabel = '')=>{
+    const explicitAlias = clean(
+      operator?.visible_alias
+      || operator?.alias_visible
+      || operator?.short_alias
+      || operator?.nickname
+    );
+    if(explicitAlias) return explicitAlias;
+    const alias = clean(operator?.alias);
+    if(alias && alias.toLowerCase() !== clean(operatorLabel).toLowerCase()){
+      return alias;
+    }
+    return '';
+  };
+  const initialsFrom = (operator)=>{
+    const seed = clean(operator?.alias || operator?.full_name || 'OP');
+    const parts = seed.split(/\s+/).filter(Boolean);
+    if(!parts.length) return 'OP';
+    if(parts.length === 1){
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+    return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
+  };
+
+  const formatHistoryDateTime = (value)=>{
+    const raw = clean(value);
+    if(!raw) return 'Sin fecha registrada';
+    const date = new Date(raw);
+    if(Number.isNaN(date.getTime())) return 'Sin fecha registrada';
+    return date.toLocaleString('es-MX', {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const resolveHistoryModuleMeta = (moduleName = '')=>{
+    const safeModule = clean(moduleName).toLowerCase();
+    if(safeModule.includes('agenda')){
+      return { label: 'Agenda', className: 'is-agenda', icon: 'bi-calendar2-check' };
+    }
+    if(safeModule.includes('paciente')){
+      return { label: 'Pacientes', className: 'is-patients', icon: 'bi-person-lines-fill' };
+    }
+    if(safeModule.includes('factur')){
+      return { label: 'Facturar', className: 'is-billing', icon: 'bi-receipt-cutoff' };
+    }
+    if(safeModule.includes('comprobante') || safeModule.includes('anualidad') || safeModule.includes('pago')){
+      return { label: 'Comprobante de pago', className: 'is-payment', icon: 'bi-credit-card-2-front' };
+    }
+    if(safeModule.includes('operador')){
+      return { label: 'Operadores', className: 'is-operators', icon: 'bi-people-fill' };
+    }
+    return { label: clean(moduleName) || 'Sistema', className: 'is-system', icon: 'bi-activity' };
+  };
+
+  const normalizeHistoryAction = (action = '')=>{
+    const safeAction = clean(action).toLowerCase();
+    if(!safeAction) return 'Actividad registrada';
+    if(safeAction.includes('reprogram')) return 'Reprogramó cita';
+    if(safeAction.includes('agend') || safeAction.includes('creó cita') || safeAction.includes('creo cita')) return 'Agendó cita';
+    if(safeAction.includes('cancel')) return 'Canceló cita';
+    if(safeAction.includes('desbloque')) return 'Desbloqueó horario';
+    if(safeAction.includes('bloque')) return 'Bloqueó horario';
+    if(safeAction.includes('factur')) return 'Generó factura';
+    if(safeAction.includes('comprobante') || safeAction.includes('anualidad') || safeAction.includes('pago')) return 'Subió comprobante de pago';
+    if(safeAction.includes('restable') && safeAction.includes('contrase')) return 'Restableció contraseña';
+    if(safeAction.includes('acceso pausado')) return 'Pausó acceso';
+    if(safeAction.includes('acceso reactivado')) return 'Reactivó acceso';
+    if(safeAction.includes('invitación enviada') || safeAction.includes('invitacion enviada')) return 'Invitó operador';
+    if(safeAction.includes('archivad')) return 'Archivó operador';
+    if(safeAction.includes('restaurad')) return 'Restauró operador';
+    if(safeAction.includes('actualiz')) return 'Actualizó perfil de operador';
+    return clean(action);
+  };
+
+  const getOperatorHistoryRecords = (operator)=>{
+    if(!operator) return [];
+    const operatorId = clean(operator.operator_id);
+    if(!operatorId) return [];
+
+    const records = ensureArray(MODEL.audit_trail)
+      .filter((item)=> clean(item?.operator_id) === operatorId)
+      .map((item)=> ({
+        operator_id: operatorId,
+        alias: clean(item?.alias) || clean(operator.alias),
+        module: clean(item?.module),
+        action: clean(item?.action),
+        entity: clean(item?.entity),
+        at: clean(item?.at)
+      }));
+
+    const meta = operator?.audit_meta && typeof operator.audit_meta === 'object'
+      ? operator.audit_meta
+      : null;
+    const hasMetaAction = clean(meta?.action);
+    if(hasMetaAction){
+      const fallback = {
+        operator_id: operatorId,
+        alias: clean(meta?.alias) || clean(operator.alias),
+        module: clean(meta?.module),
+        action: clean(meta?.action),
+        entity: clean(meta?.entity),
+        at: clean(meta?.at)
+      };
+      const exists = records.some((item)=>
+        clean(item.action).toLowerCase() === clean(fallback.action).toLowerCase()
+        && clean(item.module).toLowerCase() === clean(fallback.module).toLowerCase()
+        && clean(item.entity).toLowerCase() === clean(fallback.entity).toLowerCase()
+        && clean(item.at) === clean(fallback.at)
+      );
+      if(!exists){
+        records.push(fallback);
+      }
+    }
+
+    records.sort((a, b)=> toTimestamp(b.at) - toTimestamp(a.at));
+
+    return records.map((item, index)=>{
+      const moduleMeta = resolveHistoryModuleMeta(item.module);
+      return {
+        key: `${operatorId}-${index}-${toTimestamp(item.at)}`,
+        moduleLabel: moduleMeta.label,
+        moduleClass: moduleMeta.className,
+        moduleIcon: moduleMeta.icon,
+        actionLabel: normalizeHistoryAction(item.action),
+        entityLabel: clean(item.entity) || 'Entidad no especificada',
+        dateLabel: formatHistoryDateTime(item.at),
+        atRaw: clean(item.at) || '',
+        moduleRaw: clean(item.module) || moduleMeta.label
+      };
+    });
+  };
+
+  const renderOperatorHistoryModal = (operator)=>{
+    if(!els.historyList || !els.historyEmpty || !operator) return;
+    const operatorId = clean(operator.operator_id);
+    const operatorIndex = MODEL.operators.findIndex((item)=> clean(item?.operator_id) === operatorId);
+    const operatorLabel = resolveOperatorLabel(operator, operatorIndex >= 0 ? operatorIndex : 0);
+    const visibleAlias = resolveVisibleAlias(operator, operatorLabel) || clean(operator.alias) || operatorLabel;
+    const records = getOperatorHistoryRecords(operator);
+
+    if(els.historyOperatorName){
+      els.historyOperatorName.textContent = `${visibleAlias} · ${operatorLabel}`;
+    }
+    if(els.historySubtitle){
+      els.historySubtitle.textContent = 'Acciones clasificadas cronológicamente (más reciente primero).';
+    }
+    if(els.historyCount){
+      const noun = records.length === 1 ? 'acción' : 'acciones';
+      els.historyCount.textContent = `${records.length} ${noun}`;
+    }
+
+    if(!records.length){
+      els.historyList.innerHTML = '';
+      els.historyEmpty.classList.remove('d-none');
+      return;
+    }
+
+    els.historyEmpty.classList.add('d-none');
+    els.historyList.innerHTML = records.map((record)=> `
+      <article class="mx-ag-ops-history-item" role="listitem">
+        <div class="mx-ag-ops-history-item-head">
+          <span class="mx-ag-ops-history-module ${escapeHtml(record.moduleClass)}">
+            <i class="bi ${escapeHtml(record.moduleIcon)}" aria-hidden="true"></i>
+            <span>${escapeHtml(record.moduleLabel)}</span>
+          </span>
+          <time class="mx-ag-ops-history-time" datetime="${escapeHtml(record.atRaw)}">${escapeHtml(record.dateLabel)}</time>
+        </div>
+        <h6 class="mx-ag-ops-history-action">${escapeHtml(record.actionLabel)}</h6>
+        <p class="mx-ag-ops-history-entity">${escapeHtml(record.entityLabel)}</p>
+      </article>
+    `).join('');
+  };
+
+  const formatArchiveDateLabel = (value)=>{
+    const raw = clean(value);
+    if(!raw) return 'Sin fecha de archivo';
+    const date = new Date(raw);
+    if(Number.isNaN(date.getTime())) return 'Sin fecha de archivo';
+    return date.toLocaleString('es-MX', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getArchivedOperators = ()=> ensureArray(MODEL.archived_operators);
+
+  const getArchiveVerifyCode = ()=> els.archiveVerifyInputs.map((input)=> clean(input?.value).slice(0, 1)).join('');
+  const isArchiveVerifyCodeValid = ()=> /^\d{6}$/.test(getArchiveVerifyCode());
+
+  const setArchiveVerifyError = (message = '')=>{
+    const safeMessage = clean(message);
+    if(!els.archiveVerifyError) return;
+    els.archiveVerifyError.textContent = safeMessage || 'Ingresa un código válido de 6 dígitos para continuar.';
+    els.archiveVerifyError.classList.toggle('d-none', !safeMessage);
+  };
+
+  const syncArchiveVerifyState = ()=>{
+    const valid = isArchiveVerifyCodeValid();
+    if(els.archiveVerifyConfirmBtn){
+      els.archiveVerifyConfirmBtn.disabled = !valid;
+    }
+    els.archiveVerifyInputs.forEach((input)=>{
+      input.classList.toggle('filled', clean(input?.value).length === 1);
+    });
+    if(valid){
+      setArchiveVerifyError('');
+    }
+  };
+
+  const clearArchiveVerifyForm = ()=>{
+    archiveVerifyState.pendingOperatorId = '';
+    els.archiveVerifyInputs.forEach((input)=>{
+      input.value = '';
+      input.classList.remove('filled');
+    });
+    if(els.archiveVerifyConfirmBtn){
+      els.archiveVerifyConfirmBtn.disabled = true;
+    }
+    setArchiveVerifyError('');
+  };
+
+  const getArchiveVerifyModal = ()=>{
+    if(!els.archiveVerifyModalEl || !window.bootstrap?.Modal) return null;
+    if(!archiveVerifyState.modalInstance){
+      archiveVerifyState.modalInstance = new window.bootstrap.Modal(els.archiveVerifyModalEl, {
+        backdrop: 'static',
+        keyboard: true
+      });
+    }
+    return archiveVerifyState.modalInstance;
+  };
+
+  const showArchiveVerifyModal = ()=>{
+    const modal = getArchiveVerifyModal();
+    if(modal){
+      modal.show();
+      return;
+    }
+    if(els.archiveVerifyModalEl){
+      els.archiveVerifyModalEl.classList.remove('d-none');
+      els.archiveVerifyModalEl.style.display = 'block';
+      els.archiveVerifyModalEl.setAttribute('aria-hidden', 'false');
+    }
+  };
+
+  const hideArchiveVerifyModal = ()=>{
+    const modal = getArchiveVerifyModal();
+    if(modal){
+      modal.hide();
+      return;
+    }
+    if(els.archiveVerifyModalEl){
+      els.archiveVerifyModalEl.classList.add('d-none');
+      els.archiveVerifyModalEl.style.display = '';
+      els.archiveVerifyModalEl.setAttribute('aria-hidden', 'true');
+    }
+    clearArchiveVerifyForm();
+  };
+
+  const getHistoryModal = ()=>{
+    if(!els.historyModalEl || !window.bootstrap?.Modal) return null;
+    if(!historyState.modalInstance){
+      historyState.modalInstance = new window.bootstrap.Modal(els.historyModalEl, {
+        backdrop: true,
+        keyboard: true
+      });
+    }
+    return historyState.modalInstance;
+  };
+
+  const showHistoryModal = ()=>{
+    const modal = getHistoryModal();
+    if(modal){
+      modal.show();
+      return;
+    }
+    if(els.historyModalEl){
+      els.historyModalEl.classList.remove('d-none');
+      els.historyModalEl.style.display = 'block';
+      els.historyModalEl.setAttribute('aria-hidden', 'false');
+    }
+  };
+
+  const hideHistoryModal = ()=>{
+    const modal = getHistoryModal();
+    if(modal){
+      modal.hide();
+      return;
+    }
+    if(els.historyModalEl){
+      els.historyModalEl.classList.add('d-none');
+      els.historyModalEl.style.display = '';
+      els.historyModalEl.setAttribute('aria-hidden', 'true');
+    }
+    historyState.activeOperatorId = '';
+  };
+
+  const setFormMode = (mode = 'create')=>{
+    const safeMode = clean(mode).toLowerCase() === 'edit' ? 'edit' : 'create';
+    panel.dataset.opsFormMode = safeMode;
+    if(els.formTitle){
+      els.formTitle.textContent = safeMode === 'edit' ? 'Editar operador' : 'Agregar operador';
+    }
+    if(els.saveBtn){
+      els.saveBtn.textContent = safeMode === 'edit' ? 'Guardar cambios' : 'Guardar operador';
+    }
+  };
+
+  const setEmptyState = (isEmpty)=>{
+    const empty = !!isEmpty;
+    els.emptyState?.classList.toggle('d-none', !empty);
+    document.body.classList.toggle('mx-ag-ops-empty', empty);
+  };
+
+  const setLimitNotice = (activeCount, totalCount)=>{
+    const standardLimit = MODEL.plan_standard_limit;
+    const absoluteLimit = MODEL.plan_absolute_limit;
+    let text = '';
+    let className = '';
+
+    if(totalCount >= absoluteLimit){
+      text = `Límite máximo alcanzado (${absoluteLimit}/${absoluteLimit}). No se pueden agregar más operadores.`;
+      className = 'is-danger';
+    }else if(activeCount >= standardLimit){
+      text = `Plan estándar cubierto (${activeCount}/${standardLimit}). Puedes activar hasta ${absoluteLimit} en total.`;
+      className = 'is-warning';
+    }else{
+      const freeSlots = Math.max(0, standardLimit - activeCount);
+      text = `Aún hay ${freeSlots} cupo(s) dentro del plan estándar.`;
+    }
+
+    if(els.limitNotice){
+      els.limitNotice.textContent = text;
+      els.limitNotice.classList.remove('is-warning', 'is-danger');
+      if(className){
+        els.limitNotice.classList.add(className);
+      }
+    }
+  };
+
+  const renderSummary = ()=>{
+    const operators = ensureArray(MODEL.operators);
+    const activeCount = operators.filter((item)=> clean(item?.status).toLowerCase() === 'active').length;
+    const pendingCount = operators.filter((item)=> clean(item?.status).toLowerCase() === 'pending').length;
+    const availableCount = Math.max(0, MODEL.plan_standard_limit - activeCount);
+
+    if(els.activeValue) els.activeValue.textContent = `${activeCount}/${MODEL.plan_standard_limit}`;
+    if(els.pendingValue) els.pendingValue.textContent = String(pendingCount);
+    if(els.availableValue) els.availableValue.textContent = String(availableCount);
+    if(els.maxAllowedValue) els.maxAllowedValue.textContent = String(MODEL.plan_absolute_limit);
+    setLimitNotice(activeCount, operators.length);
+  };
+
+  const renderOperators = ()=>{
+    const operators = ensureArray(MODEL.operators);
+    if(!operators.length){
+      els.list.innerHTML = '';
+      return;
+    }
+
+    els.list.innerHTML = operators.map((operator, index)=>{
+      const safeId = clean(operator?.operator_id);
+      const meta = statusMeta(operator?.status);
+      const statusLabel = meta.label;
+      const permissions = normalizePermissions(operator?.permissions);
+      const permissionsHtml = permissions.length
+        ? permissions.map((perm)=>{
+          const info = permissionMeta(perm);
+          const label = clean(info?.label || 'Permiso');
+          const detail = clean(info?.detail || 'Permiso operativo');
+          return `
+            <span class="mx-ag-ops-permission-chip">
+              <strong>${escapeHtml(label)}</strong>
+              <span>${escapeHtml(detail)}</span>
+            </span>
+          `;
+        }).join('')
+        : `
+          <span class="mx-ag-ops-permission-chip">
+            <strong>Sin permisos</strong>
+            <span>No se asignaron módulos</span>
+          </span>
+        `;
+      const toggleLabel = clean(operator?.status).toLowerCase() === 'active' ? 'Pausar acceso' : 'Reactivar';
+      const toggleAction = clean(operator?.status).toLowerCase() === 'active' ? 'pause' : 'reactivate';
+      const name = clean(operator?.full_name) || 'Sin nombre';
+      const operatorLabel = resolveOperatorLabel(operator, index);
+      const visibleAlias = resolveVisibleAlias(operator, operatorLabel);
+      const titlePrimary = visibleAlias || operatorLabel;
+      const operatorLabelHtml = visibleAlias
+        ? `<span class="mx-ag-ops-title-name">${escapeHtml(operatorLabel)}</span>`
+        : '';
+      const phone = clean(operator?.phone) || 'Sin teléfono';
+      const email = clean(operator?.email) || 'Sin correo';
+      const lastAccess = formatDateTimeLabel(operator?.last_access);
+      return `
+        <article class="mx-ag-ops-operator-card" role="listitem" data-op-id="${escapeHtml(safeId)}">
+          <div class="mx-ag-ops-card-top">
+            <div class="mx-ag-ops-avatar" aria-hidden="true">${escapeHtml(initialsFrom(operator))}</div>
+            <div class="mx-ag-ops-main">
+              <div class="mx-ag-ops-title-row">
+                <span class="mx-ag-ops-status-pill ${escapeHtml(meta.className)}">${escapeHtml(statusLabel)}</span>
+                <h6 class="mx-ag-ops-alias">${escapeHtml(titlePrimary)}</h6>
+                ${operatorLabelHtml}
+              </div>
+              <p class="mx-ag-ops-name">
+                <span>${escapeHtml(name)}</span>
+                <span class="mx-ag-ops-name-inline-phone"><i class="bi bi-telephone-fill" aria-hidden="true"></i><span>${escapeHtml(phone)}</span></span>
+                <span class="mx-ag-ops-name-inline-phone"><i class="bi bi-envelope-fill" aria-hidden="true"></i><span>${escapeHtml(email)}</span></span>
+              </p>
+            </div>
+            <aside class="mx-ag-ops-last-access">
+              <span class="mx-ag-ops-last-access-label">Último acceso</span>
+              <strong class="mx-ag-ops-last-access-value">${escapeHtml(lastAccess)}</strong>
+            </aside>
+          </div>
+          <p class="mx-ag-ops-perm-title"><i class="bi bi-shield-check" aria-hidden="true"></i><span>Permisos otorgados</span></p>
+          <div class="mx-ag-ops-permissions">${permissionsHtml}</div>
+          <div class="mx-ag-ops-card-foot">
+            <button type="button" class="btn btn-outline-info mx-ag-ops-history-trigger" data-op-action="history" data-op-id="${escapeHtml(safeId)}">
+              <i class="bi bi-clock-history" aria-hidden="true"></i>
+              Historial de acciones
+            </button>
+            <div class="mx-ag-ops-actions">
+              <button type="button" class="btn btn-outline-primary" data-op-action="edit" data-op-id="${escapeHtml(safeId)}">Editar</button>
+              <button type="button" class="btn btn-outline-secondary" data-op-action="${escapeHtml(toggleAction)}" data-op-id="${escapeHtml(safeId)}">${escapeHtml(toggleLabel)}</button>
+              <button type="button" class="btn btn-outline-dark" data-op-action="reset-password" data-op-id="${escapeHtml(safeId)}">Restablecer contraseña</button>
+              <button type="button" class="btn btn-outline-danger" data-op-action="archive" data-op-id="${escapeHtml(safeId)}">Eliminar operador</button>
+            </div>
+          </div>
+        </article>
+      `;
+    }).join('');
+  };
+
+  const renderArchivedOperators = ()=>{
+    if(!els.archivedList || !els.archivedCount || !els.archivedSection) return;
+    const archived = getArchivedOperators();
+    els.archivedCount.textContent = String(archived.length);
+    els.archivedSection.classList.toggle('d-none', !archived.length);
+    if(!archived.length){
+      els.archivedList.innerHTML = '<p class="mx-ag-ops-archived-empty">Aún no hay operadores archivados.</p>';
+      return;
+    }
+    els.archivedList.innerHTML = archived.map((operator)=>{
+      const safeId = clean(operator?.operator_id);
+      const alias = clean(operator?.alias) || 'Sin alias';
+      const name = clean(operator?.full_name) || 'Sin nombre';
+      const phone = clean(operator?.phone) || 'Sin teléfono';
+      const email = clean(operator?.email) || 'Sin correo';
+      const archivedAt = formatArchiveDateLabel(operator?.archived_at);
+      const lastAccess = formatDateTimeLabel(operator?.last_access);
+      const permissions = normalizePermissions(operator?.permissions);
+      const permissionsHtml = permissions.length
+        ? permissions.map((perm)=> `<span class="mx-ag-ops-archived-perm">${escapeHtml(permissionLabel(perm))}</span>`).join('')
+        : '<span class="mx-ag-ops-archived-perm">Sin permisos</span>';
+      return `
+        <article class="mx-ag-ops-archived-card" data-op-archived-id="${escapeHtml(safeId)}">
+          <div class="mx-ag-ops-archived-head">
+            <h6 class="mx-ag-ops-archived-alias">${escapeHtml(alias)} (${escapeHtml(name)})</h6>
+            <span class="mx-ag-ops-archived-status">Archivado</span>
+          </div>
+          <p class="mx-ag-ops-archived-meta">Correo: ${escapeHtml(email)} · Teléfono: ${escapeHtml(phone)}</p>
+          <p class="mx-ag-ops-archived-meta">Archivado: ${escapeHtml(archivedAt)}</p>
+          <p class="mx-ag-ops-archived-meta">Último acceso: ${escapeHtml(lastAccess)}</p>
+          <div class="mx-ag-ops-archived-perms">${permissionsHtml}</div>
+          <div class="mx-ag-ops-archived-actions">
+            <button type="button" class="btn btn-outline-primary" data-op-archived-action="detail" data-op-archived-id="${escapeHtml(safeId)}">Ver detalle</button>
+            <button type="button" class="btn btn-outline-secondary" data-op-archived-action="restore" data-op-archived-id="${escapeHtml(safeId)}">Restaurar acceso</button>
+          </div>
+        </article>
+      `;
+    }).join('');
+  };
+
+  const setArchivedExpanded = (expanded)=>{
+    const isExpanded = !!expanded;
+    if(els.archivedToggle){
+      els.archivedToggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+    }
+    if(els.archivedPanel){
+      els.archivedPanel.classList.toggle('d-none', !isExpanded);
+    }
+    els.archivedSection?.classList.toggle('is-open', isExpanded);
+  };
+
+  const renderAll = ()=>{
+    const operators = ensureArray(MODEL.operators);
+    renderSummary();
+    renderOperators();
+    renderArchivedOperators();
+    setEmptyState(!operators.length);
+  };
+
+  const setModalError = (message = '')=>{
+    const safeMessage = clean(message);
+    if(!els.modalError) return;
+    els.modalError.textContent = safeMessage;
+    els.modalError.classList.toggle('d-none', !safeMessage);
+  };
+
+  const setAccordionActive = (sectionKey = 'general')=>{
+    if(!els.accordion) return;
+    const safeKey = clean(sectionKey) || 'general';
+    els.accordion.querySelectorAll('[data-ops-accordion-item]').forEach((item)=>{
+      const key = clean(item.getAttribute('data-ops-accordion-item'));
+      const isActive = key === safeKey;
+      item.classList.toggle('is-active', isActive);
+      const body = item.querySelector('.mx-ag-ops-accordion-body');
+      if(body){
+        body.classList.toggle('d-none', !isActive);
+      }
+      const toggle = item.querySelector('[data-ops-accordion-toggle]');
+      if(toggle){
+        toggle.classList.toggle('is-active', isActive);
+        toggle.setAttribute('aria-expanded', isActive ? 'true' : 'false');
+      }
+    });
+  };
+
+  const readPermissionsFromForm = ()=>{
+    return Object.entries(els.permissions)
+      .filter(([, checkbox])=> checkbox && checkbox.checked)
+      .map(([key])=> key);
+  };
+
+  const clearForm = ()=>{
+    if(els.editId) els.editId.value = '';
+    if(els.fullName) els.fullName.value = '';
+    if(els.gender) els.gender.value = '';
+    if(els.alias) els.alias.value = '';
+    if(els.phone) els.phone.value = '';
+    if(els.email) els.email.value = '';
+    if(els.role) els.role.value = 'operator';
+    if(els.login) els.login.value = '';
+    if(els.tempPassword) els.tempPassword.value = '';
+    if(els.forceChange) els.forceChange.checked = true;
+    Object.values(els.permissions).forEach((checkbox)=>{
+      if(checkbox) checkbox.checked = false;
+    });
+    if(els.permissions.agenda) els.permissions.agenda.checked = true;
+    if(els.permissions.patients) els.permissions.patients.checked = true;
+    setModalError('');
+    setAccordionActive('general');
+  };
+
+  const fillFormFromOperator = (operator)=>{
+    if(!operator) return;
+    if(els.editId) els.editId.value = clean(operator.operator_id);
+    if(els.fullName) els.fullName.value = clean(operator.full_name);
+    if(els.gender) els.gender.value = clean(operator.gender);
+    if(els.alias) els.alias.value = clean(operator.alias);
+    if(els.phone) els.phone.value = clean(operator.phone);
+    if(els.email) els.email.value = clean(operator.email);
+    if(els.role) els.role.value = clean(operator.role) || 'operator';
+    if(els.login) els.login.value = clean(operator.login);
+    if(els.tempPassword) els.tempPassword.value = '';
+    if(els.forceChange) els.forceChange.checked = !!operator.force_password_change;
+    const permissionSet = new Set(normalizePermissions(operator.permissions));
+    Object.entries(els.permissions).forEach(([key, checkbox])=>{
+      if(!checkbox) return;
+      checkbox.checked = permissionSet.has(key);
+    });
+  };
+
+  const generateOperatorId = ()=>{
+    const stamp = Date.now().toString(36).slice(-6);
+    const rand = Math.random().toString(36).slice(2, 5);
+    return `op-${stamp}${rand}`;
+  };
+
+  const findOperatorById = (operatorId)=>{
+    const safeId = clean(operatorId);
+    return MODEL.operators.find((item)=> clean(item?.operator_id) === safeId) || null;
+  };
+
+  const pushAudit = (operator, action, moduleName = 'Operadores', entity = '')=>{
+    if(!operator) return;
+    const timestamp = nowIso();
+    const record = {
+      operator_id: clean(operator.operator_id),
+      alias: clean(operator.alias),
+      module: clean(moduleName) || 'Operadores',
+      action: clean(action),
+      entity: clean(entity),
+      at: timestamp
+    };
+    operator.audit_meta = { ...record };
+    MODEL.audit_trail.unshift(record);
+    if(MODEL.audit_trail.length > 120){
+      MODEL.audit_trail.length = 120;
+    }
+  };
+
+  const seedAuditTrailFromOperators = ()=>{
+    if(ensureArray(MODEL.audit_trail).length) return;
+    const seedRecords = ensureArray(MODEL.operators)
+      .map((operator)=>{
+        const meta = operator?.audit_meta && typeof operator.audit_meta === 'object'
+          ? operator.audit_meta
+          : null;
+        const action = clean(meta?.action);
+        if(!action) return null;
+        return {
+          operator_id: clean(operator?.operator_id),
+          alias: clean(meta?.alias) || clean(operator?.alias),
+          module: clean(meta?.module) || 'Operadores',
+          action,
+          entity: clean(meta?.entity),
+          at: clean(meta?.at)
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b)=> toTimestamp(b.at) - toTimestamp(a.at));
+    MODEL.audit_trail = seedRecords;
+  };
+
+  const focusSidePanel = ()=>{
+    if(els.sidePanel){
+      try{
+        els.sidePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }catch(_){}
+    }
+  };
+
+  const startCreateFlow = ()=>{
+    clearForm();
+    setFormMode('create');
+    setAccordionActive('general');
+    focusSidePanel();
+    window.setTimeout(()=>{
+      try{ els.fullName?.focus(); }catch(_){}
+    }, 80);
+  };
+
+  const startEditFlow = (operator)=>{
+    if(!operator) return;
+    clearForm();
+    setFormMode('edit');
+    fillFormFromOperator(operator);
+    setAccordionActive('general');
+    focusSidePanel();
+    window.setTimeout(()=>{
+      try{ els.fullName?.focus(); }catch(_){}
+    }, 80);
+  };
+
+  const saveOperatorFromForm = ()=>{
+    const operatorId = clean(els.editId?.value);
+    const fullName = clean(els.fullName?.value);
+    const alias = clean(els.alias?.value);
+    const phone = clean(els.phone?.value);
+    const email = clean(els.email?.value).toLowerCase();
+    const role = clean(els.role?.value || 'operator').toLowerCase();
+    const permissions = normalizePermissions(readPermissionsFromForm());
+
+    if(!fullName){
+      setModalError('Ingresa el nombre completo del operador.');
+      setAccordionActive('general');
+      return;
+    }
+    if(!alias){
+      setModalError('Ingresa un alias visible para identificar al operador.');
+      setAccordionActive('general');
+      return;
+    }
+    if(!email){
+      setModalError('Ingresa un correo electrónico para acceso y recuperación.');
+      setAccordionActive('general');
+      return;
+    }
+    if(!permissions.length){
+      setModalError('Selecciona al menos un permiso operativo.');
+      setAccordionActive('permissions');
+      return;
+    }
+
+    const editingOperator = operatorId ? findOperatorById(operatorId) : null;
+    if(!editingOperator && MODEL.operators.length >= MODEL.plan_absolute_limit){
+      setModalError(`Se alcanzó el máximo absoluto de ${MODEL.plan_absolute_limit} operadores.`);
+      return;
+    }
+
+    if(editingOperator){
+      editingOperator.full_name = fullName;
+      editingOperator.alias = alias;
+      editingOperator.phone = phone;
+      editingOperator.email = email;
+      editingOperator.gender = clean(els.gender?.value);
+      editingOperator.role = role || 'operator';
+      editingOperator.login = clean(els.login?.value);
+      editingOperator.permissions = permissions;
+      editingOperator.force_password_change = !!els.forceChange?.checked;
+      pushAudit(editingOperator, 'Actualizó perfil de operador', 'Operadores', alias);
+    }else{
+      const createdOperator = {
+        operator_id: generateOperatorId(),
+        alias,
+        full_name: fullName,
+        phone,
+        email,
+        gender: clean(els.gender?.value),
+        role: role || 'operator',
+        status: 'pending',
+        permissions,
+        login: clean(els.login?.value),
+        force_password_change: !!els.forceChange?.checked,
+        last_access: '',
+        audit_meta: {}
+      };
+      pushAudit(createdOperator, 'Invitación enviada', 'Operadores', alias);
+      MODEL.operators.push(createdOperator);
+    }
+
+    renderAll();
+    startCreateFlow();
+  };
+
+  const updateOperatorStatus = (operatorId, status, actionLabel)=>{
+    const operator = findOperatorById(operatorId);
+    if(!operator) return;
+    operator.status = status;
+    if(status === 'active'){
+      operator.last_access = nowIso();
+    }
+    pushAudit(operator, actionLabel, 'Operadores', operator.alias || operator.full_name);
+    renderAll();
+  };
+
+  const commitArchiveOperator = (operatorId)=>{
+    const safeId = clean(operatorId);
+    if(!safeId) return;
+    const index = MODEL.operators.findIndex((item)=> clean(item?.operator_id) === safeId);
+    if(index < 0) return;
+
+    const operator = MODEL.operators[index];
+    MODEL.operators.splice(index, 1);
+    operator.status = 'archived';
+    operator.archived_at = nowIso();
+    pushAudit(operator, 'Operador archivado', 'Operadores', operator.alias || operator.full_name);
+    MODEL.archived_operators.unshift(operator);
+    if(MODEL.archived_operators.length > 80){
+      MODEL.archived_operators.length = 80;
+    }
+    setArchivedExpanded(true);
+    renderAll();
+  };
+
+  const openArchiveVerification = (operatorId)=>{
+    const operator = findOperatorById(operatorId);
+    if(!operator) return;
+    archiveVerifyState.pendingOperatorId = clean(operator.operator_id);
+    els.archiveVerifyInputs.forEach((input)=>{
+      input.value = '';
+      input.classList.remove('filled');
+    });
+    setArchiveVerifyError('');
+    syncArchiveVerifyState();
+    showArchiveVerifyModal();
+    window.setTimeout(()=>{
+      try{ els.archiveVerifyInputs[0]?.focus(); }catch(_){}
+    }, 80);
+  };
+
+  const findArchivedOperatorById = (operatorId)=>{
+    const safeId = clean(operatorId);
+    return getArchivedOperators().find((item)=> clean(item?.operator_id) === safeId) || null;
+  };
+
+  const restoreArchivedOperator = (operatorId)=>{
+    const safeId = clean(operatorId);
+    if(!safeId) return;
+    if(MODEL.operators.length >= MODEL.plan_absolute_limit){
+      setModalError(`No se puede restaurar: se alcanzó el máximo de ${MODEL.plan_absolute_limit} operadores.`);
+      focusSidePanel();
+      return;
+    }
+    const archivedIndex = getArchivedOperators().findIndex((item)=> clean(item?.operator_id) === safeId);
+    if(archivedIndex < 0) return;
+    const archivedOperator = MODEL.archived_operators[archivedIndex];
+    MODEL.archived_operators.splice(archivedIndex, 1);
+    archivedOperator.status = 'paused';
+    archivedOperator.archived_at = '';
+    pushAudit(archivedOperator, 'Operador restaurado', 'Operadores', archivedOperator.alias || archivedOperator.full_name);
+    MODEL.operators.unshift(archivedOperator);
+    renderAll();
+  };
+
+  const openOperatorHistory = (operatorId)=>{
+    const operator = findOperatorById(operatorId);
+    if(!operator) return;
+    historyState.activeOperatorId = clean(operator.operator_id);
+    renderOperatorHistoryModal(operator);
+    showHistoryModal();
+  };
+
+  const handleOperatorAction = (action, operatorId)=>{
+    const safeAction = clean(action);
+    const operator = findOperatorById(operatorId);
+    if(!operator) return;
+
+    if(safeAction === 'history'){
+      openOperatorHistory(operatorId);
+      return;
+    }
+    if(safeAction === 'edit'){
+      startEditFlow(operator);
+      return;
+    }
+    if(safeAction === 'pause'){
+      updateOperatorStatus(operatorId, 'paused', 'Acceso pausado');
+      return;
+    }
+    if(safeAction === 'reactivate'){
+      updateOperatorStatus(operatorId, 'active', 'Acceso reactivado');
+      return;
+    }
+    if(safeAction === 'reset-password'){
+      operator.force_password_change = true;
+      pushAudit(operator, 'Restableció contraseña temporal', 'Operadores', operator.alias || operator.full_name);
+      renderAll();
+      return;
+    }
+    if(safeAction === 'archive'){
+      openArchiveVerification(operatorId);
+    }
+  };
+
+  const handleArchivedOperatorAction = (action, operatorId)=>{
+    const safeAction = clean(action);
+    const operator = findArchivedOperatorById(operatorId);
+    if(!operator) return;
+    if(safeAction === 'restore'){
+      restoreArchivedOperator(operatorId);
+      return;
+    }
+    if(safeAction === 'detail'){
+      const details = [
+        `Alias: ${clean(operator.alias) || 'Sin alias'}`,
+        `Nombre: ${clean(operator.full_name) || 'Sin nombre'}`,
+        `Correo: ${clean(operator.email) || 'Sin correo'}`,
+        `Teléfono: ${clean(operator.phone) || 'Sin teléfono'}`,
+        `Último acceso: ${formatDateTimeLabel(operator.last_access)}`,
+        `Archivado: ${formatArchiveDateLabel(operator.archived_at)}`
+      ].join('\n');
+      window.alert(details);
+    }
+  };
+
+  const bindEvents = ()=>{
+    els.addBtn?.addEventListener('click', ()=>{
+      startCreateFlow();
+    });
+
+    els.emptyCta?.addEventListener('click', ()=>{
+      startCreateFlow();
+    });
+
+    els.saveBtn?.addEventListener('click', ()=>{
+      saveOperatorFromForm();
+    });
+
+    els.formCancelBtn?.addEventListener('click', ()=>{
+      startCreateFlow();
+    });
+
+    els.archivedToggle?.addEventListener('click', ()=>{
+      const expanded = els.archivedToggle?.getAttribute('aria-expanded') === 'true';
+      setArchivedExpanded(!expanded);
+    });
+
+    els.list?.addEventListener('click', (event)=>{
+      const btn = event.target.closest('[data-op-action][data-op-id]');
+      if(!btn) return;
+      const action = btn.getAttribute('data-op-action');
+      const operatorId = btn.getAttribute('data-op-id');
+      handleOperatorAction(action, operatorId);
+    });
+
+    els.archivedList?.addEventListener('click', (event)=>{
+      const btn = event.target.closest('[data-op-archived-action][data-op-archived-id]');
+      if(!btn) return;
+      const action = btn.getAttribute('data-op-archived-action');
+      const operatorId = btn.getAttribute('data-op-archived-id');
+      handleArchivedOperatorAction(action, operatorId);
+    });
+
+    els.accordion?.addEventListener('click', (event)=>{
+      const toggle = event.target.closest('[data-ops-accordion-toggle]');
+      if(!toggle) return;
+      const key = clean(toggle.getAttribute('data-ops-accordion-toggle'));
+      if(!key) return;
+      setAccordionActive(key);
+    });
+
+    els.archiveVerifyInputs.forEach((input, index)=>{
+      input.addEventListener('input', (event)=>{
+        const digits = clean(event.target.value).replace(/\D+/g, '');
+        event.target.value = digits.slice(-1);
+        syncArchiveVerifyState();
+        if(event.target.value && index < els.archiveVerifyInputs.length - 1){
+          els.archiveVerifyInputs[index + 1]?.focus();
+        }
+      });
+      input.addEventListener('keydown', (event)=>{
+        if(event.key === 'Backspace' && !event.currentTarget.value && index > 0){
+          els.archiveVerifyInputs[index - 1].focus();
+        }
+      });
+      input.addEventListener('paste', (event)=>{
+        event.preventDefault();
+        const pasted = clean(event.clipboardData?.getData('text') || '').replace(/\D+/g, '').slice(0, 6);
+        if(!pasted) return;
+        const chars = pasted.split('');
+        for(let idx = 0; idx < els.archiveVerifyInputs.length; idx += 1){
+          els.archiveVerifyInputs[idx].value = chars[idx] || '';
+        }
+        syncArchiveVerifyState();
+        const focusIndex = Math.min(chars.length, els.archiveVerifyInputs.length - 1);
+        els.archiveVerifyInputs[focusIndex]?.focus();
+      });
+    });
+
+    els.archiveVerifyConfirmBtn?.addEventListener('click', ()=>{
+      if(!isArchiveVerifyCodeValid()){
+        setArchiveVerifyError('Ingresa un código válido de 6 dígitos para continuar.');
+        return;
+      }
+      const pendingOperatorId = clean(archiveVerifyState.pendingOperatorId);
+      if(!pendingOperatorId){
+        hideArchiveVerifyModal();
+        return;
+      }
+      // Simulación frontend temporal: cualquier código numérico de 6 dígitos se considera válido.
+      // Futuro backend: sendOperatorArchiveCode + verifyOperatorArchiveCode.
+      commitArchiveOperator(pendingOperatorId);
+      hideArchiveVerifyModal();
+    });
+
+    if(els.archiveVerifyModalEl){
+      els.archiveVerifyModalEl.addEventListener('click', (event)=>{
+        const dismissTrigger = event.target.closest('[data-bs-dismiss="modal"]');
+        if(!dismissTrigger || window.bootstrap?.Modal) return;
+        hideArchiveVerifyModal();
+      });
+      els.archiveVerifyModalEl.addEventListener('hidden.bs.modal', ()=>{
+        clearArchiveVerifyForm();
+      });
+    }
+
+    if(els.historyModalEl){
+      els.historyModalEl.addEventListener('click', (event)=>{
+        const dismissTrigger = event.target.closest('[data-bs-dismiss="modal"]');
+        if(!dismissTrigger || window.bootstrap?.Modal) return;
+        hideHistoryModal();
+      });
+      els.historyModalEl.addEventListener('hidden.bs.modal', ()=>{
+        historyState.activeOperatorId = '';
+      });
+    }
+
+  };
+
+  const start = ()=>{
+    bindEvents();
+    setFormMode('create');
+    setAccordionActive('general');
+    setArchivedExpanded(false);
+    setModalError('');
+    seedAuditTrailFromOperators();
+    renderAll();
+  };
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  }else{
+    start();
+  }
+})();
+
 // P11 single source shim
 (function(){
   if(window.__mxmedPatientSourceShimApplied) return;
