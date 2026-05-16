@@ -3334,6 +3334,16 @@ console.info('app.js loaded :: 20251123a');
                   ${isSelectedDayToday ? '<span class="material-symbols-rounded mx-ag-current-day-arrow" aria-hidden="true">arrow_forward_ios</span>' : ''}
                   ${escapeHtml(resolveCustomDayViewHeaderLabel(selectedDate))}
                 </button>
+                <div class="mx-ag-day-inline-nav" role="group" aria-label="Navegación diaria">
+                  <button type="button"
+                    class="mx-ag-custom-week-nav-btn mx-ag-nav-arrow mx-ag-nav-arrow--prev"
+                    data-day-nav="prev"
+                    aria-label="Día anterior"><span class="material-symbols-rounded mxm-agenda-day-nav-icon mxm-agenda-day-nav-icon--prev" aria-hidden="true">arrow_forward_ios</span></button>
+                  <button type="button"
+                    class="mx-ag-custom-week-nav-btn mx-ag-nav-arrow mx-ag-nav-arrow--next"
+                    data-day-nav="next"
+                    aria-label="Día siguiente"><span class="material-symbols-rounded mxm-agenda-day-nav-icon mxm-agenda-day-nav-icon--next" aria-hidden="true">arrow_forward_ios</span></button>
+                </div>
               </div>
               <div class="mx-ag-day-main-subtitle">${escapeHtml(resolveCustomDayViewScopeLabel())}</div>
             </div>
@@ -10761,7 +10771,7 @@ console.info('app.js loaded :: 20251123a');
       .find((opt)=> sanitizeText(opt.value || '') === safeId);
     if(fromSelect && sanitizeText(fromSelect.textContent || '')){
       const optionLabel = sanitizeText(fromSelect.textContent || '');
-      if(agendaConsultoriosReady === true || !isGenericConsultorioLabel(optionLabel)){
+      if(!isGenericConsultorioLabel(optionLabel)){
         return optionLabel;
       }
     }
@@ -11330,7 +11340,9 @@ console.info('app.js loaded :: 20251123a');
       if(safeId){
         const fallbackLabel = sanitizeText(resolveAgendaConsultorioLabelById(safeId) || '');
         if(fallbackLabel){
-          normalized = fallbackLabel.replace(/^\s*consultorio\s*[:\-]?\s*/i, '').trim();
+          normalized = isGenericConsultorioLabel(fallbackLabel)
+            ? fallbackLabel
+            : fallbackLabel.replace(/^\s*consultorio\s*[:\-]?\s*/i, '').trim();
         }
       }
       if(!normalized){
@@ -17649,6 +17661,22 @@ console.info('app.js loaded :: 20251123a');
       nowCard.click();
     });
     ensureCustomDayRoot()?.addEventListener('click', (event)=>{
+      const dayNavBtn = event.target.closest('[data-day-nav]');
+      if(dayNavBtn){
+        event.preventDefault();
+        event.stopPropagation();
+        const action = sanitizeText(dayNavBtn.getAttribute('data-day-nav') || '');
+        const currentDate = toLocalDayDate(calendar?.getDate?.() || resolveAgendaViewAnchorDate() || new Date());
+        if(!(currentDate instanceof Date) || Number.isNaN(currentDate.getTime())) return;
+        const nextDate = addLocalDays(currentDate, action === 'prev' ? -1 : 1);
+        if(!(nextDate instanceof Date) || Number.isNaN(nextDate.getTime())) return;
+        customDayMiniMonthCursor = startOfMonth(nextDate);
+        setCustomWeekAnchorDate(nextDate);
+        if(calendar){
+          try{ calendar.changeView('timeGridDay', nextDate); }catch(_){}
+        }
+        return;
+      }
       const miniMonthNav = event.target.closest('[data-day-mini-nav]');
       if(miniMonthNav){
         event.preventDefault();

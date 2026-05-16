@@ -8183,6 +8183,20 @@ body{margin:0;background:var(--mm-fondo-base);}
   display: grid;
   gap: 12px;
 }
+#ag_block_slot_modal .mx-ag-block-base-label{
+  font-size: .73rem;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  font-weight: 700;
+  color: #4f6a7c;
+  margin-bottom: .16rem;
+}
+#ag_block_slot_modal .mx-ag-block-base-value{
+  font-size: 1.56rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #123551;
+}
 #ag_block_slot_modal .mx-ag-block-type-card{
   border: 1px solid #d4deea;
   border-radius: 14px;
@@ -8315,6 +8329,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-size: .69rem;
 }
 @media (max-width: 640px){
+  #ag_block_slot_modal .mx-ag-block-base-value{
+    font-size: 1.26rem;
+  }
   #ag_block_slot_modal #ag_block_end_select{
     width: 100%;
     max-width: none;
@@ -9017,12 +9034,22 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-bottom: 1px solid #e7eff5;
 }
 .mx-ag-day-main-title-wrap{
+  flex: 1 1 auto;
   min-width: 0;
 }
 .mx-ag-day-main-head-actions{
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
+  width: 100%;
+}
+.mx-ag-day-inline-nav{
+  display: inline-flex;
+  align-items: center;
+  gap: 80px;
+  margin-left: auto;
+  margin-right: 50px;
 }
 .mx-ag-day-today-btn{
   border: 0;
