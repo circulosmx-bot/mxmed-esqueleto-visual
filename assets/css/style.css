@@ -7115,7 +7115,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mx-ag-ops-permissions{
   display:grid;
   gap:8px;
-  grid-template-columns:repeat(2, minmax(0, 1fr));
+  grid-template-columns:1fr;
   min-width:0;
 }
 .mx-ag-ops-permission-chip{
@@ -7722,7 +7722,7 @@ body.mx-ag-ops-empty .mx-ag-ops-side-panel{
     grid-template-columns:repeat(2, minmax(120px, 1fr));
   }
   .mx-ag-ops-permissions{
-    grid-template-columns:repeat(2, minmax(120px, 1fr));
+    grid-template-columns:1fr;
   }
   .mx-ag-ops-card-top{
     grid-template-columns:50px minmax(0, 1fr);
