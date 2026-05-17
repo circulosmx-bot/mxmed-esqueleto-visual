@@ -19034,8 +19034,8 @@ console.info('app.js loaded :: 20251123a');
   const PERMISSION_META = {
     agenda: { label: 'Agenda', detail: 'Citas y bloqueos de horario' },
     patients: { label: 'Pacientes', detail: 'Datos generales' },
-    billing: { label: 'Facturar', detail: 'Honorarios médicos a pacientes' },
-    payment_proof: { label: 'Comprobante de pago', detail: 'Acreditar anualidad' }
+    billing: { label: 'Facturación', detail: 'De Honorarios Médicos a Pacientes' },
+    payment_proof: { label: 'Comprobante de Pago', detail: 'Acreditar pago de anualidad Perfil Médico' }
   };
 
   const MODEL = {
@@ -19090,6 +19090,7 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const els = {
+    layout: panel.querySelector('#ag_ops_layout'),
     list: panel.querySelector('#ag_ops_list'),
     emptyState: panel.querySelector('#ag_ops_empty_state'),
     emptyCta: panel.querySelector('#ag_ops_empty_cta'),
@@ -19127,6 +19128,10 @@ console.info('app.js loaded :: 20251123a');
     },
     accordion: panel.querySelector('#ag_ops_modal_accordion'),
     archiveVerifyModalEl: panel.querySelector('#ag_ops_archive_verify_modal'),
+    archiveVerifyTitle: panel.querySelector('#ag_ops_archive_verify_title'),
+    archiveVerifyCopy: panel.querySelector('#ag_ops_archive_verify_copy'),
+    archiveVerifyChannel: panel.querySelector('#ag_ops_archive_verify_channel'),
+    archiveVerifyHint: panel.querySelector('#ag_ops_archive_verify_hint'),
     archiveVerifyInputs: Array.from(panel.querySelectorAll('[data-op-archive-otp-input]')),
     archiveVerifyConfirmBtn: panel.querySelector('#ag_ops_archive_verify_confirm_btn'),
     archiveVerifyError: panel.querySelector('#ag_ops_archive_verify_error'),
@@ -19144,11 +19149,19 @@ console.info('app.js loaded :: 20251123a');
   const nowIso = ()=> new Date().toISOString();
   const archiveVerifyState = {
     pendingOperatorId: '',
+    pendingAction: '',
     modalInstance: null
   };
   const historyState = {
     activeOperatorId: '',
     modalInstance: null
+  };
+  const uiState = {
+    activeEditingOperatorId: '',
+    inlineAccordionKey: 'general',
+    expandedOperatorId: '',
+    addBandExpanded: false,
+    addBandTouched: false
   };
   const toTimestamp = (value)=>{
     const raw = clean(value);
@@ -19156,6 +19169,61 @@ console.info('app.js loaded :: 20251123a');
     const date = new Date(raw);
     const stamp = date.getTime();
     return Number.isFinite(stamp) ? stamp : 0;
+  };
+
+  const setupBandsLayout = ()=>{
+    if(panel.dataset.opsBandsReady === '1') return;
+    const layout = els.layout;
+    const mainPanel = layout?.querySelector('.mx-ag-ops-main-panel');
+    const mainHead = mainPanel?.querySelector('.mx-ag-ops-main-head');
+    const sidePanel = els.sidePanel;
+    if(!layout || !mainPanel || !mainHead || !sidePanel || !els.list) return;
+
+    layout.classList.add('mx-ag-ops-layout--bands');
+
+    const summarySection = mainPanel.querySelector('.mx-ag-ops-summary-secondary');
+    const summaryGrid = summarySection?.querySelector('.mx-ag-ops-summary-grid');
+    const limitNotice = summarySection?.querySelector('#ag_ops_limit_notice');
+    if(summaryGrid){
+      const headStats = document.createElement('div');
+      headStats.className = 'mx-ag-ops-head-kpis';
+      headStats.appendChild(summaryGrid);
+      if(limitNotice){
+        headStats.appendChild(limitNotice);
+      }
+      mainHead.appendChild(headStats);
+      summarySection?.classList.add('d-none');
+    }
+
+    const addBand = document.createElement('section');
+    addBand.className = 'mx-ag-ops-add-band';
+    addBand.id = 'ag_ops_add_band';
+    addBand.innerHTML = `
+      <button type="button" class="mx-ag-ops-add-band-toggle" id="ag_ops_add_toggle" aria-expanded="false" aria-controls="ag_ops_add_panel">
+        <span class="mx-ag-ops-add-band-icon material-symbols-rounded" aria-hidden="true">person_add</span>
+        <span class="mx-ag-ops-add-band-copy">
+          <strong>Agregar operador</strong>
+          <small>Crea un nuevo operador y define sus permisos de acceso.</small>
+        </span>
+        <span class="material-symbols-rounded mx-ag-ops-add-band-chevron" aria-hidden="true">expand_more</span>
+      </button>
+      <div class="mx-ag-ops-add-band-panel d-none" id="ag_ops_add_panel" role="region" aria-live="polite"></div>
+    `;
+    const addPanel = addBand.querySelector('#ag_ops_add_panel');
+    if(addPanel){
+      sidePanel.classList.add('mx-ag-ops-add-form-shell');
+      sidePanel.classList.remove('mx-ag-ops-side-panel');
+      addPanel.appendChild(sidePanel);
+    }
+    mainPanel.insertBefore(addBand, els.list);
+    panel.dataset.opsBandsReady = '1';
+  };
+
+  const refreshDynamicEls = ()=>{
+    els.addBand = panel.querySelector('#ag_ops_add_band');
+    els.addBandToggle = panel.querySelector('#ag_ops_add_toggle');
+    els.addBandPanel = panel.querySelector('#ag_ops_add_panel');
+    els.mainHeadKpis = panel.querySelector('.mx-ag-ops-head-kpis');
   };
 
   const formatDateTimeLabel = (value)=>{
@@ -19186,6 +19254,21 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const statusMeta = (status)=> STATUS_META[clean(status).toLowerCase()] || STATUS_META.pending;
+  const statusRankForDisplay = (status)=>{
+    const safeStatus = clean(status).toLowerCase();
+    if(safeStatus === 'active') return 0;
+    return 1;
+  };
+  const sortOperatorsForDisplay = (operators = [])=>{
+    return ensureArray(operators)
+      .map((operator, index)=> ({ operator, index }))
+      .sort((a, b)=>{
+        const rankDiff = statusRankForDisplay(a.operator?.status) - statusRankForDisplay(b.operator?.status);
+        if(rankDiff !== 0) return rankDiff;
+        return a.index - b.index;
+      })
+      .map((item)=> item.operator);
+  };
   const permissionMeta = (permission)=> PERMISSION_META[clean(permission).toLowerCase()] || null;
   const permissionLabel = (permission)=> clean(permissionMeta(permission)?.label || 'Permiso');
   const resolveOperatorLabel = (operator, index)=>{
@@ -19397,6 +19480,33 @@ console.info('app.js loaded :: 20251123a');
 
   const getArchivedOperators = ()=> ensureArray(MODEL.archived_operators);
 
+  const ARCHIVE_VERIFY_ACTION_META = {
+    archive: {
+      title: 'Confirmar eliminación de operador',
+      copy: 'Este operador dejará de tener acceso al sistema y será movido a Operadores archivados.',
+      channel: 'Ingresa el código de 6 dígitos enviado por SMS o correo electrónico.',
+      hint: 'Ingresa un código numérico de 6 dígitos.',
+      confirmLabel: 'Confirmar eliminación',
+      confirmClass: 'btn-danger'
+    },
+    pause: {
+      title: 'Confirmar pausa de acceso',
+      copy: 'Este operador dejará de tener acceso temporal al sistema hasta que reactives su cuenta.',
+      channel: 'Ingresa el código de 6 dígitos enviado por SMS o correo electrónico.',
+      hint: 'Ingresa un código numérico de 6 dígitos.',
+      confirmLabel: 'Confirmar pausa',
+      confirmClass: 'btn-warning'
+    },
+    reactivate: {
+      title: 'Confirmar reactivación de acceso',
+      copy: 'Este operador recuperará acceso al sistema con sus permisos actuales.',
+      channel: 'Ingresa el código de 6 dígitos enviado por SMS o correo electrónico.',
+      hint: 'Ingresa un código numérico de 6 dígitos.',
+      confirmLabel: 'Confirmar reactivación',
+      confirmClass: 'btn-primary'
+    }
+  };
+
   const getArchiveVerifyCode = ()=> els.archiveVerifyInputs.map((input)=> clean(input?.value).slice(0, 1)).join('');
   const isArchiveVerifyCodeValid = ()=> /^\d{6}$/.test(getArchiveVerifyCode());
 
@@ -19422,6 +19532,7 @@ console.info('app.js loaded :: 20251123a');
 
   const clearArchiveVerifyForm = ()=>{
     archiveVerifyState.pendingOperatorId = '';
+    archiveVerifyState.pendingAction = '';
     els.archiveVerifyInputs.forEach((input)=>{
       input.value = '';
       input.classList.remove('filled');
@@ -19430,6 +19541,30 @@ console.info('app.js loaded :: 20251123a');
       els.archiveVerifyConfirmBtn.disabled = true;
     }
     setArchiveVerifyError('');
+  };
+
+  const setArchiveVerifyMode = (action = 'archive')=>{
+    const safeAction = clean(action).toLowerCase();
+    const meta = ARCHIVE_VERIFY_ACTION_META[safeAction] || ARCHIVE_VERIFY_ACTION_META.archive;
+    archiveVerifyState.pendingAction = safeAction in ARCHIVE_VERIFY_ACTION_META ? safeAction : 'archive';
+
+    if(els.archiveVerifyTitle){
+      els.archiveVerifyTitle.textContent = meta.title;
+    }
+    if(els.archiveVerifyCopy){
+      els.archiveVerifyCopy.textContent = meta.copy;
+    }
+    if(els.archiveVerifyChannel){
+      els.archiveVerifyChannel.textContent = meta.channel;
+    }
+    if(els.archiveVerifyHint){
+      els.archiveVerifyHint.textContent = meta.hint;
+    }
+    if(els.archiveVerifyConfirmBtn){
+      els.archiveVerifyConfirmBtn.textContent = meta.confirmLabel;
+      els.archiveVerifyConfirmBtn.classList.remove('btn-danger', 'btn-warning', 'btn-primary', 'btn-success');
+      els.archiveVerifyConfirmBtn.classList.add(meta.confirmClass);
+    }
   };
 
   const getArchiveVerifyModal = ()=>{
@@ -19564,12 +19699,264 @@ console.info('app.js loaded :: 20251123a');
     setLimitNotice(activeCount, operators.length);
   };
 
-  const renderOperators = ()=>{
+  const normalizeInlineAccordionKey = (key)=>{
+    const safeKey = clean(key).toLowerCase();
+    if(safeKey === 'access' || safeKey === 'permissions' || safeKey === 'general'){
+      return safeKey;
+    }
+    return 'general';
+  };
+
+  const syncInlineEditLayoutState = ()=>{
+    const isInlineEditing = !!clean(uiState.activeEditingOperatorId);
+    els.layout?.classList.toggle('is-inline-editing', isInlineEditing);
+  };
+
+  const getInlineEditorByOperatorId = (operatorId)=>{
+    const safeId = clean(operatorId);
+    if(!safeId || !els.list) return null;
+    return els.list.querySelector(`[data-op-inline-editor][data-op-id="${safeId}"]`);
+  };
+
+  const setInlineAccordionActive = (editorRoot, sectionKey = 'general')=>{
+    if(!editorRoot) return;
+    const safeKey = normalizeInlineAccordionKey(sectionKey);
+    editorRoot.querySelectorAll('[data-op-inline-accordion-item]').forEach((item)=>{
+      const key = clean(item.getAttribute('data-op-inline-accordion-item'));
+      const isActive = key === safeKey;
+      item.classList.toggle('is-active', isActive);
+      const body = item.querySelector('.mx-ag-ops-accordion-body');
+      body?.classList.toggle('d-none', !isActive);
+      const toggle = item.querySelector('[data-op-inline-accordion-toggle]');
+      if(toggle){
+        toggle.classList.toggle('is-active', isActive);
+        toggle.setAttribute('aria-expanded', isActive ? 'true' : 'false');
+      }
+    });
+    uiState.inlineAccordionKey = safeKey;
+  };
+
+  const setInlineEditError = (operatorId, message = '')=>{
+    const editorRoot = getInlineEditorByOperatorId(operatorId);
+    if(!editorRoot) return;
+    const errorEl = editorRoot.querySelector('[data-op-inline-error]');
+    if(!errorEl) return;
+    const safeMessage = clean(message);
+    errorEl.textContent = safeMessage;
+    errorEl.classList.toggle('d-none', !safeMessage);
+  };
+
+  const setInlineEditingOperator = (operatorId = '')=>{
+    const safeId = clean(operatorId);
+    uiState.activeEditingOperatorId = safeId;
+    uiState.inlineAccordionKey = 'general';
+    if(safeId){
+      uiState.expandedOperatorId = safeId;
+    }
+    syncInlineEditLayoutState();
+  };
+
+  const setAddBandExpanded = (expanded, options = {})=>{
+    const isExpanded = !!expanded;
+    const remember = options.remember !== false;
+    if(remember){
+      uiState.addBandTouched = true;
+    }
+    uiState.addBandExpanded = isExpanded;
+    els.addBand?.classList.toggle('is-open', isExpanded);
+    els.addBandToggle?.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+    els.addBandPanel?.classList.toggle('d-none', !isExpanded);
+    if(isExpanded && options.focus){
+      els.addBandPanel?.scrollIntoView?.({ behavior: options.behavior || 'smooth', block: 'nearest' });
+      window.setTimeout(()=>{
+        try{ els.fullName?.focus(); }catch(_){}
+      }, 80);
+    }
+  };
+
+  const syncExpandedOperatorState = ()=>{
     const operators = ensureArray(MODEL.operators);
+    const editingId = clean(uiState.activeEditingOperatorId);
+    if(!operators.length){
+      uiState.expandedOperatorId = '';
+      return;
+    }
+    if(editingId){
+      uiState.expandedOperatorId = editingId;
+      return;
+    }
+    const currentExpanded = clean(uiState.expandedOperatorId);
+    const exists = operators.some((item)=> clean(item?.operator_id) === currentExpanded);
+    if(!exists){
+      uiState.expandedOperatorId = '';
+    }
+  };
+
+  const scrollInlineEditorIntoView = (operatorId)=>{
+    const safeId = clean(operatorId);
+    if(!safeId) return;
+    const card = els.list?.querySelector(`.mx-ag-ops-operator-band[data-op-id="${safeId}"]`);
+    if(!card) return;
+    try{
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }catch(_){}
+  };
+
+  const buildInlineEditorMarkup = (operator)=>{
+    const safeId = clean(operator?.operator_id);
+    const name = clean(operator?.full_name);
+    const alias = clean(operator?.alias);
+    const phone = clean(operator?.phone);
+    const email = clean(operator?.email);
+    const gender = clean(operator?.gender);
+    const role = clean(operator?.role || 'operator').toLowerCase();
+    const login = clean(operator?.login);
+    const forceChange = !!operator?.force_password_change;
+    const permissionSet = new Set(normalizePermissions(operator?.permissions));
+    const activeKey = normalizeInlineAccordionKey(uiState.inlineAccordionKey);
+    const itemClass = (key)=> activeKey === key ? ' is-active' : '';
+    const bodyClass = (key)=> activeKey === key ? '' : ' d-none';
+    const checkedAttr = (flag)=> flag ? ' checked' : '';
+    return `
+      <section class="mx-ag-ops-inline-editor" data-op-inline-editor data-op-id="${escapeHtml(safeId)}">
+        <div class="mx-ag-ops-inline-head">
+          <span class="mx-ag-ops-inline-kicker">Editando operador</span>
+          <p class="mx-ag-ops-inline-copy">Actualiza datos, acceso y permisos desde esta ficha.</p>
+        </div>
+        <div class="mx-ag-ops-modal-error d-none" data-op-inline-error role="alert"></div>
+        <div class="mx-ag-ops-accordion mx-ag-ops-accordion--inline" data-op-inline-accordion>
+          <article class="mx-ag-ops-accordion-item${itemClass('general')}" data-op-inline-accordion-item="general">
+            <button type="button" class="mx-ag-ops-accordion-toggle" data-op-inline-accordion-toggle="general" aria-expanded="${activeKey === 'general' ? 'true' : 'false'}">
+              <span class="mx-ag-ops-accordion-index">1</span>
+              <span class="mx-ag-ops-accordion-copy">
+                <strong>Datos generales</strong>
+                <small>Información básica del operador.</small>
+              </span>
+              <span class="material-symbols-rounded mx-ag-ops-accordion-chevron" aria-hidden="true">expand_more</span>
+            </button>
+            <div class="mx-ag-ops-accordion-body${bodyClass('general')}">
+              <div class="row g-3">
+                <div class="col-md-7">
+                  <label class="form-label">Nombre completo</label>
+                  <input type="text" class="form-control" data-op-inline-field="full_name" value="${escapeHtml(name)}" placeholder="Nombre y apellidos">
+                </div>
+                <div class="col-md-5">
+                  <label class="form-label">Género</label>
+                  <select class="form-select" data-op-inline-field="gender">
+                    <option value=""${gender === '' ? ' selected' : ''}>Selecciona</option>
+                    <option value="femenino"${gender === 'femenino' ? ' selected' : ''}>Femenino</option>
+                    <option value="masculino"${gender === 'masculino' ? ' selected' : ''}>Masculino</option>
+                    <option value="otro"${gender === 'otro' ? ' selected' : ''}>Otro</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Teléfono móvil</label>
+                  <input type="tel" class="form-control" data-op-inline-field="phone" value="${escapeHtml(phone)}" placeholder="999 123 4567">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Correo electrónico</label>
+                  <input type="email" class="form-control" data-op-inline-field="email" value="${escapeHtml(email)}" placeholder="operador@correo.com">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Alias (visible en sistema)</label>
+                  <input type="text" class="form-control" data-op-inline-field="alias" value="${escapeHtml(alias)}" placeholder="Operador 01">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Rol</label>
+                  <select class="form-select" data-op-inline-field="role">
+                    <option value="operator"${role !== 'assistant' ? ' selected' : ''}>Operador</option>
+                    <option value="assistant"${role === 'assistant' ? ' selected' : ''}>Asistente</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </article>
+          <article class="mx-ag-ops-accordion-item${itemClass('access')}" data-op-inline-accordion-item="access">
+            <button type="button" class="mx-ag-ops-accordion-toggle" data-op-inline-accordion-toggle="access" aria-expanded="${activeKey === 'access' ? 'true' : 'false'}">
+              <span class="mx-ag-ops-accordion-index">2</span>
+              <span class="mx-ag-ops-accordion-copy">
+                <strong>Acceso al sistema</strong>
+                <small>Usuario y contraseña para acceso.</small>
+              </span>
+              <span class="material-symbols-rounded mx-ag-ops-accordion-chevron" aria-hidden="true">expand_more</span>
+            </button>
+            <div class="mx-ag-ops-accordion-body${bodyClass('access')}">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Usuario login</label>
+                  <input type="text" class="form-control" data-op-inline-field="login" value="${escapeHtml(login)}" placeholder="usuario.operador">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Contraseña temporal</label>
+                  <input type="text" class="form-control" data-op-inline-field="temp_password" placeholder="Temporal segura">
+                </div>
+                <div class="col-12">
+                  <label class="form-check mx-ag-ops-check">
+                    <input class="form-check-input" type="checkbox" data-op-inline-field="force_change"${checkedAttr(forceChange)}>
+                    <span class="form-check-label">Solicitar cambio de contraseña al primer acceso</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </article>
+          <article class="mx-ag-ops-accordion-item${itemClass('permissions')}" data-op-inline-accordion-item="permissions">
+            <button type="button" class="mx-ag-ops-accordion-toggle" data-op-inline-accordion-toggle="permissions" aria-expanded="${activeKey === 'permissions' ? 'true' : 'false'}">
+              <span class="mx-ag-ops-accordion-index">3</span>
+              <span class="mx-ag-ops-accordion-copy">
+                <strong>Permisos</strong>
+                <small>Selecciona los módulos a los que tendrá acceso.</small>
+              </span>
+              <span class="material-symbols-rounded mx-ag-ops-accordion-chevron" aria-hidden="true">expand_more</span>
+            </button>
+            <div class="mx-ag-ops-accordion-body${bodyClass('permissions')}">
+              <div class="mx-ag-ops-permissions-grid">
+                <label class="mx-ag-ops-permission-card">
+                  <span class="mx-ag-ops-permission-copy">
+                    <strong>Agenda</strong>
+                    <small>Citas y bloqueos de horario</small>
+                  </span>
+                  <input type="checkbox" data-op-inline-permission="agenda"${checkedAttr(permissionSet.has('agenda'))}>
+                </label>
+                <label class="mx-ag-ops-permission-card">
+                  <span class="mx-ag-ops-permission-copy">
+                    <strong>Pacientes</strong>
+                    <small>Datos generales</small>
+                  </span>
+                  <input type="checkbox" data-op-inline-permission="patients"${checkedAttr(permissionSet.has('patients'))}>
+                </label>
+                <label class="mx-ag-ops-permission-card">
+                  <span class="mx-ag-ops-permission-copy">
+                    <strong>Facturación</strong>
+                    <small>De Honorarios Médicos a Pacientes</small>
+                  </span>
+                  <input type="checkbox" data-op-inline-permission="billing"${checkedAttr(permissionSet.has('billing'))}>
+                </label>
+                <label class="mx-ag-ops-permission-card">
+                  <span class="mx-ag-ops-permission-copy">
+                    <strong>Comprobante de Pago</strong>
+                    <small>Acreditar pago de anualidad Perfil Médico</small>
+                  </span>
+                  <input type="checkbox" data-op-inline-permission="payment_proof"${checkedAttr(permissionSet.has('payment_proof'))}>
+                </label>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div class="mx-ag-ops-inline-footer">
+          <button type="button" class="btn btn-outline-secondary" data-op-inline-action="cancel" data-op-id="${escapeHtml(safeId)}">Cancelar cambios</button>
+          <button type="button" class="btn btn-primary" data-op-inline-action="save" data-op-id="${escapeHtml(safeId)}">Guardar cambios</button>
+        </div>
+      </section>
+    `;
+  };
+
+  const renderOperators = ()=>{
+    const operators = sortOperatorsForDisplay(MODEL.operators);
     if(!operators.length){
       els.list.innerHTML = '';
       return;
     }
+    syncExpandedOperatorState();
 
     els.list.innerHTML = operators.map((operator, index)=>{
       const safeId = clean(operator?.operator_id);
@@ -19599,47 +19986,93 @@ console.info('app.js loaded :: 20251123a');
       const name = clean(operator?.full_name) || 'Sin nombre';
       const operatorLabel = resolveOperatorLabel(operator, index);
       const visibleAlias = resolveVisibleAlias(operator, operatorLabel);
-      const titlePrimary = visibleAlias || operatorLabel;
-      const operatorLabelHtml = visibleAlias
-        ? `<span class="mx-ag-ops-title-name">${escapeHtml(operatorLabel)}</span>`
-        : '';
+      const aliasLabel = visibleAlias || operatorLabel;
       const phone = clean(operator?.phone) || 'Sin teléfono';
       const email = clean(operator?.email) || 'Sin correo';
+      const roleLabel = clean(operator?.role).toLowerCase() === 'assistant' ? 'Asistente' : 'Operador';
       const lastAccess = formatDateTimeLabel(operator?.last_access);
+      const isInlineEditing = clean(uiState.activeEditingOperatorId) === safeId;
+      const isExpanded = clean(uiState.expandedOperatorId) === safeId;
+      const inlineEditorHtml = isInlineEditing ? buildInlineEditorMarkup(operator) : '';
+      const footHtml = `
+        <div class="mx-ag-ops-card-foot">
+          <button type="button" class="btn btn-outline-info mx-ag-ops-history-trigger" data-op-action="history" data-op-id="${escapeHtml(safeId)}">
+            <i class="bi bi-clock-history" aria-hidden="true"></i>
+            Historial de acciones
+          </button>
+          <div class="mx-ag-ops-actions">
+            <button type="button" class="btn btn-outline-primary" data-op-action="edit" data-op-id="${escapeHtml(safeId)}">Editar</button>
+            <button type="button" class="btn btn-outline-secondary" data-op-action="${escapeHtml(toggleAction)}" data-op-id="${escapeHtml(safeId)}">${escapeHtml(toggleLabel)}</button>
+            <button type="button" class="btn btn-outline-dark" data-op-action="reset-password" data-op-id="${escapeHtml(safeId)}">Restablecer contraseña</button>
+            <button type="button" class="btn btn-outline-danger" data-op-action="archive" data-op-id="${escapeHtml(safeId)}">Eliminar operador</button>
+          </div>
+        </div>
+      `;
+      const detailsHtml = isInlineEditing
+        ? inlineEditorHtml
+        : `
+          <div class="mx-ag-ops-band-detail-grid">
+            <section class="mx-ag-ops-band-block">
+              <header>
+                <h6>Datos generales</h6>
+                <button type="button" class="btn btn-outline-primary btn-sm" data-op-action="edit" data-op-id="${escapeHtml(safeId)}">Editar</button>
+              </header>
+              <dl>
+                <div><dt>Nombre completo</dt><dd>${escapeHtml(name)}</dd></div>
+                <div><dt>Alias (visible)</dt><dd>${escapeHtml(aliasLabel)}</dd></div>
+                <div><dt>Teléfono móvil</dt><dd>${escapeHtml(phone)}</dd></div>
+                <div><dt>Correo electrónico</dt><dd>${escapeHtml(email)}</dd></div>
+                <div><dt>Género</dt><dd>${escapeHtml(clean(operator?.gender) || 'No especificado')}</dd></div>
+                <div><dt>Rol</dt><dd>${escapeHtml(roleLabel)}</dd></div>
+              </dl>
+            </section>
+            <section class="mx-ag-ops-band-block">
+              <header>
+                <h6>Acceso al sistema</h6>
+                <button type="button" class="btn btn-outline-primary btn-sm" data-op-action="edit" data-op-id="${escapeHtml(safeId)}">Editar</button>
+              </header>
+              <dl>
+                <div><dt>Usuario de acceso</dt><dd>${escapeHtml(clean(operator?.login) || 'Sin usuario definido')}</dd></div>
+                <div><dt>Estado de acceso</dt><dd><span class="mx-ag-ops-status-pill ${escapeHtml(meta.className)}">${escapeHtml(statusLabel)}</span></dd></div>
+                <div><dt>Último acceso</dt><dd>${escapeHtml(lastAccess)}</dd></div>
+              </dl>
+              <button type="button" class="btn btn-outline-dark btn-sm" data-op-action="reset-password" data-op-id="${escapeHtml(safeId)}">Restablecer contraseña</button>
+            </section>
+            <section class="mx-ag-ops-band-block">
+              <header>
+                <h6>Permisos otorgados</h6>
+                <button type="button" class="btn btn-outline-primary btn-sm" data-op-action="edit" data-op-id="${escapeHtml(safeId)}">Editar</button>
+              </header>
+              <div class="mx-ag-ops-permissions">${permissionsHtml}</div>
+            </section>
+          </div>
+        `;
+
       return `
-        <article class="mx-ag-ops-operator-card" role="listitem" data-op-id="${escapeHtml(safeId)}">
-          <div class="mx-ag-ops-card-top">
-            <div class="mx-ag-ops-avatar" aria-hidden="true">${escapeHtml(initialsFrom(operator))}</div>
-            <div class="mx-ag-ops-main">
-              <div class="mx-ag-ops-title-row">
+        <article class="mx-ag-ops-operator-band${isExpanded ? ' is-open' : ''}${isInlineEditing ? ' is-inline-editing' : ''}" role="listitem" data-op-id="${escapeHtml(safeId)}">
+          <button type="button" class="mx-ag-ops-band-head" data-op-band-toggle data-op-id="${escapeHtml(safeId)}" aria-expanded="${isExpanded ? 'true' : 'false'}">
+            <span class="mx-ag-ops-avatar" aria-hidden="true">${escapeHtml(initialsFrom(operator))}</span>
+            <span class="mx-ag-ops-band-summary">
+              <span class="mx-ag-ops-band-title">
                 <span class="mx-ag-ops-status-pill ${escapeHtml(meta.className)}">${escapeHtml(statusLabel)}</span>
-                <h6 class="mx-ag-ops-alias">${escapeHtml(titlePrimary)}</h6>
-                ${operatorLabelHtml}
-              </div>
-              <p class="mx-ag-ops-name">
+                <strong>${escapeHtml(aliasLabel)}</strong>
+                <small>${escapeHtml(operatorLabel)}</small>
+              </span>
+              <span class="mx-ag-ops-band-contact">
                 <span>${escapeHtml(name)}</span>
                 <span class="mx-ag-ops-name-inline-phone"><i class="bi bi-telephone-fill" aria-hidden="true"></i><span>${escapeHtml(phone)}</span></span>
                 <span class="mx-ag-ops-name-inline-phone"><i class="bi bi-envelope-fill" aria-hidden="true"></i><span>${escapeHtml(email)}</span></span>
-              </p>
-            </div>
-            <aside class="mx-ag-ops-last-access">
+              </span>
+            </span>
+            <span class="mx-ag-ops-last-access">
               <span class="mx-ag-ops-last-access-label">Último acceso</span>
               <strong class="mx-ag-ops-last-access-value">${escapeHtml(lastAccess)}</strong>
-            </aside>
-          </div>
-          <p class="mx-ag-ops-perm-title"><i class="bi bi-shield-check" aria-hidden="true"></i><span>Permisos otorgados</span></p>
-          <div class="mx-ag-ops-permissions">${permissionsHtml}</div>
-          <div class="mx-ag-ops-card-foot">
-            <button type="button" class="btn btn-outline-info mx-ag-ops-history-trigger" data-op-action="history" data-op-id="${escapeHtml(safeId)}">
-              <i class="bi bi-clock-history" aria-hidden="true"></i>
-              Historial de acciones
-            </button>
-            <div class="mx-ag-ops-actions">
-              <button type="button" class="btn btn-outline-primary" data-op-action="edit" data-op-id="${escapeHtml(safeId)}">Editar</button>
-              <button type="button" class="btn btn-outline-secondary" data-op-action="${escapeHtml(toggleAction)}" data-op-id="${escapeHtml(safeId)}">${escapeHtml(toggleLabel)}</button>
-              <button type="button" class="btn btn-outline-dark" data-op-action="reset-password" data-op-id="${escapeHtml(safeId)}">Restablecer contraseña</button>
-              <button type="button" class="btn btn-outline-danger" data-op-action="archive" data-op-id="${escapeHtml(safeId)}">Eliminar operador</button>
-            </div>
+            </span>
+            <span class="material-symbols-rounded mx-ag-ops-band-chevron" aria-hidden="true">expand_more</span>
+          </button>
+          <div class="mx-ag-ops-band-panel${isExpanded ? '' : ' d-none'}" data-op-band-panel>
+            ${detailsHtml}
+            ${footHtml}
           </div>
         </article>
       `;
@@ -19697,12 +20130,34 @@ console.info('app.js loaded :: 20251123a');
     els.archivedSection?.classList.toggle('is-open', isExpanded);
   };
 
+  const placeAddBand = ()=>{
+    if(!els.addBand || !els.list) return;
+    const operators = ensureArray(MODEL.operators);
+    const container = els.list.parentElement;
+    if(!container) return;
+
+    if(operators.length){
+      if(els.archivedSection && els.archivedSection.parentElement === container){
+        container.insertBefore(els.addBand, els.archivedSection);
+      }else{
+        container.appendChild(els.addBand);
+      }
+      return;
+    }
+
+    container.insertBefore(els.addBand, els.list);
+  };
+
   const renderAll = ()=>{
     const operators = ensureArray(MODEL.operators);
     renderSummary();
     renderOperators();
     renderArchivedOperators();
+    placeAddBand();
     setEmptyState(!operators.length);
+    const shouldOpenAddBand = uiState.addBandTouched ? uiState.addBandExpanded : false;
+    setAddBandExpanded(shouldOpenAddBand, { remember: false });
+    syncInlineEditLayoutState();
   };
 
   const setModalError = (message = '')=>{
@@ -19829,6 +20284,12 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const focusSidePanel = ()=>{
+    if(els.addBandPanel){
+      try{
+        els.addBandPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }catch(_){}
+      return;
+    }
     if(els.sidePanel){
       try{
         els.sidePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -19836,11 +20297,88 @@ console.info('app.js loaded :: 20251123a');
     }
   };
 
+  const readInlinePermissions = (editorRoot)=>{
+    if(!editorRoot) return [];
+    const selected = Array.from(editorRoot.querySelectorAll('[data-op-inline-permission]:checked'))
+      .map((checkbox)=> clean(checkbox.getAttribute('data-op-inline-permission')).toLowerCase());
+    return normalizePermissions(selected);
+  };
+
+  const readInlineFieldValue = (editorRoot, fieldKey)=>{
+    if(!editorRoot) return '';
+    const el = editorRoot.querySelector(`[data-op-inline-field="${fieldKey}"]`);
+    if(!el) return '';
+    if(el.type === 'checkbox'){
+      return el.checked ? '1' : '';
+    }
+    return clean(el.value);
+  };
+
+  const saveInlineOperator = (operatorId)=>{
+    const safeId = clean(operatorId);
+    if(!safeId) return;
+    const editorRoot = getInlineEditorByOperatorId(safeId);
+    const editingOperator = findOperatorById(safeId);
+    if(!editorRoot || !editingOperator) return;
+
+    const fullName = readInlineFieldValue(editorRoot, 'full_name');
+    const alias = readInlineFieldValue(editorRoot, 'alias');
+    const phone = readInlineFieldValue(editorRoot, 'phone');
+    const email = readInlineFieldValue(editorRoot, 'email').toLowerCase();
+    const role = readInlineFieldValue(editorRoot, 'role').toLowerCase() || 'operator';
+    const permissions = readInlinePermissions(editorRoot);
+    const login = readInlineFieldValue(editorRoot, 'login');
+    const gender = readInlineFieldValue(editorRoot, 'gender');
+    const forceChange = !!editorRoot.querySelector('[data-op-inline-field="force_change"]')?.checked;
+
+    if(!fullName){
+      setInlineEditError(safeId, 'Ingresa el nombre completo del operador.');
+      setInlineAccordionActive(editorRoot, 'general');
+      return;
+    }
+    if(!alias){
+      setInlineEditError(safeId, 'Ingresa un alias visible para identificar al operador.');
+      setInlineAccordionActive(editorRoot, 'general');
+      return;
+    }
+    if(!email){
+      setInlineEditError(safeId, 'Ingresa un correo electrónico para acceso y recuperación.');
+      setInlineAccordionActive(editorRoot, 'general');
+      return;
+    }
+    if(!permissions.length){
+      setInlineEditError(safeId, 'Selecciona al menos un permiso operativo.');
+      setInlineAccordionActive(editorRoot, 'permissions');
+      return;
+    }
+
+    setInlineEditError(safeId, '');
+    editingOperator.full_name = fullName;
+    editingOperator.alias = alias;
+    editingOperator.phone = phone;
+    editingOperator.email = email;
+    editingOperator.gender = gender;
+    editingOperator.role = role || 'operator';
+    editingOperator.login = login;
+    editingOperator.permissions = permissions;
+    editingOperator.force_password_change = forceChange;
+    pushAudit(editingOperator, 'Actualizó perfil de operador', 'Operadores', alias);
+    setInlineEditingOperator('');
+    renderAll();
+  };
+
   const startCreateFlow = ()=>{
+    const wasInlineEditing = !!clean(uiState.activeEditingOperatorId);
+    const hadExpandedOperator = !!clean(uiState.expandedOperatorId);
+    setInlineEditingOperator('');
+    uiState.expandedOperatorId = '';
+    if(wasInlineEditing || hadExpandedOperator){
+      renderAll();
+    }
+    setAddBandExpanded(true, { focus: true });
     clearForm();
     setFormMode('create');
     setAccordionActive('general');
-    focusSidePanel();
     window.setTimeout(()=>{
       try{ els.fullName?.focus(); }catch(_){}
     }, 80);
@@ -19848,13 +20386,25 @@ console.info('app.js loaded :: 20251123a');
 
   const startEditFlow = (operator)=>{
     if(!operator) return;
-    clearForm();
-    setFormMode('edit');
-    fillFormFromOperator(operator);
+    const safeId = clean(operator.operator_id);
+    if(!safeId) return;
+    if(clean(uiState.activeEditingOperatorId) === safeId){
+      setInlineEditingOperator('');
+      renderAll();
+      return;
+    }
+    setAddBandExpanded(false, { remember: true });
+    setInlineEditingOperator(safeId);
+    setFormMode('create');
     setAccordionActive('general');
-    focusSidePanel();
+    renderAll();
+    scrollInlineEditorIntoView(safeId);
     window.setTimeout(()=>{
-      try{ els.fullName?.focus(); }catch(_){}
+      try{
+        const editorRoot = getInlineEditorByOperatorId(safeId);
+        const fullNameInput = editorRoot?.querySelector('[data-op-inline-field="full_name"]');
+        fullNameInput?.focus();
+      }catch(_){}
     }, 80);
   };
 
@@ -19955,14 +20505,18 @@ console.info('app.js loaded :: 20251123a');
     if(MODEL.archived_operators.length > 80){
       MODEL.archived_operators.length = 80;
     }
+    if(clean(uiState.activeEditingOperatorId) === safeId){
+      setInlineEditingOperator('');
+    }
     setArchivedExpanded(true);
     renderAll();
   };
 
-  const openArchiveVerification = (operatorId)=>{
+  const openArchiveVerification = (operatorId, action = 'archive')=>{
     const operator = findOperatorById(operatorId);
     if(!operator) return;
     archiveVerifyState.pendingOperatorId = clean(operator.operator_id);
+    setArchiveVerifyMode(action);
     els.archiveVerifyInputs.forEach((input)=>{
       input.value = '';
       input.classList.remove('filled');
@@ -20021,11 +20575,11 @@ console.info('app.js loaded :: 20251123a');
       return;
     }
     if(safeAction === 'pause'){
-      updateOperatorStatus(operatorId, 'paused', 'Acceso pausado');
+      openArchiveVerification(operatorId, 'pause');
       return;
     }
     if(safeAction === 'reactivate'){
-      updateOperatorStatus(operatorId, 'active', 'Acceso reactivado');
+      openArchiveVerification(operatorId, 'reactivate');
       return;
     }
     if(safeAction === 'reset-password'){
@@ -20035,7 +20589,7 @@ console.info('app.js loaded :: 20251123a');
       return;
     }
     if(safeAction === 'archive'){
-      openArchiveVerification(operatorId);
+      openArchiveVerification(operatorId, 'archive');
     }
   };
 
@@ -20065,6 +20619,26 @@ console.info('app.js loaded :: 20251123a');
       startCreateFlow();
     });
 
+    els.addBandToggle?.addEventListener('click', ()=>{
+      const expanded = els.addBandToggle?.getAttribute('aria-expanded') === 'true';
+      const willExpand = !expanded;
+      if(willExpand){
+        let needsRender = false;
+        if(clean(uiState.activeEditingOperatorId)){
+          setInlineEditingOperator('');
+          needsRender = true;
+        }
+        if(clean(uiState.expandedOperatorId)){
+          uiState.expandedOperatorId = '';
+          needsRender = true;
+        }
+        if(needsRender){
+          renderAll();
+        }
+      }
+      setAddBandExpanded(willExpand, { remember: true });
+    });
+
     els.emptyCta?.addEventListener('click', ()=>{
       startCreateFlow();
     });
@@ -20083,6 +20657,51 @@ console.info('app.js loaded :: 20251123a');
     });
 
     els.list?.addEventListener('click', (event)=>{
+      const bandToggle = event.target.closest('[data-op-band-toggle][data-op-id]');
+      if(bandToggle){
+        const operatorId = clean(bandToggle.getAttribute('data-op-id'));
+        if(!operatorId) return;
+        const isExpanded = clean(uiState.expandedOperatorId) === operatorId;
+        const isEditingThisOperator = clean(uiState.activeEditingOperatorId) === operatorId;
+        if(isExpanded){
+          if(isEditingThisOperator){
+            setInlineEditingOperator('');
+          }
+          uiState.expandedOperatorId = '';
+        }else{
+          if(clean(uiState.activeEditingOperatorId) && !isEditingThisOperator){
+            setInlineEditingOperator('');
+          }
+          if(uiState.addBandExpanded){
+            uiState.addBandExpanded = false;
+            uiState.addBandTouched = true;
+          }
+          uiState.expandedOperatorId = operatorId;
+        }
+        renderAll();
+        return;
+      }
+      const inlineActionBtn = event.target.closest('[data-op-inline-action][data-op-id]');
+      if(inlineActionBtn){
+        const action = clean(inlineActionBtn.getAttribute('data-op-inline-action'));
+        const operatorId = inlineActionBtn.getAttribute('data-op-id');
+        if(action === 'cancel'){
+          setInlineEditingOperator('');
+          renderAll();
+          return;
+        }
+        if(action === 'save'){
+          saveInlineOperator(operatorId);
+          return;
+        }
+      }
+      const inlineToggle = event.target.closest('[data-op-inline-accordion-toggle]');
+      if(inlineToggle){
+        const sectionKey = clean(inlineToggle.getAttribute('data-op-inline-accordion-toggle'));
+        const editorRoot = inlineToggle.closest('[data-op-inline-editor]');
+        setInlineAccordionActive(editorRoot, sectionKey);
+        return;
+      }
       const btn = event.target.closest('[data-op-action][data-op-id]');
       if(!btn) return;
       const action = btn.getAttribute('data-op-action');
@@ -20140,13 +20759,20 @@ console.info('app.js loaded :: 20251123a');
         return;
       }
       const pendingOperatorId = clean(archiveVerifyState.pendingOperatorId);
+      const pendingAction = clean(archiveVerifyState.pendingAction) || 'archive';
       if(!pendingOperatorId){
         hideArchiveVerifyModal();
         return;
       }
       // Simulación frontend temporal: cualquier código numérico de 6 dígitos se considera válido.
       // Futuro backend: sendOperatorArchiveCode + verifyOperatorArchiveCode.
-      commitArchiveOperator(pendingOperatorId);
+      if(pendingAction === 'pause'){
+        updateOperatorStatus(pendingOperatorId, 'paused', 'Acceso pausado');
+      }else if(pendingAction === 'reactivate'){
+        updateOperatorStatus(pendingOperatorId, 'active', 'Acceso reactivado');
+      }else{
+        commitArchiveOperator(pendingOperatorId);
+      }
       hideArchiveVerifyModal();
     });
 
@@ -20175,6 +20801,10 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const start = ()=>{
+    setupBandsLayout();
+    refreshDynamicEls();
+    uiState.addBandExpanded = false;
+    uiState.addBandTouched = false;
     bindEvents();
     setFormMode('create');
     setAccordionActive('general');

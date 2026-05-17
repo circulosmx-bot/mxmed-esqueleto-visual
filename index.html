@@ -2937,7 +2937,7 @@
                   <div class="mx-ag-ops-empty d-none" id="ag_ops_empty_state">
                     <div class="mx-ag-ops-empty-copy">
                       <h6>Registrar operador</h6>
-                      <p>Aún no hay operadores registrados. Usa el panel derecho para crear el primero.</p>
+                      <p>Aún no hay operadores registrados. Expande la banda Agregar operador para crear el primero.</p>
                     </div>
                     <button type="button" class="btn btn-primary mx-ag-ops-empty-btn" id="ag_ops_empty_cta">Registrar operador</button>
                   </div>
@@ -3082,28 +3082,28 @@
                             <label class="mx-ag-ops-permission-card">
                               <span class="mx-ag-ops-permission-copy">
                                 <strong>Agenda</strong>
-                                <small>Gestiona citas, reprogramación y bloqueos.</small>
+                                <small>Citas y bloqueos de horario</small>
                               </span>
                               <input type="checkbox" id="ag_ops_perm_agenda" checked>
                             </label>
                             <label class="mx-ag-ops-permission-card">
                               <span class="mx-ag-ops-permission-copy">
                                 <strong>Pacientes</strong>
-                                <small>Datos generales y exploración física.</small>
+                                <small>Datos generales</small>
                               </span>
                               <input type="checkbox" id="ag_ops_perm_patients" checked>
                             </label>
                             <label class="mx-ag-ops-permission-card">
                               <span class="mx-ag-ops-permission-copy">
-                                <strong>Facturar</strong>
-                                <small>Facturación de honorarios médicos.</small>
+                                <strong>Facturación</strong>
+                                <small>De Honorarios Médicos a Pacientes</small>
                               </span>
                               <input type="checkbox" id="ag_ops_perm_billing">
                             </label>
                             <label class="mx-ag-ops-permission-card">
                               <span class="mx-ag-ops-permission-copy">
-                                <strong>Comprobante de pago</strong>
-                                <small>Acreditar anualidad del perfil médico.</small>
+                                <strong>Comprobante de Pago</strong>
+                                <small>Acreditar pago de anualidad Perfil Médico</small>
                               </span>
                               <input type="checkbox" id="ag_ops_perm_payment_proof">
                             </label>
@@ -3128,10 +3128,10 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                   </div>
                   <div class="modal-body">
-                    <p class="mx-ag-ops-archive-verify-copy">
+                    <p class="mx-ag-ops-archive-verify-copy" id="ag_ops_archive_verify_copy">
                       Este operador dejará de tener acceso al sistema y será movido a Operadores archivados.
                     </p>
-                    <p class="mx-ag-ops-archive-verify-channel">
+                    <p class="mx-ag-ops-archive-verify-channel" id="ag_ops_archive_verify_channel">
                       Ingresa el código de 6 dígitos enviado por SMS o correo electrónico.
                     </p>
                     <div class="otp-inputs mx-ag-ops-archive-otp" data-op-archive-otp-group>
