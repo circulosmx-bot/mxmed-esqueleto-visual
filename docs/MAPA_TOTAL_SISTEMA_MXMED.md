@@ -17,6 +17,12 @@
   - Documentos clínicos canónicos: `clinical_documents`.
   - `modules/clinical` no debe duplicar identidad paciente.
 
+### Adenda de estado real (2026-05-18)
+- Agenda en shell principal (`index.html` + `assets/js/app.js`) ya opera vistas custom de **Semana** y **Día**.
+- Vista Mes está oculta en la UX principal.
+- Bloqueos administrativos en shell principal siguen con persistencia frontend/localStorage (pendiente write backend dedicado para overrides desde esta UX).
+- Operadores en shell principal ya cuenta con flujo funcional frontend (wizard, archivado lógico, historial y controles sensibles con código de 6 dígitos simulado).
+
 ## 1) Resumen arquitectónico general
 
 ### Núcleo funcional
@@ -101,9 +107,9 @@ POST   /api/agenda/index.php/waitlist/{id}/assign
 - UI:
 ```text
 UI server-rendered operativa en api/agenda/ui/*
-UI raíz (index.html, paneles p-ag-*) existe, pero no consume API Agenda de forma integral
+UI raíz (index.html, paneles p-ag-*) con Semana/Día custom operativas y consumo de endpoints Agenda
 ```
-- Estado: `DONE`
+- Estado: `PARTIAL`
 - Dependencias:
   - Consume `modules/patients` para crear paciente desde waitlist sin `patient_id`.
 - Riesgos/notas:
@@ -392,7 +398,7 @@ docs/assets/js/recetas.js
 1. Endpoints referenciados históricamente pero faltantes en runtime raíz (`api/hospital-stays.php`, `api/ci/*`, `api/prescription-generate.php`).
 2. Paneles UI con backend incompleto o no conectado (facturación, paquetes, parte de seguridad/suscripción).
 3. Persistencia parcial en cliente para secciones clínicas y de perfil.
-4. Integración desigual entre UI raíz y APIs operativas (ej. Agenda server-rendered vs shell principal).
+4. Coexistencia de dos frentes Agenda (shell principal custom + UI server-rendered legacy), con deuda de convergencia UX y cobertura homogénea.
 5. Secciones de expediente con estructura visual avanzada, pero sin backend estructurado homogéneo por sección.
 
 ## 6) Divergencias de contrato
@@ -426,7 +432,7 @@ api/verify-sms.php
 3. Cerrar o retirar referencias a endpoints inexistentes.
 4. Definir matriz explícita: qué vive en `clinical_documents` y qué en `modules/clinical` estructurado.
 5. Consolidar documentación/esquemas divergentes (Agenda y Clinical v1/v2).
-6. Integrar shell UI con APIs reales o declarar explícitamente paneles de maqueta.
+6. Consolidar convergencia entre shell principal y UI legacy de Agenda sin duplicar lógica ni romper contratos API.
 7. Añadir validaciones de integridad cruzada entre módulos (paciente/encounter/documento/resultado).
 
 ## 9) Resumen ejecutivo

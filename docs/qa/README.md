@@ -46,6 +46,8 @@ Si availability devuelve 0 slots, normalmente hay overrides activos; ejecutar re
 ## Referencia
 Documento de cierre con contexto y cobertura:
 - `docs/agenda/CIERRE_FASE_III_WRITE_GUARD.md`
+- Checklist de estabilización transversal Agenda + Operadores:
+  - `docs/qa/QA_AGENDA_OPERADORES_CHECKLIST.md`
 
 ## Clinical UI (embed) – Smoke test visual
 URL de prueba:

@@ -1,5 +1,15 @@
 # Rescate funcional del módulo Agenda
 
+## Adenda de actualización (2026-05-18)
+
+Este documento nació como plan de rescate. Parte de sus secciones de “parcial/no conectado” ya fueron resueltas en el shell principal.
+
+Estado real adicional confirmado:
+- Operadores en `#p-ag-operadores` ya tiene flujo funcional frontend (wizard, alias/login/password temporal, envío simulado, archivado lógico, historial y controles sensibles con código de 6 dígitos simulado).
+- Vista Día/Semana custom ya está estabilizada en shell principal.
+
+Interpretar los puntos heredados de esta bitácora como contexto histórico y no como estado vigente cuando contradigan `assets/js/app.js` e `index.html`.
+
 ## Estado actual estable
 - Semana custom de Agenda operativa en `assets/js/app.js` (ancla por rango y 6 columnas).
 - Configuración de Agenda activa (acordeón, Horarios y consultorios, Recordatorios y confirmaciones).
@@ -86,7 +96,7 @@
 ## Funciones desconectadas o parcialmente conectadas
 
 ### Botones visibles sin flujo operativo completo
-- `Agenda -> Operadores` (`#p-ag-operadores`) muestra UI estática (tabla/invitación), pero no se detectan handlers CRUD dedicados en `assets/js/app.js`.
+- `Agenda -> Operadores` (`#p-ag-operadores`) ya no es UI estática; hoy cuenta con handlers frontend para alta, edición inline, pausado/reactivación, archivado lógico e historial.
 
 ### Handlers existentes con UX actualmente oculta/parcial
 - `applyEventInProgress` y `applyEventFinished` existen, pero la visibilidad de esos botones queda desactivada por reglas (`showMarkInProgress=false`, `supportsFinishAction=false`).
@@ -122,7 +132,7 @@
 - Alinear documentación histórica que quedó desactualizada (por ejemplo `modules/agenda/README.md` aún describe “stubs”).
 
 ### Fase 2: reconectar funciones visibles
-- Operadores: decidir si se desactiva visualmente o se conecta flujo mínimo real.
+- Operadores: flujo visual ya conectado en frontend; pendiente endurecimiento backend de seguridad/permisos.
 - Unificar entrada de bloqueo (dejar una sola ruta UX activa).
 
 ### Fase 3: validar Buscar siguiente cita disponible
@@ -186,10 +196,10 @@
 | Marcar paciente conflictivo | Parcial (derivado de no_show/cancel + reglas) | Parcial | Parcial | `applyEventCancel`, `applyEventNoShow`, flags linked list | Requiere decisión UX | Medio | Definir acción explícita “marcar” vs solo reglas automáticas. |
 | Relación con no_show | Sí | Sí | Sí | `AppointmentWriteController::noShow`, visual badges | Consolidado en SPA | Bajo | Mantener; documentar reglas de activación de flag. |
 | Trazabilidad de eventos | Sí (`GET /appointments/{id}/events`) | Sí | Parcial | `AppointmentEventsController`, `appointment.php` | Parcial | Medio | Conectar eventos históricos al modal SPA de detalle. |
-| Operadores/asistentes de consultorio | Parcial (actor roles permitidos) | No | Parcial UI estática | `#p-ag-operadores`, validación `actor_role` en writes | Requiere decisión UX | Medio/Alto | Definir alcance: solo invitación visual o CRUD real con permisos. |
-| Permisos de operadores | Parcial (backend acepta actor_role) | No | No | `AppointmentWriteController` validaciones actor | Solo backend | Medio/Alto | Diseñar matriz de permisos y endpoint de gestión. |
-| Asignación de operadores | No endpoint claro de Agenda | No | No | N/A | No encontrado | Medio/Alto | Decisión de producto + contrato backend antes de UI. |
-| Acciones permitidas por operador | Parcial (writes aceptan role operator) | No | Parcial | acciones de citas actuales dependen de actor context | Parcial | Medio | Definir gating por rol en SPA antes de abrir panel Operadores. |
+| Operadores/asistentes de consultorio | Parcial (actor roles permitidos) | No | Sí (panel funcional frontend) | `#p-ag-operadores`, `assets/js/app.js` (wizard + edición + archivado) | Parcial | Medio | Mantener UX actual y cerrar persistencia/autorización backend real. |
+| Permisos de operadores | Parcial (backend acepta actor_role) | No | Sí (UI de permisos visible) | `AppointmentWriteController` + wizard/permisos frontend | Parcial | Medio/Alto | Implementar enforcement backend por módulo y auditoría server-side. |
+| Asignación de operadores | No endpoint claro de Agenda | No | Parcial | N/A (modelo frontend actual + actor context) | Parcial | Medio | Definir contrato backend de asignación/gestión de asistencias por consultorio. |
+| Acciones permitidas por operador | Parcial (writes aceptan role operator) | No | Sí (acciones UI + flujo de seguridad simulado) | `assets/js/app.js` (`pause/reactivate/archive/history`) | Parcial | Medio | Conectar verificación real de identidad y permisos antes de producción. |
 | Disponibilidad pública | Sí (`GET /public/availability`) | No (UI legacy privada) | Sí (frontend público independiente) | `PublicAvailabilityController`, `assets/js/public/public-agenda.js` | Existe pero falta conectar al SPA | Bajo | Mantener aislado como flujo público externo; no mezclar con workspace interno. |
 | Solicitud pública de cita | Sí (`/public/appointments/request|reserve`) | No | Sí (frontend público independiente) | `PublicAppointmentsController`, `public-book.js` | Existe pero falta conectar al SPA | Bajo | Mantener en portal público; documentar dependencia OTP. |
 | OTP público | Sí (`/public/otp/request|verify`) | No | Sí (frontend público independiente) | `PublicOtpController`, `public-book.js`, `public-cancel.js` | Existe pero falta conectar al SPA | Bajo | Mantener flujos actuales y endurecer observabilidad. |
@@ -220,15 +230,15 @@
    - Partes de permisos por rol operator sin consola de gestión.
 
 5. **Requieren decisión UX antes de implementar**  
-   - Confirmación interna de cita (privada).  
-   - Estados “en curso/finalizada” como write real.  
-   - Operadores (alcance de panel y permisos).  
-   - Bridge Agenda → Expediente/Consulta con reglas explícitas de acceso.
+  - Confirmación interna de cita (privada).  
+  - Estados “en curso/finalizada” como write real.  
+  - Operadores (enforcement backend de permisos por módulo y auth real).  
+  - Bridge Agenda → Expediente/Consulta con reglas explícitas de acceso.
 
 6. **Siguiente fase recomendada (menor riesgo → mayor impacto)**  
    1) Conectar timeline de eventos y waitlist CRUD al shell SPA.  
    2) Unificar bloqueo de horario (una sola entrada UX) y definir contrato write de overrides.  
-   3) Activar panel Operadores solo cuando exista matriz de permisos cerrada.  
+  3) Mantener panel Operadores activo en frontend y cerrar enforcement backend/RBAC.  
    4) Definir y conectar bridge clínico explícito (abrir expediente / iniciar consulta) con reglas de privacidad por médico.
 
 ## Contrato de origen de cita para visualización en Agenda

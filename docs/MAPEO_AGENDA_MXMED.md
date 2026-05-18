@@ -1,5 +1,17 @@
 # MAPEO AGENDA MXMED
 
+## Adenda de actualización (2026-05-18)
+
+Estado real verificado en shell principal:
+- Semana custom operativa.
+- Día custom operativo (mini calendario, reloj/contexto, KPIs, Mañana/Tarde).
+- Vista Mes oculta.
+- Bloqueo parcial + bloqueo de día completo operativos en UX shell.
+- Desbloqueo funcional con refresco en Día/Semana.
+- Modal “Siguiente cita disponible” rediseñado y activo.
+
+Este documento conserva contexto histórico, pero las secciones de “maqueta” deben interpretarse como referencia previa y no como estado actual.
+
 ## 1. Objetivo del módulo
 Levantar el estado real implementado del módulo Agenda en MXMed para documentar:
 - archivos reales involucrados
@@ -70,10 +82,10 @@ Este documento es descriptivo (sin cambios funcionales).
 
 ### UI Shell principal (index.html + assets/js)
 - `index.html` paneles `#p-ag-admin`, `#p-ag-ajustes`, `#p-ag-operadores`
-  - Estado actual: paneles mayormente maqueta visual.
+  - Estado actual: paneles operativos para Semana/Día custom y flujos de cita/bloqueo.
 - `assets/js/app.js`
-  - No usa API Agenda para administrar citas.
-  - Flujo clínico/expediente se activa por rutas de pacientes/clinical, no desde Agenda.
+  - Consume API Agenda para lecturas de disponibilidad/citas y writes operativos de cita.
+  - Mantiene coexistencia con front legacy `api/agenda/ui/*` en algunos subflujos.
 
 ## 3. Endpoints reales
 
@@ -178,8 +190,10 @@ Este documento es descriptivo (sin cambios funcionales).
 ## 5. Flujo funcional actual (real implementado)
 
 1. **Carga de agenda**
-   - UI operativa real de Agenda está en `/api/agenda/ui/*`.
-   - `day.php` consulta `/availability` y `/appointments`.
+   - UI operativa dual:
+     - shell principal (`index.html` + `assets/js/app.js`) para Semana/Día custom;
+     - front legacy en `/api/agenda/ui/*`.
+   - Ambos consumen `/availability` y `/appointments`.
 
 2. **Creación de cita**
    - `action.php` -> `POST /appointments`.
@@ -199,7 +213,7 @@ Este documento es descriptivo (sin cambios funcionales).
    - confirma cita y actualiza estado según OTP y flow.
 
 6. **Empuje a consulta activa**
-   - No hay integración directa Agenda UI -> Expediente shell -> iniciar consulta en código actual.
+   - No hay inicio automático de consulta desde Agenda (regla clínica preservada).
    - Existe bridge opcional Agenda -> Clinical Encounter solo para citas `completed` y con feature flag (`AGENDA_ENABLE_CLINICAL_ENCOUNTER_BRIDGE=1`).
 
 ## 6. Interconexiones y dependencias
@@ -213,8 +227,8 @@ Este documento es descriptivo (sin cambios funcionales).
 ### Con Expediente
 - Arquitectónicamente esperado: Agenda puede abrir expediente.
 - Implementación actual:
-  - UI shell `#p-ag-admin` es mayormente maqueta.
-  - UI Agenda operativa está separada (`/api/agenda/ui/*`) y no abre `#p-expediente` del shell principal automáticamente.
+  - Shell principal ya opera Semana/Día custom de Agenda.
+  - Persiste deuda de integración explícita para handoff Agenda -> Expediente con CTA formal (sin inicio automático de consulta).
 
 ### Con Encounters / Clinical
 - Dependencia opcional via `ClinicalEncounterBridge`:
@@ -228,12 +242,12 @@ Este documento es descriptivo (sin cambios funcionales).
 ## 7. Divergencias detectadas (solo reporte)
 
 1. **Agenda shell vs Agenda operativa**
-   - El menú Agenda en `index.html` (`p-ag-*`) no representa la operación real completa del API Agenda.
-   - La operación real está en `api/agenda/ui/*`.
+   - Coexisten dos frentes operativos: shell custom y legacy `api/agenda/ui/*`.
+   - La divergencia actual es de cobertura homogénea, no de ausencia funcional en shell.
 
 2. **Arquitectura deseada vs implementación actual**
    - Regla deseada: Agenda abre expediente pero no inicia consulta automática.
-   - Implementación actual: Agenda operativa no abre expediente shell de forma integrada (quedan separados).
+   - Implementación actual: no hay auto-inicio de consulta; falta cerrar UX de handoff explícito Agenda -> Expediente.
 
 3. **Bridge clínico con potencial de acoplamiento**
    - Existe bridge Agenda -> Encounter para citas `completed` (feature flag).

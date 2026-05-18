@@ -1,5 +1,19 @@
 # AGENDA: Estado de consolidación y deuda UX/UI – MXMed
 
+## Adenda de actualización (2026-05-18)
+
+Esta versión incorpora el estado real actual del shell principal:
+- Vista Semana custom operativa.
+- Vista Día custom operativa (mini calendario, reloj/contexto, KPIs, columnas Mañana/Tarde).
+- Vista Mes oculta en selector principal.
+- Bloqueo parcial y bloqueo de día completo funcionales en UX shell.
+- Desbloqueo funcional con re-render de Día/Semana.
+- Nueva cita + modal “Siguiente cita disponible” operativos.
+
+Se mantiene deuda en:
+- convergencia final con front legacy `api/agenda/ui/*`,
+- write backend dedicado para bloqueos administrativos desde shell (actualmente persiste en frontend/localStorage).
+
 ## 1) Propósito
 Este documento formaliza el estado real del módulo Agenda en MXMed con base en evidencia del repositorio.
 
@@ -32,8 +46,8 @@ Referencias base:
 | QA técnico | Paquetes QA y cierres de fase documentados | `docs/qa/*agenda*`, `modules/agenda/qa/*`, `docs/agenda/CIERRE_*` | Alto | Automatización CI/CD incremental |
 | Documentación de contratos | Contratos funcionales y semánticos ya escritos | `docs/agenda/CIERRE_FASE_I6_SEMANTICA_Y_CONTRATO_FRONTEND.md`, `PASO_8`, `PASO_9` | Alto | Mantener sincronía con cambios futuros |
 | UI operativa aislada | UI server-rendered operativa fuera del shell principal | `api/agenda/ui/day.php`, `waitlist.php`, `action.php`, `docs/agenda/CIERRE_AGENDA_V1_ESTADO_FINAL.md` | Medio-Alto | UX moderna unificada con shell principal |
-| Integración al shell principal | Parcial/no consolidada como flujo principal de operación | `index.html` (`p-ag-*`), `docs/MAPEO_AGENDA_MXMED.md` | Bajo | Diseño e implementación de integración UX |
-| UX final tipo FullCalendar (o equivalente) | Planeada como fase futura, no requisito de Agenda core | `docs/agenda/19_implementacion_plan.md`, `docs/agenda/CIERRE_AGENDA_V1_ESTADO_FINAL.md` | Bajo | Definir diseño final y aterrizar sin romper contratos |
+| Integración al shell principal | Operativa en Semana/Día custom; cobertura parcial en waitlist/legacy | `index.html` (`p-ag-*`), `assets/js/app.js` | Medio-Alto | Cerrar convergencia shell custom ↔ legacy sin duplicidad |
+| UX final tipo FullCalendar (o equivalente) | No bloqueante; ya existe capa custom operativa | `assets/js/app.js` (`renderCustomWeekView`, `renderCustomDayView`) | Medio | Evolución visual incremental sin romper contratos |
 
 ---
 
@@ -49,16 +63,16 @@ Se considera consolidado en Agenda:
 
 ### 3.2 Qué sigue pendiente (y por qué)
 Pendiente principal:
-- implementación UX/UI integrada a la experiencia principal de MXMed (shell).
+- convergencia de cobertura entre shell custom y frentes legacy de Agenda (especialmente waitlist y write backend dedicado para bloqueos administrativos).
 
-Esto NO implica módulo funcional incompleto. Implica deuda de aterrizaje visual e integración de experiencia.
+Esto NO implica módulo funcional incompleto. Implica deuda de convergencia y endurecimiento operativo en frentes aún mixtos.
 
 ### 3.3 Error de interpretación que debe evitarse
 Es incorrecto concluir “Agenda no está hecha” solo porque:
-- no está integrada de forma completa en paneles `p-ag-*` del shell,
-- o no usa aún FullCalendar.
+- aún coexisten rutas legacy de Agenda fuera del shell,
+- o no se ha unificado totalmente la persistencia de bloqueos administrativos en backend desde la UX shell.
 
-El estado real es: lógica/contratos consolidados + deuda de integración UX/UI.
+El estado real es: lógica/contratos consolidados + shell custom operativo + deuda de convergencia final y backend de soporte para ciertos flujos administrativos.
 
 ---
 

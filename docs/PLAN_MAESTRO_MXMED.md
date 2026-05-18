@@ -66,6 +66,37 @@ Pendiente dentro de P16 (abierto):
 - Homologación completa card↔detalle para todos los tipos en vista Casos clínicos expandida (paridad 100% con Historial general).
 - Cierre documental de criterios de aceptación P16 para pasar a fase siguiente sin deuda visual residual.
 
+## A1.2 Estado operativo actualizado (Agenda + Operadores)
+
+- Fecha de actualización: 2026-05-18
+- Alcance: cierre documental y estabilización previa a nuevas funciones.
+
+### Concluido
+- Agenda · Vista Semana custom operativa en shell principal (`index.html` + `assets/js/app.js`).
+- Agenda · Vista Día custom operativa con mini calendario, reloj/contexto, KPIs y columnas Mañana/Tarde.
+- Vista Mes oculta/no operativa en selector principal.
+- Bloqueo parcial + bloqueo de día completo con ventanas operativas reales.
+- Desbloqueo funcional con refresco de render en Día/Semana.
+- Nueva cita desde slot disponible y modal de Siguiente cita disponible en cards.
+- Operadores con bandas/acordeones, edición inline, historial de acciones y archivado lógico.
+- Límite absoluto de operadores en frontend: 3 (activos + pausados + invitación pendiente).
+
+### Parcial
+- Persistencia de bloqueos administrativos en frontend (localStorage) sin write backend dedicado de overrides para UI shell.
+- Envío de credenciales de operador simulado en frontend (sin proveedor real de correo/SMS).
+- Matriz de permisos de operador visible en UI, sin enforcement backend/RBAC completo por módulo.
+
+### Pendiente
+- Endpoint seguro para envío/verificación real de credenciales de operadores.
+- Auditoría backend consolidada (actor, timestamp, módulo, acción, entidad) con persistencia canónica.
+- Integración completa Waitlist en shell principal con paridad total frente a UI legacy `api/agenda/ui/*`.
+
+### No tocar sin QA
+- Anclaje de Semana al día actual y sincronía Día ↔ Semana.
+- Regla de domingo/feriado en Día: visible, sin inventar disponibilidad ni bloqueos ficticios.
+- Bloqueo de día completo: usar horarios reales de operación y respetar conflictos con citas reales.
+- Regla de cupo en Operadores: archivados no cuentan para el límite.
+
 ## A2. Cierre clínico reciente (Encounter/Historial/Timeline)
 
 ### Estado actual (cerrado)

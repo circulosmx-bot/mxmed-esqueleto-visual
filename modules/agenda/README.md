@@ -1,13 +1,17 @@
-# Agenda Module (bootstrapping v1)
+# Agenda Module (histórico + estado actual)
 
-Esta carpeta agrupa los componentes técnicos básicos del módulo Agenda Médica v1.
-- `routes.php`: describe los endpoints planificados.
-- `controllers/`: controladores que responden 501 (no implementado aún).
-- `services/`: servicios compartidos vacíos.
-- `repositories/`: repositorios con stubs para futuros accesos.
-- `validators/`: validadores de requests pendientes.
+> Nota de vigencia (2026-05-18): los primeros párrafos de este README son históricos de la etapa de bootstrap.
+> El estado actual del módulo Agenda ya es operativo (controllers/repositories implementados), con shell principal custom en `index.html` + `assets/js/app.js` y front legacy en `api/agenda/ui/*`.
+> Referencias de estado real: `docs/MAPEO_AGENDA_MXMED.md`, `docs/AGENDA_ESTADO_CONSOLIDACION_Y_DEUDA_UI_MXMED.md`, `docs/agenda-rescate-funcional.md`.
 
- El objetivo es preparar la base y dejar guardadas las convenciones antes de implementar la lógica.
+Esta carpeta inició como base técnica del módulo Agenda Médica v1.
+- `routes.php`: describe rutas iniciales/legacy.
+- `controllers/`: controladores Agenda (lecturas y writes operativos).
+- `services/`: servicios compartidos de dominio.
+- `repositories/`: repositorios SQL del módulo.
+- `validators/`: validadores de requests.
+
+Este README conserva historial de evolución por fases y contratos.
 
 - El módulo reutiliza `api/_lib/db.php` y su helper `mxmed_pdo()` para obtener la conexión PDO sin reconfigurar el proyecto.
 
