@@ -19088,8 +19088,14 @@ console.info('app.js loaded :: 20251123a');
     archived_operators: [],
     audit_trail: []
   };
+  const OPERATORS_STATE_STORAGE_KEY = 'mxmed.agenda.operators.state.v1';
+  const OPERATORS_CREATE_DRAFT_STORAGE_KEY = 'mxmed.agenda.operators.create_draft.v1';
+  const MAX_ARCHIVED_OPERATORS = 80;
+  const MAX_AUDIT_TRAIL_RECORDS = 120;
+  let operatorsVisibilityObserver = null;
 
   const els = {
+    shell: panel.querySelector('#ag_ops_shell'),
     layout: panel.querySelector('#ag_ops_layout'),
     list: panel.querySelector('#ag_ops_list'),
     emptyState: panel.querySelector('#ag_ops_empty_state'),
@@ -19119,6 +19125,15 @@ console.info('app.js loaded :: 20251123a');
     role: panel.querySelector('#ag_ops_role'),
     login: panel.querySelector('#ag_ops_login'),
     tempPassword: panel.querySelector('#ag_ops_temp_password'),
+    regenPasswordBtn: panel.querySelector('#ag_ops_regen_password'),
+    copyPasswordBtn: panel.querySelector('#ag_ops_copy_password'),
+    accessFeedback: panel.querySelector('#ag_ops_access_feedback'),
+    sendStep: panel.querySelector('#ag_ops_send_step'),
+    sendEmail: panel.querySelector('#ag_ops_send_email'),
+    sendLogin: panel.querySelector('#ag_ops_send_login'),
+    sendPassword: panel.querySelector('#ag_ops_send_password'),
+    sendCopyBtn: panel.querySelector('#ag_ops_send_copy_credentials'),
+    sendFeedback: panel.querySelector('#ag_ops_send_feedback'),
     forceChange: panel.querySelector('#ag_ops_force_change'),
     permissions: {
       agenda: panel.querySelector('#ag_ops_perm_agenda'),
@@ -19162,7 +19177,14 @@ console.info('app.js loaded :: 20251123a');
     inlineAccordionByOperator: {},
     expandedOperatorId: '',
     addBandExpanded: false,
-    addBandTouched: false
+    addBandTouched: false,
+    createWizardStep: 'general',
+    createWizardUnlockedStepRank: 0,
+    createAccessInitialized: false,
+    createAccessLoginManuallyEdited: false,
+    createAccessLastSuggestedLogin: '',
+    createWizardDelivery: null,
+    createWizardDeliveryCloseTimer: null
   };
   const toTimestamp = (value)=>{
     const raw = clean(value);
@@ -19252,6 +19274,376 @@ console.info('app.js loaded :: 20251123a');
       normalized.push(safeKey);
     });
     return normalized;
+  };
+
+  const normalizeOperatorRecord = (rawOperator = {}, fallback = {})=>{
+    const source = rawOperator && typeof rawOperator === 'object' ? rawOperator : {};
+    const fallbackSource = fallback && typeof fallback === 'object' ? fallback : {};
+    const safeStatus = (() => {
+      const candidate = clean(source.status || fallbackSource.status).toLowerCase();
+      if(candidate === 'active' || candidate === 'paused' || candidate === 'pending' || candidate === 'archived'){
+        return candidate;
+      }
+      return 'pending';
+    })();
+    const safeRole = clean(source.role || fallbackSource.role).toLowerCase() === 'assistant' ? 'assistant' : 'operator';
+    const auditMetaSource = source.audit_meta && typeof source.audit_meta === 'object' ? source.audit_meta : {};
+    const safeOperatorId = clean(source.operator_id || fallbackSource.operator_id);
+    if(!safeOperatorId) return null;
+    return {
+      ...fallbackSource,
+      ...source,
+      operator_id: safeOperatorId,
+      operator_label: clean(source.operator_label || fallbackSource.operator_label),
+      alias: clean(source.alias || fallbackSource.alias),
+      full_name: clean(source.full_name || fallbackSource.full_name),
+      phone: clean(source.phone || fallbackSource.phone),
+      email: clean(source.email || fallbackSource.email).toLowerCase(),
+      gender: clean(source.gender || fallbackSource.gender).toLowerCase(),
+      role: safeRole,
+      status: safeStatus,
+      permissions: normalizePermissions(source.permissions || fallbackSource.permissions),
+      login: clean(source.login || fallbackSource.login),
+      force_password_change: !!(source.force_password_change ?? fallbackSource.force_password_change),
+      last_access: clean(source.last_access || fallbackSource.last_access),
+      invitation_status: clean(source.invitation_status || fallbackSource.invitation_status || 'pending').toLowerCase(),
+      operator_credentials_sent_at: clean(source.operator_credentials_sent_at || fallbackSource.operator_credentials_sent_at),
+      archived_at: clean(source.archived_at || fallbackSource.archived_at),
+      temp_password: clean(source.temp_password || fallbackSource.temp_password),
+      audit_meta: {
+        module: clean(auditMetaSource.module),
+        action: clean(auditMetaSource.action),
+        entity: clean(auditMetaSource.entity),
+        at: clean(auditMetaSource.at)
+      }
+    };
+  };
+
+  const normalizeAuditRecord = (rawRecord = {})=>{
+    const source = rawRecord && typeof rawRecord === 'object' ? rawRecord : {};
+    const operatorId = clean(source.operator_id);
+    if(!operatorId) return null;
+    return {
+      operator_id: operatorId,
+      alias: clean(source.alias),
+      module: clean(source.module),
+      action: clean(source.action),
+      entity: clean(source.entity),
+      at: clean(source.at)
+    };
+  };
+
+  const dedupeOperatorsById = (operators = [])=>{
+    const seen = new Set();
+    return ensureArray(operators).filter((operator)=>{
+      const operatorId = clean(operator?.operator_id);
+      if(!operatorId || seen.has(operatorId)) return false;
+      seen.add(operatorId);
+      return true;
+    });
+  };
+
+  const persistOperatorsState = ()=>{
+    try{
+      const payload = {
+        operators: dedupeOperatorsById(MODEL.operators),
+        archived_operators: dedupeOperatorsById(MODEL.archived_operators).slice(0, MAX_ARCHIVED_OPERATORS),
+        audit_trail: ensureArray(MODEL.audit_trail).slice(0, MAX_AUDIT_TRAIL_RECORDS)
+      };
+      window.localStorage?.setItem(OPERATORS_STATE_STORAGE_KEY, JSON.stringify(payload));
+    }catch(_){
+      // Persistencia best-effort para entorno frontend.
+    }
+  };
+
+  const clearCreateDraftState = ()=>{
+    try{
+      window.localStorage?.removeItem?.(OPERATORS_CREATE_DRAFT_STORAGE_KEY);
+    }catch(_){
+      // limpieza best-effort
+    }
+  };
+
+  const hydrateOperatorsState = ()=>{
+    let parsed = null;
+    try{
+      const raw = clean(window.localStorage?.getItem?.(OPERATORS_STATE_STORAGE_KEY) || '');
+      if(!raw) return;
+      parsed = JSON.parse(raw);
+    }catch(_){
+      return;
+    }
+    if(!parsed || typeof parsed !== 'object') return;
+
+    const hasOwn = (key)=> Object.prototype.hasOwnProperty.call(parsed, key);
+    const activeIds = new Set();
+
+    if(hasOwn('operators')){
+      const nextOperators = dedupeOperatorsById(
+        ensureArray(parsed.operators)
+          .map((item)=> normalizeOperatorRecord(item))
+          .filter(Boolean)
+          .filter((item)=> clean(item.status).toLowerCase() !== 'archived')
+      );
+      nextOperators.forEach((item)=> activeIds.add(clean(item.operator_id)));
+      MODEL.operators = nextOperators;
+    }else{
+      ensureArray(MODEL.operators).forEach((item)=> activeIds.add(clean(item?.operator_id)));
+    }
+
+    if(hasOwn('archived_operators')){
+      MODEL.archived_operators = dedupeOperatorsById(
+        ensureArray(parsed.archived_operators)
+          .map((item)=> normalizeOperatorRecord(item))
+          .filter(Boolean)
+          .map((item)=> ({
+            ...item,
+            status: 'archived',
+            archived_at: clean(item.archived_at) || nowIso()
+          }))
+          .filter((item)=> !activeIds.has(clean(item.operator_id)))
+      ).slice(0, MAX_ARCHIVED_OPERATORS);
+    }
+
+    if(hasOwn('audit_trail')){
+      MODEL.audit_trail = ensureArray(parsed.audit_trail)
+        .map((item)=> normalizeAuditRecord(item))
+        .filter(Boolean)
+        .slice(0, MAX_AUDIT_TRAIL_RECORDS);
+    }
+  };
+
+  const removeAccents = (value = '')=>{
+    const safe = String(value == null ? '' : value);
+    if(typeof safe.normalize !== 'function') return safe;
+    return safe.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  };
+
+  const normalizeAliasValue = (value = '', options = {})=>{
+    const stripInvalid = options.stripInvalid === true;
+    let normalized = removeAccents(clean(value)).toUpperCase();
+    normalized = normalized.replace(/\s+/g, '');
+    if(stripInvalid){
+      normalized = normalized.replace(/[^A-Z0-9-]/g, '');
+    }
+    return normalized;
+  };
+
+  const aliasContainsInvalidChars = (value = '')=> /[^A-Z0-9-]/.test(clean(value));
+
+  const isAliasDuplicatedInActiveOperators = (alias = '', currentOperatorId = '')=>{
+    const normalizedAlias = normalizeAliasValue(alias);
+    if(!normalizedAlias) return false;
+    const safeCurrentId = clean(currentOperatorId);
+    return ensureArray(MODEL.operators).some((operator)=>{
+      const operatorId = clean(operator?.operator_id);
+      if(safeCurrentId && operatorId === safeCurrentId) return false;
+      const status = clean(operator?.status).toLowerCase();
+      if(status !== 'active') return false;
+      const operatorAlias = normalizeAliasValue(operator?.alias || '');
+      return operatorAlias === normalizedAlias;
+    });
+  };
+
+  const validateAliasRules = (aliasRaw = '', currentOperatorId = '')=>{
+    const alias = normalizeAliasValue(aliasRaw);
+    if(!alias){
+      return { alias, error: 'El alias es obligatorio.' };
+    }
+    if(alias.length < 3){
+      return { alias, error: 'El alias debe tener al menos 3 caracteres.' };
+    }
+    if(alias.length > 15){
+      return { alias, error: 'El alias no debe exceder 15 caracteres.' };
+    }
+    if(aliasContainsInvalidChars(aliasRaw)){
+      return { alias, error: 'Usa solo letras, números o guion medio.' };
+    }
+    if(isAliasDuplicatedInActiveOperators(alias, currentOperatorId)){
+      return { alias, error: 'Este alias ya está asignado a otro operador.' };
+    }
+    return { alias, error: '' };
+  };
+
+  const normalizeAliasInputElement = (inputEl, options = {})=>{
+    if(!inputEl) return '';
+    const normalized = normalizeAliasValue(inputEl.value, options);
+    if(inputEl.value !== normalized){
+      inputEl.value = normalized;
+    }
+    return normalized;
+  };
+
+  const setAccessFeedback = (message = '')=>{
+    if(!els.accessFeedback) return;
+    const safeMessage = clean(message);
+    els.accessFeedback.textContent = safeMessage;
+    els.accessFeedback.classList.toggle('d-none', !safeMessage);
+  };
+
+  const normalizeLoginValue = (value = '', options = {})=>{
+    const stripInvalid = options.stripInvalid !== false;
+    let normalized = removeAccents(clean(value)).toLowerCase();
+    normalized = normalized.replace(/\s+/g, '');
+    if(stripInvalid){
+      normalized = normalized.replace(/[^a-z0-9.-]/g, '');
+    }
+    normalized = normalized
+      .replace(/[.]{2,}/g, '.')
+      .replace(/[-]{2,}/g, '-')
+      .replace(/([.-]){2,}/g, '$1')
+      .replace(/^[.-]+/, '')
+      .replace(/[.-]+$/, '');
+    return normalized;
+  };
+
+  const normalizeLoginInputElement = (inputEl)=>{
+    if(!inputEl) return '';
+    const normalized = normalizeLoginValue(inputEl.value);
+    if(inputEl.value !== normalized){
+      inputEl.value = normalized;
+    }
+    return normalized;
+  };
+
+  const isLoginDuplicatedInCurrentOperators = (login = '', currentOperatorId = '')=>{
+    const normalizedLogin = normalizeLoginValue(login);
+    if(!normalizedLogin) return false;
+    const safeCurrentId = clean(currentOperatorId);
+    return ensureArray(MODEL.operators).some((operator)=>{
+      const operatorId = clean(operator?.operator_id);
+      if(safeCurrentId && operatorId === safeCurrentId) return false;
+      const operatorLogin = normalizeLoginValue(operator?.login || '');
+      return !!operatorLogin && operatorLogin === normalizedLogin;
+    });
+  };
+
+  const validateLoginRules = (loginRaw = '', currentOperatorId = '')=>{
+    const normalizedLogin = normalizeLoginValue(loginRaw);
+    if(!normalizedLogin){
+      return { login: '', error: 'Ingresa el usuario de acceso del operador.' };
+    }
+    if(!/^[a-z0-9.-]+$/.test(normalizedLogin)){
+      return { login: normalizedLogin, error: 'El usuario login solo permite letras minúsculas, números, punto o guion.' };
+    }
+    if(isLoginDuplicatedInCurrentOperators(normalizedLogin, currentOperatorId)){
+      return { login: normalizedLogin, error: 'Este usuario login ya está asignado a otro operador.' };
+    }
+    return { login: normalizedLogin, error: '' };
+  };
+
+  const buildLoginSuggestionBase = (fullNameRaw = '')=>{
+    const tokens = removeAccents(clean(fullNameRaw))
+      .toLowerCase()
+      .split(/\s+/)
+      .map((token)=> token.replace(/[^a-z0-9]/g, ''))
+      .filter(Boolean);
+    const firstName = tokens[0] || 'operador';
+    const firstLastName = tokens[1] || '';
+    const rawBase = firstLastName ? `${firstName}.${firstLastName}` : firstName;
+    const safeBase = normalizeLoginValue(rawBase);
+    return safeBase || 'operador';
+  };
+
+  const ensureUniqueLogin = (baseLogin = '', currentOperatorId = '')=>{
+    const safeBase = normalizeLoginValue(baseLogin) || 'operador';
+    if(!isLoginDuplicatedInCurrentOperators(safeBase, currentOperatorId)){
+      return safeBase;
+    }
+    let suffix = 2;
+    while(suffix < 10000){
+      const candidate = `${safeBase}${suffix}`;
+      if(!isLoginDuplicatedInCurrentOperators(candidate, currentOperatorId)){
+        return candidate;
+      }
+      suffix += 1;
+    }
+    return `${safeBase}${Date.now().toString().slice(-4)}`;
+  };
+
+  const generateSuggestedLogin = ()=>{
+    const fullName = clean(els.fullName?.value);
+    const base = buildLoginSuggestionBase(fullName);
+    return ensureUniqueLogin(base, clean(els.editId?.value));
+  };
+
+  const LOGIN_PASSWORD_SYMBOLS = '!@#$%*+-_=';
+  const pickRandomChar = (pool = '')=> pool.charAt(Math.floor(Math.random() * pool.length));
+  const shuffleChars = (chars = [])=>{
+    const clone = Array.from(chars);
+    for(let idx = clone.length - 1; idx > 0; idx -= 1){
+      const swapIdx = Math.floor(Math.random() * (idx + 1));
+      [clone[idx], clone[swapIdx]] = [clone[swapIdx], clone[idx]];
+    }
+    return clone;
+  };
+
+  const generateTemporaryPassword = (length = 12)=>{
+    const safeLength = Math.max(10, Number(length) || 12);
+    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lower = 'abcdefghijkmnopqrstuvwxyz';
+    const digits = '23456789';
+    const symbols = LOGIN_PASSWORD_SYMBOLS;
+    const allPool = `${upper}${lower}${digits}${symbols}`;
+    const chars = [
+      pickRandomChar(upper),
+      pickRandomChar(lower),
+      pickRandomChar(digits),
+      pickRandomChar(symbols)
+    ];
+    while(chars.length < safeLength){
+      chars.push(pickRandomChar(allPool));
+    }
+    return shuffleChars(chars).join('');
+  };
+
+  const validateTempPasswordRules = (rawPassword = '')=>{
+    const password = String(rawPassword == null ? '' : rawPassword);
+    if(!password){
+      return { ok: false, error: 'Ingresa la contraseña temporal del operador.' };
+    }
+    if(password.length < 10){
+      return { ok: false, error: 'La contraseña temporal debe tener al menos 10 caracteres.' };
+    }
+    if(!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)){
+      return { ok: false, error: 'La contraseña temporal debe incluir mayúscula, minúscula, número y símbolo.' };
+    }
+    return { ok: true, error: '' };
+  };
+
+  const ensureCreateAccessPrefill = (options = {})=>{
+    const mode = clean(panel.dataset.opsFormMode || 'create');
+    if(mode !== 'create') return;
+    const forceLogin = options.forceLogin === true;
+    const forcePassword = options.forcePassword === true;
+    const isFirstAccessInSession = uiState.createAccessInitialized !== true;
+    const suggestedLogin = ensureUniqueLogin(generateSuggestedLogin(), clean(els.editId?.value));
+
+    if(els.login){
+      const currentLogin = normalizeLoginInputElement(els.login);
+      const shouldAutoRefreshLogin = uiState.createAccessLoginManuallyEdited !== true;
+      const shouldRegenerateLogin = forceLogin
+        || !currentLogin
+        || isFirstAccessInSession
+        || (shouldAutoRefreshLogin && suggestedLogin && currentLogin !== suggestedLogin);
+      if(shouldRegenerateLogin){
+        els.login.value = suggestedLogin;
+        uiState.createAccessLastSuggestedLogin = suggestedLogin;
+        uiState.createAccessLoginManuallyEdited = false;
+      }else if(!clean(uiState.createAccessLastSuggestedLogin) && currentLogin){
+        uiState.createAccessLastSuggestedLogin = currentLogin;
+      }
+      normalizeLoginInputElement(els.login);
+    }
+
+    if(els.tempPassword){
+      const currentPassword = clean(els.tempPassword.value);
+      if(forcePassword || !currentPassword || isFirstAccessInSession){
+        els.tempPassword.value = generateTemporaryPassword(12);
+      }
+    }
+    uiState.createAccessInitialized = true;
+    setAccessFeedback('');
   };
 
   const statusMeta = (status)=> STATUS_META[clean(status).toLowerCase()] || STATUS_META.pending;
@@ -19430,10 +19822,16 @@ console.info('app.js loaded :: 20251123a');
     const operatorIndex = MODEL.operators.findIndex((item)=> clean(item?.operator_id) === operatorId);
     const operatorLabel = resolveOperatorLabel(operator, operatorIndex >= 0 ? operatorIndex : 0);
     const visibleAlias = resolveVisibleAlias(operator, operatorLabel) || clean(operator.alias) || operatorLabel;
+    const isArchivedOperator = clean(operator?.status).toLowerCase() === 'archived' || operatorIndex < 0;
+    const operatorFullName = clean(operator?.full_name) || 'Sin nombre';
+    const archivedAlias = resolveVisibleAlias(operator, operatorLabel) || clean(operator?.alias);
+    const historyHeaderLabel = isArchivedOperator
+      ? (archivedAlias ? `${operatorFullName} (${archivedAlias})` : operatorFullName)
+      : `${visibleAlias} · ${operatorLabel}`;
     const records = getOperatorHistoryRecords(operator);
 
     if(els.historyOperatorName){
-      els.historyOperatorName.textContent = `${visibleAlias} · ${operatorLabel}`;
+      els.historyOperatorName.textContent = historyHeaderLabel;
     }
     if(els.historySubtitle){
       els.historySubtitle.textContent = 'Acciones clasificadas cronológicamente (más reciente primero).';
@@ -19476,6 +19874,17 @@ console.info('app.js loaded :: 20251123a');
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
+    });
+  };
+  const formatArchiveDayLabel = (value)=>{
+    const raw = clean(value);
+    if(!raw) return 'Sin fecha';
+    const date = new Date(raw);
+    if(Number.isNaN(date.getTime())) return 'Sin fecha';
+    return date.toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
     });
   };
 
@@ -19651,30 +20060,38 @@ console.info('app.js loaded :: 20251123a');
       els.formTitle.textContent = safeMode === 'edit' ? 'Editar operador' : 'Agregar operador';
     }
     if(els.saveBtn){
-      els.saveBtn.textContent = safeMode === 'edit' ? 'Guardar cambios' : 'Guardar operador';
+      els.saveBtn.textContent = safeMode === 'edit' ? 'Guardar cambios' : 'Siguiente';
     }
   };
 
   const setEmptyState = (isEmpty)=>{
     const empty = !!isEmpty;
     els.emptyState?.classList.toggle('d-none', !empty);
-    document.body.classList.toggle('mx-ag-ops-empty', empty);
+    panel.classList.toggle('mx-ag-ops-is-empty', empty);
+    els.shell?.classList.toggle('is-empty', empty);
+    document.body.classList.remove('mx-ag-ops-empty');
   };
 
-  const setLimitNotice = (activeCount, totalCount)=>{
+  const QUOTA_COUNTABLE_STATUSES = new Set(['active', 'paused', 'pending']);
+  const getQuotaUsedCount = ()=> ensureArray(MODEL.operators)
+    .filter((item)=> QUOTA_COUNTABLE_STATUSES.has(clean(item?.status).toLowerCase()))
+    .length;
+  const hasReachedAbsoluteOperatorLimit = ()=> getQuotaUsedCount() >= MODEL.plan_absolute_limit;
+
+  const setLimitNotice = (activeCount, usedCount)=>{
     const standardLimit = MODEL.plan_standard_limit;
     const absoluteLimit = MODEL.plan_absolute_limit;
     let text = '';
     let className = '';
 
-    if(totalCount >= absoluteLimit){
-      text = `Límite máximo alcanzado (${absoluteLimit}/${absoluteLimit}). No se pueden agregar más operadores.`;
+    if(usedCount >= absoluteLimit){
+      text = 'Has alcanzado el máximo de operadores permitidos.';
       className = 'is-danger';
-    }else if(activeCount >= standardLimit){
-      text = `Plan estándar cubierto (${activeCount}/${standardLimit}). Puedes activar hasta ${absoluteLimit} en total.`;
+    }else if(usedCount >= standardLimit){
+      text = `Plan estándar cubierto (${usedCount}/${standardLimit}). Puedes activar hasta ${absoluteLimit} en total.`;
       className = 'is-warning';
     }else{
-      const freeSlots = Math.max(0, standardLimit - activeCount);
+      const freeSlots = Math.max(0, standardLimit - usedCount);
       text = `Aún hay ${freeSlots} cupo(s) dentro del plan estándar.`;
     }
 
@@ -19691,13 +20108,32 @@ console.info('app.js loaded :: 20251123a');
     const operators = ensureArray(MODEL.operators);
     const activeCount = operators.filter((item)=> clean(item?.status).toLowerCase() === 'active').length;
     const pendingCount = operators.filter((item)=> clean(item?.status).toLowerCase() === 'pending').length;
-    const availableCount = Math.max(0, MODEL.plan_standard_limit - activeCount);
+    const usedCount = getQuotaUsedCount();
+    const availableCount = Math.max(0, MODEL.plan_standard_limit - usedCount);
 
     if(els.activeValue) els.activeValue.textContent = `${activeCount}/${MODEL.plan_standard_limit}`;
     if(els.pendingValue) els.pendingValue.textContent = String(pendingCount);
     if(els.availableValue) els.availableValue.textContent = String(availableCount);
     if(els.maxAllowedValue) els.maxAllowedValue.textContent = String(MODEL.plan_absolute_limit);
-    setLimitNotice(activeCount, operators.length);
+    setLimitNotice(activeCount, usedCount);
+  };
+
+  const syncAddBandAvailability = ()=>{
+    if(!els.addBand || !els.addBandToggle) return;
+    const isBlocked = hasReachedAbsoluteOperatorLimit();
+    els.addBand.classList.toggle('is-disabled', isBlocked);
+    els.addBandToggle.disabled = isBlocked;
+    els.addBandToggle.setAttribute('aria-disabled', isBlocked ? 'true' : 'false');
+    if(isBlocked){
+      els.addBandToggle.setAttribute('title', 'Has alcanzado el máximo de operadores permitidos.');
+      if(uiState.addBandExpanded){
+        setAddBandExpanded(false, { remember: false });
+      }
+      clearForm();
+      setModalError('');
+    }else{
+      els.addBandToggle.removeAttribute('title');
+    }
   };
 
   const INLINE_ACCORDION_KEYS = new Set(['general', 'access', 'permissions']);
@@ -19712,12 +20148,12 @@ console.info('app.js loaded :: 20251123a');
   const getInlineAccordionKeyForOperator = (operatorId)=>{
     const safeId = clean(operatorId);
     if(!safeId){
-      return 'general';
+      return '';
     }
     if(Object.prototype.hasOwnProperty.call(uiState.inlineAccordionByOperator, safeId)){
       return normalizeInlineAccordionKey(uiState.inlineAccordionByOperator[safeId], '');
     }
-    return 'general';
+    return '';
   };
 
   const setInlineAccordionKeyForOperator = (operatorId, sectionKey = '')=>{
@@ -19776,12 +20212,12 @@ console.info('app.js loaded :: 20251123a');
     if(safeId){
       uiState.expandedOperatorId = safeId;
       if(!Object.prototype.hasOwnProperty.call(uiState.inlineAccordionByOperator, safeId)){
-        setInlineAccordionKeyForOperator(safeId, 'general');
+        setInlineAccordionKeyForOperator(safeId, '');
       }
       uiState.inlineAccordionKey = normalizeInlineAccordionKey(
         getInlineAccordionKeyForOperator(safeId),
-        'general'
-      ) || 'general';
+        ''
+      ) || '';
     }else{
       uiState.inlineAccordionKey = 'general';
     }
@@ -19799,10 +20235,29 @@ console.info('app.js loaded :: 20251123a');
     els.addBandToggle?.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
     els.addBandPanel?.classList.toggle('d-none', !isExpanded);
     if(isExpanded && options.focus){
-      els.addBandPanel?.scrollIntoView?.({ behavior: options.behavior || 'smooth', block: 'nearest' });
+      const scrollTarget = els.addBand || els.addBandPanel;
+      scrollTarget?.scrollIntoView?.({ behavior: options.behavior || 'smooth', block: options.block || 'start', inline: 'nearest' });
       window.setTimeout(()=>{
-        try{ els.fullName?.focus(); }catch(_){}
+        if(getCreateWizardCurrentStep() === 'send'){
+          try{ els.sendCopyBtn?.focus(); }catch(_){}
+        }else{
+          try{ els.fullName?.focus(); }catch(_){}
+        }
       }, 80);
+    }
+  };
+
+  const resetCreateWizardTransientState = ({ collapseBand = false, keepTouched = false } = {})=>{
+    clearForm();
+    setFormMode('create');
+    setAccordionActive('general', { force: true });
+    setModalError('');
+    setAccessFeedback('');
+    if(!keepTouched){
+      uiState.addBandTouched = false;
+    }
+    if(collapseBand){
+      setAddBandExpanded(false, { remember: false });
     }
   };
 
@@ -19851,7 +20306,6 @@ console.info('app.js loaded :: 20251123a');
     const phone = clean(operator?.phone);
     const email = clean(operator?.email);
     const gender = clean(operator?.gender);
-    const role = clean(operator?.role || 'operator').toLowerCase();
     const login = clean(operator?.login);
     const forceChange = !!operator?.force_password_change;
     const permissionSet = new Set(normalizePermissions(operator?.permissions));
@@ -19867,9 +20321,10 @@ console.info('app.js loaded :: 20251123a');
         </div>
         <div class="mx-ag-ops-modal-error d-none" data-op-inline-error role="alert"></div>
         <div class="mx-ag-ops-accordion mx-ag-ops-accordion--inline" data-op-inline-accordion>
-          <article class="mx-ag-ops-accordion-item${itemClass('general')}" data-op-inline-accordion-item="general">
+          <article class="mx-ag-ops-accordion-item is-section-general${itemClass('general')}" data-op-inline-accordion-item="general">
             <button type="button" class="mx-ag-ops-accordion-toggle" data-op-inline-accordion-toggle="general" aria-expanded="${activeKey === 'general' ? 'true' : 'false'}">
               <span class="mx-ag-ops-accordion-index">1</span>
+              <span class="mx-ag-ops-accordion-icon material-symbols-rounded" aria-hidden="true">person</span>
               <span class="mx-ag-ops-accordion-copy">
                 <strong>Datos generales</strong>
                 <small>Información básica del operador.</small>
@@ -19900,22 +20355,23 @@ console.info('app.js loaded :: 20251123a');
                   <input type="email" class="form-control" data-op-inline-field="email" value="${escapeHtml(email)}" placeholder="operador@correo.com">
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label">Alias (visible en sistema)</label>
+                  <label class="form-label">Alias (Nombre corto para este operador · 1 palabra / ejemplo: MARY)</label>
                   <input type="text" class="form-control" data-op-inline-field="alias" value="${escapeHtml(alias)}" placeholder="Operador 01">
+                  <div class="form-text">Usa 3 a 15 caracteres: letras, números o guion. Sin espacios.</div>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">Rol</label>
-                  <select class="form-select" data-op-inline-field="role">
-                    <option value="operator"${role !== 'assistant' ? ' selected' : ''}>Operador</option>
-                    <option value="assistant"${role === 'assistant' ? ' selected' : ''}>Asistente</option>
+                  <select class="form-select" data-op-inline-field="role" disabled aria-disabled="true" tabindex="-1">
+                    <option value="operator" selected>Operador</option>
                   </select>
                 </div>
               </div>
             </div>
           </article>
-          <article class="mx-ag-ops-accordion-item${itemClass('access')}" data-op-inline-accordion-item="access">
+          <article class="mx-ag-ops-accordion-item is-section-access${itemClass('access')}" data-op-inline-accordion-item="access">
             <button type="button" class="mx-ag-ops-accordion-toggle" data-op-inline-accordion-toggle="access" aria-expanded="${activeKey === 'access' ? 'true' : 'false'}">
               <span class="mx-ag-ops-accordion-index">2</span>
+              <span class="mx-ag-ops-accordion-icon material-symbols-rounded" aria-hidden="true">lock</span>
               <span class="mx-ag-ops-accordion-copy">
                 <strong>Acceso al sistema</strong>
                 <small>Usuario y contraseña para acceso.</small>
@@ -19941,9 +20397,10 @@ console.info('app.js loaded :: 20251123a');
               </div>
             </div>
           </article>
-          <article class="mx-ag-ops-accordion-item${itemClass('permissions')}" data-op-inline-accordion-item="permissions">
+          <article class="mx-ag-ops-accordion-item is-section-permissions${itemClass('permissions')}" data-op-inline-accordion-item="permissions">
             <button type="button" class="mx-ag-ops-accordion-toggle" data-op-inline-accordion-toggle="permissions" aria-expanded="${activeKey === 'permissions' ? 'true' : 'false'}">
               <span class="mx-ag-ops-accordion-index">3</span>
+              <span class="mx-ag-ops-accordion-icon material-symbols-rounded" aria-hidden="true">verified_user</span>
               <span class="mx-ag-ops-accordion-copy">
                 <strong>Permisos</strong>
                 <small>Selecciona los módulos a los que tendrá acceso.</small>
@@ -20075,28 +20532,12 @@ console.info('app.js loaded :: 20251123a');
       const safeId = clean(operator?.operator_id);
       const alias = clean(operator?.alias) || 'Sin alias';
       const name = clean(operator?.full_name) || 'Sin nombre';
-      const phone = clean(operator?.phone) || 'Sin teléfono';
-      const email = clean(operator?.email) || 'Sin correo';
-      const archivedAt = formatArchiveDateLabel(operator?.archived_at);
-      const lastAccess = formatDateTimeLabel(operator?.last_access);
-      const permissions = normalizePermissions(operator?.permissions);
-      const permissionsHtml = permissions.length
-        ? permissions.map((perm)=> `<span class="mx-ag-ops-archived-perm">${escapeHtml(permissionLabel(perm))}</span>`).join('')
-        : '<span class="mx-ag-ops-archived-perm">Sin permisos</span>';
+      const archivedDay = formatArchiveDayLabel(operator?.archived_at);
       return `
-        <article class="mx-ag-ops-archived-card" data-op-archived-id="${escapeHtml(safeId)}">
-          <div class="mx-ag-ops-archived-head">
-            <h6 class="mx-ag-ops-archived-alias">${escapeHtml(alias)} (${escapeHtml(name)})</h6>
-            <span class="mx-ag-ops-archived-status">Archivado</span>
-          </div>
-          <p class="mx-ag-ops-archived-meta">Correo: ${escapeHtml(email)} · Teléfono: ${escapeHtml(phone)}</p>
-          <p class="mx-ag-ops-archived-meta">Archivado: ${escapeHtml(archivedAt)}</p>
-          <p class="mx-ag-ops-archived-meta">Último acceso: ${escapeHtml(lastAccess)}</p>
-          <div class="mx-ag-ops-archived-perms">${permissionsHtml}</div>
-          <div class="mx-ag-ops-archived-actions">
-            <button type="button" class="btn btn-outline-primary" data-op-archived-action="detail" data-op-archived-id="${escapeHtml(safeId)}">Ver detalle</button>
-            <button type="button" class="btn btn-outline-secondary" data-op-archived-action="restore" data-op-archived-id="${escapeHtml(safeId)}">Restaurar acceso</button>
-          </div>
+        <article class="mx-ag-ops-archived-item" data-op-archived-id="${escapeHtml(safeId)}">
+          <p class="mx-ag-ops-archived-item-title">${escapeHtml(name)} <span>(${escapeHtml(alias)})</span></p>
+          <p class="mx-ag-ops-archived-item-meta">Eliminado · ${escapeHtml(archivedDay)}</p>
+          <button type="button" class="mx-ag-ops-archived-history-link" data-op-archived-action="history" data-op-archived-id="${escapeHtml(safeId)}">Ver historial de acciones</button>
         </article>
       `;
     }).join('');
@@ -20137,10 +20578,14 @@ console.info('app.js loaded :: 20251123a');
     renderOperators();
     renderArchivedOperators();
     placeAddBand();
+    syncAddBandAvailability();
     setEmptyState(!operators.length);
-    const shouldOpenAddBand = uiState.addBandTouched ? uiState.addBandExpanded : false;
+    const shouldOpenAddBand = !operators.length
+      ? false
+      : (uiState.addBandTouched ? uiState.addBandExpanded : false);
     setAddBandExpanded(shouldOpenAddBand, { remember: false });
     syncInlineEditLayoutState();
+    persistOperatorsState();
   };
 
   const setModalError = (message = '')=>{
@@ -20150,9 +20595,343 @@ console.info('app.js loaded :: 20251123a');
     els.modalError.classList.toggle('d-none', !safeMessage);
   };
 
-  const setAccordionActive = (sectionKey = 'general')=>{
+  const CREATE_WIZARD_STEPS = ['general', 'access', 'permissions', 'send'];
+  const CREATE_WIZARD_STEP_SET = new Set(CREATE_WIZARD_STEPS);
+  const CREATE_WIZARD_DEFAULT_PERMISSIONS = ['agenda', 'patients'];
+
+  const normalizeCreateWizardStep = (stepKey = '', fallback = 'general')=>{
+    const safeKey = clean(stepKey).toLowerCase();
+    if(CREATE_WIZARD_STEP_SET.has(safeKey)) return safeKey;
+    return fallback;
+  };
+
+  const getCreateWizardStepRank = (stepKey = '')=> CREATE_WIZARD_STEPS.indexOf(normalizeCreateWizardStep(stepKey, ''));
+
+  const getCreateWizardCurrentStep = ()=> normalizeCreateWizardStep(uiState.createWizardStep, 'general');
+
+  const setCreateWizardStep = (stepKey = 'general', options = {})=>{
+    const safeStep = normalizeCreateWizardStep(stepKey, 'general');
+    const safeRank = Math.max(0, getCreateWizardStepRank(safeStep));
+    const preserveUnlocked = options.preserveUnlocked !== false;
+    uiState.createWizardStep = safeStep;
+    if(!preserveUnlocked){
+      uiState.createWizardUnlockedStepRank = safeRank;
+      return;
+    }
+    uiState.createWizardUnlockedStepRank = Math.max(
+      Number.isFinite(uiState.createWizardUnlockedStepRank) ? uiState.createWizardUnlockedStepRank : 0,
+      safeRank
+    );
+  };
+
+  const isCreateWizardStepUnlocked = (stepKey = '')=>{
+    const safeStep = normalizeCreateWizardStep(stepKey, '');
+    if(!safeStep) return false;
+    const currentRank = Number.isFinite(uiState.createWizardUnlockedStepRank)
+      ? uiState.createWizardUnlockedStepRank
+      : 0;
+    const targetRank = getCreateWizardStepRank(safeStep);
+    if(targetRank < 0) return safeStep === 'general';
+    return targetRank <= currentRank;
+  };
+
+  const getCreateWizardDelivery = ()=>{
+    const source = uiState.createWizardDelivery;
+    if(!source || typeof source !== 'object') return null;
+    const operatorId = clean(source.operator_id);
+    const email = clean(source.email).toLowerCase();
+    const login = normalizeLoginValue(source.login || '');
+    const password = String(source.temp_password || '');
+    if(!operatorId || !email || !login || !password){
+      return null;
+    }
+    return {
+      operator_id: operatorId,
+      email,
+      login,
+      temp_password: password
+    };
+  };
+
+  const setCreateWizardDeliveryFeedback = (message = '')=>{
+    if(!els.sendFeedback) return;
+    const safeMessage = clean(message);
+    els.sendFeedback.textContent = safeMessage;
+    els.sendFeedback.classList.toggle('d-none', !safeMessage);
+  };
+
+  const setCreateWizardDelivery = (payload = null, options = {})=>{
+    const normalized = payload && typeof payload === 'object'
+      ? {
+          operator_id: clean(payload.operator_id),
+          email: clean(payload.email).toLowerCase(),
+          login: normalizeLoginValue(payload.login || ''),
+          temp_password: String(payload.temp_password || '')
+        }
+      : null;
+    const isValid = !!(normalized && normalized.operator_id && normalized.email && normalized.login && normalized.temp_password);
+    uiState.createWizardDelivery = isValid ? normalized : null;
+    if(options.keepFeedback !== true){
+      setCreateWizardDeliveryFeedback('');
+    }
+  };
+
+  const syncCreateWizardStepPresentation = ()=>{
+    const mode = clean(panel.dataset.opsFormMode || 'create');
+    if(mode !== 'create'){
+      els.accordion?.classList.remove('d-none');
+      els.sendStep?.classList.add('d-none');
+      return;
+    }
+    const currentStep = getCreateWizardCurrentStep();
+    const delivery = getCreateWizardDelivery();
+    const isSendStep = currentStep === 'send' && !!delivery;
+    els.accordion?.classList.toggle('d-none', isSendStep);
+    els.sendStep?.classList.toggle('d-none', !isSendStep);
+    if(!isSendStep){
+      return;
+    }
+    if(els.sendEmail) els.sendEmail.textContent = delivery.email;
+    if(els.sendLogin) els.sendLogin.textContent = delivery.login;
+    if(els.sendPassword) els.sendPassword.textContent = delivery.temp_password;
+  };
+
+  const readCreateDraftPayloadFromState = ()=>{
+    const unlockedRank = Number.isFinite(uiState.createWizardUnlockedStepRank)
+      ? Math.max(0, Math.min(CREATE_WIZARD_STEPS.length - 1, Math.floor(uiState.createWizardUnlockedStepRank)))
+      : 0;
+    return {
+      step: getCreateWizardCurrentStep(),
+      unlocked_step_rank: unlockedRank,
+      add_band_expanded: !!uiState.addBandExpanded,
+      add_band_touched: !!uiState.addBandTouched,
+      form: readCreateDraftFormSnapshot(),
+      form_meta: {
+        access_initialized: uiState.createAccessInitialized === true,
+        login_manual_edited: uiState.createAccessLoginManuallyEdited === true,
+        last_suggested_login: clean(uiState.createAccessLastSuggestedLogin)
+      },
+      delivery: getCreateWizardDelivery()
+    };
+  };
+
+  const readCreateDraftFormSnapshot = ()=>{
+    return {
+      full_name: clean(els.fullName?.value),
+      gender: clean(els.gender?.value).toLowerCase(),
+      alias: normalizeAliasValue(els.alias?.value || ''),
+      phone: clean(els.phone?.value),
+      email: clean(els.email?.value).toLowerCase(),
+      role: clean(els.role?.value || 'operator').toLowerCase(),
+      login: normalizeLoginValue(els.login?.value || ''),
+      temp_password: String(els.tempPassword?.value || ''),
+      force_password_change: !!els.forceChange?.checked,
+      permissions: normalizePermissions(readPermissionsFromForm())
+    };
+  };
+
+  const hasCreateDraftProgress = (draftPayload = {})=>{
+    const payload = draftPayload && typeof draftPayload === 'object' ? draftPayload : {};
+    const form = payload.form && typeof payload.form === 'object' ? payload.form : {};
+    const hasTextProgress = [
+      clean(form.full_name),
+      clean(form.gender),
+      clean(form.alias),
+      clean(form.phone),
+      clean(form.email),
+      clean(form.login),
+      clean(form.temp_password)
+    ].some(Boolean);
+    const permissions = normalizePermissions(form.permissions);
+    const hasCustomPermissions = permissions.join('|') !== CREATE_WIZARD_DEFAULT_PERMISSIONS.join('|');
+    const safeStep = normalizeCreateWizardStep(payload.step, 'general');
+    const rawRank = Number(payload.unlocked_step_rank);
+    const safeRank = Number.isFinite(rawRank) ? Math.max(0, Math.floor(rawRank)) : 0;
+    const delivery = payload.delivery && typeof payload.delivery === 'object'
+      ? payload.delivery
+      : {};
+    const hasDeliveryProgress = !!(
+      clean(delivery.operator_id)
+      && clean(delivery.email)
+      && clean(delivery.login)
+      && clean(delivery.temp_password)
+    );
+    return hasTextProgress || hasCustomPermissions || safeStep !== 'general' || safeRank > 0 || hasDeliveryProgress;
+  };
+
+  const persistCreateDraftState = ()=>{
+    // UX aprobada: no persistir drafts de alta de operador.
+    clearCreateDraftState();
+  };
+
+  const hydrateCreateDraftState = ()=>{
+    // UX aprobada: no rehidratar drafts de alta.
+    clearCreateDraftState();
+    return false;
+  };
+
+  const readPermissionsFromForm = ()=>{
+    return Object.entries(els.permissions)
+      .filter(([, checkbox])=> checkbox && checkbox.checked)
+      .map(([key])=> key);
+  };
+
+  const validateGeneralStep = ({ showError = false, operatorId = '' } = {})=>{
+    const safeOperatorId = clean(operatorId);
+    const fullName = clean(els.fullName?.value);
+    const gender = clean(els.gender?.value);
+    const phone = clean(els.phone?.value);
+    const email = clean(els.email?.value).toLowerCase();
+    const role = clean(els.role?.value || 'operator');
+    const aliasRaw = normalizeAliasInputElement(els.alias, { stripInvalid: false });
+    const aliasValidation = validateAliasRules(aliasRaw, safeOperatorId);
+
+    if(!fullName){
+      if(showError) setModalError('Ingresa el nombre completo del operador.');
+      return { ok: false, key: 'general' };
+    }
+    if(!gender){
+      if(showError) setModalError('Selecciona el género del operador.');
+      return { ok: false, key: 'general' };
+    }
+    if(!phone){
+      if(showError) setModalError('Ingresa el teléfono móvil del operador.');
+      return { ok: false, key: 'general' };
+    }
+    if(!email){
+      if(showError) setModalError('Ingresa un correo electrónico para acceso y recuperación.');
+      return { ok: false, key: 'general' };
+    }
+    if(aliasValidation.error){
+      if(showError) setModalError(aliasValidation.error);
+      return { ok: false, key: 'general' };
+    }
+    if(!role){
+      if(showError) setModalError('Selecciona un rol para el operador.');
+      return { ok: false, key: 'general' };
+    }
+
+    return {
+      ok: true,
+      key: 'general',
+      alias: aliasValidation.alias,
+      fullName,
+      gender,
+      phone,
+      email,
+      role
+    };
+  };
+
+  const validateAccessStep = ({ showError = false, operatorId = '' } = {})=>{
+    const safeOperatorId = clean(operatorId);
+    const loginRaw = normalizeLoginInputElement(els.login);
+    const loginValidation = validateLoginRules(loginRaw, safeOperatorId);
+    if(loginValidation.error){
+      if(showError) setModalError(loginValidation.error);
+      return { ok: false, key: 'access' };
+    }
+    const tempPasswordRaw = String(els.tempPassword?.value || '');
+    const passwordValidation = validateTempPasswordRules(tempPasswordRaw);
+    if(!passwordValidation.ok){
+      if(showError) setModalError(passwordValidation.error);
+      return { ok: false, key: 'access' };
+    }
+    return { ok: true, key: 'access', login: loginValidation.login, tempPassword: tempPasswordRaw };
+  };
+
+  const validatePermissionsStep = ({ showError = false } = {})=>{
+    const permissions = normalizePermissions(readPermissionsFromForm());
+    if(!permissions.length){
+      if(showError) setModalError('Selecciona al menos un permiso operativo.');
+      return { ok: false, key: 'permissions', permissions: [] };
+    }
+    return { ok: true, key: 'permissions', permissions };
+  };
+
+  const isCreateWizardReadyToSave = ()=>{
+    const operatorId = clean(els.editId?.value);
+    const general = validateGeneralStep({ showError: false, operatorId });
+    if(!general.ok) return false;
+    const access = validateAccessStep({ showError: false, operatorId });
+    if(!access.ok) return false;
+    const permissions = validatePermissionsStep({ showError: false });
+    return permissions.ok;
+  };
+
+  const syncCreateWizardPrimaryButton = ()=>{
+    if(!els.saveBtn) return;
+    const mode = clean(panel.dataset.opsFormMode || 'create');
+    if(mode === 'edit'){
+      els.saveBtn.textContent = 'Guardar cambios';
+      syncCreateWizardStepPresentation();
+      clearCreateDraftState();
+      return;
+    }
+    const currentStep = getCreateWizardCurrentStep();
+    if(currentStep === 'permissions'){
+      els.saveBtn.textContent = 'Guardar operador';
+    }else if(currentStep === 'send'){
+      els.saveBtn.textContent = 'Enviar correo con credenciales';
+    }else{
+      els.saveBtn.textContent = 'Siguiente';
+    }
+    syncCreateWizardStepPresentation();
+  };
+
+  const applyCreateWizardLocks = ()=>{
     if(!els.accordion) return;
-    const safeKey = clean(sectionKey) || 'general';
+    const mode = clean(panel.dataset.opsFormMode || 'create');
+    if(mode !== 'create'){
+      els.accordion.querySelectorAll('[data-ops-accordion-item]').forEach((item)=>{
+        item.classList.remove('is-step-locked');
+        item.removeAttribute('data-step-locked');
+        const toggle = item.querySelector('[data-ops-accordion-toggle]');
+        if(toggle){
+          toggle.disabled = false;
+          toggle.removeAttribute('aria-disabled');
+          toggle.removeAttribute('tabindex');
+        }
+      });
+      syncCreateWizardPrimaryButton();
+      return;
+    }
+    els.accordion.querySelectorAll('[data-ops-accordion-item]').forEach((item)=>{
+      const key = clean(item.getAttribute('data-ops-accordion-item'));
+      const isLocked = !isCreateWizardStepUnlocked(key);
+      item.classList.toggle('is-step-locked', isLocked);
+      if(isLocked){
+        item.setAttribute('data-step-locked', '1');
+      }else{
+        item.removeAttribute('data-step-locked');
+      }
+      const toggle = item.querySelector('[data-ops-accordion-toggle]');
+      if(toggle){
+        toggle.disabled = isLocked;
+        toggle.setAttribute('aria-disabled', isLocked ? 'true' : 'false');
+        if(isLocked){
+          toggle.setAttribute('tabindex', '-1');
+        }else{
+          toggle.removeAttribute('tabindex');
+        }
+      }
+    });
+    syncCreateWizardPrimaryButton();
+  };
+
+  const setAccordionActive = (sectionKey = 'general', options = {})=>{
+    if(!els.accordion) return;
+    const safeKeyBase = clean(sectionKey) || 'general';
+    const safeKey = normalizeCreateWizardStep(safeKeyBase, 'general');
+    const force = options.force === true;
+    const mode = clean(panel.dataset.opsFormMode || 'create');
+    if(mode === 'create' && !force && !isCreateWizardStepUnlocked(safeKey)){
+      applyCreateWizardLocks();
+      return;
+    }
+    if(mode === 'create' && safeKey === 'access'){
+      ensureCreateAccessPrefill();
+    }
     els.accordion.querySelectorAll('[data-ops-accordion-item]').forEach((item)=>{
       const key = clean(item.getAttribute('data-ops-accordion-item'));
       const isActive = key === safeKey;
@@ -20167,15 +20946,23 @@ console.info('app.js loaded :: 20251123a');
         toggle.setAttribute('aria-expanded', isActive ? 'true' : 'false');
       }
     });
-  };
-
-  const readPermissionsFromForm = ()=>{
-    return Object.entries(els.permissions)
-      .filter(([, checkbox])=> checkbox && checkbox.checked)
-      .map(([key])=> key);
+    if(mode === 'create'){
+      setCreateWizardStep(safeKey);
+      applyCreateWizardLocks();
+    }else{
+      syncCreateWizardPrimaryButton();
+    }
   };
 
   const clearForm = ()=>{
+    if(uiState.createWizardDeliveryCloseTimer){
+      window.clearTimeout(uiState.createWizardDeliveryCloseTimer);
+      uiState.createWizardDeliveryCloseTimer = null;
+    }
+    uiState.createAccessInitialized = false;
+    uiState.createAccessLoginManuallyEdited = false;
+    uiState.createAccessLastSuggestedLogin = '';
+    setCreateWizardDelivery(null);
     if(els.editId) els.editId.value = '';
     if(els.fullName) els.fullName.value = '';
     if(els.gender) els.gender.value = '';
@@ -20191,8 +20978,11 @@ console.info('app.js loaded :: 20251123a');
     });
     if(els.permissions.agenda) els.permissions.agenda.checked = true;
     if(els.permissions.patients) els.permissions.patients.checked = true;
+    setAccessFeedback('');
     setModalError('');
+    setCreateWizardStep('general', { preserveUnlocked: false });
     setAccordionActive('general');
+    clearCreateDraftState();
   };
 
   const fillFormFromOperator = (operator)=>{
@@ -20203,7 +20993,7 @@ console.info('app.js loaded :: 20251123a');
     if(els.alias) els.alias.value = clean(operator.alias);
     if(els.phone) els.phone.value = clean(operator.phone);
     if(els.email) els.email.value = clean(operator.email);
-    if(els.role) els.role.value = clean(operator.role) || 'operator';
+    if(els.role) els.role.value = 'operator';
     if(els.login) els.login.value = clean(operator.login);
     if(els.tempPassword) els.tempPassword.value = '';
     if(els.forceChange) els.forceChange.checked = !!operator.force_password_change;
@@ -20238,8 +21028,8 @@ console.info('app.js loaded :: 20251123a');
     };
     operator.audit_meta = { ...record };
     MODEL.audit_trail.unshift(record);
-    if(MODEL.audit_trail.length > 120){
-      MODEL.audit_trail.length = 120;
+    if(MODEL.audit_trail.length > MAX_AUDIT_TRAIL_RECORDS){
+      MODEL.audit_trail.length = MAX_AUDIT_TRAIL_RECORDS;
     }
   };
 
@@ -20305,10 +21095,9 @@ console.info('app.js loaded :: 20251123a');
     if(!editorRoot || !editingOperator) return;
 
     const fullName = readInlineFieldValue(editorRoot, 'full_name');
-    const alias = readInlineFieldValue(editorRoot, 'alias');
+    const aliasRaw = readInlineFieldValue(editorRoot, 'alias');
     const phone = readInlineFieldValue(editorRoot, 'phone');
     const email = readInlineFieldValue(editorRoot, 'email').toLowerCase();
-    const role = readInlineFieldValue(editorRoot, 'role').toLowerCase() || 'operator';
     const permissions = readInlinePermissions(editorRoot);
     const login = readInlineFieldValue(editorRoot, 'login');
     const gender = readInlineFieldValue(editorRoot, 'gender');
@@ -20319,8 +21108,9 @@ console.info('app.js loaded :: 20251123a');
       setInlineAccordionActive(editorRoot, 'general');
       return;
     }
-    if(!alias){
-      setInlineEditError(safeId, 'Ingresa un alias visible para identificar al operador.');
+    const aliasValidation = validateAliasRules(aliasRaw, safeId);
+    if(aliasValidation.error){
+      setInlineEditError(safeId, aliasValidation.error);
       setInlineAccordionActive(editorRoot, 'general');
       return;
     }
@@ -20337,20 +21127,23 @@ console.info('app.js loaded :: 20251123a');
 
     setInlineEditError(safeId, '');
     editingOperator.full_name = fullName;
-    editingOperator.alias = alias;
+    editingOperator.alias = aliasValidation.alias;
     editingOperator.phone = phone;
     editingOperator.email = email;
     editingOperator.gender = gender;
-    editingOperator.role = role || 'operator';
     editingOperator.login = login;
     editingOperator.permissions = permissions;
     editingOperator.force_password_change = forceChange;
-    pushAudit(editingOperator, 'Actualizó perfil de operador', 'Operadores', alias);
+    pushAudit(editingOperator, 'Actualizó perfil de operador', 'Operadores', aliasValidation.alias);
     setInlineEditingOperator('');
     renderAll();
   };
 
   const startCreateFlow = ()=>{
+    if(hasReachedAbsoluteOperatorLimit()){
+      setModalError(`Se alcanzó el máximo absoluto de ${MODEL.plan_absolute_limit} operadores.`);
+      return;
+    }
     const wasInlineEditing = !!clean(uiState.activeEditingOperatorId);
     const hadExpandedOperator = !!clean(uiState.expandedOperatorId);
     setInlineEditingOperator('');
@@ -20358,10 +21151,8 @@ console.info('app.js loaded :: 20251123a');
     if(wasInlineEditing || hadExpandedOperator){
       renderAll();
     }
+    resetCreateWizardTransientState({ collapseBand: false, keepTouched: true });
     setAddBandExpanded(true, { focus: true });
-    clearForm();
-    setFormMode('create');
-    setAccordionActive('general');
     window.setTimeout(()=>{
       try{ els.fullName?.focus(); }catch(_){}
     }, 80);
@@ -20416,73 +21207,153 @@ console.info('app.js loaded :: 20251123a');
 
   const saveOperatorFromForm = ()=>{
     const operatorId = clean(els.editId?.value);
-    const fullName = clean(els.fullName?.value);
-    const alias = clean(els.alias?.value);
-    const phone = clean(els.phone?.value);
-    const email = clean(els.email?.value).toLowerCase();
-    const role = clean(els.role?.value || 'operator').toLowerCase();
-    const permissions = normalizePermissions(readPermissionsFromForm());
-
-    if(!fullName){
-      setModalError('Ingresa el nombre completo del operador.');
-      setAccordionActive('general');
+    const generalValidation = validateGeneralStep({ showError: true, operatorId });
+    if(!generalValidation.ok){
+      setAccordionActive('general', { force: true });
       return;
     }
-    if(!alias){
-      setModalError('Ingresa un alias visible para identificar al operador.');
-      setAccordionActive('general');
+    const accessValidation = validateAccessStep({ showError: true, operatorId });
+    if(!accessValidation.ok){
+      setAccordionActive('access', { force: true });
       return;
     }
-    if(!email){
-      setModalError('Ingresa un correo electrónico para acceso y recuperación.');
-      setAccordionActive('general');
+    const permissionsValidation = validatePermissionsStep({ showError: true });
+    if(!permissionsValidation.ok){
+      setAccordionActive('permissions', { force: true });
       return;
     }
-    if(!permissions.length){
-      setModalError('Selecciona al menos un permiso operativo.');
-      setAccordionActive('permissions');
-      return;
-    }
+    const fullName = generalValidation.fullName;
+    const phone = generalValidation.phone;
+    const email = generalValidation.email;
+    const role = generalValidation.role || 'operator';
+    const permissions = permissionsValidation.permissions;
+    const login = accessValidation.login;
+    const tempPassword = accessValidation.tempPassword;
 
     const editingOperator = operatorId ? findOperatorById(operatorId) : null;
-    if(!editingOperator && MODEL.operators.length >= MODEL.plan_absolute_limit){
+    if(!editingOperator && hasReachedAbsoluteOperatorLimit()){
       setModalError(`Se alcanzó el máximo absoluto de ${MODEL.plan_absolute_limit} operadores.`);
       return;
     }
 
     if(editingOperator){
       editingOperator.full_name = fullName;
-      editingOperator.alias = alias;
+      editingOperator.alias = generalValidation.alias;
       editingOperator.phone = phone;
       editingOperator.email = email;
-      editingOperator.gender = clean(els.gender?.value);
-      editingOperator.role = role || 'operator';
-      editingOperator.login = clean(els.login?.value);
+      editingOperator.gender = generalValidation.gender;
+      editingOperator.login = login;
       editingOperator.permissions = permissions;
       editingOperator.force_password_change = !!els.forceChange?.checked;
-      pushAudit(editingOperator, 'Actualizó perfil de operador', 'Operadores', alias);
+      pushAudit(editingOperator, 'Actualizó perfil de operador', 'Operadores', generalValidation.alias);
+      renderAll();
+      return;
     }else{
       const createdOperator = {
         operator_id: generateOperatorId(),
-        alias,
+        alias: generalValidation.alias,
         full_name: fullName,
         phone,
         email,
-        gender: clean(els.gender?.value),
+        gender: generalValidation.gender,
         role: role || 'operator',
         status: 'pending',
         permissions,
-        login: clean(els.login?.value),
+        login,
+        temp_password: '',
         force_password_change: !!els.forceChange?.checked,
+        invitation_status: 'pending',
+        operator_credentials_sent_at: '',
         last_access: '',
         audit_meta: {}
       };
-      pushAudit(createdOperator, 'Invitación enviada', 'Operadores', alias);
+      pushAudit(createdOperator, 'Operador guardado', 'Operadores', generalValidation.alias);
       MODEL.operators.push(createdOperator);
+      setCreateWizardDelivery({
+        operator_id: createdOperator.operator_id,
+        email,
+        login,
+        temp_password: tempPassword
+      });
+      setCreateWizardStep('send');
+      uiState.addBandTouched = true;
+      uiState.addBandExpanded = true;
+      setCreateWizardDeliveryFeedback('');
+      renderAll();
+      return;
+    }
+  };
+
+  const sendCreateWizardCredentials = ()=>{
+    const delivery = getCreateWizardDelivery();
+    if(!delivery){
+      setModalError('No se encontró la información de credenciales para enviar.');
+      setCreateWizardStep('access');
+      setAccordionActive('access', { force: true });
+      return;
+    }
+    const operator = findOperatorById(delivery.operator_id);
+    if(!operator){
+      setModalError('No se encontró el operador guardado para completar el envío.');
+      setCreateWizardStep('general', { preserveUnlocked: false });
+      setAccordionActive('general', { force: true });
+      setCreateWizardDelivery(null);
+      return;
+    }
+    // Simulación frontend temporal.
+    // Futuro backend: sendOperatorCredentialsEmail(operatorId, payload)
+    // + actualización de invitation_status vía endpoint seguro.
+    operator.status = 'pending';
+    operator.invitation_status = 'sent';
+    operator.operator_credentials_sent_at = nowIso();
+    pushAudit(operator, 'Credenciales enviadas al operador', 'Operadores', operator.alias || operator.full_name);
+    setModalError('');
+    setCreateWizardDeliveryFeedback('Correo enviado correctamente.');
+    renderAll();
+    if(uiState.createWizardDeliveryCloseTimer){
+      window.clearTimeout(uiState.createWizardDeliveryCloseTimer);
+    }
+    uiState.createWizardDeliveryCloseTimer = window.setTimeout(()=>{
+      uiState.createWizardDeliveryCloseTimer = null;
+      clearForm();
+      setFormMode('create');
+      setAddBandExpanded(false, { remember: true });
+      renderAll();
+    }, 850);
+  };
+
+  const handleCreateWizardPrimaryAction = ()=>{
+    setModalError('');
+    const currentStep = getCreateWizardCurrentStep();
+
+    if(currentStep === 'general'){
+      const generalValidation = validateGeneralStep({ showError: true, operatorId: clean(els.editId?.value) });
+      if(!generalValidation.ok){
+        setAccordionActive('general', { force: true });
+        return;
+      }
+      setCreateWizardStep('access');
+      setAccordionActive('access', { force: true });
+      return;
     }
 
-    renderAll();
-    startCreateFlow();
+    if(currentStep === 'access'){
+      const accessValidation = validateAccessStep({ showError: true, operatorId: clean(els.editId?.value) });
+      if(!accessValidation.ok){
+        setAccordionActive('access', { force: true });
+        return;
+      }
+      setCreateWizardStep('permissions');
+      setAccordionActive('permissions', { force: true });
+      return;
+    }
+
+    if(currentStep === 'send'){
+      sendCreateWizardCredentials();
+      return;
+    }
+
+    saveOperatorFromForm();
   };
 
   const updateOperatorStatus = (operatorId, status, actionLabel)=>{
@@ -20508,9 +21379,10 @@ console.info('app.js loaded :: 20251123a');
     operator.status = 'archived';
     operator.archived_at = nowIso();
     pushAudit(operator, 'Operador archivado', 'Operadores', operator.alias || operator.full_name);
+    MODEL.archived_operators = getArchivedOperators().filter((item)=> clean(item?.operator_id) !== safeId);
     MODEL.archived_operators.unshift(operator);
-    if(MODEL.archived_operators.length > 80){
-      MODEL.archived_operators.length = 80;
+    if(MODEL.archived_operators.length > MAX_ARCHIVED_OPERATORS){
+      MODEL.archived_operators.length = MAX_ARCHIVED_OPERATORS;
     }
     if(clean(uiState.activeEditingOperatorId) === safeId){
       setInlineEditingOperator('');
@@ -20541,10 +21413,16 @@ console.info('app.js loaded :: 20251123a');
     return getArchivedOperators().find((item)=> clean(item?.operator_id) === safeId) || null;
   };
 
+  const findOperatorByIdInAnyState = (operatorId)=>{
+    const safeId = clean(operatorId);
+    if(!safeId) return null;
+    return findOperatorById(safeId) || findArchivedOperatorById(safeId);
+  };
+
   const restoreArchivedOperator = (operatorId)=>{
     const safeId = clean(operatorId);
     if(!safeId) return;
-    if(MODEL.operators.length >= MODEL.plan_absolute_limit){
+    if(hasReachedAbsoluteOperatorLimit()){
       setModalError(`No se puede restaurar: se alcanzó el máximo de ${MODEL.plan_absolute_limit} operadores.`);
       focusSidePanel();
       return;
@@ -20556,12 +21434,13 @@ console.info('app.js loaded :: 20251123a');
     archivedOperator.status = 'paused';
     archivedOperator.archived_at = '';
     pushAudit(archivedOperator, 'Operador restaurado', 'Operadores', archivedOperator.alias || archivedOperator.full_name);
+    MODEL.operators = ensureArray(MODEL.operators).filter((item)=> clean(item?.operator_id) !== safeId);
     MODEL.operators.unshift(archivedOperator);
     renderAll();
   };
 
   const openOperatorHistory = (operatorId)=>{
-    const operator = findOperatorById(operatorId);
+    const operator = findOperatorByIdInAnyState(operatorId);
     if(!operator) return;
     historyState.activeOperatorId = clean(operator.operator_id);
     renderOperatorHistoryModal(operator);
@@ -20608,16 +21487,8 @@ console.info('app.js loaded :: 20251123a');
       restoreArchivedOperator(operatorId);
       return;
     }
-    if(safeAction === 'detail'){
-      const details = [
-        `Alias: ${clean(operator.alias) || 'Sin alias'}`,
-        `Nombre: ${clean(operator.full_name) || 'Sin nombre'}`,
-        `Correo: ${clean(operator.email) || 'Sin correo'}`,
-        `Teléfono: ${clean(operator.phone) || 'Sin teléfono'}`,
-        `Último acceso: ${formatDateTimeLabel(operator.last_access)}`,
-        `Archivado: ${formatArchiveDateLabel(operator.archived_at)}`
-      ].join('\n');
-      window.alert(details);
+    if(safeAction === 'history' || safeAction === 'detail'){
+      openOperatorHistory(operatorId);
     }
   };
 
@@ -20629,6 +21500,11 @@ console.info('app.js loaded :: 20251123a');
     els.addBandToggle?.addEventListener('click', ()=>{
       const expanded = els.addBandToggle?.getAttribute('aria-expanded') === 'true';
       const willExpand = !expanded;
+      if(willExpand && hasReachedAbsoluteOperatorLimit()){
+        setModalError(`Se alcanzó el máximo absoluto de ${MODEL.plan_absolute_limit} operadores.`);
+        setAddBandExpanded(false, { remember: true });
+        return;
+      }
       if(willExpand){
         let needsRender = false;
         if(clean(uiState.activeEditingOperatorId)){
@@ -20642,8 +21518,9 @@ console.info('app.js loaded :: 20251123a');
         if(needsRender){
           renderAll();
         }
+        resetCreateWizardTransientState({ collapseBand: false, keepTouched: true });
       }
-      setAddBandExpanded(willExpand, { remember: true });
+      setAddBandExpanded(willExpand, { remember: true, focus: willExpand, behavior: 'smooth', block: 'start' });
     });
 
     els.emptyCta?.addEventListener('click', ()=>{
@@ -20651,11 +21528,135 @@ console.info('app.js loaded :: 20251123a');
     });
 
     els.saveBtn?.addEventListener('click', ()=>{
+      const mode = clean(panel.dataset.opsFormMode || 'create');
+      if(mode === 'create'){
+        handleCreateWizardPrimaryAction();
+        return;
+      }
       saveOperatorFromForm();
     });
 
     els.formCancelBtn?.addEventListener('click', ()=>{
-      startCreateFlow();
+      resetCreateWizardTransientState({ collapseBand: true, keepTouched: false });
+    });
+
+    els.alias?.addEventListener('input', ()=>{
+      normalizeAliasInputElement(els.alias, { stripInvalid: false });
+      syncCreateWizardPrimaryButton();
+    });
+    els.alias?.addEventListener('blur', ()=>{
+      normalizeAliasInputElement(els.alias, { stripInvalid: false });
+      syncCreateWizardPrimaryButton();
+    });
+
+    els.login?.addEventListener('input', ()=>{
+      const normalizedLogin = normalizeLoginInputElement(els.login);
+      if(clean(panel.dataset.opsFormMode || 'create') === 'create'){
+        const lastSuggested = clean(uiState.createAccessLastSuggestedLogin);
+        uiState.createAccessLoginManuallyEdited = !!normalizedLogin && !!lastSuggested && normalizedLogin !== lastSuggested;
+      }
+      setAccessFeedback('');
+      setModalError('');
+      syncCreateWizardPrimaryButton();
+    });
+    els.login?.addEventListener('blur', ()=>{
+      const normalizedLogin = normalizeLoginInputElement(els.login);
+      if(clean(panel.dataset.opsFormMode || 'create') === 'create'){
+        const lastSuggested = clean(uiState.createAccessLastSuggestedLogin);
+        uiState.createAccessLoginManuallyEdited = !!normalizedLogin && !!lastSuggested && normalizedLogin !== lastSuggested;
+      }
+      setAccessFeedback('');
+      setModalError('');
+      syncCreateWizardPrimaryButton();
+    });
+
+    els.tempPassword?.addEventListener('input', ()=>{
+      setAccessFeedback('');
+      setModalError('');
+      syncCreateWizardPrimaryButton();
+    });
+
+    els.regenPasswordBtn?.addEventListener('click', ()=>{
+      if(!els.tempPassword) return;
+      els.tempPassword.value = generateTemporaryPassword(12);
+      setModalError('');
+      setAccessFeedback('Contraseña temporal generada.');
+      syncCreateWizardPrimaryButton();
+      try{ els.tempPassword.focus(); }catch(_){}
+    });
+
+    els.copyPasswordBtn?.addEventListener('click', async ()=>{
+      const password = String(els.tempPassword?.value || '');
+      if(!password){
+        setModalError('Genera o captura una contraseña temporal antes de copiar.');
+        return;
+      }
+      try{
+        if(navigator?.clipboard?.writeText){
+          await navigator.clipboard.writeText(password);
+        }else{
+          const previousSelectionStart = els.tempPassword.selectionStart;
+          const previousSelectionEnd = els.tempPassword.selectionEnd;
+          els.tempPassword.focus();
+          els.tempPassword.select();
+          document.execCommand('copy');
+          if(Number.isInteger(previousSelectionStart) && Number.isInteger(previousSelectionEnd)){
+            els.tempPassword.setSelectionRange(previousSelectionStart, previousSelectionEnd);
+          }
+        }
+        setModalError('');
+        setAccessFeedback('Contraseña copiada.');
+      }catch(_){
+        setModalError('No se pudo copiar la contraseña. Intenta copiarla manualmente.');
+      }
+    });
+
+    els.sendCopyBtn?.addEventListener('click', async ()=>{
+      const delivery = getCreateWizardDelivery();
+      if(!delivery){
+        setCreateWizardDeliveryFeedback('No hay credenciales disponibles para copiar.');
+        return;
+      }
+      const bundle = [
+        `Correo: ${delivery.email}`,
+        `Usuario: ${delivery.login}`,
+        `Contraseña temporal: ${delivery.temp_password}`
+      ].join('\n');
+      try{
+        if(navigator?.clipboard?.writeText){
+          await navigator.clipboard.writeText(bundle);
+        }else{
+          const temp = document.createElement('textarea');
+          temp.value = bundle;
+          temp.setAttribute('readonly', 'true');
+          temp.style.position = 'absolute';
+          temp.style.left = '-9999px';
+          document.body.appendChild(temp);
+          temp.select();
+          document.execCommand('copy');
+          document.body.removeChild(temp);
+        }
+        setCreateWizardDeliveryFeedback('Credenciales copiadas.');
+      }catch(_){
+        setCreateWizardDeliveryFeedback('No se pudo copiar automáticamente. Copia manualmente los datos.');
+      }
+    });
+
+    [
+      els.fullName,
+      els.gender,
+      els.phone,
+      els.email,
+      els.login,
+      els.tempPassword
+    ].forEach((field)=>{
+      field?.addEventListener('input', syncCreateWizardPrimaryButton);
+      field?.addEventListener('change', syncCreateWizardPrimaryButton);
+      field?.addEventListener('blur', syncCreateWizardPrimaryButton);
+    });
+
+    Object.values(els.permissions).forEach((checkbox)=>{
+      checkbox?.addEventListener('change', syncCreateWizardPrimaryButton);
     });
 
     els.archivedToggle?.addEventListener('click', ()=>{
@@ -20684,7 +21685,7 @@ console.info('app.js loaded :: 20251123a');
             uiState.addBandTouched = true;
           }
           if(!Object.prototype.hasOwnProperty.call(uiState.inlineAccordionByOperator, operatorId)){
-            setInlineAccordionKeyForOperator(operatorId, 'general');
+            setInlineAccordionKeyForOperator(operatorId, '');
           }
           uiState.expandedOperatorId = operatorId;
         }
@@ -20724,6 +21725,18 @@ console.info('app.js loaded :: 20251123a');
       handleOperatorAction(action, operatorId, editSection);
     });
 
+    els.list?.addEventListener('input', (event)=>{
+      const aliasInput = event.target.closest('[data-op-inline-field="alias"]');
+      if(!aliasInput) return;
+      normalizeAliasInputElement(aliasInput, { stripInvalid: false });
+    });
+
+    els.list?.addEventListener('blur', (event)=>{
+      const aliasInput = event.target.closest('[data-op-inline-field="alias"]');
+      if(!aliasInput) return;
+      normalizeAliasInputElement(aliasInput, { stripInvalid: false });
+    }, true);
+
     els.archivedList?.addEventListener('click', (event)=>{
       const btn = event.target.closest('[data-op-archived-action][data-op-archived-id]');
       if(!btn) return;
@@ -20737,6 +21750,11 @@ console.info('app.js loaded :: 20251123a');
       if(!toggle) return;
       const key = clean(toggle.getAttribute('data-ops-accordion-toggle'));
       if(!key) return;
+      const item = toggle.closest('[data-ops-accordion-item]');
+      if(item?.classList.contains('is-step-locked')){
+        setModalError('Completa el paso anterior para continuar.');
+        return;
+      }
       setAccordionActive(key);
     });
 
@@ -20813,16 +21831,30 @@ console.info('app.js loaded :: 20251123a');
       });
     }
 
+    window.addEventListener('mxmed:workspace-mode', (event)=>{
+      const currentPanelId = clean(event?.detail?.panelId || '');
+      if(currentPanelId === 'p-ag-operadores') return;
+      resetCreateWizardTransientState({ collapseBand: true, keepTouched: false });
+    });
+
+    if(window.MutationObserver && !operatorsVisibilityObserver){
+      operatorsVisibilityObserver = new MutationObserver(()=>{
+        if(panel.classList.contains('d-none')){
+          resetCreateWizardTransientState({ collapseBand: true, keepTouched: false });
+        }
+      });
+      operatorsVisibilityObserver.observe(panel, { attributes: true, attributeFilter: ['class', 'style'] });
+    }
+
   };
 
   const start = ()=>{
     setupBandsLayout();
     refreshDynamicEls();
-    uiState.addBandExpanded = false;
-    uiState.addBandTouched = false;
+    hydrateOperatorsState();
+    hydrateCreateDraftState();
+    resetCreateWizardTransientState({ collapseBand: true, keepTouched: false });
     bindEvents();
-    setFormMode('create');
-    setAccordionActive('general');
     setArchivedExpanded(false);
     setModalError('');
     seedAuditTrailFromOperators();

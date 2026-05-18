@@ -2934,23 +2934,14 @@
                     </button>
                   </header>
 
-                  <div class="mx-ag-ops-empty d-none" id="ag_ops_empty_state">
-                    <div class="mx-ag-ops-empty-copy">
-                      <h6>Registrar operador</h6>
-                      <p>Aún no hay operadores registrados. Expande la banda Agregar operador para crear el primero.</p>
-                    </div>
-                    <button type="button" class="btn btn-primary mx-ag-ops-empty-btn" id="ag_ops_empty_cta">Registrar operador</button>
-                  </div>
-
                   <div class="mx-ag-ops-list" id="ag_ops_list" role="list"></div>
 
                   <section class="mx-ag-ops-archived" id="ag_ops_archived_section" aria-labelledby="ag_ops_archived_title">
                     <button type="button" class="mx-ag-ops-archived-toggle" id="ag_ops_archived_toggle" aria-expanded="false" aria-controls="ag_ops_archived_panel">
-                      <span>
-                        <strong id="ag_ops_archived_title">Operadores archivados</strong>
-                        <small>Consulta histórica de operadores sin acceso activo.</small>
+                      <span class="mx-ag-ops-archived-link">
+                        <strong id="ag_ops_archived_title">Operadores eliminados</strong>
+                        <span class="mx-ag-ops-archived-count" id="ag_ops_archived_count">0</span>
                       </span>
-                      <span class="mx-ag-ops-archived-count" id="ag_ops_archived_count">0</span>
                       <span class="material-symbols-rounded mx-ag-ops-archived-chevron" aria-hidden="true">expand_more</span>
                     </button>
                     <div class="mx-ag-ops-archived-panel d-none" id="ag_ops_archived_panel" role="region" aria-live="polite">
@@ -2988,7 +2979,6 @@
                     <h5 id="ag_ops_form_title">Agregar operador</h5>
                   </div>
                   <div class="mx-ag-ops-form-body">
-                    <p class="mx-ag-ops-modal-subtitle">Define datos, acceso y permisos operativos del asistente.</p>
                     <div class="mx-ag-ops-modal-error d-none" id="ag_ops_modal_error" role="alert"></div>
                     <div class="mx-ag-ops-accordion" id="ag_ops_modal_accordion">
                       <article class="mx-ag-ops-accordion-item is-active" data-ops-accordion-item="general">
@@ -3025,14 +3015,14 @@
                               <input type="email" class="form-control" id="ag_ops_email" placeholder="operador@correo.com">
                             </div>
                             <div class="col-md-6">
-                              <label class="form-label" for="ag_ops_alias">Alias (visible en sistema)</label>
+                              <label class="form-label" for="ag_ops_alias">Alias (Nombre corto para este operador · 1 palabra / ejemplo: MARY)</label>
                               <input type="text" class="form-control" id="ag_ops_alias" placeholder="Operador 01">
+                              <div class="form-text">Usa 3 a 15 caracteres: letras, números o guion. Sin espacios.</div>
                             </div>
                             <div class="col-md-6">
                               <label class="form-label" for="ag_ops_role">Rol</label>
-                              <select class="form-select" id="ag_ops_role">
+                              <select class="form-select" id="ag_ops_role" disabled aria-disabled="true" tabindex="-1">
                                 <option value="operator">Operador</option>
-                                <option value="assistant">Asistente</option>
                               </select>
                             </div>
                           </div>
@@ -3053,10 +3043,17 @@
                             <div class="col-md-6">
                               <label class="form-label" for="ag_ops_login">Usuario login</label>
                               <input type="text" class="form-control" id="ag_ops_login" placeholder="usuario.operador">
+                              <div class="form-text">Solo minúsculas: letras, números, punto o guion.</div>
                             </div>
                             <div class="col-md-6">
                               <label class="form-label" for="ag_ops_temp_password">Contraseña temporal</label>
                               <input type="text" class="form-control" id="ag_ops_temp_password" placeholder="Temporal segura">
+                              <div class="mx-ag-ops-access-tools">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_ops_regen_password">Generar nueva contraseña</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_ops_copy_password">Copiar</button>
+                              </div>
+                              <div class="form-text">Mínimo 10 caracteres con mayúscula, minúscula, número y símbolo.</div>
+                              <div class="form-text mx-ag-ops-access-feedback d-none" id="ag_ops_access_feedback"></div>
                             </div>
                             <div class="col-12">
                               <label class="form-check mx-ag-ops-check">
@@ -3111,10 +3108,39 @@
                         </div>
                       </article>
                     </div>
+                    <section class="mx-ag-ops-send-step d-none" id="ag_ops_send_step" aria-live="polite">
+                      <div class="mx-ag-ops-send-step-head">
+                        <span class="material-symbols-rounded" aria-hidden="true">mark_email_read</span>
+                        <div>
+                          <h6>Operador guardado correctamente.</h6>
+                          <p>Envía las credenciales de acceso al correo del operador.</p>
+                        </div>
+                      </div>
+                      <div class="mx-ag-ops-send-step-grid">
+                        <article class="mx-ag-ops-send-step-item">
+                          <span>Correo del operador</span>
+                          <strong id="ag_ops_send_email">-</strong>
+                        </article>
+                        <article class="mx-ag-ops-send-step-item">
+                          <span>Usuario login</span>
+                          <strong id="ag_ops_send_login">-</strong>
+                        </article>
+                        <article class="mx-ag-ops-send-step-item">
+                          <span>Contraseña temporal</span>
+                          <strong id="ag_ops_send_password">-</strong>
+                        </article>
+                      </div>
+                      <div class="mx-ag-ops-send-step-actions">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_ops_send_copy_credentials">
+                          Copiar credenciales
+                        </button>
+                        <p class="mx-ag-ops-send-step-feedback d-none" id="ag_ops_send_feedback" role="status"></p>
+                      </div>
+                    </section>
                   </div>
                   <div class="mx-ag-ops-form-footer">
                     <button type="button" class="btn btn-outline-secondary" id="ag_ops_form_cancel_btn">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="ag_ops_save_btn">Guardar operador</button>
+                    <button type="button" class="btn btn-primary" id="ag_ops_save_btn">Siguiente</button>
                   </div>
                 </aside>
               </div>
