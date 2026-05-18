@@ -30,7 +30,44 @@ class AppointmentEventsRepository
         $stmt->bindValue(':appointment_id', $appointmentId);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return array_map([$this, 'enrichRescheduleConsultorioTrace'], $rows);
+    }
+
+    private function enrichRescheduleConsultorioTrace(array $row): array
+    {
+        if (($row['event_type'] ?? '') !== 'appointment_rescheduled') {
+            return $row;
+        }
+
+        $trace = $this->extractConsultorioTraceFromNotes($row['notes'] ?? null);
+        $row['from_consultorio_id'] = $row['from_consultorio_id'] ?? ($trace['from_consultorio_id'] ?? null);
+        $row['to_consultorio_id'] = $row['to_consultorio_id'] ?? ($trace['to_consultorio_id'] ?? null);
+        return $row;
+    }
+
+    private function extractConsultorioTraceFromNotes($notes): array
+    {
+        if (!is_string($notes)) {
+            return [];
+        }
+        $trimmed = trim($notes);
+        if ($trimmed === '' || $trimmed[0] !== '{') {
+            return [];
+        }
+
+        $decoded = json_decode($trimmed, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $from = isset($decoded['from_consultorio_id']) ? trim((string)$decoded['from_consultorio_id']) : '';
+        $to = isset($decoded['to_consultorio_id']) ? trim((string)$decoded['to_consultorio_id']) : '';
+
+        return [
+            'from_consultorio_id' => $from !== '' ? $from : null,
+            'to_consultorio_id' => $to !== '' ? $to : null,
+        ];
     }
 
     private function ensureTable(): void

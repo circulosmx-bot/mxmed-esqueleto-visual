@@ -173,10 +173,15 @@ class AppointmentWriteRepository
 
         $this->pdo->beginTransaction();
         try {
-            $this->update($this->appointmentsTable, $pkColumn, $appointmentId, [
+            $updatePayload = [
                 'start_at' => $payload['to_start_at'],
                 'end_at' => $payload['to_end_at'],
-            ]);
+            ];
+            $targetConsultorioId = trim((string)($payload['to_consultorio_id'] ?? ''));
+            if ($targetConsultorioId !== '') {
+                $updatePayload['consultorio_id'] = $targetConsultorioId;
+            }
+            $this->update($this->appointmentsTable, $pkColumn, $appointmentId, $updatePayload);
             $this->appendRescheduleEvent($appointmentId, $payload, $current);
             $this->pdo->commit();
         } catch (PDOException $e) {
@@ -191,8 +196,10 @@ class AppointmentWriteRepository
             'appointment_id' => $appointmentId,
             'from_start_at' => $current['start_at'] ?? null,
             'from_end_at' => $current['end_at'] ?? null,
+            'from_consultorio_id' => $current['consultorio_id'] ?? null,
             'to_start_at' => $payload['to_start_at'],
             'to_end_at' => $payload['to_end_at'],
+            'to_consultorio_id' => $payload['to_consultorio_id'] ?? ($current['consultorio_id'] ?? null),
             'motivo_code' => $payload['motivo_code'] ?? null,
             'motivo_text' => $payload['motivo_text'] ?? null,
             'notify_patient' => $notifyPatient,
@@ -202,6 +209,12 @@ class AppointmentWriteRepository
 
     private function appendRescheduleEvent(string $appointmentId, array $payload, array $current): void
     {
+        $fromConsultorioId = isset($current['consultorio_id']) ? trim((string)$current['consultorio_id']) : '';
+        $toConsultorioId = trim((string)($payload['to_consultorio_id'] ?? ''));
+        if ($toConsultorioId === '') {
+            $toConsultorioId = $fromConsultorioId;
+        }
+
         $eventData = [
             'event_id' => $this->generateId(),
             'appointment_id' => $appointmentId,
@@ -217,8 +230,26 @@ class AppointmentWriteRepository
             'motivo_text' => $payload['motivo_text'] ?? null,
             'notify_patient' => $payload['notify_patient'] ?? 0,
             'contact_method' => $payload['contact_method'] ?? 'whatsapp',
+            // Persistimos metadatos de consultorio en `notes` para trazabilidad
+            // sin depender de migraciones de columnas en agenda_appointment_events.
+            'notes' => $this->buildRescheduleEventNotes($fromConsultorioId, $toConsultorioId),
         ];
         $this->insert($this->eventsTable, $eventData);
+    }
+
+    private function buildRescheduleEventNotes(string $fromConsultorioId, string $toConsultorioId): ?string
+    {
+        $payload = [
+            'from_consultorio_id' => $fromConsultorioId !== '' ? $fromConsultorioId : null,
+            'to_consultorio_id' => $toConsultorioId !== '' ? $toConsultorioId : null,
+        ];
+
+        $encoded = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($encoded === false) {
+            return null;
+        }
+
+        return $encoded;
     }
 
     public function cancelAppointment(string $appointmentId, array $payload): array

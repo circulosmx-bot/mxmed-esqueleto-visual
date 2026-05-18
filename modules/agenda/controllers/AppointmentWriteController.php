@@ -466,9 +466,15 @@ class AppointmentWriteController
             return $payloadScopeError;
         }
 
+        $targetConsultorioId = trim((string)($payload['to_consultorio_id'] ?? ''));
+        if ($targetConsultorioId === '') {
+            $targetConsultorioId = (string)$context['consultorio_id'];
+        }
+        $payload['to_consultorio_id'] = $targetConsultorioId;
+
         $guard = $this->checkAvailabilityRange(
             (string)$context['doctor_id'],
-            (string)$context['consultorio_id'],
+            $targetConsultorioId,
             (string)$payload['to_start_at'],
             (string)$payload['to_end_at'],
             $payload['slot_minutes'] ?? null,
@@ -516,6 +522,8 @@ class AppointmentWriteController
                 'from_end_at' => $result['from_end_at'],
                 'to_start_at' => $result['to_start_at'],
                 'to_end_at' => $result['to_end_at'],
+                'from_consultorio_id' => $result['from_consultorio_id'],
+                'to_consultorio_id' => $result['to_consultorio_id'],
                 'motivo_code' => $result['motivo_code'],
                 'motivo_text' => $result['motivo_text'],
             ],
@@ -562,6 +570,12 @@ class AppointmentWriteController
 
         if (($payload['motivo_code'] ?? '') === '' && ($payload['motivo_text'] ?? '') === '') {
             $errors['motivo'] = 'motivo_code or motivo_text required';
+        }
+
+        if (array_key_exists('to_consultorio_id', $payload) && trim((string)$payload['to_consultorio_id']) !== '') {
+            if (!preg_match('/^\d+$/', trim((string)$payload['to_consultorio_id']))) {
+                $errors['to_consultorio_id'] = $payload['to_consultorio_id'];
+            }
         }
         return $errors;
     }
