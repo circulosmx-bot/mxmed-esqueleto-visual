@@ -673,6 +673,7 @@ console.info('app.js loaded :: 20251123a');
     eventCancelPostHint: panel.querySelector('#ag_event_cancel_post_hint'),
     eventCancelPostActions: panel.querySelector('#ag_event_cancel_post_actions'),
     eventCancelPostWaitlistBtn: panel.querySelector('#ag_event_cancel_post_waitlist_btn'),
+    eventCancelPostNextAvailableBtn: panel.querySelector('#ag_event_cancel_post_next_available_btn'),
     eventCancelPostNewBtn: panel.querySelector('#ag_event_cancel_post_new_btn'),
     eventCancelWaitlistWrap: panel.querySelector('#ag_event_cancel_waitlist_wrap'),
     eventCancelWaitlistLoading: panel.querySelector('#ag_event_cancel_waitlist_loading'),
@@ -792,6 +793,7 @@ console.info('app.js loaded :: 20251123a');
   let nextAvailableForwardCursor = null;
   let nextAvailablePrevStack = [];
   let nextAvailableLastOptions = [];
+  let nextAvailableContextOverride = null;
   let nextSlotFocus = null;
   let nextSlotFocusClearTimer = 0;
   let cellMenuSelection = null;
@@ -816,6 +818,7 @@ console.info('app.js loaded :: 20251123a');
   let eventCancelPostActionsEnabled = false;
   let eventCancelPostWaitlistLoaded = false;
   let eventCancelPostWaitlistBusy = false;
+  let eventCancelDeferredRefresh = false;
   let eventCancelLateWindow = false;
   let eventRescheduleMonthOptions = [];
   let eventRescheduleMonthCursor = null;
@@ -2971,14 +2974,44 @@ console.info('app.js loaded :: 20251123a');
       ? calendar.getEvents().map((eventRef)=> normalizeEventForCustomWeek(eventRef)).filter(Boolean)
       : [];
     let dayEvents = filterEventsByLocalDay(calendarEvents, safeDay);
+    const fromCalendar = dayEvents.length;
     if(!dayEvents.length){
       const sharedState = resolveCustomWeekSharedVisibleState();
       const sharedEvents = Array.isArray(sharedState?.events) ? sharedState.events : [];
       dayEvents = filterEventsByLocalDay(sharedEvents, safeDay);
     }
-    const safeEvents = sanitizeDayEventsForCardRender(dayEvents);
+    const dayEnd = addLocalDays(safeDay, 1);
+    const blockedFromStorage = collectBlockedSlotEvents({
+      start: safeDay,
+      end: dayEnd
+    }, {
+      includeCrossScopeFallback: true
+    });
+    const mergedDayEvents = dedupeDaySnapshotEvents([
+      ...dayEvents,
+      ...blockedFromStorage
+    ]).map((eventRef)=> ensureBlockedSlotEventVisualState(eventRef));
+    const safeEvents = sanitizeDayEventsForCardRender(mergedDayEvents);
     const collapsed = collapseDaySlotCollisions(safeEvents);
     const deduped = dedupeDaySnapshotEvents(collapsed);
+    try{
+      const dayKey = formatYmdLocal(safeDay);
+      const blockedRaw = mergedDayEvents.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot').length;
+      const blockedSafe = safeEvents.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot').length;
+      const blockedCollapsed = collapsed.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot').length;
+      const blockedDeduped = deduped.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot').length;
+      console.info('MXM BLOCK PARTIAL RENDER DAY', {
+        scope: 'resolve_renderable_events',
+        view: String(calendar?.view?.type || ''),
+        dayKey,
+        source: fromCalendar ? 'calendar' : 'shared_snapshot',
+        blocked_from_storage: blockedFromStorage.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot').length,
+        blocked_raw: blockedRaw,
+        blocked_after_sanitize: blockedSafe,
+        blocked_after_collapse: blockedCollapsed,
+        blocked_after_dedupe: blockedDeduped
+      });
+    }catch(_){}
     return deduped.sort((left, right)=>{
       const leftStart = left?.start instanceof Date ? left.start.getTime() : new Date(left?.start || '').getTime();
       const rightStart = right?.start instanceof Date ? right.start.getTime() : new Date(right?.start || '').getTime();
@@ -3146,11 +3179,16 @@ console.info('app.js loaded :: 20251123a');
       ? `data-slot-start="${escapeAttrSafe(start.toISOString())}" data-slot-end="${escapeAttrSafe(end.toISOString())}"`
       : '';
     const eventIdAttr = eventId ? `data-event-id="${escapeAttrSafe(eventId)}"` : '';
+    const consultorioAttrs = `
+      data-slot-consultorio-id="${escapeAttrSafe(consultorioIdSafe)}"
+      data-slot-consultorio-name="${escapeAttrSafe(consultorioLabel)}"
+    `;
     return `
       <button type="button"
         class="${occupiedClass}"
         data-slot-kind="${slotKind}"
         data-origin-visual-key="${escapeAttrSafe(originVisualKey)}"
+        ${consultorioAttrs}
         ${isDemoQaAppointment ? 'data-slot-demo="1"' : ''}
         ${eventIdAttr}
         ${isBlockedSlot ? `data-block-id="${escapeAttrSafe(blockId)}"` : ''}
@@ -3254,7 +3292,8 @@ console.info('app.js loaded :: 20251123a');
       const row = {
         start,
         timeLabel: formatAgendaEventSlotTime(start),
-        cardHtml: buildCustomDaySlotCardHtml(eventRef, nowTs)
+        cardHtml: buildCustomDaySlotCardHtml(eventRef, nowTs),
+        eventType
       };
       if(!row.cardHtml) return;
       if(start.getHours() < 14){
@@ -3263,6 +3302,21 @@ console.info('app.js loaded :: 20251123a');
         afternoonRows.push(row);
       }
     });
+    try{
+      const blockedEvents = dayEvents
+        .filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot')
+        .map((eventRef)=> toBlockedSlotDebugEvent(eventRef))
+        .filter(Boolean);
+      console.info('MXM BLOCK PARTIAL RENDER DAY', {
+        scope: 'day_layout_render',
+        view: String(calendar?.view?.type || ''),
+        dayKey: selectedDayKey,
+        blocked_total: totalBlocked,
+        blocked_morning: morningRows.filter((row)=> row?.eventType === 'blocked_slot').length,
+        blocked_afternoon: afternoonRows.filter((row)=> row?.eventType === 'blocked_slot').length,
+        blocked_events: blockedEvents.slice(0, 24)
+      });
+    }catch(_){}
     const renderSectionRows = (rows = [], emptyLabel = 'Sin horarios en este bloque')=>{
       if(!rows.length){
         return `<div class="mx-ag-day-empty">${escapeHtml(emptyLabel)}</div>`;
@@ -3446,7 +3500,29 @@ console.info('app.js loaded :: 20251123a');
         max: Math.max(expandedMin + 30, expandedMax)
       };
       const eventSource = resolveCustomWeekEventSource();
-      const allEvents = Array.isArray(eventSource?.events) ? eventSource.events : [];
+      let allEvents = Array.isArray(eventSource?.events) ? eventSource.events : [];
+      const blockedFromStorage = collectBlockedSlotEvents({
+        start: weekRange?.startDate,
+        end: weekRange?.endDate
+      }, {
+        includeCrossScopeFallback: true
+      }).map((eventRef)=> ensureBlockedSlotEventVisualState(eventRef));
+      if(blockedFromStorage.length){
+        allEvents = dedupeDaySnapshotEvents([
+          ...allEvents,
+          ...blockedFromStorage
+        ]);
+      }
+      try{
+        console.info('MXM BLOCK PARTIAL MERGE', {
+          scope: 'week_source_merge',
+          view: String(calendar?.view?.type || ''),
+          rangeKey: sanitizeText(weekRange?.rangeKey || ''),
+          cached_events: Array.isArray(eventSource?.events) ? eventSource.events.length : 0,
+          blocked_from_storage: blockedFromStorage.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot').length,
+          merged_events: allEvents.length
+        });
+      }catch(_){}
       const currentRangeKey = sanitizeText(weekRange?.rangeKey || '');
       const currentScopeKey = resolveCustomWeekScopeKey();
       const hasRangeMismatch = !!currentRangeKey && currentRangeKey !== customWeekLastEventsRangeKey;
@@ -3676,6 +3752,7 @@ console.info('app.js loaded :: 20251123a');
         });
         const rowsAfterCollision = collapseDaySlotCollisions(rows);
         const blockedCountBefore = rows.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot').length;
+        const blockedCountAfterCollision = rowsAfterCollision.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot').length;
         const availabilityCountBefore = rows.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'availability_slot').length;
         const availabilityCountAfter = rowsAfterCollision.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'availability_slot').length;
         if(blockedCountBefore > 0){
@@ -3687,6 +3764,23 @@ console.info('app.js loaded :: 20251123a');
               availabilityCountAfter
             });
           }catch(_){}
+          try{
+            console.info('MXM BLOCK PARTIAL MERGE', {
+              scope: 'week_projection',
+              view: String(calendar?.view?.type || ''),
+              dayKey: key,
+              blocked_before: blockedCountBefore,
+              blocked_after_collision: blockedCountAfterCollision,
+              availability_before: availabilityCountBefore,
+              availability_after_collision: availabilityCountAfter,
+              blocked_filtered: Math.max(0, blockedCountBefore - blockedCountAfterCollision),
+              blocked_events_after_collision: rowsAfterCollision
+                .filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot')
+                .map((eventRef)=> toBlockedSlotDebugEvent(eventRef))
+                .filter(Boolean)
+                .slice(0, 24)
+            });
+          }catch(_){}
         }
         const renderableRows = rowsAfterCollision.filter((eventRef)=>{
           const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
@@ -3694,6 +3788,21 @@ console.info('app.js loaded :: 20251123a');
         });
         const compactVisibleRows = renderableRows.slice(0, maxCardsPerColumn);
         const rowsForDisplay = weeklyHoursExpanded ? renderableRows : compactVisibleRows;
+        if(blockedCountBefore > 0){
+          try{
+            console.info('MXM BLOCK PARTIAL RENDER WEEK', {
+              view: String(calendar?.view?.type || ''),
+              dayKey: key,
+              weeklyHoursExpanded: !!weeklyHoursExpanded,
+              blocked_displayed: rowsForDisplay.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot').length,
+              blocked_hidden_by_compact: Math.max(
+                0,
+                renderableRows.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot').length
+                - rowsForDisplay.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot').length
+              )
+            });
+          }catch(_){}
+        }
         hiddenCardsIfCompact += Math.max(0, renderableRows.length - compactVisibleRows.length);
         totalHiddenCards += Math.max(0, renderableRows.length - rowsForDisplay.length);
         currentCardsPerColumn = Math.max(currentCardsPerColumn, rowsForDisplay.length);
@@ -3841,11 +3950,16 @@ console.info('app.js loaded :: 20251123a');
             const slotRangeAttrs = isBlockedSlot
               ? `data-slot-start="${escapeAttrSafe(start.toISOString())}" data-slot-end="${escapeAttrSafe(end.toISOString())}"`
               : '';
+            const consultorioAttrs = `
+              data-slot-consultorio-id="${escapeAttrSafe(consultorioIdSafe)}"
+              data-slot-consultorio-name="${escapeAttrSafe(consultorioLabel)}"
+            `;
             return `
               <button type="button"
                 class="${occupiedClass}"
                 data-slot-kind="${slotKind}"
                 data-origin-visual-key="${escapeAttrSafe(originVisualKey)}"
+                ${consultorioAttrs}
                 ${isDemoQaAppointment ? 'data-slot-demo="1"' : `data-event-id="${escapeAttrSafe(eventId)}"`}
                 ${blockIdAttr}
                 ${slotRangeAttrs}>
@@ -4127,6 +4241,33 @@ console.info('app.js loaded :: 20251123a');
       reason_label: reasonLabel || 'Otro',
       reason_note: reasonNote,
       created_at: sanitizeText(row.created_at || toSqlDateTimeLocal(new Date()))
+    };
+  };
+  const toBlockedSlotDebugRow = (row = null)=>{
+    const normalized = normalizeBlockedSlotRecord(row);
+    if(!normalized) return null;
+    return {
+      block_id: sanitizeText(normalized.block_id || ''),
+      consultorio_id: sanitizeText(normalized.consultorio_id || ''),
+      consultorio_label: sanitizeText(normalized.consultorio_label || ''),
+      start: sanitizeText(normalized.start_at || ''),
+      end: sanitizeText(normalized.end_at || ''),
+      event_type: 'blocked_slot'
+    };
+  };
+  const toBlockedSlotDebugEvent = (eventRef = null)=>{
+    const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
+    if(eventType !== 'blocked_slot') return null;
+    const start = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
+    const end = eventRef?.end instanceof Date ? eventRef.end : new Date(eventRef?.end || '');
+    return {
+      id: sanitizeText(eventRef?.id || ''),
+      block_id: normalizeBlockedSlotIdCandidate(eventRef?.extendedProps?.block_id || eventRef?.id || ''),
+      consultorio_id: sanitizeText(eventRef?.extendedProps?.consultorio_id || ''),
+      consultorio_label: sanitizeText(eventRef?.extendedProps?.consultorio_label || ''),
+      start: Number.isNaN(start.getTime()) ? '' : toSqlDateTimeLocal(start),
+      end: Number.isNaN(end.getTime()) ? '' : toSqlDateTimeLocal(end),
+      event_type: 'blocked_slot'
     };
   };
   const readBlockedSlotsFromStorageKey = (storageKey = '')=>{
@@ -4826,37 +4967,77 @@ console.info('app.js loaded :: 20251123a');
     const storageKey = resolveBlockedSlotsStorageKey();
     const includeCrossScopeFallback = options?.includeCrossScopeFallback === true;
     const blockedRowsRaw = readBlockedSlots();
-    let mapped = blockedRowsRaw
-      .filter((row)=>{
-        const start = parseDateTimeLocalSafe(row.start_at);
-        const end = parseDateTimeLocalSafe(row.end_at);
-        if(!start || !end) return false;
-        return start < safeEnd && end > safeStart;
-      })
-      .flatMap((row)=> mapBlockedSlotToRenderEvents(row))
-      .filter(Boolean);
-    if(includeCrossScopeFallback && mapped.length === 0){
+    const rowOverlapsFetchRange = (row)=>{
+      const start = parseDateTimeLocalSafe(row?.start_at);
+      const end = parseDateTimeLocalSafe(row?.end_at);
+      if(!start || !end) return false;
+      return start < safeEnd && end > safeStart;
+    };
+    const primaryMatchedRows = blockedRowsRaw.filter((row)=> rowOverlapsFetchRange(row));
+    let fallbackMatchedRows = [];
+    let fallbackRowsRawCount = 0;
+    let storageKeysScanned = [];
+    let collectSource = 'primary';
+    let matchedRows = primaryMatchedRows.slice();
+    if(includeCrossScopeFallback){
       const mergedScope = readBlockedSlotsAcrossScopes();
-      mapped = (Array.isArray(mergedScope?.rows) ? mergedScope.rows : [])
-        .filter((row)=>{
-          const start = parseDateTimeLocalSafe(row.start_at);
-          const end = parseDateTimeLocalSafe(row.end_at);
-          if(!start || !end) return false;
-          return start < safeEnd && end > safeStart;
-        })
-        .flatMap((row)=> mapBlockedSlotToRenderEvents(row))
-        .filter(Boolean);
+      storageKeysScanned = Array.isArray(mergedScope?.storageKeys) ? mergedScope.storageKeys : [];
+      fallbackRowsRawCount = Array.isArray(mergedScope?.rows) ? mergedScope.rows.length : 0;
+      fallbackMatchedRows = (Array.isArray(mergedScope?.rows) ? mergedScope.rows : [])
+        .filter((row)=> rowOverlapsFetchRange(row));
+      const dedupeSignature = new Set();
+      matchedRows = [...primaryMatchedRows, ...fallbackMatchedRows].filter((row)=>{
+        const normalized = normalizeBlockedSlotRecord(row);
+        if(!normalized) return false;
+        const signature = [
+          sanitizeText(normalized.block_id || ''),
+          sanitizeText(normalized.start_at || ''),
+          sanitizeText(normalized.end_at || ''),
+          sanitizeText(normalized.consultorio_id || ''),
+          sanitizeText(normalized.reason_key || '')
+        ].join('__');
+        if(!signature || dedupeSignature.has(signature)) return false;
+        dedupeSignature.add(signature);
+        return true;
+      });
+      collectSource = fallbackMatchedRows.length ? 'primary+fallback' : 'primary_only';
       try{
         console.info('MXM BLOCK DAY CROSS SCOPE FALLBACK DEBUG', {
           storage_key_primary: storageKey,
-          storage_keys_scanned: Array.isArray(mergedScope?.storageKeys) ? mergedScope.storageKeys : [],
-          fallback_rows_raw: Array.isArray(mergedScope?.rows) ? mergedScope.rows.length : 0,
-          fallback_events_mapped: mapped.length,
+          storage_keys_scanned: storageKeysScanned,
+          fallback_rows_raw: fallbackRowsRawCount,
+          fallback_rows_matched: fallbackMatchedRows.length,
+          merged_rows_matched: matchedRows.length,
           fetch_start: safeStart.toISOString(),
           fetch_end: safeEnd.toISOString()
         });
       }catch(_){}
     }
+    const mapped = matchedRows
+      .flatMap((row)=> mapBlockedSlotToRenderEvents(row))
+      .filter(Boolean);
+    const blockedMappedEvents = mapped.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot');
+    try{
+      console.info('MXM BLOCK PARTIAL COLLECT', {
+        view: String(calendar?.view?.type || ''),
+        storage_key: storageKey,
+        include_cross_scope_fallback: includeCrossScopeFallback,
+        source: collectSource,
+        fetch_start: safeStart.toISOString(),
+        fetch_end: safeEnd.toISOString(),
+        primary_rows_total: blockedRowsRaw.length,
+        primary_rows_matched: primaryMatchedRows.length,
+        matched_rows_total: matchedRows.length,
+        fallback_rows_raw: fallbackRowsRawCount,
+        fallback_rows_matched: fallbackMatchedRows.length,
+        storage_keys_scanned: storageKeysScanned,
+        mapped_events_total: mapped.length,
+        mapped_blocked_total: blockedMappedEvents.length,
+        blocked_rows_primary: primaryMatchedRows.map((row)=> toBlockedSlotDebugRow(row)).filter(Boolean).slice(0, 24),
+        blocked_rows_fallback: fallbackMatchedRows.map((row)=> toBlockedSlotDebugRow(row)).filter(Boolean).slice(0, 24),
+        blocked_events_mapped: blockedMappedEvents.map((eventRef)=> toBlockedSlotDebugEvent(eventRef)).filter(Boolean).slice(0, 24)
+      });
+    }catch(_){}
     try{
       console.info('MXM BLOCK FULL DAY COLLECT DEBUG', {
         storage_key: storageKey,
@@ -5822,6 +6003,7 @@ console.info('app.js loaded :: 20251123a');
     eventCancelPostActionsEnabled = false;
     eventCancelPostWaitlistLoaded = false;
     eventCancelPostWaitlistBusy = false;
+    eventCancelDeferredRefresh = false;
     eventCancelLateWindow = false;
     if(els.eventCancelPostHint){
       els.eventCancelPostHint.classList.add('d-none');
@@ -5850,6 +6032,10 @@ console.info('app.js loaded :: 20251123a');
     if(els.eventCancelPostWaitlistBtn){
       els.eventCancelPostWaitlistBtn.disabled = false;
       els.eventCancelPostWaitlistBtn.textContent = 'Asignar desde lista de espera';
+    }
+    if(els.eventCancelPostNextAvailableBtn){
+      els.eventCancelPostNextAvailableBtn.disabled = false;
+      els.eventCancelPostNextAvailableBtn.textContent = 'Siguiente cita disponible';
     }
     if(els.eventCancelConfirmNoFlagBtn){
       els.eventCancelConfirmNoFlagBtn.disabled = false;
@@ -6285,7 +6471,15 @@ console.info('app.js loaded :: 20251123a');
     if(!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start){
       return null;
     }
-    return { start, end };
+    const props = activeEventActionRef?.extendedProps || {};
+    const consultorioId = sanitizeText(props?.consultorio_id || '');
+    return {
+      start,
+      end,
+      consultorio_id: consultorioId,
+      consultorio_name: consultorioId ? resolveAgendaConsultorioLabelById(consultorioId) : '',
+      doctor_id: sanitizeText(props?.doctor_id || getDoctorId() || '')
+    };
   };
   const buildWaitlistAssignPayload = (entry = {})=>{
     const slot = getEventActionSlotSelection();
@@ -7481,6 +7675,7 @@ console.info('app.js loaded :: 20251123a');
         }
         setError('');
         eventActionIsCancelled = true;
+        eventCancelDeferredRefresh = true;
         logAgendaCancelFlow('cancel:success-demo', {
           activeEventActionId,
           appointmentId
@@ -7527,7 +7722,7 @@ console.info('app.js loaded :: 20251123a');
         responseOk: !!result?.ok
       });
       setError('');
-      await refreshCalendar({ forceConsultorios: false });
+      eventCancelDeferredRefresh = true;
       setEventCancelPostActionsEnabled(true);
       loadEventTimeline(appointmentId).catch(()=> null);
       logAgendaCancelFlow('cancel:post-state-enabled', {
@@ -7955,9 +8150,37 @@ console.info('app.js loaded :: 20251123a');
       modalShown: els.eventActionsModalEl?.classList.contains('show') === true
     });
   };
-  const collectConflictingAppointmentsInRange = (startDate, endDate)=>{
+  const normalizeConsultorioScopeIds = (consultorioIds = [])=>{
+    const source = consultorioIds instanceof Set
+      ? Array.from(consultorioIds)
+      : (Array.isArray(consultorioIds) ? consultorioIds : [consultorioIds]);
+    return new Set(
+      source
+        .map((id)=> sanitizeText(id || ''))
+        .filter((id)=> isNumericId(id))
+    );
+  };
+  const resolveEventConsultorioId = (eventRef = null)=>{
+    return sanitizeText(
+      eventRef?.extendedProps?.consultorio_id
+      || eventRef?.extendedProps?.consultorioId
+      || ''
+    );
+  };
+  const eventMatchesConsultorioScope = (eventRef = null, consultorioScope = new Set())=>{
+    if(!(consultorioScope instanceof Set) || consultorioScope.size === 0){
+      return true;
+    }
+    const consultorioId = resolveEventConsultorioId(eventRef);
+    if(!consultorioId){
+      return false;
+    }
+    return consultorioScope.has(consultorioId);
+  };
+  const collectConflictingAppointmentsInRange = (startDate, endDate, options = {})=>{
     if(!calendar || !(startDate instanceof Date) || !(endDate instanceof Date)) return [];
     if(Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || endDate <= startDate) return [];
+    const consultorioScope = normalizeConsultorioScopeIds(options?.consultorioIds || []);
     return calendar.getEvents().filter((ev)=>{
       if(!ev || ev.display === 'background') return false;
       if(!isEventOperationallyBusy(ev)) return false;
@@ -7965,6 +8188,7 @@ console.info('app.js loaded :: 20251123a');
       if(evId.startsWith('__ag_next_focus_')) return false;
       const evType = sanitizeText(ev.extendedProps?.event_type || '');
       if(evType === 'focus_marker' || evType === 'blocked_slot') return false;
+      if(!eventMatchesConsultorioScope(ev, consultorioScope)) return false;
       const evStart = ev.start;
       const evEnd = ev.end;
       return !!(evStart && evEnd && startDate < evEnd && endDate > evStart);
@@ -8518,6 +8742,15 @@ console.info('app.js loaded :: 20251123a');
   const updateBlockModalConflictState = ()=>{
     const { slotStart, blockEnd, invalidRange } = getBlockModalRange();
     const fullDaySelected = !!(blockModalUiContext?.allowFullDayToggle && els.blockModeSingle?.checked);
+    const partialScopeIds = resolveBlockingTargetConsultorioIds(
+      sanitizeText(
+        blockModalSelection?.consultorio_id
+        || blockModalSelection?.consultorioId
+        || blockModalUiContext?.consultorio_id
+        || blockModalUiContext?.consultorioId
+        || ''
+      )
+    );
     if(!(slotStart instanceof Date) || !(blockEnd instanceof Date) || invalidRange){
       activeBlockConflictItems = [];
       if(activeBlockConflictIds.size){
@@ -8539,7 +8772,9 @@ console.info('app.js loaded :: 20251123a');
       const windows = hydrateBlockModalOperationalContext();
       const conflictById = new Map();
       (Array.isArray(windows) ? windows : []).forEach((windowRow)=>{
-        const rowConflicts = collectConflictingAppointmentsInRange(windowRow?.start, windowRow?.end);
+        const rowConflicts = collectConflictingAppointmentsInRange(windowRow?.start, windowRow?.end, {
+          consultorioIds: [sanitizeText(windowRow?.consultorio_id || '')]
+        });
         rowConflicts.forEach((ev)=>{
           const conflictId = sanitizeText(ev?.id || '');
           if(!conflictId || conflictById.has(conflictId)) return;
@@ -8548,7 +8783,9 @@ console.info('app.js loaded :: 20251123a');
       });
       conflicts = Array.from(conflictById.values());
     }else{
-      conflicts = collectConflictingAppointmentsInRange(slotStart, blockEnd);
+      conflicts = collectConflictingAppointmentsInRange(slotStart, blockEnd, {
+        consultorioIds: partialScopeIds
+      });
     }
     activeBlockConflictItems = conflicts.map((ev)=>({
       id: sanitizeText(ev?.id || ''),
@@ -8962,7 +9199,9 @@ console.info('app.js loaded :: 20251123a');
       }
       const conflictById = new Map();
       operationalWindows.forEach((windowRow)=>{
-        const conflicts = collectConflictingAppointmentsInRange(windowRow.start, windowRow.end);
+        const conflicts = collectConflictingAppointmentsInRange(windowRow.start, windowRow.end, {
+          consultorioIds: [sanitizeText(windowRow?.consultorio_id || '')]
+        });
         conflicts.forEach((ev)=>{
           const conflictId = sanitizeText(ev?.id || '');
           if(!conflictId || conflictById.has(conflictId)) return;
@@ -9023,17 +9262,80 @@ console.info('app.js loaded :: 20251123a');
         created_at: toSqlDateTimeLocal(new Date())
       }));
     }else{
-      const appointmentConflicts = collectConflictingAppointmentsInRange(slotStart, blockEnd);
+      const appointmentConflicts = collectConflictingAppointmentsInRange(slotStart, blockEnd, {
+        consultorioIds: ownershipConsultorioIds
+      });
       if(appointmentConflicts.length){
         setBlockModalError('Este rango incluye citas existentes. Ajusta el rango antes de confirmar.');
         blockModalShowConflicts = true;
         updateBlockModalConflictState();
         return;
       }
-      if(!isSelectionAvailable(slotStart, blockEnd, {
+      const validationScopeIds = Array.from(ownershipConsultorioIds);
+      try{
+        console.info('MXM BLOCK VALIDATION INPUT', {
+          view: String(calendar?.view?.type || ''),
+          source: sanitizeText(blockModalUiContext?.source || ''),
+          ownership_mode: sanitizeText(ownership?.mode || ''),
+          consultorio_id: sanitizeText(blockConsultorioIdRaw || ''),
+          consultorio_scope: validationScopeIds,
+          slot_start: toSqlDateTimeLocal(slotStart),
+          slot_end: toSqlDateTimeLocal(blockEnd),
+          day_key: dayKey,
+          selection_snapshot: snapshotDebug
+        });
+      }catch(_){}
+      const rangeDiagnostics = evaluateSlotRangeDiagnostics(slotStart, blockEnd, {
+        consultorioIds: ownershipConsultorioIds,
         ignoreBlockedSlots: false,
-        ignoreAvailabilityWindow: false
-      })){
+        ignoreAvailabilityWindow: false,
+        includeDiagnosticsDetails: true
+      });
+      try{
+        console.info('MXM BLOCK AVAILABILITY WINDOWS', {
+          view: String(calendar?.view?.type || ''),
+          day_key: dayKey,
+          consultorio_scope: validationScopeIds,
+          selection: rangeDiagnostics?.selection || null,
+          has_availability_layer: rangeDiagnostics?.hasAvailabilityLayer === true,
+          has_availability_slots: rangeDiagnostics?.hasAvailabilitySlots === true,
+          inside_availability: rangeDiagnostics?.insideAvailability === true,
+          availability_windows_count: Array.isArray(rangeDiagnostics?.availabilityWindows) ? rangeDiagnostics.availabilityWindows.length : 0,
+          availability_slot_windows_count: Array.isArray(rangeDiagnostics?.availabilitySlotWindows) ? rangeDiagnostics.availabilitySlotWindows.length : 0,
+          availability_windows: Array.isArray(rangeDiagnostics?.availabilityWindows) ? rangeDiagnostics.availabilityWindows : [],
+          availability_slot_windows: Array.isArray(rangeDiagnostics?.availabilitySlotWindows) ? rangeDiagnostics.availabilitySlotWindows : []
+        });
+      }catch(_){}
+      try{
+        console.info('MXM BLOCK BUSY OVERLAPS', {
+          view: String(calendar?.view?.type || ''),
+          day_key: dayKey,
+          consultorio_scope: validationScopeIds,
+          selection: rangeDiagnostics?.selection || null,
+          overlaps_busy: rangeDiagnostics?.overlapsBusy === true,
+          busy_candidates_seen: Number(rangeDiagnostics?.busyCandidatesSeen || 0),
+          busy_candidates_in_scope: Number(rangeDiagnostics?.busyCandidatesInScope || 0),
+          busy_overlaps_count: Array.isArray(rangeDiagnostics?.busyOverlaps) ? rangeDiagnostics.busyOverlaps.length : 0,
+          busy_overlaps: Array.isArray(rangeDiagnostics?.busyOverlaps) ? rangeDiagnostics.busyOverlaps : []
+        });
+      }catch(_){}
+      const selectionAvailable = computeStrictSelectionAvailability(rangeDiagnostics, slotStart, blockEnd);
+      try{
+        console.info('MXM BLOCK VALIDATION RESULT', {
+          view: String(calendar?.view?.type || ''),
+          day_key: dayKey,
+          consultorio_scope: validationScopeIds,
+          available: selectionAvailable === true,
+          hasConflict: rangeDiagnostics?.overlapsBusy === true,
+          hasAvailabilityLayer: rangeDiagnostics?.hasAvailabilityLayer === true,
+          hasAvailabilitySlots: rangeDiagnostics?.hasAvailabilitySlots === true,
+          insideAvailability: rangeDiagnostics?.insideAvailability === true,
+          reject_reason: selectionAvailable
+            ? ''
+            : ((rangeDiagnostics?.overlapsBusy === true) ? 'busy_overlap' : 'outside_availability')
+        });
+      }catch(_){}
+      if(!selectionAvailable){
         setBlockModalError('El rango seleccionado incluye horarios ocupados o no disponibles.');
         return;
       }
@@ -9055,6 +9357,22 @@ console.info('app.js loaded :: 20251123a');
         reason_note: reasonNote,
         created_at: toSqlDateTimeLocal(new Date())
       }));
+      try{
+        console.info('MXM BLOCK PARTIAL SAVE', {
+          stage: 'before_persist',
+          view: String(calendar?.view?.type || ''),
+          source: sanitizeText(blockModalUiContext?.source || ''),
+          ownership_mode: sanitizeText(ownership?.mode || ''),
+          dayKey,
+          payload_count: blockPayloads.length,
+          payload_rows: blockPayloads.map((row)=> toBlockedSlotDebugRow(row)).filter(Boolean),
+          selection: {
+            start: toSqlDateTimeLocal(slotStart),
+            end: toSqlDateTimeLocal(blockEnd),
+            consultorio_scope: Array.from(ownershipConsultorioIds)
+          }
+        });
+      }catch(_){}
       try{
         console.info('MXM BLOCK PARTIAL PAYLOAD DEBUG', {
           ...snapshotDebug,
@@ -9117,6 +9435,25 @@ console.info('app.js loaded :: 20251123a');
     const rowsAfterPersist = readBlockedSlots();
     const expectedBlockIds = new Set(blockPayloads.map((payload)=> sanitizeText(payload?.block_id || '')).filter(Boolean));
     const persistedBlock = Array.from(expectedBlockIds).every((blockId)=> persistedRows.some((row)=> sanitizeText(row?.block_id || '') === blockId));
+    if(!isFullDayBlockAction){
+      const persistedRowsForExpected = rowsAfterPersist
+        .filter((row)=> expectedBlockIds.has(sanitizeText(row?.block_id || '')))
+        .map((row)=> toBlockedSlotDebugRow(row))
+        .filter(Boolean);
+      try{
+        console.info('MXM BLOCK PARTIAL SAVE', {
+          stage: 'after_persist',
+          view: String(calendar?.view?.type || ''),
+          source: sanitizeText(blockModalUiContext?.source || ''),
+          dayKey,
+          storage_key: storageKeyAtConfirm,
+          expected_block_ids: Array.from(expectedBlockIds),
+          persisted_ok: persistedBlock,
+          persisted_rows_found: persistedRowsForExpected.length,
+          persisted_rows: persistedRowsForExpected
+        });
+      }catch(_){}
+    }
     if(isFullDayBlockAction){
       const dayRowsAfter = rowsAfterPersist.filter((row)=>{
         const rowStart = parseDateTimeLocalSafe(sanitizeText(row?.start_at || ''));
@@ -9408,7 +9745,17 @@ console.info('app.js loaded :: 20251123a');
       if(blockEnd <= slotStart){
         invalidRange = true;
       }
-      const conflicts = invalidRange ? [] : collectConflictingAppointmentsInRange(slotStart, blockEnd);
+      const scopedConsultorioIds = resolveBlockingTargetConsultorioIds(
+        sanitizeText(
+          cellMenuSelection?.consultorio_id
+          || cellMenuSelection?.consultorioId
+          || getAvailabilityConsultorioId()
+          || ''
+        )
+      );
+      const conflicts = invalidRange ? [] : collectConflictingAppointmentsInRange(slotStart, blockEnd, {
+        consultorioIds: scopedConsultorioIds
+      });
       activeBlockConflictItems = conflicts.map((ev)=>({
         id: sanitizeText(ev.id || ''),
         start: ev.start instanceof Date ? new Date(ev.start) : null,
@@ -9485,7 +9832,17 @@ console.info('app.js loaded :: 20251123a');
         setError('La hora final del bloqueo debe ser mayor a la inicial.');
         return;
       }
-      const appointmentConflicts = collectConflictingAppointmentsInRange(slotStart, blockEnd);
+      const scopedConsultorioIds = resolveBlockingTargetConsultorioIds(
+        sanitizeText(
+          cellMenuSelection?.consultorio_id
+          || cellMenuSelection?.consultorioId
+          || getAvailabilityConsultorioId()
+          || ''
+        )
+      );
+      const appointmentConflicts = collectConflictingAppointmentsInRange(slotStart, blockEnd, {
+        consultorioIds: scopedConsultorioIds
+      });
       if(appointmentConflicts.length){
         setError('Este rango incluye citas existentes. Ajusta el rango antes de confirmar.');
         panelEl.dataset.showConflicts = '1';
@@ -9493,7 +9850,9 @@ console.info('app.js loaded :: 20251123a');
         updateBlockConflictState();
         return;
       }
-      if(!isSelectionAvailable(slotStart, blockEnd)){
+      if(!isSelectionAvailable(slotStart, blockEnd, {
+        consultorioIds: scopedConsultorioIds
+      })){
         setError('El rango seleccionado incluye horarios ocupados o no disponibles.');
         return;
       }
@@ -9594,8 +9953,19 @@ console.info('app.js loaded :: 20251123a');
       if(action === 'block'){
         if(cellMenuSelection){
           const selection = {
+            ...cellMenuSelection,
             start: cellMenuSelection.start instanceof Date ? new Date(cellMenuSelection.start) : new Date(cellMenuSelection.start || ''),
-            end: cellMenuSelection.end instanceof Date ? new Date(cellMenuSelection.end) : new Date(cellMenuSelection.end || '')
+            end: cellMenuSelection.end instanceof Date ? new Date(cellMenuSelection.end) : new Date(cellMenuSelection.end || ''),
+            consultorio_id: sanitizeText(
+              cellMenuSelection.consultorio_id
+              || cellMenuSelection.consultorioId
+              || ''
+            ),
+            consultorio_name: sanitizeText(
+              cellMenuSelection.consultorio_name
+              || cellMenuSelection.consultorioName
+              || ''
+            )
           };
           hideCellMenu();
           openBlockModalFromSelection(selection, {
@@ -12983,6 +13353,7 @@ console.info('app.js loaded :: 20251123a');
       return {
         hasCalendar: !!calendar,
         hasAvailabilityLayer: false,
+        hasAvailabilitySlots: false,
         insideAvailability: false,
         overlapsBusy: false,
         isDemo: isAgendaDemoContext(),
@@ -12991,34 +13362,98 @@ console.info('app.js loaded :: 20251123a');
     }
     const ignoreBlockedSlots = options?.ignoreBlockedSlots === true;
     const ignoreAvailabilityWindow = options?.ignoreAvailabilityWindow === true;
+    const includeDiagnosticsDetails = options?.includeDiagnosticsDetails === true;
+    const consultorioScope = normalizeConsultorioScopeIds(options?.consultorioIds || []);
+    const consultorioScopeList = Array.from(consultorioScope);
+    const toRangeSql = (dateLike)=>{
+      const dt = dateLike instanceof Date ? dateLike : new Date(dateLike || '');
+      return Number.isNaN(dt.getTime()) ? '' : toSqlDateTimeLocal(dt);
+    };
+    const toEventDiagRow = (eventRef = null)=>{
+      const props = (eventRef?.extendedProps && typeof eventRef.extendedProps === 'object') ? eventRef.extendedProps : {};
+      return {
+        id: sanitizeText(eventRef?.id || ''),
+        event_type: sanitizeText(props.event_type || ''),
+        consultorio_id: sanitizeText(props.consultorio_id || props.consultorioId || ''),
+        status_key: sanitizeText(props.status_key_real || props.status_key || props.status || ''),
+        start: toRangeSql(eventRef?.start),
+        end: toRangeSql(eventRef?.end)
+      };
+    };
     const events = calendar.getEvents();
-    const availabilityWindows = events.filter((ev)=> ev.display === 'background' && sanitizeText(ev.extendedProps?.event_type || '') === 'availability');
+    const availabilityWindows = events.filter((ev)=>{
+      if(ev.display !== 'background') return false;
+      if(sanitizeText(ev.extendedProps?.event_type || '') !== 'availability') return false;
+      return eventMatchesConsultorioScope(ev, consultorioScope);
+    });
+    const availabilitySlotEvents = events.filter((ev)=>{
+      if(ev.display === 'background') return false;
+      if(sanitizeText(ev.extendedProps?.event_type || '') !== 'availability_slot') return false;
+      return eventMatchesConsultorioScope(ev, consultorioScope);
+    });
+    const availabilitySlotWindows = mergeBlockingWindows(
+      availabilitySlotEvents.map((ev)=> ({
+        start: ev?.start instanceof Date ? new Date(ev.start) : new Date(ev?.start || ''),
+        end: ev?.end instanceof Date ? new Date(ev.end) : new Date(ev?.end || '')
+      }))
+    );
     const hasAvailabilityLayer = availabilityWindows.length > 0;
-    const insideAvailability = availabilityWindows.some((ev)=>{
+    const hasAvailabilitySlots = availabilitySlotWindows.length > 0;
+    const insideAvailabilityFromWindows = availabilityWindows.some((ev)=>{
       const evStart = ev.start;
       const evEnd = ev.end;
       return !!(evStart && evEnd && startDate >= evStart && endDate <= evEnd);
     });
-    const overlapsBusy = events.some((ev)=>{
-      if(ev.display === 'background') return false;
+    const insideAvailabilityFromSlots = availabilitySlotWindows.some((range)=>{
+      return !!(range?.start instanceof Date && range?.end instanceof Date && startDate >= range.start && endDate <= range.end);
+    });
+    const insideAvailability = hasAvailabilitySlots
+      ? insideAvailabilityFromSlots
+      : insideAvailabilityFromWindows;
+    const busyOverlaps = [];
+    let busyCandidatesSeen = 0;
+    let busyCandidatesInScope = 0;
+    events.forEach((ev)=>{
+      if(ev.display === 'background') return;
+      busyCandidatesSeen += 1;
       const evId = sanitizeText(ev.id || '');
-      if(evId.startsWith('__ag_next_focus_')) return false;
+      if(evId.startsWith('__ag_next_focus_')) return;
       const eventType = sanitizeText(ev.extendedProps?.event_type || '');
-      if(eventType === 'focus_marker') return false;
-      if(ignoreBlockedSlots && eventType === 'blocked_slot') return false;
-      if(!isEventOperationallyBusy(ev)) return false;
+      if(eventType === 'focus_marker') return;
+      if(ignoreBlockedSlots && eventType === 'blocked_slot') return;
+      if(!eventMatchesConsultorioScope(ev, consultorioScope)) return;
+      busyCandidatesInScope += 1;
+      if(!isEventOperationallyBusy(ev)) return;
       const evStart = ev.start;
       const evEnd = ev.end;
-      return !!(evStart && evEnd && startDate < evEnd && endDate > evStart);
+      if(!(evStart && evEnd && startDate < evEnd && endDate > evStart)) return;
+      busyOverlaps.push(toEventDiagRow(ev));
     });
+    const overlapsBusy = busyOverlaps.length > 0;
     return {
       hasCalendar: true,
       hasAvailabilityLayer,
+      hasAvailabilitySlots,
       insideAvailability,
       overlapsBusy,
       ignoreAvailabilityWindow,
       isDemo: isAgendaDemoContext(),
-      eventsCount: events.length
+      eventsCount: events.length,
+      busyCandidatesSeen,
+      busyCandidatesInScope,
+      ...(includeDiagnosticsDetails ? {
+        consultorioScope: consultorioScopeList,
+        selection: {
+          start: toRangeSql(startDate),
+          end: toRangeSql(endDate)
+        },
+        availabilityWindows: availabilityWindows.map((ev)=> toEventDiagRow(ev)),
+        availabilitySlotWindows: availabilitySlotWindows.map((range)=>({
+          start: toRangeSql(range?.start),
+          end: toRangeSql(range?.end)
+        })),
+        busyOverlaps
+      } : {})
     };
   };
   const computeStrictSelectionAvailability = (diagnostics, startDate, endDate)=>{
@@ -13026,7 +13461,7 @@ console.info('app.js loaded :: 20251123a');
     if(diagnostics.ignoreAvailabilityWindow === true){
       return !diagnostics.overlapsBusy;
     }
-    if(diagnostics.hasAvailabilityLayer){
+    if(diagnostics.hasAvailabilityLayer || diagnostics.hasAvailabilitySlots){
       return diagnostics.insideAvailability && !diagnostics.overlapsBusy;
     }
     // Fallback controlado SOLO para demo: sin availability backend, usa horario demo + no traslape.
@@ -13124,7 +13559,29 @@ console.info('app.js loaded :: 20251123a');
     queueCreatePatientBehaviorNoticeRefresh(60);
     return true;
   };
-  const collectNextAvailableSlots = async ({ afterDate, limit = 3 })=>{
+  const normalizeNextAvailableContext = (rawContext = null)=>{
+    if(!(rawContext && typeof rawContext === 'object')) return null;
+    const context = {};
+    const consultorioId = sanitizeText(rawContext?.consultorio_id || rawContext?.consultorioId || '');
+    if(isNumericId(consultorioId)){
+      context.consultorio_id = consultorioId;
+    }
+    const doctorId = sanitizeText(rawContext?.doctor_id || rawContext?.doctorId || '');
+    if(isNumericId(doctorId)){
+      context.doctor_id = doctorId;
+    }
+    const afterRaw = rawContext?.afterDate || rawContext?.after_date || rawContext?.after || '';
+    const parsedAfter = afterRaw instanceof Date ? new Date(afterRaw) : parseDateTimeLocalSafe(afterRaw);
+    if(parsedAfter instanceof Date && !Number.isNaN(parsedAfter.getTime())){
+      context.afterDate = parsedAfter;
+    }
+    return Object.keys(context).length ? context : null;
+  };
+  const collectNextAvailableSlots = async ({ afterDate, limit = 3, context = null })=>{
+    const normalizedContext = normalizeNextAvailableContext(context);
+    const contextConsultorioId = sanitizeText(normalizedContext?.consultorio_id || '');
+    const contextDoctorId = sanitizeText(normalizedContext?.doctor_id || '');
+    const hasConsultorioOverride = isNumericId(contextConsultorioId);
     if(isAgendaDemoContext()){
       const slotMinutes = resolveAgendaSlotMinutes();
       const options = [];
@@ -13154,7 +13611,9 @@ console.info('app.js loaded :: 20251123a');
           if(!overlapsBusy){
             const key = toRangeKey(slotCursor, slotEnd);
             if(key && !options.some((item)=> item.key === key)){
-              const consultorioId = sanitizeText(getAvailabilityConsultorioId() || '');
+              const consultorioId = hasConsultorioOverride
+                ? contextConsultorioId
+                : sanitizeText(getAvailabilityConsultorioId() || '');
               options.push({
                 key,
                 start: new Date(slotCursor),
@@ -13172,20 +13631,27 @@ console.info('app.js loaded :: 20251123a');
       return options.slice(0, limit);
     }
 
-    const doctorId = getDoctorId();
+    const doctorId = isNumericId(contextDoctorId) ? contextDoctorId : getDoctorId();
     const availabilityScope = resolveAgendaAvailabilityConsultorioScope();
-    const allMode = sanitizeText(availabilityScope?.mode || '') === 'all';
-    const consultorioIds = allMode
-      ? Array.from(new Set((Array.isArray(availabilityScope?.consultorios) ? availabilityScope.consultorios : [])
-        .map((id)=> sanitizeText(id || ''))
-        .filter((id)=> isNumericId(id))))
-      : (()=>{
-        const fromScope = sanitizeText((Array.isArray(availabilityScope?.consultorios) ? availabilityScope.consultorios[0] : '') || '');
-        if(isNumericId(fromScope)) return [fromScope];
-        const fallbackId = sanitizeText(getAvailabilityConsultorioId() || '');
-        return isNumericId(fallbackId) ? [fallbackId] : [];
-      })();
+    const allMode = hasConsultorioOverride
+      ? false
+      : sanitizeText(availabilityScope?.mode || '') === 'all';
+    const consultorioIds = hasConsultorioOverride
+      ? [contextConsultorioId]
+      : allMode
+        ? Array.from(new Set((Array.isArray(availabilityScope?.consultorios) ? availabilityScope.consultorios : [])
+          .map((id)=> sanitizeText(id || ''))
+          .filter((id)=> isNumericId(id))))
+        : (()=>{
+          const fromScope = sanitizeText((Array.isArray(availabilityScope?.consultorios) ? availabilityScope.consultorios[0] : '') || '');
+          if(isNumericId(fromScope)) return [fromScope];
+          const fallbackId = sanitizeText(getAvailabilityConsultorioId() || '');
+          return isNumericId(fallbackId) ? [fallbackId] : [];
+        })();
     const consultorioFilterForAppointments = (()=>{
+      if(hasConsultorioOverride){
+        return contextConsultorioId;
+      }
       const selected = sanitizeText(els.consultorio?.value || '');
       return isNumericId(selected) ? selected : '';
     })();
@@ -13287,10 +13753,16 @@ console.info('app.js loaded :: 20251123a');
     }
     return options.slice(0, limit);
   };
-  const loadNextAvailableSlots = async ({ resetCursor = false } = {})=>{
+  const loadNextAvailableSlots = async ({ resetCursor = false, context = null } = {})=>{
     if(resetCursor || !(nextAvailableCursor instanceof Date)){
+      nextAvailableContextOverride = normalizeNextAvailableContext(context);
       const today = toStartOfDay(new Date());
-      nextAvailableCursor = toAddDays(today, 1);
+      const contextAfter = nextAvailableContextOverride?.afterDate instanceof Date
+        ? new Date(nextAvailableContextOverride.afterDate)
+        : null;
+      nextAvailableCursor = contextAfter && !Number.isNaN(contextAfter.getTime())
+        ? contextAfter
+        : toAddDays(today, 1);
       nextAvailablePrevStack = [];
       nextAvailableForwardCursor = null;
     }
@@ -13302,7 +13774,8 @@ console.info('app.js loaded :: 20251123a');
       const queryCursor = new Date(nextAvailableCursor);
       const options = await collectNextAvailableSlots({
         afterDate: queryCursor,
-        limit: 3
+        limit: 3,
+        context: nextAvailableContextOverride
       });
       nextAvailableLastOptions = options;
       renderNextSlotOptions(options);
@@ -13323,11 +13796,11 @@ console.info('app.js loaded :: 20251123a');
       if(els.nextSlotsMoreBtn) els.nextSlotsMoreBtn.disabled = !(nextAvailableForwardCursor instanceof Date);
     }
   };
-  const openNextAvailableSlotFinder = ()=>{
+  const openNextAvailableSlotFinder = (context = null)=>{
     if(!els.nextSlotsModalEl || !window.bootstrap?.Modal) return;
     nextSlotsModal = nextSlotsModal || window.bootstrap.Modal.getOrCreateInstance(els.nextSlotsModalEl);
     nextSlotsModal.show();
-    loadNextAvailableSlots({ resetCursor: true }).catch(()=> null);
+    loadNextAvailableSlots({ resetCursor: true, context }).catch(()=> null);
   };
   const handleCreateSubmit = async ()=>{
     if(createRequestInFlight) return;
@@ -13973,7 +14446,7 @@ console.info('app.js loaded :: 20251123a');
   const isEventOperationallyBusy = (eventRef = null)=>{
     const props = eventRef?.extendedProps || {};
     const eventType = sanitizeText(props.event_type || '');
-    if(eventType === 'availability_slot' || eventType === 'availability' || eventType === 'focus_marker'){
+    if(eventType === 'availability_slot' || eventType === 'availability' || eventType === 'focus_marker' || eventType === 'cancel_trace'){
       return false;
     }
     const statusKey = sanitizeText(props.status_key_real || props.status_key || props.status || '');
@@ -15722,7 +16195,9 @@ console.info('app.js loaded :: 20251123a');
     if(isCustomWeekFetch){
       customWeekAppointmentsRequests += 1;
     }
-    const blockedEvents = collectBlockedSlotEvents(fetchInfo);
+    const blockedEvents = collectBlockedSlotEvents(fetchInfo, {
+      includeCrossScopeFallback: true
+    });
     if(isAgendaDemoContext()){
       const events = buildDemoAppointments(fetchInfo).map(mapAppointmentToEvent).filter((event)=> !!(event && event.start));
       const demoBlocked = buildDemoBlockedSlotEvents(fetchInfo);
@@ -16419,6 +16894,24 @@ console.info('app.js loaded :: 20251123a');
                 });
               }catch(_){}
             }
+            try{
+              const blockedMerged = dayMergedRaw.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot');
+              const blockedAfterSanitize = dayAfterSanitize.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot');
+              const blockedAfterFinal = dayFinalForCalendar.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot');
+              console.info('MXM BLOCK PARTIAL MERGE', {
+                scope: 'day_projection',
+                view: String(calendar?.view?.type || ''),
+                dayKey: dayVisibleKey,
+                include_cross_scope_fallback: shouldUseCrossScopeBlockedFallback,
+                blocked_from_snapshot: dayAfterFilter.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot').length,
+                blocked_from_storage: dayBlockedEvents.filter((eventRef)=> sanitizeText(eventRef?.extendedProps?.event_type || '') === 'blocked_slot').length,
+                blocked_after_merge: blockedMerged.length,
+                blocked_after_sanitize: blockedAfterSanitize.length,
+                blocked_after_final: blockedAfterFinal.length,
+                filtered_in_collapse_or_dedupe: Math.max(0, blockedAfterSanitize.length - blockedAfterFinal.length),
+                blocked_final_events: blockedAfterFinal.map((eventRef)=> toBlockedSlotDebugEvent(eventRef)).filter(Boolean).slice(0, 24)
+              });
+            }catch(_){}
             agendaDaySlotMinOverride = resolveAgendaDaySlotMinOverrideFromEvents(dayFinalForCalendar);
             agendaDaySlotMaxOverride = resolveAgendaDaySlotMaxOverrideFromEvents(dayFinalForCalendar);
             try{
@@ -18307,6 +18800,27 @@ console.info('app.js loaded :: 20251123a');
         setError('No se pudo abrir el flujo de nueva cita para este horario.');
       }
     });
+    els.eventCancelPostNextAvailableBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      clearNextSlotFocus();
+      const slot = getEventActionSlotSelection();
+      const context = {};
+      if(slot?.end instanceof Date && !Number.isNaN(slot.end.getTime())){
+        context.afterDate = new Date(slot.end);
+      }
+      const consultorioId = sanitizeText(slot?.consultorio_id || '');
+      if(isNumericId(consultorioId)){
+        context.consultorio_id = consultorioId;
+      }
+      const doctorId = sanitizeText(slot?.doctor_id || getDoctorId() || '');
+      if(isNumericId(doctorId)){
+        context.doctor_id = doctorId;
+      }
+      hideEventActionPanel();
+      window.setTimeout(()=>{
+        openNextAvailableSlotFinder(context);
+      }, 120);
+    });
     els.eventCancelPostWaitlistBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
       loadEventCancelWaitlist().catch(()=> null);
@@ -18367,6 +18881,7 @@ console.info('app.js loaded :: 20251123a');
       });
     });
     els.eventActionsModalEl?.addEventListener('hidden.bs.modal', ()=>{
+      const shouldRefreshAfterClose = eventCancelDeferredRefresh === true;
       logAgendaCancelFlow('hidden:eventActionsModal:before-reset', {
         activeEventActionId,
         appointmentId: activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef),
@@ -18385,6 +18900,11 @@ console.info('app.js loaded :: 20251123a');
         isCancelled: eventActionIsCancelled,
         postActionsEnabled: eventCancelPostActionsEnabled
       });
+      if(shouldRefreshAfterClose){
+        window.setTimeout(()=>{
+          refreshCalendar({ forceConsultorios: false }).catch(()=> null);
+        }, 80);
+      }
     });
     els.patientSearchBtn?.addEventListener('click', ()=>{
       runPatientSearch({ trigger: 'button' }).catch(()=> null);
@@ -18597,6 +19117,7 @@ console.info('app.js loaded :: 20251123a');
       nextAvailableLastOptions = [];
       nextAvailablePrevStack = [];
       nextAvailableForwardCursor = null;
+      nextAvailableContextOverride = null;
       if(els.nextSlotsPrevBtn) els.nextSlotsPrevBtn.disabled = true;
       if(els.nextSlotsMoreBtn) els.nextSlotsMoreBtn.disabled = false;
       setWorkspaceButtonActive('p-ag-admin');
@@ -20106,12 +20627,15 @@ console.info('app.js loaded :: 20251123a');
 
   const renderSummary = ()=>{
     const operators = ensureArray(MODEL.operators);
-    const activeCount = operators.filter((item)=> clean(item?.status).toLowerCase() === 'active').length;
+    const activeCount = operators.filter((item)=> QUOTA_COUNTABLE_STATUSES.has(clean(item?.status).toLowerCase())).length;
     const pendingCount = operators.filter((item)=> clean(item?.status).toLowerCase() === 'pending').length;
     const usedCount = getQuotaUsedCount();
     const availableCount = Math.max(0, MODEL.plan_standard_limit - usedCount);
+    const activeLimitLabel = usedCount > MODEL.plan_standard_limit
+      ? MODEL.plan_absolute_limit
+      : MODEL.plan_standard_limit;
 
-    if(els.activeValue) els.activeValue.textContent = `${activeCount}/${MODEL.plan_standard_limit}`;
+    if(els.activeValue) els.activeValue.textContent = `${activeCount}/${activeLimitLabel}`;
     if(els.pendingValue) els.pendingValue.textContent = String(pendingCount);
     if(els.availableValue) els.availableValue.textContent = String(availableCount);
     if(els.maxAllowedValue) els.maxAllowedValue.textContent = String(MODEL.plan_absolute_limit);
@@ -20121,10 +20645,17 @@ console.info('app.js loaded :: 20251123a');
   const syncAddBandAvailability = ()=>{
     if(!els.addBand || !els.addBandToggle) return;
     const isBlocked = hasReachedAbsoluteOperatorLimit();
-    els.addBand.classList.toggle('is-disabled', isBlocked);
-    els.addBandToggle.disabled = isBlocked;
-    els.addBandToggle.setAttribute('aria-disabled', isBlocked ? 'true' : 'false');
-    if(isBlocked){
+    const mode = clean(panel.dataset.opsFormMode || 'create');
+    const currentStep = getCreateWizardCurrentStep();
+    const hasDeliveryPayload = !!getCreateWizardDelivery();
+    const isCredentialDeliveryStepActive = mode === 'create' && currentStep === 'send' && hasDeliveryPayload;
+    const shouldDisable = isBlocked && !isCredentialDeliveryStepActive;
+
+    els.addBand.classList.toggle('is-disabled', shouldDisable);
+    els.addBandToggle.disabled = shouldDisable;
+    els.addBandToggle.setAttribute('aria-disabled', shouldDisable ? 'true' : 'false');
+
+    if(shouldDisable){
       els.addBandToggle.setAttribute('title', 'Has alcanzado el máximo de operadores permitidos.');
       if(uiState.addBandExpanded){
         setAddBandExpanded(false, { remember: false });
@@ -20584,6 +21115,7 @@ console.info('app.js loaded :: 20251123a');
       ? false
       : (uiState.addBandTouched ? uiState.addBandExpanded : false);
     setAddBandExpanded(shouldOpenAddBand, { remember: false });
+    syncCreateWizardPrimaryButton();
     syncInlineEditLayoutState();
     persistOperatorsState();
   };
@@ -21246,6 +21778,7 @@ console.info('app.js loaded :: 20251123a');
       editingOperator.permissions = permissions;
       editingOperator.force_password_change = !!els.forceChange?.checked;
       pushAudit(editingOperator, 'Actualizó perfil de operador', 'Operadores', generalValidation.alias);
+      persistOperatorsState();
       renderAll();
       return;
     }else{
@@ -21279,6 +21812,7 @@ console.info('app.js loaded :: 20251123a');
       uiState.addBandTouched = true;
       uiState.addBandExpanded = true;
       setCreateWizardDeliveryFeedback('');
+      persistOperatorsState();
       renderAll();
       return;
     }
@@ -21307,6 +21841,7 @@ console.info('app.js loaded :: 20251123a');
     operator.invitation_status = 'sent';
     operator.operator_credentials_sent_at = nowIso();
     pushAudit(operator, 'Credenciales enviadas al operador', 'Operadores', operator.alias || operator.full_name);
+    persistOperatorsState();
     setModalError('');
     setCreateWizardDeliveryFeedback('Correo enviado correctamente.');
     renderAll();
@@ -21364,6 +21899,7 @@ console.info('app.js loaded :: 20251123a');
       operator.last_access = nowIso();
     }
     pushAudit(operator, actionLabel, 'Operadores', operator.alias || operator.full_name);
+    persistOperatorsState();
     renderAll();
   };
 
@@ -21388,6 +21924,7 @@ console.info('app.js loaded :: 20251123a');
       setInlineEditingOperator('');
     }
     setArchivedExpanded(true);
+    persistOperatorsState();
     renderAll();
   };
 
@@ -21436,6 +21973,7 @@ console.info('app.js loaded :: 20251123a');
     pushAudit(archivedOperator, 'Operador restaurado', 'Operadores', archivedOperator.alias || archivedOperator.full_name);
     MODEL.operators = ensureArray(MODEL.operators).filter((item)=> clean(item?.operator_id) !== safeId);
     MODEL.operators.unshift(archivedOperator);
+    persistOperatorsState();
     renderAll();
   };
 
