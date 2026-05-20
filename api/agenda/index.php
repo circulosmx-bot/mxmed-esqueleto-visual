@@ -11,6 +11,7 @@ require_once __DIR__ . '/../../modules/agenda/controllers/ScheduleController.php
 require_once __DIR__ . '/../../modules/agenda/controllers/AgendaSettingsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentWriteController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/WaitlistController.php';
+require_once __DIR__ . '/../../modules/agenda/controllers/OperatorsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/PublicAppointmentsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/PublicOtpController.php';
 
@@ -26,6 +27,7 @@ use Agenda\Controllers\ScheduleController;
 use Agenda\Controllers\AgendaSettingsController;
 use Agenda\Controllers\AppointmentWriteController;
 use Agenda\Controllers\WaitlistController;
+use Agenda\Controllers\OperatorsController;
 use Agenda\Controllers\PublicAppointmentsController;
 use Agenda\Controllers\PublicOtpController;
 
@@ -117,6 +119,7 @@ function is_private_agenda_route(array $segments): bool
         'schedule',
         'settings',
         'waitlist',
+        'operators',
         'medical-groups',
         'geocode',
     ], true);
@@ -537,6 +540,25 @@ try {
                 ];
             }
             break;
+        case 'operators':
+            $operators = new OperatorsController();
+            if (is_array($actorContext)) {
+                apply_actor_context($operators, $actorContext);
+            }
+            if ($method === 'GET' && !isset($segments[1])) {
+                $response = $operators->index($_GET);
+            } elseif ($method === 'POST' && !isset($segments[1])) {
+                $response = $operators->store(read_json_body());
+            } else {
+                $response = [
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'route not found',
+                    'data' => null,
+                    'meta' => (object)[],
+                ];
+            }
+            break;
     }
 } catch (\Throwable $e) {
     $response = [
@@ -576,6 +598,7 @@ try {
         'unauthorized' => 401,
         'forbidden' => 403,
         'invalid_params' => 400,
+        'conflict' => 409,
         'not_found' => 404,
         'not_implemented' => 501,
     ];
