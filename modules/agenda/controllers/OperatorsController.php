@@ -145,6 +145,26 @@ class OperatorsController
         ]);
     }
 
+    public function pause(string $operatorId, array $payload = []): array
+    {
+        return $this->mutateOperatorStatusAction($operatorId, 'pause', $payload);
+    }
+
+    public function reactivate(string $operatorId, array $payload = []): array
+    {
+        return $this->mutateOperatorStatusAction($operatorId, 'reactivate', $payload);
+    }
+
+    public function archive(string $operatorId, array $payload = []): array
+    {
+        return $this->mutateOperatorStatusAction($operatorId, 'archive', $payload);
+    }
+
+    public function restore(string $operatorId, array $payload = []): array
+    {
+        return $this->mutateOperatorStatusAction($operatorId, 'restore', $payload);
+    }
+
     private function preparePayload(array $payload): array
     {
         $errors = [];
@@ -296,6 +316,93 @@ class OperatorsController
             $seen[$key] = true;
         }
         return array_keys($seen);
+    }
+
+    private function mutateOperatorStatusAction(string $operatorIdRaw, string $mutation, array $payload = []): array
+    {
+        $notReady = $this->ensureReady();
+        if ($notReady) {
+            return $notReady;
+        }
+
+        $operatorId = trim($operatorIdRaw);
+        if ($operatorId === '') {
+            return $this->error('invalid_params', 'operator_id is required', []);
+        }
+
+        $doctorIdRequested = trim((string)($payload['doctor_id'] ?? ''));
+        $doctorScope = $this->resolveDoctorScope($doctorIdRequested, true);
+        if (!$doctorScope['ok']) {
+            return $this->error(
+                (string)$doctorScope['error'],
+                (string)$doctorScope['message'],
+                (array)($doctorScope['meta'] ?? [])
+            );
+        }
+        $doctorId = (string)$doctorScope['doctor_id'];
+
+        $verificationCode = trim((string)($payload['verification_code'] ?? ''));
+        if (!$this->isValidVerificationCode($verificationCode)) {
+            return $this->error('invalid_verification_code', 'invalid verification code', [
+                'field' => 'verification_code',
+            ]);
+        }
+
+        $reason = trim((string)($payload['reason'] ?? ''));
+        $metadata = (isset($payload['metadata']) && is_array($payload['metadata'])) ? $payload['metadata'] : [];
+        $restoreStatus = strtolower(trim((string)($payload['restore_status'] ?? '')));
+
+        try {
+            $result = $this->repository->mutateOperatorStatus($doctorId, $operatorId, $mutation, $this->actorContext, [
+                'reason' => $reason,
+                'metadata' => $metadata,
+                'restore_status' => $restoreStatus,
+            ]);
+        } catch (RuntimeException $e) {
+            $message = $e->getMessage();
+            if ($message === 'operator_not_found') {
+                return $this->error('not_found', 'operator not found', []);
+            }
+            if ($message === 'quota_limit_reached') {
+                return $this->error('conflict', 'operator quota limit reached', [
+                    'max_allowed' => 3,
+                ]);
+            }
+            if ($message === 'alias_duplicated') {
+                return $this->error('conflict', 'operator alias already exists', [
+                    'field' => 'alias',
+                ]);
+            }
+            if ($message === 'login_duplicated') {
+                return $this->error('conflict', 'operator login already exists', [
+                    'field' => 'login',
+                ]);
+            }
+            if ($message === 'invalid_transition') {
+                return $this->error('conflict', 'invalid status transition', []);
+            }
+            if ($message === 'invalid_mutation') {
+                return $this->error('invalid_params', 'invalid mutation', []);
+            }
+            if ($message === 'operators tables not ready' || $message === 'operator audit table not ready') {
+                return $this->error('db_not_ready', 'operators tables not ready');
+            }
+            return $this->error('db_error', 'database error');
+        } catch (Throwable $e) {
+            return $this->error('db_error', 'database error');
+        }
+
+        return $this->success($result, [
+            'write' => $mutation,
+            'doctor_id_effective' => $doctorId,
+            'doctor_id_requested' => ($doctorIdRequested !== '' ? $doctorIdRequested : null),
+            'events_appended' => 1,
+        ]);
+    }
+
+    private function isValidVerificationCode(string $value): bool
+    {
+        return (bool)preg_match('/^\d{6}$/', $value);
     }
 
     private function ensureReady(): ?array

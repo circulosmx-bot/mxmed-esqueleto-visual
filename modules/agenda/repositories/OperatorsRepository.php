@@ -161,6 +161,95 @@ class OperatorsRepository
         ];
     }
 
+    public function mutateOperatorStatus(
+        string $doctorId,
+        string $operatorId,
+        string $mutation,
+        array $actorContext = [],
+        array $options = []
+    ): array {
+        $this->ensureTables();
+        $mutationKey = strtolower(trim($mutation));
+        $spec = $this->resolveMutationSpec($mutationKey);
+        if (!$spec) {
+            throw new RuntimeException('invalid_mutation');
+        }
+
+        $row = $this->findOperatorRowForUpdate($doctorId, $operatorId);
+        if (!$row) {
+            throw new RuntimeException('operator_not_found');
+        }
+        $currentStatus = strtolower(trim((string)($row['status'] ?? '')));
+        if (!in_array($currentStatus, self::ALL_STATUSES, true)) {
+            $currentStatus = 'pending';
+        }
+        if (!in_array($currentStatus, $spec['allowed_from'], true)) {
+            throw new RuntimeException('invalid_transition');
+        }
+
+        $targetStatus = $spec['target_status'];
+        if ($mutationKey === 'restore') {
+            $requested = strtolower(trim((string)($options['restore_status'] ?? '')));
+            if (in_array($requested, ['active', 'pending'], true)) {
+                $targetStatus = $requested;
+            }
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+
+            if ($currentStatus === 'archived' && in_array($targetStatus, self::COUNTABLE_STATUSES, true)) {
+                $this->ensureDoctorQuotaAvailableForCreate($doctorId, $targetStatus);
+                $aliasNormalized = trim((string)($row['alias_normalized'] ?? ''));
+                $loginNormalized = trim((string)($row['login_normalized'] ?? ''));
+                $this->assertAliasIsUnique($doctorId, $aliasNormalized, $operatorId);
+                $this->assertLoginIsUnique($doctorId, $loginNormalized, $operatorId);
+            }
+
+            $this->updateStatus($doctorId, $operatorId, $targetStatus);
+
+            $auditNotes = $this->buildAuditNotes($options);
+            $auditEvent = $this->auditRepository->insertEvent([
+                'doctor_id' => $doctorId,
+                'operator_id' => $operatorId,
+                'event_type' => $spec['event_type'],
+                'module_name' => 'Operadores',
+                'action_label' => $spec['action_label'],
+                'entity_label' => trim((string)($row['alias'] ?? '')) !== ''
+                    ? trim((string)($row['alias'] ?? ''))
+                    : trim((string)($row['full_name'] ?? '')),
+                'actor_role' => trim((string)($actorContext['mode'] ?? 'system')),
+                'actor_id' => trim((string)($actorContext['user_id'] ?? 'system')),
+                'notes' => $auditNotes,
+            ]);
+
+            $this->pdo->commit();
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+
+        $state = $this->readStateByDoctor($doctorId, 120);
+        $operator = $this->findOperatorById($doctorId, $operatorId);
+        if (!$operator) {
+            throw new RuntimeException('operator not found after mutate');
+        }
+        $permissionsByOperator = $this->fetchPermissionsByDoctor($doctorId);
+        $operator = $this->withPermissions($operator, $permissionsByOperator);
+
+        return [
+            'operator' => $operator,
+            'summary' => $state['summary'],
+            'limits' => $state['limits'],
+            'audit_event' => $this->formatAuditEventRow($auditEvent),
+            'mutation' => $mutationKey,
+            'from_status' => $currentStatus,
+            'to_status' => $targetStatus,
+        ];
+    }
+
     private function fetchOperatorsByDoctor(string $doctorId, bool $archived): array
     {
         $where = $archived
@@ -193,6 +282,21 @@ class OperatorsRepository
         ]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ? $this->formatOperatorRow($row) : null;
+    }
+
+    private function findOperatorRowForUpdate(string $doctorId, string $operatorId): ?array
+    {
+        $sql = sprintf(
+            'SELECT * FROM %s WHERE doctor_id = :doctor_id AND operator_id = :operator_id LIMIT 1 FOR UPDATE',
+            $this->operatorsTable
+        );
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            'doctor_id' => $doctorId,
+            'operator_id' => $operatorId,
+        ]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return is_array($row) ? $row : null;
     }
 
     private function fetchPermissionsByDoctor(string $doctorId): array
@@ -338,6 +442,7 @@ class OperatorsRepository
             'entity' => trim((string)($row['entity_label'] ?? '')),
             'actor_role' => trim((string)($row['actor_role'] ?? '')),
             'actor_id' => trim((string)($row['actor_id'] ?? '')),
+            'notes' => trim((string)($row['notes'] ?? '')),
             'at' => trim((string)($row['at'] ?? '')),
         ];
     }
@@ -359,35 +464,49 @@ class OperatorsRepository
         }
     }
 
-    private function assertAliasIsUnique(string $doctorId, string $aliasNormalized): void
+    private function assertAliasIsUnique(string $doctorId, string $aliasNormalized, ?string $excludeOperatorId = null): void
     {
-        $sql = sprintf(
-            'SELECT COUNT(*) FROM %s WHERE doctor_id = :doctor_id AND status <> :archived AND alias_normalized = :alias LIMIT 1',
-            $this->operatorsTable
-        );
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
+        $params = [
             'doctor_id' => $doctorId,
             'archived' => 'archived',
             'alias' => $aliasNormalized,
-        ]);
+        ];
+        $excludeSql = '';
+        if ($excludeOperatorId !== null && $excludeOperatorId !== '') {
+            $excludeSql = ' AND operator_id <> :exclude_operator_id';
+            $params['exclude_operator_id'] = $excludeOperatorId;
+        }
+        $sql = sprintf(
+            'SELECT COUNT(*) FROM %s WHERE doctor_id = :doctor_id AND status <> :archived AND alias_normalized = :alias%s LIMIT 1',
+            $this->operatorsTable,
+            $excludeSql
+        );
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
         if ((int)$stmt->fetchColumn() > 0) {
             throw new RuntimeException('alias_duplicated');
         }
     }
 
-    private function assertLoginIsUnique(string $doctorId, string $loginNormalized): void
+    private function assertLoginIsUnique(string $doctorId, string $loginNormalized, ?string $excludeOperatorId = null): void
     {
-        $sql = sprintf(
-            'SELECT COUNT(*) FROM %s WHERE doctor_id = :doctor_id AND status <> :archived AND login_normalized = :login LIMIT 1',
-            $this->operatorsTable
-        );
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
+        $params = [
             'doctor_id' => $doctorId,
             'archived' => 'archived',
             'login' => $loginNormalized,
-        ]);
+        ];
+        $excludeSql = '';
+        if ($excludeOperatorId !== null && $excludeOperatorId !== '') {
+            $excludeSql = ' AND operator_id <> :exclude_operator_id';
+            $params['exclude_operator_id'] = $excludeOperatorId;
+        }
+        $sql = sprintf(
+            'SELECT COUNT(*) FROM %s WHERE doctor_id = :doctor_id AND status <> :archived AND login_normalized = :login%s LIMIT 1',
+            $this->operatorsTable,
+            $excludeSql
+        );
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
         if ((int)$stmt->fetchColumn() > 0) {
             throw new RuntimeException('login_duplicated');
         }
@@ -474,5 +593,81 @@ class OperatorsRepository
     private function sanitizeIdentifier(string $value): string
     {
         return preg_replace('/[^a-zA-Z0-9_]/', '', $value) ?: '';
+    }
+
+    private function resolveMutationSpec(string $mutation): ?array
+    {
+        $map = [
+            'pause' => [
+                'allowed_from' => ['active', 'pending'],
+                'target_status' => 'paused',
+                'event_type' => 'operator_paused',
+                'action_label' => 'Acceso pausado',
+            ],
+            'reactivate' => [
+                'allowed_from' => ['paused', 'pending'],
+                'target_status' => 'active',
+                'event_type' => 'operator_reactivated',
+                'action_label' => 'Acceso reactivado',
+            ],
+            'archive' => [
+                'allowed_from' => ['active', 'paused', 'pending'],
+                'target_status' => 'archived',
+                'event_type' => 'operator_archived',
+                'action_label' => 'Operador archivado',
+            ],
+            'restore' => [
+                'allowed_from' => ['archived'],
+                'target_status' => 'pending',
+                'event_type' => 'operator_restored',
+                'action_label' => 'Operador restaurado',
+            ],
+        ];
+
+        return $map[$mutation] ?? null;
+    }
+
+    private function updateStatus(string $doctorId, string $operatorId, string $targetStatus): void
+    {
+        $setChunks = ['status = :status', 'updated_at = CURRENT_TIMESTAMP'];
+        $params = [
+            'status' => $targetStatus,
+            'doctor_id' => $doctorId,
+            'operator_id' => $operatorId,
+        ];
+        if ($targetStatus === 'archived') {
+            $setChunks[] = 'archived_at = CURRENT_TIMESTAMP';
+        } else {
+            $setChunks[] = 'archived_at = NULL';
+        }
+        if ($targetStatus === 'active') {
+            $setChunks[] = 'invitation_status = :invitation_status';
+            $params['invitation_status'] = 'active';
+        } elseif ($targetStatus === 'pending') {
+            $setChunks[] = 'invitation_status = :invitation_status';
+            $params['invitation_status'] = 'pending';
+        }
+
+        $sql = sprintf(
+            'UPDATE %s SET %s WHERE doctor_id = :doctor_id AND operator_id = :operator_id LIMIT 1',
+            $this->operatorsTable,
+            implode(', ', $setChunks)
+        );
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+    }
+
+    private function buildAuditNotes(array $options): string
+    {
+        $reason = trim((string)($options['reason'] ?? ''));
+        $metadata = $options['metadata'] ?? null;
+        $payload = [];
+        if ($reason !== '') {
+            $payload['reason'] = $reason;
+        }
+        if (is_array($metadata) && !empty($metadata)) {
+            $payload['metadata'] = $metadata;
+        }
+        return empty($payload) ? '' : (json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '');
     }
 }

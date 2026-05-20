@@ -549,6 +549,14 @@ try {
                 $response = $operators->index($_GET);
             } elseif ($method === 'POST' && !isset($segments[1])) {
                 $response = $operators->store(read_json_body());
+            } elseif ($method === 'PATCH' && isset($segments[1]) && ($segments[2] ?? '') === 'pause') {
+                $response = $operators->pause((string)$segments[1], read_json_body());
+            } elseif ($method === 'PATCH' && isset($segments[1]) && ($segments[2] ?? '') === 'reactivate') {
+                $response = $operators->reactivate((string)$segments[1], read_json_body());
+            } elseif ($method === 'PATCH' && isset($segments[1]) && ($segments[2] ?? '') === 'archive') {
+                $response = $operators->archive((string)$segments[1], read_json_body());
+            } elseif ($method === 'PATCH' && isset($segments[1]) && ($segments[2] ?? '') === 'restore') {
+                $response = $operators->restore((string)$segments[1], read_json_body());
             } else {
                 $response = [
                     'ok' => false,
@@ -598,6 +606,7 @@ try {
         'unauthorized' => 401,
         'forbidden' => 403,
         'invalid_params' => 400,
+        'invalid_verification_code' => 400,
         'conflict' => 409,
         'not_found' => 404,
         'not_implemented' => 501,
