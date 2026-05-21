@@ -654,6 +654,24 @@ class OperatorsRepository
         }
 
         $login = $this->normalizeLogin((string)($row['login'] ?? ''));
+        if ($statusRaw === 'archived' && $login === '') {
+            $seedRaw = trim((string)($row['operator_id'] ?? ''));
+            if ($seedRaw === '') {
+                $seedRaw = $sourceBucket . '-' . (string)$sourceIndex;
+            }
+            $seed = preg_replace('/[^a-z0-9]+/i', '-', strtolower($seedRaw)) ?: '';
+            $seed = trim((string)$seed, '-');
+            if ($seed === '') {
+                $seed = 'legacy-' . substr(md5($sourceBucket . '|' . (string)$sourceIndex . '|' . $fullName . '|' . $alias), 0, 8);
+            }
+            $login = $this->normalizeLogin('archived.' . $seed);
+            if ($login === '') {
+                $login = 'archived.' . substr(md5($sourceBucket . '|' . (string)$sourceIndex), 0, 10);
+            }
+            $warnings['archived_login_generated'] = [
+                'login' => $login,
+            ];
+        }
         if ($statusRaw !== 'archived' && $login === '') {
             $errors['login'] = 'required';
         }
