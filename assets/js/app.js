@@ -6493,6 +6493,17 @@ console.info('app.js loaded :: 20251123a');
     if(!doctorId || !consultorioId) return null;
     const actorRole = resolveCreateActorRole();
     const actorId = resolveActorId() || 'ui';
+    const actorPayload = buildAgendaActorPayload('waitlist_assigned', {
+      source: 'waitlist_assign',
+      actorRole,
+      actorId,
+      entityType: 'waitlist',
+      metadata: {
+        source: 'waitlist_assign',
+        doctor_id: doctorId,
+        consultorio_id: consultorioId
+      }
+    });
     return {
       doctor_id: doctorId,
       consultorio_id: consultorioId,
@@ -6500,9 +6511,7 @@ console.info('app.js loaded :: 20251123a');
       end_at: toSqlDateTimeLocal(slot.end),
       slot_minutes: slotMinutes,
       modality: sanitizeText(activeEventActionRef?.extendedProps?.modality || '') || 'waitlist',
-      actor_role: actorRole,
-      actor_id: actorId,
-      channel_origin: resolveCreateChannelOrigin('waitlist_assign')
+      ...actorPayload
     };
   };
   const renderEventCancelWaitlistEntries = (entries = [])=>{
@@ -7593,11 +7602,18 @@ console.info('app.js loaded :: 20251123a');
         motivo_code: 'user_reschedule',
         motivo_text: '',
         notify_patient: false,
-        contact_method: 'none',
-        actor_role: resolveCreateActorRole(),
-        actor_id: resolveActorId() || 'ui',
-        channel_origin: resolveCreateChannelOrigin('reschedule')
+        contact_method: 'none'
       };
+      Object.assign(payload, buildAgendaActorPayload('appointment_rescheduled', {
+        source: 'reschedule',
+        actorRole: resolveCreateActorRole(),
+        actorId: resolveActorId() || 'ui',
+        entityType: 'appointment',
+        entityId: appointmentId,
+        metadata: {
+          motivo_code: 'user_reschedule'
+        }
+      }));
       const result = await AgendaApiClient.rescheduleAppointment(appointmentId, payload);
       if(!result?.ok || !result?.json || result.json.ok !== true){
         const msg = sanitizeText(result?.json?.message || result?.json?.error || `HTTP ${result?.status || 500}`) || 'No se pudo reprogramar la cita.';
@@ -7698,12 +7714,19 @@ console.info('app.js loaded :: 20251123a');
       const payload = {
         motivo_code: 'user_cancel',
         motivo_text: '',
-        actor_role: resolveCreateActorRole(),
-        actor_id: resolveActorId() || 'ui',
-        channel_origin: resolveCreateChannelOrigin('cancel'),
         notify_patient: false,
         contact_method: 'none'
       };
+      Object.assign(payload, buildAgendaActorPayload('appointment_canceled', {
+        source: 'cancel',
+        actorRole: resolveCreateActorRole(),
+        actorId: resolveActorId() || 'ui',
+        entityType: 'appointment',
+        entityId: appointmentId,
+        metadata: {
+          motivo_code: 'user_cancel'
+        }
+      }));
       payload.cancel_flag_type = cancelFlagChoice;
       if(lateCancelDecision === true || lateCancelDecision === false){
         payload.apply_late_cancel_flag = lateCancelDecision;
@@ -7758,9 +7781,13 @@ console.info('app.js loaded :: 20251123a');
       const doctorId = sanitizeText(activeEventActionRef?.extendedProps?.doctor_id || getDoctorId() || '');
       const actorRole = resolveCreateActorRole();
       const payload = {
-        actor_role: actorRole,
-        actor_id: actorId,
-        channel_origin: resolveCreateChannelOrigin('no_show')
+        ...buildAgendaActorPayload('appointment_no_show', {
+          source: 'no_show',
+          actorRole,
+          actorId,
+          entityType: 'appointment',
+          entityId: appointmentId
+        })
       };
       if(doctorId){
         payload.doctor_id = doctorId;
@@ -12045,6 +12072,115 @@ console.info('app.js loaded :: 20251123a');
       operatorAlias
     };
   };
+  const normalizeAgendaActorRoleValue = (value = '')=>{
+    const raw = sanitizeText(value || '').toLowerCase();
+    if(!raw) return '';
+    if(raw.includes('patient') || raw.includes('paciente')) return 'patient';
+    if(raw.includes('operator') || raw.includes('operador') || raw.includes('assistant')) return 'operator';
+    if(raw.includes('call_center') || raw.includes('call-center') || raw.includes('callcenter')) return 'call_center';
+    if(raw.includes('ai_operator') || raw === 'ai' || raw.includes('ai-assistant')) return 'ai_operator';
+    if(raw.includes('system') || raw.includes('sistema')) return 'system';
+    if(raw.includes('doctor') || raw.includes('medico')) return 'doctor';
+    return raw;
+  };
+  const resolveAgendaActionActorContext = (options = {})=>{
+    const opts = (options && typeof options === 'object') ? options : {};
+    const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
+      ? window.mxmedResolveActiveProfessionalContext()
+      : null;
+    const activeCtx = (window.mxmedStore?.activeProfessionalContext && typeof window.mxmedStore.activeProfessionalContext === 'object')
+      ? window.mxmedStore.activeProfessionalContext
+      : {};
+    const source = sanitizeText(opts.source || opts.action || '');
+    const requestedRole = normalizeAgendaActorRoleValue(opts.actorRole || opts.actor_role || '');
+    const actorRole = requestedRole || normalizeAgendaActorRoleValue(resolveCreateActorRole()) || 'doctor';
+    const channelOrigin = sanitizeText(
+      opts.channelOrigin
+      || opts.channel_origin
+      || resolveCreateChannelOrigin(source)
+    );
+    const operatorIdentity = resolveOperatorIdentityContext();
+    const fallbackActorId = sanitizeText(opts.defaultActorId || opts.default_actor_id || '');
+    const requestedActorId = sanitizeText(opts.actorId || opts.actor_id || '');
+    const resolvedActorId = sanitizeText(resolveActorId() || '');
+    const doctorId = sanitizeText(
+      activeProfessional?.doctor_id
+      || window.mxmedStore?.doctor_id
+      || window.mxmedStore?.doctorId
+      || window.mxmedDoctor?.doctor_id
+      || document.body?.dataset?.doctorId
+      || ''
+    );
+    const actorId = sanitizeText(
+      requestedActorId
+      || (actorRole === 'operator' ? operatorIdentity?.operatorId : '')
+      || resolvedActorId
+      || sanitizeText(activeProfessional?.user_id || '')
+      || sanitizeText(activeCtx?.user_id || '')
+      || doctorId
+      || fallbackActorId
+      || ''
+    );
+    const actorDisplayName = sanitizeText(
+      opts.actorDisplayName
+      || opts.actor_display_name
+      || (actorRole === 'operator' ? operatorIdentity?.operatorAlias : '')
+      || activeProfessional?.full_name
+      || activeProfessional?.display_name
+      || activeProfessional?.name
+      || activeCtx?.full_name
+      || activeCtx?.display_name
+      || activeCtx?.name
+      || ''
+    );
+    const createdByRole = normalizeAgendaActorRoleValue(
+      opts.createdByRole
+      || opts.created_by_role
+      || actorRole
+    ) || actorRole || 'doctor';
+    const createdById = sanitizeText(
+      opts.createdById
+      || opts.created_by_id
+      || actorId
+      || fallbackActorId
+      || doctorId
+      || ''
+    );
+    return {
+      actor_role: actorRole || 'doctor',
+      actor_id: actorId,
+      actor_display_name: actorDisplayName,
+      channel_origin: channelOrigin,
+      created_by_role: createdByRole || 'doctor',
+      created_by_id: createdById
+    };
+  };
+  const buildAgendaActorPayload = (action, extra = {})=>{
+    const extras = (extra && typeof extra === 'object') ? extra : {};
+    const actorContext = (extras.actorContext && typeof extras.actorContext === 'object')
+      ? extras.actorContext
+      : resolveAgendaActionActorContext(extras);
+    const actionValue = sanitizeText(action || extras.action || '');
+    const entityType = sanitizeText(extras.entityType || extras.entity_type || '');
+    const entityId = sanitizeText(extras.entityId || extras.entity_id || '');
+    const occurredAt = sanitizeText(extras.occurredAt || extras.occurred_at || '') || new Date().toISOString();
+    const metadata = (extras.metadata && typeof extras.metadata === 'object')
+      ? extras.metadata
+      : {};
+    return {
+      actor_role: sanitizeText(actorContext.actor_role || ''),
+      actor_id: sanitizeText(actorContext.actor_id || ''),
+      actor_display_name: sanitizeText(actorContext.actor_display_name || ''),
+      channel_origin: sanitizeText(actorContext.channel_origin || ''),
+      created_by_role: sanitizeText(actorContext.created_by_role || ''),
+      created_by_id: sanitizeText(actorContext.created_by_id || ''),
+      action: actionValue,
+      entity_type: entityType,
+      entity_id: entityId,
+      occurred_at: occurredAt,
+      metadata
+    };
+  };
   const resolveConsultorioId = ()=>{
     const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
       ? window.mxmedResolveActiveProfessionalContext()
@@ -13962,6 +14098,16 @@ console.info('app.js loaded :: 20251123a');
     const actorRole = resolveCreateActorRole();
     const channelOrigin = resolveCreateChannelOrigin(createSelectionContext.source);
     const actorId = resolveActorId() || doctorId;
+    const actorPayload = buildAgendaActorPayload('appointment_created', {
+      source: createSelectionContext.source,
+      actorRole,
+      actorId,
+      channelOrigin,
+      entityType: 'appointment',
+      metadata: {
+        source: 'create_modal'
+      }
+    });
     const operatorIdentity = resolveOperatorIdentityContext();
 
     if(!doctorId) return setCreateError('No se pudo resolver doctor_id.');
@@ -14004,6 +14150,7 @@ console.info('app.js loaded :: 20251123a');
       start_at: startSql,
       end_at: endSql,
       modality: modality,
+      ...actorPayload,
       channel_origin: channelOrigin,
       created_by_role: actorRole,
       created_by_id: actorId
@@ -40513,11 +40660,21 @@ console.info('app.js loaded :: 20251123a');
         start_at: followup.startAt,
         end_at: followup.endAt,
         modality: 'in_person',
-        channel_origin: 'alta_medica',
-        created_by_role: 'doctor',
-        created_by_id: sanitizeText(actorUserId || doctorId),
         reason_text: motive
       };
+      Object.assign(payload, buildAgendaActorPayload('appointment_created', {
+        source: 'alta_medica',
+        actorRole: 'doctor',
+        actorId: sanitizeText(actorUserId || doctorId),
+        channelOrigin: 'alta_medica',
+        entityType: 'appointment',
+        metadata: {
+          source: 'alta_medica'
+        }
+      }));
+      payload.channel_origin = 'alta_medica';
+      payload.created_by_role = 'doctor';
+      payload.created_by_id = sanitizeText(actorUserId || doctorId);
       try{
         const resp = await fetch('/api/agenda/index.php/appointments', {
           method: 'POST',
