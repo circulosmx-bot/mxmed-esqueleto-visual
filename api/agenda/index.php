@@ -90,12 +90,21 @@ function normalize_response($response): array
 
 function read_json_body(): array
 {
+    static $decodedCache = null;
+    static $loaded = false;
+    if ($loaded) {
+        return is_array($decodedCache) ? $decodedCache : [];
+    }
+
+    $loaded = true;
     $raw = file_get_contents('php://input');
     if (!is_string($raw) || trim($raw) === '') {
+        $decodedCache = [];
         return [];
     }
     $decoded = json_decode($raw, true);
-    return is_array($decoded) ? $decoded : [];
+    $decodedCache = is_array($decoded) ? $decoded : [];
+    return $decodedCache;
 }
 
 function bool_env_flag($value): bool
@@ -147,7 +156,85 @@ function forbidden_response(string $message = 'forbidden', array $meta = []): ar
     ];
 }
 
-function resolveAgendaActorContext(array $segments, array $query = []): array
+function resolveHeaderValue(array $headers, string $name): string
+{
+    $target = strtolower(trim($name));
+    if ($target === '') {
+        return '';
+    }
+    foreach ($headers as $key => $value) {
+        if (strtolower(trim((string)$key)) === $target) {
+            return trim((string)$value);
+        }
+    }
+    return '';
+}
+
+function normalizeAgendaActorRole($raw): string
+{
+    $value = strtolower(trim((string)($raw ?? '')));
+    if ($value === '') {
+        return '';
+    }
+    $value = str_replace([' ', '-'], '_', $value);
+    $map = [
+        'doctor' => 'doctor',
+        'medico' => 'doctor',
+        'owner' => 'doctor',
+        'operator' => 'operator',
+        'operador' => 'operator',
+        'assistant' => 'operator',
+        'asistente' => 'operator',
+        'patient' => 'patient',
+        'paciente' => 'patient',
+        'call_center' => 'call_center',
+        'callcenter' => 'call_center',
+        'ai_operator' => 'ai_operator',
+        'operator_ia' => 'ai_operator',
+        'operador_ia' => 'ai_operator',
+        'system' => 'system',
+        'sistema' => 'system',
+    ];
+    return $map[$value] ?? '';
+}
+
+function resolveAgendaActorRole(array $query = [], array $body = []): array
+{
+    $headers = function_exists('getallheaders') ? (array)getallheaders() : [];
+    $headerActorRole = normalizeAgendaActorRole(resolveHeaderValue($headers, 'X-Actor-Role'));
+    if ($headerActorRole !== '') {
+        return ['role' => $headerActorRole, 'source' => 'header:x-actor-role'];
+    }
+
+    $headerUserRole = normalizeAgendaActorRole(resolveHeaderValue($headers, 'X-User-Role'));
+    if ($headerUserRole !== '') {
+        return ['role' => $headerUserRole, 'source' => 'header:x-user-role'];
+    }
+
+    $sessionRole = normalizeAgendaActorRole(
+        $_SESSION['user_role']
+            ?? $_SESSION['role']
+            ?? $_SESSION['mxmed_user_role']
+            ?? ''
+    );
+    if ($sessionRole !== '') {
+        return ['role' => $sessionRole, 'source' => 'session'];
+    }
+
+    $bodyRole = normalizeAgendaActorRole($body['actor_role'] ?? ($body['created_by_role'] ?? ''));
+    if ($bodyRole !== '') {
+        return ['role' => $bodyRole, 'source' => 'body'];
+    }
+
+    $queryRole = normalizeAgendaActorRole($query['actor_role'] ?? '');
+    if ($queryRole !== '') {
+        return ['role' => $queryRole, 'source' => 'query'];
+    }
+
+    return ['role' => 'doctor', 'source' => 'fallback'];
+}
+
+function resolveAgendaActorContext(array $segments, array $query = [], array $actorRoleContext = []): array
 {
     $modeRaw = strtolower(trim((string)(getenv('MXMED_AGENDA_AUTH_MODE') ?: '')));
     $strictMode = bool_env_flag(getenv('MXMED_AGENDA_AUTH_REQUIRED'))
@@ -225,6 +312,8 @@ function resolveAgendaActorContext(array $segments, array $query = []): array
             'compat' => $compatMode,
             'user_id' => $contextUserId,
             'doctor_id' => $contextDoctorId,
+            'actor_role' => normalizeAgendaActorRole($actorRoleContext['role'] ?? '') ?: 'doctor',
+            'actor_role_source' => trim((string)($actorRoleContext['source'] ?? 'fallback')),
             'warnings' => $warnings,
         ],
     ];
@@ -250,8 +339,11 @@ try {
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
     $actorContext = null;
+    $actorRoleContext = ['role' => 'doctor', 'source' => 'fallback'];
     if (is_private_agenda_route($segments) && !is_public_agenda_route($segments)) {
-        $contextResult = resolveAgendaActorContext($segments, $_GET);
+        $payloadForRole = read_json_body();
+        $actorRoleContext = resolveAgendaActorRole($_GET, $payloadForRole);
+        $contextResult = resolveAgendaActorContext($segments, $_GET, $actorRoleContext);
         if (!$contextResult['ok']) {
             $response = normalize_response($contextResult['response']);
             $errorCode = (string)($response['error'] ?? '');
@@ -271,6 +363,27 @@ try {
             exit;
         }
         $actorContext = (array)($contextResult['context'] ?? []);
+
+        if (($segments[0] ?? '') === 'operators' && (($actorContext['actor_role'] ?? '') === 'operator')) {
+            $response = normalize_response(forbidden_response('forbidden for actor role', [
+                'actor_role' => 'operator',
+                'actor_role_source' => trim((string)($actorContext['actor_role_source'] ?? ($actorRoleContext['source'] ?? ''))),
+                'route' => 'operators',
+            ]));
+            http_response_code(403);
+            $json = json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if ($json === false) {
+                $json = json_encode([
+                    'ok' => false,
+                    'error' => 'db_error',
+                    'message' => 'database error',
+                    'data' => null,
+                    'meta' => (object)[],
+                ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            }
+            echo $json;
+            exit;
+        }
     }
 
     $controller = new AppointmentsController();
