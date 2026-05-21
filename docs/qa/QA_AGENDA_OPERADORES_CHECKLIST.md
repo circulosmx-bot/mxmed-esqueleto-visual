@@ -177,3 +177,36 @@ Resultado consolidado: **PASS**.
   - `waitlist`
 - [x] Rutas `public/*` sin afectación.
 - [x] `php -l api/agenda/index.php` en PASS.
+
+## I) Agenda Auditoría F2.5A (contrato documental)
+
+Referencia:
+- [ ] Revisar `../AGENDA_AUDITORIA_ACTOR_ATTRIBUTION_MXMED.md` antes de F2.5B.
+
+Validaciones de contrato (documentales):
+- [ ] Contrato canonico define: `entity_type`, `entity_id`, `action`, `actor_role`, `actor_id`, `channel_origin`, `occurred_at`, `metadata`.
+- [ ] Compatibilidad backward documentada: `created_by_*` y `actor_*` conviven temporalmente.
+- [ ] Roles canonicos documentados: `doctor`, `operator`, `patient`, `call_center`, `ai_operator`, `system`.
+- [ ] `channel_origin` canonico documentado.
+- [ ] Matriz de eventos incluida:
+  - `appointment_created`
+  - `appointment_rescheduled`
+  - `appointment_canceled`
+  - `appointment_no_show`
+  - `waitlist_created`
+  - `waitlist_assigned`
+  - `availability_blocked`
+  - `availability_unblocked`
+  - `operator_created`
+  - `operator_paused`
+  - `operator_reactivated`
+  - `operator_archived`
+  - `operator_restored`
+  - `operator_migrated_from_local`
+
+Validaciones de QA a ejecutar en fases F2.5B-F2.5F:
+- [ ] doctor crea/reprograma/cancela/no_show con actor consistente.
+- [ ] operator crea/reprograma/cancela/no_show con actor consistente.
+- [ ] patient/call_center/ai_operator registran actor y canal esperado en rutas autorizadas.
+- [ ] `GET /appointments/{id}/events` expone attribution consistente en DTO final (cuando F2.5D cierre).
+- [ ] spoofing de `actor_role`/`created_by_role`/`channel_origin` se valida con identidad autoritativa (pendiente de fase posterior).

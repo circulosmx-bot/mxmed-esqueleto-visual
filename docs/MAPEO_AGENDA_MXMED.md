@@ -291,3 +291,17 @@ Nota:
   - actores externos (`patient`, `call_center`, `ai_operator`);
   - identidad autoritativa (sesión/JWT/API key);
   - auditoría unificada por actor en todas las acciones.
+
+## 10. Adenda F2.5A (auditoria / actor attribution)
+
+Referencia:
+- `docs/AGENDA_AUDITORIA_ACTOR_ATTRIBUTION_MXMED.md`
+
+Estado actual documentado:
+- `create appointment` usa principalmente `created_by_role`, `created_by_id`, `channel_origin`.
+- Mutaciones operativas usan principalmente `actor_role`, `actor_id`, `channel_origin`.
+- `GET /appointments/{id}/events` expone eventos mayormente raw (sin DTO uniforme transversal).
+
+Decision documental:
+- Mantener compatibilidad backward.
+- Converger a contrato canonico por fases (F2.5B-F2.5F) sin romper flujos estabilizados.

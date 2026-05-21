@@ -241,3 +241,19 @@ Riesgos abiertos:
 Siguiente fase sugerida:
 - F2.4 actores externos de Agenda (`patient`, `call_center`, `ai_operator`).
 - Alternativamente F2.5 para consolidar auditoría/actor attribution antes de ampliar actores.
+
+## 12. Adenda F2.5A (contrato de auditoria)
+
+Documento canonico:
+- `docs/AGENDA_AUDITORIA_ACTOR_ATTRIBUTION_MXMED.md`
+
+Acuerdo de F2.5A:
+- Se documenta contrato canonico de actor attribution sin cambios funcionales.
+- Se mantiene compatibilidad backward con `created_by_*` y `actor_*`.
+- Se define set canonico de roles:
+  - `doctor`, `operator`, `patient`, `call_center`, `ai_operator`, `system`.
+- Se define set sugerido de `channel_origin`:
+  - `agenda_internal`, `public_profile`, `call_center`, `ai_assistant`, `system`, `migration`.
+
+Pendiente posterior:
+- F2.5B-F2.5F para normalizacion de payload, persistencia, DTO de eventos y QA integral.
