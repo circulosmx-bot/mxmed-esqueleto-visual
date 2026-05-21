@@ -549,6 +549,10 @@ try {
                 $response = $operators->index($_GET);
             } elseif ($method === 'POST' && !isset($segments[1])) {
                 $response = $operators->store(read_json_body());
+            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'migration' && ($segments[2] ?? '') === 'preview') {
+                $response = $operators->migrationPreview(read_json_body());
+            } elseif ($method === 'POST' && ($segments[1] ?? '') === 'migration' && ($segments[2] ?? '') === 'apply') {
+                $response = $operators->migrationApply(read_json_body());
             } elseif ($method === 'PATCH' && isset($segments[1]) && ($segments[2] ?? '') === 'pause') {
                 $response = $operators->pause((string)$segments[1], read_json_body());
             } elseif ($method === 'PATCH' && isset($segments[1]) && ($segments[2] ?? '') === 'reactivate') {

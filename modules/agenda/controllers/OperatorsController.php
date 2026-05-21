@@ -145,6 +145,127 @@ class OperatorsController
         ]);
     }
 
+    public function migrationPreview(array $payload = []): array
+    {
+        $notReady = $this->ensureReady();
+        if ($notReady) {
+            return $notReady;
+        }
+
+        $doctorIdRequested = trim((string)($payload['doctor_id'] ?? ''));
+        $doctorScope = $this->resolveDoctorScope($doctorIdRequested, true);
+        if (!$doctorScope['ok']) {
+            return $this->error(
+                (string)$doctorScope['error'],
+                (string)$doctorScope['message'],
+                (array)($doctorScope['meta'] ?? [])
+            );
+        }
+        $doctorId = (string)$doctorScope['doctor_id'];
+        $source = $this->extractMigrationSource($payload);
+
+        try {
+            $preview = $this->repository->previewMigrationFromLocalState($doctorId, $source);
+        } catch (RuntimeException $e) {
+            $message = $e->getMessage();
+            if ($message === 'operators tables not ready' || $message === 'operator audit table not ready') {
+                return $this->error('db_not_ready', 'operators tables not ready');
+            }
+            return $this->error('db_error', 'database error');
+        } catch (Throwable $e) {
+            return $this->error('db_error', 'database error');
+        }
+
+        return $this->success($preview, [
+            'write' => 'migration_preview',
+            'doctor_id_effective' => $doctorId,
+            'doctor_id_requested' => ($doctorIdRequested !== '' ? $doctorIdRequested : null),
+        ]);
+    }
+
+    public function migrationApply(array $payload = []): array
+    {
+        $notReady = $this->ensureReady();
+        if ($notReady) {
+            return $notReady;
+        }
+
+        if (!$this->isMigrationConfirmed($payload['confirm'] ?? null)) {
+            return $this->error('invalid_params', 'confirm is required', [
+                'field' => 'confirm',
+            ]);
+        }
+
+        $doctorIdRequested = trim((string)($payload['doctor_id'] ?? ''));
+        $doctorScope = $this->resolveDoctorScope($doctorIdRequested, true);
+        if (!$doctorScope['ok']) {
+            return $this->error(
+                (string)$doctorScope['error'],
+                (string)$doctorScope['message'],
+                (array)($doctorScope['meta'] ?? [])
+            );
+        }
+        $doctorId = (string)$doctorScope['doctor_id'];
+        $source = $this->extractMigrationSource($payload);
+
+        try {
+            $preview = $this->repository->previewMigrationFromLocalState($doctorId, $source);
+        } catch (RuntimeException $e) {
+            $message = $e->getMessage();
+            if ($message === 'operators tables not ready' || $message === 'operator audit table not ready') {
+                return $this->error('db_not_ready', 'operators tables not ready');
+            }
+            return $this->error('db_error', 'database error');
+        } catch (Throwable $e) {
+            return $this->error('db_error', 'database error');
+        }
+
+        if (!empty($preview['has_blocking_conflicts'])) {
+            return $this->error('conflict', 'migration has blocking conflicts', [
+                'conflicts' => $preview['conflicts'] ?? [],
+                'warnings' => $preview['warnings'] ?? [],
+                'summary_before' => $preview['summary_before'] ?? [],
+                'summary_after' => $preview['summary_after_if_applied'] ?? [],
+            ]);
+        }
+
+        try {
+            $result = $this->repository->applyMigrationFromLocalState($doctorId, $source, $this->actorContext, $preview);
+        } catch (RuntimeException $e) {
+            $message = $e->getMessage();
+            if ($message === 'quota_limit_reached') {
+                return $this->error('conflict', 'operator quota limit reached', [
+                    'max_allowed' => 3,
+                ]);
+            }
+            if ($message === 'alias_duplicated') {
+                return $this->error('conflict', 'operator alias already exists', [
+                    'field' => 'alias',
+                ]);
+            }
+            if ($message === 'login_duplicated') {
+                return $this->error('conflict', 'operator login already exists', [
+                    'field' => 'login',
+                ]);
+            }
+            if ($message === 'migration_conflicts_blocking') {
+                return $this->error('conflict', 'migration has blocking conflicts', []);
+            }
+            if ($message === 'operators tables not ready' || $message === 'operator audit table not ready') {
+                return $this->error('db_not_ready', 'operators tables not ready');
+            }
+            return $this->error('db_error', 'database error');
+        } catch (Throwable $e) {
+            return $this->error('db_error', 'database error');
+        }
+
+        return $this->success($result, [
+            'write' => 'migration_apply',
+            'doctor_id_effective' => $doctorId,
+            'doctor_id_requested' => ($doctorIdRequested !== '' ? $doctorIdRequested : null),
+        ]);
+    }
+
     public function pause(string $operatorId, array $payload = []): array
     {
         return $this->mutateOperatorStatusAction($operatorId, 'pause', $payload);
@@ -403,6 +524,25 @@ class OperatorsController
     private function isValidVerificationCode(string $value): bool
     {
         return (bool)preg_match('/^\d{6}$/', $value);
+    }
+
+    private function extractMigrationSource(array $payload): array
+    {
+        $source = (isset($payload['source']) && is_array($payload['source'])) ? $payload['source'] : $payload;
+        return [
+            'operators' => (isset($source['operators']) && is_array($source['operators'])) ? $source['operators'] : [],
+            'archived_operators' => (isset($source['archived_operators']) && is_array($source['archived_operators'])) ? $source['archived_operators'] : [],
+            'audit_trail' => (isset($source['audit_trail']) && is_array($source['audit_trail'])) ? $source['audit_trail'] : [],
+        ];
+    }
+
+    private function isMigrationConfirmed($confirm): bool
+    {
+        if (is_array($confirm)) {
+            $accepted = $confirm['accepted'] ?? null;
+            return $accepted === true || $accepted === 1 || $accepted === '1' || $accepted === 'true';
+        }
+        return $confirm === true || $confirm === 1 || $confirm === '1' || $confirm === 'true';
     }
 
     private function ensureReady(): ?array

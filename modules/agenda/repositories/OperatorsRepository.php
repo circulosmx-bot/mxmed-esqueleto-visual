@@ -250,6 +250,575 @@ class OperatorsRepository
         ];
     }
 
+    public function previewMigrationFromLocalState(string $doctorId, array $source): array
+    {
+        $this->ensureTables();
+        $stateBefore = $this->readStateByDoctor($doctorId, 120);
+        $analysis = $this->analyzeMigrationPayload($doctorId, $source, $stateBefore);
+
+        return [
+            'source_counts' => $analysis['source_counts'],
+            'migratable' => $analysis['migratable'],
+            'skipped' => $analysis['skipped'],
+            'conflicts' => $analysis['conflicts'],
+            'warnings' => $analysis['warnings'],
+            'has_blocking_conflicts' => $analysis['has_blocking_conflicts'],
+            'summary_before' => $stateBefore['summary'],
+            'summary_after_if_applied' => $analysis['summary_after_if_applied'],
+            'limits' => [
+                'max_allowed' => self::MAX_ALLOWED,
+            ],
+            'counts' => $analysis['counts'],
+        ];
+    }
+
+    public function applyMigrationFromLocalState(
+        string $doctorId,
+        array $source,
+        array $actorContext = [],
+        array $preview = []
+    ): array {
+        $this->ensureTables();
+        if (empty($preview)) {
+            $preview = $this->previewMigrationFromLocalState($doctorId, $source);
+        }
+        if (!empty($preview['has_blocking_conflicts'])) {
+            throw new RuntimeException('migration_conflicts_blocking');
+        }
+
+        $migratable = (isset($preview['migratable']) && is_array($preview['migratable']))
+            ? $preview['migratable']
+            : [];
+        $auditTrail = (isset($source['audit_trail']) && is_array($source['audit_trail']))
+            ? $source['audit_trail']
+            : [];
+        $localAuditCountByOperator = $this->indexLocalAuditCountsByOperator($auditTrail);
+
+        $migratedOperators = 0;
+        $migratedArchived = 0;
+        $migratedAuditEvents = 0;
+        $migratedItems = [];
+
+        try {
+            $this->pdo->beginTransaction();
+            $existingOperatorIds = $this->fetchOperatorIdSetByDoctorForUpdate($doctorId);
+
+            foreach ($migratable as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+
+                $status = strtolower(trim((string)($item['status'] ?? 'pending')));
+                if (!in_array($status, self::ALL_STATUSES, true)) {
+                    $status = 'pending';
+                }
+                $isCountable = in_array($status, self::COUNTABLE_STATUSES, true);
+                if ($isCountable) {
+                    $this->ensureDoctorQuotaAvailableForCreate($doctorId, $status);
+                    $this->assertAliasIsUnique($doctorId, trim((string)($item['alias_normalized'] ?? '')));
+                    $this->assertLoginIsUnique($doctorId, trim((string)($item['login_normalized'] ?? '')));
+                }
+
+                $operatorId = trim((string)($item['operator_id'] ?? ''));
+                if ($operatorId === '' || isset($existingOperatorIds[$operatorId])) {
+                    $operatorId = $this->generateUniqueOperatorId($existingOperatorIds);
+                }
+                $this->assertOperatorIdIsUnique($operatorId);
+                $existingOperatorIds[$operatorId] = true;
+
+                $insertPayload = [
+                    'operator_id' => $operatorId,
+                    'doctor_id' => $doctorId,
+                    'operator_label' => trim((string)($item['operator_label'] ?? '')),
+                    'alias' => trim((string)($item['alias'] ?? '')),
+                    'alias_normalized' => trim((string)($item['alias_normalized'] ?? '')),
+                    'full_name' => trim((string)($item['full_name'] ?? '')),
+                    'phone' => trim((string)($item['phone'] ?? '')),
+                    'email' => strtolower(trim((string)($item['email'] ?? ''))),
+                    'gender' => strtolower(trim((string)($item['gender'] ?? ''))),
+                    'role' => strtolower(trim((string)($item['role'] ?? 'operator'))),
+                    'status' => $status,
+                    'login' => trim((string)($item['login'] ?? '')),
+                    'login_normalized' => trim((string)($item['login_normalized'] ?? '')),
+                    'temp_password_hash' => trim((string)($item['temp_password_hash'] ?? '')),
+                    'force_password_change' => !empty($item['force_password_change']) ? 1 : 0,
+                    'invitation_status' => strtolower(trim((string)($item['invitation_status'] ?? 'pending'))),
+                    'operator_credentials_sent_at' => trim((string)($item['operator_credentials_sent_at'] ?? '')),
+                    'last_access' => trim((string)($item['last_access'] ?? '')),
+                    'archived_at' => $status === 'archived'
+                        ? trim((string)($item['archived_at'] ?? ''))
+                        : '',
+                ];
+                if ($insertPayload['archived_at'] === '' && $status === 'archived') {
+                    $insertPayload['archived_at'] = date('Y-m-d H:i:s');
+                }
+
+                $this->insert($this->operatorsTable, $insertPayload);
+                $this->replacePermissions($doctorId, $operatorId, $this->sanitizePermissionKeys($item['permissions'] ?? []));
+
+                $sourceOperatorId = trim((string)($item['source_operator_id'] ?? ''));
+                $legacyEventCount = $sourceOperatorId !== ''
+                    ? (int)($localAuditCountByOperator[$sourceOperatorId] ?? 0)
+                    : 0;
+                $auditNotes = json_encode([
+                    'source' => 'localStorage',
+                    'source_bucket' => trim((string)($item['source_bucket'] ?? 'operators')),
+                    'source_index' => (int)($item['source_index'] ?? 0),
+                    'legacy_event_count' => $legacyEventCount,
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
+
+                $this->auditRepository->insertEvent([
+                    'doctor_id' => $doctorId,
+                    'operator_id' => $operatorId,
+                    'event_type' => 'operator_migrated_from_local',
+                    'module_name' => 'Operadores',
+                    'action_label' => 'Operador migrado desde local',
+                    'entity_label' => $insertPayload['alias'] !== '' ? $insertPayload['alias'] : $insertPayload['full_name'],
+                    'actor_role' => trim((string)($actorContext['mode'] ?? 'system')),
+                    'actor_id' => trim((string)($actorContext['user_id'] ?? 'system')),
+                    'notes' => $auditNotes,
+                ]);
+                $migratedAuditEvents += 1;
+
+                if ($status === 'archived') {
+                    $migratedArchived += 1;
+                } else {
+                    $migratedOperators += 1;
+                }
+                $migratedItems[] = [
+                    'operator_id' => $operatorId,
+                    'source_operator_id' => $sourceOperatorId,
+                    'status' => $status,
+                ];
+            }
+
+            $this->pdo->commit();
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+
+        $state = $this->readStateByDoctor($doctorId, 120);
+
+        return [
+            'migrated' => [
+                'operators' => $migratedOperators,
+                'archived_operators' => $migratedArchived,
+                'audit_events' => $migratedAuditEvents,
+            ],
+            'migrated_items' => $migratedItems,
+            'skipped' => (isset($preview['skipped']) && is_array($preview['skipped'])) ? $preview['skipped'] : [],
+            'warnings' => (isset($preview['warnings']) && is_array($preview['warnings'])) ? $preview['warnings'] : [],
+            'conflicts' => (isset($preview['conflicts']) && is_array($preview['conflicts'])) ? $preview['conflicts'] : [],
+            'operators' => $state['operators'],
+            'archived_operators' => $state['archived_operators'],
+            'audit_trail' => $state['audit_trail'],
+            'summary' => $state['summary'],
+            'limits' => $state['limits'],
+        ];
+    }
+
+    private function analyzeMigrationPayload(string $doctorId, array $source, array $stateBefore): array
+    {
+        $localOperators = (isset($source['operators']) && is_array($source['operators'])) ? $source['operators'] : [];
+        $localArchived = (isset($source['archived_operators']) && is_array($source['archived_operators'])) ? $source['archived_operators'] : [];
+        $localAudit = (isset($source['audit_trail']) && is_array($source['audit_trail'])) ? $source['audit_trail'] : [];
+
+        $sourceCounts = [
+            'operators' => count($localOperators),
+            'archived_operators' => count($localArchived),
+            'audit_trail' => count($localAudit),
+        ];
+
+        $backendRows = $this->fetchOperatorsRawByDoctor($doctorId);
+        $backendCountableAlias = [];
+        $backendCountableLogin = [];
+        $backendOperatorIds = [];
+        foreach ($backendRows as $row) {
+            $status = strtolower(trim((string)($row['status'] ?? 'pending')));
+            $operatorId = trim((string)($row['operator_id'] ?? ''));
+            if ($operatorId !== '') {
+                $backendOperatorIds[$operatorId] = true;
+            }
+            if (!in_array($status, self::COUNTABLE_STATUSES, true)) {
+                continue;
+            }
+            $alias = trim((string)($row['alias_normalized'] ?? ''));
+            if ($alias !== '') {
+                $backendCountableAlias[$alias] = true;
+            }
+            $login = trim((string)($row['login_normalized'] ?? ''));
+            if ($login !== '') {
+                $backendCountableLogin[$login] = true;
+            }
+        }
+
+        $incomingAlias = [];
+        $incomingLogin = [];
+        $incomingOperatorIds = [];
+        $warnings = [];
+        $conflicts = [];
+        $skipped = [];
+        $migratableCountableCandidates = [];
+        $migratableArchivedCandidates = [];
+
+        $candidateRows = [];
+        foreach ($localOperators as $index => $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $candidateRows[] = $this->normalizeIncomingMigrationRecord($row, 'operators', (int)$index);
+        }
+        foreach ($localArchived as $index => $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $candidateRows[] = $this->normalizeIncomingMigrationRecord($row, 'archived_operators', (int)$index);
+        }
+
+        foreach ($candidateRows as $candidate) {
+            $candidateWarnings = (isset($candidate['_warnings']) && is_array($candidate['_warnings']))
+                ? $candidate['_warnings']
+                : [];
+            foreach ($candidateWarnings as $warningType => $warningDetail) {
+                $warnings[] = $this->buildMigrationWarning($warningType, $candidate, $warningDetail);
+            }
+
+            $candidateErrors = (isset($candidate['_errors']) && is_array($candidate['_errors']))
+                ? $candidate['_errors']
+                : [];
+            if (!empty($candidateErrors)) {
+                $isBlocking = strtolower((string)($candidate['status'] ?? '')) !== 'archived';
+                $conflicts[] = $this->buildMigrationConflict(
+                    'operator_incomplete',
+                    $candidate,
+                    $candidateErrors,
+                    $isBlocking
+                );
+                $skipped[] = $this->buildMigrationSkipped('operator_incomplete', $candidate, $candidateErrors);
+                continue;
+            }
+
+            $isCountable = in_array(strtolower((string)($candidate['status'] ?? '')), self::COUNTABLE_STATUSES, true);
+            if ($isCountable) {
+                $aliasNormalized = trim((string)($candidate['alias_normalized'] ?? ''));
+                $loginNormalized = trim((string)($candidate['login_normalized'] ?? ''));
+
+                if (isset($backendCountableAlias[$aliasNormalized]) || isset($incomingAlias[$aliasNormalized])) {
+                    $conflicts[] = $this->buildMigrationConflict(
+                        'alias_duplicated',
+                        $candidate,
+                        ['alias' => $aliasNormalized],
+                        true
+                    );
+                    $skipped[] = $this->buildMigrationSkipped('alias_duplicated', $candidate, ['alias' => $aliasNormalized]);
+                    continue;
+                }
+                if (isset($backendCountableLogin[$loginNormalized]) || isset($incomingLogin[$loginNormalized])) {
+                    $conflicts[] = $this->buildMigrationConflict(
+                        'login_duplicated',
+                        $candidate,
+                        ['login' => $loginNormalized],
+                        true
+                    );
+                    $skipped[] = $this->buildMigrationSkipped('login_duplicated', $candidate, ['login' => $loginNormalized]);
+                    continue;
+                }
+
+                $incomingAlias[$aliasNormalized] = true;
+                $incomingLogin[$loginNormalized] = true;
+            }
+
+            $sourceOperatorId = trim((string)($candidate['source_operator_id'] ?? ''));
+            $operatorId = trim((string)($candidate['operator_id'] ?? ''));
+            if ($operatorId === '' || isset($backendOperatorIds[$operatorId]) || isset($incomingOperatorIds[$operatorId])) {
+                $newOperatorId = $this->generateUniqueOperatorId($backendOperatorIds, $incomingOperatorIds);
+                $warnings[] = $this->buildMigrationWarning(
+                    'operator_id_reassigned',
+                    $candidate,
+                    [
+                        'from' => $operatorId !== '' ? $operatorId : null,
+                        'to' => $newOperatorId,
+                    ]
+                );
+                $candidate['operator_id'] = $newOperatorId;
+            }
+            $incomingOperatorIds[(string)$candidate['operator_id']] = true;
+
+            if ($sourceOperatorId === '') {
+                $candidate['source_operator_id'] = (string)$candidate['operator_id'];
+            }
+
+            if ($isCountable) {
+                $migratableCountableCandidates[] = $candidate;
+            } else {
+                $migratableArchivedCandidates[] = $candidate;
+            }
+        }
+
+        $quotaUsedBefore = (int)($stateBefore['summary']['quota_used'] ?? 0);
+        $quotaAvailableBefore = max(0, self::MAX_ALLOWED - $quotaUsedBefore);
+        $migratable = [];
+        $migratedCountable = 0;
+        foreach ($migratableCountableCandidates as $candidate) {
+            if ($migratedCountable >= $quotaAvailableBefore) {
+                $conflicts[] = $this->buildMigrationConflict('quota_exceeded', $candidate, [
+                    'max_allowed' => self::MAX_ALLOWED,
+                    'quota_used' => $quotaUsedBefore,
+                    'quota_available' => $quotaAvailableBefore,
+                ], true);
+                $skipped[] = $this->buildMigrationSkipped('quota_exceeded', $candidate, []);
+                continue;
+            }
+            $migratable[] = $candidate;
+            $migratedCountable += 1;
+        }
+        foreach ($migratableArchivedCandidates as $candidate) {
+            $migratable[] = $candidate;
+        }
+
+        $summaryAfter = [
+            'quota_used' => $quotaUsedBefore + $migratedCountable,
+            'quota_available' => max(0, self::MAX_ALLOWED - ($quotaUsedBefore + $migratedCountable)),
+            'active_count' => (int)($stateBefore['summary']['active_count'] ?? 0),
+            'pending_count' => (int)($stateBefore['summary']['pending_count'] ?? 0),
+            'paused_count' => (int)($stateBefore['summary']['paused_count'] ?? 0),
+            'archived_count' => (int)($stateBefore['summary']['archived_count'] ?? 0),
+            'max_allowed' => self::MAX_ALLOWED,
+        ];
+        foreach ($migratable as $candidate) {
+            $status = strtolower(trim((string)($candidate['status'] ?? '')));
+            if ($status === 'active') {
+                $summaryAfter['active_count'] += 1;
+            } elseif ($status === 'pending') {
+                $summaryAfter['pending_count'] += 1;
+            } elseif ($status === 'paused') {
+                $summaryAfter['paused_count'] += 1;
+            } elseif ($status === 'archived') {
+                $summaryAfter['archived_count'] += 1;
+            }
+        }
+
+        $hasBlockingConflicts = false;
+        foreach ($conflicts as $conflict) {
+            if (!empty($conflict['blocking'])) {
+                $hasBlockingConflicts = true;
+                break;
+            }
+        }
+
+        return [
+            'source_counts' => $sourceCounts,
+            'migratable' => $migratable,
+            'skipped' => $skipped,
+            'conflicts' => $conflicts,
+            'warnings' => $warnings,
+            'has_blocking_conflicts' => $hasBlockingConflicts,
+            'summary_after_if_applied' => $summaryAfter,
+            'counts' => [
+                'operators_local' => count($localOperators),
+                'archived_local' => count($localArchived),
+                'audit_local' => count($localAudit),
+                'migratable' => count($migratable),
+                'skipped' => count($skipped),
+                'conflicts' => count($conflicts),
+                'warnings' => count($warnings),
+            ],
+        ];
+    }
+
+    private function normalizeIncomingMigrationRecord(array $row, string $sourceBucket, int $sourceIndex): array
+    {
+        $errors = [];
+        $warnings = [];
+
+        $statusRaw = strtolower(trim((string)($row['status'] ?? ($sourceBucket === 'archived_operators' ? 'archived' : 'pending'))));
+        if ($sourceBucket === 'archived_operators' && $statusRaw !== 'archived') {
+            $warnings['status_forced_archived'] = ['from' => $statusRaw];
+            $statusRaw = 'archived';
+        }
+        if (!in_array($statusRaw, self::ALL_STATUSES, true)) {
+            $errors['status'] = 'invalid';
+        }
+
+        $alias = strtoupper(trim((string)($row['alias'] ?? '')));
+        $alias = $this->normalizeAlias($alias);
+        if ($alias === '') {
+            $errors['alias'] = 'required';
+        } elseif (strlen($alias) < 3) {
+            $errors['alias'] = 'min_length_3';
+        } elseif (strlen($alias) > 15) {
+            $errors['alias'] = 'max_length_15';
+        }
+
+        $login = $this->normalizeLogin((string)($row['login'] ?? ''));
+        if ($statusRaw !== 'archived' && $login === '') {
+            $errors['login'] = 'required';
+        }
+
+        $fullName = trim((string)($row['full_name'] ?? ''));
+        if ($fullName === '') {
+            $errors['full_name'] = 'required';
+        }
+
+        $role = strtolower(trim((string)($row['role'] ?? 'operator')));
+        if (!in_array($role, ['operator', 'assistant'], true)) {
+            $role = 'operator';
+            $warnings['role_defaulted'] = true;
+        }
+
+        $permissions = $this->sanitizePermissionKeys($row['permissions'] ?? []);
+        $forcePasswordChange = !empty($row['force_password_change']);
+
+        $tempPasswordHash = trim((string)($row['temp_password_hash'] ?? ''));
+        $tempPasswordRaw = trim((string)($row['temp_password'] ?? ''));
+        if ($tempPasswordHash !== '' && strpos($tempPasswordHash, '$') !== 0) {
+            $warnings['temp_password_hash_discarded'] = true;
+            $tempPasswordHash = '';
+            $forcePasswordChange = true;
+        }
+        if ($tempPasswordRaw !== '') {
+            $warnings['temp_password_plain_discarded'] = true;
+            $tempPasswordHash = '';
+            $forcePasswordChange = true;
+        }
+
+        $invitationStatus = strtolower(trim((string)($row['invitation_status'] ?? 'pending')));
+        if (!in_array($invitationStatus, ['pending', 'active', 'sent', 'paused'], true)) {
+            $invitationStatus = ($statusRaw === 'active') ? 'active' : 'pending';
+        }
+
+        return [
+            'source_bucket' => $sourceBucket,
+            'source_index' => $sourceIndex,
+            'source_operator_id' => trim((string)($row['operator_id'] ?? '')),
+            'operator_id' => trim((string)($row['operator_id'] ?? '')),
+            'operator_label' => trim((string)($row['operator_label'] ?? '')),
+            'alias' => $alias,
+            'alias_normalized' => $alias,
+            'full_name' => $fullName,
+            'phone' => trim((string)($row['phone'] ?? '')),
+            'email' => strtolower(trim((string)($row['email'] ?? ''))),
+            'gender' => strtolower(trim((string)($row['gender'] ?? ''))),
+            'role' => $role,
+            'status' => $statusRaw,
+            'login' => $login,
+            'login_normalized' => $login,
+            'temp_password_hash' => $tempPasswordHash,
+            'force_password_change' => $forcePasswordChange,
+            'invitation_status' => $invitationStatus,
+            'operator_credentials_sent_at' => trim((string)($row['operator_credentials_sent_at'] ?? '')),
+            'last_access' => trim((string)($row['last_access'] ?? '')),
+            'archived_at' => trim((string)($row['archived_at'] ?? '')),
+            'permissions' => $permissions,
+            '_errors' => $errors,
+            '_warnings' => $warnings,
+        ];
+    }
+
+    private function buildMigrationConflict(string $type, array $candidate, array $detail, bool $blocking): array
+    {
+        return [
+            'type' => $type,
+            'blocking' => $blocking,
+            'source_bucket' => trim((string)($candidate['source_bucket'] ?? 'operators')),
+            'source_index' => (int)($candidate['source_index'] ?? 0),
+            'operator_id' => trim((string)($candidate['source_operator_id'] ?? '')),
+            'alias' => trim((string)($candidate['alias'] ?? '')),
+            'login' => trim((string)($candidate['login'] ?? '')),
+            'status' => trim((string)($candidate['status'] ?? '')),
+            'detail' => $detail,
+        ];
+    }
+
+    private function buildMigrationSkipped(string $reason, array $candidate, array $detail): array
+    {
+        return [
+            'reason' => $reason,
+            'source_bucket' => trim((string)($candidate['source_bucket'] ?? 'operators')),
+            'source_index' => (int)($candidate['source_index'] ?? 0),
+            'operator_id' => trim((string)($candidate['source_operator_id'] ?? '')),
+            'alias' => trim((string)($candidate['alias'] ?? '')),
+            'login' => trim((string)($candidate['login'] ?? '')),
+            'detail' => $detail,
+        ];
+    }
+
+    private function buildMigrationWarning(string $type, array $candidate, $detail): array
+    {
+        return [
+            'type' => $type,
+            'source_bucket' => trim((string)($candidate['source_bucket'] ?? 'operators')),
+            'source_index' => (int)($candidate['source_index'] ?? 0),
+            'operator_id' => trim((string)($candidate['source_operator_id'] ?? '')),
+            'alias' => trim((string)($candidate['alias'] ?? '')),
+            'login' => trim((string)($candidate['login'] ?? '')),
+            'detail' => $detail,
+        ];
+    }
+
+    private function fetchOperatorsRawByDoctor(string $doctorId): array
+    {
+        $sql = sprintf(
+            'SELECT operator_id, status, alias_normalized, login_normalized FROM %s WHERE doctor_id = :doctor_id',
+            $this->operatorsTable
+        );
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(['doctor_id' => $doctorId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    private function fetchOperatorIdSetByDoctorForUpdate(string $doctorId): array
+    {
+        $sql = sprintf(
+            'SELECT operator_id FROM %s WHERE doctor_id = :doctor_id FOR UPDATE',
+            $this->operatorsTable
+        );
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(['doctor_id' => $doctorId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $set = [];
+        foreach ($rows as $row) {
+            $operatorId = trim((string)($row['operator_id'] ?? ''));
+            if ($operatorId !== '') {
+                $set[$operatorId] = true;
+            }
+        }
+        return $set;
+    }
+
+    private function generateUniqueOperatorId(array $existingSet, array $incomingSet = []): string
+    {
+        for ($i = 0; $i < 25; $i += 1) {
+            $candidate = bin2hex(random_bytes(12));
+            if (!isset($existingSet[$candidate]) && !isset($incomingSet[$candidate])) {
+                return $candidate;
+            }
+        }
+        return bin2hex(random_bytes(16));
+    }
+
+    private function indexLocalAuditCountsByOperator(array $auditTrail): array
+    {
+        $map = [];
+        foreach ($auditTrail as $event) {
+            if (!is_array($event)) {
+                continue;
+            }
+            $operatorId = trim((string)($event['operator_id'] ?? ''));
+            if ($operatorId === '') {
+                continue;
+            }
+            if (!isset($map[$operatorId])) {
+                $map[$operatorId] = 0;
+            }
+            $map[$operatorId] += 1;
+        }
+        return $map;
+    }
+
     private function fetchOperatorsByDoctor(string $doctorId, bool $archived): array
     {
         $where = $archived
@@ -364,6 +933,53 @@ class OperatorsRepository
             $seen[$key] = true;
         }
         return array_keys($seen);
+    }
+
+    private function normalizeAlias(string $value): string
+    {
+        $withoutAccents = $this->removeAccents($value);
+        $normalized = strtoupper(trim($withoutAccents));
+        $normalized = preg_replace('/\s+/', '', $normalized) ?: '';
+        $normalized = preg_replace('/[^A-Z0-9-]/', '', $normalized) ?: '';
+        return $normalized;
+    }
+
+    private function normalizeLogin(string $value): string
+    {
+        $withoutAccents = $this->removeAccents($value);
+        $normalized = strtolower(trim($withoutAccents));
+        $normalized = preg_replace('/\s+/', '', $normalized) ?: '';
+        $normalized = preg_replace('/[^a-z0-9.-]/', '', $normalized) ?: '';
+        $normalized = preg_replace('/[.]{2,}/', '.', $normalized) ?: '';
+        $normalized = preg_replace('/[-]{2,}/', '-', $normalized) ?: '';
+        $normalized = preg_replace('/([.-]){2,}/', '$1', $normalized) ?: '';
+        $normalized = trim($normalized, '.-');
+        return $normalized;
+    }
+
+    private function removeAccents(string $value): string
+    {
+        if (class_exists(\Normalizer::class)) {
+            $normalized = \Normalizer::normalize($value, \Normalizer::FORM_D);
+            if (is_string($normalized)) {
+                $value = preg_replace('/[\x{0300}-\x{036f}]/u', '', $normalized) ?: $value;
+            }
+        } else {
+            $value = strtr($value, [
+                'Á' => 'A', 'À' => 'A', 'Ä' => 'A', 'Â' => 'A', 'Ã' => 'A',
+                'á' => 'a', 'à' => 'a', 'ä' => 'a', 'â' => 'a', 'ã' => 'a',
+                'É' => 'E', 'È' => 'E', 'Ë' => 'E', 'Ê' => 'E',
+                'é' => 'e', 'è' => 'e', 'ë' => 'e', 'ê' => 'e',
+                'Í' => 'I', 'Ì' => 'I', 'Ï' => 'I', 'Î' => 'I',
+                'í' => 'i', 'ì' => 'i', 'ï' => 'i', 'î' => 'i',
+                'Ó' => 'O', 'Ò' => 'O', 'Ö' => 'O', 'Ô' => 'O', 'Õ' => 'O',
+                'ó' => 'o', 'ò' => 'o', 'ö' => 'o', 'ô' => 'o', 'õ' => 'o',
+                'Ú' => 'U', 'Ù' => 'U', 'Ü' => 'U', 'Û' => 'U',
+                'ú' => 'u', 'ù' => 'u', 'ü' => 'u', 'û' => 'u',
+                'Ñ' => 'N', 'ñ' => 'n',
+            ]);
+        }
+        return $value;
     }
 
     private function buildSummary(array $operators, array $archivedOperators): array
