@@ -267,3 +267,20 @@ Este documento es descriptivo (sin cambios funcionales).
 3. ¿Cuál tabla OTP pública queda como canónica (`agenda_public_otp_requests` vs `agenda_public_otps`)?
 4. ¿Se consolidará la UI Agenda del shell (`p-ag-*`) contra API Agenda o se mantendrá como capa separada?
 5. ¿Cuál es la estrategia final para propagar `appointment_id` hacia contexto clínico visible (header/historial/encounter) en flujo integrado?
+
+## 9. RBAC F2.1 (documental)
+
+Documento de referencia:
+- `docs/AGENDA_RBAC_MATRIZ_ACTORES_MXMED.md`
+
+Estado actual:
+- Existe trazabilidad de actor/origen en múltiples flujos (`actor_role`, `created_by_role`, `channel_origin`).
+- Existe validación de `doctor_scope` en rutas privadas.
+- No existe todavía enforcement RBAC granular por actor en todos los endpoints.
+
+Regla de negocio explícita en F2.1:
+- `operator` activo interno **sí** puede ejecutar `no_show` dentro de la operación de Agenda.
+
+Nota:
+- F2.1 es solo matriz y criterios de aceptación.
+- El gating frontend y enforcement backend se implementan en F2.2+.

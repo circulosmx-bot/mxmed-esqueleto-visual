@@ -131,3 +131,28 @@ Resultado consolidado: **PASS**.
 - [x] Sin `doctor_id` confiable + local con datos conserva UI local (fallback estable).
 - [x] Wizard local mantiene `Siguiente` antes de Permisos y `Guardar` solo en Permisos.
 - [x] Smoke Agenda Semana/Día sin regresión evidente.
+
+## G) Agenda RBAC F2 (matriz y criterios de aceptación)
+
+Referencia:
+- [ ] Revisar `../AGENDA_RBAC_MATRIZ_ACTORES_MXMED.md` antes de ejecutar QA F2.
+
+Pruebas positivas por actor:
+- [ ] `doctor` puede ejecutar operación completa interna de Agenda (incluye configuración y operadores).
+- [ ] `operator` puede operar Agenda (crear, reprogramar, cancelar, **no_show**, bloquear/desbloquear, waitlist).
+- [ ] `patient` opera solo flujo público (`public/availability`, `public/appointments/*`, OTP).
+
+Pruebas negativas por actor:
+- [ ] `operator` no puede acceder a `settings` ni `operators`.
+- [ ] `patient` no puede consumir endpoints privados de Agenda.
+- [ ] `call_center` no ejecuta acciones marcadas como `pendiente de decisión` hasta autorización explícita.
+- [ ] `ai_operator` no ejecuta acciones marcadas como `pendiente de decisión` hasta autorización explícita.
+
+Pruebas de seguridad:
+- [ ] Intento de spoofing de payload (`actor_role`, `created_by_role`, `channel_origin`) debe ser rechazado por backend.
+- [ ] `doctor_scope` mismatch en rutas privadas debe responder `403`.
+- [ ] `GET /appointments/{id}/events` debe respetar scope y no exponer datos fuera de contexto.
+
+Pruebas de auditoría:
+- [ ] Mutaciones permitidas registran `actor_role`, `actor_id`, `channel_origin`.
+- [ ] Eventos críticos (`create`, `cancel`, `no_show`, `reschedule`, `waitlist assign`) dejan rastro consistente.
