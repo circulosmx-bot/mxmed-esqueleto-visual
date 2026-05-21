@@ -19983,6 +19983,25 @@ console.info('app.js loaded :: 20251123a');
     return (operatorsCount + archivedCount + auditCount) > 0;
   };
 
+  const readStoredOperatorsStateMeta = ()=>{
+    try{
+      const raw = clean(window.localStorage?.getItem?.(OPERATORS_STATE_STORAGE_KEY) || '');
+      if(!raw){
+        return { exists: false, hasData: false };
+      }
+      const parsed = JSON.parse(raw);
+      if(!parsed || typeof parsed !== 'object'){
+        return { exists: false, hasData: false };
+      }
+      return {
+        exists: true,
+        hasData: computeOperatorsPayloadHasData(parsed)
+      };
+    }catch(_){
+      return { exists: false, hasData: false };
+    }
+  };
+
   const persistOperatorsState = ()=>{
     if(uiState.operatorsSkipPersistBootstrap === true){
       uiState.operatorsSkipPersistBootstrap = false;
@@ -19993,10 +20012,19 @@ console.info('app.js loaded :: 20251123a');
       archived_operators: dedupeOperatorsById(MODEL.archived_operators).slice(0, MAX_ARCHIVED_OPERATORS),
       audit_trail: ensureArray(MODEL.audit_trail).slice(0, MAX_AUDIT_TRAIL_RECORDS)
     };
+    const payloadHasData = computeOperatorsPayloadHasData(payload);
+    if(!payloadHasData){
+      const storedStateMeta = readStoredOperatorsStateMeta();
+      if(storedStateMeta.exists && storedStateMeta.hasData){
+        uiState.operatorsLocalStateExists = true;
+        uiState.operatorsLocalStateHasData = true;
+        return;
+      }
+    }
     try{
       window.localStorage?.setItem(OPERATORS_STATE_STORAGE_KEY, JSON.stringify(payload));
       uiState.operatorsLocalStateExists = true;
-      uiState.operatorsLocalStateHasData = computeOperatorsPayloadHasData(payload);
+      uiState.operatorsLocalStateHasData = payloadHasData;
     }catch(_){
       // Persistencia best-effort para entorno frontend.
     }
@@ -21401,6 +21429,7 @@ console.info('app.js loaded :: 20251123a');
     }
 
     if(localHasData){
+      hydrateOperatorsState();
       setOperatorsDataSource('local');
       return { source: 'local', hasData: true, reason: 'backend_empty_local_fallback' };
     }
@@ -21878,6 +21907,7 @@ console.info('app.js loaded :: 20251123a');
     const doctorId = resolveOperatorsDoctorId();
     if(!doctorId){
       uiState.operatorsReadThroughStatus = 'fallback_no_doctor_id';
+      hydrateOperatorsState();
       setOperatorsDataSource('local');
       return { ok: false, source: 'local', reason: 'doctor_id_unavailable' };
     }
@@ -21893,6 +21923,7 @@ console.info('app.js loaded :: 20251123a');
 
     if(typeof window.fetch !== 'function'){
       uiState.operatorsReadThroughStatus = 'fallback_no_fetch';
+      hydrateOperatorsState();
       setOperatorsDataSource('local');
       return { ok: false, source: 'local', reason: 'fetch_unavailable' };
     }
@@ -21918,6 +21949,7 @@ console.info('app.js loaded :: 20251123a');
         uiState.operatorsReadThroughStatus = clean(payload?.error || '') === 'db_not_ready'
           ? 'fallback_db_not_ready'
           : 'fallback_error';
+        hydrateOperatorsState();
         setOperatorsDataSource('local');
         return {
           ok: false,
@@ -21932,6 +21964,7 @@ console.info('app.js loaded :: 20251123a');
       return { ok: true, source: applied.source, hasData: applied.hasData };
     }catch(_){
       uiState.operatorsReadThroughStatus = 'fallback_network_error';
+      hydrateOperatorsState();
       setOperatorsDataSource('local');
       return { ok: false, source: 'local', reason: 'network_error' };
     }
