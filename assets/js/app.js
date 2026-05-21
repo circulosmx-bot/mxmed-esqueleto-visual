@@ -19611,6 +19611,7 @@ console.info('app.js loaded :: 20251123a');
   };
   const OPERATORS_STATE_STORAGE_KEY = 'mxmed.agenda.operators.state.v1';
   const OPERATORS_CREATE_DRAFT_STORAGE_KEY = 'mxmed.agenda.operators.create_draft.v1';
+  const OPERATORS_BACKEND_ENDPOINT = '/api/agenda/index.php/operators';
   const MAX_ARCHIVED_OPERATORS = 80;
   const MAX_AUDIT_TRAIL_RECORDS = 120;
   let operatorsVisibilityObserver = null;
@@ -19705,7 +19706,16 @@ console.info('app.js loaded :: 20251123a');
     createAccessLoginManuallyEdited: false,
     createAccessLastSuggestedLogin: '',
     createWizardDelivery: null,
-    createWizardDeliveryCloseTimer: null
+    createWizardDeliveryCloseTimer: null,
+    operatorsDataSource: 'local',
+    operatorsBackendSummary: null,
+    operatorsBackendLimits: null,
+    operatorsReadThroughStatus: 'idle',
+    operatorsReadThroughDoctorId: '',
+    operatorsReadThroughLockedToLocal: false,
+    operatorsSkipPersistBootstrap: false,
+    operatorsLocalStateExists: false,
+    operatorsLocalStateHasData: false
   };
   const toTimestamp = (value)=>{
     const raw = clean(value);
@@ -19864,14 +19874,28 @@ console.info('app.js loaded :: 20251123a');
     });
   };
 
+  const computeOperatorsPayloadHasData = (payload = {})=>{
+    const source = payload && typeof payload === 'object' ? payload : {};
+    const operatorsCount = ensureArray(source.operators).length;
+    const archivedCount = ensureArray(source.archived_operators).length;
+    const auditCount = ensureArray(source.audit_trail).length;
+    return (operatorsCount + archivedCount + auditCount) > 0;
+  };
+
   const persistOperatorsState = ()=>{
+    if(uiState.operatorsSkipPersistBootstrap === true){
+      uiState.operatorsSkipPersistBootstrap = false;
+      return;
+    }
+    const payload = {
+      operators: dedupeOperatorsById(MODEL.operators),
+      archived_operators: dedupeOperatorsById(MODEL.archived_operators).slice(0, MAX_ARCHIVED_OPERATORS),
+      audit_trail: ensureArray(MODEL.audit_trail).slice(0, MAX_AUDIT_TRAIL_RECORDS)
+    };
     try{
-      const payload = {
-        operators: dedupeOperatorsById(MODEL.operators),
-        archived_operators: dedupeOperatorsById(MODEL.archived_operators).slice(0, MAX_ARCHIVED_OPERATORS),
-        audit_trail: ensureArray(MODEL.audit_trail).slice(0, MAX_AUDIT_TRAIL_RECORDS)
-      };
       window.localStorage?.setItem(OPERATORS_STATE_STORAGE_KEY, JSON.stringify(payload));
+      uiState.operatorsLocalStateExists = true;
+      uiState.operatorsLocalStateHasData = computeOperatorsPayloadHasData(payload);
     }catch(_){
       // Persistencia best-effort para entorno frontend.
     }
@@ -19886,15 +19910,18 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const hydrateOperatorsState = ()=>{
+    const fallbackResult = { exists: false, hasData: false };
+    uiState.operatorsLocalStateExists = false;
+    uiState.operatorsLocalStateHasData = false;
     let parsed = null;
     try{
       const raw = clean(window.localStorage?.getItem?.(OPERATORS_STATE_STORAGE_KEY) || '');
-      if(!raw) return;
+      if(!raw) return fallbackResult;
       parsed = JSON.parse(raw);
     }catch(_){
-      return;
+      return fallbackResult;
     }
-    if(!parsed || typeof parsed !== 'object') return;
+    if(!parsed || typeof parsed !== 'object') return fallbackResult;
 
     const hasOwn = (key)=> Object.prototype.hasOwnProperty.call(parsed, key);
     const activeIds = new Set();
@@ -19932,6 +19959,86 @@ console.info('app.js loaded :: 20251123a');
         .filter(Boolean)
         .slice(0, MAX_AUDIT_TRAIL_RECORDS);
     }
+
+    const result = {
+      exists: true,
+      hasData: computeOperatorsPayloadHasData(parsed)
+    };
+    uiState.operatorsLocalStateExists = result.exists;
+    uiState.operatorsLocalStateHasData = result.hasData;
+    return result;
+  };
+
+  const isReliableDoctorId = (value = '')=>{
+    const safeValue = clean(value);
+    if(!safeValue) return false;
+    const lowered = safeValue.toLowerCase();
+    if(lowered === 'null' || lowered === 'undefined' || lowered === 'nan'){
+      return false;
+    }
+    return /^[a-z0-9._-]+$/i.test(safeValue);
+  };
+
+  const resolveOperatorsDoctorId = ()=>{
+    const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
+      ? window.mxmedResolveActiveProfessionalContext()
+      : null;
+    const candidates = [
+      activeProfessional?.doctor_id,
+      window.mxmedStore?.doctor_id,
+      window.mxmedStore?.doctorId,
+      window.mxmedStore?.doctorProfile?.doctor_id,
+      window.mxmedDoctor?.doctor_id,
+      document.body?.dataset?.doctorId
+    ];
+    for(let idx = 0; idx < candidates.length; idx += 1){
+      const candidate = clean(candidates[idx]);
+      if(isReliableDoctorId(candidate)){
+        return candidate;
+      }
+    }
+    return '';
+  };
+
+  const extractBackendOperatorsState = (payload = null)=>{
+    const root = payload && typeof payload === 'object' ? payload : {};
+    const data = root.data && typeof root.data === 'object' ? root.data : {};
+
+    const operators = dedupeOperatorsById(
+      ensureArray(data.operators)
+        .map((item)=> normalizeOperatorRecord(item))
+        .filter(Boolean)
+        .filter((item)=> clean(item.status).toLowerCase() !== 'archived')
+    );
+
+    const activeIds = new Set(operators.map((item)=> clean(item.operator_id)));
+    const archived = dedupeOperatorsById(
+      ensureArray(data.archived_operators)
+        .map((item)=> normalizeOperatorRecord(item))
+        .filter(Boolean)
+        .map((item)=> ({
+          ...item,
+          status: 'archived',
+          archived_at: clean(item.archived_at) || nowIso()
+        }))
+        .filter((item)=> !activeIds.has(clean(item.operator_id)))
+    ).slice(0, MAX_ARCHIVED_OPERATORS);
+
+    const auditTrail = ensureArray(data.audit_trail)
+      .map((item)=> normalizeAuditRecord(item))
+      .filter(Boolean)
+      .slice(0, MAX_AUDIT_TRAIL_RECORDS);
+
+    const summary = (data.summary && typeof data.summary === 'object') ? data.summary : null;
+    const limits = (data.limits && typeof data.limits === 'object') ? data.limits : null;
+
+    return {
+      operators,
+      archived_operators: archived,
+      audit_trail: auditTrail,
+      summary,
+      limits
+    };
   };
 
   const removeAccents = (value = '')=>{
@@ -20598,6 +20705,15 @@ console.info('app.js loaded :: 20251123a');
     .filter((item)=> QUOTA_COUNTABLE_STATUSES.has(clean(item?.status).toLowerCase()))
     .length;
   const hasReachedAbsoluteOperatorLimit = ()=> getQuotaUsedCount() >= MODEL.plan_absolute_limit;
+  const toSafeInt = (value, fallback = 0)=>{
+    const parsed = Number.parseInt(String(value == null ? '' : value), 10);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+  const getBackendSummaryIfUsable = ()=>{
+    if(uiState.operatorsDataSource !== 'backend') return null;
+    const summary = uiState.operatorsBackendSummary;
+    return (summary && typeof summary === 'object') ? summary : null;
+  };
 
   const setLimitNotice = (activeCount, usedCount)=>{
     const standardLimit = MODEL.plan_standard_limit;
@@ -20626,20 +20742,37 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const renderSummary = ()=>{
-    const operators = ensureArray(MODEL.operators);
-    const activeCount = operators.filter((item)=> QUOTA_COUNTABLE_STATUSES.has(clean(item?.status).toLowerCase())).length;
-    const pendingCount = operators.filter((item)=> clean(item?.status).toLowerCase() === 'pending').length;
-    const usedCount = getQuotaUsedCount();
-    const availableCount = Math.max(0, MODEL.plan_standard_limit - usedCount);
+    const backendSummary = getBackendSummaryIfUsable();
+    let usedCount = 0;
+    let pendingCount = 0;
+    let availableCount = 0;
+    let maxAllowed = MODEL.plan_absolute_limit;
+
+    if(backendSummary){
+      usedCount = Math.max(0, toSafeInt(backendSummary.quota_used, 0));
+      pendingCount = Math.max(0, toSafeInt(backendSummary.pending_count, 0));
+      maxAllowed = Math.max(1, toSafeInt(
+        backendSummary.max_allowed,
+        toSafeInt(uiState.operatorsBackendLimits?.max_allowed, MODEL.plan_absolute_limit)
+      ));
+      availableCount = Math.max(0, MODEL.plan_standard_limit - usedCount);
+    }else{
+      const operators = ensureArray(MODEL.operators);
+      usedCount = operators.filter((item)=> QUOTA_COUNTABLE_STATUSES.has(clean(item?.status).toLowerCase())).length;
+      pendingCount = operators.filter((item)=> clean(item?.status).toLowerCase() === 'pending').length;
+      availableCount = Math.max(0, MODEL.plan_standard_limit - usedCount);
+      maxAllowed = MODEL.plan_absolute_limit;
+    }
+
     const activeLimitLabel = usedCount > MODEL.plan_standard_limit
-      ? MODEL.plan_absolute_limit
+      ? maxAllowed
       : MODEL.plan_standard_limit;
 
-    if(els.activeValue) els.activeValue.textContent = `${activeCount}/${activeLimitLabel}`;
+    if(els.activeValue) els.activeValue.textContent = `${usedCount}/${activeLimitLabel}`;
     if(els.pendingValue) els.pendingValue.textContent = String(pendingCount);
     if(els.availableValue) els.availableValue.textContent = String(availableCount);
-    if(els.maxAllowedValue) els.maxAllowedValue.textContent = String(MODEL.plan_absolute_limit);
-    setLimitNotice(activeCount, usedCount);
+    if(els.maxAllowedValue) els.maxAllowedValue.textContent = String(maxAllowed);
+    setLimitNotice(usedCount, usedCount);
   };
 
   const syncAddBandAvailability = ()=>{
@@ -21120,6 +21253,130 @@ console.info('app.js loaded :: 20251123a');
     persistOperatorsState();
   };
 
+  const setOperatorsDataSource = (source = 'local', options = {})=>{
+    const safeSource = clean(source).toLowerCase() === 'backend' ? 'backend' : 'local';
+    uiState.operatorsDataSource = safeSource;
+    if(options.lockToLocal === true){
+      uiState.operatorsReadThroughLockedToLocal = true;
+    }else if(options.unlockLocal === true){
+      uiState.operatorsReadThroughLockedToLocal = false;
+    }
+
+    if(safeSource === 'backend'){
+      uiState.operatorsBackendSummary = (options.summary && typeof options.summary === 'object')
+        ? options.summary
+        : null;
+      uiState.operatorsBackendLimits = (options.limits && typeof options.limits === 'object')
+        ? options.limits
+        : null;
+      return;
+    }
+
+    uiState.operatorsBackendSummary = null;
+    uiState.operatorsBackendLimits = null;
+  };
+
+  const applyBackendOperatorsState = (payload = null)=>{
+    const extracted = extractBackendOperatorsState(payload);
+    const backendHasData = computeOperatorsPayloadHasData(extracted);
+    const localHasData = uiState.operatorsLocalStateHasData === true;
+
+    if(backendHasData){
+      MODEL.operators = extracted.operators;
+      MODEL.archived_operators = extracted.archived_operators;
+      MODEL.audit_trail = extracted.audit_trail;
+      setOperatorsDataSource('backend', {
+        summary: extracted.summary,
+        limits: extracted.limits,
+        unlockLocal: true
+      });
+      return { source: 'backend', hasData: true };
+    }
+
+    if(localHasData){
+      setOperatorsDataSource('local');
+      return { source: 'local', hasData: true, reason: 'backend_empty_local_fallback' };
+    }
+
+    MODEL.operators = [];
+    MODEL.archived_operators = [];
+    MODEL.audit_trail = [];
+    setOperatorsDataSource('backend', {
+      summary: extracted.summary,
+      limits: extracted.limits,
+      unlockLocal: true
+    });
+    return { source: 'backend', hasData: false };
+  };
+
+  const hydrateOperatorsReadThrough = async ({ force = false } = {})=>{
+    if(uiState.operatorsReadThroughLockedToLocal && force !== true){
+      uiState.operatorsReadThroughStatus = 'locked_local';
+      return { ok: true, source: 'local', reason: 'locked_local' };
+    }
+
+    const doctorId = resolveOperatorsDoctorId();
+    if(!doctorId){
+      uiState.operatorsReadThroughStatus = 'fallback_no_doctor_id';
+      setOperatorsDataSource('local');
+      return { ok: false, source: 'local', reason: 'doctor_id_unavailable' };
+    }
+
+    if(
+      force !== true
+      && uiState.operatorsReadThroughDoctorId === doctorId
+      && uiState.operatorsReadThroughStatus !== 'idle'
+      && uiState.operatorsReadThroughStatus !== 'error'
+    ){
+      return { ok: true, source: uiState.operatorsDataSource, reason: 'already_loaded' };
+    }
+
+    if(typeof window.fetch !== 'function'){
+      uiState.operatorsReadThroughStatus = 'fallback_no_fetch';
+      setOperatorsDataSource('local');
+      return { ok: false, source: 'local', reason: 'fetch_unavailable' };
+    }
+
+    uiState.operatorsReadThroughStatus = 'loading';
+    uiState.operatorsReadThroughDoctorId = doctorId;
+
+    const params = new URLSearchParams({
+      doctor_id: doctorId,
+      audit_limit: '120'
+    });
+    const endpoint = `${OPERATORS_BACKEND_ENDPOINT}?${params.toString()}`;
+
+    try{
+      const resp = await window.fetch(endpoint, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+      });
+      const payload = await resp.json().catch(()=> null);
+      const isOkPayload = !!(payload && typeof payload === 'object' && payload.ok === true && payload.data && typeof payload.data === 'object');
+      if(!isOkPayload){
+        uiState.operatorsReadThroughStatus = clean(payload?.error || '') === 'db_not_ready'
+          ? 'fallback_db_not_ready'
+          : 'fallback_error';
+        setOperatorsDataSource('local');
+        return {
+          ok: false,
+          source: 'local',
+          reason: clean(payload?.error || '') || `http_${Number(resp.status || 0)}`
+        };
+      }
+
+      const applied = applyBackendOperatorsState(payload);
+      uiState.operatorsReadThroughStatus = 'ready';
+      renderAll();
+      return { ok: true, source: applied.source, hasData: applied.hasData };
+    }catch(_){
+      uiState.operatorsReadThroughStatus = 'fallback_network_error';
+      setOperatorsDataSource('local');
+      return { ok: false, source: 'local', reason: 'network_error' };
+    }
+  };
+
   const setModalError = (message = '')=>{
     const safeMessage = clean(message);
     if(!els.modalError) return;
@@ -21549,6 +21806,7 @@ console.info('app.js loaded :: 20251123a');
 
   const pushAudit = (operator, action, moduleName = 'Operadores', entity = '')=>{
     if(!operator) return;
+    setOperatorsDataSource('local', { lockToLocal: true });
     const timestamp = nowIso();
     const record = {
       operator_id: clean(operator.operator_id),
@@ -22371,7 +22629,10 @@ console.info('app.js loaded :: 20251123a');
 
     window.addEventListener('mxmed:workspace-mode', (event)=>{
       const currentPanelId = clean(event?.detail?.panelId || '');
-      if(currentPanelId === 'p-ag-operadores') return;
+      if(currentPanelId === 'p-ag-operadores'){
+        hydrateOperatorsReadThrough({ force: false }).catch(()=> null);
+        return;
+      }
       resetCreateWizardTransientState({ collapseBand: true, keepTouched: false });
     });
 
@@ -22390,6 +22651,7 @@ console.info('app.js loaded :: 20251123a');
     setupBandsLayout();
     refreshDynamicEls();
     hydrateOperatorsState();
+    uiState.operatorsSkipPersistBootstrap = uiState.operatorsLocalStateExists !== true;
     hydrateCreateDraftState();
     resetCreateWizardTransientState({ collapseBand: true, keepTouched: false });
     bindEvents();
@@ -22397,6 +22659,9 @@ console.info('app.js loaded :: 20251123a');
     setModalError('');
     seedAuditTrailFromOperators();
     renderAll();
+    if(!panel.classList.contains('d-none')){
+      hydrateOperatorsReadThrough({ force: false }).catch(()=> null);
+    }
   };
 
   if(document.readyState === 'loading'){
