@@ -72,6 +72,7 @@ class AppointmentWriteController
         if (is_array($scopeError)) {
             return $scopeError;
         }
+        $payload = $this->normalizeActorPayload($payload);
 
         // Auto-create patient if missing patient_id and patient info is provided
         if (!isset($payload['patient_id'])) {
@@ -195,6 +196,7 @@ class AppointmentWriteController
         if (!isset($payload['contact_method'])) {
             $payload['contact_method'] = 'none';
         }
+        $payload = $this->normalizeActorPayload($payload);
 
         $errors = $this->validateCancel($appointmentId, $payload);
         if ($errors) {
@@ -298,6 +300,7 @@ class AppointmentWriteController
         if (!isset($payload['contact_method'])) {
             $payload['contact_method'] = 'none';
         }
+        $payload = $this->normalizeActorPayload($payload);
 
         $errors = $this->validateNoShow($appointmentId, $payload);
         if ($errors) {
@@ -435,6 +438,7 @@ class AppointmentWriteController
     public function reschedule(string $appointmentId): array
     {
         $payload = $this->getPayload();
+        $payload = $this->normalizeActorPayload($payload);
 
         $errors = $this->validateReschedule($appointmentId, $payload);
         if ($errors) {
@@ -688,6 +692,79 @@ class AppointmentWriteController
             return 1;
         }
         return 0;
+    }
+
+    private function normalizeActorPayload(array $payload): array
+    {
+        $actorRole = $this->normalizeActorRoleValue(
+            $payload['actor_role'] ?? ($payload['created_by_role'] ?? '')
+        );
+        if ($actorRole === '') {
+            $actorRole = $this->normalizeActorRoleValue($this->actorContext['actor_role'] ?? '');
+        }
+        if ($actorRole === '') {
+            $actorRole = 'doctor';
+        }
+
+        $doctorId = trim((string)($payload['doctor_id'] ?? $this->actorDoctorId()));
+        $actorId = trim((string)($payload['actor_id'] ?? ''));
+        if ($actorId === '') {
+            $actorId = trim((string)($payload['created_by_id'] ?? ''));
+        }
+        if ($actorId === '') {
+            $actorId = $this->actorUserId();
+        }
+        if ($actorId === '') {
+            $actorId = $doctorId;
+        }
+
+        $channelOrigin = trim((string)($payload['channel_origin'] ?? ''));
+        if ($channelOrigin === '') {
+            $channelOrigin = $actorRole !== '' ? $actorRole : 'doctor';
+        }
+
+        $createdByRole = $this->normalizeActorRoleValue($payload['created_by_role'] ?? '');
+        if ($createdByRole === '') {
+            $createdByRole = $actorRole;
+        }
+        $createdById = trim((string)($payload['created_by_id'] ?? ''));
+        if ($createdById === '') {
+            $createdById = $actorId;
+        }
+
+        $payload['actor_role'] = $actorRole;
+        $payload['actor_id'] = $actorId;
+        $payload['channel_origin'] = $channelOrigin;
+        $payload['created_by_role'] = $createdByRole;
+        $payload['created_by_id'] = $createdById;
+        return $payload;
+    }
+
+    private function normalizeActorRoleValue($value): string
+    {
+        $raw = strtolower(trim((string)$value));
+        if ($raw === '') {
+            return '';
+        }
+        $map = [
+            'doctor' => 'doctor',
+            'medico' => 'doctor',
+            'owner' => 'doctor',
+            'operator' => 'operator',
+            'operador' => 'operator',
+            'assistant' => 'operator',
+            'asistente' => 'operator',
+            'patient' => 'patient',
+            'paciente' => 'patient',
+            'call_center' => 'call_center',
+            'callcenter' => 'call_center',
+            'ai_operator' => 'ai_operator',
+            'operator_ia' => 'ai_operator',
+            'operador_ia' => 'ai_operator',
+            'system' => 'system',
+            'sistema' => 'system',
+        ];
+        return $map[$raw] ?? '';
     }
 
     private function normalizeSlotMinutes($value): ?int

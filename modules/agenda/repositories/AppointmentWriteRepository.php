@@ -230,6 +230,9 @@ class AppointmentWriteRepository
             'motivo_text' => $payload['motivo_text'] ?? null,
             'notify_patient' => $payload['notify_patient'] ?? 0,
             'contact_method' => $payload['contact_method'] ?? 'whatsapp',
+            'actor_role' => $payload['actor_role'] ?? $payload['created_by_role'] ?? null,
+            'actor_id' => $payload['actor_id'] ?? $payload['created_by_id'] ?? null,
+            'channel_origin' => $payload['channel_origin'] ?? null,
             // Persistimos metadatos de consultorio en `notes` para trazabilidad
             // sin depender de migraciones de columnas en agenda_appointment_events.
             'notes' => $this->buildRescheduleEventNotes($fromConsultorioId, $toConsultorioId),
