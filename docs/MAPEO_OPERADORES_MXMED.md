@@ -6,7 +6,7 @@ Documento de estado real del módulo **Operadores** en shell principal (`#p-ag-o
 - `assets/js/app.js` (bloque `Agenda · Operadores (frontend UX scaffold, backend-safe)`)
 - `assets/css/style.css` (clases `mx-ag-ops-*`)
 
-Fecha de corte: **2026-05-20**.
+Fecha de corte: **2026-05-21**.
 
 ## 2) Estado actual de UI (concluido en frontend)
 - Vista Operadores en bandas/acordeones horizontales.
@@ -178,8 +178,8 @@ Fase recomendada:
   - F1.3 read-through con fallback local: **concluido**.
   - F1.4A documentación de migración y política de conflictos: **concluido**.
   - F1.4B preview/apply backend: **concluido**.
-  - F1.4C UI de confirmación de migración: **pendiente**.
-  - F1.4D QA de cierre y retiro progresivo de dependencia local: **pendiente**.
+  - F1.4C UI de confirmación de migración: **concluido**.
+  - F1.4D QA de cierre y retiro progresivo de dependencia local: **concluido**.
 
 Endpoints F1.4B activos:
 - `POST /api/agenda/index.php/operators/migration/preview`
@@ -191,9 +191,57 @@ Notas F1.4B:
 - Warnings relevantes: password temporal plano descartado, reasignación de `operator_id`, normalizaciones.
 - Auditoría de migración: `operator_migrated_from_local`.
 - Limitación actual: aún no existe `preview_hash/token` entre preview y apply.
+- Fixes de cierre aplicados:
+  - migración de archivados sin login local,
+  - normalización de fechas ISO (`archived_at`) en apply,
+  - protección de fallback local para evitar vaciado silencioso de localStorage.
 
 Reglas críticas vigentes durante F1.4:
 - No migrar automáticamente sin confirmación explícita.
 - No persistir password temporal en texto plano.
 - Operadores archivados no cuentan para cupo.
 - Si backend está vacío y local tiene datos, no vaciar UI silenciosamente.
+
+## 16) Cierre formal F1 (2026-05-21)
+
+Estado F1 Operadores: **cerrada**.
+
+Incluye:
+- Backend base Operadores (F1.1).
+- Mutaciones y auditoría backend (F1.2).
+- Read-through frontend + fallback local (F1.3).
+- Estrategia documental de migración (F1.4A).
+- Endpoints backend preview/apply (F1.4B).
+- UI de preview/confirmación de migración (F1.4C).
+- QA final reducido de cierre (PASS) con:
+  - `archived_at` ISO en apply sin `db_error`,
+  - archivados sin login local migrables con warning,
+  - fallback local protegido ante backend vacío/falla/sin doctor_id confiable.
+
+Reglas finales vigentes:
+- Estados: `active`, `paused`, `pending`, `archived`.
+- Contables para cupo: `active|paused|pending`.
+- `archived` no cuenta para cupo.
+- Máximo absoluto: 3 operadores contables por doctor.
+- Alias/login únicos por doctor entre no archivados.
+- Código de 6 dígitos en mutaciones sensibles: temporal/simulado.
+- `GET /operators` no expone password temporal ni hash.
+
+Commits relevantes de F1:
+- `7fd49c2` backend base operadores.
+- `1f5b812` mutaciones y auditoría.
+- `c9cc7a3` read-through fallback.
+- `7024a36` documentación migración.
+- `aad814a` preview/apply migración.
+- `83d9418` docs estado migración backend.
+- `adf97ad` UI migración.
+- `f8c7380` archivados sin login.
+- `afa3e92` fechas ISO.
+- `4600de5` fallback local protegido.
+
+Próxima fase sugerida:
+- **F2**: aplicar permisos reales de Operadores sobre acciones de Agenda:
+  - gating frontend,
+  - enforcement backend,
+  - auditoría por actor,
+  - visibilidad por permiso.

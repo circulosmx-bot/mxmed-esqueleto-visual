@@ -1,7 +1,7 @@
-# OPERADORES · MIGRACIÓN LOCALSTORAGE -> BACKEND (F1.4A + F1.4B)
+# OPERADORES · MIGRACIÓN LOCALSTORAGE -> BACKEND (F1.4A + F1.4B + F1.4C)
 
-Fecha de corte: **2026-05-20**  
-Ámbito: **estrategia + estado backend implementado de migración**.
+Fecha de corte: **2026-05-21**  
+Ámbito: **estrategia + backend + UI de migración + cierre QA F1**.
 
 ## 1) Estado actual
 
@@ -223,17 +223,49 @@ Resultado: **PASS** en matriz mínima aprobada.
 - (futuro) hash/token preview->apply inconsistente cuando se implemente.
 - intento de migrar credenciales en texto plano.
 
-## 8) Siguiente fase recomendada (F1.4C)
+## 8) Estado F1.4C (UI de migración) y comportamiento final
 
-Implementar UI controlada de migración:
+Implementado en frontend (panel Operadores):
 1. detección de datos locales migrables;
-2. preview visible con conflictos/warnings;
-3. confirmación explícita de apply;
-4. feedback de resultados y recarga read-through desde backend;
-5. mantener fallback local sin borrado automático de backup.
+2. aviso discreto: `Hay operadores guardados localmente...`;
+3. acción `Revisar migración` -> `POST /migration/preview`;
+4. modal con:
+   - migrables,
+   - conflictos bloqueantes,
+   - warnings,
+   - resumen de cupo antes/después;
+5. botón `Confirmar migración` habilitado solo sin conflictos bloqueantes;
+6. apply explícito -> `POST /migration/apply` con `confirm:true`;
+7. rehidratación read-through desde backend tras apply exitoso;
+8. backup local conservado (no borrado automático).
+
+Fixes de cierre relevantes:
+- `f8c7380`: migración de archivados sin login local.
+- `afa3e92`: normalización de fechas ISO (`archived_at`) en apply.
+- `4600de5`: protección fallback local para no vaciar localStorage/UI.
 
 ## 9) Estado por fase
 - F1.4A Documentación de estrategia: **concluido**.
 - F1.4B Backend preview/apply: **concluido**.
-- F1.4C UI preview/confirmación: **pendiente**.
-- F1.4D QA de cierre + retiro progresivo de dependencia local: **pendiente**.
+- F1.4C UI preview/confirmación: **concluido**.
+- F1.4D QA de cierre + retiro progresivo de dependencia local: **concluido**.
+
+## 10) QA final de cierre F1 (resumen)
+
+PASS documentado:
+1. `migration/apply` acepta `archived_at` en ISO (`2026-05-21T00:04:41.000Z`) sin `db_error`.
+2. Migración de archivados sin login local aplica warning `archived_login_generated` y continúa.
+3. Backend vacío + local con datos: UI conserva local y no sobrescribe localStorage a vacío.
+4. Backend falla + local con datos: fallback local estable.
+5. Sin `doctor_id` confiable + local con datos: fallback local estable.
+6. Wizard local mantiene regla de botón (`Guardar` solo en Permisos).
+7. Smoke Agenda Semana/Día: sin regresión evidente.
+
+## 11) Riesgos pendientes / transición a F2
+
+- Código de 6 dígitos sigue temporal/simulado.
+- Envío real de credenciales pendiente.
+- Mutaciones UI aún pueden operar local en fallback.
+- Permisos reales aún no bloquean acciones de Agenda (falta RBAC efectivo).
+- Falta estrategia productiva de limpieza de datos QA.
+- `preview_hash/token` pendiente para endurecer handshake preview->apply.

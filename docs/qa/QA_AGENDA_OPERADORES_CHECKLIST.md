@@ -1,6 +1,6 @@
 # QA Checklist · Agenda + Operadores (estabilización)
 
-Fecha base: 2026-05-20  
+Fecha base: 2026-05-21  
 Objetivo: no regresión de flujos estabilizados antes de nuevas funciones.
 
 ## A) Agenda
@@ -119,3 +119,15 @@ Evidencia técnica F1.4B (curl backend ejecutado):
 - [ ] Preview login duplicado.
 - [ ] Preview cupo excedido.
 - [ ] GET `/operators` post-apply correcto y sin exposición de password.
+
+## F) Cierre F1 Operadores · QA final reducido (2026-05-21)
+
+Resultado consolidado: **PASS**.
+
+- [x] `migration/apply` con `archived_at` ISO no devuelve `db_error`.
+- [x] Migración de archivado sin login local funciona con warning `archived_login_generated`.
+- [x] Backend vacío + local con datos conserva UI local y no vacía localStorage.
+- [x] Backend falla + local con datos conserva UI local y no vacía localStorage.
+- [x] Sin `doctor_id` confiable + local con datos conserva UI local (fallback estable).
+- [x] Wizard local mantiene `Siguiente` antes de Permisos y `Guardar` solo en Permisos.
+- [x] Smoke Agenda Semana/Día sin regresión evidente.
