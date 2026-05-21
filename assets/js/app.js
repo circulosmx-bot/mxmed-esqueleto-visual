@@ -831,6 +831,7 @@ console.info('app.js loaded :: 20251123a');
   let agendaSettingsHydrating = false;
   let agendaSettingsSaveTimer = null;
   let sidebarResizeTimer = null;
+  let agendaUiRbacNoticeTimer = null;
   let agendaSettingsContextKey = '';
   let agendaSettingsLoaded = false;
   const DEFAULT_AGENDA_REMINDER_SETTINGS = Object.freeze({
@@ -888,6 +889,8 @@ console.info('app.js loaded :: 20251123a');
   ]);
 
   const sanitizeText = (value)=> String(value ?? '').trim();
+  const AGENDA_UI_RBAC_RESTRICTED_PANELS = new Set(['p-ag-ajustes', 'p-ag-operadores']);
+  const AGENDA_UI_RBAC_DENY_MESSAGE = 'No tienes acceso a esta sección.';
   const normalizeAgendaConfigHistoryPayload = (state = {})=>{
     if(!state || typeof state !== 'object') return { view: 'agenda-config-root' };
     const view = sanitizeText(state.view || '');
@@ -11758,6 +11761,146 @@ console.info('app.js loaded :: 20251123a');
     const visiblePane = document.querySelector('#agenda .pane:not(.d-none)');
     return sanitizeText(visiblePane?.id || panelId);
   };
+  const resolveAgendaUiActorRole = ()=>{
+    const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
+      ? window.mxmedResolveActiveProfessionalContext()
+      : null;
+    const rawRole = sanitizeText(
+      activeProfessional?.role
+      || window.mxmedStore?.role
+      || window.mxmedStore?.user_role
+      || document.body?.dataset?.userRole
+      || ''
+    ).toLowerCase();
+    if(rawRole.includes('operator') || rawRole.includes('operador') || rawRole.includes('assistant')){
+      return 'operator';
+    }
+    return 'doctor';
+  };
+  const isAgendaRestrictedPanel = (panelTarget = '')=> AGENDA_UI_RBAC_RESTRICTED_PANELS.has(sanitizeText(panelTarget || ''));
+  const canAccessAgendaPanel = (panelTarget = '', actorRole = resolveAgendaUiActorRole())=>{
+    const safePanel = sanitizeText(panelTarget || '');
+    const safeRole = sanitizeText(actorRole || '').toLowerCase();
+    if(safeRole === 'operator' && isAgendaRestrictedPanel(safePanel)) return false;
+    return true;
+  };
+  const applyAgendaUiRoleGating = ()=>{
+    const role = resolveAgendaUiActorRole();
+    const hideRestricted = role === 'operator';
+    const restrictedSelectors = [
+      '.menu-sub[data-group="agenda"] .menu-sub-btn[data-panel="p-ag-ajustes"]',
+      '.menu-sub[data-group="agenda"] .menu-sub-btn[data-panel="p-ag-operadores"]',
+      '.mx-ag-workspace-shell [data-ag-work-panel="p-ag-ajustes"]',
+      '.mx-ag-workspace-shell [data-ag-work-panel="p-ag-operadores"]'
+    ];
+    restrictedSelectors.forEach((selector)=>{
+      document.querySelectorAll(selector).forEach((btn)=>{
+        btn.classList.toggle('d-none', hideRestricted);
+        btn.toggleAttribute('disabled', hideRestricted);
+        btn.setAttribute('aria-hidden', hideRestricted ? 'true' : 'false');
+        if(hideRestricted){
+          btn.setAttribute('tabindex', '-1');
+        }else{
+          btn.removeAttribute('tabindex');
+        }
+      });
+    });
+    const agendaSeparators = document.querySelectorAll('.menu-sub[data-group="agenda"] .menu-sep');
+    agendaSeparators.forEach((sep)=>{
+      sep.classList.toggle('d-none', hideRestricted);
+    });
+  };
+  const setAgendaRbacNotice = (message = '')=>{
+    const safeMsg = sanitizeText(message);
+    if(agendaUiRbacNoticeTimer){
+      window.clearTimeout(agendaUiRbacNoticeTimer);
+      agendaUiRbacNoticeTimer = null;
+    }
+    setError(safeMsg);
+    if(!safeMsg) return;
+    agendaUiRbacNoticeTimer = window.setTimeout(()=>{
+      if(sanitizeText(els.error?.textContent || '') === safeMsg){
+        setError('');
+      }
+      agendaUiRbacNoticeTimer = null;
+    }, 2600);
+  };
+  const navigateAgendaToAdminPanel = (options = {})=>{
+    const refresh = options?.refresh !== false;
+    if(typeof window.openGroup === 'function'){
+      try{ window.openGroup('agenda'); }catch(_){}
+    }
+    if(typeof window.jumpTo === 'function'){
+      try{
+        const jumped = window.jumpTo('p-ag-admin');
+        if(jumped === false){
+          document.querySelector('.menu-sub-btn[data-panel="p-ag-admin"]')?.click();
+        }
+      }catch(_){
+        document.querySelector('.menu-sub-btn[data-panel="p-ag-admin"]')?.click();
+      }
+    }else{
+      document.querySelector('.menu-sub-btn[data-panel="p-ag-admin"]')?.click();
+    }
+    setWorkspaceButtonActive('p-ag-admin');
+    if(refresh){
+      window.setTimeout(()=>{
+        ensureAgendaVisibleRender({ forceConsultorios: false }).catch(()=> null);
+      }, 90);
+    }
+  };
+  const handleAgendaUiAccessDenied = ()=>{
+    setAgendaRbacNotice(AGENDA_UI_RBAC_DENY_MESSAGE);
+    navigateAgendaToAdminPanel();
+  };
+  const enforceAgendaUiRbacCurrentPanel = ()=>{
+    applyAgendaUiRoleGating();
+    const currentPanelId = resolveCurrentAgendaWorkspacePanelId();
+    if(!currentPanelId) return;
+    if(canAccessAgendaPanel(currentPanelId)) return;
+    handleAgendaUiAccessDenied();
+  };
+  const bindAgendaUiRbacClickGuard = ()=>{
+    if(window.__mxmedAgendaUiRbacClickGuardBound) return;
+    window.__mxmedAgendaUiRbacClickGuardBound = true;
+    document.addEventListener('click', (event)=>{
+      const target = event.target;
+      if(!(target instanceof Element)) return;
+      const navBtn = target.closest('.menu-sub-btn[data-panel], .mx-ag-workspace-btn[data-ag-work-panel]');
+      if(!navBtn) return;
+      const panelTarget = sanitizeText(
+        navBtn.getAttribute('data-panel')
+        || navBtn.getAttribute('data-ag-work-panel')
+        || ''
+      );
+      if(!isAgendaRestrictedPanel(panelTarget)) return;
+      if(canAccessAgendaPanel(panelTarget)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if(typeof event.stopImmediatePropagation === 'function'){
+        event.stopImmediatePropagation();
+      }
+      handleAgendaUiAccessDenied();
+    }, true);
+  };
+  const bindAgendaUiRbacJumpGuard = ()=>{
+    if(typeof window.jumpTo !== 'function') return;
+    const current = window.jumpTo;
+    if(typeof current === 'function' && current.__mxmedAgendaUiRbacWrapped === true){
+      return;
+    }
+    const wrapped = function(panelTarget){
+      const safePanelTarget = sanitizeText(panelTarget || '');
+      if(safePanelTarget && !canAccessAgendaPanel(safePanelTarget)){
+        handleAgendaUiAccessDenied();
+        return false;
+      }
+      return current.apply(window, arguments);
+    };
+    wrapped.__mxmedAgendaUiRbacWrapped = true;
+    wrapped.__mxmedAgendaUiRbacOriginal = current;
+    window.jumpTo = wrapped;
+  };
   const resolveCreateActorRole = ()=>{
     const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
       ? window.mxmedResolveActiveProfessionalContext()
@@ -19380,6 +19523,7 @@ console.info('app.js loaded :: 20251123a');
 
     document.querySelectorAll('.menu-main[data-group="agenda"], .menu-sub[data-group="agenda"] .menu-sub-btn').forEach((btn)=>{
       btn.addEventListener('click', ()=>{
+        applyAgendaUiRoleGating();
         window.setTimeout(()=>{
           ensureAgendaVisibleRender({ forceConsultorios: true }).catch(()=> null);
           stabilizeCalendarViewport();
@@ -19417,6 +19561,10 @@ console.info('app.js loaded :: 20251123a');
 
         const panelTarget = sanitizeText(target.getAttribute('data-ag-work-panel') || '');
         if(panelTarget){
+          if(!canAccessAgendaPanel(panelTarget)){
+            handleAgendaUiAccessDenied();
+            return;
+          }
           if(panelTarget === 'p-ag-ajustes'){
             collapseAgendaConfigSections();
             scheduleSelectorViewMode = 'overview';
@@ -19457,6 +19605,11 @@ console.info('app.js loaded :: 20251123a');
 
     window.addEventListener('mxmed:workspace-mode', (event)=>{
       const currentPanelId = sanitizeText(event?.detail?.panelId || '');
+      applyAgendaUiRoleGating();
+      if(currentPanelId && !canAccessAgendaPanel(currentPanelId)){
+        handleAgendaUiAccessDenied();
+        return;
+      }
       setWorkspaceButtonActive(currentPanelId || panelId);
     });
 
@@ -19490,6 +19643,9 @@ console.info('app.js loaded :: 20251123a');
   };
 
   const start = ()=>{
+    bindAgendaUiRbacJumpGuard();
+    bindAgendaUiRbacClickGuard();
+    applyAgendaUiRoleGating();
     bindEvents();
     syncAgendaViewModeButtons(agendaViewMode);
     syncDoctorInput();
@@ -19518,6 +19674,7 @@ console.info('app.js loaded :: 20251123a');
       try{ window.bootstrap?.Modal?.getOrCreateInstance(els.nextSlotsModalEl)?.hide(); }catch(_){}
     }
     setWorkspaceButtonActive(panelId);
+    enforceAgendaUiRbacCurrentPanel();
     hydrateAgendaSettings({ force: true }).catch(()=> null);
     const isVisible = panel && !panel.classList.contains('d-none');
     if(isVisible){
