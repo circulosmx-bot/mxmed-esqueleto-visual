@@ -343,10 +343,10 @@ class OperatorsRepository
                     'temp_password_hash' => trim((string)($item['temp_password_hash'] ?? '')),
                     'force_password_change' => !empty($item['force_password_change']) ? 1 : 0,
                     'invitation_status' => strtolower(trim((string)($item['invitation_status'] ?? 'pending'))),
-                    'operator_credentials_sent_at' => trim((string)($item['operator_credentials_sent_at'] ?? '')),
-                    'last_access' => trim((string)($item['last_access'] ?? '')),
+                    'operator_credentials_sent_at' => $this->normalizeDateTimeForDb((string)($item['operator_credentials_sent_at'] ?? '')),
+                    'last_access' => $this->normalizeDateTimeForDb((string)($item['last_access'] ?? '')),
                     'archived_at' => $status === 'archived'
-                        ? trim((string)($item['archived_at'] ?? ''))
+                        ? $this->normalizeDateTimeForDb((string)($item['archived_at'] ?? ''))
                         : '',
                 ];
                 if ($insertPayload['archived_at'] === '' && $status === 'archived') {
@@ -708,6 +708,30 @@ class OperatorsRepository
             $invitationStatus = ($statusRaw === 'active') ? 'active' : 'pending';
         }
 
+        $operatorCredentialsSentAtRaw = trim((string)($row['operator_credentials_sent_at'] ?? ''));
+        $operatorCredentialsSentAt = $this->normalizeDateTimeForDb($operatorCredentialsSentAtRaw);
+        if ($operatorCredentialsSentAtRaw !== '' && $operatorCredentialsSentAt === '') {
+            $warnings['operator_credentials_sent_at_invalid_discarded'] = [
+                'value' => $operatorCredentialsSentAtRaw,
+            ];
+        }
+
+        $lastAccessRaw = trim((string)($row['last_access'] ?? ''));
+        $lastAccess = $this->normalizeDateTimeForDb($lastAccessRaw);
+        if ($lastAccessRaw !== '' && $lastAccess === '') {
+            $warnings['last_access_invalid_discarded'] = [
+                'value' => $lastAccessRaw,
+            ];
+        }
+
+        $archivedAtRaw = trim((string)($row['archived_at'] ?? ''));
+        $archivedAt = $this->normalizeDateTimeForDb($archivedAtRaw);
+        if ($archivedAtRaw !== '' && $archivedAt === '') {
+            $warnings['archived_at_invalid_discarded'] = [
+                'value' => $archivedAtRaw,
+            ];
+        }
+
         return [
             'source_bucket' => $sourceBucket,
             'source_index' => $sourceIndex,
@@ -727,9 +751,9 @@ class OperatorsRepository
             'temp_password_hash' => $tempPasswordHash,
             'force_password_change' => $forcePasswordChange,
             'invitation_status' => $invitationStatus,
-            'operator_credentials_sent_at' => trim((string)($row['operator_credentials_sent_at'] ?? '')),
-            'last_access' => trim((string)($row['last_access'] ?? '')),
-            'archived_at' => trim((string)($row['archived_at'] ?? '')),
+            'operator_credentials_sent_at' => $operatorCredentialsSentAt,
+            'last_access' => $lastAccess,
+            'archived_at' => $archivedAt,
             'permissions' => $permissions,
             '_errors' => $errors,
             '_warnings' => $warnings,
@@ -973,6 +997,35 @@ class OperatorsRepository
         $normalized = preg_replace('/([.-]){2,}/', '$1', $normalized) ?: '';
         $normalized = trim($normalized, '.-');
         return $normalized;
+    }
+
+    private function normalizeDateTimeForDb(string $value): string
+    {
+        $raw = trim($value);
+        if ($raw === '') {
+            return '';
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) {
+            return $raw . ' 00:00:00';
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/', $raw)) {
+            return preg_replace('/\s+/', ' ', $raw) . ':00';
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/', $raw)) {
+            return preg_replace('/\s+/', ' ', $raw);
+        }
+
+        try {
+            $dt = new DateTimeImmutable($raw);
+            return $dt->format('Y-m-d H:i:s');
+        } catch (Throwable $e) {
+            $timestamp = strtotime($raw);
+            if ($timestamp === false) {
+                return '';
+            }
+            return date('Y-m-d H:i:s', $timestamp);
+        }
     }
 
     private function removeAccents(string $value): string
