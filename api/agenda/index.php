@@ -319,6 +319,36 @@ function resolveAgendaActorContext(array $segments, array $query = [], array $ac
     ];
 }
 
+function isAgendaConfigRouteForOperator(array $segments, string $method): bool
+{
+    $resource = strtolower(trim((string)($segments[0] ?? '')));
+    if ($resource === '') {
+        return false;
+    }
+    $verb = strtoupper(trim((string)$method));
+
+    if ($resource === 'settings') {
+        return in_array($verb, ['GET', 'PUT'], true);
+    }
+    if ($resource === 'schedule') {
+        return in_array($verb, ['GET', 'PUT'], true);
+    }
+    if ($resource === 'consultorios') {
+        return $verb === 'PUT';
+    }
+    if ($resource === 'geocode') {
+        $sub = strtolower(trim((string)($segments[1] ?? '')));
+        if ($sub === 'google' && $verb === 'POST') {
+            return true;
+        }
+        if ($sub === 'google-js-config' && $verb === 'GET') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function apply_actor_context($controller, array $actorContext): void
 {
     if (is_object($controller) && method_exists($controller, 'setActorContext')) {
@@ -369,6 +399,28 @@ try {
                 'actor_role' => 'operator',
                 'actor_role_source' => trim((string)($actorContext['actor_role_source'] ?? ($actorRoleContext['source'] ?? ''))),
                 'route' => 'operators',
+            ]));
+            http_response_code(403);
+            $json = json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if ($json === false) {
+                $json = json_encode([
+                    'ok' => false,
+                    'error' => 'db_error',
+                    'message' => 'database error',
+                    'data' => null,
+                    'meta' => (object)[],
+                ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            }
+            echo $json;
+            exit;
+        }
+
+        if ((($actorContext['actor_role'] ?? '') === 'operator') && isAgendaConfigRouteForOperator($segments, $method)) {
+            $response = normalize_response(forbidden_response('forbidden for actor role', [
+                'actor_role' => 'operator',
+                'actor_role_source' => trim((string)($actorContext['actor_role_source'] ?? ($actorRoleContext['source'] ?? ''))),
+                'route' => strtolower(trim((string)($segments[0] ?? ''))),
+                'method' => strtoupper(trim((string)$method)),
             ]));
             http_response_code(403);
             $json = json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
