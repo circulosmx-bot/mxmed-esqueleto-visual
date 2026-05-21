@@ -1,7 +1,19 @@
 # AGENDA RBAC · MATRIZ DE ACTORES · MXMED
 
 Fecha: 2026-05-21  
-Estado: F2.1 (documental, sin enforcement aún)
+Estado: F2.3 parcial cerrado (F2.1 + F2.2 + F2.3A + F2.3B)
+
+## 0. Estado F2.3 (cierre parcial)
+Implementación ya cerrada:
+- F2.1 Matriz RBAC documental (`9bcfbe0`).
+- F2.2 Frontend gating médico vs operador activo (`1330e31`).
+- F2.3A Backend enforcement: `operator` bloqueado en `/operators/*` (`ca1f220`).
+- F2.3B Backend enforcement: `operator` bloqueado en rutas de Configuración de Agenda (`0ccc0fc`).
+
+Resultado funcional actual:
+- `doctor` conserva acceso total.
+- `operator` conserva operación de Agenda.
+- `operator` no puede gestionar Operadores ni Configuración de Agenda en backend.
 
 ## 1. Propósito y alcance
 Este documento fija la matriz RBAC de Agenda para preparar F2 sin romper los flujos estabilizados de Semana/Día, bloqueos, citas y Operadores F1.
@@ -127,7 +139,7 @@ Cada mutación sensible debe registrar:
 | `POST /public/otp/verify` | denied | denied | allowed | allowed | allowed (API) | n/a (public) | required |
 | `POST /public/maintenance/expire` | denied | denied | denied | denied | allowed (system/API) | n/a (public) | required |
 
-## 6. Decisiones pendientes (bloqueantes para F2.3/F2.4)
+## 6. Decisiones pendientes (F2.4+)
 1. Call Center: confirmar si puede `cancel` y/o `reschedule` en privado.
 2. Operador IA: confirmar si podrá `cancel` y/o `reschedule` en fase futura.
 3. Fuente autoritativa de actor:
@@ -182,7 +194,50 @@ Cada mutación sensible debe registrar:
 - `doctor_scope` mismatch debe responder `403`.
 - `GET /appointments/{id}/events` no debe filtrar datos fuera de scope.
 
-## 9. Estado documental
-- Este documento define la política objetivo para F2.
-- No implica que el enforcement ya esté activo.
-- Cualquier cambio funcional debe ejecutarse en tickets F2.2+ con QA dedicado.
+## 9. Enforcement activo en F2.3 (operator)
+
+### 9.1 Endpoints bloqueados para `operator`
+- `/operators/*`
+- `GET /settings`
+- `PUT /settings`
+- `GET /schedule`
+- `PUT /schedule`
+- `PUT /consultorios`
+- `POST /geocode/google`
+- `GET /geocode/google-js-config`
+
+### 9.2 Endpoints permitidos para `operator`
+- `GET /appointments`
+- `GET /appointments/{id}`
+- `GET /appointments/{id}/events`
+- `POST /appointments`
+- `PATCH /appointments/{id}/reschedule`
+- `POST /appointments/{id}/cancel`
+- `POST /appointments/{id}/no_show`
+- `GET /availability`
+- `GET /consultorios`
+- `GET /waitlist`
+- `POST /waitlist`
+- `PATCH /waitlist/{id}`
+- `POST /waitlist/{id}/assign`
+- Rutas `public/*` sin cambio
+
+## 10. QA F2.3 documentado
+- `operator` recibe `403` en rutas restringidas de Operadores y Configuración.
+- `doctor` no recibe `forbidden` en esas mismas rutas.
+- Sin header de rol se mantiene compatibilidad actual (fallback temporal a `doctor`).
+- `operator` sigue operando rutas de citas/disponibilidad/waitlist.
+- `public/*` permanece sin afectación por F2.3.
+- `php -l api/agenda/index.php` en PASS.
+
+## 11. Riesgos pendientes y siguiente fase
+Riesgos abiertos:
+- Fuente de rol temporal/spoofeable por headers/query hasta identidad autoritativa.
+- Falta integrar sesión/JWT/API key para resolución de actor confiable.
+- Falta auditoría unificada por actor en todas las mutaciones operativas.
+- Falta cerrar políticas para actores externos (`patient`, `call_center`, `ai_operator`).
+- Falta F2.6 QA integral RBAC (positivas, negativas y spoofing).
+
+Siguiente fase sugerida:
+- F2.4 actores externos de Agenda (`patient`, `call_center`, `ai_operator`).
+- Alternativamente F2.5 para consolidar auditoría/actor attribution antes de ampliar actores.

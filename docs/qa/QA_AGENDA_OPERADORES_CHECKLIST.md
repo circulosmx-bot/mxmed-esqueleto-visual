@@ -156,3 +156,24 @@ Pruebas de seguridad:
 Pruebas de auditoría:
 - [ ] Mutaciones permitidas registran `actor_role`, `actor_id`, `channel_origin`.
 - [ ] Eventos críticos (`create`, `cancel`, `no_show`, `reschedule`, `waitlist assign`) dejan rastro consistente.
+
+## H) Cierre F2.3 RBAC backend mínimo (2026-05-21)
+
+Resultado consolidado: **PASS**.
+
+- [x] `operator` recibe `403` en `/operators/*`.
+- [x] `operator` recibe `403` en:
+  - `GET/PUT /settings`
+  - `GET/PUT /schedule`
+  - `PUT /consultorios`
+  - `POST /geocode/google`
+  - `GET /geocode/google-js-config`
+- [x] `doctor` no recibe `forbidden` en rutas de Configuración/Operadores.
+- [x] Sin header de rol se conserva compatibilidad actual (fallback a `doctor`).
+- [x] `operator` sigue permitido en rutas operativas:
+  - `appointments`
+  - `availability`
+  - `GET /consultorios`
+  - `waitlist`
+- [x] Rutas `public/*` sin afectación.
+- [x] `php -l api/agenda/index.php` en PASS.
