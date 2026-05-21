@@ -91,14 +91,17 @@ Read-through/Fallback (sin migración automática):
 - [ ] Backend `db_not_ready` o sin `doctor_id` confiable: fallback local sin bloqueo visual.
 - [ ] Verificar que frontend no dispara POST/PATCH de migración automáticamente.
 
-Preview/Apply (cuando exista F1.4B):
+Preview/Apply backend (F1.4B implementado):
 - [ ] Preview reporta migrables, conflictos y cupo post-aplicación sin escribir datos.
 - [ ] Conflicto alias duplicado se detecta y exige resolución.
 - [ ] Conflicto login duplicado se detecta y exige resolución.
 - [ ] Exceso de cupo contable bloquea apply correctamente.
+- [ ] Apply sin confirmación explícita responde `400`.
+- [ ] Apply con conflicto bloqueante responde `409`.
 - [ ] Archivados se migran como archivados y no cuentan para cupo.
 - [ ] Auditoría local se migra con mapeo estable y orden cronológico.
 - [ ] Apply es transaccional (sin estado parcial ante error).
+- [ ] Limitación conocida: no existe aún `preview_hash/token` entre preview y apply.
 
 Seguridad y credenciales:
 - [ ] No migrar contraseña temporal en texto plano.
@@ -108,3 +111,11 @@ Respaldo y post-migración:
 - [ ] Se crea backup local antes del apply.
 - [ ] El backup local no se elimina automáticamente en F1.4.
 - [ ] Recarga posterior mantiene consistencia backend.
+
+Evidencia técnica F1.4B (curl backend ejecutado):
+- [ ] Preview backend vacío + local válido.
+- [ ] Apply backend vacío + local válido.
+- [ ] Preview alias duplicado.
+- [ ] Preview login duplicado.
+- [ ] Preview cupo excedido.
+- [ ] GET `/operators` post-apply correcto y sin exposición de password.

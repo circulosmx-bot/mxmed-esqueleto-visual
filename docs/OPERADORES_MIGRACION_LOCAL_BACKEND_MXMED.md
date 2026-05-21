@@ -1,7 +1,7 @@
-# OPERADORES · MIGRACIÓN LOCALSTORAGE -> BACKEND (F1.4A)
+# OPERADORES · MIGRACIÓN LOCALSTORAGE -> BACKEND (F1.4A + F1.4B)
 
 Fecha de corte: **2026-05-20**  
-Ámbito: **documentación de estrategia** (sin cambios funcionales).
+Ámbito: **estrategia + estado backend implementado de migración**.
 
 ## 1) Estado actual
 
@@ -15,7 +15,7 @@ Fecha de corte: **2026-05-20**
   - key: `mxmed.agenda.operators.create_draft.v1`
   - regla vigente: **no se persisten drafts inconclusos**.
 
-### 1.2 Backend disponible (F1.1/F1.2)
+### 1.2 Backend disponible (F1.1/F1.2/F1.4B)
 - Tablas:
   - `agenda_operators`
   - `agenda_operator_permissions`
@@ -27,6 +27,8 @@ Fecha de corte: **2026-05-20**
   - `PATCH /api/agenda/index.php/operators/{operator_id}/reactivate`
   - `PATCH /api/agenda/index.php/operators/{operator_id}/archive`
   - `PATCH /api/agenda/index.php/operators/{operator_id}/restore`
+  - `POST /api/agenda/index.php/operators/migration/preview`
+  - `POST /api/agenda/index.php/operators/migration/apply`
 
 ### 1.3 Estado de integración frontend (F1.3)
 - Operadores funciona en **read-through**:
@@ -95,12 +97,12 @@ Fecha de corte: **2026-05-20**
    - conservar `archived_at`.
 
 5. **Auditoría local sin equivalente exacto**
-   - migrar como evento `legacy_imported` o mapeo estable;
-   - conservar el detalle original en `notes` JSON si aplica.
+   - en F1.4B se registra evento por operador: `operator_migrated_from_local`;
+   - conservar metadata técnica en `notes` JSON.
 
 6. **Password temporal local**
    - no persistir texto plano;
-   - convertir a hash solo durante migración controlada o descartar y forzar nuevo envío de credenciales.
+   - en F1.4B se descarta password plano y se marca warning + `force_password_change`.
 
 7. **Drafts inconclusos**
    - no migrar (regla vigente: drafts no persisten).
@@ -136,164 +138,76 @@ Fecha de corte: **2026-05-20**
    - refrescar UI desde backend;
    - mantener fallback local solo como contingencia.
 
-## 5) Contrato conceptual para F1.4B
+## 5) Endpoints backend F1.4B implementados
 
-> Nota: contrato propuesto para implementación posterior. No está activo aún.
+### 5.1 `POST /api/agenda/index.php/operators/migration/preview`
+Implementado y activo. Comportamiento:
+- no escribe datos;
+- recibe `doctor_id` y fuente local (`operators`, `archived_operators`, `audit_trail`);
+- normaliza alias/login;
+- calcula `migratable`, `skipped`, `conflicts`, `warnings`;
+- calcula `summary_before` y `summary_after_if_applied`;
+- marca `has_blocking_conflicts` cuando hay conflictos bloqueantes.
 
-### 5.1 Endpoint de preview
+### 5.2 `POST /api/agenda/index.php/operators/migration/apply`
+Implementado y activo. Comportamiento:
+- exige confirmación explícita:
+  - `confirm: true`
+  - o `confirm.accepted: true`;
+- reusa validación de preview;
+- si hay conflicto bloqueante devuelve `409`;
+- aplica migración transaccional (rollback total si falla);
+- migra operadores contables y archivados;
+- crea auditoría `operator_migrated_from_local`.
 
-`POST /api/agenda/index.php/operators/migration/preview`
+### 5.3 Confirmación y limitación actual
+- Confirmación de apply: **implementada**.
+- `preview_hash/token`: **aún no implementado** (pendiente para endurecer el handshake preview->apply).
 
-Payload sugerido:
-
-```json
-{
-  "doctor_id": "1",
-  "source": {
-    "operators": [],
-    "archived_operators": [],
-    "audit_trail": []
-  },
-  "options": {
-    "strict": true,
-    "include_archived": true,
-    "include_audit": true
-  }
-}
-```
-
-Respuesta esperada:
-
-```json
-{
-  "ok": true,
-  "data": {
-    "summary_before": {},
-    "summary_after_if_applied": {},
-    "counts": {
-      "operators_local": 0,
-      "archived_local": 0,
-      "audit_local": 0,
-      "migrable": 0,
-      "blocked": 0
-    },
-    "conflicts": [
-      {
-        "type": "alias_duplicated",
-        "operator_id": "op-001",
-        "value": "MARY",
-        "suggested": "MARY2"
-      }
-    ],
-    "quota": {
-      "max_allowed": 3,
-      "quota_used_backend": 0,
-      "quota_after_apply": 0
-    },
-    "plan": {
-      "insert_operators": [],
-      "insert_archived": [],
-      "insert_audit_events": []
-    }
-  }
-}
-```
-
-Errores esperados:
-- `invalid_params`
-- `forbidden`
-- `db_not_ready`
-- `conflict` (si preview strict detecta bloqueo de cupo global)
-
-### 5.2 Endpoint de apply
-
-`POST /api/agenda/index.php/operators/migration/apply`
-
-Payload sugerido:
-
-```json
-{
-  "doctor_id": "1",
-  "source": {
-    "operators": [],
-    "archived_operators": [],
-    "audit_trail": []
-  },
-  "resolution": {
-    "alias_overrides": {
-      "op-001": "MARY2"
-    },
-    "login_overrides": {
-      "op-001": "maria.lopez2"
-    },
-    "skip_operator_ids": []
-  },
-  "confirm": {
-    "accepted": true,
-    "preview_hash": "sha256-preview"
-  }
-}
-```
-
-Respuesta esperada:
-
-```json
-{
-  "ok": true,
-  "data": {
-    "migrated": {
-      "operators": 0,
-      "archived_operators": 0,
-      "audit_events": 0
-    },
-    "skipped": [],
-    "state": {
-      "operators": [],
-      "archived_operators": [],
-      "audit_trail": [],
-      "summary": {},
-      "limits": { "max_allowed": 3 }
-    }
-  }
-}
-```
-
-Errores esperados:
-- `preview_required`
-- `preview_hash_mismatch`
-- `quota_limit_reached`
+### 5.4 Conflictos bloqueantes actuales
 - `alias_duplicated`
 - `login_duplicated`
-- `db_not_ready`
+- `quota_exceeded`
+- `operator_incomplete` (según datos mínimos requeridos)
 
-### 5.3 Atomicidad / rollback
-- El apply debe ser transaccional por `doctor_id`.
-- Si falla un paso crítico:
-  - rollback total;
-  - no dejar migración parcial.
+### 5.5 Warnings actuales
+- `temp_password_plain_discarded`
+- `temp_password_hash_discarded` (si hash inválido)
+- `operator_id_reassigned` (cuando hay colisión o ausencia de id)
+- `status_forced_archived` (si viene en bucket archivado con estado distinto)
+- `role_defaulted`
 
-## 6) QA propuesto para F1.4
+### 5.6 Password temporal y seguridad
+- No se persiste `temp_password` plano.
+- Si llega password temporal plano desde local:
+  - se descarta,
+  - se fuerza `force_password_change = true`,
+  - se emite warning.
+- `GET /operators` no expone password temporal ni hash.
 
-### Casos verdes
-1. Backend vacío + local con 1-2 operadores contables.
-2. Migración con archivados incluidos.
-3. Rehidratación backend correcta tras apply.
+### 5.7 Auditoría de migración
+- Se registra evento por operador migrado:
+  - `event_type = operator_migrated_from_local`
+  - `module_name = Operadores`
+  - `action_label = Operador migrado desde local`
+  - `notes` con metadata técnica de origen.
 
-### Casos de conflicto
-1. Alias duplicado contra backend.
-2. Login duplicado contra backend.
-3. Cupo excedido por contables.
+## 6) QA curl ejecutado (F1.4B)
 
-### Seguridad y datos sensibles
-1. Verificar que no se persiste password temporal en texto plano.
-2. Verificar que `GET /operators` no expone hash ni password plano.
+Resultado: **PASS** en matriz mínima aprobada.
 
-### Persistencia y respaldo
-1. Confirmar creación de backup local antes de apply.
-2. Confirmar que el backup no se elimina automáticamente en F1.4.
-3. Confirmar recarga posterior consistente.
+1. Preview backend vacío + local válido: PASS.  
+2. Apply backend vacío + local válido: PASS.  
+3. Preview alias duplicado: PASS (conflicto detectado).  
+4. Preview login duplicado: PASS (conflicto detectado).  
+5. Preview cupo excedido: PASS (conflicto detectado).  
+6. Apply sin confirmación: PASS (`400 invalid_params`).  
+7. Apply con conflicto bloqueante: PASS (`409 conflict`).  
+8. Archivados migran como `archived` y no cuentan para cupo: PASS.  
+9. GET `/operators` post-apply devuelve estado esperado: PASS.  
+10. GET no expone password temporal/hash: PASS.
 
-## 7) Riesgos y no-go
+## 7) Riesgos y no-go (vigente)
 
 ### Riesgos
 - Inconsistencia de cupo si frontend y backend calculan sobre fuentes distintas en simultáneo.
@@ -305,13 +219,21 @@ Errores esperados:
 - `doctor_id` no confiable.
 - `db_not_ready`.
 - Conflictos críticos sin resolución explícita.
-- preview/apply hash inconsistente.
+- intento de ejecutar apply sin confirmación explícita.
+- (futuro) hash/token preview->apply inconsistente cuando se implemente.
 - intento de migrar credenciales en texto plano.
 
-## 8) Recomendación de implementación
+## 8) Siguiente fase recomendada (F1.4C)
 
-1. Implementar primero **preview** (sin escrituras).
-2. Validar matriz completa de conflictos.
-3. Implementar **apply transaccional** con backup local.
-4. Activar UI de confirmación explícita.
-5. Mantener fallback local hasta QA de cierre F1.4D.
+Implementar UI controlada de migración:
+1. detección de datos locales migrables;
+2. preview visible con conflictos/warnings;
+3. confirmación explícita de apply;
+4. feedback de resultados y recarga read-through desde backend;
+5. mantener fallback local sin borrado automático de backup.
+
+## 9) Estado por fase
+- F1.4A Documentación de estrategia: **concluido**.
+- F1.4B Backend preview/apply: **concluido**.
+- F1.4C UI preview/confirmación: **pendiente**.
+- F1.4D QA de cierre + retiro progresivo de dependencia local: **pendiente**.
