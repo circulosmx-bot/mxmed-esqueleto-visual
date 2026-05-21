@@ -1,6 +1,6 @@
 # QA Checklist · Agenda + Operadores (estabilización)
 
-Fecha base: 2026-05-18  
+Fecha base: 2026-05-20  
 Objetivo: no regresión de flujos estabilizados antes de nuevas funciones.
 
 ## A) Agenda
@@ -78,3 +78,33 @@ Objetivo: no regresión de flujos estabilizados antes de nuevas funciones.
 - [ ] Ejecutar checklist en escritorio (Safari/Chrome).
 - [ ] Repetir smoke básico en responsive.
 - [ ] Registrar evidencia (capturas + hora + usuario QA) por bloque A/B/C.
+
+## E) Operadores · Migración localStorage -> backend (F1.4)
+
+Referencia de estrategia:
+- [ ] Revisar `../OPERADORES_MIGRACION_LOCAL_BACKEND_MXMED.md` antes de ejecutar pruebas.
+
+Read-through/Fallback (sin migración automática):
+- [ ] Backend con datos: UI hidrata desde backend y KPI/cupo son coherentes.
+- [ ] Backend vacío + local con datos: UI mantiene datos locales (no vaciado silencioso).
+- [ ] Backend vacío + local vacío: estado vacío normal.
+- [ ] Backend `db_not_ready` o sin `doctor_id` confiable: fallback local sin bloqueo visual.
+- [ ] Verificar que frontend no dispara POST/PATCH de migración automáticamente.
+
+Preview/Apply (cuando exista F1.4B):
+- [ ] Preview reporta migrables, conflictos y cupo post-aplicación sin escribir datos.
+- [ ] Conflicto alias duplicado se detecta y exige resolución.
+- [ ] Conflicto login duplicado se detecta y exige resolución.
+- [ ] Exceso de cupo contable bloquea apply correctamente.
+- [ ] Archivados se migran como archivados y no cuentan para cupo.
+- [ ] Auditoría local se migra con mapeo estable y orden cronológico.
+- [ ] Apply es transaccional (sin estado parcial ante error).
+
+Seguridad y credenciales:
+- [ ] No migrar contraseña temporal en texto plano.
+- [ ] `GET /operators` no expone password temporal ni hash sensible.
+
+Respaldo y post-migración:
+- [ ] Se crea backup local antes del apply.
+- [ ] El backup local no se elimina automáticamente en F1.4.
+- [ ] Recarga posterior mantiene consistencia backend.

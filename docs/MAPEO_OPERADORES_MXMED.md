@@ -6,7 +6,7 @@ Documento de estado real del módulo **Operadores** en shell principal (`#p-ag-o
 - `assets/js/app.js` (bloque `Agenda · Operadores (frontend UX scaffold, backend-safe)`)
 - `assets/css/style.css` (clases `mx-ag-ops-*`)
 
-Fecha de corte: **2026-05-18**.
+Fecha de corte: **2026-05-20**.
 
 ## 2) Estado actual de UI (concluido en frontend)
 - Vista Operadores en bandas/acordeones horizontales.
@@ -169,3 +169,20 @@ Fase recomendada:
 3. Enforcement RBAC por módulo/acción.
 4. Reemplazo de verificación simulada (6 dígitos) por flujo seguro.
 5. Migración de `audit_trail` local a bitácora canónica server-side.
+
+## 15) Estado de migración localStorage -> backend (F1.4A)
+- Documento oficial de estrategia:
+  - [`docs/OPERADORES_MIGRACION_LOCAL_BACKEND_MXMED.md`](OPERADORES_MIGRACION_LOCAL_BACKEND_MXMED.md)
+- Estado actual:
+  - F1.1/F1.2 backend list/create/mutaciones + auditoría: **concluido**.
+  - F1.3 read-through con fallback local: **concluido**.
+  - F1.4A documentación de migración y política de conflictos: **concluido**.
+  - F1.4B preview/apply backend: **pendiente**.
+  - F1.4C UI de confirmación de migración: **pendiente**.
+  - F1.4D QA de cierre y retiro progresivo de dependencia local: **pendiente**.
+
+Reglas críticas vigentes durante F1.4:
+- No migrar automáticamente sin confirmación explícita.
+- No persistir password temporal en texto plano.
+- Operadores archivados no cuentan para cupo.
+- Si backend está vacío y local tiene datos, no vaciar UI silenciosamente.
