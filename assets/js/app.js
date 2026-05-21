@@ -19612,6 +19612,9 @@ console.info('app.js loaded :: 20251123a');
   const OPERATORS_STATE_STORAGE_KEY = 'mxmed.agenda.operators.state.v1';
   const OPERATORS_CREATE_DRAFT_STORAGE_KEY = 'mxmed.agenda.operators.create_draft.v1';
   const OPERATORS_BACKEND_ENDPOINT = '/api/agenda/index.php/operators';
+  const OPERATORS_MIGRATION_PREVIEW_ENDPOINT = '/api/agenda/index.php/operators/migration/preview';
+  const OPERATORS_MIGRATION_APPLY_ENDPOINT = '/api/agenda/index.php/operators/migration/apply';
+  const OPERATORS_MIGRATION_SESSION_PREFIX = 'mxmed.agenda.operators.migration.session.v1';
   const MAX_ARCHIVED_OPERATORS = 80;
   const MAX_AUDIT_TRAIL_RECORDS = 120;
   let operatorsVisibilityObserver = null;
@@ -19634,6 +19637,17 @@ console.info('app.js loaded :: 20251123a');
     archivedPanel: panel.querySelector('#ag_ops_archived_panel'),
     archivedList: panel.querySelector('#ag_ops_archived_list'),
     sidePanel: panel.querySelector('.mx-ag-ops-side-panel'),
+    migrationNotice: panel.querySelector('#ag_ops_migration_notice'),
+    migrationNoticeCopy: panel.querySelector('#ag_ops_migration_notice_copy'),
+    migrationReviewBtn: panel.querySelector('#ag_ops_migration_review_btn'),
+    migrationDismissBtn: panel.querySelector('#ag_ops_migration_dismiss_btn'),
+    migrationModalEl: panel.querySelector('#ag_ops_migration_modal'),
+    migrationModalStatus: panel.querySelector('#ag_ops_migration_modal_status'),
+    migrationModalSummary: panel.querySelector('#ag_ops_migration_modal_summary'),
+    migrationModalMigratable: panel.querySelector('#ag_ops_migration_modal_migratable'),
+    migrationModalConflicts: panel.querySelector('#ag_ops_migration_modal_conflicts'),
+    migrationModalWarnings: panel.querySelector('#ag_ops_migration_modal_warnings'),
+    migrationModalApplyBtn: panel.querySelector('#ag_ops_migration_apply_btn'),
     formTitle: panel.querySelector('#ag_ops_form_title'),
     modalError: panel.querySelector('#ag_ops_modal_error'),
     saveBtn: panel.querySelector('#ag_ops_save_btn'),
@@ -19715,7 +19729,14 @@ console.info('app.js loaded :: 20251123a');
     operatorsReadThroughLockedToLocal: false,
     operatorsSkipPersistBootstrap: false,
     operatorsLocalStateExists: false,
-    operatorsLocalStateHasData: false
+    operatorsLocalStateHasData: false,
+    operatorsMigrationModalInstance: null,
+    operatorsMigrationPreviewResult: null,
+    operatorsMigrationPreviewLoading: false,
+    operatorsMigrationApplyLoading: false,
+    operatorsMigrationNoticeDismissed: false,
+    operatorsMigrationNoticeDoctorId: '',
+    operatorsBackendSnapshot: null
   };
   const toTimestamp = (value)=>{
     const raw = clean(value);
@@ -19749,6 +19770,24 @@ console.info('app.js loaded :: 20251123a');
       summarySection?.classList.add('d-none');
     }
 
+    const migrationNotice = document.createElement('section');
+    migrationNotice.className = 'alert alert-info d-none';
+    migrationNotice.id = 'ag_ops_migration_notice';
+    migrationNotice.setAttribute('role', 'status');
+    migrationNotice.innerHTML = `
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div class="me-2">
+          <strong>Hay operadores guardados localmente.</strong>
+          <div class="small" id="ag_ops_migration_notice_copy">Revisa la migración al backend antes de continuar.</div>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <button type="button" class="btn btn-sm btn-outline-primary" id="ag_ops_migration_review_btn">Revisar migración</button>
+          <button type="button" class="btn btn-sm btn-link text-decoration-none" id="ag_ops_migration_dismiss_btn">Ocultar</button>
+        </div>
+      </div>
+    `;
+    mainPanel.insertBefore(migrationNotice, els.list);
+
     const addBand = document.createElement('section');
     addBand.className = 'mx-ag-ops-add-band';
     addBand.id = 'ag_ops_add_band';
@@ -19770,6 +19809,57 @@ console.info('app.js loaded :: 20251123a');
       addPanel.appendChild(sidePanel);
     }
     mainPanel.insertBefore(addBand, els.list);
+
+    const migrationModal = document.createElement('div');
+    migrationModal.className = 'modal fade';
+    migrationModal.id = 'ag_ops_migration_modal';
+    migrationModal.tabIndex = -1;
+    migrationModal.setAttribute('aria-hidden', 'true');
+    migrationModal.innerHTML = `
+      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Migración de operadores locales</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-secondary py-2 px-3 small mb-3" id="ag_ops_migration_modal_status">
+              Cargando previsualización...
+            </div>
+            <div class="small text-muted mb-3" id="ag_ops_migration_modal_summary"></div>
+            <div class="row g-3">
+              <div class="col-12 col-lg-4">
+                <div class="border rounded p-2 h-100">
+                  <h6 class="mb-2">Migrables</h6>
+                  <ul class="small mb-0 ps-3" id="ag_ops_migration_modal_migratable"></ul>
+                </div>
+              </div>
+              <div class="col-12 col-lg-4">
+                <div class="border rounded p-2 h-100">
+                  <h6 class="mb-2">Conflictos</h6>
+                  <ul class="small mb-0 ps-3" id="ag_ops_migration_modal_conflicts"></ul>
+                </div>
+              </div>
+              <div class="col-12 col-lg-4">
+                <div class="border rounded p-2 h-100">
+                  <h6 class="mb-2">Warnings</h6>
+                  <ul class="small mb-0 ps-3" id="ag_ops_migration_modal_warnings"></ul>
+                </div>
+              </div>
+            </div>
+            <div class="alert alert-light border small mt-3 mb-0">
+              La migración no copia contraseñas temporales en texto plano. En esta fase, el localStorage se conserva como respaldo y no se elimina automáticamente.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="ag_ops_migration_apply_btn" disabled>Confirmar migración</button>
+          </div>
+        </div>
+      </div>
+    `;
+    panel.appendChild(migrationModal);
+
     panel.dataset.opsBandsReady = '1';
   };
 
@@ -19778,6 +19868,17 @@ console.info('app.js loaded :: 20251123a');
     els.addBandToggle = panel.querySelector('#ag_ops_add_toggle');
     els.addBandPanel = panel.querySelector('#ag_ops_add_panel');
     els.mainHeadKpis = panel.querySelector('.mx-ag-ops-head-kpis');
+    els.migrationNotice = panel.querySelector('#ag_ops_migration_notice');
+    els.migrationNoticeCopy = panel.querySelector('#ag_ops_migration_notice_copy');
+    els.migrationReviewBtn = panel.querySelector('#ag_ops_migration_review_btn');
+    els.migrationDismissBtn = panel.querySelector('#ag_ops_migration_dismiss_btn');
+    els.migrationModalEl = panel.querySelector('#ag_ops_migration_modal');
+    els.migrationModalStatus = panel.querySelector('#ag_ops_migration_modal_status');
+    els.migrationModalSummary = panel.querySelector('#ag_ops_migration_modal_summary');
+    els.migrationModalMigratable = panel.querySelector('#ag_ops_migration_modal_migratable');
+    els.migrationModalConflicts = panel.querySelector('#ag_ops_migration_modal_conflicts');
+    els.migrationModalWarnings = panel.querySelector('#ag_ops_migration_modal_warnings');
+    els.migrationModalApplyBtn = panel.querySelector('#ag_ops_migration_apply_btn');
   };
 
   const formatDateTimeLabel = (value)=>{
@@ -21239,6 +21340,7 @@ console.info('app.js loaded :: 20251123a');
   const renderAll = ()=>{
     const operators = ensureArray(MODEL.operators);
     renderSummary();
+    renderMigrationNotice();
     renderOperators();
     renderArchivedOperators();
     placeAddBand();
@@ -21278,6 +21380,11 @@ console.info('app.js loaded :: 20251123a');
 
   const applyBackendOperatorsState = (payload = null)=>{
     const extracted = extractBackendOperatorsState(payload);
+    uiState.operatorsBackendSnapshot = {
+      operators: ensureArray(extracted.operators),
+      archived_operators: ensureArray(extracted.archived_operators),
+      audit_trail: ensureArray(extracted.audit_trail)
+    };
     const backendHasData = computeOperatorsPayloadHasData(extracted);
     const localHasData = uiState.operatorsLocalStateHasData === true;
 
@@ -21307,6 +21414,459 @@ console.info('app.js loaded :: 20251123a');
       unlockLocal: true
     });
     return { source: 'backend', hasData: false };
+  };
+
+  const getMigrationSessionKey = (doctorId = '')=>{
+    const safeDoctorId = clean(doctorId || uiState.operatorsReadThroughDoctorId);
+    if(!safeDoctorId) return '';
+    return `${OPERATORS_MIGRATION_SESSION_PREFIX}:${safeDoctorId}`;
+  };
+
+  const readMigrationSessionState = (doctorId = '')=>{
+    const storageKey = getMigrationSessionKey(doctorId);
+    if(!storageKey) return { dismissed: false, applied: false };
+    try{
+      const raw = clean(window.sessionStorage?.getItem?.(storageKey) || '');
+      if(!raw) return { dismissed: false, applied: false };
+      const parsed = JSON.parse(raw);
+      if(!parsed || typeof parsed !== 'object'){
+        return { dismissed: false, applied: false };
+      }
+      return {
+        dismissed: parsed.dismissed === true,
+        applied: parsed.applied === true
+      };
+    }catch(_){
+      return { dismissed: false, applied: false };
+    }
+  };
+
+  const writeMigrationSessionState = (doctorId = '', patch = {})=>{
+    const storageKey = getMigrationSessionKey(doctorId);
+    if(!storageKey) return;
+    const current = readMigrationSessionState(doctorId);
+    const next = {
+      dismissed: patch.dismissed === true || (patch.dismissed !== false && current.dismissed === true),
+      applied: patch.applied === true || (patch.applied !== false && current.applied === true)
+    };
+    try{
+      window.sessionStorage?.setItem?.(storageKey, JSON.stringify(next));
+    }catch(_){
+      // session best-effort
+    }
+  };
+
+  const readLocalOperatorsStatePayload = ()=>{
+    const fallback = { exists: false, payload: { operators: [], archived_operators: [], audit_trail: [] } };
+    try{
+      const raw = clean(window.localStorage?.getItem?.(OPERATORS_STATE_STORAGE_KEY) || '');
+      if(!raw) return fallback;
+      const parsed = JSON.parse(raw);
+      if(!parsed || typeof parsed !== 'object') return fallback;
+      return {
+        exists: true,
+        payload: {
+          operators: ensureArray(parsed.operators),
+          archived_operators: ensureArray(parsed.archived_operators),
+          audit_trail: ensureArray(parsed.audit_trail)
+        }
+      };
+    }catch(_){
+      return fallback;
+    }
+  };
+
+  const buildMigrationSourcePayload = ()=>{
+    const localState = readLocalOperatorsStatePayload();
+    if(localState.exists){
+      return {
+        operators: ensureArray(localState.payload.operators),
+        archived_operators: ensureArray(localState.payload.archived_operators),
+        audit_trail: ensureArray(localState.payload.audit_trail)
+      };
+    }
+    return {
+      operators: ensureArray(MODEL.operators),
+      archived_operators: ensureArray(MODEL.archived_operators),
+      audit_trail: ensureArray(MODEL.audit_trail)
+    };
+  };
+
+  const buildComparableOperatorsSnapshot = (payload = {})=>{
+    const source = payload && typeof payload === 'object' ? payload : {};
+    const normalizePermissionsForDigest = (value)=> normalizePermissions(value).join('|');
+    const mapOperator = (item = {})=> {
+      const sourceItem = item && typeof item === 'object' ? item : {};
+      return {
+        operator_id: clean(sourceItem.operator_id),
+        alias: normalizeAliasValue(sourceItem.alias || '', { stripInvalid: true }),
+        full_name: clean(sourceItem.full_name),
+        phone: clean(sourceItem.phone),
+        email: clean(sourceItem.email).toLowerCase(),
+        role: clean(sourceItem.role).toLowerCase(),
+        status: clean(sourceItem.status).toLowerCase(),
+        login: normalizeLoginValue(sourceItem.login || ''),
+        invitation_status: clean(sourceItem.invitation_status).toLowerCase(),
+        last_access: clean(sourceItem.last_access),
+        archived_at: clean(sourceItem.archived_at),
+        permissions: normalizePermissionsForDigest(sourceItem.permissions || [])
+      };
+    };
+    const mapAudit = (item = {})=>{
+      const sourceItem = item && typeof item === 'object' ? item : {};
+      return {
+        operator_id: clean(sourceItem.operator_id),
+        module: clean(sourceItem.module),
+        action: clean(sourceItem.action),
+        entity: clean(sourceItem.entity),
+        at: clean(sourceItem.at)
+      };
+    };
+    const operators = ensureArray(source.operators).map(mapOperator).filter((item)=> item.operator_id).sort((a, b)=> a.operator_id.localeCompare(b.operator_id));
+    const archived = ensureArray(source.archived_operators).map(mapOperator).filter((item)=> item.operator_id).sort((a, b)=> a.operator_id.localeCompare(b.operator_id));
+    const audit = ensureArray(source.audit_trail).map(mapAudit).filter((item)=> item.operator_id || item.at).sort((a, b)=>{
+      const byDate = toTimestamp(a.at) - toTimestamp(b.at);
+      if(byDate !== 0) return byDate;
+      return `${a.operator_id}|${a.action}`.localeCompare(`${b.operator_id}|${b.action}`);
+    });
+    return { operators, archived_operators: archived, audit_trail: audit };
+  };
+
+  const buildOperatorsSnapshotKey = (payload = {})=>{
+    try{
+      return JSON.stringify(buildComparableOperatorsSnapshot(payload));
+    }catch(_){
+      return '';
+    }
+  };
+
+  const hasLocalBackendDifference = ()=>{
+    const backendSnapshot = uiState.operatorsBackendSnapshot;
+    if(!backendSnapshot || typeof backendSnapshot !== 'object'){
+      return false;
+    }
+    const localPayload = buildMigrationSourcePayload();
+    if(!computeOperatorsPayloadHasData(localPayload)){
+      return false;
+    }
+    const localKey = buildOperatorsSnapshotKey(localPayload);
+    const backendKey = buildOperatorsSnapshotKey(backendSnapshot);
+    if(!localKey || !backendKey) return true;
+    return localKey !== backendKey;
+  };
+
+  const isMigrationBackendReady = ()=>{
+    if(clean(uiState.operatorsReadThroughStatus) !== 'ready') return false;
+    return isReliableDoctorId(clean(uiState.operatorsReadThroughDoctorId));
+  };
+
+  const shouldShowMigrationNotice = ()=>{
+    if(!els.migrationNotice) return false;
+    if(!isMigrationBackendReady()) return false;
+    const doctorId = clean(uiState.operatorsReadThroughDoctorId);
+    if(!doctorId) return false;
+    const localPayload = buildMigrationSourcePayload();
+    if(!computeOperatorsPayloadHasData(localPayload)){
+      return false;
+    }
+
+    const sessionState = readMigrationSessionState(doctorId);
+    if(sessionState.dismissed || sessionState.applied) return false;
+
+    if(uiState.operatorsDataSource === 'backend'){
+      return hasLocalBackendDifference();
+    }
+
+    return true;
+  };
+
+  const renderMigrationNotice = ()=>{
+    if(!els.migrationNotice || !els.migrationNoticeCopy) return;
+    const shouldShow = shouldShowMigrationNotice();
+    els.migrationNotice.classList.toggle('d-none', !shouldShow);
+    if(!shouldShow){
+      return;
+    }
+    const sourceLabel = uiState.operatorsDataSource === 'backend'
+      ? 'Puedes comparar diferencias y decidir si migrar.'
+      : 'La interfaz sigue en modo local. Puedes revisar la migración al backend.';
+    els.migrationNoticeCopy.textContent = sourceLabel;
+  };
+
+  const getMigrationModal = ()=>{
+    if(!els.migrationModalEl || !window.bootstrap?.Modal) return null;
+    if(!uiState.operatorsMigrationModalInstance){
+      uiState.operatorsMigrationModalInstance = new window.bootstrap.Modal(els.migrationModalEl, {
+        backdrop: 'static',
+        keyboard: true
+      });
+    }
+    return uiState.operatorsMigrationModalInstance;
+  };
+
+  const showMigrationModal = ()=>{
+    const modal = getMigrationModal();
+    if(modal){
+      modal.show();
+      return;
+    }
+    if(els.migrationModalEl){
+      els.migrationModalEl.classList.remove('d-none');
+      els.migrationModalEl.style.display = 'block';
+      els.migrationModalEl.setAttribute('aria-hidden', 'false');
+    }
+  };
+
+  const hideMigrationModal = ()=>{
+    const modal = getMigrationModal();
+    if(modal){
+      modal.hide();
+      return;
+    }
+    if(els.migrationModalEl){
+      els.migrationModalEl.classList.add('d-none');
+      els.migrationModalEl.style.display = '';
+      els.migrationModalEl.setAttribute('aria-hidden', 'true');
+    }
+  };
+
+  const setMigrationModalStatus = (kind = 'secondary', message = '')=>{
+    if(!els.migrationModalStatus) return;
+    const safeKind = clean(kind).toLowerCase();
+    const allowed = ['secondary', 'success', 'warning', 'danger', 'info'];
+    const finalKind = allowed.includes(safeKind) ? safeKind : 'secondary';
+    els.migrationModalStatus.className = `alert alert-${finalKind} py-2 px-3 small mb-3`;
+    els.migrationModalStatus.textContent = clean(message) || 'Sin información.';
+  };
+
+  const renderMigrationModalList = (el, items = [], formatter = null, emptyText = 'Sin elementos')=>{
+    if(!el) return;
+    const source = ensureArray(items);
+    if(!source.length){
+      el.innerHTML = `<li class="text-muted">${escapeHtml(emptyText)}</li>`;
+      return;
+    }
+    el.innerHTML = source.map((item, index)=>{
+      const text = typeof formatter === 'function'
+        ? formatter(item, index)
+        : clean(item);
+      return `<li>${escapeHtml(text || 'Registro')}</li>`;
+    }).join('');
+  };
+
+  const describeMigrationConflict = (conflict = {})=>{
+    const type = clean(conflict?.type || conflict?.reason || 'conflict');
+    const alias = clean(conflict?.alias);
+    const login = clean(conflict?.login);
+    if(type === 'alias_duplicated') return `Alias duplicado: ${alias || 'sin alias'}`;
+    if(type === 'login_duplicated') return `Login duplicado: ${login || 'sin login'}`;
+    if(type === 'quota_exceeded') return 'Cupo excedido para operadores contables';
+    if(type === 'operator_incomplete') return `Operador incompleto: ${alias || login || 'sin identificar'}`;
+    return `${type}: ${alias || login || 'sin identificar'}`;
+  };
+
+  const describeMigrationWarning = (warning = {})=>{
+    const type = clean(warning?.type || 'warning');
+    if(type === 'temp_password_plain_discarded') return 'Contraseña temporal local descartada por seguridad';
+    if(type === 'temp_password_hash_discarded') return 'Hash de contraseña temporal inválido descartado';
+    if(type === 'operator_id_reassigned'){
+      const to = clean(warning?.detail?.to);
+      return `operator_id reasignado automáticamente${to ? ` -> ${to}` : ''}`;
+    }
+    if(type === 'role_defaulted') return 'Rol inválido ajustado a Operador';
+    return type || 'warning';
+  };
+
+  const renderMigrationPreview = (preview = null)=>{
+    const data = preview && typeof preview === 'object' ? preview : {};
+    const migratable = ensureArray(data.migratable);
+    const conflicts = ensureArray(data.conflicts);
+    const warnings = ensureArray(data.warnings);
+    const hasBlocking = data.has_blocking_conflicts === true
+      || conflicts.some((item)=> item && item.blocking === true);
+    const before = data.summary_before && typeof data.summary_before === 'object' ? data.summary_before : {};
+    const after = data.summary_after_if_applied && typeof data.summary_after_if_applied === 'object' ? data.summary_after_if_applied : {};
+    const sourceCounts = data.source_counts && typeof data.source_counts === 'object' ? data.source_counts : {};
+    const totalMigratable = migratable.length;
+    const archivedMigratable = migratable.filter((item)=> clean(item?.status).toLowerCase() === 'archived').length;
+    const activeMigratable = totalMigratable - archivedMigratable;
+
+    if(els.migrationModalSummary){
+      const beforeQuota = `${toSafeInt(before.quota_used, 0)}/${toSafeInt(before.max_allowed, MODEL.plan_absolute_limit)}`;
+      const afterQuota = `${toSafeInt(after.quota_used, toSafeInt(before.quota_used, 0))}/${toSafeInt(after.max_allowed, MODEL.plan_absolute_limit)}`;
+      els.migrationModalSummary.textContent = `Origen local: ${toSafeInt(sourceCounts.operators, 0)} activos + ${toSafeInt(sourceCounts.archived_operators, 0)} archivados. Cupo backend antes: ${beforeQuota}. Cupo estimado después: ${afterQuota}.`;
+    }
+
+    renderMigrationModalList(
+      els.migrationModalMigratable,
+      migratable,
+      (item)=> {
+        const alias = clean(item?.alias) || clean(item?.login) || clean(item?.operator_id) || 'operador';
+        const status = clean(item?.status) || 'pending';
+        return `${alias} (${status})`;
+      },
+      'No hay operadores migrables.'
+    );
+
+    renderMigrationModalList(
+      els.migrationModalConflicts,
+      conflicts,
+      (item)=> describeMigrationConflict(item),
+      'Sin conflictos detectados.'
+    );
+
+    renderMigrationModalList(
+      els.migrationModalWarnings,
+      warnings,
+      (item)=> describeMigrationWarning(item),
+      'Sin warnings detectados.'
+    );
+
+    if(hasBlocking){
+      setMigrationModalStatus('warning', 'Se detectaron conflictos bloqueantes. Corrige conflictos antes de migrar.');
+    }else if(totalMigratable === 0){
+      setMigrationModalStatus('info', 'No hay operadores locales pendientes de migración.');
+    }else{
+      setMigrationModalStatus('success', `Preview listo. Migrables: ${activeMigratable} contables y ${archivedMigratable} archivados.`);
+    }
+
+    if(els.migrationModalApplyBtn){
+      els.migrationModalApplyBtn.disabled = hasBlocking || totalMigratable <= 0 || uiState.operatorsMigrationPreviewLoading || uiState.operatorsMigrationApplyLoading;
+    }
+  };
+
+  const requestMigrationPreview = async ()=>{
+    const doctorId = clean(uiState.operatorsReadThroughDoctorId || resolveOperatorsDoctorId());
+    if(!doctorId){
+      setMigrationModalStatus('warning', 'No se pudo resolver doctor_id para previsualizar migración.');
+      return { ok: false, reason: 'doctor_id_unavailable' };
+    }
+    const source = buildMigrationSourcePayload();
+    if(!computeOperatorsPayloadHasData(source)){
+      setMigrationModalStatus('info', 'No hay datos locales para migrar.');
+      renderMigrationPreview({ migratable: [], conflicts: [], warnings: [], has_blocking_conflicts: false, source_counts: { operators: 0, archived_operators: 0, audit_trail: 0 }, summary_before: {}, summary_after_if_applied: {} });
+      return { ok: true, empty: true };
+    }
+
+    uiState.operatorsMigrationPreviewLoading = true;
+    if(els.migrationModalApplyBtn){
+      els.migrationModalApplyBtn.disabled = true;
+    }
+    setMigrationModalStatus('secondary', 'Generando previsualización...');
+    try{
+      const resp = await window.fetch(OPERATORS_MIGRATION_PREVIEW_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          doctor_id: doctorId,
+          source
+        })
+      });
+      const payload = await resp.json().catch(()=> null);
+      const data = payload && payload.ok === true ? payload.data : null;
+      if(!data){
+        const errorCode = clean(payload?.error || `http_${Number(resp.status || 0)}`);
+        const fallbackMessage = errorCode === 'db_not_ready'
+          ? 'Backend no disponible para migración (db_not_ready). Se mantiene modo local.'
+          : 'No se pudo generar la previsualización de migración.';
+        setMigrationModalStatus('warning', fallbackMessage);
+        return { ok: false, reason: errorCode };
+      }
+      uiState.operatorsMigrationPreviewResult = data;
+      renderMigrationPreview(data);
+      return { ok: true, data };
+    }catch(_){
+      setMigrationModalStatus('warning', 'No se pudo conectar al backend de migración. Se mantiene modo local.');
+      return { ok: false, reason: 'network_error' };
+    }finally{
+      uiState.operatorsMigrationPreviewLoading = false;
+      if(els.migrationModalApplyBtn){
+        const hasBlocking = uiState.operatorsMigrationPreviewResult?.has_blocking_conflicts === true;
+        const migratable = ensureArray(uiState.operatorsMigrationPreviewResult?.migratable).length;
+        els.migrationModalApplyBtn.disabled = hasBlocking || migratable <= 0 || uiState.operatorsMigrationApplyLoading;
+      }
+    }
+  };
+
+  const applyMigrationFromPreview = async ()=>{
+    const doctorId = clean(uiState.operatorsReadThroughDoctorId || resolveOperatorsDoctorId());
+    if(!doctorId){
+      setMigrationModalStatus('warning', 'No se pudo resolver doctor_id para aplicar migración.');
+      return { ok: false, reason: 'doctor_id_unavailable' };
+    }
+    const preview = uiState.operatorsMigrationPreviewResult;
+    if(!preview || typeof preview !== 'object'){
+      setMigrationModalStatus('warning', 'Primero genera una previsualización de migración.');
+      return { ok: false, reason: 'missing_preview' };
+    }
+    if(preview.has_blocking_conflicts === true){
+      setMigrationModalStatus('warning', 'Existen conflictos bloqueantes. No es posible aplicar migración.');
+      return { ok: false, reason: 'blocking_conflicts' };
+    }
+
+    const source = buildMigrationSourcePayload();
+    uiState.operatorsMigrationApplyLoading = true;
+    if(els.migrationModalApplyBtn){
+      els.migrationModalApplyBtn.disabled = true;
+    }
+    setMigrationModalStatus('secondary', 'Aplicando migración...');
+
+    try{
+      const resp = await window.fetch(OPERATORS_MIGRATION_APPLY_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          doctor_id: doctorId,
+          confirm: true,
+          source
+        })
+      });
+      const payload = await resp.json().catch(()=> null);
+      if(!(payload && payload.ok === true && payload.data && typeof payload.data === 'object')){
+        const errorCode = clean(payload?.error || `http_${Number(resp.status || 0)}`);
+        if(errorCode === 'conflict'){
+          setMigrationModalStatus('warning', 'No se pudo migrar: hay conflictos bloqueantes.');
+        }else{
+          setMigrationModalStatus('danger', 'No se pudo aplicar la migración.');
+        }
+        return { ok: false, reason: errorCode };
+      }
+
+      applyBackendOperatorsState(payload);
+      setOperatorsDataSource('backend', {
+        summary: payload.data.summary,
+        limits: payload.data.limits,
+        unlockLocal: true
+      });
+      writeMigrationSessionState(doctorId, { dismissed: true, applied: true });
+      uiState.operatorsMigrationNoticeDismissed = true;
+      uiState.operatorsMigrationNoticeDoctorId = doctorId;
+      setMigrationModalStatus('success', 'Migración aplicada correctamente. Operadores rehidratados desde backend.');
+      renderAll();
+      await hydrateOperatorsReadThrough({ force: true }).catch(()=> null);
+      window.setTimeout(()=>{
+        hideMigrationModal();
+      }, 320);
+      return { ok: true, data: payload.data };
+    }catch(_){
+      setMigrationModalStatus('danger', 'Falló la conexión al aplicar migración.');
+      return { ok: false, reason: 'network_error' };
+    }finally{
+      uiState.operatorsMigrationApplyLoading = false;
+      if(els.migrationModalApplyBtn){
+        const hasBlocking = uiState.operatorsMigrationPreviewResult?.has_blocking_conflicts === true;
+        const migratable = ensureArray(uiState.operatorsMigrationPreviewResult?.migratable).length;
+        els.migrationModalApplyBtn.disabled = hasBlocking || migratable <= 0 || uiState.operatorsMigrationPreviewLoading || uiState.operatorsMigrationApplyLoading;
+      }
+    }
   };
 
   const hydrateOperatorsReadThrough = async ({ force = false } = {})=>{
@@ -22319,6 +22879,34 @@ console.info('app.js loaded :: 20251123a');
       setAddBandExpanded(willExpand, { remember: true, focus: willExpand, behavior: 'smooth', block: 'start' });
     });
 
+    els.migrationReviewBtn?.addEventListener('click', ()=>{
+      uiState.operatorsMigrationPreviewResult = null;
+      setMigrationModalStatus('secondary', 'Generando previsualización...');
+      renderMigrationModalList(els.migrationModalMigratable, [], null, 'Cargando...');
+      renderMigrationModalList(els.migrationModalConflicts, [], null, 'Cargando...');
+      renderMigrationModalList(els.migrationModalWarnings, [], null, 'Cargando...');
+      if(els.migrationModalSummary){
+        els.migrationModalSummary.textContent = '';
+      }
+      showMigrationModal();
+      requestMigrationPreview().catch(()=> null);
+    });
+
+    els.migrationDismissBtn?.addEventListener('click', ()=>{
+      const doctorId = clean(uiState.operatorsReadThroughDoctorId || resolveOperatorsDoctorId());
+      if(doctorId){
+        writeMigrationSessionState(doctorId, { dismissed: true });
+        uiState.operatorsMigrationNoticeDismissed = true;
+        uiState.operatorsMigrationNoticeDoctorId = doctorId;
+      }
+      renderMigrationNotice();
+    });
+
+    els.migrationModalApplyBtn?.addEventListener('click', ()=>{
+      if(uiState.operatorsMigrationApplyLoading || uiState.operatorsMigrationPreviewLoading) return;
+      applyMigrationFromPreview().catch(()=> null);
+    });
+
     els.emptyCta?.addEventListener('click', ()=>{
       startCreateFlow();
     });
@@ -22624,6 +23212,18 @@ console.info('app.js loaded :: 20251123a');
       });
       els.historyModalEl.addEventListener('hidden.bs.modal', ()=>{
         historyState.activeOperatorId = '';
+      });
+    }
+
+    if(els.migrationModalEl){
+      els.migrationModalEl.addEventListener('click', (event)=>{
+        const dismissTrigger = event.target.closest('[data-bs-dismiss="modal"]');
+        if(!dismissTrigger || window.bootstrap?.Modal) return;
+        hideMigrationModal();
+      });
+      els.migrationModalEl.addEventListener('hidden.bs.modal', ()=>{
+        uiState.operatorsMigrationPreviewLoading = false;
+        uiState.operatorsMigrationApplyLoading = false;
       });
     }
 
