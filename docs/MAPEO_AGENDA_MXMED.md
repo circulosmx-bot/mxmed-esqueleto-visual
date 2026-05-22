@@ -316,6 +316,20 @@ Estado actualizado:
   - payload legacy sin actor sigue funcionando.
   - si la tabla no tiene columnas actor, se usa fallback seguro en `notes` JSON.
   - respuestas waitlist hidratan campos canónicos de actor de forma aditiva.
+- F2.5E2 cerrado:
+  - `POST /waitlist/{id}/assign` mantiene flujo operativo (crea cita y confirma entry).
+  - genera `appointment_created` y `appointment_reassigned_from_waitlist` sin duplicidad.
+  - `appointment_reassigned_from_waitlist` ahora guarda `notes` JSON estructurado.
+  - metadata esperada incluye:
+    - `source=waitlist_assign`
+    - `waitlist_entry_id`
+    - `consultorio_id`
+    - `assigned_slot.start_at`
+    - `assigned_slot.end_at`
+    - `assigned_slot.slot_minutes`
+    - `actor_display_name` si aplica
+    - `linked_cancelled_appointment_id` y `override/override_reason` si aplica
+  - status `confirmed` de waitlist recibe audit payload compatible (`waitlist_assigned`).
 
 Decision documental:
 - Mantener compatibilidad backward.
@@ -326,12 +340,12 @@ Commits relevantes F2.5:
 - `62e170a` persistencia actor en eventos de reprogramación (F2.5C mínimo).
 - `3df2255` DTO uniforme aditivo en events (F2.5D).
 - `be3f86c` actor attribution compatible en `POST/PATCH /waitlist` (F2.5E1).
+- `1e455cb` estandariza auditoría explícita de `waitlist assign` (F2.5E2).
 - `8af3e7b` fix Semana corte horario (relacionado por QA, fuera del contrato de auditoría).
 
 ## 11. Pendiente inmediato F2.5E
 
-- E2: estandarización completa de auditoría de waitlist assign (flujo actual funcional y parcialmente cubierto vía appointment events).
-- Auditoría de bloqueos/desbloqueos de disponibilidad.
+- E3+: auditoría de bloqueos/desbloqueos de disponibilidad.
 - Definición de persistencia backend para eventos de bloqueo (si aplica).
 - Actor attribution integral para availability/block events.
 - Política de visibilidad de auditoría por rol.

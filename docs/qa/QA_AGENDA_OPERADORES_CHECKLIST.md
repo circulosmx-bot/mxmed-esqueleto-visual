@@ -253,5 +253,26 @@ Resultado consolidado: **PASS**.
 - [x] Respuestas waitlist hidratan campos canónicos (`actor_*`, `created_by_*`, `action`, `entity_*`, `occurred_at`, `metadata`).
 
 Pendiente F2.5E2+:
-- [ ] Estandarización completa de auditoría de waitlist assign.
 - [ ] Auditoría backend canónica de bloqueos/desbloqueos (`availability_blocked` / `availability_unblocked`).
+
+## L) Cierre F2.5E2 (waitlist assign audit explícita)
+
+Resultado consolidado: **PASS**.
+
+- [x] `POST /waitlist/{id}/assign` mantiene flujo operativo (crea cita + confirma entry).
+- [x] `appointment_created` desde assign conserva actor attribution.
+- [x] `appointment_reassigned_from_waitlist` conserva `actor_role`, `actor_id`, `channel_origin`.
+- [x] `appointment_reassigned_from_waitlist` usa `notes` JSON estructurado.
+- [x] `GET /appointments/{id}/events` expone metadata estructurada con:
+  - `source=waitlist_assign`
+  - `waitlist_entry_id`
+  - `consultorio_id`
+  - `assigned_slot.start_at`
+  - `assigned_slot.end_at`
+  - `assigned_slot.slot_minutes`
+  - `actor_display_name` si existe
+  - `linked_cancelled_appointment_id` si aplica
+  - `override` / `override_reason` si aplica
+- [x] assign legacy sin actor sigue funcionando por fallback compatible.
+- [x] `POST/PATCH /waitlist` (F2.5E1) sin regresión.
+- [x] `php -l` de `WaitlistController.php` y `AppointmentWriteRepository.php` en PASS.

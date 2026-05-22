@@ -1,7 +1,7 @@
 # AGENDA · CONTRATO DE AUDITORIA Y ACTOR ATTRIBUTION · MXMED
 
 Fecha: 2026-05-21  
-Estado: F2.5B-F2.5E1 cerrado (payload frontend + persistencia backend + DTO uniforme events + waitlist create/update actor attribution)
+Estado: F2.5B-F2.5E2 cerrado (payload frontend + persistencia backend + DTO uniforme events + waitlist create/update + waitlist assign audit explicita)
 
 ## 1) Estado actual
 
@@ -147,7 +147,23 @@ Regla:
   - Compatibilidad legacy preservada para payloads sin actor.
   - En instancias sin columnas actor en `agenda_waitlist_entries`, se usa fallback seguro en `notes` JSON.
   - Respuestas de waitlist hidratan campos canónicos (`actor_*`, `created_by_*`, `action`, `entity_*`, `occurred_at`, `metadata`).
-- F2.5E2-E5: pendiente.
+- F2.5E2: cerrado.
+  - `POST /waitlist/{id}/assign` mantiene flujo operativo: crea cita + genera `appointment_created` + genera `appointment_reassigned_from_waitlist`.
+  - `appointment_created` desde assign conserva actor attribution.
+  - `appointment_reassigned_from_waitlist` conserva `actor_role`, `actor_id`, `channel_origin`.
+  - `appointment_reassigned_from_waitlist` usa `notes` JSON estructurado.
+  - `metadata` resultante incluye:
+    - `source=waitlist_assign`
+    - `waitlist_entry_id`
+    - `consultorio_id`
+    - `assigned_slot.start_at`
+    - `assigned_slot.end_at`
+    - `assigned_slot.slot_minutes`
+    - `actor_display_name` si existe
+    - `linked_cancelled_appointment_id` si aplica
+    - `override` / `override_reason` si aplica
+  - el cambio de estado waitlist a `confirmed` recibe audit payload compatible (`waitlist_assigned`).
+- F2.5E3-E5: pendiente.
 - F2.5F: pendiente.
 
 ## 9) QA ejecutado y pendiente
@@ -168,7 +184,6 @@ Pendiente para F2.5E/F2.5F:
 - ai_operator crea/reserva.
 - `GET /appointments/{id}/events` muestra actor consistente.
 - pruebas negativas de spoofing documentadas como limitacion actual hasta identidad fuerte.
-- waitlist assign con estandarización completa de auditoría (actualmente funcional y parcialmente cubierto).
 - auditoría canónica de bloqueos/desbloqueos (`availability_blocked` / `availability_unblocked`) pendiente por persistencia backend de bloqueos.
 
 ## 10) Commits relevantes
@@ -178,6 +193,7 @@ Pendiente para F2.5E/F2.5F:
 - `3df2255` DTO uniforme aditivo en `GET /appointments/{id}/events` (F2.5D)
 - `8af3e7b` fix corte horario semanal (separado; relacionado por interrupcion de QA, no parte del contrato de auditoria)
 - `be3f86c` actor attribution compatible en `POST/PATCH /waitlist` (F2.5E1)
+- `1e455cb` estandarización explícita de auditoría en `waitlist assign` (F2.5E2)
 
 ## 11) Riesgos y guardrails
 
@@ -195,7 +211,7 @@ Pendiente para F2.5E/F2.5F:
 
 ## 13) Pendiente inmediato (F2.5E)
 
-- Auditoria completa de waitlist (beyond assign puntual).
+- Auditoria waitlist residual (si se amplía visibilidad por rol o nuevos eventos dedicados).
 - Auditoria de bloqueos/desbloqueos.
 - Estrategia de persistencia backend de bloqueos (si aplica).
 - Actor attribution para eventos de disponibilidad/bloqueo.
