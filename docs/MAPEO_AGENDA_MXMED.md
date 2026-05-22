@@ -411,3 +411,36 @@ Plan vinculado:
 - F3.4 endurecimiento de overrides por entorno.
 - F3.5 consumo frontend de actor efectivo.
 - F3.6 QA integral strict/compat/public/spoofing.
+
+## 14. Adenda F3.2A (implementación backend actor efectivo)
+
+Estado: **cerrado**.
+
+Implementación:
+- `api/agenda/index.php`
+- helper: `resolveEffectiveAgendaActor(...)`
+- commit: `82f6320`
+
+Contexto efectivo ya resuelto en backend (aditivo):
+- `actor_role`
+- `actor_id`
+- `doctor_id`
+- `operator_id`
+- `channel_origin`
+- `auth_source`
+- `auth_mode`
+- `is_authoritative`
+- `actor_role_source`
+- `warnings`
+- `mode/strict/compat/user_id`
+
+Compatibilidad funcional validada:
+- fallback `doctor` sin actor explícito.
+- header/query/body siguen operativos en compat/QA.
+- RBAC F2.3 sin cambios de comportamiento.
+- `public/*` permanece estable (`public_flow`).
+
+Pendiente post F3.2A:
+- Validar `operator` activo contra `agenda_operators`.
+- Endurecer strict/anti-spoofing.
+- Exponer observabilidad adicional en meta si se decide F3.2B.

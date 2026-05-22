@@ -228,6 +228,30 @@ Meta objetivo para trazabilidad:
 Regla de interpretación de eventos:
 - Mientras no cierre F3.2-F3.4, eventos con actor siguen siendo funcionalmente útiles para operación/QA, pero no equivalen a no repudio de identidad.
 
+## 16) Cierre F3.2A (actor efectivo para auditoría en compat/QA)
+
+Implementación relevante:
+- `82f6320` `feat(agenda): agrega actor efectivo compat para auditoria`
+- Archivo: `api/agenda/index.php`
+
+Impacto sobre auditoría:
+- Backend ya resuelve contexto de actor efectivo con:
+  - `actor_role`, `actor_id`, `doctor_id`, `operator_id`, `channel_origin`
+  - `auth_source`, `auth_mode`, `is_authoritative`
+  - más claves legacy (`mode`, `strict`, `compat`, `user_id`, `warnings`)
+- No cambia writes/eventos por sí mismo, pero estandariza la fuente contextual para fases siguientes.
+
+Compatibilidad preservada:
+- Fallback `doctor` en `compat`.
+- Header/query/body siguen vigentes en QA/compat.
+- RBAC actual sin regresión.
+- Rutas públicas sin ruptura.
+
+Limitaciones vigentes:
+- Sin validación autoritativa de `operator_id` contra `agenda_operators`.
+- Sin enforcement por estado de operador.
+- `strict` fuerte y anti-spoofing completo siguen pendientes.
+
 ## 13) Pendiente inmediato (F2.5E)
 
 - Auditoria waitlist residual (si se amplía visibilidad por rol o nuevos eventos dedicados).

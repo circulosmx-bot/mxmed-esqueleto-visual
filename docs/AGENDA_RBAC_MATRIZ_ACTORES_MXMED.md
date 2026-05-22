@@ -269,6 +269,28 @@ Regla RBAC futura para `operator` en modo estricto:
 Pendiente de implementación (F3.2+):
 - Resolver actor autoritativo en backend y acoplar enforcement a identidad fuerte.
 
+## 14. Adenda F3.2A (actor efectivo backend compat/QA)
+
+Estado:
+- Cerrado en backend con helper central (`api/agenda/index.php`, commit `82f6320`).
+
+Alcance implementado:
+- Se introduce `resolveEffectiveAgendaActor(...)` para construir contexto efectivo aditivo.
+- Se mantienen claves legacy y se agregan metadatos de actor:
+  - `actor_role`, `actor_id`, `doctor_id`, `operator_id`, `channel_origin`,
+  - `auth_source`, `auth_mode`, `is_authoritative`,
+  - `actor_role_source`, `warnings`, `mode/strict/compat/user_id`.
+
+Compatibilidad:
+- No hay endurecimiento nuevo en F3.2A.
+- RBAC F2.3 mantiene las mismas reglas deny/allow.
+- Rutas `public/*` continúan sin afectación funcional.
+
+Pendiente para F3.3/F3.4:
+- Validación de `operator` activo real contra `agenda_operators`.
+- Bloqueo por estado (`paused`/`pending`/`archived`) en modo autoritativo.
+- Restricción de overrides header/query/body a QA/dev controlado.
+
 Siguiente fase sugerida:
 - F2.4 actores externos de Agenda (`patient`, `call_center`, `ai_operator`).
 - Alternativamente F2.5 para consolidar auditoría/actor attribution antes de ampliar actores.

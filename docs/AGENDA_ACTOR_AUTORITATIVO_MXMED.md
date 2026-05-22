@@ -1,7 +1,7 @@
 # AGENDA · FUENTE AUTORITATIVA DE ACTOR · MXMED
 
 Fecha: 2026-05-21  
-Estado: F3.1 documental (sin cambios funcionales)
+Estado: F3.2A cerrado (documentación + helper backend compat/QA)
 
 ## 1) Estado actual
 
@@ -131,3 +131,47 @@ Objetivo:
 2. Política exacta para marcar `is_authoritative` en `qa_override`.
 3. Contrato definitivo para `call_center` y `ai_operator`.
 4. Estrategia de rollout por entorno (local, QA, staging, producción).
+
+## 12) Cierre F3.2A (helper backend actor efectivo)
+
+Implementado en:
+- `api/agenda/index.php` (commit `82f6320`)
+
+Helper nuevo:
+- `resolveEffectiveAgendaActor(array $segments, string $method, array $query, array $body): array`
+
+Contexto de actor efectivo ahora disponible:
+- `actor_role`
+- `actor_id`
+- `doctor_id`
+- `operator_id`
+- `channel_origin`
+- `auth_source`
+- `auth_mode`
+- `is_authoritative`
+- `actor_role_source`
+- `warnings`
+- `mode`
+- `strict`
+- `compat`
+- `user_id`
+
+Compatibilidad confirmada:
+- Sin header/query/body actor se mantiene fallback `doctor` en `compat`.
+- Header/query/body siguen operativos en `compat`/`qa_override`.
+- RBAC F2.3 conserva comportamiento (sin nuevas rutas bloqueadas).
+- `public/*` no se rompe (`auth_mode=public_flow`).
+
+Limitaciones que permanecen (intencional F3.2A):
+- Aún no se valida `operator_id` contra `agenda_operators`.
+- Aún no se bloquea `operator` por estado (`paused`/`pending`/`archived`) vía fuente autoritativa.
+- Fuentes header/query siguen spoofeables fuera de `strict`.
+- Endurecimiento `strict` real queda para F3.3/F3.4.
+
+QA documentado (PASS):
+- Sin header => `compat doctor`.
+- `X-Actor-Role: operator` => `auth_source=header`.
+- `actor_role` por query con QA => `qa_override`.
+- Ruta pública => `public_flow`.
+- RBAC F2.3 sin regresión.
+- `php -l api/agenda/index.php` PASS.

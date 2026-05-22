@@ -328,3 +328,25 @@ Validaciones objetivo por modo (pendiente de implementación F3.2+):
 - [ ] `qa_override` solo funciona cuando QA/dev esté explícitamente habilitado.
 - [ ] `/public/*` sigue operativo sin contaminar RBAC privado.
 - [ ] Respuestas/auditoría incluyen metadatos de fuente (`auth_source`, `is_authoritative`, `auth_mode`) cuando F3.2 los exponga.
+
+## O) Cierre F3.2A (helper backend actor efectivo compat/QA)
+
+Resultado consolidado: **PASS**.
+
+- [x] Helper `resolveEffectiveAgendaActor(...)` implementado en `api/agenda/index.php` (`82f6320`).
+- [x] Contexto de actor incluye:
+  - `actor_role`, `actor_id`, `doctor_id`, `operator_id`, `channel_origin`
+  - `auth_source`, `auth_mode`, `is_authoritative`
+  - `actor_role_source`, `warnings`
+  - `mode`, `strict`, `compat`, `user_id`
+- [x] Sin header/query/body actor: fallback `doctor` en `compat`.
+- [x] `X-Actor-Role: operator`: actor resuelto desde header (`auth_source=header`).
+- [x] `actor_role` en query con QA activo: modo `qa_override`.
+- [x] Ruta pública (`/public/*`): `public_flow` sin ruptura.
+- [x] RBAC F2.3 sin regresión (deny/allow se mantiene).
+- [x] `php -l api/agenda/index.php` en PASS.
+
+Limitaciones vigentes (esperadas):
+- [ ] Validación autoritativa de `operator_id` contra `agenda_operators` (F3.3).
+- [ ] Bloqueo por estado `paused/pending/archived` en modo autoritativo (F3.3+).
+- [ ] Endurecimiento anti-spoofing completo fuera de QA/dev (F3.4).
