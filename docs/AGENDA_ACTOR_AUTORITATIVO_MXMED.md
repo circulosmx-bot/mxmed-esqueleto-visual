@@ -1,7 +1,7 @@
 # AGENDA · FUENTE AUTORITATIVA DE ACTOR · MXMED
 
-Fecha: 2026-05-21  
-Estado: F3.2A cerrado (documentación + helper backend compat/QA)
+Fecha: 2026-05-22  
+Estado: F3.3C-B cerrado (enforcement strict operador activo implementado + QA post-enforcement PASS, con pendientes controlados)
 
 ## 1) Estado actual
 
@@ -15,7 +15,7 @@ Estado: F3.2A cerrado (documentación + helper backend compat/QA)
   - fallback `doctor`
 - El backend puede operar en `compat` si no se activa modo estricto por entorno.
 - El frontend usa contexto no autoritativo para UX (`mxmedStore`, dataset, `mxmedResolveActiveProfessionalContext`).
-- Operadores existen en backend (`agenda_operators`), pero aún no se valida de forma autoritativa que un actor `operator` corresponda a un operador activo real ligado al `doctor_id` efectivo.
+- Operadores existen en backend (`agenda_operators`) y ya existe enforcement real en `strict` para rutas privadas operativas elegibles cuando `actor_role=operator`.
 
 ## 2) Problema
 
@@ -76,7 +76,7 @@ Notas:
 - Debe estar en estado `active`.
 - `doctor_id` del operador debe coincidir con el scope efectivo.
 - `paused`, `pending` o `archived` no deben operar rutas privadas.
-- Si no se puede validar operador en `strict`, denegar (`403`).
+- Si no se puede validar operador en `strict`, denegar (`403`) o `503` para indisponibilidad de fuente de identidad.
 
 ## 6) Reglas para otros actores
 
@@ -215,11 +215,113 @@ Compatibilidad preservada:
 - RBAC F2.3 mantiene deny/allow existentes.
 - `public/*` sin afectación.
 
-Pendiente F3.3C:
-- Enforcement real en `strict`:
-  - `operator_id` obligatorio;
-  - operador existente;
-  - `doctor_id` consistente;
-  - `status=active` requerido;
-  - denegar `paused` / `pending` / `archived`.
-- Exponer observabilidad externa (`meta`) si se decide.
+Resultado F3.3C:
+- Enforcement real en `strict` ya activado para rutas elegibles de operador.
+- `operator_id` obligatorio, operador existente, `doctor_id` consistente y `status=active` requerido en strict.
+- Operadores `paused` / `pending` / `archived` quedan bloqueados en strict (`403`).
+- Observabilidad QA del guard strict ya expuesta bajo `X-QA-Mode: ready`.
+
+## 14) Cierre F3.3C (strict operator enforcement)
+
+Implementado y validado en commits:
+- `018a18a` `feat(agenda): prepara guard strict operator dry-run`
+- `8b877a4` `feat(agenda): expone meta qa para guard strict operator`
+- `4070629` `feat(agenda): activa enforcement strict para operador`
+
+### 14.1 Qué quedó protegido
+
+En `auth_mode=strict`, cuando `actor_role=operator` y la ruta privada es elegible, Agenda aplica enforcement real de identidad de operador antes del controller.
+
+Rutas privadas elegibles:
+- `appointments` (read/write operativo de agenda privada)
+- `availability` solo `GET`
+- `waitlist` `GET/POST/PATCH`
+- `consultorios` solo `GET`
+
+Rutas y modos no afectados:
+- `public/*`
+- `compat`
+- `qa_override`
+- actor `doctor`
+- RBAC F2.3 existente (`/operators`, `settings`, `schedule`, `geocode`)
+
+### 14.2 Diferencia por fase
+
+F3.3C-A (dry-run estructural):
+- Evalúa identidad strict para operador.
+- Marca `would_block` y `reason`.
+- No bloquea ni cambia HTTP.
+
+F3.3C-A2 (observabilidad QA mínima):
+- En QA (`X-QA-Mode: ready`) expone meta del guard strict.
+- Mantiene sin bloqueo real.
+
+F3.3C-B (enforcement real):
+- Activa salida temprana en strict cuando `would_block=true`.
+- Mantiene observabilidad QA en respuestas permitidas y bloqueadas.
+
+### 14.3 Reglas strict activas
+
+Para rutas elegibles y `actor_role=operator`:
+- `missing_operator_id` => `403`
+- `operator_not_found` => `403`
+- `doctor_mismatch` => `403`
+- `status_not_active` (`paused`/`pending`/`archived`) => `403`
+- `operator_identity_db_not_ready` => `503` (preparado en enforcement)
+
+### 14.4 JSON esperado (enforcement)
+
+`403 forbidden_operator_identity`:
+
+```json
+{
+  "ok": false,
+  "error": "forbidden_operator_identity",
+  "message": "forbidden for actor role"
+}
+```
+
+`503 operator_identity_unavailable`:
+
+```json
+{
+  "ok": false,
+  "error": "operator_identity_unavailable",
+  "message": "operator identity source unavailable"
+}
+```
+
+### 14.5 Observabilidad QA (A2 + B)
+
+Con `X-QA-Mode: ready` en rutas privadas no públicas:
+- `strict_operator_guard_checked`
+- `strict_operator_guard_mode`
+- `strict_operator_would_block`
+- `strict_operator_block_reason`
+- `strict_operator_http_status_future`
+
+Notas:
+- No se exponen alias/login/nombre ni datos internos sensibles.
+- En `public/*` no se agregan campos strict.
+
+### 14.6 Matriz QA final resumida
+
+- strict + operator active => allowed (200), `checked=true`, `would_block=false`.
+- strict + operator paused => `403` (`forbidden_operator_identity`).
+- strict + operator archived => `403`.
+- strict + missing `operator_id` => `403`.
+- strict + wrong doctor => `403`.
+- compat + operator inválido => allowed (200) como antes.
+- qa_override + operator inválido => allowed (200) como antes.
+- doctor + strict => allowed (200).
+- public availability => allowed (200), sin campos strict.
+- RBAC F2.3 (`/operators`, `settings`, `schedule`, `geocode`) => sin regresión.
+
+### 14.7 Riesgos y pendientes conocidos
+
+- `operator_identity_db_not_ready -> 503` está implementado pero pendiente de validación controlada en QA.
+- Smoke UI strict con sesión real queda pendiente fuera de CLI con servidor embebido de un solo hilo.
+
+### 14.8 Estado final F3.3C
+
+F3.3C enforcement strict para operador activo queda implementado y validado en API, con compatibilidad preservada para `compat`, `qa_override`, `doctor`, `public/*` y RBAC F2.3 existente.
