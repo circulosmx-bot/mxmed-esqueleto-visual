@@ -144,18 +144,43 @@ class AppointmentWriteRepository
 
     private function buildWaitlistEventNotes(array $payload, array $entry): string
     {
-        $parts = [];
-        if (!empty($payload['override']) && $payload['override']) {
-            $parts[] = 'override forced';
+        $structured = [
+            'source' => 'waitlist_assign',
+            'waitlist_entry_id' => trim((string)($entry['id'] ?? '')) ?: null,
+            'consultorio_id' => trim((string)($payload['consultorio_id'] ?? $entry['consultorio_id'] ?? '')) ?: null,
+            'assigned_slot' => [
+                'start_at' => trim((string)($payload['start_at'] ?? '')) ?: null,
+                'end_at' => trim((string)($payload['end_at'] ?? '')) ?: null,
+                'slot_minutes' => isset($payload['slot_minutes']) ? (int)$payload['slot_minutes'] : null,
+            ],
+            'actor_display_name' => trim((string)($payload['actor_display_name'] ?? '')) ?: null,
+            'override' => !empty($payload['override']),
+            'override_reason' => trim((string)($payload['override_reason'] ?? '')) ?: null,
+            'linked_cancelled_appointment_id' => trim((string)($payload['linked_cancelled_appointment_id'] ?? '')) ?: null,
+            'entry_notes' => trim((string)($entry['notes'] ?? '')) ?: null,
+            'action' => trim((string)($payload['action'] ?? 'waitlist_assigned')) ?: 'waitlist_assigned',
+            'entity_type' => trim((string)($payload['entity_type'] ?? 'waitlist_entry')) ?: 'waitlist_entry',
+            'entity_id' => trim((string)($payload['entity_id'] ?? $entry['id'] ?? '')) ?: null,
+            'occurred_at' => trim((string)($payload['occurred_at'] ?? '')) ?: null,
+        ];
+
+        $encoded = json_encode($structured, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($encoded !== false) {
+            return $encoded;
         }
-        if (!empty($payload['override_reason'])) {
-            $parts[] = 'razón: ' . $payload['override_reason'];
+
+        $parts = ['source=waitlist_assign'];
+        if (!empty($structured['waitlist_entry_id'])) {
+            $parts[] = 'waitlist_entry_id:' . $structured['waitlist_entry_id'];
         }
-        if (!empty($payload['linked_cancelled_appointment_id'])) {
-            $parts[] = 'linked_cancelled:' . $payload['linked_cancelled_appointment_id'];
+        if (!empty($structured['consultorio_id'])) {
+            $parts[] = 'consultorio_id:' . $structured['consultorio_id'];
         }
-        if (!empty($entry['notes'])) {
-            $parts[] = 'entry_notes:' . $entry['notes'];
+        if (!empty($structured['assigned_slot']['start_at']) || !empty($structured['assigned_slot']['end_at'])) {
+            $parts[] = 'assigned_slot:' . ($structured['assigned_slot']['start_at'] ?? '') . '->' . ($structured['assigned_slot']['end_at'] ?? '');
+        }
+        if (!empty($structured['linked_cancelled_appointment_id'])) {
+            $parts[] = 'linked_cancelled:' . $structured['linked_cancelled_appointment_id'];
         }
         return implode(' | ', $parts);
     }

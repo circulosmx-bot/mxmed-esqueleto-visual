@@ -196,6 +196,21 @@ class WaitlistController
             return $this->error((string)$doctorScope['error'], (string)$doctorScope['message'], (array)($doctorScope['meta'] ?? []));
         }
         $payload['doctor_id'] = (string)$doctorScope['doctor_id'];
+        $assignAudit = $this->resolveWaitlistActorAuditPayload($payload, 'waitlist_assigned', $id);
+        $payload['actor_role'] = $assignAudit['actor_role'] ?? ($payload['actor_role'] ?? null);
+        $payload['actor_id'] = $assignAudit['actor_id'] ?? ($payload['actor_id'] ?? null);
+        $payload['actor_display_name'] = $assignAudit['actor_display_name'] ?? ($payload['actor_display_name'] ?? null);
+        $payload['channel_origin'] = $assignAudit['channel_origin'] ?? ($payload['channel_origin'] ?? null);
+        $payload['created_by_role'] = $assignAudit['created_by_role'] ?? ($payload['created_by_role'] ?? null);
+        $payload['created_by_id'] = $assignAudit['created_by_id'] ?? ($payload['created_by_id'] ?? null);
+        $payload['action'] = $assignAudit['action'] ?? ($payload['action'] ?? null);
+        $payload['entity_type'] = $assignAudit['entity_type'] ?? ($payload['entity_type'] ?? null);
+        $payload['entity_id'] = $assignAudit['entity_id'] ?? ($payload['entity_id'] ?? null);
+        $payload['occurred_at'] = $assignAudit['occurred_at'] ?? ($payload['occurred_at'] ?? null);
+        $payload['metadata'] = array_merge(
+            is_array($payload['metadata'] ?? null) ? $payload['metadata'] : [],
+            is_array($assignAudit['metadata'] ?? null) ? $assignAudit['metadata'] : []
+        );
         $errors = $this->validateAssign($payload);
         if (!empty($errors)) {
             return $this->error('invalid_params', 'invalid payload for waitlist assign', $errors);
@@ -246,9 +261,9 @@ class WaitlistController
             'slot_minutes' => $payload['slot_minutes'],
             'modality' => $payload['modality'] ?? 'waitlist',
             'patient_id' => $patientId,
-            'channel_origin' => $payload['channel_origin'],
-            'created_by_role' => $payload['actor_role'],
-            'created_by_id' => $payload['actor_id'],
+            'channel_origin' => $assignAudit['channel_origin'],
+            'created_by_role' => $assignAudit['created_by_role'],
+            'created_by_id' => $assignAudit['created_by_id'],
         ];
 
         try {
@@ -282,8 +297,23 @@ class WaitlistController
             return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
         }
 
+        $statusAudit = $assignAudit;
+        $statusAudit['metadata'] = array_merge(
+            is_array($assignAudit['metadata'] ?? null) ? $assignAudit['metadata'] : [],
+            [
+                'source' => 'waitlist_assign',
+                'waitlist_entry_id' => $id,
+                'consultorio_id' => (string)$payload['consultorio_id'],
+                'appointment_id' => (string)($result['appointment_id'] ?? ''),
+                'assigned_slot' => [
+                    'start_at' => (string)($payload['start_at'] ?? ''),
+                    'end_at' => (string)($payload['end_at'] ?? ''),
+                    'slot_minutes' => (int)($payload['slot_minutes'] ?? 0),
+                ],
+            ]
+        );
         try {
-            $entry = $this->repository->updateStatus($id, 'confirmed');
+            $entry = $this->repository->updateStatus($id, 'confirmed', $statusAudit);
         } catch (RuntimeException $e) {
             return $this->error('db_error', 'database error');
         }
