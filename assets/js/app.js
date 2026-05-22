@@ -13416,7 +13416,7 @@ console.info('app.js loaded :: 20251123a');
     setCreateError('');
     clearCreatePatientBehaviorNotice();
     syncActivePatientPrompt();
-    switchCreatePatientMode('existing');
+    switchCreatePatientMode('new');
     if(els.patientId) els.patientId.value = '';
     if(els.startInfoTime) els.startInfoTime.textContent = '--:--';
     if(els.startInfoDate) els.startInfoDate.textContent = '--';
