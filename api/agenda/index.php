@@ -737,16 +737,13 @@ function buildAgendaStrictOperatorEnforcementResponse(
         'operator_strict_reason' => trim((string)($decision['reason'] ?? '')),
     ];
     $status = (int)($decision['status'] ?? 403);
-    $error = trim((string)($decision['error'] ?? 'forbidden'));
-    $message = trim((string)($decision['message'] ?? 'forbidden'));
-
-    if ($error === 'db_not_ready') {
+    if ($status === 503) {
         return [
-            'status' => $status,
+            'status' => 503,
             'response' => [
                 'ok' => false,
-                'error' => 'db_not_ready',
-                'message' => $message !== '' ? $message : 'operators tables not ready',
+                'error' => 'operator_identity_unavailable',
+                'message' => 'operator identity source unavailable',
                 'data' => null,
                 'meta' => (object)$meta,
             ],
@@ -754,8 +751,14 @@ function buildAgendaStrictOperatorEnforcementResponse(
     }
 
     return [
-        'status' => $status,
-        'response' => forbidden_response($message !== '' ? $message : 'forbidden', $meta),
+        'status' => 403,
+        'response' => [
+            'ok' => false,
+            'error' => 'forbidden_operator_identity',
+            'message' => 'forbidden for actor role',
+            'data' => null,
+            'meta' => (object)$meta,
+        ],
     ];
 }
 
@@ -986,11 +989,17 @@ try {
             $actorContext,
             $segments,
             (string)$method,
-            false
+            true
         );
         $actorContext = (array)($strictOperatorGuard['context'] ?? $actorContext);
         if ((bool)($strictOperatorGuard['blocked'] ?? false)) {
             $response = normalize_response($strictOperatorGuard['response'] ?? forbidden_response('forbidden'));
+            $response = appendAgendaQaStrictGuardMeta($response, $actorContext, (string)$qaMode, $segments);
+            if ($qaMode !== '') {
+                $metaArr = (array)$response['meta'];
+                $metaArr['qa_mode_seen'] = $qaMode;
+                $response['meta'] = (object)$metaArr;
+            }
             http_response_code((int)($strictOperatorGuard['status'] ?? 403));
             $json = json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             if ($json === false) {
