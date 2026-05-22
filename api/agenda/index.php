@@ -834,6 +834,60 @@ function resolveAgendaStrictOperatorGuard(
     ];
 }
 
+function shouldExposeAgendaQaStrictGuard(string $qaMode, array $segments): bool
+{
+    $mode = strtolower(trim($qaMode));
+    if ($mode !== 'ready') {
+        return false;
+    }
+    if (is_public_agenda_route($segments)) {
+        return false;
+    }
+    if (!is_private_agenda_route($segments)) {
+        return false;
+    }
+    return true;
+}
+
+function appendAgendaQaStrictGuardMeta(
+    array $response,
+    array $actorContext,
+    string $qaMode,
+    array $segments
+): array {
+    if (!shouldExposeAgendaQaStrictGuard($qaMode, $segments)) {
+        return $response;
+    }
+    if (!array_key_exists('operator_strict_guard_mode', $actorContext)) {
+        return $response;
+    }
+
+    $meta = (array)($response['meta'] ?? []);
+    $authMode = trim((string)($actorContext['auth_mode'] ?? ''));
+    if ($authMode !== '') {
+        // Localized QA visibility fix: prefer resolved auth_mode over legacy mode.
+        $meta['auth_mode'] = $authMode;
+    }
+
+    $futureStatusRaw = $actorContext['operator_strict_guard_http_status'] ?? null;
+    $futureStatus = (is_int($futureStatusRaw) || ctype_digit((string)$futureStatusRaw))
+        ? (int)$futureStatusRaw
+        : null;
+    if ($futureStatus !== null && $futureStatus <= 0) {
+        $futureStatus = null;
+    }
+    $reason = trim((string)($actorContext['operator_strict_guard_reason'] ?? ''));
+
+    $meta['strict_operator_guard_checked'] = (bool)($actorContext['operator_strict_guard_checked'] ?? false);
+    $meta['strict_operator_guard_mode'] = trim((string)($actorContext['operator_strict_guard_mode'] ?? 'dry_run'));
+    $meta['strict_operator_would_block'] = (bool)($actorContext['operator_strict_guard_would_block'] ?? false);
+    $meta['strict_operator_block_reason'] = ($reason !== '' ? $reason : null);
+    $meta['strict_operator_http_status_future'] = $futureStatus;
+
+    $response['meta'] = (object)$meta;
+    return $response;
+}
+
 function apply_actor_context($controller, array $actorContext): void
 {
     if (is_object($controller) && method_exists($controller, 'setActorContext')) {
@@ -1263,6 +1317,10 @@ try {
 }
 
     $response = normalize_response($response);
+    if (isset($actorContext) && is_array($actorContext)) {
+        $segmentsForMeta = (isset($segments) && is_array($segments)) ? $segments : [];
+        $response = appendAgendaQaStrictGuardMeta($response, $actorContext, (string)$qaMode, $segmentsForMeta);
+    }
 
     if ($qaMode === 'not_ready'
         && isset($response['error'], $response['message'])
