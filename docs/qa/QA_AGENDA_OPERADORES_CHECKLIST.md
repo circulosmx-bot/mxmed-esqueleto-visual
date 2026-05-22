@@ -210,3 +210,31 @@ Validaciones de QA a ejecutar en fases F2.5B-F2.5F:
 - [ ] patient/call_center/ai_operator registran actor y canal esperado en rutas autorizadas.
 - [ ] `GET /appointments/{id}/events` expone attribution consistente en DTO final (cuando F2.5D cierre).
 - [ ] spoofing de `actor_role`/`created_by_role`/`channel_origin` se valida con identidad autoritativa (pendiente de fase posterior).
+
+## J) Cierre F2.5B-F2.5D (payload + persistencia + DTO events)
+
+Resultado consolidado: **PASS**.
+
+- [x] Frontend (`create/reschedule/cancel/no_show`) envía modelo legacy + canónico.
+- [x] Frontend waitlist assign envía actor attribution compatible.
+- [x] Alta médica equivalente conserva `channel_origin` y agrega actor canónico.
+- [x] Backend write de reprogramación persiste `actor_role`, `actor_id`, `channel_origin`.
+- [x] Create/cancel/no_show mantienen persistencia de actor sin regresión.
+- [x] `GET /appointments/{id}/events` agrega DTO uniforme aditivo:
+  - `action`
+  - `entity_type`
+  - `entity_id`
+  - `occurred_at`
+  - `created_by_role`
+  - `created_by_id`
+  - `actor_display_name`
+  - `metadata`
+- [x] Campos legacy se conservan (incluye `event_type`, `timestamp`, `notes`, `actor_role`, `actor_id`, `channel_origin`).
+- [x] `notes` sigue como string raw.
+- [x] `notes` JSON se refleja también en `metadata`.
+- [x] `notes` no JSON se refleja como `metadata.notes_text`.
+- [x] Reschedule conserva `from_consultorio_id`/`to_consultorio_id` en top-level y metadata.
+- [x] UI real create/reschedule/cancel validada en runtime.
+- [x] API runtime no_show/waitlist/alta equivalente validada.
+- [x] Smoke Semana/Día PASS.
+- [x] Fix Semana de corte horario validado en commit separado `8af3e7b`.

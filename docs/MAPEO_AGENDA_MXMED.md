@@ -292,16 +292,39 @@ Nota:
   - identidad autoritativa (sesión/JWT/API key);
   - auditoría unificada por actor en todas las acciones.
 
-## 10. Adenda F2.5A (auditoria / actor attribution)
+## 10. Adenda F2.5 (auditoria / actor attribution)
 
 Referencia:
 - `docs/AGENDA_AUDITORIA_ACTOR_ATTRIBUTION_MXMED.md`
 
-Estado actual documentado:
-- `create appointment` usa principalmente `created_by_role`, `created_by_id`, `channel_origin`.
-- Mutaciones operativas usan principalmente `actor_role`, `actor_id`, `channel_origin`.
-- `GET /appointments/{id}/events` expone eventos mayormente raw (sin DTO uniforme transversal).
+Estado actualizado:
+- F2.5B cerrado:
+  - payload frontend normalizado para create/reschedule/cancel/no_show/waitlist assign/alta equivalente.
+  - compatibilidad legacy preservada (`created_by_*`, `channel_origin`).
+  - campos canónicos agregados (`actor_*`, `action`, `entity_*`, `occurred_at`, `metadata`).
+- F2.5C cerrado:
+  - persistencia backend de actor en writes de citas, incluyendo `appointment_rescheduled`.
+  - conservación de trazabilidad `from_consultorio_id` / `to_consultorio_id`.
+- F2.5D cerrado:
+  - `GET /appointments/{id}/events` con DTO uniforme aditivo.
+  - preserva campos raw/legacy.
+  - agrega `action`, `entity_type`, `entity_id`, `occurred_at`, `created_by_role`, `created_by_id`, `actor_display_name`, `metadata`.
+  - `notes` sigue string raw; `metadata` deriva de `notes` JSON o `notes_text` cuando no es JSON.
 
 Decision documental:
 - Mantener compatibilidad backward.
 - Converger a contrato canonico por fases (F2.5B-F2.5F) sin romper flujos estabilizados.
+
+Commits relevantes F2.5:
+- `7d00d52` normalización frontend de payload actor (F2.5B).
+- `62e170a` persistencia actor en eventos de reprogramación (F2.5C mínimo).
+- `3df2255` DTO uniforme aditivo en events (F2.5D).
+- `8af3e7b` fix Semana corte horario (relacionado por QA, fuera del contrato de auditoría).
+
+## 11. Pendiente inmediato F2.5E
+
+- Auditoría homologada de waitlist completa.
+- Auditoría de bloqueos/desbloqueos de disponibilidad.
+- Definición de persistencia backend para eventos de bloqueo (si aplica).
+- Actor attribution integral para availability/block events.
+- Política de visibilidad de auditoría por rol.

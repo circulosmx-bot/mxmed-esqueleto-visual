@@ -1,7 +1,7 @@
 # AGENDA · CONTRATO DE AUDITORIA Y ACTOR ATTRIBUTION · MXMED
 
 Fecha: 2026-05-21  
-Estado: F2.5A documental (sin cambios funcionales)
+Estado: F2.5B-F2.5D cerrado (payload frontend + persistencia backend + DTO uniforme events)
 
 ## 1) Estado actual
 
@@ -94,17 +94,67 @@ Regla:
 | `operator_restored` | `operator` | requerido | requerido | requerido | reason |
 | `operator_migrated_from_local` | `operator` | `system` o actor invocador | `migration` | requerido | source local payload |
 
-## 8) Fases de implementacion (posteriores a F2.5A)
+## 8) Estado de implementacion por fase (actualizado)
 
-- F2.5B: normalizacion de payload frontend (sin romper compatibilidad).
-- F2.5C: persistencia backend unificada en eventos appointment/waitlist/bloqueos.
-- F2.5D: DTO uniforme en `GET /appointments/{id}/events`.
-- F2.5E: auditoria homologada para waitlist y bloqueos.
-- F2.5F: QA integral por actor/canal.
+- F2.5A: contrato documental base.
+- F2.5B: cerrado.
+  - Frontend normaliza payload de actor en:
+    - create appointment
+    - reschedule
+    - cancel
+    - no_show
+    - waitlist assign
+    - alta medica equivalente
+  - Compatibilidad preservada:
+    - `created_by_role`
+    - `created_by_id`
+    - `channel_origin`
+  - Canonico agregado en payload:
+    - `actor_role`
+    - `actor_id`
+    - `actor_display_name`
+    - `action`
+    - `entity_type`
+    - `entity_id`
+    - `occurred_at`
+    - `metadata`
+- F2.5C: cerrado.
+  - Backend normaliza actor attribution en writes de citas.
+  - `appointment_rescheduled` persiste:
+    - `actor_role`
+    - `actor_id`
+    - `channel_origin`
+  - `appointment_created`, `appointment_canceled` y `appointment_no_show` mantienen persistencia operativa de actor.
+  - Se conserva trazabilidad `from_consultorio_id` / `to_consultorio_id`.
+- F2.5D: cerrado.
+  - `GET /appointments/{id}/events` devuelve DTO uniforme aditivo por evento.
+  - Conserva campos raw/legacy existentes.
+  - Agrega:
+    - `action`
+    - `entity_type`
+    - `entity_id`
+    - `occurred_at`
+    - `created_by_role`
+    - `created_by_id`
+    - `actor_display_name`
+    - `metadata`
+  - `notes` se conserva como string raw.
+  - Si `notes` es JSON valido, tambien se expone como `metadata`.
+  - Si `notes` no es JSON, se expone como `metadata.notes_text`.
+- F2.5E: pendiente.
+- F2.5F: pendiente.
 
-## 9) QA propuesto
+## 9) QA ejecutado y pendiente
 
-Casos minimos:
+Validado (PASS):
+- UI real `create/reschedule/cancel` con payload normalizado.
+- API runtime para `no_show` y `waitlist assign` con actor attribution.
+- Flujo de alta medica equivalente con canal/origen preservado.
+- `GET /appointments/{id}/events` con DTO uniforme aditivo.
+- Smoke Semana/Dia PASS.
+- Ajuste de corte horario semanal validado y separado en commit `8af3e7b`.
+
+Pendiente para F2.5E/F2.5F:
 - doctor crea/reprograma/cancela/no_show.
 - operator crea/reprograma/cancela/no_show.
 - patient reserva publico.
@@ -113,16 +163,31 @@ Casos minimos:
 - `GET /appointments/{id}/events` muestra actor consistente.
 - pruebas negativas de spoofing documentadas como limitacion actual hasta identidad fuerte.
 
-## 10) Riesgos y guardrails
+## 10) Commits relevantes
+
+- `7d00d52` frontend actor payload (F2.5B)
+- `62e170a` persistencia actor en reprogramacion (F2.5C minimo)
+- `3df2255` DTO uniforme aditivo en `GET /appointments/{id}/events` (F2.5D)
+- `8af3e7b` fix corte horario semanal (separado; relacionado por interrupcion de QA, no parte del contrato de auditoria)
+
+## 11) Riesgos y guardrails
 
 - No romper compatibilidad de payloads actuales mientras se migra contrato.
 - No rechazar actores externos antes de homologar enums por endpoint.
 - No exponer datos sensibles de attribution en UI no autorizada.
 - No asumir identidad fuerte mientras actor provenga de headers/query/body.
 
-## 11) Decisiones pendientes
+## 12) Decisiones pendientes
 
 1. Fuente autoritativa final de actor (sesion/JWT/API key).
 2. Politica final de visibilidad de auditoria para `operator`.
 3. Cierre de alcance para `call_center` y `ai_operator` en cancel/reprogram.
 4. Contrato definitivo de auditoria para bloqueos si parte del flujo sigue en capa local.
+
+## 13) Pendiente inmediato (F2.5E)
+
+- Auditoria completa de waitlist (beyond assign puntual).
+- Auditoria de bloqueos/desbloqueos.
+- Estrategia de persistencia backend de bloqueos (si aplica).
+- Actor attribution para eventos de disponibilidad/bloqueo.
+- Reglas de visibilidad de auditoria por rol.
