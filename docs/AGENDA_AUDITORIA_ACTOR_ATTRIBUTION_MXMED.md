@@ -1,7 +1,7 @@
 # AGENDA · CONTRATO DE AUDITORIA Y ACTOR ATTRIBUTION · MXMED
 
 Fecha: 2026-05-21  
-Estado: F2.5B-F2.5D cerrado (payload frontend + persistencia backend + DTO uniforme events)
+Estado: F2.5B-F2.5E1 cerrado (payload frontend + persistencia backend + DTO uniforme events + waitlist create/update actor attribution)
 
 ## 1) Estado actual
 
@@ -141,7 +141,13 @@ Regla:
   - `notes` se conserva como string raw.
   - Si `notes` es JSON valido, tambien se expone como `metadata`.
   - Si `notes` no es JSON, se expone como `metadata.notes_text`.
-- F2.5E: pendiente.
+- F2.5E1: cerrado.
+  - `POST /waitlist` acepta y persiste actor attribution compatible.
+  - `PATCH /waitlist/{id}` acepta y persiste actor attribution compatible.
+  - Compatibilidad legacy preservada para payloads sin actor.
+  - En instancias sin columnas actor en `agenda_waitlist_entries`, se usa fallback seguro en `notes` JSON.
+  - Respuestas de waitlist hidratan campos canónicos (`actor_*`, `created_by_*`, `action`, `entity_*`, `occurred_at`, `metadata`).
+- F2.5E2-E5: pendiente.
 - F2.5F: pendiente.
 
 ## 9) QA ejecutado y pendiente
@@ -162,6 +168,8 @@ Pendiente para F2.5E/F2.5F:
 - ai_operator crea/reserva.
 - `GET /appointments/{id}/events` muestra actor consistente.
 - pruebas negativas de spoofing documentadas como limitacion actual hasta identidad fuerte.
+- waitlist assign con estandarización completa de auditoría (actualmente funcional y parcialmente cubierto).
+- auditoría canónica de bloqueos/desbloqueos (`availability_blocked` / `availability_unblocked`) pendiente por persistencia backend de bloqueos.
 
 ## 10) Commits relevantes
 
@@ -169,6 +177,7 @@ Pendiente para F2.5E/F2.5F:
 - `62e170a` persistencia actor en reprogramacion (F2.5C minimo)
 - `3df2255` DTO uniforme aditivo en `GET /appointments/{id}/events` (F2.5D)
 - `8af3e7b` fix corte horario semanal (separado; relacionado por interrupcion de QA, no parte del contrato de auditoria)
+- `be3f86c` actor attribution compatible en `POST/PATCH /waitlist` (F2.5E1)
 
 ## 11) Riesgos y guardrails
 

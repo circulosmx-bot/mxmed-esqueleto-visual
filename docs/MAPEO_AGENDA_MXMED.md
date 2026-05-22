@@ -310,6 +310,12 @@ Estado actualizado:
   - preserva campos raw/legacy.
   - agrega `action`, `entity_type`, `entity_id`, `occurred_at`, `created_by_role`, `created_by_id`, `actor_display_name`, `metadata`.
   - `notes` sigue string raw; `metadata` deriva de `notes` JSON o `notes_text` cuando no es JSON.
+- F2.5E1 cerrado:
+  - `POST /waitlist` acepta y persiste actor attribution compatible.
+  - `PATCH /waitlist/{id}` acepta y persiste actor attribution compatible.
+  - payload legacy sin actor sigue funcionando.
+  - si la tabla no tiene columnas actor, se usa fallback seguro en `notes` JSON.
+  - respuestas waitlist hidratan campos canónicos de actor de forma aditiva.
 
 Decision documental:
 - Mantener compatibilidad backward.
@@ -319,11 +325,12 @@ Commits relevantes F2.5:
 - `7d00d52` normalización frontend de payload actor (F2.5B).
 - `62e170a` persistencia actor en eventos de reprogramación (F2.5C mínimo).
 - `3df2255` DTO uniforme aditivo en events (F2.5D).
+- `be3f86c` actor attribution compatible en `POST/PATCH /waitlist` (F2.5E1).
 - `8af3e7b` fix Semana corte horario (relacionado por QA, fuera del contrato de auditoría).
 
 ## 11. Pendiente inmediato F2.5E
 
-- Auditoría homologada de waitlist completa.
+- E2: estandarización completa de auditoría de waitlist assign (flujo actual funcional y parcialmente cubierto vía appointment events).
 - Auditoría de bloqueos/desbloqueos de disponibilidad.
 - Definición de persistencia backend para eventos de bloqueo (si aplica).
 - Actor attribution integral para availability/block events.

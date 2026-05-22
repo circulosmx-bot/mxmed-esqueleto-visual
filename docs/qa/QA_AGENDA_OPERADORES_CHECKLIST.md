@@ -238,3 +238,20 @@ Resultado consolidado: **PASS**.
 - [x] API runtime no_show/waitlist/alta equivalente validada.
 - [x] Smoke Semana/Día PASS.
 - [x] Fix Semana de corte horario validado en commit separado `8af3e7b`.
+
+## K) Cierre F2.5E1 (waitlist create/update actor attribution)
+
+Resultado consolidado: **PASS**.
+
+- [x] `POST /waitlist` con actor (`operator`) responde OK y persiste attribution compatible.
+- [x] `PATCH /waitlist/{id}` con actor (`operator`) responde OK y persiste attribution compatible.
+- [x] `POST /waitlist` legacy sin actor sigue funcionando.
+- [x] `PATCH /waitlist/{id}` legacy sin actor sigue funcionando.
+- [x] `assign` existente sigue funcionando sin regresión.
+- [x] `php -l` de `WaitlistController.php` y `WaitlistRepository.php` en PASS.
+- [x] Compatibilidad en instancias sin columnas actor: fallback seguro en `notes` JSON.
+- [x] Respuestas waitlist hidratan campos canónicos (`actor_*`, `created_by_*`, `action`, `entity_*`, `occurred_at`, `metadata`).
+
+Pendiente F2.5E2+:
+- [ ] Estandarización completa de auditoría de waitlist assign.
+- [ ] Auditoría backend canónica de bloqueos/desbloqueos (`availability_blocked` / `availability_unblocked`).
