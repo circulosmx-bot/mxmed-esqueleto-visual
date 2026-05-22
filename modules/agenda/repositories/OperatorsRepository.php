@@ -74,6 +74,59 @@ class OperatorsRepository
         ];
     }
 
+    public function findOperatorIdentity(?string $doctorId, string $operatorId): array
+    {
+        $this->ensureTables();
+
+        $operatorId = trim((string)$operatorId);
+        $doctorId = trim((string)($doctorId ?? ''));
+        if ($operatorId === '') {
+            return [
+                'found' => false,
+                'operator_id' => '',
+                'doctor_id' => '',
+                'status' => '',
+                'is_active' => false,
+                'doctor_match' => ($doctorId === '' ? null : false),
+                'alias' => '',
+                'login' => '',
+            ];
+        }
+
+        $sql = sprintf(
+            'SELECT operator_id, doctor_id, status, alias, login FROM %s WHERE operator_id = :operator_id LIMIT 1',
+            $this->operatorsTable
+        );
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(['operator_id' => $operatorId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($row)) {
+            return [
+                'found' => false,
+                'operator_id' => $operatorId,
+                'doctor_id' => '',
+                'status' => '',
+                'is_active' => false,
+                'doctor_match' => ($doctorId === '' ? null : false),
+                'alias' => '',
+                'login' => '',
+            ];
+        }
+
+        $rowDoctorId = trim((string)($row['doctor_id'] ?? ''));
+        $status = strtolower(trim((string)($row['status'] ?? '')));
+        return [
+            'found' => true,
+            'operator_id' => trim((string)($row['operator_id'] ?? '')),
+            'doctor_id' => $rowDoctorId,
+            'status' => $status,
+            'is_active' => ($status === 'active'),
+            'doctor_match' => ($doctorId === '' ? null : ($rowDoctorId === $doctorId)),
+            'alias' => trim((string)($row['alias'] ?? '')),
+            'login' => trim((string)($row['login'] ?? '')),
+        ];
+    }
+
     public function createOperator(string $doctorId, array $payload, array $actorContext = []): array
     {
         $this->ensureTables();

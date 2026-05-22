@@ -14,6 +14,8 @@ require_once __DIR__ . '/../../modules/agenda/controllers/WaitlistController.php
 require_once __DIR__ . '/../../modules/agenda/controllers/OperatorsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/PublicAppointmentsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/PublicOtpController.php';
+require_once __DIR__ . '/../../modules/agenda/repositories/OperatorsRepository.php';
+require_once __DIR__ . '/../_lib/db.php';
 
 use Agenda\Controllers\AppointmentsController;
 use Agenda\Controllers\ConsultoriosController;
@@ -30,6 +32,7 @@ use Agenda\Controllers\WaitlistController;
 use Agenda\Controllers\OperatorsController;
 use Agenda\Controllers\PublicAppointmentsController;
 use Agenda\Controllers\PublicOtpController;
+use Agenda\Repositories\OperatorsRepository;
 
 header('Content-Type: application/json');
 if (session_status() === PHP_SESSION_NONE) {
@@ -530,6 +533,87 @@ function resolveEffectiveAgendaActor(array $segments, string $method, array $que
     ];
 }
 
+function appendAgendaWarning(array $context, string $warningType, array $extra = []): array
+{
+    $warnings = is_array($context['warnings'] ?? null) ? $context['warnings'] : [];
+    $entry = array_merge(['type' => $warningType], $extra);
+    $warnings[] = $entry;
+    $context['warnings'] = $warnings;
+    return $context;
+}
+
+function resolveAgendaOperatorIdentity(array $actorContext): array
+{
+    $context = $actorContext;
+    $role = normalizeAgendaActorRole($context['actor_role'] ?? '');
+    if ($role !== 'operator') {
+        $context['operator_identity_checked'] = false;
+        $context['operator_identity_found'] = false;
+        $context['operator_status'] = null;
+        $context['operator_is_active'] = null;
+        $context['operator_identity_warning'] = '';
+        return $context;
+    }
+
+    $context['operator_identity_checked'] = true;
+    $context['operator_identity_found'] = false;
+    $context['operator_status'] = null;
+    $context['operator_is_active'] = null;
+    $context['operator_identity_warning'] = '';
+
+    $operatorId = trim((string)($context['operator_id'] ?? ''));
+    if ($operatorId === '') {
+        $context['operator_identity_warning'] = 'operator_id_missing';
+        return appendAgendaWarning($context, 'operator_id_missing');
+    }
+
+    try {
+        $pdo = mxmed_pdo();
+        $repository = new OperatorsRepository($pdo);
+        $identity = $repository->findOperatorIdentity(
+            trim((string)($context['doctor_id'] ?? '')),
+            $operatorId
+        );
+    } catch (\Throwable $e) {
+        $context['operator_identity_warning'] = 'operator_identity_db_not_ready';
+        return appendAgendaWarning($context, 'operator_identity_db_not_ready');
+    }
+
+    $context['operator_identity_found'] = (bool)($identity['found'] ?? false);
+    $context['operator_status'] = trim((string)($identity['status'] ?? '')) ?: null;
+    $context['operator_is_active'] = (bool)($identity['is_active'] ?? false);
+    if (!$context['operator_identity_found']) {
+        $context['operator_identity_warning'] = 'operator_not_found';
+        return appendAgendaWarning($context, 'operator_not_found', [
+            'operator_id' => $operatorId,
+        ]);
+    }
+
+    $doctorMatch = $identity['doctor_match'] ?? null;
+    if ($doctorMatch === false) {
+        $context['operator_identity_warning'] = 'operator_doctor_mismatch';
+        return appendAgendaWarning($context, 'operator_doctor_mismatch', [
+            'operator_id' => trim((string)($identity['operator_id'] ?? $operatorId)),
+            'doctor_id_operator' => trim((string)($identity['doctor_id'] ?? '')),
+            'doctor_id_context' => trim((string)($context['doctor_id'] ?? '')),
+        ]);
+    }
+
+    if (!$context['operator_is_active']) {
+        $context['operator_identity_warning'] = 'operator_not_active';
+        return appendAgendaWarning($context, 'operator_not_active', [
+            'operator_id' => trim((string)($identity['operator_id'] ?? $operatorId)),
+            'status' => trim((string)($identity['status'] ?? '')),
+        ]);
+    }
+
+    $context['operator_identity_warning'] = 'operator_identity_valid';
+    return appendAgendaWarning($context, 'operator_identity_valid', [
+        'operator_id' => trim((string)($identity['operator_id'] ?? $operatorId)),
+        'status' => trim((string)($identity['status'] ?? '')),
+    ]);
+}
+
 function isAgendaConfigRouteForOperator(array $segments, string $method): bool
 {
     $resource = strtolower(trim((string)($segments[0] ?? '')));
@@ -609,6 +693,7 @@ try {
             exit;
         }
         $actorContext = (array)($contextResult['context'] ?? []);
+        $actorContext = resolveAgendaOperatorIdentity($actorContext);
 
         if (($segments[0] ?? '') === 'operators' && (($actorContext['actor_role'] ?? '') === 'operator')) {
             $response = normalize_response(forbidden_response('forbidden for actor role', [
