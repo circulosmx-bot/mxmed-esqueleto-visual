@@ -8,6 +8,7 @@ require_once __DIR__ . '/../../../api/_lib/db.php';
 
 class WaitlistRepository
 {
+    private const NOTES_AUDIT_MARKER = '_mxm_waitlist_audit_v1';
     private PDO $pdo;
     private ?string $table = null;
     private array $columnsCache = [];
@@ -54,14 +55,16 @@ class WaitlistRepository
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return array_map(fn(array $row): array => $this->hydrateEntryRow($row), $rows);
     }
 
-    public function createEntry(array $data): array
+    public function createEntry(array $data, array $audit = []): array
     {
         $this->ensureTable();
         $entryId = $this->generateId();
         $payload = array_merge($data, ['id' => $entryId, 'status' => $data['status'] ?? 'active']);
+        $payload = $this->applyAuditForCreate($payload, $entryId, $audit);
         $this->insert($this->table, $payload);
         $entry = $this->getById($entryId);
         if (!$entry) {
@@ -76,17 +79,25 @@ class WaitlistRepository
         $stmt = $this->pdo->prepare(sprintf('SELECT * FROM %s WHERE id = :id LIMIT 1', $this->table));
         $stmt->execute(['id' => $id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ?: null;
+        if (!$row) {
+            return null;
+        }
+        return $this->hydrateEntryRow($row);
     }
 
-    public function updateStatus(string $id, string $status): array
+    public function updateStatus(string $id, string $status, array $audit = []): array
     {
-        return $this->updateEntry($id, ['status' => $status]);
+        return $this->updateEntry($id, ['status' => $status], $audit);
     }
 
-    public function updateEntry(string $id, array $updates): array
+    public function updateEntry(string $id, array $updates, array $audit = []): array
     {
         $this->ensureTable();
+        $currentRaw = $this->getByIdRaw($id);
+        if (!$currentRaw) {
+            throw new RuntimeException('waitlist entry not found after update');
+        }
+        $updates = $this->applyAuditForUpdate($currentRaw, $updates, $id, $audit);
         $columns = $this->getColumns($this->table);
         $updateColumns = array_intersect_key($updates, array_flip($columns));
         if (empty($updateColumns)) {
@@ -108,6 +119,243 @@ class WaitlistRepository
             throw new RuntimeException('waitlist entry not found after update');
         }
         return $entry;
+    }
+
+    private function getByIdRaw(string $id): ?array
+    {
+        $this->ensureTable();
+        $stmt = $this->pdo->prepare(sprintf('SELECT * FROM %s WHERE id = :id LIMIT 1', $this->table));
+        $stmt->execute(['id' => $id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    private function hydrateEntryRow(array $row): array
+    {
+        $notesInfo = $this->extractNotesInfo($row['notes'] ?? null);
+        $row['notes'] = $notesInfo['notes_text'];
+
+        $actorRole = $this->normalizeText($row['actor_role'] ?? '') ?: $this->normalizeText($notesInfo['audit']['actor_role'] ?? '');
+        $actorId = $this->normalizeText($row['actor_id'] ?? '') ?: $this->normalizeText($notesInfo['audit']['actor_id'] ?? '');
+        $channelOrigin = $this->normalizeText($row['channel_origin'] ?? '') ?: $this->normalizeText($notesInfo['audit']['channel_origin'] ?? '');
+        $createdByRole = $this->normalizeText($row['created_by_role'] ?? '') ?: $this->normalizeText($notesInfo['audit']['created_by_role'] ?? $actorRole);
+        $createdById = $this->normalizeText($row['created_by_id'] ?? '') ?: $this->normalizeText($notesInfo['audit']['created_by_id'] ?? $actorId);
+        $actorDisplayName = $this->normalizeText($notesInfo['audit']['actor_display_name'] ?? '');
+        $action = $this->normalizeText($notesInfo['audit']['action'] ?? '');
+        $entityType = $this->normalizeText($notesInfo['audit']['entity_type'] ?? '');
+        $entityId = $this->normalizeText($notesInfo['audit']['entity_id'] ?? '') ?: $this->normalizeText($row['id'] ?? '');
+        $occurredAt = $this->normalizeText($notesInfo['audit']['occurred_at'] ?? '');
+        $metadata = is_array($notesInfo['metadata']) ? $notesInfo['metadata'] : [];
+
+        if ($actorRole !== '') {
+            $row['actor_role'] = $actorRole;
+        }
+        if ($actorId !== '') {
+            $row['actor_id'] = $actorId;
+        }
+        if ($channelOrigin !== '') {
+            $row['channel_origin'] = $channelOrigin;
+        }
+        if ($createdByRole !== '') {
+            $row['created_by_role'] = $createdByRole;
+        }
+        if ($createdById !== '') {
+            $row['created_by_id'] = $createdById;
+        }
+        if ($actorDisplayName !== '') {
+            $row['actor_display_name'] = $actorDisplayName;
+        }
+        if ($action !== '') {
+            $row['action'] = $action;
+        }
+        if ($entityType !== '') {
+            $row['entity_type'] = $entityType;
+        }
+        if ($entityId !== '') {
+            $row['entity_id'] = $entityId;
+        }
+        if ($occurredAt !== '') {
+            $row['occurred_at'] = $occurredAt;
+        }
+        $row['metadata'] = $metadata;
+
+        return $row;
+    }
+
+    private function applyAuditForCreate(array $payload, string $entryId, array $audit): array
+    {
+        $columns = $this->getColumns($this->table);
+        $normalizedAudit = $this->normalizeAudit($audit, $entryId, 'waitlist_created');
+        return $this->applyAuditPersistence($payload, null, $columns, $normalizedAudit);
+    }
+
+    private function applyAuditForUpdate(array $currentRaw, array $updates, string $entryId, array $audit): array
+    {
+        if (empty($audit)) {
+            return $updates;
+        }
+        $columns = $this->getColumns($this->table);
+        $normalizedAudit = $this->normalizeAudit($audit, $entryId, 'waitlist_updated');
+        return $this->applyAuditPersistence($updates, $currentRaw, $columns, $normalizedAudit);
+    }
+
+    private function applyAuditPersistence(array $target, ?array $currentRaw, array $columns, array $audit): array
+    {
+        $hasActorColumn = $this->hasAnyColumn($columns, ['actor_role', 'actor_id', 'channel_origin', 'created_by_role', 'created_by_id']);
+        if ($this->hasColumn($columns, 'actor_role')) {
+            $target['actor_role'] = $audit['actor_role'];
+        }
+        if ($this->hasColumn($columns, 'actor_id')) {
+            $target['actor_id'] = $audit['actor_id'];
+        }
+        if ($this->hasColumn($columns, 'channel_origin')) {
+            $target['channel_origin'] = $audit['channel_origin'];
+        }
+        if ($this->hasColumn($columns, 'created_by_role')) {
+            $target['created_by_role'] = $audit['created_by_role'];
+        }
+        if ($this->hasColumn($columns, 'created_by_id')) {
+            $target['created_by_id'] = $audit['created_by_id'];
+        }
+        if ($this->hasColumn($columns, 'metadata')) {
+            $encodedMetadata = $this->encodeJson($audit['metadata']);
+            if ($encodedMetadata !== null) {
+                $target['metadata'] = $encodedMetadata;
+            }
+        }
+
+        // Fallback sin migración: persistimos auditoría dentro de notes como envolvente JSON.
+        if (!$hasActorColumn && $this->hasColumn($columns, 'notes')) {
+            $currentNotesRaw = $currentRaw['notes'] ?? null;
+            $currentNotesInfo = $this->extractNotesInfo($currentNotesRaw);
+            $noteTextFromTarget = array_key_exists('notes', $target)
+                ? $this->normalizeNullableText($target['notes'])
+                : $currentNotesInfo['notes_text'];
+
+            $mergedMetadata = $currentNotesInfo['metadata'];
+            if (is_array($audit['metadata']) && !empty($audit['metadata'])) {
+                $mergedMetadata = array_merge($mergedMetadata, $audit['metadata']);
+            }
+            $target['notes'] = $this->buildNotesEnvelope($noteTextFromTarget, $audit, $mergedMetadata);
+        }
+
+        return $target;
+    }
+
+    private function normalizeAudit(array $audit, string $entityId, string $defaultAction): array
+    {
+        $actorRole = $this->normalizeText($audit['actor_role'] ?? '') ?: $this->normalizeText($audit['created_by_role'] ?? '') ?: 'doctor';
+        $actorId = $this->normalizeText($audit['actor_id'] ?? '') ?: $this->normalizeText($audit['created_by_id'] ?? '') ?: '';
+        $createdByRole = $this->normalizeText($audit['created_by_role'] ?? '') ?: $actorRole;
+        $createdById = $this->normalizeText($audit['created_by_id'] ?? '') ?: $actorId;
+        $channelOrigin = $this->normalizeText($audit['channel_origin'] ?? '') ?: ($actorRole !== '' ? $actorRole : 'agenda_internal');
+        $action = $this->normalizeText($audit['action'] ?? '') ?: $defaultAction;
+        $entityType = $this->normalizeText($audit['entity_type'] ?? '') ?: 'waitlist_entry';
+        $entityIdNormalized = $this->normalizeText($audit['entity_id'] ?? '') ?: $entityId;
+        $occurredAt = $this->normalizeText($audit['occurred_at'] ?? '') ?: gmdate('c');
+        $actorDisplayName = $this->normalizeText($audit['actor_display_name'] ?? '');
+        $metadata = is_array($audit['metadata'] ?? null) ? $audit['metadata'] : [];
+        $metadata = array_merge($metadata, [
+            'action' => $action,
+            'entity_type' => $entityType,
+            'entity_id' => $entityIdNormalized,
+        ]);
+
+        return [
+            'actor_role' => $actorRole,
+            'actor_id' => $actorId,
+            'actor_display_name' => $actorDisplayName,
+            'channel_origin' => $channelOrigin,
+            'created_by_role' => $createdByRole,
+            'created_by_id' => $createdById,
+            'action' => $action,
+            'entity_type' => $entityType,
+            'entity_id' => $entityIdNormalized,
+            'occurred_at' => $occurredAt,
+            'metadata' => $metadata,
+        ];
+    }
+
+    private function buildNotesEnvelope(?string $notesText, array $audit, array $metadata = []): string
+    {
+        $payload = [
+            self::NOTES_AUDIT_MARKER => [
+                'actor_role' => $audit['actor_role'] ?? null,
+                'actor_id' => $audit['actor_id'] ?? null,
+                'actor_display_name' => $audit['actor_display_name'] ?? null,
+                'channel_origin' => $audit['channel_origin'] ?? null,
+                'created_by_role' => $audit['created_by_role'] ?? null,
+                'created_by_id' => $audit['created_by_id'] ?? null,
+                'action' => $audit['action'] ?? null,
+                'entity_type' => $audit['entity_type'] ?? null,
+                'entity_id' => $audit['entity_id'] ?? null,
+                'occurred_at' => $audit['occurred_at'] ?? null,
+            ],
+            'metadata' => $metadata,
+            'notes_text' => $notesText,
+        ];
+        $encoded = $this->encodeJson($payload);
+        if ($encoded !== null) {
+            return $encoded;
+        }
+        return (string)($notesText ?? '');
+    }
+
+    private function extractNotesInfo($raw): array
+    {
+        $notesText = $this->normalizeNullableText($raw);
+        $audit = [];
+        $metadata = [];
+        if (!is_string($raw) || trim($raw) === '') {
+            return ['notes_text' => $notesText, 'audit' => $audit, 'metadata' => $metadata];
+        }
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded) || !isset($decoded[self::NOTES_AUDIT_MARKER]) || !is_array($decoded[self::NOTES_AUDIT_MARKER])) {
+            return ['notes_text' => $notesText, 'audit' => $audit, 'metadata' => $metadata];
+        }
+
+        $audit = $decoded[self::NOTES_AUDIT_MARKER];
+        if (isset($decoded['metadata']) && is_array($decoded['metadata'])) {
+            $metadata = $decoded['metadata'];
+        }
+        $notesText = $this->normalizeNullableText($decoded['notes_text'] ?? null);
+
+        return ['notes_text' => $notesText, 'audit' => $audit, 'metadata' => $metadata];
+    }
+
+    private function hasColumn(array $columns, string $column): bool
+    {
+        return in_array($column, $columns, true);
+    }
+
+    private function hasAnyColumn(array $columns, array $candidates): bool
+    {
+        foreach ($candidates as $column) {
+            if ($this->hasColumn($columns, (string)$column)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function encodeJson(array $payload): ?string
+    {
+        $encoded = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($encoded === false) {
+            return null;
+        }
+        return $encoded;
+    }
+
+    private function normalizeText($value): string
+    {
+        return trim((string)($value ?? ''));
+    }
+
+    private function normalizeNullableText($value): ?string
+    {
+        $text = trim((string)($value ?? ''));
+        return $text === '' ? null : $text;
     }
 
     private function insert(string $table, array $data): void

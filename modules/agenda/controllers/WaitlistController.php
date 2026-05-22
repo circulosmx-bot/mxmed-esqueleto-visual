@@ -114,7 +114,7 @@ class WaitlistController
                 'patient_name' => $payload['patient_name'] ?? null,
                 'patient_phone' => $payload['patient_phone'] ?? null,
                 'notes' => $payload['notes'] ?? null,
-            ]);
+            ], $this->resolveWaitlistActorAuditPayload($payload, 'waitlist_created', null));
         } catch (RuntimeException $e) {
             return $this->error('db_not_ready', $e->getMessage());
         } catch (Throwable $e) {
@@ -147,7 +147,11 @@ class WaitlistController
         }
 
         try {
-            $entry = $this->repository->updateStatus($id, strtolower((string)$payload['status']));
+            $entry = $this->repository->updateStatus(
+                $id,
+                strtolower((string)$payload['status']),
+                $this->resolveWaitlistActorAuditPayload($payload, 'waitlist_updated', $id)
+            );
         } catch (RuntimeException $e) {
             return $this->error('not_found', 'waitlist entry not found');
         } catch (Throwable $e) {
@@ -346,6 +350,74 @@ class WaitlistController
             $errors['actor_role'] = 'invalid';
         }
         return $errors;
+    }
+
+    private function resolveWaitlistActorAuditPayload(array $payload, string $action, ?string $entityId): array
+    {
+        $actorRole = trim((string)(
+            $payload['actor_role']
+            ?? $payload['created_by_role']
+            ?? $this->actorContext['actor_role']
+            ?? $this->actorContext['role']
+            ?? 'doctor'
+        ));
+        if ($actorRole === '') {
+            $actorRole = 'doctor';
+        }
+
+        $actorId = trim((string)(
+            $payload['actor_id']
+            ?? $payload['created_by_id']
+            ?? $this->actorContext['user_id']
+            ?? $this->actorContext['actor_id']
+            ?? $this->actorContext['doctor_id']
+            ?? ''
+        ));
+        $createdByRole = trim((string)($payload['created_by_role'] ?? $actorRole));
+        if ($createdByRole === '') {
+            $createdByRole = $actorRole;
+        }
+        $createdById = trim((string)($payload['created_by_id'] ?? $actorId));
+        $channelOrigin = trim((string)($payload['channel_origin'] ?? ''));
+        if ($channelOrigin === '') {
+            $channelOrigin = $actorRole !== '' ? $actorRole : 'agenda_internal';
+        }
+
+        $actorDisplayName = trim((string)($payload['actor_display_name'] ?? ''));
+        $resolvedEntityId = trim((string)($entityId ?? $payload['entity_id'] ?? ''));
+        $entityType = trim((string)($payload['entity_type'] ?? 'waitlist_entry'));
+        if ($entityType === '') {
+            $entityType = 'waitlist_entry';
+        }
+        $occurredAt = trim((string)($payload['occurred_at'] ?? ''));
+        if ($occurredAt === '') {
+            $now = new DateTimeImmutable('now', new DateTimeZone('America/Mexico_City'));
+            $occurredAt = $now->format('c');
+        }
+
+        $incomingMetadata = $payload['metadata'] ?? [];
+        if (!is_array($incomingMetadata)) {
+            $incomingMetadata = [];
+        }
+        $safeMetadata = array_merge($incomingMetadata, [
+            'doctor_id' => trim((string)($payload['doctor_id'] ?? $this->actorContext['doctor_id'] ?? '')),
+            'consultorio_id' => trim((string)($payload['consultorio_id'] ?? '')),
+            'status' => trim((string)($payload['status'] ?? '')),
+        ]);
+
+        return [
+            'actor_role' => $actorRole,
+            'actor_id' => $actorId,
+            'actor_display_name' => $actorDisplayName,
+            'channel_origin' => $channelOrigin,
+            'created_by_role' => $createdByRole,
+            'created_by_id' => $createdById,
+            'action' => trim((string)($payload['action'] ?? $action)),
+            'entity_type' => $entityType,
+            'entity_id' => $resolvedEntityId,
+            'occurred_at' => $occurredAt,
+            'metadata' => $safeMetadata,
+        ];
     }
 
     private function ensureReady(): ?array
