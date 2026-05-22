@@ -319,6 +319,217 @@ function resolveAgendaActorContext(array $segments, array $query = [], array $ac
     ];
 }
 
+function resolveAgendaQaMode(): string
+{
+    $headers = function_exists('getallheaders') ? (array)getallheaders() : [];
+    $qaHeader = resolveHeaderValue($headers, 'X-QA-Mode');
+    if ($qaHeader !== '') {
+        return strtolower(trim($qaHeader));
+    }
+
+    $qaEnv = strtolower(trim((string)(getenv('QA_MODE') ?: '')));
+    return $qaEnv;
+}
+
+function isAgendaQaActorOverrideAllowed(): bool
+{
+    $qaMode = resolveAgendaQaMode();
+    if ($qaMode === '') {
+        return false;
+    }
+    if (in_array($qaMode, ['0', 'false', 'off', 'disabled', 'none'], true)) {
+        return false;
+    }
+    return true;
+}
+
+function mapAgendaActorRoleSourceToAuthSource(string $roleSource): string
+{
+    $value = strtolower(trim($roleSource));
+    if ($value === '') {
+        return 'compat';
+    }
+    if (str_starts_with($value, 'header:')) {
+        return 'header';
+    }
+    if (in_array($value, ['session', 'body', 'query'], true)) {
+        return $value;
+    }
+    return 'compat';
+}
+
+function resolveAgendaChannelOriginFallback(string $actorRole): string
+{
+    $role = normalizeAgendaActorRole($actorRole);
+    if ($role === 'patient') {
+        return 'public_profile';
+    }
+    if ($role === 'call_center') {
+        return 'call_center';
+    }
+    if ($role === 'ai_operator') {
+        return 'ai_operator';
+    }
+    if ($role === 'system') {
+        return 'system';
+    }
+    if ($role === 'operator') {
+        return 'operator';
+    }
+    return 'doctor';
+}
+
+function resolveEffectiveAgendaActor(array $segments, string $method, array $query, array $body): array
+{
+    $actorRoleContext = resolveAgendaActorRole($query, $body);
+
+    if (is_public_agenda_route($segments)) {
+        $headers = function_exists('getallheaders') ? (array)getallheaders() : [];
+        $actorRole = normalizeAgendaActorRole($actorRoleContext['role'] ?? '') ?: 'patient';
+        $actorRoleSource = trim((string)($actorRoleContext['source'] ?? 'fallback'));
+        $authSource = 'public';
+
+        $operatorId = trim((string)(
+            $body['operator_id']
+            ?? $query['operator_id']
+            ?? resolveHeaderValue($headers, 'X-Operator-Id')
+            ?? ''
+        ));
+
+        $actorId = trim((string)(
+            $body['actor_id']
+            ?? $body['created_by_id']
+            ?? $query['actor_id']
+            ?? $query['created_by_id']
+            ?? resolveHeaderValue($headers, 'X-Actor-Id')
+            ?? resolveHeaderValue($headers, 'X-User-Id')
+            ?? ''
+        ));
+
+        $doctorId = trim((string)(
+            $query['doctor_id']
+            ?? $body['doctor_id']
+            ?? $_SESSION['doctor_id']
+            ?? $_SESSION['active_doctor_id']
+            ?? $_SESSION['mxmed_doctor_id']
+            ?? ''
+        ));
+
+        $channelOrigin = trim((string)($body['channel_origin'] ?? ($query['channel_origin'] ?? '')));
+        if ($channelOrigin === '') {
+            $channelOrigin = resolveAgendaChannelOriginFallback($actorRole);
+        }
+
+        return [
+            'ok' => true,
+            'context' => [
+                'actor_role' => $actorRole,
+                'actor_role_source' => $actorRoleSource,
+                'actor_id' => $actorId,
+                'doctor_id' => $doctorId,
+                'operator_id' => $operatorId !== '' ? $operatorId : null,
+                'channel_origin' => $channelOrigin,
+                'auth_source' => $authSource,
+                'auth_mode' => 'public_flow',
+                'is_authoritative' => false,
+                'mode' => 'public_flow',
+                'strict' => false,
+                'compat' => false,
+                'user_id' => $actorId,
+                'warnings' => [],
+            ],
+            'role_context' => $actorRoleContext,
+        ];
+    }
+
+    $contextResult = resolveAgendaActorContext($segments, $query, $actorRoleContext);
+    if (!(bool)($contextResult['ok'] ?? false)) {
+        return [
+            'ok' => false,
+            'response' => $contextResult['response'] ?? forbidden_response('forbidden'),
+            'context' => [],
+            'role_context' => $actorRoleContext,
+        ];
+    }
+
+    $context = (array)($contextResult['context'] ?? []);
+    $headers = function_exists('getallheaders') ? (array)getallheaders() : [];
+
+    $actorRole = normalizeAgendaActorRole($context['actor_role'] ?? '') ?: 'doctor';
+    $actorRoleSource = trim((string)($context['actor_role_source'] ?? ($actorRoleContext['source'] ?? 'fallback')));
+    $authSource = mapAgendaActorRoleSourceToAuthSource($actorRoleSource);
+
+    $strict = (bool)($context['strict'] ?? false);
+    $compat = (bool)($context['compat'] ?? false);
+    $qaOverride = !$strict && isAgendaQaActorOverrideAllowed() && in_array($authSource, ['header', 'query', 'body'], true);
+    $authMode = $strict ? 'strict' : ($qaOverride ? 'qa_override' : 'compat');
+
+    $sessionUserId = trim((string)(
+        $_SESSION['user_id']
+        ?? $_SESSION['mxmed_user_id']
+        ?? $_SESSION['auth_user_id']
+        ?? ''
+    ));
+    $isAuthoritative = $strict && $authSource === 'session' && $sessionUserId !== '';
+
+    $doctorId = trim((string)(
+        $context['doctor_id']
+        ?? $query['doctor_id']
+        ?? $body['doctor_id']
+        ?? ''
+    ));
+    $userId = trim((string)($context['user_id'] ?? ''));
+
+    $actorId = trim((string)(
+        $body['actor_id']
+        ?? $body['created_by_id']
+        ?? $query['actor_id']
+        ?? $query['created_by_id']
+        ?? resolveHeaderValue($headers, 'X-Actor-Id')
+        ?? ''
+    ));
+    if ($actorId === '') {
+        $actorId = trim((string)(
+            $userId
+            ?: resolveHeaderValue($headers, 'X-User-Id')
+            ?: $doctorId
+        ));
+    }
+
+    $operatorId = trim((string)(
+        $body['operator_id']
+        ?? $query['operator_id']
+        ?? resolveHeaderValue($headers, 'X-Operator-Id')
+        ?? ''
+    ));
+
+    $channelOrigin = trim((string)($body['channel_origin'] ?? ($query['channel_origin'] ?? '')));
+    if ($channelOrigin === '') {
+        $channelOrigin = resolveAgendaChannelOriginFallback($actorRole);
+    }
+
+    $context['actor_role'] = $actorRole;
+    $context['actor_role_source'] = $actorRoleSource;
+    $context['actor_id'] = $actorId;
+    $context['doctor_id'] = $doctorId;
+    $context['operator_id'] = $operatorId !== '' ? $operatorId : null;
+    $context['channel_origin'] = $channelOrigin;
+    $context['auth_source'] = $authSource;
+    $context['auth_mode'] = $authMode;
+    $context['is_authoritative'] = $isAuthoritative;
+    $context['mode'] = trim((string)($context['mode'] ?? ($compat ? 'compat' : 'strict')));
+    $context['strict'] = $strict;
+    $context['compat'] = $compat;
+    $context['user_id'] = $userId;
+    $context['warnings'] = is_array($context['warnings'] ?? null) ? $context['warnings'] : [];
+
+    return [
+        'ok' => true,
+        'context' => $context,
+        'role_context' => $actorRoleContext,
+    ];
+}
+
 function isAgendaConfigRouteForOperator(array $segments, string $method): bool
 {
     $resource = strtolower(trim((string)($segments[0] ?? '')));
@@ -372,8 +583,13 @@ try {
     $actorRoleContext = ['role' => 'doctor', 'source' => 'fallback'];
     if (is_private_agenda_route($segments) && !is_public_agenda_route($segments)) {
         $payloadForRole = read_json_body();
-        $actorRoleContext = resolveAgendaActorRole($_GET, $payloadForRole);
-        $contextResult = resolveAgendaActorContext($segments, $_GET, $actorRoleContext);
+        $effectiveActorResult = resolveEffectiveAgendaActor($segments, (string)$method, $_GET, $payloadForRole);
+        $contextResult = [
+            'ok' => (bool)($effectiveActorResult['ok'] ?? false),
+            'response' => $effectiveActorResult['response'] ?? null,
+            'context' => $effectiveActorResult['context'] ?? [],
+        ];
+        $actorRoleContext = (array)($effectiveActorResult['role_context'] ?? $actorRoleContext);
         if (!$contextResult['ok']) {
             $response = normalize_response($contextResult['response']);
             $errorCode = (string)($response['error'] ?? '');
