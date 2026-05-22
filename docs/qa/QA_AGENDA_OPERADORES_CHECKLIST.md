@@ -312,3 +312,19 @@ Observaciones:
 - [x] Datos QA quedaron persistidos en tablas (sin limpieza destructiva en este cierre).
 - [x] `409 Conflict` ocasional conocido de entorno QA no bloqueó los flujos validados.
 - [x] `bloqueo parcial` y `domingo sin horario` no fueron exhaustivos en F2.6, pero conservan PASS previo dedicado.
+
+## N) F3.1 · QA propuesto para fuente autoritativa de actor
+
+Referencia:
+- [ ] Revisar `../AGENDA_ACTOR_AUTORITATIVO_MXMED.md`.
+
+Validaciones objetivo por modo (pendiente de implementación F3.2+):
+- [ ] `compat` mantiene funcionamiento actual sin romper flujos internos.
+- [ ] `strict` sin sesión/token válido rechaza rutas privadas.
+- [ ] `strict` con actor doctor autenticado permite rutas privadas válidas.
+- [ ] `strict` con actor operator requiere validación en `agenda_operators` estado `active`.
+- [ ] `strict` rechaza operator `paused`, `pending`, `archived`.
+- [ ] spoofing por `X-Actor-Role`, `X-User-Role`, body o query no funciona en `strict`.
+- [ ] `qa_override` solo funciona cuando QA/dev esté explícitamente habilitado.
+- [ ] `/public/*` sigue operativo sin contaminar RBAC privado.
+- [ ] Respuestas/auditoría incluyen metadatos de fuente (`auth_source`, `is_authoritative`, `auth_mode`) cuando F3.2 los exponga.

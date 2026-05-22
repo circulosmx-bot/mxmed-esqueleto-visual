@@ -209,6 +209,25 @@ Pendiente para F2.5E/F2.5F:
 3. Cierre de alcance para `call_center` y `ai_operator` en cancel/reprogram.
 4. Contrato definitivo de auditoria para bloqueos si parte del flujo sigue en capa local.
 
+## 15) Adenda F3.1 (identidad autoritativa y calidad de auditoría)
+
+Referencia:
+- Ver `AGENDA_ACTOR_AUTORITATIVO_MXMED.md`.
+
+Ajuste documental:
+- El contrato de auditoría ya normalizado en F2.5B-E2 sigue vigente, pero su confiabilidad final depende del modo de autenticación/resolución de actor.
+- Se declara explícitamente:
+  - En `strict`, `actor_*` y `created_by_*` deben derivar de fuente fuerte de servidor.
+  - En `compat` y `qa_override`, `actor_*` puede provenir de fallback/override y debe tratarse como no autoritativo.
+
+Meta objetivo para trazabilidad:
+- `auth_source`
+- `is_authoritative`
+- `auth_mode`
+
+Regla de interpretación de eventos:
+- Mientras no cierre F3.2-F3.4, eventos con actor siguen siendo funcionalmente útiles para operación/QA, pero no equivalen a no repudio de identidad.
+
 ## 13) Pendiente inmediato (F2.5E)
 
 - Auditoria waitlist residual (si se amplía visibilidad por rol o nuevos eventos dedicados).

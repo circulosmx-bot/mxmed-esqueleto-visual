@@ -376,3 +376,38 @@ Notas:
 Pendiente posterior recomendado:
 - Diseñar backend de bloqueos/desbloqueos con auditoría canónica.
 - Definir fuente autoritativa de actor para endurecer RBAC y evitar spoofing.
+
+## 13. Adenda F3.1 (fuente autoritativa de actor)
+
+Estado documental:
+- Se agrega contrato formal en `AGENDA_ACTOR_AUTORITATIVO_MXMED.md`.
+- No hay cambios funcionales en esta fase; solo definición de estrategia.
+
+Contrato objetivo de actor efectivo (rutas privadas):
+- `actor_role`
+- `actor_id`
+- `doctor_id`
+- `operator_id`
+- `channel_origin`
+- `auth_source`
+- `is_authoritative`
+- `auth_mode`
+
+Modos definidos:
+- `strict`: producción, identidad fuerte, sin override spoofeable.
+- `compat`: compatibilidad local/dev durante transición.
+- `qa_override`: override permitido solo en QA/dev habilitado.
+- `public_flow`: rutas públicas separadas del RBAC privado.
+
+Regla operativa futura para `operator` en modo estricto:
+- Debe existir en `agenda_operators`.
+- Debe estar `active`.
+- Debe coincidir con `doctor_id` efectivo.
+- `paused`, `pending`, `archived` no operan rutas privadas.
+
+Plan vinculado:
+- F3.2 helper backend con metadatos `auth_source/is_authoritative`.
+- F3.3 validación de operador activo.
+- F3.4 endurecimiento de overrides por entorno.
+- F3.5 consumo frontend de actor efectivo.
+- F3.6 QA integral strict/compat/public/spoofing.

@@ -238,6 +238,37 @@ Riesgos abiertos:
 - Falta cerrar políticas para actores externos (`patient`, `call_center`, `ai_operator`).
 - Falta F2.6 QA integral RBAC (positivas, negativas y spoofing).
 
+## 12. Adenda F3.1 (fuente autoritativa de actor)
+
+Referencia principal:
+- Ver `AGENDA_ACTOR_AUTORITATIVO_MXMED.md`.
+
+Definición incorporada:
+- Se formaliza contrato de actor efectivo para Agenda privada:
+  - `actor_role`
+  - `actor_id`
+  - `doctor_id`
+  - `operator_id`
+  - `channel_origin`
+  - `auth_source`
+  - `is_authoritative`
+  - `auth_mode`
+
+Modos documentados:
+- `strict` (producción): identidad fuerte, sin overrides spoofeables.
+- `compat` (local/dev): compatibilidad temporal con fallback.
+- `qa_override` (QA controlado): overrides permitidos solo bajo flag explícito.
+- `public_flow`: separado del RBAC privado.
+
+Regla RBAC futura para `operator` en modo estricto:
+- Debe existir en `agenda_operators`.
+- Debe estar `active`.
+- Debe coincidir en `doctor_id` con el scope efectivo.
+- `paused`, `pending`, `archived` quedan denegados para rutas privadas.
+
+Pendiente de implementación (F3.2+):
+- Resolver actor autoritativo en backend y acoplar enforcement a identidad fuerte.
+
 Siguiente fase sugerida:
 - F2.4 actores externos de Agenda (`patient`, `call_center`, `ai_operator`).
 - Alternativamente F2.5 para consolidar auditoría/actor attribution antes de ampliar actores.
