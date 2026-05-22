@@ -3498,8 +3498,10 @@ console.info('app.js loaded :: 20251123a');
       const compactMax = timeToMinutes(compactRange?.maxTime || '') ?? (20 * 60);
       const expandedMin = timeToMinutes(expandedRange?.minTime || '') ?? compactMin;
       const expandedMax = timeToMinutes(expandedRange?.maxTime || '') ?? compactMax;
+      const operationalStartMin = timeToMinutes(resolveAgendaStartVisibleTime()) ?? (8 * 60);
+      const weekFloorMin = Math.max(0, Math.min(compactMin, expandedMin, operationalStartMin));
       const baseBounds = {
-        min: Math.max(0, Math.min(compactMin, expandedMin)),
+        min: weekFloorMin,
         max: Math.max(expandedMin + 30, expandedMax)
       };
       const eventSource = resolveCustomWeekEventSource();
@@ -3785,7 +3787,20 @@ console.info('app.js loaded :: 20251123a');
             });
           }catch(_){}
         }
-        const renderableRows = rowsAfterCollision.filter((eventRef)=>{
+        const renderNowTs = Date.now();
+        const isCurrentColumnDay = !!(todayRef && isSameLocalDay(date, todayRef));
+        const rowsAfterTodayCutoff = rowsAfterCollision.filter((eventRef)=>{
+          if(!isCurrentColumnDay){
+            return true;
+          }
+          const startDate = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
+          const endDate = eventRef?.end instanceof Date ? eventRef.end : new Date(eventRef?.end || '');
+          if(Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())){
+            return false;
+          }
+          return endDate.getTime() > renderNowTs;
+        });
+        const renderableRows = rowsAfterTodayCutoff.filter((eventRef)=>{
           const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
           return eventType !== 'availability';
         });
@@ -3865,7 +3880,6 @@ console.info('app.js loaded :: 20251123a');
             reason
           });
         }
-        const renderNowTs = Date.now();
         const cards = rowsForDisplay
           .map((eventRef)=>{
             const eventType = sanitizeText(eventRef?.extendedProps?.event_type || '');
