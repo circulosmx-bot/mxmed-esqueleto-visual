@@ -577,6 +577,7 @@ console.info('app.js loaded :: 20251123a');
     patientNewFirstName: panel.querySelector('#ag_patient_new_first_name'),
     patientNewLastName1: panel.querySelector('#ag_patient_new_last_name_1'),
     patientNewLastName2: panel.querySelector('#ag_patient_new_last_name_2'),
+    patientNewSex: panel.querySelector('#ag_patient_new_sex'),
     patientNewPhone: panel.querySelector('#ag_patient_new_phone'),
     patientNewEmail: panel.querySelector('#ag_patient_new_email'),
     patientBirthdate: panel.querySelector('#ag_patient_birthdate_input'),
@@ -599,6 +600,7 @@ console.info('app.js loaded :: 20251123a');
     patientLookupContext: panel.querySelector('#ag_patient_lookup_context'),
     patientLookupNotice: panel.querySelector('#ag_patient_lookup_notice'),
     patientLookupList: panel.querySelector('#ag_patient_lookup_list'),
+    appointmentReason: panel.querySelector('#ag_appointment_reason_input'),
     createSubmit: panel.querySelector('#ag_create_submit_btn'),
     workspaceShell: panel.querySelector('.mx-ag-workspace-shell'),
     viewModeSwitch: panel.querySelector('#ag_view_mode_switch'),
@@ -709,7 +711,7 @@ console.info('app.js loaded :: 20251123a');
   let visibilityObserver = null;
   let createRequestInFlight = false;
   let createActivePatientMode = 'manual';
-  let createPatientMode = 'existing';
+  let createPatientMode = '';
   let activePatientContextId = '';
   let weeklyHoursExpanded = false;
   let visibleScheduleRange = null;
@@ -5203,17 +5205,18 @@ console.info('app.js loaded :: 20251123a');
       setCreatePatientBirthdateInfo('', '');
     }
   };
-  const switchCreatePatientMode = (mode = 'existing')=>{
-    createPatientMode = (mode === 'new') ? 'new' : 'existing';
+  const switchCreatePatientMode = (mode = null)=>{
+    createPatientMode = (mode === 'new' || mode === 'existing') ? mode : '';
     const isNew = createPatientMode === 'new';
-    if(els.patientExistingWrap) els.patientExistingWrap.classList.toggle('d-none', isNew);
+    const isExisting = createPatientMode === 'existing';
+    if(els.patientExistingWrap) els.patientExistingWrap.classList.toggle('d-none', !isExisting);
     if(els.patientNewWrap) els.patientNewWrap.classList.toggle('d-none', !isNew);
     const existingAccordion = els.patientModeExistingBtn?.closest?.('.mx-ag-patient-accordion-item');
     const newAccordion = els.patientModeNewBtn?.closest?.('.mx-ag-patient-accordion-item');
     if(els.patientModeExistingBtn){
-      els.patientModeExistingBtn.classList.toggle('is-active', !isNew);
-      els.patientModeExistingBtn.setAttribute('aria-selected', !isNew ? 'true' : 'false');
-      els.patientModeExistingBtn.setAttribute('aria-expanded', !isNew ? 'true' : 'false');
+      els.patientModeExistingBtn.classList.toggle('is-active', isExisting);
+      els.patientModeExistingBtn.setAttribute('aria-selected', isExisting ? 'true' : 'false');
+      els.patientModeExistingBtn.setAttribute('aria-expanded', isExisting ? 'true' : 'false');
     }
     if(els.patientModeNewBtn){
       els.patientModeNewBtn.classList.toggle('is-active', isNew);
@@ -5221,7 +5224,7 @@ console.info('app.js loaded :: 20251123a');
       els.patientModeNewBtn.setAttribute('aria-expanded', isNew ? 'true' : 'false');
     }
     if(existingAccordion instanceof HTMLElement){
-      existingAccordion.classList.toggle('is-active', !isNew);
+      existingAccordion.classList.toggle('is-active', isExisting);
     }
     if(newAccordion instanceof HTMLElement){
       newAccordion.classList.toggle('is-active', isNew);
@@ -5244,10 +5247,11 @@ console.info('app.js loaded :: 20251123a');
       });
       setActivePatientMode('manual');
       clearCreatePatientBehaviorNotice();
-    }else{
+    }else if(isExisting){
       if(els.patientNewFirstName) els.patientNewFirstName.value = '';
       if(els.patientNewLastName1) els.patientNewLastName1.value = '';
       if(els.patientNewLastName2) els.patientNewLastName2.value = '';
+      if(els.patientNewSex) els.patientNewSex.value = '';
       if(els.patientNewPhone) els.patientNewPhone.value = '';
       if(els.patientNewEmail) els.patientNewEmail.value = '';
       setCreatePatientBirthdateFieldVisible(false);
@@ -5256,6 +5260,14 @@ console.info('app.js loaded :: 20251123a');
         hint: ''
       });
       queueCreatePatientBehaviorNoticeRefresh(90);
+    }else{
+      setCreatePatientBirthdateFieldVisible(false);
+      setCreatePatientBirthdate('', {
+        readOnly: true,
+        hint: ''
+      });
+      setCreatePatientBirthdateInfo('', '');
+      clearCreatePatientBehaviorNotice();
     }
   };
   const resolvePatientLookupDisplayName = (entry = {})=>{
@@ -13416,8 +13428,18 @@ console.info('app.js loaded :: 20251123a');
     setCreateError('');
     clearCreatePatientBehaviorNotice();
     syncActivePatientPrompt();
-    switchCreatePatientMode('new');
-    if(els.patientId) els.patientId.value = '';
+    switchCreatePatientMode(null);
+    if(els.patientId){
+      els.patientId.value = '';
+      els.patientId.removeAttribute('readonly');
+    }
+    if(els.patientNewFirstName) els.patientNewFirstName.value = '';
+    if(els.patientNewLastName1) els.patientNewLastName1.value = '';
+    if(els.patientNewLastName2) els.patientNewLastName2.value = '';
+    if(els.patientNewSex) els.patientNewSex.value = '';
+    if(els.patientNewPhone) els.patientNewPhone.value = '';
+    if(els.patientNewEmail) els.patientNewEmail.value = '';
+    if(els.appointmentReason) els.appointmentReason.value = '';
     if(els.startInfoTime) els.startInfoTime.textContent = '--:--';
     if(els.startInfoDate) els.startInfoDate.textContent = '--';
     if(els.startAt) els.startAt.value = '';
@@ -14126,6 +14148,9 @@ console.info('app.js loaded :: 20251123a');
 
     if(!doctorId) return setCreateError('No se pudo resolver doctor_id.');
     if(!consultorioId) return setCreateError('No se pudo resolver un consultorio operativo. Verifica el catálogo de consultorios del médico activo.');
+    if(createPatientMode !== 'new' && createPatientMode !== 'existing'){
+      return setCreateError('Selecciona un paciente existente o utiliza “Nuevo paciente”.');
+    }
     if(createPatientMode === 'new'){
       const maybePhoneDigits = normalizePhoneDigits(newPatientPhone);
       if(maybePhoneDigits.length === 10){
@@ -14139,7 +14164,7 @@ console.info('app.js loaded :: 20251123a');
     if(createPatientMode === 'new' && (!newPatientFirstName || !newPatientLastName1)){
       return setCreateError('Nombre(s) y primer apellido son obligatorios para paciente nuevo.');
     }
-    if(createPatientMode !== 'new' && !patientId){
+    if(createPatientMode === 'existing' && !patientId){
       return setCreateError('Selecciona un paciente existente o utiliza “Nuevo paciente”.');
     }
     if(!startInput) return setCreateError('Inicio es obligatorio.');
@@ -14199,7 +14224,8 @@ console.info('app.js loaded :: 20251123a');
         ...(newPatientBirthdate ? { birthdate: newPatientBirthdate } : {}),
         ...(contacts.length ? { contacts } : {})
       };
-    }else{
+    }
+    if(createPatientMode === 'existing'){
       payload.patient_id = patientId;
     }
 
@@ -15114,7 +15140,7 @@ console.info('app.js loaded :: 20251123a');
     }
   };
   const resolveCreatePatientBehaviorPatientId = ()=>{
-    if(createPatientMode === 'new') return '';
+    if(createPatientMode !== 'existing') return '';
     if(createActivePatientMode === 'active' && activePatientContextId){
       return sanitizeText(activePatientContextId);
     }
@@ -15127,7 +15153,7 @@ console.info('app.js loaded :: 20251123a');
       try{ createBehaviorLookupCtrl.abort(); }catch(_){}
       createBehaviorLookupCtrl = null;
     }
-    if(!safePatientId || createPatientMode === 'new'){
+    if(!safePatientId || createPatientMode !== 'existing'){
       applyPatientBehaviorNotice(ensureCreatePatientBehaviorNoticeWrap(), null);
       return;
     }
@@ -19368,13 +19394,13 @@ console.info('app.js loaded :: 20251123a');
         });
       });
     els.patientModeExistingBtn?.addEventListener('click', ()=>{
-      switchCreatePatientMode('existing');
+      switchCreatePatientMode(createPatientMode === 'existing' ? null : 'existing');
     });
     els.patientModeNewBtn?.addEventListener('click', ()=>{
-      switchCreatePatientMode('new');
+      switchCreatePatientMode(createPatientMode === 'new' ? null : 'new');
     });
     els.patientNewToggle?.addEventListener('click', ()=>{
-      switchCreatePatientMode(createPatientMode === 'new' ? 'existing' : 'new');
+      switchCreatePatientMode(createPatientMode === 'new' ? null : 'new');
     });
     els.cellMenuNewAppointment?.addEventListener('click', ()=>{
       if(!cellMenuSelection) return;
