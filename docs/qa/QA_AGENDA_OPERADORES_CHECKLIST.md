@@ -276,3 +276,39 @@ Resultado consolidado: **PASS**.
 - [x] assign legacy sin actor sigue funcionando por fallback compatible.
 - [x] `POST/PATCH /waitlist` (F2.5E1) sin regresión.
 - [x] `php -l` de `WaitlistController.php` y `AppointmentWriteRepository.php` en PASS.
+
+## M) Cierre F2.6 (QA integral RBAC + auditoría)
+
+Resultado consolidado: **PASS**.
+
+- [x] Preflight:
+  - repo limpio (`git status --short --untracked-files=no`).
+  - rama correcta (`fix/agenda-dia-mes-rescate-controlado`).
+- [x] RBAC frontend doctor/operator:
+  - doctor ve y usa Configuración/Operadores.
+  - operator no accede a Configuración/Operadores (incluye intento por `jumpTo`).
+- [x] RBAC backend operator:
+  - 403 en `/operators/*` y rutas de configuración protegidas.
+  - allow en rutas operativas (`appointments`, `availability`, `waitlist`, `GET /consultorios`, `public/*`).
+- [x] Actor attribution appointments:
+  - `create`, `reschedule`, `cancel`, `no_show` con actor consistente.
+  - `GET /appointments/{id}/events` con DTO aditivo esperado.
+- [x] Waitlist actor attribution:
+  - `POST /waitlist`, `PATCH /waitlist/{id}`, `POST /waitlist/{id}/assign` con attribution consistente.
+  - `appointment_reassigned_from_waitlist` con metadata estructurada.
+- [x] Compatibilidad legacy:
+  - create cita legacy sin actor explícito.
+  - waitlist create/update/assign legacy.
+- [x] Smoke mínimo Agenda:
+  - Semana y Día abren.
+  - siguiente cita disponible abre.
+
+IDs QA de referencia F2.6:
+- `doctor_id`: `1`
+- `appointment_id`: `93730ced68f31f7d5e545ff9`, `2c4a2b508e970bb30c37f8c3`, `7e525e13e8117b07677e760f`
+- `waitlist_id`: `05b249d5f734d24b378b4a74`, `720d267fe240ef76f4627ba7`
+
+Observaciones:
+- [x] Datos QA quedaron persistidos en tablas (sin limpieza destructiva en este cierre).
+- [x] `409 Conflict` ocasional conocido de entorno QA no bloqueó los flujos validados.
+- [x] `bloqueo parcial` y `domingo sin horario` no fueron exhaustivos en F2.6, pero conservan PASS previo dedicado.

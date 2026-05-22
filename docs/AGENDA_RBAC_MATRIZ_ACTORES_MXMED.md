@@ -257,3 +257,31 @@ Acuerdo de F2.5A:
 
 Pendiente posterior:
 - F2.5B-F2.5F para normalizacion de payload, persistencia, DTO de eventos y QA integral.
+
+## 13. Cierre F2.6 (QA integral RBAC + auditoría)
+
+Estado: **PASS** (cierre de QA integral ejecutado, sin cambios funcionales en esta fase).
+
+Bloques validados:
+- Preflight (repo limpio, rama esperada, consola sin errores JS nuevos atribuibles a RBAC).
+- RBAC frontend doctor/operator (doctor con acceso completo; operator sin acceso a Configuración/Operadores, con bloqueo por navegación directa).
+- RBAC backend para `operator` (403 en rutas restringidas y acceso permitido en rutas operativas).
+- Actor attribution en citas (`create`, `reschedule`, `cancel`, `no_show`) con eventos consistentes.
+- Actor attribution en waitlist (`POST`, `PATCH`, `assign`) con metadata estructurada en assign.
+- Compatibilidad legacy sin actor explícito.
+- Smoke mínimo de Agenda (Semana, Día, siguiente cita disponible).
+
+IDs QA de referencia:
+- `doctor_id`: `1`
+- `appointment_id`: `93730ced68f31f7d5e545ff9`, `2c4a2b508e970bb30c37f8c3`, `7e525e13e8117b07677e760f`
+- `waitlist_id`: `05b249d5f734d24b378b4a74`, `720d267fe240ef76f4627ba7`
+
+Observaciones:
+- Quedaron datos QA en tablas de citas/waitlist (sin limpieza destructiva en este cierre).
+- Se mantiene aparición ocasional de `409 Conflict` en entorno QA, sin bloqueo de los flujos validados.
+- En esta corrida, el smoke de Agenda fue mínimo; `bloqueo parcial` y `domingo sin horario` se mantienen en PASS por corridas dedicadas previas.
+
+Pendiente posterior a F2.6:
+- Fuente autoritativa de actor (sesión/JWT/API key).
+- Actores externos (`patient`, `call_center`, `ai_operator`) con enforcement completo.
+- Backend de bloqueos/desbloqueos y auditoría `availability_blocked` / `availability_unblocked`.

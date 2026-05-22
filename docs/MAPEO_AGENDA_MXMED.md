@@ -349,3 +349,30 @@ Commits relevantes F2.5:
 - Definición de persistencia backend para eventos de bloqueo (si aplica).
 - Actor attribution integral para availability/block events.
 - Política de visibilidad de auditoría por rol.
+
+## 12. Cierre F2.6 (QA integral RBAC + auditoría)
+
+Resultado general: **PASS**.
+
+Bloques cubiertos:
+- Preflight (repo limpio, rama correcta, apertura del sistema).
+- RBAC frontend doctor/operator.
+- RBAC backend operator (deny en configuración/operadores, allow en operación Agenda).
+- Actor attribution en writes de citas y lectura de eventos.
+- Actor attribution en waitlist create/update/assign.
+- Compatibilidad legacy.
+- Smoke mínimo Agenda.
+
+IDs QA de referencia:
+- `doctor_id`: `1`
+- `appointment_id`: `93730ced68f31f7d5e545ff9`, `2c4a2b508e970bb30c37f8c3`, `7e525e13e8117b07677e760f`
+- `waitlist_id`: `05b249d5f734d24b378b4a74`, `720d267fe240ef76f4627ba7`
+
+Notas:
+- Se conservaron datos QA en tablas de citas/waitlist (sin limpieza destructiva en esta fase).
+- `409 Conflict` ocasional sigue visible en entorno QA; no bloqueó los flujos validados.
+- `bloqueo parcial` y `domingo sin horario` no se re-probaron exhaustivamente en F2.6, pero mantienen PASS previo dedicado.
+
+Pendiente posterior recomendado:
+- Diseñar backend de bloqueos/desbloqueos con auditoría canónica.
+- Definir fuente autoritativa de actor para endurecer RBAC y evitar spoofing.

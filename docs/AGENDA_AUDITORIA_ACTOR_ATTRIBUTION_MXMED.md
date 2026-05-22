@@ -216,3 +216,30 @@ Pendiente para F2.5E/F2.5F:
 - Estrategia de persistencia backend de bloqueos (si aplica).
 - Actor attribution para eventos de disponibilidad/bloqueo.
 - Reglas de visibilidad de auditoria por rol.
+
+## 14) Cierre F2.6 (QA integral RBAC + auditoría)
+
+Estado: **PASS**.
+
+Alcance validado en F2.6:
+- RBAC frontend doctor/operator.
+- RBAC backend para `operator` (rutas restringidas vs operativas).
+- Actor attribution de citas (`appointment_created`, `appointment_rescheduled`, `appointment_canceled`, `appointment_no_show`).
+- Actor attribution de waitlist (`waitlist_created`, `waitlist_updated`, `waitlist_assigned`) y eventos de cita derivados de assign.
+- Compatibilidad legacy sin actor explícito.
+- Smoke mínimo de Agenda sin regresión visible.
+
+IDs QA usados:
+- `doctor_id`: `1`
+- `appointment_id`: `93730ced68f31f7d5e545ff9`, `2c4a2b508e970bb30c37f8c3`, `7e525e13e8117b07677e760f`
+- `waitlist_id`: `05b249d5f734d24b378b4a74`, `720d267fe240ef76f4627ba7`
+
+Observaciones operativas:
+- Datos QA permanecen en tablas de citas/waitlist (sin limpieza destructiva en este cierre).
+- Se observa ocasionalmente `409 Conflict` conocido del entorno QA, sin bloquear las rutas auditadas.
+- `Bloqueo parcial` y `domingo sin horario` no se re-ejecutaron exhaustivamente en F2.6; ambos conservan PASS de corridas dedicadas previas.
+
+Pendiente posterior:
+- Fuente autoritativa de actor (identidad fuerte en servidor).
+- Auditoría backend de bloqueos/desbloqueos (`availability_blocked` / `availability_unblocked`).
+- Política final de visibilidad de auditoría por rol.
