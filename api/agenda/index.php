@@ -644,6 +644,196 @@ function isAgendaConfigRouteForOperator(array $segments, string $method): bool
     return false;
 }
 
+function isAgendaStrictOperatorEnforcementRoute(array $segments, string $method): bool
+{
+    $resource = strtolower(trim((string)($segments[0] ?? '')));
+    if ($resource === '') {
+        return false;
+    }
+    $verb = strtoupper(trim((string)$method));
+
+    if ($resource === 'appointments') {
+        return true;
+    }
+    if ($resource === 'availability') {
+        return $verb === 'GET';
+    }
+    if ($resource === 'waitlist') {
+        return in_array($verb, ['GET', 'POST', 'PATCH'], true);
+    }
+    if ($resource === 'consultorios') {
+        return $verb === 'GET';
+    }
+
+    return false;
+}
+
+function evaluateAgendaStrictOperatorIdentity(array $actorContext): array
+{
+    $warning = strtolower(trim((string)($actorContext['operator_identity_warning'] ?? '')));
+    $decision = [
+        'would_block' => false,
+        'reason' => '',
+        'status' => null,
+        'error' => null,
+        'message' => null,
+    ];
+
+    if ($warning === 'operator_id_missing') {
+        $decision['would_block'] = true;
+        $decision['reason'] = 'missing_operator_id';
+        $decision['status'] = 403;
+        $decision['error'] = 'forbidden';
+        $decision['message'] = 'forbidden';
+        return $decision;
+    }
+    if ($warning === 'operator_not_found') {
+        $decision['would_block'] = true;
+        $decision['reason'] = 'operator_not_found';
+        $decision['status'] = 403;
+        $decision['error'] = 'forbidden';
+        $decision['message'] = 'forbidden';
+        return $decision;
+    }
+    if ($warning === 'operator_doctor_mismatch') {
+        $decision['would_block'] = true;
+        $decision['reason'] = 'doctor_mismatch';
+        $decision['status'] = 403;
+        $decision['error'] = 'forbidden';
+        $decision['message'] = 'forbidden';
+        return $decision;
+    }
+    if ($warning === 'operator_not_active') {
+        $decision['would_block'] = true;
+        $decision['reason'] = 'status_not_active';
+        $decision['status'] = 403;
+        $decision['error'] = 'forbidden';
+        $decision['message'] = 'forbidden';
+        return $decision;
+    }
+    if ($warning === 'operator_identity_db_not_ready') {
+        $decision['would_block'] = true;
+        $decision['reason'] = 'operator_identity_db_not_ready';
+        $decision['status'] = 503;
+        $decision['error'] = 'db_not_ready';
+        $decision['message'] = 'operators tables not ready';
+        return $decision;
+    }
+
+    return $decision;
+}
+
+function buildAgendaStrictOperatorEnforcementResponse(
+    array $actorContext,
+    array $segments,
+    string $method,
+    array $decision
+): array {
+    $meta = [
+        'auth_mode' => trim((string)($actorContext['auth_mode'] ?? '')),
+        'actor_role' => trim((string)($actorContext['actor_role'] ?? '')),
+        'route' => strtolower(trim((string)($segments[0] ?? ''))),
+        'method' => strtoupper(trim((string)$method)),
+        'operator_strict_reason' => trim((string)($decision['reason'] ?? '')),
+    ];
+    $status = (int)($decision['status'] ?? 403);
+    $error = trim((string)($decision['error'] ?? 'forbidden'));
+    $message = trim((string)($decision['message'] ?? 'forbidden'));
+
+    if ($error === 'db_not_ready') {
+        return [
+            'status' => $status,
+            'response' => [
+                'ok' => false,
+                'error' => 'db_not_ready',
+                'message' => $message !== '' ? $message : 'operators tables not ready',
+                'data' => null,
+                'meta' => (object)$meta,
+            ],
+        ];
+    }
+
+    return [
+        'status' => $status,
+        'response' => forbidden_response($message !== '' ? $message : 'forbidden', $meta),
+    ];
+}
+
+function resolveAgendaStrictOperatorGuard(
+    array $actorContext,
+    array $segments,
+    string $method,
+    bool $enforcementEnabled = false
+): array {
+    $context = $actorContext;
+    $resource = strtolower(trim((string)($segments[0] ?? '')));
+    $verb = strtoupper(trim((string)$method));
+    $routeEligible = isAgendaStrictOperatorEnforcementRoute($segments, $method);
+    $actorRole = normalizeAgendaActorRole($context['actor_role'] ?? '');
+    $authMode = strtolower(trim((string)($context['auth_mode'] ?? '')));
+    $strictMode = ($authMode === 'strict') || (bool)($context['strict'] ?? false);
+
+    $context['operator_strict_guard_mode'] = $enforcementEnabled ? 'enforce' : 'dry_run';
+    $context['operator_strict_guard_enabled'] = $enforcementEnabled;
+    $context['operator_strict_guard_route_eligible'] = $routeEligible;
+    $context['operator_strict_guard_checked'] = false;
+    $context['operator_strict_guard_would_block'] = false;
+    $context['operator_strict_guard_reason'] = null;
+    $context['operator_strict_guard_http_status'] = null;
+    $context['operator_strict_guard_error'] = null;
+    $context['operator_strict_guard_message'] = null;
+
+    if (!$routeEligible || $actorRole !== 'operator' || !$strictMode) {
+        return [
+            'context' => $context,
+            'blocked' => false,
+            'status' => null,
+            'response' => null,
+        ];
+    }
+
+    $decision = evaluateAgendaStrictOperatorIdentity($context);
+    $context['operator_strict_guard_checked'] = true;
+    $context['operator_strict_guard_would_block'] = (bool)($decision['would_block'] ?? false);
+
+    if (!$context['operator_strict_guard_would_block']) {
+        return [
+            'context' => $context,
+            'blocked' => false,
+            'status' => null,
+            'response' => null,
+        ];
+    }
+
+    $context['operator_strict_guard_reason'] = trim((string)($decision['reason'] ?? ''));
+    $context['operator_strict_guard_http_status'] = (int)($decision['status'] ?? 0);
+    $context['operator_strict_guard_error'] = trim((string)($decision['error'] ?? ''));
+    $context['operator_strict_guard_message'] = trim((string)($decision['message'] ?? ''));
+    $context = appendAgendaWarning($context, 'operator_strict_dry_run_would_block', [
+        'reason' => $context['operator_strict_guard_reason'],
+        'route' => $resource,
+        'method' => $verb,
+        'strict_mode' => true,
+    ]);
+
+    if (!$enforcementEnabled) {
+        return [
+            'context' => $context,
+            'blocked' => false,
+            'status' => null,
+            'response' => null,
+        ];
+    }
+
+    $result = buildAgendaStrictOperatorEnforcementResponse($context, $segments, $method, $decision);
+    return [
+        'context' => $context,
+        'blocked' => true,
+        'status' => (int)($result['status'] ?? 403),
+        'response' => $result['response'] ?? forbidden_response('forbidden'),
+    ];
+}
+
 function apply_actor_context($controller, array $actorContext): void
 {
     if (is_object($controller) && method_exists($controller, 'setActorContext')) {
@@ -724,6 +914,30 @@ try {
                 'method' => strtoupper(trim((string)$method)),
             ]));
             http_response_code(403);
+            $json = json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if ($json === false) {
+                $json = json_encode([
+                    'ok' => false,
+                    'error' => 'db_error',
+                    'message' => 'database error',
+                    'data' => null,
+                    'meta' => (object)[],
+                ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            }
+            echo $json;
+            exit;
+        }
+
+        $strictOperatorGuard = resolveAgendaStrictOperatorGuard(
+            $actorContext,
+            $segments,
+            (string)$method,
+            false
+        );
+        $actorContext = (array)($strictOperatorGuard['context'] ?? $actorContext);
+        if ((bool)($strictOperatorGuard['blocked'] ?? false)) {
+            $response = normalize_response($strictOperatorGuard['response'] ?? forbidden_response('forbidden'));
+            http_response_code((int)($strictOperatorGuard['status'] ?? 403));
             $json = json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             if ($json === false) {
                 $json = json_encode([
