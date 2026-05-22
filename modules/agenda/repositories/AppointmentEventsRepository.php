@@ -31,43 +31,115 @@ class AppointmentEventsRepository
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return array_map([$this, 'enrichRescheduleConsultorioTrace'], $rows);
+
+        return array_map([$this, 'enrichEventDto'], $rows);
     }
 
-    private function enrichRescheduleConsultorioTrace(array $row): array
+    private function enrichEventDto(array $row): array
     {
-        if (($row['event_type'] ?? '') !== 'appointment_rescheduled') {
-            return $row;
+        $eventType = $this->safeString($row['event_type'] ?? null);
+        $appointmentId = $this->safeString($row['appointment_id'] ?? null);
+
+        $metadata = $this->buildMetadataFromNotes($row['notes'] ?? null);
+
+        if ($eventType === 'appointment_rescheduled') {
+            $trace = $this->extractConsultorioTraceFromMetadata($metadata);
+            $fromConsultorio = $this->safeString($row['from_consultorio_id'] ?? null);
+            $toConsultorio = $this->safeString($row['to_consultorio_id'] ?? null);
+
+            if ($fromConsultorio === '' && $trace['from_consultorio_id'] !== null) {
+                $fromConsultorio = $trace['from_consultorio_id'];
+            }
+            if ($toConsultorio === '' && $trace['to_consultorio_id'] !== null) {
+                $toConsultorio = $trace['to_consultorio_id'];
+            }
+
+            $row['from_consultorio_id'] = $fromConsultorio !== '' ? $fromConsultorio : null;
+            $row['to_consultorio_id'] = $toConsultorio !== '' ? $toConsultorio : null;
+
+            if ($row['from_consultorio_id'] !== null) {
+                $metadata['from_consultorio_id'] = $row['from_consultorio_id'];
+            }
+            if ($row['to_consultorio_id'] !== null) {
+                $metadata['to_consultorio_id'] = $row['to_consultorio_id'];
+            }
         }
 
-        $trace = $this->extractConsultorioTraceFromNotes($row['notes'] ?? null);
-        $row['from_consultorio_id'] = $row['from_consultorio_id'] ?? ($trace['from_consultorio_id'] ?? null);
-        $row['to_consultorio_id'] = $row['to_consultorio_id'] ?? ($trace['to_consultorio_id'] ?? null);
+        $metadataActorRole = $this->safeString($metadata['actor_role'] ?? null);
+        $metadataCreatedByRole = $this->safeString($metadata['created_by_role'] ?? null);
+        $metadataActorId = $this->safeString($metadata['actor_id'] ?? null);
+        $metadataCreatedById = $this->safeString($metadata['created_by_id'] ?? null);
+
+        $actorRole = $this->safeString($row['actor_role'] ?? null);
+        if ($actorRole === '') {
+            $actorRole = $metadataActorRole !== '' ? $metadataActorRole : $metadataCreatedByRole;
+        }
+
+        $actorId = $this->safeString($row['actor_id'] ?? null);
+        if ($actorId === '') {
+            $actorId = $metadataActorId !== '' ? $metadataActorId : $metadataCreatedById;
+        }
+
+        $createdByRole = $metadataCreatedByRole !== '' ? $metadataCreatedByRole : $actorRole;
+        $createdById = $metadataCreatedById !== '' ? $metadataCreatedById : $actorId;
+
+        $occurredAt = $this->safeString($row['timestamp'] ?? null);
+        if ($occurredAt === '') {
+            $occurredAt = $this->safeString($row['created_at'] ?? null);
+        }
+
+        $row['action'] = $eventType !== '' ? $eventType : null;
+        $row['entity_type'] = 'appointment';
+        $row['entity_id'] = $appointmentId !== '' ? $appointmentId : null;
+        $row['occurred_at'] = $occurredAt !== '' ? $occurredAt : null;
+
+        // Preservamos campos legacy y completamos attribution de forma aditiva.
+        $row['actor_role'] = $actorRole !== '' ? $actorRole : null;
+        $row['actor_id'] = $actorId !== '' ? $actorId : null;
+
+        $actorDisplayName = $this->safeString($metadata['actor_display_name'] ?? null);
+        $row['actor_display_name'] = $actorDisplayName !== '' ? $actorDisplayName : null;
+
+        $row['created_by_role'] = $createdByRole !== '' ? $createdByRole : null;
+        $row['created_by_id'] = $createdById !== '' ? $createdById : null;
+
+        $row['metadata'] = !empty($metadata) ? $metadata : (object)[];
+
         return $row;
     }
 
-    private function extractConsultorioTraceFromNotes($notes): array
+    private function buildMetadataFromNotes($notes): array
     {
-        if (!is_string($notes)) {
-            return [];
+        if (is_string($notes)) {
+            $trimmed = trim($notes);
+            if ($trimmed !== '') {
+                $decoded = json_decode($trimmed, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    return $decoded;
+                }
+                return ['notes_text' => $notes];
+            }
         }
-        $trimmed = trim($notes);
-        if ($trimmed === '' || $trimmed[0] !== '{') {
-            return [];
-        }
+        return [];
+    }
 
-        $decoded = json_decode($trimmed, true);
-        if (!is_array($decoded)) {
-            return [];
-        }
-
-        $from = isset($decoded['from_consultorio_id']) ? trim((string)$decoded['from_consultorio_id']) : '';
-        $to = isset($decoded['to_consultorio_id']) ? trim((string)$decoded['to_consultorio_id']) : '';
+    private function extractConsultorioTraceFromMetadata(array $metadata): array
+    {
+        $from = $this->safeString($metadata['from_consultorio_id'] ?? null);
+        $to = $this->safeString($metadata['to_consultorio_id'] ?? null);
 
         return [
             'from_consultorio_id' => $from !== '' ? $from : null,
             'to_consultorio_id' => $to !== '' ? $to : null,
         ];
+    }
+
+    private function safeString($value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+        return trim((string)$value);
     }
 
     private function ensureTable(): void
