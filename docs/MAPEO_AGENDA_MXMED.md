@@ -444,3 +444,42 @@ Pendiente post F3.2A:
 - Validar `operator` activo contra `agenda_operators`.
 - Endurecer strict/anti-spoofing.
 - Exponer observabilidad adicional en meta si se decide F3.2B.
+
+## 15. Adenda F3.3B (validación observacional operator)
+
+Estado: **cerrado** (observacional, sin bloqueo nuevo).
+
+Implementación:
+- commit `15d23a4`
+- `api/agenda/index.php`: `resolveAgendaOperatorIdentity(...)`
+- `modules/agenda/repositories/OperatorsRepository.php`: `findOperatorIdentity(...)`
+
+Alcance:
+- Con `actor_role=operator`, backend valida identidad contra `agenda_operators`.
+- En `compat` y `qa_override`:
+  - no bloquea rutas operativas;
+  - agrega warnings/campos observacionales al `actorContext`.
+
+Warnings posibles:
+- `operator_id_missing`
+- `operator_not_found`
+- `operator_doctor_mismatch`
+- `operator_not_active`
+- `operator_identity_db_not_ready`
+- `operator_identity_valid`
+
+Campos observacionales:
+- `operator_identity_checked`
+- `operator_identity_found`
+- `operator_status`
+- `operator_is_active`
+- `operator_identity_warning`
+- `warnings[]`
+
+Compatibilidad validada:
+- operación Agenda permitida para operator en compat aunque identity falle;
+- RBAC F2.3 sin regresión;
+- rutas públicas sin afectación.
+
+Pendiente F3.3C:
+- enforcement en `strict` con validación obligatoria de operador activo y scope de doctor.

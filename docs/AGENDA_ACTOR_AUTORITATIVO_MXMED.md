@@ -175,3 +175,51 @@ QA documentado (PASS):
 - Ruta pública => `public_flow`.
 - RBAC F2.3 sin regresión.
 - `php -l api/agenda/index.php` PASS.
+
+## 13) Cierre F3.3B (validación observacional de operador)
+
+Implementado en:
+- `api/agenda/index.php`
+- `modules/agenda/repositories/OperatorsRepository.php`
+- commit: `15d23a4`
+
+Componentes:
+- Helper router: `resolveAgendaOperatorIdentity(...)`
+- Método repository: `findOperatorIdentity(...)`
+
+Alcance:
+- Cuando `actor_role=operator`, backend intenta validar identidad contra `agenda_operators`.
+- En `compat` y `qa_override` la validación es **observacional**:
+  - no bloquea rutas operativas;
+  - agrega señales en `actorContext`.
+
+Warnings definidos:
+- `operator_id_missing`
+- `operator_not_found`
+- `operator_doctor_mismatch`
+- `operator_not_active`
+- `operator_identity_db_not_ready`
+- `operator_identity_valid`
+
+Campos observacionales en contexto:
+- `operator_identity_checked`
+- `operator_identity_found`
+- `operator_status`
+- `operator_is_active`
+- `operator_identity_warning`
+- `warnings[]`
+
+Compatibilidad preservada:
+- Sin `operator_id`, operación permitida en `compat`.
+- Header/query QA se mantienen.
+- RBAC F2.3 mantiene deny/allow existentes.
+- `public/*` sin afectación.
+
+Pendiente F3.3C:
+- Enforcement real en `strict`:
+  - `operator_id` obligatorio;
+  - operador existente;
+  - `doctor_id` consistente;
+  - `status=active` requerido;
+  - denegar `paused` / `pending` / `archived`.
+- Exponer observabilidad externa (`meta`) si se decide.

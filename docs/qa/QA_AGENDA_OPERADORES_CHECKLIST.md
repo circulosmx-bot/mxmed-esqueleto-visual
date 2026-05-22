@@ -350,3 +350,36 @@ Limitaciones vigentes (esperadas):
 - [ ] Validación autoritativa de `operator_id` contra `agenda_operators` (F3.3).
 - [ ] Bloqueo por estado `paused/pending/archived` en modo autoritativo (F3.3+).
 - [ ] Endurecimiento anti-spoofing completo fuera de QA/dev (F3.4).
+
+## P) Cierre F3.3B (validación observacional de operator)
+
+Resultado consolidado: **PASS**.
+
+- [x] Implementación observacional en commit `15d23a4`.
+- [x] `resolveAgendaOperatorIdentity(...)` activo en `api/agenda/index.php`.
+- [x] `findOperatorIdentity(...)` expuesto en `OperatorsRepository`.
+- [x] Warnings soportados:
+  - `operator_id_missing`
+  - `operator_not_found`
+  - `operator_doctor_mismatch`
+  - `operator_not_active`
+  - `operator_identity_db_not_ready`
+  - `operator_identity_valid`
+- [x] Campos observacionales en `actorContext`:
+  - `operator_identity_checked`
+  - `operator_identity_found`
+  - `operator_status`
+  - `operator_is_active`
+  - `operator_identity_warning`
+  - `warnings[]`
+- [x] `compat` sin `operator_id`: operación permitida.
+- [x] `compat` con operator active: operación permitida.
+- [x] `compat` con paused/archived/wrong doctor: operación permitida (observacional).
+- [x] RBAC F2.3 sin regresión (`operators/config` denegado, rutas operativas permitidas).
+- [x] `public/*` sin afectación.
+- [x] `php -l` PASS:
+  - `api/agenda/index.php`
+  - `modules/agenda/repositories/OperatorsRepository.php`
+
+Pendiente F3.3C:
+- [ ] Activar enforcement real en `strict` para operator activo y scoped.

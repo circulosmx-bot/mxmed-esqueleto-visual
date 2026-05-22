@@ -291,6 +291,34 @@ Pendiente para F3.3/F3.4:
 - Bloqueo por estado (`paused`/`pending`/`archived`) en modo autoritativo.
 - Restricción de overrides header/query/body a QA/dev controlado.
 
+## 15. Adenda F3.3B (validación observacional operator)
+
+Estado:
+- Cerrado de forma observacional (sin enforcement nuevo) en commit `15d23a4`.
+
+Implementación:
+- Router Agenda incorpora `resolveAgendaOperatorIdentity(...)`.
+- Repositorio de Operadores expone `findOperatorIdentity(...)`.
+
+Comportamiento por modo:
+- `compat` / `qa_override`:
+  - no bloquea operación de agenda;
+  - agrega warnings/contexto de identidad operator.
+- RBAC F2.3 no cambia:
+  - `operator` sigue bloqueado en `/operators/*` y configuración;
+  - `operator` sigue permitido en rutas operativas.
+
+Warnings documentados:
+- `operator_id_missing`
+- `operator_not_found`
+- `operator_doctor_mismatch`
+- `operator_not_active`
+- `operator_identity_db_not_ready`
+- `operator_identity_valid`
+
+Pendiente siguiente:
+- F3.3C para activar enforcement real en `strict`.
+
 Siguiente fase sugerida:
 - F2.4 actores externos de Agenda (`patient`, `call_center`, `ai_operator`).
 - Alternativamente F2.5 para consolidar auditoría/actor attribution antes de ampliar actores.

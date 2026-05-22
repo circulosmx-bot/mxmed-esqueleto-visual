@@ -252,6 +252,36 @@ Limitaciones vigentes:
 - Sin enforcement por estado de operador.
 - `strict` fuerte y anti-spoofing completo siguen pendientes.
 
+## 17) Cierre F3.3B (operator identity observacional)
+
+Commit relevante:
+- `15d23a4` `feat(agenda): valida operador en modo observacional`
+
+Implementación:
+- `resolveAgendaOperatorIdentity(...)` en router Agenda.
+- `findOperatorIdentity(...)` en `OperatorsRepository`.
+
+Impacto en auditoría/attribution:
+- Se verifica identidad de `operator` contra `agenda_operators` cuando `actor_role=operator`.
+- En `compat` y `qa_override` no hay denegación nueva; solo enriquecimiento de contexto con señales de identidad.
+
+Señales agregadas:
+- `operator_identity_checked`
+- `operator_identity_found`
+- `operator_status`
+- `operator_is_active`
+- `operator_identity_warning`
+- `warnings[]` con tipos:
+  - `operator_id_missing`
+  - `operator_not_found`
+  - `operator_doctor_mismatch`
+  - `operator_not_active`
+  - `operator_identity_db_not_ready`
+  - `operator_identity_valid`
+
+Pendiente:
+- F3.3C: convertir validación observacional en enforcement `strict` controlado.
+
 ## 13) Pendiente inmediato (F2.5E)
 
 - Auditoria waitlist residual (si se amplía visibilidad por rol o nuevos eventos dedicados).
