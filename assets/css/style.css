@@ -11017,6 +11017,22 @@ body{margin:0;background:var(--mm-fondo-base);}
   position: relative;
   overflow: hidden;
 }
+.mx-ag-custom-slot-now-badge{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #FF073A;
+  color: #ffffff;
+  font-size: .7rem;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
 .mxm-custom-week-card{
   display: grid;
   visibility: visible;
@@ -11055,7 +11071,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   color: #3f5d6f;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
   text-align: right;
   flex: 1 1 auto;
   min-width: 0;

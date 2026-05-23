@@ -728,6 +728,7 @@ console.info('app.js loaded :: 20251123a');
   let customWeekPendingRaf = 0;
   let customDayMiniMonthCursor = null;
   let customDayNowTickerId = 0;
+  let customWeekNowBadgeTickerId = 0;
   const CUSTOM_DAY_MINI_MONTH_MIN_DATE = new Date(2026, 0, 1);
   let agendaLatestEventsForCustomWeek = [];
   let customWeekLastForcedRefetchAt = 0;
@@ -2559,6 +2560,13 @@ console.info('app.js loaded :: 20251123a');
     if(Number.isNaN(start.getTime())) return false;
     return start.getTime() < Number(nowTs || Date.now());
   };
+  const isCurrentTimeInsideRange = (startLike, endLike, nowTs = Date.now())=>{
+    const start = startLike instanceof Date ? startLike : new Date(startLike || '');
+    const end = endLike instanceof Date ? endLike : new Date(endLike || '');
+    if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return false;
+    const refNow = Number(nowTs || Date.now());
+    return start.getTime() <= refNow && end.getTime() > refNow;
+  };
   const isTechnicalNonCardEventType = (eventType = '')=>{
     const safeType = sanitizeText(eventType || '');
     return safeType === 'availability' || safeType === 'focus_marker' || safeType === 'cancel_trace' || safeType === 'blocked_slot';
@@ -3252,6 +3260,68 @@ console.info('app.js loaded :: 20251123a');
       syncCustomDayNowCard();
     }, 30000);
   };
+  const clearCustomWeekNowBadgeFromCard = (cardEl = null)=>{
+    if(!(cardEl instanceof HTMLElement)) return;
+    cardEl.classList.remove('is-now');
+    const badge = cardEl.querySelector('.mx-ag-custom-slot-now-badge');
+    if(badge){
+      try{ badge.remove(); }catch(_){}
+    }
+  };
+  const markCustomWeekNowBadgeOnCard = (cardEl = null)=>{
+    if(!(cardEl instanceof HTMLElement)) return;
+    cardEl.classList.add('is-now');
+    if(cardEl.querySelector('.mx-ag-custom-slot-now-badge')) return;
+    const badge = document.createElement('span');
+    badge.className = 'mx-ag-custom-slot-now-badge';
+    badge.setAttribute('aria-hidden', 'true');
+    badge.textContent = 'AHORA';
+    const topRow = cardEl.querySelector('.mx-ag-custom-slot-top');
+    if(topRow instanceof HTMLElement){
+      const timeNode = topRow.querySelector('.mx-ag-custom-slot-time');
+      if(timeNode instanceof HTMLElement){
+        timeNode.insertAdjacentElement('afterend', badge);
+      }else{
+        topRow.insertAdjacentElement('afterbegin', badge);
+      }
+      return;
+    }
+    cardEl.insertAdjacentElement('afterbegin', badge);
+  };
+  const syncCustomWeekNowBadgeInDom = ()=>{
+    if(!isCustomWeekActive()) return;
+    const root = ensureCustomWeekRoot();
+    if(!(root instanceof HTMLElement) || root.classList.contains('d-none')) return;
+    const cards = Array.from(root.querySelectorAll('.mx-ag-custom-slot-card'));
+    cards.forEach((cardEl)=> clearCustomWeekNowBadgeFromCard(cardEl));
+    const todayKey = formatYmdLocal(new Date());
+    if(!todayKey) return;
+    const todayColumn = root.querySelector(`.mx-ag-custom-week-col[data-day-key="${todayKey}"]`);
+    if(!(todayColumn instanceof HTMLElement)) return;
+    const nowTs = Date.now();
+    const dayCards = Array.from(todayColumn.querySelectorAll('.mx-ag-custom-slot-card'));
+    const currentCard = dayCards.find((cardEl)=>{
+      const startRaw = sanitizeText(cardEl.getAttribute('data-slot-start') || '');
+      const endRaw = sanitizeText(cardEl.getAttribute('data-slot-end') || '');
+      if(!startRaw || !endRaw) return false;
+      return isCurrentTimeInsideRange(startRaw, endRaw, nowTs);
+    }) || null;
+    if(currentCard){
+      markCustomWeekNowBadgeOnCard(currentCard);
+    }
+  };
+  const stopCustomWeekNowBadgeTicker = ()=>{
+    if(customWeekNowBadgeTickerId){
+      try{ window.clearInterval(customWeekNowBadgeTickerId); }catch(_){}
+      customWeekNowBadgeTickerId = 0;
+    }
+  };
+  const ensureCustomWeekNowBadgeTicker = ()=>{
+    if(customWeekNowBadgeTickerId) return;
+    customWeekNowBadgeTickerId = window.setInterval(()=>{
+      syncCustomWeekNowBadgeInDom();
+    }, 30000);
+  };
   const renderCustomDayView = ()=>{
     const root = ensureCustomDayRoot();
     if(!(root instanceof HTMLElement)) return;
@@ -3431,6 +3501,7 @@ console.info('app.js loaded :: 20251123a');
       customWeekActive: isCustomWeekActive()
     });
     if(dayActive){
+      stopCustomWeekNowBadgeTicker();
       if(root instanceof HTMLElement){
         root.classList.add('d-none');
       }
@@ -3448,6 +3519,7 @@ console.info('app.js loaded :: 20251123a');
     els.agendaFrontendV1?.classList.remove('mx-ag-day-layout-active');
     syncCustomDayLegacyRowsVisibility(false);
     if(!isCustomWeekActive()){
+      stopCustomWeekNowBadgeTicker();
       root.classList.add('d-none');
       els.calendarWrap?.classList.remove('mx-ag-custom-week-active');
       customWeekLastRenderedDays = [];
@@ -3455,6 +3527,7 @@ console.info('app.js loaded :: 20251123a');
     }
 
     root.classList.remove('d-none');
+    ensureCustomWeekNowBadgeTicker();
     els.calendarWrap?.classList.add('mx-ag-custom-week-active');
     const hasStableRender = !!root.querySelector('.mx-ag-custom-week-grid');
     const scope = resolveAgendaAvailabilityConsultorioScope();
@@ -3808,6 +3881,7 @@ console.info('app.js loaded :: 20251123a');
         });
         const compactVisibleRows = renderableRows.slice(0, maxCardsPerColumn);
         const rowsForDisplay = weeklyHoursExpanded ? renderableRows : compactVisibleRows;
+        let nowBadgeAssignedForDay = false;
         if(blockedCountBefore > 0){
           try{
             console.info('MXM BLOCK PARTIAL RENDER WEEK', {
@@ -3890,6 +3964,18 @@ console.info('app.js loaded :: 20251123a');
             if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
             const timeLabel = formatAgendaEventSlotTime(start);
             const isPastByStart = isAvailabilitySlotElapsed(start, renderNowTs);
+            const isCurrentSlotNow = (
+              isCurrentColumnDay
+              && !nowBadgeAssignedForDay
+              && isCurrentTimeInsideRange(start, end, renderNowTs)
+            );
+            if(isCurrentSlotNow){
+              nowBadgeAssignedForDay = true;
+            }
+            const nowCardClass = isCurrentSlotNow ? ' is-now' : '';
+            const nowBadgeHtml = isCurrentSlotNow
+              ? '<span class="mx-ag-custom-slot-now-badge" aria-hidden="true">AHORA</span>'
+              : '';
             const consultorioIdSafe = sanitizeText(eventRef?.extendedProps?.consultorio_id || '');
             const consultorioLabel = normalizeConsultorioDisplayLabel(
               sanitizeText(
@@ -3905,7 +3991,7 @@ console.info('app.js loaded :: 20251123a');
               const slotRangeKey = toRangeKey(start, end);
               const isFocusedSlot = slotRangeKey && slotRangeKey === sanitizeText(nextSlotFocus?.key || '');
               const isElapsedSlot = isAvailabilitySlotElapsed(start, renderNowTs);
-              const availableClass = `mx-ag-custom-slot-card mxm-custom-week-card is-available${isElapsedSlot ? ' is-past' : ''}${isFocusedSlot ? ' is-focus-suggested' : ''}`;
+              const availableClass = `mx-ag-custom-slot-card mxm-custom-week-card is-available${isElapsedSlot ? ' is-past' : ''}${isFocusedSlot ? ' is-focus-suggested' : ''}${nowCardClass}`;
               const pastAttrs = isElapsedSlot ? 'disabled aria-disabled="true" tabindex="-1"' : '';
               const availabilityLabel = isElapsedSlot ? 'EXPIRADA' : 'DISPONIBLE';
               return `
@@ -3920,6 +4006,7 @@ console.info('app.js loaded :: 20251123a');
                   data-slot-consultorio-name="${escapeAttrSafe(consultorioLabel)}">
                   <div class="mx-ag-custom-slot-top">
                     <span class="mx-ag-custom-slot-time">${escapeHtml(timeLabel)}</span>
+                    ${nowBadgeHtml}
                     <span class="mx-ag-custom-slot-consultorio">${escapeHtml(consultorioLabel.toUpperCase())}</span>
                   </div>
                   <div class="mx-ag-custom-slot-primary">${availabilityLabel}</div>
@@ -3958,17 +4045,15 @@ console.info('app.js loaded :: 20251123a');
             // Excepciones visuales: canceladas y bloqueos.
             const isPastVisual = !!(isPastByStart && !isCancelledStatus && !isBlockedSlot);
             const occupiedClass = isBlockedSlot
-              ? 'mx-ag-custom-slot-card mxm-custom-week-card is-blocked'
-              : `mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--${escapeAttrSafe(originVisualKey)}${isPastVisual ? ' is-past' : ''}${isDemoQaAppointment ? ' is-demo-qa' : ''}`;
+              ? `mx-ag-custom-slot-card mxm-custom-week-card is-blocked${nowCardClass}`
+              : `mx-ag-custom-slot-card mxm-custom-week-card is-occupied mx-ag-slot-origin--${escapeAttrSafe(originVisualKey)}${isPastVisual ? ' is-past' : ''}${isDemoQaAppointment ? ' is-demo-qa' : ''}${nowCardClass}`;
             const slotKind = isBlockedSlot
               ? 'blocked'
               : (isDemoQaAppointment ? 'demo-occupied' : 'occupied');
             const blockIdAttr = isBlockedSlot
               ? `data-block-id="${escapeAttrSafe(normalizeBlockedSlotIdCandidate(eventRef?.extendedProps?.block_id || eventId))}"`
               : '';
-            const slotRangeAttrs = isBlockedSlot
-              ? `data-slot-start="${escapeAttrSafe(start.toISOString())}" data-slot-end="${escapeAttrSafe(end.toISOString())}"`
-              : '';
+            const slotRangeAttrs = `data-slot-start="${escapeAttrSafe(start.toISOString())}" data-slot-end="${escapeAttrSafe(end.toISOString())}"`;
             const consultorioAttrs = `
               data-slot-consultorio-id="${escapeAttrSafe(consultorioIdSafe)}"
               data-slot-consultorio-name="${escapeAttrSafe(consultorioLabel)}"
@@ -3984,6 +4069,7 @@ console.info('app.js loaded :: 20251123a');
                 ${slotRangeAttrs}>
                 <div class="mx-ag-custom-slot-top">
                   <span class="mx-ag-custom-slot-time">${escapeHtml(timeLabel)}</span>
+                  ${nowBadgeHtml}
                   <span class="mx-ag-custom-slot-consultorio">${escapeHtml(consultorioLabel.toUpperCase())}</span>
                 </div>
                 <div class="mx-ag-custom-slot-primary">${escapeHtml(patient.toUpperCase())}</div>
@@ -4010,6 +4096,7 @@ console.info('app.js loaded :: 20251123a');
       if(navTitleEl instanceof HTMLElement){
         navTitleEl.innerHTML = decorateAgendaCustomWeekTitleHtml(finalRangeTitle);
       }
+      syncCustomWeekNowBadgeInDom();
       if(nextSlotFocus){
         window.setTimeout(()=>{
           syncNextFocusViewport({ behavior: 'smooth', attempts: 4 });
