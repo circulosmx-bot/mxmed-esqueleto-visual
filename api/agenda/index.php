@@ -1357,6 +1357,7 @@ try {
         'unauthorized' => 401,
         'forbidden' => 403,
         'invalid_params' => 400,
+        'invalid_consultorio_id' => 400,
         'invalid_verification_code' => 400,
         'conflict' => 409,
         'not_found' => 404,

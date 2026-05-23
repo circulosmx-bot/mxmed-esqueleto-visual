@@ -216,6 +216,16 @@ class WaitlistController
         if (!empty($errors)) {
             return $this->error('invalid_params', 'invalid payload for waitlist assign', $errors);
         }
+        if (trim((string)($payload['consultorio_id'] ?? '')) === self::ANY_CONSULTORIO_ID) {
+            return $this->error(
+                'invalid_consultorio_id',
+                'consultorio_id must be a real consultorio for assignment',
+                [
+                    'consultorio_id' => self::ANY_CONSULTORIO_ID,
+                    'allowed' => 'real_consultorio_id',
+                ]
+            );
+        }
 
         if ((string)$payload['doctor_id'] !== (string)$entry['doctor_id']) {
             $strictMode = ($this->actorContext['strict'] ?? false) === true;
