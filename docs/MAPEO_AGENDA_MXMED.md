@@ -483,3 +483,87 @@ Compatibilidad validada:
 
 Pendiente F3.3C:
 - enforcement en `strict` con validación obligatoria de operador activo y scope de doctor.
+
+## 16. Adenda MVP Waitlist integrado en “Buscar siguiente cita disponible” (2026-05-23)
+
+Estado: **implementado y validado en QA funcional real**.
+
+Commits base del MVP:
+- `d934f8a` `fix(agenda): soporta lista de espera para todos los consultorios`
+- `d176ee0` `feat(agenda): agrega entrada UI a lista de espera`
+
+### 16.1 Qué es el MVP Waitlist
+- Integración mínima y segura de Lista de espera dentro del flujo ya operativo de Agenda.
+- Objetivo: permitir alta de waitlist cuando no se encuentra horario conveniente, sin crear cita inmediata.
+- Alcance MVP: entrada UI + términos + formulario modo waitlist + `POST /waitlist`.
+
+### 16.2 Dónde nace en UI
+- Modal: **“Buscar siguiente cita disponible”**.
+- CTA visible en la parte baja del modal: **“Inscribir en lista de espera”**.
+- Modal de términos previo a la captura.
+- Reuso del modal “Nueva cita” en modo waitlist (sin reutilizar submit de creación de cita).
+
+### 16.3 Concepto UX aplicado
+- “Entrar en lista de espera” **no** representa cita confirmada.
+- **No** garantiza disponibilidad anticipada.
+- El paciente se considera/contacta si aparece una oportunidad compatible por cancelación o reprogramación.
+
+### 16.4 Flujo operativo implementado
+1. Usuario abre “Buscar siguiente cita disponible”.
+2. Si no encuentra horario adecuado, usa CTA “Inscribir en lista de espera”.
+3. Se muestra modal de términos (cancelar no crea nada).
+4. “Entiendo, continuar” abre formulario modo waitlist.
+5. Se captura paciente:
+   - nuevo, o
+   - registrado (con búsqueda/selección).
+6. Submit en modo waitlist ejecuta `POST /waitlist`.
+7. Se muestra confirmación explícita: no cita confirmada.
+
+### 16.5 Regla “Todos los consultorios”
+- En modo “Todos”, frontend envía sentinel temporal:
+  - `consultorio_id="__all__"`.
+- Backend ajustado para operación end-to-end:
+  - `GET /waitlist?consultorio_id={real}` incluye entries de ese consultorio **y** `__all__`.
+  - `POST /waitlist/{id}/assign` permite asignar entries `__all__` a consultorio real.
+- Resultado de assign:
+  - la cita creada usa `consultorio_id` real del slot destino;
+  - **no** se crea cita con `consultorio_id="__all__"`.
+
+### 16.6 Endpoints usados por el MVP
+- `POST /api/agenda/index.php/waitlist`
+- `GET /api/agenda/index.php/waitlist`
+- `POST /api/agenda/index.php/waitlist/{id}/assign` (validación de compatibilidad y recuperación de hueco)
+
+### 16.7 QA funcional final (resumen)
+Resultado global: **PASS**.
+
+Cobertura validada:
+- CTA waitlist visible y operativo desde “Buscar siguiente cita disponible”.
+- Términos:
+  - cancelar no crea entry,
+  - continuar abre formulario modo waitlist.
+- Paciente nuevo:
+  - crea `POST /waitlist`.
+- Paciente registrado:
+  - crea `POST /waitlist` con `patient_id`.
+- Modo Todos:
+  - payload con `consultorio_id="__all__"`.
+- Consultorio específico:
+  - payload con `consultorio_id` real.
+- `GET /waitlist` devuelve entries creadas (incluyendo regla `__all__` en filtro específico).
+- Assign de entry `__all__` a consultorio real:
+  - permitido,
+  - cita creada con consultorio real.
+- Confirmado en Network:
+  - **sin** `POST /appointments` accidental desde alta waitlist UI.
+- Sin regresión funcional observada en “Nueva cita” normal.
+
+### 16.8 Deudas y siguientes pasos
+- Sentinel `__all__`:
+  - solución temporal válida; deuda semántica a formalizar (`consultorio_scope` canónico o equivalente).
+- Investigar `409 Conflict` intermitente observado en consola QA (no bloqueante en este ciclo).
+- Ejecutar validación dedicada de `strict operator active` en sesión real de operador (no solo `compat`).
+- Definir limpieza de datos QA creados en waitlist/citas según política de entorno.
+- Fase posterior recomendada:
+  - UI completa de Lista de espera,
+  - flujo “Resolver hueco” contextual desde cancelación/reprogramación.
