@@ -3775,19 +3775,22 @@
                     <div id="ag_event_cancel_wrap" class="d-none mt-3" data-view="cancel">
                       <div id="ag_event_cancel_prompt" class="alert alert-warning py-2 mb-2">¿Confirmas cancelar esta cita?</div>
                       <div id="ag_event_cancel_post_hint" class="alert alert-info py-2 mt-3 mb-2 d-none">
-                        Cita cancelada. ¿Cómo deseas ocupar este horario?
+                        Se liberó un espacio. ¿Deseas resolver este hueco?
                       </div>
                       <div id="ag_event_cancel_post_actions" class="d-none">
                         <div class="d-flex flex-wrap gap-2">
-                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_cancel_post_waitlist_btn">Asignar desde lista de espera</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="ag_event_cancel_post_waitlist_btn">Actualizar candidatos</button>
                           <button type="button" class="btn btn-outline-primary btn-sm" id="ag_event_cancel_post_next_available_btn">Siguiente cita disponible</button>
                           <button type="button" class="btn btn-primary btn-sm" id="ag_event_cancel_post_new_btn">Nueva cita en este horario</button>
                         </div>
                       </div>
                       <div id="ag_event_cancel_waitlist_wrap" class="d-none mt-3">
-                        <div class="small text-muted mb-2">Lista de espera activa para este médico/consultorio</div>
+                        <div id="ag_event_cancel_resolve_title" class="fw-semibold mb-2">Resolver hueco</div>
+                        <div id="ag_event_cancel_slot_summary" class="small border rounded-3 bg-light px-3 py-2 mb-2 d-none"></div>
+                        <div class="small text-muted mb-2">Pacientes en lista de espera que podrían ocupar este espacio</div>
                         <div id="ag_event_cancel_waitlist_loading" class="small text-muted d-none mb-2">Cargando lista de espera…</div>
-                        <div id="ag_event_cancel_waitlist_empty" class="small text-muted d-none mb-2">No hay pacientes en lista de espera para este contexto.</div>
+                        <div id="ag_event_cancel_waitlist_meta" class="small text-muted d-none mb-2"></div>
+                        <div id="ag_event_cancel_waitlist_empty" class="small text-muted d-none mb-2">No hay pacientes compatibles en lista de espera para este hueco.</div>
                         <div id="ag_event_cancel_waitlist_list" class="list-group"></div>
                       </div>
                     </div>

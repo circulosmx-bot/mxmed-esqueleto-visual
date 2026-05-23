@@ -684,7 +684,9 @@ console.info('app.js loaded :: 20251123a');
     eventCancelPostNextAvailableBtn: panel.querySelector('#ag_event_cancel_post_next_available_btn'),
     eventCancelPostNewBtn: panel.querySelector('#ag_event_cancel_post_new_btn'),
     eventCancelWaitlistWrap: panel.querySelector('#ag_event_cancel_waitlist_wrap'),
+    eventCancelSlotSummary: panel.querySelector('#ag_event_cancel_slot_summary'),
     eventCancelWaitlistLoading: panel.querySelector('#ag_event_cancel_waitlist_loading'),
+    eventCancelWaitlistMeta: panel.querySelector('#ag_event_cancel_waitlist_meta'),
     eventCancelWaitlistEmpty: panel.querySelector('#ag_event_cancel_waitlist_empty'),
     eventCancelWaitlistList: panel.querySelector('#ag_event_cancel_waitlist_list'),
     eventCloseBtn: panel.querySelector('#ag_event_close_btn'),
@@ -6134,6 +6136,9 @@ console.info('app.js loaded :: 20251123a');
     eventCancelLateWindow = false;
     if(els.eventCancelPostHint){
       els.eventCancelPostHint.classList.add('d-none');
+      els.eventCancelPostHint.classList.remove('alert-success');
+      els.eventCancelPostHint.classList.add('alert-info');
+      els.eventCancelPostHint.textContent = 'Se liberó un espacio. ¿Deseas resolver este hueco?';
     }
     if(els.eventCancelPostActions){
       els.eventCancelPostActions.classList.add('d-none');
@@ -6141,12 +6146,20 @@ console.info('app.js loaded :: 20251123a');
     if(els.eventCancelWaitlistWrap){
       els.eventCancelWaitlistWrap.classList.add('d-none');
     }
+    if(els.eventCancelSlotSummary){
+      els.eventCancelSlotSummary.classList.add('d-none');
+      els.eventCancelSlotSummary.innerHTML = '';
+    }
     if(els.eventCancelWaitlistLoading){
       els.eventCancelWaitlistLoading.classList.add('d-none');
     }
+    if(els.eventCancelWaitlistMeta){
+      els.eventCancelWaitlistMeta.classList.add('d-none');
+      els.eventCancelWaitlistMeta.textContent = '';
+    }
     if(els.eventCancelWaitlistEmpty){
       els.eventCancelWaitlistEmpty.classList.add('d-none');
-      els.eventCancelWaitlistEmpty.textContent = 'No hay pacientes en lista de espera para este contexto.';
+      els.eventCancelWaitlistEmpty.textContent = 'No hay pacientes compatibles en lista de espera para este hueco.';
     }
     if(els.eventCancelWaitlistList){
       els.eventCancelWaitlistList.innerHTML = '';
@@ -6158,7 +6171,7 @@ console.info('app.js loaded :: 20251123a');
     }
     if(els.eventCancelPostWaitlistBtn){
       els.eventCancelPostWaitlistBtn.disabled = false;
-      els.eventCancelPostWaitlistBtn.textContent = 'Asignar desde lista de espera';
+      els.eventCancelPostWaitlistBtn.textContent = 'Actualizar candidatos';
     }
     if(els.eventCancelPostNextAvailableBtn){
       els.eventCancelPostNextAvailableBtn.disabled = false;
@@ -6218,11 +6231,35 @@ console.info('app.js loaded :: 20251123a');
         els.eventCancelPrompt.classList.remove('alert-warning');
         els.eventCancelPrompt.classList.add('alert-success');
         els.eventCancelPrompt.textContent = 'Cita cancelada correctamente.';
+        renderEventCancelSlotSummary();
       }else{
         els.eventCancelPrompt.classList.remove('alert-success');
         els.eventCancelPrompt.classList.add('alert-warning');
         els.eventCancelPrompt.textContent = 'Selecciona cómo deseas cancelar esta cita.';
       }
+    }
+  };
+  const renderEventCancelRecoveredState = ()=>{
+    if(els.eventCancelPrompt){
+      els.eventCancelPrompt.classList.remove('alert-warning');
+      els.eventCancelPrompt.classList.add('alert-success');
+      els.eventCancelPrompt.textContent = 'Hueco recuperado correctamente.';
+    }
+    if(els.eventCancelPostHint){
+      els.eventCancelPostHint.classList.remove('d-none', 'alert-info');
+      els.eventCancelPostHint.classList.add('alert-success');
+      els.eventCancelPostHint.textContent = 'Hueco recuperado. La cita fue asignada desde lista de espera.';
+    }
+    if(els.eventCancelPostActions){
+      els.eventCancelPostActions.classList.add('d-none');
+    }
+    if(els.eventCancelWaitlistWrap){
+      els.eventCancelWaitlistWrap.classList.add('d-none');
+    }
+    if(els.eventCancelBackBtn){
+      els.eventCancelBackBtn.classList.remove('d-none');
+      els.eventCancelBackBtn.disabled = false;
+      els.eventCancelBackBtn.textContent = 'Volver al detalle';
     }
   };
   const abortEventTimelineLookup = ()=>{
@@ -6608,6 +6645,60 @@ console.info('app.js loaded :: 20251123a');
       doctor_id: sanitizeText(props?.doctor_id || getDoctorId() || '')
     };
   };
+  const resolveEventCancelSlotDurationMinutes = (slot = null)=>{
+    const context = slot || getEventActionSlotSelection();
+    if(!(context?.start instanceof Date) || !(context?.end instanceof Date)) {
+      return Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
+    }
+    const diff = Math.round((context.end.getTime() - context.start.getTime()) / 60000);
+    if(!Number.isFinite(diff) || diff <= 0){
+      return Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
+    }
+    return diff;
+  };
+  const renderEventCancelSlotSummary = ()=>{
+    if(!els.eventCancelSlotSummary) return;
+    const slot = getEventActionSlotSelection();
+    if(!slot){
+      els.eventCancelSlotSummary.classList.add('d-none');
+      els.eventCancelSlotSummary.innerHTML = '';
+      return;
+    }
+    const rangeLabel = formatAppointmentDateRangeLabel(slot.start, slot.end);
+    const durationMinutes = resolveEventCancelSlotDurationMinutes(slot);
+    const consultorioLabel = sanitizeText(
+      slot.consultorio_name
+      || resolveAgendaConsultorioLabelById(slot.consultorio_id)
+      || '--'
+    ) || '--';
+    els.eventCancelSlotSummary.innerHTML = `
+      <div class="fw-semibold">${escapeHtml(rangeLabel)}</div>
+      <div class="text-muted">Duración: ${escapeHtml(`${durationMinutes} min`)} · Consultorio: ${escapeHtml(consultorioLabel)}</div>
+    `;
+    els.eventCancelSlotSummary.classList.remove('d-none');
+  };
+  const formatWaitlistEntryCreatedAtLabel = (rawValue = '')=>{
+    const parsed = parseDateTimeLocalSafe(rawValue);
+    if(!(parsed instanceof Date) || Number.isNaN(parsed.getTime())) return '';
+    const dateLabel = parsed.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+    const timeLabel = parsed.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return `${dateLabel} ${timeLabel}`;
+  };
+  const formatWaitlistEntryElapsedLabel = (rawValue = '')=>{
+    const parsed = parseDateTimeLocalSafe(rawValue);
+    if(!(parsed instanceof Date) || Number.isNaN(parsed.getTime())) return '';
+    const diffMinutes = Math.max(0, Math.floor((Date.now() - parsed.getTime()) / 60000));
+    if(diffMinutes < 60){
+      const minutes = Math.max(1, diffMinutes);
+      return `En espera ${minutes} min`;
+    }
+    const diffHours = Math.floor(diffMinutes / 60);
+    if(diffHours < 24){
+      return `En espera ${diffHours} h`;
+    }
+    const diffDays = Math.floor(diffHours / 24);
+    return `En espera ${diffDays} d`;
+  };
   const buildWaitlistAssignPayload = (entry = {})=>{
     const slot = getEventActionSlotSelection();
     if(!slot) return null;
@@ -6617,7 +6708,7 @@ console.info('app.js loaded :: 20251123a');
     const consultorioId = (entryConsultorioId === WAITLIST_ANY_CONSULTORIO_ID)
       ? slotConsultorioId
       : sanitizeText(entryConsultorioId || slotConsultorioId || '');
-    const slotMinutes = Math.max(1, Number(resolveAgendaSlotMinutes() || 30));
+    const slotMinutes = resolveEventCancelSlotDurationMinutes(slot);
     if(!doctorId || !consultorioId || consultorioId === WAITLIST_ANY_CONSULTORIO_ID) return null;
     const actorRole = resolveCreateActorRole();
     const actorId = resolveActorId() || 'ui';
@@ -6646,8 +6737,24 @@ console.info('app.js loaded :: 20251123a');
   };
   const renderEventCancelWaitlistEntries = (entries = [])=>{
     if(!els.eventCancelWaitlistList) return;
-    const list = Array.isArray(entries) ? entries : [];
+    const source = Array.isArray(entries) ? entries : [];
+    let list = source.slice(0, EVENT_CANCEL_WAITLIST_MAX_VISIBLE);
+    const hasAnyConsultorioCandidate = list.some((entry)=> sanitizeText(entry?.consultorio_id || '') === WAITLIST_ANY_CONSULTORIO_ID);
+    if(!hasAnyConsultorioCandidate){
+      const anyConsultorioCandidate = source.find((entry)=> sanitizeText(entry?.consultorio_id || '') === WAITLIST_ANY_CONSULTORIO_ID);
+      if(anyConsultorioCandidate){
+        if(list.length >= EVENT_CANCEL_WAITLIST_MAX_VISIBLE){
+          list = [...list.slice(0, EVENT_CANCEL_WAITLIST_MAX_VISIBLE - 1), anyConsultorioCandidate];
+        }else{
+          list = [...list, anyConsultorioCandidate];
+        }
+      }
+    }
     if(!list.length){
+      if(els.eventCancelWaitlistMeta){
+        els.eventCancelWaitlistMeta.classList.add('d-none');
+        els.eventCancelWaitlistMeta.textContent = '';
+      }
       if(els.eventCancelWaitlistEmpty){
         els.eventCancelWaitlistEmpty.classList.remove('d-none');
       }
@@ -6657,6 +6764,15 @@ console.info('app.js loaded :: 20251123a');
     if(els.eventCancelWaitlistEmpty){
       els.eventCancelWaitlistEmpty.classList.add('d-none');
     }
+    if(els.eventCancelWaitlistMeta){
+      const total = source.length;
+      if(total > list.length){
+        els.eventCancelWaitlistMeta.textContent = `Mostrando ${list.length} de ${total} candidatos compatibles.`;
+      }else{
+        els.eventCancelWaitlistMeta.textContent = `${list.length} candidato${list.length === 1 ? '' : 's'} compatible${list.length === 1 ? '' : 's'}.`;
+      }
+      els.eventCancelWaitlistMeta.classList.remove('d-none');
+    }
     const html = list.map((entry)=>{
       const id = sanitizeText(entry?.id || '');
       const name = sanitizeText(entry?.patient_name || '') || `Paciente ${sanitizeText(entry?.patient_id || '') || '--'}`;
@@ -6664,6 +6780,13 @@ console.info('app.js loaded :: 20251123a');
       const status = sanitizeText(entry?.status || 'active');
       const doctorId = sanitizeText(entry?.doctor_id || '');
       const consultorioId = sanitizeText(entry?.consultorio_id || '');
+      const consultorioLabel = consultorioId === WAITLIST_ANY_CONSULTORIO_ID
+        ? WAITLIST_ANY_CONSULTORIO_LABEL
+        : normalizeConsultorioDisplayLabel(resolveAgendaConsultorioLabelById(consultorioId), consultorioId);
+      const notes = sanitizeText(entry?.notes || '');
+      const createdAtLabel = formatWaitlistEntryCreatedAtLabel(entry?.created_at || '');
+      const elapsedLabel = formatWaitlistEntryElapsedLabel(entry?.created_at || '');
+      const waitingLabel = [elapsedLabel, createdAtLabel ? `Desde ${createdAtLabel}` : ''].filter(Boolean).join(' · ');
       return `
         <button
           type="button"
@@ -6671,10 +6794,15 @@ console.info('app.js loaded :: 20251123a');
           data-ag-waitlist-assign="${escapeHtml(id)}"
           data-ag-waitlist-doctor="${escapeHtml(doctorId)}"
           data-ag-waitlist-consultorio="${escapeHtml(consultorioId)}"
+          data-ag-waitlist-patient-name="${escapeHtml(name)}"
+          data-ag-waitlist-consultorio-label="${escapeHtml(consultorioLabel)}"
         >
-          <span class="text-start">
+          <span class="text-start pe-2">
             <span class="d-block fw-semibold">${escapeHtml(name)}</span>
-            <span class="small text-muted">${escapeHtml(phone || 'Sin teléfono')} · ${escapeHtml(status)}</span>
+            <span class="small text-muted d-block">${escapeHtml(phone || 'Sin teléfono')}</span>
+            <span class="small text-muted d-block">${escapeHtml(consultorioLabel || '--')} · ${escapeHtml(status)}</span>
+            ${notes ? `<span class="small d-block">${escapeHtml(notes)}</span>` : ''}
+            ${waitingLabel ? `<span class="small text-muted d-block">${escapeHtml(waitingLabel)}</span>` : ''}
           </span>
           <span class="small fw-semibold text-primary">Asignar</span>
         </button>
@@ -6685,12 +6813,17 @@ console.info('app.js loaded :: 20251123a');
   const loadEventCancelWaitlist = async ()=>{
     if(eventCancelPostWaitlistBusy) return;
     if(!els.eventCancelWaitlistWrap) return;
+    renderEventCancelSlotSummary();
     const doctorId = sanitizeText(activeEventActionRef?.extendedProps?.doctor_id || getDoctorId() || '');
     const consultorioId = sanitizeText(activeEventActionRef?.extendedProps?.consultorio_id || getAvailabilityConsultorioId() || '');
     if(!doctorId || !consultorioId){
       if(els.eventCancelWaitlistEmpty){
-        els.eventCancelWaitlistEmpty.textContent = 'No hay contexto médico/consultorio para consultar lista de espera.';
+        els.eventCancelWaitlistEmpty.textContent = 'No hay contexto médico/consultorio para resolver este hueco.';
         els.eventCancelWaitlistEmpty.classList.remove('d-none');
+      }
+      if(els.eventCancelWaitlistMeta){
+        els.eventCancelWaitlistMeta.classList.add('d-none');
+        els.eventCancelWaitlistMeta.textContent = '';
       }
       els.eventCancelWaitlistWrap.classList.remove('d-none');
       return;
@@ -6699,6 +6832,10 @@ console.info('app.js loaded :: 20251123a');
     if(els.eventCancelWaitlistWrap) els.eventCancelWaitlistWrap.classList.remove('d-none');
     if(els.eventCancelWaitlistLoading) els.eventCancelWaitlistLoading.classList.remove('d-none');
     if(els.eventCancelWaitlistEmpty) els.eventCancelWaitlistEmpty.classList.add('d-none');
+    if(els.eventCancelWaitlistMeta){
+      els.eventCancelWaitlistMeta.classList.add('d-none');
+      els.eventCancelWaitlistMeta.textContent = '';
+    }
     if(els.eventCancelPostWaitlistBtn){
       els.eventCancelPostWaitlistBtn.disabled = true;
       els.eventCancelPostWaitlistBtn.textContent = 'Cargando...';
@@ -6713,12 +6850,16 @@ console.info('app.js loaded :: 20251123a');
         els.eventCancelWaitlistEmpty.textContent = 'No se pudo cargar la lista de espera.';
         els.eventCancelWaitlistEmpty.classList.remove('d-none');
       }
+      if(els.eventCancelWaitlistMeta){
+        els.eventCancelWaitlistMeta.classList.add('d-none');
+        els.eventCancelWaitlistMeta.textContent = '';
+      }
       if(els.eventCancelWaitlistList) els.eventCancelWaitlistList.innerHTML = '';
     }finally{
       if(els.eventCancelWaitlistLoading) els.eventCancelWaitlistLoading.classList.add('d-none');
       if(els.eventCancelPostWaitlistBtn){
         els.eventCancelPostWaitlistBtn.disabled = false;
-        els.eventCancelPostWaitlistBtn.textContent = 'Asignar desde lista de espera';
+        els.eventCancelPostWaitlistBtn.textContent = 'Actualizar candidatos';
       }
       eventCancelPostWaitlistBusy = false;
     }
@@ -7831,14 +7972,12 @@ console.info('app.js loaded :: 20251123a');
         });
         setEventCancelPostActionsEnabled(true);
         loadEventTimeline(appointmentId).catch(()=> null);
+        loadEventCancelWaitlist().catch(()=> null);
         logAgendaCancelFlow('cancel:post-state-enabled', {
           activeEventActionId,
           appointmentId,
           postActionsEnabled: eventCancelPostActionsEnabled
         });
-        if(els.eventCancelWaitlistWrap){
-          els.eventCancelWaitlistWrap.classList.add('d-none');
-        }
         return;
       }
       const payload = {
@@ -7881,14 +8020,12 @@ console.info('app.js loaded :: 20251123a');
       eventCancelDeferredRefresh = true;
       setEventCancelPostActionsEnabled(true);
       loadEventTimeline(appointmentId).catch(()=> null);
+      loadEventCancelWaitlist().catch(()=> null);
       logAgendaCancelFlow('cancel:post-state-enabled', {
         activeEventActionId,
         appointmentId,
         postActionsEnabled: eventCancelPostActionsEnabled
       });
-      if(els.eventCancelWaitlistWrap){
-        els.eventCancelWaitlistWrap.classList.add('d-none');
-      }
     }catch(_){
       setEventActionError('No se pudo cancelar la cita.');
       setEventCancelPostActionsEnabled(false);
@@ -11231,6 +11368,7 @@ console.info('app.js loaded :: 20251123a');
   const CONSULTORIO_UNAVAILABLE_VALUE = '__consultorio_unavailable__';
   const WAITLIST_ANY_CONSULTORIO_ID = '__all__';
   const WAITLIST_ANY_CONSULTORIO_LABEL = 'Cualquiera de los consultorios disponibles';
+  const EVENT_CANCEL_WAITLIST_MAX_VISIBLE = 5;
   const setConsultorioUnavailableState = (message = 'No se pudieron cargar consultorios')=>{
     const safeMessage = sanitizeText(message) || 'No se pudieron cargar consultorios';
     if(els.consultorio){
@@ -19492,6 +19630,19 @@ console.info('app.js loaded :: 20251123a');
       event.preventDefault();
       const waitlistId = sanitizeText(btn.getAttribute('data-ag-waitlist-assign') || '');
       if(!waitlistId || eventCancelPostWaitlistBusy) return;
+      const patientName = sanitizeText(btn.getAttribute('data-ag-waitlist-patient-name') || '');
+      const slot = getEventActionSlotSelection();
+      const slotLabel = formatAppointmentDateRangeLabel(slot?.start, slot?.end);
+      const consultorioLabel = sanitizeText(
+        slot?.consultorio_name
+        || resolveAgendaConsultorioLabelById(slot?.consultorio_id || '')
+        || btn.getAttribute('data-ag-waitlist-consultorio-label')
+        || '--'
+      ) || '--';
+      const confirmMsg = `¿Asignar a ${patientName || 'este paciente'} en ${slotLabel} · ${consultorioLabel}?`;
+      if(!window.confirm(confirmMsg)){
+        return;
+      }
       const selectedEntry = Array.from(els.eventCancelWaitlistList?.querySelectorAll('[data-ag-waitlist-assign]') || [])
         .map((el)=> ({ id: sanitizeText(el.getAttribute('data-ag-waitlist-assign') || ''), el }))
         .find((item)=> item.id === waitlistId);
@@ -19516,13 +19667,18 @@ console.info('app.js loaded :: 20251123a');
       if(assignLabel) assignLabel.textContent = 'Asignando...';
       AgendaApiClient.assignWaitlistEntry(waitlistId, payload).then(async (result)=>{
         if(!result?.ok || !result?.json || result.json.ok !== true){
-          const msg = sanitizeText(result?.json?.message || result?.json?.error || `HTTP ${result?.status || 500}`) || 'No se pudo asignar desde lista de espera.';
+          const errorKey = normalizeText(sanitizeText(result?.json?.error || ''));
+          const messageKey = normalizeText(sanitizeText(result?.json?.message || ''));
+          let msg = sanitizeText(result?.json?.message || result?.json?.error || `HTTP ${result?.status || 500}`) || 'No se pudo asignar desde lista de espera.';
+          if(errorKey.includes('collision') || messageKey.includes('collision')){
+            msg = 'El hueco ya no está disponible.';
+          }
           setEventActionError(msg);
           return;
         }
-        hideEventActionPanel();
+        renderEventCancelRecoveredState();
+        eventCancelDeferredRefresh = true;
         setError('');
-        await refreshCalendar({ forceConsultorios: false });
       }).catch(()=>{
         setEventActionError('No se pudo asignar desde lista de espera.');
       }).finally(()=>{
