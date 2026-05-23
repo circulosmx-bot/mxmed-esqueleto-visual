@@ -688,6 +688,9 @@ console.info('app.js loaded :: 20251123a');
     eventCancelWaitlistLoading: panel.querySelector('#ag_event_cancel_waitlist_loading'),
     eventCancelWaitlistMeta: panel.querySelector('#ag_event_cancel_waitlist_meta'),
     eventCancelWaitlistEmpty: panel.querySelector('#ag_event_cancel_waitlist_empty'),
+    eventCancelWaitlistEmptyActions: panel.querySelector('#ag_event_cancel_waitlist_empty_actions'),
+    eventCancelWaitlistEmptyNextBtn: panel.querySelector('#ag_event_cancel_waitlist_empty_next_btn'),
+    eventCancelWaitlistEmptyCloseBtn: panel.querySelector('#ag_event_cancel_waitlist_empty_close_btn'),
     eventCancelWaitlistList: panel.querySelector('#ag_event_cancel_waitlist_list'),
     eventCloseBtn: panel.querySelector('#ag_event_close_btn'),
     eventRescheduleBtn: panel.querySelector('#ag_event_reschedule_btn'),
@@ -6161,6 +6164,9 @@ console.info('app.js loaded :: 20251123a');
       els.eventCancelWaitlistEmpty.classList.add('d-none');
       els.eventCancelWaitlistEmpty.textContent = 'No hay pacientes compatibles en lista de espera para este hueco.';
     }
+    if(els.eventCancelWaitlistEmptyActions){
+      els.eventCancelWaitlistEmptyActions.classList.add('d-none');
+    }
     if(els.eventCancelWaitlistList){
       els.eventCancelWaitlistList.innerHTML = '';
     }
@@ -6699,6 +6705,52 @@ console.info('app.js loaded :: 20251123a');
     const diffDays = Math.floor(diffHours / 24);
     return `En espera ${diffDays} d`;
   };
+  const resolveWaitlistPriorityMeta = (entry = {})=>{
+    const metadata = (entry?.metadata && typeof entry.metadata === 'object' && !Array.isArray(entry.metadata))
+      ? entry.metadata
+      : {};
+    const rawPriority = sanitizeText(
+      entry?.priority
+      || metadata?.priority
+      || metadata?.priority_level
+      || metadata?.priority_label
+      || metadata?.urgency
+      || metadata?.triage_priority
+      || ''
+    );
+    if(!rawPriority){
+      return { rank: 1, label: '' };
+    }
+    const normalized = normalizeText(rawPriority);
+    const isHigh = normalized.includes('alta')
+      || normalized.includes('high')
+      || normalized.includes('urgent')
+      || normalized.includes('urgente')
+      || normalized.includes('critic')
+      || normalized.includes('stat');
+    if(isHigh){
+      return { rank: 0, label: 'Prioridad alta' };
+    }
+    return { rank: 1, label: 'Prioridad normal' };
+  };
+  const resolveWaitlistCreatedAtSortValue = (rawValue = '')=>{
+    const parsed = parseDateTimeLocalSafe(rawValue);
+    if(!(parsed instanceof Date) || Number.isNaN(parsed.getTime())){
+      return Number.POSITIVE_INFINITY;
+    }
+    return parsed.getTime();
+  };
+  const resolveWaitlistEntryCompatibilityMeta = (entry = {}, slotConsultorioId = '')=>{
+    const entryConsultorioId = sanitizeText(entry?.consultorio_id || '');
+    const slotConsultorio = sanitizeText(slotConsultorioId || '');
+    if(slotConsultorio && entryConsultorioId === slotConsultorio){
+      return { group: 0, label: 'Compatible con este consultorio' };
+    }
+    if(entryConsultorioId === WAITLIST_ANY_CONSULTORIO_ID){
+      return { group: 1, label: 'Cualquier consultorio' };
+    }
+    return { group: 2, label: 'Compatibilidad por validar' };
+  };
   const buildWaitlistAssignPayload = (entry = {})=>{
     const slot = getEventActionSlotSelection();
     if(!slot) return null;
@@ -6735,21 +6787,102 @@ console.info('app.js loaded :: 20251123a');
       ...actorPayload
     };
   };
-  const renderEventCancelWaitlistEntries = (entries = [])=>{
-    if(!els.eventCancelWaitlistList) return;
-    const source = Array.isArray(entries) ? entries : [];
-    let list = source.slice(0, EVENT_CANCEL_WAITLIST_MAX_VISIBLE);
-    const hasAnyConsultorioCandidate = list.some((entry)=> sanitizeText(entry?.consultorio_id || '') === WAITLIST_ANY_CONSULTORIO_ID);
-    if(!hasAnyConsultorioCandidate){
-      const anyConsultorioCandidate = source.find((entry)=> sanitizeText(entry?.consultorio_id || '') === WAITLIST_ANY_CONSULTORIO_ID);
-      if(anyConsultorioCandidate){
-        if(list.length >= EVENT_CANCEL_WAITLIST_MAX_VISIBLE){
-          list = [...list.slice(0, EVENT_CANCEL_WAITLIST_MAX_VISIBLE - 1), anyConsultorioCandidate];
-        }else{
-          list = [...list, anyConsultorioCandidate];
-        }
-      }
+  const setEventCancelWaitlistEmptyActionsVisible = (visible = false)=>{
+    if(!(els.eventCancelWaitlistEmptyActions instanceof HTMLElement)) return;
+    els.eventCancelWaitlistEmptyActions.classList.toggle('d-none', !visible);
+  };
+  const buildEventCancelNextAvailableContext = ()=>{
+    clearNextSlotFocus();
+    const slot = getEventActionSlotSelection();
+    const context = {};
+    if(slot?.end instanceof Date && !Number.isNaN(slot.end.getTime())){
+      context.afterDate = new Date(slot.end);
     }
+    const consultorioId = sanitizeText(slot?.consultorio_id || '');
+    if(isNumericId(consultorioId)){
+      context.consultorio_id = consultorioId;
+    }
+    const doctorId = sanitizeText(slot?.doctor_id || getDoctorId() || '');
+    if(isNumericId(doctorId)){
+      context.doctor_id = doctorId;
+    }
+    return context;
+  };
+  const openEventCancelNextAvailableFlow = ()=>{
+    const context = buildEventCancelNextAvailableContext();
+    hideEventActionPanel();
+    window.setTimeout(()=>{
+      openNextAvailableSlotFinder(context);
+    }, 120);
+  };
+  const closeEventCancelResolvePanel = ()=>{
+    if(els.eventCancelWaitlistWrap){
+      els.eventCancelWaitlistWrap.classList.add('d-none');
+    }
+    if(els.eventCancelWaitlistLoading){
+      els.eventCancelWaitlistLoading.classList.add('d-none');
+    }
+    setEventCancelWaitlistEmptyActionsVisible(false);
+  };
+  const rankEventCancelWaitlistEntries = (entries = [])=>{
+    const source = Array.isArray(entries) ? entries : [];
+    const slot = getEventActionSlotSelection();
+    const slotConsultorioId = sanitizeText(slot?.consultorio_id || activeEventActionRef?.extendedProps?.consultorio_id || '');
+    const ranked = source.map((entry, index)=>{
+      const priority = resolveWaitlistPriorityMeta(entry);
+      const compatibility = resolveWaitlistEntryCompatibilityMeta(entry, slotConsultorioId);
+      return {
+        entry,
+        index,
+        id: sanitizeText(entry?.id || ''),
+        group: compatibility.group,
+        compatibilityLabel: compatibility.label,
+        priorityRank: Number(priority?.rank ?? 1),
+        priorityLabel: sanitizeText(priority?.label || ''),
+        createdSort: resolveWaitlistCreatedAtSortValue(entry?.created_at || '')
+      };
+    }).sort((left, right)=>{
+      if(left.group !== right.group){
+        return left.group - right.group;
+      }
+      if(left.priorityRank !== right.priorityRank){
+        return left.priorityRank - right.priorityRank;
+      }
+      if(left.createdSort !== right.createdSort){
+        return left.createdSort - right.createdSort;
+      }
+      const byId = left.id.localeCompare(right.id);
+      if(byId !== 0){
+        return byId;
+      }
+      return left.index - right.index;
+    });
+    const exactCount = ranked.filter((item)=> item.group === 0).length;
+    const allCount = ranked.filter((item)=> sanitizeText(item?.entry?.consultorio_id || '') === WAITLIST_ANY_CONSULTORIO_ID).length;
+    return {
+      total: source.length,
+      exactCount,
+      allCount,
+      ranked
+    };
+  };
+  const renderEventCancelWaitlistEntries = (entries = [])=>{
+    if(!els.eventCancelWaitlistList){
+      return {
+        total: 0,
+        exactCount: 0,
+        allCount: 0,
+        renderedCount: 0,
+        empty: true
+      };
+    }
+    const ranking = rankEventCancelWaitlistEntries(entries);
+    const total = Number(ranking?.total || 0);
+    const exactCount = Number(ranking?.exactCount || 0);
+    const allCount = Number(ranking?.allCount || 0);
+    const list = Array.isArray(ranking?.ranked)
+      ? ranking.ranked.slice(0, EVENT_CANCEL_WAITLIST_MAX_VISIBLE)
+      : [];
     if(!list.length){
       if(els.eventCancelWaitlistMeta){
         els.eventCancelWaitlistMeta.classList.add('d-none');
@@ -6758,14 +6891,21 @@ console.info('app.js loaded :: 20251123a');
       if(els.eventCancelWaitlistEmpty){
         els.eventCancelWaitlistEmpty.classList.remove('d-none');
       }
+      setEventCancelWaitlistEmptyActionsVisible(true);
       els.eventCancelWaitlistList.innerHTML = '';
-      return;
+      return {
+        total,
+        exactCount,
+        allCount,
+        renderedCount: 0,
+        empty: true
+      };
     }
     if(els.eventCancelWaitlistEmpty){
       els.eventCancelWaitlistEmpty.classList.add('d-none');
     }
+    setEventCancelWaitlistEmptyActionsVisible(false);
     if(els.eventCancelWaitlistMeta){
-      const total = source.length;
       if(total > list.length){
         els.eventCancelWaitlistMeta.textContent = `Mostrando ${list.length} de ${total} candidatos compatibles.`;
       }else{
@@ -6773,7 +6913,8 @@ console.info('app.js loaded :: 20251123a');
       }
       els.eventCancelWaitlistMeta.classList.remove('d-none');
     }
-    const html = list.map((entry)=>{
+    const html = list.map((rankedEntry)=>{
+      const entry = rankedEntry.entry || {};
       const id = sanitizeText(entry?.id || '');
       const name = sanitizeText(entry?.patient_name || '') || `Paciente ${sanitizeText(entry?.patient_id || '') || '--'}`;
       const phone = sanitizeText(entry?.patient_phone || '');
@@ -6787,6 +6928,12 @@ console.info('app.js loaded :: 20251123a');
       const createdAtLabel = formatWaitlistEntryCreatedAtLabel(entry?.created_at || '');
       const elapsedLabel = formatWaitlistEntryElapsedLabel(entry?.created_at || '');
       const waitingLabel = [elapsedLabel, createdAtLabel ? `Desde ${createdAtLabel}` : ''].filter(Boolean).join(' · ');
+      const compatibilityLabel = sanitizeText(rankedEntry?.compatibilityLabel || '');
+      const priorityLabel = sanitizeText(rankedEntry?.priorityLabel || '');
+      const tags = [compatibilityLabel, priorityLabel].filter(Boolean);
+      const tagsHtml = tags.length
+        ? `<span class="d-flex flex-wrap gap-1 mt-1">${tags.map((tag)=> `<span class="badge rounded-pill text-bg-light border fw-normal">${escapeHtml(tag)}</span>`).join('')}</span>`
+        : '';
       return `
         <button
           type="button"
@@ -6801,6 +6948,7 @@ console.info('app.js loaded :: 20251123a');
             <span class="d-block fw-semibold">${escapeHtml(name)}</span>
             <span class="small text-muted d-block">${escapeHtml(phone || 'Sin teléfono')}</span>
             <span class="small text-muted d-block">${escapeHtml(consultorioLabel || '--')} · ${escapeHtml(status)}</span>
+            ${tagsHtml}
             ${notes ? `<span class="small d-block">${escapeHtml(notes)}</span>` : ''}
             ${waitingLabel ? `<span class="small text-muted d-block">${escapeHtml(waitingLabel)}</span>` : ''}
           </span>
@@ -6809,6 +6957,13 @@ console.info('app.js loaded :: 20251123a');
       `;
     }).join('');
     els.eventCancelWaitlistList.innerHTML = html;
+    return {
+      total,
+      exactCount,
+      allCount,
+      renderedCount: list.length,
+      empty: false
+    };
   };
   const loadEventCancelWaitlist = async ()=>{
     if(eventCancelPostWaitlistBusy) return;
@@ -6821,17 +6976,26 @@ console.info('app.js loaded :: 20251123a');
         els.eventCancelWaitlistEmpty.textContent = 'No hay contexto médico/consultorio para resolver este hueco.';
         els.eventCancelWaitlistEmpty.classList.remove('d-none');
       }
+      setEventCancelWaitlistEmptyActionsVisible(false);
       if(els.eventCancelWaitlistMeta){
         els.eventCancelWaitlistMeta.classList.add('d-none');
         els.eventCancelWaitlistMeta.textContent = '';
       }
+      if(els.eventCancelWaitlistList){
+        els.eventCancelWaitlistList.innerHTML = '';
+      }
       els.eventCancelWaitlistWrap.classList.remove('d-none');
+      logAgendaCancelFlow('cancel:waitlist:missing-context', {
+        doctorId,
+        consultorioId
+      });
       return;
     }
     eventCancelPostWaitlistBusy = true;
     if(els.eventCancelWaitlistWrap) els.eventCancelWaitlistWrap.classList.remove('d-none');
     if(els.eventCancelWaitlistLoading) els.eventCancelWaitlistLoading.classList.remove('d-none');
     if(els.eventCancelWaitlistEmpty) els.eventCancelWaitlistEmpty.classList.add('d-none');
+    setEventCancelWaitlistEmptyActionsVisible(false);
     if(els.eventCancelWaitlistMeta){
       els.eventCancelWaitlistMeta.classList.add('d-none');
       els.eventCancelWaitlistMeta.textContent = '';
@@ -6843,18 +7007,40 @@ console.info('app.js loaded :: 20251123a');
     try{
       const result = await AgendaApiClient.getWaitlistEntries({ doctorId, consultorioId, status: 'active' });
       const rows = (result?.ok && result?.json?.ok === true && Array.isArray(result?.json?.data)) ? result.json.data : [];
-      renderEventCancelWaitlistEntries(rows);
+      const renderSummary = renderEventCancelWaitlistEntries(rows);
+      logAgendaCancelFlow('cancel:waitlist:loaded', {
+        doctorId,
+        consultorioId,
+        total: Number(renderSummary?.total || 0),
+        exactCount: Number(renderSummary?.exactCount || 0),
+        allCount: Number(renderSummary?.allCount || 0),
+        renderedCount: Number(renderSummary?.renderedCount || 0)
+      });
+      if(renderSummary?.empty){
+        logAgendaCancelFlow('cancel:waitlist:empty-state', {
+          doctorId,
+          consultorioId,
+          total: Number(renderSummary?.total || 0),
+          exactCount: Number(renderSummary?.exactCount || 0),
+          allCount: Number(renderSummary?.allCount || 0)
+        });
+      }
       eventCancelPostWaitlistLoaded = true;
     }catch(_){
       if(els.eventCancelWaitlistEmpty){
         els.eventCancelWaitlistEmpty.textContent = 'No se pudo cargar la lista de espera.';
         els.eventCancelWaitlistEmpty.classList.remove('d-none');
       }
+      setEventCancelWaitlistEmptyActionsVisible(false);
       if(els.eventCancelWaitlistMeta){
         els.eventCancelWaitlistMeta.classList.add('d-none');
         els.eventCancelWaitlistMeta.textContent = '';
       }
       if(els.eventCancelWaitlistList) els.eventCancelWaitlistList.innerHTML = '';
+      logAgendaCancelFlow('cancel:waitlist:load-error', {
+        doctorId,
+        consultorioId
+      });
     }finally{
       if(els.eventCancelWaitlistLoading) els.eventCancelWaitlistLoading.classList.add('d-none');
       if(els.eventCancelPostWaitlistBtn){
@@ -19601,28 +19787,19 @@ console.info('app.js loaded :: 20251123a');
     });
     els.eventCancelPostNextAvailableBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
-      clearNextSlotFocus();
-      const slot = getEventActionSlotSelection();
-      const context = {};
-      if(slot?.end instanceof Date && !Number.isNaN(slot.end.getTime())){
-        context.afterDate = new Date(slot.end);
-      }
-      const consultorioId = sanitizeText(slot?.consultorio_id || '');
-      if(isNumericId(consultorioId)){
-        context.consultorio_id = consultorioId;
-      }
-      const doctorId = sanitizeText(slot?.doctor_id || getDoctorId() || '');
-      if(isNumericId(doctorId)){
-        context.doctor_id = doctorId;
-      }
-      hideEventActionPanel();
-      window.setTimeout(()=>{
-        openNextAvailableSlotFinder(context);
-      }, 120);
+      openEventCancelNextAvailableFlow();
     });
     els.eventCancelPostWaitlistBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
       loadEventCancelWaitlist().catch(()=> null);
+    });
+    els.eventCancelWaitlistEmptyNextBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      openEventCancelNextAvailableFlow();
+    });
+    els.eventCancelWaitlistEmptyCloseBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      closeEventCancelResolvePanel();
     });
     els.eventCancelWaitlistList?.addEventListener('click', (event)=>{
       const btn = event.target.closest('[data-ag-waitlist-assign]');
@@ -19671,15 +19848,30 @@ console.info('app.js loaded :: 20251123a');
           const messageKey = normalizeText(sanitizeText(result?.json?.message || ''));
           let msg = sanitizeText(result?.json?.message || result?.json?.error || `HTTP ${result?.status || 500}`) || 'No se pudo asignar desde lista de espera.';
           if(errorKey.includes('collision') || messageKey.includes('collision')){
-            msg = 'El hueco ya no está disponible.';
+            msg = 'El hueco ya no está disponible. La agenda pudo actualizarse antes de asignar.';
+            logAgendaCancelFlow('cancel:waitlist:assign-collision', {
+              waitlistId,
+              slotLabel,
+              consultorioLabel,
+              status: result?.status || 0
+            });
           }
           setEventActionError(msg);
           return;
         }
+        const appointmentId = sanitizeText(result?.json?.data?.appointment_id || result?.json?.appointment_id || '');
+        logAgendaCancelFlow('cancel:waitlist:assign-success', {
+          waitlistId,
+          appointmentId,
+          consultorioId: sanitizeText(payload?.consultorio_id || '')
+        });
         renderEventCancelRecoveredState();
         eventCancelDeferredRefresh = true;
         setError('');
       }).catch(()=>{
+        logAgendaCancelFlow('cancel:waitlist:assign-error', {
+          waitlistId
+        });
         setEventActionError('No se pudo asignar desde lista de espera.');
       }).finally(()=>{
         eventCancelPostWaitlistBusy = false;
