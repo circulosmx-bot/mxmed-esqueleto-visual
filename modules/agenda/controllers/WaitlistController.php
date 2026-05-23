@@ -18,6 +18,7 @@ require_once __DIR__ . '/../../../api/_lib/db.php';
 
 class WaitlistController
 {
+    private const ANY_CONSULTORIO_ID = '__all__';
     private ?WaitlistRepository $repository = null;
     private ?string $dbError = null;
     private ?\PDO $pdo = null;
@@ -231,7 +232,9 @@ class WaitlistController
             ];
             $payload['doctor_id'] = (string)$entry['doctor_id'];
         }
-        if ((string)$payload['consultorio_id'] !== (string)$entry['consultorio_id']) {
+        $entryConsultorioId = trim((string)($entry['consultorio_id'] ?? ''));
+        $isAnyConsultorioEntry = ($entryConsultorioId === self::ANY_CONSULTORIO_ID);
+        if (!$isAnyConsultorioEntry && (string)$payload['consultorio_id'] !== $entryConsultorioId) {
             return $this->error('invalid_params', 'doctor or consultorio mismatch', [
                 'entry_doctor_id' => $entry['doctor_id'],
                 'entry_consultorio_id' => $entry['consultorio_id'],

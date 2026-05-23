@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../../api/_lib/db.php';
 class WaitlistRepository
 {
     private const NOTES_AUDIT_MARKER = '_mxm_waitlist_audit_v1';
+    private const ANY_CONSULTORIO_ID = '__all__';
     private PDO $pdo;
     private ?string $table = null;
     private array $columnsCache = [];
@@ -39,8 +40,17 @@ class WaitlistRepository
             $params['doctor_id'] = $filters['doctor_id'];
         }
         if (!empty($filters['consultorio_id'])) {
-            $builder[] = 'consultorio_id = :consultorio_id';
-            $params['consultorio_id'] = $filters['consultorio_id'];
+            $consultorioId = trim((string)$filters['consultorio_id']);
+            if ($consultorioId !== '') {
+                if ($consultorioId === self::ANY_CONSULTORIO_ID) {
+                    $builder[] = 'consultorio_id = :consultorio_id';
+                    $params['consultorio_id'] = $consultorioId;
+                } else {
+                    $builder[] = '(consultorio_id = :consultorio_id OR consultorio_id = :consultorio_any)';
+                    $params['consultorio_id'] = $consultorioId;
+                    $params['consultorio_any'] = self::ANY_CONSULTORIO_ID;
+                }
+            }
         }
         if (!empty($filters['status'])) {
             $builder[] = 'status = :status';
