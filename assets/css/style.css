@@ -14729,6 +14729,23 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-size: 1.02rem;
   font-weight: 800;
 }
+.mx-ag-next-slots-waitlist-cta{
+  margin-top: 10px;
+  padding: 10px 11px;
+  border: 1px dashed #c6dbe8;
+  border-radius: 11px;
+  background: #f8fcff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.mx-ag-next-slots-waitlist-question{
+  font-size: .9rem;
+  font-weight: 600;
+  color: #3e6276;
+}
 .mx-ag-next-slots-info-note{
   margin-top: 12px;
   border: 1px solid #d5e8f4;
@@ -14780,6 +14797,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   }
   .mx-ag-next-slot-time{
     font-size: 1.65rem;
+  }
+  .mx-ag-next-slots-waitlist-cta{
+    align-items: flex-start;
   }
 }
 @media (max-width: 575.98px){
