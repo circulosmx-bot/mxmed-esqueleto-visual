@@ -567,3 +567,69 @@ Cobertura validada:
 - Fase posterior recomendada:
   - UI completa de Lista de espera,
   - flujo “Resolver hueco” contextual desde cancelación/reprogramación.
+
+## 17. Adenda MVP “Resolver hueco” post-cancelación (2026-05-23)
+
+Estado: **implementado, validado y estabilizado**.
+
+Commit base:
+- `5ea0d54` `feat(agenda): mejora flujo resolver hueco post-cancelacion`
+
+### 17.1 Qué es “Resolver hueco”
+- Flujo contextual para recuperación operativa de un slot liberado tras cancelación.
+- Objetivo: reducir pérdida de disponibilidad usando candidatos existentes en lista de espera.
+
+### 17.2 Dónde nace en UI
+- Nace inmediatamente después de cancelar una cita, dentro del modal de acciones de cita.
+- No abre módulo nuevo: reutiliza bloque post-cancel ya existente y lo orienta a recuperación del hueco.
+
+### 17.3 Qué muestra
+- Resumen del hueco liberado:
+  - fecha/día,
+  - hora inicio-fin,
+  - duración,
+  - consultorio.
+- Lista de candidatos waitlist compatibles para ese contexto.
+- Soporta candidatos:
+  - de consultorio específico,
+  - y `consultorio_id="__all__"` (cualquier consultorio).
+
+### 17.4 Qué hace assign
+- Acción principal: `POST /api/agenda/index.php/waitlist/{id}/assign`.
+- Resultado esperado:
+  - crea cita en el slot liberado,
+  - actualiza waitlist a `confirmed`,
+  - refresca Agenda (flujo diferido al cierre del modal para preservar feedback UX).
+- La cita resultante se crea con consultorio real del slot destino.
+
+### 17.5 Reglas importantes del MVP
+- Nunca usa `__all__` como consultorio de cita final.
+- Límite visual de candidatos: máximo 5.
+- Confirmación obligatoria antes de asignar.
+- Si no se resuelve el hueco, la cancelación permanece (no se revierte ni crea cita nueva).
+
+### 17.6 QA funcional final (resumen)
+Resultado global: **PASS**.
+
+Cobertura validada:
+- cancelación QA futura -> aparece bloque “Resolver hueco”.
+- resumen de hueco correcto.
+- candidatos waitlist cargan automáticamente.
+- aparecen candidatos de consultorio específico y `__all__`.
+- tope visual de 5 candidatos.
+- confirmación previa a assign.
+- assign exitoso con waitlist en `confirmed`.
+- cita creada con consultorio real (nunca `__all__`).
+- sin `POST /appointments` accidental desde frontend durante assign.
+- cerrar sin resolver conserva cancelación y no crea cita.
+- strict operator:
+  - operador activo permitido,
+  - operador inválido bloqueado (`403` esperado).
+- sin regresión en “Nueva cita” normal.
+- sin regresión en “Buscar siguiente cita disponible” + waitlist MVP.
+
+### 17.7 Deudas futuras
+- Mejorar ranking/priorización de candidatos.
+- Validar estado vacío en entorno con baja densidad de waitlist.
+- Evolucionar a contenedor UX más completo (drawer o subtab de Lista de espera).
+- Formalizar sentinel `__all__` hacia modelo canónico de `consultorio_scope`.
