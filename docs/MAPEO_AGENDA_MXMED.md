@@ -633,3 +633,66 @@ Cobertura validada:
 - Validar estado vacío en entorno con baja densidad de waitlist.
 - Evolucionar a contenedor UX más completo (drawer o subtab de Lista de espera).
 - Formalizar sentinel `__all__` hacia modelo canónico de `consultorio_scope`.
+
+### 17.8 Mejora A1 de “Resolver hueco” (2026-05-23)
+
+Estado: **implementado, validado y estabilizado**.
+
+Commit:
+- `b3d99a6` `feat(agenda): mejora ranking y estado vacio de resolver hueco`
+
+Qué mejora A1:
+- Ordena mejor la toma de decisión operativa al resolver huecos post-cancelación.
+- Evita listas ambiguas y añade salidas claras cuando no hay candidatos.
+- Refuerza mensajes de recuperación ante colisión de slot.
+
+Ranking MVP (frontend):
+- Primero candidatos con consultorio exacto del hueco liberado.
+- Después candidatos con `consultorio_id="__all__"`.
+- Desempate por prioridad en metadata (si existe): alta antes que normal.
+- Luego por antigüedad (`created_at` más antiguo primero).
+- Desempate final estable por `id`.
+- Máximo visual: **5 candidatos**.
+
+Etiquetas visuales agregadas:
+- `Compatible con este consultorio`
+- `Cualquier consultorio`
+- `Prioridad alta` / `Prioridad normal` (solo si la metadata trae prioridad interpretable)
+
+Estado vacío mejorado:
+- Mensaje: `No hay pacientes compatibles en lista de espera para este hueco.`
+- Acciones inline:
+  - `Buscar siguiente cita disponible`
+  - `Cerrar`
+
+Colisión de assign:
+- Mensaje extendido:
+  - `El hueco ya no está disponible. La agenda pudo actualizarse antes de asignar.`
+- Mantiene flujo recuperable sin dejar el modal en estado roto.
+
+Telemetría mínima:
+- Se extiende `logAgendaCancelFlow(...)` para registrar:
+  - carga de candidatos (`total`, `exactCount`, `allCount`, `renderedCount`),
+  - estado vacío,
+  - colisión en assign,
+  - éxito de assign (`waitlist_id`, `appointment_id` si está disponible).
+
+QA final (A1 + cierre de pendiente Nueva cita):
+- `Resolver hueco`: **PASS**.
+- `Nueva cita` normal: **PASS** end-to-end.
+- Confirmado en network para Nueva cita normal:
+  - `POST /appointments` **sí**,
+  - `POST /waitlist` **no** (sin alta accidental).
+- Sin errores JS nuevos bloqueantes.
+- `409` conocido en `patient-id/resolve`: no bloqueante en este ciclo.
+
+Limpieza QA A1:
+- Citas QA de la fase quedaron canceladas.
+- Cita creada por assign (`dd65b7482dd6a6d98557be80`) cancelada con motivo `qa_cleanup`.
+- Entrada waitlist confirmada (`181fb72108c652b38a599803`) **conservada** por trazabilidad histórica.
+
+Deudas abiertas tras A1:
+- Validar caso real con `__all__` cuando haya baja densidad de candidatos exactos.
+- Prioridad en metadata aún no canónica (heurística frontend).
+- Evaluar ranking backend/inteligente en fase posterior.
+- Evolucionar contenedor UX a drawer/subtab completo de Lista de espera.
