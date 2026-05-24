@@ -13949,6 +13949,10 @@ console.info('app.js loaded :: 20251123a');
       window.clearTimeout(patientSharedPhoneDebounceTimer);
       patientSharedPhoneDebounceTimer = null;
     }
+    if(patientSearchDebounceTimer){
+      window.clearTimeout(patientSearchDebounceTimer);
+      patientSearchDebounceTimer = null;
+    }
     resetLookupSelectionState();
     resetSharedPhoneSelectionState();
     closePatientLookupModal();
