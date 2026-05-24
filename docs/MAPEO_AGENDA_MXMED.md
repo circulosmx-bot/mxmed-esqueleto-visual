@@ -728,3 +728,72 @@ QA resumido (B1):
 
 Deuda futura asociada:
 - Formalizar `consultorio_scope` canónico en schema/backend para sustituir sentinel `__all__` sin ambigüedad semántica.
+
+### 17.10 B2-A: `consultorio_scope` compatible en waitlist (2026-05-23)
+
+Estado: **implementado y validado**.
+
+Commit:
+- `d8f50c9` `feat(agenda): agrega consultorio_scope compatible en waitlist`
+
+Qué es B2-A:
+- Introduce `consultorio_scope` formal con transición compatible para waitlist.
+- Mantiene `consultorio_id="__all__"` vigente para no romper flujos existentes.
+
+Motivo:
+- Reducir deuda semántica: separar alcance (`all|single`) del identificador de consultorio.
+- Permitir migración gradual sin bloquear operaciones en ambientes con schema mixto.
+
+Modelo transicional:
+- Cualquier consultorio:
+  - `consultorio_scope="all"`
+  - `consultorio_id="__all__"` (sentinel de compatibilidad)
+- Consultorio específico:
+  - `consultorio_scope="single"`
+  - `consultorio_id=<id_real>`
+
+Compatibilidad y fallback:
+- `__all__` sigue siendo válido.
+- Si la columna `consultorio_scope` no existe, backend deriva scope desde `consultorio_id`.
+- Regla defensiva de transición:
+  - si `consultorio_id="__all__"` y `consultorio_scope` llega inconsistente (`single`/vacío), **gana `__all__`** y se interpreta como `all`.
+
+Reglas por operación:
+- Create (`POST /waitlist`):
+  - normaliza `consultorio_scope`;
+  - en modo all conserva `consultorio_id="__all__"` por compatibilidad.
+- List (`GET /waitlist?consultorio_id={real}`):
+  - incluye entries exactas,
+  - incluye entries sentinel `__all__`,
+  - e incluye entries con `consultorio_scope="all"` cuando columna existe.
+- Assign (`POST /waitlist/{id}/assign`):
+  - permite entry all -> consultorio real;
+  - mantiene bloqueo de destino `consultorio_id="__all__"` con `400 invalid_consultorio_id`.
+
+Migración recomendada para ambientes existentes:
+```sql
+ALTER TABLE agenda_waitlist_entries
+  ADD COLUMN consultorio_scope VARCHAR(16) NOT NULL DEFAULT 'single';
+
+UPDATE agenda_waitlist_entries
+SET consultorio_scope = 'all'
+WHERE consultorio_id = '__all__';
+
+UPDATE agenda_waitlist_entries
+SET consultorio_scope = 'single'
+WHERE consultorio_id <> '__all__'
+  AND (consultorio_scope IS NULL OR consultorio_scope = '' OR consultorio_scope <> 'single');
+```
+
+QA resumido (B2-A):
+- create all: **PASS**.
+- create single: **PASS**.
+- GET por consultorio específico incluye all: **PASS**.
+- assign entry all -> consultorio real: **PASS**.
+- assign destino `__all__`: **PASS** (bloqueado).
+- entry single conserva regla de mismatch por consultorio: **PASS**.
+
+Deuda futura:
+- Ejecutar migración real en ambientes existentes.
+- Evaluar retiro gradual o encapsulación completa del sentinel `__all__`.
+- Evolucionar reportes/filtros para uso canónico de `consultorio_scope`.
