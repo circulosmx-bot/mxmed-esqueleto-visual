@@ -797,3 +797,146 @@ Deuda futura:
 - Ejecutar migración real en ambientes existentes.
 - Evaluar retiro gradual o encapsulación completa del sentinel `__all__`.
 - Evolucionar reportes/filtros para uso canónico de `consultorio_scope`.
+
+## 18. Adenda B3-A: contrato de transiciones de cita (2026-05-24)
+
+Estado: **documentado (sin enforcement nuevo todavía)**.
+
+Objetivo:
+- Formalizar la matriz permitida/denegada para transiciones críticas de cita:
+  - cancelar,
+  - reprogramar,
+  - marcar no_show.
+- Mantener comportamiento actual en runtime mientras se prepara hardening por fases.
+
+### 18.1 Alcance y reglas base
+
+- Este contrato **no cambia** aún el comportamiento de endpoints.
+- Se preserva F3.3C (strict operator enforcement y actorContext vigente).
+- El contrato define:
+  - estados de cita reconocidos;
+  - temporalidad canónica;
+  - transiciones permitidas/denegadas;
+  - códigos de error objetivo para enforcement futuro.
+
+### 18.2 Estados de cita detectados (canon operativo)
+
+- `pending`
+- `pending_otp`
+- `tentative`
+- `confirmed`
+- `scheduled`
+- `rescheduled`
+- `canceled` / `cancelled`
+- `no_show`
+- `in_progress` / `in_consulta`
+- `finished` / `finalizada`
+- `completed`
+
+Notas:
+- Existen valores legacy/sinónimos en frontend y eventos; el contrato usa el canon anterior para decisiones de transición.
+- `canceled` y `cancelled` se consideran equivalentes de estado terminal cancelado.
+
+### 18.3 Temporalidad canónica
+
+- `futura`: `now < start_at`
+- `en curso`: `start_at <= now < end_at`
+- `pasada`: `end_at <= now`
+- zona horaria canónica: `America/Mexico_City`
+- tolerancia: **sin tolerancia adicional por ahora** (0 minutos)
+
+### 18.4 Matriz: cancelar cita
+
+Permitido:
+- `pending` / `tentative` / `confirmed` / `scheduled` / `rescheduled` cuando la cita es `futura`.
+
+Idempotente:
+- `canceled` / `cancelled` -> `appointment_already_canceled`.
+
+Denegado:
+- `no_show` / `finished` / `completed`.
+- cita `en curso` o `pasada`.
+
+Errores sugeridos:
+- `invalid_transition`
+- `appointment_already_canceled`
+- `appointment_past_not_cancellable`
+
+### 18.5 Matriz: reprogramar cita
+
+Permitido:
+- `pending` / `tentative` / `confirmed` / `scheduled` / `rescheduled` cuando la cita es `futura` y el slot destino es válido.
+
+Denegado:
+- `canceled` / `cancelled`
+- `no_show`
+- `finished` / `completed`
+- cita `en curso` o `pasada`
+- colisión o fuera de horario
+
+Errores sugeridos:
+- `invalid_transition`
+- `appointment_past_not_reschedulable`
+- `slot_conflict`
+- `outside_schedule`
+- `slot_unavailable`
+
+### 18.6 Matriz: no_show
+
+Permitido:
+- cita `en curso` o `pasada` con estado no terminal.
+
+Idempotente:
+- ya `no_show` -> `appointment_already_no_show`.
+
+Denegado:
+- cita `futura`.
+- `canceled` / `cancelled`.
+- `finished` / `completed`.
+
+Errores sugeridos:
+- `appointment_future_not_no_show`
+- `appointment_already_no_show`
+- `invalid_transition`
+
+### 18.7 Actor / strict (preservado)
+
+- `doctor` en `strict`: permitido dentro de su scope efectivo.
+- `operator` activo en `strict`: permitido.
+- `operator` inválido en `strict`: bloqueado antes del controller por guard de identidad.
+- `compat`: se preserva comportamiento compatible vigente (sin hardening nuevo por esta adenda).
+- `qa_override`: se preserva en su rol actual de compatibilidad/observación.
+- Esta adenda **no modifica** F3.3C ni su semántica de enforcement.
+
+### 18.8 Contrato de errores objetivo (enforcement futuro)
+
+| error_code | HTTP esperado | message corto sugerido | metadata segura sugerida |
+| --- | --- | --- | --- |
+| `invalid_transition` | 409 | `invalid status transition` | `action`, `current_status` |
+| `appointment_already_canceled` | 200 (idempotente) | `already canceled` | `appointment_id`, `status` |
+| `appointment_already_no_show` | 200 (idempotente) | `already no_show` | `appointment_id`, `status` |
+| `appointment_past_not_reschedulable` | 409 | `appointment cannot be rescheduled after start` | `start_at`, `now_at` |
+| `appointment_past_not_cancellable` | 409 | `appointment cannot be canceled after start` | `start_at`, `now_at` |
+| `appointment_future_not_no_show` | 409 | `appointment cannot be marked no_show before end` | `end_at`, `now_at` |
+| `slot_conflict` | 409 | `collision detected` | `doctor_id`, `consultorio_id`, `date` |
+| `outside_schedule` | 409 | `outside schedule` | `doctor_id`, `consultorio_id`, `date` |
+| `slot_unavailable` | 409 | `slot unavailable` | `doctor_id`, `consultorio_id`, `date` |
+| `forbidden` | 403 | `forbidden` | sin fuga de datos sensibles cruzados |
+| `not_found` | 404 | `appointment not found` | `appointment_id` |
+
+Nota de implementación:
+- Antes de enforcement real, actualizar `statusMap` de `api/agenda/index.php` para evitar que códigos nuevos caigan en HTTP `200` por default.
+
+### 18.9 Riesgos de hardening
+
+- romper compatibilidad de QA/histórico si se endurece sin fase observacional.
+- afectar flujo post-cancelación (`Resolver hueco`) si cancelación se bloquea en casos hoy permitidos.
+- afectar reprogramación entre consultorios en casos válidos limítrofes.
+- afectar señalización `no_show` y flags si temporalidad se aplica sin transición gradual.
+- afectar UX si frontend no mapea mensajes/códigos nuevos de forma explícita.
+
+### 18.10 Plan por fases (B3)
+
+- **B3-A**: contrato documental (esta adenda).
+- **B3-B**: dry-run/observacional sin bloqueo (telemetría + warnings/meta).
+- **B3-C**: enforcement real controlado por feature flag y validación QA.
