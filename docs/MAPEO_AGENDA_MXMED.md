@@ -696,3 +696,35 @@ Deudas abiertas tras A1:
 - Prioridad en metadata aún no canónica (heurística frontend).
 - Evaluar ranking backend/inteligente en fase posterior.
 - Evolucionar contenedor UX a drawer/subtab completo de Lista de espera.
+
+### 17.9 Hardening B1: integridad de `__all__` en assign waitlist (2026-05-23)
+
+Estado: **implementado y validado**.
+
+Commit:
+- `2135d29` `fix(agenda): bloquea assign waitlist con consultorio sentinel all`
+
+Semántica formal de `__all__`:
+- `consultorio_id="__all__"` representa alcance de waitlist “cualquier consultorio”.
+- Se permite en la **entrada de waitlist** como sentinel temporal de alcance.
+- No se permite como consultorio destino al materializar una cita.
+
+Regla de asignación (`POST /waitlist/{id}/assign`):
+- Entry `__all__` + payload con consultorio real: **permitido**.
+- Payload con `consultorio_id="__all__"`: **bloqueado**.
+- Entry específica + payload con mismo consultorio: **permitido**.
+- Entry específica + payload con otro consultorio: **bloqueado** (regla previa preservada).
+
+Error formalizado para payload inválido:
+- `error`: `invalid_consultorio_id`
+- HTTP: `400`
+- `message`: `consultorio_id must be a real consultorio for assignment`
+
+QA resumido (B1):
+- assign válido `__all__ -> consultorio real`: **PASS**.
+- assign inválido `__all__ -> __all__`: **PASS** (bloqueado con `400`).
+- entry específica + mismo consultorio: **PASS**.
+- entry específica + otro consultorio: **PASS** (bloqueado).
+
+Deuda futura asociada:
+- Formalizar `consultorio_scope` canónico en schema/backend para sustituir sentinel `__all__` sin ambigüedad semántica.
