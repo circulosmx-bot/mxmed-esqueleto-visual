@@ -6740,13 +6740,22 @@ console.info('app.js loaded :: 20251123a');
     }
     return parsed.getTime();
   };
+  const resolveWaitlistConsultorioScope = (entry = {})=>{
+    const consultorioId = sanitizeText(entry?.consultorio_id || '');
+    if(consultorioId === WAITLIST_ANY_CONSULTORIO_ID) return 'all';
+    const scopeRaw = normalizeText(sanitizeText(entry?.consultorio_scope || ''));
+    if(scopeRaw === 'all') return 'all';
+    if(scopeRaw === 'single') return 'single';
+    return 'single';
+  };
   const resolveWaitlistEntryCompatibilityMeta = (entry = {}, slotConsultorioId = '')=>{
     const entryConsultorioId = sanitizeText(entry?.consultorio_id || '');
+    const entryConsultorioScope = resolveWaitlistConsultorioScope(entry);
     const slotConsultorio = sanitizeText(slotConsultorioId || '');
     if(slotConsultorio && entryConsultorioId === slotConsultorio){
       return { group: 0, label: 'Compatible con este consultorio' };
     }
-    if(entryConsultorioId === WAITLIST_ANY_CONSULTORIO_ID){
+    if(entryConsultorioScope === 'all'){
       return { group: 1, label: 'Cualquier consultorio' };
     }
     return { group: 2, label: 'Compatibilidad por validar' };
@@ -6757,7 +6766,8 @@ console.info('app.js loaded :: 20251123a');
     const doctorId = sanitizeText(entry?.doctor_id || activeEventActionRef?.extendedProps?.doctor_id || getDoctorId() || '');
     const slotConsultorioId = sanitizeText(slot?.consultorio_id || activeEventActionRef?.extendedProps?.consultorio_id || getAvailabilityConsultorioId() || '');
     const entryConsultorioId = sanitizeText(entry?.consultorio_id || '');
-    const consultorioId = (entryConsultorioId === WAITLIST_ANY_CONSULTORIO_ID)
+    const entryConsultorioScope = resolveWaitlistConsultorioScope(entry);
+    const consultorioId = (entryConsultorioScope === 'all')
       ? slotConsultorioId
       : sanitizeText(entryConsultorioId || slotConsultorioId || '');
     const slotMinutes = resolveEventCancelSlotDurationMinutes(slot);
@@ -6774,7 +6784,7 @@ console.info('app.js loaded :: 20251123a');
         doctor_id: doctorId,
         consultorio_id: consultorioId,
         waitlist_entry_consultorio_id: entryConsultorioId,
-        waitlist_entry_consultorio_scope: entryConsultorioId === WAITLIST_ANY_CONSULTORIO_ID ? 'all' : 'single'
+        waitlist_entry_consultorio_scope: entryConsultorioScope
       }
     });
     return {
@@ -6858,7 +6868,7 @@ console.info('app.js loaded :: 20251123a');
       return left.index - right.index;
     });
     const exactCount = ranked.filter((item)=> item.group === 0).length;
-    const allCount = ranked.filter((item)=> sanitizeText(item?.entry?.consultorio_id || '') === WAITLIST_ANY_CONSULTORIO_ID).length;
+    const allCount = ranked.filter((item)=> resolveWaitlistConsultorioScope(item?.entry || {}) === 'all').length;
     return {
       total: source.length,
       exactCount,
@@ -6921,7 +6931,8 @@ console.info('app.js loaded :: 20251123a');
       const status = sanitizeText(entry?.status || 'active');
       const doctorId = sanitizeText(entry?.doctor_id || '');
       const consultorioId = sanitizeText(entry?.consultorio_id || '');
-      const consultorioLabel = consultorioId === WAITLIST_ANY_CONSULTORIO_ID
+      const consultorioScope = resolveWaitlistConsultorioScope(entry);
+      const consultorioLabel = consultorioScope === 'all'
         ? WAITLIST_ANY_CONSULTORIO_LABEL
         : normalizeConsultorioDisplayLabel(resolveAgendaConsultorioLabelById(consultorioId), consultorioId);
       const notes = sanitizeText(entry?.notes || '');
@@ -6941,6 +6952,7 @@ console.info('app.js loaded :: 20251123a');
           data-ag-waitlist-assign="${escapeHtml(id)}"
           data-ag-waitlist-doctor="${escapeHtml(doctorId)}"
           data-ag-waitlist-consultorio="${escapeHtml(consultorioId)}"
+          data-ag-waitlist-scope="${escapeHtml(consultorioScope)}"
           data-ag-waitlist-patient-name="${escapeHtml(name)}"
           data-ag-waitlist-consultorio-label="${escapeHtml(consultorioLabel)}"
         >
@@ -14670,6 +14682,7 @@ console.info('app.js loaded :: 20251123a');
     if(createRequestInFlight) return;
     const doctorId = sanitizeText(createWaitlistContext?.doctor_id || getDoctorId() || '');
     const consultorioId = sanitizeText(createWaitlistContext?.consultorio_id || resolveConsultorioId() || '') || WAITLIST_ANY_CONSULTORIO_ID;
+    const consultorioScope = consultorioId === WAITLIST_ANY_CONSULTORIO_ID ? 'all' : 'single';
     const patientId = sanitizeText(els.patientId?.value || '');
     const newPatientFirstName = sanitizeText(els.patientNewFirstName?.value || '');
     const newPatientLastName1 = sanitizeText(els.patientNewLastName1?.value || '');
@@ -14691,7 +14704,7 @@ console.info('app.js loaded :: 20251123a');
         source: 'next_available_modal',
         consultorio_id: consultorioId,
         doctor_id: doctorId,
-        consultorio_scope: consultorioId === WAITLIST_ANY_CONSULTORIO_ID ? 'all' : 'single'
+        consultorio_scope: consultorioScope
       }
     });
 
@@ -14725,6 +14738,7 @@ console.info('app.js loaded :: 20251123a');
     const payload = {
       doctor_id: doctorId,
       consultorio_id: consultorioId,
+      consultorio_scope: consultorioScope,
       ...actorPayload,
       channel_origin: channelOrigin,
       created_by_role: actorRole,
@@ -19829,7 +19843,8 @@ console.info('app.js loaded :: 20251123a');
       const rowData = {
         id: waitlistId,
         doctor_id: sanitizeText(btn.getAttribute('data-ag-waitlist-doctor') || activeEventActionRef?.extendedProps?.doctor_id || getDoctorId() || ''),
-        consultorio_id: sanitizeText(btn.getAttribute('data-ag-waitlist-consultorio') || activeEventActionRef?.extendedProps?.consultorio_id || getAvailabilityConsultorioId() || '')
+        consultorio_id: sanitizeText(btn.getAttribute('data-ag-waitlist-consultorio') || activeEventActionRef?.extendedProps?.consultorio_id || getAvailabilityConsultorioId() || ''),
+        consultorio_scope: sanitizeText(btn.getAttribute('data-ag-waitlist-scope') || '')
       };
       const payload = buildWaitlistAssignPayload(rowData);
       if(!payload){

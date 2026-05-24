@@ -19,6 +19,8 @@ require_once __DIR__ . '/../../../api/_lib/db.php';
 class WaitlistController
 {
     private const ANY_CONSULTORIO_ID = '__all__';
+    private const CONSULTORIO_SCOPE_ALL = 'all';
+    private const CONSULTORIO_SCOPE_SINGLE = 'single';
     private ?WaitlistRepository $repository = null;
     private ?string $dbError = null;
     private ?\PDO $pdo = null;
@@ -102,6 +104,17 @@ class WaitlistController
             return $this->error((string)$doctorScope['error'], (string)$doctorScope['message'], (array)($doctorScope['meta'] ?? []));
         }
         $payload['doctor_id'] = (string)$doctorScope['doctor_id'];
+        $consultorioId = trim((string)($payload['consultorio_id'] ?? ''));
+        $consultorioScope = $this->resolveConsultorioScope($payload['consultorio_scope'] ?? null, $consultorioId);
+        if ($consultorioScope === null) {
+            return $this->error('invalid_params', 'invalid payload for waitlist', [
+                'consultorio_scope' => 'must be all or single',
+            ]);
+        }
+        if ($consultorioScope === self::CONSULTORIO_SCOPE_ALL) {
+            $payload['consultorio_id'] = self::ANY_CONSULTORIO_ID;
+        }
+        $payload['consultorio_scope'] = $consultorioScope;
         $errors = $this->validateCreate($payload);
         if (!empty($errors)) {
             return $this->error('invalid_params', 'invalid payload for waitlist', $errors);
@@ -111,6 +124,7 @@ class WaitlistController
             $entry = $this->repository->createEntry([
                 'doctor_id' => $payload['doctor_id'],
                 'consultorio_id' => $payload['consultorio_id'],
+                'consultorio_scope' => $payload['consultorio_scope'],
                 'patient_id' => $payload['patient_id'] ?? null,
                 'patient_name' => $payload['patient_name'] ?? null,
                 'patient_phone' => $payload['patient_phone'] ?? null,
@@ -243,11 +257,13 @@ class WaitlistController
             $payload['doctor_id'] = (string)$entry['doctor_id'];
         }
         $entryConsultorioId = trim((string)($entry['consultorio_id'] ?? ''));
-        $isAnyConsultorioEntry = ($entryConsultorioId === self::ANY_CONSULTORIO_ID);
+        $entryConsultorioScope = $this->resolveConsultorioScope($entry['consultorio_scope'] ?? null, $entryConsultorioId);
+        $isAnyConsultorioEntry = $entryConsultorioScope === self::CONSULTORIO_SCOPE_ALL;
         if (!$isAnyConsultorioEntry && (string)$payload['consultorio_id'] !== $entryConsultorioId) {
             return $this->error('invalid_params', 'doctor or consultorio mismatch', [
                 'entry_doctor_id' => $entry['doctor_id'],
                 'entry_consultorio_id' => $entry['consultorio_id'],
+                'entry_consultorio_scope' => $entryConsultorioScope ?? self::CONSULTORIO_SCOPE_SINGLE,
             ]);
         }
 
@@ -317,6 +333,7 @@ class WaitlistController
                 'source' => 'waitlist_assign',
                 'waitlist_entry_id' => $id,
                 'consultorio_id' => (string)$payload['consultorio_id'],
+                'waitlist_entry_consultorio_scope' => $entryConsultorioScope ?? self::CONSULTORIO_SCOPE_SINGLE,
                 'appointment_id' => (string)($result['appointment_id'] ?? ''),
                 'assigned_slot' => [
                     'start_at' => (string)($payload['start_at'] ?? ''),
@@ -351,6 +368,10 @@ class WaitlistController
         }
         if (trim((string)($payload['consultorio_id'] ?? '')) === '') {
             $errors['consultorio_id'] = 'required';
+        }
+        $consultorioScope = trim((string)($payload['consultorio_scope'] ?? ''));
+        if ($consultorioScope !== '' && !in_array($consultorioScope, [self::CONSULTORIO_SCOPE_SINGLE, self::CONSULTORIO_SCOPE_ALL], true)) {
+            $errors['consultorio_scope'] = 'invalid';
         }
         $hasPatientId = trim((string)($payload['patient_id'] ?? '')) !== '';
         $hasName = trim((string)($payload['patient_name'] ?? '')) !== '';
@@ -442,9 +463,15 @@ class WaitlistController
         if (!is_array($incomingMetadata)) {
             $incomingMetadata = [];
         }
+        $resolvedConsultorioId = trim((string)($payload['consultorio_id'] ?? ''));
+        $resolvedConsultorioScope = $this->resolveConsultorioScope(
+            $payload['consultorio_scope'] ?? null,
+            $resolvedConsultorioId
+        ) ?? self::CONSULTORIO_SCOPE_SINGLE;
         $safeMetadata = array_merge($incomingMetadata, [
             'doctor_id' => trim((string)($payload['doctor_id'] ?? $this->actorContext['doctor_id'] ?? '')),
-            'consultorio_id' => trim((string)($payload['consultorio_id'] ?? '')),
+            'consultorio_id' => $resolvedConsultorioId,
+            'consultorio_scope' => $resolvedConsultorioScope,
             'status' => trim((string)($payload['status'] ?? '')),
         ]);
 
@@ -645,6 +672,23 @@ class WaitlistController
     private function parseDatetime(string $value): ?DateTimeImmutable
     {
         return DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $value, new DateTimeZone('America/Mexico_City'));
+    }
+
+    private function resolveConsultorioScope($rawScope, string $consultorioId): ?string
+    {
+        $safeConsultorioId = trim((string)$consultorioId);
+        if ($safeConsultorioId === self::ANY_CONSULTORIO_ID) {
+            return self::CONSULTORIO_SCOPE_ALL;
+        }
+
+        $scope = strtolower(trim((string)($rawScope ?? '')));
+        if ($scope === '') {
+            return self::CONSULTORIO_SCOPE_SINGLE;
+        }
+        if ($scope !== self::CONSULTORIO_SCOPE_SINGLE && $scope !== self::CONSULTORIO_SCOPE_ALL) {
+            return null;
+        }
+        return $scope;
     }
 
     private function qaDebugMeta(?Throwable $e): array

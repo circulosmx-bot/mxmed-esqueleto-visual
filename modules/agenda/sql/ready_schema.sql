@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS `agenda_waitlist_entries` (
   `id` VARCHAR(64) NOT NULL,
   `doctor_id` VARCHAR(64) NOT NULL,
   `consultorio_id` VARCHAR(64) NOT NULL,
+  `consultorio_scope` VARCHAR(16) NOT NULL DEFAULT 'single',
   `status` VARCHAR(32) NOT NULL DEFAULT 'active',
   `patient_id` VARCHAR(64),
   `patient_name` VARCHAR(255),

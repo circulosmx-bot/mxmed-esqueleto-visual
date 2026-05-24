@@ -10,6 +10,8 @@ class WaitlistRepository
 {
     private const NOTES_AUDIT_MARKER = '_mxm_waitlist_audit_v1';
     private const ANY_CONSULTORIO_ID = '__all__';
+    private const CONSULTORIO_SCOPE_ALL = 'all';
+    private const CONSULTORIO_SCOPE_SINGLE = 'single';
     private PDO $pdo;
     private ?string $table = null;
     private array $columnsCache = [];
@@ -31,6 +33,8 @@ class WaitlistRepository
     public function listEntries(array $filters): array
     {
         $this->ensureTable();
+        $columns = $this->getColumns($this->table);
+        $hasConsultorioScopeColumn = $this->hasColumn($columns, 'consultorio_scope');
 
         $builder = [];
         $params = [];
@@ -43,10 +47,20 @@ class WaitlistRepository
             $consultorioId = trim((string)$filters['consultorio_id']);
             if ($consultorioId !== '') {
                 if ($consultorioId === self::ANY_CONSULTORIO_ID) {
-                    $builder[] = 'consultorio_id = :consultorio_id';
+                    if ($hasConsultorioScopeColumn) {
+                        $builder[] = '(consultorio_id = :consultorio_id OR consultorio_scope = :consultorio_scope_all)';
+                        $params['consultorio_scope_all'] = self::CONSULTORIO_SCOPE_ALL;
+                    } else {
+                        $builder[] = 'consultorio_id = :consultorio_id';
+                    }
                     $params['consultorio_id'] = $consultorioId;
                 } else {
-                    $builder[] = '(consultorio_id = :consultorio_id OR consultorio_id = :consultorio_any)';
+                    if ($hasConsultorioScopeColumn) {
+                        $builder[] = '(consultorio_id = :consultorio_id OR consultorio_id = :consultorio_any OR consultorio_scope = :consultorio_scope_all)';
+                        $params['consultorio_scope_all'] = self::CONSULTORIO_SCOPE_ALL;
+                    } else {
+                        $builder[] = '(consultorio_id = :consultorio_id OR consultorio_id = :consultorio_any)';
+                    }
                     $params['consultorio_id'] = $consultorioId;
                     $params['consultorio_any'] = self::ANY_CONSULTORIO_ID;
                 }
@@ -142,6 +156,10 @@ class WaitlistRepository
 
     private function hydrateEntryRow(array $row): array
     {
+        $row['consultorio_scope'] = $this->normalizeConsultorioScopeValue(
+            $row['consultorio_scope'] ?? null,
+            $row['consultorio_id'] ?? null
+        );
         $notesInfo = $this->extractNotesInfo($row['notes'] ?? null);
         $row['notes'] = $notesInfo['notes_text'];
 
@@ -366,6 +384,23 @@ class WaitlistRepository
     {
         $text = trim((string)($value ?? ''));
         return $text === '' ? null : $text;
+    }
+
+    private function normalizeConsultorioScopeValue($rawScope, $consultorioId): string
+    {
+        $safeConsultorioId = trim((string)($consultorioId ?? ''));
+        if ($safeConsultorioId === self::ANY_CONSULTORIO_ID) {
+            return self::CONSULTORIO_SCOPE_ALL;
+        }
+
+        $scope = strtolower(trim((string)($rawScope ?? '')));
+        if ($scope === self::CONSULTORIO_SCOPE_ALL) {
+            return self::CONSULTORIO_SCOPE_ALL;
+        }
+        if ($scope === self::CONSULTORIO_SCOPE_SINGLE) {
+            return self::CONSULTORIO_SCOPE_SINGLE;
+        }
+        return self::CONSULTORIO_SCOPE_SINGLE;
     }
 
     private function insert(string $table, array $data): void

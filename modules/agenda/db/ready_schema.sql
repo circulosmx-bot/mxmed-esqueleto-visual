@@ -84,6 +84,23 @@ CREATE TABLE IF NOT EXISTS `agenda_patient_incidents` (
   KEY `idx_patient_incidents_type_created` (`incident_type`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `agenda_waitlist_entries` (
+  `id` VARCHAR(64) NOT NULL,
+  `doctor_id` VARCHAR(64) NOT NULL,
+  `consultorio_id` VARCHAR(64) NOT NULL,
+  `consultorio_scope` VARCHAR(16) NOT NULL DEFAULT 'single',
+  `status` VARCHAR(32) NOT NULL DEFAULT 'active',
+  `patient_id` VARCHAR(64),
+  `patient_name` VARCHAR(255),
+  `patient_phone` VARCHAR(32),
+  `notes` TEXT,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_waitlist_doctor_status` (`doctor_id`, `status`),
+  KEY `idx_waitlist_consultorio_status` (`consultorio_id`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `agenda_public_appointment_flows` (
   `flow_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `appointment_id` VARCHAR(64) NOT NULL,
