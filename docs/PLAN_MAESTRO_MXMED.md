@@ -68,34 +68,38 @@ Pendiente dentro de P16 (abierto):
 
 ## A1.2 Estado operativo actualizado (Agenda + Operadores)
 
-- Fecha de actualización: 2026-05-18
-- Alcance: cierre documental y estabilización previa a nuevas funciones.
+- Fecha de actualización: 2026-05-24
+- Estado de cierre: **Agenda · Hecho v1 funcional consolidado, con deudas documentadas**
+- Criterio operativo: Agenda se considera funcionalmente consolidada en v1 para operación principal, con deudas técnicas/documentales explícitas que no bloquean el cierre funcional actual.
 
-### Concluido
-- Agenda · Vista Semana custom operativa en shell principal (`index.html` + `assets/js/app.js`).
-- Agenda · Vista Día custom operativa con mini calendario, reloj/contexto, KPIs y columnas Mañana/Tarde.
-- Vista Mes oculta/no operativa en selector principal.
-- Bloqueo parcial + bloqueo de día completo con ventanas operativas reales.
-- Desbloqueo funcional con refresco de render en Día/Semana.
-- Nueva cita desde slot disponible y modal de Siguiente cita disponible en cards.
-- Operadores con bandas/acordeones, edición inline, historial de acciones y archivado lógico.
-- Límite absoluto de operadores en frontend: 3 (activos + pausados + invitación pendiente).
+### Concluido (v1 funcional consolidado)
+- Semana custom operativa.
+- Día custom operativa.
+- Vista Mes oculta/no operativa.
+- Nueva cita refinada.
+- Badge `AHORA`.
+- Waitlist MVP desde “Buscar siguiente cita disponible”.
+- Resolver hueco MVP post-cancelación.
+- Resolver hueco A1: ranking, máximo 5, estado vacío y colisión.
+- Hardening B1: `__all__` no puede ser destino de cita.
+- B2-A: `consultorio_scope` compatible.
+- Strict operator enforcement activo en backend para rutas privadas elegibles.
 
-### Parcial
-- Persistencia de bloqueos administrativos en frontend (localStorage) sin write backend dedicado de overrides para UI shell.
-- Envío de credenciales de operador simulado en frontend (sin proveedor real de correo/SMS).
-- Matriz de permisos de operador visible en UI, sin enforcement backend/RBAC completo por módulo.
-
-### Pendiente
-- Endpoint seguro para envío/verificación real de credenciales de operadores.
-- Auditoría backend consolidada (actor, timestamp, módulo, acción, entidad) con persistencia canónica.
-- Integración completa Waitlist en shell principal con paridad total frente a UI legacy `api/agenda/ui/*`.
+### Parcial / deuda documentada (no bloqueante para cierre funcional actual)
+- Bloqueos/desbloqueos con backend canónico pendiente.
+- Operadores UI híbrida/local vs backend autoritativo.
+- Validación strict operator en sesión UI real completa.
+- Migración real de `consultorio_scope` en ambientes existentes.
+- Eventual encapsulación/retiro progresivo de `__all__`.
+- `operator_identity_db_not_ready` -> `503`.
+- Subtab completa Waitlist futura.
+- UX futura de Resolver hueco.
 
 ### No tocar sin QA
 - Anclaje de Semana al día actual y sincronía Día ↔ Semana.
 - Regla de domingo/feriado en Día: visible, sin inventar disponibilidad ni bloqueos ficticios.
-- Bloqueo de día completo: usar horarios reales de operación y respetar conflictos con citas reales.
-- Regla de cupo en Operadores: archivados no cuentan para el límite.
+- Waitlist no representa cita confirmada ni garantiza disponibilidad anticipada.
+- `__all__` es sentinel transicional de alcance, nunca destino de cita.
 
 ## A2. Cierre clínico reciente (Encounter/Historial/Timeline)
 
@@ -952,7 +956,7 @@ curl -sS "http://127.0.0.1:8092/modules/clinical/ui/encounter.php?encounter_key=
 | Módulo | Estado | Alcance actual | Evidencia (docs/endpoints/tags/commits) | Pendiente inmediato |
 |---|---|---|---|---|
 | Patients | En progreso | Fuente canónica de identidad y contactos | `docs/MAPA_TOTAL_SISTEMA_MXMED.md`; `api/patients/index.php` | Cerrar convergencia total patient_id en clinical legacy |
-| Agenda | Hecho (v1) | Citas, eventos, waitlist | `docs/MAPA_TOTAL_SISTEMA_MXMED.md`; `api/agenda/index.php`; `docs/agenda/CIERRE_AGENDA_V1_ESTADO_FINAL.md` | Consolidar bridge robusto a Clinical en completed |
+| Agenda | Hecho v1 funcional consolidado, con deudas documentadas | Citas, eventos, waitlist y operación principal de Agenda (Semana/Día custom + resolver hueco) | `docs/MAPA_TOTAL_SISTEMA_MXMED.md`; `api/agenda/index.php`; `docs/MAPEO_AGENDA_MXMED.md`; `docs/AGENDA_ESTADO_CONSOLIDACION_Y_DEUDA_UI_MXMED.md` | Backend canónico de bloqueos/desbloqueos con auditoría; migración real `consultorio_scope` + backfill; consolidación UI Operadores contra backend autoritativo; validación strict operator en sesión UI real |
 | Agenda (Flags / Risk) | Hecho (registro) / Pendiente (enforcement) | Flags de riesgo por no_show/late_cancel en flujo write de Agenda | `modules/agenda/repositories/AppointmentWriteRepository.php:473-480`; `modules/agenda/repositories/AppointmentWriteRepository.php:536-543`; `modules/agenda/repositories/PatientFlagsWriteRepository.php:52-96`; `modules/agenda/controllers/AppointmentWriteController.php:93-124`; `docs/qa/availability_no_show_flow_qa.sh:144-163`; `docs/qa/availability_late_cancel_flow_qa.sh:155-182` | Definir política de bloqueo por flags antes de enforcement en create |
 | Clinical API (timeline/encounters/documents) | En progreso | Timeline, encounters, documentos y casos en evolución | `docs/clinical/TIMELINE_V1_CONTRACT.md`; `docs/clinical/encounters.md`; tags `mxmed-camino2-step*` | Endurecer contratos cross-módulo y deuda legacy |
 | Cases | En progreso | Caso activo y items por caso | `docs/clinical/CONTRATO_APPOINTMENT_ENCOUNTER_LINKING_V1.md`; endpoints `/cases/*` | Mejorar trazabilidad item_type y overlays de pertenencia |
@@ -991,6 +995,11 @@ Formato obligatorio por entrada:
 | 2026-02-25 | Flags grey/black son append-only (no bloquean create) en Etapa 1 (estado actual) | Evitar bloqueo automático sin política de negocio explícita | Auditoría/QA de flags vigente; enforcement se decide aparte | `modules/agenda/README.md:42-47`; `modules/agenda/controllers/AppointmentWriteController.php:93-124`; `docs/qa/availability_no_show_flow_qa.sh:144-163`; `docs/qa/availability_late_cancel_flow_qa.sh:155-182` | vigente |
 | 2026-02-25 | Naming canónico: no_show => black (deprecar red en docs) | Alinear código, QA y documentación con una sola semántica | Actualización documental pendiente para eliminar ambigüedad red/black | `modules/agenda/repositories/AppointmentWriteRepository.php:538-539`; `modules/agenda/README.md:106` | vigente |
 | 2026-04-28 | Ubicación pública de consultorio usará coordenadas confirmadas (`lat/lng`) como fuente principal | Evitar divergencia entre mapa configurado en admin y mapa visible al público | Admin mantiene captura con Leaflet; perfil público futuro renderiza iframe de Google Maps por coordenadas (sin API Key); fallback por dirección solo visual | `modules/agenda/helpers/consultorio_map.php`; `modules/agenda/controllers/ConsultoriosController.php`; `modules/agenda/README.md` | vigente |
+| 2026-05-24 | Waitlist no representa cita confirmada ni garantiza disponibilidad anticipada | Evitar falsas expectativas operativas en admisión/agendamiento | Se separa explícitamente flujo de espera vs cita confirmada | `docs/MAPEO_AGENDA_MXMED.md`; `docs/AGENDA_ESTADO_CONSOLIDACION_Y_DEUDA_UI_MXMED.md` | vigente |
+| 2026-05-24 | Waitlist puede aplicar a cualquier consultorio mediante `consultorio_scope="all"` | Formalizar alcance cross-consultorio con semántica canónica | Permite priorización y asignación sin restringir a un solo consultorio desde el alta | `docs/MAPEO_AGENDA_MXMED.md` | vigente |
+| 2026-05-24 | `__all__` queda como sentinel transicional y nunca puede ser destino de cita | Preservar compatibilidad de transición sin romper integridad de citas reales | El assign debe resolver siempre a consultorio real; destino sentinel queda bloqueado | `docs/MAPEO_AGENDA_MXMED.md`; `docs/AGENDA_ACTOR_AUTORITATIVO_MXMED.md` | vigente |
+| 2026-05-24 | Resolver hueco permite recuperar slots post-cancelación mediante candidatos waitlist | Reducir pérdida operativa por cancelaciones/reprogramaciones | Se habilita recuperación guiada con ranking/candidatos y asignación explícita | `docs/MAPEO_AGENDA_MXMED.md`; `docs/AGENDA_ESTADO_CONSOLIDACION_Y_DEUDA_UI_MXMED.md` | vigente |
+| 2026-05-24 | Agenda puede abrir contexto de paciente/expediente, pero no inicia consulta automáticamente | Mantener frontera entre operación administrativa y acto clínico | Evita arranque automático de consulta y preserva control clínico explícito | `docs/AGENDA_COMO_PUERTA_DE_ENTRADA_CLINICA_MXMED.md`; `docs/PLAN_MAESTRO_MXMED.md` | vigente |
 | _pendiente_ | _agregar nuevas decisiones aquí_ |  |  |  |  |
 
 ## F. Mapa de interconexiones (flows principales)
@@ -1033,6 +1042,15 @@ Refs:
 - `[qa]` ampliar smoke de contratos timeline + cases + overlay.
 - `[migration]` plan de migración schema v1/v2 y tipos de IDs.
 - `[contract/api/qa]` Definir política y (opcional) enforcement de bloqueo por flags (grey/black): ¿grey bloquea?, ¿black bloquea?, duración (`expires_at`), override por rol; punto técnico para guard en `AppointmentWriteController::createFromPayload` entre payload válido y `checkAvailabilityRange` (`modules/agenda/controllers/AppointmentWriteController.php:93-124`). DoD: decisión escrita + QA contractual + error contract definido.
+- `[migration]` migración real de `consultorio_scope` + backfill en ambientes existentes.
+- `[api]` backend canónico de bloqueos/desbloqueos con auditoría.
+- `[ui/api]` consolidación Operadores UI vs backend autoritativo.
+- `[qa]` validación strict operator en sesión UI real.
+- `[contract/api]` definir contrato explícito `operator_identity_db_not_ready` -> `503`.
+- `[ui]` subtab completa de Waitlist futura.
+- `[ui/ux]` evolución futura de UX de Resolver hueco.
+- `[refactor]` encapsulación/retiro progresivo de sentinel `__all__`.
+- `[triage]` triaje de `409 patient-id/resolve` no bloqueante.
 
 ### 2a) Operación clínica extendida
 - `[api]` órdenes, recetas y resultados con contratos estables.
@@ -1065,6 +1083,11 @@ Refs:
 | Fuente (ruta en repo) | Tipo (doc interno) | Propósito | Estado (pendiente / revisado / reemplazado) | Decisiones derivadas (si aplica) | Próxima acción |
 |---|---|---|---|---|---|
 | `docs/MAPA_TOTAL_SISTEMA_MXMED.md` | doc interno | Mapa total del sistema y estado transversal | pendiente | Por definir | Revisar y extraer decisiones al Decision Log |
+| `docs/MAPEO_AGENDA_MXMED.md` | doc interno | Mapeo técnico de Agenda y adendas de cierre funcional | revisado | Consolida criterios de waitlist, resolver hueco y transición de alcance | Mantener como referencia activa para cambios de Agenda |
+| `docs/AGENDA_ESTADO_CONSOLIDACION_Y_DEUDA_UI_MXMED.md` | doc interno | Separación entre cierre funcional Agenda y deuda UX/UI | revisado | Define cierre funcional consolidado con deudas explícitas no bloqueantes | Mantener alineado con A1.2 y checklist por módulo |
+| `docs/AGENDA_RBAC_MATRIZ_ACTORES_MXMED.md` | doc interno | Matriz de actores/permisos aplicable a operación Agenda | revisado | Soporta trazabilidad de alcance y enforcement progresivo por actor | Mantener como referencia activa para validación de permisos |
+| `docs/AGENDA_AUDITORIA_ACTOR_ATTRIBUTION_MXMED.md` | doc interno | Auditoría de atribución de actor en flujos Agenda/Waitlist | revisado | Refuerza evidencia para decisiones de auditoría y hardening operativo | Mantener como referencia activa para QA/auditoría |
+| `docs/AGENDA_ACTOR_AUTORITATIVO_MXMED.md` | doc interno | Definición de actor autoritativo y compatibilidad transicional | revisado | Alinea reglas de sentinel `__all__` y destino válido de cita | Mantener alineado con retiro progresivo/encapsulación del sentinel |
 | `docs/clinical/DECISION_FUENTES_DE_VERDAD.md` | doc interno | Fuente canónica de dominios clínicos/paciente/documentos | pendiente | Por definir | Revisar y confirmar contratos canónicos |
 | `docs/db/MAPA_DOMINIOS_DATOS.md` | doc interno | Mapa de dominios y relaciones de datos | pendiente | Por definir | Revisar y alinear arquitectura universal |
 | `docs/ui/REGLAS_UI_MXMED.md` | doc interno | Metodología operativa para cambios UI/UX | pendiente | Por definir | Revisar y reflejar reglas en checklist |
