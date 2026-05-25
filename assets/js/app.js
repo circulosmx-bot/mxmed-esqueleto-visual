@@ -7123,6 +7123,7 @@ console.info('app.js loaded :: 20251123a');
     const statusLabel = statusMeta.label;
     eventRef.setExtendedProp('status', sanitizeText(rawStatus));
     eventRef.setExtendedProp('status_key', statusMeta.key);
+    eventRef.setExtendedProp('status_key_real', statusMeta.key);
     eventRef.setExtendedProp('status_label', statusLabel);
     eventRef.setExtendedProp('visual_key', visual.visualKey);
     try{
