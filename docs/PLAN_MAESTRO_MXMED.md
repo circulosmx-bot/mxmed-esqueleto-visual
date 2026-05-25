@@ -86,7 +86,9 @@ Pendiente dentro de P16 (abierto):
 - Strict operator enforcement activo en backend para rutas privadas elegibles.
 
 ### Parcial / deuda documentada (no bloqueante para cierre funcional actual)
-- Bloqueos/desbloqueos con backend canónico pendiente.
+- Conexión del UI shell de bloqueos/desbloqueos al backend canónico (BLOQ-F3) pendiente.
+- Retiro/degradación progresiva de `localStorage` en bloqueos del shell pendiente.
+- Auditoría canónica dedicada de bloqueos/desbloqueos (`availability_blocked` / `availability_unblocked`) pendiente.
 - Operadores UI híbrida/local vs backend autoritativo.
 - Validación strict operator en sesión UI real completa.
 - Migración real de `consultorio_scope` en ambientes existentes.
@@ -956,7 +958,7 @@ curl -sS "http://127.0.0.1:8092/modules/clinical/ui/encounter.php?encounter_key=
 | Módulo | Estado | Alcance actual | Evidencia (docs/endpoints/tags/commits) | Pendiente inmediato |
 |---|---|---|---|---|
 | Patients | En progreso | Fuente canónica de identidad y contactos | `docs/MAPA_TOTAL_SISTEMA_MXMED.md`; `api/patients/index.php` | Cerrar convergencia total patient_id en clinical legacy |
-| Agenda | Hecho v1 funcional consolidado, con deudas documentadas | Citas, eventos, waitlist y operación principal de Agenda (Semana/Día custom + resolver hueco) | `docs/MAPA_TOTAL_SISTEMA_MXMED.md`; `api/agenda/index.php`; `docs/MAPEO_AGENDA_MXMED.md`; `docs/AGENDA_ESTADO_CONSOLIDACION_Y_DEUDA_UI_MXMED.md` | Backend canónico de bloqueos/desbloqueos con auditoría; migración real `consultorio_scope` + backfill; consolidación UI Operadores contra backend autoritativo; validación strict operator en sesión UI real |
+| Agenda | Hecho v1 funcional consolidado, con deudas documentadas | Citas, eventos, waitlist y operación principal de Agenda (Semana/Día custom + resolver hueco) | `docs/MAPA_TOTAL_SISTEMA_MXMED.md`; `api/agenda/index.php`; `docs/MAPEO_AGENDA_MXMED.md`; `docs/AGENDA_ESTADO_CONSOLIDACION_Y_DEUDA_UI_MXMED.md` | Integrar UI shell de bloqueos/desbloqueos al backend canónico + retiro progresivo de `localStorage`; migración real `consultorio_scope` + backfill; consolidación UI Operadores contra backend autoritativo; validación strict operator en sesión UI real |
 | Agenda (Flags / Risk) | Hecho (registro) / Pendiente (enforcement) | Flags de riesgo por no_show/late_cancel en flujo write de Agenda | `modules/agenda/repositories/AppointmentWriteRepository.php:473-480`; `modules/agenda/repositories/AppointmentWriteRepository.php:536-543`; `modules/agenda/repositories/PatientFlagsWriteRepository.php:52-96`; `modules/agenda/controllers/AppointmentWriteController.php:93-124`; `docs/qa/availability_no_show_flow_qa.sh:144-163`; `docs/qa/availability_late_cancel_flow_qa.sh:155-182` | Definir política de bloqueo por flags antes de enforcement en create |
 | Clinical API (timeline/encounters/documents) | En progreso | Timeline, encounters, documentos y casos en evolución | `docs/clinical/TIMELINE_V1_CONTRACT.md`; `docs/clinical/encounters.md`; tags `mxmed-camino2-step*` | Endurecer contratos cross-módulo y deuda legacy |
 | Cases | En progreso | Caso activo y items por caso | `docs/clinical/CONTRATO_APPOINTMENT_ENCOUNTER_LINKING_V1.md`; endpoints `/cases/*` | Mejorar trazabilidad item_type y overlays de pertenencia |
@@ -1043,7 +1045,8 @@ Refs:
 - `[migration]` plan de migración schema v1/v2 y tipos de IDs.
 - `[contract/api/qa]` Definir política y (opcional) enforcement de bloqueo por flags (grey/black): ¿grey bloquea?, ¿black bloquea?, duración (`expires_at`), override por rol; punto técnico para guard en `AppointmentWriteController::createFromPayload` entre payload válido y `checkAvailabilityRange` (`modules/agenda/controllers/AppointmentWriteController.php:93-124`). DoD: decisión escrita + QA contractual + error contract definido.
 - `[migration]` migración real de `consultorio_scope` + backfill en ambientes existentes.
-- `[api]` backend canónico de bloqueos/desbloqueos con auditoría.
+- `[ui/api]` conectar UI shell de bloqueos/desbloqueos al backend canónico (BLOQ-F3) y retirar dependencia de `localStorage`.
+- `[audit]` definir auditoría canónica de bloqueos/desbloqueos (`availability_blocked` / `availability_unblocked`) y su persistencia final.
 - `[ui/api]` consolidación Operadores UI vs backend autoritativo.
 - `[qa]` validación strict operator en sesión UI real.
 - `[contract/api]` definir contrato explícito `operator_identity_db_not_ready` -> `503`.

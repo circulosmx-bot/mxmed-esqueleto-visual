@@ -1004,3 +1004,66 @@ Nota de implementación:
 - **B3-A**: contrato documental (esta adenda).
 - **B3-B**: dry-run/observacional sin bloqueo (telemetría + warnings/meta).
 - **B3-C**: enforcement real controlado por feature flag y validación QA.
+
+## 19. Adenda BLOQ-F2: backend canónico mínimo de bloqueos (2026-05-25)
+
+Estado: **implementado, validado y pusheado**.
+
+Commit base:
+- `d4e66db` `feat(agenda): agrega backend canonico para bloqueos de disponibilidad`
+
+### 19.1 Qué resuelve BLOQ-F2
+- Cierra la deuda de “solo UX/local” para bloqueos/desbloqueos al agregar fuente backend canónica mínima.
+- Mantiene compatibilidad con la Agenda actual sin conectar todavía el shell UI a estos writes.
+
+### 19.2 Endpoints nuevos
+- `GET /api/agenda/index.php/availability/blocks`
+- `POST /api/agenda/index.php/availability/blocks`
+- `PATCH /api/agenda/index.php/availability/blocks/{id}`
+
+### 19.3 Archivos principales
+- `api/agenda/index.php`
+- `modules/agenda/controllers/AvailabilityBlocksController.php`
+- `modules/agenda/repositories/OverrideRepository.php`
+
+### 19.4 Persistencia y modelo operativo
+- Reutiliza `agenda_availability_overrides` como base canónica mínima.
+- Para bloqueo se usa `type=close`.
+- Desbloqueo se resuelve con soft-unblock (`is_active=0`) vía `PATCH` (sin `DELETE` en F2).
+
+### 19.5 Reglas implementadas en F2
+- Bloqueo parcial (`scope=partial`).
+- Bloqueo de día completo (`scope=full_day`).
+- Desbloqueo lógico con idempotencia si ya estaba inactivo.
+- No permite bloquear en pasado (`409 invalid_transition`).
+- No permite bloquear donde hay cita existente (`409 block_conflict_with_appointments`).
+- `GET /availability` y `GET /public/availability` respetan los bloqueos activos.
+
+### 19.6 Fuera de alcance en F2
+- No se conectó el UI shell de bloqueos/desbloqueos todavía.
+- No se retiró `localStorage` del shell actual.
+- No se implementó recurrencia.
+- No se agregó tabla dedicada de auditoría de bloqueos.
+- No se tocó Waitlist/Resolver hueco.
+
+### 19.7 QA resumido
+Resultado global: **PASS**.
+
+- `GET /availability/blocks`: PASS.
+- `POST` bloqueo parcial: PASS.
+- `GET /availability` respeta bloqueo parcial: PASS.
+- `GET /public/availability` respeta bloqueo: PASS.
+- `PATCH` desbloqueo: PASS.
+- `PATCH` idempotente en inactivo: PASS.
+- `POST` full-day: PASS.
+- `GET /availability` full-day vacío: PASS.
+- bloqueo sobre cita existente: PASS (`409 block_conflict_with_appointments`).
+- bloqueo en pasado: PASS (`409 invalid_transition`).
+- limpieza QA: PASS (bloqueos QA desactivados).
+- strict operator en sesión real: **PARTIAL** (pendiente validación dedicada).
+
+### 19.8 Deuda futura (post F2)
+- BLOQ-F3: conectar UI shell a backend canónico de bloques.
+- Retiro/degradación progresiva de `localStorage` para bloqueos.
+- Auditoría formal (`availability_blocked` / `availability_unblocked`) con persistencia dedicada si se decide.
+- Validación strict operator en sesión UI real.
