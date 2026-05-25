@@ -761,6 +761,7 @@ console.info('app.js loaded :: 20251123a');
   let customWeekExpectedRangeKey = '';
   let customWeekLastEventsScopeKey = '';
   let customWeekExpectedScopeKey = '';
+  let customDayForceFreshSnapshotAfterCreate = false;
   let agendaToolbarLayoutMode = '';
   let customWeekLastBridgeMeta = {
     rangeStart: '',
@@ -2478,7 +2479,8 @@ console.info('app.js loaded :: 20251123a');
     });
     return true;
   };
-  const hydrateSharedWeekSnapshotForDayProjection = async (dayLike = null)=>{
+  const hydrateSharedWeekSnapshotForDayProjection = async (dayLike = null, options = {})=>{
+    const forceNetwork = options?.forceNetwork === true;
     const dayDate = toLocalDayDate(dayLike);
     if(!(dayDate instanceof Date) || Number.isNaN(dayDate.getTime())){
       return { ok: false, reason: 'invalid_day' };
@@ -2497,7 +2499,7 @@ console.info('app.js loaded :: 20251123a');
       && targetRangeKey === cacheRangeKey
       && cacheScopeMatches
     );
-    if(hasMatchingCache){
+    if(hasMatchingCache && !forceNetwork){
       const hydrated = hydrateCustomWeekSharedVisibleStateFromWeekCache({
         weekRange: targetWeekRange,
         allowEmptyEvents: true
@@ -3008,10 +3010,10 @@ console.info('app.js loaded :: 20251123a');
       ? calendar.getEvents().map((eventRef)=> normalizeEventForCustomWeek(eventRef)).filter(Boolean)
       : [];
     let dayEvents = filterEventsByLocalDay(calendarEvents, safeDay);
+    const sharedState = resolveCustomWeekSharedVisibleState();
+    const sharedEvents = Array.isArray(sharedState?.events) ? sharedState.events : [];
     const fromCalendar = dayEvents.length;
     if(!dayEvents.length){
-      const sharedState = resolveCustomWeekSharedVisibleState();
-      const sharedEvents = Array.isArray(sharedState?.events) ? sharedState.events : [];
       dayEvents = filterEventsByLocalDay(sharedEvents, safeDay);
     }
     const dayEnd = addLocalDays(safeDay, 1);
@@ -15246,6 +15248,9 @@ console.info('app.js loaded :: 20251123a');
         setCreateError(msg);
         return;
       }
+      if(String(calendar?.view?.type || '') === 'timeGridDay'){
+        customDayForceFreshSnapshotAfterCreate = true;
+      }
       createModal = createModal || window.bootstrap.Modal.getOrCreateInstance(els.createModalEl);
       createModal.hide();
       resetCreateForm();
@@ -18103,19 +18108,32 @@ console.info('app.js loaded :: 20251123a');
                 || dayVisibleStartStrKey === AGENDA_DAY_0508_DEBUG_KEY
               )
             );
+            const forceFreshSnapshot = customDayForceFreshSnapshotAfterCreate === true;
             let hasValidSnapshot = (
               !!sharedWeekState
               && !!dayVisibleKey
               && isSharedWeekSnapshotCoveringLocalDay(sharedWeekState, dayVisibleDate)
             );
+            if(forceFreshSnapshot){
+              hasValidSnapshot = false;
+            }
             if(!hasValidSnapshot){
-              const hydrationResult = await hydrateSharedWeekSnapshotForDayProjection(dayVisibleDate);
+              const hydrationResult = await hydrateSharedWeekSnapshotForDayProjection(dayVisibleDate, {
+                forceNetwork: forceFreshSnapshot
+              });
               sharedWeekState = resolveCustomWeekSharedVisibleState();
               hasValidSnapshot = (
                 hydrationResult?.ok === true
                 && !!sharedWeekState
                 && isSharedWeekSnapshotCoveringLocalDay(sharedWeekState, dayVisibleDate)
               );
+              if(
+                forceFreshSnapshot
+                && hydrationResult?.ok === true
+                && hydrationResult?.source !== 'cache'
+              ){
+                customDayForceFreshSnapshotAfterCreate = false;
+              }
             }
             const snapshotVisibleDayKeys = new Set(
               Array.isArray(sharedWeekState?.visibleDays)
