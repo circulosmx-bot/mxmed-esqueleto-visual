@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../modules/agenda/controllers/PatientFlagsController
 require_once __DIR__ . '/../../modules/agenda/controllers/PatientBehaviorController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/MedicalGroupsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AvailabilityController.php';
+require_once __DIR__ . '/../../modules/agenda/controllers/AvailabilityBlocksController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/ScheduleController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AgendaSettingsController.php';
 require_once __DIR__ . '/../../modules/agenda/controllers/AppointmentWriteController.php';
@@ -25,6 +26,7 @@ use Agenda\Controllers\PatientFlagsController;
 use Agenda\Controllers\PatientBehaviorController;
 use Agenda\Controllers\MedicalGroupsController;
 use Agenda\Controllers\AvailabilityController;
+use Agenda\Controllers\AvailabilityBlocksController;
 use Agenda\Controllers\ScheduleController;
 use Agenda\Controllers\AgendaSettingsController;
 use Agenda\Controllers\AppointmentWriteController;
@@ -656,6 +658,10 @@ function isAgendaStrictOperatorEnforcementRoute(array $segments, string $method)
         return true;
     }
     if ($resource === 'availability') {
+        $sub = strtolower(trim((string)($segments[1] ?? '')));
+        if ($sub === 'blocks') {
+            return in_array($verb, ['GET', 'POST', 'PATCH'], true);
+        }
         return $verb === 'GET';
     }
     if ($resource === 'waitlist') {
@@ -1155,11 +1161,34 @@ try {
             }
             break;
         case 'availability':
-            $availability = new AvailabilityController();
-            if (is_array($actorContext)) {
-                apply_actor_context($availability, $actorContext);
+            $sub = strtolower(trim((string)($segments[1] ?? '')));
+            if ($sub === 'blocks') {
+                $blocks = new AvailabilityBlocksController();
+                if (is_array($actorContext)) {
+                    apply_actor_context($blocks, $actorContext);
+                }
+                if ($method === 'GET' && !isset($segments[2])) {
+                    $response = $blocks->index($_GET);
+                } elseif ($method === 'POST' && !isset($segments[2])) {
+                    $response = $blocks->store(read_json_body());
+                } elseif ($method === 'PATCH' && isset($segments[2]) && $segments[2] !== '') {
+                    $response = $blocks->deactivate((string)$segments[2], read_json_body());
+                } else {
+                    $response = [
+                        'ok' => false,
+                        'error' => 'not_found',
+                        'message' => 'route not found',
+                        'data' => null,
+                        'meta' => (object)[],
+                    ];
+                }
+            } else {
+                $availability = new AvailabilityController();
+                if (is_array($actorContext)) {
+                    apply_actor_context($availability, $actorContext);
+                }
+                $response = $availability->index($_GET);
             }
-            $response = $availability->index($_GET);
             break;
         case 'schedule':
             $schedule = new ScheduleController();
@@ -1367,8 +1396,14 @@ try {
         'invalid_params' => 400,
         'invalid_consultorio_id' => 400,
         'invalid_verification_code' => 400,
+        'db_not_ready' => 503,
+        'collision' => 409,
         'conflict' => 409,
         'invalid_transition' => 409,
+        'outside_schedule' => 409,
+        'slot_unavailable' => 409,
+        'slot_conflict' => 409,
+        'block_conflict_with_appointments' => 409,
         'appointment_past_not_confirmable' => 409,
         'appointment_future_not_no_show' => 409,
         'not_found' => 404,
