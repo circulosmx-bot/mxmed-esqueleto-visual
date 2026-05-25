@@ -798,6 +798,70 @@ Deuda futura:
 - Evaluar retiro gradual o encapsulación completa del sentinel `__all__`.
 - Evolucionar reportes/filtros para uso canónico de `consultorio_scope`.
 
+### 17.11 Configuración operativa `waitlist_enabled` (2026-05-25)
+
+Estado: **implementado, validado y pusheado**.
+
+Commit:
+- `ed9fe9d` `feat(agenda): agrega configuracion para lista de espera`
+
+Qué es:
+- Flag operativo para activar/desactivar de forma centralizada:
+  - inscripción en lista de espera desde “Buscar siguiente cita disponible”,
+  - y bloque “Resolver hueco” post-cancelación.
+
+Dónde se configura:
+- Pantalla: Configuración de Agenda.
+- Switch: `Lista de espera y recuperación de huecos`.
+- Texto de ayuda: `Permite inscribir pacientes en lista de espera y sugerir candidatos cuando se libera un espacio por cancelación.`
+
+Default:
+- `waitlist_enabled=false`.
+
+Qué controla:
+- Si `false`:
+  - no se muestra CTA `Inscribir en lista de espera` en “Buscar siguiente cita disponible”;
+  - no se muestra bloque `Resolver hueco` post-cancelación;
+  - no se ejecuta `GET /waitlist` desde ese flujo post-cancelación;
+  - la cancelación normal permanece operativa.
+- Si `true`:
+  - se muestra CTA `Inscribir en lista de espera`;
+  - se habilita flujo de términos + formulario waitlist;
+  - se muestra `Resolver hueco` post-cancelación;
+  - se cargan candidatos waitlist post-cancelación.
+
+Qué no controla todavía:
+- No bloquea endpoints backend de waitlist (gating actual es operativo/UI).
+- No modifica rutas `public/*`.
+- No altera flujo de Nueva cita.
+- No altera flujo de Confirmar cita.
+
+Persistencia compatible (sin migración):
+- `waitlist_enabled` se persiste dentro del JSON de `reminder_template`.
+- Compat legacy:
+  - si `reminder_template` venía como texto plano, se conserva usable como texto;
+  - el flag se expone de forma separada.
+- `GET /settings` expone `waitlist_enabled` top-level (boolean).
+- `PUT /settings` acepta `waitlist_enabled` con normalización booleana (`true/false`, `1/0`, `"true"/"false"`).
+
+QA resumido:
+- default `false`: **PASS**.
+- persistencia `true/false` + recarga: **PASS**.
+- con `false`:
+  - sin CTA waitlist,
+  - sin Resolver hueco,
+  - sin `GET /waitlist` post-cancelación: **PASS**.
+- con `true`:
+  - CTA visible,
+  - Resolver hueco visible,
+  - `GET /waitlist` post-cancelación: **PASS**.
+- `reminder_template` legacy preservado: **PASS**.
+
+Deuda futura:
+- Evaluar campo/columna dedicada para `waitlist_enabled` si crece el set de settings.
+- Evaluar enforcement backend de waitlist basado en setting (además del gating UI).
+- Completar validación en sesión real de operador activo con este toggle.
+
 ## 18. Adenda B3-A: contrato de transiciones de cita (2026-05-24)
 
 Estado: **documentado (sin enforcement nuevo todavía)**.
