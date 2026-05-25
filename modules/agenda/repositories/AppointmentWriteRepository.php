@@ -860,6 +860,13 @@ class AppointmentWriteRepository
                 'transition_dry_run' => $transitionDryRun,
             ];
         }
+        if (!empty($transitionDryRun['would_block'])) {
+            $futureError = trim((string)($transitionDryRun['future_error'] ?? ''));
+            if ($futureError === '') {
+                $futureError = 'invalid_transition';
+            }
+            throw new RuntimeException($futureError);
+        }
 
         $this->logNoShowBackendDebug('before begin transaction', [
             'appointment_id' => $appointmentId,

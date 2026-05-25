@@ -474,6 +474,12 @@ class AppointmentWriteController
             if (in_array($message, ['appointments table not ready', 'appointment events not ready'], true)) {
                 return $this->error('db_not_ready', $message);
             }
+            if ($message === 'appointment_future_not_no_show') {
+                return $this->error('appointment_future_not_no_show', 'appointment cannot be marked no_show before end');
+            }
+            if ($message === 'invalid_transition') {
+                return $this->error('invalid_transition', 'invalid_transition');
+            }
             return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
         } catch (PDOException $e) {
             $this->logNoShowDebug('markNoShow pdo exception', [

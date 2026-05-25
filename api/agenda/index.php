@@ -1370,6 +1370,7 @@ try {
         'conflict' => 409,
         'invalid_transition' => 409,
         'appointment_past_not_confirmable' => 409,
+        'appointment_future_not_no_show' => 409,
         'not_found' => 404,
         'not_implemented' => 501,
     ];
