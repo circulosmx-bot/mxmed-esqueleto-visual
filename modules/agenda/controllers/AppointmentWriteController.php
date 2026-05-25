@@ -624,13 +624,14 @@ class AppointmentWriteController
             'events_appended' => 1,
             'notify_patient' => $result['notify_patient'],
             'contact_method' => $result['contact_method'],
+            'confirmation_reset' => !empty($result['confirmation_reset']),
         ];
         $meta = $this->appendTransitionDryRunMeta($meta, $result);
 
         return $this->success(
             [
                 'appointment_id' => $result['appointment_id'],
-                'status' => 'rescheduled',
+                'status' => $result['status'] ?? 'rescheduled',
                 'from_start_at' => $result['from_start_at'],
                 'from_end_at' => $result['from_end_at'],
                 'to_start_at' => $result['to_start_at'],
@@ -639,6 +640,10 @@ class AppointmentWriteController
                 'to_consultorio_id' => $result['to_consultorio_id'],
                 'motivo_code' => $result['motivo_code'],
                 'motivo_text' => $result['motivo_text'],
+                'confirmation_reset' => !empty($result['confirmation_reset']),
+                'from_status' => $result['from_status'] ?? null,
+                'to_status' => $result['to_status'] ?? null,
+                'confirmation_reset_reason' => $result['confirmation_reset_reason'] ?? null,
             ],
             $meta
         );

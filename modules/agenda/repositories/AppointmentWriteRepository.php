@@ -199,8 +199,16 @@ class AppointmentWriteRepository
             $payload,
             $actorContext
         );
+        $rawCurrentStatus = trim((string)($current['status'] ?? ''));
+        $normalizedCurrentStatus = (string)($transitionDryRun['normalized_status'] ?? $this->normalizeTransitionStatus($rawCurrentStatus));
+        $confirmationReset = $normalizedCurrentStatus === 'confirmed';
+        $rescheduleStatusReason = $confirmationReset ? 'reschedule_changed_confirmed_slot' : null;
+        $nextStatus = $confirmationReset ? 'tentative' : ($rawCurrentStatus !== '' ? $rawCurrentStatus : 'tentative');
         $notifyPatient = $this->resolveOptionalBoolean($payload['notify_patient'] ?? null) === true ? 1 : 0;
         $payload['notify_patient'] = $notifyPatient;
+
+        $columns = $this->getColumns($this->appointmentsTable);
+        $statusExists = in_array('status', $columns, true);
 
         $this->pdo->beginTransaction();
         try {
@@ -208,12 +216,20 @@ class AppointmentWriteRepository
                 'start_at' => $payload['to_start_at'],
                 'end_at' => $payload['to_end_at'],
             ];
+            if ($confirmationReset && $statusExists) {
+                $updatePayload['status'] = 'tentative';
+            }
             $targetConsultorioId = trim((string)($payload['to_consultorio_id'] ?? ''));
             if ($targetConsultorioId !== '') {
                 $updatePayload['consultorio_id'] = $targetConsultorioId;
             }
             $this->update($this->appointmentsTable, $pkColumn, $appointmentId, $updatePayload);
-            $this->appendRescheduleEvent($appointmentId, $payload, $current);
+            $this->appendRescheduleEvent($appointmentId, $payload, $current, [
+                'confirmation_reset' => $confirmationReset,
+                'from_status' => $normalizedCurrentStatus !== '' ? $normalizedCurrentStatus : null,
+                'to_status' => $confirmationReset ? 'tentative' : ($normalizedCurrentStatus !== '' ? $normalizedCurrentStatus : null),
+                'reason' => $rescheduleStatusReason,
+            ]);
             $this->pdo->commit();
         } catch (PDOException $e) {
             $this->pdo->rollBack();
@@ -235,16 +251,29 @@ class AppointmentWriteRepository
             'motivo_text' => $payload['motivo_text'] ?? null,
             'notify_patient' => $notifyPatient,
             'contact_method' => $payload['contact_method'] ?? 'whatsapp',
+            'status' => $nextStatus,
+            'confirmation_reset' => $confirmationReset,
+            'from_status' => $normalizedCurrentStatus !== '' ? $normalizedCurrentStatus : null,
+            'to_status' => $confirmationReset ? 'tentative' : ($normalizedCurrentStatus !== '' ? $normalizedCurrentStatus : null),
+            'confirmation_reset_reason' => $rescheduleStatusReason,
             'transition_dry_run' => $transitionDryRun,
         ];
     }
 
-    private function appendRescheduleEvent(string $appointmentId, array $payload, array $current): void
+    private function appendRescheduleEvent(string $appointmentId, array $payload, array $current, array $transitionMeta = []): void
     {
         $fromConsultorioId = isset($current['consultorio_id']) ? trim((string)$current['consultorio_id']) : '';
         $toConsultorioId = trim((string)($payload['to_consultorio_id'] ?? ''));
         if ($toConsultorioId === '') {
             $toConsultorioId = $fromConsultorioId;
+        }
+        $confirmationReset = !empty($transitionMeta['confirmation_reset']);
+        $fromStatus = trim((string)($transitionMeta['from_status'] ?? ''));
+        $toStatus = trim((string)($transitionMeta['to_status'] ?? ''));
+        $reason = trim((string)($transitionMeta['reason'] ?? ''));
+        $motivoText = trim((string)($payload['motivo_text'] ?? ''));
+        if ($confirmationReset && $motivoText === '') {
+            $motivoText = 'Reprogramación aplicada; la confirmación previa quedó invalidada.';
         }
 
         $eventData = [
@@ -259,25 +288,53 @@ class AppointmentWriteRepository
             'to_start_at' => $payload['to_start_at'],
             'to_end_at' => $payload['to_end_at'],
             'motivo_code' => $payload['motivo_code'] ?? null,
-            'motivo_text' => $payload['motivo_text'] ?? null,
+            'motivo_text' => $motivoText !== '' ? $motivoText : null,
             'notify_patient' => $payload['notify_patient'] ?? 0,
             'contact_method' => $payload['contact_method'] ?? 'whatsapp',
             'actor_role' => $payload['actor_role'] ?? $payload['created_by_role'] ?? null,
             'actor_id' => $payload['actor_id'] ?? $payload['created_by_id'] ?? null,
             'channel_origin' => $payload['channel_origin'] ?? null,
+            'status_from' => $fromStatus !== '' ? $fromStatus : null,
+            'status_to' => $toStatus !== '' ? $toStatus : null,
+            'from_status' => $fromStatus !== '' ? $fromStatus : null,
+            'to_status' => $toStatus !== '' ? $toStatus : null,
             // Persistimos metadatos de consultorio en `notes` para trazabilidad
             // sin depender de migraciones de columnas en agenda_appointment_events.
-            'notes' => $this->buildRescheduleEventNotes($fromConsultorioId, $toConsultorioId),
+            'notes' => $this->buildRescheduleEventNotes(
+                $fromConsultorioId,
+                $toConsultorioId,
+                $confirmationReset,
+                $fromStatus,
+                $toStatus,
+                $reason
+            ),
         ];
         $this->insert($this->eventsTable, $eventData);
     }
 
-    private function buildRescheduleEventNotes(string $fromConsultorioId, string $toConsultorioId): ?string
+    private function buildRescheduleEventNotes(
+        string $fromConsultorioId,
+        string $toConsultorioId,
+        bool $confirmationReset = false,
+        string $fromStatus = '',
+        string $toStatus = '',
+        string $reason = ''
+    ): ?string
     {
         $payload = [
             'from_consultorio_id' => $fromConsultorioId !== '' ? $fromConsultorioId : null,
             'to_consultorio_id' => $toConsultorioId !== '' ? $toConsultorioId : null,
         ];
+        if ($fromStatus !== '') {
+            $payload['from_status'] = $fromStatus;
+        }
+        if ($toStatus !== '') {
+            $payload['to_status'] = $toStatus;
+        }
+        if ($confirmationReset) {
+            $payload['confirmation_reset'] = true;
+            $payload['reason'] = $reason !== '' ? $reason : 'reschedule_changed_confirmed_slot';
+        }
 
         $encoded = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         if ($encoded === false) {
@@ -390,8 +447,14 @@ class AppointmentWriteRepository
             $actorContext
         );
         $normalizedStatus = (string)($transitionDryRun['normalized_status'] ?? $this->normalizeTransitionStatus((string)($current['status'] ?? '')));
+        $columns = $this->getColumns($this->appointmentsTable);
+        $statusExists = in_array('status', $columns, true);
+        $alreadyConfirmed = $normalizedStatus === 'confirmed';
+        if (!$alreadyConfirmed && !$statusExists) {
+            $alreadyConfirmed = $this->eventExists($appointmentId, 'appointment_confirmed');
+        }
 
-        if ($normalizedStatus === 'confirmed' || $this->eventExists($appointmentId, 'appointment_confirmed')) {
+        if ($alreadyConfirmed) {
             return [
                 'appointment_id' => $appointmentId,
                 'status' => 'confirmed',

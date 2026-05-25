@@ -8036,7 +8036,27 @@ console.info('app.js loaded :: 20251123a');
         activeEventActionRef.setExtendedProp('consultorio', safeConsultorioName);
       }
     }
-    hideEventActionPanel();
+    const currentTransitionStatus = normalizeAppointmentTransitionStatus(
+      sanitizeText(
+        activeEventActionRef?.extendedProps?.status_key_real
+        || activeEventActionRef?.extendedProps?.status_key
+        || activeEventActionRef?.extendedProps?.status
+        || ''
+      )
+    );
+    if(currentTransitionStatus === 'confirmed'){
+      applyLocalEventStatus(activeEventActionRef, 'tentative');
+      setEventResolutionNote('Cita reprogramada. Requiere nueva confirmación.', 'success');
+    }else{
+      setEventResolutionNote('Cita reprogramada.', 'success');
+    }
+    eventActionOriginalRange = { start: new Date(start), end: new Date(end) };
+    syncEventActionTimeField(start, end);
+    if(els.eventActionDuration){
+      const durationMinutes = Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000));
+      els.eventActionDuration.textContent = `${durationMinutes} min`;
+    }
+    setEventActionSection('detail');
     navigateToRescheduledWeek(start);
     setError('');
   };
@@ -8166,7 +8186,61 @@ console.info('app.js loaded :: 20251123a');
         setEventActionError(msg);
         return;
       }
-      hideEventActionPanel();
+      const responseData = (result?.json?.data && typeof result.json.data === 'object') ? result.json.data : {};
+      const confirmationReset = responseData?.confirmation_reset === true
+        || responseData?.confirmation_reset === 1
+        || responseData?.confirmation_reset === '1'
+        || String(responseData?.confirmation_reset || '').toLowerCase() === 'true';
+      const nextStatusRaw = sanitizeText(
+        responseData?.status
+        || (confirmationReset ? 'tentative' : (
+          activeEventActionRef?.extendedProps?.status_key_real
+          || activeEventActionRef?.extendedProps?.status_key
+          || activeEventActionRef?.extendedProps?.status
+          || 'tentative'
+        ))
+      ) || (confirmationReset ? 'tentative' : 'tentative');
+      const safeConsultorioId = sanitizeText(eventActionPendingReschedule?.consultorio_id || '');
+      const safeConsultorioName = sanitizeText(
+        eventActionPendingReschedule?.consultorio_name
+        || resolveAgendaConsultorioLabelById(safeConsultorioId)
+        || ''
+      );
+      if(activeEventActionRef){
+        try{
+          activeEventActionRef.setStart(nextStart);
+          activeEventActionRef.setEnd(nextEnd);
+        }catch(_){}
+        if(typeof activeEventActionRef.setExtendedProp === 'function'){
+          activeEventActionRef.setExtendedProp('start_at', toSqlDateTimeLocal(nextStart));
+          activeEventActionRef.setExtendedProp('end_at', toSqlDateTimeLocal(nextEnd));
+          if(safeConsultorioId){
+            activeEventActionRef.setExtendedProp('consultorio_id', safeConsultorioId);
+          }
+          if(safeConsultorioName){
+            activeEventActionRef.setExtendedProp('consultorio_name', safeConsultorioName);
+            activeEventActionRef.setExtendedProp('consultorio_label', safeConsultorioName);
+            activeEventActionRef.setExtendedProp('consultorio', safeConsultorioName);
+          }
+        }
+        applyLocalEventStatus(activeEventActionRef, nextStatusRaw);
+      }
+      eventActionOriginalRange = { start: new Date(nextStart), end: new Date(nextEnd) };
+      syncEventActionTimeField(nextStart, nextEnd);
+      if(els.eventActionDuration){
+        const durationMinutes = Math.max(1, Math.round((nextEnd.getTime() - nextStart.getTime()) / 60000));
+        els.eventActionDuration.textContent = `${durationMinutes} min`;
+      }
+      if(els.eventActionConsultorio){
+        els.eventActionConsultorio.textContent = safeConsultorioName || '--';
+      }
+      setEventActionSection('detail');
+      if(confirmationReset){
+        setEventResolutionNote('Cita reprogramada. Requiere nueva confirmación.', 'success');
+      }else{
+        setEventResolutionNote('Cita reprogramada.', 'success');
+      }
+      loadEventTimeline(appointmentId).catch(()=> null);
       navigateToRescheduledWeek(nextStart);
       setError('');
       await refreshCalendar({ forceConsultorios: false });
