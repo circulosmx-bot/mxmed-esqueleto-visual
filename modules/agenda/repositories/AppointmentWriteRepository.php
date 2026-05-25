@@ -185,7 +185,7 @@ class AppointmentWriteRepository
         return implode(' | ', $parts);
     }
 
-    public function rescheduleAppointment(string $appointmentId, array $payload): array
+    public function rescheduleAppointment(string $appointmentId, array $payload, array $actorContext = []): array
     {
         $this->ensureAppointmentsTable();
         $this->ensureEventsTable();
@@ -193,6 +193,12 @@ class AppointmentWriteRepository
         $this->ensurePrimaryKeyColumn($pkColumn);
 
         $current = $this->fetchAppointment($appointmentId, $pkColumn);
+        $transitionDryRun = $this->evaluateAppointmentTransitionDryRun(
+            'reschedule',
+            $current,
+            $payload,
+            $actorContext
+        );
         $notifyPatient = $this->resolveOptionalBoolean($payload['notify_patient'] ?? null) === true ? 1 : 0;
         $payload['notify_patient'] = $notifyPatient;
 
@@ -229,6 +235,7 @@ class AppointmentWriteRepository
             'motivo_text' => $payload['motivo_text'] ?? null,
             'notify_patient' => $notifyPatient,
             'contact_method' => $payload['contact_method'] ?? 'whatsapp',
+            'transition_dry_run' => $transitionDryRun,
         ];
     }
 
@@ -280,7 +287,7 @@ class AppointmentWriteRepository
         return $encoded;
     }
 
-    public function cancelAppointment(string $appointmentId, array $payload): array
+    public function cancelAppointment(string $appointmentId, array $payload, array $actorContext = []): array
     {
         $this->ensureAppointmentsTable();
         $this->ensureEventsTable();
@@ -288,6 +295,12 @@ class AppointmentWriteRepository
         $this->ensurePrimaryKeyColumn($pkColumn);
 
         $current = $this->fetchAppointment($appointmentId, $pkColumn);
+        $transitionDryRun = $this->evaluateAppointmentTransitionDryRun(
+            'cancel',
+            $current,
+            $payload,
+            $actorContext
+        );
         $columns = $this->getColumns($this->appointmentsTable);
         $statusExists = in_array('status', $columns, true);
         $cancelledAt = $current['cancelled_at'] ?? $current['canceled_at'] ?? null;
@@ -307,6 +320,7 @@ class AppointmentWriteRepository
                     'event_id' => null,
                     'events_appended' => 0,
                     'already_cancelled' => true,
+                    'transition_dry_run' => $transitionDryRun,
                 ];
             }
         }
@@ -357,6 +371,7 @@ class AppointmentWriteRepository
             'events_appended' => 1,
             'flags_appended' => (int)($lateCancelResult['flag_appended'] ?? 0) + (int)($manualCancelFlagResult['flag_appended'] ?? 0),
             'cancel_flag_type_applied' => $cancelFlagType,
+            'transition_dry_run' => $transitionDryRun,
         ];
     }
 
@@ -684,7 +699,7 @@ class AppointmentWriteRepository
         }
     }
 
-    public function markNoShow(string $appointmentId, array $payload): array
+    public function markNoShow(string $appointmentId, array $payload, array $actorContext = []): array
     {
         $this->logNoShowBackendDebug('enter markNoShow', [
             'appointment_id' => $appointmentId,
@@ -696,6 +711,12 @@ class AppointmentWriteRepository
 
         $this->applyNoShowLockTimeoutGuard();
         $current = $this->fetchAppointment($appointmentId, $pkColumn);
+        $transitionDryRun = $this->evaluateAppointmentTransitionDryRun(
+            'no_show',
+            $current,
+            $payload,
+            $actorContext
+        );
         $this->logNoShowBackendDebug('appointment loaded', [
             'appointment_id' => $appointmentId,
             'doctor_id_effective' => (string)($current['doctor_id'] ?? ''),
@@ -721,6 +742,7 @@ class AppointmentWriteRepository
                 'events_appended' => 0,
                 'flags_appended' => 0,
                 'already_no_show' => true,
+                'transition_dry_run' => $transitionDryRun,
             ];
         }
 
@@ -823,7 +845,215 @@ class AppointmentWriteRepository
             'events_appended' => 1,
             'flags_appended' => $flagAppended,
             'already_no_show' => false,
+            'transition_dry_run' => $transitionDryRun,
         ];
+    }
+
+    private function evaluateAppointmentTransitionDryRun(
+        string $action,
+        array $currentAppointment,
+        array $payload = [],
+        array $actorContext = []
+    ): array {
+        $normalizedAction = strtolower(trim($action));
+        if ($normalizedAction === 'no-show') {
+            $normalizedAction = 'no_show';
+        }
+
+        $rawStatus = trim((string)($currentAppointment['status'] ?? ''));
+        $normalizedStatus = $this->normalizeTransitionStatus($rawStatus);
+        $timeState = $this->resolveTransitionTimeState(
+            (string)($currentAppointment['start_at'] ?? ''),
+            (string)($currentAppointment['end_at'] ?? '')
+        );
+
+        $allowedFutureStates = ['pending', 'pending_otp', 'tentative', 'confirmed', 'scheduled', 'rescheduled'];
+        $idempotentHttp = 200;
+        $blockedHttp = 409;
+
+        $result = [
+            'checked' => true,
+            'action' => $normalizedAction,
+            'current_status' => $rawStatus,
+            'normalized_status' => $normalizedStatus,
+            'time_state' => $timeState,
+            'would_block' => false,
+            'reason' => 'allowed_by_contract',
+            'future_error' => null,
+            'future_http_status' => $idempotentHttp,
+        ];
+
+        if ($timeState === 'unknown') {
+            $result['reason'] = 'time_state_unknown_no_decision';
+            return $result;
+        }
+
+        if ($normalizedAction === 'cancel') {
+            if ($normalizedStatus === 'canceled') {
+                $result['reason'] = 'idempotent_already_canceled';
+                $result['future_error'] = 'appointment_already_canceled';
+                return $result;
+            }
+            if (in_array($normalizedStatus, ['no_show', 'finished'], true)) {
+                $result['would_block'] = true;
+                $result['reason'] = 'state_terminal_not_cancellable';
+                $result['future_error'] = 'invalid_transition';
+                $result['future_http_status'] = $blockedHttp;
+                return $result;
+            }
+            if ($timeState === 'in_progress' || $timeState === 'past') {
+                $result['would_block'] = true;
+                $result['reason'] = 'time_not_future_for_cancel';
+                $result['future_error'] = 'appointment_past_not_cancellable';
+                $result['future_http_status'] = $blockedHttp;
+                return $result;
+            }
+            if ($timeState === 'future' && !in_array($normalizedStatus, $allowedFutureStates, true)) {
+                $result['would_block'] = true;
+                $result['reason'] = 'status_not_cancellable_in_contract';
+                $result['future_error'] = 'invalid_transition';
+                $result['future_http_status'] = $blockedHttp;
+            }
+            return $result;
+        }
+
+        if ($normalizedAction === 'reschedule') {
+            if (in_array($normalizedStatus, ['canceled', 'no_show', 'finished'], true)) {
+                $result['would_block'] = true;
+                $result['reason'] = 'state_terminal_not_reschedulable';
+                $result['future_error'] = 'invalid_transition';
+                $result['future_http_status'] = $blockedHttp;
+                return $result;
+            }
+            if ($timeState === 'in_progress' || $timeState === 'past') {
+                $result['would_block'] = true;
+                $result['reason'] = 'time_not_future_for_reschedule';
+                $result['future_error'] = 'appointment_past_not_reschedulable';
+                $result['future_http_status'] = $blockedHttp;
+                return $result;
+            }
+            if ($timeState === 'future' && !in_array($normalizedStatus, $allowedFutureStates, true)) {
+                $result['would_block'] = true;
+                $result['reason'] = 'status_not_reschedulable_in_contract';
+                $result['future_error'] = 'invalid_transition';
+                $result['future_http_status'] = $blockedHttp;
+            }
+            return $result;
+        }
+
+        if ($normalizedAction === 'no_show') {
+            if ($normalizedStatus === 'no_show') {
+                $result['reason'] = 'idempotent_already_no_show';
+                $result['future_error'] = 'appointment_already_no_show';
+                return $result;
+            }
+            if (in_array($normalizedStatus, ['canceled', 'finished'], true)) {
+                $result['would_block'] = true;
+                $result['reason'] = 'state_terminal_not_no_showable';
+                $result['future_error'] = 'invalid_transition';
+                $result['future_http_status'] = $blockedHttp;
+                return $result;
+            }
+            if ($timeState === 'future') {
+                $result['would_block'] = true;
+                $result['reason'] = 'time_future_for_no_show';
+                $result['future_error'] = 'appointment_future_not_no_show';
+                $result['future_http_status'] = $blockedHttp;
+                return $result;
+            }
+            return $result;
+        }
+
+        $result['reason'] = 'action_not_supported';
+        return $result;
+    }
+
+    private function normalizeTransitionStatus(string $rawStatus): string
+    {
+        $value = strtolower(trim($rawStatus));
+        if ($value === '') {
+            return 'unknown';
+        }
+        $value = str_replace(' ', '_', $value);
+
+        if (in_array($value, ['pending', 'pendiente', 'unconfirmed', 'sin_confirmacion', 'sin-confirmacion'], true)) {
+            return 'pending';
+        }
+        if ($value === 'pending_otp') {
+            return 'pending_otp';
+        }
+        if (in_array($value, ['tentative'], true)) {
+            return 'tentative';
+        }
+        if (in_array($value, ['confirmed', 'confirmada', 'confirmado'], true)) {
+            return 'confirmed';
+        }
+        if (in_array($value, ['scheduled', 'agenda', 'agendada'], true)) {
+            return 'scheduled';
+        }
+        if (in_array($value, ['rescheduled', 'reschedule', 'reprogramada', 'reprogramado', 'reagendada', 'reagendado'], true)) {
+            return 'rescheduled';
+        }
+        if (in_array($value, ['canceled', 'cancelled', 'cancelada', 'cancelado'], true)) {
+            return 'canceled';
+        }
+        if (in_array($value, ['no_show', 'no-show', 'noshow', 'no_asistio', 'no_asistió', 'ausente'], true)) {
+            return 'no_show';
+        }
+        if (in_array($value, ['in_progress', 'in-progress', 'in_consulta', 'en_consulta', 'en_curso', 'consulta_activa'], true)) {
+            return 'in_progress';
+        }
+        if (in_array($value, ['finished', 'finalizada', 'completed', 'consulta_cerrada'], true)) {
+            return 'finished';
+        }
+
+        return 'unknown';
+    }
+
+    private function resolveTransitionTimeState(string $startAt, string $endAt): string
+    {
+        $start = $this->parseTransitionDateTime($startAt);
+        $end = $this->parseTransitionDateTime($endAt);
+        if (!$start || !$end) {
+            return 'unknown';
+        }
+
+        $now = new DateTime('now', new DateTimeZone(self::TIMEZONE));
+        if ($now < $start) {
+            return 'future';
+        }
+        if ($now >= $start && $now < $end) {
+            return 'in_progress';
+        }
+        if ($now >= $end) {
+            return 'past';
+        }
+        return 'unknown';
+    }
+
+    private function parseTransitionDateTime(string $value): ?DateTime
+    {
+        $raw = trim($value);
+        if ($raw === '') {
+            return null;
+        }
+
+        $tz = new DateTimeZone(self::TIMEZONE);
+        $formats = ['Y-m-d H:i:s', 'Y-m-d H:i', 'Y-m-d\TH:i:s', DATE_ATOM];
+        foreach ($formats as $format) {
+            $dt = DateTime::createFromFormat($format, $raw, $tz);
+            if ($dt instanceof DateTime) {
+                return $dt;
+            }
+        }
+
+        $timestamp = strtotime($raw);
+        if ($timestamp === false) {
+            return null;
+        }
+        $dt = new DateTime('@' . $timestamp);
+        $dt->setTimezone($tz);
+        return $dt;
     }
 
     private function appendNoShowEvent(string $appointmentId, array $payload, array $current, string $observedAt): void

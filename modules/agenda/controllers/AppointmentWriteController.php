@@ -233,7 +233,7 @@ class AppointmentWriteController
         }
 
         try {
-            $result = $this->repository->cancelAppointment($appointmentId, $payload);
+            $result = $this->repository->cancelAppointment($appointmentId, $payload, $this->actorContext);
         } catch (RuntimeException $e) {
             $message = $e->getMessage();
             if ($message === 'appointment not found') {
@@ -265,6 +265,7 @@ class AppointmentWriteController
             'notify_patient' => $result['notify_patient'],
             'contact_method' => $result['contact_method'],
         ];
+        $meta = $this->appendTransitionDryRunMeta($meta, $result);
         if (!empty($result['already_cancelled'])) {
             return [
                 'ok' => true,
@@ -361,7 +362,7 @@ class AppointmentWriteController
                 'appointment_id' => $appointmentId,
                 'doctor_id_effective' => (string)$context['doctor_id'],
             ]);
-            $result = $this->repository->markNoShow($appointmentId, $payload);
+            $result = $this->repository->markNoShow($appointmentId, $payload, $this->actorContext);
             $this->logNoShowDebug('after markNoShow', [
                 'appointment_id' => $appointmentId,
                 'events_appended' => (int)($result['events_appended'] ?? -1),
@@ -417,6 +418,7 @@ class AppointmentWriteController
             'notify_patient' => $notifyPatient,
             'contact_method' => $contactMethod,
         ];
+        $meta = $this->appendTransitionDryRunMeta($meta, $result);
         if (!empty($result['already_no_show'])) {
             $this->logNoShowDebug('before response JSON (already_no_show)', [
                 'appointment_id' => $appointmentId,
@@ -498,7 +500,7 @@ class AppointmentWriteController
         }
 
         try {
-            $result = $this->repository->rescheduleAppointment($appointmentId, $payload);
+            $result = $this->repository->rescheduleAppointment($appointmentId, $payload, $this->actorContext);
         } catch (RuntimeException $e) {
             $message = $e->getMessage();
             if ($message === 'appointment not found') {
@@ -518,6 +520,14 @@ class AppointmentWriteController
             return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
         }
 
+        $meta = [
+            'write' => 'reschedule',
+            'events_appended' => 1,
+            'notify_patient' => $result['notify_patient'],
+            'contact_method' => $result['contact_method'],
+        ];
+        $meta = $this->appendTransitionDryRunMeta($meta, $result);
+
         return $this->success(
             [
                 'appointment_id' => $result['appointment_id'],
@@ -531,12 +541,7 @@ class AppointmentWriteController
                 'motivo_code' => $result['motivo_code'],
                 'motivo_text' => $result['motivo_text'],
             ],
-            [
-                'write' => 'reschedule',
-                'events_appended' => 1,
-                'notify_patient' => $result['notify_patient'],
-                'contact_method' => $result['contact_method'],
-            ]
+            $meta
         );
     }
 
@@ -1258,6 +1263,33 @@ class AppointmentWriteController
             'data' => null,
             'meta' => empty($arr) ? (object)[] : (object)$arr,
         ];
+    }
+
+    private function appendTransitionDryRunMeta(array $meta, array $result): array
+    {
+        if ($this->getQaMode() !== 'ready') {
+            return $meta;
+        }
+        $dryRun = $result['transition_dry_run'] ?? null;
+        if (!is_array($dryRun)) {
+            return $meta;
+        }
+
+        $meta['transition_guard_checked'] = (bool)($dryRun['checked'] ?? false);
+        $meta['transition_action'] = (string)($dryRun['action'] ?? '');
+        $meta['transition_current_status'] = (string)($dryRun['current_status'] ?? '');
+        $meta['transition_normalized_status'] = (string)($dryRun['normalized_status'] ?? '');
+        $meta['transition_time_state'] = (string)($dryRun['time_state'] ?? 'unknown');
+        $meta['transition_would_block'] = (bool)($dryRun['would_block'] ?? false);
+        $meta['transition_block_reason'] = (string)($dryRun['reason'] ?? '');
+        $futureError = $dryRun['future_error'] ?? null;
+        $meta['transition_future_error'] = $futureError === null ? null : (string)$futureError;
+        $futureHttpStatus = $dryRun['future_http_status'] ?? null;
+        $meta['transition_future_http_status'] = is_numeric($futureHttpStatus)
+            ? (int)$futureHttpStatus
+            : null;
+
+        return $meta;
     }
 
     /**
