@@ -1056,6 +1056,14 @@ try {
                     $response = $writes->cancel($segments[1]);
                     break;
                 }
+                if ($method === 'POST' && $sub === 'confirm') {
+                    $writes = new AppointmentWriteController();
+                    if (is_array($actorContext)) {
+                        apply_actor_context($writes, $actorContext);
+                    }
+                    $response = $writes->confirm($segments[1]);
+                    break;
+                }
                 if ($method === 'POST' && ($sub === 'no_show' || $sub === 'no-show')) {
                     $writes = new AppointmentWriteController();
                     if (is_array($actorContext)) {
@@ -1360,6 +1368,8 @@ try {
         'invalid_consultorio_id' => 400,
         'invalid_verification_code' => 400,
         'conflict' => 409,
+        'invalid_transition' => 409,
+        'appointment_past_not_confirmable' => 409,
         'not_found' => 404,
         'not_implemented' => 501,
     ];

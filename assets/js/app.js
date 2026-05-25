@@ -693,6 +693,7 @@ console.info('app.js loaded :: 20251123a');
     eventCancelWaitlistEmptyCloseBtn: panel.querySelector('#ag_event_cancel_waitlist_empty_close_btn'),
     eventCancelWaitlistList: panel.querySelector('#ag_event_cancel_waitlist_list'),
     eventCloseBtn: panel.querySelector('#ag_event_close_btn'),
+    eventConfirmBtn: panel.querySelector('#ag_event_confirm_btn'),
     eventRescheduleBtn: panel.querySelector('#ag_event_reschedule_btn'),
     eventCancelBtn: panel.querySelector('#ag_event_cancel_btn'),
     cfgDurationMin: document.getElementById('ag_cfg_duration_min'),
@@ -830,6 +831,7 @@ console.info('app.js loaded :: 20251123a');
   let eventActionOriginalRange = null;
   let eventActionPendingReschedule = null;
   let eventActionRescheduleBusy = false;
+  let eventActionConfirmBusy = false;
   let eventActionCurrentSection = 'detail';
   let eventActionIsCancelled = false;
   let eventTimelineLookupSeq = 0;
@@ -6514,6 +6516,7 @@ console.info('app.js loaded :: 20251123a');
     eventActionIsCancelled = false;
     eventActionPendingReschedule = null;
     eventActionRescheduleBusy = false;
+    eventActionConfirmBusy = false;
     eventRescheduleMonthOptions = [];
     eventRescheduleMonthCursor = null;
     eventRescheduleSelectedDayKey = '';
@@ -6529,6 +6532,9 @@ console.info('app.js loaded :: 20251123a');
     if(els.eventRescheduleConfirmBtn){
       els.eventRescheduleConfirmBtn.disabled = true;
     }
+    if(els.eventConfirmBtn){
+      els.eventConfirmBtn.disabled = false;
+    }
     renderEventRescheduleSummary();
     if(els.eventActionDetailWrap){
       els.eventActionDetailWrap.classList.remove('d-none');
@@ -6539,6 +6545,21 @@ console.info('app.js loaded :: 20251123a');
     if(els.eventCancelWrap){
       els.eventCancelWrap.classList.add('d-none');
     }
+  };
+  const normalizeAppointmentTransitionStatus = (rawStatus = '')=>{
+    const normalized = normalizeText(sanitizeText(rawStatus));
+    if(!normalized) return 'unknown';
+    if(['pending', 'pendiente', 'unconfirmed', 'sin_confirmacion', 'sin-confirmacion'].includes(normalized)) return 'pending';
+    if(normalized === 'pending_otp') return 'pending_otp';
+    if(normalized === 'tentative') return 'tentative';
+    if(['confirmed', 'confirmada', 'confirmado'].includes(normalized)) return 'confirmed';
+    if(['scheduled', 'agenda', 'agendada'].includes(normalized)) return 'scheduled';
+    if(['rescheduled', 'reschedule', 'reprogramada', 'reprogramado', 'reagendada', 'reagendado'].includes(normalized)) return 'rescheduled';
+    if(['canceled', 'cancelled', 'cancelada', 'cancelado'].includes(normalized)) return 'canceled';
+    if(['no_show', 'no-show', 'noshow', 'no_asistio', 'no_asistió', 'ausente'].includes(normalized)) return 'no_show';
+    if(['in_progress', 'in-progress', 'in_consulta', 'en_consulta', 'en_curso', 'consulta_activa'].includes(normalized)) return 'in_progress';
+    if(['finished', 'finalizada', 'completed', 'consulta_cerrada'].includes(normalized)) return 'finished';
+    return 'unknown';
   };
   const resolveEventCancelledFlag = (eventRef = null)=>{
     const props = eventRef?.extendedProps || {};
@@ -6561,6 +6582,7 @@ console.info('app.js loaded :: 20251123a');
       || ''
     );
     const statusMeta = resolveAppointmentStatusMeta(rawStatus);
+    const transitionStatus = normalizeAppointmentTransitionStatus(rawStatus);
     const statusKey = sanitizeText(statusMeta.key || '').toLowerCase();
     const statusLabel = sanitizeText(props.status_label || statusMeta.label || '').toLowerCase();
     const nowTs = Date.now();
@@ -6604,6 +6626,11 @@ console.info('app.js loaded :: 20251123a');
 
     const showFooterCancel = !isTerminal && isFuture;
     const showFooterReschedule = !isTerminal && isFuture;
+    const isConfirmableStatus = transitionStatus === 'pending'
+      || transitionStatus === 'pending_otp'
+      || transitionStatus === 'tentative'
+      || transitionStatus === 'scheduled';
+    const showFooterConfirm = !isTerminal && !isPast && (isFuture || isCurrentWindow) && isConfirmableStatus;
     const showResolutionWrap = isPastUnresolved || isInCourse;
     const showMarkInProgress = false;
     // Solo mostrar "Paciente atendido" cuando haya endpoint operativo real.
@@ -6624,8 +6651,10 @@ console.info('app.js loaded :: 20251123a');
       isNoShow,
       isFinished,
       isInProgress,
+      transitionStatus,
       supportsFinishAction,
       supportsLateCancelAction,
+      showFooterConfirm,
       showFooterCancel,
       showFooterReschedule,
       showResolutionWrap,
@@ -7203,6 +7232,12 @@ console.info('app.js loaded :: 20251123a');
       els.eventRescheduleBtn.classList.toggle('btn-primary', isReschedule);
       els.eventRescheduleBtn.classList.toggle('btn-outline-secondary', !isReschedule);
       els.eventRescheduleBtn.classList.toggle('d-none', isReschedule || isCancel || !actionVisibility.showFooterReschedule);
+    }
+    if(els.eventConfirmBtn){
+      els.eventConfirmBtn.classList.remove('btn-primary', 'btn-outline-secondary');
+      els.eventConfirmBtn.classList.add('btn-outline-primary');
+      els.eventConfirmBtn.classList.toggle('d-none', isReschedule || isCancel || !actionVisibility.showFooterConfirm);
+      els.eventConfirmBtn.disabled = eventActionConfirmBusy;
     }
     if(els.eventCancelBtn){
       els.eventCancelBtn.classList.remove('btn-primary', 'btn-outline-secondary', 'btn-danger');
@@ -8227,6 +8262,83 @@ console.info('app.js loaded :: 20251123a');
     }catch(_){
       setEventActionError('No se pudo cancelar la cita.');
       setEventCancelPostActionsEnabled(false);
+    }
+  };
+  const applyEventConfirm = async ()=>{
+    if(eventActionConfirmBusy) return;
+    const appointmentId = sanitizeText(activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef));
+    if(!appointmentId){
+      setEventActionError('No se pudo identificar la cita para confirmar.');
+      return;
+    }
+
+    eventActionConfirmBusy = true;
+    setEventActionError('');
+    setEventResolutionNote('');
+    if(els.eventConfirmBtn){
+      els.eventConfirmBtn.disabled = true;
+    }
+
+    try{
+      if(isAgendaDemoContext()){
+        if(activeEventActionRef){
+          applyLocalEventStatus(activeEventActionRef, 'confirmed');
+        }
+        setEventActionSection('detail');
+        loadEventTimeline(appointmentId).catch(()=> null);
+        setEventResolutionNote('Cita confirmada.', 'success');
+        return;
+      }
+
+      const actorRole = resolveCreateActorRole();
+      const actorId = sanitizeText(
+        (typeof getUserId === 'function' ? getUserId() : '')
+        || resolveActorId()
+        || 'u_legacy_1'
+      );
+      const doctorId = sanitizeText(activeEventActionRef?.extendedProps?.doctor_id || getDoctorId() || '');
+      const payload = {
+        ...buildAgendaActorPayload('appointment_confirmed', {
+          source: 'confirm',
+          actorRole,
+          actorId,
+          entityType: 'appointment',
+          entityId: appointmentId,
+          metadata: {
+            to_status: 'confirmed'
+          }
+        })
+      };
+      if(doctorId){
+        payload.doctor_id = doctorId;
+      }
+
+      const result = await AgendaApiClient.confirmAppointment(appointmentId, payload);
+      if(!result?.ok || !result?.json || result.json.ok !== true){
+        const msg = sanitizeText(result?.json?.message || result?.json?.error || `HTTP ${result?.status || 500}`) || 'No se pudo confirmar la cita.';
+        setEventActionError(msg);
+        return;
+      }
+
+      if(activeEventActionRef){
+        applyLocalEventStatus(activeEventActionRef, 'confirmed');
+      }
+      setEventActionSection('detail');
+      loadEventTimeline(appointmentId).catch(()=> null);
+      const responseMessage = sanitizeText(result?.json?.message || '');
+      if(responseMessage === 'already_confirmed'){
+        setEventResolutionNote('La cita ya estaba confirmada.', 'success');
+      }else{
+        setEventResolutionNote('Cita confirmada.', 'success');
+      }
+    }catch(_){
+      setEventActionError('No se pudo confirmar la cita.');
+    }finally{
+      eventActionConfirmBusy = false;
+      if(els.eventConfirmBtn){
+        els.eventConfirmBtn.disabled = false;
+      }
+      setEventActionSection(eventActionCurrentSection || 'detail');
     }
   };
   const applyEventNoShow = async ()=>{
@@ -11940,6 +12052,20 @@ console.info('app.js loaded :: 20251123a');
     async cancelAppointment(appointmentId, payload){
       const safeId = encodeURIComponent(String(appointmentId || '').trim());
       const resp = await fetch(`/api/agenda/index.php/appointments/${safeId}/cancel`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload || {})
+      });
+      return {
+        ok: resp.ok,
+        status: resp.status,
+        json: await resp.json().catch(()=> null)
+      };
+    },
+    async confirmAppointment(appointmentId, payload){
+      const safeId = encodeURIComponent(String(appointmentId || '').trim());
+      const resp = await fetch(`/api/agenda/index.php/appointments/${safeId}/confirm`, {
         method: 'POST',
         headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -19630,6 +19756,10 @@ console.info('app.js loaded :: 20251123a');
       setEventActionSection('reschedule');
       initEventRescheduleSelector();
       validateEventRescheduleCandidate();
+    });
+    els.eventConfirmBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      applyEventConfirm().catch(()=> null);
     });
     els.eventRescheduleMonthNextBtn?.addEventListener('click', (event)=>{
       event.preventDefault();

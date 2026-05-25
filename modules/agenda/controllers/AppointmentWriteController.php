@@ -278,6 +278,99 @@ class AppointmentWriteController
         return $this->success($data, $meta);
     }
 
+    public function confirm(string $appointmentId): array
+    {
+        $payload = $this->getPayload();
+        if (!isset($payload['actor_role']) && isset($payload['created_by_role'])) {
+            $payload['actor_role'] = $payload['created_by_role'];
+        }
+        if (!isset($payload['actor_id']) && isset($payload['created_by_id'])) {
+            $payload['actor_id'] = $payload['created_by_id'];
+        }
+        $payload = $this->normalizeActorPayload($payload);
+
+        $errors = $this->validateConfirm($appointmentId, $payload);
+        if ($errors) {
+            return $this->error('invalid_params', 'invalid payload for confirm', $errors);
+        }
+
+        if ($this->dbConnectionError) {
+            return $this->error('db_error', 'database error');
+        }
+
+        if ($this->dbError) {
+            if (in_array($this->dbError, ['appointments table not ready', 'appointment events not ready'], true)) {
+                return $this->error('db_not_ready', $this->dbError);
+            }
+            return $this->error('db_error', 'database error', $this->qaDebugMeta(null, $this->dbError));
+        }
+
+        if (!$this->repository) {
+            return $this->notImplemented();
+        }
+
+        $context = $this->fetchAppointmentContext($appointmentId);
+        if (!$context['ok']) {
+            return $this->error(
+                (string)$context['error'],
+                (string)$context['message'],
+                (array)($context['meta'] ?? [])
+            );
+        }
+        $scopeError = $this->assertDoctorScope((string)$context['doctor_id'], $appointmentId);
+        if (is_array($scopeError)) {
+            return $scopeError;
+        }
+        $payloadScopeError = $this->assertPayloadDoctorScope($payload, (string)$context['doctor_id']);
+        if (is_array($payloadScopeError)) {
+            return $payloadScopeError;
+        }
+
+        try {
+            $result = $this->repository->confirmAppointment($appointmentId, $payload, $this->actorContext);
+        } catch (RuntimeException $e) {
+            $message = $e->getMessage();
+            if ($message === 'appointment not found') {
+                return $this->error('not_found', 'appointment not found');
+            }
+            if (in_array($message, ['appointments table not ready', 'appointment events not ready'], true)) {
+                return $this->error('db_not_ready', $message);
+            }
+            if (in_array($message, ['invalid_transition', 'appointment_past_not_confirmable'], true)) {
+                return $this->error($message, $message);
+            }
+            return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
+        } catch (PDOException $e) {
+            return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
+        } catch (\Throwable $e) {
+            return $this->error('db_error', 'database error', $this->qaDebugMeta($e));
+        }
+
+        $data = [
+            'appointment_id' => $result['appointment_id'],
+            'status' => $result['status'],
+            'start_at' => $result['start_at'],
+            'end_at' => $result['end_at'],
+            'confirmed_at' => $result['confirmed_at'] ?? null,
+            'event_id' => $result['event_id'] ?? null,
+        ];
+        $meta = [
+            'write' => 'confirm',
+            'events_appended' => (int)($result['events_appended'] ?? 0),
+        ];
+        $meta = $this->appendTransitionDryRunMeta($meta, $result);
+        if (!empty($result['already_confirmed'])) {
+            return [
+                'ok' => true,
+                'error' => null,
+                'message' => 'already_confirmed',
+                'data' => $data,
+                'meta' => (object)$meta,
+            ];
+        }
+        return $this->success($data, $meta);
+    }
+
     public function noShow(string $appointmentId): array
     {
         $this->logNoShowDebug('enter noShow', [
@@ -671,6 +764,25 @@ class AppointmentWriteController
         }
         if (isset($payload['observed_at']) && $this->parseDateTime($payload['observed_at']) === null) {
             $errors['observed_at'] = $payload['observed_at'];
+        }
+        return $errors;
+    }
+
+    private function validateConfirm(string $appointmentId, array $payload): array
+    {
+        $errors = [];
+        if (trim($appointmentId) === '') {
+            $errors['appointment_id'] = $appointmentId;
+        }
+        $actorRole = trim((string)($payload['actor_role'] ?? ''));
+        if ($actorRole === '') {
+            $errors['actor_role'] = 'actor_role required';
+        } elseif (!in_array($actorRole, ['patient', 'operator', 'doctor', 'system'], true)) {
+            $errors['actor_role'] = 'actor_role invalid';
+        }
+        $channelOrigin = trim((string)($payload['channel_origin'] ?? ''));
+        if ($channelOrigin === '') {
+            $errors['channel_origin'] = 'channel_origin required';
         }
         return $errors;
     }

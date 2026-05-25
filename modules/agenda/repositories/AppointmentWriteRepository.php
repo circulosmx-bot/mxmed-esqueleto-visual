@@ -375,6 +375,73 @@ class AppointmentWriteRepository
         ];
     }
 
+    public function confirmAppointment(string $appointmentId, array $payload, array $actorContext = []): array
+    {
+        $this->ensureAppointmentsTable();
+        $this->ensureEventsTable();
+        $pkColumn = $this->appointmentPk ?: 'appointment_id';
+        $this->ensurePrimaryKeyColumn($pkColumn);
+
+        $current = $this->fetchAppointment($appointmentId, $pkColumn);
+        $transitionDryRun = $this->evaluateAppointmentTransitionDryRun(
+            'confirm',
+            $current,
+            $payload,
+            $actorContext
+        );
+        $normalizedStatus = (string)($transitionDryRun['normalized_status'] ?? $this->normalizeTransitionStatus((string)($current['status'] ?? '')));
+
+        if ($normalizedStatus === 'confirmed' || $this->eventExists($appointmentId, 'appointment_confirmed')) {
+            return [
+                'appointment_id' => $appointmentId,
+                'status' => 'confirmed',
+                'start_at' => $current['start_at'] ?? null,
+                'end_at' => $current['end_at'] ?? null,
+                'confirmed_at' => $current['confirmed_at'] ?? null,
+                'event_id' => null,
+                'events_appended' => 0,
+                'already_confirmed' => true,
+                'transition_dry_run' => $transitionDryRun,
+            ];
+        }
+
+        if (!empty($transitionDryRun['would_block'])) {
+            $futureError = trim((string)($transitionDryRun['future_error'] ?? ''));
+            if ($futureError === '') {
+                $futureError = 'invalid_transition';
+            }
+            throw new RuntimeException($futureError);
+        }
+
+        $confirmedAt = (new DateTime('now', new DateTimeZone(self::TIMEZONE)))->format('Y-m-d H:i:s');
+        $eventId = null;
+
+        $this->pdo->beginTransaction();
+        try {
+            $this->updateStatusIfExists($pkColumn, $appointmentId, 'confirmed');
+            $eventId = $this->appendConfirmEvent($appointmentId, $payload, $current, $confirmedAt);
+            $this->pdo->commit();
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        } catch (RuntimeException $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+
+        return [
+            'appointment_id' => $appointmentId,
+            'status' => 'confirmed',
+            'start_at' => $current['start_at'] ?? null,
+            'end_at' => $current['end_at'] ?? null,
+            'confirmed_at' => $confirmedAt,
+            'event_id' => $eventId,
+            'events_appended' => 1,
+            'already_confirmed' => false,
+            'transition_dry_run' => $transitionDryRun,
+        ];
+    }
+
     private function updateCancelFields(string $pkColumn, string $appointmentId, string $status, string $cancelledAt): void
     {
         $columns = $this->getColumns($this->appointmentsTable);
@@ -423,6 +490,54 @@ class AppointmentWriteRepository
         ];
         $this->insert($this->eventsTable, $eventData);
         return $eventId;
+    }
+
+    private function appendConfirmEvent(string $appointmentId, array $payload, array $current, string $confirmedAt): string
+    {
+        $eventId = $this->generateId();
+        $fromStatus = trim((string)($current['status'] ?? ''));
+        $toStatus = 'confirmed';
+        $eventData = [
+            'event_id' => $eventId,
+            'appointment_id' => $appointmentId,
+            'event_type' => 'appointment_confirmed',
+            'timestamp' => $confirmedAt,
+            'from_datetime' => $current['start_at'] ?? null,
+            'to_datetime' => $current['end_at'] ?? null,
+            'from_start_at' => $current['start_at'] ?? null,
+            'from_end_at' => $current['end_at'] ?? null,
+            'actor_role' => $payload['actor_role'] ?? $payload['created_by_role'] ?? null,
+            'actor_id' => $payload['actor_id'] ?? $payload['created_by_id'] ?? null,
+            'channel_origin' => $payload['channel_origin'] ?? null,
+            'status_from' => $fromStatus !== '' ? $fromStatus : null,
+            'status_to' => $toStatus,
+            'from_status' => $fromStatus !== '' ? $fromStatus : null,
+            'to_status' => $toStatus,
+            'confirmed_at' => $confirmedAt,
+            'notes' => $this->buildConfirmEventNotes($payload, $fromStatus, $toStatus, $confirmedAt),
+        ];
+        $this->insert($this->eventsTable, $eventData);
+        return $eventId;
+    }
+
+    private function buildConfirmEventNotes(array $payload, string $fromStatus, string $toStatus, string $confirmedAt): ?string
+    {
+        $metadata = [
+            'from_status' => $fromStatus !== '' ? $fromStatus : null,
+            'to_status' => $toStatus,
+            'confirmed_at' => $confirmedAt,
+            'actor_role' => isset($payload['actor_role']) ? trim((string)$payload['actor_role']) : null,
+            'actor_id' => isset($payload['actor_id']) ? trim((string)$payload['actor_id']) : null,
+            'channel_origin' => isset($payload['channel_origin']) ? trim((string)$payload['channel_origin']) : null,
+            'created_by_role' => isset($payload['created_by_role']) ? trim((string)$payload['created_by_role']) : null,
+            'created_by_id' => isset($payload['created_by_id']) ? trim((string)$payload['created_by_id']) : null,
+        ];
+
+        $encoded = json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($encoded === false) {
+            return null;
+        }
+        return $encoded;
     }
 
     private function insert(string $table, array $data): void
@@ -958,6 +1073,39 @@ class AppointmentWriteRepository
                 $result['would_block'] = true;
                 $result['reason'] = 'time_future_for_no_show';
                 $result['future_error'] = 'appointment_future_not_no_show';
+                $result['future_http_status'] = $blockedHttp;
+                return $result;
+            }
+            return $result;
+        }
+
+        if ($normalizedAction === 'confirm') {
+            $confirmableStates = ['pending', 'pending_otp', 'tentative', 'scheduled'];
+            if ($normalizedStatus === 'confirmed') {
+                $result['reason'] = 'idempotent_already_confirmed';
+                $result['future_error'] = 'already_confirmed';
+                return $result;
+            }
+            if (in_array($normalizedStatus, ['canceled', 'no_show', 'finished'], true)) {
+                $result['would_block'] = true;
+                $result['reason'] = 'state_terminal_not_confirmable';
+                $result['future_error'] = 'invalid_transition';
+                $result['future_http_status'] = $blockedHttp;
+                return $result;
+            }
+            if ($timeState === 'past') {
+                $result['would_block'] = true;
+                $result['reason'] = 'time_past_for_confirm';
+                $result['future_error'] = 'appointment_past_not_confirmable';
+                $result['future_http_status'] = $blockedHttp;
+                return $result;
+            }
+            if (($timeState === 'future' || $timeState === 'in_progress')
+                && !in_array($normalizedStatus, $confirmableStates, true)
+            ) {
+                $result['would_block'] = true;
+                $result['reason'] = 'status_not_confirmable_in_contract';
+                $result['future_error'] = 'invalid_transition';
                 $result['future_http_status'] = $blockedHttp;
                 return $result;
             }
