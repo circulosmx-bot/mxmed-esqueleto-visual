@@ -7126,6 +7126,47 @@ console.info('app.js loaded :: 20251123a');
     eventRef.setExtendedProp('status_key_real', statusMeta.key);
     eventRef.setExtendedProp('status_label', statusLabel);
     eventRef.setExtendedProp('visual_key', visual.visualKey);
+
+    if(eventRef === activeEventActionRef){
+      if(els.eventActionStatus){
+        els.eventActionStatus.textContent = statusLabel || '--';
+      }
+      if(els.eventActionStatusBadge){
+        const statusNorm = normalizeText(statusLabel);
+        const statusKeyNorm = normalizeText(statusMeta.key);
+        const visualKeyNorm = normalizeText(sanitizeText(visual.visualKey || ''));
+        const isConfirmed = statusNorm.includes('confirm') || statusKeyNorm.includes('confirmed');
+        const isPending = statusNorm.includes('pend') || statusKeyNorm.includes('pending') || statusKeyNorm.includes('tentative');
+        const isInProgress = statusNorm.includes('curso') || statusNorm.includes('progress') || statusNorm.includes('consulta') || statusKeyNorm.includes('in-progress');
+        const isFinished = statusNorm.includes('finaliz') || statusNorm.includes('finished') || statusKeyNorm.includes('finished');
+        const isCancelled = statusNorm.includes('cancel') || statusKeyNorm.includes('cancel');
+        const isNoShow = statusNorm.includes('no show') || statusNorm.includes('no-show') || statusNorm.includes('no_show') || statusNorm.includes('no asist') || statusKeyNorm.includes('no-show');
+        const isRescheduled = statusNorm.includes('reprogram') || statusNorm.includes('reschedul') || statusNorm.includes('reagend') || statusKeyNorm.includes('rescheduled');
+        const isBlacklist = visualKeyNorm.includes('blacklist');
+        const isGraylist = visualKeyNorm.includes('graylist');
+        const shouldRenderHeaderBadge = isConfirmed || isPending || isInProgress || isFinished || isCancelled || isNoShow || isRescheduled || isBlacklist || isGraylist;
+
+        if(shouldRenderHeaderBadge){
+          let badgeKey = 'pending';
+          if(isBlacklist) badgeKey = 'blacklist';
+          else if(isGraylist) badgeKey = 'graylist';
+          else if(isConfirmed) badgeKey = 'confirmed';
+          else if(isPending) badgeKey = 'pending';
+          else if(isInProgress) badgeKey = 'in-progress';
+          else if(isFinished) badgeKey = 'finished';
+          else if(isCancelled) badgeKey = 'cancelled';
+          else if(isNoShow) badgeKey = 'no-show';
+          else if(isRescheduled) badgeKey = 'rescheduled';
+          els.eventActionStatusBadge.classList.remove('d-none');
+          els.eventActionStatusBadge.textContent = statusLabel || '--';
+          els.eventActionStatusBadge.className = `badge mx-ag-status-badge mx-ag-status-badge--${badgeKey}`;
+        }else{
+          els.eventActionStatusBadge.textContent = '';
+          els.eventActionStatusBadge.className = 'badge mx-ag-status-badge d-none';
+        }
+      }
+    }
+
     try{
       eventRef.setProp('backgroundColor', visual.backgroundColor);
       eventRef.setProp('borderColor', visual.borderColor);
