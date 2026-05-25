@@ -762,6 +762,13 @@ console.info('app.js loaded :: 20251123a');
   let customWeekLastEventsScopeKey = '';
   let customWeekExpectedScopeKey = '';
   let customDayForceFreshSnapshotAfterCreate = false;
+  let agendaBackendBlockedSlotsCache = [];
+  let agendaBackendBlockedSlotsCacheRangeKey = '';
+  let agendaBackendBlockedSlotsCacheScopeKey = '';
+  let agendaBackendBlockedSlotsCacheDoctorId = '';
+  let agendaBackendBlockedSlotsInflightKey = '';
+  let agendaBackendBlockedSlotsHydratePromise = null;
+  let agendaBackendBlockedSlotsRequestCtrl = null;
   let agendaToolbarLayoutMode = '';
   let customWeekLastBridgeMeta = {
     rangeStart: '',
@@ -4326,6 +4333,101 @@ console.info('app.js loaded :: 20251123a');
     const safeScopeId = sanitizeText(consultorioScopeId || 'all') || 'all';
     return `mxmed.agenda.blocked_slots.v1:${safeDoctorId}:${safeScopeId}`;
   };
+  const resolveBlockedSlotsBackendScopeKey = ()=>{
+    const scope = resolveAgendaAvailabilityConsultorioScope();
+    const mode = scope?.mode === 'all' ? 'all' : 'specific';
+    const consultorios = Array.isArray(scope?.consultorios)
+      ? scope.consultorios
+        .map((id)=> sanitizeText(id || ''))
+        .filter((id)=> isNumericId(id))
+      : [];
+    const normalized = Array.from(new Set(consultorios)).sort((a, b)=> Number(a) - Number(b));
+    return `${mode}:${normalized.join(',')}`;
+  };
+  const resolveBlockedSlotsBackendRangeKey = (startLike, endLike)=>{
+    const start = startLike instanceof Date ? startLike : new Date(startLike || '');
+    const end = endLike instanceof Date ? endLike : new Date(endLike || '');
+    if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start){
+      return '';
+    }
+    return toRangeKey(start, end);
+  };
+  const resolveBlockedSlotRowSource = (row = null)=>{
+    if(!(row && typeof row === 'object')) return 'local';
+    const explicit = sanitizeText(row.block_source || row.source || '').toLowerCase();
+    if(explicit === 'backend'){
+      return 'backend';
+    }
+    const backendOverrideId = sanitizeText(
+      row.backend_override_id
+      || row.override_id
+      || row.backendOverrideId
+      || ''
+    );
+    return isNumericId(backendOverrideId) ? 'backend' : 'local';
+  };
+  const resolveBlockedSlotRowSourceRank = (row = null)=>{
+    return resolveBlockedSlotRowSource(row) === 'backend' ? 2 : 1;
+  };
+  const buildBlockedSlotDedupeSignature = (row = null)=>{
+    const normalized = normalizeBlockedSlotRecord(row);
+    if(!normalized) return '';
+    const consultorioId = sanitizeText(normalized.consultorio_id || '');
+    const startAt = sanitizeText(normalized.start_at || '');
+    const endAt = sanitizeText(normalized.end_at || '');
+    const scope = sanitizeText(normalized.block_scope || '');
+    if(!startAt || !endAt) return '';
+    return [
+      consultorioId,
+      startAt,
+      endAt,
+      'blocked_slot',
+      scope
+    ].join('__');
+  };
+  const dedupeBlockedRowsPreferBackend = (rowsInput = [])=>{
+    const safeRows = Array.isArray(rowsInput) ? rowsInput : [];
+    const bySignature = new Map();
+    safeRows.forEach((row)=>{
+      const normalized = normalizeBlockedSlotRecord(row);
+      if(!normalized) return;
+      const signature = buildBlockedSlotDedupeSignature(normalized);
+      if(!signature) return;
+      const sourceRank = resolveBlockedSlotRowSourceRank(normalized);
+      const existing = bySignature.get(signature);
+      if(!existing || sourceRank > existing.sourceRank){
+        bySignature.set(signature, {
+          sourceRank,
+          row: normalized
+        });
+      }
+    });
+    return Array.from(bySignature.values()).map((entry)=> entry.row);
+  };
+  const getCachedBackendBlockedRowsForRange = (startLike, endLike)=>{
+    const safeStart = startLike instanceof Date ? startLike : new Date(startLike || '');
+    const safeEnd = endLike instanceof Date ? endLike : new Date(endLike || '');
+    if(Number.isNaN(safeStart.getTime()) || Number.isNaN(safeEnd.getTime()) || safeEnd <= safeStart){
+      return [];
+    }
+    const doctorId = sanitizeText(getDoctorId() || '');
+    const scopeKey = resolveBlockedSlotsBackendScopeKey();
+    if(!doctorId || doctorId !== sanitizeText(agendaBackendBlockedSlotsCacheDoctorId || '')){
+      return [];
+    }
+    if(scopeKey !== sanitizeText(agendaBackendBlockedSlotsCacheScopeKey || '')){
+      return [];
+    }
+    const rows = Array.isArray(agendaBackendBlockedSlotsCache) ? agendaBackendBlockedSlotsCache : [];
+    return rows.filter((row)=>{
+      const start = parseDateTimeLocalSafe(row?.start_at);
+      const end = parseDateTimeLocalSafe(row?.end_at);
+      if(!(start instanceof Date) || !(end instanceof Date) || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start){
+        return false;
+      }
+      return start < safeEnd && end > safeStart;
+    });
+  };
   const KNOWN_LEGACY_BLOCKED_SLOT_DAY_KEYS = new Set(['2026-05-17']);
   const legacyBlockedSlotCleanupSessionByDay = new Set();
   const resolveBlockedSlotsStorageKeysAcrossScopes = ()=>{
@@ -4346,14 +4448,27 @@ console.info('app.js loaded :: 20251123a');
   };
   const normalizeBlockedSlotRecord = (row = null)=>{
     if(!row || typeof row !== 'object') return null;
-    const blockId = sanitizeText(row.block_id || row.id || '');
+    const backendOverrideIdRaw = sanitizeText(
+      row.backend_override_id
+      || row.override_id
+      || row.backendOverrideId
+      || ''
+    );
+    const backendOverrideId = isNumericId(backendOverrideIdRaw) ? backendOverrideIdRaw : '';
+    const blockSource = resolveBlockedSlotRowSource(row);
+    let blockId = sanitizeText(row.block_id || row.id || '');
+    if(!blockId && backendOverrideId){
+      blockId = `backend:${backendOverrideId}`;
+    }
     const startAt = sanitizeText(row.start_at || '');
     const endAt = sanitizeText(row.end_at || '');
     const reasonKey = sanitizeText(row.reason_key || '');
     const reasonLabel = sanitizeText(row.reason_label || '');
     const reasonNote = sanitizeText(row.reason_note || '');
+    const reasonPlain = sanitizeText(row.reason || '');
     const consultorioId = sanitizeText(row.consultorio_id || row.consultorioId || '');
     const consultorioLabel = sanitizeText(row.consultorio_label || row.consultorioLabel || '');
+    const blockScope = sanitizeText(row.block_scope || row.scope || '');
     if(!blockId || !startAt || !endAt) return null;
     const start = parseDateTimeLocalSafe(startAt);
     const end = parseDateTimeLocalSafe(endAt);
@@ -4366,9 +4481,12 @@ console.info('app.js loaded :: 20251123a');
       end_at: toSqlDateTimeLocal(end),
       consultorio_id: consultorioId,
       consultorio_label: consultorioLabel,
+      backend_override_id: backendOverrideId,
+      block_source: blockSource,
+      block_scope: blockScope,
       reason_key: reasonKey || 'otro',
-      reason_label: reasonLabel || 'Otro',
-      reason_note: reasonNote,
+      reason_label: reasonLabel || reasonPlain || 'Otro',
+      reason_note: reasonNote || reasonPlain,
       created_at: sanitizeText(row.created_at || toSqlDateTimeLocal(new Date()))
     };
   };
@@ -4377,6 +4495,8 @@ console.info('app.js loaded :: 20251123a');
     if(!normalized) return null;
     return {
       block_id: sanitizeText(normalized.block_id || ''),
+      backend_override_id: sanitizeText(normalized.backend_override_id || ''),
+      block_source: sanitizeText(normalized.block_source || ''),
       consultorio_id: sanitizeText(normalized.consultorio_id || ''),
       consultorio_label: sanitizeText(normalized.consultorio_label || ''),
       start: sanitizeText(normalized.start_at || ''),
@@ -4392,6 +4512,8 @@ console.info('app.js loaded :: 20251123a');
     return {
       id: sanitizeText(eventRef?.id || ''),
       block_id: normalizeBlockedSlotIdCandidate(eventRef?.extendedProps?.block_id || eventRef?.id || ''),
+      backend_override_id: sanitizeText(eventRef?.extendedProps?.backend_override_id || ''),
+      block_source: sanitizeText(eventRef?.extendedProps?.block_source || ''),
       consultorio_id: sanitizeText(eventRef?.extendedProps?.consultorio_id || ''),
       consultorio_label: sanitizeText(eventRef?.extendedProps?.consultorio_label || ''),
       start: Number.isNaN(start.getTime()) ? '' : toSqlDateTimeLocal(start),
@@ -5047,6 +5169,9 @@ console.info('app.js loaded :: 20251123a');
         consultorio_id: consultorioId,
         consultorio_label: consultorioLabel,
         block_id: normalized.block_id,
+        backend_override_id: sanitizeText(normalized.backend_override_id || ''),
+        block_source: sanitizeText(normalized.block_source || ''),
+        block_scope: sanitizeText(normalized.block_scope || ''),
         block_reason_key: sanitizeText(normalized.reason_key || ''),
         block_reason_label: reasonLabel,
         block_reason_note: reasonNote,
@@ -5089,6 +5214,140 @@ console.info('app.js loaded :: 20251123a');
     }
     return events.length ? events : [baseEvent];
   };
+  const mapBackendAvailabilityBlockToBlockedRecord = (row = null)=>{
+    if(!(row && typeof row === 'object')) return null;
+    const overrideId = sanitizeText(row.override_id || row.backend_override_id || '');
+    const consultorioId = sanitizeText(row.consultorio_id || '');
+    const startAt = sanitizeText(row.start_at || '');
+    const endAt = sanitizeText(row.end_at || '');
+    if(!isNumericId(overrideId) || !startAt || !endAt){
+      return null;
+    }
+    const start = parseDateTimeLocalSafe(startAt);
+    const end = parseDateTimeLocalSafe(endAt);
+    if(!(start instanceof Date) || !(end instanceof Date) || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start){
+      return null;
+    }
+    const isFullDayBlock = isRangeLikelyFullDayBlock(start, end);
+    return normalizeBlockedSlotRecord({
+      block_id: `backend:${overrideId}`,
+      backend_override_id: overrideId,
+      source: 'backend',
+      block_scope: isFullDayBlock ? 'full_day' : 'partial',
+      consultorio_id: consultorioId,
+      consultorio_label: sanitizeText(resolveAgendaConsultorioLabelById(consultorioId) || ''),
+      start_at: toSqlDateTimeLocal(start),
+      end_at: toSqlDateTimeLocal(end),
+      reason: sanitizeText(row.reason || ''),
+      reason_key: 'backend',
+      reason_label: sanitizeText(row.reason || 'Bloqueo de disponibilidad'),
+      reason_note: sanitizeText(row.reason || ''),
+      created_at: sanitizeText(row.created_at || toSqlDateTimeLocal(new Date()))
+    });
+  };
+  const ensureBackendBlockedSlotsHydrated = async (fetchInfo = null, options = {})=>{
+    const safeStart = fetchInfo?.start instanceof Date ? fetchInfo.start : new Date(fetchInfo?.start || '');
+    const safeEnd = fetchInfo?.end instanceof Date ? fetchInfo.end : new Date(fetchInfo?.end || '');
+    if(Number.isNaN(safeStart.getTime()) || Number.isNaN(safeEnd.getTime()) || safeEnd <= safeStart){
+      return [];
+    }
+    if(isAgendaDemoContext()){
+      return [];
+    }
+    const doctorId = sanitizeText(getDoctorId() || '');
+    if(!isNumericId(doctorId)){
+      return [];
+    }
+    const scope = resolveAgendaAvailabilityConsultorioScope();
+    const scopeKey = resolveBlockedSlotsBackendScopeKey();
+    const rangeKey = resolveBlockedSlotsBackendRangeKey(safeStart, safeEnd);
+    const force = options?.force === true;
+    const requestKey = [doctorId, scopeKey, rangeKey].join('__');
+    if(
+      !force
+      && requestKey
+      && requestKey === sanitizeText(agendaBackendBlockedSlotsInflightKey || '')
+      && agendaBackendBlockedSlotsHydratePromise
+    ){
+      try{
+        return await agendaBackendBlockedSlotsHydratePromise;
+      }catch(_){
+        return getCachedBackendBlockedRowsForRange(safeStart, safeEnd);
+      }
+    }
+    if(
+      !force
+      && doctorId === sanitizeText(agendaBackendBlockedSlotsCacheDoctorId || '')
+      && scopeKey === sanitizeText(agendaBackendBlockedSlotsCacheScopeKey || '')
+      && rangeKey === sanitizeText(agendaBackendBlockedSlotsCacheRangeKey || '')
+      && Array.isArray(agendaBackendBlockedSlotsCache)
+    ){
+      return getCachedBackendBlockedRowsForRange(safeStart, safeEnd);
+    }
+
+    if(agendaBackendBlockedSlotsRequestCtrl){
+      try{ agendaBackendBlockedSlotsRequestCtrl.abort(); }catch(_){}
+    }
+    agendaBackendBlockedSlotsRequestCtrl = new AbortController();
+    agendaBackendBlockedSlotsInflightKey = requestKey;
+    const params = new URLSearchParams({
+      doctor_id: doctorId,
+      from: toSqlDateTimeLocal(safeStart),
+      to: toSqlDateTimeLocal(safeEnd),
+      active_only: '1'
+    });
+    if(scope?.mode === 'specific'){
+      const consultorioId = sanitizeText(scope?.consultorios?.[0] || '');
+      if(isNumericId(consultorioId)){
+        params.set('consultorio_id', consultorioId);
+      }
+    }
+    agendaBackendBlockedSlotsHydratePromise = (async ()=>{
+      try{
+        const json = await AgendaApiClient.getAvailabilityBlocks({
+          params,
+          signal: agendaBackendBlockedSlotsRequestCtrl?.signal
+        });
+        if(!json || json.ok !== true){
+          console.warn('MXM BLOCK BACKEND READTHROUGH WARN', {
+            action: 'get_availability_blocks_failed',
+            doctor_id: doctorId,
+            scope_key: scopeKey,
+            range_key: rangeKey,
+            error: sanitizeText(json?.error || ''),
+            message: sanitizeText(json?.message || '')
+          });
+          return getCachedBackendBlockedRowsForRange(safeStart, safeEnd);
+        }
+        const rowsRaw = Array.isArray(json?.data) ? json.data : [];
+        const rowsNormalized = rowsRaw
+          .map((row)=> mapBackendAvailabilityBlockToBlockedRecord(row))
+          .filter(Boolean);
+        agendaBackendBlockedSlotsCache = rowsNormalized;
+        agendaBackendBlockedSlotsCacheDoctorId = doctorId;
+        agendaBackendBlockedSlotsCacheScopeKey = scopeKey;
+        agendaBackendBlockedSlotsCacheRangeKey = rangeKey;
+        return getCachedBackendBlockedRowsForRange(safeStart, safeEnd);
+      }catch(err){
+        if(err?.name !== 'AbortError'){
+          console.warn('MXM BLOCK BACKEND READTHROUGH WARN', {
+            action: 'get_availability_blocks_exception',
+            doctor_id: doctorId,
+            scope_key: scopeKey,
+            range_key: rangeKey,
+            message: sanitizeText(err?.message || '')
+          });
+        }
+        return getCachedBackendBlockedRowsForRange(safeStart, safeEnd);
+      }finally{
+        if(requestKey === sanitizeText(agendaBackendBlockedSlotsInflightKey || '')){
+          agendaBackendBlockedSlotsHydratePromise = null;
+          agendaBackendBlockedSlotsInflightKey = '';
+        }
+      }
+    })();
+    return agendaBackendBlockedSlotsHydratePromise;
+  };
   const collectBlockedSlotEvents = (fetchInfo, options = {})=>{
     const safeStart = fetchInfo?.start instanceof Date ? fetchInfo.start : new Date(fetchInfo?.start || '');
     const safeEnd = fetchInfo?.end instanceof Date ? fetchInfo.end : new Date(fetchInfo?.end || '');
@@ -5104,9 +5363,10 @@ console.info('app.js loaded :: 20251123a');
     };
     const primaryMatchedRows = blockedRowsRaw.filter((row)=> rowOverlapsFetchRange(row));
     let fallbackMatchedRows = [];
+    const backendMatchedRows = getCachedBackendBlockedRowsForRange(safeStart, safeEnd);
     let fallbackRowsRawCount = 0;
     let storageKeysScanned = [];
-    let collectSource = 'primary';
+    let collectSource = 'primary+backend';
     let matchedRows = primaryMatchedRows.slice();
     if(includeCrossScopeFallback){
       const mergedScope = readBlockedSlotsAcrossScopes();
@@ -5114,22 +5374,12 @@ console.info('app.js loaded :: 20251123a');
       fallbackRowsRawCount = Array.isArray(mergedScope?.rows) ? mergedScope.rows.length : 0;
       fallbackMatchedRows = (Array.isArray(mergedScope?.rows) ? mergedScope.rows : [])
         .filter((row)=> rowOverlapsFetchRange(row));
-      const dedupeSignature = new Set();
-      matchedRows = [...primaryMatchedRows, ...fallbackMatchedRows].filter((row)=>{
-        const normalized = normalizeBlockedSlotRecord(row);
-        if(!normalized) return false;
-        const signature = [
-          sanitizeText(normalized.block_id || ''),
-          sanitizeText(normalized.start_at || ''),
-          sanitizeText(normalized.end_at || ''),
-          sanitizeText(normalized.consultorio_id || ''),
-          sanitizeText(normalized.reason_key || '')
-        ].join('__');
-        if(!signature || dedupeSignature.has(signature)) return false;
-        dedupeSignature.add(signature);
-        return true;
-      });
-      collectSource = fallbackMatchedRows.length ? 'primary+fallback' : 'primary_only';
+      matchedRows = dedupeBlockedRowsPreferBackend([
+        ...primaryMatchedRows,
+        ...fallbackMatchedRows,
+        ...backendMatchedRows
+      ]);
+      collectSource = fallbackMatchedRows.length ? 'primary+fallback+backend' : 'primary_only+backend';
       try{
         console.info('MXM BLOCK DAY CROSS SCOPE FALLBACK DEBUG', {
           storage_key_primary: storageKey,
@@ -5141,6 +5391,11 @@ console.info('app.js loaded :: 20251123a');
           fetch_end: safeEnd.toISOString()
         });
       }catch(_){}
+    }else{
+      matchedRows = dedupeBlockedRowsPreferBackend([
+        ...primaryMatchedRows,
+        ...backendMatchedRows
+      ]);
     }
     const mapped = matchedRows
       .flatMap((row)=> mapBlockedSlotToRenderEvents(row))
@@ -5157,6 +5412,7 @@ console.info('app.js loaded :: 20251123a');
         primary_rows_total: blockedRowsRaw.length,
         primary_rows_matched: primaryMatchedRows.length,
         matched_rows_total: matchedRows.length,
+        backend_rows_matched: backendMatchedRows.length,
         fallback_rows_raw: fallbackRowsRawCount,
         fallback_rows_matched: fallbackMatchedRows.length,
         storage_keys_scanned: storageKeysScanned,
@@ -12085,6 +12341,30 @@ console.info('app.js loaded :: 20251123a');
       });
       return payload;
     },
+    async getAvailabilityBlocks({ params, signal }){
+      const qs = (params instanceof URLSearchParams) ? params.toString() : String(params || '');
+      const resp = await fetch(`/api/agenda/index.php/availability/blocks?${qs}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        signal
+      });
+      const payload = await resp.json().catch(()=> null);
+      if(payload && typeof payload === 'object'){
+        payload.__httpStatus = Number(resp.status || 0);
+        payload.__httpOk = resp.ok === true;
+        return payload;
+      }
+      return {
+        ok: false,
+        error: 'invalid_json',
+        message: `HTTP ${Number(resp.status || 0)}`,
+        data: null,
+        meta: {},
+        __httpStatus: Number(resp.status || 0),
+        __httpOk: resp.ok === true
+      };
+    },
     async getSchedule({ doctorId, consultorioId, signal }){
       const qs = new URLSearchParams({
         doctor_id: String(doctorId || '').trim(),
@@ -17532,6 +17812,9 @@ console.info('app.js loaded :: 20251123a');
     if(isCustomWeekFetch){
       customWeekAppointmentsRequests += 1;
     }
+    if(!isAgendaDemoContext()){
+      await ensureBackendBlockedSlotsHydrated(fetchInfo);
+    }
     const blockedEvents = collectBlockedSlotEvents(fetchInfo, {
       includeCrossScopeFallback: true
     });
@@ -18169,6 +18452,10 @@ console.info('app.js loaded :: 20251123a');
             const dayAfterFilterRaw = filterEventsByLocalDay(sharedWeekState.events, dayVisibleDate);
             const dayStart = toLocalDayDate(dayVisibleDate);
             const dayEnd = addLocalDays(dayStart, 1);
+            await ensureBackendBlockedSlotsHydrated({
+              start: dayStart,
+              end: dayEnd
+            });
             const dayOperationalContext = resolveCurrentCustomWeekOperationalContext() || {};
             const dayOperativeInfo = isCustomWeekDayOperative(dayVisibleDate, dayOperationalContext);
             const dayOperativeReason = sanitizeText(dayOperativeInfo?.reason || '');
