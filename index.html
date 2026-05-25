@@ -2703,6 +2703,17 @@
                           <span>Avisar operador</span>
                         </label>
                       </div>
+
+                      <div class="ag-reminders-card">
+                        <div class="ag-reminders-block-title">Lista de espera y recuperación de huecos</div>
+                        <label class="ag-reminders-option">
+                          <input type="checkbox" class="form-check-input" id="ag_cfg_waitlist_enabled">
+                          <span>Activado</span>
+                        </label>
+                        <p class="ag-reminders-help mb-0">
+                          Permite inscribir pacientes en lista de espera y sugerir candidatos cuando se libera un espacio por cancelación.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -3620,7 +3631,7 @@
                     <div id="ag_next_slots_loading" class="small text-muted d-none mb-2">Buscando disponibilidad real…</div>
                     <div id="ag_next_slots_results" class="mx-ag-next-slots-results"></div>
                     <div id="ag_next_slots_empty" class="small text-muted d-none mt-2">No se encontraron opciones disponibles.</div>
-                    <div class="mx-ag-next-slots-waitlist-cta">
+                    <div class="mx-ag-next-slots-waitlist-cta" id="ag_next_slots_waitlist_cta">
                       <div class="mx-ag-next-slots-waitlist-question">¿No encontraste un horario adecuado?</div>
                       <button type="button" class="btn btn-outline-primary btn-sm" id="ag_next_slots_waitlist_btn">Inscribir en lista de espera</button>
                     </div>

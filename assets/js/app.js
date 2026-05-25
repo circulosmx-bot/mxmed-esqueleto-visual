@@ -624,6 +624,7 @@ console.info('app.js loaded :: 20251123a');
     nextSlotsLoading: panel.querySelector('#ag_next_slots_loading'),
     nextSlotsResults: panel.querySelector('#ag_next_slots_results'),
     nextSlotsEmpty: panel.querySelector('#ag_next_slots_empty'),
+    nextSlotsWaitlistCta: panel.querySelector('#ag_next_slots_waitlist_cta'),
     nextSlotsWaitlistFeedback: panel.querySelector('#ag_next_slots_waitlist_feedback'),
     nextSlotsWaitlistBtn: panel.querySelector('#ag_next_slots_waitlist_btn'),
     nextSlotsPrevBtn: panel.querySelector('#ag_next_slots_prev_btn'),
@@ -702,6 +703,7 @@ console.info('app.js loaded :: 20251123a');
     cfgCancelPolicyHours: document.getElementById('ag_cfg_cancel_policy_h'),
     cfgChannelLimitNote: document.getElementById('ag_cfg_channel_limit_note'),
     cfgReminderTemplate: document.getElementById('ag_cfg_reminder_template'),
+    cfgWaitlistEnabled: document.getElementById('ag_cfg_waitlist_enabled'),
     remindersPanel: document.getElementById('ag_reminders_panel'),
     reminderChannelLimitNote: document.getElementById('ag_channel_limit_note'),
     cfgScheduleSummaryText: document.getElementById('ag_cfg_schedule_summary_text'),
@@ -855,6 +857,7 @@ console.info('app.js loaded :: 20251123a');
   let agendaUiRbacNoticeTimer = null;
   let agendaSettingsContextKey = '';
   let agendaSettingsLoaded = false;
+  let agendaWaitlistEnabled = false;
   const DEFAULT_AGENDA_REMINDER_SETTINGS = Object.freeze({
     reminderBefore: '24h',
     channels: ['whatsapp'],
@@ -6201,7 +6204,8 @@ console.info('app.js loaded :: 20251123a');
     }
   };
   const setEventCancelPostActionsEnabled = (enabled)=>{
-    eventCancelPostActionsEnabled = !!enabled;
+    const allowWaitlistPostActions = isAgendaWaitlistFeatureEnabled();
+    eventCancelPostActionsEnabled = !!enabled && allowWaitlistPostActions;
     if(els.eventCancelPostHint){
       els.eventCancelPostHint.classList.toggle('d-none', !eventCancelPostActionsEnabled);
     }
@@ -6233,6 +6237,9 @@ console.info('app.js loaded :: 20251123a');
       els.eventCancelConfirmBtn.classList.toggle('d-none', eventCancelPostActionsEnabled);
       els.eventCancelConfirmBtn.disabled = false;
       els.eventCancelConfirmBtn.textContent = 'Cancelar y marcar lista gris';
+    }
+    if(els.eventCancelPostWaitlistBtn){
+      els.eventCancelPostWaitlistBtn.classList.toggle('d-none', !allowWaitlistPostActions);
     }
     if(els.eventCancelPrompt){
       if(eventCancelPostActionsEnabled){
@@ -7009,6 +7016,17 @@ console.info('app.js loaded :: 20251123a');
   const loadEventCancelWaitlist = async ()=>{
     if(eventCancelPostWaitlistBusy) return;
     if(!els.eventCancelWaitlistWrap) return;
+    if(!isAgendaWaitlistFeatureEnabled()){
+      els.eventCancelWaitlistWrap.classList.add('d-none');
+      if(els.eventCancelWaitlistMeta){
+        els.eventCancelWaitlistMeta.classList.add('d-none');
+        els.eventCancelWaitlistMeta.textContent = '';
+      }
+      if(els.eventCancelWaitlistList){
+        els.eventCancelWaitlistList.innerHTML = '';
+      }
+      return;
+    }
     renderEventCancelSlotSummary();
     const doctorId = sanitizeText(activeEventActionRef?.extendedProps?.doctor_id || getDoctorId() || '');
     const consultorioId = sanitizeText(activeEventActionRef?.extendedProps?.consultorio_id || getAvailabilityConsultorioId() || '');
@@ -8319,9 +8337,14 @@ console.info('app.js loaded :: 20251123a');
           activeEventActionId,
           appointmentId
         });
-        setEventCancelPostActionsEnabled(true);
+        setEventCancelPostActionsEnabled(isAgendaWaitlistFeatureEnabled());
         loadEventTimeline(appointmentId).catch(()=> null);
-        loadEventCancelWaitlist().catch(()=> null);
+        if(isAgendaWaitlistFeatureEnabled()){
+          loadEventCancelWaitlist().catch(()=> null);
+        }else{
+          setEventResolutionNote('Cita cancelada.', 'success');
+          setEventActionSection('detail');
+        }
         logAgendaCancelFlow('cancel:post-state-enabled', {
           activeEventActionId,
           appointmentId,
@@ -8367,9 +8390,14 @@ console.info('app.js loaded :: 20251123a');
       });
       setError('');
       eventCancelDeferredRefresh = true;
-      setEventCancelPostActionsEnabled(true);
+      setEventCancelPostActionsEnabled(isAgendaWaitlistFeatureEnabled());
       loadEventTimeline(appointmentId).catch(()=> null);
-      loadEventCancelWaitlist().catch(()=> null);
+      if(isAgendaWaitlistFeatureEnabled()){
+        loadEventCancelWaitlist().catch(()=> null);
+      }else{
+        setEventResolutionNote('Cita cancelada.', 'success');
+        setEventActionSection('detail');
+      }
       logAgendaCancelFlow('cancel:post-state-enabled', {
         activeEventActionId,
         appointmentId,
@@ -13042,6 +13070,45 @@ console.info('app.js loaded :: 20251123a');
     );
     els.cfgSyncNote.textContent = msg;
   };
+  const normalizeAgendaWaitlistEnabled = (value, fallback = false)=>{
+    if(typeof value === 'boolean') return value;
+    if(typeof value === 'number') return Number(value) === 1;
+    const raw = sanitizeText(value || '').toLowerCase();
+    if(!raw) return !!fallback;
+    if(['1', 'true', 'on', 'yes', 'si'].includes(raw)) return true;
+    if(['0', 'false', 'off', 'no'].includes(raw)) return false;
+    return !!fallback;
+  };
+  const isAgendaWaitlistFeatureEnabled = ()=> agendaWaitlistEnabled === true;
+  const applyAgendaWaitlistFeatureVisibility = ()=>{
+    const enabled = isAgendaWaitlistFeatureEnabled();
+    if(!enabled && eventCancelPostActionsEnabled){
+      setEventCancelPostActionsEnabled(false);
+    }
+    if(els.nextSlotsWaitlistCta){
+      els.nextSlotsWaitlistCta.classList.toggle('d-none', !enabled);
+    }
+    if(els.nextSlotsWaitlistBtn){
+      els.nextSlotsWaitlistBtn.disabled = !enabled;
+      els.nextSlotsWaitlistBtn.classList.toggle('d-none', !enabled);
+    }
+    if(els.eventCancelPostWaitlistBtn){
+      els.eventCancelPostWaitlistBtn.classList.toggle('d-none', !enabled);
+    }
+    if(!enabled && els.eventCancelWaitlistWrap){
+      els.eventCancelWaitlistWrap.classList.add('d-none');
+    }
+  };
+  const setAgendaWaitlistEnabled = (value, { syncInput = true, applyUi = true } = {})=>{
+    agendaWaitlistEnabled = normalizeAgendaWaitlistEnabled(value, false);
+    window.agendaWaitlistEnabled = agendaWaitlistEnabled;
+    if(syncInput && els.cfgWaitlistEnabled){
+      els.cfgWaitlistEnabled.checked = agendaWaitlistEnabled;
+    }
+    if(applyUi){
+      applyAgendaWaitlistFeatureVisibility();
+    }
+  };
   const AGENDA_REMINDER_BEFORE_VALUES = Object.freeze(['24h', '12h']);
   const AGENDA_REMINDER_CHANNEL_VALUES = Object.freeze(['whatsapp', 'email', 'sms', 'call']);
   const AGENDA_REMINDER_MAX_CHANNELS = 2;
@@ -13080,36 +13147,42 @@ console.info('app.js loaded :: 20251123a');
     if(!raw){
       return {
         settings: cloneAgendaReminderDefaults(),
-        messageTemplate: ''
+        messageTemplate: '',
+        waitlistEnabled: false
       };
     }
     try{
       const json = JSON.parse(raw);
       if(json && typeof json === 'object'){
+        const waitlistEnabled = normalizeAgendaWaitlistEnabled(json?.waitlist_enabled, false);
         const hasSettingsObject = !!(json?.settings && typeof json.settings === 'object');
         if(hasSettingsObject){
           return {
             settings: normalizeAgendaReminderSettings(json.settings),
-            messageTemplate: String(json?.message_template || '').trim()
+            messageTemplate: String(json?.message_template || '').trim(),
+            waitlistEnabled
           };
         }
         return {
           settings: normalizeAgendaReminderSettings(json),
-          messageTemplate: String(json?.message_template || '').trim()
+          messageTemplate: String(json?.message_template || '').trim(),
+          waitlistEnabled
         };
       }
     }catch(_){}
     return {
       settings: cloneAgendaReminderDefaults(),
-      messageTemplate: raw
+      messageTemplate: raw,
+      waitlistEnabled: false
     };
   };
-  const serializeAgendaReminderSettings = (settings = {}, messageTemplate = '')=>{
+  const serializeAgendaReminderSettings = (settings = {}, messageTemplate = '', waitlistEnabled = false)=>{
     const normalized = normalizeAgendaReminderSettings(settings);
     const payload = {
       version: AGENDA_REMINDER_TEMPLATE_VERSION,
       message_template: String(messageTemplate || '').trim(),
-      settings: normalized
+      settings: normalized,
+      waitlist_enabled: normalizeAgendaWaitlistEnabled(waitlistEnabled, false)
     };
     try{
       return JSON.stringify(payload);
@@ -13117,7 +13190,8 @@ console.info('app.js loaded :: 20251123a');
       return JSON.stringify({
         version: AGENDA_REMINDER_TEMPLATE_VERSION,
         message_template: '',
-        settings: cloneAgendaReminderDefaults()
+        settings: cloneAgendaReminderDefaults(),
+        waitlist_enabled: false
       });
     }
   };
@@ -13197,7 +13271,11 @@ console.info('app.js loaded :: 20251123a');
     agendaReminderSettings = normalized;
     window.agendaReminderSettings = normalizeAgendaReminderSettings(normalized);
     if(els.cfgReminderTemplate){
-      els.cfgReminderTemplate.value = serializeAgendaReminderSettings(normalized, agendaReminderMessageTemplate);
+      els.cfgReminderTemplate.value = serializeAgendaReminderSettings(
+        normalized,
+        agendaReminderMessageTemplate,
+        agendaWaitlistEnabled
+      );
     }
     agendaReminderPreviewSelection = '';
     enforceAgendaReminderChannelLimit();
@@ -13955,12 +14033,15 @@ console.info('app.js loaded :: 20251123a');
     const channels = Array.from(els.cfgChannels?.selectedOptions || [])
       .map((opt)=> sanitizeText(opt.value || ''))
       .filter(Boolean);
+    const waitlistEnabled = normalizeAgendaWaitlistEnabled(els.cfgWaitlistEnabled?.checked, false);
+    setAgendaWaitlistEnabled(waitlistEnabled, { syncInput: true, applyUi: true });
     const reminderSettings = readAgendaReminderSettingsFromUi();
     agendaReminderSettings = normalizeAgendaReminderSettings(reminderSettings);
     window.agendaReminderSettings = normalizeAgendaReminderSettings(agendaReminderSettings);
     const reminderTemplate = serializeAgendaReminderSettings(
       agendaReminderSettings,
-      agendaReminderMessageTemplate
+      agendaReminderMessageTemplate,
+      waitlistEnabled
     );
     if(els.cfgReminderTemplate){
       els.cfgReminderTemplate.value = reminderTemplate;
@@ -13971,6 +14052,7 @@ console.info('app.js loaded :: 20251123a');
       gap_between_appointments_min: 0,
       channels,
       cancellation_policy_hours: sanitizeText(els.cfgCancelPolicyHours?.value || '') || null,
+      waitlist_enabled: waitlistEnabled,
       reminder_template: reminderTemplate
     };
   };
@@ -13995,6 +14077,11 @@ console.info('app.js loaded :: 20251123a');
     }
     const reminderTemplate = String(data?.reminder_template || '');
     const parsedReminderPayload = parseAgendaReminderPayloadFromTemplate(reminderTemplate);
+    const waitlistEnabled = normalizeAgendaWaitlistEnabled(
+      data?.waitlist_enabled,
+      normalizeAgendaWaitlistEnabled(parsedReminderPayload?.waitlistEnabled, false)
+    );
+    setAgendaWaitlistEnabled(waitlistEnabled, { syncInput: true, applyUi: true });
     agendaReminderMessageTemplate = String(parsedReminderPayload?.messageTemplate || '').trim();
     applyAgendaReminderSettingsToUi(parsedReminderPayload?.settings || cloneAgendaReminderDefaults());
     if(els.cfgChannels){
@@ -14885,6 +14972,10 @@ console.info('app.js loaded :: 20251123a');
     };
   };
   const openWaitlistCreateFromNextAvailable = ()=>{
+    if(!isAgendaWaitlistFeatureEnabled()){
+      setNextSlotsError('La lista de espera está desactivada en Configuración de Agenda.');
+      return false;
+    }
     const context = resolveWaitlistContextFromNextAvailable();
     if(!sanitizeText(context?.doctor_id || '')){
       setNextSlotsError('No se pudo resolver el médico para inscribir en lista de espera.');
@@ -19153,6 +19244,7 @@ console.info('app.js loaded :: 20251123a');
     collapseAgendaConfigSections();
     renderAgendaScheduleEditorSelector();
     const initialReminderPayload = parseAgendaReminderPayloadFromTemplate(String(els.cfgReminderTemplate?.value || ''));
+    setAgendaWaitlistEnabled(initialReminderPayload?.waitlistEnabled, { syncInput: true, applyUi: true });
     agendaReminderMessageTemplate = String(initialReminderPayload?.messageTemplate || '').trim();
     applyAgendaReminderSettingsToUi(initialReminderPayload?.settings || cloneAgendaReminderDefaults());
     populateCreateBirthdateSelectors();
@@ -19206,12 +19298,15 @@ console.info('app.js loaded :: 20251123a');
         els.consultorio.value = chosen;
       }
     });
-    [els.cfgDurationMin, els.cfgChannels, els.cfgCancelPolicyHours, els.cfgReminderTemplate]
+    [els.cfgDurationMin, els.cfgChannels, els.cfgCancelPolicyHours, els.cfgReminderTemplate, els.cfgWaitlistEnabled]
       .filter(Boolean)
       .forEach((el)=>{
         el.addEventListener('input', ()=> queuePersistAgendaSettings());
         el.addEventListener('change', ()=> queuePersistAgendaSettings(220));
       });
+    els.cfgWaitlistEnabled?.addEventListener('change', ()=>{
+      setAgendaWaitlistEnabled(!!els.cfgWaitlistEnabled?.checked, { syncInput: false, applyUi: true });
+    });
     panel.querySelectorAll('input[data-ag-cfg-duration]').forEach((input)=>{
       input.addEventListener('change', ()=>{
         if(!input.checked || !els.cfgDurationMin) return;
@@ -20055,6 +20150,13 @@ console.info('app.js loaded :: 20251123a');
     });
     els.eventCancelPostWaitlistBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
+      if(!isAgendaWaitlistFeatureEnabled()){
+        setEventActionError('La lista de espera está desactivada en Configuración de Agenda.');
+        if(els.eventCancelWaitlistWrap){
+          els.eventCancelWaitlistWrap.classList.add('d-none');
+        }
+        return;
+      }
       loadEventCancelWaitlist().catch(()=> null);
     });
     els.eventCancelWaitlistEmptyNextBtn?.addEventListener('click', (event)=>{
@@ -20385,6 +20487,10 @@ console.info('app.js loaded :: 20251123a');
     });
     els.nextSlotsWaitlistBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
+      if(!isAgendaWaitlistFeatureEnabled()){
+        setNextSlotsError('La lista de espera está desactivada en Configuración de Agenda.');
+        return;
+      }
       const context = resolveWaitlistContextFromNextAvailable();
       if(!sanitizeText(context?.doctor_id || '')){
         setNextSlotsError('No se pudo resolver el médico para inscribir en lista de espera.');
@@ -20399,6 +20505,10 @@ console.info('app.js loaded :: 20251123a');
     });
     els.waitlistTermsContinueBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
+      if(!isAgendaWaitlistFeatureEnabled()){
+        setNextSlotsError('La lista de espera está desactivada en Configuración de Agenda.');
+        return;
+      }
       if(!(nextAvailableWaitlistContext && typeof nextAvailableWaitlistContext === 'object')){
         nextAvailableWaitlistContext = resolveWaitlistContextFromNextAvailable();
       }

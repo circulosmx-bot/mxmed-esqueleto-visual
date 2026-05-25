@@ -8,6 +8,8 @@ require_once __DIR__ . '/../../../api/_lib/db.php';
 
 class AgendaSettingsController
 {
+    private const REMINDER_TEMPLATE_VERSION = 1;
+
     private ?AgendaSettingsRepository $repository = null;
     private ?string $dbError = null;
     private array $actorContext = [];
@@ -91,7 +93,6 @@ class AgendaSettingsController
         $channels = array_values(array_unique(array_filter(array_map(static function ($v) {
             return trim((string)$v);
         }, $channels))));
-        $reminderTemplate = trim((string)($payload['reminder_template'] ?? ''));
         if (!in_array($duration, [20, 30, 40, 60], true)) {
             $duration = 30;
         }
@@ -101,6 +102,25 @@ class AgendaSettingsController
         if (!in_array($policy, [24, 48], true)) {
             $policy = null;
         }
+        $existingReminderTemplate = '';
+        $existingWaitlistEnabled = false;
+        try {
+            $existingRow = $this->repository->getByDoctorConsultorio($doctorId, $consultorioId);
+            $existingReminderTemplate = trim((string)($existingRow['reminder_template'] ?? ''));
+            $existingWaitlistEnabled = $this->extractWaitlistEnabledFromReminderTemplate($existingReminderTemplate);
+        } catch (\Throwable $e) {
+            $existingReminderTemplate = '';
+            $existingWaitlistEnabled = false;
+        }
+        $reminderTemplateRaw = trim((string)($payload['reminder_template'] ?? ''));
+        $waitlistEnabled = array_key_exists('waitlist_enabled', $payload)
+            ? $this->normalizeBoolean($payload['waitlist_enabled'], false)
+            : $existingWaitlistEnabled;
+        $reminderTemplate = $this->composeReminderTemplateForStorage(
+            $reminderTemplateRaw,
+            $waitlistEnabled,
+            $existingReminderTemplate
+        );
         $record = [
             'doctor_id' => $doctorId,
             'consultorio_id' => $consultorioId,
@@ -170,6 +190,8 @@ class AgendaSettingsController
 
     private function normalize(?array $row, string $doctorId, string $consultorioId): array
     {
+        $reminderTemplate = trim((string)($row['reminder_template'] ?? ''));
+        $waitlistEnabled = $this->extractWaitlistEnabledFromReminderTemplate($reminderTemplate);
         $channels = [];
         if (is_array($row) && isset($row['channels_json']) && is_string($row['channels_json']) && trim($row['channels_json']) !== '') {
             $decoded = json_decode($row['channels_json'], true);
@@ -186,10 +208,101 @@ class AgendaSettingsController
             'gap_between_appointments_min' => (int)($row['gap_between_appointments_min'] ?? 0),
             'channels' => $channels,
             'cancellation_policy_hours' => isset($row['cancellation_policy_hours']) ? (int)$row['cancellation_policy_hours'] : null,
-            'reminder_template' => trim((string)($row['reminder_template'] ?? '')),
+            'waitlist_enabled' => $waitlistEnabled,
+            'reminder_template' => $reminderTemplate,
             'created_at' => $row['created_at'] ?? null,
             'updated_at' => $row['updated_at'] ?? null,
         ];
+    }
+
+    private function decodeReminderTemplateObject(string $rawTemplate): ?array
+    {
+        $raw = trim($rawTemplate);
+        if ($raw === '') {
+            return null;
+        }
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return null;
+        }
+        return $decoded;
+    }
+
+    private function normalizeBoolean($value, bool $default = false): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_int($value) || is_float($value)) {
+            return ((int)$value) === 1;
+        }
+        $raw = strtolower(trim((string)$value));
+        if ($raw === '') {
+            return $default;
+        }
+        if (in_array($raw, ['1', 'true', 'on', 'yes', 'si'], true)) {
+            return true;
+        }
+        if (in_array($raw, ['0', 'false', 'off', 'no'], true)) {
+            return false;
+        }
+        return $default;
+    }
+
+    private function extractWaitlistEnabledFromReminderTemplate(string $rawTemplate): bool
+    {
+        $decoded = $this->decodeReminderTemplateObject($rawTemplate);
+        if (!is_array($decoded) || !array_key_exists('waitlist_enabled', $decoded)) {
+            return false;
+        }
+        return $this->normalizeBoolean($decoded['waitlist_enabled'], false);
+    }
+
+    private function encodeReminderTemplatePayload(array $payload, string $fallbackTemplate): string
+    {
+        $encoded = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (is_string($encoded) && $encoded !== '') {
+            return $encoded;
+        }
+        return trim($fallbackTemplate);
+    }
+
+    private function composeReminderTemplateForStorage(string $incomingTemplate, bool $waitlistEnabled, string $existingTemplate = ''): string
+    {
+        $incoming = trim($incomingTemplate);
+        $existing = trim($existingTemplate);
+
+        if ($incoming === '') {
+            if ($existing === '') {
+                return '';
+            }
+            $existingDecoded = $this->decodeReminderTemplateObject($existing);
+            if (!is_array($existingDecoded)) {
+                return $existing;
+            }
+            $existingDecoded['waitlist_enabled'] = $waitlistEnabled;
+            return $this->encodeReminderTemplatePayload($existingDecoded, $existing);
+        }
+
+        $incomingDecoded = $this->decodeReminderTemplateObject($incoming);
+        if (is_array($incomingDecoded)) {
+            $incomingDecoded['waitlist_enabled'] = $waitlistEnabled;
+            return $this->encodeReminderTemplatePayload($incomingDecoded, $incoming);
+        }
+
+        $existingDecoded = $this->decodeReminderTemplateObject($existing);
+        if (is_array($existingDecoded)) {
+            $existingDecoded['message_template'] = $incoming;
+            $existingDecoded['waitlist_enabled'] = $waitlistEnabled;
+            return $this->encodeReminderTemplatePayload($existingDecoded, $incoming);
+        }
+
+        $payload = [
+            'version' => self::REMINDER_TEMPLATE_VERSION,
+            'message_template' => $incoming,
+            'waitlist_enabled' => $waitlistEnabled,
+        ];
+        return $this->encodeReminderTemplatePayload($payload, $incoming);
     }
 
     private function error(string $code, string $message, array $meta = []): array
