@@ -602,6 +602,8 @@ console.info('app.js loaded :: 20251123a');
     patientLookupContext: panel.querySelector('#ag_patient_lookup_context'),
     patientLookupNotice: panel.querySelector('#ag_patient_lookup_notice'),
     patientLookupList: panel.querySelector('#ag_patient_lookup_list'),
+    patientLookupReasonWrap: panel.querySelector('#ag_patient_lookup_reason_wrap'),
+    patientLookupReason: panel.querySelector('#ag_patient_lookup_reason_input'),
     appointmentReason: panel.querySelector('#ag_appointment_reason_input'),
     createSubmit: panel.querySelector('#ag_create_submit_btn'),
     workspaceShell: panel.querySelector('.mx-ag-workspace-shell'),
@@ -805,6 +807,7 @@ console.info('app.js loaded :: 20251123a');
   let patientLookupEntries = [];
   let patientLookupSelectedId = '';
   let patientLookupContextQuery = '';
+  let createExistingPatientReason = '';
   let patientSharedPhoneEntries = [];
   let patientSharedPhoneSelectedId = '';
   let patientSharedPhoneCurrentDigits = '';
@@ -5601,6 +5604,7 @@ console.info('app.js loaded :: 20251123a');
       els.patientNewToggle.setAttribute('aria-pressed', isNew ? 'true' : 'false');
     }
     if(isNew){
+      createExistingPatientReason = '';
       if(els.patientId){
         els.patientId.value = '';
         els.patientId.removeAttribute('readonly');
@@ -5620,6 +5624,7 @@ console.info('app.js loaded :: 20251123a');
       if(els.patientNewSex) els.patientNewSex.value = '';
       if(els.patientNewPhone) els.patientNewPhone.value = '';
       if(els.patientNewEmail) els.patientNewEmail.value = '';
+      if(els.appointmentReason) els.appointmentReason.value = '';
       setCreatePatientBirthdateFieldVisible(false);
       setCreatePatientBirthdate('', {
         readOnly: true,
@@ -5884,6 +5889,8 @@ console.info('app.js loaded :: 20251123a');
     patientLookupSelectedId = '';
     if(els.patientLookupModalEl) els.patientLookupModalEl.classList.remove('is-confirm-mode');
     if(els.patientLookupNotice) els.patientLookupNotice.classList.remove('is-confirm-mode');
+    if(els.patientLookupReasonWrap) els.patientLookupReasonWrap.classList.add('d-none');
+    if(els.patientLookupReason) els.patientLookupReason.value = '';
   };
   const resetSharedPhoneSelectionState = ()=>{
     patientSharedPhoneSelectedId = '';
@@ -5944,6 +5951,12 @@ console.info('app.js loaded :: 20251123a');
     }
     if(els.patientLookupNotice){
       els.patientLookupNotice.classList.toggle('is-confirm-mode', !!patientLookupSelectedId);
+    }
+    if(els.patientLookupReasonWrap){
+      els.patientLookupReasonWrap.classList.toggle('d-none', !patientLookupSelectedId);
+    }
+    if(!patientLookupSelectedId && els.patientLookupReason){
+      els.patientLookupReason.value = '';
     }
     renderPatientLookupList();
   };
@@ -14536,6 +14549,7 @@ console.info('app.js loaded :: 20251123a');
     if(els.patientNewPhone) els.patientNewPhone.value = '';
     if(els.patientNewEmail) els.patientNewEmail.value = '';
     if(els.appointmentReason) els.appointmentReason.value = '';
+    createExistingPatientReason = '';
     if(els.startInfoTime) els.startInfoTime.textContent = '--:--';
     if(els.startInfoDate) els.startInfoDate.textContent = '--';
     if(els.startAt) els.startAt.value = '';
@@ -15309,7 +15323,7 @@ console.info('app.js loaded :: 20251123a');
     const newPatientDisplayName = [newPatientFirstName, newPatientLastName1, newPatientLastName2].filter(Boolean).join(' ');
     const newPatientPhone = sanitizeText(els.patientNewPhone?.value || '');
     const newPatientEmail = sanitizeText(els.patientNewEmail?.value || '');
-    const reasonText = sanitizeText(els.appointmentReason?.value || '');
+    const reasonText = resolveCreateAppointmentReasonText();
     const actorRole = resolveCreateActorRole();
     const actorId = resolveActorId() || doctorId;
     const channelOrigin = 'next_available_waitlist';
@@ -15401,6 +15415,12 @@ console.info('app.js loaded :: 20251123a');
       }
     }
   };
+  const resolveCreateAppointmentReasonText = ()=>{
+    if(createPatientMode === 'existing'){
+      return sanitizeText(createExistingPatientReason || '');
+    }
+    return sanitizeText(els.appointmentReason?.value || '');
+  };
   const handleCreateSubmit = async ()=>{
     if(createRequestInFlight) return;
     const doctorId = getDoctorId();
@@ -15413,6 +15433,7 @@ console.info('app.js loaded :: 20251123a');
     const newPatientPhone = sanitizeText(els.patientNewPhone?.value || '');
     const newPatientEmail = sanitizeText(els.patientNewEmail?.value || '');
     const newPatientBirthdate = toDateOnlyYmd(els.patientBirthdate?.value || '');
+    const reasonText = resolveCreateAppointmentReasonText();
     const startInput = sanitizeText(els.startAt?.value || '');
     const modality = sanitizeText(els.modality?.value || 'in_person') || 'in_person';
     const actorRole = resolveCreateActorRole();
@@ -15473,6 +15494,7 @@ console.info('app.js loaded :: 20251123a');
       start_at: startSql,
       end_at: endSql,
       modality: modality,
+      ...(reasonText ? { notes: reasonText } : {}),
       ...actorPayload,
       channel_origin: channelOrigin,
       created_by_role: actorRole,
@@ -20653,6 +20675,7 @@ console.info('app.js loaded :: 20251123a');
         event.preventDefault();
         const patientId = sanitizeText(confirmYesBtn.getAttribute('data-ag-identity-confirm-yes') || '');
         if(!patientId) return;
+        createExistingPatientReason = sanitizeText(els.patientLookupReason?.value || '');
         const selectedEntry = patientLookupEntries.find((entry)=> sanitizeText(entry?.patient_id || '') === patientId) || null;
         applyExistingPatientSelection({
           patientId,
@@ -20683,6 +20706,7 @@ console.info('app.js loaded :: 20251123a');
         event.preventDefault();
         const patientId = sanitizeText(confirmYesBtn.getAttribute('data-ag-identity-confirm-yes') || '');
         if(!patientId) return;
+        createExistingPatientReason = '';
         const selectedEntry = patientSharedPhoneEntries.find((entry)=> sanitizeText(entry?.patient_id || '') === patientId) || null;
         applyExistingPatientSelection({
           patientId,

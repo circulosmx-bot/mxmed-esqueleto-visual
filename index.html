@@ -3428,6 +3428,16 @@
                                 <div id="ag_patient_birthdate_hint" class="form-text d-none"></div>
                               </div>
                               <div id="ag_patient_birthdate_info" class="small text-muted mt-2 d-none"></div>
+                              <div class="mt-3">
+                                <label class="form-label" for="ag_appointment_reason_input">Motivo de la cita <span class="text-muted">(opcional)</span></label>
+                                <textarea
+                                  class="form-control no-check"
+                                  id="ag_appointment_reason_input"
+                                  rows="2"
+                                  maxlength="600"
+                                  placeholder="Describe brevemente el motivo de la consulta"
+                                ></textarea>
+                              </div>
                             </div>
                           </article>
 
@@ -3468,16 +3478,6 @@
                             </div>
                           </article>
                         </section>
-                      </div>
-                      <div class="col-12">
-                        <label class="form-label" for="ag_appointment_reason_input">Motivo de la cita <span class="text-muted">(opcional)</span></label>
-                        <textarea
-                          class="form-control no-check"
-                          id="ag_appointment_reason_input"
-                          rows="2"
-                          maxlength="600"
-                          placeholder="Describe brevemente el motivo de la consulta"
-                        ></textarea>
                       </div>
                       <div class="col-12 d-none">
                         <input type="hidden" id="ag_channel_input" value="agenda_frontend_v1">
@@ -3530,6 +3530,16 @@
                   <div class="modal-body pt-2 pb-3">
                     <div id="ag_patient_lookup_notice" class="mx-ag-shared-phone-notice d-none" role="status" aria-live="polite">
                       <div id="ag_patient_lookup_list" class="mx-ag-shared-phone-list"></div>
+                      <div id="ag_patient_lookup_reason_wrap" class="mt-3 d-none">
+                        <label class="form-label mb-1" for="ag_patient_lookup_reason_input">Motivo de la cita <span class="text-muted">(opcional)</span></label>
+                        <textarea
+                          class="form-control no-check"
+                          id="ag_patient_lookup_reason_input"
+                          rows="2"
+                          maxlength="600"
+                          placeholder="Describe brevemente el motivo de la consulta"
+                        ></textarea>
+                      </div>
                     </div>
                   </div>
                 </div>
