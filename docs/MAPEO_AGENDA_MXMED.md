@@ -1067,3 +1067,81 @@ Resultado global: **PASS**.
 - Retiro/degradación progresiva de `localStorage` para bloqueos.
 - Auditoría formal (`availability_blocked` / `availability_unblocked`) con persistencia dedicada si se decide.
 - Validación strict operator en sesión UI real.
+
+## 20. Adenda BLOQ-F3: integración UI shell con backend canónico de bloqueos (2026-05-26)
+
+Estado: **implementado, validado y pusheado**.
+
+Commits base:
+- `7cf10dd` `feat(agenda): integra lectura backend de bloqueos`
+- `4ccecb9` `feat(agenda): conecta bloqueo parcial con backend`
+- `79c8e03` `feat(agenda): agrega desbloqueo de dia desde header`
+
+### 20.1 Problema resuelto
+- Se cerró la brecha entre backend canónico de bloqueos (F2) y shell UI de Agenda.
+- La Agenda dejó de depender de writes solo locales para bloqueo/desbloqueo parcial.
+- Se habilitó desbloqueo global por header cuando el día está totalmente cubierto por bloqueos.
+
+### 20.2 Endpoints usados por UI
+- `GET /api/agenda/index.php/availability/blocks`
+- `POST /api/agenda/index.php/availability/blocks`
+- `PATCH /api/agenda/index.php/availability/blocks/{id}`
+- `GET /api/agenda/index.php/schedule` (fallback para ventanas operativas reales en cobertura total).
+
+### 20.3 Flujo implementado
+
+A) Lectura backend de bloqueos (F3-A)
+- La UI hidrata bloqueos activos desde `GET /availability/blocks`.
+- Proyecta bloqueos como `blocked_slot`.
+- Mezcla backend + `localStorage` legacy para compatibilidad.
+- Deduplica privilegiando backend cuando existe solapamiento.
+
+B) Bloqueo parcial backend desde UI
+- Al bloquear desde card/slot disponible, la UI crea override backend con `POST /availability/blocks`.
+- Contrato operativo: `scope=partial`, `type=close`, `consultorio_id` real, `start_at`, `end_at`.
+- En éxito: refresh de Agenda + conservación de metadata backend para operaciones posteriores.
+- En fallo: no se crea write local silencioso.
+
+C) Desbloqueo backend de conjunto
+- La UI desactiva override backend por `PATCH /availability/blocks/{id}` con `is_active=false`.
+- Label UX: `Desbloquear este conjunto`.
+
+D) Desbloquear solo este horario
+- Cuando la card seleccionada representa un subtramo de un rango mayor:
+  - `PATCH` del override original para inactivarlo.
+  - `POST` de segmentos residuales válidos (izquierdo/derecho) cuando aplique.
+- Ejemplo: original `09:00-13:00`, liberar `10:30-11:00` => quedan `09:00-10:30` y `11:00-13:00`.
+- Requiere metadata backend consistente (`backend_override_id`, rango origen y slot seleccionado).
+
+E) Desbloqueo de todo el día desde header
+- El header alterna entre `Bloquear todo el día` y `Desbloquear todo el día`.
+- `Desbloquear todo el día` aparece solo si la cobertura de bloqueos activos cubre todas las ventanas operativas reales del día.
+- Cuando `/availability` queda vacío por cobertura total, el detector toma ventanas reales vía fallback `GET /schedule`.
+- La acción global desactiva overrides backend activos del día (y limpia compat local legacy) sin contar citas como bloqueos.
+
+### 20.4 QA resumido (PASS)
+- Lectura/pintado de bloqueos backend: PASS.
+- Bloqueo parcial por `POST`: PASS.
+- Acumulación de múltiples bloqueos: PASS.
+- Desbloqueo de conjunto por `PATCH`: PASS.
+- Desbloqueo granular de una card dentro de rango (centro/inicio/final): PASS.
+- Persistencia tras recarga (read-through backend): PASS.
+- Detector de día completamente bloqueado en header: PASS.
+- Día parcialmente bloqueado no muestra desbloqueo global: PASS.
+- Citas ocupadas no se interpretan como bloqueo: PASS.
+- Modo `Todos` validado: PASS.
+- Cierre QA: `GET /availability/blocks?doctor_id=1&active_only=1` en `count=0`.
+
+### 20.5 Fuera de alcance
+- No se introdujo backend nuevo adicional para full-day fuera de los endpoints ya canónicos.
+- No se tocó Waitlist/Resolver hueco.
+- No se alteró circuito de cancelación de citas.
+
+### 20.6 Deuda futura (post F3)
+- Retiro/degradación progresiva de `localStorage` legacy de bloqueos.
+- Auditoría canónica dedicada (`availability_blocked` / `availability_unblocked`) y su persistencia final.
+- Validación strict/operator en sesión UI real dedicada.
+- Hardening de fallos parciales durante split backend si se requiere nivel transaccional más estricto.
+- Cobertura ampliada de escenarios multi-sesión/concurrencia.
+- Limpieza progresiva de helpers legacy cuando backend sea fuente única.
+- Evaluación futura de formalización full-day backend más allá de la capa de compatibilidad actual.
