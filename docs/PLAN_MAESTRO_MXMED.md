@@ -75,14 +75,21 @@ Pendiente dentro de P16 (abierto):
 ### Concluido (v1 funcional consolidado)
 - Semana custom operativa.
 - Día custom operativa.
+- Sincronía operativa Día ↔ Semana consolidada.
 - Vista Mes oculta/no operativa.
 - Nueva cita refinada.
 - Badge `AHORA`.
+- Estados de cita operativos en shell:
+  - confirmar cita manual privada;
+  - reprogramar cita confirmada reinicia confirmación;
+  - `no_show` bloqueado para citas futuras;
+  - cancelación operativa.
 - Waitlist MVP desde “Buscar siguiente cita disponible”.
 - Resolver hueco MVP post-cancelación.
 - Resolver hueco A1: ranking, máximo 5, estado vacío y colisión.
 - Hardening B1: `__all__` no puede ser destino de cita.
 - B2-A: `consultorio_scope` compatible.
+- BLOQ-F2 backend canónico de bloqueos cerrado (`GET/POST/PATCH /availability/blocks`).
 - BLOQ-F3 funcional:
   - lectura backend de bloqueos;
   - bloqueo parcial backend;

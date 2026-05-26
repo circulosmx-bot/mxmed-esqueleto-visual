@@ -12,7 +12,23 @@ Esta versión incorpora el estado real actual del shell principal:
 
 Se mantiene deuda en:
 - convergencia final con front legacy `api/agenda/ui/*`,
-- write backend dedicado para bloqueos administrativos desde shell (actualmente persiste en frontend/localStorage).
+- retiro/degradación progresiva de `localStorage` legacy para bloqueos y hardening transaccional de split granular.
+
+## Adenda de actualización (2026-05-26)
+
+Actualización de estado respecto a bloqueos de disponibilidad:
+- BLOQ-F2 backend canónico mínimo de bloqueos: cerrado (`GET/POST/PATCH /availability/blocks`).
+- BLOQ-F3 integración shell UI ↔ backend canónico: cerrada funcionalmente.
+  - lectura backend de bloqueos;
+  - bloqueo parcial backend desde UI;
+  - desbloqueo de conjunto (`PATCH`);
+  - desbloqueo granular de horario con split seguro;
+  - desbloqueo de día desde header con detector de cobertura total y fallback a `GET /schedule`.
+
+Deuda vigente no bloqueante (bloqueos):
+- retiro progresivo de compatibilidad legacy en `localStorage`;
+- auditoría canónica dedicada (`availability_blocked` / `availability_unblocked`);
+- hardening adicional de fallos parciales en split backend y escenarios multi-sesión.
 
 ## 1) Propósito
 Este documento formaliza el estado real del módulo Agenda en MXMed con base en evidencia del repositorio.
@@ -63,14 +79,14 @@ Se considera consolidado en Agenda:
 
 ### 3.2 Qué sigue pendiente (y por qué)
 Pendiente principal:
-- convergencia de cobertura entre shell custom y frentes legacy de Agenda (especialmente waitlist y write backend dedicado para bloqueos administrativos).
+- convergencia de cobertura entre shell custom y frentes legacy de Agenda (especialmente waitlist), además del retiro progresivo de compatibilidad legacy en bloqueos.
 
 Esto NO implica módulo funcional incompleto. Implica deuda de convergencia y endurecimiento operativo en frentes aún mixtos.
 
 ### 3.3 Error de interpretación que debe evitarse
 Es incorrecto concluir “Agenda no está hecha” solo porque:
 - aún coexisten rutas legacy de Agenda fuera del shell,
-- o no se ha unificado totalmente la persistencia de bloqueos administrativos en backend desde la UX shell.
+- o aún existe capa de compatibilidad local (`localStorage`) para algunos flujos de bloqueos durante la transición.
 
 El estado real es: lógica/contratos consolidados + shell custom operativo + deuda de convergencia final y backend de soporte para ciertos flujos administrativos.
 

@@ -1063,7 +1063,7 @@ Resultado global: **PASS**.
 - strict operator en sesión real: **PARTIAL** (pendiente validación dedicada).
 
 ### 19.8 Deuda futura (post F2)
-- BLOQ-F3: conectar UI shell a backend canónico de bloques.
+- BLOQ-F3: conectar UI shell a backend canónico de bloques. **Estado actual**: resuelto en Adenda 20 (cierre funcional F3).
 - Retiro/degradación progresiva de `localStorage` para bloqueos.
 - Auditoría formal (`availability_blocked` / `availability_unblocked`) con persistencia dedicada si se decide.
 - Validación strict operator en sesión UI real.
