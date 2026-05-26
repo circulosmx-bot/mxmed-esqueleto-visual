@@ -838,6 +838,7 @@ console.info('app.js loaded :: 20251123a');
   let activeSlotActionPortal = null;
   let activeSlotActionPanel = null;
   let dayHeadMenuContext = null;
+  let dayHeadMenuRequestSeq = 0;
   let customSlotMenuSelection = null;
   let suppressCellMenuAutoHideUntil = 0;
   let activeEventActionPortal = null;
@@ -6721,7 +6722,261 @@ console.info('app.js loaded :: 20251123a');
       source: 'day_header'
     };
   };
+  const resolveDayHeadBlockedCoverageContext = async ({
+    dayKey = '',
+    consultorioId = ''
+  } = {})=>{
+    const safeDayKey = sanitizeText(dayKey || '').slice(0, 10);
+    const dayStart = toLocalDayDate(safeDayKey);
+    const dayEnd = addLocalDays(dayStart, 1);
+    if(
+      !safeDayKey
+      || !(dayStart instanceof Date)
+      || Number.isNaN(dayStart.getTime())
+      || !(dayEnd instanceof Date)
+      || Number.isNaN(dayEnd.getTime())
+      || dayEnd <= dayStart
+    ){
+      return {
+        dayKey: safeDayKey,
+        canUnblockDay: false,
+        reason: 'invalid_day'
+      };
+    }
+    const targetConsultorioIds = resolveBlockingTargetConsultorioIds(consultorioId)
+      .map((id)=> sanitizeText(id || ''))
+      .filter((id)=> isNumericId(id));
+    if(!targetConsultorioIds.length){
+      return {
+        dayKey: safeDayKey,
+        canUnblockDay: false,
+        reason: 'missing_scope'
+      };
+    }
+
+    try{
+      await ensureBackendBlockedSlotsHydrated({
+        start: dayStart,
+        end: dayEnd
+      });
+    }catch(_){}
+
+    let operationalWindows = resolveBlockingOperationalWindowsForDay({
+      dayKey: safeDayKey,
+      targetConsultorioIds,
+      allowDomFallback: true
+    });
+    if(!operationalWindows.length){
+      try{
+        operationalWindows = await resolveBlockingOperationalWindowsFromScheduleApi({
+          dayKey: safeDayKey,
+          targetConsultorioIds
+        });
+      }catch(_){
+        operationalWindows = [];
+      }
+    }
+    if(!operationalWindows.length){
+      try{
+        operationalWindows = await resolveBlockingOperationalWindowsFromAvailabilityApi({
+          dayKey: safeDayKey,
+          targetConsultorioIds
+        });
+      }catch(_){
+        operationalWindows = [];
+      }
+    }
+    const normalizedWindows = (Array.isArray(operationalWindows) ? operationalWindows : [])
+      .map((row)=>({
+        consultorio_id: sanitizeText(row?.consultorio_id || ''),
+        consultorio_label: sanitizeText(
+          row?.consultorio_label
+          || resolveAgendaConsultorioLabelById(sanitizeText(row?.consultorio_id || ''))
+          || ''
+        ),
+        start: cloneValidDateForBlock(row?.start),
+        end: cloneValidDateForBlock(row?.end)
+      }))
+      .filter((row)=>{
+        return isNumericId(row.consultorio_id)
+          && targetConsultorioIds.includes(row.consultorio_id)
+          && row.start instanceof Date
+          && row.end instanceof Date
+          && row.end > row.start;
+      });
+    if(!normalizedWindows.length){
+      return {
+        dayKey: safeDayKey,
+        targetConsultorioIds,
+        operationalWindows: [],
+        blockedRows: [],
+        backendOverrideIds: [],
+        localBlockIds: [],
+        canUnblockDay: false,
+        reason: 'no_operational_windows'
+      };
+    }
+
+    const operativeConsultorioIds = new Set(
+      normalizedWindows
+        .map((row)=> sanitizeText(row?.consultorio_id || ''))
+        .filter((id)=> isNumericId(id))
+    );
+    const localScopeRows = readBlockedSlotsAcrossScopes();
+    const localRows = Array.isArray(localScopeRows?.rows)
+      ? localScopeRows.rows
+      : [];
+    const backendRows = getCachedBackendBlockedRowsForRange(dayStart, dayEnd);
+    const mergedRows = dedupeBlockedRowsPreferBackend([
+      ...localRows,
+      ...backendRows
+    ]);
+    const blockedRows = mergedRows.filter((row)=>{
+      const consultorioIdRow = sanitizeText(row?.consultorio_id || '');
+      if(!operativeConsultorioIds.has(consultorioIdRow)) return false;
+      const rowStart = parseDateTimeLocalSafe(sanitizeText(row?.start_at || ''));
+      const rowEnd = parseDateTimeLocalSafe(sanitizeText(row?.end_at || ''));
+      if(
+        !(rowStart instanceof Date)
+        || !(rowEnd instanceof Date)
+        || Number.isNaN(rowStart.getTime())
+        || Number.isNaN(rowEnd.getTime())
+        || rowEnd <= rowStart
+      ){
+        return false;
+      }
+      return rowStart < dayEnd && rowEnd > dayStart;
+    });
+
+    const blockedByConsultorio = new Map();
+    blockedRows.forEach((row)=>{
+      const consultorioIdRow = sanitizeText(row?.consultorio_id || '');
+      const rowStartRaw = parseDateTimeLocalSafe(sanitizeText(row?.start_at || ''));
+      const rowEndRaw = parseDateTimeLocalSafe(sanitizeText(row?.end_at || ''));
+      if(
+        !(rowStartRaw instanceof Date)
+        || !(rowEndRaw instanceof Date)
+        || Number.isNaN(rowStartRaw.getTime())
+        || Number.isNaN(rowEndRaw.getTime())
+        || rowEndRaw <= rowStartRaw
+      ){
+        return;
+      }
+      const clippedStart = rowStartRaw < dayStart ? new Date(dayStart) : rowStartRaw;
+      const clippedEnd = rowEndRaw > dayEnd ? new Date(dayEnd) : rowEndRaw;
+      if(!(clippedStart instanceof Date) || !(clippedEnd instanceof Date) || clippedEnd <= clippedStart){
+        return;
+      }
+      if(!blockedByConsultorio.has(consultorioIdRow)){
+        blockedByConsultorio.set(consultorioIdRow, []);
+      }
+      blockedByConsultorio.get(consultorioIdRow).push({
+        start: clippedStart,
+        end: clippedEnd
+      });
+    });
+    const mergedBlockedByConsultorio = new Map();
+    blockedByConsultorio.forEach((ranges, consultorioIdRow)=>{
+      mergedBlockedByConsultorio.set(
+        consultorioIdRow,
+        mergeBlockingWindows(Array.isArray(ranges) ? ranges : [])
+      );
+    });
+
+    const uncoveredWindows = normalizedWindows.filter((windowRow)=>{
+      const ranges = Array.isArray(mergedBlockedByConsultorio.get(windowRow.consultorio_id))
+        ? mergedBlockedByConsultorio.get(windowRow.consultorio_id)
+        : [];
+      if(!ranges.length) return true;
+      return !ranges.some((range)=>{
+        return isBlockRangeContaining(range?.start, range?.end, windowRow.start, windowRow.end, 1000);
+      });
+    });
+
+    const backendOverrideIds = Array.from(new Set(
+      blockedRows
+        .map((row)=> sanitizeText(row?.backend_override_id || ''))
+        .filter((id)=> isNumericId(id))
+    ));
+    const localBlockIds = Array.from(new Set(
+      blockedRows
+        .filter((row)=> !isNumericId(sanitizeText(row?.backend_override_id || '')))
+        .map((row)=> normalizeBlockedSlotIdCandidate(sanitizeText(row?.block_id || '')))
+        .filter(Boolean)
+    ));
+    const hasUnlockableRows = backendOverrideIds.length > 0 || localBlockIds.length > 0;
+    const canUnblockDay = uncoveredWindows.length === 0 && hasUnlockableRows;
+
+    return {
+      dayKey: safeDayKey,
+      targetConsultorioIds: Array.from(operativeConsultorioIds),
+      operationalWindows: normalizedWindows,
+      blockedRows,
+      backendOverrideIds,
+      localBlockIds,
+      uncoveredWindowsCount: uncoveredWindows.length,
+      canUnblockDay,
+      reason: canUnblockDay ? '' : (uncoveredWindows.length ? 'day_not_fully_blocked' : 'missing_unlockable_rows')
+    };
+  };
+  const unblockDayHeadBlockedCoverageContext = async (context = null)=>{
+    const safeContext = (context && typeof context === 'object') ? context : {};
+    const backendOverrideIds = Array.from(new Set(
+      (Array.isArray(safeContext.backendOverrideIds) ? safeContext.backendOverrideIds : [])
+        .map((id)=> sanitizeText(id || ''))
+        .filter((id)=> isNumericId(id))
+    ));
+    const localBlockIds = Array.from(new Set(
+      (Array.isArray(safeContext.localBlockIds) ? safeContext.localBlockIds : [])
+        .map((id)=> normalizeBlockedSlotIdCandidate(id))
+        .filter(Boolean)
+    ));
+    if(!backendOverrideIds.length && !localBlockIds.length){
+      return {
+        ok: false,
+        reason: 'missing_unlockable_rows',
+        failedBackendIds: [],
+        patchedBackendIds: [],
+        removedLocalIds: []
+      };
+    }
+    const failedBackendIds = [];
+    const patchedBackendIds = [];
+    for(const overrideId of backendOverrideIds){
+      let backendResult = null;
+      try{
+        backendResult = await AgendaApiClient.updateAvailabilityBlock(overrideId, {
+          is_active: false,
+          reason: 'Desbloqueo de día desde agenda'
+        });
+      }catch(_){
+        backendResult = null;
+      }
+      if(!(backendResult && backendResult.ok === true)){
+        failedBackendIds.push(overrideId);
+        continue;
+      }
+      patchedBackendIds.push(overrideId);
+      removeBlockedSlotsByBackendOverrideId(overrideId);
+    }
+    const removedLocalIds = [];
+    if(!failedBackendIds.length){
+      localBlockIds.forEach((blockId)=>{
+        if(removeBlockedSlotById(blockId)){
+          removedLocalIds.push(blockId);
+        }
+      });
+    }
+    return {
+      ok: failedBackendIds.length === 0,
+      reason: failedBackendIds.length ? 'patch_failed' : '',
+      failedBackendIds,
+      patchedBackendIds,
+      removedLocalIds
+    };
+  };
   const hideDayHeadMenu = ()=>{
+    dayHeadMenuRequestSeq += 1;
     if(els.dayHeadMenu){
       els.dayHeadMenu.classList.add('d-none');
       els.dayHeadMenu.style.left = '';
@@ -6772,8 +7027,9 @@ console.info('app.js loaded :: 20251123a');
       });
     }catch(_){}
   };
-  const openDayHeadMenu = ({ dayKey = '', consultorioId = '', consultorioName = '', anchorEl = null, jsEvent = null } = {})=>{
+  const openDayHeadMenu = async ({ dayKey = '', consultorioId = '', consultorioName = '', anchorEl = null, jsEvent = null } = {})=>{
     if(!(els.dayHeadMenu instanceof HTMLElement)) return false;
+    const requestSeq = ++dayHeadMenuRequestSeq;
     const safeDayKey = sanitizeText(dayKey || '').slice(0, 10);
     if(!safeDayKey) return false;
     if(isCustomWeekActive() && !isCustomWeekRenderedDayKey(safeDayKey)){
@@ -6788,15 +7044,30 @@ console.info('app.js loaded :: 20251123a');
     }
     const selection = buildDaySlotSelectionFromDayKey(safeDayKey, consultorioId, consultorioName);
     if(!selection) return false;
+    let dayCoverageContext = null;
+    try{
+      dayCoverageContext = await resolveDayHeadBlockedCoverageContext({
+        dayKey: safeDayKey,
+        consultorioId: sanitizeText(selection?.consultorio_id || consultorioId || '')
+      });
+    }catch(_){
+      dayCoverageContext = null;
+    }
+    if(requestSeq !== dayHeadMenuRequestSeq){
+      return false;
+    }
     dayHeadMenuContext = {
       dayKey: safeDayKey,
-      selection
+      selection,
+      dayCoverageContext
     };
     const dayBounds = resolveBlockDayBoundsFromDate(selection.start);
     const startLabel = formatAgendaHourLabelShort(dayBounds?.dayStart || selection.start);
     const endLabel = formatAgendaHourLabelShort(dayBounds?.dayEnd || selection.end);
     if(els.dayHeadBlockBtn){
-      els.dayHeadBlockBtn.textContent = 'Bloquear todo el día';
+      els.dayHeadBlockBtn.textContent = dayCoverageContext?.canUnblockDay === true
+        ? 'Desbloquear todo el día'
+        : 'Bloquear todo el día';
     }
     if(els.dayHeadViewBtn){
       els.dayHeadViewBtn.textContent = `Bloquear de ${startLabel} a ${endLabel}`;
@@ -10166,6 +10437,114 @@ console.info('app.js loaded :: 20251123a');
     try{
       console.info('MXM BLOCK FULLDAY WINDOWS DEBUG', {
         stage: 'resolve_windows_api_fallback',
+        dayKey: safeDayKey,
+        doctor_id: doctorId,
+        targetConsultorioIds: consultorioIds,
+        rowsResolved: normalized.map((row)=>({
+          consultorio_id: sanitizeText(row?.consultorio_id || ''),
+          consultorio_label: sanitizeText(row?.consultorio_label || ''),
+          start_at: toSqlDateTimeLocal(row?.start),
+          end_at: toSqlDateTimeLocal(row?.end)
+        }))
+      });
+    }catch(_){}
+    return normalized;
+  };
+  const resolveBlockingOperationalWindowsFromScheduleApi = async ({ dayKey = '', targetConsultorioIds = [] } = {})=>{
+    const safeDayKey = sanitizeText(dayKey || '').slice(0, 10);
+    const dayStart = toLocalDayDate(safeDayKey);
+    const dayEnd = addLocalDays(dayStart, 1);
+    const doctorId = sanitizeText(getDoctorId() || '');
+    const consultorioIds = Array.from(new Set(
+      (Array.isArray(targetConsultorioIds) ? targetConsultorioIds : [])
+        .map((id)=> sanitizeText(id || ''))
+        .filter((id)=> isNumericId(id))
+    ));
+    if(
+      !safeDayKey
+      || !isNumericId(doctorId)
+      || !consultorioIds.length
+      || !(dayStart instanceof Date)
+      || Number.isNaN(dayStart.getTime())
+      || !(dayEnd instanceof Date)
+      || Number.isNaN(dayEnd.getTime())
+    ){
+      return [];
+    }
+    const dayWeekday = Number(dayStart.getDay());
+    const rows = [];
+    await Promise.all(consultorioIds.map(async (consultorioId)=>{
+      let json = null;
+      try{
+        json = await AgendaApiClient.getSchedule({ doctorId, consultorioId });
+      }catch(_){
+        json = null;
+      }
+      if(!json || json.ok !== true || !Array.isArray(json?.data?.days)){
+        return;
+      }
+      const consultorioLabel = sanitizeText(resolveAgendaConsultorioLabelById(consultorioId) || '');
+      const scheduleDays = Array.isArray(json?.data?.days) ? json.data.days : [];
+      const weekdayMode = detectScheduleWeekdayMode(scheduleDays);
+      const dayRanges = [];
+      scheduleDays.forEach((dayRow)=>{
+        const dayIndex = normalizeScheduleDayToJsWeekday(dayRow?.weekday, weekdayMode);
+        if(dayIndex === null || dayIndex !== dayWeekday){
+          return;
+        }
+        const rowIsActive = (
+          Object.prototype.hasOwnProperty.call(dayRow || {}, 'active')
+            ? !!dayRow?.active
+            : true
+        );
+        if(!rowIsActive){
+          return;
+        }
+        const windows = Array.isArray(dayRow?.windows) ? dayRow.windows : [];
+        windows.forEach((windowItem)=>{
+          const startTime = normalizeAgendaTimeValue(
+            sanitizeText(windowItem?.start_time || windowItem?.start || '')
+          );
+          const endTime = normalizeAgendaTimeValue(
+            sanitizeText(windowItem?.end_time || windowItem?.end || '')
+          );
+          const startMinutes = timeToMinutes(startTime || '');
+          const endMinutes = timeToMinutes(endTime || '');
+          if(
+            startMinutes === null
+            || endMinutes === null
+            || endMinutes <= startMinutes
+          ){
+            return;
+          }
+          const start = new Date(dayStart);
+          start.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
+          const end = new Date(dayStart);
+          end.setHours(Math.floor(endMinutes / 60), endMinutes % 60, 0, 0);
+          if(!(start < dayEnd && end > dayStart) || end <= start){
+            return;
+          }
+          dayRanges.push({ start, end });
+        });
+      });
+      const mergedRanges = mergeBlockingWindows(dayRanges);
+      mergedRanges.forEach((range)=>{
+        rows.push({
+          consultorio_id: consultorioId,
+          consultorio_label: consultorioLabel,
+          start: range.start,
+          end: range.end
+        });
+      });
+    }));
+    const normalized = rows.sort((a, b)=>{
+      const byConsultorioNum = Number(a.consultorio_id || 0) - Number(b.consultorio_id || 0);
+      if(byConsultorioNum !== 0) return byConsultorioNum;
+      return a.start.getTime() - b.start.getTime();
+    });
+    try{
+      console.info('MXM BLOCK FULLDAY WINDOWS DEBUG', {
+        stage: 'resolve_windows_schedule_fallback',
         dayKey: safeDayKey,
         doctor_id: doctorId,
         targetConsultorioIds: consultorioIds,
@@ -20798,12 +21177,46 @@ console.info('app.js loaded :: 20251123a');
         }
       }
     });
-    els.dayHeadBlockBtn?.addEventListener('click', (event)=>{
+    els.dayHeadBlockBtn?.addEventListener('click', async (event)=>{
       event.preventDefault();
       event.stopPropagation();
       const selection = dayHeadMenuContext?.selection || null;
+      const dayCoverageContext = dayHeadMenuContext?.dayCoverageContext || null;
       hideDayHeadMenu();
       if(!selection) return;
+      const dayKey = sanitizeText(
+        dayCoverageContext?.dayKey
+        || formatYmdLocal(selection?.start || resolveAgendaViewAnchorDate() || new Date())
+        || ''
+      ).slice(0, 10);
+      if(dayCoverageContext?.canUnblockDay === true){
+        const confirmMessage = '¿Deseas desbloquear todos los horarios bloqueados de este día?';
+        if(!window.confirm(confirmMessage)){
+          return;
+        }
+        const unblockResult = await unblockDayHeadBlockedCoverageContext(dayCoverageContext);
+        invalidateBackendBlockedSlotsCache({ abortRequest: true });
+        if(!(unblockResult && unblockResult.ok === true)){
+          if(sanitizeText(unblockResult?.reason || '') === 'missing_unlockable_rows'){
+            setError('No se encontraron bloqueos desbloqueables para este día.');
+          }else{
+            setError('No se pudieron desbloquear todos los horarios del día. Intenta nuevamente.');
+          }
+          refreshCalendarAfterBlockedSlotMutation({
+            mutation: 'unblock_full_day_failed',
+            source: 'day_header',
+            dayKey
+          });
+          return;
+        }
+        setError('');
+        refreshCalendarAfterBlockedSlotMutation({
+          mutation: 'unblock_full_day',
+          source: 'day_header',
+          dayKey
+        });
+        return;
+      }
       const opened = openBlockModalFromSelection(selection, {
         source: 'day_header',
         mode: 'day_header',
