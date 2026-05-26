@@ -604,6 +604,9 @@ console.info('app.js loaded :: 20251123a');
     patientLookupList: panel.querySelector('#ag_patient_lookup_list'),
     patientLookupReasonWrap: panel.querySelector('#ag_patient_lookup_reason_wrap'),
     patientLookupReason: panel.querySelector('#ag_patient_lookup_reason_input'),
+    patientLookupReasonValidation: panel.querySelector('#ag_patient_lookup_reason_validation'),
+    patientLookupReasonWithBtn: panel.querySelector('#ag_patient_lookup_reason_with_btn'),
+    patientLookupReasonWithoutBtn: panel.querySelector('#ag_patient_lookup_reason_without_btn'),
     appointmentReason: panel.querySelector('#ag_appointment_reason_input'),
     createSubmit: panel.querySelector('#ag_create_submit_btn'),
     workspaceShell: panel.querySelector('.mx-ag-workspace-shell'),
@@ -807,6 +810,7 @@ console.info('app.js loaded :: 20251123a');
   let patientLookupEntries = [];
   let patientLookupSelectedId = '';
   let patientLookupContextQuery = '';
+  let patientLookupStep = 'results';
   let createExistingPatientReason = '';
   let patientSharedPhoneEntries = [];
   let patientSharedPhoneSelectedId = '';
@@ -5887,9 +5891,11 @@ console.info('app.js loaded :: 20251123a');
   };
   const resetLookupSelectionState = ()=>{
     patientLookupSelectedId = '';
+    patientLookupStep = 'results';
     if(els.patientLookupModalEl) els.patientLookupModalEl.classList.remove('is-confirm-mode');
     if(els.patientLookupNotice) els.patientLookupNotice.classList.remove('is-confirm-mode');
     if(els.patientLookupReasonWrap) els.patientLookupReasonWrap.classList.add('d-none');
+    if(els.patientLookupReasonValidation) els.patientLookupReasonValidation.classList.add('d-none');
     if(els.patientLookupReason) els.patientLookupReason.value = '';
   };
   const resetSharedPhoneSelectionState = ()=>{
@@ -5897,9 +5903,10 @@ console.info('app.js loaded :: 20251123a');
     if(els.patientSharedPhoneModalEl) els.patientSharedPhoneModalEl.classList.remove('is-confirm-mode');
     if(els.patientSharedPhoneNotice) els.patientSharedPhoneNotice.classList.remove('is-confirm-mode');
   };
-  const renderIdentityPatientCard = (entry = {}, { scope = 'lookup', selectedId = '' } = {})=>{
+  const renderIdentityPatientCard = (entry = {}, { scope = 'lookup', selectedId = '', lookupStep = 'confirm_patient' } = {})=>{
     const patientId = sanitizeText(entry.patient_id || '');
     const isSelected = patientId && patientId === sanitizeText(selectedId || '');
+    const showInlineConfirm = scope !== 'lookup' || lookupStep === 'confirm_patient';
     const displayName = resolvePatientLookupDisplayName(entry);
     const avatarSrc = resolvePatientAvatarBySexAndAge({
       sex: entry.sex || entry.gender || '',
@@ -5920,7 +5927,7 @@ console.info('app.js loaded :: 20251123a');
           </span>
           <span class="mx-ag-shared-phone-item-chevron" aria-hidden="true">›</span>
         </button>
-        <div class="mx-ag-shared-phone-inline-confirm${isSelected ? '' : ' d-none'}" data-ag-identity-confirm="${escapeAttrSafe(patientId)}" data-ag-identity-scope="${escapeAttrSafe(scope)}">
+        <div class="mx-ag-shared-phone-inline-confirm${(isSelected && showInlineConfirm) ? '' : ' d-none'}" data-ag-identity-confirm="${escapeAttrSafe(patientId)}" data-ag-identity-scope="${escapeAttrSafe(scope)}">
           <div class="mx-ag-shared-phone-inline-question">¿Este es el paciente que deseas asignar a la cita?</div>
           <div class="mx-ag-shared-phone-inline-actions">
             <button type="button" class="btn btn-primary btn-sm" data-ag-identity-confirm-yes="${escapeAttrSafe(patientId)}" data-ag-identity-scope="${escapeAttrSafe(scope)}">Sí</button>
@@ -5932,8 +5939,15 @@ console.info('app.js loaded :: 20251123a');
   };
   const renderPatientLookupList = ()=>{
     if(!els.patientLookupList) return;
-    const cardsHtml = patientLookupEntries
-      .map((entry)=> renderIdentityPatientCard(entry, { scope: 'lookup', selectedId: patientLookupSelectedId }))
+    const entriesToRender = (patientLookupStep === 'results' || !patientLookupSelectedId)
+      ? patientLookupEntries
+      : patientLookupEntries.filter((entry)=> sanitizeText(entry?.patient_id || '') === patientLookupSelectedId);
+    const cardsHtml = entriesToRender
+      .map((entry)=> renderIdentityPatientCard(entry, {
+        scope: 'lookup',
+        selectedId: patientLookupSelectedId,
+        lookupStep: patientLookupStep
+      }))
       .join('');
     els.patientLookupList.innerHTML = cardsHtml;
   };
@@ -5944,8 +5958,10 @@ console.info('app.js loaded :: 20251123a');
       .join('');
     els.patientSharedPhoneList.innerHTML = cardsHtml;
   };
-  const setLookupConfirmSelection = (patientId = '')=>{
+  const setLookupConfirmSelection = (patientId = '', { step = 'confirm_patient', preserveReason = false } = {})=>{
     patientLookupSelectedId = sanitizeText(patientId || '');
+    patientLookupStep = patientLookupSelectedId ? step : 'results';
+    const showReasonStep = !!patientLookupSelectedId && patientLookupStep === 'appointment_reason';
     if(els.patientLookupModalEl){
       els.patientLookupModalEl.classList.toggle('is-confirm-mode', !!patientLookupSelectedId);
     }
@@ -5953,12 +5969,27 @@ console.info('app.js loaded :: 20251123a');
       els.patientLookupNotice.classList.toggle('is-confirm-mode', !!patientLookupSelectedId);
     }
     if(els.patientLookupReasonWrap){
-      els.patientLookupReasonWrap.classList.toggle('d-none', !patientLookupSelectedId);
+      els.patientLookupReasonWrap.classList.toggle('d-none', !showReasonStep);
     }
-    if(!patientLookupSelectedId && els.patientLookupReason){
+    if(!showReasonStep && els.patientLookupReasonValidation){
+      els.patientLookupReasonValidation.classList.add('d-none');
+    }
+    if((!patientLookupSelectedId || !showReasonStep || !preserveReason) && els.patientLookupReason){
       els.patientLookupReason.value = '';
     }
     renderPatientLookupList();
+  };
+  const applyLookupPatientSelection = (patientId = '', { reason = '' } = {})=>{
+    const safePatientId = sanitizeText(patientId || '');
+    if(!safePatientId) return;
+    createExistingPatientReason = sanitizeText(reason || '');
+    const selectedEntry = patientLookupEntries.find((entry)=> sanitizeText(entry?.patient_id || '') === safePatientId) || null;
+    applyExistingPatientSelection({
+      patientId: safePatientId,
+      patientName: resolvePatientLookupDisplayName(selectedEntry || {}),
+      birthdate: toDateOnlyYmd(selectedEntry?.birthdate || '')
+    }).catch(()=> null);
+    closePatientLookupModal();
   };
   const setSharedPhoneConfirmSelection = (patientId = '')=>{
     patientSharedPhoneSelectedId = sanitizeText(patientId || '');
@@ -20675,20 +20706,40 @@ console.info('app.js loaded :: 20251123a');
         event.preventDefault();
         const patientId = sanitizeText(confirmYesBtn.getAttribute('data-ag-identity-confirm-yes') || '');
         if(!patientId) return;
-        createExistingPatientReason = sanitizeText(els.patientLookupReason?.value || '');
-        const selectedEntry = patientLookupEntries.find((entry)=> sanitizeText(entry?.patient_id || '') === patientId) || null;
-        applyExistingPatientSelection({
-          patientId,
-          patientName: resolvePatientLookupDisplayName(selectedEntry || {}),
-          birthdate: toDateOnlyYmd(selectedEntry?.birthdate || '')
-        }).catch(()=> null);
-        closePatientLookupModal();
+        setLookupConfirmSelection(patientId, { step: 'appointment_reason', preserveReason: true });
         return;
       }
       const confirmNoBtn = event.target.closest('[data-ag-identity-confirm-no]');
       if(confirmNoBtn){
         event.preventDefault();
         setLookupConfirmSelection('');
+      }
+    });
+    els.patientLookupReasonWithBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      if(!patientLookupSelectedId) return;
+      const reasonText = sanitizeText(els.patientLookupReason?.value || '');
+      if(!reasonText){
+        if(els.patientLookupReasonValidation){
+          els.patientLookupReasonValidation.classList.remove('d-none');
+        }
+        els.patientLookupReason?.focus();
+        return;
+      }
+      applyLookupPatientSelection(patientLookupSelectedId, {
+        reason: reasonText
+      });
+    });
+    els.patientLookupReasonWithoutBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      if(!patientLookupSelectedId) return;
+      if(els.patientLookupReasonValidation) els.patientLookupReasonValidation.classList.add('d-none');
+      if(els.patientLookupReason) els.patientLookupReason.value = '';
+      applyLookupPatientSelection(patientLookupSelectedId, { reason: '' });
+    });
+    els.patientLookupReason?.addEventListener('input', ()=>{
+      if(els.patientLookupReasonValidation){
+        els.patientLookupReasonValidation.classList.add('d-none');
       }
     });
     els.patientSharedPhoneList?.addEventListener('click', (event)=>{
