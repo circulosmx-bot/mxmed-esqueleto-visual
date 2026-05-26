@@ -3225,6 +3225,9 @@ console.info('app.js loaded :: 20251123a');
       : (isDemoQaAppointment ? 'demo-occupied' : 'occupied');
     const eventId = sanitizeText(eventRef?.id || '');
     const blockId = normalizeBlockedSlotIdCandidate(eventRef?.extendedProps?.block_id || eventId);
+    const blockBackendOverrideId = sanitizeText(eventRef?.extendedProps?.backend_override_id || '');
+    const blockSource = sanitizeText(eventRef?.extendedProps?.block_source || '');
+    const blockScope = sanitizeText(eventRef?.extendedProps?.block_scope || '');
     const slotRangeAttrs = isBlockedSlot
       ? `data-slot-start="${escapeAttrSafe(start.toISOString())}" data-slot-end="${escapeAttrSafe(end.toISOString())}"`
       : '';
@@ -3242,6 +3245,9 @@ console.info('app.js loaded :: 20251123a');
         ${isDemoQaAppointment ? 'data-slot-demo="1"' : ''}
         ${eventIdAttr}
         ${isBlockedSlot ? `data-block-id="${escapeAttrSafe(blockId)}"` : ''}
+        ${isBlockedSlot ? `data-block-backend-override-id="${escapeAttrSafe(blockBackendOverrideId)}"` : ''}
+        ${isBlockedSlot ? `data-block-source="${escapeAttrSafe(blockSource)}"` : ''}
+        ${isBlockedSlot ? `data-block-scope="${escapeAttrSafe(blockScope)}"` : ''}
         ${slotRangeAttrs}>
         <div class="mx-ag-custom-slot-top">
           <span class="mx-ag-custom-slot-time">${escapeHtml(timeLabel)}</span>
@@ -4090,6 +4096,15 @@ console.info('app.js loaded :: 20251123a');
             const blockIdAttr = isBlockedSlot
               ? `data-block-id="${escapeAttrSafe(normalizeBlockedSlotIdCandidate(eventRef?.extendedProps?.block_id || eventId))}"`
               : '';
+            const blockBackendOverrideIdAttr = isBlockedSlot
+              ? `data-block-backend-override-id="${escapeAttrSafe(sanitizeText(eventRef?.extendedProps?.backend_override_id || ''))}"`
+              : '';
+            const blockSourceAttr = isBlockedSlot
+              ? `data-block-source="${escapeAttrSafe(sanitizeText(eventRef?.extendedProps?.block_source || ''))}"`
+              : '';
+            const blockScopeAttr = isBlockedSlot
+              ? `data-block-scope="${escapeAttrSafe(sanitizeText(eventRef?.extendedProps?.block_scope || ''))}"`
+              : '';
             const slotRangeAttrs = `data-slot-start="${escapeAttrSafe(start.toISOString())}" data-slot-end="${escapeAttrSafe(end.toISOString())}"`;
             const consultorioAttrs = `
               data-slot-consultorio-id="${escapeAttrSafe(consultorioIdSafe)}"
@@ -4103,6 +4118,9 @@ console.info('app.js loaded :: 20251123a');
                 ${consultorioAttrs}
                 ${isDemoQaAppointment ? 'data-slot-demo="1"' : `data-event-id="${escapeAttrSafe(eventId)}"`}
                 ${blockIdAttr}
+                ${blockBackendOverrideIdAttr}
+                ${blockSourceAttr}
+                ${blockScopeAttr}
                 ${slotRangeAttrs}>
                 <div class="mx-ag-custom-slot-top">
                   <span class="mx-ag-custom-slot-time">${escapeHtml(timeLabel)}</span>
@@ -4358,6 +4376,18 @@ console.info('app.js loaded :: 20251123a');
       return '';
     }
     return toRangeKey(start, end);
+  };
+  const invalidateBackendBlockedSlotsCache = ({ abortRequest = true } = {})=>{
+    agendaBackendBlockedSlotsCache = [];
+    agendaBackendBlockedSlotsCacheRangeKey = '';
+    agendaBackendBlockedSlotsCacheScopeKey = '';
+    agendaBackendBlockedSlotsCacheDoctorId = '';
+    agendaBackendBlockedSlotsInflightKey = '';
+    agendaBackendBlockedSlotsHydratePromise = null;
+    if(abortRequest && agendaBackendBlockedSlotsRequestCtrl){
+      try{ agendaBackendBlockedSlotsRequestCtrl.abort(); }catch(_){}
+      agendaBackendBlockedSlotsRequestCtrl = null;
+    }
   };
   const resolveBlockedSlotRowSource = (row = null)=>{
     if(!(row && typeof row === 'object')) return 'local';
@@ -4881,6 +4911,31 @@ console.info('app.js loaded :: 20251123a');
     });
     return removed;
   };
+  const removeBlockedSlotsByBackendOverrideId = (overrideId = '')=>{
+    const safeOverrideId = sanitizeText(overrideId || '');
+    if(!isNumericId(safeOverrideId)) return false;
+    const scopeKeys = new Set(resolveBlockedSlotsStorageKeysAcrossScopes());
+    let removed = false;
+    scopeKeys.forEach((storageKey)=>{
+      const current = readBlockedSlotsFromStorageKey(storageKey);
+      if(!current.length) return;
+      const next = current.filter((row)=>{
+        const rowOverrideId = sanitizeText(
+          row?.backend_override_id
+          || row?.override_id
+          || row?.backendOverrideId
+          || ''
+        );
+        return rowOverrideId !== safeOverrideId;
+      });
+      if(next.length === current.length) return;
+      removed = true;
+      try{
+        window.localStorage?.setItem(storageKey, JSON.stringify(next));
+      }catch(_){}
+    });
+    return removed;
+  };
   const getBlockedSlotUntilOptions = (startDate)=>{
     if(!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return [];
     const slotMinutes = resolveAgendaSlotMinutes();
@@ -4953,7 +5008,7 @@ console.info('app.js loaded :: 20251123a');
   const resolveBlockUnlockLabelFromRange = (startValue, endValue)=>{
     return isRangeLikelyFullDayBlock(startValue, endValue)
       ? 'Desbloquear bloque completo del día'
-      : 'Desbloquear bloque completo del rango';
+      : 'Desbloquear este conjunto';
   };
   const normalizeBlockedSlotIdCandidate = (value = '')=>{
     const safeValue = sanitizeText(value || '');
@@ -4967,10 +5022,487 @@ console.info('app.js loaded :: 20251123a');
       ? '¿Deseas desbloquear todo el bloqueo del día para este consultorio?'
       : '¿Deseas desbloquear todo el bloqueo de este rango para este consultorio?';
   };
+  const resolveBlockUnlockSingleConfirmMessage = ()=>{
+    return '¿Deseas desbloquear solo este horario?';
+  };
   const cloneValidDateForBlock = (value)=>{
     const parsed = value instanceof Date ? new Date(value.getTime()) : new Date(value || '');
     if(Number.isNaN(parsed.getTime())) return null;
     return parsed;
+  };
+  const isBlockRangeContaining = (containerStart, containerEnd, targetStart, targetEnd, toleranceMs = 1000)=>{
+    if(
+      !(containerStart instanceof Date)
+      || !(containerEnd instanceof Date)
+      || !(targetStart instanceof Date)
+      || !(targetEnd instanceof Date)
+    ){
+      return false;
+    }
+    if(
+      Number.isNaN(containerStart.getTime())
+      || Number.isNaN(containerEnd.getTime())
+      || Number.isNaN(targetStart.getTime())
+      || Number.isNaN(targetEnd.getTime())
+    ){
+      return false;
+    }
+    if(containerEnd <= containerStart || targetEnd <= targetStart){
+      return false;
+    }
+    return (
+      targetStart.getTime() >= (containerStart.getTime() - Math.max(0, Number(toleranceMs || 0)))
+      && targetEnd.getTime() <= (containerEnd.getTime() + Math.max(0, Number(toleranceMs || 0)))
+    );
+  };
+  const isBlockRangeEquivalent = (startA, endA, startB, endB, toleranceMs = 1000)=>{
+    if(
+      !(startA instanceof Date)
+      || !(endA instanceof Date)
+      || !(startB instanceof Date)
+      || !(endB instanceof Date)
+    ){
+      return false;
+    }
+    if(
+      Number.isNaN(startA.getTime())
+      || Number.isNaN(endA.getTime())
+      || Number.isNaN(startB.getTime())
+      || Number.isNaN(endB.getTime())
+    ){
+      return false;
+    }
+    const safeToleranceMs = Math.max(0, Number(toleranceMs || 0));
+    return (
+      Math.abs(startA.getTime() - startB.getTime()) <= safeToleranceMs
+      && Math.abs(endA.getTime() - endB.getTime()) <= safeToleranceMs
+    );
+  };
+  const resolveBlockedRangeSourceFromCalendar = (selection = null)=>{
+    const slotStart = cloneValidDateForBlock(selection?.start);
+    const slotEnd = cloneValidDateForBlock(selection?.end);
+    const blockId = normalizeBlockedSlotIdCandidate(selection?.block_id || '');
+    const backendOverrideId = sanitizeText(selection?.backend_override_id || '');
+    const consultorioId = sanitizeText(selection?.consultorio_id || '');
+    const blockSource = sanitizeText(selection?.block_source || '').toLowerCase();
+    if(!(slotStart instanceof Date) || !(slotEnd instanceof Date) || slotEnd <= slotStart){
+      return {
+        found: false,
+        slotStart: null,
+        slotEnd: null,
+        sourceStart: null,
+        sourceEnd: null,
+        blockId,
+        backend_override_id: backendOverrideId,
+        block_source: blockSource
+      };
+    }
+    const isBackendBlock = blockSource === 'backend' || isNumericId(backendOverrideId);
+    const allEvents = (calendar && typeof calendar.getEvents === 'function')
+      ? (Array.isArray(calendar.getEvents()) ? calendar.getEvents() : [])
+      : [];
+    const candidates = allEvents.filter((eventRef)=>{
+      const props = eventRef?.extendedProps || {};
+      if(sanitizeText(props.event_type || '') !== 'blocked_slot'){
+        return false;
+      }
+      const candidateOverrideId = sanitizeText(props.backend_override_id || '');
+      const candidateBlockId = normalizeBlockedSlotIdCandidate(props.block_id || eventRef?.id || '');
+      const candidateConsultorioId = sanitizeText(props.consultorio_id || '');
+      if(isNumericId(backendOverrideId)){
+        if(candidateOverrideId !== backendOverrideId){
+          return false;
+        }
+      }else if(blockId){
+        if(candidateBlockId !== blockId){
+          return false;
+        }
+      }else{
+        return false;
+      }
+      if(isNumericId(consultorioId) && isNumericId(candidateConsultorioId) && candidateConsultorioId !== consultorioId){
+        return false;
+      }
+      return true;
+    });
+    if(!candidates.length){
+      return {
+        found: false,
+        slotStart,
+        slotEnd,
+        sourceStart: new Date(slotStart.getTime()),
+        sourceEnd: new Date(slotEnd.getTime()),
+        blockId,
+        backend_override_id: backendOverrideId,
+        block_source: isBackendBlock ? 'backend' : 'local'
+      };
+    }
+    const sourceStartMs = Math.min(...candidates.map((eventRef)=>{
+      const start = eventRef?.start instanceof Date ? eventRef.start : new Date(eventRef?.start || '');
+      return Number.isNaN(start.getTime()) ? Number.MAX_SAFE_INTEGER : start.getTime();
+    }));
+    const sourceEndMs = Math.max(...candidates.map((eventRef)=>{
+      const end = eventRef?.end instanceof Date ? eventRef.end : new Date(eventRef?.end || '');
+      return Number.isNaN(end.getTime()) ? Number.MIN_SAFE_INTEGER : end.getTime();
+    }));
+    const sourceStart = Number.isFinite(sourceStartMs) ? new Date(sourceStartMs) : new Date(slotStart.getTime());
+    const sourceEnd = Number.isFinite(sourceEndMs) ? new Date(sourceEndMs) : new Date(slotEnd.getTime());
+    const firstProps = candidates[0]?.extendedProps || {};
+    const resolvedBackendOverrideId = sanitizeText(firstProps.backend_override_id || backendOverrideId || '');
+    const resolvedBlockId = normalizeBlockedSlotIdCandidate(firstProps.block_id || blockId || '');
+    const resolvedBlockSource = sanitizeText(firstProps.block_source || blockSource || (isNumericId(resolvedBackendOverrideId) ? 'backend' : 'local')).toLowerCase();
+    return {
+      found: true,
+      slotStart,
+      slotEnd,
+      sourceStart,
+      sourceEnd,
+      blockId: resolvedBlockId || blockId,
+      backend_override_id: resolvedBackendOverrideId,
+      block_source: resolvedBlockSource
+    };
+  };
+  const resolveSingleSlotUnblockCapability = (selection = null)=>{
+    const resolved = resolveBlockedRangeSourceFromCalendar(selection);
+    const slotStart = resolved?.slotStart instanceof Date ? resolved.slotStart : null;
+    const slotEnd = resolved?.slotEnd instanceof Date ? resolved.slotEnd : null;
+    const sourceStart = resolved?.sourceStart instanceof Date ? resolved.sourceStart : null;
+    const sourceEnd = resolved?.sourceEnd instanceof Date ? resolved.sourceEnd : null;
+    const backendOverrideId = sanitizeText(resolved?.backend_override_id || '');
+    const blockId = normalizeBlockedSlotIdCandidate(resolved?.blockId || selection?.block_id || '');
+    const blockSource = sanitizeText(resolved?.block_source || selection?.block_source || '').toLowerCase();
+    const blockScope = sanitizeText(selection?.block_scope || '').toLowerCase();
+    if(!(slotStart instanceof Date) || !(slotEnd instanceof Date) || slotEnd <= slotStart){
+      return {
+        enabled: false,
+        mode: '',
+        reason: 'invalid_slot',
+        blockId,
+        backend_override_id: backendOverrideId,
+        source_start_at: '',
+        source_end_at: ''
+      };
+    }
+    if(!(sourceStart instanceof Date) || !(sourceEnd instanceof Date) || sourceEnd <= sourceStart){
+      return {
+        enabled: false,
+        mode: '',
+        reason: 'missing_source',
+        blockId,
+        backend_override_id: backendOverrideId,
+        source_start_at: '',
+        source_end_at: ''
+      };
+    }
+    const isBackendBlock = blockSource === 'backend' || isNumericId(backendOverrideId);
+    if(blockScope === 'full_day'){
+      return {
+        enabled: false,
+        mode: '',
+        reason: 'full_day_not_supported',
+        blockId,
+        backend_override_id: backendOverrideId,
+        source_start_at: toSqlDateTimeLocal(sourceStart),
+        source_end_at: toSqlDateTimeLocal(sourceEnd)
+      };
+    }
+    if(isBackendBlock){
+      if(!isNumericId(backendOverrideId)){
+        return {
+          enabled: false,
+          mode: '',
+          reason: 'backend_missing_override',
+          blockId,
+          backend_override_id: backendOverrideId,
+          source_start_at: toSqlDateTimeLocal(sourceStart),
+          source_end_at: toSqlDateTimeLocal(sourceEnd)
+        };
+      }
+      const exactMatch = isBlockRangeEquivalent(slotStart, slotEnd, sourceStart, sourceEnd);
+      return {
+        enabled: true,
+        mode: exactMatch ? 'backend_exact' : 'backend_range_split',
+        reason: exactMatch ? '' : '',
+        blockId,
+        backend_override_id: backendOverrideId,
+        consultorio_id: sanitizeText(selection?.consultorio_id || ''),
+        source_start_at: toSqlDateTimeLocal(sourceStart),
+        source_end_at: toSqlDateTimeLocal(sourceEnd)
+      };
+    }
+    if(!blockId){
+      return {
+        enabled: false,
+        mode: '',
+        reason: 'local_missing_block_id',
+        blockId,
+        backend_override_id: '',
+        source_start_at: toSqlDateTimeLocal(sourceStart),
+        source_end_at: toSqlDateTimeLocal(sourceEnd)
+      };
+    }
+    const contained = isBlockRangeContaining(sourceStart, sourceEnd, slotStart, slotEnd);
+    return {
+      enabled: contained,
+      mode: contained ? 'local_range_split' : '',
+      reason: contained ? '' : 'local_slot_outside_source',
+      blockId,
+      backend_override_id: '',
+      consultorio_id: sanitizeText(selection?.consultorio_id || ''),
+      source_start_at: toSqlDateTimeLocal(sourceStart),
+      source_end_at: toSqlDateTimeLocal(sourceEnd)
+    };
+  };
+  const splitBackendBlockedRangeBySlot = async ({
+    backendOverrideId = '',
+    consultorioId = '',
+    slotStart = null,
+    slotEnd = null,
+    sourceStart = null,
+    sourceEnd = null
+  } = {})=>{
+    const safeOverrideId = sanitizeText(backendOverrideId || '');
+    const safeConsultorioId = sanitizeText(consultorioId || '');
+    const safeSlotStart = cloneValidDateForBlock(slotStart);
+    const safeSlotEnd = cloneValidDateForBlock(slotEnd);
+    const safeSourceStart = cloneValidDateForBlock(sourceStart);
+    const safeSourceEnd = cloneValidDateForBlock(sourceEnd);
+    const safeDoctorId = sanitizeText(getDoctorId() || '');
+    if(
+      !isNumericId(safeOverrideId)
+      || !isNumericId(safeConsultorioId)
+      || !isNumericId(safeDoctorId)
+      || !(safeSlotStart instanceof Date)
+      || !(safeSlotEnd instanceof Date)
+      || !(safeSourceStart instanceof Date)
+      || !(safeSourceEnd instanceof Date)
+      || safeSlotEnd <= safeSlotStart
+      || safeSourceEnd <= safeSourceStart
+      || !isBlockRangeContaining(safeSourceStart, safeSourceEnd, safeSlotStart, safeSlotEnd)
+    ){
+      return {
+        ok: false,
+        reason: 'invalid_split_params',
+        createdOverrideIds: [],
+        rollbackAttempted: false,
+        rollbackRestored: false
+      };
+    }
+    const toleranceMs = 1000;
+    const segments = [];
+    if((safeSlotStart.getTime() - safeSourceStart.getTime()) > toleranceMs){
+      segments.push({
+        start: new Date(safeSourceStart.getTime()),
+        end: new Date(safeSlotStart.getTime())
+      });
+    }
+    if((safeSourceEnd.getTime() - safeSlotEnd.getTime()) > toleranceMs){
+      segments.push({
+        start: new Date(safeSlotEnd.getTime()),
+        end: new Date(safeSourceEnd.getTime())
+      });
+    }
+    const validSegments = segments.filter((segment)=>{
+      return segment?.start instanceof Date
+        && segment?.end instanceof Date
+        && !Number.isNaN(segment.start.getTime())
+        && !Number.isNaN(segment.end.getTime())
+        && segment.end > segment.start;
+    });
+    let disableOriginalResponse = null;
+    try{
+      disableOriginalResponse = await AgendaApiClient.updateAvailabilityBlock(safeOverrideId, {
+        is_active: false,
+        reason: 'Desbloqueo parcial de horario desde agenda'
+      });
+    }catch(_){
+      disableOriginalResponse = null;
+    }
+    if(!(disableOriginalResponse && disableOriginalResponse.ok === true)){
+      return {
+        ok: false,
+        reason: 'disable_original_failed',
+        createdOverrideIds: [],
+        rollbackAttempted: false,
+        rollbackRestored: false
+      };
+    }
+    if(!validSegments.length){
+      return {
+        ok: true,
+        reason: '',
+        createdOverrideIds: [],
+        rollbackAttempted: false,
+        rollbackRestored: true
+      };
+    }
+    const createdOverrideIds = [];
+    for(const segment of validSegments){
+      const payload = {
+        doctor_id: safeDoctorId,
+        consultorio_id: safeConsultorioId,
+        scope: 'partial',
+        type: 'close',
+        date: formatYmdLocal(segment.start),
+        start_at: toSqlDateTimeLocal(segment.start),
+        end_at: toSqlDateTimeLocal(segment.end),
+        reason: 'Bloqueo residual por desbloqueo parcial desde agenda'
+      };
+      let createResponse = null;
+      try{
+        createResponse = await AgendaApiClient.createAvailabilityBlock(payload);
+      }catch(_){
+        createResponse = null;
+      }
+      if(!(createResponse && createResponse.ok === true)){
+        let rollbackRestored = false;
+        for(const createdId of createdOverrideIds){
+          if(!isNumericId(createdId)) continue;
+          try{
+            await AgendaApiClient.updateAvailabilityBlock(createdId, {
+              is_active: false,
+              reason: 'Rollback desbloqueo parcial fallido'
+            });
+          }catch(_){}
+        }
+        try{
+          const rollbackPayload = {
+            doctor_id: safeDoctorId,
+            consultorio_id: safeConsultorioId,
+            scope: 'partial',
+            type: 'close',
+            date: formatYmdLocal(safeSourceStart),
+            start_at: toSqlDateTimeLocal(safeSourceStart),
+            end_at: toSqlDateTimeLocal(safeSourceEnd),
+            reason: 'Rollback desbloqueo parcial fallido'
+          };
+          const rollbackResponse = await AgendaApiClient.createAvailabilityBlock(rollbackPayload);
+          rollbackRestored = !!(rollbackResponse && rollbackResponse.ok === true);
+        }catch(_){
+          rollbackRestored = false;
+        }
+        return {
+          ok: false,
+          reason: 'create_segments_failed',
+          createdOverrideIds,
+          rollbackAttempted: true,
+          rollbackRestored
+        };
+      }
+      const createdBlocks = Array.isArray(createResponse?.data?.blocks) ? createResponse.data.blocks : [];
+      const createdFirst = (createdBlocks[0] && typeof createdBlocks[0] === 'object') ? createdBlocks[0] : null;
+      const createdOverrideId = sanitizeText(createdFirst?.override_id || createdFirst?.id || '');
+      if(isNumericId(createdOverrideId)){
+        createdOverrideIds.push(createdOverrideId);
+      }
+    }
+    return {
+      ok: true,
+      reason: '',
+      createdOverrideIds,
+      rollbackAttempted: false,
+      rollbackRestored: true
+    };
+  };
+  const splitLocalBlockedRangeBySlot = ({
+    blockId = '',
+    slotStart = null,
+    slotEnd = null
+  } = {})=>{
+    const safeBlockId = normalizeBlockedSlotIdCandidate(blockId || '');
+    const safeSlotStart = cloneValidDateForBlock(slotStart);
+    const safeSlotEnd = cloneValidDateForBlock(slotEnd);
+    if(!safeBlockId || !(safeSlotStart instanceof Date) || !(safeSlotEnd instanceof Date) || safeSlotEnd <= safeSlotStart){
+      return { changed: false, removed: 0, inserted: 0 };
+    }
+    const toleranceMs = 1000;
+    const buildSegmentId = (baseId, suffix)=>{
+      const safeBase = sanitizeText(baseId || safeBlockId || 'blk');
+      return `${safeBase}_${suffix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    };
+    const storageKeys = new Set(resolveBlockedSlotsStorageKeysAcrossScopes());
+    let changed = false;
+    let removed = 0;
+    let inserted = 0;
+    storageKeys.forEach((storageKey)=>{
+      const rows = readBlockedSlotsFromStorageKey(storageKey);
+      if(!rows.length) return;
+      let storageChanged = false;
+      const nextRows = [];
+      rows.forEach((row)=>{
+        const rowBlockId = normalizeBlockedSlotIdCandidate(row?.block_id || '');
+        if(rowBlockId !== safeBlockId){
+          nextRows.push(row);
+          return;
+        }
+        const rowBackendOverrideId = sanitizeText(row?.backend_override_id || '');
+        const rowSource = resolveBlockedSlotRowSource(row);
+        if(isNumericId(rowBackendOverrideId) || rowSource === 'backend'){
+          nextRows.push(row);
+          return;
+        }
+        const rowStart = parseDateTimeLocalSafe(sanitizeText(row?.start_at || ''));
+        const rowEnd = parseDateTimeLocalSafe(sanitizeText(row?.end_at || ''));
+        if(!(rowStart instanceof Date) || !(rowEnd instanceof Date) || Number.isNaN(rowStart.getTime()) || Number.isNaN(rowEnd.getTime()) || rowEnd <= rowStart){
+          nextRows.push(row);
+          return;
+        }
+        if(!isBlockRangeContaining(rowStart, rowEnd, safeSlotStart, safeSlotEnd, toleranceMs)){
+          nextRows.push(row);
+          return;
+        }
+        storageChanged = true;
+        changed = true;
+        removed += 1;
+        const leftDurationMs = safeSlotStart.getTime() - rowStart.getTime();
+        if(leftDurationMs > toleranceMs){
+          const leftRow = normalizeBlockedSlotRecord({
+            ...row,
+            block_id: buildSegmentId(safeBlockId, 'L'),
+            backend_override_id: '',
+            override_id: '',
+            block_source: 'local',
+            source: 'local',
+            block_scope: sanitizeText(row?.block_scope || row?.scope || 'partial') || 'partial',
+            scope: sanitizeText(row?.scope || row?.block_scope || 'partial') || 'partial',
+            start_at: toSqlDateTimeLocal(rowStart),
+            end_at: toSqlDateTimeLocal(safeSlotStart),
+            created_at: toSqlDateTimeLocal(new Date())
+          });
+          if(leftRow){
+            nextRows.push(leftRow);
+            inserted += 1;
+          }
+        }
+        const rightDurationMs = rowEnd.getTime() - safeSlotEnd.getTime();
+        if(rightDurationMs > toleranceMs){
+          const rightRow = normalizeBlockedSlotRecord({
+            ...row,
+            block_id: buildSegmentId(safeBlockId, 'R'),
+            backend_override_id: '',
+            override_id: '',
+            block_source: 'local',
+            source: 'local',
+            block_scope: sanitizeText(row?.block_scope || row?.scope || 'partial') || 'partial',
+            scope: sanitizeText(row?.scope || row?.block_scope || 'partial') || 'partial',
+            start_at: toSqlDateTimeLocal(safeSlotEnd),
+            end_at: toSqlDateTimeLocal(rowEnd),
+            created_at: toSqlDateTimeLocal(new Date())
+          });
+          if(rightRow){
+            nextRows.push(rightRow);
+            inserted += 1;
+          }
+        }
+      });
+      if(!storageChanged){
+        return;
+      }
+      try{
+        window.localStorage?.setItem(storageKey, JSON.stringify(nextRows));
+      }catch(_){}
+    });
+    return { changed, removed, inserted };
   };
   const buildBlockSelectionSnapshot = (selection = null, options = {})=>{
     if(!(selection && typeof selection === 'object')) return null;
@@ -6287,7 +6819,15 @@ console.info('app.js loaded :: 20251123a');
     const end = selection?.end instanceof Date ? new Date(selection.end) : new Date(selection?.end || '');
     if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return false;
     const menuMode = sanitizeText(selection?.menu_mode || 'available') || 'available';
-    const unblockLabel = sanitizeText(selection?.unblock_label || resolveBlockUnlockLabelFromRange(start, end) || 'Desbloquear bloque completo del rango');
+    const unblockLabel = sanitizeText(selection?.unblock_label || resolveBlockUnlockLabelFromRange(start, end) || 'Desbloquear este conjunto');
+    const singleUnblockCapability = (menuMode === 'blocked')
+      ? resolveSingleSlotUnblockCapability({
+        ...selection,
+        start,
+        end
+      })
+      : { enabled: false, mode: '', reason: '', source_start_at: '', source_end_at: '' };
+    const canUnblockSingleSlot = singleUnblockCapability?.enabled === true;
     customSlotMenuSelection = {
       start,
       end,
@@ -6295,22 +6835,35 @@ console.info('app.js loaded :: 20251123a');
       consultorio_name: sanitizeText(selection?.consultorio_name || ''),
       source: sanitizeText(selection?.source || 'custom_week_slot'),
       block_id: normalizeBlockedSlotIdCandidate(selection?.block_id || ''),
+      backend_override_id: sanitizeText(selection?.backend_override_id || selection?.override_id || ''),
+      block_source: sanitizeText(selection?.block_source || ''),
+      block_scope: sanitizeText(selection?.block_scope || ''),
       menu_mode: menuMode,
-      unblock_label: unblockLabel
+      unblock_label: unblockLabel,
+      single_unblock_enabled: canUnblockSingleSlot,
+      single_unblock_mode: sanitizeText(singleUnblockCapability?.mode || ''),
+      single_unblock_reason: sanitizeText(singleUnblockCapability?.reason || ''),
+      source_start_at: sanitizeText(singleUnblockCapability?.source_start_at || ''),
+      source_end_at: sanitizeText(singleUnblockCapability?.source_end_at || '')
     };
     if(els.customSlotNewBtn){
       els.customSlotNewBtn.classList.toggle('d-none', menuMode === 'blocked');
     }
     if(els.customSlotBlockBtn){
-      els.customSlotBlockBtn.classList.toggle('d-none', menuMode === 'blocked');
-      if(menuMode !== 'blocked'){
+      if(menuMode === 'blocked'){
+        els.customSlotBlockBtn.classList.toggle('d-none', !canUnblockSingleSlot);
+        if(canUnblockSingleSlot){
+          els.customSlotBlockBtn.textContent = 'Desbloquear solo este horario';
+        }
+      }else{
+        els.customSlotBlockBtn.classList.remove('d-none');
         els.customSlotBlockBtn.textContent = 'Bloquear';
       }
     }
     if(els.customSlotUnblockBtn){
       els.customSlotUnblockBtn.classList.toggle('d-none', menuMode !== 'blocked');
       if(menuMode === 'blocked'){
-        els.customSlotUnblockBtn.textContent = unblockLabel || 'Desbloquear bloque completo del rango';
+        els.customSlotUnblockBtn.textContent = unblockLabel || 'Desbloquear este conjunto';
       }
     }
     hideDayHeadMenu();
@@ -10438,6 +10991,94 @@ console.info('app.js loaded :: 20251123a');
           blockPayloads
         });
       }catch(_){}
+      const primaryPayload = blockPayloads[0] || null;
+      const backendDoctorId = sanitizeText(getDoctorId() || '');
+      const backendConsultorioId = sanitizeText(
+        primaryPayload?.consultorio_id
+        || blockConsultorioIdRaw
+        || ''
+      );
+      const backendStartAt = sanitizeText(primaryPayload?.start_at || toSqlDateTimeLocal(slotStart));
+      const backendEndAt = sanitizeText(primaryPayload?.end_at || toSqlDateTimeLocal(blockEnd));
+      if(!isNumericId(backendDoctorId)){
+        setBlockModalError('No se pudo identificar el médico para este bloqueo.');
+        return;
+      }
+      if(!isNumericId(backendConsultorioId)){
+        setBlockModalError('No se pudo identificar el consultorio para este bloqueo.');
+        return;
+      }
+      if(!backendStartAt || !backendEndAt){
+        setBlockModalError('No se pudo resolver el rango para este bloqueo.');
+        return;
+      }
+      const backendReason = sanitizeText(
+        (blockModalReasonKey === 'otro')
+          ? reasonNote
+          : (blockModalReasonLabel || reasonNote || '')
+      );
+      const backendPayload = {
+        doctor_id: backendDoctorId,
+        consultorio_id: backendConsultorioId,
+        scope: 'partial',
+        type: 'close',
+        date: dayKey,
+        start_at: backendStartAt,
+        end_at: backendEndAt
+      };
+      if(backendReason){
+        backendPayload.reason = backendReason;
+      }
+      let backendResponse = null;
+      try{
+        backendResponse = await AgendaApiClient.createAvailabilityBlock(backendPayload);
+      }catch(_){
+        setBlockModalError('No se pudo guardar el bloqueo. Intenta nuevamente.');
+        return;
+      }
+      if(!(backendResponse && backendResponse.ok === true)){
+        const backendError = sanitizeText(backendResponse?.error || '');
+        if(backendError === 'block_conflict_with_appointments'){
+          setBlockModalError('No se pudo bloquear este horario porque ya existe una cita.');
+        }else if(backendError === 'invalid_transition'){
+          setBlockModalError('No se puede bloquear un horario pasado.');
+        }else if(backendError === 'invalid_params' && !isNumericId(backendConsultorioId)){
+          setBlockModalError('No se pudo identificar el consultorio para este bloqueo.');
+        }else{
+          setBlockModalError(sanitizeText(backendResponse?.message || '') || 'No se pudo guardar el bloqueo. Intenta nuevamente.');
+        }
+        refreshCalendarAfterBlockedSlotMutation({
+          mutation: 'block_range_rejected',
+          source: sanitizeText(blockModalUiContext?.source || 'slot'),
+          dayKey
+        });
+        return;
+      }
+      const createdBlocks = Array.isArray(backendResponse?.data?.blocks) ? backendResponse.data.blocks : [];
+      const firstCreated = (createdBlocks[0] && typeof createdBlocks[0] === 'object') ? createdBlocks[0] : null;
+      const backendOverrideId = sanitizeText(firstCreated?.override_id || firstCreated?.id || '');
+      try{
+        console.info('MXM BLOCK PARTIAL API RESPONSE DEBUG', {
+          action: 'availability_blocked',
+          doctor_id: backendDoctorId,
+          consultorio_id: backendConsultorioId,
+          start_at: backendStartAt,
+          end_at: backendEndAt,
+          backend_override_id: backendOverrideId,
+          payload: backendPayload,
+          response_meta: backendResponse?.meta || null
+        });
+      }catch(_){}
+      invalidateBackendBlockedSlotsCache({ abortRequest: true });
+      activeBlockedEventId = '';
+      setError('');
+      blockSlotModal?.hide();
+      refreshCalendarAfterBlockedSlotMutation({
+        mutation: 'block_range',
+        source: sanitizeText(blockModalUiContext?.source || 'slot'),
+        dayKey
+      });
+      return;
     }
 
     if(isFullDayBlockAction && dayKey){
@@ -12398,6 +13039,55 @@ console.info('app.js loaded :: 20251123a');
         payload.__httpStatus = Number(resp.status || 0);
         payload.__httpOk = resp.ok === true;
         return payload;
+      }
+      return {
+        ok: false,
+        error: 'invalid_json',
+        message: `HTTP ${Number(resp.status || 0)}`,
+        data: null,
+        meta: {},
+        __httpStatus: Number(resp.status || 0),
+        __httpOk: resp.ok === true
+      };
+    },
+    async createAvailabilityBlock(payload = {}, { signal } = {}){
+      const resp = await fetch('/api/agenda/index.php/availability/blocks', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        signal,
+        body: JSON.stringify(payload || {})
+      });
+      const json = await resp.json().catch(()=> null);
+      if(json && typeof json === 'object'){
+        json.__httpStatus = Number(resp.status || 0);
+        json.__httpOk = resp.ok === true;
+        return json;
+      }
+      return {
+        ok: false,
+        error: 'invalid_json',
+        message: `HTTP ${Number(resp.status || 0)}`,
+        data: null,
+        meta: {},
+        __httpStatus: Number(resp.status || 0),
+        __httpOk: resp.ok === true
+      };
+    },
+    async updateAvailabilityBlock(blockId, payload = {}, { signal } = {}){
+      const safeId = encodeURIComponent(String(blockId || '').trim());
+      const resp = await fetch(`/api/agenda/index.php/availability/blocks/${safeId}`, {
+        method: 'PATCH',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        signal,
+        body: JSON.stringify(payload || {})
+      });
+      const json = await resp.json().catch(()=> null);
+      if(json && typeof json === 'object'){
+        json.__httpStatus = Number(resp.status || 0);
+        json.__httpOk = resp.ok === true;
+        return json;
       }
       return {
         ok: false,
@@ -18958,9 +19648,12 @@ console.info('app.js loaded :: 20251123a');
           const isActiveBlock = sanitizeText(activeBlockedEventId || '') === sanitizeText(arg.event.id || '');
           const unlockLabel = isFullDayBlock
             ? 'Desbloquear bloque completo del día'
-            : 'Desbloquear bloque completo del rango';
+            : 'Desbloquear este conjunto';
           const blockStateLabel = isFullDayBlock ? 'DÍA BLOQUEADO' : 'HORARIO BLOQUEADO';
           const blockIdAttr = normalizeBlockedSlotIdCandidate(props.block_id || arg.event?.id || '');
+          const backendOverrideIdAttr = sanitizeText(props.backend_override_id || '');
+          const blockSourceAttr = sanitizeText(props.block_source || '');
+          const blockScopeAttr = sanitizeText(props.block_scope || '');
           return {
             html: `
               <div class="mx-ag-blocked-event-wrap${isActiveBlock ? ' is-active' : ''}">
@@ -18971,7 +19664,7 @@ console.info('app.js loaded :: 20251123a');
                   </div>
                   <div class="mx-ag-slot-primary">${blockStateLabel}</div>
                   ${reasonLabel ? `<div class="mx-ag-slot-block-reason">${escapeHtml(reasonLabel)}</div>` : ''}
-                  ${isActiveBlock ? `<button type="button" class="mx-ag-blocked-event-remove mx-ag-slot-block-remove" data-ag-block-action="remove" data-ag-block-id="${escapeHtml(blockIdAttr)}" data-ag-block-kind="${isFullDayBlock ? 'day' : 'slot'}">${escapeHtml(unlockLabel)}</button>` : ''}
+                  ${isActiveBlock ? `<button type="button" class="mx-ag-blocked-event-remove mx-ag-slot-block-remove" data-ag-block-action="remove" data-ag-block-id="${escapeHtml(blockIdAttr)}" data-ag-block-kind="${isFullDayBlock ? 'day' : 'slot'}" data-ag-block-backend-override-id="${escapeHtml(backendOverrideIdAttr)}" data-ag-block-source="${escapeHtml(blockSourceAttr)}" data-ag-block-scope="${escapeHtml(blockScopeAttr)}">${escapeHtml(unlockLabel)}</button>` : ''}
                 </div>
               </div>
             `
@@ -19362,6 +20055,11 @@ console.info('app.js loaded :: 20251123a');
               start,
               end,
               block_id: blockId,
+              consultorio_id: sanitizeText(props.consultorio_id || ''),
+              consultorio_name: sanitizeText(props.consultorio_name || props.consultorio_label || ''),
+              backend_override_id: sanitizeText(props.backend_override_id || ''),
+              block_source: sanitizeText(props.block_source || ''),
+              block_scope: sanitizeText(props.block_scope || ''),
               menu_mode: 'blocked',
               unblock_label: resolveBlockUnlockLabelFromRange(start, end),
               source: 'day_blocked_slot'
@@ -19835,11 +20533,16 @@ console.info('app.js loaded :: 20251123a');
       if(kind === 'blocked'){
         const startRaw = sanitizeText(card.getAttribute('data-slot-start') || '');
         const endRaw = sanitizeText(card.getAttribute('data-slot-end') || '');
+        const consultorioId = sanitizeText(card.getAttribute('data-slot-consultorio-id') || '');
+        const consultorioName = sanitizeText(card.getAttribute('data-slot-consultorio-name') || '');
         const blockId = normalizeBlockedSlotIdCandidate(
           card.getAttribute('data-block-id')
           || card.getAttribute('data-event-id')
           || ''
         );
+        const backendOverrideId = sanitizeText(card.getAttribute('data-block-backend-override-id') || '');
+        const blockSource = sanitizeText(card.getAttribute('data-block-source') || '');
+        const blockScope = sanitizeText(card.getAttribute('data-block-scope') || '');
         const start = new Date(startRaw);
         const end = new Date(endRaw);
         if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start || !blockId){
@@ -19850,6 +20553,11 @@ console.info('app.js loaded :: 20251123a');
             start,
             end,
             block_id: blockId,
+            consultorio_id: consultorioId,
+            consultorio_name: consultorioName,
+            backend_override_id: backendOverrideId,
+            block_source: blockSource,
+            block_scope: blockScope,
             menu_mode: 'blocked',
             unblock_label: resolveBlockUnlockLabelFromRange(start, end),
             source: 'custom_week_blocked'
@@ -20040,11 +20748,16 @@ console.info('app.js loaded :: 20251123a');
       if(kind === 'blocked'){
         const startRaw = sanitizeText(card.getAttribute('data-slot-start') || '');
         const endRaw = sanitizeText(card.getAttribute('data-slot-end') || '');
+        const consultorioId = sanitizeText(card.getAttribute('data-slot-consultorio-id') || '');
+        const consultorioName = sanitizeText(card.getAttribute('data-slot-consultorio-name') || '');
         const blockId = normalizeBlockedSlotIdCandidate(
           card.getAttribute('data-block-id')
           || card.getAttribute('data-event-id')
           || ''
         );
+        const backendOverrideId = sanitizeText(card.getAttribute('data-block-backend-override-id') || '');
+        const blockSource = sanitizeText(card.getAttribute('data-block-source') || '');
+        const blockScope = sanitizeText(card.getAttribute('data-block-scope') || '');
         const start = new Date(startRaw);
         const end = new Date(endRaw);
         if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start || !blockId){
@@ -20055,6 +20768,11 @@ console.info('app.js loaded :: 20251123a');
             start,
             end,
             block_id: blockId,
+            consultorio_id: consultorioId,
+            consultorio_name: consultorioName,
+            backend_override_id: backendOverrideId,
+            block_source: blockSource,
+            block_scope: blockScope,
             menu_mode: 'blocked',
             unblock_label: resolveBlockUnlockLabelFromRange(start, end),
             source: 'custom_day_blocked'
@@ -20127,7 +20845,7 @@ console.info('app.js loaded :: 20251123a');
         openCreateModalFromSelection(selection);
       }
     });
-    els.customSlotBlockBtn?.addEventListener('click', (event)=>{
+    els.customSlotBlockBtn?.addEventListener('click', async (event)=>{
       event.preventDefault();
       event.stopPropagation();
       const selection = customSlotMenuSelection ? {
@@ -20136,6 +20854,120 @@ console.info('app.js loaded :: 20251123a');
         end: customSlotMenuSelection.end instanceof Date ? new Date(customSlotMenuSelection.end) : new Date(customSlotMenuSelection.end || '')
       } : null;
       hideCustomSlotQuickMenu();
+      if(selection && sanitizeText(selection?.menu_mode || '') === 'blocked'){
+        const singleCapability = resolveSingleSlotUnblockCapability(selection);
+        const dayKey = formatYmdLocal(selection?.start || resolveAgendaViewAnchorDate() || new Date());
+        if(!(singleCapability?.enabled === true)){
+          if(sanitizeText(singleCapability?.reason || '') === 'backend_range_requires_split'){
+            setError('Este bloqueo solo puede desbloquearse como conjunto por ahora.');
+          }else{
+            setError('No se pudo desbloquear solo este horario.');
+          }
+          return;
+        }
+        if(!window.confirm(resolveBlockUnlockSingleConfirmMessage())){
+          return;
+        }
+        if(sanitizeText(singleCapability?.mode || '') === 'backend_exact'){
+          const backendOverrideId = sanitizeText(singleCapability?.backend_override_id || selection?.backend_override_id || '');
+          if(!isNumericId(backendOverrideId)){
+            setError('No se pudo identificar el bloqueo backend para desbloquear.');
+            return;
+          }
+          let backendResult = null;
+          try{
+            backendResult = await AgendaApiClient.updateAvailabilityBlock(backendOverrideId, {
+              is_active: false,
+              reason: 'Desbloqueo de horario desde agenda'
+            });
+          }catch(_){
+            backendResult = null;
+          }
+          if(!(backendResult && backendResult.ok === true)){
+            setError('No se pudo desbloquear solo este horario. Intenta nuevamente.');
+            refreshCalendarAfterBlockedSlotMutation({
+              mutation: 'unblock_single_backend_failed',
+              source: 'custom_day_slot_menu',
+              dayKey
+            });
+            return;
+          }
+          removeBlockedSlotsByBackendOverrideId(backendOverrideId);
+          invalidateBackendBlockedSlotsCache({ abortRequest: true });
+          activeBlockedEventId = '';
+          setError('');
+          refreshCalendarAfterBlockedSlotMutation({
+            mutation: 'unblock_single_backend',
+            source: 'custom_day_slot_menu',
+            dayKey
+          });
+          return;
+        }
+        if(sanitizeText(singleCapability?.mode || '') === 'backend_range_split'){
+          const backendOverrideId = sanitizeText(singleCapability?.backend_override_id || selection?.backend_override_id || '');
+          const consultorioId = sanitizeText(singleCapability?.consultorio_id || selection?.consultorio_id || '');
+          const sourceStart = parseDateTimeLocalSafe(sanitizeText(singleCapability?.source_start_at || ''));
+          const sourceEnd = parseDateTimeLocalSafe(sanitizeText(singleCapability?.source_end_at || ''));
+          const splitResult = await splitBackendBlockedRangeBySlot({
+            backendOverrideId,
+            consultorioId,
+            slotStart: selection.start,
+            slotEnd: selection.end,
+            sourceStart,
+            sourceEnd
+          });
+          if(!(splitResult && splitResult.ok === true)){
+            if(splitResult?.rollbackAttempted === true && splitResult?.rollbackRestored !== true){
+              setError('No se pudo completar el desbloqueo parcial. Verifica la disponibilidad y vuelve a intentar.');
+            }else{
+              setError('No se pudo desbloquear solo este horario. Intenta nuevamente.');
+            }
+            invalidateBackendBlockedSlotsCache({ abortRequest: true });
+            refreshCalendarAfterBlockedSlotMutation({
+              mutation: 'unblock_single_backend_split_failed',
+              source: 'custom_day_slot_menu',
+              dayKey
+            });
+            return;
+          }
+          removeBlockedSlotsByBackendOverrideId(backendOverrideId);
+          if(Array.isArray(splitResult?.createdOverrideIds)){
+            splitResult.createdOverrideIds.forEach((createdId)=>{
+              removeBlockedSlotsByBackendOverrideId(createdId);
+            });
+          }
+          invalidateBackendBlockedSlotsCache({ abortRequest: true });
+          activeBlockedEventId = '';
+          setError('');
+          refreshCalendarAfterBlockedSlotMutation({
+            mutation: 'unblock_single_backend_split',
+            source: 'custom_day_slot_menu',
+            dayKey
+          });
+          return;
+        }
+        if(sanitizeText(singleCapability?.mode || '') === 'local_range_split'){
+          const splitResult = splitLocalBlockedRangeBySlot({
+            blockId: sanitizeText(singleCapability?.blockId || selection?.block_id || ''),
+            slotStart: selection.start,
+            slotEnd: selection.end
+          });
+          if(!(splitResult && splitResult.changed === true)){
+            setError('No se pudo desbloquear solo este horario.');
+            return;
+          }
+          activeBlockedEventId = '';
+          setError('');
+          refreshCalendarAfterBlockedSlotMutation({
+            mutation: 'unblock_single_local',
+            source: 'custom_day_slot_menu',
+            dayKey
+          });
+          return;
+        }
+        setError('No se pudo desbloquear solo este horario.');
+        return;
+      }
       if(selection){
         openBlockModalFromSelection(selection, {
           source: 'slot',
@@ -20145,18 +20977,72 @@ console.info('app.js loaded :: 20251123a');
         });
       }
     });
-    els.customSlotUnblockBtn?.addEventListener('click', (event)=>{
+    els.customSlotUnblockBtn?.addEventListener('click', async (event)=>{
       event.preventDefault();
       event.stopPropagation();
       const selection = customSlotMenuSelection ? { ...customSlotMenuSelection } : null;
       hideCustomSlotQuickMenu();
       const blockId = normalizeBlockedSlotIdCandidate(selection?.block_id || '');
-      if(!blockId) return;
-      const unlockLabel = sanitizeText(selection?.unblock_label || 'Desbloquear bloque completo del rango');
+      const unlockLabel = sanitizeText(selection?.unblock_label || 'Desbloquear este conjunto');
       const confirmMessage = resolveBlockUnlockConfirmMessage({
         isDayBlock: unlockLabel.includes('día')
       });
       if(!window.confirm(confirmMessage)) return;
+      const backendOverrideId = sanitizeText(selection?.backend_override_id || '');
+      const blockSource = sanitizeText(selection?.block_source || '').toLowerCase();
+      const blockScope = sanitizeText(selection?.block_scope || '').toLowerCase();
+      const dayKey = formatYmdLocal(selection?.start || resolveAgendaViewAnchorDate() || new Date());
+      const isBackendBlock = blockSource === 'backend' || isNumericId(backendOverrideId);
+      if(isBackendBlock){
+        if(!isNumericId(backendOverrideId)){
+          setError('No se pudo identificar el bloqueo backend para desbloquear.');
+          return;
+        }
+        if(blockScope && blockScope !== 'partial'){
+          setError('Este bloqueo se podrá desbloquear en la siguiente fase.');
+          return;
+        }
+        let backendResult = null;
+        try{
+          backendResult = await AgendaApiClient.updateAvailabilityBlock(backendOverrideId, {
+            is_active: false,
+            reason: 'Desbloqueo desde agenda'
+          });
+        }catch(_){
+          backendResult = null;
+        }
+        if(!(backendResult && backendResult.ok === true)){
+          setError('No se pudo desbloquear este conjunto. Intenta nuevamente.');
+          refreshCalendarAfterBlockedSlotMutation({
+            mutation: 'unblock_backend_failed',
+            source: 'custom_day_slot_menu',
+            dayKey
+          });
+          return;
+        }
+        removeBlockedSlotsByBackendOverrideId(backendOverrideId);
+        invalidateBackendBlockedSlotsCache({ abortRequest: true });
+        activeBlockedEventId = '';
+        setError('');
+        try{
+          console.info('MXM DAY UNBLOCK MUTATION DEBUG', {
+            source: 'custom_day_slot_menu_backend',
+            blockId,
+            backend_override_id: backendOverrideId,
+            dayKey,
+            viewType: String(calendar?.view?.type || '')
+          });
+        }catch(_){}
+        refreshCalendarAfterBlockedSlotMutation({
+          mutation: 'unblock_backend',
+          source: 'custom_day_slot_menu',
+          dayKey
+        });
+        return;
+      }
+      if(!blockId){
+        return;
+      }
       const removed = removeBlockedSlotById(blockId);
       activeBlockedEventId = '';
       if(removed){
@@ -20164,14 +21050,14 @@ console.info('app.js loaded :: 20251123a');
           console.info('MXM DAY UNBLOCK MUTATION DEBUG', {
             source: 'custom_day_slot_menu',
             blockId,
-            dayKey: formatYmdLocal(selection?.start || resolveAgendaViewAnchorDate() || new Date()),
+            dayKey,
             viewType: String(calendar?.view?.type || '')
           });
         }catch(_){}
         refreshCalendarAfterBlockedSlotMutation({
           mutation: 'unblock',
           source: 'custom_day_slot_menu',
-          dayKey: formatYmdLocal(selection?.start || resolveAgendaViewAnchorDate() || new Date())
+          dayKey
         });
       }
     });
@@ -21054,18 +21940,61 @@ console.info('app.js loaded :: 20251123a');
         renderNextFocusInlineMessage();
       }
     }, true);
-    els.calendarWrap?.addEventListener('click', (event)=>{
+    els.calendarWrap?.addEventListener('click', async (event)=>{
       const removeBtn = event.target.closest('[data-ag-block-action="remove"]');
       if(!removeBtn) return;
       event.preventDefault();
       event.stopPropagation();
       const blockId = normalizeBlockedSlotIdCandidate(removeBtn.getAttribute('data-ag-block-id') || '');
-      if(!blockId) return;
       const blockKind = sanitizeText(removeBtn.getAttribute('data-ag-block-kind') || '');
+      const backendOverrideId = sanitizeText(removeBtn.getAttribute('data-ag-block-backend-override-id') || '');
+      const blockSource = sanitizeText(removeBtn.getAttribute('data-ag-block-source') || '').toLowerCase();
+      const blockScope = sanitizeText(removeBtn.getAttribute('data-ag-block-scope') || '').toLowerCase();
+      const dayKey = formatYmdLocal(resolveAgendaViewAnchorDate() || new Date());
       const confirmMessage = resolveBlockUnlockConfirmMessage({
         isDayBlock: blockKind === 'day'
       });
       if(!window.confirm(confirmMessage)) return;
+      const isBackendBlock = blockSource === 'backend' || isNumericId(backendOverrideId);
+      if(isBackendBlock){
+        if(!isNumericId(backendOverrideId)){
+          setError('No se pudo identificar el bloqueo backend para desbloquear.');
+          return;
+        }
+        if(blockScope && blockScope !== 'partial'){
+          setError('Este bloqueo se podrá desbloquear en la siguiente fase.');
+          return;
+        }
+        let backendResult = null;
+        try{
+          backendResult = await AgendaApiClient.updateAvailabilityBlock(backendOverrideId, {
+            is_active: false,
+            reason: 'Desbloqueo desde agenda'
+          });
+        }catch(_){
+          backendResult = null;
+        }
+        if(!(backendResult && backendResult.ok === true)){
+          setError('No se pudo desbloquear este conjunto. Intenta nuevamente.');
+          refreshCalendarAfterBlockedSlotMutation({
+            mutation: 'unblock_backend_failed',
+            source: 'calendar_blocked_action',
+            dayKey
+          });
+          return;
+        }
+        removeBlockedSlotsByBackendOverrideId(backendOverrideId);
+        invalidateBackendBlockedSlotsCache({ abortRequest: true });
+        activeBlockedEventId = '';
+        setError('');
+        refreshCalendarAfterBlockedSlotMutation({
+          mutation: 'unblock_backend',
+          source: 'calendar_blocked_action',
+          dayKey
+        });
+        return;
+      }
+      if(!blockId) return;
       const removed = removeBlockedSlotById(blockId);
       activeBlockedEventId = '';
       if(removed){
@@ -21073,14 +22002,14 @@ console.info('app.js loaded :: 20251123a');
           console.info('MXM DAY UNBLOCK MUTATION DEBUG', {
             source: 'calendar_blocked_action',
             blockId,
-            dayKey: formatYmdLocal(resolveAgendaViewAnchorDate() || new Date()),
+            dayKey,
             viewType: String(calendar?.view?.type || '')
           });
         }catch(_){}
         refreshCalendarAfterBlockedSlotMutation({
           mutation: 'unblock',
           source: 'calendar_blocked_action',
-          dayKey: formatYmdLocal(resolveAgendaViewAnchorDate() || new Date())
+          dayKey
         });
       }
     }, true);
