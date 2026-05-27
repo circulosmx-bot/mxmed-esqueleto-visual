@@ -295,3 +295,69 @@ PP-4 — Diagnostico de fuentes reales para DTO ejecutable y endpoint read-only 
 Razon:
 - El repo ya tiene piezas reutilizables (consultorios/schedule/public availability),
 - pero aun faltan fuentes canonicas cerradas para identidad profesional, plan/gating, reviews, claim y slug.
+
+## 16) Adenda PP-Decisiones 01 — Ajustes operativos del contrato
+
+### 16.1 Render y SEO tecnico
+- La pagina publica del perfil se define SSR PHP para contenido principal indexable.
+- Este endpoint read-only es fuente de datos sanitizada para SSR + JS progresivo.
+- JS solo para interacciones dinamicas (agenda, OTP, reserva, metricas, mapa, opiniones).
+
+### 16.2 Regla de URL publica
+- URL publica final del perfil:
+  - `/{seo_category}/{ciudad}/{slug-medico}`
+- Variante de desambiguacion:
+  - `/{seo_category}/{estado}/{ciudad}/{slug-medico}`
+- Ruta API puede seguir recibiendo slug canonicamente en PP-3; la capa web resuelve categoria/ciudad y canonical.
+- `doctor_id` permanece como ruta transicional de QA/desarrollo.
+
+### 16.3 Slug e historial
+- Mantener historial de slugs para redireccion 301.
+- Cambio de ciudad puede implicar cambio de URL.
+- Rutas secundarias/contextuales deben canonicalizar a la URL principal salvo estrategia futura de landings diferenciadas.
+
+### 16.4 Claim y ownership
+- Extender estados de ownership/claim para contrato operativo:
+  - `unclaimed`
+  - `claim_pending`
+  - `claimed`
+  - `rejected`
+  - `needs_info`
+- Perfil gratuito publicado puede seguir visible durante `claim_pending`.
+- Perfil nuevo no se publica hasta aprobacion.
+
+### 16.5 Reglas de plan/contacto/agenda
+- Gratuito:
+  - sin contacto directo;
+  - sin agenda publica;
+  - claim visible si corresponde.
+- Basico:
+  - contacto habilitable;
+  - horarios visibles;
+  - sin reserva publica.
+- Estandar+:
+  - reserva publica (OTP) habilitable.
+- En cualquier plan, gating se resuelve backend y se expresa via `public_visibility` + `agenda_public`.
+
+### 16.6 Cedulas y publicacion
+- Perfil medico individual no debe publicarse sin cedula profesional valida.
+- Clasificacion como especialista requiere cedula de especialidad valida.
+- Cedulas certificadas solo editables por operador plataforma.
+
+### 16.7 Opiniones desde MVP
+- `reviews` se considera en alcance MVP contractual.
+- Moderacion obligatoria.
+- Promedio puede alimentar JSON-LD cuando exista base suficiente.
+
+### 16.8 Seguridad y privacidad reforzada
+- Nunca exponer datos clinicos/pacientes/flags/tokens/API keys/notas internas.
+- Motivo de consulta capturado en agenda publica: visible al medico, no a operador en contrato publico.
+- `doctor_id` publico solo si se aprueba explicitamente.
+
+### 16.9 Robots y estado
+- `removed` puede responder `410` para gestion SEO.
+- `suspended` y estados no publicables deben resolver `423` o `noindex` segun ruta/regla.
+- `seo.robots` se deriva de estado + completitud + visibilidad.
+
+### 16.10 Recomendacion de fase siguiente
+- PP-4 recomendado: diagnostico de fuentes reales para construir DTO ejecutable sin exponer datos sensibles.

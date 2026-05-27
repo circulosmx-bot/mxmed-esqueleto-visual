@@ -353,8 +353,113 @@ El endpoint publico nunca debe devolver:
 - No cambia contratos clinicos.
 
 ## 11) Siguiente paso recomendado
-PP-3 — Definir contrato de endpoint read-only ejecutable:
-- request/response final versionado;
-- matriz de errores (`404`, `410`, `423`, etc.);
-- criterios de gating en backend;
-- estrategia de slug/canonical.
+PP-4 — Diagnostico de fuentes reales para DTO ejecutable / endpoint read-only MVP:
+- cerrar fuente canonica de identidad profesional;
+- cerrar fuente canonica de plan/gating efectivo;
+- cerrar ownership/reclamo y slug historico;
+- definir estrategia inicial de reviews y moderacion.
+
+## 12) Adenda PP-Decisiones 01 — Impacto directo en payload
+
+### 12.1 Identidad y branding
+- `identity.display_name` puede diferir del nombre completo certificado interno.
+- `identity.prefix` es obligatorio y de control plataforma.
+- `identity.photo_url` disponible desde Gratuito; si falta foto, frontend debe usar avatar generico por genero.
+- `identity.logo_url` puede coexistir con logos de grupos medicos asociados (no reemplaza identidad principal del medico).
+- Agregar bandera recomendada:
+  - `identity.verified_badge = true|false`
+
+### 12.2 Cedulas y clasificacion
+- `professional.professional_license` obligatoria para publicar medico individual.
+- Clasificacion especialista requiere `professional.specialty_license`.
+- Se permiten multiples cedulas:
+  - agregar recomendado `professional.licenses[]` (tipo, numero, estado, es_principal).
+- Edicion de cedulas certificadas restringida a operador plataforma.
+
+### 12.3 Taxonomia SEO controlada
+- Mantener `specialties[]` + agregar concepto operativo `seo_category`.
+- `seo_category` puede representar especialidad, subespecialidad, procedimiento, padecimiento, tratamiento o grupo medico.
+- Recomendado:
+  - `seo.seo_categories[]`
+  - `seo.primary_seo_category`
+
+### 12.4 URL canonica y rutas contextuales
+- `profile.canonical_url` obligatoria.
+- Un perfil puede tener rutas contextuales; para evitar duplicidad SEO:
+  - rutas secundarias deben canonicalizar a `canonical_url` (salvo fase futura con landings diferenciadas).
+- Endpoint transicional por `doctor_id` solo QA/desarrollo.
+
+### 12.5 Contacto y metricas
+- `public_visibility.show_contact_buttons` depende de plan y consentimiento.
+- `contact.phone` y `contact.whatsapp` solo con visibilidad efectiva habilitada.
+- Soporte multiple por consultorio recomendado:
+  - `consultorios[].phones[]`
+  - `consultorios[].whatsapp`
+- Recomendado agregar:
+  - `contact.metrics_enabled = true|false`
+
+### 12.6 Consultorios y mapas
+- Limite operativo publico: maximo 3 consultorios.
+- Consultorio activo para agenda no debe quedar oculto.
+- Si no hay coordenadas confirmadas:
+  - mostrar direccion textual;
+  - no mostrar mapa.
+- Recomendado en payload:
+  - `consultorios[].map_is_available`
+  - `consultorios[].map_can_open_gps`
+
+### 12.7 Horarios y disponibilidad
+- Gratuito/Basico muestran horarios generales.
+- Estandar+ habilita disponibilidad/reserva publica.
+- `schedule` debe ocultar dias sin disponibilidad en proyeccion publica.
+- Recomendado:
+  - `schedule.hide_days_without_availability = true`
+
+### 12.8 Agenda publica
+- `agenda_public.enabled` desde Estandar.
+- `agenda_public.requires_otp = true` para reserva publica.
+- `agenda_public.availability_endpoint` apunta a endpoint publico de agenda vigente.
+- Motivo de consulta publico (si se captura) solo visible al medico, no a operador.
+- Recomendado:
+  - `agenda_public.allow_waitlist = true|false`
+  - `agenda_public.allow_rebooking = false` (MVP)
+  - `agenda_public.default_modality = "presencial"`
+
+### 12.9 Reclamo
+- Estados ampliados de claim:
+  - `unclaimed`
+  - `claim_pending`
+  - `claimed`
+  - `rejected`
+  - `needs_info`
+- Recomendado en payload:
+  - `claim.claim_status`
+  - `claim.required_documents[]`
+  - `claim.claim_blocked_reason`
+
+### 12.10 Opiniones
+- Incluidas desde MVP.
+- Gratuito muestra opiniones.
+- Basico+ puede habilitar respuesta/gestion segun policy.
+- Recomendado en payload:
+  - `reviews.moderation_enabled`
+  - `reviews.restrict_to_patients_with_appointment`
+  - `reviews.post_visit_invite_policy`
+
+### 12.11 SEO / JSON-LD
+- JSON-LD desde inicio MVP con minimos y enriquecimiento progresivo.
+- `seo.robots` depende de estado/visibilidad:
+  - `index,follow` en perfil publico apto
+  - `noindex,nofollow` en hidden/suspended/pending_review o contenido insuficiente
+- `json_ld.priceRange` solo si costo habilitado por usuario.
+
+### 12.12 Gating backend y seguridad
+- `plan` y `public_visibility` deben calcularse backend.
+- Nunca exponer datos privados/clinicos, ni notas internas, ni tokens.
+- `doctor_id` en payload publico solo si se aprueba explicitamente.
+
+### 12.13 IA y videoconsulta (exposicion publica)
+- IA interna no debe publicitarse por defecto.
+- IA redactora desde Basico como capacidad de panel, no dato obligatorio publico.
+- IA clinica en recetas: interna (Optimo/Profesional), no claim publico inicial.
+- Videoconsulta: informativa desde Basico y reservable desde Estandar segun configuracion.

@@ -255,6 +255,232 @@ Incluir en v1:
 12. Que claims comerciales se permitiran para IA clinica?
 13. Como comunicar seguridad clinica sin prometer diagnostico automatico?
 
+## Adenda PP-Decisiones 01 — Identidad, URL, contacto, agenda, reclamo, SEO y MVP
+
+### A) Estrategia tecnica de render
+- El perfil publico se define en SSR PHP para contenido principal indexable.
+- JS progresivo solo para interacciones dinamicas: agenda semanal, reserva, OTP, buzon, metricas de clic, mapa, opiniones, formularios.
+- El contenido SEO (nombre, especialidad, cedulas, domicilio, consultorios, horarios, resumen de opiniones, title/description/canonical/JSON-LD) debe salir del servidor.
+- JS no puede ser la unica fuente de contenido indexable.
+
+### B) Identidad publica
+- El sistema conserva nombre completo certificado e inamovible.
+- El medico puede elegir nombre visible (si tiene varios) y un solo apellido publico.
+- Prefijo obligatorio predefinido por operador plataforma (Dr., Dra., Psic., Lic., etc.).
+- Foto disponible desde plan Gratuito; si no hay, avatar generico masculino/femenino.
+- Perfil individual puede mostrar logo del medico y logos de grupos medicos asociados cuando aplique.
+- En perfil medico individual la identidad principal es el medico, no la marca comercial.
+- Badge de perfil verificado visible.
+
+### C) Cedulas
+- Cedula profesional obligatoria para publicar perfil medico individual.
+- Cedula de especialidad obligatoria para clasificarse como especialista.
+- Perfiles creados por plataforma requieren verificacion previa.
+- Si un perfil gratuito de plataforma queda sin cedula confirmada, operador debe darlo de baja.
+- Cedulas certificadas: solo editables por operador plataforma.
+- Se permiten multiples cedulas.
+- Institucion emisora puede mostrarse en formacion/descripcion.
+- No es obligatorio texto "cedula validada"; basta mostrar cedula.
+
+### D) Catalogo / taxonomia SEO
+- Especialidad principal obligatoria.
+- Se permiten multiples especialidades y subespecialidades visibles.
+- Catalogo controlado/cerrado aprobado por operador.
+- El medico puede solicitar alta de nuevos padecimientos/servicios.
+- Campos manuales deben normalizarse contra catalogo cuando aplique.
+- Preparar arquitectura para listados por especialidad, ciudad, estado, tratamiento, enfermedad, padecimiento y grupo medico.
+- Concepto tecnico de categoria publica: `seo_category` (especialidad, subespecialidad, procedimiento, padecimiento, tratamiento o grupo medico).
+
+### E) URL / slug
+- Estructura base aprobada:
+  - `/{seo_category}/{ciudad}/{slug-medico}`
+- Ejemplo:
+  - `/ginecologos/aguascalientes/dr-alberto-rodriguez-zaragoza`
+- Categoria no plural estricta valida:
+  - `/colposcopia/aguascalientes/dr-alberto-rodriguez-zaragoza`
+- Desambiguacion opcional:
+  - `/{seo_category}/{estado}/{ciudad}/{slug-medico}`
+- Si cambia ciudad, nueva URL + redireccion 301 desde URL anterior.
+- Mantener historial de slugs.
+- Slug controlado por plataforma (cambio via solicitud/revision).
+- Resolver duplicados con apellido/especialidad/ciudad/sufijo controlado.
+- Un medico puede tener URLs de entrada contextuales, pero debe existir URL canonica principal.
+- Rutas secundarias deben canonicalizar a la principal salvo fase futura de landings diferenciadas.
+- Ruta transicional por `doctor_id` queda solo para QA/desarrollo.
+
+### F) Contacto publico
+- CTAs publicos potenciales:
+  - Llamar
+  - WhatsApp
+  - Buzon interno
+  - Ver horarios disponibles
+  - Enviar mensaje
+- Gratuito oculta contacto.
+- Basico habilita contacto.
+- Telefonos pueden ser de consultorio o medico (incluyendo multiples por consultorio).
+- WhatsApp configurable (consultorio/medico/operador) y con mensaje prellenado.
+- Buzon interno requiere datos basicos + captcha.
+- Registrar metricas de clic en telefono/WhatsApp.
+- El medico puede desactivar WhatsApp aunque plan lo permita.
+- Operador no puede editar telefonos publicos.
+- CTA de agenda publica:
+  - "Ver horarios disponibles"
+  - "Reservar cita" tras seleccionar horario.
+
+### G) Consultorios
+- Maximo 3 consultorios visibles.
+- Publicos por defecto, salvo ocultamiento explicito por medico.
+- Un consultorio activo para agenda no debe quedar oculto publicamente.
+- Mostrar por consultorio: nombre, direccion, telefonos, WhatsApp, horario, mapa, foto.
+- Mapa abre Google Maps.
+- Gratuito: mapa sin guia GPS activa.
+- Basico: GPS activo si aplica.
+- Si no hay coordenadas confirmadas, ocultar mapa (mostrar direccion textual).
+- Nombre por defecto si falta: "Consultorio principal".
+- Renombre publico permitido.
+- Fotos de consultorio con moderacion.
+
+### H) Horarios publicos
+- Mostrar horarios generales por consultorio en Gratuito/Basico.
+- Estandar habilita ademas disponibilidad para reservar.
+- Horario publico respeta bloqueos.
+- Ocultar dias sin disponibilidad.
+- UX sugerida: Hoy, Manana, proximos dias.
+- Permitir etiqueta "previa cita" o equivalente.
+
+### I) Agenda publica
+- Reserva habilitada desde Estandar.
+- Requiere OTP.
+- Paciente ve consultorio en card/preview.
+- Modalidad default presencial (videoconsulta opcional por configuracion).
+- Motivo de consulta opcional.
+- Motivo desde perfil publico visible solo para medico.
+- Operador no ve motivo (solo datos generales del paciente).
+- Cancelacion publica via URL del resumen de cita.
+- Reprogramacion publica: fuera de alcance actual.
+- Waitlist publica opcional si medico la habilita.
+- Reusar flujo publico existente de Agenda.
+- Posible widget de primera cita disponible.
+- Costo visible solo si medico lo habilita.
+- Si agenda esta cerrada temporalmente, no se muestra.
+
+### J) Reclamo de perfil
+- Claim funcional desde MVP.
+- Boton sugerido:
+  - "Yo soy Dr. X, quiero administrar mi perfil"
+- Solo titular puede reclamar.
+- Datos iniciales: celular, correo, password, confirmacion, nombre.
+- Documentos: identificacion, cedula profesional, cedula de especialidad (si desea clasificacion especialista).
+- Sin acceso a panel hasta aprobacion de operador plataforma.
+- Estados de claim:
+  - `unclaimed`
+  - `claim_pending`
+  - `claimed`
+  - `rejected`
+  - `needs_info`
+- Perfil gratuito publicado puede seguir visible durante revision.
+- Perfil nuevo sin aprobar no debe publicarse.
+- Rechazo se notifica por email.
+- Conflicto de doble reclamo se resuelve por titularidad acreditada.
+- Origen del perfil visible solo internamente para operadores.
+
+### K) Opiniones
+- Opiniones incluidas desde MVP.
+- Gratuito muestra reseñas.
+- Desde Basico se habilita respuesta del medico.
+- Soporte de archivar/restaurar y moderacion.
+- Sin encuesta privada separada.
+- Fuentes de opinion:
+  - formulario publico + captcha
+  - enlace post-cita
+- Si plan/setting lo requiere, restringir a pacientes con cita.
+- Invitacion sugerida: +24h y reenvio +48h.
+- Promedio incluido en JSON-LD.
+- Sin anonimato.
+
+### L) SEO / Schema
+- Regla plural en listados confirmada.
+- Ejemplos:
+  - `mexicomedico.com/ginecologos/aguascalientes`
+  - `mexicomedico.com/ginecologos/aguascalientes/dr-alberto-rodriguez-zaragoza`
+- Meta title/description automaticos.
+- Edicion SEO por operador plataforma y superadmin.
+- Medico puede editar descripcion SEO con apoyo IA (si acepta y segun plan).
+- JSON-LD desde MVP con `@type` segun especialidad (`Physician`, `Dentist`, `Psychologist`, etc.).
+- `medicalSpecialty` en ingles cuando aplique recomendacion Schema.org.
+- `priceRange` solo si usuario habilita costo.
+- Perfil no reclamado puede indexar.
+- Perfil suspendido debe ser `noindex`.
+- Perfil incompleto puede indexar si cumple minimo (nombre, clasificacion, cedula, domicilio).
+- Permitir entradas SEO contextuales por categoria con control estricto de canonical.
+
+### M) Gating / suscripcion
+- Gating debe resolver backend, no frontend.
+- Vigencia de plan anual.
+- Avisos de renovacion previos (excepto cobro automatico).
+- En gracia: mensaje persistente + enlace de pago.
+- Fin de gracia: desactivar funciones avanzadas sin borrar datos.
+- Downgrade Estandar -> Basico:
+  - advertir perdida de administracion de agenda publica y accesorios.
+  - conservar citas ya existentes.
+- Agenda interna puede mantenerse aunque se oculte agenda publica, pero sin accesorios restringidos por plan.
+- Modulos congelados no borran historico.
+- Operador puede pagar, no cambiar plan.
+- No mostrar etiqueta de plan en perfil publico.
+- Paquetes/promociones de pago arrancan desde Basico.
+
+### N) Videoconsulta
+- Informativa desde Basico si usuario la activa.
+- Reservable desde Estandar.
+- Canales: WhatsApp, Zoom, Teams, Meet.
+- Pago previo obligatorio si aplica contrato.
+- Precio visible opcional.
+- Confirmacion por correo con fecha/hora/canal.
+- Si no hay canal conectado operativo, medico debe resolver reprogramacion/reembolso.
+- Para MVP puede quedar fuera de ejecucion funcional, pero prevista en contrato.
+
+### O) IA
+- No anunciar uso interno de IA en publico por defecto.
+- IA siempre bajo activacion/aprobacion del usuario.
+- IA redactora desde Basico (bio, metatags, SEO de especialidades/servicios/padecimientos).
+- Contenido IA requiere revision/moderacion antes de publicar.
+- IA clinica en recetas: solo Optimo/Profesional, uso interno, no claim publico inicial.
+- Agente IA llamadas/chat en Profesional puede mostrarse como "Asistente virtual disponible".
+- Agente IA puede agendar/cancelar segun servicio activo.
+- Toda accion IA debe quedar auditada como "Agente IA".
+
+### P) Datos privados / seguridad
+- Nunca exponer datos de pacientes, flags, recetas, diagnosticos, documentos clinicos, tokens, API keys.
+- Email del medico oculto por defecto.
+- IDs internos no visibles salvo necesidad tecnica estricta.
+- Campos con moderacion:
+  - foto, fotos de consultorio, logotipo, cedulas, especialidad, bio, formacion, servicios/padecimientos, promociones, respuestas publicas, metatags, claims.
+- Causas de suspension (entre otras):
+  - cedula falsa/no acreditada
+  - especialidad sin cedula valida
+  - suplantacion
+  - foto no correspondiente
+  - contenido enganoso/promesas medicas absolutas
+  - publicacion de datos de pacientes
+  - fraude en reclamo
+  - violacion de privacidad
+  - datos de contacto falsos
+
+### Q) MVP real acordado
+- Endpoint transicional por `doctor_id` permitido solo QA/desarrollo.
+- Ruta publica final por slug/categoria/ciudad.
+- Secuencia recomendada:
+  - primero endpoint backend read-only,
+  - despues vista publica.
+- Render principal SSR PHP.
+- JS progresivo solo para interacciones.
+- CSS separado con tokens/base.
+- Vista fuera de `index.html`.
+- Prueba con 5 medicos demo (uno por plan).
+- Reusar datos reales de consultorio cuando existan.
+- Agenda publica real + JSON-LD desde inicio.
+- Claim funcional desde arranque MVP.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
