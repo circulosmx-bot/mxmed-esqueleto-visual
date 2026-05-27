@@ -515,3 +515,95 @@ Razon:
 
 Recomendacion:
 - Ejecutar `PP-4C` primero antes de construir la vista publica.
+
+## 19) Cierre PP-4C — QA ampliado del endpoint publico (validado)
+
+### 19.1 Estado
+- PP-4C ejecutado y validado como QA ampliado sin cambios de codigo.
+- Endpoint validado:
+  - `GET /api/profiles/public/doctor/{doctor_id}`
+
+### 19.2 Casos probados
+- `doctor_id` validos/resolubles:
+  - `1`
+  - `d_demo_01`
+  - `d_1`
+  - `qa_doc_late_cancel`
+- `doctor_id` inexistentes:
+  - `901101`
+  - `doctor_not_found_999`
+- `doctor_id` invalido:
+  - `bad$id`
+
+### 19.3 Resultados HTTP
+- Validos/resolubles -> `200 OK`
+- Inexistentes -> `404 profile_not_found`
+- Invalido -> `400 invalid_doctor_id`
+
+### 19.4 Validaciones de contrato (respuestas 200)
+- Se confirmo presencia de:
+  - `ok`
+  - `data`
+  - `meta`
+  - `profile`
+  - `plan`
+  - `public_visibility`
+  - `identity`
+  - `professional`
+  - `specialties`
+  - `consultorios`
+  - `schedule`
+  - `contact`
+  - `agenda_public`
+  - `commercial_visibility`
+  - `reviews`
+  - `claim`
+  - `seo`
+  - `json_ld`
+  - `ecosystem_links`
+  - `feature_flags`
+
+### 19.5 Comportamiento conservador (validado)
+- Cuando faltan `identity.display_name` y `professional.professional_license`:
+  - `profile.status = hidden`
+  - `profile.is_public = false`
+  - `feature_flags.has_public_profile = false`
+  - `seo.robots = noindex,nofollow`
+
+### 19.6 Campos comerciales (validado)
+- `commercial_visibility` existe siempre.
+- Sin fuente canonica:
+  - `consultation_fee = null`
+  - `payment_methods = []`
+  - `accepted_insurances = []`
+  - `commercial_restriction_reason = source_not_ready`
+
+### 19.7 Ecosystem links (validado)
+- `medical_groups = []`
+- `insurers = []`
+- `labs = []`
+- `imaging_centers = []`
+- `pharma_partners = []`
+
+### 19.8 Seguridad (validado)
+- En respuestas `200` no aparecen:
+  - `patient_id`
+  - `motivo`
+  - `diagnostico`
+  - `diagnóstico`
+  - `receta`
+  - `token`
+  - `api_key`
+  - `flag_type`
+  - `datos_fiscales`
+  - `password`
+  - `secret`
+  - `notas internas`
+
+### 19.9 Sintaxis PHP (validado)
+- `php -l api/profiles/index.php`
+- `php -l modules/profiles/controllers/PublicProfileController.php`
+- `php -l modules/profiles/repositories/PublicProfileRepository.php`
+
+Resultado:
+- Sin errores de sintaxis.

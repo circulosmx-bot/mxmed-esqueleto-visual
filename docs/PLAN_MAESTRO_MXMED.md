@@ -1072,7 +1072,8 @@ Refs:
 - `[profiles]` PP-Decisiones 01 completado: adenda de decisiones de producto para identidad, URL, contacto, agenda, reclamo, SEO/Schema, gating, videoconsulta e IA (`0460db2`).
 - `[profiles]` PP-Decisiones 02 completado: adenda de datos comerciales, medios de pago, aseguradoras aceptadas y ecosistema ampliado (`9c81a05`).
 - `[profiles]` PP-4B completado: endpoint publico minimo read-only transicional por `doctor_id` implementado (`2398549`).
-- `[profiles]` Siguiente recomendado: PP-4C QA ampliado del endpoint publico (cobertura con mas doctores/demo, casos borde y validacion de contrato conservador) antes de iniciar PP-5 (vista publica SSR).
+- `[profiles]` PP-4C completado: QA ampliado del endpoint publico transicional validado (casos 200/400/404, contrato, seguridad y comportamiento conservador) sin cambios de codigo.
+- `[profiles]` Siguiente recomendado: PP-5 preparacion de primera vista publica SSR PHP (sin slug final ni diseno final cerrados).
 
 ### 2a) Operación clínica extendida
 - `[api]` órdenes, recetas y resultados con contratos estables.
