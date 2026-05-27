@@ -531,6 +531,121 @@ Incluir en v1:
 - Los campos comerciales/aseguradoras/ecosistema pueden salir como `null`, `false` o arrays vacios cuando no exista fuente canonica aun.
 - No se implementa vista publica en esta fase.
 
+## Adenda PP-Decisiones 03 — Boceto visual, estructura por plan y navegacion publica
+
+### A) Referencia de boceto visual
+- Existen bocetos guia para:
+  - perfil gratuito;
+  - perfil mejorado por plan;
+  - plataforma/listado publico de busqueda.
+- Los bocetos son referencia funcional/visual y de jerarquia de contenido.
+- No constituyen especificacion pixel-perfect.
+- PP-5 debe inspirarse en estos bocetos, sin forzar diseno final exacto en esta etapa.
+
+### B) Perfil gratuito (ficha de directorio + reclamo)
+- El perfil gratuito se entiende como ficha publica minima, util para descubrimiento y reclamo.
+- Debe contemplar:
+  - header/logo Mexico Medico;
+  - navegacion superior basica con buscador simple;
+  - foto o avatar;
+  - nombre visible del medico;
+  - badge/verificacion si aplica;
+  - especialidad principal;
+  - cedula profesional;
+  - cedula de especialidad si aplica;
+  - consultorio principal;
+  - direccion;
+  - mapa o referencia de ubicacion cuando existan coordenadas;
+  - opiniones/resumen si existen;
+  - enlace para sugerir correccion;
+  - bloque de reclamo: "Yo soy este medico y quiero administrar mi perfil";
+  - CTA comercial futuro tipo "Destacar mi perfil".
+- Regla:
+  - el gratuito no muestra contacto directo ni agenda publica cuando el gating no lo permita;
+  - el gratuito no debe verse roto o vacio.
+
+### C) Perfil mejorado por plan
+- Los planes de pago agregan bloques de conversion y confianza.
+- Capas progresivas:
+  - foto real;
+  - consultorios multiples;
+  - nombre publico del consultorio;
+  - logo de hospital/grupo asociado;
+  - botones "Sobre mi", "Detalles de la consulta", "Llamar", "WhatsApp", "Ver horarios disponibles";
+  - CTA "Reservar cita" dentro del flujo de agenda;
+  - costo de consulta (si medico lo habilita);
+  - medios de pago;
+  - aseguradoras aceptadas;
+  - agenda publica (si plan lo permite);
+  - fotos/carrusel;
+  - opiniones;
+  - mapa/como llegar.
+- Regla por plan:
+  - Basico: contacto + presentacion mejorada + horarios + costo/medios/aseguradoras (si aplica).
+  - Estandar: agenda publica/reserva.
+  - Optimo/Profesional: visibilidad y recursos avanzados futuros.
+
+### D) Agenda publica visual (direccion PP-5)
+- El boceto preve un bloque "Agenda una cita" con:
+  - Hoy / proximos dias;
+  - horarios disponibles;
+  - boton para expandir horarios;
+  - busqueda de primera cita disponible.
+- Para PP-5:
+  - no implementar agenda interactiva completa;
+  - no reabrir Agenda;
+  - preparar bloque visual SSR o placeholder segun gating y datos disponibles.
+
+### E) Aseguradoras como bloque visual
+- Las aseguradoras aceptadas deben presentarse como bloque de valor publico:
+  - logos;
+  - nombre/slug/logo desde catalogo futuro;
+  - seleccion declarada por medico desde panel.
+- Diferenciar claramente:
+  - declaracion del medico;
+  - vinculacion verificada futura.
+- Si no hay fuente canonica, el bloque puede quedar vacio/no disponible sin romper la vista.
+
+### F) Plataforma/listado publico (fase separada)
+- El boceto de busqueda por estado/especialidad corresponde a una fase distinta al perfil individual.
+- Incluye a futuro:
+  - home publica;
+  - selector de estado;
+  - selector de especialidad;
+  - medicos destacados;
+  - listados por estado/especialidad;
+  - CTA "Eres medico? Crea tu perfil".
+- Regla:
+  - no mezclar esta home/listado con PP-5 inicial;
+  - PP-5 se enfoca en perfil individual SSR.
+
+### G) Estructura sugerida para PP-5 (primera vista SSR)
+- Header publico Mexico Medico.
+- Buscador/navegacion basica (estatica o placeholder inicial).
+- Bloque principal:
+  - columna izquierda: foto/avatar, consultorio principal, direccion, sugerir correccion, reclamar perfil;
+  - columna derecha: nombre, badge, opiniones, especialidad, cedulas, descripcion breve.
+- Bloques inferiores:
+  - consultorios;
+  - horarios;
+  - contacto segun plan;
+  - agenda segun plan;
+  - `commercial_visibility`;
+  - `accepted_insurances`;
+  - opiniones;
+  - footer.
+
+### H) Limites explicitos de PP-5
+- No diseno final pixel-perfect.
+- No slug final ni canonical SEO definitivo.
+- No home publica ni listados por estado/especialidad.
+- No agenda interactiva completa.
+- No claim completo.
+- No reviews reales si no existe backend consolidado.
+- No catalogo real de aseguradoras en esta etapa.
+- No tocar `index.html`.
+- No tocar Agenda.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
