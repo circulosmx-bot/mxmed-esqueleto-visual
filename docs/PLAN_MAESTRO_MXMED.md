@@ -1069,7 +1069,8 @@ Refs:
 - `[profiles]` PP-1 completado: contrato funcional inicial de Perfil Publico Medico documentado (`9d6024e`).
 - `[profiles]` PP-2B completado: contrato tecnico de payload publico MVP documentado (`4274d6b`).
 - `[profiles]` PP-3 completado: contrato de endpoint publico read-only ejecutable documentado (`2b0e9d4`).
-- `[profiles]` PP-Decisiones 01 en curso: adenda de decisiones de producto para identidad, URL, contacto, agenda, reclamo, SEO/Schema, gating, videoconsulta e IA (base previa a PP-4).
+- `[profiles]` PP-Decisiones 01 completado: adenda de decisiones de producto para identidad, URL, contacto, agenda, reclamo, SEO/Schema, gating, videoconsulta e IA (`0460db2`).
+- `[profiles]` PP-Decisiones 02 en curso: adenda de datos comerciales, medios de pago, aseguradoras aceptadas y ecosistema ampliado (base de contrato previa a PP-4B).
 
 ### 2a) Operación clínica extendida
 - `[api]` órdenes, recetas y resultados con contratos estables.

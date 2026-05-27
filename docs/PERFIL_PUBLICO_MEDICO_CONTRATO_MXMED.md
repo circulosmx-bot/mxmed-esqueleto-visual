@@ -481,6 +481,56 @@ Incluir en v1:
 - Agenda publica real + JSON-LD desde inicio.
 - Claim funcional desde arranque MVP.
 
+## Adenda PP-Decisiones 02 — Datos comerciales, aseguradoras y ecosistema ampliado
+
+### A) Datos comerciales y medios de pago
+- Cada medico podra configurar costo de consulta y decidir si se muestra publicamente.
+- Debe existir catalogo controlado de medios de pago publicables:
+  - efectivo
+  - tarjetas bancarias
+  - transferencia
+  - otros futuros controlados por plataforma
+- Si el costo no se habilita publicamente, la salida publica debe entregar valor nulo o bandera de ocultamiento.
+- `priceRange` en JSON-LD solo aplica cuando el costo sea publico.
+
+### B) Aseguradoras aceptadas
+- El perfil debe prever desde inicio un catalogo precargado de aseguradoras (MX) con:
+  - nombre publico
+  - slug
+  - logotipo
+  - estado activo
+  - distintivo/verificacion futura
+- El medico selecciona aseguradoras por checkboxes en su panel.
+- La visibilidad publica de aseguradoras depende de configuracion del medico y reglas de plan/politica.
+- Esta capacidad no depende del modulo completo de perfiles de aseguradoras en la fase actual.
+
+### C) Relacion futura con perfiles de aseguradoras
+- A futuro, aseguradoras tendran perfiles propios y podran gestionar su red de prestadores.
+- La aseguradora no puede editar datos del perfil medico.
+- La relacion aseguradora-medico se modela como afiliacion/vinculacion, no propiedad del perfil.
+- Fases futuras deben contemplar aceptacion/rechazo/revision por parte del medico.
+
+### D) Ecosistema ampliado
+- El modelo de perfiles debe contemplar crecimiento hacia:
+  - laboratorios de analisis clinicos
+  - gabinetes de imagenes medicas
+  - laboratorios farmaceuticos
+  - aseguradoras
+  - grupos medicos
+  - hospitales/clinicas (si aplica)
+- Estas entidades quedan fuera del MVP actual, pero influyen en el contrato para evitar redisenos incompatibles.
+
+### E) Seguridad y privacidad
+- No exponer datos clinicos ni de pacientes en ningun perfil publico.
+- No convertir ordenes clinicas en comunicacion comercial publica.
+- No permitir que aseguradoras/laboratorios/farmaceuticas modifiquen datos del medico.
+- Comunicaciones futuras entre entidades deben respetar opt-in, trazabilidad y gating por plan.
+
+### F) Alcance PP-4B
+- PP-4B mantiene enfoque en endpoint transicional read-only por `doctor_id`.
+- Los campos comerciales/aseguradoras/ecosistema pueden salir como `null`, `false` o arrays vacios cuando no exista fuente canonica aun.
+- No se implementa vista publica en esta fase.
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato

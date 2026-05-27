@@ -24,6 +24,7 @@
 - Lee: pacientes, buscadores, operaciones de agenda.
 - Relación: enlaza a consultorios y agenda para mostrar disponibilidad; alimenta notificaciones.
 - Crecimiento: medio.
+- Nota PP-Decisiones 02: prever campos de salida pública comercial (`consultation_fee`, `payment_methods`, `accepted_insurances`) y reservas de `ecosystem_links` sin exponer datos clínicos ni ceder edición del perfil a terceros.
 
 ### Dominio: Consultorios (`consultorios_*`)
 - Propósito: describir cada espacio físico y su configuración base.

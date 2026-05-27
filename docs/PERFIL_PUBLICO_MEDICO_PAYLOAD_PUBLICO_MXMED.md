@@ -36,10 +36,12 @@ Reglas del endpoint:
     "schedule": {},
     "contact": {},
     "agenda_public": {},
+    "commercial_visibility": {},
     "reviews": {},
     "claim": {},
     "seo": {},
     "json_ld": {},
+    "ecosystem_links": {},
     "feature_flags": {}
   },
   "meta": {}
@@ -88,6 +90,8 @@ Resumen tecnico de visibilidad efectiva:
 - `show_claim_button`
 - `show_video_consultation`
 - `show_ai_claims`
+- `show_consultation_fee`
+- `show_accepted_insurances`
 
 ### 4.4 `identity`
 Campos publicos:
@@ -197,7 +201,32 @@ Reglas:
 - Debe respetar bloqueos canonicamente (BLOQ-F2/BLOQ-F3).
 - No representa encounter clinico.
 
-### 4.11 `reviews`
+### 4.11 `commercial_visibility`
+Campos propuestos:
+- `consultation_fee`
+  - `amount_mxn`
+  - `currency` (ej. `MXN`)
+  - `show_public_price`
+  - `price_last_updated_at`
+- `payment_methods` (array catalogado)
+  - `code` (cash/card/transfer/other)
+  - `label`
+  - `enabled`
+- `accepted_insurances` (array)
+  - `insurance_id`
+  - `name`
+  - `slug`
+  - `logo_url`
+  - `is_active`
+  - `is_verified` (futuro)
+- `commercial_restriction_reason`
+
+Reglas:
+- Si no existe fuente canonica, devolver `consultation_fee=null`, `payment_methods=[]`, `accepted_insurances=[]`.
+- El costo solo se publica si `show_public_price=true`.
+- `accepted_insurances` debe contemplarse desde inicio aunque el modulo completo de aseguradoras sea fase futura.
+
+### 4.12 `reviews`
 Campos:
 - `enabled`
 - `visible`
@@ -210,7 +239,7 @@ Campos:
 Nota MVP:
 - Puede devolverse apagado hasta contar con backend consolidado de reviews.
 
-### 4.12 `claim`
+### 4.13 `claim`
 Campos:
 - `show_claim_button`
 - `claim_url`
@@ -223,7 +252,7 @@ Reglas:
 - No aplica a perfil pagado o ya reclamado.
 - Sujeto a verificacion humana.
 
-### 4.13 `seo`
+### 4.14 `seo`
 Campos:
 - `title`
 - `description`
@@ -235,7 +264,7 @@ Campos:
 - `og_image`
 - `breadcrumb`
 
-### 4.14 `json_ld`
+### 4.15 `json_ld`
 Puede ser:
 - objeto JSON-LD listo para render, o
 - `null` si faltan datos criticos.
@@ -253,7 +282,20 @@ Campos minimos esperados:
 - `medicalSpecialty`
 - `aggregateRating` (si aplica)
 
-### 4.15 `feature_flags`
+### 4.16 `ecosystem_links`
+Campos propuestos:
+- `medical_groups` (array de vinculos publicos)
+- `insurers` (array de vinculos publicos)
+- `labs` (array de vinculos publicos)
+- `imaging_centers` (array de vinculos publicos)
+- `pharma_partners` (array de vinculos publicos)
+
+Reglas:
+- En PP-4B pueden salir como arrays vacios por falta de fuente canonica.
+- Ningun actor externo puede editar perfil medico desde estos vinculos.
+- La vinculacion representa afiliacion/comunidad, no propiedad del perfil.
+
+### 4.17 `feature_flags`
 Campos:
 - `has_public_profile`
 - `has_public_contact`
@@ -264,6 +306,9 @@ Campos:
 - `has_ai_agent`
 - `has_ai_profile_writer`
 - `has_ai_prescription_safety`
+- `has_commercial_profile_data`
+- `has_insurance_affiliations`
+- `has_ecosystem_links`
 
 ## 5) Gating tecnico por plan (MVP de reglas)
 
@@ -321,6 +366,9 @@ El endpoint publico nunca debe devolver:
 - `slug`: pendiente
 - `claim`: pendiente
 - `json_ld`: derivado nuevo en capa de presentacion/perfil
+- `consultation_fee` / `payment_methods`: fuente canonica pendiente
+- `accepted_insurances`: catalogo + seleccion por medico pendientes
+- `ecosystem_links`: dominio futuro pendiente
 
 ## 8) Reglas de sanitizacion y seguridad
 - Build de respuesta desde DTO publico explicito, no `SELECT *`.
@@ -463,3 +511,36 @@ PP-4 — Diagnostico de fuentes reales para DTO ejecutable / endpoint read-only 
 - IA redactora desde Basico como capacidad de panel, no dato obligatorio publico.
 - IA clinica en recetas: interna (Optimo/Profesional), no claim publico inicial.
 - Videoconsulta: informativa desde Basico y reservable desde Estandar segun configuracion.
+
+## 13) Adenda PP-Decisiones 02 — Datos comerciales, aseguradoras y ecosistema ampliado
+
+### 13.1 Campos comerciales
+- Incorporar en contrato los campos transicionales:
+  - `commercial_visibility.consultation_fee`
+  - `commercial_visibility.payment_methods`
+- El medico controla publicacion de costo; si no habilita, devolver `null` o visibilidad apagada.
+- `json_ld.priceRange` solo aplica cuando el costo sea publico.
+
+### 13.2 Aseguradoras aceptadas
+- Incorporar desde el inicio:
+  - `commercial_visibility.accepted_insurances`
+- Este bloque puede salir vacio en PP-4B hasta tener fuente canonica, pero no debe omitirse del contrato.
+- La publicacion depende de configuracion del medico + gating de plan/politica.
+
+### 13.3 Ecosistema ampliado
+- Reservar `ecosystem_links` para evolucion futura con perfiles de:
+  - aseguradoras
+  - laboratorios clinicos
+  - gabinetes de imagen
+  - laboratorios farmaceuticos
+  - grupos medicos
+- En PP-4B estos campos pueden salir como arrays vacios y banderas en `feature_flags`.
+
+### 13.4 Seguridad y limites
+- Prohibido exponer datos clinicos/pacientes en campos comerciales o de ecosistema.
+- Vinculos con aseguradoras/labs/pharma no implican permiso de edicion sobre perfil medico.
+- Toda evolucion futura requiere opt-in, trazabilidad y control backend.
+
+### 13.5 Regla PP-4B
+- Mantener PP-4B como endpoint transicional read-only por `doctor_id`, sin vista publica.
+- Entregar datos reales disponibles y completar faltantes con `null`, `false` o arrays vacios.

@@ -30,6 +30,8 @@ Reglas:
 - `include=availability`
 - `include=json_ld`
 - `include=reviews_preview`
+- `include=commercial_visibility`
+- `include=accepted_insurances`
 - `preview=1` (solo futuro/admin; no publico general)
 - `lang=es-MX`
 
@@ -57,10 +59,12 @@ Nota:
     "schedule": {},
     "contact": {},
     "agenda_public": {},
+    "commercial_visibility": {},
     "reviews": {},
     "claim": {},
     "seo": {},
     "json_ld": {},
+    "ecosystem_links": {},
     "feature_flags": {}
   },
   "meta": {
@@ -334,6 +338,7 @@ Razon:
 - Basico:
   - contacto habilitable;
   - horarios visibles;
+  - costo/medios de pago publicables segun configuracion;
   - sin reserva publica.
 - Estandar+:
   - reserva publica (OTP) habilitable.
@@ -353,6 +358,7 @@ Razon:
 - Nunca exponer datos clinicos/pacientes/flags/tokens/API keys/notas internas.
 - Motivo de consulta capturado en agenda publica: visible al medico, no a operador en contrato publico.
 - `doctor_id` publico solo si se aprueba explicitamente.
+- Campos comerciales solo por allowlist (`consultation_fee`, `payment_methods`, `accepted_insurances`) y segun visibilidad efectiva.
 
 ### 16.9 Robots y estado
 - `removed` puede responder `410` para gestion SEO.
@@ -361,3 +367,43 @@ Razon:
 
 ### 16.10 Recomendacion de fase siguiente
 - PP-4 recomendado: diagnostico de fuentes reales para construir DTO ejecutable sin exponer datos sensibles.
+
+## 17) Adenda PP-Decisiones 02 — Datos comerciales, aseguradoras y ecosistema ampliado
+
+### 17.1 Campos comerciales del endpoint
+- El contrato debe incluir `commercial_visibility` con:
+  - `consultation_fee`
+  - `payment_methods`
+  - `accepted_insurances`
+- Si no hay fuente canonica en PP-4B, el endpoint devuelve:
+  - `consultation_fee = null`
+  - `payment_methods = []`
+  - `accepted_insurances = []`
+
+### 17.2 Regla de visibilidad comercial
+- El precio de consulta solo se publica cuando el medico lo habilita explicitamente.
+- `json_ld.priceRange` solo debe generarse cuando el costo sea publico.
+- Los medios de pago deben salir de catalogo controlado backend.
+
+### 17.3 Aseguradoras aceptadas
+- Debe preverse catalogo de aseguradoras con nombre/slug/logo/estado activo.
+- La seleccion del medico se publica solo si plan/politica y configuracion lo permiten.
+- Este bloque no depende de implementar de inmediato perfiles completos de aseguradoras.
+
+### 17.4 Ecosistema ampliado
+- Reservar `ecosystem_links` para futuras vinculaciones con:
+  - aseguradoras
+  - laboratorios clinicos
+  - gabinetes de imagen
+  - laboratorios farmaceuticos
+  - grupos medicos
+- Estos vinculos representan afiliacion, no propiedad ni permiso de edicion del perfil medico.
+
+### 17.5 Seguridad
+- No exponer datos clinicos/pacientes en ningun bloque comercial/ecosistema.
+- No permitir que entidades externas (aseguradoras/labs/pharma) editen perfil medico.
+- Toda comunicacion futura entre perfiles debe operar con opt-in y trazabilidad.
+
+### 17.6 Scope PP-4B
+- PP-4B mantiene enfoque en endpoint transicional read-only por `doctor_id`.
+- No se implementa vista publica en esta fase.
