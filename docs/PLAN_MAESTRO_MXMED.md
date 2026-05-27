@@ -1067,7 +1067,8 @@ Refs:
 - `[refactor]` encapsulación/retiro progresivo de sentinel `__all__`.
 - `[triage]` triaje de `409 patient-id/resolve` no bloqueante.
 - `[profiles]` PP-1 completado: contrato funcional inicial de Perfil Publico Medico documentado (`9d6024e`).
-- `[profiles]` PP-2B en curso: definir contrato tecnico de payload publico MVP (DTO read-only, sanitizacion, gating y pendientes de slug/ownership/plan).
+- `[profiles]` PP-2B completado: contrato tecnico de payload publico MVP documentado (`4274d6b`).
+- `[profiles]` PP-3 en curso: contrato de endpoint publico read-only ejecutable (rutas, request, respuesta, matriz de errores, estados y reglas operativas).
 
 ### 2a) Operación clínica extendida
 - `[api]` órdenes, recetas y resultados con contratos estables.
