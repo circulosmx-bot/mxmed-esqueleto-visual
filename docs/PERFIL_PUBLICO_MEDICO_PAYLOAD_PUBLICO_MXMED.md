@@ -544,3 +544,67 @@ PP-4 — Diagnostico de fuentes reales para DTO ejecutable / endpoint read-only 
 ### 13.5 Regla PP-4B
 - Mantener PP-4B como endpoint transicional read-only por `doctor_id`, sin vista publica.
 - Entregar datos reales disponibles y completar faltantes con `null`, `false` o arrays vacios.
+
+## 14) Estado post PP-4B (implementado)
+
+### 14.1 Endpoint implementado
+- Ruta transicional activa:
+  - `GET /api/profiles/public/doctor/{doctor_id}`
+- Commit:
+  - `2398549 feat(profiles): agrega endpoint publico minimo por doctor`
+
+### 14.2 Contrato entregado en respuesta
+- Wrapper estable:
+  - `ok`
+  - `data`
+  - `meta`
+- `meta.contract = profile_public_mvp`
+- `meta.version = PP-4B`
+- Bloques incluidos:
+  - `profile`
+  - `plan`
+  - `public_visibility`
+  - `identity`
+  - `professional`
+  - `specialties`
+  - `consultorios`
+  - `schedule`
+  - `contact`
+  - `agenda_public`
+  - `commercial_visibility`
+  - `reviews`
+  - `claim`
+  - `seo`
+  - `json_ld`
+  - `ecosystem_links`
+  - `feature_flags`
+
+### 14.3 Regla conservadora de publicacion
+- Cuando faltan datos minimos (`identity.display_name` y `professional.professional_license`):
+  - `profile.status = hidden`
+  - `profile.is_public = false`
+  - `feature_flags.has_public_profile = false`
+  - `seo.robots = noindex,nofollow`
+
+### 14.4 Campos sin fuente canonica en PP-4B
+- Se entregan de forma conservadora como `null`, `false` o `[]`.
+- Ejemplos:
+  - `commercial_visibility.consultation_fee = null`
+  - `commercial_visibility.payment_methods = []`
+  - `commercial_visibility.accepted_insurances = []`
+  - `reviews.visible = false` / `reviews.reviews_preview = []`
+  - `claim.claim_status = null`
+  - `json_ld = null`
+  - `ecosystem_links.* = []`
+
+### 14.5 Seguridad alineada al contrato
+- DTO por allowlist.
+- Sin `SELECT *` para salida publica.
+- No expone datos clinicos ni privados.
+- Sin exposicion de:
+  - pacientes;
+  - motivo de consulta;
+  - diagnosticos/recetas/documentos clinicos;
+  - flags clinicos;
+  - tokens/API keys;
+  - datos fiscales/passwords/secrets/notas internas.

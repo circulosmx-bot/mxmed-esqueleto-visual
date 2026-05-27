@@ -407,3 +407,111 @@ Razon:
 ### 17.6 Scope PP-4B
 - PP-4B mantiene enfoque en endpoint transicional read-only por `doctor_id`.
 - No se implementa vista publica en esta fase.
+
+## 18) Cierre PP-4B — Endpoint minimo transicional (implementado)
+
+### 18.1 Estado
+- PP-4B implementado y publicado.
+- Endpoint transicional disponible:
+  - `GET /api/profiles/public/doctor/{doctor_id}`
+- Commit de implementacion:
+  - `2398549 feat(profiles): agrega endpoint publico minimo por doctor`
+
+### 18.2 Archivos creados por PP-4B
+- `api/profiles/.htaccess`
+- `api/profiles/index.php`
+- `modules/profiles/controllers/PublicProfileController.php`
+- `modules/profiles/repositories/PublicProfileRepository.php`
+
+### 18.3 Alcance real implementado
+- Endpoint publico read-only.
+- DTO publico sanitizado con wrapper `ok/data/meta`.
+- `meta.contract = profile_public_mvp`.
+- `meta.version = PP-4B`.
+- Bloques de salida implementados:
+  - `profile`
+  - `plan`
+  - `public_visibility`
+  - `identity`
+  - `professional`
+  - `specialties`
+  - `consultorios`
+  - `schedule`
+  - `contact`
+  - `agenda_public`
+  - `commercial_visibility`
+  - `reviews`
+  - `claim`
+  - `seo`
+  - `json_ld`
+  - `ecosystem_links`
+  - `feature_flags`
+
+### 18.4 Comportamiento conservador aplicado
+- Si faltan datos minimos criticos (`identity.display_name` y `professional.professional_license`):
+  - `profile.status = hidden`
+  - `profile.is_public = false`
+  - `feature_flags.has_public_profile = false`
+  - `seo.robots = noindex,nofollow`
+- No se inventan:
+  - nombre publico;
+  - cedulas;
+  - especialidades;
+  - costo de consulta;
+  - aseguradoras;
+  - reviews.
+- Campos sin fuente canonica salen como `null`, `false` o `[]`.
+
+### 18.5 Datos reales ya reutilizados
+- Consultorios desde fuente real de Agenda.
+- Horarios/schedule cuando hay fuente disponible.
+- Coordenadas/mapa solo si existen datos publicos seguros.
+- Integracion preparada para disponibilidad publica existente, sin habilitar agenda publica por gating real.
+
+### 18.6 Seguridad aplicada
+- Sin `SELECT *` en la implementacion del endpoint.
+- DTO por allowlist explicita.
+- No expone:
+  - datos de pacientes;
+  - motivos de consulta;
+  - diagnosticos;
+  - recetas;
+  - documentos clinicos;
+  - tokens/API keys;
+  - flags clinicos;
+  - datos fiscales;
+  - passwords/secrets;
+  - notas internas.
+
+### 18.7 QA ejecutado (resumen)
+- Sintaxis PHP (`php -l`) sin errores en:
+  - `api/profiles/index.php`
+  - `modules/profiles/controllers/PublicProfileController.php`
+  - `modules/profiles/repositories/PublicProfileRepository.php`
+- `git diff --check` limpio en PP-4B.
+- Curl validado:
+  - `doctor_id` valido/demo -> `200 OK`
+  - `doctor_id` invalido -> `400 invalid_doctor_id`
+  - `doctor_id` inexistente -> `404 profile_not_found`
+- La respuesta valida contiene todos los bloques requeridos.
+- La respuesta valida no contiene claves prohibidas.
+
+### 18.8 Fuera de alcance de PP-4B
+- No vista publica.
+- No SSR PHP visual.
+- No slug final ni URL SEO publica.
+- No claim completo.
+- No reviews backend.
+- No gating real por plan.
+- No modulo de aseguradoras ni catalogos comerciales finales.
+- No perfiles de laboratorios/gabinetes/farmaceuticas.
+- No cambios en Agenda.
+
+### 18.9 Siguiente paso recomendado
+- Opcion 1:
+  - `PP-4C` QA ampliado del endpoint (mas doctores/demo, cobertura de contratos y validaciones negativas adicionales).
+- Opcion 2:
+  - `PP-5` preparacion de primera vista publica SSR PHP (sin diseno final ni slug definitivo).
+
+Recomendacion:
+- Ejecutar `PP-4C` primero antes de construir la vista publica.

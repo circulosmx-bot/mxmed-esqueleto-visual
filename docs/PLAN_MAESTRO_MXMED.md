@@ -1070,7 +1070,9 @@ Refs:
 - `[profiles]` PP-2B completado: contrato tecnico de payload publico MVP documentado (`4274d6b`).
 - `[profiles]` PP-3 completado: contrato de endpoint publico read-only ejecutable documentado (`2b0e9d4`).
 - `[profiles]` PP-Decisiones 01 completado: adenda de decisiones de producto para identidad, URL, contacto, agenda, reclamo, SEO/Schema, gating, videoconsulta e IA (`0460db2`).
-- `[profiles]` PP-Decisiones 02 en curso: adenda de datos comerciales, medios de pago, aseguradoras aceptadas y ecosistema ampliado (base de contrato previa a PP-4B).
+- `[profiles]` PP-Decisiones 02 completado: adenda de datos comerciales, medios de pago, aseguradoras aceptadas y ecosistema ampliado (`9c81a05`).
+- `[profiles]` PP-4B completado: endpoint publico minimo read-only transicional por `doctor_id` implementado (`2398549`).
+- `[profiles]` Siguiente recomendado: PP-4C QA ampliado del endpoint publico (cobertura con mas doctores/demo, casos borde y validacion de contrato conservador) antes de iniciar PP-5 (vista publica SSR).
 
 ### 2a) Operación clínica extendida
 - `[api]` órdenes, recetas y resultados con contratos estables.
