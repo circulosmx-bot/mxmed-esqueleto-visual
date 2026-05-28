@@ -142,6 +142,32 @@ $('.menu-sub-btn').on('click', function(){
   localStorage.setItem('mxmed_last_panel', id);
 });
 
+// Accesos de perfil desde el dropdown superior (compatibilidad con paneles actuales)
+$(document).on('click', '.dropdown-menu [data-profile-panel]', function(ev){
+  ev.preventDefault();
+  const panelId = String($(this).attr('data-profile-panel') || '').trim();
+  if(!panelId) return;
+
+  let allowed = true;
+  if(typeof jumpTo === 'function'){
+    const result = jumpTo(panelId);
+    if(result === false) allowed = false;
+  }else{
+    showPanel(panelId);
+  }
+  if(!allowed) return;
+
+  openGroup('perfil');
+  localStorage.setItem('mxmed_btn_perfil', panelId);
+
+  const dropdownRoot = this.closest('.dropdown');
+  const toggleEl = dropdownRoot ? dropdownRoot.querySelector('[data-bs-toggle="dropdown"]') : null;
+  if(toggleEl && window.bootstrap && window.bootstrap.Dropdown){
+    const instance = window.bootstrap.Dropdown.getInstance(toggleEl) || new window.bootstrap.Dropdown(toggleEl);
+    instance.hide();
+  }
+});
+
 /* ===== Restaurar estado previo ===== */
 $(function(){
   // Forzar mostrar Actividad (RESUMEN) al recargar
