@@ -120,3 +120,51 @@
 - No toca Agenda.
 - No activa funciones comerciales superiores.
 - No redefine slug/canonical SEO final.
+
+## 13) PP-7H1-C — Deuda UX controlada en navegacion (transicion)
+
+### 13.1 Estado actual de navegacion
+- El menu lateral conserva accesos de Perfil Medico por compatibilidad.
+- El dropdown superior del usuario ya incluye accesos funcionales a:
+  - Informacion datos personales (`p-info`)
+  - Consultorio datos y contacto (`p-consultorio`)
+  - Opiniones supervision comentarios (`p-opiniones`)
+  - Seguridad acceso y privacidad (`p-seguridad`)
+  - Suscripcion plan contratado (`p-suscripcion`)
+  - Ver perfil publico
+- Los paneles reales no se movieron.
+- El dropdown reutiliza navegacion existente (misma logica/paneles).
+
+### 13.2 Decision temporal
+- Mantener temporalmente menu lateral + dropdown superior coexistiendo.
+- No eliminar menu lateral hasta cerrar definicion UX final de navegacion.
+- No cambiar aun reglas de auto-apertura/cierre de menus.
+- No definir aun sustitucion total del lateral por el dropdown.
+
+### 13.3 Pendientes UX (deuda controlada)
+- Definir que grupo queda abierto al navegar desde dropdown.
+- Definir si el menu lateral se oculta o permanece visible por modulo.
+- Definir comportamiento al cambiar entre Perfil, Agenda y Pacientes.
+- Definir si se conserva estado de submenu activo entre navegaciones.
+- Definir comportamiento responsive/movil.
+- Definir si "Mi Perfil" vivira solo en dropdown o en esquema mixto.
+- Definir separacion visual final entre:
+  - identidad profesional publica;
+  - seguridad;
+  - suscripcion.
+
+### 13.4 Guardrail para PP-7H2-A
+- PP-7H2-A puede avanzar con endpoint privado minimo GET/PATCH para `profiles_doctors`.
+- Restriccion obligatoria:
+  - no mover paneles;
+  - no cambiar navegacion;
+  - no modificar dropdown ni menu lateral;
+  - no depender de UX final de menus.
+- Objetivo tecnico de PP-7H2-A:
+  - solo lectura/guardado canonicos de identidad publica profesional.
+
+### 13.5 Dependencia para PP-7H2-B
+- La conexion visual del formulario de panel hacia `profiles_doctors` queda para PP-7H2-B.
+- Debe ejecutarse cuando:
+  - la UX de menus este mejor definida;
+  - o se aplique una conexion minima sin reestructurar navegacion.

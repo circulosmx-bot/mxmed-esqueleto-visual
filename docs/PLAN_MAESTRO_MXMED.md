@@ -1085,7 +1085,10 @@ Refs:
 - `[profiles]` PP-7E completado: cierre documental de identidad profesional canonica publica y evidencia de QA/consumo SSR.
 - `[profiles]` PP-7F completado: diagnostico del panel privado para edicion de identidad publica profesional y mapa panel -> `profiles_doctors` (sin cambios de codigo).
 - `[profiles]` PP-7G completado: diseno UX/contrato de seccion "Identidad publica profesional" (campos, gobernanza, prefijos y ruta panel -> DB canonica -> DTO -> SSR).
-- `[profiles]` Siguiente recomendado: PP-7H implementacion de endpoint privado minimo + guardado desde panel a `profiles_doctors` (sin tocar Agenda ni activar funciones comerciales superiores).
+- `[profiles]` PP-7H1 completado: accesos funcionales de Perfil Medico agregados al dropdown superior del usuario (`ba8938c`).
+- `[profiles]` PP-7H1-B completado: homologacion de labels del dropdown respecto al menu lateral (`ced5676`).
+- `[profiles]` PP-7H1-C completado: deuda UX controlada de navegacion Perfil Medico (coexistencia temporal lateral + dropdown; sin cierre final de comportamiento de menus).
+- `[profiles]` Siguiente recomendado: PP-7H2-A endpoint privado minimo GET/PATCH para `profiles_doctors`, sin mover paneles ni tocar navegacion/menu lateral/dropdown.
 
 ### 2a) Operación clínica extendida
 - `[api]` órdenes, recetas y resultados con contratos estables.
