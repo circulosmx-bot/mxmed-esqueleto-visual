@@ -368,9 +368,16 @@ $renderJsonLd = is_array($jsonLd) && !empty($jsonLd);
 <body>
   <header class="mxpp-header">
     <div class="mxpp-wrap mxpp-header__inner">
-      <div class="mxpp-brand">México Médico</div>
+      <div class="mxpp-brand" aria-label="México Médico">
+        <span class="mxpp-brand__seal" aria-hidden="true">MM</span>
+        <div class="mxpp-brand__copy">
+          <span class="mxpp-brand__title">México Médico</span>
+          <span class="mxpp-brand__subtitle">Perfil público profesional</span>
+        </div>
+      </div>
       <form class="mxpp-search" action="#" method="get" onsubmit="return false;">
-        <input type="search" placeholder="Buscar médico o especialidad (próximamente)" aria-label="Buscar" disabled />
+        <label class="mxpp-search__label" for="mxpp-public-search">Búsqueda pública</label>
+        <input id="mxpp-public-search" type="search" placeholder="Buscar médico o especialidad (próximamente)" aria-label="Buscar" disabled />
       </form>
     </div>
   </header>
@@ -387,22 +394,23 @@ $renderJsonLd = is_array($jsonLd) && !empty($jsonLd);
       <?php if ($showLimitedNotice): ?>
         <section class="mxpp-alert mxpp-alert--info">
           <strong>Información pública limitada.</strong>
-          <span>Este perfil está en validación y algunos datos pueden no estar disponibles.</span>
+          <span>Este perfil se muestra con datos públicos disponibles y puede estar pendiente de validación.</span>
         </section>
       <?php endif; ?>
 
       <section class="mxpp-hero">
         <div class="mxpp-col mxpp-col--left">
           <div class="mxpp-card mxpp-avatar-card">
+            <p class="mxpp-kicker">Consultorio principal</p>
             <?php if (toText($identity['photo_url'] ?? null) !== null): ?>
               <img src="<?= h((string)$identity['photo_url']) ?>" alt="Foto del médico" class="mxpp-avatar" />
             <?php else: ?>
               <div class="mxpp-avatar mxpp-avatar--placeholder" aria-hidden="true">👨‍⚕️</div>
             <?php endif; ?>
 
-            <h3><?= h($primaryName) ?></h3>
+            <h3 class="mxpp-card__title"><?= h($primaryName) ?></h3>
             <?php if ($primaryAddress !== null): ?>
-              <p class="mxpp-muted"><?= h($primaryAddress) ?></p>
+              <p class="mxpp-muted mxpp-address"><?= h($primaryAddress) ?></p>
             <?php endif; ?>
 
             <?php if ($primaryMapUrl !== null): ?>
@@ -411,58 +419,63 @@ $renderJsonLd = is_array($jsonLd) && !empty($jsonLd);
               </div>
             <?php endif; ?>
 
-            <a class="mxpp-link" href="#" aria-disabled="true">Sugerir corrección</a>
-            <a class="mxpp-link mxpp-link--strong" href="#" aria-disabled="true">Yo soy este médico y quiero administrar mi perfil</a>
+            <div class="mxpp-actions">
+              <a class="mxpp-link mxpp-link--muted" href="#" aria-disabled="true">Sugerir corrección</a>
+              <a class="mxpp-link mxpp-link--strong" href="#" aria-disabled="true">Yo soy este médico y quiero administrar mi perfil</a>
+            </div>
           </div>
         </div>
 
         <div class="mxpp-col mxpp-col--right">
           <div class="mxpp-card">
+            <p class="mxpp-kicker">Perfil médico individual</p>
             <div class="mxpp-heading-row">
-              <h1>
+              <h1 class="mxpp-profile-title">
                 <?= h($displayName ?? 'Perfil médico en validación') ?>
               </h1>
               <?php if ($isPublic): ?>
                 <span class="mxpp-badge">Verificado</span>
+              <?php else: ?>
+                <span class="mxpp-badge mxpp-badge--soft">En validación</span>
               <?php endif; ?>
             </div>
 
             <?php if ($reviewsVisible): ?>
-              <p class="mxpp-muted">Opiniones: <?= h((string)$reviewCount) ?><?= $ratingAvg !== null ? ' · Calificación ' . h((string)$ratingAvg) : '' ?></p>
+              <p class="mxpp-muted mxpp-inline-meta">Opiniones: <?= h((string)$reviewCount) ?><?= $ratingAvg !== null ? ' · Calificación ' . h((string)$ratingAvg) : '' ?></p>
             <?php else: ?>
-              <p class="mxpp-muted">Opiniones públicas no disponibles por ahora.</p>
+              <p class="mxpp-muted mxpp-inline-meta">Opiniones públicas no disponibles por ahora.</p>
             <?php endif; ?>
 
             <?php if ($primarySpecialty !== null): ?>
-              <p><strong>Especialidad:</strong> <?= h($primarySpecialty) ?></p>
+              <p class="mxpp-detail-row"><strong>Especialidad:</strong> <?= h($primarySpecialty) ?></p>
             <?php endif; ?>
             <?php if ($professionalLicense !== null): ?>
-              <p><strong>Cédula profesional:</strong> <?= h($professionalLicense) ?></p>
+              <p class="mxpp-detail-row"><strong>Cédula profesional:</strong> <?= h($professionalLicense) ?></p>
             <?php endif; ?>
             <?php if ($specialtyLicense !== null): ?>
-              <p><strong>Cédula de especialidad:</strong> <?= h($specialtyLicense) ?></p>
+              <p class="mxpp-detail-row"><strong>Cédula de especialidad:</strong> <?= h($specialtyLicense) ?></p>
             <?php endif; ?>
             <?php if ($bioShort !== null): ?>
-              <p><?= h($bioShort) ?></p>
+              <p class="mxpp-bio"><?= h($bioShort) ?></p>
             <?php endif; ?>
             <?php if (toText($plan['plan_label'] ?? null) !== null): ?>
-              <p class="mxpp-muted">Plan informativo: <?= h((string)$plan['plan_label']) ?></p>
+              <p class="mxpp-muted mxpp-plan-note">Plan informativo: <?= h((string)$plan['plan_label']) ?></p>
             <?php endif; ?>
           </div>
         </div>
       </section>
 
       <section class="mxpp-grid">
-        <article class="mxpp-card">
+        <article class="mxpp-card mxpp-card--section">
           <h2>Consultorios</h2>
           <?php if (!empty($consultorios)): ?>
             <ul class="mxpp-list">
               <?php foreach ($consultorios as $row): ?>
                 <?php if (!is_array($row)): continue; endif; ?>
-                <li>
-                  <strong><?= h(toText($row['public_name'] ?? null) ?? 'Consultorio') ?></strong>
+                <li class="mxpp-list__item">
+                  <strong class="mxpp-list__title"><?= h(toText($row['public_name'] ?? null) ?? 'Consultorio') ?></strong>
                   <?php if (toText($row['address'] ?? null) !== null): ?>
-                    <div class="mxpp-muted"><?= h((string)$row['address']) ?></div>
+                    <div class="mxpp-muted mxpp-list__subtitle"><?= h((string)$row['address']) ?></div>
                   <?php endif; ?>
                 </li>
               <?php endforeach; ?>
@@ -472,17 +485,17 @@ $renderJsonLd = is_array($jsonLd) && !empty($jsonLd);
           <?php endif; ?>
         </article>
 
-        <article class="mxpp-card">
+        <article class="mxpp-card mxpp-card--section">
           <h2>Horarios</h2>
           <?php if (!empty($scheduleRows)): ?>
             <ul class="mxpp-list">
               <?php foreach ($scheduleRows as $day): ?>
-                <li>
-                  <strong><?= h((string)$day['label']) ?></strong>
+                <li class="mxpp-list__item">
+                  <strong class="mxpp-list__title"><?= h((string)$day['label']) ?></strong>
                   <ul class="mxpp-sublist">
                     <?php foreach ($day['windows'] as $window): ?>
-                      <li>
-                        <?= h((string)$window['start']) ?> - <?= h((string)$window['end']) ?>
+                      <li class="mxpp-schedule-row">
+                        <span class="mxpp-schedule-chip"><?= h((string)$window['start']) ?> - <?= h((string)$window['end']) ?></span>
                         <?php if (!empty($window['consultorio'])): ?>
                           <span class="mxpp-muted"> · <?= h((string)$window['consultorio']) ?></span>
                         <?php endif; ?>
@@ -498,7 +511,7 @@ $renderJsonLd = is_array($jsonLd) && !empty($jsonLd);
         </article>
 
         <?php if ($showContactButtons): ?>
-          <article class="mxpp-card">
+          <article class="mxpp-card mxpp-card--section">
             <h2>Contacto</h2>
             <?php if ($showPhone && $contactPhone !== null): ?>
               <p><strong>Teléfono:</strong> <?= h($contactPhone) ?></p>
@@ -513,7 +526,7 @@ $renderJsonLd = is_array($jsonLd) && !empty($jsonLd);
         <?php endif; ?>
 
         <?php if ($showPublicAgenda): ?>
-          <article class="mxpp-card">
+          <article class="mxpp-card mxpp-card--section">
             <h2>Agenda una cita</h2>
             <p class="mxpp-muted">Horarios disponibles para reserva pública.</p>
             <?php if (toText($agendaPublic['availability_endpoint'] ?? null) !== null): ?>
@@ -523,7 +536,7 @@ $renderJsonLd = is_array($jsonLd) && !empty($jsonLd);
         <?php endif; ?>
 
         <?php if ($showFee): ?>
-          <article class="mxpp-card">
+          <article class="mxpp-card mxpp-card--section">
             <h2>Costo y medios de pago</h2>
             <?php if ($consultationFee !== null): ?>
               <p><strong>Costo de consulta:</strong> <?= h(is_scalar($consultationFee) ? (string)$consultationFee : json_encode($consultationFee, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></p>
@@ -541,7 +554,7 @@ $renderJsonLd = is_array($jsonLd) && !empty($jsonLd);
         <?php endif; ?>
 
         <?php if ($showInsurances): ?>
-          <article class="mxpp-card">
+          <article class="mxpp-card mxpp-card--section">
             <h2>Aseguradoras aceptadas</h2>
             <?php if (!empty($acceptedInsurances)): ?>
               <ul class="mxpp-list">
@@ -557,7 +570,7 @@ $renderJsonLd = is_array($jsonLd) && !empty($jsonLd);
         <?php endif; ?>
 
         <?php if ($reviewsVisible): ?>
-          <article class="mxpp-card">
+          <article class="mxpp-card mxpp-card--section">
             <h2>Opiniones</h2>
             <p class="mxpp-muted">Calificación promedio: <?= h((string)($ratingAvg ?? 'N/D')) ?> · <?= h((string)$reviewCount) ?> reseñas</p>
           </article>
