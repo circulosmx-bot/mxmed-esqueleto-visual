@@ -1074,7 +1074,9 @@ Refs:
 - `[profiles]` PP-4B completado: endpoint publico minimo read-only transicional por `doctor_id` implementado (`2398549`).
 - `[profiles]` PP-4C completado: QA ampliado del endpoint publico transicional validado (casos 200/400/404, contrato, seguridad y comportamiento conservador) sin cambios de codigo.
 - `[profiles]` PP-Decisiones 03 completado: direccion visual/funcional por boceto para perfil gratuito, perfil mejorado por plan y separacion de plataforma/listados publicos.
-- `[profiles]` Siguiente recomendado: PP-5A diagnostico tecnico de ubicacion para primera vista publica SSR PHP (fuera de `index.html`, sin slug final ni diseno final cerrados).
+- `[profiles]` PP-5B completado: primera vista publica SSR transicional implementada en `profiles/doctor.php` con CSS dedicado (`77f3a1a`).
+- `[profiles]` PP-5C completado: QA visual/funcional basico de la vista SSR transicional validado (200/400/404, estructura, gating, SEO/SSR y seguridad) sin cambios de codigo.
+- `[profiles]` Siguiente recomendado: PP-5D micro-ajustes visuales del perfil gratuito SSR o PP-6 acercamiento visual progresivo al boceto (sin slug/canonical finales).
 
 ### 2a) Operación clínica extendida
 - `[api]` órdenes, recetas y resultados con contratos estables.

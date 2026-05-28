@@ -607,3 +607,121 @@ Recomendacion:
 
 Resultado:
 - Sin errores de sintaxis.
+
+## 20) Cierre PP-5B / PP-5C — Vista publica SSR transicional (implementado + QA)
+
+### 20.1 Estado PP-5B
+- PP-5B implementado.
+- Vista publica SSR transicional creada en:
+  - `profiles/doctor.php`
+- CSS dedicado creado en:
+  - `assets/css/public-profile.css`
+- URL transicional:
+  - `/profiles/doctor.php?doctor_id=1`
+- Commit de implementacion:
+  - `77f3a1a feat(profiles): agrega vista publica SSR transicional`
+
+### 20.2 Alcance real implementado
+- Primera vista SSR minima del Perfil Medico.
+- Consume server-side el endpoint:
+  - `GET /api/profiles/public/doctor/{doctor_id}`
+- Renderiza unicamente el DTO publico sanitizado.
+- No consulta DB directamente en flujo normal (consumo HTTP del endpoint).
+- No duplica el contrato de salida del endpoint.
+- Mantiene fallback local para `php -S` de un solo worker, acotado a QA local, reutilizando:
+  - `PublicProfileController`
+  - `PublicProfileRepository`
+
+### 20.3 Estructura visual implementada
+- Header publico Mexico Medico.
+- Buscador placeholder.
+- Bloque principal del perfil.
+- Foto/avatar.
+- Consultorio principal.
+- Direccion.
+- Mapa cuando existe `map_embed_url`.
+- Estado conservador "Informacion publica limitada" cuando `profile.is_public=false`.
+- Bloques de consultorios y horarios.
+- Footer basico.
+
+### 20.4 Gating validado
+- PP-5 no implementa motor de planes.
+- La vista no usa condiciones por `plan_code`.
+- `data.plan` se usa solo como informativo.
+- La visibilidad depende de:
+  - `data.public_visibility`
+  - `data.feature_flags`
+- Con flags conservadores de PP-4B se ocultan:
+  - contacto;
+  - telefono;
+  - WhatsApp;
+  - agenda publica;
+  - costo;
+  - aseguradoras.
+
+### 20.5 SEO/SSR validado
+- HTML renderizado desde servidor.
+- `title` renderizado.
+- `meta description` renderizado.
+- `meta robots = noindex,nofollow` cuando viene asi.
+- `canonical` omitido cuando `canonical_url` es `null`.
+- JSON-LD omitido cuando `json_ld` es `null`.
+- No se imprime JSON crudo completo.
+
+### 20.6 Seguridad validada
+- No se exponen claves prohibidas:
+  - `patient_id`
+  - `motivo`
+  - `diagnostico`
+  - `diagnóstico`
+  - `receta`
+  - `token`
+  - `api_key`
+  - `flag_type`
+  - `datos_fiscales`
+  - `password`
+  - `secret`
+  - `stack`
+  - `trace`
+- Output HTML escapado.
+- Sin errores internos visibles en la pagina publica.
+
+### 20.7 QA PP-5C ejecutado (resumen)
+- Sintaxis PHP validada:
+  - `php -l profiles/doctor.php`
+  - `php -l api/profiles/index.php`
+  - `php -l modules/profiles/controllers/PublicProfileController.php`
+  - `php -l modules/profiles/repositories/PublicProfileRepository.php`
+- URLs probadas:
+  - `/profiles/doctor.php?doctor_id=1` -> `200 OK`
+  - `/profiles/doctor.php?doctor_id=d_demo_01` -> `200 OK`
+  - `/profiles/doctor.php?doctor_id=doctor_not_found_999` -> `404 Not Found`
+  - `/profiles/doctor.php?doctor_id=bad%24id` -> `400 Bad Request`
+  - `/profiles/doctor.php` -> `400 Bad Request`
+- Estructura HTML validada.
+- Gating visual validado.
+- SEO/SSR validado.
+- Seguridad validada.
+- Responsive basico validado por CSS:
+  - desktop en dos columnas;
+  - movil en una columna.
+
+### 20.8 Fuera de alcance vigente
+- No slug final.
+- No canonical SEO definitivo.
+- No home publica.
+- No listados por estado/especialidad.
+- No diseno final pixel-perfect.
+- No agenda interactiva completa.
+- No reserva de cita.
+- No OTP.
+- No claim completo.
+- No reviews reales.
+- No catalogo real de aseguradoras.
+- No motor real de planes.
+
+### 20.9 Siguiente paso recomendado
+- Opcion 1:
+  - `PP-5D` micro-ajustes visuales del perfil gratuito SSR.
+- Opcion 2:
+  - `PP-6` acercamiento visual progresivo al boceto (sin cerrar slug/canonical finales).
