@@ -214,3 +214,28 @@ Si falta cualquier minimo:
 - Recomendacion preferida:
   - `PP-7F` diagnostico del panel privado para definir la seccion exacta que editara identidad publica canonica en `profiles_doctors`.
 - Implementacion de guardado desde panel privado debe iniciar solo despues de ese diagnostico.
+
+## 12) PP-7F/PP-7G — Diagnostico de panel y diseno UX/contrato de identidad publica
+
+### 12.1 Resultado PP-7F (diagnostico)
+- Se confirmo que el panel privado ya tiene UI de identidad profesional dentro de Mi Perfil, pero con persistencia principal en localStorage/seed (`dp:*`) y catalogos frontend.
+- No existe aun endpoint privado canonico para guardar identidad publica profesional en `profiles_doctors`.
+- Se confirmo la regla de arquitectura:
+  - panel privado -> DB canonica -> endpoint publico -> vista SSR.
+
+### 12.2 Resultado PP-7G (diseno documental)
+- Se definio la seccion de panel:
+  - Mi Perfil -> Informacion -> Identidad publica profesional.
+- Se documentaron campos iniciales, gobernanza por campo, catalogo controlado de prefijos y separacion entre:
+  - especialidad medica real;
+  - taxonomia SEO/servicios/padecimientos.
+- Se definio que `profile_status` e `is_public_candidate` son estados gobernados por backend/plataforma y no por edicion libre del medico.
+
+### 12.3 Documento de referencia PP-7G
+- `docs/PERFIL_PUBLICO_MEDICO_PANEL_IDENTIDAD_PUBLICA_MXMED.md`
+
+### 12.4 Siguiente recomendado (PP-7H)
+- Implementar endpoint privado minimo de identidad publica (`GET/PATCH`) y conexion del formulario de panel hacia `profiles_doctors`.
+- Mantener localStorage solo como respaldo UX transicional (no como fuente publica).
+- QA de extremo a extremo:
+  - panel privado -> `profiles_doctors` -> endpoint publico DTO -> vista SSR.

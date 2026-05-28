@@ -1083,7 +1083,9 @@ Refs:
 - `[profiles]` PP-7C completado: decision tecnica de fuente canonica minima `profiles_doctors` para identidad profesional publica (documental).
 - `[profiles]` PP-7D completado: implementacion minima de `profiles_doctors` + seed demo controlado + adaptacion endpoint publico (`d095475`).
 - `[profiles]` PP-7E completado: cierre documental de identidad profesional canonica publica y evidencia de QA/consumo SSR.
-- `[profiles]` Siguiente recomendado: PP-7F diagnostico del panel privado para definir seccion de edicion/guardado de identidad publica en `profiles_doctors`.
+- `[profiles]` PP-7F completado: diagnostico del panel privado para edicion de identidad publica profesional y mapa panel -> `profiles_doctors` (sin cambios de codigo).
+- `[profiles]` PP-7G completado: diseno UX/contrato de seccion "Identidad publica profesional" (campos, gobernanza, prefijos y ruta panel -> DB canonica -> DTO -> SSR).
+- `[profiles]` Siguiente recomendado: PP-7H implementacion de endpoint privado minimo + guardado desde panel a `profiles_doctors` (sin tocar Agenda ni activar funciones comerciales superiores).
 
 ### 2a) Operación clínica extendida
 - `[api]` órdenes, recetas y resultados con contratos estables.

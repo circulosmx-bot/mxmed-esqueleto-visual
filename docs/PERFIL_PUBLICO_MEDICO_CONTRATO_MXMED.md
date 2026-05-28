@@ -700,6 +700,38 @@ Incluir en v1:
   - adaptacion endpoint publico para leer primero `profiles_doctors`
   - QA endpoint + QA vista SSR
 
+## Adenda PP-Decisiones 05 — Panel privado para Identidad publica profesional (PP-7G)
+
+### A) Alcance de producto/arquitectura
+- La edicion de identidad publica profesional debe vivir en panel privado, separada de datos internos no publicos.
+- Flujo obligatorio:
+  - Panel privado -> `profiles_doctors` -> endpoint publico DTO sanitizado -> vista SSR.
+- Prohibido:
+  - panel privado -> vista publica directa.
+  - localStorage/seed/UI como fuente publica final.
+
+### B) Ubicacion recomendada en panel
+- Ruta UX recomendada:
+  - Mi Perfil -> Informacion -> Identidad publica profesional.
+- Debe incluir un bloque explicito:
+  - "Estos datos se mostraran en tu perfil publico".
+
+### C) Regla de edicion/gobernanza
+- `display_name`, `prefix`, `specialty_primary`, `bio_short`: editables por medico (con validaciones).
+- `professional_license` y `specialty_license`: capturables por medico, sujetas a revision de plataforma.
+- `profile_status` e `is_public_candidate`: no editables libremente por medico; decision final backend/plataforma.
+- Prefijo profesional: no texto libre; catalogo controlado.
+
+### D) Siguiente fase
+- PP-7H recomendado:
+  - endpoint privado minimo (`GET/PATCH`) para lectura/guardado en `profiles_doctors`;
+  - conexion de formulario de panel privado a fuente canonica;
+  - mantener localStorage solo como respaldo UX transicional.
+
+### E) Referencia documental
+- Detalle UX/contrato tecnico de PP-7G:
+  - `docs/PERFIL_PUBLICO_MEDICO_PANEL_IDENTIDAD_PUBLICA_MXMED.md`
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato
