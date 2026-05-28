@@ -42,7 +42,7 @@ body {
 .mxpp-brand {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.78rem;
 }
 
 .mxpp-brand__grid {
@@ -97,12 +97,6 @@ body {
   color: #0f4562;
 }
 
-.mxpp-brand__icon {
-  font-size: clamp(1.7rem, 3.4vw, 2.35rem);
-  opacity: 0.8;
-  margin-left: 0.2rem;
-}
-
 .mxpp-header__bar {
   background: linear-gradient(90deg, var(--mxpp-teal) 0%, #10a6b0 55%, var(--mxpp-teal-dark) 100%);
 }
@@ -116,17 +110,7 @@ body {
 }
 
 .mxpp-search {
-  display: grid;
-  gap: 0.15rem;
   flex: 0 1 390px;
-}
-
-.mxpp-search__label {
-  font-size: 0.66rem;
-  color: rgba(255, 255, 255, 0.94);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-weight: 700;
 }
 
 .mxpp-search__field {
@@ -192,7 +176,7 @@ body {
 
 .mxpp-profile-hero {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-columns: 260px minmax(0, 1fr);
   gap: 0.9rem;
   align-items: start;
 }
@@ -205,7 +189,7 @@ body {
 }
 
 .mxpp-card--left-main {
-  padding: 0.85rem;
+  padding: 0.62rem;
 }
 
 .mxpp-avatar-wrap {
@@ -215,7 +199,7 @@ body {
 
 .mxpp-avatar {
   width: 100%;
-  max-width: 220px;
+  max-width: 210px;
   aspect-ratio: 1 / 1;
   object-fit: cover;
   border-radius: 3px;
@@ -251,28 +235,71 @@ body {
 }
 
 .mxpp-consultorio-title {
-  margin: 0.85rem 0 0.22rem;
-  font-size: 2.05rem;
-  line-height: 1;
+  margin: 0;
+  font-size: 1.45rem;
+  line-height: 1.05;
   text-transform: uppercase;
   letter-spacing: -0.01em;
 }
 
 .mxpp-consultorio-name {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.28rem;
+  color: #fff;
+  font-weight: 700;
+  text-align: left;
 }
 
 .mxpp-consultorio-address {
-  margin: 0.52rem 0 0;
+  margin: 0.56rem 0 0;
   color: #445b67;
   line-height: 1.4;
+  font-size: 1.12rem;
 }
 
-.mxpp-actions {
-  margin-top: 0.8rem;
+.mxpp-consultorio-block {
+  margin-top: 0.78rem;
+  overflow: hidden;
+}
+
+.mxpp-consultorio-bar {
+  width: 100%;
+  background: linear-gradient(90deg, #10adba 0%, #0a99a6 100%);
+  padding: 0.72rem 0.9rem;
+}
+
+.mxpp-consultorio-body {
   display: grid;
-  gap: 0.45rem;
+  grid-template-columns: minmax(0, 40%) minmax(0, 60%);
+}
+
+.mxpp-consultorio-address-col {
+  padding: 0.95rem 1rem;
+  border-right: 1px solid #d8e7ed;
+  background: #fff;
+}
+
+.mxpp-consultorio-schedule {
+  margin: 0.7rem 0 0;
+  font-size: 1.02rem;
+  color: #2f5f71;
+}
+
+.mxpp-map-link {
+  margin: 0.7rem 0 0;
+  color: #0b6f8a;
+  font-weight: 600;
+}
+
+.mxpp-consultorio-map-col {
+  background: #f3f8fb;
+}
+
+.mxpp-actions-row {
+  margin-top: 0.72rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
 }
 
 .mxpp-action-link,
@@ -320,6 +347,11 @@ body {
   letter-spacing: -0.03em;
 }
 
+.mxpp-profile-title--pending {
+  font-size: clamp(1.65rem, 3.2vw, 2.05rem);
+  font-weight: 700;
+}
+
 .mxpp-badge {
   margin-top: 0.23rem;
   padding: 0.18rem 0.58rem;
@@ -344,7 +376,7 @@ body {
 
 .mxpp-opinions {
   margin: 0.54rem 0 0.46rem;
-  font-size: 1.2rem;
+  font-size: 1.05rem;
   color: #0ca2b0;
   font-weight: 700;
 }
@@ -369,11 +401,35 @@ body {
   line-height: 1.35;
 }
 
+.mxpp-specialty--pending {
+  font-size: 1.35rem;
+  color: #2b6073;
+}
+
+.mxpp-licenses-inline {
+  margin: 0.28rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.34rem;
+  align-items: center;
+  font-size: 0.98rem;
+  line-height: 1.35;
+}
+
+.mxpp-license-divider {
+  color: #6f8a97;
+}
+
 .mxpp-bio {
   margin: 0.6rem 0 0;
   font-size: 1.02rem;
   color: #36505c;
   line-height: 1.42;
+}
+
+.mxpp-bio--pending {
+  font-size: 0.94rem;
+  color: #5f7b87;
 }
 
 .mxpp-plan-note {
@@ -382,18 +438,25 @@ body {
   color: #5f7b86;
 }
 
-.mxpp-card--map {
-  margin-top: 0.6rem;
-  padding: 0;
-  overflow: hidden;
+.mxpp-consultas-note {
+  margin: 0.62rem 0 0;
+  font-size: 0.95rem;
+  color: #0f7a9b;
 }
 
 .mxpp-map,
 .mxpp-map iframe {
   width: 100%;
-  min-height: 190px;
+  min-height: 210px;
   border: 0;
   display: block;
+}
+
+.mxpp-map--placeholder {
+  display: grid;
+  place-items: center;
+  color: #6b828c;
+  font-size: 0.9rem;
 }
 
 .mxpp-institutional {
@@ -447,9 +510,30 @@ body {
   border: 1px solid #b5dbe3;
   border-radius: 9px;
   background: #f4fcfe;
-  padding: 0.62rem 0.8rem;
+  padding: 0.72rem 0.85rem;
   color: #2f5a69;
   font-size: 0.92rem;
+}
+
+.mxpp-review-strip__header {
+  margin: 0;
+  font-weight: 700;
+  color: #127e9c;
+}
+
+.mxpp-review-strip__body {
+  margin: 0.4rem 0 0;
+  color: #365462;
+  line-height: 1.45;
+}
+
+.mxpp-review-strip__links {
+  margin-top: 0.52rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  color: #0d5f82;
+  font-weight: 700;
 }
 
 .mxpp-muted {
@@ -462,7 +546,7 @@ body {
 
 .mxpp-footer__top {
   border-top: 1px solid #d2dde4;
-  padding: 0.85rem 0 0.62rem;
+  padding: 0.85rem 0 0.42rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -482,6 +566,33 @@ body {
   gap: 0.35rem;
   font-size: 0.88rem;
   color: #3f5f6d;
+}
+
+.mxpp-footer__participa {
+  text-align: right;
+  color: #184a62;
+}
+
+.mxpp-footer__participa p {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.mxpp-footer__participa small {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.84rem;
+  color: #2f5e73;
+}
+
+.mxpp-footer__links-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+  padding-bottom: 0.15rem;
 }
 
 .mxpp-footer__links a {
@@ -519,6 +630,19 @@ body {
   .mxpp-profile-hero {
     grid-template-columns: 1fr;
   }
+
+  .mxpp-consultorio-body {
+    grid-template-columns: 1fr;
+  }
+
+  .mxpp-consultorio-address-col {
+    border-right: 0;
+    border-bottom: 1px solid #d8e7ed;
+  }
+
+  .mxpp-actions-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -532,10 +656,6 @@ body {
 
   .mxpp-brand__line2 {
     font-size: 2rem;
-  }
-
-  .mxpp-brand__icon {
-    display: none;
   }
 
   .mxpp-search__field button {
@@ -561,6 +681,24 @@ body {
   }
 
   .mxpp-footer__top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .mxpp-footer__participa {
+    text-align: left;
+  }
+
+  .mxpp-footer__participa p {
+    font-size: 1.65rem;
+  }
+
+  .mxpp-footer__links-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .mxpp-review-strip__links {
     flex-direction: column;
     align-items: flex-start;
   }
