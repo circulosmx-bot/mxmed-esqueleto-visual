@@ -725,3 +725,45 @@ Resultado:
   - `PP-5D` micro-ajustes visuales del perfil gratuito SSR.
 - Opcion 2:
   - `PP-6` acercamiento visual progresivo al boceto (sin cerrar slug/canonical finales).
+
+## 21) Adenda PP-7C — Identidad profesional canonica minima (decision tecnica)
+
+### 21.1 Estado actual
+- El endpoint ya resuelve consultorios/mapa desde fuentes reales.
+- La identidad profesional publica sigue en modo conservador cuando no existe fuente backend canonica.
+- Semillas/localStorage/UI no son fuente valida para publicacion indexable.
+
+### 21.2 Decision de fuente canonica
+- Preparar tabla/fuente minima `profiles_doctors` dentro de `profiles_*`.
+- El endpoint debe leer identidad profesional desde esa fuente de verdad y no desde formulario privado.
+
+### 21.3 Campos minimos a mapear en DTO
+- `identity.display_name`
+- `identity.prefix`
+- `identity.photo_url`
+- `identity.avatar_url`
+- `identity.logo_url`
+- `professional.professional_license`
+- `professional.specialty_license`
+- `professional.bio_short`
+- `specialties[]` (desde `specialty_primary`/fuente derivada)
+
+### 21.4 Regla minima para estado publico
+- Solo pasar a `profile.status=active` y `profile.is_public=true` cuando existan:
+  - `display_name`
+  - `professional_license`
+  - `specialty_primary` (o equivalente)
+  - al menos un consultorio publicable/resoluble
+
+### 21.5 Guardrails
+- Mantener allowlist explicita.
+- No exponer datos privados/sensibles.
+- Mantener `public_visibility`/`feature_flags` como motor de visibilidad.
+- No usar `plan_code` para decisiones visuales en la vista SSR.
+
+### 21.6 Proxima fase sugerida
+- PP-7D:
+  - schema minima `profiles_doctors`
+  - seed demo controlado para QA local
+  - adaptacion de `PublicProfileRepository`/`PublicProfileController`
+  - QA de endpoint y vista SSR

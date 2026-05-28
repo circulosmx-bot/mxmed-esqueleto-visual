@@ -646,6 +646,60 @@ Incluir en v1:
 - No tocar `index.html`.
 - No tocar Agenda.
 
+## Adenda PP-Decisiones 04 — Identidad profesional canonica minima (PP-7C)
+
+### A) Problema actual
+- El perfil publico ya puede renderizar consultorio principal y mapa desde fuentes reales.
+- La identidad profesional publica (nombre, prefijo, cedulas, especialidad, bio, foto) no tiene fuente backend canonica.
+- Hoy esos datos viven en seed/localStorage/UI y no son validos como fuente publica indexable.
+
+### B) Decision
+- Preparar una fuente canonica minima del dominio `profiles_*`:
+  - `profiles_doctors`
+- Regla de arquitectura:
+  - panel privado -> DB canonica -> endpoint publico DTO sanitizado -> vista SSR.
+- Prohibido:
+  - panel privado -> vista publica directa.
+
+### C) Campos minimos de la fuente canonica
+- `doctor_id`
+- `display_name`
+- `prefix`
+- `gender` / `gender_label`
+- `professional_license`
+- `specialty_license`
+- `specialty_primary`
+- `specialty_secondary_json`
+- `bio_short`
+- `photo_url`
+- `avatar_url`
+- `logo_url`
+- `profile_status`
+- `is_public_candidate`
+- `created_at`
+- `updated_at`
+
+### D) Regla minima de publicacion
+- Un perfil puede pasar de `hidden/is_public=false` a `active/is_public=true` solo si existen:
+  - `display_name`
+  - `professional_license`
+  - `specialty_primary` (o equivalente)
+  - al menos un consultorio publicable/resoluble
+- Esta fase no activa:
+  - contacto publico
+  - agenda publica
+  - costo
+  - aseguradoras
+  - reviews
+  - claim real
+
+### E) Implementacion posterior recomendada
+- Fase siguiente: PP-7D
+  - schema/migracion minima `profiles_doctors`
+  - seed demo controlado (QA local)
+  - adaptacion endpoint publico para leer primero `profiles_doctors`
+  - QA endpoint + QA vista SSR
+
 ---
 
 ## Fuentes de referencia entregadas para este contrato

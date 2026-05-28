@@ -1076,7 +1076,12 @@ Refs:
 - `[profiles]` PP-Decisiones 03 completado: direccion visual/funcional por boceto para perfil gratuito, perfil mejorado por plan y separacion de plataforma/listados publicos.
 - `[profiles]` PP-5B completado: primera vista publica SSR transicional implementada en `profiles/doctor.php` con CSS dedicado (`77f3a1a`).
 - `[profiles]` PP-5C completado: QA visual/funcional basico de la vista SSR transicional validado (200/400/404, estructura, gating, SEO/SSR y seguridad) sin cambios de codigo.
-- `[profiles]` Siguiente recomendado: PP-5D micro-ajustes visuales del perfil gratuito SSR o PP-6 acercamiento visual progresivo al boceto (sin slug/canonical finales).
+- `[profiles]` PP-5D completado: micro-ajustes visuales de la ficha gratuita SSR (`4764568`).
+- `[profiles]` PP-6A completado: reestructuracion visual progresiva y refinamiento tipo directorio del perfil gratuito (`4e36597`, `b7aee1b`).
+- `[profiles]` PP-7A completado: diagnostico de conexion panel privado -> DTO publico (sin cambios de codigo).
+- `[profiles]` PP-7B completado: diseno tecnico minimo de identidad profesional canonica (sin implementacion).
+- `[profiles]` PP-7C completado: decision tecnica de fuente canonica minima `profiles_doctors` para identidad profesional publica (documental).
+- `[profiles]` Siguiente recomendado: PP-7D implementacion minima de `profiles_doctors` + seed demo controlado + adaptacion endpoint publico + QA endpoint/SSR.
 
 ### 2a) Operación clínica extendida
 - `[api]` órdenes, recetas y resultados con contratos estables.

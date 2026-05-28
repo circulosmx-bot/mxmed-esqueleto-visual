@@ -25,6 +25,7 @@
 - Relación: enlaza a consultorios y agenda para mostrar disponibilidad; alimenta notificaciones.
 - Crecimiento: medio.
 - Nota PP-Decisiones 02: prever campos de salida pública comercial (`consultation_fee`, `payment_methods`, `accepted_insurances`) y reservas de `ecosystem_links` sin exponer datos clínicos ni ceder edición del perfil a terceros.
+- Nota PP-7C: definir fuente canonica minima de identidad profesional publica en `profiles_doctors` (display_name, prefijo, cedulas, especialidad primaria, bio, foto/avatar, estado), evitando dependencia de seed/localStorage/UI.
 
 ### Dominio: Consultorios (`consultorios_*`)
 - Propósito: describir cada espacio físico y su configuración base.
