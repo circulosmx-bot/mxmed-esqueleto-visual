@@ -142,57 +142,6 @@ function fetchProfileViaControllerFallback(string $doctorId): ?array
     }
 }
 
-function buildScheduleRows(array $schedule, array $consultorioNames): array
-{
-    $byDay = safeArray($schedule['by_day'] ?? []);
-    $weekdayLabels = [
-        '1' => 'Lunes',
-        '2' => 'Martes',
-        '3' => 'Miercoles',
-        '4' => 'Jueves',
-        '5' => 'Viernes',
-        '6' => 'Sabado',
-        '7' => 'Domingo',
-    ];
-
-    $rows = [];
-    foreach ($weekdayLabels as $weekday => $label) {
-        $items = safeArray($byDay[$weekday] ?? []);
-        if (empty($items)) {
-            continue;
-        }
-        $windows = [];
-        foreach ($items as $item) {
-            if (!is_array($item)) {
-                continue;
-            }
-            $start = toText($item['start_time'] ?? null);
-            $end = toText($item['end_time'] ?? null);
-            $consultorioId = toText($item['consultorio_id'] ?? null);
-            if ($start === null || $end === null) {
-                continue;
-            }
-            $title = null;
-            if ($consultorioId !== null && isset($consultorioNames[$consultorioId])) {
-                $title = $consultorioNames[$consultorioId];
-            }
-            $windows[] = [
-                'start' => $start,
-                'end' => $end,
-                'consultorio' => $title,
-            ];
-        }
-        if (!empty($windows)) {
-            $rows[] = [
-                'label' => $label,
-                'windows' => $windows,
-            ];
-        }
-    }
-
-    return $rows;
-}
-
 $doctorId = trim((string)($_GET['doctor_id'] ?? ''));
 $inputError = null;
 if ($doctorId === '') {
@@ -221,12 +170,11 @@ if ($inputError === null) {
     $headers = readLastHttpHeaders();
     $endpointStatus = parseHttpStatusCode($headers);
 
-    // QA/local-only fallback for php -S with a single worker:
-    // avoids deadlock from HTTP self-calls to the same process.
-    // It is gated by PHP_SAPI === 'cli-server' and same host/port,
-    // so it should not activate in production.
-    // Reuses PublicProfileController/PublicProfileRepository to keep
-    // the same sanitized public DTO contract.
+    // Fallback solo para QA local con php -S de un solo worker.
+    // Evita deadlock por autollamada HTTP al mismo proceso.
+    // En producción no debe activarse porque depende de PHP_SAPI === 'cli-server'.
+    // Reutiliza PublicProfileController/PublicProfileRepository para mantener
+    // el mismo DTO público sanitizado del endpoint.
     if ($raw === false && shouldUseLocalProfileFallback($apiBase)) {
         $fallback = fetchProfileViaControllerFallback($doctorId);
         if (is_array($fallback)) {
@@ -278,16 +226,13 @@ $identity = safeArray($data['identity'] ?? []);
 $professional = safeArray($data['professional'] ?? []);
 $specialties = safeArray($data['specialties'] ?? []);
 $consultorios = safeArray($data['consultorios'] ?? []);
-$schedule = safeArray($data['schedule'] ?? []);
 $contact = safeArray($data['contact'] ?? []);
 $agendaPublic = safeArray($data['agenda_public'] ?? []);
 $publicVisibility = safeArray($data['public_visibility'] ?? []);
 $commercialVisibility = safeArray($data['commercial_visibility'] ?? []);
 $reviews = safeArray($data['reviews'] ?? []);
-$claim = safeArray($data['claim'] ?? []);
 $seo = safeArray($data['seo'] ?? []);
 $jsonLd = $data['json_ld'] ?? null;
-$ecosystemLinks = safeArray($data['ecosystem_links'] ?? []);
 $featureFlags = safeArray($data['feature_flags'] ?? []);
 $plan = safeArray($data['plan'] ?? []);
 
@@ -307,6 +252,7 @@ $primaryName = toText($primaryConsultorio['public_name'] ?? null) ?? 'Consultori
 $primaryAddress = toText($primaryConsultorio['address'] ?? null);
 $primaryMapUrl = toText($primaryConsultorio['map_embed_url'] ?? null);
 
+$photoUrl = toText($identity['photo_url'] ?? null);
 $primarySpecialty = null;
 if (!empty($specialties) && is_array($specialties[0])) {
     $primarySpecialty = toText($specialties[0]['name_es'] ?? null);
@@ -334,20 +280,9 @@ $consultationFee = $showFee ? ($commercialVisibility['consultation_fee'] ?? null
 $paymentMethods = $showFee ? safeArray($commercialVisibility['payment_methods'] ?? []) : [];
 $acceptedInsurances = $showInsurances ? safeArray($commercialVisibility['accepted_insurances'] ?? []) : [];
 
-$consultorioNames = [];
-foreach ($consultorios as $row) {
-    if (!is_array($row)) {
-        continue;
-    }
-    $id = toText($row['consultorio_id'] ?? null);
-    $name = toText($row['public_name'] ?? null);
-    if ($id !== null && $name !== null) {
-        $consultorioNames[$id] = $name;
-    }
-}
-$scheduleRows = buildScheduleRows($schedule, $consultorioNames);
-
 $renderJsonLd = is_array($jsonLd) && !empty($jsonLd);
+$planLabel = toText($plan['plan_label'] ?? null);
+$agendaEndpoint = toText($agendaPublic['availability_endpoint'] ?? null);
 ?>
 <!doctype html>
 <html lang="es-MX">
@@ -366,19 +301,40 @@ $renderJsonLd = is_array($jsonLd) && !empty($jsonLd);
   <?php endif; ?>
 </head>
 <body>
-  <header class="mxpp-header">
-    <div class="mxpp-wrap mxpp-header__inner">
-      <div class="mxpp-brand" aria-label="México Médico">
-        <span class="mxpp-brand__seal" aria-hidden="true">MM</span>
-        <div class="mxpp-brand__copy">
-          <span class="mxpp-brand__title">México Médico</span>
-          <span class="mxpp-brand__subtitle">Perfil público profesional</span>
+  <header class="mxpp-header" aria-label="Encabezado público México Médico">
+    <div class="mxpp-header__top">
+      <div class="mxpp-wrap mxpp-header__brand-wrap">
+        <div class="mxpp-brand" aria-label="México Médico">
+          <div class="mxpp-brand__grid" aria-hidden="true">
+            <span></span><span></span><span></span>
+            <span></span><span></span><span></span>
+            <span></span><span></span><span></span>
+          </div>
+          <div class="mxpp-brand__copy">
+            <p class="mxpp-brand__line1">méxico</p>
+            <p class="mxpp-brand__line2">Médico</p>
+            <p class="mxpp-brand__line3">encuentra a tu médico fácilmente</p>
+          </div>
+          <div class="mxpp-brand__icon" aria-hidden="true">👨‍⚕️👩‍⚕️</div>
         </div>
       </div>
-      <form class="mxpp-search" action="#" method="get" onsubmit="return false;">
-        <label class="mxpp-search__label" for="mxpp-public-search">Búsqueda pública</label>
-        <input id="mxpp-public-search" type="search" placeholder="Buscar médico o especialidad (próximamente)" aria-label="Buscar" disabled />
-      </form>
+    </div>
+    <div class="mxpp-header__bar">
+      <div class="mxpp-wrap mxpp-header__bar-wrap">
+        <form class="mxpp-search" action="#" method="get" onsubmit="return false;">
+          <label class="mxpp-search__label" for="mxpp-public-search">Búsqueda pública</label>
+          <div class="mxpp-search__field">
+            <input id="mxpp-public-search" type="search" placeholder="Médico / Clínica / Laboratorio / Padecimiento" aria-label="Buscar" disabled />
+            <button type="button" disabled>Buscar</button>
+          </div>
+        </form>
+        <nav class="mxpp-nav" aria-label="Navegación pública">
+          <span>Especialistas</span>
+          <span>Servicios</span>
+          <span>Hospitales</span>
+          <span>Laboratorios</span>
+        </nav>
+      </div>
     </div>
   </header>
 
@@ -386,209 +342,179 @@ $renderJsonLd = is_array($jsonLd) && !empty($jsonLd);
     <?php if ($inputError !== null || $dto === null): ?>
       <section class="mxpp-alert mxpp-alert--error">
         <h1>Perfil no disponible</h1>
-        <p>
-          <?= h($inputError ?? $endpointError ?? 'No fue posible cargar el perfil en este momento.') ?>
-        </p>
+        <p><?= h($inputError ?? $endpointError ?? 'No fue posible cargar el perfil en este momento.') ?></p>
       </section>
     <?php else: ?>
-      <?php if ($showLimitedNotice): ?>
-        <section class="mxpp-alert mxpp-alert--info">
-          <strong>Información pública limitada.</strong>
-          <span>Este perfil se muestra con datos públicos disponibles y puede estar pendiente de validación.</span>
-        </section>
-      <?php endif; ?>
-
-      <section class="mxpp-hero">
-        <div class="mxpp-col mxpp-col--left">
-          <div class="mxpp-card mxpp-avatar-card">
-            <p class="mxpp-kicker">Consultorio principal</p>
-            <?php if (toText($identity['photo_url'] ?? null) !== null): ?>
-              <img src="<?= h((string)$identity['photo_url']) ?>" alt="Foto del médico" class="mxpp-avatar" />
-            <?php else: ?>
-              <div class="mxpp-avatar mxpp-avatar--placeholder" aria-hidden="true">👨‍⚕️</div>
-            <?php endif; ?>
-
-            <h3 class="mxpp-card__title"><?= h($primaryName) ?></h3>
-            <?php if ($primaryAddress !== null): ?>
-              <p class="mxpp-muted mxpp-address"><?= h($primaryAddress) ?></p>
-            <?php endif; ?>
-
-            <?php if ($primaryMapUrl !== null): ?>
-              <div class="mxpp-map">
-                <iframe src="<?= h($primaryMapUrl) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Ubicación del consultorio"></iframe>
-              </div>
-            <?php endif; ?>
-
-            <div class="mxpp-actions">
-              <a class="mxpp-link mxpp-link--muted" href="#" aria-disabled="true">Sugerir corrección</a>
-              <a class="mxpp-link mxpp-link--strong" href="#" aria-disabled="true">Yo soy este médico y quiero administrar mi perfil</a>
-            </div>
-          </div>
-        </div>
-
-        <div class="mxpp-col mxpp-col--right">
-          <div class="mxpp-card">
-            <p class="mxpp-kicker">Perfil médico individual</p>
-            <div class="mxpp-heading-row">
-              <h1 class="mxpp-profile-title">
-                <?= h($displayName ?? 'Perfil médico en validación') ?>
-              </h1>
-              <?php if ($isPublic): ?>
-                <span class="mxpp-badge">Verificado</span>
+      <section class="mxpp-profile-hero">
+        <aside class="mxpp-left-panel">
+          <article class="mxpp-card mxpp-card--left-main">
+            <div class="mxpp-avatar-wrap">
+              <?php if ($photoUrl !== null): ?>
+                <img src="<?= h($photoUrl) ?>" alt="Foto del médico" class="mxpp-avatar" />
               <?php else: ?>
-                <span class="mxpp-badge mxpp-badge--soft">En validación</span>
+                <div class="mxpp-avatar mxpp-avatar--placeholder" aria-hidden="true">
+                  <div class="mxpp-avatar-shape"></div>
+                </div>
               <?php endif; ?>
             </div>
 
-            <?php if ($reviewsVisible): ?>
-              <p class="mxpp-muted mxpp-inline-meta">Opiniones: <?= h((string)$reviewCount) ?><?= $ratingAvg !== null ? ' · Calificación ' . h((string)$ratingAvg) : '' ?></p>
+            <h2 class="mxpp-consultorio-title">Consultorio</h2>
+            <h3 class="mxpp-consultorio-name"><?= h($primaryName) ?></h3>
+            <?php if ($primaryAddress !== null): ?>
+              <p class="mxpp-consultorio-address"><?= h($primaryAddress) ?></p>
             <?php else: ?>
-              <p class="mxpp-muted mxpp-inline-meta">Opiniones públicas no disponibles por ahora.</p>
+              <p class="mxpp-consultorio-address mxpp-muted">Dirección pública no disponible por ahora.</p>
+            <?php endif; ?>
+
+            <div class="mxpp-actions">
+              <a class="mxpp-action-link" href="#" aria-disabled="true">Sugerir corrección</a>
+              <a class="mxpp-action-claim" href="#" aria-disabled="true">Yo soy este médico y quiero administrar mi perfil</a>
+            </div>
+          </article>
+        </aside>
+
+        <div class="mxpp-right-panel">
+          <article class="mxpp-card mxpp-card--identity">
+            <div class="mxpp-title-row">
+              <h1 class="mxpp-profile-title"><?= h($displayName ?? 'Perfil médico en validación') ?></h1>
+              <span class="mxpp-badge <?= $isPublic ? '' : 'mxpp-badge--soft' ?>"><?= $isPublic ? 'Verificado' : 'En validación' ?></span>
+            </div>
+
+            <?php if ($showLimitedNotice): ?>
+              <p class="mxpp-inline-limited">Información pública limitada: este perfil puede estar pendiente de validación.</p>
+            <?php endif; ?>
+
+            <?php if ($reviewsVisible): ?>
+              <p class="mxpp-opinions">★★★★★ <?= h((string)$reviewCount) ?> opiniones<?= $ratingAvg !== null ? ' · ' . h((string)$ratingAvg) : '' ?></p>
+            <?php else: ?>
+              <p class="mxpp-opinions mxpp-opinions--muted">Opiniones públicas no disponibles por ahora.</p>
             <?php endif; ?>
 
             <?php if ($primarySpecialty !== null): ?>
-              <p class="mxpp-detail-row"><strong>Especialidad:</strong> <?= h($primarySpecialty) ?></p>
+              <p class="mxpp-specialty"><?= h($primarySpecialty) ?></p>
             <?php endif; ?>
-            <?php if ($professionalLicense !== null): ?>
-              <p class="mxpp-detail-row"><strong>Cédula profesional:</strong> <?= h($professionalLicense) ?></p>
-            <?php endif; ?>
-            <?php if ($specialtyLicense !== null): ?>
-              <p class="mxpp-detail-row"><strong>Cédula de especialidad:</strong> <?= h($specialtyLicense) ?></p>
-            <?php endif; ?>
+
+            <div class="mxpp-license-block">
+              <?php if ($professionalLicense !== null): ?>
+                <p><strong>Cédula profesional:</strong> <?= h($professionalLicense) ?></p>
+              <?php endif; ?>
+              <?php if ($specialtyLicense !== null): ?>
+                <p><strong>Cédula especialidad:</strong> <?= h($specialtyLicense) ?></p>
+              <?php endif; ?>
+              <?php if ($professionalLicense === null && $specialtyLicense === null): ?>
+                <p class="mxpp-muted">Cédulas públicas en proceso de validación.</p>
+              <?php endif; ?>
+            </div>
+
             <?php if ($bioShort !== null): ?>
               <p class="mxpp-bio"><?= h($bioShort) ?></p>
             <?php endif; ?>
-            <?php if (toText($plan['plan_label'] ?? null) !== null): ?>
-              <p class="mxpp-muted mxpp-plan-note">Plan informativo: <?= h((string)$plan['plan_label']) ?></p>
+
+            <?php if ($planLabel !== null): ?>
+              <p class="mxpp-plan-note">Perfil informativo · <?= h($planLabel) ?></p>
             <?php endif; ?>
-          </div>
+          </article>
+
+          <?php if ($primaryMapUrl !== null): ?>
+            <article class="mxpp-card mxpp-card--map">
+              <div class="mxpp-map">
+                <iframe src="<?= h($primaryMapUrl) ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Ubicación del consultorio"></iframe>
+              </div>
+            </article>
+          <?php endif; ?>
         </div>
       </section>
 
-      <section class="mxpp-grid">
-        <article class="mxpp-card mxpp-card--section">
-          <h2>Consultorios</h2>
-          <?php if (!empty($consultorios)): ?>
-            <ul class="mxpp-list">
-              <?php foreach ($consultorios as $row): ?>
-                <?php if (!is_array($row)): continue; endif; ?>
-                <li class="mxpp-list__item">
-                  <strong class="mxpp-list__title"><?= h(toText($row['public_name'] ?? null) ?? 'Consultorio') ?></strong>
-                  <?php if (toText($row['address'] ?? null) !== null): ?>
-                    <div class="mxpp-muted mxpp-list__subtitle"><?= h((string)$row['address']) ?></div>
-                  <?php endif; ?>
-                </li>
-              <?php endforeach; ?>
-            </ul>
-          <?php else: ?>
-            <p class="mxpp-muted">No hay consultorios públicos disponibles.</p>
-          <?php endif; ?>
-        </article>
-
-        <article class="mxpp-card mxpp-card--section">
-          <h2>Horarios</h2>
-          <?php if (!empty($scheduleRows)): ?>
-            <ul class="mxpp-list">
-              <?php foreach ($scheduleRows as $day): ?>
-                <li class="mxpp-list__item">
-                  <strong class="mxpp-list__title"><?= h((string)$day['label']) ?></strong>
-                  <ul class="mxpp-sublist">
-                    <?php foreach ($day['windows'] as $window): ?>
-                      <li class="mxpp-schedule-row">
-                        <span class="mxpp-schedule-chip"><?= h((string)$window['start']) ?> - <?= h((string)$window['end']) ?></span>
-                        <?php if (!empty($window['consultorio'])): ?>
-                          <span class="mxpp-muted"> · <?= h((string)$window['consultorio']) ?></span>
-                        <?php endif; ?>
-                      </li>
-                    <?php endforeach; ?>
-                  </ul>
-                </li>
-              <?php endforeach; ?>
-            </ul>
-          <?php else: ?>
-            <p class="mxpp-muted">Horarios no disponibles públicamente.</p>
-          <?php endif; ?>
-        </article>
-
-        <?php if ($showContactButtons): ?>
-          <article class="mxpp-card mxpp-card--section">
-            <h2>Contacto</h2>
-            <?php if ($showPhone && $contactPhone !== null): ?>
-              <p><strong>Teléfono:</strong> <?= h($contactPhone) ?></p>
-            <?php endif; ?>
-            <?php if ($showWhatsapp && $contactWhatsapp !== null): ?>
-              <p><strong>WhatsApp:</strong> <?= h($contactWhatsapp) ?></p>
-            <?php endif; ?>
-            <?php if ((!$showPhone || $contactPhone === null) && (!$showWhatsapp || $contactWhatsapp === null)): ?>
-              <p class="mxpp-muted">Contacto público no disponible por ahora.</p>
-            <?php endif; ?>
-          </article>
-        <?php endif; ?>
-
-        <?php if ($showPublicAgenda): ?>
-          <article class="mxpp-card mxpp-card--section">
-            <h2>Agenda una cita</h2>
-            <p class="mxpp-muted">Horarios disponibles para reserva pública.</p>
-            <?php if (toText($agendaPublic['availability_endpoint'] ?? null) !== null): ?>
-              <p class="mxpp-muted">Fuente: <?= h((string)$agendaPublic['availability_endpoint']) ?></p>
-            <?php endif; ?>
-          </article>
-        <?php endif; ?>
-
-        <?php if ($showFee): ?>
-          <article class="mxpp-card mxpp-card--section">
-            <h2>Costo y medios de pago</h2>
-            <?php if ($consultationFee !== null): ?>
-              <p><strong>Costo de consulta:</strong> <?= h(is_scalar($consultationFee) ? (string)$consultationFee : json_encode($consultationFee, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></p>
-            <?php else: ?>
-              <p class="mxpp-muted">Costo de consulta no disponible.</p>
-            <?php endif; ?>
-            <?php if (!empty($paymentMethods)): ?>
-              <ul class="mxpp-list">
-                <?php foreach ($paymentMethods as $method): ?>
-                  <li><?= h(is_scalar($method) ? (string)$method : json_encode($method, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></li>
-                <?php endforeach; ?>
-              </ul>
-            <?php endif; ?>
-          </article>
-        <?php endif; ?>
-
-        <?php if ($showInsurances): ?>
-          <article class="mxpp-card mxpp-card--section">
-            <h2>Aseguradoras aceptadas</h2>
-            <?php if (!empty($acceptedInsurances)): ?>
-              <ul class="mxpp-list">
-                <?php foreach ($acceptedInsurances as $insurer): ?>
-                  <?php if (!is_array($insurer)): continue; endif; ?>
-                  <li><?= h(toText($insurer['name'] ?? null) ?? 'Aseguradora') ?></li>
-                <?php endforeach; ?>
-              </ul>
-            <?php else: ?>
-              <p class="mxpp-muted">Aseguradoras no disponibles por ahora.</p>
-            <?php endif; ?>
-          </article>
-        <?php endif; ?>
-
-        <?php if ($reviewsVisible): ?>
-          <article class="mxpp-card mxpp-card--section">
-            <h2>Opiniones</h2>
-            <p class="mxpp-muted">Calificación promedio: <?= h((string)($ratingAvg ?? 'N/D')) ?> · <?= h((string)$reviewCount) ?> reseñas</p>
-          </article>
-        <?php endif; ?>
+      <section class="mxpp-institutional" aria-label="Espacio institucional del consultorio">
+        <div class="mxpp-institutional__placeholder">
+          <span>Imagen institucional del consultorio</span>
+        </div>
       </section>
 
-      <?php if (!empty($ecosystemLinks)): ?>
-        <section class="mxpp-card mxpp-card--subtle">
-          <h2>Red profesional</h2>
-          <p class="mxpp-muted">Información de ecosistema disponible de forma limitada.</p>
+      <?php if ($showContactButtons): ?>
+        <section class="mxpp-card mxpp-card--section">
+          <h2>Contacto</h2>
+          <?php if ($showPhone && $contactPhone !== null): ?>
+            <p><strong>Teléfono:</strong> <?= h($contactPhone) ?></p>
+          <?php endif; ?>
+          <?php if ($showWhatsapp && $contactWhatsapp !== null): ?>
+            <p><strong>WhatsApp:</strong> <?= h($contactWhatsapp) ?></p>
+          <?php endif; ?>
+          <?php if ((!$showPhone || $contactPhone === null) && (!$showWhatsapp || $contactWhatsapp === null)): ?>
+            <p class="mxpp-muted">Contacto público no disponible por ahora.</p>
+          <?php endif; ?>
+        </section>
+      <?php endif; ?>
+
+      <?php if ($showPublicAgenda): ?>
+        <section class="mxpp-card mxpp-card--section">
+          <h2>Agenda pública</h2>
+          <p class="mxpp-muted">La disponibilidad se muestra según la configuración pública vigente.</p>
+          <?php if ($agendaEndpoint !== null): ?>
+            <p class="mxpp-muted">Fuente: <?= h($agendaEndpoint) ?></p>
+          <?php endif; ?>
+        </section>
+      <?php endif; ?>
+
+      <?php if ($showFee): ?>
+        <section class="mxpp-card mxpp-card--section">
+          <h2>Costo y medios de pago</h2>
+          <?php if ($consultationFee !== null): ?>
+            <p><strong>Costo de consulta:</strong> <?= h(is_scalar($consultationFee) ? (string)$consultationFee : json_encode($consultationFee, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></p>
+          <?php else: ?>
+            <p class="mxpp-muted">Costo de consulta no disponible.</p>
+          <?php endif; ?>
+          <?php if (!empty($paymentMethods)): ?>
+            <ul class="mxpp-bullets">
+              <?php foreach ($paymentMethods as $method): ?>
+                <li><?= h(is_scalar($method) ? (string)$method : json_encode($method, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></li>
+              <?php endforeach; ?>
+            </ul>
+          <?php endif; ?>
+        </section>
+      <?php endif; ?>
+
+      <?php if ($showInsurances): ?>
+        <section class="mxpp-card mxpp-card--section">
+          <h2>Aseguradoras aceptadas</h2>
+          <?php if (!empty($acceptedInsurances)): ?>
+            <ul class="mxpp-bullets">
+              <?php foreach ($acceptedInsurances as $insurer): ?>
+                <?php if (!is_array($insurer)): continue; endif; ?>
+                <li><?= h(toText($insurer['name'] ?? null) ?? 'Aseguradora') ?></li>
+              <?php endforeach; ?>
+            </ul>
+          <?php else: ?>
+            <p class="mxpp-muted">Aseguradoras no disponibles por ahora.</p>
+          <?php endif; ?>
+        </section>
+      <?php endif; ?>
+
+      <?php if ($reviewsVisible): ?>
+        <section class="mxpp-review-strip">
+          <p><strong>Opinión destacada:</strong> Información de reseñas disponible en siguiente fase.</p>
         </section>
       <?php endif; ?>
     <?php endif; ?>
   </main>
 
   <footer class="mxpp-footer">
-    <div class="mxpp-wrap">
-      <p>© <?= h((string)date('Y')) ?> México Médico · Perfil público transicional</p>
+    <div class="mxpp-wrap mxpp-footer__top">
+      <div class="mxpp-footer__brand">México Médico</div>
+      <div class="mxpp-footer__links">
+        <a href="#" aria-disabled="true">¿Cómo formar parte?</a>
+        <span>·</span>
+        <a href="#" aria-disabled="true">Nosotros</a>
+        <span>·</span>
+        <a href="#" aria-disabled="true">Términos y Condiciones</a>
+        <span>·</span>
+        <a href="#" aria-disabled="true">Aviso de Privacidad</a>
+      </div>
+    </div>
+    <div class="mxpp-footer__bottom">
+      <div class="mxpp-wrap">
+        <small>Todos los derechos reservados México Médico</small>
+      </div>
     </div>
   </footer>
 </body>
