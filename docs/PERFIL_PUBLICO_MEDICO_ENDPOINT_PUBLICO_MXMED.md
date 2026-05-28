@@ -318,6 +318,76 @@ Razon:
 ### 16.3 Slug e historial
 - Mantener historial de slugs para redireccion 301.
 - Cambio de ciudad puede implicar cambio de URL.
+
+## 17) Adenda PP-7E — Cierre documental de identidad canonica publica
+
+### 17.1 Estado
+- PP-7D implementado y validado:
+  - `d095475 feat(profiles): agrega identidad publica canonica`
+- PP-7E documenta el cierre tecnico de esa implementacion.
+
+### 17.2 Fuente canonica en uso por endpoint
+- Fuente minima de identidad profesional publica:
+  - `profiles_doctors`
+- El endpoint transicional (`GET /api/profiles/public/doctor/{doctor_id}`):
+  - lee `profiles_doctors` por `doctor_id`;
+  - aplica allowlist explicita;
+  - no usa `SELECT *`;
+  - compone DTO con `consultorios` desde su fuente vigente (sin duplicacion de direccion/mapa).
+
+### 17.3 Mapeo efectivo en DTO (tras PP-7D)
+- `identity.display_name`
+- `identity.prefix`
+- `identity.photo_url`
+- `identity.avatar_url`
+- `identity.logo_url`
+- `professional.professional_license`
+- `professional.specialty_license`
+- `professional.bio_short`
+- `specialties[]` (desde `specialty_primary` + `specialty_secondary_json`)
+
+### 17.4 Regla minima de publicacion activa
+El endpoint marca:
+- `profile.status=active`
+- `profile.is_public=true`
+- `feature_flags.has_public_profile=true`
+
+solo si existen:
+- `display_name`;
+- `professional_license`;
+- `specialty_primary` o equivalente;
+- al menos un consultorio publicable/resoluble;
+- `profile_status=active`;
+- `is_public_candidate=true`.
+
+En caso contrario, conserva:
+- `profile.status=hidden`;
+- `profile.is_public=false`;
+- `feature_flags.has_public_profile=false`;
+- `seo.robots=noindex,nofollow`.
+
+### 17.5 Seed demo controlado (QA local)
+- `doctor_id=1` con identidad profesional minima:
+  - `Dra. Leticia Muñoz Alfaro`
+  - `Dra.`
+  - `0123456`
+  - `6543210`
+  - `Medicina Interna`
+  - bio breve
+- Seed idempotente para QA/demo local.
+
+### 17.6 Validaciones de seguridad y alcance
+- Se mantiene sin activacion:
+  - contacto, telefono, WhatsApp;
+  - agenda publica;
+  - costo, medios de pago, aseguradoras;
+  - reviews reales;
+  - claim real.
+- Se mantiene `seo.robots=noindex,nofollow` en fase transicional.
+- No se altera Agenda ni reglas comerciales por `plan_code` en la vista.
+
+### 17.7 Siguiente recomendado
+- `PP-7F`: diagnostico del panel privado para definir seccion/fuente de guardado en `profiles_doctors` antes de implementar escritura real.
 - Rutas secundarias/contextuales deben canonicalizar a la URL principal salvo estrategia futura de landings diferenciadas.
 
 ### 16.4 Claim y ownership

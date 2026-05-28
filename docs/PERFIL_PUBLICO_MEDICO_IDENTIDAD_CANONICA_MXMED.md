@@ -117,3 +117,100 @@ Fuera de esta fase (debe seguir apagado):
 - no tocar Agenda
 - no activar funciones de plan superior
 - no introducir motor de planes en frontend
+
+## 11) Cierre PP-7D y PP-7E (implementacion + cierre documental)
+
+### 11.1 Estado PP-7D
+- PP-7D implementado.
+- Commit de implementacion:
+  - `d095475 feat(profiles): agrega identidad publica canonica`
+
+### 11.2 Archivos creados/modificados en PP-7D
+- `modules/profiles/db/profiles_doctors_schema.sql`
+- `modules/profiles/db/profiles_doctors_seed_demo.sql`
+- `modules/profiles/repositories/PublicProfileRepository.php`
+- `modules/profiles/controllers/PublicProfileController.php`
+
+### 11.3 Fuente canonica activa
+- Fuente minima activa para identidad profesional publica:
+  - `profiles_doctors`
+- Alcance de la fuente:
+  - identidad profesional (nombre, prefijo, cedulas, especialidad, bio, media publica).
+- No duplica ni sustituye:
+  - `consultorios` (direccion, mapa, resolucion de consultorio principal);
+  - agenda/horarios.
+
+### 11.4 Seed demo controlado (QA local)
+- Caso demo:
+  - `doctor_id=1`
+- Datos:
+  - `display_name`: `Dra. Leticia Muñoz Alfaro`
+  - `prefix`: `Dra.`
+  - `professional_license`: `0123456`
+  - `specialty_license`: `6543210`
+  - `specialty_primary`: `Medicina Interna`
+  - `bio_short`: `Médico especialista con atención profesional y enfoque integral.`
+  - `profile_status`: `active`
+  - `is_public_candidate`: `1`
+- El seed es idempotente (`INSERT ... ON DUPLICATE KEY UPDATE`).
+- Uso previsto:
+  - QA local/demo; no es fuente editorial final de produccion.
+
+### 11.5 Endpoint publico actualizado
+- El endpoint publico por `doctor_id` ahora:
+  - lee `profiles_doctors` por `doctor_id`;
+  - usa allowlist explicita;
+  - no usa `SELECT *`;
+  - mapea a DTO:
+    - `identity.display_name`
+    - `identity.prefix`
+    - `professional.professional_license`
+    - `professional.specialty_license`
+    - `professional.bio_short`
+    - `specialties[]` (desde `specialty_primary` + `specialty_secondary_json`).
+- Si faltan fuentes, conserva `null` o `[]` segun contrato.
+
+### 11.6 Regla minima de publicacion (vigente tras PP-7D)
+Se marca perfil publico activo (`active/is_public=true/has_public_profile=true`) solo si:
+- existe `display_name`;
+- existe `professional_license`;
+- existe `specialty_primary` o equivalente en `specialties[]`;
+- existe al menos un consultorio publicable/resoluble;
+- `profile_status=active`;
+- `is_public_candidate=true`.
+
+Si falta cualquier minimo:
+- `profile.status=hidden`;
+- `profile.is_public=false`;
+- `feature_flags.has_public_profile=false`;
+- `seo.robots=noindex,nofollow`.
+
+### 11.7 QA validado en PP-7D
+- `php -l` valido en repository, controller, API profiles y vista SSR.
+- `doctor_id=1` devuelve identidad profesional canonica minima real:
+  - nombre, prefijo, cedulas, especialidad primaria, bio.
+- `d_demo_01` permanece conservador:
+  - `hidden/is_public=false/has_public_profile=false`.
+- Errores esperados:
+  - `404 profile_not_found`;
+  - `400 invalid_doctor_id`.
+- Vista SSR (`/profiles/doctor.php?doctor_id=1`) ya refleja identidad profesional minima.
+- No se exponen datos sensibles ni se activan funciones fuera de alcance.
+
+### 11.8 Limites vigentes tras PP-7D
+- No hay guardado desde panel privado real todavia.
+- No hay formulario de edicion de identidad publica.
+- No se activa:
+  - contacto;
+  - agenda publica;
+  - costo;
+  - aseguradoras;
+  - reviews reales;
+  - claim real.
+- No se introduce motor de planes en frontend.
+- No se toca Agenda.
+
+### 11.9 Siguiente recomendado (PP-7F)
+- Recomendacion preferida:
+  - `PP-7F` diagnostico del panel privado para definir la seccion exacta que editara identidad publica canonica en `profiles_doctors`.
+- Implementacion de guardado desde panel privado debe iniciar solo despues de ese diagnostico.
