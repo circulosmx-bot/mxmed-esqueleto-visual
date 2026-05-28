@@ -387,7 +387,10 @@ En caso contrario, conserva:
 - No se altera Agenda ni reglas comerciales por `plan_code` en la vista.
 
 ### 17.7 Siguiente recomendado
-- `PP-7F`: diagnostico del panel privado para definir seccion/fuente de guardado en `profiles_doctors` antes de implementar escritura real.
+- `PP-7H2-A` completado:
+  - endpoint privado minimo de identidad publica (`GET/PATCH`) en `profiles_doctors` (`23de802`).
+- Siguiente recomendado:
+  - `PP-7H2-B` conexion minima del formulario visual de panel al endpoint privado, sin redisenar navegacion.
 - Rutas secundarias/contextuales deben canonicalizar a la URL principal salvo estrategia futura de landings diferenciadas.
 
 ### 16.4 Claim y ownership

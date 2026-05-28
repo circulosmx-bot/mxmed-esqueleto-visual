@@ -219,7 +219,7 @@ Si falta cualquier minimo:
 
 ### 12.1 Resultado PP-7F (diagnostico)
 - Se confirmo que el panel privado ya tiene UI de identidad profesional dentro de Mi Perfil, pero con persistencia principal en localStorage/seed (`dp:*`) y catalogos frontend.
-- No existe aun endpoint privado canonico para guardar identidad publica profesional en `profiles_doctors`.
+- En el momento del diagnostico PP-7F no existia endpoint privado canonico; este punto queda resuelto en PP-7H2-A.
 - Se confirmo la regla de arquitectura:
   - panel privado -> DB canonica -> endpoint publico -> vista SSR.
 
@@ -234,8 +234,51 @@ Si falta cualquier minimo:
 ### 12.3 Documento de referencia PP-7G
 - `docs/PERFIL_PUBLICO_MEDICO_PANEL_IDENTIDAD_PUBLICA_MXMED.md`
 
-### 12.4 Siguiente recomendado (PP-7H)
-- Implementar endpoint privado minimo de identidad publica (`GET/PATCH`) y conexion del formulario de panel hacia `profiles_doctors`.
-- Mantener localStorage solo como respaldo UX transicional (no como fuente publica).
-- QA de extremo a extremo:
-  - panel privado -> `profiles_doctors` -> endpoint publico DTO -> vista SSR.
+### 12.4 Siguiente recomendado original (PP-7H)
+- Implementar endpoint privado minimo de identidad publica (`GET/PATCH`) y posterior conexion del formulario.
+
+### 12.5 Estado actual tras PP-7H2-A
+- El endpoint privado minimo ya fue implementado en PP-7H2-A.
+
+## 13) Cierre PP-7H2-A — Endpoint privado minimo GET/PATCH
+
+### 13.1 Estado
+- PP-7H2-A implementado.
+- Commit:
+  - `23de802 feat(profiles): agrega endpoint privado de identidad`.
+
+### 13.2 Rutas implementadas
+- `GET /api/profiles/private/doctor/{doctor_id}`
+- `PATCH /api/profiles/private/doctor/{doctor_id}`
+
+### 13.3 Reglas clave
+- Fuente: `profiles_doctors`.
+- Campos editables: identidad profesional minima (`display_name`, prefijo, genero, cedulas, especialidad, bio, media publica).
+- Campos bloqueados:
+  - `profile_status`
+  - `is_public_candidate`
+- Si PATCH solo recibe bloqueados -> `invalid_payload`.
+- Si PATCH recibe editable + bloqueado -> aplica editable y reporta bloqueado en `meta`.
+
+### 13.4 Seguridad
+- Allowlist explicita y sin `SELECT *`.
+- Sin exposicion de datos clinicos/pacientes/fiscales/tokens/secretos.
+- Strings sanitizados; `specialty_secondary` normalizado a JSON.
+- Sin impacto en consultorios, Agenda, Patients, Clinical.
+
+### 13.5 Auth transicional
+- Modo por defecto: `transitional_open`.
+- Endurecimiento por entorno: `MXMED_PROFILES_PRIVATE_AUTH_REQUIRED`.
+- En modo estricto puede validar usuario/scope por sesion/headers.
+
+### 13.6 QA validado
+- `GET private` para `doctor_id=1` retorna identidad canonica.
+- `PATCH` editable refleja cambios en private/public/SSR.
+- Restauracion de `bio_short` seed confirmada.
+- Errores validados:
+  - `400 invalid_doctor_id`
+  - `404 profile_identity_not_found`
+  - `405 method_not_allowed`
+
+### 13.7 Siguiente recomendado
+- `PP-7H2-B`: conectar minimamente formulario visual del panel al endpoint privado (`GET/PATCH`) sin redisenar navegacion.

@@ -168,3 +168,99 @@
 - Debe ejecutarse cuando:
   - la UX de menus este mejor definida;
   - o se aplique una conexion minima sin reestructurar navegacion.
+
+## 14) PP-7H2-A — Cierre endpoint privado minimo de identidad publica
+
+### 14.1 Estado
+- PP-7H2-A implementado.
+- Commit:
+  - `23de802 feat(profiles): agrega endpoint privado de identidad`.
+
+### 14.2 Archivos de implementacion
+- `api/profiles/index.php`
+- `modules/profiles/controllers/PrivateProfileController.php`
+- `modules/profiles/repositories/PrivateProfileRepository.php`
+
+### 14.3 Rutas privadas activas
+- `GET /api/profiles/private/doctor/{doctor_id}`
+- `PATCH /api/profiles/private/doctor/{doctor_id}`
+
+### 14.4 Proposito y alcance
+- Permitir lectura/guardado privado minimo de identidad publica profesional en `profiles_doctors`.
+- Preparar la futura conexion visual del panel, sin conectar formulario en esta fase.
+- No modifica navegacion (dropdown/lateral), ni mueve paneles.
+
+### 14.5 Contrato minimo implementado
+- `GET` devuelve:
+  - `doctor_id`
+  - `identity_public.display_name`
+  - `identity_public.prefix`
+  - `identity_public.gender`
+  - `identity_public.gender_label`
+  - `identity_public.professional_license`
+  - `identity_public.specialty_license`
+  - `identity_public.specialty_primary`
+  - `identity_public.specialty_secondary[]`
+  - `identity_public.bio_short`
+  - `identity_public.photo_url`
+  - `identity_public.avatar_url`
+  - `identity_public.logo_url`
+  - `identity_public.profile_status`
+  - `identity_public.is_public_candidate`
+- `PATCH` editable:
+  - `display_name`, `prefix`, `gender`, `gender_label`,
+  - `professional_license`, `specialty_license`,
+  - `specialty_primary`, `specialty_secondary`,
+  - `bio_short`, `photo_url`, `avatar_url`, `logo_url`.
+- `PATCH` bloqueado:
+  - `profile_status`
+  - `is_public_candidate`
+- Regla:
+  - solo bloqueados -> `invalid_payload`;
+  - editable + bloqueado -> aplica editable e informa bloqueado en `meta`.
+
+### 14.6 Seguridad y guardrails
+- Allowlist explicita.
+- Sin `SELECT *`.
+- Sin exposicion de datos clinicos/pacientes/fiscales/tokens/secretos.
+- Sin stack traces en respuesta.
+- Sanitizacion de strings en escritura.
+- URLs de media limitadas a `http(s)` o rutas relativas con `/`.
+- `specialty_secondary` persiste como JSON en `specialty_secondary_json`.
+- Sin impacto en consultorios, Agenda, Patients ni Clinical.
+
+### 14.7 Auth transicional
+- Modo actual: `transitional_open`.
+- Endurecimiento disponible por entorno:
+  - `MXMED_PROFILES_PRIVATE_AUTH_REQUIRED`.
+- En modo estricto puede validar usuario/scope por sesion/headers.
+- No sustituye aun un RBAC final de produccion.
+
+### 14.8 QA validado
+- `php -l` correcto en API/controller/repository privado y componentes relacionados.
+- `GET private doctor_id=1` devuelve identidad publica canonica.
+- `PATCH` editable (ej. `bio_short`) refleja cambios en:
+  - `GET private`
+  - `GET public`
+  - vista SSR.
+- `bio_short` restaurado al valor seed.
+- Bloqueo de campos no editables validado.
+- Errores validados:
+  - `400 invalid_doctor_id`
+  - `404 profile_identity_not_found`
+  - `405 method_not_allowed`
+- Publico fuera de alcance se mantiene apagado:
+  - contacto/telefono/WhatsApp
+  - agenda publica
+  - costo/aseguradoras
+  - reviews
+  - claim
+
+### 14.9 Limites y siguiente recomendado
+- No conecta aun formulario visual.
+- No toca dropdown/lateral/navegacion.
+- No toca Agenda.
+- No activa motor de planes ni funciones comerciales superiores.
+- No resuelve aun catalogo backend final de prefijos/especialidades ni verificacion documental de cedulas.
+- Siguiente recomendado:
+  - `PP-7H2-B` conexion minima del formulario visual del panel a endpoint privado (`GET/PATCH`), sin redisenar navegacion.

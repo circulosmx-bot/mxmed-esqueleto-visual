@@ -1088,7 +1088,8 @@ Refs:
 - `[profiles]` PP-7H1 completado: accesos funcionales de Perfil Medico agregados al dropdown superior del usuario (`ba8938c`).
 - `[profiles]` PP-7H1-B completado: homologacion de labels del dropdown respecto al menu lateral (`ced5676`).
 - `[profiles]` PP-7H1-C completado: deuda UX controlada de navegacion Perfil Medico (coexistencia temporal lateral + dropdown; sin cierre final de comportamiento de menus).
-- `[profiles]` Siguiente recomendado: PP-7H2-A endpoint privado minimo GET/PATCH para `profiles_doctors`, sin mover paneles ni tocar navegacion/menu lateral/dropdown.
+- `[profiles]` PP-7H2-A completado: endpoint privado minimo `GET/PATCH /api/profiles/private/doctor/{doctor_id}` para identidad publica en `profiles_doctors` (`23de802`).
+- `[profiles]` Siguiente recomendado: PP-7H2-B conexion minima del formulario visual del panel al endpoint privado (`GET/PATCH`) sin mover paneles ni redisenar navegacion.
 
 ### 2a) Operación clínica extendida
 - `[api]` órdenes, recetas y resultados con contratos estables.
