@@ -32,15 +32,17 @@ final class PublicProfileRepository
         $consultorios = $this->fetchConsultoriosRows($doctorId);
         $scheduleRows = $this->fetchScheduleRows($doctorId);
         $hasAppointments = $this->doctorHasAppointments($doctorId);
+        $canonicalProfile = $this->fetchCanonicalProfileRow($doctorId);
 
         return [
-            'exists' => (!empty($consultorios) || !empty($scheduleRows) || $hasAppointments),
+            'exists' => (!empty($consultorios) || !empty($scheduleRows) || $hasAppointments || $canonicalProfile !== null),
             'consultorios' => $consultorios,
             'schedule_rows' => $scheduleRows,
             'has_appointments' => $hasAppointments,
-            'identity' => $this->resolveIdentity($doctorId),
-            'professional' => $this->resolveProfessional($doctorId),
-            'specialties' => $this->resolveSpecialties($doctorId),
+            'profile_source' => $this->resolveProfileSource($canonicalProfile),
+            'identity' => $this->resolveIdentity($canonicalProfile),
+            'professional' => $this->resolveProfessional($canonicalProfile),
+            'specialties' => $this->resolveSpecialties($canonicalProfile),
         ];
     }
 
@@ -221,7 +223,81 @@ final class PublicProfileRepository
         return null;
     }
 
-    private function resolveIdentity(string $doctorId): array
+    private function fetchCanonicalProfileRow(string $doctorId): ?array
+    {
+        if (!$this->tableExists('profiles_doctors')) {
+            return null;
+        }
+        $columns = $this->tableColumns('profiles_doctors');
+        if (empty($columns) || !in_array('doctor_id', $columns, true)) {
+            return null;
+        }
+
+        $allowlist = [
+            'doctor_id',
+            'display_name',
+            'prefix',
+            'gender',
+            'gender_label',
+            'professional_license',
+            'specialty_license',
+            'specialty_primary',
+            'specialty_secondary_json',
+            'bio_short',
+            'photo_url',
+            'avatar_url',
+            'logo_url',
+            'profile_status',
+            'is_public_candidate',
+            'updated_at',
+        ];
+
+        $selected = [];
+        foreach ($allowlist as $column) {
+            if (in_array($column, $columns, true)) {
+                $selected[] = sprintf('`%s`', $column);
+            }
+        }
+        if (empty($selected)) {
+            return null;
+        }
+
+        $sql = sprintf(
+            'SELECT %s FROM `profiles_doctors` WHERE `doctor_id` = :doctor_id LIMIT 1',
+            implode(', ', $selected)
+        );
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute(['doctor_id' => $doctorId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return null;
+        }
+        return is_array($row) ? $row : null;
+    }
+
+    private function resolveProfileSource(?array $profileRow): array
+    {
+        $source = [
+            'has_canonical_row' => false,
+            'profile_status' => 'hidden',
+            'is_public_candidate' => false,
+            'last_public_update_at' => null,
+        ];
+        if (!is_array($profileRow)) {
+            return $source;
+        }
+
+        $source['has_canonical_row'] = true;
+        $status = strtolower((string)($this->toNullableText($profileRow['profile_status'] ?? null) ?? 'hidden'));
+        $allowed = ['draft', 'pending_review', 'active', 'hidden', 'suspended', 'removed'];
+        $source['profile_status'] = in_array($status, $allowed, true) ? $status : 'hidden';
+        $source['is_public_candidate'] = ((int)($profileRow['is_public_candidate'] ?? 0) === 1);
+        $source['last_public_update_at'] = $this->toNullableText($profileRow['updated_at'] ?? null);
+        return $source;
+    }
+
+    private function resolveIdentity(?array $profileRow): array
     {
         $resolved = [
             'display_name' => null,
@@ -231,117 +307,26 @@ final class PublicProfileRepository
             'avatar_url' => null,
             'logo_url' => null,
         ];
-
-        $candidates = [
-            [
-                'table' => 'users',
-                'id' => ['doctor_id', 'user_id', 'id'],
-                'display_name' => ['display_name', 'full_name', 'name', 'nombre', 'nombre_completo'],
-                'prefix' => ['prefix', 'title_prefix'],
-                'gender' => ['gender', 'gender_label', 'sexo'],
-                'photo' => ['photo_url', 'avatar_url', 'photo'],
-                'avatar' => ['avatar_url'],
-                'logo' => ['logo_url'],
-            ],
-            [
-                'table' => 'doctors',
-                'id' => ['doctor_id', 'id'],
-                'display_name' => ['display_name', 'full_name', 'name', 'nombre', 'nombre_completo'],
-                'prefix' => ['prefix', 'title_prefix'],
-                'gender' => ['gender', 'gender_label', 'sexo'],
-                'photo' => ['photo_url', 'avatar_url', 'photo'],
-                'avatar' => ['avatar_url'],
-                'logo' => ['logo_url'],
-            ],
-            [
-                'table' => 'medicos',
-                'id' => ['doctor_id', 'id', 'medico_id'],
-                'display_name' => ['display_name', 'full_name', 'name', 'nombre', 'nombre_completo'],
-                'prefix' => ['prefix', 'title_prefix'],
-                'gender' => ['gender', 'gender_label', 'sexo'],
-                'photo' => ['photo_url', 'avatar_url', 'photo'],
-                'avatar' => ['avatar_url'],
-                'logo' => ['logo_url'],
-            ],
-        ];
-
-        foreach ($candidates as $candidate) {
-            $table = (string)($candidate['table'] ?? '');
-            if ($table === '' || !$this->tableExists($table)) {
-                continue;
-            }
-            $cols = $this->tableColumns($table);
-            $idCol = $this->firstExistingColumn($cols, $candidate['id']);
-            if ($idCol === null) {
-                continue;
-            }
-            $displayCol = $this->firstExistingColumn($cols, $candidate['display_name']);
-            if ($displayCol === null) {
-                continue;
-            }
-
-            $queryCols = [
-                sprintf('`%s` AS display_name', $displayCol),
-            ];
-            $prefixCol = $this->firstExistingColumn($cols, $candidate['prefix']);
-            if ($prefixCol !== null) {
-                $queryCols[] = sprintf('`%s` AS prefix', $prefixCol);
-            }
-            $genderCol = $this->firstExistingColumn($cols, $candidate['gender']);
-            if ($genderCol !== null) {
-                $queryCols[] = sprintf('`%s` AS gender_label', $genderCol);
-            }
-            $photoCol = $this->firstExistingColumn($cols, $candidate['photo']);
-            if ($photoCol !== null) {
-                $queryCols[] = sprintf('`%s` AS photo_url', $photoCol);
-            }
-            $avatarCol = $this->firstExistingColumn($cols, $candidate['avatar']);
-            if ($avatarCol !== null) {
-                $queryCols[] = sprintf('`%s` AS avatar_url', $avatarCol);
-            }
-            $logoCol = $this->firstExistingColumn($cols, $candidate['logo']);
-            if ($logoCol !== null) {
-                $queryCols[] = sprintf('`%s` AS logo_url', $logoCol);
-            }
-
-            $sql = sprintf(
-                'SELECT %s FROM `%s` WHERE `%s` = :doctor_id LIMIT 1',
-                implode(', ', $queryCols),
-                $table,
-                $idCol
-            );
-            try {
-                $stmt = $this->pdo->prepare($sql);
-                $stmt->execute(['doctor_id' => $doctorId]);
-                $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            } catch (PDOException $e) {
-                continue;
-            }
-            if (!is_array($row)) {
-                continue;
-            }
-
-            $displayName = trim((string)($row['display_name'] ?? ''));
-            if ($displayName === '') {
-                continue;
-            }
-            $resolved['display_name'] = $displayName;
-            $resolved['prefix'] = $this->toNullableText($row['prefix'] ?? null);
-            $resolved['gender_label'] = $this->toNullableText($row['gender_label'] ?? null);
-            $resolved['photo_url'] = $this->toNullableText($row['photo_url'] ?? null);
-            $resolved['avatar_url'] = $this->toNullableText($row['avatar_url'] ?? null);
-            $resolved['logo_url'] = $this->toNullableText($row['logo_url'] ?? null);
+        if (!is_array($profileRow)) {
             return $resolved;
         }
 
+        $resolved['display_name'] = $this->toNullableText($profileRow['display_name'] ?? null);
+        $resolved['prefix'] = $this->toNullableText($profileRow['prefix'] ?? null);
+        $resolved['gender_label'] = $this->toNullableText($profileRow['gender_label'] ?? null)
+            ?? $this->toNullableText($profileRow['gender'] ?? null);
+        $resolved['photo_url'] = $this->toNullableText($profileRow['photo_url'] ?? null);
+        $resolved['avatar_url'] = $this->toNullableText($profileRow['avatar_url'] ?? null);
+        $resolved['logo_url'] = $this->toNullableText($profileRow['logo_url'] ?? null);
         return $resolved;
     }
 
-    private function resolveProfessional(string $doctorId): array
+    private function resolveProfessional(?array $profileRow): array
     {
         $result = [
             'professional_license' => null,
             'specialty_license' => null,
+            'specialty_primary' => null,
             'bio_short' => null,
             'bio_long' => null,
             'education' => [],
@@ -352,151 +337,52 @@ final class PublicProfileRepository
             'services' => [],
             'conditions_treated' => [],
         ];
-
-        $candidates = [
-            [
-                'table' => 'doctor_profiles',
-                'id' => ['doctor_id', 'profile_id'],
-                'professional_license' => ['professional_license', 'cedula_profesional', 'cedula'],
-                'specialty_license' => ['specialty_license', 'cedula_especialidad'],
-                'bio_short' => ['bio_short', 'bio', 'resena', 'descripcion_corta'],
-            ],
-            [
-                'table' => 'doctors',
-                'id' => ['doctor_id', 'id'],
-                'professional_license' => ['professional_license', 'cedula_profesional', 'cedula'],
-                'specialty_license' => ['specialty_license', 'cedula_especialidad'],
-                'bio_short' => ['bio_short', 'bio', 'resena', 'descripcion_corta'],
-            ],
-            [
-                'table' => 'medicos',
-                'id' => ['doctor_id', 'id', 'medico_id'],
-                'professional_license' => ['professional_license', 'cedula_profesional', 'cedula'],
-                'specialty_license' => ['specialty_license', 'cedula_especialidad'],
-                'bio_short' => ['bio_short', 'bio', 'resena', 'descripcion_corta'],
-            ],
-        ];
-
-        foreach ($candidates as $candidate) {
-            $table = (string)($candidate['table'] ?? '');
-            if ($table === '' || !$this->tableExists($table)) {
-                continue;
-            }
-            $cols = $this->tableColumns($table);
-            $idCol = $this->firstExistingColumn($cols, $candidate['id']);
-            if ($idCol === null) {
-                continue;
-            }
-            $professionalCol = $this->firstExistingColumn($cols, $candidate['professional_license']);
-            $specialtyCol = $this->firstExistingColumn($cols, $candidate['specialty_license']);
-            $bioCol = $this->firstExistingColumn($cols, $candidate['bio_short']);
-            if ($professionalCol === null && $specialtyCol === null && $bioCol === null) {
-                continue;
-            }
-
-            $queryCols = [];
-            if ($professionalCol !== null) {
-                $queryCols[] = sprintf('`%s` AS professional_license', $professionalCol);
-            }
-            if ($specialtyCol !== null) {
-                $queryCols[] = sprintf('`%s` AS specialty_license', $specialtyCol);
-            }
-            if ($bioCol !== null) {
-                $queryCols[] = sprintf('`%s` AS bio_short', $bioCol);
-            }
-
-            $sql = sprintf(
-                'SELECT %s FROM `%s` WHERE `%s` = :doctor_id LIMIT 1',
-                implode(', ', $queryCols),
-                $table,
-                $idCol
-            );
-            try {
-                $stmt = $this->pdo->prepare($sql);
-                $stmt->execute(['doctor_id' => $doctorId]);
-                $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            } catch (PDOException $e) {
-                continue;
-            }
-            if (!is_array($row)) {
-                continue;
-            }
-
-            $result['professional_license'] = $this->toNullableText($row['professional_license'] ?? null);
-            $result['specialty_license'] = $this->toNullableText($row['specialty_license'] ?? null);
-            $result['bio_short'] = $this->toNullableText($row['bio_short'] ?? null);
+        if (!is_array($profileRow)) {
             return $result;
         }
 
+        $result['professional_license'] = $this->toNullableText($profileRow['professional_license'] ?? null);
+        $result['specialty_license'] = $this->toNullableText($profileRow['specialty_license'] ?? null);
+        $result['specialty_primary'] = $this->toNullableText($profileRow['specialty_primary'] ?? null);
+        $result['bio_short'] = $this->toNullableText($profileRow['bio_short'] ?? null);
         return $result;
     }
 
-    private function resolveSpecialties(string $doctorId): array
+    private function resolveSpecialties(?array $profileRow): array
     {
-        $candidates = [
-            ['table' => 'doctor_specialties', 'doctor_col' => 'doctor_id', 'name_col' => 'specialty_name'],
-            ['table' => 'doctor_specialties', 'doctor_col' => 'doctor_id', 'name_col' => 'name'],
-            ['table' => 'medico_especialidades', 'doctor_col' => 'doctor_id', 'name_col' => 'especialidad'],
-        ];
-
-        foreach ($candidates as $candidate) {
-            $table = (string)$candidate['table'];
-            if (!$this->tableExists($table)) {
-                continue;
-            }
-            $cols = $this->tableColumns($table);
-            $doctorCol = trim((string)$candidate['doctor_col']);
-            $nameCol = trim((string)$candidate['name_col']);
-            if (!in_array($doctorCol, $cols, true) || !in_array($nameCol, $cols, true)) {
-                continue;
-            }
-            $idCol = in_array('specialty_id', $cols, true) ? 'specialty_id' : null;
-            $isPrimaryCol = in_array('is_primary', $cols, true) ? 'is_primary' : null;
-            $parts = [];
-            if ($idCol !== null) {
-                $parts[] = sprintf('`%s` AS specialty_id', $idCol);
-            }
-            $parts[] = sprintf('`%s` AS name_es', $nameCol);
-            if ($isPrimaryCol !== null) {
-                $parts[] = sprintf('`%s` AS is_primary', $isPrimaryCol);
-            }
-            $sql = sprintf(
-                'SELECT %s FROM `%s` WHERE `%s` = :doctor_id',
-                implode(', ', $parts),
-                $table,
-                $doctorCol
-            );
-            try {
-                $stmt = $this->pdo->prepare($sql);
-                $stmt->execute(['doctor_id' => $doctorId]);
-                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            } catch (PDOException $e) {
-                continue;
-            }
-            if (!is_array($rows) || empty($rows)) {
-                continue;
-            }
-
-            $out = [];
-            foreach ($rows as $row) {
-                $name = trim((string)($row['name_es'] ?? ''));
-                if ($name === '') {
-                    continue;
-                }
-                $slug = $this->slugify($name);
-                $out[] = [
-                    'specialty_id' => $this->toNullableText($row['specialty_id'] ?? null),
-                    'name_es' => $name,
-                    'name_plural_es' => null,
-                    'slug' => ($slug !== '' ? $slug : null),
-                    'schema_medical_specialty' => null,
-                    'is_primary' => ((int)($row['is_primary'] ?? 0) === 1),
-                ];
-            }
-            return $out;
+        if (!is_array($profileRow)) {
+            return [];
         }
 
-        return [];
+        $out = [];
+        $primary = $this->toNullableText($profileRow['specialty_primary'] ?? null);
+        if ($primary !== null) {
+            $out[] = [
+                'specialty_id' => null,
+                'name_es' => $primary,
+                'name_plural_es' => null,
+                'slug' => $this->slugify($primary),
+                'schema_medical_specialty' => null,
+                'is_primary' => true,
+            ];
+        }
+
+        $secondaries = $this->decodeJsonTextArray($profileRow['specialty_secondary_json'] ?? null);
+        foreach ($secondaries as $secondary) {
+            if ($primary !== null && mb_strtolower($secondary, 'UTF-8') === mb_strtolower($primary, 'UTF-8')) {
+                continue;
+            }
+            $out[] = [
+                'specialty_id' => null,
+                'name_es' => $secondary,
+                'name_plural_es' => null,
+                'slug' => $this->slugify($secondary),
+                'schema_medical_specialty' => null,
+                'is_primary' => false,
+            ];
+        }
+
+        return $out;
     }
 
     private function tableExists(string $table): bool
@@ -573,6 +459,32 @@ final class PublicProfileRepository
     {
         $v = trim((string)($value ?? ''));
         return ($v === '') ? null : $v;
+    }
+
+    private function decodeJsonTextArray($value): array
+    {
+        if (is_array($value)) {
+            $items = $value;
+        } else {
+            $raw = trim((string)($value ?? ''));
+            if ($raw === '') {
+                return [];
+            }
+            $decoded = json_decode($raw, true);
+            if (!is_array($decoded)) {
+                return [];
+            }
+            $items = $decoded;
+        }
+
+        $clean = [];
+        foreach ($items as $item) {
+            $text = trim((string)$item);
+            if ($text !== '') {
+                $clean[] = $text;
+            }
+        }
+        return array_values(array_unique($clean));
     }
 
     private function slugify(string $value): string

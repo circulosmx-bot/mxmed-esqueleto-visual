@@ -33,6 +33,7 @@ final class PublicProfileController
         $identity = (array)($snapshot['identity'] ?? []);
         $professional = (array)($snapshot['professional'] ?? []);
         $specialties = (array)($snapshot['specialties'] ?? []);
+        $profileSource = (array)($snapshot['profile_source'] ?? []);
         $scheduleRows = is_array($snapshot['schedule_rows'] ?? null) ? $snapshot['schedule_rows'] : [];
 
         $plan = [
@@ -73,9 +74,11 @@ final class PublicProfileController
         );
 
         $schedule = $this->buildSchedule($scheduleRows);
-        $hasMinimumPublicData = $this->hasMinimumPublicData($identity, $professional);
-        $isPublic = $hasMinimumPublicData;
-        $profileStatus = $hasMinimumPublicData ? 'active' : 'hidden';
+        $hasMinimumPublicData = $this->hasMinimumPublicData($identity, $professional, $specialties, $consultorios);
+        $sourceStatus = $this->normalizeProfileStatus($profileSource['profile_status'] ?? null);
+        $isPublicCandidate = (bool)($profileSource['is_public_candidate'] ?? false);
+        $isPublic = $hasMinimumPublicData && $isPublicCandidate && $sourceStatus === 'active';
+        $profileStatus = $isPublic ? 'active' : 'hidden';
 
         $city = $this->firstNonEmpty($consultorios[0]['city'] ?? null);
         $displayName = $this->firstNonEmpty($identity['display_name'] ?? null);
@@ -103,8 +106,8 @@ final class PublicProfileController
                 'ownership_status' => null,
                 'is_claimed' => false,
                 'is_public' => $isPublic,
-                'created_origin' => null,
-                'last_public_update_at' => null,
+                'created_origin' => ((bool)($profileSource['has_canonical_row'] ?? false) ? 'profiles_doctors' : null),
+                'last_public_update_at' => $this->firstNonEmpty($profileSource['last_public_update_at'] ?? null),
             ],
             'plan' => $plan,
             'public_visibility' => $publicVisibility,
@@ -119,6 +122,7 @@ final class PublicProfileController
             'professional' => [
                 'professional_license' => $this->firstNonEmpty($professional['professional_license'] ?? null),
                 'specialty_license' => $this->firstNonEmpty($professional['specialty_license'] ?? null),
+                'specialty_primary' => $this->firstNonEmpty($professional['specialty_primary'] ?? null),
                 'bio_short' => $this->firstNonEmpty($professional['bio_short'] ?? null),
                 'bio_long' => null,
                 'education' => [],
@@ -212,7 +216,7 @@ final class PublicProfileController
             'data' => $data,
             'meta' => [
                 'contract' => 'profile_public_mvp',
-                'version' => 'PP-4B',
+                'version' => 'PP-7D',
                 'generated_at' => gmdate('c'),
             ],
         ];
@@ -403,10 +407,60 @@ final class PublicProfileController
         return $clean;
     }
 
-    private function hasMinimumPublicData(array $identity, array $professional): bool
+    private function hasMinimumPublicData(array $identity, array $professional, array $specialties, array $consultorios): bool
     {
-        return $this->firstNonEmpty($identity['display_name'] ?? null) !== null
-            && $this->firstNonEmpty($professional['professional_license'] ?? null) !== null;
+        if ($this->firstNonEmpty($identity['display_name'] ?? null) === null) {
+            return false;
+        }
+        if ($this->firstNonEmpty($professional['professional_license'] ?? null) === null) {
+            return false;
+        }
+        if (!$this->hasPrimarySpecialty($professional, $specialties)) {
+            return false;
+        }
+        return $this->hasPublicConsultorio($consultorios);
+    }
+
+    private function hasPrimarySpecialty(array $professional, array $specialties): bool
+    {
+        if ($this->firstNonEmpty($professional['specialty_primary'] ?? null) !== null) {
+            return true;
+        }
+        foreach ($specialties as $specialty) {
+            if (!is_array($specialty)) {
+                continue;
+            }
+            if ($this->firstNonEmpty($specialty['name_es'] ?? null) !== null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function hasPublicConsultorio(array $consultorios): bool
+    {
+        foreach ($consultorios as $consultorio) {
+            if (!is_array($consultorio)) {
+                continue;
+            }
+            $id = $this->firstNonEmpty($consultorio['consultorio_id'] ?? null);
+            $isPublic = (bool)($consultorio['is_public'] ?? false);
+            $isActive = (bool)($consultorio['is_active'] ?? false);
+            if ($id !== null && $isPublic && $isActive) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function normalizeProfileStatus($value): string
+    {
+        $status = strtolower(trim((string)($value ?? '')));
+        $allowed = ['draft', 'pending_review', 'active', 'hidden', 'suspended', 'removed'];
+        if (in_array($status, $allowed, true)) {
+            return $status;
+        }
+        return 'hidden';
     }
 
     private function isValidDoctorId(string $doctorId): bool
@@ -435,7 +489,7 @@ final class PublicProfileController
             'data' => null,
             'meta' => [
                 'contract' => 'profile_public_mvp',
-                'version' => 'PP-4B',
+                'version' => 'PP-7D',
                 'generated_at' => gmdate('c'),
             ],
         ];
