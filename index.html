@@ -865,6 +865,85 @@
 
                 </div>
 
+                <div class="card mt-3" id="mx-public-identity-card">
+                  <div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                      <div>
+                        <div class="fw-semibold">Identidad pública profesional</div>
+                        <div class="text-muted small">Estos datos se mostrarán en tu perfil público.</div>
+                      </div>
+                      <a id="mx-public-profile-link" class="btn btn-outline-secondary btn-sm" href="/profiles/doctor.php?doctor_id=1" target="_blank" rel="noopener">Ver perfil público</a>
+                    </div>
+
+                    <div class="row g-3">
+                      <div class="col-md-6">
+                        <label class="form-label" for="mxpi-display-name">Nombre público</label>
+                        <input class="form-control" id="mxpi-display-name" maxlength="190" placeholder="Ej. Dra. Leticia Muñoz Alfaro">
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label" for="mxpi-prefix">Prefijo profesional</label>
+                        <select class="form-select" id="mxpi-prefix">
+                          <option value="">Selecciona</option>
+                          <option value="Dr.">Dr.</option>
+                          <option value="Dra.">Dra.</option>
+                          <option value="Psic.">Psic.</option>
+                          <option value="Psicóloga">Psicóloga</option>
+                          <option value="Lic.">Lic.</option>
+                          <option value="Mtro.">Mtro.</option>
+                          <option value="Mtra.">Mtra.</option>
+                          <option value="C.D.">C.D.</option>
+                          <option value="Dent.">Dent.</option>
+                          <option value="QFB">QFB</option>
+                          <option value="Nut.">Nut.</option>
+                          <option value="Fisio.">Fisio.</option>
+                        </select>
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label" for="mxpi-gender-label">Género / tratamiento</label>
+                        <select class="form-select" id="mxpi-gender-label">
+                          <option value="">Selecciona</option>
+                          <option value="Femenino">Femenino</option>
+                          <option value="Masculino">Masculino</option>
+                          <option value="No Específico">No Específico</option>
+                        </select>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="mxpi-prof-license">Cédula profesional</label>
+                        <input class="form-control" id="mxpi-prof-license" maxlength="64" placeholder="Número de cédula profesional">
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="mxpi-specialty-license">Cédula de especialidad</label>
+                        <input class="form-control" id="mxpi-specialty-license" maxlength="64" placeholder="Número de cédula de especialidad">
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="mxpi-specialty-primary">Especialidad principal</label>
+                        <input class="form-control" id="mxpi-specialty-primary" maxlength="190" placeholder="Ej. Medicina Interna">
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="mxpi-specialty-secondary">Especialidades secundarias</label>
+                        <input class="form-control" id="mxpi-specialty-secondary" maxlength="1500" placeholder="Separadas por coma">
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label" for="mxpi-bio-short">Bio breve</label>
+                        <textarea class="form-control" id="mxpi-bio-short" rows="3" maxlength="1500" placeholder="Resumen profesional breve visible en el perfil público"></textarea>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="mxpi-profile-status">Estado del perfil público</label>
+                        <input class="form-control no-check" id="mxpi-profile-status" type="text" readonly>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="mxpi-public-candidate">Candidato público</label>
+                        <input class="form-control no-check" id="mxpi-public-candidate" type="text" readonly>
+                      </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+                      <button class="btn btn-primary btn-sm" id="mxpi-save-btn" type="button">Guardar identidad pública</button>
+                      <div class="small text-muted" id="mxpi-feedback" aria-live="polite"></div>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="card mt-3" id="dg-signature-card">
                   <div class="card-body">
                     <div class="d-flex align-items-start justify-content-between gap-2">
