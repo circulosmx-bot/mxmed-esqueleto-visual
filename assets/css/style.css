@@ -2433,6 +2433,59 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 
 
+/* ===== UX-Panel-01C1 · Datos Personales (separacion visual por bloques) ===== */
+#p-info #t-info-datos .mx-dg-card{
+  border:1px solid #d6e7ee;
+  border-radius:14px;
+  box-shadow:0 8px 18px rgba(9,49,72,.06);
+  overflow:hidden;
+}
+#p-info #t-info-datos .mx-dg-card .card-body{
+  padding:1rem 1rem 1.1rem;
+}
+#p-info #t-info-datos .mx-dg-card-head{
+  margin-bottom:.65rem;
+}
+#p-info #t-info-datos .mx-dg-card-title{
+  font-weight:700;
+  color:#063247;
+  line-height:1.25;
+}
+#p-info #t-info-datos .mx-dg-card-note{
+  margin-top:.2rem;
+  color:#5f7483;
+  font-size:.86rem;
+  line-height:1.35;
+}
+#p-info #t-info-datos #mx-dg-media-card{
+  border-left:4px solid #8ec8d3;
+}
+#p-info #t-info-datos #mx-dg-media-card .mf-upload-grid{
+  margin-top:.65rem;
+  margin-bottom:0;
+}
+#p-info #t-info-datos #mx-dg-verified-card{
+  border-left:4px solid #7f9dad;
+}
+#p-info #t-info-datos #mx-dg-verified-card .row{
+  margin-top:.2rem;
+}
+#p-info #t-info-datos .mx-dg-legacy-save{
+  border-color:#d2e7ef !important;
+  background:#f6fbfd !important;
+}
+#p-info #t-info-datos #mx-public-identity-card{
+  border-left:4px solid #00ADC1;
+}
+#p-info #t-info-datos #mx-public-identity-card .card-body{
+  padding:1rem 1rem 1.1rem;
+}
+@media (max-width:991px){
+  #p-info #t-info-datos .mx-dg-card .card-body{
+    padding:.9rem;
+  }
+}
+
 /* ===== FOTOS: dropzone + grid ===== */
 
 .fotos-drop{ border:4px dashed #00ADC1; border-radius:20px; background:#fff; padding:28px; text-align:center; color:#003152; transition:border-color .2s ease, background-color .2s ease }

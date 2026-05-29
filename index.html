@@ -759,73 +759,87 @@
 
 
 
-<div class="mf-upload-grid">
+                <div class="card mt-3 mx-dg-card mx-dg-card-media" id="mx-dg-media-card">
+                  <div class="card-body">
+                    <div class="mx-dg-card-head">
+                      <div class="mx-dg-card-title">Foto y logotipo profesional</div>
+                      <div class="mx-dg-card-note">Imagen pública y logotipo profesional. La persistencia canónica de media se definirá en una fase posterior.</div>
+                    </div>
+                    <div class="mf-upload-grid">
 
-  <div class="mf-upload square" data-type="foto">
+                      <div class="mf-upload square" data-type="foto">
 
-    <svg class="mf-illus" viewBox="0 0 64 64" aria-hidden="true">
+                        <svg class="mf-illus" viewBox="0 0 64 64" aria-hidden="true">
 
-      <circle cx="32" cy="22" r="12" fill="#c7dbe4"/>
+                          <circle cx="32" cy="22" r="12" fill="#c7dbe4"/>
 
-      <rect x="16" y="36" width="32" height="18" rx="9" fill="#c7dbe4"/>
+                          <rect x="16" y="36" width="32" height="18" rx="9" fill="#c7dbe4"/>
 
-      <rect x="6" y="8" width="52" height="48" rx="8" fill="none" stroke="#99bfd0" stroke-width="2"/>
+                          <rect x="6" y="8" width="52" height="48" rx="8" fill="none" stroke="#99bfd0" stroke-width="2"/>
 
-    </svg>
+                        </svg>
 
-    <div class="mf-title">Arrastra aquí tu fotografía</div>
+                        <div class="mf-title">Arrastra aquí tu fotografía</div>
 
-    <div class="mf-sub">o haz clic para subirla</div>
+                        <div class="mf-sub">o haz clic para subirla</div>
 
-    <div class="mf-actions">
+                        <div class="mf-actions">
 
-      <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
+                          <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
 
-      <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cámara</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cámara</button>
 
-    </div>
+                        </div>
 
-    <input type="file" accept="image/*" class="d-none mf-input">
+                        <input type="file" accept="image/*" class="d-none mf-input">
 
-    <div class="mf-prev"><img alt="preview foto"></div>
+                        <div class="mf-prev"><img alt="preview foto"></div>
 
-  </div>
+                      </div>
 
 
 
-  <div class="mf-upload square" data-type="logo">
+                      <div class="mf-upload square" data-type="logo">
 
-    <svg class="mf-illus" viewBox="0 0 64 64" aria-hidden="true">
+                        <svg class="mf-illus" viewBox="0 0 64 64" aria-hidden="true">
 
-      <rect x="12" y="26" width="40" height="12" rx="6" fill="#c7dbe4"/>
+                          <rect x="12" y="26" width="40" height="12" rx="6" fill="#c7dbe4"/>
 
-      <path d="M32 10v44M10 32h44" stroke="#99bfd0" stroke-width="2" stroke-linecap="round"/>
+                          <path d="M32 10v44M10 32h44" stroke="#99bfd0" stroke-width="2" stroke-linecap="round"/>
 
-      <rect x="6" y="8" width="52" height="48" rx="8" fill="none" stroke="#99bfd0" stroke-width="2"/>
+                          <rect x="6" y="8" width="52" height="48" rx="8" fill="none" stroke="#99bfd0" stroke-width="2"/>
 
-    </svg>
+                        </svg>
 
-    <div class="mf-title">Arrastra aquí tu logotipo</div>
+                        <div class="mf-title">Arrastra aquí tu logotipo</div>
 
-    <div class="mf-sub">o haz clic para subirlo</div>
+                        <div class="mf-sub">o haz clic para subirlo</div>
 
-    <div class="mf-actions">
+                        <div class="mf-actions">
 
-      <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
+                          <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
 
-      <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cámara</button>
+                          <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cámara</button>
 
-    </div>
+                        </div>
 
-    <input type="file" accept="image/*" class="d-none mf-input">
+                        <input type="file" accept="image/*" class="d-none mf-input">
 
-    <div class="mf-prev"><img alt="preview logo"></div>
+                        <div class="mf-prev"><img alt="preview logo"></div>
 
-  </div>
+                      </div>
 
-</div>
+                    </div>
+                  </div>
+                </div>
 
-<div class="row g-3">
+                <div class="card mt-3 mx-dg-card mx-dg-card-verified" id="mx-dg-verified-card">
+                  <div class="card-body">
+                    <div class="mx-dg-card-head">
+                      <div class="mx-dg-card-title">Información verificada / administrativa</div>
+                      <div class="mx-dg-card-note">Estos datos serán validados por la plataforma. En una fase posterior podrán quedar protegidos y requerir solicitud de cambio.</div>
+                    </div>
+                    <div class="row g-3">
 
                   <div class="col-md-3"><label class="form-label">Nombre(s)</label><input class="form-control" id="dp-nombres" placeholder="Nombre(s)"></div>
 
@@ -864,7 +878,7 @@
                   
 
                   <div class="col-12">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 border rounded p-2 bg-light">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 border rounded p-2 bg-light mx-dg-legacy-save">
                       <div class="small text-muted">
                         Guardado local como borrador. Este cambio aún no actualiza el perfil público.
                       </div>
@@ -875,9 +889,11 @@
                     </div>
                   </div>
 
+                    </div>
+                  </div>
                 </div>
 
-                <div class="card mt-3" id="mx-public-identity-card">
+                <div class="card mt-3 mx-dg-card mx-dg-card-public" id="mx-public-identity-card">
                   <div class="card-body">
                     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
                       <div>
