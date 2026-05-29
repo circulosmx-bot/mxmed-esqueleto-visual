@@ -339,6 +339,64 @@ console.info('app.js loaded :: 20251123a');
     return null;
   }
 
+  function resolveLegacyGenderLabel(genderLabel, gender){
+    const fromLabel = String(genderLabel || '').trim();
+    if(fromLabel === 'Femenino' || fromLabel === 'Masculino' || fromLabel === 'No Específico'){
+      return fromLabel;
+    }
+    const fromGender = String(gender || '').trim().toLowerCase();
+    if(fromGender === 'femenino') return 'Femenino';
+    if(fromGender === 'masculino') return 'Masculino';
+    if(fromGender === 'otro' || fromGender === 'no específico' || fromGender === 'no especifico'){
+      return 'No Específico';
+    }
+    return '';
+  }
+
+  function splitLegacyName(displayName, prefix){
+    const fullName = normalizeText(displayName, 190);
+    if(!fullName){
+      return { nombres: '', apellidoPaterno: '', apellidoMaterno: '' };
+    }
+
+    let cleanName = fullName;
+    const safePrefix = normalizeText(prefix, 32);
+    if(safePrefix){
+      const escaped = safePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp('^' + escaped + '\\s+', 'i');
+      cleanName = cleanName.replace(re, '').trim();
+    }
+
+    const tokens = cleanName.split(/\s+/).filter(Boolean);
+    if(tokens.length === 0){
+      return { nombres: fullName, apellidoPaterno: '', apellidoMaterno: '' };
+    }
+    if(tokens.length === 1){
+      return { nombres: tokens[0], apellidoPaterno: '', apellidoMaterno: '' };
+    }
+    if(tokens.length === 2){
+      return { nombres: tokens[0], apellidoPaterno: tokens[1], apellidoMaterno: '' };
+    }
+
+    const apellidoMaterno = tokens[tokens.length - 1];
+    const apellidoPaterno = tokens[tokens.length - 2];
+    const nombres = tokens.slice(0, -2).join(' ');
+    return {
+      nombres: nombres || fullName,
+      apellidoPaterno,
+      apellidoMaterno
+    };
+  }
+
+  function writeLegacyValue(inputEl, value){
+    if(!inputEl) return;
+    const safeValue = String(value || '').trim();
+    if(inputEl.value !== safeValue){
+      inputEl.value = safeValue;
+      try{ inputEl.dispatchEvent(new Event('change', { bubbles: true })); }catch(_){}
+    }
+  }
+
   function ensureSelectOption(selectEl, value){
     const safeValue = String(value || '').trim();
     if(!safeValue || !selectEl) return;
@@ -380,6 +438,7 @@ console.info('app.js loaded :: 20251123a');
     const data = identity && typeof identity === 'object' ? identity : {};
     const displayName = normalizeText(data.display_name, 190);
     const prefix = normalizeText(data.prefix, 32);
+    const gender = normalizeText(data.gender, 32);
     const genderLabel = normalizeText(data.gender_label, 64);
     const professionalLicense = normalizeText(data.professional_license, 64);
     const specialtyLicense = normalizeText(data.specialty_license, 64);
@@ -406,14 +465,31 @@ console.info('app.js loaded :: 20251123a');
 
     const legacyCedProf = document.getElementById('ced-prof');
     if(legacyCedProf && professionalLicense){
-      legacyCedProf.value = professionalLicense;
-      try{ legacyCedProf.dispatchEvent(new Event('change', { bubbles: true })); }catch(_){}
+      writeLegacyValue(legacyCedProf, professionalLicense);
     }
     const legacyCedEsp = document.getElementById('ced-esp');
     if(legacyCedEsp && specialtyLicense){
-      legacyCedEsp.value = specialtyLicense;
-      try{ legacyCedEsp.dispatchEvent(new Event('change', { bubbles: true })); }catch(_){}
+      writeLegacyValue(legacyCedEsp, specialtyLicense);
     }
+
+    const legacyGenero = document.getElementById('dp-genero');
+    const legacyGenderLabel = resolveLegacyGenderLabel(genderLabel, gender);
+    if(legacyGenero && legacyGenderLabel){
+      ensureSelectOption(legacyGenero, legacyGenderLabel);
+      writeLegacyValue(legacyGenero, legacyGenderLabel);
+    }
+
+    const legacyName = splitLegacyName(displayName, prefix);
+    writeLegacyValue(document.getElementById('dp-nombres'), legacyName.nombres);
+    writeLegacyValue(document.getElementById('dp-apellido-paterno'), legacyName.apellidoPaterno);
+    writeLegacyValue(document.getElementById('dp-apellido-materno'), legacyName.apellidoMaterno);
+
+    const legacyEsp1 = document.getElementById('esp-1');
+    if(legacyEsp1 && specialtyPrimary){
+      ensureSelectOption(legacyEsp1, specialtyPrimary);
+      writeLegacyValue(legacyEsp1, specialtyPrimary);
+    }
+
     const specialtySummary = document.getElementById('fs-esp');
     if(specialtySummary && specialtyPrimary){
       specialtySummary.textContent = specialtyPrimary;
