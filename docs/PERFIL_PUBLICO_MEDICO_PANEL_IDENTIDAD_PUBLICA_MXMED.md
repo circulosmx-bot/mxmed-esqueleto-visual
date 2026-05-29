@@ -457,3 +457,101 @@ Esta decision nace como base responsive y portable:
 - No implementar app en esta fase.
 - No redisenar todo el sistema en una sola intervencion.
 - Primero documentar; luego ejecutar rediseno con micro-parches controlados.
+
+## 17) UX-Panel-01B — Auditoria de autosave/localStorage y politica de guardado
+
+### 17.1 Problema detectado
+- El panel mezcla guardado canonico y autosave/localStorage en la misma experiencia.
+- localStorage puede generar sensacion falsa de "guardado real" cuando no existe persistencia en BD.
+- El autosave global `dp:*` no impacta solo Datos Personales; alcanza multiples controles y tabs.
+
+### 17.2 Hallazgo principal
+- No es seguro retirar autosave de golpe.
+- Primero debe existir clasificacion por tipo de dato y riesgo de regresion.
+- Hay usos correctos de localStorage como preferencia UI o borrador local.
+- Hay usos que deben migrar a guardado explicito por impacto en perfil publico o datos verificados.
+
+### 17.3 Clasificacion de usos
+
+A) Puede quedarse en localStorage
+- pestaña activa y submenu activo;
+- estado de sidebar y preferencias visuales;
+- filtros temporales;
+- cache tecnica acotada;
+- borradores explicitamente etiquetados como borrador local.
+
+B) Debe migrarse a guardado explicito
+- identidad publica profesional;
+- nombre publico y datos que construyen `display_name`;
+- cedulas;
+- especialidades visibles;
+- datos que actualizan perfil publico;
+- datos administrativos/profesionales verificados.
+
+C) No retirar todavia
+- chips de formacion;
+- servicios;
+- enfermedades/tratamientos;
+- fotos sin pipeline canonico definido;
+- modulos de Agenda;
+- modulos de Operadores;
+- borradores clinicos activos.
+
+D) Requiere decision de producto
+- foto/logotipo publico;
+- firma;
+- contacto publico/privado;
+- servicios/padecimientos visibles en perfil publico;
+- datos fiscales en fases futuras.
+
+### 17.4 Reglas oficiales de guardado
+- Autosave si:
+  - preferencias UI;
+  - estado temporal;
+  - borradores locales marcados con claridad.
+- Autosave no:
+  - publicacion;
+  - aprobacion;
+  - datos verificados;
+  - identidad publica;
+  - datos clinicos finales;
+  - datos administrativos canonicos.
+- Guardado explicito:
+  - datos publicos;
+  - datos administrativos importantes;
+  - datos verificados;
+  - informacion que impacta BD o perfil publico.
+- Solicitar cambio:
+  - para datos verificados despues de aprobacion.
+
+### 17.5 Reglas de UX / microcopy
+- `Cambios sin guardar`
+- `Cambios guardados`
+- `Guardado local como borrador`
+- `Guardado en perfil publico`
+- `Error al guardar`
+
+### 17.6 Riesgos
+- Retirar autosave global `dp:*` sin segmentacion puede romper varias pestanas.
+- Retirar almacenamiento de chips puede perder borradores utiles.
+- Retirar fotos locales sin pipeline canonico puede romper continuidad operativa.
+- Tocar Agenda/Operadores queda fuera de alcance en esta fase.
+- Borrar claves legacy sin reemplazo controlado puede introducir regresiones.
+
+### 17.7 Migracion progresiva recomendada
+- `UX-Panel-01B1`: congelar inventario y clasificacion de claves.
+- `UX-Panel-01B2`: microcopy visible de `guardado local` vs `guardado canonico`.
+- `UX-Panel-01B3`: restringir autosave `dp:*` solo a borradores permitidos.
+- `UX-Panel-01B4`: datos publicos solo por boton guardar explicito.
+- `UX-Panel-01B5`: informacion verificada en solo lectura + `Solicitar cambio`.
+- `UX-Panel-01B6`: definir persistencia canonica para chips/fotos/servicios.
+- `UX-Panel-01B7`: retirar claves legacy no usadas.
+
+### 17.8 Guardrails
+- No tocar Agenda.
+- No tocar Operadores.
+- No retirar localStorage de forma masiva.
+- No cambiar contratos backend en esta fase.
+- No agregar SQL.
+- No romper borradores clinicos.
+- No hacer rediseno masivo en una sola intervencion.
