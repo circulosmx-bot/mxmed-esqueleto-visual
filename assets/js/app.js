@@ -263,7 +263,9 @@ console.info('app.js loaded :: 20251123a');
     profileStatus: document.getElementById('mxpi-profile-status'),
     publicCandidate: document.getElementById('mxpi-public-candidate'),
     saveBtn: document.getElementById('mxpi-save-btn'),
+    saveLegacyBtn: document.getElementById('mxpi-save-btn-legacy'),
     feedback: document.getElementById('mxpi-feedback'),
+    legacyFeedback: document.getElementById('mxpi-legacy-feedback'),
     profileLink: document.getElementById('mx-public-profile-link')
   };
 
@@ -279,7 +281,8 @@ console.info('app.js loaded :: 20251123a');
     saving: false,
     displayNameTouched: false,
     legacyNameTouched: false,
-    hydratingIdentity: false
+    hydratingIdentity: false,
+    dirty: false
   };
 
   function sanitizeDoctorId(raw){
@@ -445,16 +448,46 @@ console.info('app.js loaded :: 20251123a');
     const classes = {
       success: 'small text-success',
       danger: 'small text-danger',
+      warning: 'small text-warning',
       muted: 'small text-muted'
     };
     els.feedback.className = classes[tone] || classes.muted;
     els.feedback.textContent = msg;
   }
 
+  function setLegacyFeedback(message, tone){
+    if(!els.legacyFeedback) return;
+    const msg = String(message || '').trim();
+    if(!msg){
+      els.legacyFeedback.className = 'small text-muted';
+      els.legacyFeedback.textContent = 'Sin cambios pendientes.';
+      return;
+    }
+    const classes = {
+      success: 'small text-success',
+      danger: 'small text-danger',
+      warning: 'small text-warning',
+      muted: 'small text-muted'
+    };
+    els.legacyFeedback.className = classes[tone] || classes.muted;
+    els.legacyFeedback.textContent = msg;
+  }
+
+  function markIdentityDirty(){
+    if(state.hydratingIdentity) return;
+    state.dirty = true;
+    setFeedback('Cambios sin guardar. Guarda estos cambios para actualizar tu perfil público.', 'warning');
+    setLegacyFeedback('Cambios sin guardar.', 'warning');
+  }
+
   function setBusyState(){
     if(els.saveBtn){
       els.saveBtn.disabled = state.loading || state.saving || !state.loaded;
       els.saveBtn.textContent = state.saving ? 'Guardando...' : 'Guardar identidad pública';
+    }
+    if(els.saveLegacyBtn){
+      els.saveLegacyBtn.disabled = state.loading || state.saving || !state.loaded;
+      els.saveLegacyBtn.textContent = state.saving ? 'Guardando...' : 'Guardar cambios del perfil público';
     }
   }
 
@@ -525,7 +558,9 @@ console.info('app.js loaded :: 20251123a');
     }
     state.displayNameTouched = false;
     state.legacyNameTouched = false;
+    state.dirty = false;
     state.hydratingIdentity = false;
+    setLegacyFeedback('Sin cambios pendientes.', 'muted');
   }
 
   function updateProfileLink(){
@@ -561,10 +596,12 @@ console.info('app.js loaded :: 20251123a');
   els.displayName.addEventListener('input', ()=>{
     if(state.hydratingIdentity) return;
     state.displayNameTouched = true;
+    markIdentityDirty();
   });
   els.displayName.addEventListener('change', ()=>{
     if(state.hydratingIdentity) return;
     state.displayNameTouched = true;
+    markIdentityDirty();
   });
 
   ['dp-nombres', 'dp-apellido-paterno', 'dp-apellido-materno'].forEach((id)=>{
@@ -573,9 +610,17 @@ console.info('app.js loaded :: 20251123a');
     const markLegacyTouched = ()=>{
       if(state.hydratingIdentity) return;
       state.legacyNameTouched = true;
+      markIdentityDirty();
     };
     input.addEventListener('input', markLegacyTouched);
     input.addEventListener('change', markLegacyTouched);
+  });
+
+  ['mxpi-prefix', 'mxpi-gender-label', 'mxpi-prof-license', 'mxpi-specialty-license', 'mxpi-specialty-primary', 'mxpi-specialty-secondary', 'mxpi-bio-short'].forEach((id)=>{
+    const input = document.getElementById(id);
+    if(!input) return;
+    input.addEventListener('input', markIdentityDirty);
+    input.addEventListener('change', markIdentityDirty);
   });
 
   async function readPrivateIdentity(){
@@ -598,9 +643,11 @@ console.info('app.js loaded :: 20251123a');
       applyIdentity(json.data.identity_public);
       state.loaded = true;
       setFeedback('Identidad pública cargada.', 'muted');
+      setLegacyFeedback('Sin cambios pendientes.', 'muted');
     }catch(_){
       state.loaded = false;
       setFeedback('No fue posible cargar la identidad pública. Intenta nuevamente.', 'danger');
+      setLegacyFeedback('No fue posible cargar identidad pública.', 'danger');
     }finally{
       state.loading = false;
       setBusyState();
@@ -631,9 +678,11 @@ console.info('app.js loaded :: 20251123a');
         throw new Error('No fue posible guardar la identidad pública.');
       }
       applyIdentity(json.data.identity_public);
-      setFeedback('Identidad pública guardada correctamente.', 'success');
+      setFeedback('Cambios guardados. El perfil público ya puede reflejar esta información.', 'success');
+      setLegacyFeedback('Cambios guardados.', 'success');
     }catch(_){
       setFeedback('No fue posible guardar. Revisa los campos e intenta nuevamente.', 'danger');
+      setLegacyFeedback('No se guardaron los cambios.', 'danger');
     }finally{
       state.saving = false;
       setBusyState();
@@ -641,6 +690,7 @@ console.info('app.js loaded :: 20251123a');
   }
 
   els.saveBtn.addEventListener('click', savePrivateIdentity);
+  els.saveLegacyBtn?.addEventListener('click', savePrivateIdentity);
   document.addEventListener('click', (event)=>{
     const trigger = event.target && event.target.closest
       ? event.target.closest('[data-profile-panel="p-info"], .menu-sub-btn[data-panel="p-info"]')
