@@ -276,7 +276,10 @@ console.info('app.js loaded :: 20251123a');
     doctorId: '',
     loaded: false,
     loading: false,
-    saving: false
+    saving: false,
+    displayNameTouched: false,
+    legacyNameTouched: false,
+    hydratingIdentity: false
   };
 
   function sanitizeDoctorId(raw){
@@ -397,6 +400,27 @@ console.info('app.js loaded :: 20251123a');
     }
   }
 
+  function readLegacyAdministrativeName(){
+    return {
+      nombres: normalizeText(document.getElementById('dp-nombres')?.value, 190),
+      apellidoPaterno: normalizeText(document.getElementById('dp-apellido-paterno')?.value, 190),
+      apellidoMaterno: normalizeText(document.getElementById('dp-apellido-materno')?.value, 190)
+    };
+  }
+
+  function buildDisplayNameFromLegacy(prefix, legacyName = {}){
+    const names = [
+      normalizeText(legacyName.nombres, 190),
+      normalizeText(legacyName.apellidoPaterno, 190),
+      normalizeText(legacyName.apellidoMaterno, 190)
+    ].filter(Boolean);
+    if(!names.length){
+      return null;
+    }
+    const pref = normalizeText(prefix, 32);
+    return normalizeText([pref, ...names].filter(Boolean).join(' '), 190);
+  }
+
   function ensureSelectOption(selectEl, value){
     const safeValue = String(value || '').trim();
     if(!safeValue || !selectEl) return;
@@ -435,6 +459,7 @@ console.info('app.js loaded :: 20251123a');
   }
 
   function applyIdentity(identity){
+    state.hydratingIdentity = true;
     const data = identity && typeof identity === 'object' ? identity : {};
     const displayName = normalizeText(data.display_name, 190);
     const prefix = normalizeText(data.prefix, 32);
@@ -498,6 +523,9 @@ console.info('app.js loaded :: 20251123a');
     if(headerName && displayName){
       headerName.textContent = displayName;
     }
+    state.displayNameTouched = false;
+    state.legacyNameTouched = false;
+    state.hydratingIdentity = false;
   }
 
   function updateProfileLink(){
@@ -508,8 +536,17 @@ console.info('app.js loaded :: 20251123a');
 
   function buildPatchPayload(){
     const genderLabel = normalizeText(els.genderLabel?.value, 64);
+    const displayFromPublicField = normalizeText(els.displayName?.value, 190);
+    let resolvedDisplayName = displayFromPublicField;
+    if(!state.displayNameTouched && state.legacyNameTouched){
+      const legacyName = readLegacyAdministrativeName();
+      const fromLegacy = buildDisplayNameFromLegacy(els.prefix?.value, legacyName);
+      if(fromLegacy){
+        resolvedDisplayName = fromLegacy;
+      }
+    }
     return {
-      display_name: normalizeText(els.displayName?.value, 190),
+      display_name: resolvedDisplayName,
       prefix: normalizeText(els.prefix?.value, 32),
       gender: mapGenderValue(genderLabel),
       gender_label: genderLabel,
@@ -520,6 +557,26 @@ console.info('app.js loaded :: 20251123a');
       bio_short: normalizeText(els.bioShort?.value, 1500)
     };
   }
+
+  els.displayName.addEventListener('input', ()=>{
+    if(state.hydratingIdentity) return;
+    state.displayNameTouched = true;
+  });
+  els.displayName.addEventListener('change', ()=>{
+    if(state.hydratingIdentity) return;
+    state.displayNameTouched = true;
+  });
+
+  ['dp-nombres', 'dp-apellido-paterno', 'dp-apellido-materno'].forEach((id)=>{
+    const input = document.getElementById(id);
+    if(!input) return;
+    const markLegacyTouched = ()=>{
+      if(state.hydratingIdentity) return;
+      state.legacyNameTouched = true;
+    };
+    input.addEventListener('input', markLegacyTouched);
+    input.addEventListener('change', markLegacyTouched);
+  });
 
   async function readPrivateIdentity(){
     state.doctorId = resolveDoctorId();
