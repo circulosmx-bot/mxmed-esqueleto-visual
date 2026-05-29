@@ -1090,7 +1090,8 @@ Refs:
 - `[profiles]` PP-7H1-C completado: deuda UX controlada de navegacion Perfil Medico (coexistencia temporal lateral + dropdown; sin cierre final de comportamiento de menus).
 - `[profiles]` PP-7H2-A completado: endpoint privado minimo `GET/PATCH /api/profiles/private/doctor/{doctor_id}` para identidad publica en `profiles_doctors` (`23de802`).
 - `[profiles]` PP-7H2-C completado: congruencia panel legacy + bloque identidad publica + `profiles_doctors` con guardado explicito (commits `14ba4cf`, `8b29b76`, `e7a2009`).
-- `[profiles]` Siguiente recomendado: fase UX separada para uniformar politica de guardado (autosave vs guardado explicito) sin tocar Agenda ni backend.
+- `[profiles]` UX-Panel-01A completado: decision UX de separacion entre Informacion Verificada e Identidad Publica editable en Datos Personales (base responsive PC/tablet/movil/PWA), sin cambios de codigo.
+- `[profiles]` Siguiente recomendado: UX-Panel-01B reorganizacion estructural visual de Datos Personales (sin tocar Agenda, backend ni contratos `profiles_doctors`).
 
 ### 2a) Operación clínica extendida
 - `[api]` órdenes, recetas y resultados con contratos estables.

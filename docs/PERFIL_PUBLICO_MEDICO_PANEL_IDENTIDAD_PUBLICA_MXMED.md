@@ -333,3 +333,127 @@
   - como confirmar \"cambios guardados\",
   - como presentar errores.
 - Esta deuda se atiende en fase UX separada, fuera de PP-7H2-C.
+
+## 16) UX-Panel-01A — Separacion de Informacion Verificada e Identidad Publica
+
+### 16.1 Problema detectado
+- La seccion `Datos Personales` mezcla en una sola vista:
+  - datos administrativos/profesionales formales;
+  - datos publicos editables;
+  - fotografia/logotipo;
+  - autosave legacy/localStorage;
+  - guardado canonico a `profiles_doctors`;
+  - mensajes y botones de guardado.
+- Esta mezcla genera:
+  - confusion del usuario sobre que se guarda de verdad;
+  - sensacion de espacio desperdiciado y altura excesiva;
+  - duplicidad visual entre campos legacy y bloque de identidad publica;
+  - ambiguedad sobre que cambios actualizan el perfil publico SSR.
+
+### 16.2 Decision de producto
+Se separan dos capas de datos en `Datos Personales`:
+
+1) Informacion personal/profesional verificada
+- Ejemplos:
+  - Nombre(s), Apellido Paterno, Apellido Materno.
+  - Cedula Profesional, Cedula de Especialidad.
+  - Universidad/Institucion.
+  - Formacion profesional validada y datos legales/profesionales sujetos a revision.
+- Regla:
+  - una vez aprobado el perfil por operadores/plataforma, estos datos no se editan libremente;
+  - cualquier ajuste requiere flujo `Solicitar cambio` + revision/aprobacion.
+
+2) Identidad publica profesional editable
+- Ejemplos:
+  - Nombre publico.
+  - Prefijo profesional.
+  - Genero/tratamiento publico.
+  - Especialidad principal visible.
+  - Especialidades secundarias visibles.
+  - Bio breve.
+  - Foto publica y logotipo publico (cuando aplique).
+  - Datos publicos opcionales segun flags/plan (fases posteriores).
+- Regla:
+  - se edita desde panel con accion explicita de guardado;
+  - no depende de autosave legacy;
+  - persiste en `profiles_doctors` y se refleja via endpoint publico + SSR.
+
+### 16.3 Politica de guardado
+Para Informacion Verificada:
+- solo lectura tras aprobacion;
+- boton `Solicitar cambio`;
+- estado `Pendiente de revision` cuando aplique;
+- aprobacion final por operador/plataforma.
+
+Para Identidad Publica:
+- editable;
+- estado `Cambios sin guardar`;
+- boton `Guardar cambios del perfil publico`;
+- estado `Cambios guardados`;
+- error visible y entendible si falla `PATCH`.
+
+Para autosave/localStorage:
+- solo respaldo visual/transicional o preferencia local;
+- no equivale a publicacion, aprobacion ni persistencia canonica.
+
+### 16.4 Implicaciones visuales para futura reorganizacion
+La reorganizacion de `Datos Personales` debe:
+- reducir altura desperdiciada;
+- compactar fotografia/logotipo;
+- mejorar grid de campos;
+- evitar duplicidad entre legacy e identidad publica;
+- homogenizar dropdowns/inputs/cards;
+- unificar estados visuales de guardado;
+- separar con claridad:
+  - Informacion verificada,
+  - Identidad publica,
+  - Vista previa del perfil publico,
+  - Acciones de guardado.
+
+### 16.5 Responsividad, movil y futura app/PWA
+Esta decision nace como base responsive y portable:
+
+1) Escritorio / PC
+- cards en grid;
+- campos en 2-3 columnas segun densidad;
+- vista previa lateral cuando el ancho lo permita;
+- acciones de guardado agrupadas en zona clara.
+
+2) Tablet
+- grid reducido (1-2 columnas segun ancho real);
+- cards apilables;
+- botones tactiles amplios;
+- tabs usables sin saturacion visual.
+
+3) Movil
+- una sola columna;
+- cards apiladas;
+- tabs con scroll horizontal si se requiere;
+- boton de guardado visible/facil de alcanzar;
+- estados `sin guardar/guardado/error` visibles;
+- evitar hover y controles pequenos o muy juntos.
+
+4) Futura app descargable / PWA
+- mantener patron tactil consistente;
+- evitar layouts rigidos dependientes de escritorio;
+- usar bloques reutilizables;
+- preparar traslado a app sin rediseno total desde cero.
+
+### 16.6 Deuda futura (micro-fases UX)
+- `UX-Panel-01B`: reorganizacion estructural visual de Datos Personales.
+- `UX-Panel-01C`: modo solo lectura para informacion verificada + Solicitar cambio.
+- `UX-Panel-01D`: politica unificada de guardado explicito.
+- `UX-Panel-01E`: homologacion visual de inputs, dropdowns, cards, botones y estados.
+- `UX-Panel-01F`: revision de foto/logotipo y vista previa publica.
+- `UX-Panel-01G`: revision responsive movil/tablet de la seccion.
+- `UX-Panel-01H`: criterios de portabilidad futura a PWA/app.
+
+### 16.7 Guardrails de ejecucion
+- No reabrir Agenda.
+- No mezclar esta fase UX con backend.
+- No cambiar contratos de `profiles_doctors` en esta fase.
+- No agregar campos SQL en esta fase.
+- No implementar flujo de aprobacion en esta fase.
+- No implementar app en esta fase.
+- No redisenar todo el sistema en una sola intervencion.
+- Primero documentar; luego ejecutar rediseno con micro-parches controlados.
