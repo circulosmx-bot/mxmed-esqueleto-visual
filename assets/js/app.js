@@ -476,14 +476,16 @@ console.info('app.js loaded :: 20251123a');
   function markIdentityDirty(){
     if(state.hydratingIdentity) return;
     state.dirty = true;
-    setFeedback('Cambios sin guardar. Guarda estos cambios para actualizar tu perfil público.', 'warning');
-    setLegacyFeedback('Cambios sin guardar.', 'warning');
+    setFeedback('Cambios sin guardar. Guarda para actualizar tu perfil público.', 'warning');
+    if(!state.legacyNameTouched){
+      setLegacyFeedback('Cambios sin guardar.', 'warning');
+    }
   }
 
   function setBusyState(){
     if(els.saveBtn){
       els.saveBtn.disabled = state.loading || state.saving || !state.loaded;
-      els.saveBtn.textContent = state.saving ? 'Guardando...' : 'Guardar identidad pública';
+      els.saveBtn.textContent = state.saving ? 'Guardando...' : 'Guardar cambios del perfil público';
     }
     if(els.saveLegacyBtn){
       els.saveLegacyBtn.disabled = state.loading || state.saving || !state.loaded;
@@ -607,13 +609,17 @@ console.info('app.js loaded :: 20251123a');
   ['dp-nombres', 'dp-apellido-paterno', 'dp-apellido-materno'].forEach((id)=>{
     const input = document.getElementById(id);
     if(!input) return;
-    const markLegacyTouched = ()=>{
+    const markLegacyTouched = (eventType = 'input')=>{
       if(state.hydratingIdentity) return;
       state.legacyNameTouched = true;
       markIdentityDirty();
+      if(eventType === 'change' || eventType === 'blur'){
+        setLegacyFeedback('Guardado local como borrador. Este cambio aún no actualiza el perfil público.', 'muted');
+      }
     };
-    input.addEventListener('input', markLegacyTouched);
-    input.addEventListener('change', markLegacyTouched);
+    input.addEventListener('input', ()=> markLegacyTouched('input'));
+    input.addEventListener('change', ()=> markLegacyTouched('change'));
+    input.addEventListener('blur', ()=> markLegacyTouched('blur'));
   });
 
   ['mxpi-prefix', 'mxpi-gender-label', 'mxpi-prof-license', 'mxpi-specialty-license', 'mxpi-specialty-primary', 'mxpi-specialty-secondary', 'mxpi-bio-short'].forEach((id)=>{
@@ -679,10 +685,10 @@ console.info('app.js loaded :: 20251123a');
       }
       applyIdentity(json.data.identity_public);
       setFeedback('Cambios guardados. El perfil público ya puede reflejar esta información.', 'success');
-      setLegacyFeedback('Cambios guardados.', 'success');
+      setLegacyFeedback('Guardado en perfil público.', 'success');
     }catch(_){
-      setFeedback('No fue posible guardar. Revisa los campos e intenta nuevamente.', 'danger');
-      setLegacyFeedback('No se guardaron los cambios.', 'danger');
+      setFeedback('No se pudieron guardar los cambios. Revisa la conexión e inténtalo nuevamente.', 'danger');
+      setLegacyFeedback('No se pudieron guardar los cambios.', 'danger');
     }finally{
       state.saving = false;
       setBusyState();
