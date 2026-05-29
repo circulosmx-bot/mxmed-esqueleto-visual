@@ -264,3 +264,72 @@
 - No resuelve aun catalogo backend final de prefijos/especialidades ni verificacion documental de cedulas.
 - Siguiente recomendado:
   - `PP-7H2-B` conexion minima del formulario visual del panel a endpoint privado (`GET/PATCH`), sin redisenar navegacion.
+
+## 15) PP-7H2-C — Cierre congruencia panel ↔ `profiles_doctors` ↔ perfil publico
+
+### 15.1 Problema detectado
+- El perfil publico ya mostraba datos provenientes de `profiles_doctors`.
+- El panel visible del medico mantenia campos legacy vacios o desconectados de la identidad canonica.
+- Esto rompia confianza operativa: el panel debe sentirse como fuente de trabajo del medico.
+
+### 15.2 Segunda falla detectada
+- El autosave legacy/localStorage podia guardar cambios visuales locales.
+- Esos cambios locales no publicaban datos en `profiles_doctors` por si solos.
+- Resultado: si el usuario no presionaba guardado canonico, el perfil publico no cambiaba.
+
+### 15.3 Decision UX/producto
+- Fuente persistente:
+  - `profiles_doctors`.
+- Regla UX:
+  - para datos publicos/publicables no depender de autosave legacy.
+- Flujo obligatorio:
+  - editar panel visible -> estado \"cambios sin guardar\" -> boton Guardar -> `PATCH` privado -> `profiles_doctors` -> endpoint publico -> SSR.
+- Mensajeria obligatoria:
+  - cambios sin guardar,
+  - cambios guardados,
+  - error al guardar.
+
+### 15.4 Correcciones aplicadas (commits `14ba4cf`, `8b29b76`, `e7a2009`)
+- Alineacion de campos legacy equivalentes con `identity_public` al hidratar.
+- Continuidad del bloque \"Identidad publica profesional\" como guardado canonico.
+- Regla de nombre transicional en guardado:
+  - si `mxpi-display-name` fue editado explicitamente, se usa ese valor;
+  - si se editaron campos legacy de nombre y no se edito explicitamente `mxpi-display-name`, se construye `display_name` con prefijo + nombre legacy.
+- Agregado de accion visible de guardado en la zona legacy para evitar confundir autosave local con publicacion.
+- Guardrails de payload mantenidos: no se envian
+  - `profile_status`,
+  - `is_public_candidate`,
+  - `first_name`,
+  - `last_name_1`,
+  - `last_name_2`,
+  - `dp-nombres`,
+  - `dp-apellido-paterno`,
+  - `dp-apellido-materno`.
+
+### 15.5 Regla especial sobre nombre
+- La construccion de `display_name` desde Nombre(s)/Apellido Paterno/Apellido Materno es transicional.
+- No crea columnas canonicas separadas en BD para nombre administrativo.
+- No guarda `first_name`/`last_name_1`/`last_name_2`.
+- No convierte localStorage en fuente publica.
+- Deuda futura:
+  - definir modelo canonico separado para `display_name` publico vs nombre administrativo interno.
+
+### 15.6 Estado final
+- Congruencia funcional basica cerrada.
+- El panel visible ya no debe quedar vacio en campos equivalentes cuando `profiles_doctors` tiene datos.
+- Si el usuario edita datos que impactan perfil publico, debe guardar explicitamente.
+- Al guardar, el cambio se refleja en:
+  - endpoint privado,
+  - `profiles_doctors`,
+  - endpoint publico,
+  - perfil publico SSR.
+- Agenda no fue tocada.
+
+### 15.7 Deuda futura
+- Uniformar politica de guardado del panel privado:
+  - que usa autosave,
+  - que requiere boton Guardar,
+  - como mostrar \"cambios sin guardar\",
+  - como confirmar \"cambios guardados\",
+  - como presentar errores.
+- Esta deuda se atiende en fase UX separada, fuera de PP-7H2-C.
