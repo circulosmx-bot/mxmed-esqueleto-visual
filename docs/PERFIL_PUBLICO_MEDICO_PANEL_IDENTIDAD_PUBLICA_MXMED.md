@@ -555,3 +555,87 @@ D) Requiere decision de producto
 - No agregar SQL.
 - No romper borradores clinicos.
 - No hacer rediseno masivo en una sola intervencion.
+
+## 18) UX-Panel-01C2 — Optimizacion de layout y catalogo transicional de credenciales
+
+### 18.1 Problema detectado
+- La seccion `Datos Personales` seguia desperdiciando espacio en layout vertical.
+- Foto/logotipo mantenian peso visual alto frente a la zona de informacion verificada.
+- Los campos de cedula/universidad/especialidad estaban dispersos y con jerarquia inconsistente.
+- Persistia confusion conceptual entre:
+  - titulo profesional;
+  - especialidad verificada;
+  - campos publicos editables;
+  - clasificaciones publicas.
+
+### 18.2 Decision de producto (separacion conceptual)
+- `Titulo profesional`:
+  - asociado a cedula profesional base;
+  - dato verificable de plataforma (no clasificacion publica).
+- `Especialidad verificada`:
+  - asociada a cedula de especialidad o credencial formal;
+  - dato verificable (no editable libre como marketing).
+- `Clasificaciones publicas / areas visibles`:
+  - capa de visibilidad/busqueda publica;
+  - no sustituye credenciales verificadas.
+
+Ejemplos de referencia:
+- Titulos profesionales: `Medico Cirujano`, `Medico General`, `Medico Cirujano y Partero`, `Cirujano Dentista`, `Licenciado en Nutricion`, `Licenciado en Psicologia`, `Licenciado en Fisioterapia`, `Quimico Farmacobiologo`, `Enfermeria`.
+- Especialidades verificadas: `Cirugia General`, `Medicina Interna`, `Anestesiologia`, `Ortodoncia`, `Periodoncia`, `Nutricion Clinica`.
+- Clasificaciones publicas: `Clinica del dolor`, `Cuidados paliativos`, `Manejo del dolor cronico`, `Brackets`, `Alineadores`, `Control de peso`.
+
+### 18.3 Cambios implementados
+- Layout superior optimizado con separacion visual clara entre media y bloque administrativo.
+- Columna izquierda (media) en rol auxiliar y columna derecha (verificada) con mayor protagonismo.
+- Foto arriba y logotipo abajo en el bloque de media.
+- Campo `Nombre(s)` ampliado para mejorar lectura de nombres compuestos.
+- Campo `Fecha de nacimiento` incorporado en informacion verificada.
+- Sub-seccion `Credenciales verificadas` con filas compactas:
+  - `Cedula profesional | Universidad / Institucion | Titulo profesional`
+  - `Cedula de especialidad | Universidad / Institucion | Especialidad verificada`
+  - `Otra cedula | Universidad / Institucion | Grado / Subespecialidad / Certificacion`
+
+### 18.4 Catalogo frontend transicional
+- Se agrego `MXMED_PROFESSIONAL_TAXONOMY` en frontend.
+- Alcance:
+  - filtrar especialidades verificadas segun titulo profesional;
+  - sugerir clasificaciones publicas segun especialidad verificada.
+- Restricciones:
+  - no es catalogo canonico definitivo;
+  - no sustituye validacion oficial;
+  - no agrega SQL;
+  - no cambia contratos de `profiles_doctors`.
+
+### 18.5 Reglas de filtrado transicional
+- `Titulo profesional -> filtra Especialidad verificada`.
+- `Especialidad verificada -> sugiere Clasificaciones publicas`.
+- Las opciones de especialidad se presentan en orden alfabetico.
+- Para `Medico Cirujano`, si no existe valor valido previo, fallback visual a `Cirugia General`.
+- Si el valor hidratado/persistido sigue siendo valido para el titulo seleccionado, no se sobrescribe.
+- Si el usuario cambia a un titulo incompatible, se evita borrado agresivo de informacion canonica.
+
+### 18.6 Guardrails tecnicos
+- `esp-1`, `esp-2`, `esp-3` quedan como controles visuales/transicionales.
+- `esp-1`, `esp-2`, `esp-3` no se envian en `PATCH` a `profiles_doctors`.
+- `profiles_doctors` se mantiene como fuente persistente de identidad publica.
+- No se agrego backend ni SQL para este catalogo.
+- No se tocaron Agenda, Operadores ni `profiles/doctor.php`.
+- El catalogo canonico futuro debe migrarse a backend/catalogo administrado.
+
+### 18.7 Estado final
+- `UX-Panel-01C2` completado.
+- Layout de `Datos Personales` mas compacto y legible.
+- Informacion verificada mejor estructurada.
+- Catalogo transicional operativo en UI con filtrado activo.
+- Diferencia entre credencial verificada y clasificacion publica visible ya explicitada.
+- Cambios implementados y publicados en:
+  - `ff4c311 style(profiles): optimiza layout de datos personales`
+  - `f55e774 feat(profiles): agrega catalogo transicional de credenciales`
+  - `3135cd5 fix(profiles): ajusta catalogo transicional de credenciales`
+
+### 18.8 Deuda futura
+- Definir catalogo canonico backend de titulos, especialidades verificables y clasificaciones publicas.
+- Definir flujo de aprobacion para datos verificados (`solo lectura + Solicitar cambio`).
+- Determinar mapeo final de `esp-1`, `esp-2`, `esp-3` (columnas, tabla de credenciales o catalogo dedicado).
+- Revisar refinamiento visual adicional de bloque foto/logotipo si se prioriza.
+- Auditar integracion futura entre especialidades verificadas, SEO/slugs y clasificaciones publicas.

@@ -1092,7 +1092,8 @@ Refs:
 - `[profiles]` PP-7H2-C completado: congruencia panel legacy + bloque identidad publica + `profiles_doctors` con guardado explicito (commits `14ba4cf`, `8b29b76`, `e7a2009`).
 - `[profiles]` UX-Panel-01A completado: decision UX de separacion entre Informacion Verificada e Identidad Publica editable en Datos Personales (base responsive PC/tablet/movil/PWA), sin cambios de codigo.
 - `[profiles]` UX-Panel-01B completado: auditoria de autosave/localStorage y politica de guardado progresivo del panel (sin cambios funcionales).
-- `[profiles]` Siguiente recomendado: UX-Panel-01B2 microcopy y estado visual de `guardado local` vs `guardado canonico` en Datos Personales (sin tocar Agenda, backend ni contratos `profiles_doctors`).
+- `[profiles]` UX-Panel-01C2 completado: optimizacion visual de Datos Personales + catalogo frontend transicional de credenciales (commits `ff4c311`, `f55e774`, `3135cd5`).
+- `[profiles]` Siguiente recomendado: definir catalogo canonico backend (titulos/especialidades/clasificaciones) o continuar UX-Panel-01C3 segun prioridad.
 
 ### 2a) Operación clínica extendida
 - `[api]` órdenes, recetas y resultados con contratos estables.
