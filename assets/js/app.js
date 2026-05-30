@@ -22,6 +22,7 @@ console.info('app.js loaded :: 20251123a');
     last_name: 'Zenteno',
     middle_name: 'Macías',
     gender: 'Masculino',
+    professional_title: 'Médico Cirujano',
     specialty_visible: 'Pediatra',
     specialty_academic: 'Pediatría',
     professional_license: '1102174',
@@ -82,8 +83,10 @@ console.info('app.js loaded :: 20251123a');
     // Perfil médico (datos visibles y de referencia)
     setInputValue('ced-prof', profile.professional_license);
     setInputValue('uni-prof', profile.professional_university);
+    setInputValue('esp-1', profile.professional_title);
     setInputValue('ced-esp', profile.specialty_license);
     setInputValue('uni-esp', profile.specialty_university);
+    setInputValue('esp-2', profile.specialty_academic || profile.specialty_visible);
     setInputValue('dp-correo', profile.contact.email);
     setInputValue('dp-whatsapp', profile.contact.whatsapp);
 
@@ -118,7 +121,8 @@ console.info('app.js loaded :: 20251123a');
     setLocalStorageValue('dp:uni-esp', profile.specialty_university);
     setLocalStorageValue('dp:dp-correo', profile.contact.email);
     setLocalStorageValue('dp:dp-whatsapp', profile.contact.whatsapp);
-    setLocalStorageValue('dp:esp-1', profile.specialty_visible);
+    setLocalStorageValue('dp:esp-1', profile.professional_title || 'Médico Cirujano');
+    setLocalStorageValue('dp:esp-2', profile.specialty_academic || profile.specialty_visible);
     setLocalStorageValue('dp:srv1', profile.services[0] || '');
     setLocalStorageValue('dp:srv2', profile.services[1] || '');
     setLocalStorageValue('dp:srv3', profile.services[2] || '');
@@ -269,6 +273,50 @@ console.info('app.js loaded :: 20251123a');
     profileLink: document.getElementById('mx-public-profile-link')
   };
 
+  const legacyCredentialEls = {
+    professionalTitle: document.getElementById('esp-1'),
+    verifiedSpecialty: document.getElementById('esp-2'),
+    extraCredential: document.getElementById('esp-3'),
+    classificationSuggestions: document.getElementById('mxpi-classification-suggestions')
+  };
+
+  // Catálogo transicional de referencia UX (no canónico backend).
+  const MXMED_PROFESSIONAL_TAXONOMY = Object.freeze({
+    default_title: 'medico_cirujano',
+    professional_titles: Object.freeze({
+      medico_cirujano: 'Médico Cirujano',
+      medico_general: 'Médico General',
+      medico_cirujano_partero: 'Médico Cirujano y Partero',
+      cirujano_dentista: 'Cirujano Dentista',
+      lic_nutricion: 'Licenciado en Nutrición',
+      lic_psicologia: 'Licenciado en Psicología',
+      lic_fisioterapia: 'Licenciado en Fisioterapia',
+      lic_rehabilitacion: 'Licenciado en Rehabilitación',
+      qfb: 'Químico Farmacobiólogo',
+      enfermeria: 'Enfermería'
+    }),
+    specialties_by_title: Object.freeze({
+      medico_cirujano: ['Medicina Interna','Pediatría','Ginecología y Obstetricia','Anestesiología','Cirugía General','Cardiología','Dermatología','Traumatología y Ortopedia','Psiquiatría','Oftalmología','Otorrinolaringología','Urología','Medicina Familiar','Urgencias Médico Quirúrgicas','Radiología e Imagen','Oncología','Endocrinología','Nefrología','Neurología','Gastroenterología','Reumatología','Neumología','Geriatría','Hematología','Patología Clínica','Anatomía Patológica','Infectología','Medicina del Trabajo','Medicina del Deporte','Medicina de Rehabilitación','Salud Pública'],
+      medico_general: ['Medicina Interna','Pediatría','Ginecología y Obstetricia','Anestesiología','Cirugía General','Cardiología','Dermatología','Traumatología y Ortopedia','Psiquiatría','Oftalmología','Otorrinolaringología','Urología','Medicina Familiar','Urgencias Médico Quirúrgicas','Radiología e Imagen','Oncología','Endocrinología','Nefrología','Neurología','Gastroenterología','Reumatología','Neumología','Geriatría','Hematología','Patología Clínica','Anatomía Patológica','Infectología','Medicina del Trabajo','Medicina del Deporte','Medicina de Rehabilitación','Salud Pública'],
+      medico_cirujano_partero: ['Medicina Interna','Pediatría','Ginecología y Obstetricia','Anestesiología','Cirugía General','Cardiología','Dermatología','Traumatología y Ortopedia','Psiquiatría','Oftalmología','Otorrinolaringología','Urología','Medicina Familiar','Urgencias Médico Quirúrgicas','Radiología e Imagen','Oncología','Endocrinología','Nefrología','Neurología','Gastroenterología','Reumatología','Neumología','Geriatría','Hematología','Patología Clínica','Anatomía Patológica','Infectología','Medicina del Trabajo','Medicina del Deporte','Medicina de Rehabilitación','Salud Pública'],
+      cirujano_dentista: ['Ortodoncia','Periodoncia','Odontopediatría','Endodoncia','Cirugía Oral y Maxilofacial','Rehabilitación Oral','Implantología','Prótesis Bucal','Patología Bucal','Odontología Estética'],
+      lic_nutricion: ['Nutrición Clínica','Nutrición Deportiva','Nutrición Pediátrica','Nutrición Renal','Nutrición Oncológica','Nutrición Geriátrica','Nutrición en Diabetes','Nutrición Bariátrica'],
+      lic_psicologia: ['Psicología Clínica','Psicología Infantil','Psicoterapia','Neuropsicología','Psicología Educativa','Psicología Organizacional','Terapia de Pareja','Terapia Familiar'],
+      lic_fisioterapia: ['Fisioterapia Ortopédica','Fisioterapia Deportiva','Fisioterapia Neurológica','Fisioterapia Pediátrica','Fisioterapia Geriátrica','Rehabilitación Física','Terapia Manual','Rehabilitación Postquirúrgica'],
+      lic_rehabilitacion: ['Fisioterapia Ortopédica','Fisioterapia Deportiva','Fisioterapia Neurológica','Fisioterapia Pediátrica','Fisioterapia Geriátrica','Rehabilitación Física','Terapia Manual','Rehabilitación Postquirúrgica'],
+      qfb: ['Química Clínica','Microbiología','Hematología de Laboratorio','Banco de Sangre','Toxicología','Inmunología','Farmacia Clínica'],
+      enfermeria: ['Enfermería General','Enfermería Quirúrgica','Enfermería Pediátrica','Enfermería Geriátrica','Enfermería en Cuidados Intensivos','Enfermería Obstétrica','Enfermería Comunitaria']
+    }),
+    public_classifications_by_specialty: Object.freeze({
+      'Anestesiología': ['Clínica del dolor','Cuidados paliativos','Manejo del dolor crónico','Medicina perioperatoria'],
+      'Medicina Interna': ['Control de diabetes','Hipertensión','Medicina preventiva','Enfermedades crónicas'],
+      'Pediatría': ['Crecimiento y desarrollo','Vacunación','Pediatría preventiva'],
+      'Cirugía Oral y Maxilofacial': ['Cirugía de terceros molares','Implantes dentales','Cirugía maxilofacial'],
+      'Ortodoncia': ['Brackets','Alineadores','Ortopedia maxilar'],
+      'Nutrición Clínica': ['Control de peso','Nutrición metabólica','Nutrición para diabetes']
+    })
+  });
+
   if(!els.displayName || !els.saveBtn){
     return;
   }
@@ -282,7 +330,8 @@ console.info('app.js loaded :: 20251123a');
     displayNameTouched: false,
     legacyNameTouched: false,
     hydratingIdentity: false,
-    dirty: false
+    dirty: false,
+    autoPublicSpecialty: null
   };
 
   function sanitizeDoctorId(raw){
@@ -305,6 +354,143 @@ console.info('app.js loaded :: 20251123a');
       if(clean) return clean;
     }
     return DEFAULT_DOCTOR_ID;
+  }
+
+  function normalizeCatalogValue(value){
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  function resolveProfessionalTitleKey(value){
+    const clean = normalizeCatalogValue(value);
+    if(!clean) return '';
+    const entries = Object.entries(MXMED_PROFESSIONAL_TAXONOMY.professional_titles);
+    for(const [key, label] of entries){
+      if(clean === key || clean === normalizeCatalogValue(label)) return key;
+    }
+    return '';
+  }
+
+  function titleLabelForKey(key){
+    return MXMED_PROFESSIONAL_TAXONOMY.professional_titles[key] || '';
+  }
+
+  function specialtiesForTitleKey(key){
+    const list = MXMED_PROFESSIONAL_TAXONOMY.specialties_by_title[key];
+    return Array.isArray(list) ? list.slice() : [];
+  }
+
+  function inferTitleKeyFromSpecialty(specialty){
+    const needle = normalizeCatalogValue(specialty);
+    if(!needle) return '';
+    const byTitle = MXMED_PROFESSIONAL_TAXONOMY.specialties_by_title;
+    for(const key of Object.keys(byTitle)){
+      const found = (byTitle[key] || []).some((item)=> normalizeCatalogValue(item) === needle);
+      if(found) return key;
+    }
+    return '';
+  }
+
+  function rebuildSelectOptions(selectEl, options, selectedValue, placeholder, allowCustom = true){
+    if(!selectEl) return;
+    const normalizedSelected = String(selectedValue || '').trim();
+    const seen = new Set();
+    const nextOptions = [];
+    (options || []).forEach((item)=>{
+      const text = String(item || '').trim();
+      if(!text) return;
+      const key = normalizeCatalogValue(text);
+      if(seen.has(key)) return;
+      seen.add(key);
+      nextOptions.push(text);
+    });
+
+    const current = normalizedSelected || String(selectEl.value || '').trim();
+    selectEl.innerHTML = '';
+    const firstOption = document.createElement('option');
+    firstOption.value = '';
+    firstOption.textContent = placeholder || 'Selecciona';
+    selectEl.appendChild(firstOption);
+
+    nextOptions.forEach((value)=>{
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = value;
+      selectEl.appendChild(opt);
+    });
+
+    if(current){
+      const exists = Array.from(selectEl.options).some((opt)=> String(opt.value || '').trim() === current);
+      if(!exists && allowCustom){
+        const custom = document.createElement('option');
+        custom.value = current;
+        custom.textContent = current;
+        selectEl.appendChild(custom);
+      }
+      selectEl.value = current;
+    }else{
+      selectEl.value = '';
+    }
+  }
+
+  function applyClassificationSuggestions(specialtyValue){
+    if(!legacyCredentialEls.classificationSuggestions) return;
+    const specialty = String(specialtyValue || '').trim();
+    const bySpecialty = MXMED_PROFESSIONAL_TAXONOMY.public_classifications_by_specialty;
+    const list = Object.keys(bySpecialty).find((key)=> normalizeCatalogValue(key) === normalizeCatalogValue(specialty));
+    if(!list){
+      legacyCredentialEls.classificationSuggestions.textContent = 'Las clasificaciones públicas ayudan a ubicar tu perfil en búsquedas y no sustituyen tus credenciales verificadas.';
+      return;
+    }
+    const suggestions = bySpecialty[list] || [];
+    legacyCredentialEls.classificationSuggestions.textContent = 'Sugerencias iniciales de clasificación pública para ' + list + ': ' + suggestions.join(', ') + '.';
+  }
+
+  function syncVerifiedSpecialtyOptions(titleKey, preferredSpecialty, options = {}){
+    if(!legacyCredentialEls.verifiedSpecialty) return;
+    const preserveUnknown = options && options.preserveUnknown !== undefined ? !!options.preserveUnknown : true;
+    const key = titleKey || MXMED_PROFESSIONAL_TAXONOMY.default_title;
+    const selected = String(preferredSpecialty || legacyCredentialEls.verifiedSpecialty.value || '').trim();
+    const specialtyOptions = specialtiesForTitleKey(key);
+    const hasSelected = specialtyOptions.some((item)=> normalizeCatalogValue(item) === normalizeCatalogValue(selected));
+    const safeSelected = hasSelected ? selected : (preserveUnknown ? selected : '');
+    rebuildSelectOptions(legacyCredentialEls.verifiedSpecialty, specialtyOptions, safeSelected, 'Selecciona especialidad verificada', preserveUnknown);
+    applyClassificationSuggestions(legacyCredentialEls.verifiedSpecialty.value);
+  }
+
+  function syncProfessionalTitleOptions(preferredTitle){
+    if(!legacyCredentialEls.professionalTitle) return '';
+    const entries = Object.entries(MXMED_PROFESSIONAL_TAXONOMY.professional_titles).map(([, label])=> label);
+    rebuildSelectOptions(legacyCredentialEls.professionalTitle, entries, preferredTitle, 'Selecciona título profesional');
+    const resolved = resolveProfessionalTitleKey(legacyCredentialEls.professionalTitle.value)
+      || resolveProfessionalTitleKey(preferredTitle)
+      || MXMED_PROFESSIONAL_TAXONOMY.default_title;
+    const resolvedLabel = titleLabelForKey(resolved);
+    if(resolvedLabel){
+      legacyCredentialEls.professionalTitle.value = resolvedLabel;
+    }
+    return resolved;
+  }
+
+  function initializeProfessionalTaxonomy(){
+    const titleKey = syncProfessionalTitleOptions(legacyCredentialEls.professionalTitle?.value);
+    syncVerifiedSpecialtyOptions(titleKey, legacyCredentialEls.verifiedSpecialty?.value);
+  }
+
+  function syncPublicSpecialtyFromVerified(specialtyValue){
+    const verified = normalizeText(specialtyValue, 190);
+    if(!verified || !els.specialtyPrimary) return;
+    const current = normalizeText(els.specialtyPrimary.value, 190);
+    if(!current || current === state.autoPublicSpecialty){
+      els.specialtyPrimary.value = verified;
+      state.autoPublicSpecialty = verified;
+      if(!state.hydratingIdentity){
+        markIdentityDirty();
+      }
+    }
   }
 
   function buildPrivateEndpoint(doctorId){
@@ -518,6 +704,7 @@ console.info('app.js loaded :: 20251123a');
     if(els.professionalLicense) els.professionalLicense.value = professionalLicense || '';
     if(els.specialtyLicense) els.specialtyLicense.value = specialtyLicense || '';
     if(els.specialtyPrimary) els.specialtyPrimary.value = specialtyPrimary || '';
+    state.autoPublicSpecialty = specialtyPrimary || null;
     if(els.specialtySecondary) els.specialtySecondary.value = specialtySecondary || '';
     if(els.bioShort) els.bioShort.value = bioShort || '';
     if(els.profileStatus) els.profileStatus.value = normalizeText(data.profile_status, 64) || 'hidden';
@@ -544,11 +731,12 @@ console.info('app.js loaded :: 20251123a');
     writeLegacyValue(document.getElementById('dp-apellido-paterno'), legacyName.apellidoPaterno);
     writeLegacyValue(document.getElementById('dp-apellido-materno'), legacyName.apellidoMaterno);
 
-    const legacyEsp1 = document.getElementById('esp-1');
-    if(legacyEsp1 && specialtyPrimary){
-      ensureSelectOption(legacyEsp1, specialtyPrimary);
-      writeLegacyValue(legacyEsp1, specialtyPrimary);
-    }
+    const inferredTitleKey = inferTitleKeyFromSpecialty(specialtyPrimary);
+    const preferredLegacyTitle = legacyCredentialEls.professionalTitle?.value
+      || titleLabelForKey(inferredTitleKey)
+      || titleLabelForKey(MXMED_PROFESSIONAL_TAXONOMY.default_title);
+    const titleKey = syncProfessionalTitleOptions(preferredLegacyTitle);
+    syncVerifiedSpecialtyOptions(titleKey, specialtyPrimary);
 
     const specialtySummary = document.getElementById('fs-esp');
     if(specialtySummary && specialtyPrimary){
@@ -628,6 +816,25 @@ console.info('app.js loaded :: 20251123a');
     input.addEventListener('input', markIdentityDirty);
     input.addEventListener('change', markIdentityDirty);
   });
+
+  if(legacyCredentialEls.professionalTitle){
+    legacyCredentialEls.professionalTitle.addEventListener('change', ()=>{
+      const titleKey = resolveProfessionalTitleKey(legacyCredentialEls.professionalTitle?.value) || MXMED_PROFESSIONAL_TAXONOMY.default_title;
+      syncVerifiedSpecialtyOptions(titleKey, legacyCredentialEls.verifiedSpecialty?.value, { preserveUnknown: false });
+    });
+  }
+
+  if(legacyCredentialEls.verifiedSpecialty){
+    const onVerifiedSpecialtyChange = ()=>{
+      const specialty = String(legacyCredentialEls.verifiedSpecialty?.value || '').trim();
+      applyClassificationSuggestions(specialty);
+      syncPublicSpecialtyFromVerified(specialty);
+    };
+    legacyCredentialEls.verifiedSpecialty.addEventListener('change', onVerifiedSpecialtyChange);
+    legacyCredentialEls.verifiedSpecialty.addEventListener('input', onVerifiedSpecialtyChange);
+  }
+
+  initializeProfessionalTaxonomy();
 
   async function readPrivateIdentity(){
     state.doctorId = resolveDoctorId();
