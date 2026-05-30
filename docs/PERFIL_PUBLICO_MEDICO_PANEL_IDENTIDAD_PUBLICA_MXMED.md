@@ -709,3 +709,48 @@ Ejemplos de referencia:
 - Definir contacto privado, contacto publico y contacto operativo.
 - Definir reglas de visibilidad por plan.
 - Definir validacion/verificacion de email/telefono/WhatsApp (si aplica por producto).
+
+## 20) UX-Panel-01D2 — Separacion transicional de Datos de contacto
+
+### 20.1 Estado actual UX (D1)
+- Ya existe card separada `Datos de contacto` dentro de `Datos Generales`.
+- La card contiene actualmente:
+  - `Correo Electronico` (`dp-correo`)
+  - `Telefono WhatsApp` (`dp-whatsapp`)
+- Estos campos ya no se muestran dentro de `Informacion verificada / administrativa`.
+
+### 20.2 Naturaleza transicional de contacto
+- `dp-correo` y `dp-whatsapp` se mantienen como campos transicionales.
+- Conservan su comportamiento local/autosave heredado (donde aplica).
+- Aun no existe modelo canonico definitivo de contacto para esta seccion.
+- No impactan directamente el perfil publico en esta fase.
+- No entran al `PATCH` de identidad publica profesional.
+- No se publican automaticamente por existir en el panel.
+
+### 20.3 Separacion conceptual objetivo (fases futuras)
+- `Contacto privado administrativo`:
+  - datos de cuenta/soporte interno del medico.
+- `Contacto publico visible para pacientes`:
+  - datos que podrian mostrarse en perfil publico bajo reglas explicitas.
+- `Contacto operativo`:
+  - datos usados para agenda, recordatorios u operacion con operadores.
+- `Contacto por consultorio`:
+  - datos por sede/ubicacion (telefono, WhatsApp, variantes por consultorio).
+
+### 20.4 Riesgos evitados con la separacion visual
+- Evitar mezclar datos profesionales verificados con datos de contacto.
+- Evitar interpretar `WhatsApp` como dato publico por defecto.
+- Evitar publicar email/telefono sin reglas de visibilidad y plan.
+- Evitar mezclar contacto de cuenta con contacto de consultorio.
+- Evitar mezclar contacto operativo con contacto publico para pacientes.
+
+### 20.5 Estado tecnico y deuda futura
+- Esta fase no agrega backend, SQL ni contratos nuevos.
+- Esta fase no cambia DTO publico ni SSR publico.
+- Esta fase no cambia `PATCH` de identidad publica.
+- Pendiente futuro:
+  - definir persistencia canonica de contacto;
+  - definir flags de visibilidad publica por tipo de contacto;
+  - definir separacion formal privado/publico/operativo/consultorio;
+  - definir validacion/verificacion de email, telefono y WhatsApp;
+  - alinear contacto con Agenda y Operadores sin acoplar fases.
