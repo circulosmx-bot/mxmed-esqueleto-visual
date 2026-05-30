@@ -2470,6 +2470,30 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-size:.84rem;
   line-height:1.32;
 }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-verify-status-row{
+  margin-top:.36rem;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-verify-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:.32rem;
+  border:1px solid #b8cfd9;
+  border-radius:999px;
+  padding:.14rem .58rem;
+  font-size:.72rem;
+  font-weight:700;
+  line-height:1.2;
+  color:#335767;
+  background:#f2f8fb;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-verify-badge::before{
+  content:'';
+  width:.42rem;
+  height:.42rem;
+  border-radius:50%;
+  background:#9db4c2;
+  flex:0 0 auto;
+}
 #p-info #t-info-datos #mx-dg-media-card .card-body{
   padding:.78rem .78rem .86rem;
 }
@@ -2803,6 +2827,13 @@ body{margin:0;background:var(--mm-fondo-base);}
   #p-info #t-info-datos #mx-public-identity-card .card-body > .d-flex .text-muted.small{
     font-size:.74rem;
     line-height:1.2;
+  }
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verify-status-row{
+    margin-top:.28rem;
+  }
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verify-badge{
+    font-size:.69rem;
+    padding:.12rem .5rem;
   }
   #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-birth .form-control,
   #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-gender .form-select,
