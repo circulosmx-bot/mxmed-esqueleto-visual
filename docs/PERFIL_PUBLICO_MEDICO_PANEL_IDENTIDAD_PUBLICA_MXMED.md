@@ -639,3 +639,73 @@ Ejemplos de referencia:
 - Determinar mapeo final de `esp-1`, `esp-2`, `esp-3` (columnas, tabla de credenciales o catalogo dedicado).
 - Revisar refinamiento visual adicional de bloque foto/logotipo si se prioriza.
 - Auditar integracion futura entre especialidades verificadas, SEO/slugs y clasificaciones publicas.
+
+## 19) UX-Panel-01C3-D — Estado transicional de Informacion verificada
+
+### 19.1 Estado actual UX (C3-B / C3-C)
+- La card `Informacion verificada / administrativa` ya muestra badge:
+  - `Informacion pendiente de validacion`.
+- La card ya muestra microcopy transicional:
+  - comunica que los datos forman parte de informacion profesional;
+  - comunica que en fase posterior podran revisarse por plataforma;
+  - comunica que por ahora permanecen editables.
+- Ya existe boton visual transicional:
+  - `Solicitar cambio`.
+- El boton `Solicitar cambio` en estado actual:
+  - solo muestra/oculta mensaje informativo placeholder;
+  - no envia datos;
+  - no dispara `PATCH`;
+  - no modifica `localStorage`;
+  - no bloquea campos;
+  - no crea solicitud real.
+
+### 19.2 Alcance conceptual del boton transicional
+- El flujo `Solicitar cambio` aplica a informacion verificada / administrativa profesional, por ejemplo:
+  - `Nombre(s)`
+  - `Apellido Paterno`
+  - `Apellido Materno`
+  - `Fecha de nacimiento`
+  - `Genero`
+  - `Cedula profesional`
+  - `Universidad / Institucion` (cedula profesional)
+  - `Titulo profesional`
+  - `Cedula de especialidad`
+  - `Universidad / Institucion` (cedula de especialidad)
+  - `Especialidad verificada`
+  - `Otra cedula`
+  - `Universidad / Institucion` (otra cedula)
+  - `Grado / Subespecialidad / Certificacion`
+
+### 19.3 Exclusiones de esta fase
+- Esta fase no cubre aun:
+  - email;
+  - telefono;
+  - WhatsApp;
+  - telefonos de consultorio;
+  - contacto publico;
+  - contacto privado;
+  - contacto operativo de agenda;
+  - visibilidad por plan comercial.
+- Nota de roadmap:
+  - separar datos de contacto en fase dedicada, sugerida como `UX-Panel-01D`.
+
+### 19.4 Estado tecnico real (transicional)
+- Aun no existe backend de solicitudes de cambio.
+- Aun no existe tabla/entidad canonica de `change requests`.
+- Aun no existe flujo real de aprobacion/rechazo por operador.
+- Aun no existe historial/auditoria de cambios verificados.
+- Aun no existe bloqueo real por estado de verificacion.
+- Aun no existe verificacion por campo.
+- `profile_status` e `is_public_candidate` no son suficientes para bloquear campos de forma segura en esta fase.
+
+### 19.5 Deuda futura explicita
+- Definir modelo canonico de Informacion verificada.
+- Definir persistencia canonica de campos hoy transicionales.
+- Definir solicitudes de cambio (modelo y contratos).
+- Definir aprobacion/rechazo por plataforma.
+- Definir historial de cambios y auditoria.
+- Definir permisos de operador para este flujo.
+- Separar formalmente Datos de contacto.
+- Definir contacto privado, contacto publico y contacto operativo.
+- Definir reglas de visibilidad por plan.
+- Definir validacion/verificacion de email/telefono/WhatsApp (si aplica por producto).

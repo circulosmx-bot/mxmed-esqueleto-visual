@@ -1093,7 +1093,8 @@ Refs:
 - `[profiles]` UX-Panel-01A completado: decision UX de separacion entre Informacion Verificada e Identidad Publica editable en Datos Personales (base responsive PC/tablet/movil/PWA), sin cambios de codigo.
 - `[profiles]` UX-Panel-01B completado: auditoria de autosave/localStorage y politica de guardado progresivo del panel (sin cambios funcionales).
 - `[profiles]` UX-Panel-01C2 completado: optimizacion visual de Datos Personales + catalogo frontend transicional de credenciales (commits `ff4c311`, `f55e774`, `3135cd5`).
-- `[profiles]` Siguiente recomendado: definir catalogo canonico backend (titulos/especialidades/clasificaciones) o continuar UX-Panel-01C3 segun prioridad.
+- `[profiles]` UX-Panel-01C3-D completado: estado transicional documentado para Informacion verificada (badge, microcopy y boton placeholder `Solicitar cambio` sin bloqueo ni backend de solicitudes).
+- `[profiles]` Siguiente recomendado: UX-Panel-01D (separacion de Datos de contacto: privados/publicos/operativos) o UX-Panel-01C3-E (definicion backend de solicitudes y aprobacion), segun prioridad.
 
 ### 2a) Operación clínica extendida
 - `[api]` órdenes, recetas y resultados con contratos estables.
