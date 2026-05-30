@@ -839,8 +839,23 @@
                       <div class="mx-dg-card-title">Información verificada / administrativa</div>
                       <div class="mx-dg-verify-status-row">
                         <span class="mx-dg-verify-badge" role="status" aria-live="polite">Información pendiente de validación</span>
+                        <button
+                          type="button"
+                          class="btn btn-outline-secondary btn-sm mx-dg-request-change-btn"
+                          data-bs-toggle="collapse"
+                          data-bs-target="#mx-dg-request-change-placeholder"
+                          aria-expanded="false"
+                          aria-controls="mx-dg-request-change-placeholder"
+                        >
+                          Solicitar cambio
+                        </button>
                       </div>
                       <div class="mx-dg-card-note">Estos datos forman parte de tu información profesional. En una siguiente fase podrán ser revisados por la plataforma y, una vez validados, cualquier corrección deberá solicitarse para revisión. Por ahora permanecen editables.</div>
+                      <div class="collapse mt-2" id="mx-dg-request-change-placeholder">
+                        <div class="mx-dg-request-change-msg" role="status" aria-live="polite">
+                          En una siguiente fase podrás solicitar la corrección de tus datos profesionales verificados para que el equipo de México Médico los revise.
+                        </div>
+                      </div>
                     </div>
                     <div class="row g-3 mx-dg-verified-grid">
 

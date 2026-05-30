@@ -2472,6 +2472,11 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verify-status-row{
   margin-top:.36rem;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:.5rem;
 }
 #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verify-badge{
   display:inline-flex;
@@ -2485,6 +2490,31 @@ body{margin:0;background:var(--mm-fondo-base);}
   line-height:1.2;
   color:#335767;
   background:#f2f8fb;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-request-change-btn{
+  border-color:#b8c8d1;
+  color:#4b6674;
+  font-size:.73rem;
+  font-weight:600;
+  line-height:1.1;
+  padding:.27rem .58rem;
+  white-space:nowrap;
+  background:#fff;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-request-change-btn:hover,
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-request-change-btn:focus{
+  color:#2f4a58;
+  border-color:#9fb6c2;
+  background:#f5fafc;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-request-change-msg{
+  border:1px solid #d8e5ec;
+  border-radius:9px;
+  background:#f7fbfd;
+  color:#4e6877;
+  font-size:.79rem;
+  line-height:1.33;
+  padding:.46rem .62rem;
 }
 #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verify-badge::before{
   content:'';
@@ -2830,10 +2860,21 @@ body{margin:0;background:var(--mm-fondo-base);}
   }
   #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verify-status-row{
     margin-top:.28rem;
+    justify-content:flex-start;
+    gap:.42rem;
   }
   #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verify-badge{
     font-size:.69rem;
     padding:.12rem .5rem;
+  }
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-request-change-btn{
+    font-size:.69rem;
+    padding:.22rem .5rem;
+  }
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-request-change-msg{
+    font-size:.73rem;
+    line-height:1.28;
+    padding:.4rem .54rem;
   }
   #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-birth .form-control,
   #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-gender .form-select,
