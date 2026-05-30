@@ -876,3 +876,28 @@ Ejemplos de referencia:
 - `UX-Panel-01D3-F`: integracion canonica con perfil publico y consultorios.
 - `UX-Panel-01D3-G`: verificacion email/telefono/WhatsApp.
 - `UX-Panel-01D3-H`: auditoria/permisos operador para cambios de contacto.
+
+## 22) UX-Panel-01D3-B2 — Microcopy visual de privacidad/visibilidad
+
+### 22.1 Estado implementado en UI
+- La card `Datos de contacto` ya muestra microcopy explicito de privacidad/visibilidad.
+- Mensaje operativo aplicado:
+  - los datos de contacto son `privados por defecto`;
+  - pueden usarse para seguridad, comunicacion administrativa u operacion;
+  - no se muestran a pacientes automaticamente;
+  - `WhatsApp` no se publica automaticamente.
+
+### 22.2 Alcance tecnico de la microfase
+- Esta microfase fue solo de microcopy visual.
+- No se agregaron switches ni flags nuevos en la UI.
+- No se agrego backend ni SQL.
+- No se cambio persistencia.
+- No se cambio autosave/localStorage.
+- No se modifico `PATCH` de identidad publica.
+- No se publico ningun dato nuevo.
+
+### 22.3 Resultado de producto
+- Se reduce ambiguedad para el medico:
+  - capturar email/telefono/WhatsApp no implica exposicion publica inmediata.
+- Se mantiene la ruta futura:
+  - visibilidad publica solo con reglas explicitas de flag + plan (+ verificacion si aplica).
