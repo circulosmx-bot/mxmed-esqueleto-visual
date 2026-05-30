@@ -2433,42 +2433,181 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 
 
-/* ===== UX-Panel-01C1 · Datos Personales (separacion visual por bloques) ===== */
+/* ===== UX-Panel-01C2 · Datos Personales (compactación + separación conceptual) ===== */
+#p-info #t-info-datos{
+  display:grid;
+  grid-template-columns:minmax(210px,25%) minmax(0,75%);
+  gap:.72rem;
+  align-items:start;
+}
+#p-info #t-info-datos #mx-dg-media-card{ grid-column:1; }
+#p-info #t-info-datos #mx-dg-verified-card{ grid-column:2; }
+#p-info #t-info-datos #mx-public-identity-card,
+#p-info #t-info-datos #dg-signature-card{ grid-column:1 / -1; }
 #p-info #t-info-datos .mx-dg-card{
   border:1px solid #d6e7ee;
   border-radius:14px;
   box-shadow:0 8px 18px rgba(9,49,72,.06);
   overflow:hidden;
 }
+#p-info #t-info-datos .mx-dg-card + .mx-dg-card{
+  margin-top:.8rem !important;
+}
 #p-info #t-info-datos .mx-dg-card .card-body{
-  padding:1rem 1rem 1.1rem;
+  padding:.95rem .95rem 1rem;
 }
 #p-info #t-info-datos .mx-dg-card-head{
-  margin-bottom:.65rem;
+  margin-bottom:.55rem;
 }
 #p-info #t-info-datos .mx-dg-card-title{
   font-weight:700;
   color:#063247;
-  line-height:1.25;
+  line-height:1.24;
 }
 #p-info #t-info-datos .mx-dg-card-note{
-  margin-top:.2rem;
+  margin-top:.15rem;
   color:#5f7483;
-  font-size:.86rem;
-  line-height:1.35;
+  font-size:.84rem;
+  line-height:1.32;
 }
-#p-info #t-info-datos #mx-dg-media-card{
-  border-left:4px solid #8ec8d3;
+#p-info #t-info-datos #mx-dg-media-card .card-body{
+  padding:.86rem .86rem .92rem;
 }
 #p-info #t-info-datos #mx-dg-media-card .mf-upload-grid{
-  margin-top:.65rem;
+  grid-template-columns:1fr;
+  gap:.68rem;
   margin-bottom:0;
+}
+#p-info #t-info-datos #mx-dg-media-card .mf-upload.square{
+  width:100%;
+  max-width:none;
+  margin-inline:0;
+  aspect-ratio:auto;
+  min-height:146px;
+  padding:11px 12px;
+}
+#p-info #t-info-datos #mx-dg-media-card .mf-title{
+  font-size:.91rem;
+  line-height:1.25;
+}
+#p-info #t-info-datos #mx-dg-media-card .mf-sub{
+  font-size:.78rem;
+  line-height:1.24;
+}
+#p-info #t-info-datos #mx-dg-media-card .mf-actions{
+  gap:.38rem;
+}
+#p-info #t-info-datos #mx-dg-media-card .mf-actions .btn{
+  padding:.2rem .55rem;
 }
 #p-info #t-info-datos #mx-dg-verified-card{
   border-left:4px solid #7f9dad;
 }
-#p-info #t-info-datos #mx-dg-verified-card .row{
-  margin-top:.2rem;
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid{
+  margin-top:.15rem;
+  row-gap:.62rem !important;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-subhead{
+  margin-top:.12rem;
+  margin-bottom:.1rem;
+  padding:.52rem .62rem;
+  border:1px solid #d7e8ef;
+  border-radius:10px;
+  background:#f8fcfd;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-subhead-title{
+  font-size:.87rem;
+  font-weight:700;
+  color:#0a3e56;
+  line-height:1.25;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-subhead-note{
+  margin-top:.08rem;
+  font-size:.77rem;
+  color:#627b8b;
+  line-height:1.28;
+}
+#p-info #t-info-datos #mx-dg-verified-card .form-label{
+  margin-bottom:.22rem;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-birth .form-control{
+  max-width:200px;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-gender .form-select{
+  max-width:190px;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-ced .form-control{
+  max-width:none;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-phone .form-control{
+  max-width:250px;
+}
+#p-info #t-info-datos #mx-dg-verified-card #esp-1,
+#p-info #t-info-datos #mx-dg-verified-card #esp-2,
+#p-info #t-info-datos #mx-dg-verified-card #esp-3{
+  max-width:none;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-name:has(> #dp-nombres){ order:10; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-name:has(> #dp-apellido-paterno){ order:11; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-name:has(> #dp-apellido-materno){ order:12; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-birth{ order:13; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-gender{ order:14; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-subhead-cred{ order:20; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-1-ced{ order:21; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-1-uni{ order:22; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-2-ced{ order:31; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-2-uni{ order:32; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-3-ced{ order:41; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-3-uni{ order:42; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-email{ order:60; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-phone{ order:61; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-legacy-save{ order:70; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-1){ order:23; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-2){ order:33; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-3){ order:43; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > #esp-otra-wrap{ order:44; }
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-personal-field{
+  flex:0 0 20%;
+  max-width:20%;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-name.mx-dg-personal-field:has(#dp-nombres){
+  flex:0 0 50%;
+  max-width:50%;
+  width:50%;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-name.mx-dg-personal-field:has(#dp-apellido-paterno),
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-name.mx-dg-personal-field:has(#dp-apellido-materno){
+  flex:0 0 25%;
+  max-width:25%;
+  width:25%;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-birth.mx-dg-personal-field,
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-gender.mx-dg-personal-field{
+  flex:0 0 30%;
+  max-width:30%;
+  width:30%;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-1-ced,
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-2-ced,
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-3-ced{
+  flex:0 0 24%;
+  max-width:24%;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-1-uni,
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-2-uni,
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-3-uni{
+  flex:0 0 38%;
+  max-width:38%;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-1),
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-2),
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-3){
+  flex:0 0 38%;
+  max-width:38%;
+}
+#p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > #esp-otra-wrap{
+  flex:0 0 100%;
+  max-width:100%;
 }
 #p-info #t-info-datos .mx-dg-legacy-save{
   border-color:#d2e7ef !important;
@@ -2480,9 +2619,131 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-info #t-info-datos #mx-public-identity-card .card-body{
   padding:1rem 1rem 1.1rem;
 }
+#p-info #t-info-datos #mx-public-identity-card .mxpi-public-grid{
+  margin-top:.25rem;
+  row-gap:.7rem !important;
+}
+#p-info #t-info-datos #mx-public-identity-card .mxpi-subsection{
+  padding:.5rem .62rem;
+  border-radius:10px;
+  border:1px solid #d5e8ef;
+  background:#f8fcfd;
+}
+#p-info #t-info-datos #mx-public-identity-card .mxpi-subsection-verified{
+  border-left:3px solid #7f9dad;
+}
+#p-info #t-info-datos #mx-public-identity-card .mxpi-subsection-future{
+  border-left:3px solid #79c0cb;
+  background:#f4fbfd;
+}
+#p-info #t-info-datos #mx-public-identity-card .mxpi-subsection-phase{
+  border-left-color:#96c8d2;
+}
+#p-info #t-info-datos #mx-public-identity-card .mxpi-subsection-title{
+  font-size:.86rem;
+  font-weight:700;
+  color:#09364d;
+  line-height:1.25;
+}
+#p-info #t-info-datos #mx-public-identity-card .mxpi-subsection-note{
+  margin-top:.12rem;
+  font-size:.78rem;
+  color:#617a8a;
+  line-height:1.3;
+}
+#p-info #t-info-datos #mx-public-identity-card .mxpi-field-note{
+  color:#607989 !important;
+  line-height:1.28;
+  font-size:.75rem;
+}
+@media (max-width:1199px){
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-personal-field{
+    flex:0 0 33.333333%;
+    max-width:33.333333%;
+  }
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-name.mx-dg-personal-field:has(#dp-nombres){
+    flex:0 0 50%;
+    max-width:50%;
+    width:50%;
+  }
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-name.mx-dg-personal-field:has(#dp-apellido-paterno),
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-name.mx-dg-personal-field:has(#dp-apellido-materno){
+    flex:0 0 25%;
+    max-width:25%;
+    width:25%;
+  }
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-birth.mx-dg-personal-field,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-gender.mx-dg-personal-field{
+    flex:0 0 50%;
+    max-width:50%;
+    width:50%;
+  }
+}
 @media (max-width:991px){
+  #p-info #t-info-datos{
+    grid-template-columns:1fr;
+  }
+  #p-info #t-info-datos #mx-dg-media-card,
+  #p-info #t-info-datos #mx-dg-verified-card,
+  #p-info #t-info-datos #mx-public-identity-card,
+  #p-info #t-info-datos #dg-signature-card{
+    grid-column:1 / -1;
+  }
+  #p-info #t-info-datos .mx-dg-card + .mx-dg-card{
+    margin-top:.7rem !important;
+  }
   #p-info #t-info-datos .mx-dg-card .card-body{
     padding:.9rem;
+  }
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-birth .form-control,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-gender .form-select,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-ced .form-control,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-phone .form-control,
+  #p-info #t-info-datos #mx-dg-verified-card #esp-1,
+  #p-info #t-info-datos #mx-dg-verified-card #esp-2,
+  #p-info #t-info-datos #mx-dg-verified-card #esp-3{
+    max-width:100%;
+  }
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-personal-field,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-1),
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-2),
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-3),
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-1-ced,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-2-ced,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-3-ced,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-1-uni,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-2-uni,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-3-uni{
+    flex:0 0 50%;
+    max-width:50%;
+  }
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-name.mx-dg-personal-field:has(#dp-nombres){
+    flex:0 0 100%;
+    max-width:100%;
+    width:100%;
+  }
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-name.mx-dg-personal-field:has(#dp-apellido-paterno),
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-name.mx-dg-personal-field:has(#dp-apellido-materno),
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-birth.mx-dg-personal-field,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-gender.mx-dg-personal-field{
+    flex:0 0 50%;
+    max-width:50%;
+    width:50%;
+  }
+}
+@media (max-width:767px){
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-personal-field,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-1-ced,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-2-ced,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-3-ced,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-1-uni,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-2-uni,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-cred-row-3-uni,
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-1),
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-2),
+  #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verified-grid > div:has(#esp-3){
+    flex:0 0 100%;
+    max-width:100%;
   }
 }
 

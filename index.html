@@ -839,29 +839,41 @@
                       <div class="mx-dg-card-title">Información verificada / administrativa</div>
                       <div class="mx-dg-card-note">Estos datos serán validados por la plataforma. En una fase posterior podrán quedar protegidos y requerir solicitud de cambio.</div>
                     </div>
-                    <div class="row g-3">
+                    <div class="row g-3 mx-dg-verified-grid">
 
-                  <div class="col-md-3"><label class="form-label">Nombre(s)</label><input class="form-control" id="dp-nombres" placeholder="Nombre(s)"></div>
+                  <div class="col-md-6 col-lg-4 mx-dg-col-name mx-dg-personal-field"><label class="form-label">Nombre(s)</label><input class="form-control" id="dp-nombres" placeholder="Nombre(s)"></div>
 
-                  <div class="col-md-3"><label class="form-label">Apellido Paterno</label><input class="form-control" id="dp-apellido-paterno" placeholder="Apellido Paterno"></div>
+                  <div class="col-md-6 col-lg-4 mx-dg-col-name mx-dg-personal-field"><label class="form-label">Apellido Paterno</label><input class="form-control" id="dp-apellido-paterno" placeholder="Apellido Paterno"></div>
 
-                  <div class="col-md-3"><label class="form-label">Apellido Materno</label><input class="form-control" id="dp-apellido-materno" placeholder="Apellido Materno"></div>
+                  <div class="col-md-6 col-lg-4 mx-dg-col-name mx-dg-personal-field"><label class="form-label">Apellido Materno</label><input class="form-control" id="dp-apellido-materno" placeholder="Apellido Materno"></div>
 
-                  <div class="col-md-3"><label class="form-label">Género</label><select class="form-select" id="dp-genero"><option>?</option><option>Femenino</option><option>Masculino</option><option>No Específico</option></select></div>
+                  <div class="col-sm-6 col-lg-3 mx-dg-col-birth mx-dg-personal-field"><label class="form-label">Fecha de nacimiento</label><input class="form-control" id="dp-fecha-nacimiento" type="date" placeholder="AAAA-MM-DD"></div>
+
+                  <div class="col-sm-6 col-lg-3 mx-dg-col-gender mx-dg-personal-field"><label class="form-label">Género</label><select class="form-select" id="dp-genero"><option>?</option><option>Femenino</option><option>Masculino</option><option>No Específico</option></select></div>
+
+
+                  <div class="col-12 mx-dg-subhead mx-dg-subhead-cred">
+                    <div class="mx-dg-subhead-title">Credenciales verificadas</div>
+                    <div class="mx-dg-subhead-note">Cada credencial integra número, institución y formación/especialidad asociada.</div>
+                  </div>
 
 
 
-                  <div class="col-md-4"><label class="form-label">Cédula Profesional</label><input class="form-control" id="ced-prof" placeholder="Número de Cédula"></div>
+                  <div class="col-md-4 col-lg-3 mx-dg-col-ced mx-dg-cred-row-1-ced"><label class="form-label">Cédula Profesional</label><input class="form-control" id="ced-prof" placeholder="Número de Cédula"></div>
 
-                  <div class="col-md-8"><label class="form-label">Universidad / Institución</label><input class="form-control" id="uni-prof" placeholder="p.ej. UNAM"></div>
+                  <div class="col-md-8 col-lg-5 mx-dg-col-uni mx-dg-cred-row-1-uni"><label class="form-label">Universidad / Institución</label><input class="form-control" id="uni-prof" placeholder="p.ej. UNAM"></div>
 
-                  <div class="col-md-4"><label class="form-label">Cédula de Especialidad</label><input class="form-control" id="ced-esp" placeholder="Número de Cédula"></div>
 
-                  <div class="col-md-8"><label class="form-label">Universidad / Institución</label><input class="form-control" id="uni-esp" placeholder="p.ej. UNAM"></div>
+                  <div class="col-md-4 col-lg-3 mx-dg-col-ced mx-dg-cred-row-2-ced"><label class="form-label">Cédula de Especialidad</label><input class="form-control" id="ced-esp" placeholder="Número de Cédula"></div>
 
-                  <div class="col-md-4"><label class="form-label">Agregar Otra Cédula</label><input class="form-control" id="ced-extra" placeholder="Número de Cédula"></div>
+                  <div class="col-md-8 col-lg-5 mx-dg-col-uni mx-dg-cred-row-2-uni"><label class="form-label">Universidad / Institución</label><input class="form-control" id="uni-esp" placeholder="p.ej. UNAM"></div>
 
-                  <div class="col-md-8"><label class="form-label">Universidad / Institución</label><input class="form-control" id="uni-extra" placeholder="p.ej. UNAM"></div>
+
+                  <div class="col-md-4 col-lg-3 mx-dg-col-ced mx-dg-cred-row-3-ced"><label class="form-label">Agregar Otra Cédula</label><input class="form-control" id="ced-extra" placeholder="Número de Cédula"></div>
+
+                  <div class="col-md-8 col-lg-5 mx-dg-col-uni mx-dg-cred-row-3-uni"><label class="form-label">Universidad / Institución</label><input class="form-control" id="uni-extra" placeholder="p.ej. UNAM"></div>
+
+                  <div class="col-md-8 col-lg-5 mx-dg-col-esp mx-dg-cred-row-3-esp"><label class="form-label">Grado / Subespecialidad / Certificación</label><input class="form-control" id="esp-3" placeholder="p.ej. Alta especialidad, certificación o subespecialidad"></div>
 
 
 
@@ -869,9 +881,9 @@
 
 
 
-                  <div class="col-md-6"><label class="form-label">Correo Electrónico</label><input class="form-control" id="dp-correo" placeholder="nombre@correo.com"></div>
+                  <div class="col-md-6 col-lg-8 mx-dg-col-email"><label class="form-label">Correo Electrónico</label><input class="form-control" id="dp-correo" placeholder="nombre@correo.com"></div>
 
-                  <div class="col-md-6"><label class="form-label">Teléfono Whatsapp</label><input class="form-control" id="dp-whatsapp" placeholder="+52 ..."></div>
+                  <div class="col-md-6 col-lg-4 mx-dg-col-phone"><label class="form-label">Teléfono Whatsapp</label><input class="form-control" id="dp-whatsapp" placeholder="+52 ..."></div>
 
 
 
@@ -900,11 +912,12 @@
                         <div class="fw-semibold">Identidad pública profesional</div>
                         <div class="text-muted small">Estos datos se mostrarán en tu perfil público.</div>
                         <div class="text-muted small">El autosave local no publica cambios hasta que guardes.</div>
+                        <div class="text-muted small">Las credenciales verificadas se gestionan en la sección administrativa y no se sustituyen aquí.</div>
                       </div>
                       <a id="mx-public-profile-link" class="btn btn-outline-secondary btn-sm" href="/profiles/doctor.php?doctor_id=1" target="_blank" rel="noopener">Ver perfil público</a>
                     </div>
 
-                    <div class="row g-3">
+                    <div class="row g-3 mxpi-public-grid">
                       <div class="col-md-6">
                         <label class="form-label" for="mxpi-display-name">Nombre público</label>
                         <input class="form-control" id="mxpi-display-name" maxlength="190" placeholder="Ej. Dra. Leticia Muñoz Alfaro">
@@ -944,12 +957,21 @@
                         <label class="form-label" for="mxpi-specialty-license">Cédula de especialidad</label>
                         <input class="form-control" id="mxpi-specialty-license" maxlength="64" placeholder="Número de cédula de especialidad">
                       </div>
-                      <div class="col-md-6">
-                        <label class="form-label" for="mxpi-specialty-primary">Especialidad principal</label>
-                        <input class="form-control" id="mxpi-specialty-primary" maxlength="190" placeholder="Ej. Medicina Interna">
+                      <div class="col-12 mxpi-subsection mxpi-subsection-verified">
+                        <div class="mxpi-subsection-title">Especialidad acreditada (referencia formal)</div>
+                        <div class="mxpi-subsection-note">La especialidad validada por cédula se administra en “Información verificada / administrativa”.</div>
+                      </div>
+                      <div class="col-12 mxpi-subsection mxpi-subsection-future">
+                        <div class="mxpi-subsection-title">Clasificaciones públicas / áreas de atención visibles</div>
+                        <div class="mxpi-subsection-note">Te ayudan a aparecer en búsquedas públicas, pero no sustituyen tus credenciales verificadas.</div>
                       </div>
                       <div class="col-md-6">
-                        <label class="form-label" for="mxpi-specialty-secondary">Especialidades secundarias</label>
+                        <label class="form-label" for="mxpi-specialty-primary">Clasificación pública principal (transicional)</label>
+                        <input class="form-control" id="mxpi-specialty-primary" maxlength="190" placeholder="Ej. Medicina Interna">
+                        <div class="text-muted small mt-1 mxpi-field-note">Basado en información verificada. La clasificación visible se usa solo para presentación pública.</div>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="mxpi-specialty-secondary">Áreas de atención visibles (transicional)</label>
                         <input class="form-control" id="mxpi-specialty-secondary" maxlength="1500" placeholder="Separadas por coma">
                       </div>
                       <div class="col-12">
