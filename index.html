@@ -951,17 +951,19 @@
                           <option value="No Específico">No Específico</option>
                         </select>
                       </div>
-                      <div class="col-md-6">
-                        <label class="form-label" for="mxpi-prof-license">Cédula profesional</label>
-                        <input class="form-control" id="mxpi-prof-license" maxlength="64" placeholder="Número de cédula profesional">
-                      </div>
-                      <div class="col-md-6">
-                        <label class="form-label" for="mxpi-specialty-license">Cédula de especialidad</label>
-                        <input class="form-control" id="mxpi-specialty-license" maxlength="64" placeholder="Número de cédula de especialidad">
-                      </div>
                       <div class="col-12 mxpi-subsection mxpi-subsection-verified">
-                        <div class="mxpi-subsection-title">Especialidad acreditada (referencia formal)</div>
-                        <div class="mxpi-subsection-note">La especialidad validada por cédula se administra en “Información verificada / administrativa”.</div>
+                        <div class="mxpi-subsection-title">Referencias de credenciales verificadas (transicional)</div>
+                        <div class="mxpi-subsection-note">El título profesional y la especialidad verificada se gobiernan en “Información verificada / administrativa”.</div>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="mxpi-prof-license">Cédula profesional (referencia verificada)</label>
+                        <input class="form-control" id="mxpi-prof-license" maxlength="64" placeholder="Número de cédula profesional">
+                        <div class="text-muted small mt-1 mxpi-field-note">Este dato se alinea con credenciales verificadas por la plataforma.</div>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="mxpi-specialty-license">Cédula de especialidad (referencia verificada)</label>
+                        <input class="form-control" id="mxpi-specialty-license" maxlength="64" placeholder="Número de cédula de especialidad">
+                        <div class="text-muted small mt-1 mxpi-field-note">No sustituye la especialidad acreditada en la sección administrativa.</div>
                       </div>
                       <div class="col-12 mxpi-subsection mxpi-subsection-future">
                         <div class="mxpi-subsection-title">Clasificaciones públicas / áreas de atención visibles</div>
@@ -969,7 +971,7 @@
                       </div>
                       <div class="col-md-6">
                         <label class="form-label" for="mxpi-specialty-primary">Clasificación pública principal (transicional)</label>
-                        <input class="form-control" id="mxpi-specialty-primary" maxlength="190" placeholder="Ej. Medicina Interna">
+                        <input class="form-control" id="mxpi-specialty-primary" maxlength="190" placeholder="Ej. Clínica del dolor">
                         <div class="text-muted small mt-1 mxpi-field-note">Basado en información verificada. La clasificación visible se usa solo para presentación pública.</div>
                       </div>
                       <div class="col-md-6">

@@ -38,7 +38,12 @@
   // Insertar selects si existen anclas de correo en la vista de Datos
   const correo = document.getElementById('dp-correo');
   const row = correo?.closest('.row');
-  if(row){
+  const hasCredentialFieldsInMarkup = !!(
+    document.querySelector('#p-info #t-info-datos #esp-1')
+    && document.querySelector('#p-info #t-info-datos #esp-2')
+    && document.querySelector('#p-info #t-info-datos #esp-3')
+  );
+  if(row && !hasCredentialFieldsInMarkup){
     ['esp-1','esp-2','esp-3'].forEach(id=>{
       const col = document.createElement('div'); col.className='col-md-4';
       const lab = document.createElement('label'); lab.className='form-label';

@@ -334,6 +334,18 @@ console.info('app.js loaded :: 20251123a');
     autoPublicSpecialty: null
   };
 
+  function getLegacySelectList(id){
+    return Array.from(document.querySelectorAll(`select#${id}`));
+  }
+
+  function firstNonEmptySelectValue(selects){
+    for(const select of selects || []){
+      const value = String(select?.value || '').trim();
+      if(value) return value;
+    }
+    return '';
+  }
+
   function sanitizeDoctorId(raw){
     const value = String(raw || '').trim();
     if(!value || value.length > 64) return '';
@@ -380,7 +392,18 @@ console.info('app.js loaded :: 20251123a');
 
   function specialtiesForTitleKey(key){
     const list = MXMED_PROFESSIONAL_TAXONOMY.specialties_by_title[key];
-    return Array.isArray(list) ? list.slice() : [];
+    if(!Array.isArray(list)) return [];
+    return list
+      .slice()
+      .sort((a, b)=> String(a || '').localeCompare(String(b || ''), 'es', { sensitivity: 'base' }));
+  }
+
+  function defaultVerifiedSpecialtyForTitleKey(titleKey, options){
+    if(titleKey !== 'medico_cirujano') return '';
+    const preferred = 'Cirugía General';
+    return (options || []).some((item)=> normalizeCatalogValue(item) === normalizeCatalogValue(preferred))
+      ? preferred
+      : '';
   }
 
   function inferTitleKeyFromSpecialty(specialty){
@@ -450,34 +473,48 @@ console.info('app.js loaded :: 20251123a');
   }
 
   function syncVerifiedSpecialtyOptions(titleKey, preferredSpecialty, options = {}){
-    if(!legacyCredentialEls.verifiedSpecialty) return;
+    const specialtySelects = getLegacySelectList('esp-2');
+    const fallback = legacyCredentialEls.verifiedSpecialty ? [legacyCredentialEls.verifiedSpecialty] : [];
+    const targets = specialtySelects.length ? specialtySelects : fallback;
+    if(!targets.length) return;
     const preserveUnknown = options && options.preserveUnknown !== undefined ? !!options.preserveUnknown : true;
     const key = titleKey || MXMED_PROFESSIONAL_TAXONOMY.default_title;
-    const selected = String(preferredSpecialty || legacyCredentialEls.verifiedSpecialty.value || '').trim();
+    const selected = String(preferredSpecialty || firstNonEmptySelectValue(targets) || '').trim();
     const specialtyOptions = specialtiesForTitleKey(key);
     const hasSelected = specialtyOptions.some((item)=> normalizeCatalogValue(item) === normalizeCatalogValue(selected));
-    const safeSelected = hasSelected ? selected : (preserveUnknown ? selected : '');
-    rebuildSelectOptions(legacyCredentialEls.verifiedSpecialty, specialtyOptions, safeSelected, 'Selecciona especialidad verificada', preserveUnknown);
-    applyClassificationSuggestions(legacyCredentialEls.verifiedSpecialty.value);
+    let safeSelected = hasSelected ? selected : (preserveUnknown ? selected : '');
+    if(!safeSelected && !preserveUnknown){
+      safeSelected = defaultVerifiedSpecialtyForTitleKey(key, specialtyOptions);
+    }
+    targets.forEach((selectEl)=>{
+      rebuildSelectOptions(selectEl, specialtyOptions, safeSelected, 'Selecciona especialidad verificada', preserveUnknown);
+    });
+    applyClassificationSuggestions(firstNonEmptySelectValue(targets));
   }
 
   function syncProfessionalTitleOptions(preferredTitle){
-    if(!legacyCredentialEls.professionalTitle) return '';
+    const titleSelects = getLegacySelectList('esp-1');
+    const fallback = legacyCredentialEls.professionalTitle ? [legacyCredentialEls.professionalTitle] : [];
+    const targets = titleSelects.length ? titleSelects : fallback;
+    if(!targets.length) return '';
     const entries = Object.entries(MXMED_PROFESSIONAL_TAXONOMY.professional_titles).map(([, label])=> label);
-    rebuildSelectOptions(legacyCredentialEls.professionalTitle, entries, preferredTitle, 'Selecciona título profesional');
-    const resolved = resolveProfessionalTitleKey(legacyCredentialEls.professionalTitle.value)
+    const selectedTitle = String(preferredTitle || firstNonEmptySelectValue(targets) || '').trim();
+    targets.forEach((selectEl)=>{
+      rebuildSelectOptions(selectEl, entries, selectedTitle, 'Selecciona título profesional');
+    });
+    const resolved = resolveProfessionalTitleKey(firstNonEmptySelectValue(targets))
       || resolveProfessionalTitleKey(preferredTitle)
       || MXMED_PROFESSIONAL_TAXONOMY.default_title;
     const resolvedLabel = titleLabelForKey(resolved);
     if(resolvedLabel){
-      legacyCredentialEls.professionalTitle.value = resolvedLabel;
+      targets.forEach((selectEl)=>{ selectEl.value = resolvedLabel; });
     }
     return resolved;
   }
 
   function initializeProfessionalTaxonomy(){
-    const titleKey = syncProfessionalTitleOptions(legacyCredentialEls.professionalTitle?.value);
-    syncVerifiedSpecialtyOptions(titleKey, legacyCredentialEls.verifiedSpecialty?.value);
+    const titleKey = syncProfessionalTitleOptions(firstNonEmptySelectValue(getLegacySelectList('esp-1')));
+    syncVerifiedSpecialtyOptions(titleKey, firstNonEmptySelectValue(getLegacySelectList('esp-2')));
   }
 
   function syncPublicSpecialtyFromVerified(specialtyValue){
@@ -732,7 +769,7 @@ console.info('app.js loaded :: 20251123a');
     writeLegacyValue(document.getElementById('dp-apellido-materno'), legacyName.apellidoMaterno);
 
     const inferredTitleKey = inferTitleKeyFromSpecialty(specialtyPrimary);
-    const preferredLegacyTitle = legacyCredentialEls.professionalTitle?.value
+    const preferredLegacyTitle = firstNonEmptySelectValue(getLegacySelectList('esp-1'))
       || titleLabelForKey(inferredTitleKey)
       || titleLabelForKey(MXMED_PROFESSIONAL_TAXONOMY.default_title);
     const titleKey = syncProfessionalTitleOptions(preferredLegacyTitle);
@@ -817,24 +854,49 @@ console.info('app.js loaded :: 20251123a');
     input.addEventListener('change', markIdentityDirty);
   });
 
-  if(legacyCredentialEls.professionalTitle){
-    legacyCredentialEls.professionalTitle.addEventListener('change', ()=>{
-      const titleKey = resolveProfessionalTitleKey(legacyCredentialEls.professionalTitle?.value) || MXMED_PROFESSIONAL_TAXONOMY.default_title;
-      syncVerifiedSpecialtyOptions(titleKey, legacyCredentialEls.verifiedSpecialty?.value, { preserveUnknown: false });
-    });
-  }
+  const onProfessionalTitleChange = (sourceValue = '')=>{
+    const preferredTitle = String(sourceValue || firstNonEmptySelectValue(getLegacySelectList('esp-1')) || '').trim();
+    const titleKey = syncProfessionalTitleOptions(preferredTitle) || MXMED_PROFESSIONAL_TAXONOMY.default_title;
+    syncVerifiedSpecialtyOptions(titleKey, firstNonEmptySelectValue(getLegacySelectList('esp-2')), { preserveUnknown: false });
+  };
 
-  if(legacyCredentialEls.verifiedSpecialty){
-    const onVerifiedSpecialtyChange = ()=>{
-      const specialty = String(legacyCredentialEls.verifiedSpecialty?.value || '').trim();
-      applyClassificationSuggestions(specialty);
-      syncPublicSpecialtyFromVerified(specialty);
-    };
-    legacyCredentialEls.verifiedSpecialty.addEventListener('change', onVerifiedSpecialtyChange);
-    legacyCredentialEls.verifiedSpecialty.addEventListener('input', onVerifiedSpecialtyChange);
-  }
+  const onVerifiedSpecialtyChange = (sourceValue = '')=>{
+    const specialty = String(sourceValue || firstNonEmptySelectValue(getLegacySelectList('esp-2')) || '').trim();
+    const specialtySelects = getLegacySelectList('esp-2');
+    if(specialty && specialtySelects.length){
+      specialtySelects.forEach((selectEl)=>{
+        const hasOption = Array.from(selectEl.options || []).some((opt)=> String(opt.value || '').trim() === specialty);
+        if(hasOption){
+          selectEl.value = specialty;
+        }
+      });
+    }
+    applyClassificationSuggestions(specialty);
+    syncPublicSpecialtyFromVerified(specialty);
+  };
+
+  document.addEventListener('change', (event)=>{
+    const target = event.target instanceof Element ? event.target : null;
+    if(!target) return;
+    if(target.matches('select#esp-1')){
+      onProfessionalTitleChange(target.value);
+      return;
+    }
+    if(target.matches('select#esp-2')){
+      onVerifiedSpecialtyChange(target.value);
+    }
+  });
+
+  document.addEventListener('input', (event)=>{
+    const target = event.target instanceof Element ? event.target : null;
+    if(!target) return;
+    if(target.matches('select#esp-2')){
+      onVerifiedSpecialtyChange(target.value);
+    }
+  });
 
   initializeProfessionalTaxonomy();
+  window.setTimeout(()=>{ initializeProfessionalTaxonomy(); }, 0);
 
   async function readPrivateIdentity(){
     state.doctorId = resolveDoctorId();
