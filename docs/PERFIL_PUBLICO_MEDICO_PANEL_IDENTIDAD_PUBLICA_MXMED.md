@@ -754,3 +754,125 @@ Ejemplos de referencia:
   - definir separacion formal privado/publico/operativo/consultorio;
   - definir validacion/verificacion de email, telefono y WhatsApp;
   - alinear contacto con Agenda y Operadores sin acoplar fases.
+
+## 21) UX-Panel-01D3-A — Modelo canonico futuro de Datos de contacto
+
+### 21.1 Estado actual (transicional)
+- En `Datos Generales` existe card separada `Datos de contacto` con:
+  - `dp-correo`
+  - `dp-whatsapp`
+- Ambos campos siguen en estado transicional:
+  - usan autosave/localStorage heredado (`dp:*`);
+  - no se guardan en `profiles_doctors`;
+  - no entran al `PATCH` de identidad publica;
+  - no se publican automaticamente.
+- El contacto publico actual depende mas de fuentes de consultorio + flags de visibilidad (`show_contact_buttons`, `show_phone`, `show_whatsapp`) que de `dp-correo`/`dp-whatsapp`.
+
+### 21.2 Regla base de producto
+- Todo email, telefono o WhatsApp capturado debe considerarse `privado por defecto`.
+- Solo puede volverse publico si existe:
+  - permiso/configuracion explicita;
+  - flag de visibilidad publica;
+  - regla de plan aplicable;
+  - y, si producto lo define, verificacion previa.
+
+### 21.3 Capas conceptuales de contacto
+1. `Contacto de seguridad de plataforma`
+   - acceso, recuperacion de cuenta, validacion, autenticacion futura, avisos criticos.
+   - Nunca debe publicarse.
+2. `Contacto privado administrativo`
+   - comunicacion Mexico Medico ↔ medico, soporte, facturacion/plataforma, relacion comercial.
+   - No publico por defecto.
+3. `Contacto publico visible para pacientes`
+   - perfil publico, botones de contacto, listados y conversion comercial.
+   - Requiere flag explicito + plan.
+4. `Contacto operativo`
+   - agenda, recordatorios, confirmacion de citas, operadores, call center.
+   - No implica visibilidad publica automatica.
+5. `Contacto por consultorio`
+   - telefono/WhatsApp/email por sede.
+   - Visibilidad definida por sede + plan + configuracion.
+
+### 21.4 Modelo tecnico futuro sugerido
+- Entidad base sugerida: `contact_points`
+- Campos sugeridos:
+  - `contact_id`
+  - `doctor_id`
+  - `user_id`
+  - `consultorio_id`
+  - `type`
+  - `value`
+  - `normalized_value`
+  - `label`
+  - `scope`
+  - `is_public`
+  - `is_primary`
+  - `is_verified`
+  - `verification_status`
+  - `verified_at`
+  - `visibility_plan_min`
+  - `use_for_login`
+  - `use_for_recovery`
+  - `use_for_security_alerts`
+  - `use_for_platform_admin`
+  - `use_for_appointments`
+  - `use_for_reminders`
+  - `use_for_public_profile`
+  - `use_for_internal_ops`
+  - `sort_order`
+  - `status`
+  - `created_at`
+  - `updated_at`
+- Capas/entidades futuras complementarias:
+  - `contact_verifications`
+  - `contact_visibility_rules`
+  - `contact_usage_policies`
+  - `contact_change_requests`
+  - `contact_audit_log`
+
+### 21.5 Reglas de publicacion
+- Ningun contacto se publica por defecto.
+- Publicacion requiere flag explicito.
+- La visibilidad puede depender del plan.
+- Contacto de seguridad nunca se publica.
+- Contacto privado administrativo no se publica salvo configuracion explicita separada.
+- Contacto operativo no implica contacto publico.
+- Contacto por consultorio se decide por sede.
+- WhatsApp privado nunca debe convertirse automaticamente en WhatsApp publico.
+
+### 21.6 Reglas de edicion y verificacion
+- El medico puede editar ciertos datos de contacto, pero los de seguridad deben exigir verificacion.
+- Cambios en `value` deben invalidar verificacion previa (`is_verified=false`) hasta nueva validacion.
+- Operadores solo editan segun permisos explicitos.
+- Cualquier cambio con impacto publico debe auditarse.
+- Cambios sensibles deben quedar trazados en historial.
+
+### 21.7 Relacion con modulos
+- Cuenta / seguridad de plataforma.
+- Perfil publico.
+- Agenda.
+- Recordatorios.
+- Operadores.
+- Call center.
+- Consultorios.
+- Planes comerciales.
+- Facturacion / plataforma.
+
+### 21.8 Riesgos evitados por el modelo canonico
+- Publicar WhatsApp privado por error.
+- Mezclar contacto de seguridad con contacto publico.
+- Mezclar contacto operativo con contacto visible al paciente.
+- Duplicar telefonos entre doctor y consultorio sin gobernanza.
+- Usar localStorage como fuente final.
+- Romper diferencias de visibilidad entre perfil gratuito/pago.
+- Publicar datos sensibles sin consentimiento explicito.
+- Perder auditoria de cambios sensibles.
+
+### 21.9 Microfases futuras recomendadas
+- `UX-Panel-01D3-B`: microcopy visual de privacidad/visibilidad en card Datos de contacto.
+- `UX-Panel-01D3-C`: UI placeholder de categorias seguridad/privado/publico/operativo/consultorio sin backend.
+- `UX-Panel-01D3-D`: diseno backend de `contact_points` + verificaciones.
+- `UX-Panel-01D3-E`: flags de visibilidad publica por plan.
+- `UX-Panel-01D3-F`: integracion canonica con perfil publico y consultorios.
+- `UX-Panel-01D3-G`: verificacion email/telefono/WhatsApp.
+- `UX-Panel-01D3-H`: auditoria/permisos operador para cambios de contacto.

@@ -1095,7 +1095,8 @@ Refs:
 - `[profiles]` UX-Panel-01C2 completado: optimizacion visual de Datos Personales + catalogo frontend transicional de credenciales (commits `ff4c311`, `f55e774`, `3135cd5`).
 - `[profiles]` UX-Panel-01C3-D completado: estado transicional documentado para Informacion verificada (badge, microcopy y boton placeholder `Solicitar cambio` sin bloqueo ni backend de solicitudes).
 - `[profiles]` UX-Panel-01D2 completado: documentada la separacion transicional de Datos de contacto (`dp-correo`, `dp-whatsapp`) y su alcance no canonico/no publico automatico.
-- `[profiles]` Siguiente recomendado: UX-Panel-01D3 (definir modelo canonico de contacto privado/publico/operativo/consultorio) o UX-Panel-01C3-E (definicion backend de solicitudes y aprobacion), segun prioridad.
+- `[profiles]` UX-Panel-01D3-A completado: modelo canonico futuro de Datos de contacto definido documentalmente, separando seguridad, contacto privado administrativo, contacto publico, contacto operativo y contacto por consultorio; regla base `privado por defecto` y `publico solo con flag/plan/verificacion`.
+- `[profiles]` Siguiente recomendado: UX-Panel-01D3-B (microcopy visual de privacidad/visibilidad) o UX-Panel-01D3-D (diseno backend canonico de contacto), segun prioridad.
 
 ### 2a) Operación clínica extendida
 - `[api]` órdenes, recetas y resultados con contratos estables.
