@@ -2442,6 +2442,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 #p-info #t-info-datos #mx-dg-media-card{ grid-column:1; }
 #p-info #t-info-datos #mx-dg-verified-card{ grid-column:2; }
+#p-info #t-info-datos #mx-dg-contact-card,
 #p-info #t-info-datos #mx-public-identity-card,
 #p-info #t-info-datos #dg-signature-card{ grid-column:1 / -1; }
 #p-info #t-info-datos .mx-dg-card{
@@ -2844,6 +2845,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   }
   #p-info #t-info-datos #mx-dg-media-card,
   #p-info #t-info-datos #mx-dg-verified-card,
+  #p-info #t-info-datos #mx-dg-contact-card,
   #p-info #t-info-datos #mx-public-identity-card,
   #p-info #t-info-datos #dg-signature-card{
     grid-column:1 / -1;
