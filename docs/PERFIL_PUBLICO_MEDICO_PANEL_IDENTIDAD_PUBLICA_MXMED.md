@@ -901,3 +901,28 @@ Ejemplos de referencia:
   - capturar email/telefono/WhatsApp no implica exposicion publica inmediata.
 - Se mantiene la ruta futura:
   - visibilidad publica solo con reglas explicitas de flag + plan (+ verificacion si aplica).
+
+## 23) UX-Shell-01C — Acceso inferior Mi Perfil en sidebar (transicional)
+
+### 23.1 Estado implementado
+- Se agrego un acceso inferior de `Mi Perfil` dentro del sidebar, con composicion visual tipo perfil/header:
+  - avatar/icono de usuario;
+  - label de perfil en modo expandido;
+  - comportamiento compacto en sidebar contraido.
+- El acceso inferior reutiliza destinos actuales de perfil (`data-profile-panel`) sin crear rutas nuevas.
+
+### 23.2 Regla de convivencia de navegacion
+- El menu legacy de perfil en sidebar sigue oculto (`menu-main d-none[data-group=\"perfil\"]` y `menu-sub d-none[data-group=\"perfil\"]`).
+- El dropdown superior del header sigue activo como respaldo transicional.
+- No se retiro aun el acceso duplicado del header en esta fase.
+
+### 23.3 Guardrails de la microfase
+- No se modifico logica de navegacion.
+- No se toco JS de panel/shell.
+- No se tocaron backend, SQL, endpoints ni contratos de datos.
+- No hubo cambios en PATCH, localStorage ni fuentes canonicas.
+
+### 23.4 Deuda futura recomendada
+- Evaluar simplificacion del header superior cuando exista evidencia de uso del acceso inferior.
+- Cerrar validacion responsive final (desktop/tablet/movil) del shell con sidebar expandido/contraido.
+- Definir si el dropdown superior se retira o se mantiene como respaldo permanente.

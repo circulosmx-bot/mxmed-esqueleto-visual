@@ -1097,6 +1097,8 @@ Refs:
 - `[profiles]` UX-Panel-01D2 completado: documentada la separacion transicional de Datos de contacto (`dp-correo`, `dp-whatsapp`) y su alcance no canonico/no publico automatico.
 - `[profiles]` UX-Panel-01D3-A completado: modelo canonico futuro de Datos de contacto definido documentalmente, separando seguridad, contacto privado administrativo, contacto publico, contacto operativo y contacto por consultorio; regla base `privado por defecto` y `publico solo con flag/plan/verificacion`.
 - `[profiles]` UX-Panel-01D3-B2 completado: documentado el microcopy visual de privacidad/visibilidad en Datos de contacto; datos privados por defecto y no publicos automaticamente.
+- `[shell]` UX-Shell-01B completado: acceso inferior de Mi Perfil agregado al sidebar con estructura tipo perfil/header; menu legacy de perfil en sidebar se mantiene oculto y dropdown superior permanece como respaldo transicional (`97281e2`).
+- `[shell]` UX-Shell-01C completado: decision de navegacion documentada para mantener acceso inferior en sidebar como direccion preferida, con deuda futura de simplificacion del header y cierre responsive final.
 - `[profiles]` Siguiente recomendado: UX-Panel-01D3-C (UI placeholder de categorias seguridad/privado/publico/operativo/consultorio sin backend) o UX-Panel-01D3-D (diseno backend canonico de contacto), segun prioridad.
 
 ### 2a) Operación clínica extendida
