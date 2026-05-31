@@ -419,6 +419,43 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-size:.86rem;
   padding:.43rem .74rem;
 }
+.sidebar-profile-access .mx-prof-dd-item{
+  display:flex;
+  align-items:flex-start;
+  gap:.58rem;
+}
+.sidebar-profile-access .mx-prof-dd-icon{
+  flex:0 0 1.28rem;
+  width:1.28rem;
+  height:1.28rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#0a4f70;
+  margin-top:.06rem;
+}
+.sidebar-profile-access .mx-prof-dd-icon .material-symbols-rounded,
+.sidebar-profile-access .mx-prof-dd-icon i{
+  font-size:1.03rem;
+  line-height:1;
+}
+.sidebar-profile-access .mx-prof-dd-copy{
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  gap:.03rem;
+}
+.sidebar-profile-access .mx-prof-dd-label{
+  font-weight:600;
+  font-size:.82rem;
+  line-height:1.18;
+  color:#10354a;
+}
+.sidebar-profile-access .mx-prof-dd-sub{
+  font-size:.72rem;
+  line-height:1.2;
+  color:#678091;
+}
 
 .sidebar-toggle{
   position: relative;
@@ -4319,6 +4356,12 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-radius:12px;
   padding:0 !important;
   margin:0 !important; /* igual separación que en estado estático */
+}
+/* Guardrail: el menu legacy de perfil debe permanecer oculto siempre */
+.menu-main.d-none[data-group="perfil"],
+.menu-sub.d-none[data-group="perfil"],
+.menu-sub.d-none[data-group="perfil"].open{
+  display:none !important;
 }
 .menu-sub .menu-sub-btn{
   position:relative;
