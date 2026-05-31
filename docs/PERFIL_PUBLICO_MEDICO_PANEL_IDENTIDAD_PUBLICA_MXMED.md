@@ -926,3 +926,27 @@ Ejemplos de referencia:
 - Evaluar simplificacion del header superior cuando exista evidencia de uso del acceso inferior.
 - Cerrar validacion responsive final (desktop/tablet/movil) del shell con sidebar expandido/contraido.
 - Definir si el dropdown superior se retira o se mantiene como respaldo permanente.
+
+## 24) UX-Shell-01D5 — Control de sidebar y comportamiento responsive de hamburguesa
+
+### 24.1 Estado actual
+- El boton/proxy de hamburguesa del header ya no es la referencia visual principal del sidebar.
+- El control visible de colapso/expansion queda asociado al sidebar en desktop y tablet grande.
+- En movil no se muestra hamburguesa porque todavia no existe overlay real de sidebar.
+
+### 24.2 Regla UX vigente
+- Desktop/tablet grande: el control de sidebar debe sentirse parte del sidebar, no del header.
+- Movil: no mostrar hamburguesa sin funcion visible.
+- Si en el futuro se implementa overlay movil, entonces se podra habilitar una hamburguesa movil especifica.
+
+### 24.3 Guardrails
+- No reactivar el menu legacy de perfil del sidebar.
+- No volver a colocar el control de sidebar como accion principal del header sin justificacion de fase.
+- No romper `data-panel` ni `data-profile-panel`.
+- No tocar `openGroup`/`showPanel` fuera de una fase dedicada.
+- No convertir el header en menu principal mientras el sidebar cumpla esa funcion.
+
+### 24.4 Deuda futura
+- Disenar overlay movil real si se requiere navegacion lateral en movil.
+- Revisar si el dropdown superior del header se mantiene o se simplifica.
+- Validar responsive final del shell completo.

@@ -1099,6 +1099,7 @@ Refs:
 - `[profiles]` UX-Panel-01D3-B2 completado: documentado el microcopy visual de privacidad/visibilidad en Datos de contacto; datos privados por defecto y no publicos automaticamente.
 - `[shell]` UX-Shell-01B completado: acceso inferior de Mi Perfil agregado al sidebar con estructura tipo perfil/header; menu legacy de perfil en sidebar se mantiene oculto y dropdown superior permanece como respaldo transicional (`97281e2`).
 - `[shell]` UX-Shell-01C completado: decision de navegacion documentada para mantener acceso inferior en sidebar como direccion preferida, con deuda futura de simplificacion del header y cierre responsive final.
+- `[shell]` UX-Shell-01D5 completado: documentado comportamiento del control de sidebar; en desktop/tablet grande el control de colapso pertenece visualmente al sidebar y en movil no se muestra hamburguesa hasta existir overlay real.
 - `[profiles]` Siguiente recomendado: UX-Panel-01D3-C (UI placeholder de categorias seguridad/privado/publico/operativo/consultorio sin backend) o UX-Panel-01D3-D (diseno backend canonico de contacto), segun prioridad.
 
 ### 2a) Operación clínica extendida
