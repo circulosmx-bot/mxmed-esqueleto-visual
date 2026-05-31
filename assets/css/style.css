@@ -1294,8 +1294,27 @@ body{margin:0;background:var(--mm-fondo-base);}
   .mx-gh-toggle{
     display:none;
   }
+  .mm-sidebar{
+    position:sticky;
+    top:calc(var(--mm-global-header-h) + 18px);
+    align-self:flex-start;
+    max-height:calc(100vh - var(--mm-global-header-h) - 36px);
+    overflow-y:auto;
+    overflow-x:hidden;
+  }
   .mm-sidebar > .sidebar-toggle{
     display:flex;
+  }
+  .sidebar-profile-access{
+    position:sticky;
+    bottom:0;
+    z-index:3;
+    margin-top:auto;
+    padding-top:8px;
+    background:linear-gradient(180deg, rgba(0,176,197,0) 0%, rgba(0,176,197,.76) 24%, rgba(0,176,197,.97) 100%);
+  }
+  .sidebar-profile-access::before{
+    margin:0 2px 8px;
   }
   .mm-grid.is-sidebar-collapsed,
   body.mx-sidebar-collapsed .mm-grid{
