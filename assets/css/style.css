@@ -1267,6 +1267,10 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 @media (max-width:992px){
 
+  .mx-gh-toggle{
+    display:none;
+  }
+
   .mm-grid{flex-direction:column;}
 
   .mm-sidebar{width:auto;flex:1 1 auto;}
