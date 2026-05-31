@@ -1291,6 +1291,12 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 
 @media (min-width:993px){
+  .mx-gh-toggle{
+    display:none;
+  }
+  .mm-sidebar > .sidebar-toggle{
+    display:flex;
+  }
   .mm-grid.is-sidebar-collapsed,
   body.mx-sidebar-collapsed .mm-grid{
     gap:12px;
