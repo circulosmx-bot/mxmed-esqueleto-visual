@@ -986,3 +986,37 @@ Ejemplos de referencia:
 - Disenar overlay movil real si se requiere navegacion lateral en movil.
 - Cerrar QA responsive final del shell/sidebar.
 - Documentar patron visual final del sidebar si se consolida como estandar del sistema.
+
+## 26) UX-Shell-01E5-D — Layout dashboard del panel principal de perfil
+
+### 26.1 Estado implementado
+- El panel principal de perfil adopta una composicion tipo dashboard.
+- La card de completitud queda como bloque principal izquierdo.
+- La card `Actividad reciente de mi perfil` queda como bloque lateral derecho.
+- La seccion `Indicadores clave` queda debajo como bloque de metricas.
+- La hilera de indicadores dejo de vivir dentro de la card superior.
+- Se elimino duplicidad visual de indicadores.
+
+### 26.2 Regla UX vigente
+- Card superior/izquierda: objetivo principal de completitud del perfil.
+- Card lateral derecha: actividad reciente.
+- Bloque inferior: indicadores clave.
+- El resumen debe funcionar como dashboard informativo, no solo como lista de accesos.
+- La actividad reciente no debe competir como modulo principal del sidebar.
+- Los indicadores deben mantenerse como datos resumidos del estado del perfil/plataforma.
+
+### 26.3 Guardrails
+- No duplicar indicadores entre card superior e indicadores clave.
+- No reintroducir `Actividad` como modulo principal si la estrategia final es convertirlo en dashboard/card.
+- No tocar navegacion inicial sin fase dedicada.
+- No cambiar `p-resumen` ni `p-ag-admin` sin decision explicita.
+- No conectar metricas a backend sin contrato definido.
+- No modificar `data-panel`, `data-profile-panel`, `openGroup`, `showPanel` fuera de fase dedicada.
+
+### 26.4 Deuda futura
+- Definir los 4 indicadores finales y su fuente de datos.
+- Definir si Agenda sera el panel inicial por defecto.
+- Definir si `Actividad reciente` se alimentara de eventos reales, auditoria o mock transicional.
+- Documentar contrato futuro de metricas del dashboard.
+- Validar responsive final del panel principal.
+- Cerrar decision sobre el rol de `p-resumen`.

@@ -1101,6 +1101,7 @@ Refs:
 - `[shell]` UX-Shell-01C completado: decision de navegacion documentada para mantener acceso inferior en sidebar como direccion preferida, con deuda futura de simplificacion del header y cierre responsive final.
 - `[shell]` UX-Shell-01D5 completado: documentado comportamiento del control de sidebar; en desktop/tablet grande el control de colapso pertenece visualmente al sidebar y en movil no se muestra hamburguesa hasta existir overlay real.
 - `[shell]` UX-Shell-01D10 completado: documentada la consolidacion de Mi Perfil en el dropdown inferior del sidebar; menu principal reservado para modulos generales y dropdown inferior funcional en modo expandido/compacto.
+- `[shell]` UX-Shell-01E5-D completado: documentado el layout dashboard del panel principal de perfil, con completitud como bloque principal, actividad reciente como card lateral e indicadores clave como bloque inferior; pendiente definir metricas finales y decision de panel inicial.
 - `[profiles]` Siguiente recomendado: UX-Panel-01D3-C (UI placeholder de categorias seguridad/privado/publico/operativo/consultorio sin backend) o UX-Panel-01D3-D (diseno backend canonico de contacto), segun prioridad.
 
 ### 2a) Operación clínica extendida
