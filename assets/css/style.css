@@ -1596,6 +1596,15 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* ==== RESUMEN (mockup exacto) ===== */
 
+.mx-profile-dashboard-top{
+  display:grid;
+  grid-template-columns:minmax(0,3fr) minmax(300px,1fr);
+  gap:14px;
+  align-items:stretch;
+}
+.mx-profile-completion-card{
+  padding:16px 18px;
+}
 .resumen-hero{display:grid;grid-template-columns:1fr 380px;gap:40px;align-items:center}
 
 .resumen-title{font-weight:800;font-size:40px;line-height:1.2;color:#111;margin:0 0 18px}
@@ -1642,39 +1651,129 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 @media(max-width: 600px){.kpi-row{grid-template-columns:1fr}}
 
-.resumen-activity-strip{
-  margin-top:22px;
+.resumen-lower-stack{
+  margin-top:14px;
+  display:grid;
+  gap:14px;
+}
+.resumen-lower-card{
   border:1px solid #d5e8ef;
   border-radius:14px;
   background:#f9fdff;
   padding:14px 16px 12px;
 }
-.resumen-activity-strip__head{
+.resumen-lower-card__head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:12px;
+}
+.resumen-lower-card__head h6{
+  margin:0;
+  font-size:1.02rem;
+  font-weight:800;
+  color:#0e3550;
+  line-height:1.2;
+}
+.resumen-lower-card__hint{
+  font-size:.76rem;
+  color:#6b8290;
+  white-space:nowrap;
+}
+.resumen-indicators-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+}
+.resumen-indicator-pill{
+  background:#fff;
+  border:1px solid #dcebf1;
+  border-radius:11px;
+  padding:10px 10px 9px;
+  display:flex;
+  align-items:flex-start;
+  gap:9px;
+  min-width:0;
+}
+.resumen-indicator-pill__icon{
+  width:32px;
+  height:32px;
+  border-radius:999px;
+  background:#0cb2c7;
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:.95rem;
+  flex:0 0 32px;
+}
+.resumen-indicator-pill__copy{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+}
+.resumen-indicator-pill__label{
+  font-size:.73rem;
+  line-height:1.2;
+  color:#537082;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.resumen-indicator-pill__value{
+  margin-top:2px;
+  font-size:1.34rem;
+  line-height:1.12;
+  font-weight:800;
+  color:#09364d;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.resumen-indicator-pill__meta{
+  margin-top:2px;
+  font-size:.69rem;
+  line-height:1.2;
+  color:#6f8797;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.resumen-indicator-pill__meta a{
+  color:#0aa2b7;
+  text-decoration:none;
+  font-weight:600;
+}
+.resumen-indicator-pill__meta a:hover{
+  text-decoration:underline;
+}
+.resumen-activity-card__head{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:12px;
+  gap:10px;
   margin-bottom:10px;
 }
-.resumen-activity-strip__head h6{
+.resumen-activity-card__head h6{
   margin:0;
   font-size:1.02rem;
   font-weight:800;
   color:#0e3550;
 }
-.resumen-activity-strip__link{
+.resumen-activity-card__link{
   font-size:.82rem;
   color:#0aa2b7;
   text-decoration:none;
   font-weight:600;
 }
-.resumen-activity-strip__link:hover{text-decoration:underline;}
-.resumen-activity-strip__list{
+.resumen-activity-card__link:hover{text-decoration:underline;}
+.resumen-activity-card__list{
   display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-columns:1fr;
   gap:10px;
 }
-.resumen-activity-strip__item{
+.resumen-activity-card__item{
   display:grid;
   grid-template-columns:34px 1fr auto;
   gap:10px;
@@ -1685,7 +1784,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-radius:11px;
   padding:9px 10px;
 }
-.resumen-activity-strip__icon{
+.resumen-activity-card__icon{
   width:34px;
   height:34px;
   border-radius:999px;
@@ -1696,12 +1795,12 @@ body{margin:0;background:var(--mm-fondo-base);}
   justify-content:center;
   font-size:1rem;
 }
-.resumen-activity-strip__copy{
+.resumen-activity-card__copy{
   min-width:0;
   display:flex;
   flex-direction:column;
 }
-.resumen-activity-strip__copy strong{
+.resumen-activity-card__copy strong{
   font-size:.84rem;
   line-height:1.15;
   color:#0b3854;
@@ -1709,19 +1808,19 @@ body{margin:0;background:var(--mm-fondo-base);}
   overflow:hidden;
   text-overflow:ellipsis;
 }
-.resumen-activity-strip__copy span{
+.resumen-activity-card__copy span{
   font-size:.73rem;
   color:#5d7483;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
 }
-.resumen-activity-strip__item small{
+.resumen-activity-card__item small{
   font-size:.69rem;
   color:#8b9eaa;
   white-space:nowrap;
 }
-.resumen-activity-strip__cta{
+.resumen-activity-card__cta{
   margin-top:10px;
   width:100%;
   min-height:38px;
@@ -1732,10 +1831,59 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-weight:700;
   font-size:.9rem;
 }
+.mx-profile-dashboard-top .resumen-activity-card{
+  display:flex;
+  flex-direction:column;
+}
+.mx-profile-dashboard-top .resumen-activity-card__list{
+  flex:1 1 auto;
+}
+.mx-profile-dashboard-top .resumen-activity-card__cta{
+  margin-top:12px;
+}
+@media(min-width: 993px) and (max-width: 1320px){
+  .resumen-hero{
+    grid-template-columns:1fr minmax(210px,300px);
+    gap:24px;
+  }
+}
 @media(max-width: 1199px){
-  .resumen-activity-strip__list{
+  .mx-profile-dashboard-top{
+    grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);
+  }
+  .resumen-indicators-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media(max-width: 992px){
+  .mx-profile-dashboard-top{
     grid-template-columns:1fr;
   }
+  .mx-profile-completion-card{
+    padding:14px 16px 12px;
+  }
+}
+@media(max-width: 700px){
+  .resumen-lower-card__head{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:4px;
+  }
+  .resumen-lower-card__hint{
+    white-space:normal;
+  }
+  .resumen-indicators-grid{
+    grid-template-columns:1fr;
+  }
+  .resumen-activity-card__item{
+    grid-template-columns:30px 1fr;
+    grid-template-areas:
+      "icon copy"
+      "icon time";
+  }
+  .resumen-activity-card__icon{ grid-area:icon; width:30px; height:30px; font-size:.9rem; }
+  .resumen-activity-card__copy{ grid-area:copy; }
+  .resumen-activity-card__item small{ grid-area:time; margin-left:0; }
 }
 
 
