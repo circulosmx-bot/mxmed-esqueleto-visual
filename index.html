@@ -216,9 +216,6 @@
         <img src="assets/mexico-medico.svg" alt="MXMed">
       </a>
     </div>
-    <div class="mx-gh-right">
-      <button class="mx-gh-reset-btn" type="button" aria-label="Restablecer">Restablecer</button>
-    </div>
   </div>
 </header>
 
@@ -245,7 +242,7 @@
 
       <!-- RESUMEN (botón principal sin submenú) -->
 
-      <button class="menu-main" data-panel="p-resumen">
+      <button class="menu-main d-none" data-panel="p-resumen" aria-hidden="true">
 
         <span class="txt">
 
@@ -497,7 +494,7 @@
 
 <section class="mm-card" id="p-resumen">
 
-  <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">search_activity</span>Actividad reciente de mi perfil</h5></div>
+  <div class="head"><h5><span class="material-symbols-rounded title-ico" aria-hidden="true">dashboard</span>Panel principal de mi perfil</h5></div>
 
   <div class="body">
 
@@ -625,6 +622,40 @@
 
       </div>
 
+    </div>
+
+    <div class="resumen-activity-strip" aria-label="Actividad reciente">
+      <div class="resumen-activity-strip__head">
+        <h6>Actividad reciente de mi perfil</h6>
+        <a href="#" class="resumen-activity-strip__link">Ver todo</a>
+      </div>
+      <div class="resumen-activity-strip__list">
+        <article class="resumen-activity-strip__item">
+          <span class="resumen-activity-strip__icon" aria-hidden="true"><i class="bi bi-file-earmark-text"></i></span>
+          <div class="resumen-activity-strip__copy">
+            <strong>Factura 000456 generada</strong>
+            <span>Paciente: Ana López Hernández</span>
+          </div>
+          <small>Hoy, 11:42 AM</small>
+        </article>
+        <article class="resumen-activity-strip__item">
+          <span class="resumen-activity-strip__icon" aria-hidden="true"><i class="bi bi-calendar-check"></i></span>
+          <div class="resumen-activity-strip__copy">
+            <strong>Cita agendada</strong>
+            <span>Paciente: Carlos Ramírez</span>
+          </div>
+          <small>Hoy, 10:15 AM</small>
+        </article>
+        <article class="resumen-activity-strip__item">
+          <span class="resumen-activity-strip__icon" aria-hidden="true"><i class="bi bi-file-earmark-x"></i></span>
+          <div class="resumen-activity-strip__copy">
+            <strong>Factura 000455 cancelada</strong>
+            <span>Paciente: María González</span>
+          </div>
+          <small>Ayer, 04:32 PM</small>
+        </article>
+      </div>
+      <button type="button" class="resumen-activity-strip__cta">Ir a actividad</button>
     </div>
 
 
