@@ -53435,8 +53435,21 @@ console.info('app.js loaded :: 20251123a');
 
   try{
 
-    // Mostrar siempre (antes solo en localhost); se puede desactivar con window.mxHideResetWidget = true;
-    if(window.mxHideResetWidget) return;
+    // Desactivado por defecto: solo habilitar con bandera explícita de desarrollo.
+    // Formas de habilitar:
+    // 1) window.mxEnableResetWidget = true
+    // 2) agregar ?dev_reset=1 a la URL
+    const devResetEnabled = (() => {
+      try{
+        if(window.mxHideResetWidget) return false;
+        if(window.mxEnableResetWidget === true) return true;
+        const params = new URLSearchParams(String(window.location?.search || ''));
+        return params.get('dev_reset') === '1';
+      }catch(_){
+        return false;
+      }
+    })();
+    if(!devResetEnabled) return;
 
     // Crear botón flotante solo una vez
     if(document.getElementById('mx-dev-reset')) return;
