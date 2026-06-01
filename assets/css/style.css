@@ -2629,7 +2629,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 
 /* ===== UX-Panel-01C2 · Datos Personales (compactación + separación conceptual) ===== */
-#p-info #t-info-datos{
+#p-info #t-info-datos.active{
   display:grid;
   grid-template-columns:minmax(176px,23%) minmax(0,77%);
   gap:.72rem;
@@ -2970,7 +2970,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   }
 }
 @media (max-width:1199px){
-  #p-info #t-info-datos{
+  #p-info #t-info-datos.active{
     grid-template-columns:minmax(160px,22%) minmax(0,78%);
   }
   #p-info #t-info-datos #mx-dg-media-card .mf-upload.square{
@@ -3034,7 +3034,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   .mm-grid:has(#p-info:not(.d-none)) .menu-sep{
     display:none !important;
   }
-  #p-info #t-info-datos{
+  #p-info #t-info-datos.active{
     grid-template-columns:1fr;
     gap:.62rem;
   }
