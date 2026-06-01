@@ -950,3 +950,39 @@ Ejemplos de referencia:
 - Disenar overlay movil real si se requiere navegacion lateral en movil.
 - Revisar si el dropdown superior del header se mantiene o se simplifica.
 - Validar responsive final del shell completo.
+
+## 25) UX-Shell-01D10 — Consolidación de Mi Perfil en menú inferior
+
+### 25.1 Estado actual
+- `Mi Perfil` vive como acceso inferior del sidebar.
+- Las opciones internas de `Mi Perfil` se concentran en su dropdown inferior.
+- El menu principal ya no debe mostrar botones grandes duplicados de:
+  - Informacion
+  - Consultorio
+  - Opiniones
+  - Seguridad
+  - Suscripcion
+- El dropdown inferior conserva esas opciones y ahora las muestra con iconos.
+- El dropdown inferior funciona en sidebar expandido y contraido.
+- En modo compacto, el dropdown se abre fuera del riel lateral para evitar recorte.
+
+### 25.2 Regla UX vigente
+- Menu principal del sidebar: modulos generales.
+- Dropdown inferior de `Mi Perfil`: opciones internas de cuenta/perfil.
+- No duplicar opciones internas de `Mi Perfil` en el menu principal.
+- No reactivar menu legacy de perfil.
+- Mantener el dropdown superior del header como respaldo transicional hasta una fase dedicada.
+
+### 25.3 Guardrails
+- No reactivar `menu-main d-none[data-group="perfil"]`.
+- No reactivar `menu-sub d-none[data-group="perfil"]`.
+- No romper `data-profile-panel`.
+- No tocar `openGroup`/`showPanel` fuera de una fase dedicada.
+- No usar el menu principal como sustituto de las opciones internas de `Mi Perfil`.
+- En sidebar compacto, no permitir que el dropdown inferior quede recortado.
+
+### 25.4 Deuda futura
+- Evaluar retiro o simplificacion del dropdown superior del header.
+- Disenar overlay movil real si se requiere navegacion lateral en movil.
+- Cerrar QA responsive final del shell/sidebar.
+- Documentar patron visual final del sidebar si se consolida como estandar del sistema.
