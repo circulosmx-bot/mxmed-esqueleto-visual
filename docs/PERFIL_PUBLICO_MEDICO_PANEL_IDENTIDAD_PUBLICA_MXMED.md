@@ -868,10 +868,10 @@ Ejemplos de referencia:
 - Publicar datos sensibles sin consentimiento explicito.
 - Perder auditoria de cambios sensibles.
 
-### 21.9 Microfases futuras recomendadas
-- `UX-Panel-01D3-B`: microcopy visual de privacidad/visibilidad en card Datos de contacto.
-- `UX-Panel-01D3-C`: UI placeholder de categorias seguridad/privado/publico/operativo/consultorio sin backend.
-- `UX-Panel-01D3-D`: diseno backend de `contact_points` + verificaciones.
+### 21.9 Microfases relacionadas y futuras recomendadas
+- `UX-Panel-01D3-B2`: microcopy visual de privacidad/visibilidad en card Datos de contacto (documentado).
+- `UX-Panel-01D3-C`: placeholder visual de categorias seguridad/privado/publico/operativo/consultorio (visual, sin backend).
+- `UX-Panel-01D3-D`: diseno backend de `contact_points` + verificaciones como siguiente fase natural.
 - `UX-Panel-01D3-E`: flags de visibilidad publica por plan.
 - `UX-Panel-01D3-F`: integracion canonica con perfil publico y consultorios.
 - `UX-Panel-01D3-G`: verificacion email/telefono/WhatsApp.
@@ -902,58 +902,110 @@ Ejemplos de referencia:
 - Se mantiene la ruta futura:
   - visibilidad publica solo con reglas explicitas de flag + plan (+ verificacion si aplica).
 
-## 23) UX-Shell-01C — Acceso inferior Mi Perfil en sidebar (transicional)
+## 23) UX-Panel-01D3-C — Placeholder visual de categorias de contacto
 
-### 23.1 Estado implementado
+### 23.1 Estado implementado en UI
+- En `Mi Perfil > Datos Personales > Datos Generales > Datos de contacto` se agrego un bloque visual transicional.
+- El bloque se titula: `Uso previsto de estos datos`.
+- Se ubica debajo del microcopy de privacidad/visibilidad y antes de los campos:
+  - `dp-correo`
+  - `dp-whatsapp`
+- Su objetivo es preparar visualmente la futura separacion de usos de contacto sin cambiar el comportamiento actual.
+
+### 23.2 Categorias visibles
+- El placeholder muestra cinco categorias futuras:
+  - `Seguridad`
+  - `Privado administrativo`
+  - `Publico`
+  - `Operativo`
+  - `Consultorio`
+- La categoria `Publico` incluye una etiqueta pasiva: `No activo`.
+- La etiqueta `No activo` no es boton, no es switch y no activa ningun estado.
+
+### 23.3 Alcance tecnico de la microfase
+- Esta microfase es solo visual.
+- No agrega logica funcional.
+- No publica datos.
+- No convierte correo ni WhatsApp en publicos.
+- No modifica `dp-correo`.
+- No modifica `dp-whatsapp`.
+- No toca `PATCH`.
+- No toca backend.
+- No toca endpoints.
+- No toca planes.
+- No crea reglas reales de visibilidad.
+- No crea verificacion real.
+- No cambia la privacidad actual.
+
+### 23.4 Regla futura para contacto publico
+- En fases futuras, un dato publico requerira:
+  - activacion explicita del profesional;
+  - regla de plan aplicable;
+  - validacion/verificacion si aplica;
+  - politica de visibilidad clara.
+- La presencia de `dp-correo` o `dp-whatsapp` en el panel privado no implica publicacion ni disponibilidad para pacientes.
+
+### 23.5 Validacion visual registrada
+- Desktop: el placeholder renderiza en 5 columnas sin overflow horizontal.
+- Tablet grande: el placeholder renderiza en 3 columnas sin overflow horizontal.
+- Movil: el placeholder renderiza en 1 columna sin overflow horizontal.
+- `dp-correo` sigue visible y unico.
+- `dp-whatsapp` sigue visible y unico.
+- Los tabs de `Datos Personales` siguen visibles.
+- Sidebar, header y shell no fueron afectados por esta microfase.
+
+## 24) UX-Shell-01C — Acceso inferior Mi Perfil en sidebar (transicional)
+
+### 24.1 Estado implementado
 - Se agrego un acceso inferior de `Mi Perfil` dentro del sidebar, con composicion visual tipo perfil/header:
   - avatar/icono de usuario;
   - label de perfil en modo expandido;
   - comportamiento compacto en sidebar contraido.
 - El acceso inferior reutiliza destinos actuales de perfil (`data-profile-panel`) sin crear rutas nuevas.
 
-### 23.2 Regla de convivencia de navegacion
+### 24.2 Regla de convivencia de navegacion
 - El menu legacy de perfil en sidebar sigue oculto (`menu-main d-none[data-group=\"perfil\"]` y `menu-sub d-none[data-group=\"perfil\"]`).
 - El dropdown superior del header sigue activo como respaldo transicional.
 - No se retiro aun el acceso duplicado del header en esta fase.
 
-### 23.3 Guardrails de la microfase
+### 24.3 Guardrails de la microfase
 - No se modifico logica de navegacion.
 - No se toco JS de panel/shell.
 - No se tocaron backend, SQL, endpoints ni contratos de datos.
 - No hubo cambios en PATCH, localStorage ni fuentes canonicas.
 
-### 23.4 Deuda futura recomendada
+### 24.4 Deuda futura recomendada
 - Evaluar simplificacion del header superior cuando exista evidencia de uso del acceso inferior.
 - Cerrar validacion responsive final (desktop/tablet/movil) del shell con sidebar expandido/contraido.
 - Definir si el dropdown superior se retira o se mantiene como respaldo permanente.
 
-## 24) UX-Shell-01D5 — Control de sidebar y comportamiento responsive de hamburguesa
+## 25) UX-Shell-01D5 — Control de sidebar y comportamiento responsive de hamburguesa
 
-### 24.1 Estado actual
+### 25.1 Estado actual
 - El boton/proxy de hamburguesa del header ya no es la referencia visual principal del sidebar.
 - El control visible de colapso/expansion queda asociado al sidebar en desktop y tablet grande.
 - En movil no se muestra hamburguesa porque todavia no existe overlay real de sidebar.
 
-### 24.2 Regla UX vigente
+### 25.2 Regla UX vigente
 - Desktop/tablet grande: el control de sidebar debe sentirse parte del sidebar, no del header.
 - Movil: no mostrar hamburguesa sin funcion visible.
 - Si en el futuro se implementa overlay movil, entonces se podra habilitar una hamburguesa movil especifica.
 
-### 24.3 Guardrails
+### 25.3 Guardrails
 - No reactivar el menu legacy de perfil del sidebar.
 - No volver a colocar el control de sidebar como accion principal del header sin justificacion de fase.
 - No romper `data-panel` ni `data-profile-panel`.
 - No tocar `openGroup`/`showPanel` fuera de una fase dedicada.
 - No convertir el header en menu principal mientras el sidebar cumpla esa funcion.
 
-### 24.4 Deuda futura
+### 25.4 Deuda futura
 - Disenar overlay movil real si se requiere navegacion lateral en movil.
 - Revisar si el dropdown superior del header se mantiene o se simplifica.
 - Validar responsive final del shell completo.
 
-## 25) UX-Shell-01D10 — Consolidación de Mi Perfil en menú inferior
+## 26) UX-Shell-01D10 — Consolidación de Mi Perfil en menú inferior
 
-### 25.1 Estado actual
+### 26.1 Estado actual
 - `Mi Perfil` vive como acceso inferior del sidebar.
 - Las opciones internas de `Mi Perfil` se concentran en su dropdown inferior.
 - El menu principal ya no debe mostrar botones grandes duplicados de:
@@ -966,14 +1018,14 @@ Ejemplos de referencia:
 - El dropdown inferior funciona en sidebar expandido y contraido.
 - En modo compacto, el dropdown se abre fuera del riel lateral para evitar recorte.
 
-### 25.2 Regla UX vigente
+### 26.2 Regla UX vigente
 - Menu principal del sidebar: modulos generales.
 - Dropdown inferior de `Mi Perfil`: opciones internas de cuenta/perfil.
 - No duplicar opciones internas de `Mi Perfil` en el menu principal.
 - No reactivar menu legacy de perfil.
 - Mantener el dropdown superior del header como respaldo transicional hasta una fase dedicada.
 
-### 25.3 Guardrails
+### 26.3 Guardrails
 - No reactivar `menu-main d-none[data-group="perfil"]`.
 - No reactivar `menu-sub d-none[data-group="perfil"]`.
 - No romper `data-profile-panel`.
@@ -981,15 +1033,15 @@ Ejemplos de referencia:
 - No usar el menu principal como sustituto de las opciones internas de `Mi Perfil`.
 - En sidebar compacto, no permitir que el dropdown inferior quede recortado.
 
-### 25.4 Deuda futura
+### 26.4 Deuda futura
 - Evaluar retiro o simplificacion del dropdown superior del header.
 - Disenar overlay movil real si se requiere navegacion lateral en movil.
 - Cerrar QA responsive final del shell/sidebar.
 - Documentar patron visual final del sidebar si se consolida como estandar del sistema.
 
-## 26) UX-Shell-01E5-D — Layout dashboard del panel principal de perfil
+## 27) UX-Shell-01E5-D — Layout dashboard del panel principal de perfil
 
-### 26.1 Estado implementado
+### 27.1 Estado implementado
 - El panel principal de perfil adopta una composicion tipo dashboard.
 - La card de completitud queda como bloque principal izquierdo.
 - La card `Actividad reciente de mi perfil` queda como bloque lateral derecho.
@@ -997,7 +1049,7 @@ Ejemplos de referencia:
 - La hilera de indicadores dejo de vivir dentro de la card superior.
 - Se elimino duplicidad visual de indicadores.
 
-### 26.2 Regla UX vigente
+### 27.2 Regla UX vigente
 - Card superior/izquierda: objetivo principal de completitud del perfil.
 - Card lateral derecha: actividad reciente.
 - Bloque inferior: indicadores clave.
@@ -1005,7 +1057,7 @@ Ejemplos de referencia:
 - La actividad reciente no debe competir como modulo principal del sidebar.
 - Los indicadores deben mantenerse como datos resumidos del estado del perfil/plataforma.
 
-### 26.3 Guardrails
+### 27.3 Guardrails
 - No duplicar indicadores entre card superior e indicadores clave.
 - No reintroducir `Actividad` como modulo principal si la estrategia final es convertirlo en dashboard/card.
 - No tocar navegacion inicial sin fase dedicada.
@@ -1013,7 +1065,7 @@ Ejemplos de referencia:
 - No conectar metricas a backend sin contrato definido.
 - No modificar `data-panel`, `data-profile-panel`, `openGroup`, `showPanel` fuera de fase dedicada.
 
-### 26.4 Deuda futura
+### 27.4 Deuda futura
 - Definir los 4 indicadores finales y su fuente de datos.
 - Definir si Agenda sera el panel inicial por defecto.
 - Definir si `Actividad reciente` se alimentara de eventos reales, auditoria o mock transicional.
