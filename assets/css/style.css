@@ -3121,6 +3121,76 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-size:.84rem;
   line-height:1.32;
 }
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-usage{
+  margin-top:.62rem;
+  padding:.66rem .7rem .72rem;
+  border:1px solid #d9e9ef;
+  border-radius:12px;
+  background:#f8fcfd;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-usage-head{
+  display:grid;
+  gap:.14rem;
+  margin-bottom:.48rem;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-usage-title{
+  font-size:.82rem;
+  font-weight:800;
+  color:#0d394f;
+  line-height:1.2;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-usage-note{
+  max-width:860px;
+  font-size:.74rem;
+  line-height:1.3;
+  color:#647b8a;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-usage-grid{
+  display:grid;
+  grid-template-columns:repeat(5, minmax(0, 1fr));
+  gap:.44rem;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-usage-item{
+  min-width:0;
+  padding:.48rem .5rem .5rem;
+  border:1px solid #e0edf2;
+  border-radius:10px;
+  background:#fff;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-usage-item-title{
+  display:flex;
+  align-items:center;
+  gap:.34rem;
+  min-width:0;
+  color:#123d55;
+  font-size:.75rem;
+  font-weight:800;
+  line-height:1.2;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-usage-copy{
+  margin-top:.18rem;
+  color:#6a8290;
+  font-size:.7rem;
+  line-height:1.28;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-usage-badge{
+  display:inline-flex;
+  align-items:center;
+  flex:0 0 auto;
+  border-radius:999px;
+  padding:.09rem .42rem;
+  font-size:.62rem;
+  font-weight:800;
+  line-height:1.2;
+  color:#6a7280;
+  background:#eef2f4;
+  border:1px solid #d7e0e5;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-usage-badge.is-inactive{
+  color:#69737b;
+  background:#f1f4f6;
+  border-color:#d8e0e5;
+}
 #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verify-status-row{
   margin-top:.36rem;
   display:flex;
@@ -3425,6 +3495,9 @@ body{margin:0;background:var(--mm-fondo-base);}
   }
 }
 @media (max-width:1199px){
+  #p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-usage-grid{
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+  }
   #p-info #t-info-datos.active{
     grid-template-columns:minmax(160px,22%) minmax(0,78%);
   }
@@ -3528,6 +3601,9 @@ body{margin:0;background:var(--mm-fondo-base);}
     line-height:1.28;
     padding:.4rem .54rem;
   }
+  #p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-usage-grid{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
   #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-birth .form-control,
   #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-gender .form-select,
   #p-info #t-info-datos #mx-dg-verified-card .mx-dg-col-ced .form-control,
@@ -3565,6 +3641,12 @@ body{margin:0;background:var(--mm-fondo-base);}
   }
 }
 @media (max-width:767px){
+  #p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-usage{
+    padding:.6rem .62rem .64rem;
+  }
+  #p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-usage-grid{
+    grid-template-columns:1fr;
+  }
   #p-info #t-info-datos #mx-dg-media-card .mf-upload.square{
     min-height:116px;
   }
