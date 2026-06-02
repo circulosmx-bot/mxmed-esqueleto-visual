@@ -29,6 +29,9 @@ html{
 
   --mm-header-top:#EAF6FB;
   --mm-global-header-h:62px;
+  --mm-sidebar-expanded-w:236px;
+  --mm-sidebar-collapsed-w:64px;
+  --mm-header-logo-panel-align-offset:28px; /* alinea inicio del logo con icono/titulo del panel */
 
   --mm-verde:#1fbf75;
   --agenda-origin-user:#2F80ED;
@@ -220,16 +223,83 @@ body{margin:0;background:var(--mm-fondo-base);}
   display:inline-flex;
   align-items:center;
   text-decoration:none;
-  border:1px solid rgba(0,49,82,.12);
-  border-radius:14px;
-  background:#fff;
-  box-shadow:0 6px 16px rgba(0,49,82,.10);
-  padding:4px 10px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  padding:0;
+  margin-inline-start:calc(var(--mm-sidebar-expanded-w) - var(--mm-header-logo-panel-align-offset));
 }
 .mx-gh-brand img{
   height:50px;
   width:auto;
   display:block;
+}
+.mx-gh-account-summary{
+  flex:1 1 auto;
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:22px;
+  padding-left:22px;
+  color:#003152;
+}
+.mx-gh-identity{
+  flex:1 1 auto;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  gap:2px;
+  font-family:'Asap','Carlito','IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  line-height:1;
+  white-space:nowrap;
+  overflow:hidden;
+}
+.mx-gh-identity-name{
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  font-size:clamp(1.48rem, 1.75vw, 1.62rem);
+  font-weight:800;
+  color:#003152;
+}
+.mx-gh-identity-role{
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  font-size:.88rem;
+  font-weight:700;
+  color:#003152;
+}
+.mx-gh-current-plan{
+  margin-left:auto;
+  flex:0 0 auto;
+  min-width:216px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:4px;
+  padding:9px 18px;
+  border:1px solid rgba(0, 173, 193, .7);
+  border-radius:8px;
+  background:linear-gradient(135deg, #04b9c5 0%, #008daa 100%);
+  box-shadow:0 7px 18px rgba(0, 141, 170, .24);
+  font-family:'Asap','Carlito','IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  line-height:1.05;
+}
+.mx-gh-current-plan-name{
+  font-size:1.06rem;
+  font-weight:700;
+  color:#fff;
+}
+.mx-gh-current-plan-renewal{
+  font-size:.84rem;
+  font-weight:600;
+  color:rgba(255,255,255,.94);
+  white-space:nowrap;
 }
 .mx-gh-profile-btn{
   display:flex;
@@ -285,8 +355,6 @@ body{margin:0;background:var(--mm-fondo-base);}
 .mm-grid{
 
   display:flex; gap:18px;
-  --mm-sidebar-expanded-w: 236px;
-  --mm-sidebar-collapsed-w: 64px;
 
   min-height:calc(100vh - var(--mm-global-header-h) - var(--mm-footer-h));
 
@@ -1100,6 +1168,43 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 }
 
+.mx-global-header .mx-gh-brand.menu-main{
+  width:auto;
+  min-height:0;
+  padding:0;
+  border:0;
+  border-radius:0;
+  gap:0;
+  display:inline-flex;
+  align-items:center;
+  justify-content:flex-start;
+  color:inherit;
+  font-family:inherit;
+  overflow:visible;
+  background:transparent;
+  box-shadow:none;
+  text-align:left;
+  transition:none;
+}
+.mx-global-header .mx-gh-brand.menu-main::before,
+.mx-global-header .mx-gh-brand.menu-main::after{
+  content:none;
+  display:none;
+}
+.mx-global-header .mx-gh-brand.menu-main:hover,
+.mx-global-header .mx-gh-brand.menu-main:focus-visible,
+.mx-global-header .mx-gh-brand.menu-main.active,
+.mx-global-header .mx-gh-brand.menu-main.active:hover,
+.mx-global-header .mx-gh-brand.menu-main.active:focus-visible{
+  background:transparent;
+  color:inherit;
+  text-decoration:none;
+}
+.mx-global-header .mx-gh-brand.menu-main:focus-visible{
+  outline:2px solid rgba(0, 160, 182, .45);
+  outline-offset:4px;
+}
+
 
 
 /* ================== ÁREA DERECHA ================== */
@@ -1327,9 +1432,32 @@ body{margin:0;background:var(--mm-fondo-base);}
   .mx-gh-toggle{
     display:none;
   }
+  .mx-gh-brand{
+    margin-inline-start:0;
+  }
   .mx-global-header .wrap{
     padding-inline:6px;
     gap:6px;
+  }
+  .mx-gh-account-summary{
+    gap:12px;
+    padding-left:10px;
+  }
+  .mx-gh-identity-name{
+    font-size:clamp(1.04rem, 2.35vw, 1.28rem);
+  }
+  .mx-gh-identity-role{
+    font-size:.74rem;
+  }
+  .mx-gh-current-plan{
+    min-width:174px;
+    padding:8px 12px;
+  }
+  .mx-gh-current-plan-name{
+    font-size:.92rem;
+  }
+  .mx-gh-current-plan-renewal{
+    font-size:.72rem;
   }
   .mx-gh-brand img{
     height:38px;
@@ -1358,6 +1486,13 @@ body{margin:0;background:var(--mm-fondo-base);}
   .mx-gh-brand img{
     height:40px;
   }
+  .mx-gh-account-summary{
+    gap:16px;
+    padding-left:16px;
+  }
+  .mx-gh-current-plan{
+    min-width:190px;
+  }
 }
 
 @media (max-width:576px){
@@ -1365,16 +1500,48 @@ body{margin:0;background:var(--mm-fondo-base);}
     padding-inline:4px;
   }
   .mx-gh-brand{
-    padding:3px 8px;
+    padding:0;
   }
   .mx-gh-brand img{
     height:34px;
+  }
+  .mx-gh-account-summary{
+    gap:7px;
+    padding-left:6px;
+  }
+  .mx-gh-identity{
+    flex:1 1 auto;
+    gap:1px;
+  }
+  .mx-gh-identity-name{
+    font-size:.78rem;
+  }
+  .mx-gh-identity-role{
+    font-size:.58rem;
+  }
+  .mx-gh-current-plan{
+    min-width:0;
+    padding:6px 8px;
+    border-radius:7px;
+  }
+  .mx-gh-current-plan-name{
+    font-size:.72rem;
+    white-space:nowrap;
+  }
+  .mx-gh-current-plan-renewal{
+    display:none;
   }
 }
 
 @media (min-width:993px){
   .mx-gh-toggle{
     display:inline-flex;
+  }
+  body.mx-sidebar-collapsed .mx-gh-brand{
+    margin-inline-start:calc(var(--mm-sidebar-collapsed-w) - var(--mm-header-logo-panel-align-offset));
+  }
+  body.mx-sidebar-expanded .mx-gh-brand{
+    margin-inline-start:calc(var(--mm-sidebar-expanded-w) - var(--mm-header-logo-panel-align-offset));
   }
   .mm-sidebar{
     position:sticky;
