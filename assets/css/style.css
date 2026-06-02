@@ -3464,6 +3464,12 @@ body{margin:0;background:var(--mm-fondo-base);}
   .mm-grid:has(#p-info:not(.d-none)) .mm-sidebar{
     width:var(--mm-sidebar-collapsed-w);
     flex-basis:var(--mm-sidebar-collapsed-w);
+    overflow:visible;
+    z-index:40;
+  }
+  .mm-grid:has(#p-info:not(.d-none)) .sidebar-profile-access .dropdown-menu{
+    left:calc(100% + 10px) !important;
+    right:auto !important;
   }
   .mm-grid:has(#p-info:not(.d-none)) .sidebar-toggle{
     justify-content:center;
