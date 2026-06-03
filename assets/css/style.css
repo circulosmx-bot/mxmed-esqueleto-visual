@@ -3457,6 +3457,38 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-info #t-info-datos #mx-public-identity-card textarea#mxpi-bio-short{
   min-height:88px;
 }
+@media (min-width:1200px){
+  #p-info #t-info-datos.active{
+    gap:.64rem;
+  }
+  #p-info #t-info-datos .mx-dg-card + .mx-dg-card{
+    margin-top:.68rem !important;
+  }
+  #p-info #t-info-datos #mx-public-identity-card .card-body{
+    padding:.76rem .86rem .88rem;
+  }
+  #p-info #t-info-datos #mx-public-identity-card .card-body > .d-flex{
+    margin-bottom:.34rem !important;
+  }
+  #p-info #t-info-datos #mx-public-identity-card .card-body > .d-flex .text-muted.small{
+    line-height:1.18;
+  }
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-public-grid{
+    row-gap:.46rem !important;
+  }
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-subsection{
+    padding:.34rem .48rem;
+  }
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-subsection-note{
+    line-height:1.18;
+  }
+  #p-info #t-info-datos #mx-public-identity-card .mxpi-field-note{
+    line-height:1.16;
+  }
+  #p-info #t-info-datos #mx-public-identity-card textarea#mxpi-bio-short{
+    min-height:72px;
+  }
+}
 @media (max-width:1180px) and (min-width:993px){
   .mm-grid:has(#p-info:not(.d-none)){
     gap:12px;
