@@ -1858,6 +1858,35 @@ body{margin:0;background:var(--mm-fondo-base);}
   gap:14px;
   align-items:stretch;
 }
+.mx-panel-subheader{
+  color:#fff;
+}
+.mx-panel-subheader--simple{
+  min-height:3.35rem;
+  display:flex;
+  align-items:center;
+}
+.mx-panel-subheader-main{
+  display:flex;
+  align-items:center;
+  gap:.7rem;
+  min-width:0;
+}
+.mx-panel-subheader-icon{
+  flex:0 0 auto;
+  font-size:3.25rem;
+  line-height:1;
+}
+.mx-panel-subheader-copy{
+  min-width:0;
+}
+.mx-panel-subheader-title{
+  margin:0;
+  color:inherit;
+  font-size:2rem;
+  font-weight:700;
+  line-height:1.12;
+}
 .mx-profile-completion-card{
   padding:16px 18px;
 }
