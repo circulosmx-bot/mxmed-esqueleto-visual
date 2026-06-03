@@ -3459,6 +3459,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 @media (min-width:1200px){
   #p-info #t-info-datos.active{
+    grid-template-columns:minmax(240px, 20%) minmax(0, 1fr);
     gap:.64rem;
   }
   #p-info #t-info-datos .mx-dg-card + .mx-dg-card{
