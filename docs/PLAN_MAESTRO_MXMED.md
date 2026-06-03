@@ -1104,6 +1104,7 @@ Refs:
 - `[shell]` UX-Shell-01D10 completado: documentada la consolidacion de Mi Perfil en el dropdown inferior del sidebar; menu principal reservado para modulos generales y dropdown inferior funcional en modo expandido/compacto.
 - `[shell]` UX-Shell-01E5-D completado: documentado el layout dashboard del panel principal de perfil, con completitud como bloque principal, actividad reciente como card lateral e indicadores clave como bloque inferior; pendiente definir metricas finales y decision de panel inicial.
 - `[shell]` UX-Shell-01H2 completado: header global con identidad profesional verificada, especialidad en etiqueta, estado de plan sin selector y accion visual transicional de vigencia; evidencia commit `75c1321` + QA UX-Shell-01H3 PASS sin cambios.
+- `[shell]` UX-Shell-02B completado: creado el primer piloto del componente maestro `mx-panel-subheader` y aplicado únicamente al subheader de `Panel principal de mi perfil`; evidencia commit `da76ef4`, sin cambios en JS, navegación, tabs ni otros subheaders.
 - `[profiles]` Siguiente recomendado: UX-Panel-01D3-D (diseno backend canonico de contacto como posible fase futura/refinamiento documental; sin implementacion definida todavia).
 
 ### 2a) Operación clínica extendida

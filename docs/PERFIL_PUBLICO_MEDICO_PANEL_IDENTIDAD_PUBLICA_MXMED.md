@@ -1129,3 +1129,35 @@ Ejemplos de referencia:
 - Definir si la verificacion visual se conectara a un proceso formal de validacion.
 - Definir fuente canonica futura de especialidad visible en header.
 - Definir comportamiento real de `Incrementar vigencia` solo cuando exista contrato comercial.
+
+## 29) UX-Shell-02B — Componente maestro de subheader aplicado a Panel principal
+
+### 29.1 Estado implementado
+- Commit de implementación: `da76ef4 style(shell): crea subheader maestro para panel principal`.
+- Se crea el primer piloto del componente maestro de subheader: `mx-panel-subheader`.
+- El piloto se aplica únicamente al subheader de `Panel principal de mi perfil`.
+- Se conserva el contenedor externo `.head` y la estructura del panel `#p-resumen`.
+- Se conserva el ícono `dashboard`.
+- Se conserva el título exacto `Panel principal de mi perfil`.
+- No se agregan descripción, acciones ni tabs en esta fase.
+
+### 29.2 Alcance técnico
+- Cambios de implementación limitados a `index.html` y `assets/css/style.css`.
+- Sin JS.
+- Sin backend.
+- Sin navegación nueva.
+- Sin cambios en Bootstrap behavior.
+- Sin modificación de tabs.
+- Sin migración de otros subheaders.
+
+### 29.3 Regla UX vigente
+- `mx-panel-subheader` queda como primer piloto del componente maestro de subheaders; futuras migraciones deberán realizarse por microfase separada.
+- El piloto no cambia el comportamiento del panel; solo normaliza la estructura visual del encabezado.
+- Otros subheaders siguen en el patrón legacy `.mm-card > .head > h5`.
+
+### 29.4 Validación
+- QA visual aprobado en desktop `1440x900`, desktop `1680x1000`, tablet `1024x768` y móvil `390x844`.
+- Sin overflow horizontal.
+- El logo sigue navegando a Panel principal.
+- Mi Perfil inferior y su dropdown siguen funcionando.
+- Otros subheaders permanecen sin cambios visuales.
