@@ -1072,3 +1072,60 @@ Ejemplos de referencia:
 - Documentar contrato futuro de metricas del dashboard.
 - Validar responsive final del panel principal.
 - Cerrar decision sobre el rol de `p-resumen`.
+
+## 28) UX-Shell-01H2 — Header global: identidad verificada y estado de plan
+
+### 28.1 Estado implementado
+- Commit de implementacion: `75c1321 style(shell): ajusta badge y estado de plan en header`.
+- QA posterior: `UX-Shell-01H3 — QA PASS sin cambios`.
+- El header global gana mayor altura visual y respiracion vertical.
+- El logo se mantiene visible, sin recuadro de fondo, y pulsable hacia el Panel principal.
+- El bloque del medico queda desplazado hacia la derecha respecto al logo y con mayor protagonismo.
+- El nombre visible del medico queda como `Dra. Leticia Muñoz Romo`.
+- El badge de verificacion queda a la derecha del nombre.
+- El badge es circular, usa fondo `#015684` y check blanco centrado.
+- La especialidad queda como `ENDOCRINÓLOGO`, sin el prefijo visual `Perfil Medico /`.
+- La especialidad se presenta como etiqueta turquesa con texto blanco.
+- El bloque de plan se muestra sin recuadro ni fondo turquesa, integrado sobre el fondo del header.
+- `Plan Óptimo` se muestra en color `#015684` y peso bold.
+- `Vigencia 17 de Agosto 2027` se muestra en color `#02adc1` y peso normal.
+- `+ Incrementar vigencia` se muestra como accion visual secundaria en color `#015684`, sin funcionalidad real.
+- En movil se ocultan vigencia y accion para preservar estabilidad responsive.
+
+### 28.2 Regla UX vigente
+- El header comunica identidad profesional y estado visual del plan, no administra planes reales.
+- La verificacion visual pertenece al nombre del medico y no sustituye un contrato de verificacion formal.
+- La especialidad funciona como etiqueta informativa, no como boton ni filtro.
+- El bloque de plan es estado visual transicional; no debe parecer selector de planes.
+- La accion `+ Incrementar vigencia` es solamente affordance visual transicional.
+- No hay selector de planes en esta fase.
+- No se reintroducen `Mi Perfil`, campana ni boton flotante `Restablecer` dentro del header.
+
+### 28.3 Alcance tecnico
+- Sin backend.
+- Sin JS.
+- Sin endpoints.
+- Sin planes reales todavia.
+- Sin flujo de pago.
+- Sin modal.
+- Sin navegacion nueva.
+
+### 28.4 Validacion
+- Desktop validado en `1440x900`, `1680x1000` y `1920x1080`.
+- Tablet validado en `1024x768`.
+- Movil validado en `390x844`.
+- Sin overflow horizontal observado.
+- El logo sigue navegando al Panel principal.
+- Los modulos principales siguen abriendo: Panel principal, Agenda, Pacientes, Notificaciones y Mi Perfil > Datos Personales.
+- Los tabs de Datos Personales siguen visibles:
+  - Datos Generales.
+  - Formacion Profesional.
+  - Principales Servicios.
+  - Enfermedades y Tratamientos.
+  - Fotos.
+
+### 28.5 Deuda futura
+- Definir contrato real de planes, vigencia, renovacion e incrementos.
+- Definir si la verificacion visual se conectara a un proceso formal de validacion.
+- Definir fuente canonica futura de especialidad visible en header.
+- Definir comportamiento real de `Incrementar vigencia` solo cuando exista contrato comercial.
