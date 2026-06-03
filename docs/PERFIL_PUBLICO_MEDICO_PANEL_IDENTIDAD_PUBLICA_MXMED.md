@@ -1161,3 +1161,34 @@ Ejemplos de referencia:
 - El logo sigue navegando a Panel principal.
 - Mi Perfil inferior y su dropdown siguen funcionando.
 - Otros subheaders permanecen sin cambios visuales.
+
+## 30) UX-Shell-02D — Segundo piloto de subheader: Opiniones
+
+### 30.1 Estado implementado
+- Commit de implementación: `fb6fd0d style(shell): migra subheader de opiniones`.
+- Se aplica `mx-panel-subheader` como segundo piloto, únicamente al subheader de `Opiniones recibidas en mi perfil`.
+- Se conserva el ícono Bootstrap `bi-chat-quote`.
+- Se conserva el título exacto `Opiniones recibidas en mi perfil`.
+- No se agrega CSS nuevo.
+- No se agregan descripción, acciones ni tabs.
+
+### 30.2 Alcance técnico
+- Cambio limitado a `index.html`.
+- Sin JS.
+- Sin backend.
+- Sin navegación nueva.
+- Sin cambios en Bootstrap behavior.
+- Sin modificación de tabs.
+- Sin migración de otros subheaders.
+
+### 30.3 Regla UX vigente
+- `mx-panel-subheader` ya tiene dos pilotos simples: Panel principal y Opiniones.
+- Las futuras migraciones deben seguir siendo por microfase separada.
+- Los subheaders con tabs, acciones o comportamiento sensible siguen pendientes de variante específica.
+
+### 30.4 Validación
+- QA visual aprobado en desktop `1440x900`, desktop `1680x1000`, tablet `1024x768` y móvil `390x844`.
+- El ícono Bootstrap `bi-chat-quote` quedó alineado con el título.
+- Sin overflow horizontal.
+- Mi Perfil inferior y su dropdown abren Opiniones correctamente.
+- Otros subheaders permanecen sin migración accidental.
