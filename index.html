@@ -993,12 +993,24 @@
                     </div>
                     <div class="row g-3">
                       <div class="col-md-6 col-lg-8 mx-dg-col-email">
-                        <label class="form-label" for="dp-correo">Correo Electrónico</label>
+                        <label class="form-label mx-dg-contact-field-label" for="dp-correo">
+                          <span>Correo Electrónico</span>
+                          <span class="mx-dg-contact-field-badge">Privado</span>
+                          <span class="mx-dg-contact-field-badge is-muted">No publicado</span>
+                        </label>
                         <input class="form-control" id="dp-correo" placeholder="nombre@correo.com">
+                        <div class="mx-dg-contact-field-note">Uso transicional privado. No alimenta el perfil público ni sustituye el futuro contacto público configurable.</div>
                       </div>
                       <div class="col-md-6 col-lg-4 mx-dg-col-phone">
                         <label class="form-label" for="dp-whatsapp">Teléfono Whatsapp</label>
                         <input class="form-control" id="dp-whatsapp" placeholder="+52 ...">
+                      </div>
+                      <div class="col-12">
+                        <div class="mx-dg-contact-privacy-strip">
+                          <span class="mx-dg-contact-field-badge">Privado</span>
+                          <span class="mx-dg-contact-field-badge is-muted">No publicado</span>
+                          <span>El correo y WhatsApp de esta tarjeta son transicionales y privados. No son el contacto público del perfil ni sustituyen el WhatsApp de cada consultorio.</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1668,7 +1680,7 @@
 
                   <div class="col-md-3"><label class="form-label" for="cons-tel3">Teléfono 03</label><div class="save-wrap"><input id="cons-tel3" class="form-control" inputmode="tel" data-validate="phone"/><div class="err-bubble">Ingresa un teléfono válido (7-15 dígitos).</div></div></div>
 
-                  <div class="col-md-3 mb-2"><label class="form-label" for="cons-wa">Whatsapp consultorio</label><div class="save-wrap"><input id="cons-wa" class="form-control" inputmode="tel" data-validate="phone" placeholder="+52 ..."/><div class="err-bubble">Ingresa un número válido (7-15 dígitos).</div></div></div>
+                  <div class="col-md-3 mb-2"><label class="form-label" for="cons-wa">Whatsapp consultorio</label><div class="save-wrap"><input id="cons-wa" class="form-control" inputmode="tel" data-validate="phone" placeholder="+52 ..."/><div class="err-bubble">Ingresa un número válido (7-15 dígitos).</div></div><div class="mx-cons-contact-note">Contacto de esta sede. Si sincronizas desde Datos de contacto, se copia el WhatsApp privado a este consultorio; no publica automáticamente todo el perfil.</div></div>
 
                   <div class="col-md-3"><label class="form-label" for="cons-urg1">Teléfono Urgencias 01</label><div class="save-wrap"><input id="cons-urg1" class="form-control" inputmode="tel" data-validate="phone"/><div class="err-bubble">Ingresa un teléfono válido (7-15 dígitos).</div></div></div>
 

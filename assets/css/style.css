@@ -3381,6 +3381,54 @@ body{margin:0;background:var(--mm-fondo-base);}
   background:#f1f4f6;
   border-color:#d8e0e5;
 }
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-field-label{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:.32rem;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-field-badge{
+  display:inline-flex;
+  align-items:center;
+  border-radius:999px;
+  padding:.08rem .4rem;
+  font-size:.62rem;
+  font-weight:800;
+  line-height:1.2;
+  color:#0c5f54;
+  background:#e8f8f4;
+  border:1px solid #c9ebe3;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-field-badge.is-muted{
+  color:#687680;
+  background:#f2f5f7;
+  border-color:#dbe4e8;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-field-note{
+  margin-top:.22rem;
+  color:#667c8a;
+  font-size:.72rem;
+  line-height:1.3;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-privacy-strip{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:.32rem .42rem;
+  padding:.42rem .52rem;
+  border:1px solid #dce9ee;
+  border-radius:10px;
+  background:#f9fcfd;
+  color:#627987;
+  font-size:.72rem;
+  line-height:1.3;
+}
+#p-consultorio .mx-cons-contact-note{
+  margin-top:.22rem;
+  color:#687c88;
+  font-size:.72rem;
+  line-height:1.3;
+}
 #p-info #t-info-datos #mx-dg-verified-card .mx-dg-verify-status-row{
   margin-top:.36rem;
   display:flex;
