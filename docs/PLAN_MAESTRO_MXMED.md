@@ -1106,6 +1106,7 @@ Refs:
 - `[shell]` UX-Shell-01H2 completado: header global con identidad profesional verificada, especialidad en etiqueta, estado de plan sin selector y accion visual transicional de vigencia; evidencia commit `75c1321` + QA UX-Shell-01H3 PASS sin cambios.
 - `[shell]` UX-Shell-02B completado: creado el primer piloto del componente maestro `mx-panel-subheader` y aplicado únicamente al subheader de `Panel principal de mi perfil`; evidencia commit `da76ef4`, sin cambios en JS, navegación, tabs ni otros subheaders.
 - `[shell]` UX-Shell-02D completado: segundo piloto de `mx-panel-subheader` aplicado únicamente al subheader de `Opiniones recibidas en mi perfil`; evidencia commit `fb6fd0d`, sin CSS nuevo, sin JS, navegación, tabs ni otros subheaders.
+- `[shell]` UX-Shell-02G completado: definido diseño maestro conceptual para tabs modernos asociados a subheaders (`mx-panel-tabs`), inspirado visualmente en Agenda pero sin reutilizar clases `mx-ag-*` ni lógica de Agenda; estrategia transicional conserva `mm-tabs`, Bootstrap pills, `data-bs-*` y `.tab-content`, con piloto futuro recomendado en `Paquetes y Promociones`.
 - `[profiles]` Siguiente recomendado: UX-Panel-01D3-D (diseno backend canonico de contacto como posible fase futura/refinamiento documental; sin implementacion definida todavia).
 
 ### 2a) Operación clínica extendida

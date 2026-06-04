@@ -1192,3 +1192,76 @@ Ejemplos de referencia:
 - Sin overflow horizontal.
 - Mi Perfil inferior y su dropdown abren Opiniones correctamente.
 - Otros subheaders permanecen sin migración accidental.
+
+## 31) UX-Shell-02G — Diseño maestro de tabs modernos asociados a subheaders
+
+### 31.1 Decisión UX
+- La estandarización visual del shell no se limita a `mx-panel-subheader`.
+- También se define un sistema maestro para tabs asociados a subheaders.
+- Agenda se toma como referencia visual por su patrón más moderno, compacto y responsivo.
+- Agenda es referencia visual, no dependencia técnica.
+- No se deben reutilizar clases `mx-ag-*`, atributos `data-ag-*` ni lógica propia de Agenda.
+- La migración de tabs debe realizarse por pilotos separados y sin migración global.
+
+### 31.2 Arquitectura conceptual propuesta
+Se mantiene:
+- `mx-panel-subheader`
+- `mx-panel-subheader--simple`
+- `mx-panel-subheader--with-tabs` o `mx-panel-subheader--tabs`
+
+Se agrega conceptualmente:
+- `mx-panel-tabs`
+- `mx-panel-tabs-list`
+- `mx-panel-tabs-item`
+- `mx-panel-tabs-link`
+- `mx-panel-tabs-icon`
+- `mx-panel-tabs-label`
+- `mx-panel-tabs--pills`
+- `mx-panel-tabs--compact` como variante futura opcional.
+
+### 31.3 Estrategia de compatibilidad aprobada
+La estrategia aprobada es una transición tipo Opción C:
+- conservar temporalmente `mm-tabs`;
+- conservar `mm-tabs-embed`;
+- conservar Bootstrap pills;
+- conservar `data-bs-toggle`;
+- conservar `data-bs-target`;
+- conservar `.tab-content`;
+- agregar clases `mx-panel-tabs*` de forma progresiva;
+- aplicar overrides acotados por panel piloto;
+- no modificar reglas globales de `.mm-tabs`, `.mm-tabs-embed` ni `.mm-tabs-rows`.
+
+### 31.4 Diferencia respecto a Agenda
+- Agenda usa clases `mx-ag-*`, JS propio y comportamiento operativo específico.
+- El nuevo sistema `mx-panel-tabs` no copia esa implementación literal.
+- Sólo toma como referencia visual:
+  - contenedor claro;
+  - borde sutil;
+  - botones compactos;
+  - estado activo claro;
+  - mejor comportamiento responsive.
+- El sistema maestro de tabs debe pertenecer al shell general, no al dominio Agenda.
+
+### 31.5 Piloto futuro recomendado
+- Siguiente piloto recomendado: `UX-Shell-02H — Piloto de tabs modernos en Paquetes y Promociones`.
+- `Paquetes y Promociones` se mantiene como laboratorio porque:
+  - tiene 3 tabs;
+  - no tiene acciones en el subheader;
+  - no pertenece a Agenda, Expediente, Pacientes ni Notificaciones;
+  - usa Bootstrap pills y permite validar compatibilidad sin tocar lógica sensible.
+- El piloto debe probar:
+  - `mx-panel-subheader--with-tabs`;
+  - `mx-panel-tabs`;
+  - convivencia con Bootstrap;
+  - tabs visualmente más cercanos al patrón moderno de Agenda.
+
+### 31.6 Riesgos y guardrails
+- No tocar Agenda.
+- No reutilizar `mx-ag-*`.
+- No tocar JS.
+- No tocar Bootstrap behavior.
+- No tocar `data-bs-*`.
+- No tocar `.tab-content`.
+- No afectar Datos Personales, Consultorio, Seguridad, Facturación ni Expediente.
+- No hacer migración global.
+- No limpiar estilos legacy hasta que todos los pilotos estén validados.
