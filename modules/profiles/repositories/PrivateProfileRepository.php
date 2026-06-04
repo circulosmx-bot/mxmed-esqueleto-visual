@@ -37,14 +37,7 @@ final class PrivateProfileRepository
         'prefix' => 'prefix',
         'gender' => 'gender',
         'gender_label' => 'gender_label',
-        'professional_license' => 'professional_license',
-        'specialty_license' => 'specialty_license',
-        'specialty_primary' => 'specialty_primary',
-        'specialty_secondary_json' => 'specialty_secondary_json',
         'bio_short' => 'bio_short',
-        'photo_url' => 'photo_url',
-        'avatar_url' => 'avatar_url',
-        'logo_url' => 'logo_url',
     ];
 
     public function __construct(PDO $pdo)

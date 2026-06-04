@@ -16,17 +16,17 @@ final class PrivateProfileController
         'prefix',
         'gender',
         'gender_label',
+        'bio_short',
+    ];
+
+    private const BLOCKED_FIELDS = [
         'professional_license',
         'specialty_license',
         'specialty_primary',
         'specialty_secondary',
-        'bio_short',
         'photo_url',
         'avatar_url',
         'logo_url',
-    ];
-
-    private const BLOCKED_FIELDS = [
         'profile_status',
         'is_public_candidate',
     ];
@@ -68,13 +68,26 @@ final class PrivateProfileController
             ]);
         }
         if (empty($prepared['editable'])) {
-            return $this->error('invalid_payload', 'no editable fields provided', $authMode, [
-                'blocked_fields' => array_values($prepared['blocked_fields']),
+            $row = $this->repository->fetchIdentity($doctorId);
+            if (!is_array($row)) {
+                return $this->error('profile_identity_not_found', 'profile identity not found', $authMode, [
+                    'blocked_fields_ignored' => array_values($prepared['blocked_fields']),
+                    'editable_fields_applied' => [],
+                    'no_editable_fields_applied' => true,
+                ]);
+            }
+
+            return $this->success($doctorId, $row, $authMode, [
+                'blocked_fields_ignored' => array_values($prepared['blocked_fields']),
+                'editable_fields_applied' => [],
+                'no_editable_fields_applied' => true,
             ]);
         }
 
         $updated = $this->repository->upsertIdentity($doctorId, $prepared['editable']);
-        $metaExtra = [];
+        $metaExtra = [
+            'editable_fields_applied' => array_keys($prepared['editable']),
+        ];
         if (!empty($prepared['blocked_fields'])) {
             $metaExtra['blocked_fields_ignored'] = array_values($prepared['blocked_fields']);
         }
@@ -102,25 +115,7 @@ final class PrivateProfileController
                 continue;
             }
 
-            if ($field === 'specialty_secondary') {
-                if (!is_array($value)) {
-                    $unknown[] = $field;
-                    continue;
-                }
-                $editable['specialty_secondary_json'] = json_encode(
-                    $this->sanitizeTextArray($value, 190, 12),
-                    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-                );
-                if ($editable['specialty_secondary_json'] === false) {
-                    $editable['specialty_secondary_json'] = '[]';
-                }
-                continue;
-            }
-
             $clean = $this->sanitizeText($value, $this->fieldMaxLength($field));
-            if (in_array($field, ['photo_url', 'avatar_url', 'logo_url'], true)) {
-                $clean = $this->sanitizeUrlLike($clean);
-            }
             $editable[$field] = $clean;
         }
 
