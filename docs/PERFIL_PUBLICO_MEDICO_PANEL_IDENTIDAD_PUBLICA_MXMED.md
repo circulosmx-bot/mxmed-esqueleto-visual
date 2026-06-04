@@ -1328,3 +1328,40 @@ La estrategia aprobada es una transición tipo Opción C:
 - Tabs validados: `SEGURIDAD` y `PRIVACIDAD`.
 - Contenido interno de Seguridad y Privacidad permanece estable.
 - Otros tabs y subheaders permanecen sin cambios accidentales.
+
+## 34) UX-Shell-02L — Consolidación mínima de base común mx-panel-tabs
+
+### 34.1 Estado implementado
+- Commit de implementación: `ca7322b style(shell): consolida base comun de tabs modernos`.
+- Se consolida una base común mínima opt-in para `mx-panel-tabs`.
+- La base común sólo afecta elementos que ya usan clases `mx-panel-tabs*`.
+- Se reduce duplicación CSS entre `#p-paquetes` y `#p-seguridad`.
+- No se convierte todavía en migración global de todos los tabs del sistema.
+
+### 34.2 Alcance técnico
+- Cambio limitado a `assets/css/style.css`.
+- Sin cambios en HTML.
+- Sin cambios en JS.
+- Sin cambios en navegación.
+- Sin cambios en Bootstrap behavior.
+- Sin cambios en Agenda ni clases `mx-ag-*`.
+- Sin cambios en tabs legacy que todavía no usan `mx-panel-tabs*`.
+
+### 34.3 Compatibilidad preservada
+- Se conservan `mm-tabs` y `mm-tabs-embed`.
+- Se conservan Bootstrap pills.
+- Se conservan `data-bs-*` y `.tab-content`.
+- Se conserva `selectPaqTab('#paq-crear')`.
+- No se modifican globalmente `mm-tabs`, `mm-tabs-embed`, `mm-tabs-rows`, `nav`, `nav-pills`, `nav-link` ni `tab-ico`.
+
+### 34.4 Overrides acotados
+- Se mantiene el ajuste específico `#p-seguridad .mx-panel-tabs .tab-ico` para compactar los íconos internos `verified_user` y `lock_person`.
+- Se conserva un override acotado para neutralizar el ancho legacy de `240px` en los pilotos `#p-paquetes` y `#p-seguridad`.
+- Los overrides siguen limitados a paneles ya migrados.
+
+### 34.5 Validación
+- QA visual y funcional aprobado en `Paquetes y Promociones` y `Seguridad`.
+- Validado en desktop `1440x900`, desktop `1680x1000`, tablet `1024x768` y móvil `390x844`.
+- Sin overflow horizontal.
+- Bootstrap tabs, `data-bs-*`, `.tab-content` y `selectPaqTab('#paq-crear')` siguen funcionando.
+- Datos Personales, Consultorio, Facturación, Expediente, Pacientes y Notificaciones no cambiaron.
