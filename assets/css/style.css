@@ -1911,6 +1911,12 @@ body{margin:0;background:var(--mm-fondo-base);}
   flex:0 1 auto;
   margin:0;
 }
+#p-facturacion .mx-panel-tabs{
+  flex-wrap:wrap;
+}
+#p-facturacion .mx-panel-tabs .nav-item.mx-panel-tabs-item{
+  flex:0 1 auto;
+}
 .mx-panel-tabs .nav-link.mx-panel-tabs-link{
   width:auto;
   height:auto;
