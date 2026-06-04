@@ -1441,3 +1441,58 @@ La estrategia aprobada es una transición tipo Opción C:
 - Sin overflow horizontal.
 - Sin errores de consola relacionados con Facturación.
 - Otros tabs y subheaders permanecen sin cambios accidentales.
+
+## 37) UX-Consultorio-01H — Estabilización de Consultorio multisede
+
+### 37.1 Fuente de datos confirmada
+- Consultorio no usa un mock puro para lectura/guardado.
+- Usa backend real con MySQL.
+- Endpoint de lectura: `/api/agenda/index.php/consultorios?doctor_id=1`.
+- Endpoint de guardado: `PUT /api/agenda/index.php/consultorios`.
+- Tabla real: `consultorios`.
+- Frontend principal: `assets/js/perfil/consultorio/multisede.js`.
+
+### 37.2 Problema detectado
+- Después del intento visual `UX-Shell-02R`, los datos de Consultorio parecían desaparecer.
+- El commit visual se revirtió con `ebd398c Revert "style(shell): aplica tabs con accion en consultorio"`.
+- La causa persistente no era el HTML/CSS revertido, sino que la hidratación multisede dejaba activo `#sede3`.
+- Al quedar activo `#sede3`, los datos principales de `#sede1` quedaban ocultos al cargar.
+- Además, la base MySQL local tenía registros incompletos, lo que hacía que algunas sedes parecieran vacías.
+
+### 37.3 Fixes aplicados
+- `35ff9b3 fix(consultorio): restaura sede principal tras hidratacion multisede`.
+  - Restaura `#sede1` al abrir Consultorio desde navegación normal.
+  - No elimina `#sede2`, `#sede3` ni `#sede-add`.
+- `868aeb9 fix(consultorio): evita autosave durante hidratacion multisede`.
+  - Evita `PUTs` automáticos durante hidratación.
+  - Evita que `updated_at` cambie sólo por abrir o recargar Consultorio.
+  - Mantiene el guardado real cuando el usuario edita datos.
+
+### 37.4 Datos demo locales
+- Se poblaron datos locales en MySQL para `doctor_id=1`.
+- Sedes demo usadas para QA visual:
+  - `Consultorio Principal`.
+  - `Consultorio Norte`.
+  - `Consultorio Sur`.
+- No hubo commit por esta carga, porque sólo modificó datos locales de base de datos.
+- Los datos sirven como base visual controlada para QA de Consultorio multisede.
+
+### 37.5 Guardrails vigentes
+- No retomar `mx-panel-tabs` en Consultorio por ahora.
+- Consultorio queda excluido temporalmente de la migración visual de tabs.
+- Si se retoma, debe hacerse con nueva estrategia, diagnóstico separado y QA exhaustivo.
+- No mover `#btn-consul-add` fuera del `ul` sin fase dedicada.
+- No tocar lógica multisede sin validar hidratación, cambio de sede, creación de sede y guardado real.
+- No permitir autosave durante hidratación.
+
+### 37.6 Validación y pendientes
+- Consultorio abre desde navegación normal en `#sede1`.
+- `#sede1`, `#sede2` y `#sede3` hidratan datos visibles.
+- Click en sedes 2 y 3 funciona.
+- `#sede-add` sigue existiendo.
+- Edición real sigue disparando guardado.
+- Sin overflow horizontal.
+- No se reintroduce `mx-panel-tabs` en Consultorio.
+- El `409 Conflict` observado queda marcado como preexistente/no relacionado.
+- Datos Personales sigue pendiente y no debe migrarse todavía a `mx-panel-tabs`.
+- Consultorio podría requerir en el futuro una variante especial para tabs con acción, pero queda pausado.
