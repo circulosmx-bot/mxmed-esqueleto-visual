@@ -1496,3 +1496,49 @@ La estrategia aprobada es una transición tipo Opción C:
 - El `409 Conflict` observado queda marcado como preexistente/no relacionado.
 - Datos Personales sigue pendiente y no debe migrarse todavía a `mx-panel-tabs`.
 - Consultorio podría requerir en el futuro una variante especial para tabs con acción, pero queda pausado.
+
+## 38) SYS-Data-01E — Contrato seguro de identidad pública
+
+### 38.1 Estado implementado
+- Commit de implementación: `1137739 fix(profiles): bloquea campos verificados en patch privado`.
+- Se endurece el contrato del endpoint privado `/api/profiles/private/doctor/{doctor_id}`.
+- El `PATCH` privado de identidad pública sólo permite guardar campos realmente editables por el usuario.
+- La fuente canónica sigue siendo `profiles_doctors`.
+
+### 38.2 Campos permitidos por PATCH
+- `display_name`.
+- `prefix`.
+- `gender`.
+- `gender_label`.
+- `bio_short`.
+
+### 38.3 Campos bloqueados o ignorados
+- `professional_license`.
+- `specialty_license`.
+- `specialty_primary`.
+- `specialty_secondary`.
+- `profile_status`.
+- `is_public_candidate`.
+- Campos administrativos.
+- Media pública, incluyendo `photo_url`, `avatar_url` y `logo_url`, por ahora.
+- Contacto privado y contacto público, por ahora.
+
+### 38.4 Comportamiento del contrato
+- Los campos bloqueados no se guardan desde este `PATCH`.
+- Si llegan campos bloqueados desde la UI transicional, no rompen el guardado.
+- Los campos bloqueados se reportan en metadata como `blocked_fields_ignored`.
+- El `GET` privado y la respuesta del `PATCH` siguen devolviendo cédulas, especialidad, estado y candidatura como datos de lectura.
+- Si el `PATCH` trae sólo campos bloqueados, no escribe base de datos ni toca `updated_at`.
+
+### 38.5 Motivo de la decisión
+- Evitar edición libre de información verificada.
+- Preparar el contrato para producción.
+- Separar identidad pública editable de información verificada o administrativa.
+- Evitar duplicidad entre Datos Personales legacy, `localStorage dp:*` y `profiles_doctors`.
+- Mantener compatibilidad con la UI actual mientras se retiran campos transicionales.
+
+### 38.6 Pendientes
+- Diseñar solicitud de cambio para información verificada.
+- Normalizar contacto privado y contacto público en contrato separado.
+- Retirar `dp:*` como fuente productiva.
+- Ajustar la UI en una fase posterior para que cédulas y especialidad se vean realmente como sólo lectura.
