@@ -1542,3 +1542,115 @@ La estrategia aprobada es una transición tipo Opción C:
 - Normalizar contacto privado y contacto público en contrato separado.
 - Retirar `dp:*` como fuente productiva.
 - Ajustar la UI en una fase posterior para que cédulas y especialidad se vean realmente como sólo lectura.
+
+## 39) SYS-Data-01G — Contrato canónico de contact_points
+
+### 39.1 Decisión general
+- Se define como contrato futuro un dominio canónico de contacto del médico.
+- Nombre conceptual sugerido: `contact_points` o `doctor_contact_points`.
+- El contrato deberá vivir en endpoint separado:
+  - `GET /api/profiles/private/doctor/{doctor_id}/contact-points`.
+  - `PATCH /api/profiles/private/doctor/{doctor_id}/contact-points`.
+- No se debe extender por ahora el `PATCH /api/profiles/private/doctor/{doctor_id}` de identidad pública para guardar contacto.
+- Esta fase es documental: no crea tablas, endpoints, migraciones ni cambios funcionales.
+
+### 39.2 Tipos de contacto
+- `contacto_privado`:
+  - correo administrativo;
+  - WhatsApp privado;
+  - teléfono privado;
+  - uso interno de plataforma;
+  - no público por defecto.
+- `contacto_publico`:
+  - teléfono público;
+  - WhatsApp público;
+  - correo público, si aplica;
+  - requiere opt-in explícito;
+  - puede requerir plan habilitado;
+  - puede requerir verificación;
+  - no se infiere desde contacto privado.
+- `contacto_operativo`:
+  - notificaciones;
+  - Agenda;
+  - recordatorios;
+  - seguridad;
+  - operadores;
+  - uso interno.
+- `contacto_administrativo_plataforma`:
+  - facturación de plataforma;
+  - soporte;
+  - cobranza;
+  - administración de cuenta.
+- `contacto_consultorio`:
+  - domicilio;
+  - teléfonos por sede;
+  - WhatsApp por sede;
+  - mapa/coordenadas;
+  - horarios;
+  - fuente canónica actual: `consultorios`.
+
+### 39.3 Relación con fuentes actuales
+- `dp-correo` y `dp-whatsapp` quedan como UI transicional/legacy.
+- `dp-correo` y `dp-whatsapp` no deben publicarse automáticamente.
+- `consultorios.telefonos_json` y `consultorios.whatsapp` siguen siendo canónicos para contacto por sede.
+- `profiles_doctors` no debe crecer como contenedor de contacto privado.
+- `patients_contacts` pertenece a pacientes y no debe usarse para contacto del médico.
+- Seguridad/2FA no debe mezclarse con contacto público.
+- Operadores de Agenda siguen en su propio dominio, por ejemplo `agenda_operators`.
+
+### 39.4 Modelo conceptual futuro
+- Campos conceptuales para `contact_points` o `doctor_contact_points`:
+  - `contact_point_id`;
+  - `doctor_id`;
+  - `type`: `email`, `phone`, `whatsapp`;
+  - `value`;
+  - `scope`: `private`, `public`, `operational`, `platform_admin`;
+  - `label`;
+  - `is_public`;
+  - `is_verified`;
+  - `use_for_security`;
+  - `use_for_platform_admin`;
+  - `use_for_public_profile`;
+  - `use_for_appointments`;
+  - `consultorio_id`, nullable sólo si aplica;
+  - `visibility_plan_min`;
+  - `status`;
+  - `created_at`;
+  - `updated_at`.
+- Este modelo es conceptual y no implica implementación en esta microfase.
+
+### 39.5 Reglas de publicación
+- Todo contacto capturado es privado por defecto.
+- Ningún contacto de `dp-correo` o `dp-whatsapp` se publica automáticamente.
+- Contacto público requiere opt-in explícito.
+- Contacto público puede depender del plan.
+- Si baja de plan, el contacto público se oculta pero no se borra.
+- Contacto privado se conserva aunque no sea público.
+- Contacto por consultorio se publica por sede sólo si la sede y los flags lo permiten.
+- WhatsApp privado nunca se convierte automáticamente en WhatsApp público.
+- Correo administrativo nunca se muestra al paciente por defecto.
+- El DTO público debe recibir visibilidad ya resuelta por backend, no inferirla sólo por plan.
+
+### 39.6 Relación con planes
+- Plan gratuito: sin contacto directo público.
+- Planes pagos: pueden habilitar contacto público con opt-in y reglas.
+- Baja de plan: conservar datos, ocultar publicación.
+- Datos privados y operativos no dependen de visibilidad pública.
+- Contacto por sede existe aunque no sea visible públicamente.
+
+### 39.7 Guardrails
+- No duplicar contacto general en `consultorios`.
+- No duplicar contacto por sede en `contact_points` salvo diseño explícito.
+- No usar `patients_contacts` para contacto del médico.
+- No usar `profiles_doctors` para contacto privado.
+- No usar `localStorage dp:*` como fuente productiva.
+- No publicar contacto sin flags.
+- No mezclar seguridad/2FA con contacto público.
+
+### 39.8 Pendientes
+- `SYS-Data-01H — Diseñar schema y endpoints privados de contact_points`.
+- `SYS-Data-01I — Bloquear publicación automática de dp-correo/dp-whatsapp`.
+- `SYS-Data-01J — Migrar dp-correo/dp-whatsapp a contacto privado`.
+- `SYS-Data-01K — Definir visibilidad pública de contacto por plan`.
+- `SYS-Data-01L — Integrar contacto público al DTO SSR con flags`.
+- `SYS-Data-01M — Auditar sincronización WhatsApp Datos Personales ↔ Consultorio`.
