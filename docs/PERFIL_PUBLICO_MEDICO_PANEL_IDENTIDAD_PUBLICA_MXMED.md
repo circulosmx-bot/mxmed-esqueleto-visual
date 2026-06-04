@@ -1294,3 +1294,37 @@ La estrategia aprobada es una transición tipo Opción C:
 - Tabs validados: `Activos`, `Crear/Editar`, `Historial`.
 - `selectPaqTab('#paq-crear')` sigue activando el tab `Crear/Editar`.
 - Otros tabs y subheaders permanecen sin cambios accidentales.
+
+## 33) UX-Shell-02J — Segundo piloto de tabs modernos en Seguridad
+
+### 33.1 Estado implementado
+- Commit de implementación: `eed4d92 style(shell): aplica tabs modernos en seguridad`.
+- Se aplica `mx-panel-tabs` al panel `Seguridad`.
+- El subheader del panel usa `mx-panel-subheader--with-tabs`.
+- Es el segundo piloto real de `mx-panel-tabs`, después de `Paquetes y Promociones`.
+- El CSS nuevo queda acotado a `#p-seguridad`.
+
+### 33.2 Compatibilidad preservada
+- Se conservan `mm-tabs` y `mm-tabs-embed`.
+- Se conservan Bootstrap pills.
+- Se conservan `data-bs-*` y `.tab-content`.
+- No se toca JS ni Bootstrap behavior.
+- No se toca Agenda, Paquetes ni clases `mx-ag-*`.
+
+### 33.3 Ajuste fino
+- Se agrega ajuste acotado a `#p-seguridad .mx-panel-tabs .tab-ico`.
+- El ajuste compacta los íconos internos `verified_user` y `lock_person`.
+- El objetivo es acercar visualmente Seguridad al patrón moderno validado en Paquetes.
+
+### 33.4 Alcance
+- Cambios de implementación limitados a `index.html` y `assets/css/style.css`.
+- Sin cambios en Agenda, Expediente, Pacientes ni Notificaciones.
+- Sin cambios en Datos Personales, Consultorio, Facturación ni Suscripción.
+- Sin migración de otros tabs o subheaders.
+
+### 33.5 Validación
+- QA visual y funcional aprobado en desktop `1440x900`, desktop `1680x1000`, tablet `1024x768` y móvil `390x844`.
+- Sin overflow horizontal.
+- Tabs validados: `SEGURIDAD` y `PRIVACIDAD`.
+- Contenido interno de Seguridad y Privacidad permanece estable.
+- Otros tabs y subheaders permanecen sin cambios accidentales.
