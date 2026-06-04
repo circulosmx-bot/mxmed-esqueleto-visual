@@ -3494,6 +3494,8 @@ function mxClearHorarioInputs(inputs){
     let groupSuggestCloseHandler = null;
     let groupSuggestPaneKey = '';
     const deferredSaveQueue = new Map();
+    let consultorioHydratedOnce = false;
+    let restorePrimaryOnNormalOpen = false;
 
     const clean = (value)=> String(value ?? '').trim();
     const resolveDoctorId = ()=> clean(resolveActiveDoctorId());
@@ -3522,6 +3524,29 @@ function mxClearHorarioInputs(inputs){
         window._mx_createConsultorio(idx);
       }
       return getPaneByIndex(idx);
+    };
+    const restorePrimaryConsultorioPaneAfterHydration = ()=>{
+      const tabBtn = root.querySelector('[data-bs-target="#sede1"]');
+      const pane = getPaneByIndex(1);
+      if(!tabBtn || !pane) return false;
+      try{
+        if(window.bootstrap?.Tab){
+          window.bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+        }else{
+          tabBtn.click();
+        }
+      }catch(_){
+        try{ tabBtn.click(); }catch(__){ return false; }
+      }
+      refreshScheduleHeaders();
+      return true;
+    };
+    const queuePrimaryConsultorioRestore = ()=>{
+      window.setTimeout(()=>{
+        if(restorePrimaryConsultorioPaneAfterHydration()){
+          restorePrimaryOnNormalOpen = false;
+        }
+      }, 0);
     };
     const getField = (pane, selector)=> pane?.querySelector(selector);
     const getScheduleHeaderNodes = (pane)=>{
@@ -4761,8 +4786,23 @@ function mxClearHorarioInputs(inputs){
             queueSavePane(entry.idx, entry.delay, entry.reason);
           });
         }
+        consultorioHydratedOnce = true;
+        if(restorePrimaryOnNormalOpen){
+          queuePrimaryConsultorioRestore();
+        }
       }
     };
+
+    document.addEventListener('click', (event)=>{
+      const target = event.target instanceof Element
+        ? event.target.closest('.menu-sub-btn[data-panel="p-consultorio"], [data-profile-panel="p-consultorio"]')
+        : null;
+      if(!target) return;
+      restorePrimaryOnNormalOpen = true;
+      if(consultorioHydratedOnce){
+        queuePrimaryConsultorioRestore();
+      }
+    }, true);
 
     root.addEventListener('input', (event)=>{
       const target = event.target;
