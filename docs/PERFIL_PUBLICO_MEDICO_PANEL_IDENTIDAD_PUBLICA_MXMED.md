@@ -1654,3 +1654,85 @@ La estrategia aprobada es una transición tipo Opción C:
 - `SYS-Data-01K — Definir visibilidad pública de contacto por plan`.
 - `SYS-Data-01L — Integrar contacto público al DTO SSR con flags`.
 - `SYS-Data-01M — Auditar sincronización WhatsApp Datos Personales ↔ Consultorio`.
+
+## 40) SYS-Data-01M — Schema de doctor_contact_points
+
+### 40.1 Estado implementado
+- Commit de implementación: `73ba0d3 db(profiles): agrega schema de doctor contact points`.
+- Se crea en repositorio el archivo `modules/profiles/db/doctor_contact_points_schema.sql`.
+- El archivo prepara la futura tabla `doctor_contact_points`.
+- La migración todavía no fue ejecutada.
+- No se toca MySQL.
+- No se crean endpoints.
+- No se conecta UI.
+- No se migran `dp-correo` ni `dp-whatsapp`.
+
+### 40.2 Propósito
+- Preparar el dominio canónico futuro de contactos del médico.
+- Separar contacto privado, público, operativo y administrativo/plataforma.
+- Evitar usar `profiles_doctors` como contenedor de contacto privado.
+- Evitar usar `patients_contacts`, que pertenece al dominio de pacientes.
+- Evitar duplicar contacto de `consultorios`.
+
+### 40.3 Tabla y campos principales
+- Tabla futura: `doctor_contact_points`.
+- Campos principales:
+  - `contact_point_id`;
+  - `doctor_id`;
+  - `consultorio_id`, nullable y reservado;
+  - `type`;
+  - `value`;
+  - `normalized_value`;
+  - `label`;
+  - `scope`;
+  - `is_public`;
+  - `is_verified`;
+  - `verification_status`;
+  - flags `use_for_*`;
+  - `visibility_plan_min`;
+  - `status`;
+  - `sort_order`;
+  - `source`;
+  - `metadata_json`;
+  - `created_at`;
+  - `updated_at`;
+  - `deleted_at`;
+  - `active_normalized_value`.
+
+### 40.4 Regla de unicidad
+- El índice único evita duplicados activos por `doctor_id`, `type` y `active_normalized_value`.
+- `scope` no forma parte del índice único.
+- La decisión evita duplicar el mismo contacto activo sólo por cambiar de `scope`.
+- Los usos se modelan con flags `use_for_*`, no con filas duplicadas.
+- La columna generada `active_normalized_value` permite soft delete sin bloquear un nuevo registro activo.
+
+### 40.5 Relación con Consultorio
+- `consultorios.telefonos_json` y `consultorios.whatsapp` siguen siendo fuente canónica de contacto por sede.
+- `consultorio_id` queda reservado para casos futuros explícitos.
+- No se debe duplicar automáticamente contacto por sede en `doctor_contact_points`.
+
+### 40.6 Relación con Datos Personales
+- `dp-correo` y `dp-whatsapp` siguen como campos transicionales basados en `localStorage`.
+- No se migran automáticamente a `doctor_contact_points`.
+- Una migración futura requerirá confirmación o flujo explícito.
+- Todo contacto importado desde legacy debe nacer privado y no público.
+
+### 40.7 Reglas de publicación
+- Contacto público requiere opt-in explícito.
+- También requiere estado activo, flags de visibilidad y gating de plan.
+- El perfil público debe recibir contactos ya filtrados por backend.
+- No se debe publicar contacto privado.
+- No se debe inferir contacto público sólo por plan.
+
+### 40.8 Rollback conceptual
+- Rollback conceptual documentado en el SQL:
+  - `DROP TABLE IF EXISTS doctor_contact_points`.
+- Ese rollback no fue ejecutado.
+
+### 40.9 Pendientes
+- Diseñar repositorio y endpoints privados.
+- Ejecutar la migración en entorno controlado.
+- Implementar endpoint privado `GET/PATCH`.
+- Diseñar importación desde `dp-correo` y `dp-whatsapp`.
+- Integrar al DTO público con visibilidad resuelta.
+- Ejecutar QA de privacidad y publicación.
