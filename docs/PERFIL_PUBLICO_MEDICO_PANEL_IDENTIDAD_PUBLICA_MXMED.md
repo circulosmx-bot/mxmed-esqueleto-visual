@@ -1265,3 +1265,32 @@ La estrategia aprobada es una transición tipo Opción C:
 - No afectar Datos Personales, Consultorio, Seguridad, Facturación ni Expediente.
 - No hacer migración global.
 - No limpiar estilos legacy hasta que todos los pilotos estén validados.
+
+## 32) UX-Shell-02H — Piloto de tabs modernos en Paquetes y Promociones
+
+### 32.1 Estado implementado
+- Commit de implementación: `2ae3b9f style(shell): crea piloto de tabs modernos en paquetes`.
+- Se implementa el primer piloto de `mx-panel-tabs` en `Paquetes y Promociones`.
+- El subheader del panel usa `mx-panel-subheader--with-tabs`.
+- El patrón visual se inspira en Agenda, pero sin tocar Agenda ni reutilizar clases `mx-ag-*`.
+- El CSS nuevo queda acotado a `#p-paquetes`.
+
+### 32.2 Compatibilidad preservada
+- Se conservan `mm-tabs` y `mm-tabs-embed`.
+- Se conservan Bootstrap pills.
+- Se conservan `data-bs-toggle`, `data-bs-target` y `.tab-content`.
+- Se conserva `selectPaqTab('#paq-crear')`.
+- No se toca JS, navegación ni Bootstrap behavior.
+
+### 32.3 Alcance
+- Cambios de implementación limitados a `index.html` y `assets/css/style.css`.
+- Sin cambios en Agenda, Expediente, Pacientes ni Notificaciones.
+- Sin cambios en Datos Personales, Consultorio, Seguridad, Facturación ni Suscripción.
+- Sin migración de otros tabs o subheaders.
+
+### 32.4 Validación
+- QA visual y funcional aprobado en desktop `1440x900`, desktop `1680x1000`, tablet `1024x768` y móvil `390x844`.
+- Sin overflow horizontal.
+- Tabs validados: `Activos`, `Crear/Editar`, `Historial`.
+- `selectPaqTab('#paq-crear')` sigue activando el tab `Crear/Editar`.
+- Otros tabs y subheaders permanecen sin cambios accidentales.

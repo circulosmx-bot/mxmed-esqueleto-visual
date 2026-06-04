@@ -1107,6 +1107,7 @@ Refs:
 - `[shell]` UX-Shell-02B completado: creado el primer piloto del componente maestro `mx-panel-subheader` y aplicado únicamente al subheader de `Panel principal de mi perfil`; evidencia commit `da76ef4`, sin cambios en JS, navegación, tabs ni otros subheaders.
 - `[shell]` UX-Shell-02D completado: segundo piloto de `mx-panel-subheader` aplicado únicamente al subheader de `Opiniones recibidas en mi perfil`; evidencia commit `fb6fd0d`, sin CSS nuevo, sin JS, navegación, tabs ni otros subheaders.
 - `[shell]` UX-Shell-02G completado: definido diseño maestro conceptual para tabs modernos asociados a subheaders (`mx-panel-tabs`), inspirado visualmente en Agenda pero sin reutilizar clases `mx-ag-*` ni lógica de Agenda; estrategia transicional conserva `mm-tabs`, Bootstrap pills, `data-bs-*` y `.tab-content`, con piloto futuro recomendado en `Paquetes y Promociones`.
+- `[shell]` UX-Shell-02H completado: primer piloto de `mx-panel-tabs` implementado en `Paquetes y Promociones` junto con `mx-panel-subheader--with-tabs`; evidencia commit `2ae3b9f`, CSS acotado a `#p-paquetes`, conserva Bootstrap pills, `mm-tabs`, `data-bs-*`, `.tab-content` y `selectPaqTab('#paq-crear')`.
 - `[profiles]` Siguiente recomendado: UX-Panel-01D3-D (diseno backend canonico de contacto como posible fase futura/refinamiento documental; sin implementacion definida todavia).
 
 ### 2a) Operación clínica extendida
