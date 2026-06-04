@@ -4974,6 +4974,10 @@ function mxClearHorarioInputs(inputs){
           consultorio_index: idx
         });
       }catch(_){ }
+      if(hydrateInProgress){
+        refreshScheduleHeaders();
+        return;
+      }
       window.setTimeout(()=>{
         materializeConsultorioRow(idx, 'pane_created_immediate').catch(()=> null);
         queueSavePane(idx, 140, 'pane_created');
