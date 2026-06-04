@@ -261,7 +261,7 @@ final class PublicProfileController
             $mapped[] = [
                 'consultorio_id' => $consultorioId,
                 'public_name' => $title,
-                'address' => $this->firstNonEmpty($mapPayload['address_compact'] ?? null),
+                'address' => $this->buildPublicConsultorioAddress($row, $mapPayload),
                 'city' => $this->firstNonEmpty($row['municipio'] ?? null),
                 'state' => $this->firstNonEmpty($row['estado'] ?? null),
                 'municipality' => $this->firstNonEmpty($row['municipio'] ?? null),
@@ -280,6 +280,39 @@ final class PublicProfileController
             ];
         }
         return $mapped;
+    }
+
+    private function buildPublicConsultorioAddress(array $row, array $mapPayload): ?string
+    {
+        $street = $this->firstNonEmpty($row['calle'] ?? null);
+        $numExt = $this->formatPublicNumExt($row['num_ext'] ?? null);
+        $streetWithNumber = trim((string)($street ?? '') . ($numExt !== '' ? ' ' . $numExt : ''));
+
+        $parts = [
+            $streetWithNumber,
+            $this->firstNonEmpty($row['colonia'] ?? null),
+            $this->firstNonEmpty($row['cp'] ?? null),
+            $this->firstNonEmpty($row['municipio'] ?? null),
+            $this->firstNonEmpty($row['estado'] ?? null),
+            'México',
+        ];
+        $parts = array_values(array_filter($parts, static fn($part): bool => trim((string)$part) !== ''));
+        if (!empty($parts)) {
+            return implode(', ', $parts);
+        }
+
+        return $this->firstNonEmpty($mapPayload['address_compact'] ?? null);
+    }
+
+    private function formatPublicNumExt($value): string
+    {
+        $numExt = trim((string)($value ?? ''));
+        if ($numExt === '') {
+            return '';
+        }
+
+        $numExt = preg_replace('/^#+\s*/', '#', $numExt) ?? $numExt;
+        return str_starts_with($numExt, '#') ? $numExt : '#' . $numExt;
     }
 
     private function buildSchedule(array $rows): array
