@@ -1365,3 +1365,44 @@ La estrategia aprobada es una transición tipo Opción C:
 - Sin overflow horizontal.
 - Bootstrap tabs, `data-bs-*`, `.tab-content` y `selectPaqTab('#paq-crear')` siguen funcionando.
 - Datos Personales, Consultorio, Facturación, Expediente, Pacientes y Notificaciones no cambiaron.
+
+## 35) UX-Shell-02N — Limpieza HTML controlada de tabs de Facturación
+
+### 35.1 Estado implementado
+- Commit de implementación: `5c11074 fix(shell): limpia html de tabs de facturacion`.
+- Se realiza una limpieza HTML controlada en los tabs de `Facturación`.
+- Esta fase es preparatoria para una futura migración a `mx-panel-tabs`.
+- No se migra `Facturación` a `mx-panel-tabs` en esta microfase.
+
+### 35.2 Limpieza aplicada
+- Se elimina el atributo irregular `button la=""`.
+- Se corrige `li es="nav-item"` a `li class="nav-item"`.
+- Se agrega `type="button"` a los cuatro botones de tabs.
+- Se conservan los textos visibles de los tabs:
+  - `Crear Factura`
+  - `Listar Facturas`
+  - `Pacientes`
+  - `Facturas Canceladas`
+
+### 35.3 Compatibilidad preservada
+- Se conservan `data-bs-*`.
+- Se conservan targets.
+- Se conserva `.tab-content`.
+- No se toca CSS.
+- No se toca JS.
+- No se modifica Bootstrap behavior.
+- No se agregan clases `mx-panel-tabs`.
+
+### 35.4 Validación
+- QA funcional aprobado en desktop `1440x900` y móvil `390x844`.
+- Los cuatro tabs activan correctamente sus panes:
+  - `Crear Factura`
+  - `Listar Facturas`
+  - `Pacientes`
+  - `Facturas Canceladas`
+- Sin overflow horizontal.
+- Sin errores de consola relacionados con Facturación.
+
+### 35.5 Fase futura
+- `UX-Shell-02O` queda como fase futura recomendada para aplicar `mx-panel-tabs` al panel `Facturación`.
+- Esa futura migración deberá realizarse con diagnóstico, QA y commit separados.

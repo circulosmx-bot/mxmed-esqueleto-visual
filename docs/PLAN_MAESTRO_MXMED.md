@@ -1110,6 +1110,7 @@ Refs:
 - `[shell]` UX-Shell-02H completado: primer piloto de `mx-panel-tabs` implementado en `Paquetes y Promociones` junto con `mx-panel-subheader--with-tabs`; evidencia commit `2ae3b9f`, CSS acotado a `#p-paquetes`, conserva Bootstrap pills, `mm-tabs`, `data-bs-*`, `.tab-content` y `selectPaqTab('#paq-crear')`.
 - `[shell]` UX-Shell-02J completado: segundo piloto real de `mx-panel-tabs` aplicado al panel `Seguridad` junto con `mx-panel-subheader--with-tabs`; evidencia commit `eed4d92`, CSS acotado a `#p-seguridad`, conserva Bootstrap pills, `mm-tabs`, `data-bs-*` y `.tab-content`, con ajuste fino de `tab-ico` para compactar `verified_user` y `lock_person`.
 - `[shell]` UX-Shell-02L completado: consolidada base común mínima opt-in de `mx-panel-tabs`; evidencia commit `ca7322b`, reduce duplicación entre `#p-paquetes` y `#p-seguridad`, conserva overrides acotados, Bootstrap pills, `mm-tabs`, `data-bs-*`, `.tab-content` y `selectPaqTab('#paq-crear')`, sin tocar HTML, JS, Agenda ni tabs legacy.
+- `[shell]` UX-Shell-02N completado: limpieza HTML controlada de tabs de `Facturación` como preparación para futura migración a `mx-panel-tabs`; evidencia commit `5c11074`, corrige atributos irregulares, agrega `type="button"` a los cuatro tabs y conserva `data-bs-*`, targets, textos visibles y `.tab-content`, sin tocar CSS ni JS.
 - `[profiles]` Siguiente recomendado: UX-Panel-01D3-D (diseno backend canonico de contacto como posible fase futura/refinamiento documental; sin implementacion definida todavia).
 
 ### 2a) Operación clínica extendida
