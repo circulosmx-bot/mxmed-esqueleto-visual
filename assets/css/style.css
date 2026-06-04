@@ -1917,13 +1917,6 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-facturacion .mx-panel-tabs .nav-item.mx-panel-tabs-item{
   flex:0 1 auto;
 }
-#p-consultorio .mx-panel-tabs--with-action{
-  flex-wrap:wrap;
-}
-#p-consultorio .mx-panel-tabs .nav-item.mx-panel-tabs-item{
-  flex:0 1 auto;
-  margin:0;
-}
 .mx-panel-tabs .nav-link.mx-panel-tabs-link{
   width:auto;
   height:auto;
@@ -1961,28 +1954,6 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-seguridad .mx-panel-tabs .tab-ico{
   font-size:1.15rem;
   line-height:1;
-}
-#p-consultorio .mx-panel-tabs .tab-ico{
-  flex:0 0 auto;
-  min-width:0;
-  font-size:1.15rem;
-  line-height:1;
-  text-align:center;
-}
-#p-consultorio .mx-panel-tabs-action{
-  border-style:dashed;
-  background:#f7fbfe;
-  color:#0f5f8e;
-}
-#p-consultorio .mx-panel-tabs-action:hover,
-#p-consultorio .mx-panel-tabs-action:focus-visible{
-  border-color:#7ba9c8;
-  background:#eef6fc;
-  color:#0f4f77;
-  outline:none;
-}
-#p-consultorio .mx-panel-tabs-action .tab-ico{
-  font-size:1.2rem;
 }
 .mx-panel-tabs-label{
   display:inline-block;
