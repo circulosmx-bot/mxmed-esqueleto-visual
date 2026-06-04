@@ -1406,3 +1406,38 @@ La estrategia aprobada es una transición tipo Opción C:
 ### 35.5 Fase futura
 - `UX-Shell-02O` queda como fase futura recomendada para aplicar `mx-panel-tabs` al panel `Facturación`.
 - Esa futura migración deberá realizarse con diagnóstico, QA y commit separados.
+
+## 36) UX-Shell-02O — Tabs modernos en Facturación
+
+### 36.1 Estado implementado
+- Commit de implementación: `09bcfef style(shell): aplica tabs modernos en facturacion`.
+- Se aplica `mx-panel-subheader--with-tabs` al subheader de `Facturación`.
+- Se aplica `mx-panel-tabs` a los tabs de `Facturación`.
+- La fase se apoya en la limpieza previa `UX-Shell-02N`.
+
+### 36.2 Compatibilidad preservada
+- Se conservan Bootstrap pills.
+- Se conservan `data-bs-*`.
+- Se conservan targets.
+- Se conserva `.tab-content`.
+- No se toca JS.
+- No se modifica Bootstrap behavior.
+- No se toca Agenda ni clases `mx-ag-*`.
+- No se tocan Paquetes, Seguridad, Datos Personales ni Consultorio.
+
+### 36.3 Ajuste responsive
+- Se agrega override acotado a `#p-facturacion` para permitir wrap móvil de tabs.
+- El objetivo del override es evitar que el tab `Facturas Canceladas` quede cortado en móvil.
+- El ajuste no modifica reglas globales de tabs ni afecta otros paneles.
+
+### 36.4 Validación
+- QA visual y funcional aprobado en desktop `1440x900`, desktop `1680x1000`, tablet `1024x768` y móvil `390x844`.
+- Tabs validados:
+  - `Crear Factura`
+  - `Listar Facturas`
+  - `Pacientes`
+  - `Facturas Canceladas`
+- El tab `Facturas Canceladas` ya no queda cortado en móvil.
+- Sin overflow horizontal.
+- Sin errores de consola relacionados con Facturación.
+- Otros tabs y subheaders permanecen sin cambios accidentales.
