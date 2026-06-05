@@ -3273,6 +3273,94 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 
 
+#p-info .mx-panel-subheader--with-tabs{
+  min-height:3.35rem;
+  display:flex;
+  align-items:center;
+}
+
+#p-info #tabs-info.mx-panel-tabs{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  margin:0 0 .85rem 0;
+  padding:8px;
+  border:1px solid #c7e2f3;
+  border-radius:10px;
+  background:linear-gradient(180deg,#edf8ff 0%,#e6f3fb 100%);
+  overflow:visible;
+}
+
+#p-info #tabs-info.mx-panel-tabs .nav-item.mx-panel-tabs-item{
+  flex:0 1 auto;
+  min-width:0;
+  margin:0;
+}
+
+#p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link{
+  width:auto;
+  min-height:46px;
+  height:100%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  padding:8px 14px;
+  border:1px solid #c9dbe8;
+  border-radius:9px;
+  background:#fff;
+  color:#224a61;
+  font-size:.87rem;
+  font-weight:700;
+  line-height:1.1;
+  text-transform:none;
+  text-align:center;
+  box-shadow:none;
+  filter:none;
+}
+
+#p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link .tab-ico{
+  flex:0 0 auto;
+  min-width:0;
+  font-size:1.2rem;
+  line-height:1;
+  color:inherit;
+}
+
+#p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link .mx-panel-tabs-label{
+  flex:0 1 auto;
+  display:inline-block;
+  text-align:center;
+  text-transform:none;
+  font-weight:700;
+  line-height:1.12;
+  white-space:normal;
+}
+
+#p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link:hover,
+#p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link:focus-visible{
+  border-color:#7ba9c8;
+  background:#eef6fc;
+  color:#0f4f77;
+  outline:none;
+  filter:none;
+}
+
+#p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link.active{
+  background:#0f5f8e;
+  border-color:#0f5f8e;
+  color:#fff;
+  font-weight:700;
+  box-shadow:none;
+}
+
+#p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link.active .tab-ico{
+  color:inherit;
+}
+
+
+
 /* ===== UX-Panel-01C2 · Datos Personales (compactación + separación conceptual) ===== */
 #p-info #t-info-datos.active{
   display:grid;
