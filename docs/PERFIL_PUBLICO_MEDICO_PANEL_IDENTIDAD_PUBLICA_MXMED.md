@@ -2376,3 +2376,86 @@ La estrategia aprobada es una transición tipo Opción C:
 - Degradar `localStorage` como respaldo transicional, no fuente productiva.
 - Diseñar contacto público con flags/plan.
 - Integrar `contact_points` al DTO público sólo con visibilidad resuelta por backend.
+
+## 47) SYS-Data-02J — Bloque visual pasivo de importación legacy
+
+### 47.1 Estado implementado
+- Commit de implementación: `405d9d3 style(profiles): agrega bloque pasivo de importacion de contactos`.
+- Archivos modificados en la implementación:
+  - `index.html`;
+  - `assets/css/style.css`.
+- Se agrega un bloque visual pasivo dentro de Datos Personales > Datos Generales > Datos de contacto.
+- El bloque prepara la futura importación controlada de:
+  - `dp:dp-correo`;
+  - `dp:dp-whatsapp`.
+- No conecta todavía el endpoint `POST /api/profiles/private/doctor/{doctor_id}/contact-points/import-legacy`.
+
+### 47.2 Ubicación UI
+- Contenedor: `#mx-dg-contact-card`.
+- Ubicación exacta:
+  - después del row de campos `#dp-correo` / `#dp-whatsapp`;
+  - antes de `.mx-dg-contact-privacy-strip`.
+- Título del bloque:
+  - `Contactos privados seguros`.
+- CTA pasivo/deshabilitado:
+  - `Importar contactos privados próximamente`.
+
+### 47.3 Clases CSS nuevas
+- `mx-dg-contact-import`.
+- `mx-dg-contact-import__head`.
+- `mx-dg-contact-import__title`.
+- `mx-dg-contact-import__text`.
+- `mx-dg-contact-import__items`.
+- `mx-dg-contact-import__item`.
+- `mx-dg-contact-import__note`.
+- `mx-dg-contact-import__actions`.
+- `mx-dg-contact-import__btn`.
+
+### 47.4 Guardrails
+- El bloque es sólo visual pasivo.
+- No ejecuta JS.
+- No llama `GET /api/profiles/private/doctor/{doctor_id}/contact-points`.
+- No llama `POST /api/profiles/private/doctor/{doctor_id}/contact-points/import-legacy`.
+- No lee `localStorage`.
+- No escribe `localStorage`.
+- No borra `dp-correo` ni `dp-whatsapp`.
+- No publica contacto.
+- No activa `use_for_public_profile`.
+- No toca Consultorio.
+- No modifica WhatsApp de sede.
+- No toca perfil público.
+- No cambia DTO público.
+- No modifica endpoints.
+- No modifica MySQL.
+
+### 47.5 Microcopy funcional
+- El texto aclara que los datos son contactos privados seguros.
+- El texto aclara que no se publican en el perfil.
+- El texto aclara que no se copian a consultorios.
+- La nota indica que la importación futura no borrará los datos actuales de la tarjeta.
+- La nota indica que la visibilidad pública se configurará en otra fase.
+- La nota específica de WhatsApp aclara que el WhatsApp privado no se copia al consultorio y que el WhatsApp de sede se gestiona en Consultorio.
+
+### 47.6 Validación reportada
+- `git diff --check` sin salida.
+- HTML servido OK.
+- Bloque, título, CTA disabled y privacy strip detectados en orden correcto.
+- Los 5 tabs de Datos Personales siguen presentes:
+  - Datos Generales;
+  - Formación Profesional;
+  - Principales Servicios;
+  - Enfermedades y Tratamientos;
+  - Fotos.
+- Consultorio endpoint OK y sigue devolviendo 3 sedes.
+- Perfil público endpoint OK.
+- No se tocaron JS, PHP, MySQL, endpoints, Consultorio ni perfil público.
+- No hubo screenshots reales por falta de navegador/Playwright/Chromium/Firefox/Node en el entorno; se validó estructura y CSS responsive estático.
+
+### 47.7 Pendientes
+- Conectar el bloque visual a `GET contact-points`.
+- Conectar el bloque visual a `POST import-legacy`.
+- Leer `dp-correo` y `dp-whatsapp` desde `localStorage` sólo desde una fase UI explícita.
+- Diseñar confirmación antes de importar.
+- Mostrar resultados por item (`created`, `already_exists`, `invalid_value`, etc.).
+- Mantener `localStorage` sin borrado automático hasta una fase posterior.
+- Documentar y validar la conexión UI cuando exista.
