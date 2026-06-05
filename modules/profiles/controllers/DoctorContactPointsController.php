@@ -268,6 +268,49 @@ final class DoctorContactPointsController
         ];
     }
 
+    public function destroy(
+        string $doctorId,
+        string $contactPointId,
+        string $authMode = 'transitional_open'
+    ): array {
+        $doctorId = trim($doctorId);
+        $contactPointId = trim($contactPointId);
+        if (!$this->isValidDoctorId($doctorId)) {
+            return $this->error('invalid_doctor_id', 'doctor_id invalid', $authMode);
+        }
+        if (!$this->isValidContactPointId($contactPointId)) {
+            return $this->error('invalid_contact_point_id', 'contact_point_id invalid', $authMode);
+        }
+
+        try {
+            $deleted = $this->repository->softDeleteForDoctor($doctorId, $contactPointId);
+        } catch (RuntimeException $e) {
+            if ($e->getMessage() === 'doctor_contact_points table not ready') {
+                return $this->error('db_not_ready', 'doctor_contact_points table not ready', $authMode, [
+                    'schema_executed' => false,
+                ]);
+            }
+            return $this->error('profile_contact_points_unavailable', 'contact points unavailable', $authMode);
+        }
+
+        if (!$deleted) {
+            return $this->error('contact_point_not_found', 'contact point not found', $authMode);
+        }
+
+        return [
+            'ok' => true,
+            'error' => null,
+            'message' => '',
+            'data' => [
+                'contact_point_id' => (int)$contactPointId,
+            ],
+            'meta' => $this->meta($authMode, [
+                'schema_executed' => true,
+                'deleted' => true,
+            ]),
+        ];
+    }
+
     private function error(string $code, string $message, string $authMode, array $metaExtra = [], $data = null): array
     {
         return [

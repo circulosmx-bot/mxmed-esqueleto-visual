@@ -261,7 +261,7 @@ try {
             ], 400);
             return;
         }
-        if ($method !== 'PATCH') {
+        if (!in_array($method, ['PATCH', 'DELETE'], true)) {
             profileRespond([
                 'ok' => false,
                 'error' => 'method_not_allowed',
@@ -279,21 +279,24 @@ try {
         }
         $authMode = (string)($context['auth_mode'] ?? 'transitional_open');
 
-        $jsonBody = profileReadJsonBody();
-        if (!(bool)($jsonBody['ok'] ?? false)) {
-            profileRespond([
-                'ok' => false,
-                'error' => 'invalid_json',
-                'message' => 'invalid json',
-                'data' => null,
-                'meta' => profileContactPointsPrivateMeta($authMode),
-            ], 400);
-            return;
-        }
-
         $repo = new DoctorContactPointsRepository(mxmed_pdo());
         $controller = new DoctorContactPointsController($repo);
-        $response = $controller->update($doctorId, $contactPointId, (array)($jsonBody['data'] ?? []), $authMode);
+        if ($method === 'DELETE') {
+            $response = $controller->destroy($doctorId, $contactPointId, $authMode);
+        } else {
+            $jsonBody = profileReadJsonBody();
+            if (!(bool)($jsonBody['ok'] ?? false)) {
+                profileRespond([
+                    'ok' => false,
+                    'error' => 'invalid_json',
+                    'message' => 'invalid json',
+                    'data' => null,
+                    'meta' => profileContactPointsPrivateMeta($authMode),
+                ], 400);
+                return;
+            }
+            $response = $controller->update($doctorId, $contactPointId, (array)($jsonBody['data'] ?? []), $authMode);
+        }
 
         $error = (string)($response['error'] ?? '');
         $statusMap = [

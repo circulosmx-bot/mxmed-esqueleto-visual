@@ -320,6 +320,33 @@ final class DoctorContactPointsRepository
         return $updated;
     }
 
+    public function softDeleteForDoctor(string $doctorId, string $contactPointId): bool
+    {
+        $this->requireTableColumns();
+
+        $sql = sprintf(
+            'UPDATE `%s`
+                SET `deleted_at` = NOW(),
+                    `updated_at` = NOW()
+              WHERE `doctor_id` = :doctor_id
+                AND `contact_point_id` = :contact_point_id
+                AND `deleted_at` IS NULL',
+            self::TABLE
+        );
+
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([
+                'doctor_id' => $doctorId,
+                'contact_point_id' => $contactPointId,
+            ]);
+        } catch (PDOException $e) {
+            throw new RuntimeException('doctor_contact_points delete failed', 0, $e);
+        }
+
+        return $stmt->rowCount() === 1;
+    }
+
     public function normalizeValue(string $type, string $value): string
     {
         $type = strtolower(trim($type));
