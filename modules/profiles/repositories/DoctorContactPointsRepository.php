@@ -138,6 +138,44 @@ final class DoctorContactPointsRepository
         return is_array($row) ? $this->mapContactPointRow($row) : null;
     }
 
+    public function findDuplicateActive(
+        string $doctorId,
+        string $type,
+        string $normalizedValue,
+        string $excludeContactPointId
+    ): ?array {
+        $columns = $this->requireTableColumns();
+        $selected = $this->existingColumns(self::READ_COLUMNS, $columns);
+
+        $sql = sprintf(
+            'SELECT %s
+               FROM `%s`
+              WHERE `doctor_id` = :doctor_id
+                AND `type` = :type
+                AND `normalized_value` = :normalized_value
+                AND `contact_point_id` <> :exclude_contact_point_id
+                AND `deleted_at` IS NULL
+              LIMIT 1',
+            implode(', ', array_map(static fn(string $col): string => sprintf('`%s`', $col), $selected)),
+            self::TABLE
+        );
+
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([
+                'doctor_id' => $doctorId,
+                'type' => $type,
+                'normalized_value' => $normalizedValue,
+                'exclude_contact_point_id' => $excludeContactPointId,
+            ]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            throw new RuntimeException('doctor_contact_points query failed', 0, $e);
+        }
+
+        return is_array($row) ? $this->mapContactPointRow($row) : null;
+    }
+
     public function createForDoctor(string $doctorId, array $payload): array
     {
         $this->requireTableColumns();
@@ -208,6 +246,78 @@ final class DoctorContactPointsRepository
             throw new RuntimeException('doctor_contact_points create failed');
         }
         return $created;
+    }
+
+    public function updateForDoctor(string $doctorId, string $contactPointId, array $payload): array
+    {
+        $this->requireTableColumns();
+
+        $allowed = [
+            'type',
+            'value',
+            'normalized_value',
+            'label',
+            'scope',
+            'use_for_security',
+            'use_for_platform_admin',
+            'use_for_appointments',
+            'status',
+            'sort_order',
+        ];
+        $assignments = [];
+        $params = [
+            'doctor_id' => $doctorId,
+            'contact_point_id' => $contactPointId,
+        ];
+
+        foreach ($allowed as $field) {
+            if (!array_key_exists($field, $payload)) {
+                continue;
+            }
+            $assignments[] = sprintf('`%s` = :%s', $field, $field);
+            if (in_array($field, ['use_for_security', 'use_for_platform_admin', 'use_for_appointments'], true)) {
+                $params[$field] = (int)((bool)$payload[$field]);
+            } elseif ($field === 'sort_order') {
+                $params[$field] = (int)$payload[$field];
+            } else {
+                $params[$field] = $payload[$field];
+            }
+        }
+
+        if (empty($assignments)) {
+            $current = $this->findById($doctorId, $contactPointId);
+            if (!is_array($current)) {
+                throw new RuntimeException('contact_point_not_found');
+            }
+            return $current;
+        }
+
+        $assignments[] = '`updated_at` = NOW()';
+        $sql = sprintf(
+            'UPDATE `%s`
+                SET %s
+              WHERE `doctor_id` = :doctor_id
+                AND `contact_point_id` = :contact_point_id
+                AND `deleted_at` IS NULL',
+            self::TABLE,
+            implode(', ', $assignments)
+        );
+
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+        } catch (PDOException $e) {
+            if ((string)$e->getCode() === '23000') {
+                throw new RuntimeException('duplicate_active_contact', 0, $e);
+            }
+            throw new RuntimeException('doctor_contact_points update failed', 0, $e);
+        }
+
+        $updated = $this->findById($doctorId, $contactPointId);
+        if (!is_array($updated)) {
+            throw new RuntimeException('contact_point_not_found');
+        }
+        return $updated;
     }
 
     public function normalizeValue(string $type, string $value): string

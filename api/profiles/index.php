@@ -248,6 +248,75 @@ try {
         return;
     }
 
+    if (count($segments) === 5 && $segments[0] === 'private' && $segments[1] === 'doctor' && $segments[3] === 'contact-points') {
+        $doctorId = trim((string)$segments[2]);
+        $contactPointId = trim((string)$segments[4]);
+        if (profileInvalidDoctorId($doctorId)) {
+            profileRespond([
+                'ok' => false,
+                'error' => 'invalid_doctor_id',
+                'message' => 'doctor_id invalid',
+                'data' => null,
+                'meta' => profileContactPointsPrivateMeta(),
+            ], 400);
+            return;
+        }
+        if ($method !== 'PATCH') {
+            profileRespond([
+                'ok' => false,
+                'error' => 'method_not_allowed',
+                'message' => 'method not allowed',
+                'data' => null,
+                'meta' => profileContactPointsPrivateMeta(),
+            ], 405);
+            return;
+        }
+
+        $context = profileResolvePrivateContext($doctorId);
+        if (!(bool)($context['ok'] ?? false)) {
+            profileRespond((array)($context['response'] ?? []), (int)($context['status'] ?? 403));
+            return;
+        }
+        $authMode = (string)($context['auth_mode'] ?? 'transitional_open');
+
+        $jsonBody = profileReadJsonBody();
+        if (!(bool)($jsonBody['ok'] ?? false)) {
+            profileRespond([
+                'ok' => false,
+                'error' => 'invalid_json',
+                'message' => 'invalid json',
+                'data' => null,
+                'meta' => profileContactPointsPrivateMeta($authMode),
+            ], 400);
+            return;
+        }
+
+        $repo = new DoctorContactPointsRepository(mxmed_pdo());
+        $controller = new DoctorContactPointsController($repo);
+        $response = $controller->update($doctorId, $contactPointId, (array)($jsonBody['data'] ?? []), $authMode);
+
+        $error = (string)($response['error'] ?? '');
+        $statusMap = [
+            'invalid_doctor_id' => 400,
+            'invalid_contact_point_id' => 400,
+            'invalid_json' => 400,
+            'invalid_payload' => 400,
+            'validation_error' => 422,
+            'contact_point_not_found' => 404,
+            'duplicate_active_contact' => 409,
+            'db_not_ready' => 503,
+            'profile_contact_points_unavailable' => 500,
+            'unauthorized' => 401,
+            'forbidden' => 403,
+        ];
+        if ($error !== '' && isset($statusMap[$error])) {
+            profileRespond($response, $statusMap[$error]);
+            return;
+        }
+        profileRespond($response, (($response['ok'] ?? false) ? 200 : 500));
+        return;
+    }
+
     if (count($segments) === 4 && $segments[0] === 'private' && $segments[1] === 'doctor' && $segments[3] === 'contact-points') {
         $doctorId = trim((string)$segments[2]);
         if (profileInvalidDoctorId($doctorId)) {
