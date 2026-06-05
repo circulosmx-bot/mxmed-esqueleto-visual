@@ -794,12 +794,54 @@
 
               <div class="tab-pane fade" id="t-info-datos" role="tabpanel">
 
+                <section class="mx-data-visibility" aria-labelledby="mx-data-visibility-title">
+                  <div class="mx-data-visibility__head">
+                    <div>
+                      <h3 class="mx-data-visibility__title" id="mx-data-visibility-title">Visibilidad de tus datos</h3>
+                      <p class="mx-data-visibility__intro">Cada bloque indica si la información puede mostrarse en tu perfil, si es privada, si pertenece a una sede o si requiere validación.</p>
+                    </div>
+                  </div>
+                  <div class="mx-data-visibility__legend" aria-label="Categorías de visibilidad">
+                    <div class="mx-data-visibility__item mx-data-visibility__item--public">
+                      <span class="mx-data-visibility__icon material-symbols-outlined" aria-hidden="true">visibility</span>
+                      <span class="mx-data-visibility__copy">
+                        <span class="mx-data-visibility__label">Público en perfil</span>
+                        <span class="mx-data-visibility__text">Visible en tu perfil médico.</span>
+                      </span>
+                    </div>
+                    <div class="mx-data-visibility__item mx-data-visibility__item--private">
+                      <span class="mx-data-visibility__icon material-symbols-outlined" aria-hidden="true">lock</span>
+                      <span class="mx-data-visibility__copy">
+                        <span class="mx-data-visibility__label">Privado · No publicado</span>
+                        <span class="mx-data-visibility__text">Sólo tú puedes ver esta información.</span>
+                      </span>
+                    </div>
+                    <div class="mx-data-visibility__item mx-data-visibility__item--consultorio">
+                      <span class="mx-data-visibility__icon material-symbols-outlined" aria-hidden="true">location_on</span>
+                      <span class="mx-data-visibility__copy">
+                        <span class="mx-data-visibility__label">Consultorio / sede</span>
+                        <span class="mx-data-visibility__text">Pertenece a una sede o consultorio.</span>
+                      </span>
+                    </div>
+                    <div class="mx-data-visibility__item mx-data-visibility__item--verified">
+                      <span class="mx-data-visibility__icon material-symbols-outlined" aria-hidden="true">verified</span>
+                      <span class="mx-data-visibility__copy">
+                        <span class="mx-data-visibility__label">Verificado / revisión</span>
+                        <span class="mx-data-visibility__text">Puede requerir validación de la plataforma.</span>
+                      </span>
+                    </div>
+                  </div>
+                </section>
+
 
 
                 <div class="card mt-3 mx-dg-card mx-dg-card-media" id="mx-dg-media-card">
                   <div class="card-body">
                     <div class="mx-dg-card-head">
-                      <div class="mx-dg-card-title">Foto y logotipo profesional</div>
+                      <div class="mx-dg-card-title-row">
+                        <div class="mx-dg-card-title">Foto y logotipo profesional</div>
+                        <span class="mx-data-badge mx-data-badge--public"><span class="material-symbols-outlined" aria-hidden="true">visibility</span>Público en perfil</span>
+                      </div>
                       <div class="mx-dg-card-note">Imagen pública y logotipo profesional. La persistencia canónica de media se definirá en una fase posterior.</div>
                     </div>
                     <div class="mf-upload-grid">
@@ -873,7 +915,10 @@
                 <div class="card mt-3 mx-dg-card mx-dg-card-verified" id="mx-dg-verified-card">
                   <div class="card-body">
                     <div class="mx-dg-card-head">
-                      <div class="mx-dg-card-title">Información verificada / administrativa</div>
+                      <div class="mx-dg-card-title-row">
+                        <div class="mx-dg-card-title">Información verificada / administrativa</div>
+                        <span class="mx-data-badge mx-data-badge--verified"><span class="material-symbols-outlined" aria-hidden="true">verified</span>Verificado / revisión</span>
+                      </div>
                       <div class="mx-dg-verify-status-row">
                         <span class="mx-dg-verify-badge" role="status" aria-live="polite">Información pendiente de validación</span>
                         <button
@@ -896,15 +941,15 @@
                     </div>
                     <div class="row g-3 mx-dg-verified-grid">
 
-                  <div class="col-md-6 col-lg-4 mx-dg-col-name mx-dg-personal-field"><label class="form-label">Nombre(s)</label><input class="form-control" id="dp-nombres" placeholder="Nombre(s)"></div>
+                  <div class="col-md-6 col-lg-4 mx-dg-col-name mx-dg-personal-field"><label class="form-label mx-field-label">Nombre(s)<span class="mx-field-badge mx-field-badge--verified">Revisión</span></label><input class="form-control" id="dp-nombres" placeholder="Nombre(s)"></div>
 
-                  <div class="col-md-6 col-lg-4 mx-dg-col-name mx-dg-personal-field"><label class="form-label">Apellido Paterno</label><input class="form-control" id="dp-apellido-paterno" placeholder="Apellido Paterno"></div>
+                  <div class="col-md-6 col-lg-4 mx-dg-col-name mx-dg-personal-field"><label class="form-label mx-field-label">Apellido Paterno<span class="mx-field-badge mx-field-badge--verified">Revisión</span></label><input class="form-control" id="dp-apellido-paterno" placeholder="Apellido Paterno"></div>
 
-                  <div class="col-md-6 col-lg-4 mx-dg-col-name mx-dg-personal-field"><label class="form-label">Apellido Materno</label><input class="form-control" id="dp-apellido-materno" placeholder="Apellido Materno"></div>
+                  <div class="col-md-6 col-lg-4 mx-dg-col-name mx-dg-personal-field"><label class="form-label mx-field-label">Apellido Materno<span class="mx-field-badge mx-field-badge--verified">Revisión</span></label><input class="form-control" id="dp-apellido-materno" placeholder="Apellido Materno"></div>
 
-                  <div class="col-sm-6 col-lg-3 mx-dg-col-birth mx-dg-personal-field"><label class="form-label">Fecha de nacimiento</label><input class="form-control" id="dp-fecha-nacimiento" type="date" placeholder="AAAA-MM-DD"></div>
+                  <div class="col-sm-6 col-lg-3 mx-dg-col-birth mx-dg-personal-field"><label class="form-label mx-field-label">Fecha de nacimiento<span class="mx-field-badge mx-field-badge--verified">Revisión</span></label><input class="form-control" id="dp-fecha-nacimiento" type="date" placeholder="AAAA-MM-DD"></div>
 
-                  <div class="col-sm-6 col-lg-3 mx-dg-col-gender mx-dg-personal-field"><label class="form-label">Género</label><select class="form-select" id="dp-genero"><option>?</option><option>Femenino</option><option>Masculino</option><option>No Específico</option></select></div>
+                  <div class="col-sm-6 col-lg-3 mx-dg-col-gender mx-dg-personal-field"><label class="form-label mx-field-label">Género<span class="mx-field-badge mx-field-badge--verified">Revisión</span></label><select class="form-select" id="dp-genero"><option>?</option><option>Femenino</option><option>Masculino</option><option>No Específico</option></select></div>
 
 
                   <div class="col-12 mx-dg-subhead mx-dg-subhead-cred">
@@ -914,23 +959,23 @@
 
 
 
-                  <div class="col-md-4 col-lg-3 mx-dg-col-ced mx-dg-cred-row-1-ced"><label class="form-label">Cédula Profesional</label><input class="form-control" id="ced-prof" placeholder="Número de Cédula"></div>
+                  <div class="col-md-4 col-lg-3 mx-dg-col-ced mx-dg-cred-row-1-ced"><label class="form-label mx-field-label">Cédula Profesional<span class="mx-field-badge mx-field-badge--verified">Verificado</span></label><input class="form-control" id="ced-prof" placeholder="Número de Cédula"></div>
 
-                  <div class="col-md-8 col-lg-5 mx-dg-col-uni mx-dg-cred-row-1-uni"><label class="form-label">Universidad / Institución</label><input class="form-control" id="uni-prof" placeholder="p.ej. UNAM"></div>
+                  <div class="col-md-8 col-lg-5 mx-dg-col-uni mx-dg-cred-row-1-uni"><label class="form-label mx-field-label">Universidad / Institución<span class="mx-field-badge mx-field-badge--verified">Revisión</span></label><input class="form-control" id="uni-prof" placeholder="p.ej. UNAM"></div>
 
-                  <div class="col-md-8 col-lg-5 mx-dg-col-esp mx-dg-cred-row-1-esp"><label class="form-label">Título profesional</label><select class="form-select" id="esp-1"><option value="">Selecciona título profesional</option><option value="Médico Cirujano">Médico Cirujano</option></select></div>
+                  <div class="col-md-8 col-lg-5 mx-dg-col-esp mx-dg-cred-row-1-esp"><label class="form-label mx-field-label">Título profesional<span class="mx-field-badge mx-field-badge--verified">Revisión</span></label><select class="form-select" id="esp-1"><option value="">Selecciona título profesional</option><option value="Médico Cirujano">Médico Cirujano</option></select></div>
 
-                  <div class="col-md-4 col-lg-3 mx-dg-col-ced mx-dg-cred-row-2-ced"><label class="form-label">Cédula de Especialidad</label><input class="form-control" id="ced-esp" placeholder="Número de Cédula"></div>
+                  <div class="col-md-4 col-lg-3 mx-dg-col-ced mx-dg-cred-row-2-ced"><label class="form-label mx-field-label">Cédula de Especialidad<span class="mx-field-badge mx-field-badge--verified">Verificado</span></label><input class="form-control" id="ced-esp" placeholder="Número de Cédula"></div>
 
-                  <div class="col-md-8 col-lg-5 mx-dg-col-uni mx-dg-cred-row-2-uni"><label class="form-label">Universidad / Institución</label><input class="form-control" id="uni-esp" placeholder="p.ej. UNAM"></div>
+                  <div class="col-md-8 col-lg-5 mx-dg-col-uni mx-dg-cred-row-2-uni"><label class="form-label mx-field-label">Universidad / Institución<span class="mx-field-badge mx-field-badge--verified">Revisión</span></label><input class="form-control" id="uni-esp" placeholder="p.ej. UNAM"></div>
 
-                  <div class="col-md-8 col-lg-5 mx-dg-col-esp mx-dg-cred-row-2-esp"><label class="form-label">Especialidad verificada</label><select class="form-select" id="esp-2"><option value="">Selecciona especialidad verificada</option></select></div>
+                  <div class="col-md-8 col-lg-5 mx-dg-col-esp mx-dg-cred-row-2-esp"><label class="form-label mx-field-label">Especialidad verificada<span class="mx-field-badge mx-field-badge--verified">Verificado</span></label><select class="form-select" id="esp-2"><option value="">Selecciona especialidad verificada</option></select></div>
 
-                  <div class="col-md-4 col-lg-3 mx-dg-col-ced mx-dg-cred-row-3-ced"><label class="form-label">Agregar Otra Cédula</label><input class="form-control" id="ced-extra" placeholder="Número de Cédula"></div>
+                  <div class="col-md-4 col-lg-3 mx-dg-col-ced mx-dg-cred-row-3-ced"><label class="form-label mx-field-label">Agregar Otra Cédula<span class="mx-field-badge mx-field-badge--verified">Revisión</span></label><input class="form-control" id="ced-extra" placeholder="Número de Cédula"></div>
 
-                  <div class="col-md-8 col-lg-5 mx-dg-col-uni mx-dg-cred-row-3-uni"><label class="form-label">Universidad / Institución</label><input class="form-control" id="uni-extra" placeholder="p.ej. UNAM"></div>
+                  <div class="col-md-8 col-lg-5 mx-dg-col-uni mx-dg-cred-row-3-uni"><label class="form-label mx-field-label">Universidad / Institución<span class="mx-field-badge mx-field-badge--verified">Revisión</span></label><input class="form-control" id="uni-extra" placeholder="p.ej. UNAM"></div>
 
-                  <div class="col-md-8 col-lg-5 mx-dg-col-esp mx-dg-cred-row-3-esp"><label class="form-label">Grado / Subespecialidad / Certificación</label><input class="form-control" id="esp-3" placeholder="p.ej. Alta especialidad, certificación o subespecialidad"></div>
+                  <div class="col-md-8 col-lg-5 mx-dg-col-esp mx-dg-cred-row-3-esp"><label class="form-label mx-field-label">Grado / Subespecialidad / Certificación<span class="mx-field-badge mx-field-badge--verified">Revisión</span></label><input class="form-control" id="esp-3" placeholder="p.ej. Alta especialidad, certificación o subespecialidad"></div>
 
 
 
@@ -957,7 +1002,10 @@
                 <div class="card mt-3 mx-dg-card mx-dg-card-contact" id="mx-dg-contact-card">
                   <div class="card-body">
                     <div class="mx-dg-card-head">
-                      <div class="mx-dg-card-title">Datos de contacto</div>
+                      <div class="mx-dg-card-title-row">
+                        <div class="mx-dg-card-title">Datos de contacto</div>
+                        <span class="mx-data-badge mx-data-badge--private"><span class="material-symbols-outlined" aria-hidden="true">lock</span>Privado · No publicado</span>
+                      </div>
                       <div class="mx-dg-card-note">Estos datos son privados por defecto. Pueden usarse para seguridad, comunicación administrativa u operación de la plataforma. No se mostrarán a pacientes salvo que más adelante actives una opción pública permitida por tu plan. WhatsApp no se publica automáticamente.</div>
                       <div class="mx-dg-contact-usage" aria-label="Uso previsto de estos datos">
                         <div class="mx-dg-contact-usage-head">
@@ -993,17 +1041,18 @@
                     </div>
                     <div class="row g-3">
                       <div class="col-md-6 col-lg-8 mx-dg-col-email">
-                        <label class="form-label mx-dg-contact-field-label" for="dp-correo">
+                        <label class="form-label mx-dg-contact-field-label mx-field-label" for="dp-correo">
                           <span>Correo Electrónico</span>
-                          <span class="mx-dg-contact-field-badge">Privado</span>
-                          <span class="mx-dg-contact-field-badge is-muted">No publicado</span>
+                          <span class="mx-field-badge mx-field-badge--private">Privado</span>
+                          <span class="mx-field-hint">No visible en perfil público.</span>
                         </label>
                         <input class="form-control" id="dp-correo" placeholder="nombre@correo.com">
                         <div class="mx-dg-contact-field-note">Uso transicional privado. No alimenta el perfil público ni sustituye el futuro contacto público configurable.</div>
                       </div>
                       <div class="col-md-6 col-lg-4 mx-dg-col-phone">
-                        <label class="form-label" for="dp-whatsapp">Teléfono Whatsapp</label>
+                        <label class="form-label mx-field-label" for="dp-whatsapp">Teléfono Whatsapp<span class="mx-field-badge mx-field-badge--private">Privado</span></label>
                         <input class="form-control" id="dp-whatsapp" placeholder="+52 ...">
+                        <div class="mx-dg-contact-field-note">No visible en perfil público. El WhatsApp de consultorio se gestiona por sede.</div>
                       </div>
                       <div class="col-12">
                         <div class="mx-dg-contact-import" aria-label="Estado de privacidad de datos de contacto">
@@ -1044,7 +1093,10 @@
                   <div class="card-body">
                     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
                       <div>
-                        <div class="fw-semibold">Identidad pública profesional</div>
+                        <div class="mxpi-title-row">
+                          <div class="fw-semibold">Identidad pública profesional</div>
+                          <span class="mx-data-badge mx-data-badge--public"><span class="material-symbols-outlined" aria-hidden="true">visibility</span>Público en perfil</span>
+                        </div>
                         <div class="text-muted small">Estos datos se mostrarán en tu perfil público.</div>
                         <div class="text-muted small">El autosave local no publica cambios hasta que guardes.</div>
                         <div class="text-muted small">Las credenciales verificadas se gestionan en la sección administrativa y no se sustituyen aquí.</div>
@@ -1054,11 +1106,11 @@
 
                     <div class="row g-3 mxpi-public-grid">
                       <div class="col-md-6">
-                        <label class="form-label" for="mxpi-display-name">Nombre público</label>
+                        <label class="form-label mx-field-label" for="mxpi-display-name">Nombre público<span class="mx-field-badge mx-field-badge--public">Público</span></label>
                         <input class="form-control" id="mxpi-display-name" maxlength="190" placeholder="Ej. Dra. Leticia Muñoz Alfaro">
                       </div>
                       <div class="col-md-3">
-                        <label class="form-label" for="mxpi-prefix">Prefijo profesional</label>
+                        <label class="form-label mx-field-label" for="mxpi-prefix">Prefijo profesional<span class="mx-field-badge mx-field-badge--public">Público</span></label>
                         <select class="form-select" id="mxpi-prefix">
                           <option value="">Selecciona</option>
                           <option value="Dr.">Dr.</option>
@@ -1076,7 +1128,7 @@
                         </select>
                       </div>
                       <div class="col-md-3">
-                        <label class="form-label" for="mxpi-gender-label">Género / tratamiento</label>
+                        <label class="form-label mx-field-label" for="mxpi-gender-label">Género / tratamiento<span class="mx-field-badge mx-field-badge--public">Público</span></label>
                         <select class="form-select" id="mxpi-gender-label">
                           <option value="">Selecciona</option>
                           <option value="Femenino">Femenino</option>
@@ -1089,12 +1141,12 @@
                         <div class="mxpi-subsection-note">El título profesional y la especialidad verificada se gobiernan en “Información verificada / administrativa”.</div>
                       </div>
                       <div class="col-md-6">
-                        <label class="form-label" for="mxpi-prof-license">Cédula profesional (referencia verificada)</label>
+                        <label class="form-label mx-field-label" for="mxpi-prof-license">Cédula profesional (referencia verificada)<span class="mx-field-badge mx-field-badge--verified">Verificado</span></label>
                         <input class="form-control" id="mxpi-prof-license" maxlength="64" placeholder="Número de cédula profesional">
                         <div class="text-muted small mt-1 mxpi-field-note">Este dato se alinea con credenciales verificadas por la plataforma.</div>
                       </div>
                       <div class="col-md-6">
-                        <label class="form-label" for="mxpi-specialty-license">Cédula de especialidad (referencia verificada)</label>
+                        <label class="form-label mx-field-label" for="mxpi-specialty-license">Cédula de especialidad (referencia verificada)<span class="mx-field-badge mx-field-badge--verified">Verificado</span></label>
                         <input class="form-control" id="mxpi-specialty-license" maxlength="64" placeholder="Número de cédula de especialidad">
                         <div class="text-muted small mt-1 mxpi-field-note">No sustituye la especialidad acreditada en la sección administrativa.</div>
                       </div>
@@ -1103,12 +1155,12 @@
                         <div class="mxpi-subsection-note">Te ayudan a aparecer en búsquedas públicas, pero no sustituyen tus credenciales verificadas.</div>
                       </div>
                       <div class="col-md-6">
-                        <label class="form-label" for="mxpi-specialty-primary">Clasificación pública principal (transicional)</label>
+                        <label class="form-label mx-field-label" for="mxpi-specialty-primary">Clasificación pública principal (transicional)<span class="mx-field-badge mx-field-badge--public">Público</span></label>
                         <input class="form-control" id="mxpi-specialty-primary" maxlength="190" placeholder="Ej. Clínica del dolor">
                         <div class="text-muted small mt-1 mxpi-field-note">Basado en información verificada. La clasificación visible se usa solo para presentación pública.</div>
                       </div>
                       <div class="col-md-6">
-                        <label class="form-label" for="mxpi-specialty-secondary">Áreas de atención visibles (transicional)</label>
+                        <label class="form-label mx-field-label" for="mxpi-specialty-secondary">Áreas de atención visibles (transicional)<span class="mx-field-badge mx-field-badge--public">Público</span></label>
                         <input class="form-control" id="mxpi-specialty-secondary" maxlength="1500" placeholder="Separadas por coma">
                         <div class="text-muted small mt-1 mxpi-field-note">Estas áreas ayudan a búsquedas y no reemplazan especialidades certificadas por cédula.</div>
                         <div class="text-muted small mt-1 mxpi-field-note" id="mxpi-classification-suggestions">Sugerencias iniciales de clasificación pública según especialidad verificada: Clínica del dolor, Cuidados paliativos, Manejo del dolor crónico.</div>
@@ -1118,7 +1170,7 @@
                         <div class="mxpi-subsection-note">En una fase siguiente podrás definir clasificaciones visibles para búsquedas, separadas de tus credenciales verificadas.</div>
                       </div>
                       <div class="col-12">
-                        <label class="form-label" for="mxpi-bio-short">Bio breve</label>
+                        <label class="form-label mx-field-label" for="mxpi-bio-short">Bio breve<span class="mx-field-badge mx-field-badge--public">Público</span></label>
                         <textarea class="form-control" id="mxpi-bio-short" rows="3" maxlength="1500" placeholder="Resumen profesional breve visible en el perfil público"></textarea>
                       </div>
                       <div class="col-md-6">
