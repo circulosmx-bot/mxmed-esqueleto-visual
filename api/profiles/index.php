@@ -6,11 +6,15 @@ require_once __DIR__ . '/../../modules/profiles/repositories/PublicProfileReposi
 require_once __DIR__ . '/../../modules/profiles/controllers/PublicProfileController.php';
 require_once __DIR__ . '/../../modules/profiles/repositories/PrivateProfileRepository.php';
 require_once __DIR__ . '/../../modules/profiles/controllers/PrivateProfileController.php';
+require_once __DIR__ . '/../../modules/profiles/repositories/DoctorContactPointsRepository.php';
+require_once __DIR__ . '/../../modules/profiles/controllers/DoctorContactPointsController.php';
 
 use Profiles\Repositories\PublicProfileRepository;
 use Profiles\Controllers\PublicProfileController;
 use Profiles\Repositories\PrivateProfileRepository;
 use Profiles\Controllers\PrivateProfileController;
+use Profiles\Repositories\DoctorContactPointsRepository;
+use Profiles\Controllers\DoctorContactPointsController;
 
 header('Content-Type: application/json; charset=UTF-8');
 if (session_status() === PHP_SESSION_NONE) {
@@ -189,6 +193,17 @@ function profilePrivateMeta(string $authMode = 'transitional_open'): array
     ];
 }
 
+function profileContactPointsPrivateMeta(string $authMode = 'transitional_open'): array
+{
+    return [
+        'contract' => 'doctor_contact_points_private',
+        'version' => 'SYS-Data-01P',
+        'generated_at' => gmdate('c'),
+        'auth_mode' => $authMode,
+        'source' => 'doctor_contact_points',
+    ];
+}
+
 try {
     $method = strtoupper(trim((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')));
     $segments = profileRelativeSegments();
@@ -227,6 +242,56 @@ try {
         }
         if ($error === 'profile_not_found') {
             profileRespond($response, 404);
+            return;
+        }
+        profileRespond($response, (($response['ok'] ?? false) ? 200 : 500));
+        return;
+    }
+
+    if (count($segments) === 4 && $segments[0] === 'private' && $segments[1] === 'doctor' && $segments[3] === 'contact-points') {
+        $doctorId = trim((string)$segments[2]);
+        if (profileInvalidDoctorId($doctorId)) {
+            profileRespond([
+                'ok' => false,
+                'error' => 'invalid_doctor_id',
+                'message' => 'doctor_id invalid',
+                'data' => null,
+                'meta' => profileContactPointsPrivateMeta(),
+            ], 400);
+            return;
+        }
+        if ($method !== 'GET') {
+            profileRespond([
+                'ok' => false,
+                'error' => 'method_not_allowed',
+                'message' => 'method not allowed',
+                'data' => null,
+                'meta' => profileContactPointsPrivateMeta(),
+            ], 405);
+            return;
+        }
+
+        $context = profileResolvePrivateContext($doctorId);
+        if (!(bool)($context['ok'] ?? false)) {
+            profileRespond((array)($context['response'] ?? []), (int)($context['status'] ?? 403));
+            return;
+        }
+        $authMode = (string)($context['auth_mode'] ?? 'transitional_open');
+
+        $repo = new DoctorContactPointsRepository(mxmed_pdo());
+        $controller = new DoctorContactPointsController($repo);
+        $response = $controller->index($doctorId, $authMode);
+
+        $error = (string)($response['error'] ?? '');
+        $statusMap = [
+            'invalid_doctor_id' => 400,
+            'db_not_ready' => 503,
+            'profile_contact_points_unavailable' => 500,
+            'unauthorized' => 401,
+            'forbidden' => 403,
+        ];
+        if ($error !== '' && isset($statusMap[$error])) {
+            profileRespond($response, $statusMap[$error]);
             return;
         }
         profileRespond($response, (($response['ok'] ?? false) ? 200 : 500));
