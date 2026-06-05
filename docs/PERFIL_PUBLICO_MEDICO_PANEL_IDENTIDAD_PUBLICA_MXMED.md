@@ -2084,3 +2084,86 @@ La estrategia aprobada es una transición tipo Opción C:
 - Importación desde `dp-correo` y `dp-whatsapp`.
 - Contacto público con flags/plan.
 - Integración al DTO público.
+
+## 45) SYS-Data-02C — DELETE lógico de doctor_contact_points
+
+### 45.1 Estado implementado
+- Commit de implementación: `7b6b33b feat(profiles): agrega delete logico de contact points`.
+- Se implementa el endpoint privado:
+  - `DELETE /api/profiles/private/doctor/{doctor_id}/contact-points/{contact_point_id}`.
+- Archivos relacionados:
+  - `api/profiles/index.php`;
+  - `modules/profiles/controllers/DoctorContactPointsController.php`;
+  - `modules/profiles/repositories/DoctorContactPointsRepository.php`.
+- La tabla `doctor_contact_points` quedó limpia tras QA:
+  - `row_count_final = 0`.
+
+### 45.2 Alcance actual
+- `DELETE` lógico individual.
+- No borra físicamente en lógica de producción.
+- No existe `DELETE` batch.
+- No conecta UI.
+- No migra datos legacy.
+- No publica nada en perfil público.
+- No toca contacto de Consultorio.
+
+### 45.3 Comportamiento
+- Aplica `deleted_at = NOW()`.
+- Actualiza `updated_at = NOW()`.
+- `GET` ya no devuelve el contacto eliminado.
+- El DTO privado no expone `deleted_at`.
+- Si el contacto no existe, pertenece a otro doctor o ya fue eliminado:
+  - responde HTTP `404`;
+  - usa error `contact_point_not_found`.
+
+### 45.4 Relación con duplicados activos
+- La columna generada `active_normalized_value` permite que un registro soft-deleted deje de bloquear un nuevo contacto activo con el mismo `doctor_id`, `type` y `normalized_value`.
+- Después del `DELETE` lógico, un `POST` del mismo `type` y `value` vuelve a ser posible.
+- Este comportamiento fue validado en QA.
+
+### 45.5 QA validado
+- `php -l` OK.
+- `git diff --check` OK.
+- `POST` QA creó contacto.
+- `DELETE` lógico respondió `200 OK` y `deleted=true`.
+- Consulta directa confirmó `deleted_at IS NOT NULL`.
+- `GET` ya no devolvió el contacto eliminado.
+- `DELETE` repetido devolvió HTTP `404` con `contact_point_not_found`.
+- `DELETE` inexistente devolvió HTTP `404` con `contact_point_not_found`.
+- `POST` del mismo `type` y `value` después del soft delete funcionó.
+- Perfil público no mostró datos QA.
+- Consultorio no cambió.
+- Frontend no fue tocado.
+- Registros QA eliminados físicamente al final.
+- `row_count_final = 0`.
+
+### 45.6 Guardrails preservados
+- No usar `patients_contacts`.
+- No duplicar contacto de `consultorios`.
+- No migrar automáticamente `dp-correo` ni `dp-whatsapp`.
+- No publicar contacto privado.
+- No activar `use_for_public_profile` desde los endpoints actuales.
+- No permitir `consultorio_id` todavía.
+- No conectar UI todavía.
+- No exponer `deleted_at` en DTO.
+
+### 45.7 Estado actual del dominio
+- `doctor_contact_points` ya cuenta con CRUD privado básico:
+  - `GET`: listo;
+  - `POST`: listo;
+  - `PATCH`: listo;
+  - `DELETE` lógico: listo.
+- Pendientes:
+  - batch;
+  - UI Datos de contacto;
+  - importación controlada desde `dp-correo` y `dp-whatsapp`;
+  - contacto público con flags/plan;
+  - integración al DTO público;
+  - QA consolidado CRUD completo.
+
+### 45.8 Siguientes microfases sugeridas
+- `SYS-Data-02D — QA consolidado CRUD privado de contact_points`.
+- `SYS-Data-02E — Diseñar importación controlada desde dp-correo/dp-whatsapp`.
+- `SYS-Data-02F — Conectar UI Datos de contacto a contact_points`.
+- `SYS-Data-02G — Diseñar contacto público con flags/plan`.
+- `SYS-Data-02H — Integrar contact_points al DTO público con visibilidad resuelta`.
