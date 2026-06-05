@@ -1782,3 +1782,119 @@ La estrategia aprobada es una transición tipo Opción C:
 - Diseñar importación desde `dp-correo` y `dp-whatsapp` con confirmación explícita.
 - Integrar la UI de Datos de contacto al contrato canónico.
 - Integrar contactos al DTO público sólo con visibilidad resuelta por backend.
+
+## 42) SYS-Data-01T — POST privado de doctor_contact_points
+
+### 42.1 Estado implementado
+- Commit de implementación: `f01f6b7 feat(profiles): agrega post privado de contact points`.
+- Se implementa el endpoint privado de creación individual:
+  - `POST /api/profiles/private/doctor/{doctor_id}/contact-points`.
+- El `GET /api/profiles/private/doctor/{doctor_id}/contact-points` se mantiene disponible.
+- La tabla `doctor_contact_points` existe en MySQL local.
+- Los registros QA usados durante validación fueron eliminados.
+- Estado final de tabla validado: `row_count=0`.
+
+### 42.2 Archivos relacionados
+- Router:
+  - `api/profiles/index.php`.
+- Controller:
+  - `modules/profiles/controllers/DoctorContactPointsController.php`.
+- Repository:
+  - `modules/profiles/repositories/DoctorContactPointsRepository.php`.
+
+### 42.3 Alcance actual
+- Crea un contacto individual por request.
+- No implementa `PATCH`.
+- No implementa `DELETE`.
+- No implementa batch.
+- No conecta UI.
+- No migra datos legacy.
+- No publica contacto en perfil público.
+
+### 42.4 Campos permitidos desde cliente
+- `type`.
+- `value`.
+- `label`.
+- `scope`.
+- `use_for_security`.
+- `use_for_platform_admin`.
+- `use_for_appointments`.
+- `status`.
+- `sort_order`.
+
+### 42.5 Campos bloqueados o ignorados desde cliente
+- `doctor_id`.
+- `contact_point_id`.
+- `normalized_value`.
+- `is_public`.
+- `use_for_public_profile`.
+- `visibility_plan_min`.
+- `is_verified`.
+- `verification_status`.
+- `consultorio_id`.
+- `source`.
+- `metadata_json`.
+- `created_at`.
+- `updated_at`.
+- `deleted_at`.
+
+### 42.6 Privacidad estricta por defecto
+- Todo contacto creado por `POST` nace con:
+  - `is_public = 0`;
+  - `use_for_public_profile = 0`;
+  - `is_verified = 0`;
+  - `verification_status = unverified`;
+  - `source = manual`.
+- El cliente no puede activar publicación ni verificación desde este endpoint.
+
+### 42.7 Normalización backend
+- Email:
+  - aplica `trim`;
+  - convierte a lowercase;
+  - valida formato básico.
+- Teléfono y WhatsApp:
+  - elimina espacios, guiones y paréntesis;
+  - conserva `+` inicial si existe;
+  - conserva dígitos;
+  - no fuerza país todavía.
+- Ejemplos validados:
+  - `449 978 8888` -> `4499788888`;
+  - `+52 449 978 8888` -> `+524499788888`.
+
+### 42.8 Duplicados activos
+- Un duplicado activo se define por `doctor_id`, `type` y `normalized_value`.
+- Si se detecta duplicado:
+  - responde HTTP `409`;
+  - usa error `duplicate_active_contact`;
+  - no crea fila duplicada;
+  - puede devolver `existing_contact_point_id`.
+
+### 42.9 QA validado
+- `POST` con email válido: OK.
+- `POST` con WhatsApp válido: OK.
+- `POST` duplicado: HTTP `409`.
+- `POST` con campos bloqueados: campos ignorados y reportados.
+- JSON inválido: HTTP `400`.
+- Email inválido: HTTP `422`.
+- `GET` devolvió contactos creados durante QA.
+- Perfil público no mostró datos QA.
+- Consultorio no cambió.
+- Frontend no fue tocado.
+- Registros QA eliminados después de validar.
+- `row_count_final = 0`.
+
+### 42.10 Guardrails preservados
+- No usar `patients_contacts`.
+- No duplicar contacto de `consultorios`.
+- No migrar automáticamente `dp-correo` ni `dp-whatsapp`.
+- No publicar contacto privado.
+- No activar `use_for_public_profile` desde este endpoint.
+- No permitir `consultorio_id` todavía.
+- No conectar UI todavía.
+
+### 42.11 Pendientes
+- `SYS-Data-01U — Implementar PATCH privado de contact_points`.
+- `SYS-Data-01V — Implementar DELETE lógico de contact_points`.
+- `SYS-Data-01W — Diseñar importación controlada desde dp-correo/dp-whatsapp`.
+- `SYS-Data-01X — Conectar UI Datos de contacto a contact_points`.
+- `SYS-Data-01Y — Diseñar contacto público con flags/plan`.
