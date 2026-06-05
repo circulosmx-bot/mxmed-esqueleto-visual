@@ -1893,8 +1893,139 @@ La estrategia aprobada es una transición tipo Opción C:
 - No conectar UI todavía.
 
 ### 42.11 Pendientes
-- `SYS-Data-01U — Implementar PATCH privado de contact_points`.
-- `SYS-Data-01V — Implementar DELETE lógico de contact_points`.
-- `SYS-Data-01W — Diseñar importación controlada desde dp-correo/dp-whatsapp`.
-- `SYS-Data-01X — Conectar UI Datos de contacto a contact_points`.
-- `SYS-Data-01Y — Diseñar contacto público con flags/plan`.
+- `SYS-Data-01X — Diseñar DELETE lógico de contact_points`.
+- `SYS-Data-01Y — Implementar DELETE lógico de contact_points`.
+- `SYS-Data-01Z — Diseñar importación controlada desde dp-correo/dp-whatsapp`.
+- `SYS-Data-02A — Conectar UI Datos de contacto a contact_points`.
+- `SYS-Data-02B — Diseñar contacto público con flags/plan`.
+
+## 43) SYS-Data-01W — PATCH privado de doctor_contact_points
+
+### 43.1 Estado implementado
+- Commit de implementación: `1f8e505 feat(profiles): agrega patch privado de contact points`.
+- Se implementa el endpoint privado de actualización individual:
+  - `PATCH /api/profiles/private/doctor/{doctor_id}/contact-points/{contact_point_id}`.
+- Ya existen también:
+  - `GET /api/profiles/private/doctor/{doctor_id}/contact-points`;
+  - `POST /api/profiles/private/doctor/{doctor_id}/contact-points`.
+- Los registros QA usados durante validación fueron eliminados.
+- Estado final de tabla validado: `row_count=0`.
+
+### 43.2 Archivos relacionados
+- Router:
+  - `api/profiles/index.php`.
+- Controller:
+  - `modules/profiles/controllers/DoctorContactPointsController.php`.
+- Repository:
+  - `modules/profiles/repositories/DoctorContactPointsRepository.php`.
+
+### 43.3 Alcance actual
+- Actualiza un contacto individual existente.
+- Aplica `PATCH` parcial.
+- No crea registros si el contacto no existe.
+- No implementa `DELETE`.
+- No implementa batch.
+- No conecta UI.
+- No migra datos legacy.
+- No publica contacto en perfil público.
+
+### 43.4 Campos permitidos en PATCH
+- `type`.
+- `value`.
+- `label`.
+- `scope`.
+- `use_for_security`.
+- `use_for_platform_admin`.
+- `use_for_appointments`.
+- `status`.
+- `sort_order`.
+
+### 43.5 Campos bloqueados o ignorados
+- `doctor_id`.
+- `contact_point_id`.
+- `normalized_value`.
+- `is_public`.
+- `use_for_public_profile`.
+- `visibility_plan_min`.
+- `is_verified`.
+- `verification_status`.
+- `consultorio_id`.
+- `source`.
+- `metadata_json`.
+- `created_at`.
+- `updated_at`.
+- `deleted_at`.
+
+### 43.6 Reglas de actualización
+- Sólo actualiza campos enviados y permitidos.
+- Campos no enviados se conservan.
+- Si cambia `value`, recalcula `normalized_value`.
+- Si cambia `type`, recalcula `normalized_value` con el valor final.
+- Si cambian `type` y `value`, normaliza el valor nuevo con el tipo nuevo.
+- No revive registros soft-deleted.
+- No permite `scope=public`.
+- No permite `scope=consultorio`.
+- No permite activar publicación pública.
+
+### 43.7 Normalización backend
+- Reutiliza la lógica del `POST`.
+- Email:
+  - aplica `trim`;
+  - convierte a lowercase;
+  - valida formato básico.
+- Teléfono y WhatsApp:
+  - elimina espacios, guiones y paréntesis;
+  - conserva `+` inicial si existe;
+  - conserva dígitos;
+  - no fuerza país todavía.
+
+### 43.8 Duplicados activos
+- Si el resultado final genera duplicado activo por `doctor_id`, `type` y `normalized_value`, responde HTTP `409`.
+- Usa error `duplicate_active_contact`.
+- Excluye el contacto actual al validar duplicado.
+- No actualiza si hay conflicto.
+- Puede devolver `existing_contact_point_id`.
+
+### 43.9 Casos especiales
+- `PATCH` a contacto inexistente o soft-deleted:
+  - responde HTTP `404`;
+  - usa error `contact_point_not_found`.
+- `PATCH` sólo con campos bloqueados:
+  - responde OK;
+  - `updated=false`;
+  - reporta `blocked_fields_ignored`;
+  - no modifica base de datos.
+- Un `GET` posterior refleja los cambios cuando el `PATCH` es exitoso.
+
+### 43.10 QA validado
+- `php -l` OK.
+- `git diff --check` OK.
+- `POST` QA email y WhatsApp para preparar datos: OK.
+- `PATCH` de `label`: OK.
+- `PATCH` de `status`: OK.
+- `PATCH` de `value` con recálculo de `normalized_value`: OK.
+- `PATCH` de `type` + `value`: OK.
+- `PATCH` duplicado: HTTP `409`.
+- `PATCH` sólo bloqueados: `updated=false`.
+- `PATCH` inexistente: HTTP `404`.
+- Perfil público no cambió.
+- Consultorio no cambió.
+- Frontend no fue tocado.
+- Registros QA eliminados.
+- `row_count_final = 0`.
+
+### 43.11 Guardrails preservados
+- No usar `patients_contacts`.
+- No duplicar contacto de `consultorios`.
+- No migrar automáticamente `dp-correo` ni `dp-whatsapp`.
+- No publicar contacto privado.
+- No activar `use_for_public_profile` desde este endpoint.
+- No permitir `consultorio_id` todavía.
+- No conectar UI todavía.
+
+### 43.12 Pendientes
+- `SYS-Data-01X — Diseñar DELETE lógico de contact_points`.
+- `SYS-Data-01Y — Implementar DELETE lógico de contact_points`.
+- `SYS-Data-01Z — Diseñar importación controlada desde dp-correo/dp-whatsapp`.
+- `SYS-Data-02A — Conectar UI Datos de contacto a contact_points`.
+- `SYS-Data-02B — Diseñar contacto público con flags/plan`.
