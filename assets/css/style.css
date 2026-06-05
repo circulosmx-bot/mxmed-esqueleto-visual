@@ -3423,6 +3423,76 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-size:.72rem;
   line-height:1.3;
 }
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-import{
+  display:grid;
+  gap:.54rem;
+  padding:.68rem .72rem;
+  border:1px solid #dbe9ee;
+  border-radius:10px;
+  background:#fbfdfe;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-import__head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:.58rem;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-import__title{
+  color:#113c53;
+  font-size:.84rem;
+  font-weight:800;
+  line-height:1.2;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-import__text{
+  max-width:780px;
+  margin-top:.16rem;
+  color:#607988;
+  font-size:.74rem;
+  line-height:1.32;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-import__items{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.42rem;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-import__item{
+  display:inline-flex;
+  align-items:center;
+  gap:.3rem;
+  min-width:0;
+  padding:.28rem .46rem;
+  border:1px solid #dce8ed;
+  border-radius:8px;
+  background:#fff;
+  color:#294d60;
+  font-size:.74rem;
+  font-weight:700;
+  line-height:1.2;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-import__item .material-symbols-outlined{
+  flex:0 0 auto;
+  color:#0b7382;
+  font-size:1rem;
+  line-height:1;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-import__note{
+  color:#667d8b;
+  font-size:.72rem;
+  line-height:1.3;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-import__actions{
+  display:flex;
+  justify-content:flex-start;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-import__btn{
+  white-space:normal;
+  text-align:left;
+  line-height:1.2;
+}
+#p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-import__btn:disabled{
+  cursor:not-allowed;
+  opacity:.72;
+}
 #p-consultorio .mx-cons-contact-note{
   margin-top:.22rem;
   color:#687c88;
@@ -3923,6 +3993,17 @@ body{margin:0;background:var(--mm-fondo-base);}
   }
   #p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-usage-grid{
     grid-template-columns:1fr;
+  }
+  #p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-import{
+    padding:.62rem .64rem;
+  }
+  #p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-import__head{
+    display:grid;
+    gap:.38rem;
+  }
+  #p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-import__actions,
+  #p-info #t-info-datos #mx-dg-contact-card .mx-dg-contact-import__btn{
+    width:100%;
   }
   #p-info #t-info-datos #mx-dg-media-card .mf-upload.square{
     min-height:116px;
