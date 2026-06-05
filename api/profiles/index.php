@@ -260,7 +260,7 @@ try {
             ], 400);
             return;
         }
-        if ($method !== 'GET') {
+        if (!in_array($method, ['GET', 'POST'], true)) {
             profileRespond([
                 'ok' => false,
                 'error' => 'method_not_allowed',
@@ -280,11 +280,30 @@ try {
 
         $repo = new DoctorContactPointsRepository(mxmed_pdo());
         $controller = new DoctorContactPointsController($repo);
-        $response = $controller->index($doctorId, $authMode);
+        if ($method === 'GET') {
+            $response = $controller->index($doctorId, $authMode);
+        } else {
+            $jsonBody = profileReadJsonBody();
+            if (!(bool)($jsonBody['ok'] ?? false)) {
+                profileRespond([
+                    'ok' => false,
+                    'error' => 'invalid_json',
+                    'message' => 'invalid json',
+                    'data' => null,
+                    'meta' => profileContactPointsPrivateMeta($authMode),
+                ], 400);
+                return;
+            }
+            $response = $controller->store($doctorId, (array)($jsonBody['data'] ?? []), $authMode);
+        }
 
         $error = (string)($response['error'] ?? '');
         $statusMap = [
             'invalid_doctor_id' => 400,
+            'invalid_json' => 400,
+            'invalid_payload' => 400,
+            'validation_error' => 422,
+            'duplicate_active_contact' => 409,
             'db_not_ready' => 503,
             'profile_contact_points_unavailable' => 500,
             'unauthorized' => 401,
