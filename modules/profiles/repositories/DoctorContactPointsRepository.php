@@ -393,7 +393,6 @@ final class DoctorContactPointsRepository
             'metadata_json' => $this->decodeJsonObject($row['metadata_json'] ?? null),
             'created_at' => $this->toNullableText($row['created_at'] ?? null),
             'updated_at' => $this->toNullableText($row['updated_at'] ?? null),
-            'deleted_at' => $this->toNullableText($row['deleted_at'] ?? null),
         ];
     }
 
