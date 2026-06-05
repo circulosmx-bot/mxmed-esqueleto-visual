@@ -1736,3 +1736,49 @@ La estrategia aprobada es una transición tipo Opción C:
 - Diseñar importación desde `dp-correo` y `dp-whatsapp`.
 - Integrar al DTO público con visibilidad resuelta.
 - Ejecutar QA de privacidad y publicación.
+
+## 41) SYS-Data-01Q — GET privado de doctor_contact_points
+
+### 41.1 Estado implementado
+- Commit de implementación: `274187a feat(profiles): agrega endpoint privado de contact points`.
+- Se implementa el primer endpoint privado de lectura para `doctor_contact_points`.
+- Endpoint:
+  - `GET /api/profiles/private/doctor/{doctor_id}/contact-points`.
+- La implementación es sólo lectura.
+- La tabla `doctor_contact_points` existe en MySQL local.
+- La tabla se mantiene vacía en esta fase.
+
+### 41.2 Archivos relacionados
+- Router:
+  - `api/profiles/index.php`.
+- Controller:
+  - `modules/profiles/controllers/DoctorContactPointsController.php`.
+- Repository:
+  - `modules/profiles/repositories/DoctorContactPointsRepository.php`.
+
+### 41.3 Respuesta esperada con tabla vacía
+- Con `doctor_id=1` y tabla vacía, la respuesta validada es:
+  - HTTP `200`;
+  - `ok: true`;
+  - `data.items: []`;
+  - `meta.count: 0`;
+  - `meta.source: doctor_contact_points`.
+- `SELECT COUNT(*) FROM doctor_contact_points` se mantiene en `0`.
+
+### 41.4 Guardrails preservados
+- No existen todavía `POST`, `PATCH` ni `DELETE` para `doctor_contact_points`.
+- No se conecta UI.
+- No se migran `dp-correo` ni `dp-whatsapp`.
+- No se publica contacto en perfil público.
+- No se duplica contacto de `consultorios`.
+- No se toca `profiles_doctors`.
+- No se usa `patients_contacts`.
+- No se leen `consultorios` ni `localStorage` desde este endpoint.
+
+### 41.5 Pendientes
+- Diseñar e implementar `POST/PATCH/DELETE` privados de `doctor_contact_points`.
+- Definir validaciones de `type`, `scope`, `verification_status` y `status`.
+- Definir normalización de email, teléfono y WhatsApp.
+- Diseñar importación desde `dp-correo` y `dp-whatsapp` con confirmación explícita.
+- Integrar la UI de Datos de contacto al contrato canónico.
+- Integrar contactos al DTO público sólo con visibilidad resuelta por backend.
