@@ -2167,3 +2167,212 @@ La estrategia aprobada es una transición tipo Opción C:
 - `SYS-Data-02F — Conectar UI Datos de contacto a contact_points`.
 - `SYS-Data-02G — Diseñar contacto público con flags/plan`.
 - `SYS-Data-02H — Integrar contact_points al DTO público con visibilidad resuelta`.
+
+## 46) SYS-Data-02H — Importación legacy de doctor_contact_points
+
+### 46.1 Estado implementado
+- Commit de implementación: `1676eb6 feat(profiles): agrega importacion legacy de contact points`.
+- Se implementa el endpoint privado:
+  - `POST /api/profiles/private/doctor/{doctor_id}/contact-points/import-legacy`.
+- Este endpoint importa valores legacy/transicionales de Datos Personales hacia `doctor_contact_points`.
+- Fuentes legacy aceptadas:
+  - `dp:dp-correo`;
+  - `dp:dp-whatsapp`.
+- No conecta UI todavía.
+- No lee ni escribe `localStorage`.
+- No borra `dp-correo` ni `dp-whatsapp`.
+
+### 46.2 Payload esperado
+- El request acepta únicamente un objeto con `items`.
+- Cada item acepta sólo:
+  - `legacy_key`;
+  - `type`;
+  - `value`.
+- Ejemplo:
+
+```json
+{
+  "items": [
+    {
+      "legacy_key": "dp:dp-correo",
+      "type": "email",
+      "value": "correo@ejemplo.com"
+    },
+    {
+      "legacy_key": "dp:dp-whatsapp",
+      "type": "whatsapp",
+      "value": "4491234567"
+    }
+  ]
+}
+```
+
+### 46.3 Mapeo permitido
+- `dp:dp-correo` sólo puede mapear a `type=email`.
+- `dp:dp-whatsapp` sólo puede mapear a `type=whatsapp`.
+- Cualquier otro `legacy_key` se rechaza por item.
+- Cualquier otro `type` se rechaza por item.
+- Si `legacy_key` y `type` no corresponden, el item se marca como mismatch.
+
+### 46.4 Valores impuestos por backend
+- Para `dp:dp-correo`:
+  - `type=email`;
+  - `label=Correo privado`;
+  - `scope=private`;
+  - `use_for_platform_admin=1`;
+  - `use_for_appointments=0`;
+  - `is_public=0`;
+  - `use_for_public_profile=0`;
+  - `is_verified=0`;
+  - `verification_status=unverified`;
+  - `status=active`;
+  - `sort_order=100`;
+  - `source=legacy_dp`.
+- Para `dp:dp-whatsapp`:
+  - `type=whatsapp`;
+  - `label=WhatsApp privado`;
+  - `scope=private`;
+  - `use_for_platform_admin=0`;
+  - `use_for_appointments=0`;
+  - `is_public=0`;
+  - `use_for_public_profile=0`;
+  - `is_verified=0`;
+  - `verification_status=unverified`;
+  - `status=active`;
+  - `sort_order=110`;
+  - `source=legacy_dp`.
+
+### 46.5 Source cerrado
+- El `POST` general de `contact-points` sigue cerrado y conserva `source=manual`.
+- El endpoint `import-legacy` es el único flujo actual que puede escribir `source=legacy_dp`.
+- `source` no se abre al cliente.
+- Si el cliente envía `source`, se ignora y no afecta la base de datos.
+
+### 46.6 Campos bloqueados o ignorados
+- El cliente no puede imponer:
+  - `doctor_id`;
+  - `contact_point_id`;
+  - `source`;
+  - `normalized_value`;
+  - `label`;
+  - `scope`;
+  - `is_public`;
+  - `use_for_public_profile`;
+  - `is_verified`;
+  - `verification_status`;
+  - `consultorio_id`;
+  - `metadata_json`;
+  - `created_at`;
+  - `updated_at`;
+  - `deleted_at`;
+  - flags `use_for_*`.
+- Los campos bloqueados no afectan DB.
+- Si aplica, se reportan como `blocked_fields_ignored` por item.
+
+### 46.7 Status por item
+- `created`: contacto importado.
+- `already_exists`: ya existe un contacto activo equivalente.
+- `invalid_value`: valor inválido para el tipo.
+- `unsupported_legacy_key`: `legacy_key` no permitida.
+- `unsupported_type`: `type` no permitido.
+- `mismatch_legacy_key_type`: `legacy_key` y `type` no corresponden.
+- `empty_value`: valor vacío.
+- `duplicate_in_payload`: duplicado dentro del mismo payload.
+- `error`: error controlado por item si fuera necesario.
+
+### 46.8 Respuesta esperada
+- Ejemplo:
+
+```json
+{
+  "ok": true,
+  "error": null,
+  "message": "",
+  "data": {
+    "results": [
+      {
+        "legacy_key": "dp:dp-correo",
+        "type": "email",
+        "status": "created",
+        "contact_point_id": 1
+      },
+      {
+        "legacy_key": "dp:dp-whatsapp",
+        "type": "whatsapp",
+        "status": "already_exists",
+        "existing_contact_point_id": 2
+      }
+    ]
+  },
+  "meta": {
+    "contract": "doctor_contact_points_private",
+    "source": "doctor_contact_points",
+    "import_source": "legacy_dp",
+    "processed": 2,
+    "created": 1,
+    "already_exists": 1,
+    "failed": 0
+  }
+}
+```
+
+### 46.9 Códigos HTTP
+- HTTP `200`: payload procesado, incluso con resultados mixtos.
+- HTTP `400`: JSON inválido o payload mal formado.
+- HTTP `422`: payload válido estructuralmente, pero sin items importables.
+- HTTP `503`: tabla/repositorio no disponible.
+- HTTP `500`: error inesperado.
+- No se usa HTTP `409` global para duplicados de importación; los duplicados se resuelven por item como `already_exists`.
+
+### 46.10 Duplicados
+- La detección usa la regla activa:
+  - `doctor_id`;
+  - `type`;
+  - `normalized_value`;
+  - `deleted_at IS NULL`.
+- Si ya existe contacto activo equivalente:
+  - no crea duplicado;
+  - devuelve `already_exists`;
+  - incluye `existing_contact_point_id` si está disponible.
+- Si hay duplicado dentro del mismo payload:
+  - el item posterior se marca como `duplicate_in_payload`.
+
+### 46.11 Guardrails preservados
+- No publica contacto.
+- No activa `use_for_public_profile`.
+- No verifica contacto.
+- No toca perfil público.
+- No toca Consultorio.
+- No modifica `consultorios.whatsapp`.
+- No modifica `consultorios.telefonos_json`.
+- No lee ni escribe `localStorage`.
+- No borra `dp-correo` ni `dp-whatsapp`.
+- No depende de `mxmed.enable_doctor_demo_seed`.
+- No convierte WhatsApp privado en WhatsApp de sede.
+
+### 46.12 QA validado
+- `php -l` OK.
+- `git diff --check` OK.
+- Email válido: OK.
+- WhatsApp válido: OK.
+- Payload mixto: OK.
+- Duplicado existente: `already_exists`.
+- Duplicado dentro del payload: `duplicate_in_payload`.
+- `value` vacío: `empty_value`.
+- Email inválido: `invalid_value`.
+- `legacy_key` no permitida: `unsupported_legacy_key`.
+- `type` no permitido: `unsupported_type`.
+- Mismatch `legacy_key`/`type`: `mismatch_legacy_key_type`.
+- Campos bloqueados ignorados: OK.
+- `GET` final vacío y sin `deleted_at`.
+- Perfil público sin datos QA.
+- Consultorio sin datos QA.
+- Registros QA eliminados físicamente.
+- `row_count_final = 0`.
+
+### 46.13 Pendientes
+- Conectar UI de Datos de contacto a `doctor_contact_points`.
+- Diseñar confirmación explícita de importación desde `dp-correo` y `dp-whatsapp`.
+- Degradar `localStorage` como respaldo transicional, no fuente productiva.
+- Diseñar contacto público con flags/plan.
+- Integrar `contact_points` al DTO público sólo con visibilidad resuelta por backend.
