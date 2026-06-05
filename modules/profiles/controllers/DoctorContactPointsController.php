@@ -44,6 +44,31 @@ final class DoctorContactPointsController
     private const ALLOWED_TYPES = ['email', 'phone', 'whatsapp'];
     private const ALLOWED_SCOPES = ['private', 'operational', 'platform_admin'];
     private const ALLOWED_STATUSES = ['active', 'inactive', 'archived'];
+    private const LEGACY_IMPORT_KEYS = ['dp:dp-correo', 'dp:dp-whatsapp'];
+    private const LEGACY_IMPORT_TYPE_BY_KEY = [
+        'dp:dp-correo' => 'email',
+        'dp:dp-whatsapp' => 'whatsapp',
+    ];
+    private const LEGACY_IMPORT_BLOCKED_FIELDS = [
+        'doctor_id',
+        'contact_point_id',
+        'source',
+        'normalized_value',
+        'label',
+        'scope',
+        'is_public',
+        'use_for_public_profile',
+        'is_verified',
+        'verification_status',
+        'consultorio_id',
+        'metadata_json',
+        'created_at',
+        'updated_at',
+        'deleted_at',
+        'use_for_security',
+        'use_for_platform_admin',
+        'use_for_appointments',
+    ];
 
     public function __construct(DoctorContactPointsRepository $repository)
     {
@@ -311,6 +336,149 @@ final class DoctorContactPointsController
         ];
     }
 
+    public function importLegacy(string $doctorId, array $payload, string $authMode = 'transitional_open'): array
+    {
+        $doctorId = trim($doctorId);
+        if (!$this->isValidDoctorId($doctorId)) {
+            return $this->error('invalid_doctor_id', 'doctor_id invalid', $authMode);
+        }
+        if (!$this->isAssociative($payload)) {
+            return $this->error('invalid_payload', 'payload object required', $authMode);
+        }
+
+        $items = $payload['items'] ?? null;
+        if (!is_array($items)) {
+            return $this->error('invalid_payload', 'items array required', $authMode, [
+                'import_source' => 'legacy_dp',
+            ]);
+        }
+        if (count($items) === 0 || count($items) > 2) {
+            return $this->error('validation_error', 'items must contain one or two entries', $authMode, [
+                'import_source' => 'legacy_dp',
+                'validation_errors' => ['items must contain one or two entries'],
+            ], [
+                'results' => [],
+            ]);
+        }
+
+        $results = [];
+        $seen = [];
+        $created = 0;
+        $alreadyExists = 0;
+        $failed = 0;
+
+        foreach (array_values($items) as $item) {
+            if (!is_array($item) || !$this->isAssociative($item)) {
+                $results[] = [
+                    'legacy_key' => null,
+                    'type' => null,
+                    'status' => 'error',
+                    'message' => 'item object required',
+                ];
+                $failed++;
+                continue;
+            }
+
+            $prepared = $this->prepareLegacyImportItem($item);
+            if ($prepared['status'] !== 'ready') {
+                $results[] = $prepared['result'];
+                $failed++;
+                continue;
+            }
+
+            $contact = $prepared['contact_point'];
+            $dedupeKey = (string)$contact['type'] . ':' . (string)$contact['normalized_value'];
+            if (isset($seen[$dedupeKey])) {
+                $results[] = [
+                    'legacy_key' => $contact['legacy_key'],
+                    'type' => $contact['type'],
+                    'status' => 'duplicate_in_payload',
+                ];
+                $failed++;
+                continue;
+            }
+            $seen[$dedupeKey] = true;
+
+            try {
+                $existing = $this->repository->findByNormalizedValue(
+                    $doctorId,
+                    (string)$contact['type'],
+                    (string)$contact['normalized_value']
+                );
+                if (is_array($existing)) {
+                    $results[] = [
+                        'legacy_key' => $contact['legacy_key'],
+                        'type' => $contact['type'],
+                        'status' => 'already_exists',
+                        'existing_contact_point_id' => (int)($existing['contact_point_id'] ?? 0),
+                    ];
+                    $alreadyExists++;
+                    continue;
+                }
+
+                $createdContact = $this->repository->createLegacyForDoctor($doctorId, $contact);
+                $result = [
+                    'legacy_key' => $contact['legacy_key'],
+                    'type' => $contact['type'],
+                    'status' => 'created',
+                    'contact_point_id' => (int)($createdContact['contact_point_id'] ?? 0),
+                ];
+                if (!empty($prepared['blocked_fields'])) {
+                    $result['blocked_fields_ignored'] = array_values($prepared['blocked_fields']);
+                }
+                $results[] = $result;
+                $created++;
+            } catch (RuntimeException $e) {
+                if ($e->getMessage() === 'doctor_contact_points table not ready') {
+                    return $this->error('db_not_ready', 'doctor_contact_points table not ready', $authMode, [
+                        'schema_executed' => false,
+                        'import_source' => 'legacy_dp',
+                    ]);
+                }
+                if ($e->getMessage() === 'duplicate_active_contact') {
+                    $results[] = [
+                        'legacy_key' => $contact['legacy_key'],
+                        'type' => $contact['type'],
+                        'status' => 'already_exists',
+                    ];
+                    $alreadyExists++;
+                    continue;
+                }
+                $results[] = [
+                    'legacy_key' => $contact['legacy_key'],
+                    'type' => $contact['type'],
+                    'status' => 'error',
+                ];
+                $failed++;
+            }
+        }
+
+        $response = [
+            'ok' => true,
+            'error' => null,
+            'message' => '',
+            'data' => [
+                'results' => $results,
+            ],
+            'meta' => $this->meta($authMode, [
+                'schema_executed' => true,
+                'import_source' => 'legacy_dp',
+                'processed' => count($results),
+                'created' => $created,
+                'already_exists' => $alreadyExists,
+                'failed' => $failed,
+            ]),
+        ];
+
+        if (($created + $alreadyExists) === 0) {
+            $response['ok'] = false;
+            $response['error'] = 'validation_error';
+            $response['message'] = 'no importable legacy items';
+        }
+
+        return $response;
+    }
+
     private function error(string $code, string $message, string $authMode, array $metaExtra = [], $data = null): array
     {
         return [
@@ -331,6 +499,111 @@ final class DoctorContactPointsController
             'auth_mode' => $authMode,
             'source' => 'doctor_contact_points',
         ], $extra);
+    }
+
+    private function prepareLegacyImportItem(array $item): array
+    {
+        $blocked = [];
+        foreach ($item as $key => $_value) {
+            $field = trim((string)$key);
+            if ($field !== '' && in_array($field, self::LEGACY_IMPORT_BLOCKED_FIELDS, true)) {
+                $blocked[] = $field;
+            }
+        }
+
+        $legacyKey = $this->sanitizeText($item['legacy_key'] ?? null, 64);
+        $type = strtolower((string)$this->sanitizeText($item['type'] ?? null, 32));
+        $baseResult = [
+            'legacy_key' => $legacyKey,
+            'type' => $type !== '' ? $type : null,
+        ];
+        if (!empty($blocked)) {
+            $baseResult['blocked_fields_ignored'] = array_values(array_unique($blocked));
+        }
+
+        if ($legacyKey === null || !in_array($legacyKey, self::LEGACY_IMPORT_KEYS, true)) {
+            return [
+                'status' => 'unsupported_legacy_key',
+                'result' => array_merge($baseResult, ['status' => 'unsupported_legacy_key']),
+            ];
+        }
+
+        if ($type === '' || !in_array($type, ['email', 'whatsapp'], true)) {
+            return [
+                'status' => 'unsupported_type',
+                'result' => array_merge($baseResult, ['status' => 'unsupported_type']),
+            ];
+        }
+
+        if ((self::LEGACY_IMPORT_TYPE_BY_KEY[$legacyKey] ?? '') !== $type) {
+            return [
+                'status' => 'mismatch_legacy_key_type',
+                'result' => array_merge($baseResult, ['status' => 'mismatch_legacy_key_type']),
+            ];
+        }
+
+        $value = $this->sanitizeText($item['value'] ?? null, 255);
+        if ($value === null) {
+            return [
+                'status' => 'empty_value',
+                'result' => array_merge($baseResult, ['status' => 'empty_value']),
+            ];
+        }
+
+        $normalizedValue = $this->repository->normalizeValue($type, $value);
+        if ($type === 'email' && filter_var($normalizedValue, FILTER_VALIDATE_EMAIL) === false) {
+            return [
+                'status' => 'invalid_value',
+                'result' => array_merge($baseResult, ['status' => 'invalid_value']),
+            ];
+        }
+        if ($type === 'whatsapp' && ($normalizedValue === '' || $normalizedValue === '+')) {
+            return [
+                'status' => 'invalid_value',
+                'result' => array_merge($baseResult, ['status' => 'invalid_value']),
+            ];
+        }
+
+        return [
+            'status' => 'ready',
+            'blocked_fields' => array_values(array_unique($blocked)),
+            'contact_point' => $this->buildLegacyContactPayload($legacyKey, $type, $value, $normalizedValue),
+        ];
+    }
+
+    private function buildLegacyContactPayload(
+        string $legacyKey,
+        string $type,
+        string $value,
+        string $normalizedValue
+    ): array {
+        if ($legacyKey === 'dp:dp-correo') {
+            return [
+                'legacy_key' => $legacyKey,
+                'type' => 'email',
+                'value' => $value,
+                'normalized_value' => $normalizedValue,
+                'label' => 'Correo privado',
+                'scope' => 'private',
+                'use_for_platform_admin' => true,
+                'use_for_appointments' => false,
+                'status' => 'active',
+                'sort_order' => 100,
+            ];
+        }
+
+        return [
+            'legacy_key' => $legacyKey,
+            'type' => $type,
+            'value' => $value,
+            'normalized_value' => $normalizedValue,
+            'label' => 'WhatsApp privado',
+            'scope' => 'private',
+            'use_for_platform_admin' => false,
+            'use_for_appointments' => false,
+            'status' => 'active',
+            'sort_order' => 110,
+        ];
     }
 
     private function prepareCreatePayload(array $payload): array

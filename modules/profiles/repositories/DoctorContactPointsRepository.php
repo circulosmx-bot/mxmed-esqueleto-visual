@@ -248,6 +248,77 @@ final class DoctorContactPointsRepository
         return $created;
     }
 
+    public function createLegacyForDoctor(string $doctorId, array $payload): array
+    {
+        $this->requireTableColumns();
+
+        $sql = sprintf(
+            'INSERT INTO `%s` (
+                `doctor_id`,
+                `type`,
+                `value`,
+                `normalized_value`,
+                `label`,
+                `scope`,
+                `is_public`,
+                `is_verified`,
+                `verification_status`,
+                `use_for_security`,
+                `use_for_platform_admin`,
+                `use_for_public_profile`,
+                `use_for_appointments`,
+                `status`,
+                `sort_order`,
+                `source`
+            ) VALUES (
+                :doctor_id,
+                :type,
+                :value,
+                :normalized_value,
+                :label,
+                :scope,
+                0,
+                0,
+                \'unverified\',
+                0,
+                :use_for_platform_admin,
+                0,
+                :use_for_appointments,
+                :status,
+                :sort_order,
+                \'legacy_dp\'
+            )',
+            self::TABLE
+        );
+
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([
+                'doctor_id' => $doctorId,
+                'type' => $payload['type'],
+                'value' => $payload['value'],
+                'normalized_value' => $payload['normalized_value'],
+                'label' => $payload['label'],
+                'scope' => $payload['scope'],
+                'use_for_platform_admin' => (int)((bool)($payload['use_for_platform_admin'] ?? false)),
+                'use_for_appointments' => (int)((bool)($payload['use_for_appointments'] ?? false)),
+                'status' => $payload['status'],
+                'sort_order' => (int)$payload['sort_order'],
+            ]);
+        } catch (PDOException $e) {
+            if ((string)$e->getCode() === '23000') {
+                throw new RuntimeException('duplicate_active_contact', 0, $e);
+            }
+            throw new RuntimeException('doctor_contact_points legacy create failed', 0, $e);
+        }
+
+        $created = $this->findById($doctorId, (string)$this->pdo->lastInsertId());
+        if (!is_array($created)) {
+            throw new RuntimeException('doctor_contact_points legacy create failed');
+        }
+        return $created;
+    }
+
     public function updateForDoctor(string $doctorId, string $contactPointId, array $payload): array
     {
         $this->requireTableColumns();
