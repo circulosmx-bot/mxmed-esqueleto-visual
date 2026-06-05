@@ -2024,8 +2024,63 @@ La estrategia aprobada es una transición tipo Opción C:
 - No conectar UI todavía.
 
 ### 43.12 Pendientes
-- `SYS-Data-01X — Diseñar DELETE lógico de contact_points`.
-- `SYS-Data-01Y — Implementar DELETE lógico de contact_points`.
-- `SYS-Data-01Z — Diseñar importación controlada desde dp-correo/dp-whatsapp`.
-- `SYS-Data-02A — Conectar UI Datos de contacto a contact_points`.
-- `SYS-Data-02B — Diseñar contacto público con flags/plan`.
+- `SYS-Data-02A — Diseñar DELETE lógico de contact_points`.
+- `SYS-Data-02B — Implementar DELETE lógico de contact_points`.
+- `SYS-Data-02C — Diseñar importación controlada desde dp-correo/dp-whatsapp`.
+- `SYS-Data-02D — Conectar UI Datos de contacto a contact_points`.
+- `SYS-Data-02E — Diseñar contacto público con flags/plan`.
+
+## 44) SYS-Data-01Z — DTO privado de doctor_contact_points
+
+### 44.1 Estado implementado
+- Commit de implementación: `98c5ddd fix(profiles): oculta deleted_at en dto de contact points`.
+- Se ajusta el DTO privado de `doctor_contact_points` para no exponer `deleted_at`.
+- Archivo modificado:
+  - `modules/profiles/repositories/DoctorContactPointsRepository.php`.
+- `deleted_at` sigue existiendo en MySQL.
+- `deleted_at` se mantiene como campo técnico interno para soft delete.
+- El filtro interno `deleted_at IS NULL` se conserva.
+
+### 44.2 Motivo
+- Reducir superficie innecesaria en respuestas API.
+- Evitar exponer detalles internos de soft delete a la futura UI.
+- Mantener un contrato de salida más limpio.
+- Preparar mejor el futuro `DELETE` lógico.
+
+### 44.3 Alcance del DTO
+- Aplica a respuestas privadas de:
+  - `GET /api/profiles/private/doctor/{doctor_id}/contact-points`;
+  - `POST /api/profiles/private/doctor/{doctor_id}/contact-points`;
+  - `PATCH /api/profiles/private/doctor/{doctor_id}/contact-points/{contact_point_id}`.
+
+### 44.4 Lo que no cambia
+- No se elimina la columna `deleted_at` de MySQL.
+- No cambia el schema.
+- No cambia la lógica futura de soft delete.
+- No cambia la normalización.
+- No cambia la privacidad.
+- No cambia el manejo de duplicados.
+- No cambia el perfil público.
+- No cambia Consultorio.
+
+### 44.5 QA validado
+- `php -l` OK.
+- `git diff --check` OK.
+- `GET` vacío: OK.
+- `POST` QA sin `deleted_at` en respuesta.
+- `GET` después de `POST` sin `deleted_at` en items.
+- `PATCH` QA sin `deleted_at` en respuesta.
+- Registro soft-deleted no se devuelve.
+- Datos QA eliminados.
+- `row_count_final = 0`.
+- Perfil público sin cambios.
+- Consultorio sin cambios.
+- Frontend no fue tocado.
+
+### 44.6 Pendientes
+- `DELETE` lógico.
+- Batch.
+- UI conectada.
+- Importación desde `dp-correo` y `dp-whatsapp`.
+- Contacto público con flags/plan.
+- Integración al DTO público.
