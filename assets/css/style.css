@@ -1926,7 +1926,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-size:.87rem;
   font-weight:700;
   line-height:1.1;
-  text-transform:none;
+  text-transform:uppercase;
   text-align:center;
   box-shadow:none;
   filter:none;
@@ -1965,7 +1965,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   display:inline-block;
   flex:0 1 auto;
   text-align:center;
-  text-transform:none;
+  text-transform:uppercase;
   font-weight:700;
   line-height:1.12;
   white-space:normal;
