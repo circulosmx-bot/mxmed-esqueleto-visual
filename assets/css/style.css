@@ -1951,6 +1951,40 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-weight:700;
   box-shadow:none;
 }
+#p-info .mx-panel-tabs .nav-link.mx-panel-tabs-link,
+#p-seguridad .mx-panel-tabs .nav-link.mx-panel-tabs-link,
+#p-facturacion .mx-panel-tabs .nav-link.mx-panel-tabs-link,
+#p-paquetes .mx-panel-tabs .nav-link.mx-panel-tabs-link{
+  border-color:#b8e1eb;
+  background:#fff;
+  color:#015684;
+}
+#p-info .mx-panel-tabs .nav-link.mx-panel-tabs-link .tab-ico,
+#p-seguridad .mx-panel-tabs .nav-link.mx-panel-tabs-link .tab-ico,
+#p-facturacion .mx-panel-tabs .nav-link.mx-panel-tabs-link .tab-ico,
+#p-paquetes .mx-panel-tabs .nav-link.mx-panel-tabs-link .tab-ico{
+  color:inherit;
+}
+#p-info .mx-panel-tabs .nav-link.mx-panel-tabs-link:hover,
+#p-info .mx-panel-tabs .nav-link.mx-panel-tabs-link:focus-visible,
+#p-seguridad .mx-panel-tabs .nav-link.mx-panel-tabs-link:hover,
+#p-seguridad .mx-panel-tabs .nav-link.mx-panel-tabs-link:focus-visible,
+#p-facturacion .mx-panel-tabs .nav-link.mx-panel-tabs-link:hover,
+#p-facturacion .mx-panel-tabs .nav-link.mx-panel-tabs-link:focus-visible,
+#p-paquetes .mx-panel-tabs .nav-link.mx-panel-tabs-link:hover,
+#p-paquetes .mx-panel-tabs .nav-link.mx-panel-tabs-link:focus-visible{
+  border-color:#72cbd8;
+  background:#ecfbfd;
+  color:#004f7a;
+}
+#p-info .mx-panel-tabs .nav-link.mx-panel-tabs-link.active,
+#p-seguridad .mx-panel-tabs .nav-link.mx-panel-tabs-link.active,
+#p-facturacion .mx-panel-tabs .nav-link.mx-panel-tabs-link.active,
+#p-paquetes .mx-panel-tabs .nav-link.mx-panel-tabs-link.active{
+  border-color:#00ADC1;
+  background:#00ADC1;
+  color:#fff;
+}
 #p-seguridad .mx-panel-tabs .tab-ico{
   font-size:1.15rem;
   line-height:1;
@@ -3307,10 +3341,10 @@ body{margin:0;background:var(--mm-fondo-base);}
   justify-content:center;
   gap:8px;
   padding:8px 14px;
-  border:1px solid #c9dbe8;
+  border:1px solid #b8e1eb;
   border-radius:9px;
   background:#fff;
-  color:#224a61;
+  color:#015684;
   font-size:.87rem;
   font-weight:700;
   line-height:1.1;
@@ -3345,16 +3379,16 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 #p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link:hover,
 #p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link:focus-visible{
-  border-color:#7ba9c8;
-  background:#eef6fc;
-  color:#0f4f77;
+  border-color:#72cbd8;
+  background:#ecfbfd;
+  color:#004f7a;
   outline:none;
   filter:none;
 }
 
 #p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link.active{
-  background:#0f5f8e;
-  border-color:#0f5f8e;
+  background:#00ADC1;
+  border-color:#00ADC1;
   color:#fff;
   font-weight:700;
   box-shadow:none;
