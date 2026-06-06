@@ -5609,15 +5609,15 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-expediente .mm-tabs-rows{
   display:flex;
   flex-direction:column;
-  gap:4px;
+  gap:8px;
   margin:0 -0.9rem 0 -0.9rem;
   border-top-left-radius:.9rem;
-  overflow:hidden;
+  overflow:visible;
   padding-top:0;
 }
 #p-expediente .mm-tabs-row{
   display:grid;
-  gap:4px;
+  gap:8px;
   padding:0;
   list-style:none;
 }
@@ -5629,21 +5629,38 @@ body{margin:0;background:var(--mm-fondo-base);}
   display:flex;
 }
 #p-expediente .mm-tabs-row .nav-link{
-  width:100%; text-align:left; white-space:normal;
-  min-height:52px;
-  display:flex; align-items:center; justify-content:flex-start;
-  padding:10px 12px;
-  border-radius:0;
-  border:1px solid transparent !important;
+  width:100%;
+  text-align:left;
+  white-space:normal;
+  min-height:54px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:8px;
+  padding:8px 14px;
+  border-radius:9px;
+  border:1px solid #b8e1eb !important;
+  background:#fff;
+  color:#015684;
   height:100%;
   position:relative;
   min-width:0;
   box-sizing:border-box;
   font-weight:700;
+  font-size:.88rem;
+  line-height:1.15;
+  box-shadow:0 6px 14px rgba(1,86,132,.06);
+  transition:background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease;
 }
 #p-expediente .mm-tabs-row .nav-link .tab-ico{
-  align-self:flex-start;
-  margin-top:2px;
+  align-self:center;
+  flex:0 0 1.65rem;
+  min-width:1.65rem;
+  margin-top:0;
+  font-size:1.55rem;
+  line-height:1;
+  color:currentColor;
+  text-align:center;
 }
 #p-expediente .mm-tabs-row .nav-link .tab-lbl{
   min-width:0;
@@ -5651,9 +5668,14 @@ body{margin:0;background:var(--mm-fondo-base);}
   word-break:normal;
   hyphens:none;
   text-wrap:balance;
+  color:currentColor;
+}
+#p-expediente .mm-tabs-row .nav-link .tab-line,
+#p-expediente .mm-tabs-row .nav-link .tab-line-sub{
+  color:currentColor;
 }
 #p-expediente .mm-tabs-row-top .nav-item:first-child .nav-link{
-  border-top-left-radius:.9rem;
+  border-top-left-radius:9px;
 }
 #p-expediente .mm-tabs-row-top .nav-item:first-child .nav-link::before{
   content:'';
@@ -5663,11 +5685,20 @@ body{margin:0;background:var(--mm-fondo-base);}
   pointer-events:none;
 }
 @media (max-width:1200px){
-  #p-expediente .mm-tabs-row{ gap:3px; }
+  #p-expediente .mm-tabs-row{ gap:6px; }
 }
 @media (max-width:768px){
   #p-expediente .mm-tabs-row{ grid-template-columns: repeat(2, 1fr) !important; }
-  #p-expediente .mm-tabs-row .nav-link{ min-height:48px; }
+  #p-expediente .mm-tabs-row .nav-link{
+    min-height:50px;
+    padding:8px 10px;
+    font-size:.82rem;
+  }
+  #p-expediente .mm-tabs-row .nav-link .tab-ico{
+    flex-basis:1.45rem;
+    min-width:1.45rem;
+    font-size:1.38rem;
+  }
 }
 
 /* Composición tipográfica puntual por tab (sin afectar el resto) */
@@ -14716,10 +14747,13 @@ body{margin:0;background:var(--mm-fondo-base);}
   text-transform:uppercase;
   opacity:.92;
 }
-#p-expediente .mm-tabs-row .nav-link.active{
-  background:linear-gradient(90deg,#123f83 0%, #0f2d63 100%) !important;
+#p-expediente .mm-tabs-row .nav-link.active,
+#p-expediente .mm-tabs-row .nav-link.active:hover,
+#p-expediente .mm-tabs-row .nav-link.active:focus{
+  background:#00ADC1 !important;
   color:#fff !important;
-  border-color:transparent !important;
+  border-color:#00ADC1 !important;
+  box-shadow:0 10px 22px rgba(0,173,193,.22);
 }
 #p-expediente .mm-tabs-row .nav-link.active .tab-lbl,
 #p-expediente .mm-tabs-row .nav-link.active .tab-lbl .tab-line,
@@ -14760,32 +14794,42 @@ body{margin:0;background:var(--mm-fondo-base);}
   #p-expediente .head .exp-h-active-chip{
     padding:7px 12px;
   }
+  #p-expediente .head .exp-h-active-strip-title{
+    width:100%;
+  }
 }
-/* Pacientes: escala de alfa en tabs inactivos (nuevo orden 10 tabs, 2 filas) */
-#p-expediente .mm-tabs-row-top .nav-item:nth-child(1) .nav-link:not(.active){ background: rgba(0,173,193,.90); color:#fff }
-#p-expediente .mm-tabs-row-top .nav-item:nth-child(2) .nav-link:not(.active){ background: rgba(0,173,193,.84); color:#fff }
-#p-expediente .mm-tabs-row-top .nav-item:nth-child(3) .nav-link:not(.active){ background: rgba(0,173,193,.78); color:#fff }
-#p-expediente .mm-tabs-row-top .nav-item:nth-child(4) .nav-link:not(.active){ background: rgba(0,173,193,.72); color:#fff }
-#p-expediente .mm-tabs-row-top .nav-item:nth-child(5) .nav-link:not(.active){ background: rgba(0,173,193,.66); color:#fff }
-#p-expediente .mm-tabs-row-bottom .nav-item:nth-child(1) .nav-link:not(.active){ background: rgba(0,173,193,.60); color:#fff }
-#p-expediente .mm-tabs-row-bottom .nav-item:nth-child(2) .nav-link:not(.active){ background: rgba(0,173,193,.54); color:#fff }
-#p-expediente .mm-tabs-row-bottom .nav-item:nth-child(3) .nav-link:not(.active){ background: rgba(0,173,193,.48); color:#fff }
-#p-expediente .mm-tabs-row-bottom .nav-item:nth-child(4) .nav-link:not(.active){ background: rgba(0,173,193,.42); color:#fff }
-#p-expediente .mm-tabs-row-bottom .nav-item:nth-child(5) .nav-link:not(.active){ background: rgba(0,173,193,.36); color:#fff }
-#p-expediente .mm-tabs-row .nav-link:not(.active) .tab-ico{ color:#fff; }
-#p-expediente .mm-tabs-row .nav-link.active{ background:#F2FBFC; color:#003152; border-color:transparent !important; }
-#p-expediente .mm-tabs-row .nav-link.active .tab-ico{ color:#003152; }
+/* Expediente: tabs clinicos con modelo visual compatible al shell moderno */
+#p-expediente .mm-tabs-row .nav-link:not(.active){
+  background:#fff;
+  color:#015684;
+  border-color:#b8e1eb !important;
+}
+#p-expediente .mm-tabs-row .nav-link:not(.active) .tab-ico,
+#p-expediente .mm-tabs-row .nav-link:not(.active) .tab-lbl,
+#p-expediente .mm-tabs-row .nav-link:not(.active) .tab-line,
+#p-expediente .mm-tabs-row .nav-link:not(.active) .tab-line-sub{
+  color:currentColor;
+}
+#p-expediente .mm-tabs-row .nav-link:not(.active):hover,
+#p-expediente .mm-tabs-row .nav-link:not(.active):focus{
+  background:#ecfbfd;
+  border-color:#72cbd8 !important;
+  color:#004f7a;
+  box-shadow:0 8px 18px rgba(0,173,193,.12);
+}
 #p-expediente[data-exp-gender="F"] .exp-name-badge{
   background:#FFC5D3;
   color:#004465;
 }
 #p-expediente .mm-tabs-row .nav-item[data-tab-conditional="gineco"] .nav-link{
-  background:#FFC5D3 !important;
-  color:#004465 !important;
+  background:#fff !important;
+  color:#015684 !important;
+  border-color:#b8e1eb !important;
 }
 #p-expediente .mm-tabs-row .nav-item[data-tab-conditional="gineco"] .nav-link.active{
-  background:#FFC5D3 !important;
-  color:#004465 !important;
+  background:#00ADC1 !important;
+  color:#fff !important;
+  border-color:#00ADC1 !important;
 }
 #p-expediente.mm-card .body{
   border-top:0;
