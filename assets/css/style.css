@@ -3300,12 +3300,12 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 #p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link{
   width:auto;
-  min-height:46px;
+  min-height:52px;
   height:100%;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  gap:7px;
+  gap:8px;
   padding:8px 14px;
   border:1px solid #c9dbe8;
   border-radius:9px;
@@ -3321,9 +3321,14 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 
 #p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link .tab-ico{
-  flex:0 0 auto;
-  min-width:0;
-  font-size:1.2rem;
+  width:2.35rem;
+  height:2.35rem;
+  flex:0 0 2.35rem;
+  min-width:2.35rem;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:2.35rem;
   line-height:1;
   color:inherit;
 }
