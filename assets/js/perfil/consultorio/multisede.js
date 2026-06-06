@@ -367,6 +367,7 @@ function mxClearHorarioInputs(inputs){
     try{
       const root = document.getElementById('p-consultorio');
       root?.dispatchEvent(new CustomEvent('mx:consultorio-pane-created', { detail: { index: n } }));
+      try{ window.mxmEnsureConsultorioScheduleGrid?.(n); }catch(_){ }
       const paneDebug = document.getElementById(`sede${n}`);
       false && console.warn('MXM CONSULTORIO DEBUG:', {
         event: 'create_consultorio_done',

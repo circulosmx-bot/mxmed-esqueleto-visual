@@ -29145,6 +29145,28 @@ console.info('app.js loaded :: 20251123a');
       enforceNoTimeInputsOnEmptyRows();
       return true;
     };
+    window.mxmEnsureConsultorioScheduleGrid = function(index){
+      const idx = Number.parseInt(String(index || ''), 10);
+      const pane = Number.isFinite(idx) && idx > 0
+        ? document.getElementById(`sede${idx}`)
+        : resolveActiveConsultorioPane();
+      if(!pane) return false;
+      const bodyEl = pane.querySelector('tbody[id^="sched-body"]');
+      if(!bodyEl) return false;
+      if(bodyEl.querySelectorAll('tr').length >= DAYS.length) return true;
+      const targetConsultorioId = String(resolveConsultorioIdFromPane(pane) || idx || getActiveConsultorioId() || '').trim();
+      const previousHint = scheduleResolveConsultorioHint;
+      scheduleResolveConsultorioHint = targetConsultorioId;
+      activeScheduleConsultorioId = targetConsultorioId || activeScheduleConsultorioId;
+      activePane = pane;
+      activeBody = null;
+      rowRefs.clear();
+      try{
+        return mountActiveScheduleGrid();
+      }finally{
+        scheduleResolveConsultorioHint = previousHint;
+      }
+    };
     const resolveScheduleContext = ()=>{
       const doctorId = String(
         (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : '')
