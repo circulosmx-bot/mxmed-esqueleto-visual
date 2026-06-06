@@ -3222,31 +3222,90 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 #p-paquetes .mm-tabs-embed:not(.mx-panel-tabs) .nav-item{ flex:0 0 240px; }
 
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs){
+  gap:8px;
+  padding:8px;
+  border:1px solid #c7e2f3;
+  border-radius:10px;
+  background:linear-gradient(180deg,#edf8ff 0%,#e6f3fb 100%);
+  overflow:visible;
+}
+
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link{
+  min-height:52px;
+  justify-content:center;
+  gap:8px;
+  padding:8px 14px;
+  border:1px solid #b8e1eb;
+  border-radius:9px;
+  background:#fff;
+  color:#015684;
+  font-size:.87rem;
+  font-weight:700;
+  line-height:1.1;
+  text-align:center;
+  box-shadow:none;
+  filter:none;
+}
+
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link .tab-ico{
+  flex:0 0 2.35rem;
+  min-width:2.35rem;
+  font-size:2.35rem;
+  line-height:1;
+  color:inherit;
+  text-align:center;
+}
+
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link:hover,
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link:focus-visible{
+  border-color:#72cbd8;
+  background:#ecfbfd;
+  color:#004f7a;
+  outline:none;
+  filter:none;
+}
+
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link.active{
+  border-color:#00ADC1;
+  background:#00ADC1;
+  color:#fff;
+  box-shadow:none;
+}
+
 
 
 /* Consultorio: plus ligeramente más grande */
 
-#p-consultorio .mm-tabs-embed .nav-link .ico-plus{ font-size:2.9rem }
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-link .ico-plus{ font-size:2.35rem }
 
 
 
 /* Consultorio: tono más bajo para el tab de "Agregar Otro Consultorio" */
 
-#p-consultorio .mm-tabs-embed .consul-add-btn.nav-link,
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .consul-add-btn.nav-link,
 
-#p-consultorio .mm-tabs-embed .nav-item .consul-add-btn{
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .nav-item .consul-add-btn{
 
-  background: rgba(0,176,197,.58);
+  border-color:#b8e1eb;
 
-  color:#fff;
+  background:#fff;
+
+  color:#015684;
 
 }
 
-#p-consultorio .mm-tabs-embed .consul-add-btn.nav-link:hover{
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .consul-add-btn.nav-link:hover,
 
-  filter:brightness(1.06);
+#p-consultorio .mm-tabs-embed:not(.mx-panel-tabs) .consul-add-btn.nav-link:focus-visible{
 
-  background: rgba(0,176,197,.66);
+  border-color:#72cbd8;
+
+  background:#ecfbfd;
+
+  color:#004f7a;
+
+  filter:none;
 
 }
 
