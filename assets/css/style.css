@@ -1904,94 +1904,71 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 .mx-panel-tabs .nav-item.mx-panel-tabs-item{
   flex:0 1 auto;
-  margin:0;
-}
-#p-paquetes .mx-panel-tabs .nav-item.mx-panel-tabs-item,
-#p-seguridad .mx-panel-tabs .nav-item.mx-panel-tabs-item{
-  flex:0 1 auto;
+  min-width:0;
   margin:0;
 }
 #p-facturacion .mx-panel-tabs{
   flex-wrap:wrap;
 }
-#p-facturacion .mx-panel-tabs .nav-item.mx-panel-tabs-item{
-  flex:0 1 auto;
-}
 .mx-panel-tabs .nav-link.mx-panel-tabs-link{
   width:auto;
   height:auto;
-  min-height:0;
+  min-height:52px;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  gap:6px;
-  padding:7px 12px;
-  border:1px solid #c9dbe8;
-  border-radius:8px;
+  gap:8px;
+  padding:8px 14px;
+  border:1px solid #b8e1eb;
+  border-radius:9px;
   background:#fff;
-  color:#224a61;
-  font-size:.84rem;
-  font-weight:600;
+  color:#015684;
+  font-size:.87rem;
+  font-weight:700;
   line-height:1.1;
   text-transform:none;
   text-align:center;
   box-shadow:none;
+  filter:none;
+}
+.mx-panel-tabs .nav-link.mx-panel-tabs-link .tab-ico{
+  width:2.35rem;
+  height:2.35rem;
+  flex:0 0 2.35rem;
+  min-width:2.35rem;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:2.35rem;
+  line-height:1;
+  color:inherit;
 }
 .mx-panel-tabs .nav-link.mx-panel-tabs-link:hover,
 .mx-panel-tabs .nav-link.mx-panel-tabs-link:focus-visible{
-  border-color:#7ba9c8;
-  background:#eef6fc;
-  color:#0f4f77;
+  border-color:#72cbd8;
+  background:#ecfbfd;
+  color:#004f7a;
   outline:none;
+  filter:none;
 }
 .mx-panel-tabs .nav-link.mx-panel-tabs-link.active{
-  background:#0f5f8e;
-  border-color:#0f5f8e;
+  background:#00ADC1;
+  border-color:#00ADC1;
   color:#fff;
   font-weight:700;
   box-shadow:none;
 }
-#p-info .mx-panel-tabs .nav-link.mx-panel-tabs-link,
-#p-seguridad .mx-panel-tabs .nav-link.mx-panel-tabs-link,
-#p-facturacion .mx-panel-tabs .nav-link.mx-panel-tabs-link,
-#p-paquetes .mx-panel-tabs .nav-link.mx-panel-tabs-link{
-  border-color:#b8e1eb;
-  background:#fff;
-  color:#015684;
-}
-#p-info .mx-panel-tabs .nav-link.mx-panel-tabs-link .tab-ico,
-#p-seguridad .mx-panel-tabs .nav-link.mx-panel-tabs-link .tab-ico,
-#p-facturacion .mx-panel-tabs .nav-link.mx-panel-tabs-link .tab-ico,
-#p-paquetes .mx-panel-tabs .nav-link.mx-panel-tabs-link .tab-ico{
+.mx-panel-tabs .nav-link.mx-panel-tabs-link.active .tab-ico{
   color:inherit;
-}
-#p-info .mx-panel-tabs .nav-link.mx-panel-tabs-link:hover,
-#p-info .mx-panel-tabs .nav-link.mx-panel-tabs-link:focus-visible,
-#p-seguridad .mx-panel-tabs .nav-link.mx-panel-tabs-link:hover,
-#p-seguridad .mx-panel-tabs .nav-link.mx-panel-tabs-link:focus-visible,
-#p-facturacion .mx-panel-tabs .nav-link.mx-panel-tabs-link:hover,
-#p-facturacion .mx-panel-tabs .nav-link.mx-panel-tabs-link:focus-visible,
-#p-paquetes .mx-panel-tabs .nav-link.mx-panel-tabs-link:hover,
-#p-paquetes .mx-panel-tabs .nav-link.mx-panel-tabs-link:focus-visible{
-  border-color:#72cbd8;
-  background:#ecfbfd;
-  color:#004f7a;
-}
-#p-info .mx-panel-tabs .nav-link.mx-panel-tabs-link.active,
-#p-seguridad .mx-panel-tabs .nav-link.mx-panel-tabs-link.active,
-#p-facturacion .mx-panel-tabs .nav-link.mx-panel-tabs-link.active,
-#p-paquetes .mx-panel-tabs .nav-link.mx-panel-tabs-link.active{
-  border-color:#00ADC1;
-  background:#00ADC1;
-  color:#fff;
-}
-#p-seguridad .mx-panel-tabs .tab-ico{
-  font-size:1.15rem;
-  line-height:1;
 }
 .mx-panel-tabs-label{
   display:inline-block;
-  white-space:nowrap;
+  flex:0 1 auto;
+  text-align:center;
+  text-transform:none;
+  font-weight:700;
+  line-height:1.12;
+  white-space:normal;
 }
 .mx-profile-completion-card{
   padding:16px 18px;
@@ -3149,21 +3126,21 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* ===== Tabs incrustados en Datos Personales ===== */
 
-#p-info .mm-tabs-embed{ display:flex; flex-wrap:nowrap; gap:3px; padding:0; margin:0 -0.9rem 0 -0.9rem; }
+#p-info .mm-tabs-embed:not(.mx-panel-tabs){ display:flex; flex-wrap:nowrap; gap:3px; padding:0; margin:0 -0.9rem 0 -0.9rem; }
 
-#p-info .mm-tabs-embed .nav-item{ flex:1 1 0; }
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-item{ flex:1 1 0; }
 
 /* Balancear ancho relativo por tab: dar más espacio a Enfermedades y Fotos */
 
-#p-info .mm-tabs-embed .nav-item:nth-child(2){ flex:0.9 1 0; } /* FORMACIÓN PROFESIONAL un poco más compacto */
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-item:nth-child(2){ flex:0.9 1 0; } /* FORMACIÓN PROFESIONAL un poco más compacto */
 
-#p-info .mm-tabs-embed .nav-item:nth-child(3){ flex:1.05 1 0; } /* PRINCIPALES SERVICIOS leve extra */
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-item:nth-child(3){ flex:1.05 1 0; } /* PRINCIPALES SERVICIOS leve extra */
 
-#p-info .mm-tabs-embed .nav-item:nth-child(4),
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-item:nth-child(4),
 
-#p-info .mm-tabs-embed .nav-item:nth-child(5){ flex:1.2 1 0; } /* ENFERMEDADES y FOTOS más espacio */
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-item:nth-child(5){ flex:1.2 1 0; } /* ENFERMEDADES y FOTOS más espacio */
 
-#p-info .mm-tabs-embed .nav-link{ 
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-link{
 
   display:flex; align-items:center; gap:.6rem; justify-content:flex-start;
 
@@ -3177,7 +3154,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 }
 
-#p-info .mm-tabs-embed .nav-link .tab-lbl{ 
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-link .tab-lbl{
 
   text-transform:uppercase; font-weight:700; line-height:1.1; white-space:normal; 
 
@@ -3185,15 +3162,15 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 }
 
-#p-info .mm-tabs-embed .nav-link .tab-ico{ flex:0 0 3.2rem; min-width:3.2rem; text-align:left; }
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-link .tab-ico{ flex:0 0 3.2rem; min-width:3.2rem; text-align:left; }
 
-#p-info .mm-tabs-embed .nav-link .tab-ico{ font-size:3rem; line-height:1; }
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-link .tab-ico{ font-size:3rem; line-height:1; }
 
-#p-info .mm-tabs-embed .nav-link:hover{ filter:brightness(1.06); background:#00ADC1; color:#fff; }
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-link:hover{ filter:brightness(1.06); background:#00ADC1; color:#fff; }
 
-#p-info .mm-tabs-embed .nav-link.active{ background:#F2FBFC; color:#003152; }
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-link.active{ background:#F2FBFC; color:#003152; }
 
-#p-info .mm-tabs-embed .nav-link.active .tab-ico{ color:#003152; }
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-link.active .tab-ico{ color:#003152; }
 
 
 
@@ -3207,11 +3184,11 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* ===== Tabs incrustados: base reutilizable para otras secciones ===== */
 
-.mm-tabs-embed{ display:flex; flex-wrap:nowrap; gap:3px; padding:0; margin:0 -0.9rem 0 -0.9rem; }
+.mm-tabs-embed:not(.mx-panel-tabs){ display:flex; flex-wrap:nowrap; gap:3px; padding:0; margin:0 -0.9rem 0 -0.9rem; }
 
-.mm-tabs-embed .nav-item{ flex:1 1 0; }
+.mm-tabs-embed:not(.mx-panel-tabs) .nav-item{ flex:1 1 0; }
 
-.mm-tabs-embed .nav-link{
+.mm-tabs-embed:not(.mx-panel-tabs) .nav-link{
 
   display:flex; align-items:center; gap:.6rem; justify-content:flex-start;
 
@@ -3223,17 +3200,17 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 }
 
-.mm-tabs-embed .nav-link .tab-lbl,
+.mm-tabs-embed:not(.mx-panel-tabs) .nav-link .tab-lbl,
 #p-expediente .mm-tabs-row .nav-link .tab-lbl{ text-transform:uppercase; font-weight:700; line-height:1.1; white-space:normal; flex:1 1 auto; text-align:center; display:block; }
 
-.mm-tabs-embed .nav-link .tab-ico,
+.mm-tabs-embed:not(.mx-panel-tabs) .nav-link .tab-ico,
 #p-expediente .mm-tabs-row .nav-link .tab-ico{ flex:0 0 3.2rem; min-width:3.2rem; text-align:left; font-size:3rem; line-height:1; }
 
-.mm-tabs-embed .nav-link:hover{ filter:brightness(1.06); background:#00ADC1; color:#fff; }
+.mm-tabs-embed:not(.mx-panel-tabs) .nav-link:hover{ filter:brightness(1.06); background:#00ADC1; color:#fff; }
 
-.mm-tabs-embed .nav-link.active{ background:#F2FBFC; color:#003152; }
+.mm-tabs-embed:not(.mx-panel-tabs) .nav-link.active{ background:#F2FBFC; color:#003152; }
 
-.mm-tabs-embed .nav-link.active .tab-ico{ color:#003152; }
+.mm-tabs-embed:not(.mx-panel-tabs) .nav-link.active .tab-ico{ color:#003152; }
 
 
 
@@ -3241,9 +3218,9 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 #p-consultorio .mm-tabs-embed .nav-item,
 
-#p-seguridad .mm-tabs-embed .nav-item,
+#p-seguridad .mm-tabs-embed:not(.mx-panel-tabs) .nav-item,
 
-#p-paquetes .mm-tabs-embed .nav-item{ flex:0 0 240px; }
+#p-paquetes .mm-tabs-embed:not(.mx-panel-tabs) .nav-item{ flex:0 0 240px; }
 
 
 
@@ -3293,17 +3270,17 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 /* Profundidad alternada: niveles de alfa en tabs no activos */
 
-#p-info .mm-tabs-embed .nav-item:nth-child(1) .nav-link:not(.active){ background: rgba(0,176,197,.90); color:#fff }
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-item:nth-child(1) .nav-link:not(.active){ background: rgba(0,176,197,.90); color:#fff }
 
-#p-info .mm-tabs-embed .nav-item:nth-child(2) .nav-link:not(.active){ background: rgba(0,176,197,.82); color:#fff }
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-item:nth-child(2) .nav-link:not(.active){ background: rgba(0,176,197,.82); color:#fff }
 
-#p-info .mm-tabs-embed .nav-item:nth-child(3) .nav-link:not(.active){ background: rgba(0,176,197,.74); color:#fff }
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-item:nth-child(3) .nav-link:not(.active){ background: rgba(0,176,197,.74); color:#fff }
 
-#p-info .mm-tabs-embed .nav-item:nth-child(4) .nav-link:not(.active){ background: rgba(0,176,197,.66); color:#fff }
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-item:nth-child(4) .nav-link:not(.active){ background: rgba(0,176,197,.66); color:#fff }
 
-#p-info .mm-tabs-embed .nav-item:nth-child(5) .nav-link:not(.active){ background: rgba(0,176,197,.58); color:#fff }
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-item:nth-child(5) .nav-link:not(.active){ background: rgba(0,176,197,.58); color:#fff }
 
-#p-info .mm-tabs-embed .nav-item .nav-link:not(.active) .tab-ico{ color:#fff }
+#p-info .mm-tabs-embed:not(.mx-panel-tabs) .nav-item .nav-link:not(.active) .tab-ico{ color:#fff }
 
 
 
@@ -3312,93 +3289,6 @@ body{margin:0;background:var(--mm-fondo-base);}
   display:flex;
   align-items:center;
 }
-
-#p-info #tabs-info.mx-panel-tabs{
-  display:flex;
-  flex-wrap:wrap;
-  align-items:center;
-  gap:8px;
-  margin:0 0 .85rem 0;
-  padding:8px;
-  border:1px solid #c7e2f3;
-  border-radius:10px;
-  background:linear-gradient(180deg,#edf8ff 0%,#e6f3fb 100%);
-  overflow:visible;
-}
-
-#p-info #tabs-info.mx-panel-tabs .nav-item.mx-panel-tabs-item{
-  flex:0 1 auto;
-  min-width:0;
-  margin:0;
-}
-
-#p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link{
-  width:auto;
-  min-height:52px;
-  height:100%;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  padding:8px 14px;
-  border:1px solid #b8e1eb;
-  border-radius:9px;
-  background:#fff;
-  color:#015684;
-  font-size:.87rem;
-  font-weight:700;
-  line-height:1.1;
-  text-transform:none;
-  text-align:center;
-  box-shadow:none;
-  filter:none;
-}
-
-#p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link .tab-ico{
-  width:2.35rem;
-  height:2.35rem;
-  flex:0 0 2.35rem;
-  min-width:2.35rem;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  font-size:2.35rem;
-  line-height:1;
-  color:inherit;
-}
-
-#p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link .mx-panel-tabs-label{
-  flex:0 1 auto;
-  display:inline-block;
-  text-align:center;
-  text-transform:none;
-  font-weight:700;
-  line-height:1.12;
-  white-space:normal;
-}
-
-#p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link:hover,
-#p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link:focus-visible{
-  border-color:#72cbd8;
-  background:#ecfbfd;
-  color:#004f7a;
-  outline:none;
-  filter:none;
-}
-
-#p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link.active{
-  background:#00ADC1;
-  border-color:#00ADC1;
-  color:#fff;
-  font-weight:700;
-  box-shadow:none;
-}
-
-#p-info #tabs-info.mx-panel-tabs .nav-link.mx-panel-tabs-link.active .tab-ico{
-  color:inherit;
-}
-
-
 
 /* ===== UX-Panel-01C2 · Datos Personales (compactación + separación conceptual) ===== */
 #p-info #t-info-datos.active{
