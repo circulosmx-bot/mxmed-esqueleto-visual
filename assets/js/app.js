@@ -34402,6 +34402,22 @@ console.info('app.js loaded :: 20251123a');
           <span class="ne-rx-ch-meta" data-clinical-field="sex">--</span>
         </div>
         <div class="ne-rx-ch-reason" data-clinical-field="clinical_reason">Motivo: Sin motivo registrado</div>
+        <div class="mx-exp-empty-state" data-role="exp-empty-state">
+          <div class="mx-exp-empty-copy">
+            <div class="mx-exp-empty-title">Selecciona o registra un paciente para comenzar</div>
+            <div class="mx-exp-empty-text">Puedes crear un nuevo expediente o buscar un paciente existente en tu archivo.</div>
+          </div>
+          <div class="mx-exp-empty-actions" aria-label="Acciones iniciales de expediente">
+            <button type="button" class="mx-exp-empty-action mx-exp-empty-action--primary" data-exp-empty-action="new">
+              <span class="material-symbols-rounded" aria-hidden="true">person_add</span>
+              <span>Nuevo paciente</span>
+            </button>
+            <button type="button" class="mx-exp-empty-action mx-exp-empty-action--secondary" data-exp-empty-action="search">
+              <span class="material-symbols-rounded" aria-hidden="true">folder_open</span>
+              <span>Buscar paciente</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="ne-rx-ch-bottom">
@@ -51860,8 +51876,53 @@ console.info('app.js loaded :: 20251123a');
     pane.__patientGateInit = true;
   }
 
+  const activateDatosGeneralesTab = ()=>{
+    const targetDatosBtn = pane.querySelector('[data-tab-key="t-datos"]');
+    if(targetDatosBtn){
+      window.setTimeout(()=>{ activateWithBootstrap(targetDatosBtn); }, 0);
+    }
+  };
+  const startNewPatientEntry = (source = 'patient_empty_state')=>{
+    pane.dataset.newEntryMode = '1';
+    pane.setAttribute('data-new-entry-mode', '1');
+    try{
+      window.dispatchEvent(new CustomEvent('mxmed:expediente-neutralize', {
+        detail: { reason: 'new_patient_entry', source }
+      }));
+    }catch(_){}
+    activateDatosGeneralesTab();
+  };
+  window.mxmedStartNewPatientEntry = startNewPatientEntry;
+  const navigateToPatientArchive = ()=>{
+    if(typeof jumpTo === 'function'){
+      return jumpTo('p-pac-archivo') !== false;
+    }
+    if(typeof showPanel === 'function'){
+      showPanel('p-pac-archivo');
+      try{
+        localStorage.setItem('mxmed_btn_pacientes', 'p-pac-archivo');
+        localStorage.setItem('mxmed_last_panel', 'p-pac-archivo');
+      }catch(_){}
+      return true;
+    }
+    return false;
+  };
+
   if(expClinicalContext){
     expClinicalContext.addEventListener('click', (ev)=>{
+      const emptyAction = ev.target.closest('[data-exp-empty-action]');
+      if(emptyAction){
+        ev.preventDefault();
+        const action = String(emptyAction.getAttribute('data-exp-empty-action') || '').trim();
+        if(action === 'new'){
+          startNewPatientEntry('patient_empty_state');
+          return;
+        }
+        if(action === 'search'){
+          navigateToPatientArchive();
+          return;
+        }
+      }
       const trigger = ev.target.closest('[data-clinical-action="encounter"]');
       if(!trigger) return;
       const mode = String(trigger.getAttribute('data-encounter-action-mode') || '').trim();
@@ -52038,17 +52099,7 @@ console.info('app.js loaded :: 20251123a');
   const newPatientMenuBtn = document.querySelector('.menu-sub[data-group="pacientes"] .menu-sub-btn[data-panel="p-expediente"]');
   if(newPatientMenuBtn){
     newPatientMenuBtn.addEventListener('click', ()=>{
-      pane.dataset.newEntryMode = '1';
-      pane.setAttribute('data-new-entry-mode', '1');
-      try{
-        window.dispatchEvent(new CustomEvent('mxmed:expediente-neutralize', {
-          detail: { reason: 'new_patient_entry' }
-        }));
-      }catch(_){}
-      const targetDatosBtn = pane.querySelector('[data-tab-key="t-datos"]');
-      if(targetDatosBtn){
-        window.setTimeout(()=>{ activateWithBootstrap(targetDatosBtn); }, 0);
-      }
+      startNewPatientEntry('sidebar_new_patient');
     });
   }
   const headerEncounterObserver = new MutationObserver(syncExpedienteHeaderContext);
