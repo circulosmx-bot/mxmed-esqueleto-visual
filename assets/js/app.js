@@ -34499,6 +34499,9 @@ console.info('app.js loaded :: 20251123a');
   const renderClinicalSlimHeader = (container, headerData = {}, opts = {}) => {
     if (!container) return;
     ensureClinicalSlimHeader(container, opts);
+    const isEmptyState = opts.emptyState === true || headerData?.empty_state === true || headerData?.emptyState === true;
+    container.classList.toggle('mx-clinical-header--empty', isEmptyState);
+    container.setAttribute('data-clinical-empty-state', isEmptyState ? '1' : '0');
     const normalized = normalizeClinicalHeaderData(headerData);
     const fields = Object.keys(CLINICAL_HEADER_EMPTY_STATE);
     fields.forEach((field) => {
@@ -50939,6 +50942,11 @@ console.info('app.js loaded :: 20251123a');
     }
     return null;
   }
+  function getPanePatientContextId(){
+    const fromPane = String(pane.dataset?.patientId || pane.getAttribute('data-patient-id') || '').trim();
+    if(fromPane) return fromPane;
+    return String(pane.dataset?.activePatientId || pane.getAttribute('data-active-patient-id') || '').trim();
+  }
   window.resolveActivePatientId = getActivePatientId;
   window.mxmedResolveActivePatientId = getActivePatientId;
 
@@ -51461,7 +51469,9 @@ console.info('app.js loaded :: 20251123a');
     };
 
     // 1) Identidad fija del paciente (siempre visible cuando hay contexto)
-    const patientId = String(getActivePatientId() || '').trim();
+    const patientId = String(getPanePatientContextId() || '').trim();
+    const hasPatientContext = !!patientId;
+    pane.classList.toggle('mx-expediente-empty-patient', !hasPatientContext);
     const nombre = pane.querySelector('[data-pac-nombre]')?.value?.trim() || '';
     const apPat = pane.querySelector('[data-pac-apellido-paterno]')?.value?.trim() || '';
     const apMat = pane.querySelector('[data-pac-apellido-materno]')?.value?.trim() || '';
@@ -51504,7 +51514,6 @@ console.info('app.js loaded :: 20251123a');
       : false;
     const encounterKey = (suppressAutoEncounterContext || !isOperationalEncounter) ? '' : resolvedEncounterKey;
     if(runToken !== headerSyncToken) return;
-    const hasPatientContext = !!patientId;
     const hasActiveEncounter = !!encounterKey;
     if (typeof window.mxmedRenderClinicalSlimHeader === 'function' && expClinicalContext) {
       const sharedHeaderData = (typeof window.mxmedBuildClinicalHeaderData === 'function')
@@ -51519,7 +51528,7 @@ console.info('app.js loaded :: 20251123a');
         encounter_status: hasActiveEncounter ? 'Consulta activa' : 'Sin consulta activa',
         encounter_action_label: hasPatientContext ? (hasActiveEncounter ? 'Cerrar consulta' : 'Iniciar consulta') : '',
         encounter_action_mode: hasPatientContext ? (hasActiveEncounter ? 'close' : 'start') : ''
-      }, { layout: 'shell' });
+      }, { layout: 'shell', emptyState: !hasPatientContext });
     }
     const hasEntriesForPatient = (typeof window.mxmedHasActiveEntriesForPatient === 'function')
       ? window.mxmedHasActiveEntriesForPatient(patientId)
@@ -51666,7 +51675,8 @@ console.info('app.js loaded :: 20251123a');
   window.mxmedSetCurrentEncounterForPatient = setCurrentEncounterForPatient;
 
   const applyPatientGate = ()=>{
-    const gateOn = String(getActivePatientId() || '').trim() !== '';
+    const gateOn = String(getPanePatientContextId() || '').trim() !== '';
+    pane.classList.toggle('mx-expediente-empty-patient', !gateOn);
     const isFemaleExp = normalizeExpGender(pane.getAttribute('data-exp-gender')) === 'F';
     const panes = Array.from(pane.querySelectorAll('.tab-content .tab-pane'));
     const nonDatosLinks = tabs.filter(btn => btn.getAttribute('data-tab-key') !== 't-datos');
@@ -52077,6 +52087,17 @@ console.info('app.js loaded :: 20251123a');
       syncExpedienteHeaderContext();
       renderActividadClinicaContext();
     }));
+  window.addEventListener('mxmed:workspace-mode', (ev)=>{
+    const panelId = String(ev?.detail?.panelId || '').trim();
+    if(panelId !== 'p-expediente') return;
+    window.requestAnimationFrame(()=>{
+      if(pane.classList.contains('d-none')) return;
+      applyPatientGate();
+      window.__mxmedHeaderSyncOrigin = 'event:mxmed:workspace-mode';
+      syncExpedienteHeaderContext();
+      renderActividadClinicaContext();
+    });
+  });
   window.addEventListener('mxmed:expediente-neutralize', ()=>{
     resetExpedienteIdentityFields();
     clearSessionPatientId();

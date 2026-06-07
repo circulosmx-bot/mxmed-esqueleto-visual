@@ -16407,6 +16407,50 @@ body{margin:0;background:var(--mm-fondo-base);}
   width:100%;
   min-height:64px;
 }
+#p-expediente.mx-expediente-empty-patient .head .exp-hdr-left{
+  grid-template-columns:74px minmax(0,1fr);
+  padding:10px 12px;
+}
+#p-expediente.mx-expediente-empty-patient .head .exp-patient-photo-slot,
+#p-expediente.mx-expediente-empty-patient .head .exp-patient-photo-slot .mf-upload.square{
+  width:64px;
+  min-width:64px;
+  max-width:64px;
+  height:64px;
+  min-height:64px;
+}
+#p-expediente.mx-expediente-empty-patient .head .exp-patient-photo-slot .mf-illus{
+  width:42px;
+  height:42px;
+}
+#p-expediente.mx-expediente-empty-patient .head .exp-patient-photo-slot .mf-actions{
+  display:none;
+}
+#p-expediente.mx-expediente-empty-patient .head .exp-hdr-left .mx-clinical-header--shell{
+  display:block;
+}
+#p-expediente .head .exp-hdr-left .mx-clinical-header--empty .ne-rx-ch-top{
+  padding:0;
+  border:0;
+  background:transparent;
+}
+#p-expediente .head .exp-hdr-left .mx-clinical-header--empty .ne-rx-ch-main::before{
+  content:none;
+  display:none;
+}
+#p-expediente .head .exp-hdr-left .mx-clinical-header--empty .ne-rx-ch-patient-line,
+#p-expediente .head .exp-hdr-left .mx-clinical-header--empty .ne-rx-ch-reason,
+#p-expediente .head .exp-hdr-left .mx-clinical-header--empty .ne-rx-ch-bottom{
+  display:none;
+}
+#p-expediente .head .exp-hdr-left .mx-clinical-header--empty .mx-exp-empty-state{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:14px;
+  width:100%;
+  min-height:64px;
+}
 #p-expediente .head .exp-hdr-left .mx-clinical-header--shell .mx-exp-empty-copy{
   min-width:0;
 }
@@ -16670,7 +16714,8 @@ body{margin:0;background:var(--mm-fondo-base);}
     grid-template-columns:1fr;
     gap:10px;
   }
-  #p-expediente:where(:not([data-patient-id]), [data-patient-id=""]):where(:not([data-active-patient-id]), [data-active-patient-id=""]) .head .exp-hdr-left .mx-clinical-header--shell .mx-exp-empty-state{
+  #p-expediente:where(:not([data-patient-id]), [data-patient-id=""]):where(:not([data-active-patient-id]), [data-active-patient-id=""]) .head .exp-hdr-left .mx-clinical-header--shell .mx-exp-empty-state,
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--empty .mx-exp-empty-state{
     grid-template-columns:1fr;
     gap:10px;
   }
