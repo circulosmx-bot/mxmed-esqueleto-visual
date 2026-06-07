@@ -4296,6 +4296,14 @@
         <section class="mm-card d-none" id="p-expediente">
 
           <div class="head">
+            <header class="mx-panel-subheader mx-panel-subheader--simple">
+              <div class="mx-panel-subheader-main">
+                <span class="mx-panel-subheader-icon material-symbols-rounded" aria-hidden="true">folder_open</span>
+                <div class="mx-panel-subheader-copy">
+                  <h2 class="mx-panel-subheader-title">Expediente paciente</h2>
+                </div>
+              </div>
+            </header>
             <div class="exp-hdr mx-clinical-subheader" data-role="exp-header">
               <div class="exp-hdr-left">
                 <div class="mx-section-topbar ne-rx-modal-header" data-role="exp-section-topbar">
@@ -4304,6 +4312,23 @@
                       <span class="material-symbols-rounded mx-section-topbar-icon">person_add</span>
                     </span>
                     <span data-role="exp-section-topbar-text">EXPEDIENTE PACIENTE</span>
+                  </div>
+                </div>
+                <div class="exp-patient-photo-slot" data-role="exp-patient-photo-slot">
+                  <div class="mf-upload square" data-type="foto" id="pac-foto-slot" aria-label="Fotografía del paciente">
+                    <svg class="mf-illus" viewBox="0 0 64 64" aria-hidden="true">
+                      <circle cx="32" cy="22" r="12" fill="#c7dbe4"/>
+                      <rect x="16" y="36" width="32" height="18" rx="9" fill="#c7dbe4"/>
+                      <rect x="6" y="8" width="52" height="48" rx="8" fill="none" stroke="#99bfd0" stroke-width="2"/>
+                    </svg>
+                    <div class="mf-title">Arrastra aquí la fotografía del paciente</div>
+                    <div class="mf-sub">o haz clic para subirla</div>
+                    <div class="mf-actions">
+                      <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
+                      <button type="button" class="btn btn-outline-secondary btn-sm mf-qr" aria-label="Tomar fotografía con cámara">Tomar con cámara</button>
+                    </div>
+                    <input type="file" accept="image/*" class="d-none mf-input" id="pac-foto">
+                    <div class="mf-prev"><img id="pac-foto-img" alt="preview foto"></div>
                   </div>
                 </div>
                 <div id="exp_clinical_context" class="mx-clinical-header-host" data-clinical-header="slim" data-clinical-layout="shell"></div>
@@ -4354,28 +4379,7 @@
 
                 <div class="dg-head row g-3 align-items-center mb-3">
 
-                  <div class="col-lg-3">
-
-                    <div class="dg-photo">
-                      <div class="mf-upload square" data-type="foto" id="pac-foto-slot">
-                        <svg class="mf-illus" viewBox="0 0 64 64" aria-hidden="true">
-                          <circle cx="32" cy="22" r="12" fill="#c7dbe4"/>
-                          <rect x="16" y="36" width="32" height="18" rx="9" fill="#c7dbe4"/>
-                          <rect x="6" y="8" width="52" height="48" rx="8" fill="none" stroke="#99bfd0" stroke-width="2"/>
-                        </svg>
-                        <div class="mf-title">Arrastra aquí la fotografía del paciente</div>
-                        <div class="mf-sub">o haz clic para subirla</div>
-                        <div class="mf-actions">
-                          <button type="button" class="btn btn-outline-primary btn-sm mf-choose">Subir desde tu equipo</button>
-                          <button type="button" class="btn btn-outline-secondary btn-sm mf-qr">Tomar con cámara</button>
-                        </div>
-                        <input type="file" accept="image/*" class="d-none mf-input" id="pac-foto">
-                        <div class="mf-prev"><img id="pac-foto-img" alt="preview foto"></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="col-lg-9">
+                  <div class="col-12">
                     <div class="form-label mt-2 mb-1 dg-heading">Fecha de Nacimiento</div>
 
                     <div class="row g-2 mt-2 dg-date-row">
