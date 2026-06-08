@@ -16638,6 +16638,38 @@ body{margin:0;background:var(--mm-fondo-base);}
   background:#ffffff;
   color:#008fa5;
 }
+#p-expediente.mx-expediente-new-patient .head .mx-clinical-subheader{
+  border-color:rgba(1,86,132,.26);
+  background:linear-gradient(180deg,#ffffff 0%,#f4fcfe 100%);
+}
+#p-expediente.mx-expediente-new-patient .head .exp-patient-photo-slot .mf-upload.square{
+  border-color:#a7d9e4;
+  background:linear-gradient(145deg,#f7fdff 0%,#dff5f8 100%);
+}
+#p-expediente.mx-expediente-new-patient .head .exp-patient-photo-slot .mf-upload.square::before{
+  content:"edit_note";
+  color:#015684;
+}
+#p-expediente.mx-expediente-new-patient .head .exp-patient-photo-slot .mf-upload.square::after{
+  background:
+    radial-gradient(circle at 18px 12px,rgba(1,86,132,.36) 0 4px,transparent 5px),
+    radial-gradient(circle at 44px 10px,rgba(0,173,193,.34) 0 3px,transparent 4px),
+    radial-gradient(circle at 54px 32px,rgba(1,86,132,.28) 0 2px,transparent 3px);
+}
+#p-expediente .head .exp-hdr-left .mx-clinical-header--new-patient .mx-exp-empty-title{
+  color:#014a72;
+}
+#p-expediente .head .exp-hdr-left .mx-clinical-header--new-patient .mx-exp-empty-action--cancel{
+  border-color:#b8e1eb;
+  background:#ffffff;
+  color:#015684;
+}
+#p-expediente .head .exp-hdr-left .mx-clinical-header--new-patient .mx-exp-empty-action--cancel:hover,
+#p-expediente .head .exp-hdr-left .mx-clinical-header--new-patient .mx-exp-empty-action--cancel:focus-visible{
+  border-color:#015684;
+  background:#eef9fc;
+  color:#003152;
+}
 #p-expediente .head .exp-hdr-left .mx-clinical-header--empty .mx-exp-empty-action--primary:hover,
 #p-expediente .head .exp-hdr-left .mx-clinical-header--empty .mx-exp-empty-action--primary:focus-visible{
   border-color:#00bfd4;

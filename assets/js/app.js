@@ -34409,12 +34409,12 @@ console.info('app.js loaded :: 20251123a');
           </div>
           <div class="mx-exp-empty-actions" aria-label="Acciones iniciales de expediente">
             <button type="button" class="mx-exp-empty-action mx-exp-empty-action--primary" data-exp-empty-action="new">
-              <span class="material-symbols-rounded" aria-hidden="true">person_add</span>
-              <span>Nuevo paciente</span>
+              <span class="material-symbols-rounded" aria-hidden="true" data-exp-empty-action-icon>person_add</span>
+              <span data-exp-empty-action-label>Nuevo paciente</span>
             </button>
             <button type="button" class="mx-exp-empty-action mx-exp-empty-action--secondary" data-exp-empty-action="search">
-              <span class="material-symbols-rounded" aria-hidden="true">folder_open</span>
-              <span>Buscar paciente</span>
+              <span class="material-symbols-rounded" aria-hidden="true" data-exp-empty-action-icon>folder_open</span>
+              <span data-exp-empty-action-label>Buscar paciente</span>
             </button>
           </div>
         </div>
@@ -34500,8 +34500,59 @@ console.info('app.js loaded :: 20251123a');
     if (!container) return;
     ensureClinicalSlimHeader(container, opts);
     const isEmptyState = opts.emptyState === true || headerData?.empty_state === true || headerData?.emptyState === true;
+    const isNewPatientMode = isEmptyState && (
+      opts.newPatientMode === true ||
+      headerData?.new_patient_mode === true ||
+      headerData?.newPatientMode === true
+    );
     container.classList.toggle('mx-clinical-header--empty', isEmptyState);
+    container.classList.toggle('mx-clinical-header--new-patient', isNewPatientMode);
     container.setAttribute('data-clinical-empty-state', isEmptyState ? '1' : '0');
+    container.setAttribute('data-clinical-empty-mode', isEmptyState ? (isNewPatientMode ? 'new-patient' : 'initial') : 'active');
+    const emptyStateNode = container.querySelector('[data-role="exp-empty-state"]');
+    if (emptyStateNode) {
+      const emptyStateConfig = isNewPatientMode
+        ? {
+            title: 'Registrando nuevo paciente',
+            text: 'Completa los datos generales para crear el expediente del paciente.',
+            actionsLabel: 'Acciones de registro de paciente',
+            actions: [
+              { action: 'cancel', icon: 'close', label: 'Cancelar', variant: 'cancel' },
+              { action: 'search', icon: 'folder_open', label: 'Buscar paciente', variant: 'secondary' }
+            ]
+          }
+        : {
+            title: 'Selecciona o registra un paciente para comenzar',
+            text: 'Puedes crear un nuevo expediente o buscar un paciente existente en tu archivo.',
+            actionsLabel: 'Acciones iniciales de expediente',
+            actions: [
+              { action: 'new', icon: 'person_add', label: 'Nuevo paciente', variant: 'primary' },
+              { action: 'search', icon: 'folder_open', label: 'Buscar paciente', variant: 'secondary' }
+            ]
+          };
+      const titleNode = emptyStateNode.querySelector('.mx-exp-empty-title');
+      const textNode = emptyStateNode.querySelector('.mx-exp-empty-text');
+      const actionsNode = emptyStateNode.querySelector('.mx-exp-empty-actions');
+      if (titleNode) titleNode.textContent = emptyStateConfig.title;
+      if (textNode) textNode.textContent = emptyStateConfig.text;
+      if (actionsNode) actionsNode.setAttribute('aria-label', emptyStateConfig.actionsLabel);
+      Array.from(emptyStateNode.querySelectorAll('[data-exp-empty-action]')).forEach((button, index) => {
+        const cfg = emptyStateConfig.actions[index];
+        if (!cfg) {
+          button.classList.add('d-none');
+          return;
+        }
+        button.classList.remove('d-none');
+        button.setAttribute('data-exp-empty-action', cfg.action);
+        button.classList.toggle('mx-exp-empty-action--primary', cfg.variant === 'primary');
+        button.classList.toggle('mx-exp-empty-action--secondary', cfg.variant === 'secondary');
+        button.classList.toggle('mx-exp-empty-action--cancel', cfg.variant === 'cancel');
+        const iconNode = button.querySelector('[data-exp-empty-action-icon]') || button.querySelector('.material-symbols-rounded');
+        const labelNode = button.querySelector('[data-exp-empty-action-label]') || button.querySelector('span:last-child');
+        if (iconNode) iconNode.textContent = cfg.icon;
+        if (labelNode) labelNode.textContent = cfg.label;
+      });
+    }
     const normalized = normalizeClinicalHeaderData(headerData);
     const fields = Object.keys(CLINICAL_HEADER_EMPTY_STATE);
     fields.forEach((field) => {
@@ -51471,7 +51522,9 @@ console.info('app.js loaded :: 20251123a');
     // 1) Identidad fija del paciente (siempre visible cuando hay contexto)
     const patientId = String(getPanePatientContextId() || '').trim();
     const hasPatientContext = !!patientId;
+    const isNewPatientMode = !hasPatientContext && isNewPatientEntryModeActive();
     pane.classList.toggle('mx-expediente-empty-patient', !hasPatientContext);
+    pane.classList.toggle('mx-expediente-new-patient', isNewPatientMode);
     const nombre = pane.querySelector('[data-pac-nombre]')?.value?.trim() || '';
     const apPat = pane.querySelector('[data-pac-apellido-paterno]')?.value?.trim() || '';
     const apMat = pane.querySelector('[data-pac-apellido-materno]')?.value?.trim() || '';
@@ -51528,7 +51581,7 @@ console.info('app.js loaded :: 20251123a');
         encounter_status: hasActiveEncounter ? 'Consulta activa' : 'Sin consulta activa',
         encounter_action_label: hasPatientContext ? (hasActiveEncounter ? 'Cerrar consulta' : 'Iniciar consulta') : '',
         encounter_action_mode: hasPatientContext ? (hasActiveEncounter ? 'close' : 'start') : ''
-      }, { layout: 'shell', emptyState: !hasPatientContext });
+      }, { layout: 'shell', emptyState: !hasPatientContext, newPatientMode: isNewPatientMode });
     }
     const hasEntriesForPatient = (typeof window.mxmedHasActiveEntriesForPatient === 'function')
       ? window.mxmedHasActiveEntriesForPatient(patientId)
@@ -51676,7 +51729,9 @@ console.info('app.js loaded :: 20251123a');
 
   const applyPatientGate = ()=>{
     const gateOn = String(getPanePatientContextId() || '').trim() !== '';
+    const isNewPatientMode = !gateOn && isNewPatientEntryModeActive();
     pane.classList.toggle('mx-expediente-empty-patient', !gateOn);
+    pane.classList.toggle('mx-expediente-new-patient', isNewPatientMode);
     const isFemaleExp = normalizeExpGender(pane.getAttribute('data-exp-gender')) === 'F';
     const panes = Array.from(pane.querySelectorAll('.tab-content .tab-pane'));
     const nonDatosLinks = tabs.filter(btn => btn.getAttribute('data-tab-key') !== 't-datos');
@@ -51892,6 +51947,50 @@ console.info('app.js loaded :: 20251123a');
       window.setTimeout(()=>{ activateWithBootstrap(targetDatosBtn); }, 0);
     }
   };
+  const isNewPatientEntryModeActive = ()=>{
+    return String(pane.dataset?.newEntryMode || pane.getAttribute('data-new-entry-mode') || '').trim() === '1';
+  };
+  const hasNewPatientDraftProgress = ()=>{
+    if(!isNewPatientEntryModeActive()) return false;
+    const draft = readExpedienteIdentityDraftFromDom();
+    const hasIdentityData = Object.values(draft).some((value)=> String(value || '').trim() !== '');
+    if(hasIdentityData) return true;
+    const datosPane = pane.querySelector('#t-datos');
+    const controls = Array.from(datosPane?.querySelectorAll('input, select, textarea') || []);
+    return controls.some((control)=>{
+      const type = String(control.getAttribute('type') || control.type || '').trim().toLowerCase();
+      if(['button', 'submit', 'reset', 'hidden', 'file'].includes(type)) return false;
+      if(type === 'checkbox' || type === 'radio') return control.checked === true;
+      if(control.tagName === 'SELECT'){
+        return Number(control.selectedIndex || 0) > 0 && String(control.value || '').trim() !== '';
+      }
+      return String(control.value || '').trim() !== '';
+    });
+  };
+  const confirmDiscardNewPatientDraft = ()=>{
+    if(!hasNewPatientDraftProgress()) return true;
+    return window.confirm('Hay datos sin guardar. ¿Deseas cancelar el registro y descartar la captura?');
+  };
+  const clearNewPatientEntryState = (source = 'new_patient_entry_cancel')=>{
+    delete pane.dataset.newEntryMode;
+    pane.removeAttribute('data-new-entry-mode');
+    try{
+      window.dispatchEvent(new CustomEvent('mxmed:expediente-neutralize', {
+        detail: { reason: 'new_patient_entry_cancel', source }
+      }));
+    }catch(_){}
+    activateDatosGeneralesTab();
+    return true;
+  };
+  const cancelNewPatientEntry = (source = 'patient_empty_state_cancel')=>{
+    if(!confirmDiscardNewPatientDraft()) return false;
+    return clearNewPatientEntryState(source);
+  };
+  window.mxmedHasUnsavedNewPatientDraft = hasNewPatientDraftProgress;
+  window.mxmedClearNewPatientEntryDirty = (detail = {})=>{
+    const reason = String(detail?.reason || 'clear_new_patient_entry_dirty').trim();
+    return clearNewPatientEntryState(reason);
+  };
   const startNewPatientEntry = (source = 'patient_empty_state')=>{
     pane.dataset.newEntryMode = '1';
     pane.setAttribute('data-new-entry-mode', '1');
@@ -51928,7 +52027,14 @@ console.info('app.js loaded :: 20251123a');
           startNewPatientEntry('patient_empty_state');
           return;
         }
+        if(action === 'cancel'){
+          cancelNewPatientEntry('patient_empty_state_cancel');
+          return;
+        }
         if(action === 'search'){
+          if(isNewPatientEntryModeActive() && !cancelNewPatientEntry('patient_empty_state_search')){
+            return;
+          }
           navigateToPatientArchive();
           return;
         }
