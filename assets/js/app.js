@@ -35422,6 +35422,52 @@ console.info('app.js loaded :: 20251123a');
     else { pane.removeAttribute('data-exp-gender'); }
   };
   const sanitizeText = (value)=> String(value || '').replace(/\s+/g, ' ').trim();
+  const getGenderOptionCard = (input)=>{
+    return input?.closest('.dg-gender-item')?.querySelector('.dg-gender-card') || null;
+  };
+  const syncGenderOptionCardsA11y = ()=>{
+    const genderGroup = pane.querySelector('.dg-gender-inline');
+    if(genderGroup){
+      genderGroup.setAttribute('role', 'radiogroup');
+      genderGroup.setAttribute('aria-label', 'Género');
+    }
+    genderInputs.forEach((input)=>{
+      const card = getGenderOptionCard(input);
+      if(!card) return;
+      const label = sanitizeText(card.textContent);
+      card.setAttribute('role', 'radio');
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('aria-checked', input.checked ? 'true' : 'false');
+      if(label) card.setAttribute('aria-label', label);
+      input.setAttribute('tabindex', '-1');
+      input.setAttribute('aria-hidden', 'true');
+    });
+  };
+  const selectGenderOptionCard = (input)=>{
+    if(!input) return;
+    if(!input.checked){
+      input.checked = true;
+      input.dispatchEvent(new Event('change', { bubbles:true }));
+      return;
+    }
+    syncGenderOptionCardsA11y();
+  };
+  const bindGenderOptionCardsA11y = ()=>{
+    genderInputs.forEach((input)=>{
+      const card = getGenderOptionCard(input);
+      if(!card || card.dataset.dgGenderKeyboardBound === '1') return;
+      card.dataset.dgGenderKeyboardBound = '1';
+      card.addEventListener('keydown', (event)=>{
+        if(event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        selectGenderOptionCard(input);
+      });
+      card.addEventListener('click', ()=>{
+        window.setTimeout(syncGenderOptionCardsA11y, 0);
+      });
+    });
+    syncGenderOptionCardsA11y();
+  };
   const clinicalTabTargets = {
     datos: '#t-datos',
     historia: '#t-historia',
@@ -51803,6 +51849,7 @@ console.info('app.js loaded :: 20251123a');
     });
     const genero = genderInputs.find(r=>r.checked)?.value || '';
     setGenderAttr(genero);
+    syncGenderOptionCardsA11y();
     syncGineco(genero, opts.allowNavigate);
     updateGenderExtra();
     applyPatientGate();
@@ -51818,6 +51865,7 @@ console.info('app.js loaded :: 20251123a');
     syncGineco(selected, true);
     syncState({ allowNavigate:true });
   }));
+  bindGenderOptionCardsA11y();
 
   const getTabIdFromTarget = (target)=> String(target || '').replace(/^#/, '').trim();
   const getTabDisplayTitle = (btn)=>{
