@@ -59684,6 +59684,7 @@ function mxResetLogoPreview(){
   const qEl = document.getElementById('mm-pac-archivo-q');
   const filterEl = document.getElementById('mm-pac-archivo-filter');
   const searchBtn = document.getElementById('mm-pac-archivo-search');
+  const newBtn = document.getElementById('mm-pac-archivo-new');
   const msgEl = document.getElementById('mm-pac-archivo-msg');
   const tbodyEl = document.getElementById('mm-pac-archivo-tbody');
   if(!qEl || !filterEl || !searchBtn || !msgEl || !tbodyEl) return;
@@ -59951,6 +59952,34 @@ function mxResetLogoPreview(){
     }
   });
   searchBtn.addEventListener('click', doSearch);
+  newBtn?.addEventListener('click', (ev)=>{
+    ev.preventDefault();
+    if(typeof window.mxmedHasUnsavedNewPatientDraft === 'function'){
+      let hasUnsaved = false;
+      try{
+        hasUnsaved = window.mxmedHasUnsavedNewPatientDraft() === true;
+      }catch(_){
+        hasUnsaved = false;
+      }
+      if(hasUnsaved){
+        const allow = window.confirm('Hay datos sin guardar. ¿Deseas cancelar el registro y descartar la captura?');
+        if(!allow) return;
+        if(typeof window.mxmedClearNewPatientEntryDirty === 'function'){
+          try{ window.mxmedClearNewPatientEntryDirty({ reason: 'archive_new_patient' }); }catch(_){}
+        }
+      }
+    }
+    if(typeof window.mxmedStartNewPatientEntry === 'function'){
+      window.mxmedStartNewPatientEntry('archive_new_patient');
+    }
+    if(typeof jumpTo === 'function'){
+      jumpTo('p-expediente');
+      return;
+    }
+    if(typeof showPanel === 'function'){
+      showPanel('p-expediente');
+    }
+  });
   tbodyEl.addEventListener('click', async (ev)=>{
     const btn = ev.target.closest('[data-pid]');
     if(!btn) return;
