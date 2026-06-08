@@ -16771,7 +16771,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-expediente #t-datos.active{
   display:grid;
   grid-template-columns:repeat(12,minmax(0,1fr));
-  gap:14px 16px;
+  gap:10px 14px;
   align-items:start;
 }
 #p-expediente #t-datos > .dg-head{
@@ -16785,16 +16785,15 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-expediente #t-datos > .dg-head > .col-12{
   display:grid;
   grid-template-columns:minmax(350px,.9fr) minmax(420px,1.1fr);
-  gap:8px 24px;
+  gap:10px 14px;
   flex:1 1 auto;
   width:auto;
   max-width:none;
   min-width:0;
   padding-left:0;
   padding-right:0;
-  padding:16px 0 18px;
-  border-top:1px solid #d4e8ef;
-  border-bottom:1px solid #d4e8ef;
+  padding:0;
+  border:0;
 }
 #p-expediente #t-datos > .dg-form{
   display:contents;
@@ -16802,6 +16801,28 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-expediente #t-datos > .dg-form > [class*="col-"]{
   width:auto;
   max-width:none;
+  min-width:0;
+  margin-top:0 !important;
+  padding-left:0;
+  padding-right:0;
+}
+#p-expediente #t-datos > .dg-form .form-label{
+  margin-bottom:.25rem;
+  font-size:.88rem;
+  line-height:1.16;
+}
+#p-expediente #t-datos > .dg-form .form-control,
+#p-expediente #t-datos > .dg-form .form-select,
+#p-expediente #t-datos .dg-date-field .form-select{
+  min-height:38px;
+  padding-top:.42rem;
+  padding-bottom:.42rem;
+  border-radius:10px;
+  font-size:.92rem;
+}
+#p-expediente #t-datos > .dg-form .row.g-2{
+  --bs-gutter-x:.45rem;
+  --bs-gutter-y:.35rem;
 }
 #p-expediente #t-datos > .dg-form > div:nth-child(1){
   grid-column:1 / 5;
@@ -16820,12 +16841,13 @@ body{margin:0;background:var(--mm-fondo-base);}
 }
 #p-expediente #t-datos > .dg-form > div:last-child{
   grid-column:1 / -1;
+  margin-top:2px !important;
 }
 #p-expediente #t-datos .dg-heading{
   grid-column:1;
   grid-row:1;
-  margin:0 0 2px !important;
-  font-size:1rem;
+  margin:0 !important;
+  font-size:.94rem;
   font-weight:800;
 }
 #p-expediente #t-datos .dg-date-row{
@@ -16834,13 +16856,16 @@ body{margin:0;background:var(--mm-fondo-base);}
   margin-top:0 !important;
   align-items:center;
   min-width:0;
+  --bs-gutter-x:.5rem;
+  --bs-gutter-y:.25rem;
 }
 #p-expediente #t-datos .dg-gender-inline{
   grid-column:2;
   grid-row:1 / span 2;
   margin-top:0 !important;
-  padding-left:24px;
-  border-left:1px solid #cfe3eb;
+  gap:6px 12px;
+  padding-left:0;
+  border-left:0;
   align-self:stretch;
   align-content:center;
   min-width:0;
@@ -16849,25 +16874,25 @@ body{margin:0;background:var(--mm-fondo-base);}
   content:"Género";
   flex:0 0 100%;
   color:#003152;
-  font-size:1rem;
+  font-size:.94rem;
   font-weight:800;
   line-height:1.2;
-  margin-bottom:4px;
+  margin-bottom:2px;
 }
 #p-expediente #t-datos .dg-gender-card{
   flex-direction:row;
-  gap:8px;
-  padding:2px 4px;
+  gap:6px;
+  padding:1px 2px;
 }
 #p-expediente #t-datos .dg-gender-ico{
-  width:36px;
-  height:36px;
+  width:32px;
+  height:32px;
 }
 #p-expediente #t-datos .dg-gender-ico .material-symbols-outlined{
-  font-size:27px;
+  font-size:24px;
 }
 #p-expediente #t-datos .dg-gender-lbl{
-  font-size:.88rem;
+  font-size:.84rem;
   white-space:nowrap;
 }
 @media (max-width: 1199.98px){
@@ -16920,9 +16945,9 @@ body{margin:0;background:var(--mm-fondo-base);}
     grid-column:1;
     grid-row:auto;
     padding-left:0;
-    padding-top:12px;
+    padding-top:0;
     border-left:0;
-    border-top:1px solid #cfe3eb;
+    border-top:0;
   }
 }
 @media (max-width: 767.98px){
@@ -17061,7 +17086,7 @@ body{margin:0;background:var(--mm-fondo-base);}
     grid-row:4;
   }
   #p-expediente #t-datos > .dg-head > .col-12{
-    padding:12px 0;
+    padding:0;
   }
   #p-expediente #t-datos .dg-date-row{
     display:grid;
