@@ -257,6 +257,8 @@ console.info('app.js loaded :: 20251123a');
   const TECHNICAL_TEXT_RE = /\b(tel[eé]fono|whatsapp|correo|email|e-mail|c[oó]digo postal|codigo postal|c\.?p\.?|curp|rfc|c[eé]dula|cedula|contrase[nñ]a|password|otp|token|usuario|login|buscar|b[uú]squeda|folio|id|#\s*(ext|int)|n[uú]mero\s+(ext|int)|piso|sist[oó]lica|diast[oó]lica|spo2|spO₂|temperatura|peso|altura|cintura|imc)\b/i;
   const NAME_TEXT_RE = /\b(nombre\(s\)|nombre completo|primer apellido|segundo apellido|apellido paterno|apellido materno|apellido|nombre de la persona|nombre del firmante|firmante|testigo|ocupaci[oó]n|estado civil|parentesco|calle|colonia|fraccionamiento|municipio|localidad|estado|direcci[oó]n|universidad|instituci[oó]n|especialidad|subespecialidad|certificaci[oó]n)\b/i;
   const SENTENCE_TEXT_RE = /\b(motivo|observaci[oó]n|observaciones|antecedente|antecedentes|nota|notas|diagn[oó]stico|diagn[oó]sticos|tratamiento|indicaci[oó]n|indicaciones|padecimiento|evoluci[oó]n|s[ií]ntoma|s[ií]ntomas|hallazgo|hallazgos|interpretaci[oó]n|plan|riesgo|riesgos|beneficio|beneficios|alternativa|alternativas|resumen|detalle|detalles|descripci[oó]n|describe|informaci[oó]n adicional|objetivo|pron[oó]stico|recomendaci[oó]n|recomendaciones|cuidados|signos de alarma|egreso|control)\b/i;
+  const HUMAN_NAME_CASE_SELECTOR = '[data-pac-nombre], [data-pac-apellido-paterno], [data-pac-apellido-materno]';
+  const HUMAN_NAME_CASE_PARTICLES = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'van', 'von', 'da', 'dos']);
 
   const normalizeTextAssistText = (value)=>{
     return String(value == null ? '' : value)
@@ -287,6 +289,48 @@ console.info('app.js loaded :: 20251123a');
     const wrapLabel = fieldWrap?.querySelector?.('label, .form-label, .mx-field-label');
     if(wrapLabel) chunks.push(wrapLabel.textContent || '');
     return chunks.join(' ');
+  };
+
+  const capitalizeHumanNameSegment = (segment)=>{
+    if(!segment) return '';
+    const lowered = String(segment).toLocaleLowerCase('es-MX');
+    return lowered.charAt(0).toLocaleUpperCase('es-MX') + lowered.slice(1);
+  };
+
+  const normalizeHumanNameWord = (word, index)=>{
+    const lowered = String(word || '').toLocaleLowerCase('es-MX');
+    if(index > 0 && HUMAN_NAME_CASE_PARTICLES.has(lowered)) return lowered;
+    return lowered
+      .split(/([-'\u2019])/)
+      .map((segment)=> /^[-'\u2019]$/.test(segment) ? segment : capitalizeHumanNameSegment(segment))
+      .join('');
+  };
+
+  const normalizeHumanNameCase = (value)=>{
+    const clean = String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
+    if(!clean) return '';
+    return clean.split(' ').map(normalizeHumanNameWord).join(' ');
+  };
+
+  const isHumanNameCaseControl = (control)=>{
+    if(!control || control.disabled || control.readOnly) return false;
+    if(!control.closest?.('#p-expediente')) return false;
+    const tag = String(control.tagName || '').toLowerCase();
+    if(tag !== 'input') return false;
+    const type = String(control.getAttribute('type') || control.type || 'text').toLowerCase();
+    if(type && type !== 'text') return false;
+    if(control.matches(HUMAN_NAME_CASE_SELECTOR)) return true;
+    const label = normalizeTextAssistText(readAssociatedLabelText(control)).toLowerCase();
+    return label === 'nombre de la persona de contacto';
+  };
+
+  const applyHumanNameCase = (control)=>{
+    if(!isHumanNameCaseControl(control)) return;
+    const current = String(control.value || '');
+    const normalized = normalizeHumanNameCase(current);
+    if(normalized === current) return;
+    control.value = normalized;
+    control.dispatchEvent(new Event('input', { bubbles: true }));
   };
 
   const describeControlForTextAssist = (control)=>{
@@ -353,6 +397,12 @@ console.info('app.js loaded :: 20251123a');
   const startTextAssist = ()=>{
     applyTextAssistAttributes();
     const scope = document.getElementById('p-expediente');
+    if(scope && !scope.__mxmedHumanNameCaseBound){
+      scope.addEventListener('focusout', (event)=>{
+        applyHumanNameCase(event.target);
+      });
+      scope.__mxmedHumanNameCaseBound = true;
+    }
     if(scope && window.MutationObserver && !scope.__mxmedTextAssistObserver){
       const observer = new MutationObserver((mutations)=>{
         if(mutations.some((mutation)=> mutation.type === 'childList' && mutation.addedNodes.length > 0)){
