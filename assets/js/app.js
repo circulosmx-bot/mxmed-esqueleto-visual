@@ -50692,6 +50692,7 @@ console.info('app.js loaded :: 20251123a');
 
     const draftSexo = String(draft.sexo || '').trim();
     genderInputs.forEach((inp)=>{ inp.checked = !!draftSexo && inp.value === draftSexo; });
+    syncGenderOptionCardsA11y();
 
     const dd = pane.querySelector('[data-dg-dia]');
     const mm = pane.querySelector('[data-dg-mes]');
@@ -50727,6 +50728,7 @@ console.info('app.js loaded :: 20251123a');
     const edadOk = pane.querySelector('[data-dg-ok]');
     if(edadOk) edadOk.style.display = 'none';
     pane.removeAttribute('data-exp-gender');
+    syncGenderOptionCardsA11y();
 
     delete pane.dataset.lastDxText;
     delete pane.dataset.lastDxDate;
@@ -52038,6 +52040,38 @@ console.info('app.js loaded :: 20251123a');
   const isNewPatientEntryModeActive = ()=>{
     return String(pane.dataset?.newEntryMode || pane.getAttribute('data-new-entry-mode') || '').trim() === '1';
   };
+  const readNewPatientMinimumIdentity = ()=>{
+    const readValue = (selector)=> sanitizeText(pane.querySelector(selector)?.value);
+    const firstName = readValue('[data-pac-nombre]');
+    const paternalLastName = readValue('[data-pac-apellido-paterno]');
+    const maternalLastName = readValue('[data-pac-apellido-materno]');
+    const birthDay = readValue('[data-dg-dia]');
+    const birthMonth = readValue('[data-dg-mes]');
+    const birthYear = readValue('[data-dg-anio]');
+    const genderInput = pane.querySelector('input[name="pac-genero"]:checked');
+    const genderValue = sanitizeText(genderInput?.value);
+    const genderCard = getGenderOptionCard(genderInput);
+    const genderLabel = sanitizeText(genderCard?.querySelector('.dg-gender-lbl')?.textContent || genderCard?.textContent || toUserSex(genderValue));
+    const hasName = firstName !== '';
+    const hasBirthDate = birthDay !== '' && birthMonth !== '' && birthYear !== '';
+    const hasGender = genderValue !== '';
+    return {
+      fullName: [firstName, paternalLastName, maternalLastName].filter(Boolean).join(' ').trim(),
+      firstName,
+      paternalLastName,
+      maternalLastName,
+      birthDay,
+      birthMonth,
+      birthYear,
+      genderValue,
+      genderLabel,
+      hasBirthDate,
+      hasGender,
+      hasName,
+      hasMinimumIdentity: hasName && hasBirthDate && hasGender
+    };
+  };
+  window.mxmedDebugReadNewPatientMinimumIdentity = readNewPatientMinimumIdentity;
   const hasNewPatientDraftProgress = ()=>{
     if(!isNewPatientEntryModeActive()) return false;
     const draft = readExpedienteIdentityDraftFromDom();
