@@ -31837,20 +31837,21 @@ console.info('app.js loaded :: 20251123a');
     const mm = pane?.querySelector('[data-dg-mes]')?.value || '';
     const yy = pane?.querySelector('[data-dg-anio]')?.value || '';
     const dob = [yy, mm, dd].filter(Boolean).join('-');
-    const patientKey = buildLegacyPatientId(nombreCompleto, dob, sexoVal);
     const contextPatientId = resolveContextPatientId();
+    const hasPatientContext = contextPatientId !== '';
+    const patientKey = hasPatientContext ? buildLegacyPatientId(nombreCompleto, dob, sexoVal) : '';
     const canonicalCache = getCanonicalCache();
-    const canonicalPatientId = /^p_/i.test(contextPatientId)
+    const canonicalPatientId = hasPatientContext && /^p_/i.test(contextPatientId)
       ? contextPatientId
-      : (Object.prototype.hasOwnProperty.call(canonicalCache, patientKey)
+      : (hasPatientContext && Object.prototype.hasOwnProperty.call(canonicalCache, patientKey)
         ? (canonicalCache[patientKey] || null)
         : null);
 
-    if (!canonicalPatientId) {
+    if (hasPatientContext && !canonicalPatientId) {
       resolveCanonicalPatientIdSafe(patientKey).catch(() => {});
     }
-    const resolvedPatientId = canonicalPatientId || contextPatientId || patientKey;
-    if (window.__p15LastResolvedPatientLog !== resolvedPatientId) {
+    const resolvedPatientId = canonicalPatientId || contextPatientId;
+    if (resolvedPatientId && window.__p15LastResolvedPatientLog !== resolvedPatientId) {
       window.__p15LastResolvedPatientLog = resolvedPatientId;
       console.info('[P15][nota_evolucion] patient_id resolved', {
         patient_id: resolvedPatientId,
@@ -33186,6 +33187,10 @@ console.info('app.js loaded :: 20251123a');
   const renderTimeline = () => {
     const patient = getPatient();
     if (!els.timeline) return;
+    if (!patient.patient_id) {
+      els.timeline.innerHTML = '<div class="text-muted small">Selecciona un paciente para consultar notas de evolución.</div>';
+      return;
+    }
 
     const renderLocal = () => {
       const list = loadNotes(patient.patient_id);
