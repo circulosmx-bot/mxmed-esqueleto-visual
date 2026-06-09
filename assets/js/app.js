@@ -34430,6 +34430,7 @@ console.info('app.js loaded :: 20251123a');
         <div class="mx-ch-enc-wrap">
           <span class="ne-rx-ch-value" data-clinical-field="encounter_status">Sin consulta activa</span>
           <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="encounter">Iniciar consulta</button>
+          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="draft-search">Buscar paciente</button>
         </div>
       </div>
       <div class="ne-rx-ch-item">
@@ -34505,11 +34506,31 @@ console.info('app.js loaded :: 20251123a');
       headerData?.new_patient_mode === true ||
       headerData?.newPatientMode === true
     );
+    const isDraftPatientMode = !isEmptyState && (
+      opts.draftPatientMode === true ||
+      headerData?.draft_patient_mode === true ||
+      headerData?.draftPatientMode === true
+    );
     container.classList.toggle('mx-clinical-header--empty', isEmptyState);
     container.classList.toggle('mx-clinical-header--new-patient', isNewPatientMode);
+    container.classList.toggle('mx-clinical-header--new-draft', isDraftPatientMode);
     container.setAttribute('data-clinical-empty-state', isEmptyState ? '1' : '0');
-    container.setAttribute('data-clinical-empty-mode', isEmptyState ? (isNewPatientMode ? 'new-patient' : 'initial') : 'active');
+    container.setAttribute('data-clinical-empty-mode', isEmptyState ? (isNewPatientMode ? 'new-patient' : 'initial') : (isDraftPatientMode ? 'new-draft' : 'active'));
     const emptyStateNode = container.querySelector('[data-role="exp-empty-state"]');
+    const patientLineNode = container.querySelector('.ne-rx-ch-patient-line');
+    const reasonNode = container.querySelector('.ne-rx-ch-reason');
+    const bottomNode = container.querySelector('.ne-rx-ch-bottom');
+    if (isDraftPatientMode) {
+      if (emptyStateNode) emptyStateNode.style.display = 'none';
+      if (patientLineNode) patientLineNode.style.display = 'flex';
+      if (reasonNode) reasonNode.style.display = '-webkit-box';
+      if (bottomNode) bottomNode.style.display = 'grid';
+    } else {
+      if (emptyStateNode) emptyStateNode.style.removeProperty('display');
+      if (patientLineNode) patientLineNode.style.removeProperty('display');
+      if (reasonNode) reasonNode.style.removeProperty('display');
+      if (bottomNode) bottomNode.style.removeProperty('display');
+    }
     if (emptyStateNode) {
       const emptyStateConfig = isNewPatientMode
         ? {
@@ -34570,6 +34591,18 @@ console.info('app.js loaded :: 20251123a');
       } else {
         actionBtn.textContent = '';
         actionBtn.removeAttribute('data-encounter-action-mode');
+      }
+    }
+    const draftSearchBtn = container.querySelector('[data-clinical-action="draft-search"]');
+    if (draftSearchBtn) {
+      const showDraftSearch = isDraftPatientMode && normalizeRecetaText(headerData?.draft_search_action_label || 'Buscar paciente') !== '';
+      draftSearchBtn.classList.toggle('d-none', !showDraftSearch);
+      if (showDraftSearch) {
+        draftSearchBtn.textContent = normalizeRecetaText(headerData?.draft_search_action_label || 'Buscar paciente');
+        draftSearchBtn.setAttribute('data-encounter-action-mode', 'draft-search');
+      } else {
+        draftSearchBtn.textContent = '';
+        draftSearchBtn.removeAttribute('data-encounter-action-mode');
       }
     }
   };
@@ -51570,19 +51603,26 @@ console.info('app.js loaded :: 20251123a');
     // 1) Identidad fija del paciente (siempre visible cuando hay contexto)
     const patientId = String(getPanePatientContextId() || '').trim();
     const hasPatientContext = !!patientId;
-    const isNewPatientMode = !hasPatientContext && isNewPatientEntryModeActive();
-    pane.classList.toggle('mx-expediente-empty-patient', !hasPatientContext);
+    const headerState = resolveExpedienteHeaderState(patientId);
+    const isNewPatientMode = headerState.mode === 'new-patient';
+    const isNewDraftMode = headerState.mode === 'new-draft';
+    pane.classList.toggle('mx-expediente-empty-patient', !hasPatientContext && !isNewDraftMode);
     pane.classList.toggle('mx-expediente-new-patient', isNewPatientMode);
+    pane.classList.toggle('mx-expediente-new-draft', isNewDraftMode);
     const nombre = pane.querySelector('[data-pac-nombre]')?.value?.trim() || '';
     const apPat = pane.querySelector('[data-pac-apellido-paterno]')?.value?.trim() || '';
     const apMat = pane.querySelector('[data-pac-apellido-materno]')?.value?.trim() || '';
-    const fullName = [nombre, apPat, apMat].filter(Boolean).join(' ').trim() || 'Paciente';
+    const fullName = isNewDraftMode
+      ? (headerState.payload?.patient_name || 'Paciente')
+      : ([nombre, apPat, apMat].filter(Boolean).join(' ').trim() || 'Paciente');
     const ageText = pane.querySelector('[data-dg-edad]')?.textContent?.trim() || '--';
     const sexoVal = firstNonEmpty(
       pane.querySelector('input[name="pac-genero"]:checked')?.value || '',
       pane.getAttribute('data-exp-gender')
     );
-    const sexText = toUserSex(sexoVal);
+    const sexText = isNewDraftMode
+      ? (headerState.payload?.sex || toUserSex(sexoVal))
+      : toUserSex(sexoVal);
     setNodeText(expHeaderName, fullName);
     setNodeText(expHeaderAge, ageText || '--');
     setNodeText(expHeaderSex, sexText);
@@ -51620,16 +51660,24 @@ console.info('app.js loaded :: 20251123a');
       const sharedHeaderData = (typeof window.mxmedBuildClinicalHeaderData === 'function')
         ? window.mxmedBuildClinicalHeaderData()
         : {};
+      const draftHeaderData = isNewDraftMode ? (headerState.payload || {}) : {};
       window.mxmedRenderClinicalSlimHeader(expClinicalContext, {
         ...sharedHeaderData,
+        ...draftHeaderData,
         patient_name: fullName,
         age: ageText || '--',
         sex: sexText,
         clinical_reason: motivoConsulta || '',
         encounter_status: hasActiveEncounter ? 'Consulta activa' : 'Sin consulta activa',
-        encounter_action_label: hasPatientContext ? (hasActiveEncounter ? 'Cerrar consulta' : 'Iniciar consulta') : '',
-        encounter_action_mode: hasPatientContext ? (hasActiveEncounter ? 'close' : 'start') : ''
-      }, { layout: 'shell', emptyState: !hasPatientContext, newPatientMode: isNewPatientMode });
+        encounter_action_label: isNewDraftMode ? 'Cancelar' : (hasPatientContext ? (hasActiveEncounter ? 'Cerrar consulta' : 'Iniciar consulta') : ''),
+        encounter_action_mode: isNewDraftMode ? 'draft-cancel' : (hasPatientContext ? (hasActiveEncounter ? 'close' : 'start') : ''),
+        draft_search_action_label: isNewDraftMode ? 'Buscar paciente' : ''
+      }, {
+        layout: 'shell',
+        emptyState: !hasPatientContext && !isNewDraftMode,
+        newPatientMode: isNewPatientMode,
+        draftPatientMode: isNewDraftMode
+      });
     }
     const hasEntriesForPatient = (typeof window.mxmedHasActiveEntriesForPatient === 'function')
       ? window.mxmedHasActiveEntriesForPatient(patientId)
@@ -52072,6 +52120,36 @@ console.info('app.js loaded :: 20251123a');
     };
   };
   window.mxmedDebugReadNewPatientMinimumIdentity = readNewPatientMinimumIdentity;
+  const resolveExpedienteHeaderState = (patientId = '')=>{
+    const realPatientId = sanitizeText(patientId || getPanePatientContextId());
+    if(realPatientId){
+      return { mode: 'active', patientId: realPatientId, payload: null };
+    }
+    if(!isNewPatientEntryModeActive()){
+      return { mode: 'initial', patientId: '', payload: null };
+    }
+    const identity = readNewPatientMinimumIdentity();
+    if(!identity.hasMinimumIdentity){
+      return { mode: 'new-patient', patientId: '', payload: { identity } };
+    }
+    const genderLabel = sanitizeText(identity.genderLabel || toUserSex(identity.genderValue));
+    const sexParts = [genderLabel, 'Nuevo paciente en captura'].filter(Boolean);
+    return {
+      mode: 'new-draft',
+      patientId: '',
+      payload: {
+        identity,
+        draft_patient_mode: true,
+        patient_name: identity.fullName || identity.firstName || 'Paciente',
+        sex: sexParts.join(' · '),
+        clinical_reason: '',
+        encounter_status: 'Sin consulta activa',
+        encounter_action_label: 'Cancelar',
+        encounter_action_mode: 'draft-cancel',
+        draft_search_action_label: 'Buscar paciente'
+      }
+    };
+  };
   const hasNewPatientDraftProgress = ()=>{
     if(!isNewPatientEntryModeActive()) return false;
     const draft = readExpedienteIdentityDraftFromDom();
@@ -52163,8 +52241,22 @@ console.info('app.js loaded :: 20251123a');
         }
       }
       const trigger = ev.target.closest('[data-clinical-action="encounter"]');
-      if(!trigger) return;
+      const draftSearchTrigger = ev.target.closest('[data-clinical-action="draft-search"]');
+      if(!trigger && !draftSearchTrigger) return;
+      if(draftSearchTrigger){
+        ev.preventDefault();
+        if(isNewPatientEntryModeActive() && !cancelNewPatientEntry('new_draft_search')){
+          return;
+        }
+        navigateToPatientArchive();
+        return;
+      }
       const mode = String(trigger.getAttribute('data-encounter-action-mode') || '').trim();
+      if(mode === 'draft-cancel'){
+        ev.preventDefault();
+        cancelNewPatientEntry('new_draft_cancel');
+        return;
+      }
       if(mode === 'close'){
         if(!p10FinalizeBtn || p10FinalizeBtn.disabled) return;
         p10FinalizeBtn.click();
