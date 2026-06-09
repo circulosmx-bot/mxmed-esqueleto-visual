@@ -34428,11 +34428,13 @@ console.info('app.js loaded :: 20251123a');
       <div class="ne-rx-ch-item">
         <span class="material-symbols-outlined ne-rx-ch-ico" aria-hidden="true">description</span>
         <div class="mx-ch-enc-wrap">
-          <span class="ne-rx-ch-value" data-clinical-field="encounter_status">Sin consulta activa</span>
-          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="encounter">Iniciar consulta</button>
-          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="draft-search">Buscar paciente</button>
-        </div>
-      </div>
+	          <span class="ne-rx-ch-value" data-clinical-field="encounter_status">Sin consulta activa</span>
+	          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="encounter">Iniciar consulta</button>
+	          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="draft-search">Buscar paciente</button>
+	          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="active-close">Cerrar expediente</button>
+	          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="active-search">Cambiar paciente</button>
+	        </div>
+	      </div>
       <div class="ne-rx-ch-item">
         <span class="material-symbols-outlined ne-rx-ch-ico" aria-hidden="true">warning</span>
         <span class="ne-rx-ch-value" data-clinical-field="allergies">Sin alergias registradas</span>
@@ -34506,11 +34508,12 @@ console.info('app.js loaded :: 20251123a');
       headerData?.new_patient_mode === true ||
       headerData?.newPatientMode === true
     );
-    const isDraftPatientMode = !isEmptyState && (
-      opts.draftPatientMode === true ||
-      headerData?.draft_patient_mode === true ||
-      headerData?.draftPatientMode === true
-    );
+	    const isDraftPatientMode = !isEmptyState && (
+	      opts.draftPatientMode === true ||
+	      headerData?.draft_patient_mode === true ||
+	      headerData?.draftPatientMode === true
+	    );
+	    const isActivePatientMode = !isEmptyState && !isDraftPatientMode;
     container.classList.toggle('mx-clinical-header--empty', isEmptyState);
     container.classList.toggle('mx-clinical-header--new-patient', isNewPatientMode);
     container.classList.toggle('mx-clinical-header--new-draft', isDraftPatientMode);
@@ -34593,19 +34596,33 @@ console.info('app.js loaded :: 20251123a');
         actionBtn.removeAttribute('data-encounter-action-mode');
       }
     }
-    const draftSearchBtn = container.querySelector('[data-clinical-action="draft-search"]');
-    if (draftSearchBtn) {
-      const showDraftSearch = isDraftPatientMode && normalizeRecetaText(headerData?.draft_search_action_label || 'Buscar paciente') !== '';
-      draftSearchBtn.classList.toggle('d-none', !showDraftSearch);
-      if (showDraftSearch) {
-        draftSearchBtn.textContent = normalizeRecetaText(headerData?.draft_search_action_label || 'Buscar paciente');
-        draftSearchBtn.setAttribute('data-encounter-action-mode', 'draft-search');
-      } else {
-        draftSearchBtn.textContent = '';
-        draftSearchBtn.removeAttribute('data-encounter-action-mode');
-      }
-    }
-  };
+	    const draftSearchBtn = container.querySelector('[data-clinical-action="draft-search"]');
+	    if (draftSearchBtn) {
+	      const showDraftSearch = isDraftPatientMode && normalizeRecetaText(headerData?.draft_search_action_label || 'Buscar paciente') !== '';
+	      draftSearchBtn.classList.toggle('d-none', !showDraftSearch);
+	      if (showDraftSearch) {
+	        draftSearchBtn.textContent = normalizeRecetaText(headerData?.draft_search_action_label || 'Buscar paciente');
+	        draftSearchBtn.setAttribute('data-encounter-action-mode', 'draft-search');
+	      } else {
+	        draftSearchBtn.textContent = '';
+	        draftSearchBtn.removeAttribute('data-encounter-action-mode');
+	      }
+	    }
+	    const activeCloseBtn = container.querySelector('[data-clinical-action="active-close"]');
+	    if (activeCloseBtn) {
+	      const closeLabel = normalizeRecetaText(headerData?.active_close_action_label || '');
+	      const showActiveClose = isActivePatientMode && closeLabel !== '';
+	      activeCloseBtn.classList.toggle('d-none', !showActiveClose);
+	      activeCloseBtn.textContent = showActiveClose ? closeLabel : '';
+	    }
+	    const activeSearchBtn = container.querySelector('[data-clinical-action="active-search"]');
+	    if (activeSearchBtn) {
+	      const searchLabel = normalizeRecetaText(headerData?.active_search_action_label || '');
+	      const showActiveSearch = isActivePatientMode && searchLabel !== '';
+	      activeSearchBtn.classList.toggle('d-none', !showActiveSearch);
+	      activeSearchBtn.textContent = showActiveSearch ? searchLabel : '';
+	    }
+	  };
   window.mxmedNormalizeClinicalHeaderData = normalizeClinicalHeaderData;
   window.mxmedRenderClinicalSlimHeader = renderClinicalSlimHeader;
   const isDefaultDoctorLabel = (name) => {
@@ -51668,11 +51685,13 @@ console.info('app.js loaded :: 20251123a');
         age: ageText || '--',
         sex: sexText,
         clinical_reason: motivoConsulta || '',
-        encounter_status: hasActiveEncounter ? 'Consulta activa' : 'Sin consulta activa',
-        encounter_action_label: isNewDraftMode ? 'Cancelar' : (hasPatientContext ? (hasActiveEncounter ? 'Cerrar consulta' : 'Iniciar consulta') : ''),
-        encounter_action_mode: isNewDraftMode ? 'draft-cancel' : (hasPatientContext ? (hasActiveEncounter ? 'close' : 'start') : ''),
-        draft_search_action_label: isNewDraftMode ? 'Buscar paciente' : ''
-      }, {
+	        encounter_status: hasActiveEncounter ? 'Consulta activa' : 'Sin consulta activa',
+	        encounter_action_label: isNewDraftMode ? 'Cancelar' : (hasPatientContext ? (hasActiveEncounter ? 'Cerrar consulta' : 'Iniciar consulta') : ''),
+	        encounter_action_mode: isNewDraftMode ? 'draft-cancel' : (hasPatientContext ? (hasActiveEncounter ? 'close' : 'start') : ''),
+	        draft_search_action_label: isNewDraftMode ? 'Buscar paciente' : '',
+	        active_close_action_label: hasPatientContext && !isNewDraftMode ? 'Cerrar expediente' : '',
+	        active_search_action_label: hasPatientContext && !isNewDraftMode ? 'Cambiar paciente' : ''
+	      }, {
         layout: 'shell',
         emptyState: !hasPatientContext && !isNewDraftMode,
         newPatientMode: isNewPatientMode,
@@ -52217,10 +52236,10 @@ console.info('app.js loaded :: 20251123a');
     focusPatientFirstNameInput();
   };
   window.mxmedStartNewPatientEntry = startNewPatientEntry;
-  const navigateToPatientArchive = ()=>{
-    if(typeof jumpTo === 'function'){
-      return jumpTo('p-pac-archivo') !== false;
-    }
+	  const navigateToPatientArchive = ()=>{
+	    if(typeof jumpTo === 'function'){
+	      return jumpTo('p-pac-archivo') !== false;
+	    }
     if(typeof showPanel === 'function'){
       showPanel('p-pac-archivo');
       try{
@@ -52228,13 +52247,39 @@ console.info('app.js loaded :: 20251123a');
         localStorage.setItem('mxmed_last_panel', 'p-pac-archivo');
       }catch(_){}
       return true;
-    }
-    return false;
-  };
+	    }
+	    return false;
+	  };
+	  const closeActivePatientContext = (source = 'active_header_close')=>{
+	    const currentPatientId = sanitizeText(getActivePatientId());
+	    if(!currentPatientId) return false;
+	    captureExpedienteIdentityDraft(currentPatientId);
+	    captureCurrentMotivoDraftForPatient(currentPatientId);
+	    if(window.mxmedStore && typeof window.mxmedStore === 'object'){
+	      window.mxmedStore.currentEncounterKey = '';
+	      window.mxmedStore.activeEncounterKey = '';
+	    }
+	    if(typeof window.setEncounterContextOnPane === 'function'){
+	      try{ window.setEncounterContextOnPane('', ''); }catch(_){}
+	    }
+	    if(p10BarNode && p10BarNode.dataset){
+	      p10BarNode.dataset.encounterKey = '';
+	      p10BarNode.dataset.appointmentId = '';
+	    }
+	    delete pane.dataset.encounterAutoContextMode;
+	    delete pane.dataset.encounterAutoContextPatientId;
+	    try{
+	      window.dispatchEvent(new CustomEvent('mxmed:expediente-neutralize', {
+	        detail: { reason: 'active_patient_close', source, patient_id: currentPatientId }
+	      }));
+	    }catch(_){}
+	    activateDatosGeneralesTab();
+	    return true;
+	  };
 
-  if(expClinicalContext){
-    expClinicalContext.addEventListener('click', (ev)=>{
-      const emptyAction = ev.target.closest('[data-exp-empty-action]');
+	  if(expClinicalContext){
+	    expClinicalContext.addEventListener('click', (ev)=>{
+	      const emptyAction = ev.target.closest('[data-exp-empty-action]');
       if(emptyAction){
         ev.preventDefault();
         const action = String(emptyAction.getAttribute('data-exp-empty-action') || '').trim();
@@ -52253,19 +52298,31 @@ console.info('app.js loaded :: 20251123a');
           navigateToPatientArchive();
           return;
         }
-      }
-      const trigger = ev.target.closest('[data-clinical-action="encounter"]');
-      const draftSearchTrigger = ev.target.closest('[data-clinical-action="draft-search"]');
-      if(!trigger && !draftSearchTrigger) return;
-      if(draftSearchTrigger){
-        ev.preventDefault();
-        if(isNewPatientEntryModeActive() && !cancelNewPatientEntry('new_draft_search')){
-          return;
-        }
-        navigateToPatientArchive();
-        return;
-      }
-      const mode = String(trigger.getAttribute('data-encounter-action-mode') || '').trim();
+	      }
+	      const trigger = ev.target.closest('[data-clinical-action="encounter"]');
+	      const draftSearchTrigger = ev.target.closest('[data-clinical-action="draft-search"]');
+	      const activeCloseTrigger = ev.target.closest('[data-clinical-action="active-close"]');
+	      const activeSearchTrigger = ev.target.closest('[data-clinical-action="active-search"]');
+	      if(!trigger && !draftSearchTrigger && !activeCloseTrigger && !activeSearchTrigger) return;
+	      if(draftSearchTrigger){
+	        ev.preventDefault();
+	        if(isNewPatientEntryModeActive() && !cancelNewPatientEntry('new_draft_search')){
+	          return;
+	        }
+	        navigateToPatientArchive();
+	        return;
+	      }
+	      if(activeCloseTrigger){
+	        ev.preventDefault();
+	        closeActivePatientContext('active_header_close');
+	        return;
+	      }
+	      if(activeSearchTrigger){
+	        ev.preventDefault();
+	        navigateToPatientArchive();
+	        return;
+	      }
+	      const mode = String(trigger.getAttribute('data-encounter-action-mode') || '').trim();
       if(mode === 'draft-cancel'){
         ev.preventDefault();
         cancelNewPatientEntry('new_draft_cancel');
