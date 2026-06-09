@@ -247,6 +247,133 @@ console.info('app.js loaded :: 20251123a');
   if(doctorName) window.mxmedDoctor.full_name = doctorName;
 })();
 
+// Text assistance for human-readable Expediente fields.
+(function(){
+  if(window.__mxmedTextAssistApplied) return;
+  window.__mxmedTextAssistApplied = true;
+
+  const TEXT_ASSIST_LANG = 'es-MX';
+  const TECHNICAL_TYPE_RE = /^(button|checkbox|color|date|datetime-local|email|file|hidden|month|number|password|radio|range|reset|search|submit|tel|time|url|week)$/i;
+  const TECHNICAL_TEXT_RE = /\b(tel[eé]fono|whatsapp|correo|email|e-mail|c[oó]digo postal|codigo postal|c\.?p\.?|curp|rfc|c[eé]dula|cedula|contrase[nñ]a|password|otp|token|usuario|login|buscar|b[uú]squeda|folio|id|#\s*(ext|int)|n[uú]mero\s+(ext|int)|piso|sist[oó]lica|diast[oó]lica|spo2|spO₂|temperatura|peso|altura|cintura|imc)\b/i;
+  const NAME_TEXT_RE = /\b(nombre\(s\)|nombre completo|primer apellido|segundo apellido|apellido paterno|apellido materno|apellido|nombre de la persona|nombre del firmante|firmante|testigo|ocupaci[oó]n|estado civil|parentesco|calle|colonia|fraccionamiento|municipio|localidad|estado|direcci[oó]n|universidad|instituci[oó]n|especialidad|subespecialidad|certificaci[oó]n)\b/i;
+  const SENTENCE_TEXT_RE = /\b(motivo|observaci[oó]n|observaciones|antecedente|antecedentes|nota|notas|diagn[oó]stico|diagn[oó]sticos|tratamiento|indicaci[oó]n|indicaciones|padecimiento|evoluci[oó]n|s[ií]ntoma|s[ií]ntomas|hallazgo|hallazgos|interpretaci[oó]n|plan|riesgo|riesgos|beneficio|beneficios|alternativa|alternativas|resumen|detalle|detalles|descripci[oó]n|describe|informaci[oó]n adicional|objetivo|pron[oó]stico|recomendaci[oó]n|recomendaciones|cuidados|signos de alarma|egreso|control)\b/i;
+
+  const normalizeTextAssistText = (value)=>{
+    return String(value == null ? '' : value)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const findLabelByFor = (id)=>{
+    if(!id) return null;
+    try{
+      const escaped = (window.CSS && typeof window.CSS.escape === 'function') ? window.CSS.escape(id) : String(id).replace(/"/g, '\\"');
+      return document.querySelector(`label[for="${escaped}"]`);
+    }catch(_){
+      return null;
+    }
+  };
+
+  const readAssociatedLabelText = (control)=>{
+    if(!control) return '';
+    const chunks = [];
+    const labelByFor = findLabelByFor(String(control.id || '').trim());
+    if(labelByFor) chunks.push(labelByFor.textContent || '');
+    const nearestLabel = control.closest('label');
+    if(nearestLabel) chunks.push(nearestLabel.textContent || '');
+    const fieldWrap = control.closest('.col, [class*="col-"], .mb-3, .form-group, .mx-field, [data-role], .dg-form > div');
+    const wrapLabel = fieldWrap?.querySelector?.('label, .form-label, .mx-field-label');
+    if(wrapLabel) chunks.push(wrapLabel.textContent || '');
+    return chunks.join(' ');
+  };
+
+  const describeControlForTextAssist = (control)=>{
+    return [
+      control.id,
+      control.name,
+      control.getAttribute('data-role'),
+      control.getAttribute('data-ne-rx'),
+      control.getAttribute('placeholder'),
+      control.getAttribute('aria-label'),
+      readAssociatedLabelText(control)
+    ].filter(Boolean).join(' ');
+  };
+
+  const setTextAssistMode = (control, mode)=>{
+    if(!control || !mode) return;
+    const enabled = mode !== 'off';
+    control.setAttribute('spellcheck', enabled ? 'true' : 'false');
+    try{ control.spellcheck = enabled; }catch(_){}
+    control.setAttribute('autocorrect', enabled ? 'on' : 'off');
+    control.setAttribute('autocapitalize', enabled ? mode : 'off');
+    if(enabled) control.setAttribute('lang', TEXT_ASSIST_LANG);
+  };
+
+  const inferTextAssistMode = (control)=>{
+    if(!control || control.readOnly) return '';
+    const tag = String(control.tagName || '').toLowerCase();
+    if(tag !== 'input' && tag !== 'textarea') return '';
+    const type = String(control.getAttribute('type') || control.type || '').trim().toLowerCase() || 'text';
+    const inputMode = String(control.getAttribute('inputmode') || '').trim().toLowerCase();
+    const descriptor = normalizeTextAssistText(describeControlForTextAssist(control));
+    if(TECHNICAL_TYPE_RE.test(type)) return 'off';
+    if(inputMode && /^(numeric|decimal|tel|email|url|search)$/i.test(inputMode)) return 'off';
+    if(TECHNICAL_TEXT_RE.test(descriptor)) return 'off';
+    if(tag === 'textarea') return 'sentences';
+    if(control.matches('[data-pac-nombre], [data-pac-apellido-paterno], [data-pac-apellido-materno]')) return 'words';
+    if(SENTENCE_TEXT_RE.test(descriptor)) return 'sentences';
+    if(NAME_TEXT_RE.test(descriptor)) return 'words';
+    return '';
+  };
+
+  const applyTextAssistAttributes = (root = document)=>{
+    const scope = root?.querySelector?.('#p-expediente') || (root?.id === 'p-expediente' ? root : document.getElementById('p-expediente'));
+    if(!scope) return 0;
+    let count = 0;
+    scope.querySelectorAll('input, textarea').forEach((control)=>{
+      const mode = inferTextAssistMode(control);
+      if(!mode) return;
+      setTextAssistMode(control, mode);
+      count += 1;
+    });
+    return count;
+  };
+
+  const scheduleTextAssistApply = ()=>{
+    if(window.__mxmedTextAssistApplyQueued) return;
+    window.__mxmedTextAssistApplyQueued = true;
+    window.requestAnimationFrame(()=>{
+      window.__mxmedTextAssistApplyQueued = false;
+      applyTextAssistAttributes();
+    });
+  };
+
+  const startTextAssist = ()=>{
+    applyTextAssistAttributes();
+    const scope = document.getElementById('p-expediente');
+    if(scope && window.MutationObserver && !scope.__mxmedTextAssistObserver){
+      const observer = new MutationObserver((mutations)=>{
+        if(mutations.some((mutation)=> mutation.type === 'childList' && mutation.addedNodes.length > 0)){
+          scheduleTextAssistApply();
+        }
+      });
+      observer.observe(scope, { childList: true, subtree: true });
+      scope.__mxmedTextAssistObserver = observer;
+    }
+  };
+
+  window.mxmedApplyTextAssistAttributes = applyTextAssistAttributes;
+  window.addEventListener('mxmed:workspace-mode', scheduleTextAssistApply);
+  document.addEventListener('shown.bs.modal', scheduleTextAssistApply);
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', startTextAssist, { once: true });
+  }else{
+    startTextAssist();
+  }
+})();
+
 // Private profile identity bridge (PP-7H2-B)
 (function(){
   if(window.__mxmedPrivateIdentityBridgeApplied) return;
