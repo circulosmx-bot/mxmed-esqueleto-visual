@@ -16359,6 +16359,75 @@ body{margin:0;background:var(--mm-fondo-base);}
   color:#9af4fb;
   text-decoration:underline;
 }
+@media (min-width: 1200px){
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft .ne-rx-ch-bottom{
+    position:relative;
+    padding-bottom:38px;
+  }
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft .ne-rx-ch-item,
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--shell[data-clinical-empty-mode="active"] .ne-rx-ch-item{
+    min-height:92px;
+    padding:9px 11px 10px;
+    row-gap:5px;
+  }
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft .ne-rx-ch-item::before,
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--shell[data-clinical-empty-mode="active"] .ne-rx-ch-item::before{
+    min-height:32px;
+  }
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft .mx-ch-enc-wrap{
+    justify-content:center;
+  }
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft .mx-clinical-header-action[data-encounter-action-mode="draft-cancel"],
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft .mx-clinical-header-action[data-clinical-action="draft-search"]{
+    position:absolute;
+    bottom:0;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:5px;
+    min-height:30px;
+    margin-top:0;
+    padding:5px 12px;
+    border:1px solid rgba(255,255,255,.36);
+    border-radius:999px;
+    background:rgba(255,255,255,.07);
+    color:#f2fdff;
+    font-size:.80rem;
+    font-weight:800;
+    line-height:1;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.12);
+  }
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft .mx-clinical-header-action[data-encounter-action-mode="draft-cancel"]{
+    right:144px;
+    min-width:100px;
+  }
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft .mx-clinical-header-action[data-clinical-action="draft-search"]{
+    right:0;
+    min-width:134px;
+  }
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft .mx-clinical-header-action[data-encounter-action-mode="draft-cancel"]::before,
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft .mx-clinical-header-action[data-clinical-action="draft-search"]::before{
+    font-family:"Material Symbols Rounded";
+    font-size:18px;
+    font-weight:400;
+    line-height:1;
+  }
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft .mx-clinical-header-action[data-encounter-action-mode="draft-cancel"]::before{
+    content:"close";
+  }
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft .mx-clinical-header-action[data-clinical-action="draft-search"]::before{
+    content:"folder_open";
+  }
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft .mx-clinical-header-action[data-encounter-action-mode="draft-cancel"]:hover,
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft .mx-clinical-header-action[data-encounter-action-mode="draft-cancel"]:focus-visible,
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft .mx-clinical-header-action[data-clinical-action="draft-search"]:hover,
+  #p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft .mx-clinical-header-action[data-clinical-action="draft-search"]:focus-visible{
+    border-color:rgba(255,255,255,.68);
+    background:rgba(255,255,255,.16);
+    color:#fff;
+    text-decoration:none;
+  }
+}
 #p-expediente .head .exp-hdr-left .mx-clinical-header--shell .mx-exp-empty-state{
   display:none;
   min-width:0;
@@ -16450,6 +16519,40 @@ body{margin:0;background:var(--mm-fondo-base);}
   gap:14px;
   width:100%;
   min-height:64px;
+}
+#p-expediente.mx-expediente-new-draft .head .exp-hdr-left{
+  grid-template-columns:92px minmax(0,1fr);
+  padding:12px 14px;
+}
+#p-expediente.mx-expediente-new-draft .head .exp-patient-photo-slot,
+#p-expediente.mx-expediente-new-draft .head .exp-patient-photo-slot .mf-upload.square{
+  width:82px;
+  min-width:82px;
+  max-width:82px;
+  height:82px;
+  min-height:82px;
+}
+#p-expediente.mx-expediente-new-draft .head .exp-patient-photo-slot .mf-illus{
+  width:50px;
+  height:50px;
+}
+#p-expediente.mx-expediente-new-draft .head .exp-patient-photo-slot .mf-actions{
+  display:block;
+}
+#p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft{
+  display:grid;
+  grid-template-columns:minmax(250px,.85fr) minmax(480px,1.35fr);
+  align-items:center;
+  gap:14px;
+}
+#p-expediente .head .exp-hdr-left .mx-clinical-header--new-draft .ne-rx-ch-top{
+  min-width:0;
+  align-items:center;
+  gap:0;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
 }
 #p-expediente .head .exp-hdr-left .mx-clinical-header--shell .mx-exp-empty-copy{
   min-width:0;

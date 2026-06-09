@@ -52089,7 +52089,21 @@ console.info('app.js loaded :: 20251123a');
     return String(pane.dataset?.newEntryMode || pane.getAttribute('data-new-entry-mode') || '').trim() === '1';
   };
   const readNewPatientMinimumIdentity = ()=>{
-    const readValue = (selector)=> sanitizeText(pane.querySelector(selector)?.value);
+    const isPlaceholderValue = (value)=>{
+      const normalized = sanitizeText(value).toLowerCase();
+      return !normalized || normalized === 'mes' || normalized === 'día' || normalized === 'dia' || normalized === 'año' || normalized === 'anio' || normalized === 'selecciona' || normalized === 'selecciona una opción' || normalized === 'selecciona una opcion';
+    };
+    const readValue = (selector)=>{
+      const control = pane.querySelector(selector);
+      if(!control) return '';
+      const directValue = sanitizeText(control.value);
+      if(directValue) return directValue;
+      if(control.tagName === 'SELECT'){
+        const selectedText = sanitizeText(control.selectedOptions?.[0]?.textContent || '');
+        if(!isPlaceholderValue(selectedText)) return selectedText;
+      }
+      return '';
+    };
     const firstName = readValue('[data-pac-nombre]');
     const paternalLastName = readValue('[data-pac-apellido-paterno]');
     const maternalLastName = readValue('[data-pac-apellido-materno]');
@@ -52340,6 +52354,45 @@ console.info('app.js loaded :: 20251123a');
       syncExpedienteHeaderContext();
     });
     el.addEventListener('change', persistIdentityDraft);
+  });
+  const newPatientDraftIdentitySelector = [
+    '[data-pac-nombre]',
+    '[data-pac-apellido-paterno]',
+    '[data-pac-apellido-materno]',
+    '[data-dg-dia]',
+    '[data-dg-mes]',
+    '[data-dg-anio]',
+    'input[name="pac-genero"]',
+    '.dg-gender-card'
+  ].join(',');
+  let newPatientDraftSyncQueued = false;
+  const scheduleNewPatientDraftHeaderSync = (origin = 'new_patient_draft_identity')=>{
+    if(!isNewPatientEntryModeActive()) return;
+    if(newPatientDraftSyncQueued) return;
+    newPatientDraftSyncQueued = true;
+    window.requestAnimationFrame(()=>{
+      newPatientDraftSyncQueued = false;
+      if(!isNewPatientEntryModeActive()) return;
+      window.__mxmedHeaderSyncOrigin = origin;
+      syncExpedienteHeaderContext();
+    });
+  };
+  const isNewPatientDraftIdentityTarget = (target)=>{
+    if(!target || typeof target.closest !== 'function') return false;
+    const match = target.closest(newPatientDraftIdentitySelector);
+    return !!(match && pane.contains(match));
+  };
+  ['input', 'change', 'focusout'].forEach((evtName)=>{
+    pane.addEventListener(evtName, (ev)=>{
+      if(!isNewPatientDraftIdentityTarget(ev.target)) return;
+      scheduleNewPatientDraftHeaderSync(`draft_identity_${evtName}`);
+    });
+  });
+  ['click', 'keyup'].forEach((evtName)=>{
+    pane.addEventListener(evtName, (ev)=>{
+      if(!isNewPatientDraftIdentityTarget(ev.target)) return;
+      window.setTimeout(()=>scheduleNewPatientDraftHeaderSync(`draft_identity_${evtName}`), 0);
+    });
   });
   pane.addEventListener('pac-age-changed', ()=>{
     window.__mxmedHeaderSyncOrigin = 'pac-age-changed';
