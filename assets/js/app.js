@@ -51995,6 +51995,46 @@ console.info('app.js loaded :: 20251123a');
       window.setTimeout(()=>{ activateWithBootstrap(targetDatosBtn); }, 0);
     }
   };
+  const focusPatientFirstNameInput = ()=>{
+    const target = pane.querySelector('[data-pac-nombre]');
+    if(!target || typeof target.focus !== 'function') return;
+    let done = false;
+    const isTargetReady = ()=>{
+      if(pane.classList.contains('d-none')) return false;
+      const datosPane = pane.querySelector('#t-datos');
+      if(datosPane && !datosPane.classList.contains('active') && !datosPane.classList.contains('show')) return false;
+      if(target.disabled || target.readOnly) return false;
+      const style = window.getComputedStyle ? window.getComputedStyle(target) : null;
+      if(style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+      return target.getClientRects().length > 0;
+    };
+    const tryFocus = ()=>{
+      if(done) return true;
+      if(!isTargetReady()) return false;
+      const active = document.activeElement;
+      const activeIsEditable = active
+        && active !== document.body
+        && active !== target
+        && active.matches?.('input, select, textarea, [contenteditable="true"]');
+      if(activeIsEditable){
+        done = true;
+        return true;
+      }
+      try{
+        target.focus({ preventScroll:true });
+      }catch(_){
+        target.focus();
+      }
+      done = document.activeElement === target;
+      return done;
+    };
+    window.requestAnimationFrame(()=>{
+      if(tryFocus()) return;
+      [40, 120, 240].forEach((delay)=>{
+        window.setTimeout(tryFocus, delay);
+      });
+    });
+  };
   const isNewPatientEntryModeActive = ()=>{
     return String(pane.dataset?.newEntryMode || pane.getAttribute('data-new-entry-mode') || '').trim() === '1';
   };
@@ -52048,6 +52088,7 @@ console.info('app.js loaded :: 20251123a');
       }));
     }catch(_){}
     activateDatosGeneralesTab();
+    focusPatientFirstNameInput();
   };
   window.mxmedStartNewPatientEntry = startNewPatientEntry;
   const navigateToPatientArchive = ()=>{
