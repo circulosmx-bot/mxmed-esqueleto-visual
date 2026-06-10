@@ -154,6 +154,42 @@
     let explicitSaveCompleted = false;
     const savePatientBtn = document.getElementById('dg-save-patient');
     const savePatientFeedback = document.getElementById('dg-save-feedback');
+    const normalizeFieldLabel = (value)=> String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+
+    const readFieldLabelText = (ctrl)=>{
+      if(!ctrl) return '';
+      const chunks = [];
+      const id = String(ctrl.id || '').trim();
+      if(id){
+        try{
+          const escaped = (window.CSS && typeof window.CSS.escape === 'function') ? window.CSS.escape(id) : id.replace(/"/g, '\\"');
+          const byFor = document.querySelector(`label[for="${escaped}"]`);
+          if(byFor) chunks.push(byFor.textContent || '');
+        }catch(_){}
+      }
+      const wrappingLabel = ctrl.closest('label');
+      if(wrappingLabel) chunks.push(wrappingLabel.textContent || '');
+      const fieldWrap = ctrl.closest('[class^="col-"], [class*=" col-"], .form-group, .mb-3, .dg-form > div');
+      const label = fieldWrap?.querySelector?.(':scope > label, :scope > .form-label');
+      if(label) chunks.push(label.textContent || '');
+      return chunks.join(' ');
+    };
+
+    const isHumanNameFieldForNativeTextAssist = (ctrl)=>{
+      if(!expedienteRoot || !ctrl || !expedienteRoot.contains(ctrl)) return false;
+      if(ctrl.disabled || ctrl.readOnly) return false;
+      const tag = String(ctrl.tagName || '').toLowerCase();
+      if(tag !== 'input') return false;
+      const type = String(ctrl.getAttribute('type') || ctrl.type || 'text').toLowerCase();
+      if(type && type !== 'text') return false;
+      if(ctrl.matches('[data-pac-nombre], [data-pac-apellido-paterno], [data-pac-apellido-materno]')) return true;
+      return normalizeFieldLabel(readFieldLabelText(ctrl)) === 'nombre de la persona de contacto';
+    };
 
     const getActivePatientId = ()=>{
       if(typeof window.resolveActivePatientId === 'function'){
@@ -387,6 +423,7 @@
       if(ctrl.type==='file') return;
       // excluir campos de búsqueda u opt-out manual
       if(ctrl.type==='search' || ctrl.classList.contains('no-check') || ctrl.dataset.noCheck==='1') return;
+      if(isHumanNameFieldForNativeTextAssist(ctrl)) return;
       if(!ctrl.id){ ctrl.id = 'dp_auto_' + Math.random().toString(36).slice(2,8); }
       const col = ensureSaveMark(ctrl);
       const key = 'dp:'+ctrl.id;
