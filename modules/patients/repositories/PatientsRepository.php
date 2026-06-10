@@ -24,6 +24,7 @@ class PatientsRepository
         $contacts = $this->fetchMaskedContacts($patientId);
         $patient['contacts'] = $contacts;
         $patient['addresses'] = $this->fetchAddressRows($patientId);
+        $patient['profile'] = $this->fetchProfileRow($patientId);
         return $patient;
     }
 
@@ -172,6 +173,72 @@ class PatientsRepository
         return $this->fetchAddressRows($patientId);
     }
 
+    public function fetchProfile(string $patientId): ?array
+    {
+        $this->ensureTables();
+        return $this->fetchProfileRow($patientId);
+    }
+
+    public function upsertProfile(string $patientId, array $profile): array
+    {
+        $this->ensureTables();
+
+        if (!$this->fetchPatient($patientId)) {
+            throw new RuntimeException('patient not found');
+        }
+
+        $now = (new \DateTime('now', new \DateTimeZone('America/Mexico_City')))->format('Y-m-d H:i:s');
+        $existing = $this->fetchProfileRow($patientId);
+        $values = $this->normalizeProfileInput($profile, $existing);
+
+        $this->pdo->beginTransaction();
+        try {
+            if ($existing) {
+                $profileId = $existing['profile_id'];
+                $stmt = $this->pdo->prepare(
+                    'UPDATE patients_profiles
+                     SET first_name = :first_name,
+                         paternal_last_name = :paternal_last_name,
+                         maternal_last_name = :maternal_last_name,
+                         marital_status = :marital_status,
+                         occupation = :occupation,
+                         updated_at = :updated_at
+                     WHERE profile_id = :profile_id AND patient_id = :patient_id'
+                );
+                $stmt->execute($values + [
+                    'updated_at' => $now,
+                    'profile_id' => $profileId,
+                    'patient_id' => $patientId,
+                ]);
+            } else {
+                $profileId = $this->generateId('pr_');
+                $stmt = $this->pdo->prepare(
+                    'INSERT INTO patients_profiles
+                     (profile_id, patient_id, first_name, paternal_last_name, maternal_last_name, marital_status, occupation, created_at, updated_at)
+                     VALUES
+                     (:profile_id, :patient_id, :first_name, :paternal_last_name, :maternal_last_name, :marital_status, :occupation, :created_at, :updated_at)'
+                );
+                $stmt->execute($values + [
+                    'profile_id' => $profileId,
+                    'patient_id' => $patientId,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
+
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+
+        $saved = $this->fetchProfileRow($patientId);
+        if (!$saved) {
+            throw new RuntimeException('database error');
+        }
+        return $saved;
+    }
+
     private function fetchPatient(string $patientId): ?array
     {
         $stmt = $this->pdo->prepare(
@@ -214,6 +281,43 @@ class PatientsRepository
         $stmt->execute(['patient_id' => $patientId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ? $this->normalizeAddressRow($row) : null;
+    }
+
+    private function fetchProfileRow(string $patientId): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT profile_id, patient_id, first_name, paternal_last_name, maternal_last_name, marital_status, occupation, created_at, updated_at
+             FROM patients_profiles
+             WHERE patient_id = :patient_id
+             LIMIT 1'
+        );
+        $stmt->execute(['patient_id' => $patientId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $this->normalizeProfileRow($row) : null;
+    }
+
+    private function normalizeProfileInput(array $profile, ?array $base = null): array
+    {
+        return [
+            'first_name' => $this->cleanProfileString($profile, 'first_name', $base),
+            'paternal_last_name' => $this->cleanProfileString($profile, 'paternal_last_name', $base),
+            'maternal_last_name' => $this->cleanProfileString($profile, 'maternal_last_name', $base),
+            'marital_status' => $this->cleanProfileString($profile, 'marital_status', $base),
+            'occupation' => $this->cleanProfileString($profile, 'occupation', $base),
+        ];
+    }
+
+    private function normalizeProfileRow(array $row): array
+    {
+        return $row;
+    }
+
+    private function cleanProfileString(array $profile, string $key, ?array $base): ?string
+    {
+        if (array_key_exists($key, $profile)) {
+            return $this->cleanNullableString($profile[$key]);
+        }
+        return $base[$key] ?? null;
     }
 
     private function normalizeAddressInput(array $address, ?array $base = null): array
@@ -422,7 +526,7 @@ class PatientsRepository
 
     private function ensureTables(): void
     {
-        foreach (['patients_patients', 'patients_contacts', 'patients_addresses', 'patients_doctor_links'] as $table) {
+        foreach (['patients_patients', 'patients_profiles', 'patients_contacts', 'patients_addresses', 'patients_doctor_links'] as $table) {
             if (!$this->tableExists($table)) {
                 throw new RuntimeException('patients not ready');
             }
