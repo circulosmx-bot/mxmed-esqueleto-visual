@@ -7549,6 +7549,48 @@ body{margin:0;background:var(--mm-fondo-base);}
   border:1px solid #009ab0;
   border-radius:12px;
 }
+#p-expediente .mx-phone-field{
+  display:flex;
+  align-items:stretch;
+  width:100%;
+  min-width:0;
+}
+#p-expediente .mx-phone-country{
+  flex:0 0 auto;
+  width:120px;
+  min-width:120px;
+  padding:0 1.7rem 0 0.65rem;
+  border:1px solid #009ab0;
+  border-right:0;
+  border-radius:12px 0 0 12px;
+  background:#eef9fb;
+  color:#003152;
+  font-weight:700;
+  white-space:nowrap;
+  min-height:44px;
+  appearance:auto;
+  -webkit-appearance:menulist;
+}
+#p-expediente .mx-phone-field > .form-control,
+#p-expediente .mx-phone-field > .save-field{
+  flex:1 1 auto;
+  min-width:0;
+}
+#p-expediente .mx-phone-field > .save-field{
+  display:block;
+}
+#p-expediente .mx-phone-field > .form-control,
+#p-expediente .mx-phone-field > .save-field > .form-control{
+  border-top-left-radius:0;
+  border-bottom-left-radius:0;
+}
+@media (max-width:575.98px){
+  #p-expediente .mx-phone-country{
+    width:108px;
+    min-width:108px;
+    padding-left:0.5rem;
+  }
+}
 .dg-form .form-label{
   font-weight:600;
   color:#003152;

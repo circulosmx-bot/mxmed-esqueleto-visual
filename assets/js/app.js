@@ -424,6 +424,174 @@ console.info('app.js loaded :: 20251123a');
   }
 })();
 
+// Phone country/lada capture for Expediente patient fields.
+(function(){
+  if(window.__mxmedPatientPhoneCaptureApplied) return;
+  window.__mxmedPatientPhoneCaptureApplied = true;
+
+  const PHONE_SELECTOR = '#p-expediente [data-pac-phone]';
+  const MX_DIAL_CODE = '52';
+  const PHONE_COUNTRIES = [
+    { code: 'MX', dial: '52', label: 'México +52' },
+    { code: 'US', dial: '1', label: 'EUA +1' },
+    { code: 'CA', dial: '1', label: 'Canadá +1' },
+    { code: 'ES', dial: '34', label: 'España +34' },
+    { code: 'CO', dial: '57', label: 'Colombia +57' },
+    { code: 'AR', dial: '54', label: 'Argentina +54' },
+    { code: 'CL', dial: '56', label: 'Chile +56' },
+    { code: 'PE', dial: '51', label: 'Perú +51' },
+    { code: 'BR', dial: '55', label: 'Brasil +55' },
+    { code: 'GB', dial: '44', label: 'Reino Unido +44' },
+    { code: 'FR', dial: '33', label: 'Francia +33' },
+    { code: 'DE', dial: '49', label: 'Alemania +49' },
+    { code: 'IT', dial: '39', label: 'Italia +39' },
+    { code: 'OTHER', dial: '', label: 'Otro país' }
+  ];
+
+  const getPhoneCountrySelect = (control)=>{
+    return control?.closest('.mx-phone-field')?.querySelector?.('.mx-phone-country') || null;
+  };
+
+  const getSelectedPhoneCountry = (control)=>{
+    const select = getPhoneCountrySelect(control);
+    const selected = PHONE_COUNTRIES.find((country)=> country.code === select?.value);
+    return selected || PHONE_COUNTRIES[0];
+  };
+
+  const isMexicoPhone = (control)=>{
+    return getSelectedPhoneCountry(control).code === 'MX';
+  };
+
+  const getPhoneMaxDigits = (control)=>{
+    return isMexicoPhone(control) ? 10 : 15;
+  };
+
+  const toNationalPhoneDigits = (value, control)=>{
+    let digits = String(value == null ? '' : value).replace(/\D+/g, '');
+    if(isMexicoPhone(control) && digits.length > 10 && digits.startsWith(MX_DIAL_CODE)){
+      digits = digits.slice(MX_DIAL_CODE.length);
+    }
+    return digits.slice(0, getPhoneMaxDigits(control));
+  };
+
+  const setPhoneInputAttributes = (control)=>{
+    if(!control) return;
+    const maxDigits = getPhoneMaxDigits(control);
+    control.setAttribute('type', 'text');
+    control.setAttribute('inputmode', 'numeric');
+    control.setAttribute('pattern', '[0-9]*');
+    control.setAttribute('maxlength', String(maxDigits));
+    control.setAttribute('autocomplete', 'tel-national');
+    control.setAttribute('spellcheck', 'false');
+    try{ control.spellcheck = false; }catch(_){}
+    control.setAttribute('autocorrect', 'off');
+    control.setAttribute('autocapitalize', 'off');
+    control.setAttribute('aria-label', `${control.closest('[class^="col-"], [class*=" col-"]')?.querySelector?.('.form-label')?.textContent?.trim() || 'Teléfono'} nacional, sin lada`);
+    control.placeholder = isMexicoPhone(control) ? '10 dígitos nacionales' : 'Número nacional';
+    const country = getSelectedPhoneCountry(control);
+    control.dataset.phoneCountry = country.code;
+    control.dataset.phoneDialCode = country.dial;
+  };
+
+  const ensurePhonePrefixWrapper = (control)=>{
+    if(!control) return;
+    const host = control.closest('.save-field') || control;
+    let wrapper = host.parentElement?.classList?.contains('mx-phone-field') ? host.parentElement : null;
+    if(!wrapper){
+      wrapper = document.createElement('div');
+      wrapper.className = 'mx-phone-field';
+      host.parentElement?.insertBefore(wrapper, host);
+      wrapper.appendChild(host);
+    }
+    wrapper.querySelectorAll(':scope > .mx-phone-prefix').forEach((legacyPrefix)=> legacyPrefix.remove());
+    let countrySelect = wrapper.querySelector(':scope > .mx-phone-country');
+    if(!countrySelect){
+      countrySelect = document.createElement('select');
+      countrySelect.className = 'mx-phone-country';
+      countrySelect.setAttribute('aria-label', 'País y lada telefónica');
+      PHONE_COUNTRIES.forEach((country)=>{
+        const option = document.createElement('option');
+        option.value = country.code;
+        option.textContent = country.label;
+        option.dataset.dial = country.dial;
+        countrySelect.appendChild(option);
+      });
+      countrySelect.value = 'MX';
+      wrapper.insertBefore(countrySelect, wrapper.firstChild);
+      countrySelect.addEventListener('change', ()=>{
+        setPhoneInputAttributes(control);
+        if(sanitizePhoneControl(control)){
+          control.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      });
+    }
+    if(!countrySelect.value){
+      countrySelect.value = 'MX';
+    }
+    setPhoneInputAttributes(control);
+  };
+
+  const sanitizePhoneControl = (control)=>{
+    if(!control) return false;
+    const normalized = toNationalPhoneDigits(control.value, control);
+    if(control.value === normalized) return false;
+    control.value = normalized;
+    if(document.activeElement === control){
+      try{ control.setSelectionRange(normalized.length, normalized.length); }catch(_){}
+    }
+    return true;
+  };
+
+  const bindPhoneControl = (control)=>{
+    if(!control || control.__mxmedPatientPhoneBound) return;
+    control.__mxmedPatientPhoneBound = true;
+    setPhoneInputAttributes(control);
+    ensurePhonePrefixWrapper(control);
+    sanitizePhoneControl(control);
+
+    control.addEventListener('beforeinput', (event)=>{
+      if(event.isComposing) return;
+      const inputType = String(event.inputType || '');
+      if(inputType.startsWith('delete')) return;
+      if(inputType === 'insertText' && event.data && /\D/.test(event.data)){
+        event.preventDefault();
+      }
+    });
+
+    control.addEventListener('paste', (event)=>{
+      const text = event.clipboardData?.getData('text');
+      if(text == null) return;
+      event.preventDefault();
+      const normalized = toNationalPhoneDigits(text, control);
+      if(control.value !== normalized){
+        control.value = normalized;
+        control.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    });
+
+    control.addEventListener('input', ()=>{
+      sanitizePhoneControl(control);
+    });
+  };
+
+  const applyPatientPhoneCapture = ()=>{
+    document.querySelectorAll(PHONE_SELECTOR).forEach((control)=>{
+      bindPhoneControl(control);
+      setPhoneInputAttributes(control);
+      ensurePhonePrefixWrapper(control);
+      sanitizePhoneControl(control);
+    });
+  };
+
+  window.mxmedApplyPatientPhoneCapture = applyPatientPhoneCapture;
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', applyPatientPhoneCapture, { once: true });
+  }else{
+    applyPatientPhoneCapture();
+  }
+  window.setTimeout(applyPatientPhoneCapture, 0);
+})();
+
 // Private profile identity bridge (PP-7H2-B)
 (function(){
   if(window.__mxmedPrivateIdentityBridgeApplied) return;
