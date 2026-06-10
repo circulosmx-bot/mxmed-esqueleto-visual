@@ -784,6 +784,146 @@ function fetch_http_json(string $url, int $timeoutSeconds = 4, int $maxAttempts 
     return $last;
 }
 
+function historial_table_exists(PDO $pdo, string $tableName): bool
+{
+    if (preg_match('/^[A-Za-z0-9_]+$/', $tableName) !== 1) {
+        return false;
+    }
+    $stmt = $pdo->prepare('SHOW TABLES LIKE :table_name');
+    $stmt->bindValue(':table_name', $tableName, PDO::PARAM_STR);
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_NUM);
+    return is_array($row) && $row !== [];
+}
+
+function historial_count_by_patient_id(PDO $pdo, string $tableName, string $patientId): int
+{
+    if (preg_match('/^[A-Za-z0-9_]+$/', $tableName) !== 1) {
+        return 0;
+    }
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM `{$tableName}` WHERE patient_id = :patient_id");
+    $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+    $stmt->execute();
+    return (int)$stmt->fetchColumn();
+}
+
+function historial_local_timeline_state(string $patientId, string $include): array
+{
+    $patientId = trim($patientId);
+    if ($patientId === '') {
+        return [
+            'ok' => false,
+            'patient_exists' => false,
+            'has_items' => false,
+            'error' => 'patient_id vacío',
+        ];
+    }
+
+    try {
+        require_once __DIR__ . '/../../../api/_lib/db.php';
+        $pdo = mxmed_pdo();
+
+        if (!historial_table_exists($pdo, 'patients_patients')) {
+            return [
+                'ok' => false,
+                'patient_exists' => false,
+                'has_items' => false,
+                'error' => 'tabla patients_patients no disponible',
+            ];
+        }
+
+        $stmt = $pdo->prepare('SELECT patient_id FROM patients_patients WHERE patient_id = :patient_id LIMIT 1');
+        $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+        $stmt->execute();
+        $patientExists = is_array($stmt->fetch(PDO::FETCH_ASSOC));
+        if (!$patientExists) {
+            return [
+                'ok' => true,
+                'patient_exists' => false,
+                'has_items' => false,
+                'error' => '',
+            ];
+        }
+
+        $includeParts = array_filter(array_map('trim', explode(',', strtolower($include))));
+        $includeClinical = in_array('clinical', $includeParts, true) || $includeParts === [];
+        $includeAgenda = in_array('agenda', $includeParts, true);
+
+        if ($includeClinical) {
+            foreach (['clinical_encounters', 'clinical_documents'] as $tableName) {
+                if (historial_table_exists($pdo, $tableName)
+                    && historial_count_by_patient_id($pdo, $tableName, $patientId) > 0) {
+                    return [
+                        'ok' => true,
+                        'patient_exists' => true,
+                        'has_items' => true,
+                        'error' => '',
+                    ];
+                }
+            }
+        }
+
+        if ($includeAgenda
+            && historial_table_exists($pdo, 'clinical_patient_identity_bridge')
+            && historial_table_exists($pdo, 'agenda_appointments')) {
+            $legacyStmt = $pdo->prepare("
+                SELECT legacy_patient_id
+                FROM clinical_patient_identity_bridge
+                WHERE canonical_patient_id = :patient_id
+            ");
+            $legacyStmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+            $legacyStmt->execute();
+            $legacyIds = [];
+            foreach ($legacyStmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+                $legacyId = trim((string)($row['legacy_patient_id'] ?? ''));
+                if ($legacyId !== '') {
+                    $legacyIds[$legacyId] = true;
+                }
+            }
+            if ($legacyIds !== []) {
+                $placeholders = [];
+                $params = [];
+                foreach (array_keys($legacyIds) as $idx => $legacyId) {
+                    $ph = ':pid' . $idx;
+                    $placeholders[] = $ph;
+                    $params[$ph] = $legacyId;
+                }
+                $agendaStmt = $pdo->prepare("
+                    SELECT COUNT(*)
+                    FROM agenda_appointments
+                    WHERE patient_id IN (" . implode(',', $placeholders) . ")
+                ");
+                foreach ($params as $ph => $value) {
+                    $agendaStmt->bindValue($ph, $value, PDO::PARAM_STR);
+                }
+                $agendaStmt->execute();
+                if ((int)$agendaStmt->fetchColumn() > 0) {
+                    return [
+                        'ok' => true,
+                        'patient_exists' => true,
+                        'has_items' => true,
+                        'error' => '',
+                    ];
+                }
+            }
+        }
+
+        return [
+            'ok' => true,
+            'patient_exists' => true,
+            'has_items' => false,
+            'error' => '',
+        ];
+    } catch (Throwable $e) {
+        return [
+            'ok' => false,
+            'patient_exists' => false,
+            'has_items' => false,
+            'error' => trim((string)$e->getMessage()),
+        ];
+    }
+}
+
 function build_demo_timeline_items(): array
 {
     // Fixtures demo para UX (sin dependencia de DB/API)
@@ -1151,8 +1291,24 @@ if ($patientId !== '') {
         $attempts = (int)($fetch['attempts'] ?? 1);
 
         if ($raw === false) {
-            $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
-            $errorTechnicalDetails = "status: {$status}\ntimeline_url: {$timelineUrlSafe}\nenv_CLINICAL_API_BASE: " . ($envClinicalApiBaseRaw !== '' ? $envClinicalApiBaseRaw : '<empty>') . "\nnormalized_api_base: {$clinicalApiBase}\nattempts: {$attempts}\nerror: " . (string)($fetch['error'] ?? '') . "\nheaders:\n" . implode("\n", $headers);
+            $localState = historial_local_timeline_state($patientId, $include);
+            if (($localState['ok'] ?? false) === true
+                && ($localState['patient_exists'] ?? false) === true
+                && ($localState['has_items'] ?? true) === false) {
+                $items = [];
+                $range = [];
+                $cursorNext = '';
+                $cursorPrev = '';
+            } else {
+                $localReason = (string)($localState['error'] ?? '');
+                if (($localState['ok'] ?? false) === true && ($localState['patient_exists'] ?? false) === false) {
+                    $localReason = 'patient_id no encontrado';
+                    $errorMessage = 'No se pudo cargar el historial. Verifique que el paciente exista y reintente.';
+                } else {
+                    $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
+                }
+                $errorTechnicalDetails = "status: {$status}\ntimeline_url: {$timelineUrlSafe}\nenv_CLINICAL_API_BASE: " . ($envClinicalApiBaseRaw !== '' ? $envClinicalApiBaseRaw : '<empty>') . "\nnormalized_api_base: {$clinicalApiBase}\nattempts: {$attempts}\nerror: " . (string)($fetch['error'] ?? '') . "\nlocal_fallback: " . ($localReason !== '' ? $localReason : 'no aplicable') . "\nheaders:\n" . implode("\n", $headers);
+            }
         } elseif ($status >= 400) {
             $errorMessage = 'No se pudo cargar el historial. Verifique que el servicio clínico (API) esté activo y reintente.';
             $errorTechnicalDetails = "status: {$status}\ntimeline_url: {$timelineUrlSafe}\nenv_CLINICAL_API_BASE: " . ($envClinicalApiBaseRaw !== '' ? $envClinicalApiBaseRaw : '<empty>') . "\nnormalized_api_base: {$clinicalApiBase}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\nbody_snippet:\n" . (string)($fetch['body_snippet'] ?? '');
@@ -1168,6 +1324,14 @@ if ($patientId !== '') {
                 $data = is_array($decoded['data'] ?? null) ? $decoded['data'] : [];
                 $list = $data['items'] ?? [];
                 $items = is_array($list) ? $list : [];
+                if ($items === []) {
+                    $localState = historial_local_timeline_state($patientId, $include);
+                    if (($localState['ok'] ?? false) === true
+                        && ($localState['patient_exists'] ?? true) === false) {
+                        $errorMessage = 'No se pudo cargar el historial. Verifique que el paciente exista y reintente.';
+                        $errorTechnicalDetails = "status: {$status}\ntimeline_url: {$timelineUrlSafe}\nenv_CLINICAL_API_BASE: " . ($envClinicalApiBaseRaw !== '' ? $envClinicalApiBaseRaw : '<empty>') . "\nnormalized_api_base: {$clinicalApiBase}\nattempts: {$attempts}\nheaders:\n" . implode("\n", $headers) . "\n\napi_message: paciente sin eventos, pero patient_id no existe localmente";
+                    }
+                }
                 $range = is_array($data['range'] ?? null) ? $data['range'] : [];
                 $cursorNext = trim((string)($range['cursor_next'] ?? ''));
                 $cursorPrev = trim((string)($range['cursor_prev'] ?? ''));
@@ -2038,7 +2202,7 @@ if (!$embed) {
         </div>
       </div>
     <?php elseif (!$hasRenderableItems): ?>
-      <div class="alert alert-secondary">Sin eventos (no hay encuentros ni documentos)</div>
+      <div class="alert alert-secondary">Este paciente aún no tiene registros en el historial.</div>
     <?php else: ?>
     <?php if ($cursorNext !== '' || $cursorPrev !== ''): ?>
       <div class="d-flex flex-wrap gap-2 mb-3">
