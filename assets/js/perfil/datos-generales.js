@@ -255,6 +255,106 @@
       return payload;
     };
 
+    const getPatientMobilePhoneControls = ()=>{
+      if(!expedienteRoot) return null;
+      const input = expedienteRoot.querySelector('[data-pac-phone="mobile"]');
+      if(!input) return null;
+      const phoneField = input.closest('.mx-phone-field');
+      const countrySelect = phoneField?.querySelector?.('.mx-phone-country') || null;
+      const fieldWrap = input.closest('[class^="col-"], [class*=" col-"], .form-group, .mb-3') || phoneField || input.parentElement;
+      return { input, countrySelect, fieldWrap };
+    };
+
+    const readPatientMobilePhoneFromDom = ()=>{
+      const controls = getPatientMobilePhoneControls();
+      if(!controls) return null;
+      const { input, countrySelect } = controls;
+      let country = String(countrySelect?.value || input.dataset.phoneCountry || 'MX').trim().toUpperCase();
+      let dialCode = String(countrySelect?.selectedOptions?.[0]?.dataset?.dial || input.dataset.phoneDialCode || '').replace(/\D+/g, '');
+      const nationalDigits = String(input.value || '').replace(/\D+/g, '');
+      if(!country){
+        country = 'MX';
+      }
+      if(!dialCode && country === 'MX'){
+        dialCode = '52';
+      }
+      return {
+        country,
+        dialCode,
+        nationalDigits,
+        value: dialCode ? `+${dialCode}${nationalDigits}` : nationalDigits,
+        input,
+        countrySelect: countrySelect || null
+      };
+    };
+
+    const ensurePatientMobilePhoneFeedback = ()=>{
+      const controls = getPatientMobilePhoneControls();
+      if(!controls?.fieldWrap) return null;
+      let feedback = controls.fieldWrap.querySelector(':scope > [data-pac-phone-mobile-feedback]');
+      if(!feedback){
+        feedback = document.createElement('div');
+        feedback.className = 'form-text text-danger d-none';
+        feedback.setAttribute('data-pac-phone-mobile-feedback', '');
+        feedback.setAttribute('aria-live', 'polite');
+        controls.fieldWrap.appendChild(feedback);
+      }
+      return feedback;
+    };
+
+    const setPatientMobilePhoneFeedback = (message = '')=>{
+      const controls = getPatientMobilePhoneControls();
+      const feedback = ensurePatientMobilePhoneFeedback();
+      const msg = String(message || '').trim();
+      if(controls?.input){
+        controls.input.classList.toggle('is-invalid', !!msg);
+        if(msg){
+          controls.input.setAttribute('aria-invalid', 'true');
+        }else{
+          controls.input.removeAttribute('aria-invalid');
+        }
+      }
+      if(!feedback) return;
+      feedback.textContent = msg;
+      feedback.classList.toggle('d-none', !msg);
+    };
+
+    const validateRequiredPatientMobilePhone = ()=>{
+      const phone = readPatientMobilePhoneFromDom();
+      if(!phone?.input){
+        return { valid: false, message: 'Captura el teléfono celular del paciente.', phone };
+      }
+      if(!phone.nationalDigits){
+        return { valid: false, message: 'Captura el teléfono celular del paciente.', phone };
+      }
+      if(phone.country === 'MX' || phone.dialCode === '52'){
+        if(phone.nationalDigits.length !== 10){
+          return { valid: false, message: 'El teléfono celular debe tener 10 dígitos nacionales.', phone };
+        }
+        return { valid: true, message: '', phone: { ...phone, country: 'MX', dialCode: '52', value: `+52${phone.nationalDigits}` } };
+      }
+      if(!phone.dialCode){
+        return { valid: false, message: 'Selecciona la lada del teléfono celular.', phone };
+      }
+      if(phone.nationalDigits.length < 7 || phone.nationalDigits.length > 15){
+        return { valid: false, message: 'El teléfono celular debe tener entre 7 y 15 dígitos.', phone };
+      }
+      return { valid: true, message: '', phone };
+    };
+
+    const appendPatientMobileContactToPayload = (payload, phone)=>{
+      if(!payload || !phone?.value) return payload;
+      const contacts = Array.isArray(payload.contacts) ? payload.contacts.slice() : [];
+      contacts.push({
+        type: 'phone',
+        value: phone.value,
+        is_primary: true,
+        preferred_contact_method: 'phone'
+      });
+      payload.contacts = contacts;
+      return payload;
+    };
+
     const getAddressFields = ()=>{
       if(!expedienteRoot) return null;
       return {
@@ -579,6 +679,15 @@
         setSaveFeedback('Captura nombre y apellidos para guardar.', 'error');
         return Promise.resolve(null);
       }
+      const mobileValidation = validateRequiredPatientMobilePhone();
+      if(!mobileValidation.valid){
+        setPatientMobilePhoneFeedback(mobileValidation.message);
+        setSaveFeedback(mobileValidation.message, 'error');
+        mobileValidation.phone?.input?.focus?.();
+        return Promise.resolve(null);
+      }
+      setPatientMobilePhoneFeedback('');
+      appendPatientMobileContactToPayload(payload, mobileValidation.phone);
       const address = readPatientAddressFromDom();
       const shouldSaveAddress = hasPatientAddressData(address);
       const addressValidationError = validatePatientAddress(address);
@@ -672,6 +781,24 @@
       }
       createPatientFromExplicitSave();
     });
+
+    const mobilePhoneControls = getPatientMobilePhoneControls();
+    if(mobilePhoneControls?.input && !mobilePhoneControls.input.__mxmedRequiredMobileBound){
+      mobilePhoneControls.input.__mxmedRequiredMobileBound = true;
+      mobilePhoneControls.input.addEventListener('input', ()=>{
+        if(validateRequiredPatientMobilePhone().valid){
+          setPatientMobilePhoneFeedback('');
+        }
+      });
+      mobilePhoneControls.countrySelect?.addEventListener('change', ()=>{
+        if(validateRequiredPatientMobilePhone().valid){
+          setPatientMobilePhoneFeedback('');
+        }
+      });
+    }
+
+    window.mxmedReadPatientMobilePhoneFromDom = readPatientMobilePhoneFromDom;
+    window.mxmedValidateRequiredPatientMobilePhone = validateRequiredPatientMobilePhone;
 
     document.querySelectorAll('input.form-control, select.form-select, textarea.form-control').forEach(ctrl=>{
       if(ctrl.type==='file') return;
