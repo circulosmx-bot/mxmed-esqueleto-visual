@@ -11089,6 +11089,10 @@
       ensureEmbedIframe();
       refreshP10();
       updateP10Polling();
+      if (window.__mxmedSkipNextHistorialAutoModal === true) {
+        window.__mxmedSkipNextHistorialAutoModal = false;
+        return;
+      }
       openExpandedHistorial();
     });
     iframe.addEventListener('load', function () {

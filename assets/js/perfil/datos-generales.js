@@ -205,11 +205,15 @@
       return fromGlobal;
     };
 
-    const setActivePatientId = (patientId)=>{
+    const setActivePatientId = (patientId, opts = {})=>{
       const pid = String(patientId || '').trim();
       if(!pid) return;
       if(typeof window.setActivePatientId === 'function'){
-        return window.setActivePatientId(pid, { emitEvent: true, skipUnsavedNewPatientConfirm: true });
+        return window.setActivePatientId(pid, {
+          emitEvent: true,
+          skipUnsavedNewPatientConfirm: true,
+          ...opts
+        });
       }
       if(!expedienteRoot) return;
       expedienteRoot.dataset.activePatientId = pid;
@@ -731,11 +735,25 @@
                   })
               : Promise.resolve(null);
             return addressSavePromise.then((addressSaved)=>{
-              Promise.resolve(setActivePatientId(patientId))
+              Promise.resolve(setActivePatientId(patientId, { applyEntryRule: false }))
               .catch(()=> null)
               .finally(()=>{
                 if(typeof window.mxmedApplyExpedienteEntryTabRule === 'function'){
-                  try{ window.mxmedApplyExpedienteEntryTabRule({ context: 'explicit_save' }); }catch(_){}
+                  try{
+                    window.__mxmedSkipNextHistorialAutoModal = true;
+                    const appliedEntryRule = window.mxmedApplyExpedienteEntryTabRule({ context: 'explicit_save' });
+                    if(!appliedEntryRule){
+                      window.__mxmedSkipNextHistorialAutoModal = false;
+                    }else{
+                      window.setTimeout(()=>{
+                        if(window.__mxmedSkipNextHistorialAutoModal === true){
+                          window.__mxmedSkipNextHistorialAutoModal = false;
+                        }
+                      }, 2000);
+                    }
+                  }catch(_){
+                    window.__mxmedSkipNextHistorialAutoModal = false;
+                  }
                 }
               });
             if(typeof window.mxmedInvalidatePatientsIndexCache === 'function'){
