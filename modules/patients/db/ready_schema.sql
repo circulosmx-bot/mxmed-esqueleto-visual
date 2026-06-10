@@ -1,5 +1,5 @@
 -- Schema mínimo para el dominio Pacientes
--- Tablas: patients_patients, patients_contacts, patients_consents, patients_doctor_links
+-- Tablas: patients_patients, patients_contacts, patients_addresses, patients_consents, patients_doctor_links
 
 CREATE TABLE IF NOT EXISTS `patients_patients` (
   `patient_id` VARCHAR(64) NOT NULL,
@@ -25,6 +25,31 @@ CREATE TABLE IF NOT EXISTS `patients_contacts` (
   PRIMARY KEY (`contact_id`),
   KEY `idx_contacts_patient` (`patient_id`),
   KEY `idx_contacts_email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `patients_addresses` (
+  `address_id` VARCHAR(64) NOT NULL,
+  `patient_id` VARCHAR(64) NOT NULL,
+  `address_type` VARCHAR(32) NOT NULL DEFAULT 'home',
+  `is_primary` TINYINT(1) NOT NULL DEFAULT 1,
+  `country` VARCHAR(2) NOT NULL DEFAULT 'MX',
+  `postal_code` VARCHAR(16) DEFAULT NULL,
+  `colony` VARCHAR(190) DEFAULT NULL,
+  `state` VARCHAR(190) DEFAULT NULL,
+  `municipality` VARCHAR(190) DEFAULT NULL,
+  `locality` VARCHAR(190) DEFAULT NULL,
+  `street` VARCHAR(190) DEFAULT NULL,
+  `exterior_number` VARCHAR(32) DEFAULT NULL,
+  `interior_number` VARCHAR(32) DEFAULT NULL,
+  `floor` VARCHAR(32) DEFAULT NULL,
+  `catalog_cp_colonia_id` BIGINT UNSIGNED DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT NULL,
+  PRIMARY KEY (`address_id`),
+  KEY `idx_addresses_patient` (`patient_id`),
+  KEY `idx_addresses_patient_primary` (`patient_id`, `is_primary`),
+  KEY `idx_addresses_postal_code` (`postal_code`),
+  KEY `idx_addresses_catalog_cp_colonia` (`catalog_cp_colonia_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `patients_consents` (
