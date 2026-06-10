@@ -359,6 +359,114 @@
       return payload;
     };
 
+    const getProfileFields = ()=>{
+      if(!expedienteRoot) return null;
+      return {
+        firstName: expedienteRoot.querySelector('[data-pac-nombre]'),
+        paternalLastName: expedienteRoot.querySelector('[data-pac-apellido-paterno]'),
+        maternalLastName: expedienteRoot.querySelector('[data-pac-apellido-materno]'),
+        maritalStatus: expedienteRoot.querySelector('[data-pac-profile-marital-status]'),
+        occupation: expedienteRoot.querySelector('[data-pac-profile-occupation]')
+      };
+    };
+
+    const cleanProfileValue = (value)=> String(value || '').replace(/\s+/g, ' ').trim();
+
+    const readPatientProfileFromDom = ()=>{
+      const fields = getProfileFields();
+      if(!fields) return null;
+      return {
+        first_name: cleanProfileValue(fields.firstName?.value || ''),
+        paternal_last_name: cleanProfileValue(fields.paternalLastName?.value || ''),
+        maternal_last_name: cleanProfileValue(fields.maternalLastName?.value || ''),
+        marital_status: cleanProfileValue(fields.maritalStatus?.value || ''),
+        occupation: cleanProfileValue(fields.occupation?.value || '')
+      };
+    };
+
+    const hasPatientProfileData = (profile)=>{
+      if(!profile || typeof profile !== 'object') return false;
+      return [
+        profile.first_name,
+        profile.paternal_last_name,
+        profile.maternal_last_name,
+        profile.marital_status,
+        profile.occupation
+      ].some((value)=> String(value || '').trim() !== '');
+    };
+
+    const savePatientProfile = async (patientId, profile, { force = false } = {})=>{
+      const pid = String(patientId || '').trim();
+      if(!pid) throw new Error('patient_id requerido');
+      const payload = {
+        first_name: cleanProfileValue(profile?.first_name || ''),
+        paternal_last_name: cleanProfileValue(profile?.paternal_last_name || ''),
+        maternal_last_name: cleanProfileValue(profile?.maternal_last_name || ''),
+        marital_status: cleanProfileValue(profile?.marital_status || ''),
+        occupation: cleanProfileValue(profile?.occupation || '')
+      };
+      if(!force && !hasPatientProfileData(payload)) return null;
+      const response = await fetch(`/api/patients/index.php/patients/${encodeURIComponent(pid)}/profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload)
+      });
+      const json = await response.json().catch(()=> null);
+      if(!response.ok || json?.ok !== true){
+        throw new Error(String(json?.message || json?.error || 'No se pudo guardar el perfil.'));
+      }
+      return json?.data?.profile || null;
+    };
+
+    const dispatchProfileChange = (field, eventName = 'change')=>{
+      if(!field) return;
+      field.dispatchEvent(new Event(eventName, { bubbles: true }));
+    };
+
+    const setProfileFieldValue = (field, value, { dispatchEvents = true } = {})=>{
+      if(!field) return;
+      const next = String(value || '');
+      if(field.value === next) return;
+      field.value = next;
+      if(dispatchEvents){
+        dispatchProfileChange(field, 'input');
+        dispatchProfileChange(field, 'change');
+      }
+    };
+
+    const hydratePatientProfileIntoDom = (profile)=>{
+      const fields = getProfileFields();
+      if(!fields) return false;
+      const data = (profile && typeof profile === 'object') ? profile : {};
+      setProfileFieldValue(fields.firstName, data.first_name || '', { dispatchEvents: false });
+      setProfileFieldValue(fields.paternalLastName, data.paternal_last_name || '', { dispatchEvents: false });
+      setProfileFieldValue(fields.maternalLastName, data.maternal_last_name || '', { dispatchEvents: false });
+      setProfileFieldValue(fields.maritalStatus, data.marital_status || '', { dispatchEvents: false });
+      setProfileFieldValue(fields.occupation, data.occupation || '', { dispatchEvents: false });
+      return true;
+    };
+
+    const clearPatientProfileFields = ()=> hydratePatientProfileIntoDom(null);
+
+    const fetchAndHydratePatientProfile = async (patientId, shouldApply = ()=> true)=>{
+      const pid = String(patientId || '').trim();
+      if(!pid) return false;
+      const response = await fetch(`/api/patients/index.php/patients/${encodeURIComponent(pid)}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+      });
+      const json = await response.json().catch(()=> null);
+      const profile = json?.data?.profile || null;
+      if(shouldApply() !== true) return false;
+      if(!profile){
+        clearPatientProfileFields();
+        return false;
+      }
+      return hydratePatientProfileIntoDom(profile);
+    };
+
     const getAddressFields = ()=>{
       if(!expedienteRoot) return null;
       return {
@@ -535,6 +643,10 @@
     window.mxmedHasPatientAddressData = hasPatientAddressData;
     window.mxmedSavePatientPrimaryAddress = savePatientPrimaryAddress;
     window.mxmedHydratePatientAddressIntoDom = hydratePatientAddressIntoDom;
+    window.mxmedReadPatientProfileFromDom = readPatientProfileFromDom;
+    window.mxmedHasPatientProfileData = hasPatientProfileData;
+    window.mxmedSavePatientProfile = savePatientProfile;
+    window.mxmedHydratePatientProfileIntoDom = hydratePatientProfileIntoDom;
 
     const isInNewEntryMode = ()=>{
       if(!expedienteRoot) return false;
@@ -636,36 +748,69 @@
       savePatientFeedback.className = cls;
     };
 
-    const saveAddressForActivePatient = ()=>{
+    const saveDatosGeneralesForActivePatient = ()=>{
       const patientId = getActivePatientId();
       if(!patientId){
-        setSaveFeedback('Selecciona un paciente para guardar domicilio.', 'error');
+        setSaveFeedback('Selecciona un paciente para guardar datos generales.', 'error');
         return Promise.resolve(null);
       }
+      const profile = readPatientProfileFromDom();
       const address = readPatientAddressFromDom();
       const validationError = validatePatientAddress(address);
       if(validationError){
         setSaveFeedback(validationError, 'error');
         return Promise.resolve(null);
       }
-      if(!hasPatientAddressData(address)){
-        setSaveFeedback('No hay domicilio capturado para guardar.', 'muted');
-        return Promise.resolve(null);
-      }
+      const shouldSaveAddress = hasPatientAddressData(address);
       if(savePatientBtn) savePatientBtn.disabled = true;
-      setSaveFeedback('Guardando domicilio...', 'muted');
-      return savePatientPrimaryAddress(patientId, address)
-        .then((savedAddress)=>{
-          if(savedAddress) hydratePatientAddressIntoDom(savedAddress);
-          setSaveFeedback('Domicilio guardado correctamente.', 'success');
-          return savedAddress;
+      setSaveFeedback('Guardando datos generales...', 'muted');
+      const profileSavePromise = savePatientProfile(patientId, profile, { force: true })
+        .then((savedProfile)=>{
+          if(savedProfile) hydratePatientProfileIntoDom(savedProfile);
+          return true;
         })
         .catch((err)=>{
-          console.warn('[DG-ADDRESS-SAVE] request_error', {
+          console.warn('[DG-PROFILE-SAVE] request_error', {
             patient_id: patientId,
             message: String(err?.message || '').trim()
           });
-          setSaveFeedback(String(err?.message || 'No se pudo guardar el domicilio.'), 'error');
+          return false;
+        });
+      const addressSavePromise = shouldSaveAddress
+        ? savePatientPrimaryAddress(patientId, address)
+            .then((savedAddress)=>{
+              if(savedAddress) hydratePatientAddressIntoDom(savedAddress);
+              return true;
+            })
+            .catch((err)=>{
+              console.warn('[DG-ADDRESS-SAVE] request_error', {
+                patient_id: patientId,
+                message: String(err?.message || '').trim()
+              });
+              return false;
+            })
+        : Promise.resolve(null);
+      return Promise.all([profileSavePromise, addressSavePromise])
+        .then(([profileSaved, addressSaved])=>{
+          if(profileSaved === false && addressSaved === false){
+            setSaveFeedback('No se pudieron guardar los datos generales.', 'error');
+          }else if(profileSaved === false){
+            setSaveFeedback('Domicilio guardado, pero no se pudo guardar el perfil.', 'error');
+          }else if(addressSaved === false){
+            setSaveFeedback('Perfil guardado, pero no se pudo guardar el domicilio.', 'error');
+          }else if(addressSaved === true){
+            setSaveFeedback('Perfil y domicilio guardados correctamente.', 'success');
+          }else{
+            setSaveFeedback('Perfil guardado correctamente.', 'success');
+          }
+          return { profileSaved, addressSaved };
+        })
+        .catch((err)=>{
+          console.warn('[DG-PROFILE-SAVE] request_error', {
+            patient_id: patientId,
+            message: String(err?.message || '').trim()
+          });
+          setSaveFeedback(String(err?.message || 'No se pudieron guardar los datos generales.'), 'error');
           return null;
         })
         .finally(()=>{
@@ -692,6 +837,8 @@
       }
       setPatientMobilePhoneFeedback('');
       appendPatientMobileContactToPayload(payload, mobileValidation.phone);
+      const profile = readPatientProfileFromDom();
+      const shouldSaveProfile = hasPatientProfileData(profile);
       const address = readPatientAddressFromDom();
       const shouldSaveAddress = hasPatientAddressData(address);
       const addressValidationError = validatePatientAddress(address);
@@ -720,6 +867,20 @@
             persistIdentityDraftForPatient(patientId);
             explicitSaveCompleted = true;
             syncNewPatientDirtyState();
+            const profileSavePromise = shouldSaveProfile
+              ? savePatientProfile(patientId, profile)
+                  .then((savedProfile)=>{
+                    if(savedProfile) hydratePatientProfileIntoDom(savedProfile);
+                    return true;
+                  })
+                  .catch((err)=>{
+                    console.warn('[DG-PROFILE-SAVE] after_create_error', {
+                      patient_id: patientId,
+                      message: String(err?.message || '').trim()
+                    });
+                    return false;
+                  })
+              : Promise.resolve(null);
             const addressSavePromise = shouldSaveAddress
               ? savePatientPrimaryAddress(patientId, address)
                   .then((savedAddress)=>{
@@ -734,7 +895,7 @@
                     return false;
                   })
               : Promise.resolve(null);
-            return addressSavePromise.then((addressSaved)=>{
+            return Promise.all([profileSavePromise, addressSavePromise]).then(([profileSaved, addressSaved])=>{
               Promise.resolve(setActivePatientId(patientId, { applyEntryRule: false }))
               .catch(()=> null)
               .finally(()=>{
@@ -759,8 +920,16 @@
             if(typeof window.mxmedInvalidatePatientsIndexCache === 'function'){
               window.mxmedInvalidatePatientsIndexCache();
             }
-              if(shouldSaveAddress && addressSaved === false){
+              if(profileSaved === false && addressSaved === false){
+                setSaveFeedback('Paciente guardado, pero no se pudieron guardar perfil ni domicilio.', 'error');
+              }else if(profileSaved === false){
+                setSaveFeedback('Paciente guardado, pero no se pudo guardar perfil.', 'error');
+              }else if(addressSaved === false){
                 setSaveFeedback('Paciente guardado, pero no se pudo guardar domicilio.', 'error');
+              }else if(shouldSaveProfile && shouldSaveAddress){
+                setSaveFeedback('Paciente, perfil y domicilio guardados correctamente.', 'success');
+              }else if(shouldSaveProfile){
+                setSaveFeedback('Paciente y perfil guardados correctamente.', 'success');
               }else if(shouldSaveAddress){
                 setSaveFeedback('Paciente y domicilio guardados correctamente.', 'success');
               }else{
@@ -794,7 +963,7 @@
     savePatientBtn?.addEventListener('click', ()=>{
       const activePatientId = getActivePatientId();
       if(activePatientId && !isInNewEntryMode()){
-        saveAddressForActivePatient();
+        saveDatosGeneralesForActivePatient();
         return;
       }
       createPatientFromExplicitSave();
@@ -855,6 +1024,23 @@
     document.querySelectorAll('input[name="pac-genero"]').forEach((ctrl)=>{
       ctrl.addEventListener('change', ()=>{ explicitSaveCompleted = false; syncNewPatientDirtyState(); });
     });
+    let profileHydrationToken = 0;
+    const hydrateProfileForCurrentActivePatient = ()=>{
+      if(isInNewEntryMode()) return;
+      const patientId = getActivePatientId();
+      const token = ++profileHydrationToken;
+      if(!patientId){
+        clearPatientProfileFields();
+        return;
+      }
+      fetchAndHydratePatientProfile(patientId, ()=>{
+        return token === profileHydrationToken
+          && String(getActivePatientId() || '').trim() === patientId
+          && !isInNewEntryMode();
+      })
+        .then(()=> null)
+        .catch(()=> null);
+    };
     let addressHydrationToken = 0;
     const hydrateAddressForCurrentActivePatient = ()=>{
       if(isInNewEntryMode()) return;
@@ -873,10 +1059,14 @@
         .catch(()=> null);
     };
     ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach((eventName)=>{
-      window.addEventListener(eventName, hydrateAddressForCurrentActivePatient);
+      window.addEventListener(eventName, ()=>{
+        hydrateProfileForCurrentActivePatient();
+        hydrateAddressForCurrentActivePatient();
+      });
     });
     window.addEventListener('mxmed:expediente-neutralize', ()=>{
       clearNewPatientDirtyState();
+      clearPatientProfileFields();
       clearPatientAddressFields();
     });
     window.setTimeout(syncNewPatientDirtyState, 0);
