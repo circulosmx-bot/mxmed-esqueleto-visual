@@ -592,6 +592,130 @@ console.info('app.js loaded :: 20251123a');
   window.setTimeout(applyPatientPhoneCapture, 0);
 })();
 
+// Email validation for Expediente patient fields.
+(function(){
+  if(window.__mxmedPatientEmailValidationApplied) return;
+  window.__mxmedPatientEmailValidationApplied = true;
+
+  const EMAIL_SELECTOR = '#p-expediente [data-pac-email]';
+  const EMAIL_ERROR_MESSAGE = 'Ingresa un correo válido, por ejemplo nombre@dominio.com';
+
+  const normalizePatientEmail = (value)=>{
+    return String(value == null ? '' : value)
+      .trim()
+      .replace(/\s+/g, '')
+      .toLowerCase();
+  };
+
+  const isValidPatientEmail = (value)=>{
+    const email = normalizePatientEmail(value);
+    if(!email) return true;
+    if(email.length > 254) return false;
+    if(/\s/.test(email) || email.includes('..')) return false;
+    const parts = email.split('@');
+    if(parts.length !== 2) return false;
+    const [local, domain] = parts;
+    if(!local || !domain) return false;
+    if(local.startsWith('.') || local.endsWith('.')) return false;
+    if(domain.startsWith('.') || domain.endsWith('.')) return false;
+    if(!domain.includes('.')) return false;
+    if(!/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+$/i.test(local)) return false;
+    if(!/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/i.test(domain)) return false;
+    return domain.split('.').every((part)=> part.length > 0 && part.length <= 63 && !part.startsWith('-') && !part.endsWith('-'));
+  };
+
+  const setEmailInputAttributes = (control)=>{
+    if(!control) return;
+    control.setAttribute('type', 'email');
+    control.setAttribute('inputmode', 'email');
+    control.setAttribute('autocomplete', 'email');
+    control.setAttribute('spellcheck', 'false');
+    try{ control.spellcheck = false; }catch(_){}
+    control.setAttribute('autocorrect', 'off');
+    control.setAttribute('autocapitalize', 'off');
+  };
+
+  const getEmailFeedbackHost = (control)=>{
+    return control?.closest('.save-wrap') || control?.closest('[class^="col-"], [class*=" col-"]') || control?.parentElement || null;
+  };
+
+  const setEmailFeedback = (control, isInvalid)=>{
+    if(!control) return;
+    const host = getEmailFeedbackHost(control);
+    if(!host) return;
+    let bubble = host.querySelector(':scope > .err-bubble[data-pac-email-error]');
+    if(isInvalid){
+      control.classList.add('is-invalid');
+      control.classList.remove('is-valid');
+      host.classList.add('has-error');
+      control.setCustomValidity(EMAIL_ERROR_MESSAGE);
+      if(!bubble){
+        bubble = document.createElement('div');
+        bubble.className = 'err-bubble';
+        bubble.dataset.pacEmailError = '1';
+        host.appendChild(bubble);
+      }
+      bubble.textContent = EMAIL_ERROR_MESSAGE;
+      bubble.style.opacity = '1';
+    }else{
+      control.classList.remove('is-invalid');
+      host.classList.remove('has-error');
+      control.setCustomValidity('');
+      if(bubble) bubble.remove();
+    }
+  };
+
+  const validatePatientEmailControl = (control, { normalize = false } = {})=>{
+    if(!control) return true;
+    if(normalize){
+      const normalized = normalizePatientEmail(control.value);
+      if(control.value !== normalized){
+        control.value = normalized;
+        control.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+    const valid = isValidPatientEmail(control.value);
+    setEmailFeedback(control, !valid);
+    return valid;
+  };
+
+  const bindPatientEmailControl = (control)=>{
+    if(!control || control.__mxmedPatientEmailBound) return;
+    control.__mxmedPatientEmailBound = true;
+    setEmailInputAttributes(control);
+    control.addEventListener('input', ()=>{
+      if(!String(control.value || '').trim() || isValidPatientEmail(control.value)){
+        setEmailFeedback(control, false);
+      }
+    });
+    control.addEventListener('blur', ()=>{
+      validatePatientEmailControl(control, { normalize: true });
+    });
+  };
+
+  const applyPatientEmailValidation = ()=>{
+    document.querySelectorAll(EMAIL_SELECTOR).forEach((control)=>{
+      bindPatientEmailControl(control);
+      setEmailInputAttributes(control);
+      if(control.classList.contains('is-invalid')){
+        validatePatientEmailControl(control);
+      }
+    });
+  };
+
+  window.mxmedApplyPatientEmailValidation = applyPatientEmailValidation;
+  window.mxmedValidatePatientEmails = ()=>{
+    return Array.from(document.querySelectorAll(EMAIL_SELECTOR)).every((control)=> validatePatientEmailControl(control, { normalize: true }));
+  };
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', applyPatientEmailValidation, { once: true });
+  }else{
+    applyPatientEmailValidation();
+  }
+  window.setTimeout(applyPatientEmailValidation, 0);
+})();
+
 // Private profile identity bridge (PP-7H2-B)
 (function(){
   if(window.__mxmedPrivateIdentityBridgeApplied) return;

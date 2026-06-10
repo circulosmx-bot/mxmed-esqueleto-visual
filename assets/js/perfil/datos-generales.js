@@ -356,6 +356,10 @@
     };
 
     const createPatientFromExplicitSave = ()=>{
+      if(typeof window.mxmedValidatePatientEmails === 'function' && window.mxmedValidatePatientEmails() === false){
+        setSaveFeedback('Revisa el formato de los correos electrónicos.', 'error');
+        return Promise.resolve(null);
+      }
       const payload = buildCreatePayload();
       if(!payload || !String(payload.display_name || '').trim()){
         setSaveFeedback('Captura nombre y apellidos para guardar.', 'error');
