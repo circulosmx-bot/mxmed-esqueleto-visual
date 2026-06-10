@@ -255,6 +255,183 @@
       return payload;
     };
 
+    const getAddressFields = ()=>{
+      if(!expedienteRoot) return null;
+      return {
+        cp: expedienteRoot.querySelector('[data-pac-address-cp]'),
+        colony: expedienteRoot.querySelector('[data-pac-address-colony]'),
+        state: expedienteRoot.querySelector('[data-pac-address-state]'),
+        municipality: expedienteRoot.querySelector('[data-pac-address-municipality]'),
+        locality: expedienteRoot.querySelector('[data-pac-address-locality]'),
+        street: expedienteRoot.querySelector('[data-pac-address-street]'),
+        exteriorNumber: expedienteRoot.querySelector('[data-pac-address-ext]'),
+        interiorNumber: expedienteRoot.querySelector('[data-pac-address-int]'),
+        floor: expedienteRoot.querySelector('[data-pac-address-floor]')
+      };
+    };
+
+    const cleanAddressValue = (value)=> String(value || '').replace(/\s+/g, ' ').trim();
+    const cleanAddressCp = (value)=> String(value || '').replace(/\D+/g, '').slice(0, 5);
+
+    const readPatientAddressFromDom = ()=>{
+      const fields = getAddressFields();
+      if(!fields) return null;
+      return {
+        country: 'MX',
+        postal_code: cleanAddressCp(fields.cp?.value || ''),
+        colony: cleanAddressValue(fields.colony?.value || ''),
+        state: cleanAddressValue(fields.state?.value || ''),
+        municipality: cleanAddressValue(fields.municipality?.value || ''),
+        locality: cleanAddressValue(fields.locality?.value || ''),
+        street: cleanAddressValue(fields.street?.value || ''),
+        exterior_number: cleanAddressValue(fields.exteriorNumber?.value || ''),
+        interior_number: cleanAddressValue(fields.interiorNumber?.value || ''),
+        floor: cleanAddressValue(fields.floor?.value || ''),
+        catalog_cp_colonia_id: null
+      };
+    };
+
+    const hasPatientAddressData = (address)=>{
+      if(!address || typeof address !== 'object') return false;
+      return [
+        address.postal_code,
+        address.colony,
+        address.state,
+        address.municipality,
+        address.locality,
+        address.street,
+        address.exterior_number,
+        address.interior_number,
+        address.floor
+      ].some((value)=> String(value || '').trim() !== '');
+    };
+
+    const validatePatientAddress = (address)=>{
+      if(!hasPatientAddressData(address)) return null;
+      const cp = String(address?.postal_code || '').trim();
+      if(cp && !/^\d{5}$/.test(cp)){
+        return 'El código postal debe tener 5 dígitos.';
+      }
+      return null;
+    };
+
+    const savePatientPrimaryAddress = async (patientId, address)=>{
+      const pid = String(patientId || '').trim();
+      if(!pid) throw new Error('patient_id requerido');
+      if(!hasPatientAddressData(address)) return null;
+      const validationError = validatePatientAddress(address);
+      if(validationError) throw new Error(validationError);
+      const response = await fetch(`/api/patients/index.php/patients/${encodeURIComponent(pid)}/address`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(address)
+      });
+      const json = await response.json().catch(()=> null);
+      if(!response.ok || json?.ok !== true){
+        throw new Error(String(json?.message || json?.error || 'No se pudo guardar el domicilio.'));
+      }
+      return json?.data?.address || null;
+    };
+
+    const dispatchAddressChange = (field, eventName = 'change')=>{
+      if(!field) return;
+      field.dispatchEvent(new Event(eventName, { bubbles: true }));
+    };
+
+    const setAddressFieldValue = (field, value, { dispatchEvents = true } = {})=>{
+      if(!field) return;
+      const next = String(value || '');
+      if(field.value === next) return;
+      field.value = next;
+      if(dispatchEvents){
+        dispatchAddressChange(field, 'input');
+        dispatchAddressChange(field, 'change');
+      }
+    };
+
+    const setAddressColonyValue = (select, value, meta = {})=>{
+      if(!select) return;
+      const colony = cleanAddressValue(value || '');
+      if(!colony){
+        select.value = '';
+        dispatchAddressChange(select, 'change');
+        return;
+      }
+      const exists = Array.from(select.options || []).some((option)=> option.value === colony);
+      if(!exists){
+        const option = document.createElement('option');
+        option.value = colony;
+        option.textContent = colony;
+        option.dataset.estado = cleanAddressValue(meta.state || '');
+        option.dataset.municipio = cleanAddressValue(meta.municipality || '');
+        select.appendChild(option);
+      }
+      select.disabled = false;
+      select.removeAttribute('disabled');
+      select.value = colony;
+      dispatchAddressChange(select, 'change');
+    };
+
+    const hydratePatientAddressIntoDom = (address)=>{
+      const fields = getAddressFields();
+      if(!fields || !address || typeof address !== 'object') return false;
+      setAddressFieldValue(fields.cp, cleanAddressCp(address.postal_code || ''), { dispatchEvents: false });
+      setAddressColonyValue(fields.colony, address.colony || '', address);
+      setAddressFieldValue(fields.state, address.state || '');
+      setAddressFieldValue(fields.municipality, address.municipality || '');
+      setAddressFieldValue(fields.locality, address.locality || '');
+      setAddressFieldValue(fields.street, address.street || '');
+      setAddressFieldValue(fields.exteriorNumber, address.exterior_number || '');
+      setAddressFieldValue(fields.interiorNumber, address.interior_number || '');
+      setAddressFieldValue(fields.floor, address.floor || '');
+      return true;
+    };
+
+    const clearPatientAddressFields = ()=>{
+      const fields = getAddressFields();
+      if(!fields) return;
+      setAddressFieldValue(fields.cp, '');
+      setAddressFieldValue(fields.state, '');
+      setAddressFieldValue(fields.municipality, '');
+      setAddressFieldValue(fields.locality, '');
+      setAddressFieldValue(fields.street, '');
+      setAddressFieldValue(fields.exteriorNumber, '');
+      setAddressFieldValue(fields.interiorNumber, '');
+      setAddressFieldValue(fields.floor, '');
+      if(fields.colony){
+        fields.colony.innerHTML = '<option value="">Captura primero el código postal</option>';
+        fields.colony.value = '';
+        fields.colony.disabled = true;
+        fields.colony.setAttribute('disabled', 'disabled');
+        dispatchAddressChange(fields.colony, 'change');
+      }
+    };
+
+    const fetchAndHydratePatientAddress = async (patientId, shouldApply = ()=> true)=>{
+      const pid = String(patientId || '').trim();
+      if(!pid) return false;
+      const response = await fetch(`/api/patients/index.php/patients/${encodeURIComponent(pid)}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+      });
+      const json = await response.json().catch(()=> null);
+      const addresses = Array.isArray(json?.data?.addresses) ? json.data.addresses : [];
+      const primary = addresses.find((entry)=> entry?.is_primary === true) || addresses[0] || null;
+      if(shouldApply() !== true) return false;
+      if(!primary){
+        clearPatientAddressFields();
+        return false;
+      }
+      return hydratePatientAddressIntoDom(primary);
+    };
+
+    window.mxmedReadPatientAddressFromDom = readPatientAddressFromDom;
+    window.mxmedHasPatientAddressData = hasPatientAddressData;
+    window.mxmedSavePatientPrimaryAddress = savePatientPrimaryAddress;
+    window.mxmedHydratePatientAddressIntoDom = hydratePatientAddressIntoDom;
+
     const isInNewEntryMode = ()=>{
       if(!expedienteRoot) return false;
       return String(expedienteRoot.dataset?.newEntryMode || expedienteRoot.getAttribute('data-new-entry-mode') || '').trim() === '1';
@@ -355,6 +532,43 @@
       savePatientFeedback.className = cls;
     };
 
+    const saveAddressForActivePatient = ()=>{
+      const patientId = getActivePatientId();
+      if(!patientId){
+        setSaveFeedback('Selecciona un paciente para guardar domicilio.', 'error');
+        return Promise.resolve(null);
+      }
+      const address = readPatientAddressFromDom();
+      const validationError = validatePatientAddress(address);
+      if(validationError){
+        setSaveFeedback(validationError, 'error');
+        return Promise.resolve(null);
+      }
+      if(!hasPatientAddressData(address)){
+        setSaveFeedback('No hay domicilio capturado para guardar.', 'muted');
+        return Promise.resolve(null);
+      }
+      if(savePatientBtn) savePatientBtn.disabled = true;
+      setSaveFeedback('Guardando domicilio...', 'muted');
+      return savePatientPrimaryAddress(patientId, address)
+        .then((savedAddress)=>{
+          if(savedAddress) hydratePatientAddressIntoDom(savedAddress);
+          setSaveFeedback('Domicilio guardado correctamente.', 'success');
+          return savedAddress;
+        })
+        .catch((err)=>{
+          console.warn('[DG-ADDRESS-SAVE] request_error', {
+            patient_id: patientId,
+            message: String(err?.message || '').trim()
+          });
+          setSaveFeedback(String(err?.message || 'No se pudo guardar el domicilio.'), 'error');
+          return null;
+        })
+        .finally(()=>{
+          if(savePatientBtn) savePatientBtn.disabled = false;
+        });
+    };
+
     const createPatientFromExplicitSave = ()=>{
       if(typeof window.mxmedValidatePatientEmails === 'function' && window.mxmedValidatePatientEmails() === false){
         setSaveFeedback('Revisa el formato de los correos electrónicos.', 'error');
@@ -363,6 +577,13 @@
       const payload = buildCreatePayload();
       if(!payload || !String(payload.display_name || '').trim()){
         setSaveFeedback('Captura nombre y apellidos para guardar.', 'error');
+        return Promise.resolve(null);
+      }
+      const address = readPatientAddressFromDom();
+      const shouldSaveAddress = hasPatientAddressData(address);
+      const addressValidationError = validatePatientAddress(address);
+      if(addressValidationError){
+        setSaveFeedback(addressValidationError, 'error');
         return Promise.resolve(null);
       }
       if(creatingPatientPromise) return creatingPatientPromise;
@@ -386,7 +607,22 @@
             persistIdentityDraftForPatient(patientId);
             explicitSaveCompleted = true;
             syncNewPatientDirtyState();
-            Promise.resolve(setActivePatientId(patientId))
+            const addressSavePromise = shouldSaveAddress
+              ? savePatientPrimaryAddress(patientId, address)
+                  .then((savedAddress)=>{
+                    if(savedAddress) hydratePatientAddressIntoDom(savedAddress);
+                    return true;
+                  })
+                  .catch((err)=>{
+                    console.warn('[DG-ADDRESS-SAVE] after_create_error', {
+                      patient_id: patientId,
+                      message: String(err?.message || '').trim()
+                    });
+                    return false;
+                  })
+              : Promise.resolve(null);
+            return addressSavePromise.then((addressSaved)=>{
+              Promise.resolve(setActivePatientId(patientId))
               .catch(()=> null)
               .finally(()=>{
                 if(typeof window.mxmedApplyExpedienteEntryTabRule === 'function'){
@@ -396,8 +632,15 @@
             if(typeof window.mxmedInvalidatePatientsIndexCache === 'function'){
               window.mxmedInvalidatePatientsIndexCache();
             }
-            setSaveFeedback('Paciente guardado correctamente.', 'success');
-            return patientId;
+              if(shouldSaveAddress && addressSaved === false){
+                setSaveFeedback('Paciente guardado, pero no se pudo guardar domicilio.', 'error');
+              }else if(shouldSaveAddress){
+                setSaveFeedback('Paciente y domicilio guardados correctamente.', 'success');
+              }else{
+                setSaveFeedback('Paciente guardado correctamente.', 'success');
+              }
+              return patientId;
+            });
           }
           console.warn('[P14-PATIENT-SAVE] no_create', {
             ok: json?.ok === true,
@@ -421,7 +664,14 @@
         });
       return creatingPatientPromise;
     };
-    savePatientBtn?.addEventListener('click', ()=>{ createPatientFromExplicitSave(); });
+    savePatientBtn?.addEventListener('click', ()=>{
+      const activePatientId = getActivePatientId();
+      if(activePatientId && !isInNewEntryMode()){
+        saveAddressForActivePatient();
+        return;
+      }
+      createPatientFromExplicitSave();
+    });
 
     document.querySelectorAll('input.form-control, select.form-select, textarea.form-control').forEach(ctrl=>{
       if(ctrl.type==='file') return;
@@ -460,7 +710,30 @@
     document.querySelectorAll('input[name="pac-genero"]').forEach((ctrl)=>{
       ctrl.addEventListener('change', ()=>{ explicitSaveCompleted = false; syncNewPatientDirtyState(); });
     });
-    window.addEventListener('mxmed:expediente-neutralize', ()=>{ clearNewPatientDirtyState(); });
+    let addressHydrationToken = 0;
+    const hydrateAddressForCurrentActivePatient = ()=>{
+      if(isInNewEntryMode()) return;
+      const patientId = getActivePatientId();
+      const token = ++addressHydrationToken;
+      if(!patientId){
+        clearPatientAddressFields();
+        return;
+      }
+      fetchAndHydratePatientAddress(patientId, ()=>{
+        return token === addressHydrationToken
+          && String(getActivePatientId() || '').trim() === patientId
+          && !isInNewEntryMode();
+      })
+        .then(()=> null)
+        .catch(()=> null);
+    };
+    ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach((eventName)=>{
+      window.addEventListener(eventName, hydrateAddressForCurrentActivePatient);
+    });
+    window.addEventListener('mxmed:expediente-neutralize', ()=>{
+      clearNewPatientDirtyState();
+      clearPatientAddressFields();
+    });
     window.setTimeout(syncNewPatientDirtyState, 0);
   }
 
