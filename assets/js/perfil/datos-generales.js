@@ -987,6 +987,79 @@
     window.mxmedReadPatientMobilePhoneFromDom = readPatientMobilePhoneFromDom;
     window.mxmedValidateRequiredPatientMobilePhone = validateRequiredPatientMobilePhone;
 
+    const setupBirthdateKeyboardAssist = ()=>{
+      if(!expedienteRoot) return;
+      const monthSelect = expedienteRoot.querySelector('[data-dg-mes]');
+      const yearSelect = expedienteRoot.querySelector('[data-dg-anio]');
+
+      if(monthSelect && !monthSelect.__mxmedBirthMonthNumericBound){
+        monthSelect.__mxmedBirthMonthNumericBound = true;
+        let monthNumberBuffer = '';
+        let monthNumberTimer = null;
+        const commitMonthNumber = (value)=>{
+          const month = Number(value);
+          if(!Number.isInteger(month) || month < 1 || month > 12) return false;
+          const next = String(month).padStart(2, '0');
+          if(monthSelect.value !== next){
+            monthSelect.value = next;
+            monthSelect.dispatchEvent(new Event('input', { bubbles: true }));
+            monthSelect.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          return true;
+        };
+        const clearMonthNumberBuffer = ()=>{
+          monthNumberBuffer = '';
+          if(monthNumberTimer){
+            window.clearTimeout(monthNumberTimer);
+            monthNumberTimer = null;
+          }
+        };
+        monthSelect.addEventListener('keydown', (event)=>{
+          if(event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+          if(!/^\d$/.test(event.key || '')) return;
+          event.preventDefault();
+          if(monthNumberTimer){
+            window.clearTimeout(monthNumberTimer);
+          }
+          monthNumberBuffer = (monthNumberBuffer + event.key).slice(-2);
+          const numeric = Number(monthNumberBuffer);
+          if(monthNumberBuffer.length === 2){
+            if(numeric >= 10 && numeric <= 12){
+              commitMonthNumber(monthNumberBuffer);
+              clearMonthNumberBuffer();
+              return;
+            }
+            monthNumberBuffer = event.key;
+          }
+          if(event.key !== '1'){
+            commitMonthNumber(event.key);
+            clearMonthNumberBuffer();
+            return;
+          }
+          monthNumberTimer = window.setTimeout(()=>{
+            commitMonthNumber(monthNumberBuffer);
+            clearMonthNumberBuffer();
+          }, 650);
+        });
+        monthSelect.addEventListener('blur', clearMonthNumberBuffer);
+      }
+
+      if(yearSelect && !yearSelect.__mxmedBirthYearAnchorApplied){
+        yearSelect.__mxmedBirthYearAnchorApplied = true;
+        const placeholder = Array.from(yearSelect.options || []).find((option)=> option.value === '') || null;
+        const anchor = Array.from(yearSelect.options || []).find((option)=> option.value === '2000') || null;
+        if(anchor){
+          if(placeholder){
+            placeholder.after(anchor);
+          }else{
+            yearSelect.prepend(anchor);
+          }
+        }
+      }
+    };
+
+    setupBirthdateKeyboardAssist();
+
     document.querySelectorAll('input.form-control, select.form-select, textarea.form-control').forEach(ctrl=>{
       if(ctrl.type==='file') return;
       // excluir campos de búsqueda u opt-out manual
