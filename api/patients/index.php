@@ -6,10 +6,12 @@ require_once __DIR__ . '/../../modules/agenda/helpers/db_helpers.php';
 require_once __DIR__ . '/../../modules/patients/controllers/GetPatientController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/GetDoctorPatientsController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/CreatePatientController.php';
+require_once __DIR__ . '/../../modules/patients/controllers/UpsertPatientAddressController.php';
 
 use Patients\Controllers\GetPatientController;
 use Patients\Controllers\GetDoctorPatientsController;
 use Patients\Controllers\CreatePatientController;
+use Patients\Controllers\UpsertPatientAddressController;
 use Agenda\Helpers as DbHelpers;
 
 header('Content-Type: application/json');
@@ -78,6 +80,15 @@ if ($method === 'GET') {
         } else {
             $controller = new CreatePatientController();
             $response = $controller->handle($decoded);
+        }
+    } elseif (count($segments) === 3 && $segments[0] === 'patients' && $segments[2] === 'address') {
+        $payloadRaw = file_get_contents('php://input');
+        $decoded = json_decode($payloadRaw, true);
+        if (!is_array($decoded)) {
+            $response = ['ok' => false, 'error' => 'invalid_params', 'message' => 'invalid json', 'data' => null, 'meta' => ['visibility' => ['contact' => 'masked']]];
+        } else {
+            $controller = new UpsertPatientAddressController();
+            $response = $controller->handle($segments[1], $decoded);
         }
     }
 }

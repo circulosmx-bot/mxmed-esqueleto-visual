@@ -23,6 +23,7 @@ class PatientsRepository
         }
         $contacts = $this->fetchMaskedContacts($patientId);
         $patient['contacts'] = $contacts;
+        $patient['addresses'] = $this->fetchAddressRows($patientId);
         return $patient;
     }
 
@@ -88,6 +89,89 @@ class PatientsRepository
         ];
     }
 
+    public function upsertPrimaryAddress(string $patientId, array $address): array
+    {
+        $this->ensureTables();
+
+        if (!$this->fetchPatient($patientId)) {
+            throw new RuntimeException('patient not found');
+        }
+
+        $now = (new \DateTime('now', new \DateTimeZone('America/Mexico_City')))->format('Y-m-d H:i:s');
+        $existing = $this->fetchPrimaryAddressRow($patientId);
+        $values = $this->normalizeAddressInput($address, $existing);
+
+        $this->pdo->beginTransaction();
+        try {
+            $this->pdo->prepare(
+                'UPDATE patients_addresses SET is_primary = 0, updated_at = :updated_at WHERE patient_id = :patient_id'
+            )->execute([
+                'updated_at' => $now,
+                'patient_id' => $patientId,
+            ]);
+
+            if ($existing) {
+                $addressId = $existing['address_id'];
+                $stmt = $this->pdo->prepare(
+                    'UPDATE patients_addresses
+                     SET address_type = :address_type,
+                         is_primary = :is_primary,
+                         country = :country,
+                         postal_code = :postal_code,
+                         colony = :colony,
+                         state = :state,
+                         municipality = :municipality,
+                         locality = :locality,
+                         street = :street,
+                         exterior_number = :exterior_number,
+                         interior_number = :interior_number,
+                         floor = :floor,
+                         catalog_cp_colonia_id = :catalog_cp_colonia_id,
+                         updated_at = :updated_at
+                     WHERE address_id = :address_id AND patient_id = :patient_id'
+                );
+                $stmt->execute($values + [
+                    'is_primary' => 1,
+                    'updated_at' => $now,
+                    'address_id' => $addressId,
+                    'patient_id' => $patientId,
+                ]);
+            } else {
+                $addressId = $this->generateId('a_');
+                $stmt = $this->pdo->prepare(
+                    'INSERT INTO patients_addresses
+                     (address_id, patient_id, address_type, is_primary, country, postal_code, colony, state, municipality, locality, street, exterior_number, interior_number, floor, catalog_cp_colonia_id, created_at, updated_at)
+                     VALUES
+                     (:address_id, :patient_id, :address_type, :is_primary, :country, :postal_code, :colony, :state, :municipality, :locality, :street, :exterior_number, :interior_number, :floor, :catalog_cp_colonia_id, :created_at, :updated_at)'
+                );
+                $stmt->execute($values + [
+                    'address_id' => $addressId,
+                    'patient_id' => $patientId,
+                    'is_primary' => 1,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
+
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+
+        $saved = $this->fetchPrimaryAddressRow($patientId);
+        if (!$saved) {
+            throw new RuntimeException('database error');
+        }
+        return $saved;
+    }
+
+    public function fetchAddresses(string $patientId): array
+    {
+        $this->ensureTables();
+        return $this->fetchAddressRows($patientId);
+    }
+
     private function fetchPatient(string $patientId): ?array
     {
         $stmt = $this->pdo->prepare(
@@ -103,6 +187,98 @@ class PatientsRepository
         // Enmascara campos sensibles
         $row['birthdate'] = $row['birthdate'] ?? null;
         return $row;
+    }
+
+    private function fetchAddressRows(string $patientId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT address_id, patient_id, address_type, is_primary, country, postal_code, colony, state, municipality, locality, street, exterior_number, interior_number, floor, catalog_cp_colonia_id, created_at, updated_at
+             FROM patients_addresses
+             WHERE patient_id = :patient_id
+             ORDER BY is_primary DESC, created_at ASC, address_id ASC'
+        );
+        $stmt->execute(['patient_id' => $patientId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return array_map([$this, 'normalizeAddressRow'], $rows);
+    }
+
+    private function fetchPrimaryAddressRow(string $patientId): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT address_id, patient_id, address_type, is_primary, country, postal_code, colony, state, municipality, locality, street, exterior_number, interior_number, floor, catalog_cp_colonia_id, created_at, updated_at
+             FROM patients_addresses
+             WHERE patient_id = :patient_id AND is_primary = 1
+             ORDER BY created_at ASC, address_id ASC
+             LIMIT 1'
+        );
+        $stmt->execute(['patient_id' => $patientId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $this->normalizeAddressRow($row) : null;
+    }
+
+    private function normalizeAddressInput(array $address, ?array $base = null): array
+    {
+        return [
+            'address_type' => array_key_exists('address_type', $address) ? $this->cleanStringOrDefault($address['address_type'], 'home') : (string)($base['address_type'] ?? 'home'),
+            'country' => strtoupper(array_key_exists('country', $address) ? $this->cleanStringOrDefault($address['country'], 'MX') : (string)($base['country'] ?? 'MX')),
+            'postal_code' => $this->cleanAddressString($address, 'postal_code', $base),
+            'colony' => $this->cleanAddressString($address, 'colony', $base),
+            'state' => $this->cleanAddressString($address, 'state', $base),
+            'municipality' => $this->cleanAddressString($address, 'municipality', $base),
+            'locality' => $this->cleanAddressString($address, 'locality', $base),
+            'street' => $this->cleanAddressString($address, 'street', $base),
+            'exterior_number' => $this->cleanAddressString($address, 'exterior_number', $base),
+            'interior_number' => $this->cleanAddressString($address, 'interior_number', $base),
+            'floor' => $this->cleanAddressString($address, 'floor', $base),
+            'catalog_cp_colonia_id' => $this->cleanAddressInt($address, 'catalog_cp_colonia_id', $base),
+        ];
+    }
+
+    private function normalizeAddressRow(array $row): array
+    {
+        $row['is_primary'] = (bool)$row['is_primary'];
+        $row['catalog_cp_colonia_id'] = $row['catalog_cp_colonia_id'] !== null ? (int)$row['catalog_cp_colonia_id'] : null;
+        return $row;
+    }
+
+    private function cleanNullableString($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        $text = trim((string)$value);
+        return $text === '' ? null : $text;
+    }
+
+    private function cleanStringOrDefault($value, string $default): string
+    {
+        $text = $this->cleanNullableString($value);
+        return $text === null ? $default : $text;
+    }
+
+    private function cleanAddressString(array $address, string $key, ?array $base): ?string
+    {
+        if (array_key_exists($key, $address)) {
+            return $this->cleanNullableString($address[$key]);
+        }
+        return $base[$key] ?? null;
+    }
+
+    private function cleanNullableInt($value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        $int = (int)$value;
+        return $int > 0 ? $int : null;
+    }
+
+    private function cleanAddressInt(array $address, string $key, ?array $base): ?int
+    {
+        if (array_key_exists($key, $address)) {
+            return $this->cleanNullableInt($address[$key]);
+        }
+        return $base[$key] ?? null;
     }
 
     private function insertPatient(string $patientId, array $input, string $now): void
@@ -246,7 +422,7 @@ class PatientsRepository
 
     private function ensureTables(): void
     {
-        foreach (['patients_patients', 'patients_contacts', 'patients_doctor_links'] as $table) {
+        foreach (['patients_patients', 'patients_contacts', 'patients_addresses', 'patients_doctor_links'] as $table) {
             if (!$this->tableExists($table)) {
                 throw new RuntimeException('patients not ready');
             }
