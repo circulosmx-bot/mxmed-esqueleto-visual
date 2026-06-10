@@ -1,5 +1,5 @@
 -- Schema mínimo para el dominio Pacientes
--- Tablas: patients_patients, patients_contacts, patients_addresses, patients_consents, patients_doctor_links
+-- Tablas: patients_patients, patients_profiles, patients_contacts, patients_addresses, patients_consents, patients_doctor_links
 
 CREATE TABLE IF NOT EXISTS `patients_patients` (
   `patient_id` VARCHAR(64) NOT NULL,
@@ -12,6 +12,21 @@ CREATE TABLE IF NOT EXISTS `patients_patients` (
   `updated_at` DATETIME DEFAULT NULL,
   PRIMARY KEY (`patient_id`),
   KEY `idx_patients_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `patients_profiles` (
+  `profile_id` VARCHAR(64) NOT NULL,
+  `patient_id` VARCHAR(64) NOT NULL,
+  `first_name` VARCHAR(120) DEFAULT NULL,
+  `paternal_last_name` VARCHAR(120) DEFAULT NULL,
+  `maternal_last_name` VARCHAR(120) DEFAULT NULL,
+  `marital_status` VARCHAR(64) DEFAULT NULL,
+  `occupation` VARCHAR(190) DEFAULT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT NULL,
+  PRIMARY KEY (`profile_id`),
+  UNIQUE KEY `uq_profiles_patient` (`patient_id`),
+  KEY `idx_profiles_names` (`first_name`, `paternal_last_name`, `maternal_last_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `patients_contacts` (
