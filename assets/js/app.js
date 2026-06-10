@@ -592,6 +592,271 @@ console.info('app.js loaded :: 20251123a');
   window.setTimeout(applyPatientPhoneCapture, 0);
 })();
 
+// CP lookup for Expediente patient address fields.
+(function(){
+  if(window.__mxmedPatientAddressCpLookupApplied) return;
+  window.__mxmedPatientAddressCpLookupApplied = true;
+
+  const ADDRESS_ROOT_SELECTOR = '#p-expediente';
+  const EMPTY_COLONY_LABEL = 'Captura primero el código postal';
+  const READY_COLONY_LABEL = 'Selecciona colonia o fraccionamiento';
+  const NO_RESULTS_MESSAGE = 'Código postal sin colonias registradas';
+  const LOOKUP_ERROR_MESSAGE = 'No fue posible consultar el código postal';
+
+  const getAddressFields = ()=>{
+    const root = document.querySelector(ADDRESS_ROOT_SELECTOR);
+    if(!root) return null;
+    return {
+      root,
+      cp: root.querySelector('[data-pac-address-cp]'),
+      colony: root.querySelector('[data-pac-address-colony]'),
+      state: root.querySelector('[data-pac-address-state]'),
+      municipality: root.querySelector('[data-pac-address-municipality]'),
+      locality: root.querySelector('[data-pac-address-locality]'),
+      message: root.querySelector('[data-pac-address-message]')
+    };
+  };
+
+  const sanitizeCpValue = (value)=>{
+    return String(value == null ? '' : value).replace(/\D+/g, '').slice(0, 5);
+  };
+
+  const setAddressMessage = (messageEl, text = '')=>{
+    if(!messageEl) return;
+    const msg = String(text || '').trim();
+    messageEl.textContent = msg;
+    messageEl.classList.toggle('d-none', msg === '');
+  };
+
+  const dispatchFieldChange = (field, eventName = 'change')=>{
+    if(!field) return;
+    field.dispatchEvent(new Event(eventName, { bubbles: true }));
+  };
+
+  const setFieldValue = (field, value)=>{
+    if(!field) return;
+    const next = String(value || '');
+    if(field.value === next) return;
+    field.value = next;
+    dispatchFieldChange(field, 'input');
+    dispatchFieldChange(field, 'change');
+  };
+
+  const setColonyOptions = (select, labels = [], meta = {}, placeholder = READY_COLONY_LABEL)=>{
+    if(!select) return;
+    select.innerHTML = '';
+    const base = document.createElement('option');
+    base.value = '';
+    base.textContent = placeholder;
+    select.appendChild(base);
+    const municipio = String(meta.municipio || '').trim();
+    const estado = String(meta.estado || '').trim();
+    labels.forEach((label)=>{
+      const name = String(label || '').trim();
+      if(!name) return;
+      const option = document.createElement('option');
+      option.value = name;
+      option.textContent = name;
+      option.dataset.municipio = municipio;
+      option.dataset.estado = estado;
+      select.appendChild(option);
+    });
+    select.dataset.municipio = municipio;
+    select.dataset.estado = estado;
+    select.disabled = labels.length === 0;
+    if(select.disabled){
+      select.setAttribute('disabled', 'disabled');
+    }else{
+      select.removeAttribute('disabled');
+    }
+    select.selectedIndex = 0;
+    dispatchFieldChange(select, 'change');
+  };
+
+  const clearAddressLookup = (fields, placeholder = EMPTY_COLONY_LABEL)=>{
+    if(!fields) return;
+    setColonyOptions(fields.colony, [], {}, placeholder);
+    setFieldValue(fields.state, '');
+    setFieldValue(fields.municipality, '');
+  };
+
+  const normalizeCatalogPayload = (data)=>{
+    const colonias = Array.isArray(data?.colonias)
+      ? data.colonias.map((item)=> String(item || '').trim()).filter(Boolean)
+      : Array.isArray(data?.list)
+        ? data.list.map((item)=> String(item || '').trim()).filter(Boolean)
+        : [];
+    const uniqueColonias = Array.from(new Set(colonias)).sort((a, b)=> a.localeCompare(b, 'es'));
+    return {
+      list: uniqueColonias,
+      municipio: String(data?.municipio || '').trim(),
+      estado: String(data?.estado || '').trim()
+    };
+  };
+
+  const fetchPatientAddressCp = async (cpValue)=>{
+    const cp = sanitizeCpValue(cpValue);
+    const cacheKey = `catalog_cp_${cp}`;
+    try{
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+      const normalized = normalizeCatalogPayload(cached);
+      if(normalized.list.length){
+        return { ...normalized, fromCache: true, notFound: false };
+      }
+    }catch(_){}
+
+    const response = await fetch(`/api/catalog/index.php/cp/${encodeURIComponent(cp)}`, {
+      cache: 'no-store',
+      credentials: 'same-origin'
+    });
+    if(response.status === 404){
+      return { list: [], municipio: '', estado: '', fromCache: false, notFound: true };
+    }
+    if(!response.ok){
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    if(data?.ok !== true){
+      return { list: [], municipio: '', estado: '', fromCache: false, notFound: true };
+    }
+    const normalized = normalizeCatalogPayload(data);
+    if(normalized.list.length){
+      try{ localStorage.setItem(cacheKey, JSON.stringify(normalized)); }catch(_){}
+    }
+    return { ...normalized, fromCache: false, notFound: normalized.list.length === 0 };
+  };
+
+  const applySelectedColonyMeta = (fields)=>{
+    if(!fields?.colony) return;
+    const selected = fields.colony.options[fields.colony.selectedIndex];
+    const municipio = selected?.dataset?.municipio || fields.colony.dataset.municipio || '';
+    const estado = selected?.dataset?.estado || fields.colony.dataset.estado || '';
+    if(fields.colony.value){
+      setFieldValue(fields.municipality, municipio);
+      setFieldValue(fields.state, estado);
+    }
+  };
+
+  const runCpLookup = async (fields)=>{
+    if(!fields?.cp || !fields.colony) return;
+    const cpValue = sanitizeCpValue(fields.cp.value);
+    if(cpValue.length !== 5){
+      fields.cp.__mxmedAddressLastCp = '';
+      clearAddressLookup(fields, EMPTY_COLONY_LABEL);
+      setAddressMessage(fields.message, '');
+      return;
+    }
+    if(fields.cp.__mxmedAddressLastCp === cpValue && fields.colony.options.length > 1){
+      return;
+    }
+    fields.cp.__mxmedAddressLastCp = cpValue;
+    const requestId = (fields.cp.__mxmedAddressRequestId || 0) + 1;
+    fields.cp.__mxmedAddressRequestId = requestId;
+    setAddressMessage(fields.message, '');
+    setColonyOptions(fields.colony, [], {}, 'Buscando colonias...');
+    try{
+      const result = await fetchPatientAddressCp(cpValue);
+      if(fields.cp.__mxmedAddressRequestId !== requestId) return;
+      if(result.list.length){
+        setColonyOptions(fields.colony, result.list, {
+          municipio: result.municipio,
+          estado: result.estado
+        }, READY_COLONY_LABEL);
+        setFieldValue(fields.municipality, result.municipio);
+        setFieldValue(fields.state, result.estado);
+        setAddressMessage(fields.message, '');
+      }else{
+        clearAddressLookup(fields, READY_COLONY_LABEL);
+        setAddressMessage(fields.message, NO_RESULTS_MESSAGE);
+      }
+    }catch(_){
+      if(fields.cp.__mxmedAddressRequestId !== requestId) return;
+      clearAddressLookup(fields, READY_COLONY_LABEL);
+      setAddressMessage(fields.message, LOOKUP_ERROR_MESSAGE);
+    }
+  };
+
+  const setCpInputAttributes = (control)=>{
+    if(!control) return;
+    control.setAttribute('type', 'text');
+    control.setAttribute('inputmode', 'numeric');
+    control.setAttribute('maxlength', '5');
+    control.setAttribute('autocomplete', 'postal-code');
+    control.setAttribute('spellcheck', 'false');
+    try{ control.spellcheck = false; }catch(_){}
+    control.setAttribute('autocorrect', 'off');
+    control.setAttribute('autocapitalize', 'off');
+  };
+
+  const sanitizeCpControl = (control)=>{
+    if(!control) return false;
+    const normalized = sanitizeCpValue(control.value);
+    if(control.value === normalized) return false;
+    control.value = normalized;
+    if(document.activeElement === control){
+      try{ control.setSelectionRange(normalized.length, normalized.length); }catch(_){}
+    }
+    return true;
+  };
+
+  const bindPatientAddressLookup = ()=>{
+    const fields = getAddressFields();
+    if(!fields?.cp || !fields.colony) return;
+    setCpInputAttributes(fields.cp);
+    if(!fields.colony.options.length){
+      setColonyOptions(fields.colony, [], {}, EMPTY_COLONY_LABEL);
+    }
+    if(!fields.cp.__mxmedPatientAddressBound){
+      fields.cp.__mxmedPatientAddressBound = true;
+      fields.cp.addEventListener('beforeinput', (event)=>{
+        if(event.isComposing) return;
+        const inputType = String(event.inputType || '');
+        if(inputType.startsWith('delete')) return;
+        if(inputType === 'insertText' && event.data && /\D/.test(event.data)){
+          event.preventDefault();
+        }
+      });
+      fields.cp.addEventListener('paste', (event)=>{
+        const text = event.clipboardData?.getData('text');
+        if(text == null) return;
+        event.preventDefault();
+        const normalized = sanitizeCpValue(text);
+        if(fields.cp.value !== normalized){
+          fields.cp.value = normalized;
+          dispatchFieldChange(fields.cp, 'input');
+        }
+        runCpLookup(getAddressFields()).catch(()=> null);
+      });
+      fields.cp.addEventListener('input', ()=>{
+        sanitizeCpControl(fields.cp);
+        runCpLookup(getAddressFields()).catch(()=> null);
+      });
+      fields.cp.addEventListener('change', ()=>{
+        sanitizeCpControl(fields.cp);
+        runCpLookup(getAddressFields()).catch(()=> null);
+      });
+    }
+    if(!fields.colony.__mxmedPatientAddressBound){
+      fields.colony.__mxmedPatientAddressBound = true;
+      fields.colony.addEventListener('change', ()=>{
+        applySelectedColonyMeta(getAddressFields());
+      });
+    }
+    sanitizeCpControl(fields.cp);
+    if(sanitizeCpValue(fields.cp.value).length !== 5 && fields.colony.options.length <= 1){
+      clearAddressLookup(fields, EMPTY_COLONY_LABEL);
+    }
+  };
+
+  window.mxmedApplyPatientAddressCpLookup = bindPatientAddressLookup;
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', bindPatientAddressLookup, { once: true });
+  }else{
+    bindPatientAddressLookup();
+  }
+  window.setTimeout(bindPatientAddressLookup, 0);
+})();
+
 // Email validation for Expediente patient fields.
 (function(){
   if(window.__mxmedPatientEmailValidationApplied) return;
