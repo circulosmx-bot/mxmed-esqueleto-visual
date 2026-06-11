@@ -36642,6 +36642,35 @@ console.info('app.js loaded :: 20251123a');
     }
     return false;
   };
+  const clearClinicalCompletionHub = (source = 'completion_hub_clear')=>{
+    if(!pane) return false;
+    const hadHub = !!pane.getAttribute('data-exp-completion-hub');
+    pane.removeAttribute('data-exp-completion-hub');
+    pane.classList.remove('mx-expediente-completion-hub');
+    if(hadHub){
+      try{
+        console.info('[mxmed-clinical-completion-hub] clear', { source });
+      }catch(_){}
+    }
+    return hadHub;
+  };
+  const showClinicalCompletionHub = (detail = {})=>{
+    const patientId = sanitizeText(detail?.patientId || detail?.patient_id || getActivePatientId());
+    const hubSource = sanitizeText(detail?.source || detail?.hub || 'datos-generales') || 'datos-generales';
+    if(!patientId) return false;
+    pane.setAttribute('data-exp-completion-hub', hubSource);
+    pane.classList.add('mx-expediente-completion-hub');
+    showClinicalTab(clinicalTabTargets.datos);
+    try{
+      console.info('[mxmed-clinical-completion-hub] show', {
+        patient_id: patientId,
+        source: hubSource,
+        event: sanitizeText(detail?.event || 'explicit_save')
+      });
+    }catch(_){}
+    return true;
+  };
+  window.mxmedShowClinicalCompletionHub = (detail)=> showClinicalCompletionHub(detail || {});
   const hideActividadClinicaModal = ()=>{
     if(!actividadClinicaModalEl) return;
     const BsModal = window.bootstrap && window.bootstrap.Modal;
@@ -51536,6 +51565,9 @@ console.info('app.js loaded :: 20251123a');
   const setActivePatientId = async (pid, opts = {})=>{
     const next = String(pid || '').trim();
     if(!next) return false;
+    if(opts.preserveCompletionHub !== true){
+      clearClinicalCompletionHub('set_active_patient');
+    }
     const current = String(getActivePatientId() || '').trim();
     const source = String(opts.source || '').trim();
     const isSearchOpen = source === 'search_open';
@@ -52759,11 +52791,32 @@ console.info('app.js loaded :: 20251123a');
     btn.addEventListener('click', ()=>{
       const target = btn.getAttribute('data-bs-target');
       if(!target) return;
+      clearClinicalCompletionHub('tab_click');
       const isBottomRow = !!btn.closest('.mm-tabs-row-bottom');
       const bootstrapped = activateWithBootstrap(btn);
       if(!isBottomRow && bootstrapped) return;
       activateTabPaneManually(btn, target);
     });
+  });
+  pane.addEventListener('click', (ev)=>{
+    const completionTarget = ev.target.closest('[data-exp-completion-target]');
+    if(!completionTarget || !pane.contains(completionTarget)) return;
+    const target = sanitizeText(completionTarget.getAttribute('data-exp-completion-target'));
+    if(!target) return;
+    ev.preventDefault();
+    if(target === clinicalTabTargets.historialAtencion){
+      window.__mxmedSkipNextHistorialAutoModal = true;
+      window.setTimeout(()=>{
+        if(window.__mxmedSkipNextHistorialAutoModal === true){
+          window.__mxmedSkipNextHistorialAutoModal = false;
+        }
+      }, 2000);
+    }
+    clearClinicalCompletionHub('completion_hub_card');
+    const opened = showClinicalTab(target);
+    if(!opened && target === clinicalTabTargets.historialAtencion){
+      window.__mxmedSkipNextHistorialAutoModal = false;
+    }
   });
   syncExpedienteSectionTopbarTitle();
 
@@ -52964,6 +53017,7 @@ console.info('app.js loaded :: 20251123a');
     return clearNewPatientEntryState(reason);
   };
   const startNewPatientEntry = (source = 'patient_empty_state')=>{
+    clearClinicalCompletionHub('start_new_patient');
     pane.dataset.newEntryMode = '1';
     pane.setAttribute('data-new-entry-mode', '1');
     try{
@@ -52976,6 +53030,7 @@ console.info('app.js loaded :: 20251123a');
   };
   window.mxmedStartNewPatientEntry = startNewPatientEntry;
 	  const navigateToPatientArchive = ()=>{
+	    clearClinicalCompletionHub('navigate_patient_archive');
 	    if(typeof jumpTo === 'function'){
 	      return jumpTo('p-pac-archivo') !== false;
 	    }
@@ -52992,6 +53047,7 @@ console.info('app.js loaded :: 20251123a');
 	  const closeActivePatientContext = (source = 'active_header_close')=>{
 	    const currentPatientId = sanitizeText(getActivePatientId());
 	    if(!currentPatientId) return false;
+	    clearClinicalCompletionHub('close_active_patient');
 	    captureExpedienteIdentityDraft(currentPatientId);
 	    captureCurrentMotivoDraftForPatient(currentPatientId);
 	    if(window.mxmedStore && typeof window.mxmedStore === 'object'){

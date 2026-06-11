@@ -4401,6 +4401,93 @@
                   </div>
                 </div>
 
+                <div class="mx-clinical-completion-hub" data-exp-completion-hub-panel>
+                  <div class="mx-clinical-completion-check" aria-hidden="true">
+                    <span class="material-symbols-rounded">check</span>
+                  </div>
+                  <div class="mx-clinical-completion-copy">
+                    <h3>Paciente guardado correctamente</h3>
+                    <p>El expediente ya fue creado. Selecciona el siguiente paso para continuar la atención médica.</p>
+                  </div>
+
+                  <div class="mx-clinical-completion-heading">
+                    <span>¿Qué deseas hacer ahora?</span>
+                  </div>
+
+                  <div class="mx-clinical-completion-grid" aria-label="Siguientes pasos clínicos">
+                    <button type="button" class="mx-clinical-completion-card is-recommended" data-exp-completion-target="#t-historia">
+                      <span class="mx-clinical-completion-badge">Recomendado para primera consulta</span>
+                      <span class="material-symbols-rounded" aria-hidden="true">assignment</span>
+                      <span class="mx-clinical-completion-card-copy">
+                        <strong>Historia clínica</strong>
+                        <span>Registra antecedentes y datos relevantes para la evaluación.</span>
+                      </span>
+                      <span class="material-symbols-rounded mx-clinical-completion-arrow" aria-hidden="true">chevron_right</span>
+                    </button>
+                    <button type="button" class="mx-clinical-completion-card" data-exp-completion-target="#t-exploracion">
+                      <span class="material-symbols-rounded" aria-hidden="true">stethoscope</span>
+                      <span class="mx-clinical-completion-card-copy">
+                        <strong>Exploración física</strong>
+                        <span>Registra los hallazgos del examen físico.</span>
+                      </span>
+                      <span class="material-symbols-rounded mx-clinical-completion-arrow" aria-hidden="true">chevron_right</span>
+                    </button>
+                    <button type="button" class="mx-clinical-completion-card" data-exp-completion-target="#t-historial-atencion">
+                      <span class="material-symbols-rounded" aria-hidden="true">history</span>
+                      <span class="mx-clinical-completion-card-copy">
+                        <strong>Historial de atención</strong>
+                        <span>Consulta y da seguimiento a atenciones previas.</span>
+                      </span>
+                      <span class="material-symbols-rounded mx-clinical-completion-arrow" aria-hidden="true">chevron_right</span>
+                    </button>
+                    <button type="button" class="mx-clinical-completion-card" data-exp-completion-target="#t-estudios">
+                      <span class="material-symbols-rounded" aria-hidden="true">biotech</span>
+                      <span class="mx-clinical-completion-card-copy">
+                        <strong>Estudios diagnósticos</strong>
+                        <span>Solicita y consulta estudios de laboratorio e imagen.</span>
+                      </span>
+                      <span class="material-symbols-rounded mx-clinical-completion-arrow" aria-hidden="true">chevron_right</span>
+                    </button>
+                    <button type="button" class="mx-clinical-completion-card" data-exp-completion-target="#t-tratamiento">
+                      <span class="material-symbols-rounded" aria-hidden="true">pill</span>
+                      <span class="mx-clinical-completion-card-copy">
+                        <strong>Tratamientos y recetas</strong>
+                        <span>Define tratamientos y prescribe medicamentos.</span>
+                      </span>
+                      <span class="material-symbols-rounded mx-clinical-completion-arrow" aria-hidden="true">chevron_right</span>
+                    </button>
+                    <button type="button" class="mx-clinical-completion-card" data-exp-completion-target="#t-manejo">
+                      <span class="material-symbols-rounded" aria-hidden="true">bed</span>
+                      <span class="mx-clinical-completion-card-copy">
+                        <strong>Manejo hospitalario</strong>
+                        <span>Gestiona ingresos, evolución y egresos hospitalarios.</span>
+                      </span>
+                      <span class="material-symbols-rounded mx-clinical-completion-arrow" aria-hidden="true">chevron_right</span>
+                    </button>
+                    <button type="button" class="mx-clinical-completion-card" data-exp-completion-target="#t-consent">
+                      <span class="material-symbols-rounded" aria-hidden="true">description</span>
+                      <span class="mx-clinical-completion-card-copy">
+                        <strong>Documentos clínicos</strong>
+                        <span>Genera y consulta documentos clínicos del paciente.</span>
+                      </span>
+                      <span class="material-symbols-rounded mx-clinical-completion-arrow" aria-hidden="true">chevron_right</span>
+                    </button>
+                    <button type="button" class="mx-clinical-completion-card" data-exp-completion-target="#t-tratamiento" data-exp-completion-partial="recetas">
+                      <span class="material-symbols-rounded" aria-hidden="true">prescriptions</span>
+                      <span class="mx-clinical-completion-card-copy">
+                        <strong>Recetas</strong>
+                        <span>Genera recetas médicas para el paciente.</span>
+                      </span>
+                      <span class="material-symbols-rounded mx-clinical-completion-arrow" aria-hidden="true">chevron_right</span>
+                    </button>
+                  </div>
+
+                  <div class="mx-clinical-completion-note">
+                    <span class="material-symbols-rounded" aria-hidden="true">info</span>
+                    Puedes completar esta información en el orden que mejor se ajuste a tu consulta.
+                  </div>
+                </div>
+
                 <div class="dg-form row g-3" data-exp-datos-form>
 
                   <div class="col-md-4"><label class="form-label">Nombre(s)</label><input class="form-control" data-pac-nombre placeholder="Nombre(s)"></div>

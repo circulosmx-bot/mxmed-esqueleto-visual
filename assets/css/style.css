@@ -4560,6 +4560,212 @@ body{margin:0;background:var(--mm-fondo-base);}
   }
 }
 
+#p-expediente .mx-clinical-completion-hub{
+  display:none;
+}
+#p-expediente[data-exp-completion-hub] #t-datos [data-exp-datos-form]{
+  display:none !important;
+}
+#p-expediente[data-exp-completion-hub] #t-datos > .mx-clinical-completion-hub{
+  grid-column:1 / -1;
+  width:100%;
+  display:flex;
+}
+#p-expediente .mx-clinical-completion-hub{
+  box-sizing:border-box;
+  flex-direction:column;
+  align-items:center;
+  gap:20px;
+  min-height:clamp(520px,62vh,720px);
+  padding:32px clamp(20px,4vw,54px) 26px;
+  border:1px solid rgba(1,86,132,.08);
+  border-radius:8px;
+  background:
+    radial-gradient(circle at 50% 10%, rgba(218,247,241,.76), rgba(255,255,255,0) 20%),
+    linear-gradient(180deg,#ffffff 0%,#f8fcfd 100%);
+  color:#083b59;
+  text-align:center;
+  box-shadow:0 14px 36px rgba(1,86,132,.06);
+}
+#p-expediente .mx-clinical-completion-check{
+  width:72px;
+  height:72px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  background:#dff6ef;
+  color:#007a5f;
+  box-shadow:0 10px 24px rgba(0,122,95,.12);
+}
+#p-expediente .mx-clinical-completion-check .material-symbols-rounded{
+  font-size:48px;
+  line-height:1;
+}
+#p-expediente .mx-clinical-completion-copy{
+  width:min(760px,100%);
+}
+#p-expediente .mx-clinical-completion-copy h3{
+  margin:0 0 8px;
+  color:#007a5f;
+  font-size:1.58rem;
+  font-weight:800;
+  letter-spacing:0;
+}
+#p-expediente .mx-clinical-completion-copy p{
+  margin:0 auto;
+  max-width:700px;
+  color:#405b70;
+  font-size:1rem;
+  line-height:1.45;
+}
+#p-expediente .mx-clinical-completion-heading{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:18px;
+  color:#315d78;
+  font-size:1rem;
+  font-weight:800;
+}
+#p-expediente .mx-clinical-completion-heading::before,
+#p-expediente .mx-clinical-completion-heading::after{
+  content:"";
+  flex:1 1 auto;
+  height:1px;
+  background:#d6e8ef;
+}
+#p-expediente .mx-clinical-completion-grid{
+  width:100%;
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:14px;
+}
+#p-expediente .mx-clinical-completion-card{
+  position:relative;
+  min-height:106px;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:13px;
+  padding:16px 14px;
+  border:1px solid #d7e8ef;
+  border-radius:8px;
+  background:#ffffff;
+  color:#083b59;
+  text-align:left;
+  box-shadow:0 10px 22px rgba(1,86,132,.05);
+}
+#p-expediente .mx-clinical-completion-card.is-recommended{
+  padding-top:28px;
+  border-color:rgba(0,173,193,.38);
+  background:linear-gradient(180deg,#ffffff 0%,#f3fcfb 100%);
+}
+#p-expediente .mx-clinical-completion-card:hover,
+#p-expediente .mx-clinical-completion-card:focus-visible{
+  border-color:#00ADC1;
+  background:#f2fbfc;
+}
+#p-expediente .mx-clinical-completion-badge{
+  position:absolute;
+  top:8px;
+  right:10px;
+  max-width:calc(100% - 20px);
+  padding:3px 8px;
+  border-radius:999px;
+  background:#e2f8ef;
+  color:#007a5f;
+  font-size:.66rem;
+  font-weight:800;
+  line-height:1.1;
+  text-transform:uppercase;
+  white-space:normal;
+}
+#p-expediente .mx-clinical-completion-card > .material-symbols-rounded:first-child{
+  width:42px;
+  color:#008fa2;
+  font-size:38px;
+  line-height:1;
+  text-align:center;
+}
+#p-expediente .mx-clinical-completion-card-copy{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+#p-expediente .mx-clinical-completion-card-copy strong{
+  color:#083b59;
+  font-size:.9rem;
+  line-height:1.15;
+}
+#p-expediente .mx-clinical-completion-card-copy span{
+  color:#405b70;
+  font-size:.82rem;
+  line-height:1.35;
+}
+#p-expediente .mx-clinical-completion-arrow{
+  color:#008fa2;
+  font-size:24px;
+}
+#p-expediente .mx-clinical-completion-note{
+  width:100%;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:14px 16px;
+  border:1px solid #cfe9f1;
+  border-radius:8px;
+  background:#f2fbfc;
+  color:#315d78;
+  text-align:left;
+  font-size:.92rem;
+}
+#p-expediente .mx-clinical-completion-note .material-symbols-rounded{
+  color:#008fa2;
+  font-size:27px;
+}
+@media (max-width: 1180px){
+  #p-expediente .mx-clinical-completion-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+}
+@media (max-width: 900px){
+  #p-expediente .mx-clinical-completion-hub{
+    padding:28px 16px 24px;
+  }
+  #p-expediente .mx-clinical-completion-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media (max-width: 620px){
+  #p-expediente .mx-clinical-completion-hub{
+    min-height:0;
+    gap:18px;
+  }
+  #p-expediente .mx-clinical-completion-check{
+    width:60px;
+    height:60px;
+  }
+  #p-expediente .mx-clinical-completion-check .material-symbols-rounded{
+    font-size:40px;
+  }
+  #p-expediente .mx-clinical-completion-copy h3{
+    font-size:1.3rem;
+  }
+  #p-expediente .mx-clinical-completion-grid{
+    grid-template-columns:1fr;
+  }
+  #p-expediente .mx-clinical-completion-heading{
+    gap:10px;
+    font-size:.92rem;
+  }
+  #p-expediente .mx-clinical-completion-note{
+    align-items:flex-start;
+  }
+}
+
 /* Embed historial: estado compacto cuando no hay contenido útil o hay error */
 #t-historial-atencion .clinical-panel.is-empty #mm-embed-historial,
 #t-historial-atencion .clinical-panel.is-error #mm-embed-historial{
