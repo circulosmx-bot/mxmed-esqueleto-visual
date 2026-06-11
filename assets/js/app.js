@@ -53538,6 +53538,8 @@ console.info('app.js loaded :: 20251123a');
   const clean = (value)=> String(value || '').replace(/\s+/g, ' ').trim();
   const readValue = (ctrl)=> String(ctrl?.value || '').trim();
   const invalidPatientIds = new Set(['', '-', 'anon', 'anonymous', 'null', 'undefined']);
+  let lastHydratedHistoryPatientId = '';
+  let hydrationToken = 0;
 
   const setClinicalHistoryFeedback = (message = '', type = 'muted')=>{
     if(!feedback) return;
@@ -53586,8 +53588,8 @@ console.info('app.js loaded :: 20251123a');
   const readClinicalHistoryChips = (itemKey)=>{
     return Array.from(historyPane.querySelectorAll(`[data-hc-item="${itemKey}"] [data-hc-chips] .hc-chip`))
       .map((chip)=>({
-        year: readValue(chip.dataset?.year),
-        details: readValue(chip.dataset?.details)
+        year: clean(chip.dataset?.year),
+        details: clean(chip.dataset?.details)
       }))
       .filter((item)=> item.year || item.details);
   };
@@ -53651,6 +53653,183 @@ console.info('app.js loaded :: 20251123a');
     };
   };
 
+  const makeClinicalHistoryChipLabel = (year, details)=>{
+    const cleanDetails = clean(details);
+    if(!cleanDetails) return clean(year);
+    let short = cleanDetails;
+    if(short.length > 32){
+      short = short.slice(0, 32).trim() + '...';
+    }
+    return `${clean(year)} · ${short}`;
+  };
+
+  const setControlValue = (field, value)=>{
+    if(!field) return;
+    field.value = String(value ?? '');
+    field.dispatchEvent(new Event('input', { bubbles:true }));
+    field.dispatchEvent(new Event('change', { bubbles:true }));
+  };
+
+  const setClinicalHistoryField = (fieldName, value)=>{
+    const fields = Array.from(historyPane.querySelectorAll(`[data-hc-field="${fieldName}"]`));
+    if(!fields.length) return;
+    const first = fields[0];
+    if(first.matches('input[type="radio"]')){
+      const targetValue = clean(value);
+      fields.forEach((field)=>{
+        const checked = targetValue !== '' && clean(field.value) === targetValue;
+        if(field.checked !== checked){
+          field.checked = checked;
+          field.dispatchEvent(new Event('change', { bubbles:true }));
+        }
+      });
+      return;
+    }
+    setControlValue(first, value);
+  };
+
+  const setClinicalHistoryHabit = (habitName, value)=>{
+    const radios = Array.from(historyPane.querySelectorAll(`[data-hc-habit="${habitName}"]`));
+    const targetValue = clean(value);
+    radios.forEach((radio)=>{
+      const checked = targetValue !== '' && clean(radio.value) === targetValue;
+      if(radio.checked !== checked){
+        radio.checked = checked;
+        radio.dispatchEvent(new Event('change', { bubbles:true }));
+      }
+    });
+  };
+
+  const renderClinicalHistoryChips = (itemKey, items = [])=>{
+    const list = historyPane.querySelector(`[data-hc-item="${itemKey}"] [data-hc-chips]`);
+    if(!list) return;
+    list.innerHTML = '';
+    if(!Array.isArray(items)) return;
+    items.forEach((item)=>{
+      const year = clean(item?.year);
+      const details = clean(item?.details);
+      if(!year && !details) return;
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'hc-chip';
+      chip.dataset.year = year;
+      chip.dataset.details = details;
+      chip.textContent = makeClinicalHistoryChipLabel(year, details);
+      list.appendChild(chip);
+    });
+  };
+
+  const hydrateClinicalHistoryVaccines = (vaccination = {})=>{
+    const items = Array.isArray(vaccination?.items) ? vaccination.items : [];
+    const byKey = new Map(items.map((item)=> [clean(item?.key), item]).filter(([key])=> key));
+    setClinicalHistoryField('vaccination_schema', vaccination?.schema || '');
+    historyPane.querySelectorAll('[data-hc-vaccine-item]').forEach((itemEl)=>{
+      const key = clean(itemEl.getAttribute('data-hc-vaccine-item'));
+      const item = byKey.get(key) || null;
+      const toggle = itemEl.querySelector('[data-vac-toggle]');
+      const note = itemEl.querySelector('[data-vac-note]');
+      if(toggle){
+        toggle.checked = !!item?.selected;
+        toggle.dispatchEvent(new Event('change', { bubbles:true }));
+      }
+      if(note){
+        note.value = item ? String(item.notes ?? '') : '';
+        note.dispatchEvent(new Event('input', { bubbles:true }));
+        note.dispatchEvent(new Event('change', { bubbles:true }));
+      }
+    });
+  };
+
+  const hydrateClinicalHistoryGyn = (gyn = {})=>{
+    const values = gyn && typeof gyn === 'object' && !Array.isArray(gyn) ? gyn : {};
+    historyPane.querySelectorAll('[data-hc-gyn-field]').forEach((field)=>{
+      const key = clean(field.getAttribute('data-hc-gyn-field'));
+      setControlValue(field, key ? (values[key] ?? '') : '');
+    });
+  };
+
+  const hydrateClinicalHistoryPayload = (payload = {})=>{
+    const data = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+    const habits = data.habits && typeof data.habits === 'object' ? data.habits : {};
+    const personal = data.personal_history && typeof data.personal_history === 'object' ? data.personal_history : {};
+
+    setClinicalHistoryField('chief_complaint', data.chief_complaint || '');
+    setClinicalHistoryField('present_illness', data.present_illness || '');
+    setClinicalHistoryField('systems_review', data.systems_review || '');
+    setClinicalHistoryField('family_history', data.family_history || '');
+
+    setClinicalHistoryHabit('smoking', habits.smoking || '');
+    setClinicalHistoryHabit('alcohol', habits.alcohol || '');
+    setClinicalHistoryHabit('physical_activity', habits.physical_activity || '');
+    setClinicalHistoryHabit('substances', habits.substances || '');
+    setClinicalHistoryHabit('diet', habits.diet || '');
+
+    renderClinicalHistoryChips('hospitalizaciones', personal.hospitalizations || []);
+    renderClinicalHistoryChips('cirugias', personal.surgeries || []);
+    renderClinicalHistoryChips('accidentes', personal.accidents || []);
+    renderClinicalHistoryChips('alergias', personal.allergies || []);
+    renderClinicalHistoryChips('diabetes', personal.diabetes || []);
+    renderClinicalHistoryChips('hipertension', personal.hypertension || []);
+    renderClinicalHistoryChips('asma', personal.asthma || []);
+    renderClinicalHistoryChips('cancer', personal.cancer || []);
+    renderClinicalHistoryChips('traumatismos', personal.trauma || []);
+    renderClinicalHistoryChips('otros', personal.other || []);
+    renderClinicalHistoryChips('cronicos', data.chronic_conditions || []);
+    renderClinicalHistoryChips('medicamentos', data.continuous_medications || []);
+    renderClinicalHistoryChips('transfusiones', data.transfusions || []);
+
+    hydrateClinicalHistoryVaccines(data.vaccination || {});
+    hydrateClinicalHistoryGyn(data.gyneco_obstetric || {});
+  };
+
+  const clearClinicalHistoryForm = ()=>{
+    hydrateClinicalHistoryPayload({});
+    setClinicalHistoryFeedback('', 'muted');
+  };
+
+  const fetchClinicalHistory = async (patientId)=>{
+    const response = await fetch(`/api/clinical/index.php/patients/${encodeURIComponent(patientId)}/history`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+    const data = await response.json().catch(()=> null);
+    if(!response.ok || !data || data.ok !== true){
+      throw new Error(clean(data?.message || data?.error?.message || 'No se pudo cargar la historia clínica.'));
+    }
+    return data?.data?.record || null;
+  };
+
+  const hydrateClinicalHistoryForActivePatient = async (force = false)=>{
+    const patientId = getActiveClinicalHistoryPatientId();
+    if(!patientId){
+      lastHydratedHistoryPatientId = '';
+      hydrationToken += 1;
+      clearClinicalHistoryForm();
+      return;
+    }
+    if(!force && patientId === lastHydratedHistoryPatientId){
+      return;
+    }
+    const token = hydrationToken + 1;
+    hydrationToken = token;
+    try{
+      const record = await fetchClinicalHistory(patientId);
+      if(token !== hydrationToken) return;
+      lastHydratedHistoryPatientId = patientId;
+      setClinicalHistoryFeedback('', 'muted');
+      if(record?.payload && typeof record.payload === 'object'){
+        hydrateClinicalHistoryPayload(record.payload);
+      }else{
+        clearClinicalHistoryForm();
+      }
+    }catch(error){
+      if(token !== hydrationToken) return;
+      lastHydratedHistoryPatientId = patientId;
+      clearClinicalHistoryForm();
+      setClinicalHistoryFeedback(clean(error?.message) || 'No se pudo cargar la historia clínica.', 'danger');
+    }
+  };
+
   const saveClinicalHistory = async ()=>{
     const patientId = getActiveClinicalHistoryPatientId();
     if(!patientId){
@@ -53678,6 +53857,7 @@ console.info('app.js loaded :: 20251123a');
         throw new Error(message || 'No se pudo guardar la historia clínica.');
       }
       setClinicalHistoryFeedback('Historia clínica guardada correctamente.', 'success');
+      lastHydratedHistoryPatientId = patientId;
       return data?.data?.record || null;
     }catch(error){
       const message = clean(error?.message) || 'No se pudo guardar la historia clínica.';
@@ -53693,6 +53873,23 @@ console.info('app.js loaded :: 20251123a');
     event.preventDefault();
     saveClinicalHistory().catch(()=> null);
   });
+
+  const scheduleClinicalHistoryHydration = (force = false)=>{
+    window.setTimeout(()=>{ hydrateClinicalHistoryForActivePatient(force).catch(()=> null); }, 0);
+  };
+
+  ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach((eventName)=>{
+    window.addEventListener(eventName, ()=>{ scheduleClinicalHistoryHydration(false); });
+  });
+  window.addEventListener('mxmed:expediente-neutralize', ()=>{
+    lastHydratedHistoryPatientId = '';
+    hydrationToken += 1;
+    clearClinicalHistoryForm();
+  });
+
+  const patientObserver = new MutationObserver(()=>{ scheduleClinicalHistoryHydration(false); });
+  patientObserver.observe(pane, { attributes:true, attributeFilter:['data-patient-id', 'data-active-patient-id'] });
+  scheduleClinicalHistoryHydration(false);
 })();
 
 // ====== Historia Clinica: vacunas relevantes ======
