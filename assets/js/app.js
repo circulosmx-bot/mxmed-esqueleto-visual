@@ -53525,6 +53525,176 @@ console.info('app.js loaded :: 20251123a');
   });
 })();
 
+// ====== Historia Clinica: guardar snapshot editable ======
+(function(){
+  const pane = document.getElementById('p-expediente');
+  const historyPane = document.getElementById('t-historia');
+  if(!pane || !historyPane) return;
+
+  const saveBtn = historyPane.querySelector('[data-hc-save-history]');
+  const feedback = historyPane.querySelector('[data-hc-save-feedback]');
+  if(!saveBtn) return;
+
+  const clean = (value)=> String(value || '').replace(/\s+/g, ' ').trim();
+  const readValue = (ctrl)=> String(ctrl?.value || '').trim();
+  const invalidPatientIds = new Set(['', '-', 'anon', 'anonymous', 'null', 'undefined']);
+
+  const setClinicalHistoryFeedback = (message = '', type = 'muted')=>{
+    if(!feedback) return;
+    const text = clean(message);
+    feedback.textContent = text;
+    feedback.classList.toggle('d-none', !text);
+    feedback.classList.remove('text-muted', 'text-success', 'text-danger');
+    const cls = type === 'success' ? 'text-success' : (type === 'danger' ? 'text-danger' : 'text-muted');
+    feedback.classList.add(cls);
+  };
+
+  const getActiveClinicalHistoryPatientId = ()=>{
+    const candidates = [
+      pane.dataset?.activePatientId,
+      pane.getAttribute('data-active-patient-id'),
+      pane.dataset?.patientId,
+      pane.getAttribute('data-patient-id'),
+      typeof window.resolveActivePatientId === 'function' ? window.resolveActivePatientId() : '',
+      window.mxmedStore?.activePatientId,
+      window.mxmedStore?.currentPatientId,
+      window.mxmedActivePatientId,
+      window.__MXMED_ACTIVE_PATIENT_ID
+    ];
+    for(const candidate of candidates){
+      const value = clean(candidate);
+      if(!invalidPatientIds.has(value.toLowerCase()) && value.length >= 6){
+        return value;
+      }
+    }
+    return '';
+  };
+
+  const readClinicalHistoryField = (fieldName)=>{
+    const field = historyPane.querySelector(`[data-hc-field="${fieldName}"]`);
+    if(!field) return '';
+    if(field.matches('input[type="radio"]')){
+      return readValue(historyPane.querySelector(`[data-hc-field="${fieldName}"]:checked`));
+    }
+    return readValue(field);
+  };
+
+  const readClinicalHistoryHabit = (habitName)=>{
+    return readValue(historyPane.querySelector(`[data-hc-habit="${habitName}"]:checked`));
+  };
+
+  const readClinicalHistoryChips = (itemKey)=>{
+    return Array.from(historyPane.querySelectorAll(`[data-hc-item="${itemKey}"] [data-hc-chips] .hc-chip`))
+      .map((chip)=>({
+        year: readValue(chip.dataset?.year),
+        details: readValue(chip.dataset?.details)
+      }))
+      .filter((item)=> item.year || item.details);
+  };
+
+  const readClinicalHistoryVaccines = ()=>{
+    return Array.from(historyPane.querySelectorAll('[data-hc-vaccine-item]')).map((item)=>{
+      const key = clean(item.getAttribute('data-hc-vaccine-item'));
+      const toggle = item.querySelector('[data-vac-toggle]');
+      const note = item.querySelector('[data-vac-note]');
+      return {
+        key,
+        selected: !!toggle?.checked,
+        notes: readValue(note)
+      };
+    }).filter((item)=> item.key);
+  };
+
+  const readClinicalHistoryGyn = ()=>{
+    const result = {};
+    historyPane.querySelectorAll('[data-hc-gyn-field]').forEach((field)=>{
+      const key = clean(field.getAttribute('data-hc-gyn-field'));
+      if(!key) return;
+      result[key] = readValue(field);
+    });
+    return result;
+  };
+
+  const readClinicalHistoryPayload = ()=>{
+    return {
+      chief_complaint: readClinicalHistoryField('chief_complaint'),
+      present_illness: readClinicalHistoryField('present_illness'),
+      systems_review: readClinicalHistoryField('systems_review'),
+      habits: {
+        smoking: readClinicalHistoryHabit('smoking'),
+        alcohol: readClinicalHistoryHabit('alcohol'),
+        physical_activity: readClinicalHistoryHabit('physical_activity'),
+        substances: readClinicalHistoryHabit('substances'),
+        diet: readClinicalHistoryHabit('diet')
+      },
+      personal_history: {
+        hospitalizations: readClinicalHistoryChips('hospitalizaciones'),
+        surgeries: readClinicalHistoryChips('cirugias'),
+        accidents: readClinicalHistoryChips('accidentes'),
+        allergies: readClinicalHistoryChips('alergias'),
+        diabetes: readClinicalHistoryChips('diabetes'),
+        hypertension: readClinicalHistoryChips('hipertension'),
+        asthma: readClinicalHistoryChips('asma'),
+        cancer: readClinicalHistoryChips('cancer'),
+        trauma: readClinicalHistoryChips('traumatismos'),
+        other: readClinicalHistoryChips('otros')
+      },
+      chronic_conditions: readClinicalHistoryChips('cronicos'),
+      continuous_medications: readClinicalHistoryChips('medicamentos'),
+      transfusions: readClinicalHistoryChips('transfusiones'),
+      vaccination: {
+        schema: readClinicalHistoryField('vaccination_schema'),
+        items: readClinicalHistoryVaccines()
+      },
+      family_history: readClinicalHistoryField('family_history'),
+      gyneco_obstetric: readClinicalHistoryGyn()
+    };
+  };
+
+  const saveClinicalHistory = async ()=>{
+    const patientId = getActiveClinicalHistoryPatientId();
+    if(!patientId){
+      setClinicalHistoryFeedback('Selecciona o registra un paciente antes de guardar.', 'danger');
+      return null;
+    }
+
+    const payload = readClinicalHistoryPayload();
+    const previousText = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Guardando...';
+    setClinicalHistoryFeedback('Guardando...', 'muted');
+    try{
+      const response = await fetch(`/api/clinical/index.php/patients/${encodeURIComponent(patientId)}/history`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'draft',
+          payload
+        })
+      });
+      const data = await response.json().catch(()=> null);
+      if(!response.ok || !data || data.ok !== true){
+        const message = clean(data?.message || data?.error?.message || 'No se pudo guardar la historia clínica.');
+        throw new Error(message || 'No se pudo guardar la historia clínica.');
+      }
+      setClinicalHistoryFeedback('Historia clínica guardada correctamente.', 'success');
+      return data?.data?.record || null;
+    }catch(error){
+      const message = clean(error?.message) || 'No se pudo guardar la historia clínica.';
+      setClinicalHistoryFeedback(message, 'danger');
+      return null;
+    }finally{
+      saveBtn.disabled = false;
+      saveBtn.textContent = previousText || 'Guardar historia clínica';
+    }
+  };
+
+  saveBtn.addEventListener('click', (event)=>{
+    event.preventDefault();
+    saveClinicalHistory().catch(()=> null);
+  });
+})();
+
 // ====== Historia Clinica: vacunas relevantes ======
 (function(){
   const pane = document.getElementById('p-expediente');
