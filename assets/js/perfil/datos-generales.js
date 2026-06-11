@@ -1029,7 +1029,12 @@
             clearMonthNumberBuffer();
           }, 650);
         });
-        monthSelect.addEventListener('blur', clearMonthNumberBuffer);
+        monthSelect.addEventListener('blur', ()=>{
+          if(monthNumberBuffer){
+            commitMonthNumber(monthNumberBuffer);
+          }
+          clearMonthNumberBuffer();
+        });
       }
 
       if(yearSelect && !yearSelect.__mxmedBirthYearAnchorApplied){
