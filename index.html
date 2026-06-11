@@ -4293,7 +4293,7 @@
 
         <!-- PACIENTES · EXPEDIENTE -->
 
-        <section class="mm-card d-none" id="p-expediente">
+        <section class="mm-card d-none mx-expediente-empty-patient" id="p-expediente">
 
           <div class="head">
             <header class="mx-panel-subheader mx-panel-subheader--simple">
@@ -4345,7 +4345,7 @@
 
               <ul class="nav nav-pills mm-tabs-row mm-tabs-row-top" role="tablist">
 
-                <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-datos" data-tab-key="t-datos"><span class="tab-ico material-symbols-outlined" aria-hidden="true">id_card</span><span class="tab-lbl tab-lbl-stack tab-lbl-stack-datos"><span class="tab-line">Datos</span><span class="tab-line">Generales</span></span></button></li>
+                <li class="nav-item" data-exp-datos-tab-item><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-datos" data-tab-key="t-datos"><span class="tab-ico material-symbols-outlined" aria-hidden="true">id_card</span><span class="tab-lbl tab-lbl-stack tab-lbl-stack-datos"><span class="tab-line">Datos</span><span class="tab-line">Generales</span></span></button></li>
 
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-exploracion" data-tab-key="t-exploracion"><span class="tab-ico material-symbols-outlined" aria-hidden="true">accessibility</span><span class="tab-lbl">Exploración Física</span></button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-historia" data-tab-key="t-historia"><span class="tab-ico material-symbols-outlined" aria-hidden="true">menu_book</span><span class="tab-lbl">Historia Clínica</span></button></li>
@@ -4377,7 +4377,31 @@
 
               <div class="tab-pane fade show active" id="t-datos">
 
-                <div class="dg-form row g-3">
+                <div class="mx-exp-initial-empty" data-exp-initial-empty-state>
+                  <div class="mx-exp-initial-illustration" aria-hidden="true">
+                    <div class="mx-exp-initial-orbit mx-exp-initial-orbit--one"></div>
+                    <div class="mx-exp-initial-orbit mx-exp-initial-orbit--two"></div>
+                    <div class="mx-exp-initial-card mx-exp-initial-card--id">
+                      <span class="material-symbols-rounded">badge</span>
+                    </div>
+                    <div class="mx-exp-initial-clipboard">
+                      <span class="mx-exp-initial-clip"></span>
+                      <span class="material-symbols-rounded mx-exp-initial-person">person</span>
+                      <span class="mx-exp-initial-line"></span>
+                      <span class="mx-exp-initial-line mx-exp-initial-line--short"></span>
+                      <span class="mx-exp-initial-line"></span>
+                    </div>
+                    <div class="mx-exp-initial-search">
+                      <span class="material-symbols-rounded">search</span>
+                    </div>
+                  </div>
+                  <div class="mx-exp-initial-copy">
+                    <h3>Gestiona los expedientes de tus pacientes</h3>
+                    <p>Registra un nuevo paciente o busca en tu archivo para ver su información y seguimiento.</p>
+                  </div>
+                </div>
+
+                <div class="dg-form row g-3" data-exp-datos-form>
 
                   <div class="col-md-4"><label class="form-label">Nombre(s)</label><input class="form-control" data-pac-nombre placeholder="Nombre(s)"></div>
 

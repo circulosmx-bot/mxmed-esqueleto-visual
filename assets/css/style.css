@@ -4348,8 +4348,217 @@ body{margin:0;background:var(--mm-fondo-base);}
 .foto-x:hover{ filter:brightness(1.05) }
 
 /* Tab-content fallback: asegurar visibilidad del activo */
+#p-expediente .tab-content{ width:100%; }
 #p-expediente .tab-content > .tab-pane{ display:none; }
 #p-expediente .tab-content > .tab-pane.active{ display:block; width:100%; }
+
+#p-expediente .mx-exp-initial-empty{
+  display:none;
+}
+#p-expediente.mx-expediente-empty-patient:not([data-new-entry-mode="1"]) [data-exp-datos-tab-item]{
+  display:none;
+}
+#p-expediente.mx-expediente-empty-patient:not([data-new-entry-mode="1"]) #t-datos [data-exp-datos-form]{
+  display:none !important;
+}
+#p-expediente.mx-expediente-empty-patient:not([data-new-entry-mode="1"]) #t-datos .mx-exp-initial-empty{
+  display:flex;
+}
+#p-expediente #t-datos > .mx-exp-initial-empty{
+  grid-column:1 / -1;
+  width:100%;
+}
+#p-expediente .mx-exp-initial-empty{
+  box-sizing:border-box;
+  min-height:clamp(390px,48vh,540px);
+  width:100%;
+  max-width:none;
+  margin:0 auto;
+  align-items:center;
+  justify-content:flex-start;
+  flex-direction:column;
+  gap:clamp(12px,1.45vh,18px);
+  padding:clamp(24px,3.4vh,40px) clamp(24px,6vw,80px) clamp(28px,3.8vh,44px);
+  border:1px solid rgba(1,86,132,.08);
+  border-radius:8px;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(223,247,250,.88), rgba(255,255,255,0) 30%),
+    linear-gradient(180deg,#ffffff 0%,#f7fcfd 100%);
+  color:#083b59;
+  text-align:center;
+  box-shadow:0 14px 36px rgba(1,86,132,.06);
+}
+#p-expediente .mx-exp-initial-empty > *{
+  margin-left:auto;
+  margin-right:auto;
+}
+#p-expediente .mx-exp-initial-illustration{
+  position:relative;
+  width:min(330px,76vw);
+  max-width:100%;
+  aspect-ratio:1.45;
+  flex:0 0 auto;
+  margin-bottom:0;
+}
+#p-expediente .mx-exp-initial-illustration::before{
+  content:"";
+  position:absolute;
+  inset:8% 22% 3%;
+  border-radius:50%;
+  background:#e4f7fa;
+}
+#p-expediente .mx-exp-initial-clipboard{
+  position:absolute;
+  left:50%;
+  top:12%;
+  width:98px;
+  height:142px;
+  transform:translateX(-50%);
+  border:3px solid #2f6f8b;
+  border-radius:10px;
+  background:#ffffff;
+  box-shadow:0 12px 24px rgba(1,86,132,.12);
+}
+#p-expediente .mx-exp-initial-clip{
+  position:absolute;
+  left:50%;
+  top:-18px;
+  width:48px;
+  height:24px;
+  transform:translateX(-50%);
+  border:3px solid #2f6f8b;
+  border-bottom:0;
+  border-radius:8px 8px 0 0;
+  background:#54b9c7;
+}
+#p-expediente .mx-exp-initial-clip::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:5px;
+  width:7px;
+  height:7px;
+  transform:translateX(-50%);
+  border-radius:50%;
+  background:#ffffff;
+}
+#p-expediente .mx-exp-initial-person{
+  position:absolute;
+  left:15px;
+  top:34px;
+  width:38px;
+  height:38px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  background:#dff4f7;
+  color:#2f6f8b;
+  font-size:28px;
+}
+#p-expediente .mx-exp-initial-line{
+  position:absolute;
+  left:62px;
+  right:18px;
+  top:46px;
+  height:3px;
+  border-radius:999px;
+  background:#2f6f8b;
+}
+#p-expediente .mx-exp-initial-line:nth-of-type(4){ top:70px; left:18px; }
+#p-expediente .mx-exp-initial-line:nth-of-type(5){ top:92px; left:18px; }
+#p-expediente .mx-exp-initial-line--short{ right:32px; }
+#p-expediente .mx-exp-initial-card,
+#p-expediente .mx-exp-initial-search{
+  position:absolute;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:3px solid #2f6f8b;
+  color:#00aebf;
+  background:#ffffff;
+  box-shadow:0 10px 22px rgba(1,86,132,.10);
+}
+#p-expediente .mx-exp-initial-card{
+  left:15%;
+  bottom:13%;
+  width:74px;
+  height:52px;
+  border-radius:8px;
+  transform:rotate(-9deg);
+}
+#p-expediente .mx-exp-initial-card .material-symbols-rounded{ font-size:31px; }
+#p-expediente .mx-exp-initial-search{
+  right:14%;
+  bottom:15%;
+  width:56px;
+  height:56px;
+  border-radius:50%;
+}
+#p-expediente .mx-exp-initial-search::after{
+  content:"";
+  position:absolute;
+  right:-20px;
+  bottom:-15px;
+  width:30px;
+  height:8px;
+  border-radius:999px;
+  background:#2f6f8b;
+  transform:rotate(45deg);
+}
+#p-expediente .mx-exp-initial-search .material-symbols-rounded{ font-size:33px; }
+#p-expediente .mx-exp-initial-orbit{
+  position:absolute;
+  border:2px dashed rgba(47,111,139,.55);
+  border-radius:50%;
+}
+#p-expediente .mx-exp-initial-orbit--one{
+  left:18%;
+  top:30%;
+  width:56px;
+  height:56px;
+}
+#p-expediente .mx-exp-initial-orbit--two{
+  right:18%;
+  top:38%;
+  width:78px;
+  height:78px;
+  border-left-color:transparent;
+  border-bottom-color:transparent;
+}
+#p-expediente .mx-exp-initial-copy h3{
+  margin:0 0 6px;
+  color:#033653;
+  font-size:1.42rem;
+  font-weight:800;
+  letter-spacing:0;
+}
+#p-expediente .mx-exp-initial-copy{
+  width:min(720px,100%);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+}
+#p-expediente .mx-exp-initial-copy p{
+  max-width:540px;
+  margin:0 auto;
+  color:#52697d;
+  font-size:.96rem;
+  line-height:1.38;
+}
+@media (max-width: 760px){
+  #p-expediente .mx-exp-initial-empty{
+    min-height:440px;
+    padding:26px 16px 38px;
+  }
+  #p-expediente .mx-exp-initial-illustration{
+    width:min(290px,84vw);
+  }
+  #p-expediente .mx-exp-initial-copy h3{
+    font-size:1.25rem;
+  }
+}
 
 /* Embed historial: estado compacto cuando no hay contenido útil o hay error */
 #t-historial-atencion .clinical-panel.is-empty #mm-embed-historial,
@@ -16935,6 +17144,26 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-expediente .mm-tabs-row .nav-link.active:hover,
 #p-expediente .mm-tabs-row .nav-link.active:focus{
   box-shadow:0 7px 16px rgba(0,173,193,.22);
+}
+#p-expediente[data-new-entry-mode="1"] .mm-tabs-rows{
+  display:inline-flex;
+  align-items:stretch;
+  width:auto;
+  max-width:100%;
+}
+#p-expediente[data-new-entry-mode="1"] .mm-tabs-row{
+  display:flex;
+  width:auto;
+  max-width:100%;
+}
+#p-expediente[data-new-entry-mode="1"] [data-exp-datos-tab-item]{
+  flex:0 0 auto;
+  width:auto;
+  max-width:100%;
+}
+#p-expediente[data-new-entry-mode="1"] [data-exp-datos-tab-item] .nav-link{
+  width:min(220px,100%);
+  min-width:176px;
 }
 #p-expediente #t-datos.active{
   display:grid;
