@@ -3468,6 +3468,112 @@ function clinical_patient_exists(PDO $pdo, string $patientId): bool
     return is_array($row) && trim((string)($row['patient_id'] ?? '')) !== '';
 }
 
+function clinical_history_payload_is_object(array $payload): bool
+{
+    if ($payload === []) {
+        return true;
+    }
+    return array_keys($payload) !== range(0, count($payload) - 1);
+}
+
+function clinical_history_record_from_row(?array $row): ?array
+{
+    if (!is_array($row)) {
+        return null;
+    }
+
+    $payload = [];
+    $payloadRaw = $row['payload_json'] ?? null;
+    if ($payloadRaw !== null && trim((string)$payloadRaw) !== '') {
+        $decoded = json_decode((string)$payloadRaw, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            $payload = $decoded;
+        }
+    }
+
+    return [
+        'entry_id' => (int)($row['entry_id'] ?? 0),
+        'patient_id' => (string)($row['patient_id'] ?? ''),
+        'entry_date' => (string)($row['entry_date'] ?? ''),
+        'note_type' => (string)($row['note_type'] ?? ''),
+        'status' => (string)($row['status'] ?? ''),
+        'payload' => $payload,
+        'subjective' => $row['subjective'] ?? null,
+        'objective' => $row['objective'] ?? null,
+        'assessment' => $row['assessment'] ?? null,
+        'plan' => $row['plan'] ?? null,
+        'created_at' => (string)($row['created_at'] ?? ''),
+        'updated_at' => (string)($row['updated_at'] ?? ''),
+    ];
+}
+
+function clinical_history_fetch_draft(PDO $pdo, string $patientId): ?array
+{
+    $stmt = $pdo->prepare("
+        SELECT entry_id, patient_id, entry_date, note_type, status, payload_json,
+               subjective, objective, assessment, plan, created_at, updated_at
+        FROM clinical_record_entries
+        WHERE patient_id = :patient_id
+          AND note_type = 'historia_clinica'
+          AND status = 'draft'
+        ORDER BY updated_at DESC, entry_id DESC
+        LIMIT 1
+    ");
+    $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return clinical_history_record_from_row(is_array($row) ? $row : null);
+}
+
+function clinical_history_upsert_draft(PDO $pdo, string $patientId, array $payload): array
+{
+    $payloadJson = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (!is_string($payloadJson)) {
+        $payloadJson = '{}';
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT entry_id
+        FROM clinical_record_entries
+        WHERE patient_id = :patient_id
+          AND note_type = 'historia_clinica'
+          AND status = 'draft'
+        ORDER BY updated_at DESC, entry_id DESC
+        LIMIT 1
+    ");
+    $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+    $stmt->execute();
+    $entryId = $stmt->fetchColumn();
+
+    if ($entryId !== false && (int)$entryId > 0) {
+        $update = $pdo->prepare("
+            UPDATE clinical_record_entries
+            SET payload_json = :payload_json,
+                updated_at = NOW()
+            WHERE entry_id = :entry_id
+        ");
+        $update->bindValue(':payload_json', $payloadJson, PDO::PARAM_STR);
+        $update->bindValue(':entry_id', (int)$entryId, PDO::PARAM_INT);
+        $update->execute();
+    } else {
+        $insert = $pdo->prepare("
+            INSERT INTO clinical_record_entries
+                (patient_id, note_type, status, payload_json, entry_date, created_at, updated_at)
+            VALUES
+                (:patient_id, 'historia_clinica', 'draft', :payload_json, NOW(), NOW(), NOW())
+        ");
+        $insert->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+        $insert->bindValue(':payload_json', $payloadJson, PDO::PARAM_STR);
+        $insert->execute();
+    }
+
+    $record = clinical_history_fetch_draft($pdo, $patientId);
+    if ($record === null) {
+        throw new RuntimeException('no se pudo guardar historia clinica');
+    }
+    return $record;
+}
+
 function clinical_cases_list_fetch(PDO $pdo, string $patientId): array
 {
     $stmt = $pdo->prepare("
@@ -4001,6 +4107,164 @@ try {
                 'route' => 'patients/{patient_id}/timeline',
                 'scaffold' => $isScaffold,
             ],
+        ], 200);
+        return;
+    }
+
+    if (($segments[0] ?? '') === 'patients' && ($segments[2] ?? '') === 'history' && count($segments) === 3) {
+        $historyMeta = [
+            'method' => $method,
+            'route' => 'patients/{patient_id}/history',
+            'source' => 'clinical_record_entries',
+        ];
+
+        if ($method !== 'GET' && $method !== 'PUT') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => 'not_found',
+                'message' => 'route not found',
+                'data' => null,
+                'meta' => $historyMeta,
+            ], 404);
+            return;
+        }
+
+        $patientId = trim((string)$segments[1]);
+        if ($patientId === '') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => 'patient_id requerido'],
+                'message' => '',
+                'data' => null,
+                'meta' => $historyMeta,
+            ], 400);
+            return;
+        }
+
+        try {
+            $pdo = clinical_documents_pdo();
+            if (!clinical_patient_exists($pdo, $patientId)) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => ['code' => 'not_found', 'message' => 'patient no encontrado'],
+                    'message' => '',
+                    'data' => null,
+                    'meta' => $historyMeta,
+                ], 404);
+                return;
+            }
+        } catch (Throwable $e) {
+            $msg = trim((string)$e->getMessage());
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'server_error', 'message' => ($msg !== '' ? $msg : 'server error')],
+                'message' => '',
+                'data' => null,
+                'meta' => $historyMeta,
+            ], 500);
+            return;
+        }
+
+        if ($method === 'GET') {
+            try {
+                $record = clinical_history_fetch_draft($pdo, $patientId);
+            } catch (Throwable $e) {
+                $msg = trim((string)$e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => ['code' => 'server_error', 'message' => ($msg !== '' ? $msg : 'server error')],
+                    'message' => '',
+                    'data' => null,
+                    'meta' => $historyMeta,
+                ], 500);
+                return;
+            }
+
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => '',
+                'data' => [
+                    'record' => $record,
+                ],
+                'meta' => $historyMeta,
+            ], 200);
+            return;
+        }
+
+        $bodyResult = clinical_read_json_body();
+        if (($bodyResult['ok'] ?? false) !== true) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'bad_request', 'message' => (string)($bodyResult['error'] ?? 'invalid body')],
+                'message' => '',
+                'data' => null,
+                'meta' => $historyMeta,
+            ], 400);
+            return;
+        }
+
+        $body = is_array($bodyResult['data'] ?? null) ? (array)$bodyResult['data'] : [];
+        $status = trim((string)($body['status'] ?? 'draft'));
+        if ($status === '') {
+            $status = 'draft';
+        }
+        if ($status !== 'draft') {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'invalid_params', 'message' => 'status sólo puede ser draft en esta fase'],
+                'message' => '',
+                'data' => null,
+                'meta' => $historyMeta,
+            ], 400);
+            return;
+        }
+
+        if (!array_key_exists('payload', $body) || !is_array($body['payload'])) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'invalid_params', 'message' => 'payload debe ser objeto JSON'],
+                'message' => '',
+                'data' => null,
+                'meta' => $historyMeta,
+            ], 400);
+            return;
+        }
+
+        $payload = (array)$body['payload'];
+        if (!clinical_history_payload_is_object($payload)) {
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'invalid_params', 'message' => 'payload debe ser objeto JSON'],
+                'message' => '',
+                'data' => null,
+                'meta' => $historyMeta,
+            ], 400);
+            return;
+        }
+
+        try {
+            $record = clinical_history_upsert_draft($pdo, $patientId, $payload);
+        } catch (Throwable $e) {
+            $msg = trim((string)$e->getMessage());
+            clinical_send_response([
+                'ok' => false,
+                'error' => ['code' => 'server_error', 'message' => ($msg !== '' ? $msg : 'server error')],
+                'message' => '',
+                'data' => null,
+                'meta' => $historyMeta,
+            ], 500);
+            return;
+        }
+
+        clinical_send_response([
+            'ok' => true,
+            'error' => null,
+            'message' => 'historia clinica guardada',
+            'data' => [
+                'record' => $record,
+            ],
+            'meta' => $historyMeta,
         ], 200);
         return;
     }
