@@ -30,32 +30,34 @@ SET time_zone = '+00:00';
 -- Tabla clínica estructurada: entradas de expediente (no documental)
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS clinical_record_entries (
-  entry_id VARCHAR(64) NOT NULL,
+  entry_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   patient_id VARCHAR(64) NOT NULL,
-  entry_date TIMESTAMP NOT NULL,
-  note_type VARCHAR(24) NOT NULL,
+  entry_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  note_type VARCHAR(64) NOT NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'draft',
+  payload_json JSON NULL,
   subjective TEXT NULL,
   objective TEXT NULL,
   assessment TEXT NULL,
   plan TEXT NULL,
-  status VARCHAR(16) NOT NULL DEFAULT 'active',
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
   PRIMARY KEY (entry_id),
+  KEY idx_clinical_record_entries_patient (patient_id),
+  KEY idx_clinical_record_entries_note_type (note_type),
+  KEY idx_clinical_record_entries_status (status),
+  KEY idx_clinical_record_entries_patient_type (patient_id, note_type),
+  KEY idx_clinical_record_entries_patient_type_status (patient_id, note_type, status),
+  KEY idx_clinical_record_entries_patient_entry_date (patient_id, entry_date),
   CONSTRAINT fk_clinical_record_entries_patient_v2
     FOREIGN KEY (patient_id)
     REFERENCES patients_patients (patient_id)
     ON UPDATE CASCADE
     ON DELETE RESTRICT,
-  CONSTRAINT chk_clinical_record_entries_note_type_v2
-    CHECK (note_type IN ('evolucion', 'ingreso', 'seguimiento', 'alta', 'otro')),
   CONSTRAINT chk_clinical_record_entries_status_v2
-    CHECK (status IN ('active', 'amended', 'archived'))
+    CHECK (status IN ('draft', 'signed', 'archived'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE INDEX idx_clinical_record_entries_patient_entry_date
-  ON clinical_record_entries (patient_id, entry_date);
 
 -- -----------------------------------------------------------------------------
 -- Tabla clínica estructurada: consentimiento informado clínico (no administrativo)
