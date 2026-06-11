@@ -36260,9 +36260,12 @@ console.info('app.js loaded :: 20251123a');
   const clinicalTabTargets = {
     datos: '#t-datos',
     historia: '#t-historia',
+    exploracion: '#t-exploracion',
     historialAtencion: '#t-historial-atencion',
     notas: '#t-notas',
     estudios: '#t-estudios',
+    tratamiento: '#t-tratamiento',
+    manejo: '#t-manejo',
     consent: '#t-consent'
   };
   const findClinicalTabTrigger = (target)=>{
@@ -36610,6 +36613,23 @@ console.info('app.js loaded :: 20251123a');
     const state = getMinimumPatientProfileState();
     return state.complete;
   };
+  const getTopLevelClinicalTabPanes = ()=>{
+    const tabContent = pane.querySelector('.tab-content');
+    return Array.from(tabContent?.children || []).filter((child)=> child.classList?.contains('tab-pane'));
+  };
+  const enforceSingleClinicalTab = (btn, safeTarget)=>{
+    tabs.forEach((tabBtn)=>{
+      const isCurrent = tabBtn === btn;
+      tabBtn.classList.toggle('active', isCurrent);
+      tabBtn.setAttribute('aria-selected', isCurrent ? 'true' : 'false');
+    });
+    getTopLevelClinicalTabPanes().forEach((tabPane)=>{
+      const isCurrent = tabPane.matches(safeTarget);
+      tabPane.classList.toggle('show', isCurrent);
+      tabPane.classList.toggle('active', isCurrent);
+    });
+    pane.dataset.activeTab = String(safeTarget || '').replace(/^#/, '').trim();
+  };
   const showClinicalTab = (tabTarget, opts = {})=>{
     const btn = findClinicalTabTrigger(tabTarget);
     if(!btn) return false;
@@ -36624,23 +36644,178 @@ console.info('app.js loaded :: 20251123a');
         }else{
           (new BsTab(btn)).show();
         }
-        return true;
+        const paneTarget = pane.querySelector(safeTarget);
+        if(paneTarget?.classList.contains('active')){
+          enforceSingleClinicalTab(btn, safeTarget);
+          return true;
+        }
       }catch(_){}
     }
-    tabs.forEach((tabBtn)=>{
-      const isCurrent = tabBtn === btn;
-      tabBtn.classList.toggle('active', isCurrent);
-      tabBtn.setAttribute('aria-selected', isCurrent ? 'true' : 'false');
-    });
-    const tabPanes = Array.from(pane.querySelectorAll('.tab-content .tab-pane'));
-    tabPanes.forEach((tabPane)=> tabPane.classList.remove('show', 'active'));
+    enforceSingleClinicalTab(btn, safeTarget);
     const paneTarget = pane.querySelector(safeTarget);
     if(paneTarget){
-      paneTarget.classList.add('show', 'active');
-      pane.dataset.activeTab = String(safeTarget || '').replace(/^#/, '').trim();
       return true;
     }
     return false;
+  };
+  const clinicalCompletionTargetPresets = {
+    historia: {
+      target: clinicalTabTargets.historia,
+      icon: 'assignment',
+      title: 'Historia clínica',
+      description: 'Registra antecedentes y datos relevantes para la evaluación.'
+    },
+    exploracion: {
+      target: clinicalTabTargets.exploracion,
+      icon: 'stethoscope',
+      title: 'Exploración física',
+      description: 'Registra los hallazgos del examen físico.'
+    },
+    historial: {
+      target: clinicalTabTargets.historialAtencion,
+      icon: 'history',
+      title: 'Historial de atención',
+      description: 'Consulta y da seguimiento a atenciones previas.'
+    },
+    estudios: {
+      target: clinicalTabTargets.estudios,
+      icon: 'biotech',
+      title: 'Estudios diagnósticos',
+      description: 'Solicita y consulta estudios de laboratorio e imagen.'
+    },
+    tratamiento: {
+      target: clinicalTabTargets.tratamiento,
+      icon: 'pill',
+      title: 'Tratamientos y recetas',
+      description: 'Define tratamientos y prescribe medicamentos.'
+    },
+    manejo: {
+      target: clinicalTabTargets.manejo,
+      icon: 'bed',
+      title: 'Manejo hospitalario',
+      description: 'Gestiona ingresos, evolución y egresos hospitalarios.'
+    },
+    documentos: {
+      target: clinicalTabTargets.consent,
+      icon: 'description',
+      title: 'Documentos clínicos',
+      description: 'Genera y consulta documentos clínicos del paciente.'
+    },
+    recetas: {
+      target: clinicalTabTargets.tratamiento,
+      icon: 'prescriptions',
+      title: 'Recetas',
+      description: 'Genera recetas médicas para el paciente.',
+      partial: 'recetas'
+    }
+  };
+  const clinicalCompletionHubConfigs = {
+    'datos-generales': {
+      panelTarget: clinicalTabTargets.datos,
+      title: 'Paciente guardado correctamente',
+      description: 'El expediente ya fue creado. Selecciona el siguiente paso para continuar la atención médica.',
+      heading: '¿Qué deseas hacer ahora?',
+      note: 'Puedes completar esta información en el orden que mejor se ajuste a tu consulta.',
+      targets: [
+        { ...clinicalCompletionTargetPresets.historia, recommended: true, badge: 'Recomendado para primera consulta' },
+        clinicalCompletionTargetPresets.exploracion,
+        clinicalCompletionTargetPresets.historial,
+        clinicalCompletionTargetPresets.estudios,
+        clinicalCompletionTargetPresets.tratamiento,
+        clinicalCompletionTargetPresets.manejo,
+        clinicalCompletionTargetPresets.documentos,
+        clinicalCompletionTargetPresets.recetas
+      ]
+    },
+    'historia-clinica': {
+      panelTarget: clinicalTabTargets.historia,
+      title: 'Historia clínica guardada correctamente',
+      description: 'La información quedó guardada como borrador editable. Selecciona el siguiente paso para continuar la atención médica.',
+      heading: '¿Qué deseas hacer ahora?',
+      note: 'Puedes completar esta información en el orden que mejor se ajuste a tu consulta.',
+      targets: [
+        { ...clinicalCompletionTargetPresets.exploracion, recommended: true, badge: 'Recomendado después de historia clínica' },
+        clinicalCompletionTargetPresets.historial,
+        clinicalCompletionTargetPresets.estudios,
+        clinicalCompletionTargetPresets.tratamiento,
+        clinicalCompletionTargetPresets.manejo,
+        clinicalCompletionTargetPresets.documentos,
+        clinicalCompletionTargetPresets.recetas
+      ]
+    }
+  };
+  const appendCompletionText = (parent, tag, text, className = '')=>{
+    const el = document.createElement(tag);
+    if(className) el.className = className;
+    el.textContent = text;
+    parent.appendChild(el);
+    return el;
+  };
+  const renderClinicalCompletionHubPanel = (panel, config)=>{
+    if(!panel || !config) return false;
+    panel.innerHTML = '';
+
+    const check = document.createElement('div');
+    check.className = 'mx-clinical-completion-check';
+    check.setAttribute('aria-hidden', 'true');
+    appendCompletionText(check, 'span', 'check', 'material-symbols-rounded');
+    panel.appendChild(check);
+
+    const copy = document.createElement('div');
+    copy.className = 'mx-clinical-completion-copy';
+    appendCompletionText(copy, 'h3', config.title || '');
+    appendCompletionText(copy, 'p', config.description || '');
+    panel.appendChild(copy);
+
+    const heading = document.createElement('div');
+    heading.className = 'mx-clinical-completion-heading';
+    appendCompletionText(heading, 'span', config.heading || '¿Qué deseas hacer ahora?');
+    panel.appendChild(heading);
+
+    const grid = document.createElement('div');
+    grid.className = 'mx-clinical-completion-grid';
+    grid.setAttribute('aria-label', 'Siguientes pasos clínicos');
+    (config.targets || []).forEach((item)=>{
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'mx-clinical-completion-card';
+      if(item.recommended) button.classList.add('is-recommended');
+      button.setAttribute('data-exp-completion-target', item.target || '');
+      if(item.partial) button.setAttribute('data-exp-completion-partial', item.partial);
+      if(item.badge){
+        appendCompletionText(button, 'span', item.badge, 'mx-clinical-completion-badge');
+      }
+      appendCompletionText(button, 'span', item.icon || 'chevron_right', 'material-symbols-rounded');
+      button.lastElementChild?.setAttribute('aria-hidden', 'true');
+      const cardCopy = document.createElement('span');
+      cardCopy.className = 'mx-clinical-completion-card-copy';
+      appendCompletionText(cardCopy, 'strong', item.title || '');
+      appendCompletionText(cardCopy, 'span', item.description || '');
+      button.appendChild(cardCopy);
+      const arrow = appendCompletionText(button, 'span', 'chevron_right', 'material-symbols-rounded mx-clinical-completion-arrow');
+      arrow.setAttribute('aria-hidden', 'true');
+      grid.appendChild(button);
+    });
+    panel.appendChild(grid);
+
+    const note = document.createElement('div');
+    note.className = 'mx-clinical-completion-note';
+    appendCompletionText(note, 'span', 'info', 'material-symbols-rounded').setAttribute('aria-hidden', 'true');
+    note.appendChild(document.createTextNode(config.note || 'Puedes continuar en el orden que mejor se ajuste a tu consulta.'));
+    panel.appendChild(note);
+    return true;
+  };
+  const renderClinicalCompletionHub = (source)=>{
+    const config = clinicalCompletionHubConfigs[source] || clinicalCompletionHubConfigs['datos-generales'];
+    const panels = Array.from(pane.querySelectorAll('[data-exp-completion-hub-panel]'));
+    let rendered = false;
+    panels.forEach((panel)=>{
+      const panelSource = sanitizeText(panel.getAttribute('data-exp-completion-hub-panel-source') || 'datos-generales') || 'datos-generales';
+      if(panelSource === source){
+        rendered = renderClinicalCompletionHubPanel(panel, config) || rendered;
+      }
+    });
+    return rendered;
   };
   const clearClinicalCompletionHub = (source = 'completion_hub_clear')=>{
     if(!pane) return false;
@@ -36657,10 +36832,12 @@ console.info('app.js loaded :: 20251123a');
   const showClinicalCompletionHub = (detail = {})=>{
     const patientId = sanitizeText(detail?.patientId || detail?.patient_id || getActivePatientId());
     const hubSource = sanitizeText(detail?.source || detail?.hub || 'datos-generales') || 'datos-generales';
+    const config = clinicalCompletionHubConfigs[hubSource] || clinicalCompletionHubConfigs['datos-generales'];
     if(!patientId) return false;
+    if(!renderClinicalCompletionHub(hubSource)) return false;
     pane.setAttribute('data-exp-completion-hub', hubSource);
     pane.classList.add('mx-expediente-completion-hub');
-    showClinicalTab(clinicalTabTargets.datos);
+    showClinicalTab(config.panelTarget || clinicalTabTargets.datos);
     try{
       console.info('[mxmed-clinical-completion-hub] show', {
         patient_id: patientId,
@@ -36671,6 +36848,9 @@ console.info('app.js loaded :: 20251123a');
     return true;
   };
   window.mxmedShowClinicalCompletionHub = (detail)=> showClinicalCompletionHub(detail || {});
+  window.addEventListener('mxmed:expediente-neutralize', ()=>{
+    clearClinicalCompletionHub('expediente_neutralize');
+  });
   const hideActividadClinicaModal = ()=>{
     if(!actividadClinicaModalEl) return;
     const BsModal = window.bootstrap && window.bootstrap.Modal;
@@ -53858,6 +54038,14 @@ console.info('app.js loaded :: 20251123a');
       }
       setClinicalHistoryFeedback('Historia clínica guardada correctamente.', 'success');
       lastHydratedHistoryPatientId = patientId;
+      if(typeof window.mxmedShowClinicalCompletionHub === 'function'){
+        window.mxmedShowClinicalCompletionHub({
+          source: 'historia-clinica',
+          patientId,
+          event: 'history_save'
+        });
+        setClinicalHistoryFeedback('', 'muted');
+      }
       return data?.data?.record || null;
     }catch(error){
       const message = clean(error?.message) || 'No se pudo guardar la historia clínica.';

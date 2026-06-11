@@ -4563,10 +4563,14 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-expediente .mx-clinical-completion-hub{
   display:none;
 }
-#p-expediente[data-exp-completion-hub] #t-datos [data-exp-datos-form]{
+#p-expediente[data-exp-completion-hub="datos-generales"] #t-datos [data-exp-datos-form]{
   display:none !important;
 }
-#p-expediente[data-exp-completion-hub] #t-datos > .mx-clinical-completion-hub{
+#p-expediente[data-exp-completion-hub="historia-clinica"] #t-historia [data-hc-history-form]{
+  display:none !important;
+}
+#p-expediente[data-exp-completion-hub="datos-generales"] #t-datos > .mx-clinical-completion-hub[data-exp-completion-hub-panel-source="datos-generales"],
+#p-expediente[data-exp-completion-hub="historia-clinica"] #t-historia > .mx-clinical-completion-hub[data-exp-completion-hub-panel-source="historia-clinica"]{
   grid-column:1 / -1;
   width:100%;
   display:flex;
