@@ -4804,16 +4804,16 @@
                 <div class="row g-3 mt-1">
                   <div class="col-md-4">
                     <label class="form-label">Motivo de la Consulta</label>
-                    <textarea class="form-control" data-pac-motivo-consulta rows="3" placeholder="Describe el motivo principal de la consulta"></textarea>
+                    <textarea class="form-control" data-pac-motivo-consulta data-hc-field="chief_complaint" rows="3" placeholder="Describe el motivo principal de la consulta"></textarea>
                   </div>
                   <div class="col-md-8">
                     <label class="form-label">Padecimiento Actual</label>
-                    <textarea class="form-control" rows="3" placeholder="Evolución y síntomas actuales"></textarea>
+                    <textarea class="form-control" data-hc-field="present_illness" rows="3" placeholder="Evolución y síntomas actuales"></textarea>
                   </div>
 
                   <div class="col-md-12">
                     <label class="form-label">Interrogatorio por aparatos</label>
-                    <textarea class="form-control" rows="3" placeholder="Hallazgos relevantes por sistemas"></textarea>
+                    <textarea class="form-control" data-hc-field="systems_review" rows="3" placeholder="Hallazgos relevantes por sistemas"></textarea>
                   </div>
 
                   <div class="col-12">
@@ -4824,40 +4824,40 @@
                     <div class="hc-ante-grid">
                       <div class="hc-ante-item">
                         <label class="form-label d-block">Fuma</label>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-fuma" id="hist-fuma-nunca"><label class="form-check-label" for="hist-fuma-nunca">Nunca</label></div>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-fuma" id="hist-fuma-activo"><label class="form-check-label" for="hist-fuma-activo">Fumador activo</label></div>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-fuma" id="hist-fuma-ocasional"><label class="form-check-label" for="hist-fuma-ocasional">Fumador ocasional</label></div>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-fuma" id="hist-fuma-ex"><label class="form-check-label" for="hist-fuma-ex">Exfumador</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-fuma" id="hist-fuma-nunca" value="never" data-hc-habit="smoking"><label class="form-check-label" for="hist-fuma-nunca">Nunca</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-fuma" id="hist-fuma-activo" value="active" data-hc-habit="smoking"><label class="form-check-label" for="hist-fuma-activo">Fumador activo</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-fuma" id="hist-fuma-ocasional" value="occasional" data-hc-habit="smoking"><label class="form-check-label" for="hist-fuma-ocasional">Fumador ocasional</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-fuma" id="hist-fuma-ex" value="former" data-hc-habit="smoking"><label class="form-check-label" for="hist-fuma-ex">Exfumador</label></div>
                       </div>
 
                       <div class="hc-ante-item">
                         <label class="form-label d-block">Bebe</label>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-bebe" id="hist-bebe-nunca"><label class="form-check-label" for="hist-bebe-nunca">Nunca</label></div>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-bebe" id="hist-bebe-cronico"><label class="form-check-label" for="hist-bebe-cronico">Bebedor cr&oacute;nico</label></div>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-bebe" id="hist-bebe-ocasional"><label class="form-check-label" for="hist-bebe-ocasional">Bebedor ocasional</label></div>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-bebe" id="hist-bebe-ex"><label class="form-check-label" for="hist-bebe-ex">Exbebedor</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-bebe" id="hist-bebe-nunca" value="never" data-hc-habit="alcohol"><label class="form-check-label" for="hist-bebe-nunca">Nunca</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-bebe" id="hist-bebe-cronico" value="chronic" data-hc-habit="alcohol"><label class="form-check-label" for="hist-bebe-cronico">Bebedor cr&oacute;nico</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-bebe" id="hist-bebe-ocasional" value="occasional" data-hc-habit="alcohol"><label class="form-check-label" for="hist-bebe-ocasional">Bebedor ocasional</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-bebe" id="hist-bebe-ex" value="former" data-hc-habit="alcohol"><label class="form-check-label" for="hist-bebe-ex">Exbebedor</label></div>
                       </div>
 
                       <div class="hc-ante-item">
                         <label class="form-label d-block">Actividad F&iacute;sica</label>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-actividad" id="hist-act-norealiza"><label class="form-check-label" for="hist-act-norealiza">No realiza</label></div>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-actividad" id="hist-act-moderado"><label class="form-check-label" for="hist-act-moderado">Ejercicio moderado</label></div>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-actividad" id="hist-act-intenso"><label class="form-check-label" for="hist-act-intenso">Ejercicio intenso</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-actividad" id="hist-act-norealiza" value="none" data-hc-habit="physical_activity"><label class="form-check-label" for="hist-act-norealiza">No realiza</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-actividad" id="hist-act-moderado" value="moderate" data-hc-habit="physical_activity"><label class="form-check-label" for="hist-act-moderado">Ejercicio moderado</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-actividad" id="hist-act-intenso" value="intense" data-hc-habit="physical_activity"><label class="form-check-label" for="hist-act-intenso">Ejercicio intenso</label></div>
                       </div>
 
                       <div class="hc-ante-item">
                         <label class="form-label d-block">Drogas / Sustancias</label>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-drogas" id="hist-drogas-si"><label class="form-check-label" for="hist-drogas-si">S&iacute;</label></div>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-drogas" id="hist-drogas-neg"><label class="form-check-label" for="hist-drogas-neg">Negado</label></div>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-drogas" id="hist-drogas-ocasional"><label class="form-check-label" for="hist-drogas-ocasional">Ocasionalmente</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-drogas" id="hist-drogas-si" value="yes" data-hc-habit="substances"><label class="form-check-label" for="hist-drogas-si">S&iacute;</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-drogas" id="hist-drogas-neg" value="denied" data-hc-habit="substances"><label class="form-check-label" for="hist-drogas-neg">Negado</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-drogas" id="hist-drogas-ocasional" value="occasional" data-hc-habit="substances"><label class="form-check-label" for="hist-drogas-ocasional">Ocasionalmente</label></div>
                       </div>
 
                       <div class="hc-ante-item">
                         <label class="form-label d-block">Dieta</label>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-dieta" id="hist-dieta-bal"><label class="form-check-label" for="hist-dieta-bal">Balanceada</label></div>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-dieta" id="hist-dieta-carb"><label class="form-check-label" for="hist-dieta-carb">Alta en carbohidratos</label></div>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-dieta" id="hist-dieta-veg"><label class="form-check-label" for="hist-dieta-veg">Vegetariana</label></div>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-dieta" id="hist-dieta-nesp"><label class="form-check-label" for="hist-dieta-nesp">No especifica</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-dieta" id="hist-dieta-bal" value="balanced" data-hc-habit="diet"><label class="form-check-label" for="hist-dieta-bal">Balanceada</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-dieta" id="hist-dieta-carb" value="high_carbohydrate" data-hc-habit="diet"><label class="form-check-label" for="hist-dieta-carb">Alta en carbohidratos</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-dieta" id="hist-dieta-veg" value="vegetarian" data-hc-habit="diet"><label class="form-check-label" for="hist-dieta-veg">Vegetariana</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-dieta" id="hist-dieta-nesp" value="unspecified" data-hc-habit="diet"><label class="form-check-label" for="hist-dieta-nesp">No especifica</label></div>
                       </div>
                     </div>
                   </div>
@@ -4984,21 +4984,21 @@
                     <div class="row g-2 hc-vac-row">
                       <div class="col-md-4">
                         <label class="form-label d-block">Esquema</label>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-vac-esquema" id="hist-vac-completo" value="completo"><label class="form-check-label" for="hist-vac-completo">Completo</label></div>
-                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-vac-esquema" id="hist-vac-incompleto" value="incompleto"><label class="form-check-label" for="hist-vac-incompleto">Incompleto</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-vac-esquema" id="hist-vac-completo" value="completo" data-hc-field="vaccination_schema"><label class="form-check-label" for="hist-vac-completo">Completo</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="hist-vac-esquema" id="hist-vac-incompleto" value="incompleto" data-hc-field="vaccination_schema"><label class="form-check-label" for="hist-vac-incompleto">Incompleto</label></div>
                       </div>
                       <div class="col-md-8">
                         <label class="form-label d-block">Vacunas relevantes</label>
                         <div class="hc-vac-grid">
-                          <div class="hc-vac-item">
+                          <div class="hc-vac-item" data-hc-vaccine-item="covid">
                             <div class="form-check"><input class="form-check-input" type="checkbox" id="hist-vac-covid" data-vac-toggle><label class="form-check-label" for="hist-vac-covid">COVID</label></div>
                             <input class="form-control form-control-sm" type="text" placeholder="Observaciones" data-vac-note disabled>
                           </div>
-                          <div class="hc-vac-item">
+                          <div class="hc-vac-item" data-hc-vaccine-item="influenza">
                             <div class="form-check"><input class="form-check-input" type="checkbox" id="hist-vac-influenza" data-vac-toggle><label class="form-check-label" for="hist-vac-influenza">Influenza</label></div>
                             <input class="form-control form-control-sm" type="text" placeholder="Observaciones" data-vac-note disabled>
                           </div>
-                          <div class="hc-vac-item">
+                          <div class="hc-vac-item" data-hc-vaccine-item="tetanus">
                             <div class="form-check"><input class="form-check-input" type="checkbox" id="hist-vac-tetanos" data-vac-toggle><label class="form-check-label" for="hist-vac-tetanos">T&#233;tanos</label></div>
                             <input class="form-control form-control-sm" type="text" placeholder="Observaciones" data-vac-note disabled>
                           </div>
@@ -5009,7 +5009,7 @@
 
                   <div class="col-12">
                     <h6 class="mt-2">Antecedentes Familiares</h6>
-                    <textarea class="form-control" rows="2" placeholder="Ejemplo: Diabetes en madre, hipertensión en padre, cáncer de mama en abuela..."></textarea>
+                    <textarea class="form-control" data-hc-field="family_history" rows="2" placeholder="Ejemplo: Diabetes en madre, hipertensión en padre, cáncer de mama en abuela..."></textarea>
                   </div>
 
                   <div class="col-12 d-none" data-role="hc-gineco-subsection">
@@ -5021,23 +5021,23 @@
                           <div class="gyn-summary">
                             <div>
                               <label class="form-label">Gestas</label>
-                              <input class="form-control form-control-sm" type="number" min="0" step="1" placeholder="0">
+                              <input class="form-control form-control-sm" type="number" min="0" step="1" placeholder="0" data-hc-gyn-field="pregnancies">
                             </div>
                             <div>
                               <label class="form-label">Partos</label>
-                              <input class="form-control form-control-sm" type="number" min="0" step="1" placeholder="0">
+                              <input class="form-control form-control-sm" type="number" min="0" step="1" placeholder="0" data-hc-gyn-field="births">
                             </div>
                             <div>
                               <label class="form-label">Ces&#225;reas</label>
-                              <input class="form-control form-control-sm" type="number" min="0" step="1" placeholder="0">
+                              <input class="form-control form-control-sm" type="number" min="0" step="1" placeholder="0" data-hc-gyn-field="cesareans">
                             </div>
                             <div>
                               <label class="form-label">Abortos</label>
-                              <input class="form-control form-control-sm" type="number" min="0" step="1" placeholder="0">
+                              <input class="form-control form-control-sm" type="number" min="0" step="1" placeholder="0" data-hc-gyn-field="abortions">
                             </div>
                             <div>
                               <label class="form-label">Nacidos vivos</label>
-                              <input class="form-control form-control-sm" type="number" min="0" step="1" placeholder="0">
+                              <input class="form-control form-control-sm" type="number" min="0" step="1" placeholder="0" data-hc-gyn-field="living_children">
                             </div>
                           </div>
                           <div class="gyn-note">Gestas, partos, ces&#225;reas, abortos y nacidos vivos.</div>
@@ -5048,11 +5048,11 @@
                           <div class="row g-2">
                             <div class="col-md-4">
                               <label class="form-label">FUM</label>
-                              <input class="form-control" type="date">
+                              <input class="form-control" type="date" data-hc-gyn-field="last_menstrual_period">
                             </div>
                             <div class="col-md-4">
                               <label class="form-label">Regularidad</label>
-                              <select class="form-select">
+                              <select class="form-select" data-hc-gyn-field="cycle_regularity">
                                 <option value="">Selecciona una opci&#243;n</option>
                                 <option value="regular">Regular</option>
                                 <option value="irregular">Irregular</option>
@@ -5061,15 +5061,15 @@
                             </div>
                             <div class="col-md-4">
                               <label class="form-label">Duraci&#243;n (d&#237;as)</label>
-                              <input class="form-control" type="number" min="0" step="1" placeholder="5">
+                              <input class="form-control" type="number" min="0" step="1" placeholder="5" data-hc-gyn-field="cycle_duration_days">
                             </div>
                             <div class="col-md-4">
                               <label class="form-label">Frecuencia (d&#237;as)</label>
-                              <input class="form-control" type="number" min="0" step="1" placeholder="28">
+                              <input class="form-control" type="number" min="0" step="1" placeholder="28" data-hc-gyn-field="cycle_frequency_days">
                             </div>
                             <div class="col-md-4">
                               <label class="form-label">Intensidad</label>
-                              <select class="form-select">
+                              <select class="form-select" data-hc-gyn-field="cycle_intensity">
                                 <option value="">Selecciona una opci&#243;n</option>
                                 <option value="leve">Leve</option>
                                 <option value="moderada">Moderada</option>
@@ -5078,7 +5078,7 @@
                             </div>
                             <div class="col-md-4">
                               <label class="form-label">Dolor</label>
-                              <select class="form-select">
+                              <select class="form-select" data-hc-gyn-field="cycle_pain">
                                 <option value="">Selecciona una opci&#243;n</option>
                                 <option value="sin-dolor">Sin dolor</option>
                                 <option value="leve">Leve</option>
@@ -5094,7 +5094,7 @@
                           <div class="row g-2">
                             <div class="col-md-5">
                               <label class="form-label">M&#233;todo</label>
-                              <select class="form-select">
+                              <select class="form-select" data-hc-gyn-field="contraceptive_method">
                                 <option value="">Selecciona una opci&#243;n</option>
                                 <option value="ninguno">Ninguno</option>
                                 <option value="preservativo">Preservativo</option>
@@ -5108,11 +5108,11 @@
                             </div>
                             <div class="col-md-3">
                               <label class="form-label">Tiempo de uso (meses)</label>
-                              <input class="form-control" type="number" min="0" step="1" placeholder="0">
+                              <input class="form-control" type="number" min="0" step="1" placeholder="0" data-hc-gyn-field="contraceptive_use_months">
                             </div>
                             <div class="col-md-4">
                               <label class="form-label">Plan reproductivo</label>
-                              <select class="form-select">
+                              <select class="form-select" data-hc-gyn-field="reproductive_plan">
                                 <option value="">Selecciona una opci&#243;n</option>
                                 <option value="busca-embarazo">Busca embarazo</option>
                                 <option value="no-busca">No busca embarazo</option>
@@ -5121,7 +5121,7 @@
                             </div>
                             <div class="col-12">
                               <label class="form-label">Observaciones</label>
-                              <textarea class="form-control" rows="2" placeholder="Notas relevantes sobre anticoncepci&#243;n y planificaci&#243;n familiar"></textarea>
+                              <textarea class="form-control" rows="2" placeholder="Notas relevantes sobre anticoncepci&#243;n y planificaci&#243;n familiar" data-hc-gyn-field="contraception_notes"></textarea>
                             </div>
                           </div>
                         </div>
