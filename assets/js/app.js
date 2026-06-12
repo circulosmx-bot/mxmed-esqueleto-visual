@@ -61873,6 +61873,13 @@ function mxResetLogoPreview(){
   let cachedList = null;
   let cachedAt = 0;
   let cachingPromise = null;
+  let renderedPatients = [];
+  let archiveLookupModalEl = null;
+  let archiveLookupModal = null;
+  let archiveLookupListEl = null;
+  let archiveLookupContextEl = null;
+  let archiveLookupEntries = [];
+  let archiveLookupSelectedId = '';
   window.mxmedInvalidatePatientsIndexCache = ()=>{
     cachedList = null;
     cachedAt = 0;
@@ -61893,6 +61900,37 @@ function mxResetLogoPreview(){
     tbodyEl.innerHTML = '';
   };
 
+  const escapeHtml = (value = '')=> String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  const escapeAttr = escapeHtml;
+
+  const toDateOnlyYmd = (value = '')=>{
+    const raw = String(value || '').trim();
+    if(!raw) return '';
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return match ? `${match[1]}-${match[2]}-${match[3]}` : '';
+  };
+
+  const normalizeContactForDisplay = (contact = {})=>{
+    if(!contact || typeof contact !== 'object') return null;
+    const type = String(contact.type || contact.contact_type || '').trim();
+    const valueMasked = String(contact.value_masked || '').trim();
+    if(!type && !valueMasked) return null;
+    return {
+      contact_id: String(contact.contact_id || '').trim(),
+      type,
+      value_masked: valueMasked,
+      is_primary: contact.is_primary === true || contact.is_primary === 1 || contact.is_primary === '1',
+      preferred_contact_method: String(contact.preferred_contact_method || '').trim(),
+      created_at: String(contact.created_at || '').trim()
+    };
+  };
+
   const normalizeList = (payload)=>{
     if(!payload || payload.ok !== true) return [];
     const raw = Array.isArray(payload.data)
@@ -61903,10 +61941,22 @@ function mxResetLogoPreview(){
       const patientId = String(item.patient_id || item.id || item.patientId || '').trim();
       const fullName = String(item.nombre_completo || item.display_name || item.name || '').trim();
       const curp = String(item.curp || '').trim();
+      const contacts = Array.isArray(item.contacts)
+        ? item.contacts.map((contact)=> normalizeContactForDisplay(contact)).filter(Boolean)
+        : [];
+      const ageNumber = Number(item.age);
       return {
         patient_id: patientId,
         nombre_completo: fullName,
-        curp
+        display_name: fullName,
+        curp,
+        birthdate: toDateOnlyYmd(item.birthdate || item.fecha_nacimiento || item.dob || ''),
+        sex: String(item.sex || item.sexo || item.gender || '').trim(),
+        gender: String(item.gender || item.sex || item.sexo || '').trim(),
+        age: Number.isFinite(ageNumber) ? ageNumber : null,
+        profile: (item.profile && typeof item.profile === 'object') ? item.profile : null,
+        contacts,
+        match: (item.match && typeof item.match === 'object') ? item.match : null
       };
     }).filter(item => item.patient_id !== '');
   };
@@ -61926,6 +61976,264 @@ function mxResetLogoPreview(){
     const curp = norm(patient.curp || '');
     const pid = norm(patient.patient_id || '');
     return name.includes(qn) || curp.includes(qn) || pid.includes(qn);
+  };
+
+  const resolvePatientsUnifiedSearchUrl = ()=>{
+    const docId = resolveDoctorId();
+    if(!docId){
+      throw new Error('No se pudo identificar al médico para buscar pacientes.');
+    }
+    return `/api/patients/index.php/doctors/${encodeURIComponent(docId)}/patients/search`;
+  };
+
+  const fetchPatientsUnifiedSearch = async (query = '')=>{
+    const url = new URL(resolvePatientsUnifiedSearchUrl(), window.location.origin);
+    url.searchParams.set('q', String(query || '').trim());
+    url.searchParams.set('limit', '12');
+    const resp = await fetch(url.toString(), {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      credentials: 'same-origin'
+    });
+    const json = await resp.json().catch(()=> null);
+    if(!resp.ok || !json || json.ok !== true){
+      throw new Error(String((json && (json.message || json.error)) || 'No se pudo buscar pacientes.'));
+    }
+    return normalizeList(json).slice(0, 12);
+  };
+
+  const fetchPatientsSearchResults = async (query = '', qn = '')=>{
+    try{
+      return await fetchPatientsUnifiedSearch(query);
+    }catch(err){
+      const list = await fetchPatientsIndex();
+      const filtered = list.filter((patient)=> matchesPatient(patient, qn)).slice(0, 12);
+      if(filtered.length) return filtered;
+      throw err;
+    }
+  };
+
+  const resolvePatientDisplayName = (entry = {})=>{
+    return String(entry.nombre_completo || entry.display_name || entry.name || entry.patient_id || 'Paciente').trim();
+  };
+
+  const resolvePatientSexMeta = (value = '')=>{
+    const raw = norm(value || '');
+    if(!raw) return { key: '', label: '' };
+    if(raw === 'm' || raw.includes('masc') || raw.includes('male') || raw.includes('hombre')){
+      return { key: 'male', label: 'Hombre' };
+    }
+    if(raw === 'f' || raw.includes('fem') || raw.includes('female') || raw.includes('mujer')){
+      return { key: 'female', label: 'Mujer' };
+    }
+    return { key: '', label: String(value || '').trim() };
+  };
+
+  const resolvePatientAge = (entry = {})=>{
+    const directAge = Number(entry.age);
+    if(Number.isFinite(directAge) && directAge >= 0 && directAge <= 130) return directAge;
+    const birthdate = toDateOnlyYmd(entry.birthdate || '');
+    if(!birthdate) return null;
+    const parsed = new Date(`${birthdate}T00:00:00`);
+    if(Number.isNaN(parsed.getTime())) return null;
+    const now = new Date();
+    let age = now.getFullYear() - parsed.getFullYear();
+    const monthDiff = now.getMonth() - parsed.getMonth();
+    if(monthDiff < 0 || (monthDiff === 0 && now.getDate() < parsed.getDate())){
+      age -= 1;
+    }
+    return Number.isFinite(age) && age >= 0 && age <= 130 ? age : null;
+  };
+
+  const formatPatientBirthdate = (birthdate = '')=>{
+    const safeBirthdate = toDateOnlyYmd(birthdate || '');
+    if(!safeBirthdate) return '';
+    const parsed = new Date(`${safeBirthdate}T00:00:00`);
+    if(Number.isNaN(parsed.getTime())) return '';
+    return parsed.toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const resolvePatientAvatarSrc = (entry = {})=>{
+    const sexMeta = resolvePatientSexMeta(entry.sex || entry.gender || '');
+    const age = resolvePatientAge(entry);
+    const isFemale = sexMeta.key === 'female';
+    const isMale = sexMeta.key === 'male';
+    if(Number.isFinite(age)){
+      if(age >= 3 && age <= 10){
+        return isFemale ? 'assets/img/patients/avatars/girl.png' : 'assets/img/patients/avatars/boy.png';
+      }
+      if(age >= 11 && age <= 21){
+        return isFemale ? 'assets/img/patients/avatars/young-female.png' : 'assets/img/patients/avatars/young-male.png';
+      }
+    }
+    if(isFemale) return 'assets/img/patients/avatars/female.png';
+    if(isMale) return 'assets/img/patients/avatars/male.png';
+    return 'assets/img/patients/avatars/male.png';
+  };
+
+  const buildPatientMetaLabel = (entry = {})=>{
+    const sexMeta = resolvePatientSexMeta(entry.sex || entry.gender || '');
+    const age = resolvePatientAge(entry);
+    const birthLabel = formatPatientBirthdate(entry.birthdate || '');
+    const parts = [];
+    if(sexMeta.label) parts.push(sexMeta.label);
+    if(Number.isFinite(age)) parts.push(`${age} años`);
+    if(birthLabel) parts.push(birthLabel);
+    return parts.join(' · ') || 'Datos clínicos pendientes';
+  };
+
+  const resolvePatientPhoneLabel = (entry = {})=>{
+    const contacts = Array.isArray(entry.contacts) ? entry.contacts : [];
+    const phones = contacts.filter((contact)=>{
+      const type = norm(contact?.type || contact?.contact_type || '');
+      return type.includes('phone') || type.includes('tel');
+    });
+    const primary = phones.find((contact)=> contact?.is_primary === true) || phones[0] || null;
+    const masked = String(primary?.value_masked || '').trim();
+    return masked || 'Teléfono no disponible';
+  };
+
+  const resolveArchiveLookupContextLabel = (query = '')=>{
+    const safeQuery = String(query || '').trim();
+    if(!safeQuery) return '';
+    const phoneDigits = safeQuery.replace(/\D+/g, '');
+    const nonPhoneChars = safeQuery.replace(/[\d\s()+\-./]/g, '');
+    if(phoneDigits && !nonPhoneChars.trim()){
+      return 'Búsqueda por teléfono';
+    }
+    if(safeQuery.includes('@')){
+      return 'Búsqueda por correo';
+    }
+    return safeQuery;
+  };
+
+  const renderArchivePatientCard = (entry = {})=>{
+    const patientId = String(entry.patient_id || '').trim();
+    const isSelected = patientId && patientId === archiveLookupSelectedId;
+    const displayName = resolvePatientDisplayName(entry);
+    const avatarSrc = resolvePatientAvatarSrc(entry);
+    const metaLabel = buildPatientMetaLabel(entry);
+    const phoneLabel = resolvePatientPhoneLabel(entry);
+    return `
+      <div class="mx-ag-shared-phone-entry${isSelected ? ' is-selected' : ''}" data-mm-pac-identity-entry="${escapeAttr(patientId)}">
+        <button type="button" class="mx-ag-shared-phone-item" data-mm-pac-identity-select="${escapeAttr(patientId)}">
+          <span class="mx-ag-shared-phone-avatar">
+            <img src="${escapeAttr(avatarSrc)}" alt="${escapeAttr(displayName)}">
+          </span>
+          <span class="mx-ag-shared-phone-item-body">
+            <span class="mx-ag-shared-phone-item-name">${escapeHtml(displayName)}</span>
+            <span class="mx-ag-shared-phone-item-meta">${escapeHtml(metaLabel)}</span>
+            <span class="mx-ag-shared-phone-item-phone">${escapeHtml(phoneLabel)}</span>
+          </span>
+          <span class="mx-ag-shared-phone-item-chevron" aria-hidden="true">›</span>
+        </button>
+        <div class="mx-ag-shared-phone-inline-confirm${isSelected ? '' : ' d-none'}" data-mm-pac-identity-confirm="${escapeAttr(patientId)}">
+          <div class="mx-ag-shared-phone-inline-question">¿Abrir el expediente de este paciente?</div>
+          <div class="mx-ag-shared-phone-inline-actions">
+            <button type="button" class="btn btn-primary btn-sm" data-mm-pac-identity-confirm-yes="${escapeAttr(patientId)}">Sí, abrir expediente</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-mm-pac-identity-confirm-no="${escapeAttr(patientId)}">No</button>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  const renderArchiveLookupList = ()=>{
+    if(!archiveLookupListEl) return;
+    archiveLookupListEl.innerHTML = archiveLookupEntries.map((entry)=> renderArchivePatientCard(entry)).join('');
+  };
+
+  const setArchiveLookupSelection = (patientId = '')=>{
+    archiveLookupSelectedId = String(patientId || '').trim();
+    if(archiveLookupModalEl){
+      archiveLookupModalEl.classList.toggle('is-confirm-mode', !!archiveLookupSelectedId);
+    }
+    renderArchiveLookupList();
+  };
+
+  const ensureArchiveLookupModal = ()=>{
+    if(archiveLookupModalEl && archiveLookupListEl){
+      return true;
+    }
+    archiveLookupModalEl = document.getElementById('mm_pac_archive_lookup_modal');
+    if(!archiveLookupModalEl){
+      archiveLookupModalEl = document.createElement('div');
+      archiveLookupModalEl.className = 'modal fade';
+      archiveLookupModalEl.id = 'mm_pac_archive_lookup_modal';
+      archiveLookupModalEl.tabIndex = -1;
+      archiveLookupModalEl.setAttribute('aria-hidden', 'true');
+      archiveLookupModalEl.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+          <div class="modal-content mx-ag-shared-phone-modal">
+            <div class="modal-header border-0 pb-0">
+              <div>
+                <div class="mx-ag-shared-phone-header-title mx-ag-patient-lookup-header-title">Pacientes encontrados</div>
+                <div class="mx-ag-shared-phone-header-subtitle">Selecciona el expediente que deseas abrir.</div>
+                <div id="mm_pac_archive_lookup_context" class="mx-ag-patient-lookup-context d-none"></div>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body pt-3">
+              <div id="mm_pac_archive_lookup_list" class="mx-ag-shared-phone-list"></div>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(archiveLookupModalEl);
+    }
+    archiveLookupListEl = archiveLookupModalEl.querySelector('#mm_pac_archive_lookup_list');
+    archiveLookupContextEl = archiveLookupModalEl.querySelector('#mm_pac_archive_lookup_context');
+    archiveLookupListEl?.addEventListener('click', (event)=>{
+      const selectBtn = event.target.closest('[data-mm-pac-identity-select]');
+      if(selectBtn){
+        event.preventDefault();
+        const patientId = String(selectBtn.getAttribute('data-mm-pac-identity-select') || '').trim();
+        setArchiveLookupSelection(patientId);
+        return;
+      }
+      const confirmYesBtn = event.target.closest('[data-mm-pac-identity-confirm-yes]');
+      if(confirmYesBtn){
+        event.preventDefault();
+        const patientId = String(confirmYesBtn.getAttribute('data-mm-pac-identity-confirm-yes') || '').trim();
+        const entry = archiveLookupEntries.find((item)=> String(item.patient_id || '').trim() === patientId) || { patient_id: patientId };
+        openArchivePatientRecord(entry).catch(()=> null);
+        return;
+      }
+      const confirmNoBtn = event.target.closest('[data-mm-pac-identity-confirm-no]');
+      if(confirmNoBtn){
+        event.preventDefault();
+        setArchiveLookupSelection('');
+      }
+    });
+    if(window.bootstrap?.Modal){
+      archiveLookupModal = window.bootstrap.Modal.getOrCreateInstance(archiveLookupModalEl);
+    }
+    return !!archiveLookupModal;
+  };
+
+  const openArchiveLookupModal = (list = [], { query = '' } = {})=>{
+    const safeList = Array.isArray(list) ? list.filter((item)=> item && item.patient_id) : [];
+    if(!safeList.length) return false;
+    if(!ensureArchiveLookupModal()) return false;
+    archiveLookupEntries = safeList;
+    archiveLookupSelectedId = '';
+    if(archiveLookupContextEl){
+      const contextLabel = resolveArchiveLookupContextLabel(query);
+      if(contextLabel){
+        archiveLookupContextEl.textContent = contextLabel;
+        archiveLookupContextEl.classList.remove('d-none');
+      }else{
+        archiveLookupContextEl.textContent = '';
+        archiveLookupContextEl.classList.add('d-none');
+      }
+    }
+    renderArchiveLookupList();
+    archiveLookupModal?.show();
+    return true;
   };
 
   const fetchPatientsIndex = async ({ force = false } = {})=>{
@@ -61959,28 +62267,40 @@ function mxResetLogoPreview(){
 
   const renderResults = (list)=>{
     if(!Array.isArray(list) || !list.length){
+      renderedPatients = [];
+      archiveLookupEntries = [];
+      archiveLookupSelectedId = '';
+      if(archiveLookupListEl) archiveLookupListEl.innerHTML = '';
+      if(archiveLookupModal){
+        try{ archiveLookupModal.hide(); }catch(_){}
+      }
       clearResults();
       showMsg('Sin resultados', 'info');
       return;
     }
+    renderedPatients = list.slice();
     hideMsg();
     tbodyEl.innerHTML = list.map((item)=>{
       const pid = String(item.patient_id || '').trim();
-      const name = String(item.nombre_completo || item.display_name || pid || 'Paciente').trim();
+      const name = resolvePatientDisplayName(item);
       const curp = String(item.curp || '').trim();
       return `
         <tr>
-          <td>${name.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>
-          <td>${(curp || '-').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>
+          <td>${escapeHtml(name)}</td>
+          <td>${escapeHtml(curp || '-')}</td>
           <td class="text-end">
-            <button type="button" class="btn btn-outline-primary btn-sm" data-pid="${pid.replace(/"/g,'&quot;')}" data-pname="${name.replace(/"/g,'&quot;')}">Abrir expediente</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" data-pid="${escapeAttr(pid)}" data-pname="${escapeAttr(name)}">Abrir expediente</button>
           </td>
         </tr>
       `;
     }).join('');
   };
 
-  const doSearch = async ()=>{
+  const doSearch = async ({ trigger = 'button' } = {})=>{
+    if(trigger !== 'input' && debounceTimer){
+      window.clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
     const q = String(qEl.value || '').trim();
     const filterVal = String(filterEl.value || '').trim();
 
@@ -61994,11 +62314,23 @@ function mxResetLogoPreview(){
     searchBtn.disabled = true;
     searchBtn.textContent = 'Buscando…';
     try{
-      const list = await fetchPatientsIndex();
       // TODO: aplicar `filterVal` cuando el índice exponga señales (recent/inactive) de forma consistente.
       void filterVal;
-      const filtered = list.filter((patient)=> matchesPatient(patient, qn));
-      renderResults(filtered);
+      const matches = await fetchPatientsSearchResults(q, qn);
+      renderResults(matches);
+      if(matches.length){
+        const explicitOpen = trigger === 'button' || trigger === 'enter';
+        if(explicitOpen){
+          const opened = openArchiveLookupModal(matches, { query: q });
+          if(!opened){
+            showMsg(`Coincidencias encontradas: ${matches.length}. Selecciona un paciente de la tabla.`, 'success');
+          }else{
+            showMsg(`Coincidencias encontradas: ${matches.length}.`, 'success');
+          }
+        }else{
+          showMsg(`Coincidencias encontradas: ${matches.length}. Presiona Enter o Buscar para seleccionar.`, 'info');
+        }
+      }
     }catch(err){
       clearResults();
       showMsg(String(err?.message || 'Error de red al buscar pacientes.'), 'danger');
@@ -62093,21 +62425,58 @@ function mxResetLogoPreview(){
     }
   };
 
+  const openArchivePatientRecord = async (entry = {}, { openOrigin = 'search_general' } = {})=>{
+    const pid = String(entry.patient_id || '').trim();
+    const pname = resolvePatientDisplayName(entry);
+    if(!pid) return false;
+    if(typeof window.mxmedRememberPatientLabel === 'function'){
+      window.mxmedRememberPatientLabel(pid, pname);
+    }
+    let changed = true;
+    if(typeof window.setActivePatientId === 'function'){
+      changed = await window.setActivePatientId(pid, { emitEvent:true, source:'search_open', suppressEncounterAutoContext:true });
+    }else if(typeof window.mxmedSetActivePatientId === 'function'){
+      changed = await window.mxmedSetActivePatientId(pid, { emitEvent:true, source:'search_open', suppressEncounterAutoContext:true });
+    }
+    if(changed === false){
+      return false;
+    }
+    if(archiveLookupModal){
+      try{ archiveLookupModal.hide(); }catch(_){}
+    }
+    if(typeof jumpTo === 'function'){
+      jumpTo('p-expediente');
+      window.requestAnimationFrame(()=>{
+        const expPane = document.getElementById('p-expediente');
+        if(!expPane || expPane.classList.contains('d-none')) return;
+        window.__mxmedHeaderSyncOrigin = 'search_open_post_jump';
+        window.dispatchEvent(new Event('patient:selected'));
+      });
+    }else if(typeof showPanel === 'function'){
+      showPanel('p-expediente');
+    }
+    const safeOrigin = String(openOrigin || 'search_general').trim().toLowerCase();
+    if(safeOrigin === 'clinical_explicit'){
+      ensureActiveEncounter(pid).catch(()=> null);
+    }
+    return true;
+  };
+
   const scheduleSearch = ()=>{
     if(debounceTimer){
       window.clearTimeout(debounceTimer);
     }
-    debounceTimer = window.setTimeout(doSearch, 300);
+    debounceTimer = window.setTimeout(()=>{ doSearch({ trigger: 'input' }); }, 300);
   };
 
   qEl.addEventListener('input', scheduleSearch);
   qEl.addEventListener('keydown', (ev)=>{
     if(ev.key === 'Enter'){
       ev.preventDefault();
-      doSearch();
+      doSearch({ trigger: 'enter' });
     }
   });
-  searchBtn.addEventListener('click', doSearch);
+  searchBtn.addEventListener('click', ()=>{ doSearch({ trigger: 'button' }); });
   newBtn?.addEventListener('click', (ev)=>{
     ev.preventDefault();
     if(typeof window.mxmedHasUnsavedNewPatientDraft === 'function'){
@@ -62142,30 +62511,12 @@ function mxResetLogoPreview(){
     const pid = String(btn.getAttribute('data-pid') || '').trim();
     const pname = String(btn.getAttribute('data-pname') || '').trim();
     if(!pid) return;
-    if(typeof window.mxmedRememberPatientLabel === 'function'){
-      window.mxmedRememberPatientLabel(pid, pname);
-    }
-    let changed = true;
-    if(typeof window.setActivePatientId === 'function'){
-      changed = await window.setActivePatientId(pid, { emitEvent:true, source:'search_open', suppressEncounterAutoContext:true });
-    }else if(typeof window.mxmedSetActivePatientId === 'function'){
-      changed = await window.mxmedSetActivePatientId(pid, { emitEvent:true, source:'search_open', suppressEncounterAutoContext:true });
-    }
-    if(changed === false){
-      return;
-    }
-    if(typeof jumpTo === 'function'){
-      jumpTo('p-expediente');
-      window.requestAnimationFrame(()=>{
-        const expPane = document.getElementById('p-expediente');
-        if(!expPane || expPane.classList.contains('d-none')) return;
-        window.__mxmedHeaderSyncOrigin = 'search_open_post_jump';
-        window.dispatchEvent(new Event('patient:selected'));
-      });
-    }
     const openOrigin = String(btn.getAttribute('data-open-origin') || 'search_general').trim().toLowerCase();
-    if(openOrigin === 'clinical_explicit'){
-      ensureActiveEncounter(pid).catch(()=> null);
-    }
+    const entry = renderedPatients.find((item)=> String(item.patient_id || '').trim() === pid) || {
+      patient_id: pid,
+      nombre_completo: pname,
+      display_name: pname
+    };
+    openArchivePatientRecord(entry, { openOrigin }).catch(()=> null);
   });
 })();
