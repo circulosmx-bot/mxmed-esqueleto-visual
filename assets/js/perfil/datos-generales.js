@@ -1097,18 +1097,6 @@
         });
       }
 
-      if(yearSelect && !yearSelect.__mxmedBirthYearAnchorApplied){
-        yearSelect.__mxmedBirthYearAnchorApplied = true;
-        const placeholder = Array.from(yearSelect.options || []).find((option)=> option.value === '') || null;
-        const anchor = Array.from(yearSelect.options || []).find((option)=> option.value === '2000') || null;
-        if(anchor){
-          if(placeholder){
-            placeholder.after(anchor);
-          }else{
-            yearSelect.prepend(anchor);
-          }
-        }
-      }
     };
 
     setupBirthdateKeyboardAssist();
