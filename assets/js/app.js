@@ -38657,29 +38657,40 @@ console.info('app.js loaded :: 20251123a');
     return window.mxmedStore.patientIdentityDrafts;
   };
   const patientIdentityHydrationCache = new Map();
-  const splitDisplayNameToIdentity = (displayName)=>{
-    const parts = String(displayName || '').trim().split(/\s+/).filter(Boolean);
-    if(!parts.length){
-      return { nombre:'', apellido_paterno:'', apellido_materno:'' };
-    }
-    if(parts.length === 1){
-      return { nombre:parts[0], apellido_paterno:'', apellido_materno:'' };
-    }
-    if(parts.length === 2){
-      return { nombre:parts[0], apellido_paterno:parts[1], apellido_materno:'' };
-    }
-    return {
-      nombre: parts[0],
-      apellido_paterno: parts[1],
-      apellido_materno: parts.slice(2).join(' ')
-    };
-  };
   const parseBirthdateToDraftParts = (birthdate)=>{
     const raw = String(birthdate || '').trim();
     if(!raw) return { dia:'', mes:'', anio:'' };
     const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if(!m) return { dia:'', mes:'', anio:'' };
     return { anio:m[1], mes:m[2], dia:m[3] };
+  };
+  const normalizePatientSexForDraft = (value)=>{
+    const raw = String(value || '').trim();
+    const upper = raw.toUpperCase();
+    if(['M', 'MASCULINO', 'HOMBRE', 'MALE'].includes(upper)) return 'M';
+    if(['F', 'FEMENINO', 'MUJER', 'FEMALE'].includes(upper)) return 'F';
+    if(['O', 'OTRO', 'OTRA', 'NO ESPECIFICADO', 'NO ESPECIFICADA', 'OTHER'].includes(upper)) return 'O';
+    return '';
+  };
+  const buildIdentityDraftFromPatientDetail = (patient)=>{
+    if(!patient || typeof patient !== 'object') return null;
+    const profile = (patient.profile && typeof patient.profile === 'object') ? patient.profile : null;
+    const displayName = String(patient.display_name || patient.nombre_completo || '').replace(/\s+/g, ' ').trim();
+    const hasProfileIdentity = !!profile && [
+      profile.first_name,
+      profile.paternal_last_name,
+      profile.maternal_last_name
+    ].some((value)=> String(value || '').trim() !== '');
+    const birth = parseBirthdateToDraftParts(patient.birthdate);
+    return {
+      nombre: hasProfileIdentity ? String(profile.first_name || '').trim() : displayName,
+      apellido_paterno: hasProfileIdentity ? String(profile.paternal_last_name || '').trim() : '',
+      apellido_materno: hasProfileIdentity ? String(profile.maternal_last_name || '').trim() : '',
+      sexo: normalizePatientSexForDraft(patient.sex || patient.gender || ''),
+      dia: birth.dia || '',
+      mes: birth.mes || '',
+      anio: birth.anio || ''
+    };
   };
   const fetchPatientIdentityProfile = async (patientId)=>{
     const pid = String(patientId || '').trim();
@@ -38707,21 +38718,11 @@ console.info('app.js loaded :: 20251123a');
     if(drafts[pid] && typeof drafts[pid] === 'object'){
       return true;
     }
-    const profile = await fetchPatientIdentityProfile(pid);
-    if(!profile) return false;
-    const displayName = String(profile.display_name || profile.nombre_completo || '').trim();
-    const names = splitDisplayNameToIdentity(displayName);
-    const birth = parseBirthdateToDraftParts(profile.birthdate);
-    const sexo = String(profile.sex || '').trim().toUpperCase();
-    const draft = {
-      nombre: names.nombre || '',
-      apellido_paterno: names.apellido_paterno || '',
-      apellido_materno: names.apellido_materno || '',
-      sexo: ['F','M','O'].includes(sexo) ? sexo : '',
-      dia: birth.dia || '',
-      mes: birth.mes || '',
-      anio: birth.anio || ''
-    };
+    const patient = await fetchPatientIdentityProfile(pid);
+    if(!patient) return false;
+    const displayName = String(patient.display_name || patient.nombre_completo || '').trim();
+    const draft = buildIdentityDraftFromPatientDetail(patient);
+    if(!draft) return false;
     const hasData = Object.values(draft).some((v)=> String(v || '').trim() !== '');
     if(!hasData) return false;
     drafts[pid] = draft;
@@ -38729,6 +38730,24 @@ console.info('app.js loaded :: 20251123a');
       try{ rememberPatientLabel(pid, displayName); }catch(_){}
     }
     return true;
+  };
+  const hydrateDatosGeneralesFromPatientDetail = async (patientId)=>{
+    const pid = String(patientId || '').trim();
+    if(!pid || typeof window.mxmedHydratePatientDetailIntoDatosGenerales !== 'function') return false;
+    const patient = await fetchPatientIdentityProfile(pid).catch(()=> null);
+    if(!patient) return false;
+    const active = String(
+      pane?.dataset?.patientId
+      || pane?.getAttribute?.('data-patient-id')
+      || window.mxmedActivePatientId
+      || ''
+    ).trim();
+    if(active && active !== pid) return false;
+    try{
+      return window.mxmedHydratePatientDetailIntoDatosGenerales(patient) === true;
+    }catch(_){
+      return false;
+    }
   };
   const openAdjuntarDocumentoFromActividad = ()=>{
     const mounted = actividadClinicaAdjuntoPortal?.mount?.() === true;
@@ -51822,6 +51841,7 @@ console.info('app.js loaded :: 20251123a');
             appliedFromDraft = applyExpedienteIdentityDraft(next);
           }
         }
+        await hydrateDatosGeneralesFromPatientDetail(next).catch(()=> false);
         applyMotivoDraftForPatient(next);
         const prefillEncounterContext = { encounter_key: '' };
         maybeApplyContextualMotivoPrefill(next, prefillEncounterContext).catch(()=> null);
@@ -51840,6 +51860,7 @@ console.info('app.js loaded :: 20251123a');
       }else{
         setSearchOpenSuppression(false);
       }
+      await hydrateDatosGeneralesFromPatientDetail(next).catch(()=> false);
       applyPatientGate();
       return true;
     }
@@ -51905,6 +51926,7 @@ console.info('app.js loaded :: 20251123a');
     if(typeof window.mxmedSetCurrentPatientContext === 'function'){
       window.mxmedSetCurrentPatientContext(next, { sync:true });
     }
+    await hydrateDatosGeneralesFromPatientDetail(next).catch(()=> false);
     if(shouldSuppressAutoEncounterContext){
       setSearchOpenSuppression(true);
       console.info('[mxmed-search-open] suppress auto encounter context', { patient_id: next });

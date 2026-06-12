@@ -371,17 +371,44 @@
     };
 
     const cleanProfileValue = (value)=> String(value || '').replace(/\s+/g, ' ').trim();
+    let lastHydratedProfileSnapshot = '';
+
+    const normalizeProfilePayload = (profile)=>{
+      return {
+        first_name: cleanProfileValue(profile?.first_name || ''),
+        paternal_last_name: cleanProfileValue(profile?.paternal_last_name || ''),
+        maternal_last_name: cleanProfileValue(profile?.maternal_last_name || ''),
+        marital_status: cleanProfileValue(profile?.marital_status || ''),
+        occupation: cleanProfileValue(profile?.occupation || '')
+      };
+    };
+
+    const serializeProfileSnapshot = (profile)=> JSON.stringify(normalizeProfilePayload(profile));
 
     const readPatientProfileFromDom = ()=>{
       const fields = getProfileFields();
       if(!fields) return null;
+      const readProfileValue = (field)=>{
+        const value = cleanProfileValue(field?.value || '');
+        if(
+          field?.dataset?.mxmedDisplayNameFallback === '1'
+          && value === cleanProfileValue(field.dataset.mxmedDisplayNameFallbackValue || '')
+        ){
+          return '';
+        }
+        return value;
+      };
       return {
-        first_name: cleanProfileValue(fields.firstName?.value || ''),
+        first_name: readProfileValue(fields.firstName),
         paternal_last_name: cleanProfileValue(fields.paternalLastName?.value || ''),
         maternal_last_name: cleanProfileValue(fields.maternalLastName?.value || ''),
         marital_status: cleanProfileValue(fields.maritalStatus?.value || ''),
         occupation: cleanProfileValue(fields.occupation?.value || '')
       };
+    };
+
+    const rememberProfileSnapshotFromDom = ()=>{
+      lastHydratedProfileSnapshot = serializeProfileSnapshot(readPatientProfileFromDom() || {});
     };
 
     const hasPatientProfileData = (profile)=>{
@@ -398,13 +425,7 @@
     const savePatientProfile = async (patientId, profile, { force = false } = {})=>{
       const pid = String(patientId || '').trim();
       if(!pid) throw new Error('patient_id requerido');
-      const payload = {
-        first_name: cleanProfileValue(profile?.first_name || ''),
-        paternal_last_name: cleanProfileValue(profile?.paternal_last_name || ''),
-        maternal_last_name: cleanProfileValue(profile?.maternal_last_name || ''),
-        marital_status: cleanProfileValue(profile?.marital_status || ''),
-        occupation: cleanProfileValue(profile?.occupation || '')
-      };
+      const payload = normalizeProfilePayload(profile);
       if(!force && !hasPatientProfileData(payload)) return null;
       const response = await fetch(`/api/patients/index.php/patients/${encodeURIComponent(pid)}/profile`, {
         method: 'POST',
@@ -435,36 +456,199 @@
       }
     };
 
+    const clearDisplayNameFallback = (field)=>{
+      if(!field?.dataset) return;
+      delete field.dataset.mxmedDisplayNameFallback;
+      delete field.dataset.mxmedDisplayNameFallbackValue;
+    };
+
+    const markDisplayNameFallback = (field, displayName)=>{
+      if(!field?.dataset) return;
+      const value = cleanProfileValue(displayName || '');
+      if(!value){
+        clearDisplayNameFallback(field);
+        return;
+      }
+      field.dataset.mxmedDisplayNameFallback = '1';
+      field.dataset.mxmedDisplayNameFallbackValue = value;
+    };
+
+    const hasProfileIdentityData = (profile)=>{
+      if(!profile || typeof profile !== 'object') return false;
+      return [
+        profile.first_name,
+        profile.paternal_last_name,
+        profile.maternal_last_name
+      ].some((value)=> String(value || '').trim() !== '');
+    };
+
+    const parsePatientBirthdate = (birthdate)=>{
+      const raw = String(birthdate || '').trim();
+      const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if(!match) return { year:'', month:'', day:'' };
+      return { year: match[1], month: match[2], day: match[3] };
+    };
+
+    const normalizePatientSexValue = (value)=>{
+      const upper = String(value || '').trim().toUpperCase();
+      if(['M', 'MASCULINO', 'HOMBRE', 'MALE'].includes(upper)) return 'M';
+      if(['F', 'FEMENINO', 'MUJER', 'FEMALE'].includes(upper)) return 'F';
+      if(['O', 'OTRO', 'OTRA', 'NO ESPECIFICADO', 'NO ESPECIFICADA', 'OTHER'].includes(upper)) return 'O';
+      return '';
+    };
+
+    const setPrimaryFieldValue = (field, value, { dispatchEvents = true } = {})=>{
+      if(!field) return;
+      const next = String(value || '');
+      if(field.value === next) return;
+      field.value = next;
+      if(dispatchEvents){
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        field.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    };
+
+    const setPatientGenderValue = (sex)=>{
+      const normalized = normalizePatientSexValue(sex);
+      const genderInputs = Array.from(expedienteRoot?.querySelectorAll('input[name="pac-genero"]') || []);
+      let changed = false;
+      let selected = null;
+      genderInputs.forEach((input)=>{
+        const shouldCheck = !!normalized && input.value === normalized;
+        if(input.checked !== shouldCheck){
+          input.checked = shouldCheck;
+          changed = true;
+        }
+        if(shouldCheck) selected = input;
+      });
+      if(changed && selected){
+        selected.dispatchEvent(new Event('change', { bubbles: true }));
+      }else if(changed){
+        const previouslyChecked = genderInputs.find((input)=> input.checked);
+        if(previouslyChecked){
+          previouslyChecked.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+    };
+
+    const getContactFields = ()=>{
+      if(!expedienteRoot) return null;
+      return {
+        mobilePhone: expedienteRoot.querySelector('[data-pac-phone="mobile"]'),
+        homePhone: expedienteRoot.querySelector('[data-pac-phone="home"]'),
+        contactPhone: expedienteRoot.querySelector('[data-pac-phone="contact"]'),
+        primaryEmail: expedienteRoot.querySelector('[data-pac-email="primary"]'),
+        alternateEmail: expedienteRoot.querySelector('[data-pac-email="alternate"]')
+      };
+    };
+
+    const readRawContactValue = (contact)=>{
+      if(!contact || typeof contact !== 'object') return '';
+      return cleanProfileValue(contact.value || contact.phone || contact.email || contact.contact_value || '');
+    };
+
+    const hydratePatientContactsIntoDom = (contacts)=>{
+      const fields = getContactFields();
+      if(!fields) return false;
+      [fields.mobilePhone, fields.homePhone, fields.contactPhone, fields.primaryEmail, fields.alternateEmail].forEach((field)=>{
+        setPrimaryFieldValue(field, '', { dispatchEvents: false });
+      });
+      const list = Array.isArray(contacts) ? contacts : [];
+      const phoneContacts = list.filter((contact)=> String(contact?.type || '').trim() === 'phone');
+      const emailContacts = list.filter((contact)=> String(contact?.type || '').trim() === 'email');
+      const primaryPhone = phoneContacts.find((contact)=> contact?.is_primary === true) || phoneContacts[0] || null;
+      const secondaryPhone = phoneContacts.find((contact)=> contact !== primaryPhone) || null;
+      const primaryEmail = emailContacts.find((contact)=> contact?.is_primary === true) || emailContacts[0] || null;
+      const alternateEmail = emailContacts.find((contact)=> contact !== primaryEmail) || null;
+      const primaryPhoneValue = readRawContactValue(primaryPhone);
+      const secondaryPhoneValue = readRawContactValue(secondaryPhone);
+      const primaryEmailValue = readRawContactValue(primaryEmail);
+      const alternateEmailValue = readRawContactValue(alternateEmail);
+      if(primaryPhoneValue) setPrimaryFieldValue(fields.mobilePhone, primaryPhoneValue, { dispatchEvents: false });
+      if(secondaryPhoneValue) setPrimaryFieldValue(fields.homePhone, secondaryPhoneValue, { dispatchEvents: false });
+      if(primaryEmailValue) setPrimaryFieldValue(fields.primaryEmail, primaryEmailValue, { dispatchEvents: false });
+      if(alternateEmailValue) setPrimaryFieldValue(fields.alternateEmail, alternateEmailValue, { dispatchEvents: false });
+      return true;
+    };
+
+    const hydratePatientIdentityAndProfileIntoDom = (patient)=>{
+      const fields = getProfileFields();
+      if(!fields || !patient || typeof patient !== 'object') return false;
+      const profile = (patient.profile && typeof patient.profile === 'object') ? patient.profile : null;
+      const displayName = cleanProfileValue(patient.display_name || patient.nombre_completo || '');
+      const useProfileIdentity = hasProfileIdentityData(profile);
+      const firstName = useProfileIdentity ? cleanProfileValue(profile.first_name || '') : displayName;
+      const paternalLastName = useProfileIdentity ? cleanProfileValue(profile.paternal_last_name || '') : '';
+      const maternalLastName = useProfileIdentity ? cleanProfileValue(profile.maternal_last_name || '') : '';
+      setProfileFieldValue(fields.firstName, firstName, { dispatchEvents: true });
+      if(useProfileIdentity){
+        clearDisplayNameFallback(fields.firstName);
+      }else{
+        markDisplayNameFallback(fields.firstName, displayName);
+      }
+      setProfileFieldValue(fields.paternalLastName, paternalLastName, { dispatchEvents: true });
+      setProfileFieldValue(fields.maternalLastName, maternalLastName, { dispatchEvents: true });
+      setProfileFieldValue(fields.maritalStatus, profile?.marital_status || '', { dispatchEvents: false });
+      setProfileFieldValue(fields.occupation, profile?.occupation || '', { dispatchEvents: false });
+
+      const birth = parsePatientBirthdate(patient.birthdate);
+      setPrimaryFieldValue(expedienteRoot.querySelector('[data-dg-dia]'), birth.day, { dispatchEvents: true });
+      setPrimaryFieldValue(expedienteRoot.querySelector('[data-dg-mes]'), birth.month, { dispatchEvents: true });
+      setPrimaryFieldValue(expedienteRoot.querySelector('[data-dg-anio]'), birth.year, { dispatchEvents: true });
+      setPatientGenderValue(patient.sex || patient.gender || '');
+      hydratePatientContactsIntoDom(patient.contacts || []);
+      rememberProfileSnapshotFromDom();
+      return true;
+    };
+
+    const hydratePatientDetailIntoDatosGenerales = (patient)=>{
+      if(!patient || typeof patient !== 'object') return false;
+      const hydratedProfile = hydratePatientIdentityAndProfileIntoDom(patient);
+      const addresses = Array.isArray(patient.addresses) ? patient.addresses : [];
+      const primaryAddress = addresses.find((entry)=> entry?.is_primary === true) || addresses[0] || null;
+      const hydratedAddress = primaryAddress
+        ? hydratePatientAddressIntoDom(primaryAddress)
+        : (clearPatientAddressFields(), false);
+      return hydratedProfile || hydratedAddress;
+    };
+
     const hydratePatientProfileIntoDom = (profile)=>{
       const fields = getProfileFields();
       if(!fields) return false;
       const data = (profile && typeof profile === 'object') ? profile : {};
+      clearDisplayNameFallback(fields.firstName);
       setProfileFieldValue(fields.firstName, data.first_name || '', { dispatchEvents: false });
       setProfileFieldValue(fields.paternalLastName, data.paternal_last_name || '', { dispatchEvents: false });
       setProfileFieldValue(fields.maternalLastName, data.maternal_last_name || '', { dispatchEvents: false });
       setProfileFieldValue(fields.maritalStatus, data.marital_status || '', { dispatchEvents: false });
       setProfileFieldValue(fields.occupation, data.occupation || '', { dispatchEvents: false });
+      rememberProfileSnapshotFromDom();
       return true;
     };
 
     const clearPatientProfileFields = ()=> hydratePatientProfileIntoDom(null);
 
-    const fetchAndHydratePatientProfile = async (patientId, shouldApply = ()=> true)=>{
+    const fetchPatientDetails = async (patientId)=>{
       const pid = String(patientId || '').trim();
-      if(!pid) return false;
+      if(!pid) return null;
       const response = await fetch(`/api/patients/index.php/patients/${encodeURIComponent(pid)}`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin'
       });
       const json = await response.json().catch(()=> null);
-      const profile = json?.data?.profile || null;
+      if(!response.ok || json?.ok !== true || !json?.data || typeof json.data !== 'object') return null;
+      return json.data;
+    };
+
+    const fetchAndHydratePatientProfile = async (patientId, shouldApply = ()=> true)=>{
+      const patient = await fetchPatientDetails(patientId);
       if(shouldApply() !== true) return false;
-      if(!profile){
+      if(!patient){
         clearPatientProfileFields();
         return false;
       }
-      return hydratePatientProfileIntoDom(profile);
+      return hydratePatientIdentityAndProfileIntoDom(patient);
     };
 
     const getAddressFields = ()=>{
@@ -484,6 +668,7 @@
 
     const cleanAddressValue = (value)=> String(value || '').replace(/\s+/g, ' ').trim();
     const cleanAddressCp = (value)=> String(value || '').replace(/\D+/g, '').slice(0, 5);
+    let lastHydratedAddressSnapshot = '';
 
     const readPatientAddressFromDom = ()=>{
       const fields = getAddressFields();
@@ -501,6 +686,28 @@
         floor: cleanAddressValue(fields.floor?.value || ''),
         catalog_cp_colonia_id: null
       };
+    };
+
+    const normalizeAddressPayload = (address)=>{
+      return {
+        country: cleanAddressValue(address?.country || 'MX').toUpperCase() || 'MX',
+        postal_code: cleanAddressCp(address?.postal_code || ''),
+        colony: cleanAddressValue(address?.colony || ''),
+        state: cleanAddressValue(address?.state || ''),
+        municipality: cleanAddressValue(address?.municipality || ''),
+        locality: cleanAddressValue(address?.locality || ''),
+        street: cleanAddressValue(address?.street || ''),
+        exterior_number: cleanAddressValue(address?.exterior_number || ''),
+        interior_number: cleanAddressValue(address?.interior_number || ''),
+        floor: cleanAddressValue(address?.floor || ''),
+        catalog_cp_colonia_id: address?.catalog_cp_colonia_id == null ? null : address.catalog_cp_colonia_id
+      };
+    };
+
+    const serializeAddressSnapshot = (address)=> JSON.stringify(normalizeAddressPayload(address || {}));
+
+    const rememberAddressSnapshotFromDom = ()=>{
+      lastHydratedAddressSnapshot = serializeAddressSnapshot(readPatientAddressFromDom() || {});
     };
 
     const hasPatientAddressData = (address)=>{
@@ -597,6 +804,7 @@
       setAddressFieldValue(fields.exteriorNumber, address.exterior_number || '');
       setAddressFieldValue(fields.interiorNumber, address.interior_number || '');
       setAddressFieldValue(fields.floor, address.floor || '');
+      rememberAddressSnapshotFromDom();
       return true;
     };
 
@@ -618,6 +826,7 @@
         fields.colony.setAttribute('disabled', 'disabled');
         dispatchAddressChange(fields.colony, 'change');
       }
+      rememberAddressSnapshotFromDom();
     };
 
     const fetchAndHydratePatientAddress = async (patientId, shouldApply = ()=> true)=>{
@@ -647,6 +856,7 @@
     window.mxmedHasPatientProfileData = hasPatientProfileData;
     window.mxmedSavePatientProfile = savePatientProfile;
     window.mxmedHydratePatientProfileIntoDom = hydratePatientProfileIntoDom;
+    window.mxmedHydratePatientDetailIntoDatosGenerales = hydratePatientDetailIntoDatosGenerales;
 
     const isInNewEntryMode = ()=>{
       if(!expedienteRoot) return false;
@@ -762,9 +972,21 @@
         return Promise.resolve(null);
       }
       const shouldSaveAddress = hasPatientAddressData(address);
+      const profileChanged = serializeProfileSnapshot(profile || {}) !== lastHydratedProfileSnapshot;
+      const addressChanged = shouldSaveAddress && serializeAddressSnapshot(address || {}) !== lastHydratedAddressSnapshot;
+      if(!profileChanged && !addressChanged){
+        setSaveFeedback('No hay cambios por guardar.', 'muted');
+        return Promise.resolve({ profileSaved: null, addressSaved: null });
+      }
       if(savePatientBtn) savePatientBtn.disabled = true;
       setSaveFeedback('Guardando datos generales...', 'muted');
-      const profileSavePromise = savePatientProfile(patientId, profile, { force: true })
+      const slowSaveFeedbackTimer = window.setTimeout(()=>{
+        if(savePatientBtn?.disabled){
+          setSaveFeedback('Guardando cambios; el servidor sigue procesando la solicitud...', 'muted');
+        }
+      }, 8000);
+      const profileSavePromise = profileChanged
+        ? savePatientProfile(patientId, profile, { force: true })
         .then((savedProfile)=>{
           if(savedProfile) hydratePatientProfileIntoDom(savedProfile);
           return true;
@@ -775,8 +997,9 @@
             message: String(err?.message || '').trim()
           });
           return false;
-        });
-      const addressSavePromise = shouldSaveAddress
+        })
+        : Promise.resolve(null);
+      const addressSavePromise = addressChanged
         ? savePatientPrimaryAddress(patientId, address)
             .then((savedAddress)=>{
               if(savedAddress) hydratePatientAddressIntoDom(savedAddress);
@@ -800,8 +1023,10 @@
             setSaveFeedback('Perfil guardado, pero no se pudo guardar el domicilio.', 'error');
           }else if(addressSaved === true){
             setSaveFeedback('Perfil y domicilio guardados correctamente.', 'success');
-          }else{
+          }else if(profileSaved === true){
             setSaveFeedback('Perfil guardado correctamente.', 'success');
+          }else{
+            setSaveFeedback('Cambios guardados correctamente.', 'success');
           }
           return { profileSaved, addressSaved };
         })
@@ -814,6 +1039,7 @@
           return null;
         })
         .finally(()=>{
+          window.clearTimeout(slowSaveFeedbackTimer);
           if(savePatientBtn) savePatientBtn.disabled = false;
         });
     };
@@ -1202,12 +1428,14 @@
       ctrl.addEventListener('change', ()=>{ explicitSaveCompleted = false; syncNewPatientDirtyState(); });
     });
     let profileHydrationToken = 0;
-    const hydrateProfileForCurrentActivePatient = ()=>{
+    let profileHydrationTimer = 0;
+    const hydrateProfileForCurrentActivePatientNow = ()=>{
       if(isInNewEntryMode()) return;
       const patientId = getActivePatientId();
       const token = ++profileHydrationToken;
       if(!patientId){
         clearPatientProfileFields();
+        hydratePatientContactsIntoDom([]);
         return;
       }
       fetchAndHydratePatientProfile(patientId, ()=>{
@@ -1218,8 +1446,13 @@
         .then(()=> null)
         .catch(()=> null);
     };
+    const hydrateProfileForCurrentActivePatient = ()=>{
+      window.clearTimeout(profileHydrationTimer);
+      profileHydrationTimer = window.setTimeout(hydrateProfileForCurrentActivePatientNow, 80);
+    };
     let addressHydrationToken = 0;
-    const hydrateAddressForCurrentActivePatient = ()=>{
+    let addressHydrationTimer = 0;
+    const hydrateAddressForCurrentActivePatientNow = ()=>{
       if(isInNewEntryMode()) return;
       const patientId = getActivePatientId();
       const token = ++addressHydrationToken;
@@ -1235,6 +1468,10 @@
         .then(()=> null)
         .catch(()=> null);
     };
+    const hydrateAddressForCurrentActivePatient = ()=>{
+      window.clearTimeout(addressHydrationTimer);
+      addressHydrationTimer = window.setTimeout(hydrateAddressForCurrentActivePatientNow, 80);
+    };
     ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach((eventName)=>{
       window.addEventListener(eventName, ()=>{
         hydrateProfileForCurrentActivePatient();
@@ -1245,6 +1482,7 @@
       clearNewPatientDirtyState();
       clearPatientProfileFields();
       clearPatientAddressFields();
+      hydratePatientContactsIntoDom([]);
     });
     window.setTimeout(syncNewPatientDirtyState, 0);
   }
