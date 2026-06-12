@@ -1097,6 +1097,69 @@
         });
       }
 
+      if(yearSelect && !yearSelect.__mxmedBirthYearNativeAnchorBound){
+        yearSelect.__mxmedBirthYearNativeAnchorBound = true;
+        const yearAnchorValue = '2000';
+        let yearAnchorRestoreTimer = null;
+        const hasYearAnchor = ()=>{
+          return Array.from(yearSelect.options || []).some((option)=> option.value === yearAnchorValue);
+        };
+        const restoreTemporaryYearAnchor = ()=>{
+          if(yearSelect.dataset.mxmedTemporaryYearAnchor !== '1') return;
+          if(yearSelect.value === yearAnchorValue){
+            yearSelect.value = '';
+          }
+          delete yearSelect.dataset.mxmedTemporaryYearAnchor;
+        };
+        const clearYearAnchorRestoreTimer = ()=>{
+          if(yearAnchorRestoreTimer){
+            window.clearTimeout(yearAnchorRestoreTimer);
+            yearAnchorRestoreTimer = null;
+          }
+        };
+        const primeYearAnchorForNativeOpen = ()=>{
+          if(yearSelect.value !== '' || !hasYearAnchor()) return;
+          clearYearAnchorRestoreTimer();
+          yearSelect.dataset.mxmedTemporaryYearAnchor = '1';
+          yearSelect.value = yearAnchorValue;
+          yearAnchorRestoreTimer = window.setTimeout(()=>{
+            yearAnchorRestoreTimer = null;
+            restoreTemporaryYearAnchor();
+          }, 0);
+        };
+        const cancelTemporaryYearAnchor = ()=>{
+          clearYearAnchorRestoreTimer();
+          delete yearSelect.dataset.mxmedTemporaryYearAnchor;
+        };
+        const shouldPrimeYearAnchorForKey = (key)=>{
+          return key === 'Enter'
+            || key === ' '
+            || key === 'ArrowDown'
+            || key === 'ArrowUp'
+            || key === 'PageDown'
+            || key === 'PageUp';
+        };
+        yearSelect.addEventListener('pointerdown', (event)=>{
+          if(event.defaultPrevented || (typeof event.button === 'number' && event.button !== 0)) return;
+          primeYearAnchorForNativeOpen();
+        }, true);
+        yearSelect.addEventListener('mousedown', (event)=>{
+          if(event.defaultPrevented || (typeof event.button === 'number' && event.button !== 0)) return;
+          primeYearAnchorForNativeOpen();
+        }, true);
+        yearSelect.addEventListener('keydown', (event)=>{
+          if(event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+          if(!shouldPrimeYearAnchorForKey(event.key || '')) return;
+          primeYearAnchorForNativeOpen();
+        }, true);
+        yearSelect.addEventListener('input', cancelTemporaryYearAnchor);
+        yearSelect.addEventListener('change', cancelTemporaryYearAnchor);
+        yearSelect.addEventListener('blur', ()=>{
+          clearYearAnchorRestoreTimer();
+          restoreTemporaryYearAnchor();
+        });
+      }
+
     };
 
     setupBirthdateKeyboardAssist();
