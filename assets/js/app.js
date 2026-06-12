@@ -38683,7 +38683,7 @@ console.info('app.js loaded :: 20251123a');
     ].some((value)=> String(value || '').trim() !== '');
     const birth = parseBirthdateToDraftParts(patient.birthdate);
     return {
-      nombre: hasProfileIdentity ? String(profile.first_name || '').trim() : displayName,
+      nombre: hasProfileIdentity ? String(profile.first_name || '').trim() : '',
       apellido_paterno: hasProfileIdentity ? String(profile.paternal_last_name || '').trim() : '',
       apellido_materno: hasProfileIdentity ? String(profile.maternal_last_name || '').trim() : '',
       sexo: normalizePatientSexForDraft(patient.sex || patient.gender || ''),
@@ -52617,9 +52617,16 @@ console.info('app.js loaded :: 20251123a');
     const nombre = pane.querySelector('[data-pac-nombre]')?.value?.trim() || '';
     const apPat = pane.querySelector('[data-pac-apellido-paterno]')?.value?.trim() || '';
     const apMat = pane.querySelector('[data-pac-apellido-materno]')?.value?.trim() || '';
+    const structuredFullName = [nombre, apPat, apMat].filter(Boolean).join(' ').trim();
+    const cachedPatientLabel = patientId
+      ? String(ensurePatientLabelCache()[patientId] || '').replace(/\s+/g, ' ').trim()
+      : '';
+    const activePatientName = structuredFullName
+      || (!isGenericChipLabel(cachedPatientLabel, patientId) ? cachedPatientLabel : '')
+      || 'Paciente';
     const fullName = isNewDraftMode
       ? (headerState.payload?.patient_name || 'Paciente')
-      : ([nombre, apPat, apMat].filter(Boolean).join(' ').trim() || 'Paciente');
+      : activePatientName;
     const ageText = pane.querySelector('[data-dg-edad]')?.textContent?.trim() || '--';
     const sexoVal = firstNonEmpty(
       pane.querySelector('input[name="pac-genero"]:checked')?.value || '',

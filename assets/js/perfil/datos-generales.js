@@ -575,17 +575,12 @@
       const fields = getProfileFields();
       if(!fields || !patient || typeof patient !== 'object') return false;
       const profile = (patient.profile && typeof patient.profile === 'object') ? patient.profile : null;
-      const displayName = cleanProfileValue(patient.display_name || patient.nombre_completo || '');
       const useProfileIdentity = hasProfileIdentityData(profile);
-      const firstName = useProfileIdentity ? cleanProfileValue(profile.first_name || '') : displayName;
+      const firstName = useProfileIdentity ? cleanProfileValue(profile.first_name || '') : '';
       const paternalLastName = useProfileIdentity ? cleanProfileValue(profile.paternal_last_name || '') : '';
       const maternalLastName = useProfileIdentity ? cleanProfileValue(profile.maternal_last_name || '') : '';
       setProfileFieldValue(fields.firstName, firstName, { dispatchEvents: true });
-      if(useProfileIdentity){
-        clearDisplayNameFallback(fields.firstName);
-      }else{
-        markDisplayNameFallback(fields.firstName, displayName);
-      }
+      clearDisplayNameFallback(fields.firstName);
       setProfileFieldValue(fields.paternalLastName, paternalLastName, { dispatchEvents: true });
       setProfileFieldValue(fields.maternalLastName, maternalLastName, { dispatchEvents: true });
       setProfileFieldValue(fields.maritalStatus, profile?.marital_status || '', { dispatchEvents: false });
