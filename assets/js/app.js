@@ -61876,6 +61876,7 @@ function mxResetLogoPreview(){
   let renderedPatients = [];
   let archiveLookupModalEl = null;
   let archiveLookupModal = null;
+  let archiveLookupNoticeEl = null;
   let archiveLookupListEl = null;
   let archiveLookupContextEl = null;
   let archiveLookupEntries = [];
@@ -62152,6 +62153,9 @@ function mxResetLogoPreview(){
     if(archiveLookupModalEl){
       archiveLookupModalEl.classList.toggle('is-confirm-mode', !!archiveLookupSelectedId);
     }
+    if(archiveLookupNoticeEl){
+      archiveLookupNoticeEl.classList.toggle('is-confirm-mode', !!archiveLookupSelectedId);
+    }
     renderArchiveLookupList();
   };
 
@@ -62168,23 +62172,26 @@ function mxResetLogoPreview(){
       archiveLookupModalEl.setAttribute('aria-hidden', 'true');
       archiveLookupModalEl.innerHTML = `
         <div class="modal-dialog modal-dialog-centered modal-lg">
-          <div class="modal-content mx-ag-shared-phone-modal">
-            <div class="modal-header border-0 pb-0">
-              <div>
+          <div class="modal-content">
+            <div class="modal-header mx-ag-shared-phone-header">
+              <div class="mx-ag-shared-phone-header-copy">
                 <div class="mx-ag-shared-phone-header-title mx-ag-patient-lookup-header-title">Pacientes encontrados</div>
                 <div class="mx-ag-shared-phone-header-subtitle">Selecciona el expediente que deseas abrir.</div>
                 <div id="mm_pac_archive_lookup_context" class="mx-ag-patient-lookup-context d-none"></div>
               </div>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+              <button type="button" class="btn-close mx-ag-shared-phone-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <div class="modal-body pt-3">
-              <div id="mm_pac_archive_lookup_list" class="mx-ag-shared-phone-list"></div>
+            <div class="modal-body">
+              <div id="mm_pac_archive_lookup_notice" class="mx-ag-shared-phone-notice" role="status" aria-live="polite">
+                <div id="mm_pac_archive_lookup_list" class="mx-ag-shared-phone-list"></div>
+              </div>
             </div>
           </div>
         </div>
       `;
       document.body.appendChild(archiveLookupModalEl);
     }
+    archiveLookupNoticeEl = archiveLookupModalEl.querySelector('#mm_pac_archive_lookup_notice');
     archiveLookupListEl = archiveLookupModalEl.querySelector('#mm_pac_archive_lookup_list');
     archiveLookupContextEl = archiveLookupModalEl.querySelector('#mm_pac_archive_lookup_context');
     archiveLookupListEl?.addEventListener('click', (event)=>{

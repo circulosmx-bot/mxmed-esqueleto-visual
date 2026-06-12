@@ -11744,24 +11744,24 @@ body{margin:0;background:var(--mm-fondo-base);}
   filter: blur(.35px) saturate(.9);
   transition: opacity .2s ease, filter .2s ease;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .modal-dialog{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .modal-dialog{
   max-width: 900px;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .modal-content{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .modal-content{
   border: 1px solid #d8e8f0;
   border-radius: 18px;
   background: linear-gradient(180deg, #f6fcff 0%, #ffffff 78%);
   box-shadow: 0 26px 54px rgba(10, 65, 92, .26);
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-header{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-header{
   padding: 1.05rem 1.15rem .88rem;
   border-bottom: 1px solid #d1e4ed;
   align-items: flex-start;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-header-copy{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-header-copy{
   min-width: 0;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-header-title{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-header-title{
   margin: 0;
   margin-top: .38rem;
   font-size: clamp(1.25rem, 1.12rem + .46vw, 1.66rem);
@@ -11769,7 +11769,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   line-height: 1.16;
   color: #153f59;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-number{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-number{
   margin-top: .06rem;
   font-size: clamp(2.15rem, 4.7vw, 3.05rem);
   line-height: 1;
@@ -11777,30 +11777,30 @@ body{margin:0;background:var(--mm-fondo-base);}
   font-weight: 800;
   color: #0f5f8e;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-header-subtitle{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-header-subtitle{
   margin-top: .46rem;
   font-size: 1.03rem;
   color: #3f6175;
   line-height: 1.34;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .modal-body{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .modal-body{
   padding: .8rem 1.15rem 1.05rem;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-notice{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-notice{
   margin-top: .05rem;
   border: 1px solid #d8e8f0;
   background: #f9fdff;
   border-radius: 14px;
   padding: .76rem .8rem .82rem;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-title{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-title{
   font-size: .98rem;
   font-weight: 700;
   color: #204e69;
   text-transform: uppercase;
   letter-spacing: .015em;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-list{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-list{
   margin-top: .68rem;
   display: grid;
   gap: .78rem;
@@ -11808,26 +11808,26 @@ body{margin:0;background:var(--mm-fondo-base);}
   overflow-y: auto;
   padding-right: .12rem;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-entry{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-entry{
   border: 1px solid #d4e4ed;
   border-radius: 16px;
   background: #fff;
   overflow: hidden;
   transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-entry:hover{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-entry:hover{
   border-color: #b7d9e6;
   box-shadow: 0 8px 18px rgba(11, 80, 112, .09);
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-entry:focus-within{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-entry:focus-within{
   border-color: #8fcadd;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-entry.is-selected{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-entry.is-selected{
   border-color: #42a0c3;
   box-shadow: 0 14px 28px rgba(15, 95, 142, .19);
   transform: translateY(-2px);
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-item{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-item{
   display: grid;
   grid-template-columns: 70px minmax(0, 1fr) 20px;
   align-items: center;
@@ -11843,15 +11843,15 @@ body{margin:0;background:var(--mm-fondo-base);}
   padding: 1rem .95rem;
   cursor: pointer;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-entry:hover .mx-ag-shared-phone-item{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-entry:hover .mx-ag-shared-phone-item{
   background: #f8fcff;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-item:focus{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-item:focus{
   outline: 2px solid rgba(31, 155, 196, .35);
   outline-offset: -2px;
   border-radius: 13px;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-avatar{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-avatar{
   width: 70px;
   height: 70px;
   border-radius: 50%;
@@ -11860,37 +11860,37 @@ body{margin:0;background:var(--mm-fondo-base);}
   background: #e8f6f9;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .9);
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-avatar img{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-avatar img{
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-item-body{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-item-body{
   min-width: 0;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-item-name{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-item-name{
   display: block;
   font-size: 1.14rem;
   font-weight: 750;
   color: #113a54;
   line-height: 1.18;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-item-meta{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-item-meta{
   display: block;
   margin-top: .25rem;
   font-size: .94rem;
   color: #4f6a7c;
   line-height: 1.27;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-item-phone{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-item-phone{
   display: block;
   margin-top: .32rem;
   font-size: .9rem;
   font-weight: 650;
   color: #2d5c77;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-item-chevron{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-item-chevron{
   color: #187ea0;
   font-size: 1.25rem;
   display: inline-flex;
@@ -11901,7 +11901,7 @@ body{margin:0;background:var(--mm-fondo-base);}
   border-radius: 999px;
   background: #e8f5fb;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-item-tag{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-item-tag{
   display: inline-flex;
   margin-top: .26rem;
   padding: .11rem .42rem;
@@ -11911,82 +11911,82 @@ body{margin:0;background:var(--mm-fondo-base);}
   background: #fff3cd;
   color: #8b6b00;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-inline-confirm{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-inline-confirm{
   border-top: 1px solid #d6e8f1;
   padding: .78rem .95rem .92rem;
   background: #fbfeff;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-inline-question{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-inline-question{
   font-size: 1rem;
   color: #2e5a74;
   margin-bottom: .62rem;
   font-weight: 600;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-inline-actions{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-inline-actions{
   display: flex;
   flex-wrap: wrap;
   gap: .46rem;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-inline-actions .btn{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-inline-actions .btn{
   min-width: 104px;
   font-weight: 700;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-continue-wrap{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-continue-wrap{
   margin-top: .78rem;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-continue-wrap .btn{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-continue-wrap .btn{
   min-height: 48px;
   font-size: 1.02rem;
   font-weight: 700;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal).is-confirm-mode .mx-ag-shared-phone-header-title,
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal).is-confirm-mode .mx-ag-shared-phone-header-subtitle,
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-notice.is-confirm-mode .mx-ag-shared-phone-title,
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-notice.is-confirm-mode .mx-ag-shared-phone-continue-wrap{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal).is-confirm-mode .mx-ag-shared-phone-header-title,
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal).is-confirm-mode .mx-ag-shared-phone-header-subtitle,
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-notice.is-confirm-mode .mx-ag-shared-phone-title,
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-notice.is-confirm-mode .mx-ag-shared-phone-continue-wrap{
   display: none !important;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-patient-lookup-context{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-patient-lookup-context{
   margin-top: .34rem;
   font-size: .85rem;
   font-weight: 600;
   color: #3f6780;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-patient-lookup-phone{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-patient-lookup-phone{
   display: inline-block;
   margin-top: .2rem;
   font-size: .89rem;
   color: #355f78;
   font-weight: 600;
 }
-:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-notice.is-confirm-mode{
+:is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-notice.is-confirm-mode{
   padding-top: .82rem;
 }
 @media (max-width: 767.98px){
-  :is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .modal-dialog{
+  :is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .modal-dialog{
     max-width: 96vw;
     margin: .75rem auto;
   }
-  :is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-header-title{
+  :is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-header-title{
     font-size: 1.08rem;
   }
-  :is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-header-subtitle{
+  :is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-header-subtitle{
     font-size: .92rem;
   }
-  :is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-item{
+  :is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-item{
     grid-template-columns: 58px minmax(0, 1fr) 18px;
     padding: .75rem .72rem;
   }
-  :is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-avatar{
+  :is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-avatar{
     width: 58px;
     height: 58px;
   }
-  :is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-item-name{
+  :is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-item-name{
     font-size: 1rem;
   }
-  :is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-item-meta{
+  :is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-item-meta{
     font-size: .89rem;
   }
-  :is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal) .mx-ag-shared-phone-item-phone{
+  :is(#ag_patient_shared_phone_modal,#ag_patient_lookup_modal,#mm_pac_archive_lookup_modal) .mx-ag-shared-phone-item-phone{
     font-size: .84rem;
   }
 }
