@@ -5,12 +5,14 @@ require_once __DIR__ . '/../_lib/db.php';
 require_once __DIR__ . '/../../modules/agenda/helpers/db_helpers.php';
 require_once __DIR__ . '/../../modules/patients/controllers/GetPatientController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/GetDoctorPatientsController.php';
+require_once __DIR__ . '/../../modules/patients/controllers/SearchDoctorPatientsController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/CreatePatientController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/UpsertPatientAddressController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/UpsertPatientProfileController.php';
 
 use Patients\Controllers\GetPatientController;
 use Patients\Controllers\GetDoctorPatientsController;
+use Patients\Controllers\SearchDoctorPatientsController;
 use Patients\Controllers\CreatePatientController;
 use Patients\Controllers\UpsertPatientAddressController;
 use Patients\Controllers\UpsertPatientProfileController;
@@ -68,6 +70,10 @@ if ($method === 'GET') {
     if (count($segments) === 2 && $segments[0] === 'patients') {
         $controller = new GetPatientController();
         $response = $controller->handle($segments[1]);
+    } elseif (count($segments) === 4 && $segments[0] === 'doctors' && $segments[2] === 'patients' && $segments[3] === 'search') {
+        $controller = new SearchDoctorPatientsController();
+        $query = $_GET ?? [];
+        $response = $controller->handle($segments[1], $query);
     } elseif (count($segments) === 3 && $segments[0] === 'doctors' && $segments[2] === 'patients') {
         $controller = new GetDoctorPatientsController();
         $query = $_GET ?? [];
