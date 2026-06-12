@@ -36742,6 +36742,21 @@ console.info('app.js loaded :: 20251123a');
         clinicalCompletionTargetPresets.documentos,
         clinicalCompletionTargetPresets.recetas
       ]
+    },
+    'exploracion-fisica': {
+      panelTarget: clinicalTabTargets.exploracion,
+      title: 'Exploración física guardada correctamente',
+      description: 'La exploración quedó guardada como borrador editable. Selecciona el siguiente paso para continuar la atención médica.',
+      heading: '¿Qué deseas hacer ahora?',
+      note: 'Puedes completar esta información en el orden que mejor se ajuste a tu consulta.',
+      targets: [
+        clinicalCompletionTargetPresets.historial,
+        { ...clinicalCompletionTargetPresets.estudios, recommended: true, badge: 'Recomendado después de exploración física' },
+        clinicalCompletionTargetPresets.tratamiento,
+        clinicalCompletionTargetPresets.manejo,
+        clinicalCompletionTargetPresets.documentos,
+        clinicalCompletionTargetPresets.recetas
+      ]
     }
   };
   const appendCompletionText = (parent, tag, text, className = '')=>{
@@ -61698,6 +61713,14 @@ function mxResetLogoPreview(){
       }
       setPhysicalExamFeedback('Exploración física guardada correctamente.', 'success');
       lastHydratedPhysicalExamPatientId = patientId;
+      if(typeof window.mxmedShowClinicalCompletionHub === 'function'){
+        window.mxmedShowClinicalCompletionHub({
+          source: 'exploracion-fisica',
+          patientId,
+          event: 'physical_exam_save'
+        });
+        setPhysicalExamFeedback('', 'muted');
+      }
       return data?.data?.record || null;
     }catch(error){
       const message = clean(error?.message) || 'No se pudo guardar la exploración física.';

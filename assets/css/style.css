@@ -4569,8 +4569,12 @@ body{margin:0;background:var(--mm-fondo-base);}
 #p-expediente[data-exp-completion-hub="historia-clinica"] #t-historia [data-hc-history-form]{
   display:none !important;
 }
+#p-expediente[data-exp-completion-hub="exploracion-fisica"] #t-exploracion > .exp-physical-app{
+  display:none !important;
+}
 #p-expediente[data-exp-completion-hub="datos-generales"] #t-datos > .mx-clinical-completion-hub[data-exp-completion-hub-panel-source="datos-generales"],
-#p-expediente[data-exp-completion-hub="historia-clinica"] #t-historia > .mx-clinical-completion-hub[data-exp-completion-hub-panel-source="historia-clinica"]{
+#p-expediente[data-exp-completion-hub="historia-clinica"] #t-historia > .mx-clinical-completion-hub[data-exp-completion-hub-panel-source="historia-clinica"],
+#p-expediente[data-exp-completion-hub="exploracion-fisica"] #t-exploracion > .mx-clinical-completion-hub[data-exp-completion-hub-panel-source="exploracion-fisica"]{
   grid-column:1 / -1;
   width:100%;
   display:flex;
