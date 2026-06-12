@@ -7510,7 +7510,12 @@ console.info('app.js loaded :: 20251123a');
         display_name: sanitizeText(item.nombre_completo || item.display_name || item.name || ''),
         curp: sanitizeText(item.curp || ''),
         birthdate: toDateOnlyYmd(item.birthdate || item.fecha_nacimiento || item.dob || ''),
+        sex: sanitizeText(item.sex || item.sexo || item.gender || ''),
+        gender: sanitizeText(item.gender || item.sex || item.sexo || ''),
+        age: Number.isFinite(Number(item.age)) ? Number(item.age) : null,
+        profile: (item.profile && typeof item.profile === 'object') ? item.profile : null,
         contacts: Array.isArray(item.contacts) ? item.contacts : [],
+        match: (item.match && typeof item.match === 'object') ? item.match : null,
         phone_candidates: resolvePatientPhoneCandidatesFromRaw(item)
       }))
       .filter((item)=> item.patient_id);
@@ -7543,6 +7548,30 @@ console.info('app.js loaded :: 20251123a');
         patientIndexPromise = null;
       });
     return patientIndexPromise;
+  };
+  const fetchPatientSearchMatches = async (searchState = null, { signal } = {})=>{
+    const state = (searchState && typeof searchState === 'object')
+      ? searchState
+      : resolvePatientSearchState(String(searchState || ''));
+    if(!state.tokens.length) return [];
+    try{
+      const json = await AgendaApiClient.searchPatients({
+        query: state.raw,
+        limit: 12,
+        signal
+      });
+      if(!json || json.ok !== true){
+        throw new Error(sanitizeText(json?.message || json?.error || 'No se pudo buscar pacientes.'));
+      }
+      return normalizePatientsIndexPayload(json).slice(0, 12);
+    }catch(err){
+      const list = await fetchPatientIndex({ signal });
+      const fallbackMatches = resolvePatientSearchMatches(list, state).slice(0, 12);
+      if(fallbackMatches.length){
+        return fallbackMatches;
+      }
+      throw err;
+    }
   };
   const fetchPatientDetailById = async (patientId = '', { signal } = {})=>{
     const safePatientId = sanitizeText(patientId || '');
@@ -15204,6 +15233,24 @@ console.info('app.js loaded :: 20251123a');
       });
       return resp.json().catch(()=> null);
     },
+    async searchPatients({ query = '', limit = 12, signal } = {}){
+      const doctorId = (typeof window.resolveDoctorId === 'function')
+        ? window.resolveDoctorId()
+        : '';
+      if(!doctorId){
+        throw new Error('No se pudo identificar al médico para buscar pacientes.');
+      }
+      const url = new URL(`/api/patients/index.php/doctors/${encodeURIComponent(doctorId)}/patients/search`, window.location.origin);
+      url.searchParams.set('q', String(query || '').trim());
+      url.searchParams.set('limit', String(limit || 12));
+      const resp = await fetch(url.toString(), {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        signal
+      });
+      return resp.json().catch(()=> null);
+    },
     async getPatientById(patientId, { signal } = {}){
       const safePatientId = encodeURIComponent(String(patientId || '').trim());
       const resp = await fetch(`/api/patients/index.php/patients/${safePatientId}`, {
@@ -17238,7 +17285,7 @@ console.info('app.js loaded :: 20251123a');
       phoneDigits,
       isPhoneOnly,
       hasTwoTextTokens: textTokens.length >= 2,
-      isFullPhoneQuery: isPhoneOnly && phoneDigits.length === 10
+      isFullPhoneQuery: isPhoneOnly && phoneDigits.length >= 10
     };
   };
   const tokenizeSearchText = (value = '')=>{
@@ -17273,8 +17320,9 @@ console.info('app.js loaded :: 20251123a');
     const phoneCandidates = resolvePatientPhoneCandidatesFromEntry(entry);
     return tokens.every((token)=>{
       if(/^\d+$/.test(token)){
-        if(token.length !== 10) return false;
-        return phoneCandidates.some((candidate)=> matchesFullPhoneAgainstCandidate(token, candidate));
+        if(token.length < 10) return false;
+        const tokenLast10 = token.slice(-10);
+        return phoneCandidates.some((candidate)=> matchesFullPhoneAgainstCandidate(tokenLast10, candidate));
       }
       const safeToken = sanitizeText(token).replace(/[^a-z0-9]/g, '').trim();
       if(!safeToken) return false;
@@ -17288,10 +17336,11 @@ console.info('app.js loaded :: 20251123a');
     const safeEntries = Array.isArray(entries) ? entries : [];
     if(!state.tokens.length) return [];
     if(state.isPhoneOnly){
-      if(state.phoneDigits.length !== 10) return [];
+      if(state.phoneDigits.length < 10) return [];
+      const phoneLast10 = state.phoneDigits.slice(-10);
       return safeEntries.filter((entry)=>{
         const phoneCandidates = resolvePatientPhoneCandidatesFromEntry(entry);
-        return phoneCandidates.some((candidate)=> matchesFullPhoneAgainstCandidate(state.phoneDigits, candidate));
+        return phoneCandidates.some((candidate)=> matchesFullPhoneAgainstCandidate(phoneLast10, candidate));
       });
     }
     return safeEntries.filter((entry)=> matchesPatientSearch(entry, state));
@@ -17312,10 +17361,10 @@ console.info('app.js loaded :: 20251123a');
       clearPatientSearchResults();
       return;
     }
-    if(searchState.isPhoneOnly && searchState.phoneDigits.length !== 10){
+    if(searchState.isPhoneOnly && searchState.phoneDigits.length < 4){
       clearPatientSearchResults();
       if(trigger === 'button' || trigger === 'enter'){
-        setPatientSearchMsg('Para buscar por teléfono, ingresa exactamente 10 dígitos.');
+        setPatientSearchMsg('Para buscar por teléfono, ingresa al menos 4 dígitos.');
       }
       return;
     }
@@ -17324,8 +17373,7 @@ console.info('app.js loaded :: 20251123a');
       els.patientSearchBtn.textContent = 'Filtrando…';
     }
     try{
-      const list = await fetchPatientIndex();
-      const matches = resolvePatientSearchMatches(list, searchState).slice(0, 12);
+      const matches = await fetchPatientSearchMatches(searchState);
       renderPatientSearchResults(matches);
       const autoOpen = trigger === 'input'
         && matches.length === 1
