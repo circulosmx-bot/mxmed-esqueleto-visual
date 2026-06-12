@@ -61843,6 +61843,7 @@ function mxResetLogoPreview(){
   const newBtn = document.getElementById('mm-pac-archivo-new');
   const msgEl = document.getElementById('mm-pac-archivo-msg');
   const tbodyEl = document.getElementById('mm-pac-archivo-tbody');
+  const inlineResultsWrapEl = document.getElementById('mm-pac-archivo-table')?.closest('.table-responsive') || null;
   if(!qEl || !filterEl || !searchBtn || !msgEl || !tbodyEl) return;
 
   function resolveDoctorId(){
@@ -61897,8 +61898,15 @@ function mxResetLogoPreview(){
     msgEl.textContent = text;
   };
 
+  const setInlineResultsVisible = (visible)=>{
+    if(inlineResultsWrapEl){
+      inlineResultsWrapEl.classList.toggle('d-none', visible !== true);
+    }
+  };
+
   const clearResults = ()=>{
     tbodyEl.innerHTML = '';
+    setInlineResultsVisible(false);
   };
 
   const escapeHtml = (value = '')=> String(value ?? '')
@@ -62287,6 +62295,7 @@ function mxResetLogoPreview(){
     }
     renderedPatients = list.slice();
     hideMsg();
+    setInlineResultsVisible(true);
     tbodyEl.innerHTML = list.map((item)=>{
       const pid = String(item.patient_id || '').trim();
       const name = resolvePatientDisplayName(item);
@@ -62324,19 +62333,23 @@ function mxResetLogoPreview(){
       // TODO: aplicar `filterVal` cuando el índice exponga señales (recent/inactive) de forma consistente.
       void filterVal;
       const matches = await fetchPatientsSearchResults(q, qn);
-      renderResults(matches);
+      renderedPatients = matches.slice();
+      clearResults();
       if(matches.length){
         const explicitOpen = trigger === 'button' || trigger === 'enter';
         if(explicitOpen){
           const opened = openArchiveLookupModal(matches, { query: q });
           if(!opened){
+            renderResults(matches);
             showMsg(`Coincidencias encontradas: ${matches.length}. Selecciona un paciente de la tabla.`, 'success');
           }else{
-            showMsg(`Coincidencias encontradas: ${matches.length}.`, 'success');
+            showMsg(`Coincidencias encontradas: ${matches.length}. Selecciona un paciente en la ventana.`, 'success');
           }
         }else{
           showMsg(`Coincidencias encontradas: ${matches.length}. Presiona Enter o Buscar para seleccionar.`, 'info');
         }
+      }else{
+        renderResults([]);
       }
     }catch(err){
       clearResults();
