@@ -61370,6 +61370,8 @@ function mxResetLogoPreview(){
 
   const clean = (value)=> String(value || '').replace(/\s+/g, ' ').trim();
   const invalidPatientIds = new Set(['', '-', 'anon', 'anonymous', 'null', 'undefined']);
+  let lastHydratedPhysicalExamPatientId = '';
+  let physicalExamHydrationToken = 0;
 
   const setPhysicalExamFeedback = (message = '', type = 'muted')=>{
     if(!feedback) return;
@@ -61484,6 +61486,190 @@ function mxResetLogoPreview(){
     };
   };
 
+  const setControlValue = (field, value)=>{
+    if(!field) return;
+    if('value' in field){
+      field.value = String(value ?? '');
+    }else{
+      field.textContent = String(value ?? '');
+    }
+    field.dispatchEvent(new Event('input', { bubbles:true }));
+    field.dispatchEvent(new Event('change', { bubbles:true }));
+  };
+
+  const setPhysicalExamVital = (name, value)=>{
+    setControlValue(examPane.querySelector(`[data-ef-vital="${name}"]`), value);
+  };
+
+  const setPhysicalExamAnthro = (name, value)=>{
+    setControlValue(examPane.querySelector(`[data-ef-anthro="${name}"]`), value);
+  };
+
+  const setPhysicalExamBmiState = (value)=>{
+    const field = examPane.querySelector('[data-ef-anthro="bmi_state"]');
+    if(!field) return;
+    const label = clean(value) || 'Sin datos';
+    field.textContent = label;
+    let cls = 'exp-bmi-pill--neutral';
+    const lower = label.toLowerCase();
+    if(lower.includes('bajo')){
+      cls = 'exp-bmi-pill--underweight';
+    }else if(lower.includes('normal')){
+      cls = 'exp-bmi-pill--normal';
+    }else if(lower.includes('sobrepeso')){
+      cls = 'exp-bmi-pill--overweight';
+    }else if(lower.includes('obesidad')){
+      cls = 'exp-bmi-pill--obese';
+    }
+    field.className = `exp-bmi-pill ${cls}`;
+    field.dispatchEvent(new Event('input', { bubbles:true }));
+    field.dispatchEvent(new Event('change', { bubbles:true }));
+  };
+
+  const setPhysicalExamField = (name, value)=>{
+    setControlValue(examPane.querySelector(`[data-ef-field="${name}"]`), value);
+  };
+
+  const setPhysicalExamRadio = (systemKey, status)=>{
+    const normalizedStatus = clean(status) || 'normal';
+    const radios = Array.from(examPane.querySelectorAll(`[data-ef-system-status="${systemKey}"]`));
+    let matched = false;
+    radios.forEach((radio)=>{
+      const shouldCheck = clean(radio.value) === normalizedStatus;
+      matched = matched || shouldCheck;
+      if(radio.checked !== shouldCheck){
+        radio.checked = shouldCheck;
+        radio.dispatchEvent(new Event('change', { bubbles:true }));
+      }
+    });
+    if(!matched){
+      const normal = radios.find((radio)=> clean(radio.value) === 'normal');
+      if(normal && !normal.checked){
+        normal.checked = true;
+        normal.dispatchEvent(new Event('change', { bubbles:true }));
+      }
+    }
+  };
+
+  const resetPhysicalExamSummaryState = ()=>{
+    const resetBtn = examPane.querySelector('#exp_resumen_reset');
+    if(resetBtn && !resetBtn.disabled){
+      resetBtn.dispatchEvent(new MouseEvent('click', { bubbles:true, cancelable:true }));
+    }else{
+      setPhysicalExamField('summary_is_user_edited', '0');
+    }
+  };
+
+  const hydratePhysicalExamVitals = (vitals = {})=>{
+    const bloodPressure = vitals?.blood_pressure && typeof vitals.blood_pressure === 'object'
+      ? vitals.blood_pressure
+      : {};
+    const systolic = clean(bloodPressure.systolic);
+    const diastolic = clean(bloodPressure.diastolic);
+    const display = clean(bloodPressure.display) || (systolic && diastolic ? `${systolic}/${diastolic}` : '');
+
+    setPhysicalExamVital('blood_pressure_systolic', systolic);
+    setPhysicalExamVital('blood_pressure_diastolic', diastolic);
+    setPhysicalExamVital('blood_pressure_display', display);
+    setPhysicalExamVital('heart_rate', vitals?.heart_rate || '');
+    setPhysicalExamVital('respiratory_rate', vitals?.respiratory_rate || '');
+    setPhysicalExamVital('temperature', vitals?.temperature || '');
+    setPhysicalExamVital('oxygen_saturation', vitals?.oxygen_saturation || '');
+    setPhysicalExamVital('pain', vitals?.pain || '');
+  };
+
+  const hydratePhysicalExamAnthropometrics = (anthropometrics = {})=>{
+    setPhysicalExamAnthro('weight', anthropometrics?.weight || '');
+    setPhysicalExamAnthro('height', anthropometrics?.height || '');
+    setPhysicalExamAnthro('waist', anthropometrics?.waist || '');
+    if(clean(anthropometrics?.bmi)){
+      setPhysicalExamAnthro('bmi', anthropometrics.bmi);
+    }
+    if(clean(anthropometrics?.bmi_state)){
+      setPhysicalExamBmiState(anthropometrics.bmi_state);
+    }
+  };
+
+  const hydratePhysicalExamSystems = (systems = {})=>{
+    const values = systems && typeof systems === 'object' && !Array.isArray(systems) ? systems : {};
+    examPane.querySelectorAll('[data-ef-system]').forEach((systemEl)=>{
+      const key = clean(systemEl.getAttribute('data-ef-system'));
+      if(!key) return;
+      const item = values[key] && typeof values[key] === 'object' ? values[key] : {};
+      setPhysicalExamRadio(key, item.status || 'normal');
+      const notes = systemEl.querySelector(`[data-ef-system-notes="${key}"]`);
+      setControlValue(notes, item.notes || '');
+    });
+  };
+
+  const hydratePhysicalExamFindings = (findings = {})=>{
+    const data = findings && typeof findings === 'object' && !Array.isArray(findings) ? findings : {};
+    setPhysicalExamField('relevant_findings', data.relevant_findings || '');
+    if(data.summary_is_user_edited){
+      setPhysicalExamField('summary_edited', data.summary_edited || '');
+      setPhysicalExamField('summary_is_user_edited', '1');
+    }else{
+      resetPhysicalExamSummaryState();
+      setPhysicalExamField('summary_is_user_edited', '0');
+    }
+  };
+
+  const hydratePhysicalExamPayload = (payload = {})=>{
+    const data = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+    hydratePhysicalExamVitals(data.vitals || {});
+    hydratePhysicalExamAnthropometrics(data.anthropometrics || {});
+    hydratePhysicalExamSystems(data.systems || {});
+    hydratePhysicalExamFindings(data.findings || {});
+  };
+
+  const clearPhysicalExamForm = ()=>{
+    hydratePhysicalExamPayload({});
+    setPhysicalExamFeedback('', 'muted');
+  };
+
+  const fetchPhysicalExam = async (patientId)=>{
+    const response = await fetch(`/api/clinical/index.php/patients/${encodeURIComponent(patientId)}/physical-exam`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+    const data = await response.json().catch(()=> null);
+    if(!response.ok || !data || data.ok !== true){
+      throw new Error(clean(data?.message || data?.error?.message || 'No se pudo cargar la exploración física.'));
+    }
+    return data?.data?.record || null;
+  };
+
+  const hydratePhysicalExamForActivePatient = async (force = false)=>{
+    const patientId = getActivePhysicalExamPatientId();
+    if(!patientId){
+      lastHydratedPhysicalExamPatientId = '';
+      physicalExamHydrationToken += 1;
+      clearPhysicalExamForm();
+      return;
+    }
+    if(!force && patientId === lastHydratedPhysicalExamPatientId){
+      return;
+    }
+    const token = physicalExamHydrationToken + 1;
+    physicalExamHydrationToken = token;
+    try{
+      const record = await fetchPhysicalExam(patientId);
+      if(token !== physicalExamHydrationToken) return;
+      lastHydratedPhysicalExamPatientId = patientId;
+      setPhysicalExamFeedback('', 'muted');
+      if(record?.payload && typeof record.payload === 'object'){
+        hydratePhysicalExamPayload(record.payload);
+      }else{
+        clearPhysicalExamForm();
+      }
+    }catch(error){
+      if(token !== physicalExamHydrationToken) return;
+      lastHydratedPhysicalExamPatientId = patientId;
+      clearPhysicalExamForm();
+      setPhysicalExamFeedback(clean(error?.message) || 'No se pudo cargar la exploración física.', 'danger');
+    }
+  };
+
   const savePhysicalExam = async ()=>{
     const patientId = getActivePhysicalExamPatientId();
     if(!patientId){
@@ -61511,6 +61697,7 @@ function mxResetLogoPreview(){
         throw new Error(message || 'No se pudo guardar la exploración física.');
       }
       setPhysicalExamFeedback('Exploración física guardada correctamente.', 'success');
+      lastHydratedPhysicalExamPatientId = patientId;
       return data?.data?.record || null;
     }catch(error){
       const message = clean(error?.message) || 'No se pudo guardar la exploración física.';
@@ -61526,6 +61713,23 @@ function mxResetLogoPreview(){
     event.preventDefault();
     savePhysicalExam().catch(()=> null);
   });
+
+  const schedulePhysicalExamHydration = (force = false)=>{
+    window.setTimeout(()=>{ hydratePhysicalExamForActivePatient(force).catch(()=> null); }, 0);
+  };
+
+  ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed'].forEach((eventName)=>{
+    window.addEventListener(eventName, ()=>{ schedulePhysicalExamHydration(false); });
+  });
+  window.addEventListener('mxmed:expediente-neutralize', ()=>{
+    lastHydratedPhysicalExamPatientId = '';
+    physicalExamHydrationToken += 1;
+    clearPhysicalExamForm();
+  });
+
+  const patientObserver = new MutationObserver(()=>{ schedulePhysicalExamHydration(false); });
+  patientObserver.observe(pane, { attributes:true, attributeFilter:['data-patient-id', 'data-active-patient-id'] });
+  schedulePhysicalExamHydration(false);
 })();
 
 // ====== Pacientes: buscar en archivo ======
