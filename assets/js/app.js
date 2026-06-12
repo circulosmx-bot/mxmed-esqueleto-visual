@@ -61250,13 +61250,24 @@ function mxResetLogoPreview(){
   const container = document.querySelector('#t-exploracion');
   if(!container) return;
 
+  const emitValueEvents = (target)=>{
+    if(!target) return;
+    target.dispatchEvent(new Event('input', { bubbles:true }));
+    target.dispatchEvent(new Event('change', { bubbles:true }));
+  };
+
+  const setFieldValue = (target, value)=>{
+    if(!target) return;
+    target.value = value ?? '';
+    emitValueEvents(target);
+  };
+
   container.addEventListener('click', (event)=>{
     const preset = event.target.closest('[data-exp-target]');
     if(preset){
       const target = preset.dataset.expTarget ? document.getElementById(preset.dataset.expTarget) : null;
       if(target){
-        target.value = preset.dataset.expValue ?? '';
-        target.dispatchEvent(new Event('input', { bubbles:true }));
+        setFieldValue(target, preset.dataset.expValue);
         target.focus();
       }
       return;
@@ -61269,17 +61280,15 @@ function mxResetLogoPreview(){
       const sysVal = bpPreset.dataset.expBpSys;
       const diaVal = bpPreset.dataset.expBpDia;
       if(sys && sysVal){
-        sys.value = sysVal;
-        sys.dispatchEvent(new Event('input', { bubbles:true }));
+        setFieldValue(sys, sysVal);
       }
       if(dia && diaVal){
-        dia.value = diaVal;
-        dia.dispatchEvent(new Event('input', { bubbles:true }));
+        setFieldValue(dia, diaVal);
       }
       if(display && sysVal && diaVal){
-        display.value = `${sysVal}/${diaVal}`;
+        setFieldValue(display, `${sysVal}/${diaVal}`);
       }
-      sys?.focus();
+      display?.focus();
     }
   });
 
@@ -61295,10 +61304,8 @@ function mxResetLogoPreview(){
     const match = bpDisplay.value.match(/(\d{1,3})\s*\/\s*(\d{1,3})/);
     if(!match) return;
     const [, sysVal, diaVal] = match;
-    bpSys.value = sysVal;
-    bpDia.value = diaVal;
-    bpSys.dispatchEvent(new Event('input', { bubbles:true }));
-    bpDia.dispatchEvent(new Event('input', { bubbles:true }));
+    setFieldValue(bpSys, sysVal);
+    setFieldValue(bpDia, diaVal);
   };
   bpDisplay?.addEventListener('blur', parseBpDisplay);
   bpDisplay?.addEventListener('change', parseBpDisplay);
@@ -61349,6 +61356,176 @@ function mxResetLogoPreview(){
     height.addEventListener('input', calc);
     calc();
   }
+})();
+
+// ====== Exploracion Fisica: guardar snapshot editable ======
+(function(){
+  const pane = document.getElementById('p-expediente');
+  const examPane = document.getElementById('t-exploracion');
+  if(!pane || !examPane) return;
+
+  const saveBtn = examPane.querySelector('[data-ef-save-exam]');
+  const feedback = examPane.querySelector('[data-ef-save-feedback]');
+  if(!saveBtn) return;
+
+  const clean = (value)=> String(value || '').replace(/\s+/g, ' ').trim();
+  const invalidPatientIds = new Set(['', '-', 'anon', 'anonymous', 'null', 'undefined']);
+
+  const setPhysicalExamFeedback = (message = '', type = 'muted')=>{
+    if(!feedback) return;
+    const text = clean(message);
+    feedback.textContent = text;
+    feedback.classList.toggle('d-none', !text);
+    feedback.classList.remove('text-muted', 'text-success', 'text-danger');
+    const cls = type === 'success' ? 'text-success' : (type === 'danger' ? 'text-danger' : 'text-muted');
+    feedback.classList.add(cls);
+  };
+
+  const getActivePhysicalExamPatientId = ()=>{
+    const candidates = [
+      pane.dataset?.activePatientId,
+      pane.getAttribute('data-active-patient-id'),
+      pane.dataset?.patientId,
+      pane.getAttribute('data-patient-id'),
+      typeof window.resolveActivePatientId === 'function' ? window.resolveActivePatientId() : '',
+      window.mxmedStore?.activePatientId,
+      window.mxmedStore?.currentPatientId,
+      window.mxmedActivePatientId,
+      window.__MXMED_ACTIVE_PATIENT_ID
+    ];
+    for(const candidate of candidates){
+      const value = clean(candidate);
+      if(!invalidPatientIds.has(value.toLowerCase()) && value.length >= 6){
+        return value;
+      }
+    }
+    return '';
+  };
+
+  const readControlText = (selector)=>{
+    const el = examPane.querySelector(selector);
+    if(!el) return '';
+    if('value' in el) return String(el.value || '').trim();
+    return clean(el.textContent || '');
+  };
+
+  const parseBloodPressureDisplay = (display)=>{
+    const match = String(display || '').match(/(\d{1,3})\s*\/\s*(\d{1,3})/);
+    if(!match) return { systolic: '', diastolic: '' };
+    return { systolic: match[1], diastolic: match[2] };
+  };
+
+  const readVital = (name)=> readControlText(`[data-ef-vital="${name}"]`);
+  const readAnthro = (name)=> readControlText(`[data-ef-anthro="${name}"]`);
+
+  const readSystems = ()=>{
+    const systems = {};
+    examPane.querySelectorAll('[data-ef-system]').forEach((systemEl)=>{
+      const key = clean(systemEl.getAttribute('data-ef-system'));
+      if(!key) return;
+      const checked = systemEl.querySelector(`[data-ef-system-status="${key}"]:checked`);
+      const notes = systemEl.querySelector(`[data-ef-system-notes="${key}"]`);
+      systems[key] = {
+        status: clean(checked?.value || 'normal') || 'normal',
+        notes: String(notes?.value || '').trim()
+      };
+    });
+    return systems;
+  };
+
+  const readSystemSummaryAuto = ()=>{
+    try{
+      if(typeof window.mxExploracionPorSistemasPayload === 'function'){
+        const payload = window.mxExploracionPorSistemasPayload();
+        return String(payload?.resumen_auto || '').trim();
+      }
+    }catch(_){}
+    return '';
+  };
+
+  const readSummaryEditedFlag = ()=>{
+    const raw = clean(readControlText('[data-ef-field="summary_is_user_edited"]')).toLowerCase();
+    return raw === '1' || raw === 'true' || raw === 'yes';
+  };
+
+  const readPhysicalExamPayload = ()=>{
+    const bpDisplay = readVital('blood_pressure_display');
+    const parsedBp = parseBloodPressureDisplay(bpDisplay);
+    const systolic = readVital('blood_pressure_systolic') || parsedBp.systolic;
+    const diastolic = readVital('blood_pressure_diastolic') || parsedBp.diastolic;
+
+    return {
+      vitals: {
+        blood_pressure: {
+          systolic,
+          diastolic,
+          display: bpDisplay
+        },
+        heart_rate: readVital('heart_rate'),
+        respiratory_rate: readVital('respiratory_rate'),
+        temperature: readVital('temperature'),
+        oxygen_saturation: readVital('oxygen_saturation'),
+        pain: readVital('pain')
+      },
+      anthropometrics: {
+        weight: readAnthro('weight'),
+        height: readAnthro('height'),
+        waist: readAnthro('waist'),
+        bmi: readAnthro('bmi'),
+        bmi_state: readAnthro('bmi_state')
+      },
+      systems: readSystems(),
+      findings: {
+        relevant_findings: readControlText('[data-ef-field="relevant_findings"]'),
+        summary_auto: readSystemSummaryAuto(),
+        summary_edited: readControlText('[data-ef-field="summary_edited"]'),
+        summary_is_user_edited: readSummaryEditedFlag()
+      }
+    };
+  };
+
+  const savePhysicalExam = async ()=>{
+    const patientId = getActivePhysicalExamPatientId();
+    if(!patientId){
+      setPhysicalExamFeedback('Selecciona o registra un paciente antes de guardar.', 'danger');
+      return null;
+    }
+
+    const payload = readPhysicalExamPayload();
+    const previousText = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Guardando...';
+    setPhysicalExamFeedback('Guardando exploración física...', 'muted');
+    try{
+      const response = await fetch(`/api/clinical/index.php/patients/${encodeURIComponent(patientId)}/physical-exam`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'draft',
+          payload
+        })
+      });
+      const data = await response.json().catch(()=> null);
+      if(!response.ok || !data || data.ok !== true){
+        const message = clean(data?.message || data?.error?.message || 'No se pudo guardar la exploración física.');
+        throw new Error(message || 'No se pudo guardar la exploración física.');
+      }
+      setPhysicalExamFeedback('Exploración física guardada correctamente.', 'success');
+      return data?.data?.record || null;
+    }catch(error){
+      const message = clean(error?.message) || 'No se pudo guardar la exploración física.';
+      setPhysicalExamFeedback(message, 'danger');
+      return null;
+    }finally{
+      saveBtn.disabled = false;
+      saveBtn.textContent = previousText || 'Guardar exploración física';
+    }
+  };
+
+  saveBtn.addEventListener('click', (event)=>{
+    event.preventDefault();
+    savePhysicalExam().catch(()=> null);
+  });
 })();
 
 // ====== Pacientes: buscar en archivo ======
