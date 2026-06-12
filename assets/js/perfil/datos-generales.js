@@ -977,8 +977,68 @@
 
     const setupBirthdateKeyboardAssist = ()=>{
       if(!expedienteRoot) return;
+      const daySelect = expedienteRoot.querySelector('[data-dg-dia]');
       const monthSelect = expedienteRoot.querySelector('[data-dg-mes]');
       const yearSelect = expedienteRoot.querySelector('[data-dg-anio]');
+
+      if(daySelect && !daySelect.__mxmedBirthDayNumericBound){
+        daySelect.__mxmedBirthDayNumericBound = true;
+        let dayNumberBuffer = '';
+        let dayNumberTimer = null;
+        const commitDayNumber = (value)=>{
+          const raw = String(value || '').trim();
+          if(!/^\d{1,2}$/.test(raw)) return false;
+          const day = Number(raw);
+          if(!Number.isInteger(day) || day < 1 || day > 31) return false;
+          const next = String(day).padStart(2, '0');
+          if(daySelect.value !== next){
+            daySelect.value = next;
+            daySelect.dispatchEvent(new Event('input', { bubbles: true }));
+            daySelect.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          return true;
+        };
+        const clearDayNumberBuffer = ()=>{
+          dayNumberBuffer = '';
+          if(dayNumberTimer){
+            window.clearTimeout(dayNumberTimer);
+            dayNumberTimer = null;
+          }
+        };
+        const flushDayNumberBuffer = ()=>{
+          if(dayNumberBuffer){
+            commitDayNumber(dayNumberBuffer);
+          }
+          clearDayNumberBuffer();
+        };
+        daySelect.addEventListener('keydown', (event)=>{
+          if(event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+          if(!/^\d$/.test(event.key || '')) return;
+          event.preventDefault();
+          if(dayNumberTimer){
+            window.clearTimeout(dayNumberTimer);
+            dayNumberTimer = null;
+          }
+          dayNumberBuffer = (dayNumberBuffer + event.key).slice(-2);
+          const numeric = Number(dayNumberBuffer);
+          if(dayNumberBuffer.length === 2){
+            if(numeric >= 1 && numeric <= 31){
+              commitDayNumber(dayNumberBuffer);
+              clearDayNumberBuffer();
+              return;
+            }
+            clearDayNumberBuffer();
+            return;
+          }
+          if(/^[4-9]$/.test(event.key)){
+            commitDayNumber(event.key);
+            clearDayNumberBuffer();
+            return;
+          }
+          dayNumberTimer = window.setTimeout(flushDayNumberBuffer, 650);
+        });
+        daySelect.addEventListener('blur', flushDayNumberBuffer);
+      }
 
       if(monthSelect && !monthSelect.__mxmedBirthMonthNumericBound){
         monthSelect.__mxmedBirthMonthNumericBound = true;
