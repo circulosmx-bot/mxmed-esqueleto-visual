@@ -58137,6 +58137,12 @@ function mxResetLogoPreview(){
     if(!doctorId || !safePatientId) return '';
     return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(safePatientId)}/documents`;
   }
+  function buildScopedClinicalDocumentReplaceUrl(docRef){
+    const doctorId = resolveClinicalDocumentsDoctorId();
+    const safeRef = clean(docRef);
+    if(!doctorId || !safeRef) return '';
+    return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/documents/${encodeURIComponent(safeRef)}/replace`;
+  }
   function setOrderFeedback(message, tone = 'muted'){
     if(!orderFeedbackEl) return;
     const text = clean(message);
@@ -59721,7 +59727,11 @@ function mxResetLogoPreview(){
           title_override: title,
           event_datetime: eventDatetime
         };
-        resp = await fetch(`/api/clinical/index.php/documents/${encodeURIComponent(replacementRef)}/replace`, {
+        const replaceUrl = buildScopedClinicalDocumentReplaceUrl(replacementRef);
+        if(!replaceUrl){
+          throw new Error('No se pudo resolver el médico para reemplazar documentos clínicos.');
+        }
+        resp = await fetch(replaceUrl, {
           method: 'POST',
           headers: {
             Accept: 'application/json',
