@@ -61129,6 +61129,9 @@ function mxResetLogoPreview(){
   const categoryInput = studiesPane.querySelector('[data-role="ac-doc-category"]');
   const categoryButtons = Array.from(studiesPane.querySelectorAll('[data-ac-doc-category-btn]'));
   const categoryOtherInput = studiesPane.querySelector('[data-role="ac-doc-category-other-input"]');
+  const diagnosticKindWrap = studiesPane.querySelector('[data-role="ac-doc-diagnostic-kind-wrap"]');
+  const diagnosticKindInput = studiesPane.querySelector('[data-role="ac-doc-diagnostic-kind"]');
+  const diagnosticKindButtons = Array.from(studiesPane.querySelectorAll('[data-ac-doc-diagnostic-kind-btn]'));
   const previewWrap = studiesPane.querySelector('[data-role="ac-doc-preview"]');
   const previewBody = studiesPane.querySelector('[data-role="ac-doc-preview-body"]');
   const wizardRoot = studiesPane.querySelector('[data-role="ac-doc-wizard"]');
@@ -61280,6 +61283,24 @@ function mxResetLogoPreview(){
         try{ categoryOtherInput.focus(); }catch(_){}
       }
     }
+    syncDiagnosticKindVisibility();
+  };
+  const setDiagnosticKind = (kind)=>{
+    const normalized = clean(kind).toLowerCase();
+    const allowed = new Set(['lab', 'imaging', 'other']);
+    const value = allowed.has(normalized) ? normalized : '';
+    if(diagnosticKindInput) diagnosticKindInput.value = value;
+    diagnosticKindButtons.forEach((btn)=>{
+      btn.classList.toggle('is-active', clean(btn.getAttribute('data-ac-doc-diagnostic-kind-btn')).toLowerCase() === value);
+    });
+  };
+  const syncDiagnosticKindVisibility = ()=>{
+    const categorySelection = resolveCategorySelection();
+    const showDiagnosticKind = categorySelection.key === 'estudio_resultado';
+    diagnosticKindWrap?.classList.toggle('d-none', !showDiagnosticKind);
+    if(!showDiagnosticKind){
+      setDiagnosticKind('');
+    }
   };
   const resolveCategorySelection = ()=>{
     const raw = clean(categoryInput?.value || '');
@@ -61292,6 +61313,15 @@ function mxResetLogoPreview(){
     const btn = categoryButtons.find((node)=> clean(node.getAttribute('data-ac-doc-category-btn')).toLowerCase() === key);
     const label = clean(btn?.textContent || key);
     return { key, label };
+  };
+  const resolveDiagnosticKindSelection = ()=>{
+    const key = clean(diagnosticKindInput?.value || '').toLowerCase();
+    const map = {
+      lab: { key: 'lab', label: 'Laboratorio', documentType: 'lab_result' },
+      imaging: { key: 'imaging', label: 'Imagenología', documentType: 'imaging_result' },
+      other: { key: 'other', label: 'Otro diagnóstico', documentType: 'result' }
+    };
+    return map[key] || { key: '', label: '', documentType: '' };
   };
   const clearPreviewObjectUrl = ()=>{
     if(!previewObjectUrl) return;
@@ -61422,6 +61452,15 @@ function mxResetLogoPreview(){
       });
     });
   }
+  if(diagnosticKindButtons.length){
+    diagnosticKindButtons.forEach((btn)=>{
+      btn.addEventListener('click', (event)=>{
+        event.preventDefault();
+        setDiagnosticKind(btn.getAttribute('data-ac-doc-diagnostic-kind-btn'));
+        renderDocumentPreview();
+      });
+    });
+  }
   if(categoryOtherInput){
     categoryOtherInput.addEventListener('input', ()=>{
       if(!categoryInput) return;
@@ -61468,6 +61507,7 @@ function mxResetLogoPreview(){
   if(!clean(categoryInput?.value || '')){
     setDocCategory('estudio_resultado');
   }
+  syncDiagnosticKindVisibility();
   refreshIntentQuestion();
   renderDocumentPreview();
   renderWizard({ focus: false });
@@ -61493,8 +61533,8 @@ function mxResetLogoPreview(){
       setFeedback('Selecciona un archivo (imagen o PDF).', 'error');
       return;
     }
-    const documentType = inferDocumentTypeFromFile(file);
-    if(!documentType){
+    const fileDocumentType = inferDocumentTypeFromFile(file);
+    if(!fileDocumentType){
       setFeedback('Formato no compatible. Usa imagen o PDF.', 'error');
       return;
     }
@@ -61506,6 +61546,18 @@ function mxResetLogoPreview(){
     const mediaTagKey = clean(mediaTagSelect?.value || 'evidencia_clinica');
     const mediaTagLabel = clean(mediaTagSelect?.selectedOptions?.[0]?.textContent || 'Evidencia clínica');
     const categorySelection = resolveCategorySelection();
+    const diagnosticKind = resolveDiagnosticKindSelection();
+    if(categorySelection.key === 'estudio_resultado' && !diagnosticKind.documentType){
+      setFeedback('Selecciona si el resultado corresponde a Laboratorio, Imagenología u Otro diagnóstico.', 'error');
+      if(wizardMode === 'guided'){
+        wizardStep = 3;
+        renderWizard({ focus: true });
+      }
+      return;
+    }
+    const documentType = categorySelection.key === 'estudio_resultado'
+      ? diagnosticKind.documentType
+      : fileDocumentType;
 
     const payload = {
       patient_id: patientId,
@@ -61520,7 +61572,7 @@ function mxResetLogoPreview(){
     if(summary) payload.summary = summary;
     if(eventDatetime) payload.event_datetime = eventDatetime;
     if(encounterKey) payload.encounter_key = encounterKey;
-    if(documentType === 'image'){
+    if(fileDocumentType === 'image'){
       payload.media_tag_key = mediaTagKey || 'evidencia_clinica';
       payload.media_tag_label = mediaTagLabel || 'Evidencia clínica';
       payload.payload.media_tag_key = payload.media_tag_key;
@@ -61531,6 +61583,12 @@ function mxResetLogoPreview(){
     }
     if(categorySelection.label){
       payload.payload.document_category_label = categorySelection.label;
+    }
+    if(categorySelection.key === 'estudio_resultado'){
+      payload.payload.diagnostic_result_kind = diagnosticKind.key;
+      payload.payload.diagnostic_result_label = diagnosticKind.label;
+      payload.payload.original_file_document_type = fileDocumentType;
+      payload.payload.result_origin = 'sin_orden';
     }
 
     const formData = new FormData();
