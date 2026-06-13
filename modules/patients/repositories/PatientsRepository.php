@@ -61,6 +61,76 @@ class PatientsRepository
         return $this->fetchEditableContactsRows($patientId);
     }
 
+    public function upsertPrimaryEditablePhone(string $patientId, string $phone, ?string $preferredContactMethod = 'phone'): array
+    {
+        $this->ensureTables();
+
+        if (!$this->fetchPatient($patientId)) {
+            throw new RuntimeException('patient not found');
+        }
+
+        $now = (new \DateTime('now', new \DateTimeZone('America/Mexico_City')))->format('Y-m-d H:i:s');
+        $existing = $this->fetchPrimaryPhoneContactRow($patientId);
+        $preferred = $this->cleanNullableString($preferredContactMethod) ?? 'phone';
+
+        $this->pdo->beginTransaction();
+        try {
+            if ($existing) {
+                $contactId = (string)$existing['contact_id'];
+                $this->pdo->prepare(
+                    'UPDATE patients_contacts
+                     SET is_primary = 0
+                     WHERE patient_id = :patient_id
+                       AND phone IS NOT NULL
+                       AND phone <> \'\'
+                       AND contact_id <> :contact_id'
+                )->execute([
+                    'patient_id' => $patientId,
+                    'contact_id' => $contactId,
+                ]);
+                $this->pdo->prepare(
+                    'UPDATE patients_contacts
+                     SET phone = :phone,
+                         preferred_contact_method = :preferred_contact_method,
+                         is_primary = 1
+                     WHERE contact_id = :contact_id
+                       AND patient_id = :patient_id'
+                )->execute([
+                    'phone' => $phone,
+                    'preferred_contact_method' => $preferred,
+                    'contact_id' => $contactId,
+                    'patient_id' => $patientId,
+                ]);
+            } else {
+                $this->pdo->prepare(
+                    'UPDATE patients_contacts
+                     SET is_primary = 0
+                     WHERE patient_id = :patient_id
+                       AND phone IS NOT NULL
+                       AND phone <> \'\''
+                )->execute([
+                    'patient_id' => $patientId,
+                ]);
+                $this->pdo->prepare(
+                    'INSERT INTO patients_contacts (contact_id, patient_id, phone, email, preferred_contact_method, is_primary, created_at)
+                     VALUES (:contact_id, :patient_id, :phone, NULL, :preferred_contact_method, 1, :created_at)'
+                )->execute([
+                    'contact_id' => $this->generateId('c_'),
+                    'patient_id' => $patientId,
+                    'phone' => $phone,
+                    'preferred_contact_method' => $preferred,
+                    'created_at' => $now,
+                ]);
+            }
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+
+        return $this->fetchEditableContactsRows($patientId);
+    }
+
     public function findPatientsByDoctorId(string $doctorId, int $limit = 50): array
     {
         $this->ensureTables();
@@ -713,6 +783,23 @@ class PatientsRepository
         $stmt->execute(['patient_id' => $patientId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ? $this->normalizeProfileRow($row) : null;
+    }
+
+    private function fetchPrimaryPhoneContactRow(string $patientId): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT contact_id, patient_id, phone, email, preferred_contact_method, is_primary, created_at
+             FROM patients_contacts
+             WHERE patient_id = :patient_id
+               AND phone IS NOT NULL
+               AND phone <> \'\'
+               AND is_primary = 1
+             ORDER BY created_at ASC, contact_id ASC
+             LIMIT 1'
+        );
+        $stmt->execute(['patient_id' => $patientId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
     }
 
     private function normalizeProfileInput(array $profile, ?array $base = null): array

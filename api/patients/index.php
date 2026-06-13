@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../modules/patients/controllers/GetPatientController
 require_once __DIR__ . '/../../modules/patients/controllers/GetDoctorPatientsController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/SearchDoctorPatientsController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/GetEditablePatientContactsController.php';
+require_once __DIR__ . '/../../modules/patients/controllers/UpsertEditablePatientContactsController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/CreatePatientController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/UpsertPatientAddressController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/UpsertPatientProfileController.php';
@@ -15,6 +16,7 @@ use Patients\Controllers\GetPatientController;
 use Patients\Controllers\GetDoctorPatientsController;
 use Patients\Controllers\SearchDoctorPatientsController;
 use Patients\Controllers\GetEditablePatientContactsController;
+use Patients\Controllers\UpsertEditablePatientContactsController;
 use Patients\Controllers\CreatePatientController;
 use Patients\Controllers\UpsertPatientAddressController;
 use Patients\Controllers\UpsertPatientProfileController;
@@ -115,6 +117,17 @@ if ($method === 'GET') {
         } else {
             $controller = new UpsertPatientProfileController();
             $response = $controller->handle($segments[1], $decoded);
+        }
+    }
+} elseif ($method === 'PUT') {
+    if (count($segments) === 6 && $segments[0] === 'doctors' && $segments[2] === 'patients' && $segments[4] === 'contacts' && $segments[5] === 'editable') {
+        $payloadRaw = file_get_contents('php://input');
+        $decoded = json_decode($payloadRaw, true);
+        if (!is_array($decoded)) {
+            $response = ['ok' => false, 'error' => 'invalid_params', 'message' => 'invalid json', 'data' => null, 'meta' => ['visibility' => ['contacts' => 'editable_private']], 'http_status' => 400];
+        } else {
+            $controller = new UpsertEditablePatientContactsController();
+            $response = $controller->handle($segments[1], $segments[3], $decoded);
         }
     }
 }
