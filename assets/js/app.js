@@ -58131,6 +58131,12 @@ function mxResetLogoPreview(){
     if(!doctorId || !safeRef) return '';
     return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/documents/${encodeURIComponent(safeRef)}`;
   }
+  function buildScopedClinicalDocumentCreateUrl(patientId){
+    const doctorId = resolveClinicalDocumentsDoctorId();
+    const safePatientId = clean(patientId);
+    if(!doctorId || !safePatientId) return '';
+    return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(safePatientId)}/documents`;
+  }
   function setOrderFeedback(message, tone = 'muted'){
     if(!orderFeedbackEl) return;
     const text = clean(message);
@@ -58985,6 +58991,11 @@ function mxResetLogoPreview(){
       setOrderResultFeedback(refs, 'No se pudo resolver el paciente activo para guardar el resultado.', 'error');
       return;
     }
+    const createUrl = buildScopedClinicalDocumentCreateUrl(patientId);
+    if(!createUrl){
+      setOrderResultFeedback(refs, 'No se pudo resolver el médico para guardar documentos clínicos.', 'error');
+      return;
+    }
     const studies = extractDiagnosticItemsFromPayload(payload);
     const resultDocumentType = resolveResultDocumentTypeFromOrder(detail.documentType);
     const observations = clean(refs.notesInput?.value || '');
@@ -59012,7 +59023,7 @@ function mxResetLogoPreview(){
     if(refs.saveBtn) refs.saveBtn.disabled = true;
     setOrderResultFeedback(refs, 'Guardando resultado canónico…');
     try{
-      const resp = await fetch('/api/clinical/index.php/documents', {
+      const resp = await fetch(createUrl, {
         method: 'POST',
         headers: { Accept: 'application/json' },
         credentials: 'same-origin',
@@ -59720,7 +59731,11 @@ function mxResetLogoPreview(){
           body: JSON.stringify(body)
         });
       }else{
-        resp = await fetch('/api/clinical/index.php/documents', {
+        const createUrl = buildScopedClinicalDocumentCreateUrl(patientId);
+        if(!createUrl){
+          throw new Error('No se pudo resolver el médico para guardar documentos clínicos.');
+        }
+        resp = await fetch(createUrl, {
           method: 'POST',
           headers: {
             Accept: 'application/json'
@@ -61184,6 +61199,21 @@ function mxResetLogoPreview(){
   if(!fileInput || !saveBtn || !feedbackEl) return;
 
   const clean = (value)=> String(value || '').trim();
+  const resolveClinicalDocumentsDoctorId = ()=>{
+    return clean(
+      (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : '')
+      || window.mxmedStore?.doctorId
+      || window.mxmedStore?.doctor_id
+      || document.body?.dataset?.doctorId
+      || ''
+    );
+  };
+  const buildScopedClinicalDocumentCreateUrl = (patientId)=>{
+    const doctorId = resolveClinicalDocumentsDoctorId();
+    const safePatientId = clean(patientId);
+    if(!doctorId || !safePatientId) return '';
+    return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(safePatientId)}/documents`;
+  };
   let previewObjectUrl = '';
   let previewRenderKey = '';
   const setFeedback = (message, tone = 'muted')=>{
@@ -61681,6 +61711,12 @@ function mxResetLogoPreview(){
     });
     formData.append('file', file);
 
+    const createUrl = buildScopedClinicalDocumentCreateUrl(patientId);
+    if(!createUrl){
+      setFeedback('No se pudo resolver el médico para guardar documentos clínicos.', 'error');
+      return;
+    }
+
     saveBtn.disabled = true;
     setFeedback('Guardando documento clínico…');
     try{
@@ -61692,7 +61728,7 @@ function mxResetLogoPreview(){
     }catch(_){}
 
     try{
-      const resp = await fetch('/api/clinical/index.php/documents', {
+      const resp = await fetch(createUrl, {
         method: 'POST',
         body: formData,
         headers: { Accept: 'application/json' },
