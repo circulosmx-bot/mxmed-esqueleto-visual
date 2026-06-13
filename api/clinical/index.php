@@ -166,6 +166,120 @@ function clinical_read_json_body(): array
     ];
 }
 
+function clinical_documents_read_create_request(): array
+{
+    $contentType = strtolower((string)($_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? ''));
+    $isMultipart = (!empty($_FILES) || strpos($contentType, 'multipart/form-data') !== false);
+    $payload = [];
+    $uploadFile = null;
+
+    if ($isMultipart) {
+        $payload = is_array($_POST) ? $_POST : [];
+        if (isset($payload['payload']) && is_string($payload['payload'])) {
+            $payloadDecoded = json_decode((string)$payload['payload'], true);
+            if (is_array($payloadDecoded)) {
+                $payload['payload'] = $payloadDecoded;
+            }
+        }
+        if (isset($payload['context']) && is_string($payload['context'])) {
+            $contextDecoded = json_decode((string)$payload['context'], true);
+            if (is_array($contextDecoded)) {
+                $payload['context'] = $contextDecoded;
+            }
+        }
+
+        $uploadCandidate = $_FILES['file'] ?? null;
+        if (is_array($uploadCandidate) && (($uploadCandidate['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE)) {
+            $uploadFile = $uploadCandidate;
+            $uploadError = (int)($uploadFile['error'] ?? UPLOAD_ERR_NO_FILE);
+            if ($uploadError !== UPLOAD_ERR_OK) {
+                throw new InvalidArgumentException('upload inválido');
+            }
+        }
+
+        return [
+            'payload' => $payload,
+            'upload_file' => $uploadFile,
+            'is_multipart' => true,
+        ];
+    }
+
+    $bodyResult = clinical_read_json_body();
+    if ($bodyResult['ok'] !== true) {
+        throw new InvalidArgumentException((string)$bodyResult['error']);
+    }
+
+    return [
+        'payload' => is_array($bodyResult['data'] ?? null) ? (array)$bodyResult['data'] : [],
+        'upload_file' => null,
+        'is_multipart' => false,
+    ];
+}
+
+function clinical_documents_request_patient_id_values(array $payload): array
+{
+    $values = [];
+    $topLevelPatientId = trim((string)($payload['patient_id'] ?? ''));
+    if ($topLevelPatientId !== '') {
+        $values[] = $topLevelPatientId;
+    }
+
+    $context = is_array($payload['context'] ?? null) ? $payload['context'] : [];
+    $contextPatientId = trim((string)($context['patient_id'] ?? ''));
+    if ($contextPatientId !== '') {
+        $values[] = $contextPatientId;
+    }
+
+    $documentPayload = is_array($payload['payload'] ?? null) ? $payload['payload'] : [];
+    $nestedPatientId = trim((string)($documentPayload['patient_id'] ?? ''));
+    if ($nestedPatientId !== '') {
+        $values[] = $nestedPatientId;
+    }
+
+    $nestedContext = is_array($documentPayload['context'] ?? null) ? $documentPayload['context'] : [];
+    $nestedContextPatientId = trim((string)($nestedContext['patient_id'] ?? ''));
+    if ($nestedContextPatientId !== '') {
+        $values[] = $nestedContextPatientId;
+    }
+
+    return array_values(array_unique($values));
+}
+
+function clinical_documents_request_has_patient_mismatch(array $payload, string $routePatientId): bool
+{
+    $safeRoutePatientId = trim($routePatientId);
+    foreach (clinical_documents_request_patient_id_values($payload) as $candidate) {
+        if ($candidate !== $safeRoutePatientId) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function clinical_documents_force_request_patient_id(array $payload, string $patientId): array
+{
+    $safePatientId = trim($patientId);
+    $payload['patient_id'] = $safePatientId;
+    $context = is_array($payload['context'] ?? null) ? $payload['context'] : [];
+    $context['patient_id'] = $safePatientId;
+    $payload['context'] = $context;
+    return $payload;
+}
+
+function clinical_documents_save_create_request(PDO $pdo, array $payload, ?array $uploadFile, bool $isMultipart): array
+{
+    $looksLikeUploadDocument = $isMultipart && (
+        is_array($uploadFile)
+        || trim((string)($payload['document_type'] ?? '')) !== ''
+    );
+
+    if ($looksLikeUploadDocument) {
+        return clinical_documents_gateway_save_upload($pdo, $payload, $uploadFile);
+    }
+
+    return clinical_documents_save_passthrough($pdo, $payload);
+}
+
 function clinical_request_actor_user_id(?array $payload = null): string
 {
     $payload = is_array($payload) ? $payload : [];
@@ -7265,6 +7379,124 @@ try {
     }
 
     if (($segments[0] ?? '') === 'doctors') {
+        if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'documents') {
+            $doctorId = trim(rawurldecode((string)$segments[1]));
+            $patientId = trim(rawurldecode((string)$segments[3]));
+            $meta = [
+                'method' => 'POST',
+                'route' => 'doctors/{doctor_id}/patients/{patient_id}/documents',
+                'source' => 'clinical_documents_pdo',
+                'scope' => 'doctor_patient',
+            ];
+            if ($doctorId === '' || $patientId === '') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'doctor_id and patient_id required',
+                    'data' => null,
+                    'meta' => $meta,
+                ], 400);
+                return;
+            }
+
+            try {
+                $pdo = clinical_documents_pdo();
+                if (!clinical_patient_exists($pdo, $patientId)) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'not_found',
+                        'message' => 'patient not found',
+                        'data' => null,
+                        'meta' => $meta,
+                    ], 404);
+                    return;
+                }
+                if (!clinical_has_active_doctor_patient_link($pdo, $doctorId, $patientId)) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'forbidden',
+                        'message' => 'doctor patient link required',
+                        'data' => null,
+                        'meta' => $meta,
+                    ], 403);
+                    return;
+                }
+
+                $request = clinical_documents_read_create_request();
+                $payload = is_array($request['payload'] ?? null) ? $request['payload'] : [];
+                if (clinical_documents_request_has_patient_mismatch($payload, $patientId)) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'invalid_params',
+                        'message' => 'patient_id mismatch',
+                        'data' => null,
+                        'meta' => $meta,
+                    ], 400);
+                    return;
+                }
+
+                $payload = clinical_documents_force_request_patient_id($payload, $patientId);
+                $uploadFile = is_array($request['upload_file'] ?? null) ? $request['upload_file'] : null;
+                $isMultipart = ($request['is_multipart'] ?? false) === true;
+                $document = clinical_documents_save_create_request($pdo, $payload, $uploadFile, $isMultipart);
+            } catch (InvalidArgumentException $e) {
+                $msg = trim((string)$e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'invalid_params',
+                    'message' => ($msg !== '') ? $msg : 'invalid params',
+                    'data' => null,
+                    'meta' => $meta,
+                ], 400);
+                return;
+            } catch (RuntimeException $e) {
+                $msg = trim((string)$e->getMessage());
+                if ($msg === 'MEDIA_TAG_REQUIRED') {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => [
+                            'code' => 'MEDIA_TAG_REQUIRED',
+                            'message' => 'Selecciona una etiqueta para esta imagen.',
+                        ],
+                        'message' => 'Selecciona una etiqueta para esta imagen.',
+                        'data' => null,
+                        'meta' => $meta,
+                    ], 400);
+                    return;
+                }
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => ($msg !== '') ? $msg : 'server error',
+                    'data' => null,
+                    'meta' => $meta,
+                ], 500);
+                return;
+            } catch (Throwable $e) {
+                $msg = trim((string)$e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => ($msg !== '') ? $msg : 'server error',
+                    'data' => null,
+                    'meta' => $meta,
+                ], 500);
+                return;
+            }
+
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => 'document saved',
+                'data' => [
+                    'document_id' => $document['document_id'] ?? ($document['document_uuid'] ?? null),
+                    'document' => $document,
+                ],
+                'meta' => $meta,
+            ], 201);
+            return;
+        }
+
         if ($method === 'GET' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'documents') {
             $doctorId = trim(rawurldecode((string)$segments[1]));
             $patientId = trim(rawurldecode((string)$segments[3]));
