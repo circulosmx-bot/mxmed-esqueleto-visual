@@ -49165,6 +49165,25 @@ console.info('app.js loaded :: 20251123a');
       });
     };
 
+    const resolveCanonicalDocumentsDoctorId = ()=>{
+      return sanitizeText(
+        (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : '')
+        || window.mxmedStore?.doctorId
+        || window.mxmedStore?.doctor_id
+        || window.mxmedStore?.activeProfessionalContext?.doctor_id
+        || window.mxmedDoctor?.doctor_id
+        || document.body?.dataset?.doctorId
+        || ''
+      );
+    };
+
+    const buildScopedCanonicalDocumentsListUrl = (patientId)=>{
+      const doctorId = resolveCanonicalDocumentsDoctorId();
+      const safePatientId = sanitizeText(patientId || '');
+      if(!doctorId || !safePatientId) return '';
+      return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(safePatientId)}/documents?limit=80`;
+    };
+
     const listCanonicalConsents = async ()=>{
       const patientId = resolveActivePatientIdForConsent();
       const hasPatient = !!patientId;
@@ -49174,7 +49193,12 @@ console.info('app.js loaded :: 20251123a');
         return;
       }
       try{
-        const url = `/api/clinical/index.php/documents?patient_id=${encodeURIComponent(patientId)}&limit=80`;
+        const url = buildScopedCanonicalDocumentsListUrl(patientId);
+        if(!url){
+          console.warn('[CLINICAL-DOCUMENTS-CANONICAL-LIST] missing_doctor_scope', { patient_id: patientId });
+          renderList([]);
+          return;
+        }
         const resp = await fetch(url, {
           method: 'GET',
           headers: { Accept: 'application/json' },
