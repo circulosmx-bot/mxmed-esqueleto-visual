@@ -61132,6 +61132,8 @@ function mxResetLogoPreview(){
   const diagnosticKindWrap = studiesPane.querySelector('[data-role="ac-doc-diagnostic-kind-wrap"]');
   const diagnosticKindInput = studiesPane.querySelector('[data-role="ac-doc-diagnostic-kind"]');
   const diagnosticKindButtons = Array.from(studiesPane.querySelectorAll('[data-ac-doc-diagnostic-kind-btn]'));
+  const studyNameWrap = studiesPane.querySelector('[data-role="ac-doc-study-name-wrap"]');
+  const studyNameInput = studiesPane.querySelector('[data-role="ac-doc-study-name"]');
   const previewWrap = studiesPane.querySelector('[data-role="ac-doc-preview"]');
   const previewBody = studiesPane.querySelector('[data-role="ac-doc-preview-body"]');
   const wizardRoot = studiesPane.querySelector('[data-role="ac-doc-wizard"]');
@@ -61293,6 +61295,7 @@ function mxResetLogoPreview(){
     diagnosticKindButtons.forEach((btn)=>{
       btn.classList.toggle('is-active', clean(btn.getAttribute('data-ac-doc-diagnostic-kind-btn')).toLowerCase() === value);
     });
+    syncStudyNameVisibility();
   };
   const syncDiagnosticKindVisibility = ()=>{
     const categorySelection = resolveCategorySelection();
@@ -61301,6 +61304,7 @@ function mxResetLogoPreview(){
     if(!showDiagnosticKind){
       setDiagnosticKind('');
     }
+    syncStudyNameVisibility();
   };
   const resolveCategorySelection = ()=>{
     const raw = clean(categoryInput?.value || '');
@@ -61322,6 +61326,35 @@ function mxResetLogoPreview(){
       other: { key: 'other', label: 'Otro diagnóstico', documentType: 'result' }
     };
     return map[key] || { key: '', label: '', documentType: '' };
+  };
+  const resolveStudyNamePlaceholder = (kind)=>{
+    if(kind === 'lab') return 'Ej. Biometría hemática, Química sanguínea, HbA1c';
+    if(kind === 'imaging') return 'Ej. RX Tórax, Ultrasonido abdominal, TAC';
+    if(kind === 'other') return 'Ej. Espirometría, Electrocardiograma, Endoscopía';
+    return 'Ej. Biometría hemática, RX Tórax, Espirometría';
+  };
+  const syncStudyNameVisibility = ()=>{
+    const categorySelection = resolveCategorySelection();
+    const diagnosticKind = resolveDiagnosticKindSelection();
+    const showStudyName = categorySelection.key === 'estudio_resultado' && diagnosticKind.key !== '';
+    studyNameWrap?.classList.toggle('d-none', !showStudyName);
+    if(studyNameInput){
+      studyNameInput.placeholder = resolveStudyNamePlaceholder(diagnosticKind.key);
+      if(!showStudyName) studyNameInput.value = '';
+    }
+  };
+  const parseStudyNames = (value)=>{
+    const seen = new Set();
+    return String(value || '')
+      .split(/[,\n]+/)
+      .map((item)=> clean(item))
+      .filter(Boolean)
+      .filter((item)=>{
+        const key = item.toLowerCase();
+        if(seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
   };
   const clearPreviewObjectUrl = ()=>{
     if(!previewObjectUrl) return;
@@ -61555,6 +61588,18 @@ function mxResetLogoPreview(){
       }
       return;
     }
+    const requestedStudies = categorySelection.key === 'estudio_resultado'
+      ? parseStudyNames(studyNameInput?.value || '')
+      : [];
+    if(categorySelection.key === 'estudio_resultado' && !requestedStudies.length){
+      setFeedback('Ingresa el nombre del estudio o prueba.', 'error');
+      if(wizardMode === 'guided'){
+        wizardStep = WIZARD_MAX_STEP;
+        renderWizard({ focus: true });
+      }
+      try{ studyNameInput?.focus?.(); }catch(_){}
+      return;
+    }
     const documentType = categorySelection.key === 'estudio_resultado'
       ? diagnosticKind.documentType
       : fileDocumentType;
@@ -61589,6 +61634,8 @@ function mxResetLogoPreview(){
       payload.payload.diagnostic_result_label = diagnosticKind.label;
       payload.payload.original_file_document_type = fileDocumentType;
       payload.payload.result_origin = 'sin_orden';
+      payload.payload.requested_studies = requestedStudies;
+      payload.payload.selection_count = requestedStudies.length;
     }
 
     const formData = new FormData();
