@@ -204,6 +204,28 @@ function clinical_request_actor_user_id_strict(?array $payload = null): string
     return '';
 }
 
+function clinical_has_active_doctor_patient_link(PDO $pdo, string $doctorId, string $patientId): bool
+{
+    $safeDoctorId = trim($doctorId);
+    $safePatientId = trim($patientId);
+    if ($safeDoctorId === '' || $safePatientId === '') {
+        return false;
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM patients_doctor_links
+        WHERE doctor_id = :doctor_id
+          AND patient_id = :patient_id
+          AND status = 'active'
+    ");
+    $stmt->execute([
+        ':doctor_id' => $safeDoctorId,
+        ':patient_id' => $safePatientId,
+    ]);
+    return (int)$stmt->fetchColumn() > 0;
+}
+
 function clinical_is_local_host(): bool
 {
     $host = strtolower(trim((string)($_SERVER['HTTP_HOST'] ?? '')));
@@ -7240,6 +7262,153 @@ try {
             ],
         ], 404);
         return;
+    }
+
+    if (($segments[0] ?? '') === 'doctors') {
+        if ($method === 'GET' && count($segments) === 5 && ($segments[2] ?? '') === 'patients' && ($segments[4] ?? '') === 'documents') {
+            $doctorId = trim(rawurldecode((string)$segments[1]));
+            $patientId = trim(rawurldecode((string)$segments[3]));
+            $meta = [
+                'method' => 'GET',
+                'route' => 'doctors/{doctor_id}/patients/{patient_id}/documents',
+                'source' => 'clinical_documents_pdo',
+                'scope' => 'doctor_patient',
+            ];
+            if ($doctorId === '' || $patientId === '') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'doctor_id and patient_id required',
+                    'data' => null,
+                    'meta' => $meta,
+                ], 400);
+                return;
+            }
+
+            $limit = (int)($_GET['limit'] ?? 30);
+            if ($limit <= 0) {
+                $limit = 30;
+            } elseif ($limit > 200) {
+                $limit = 200;
+            }
+            $documentType = trim((string)($_GET['document_type'] ?? ''));
+            $hospitalStayId = trim((string)($_GET['hospital_stay_id'] ?? ''));
+
+            try {
+                $pdo = clinical_documents_pdo();
+                if (!clinical_patient_exists($pdo, $patientId)) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'not_found',
+                        'message' => 'patient not found',
+                        'data' => null,
+                        'meta' => $meta,
+                    ], 404);
+                    return;
+                }
+                if (!clinical_has_active_doctor_patient_link($pdo, $doctorId, $patientId)) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'forbidden',
+                        'message' => 'doctor patient link required',
+                        'data' => null,
+                        'meta' => $meta,
+                    ], 403);
+                    return;
+                }
+                $items = clinical_documents_list_fetch($pdo, $patientId, $documentType, $hospitalStayId, $limit);
+            } catch (Throwable $e) {
+                $msg = trim($e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => ($msg !== '') ? $msg : 'server error',
+                    'data' => null,
+                    'meta' => $meta,
+                ], 500);
+                return;
+            }
+
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => 'documents listed',
+                'data' => [
+                    'items' => $items,
+                ],
+                'meta' => $meta,
+            ], 200);
+            return;
+        }
+
+        if ($method === 'GET' && count($segments) === 4 && ($segments[2] ?? '') === 'documents') {
+            $doctorId = trim(rawurldecode((string)$segments[1]));
+            $documentToken = trim(rawurldecode((string)$segments[3]));
+            $meta = [
+                'method' => 'GET',
+                'route' => 'doctors/{doctor_id}/documents/{id_or_uuid}',
+                'source' => 'clinical_documents_pdo',
+                'scope' => 'doctor_patient',
+            ];
+            if ($doctorId === '' || $documentToken === '') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'doctor_id and document id_or_uuid required',
+                    'data' => null,
+                    'meta' => $meta,
+                ], 400);
+                return;
+            }
+
+            try {
+                $pdo = clinical_documents_pdo();
+                $document = clinical_documents_get_by_token_fetch($pdo, $documentToken);
+                if ($document === null) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'not_found',
+                        'message' => 'Documento no encontrado',
+                        'data' => null,
+                        'meta' => $meta,
+                    ], 404);
+                    return;
+                }
+
+                $patientId = trim((string)($document['context']['patient_id'] ?? ''));
+                if ($patientId === '' || !clinical_has_active_doctor_patient_link($pdo, $doctorId, $patientId)) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'forbidden',
+                        'message' => 'doctor patient link required',
+                        'data' => null,
+                        'meta' => $meta,
+                    ], 403);
+                    return;
+                }
+            } catch (Throwable $e) {
+                $msg = trim($e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => ($msg !== '') ? $msg : 'server error',
+                    'data' => null,
+                    'meta' => $meta,
+                ], 500);
+                return;
+            }
+
+            clinical_send_response([
+                'ok' => true,
+                'error' => null,
+                'message' => 'document retrieved',
+                'data' => [
+                    'document' => $document,
+                ],
+                'meta' => $meta,
+            ], 200);
+            return;
+        }
     }
 
     if (($segments[0] ?? '') === 'documents') {
