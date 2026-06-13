@@ -58050,6 +58050,9 @@ function mxResetLogoPreview(){
   const summaryContainer = summaryWrap?.closest('.est-summary');
   const orderBlock = document.querySelector('[data-est-order-block]');
   const orderList = document.querySelector('.est-orders-list');
+  const resultsList = document.querySelector('[data-est-results-list]');
+  const resultsEmpty = document.querySelector('[data-est-results-empty]');
+  const previosSectionBtn = document.querySelector('.est-section-tab[data-est-section="previos"]');
   const areaSelect = orderBlock?.querySelector('[data-est-area-select]');
   const prioritySelect = orderBlock?.querySelector('[data-role="ac-order-priority"]');
   const indicationTextarea = orderBlock?.querySelector('[data-role="ac-order-indication"]');
@@ -58610,7 +58613,7 @@ function mxResetLogoPreview(){
       section.appendChild(label);
       const hint = document.createElement('div');
       hint.className = 'small text-muted mb-1';
-      hint.textContent = clean(file.filename || file.url);
+      hint.textContent = clean(file.filename || 'Archivo adjunto disponible');
       section.appendChild(hint);
       const mode = clean(file.renderMode || '').toLowerCase();
       const isPdf = mode === 'pdf' || /pdf/i.test(clean(file.mime || '')) || /\.pdf(?:$|\?)/i.test(clean(file.url || ''));
@@ -59168,6 +59171,8 @@ function mxResetLogoPreview(){
   let refreshOrdersTimer = null;
   let lastListRefreshSignature = '';
   let lastOrderResultsIndex = new Map();
+  let refreshResultsToken = 0;
+  let refreshResultsTimer = null;
   async function fetchCanonicalOrderDocuments(patientId){
     const safePatientId = clean(patientId);
     if(!safePatientId) return [];
@@ -59268,6 +59273,120 @@ function mxResetLogoPreview(){
       }catch(_){}
     }));
     return map;
+  }
+  function resolveDiagnosticResultTypeLabel(docType){
+    const type = clean(docType).toLowerCase();
+    if(type === 'lab_result' || type === 'lab_pdf') return 'Resultado de laboratorio';
+    if(type === 'imaging_result') return 'Resultado de imagen';
+    return 'Resultado diagnóstico';
+  }
+  function isResultsPreviosVisible(){
+    const block = document.querySelector('[data-est-section-block="previos"]');
+    return !!block && !block.classList.contains('d-none');
+  }
+  function setResultsEmptyVisible(visible, message = ''){
+    if(!resultsEmpty) return;
+    resultsEmpty.classList.toggle('d-none', visible !== true);
+    if(message){
+      const body = resultsEmpty.querySelector('.small') || resultsEmpty;
+      body.textContent = message;
+    }
+  }
+  function clearResultsList({ keepEmpty = true } = {}){
+    if(!resultsList) return;
+    Array.from(resultsList.children).forEach((node)=>{
+      if(keepEmpty && node === resultsEmpty) return;
+      node.remove();
+    });
+  }
+  function renderDiagnosticResultsRows(rows){
+    if(!resultsList) return;
+    clearResultsList({ keepEmpty: true });
+    const safeRows = Array.isArray(rows) ? rows : [];
+    if(!safeRows.length){
+      setResultsEmptyVisible(true, 'Cuando se ingresen resultados de laboratorio o imagenología, aparecerán aquí.');
+      return;
+    }
+    setResultsEmptyVisible(false);
+    safeRows.forEach((row)=>{
+      const docId = clean(row?.id || row?.__docId || '');
+      const docUuid = clean(row?.document_uuid || row?.document_id || row?.__docUuid || '');
+      const docRef = docUuid || docId;
+      if(!docRef) return;
+      const docType = clean(row?.document_type).toLowerCase();
+      if(!isDiagnosticResultDocumentType(docType)) return;
+      const payload = (row && typeof row.__docPayload === 'object') ? row.__docPayload : {};
+      const studies = extractDiagnosticItemsFromPayload(payload);
+      const relatedOrderRef = resolveRelatedOrderRefFromPayload(payload);
+      const typeLabel = resolveDiagnosticResultTypeLabel(docType);
+      const areaLabel = resolveOrderAreaLabel(docType, payload);
+      const dateText = prettyDate(clean(row?.event_datetime)) || clean(row?.event_datetime) || 'Fecha no registrada';
+      const summary = clean(row?.summary || '');
+      const studyPreview = studies.length ? studies.slice(0, 3).join(', ') : 'Sin estudios detallados';
+      const extraCount = studies.length > 3 ? studies.length - 3 : 0;
+      const linkState = relatedOrderRef ? 'Ligado a orden' : 'Sin orden relacionada';
+      const icon = resolveClinicalDocumentSvgIcon(docType, areaLabel);
+      const card = document.createElement('article');
+      card.className = `est-order-card ${docType === 'lab_result' || docType === 'lab_pdf' ? 'est-order--lab' : 'est-order--img'} is-study-diagnostic`;
+      card.setAttribute('data-document-type', docType);
+      card.setAttribute('data-document-id', docId);
+      card.setAttribute('data-document-uuid', docUuid);
+      card.setAttribute('data-est-result-card', '1');
+      if(relatedOrderRef){
+        card.setAttribute('data-related-order-ref', relatedOrderRef);
+      }
+      card.innerHTML = `
+        <div class="est-order-head">
+          <div class="est-order-title"><span class="est-order-ico est-order-ico-svg" aria-hidden="true">${icon}</span><span>${escapeHtml(typeLabel)}</span></div>
+        </div>
+        ${summary ? `<div class="est-order-summary">${escapeHtml(summary)}</div>` : ''}
+        <div class="est-order-preview">${escapeHtml(studyPreview)}${extraCount > 0 ? ` ${escapeHtml(`y ${extraCount} más`)}` : ''}</div>
+        <div class="est-order-meta">${escapeHtml(dateText)}</div>
+        <div class="est-order-result-state ${relatedOrderRef ? 'has-result' : 'no-result'}">${escapeHtml(linkState)}</div>
+        <div class="est-order-actions">
+          <button type="button" class="btn btn-outline-primary btn-sm" data-est-result-view>Ver resultado</button>
+          ${relatedOrderRef ? '<button type="button" class="btn btn-outline-secondary btn-sm" data-est-result-view-order>Ver orden relacionada</button>' : ''}
+        </div>
+      `;
+      resultsList.appendChild(card);
+    });
+  }
+  async function refreshDiagnosticResultsList(){
+    const token = ++refreshResultsToken;
+    const request = (async ()=>{
+      const patientId = resolveOrderPatientId();
+      if(!resultsList) return;
+      clearResultsList({ keepEmpty: true });
+      if(!patientId){
+        setResultsEmptyVisible(true, 'Selecciona un paciente activo para consultar resultados previos.');
+        return;
+      }
+      try{
+        const rows = await fetchCanonicalResultDocuments(patientId);
+        await hydrateOrderRowsPayload(rows);
+        if(token !== refreshResultsToken || patientId !== resolveOrderPatientId()) return;
+        renderDiagnosticResultsRows(rows);
+      }catch(err){
+        if(token !== refreshResultsToken || patientId !== resolveOrderPatientId()) return;
+        console.warn('[EST-RESULTS-PREVIOUS] load_error', {
+          patient_id: patientId,
+          message: clean(err?.message || 'load_failed')
+        });
+        clearResultsList({ keepEmpty: true });
+        setResultsEmptyVisible(true, 'No se pudieron consultar los resultados previos en este momento.');
+      }
+    })();
+    return await request;
+  }
+  function requestRefreshDiagnosticResultsList({ onlyIfVisible = false } = {}){
+    if(onlyIfVisible && !isResultsPreviosVisible()) return;
+    if(refreshResultsTimer){
+      window.clearTimeout(refreshResultsTimer);
+    }
+    refreshResultsTimer = window.setTimeout(()=>{
+      refreshResultsTimer = null;
+      refreshDiagnosticResultsList();
+    }, 80);
   }
   function resolveDocRefMatch(row, ref){
     if(!row || !ref) return false;
@@ -60781,6 +60900,28 @@ function mxResetLogoPreview(){
     const resultRef = clean(card.getAttribute('data-result-document-ref') || '');
     openOrderResultModal(docRef, { resultRef });
   });
+  resultsList?.addEventListener('click', (e)=>{
+    const viewBtn = e.target.closest('[data-est-result-view]');
+    if(viewBtn){
+      const card = viewBtn.closest('[data-est-result-card]');
+      const docRef = clean(card?.getAttribute('data-document-uuid') || card?.getAttribute('data-document-id') || '');
+      if(docRef){
+        openOrderDetailModal(docRef);
+      }
+      return;
+    }
+    const orderBtn = e.target.closest('[data-est-result-view-order]');
+    if(orderBtn){
+      const card = orderBtn.closest('[data-est-result-card]');
+      const orderRef = clean(card?.getAttribute('data-related-order-ref') || '');
+      if(orderRef){
+        openOrderDetailModal(orderRef);
+      }
+    }
+  });
+  previosSectionBtn?.addEventListener('click', ()=>{
+    requestRefreshDiagnosticResultsList();
+  });
   orderList?.addEventListener('click', (e)=>{
     const btn = e.target.closest('[data-est-order-replace]');
     if(!btn) return;
@@ -60910,6 +61051,9 @@ function mxResetLogoPreview(){
       if(orderList){
         orderList.innerHTML = '';
       }
+      clearResultsList({ keepEmpty: true });
+      setResultsEmptyVisible(true, 'Cuando se ingresen resultados de laboratorio o imagenología, aparecerán aquí.');
+      refreshResultsToken++;
       activeController = null;
       activeInput = null;
       modalMode = 'add';
@@ -60921,9 +61065,30 @@ function mxResetLogoPreview(){
   renderSelected();
   if(openInputs[0]) setSelection(getInputItems(openInputs[0]), openInputs[0]);
   requestRefreshCanonicalOrdersList();
-  window.addEventListener('expediente:patient_changed', requestRefreshCanonicalOrdersList);
-  window.addEventListener('expediente:patient-changed', requestRefreshCanonicalOrdersList);
-  window.addEventListener('patient:selected', requestRefreshCanonicalOrdersList);
+  window.addEventListener('expediente:patient_changed', ()=>{
+    requestRefreshCanonicalOrdersList();
+    refreshResultsToken++;
+    clearResultsList({ keepEmpty: true });
+    requestRefreshDiagnosticResultsList({ onlyIfVisible: true });
+  });
+  window.addEventListener('expediente:patient-changed', ()=>{
+    requestRefreshCanonicalOrdersList();
+    refreshResultsToken++;
+    clearResultsList({ keepEmpty: true });
+    requestRefreshDiagnosticResultsList({ onlyIfVisible: true });
+  });
+  window.addEventListener('patient:selected', ()=>{
+    requestRefreshCanonicalOrdersList();
+    refreshResultsToken++;
+    clearResultsList({ keepEmpty: true });
+    requestRefreshDiagnosticResultsList({ onlyIfVisible: true });
+  });
+  window.addEventListener('mxmed:clinical-document-created', (event)=>{
+    const documentType = clean(event?.detail?.document_type || '').toLowerCase();
+    if(isDiagnosticResultDocumentType(documentType)){
+      requestRefreshDiagnosticResultsList({ onlyIfVisible: true });
+    }
+  });
 })();
 
 
