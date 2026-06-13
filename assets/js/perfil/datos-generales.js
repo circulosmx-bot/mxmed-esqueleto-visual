@@ -380,6 +380,37 @@
 
     const cleanProfileValue = (value)=> String(value || '').replace(/\s+/g, ' ').trim();
     let lastHydratedProfileSnapshot = '';
+    let profileNullNoticeEl = null;
+
+    const ensureProfileNullNotice = ()=>{
+      if(profileNullNoticeEl?.isConnected) return profileNullNoticeEl;
+      const fields = getProfileFields();
+      const anchor = fields?.firstName?.closest('[class^="col-"], [class*=" col-"], .form-group, .mb-3') || fields?.firstName?.parentElement;
+      if(!anchor?.parentElement) return null;
+      const notice = document.createElement('div');
+      notice.className = 'col-12 d-none';
+      notice.dataset.pacProfileNullNotice = '1';
+      notice.innerHTML = `
+        <div class="alert alert-info py-2 px-3 small mb-0" role="status" aria-live="polite">
+          Este paciente aún no tiene nombre estructurado. Completa Nombre(s) y Apellidos para normalizar su expediente.
+        </div>
+      `;
+      anchor.parentElement.insertBefore(notice, anchor);
+      profileNullNoticeEl = notice;
+      return profileNullNoticeEl;
+    };
+
+    const setProfileNullNoticeVisible = (visible)=>{
+      const notice = ensureProfileNullNotice();
+      if(!notice) return;
+      notice.classList.toggle('d-none', visible !== true);
+    };
+
+    const shouldShowProfileNullNotice = (patient)=>{
+      if(!patient || typeof patient !== 'object' || isInNewEntryMode()) return false;
+      if(patient.profile && typeof patient.profile === 'object') return false;
+      return cleanProfileValue(patient.display_name || patient.nombre_completo || '') !== '';
+    };
 
     const normalizeProfilePayload = (profile)=>{
       return {
@@ -781,6 +812,7 @@
     const hydratePatientIdentityAndProfileIntoDom = (patient)=>{
       const fields = getProfileFields();
       if(!fields || !patient || typeof patient !== 'object') return false;
+      setProfileNullNoticeVisible(shouldShowProfileNullNotice(patient));
       const profile = (patient.profile && typeof patient.profile === 'object') ? patient.profile : null;
       const useProfileIdentity = hasProfileIdentityData(profile);
       const firstName = useProfileIdentity ? cleanProfileValue(profile.first_name || '') : '';
@@ -821,6 +853,7 @@
     const hydratePatientProfileIntoDom = (profile)=>{
       const fields = getProfileFields();
       if(!fields) return false;
+      setProfileNullNoticeVisible(false);
       const data = (profile && typeof profile === 'object') ? profile : {};
       clearDisplayNameFallback(fields.firstName);
       setProfileFieldValue(fields.firstName, data.first_name || '', { dispatchEvents: false });
