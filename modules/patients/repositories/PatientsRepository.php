@@ -28,6 +28,39 @@ class PatientsRepository
         return $patient;
     }
 
+    public function patientExists(string $patientId): bool
+    {
+        $this->ensureTables();
+
+        return $this->fetchPatient($patientId) !== null;
+    }
+
+    public function hasActiveDoctorPatientLink(string $doctorId, string $patientId): bool
+    {
+        $this->ensureTables();
+
+        $stmt = $this->pdo->prepare(
+            'SELECT COUNT(*)
+             FROM patients_doctor_links
+             WHERE doctor_id = :doctor_id
+               AND patient_id = :patient_id
+               AND status = :status'
+        );
+        $stmt->execute([
+            'doctor_id' => $doctorId,
+            'patient_id' => $patientId,
+            'status' => 'active',
+        ]);
+        return (int)$stmt->fetchColumn() > 0;
+    }
+
+    public function fetchEditableContacts(string $patientId): array
+    {
+        $this->ensureTables();
+
+        return $this->fetchEditableContactsRows($patientId);
+    }
+
     public function findPatientsByDoctorId(string $doctorId, int $limit = 50): array
     {
         $this->ensureTables();
@@ -887,6 +920,45 @@ class PatientsRepository
             $masked[] = $entry;
         }
         return $masked;
+    }
+
+    private function fetchEditableContactsRows(string $patientId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT contact_id, phone, email, preferred_contact_method, is_primary, created_at
+             FROM patients_contacts
+             WHERE patient_id = :patient_id
+             ORDER BY is_primary DESC, created_at ASC, contact_id ASC'
+        );
+        $stmt->execute(['patient_id' => $patientId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $contacts = [];
+        foreach ($rows as $row) {
+            $base = [
+                'contact_id' => $row['contact_id'],
+                'is_primary' => (bool)$row['is_primary'],
+                'preferred_contact_method' => $row['preferred_contact_method'] ?? null,
+                'created_at' => $row['created_at'],
+            ];
+            if (!empty($row['phone'])) {
+                $phone = (string)$row['phone'];
+                $contacts[] = $base + [
+                    'type' => 'phone',
+                    'value' => $phone,
+                    'value_masked' => $this->maskPhone($phone),
+                ];
+                continue;
+            }
+            if (!empty($row['email'])) {
+                $email = (string)$row['email'];
+                $contacts[] = $base + [
+                    'type' => 'email',
+                    'value' => $email,
+                    'value_masked' => $this->maskEmail($email),
+                ];
+            }
+        }
+        return $contacts;
     }
 
     private function maskPhone(string $phone): string

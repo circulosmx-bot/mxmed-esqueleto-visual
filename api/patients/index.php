@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../modules/agenda/helpers/db_helpers.php';
 require_once __DIR__ . '/../../modules/patients/controllers/GetPatientController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/GetDoctorPatientsController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/SearchDoctorPatientsController.php';
+require_once __DIR__ . '/../../modules/patients/controllers/GetEditablePatientContactsController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/CreatePatientController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/UpsertPatientAddressController.php';
 require_once __DIR__ . '/../../modules/patients/controllers/UpsertPatientProfileController.php';
@@ -13,6 +14,7 @@ require_once __DIR__ . '/../../modules/patients/controllers/UpsertPatientProfile
 use Patients\Controllers\GetPatientController;
 use Patients\Controllers\GetDoctorPatientsController;
 use Patients\Controllers\SearchDoctorPatientsController;
+use Patients\Controllers\GetEditablePatientContactsController;
 use Patients\Controllers\CreatePatientController;
 use Patients\Controllers\UpsertPatientAddressController;
 use Patients\Controllers\UpsertPatientProfileController;
@@ -50,6 +52,8 @@ if (!empty($segments) && $segments[0] === 'index.php') {
 $qaMode = getenv('QA_MODE') ?: ($_SERVER['HTTP_X_QA_MODE'] ?? '');
 
 function respond(array $response, string $qaMode, string $method): void {
+    $statusOverride = isset($response['http_status']) ? (int)$response['http_status'] : null;
+    unset($response['http_status']);
     if ($qaMode !== '') {
         if (!isset($response['meta']) || !is_array($response['meta'])) {
             $response['meta'] = [];
@@ -59,7 +63,9 @@ function respond(array $response, string $qaMode, string $method): void {
     if (isset($response['meta']) && is_array($response['meta'])) {
         $response['meta'] = (object)$response['meta'];
     }
-    $status = ($response['error'] === 'not_implemented') ? 501 : (($response['ok'] === true && $method === 'POST') ? 201 : 200);
+    $status = ($statusOverride !== null && $statusOverride >= 100 && $statusOverride <= 599)
+        ? $statusOverride
+        : (($response['error'] === 'not_implemented') ? 501 : (($response['ok'] === true && $method === 'POST') ? 201 : 200));
     http_response_code($status);
     echo json_encode($response);
 }
@@ -70,6 +76,9 @@ if ($method === 'GET') {
     if (count($segments) === 2 && $segments[0] === 'patients') {
         $controller = new GetPatientController();
         $response = $controller->handle($segments[1]);
+    } elseif (count($segments) === 6 && $segments[0] === 'doctors' && $segments[2] === 'patients' && $segments[4] === 'contacts' && $segments[5] === 'editable') {
+        $controller = new GetEditablePatientContactsController();
+        $response = $controller->handle($segments[1], $segments[3]);
     } elseif (count($segments) === 4 && $segments[0] === 'doctors' && $segments[2] === 'patients' && $segments[3] === 'search') {
         $controller = new SearchDoctorPatientsController();
         $query = $_GET ?? [];
