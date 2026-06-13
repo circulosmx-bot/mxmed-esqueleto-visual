@@ -58110,6 +58110,27 @@ function mxResetLogoPreview(){
   function clean(value){
     return String(value || '').trim();
   }
+  function resolveClinicalDocumentsDoctorId(){
+    return clean(
+      (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : '')
+      || window.mxmedStore?.doctorId
+      || window.mxmedStore?.doctor_id
+      || document.body?.dataset?.doctorId
+      || ''
+    );
+  }
+  function buildScopedClinicalDocumentsListUrl(patientId, limit){
+    const doctorId = resolveClinicalDocumentsDoctorId();
+    const safePatientId = clean(patientId);
+    if(!doctorId || !safePatientId) return '';
+    return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(safePatientId)}/documents?limit=${encodeURIComponent(String(limit || 80))}`;
+  }
+  function buildScopedClinicalDocumentDetailUrl(docRef){
+    const doctorId = resolveClinicalDocumentsDoctorId();
+    const safeRef = clean(docRef);
+    if(!doctorId || !safeRef) return '';
+    return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/documents/${encodeURIComponent(safeRef)}`;
+  }
   function setOrderFeedback(message, tone = 'muted'){
     if(!orderFeedbackEl) return;
     const text = clean(message);
@@ -58682,7 +58703,11 @@ function mxResetLogoPreview(){
     }
     const request = (async ()=>{
       try{
-        const resp = await fetch(`/api/clinical/index.php/documents/${encodeURIComponent(safeRef)}`, {
+        const url = buildScopedClinicalDocumentDetailUrl(safeRef);
+        if(!url){
+          throw new Error('No se pudo resolver el médico para consultar documentos clínicos.');
+        }
+        const resp = await fetch(url, {
           method: 'GET',
           headers: { Accept: 'application/json' },
           credentials: 'same-origin'
@@ -59176,7 +59201,10 @@ function mxResetLogoPreview(){
   async function fetchCanonicalOrderDocuments(patientId){
     const safePatientId = clean(patientId);
     if(!safePatientId) return [];
-    const url = `/api/clinical/index.php/documents?patient_id=${encodeURIComponent(safePatientId)}&limit=80`;
+    const url = buildScopedClinicalDocumentsListUrl(safePatientId, 80);
+    if(!url){
+      throw new Error('No se pudo resolver el médico para consultar órdenes.');
+    }
     const resp = await fetch(url, {
       method: 'GET',
       headers: { Accept: 'application/json' },
@@ -59211,7 +59239,10 @@ function mxResetLogoPreview(){
   async function fetchCanonicalResultDocuments(patientId){
     const safePatientId = clean(patientId);
     if(!safePatientId) return [];
-    const url = `/api/clinical/index.php/documents?patient_id=${encodeURIComponent(safePatientId)}&limit=120`;
+    const url = buildScopedClinicalDocumentsListUrl(safePatientId, 120);
+    if(!url){
+      throw new Error('No se pudo resolver el médico para consultar resultados.');
+    }
     const resp = await fetch(url, {
       method: 'GET',
       headers: { Accept: 'application/json' },
