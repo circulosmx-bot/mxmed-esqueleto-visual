@@ -4399,6 +4399,33 @@
                     <h3>Gestiona los expedientes de tus pacientes</h3>
                     <p>Registra un nuevo paciente o busca en tu archivo para ver su información y seguimiento.</p>
                   </div>
+                  <div class="mx-exp-initial-search-panel d-none" data-exp-initial-search-panel>
+                    <div class="mx-exp-initial-search-copy">
+                      <h3>Busca un paciente en tu archivo</h3>
+                      <p>Busca por nombre, apellido o teléfono para abrir el expediente correcto.</p>
+                    </div>
+                    <form class="mx-exp-initial-search-form" data-exp-initial-search-form>
+                      <label class="visually-hidden" for="exp_initial_patient_search">Buscar paciente</label>
+                      <div class="mx-exp-initial-search-control">
+                        <span class="material-symbols-rounded" aria-hidden="true">search</span>
+                        <input
+                          type="search"
+                          class="form-control"
+                          id="exp_initial_patient_search"
+                          data-exp-initial-search-input
+                          placeholder="Nombre, apellido o teléfono"
+                          autocomplete="off"
+                        >
+                      </div>
+                      <button type="submit" class="btn mx-exp-initial-search-submit" data-exp-initial-search-submit>Buscar</button>
+                      <button type="button" class="btn btn-outline-secondary" data-exp-initial-search-cancel>Volver</button>
+                    </form>
+                    <div class="mx-exp-initial-search-actions">
+                      <button type="button" class="btn btn-link" data-exp-initial-search-recent>Pacientes recientes</button>
+                      <button type="button" class="btn btn-link" data-exp-initial-search-new>Registrar nuevo paciente</button>
+                    </div>
+                    <div class="mx-exp-initial-search-feedback d-none" data-exp-initial-search-feedback aria-live="polite"></div>
+                  </div>
                 </div>
 
                 <div class="mx-clinical-completion-hub" data-exp-completion-hub-panel data-exp-completion-hub-panel-source="datos-generales">
