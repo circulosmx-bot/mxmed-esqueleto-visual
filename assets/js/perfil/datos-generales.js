@@ -359,6 +359,14 @@
       return payload;
     };
 
+    const resolveDatosGeneralesDoctorId = ()=>{
+      return String(
+        (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : '') ||
+        document.body?.dataset?.doctorId ||
+        ''
+      ).trim();
+    };
+
     const getProfileFields = ()=>{
       if(!expedienteRoot) return null;
       return {
@@ -508,6 +516,198 @@
       }
     };
 
+    const normalizeMxPhoneNationalDigits = (value)=>{
+      const digits = String(value || '').replace(/\D+/g, '');
+      if(digits.length === 12 && digits.startsWith('52')) return digits.slice(2);
+      if(digits.length === 10) return digits;
+      return '';
+    };
+
+    const normalizeMxPhoneStorageValue = (value)=>{
+      const national = normalizeMxPhoneNationalDigits(value);
+      return national ? `+52${national}` : '';
+    };
+
+    const serializeEditableMobilePhoneSnapshot = (value)=> JSON.stringify({
+      value: normalizeMxPhoneStorageValue(value)
+    });
+
+    let lastHydratedEditableMobilePhoneSnapshot = serializeEditableMobilePhoneSnapshot('');
+    let editableContactsHydrationToken = 0;
+    let editableContactsHydrationInFlightPatientId = '';
+    let editableContactsHydrationInFlightPromise = null;
+    let lastEditableContactsHydratedPatientId = '';
+    let lastEditableContactsHydratedAt = 0;
+
+    const resetEditableContactsHydrationCache = ()=>{
+      editableContactsHydrationInFlightPatientId = '';
+      editableContactsHydrationInFlightPromise = null;
+      lastEditableContactsHydratedPatientId = '';
+      lastEditableContactsHydratedAt = 0;
+    };
+
+    const setMobilePhoneCountryMx = (controls)=>{
+      const { input, countrySelect } = controls || {};
+      if(countrySelect && countrySelect.value !== 'MX'){
+        countrySelect.value = 'MX';
+        countrySelect.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      if(input?.dataset){
+        input.dataset.phoneCountry = 'MX';
+        input.dataset.phoneDialCode = '52';
+      }
+    };
+
+    const rememberEditableMobilePhoneSnapshotFromDom = ()=>{
+      const phone = readPatientMobilePhoneFromDom();
+      const value = phone?.nationalDigits ? `+52${phone.nationalDigits}` : '';
+      lastHydratedEditableMobilePhoneSnapshot = serializeEditableMobilePhoneSnapshot(value);
+    };
+
+    const hydrateEditableMobilePhoneIntoDom = (contacts)=>{
+      const controls = getPatientMobilePhoneControls();
+      if(!controls?.input) return false;
+      const list = Array.isArray(contacts) ? contacts : [];
+      const phones = list.filter((contact)=> String(contact?.type || '').trim() === 'phone');
+      const primaryPhone = phones.find((contact)=> contact?.is_primary === true) || phones[0] || null;
+      const rawValue = primaryPhone?.value || primaryPhone?.phone || '';
+      const nationalDigits = normalizeMxPhoneNationalDigits(rawValue);
+      setMobilePhoneCountryMx(controls);
+      setPrimaryFieldValue(controls.input, nationalDigits, { dispatchEvents: true });
+      setPatientMobilePhoneFeedback('');
+      lastHydratedEditableMobilePhoneSnapshot = serializeEditableMobilePhoneSnapshot(rawValue);
+      return true;
+    };
+
+    const buildEditablePatientContactsUrl = (patientId)=>{
+      const doctorId = resolveDatosGeneralesDoctorId();
+      const pid = String(patientId || '').trim();
+      if(!doctorId || !pid) return '';
+      return `/api/patients/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(pid)}/contacts/editable`;
+    };
+
+    const fetchEditablePatientContacts = async (patientId)=>{
+      const url = buildEditablePatientContactsUrl(patientId);
+      if(!url) return null;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+      });
+      const json = await response.json().catch(()=> null);
+      if(!response.ok || json?.ok !== true){
+        throw new Error(String(json?.message || json?.error || 'No se pudieron cargar contactos editables.'));
+      }
+      return Array.isArray(json?.data?.contacts) ? json.data.contacts : [];
+    };
+
+    const fetchAndHydrateEditablePatientContacts = async (patientId, shouldApply = ()=> true)=>{
+      const pid = String(patientId || '').trim();
+      if(!pid) return false;
+      let contacts = null;
+      try{
+        contacts = await fetchEditablePatientContacts(pid);
+      }catch(err){
+        console.warn('[DG-CONTACTS-EDITABLE-GET] request_error', {
+          patient_id: pid,
+          message: String(err?.message || '').trim()
+        });
+        contacts = [];
+      }
+      if(shouldApply() !== true) return false;
+      return hydrateEditableMobilePhoneIntoDom(contacts || []);
+    };
+
+    const hydrateEditableContactsForActivePatient = (patientId)=>{
+      const pid = String(patientId || '').trim();
+      if(!pid || isInNewEntryMode()) return Promise.resolve(false);
+      const now = Date.now();
+      if(lastEditableContactsHydratedPatientId === pid && now - lastEditableContactsHydratedAt < 300){
+        return Promise.resolve(false);
+      }
+      if(editableContactsHydrationInFlightPatientId === pid && editableContactsHydrationInFlightPromise){
+        return editableContactsHydrationInFlightPromise;
+      }
+      const token = ++editableContactsHydrationToken;
+      editableContactsHydrationInFlightPatientId = pid;
+      editableContactsHydrationInFlightPromise = fetchAndHydrateEditablePatientContacts(pid, ()=>{
+        return token === editableContactsHydrationToken
+          && String(getActivePatientId() || '').trim() === pid
+          && !isInNewEntryMode();
+      })
+        .then((applied)=>{
+          if(applied === true){
+            lastEditableContactsHydratedPatientId = pid;
+            lastEditableContactsHydratedAt = Date.now();
+          }
+          return applied;
+        })
+        .finally(()=>{
+          if(editableContactsHydrationInFlightPatientId === pid){
+            editableContactsHydrationInFlightPatientId = '';
+            editableContactsHydrationInFlightPromise = null;
+          }
+        });
+      return editableContactsHydrationInFlightPromise;
+    };
+
+    const readEditableMobilePhoneForSave = ()=>{
+      const phone = readPatientMobilePhoneFromDom();
+      if(!phone?.input) return { hasValue: false, valid: true, value: '', snapshot: serializeEditableMobilePhoneSnapshot('') };
+      if(!phone.nationalDigits){
+        return { hasValue: false, valid: true, value: '', snapshot: serializeEditableMobilePhoneSnapshot('') };
+      }
+      if(phone.country !== 'MX' && phone.dialCode !== '52'){
+        return {
+          hasValue: true,
+          valid: false,
+          message: 'Por ahora el teléfono editable debe ser de México (+52).',
+          value: '',
+          snapshot: serializeEditableMobilePhoneSnapshot('')
+        };
+      }
+      if(phone.nationalDigits.length !== 10){
+        return {
+          hasValue: true,
+          valid: false,
+          message: 'El teléfono celular debe tener 10 dígitos nacionales.',
+          value: '',
+          snapshot: serializeEditableMobilePhoneSnapshot('')
+        };
+      }
+      const value = `+52${phone.nationalDigits}`;
+      return {
+        hasValue: true,
+        valid: true,
+        value,
+        snapshot: serializeEditableMobilePhoneSnapshot(value)
+      };
+    };
+
+    const saveEditableMobilePhone = async (patientId, mobilePhone)=>{
+      const url = buildEditablePatientContactsUrl(patientId);
+      if(!url) throw new Error('No se pudo identificar al médico para guardar el teléfono.');
+      const payload = {
+        contacts: [{
+          type: 'phone',
+          value: mobilePhone.value,
+          is_primary: true,
+          preferred_contact_method: 'phone'
+        }]
+      };
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload)
+      });
+      const json = await response.json().catch(()=> null);
+      if(!response.ok || json?.ok !== true){
+        throw new Error(String(json?.message || json?.error || 'No se pudo guardar el teléfono.'));
+      }
+      return Array.isArray(json?.data?.contacts) ? json.data.contacts : [];
+    };
+
     const setPatientGenderValue = (sex)=>{
       const normalized = normalizePatientSexValue(sex);
       const genderInputs = Array.from(expedienteRoot?.querySelectorAll('input[name="pac-genero"]') || []);
@@ -547,10 +747,17 @@
       return cleanProfileValue(contact.value || contact.phone || contact.email || contact.contact_value || '');
     };
 
-    const hydratePatientContactsIntoDom = (contacts)=>{
+    const hydratePatientContactsIntoDom = (contacts, options = {})=>{
       const fields = getContactFields();
       if(!fields) return false;
-      [fields.mobilePhone, fields.homePhone, fields.contactPhone, fields.primaryEmail, fields.alternateEmail].forEach((field)=>{
+      const preserveMobilePhone = options?.preserveMobilePhone === true;
+      [
+        preserveMobilePhone ? null : fields.mobilePhone,
+        fields.homePhone,
+        fields.contactPhone,
+        fields.primaryEmail,
+        fields.alternateEmail
+      ].forEach((field)=>{
         setPrimaryFieldValue(field, '', { dispatchEvents: false });
       });
       const list = Array.isArray(contacts) ? contacts : [];
@@ -564,7 +771,7 @@
       const secondaryPhoneValue = readRawContactValue(secondaryPhone);
       const primaryEmailValue = readRawContactValue(primaryEmail);
       const alternateEmailValue = readRawContactValue(alternateEmail);
-      if(primaryPhoneValue) setPrimaryFieldValue(fields.mobilePhone, primaryPhoneValue, { dispatchEvents: false });
+      if(!preserveMobilePhone && primaryPhoneValue) setPrimaryFieldValue(fields.mobilePhone, primaryPhoneValue, { dispatchEvents: false });
       if(secondaryPhoneValue) setPrimaryFieldValue(fields.homePhone, secondaryPhoneValue, { dispatchEvents: false });
       if(primaryEmailValue) setPrimaryFieldValue(fields.primaryEmail, primaryEmailValue, { dispatchEvents: false });
       if(alternateEmailValue) setPrimaryFieldValue(fields.alternateEmail, alternateEmailValue, { dispatchEvents: false });
@@ -591,7 +798,7 @@
       setPrimaryFieldValue(expedienteRoot.querySelector('[data-dg-mes]'), birth.month, { dispatchEvents: true });
       setPrimaryFieldValue(expedienteRoot.querySelector('[data-dg-anio]'), birth.year, { dispatchEvents: true });
       setPatientGenderValue(patient.sex || patient.gender || '');
-      hydratePatientContactsIntoDom(patient.contacts || []);
+      hydratePatientContactsIntoDom(patient.contacts || [], { preserveMobilePhone: true });
       rememberProfileSnapshotFromDom();
       return true;
     };
@@ -604,6 +811,10 @@
       const hydratedAddress = primaryAddress
         ? hydratePatientAddressIntoDom(primaryAddress)
         : (clearPatientAddressFields(), false);
+      const patientId = String(patient.patient_id || '').trim();
+      if(patientId && String(getActivePatientId() || '').trim() === patientId && !isInNewEntryMode()){
+        hydrateEditableContactsForActivePatient(patientId).catch(()=> null);
+      }
       return hydratedProfile || hydratedAddress;
     };
 
@@ -961,6 +1172,13 @@
       }
       const profile = readPatientProfileFromDom();
       const address = readPatientAddressFromDom();
+      const mobilePhone = readEditableMobilePhoneForSave();
+      if(!mobilePhone.valid){
+        setPatientMobilePhoneFeedback(mobilePhone.message || 'Revisa el teléfono celular.');
+        setSaveFeedback(mobilePhone.message || 'Revisa el teléfono celular.', 'error');
+        return Promise.resolve(null);
+      }
+      setPatientMobilePhoneFeedback('');
       const validationError = validatePatientAddress(address);
       if(validationError){
         setSaveFeedback(validationError, 'error');
@@ -969,9 +1187,10 @@
       const shouldSaveAddress = hasPatientAddressData(address);
       const profileChanged = serializeProfileSnapshot(profile || {}) !== lastHydratedProfileSnapshot;
       const addressChanged = shouldSaveAddress && serializeAddressSnapshot(address || {}) !== lastHydratedAddressSnapshot;
-      if(!profileChanged && !addressChanged){
+      const mobilePhoneChanged = mobilePhone.hasValue && mobilePhone.snapshot !== lastHydratedEditableMobilePhoneSnapshot;
+      if(!profileChanged && !addressChanged && !mobilePhoneChanged){
         setSaveFeedback('No hay cambios por guardar.', 'muted');
-        return Promise.resolve({ profileSaved: null, addressSaved: null });
+        return Promise.resolve({ profileSaved: null, addressSaved: null, phoneSaved: null });
       }
       if(savePatientBtn) savePatientBtn.disabled = true;
       setSaveFeedback('Guardando datos generales...', 'muted');
@@ -1008,14 +1227,37 @@
               return false;
             })
         : Promise.resolve(null);
-      return Promise.all([profileSavePromise, addressSavePromise])
-        .then(([profileSaved, addressSaved])=>{
-          if(profileSaved === false && addressSaved === false){
+      const phoneSavePromise = mobilePhoneChanged
+        ? saveEditableMobilePhone(patientId, mobilePhone)
+            .then((contacts)=>{
+              hydrateEditableMobilePhoneIntoDom(contacts);
+              if(typeof window.mxmedInvalidatePatientsIndexCache === 'function'){
+                window.mxmedInvalidatePatientsIndexCache();
+              }
+              return true;
+            })
+            .catch((err)=>{
+              console.warn('[DG-CONTACTS-EDITABLE-SAVE] request_error', {
+                patient_id: patientId,
+                message: String(err?.message || '').trim()
+              });
+              return false;
+            })
+        : Promise.resolve(null);
+      return Promise.all([profileSavePromise, addressSavePromise, phoneSavePromise])
+        .then(([profileSaved, addressSaved, phoneSaved])=>{
+          if(profileSaved === false && addressSaved === false && phoneSaved === false){
             setSaveFeedback('No se pudieron guardar los datos generales.', 'error');
+          }else if(phoneSaved === false){
+            setSaveFeedback('Datos generales guardados parcialmente; no se pudo guardar el teléfono.', 'error');
           }else if(profileSaved === false){
-            setSaveFeedback('Domicilio guardado, pero no se pudo guardar el perfil.', 'error');
+            setSaveFeedback('Datos generales guardados parcialmente; no se pudo guardar el perfil.', 'error');
           }else if(addressSaved === false){
-            setSaveFeedback('Perfil guardado, pero no se pudo guardar el domicilio.', 'error');
+            setSaveFeedback('Datos generales guardados parcialmente; no se pudo guardar el domicilio.', 'error');
+          }else if(phoneSaved === true && (profileSaved === true || addressSaved === true)){
+            setSaveFeedback('Datos generales guardados correctamente.', 'success');
+          }else if(phoneSaved === true){
+            setSaveFeedback('Teléfono guardado correctamente.', 'success');
           }else if(addressSaved === true){
             setSaveFeedback('Perfil y domicilio guardados correctamente.', 'success');
           }else if(profileSaved === true){
@@ -1023,7 +1265,7 @@
           }else{
             setSaveFeedback('Cambios guardados correctamente.', 'success');
           }
-          return { profileSaved, addressSaved };
+          return { profileSaved, addressSaved, phoneSaved };
         })
         .catch((err)=>{
           console.warn('[DG-PROFILE-SAVE] request_error', {
@@ -1429,8 +1671,11 @@
       const patientId = getActivePatientId();
       const token = ++profileHydrationToken;
       if(!patientId){
+        editableContactsHydrationToken++;
+        resetEditableContactsHydrationCache();
         clearPatientProfileFields();
         hydratePatientContactsIntoDom([]);
+        rememberEditableMobilePhoneSnapshotFromDom();
         return;
       }
       fetchAndHydratePatientProfile(patientId, ()=>{
@@ -1438,7 +1683,7 @@
           && String(getActivePatientId() || '').trim() === patientId
           && !isInNewEntryMode();
       })
-        .then(()=> null)
+        .then(()=> hydrateEditableContactsForActivePatient(patientId))
         .catch(()=> null);
     };
     const hydrateProfileForCurrentActivePatient = ()=>{
@@ -1474,10 +1719,13 @@
       });
     });
     window.addEventListener('mxmed:expediente-neutralize', ()=>{
+      editableContactsHydrationToken++;
+      resetEditableContactsHydrationCache();
       clearNewPatientDirtyState();
       clearPatientProfileFields();
       clearPatientAddressFields();
       hydratePatientContactsIntoDom([]);
+      rememberEditableMobilePhoneSnapshotFromDom();
     });
     window.setTimeout(syncNewPatientDirtyState, 0);
   }
