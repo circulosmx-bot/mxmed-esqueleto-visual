@@ -32334,6 +32334,8 @@ console.info('app.js loaded :: 20251123a');
     const saveClinicalDocument = async (args) => {
       const requestArgs = (args && typeof args === 'object') ? { ...args } : {};
       const context = (requestArgs.context && typeof requestArgs.context === 'object') ? { ...requestArgs.context } : {};
+      const requestedDocumentType = String(requestArgs.document_type || requestArgs.type || '').trim();
+      const isEvolutionNote = requestedDocumentType === 'nota_evolucion';
       const fromBridge = (typeof window.getActiveEncounterKey === 'function')
         ? String(window.getActiveEncounterKey() || '').trim()
         : '';
@@ -32361,6 +32363,49 @@ console.info('app.js loaded :: 20251123a');
             legacy_patient_id: legacyPatientId || undefined
           }
         };
+
+        if (isEvolutionNote) {
+          const doctorId = resolveGatewayDocumentsDoctorId();
+          if (!doctorId || !canonicalPatientId) {
+            console.warn('[CLINICAL-DOCUMENTS-GATEWAY-CREATE-NOTA] missing_doctor_scope', {
+              doctor_id: doctorId || null,
+              patient_id: canonicalPatientId || null
+            });
+            throw new Error('No se pudo resolver el médico o paciente para guardar la nota de evolución.');
+          }
+
+          console.debug('SAVE gateway scoped nota attempt', {
+            doctor_id: doctorId,
+            patient_id: canonicalPatientId,
+            legacy_patient_id: legacyPatientId || null,
+            source: 'app'
+          });
+
+          try {
+            const gatewayPayload = await fetchJson(`${mxmedApiBase()}/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(canonicalPatientId)}/documents`, {
+              method: 'POST',
+              headers: { Accept: 'application/json' },
+              body: JSON.stringify(gatewayArgs)
+            });
+            const normalized = normalizeSavedDocumentResponse(gatewayPayload, 'gateway');
+            console.debug('SAVE gateway scoped nota ok', {
+              doctor_id: doctorId,
+              patient_id: canonicalPatientId,
+              source: 'app'
+            });
+            return normalized;
+          } catch (e) {
+            errors.push(e);
+            console.warn('[CLINICAL-DOCUMENTS-GATEWAY-CREATE-NOTA] scoped_create_failed', {
+              doctor_id: doctorId,
+              patient_id: canonicalPatientId,
+              status: e?.status || null,
+              message: e?.message || null
+            });
+            const mergedMessage = errors.map((err)=> String(err?.message || '').trim()).filter(Boolean).join(' | ');
+            throw new Error(mergedMessage || 'No se pudo guardar nota de evolución.');
+          }
+        }
 
         console.debug('SAVE gateway attempt', {
           patient_id: canonicalPatientId,
@@ -32392,6 +32437,13 @@ console.info('app.js loaded :: 20251123a');
           reason: 'canonical_unavailable',
           source: 'app'
         });
+        if (isEvolutionNote) {
+          console.warn('[CLINICAL-DOCUMENTS-GATEWAY-CREATE-NOTA] missing_doctor_scope', {
+            doctor_id: resolveGatewayDocumentsDoctorId() || null,
+            patient_id: canonicalPatientId || null
+          });
+          throw new Error('No se pudo resolver el médico o paciente para guardar la nota de evolución.');
+        }
       }
 
       try {
