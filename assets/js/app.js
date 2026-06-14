@@ -50053,8 +50053,13 @@ console.info('app.js loaded :: 20251123a');
         if(identityDocCache.has(token)){
           return { ...out, ...identityDocCache.get(token) };
         }
+        const detailUrl = buildScopedCanonicalDocumentDetailUrl(token);
+        if(!detailUrl){
+          console.warn('[CONSENT-IDENTITY-DETAIL] missing_doctor_scope', { document_ref: token });
+          return out;
+        }
         try{
-          const resp = await fetch(`/api/clinical/index.php/documents/${encodeURIComponent(token)}`, {
+          const resp = await fetch(detailUrl, {
             method: 'GET',
             headers: { Accept: 'application/json' },
             credentials: 'same-origin'
