@@ -32126,6 +32126,22 @@ console.info('app.js loaded :: 20251123a');
     const gatewayDocumentsEndpoint = mxmedApiBase() + '/api/clinical/index.php/documents';
     let mode = 'unknown'; // legacy compat flag (no longer driving persistence order)
 
+    const resolveGatewayDocumentsDoctorId = () => {
+      const candidates = [
+        (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : ''),
+        window.mxmedStore?.doctorId,
+        window.mxmedStore?.doctor_id,
+        window.mxmedStore?.activeProfessionalContext?.doctor_id,
+        window.mxmedDoctor?.doctor_id,
+        document.body?.dataset?.doctorId
+      ];
+      for (const candidate of candidates) {
+        const value = String(candidate || '').trim();
+        if (value) return value;
+      }
+      return '';
+    };
+
     const fetchJson = async (url, options) => {
       const res = await fetch(url, {
         ...(options || {}),
@@ -32171,11 +32187,19 @@ console.info('app.js loaded :: 20251123a');
 
     const listClinicalDocumentsGateway = async (canonicalPatientId, opts = {}) => {
       const patientId = String(canonicalPatientId ?? '').trim();
+      const doctorId = resolveGatewayDocumentsDoctorId();
       const documentType = String(opts.document_type ?? '');
       const hospitalStayId = String(opts.hospital_stay_id ?? '');
       const limit = normalizeLimit(opts.limit, 30);
+      if (!doctorId || !patientId) {
+        console.warn('[CLINICAL-DOCUMENTS-GATEWAY-LIST] missing_doctor_scope', {
+          doctor_id: doctorId || null,
+          patient_id: patientId || null
+        });
+        return [];
+      }
 
-      let url = `${gatewayDocumentsEndpoint}?patient_id=${encodeURIComponent(patientId)}&limit=${encodeURIComponent(String(limit))}`;
+      let url = `${mxmedApiBase()}/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(patientId)}/documents?limit=${encodeURIComponent(String(limit))}`;
       if (documentType !== '') {
         url += `&document_type=${encodeURIComponent(documentType)}`;
       }
@@ -32183,12 +32207,27 @@ console.info('app.js loaded :: 20251123a');
         url += `&hospital_stay_id=${encodeURIComponent(hospitalStayId)}`;
       }
 
-      const payload = await fetchJson(url, { method: 'GET', headers: { Accept: 'application/json' } });
+      let payload = null;
+      try {
+        payload = await fetchJson(url, { method: 'GET', headers: { Accept: 'application/json' } });
+      } catch (error) {
+        console.warn('[CLINICAL-DOCUMENTS-GATEWAY-LIST] scoped_list_failed', {
+          doctor_id: doctorId,
+          patient_id: patientId,
+          status: error?.status || null,
+          message: error?.message || null
+        });
+        return [];
+      }
       const items = payload?.data?.items;
       if (payload?.ok === true && Array.isArray(items)) {
         return items;
       }
-      throw new Error(payload?.error || 'gateway documents list failed');
+      console.warn('[CLINICAL-DOCUMENTS-GATEWAY-LIST] invalid_scoped_response', {
+        doctor_id: doctorId,
+        patient_id: patientId
+      });
+      return [];
     };
 
     const listClinicalDocuments = async (patient, opts = {}) => {
@@ -32477,6 +32516,17 @@ console.info('app.js loaded :: 20251123a');
   const safeText = (v, fallback = 'No registrado') => {
     const t = (v ?? '').toString().trim();
     return t ? t : fallback;
+  };
+  const formatEvolutionNoteDateTime = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const dt = new Date(raw.replace(' ', 'T'));
+    if (Number.isNaN(dt.getTime())) return raw;
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const hh = String(dt.getHours()).padStart(2, '0');
+    const mm = String(dt.getMinutes()).padStart(2, '0');
+    const ss = String(dt.getSeconds()).padStart(2, '0');
+    return `${String(dt.getDate()).padStart(2, '0')}-${months[dt.getMonth()]}-${dt.getFullYear()} - ${hh}:${mm}:${ss}`;
   };
 
   const getPatient = () => {
@@ -33858,7 +33908,7 @@ console.info('app.js loaded :: 20251123a');
         .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
         .slice(0, 20)
         .map(n => {
-          const dt = prettyDateTime(n.created_at || '');
+          const dt = formatEvolutionNoteDateTime(n.created_at || '');
           const amb = n.ambito_label || '';
           const ttl = normalizeEvolutionNoteTitle(n.summary || n.title, amb || 'Nota de evolución');
           const doc = n.document_text || '';
@@ -33891,7 +33941,7 @@ console.info('app.js loaded :: 20251123a');
           return;
         }
         els.timeline.innerHTML = list.map(item => {
-          const dt = prettyDateTime(item.event_datetime || '');
+          const dt = formatEvolutionNoteDateTime(item.event_datetime || '');
           const ttl = normalizeEvolutionNoteTitle(item.summary || item.title, 'Nota de evolución');
           const meta = dt;
           const docToken = String(item.document_uuid || item.document_id || item.id || '').trim();
