@@ -50088,6 +50088,10 @@ console.info('app.js loaded :: 20251123a');
         }
         return onlyRemote;
       }
+      const createUrl = buildScopedCanonicalDocumentCreateUrl(patientId);
+      if(!createUrl){
+        throw new Error('No se pudo resolver el médico para subir el anexo de identidad.');
+      }
       for(const file of files){
         const documentType = inferIdentityDocumentType(file);
         if(!documentType) continue;
@@ -50110,7 +50114,7 @@ console.info('app.js loaded :: 20251123a');
           formData.append('media_tag_label', 'Identidad del firmante');
         }
         formData.append('file', file);
-        const resp = await fetch('/api/clinical/index.php/documents', {
+        const resp = await fetch(createUrl, {
           method: 'POST',
           headers: { Accept: 'application/json' },
           credentials: 'same-origin',
@@ -50124,7 +50128,7 @@ console.info('app.js loaded :: 20251123a');
         const doc = (json?.data?.document && typeof json.data.document === 'object') ? json.data.document : {};
         refs.push({
           document_id: sanitizeText(doc.document_db_id || doc.id || ''),
-          document_uuid: sanitizeText(doc.document_uuid || json?.data?.document_uuid || ''),
+          document_uuid: sanitizeText(doc.document_uuid || doc.document_id || json?.data?.document_uuid || json?.data?.document_id || ''),
           title: sanitizeText(doc.title || `Anexo identidad firmante — ${sanitizeText(file?.name || '')}`),
           document_type: sanitizeText(doc.document_type || documentType),
           file_name: sanitizeText(file?.name || ''),
