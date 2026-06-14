@@ -49257,6 +49257,12 @@ console.info('app.js loaded :: 20251123a');
       if(!doctorId || !safeDocRef) return '';
       return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/documents/${encodeURIComponent(safeDocRef)}`;
     };
+    const buildScopedCanonicalDocumentDetailUrl = (docRef)=>{
+      const doctorId = resolveCanonicalDocumentsDoctorId();
+      const safeDocRef = sanitizeText(docRef || '');
+      if(!doctorId || !safeDocRef) return '';
+      return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/documents/${encodeURIComponent(safeDocRef)}`;
+    };
 
     const listCanonicalConsents = async ()=>{
       const patientId = resolveActivePatientIdForConsent();
@@ -51631,7 +51637,11 @@ console.info('app.js loaded :: 20251123a');
           await syncCertificadoFinalInlineEdits();
         }
         if(certificadoState.finalDocUuid){
-          const latestResp = await fetch(`/api/clinical/index.php/documents/${encodeURIComponent(certificadoState.finalDocUuid)}`, {
+          const detailUrl = buildScopedCanonicalDocumentDetailUrl(certificadoState.finalDocUuid);
+          if(!detailUrl){
+            throw new Error('No se pudo resolver el médico para consultar el certificado médico.');
+          }
+          const latestResp = await fetch(detailUrl, {
             method: 'GET',
             headers: { Accept: 'application/json' },
             credentials: 'same-origin'

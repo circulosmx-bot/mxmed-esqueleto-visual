@@ -650,11 +650,21 @@ if ($uuid !== '') {
     if ($apiIndexBase === '') {
         $errorMessage = 'CLINICAL_API_BASE no configurado y get_api_base() vacío.';
     } else {
-        $url = $apiIndexBase . '/documents/' . rawurlencode($uuid);
-        $decoded = http_get_json($url, 8);
+        $url = '';
+        if ($doctorId !== '') {
+            $url = $apiIndexBase . '/doctors/' . rawurlencode($doctorId) . '/documents/' . rawurlencode($uuid);
+        } elseif ($allowInlineEdit) {
+            $errorMessage = 'No se pudo resolver el médico para consultar el certificado médico.';
+        } else {
+            $url = $apiIndexBase . '/documents/' . rawurlencode($uuid);
+        }
+
+        $decoded = $url !== '' ? http_get_json($url, 8) : [];
 
         if (($decoded['ok'] ?? false) !== true) {
-            $errorMessage = (string)($decoded['message'] ?? 'Error consultando documento.');
+            if ($errorMessage === '') {
+                $errorMessage = (string)($decoded['message'] ?? 'Error consultando documento.');
+            }
         } else {
             $doc = $decoded['data']['document'] ?? null;
             $document = is_array($doc) ? $doc : null;
