@@ -7642,6 +7642,66 @@ try {
             return;
         }
 
+        if ($method === 'PATCH' && count($segments) === 4 && ($segments[2] ?? '') === 'documents') {
+            $doctorId = trim(rawurldecode((string)$segments[1]));
+            $documentToken = trim(rawurldecode((string)$segments[3]));
+            $meta = [
+                'method' => 'PATCH',
+                'route' => 'doctors/{doctor_id}/documents/{id_or_uuid}',
+                'source' => 'clinical_documents_pdo',
+                'scope' => 'doctor_patient',
+            ];
+            if ($doctorId === '' || $documentToken === '') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'bad_request',
+                    'message' => 'doctor_id and document id_or_uuid required',
+                    'data' => null,
+                    'meta' => $meta,
+                ], 400);
+                return;
+            }
+
+            try {
+                $pdo = clinical_documents_pdo();
+                $document = clinical_documents_get_by_token_fetch($pdo, $documentToken);
+                if ($document === null) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'not_found',
+                        'message' => 'Documento no encontrado',
+                        'data' => null,
+                        'meta' => $meta,
+                    ], 404);
+                    return;
+                }
+
+                $patientId = trim((string)($document['context']['patient_id'] ?? ''));
+                if ($patientId === '' || !clinical_has_active_doctor_patient_link($pdo, $doctorId, $patientId)) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'forbidden',
+                        'message' => 'doctor patient link required',
+                        'data' => null,
+                        'meta' => $meta,
+                    ], 403);
+                    return;
+                }
+            } catch (Throwable $e) {
+                $msg = trim($e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => ($msg !== '') ? $msg : 'server error',
+                    'data' => null,
+                    'meta' => $meta,
+                ], 500);
+                return;
+            }
+
+            $segments = ['documents', $documentToken];
+        }
+
         if ($method === 'POST' && count($segments) === 5 && ($segments[2] ?? '') === 'documents' && ($segments[4] ?? '') === 'replace') {
             $doctorId = trim(rawurldecode((string)$segments[1]));
             $documentToken = trim(rawurldecode((string)$segments[3]));
