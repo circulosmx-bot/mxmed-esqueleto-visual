@@ -562,6 +562,7 @@ if ($uuid === '') {
 }
 $bundleId = trim((string)($_GET['bundle_id'] ?? ''));
 $patientId = trim((string)($_GET['patient_id'] ?? ''));
+$doctorId = trim((string)($_GET['doctor_id'] ?? ''));
 $returnTo = validate_return_to((string)($_GET['return_to'] ?? ''));
 $returnToClean = $returnTo !== null ? normalize_return_to($returnTo) : '';
 $backHref = $returnToClean !== '' ? $returnToClean : 'javascript:history.back()';
@@ -3361,6 +3362,7 @@ if (!$embed) {
     var certEditableBox = document.querySelector('[data-role="cert-editable-body"]');
     var certEditableContent = document.querySelector('[data-role="cert-editable-content"]');
     var certDocToken = <?php echo json_encode($uuid, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    var certDoctorId = <?php echo json_encode($doctorId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var certEditOriginalHtml = '';
     var certEditing = false;
 
@@ -3400,6 +3402,13 @@ if (!$embed) {
       return String(root.innerHTML || '').trim();
     }
 
+    function certBuildScopedPatchEndpoint() {
+      var token = String(certDocToken || '').trim();
+      var doctorId = String(certDoctorId || '').trim();
+      if (!token || !doctorId) return '';
+      return '/api/clinical/index.php/doctors/' + encodeURIComponent(doctorId) + '/documents/' + encodeURIComponent(token);
+    }
+
     if (certStartBtn && certSaveBtn && certCancelBtn && certEditableContent && certDocToken) {
       certSetEditUi(false);
 
@@ -3423,7 +3432,11 @@ if (!$embed) {
         certSaveBtn.disabled = true;
         certCancelBtn.disabled = true;
         try {
-          var resp = await fetch('/api/clinical/index.php/documents/' + encodeURIComponent(certDocToken), {
+          var patchEndpoint = certBuildScopedPatchEndpoint();
+          if (!patchEndpoint) {
+            throw new Error('missing_doctor_scope');
+          }
+          var resp = await fetch(patchEndpoint, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             credentials: 'same-origin',
@@ -3439,7 +3452,10 @@ if (!$embed) {
           certEditOriginalHtml = safeHtml;
           certSetEditUi(false);
         } catch (err) {
-          window.alert('No se pudieron guardar los cambios del documento.');
+          var message = err && err.message === 'missing_doctor_scope'
+            ? 'No se pudo resolver el médico para actualizar el certificado médico.'
+            : 'No se pudieron guardar los cambios del documento.';
+          window.alert(message);
         } finally {
           certSaveBtn.disabled = false;
           certCancelBtn.disabled = false;

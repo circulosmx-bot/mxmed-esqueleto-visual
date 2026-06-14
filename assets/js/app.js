@@ -48081,8 +48081,9 @@ console.info('app.js loaded :: 20251123a');
     };
     const buildCertificadoViewerHref = (uuid = '')=>{
       const safeUuid = sanitizeText(uuid || '');
-      if(!safeUuid) return '';
-      return `/modules/clinical/ui/viewer.php?uuid=${encodeURIComponent(safeUuid)}&embed=1&allow_edit=1`;
+      const doctorId = resolveCanonicalDocumentsDoctorId();
+      if(!safeUuid || !doctorId) return '';
+      return `/modules/clinical/ui/viewer.php?uuid=${encodeURIComponent(safeUuid)}&doctor_id=${encodeURIComponent(doctorId)}&embed=1&allow_edit=1`;
     };
     const clickCertificadoViewerButton = (selector = '')=>{
       const frame = els.certificadoFinalPreviewFrame;
@@ -48905,8 +48906,11 @@ console.info('app.js loaded :: 20251123a');
     const resolveCreatedCertificadoUuid = (responseJson = null)=>{
       return sanitizeText(
         responseJson?.data?.document?.document_uuid
+        || responseJson?.data?.document?.document_id
         || responseJson?.data?.document_uuid
+        || responseJson?.data?.document_id
         || responseJson?.data?.item?.document_uuid
+        || responseJson?.data?.item?.document_id
         || responseJson?.data?.document?.uuid
         || ''
       );
@@ -49246,6 +49250,12 @@ console.info('app.js loaded :: 20251123a');
       const safePatientId = sanitizeText(patientId || '');
       if(!doctorId || !safePatientId) return '';
       return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(safePatientId)}/documents`;
+    };
+    const buildScopedCanonicalDocumentPatchUrl = (docRef)=>{
+      const doctorId = resolveCanonicalDocumentsDoctorId();
+      const safeDocRef = sanitizeText(docRef || '');
+      if(!doctorId || !safeDocRef) return '';
+      return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/documents/${encodeURIComponent(safeDocRef)}`;
     };
 
     const listCanonicalConsents = async ()=>{
@@ -51586,7 +51596,11 @@ console.info('app.js loaded :: 20251123a');
           await syncCertificadoFinalInlineEdits();
         }
         if(certificadoState.finalRenderMode !== 'viewer' && certificadoState.finalDocUuid){
-          const patchResp = await fetch(`/api/clinical/index.php/documents/${encodeURIComponent(certificadoState.finalDocUuid)}`, {
+          const patchUrl = buildScopedCanonicalDocumentPatchUrl(certificadoState.finalDocUuid);
+          if(!patchUrl){
+            throw new Error('No se pudo resolver el médico para actualizar el certificado médico.');
+          }
+          const patchResp = await fetch(patchUrl, {
             method: 'PATCH',
             headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
             credentials: 'same-origin',
