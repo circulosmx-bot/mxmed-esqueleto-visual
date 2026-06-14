@@ -43930,7 +43930,11 @@ console.info('app.js loaded :: 20251123a');
         if(prepared?.error){
           throw new Error(prepared.error);
         }
-        const resp = await fetch('/api/clinical/index.php/documents', {
+        const createUrl = buildScopedCanonicalDocumentCreateUrl(prepared.patientId);
+        if(!createUrl){
+          throw new Error('No se pudo resolver el médico para guardar el informe médico.');
+        }
+        const resp = await fetch(createUrl, {
           method: 'POST',
           headers: {
             Accept: 'application/json',
