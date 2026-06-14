@@ -38788,7 +38788,17 @@ console.info('app.js loaded :: 20251123a');
       }catch(_){}
     }
 
-    window.location.href = `/modules/clinical/ui/historial.php?patient_id=${encodeURIComponent(finalId)}`;
+    const params = new URLSearchParams({ patient_id: finalId });
+    const doctorId = sanitizeText(
+      (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : '')
+      || window.mxmedStore?.doctorId
+      || window.mxmedStore?.doctor_id
+      || window.mxmedStore?.activeProfessionalContext?.doctor_id
+      || window.mxmedDoctor?.doctor_id
+      || document.body?.dataset?.doctorId
+    );
+    if(doctorId) params.set('doctor_id', doctorId);
+    window.location.href = `/modules/clinical/ui/historial.php?${params.toString()}`;
   };
 
   const syncGineco = (genero, allowNavigate)=>{

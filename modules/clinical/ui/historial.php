@@ -1089,6 +1089,10 @@ function timeline_is_demo_local_patient(string $patientId): bool
 $patientId = trim((string)($_GET['patient_id'] ?? ''));
 $appointmentId = trim((string)($_GET['appointment_id'] ?? ''));
 $encounterKey = trim((string)($_GET['encounter_key'] ?? ''));
+$doctorId = trim((string)($_GET['doctor_id'] ?? ''));
+if ($doctorId !== '' && preg_match('/^[A-Za-z0-9._:-]{1,64}$/', $doctorId) !== 1) {
+    $doctorId = '';
+}
 $focusCaseId = trim((string)($_GET['case_id'] ?? ''));
 $isCaseEmbed = trim((string)($_GET['case_embed'] ?? '')) === '1';
 $view = strtolower(trim((string)($_GET['view'] ?? 'historial')));
@@ -1196,6 +1200,9 @@ if ($patientId === '' && $encounterKey !== '') {
             if ($embed) {
                 $redirectParams['embed'] = '1';
             }
+            if ($doctorId !== '') {
+                $redirectParams['doctor_id'] = $doctorId;
+            }
             header('Location: /modules/clinical/ui/historial.php?' . http_build_query($redirectParams));
             exit;
         }
@@ -1238,6 +1245,9 @@ if ($patientId === '' && $encounterKey !== '') {
             }
             if ($embed) {
                 $redirectParams['embed'] = '1';
+            }
+            if ($doctorId !== '') {
+                $redirectParams['doctor_id'] = $doctorId;
             }
             header('Location: /modules/clinical/ui/historial.php?' . http_build_query($redirectParams));
             exit;
@@ -1559,6 +1569,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     if ($embed) {
                         $redirectParams['embed'] = '1';
+                    }
+                    if ($doctorId !== '') {
+                        $redirectParams['doctor_id'] = $doctorId;
                     }
                     if (trim((string)($_GET['debug'] ?? '')) === '1') {
                         $redirectParams['debug'] = '1';
@@ -3387,9 +3400,42 @@ if (!$embed) {
     var currentUserId = <?php echo json_encode($currentUserId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var currentInclude = <?php echo json_encode($include, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var apiBase = <?php echo json_encode($clinicalApiClientBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+    var historialDoctorId = <?php echo json_encode($doctorId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var activeCaseId = <?php echo json_encode($activeCaseId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     var isCasesView = <?php echo $isCasesView ? 'true' : 'false'; ?>;
     var isEmbed = <?php echo $embed ? 'true' : 'false'; ?>;
+    var historialDoctorScopeWarned = false;
+    window.mxmedHistorialDoctorId = historialDoctorId;
+    function resolveHistorialDoctorId() {
+      var candidates = [historialDoctorId];
+      try {
+        var params = new URLSearchParams(window.location.search || '');
+        candidates.push(params.get('doctor_id') || '');
+      } catch (_) {}
+      try {
+        if (window.parent && window.parent !== window && typeof window.parent.resolveDoctorId === 'function') {
+          candidates.push(window.parent.resolveDoctorId());
+        }
+      } catch (_) {}
+      try {
+        candidates.push(window.mxmedStore && (window.mxmedStore.doctorId || window.mxmedStore.doctor_id));
+        candidates.push(window.mxmedStore && window.mxmedStore.activeProfessionalContext && window.mxmedStore.activeProfessionalContext.doctor_id);
+        candidates.push(window.mxmedDoctor && window.mxmedDoctor.doctor_id);
+        candidates.push(document.body && document.body.dataset ? document.body.dataset.doctorId : '');
+      } catch (_) {}
+      for (var i = 0; i < candidates.length; i += 1) {
+        var value = String(candidates[i] || '').trim();
+        if (value) return value;
+      }
+      if (!historialDoctorScopeWarned) {
+        historialDoctorScopeWarned = true;
+        try {
+          console.warn('[ACTIVIDAD-CLINICA-PROCEDIMIENTO-IFRAME] missing_doctor_scope');
+        } catch (_) {}
+      }
+      return '';
+    }
+    window.resolveHistorialDoctorId = resolveHistorialDoctorId;
     var onlyActiveCaseStorageKey = 'mxmed_historial_only_active_case:' + String(patientId || '');
     var casesModalEl = document.getElementById('clinicalCasesModal');
     var casesModalList = document.getElementById('casesModalList');
@@ -4806,8 +4852,17 @@ if (!$embed) {
     function buildCaseEmbedSrc(caseId) {
       var id = String(caseId || '').trim();
       if (!id || !patientId) return '';
-      return '/modules/clinical/ui/historial.php?patient_id=' + encodeURIComponent(patientId)
-        + '&embed=1&view=historial&case_embed=1&case_id=' + encodeURIComponent(id);
+      var params = new URLSearchParams();
+      params.set('patient_id', patientId);
+      params.set('embed', '1');
+      params.set('view', 'historial');
+      params.set('case_embed', '1');
+      params.set('case_id', id);
+      var doctorId = resolveHistorialDoctorId();
+      if (doctorId) {
+        params.set('doctor_id', doctorId);
+      }
+      return '/modules/clinical/ui/historial.php?' + params.toString();
     }
 
     function setCasesModalLoading(flag) {

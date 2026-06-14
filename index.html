@@ -10526,17 +10526,52 @@
       return 'demo';
     }
 
+    function readActiveDoctorId() {
+      var candidates = [];
+      try {
+        if (typeof window.resolveDoctorId === 'function') {
+          candidates.push(window.resolveDoctorId());
+        }
+      } catch (_) {}
+      candidates.push(window.mxmedStore && window.mxmedStore.doctorId);
+      candidates.push(window.mxmedStore && window.mxmedStore.doctor_id);
+      candidates.push(window.mxmedStore && window.mxmedStore.activeProfessionalContext && window.mxmedStore.activeProfessionalContext.doctor_id);
+      candidates.push(window.mxmedDoctor && window.mxmedDoctor.doctor_id);
+      candidates.push(document.body && document.body.dataset ? document.body.dataset.doctorId : '');
+      for (var i = 0; i < candidates.length; i += 1) {
+        var value = String(candidates[i] || '').trim();
+        if (value) return value;
+      }
+      return '';
+    }
+
+    function buildHistorialSrc(context, extras) {
+      var params = new URLSearchParams();
+      params.set('patient_id', context.patientId);
+      params.set('embed', '1');
+      var doctorId = readActiveDoctorId();
+      if (doctorId) {
+        params.set('doctor_id', doctorId);
+      }
+      var extraParams = extras || {};
+      Object.keys(extraParams).forEach(function (key) {
+        var value = String(extraParams[key] || '').trim();
+        if (value) params.set(key, value);
+      });
+      return '/modules/clinical/ui/historial.php?' + params.toString();
+    }
+
     function buildSrc(mode, context) {
       if (mode === 'encounter') {
         return '/modules/clinical/ui/encounter.php?encounter_key=' + encodeURIComponent(context.encounterKey) + '&embed=1';
       }
       if (mode === 'cases') {
-        return '/modules/clinical/ui/historial.php?patient_id=' + encodeURIComponent(context.patientId) + '&embed=1&view=cases';
+        return buildHistorialSrc(context, { view: 'cases' });
       }
       if (mode === 'document') {
         return '/modules/clinical/ui/document.php?uuid=' + encodeURIComponent(context.documentUuid) + '&embed=1';
       }
-      return '/modules/clinical/ui/historial.php?patient_id=' + encodeURIComponent(context.patientId) + '&embed=1';
+      return buildHistorialSrc(context);
     }
 
     function setEmbedVisualState(state, message) {
@@ -10984,7 +11019,7 @@
         : activeMode === 'document'
           ? context.documentUuid
           : context.patientId;
-      var nextKey = activeMode + '|' + String(idValue || '').trim();
+      var nextKey = activeMode + '|' + String(idValue || '').trim() + '|doctor:' + readActiveDoctorId();
       var nextSrc = buildSrc(activeMode, context);
 
       if (iframe.getAttribute('src') && lastLoadedKey === nextKey) {

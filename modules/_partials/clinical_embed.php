@@ -15,6 +15,10 @@ if (!function_exists('carry_embed_params')) {
         if (is_embed_request()) {
             $params['embed'] = '1';
         }
+        $doctorId = trim((string)($_GET['doctor_id'] ?? ''));
+        if ($doctorId !== '' && preg_match('/^[A-Za-z0-9._:-]{1,64}$/', $doctorId) === 1 && !array_key_exists('doctor_id', $params)) {
+            $params['doctor_id'] = $doctorId;
+        }
         return http_build_query($params);
     }
 }
@@ -25,7 +29,12 @@ if (!function_exists('carry_embed_hidden_input')) {
         if (!is_embed_request()) {
             return '';
         }
-        return '<input type="hidden" name="embed" value="1">';
+        $html = '<input type="hidden" name="embed" value="1">';
+        $doctorId = trim((string)($_GET['doctor_id'] ?? ''));
+        if ($doctorId !== '' && preg_match('/^[A-Za-z0-9._:-]{1,64}$/', $doctorId) === 1) {
+            $html .= '<input type="hidden" name="doctor_id" value="' . htmlspecialchars($doctorId, ENT_QUOTES, 'UTF-8') . '">';
+        }
+        return $html;
     }
 }
 
