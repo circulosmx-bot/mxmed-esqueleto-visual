@@ -32336,6 +32336,7 @@ console.info('app.js loaded :: 20251123a');
       const context = (requestArgs.context && typeof requestArgs.context === 'object') ? { ...requestArgs.context } : {};
       const requestedDocumentType = String(requestArgs.document_type || requestArgs.type || '').trim();
       const isEvolutionNote = requestedDocumentType === 'nota_evolucion';
+      const isPrescription = requestedDocumentType === 'prescription';
       const fromBridge = (typeof window.getActiveEncounterKey === 'function')
         ? String(window.getActiveEncounterKey() || '').trim()
         : '';
@@ -32407,6 +32408,96 @@ console.info('app.js loaded :: 20251123a');
           }
         }
 
+        if (isPrescription) {
+          const doctorId = resolveGatewayDocumentsDoctorId();
+          if (!doctorId || !canonicalPatientId) {
+            console.warn('[CLINICAL-DOCUMENTS-GATEWAY-CREATE-PRESCRIPTION] missing_doctor_scope', {
+              doctor_id: doctorId || null,
+              patient_id: canonicalPatientId || null
+            });
+            throw new Error('No se pudo resolver el médico o paciente para guardar la receta.');
+          }
+
+          const prescriptionSourcePayload = (gatewayArgs.payload && typeof gatewayArgs.payload === 'object') ? gatewayArgs.payload : {};
+          const prescriptionItems = resolvePrescriptionPayloadItems(prescriptionSourcePayload)
+            .map((item) => {
+              const name = String(item?.name || item?.medicamento || '').trim();
+              const dose = String(item?.dose || item?.dosis || '').trim();
+              const route = String(item?.route || item?.via || '').trim();
+              const frequency = String(item?.frequency || item?.frecuencia || item?.periodicidad || '').trim();
+              const duration = String(item?.duration || item?.duracion || '').trim();
+              const indications = [
+                String(item?.instructions || item?.indicaciones || '').trim(),
+                String(item?.presentation || '').trim() ? `Presentación: ${String(item.presentation).trim()}` : '',
+                String(item?.quantity || item?.cantidad || '').trim() ? `Cantidad: ${String(item?.quantity || item?.cantidad).trim()}` : ''
+              ].filter(Boolean).join(' · ');
+              return {
+                medicamento: name,
+                dosis: dose,
+                via: route,
+                frecuencia: frequency,
+                periodicidad: frequency,
+                duracion: duration,
+                indicaciones: indications
+              };
+            });
+          const prescriptionObservations = [
+            ...(Array.isArray(prescriptionSourcePayload?.analysis?.results?.observations) ? prescriptionSourcePayload.analysis.results.observations : []),
+            ...(Array.isArray(prescriptionSourcePayload?.analysis?.observations) ? prescriptionSourcePayload.analysis.observations : [])
+          ].map((item) => String(item || '').trim()).filter(Boolean).join(' ');
+          const prescriptionPayload = {
+            ...prescriptionSourcePayload,
+            contract_version: prescriptionSourcePayload.contract_version || 1,
+            prescription: {
+              ...((prescriptionSourcePayload.prescription && typeof prescriptionSourcePayload.prescription === 'object') ? prescriptionSourcePayload.prescription : {}),
+              items: prescriptionItems,
+              observaciones: String(prescriptionSourcePayload?.prescription?.observaciones || prescriptionObservations || '').trim()
+            }
+          };
+          const prescriptionGatewayArgs = {
+            ...gatewayArgs,
+            payload: prescriptionPayload,
+            content: {
+              ...((gatewayArgs.content && typeof gatewayArgs.content === 'object') ? gatewayArgs.content : {}),
+              payload: prescriptionPayload,
+              rendered_text: buildPrescriptionRenderedText(prescriptionPayload, context, requestArgs.actor || {}),
+              summary: window.buildPrescriptionSummary(prescriptionPayload)
+            }
+          };
+
+          console.debug('SAVE gateway scoped prescription attempt', {
+            doctor_id: doctorId,
+            patient_id: canonicalPatientId,
+            legacy_patient_id: legacyPatientId || null,
+            source: 'app'
+          });
+
+          try {
+            const gatewayPayload = await fetchJson(`${mxmedApiBase()}/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(canonicalPatientId)}/documents`, {
+              method: 'POST',
+              headers: { Accept: 'application/json' },
+              body: JSON.stringify(prescriptionGatewayArgs)
+            });
+            const normalized = normalizeSavedDocumentResponse(gatewayPayload, 'gateway');
+            console.debug('SAVE gateway scoped prescription ok', {
+              doctor_id: doctorId,
+              patient_id: canonicalPatientId,
+              source: 'app'
+            });
+            return normalized;
+          } catch (e) {
+            errors.push(e);
+            console.warn('[CLINICAL-DOCUMENTS-GATEWAY-CREATE-PRESCRIPTION] scoped_create_failed', {
+              doctor_id: doctorId,
+              patient_id: canonicalPatientId,
+              status: e?.status || null,
+              message: e?.message || null
+            });
+            const mergedMessage = errors.map((err)=> String(err?.message || '').trim()).filter(Boolean).join(' | ');
+            throw new Error(mergedMessage || 'No se pudo guardar la receta.');
+          }
+        }
+
         console.debug('SAVE gateway attempt', {
           patient_id: canonicalPatientId,
           legacy_patient_id: legacyPatientId || null,
@@ -32443,6 +32534,13 @@ console.info('app.js loaded :: 20251123a');
             patient_id: canonicalPatientId || null
           });
           throw new Error('No se pudo resolver el médico o paciente para guardar la nota de evolución.');
+        }
+        if (isPrescription) {
+          console.warn('[CLINICAL-DOCUMENTS-GATEWAY-CREATE-PRESCRIPTION] missing_doctor_scope', {
+            doctor_id: resolveGatewayDocumentsDoctorId() || null,
+            patient_id: canonicalPatientId || null
+          });
+          throw new Error('No se pudo resolver el médico o paciente para guardar la receta.');
         }
       }
 
