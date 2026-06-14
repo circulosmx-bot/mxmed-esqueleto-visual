@@ -32412,7 +32412,15 @@ console.info('app.js loaded :: 20251123a');
       const errors = [];
 
       const tryGateway = async () => {
-        const payload = await fetchJson(`${gatewayDocumentsEndpoint}/${encodeURIComponent(token)}`, {
+        const doctorId = resolveGatewayDocumentsDoctorId();
+        if (!doctorId || !token) {
+          console.warn('[CLINICAL-DOCUMENTS-GATEWAY-DETAIL] missing_doctor_scope', {
+            doctor_id: doctorId || null,
+            document_token: token || null
+          });
+          throw new Error('missing doctor scope');
+        }
+        const payload = await fetchJson(`${mxmedApiBase()}/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/documents/${encodeURIComponent(token)}`, {
           method: 'GET',
           headers: { Accept: 'application/json' }
         });
@@ -32431,9 +32439,14 @@ console.info('app.js loaded :: 20251123a');
         try { return await tryLegacy(); } catch (e) { errors.push(e); }
         try { return await tryGateway(); } catch (e) { errors.push(e); }
       } else {
-        try { return await tryGateway(); } catch (e) { errors.push(e); }
-        console.info('[P15][nota_evolucion] detail fallback -> legacy', { reason: 'gateway_failed', token });
-        try { return await tryLegacy(); } catch (e) { errors.push(e); }
+        try { return await tryGateway(); } catch (e) {
+          errors.push(e);
+          console.warn('[CLINICAL-DOCUMENTS-GATEWAY-DETAIL] scoped_detail_failed', {
+            status: e?.status || null,
+            message: e?.message || null,
+            document_token: token
+          });
+        }
       }
 
       const mergedMessage = errors.map((e)=> String(e?.message || '').trim()).filter(Boolean).join(' | ');
