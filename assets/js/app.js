@@ -39106,6 +39106,32 @@ console.info('app.js loaded :: 20251123a');
       }
       return 'qa';
     };
+    const resolveHostProcedureDoctorId = ()=>{
+      const candidates = [
+        (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : ''),
+        window.mxmedStore?.doctorId,
+        window.mxmedStore?.doctor_id,
+        window.mxmedStore?.activeProfessionalContext?.doctor_id,
+        window.mxmedDoctor?.doctor_id,
+        document.body?.dataset?.doctorId
+      ];
+      for(const raw of candidates){
+        const value = String(raw || '').trim();
+        if(value) return value;
+      }
+      return '';
+    };
+    const resolveHostProcedurePatientId = async (patientId)=>{
+      const raw = sanitizeText(patientId);
+      if(/^p_/i.test(raw)) return raw;
+      const resolved = (typeof resolveCanonicalPatientIdSafe === 'function')
+        ? await resolveCanonicalPatientIdSafe(raw).catch(()=> null)
+        : null;
+      return sanitizeText(resolved);
+    };
+    const buildHostProcedureCreateUrl = (doctorId, patientId)=>{
+      return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(patientId)}/documents`;
+    };
     const refreshAfterSave = (patientId, requestType)=>{
       try{
         window.dispatchEvent(new CustomEvent('mxmed:clinical-document-created', {
@@ -39217,32 +39243,63 @@ console.info('app.js loaded :: 20251123a');
         });
       }catch(_){}
       try{
-        const resp = await fetch('/api/clinical/index.php/documents', {
+        const doctorId = resolveHostProcedureDoctorId();
+        const scopedPatientId = await resolveHostProcedurePatientId(prepared.patientId);
+        if(!doctorId || !scopedPatientId){
+          console.warn('[ACTIVIDAD-CLINICA-PROCEDIMIENTO-HOST] missing_doctor_scope', {
+            doctor_id: doctorId || null,
+            patient_id: scopedPatientId || prepared.patientId || null
+          });
+          const scopeError = new Error('No se pudo resolver el médico o paciente para registrar el procedimiento.');
+          scopeError.code = 'missing_doctor_scope';
+          throw scopeError;
+        }
+        const scopedBody = {
+          ...prepared.body,
+          document_type: prepared.requestType,
+          context: {
+            ...prepared.body.context,
+            patient_id: scopedPatientId
+          }
+        };
+        const resp = await fetch(buildHostProcedureCreateUrl(doctorId, scopedPatientId), {
           method: 'POST',
           headers: {
             Accept: 'application/json',
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(prepared.body),
+          body: JSON.stringify(scopedBody),
           credentials: 'same-origin'
         });
         const json = await resp.json().catch(()=> null);
         if(!resp.ok || !json || json.ok !== true){
           const msg = sanitizeText(json?.message || json?.error?.message || json?.error || `HTTP ${resp.status}`) || 'No se pudo registrar el procedimiento.';
-          throw new Error(msg);
+          const scopedError = new Error(msg);
+          scopedError.status = resp.status;
+          scopedError.data = json;
+          throw scopedError;
         }
         const modal = (window.bootstrap && window.bootstrap.Modal && typeof window.bootstrap.Modal.getInstance === 'function')
           ? window.bootstrap.Modal.getInstance(modalEl)
           : null;
         modal?.hide();
-        refreshAfterSave(prepared.patientId, prepared.requestType);
+        refreshAfterSave(scopedPatientId, prepared.requestType);
         try{
           console.info('[mxmed-actividad-clinica] host procedure save ok', {
-            patient_id: prepared.patientId,
+            doctor_id: doctorId,
+            patient_id: scopedPatientId,
             type: prepared.requestType
           });
         }catch(_){}
       }catch(err){
+        if(err?.code !== 'missing_doctor_scope'){
+          console.warn('[ACTIVIDAD-CLINICA-PROCEDIMIENTO-HOST] scoped_create_failed', {
+            status: err?.status || null,
+            message: err?.message || null,
+            patient_id: prepared.patientId || null,
+            type: prepared.requestType || null
+          });
+        }
         setError(err?.message || 'No se pudo registrar el procedimiento.');
         submitBtn.disabled = false;
         submitBtn.textContent = 'Guardar';
