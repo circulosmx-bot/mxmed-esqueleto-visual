@@ -48080,7 +48080,14 @@ console.info('app.js loaded :: 20251123a');
     const fetchLatestCertificadoUuid = async (patientId = '')=>{
       const safePatientId = sanitizeText(patientId || '');
       if(!safePatientId) return '';
-      const resp = await fetch(`/api/clinical/index.php/documents?patient_id=${encodeURIComponent(safePatientId)}&document_type=certificado_medico&limit=5`, {
+      const url = buildScopedCanonicalDocumentsListUrl(safePatientId, 5, {
+        document_type: 'certificado_medico'
+      });
+      if(!url){
+        console.warn('[CERTIFICADO-LATEST] missing_doctor_scope', { patient_id: safePatientId });
+        return '';
+      }
+      const resp = await fetch(url, {
         method: 'GET',
         headers: { Accept: 'application/json' },
         credentials: 'same-origin'
@@ -48090,8 +48097,13 @@ console.info('app.js loaded :: 20251123a');
         return '';
       }
       const items = Array.isArray(json?.data?.items) ? json.data.items : [];
-      if(!items.length) return '';
-      return sanitizeText(items[0]?.document_uuid || '');
+      const certificados = items.filter((item)=>{
+        const clinicalDoc = (item?.clinical_document && typeof item.clinical_document === 'object') ? item.clinical_document : {};
+        const documentType = sanitizeText(clinicalDoc.document_type || item?.document_type || '').toLowerCase();
+        return documentType === 'certificado_medico';
+      });
+      if(!certificados.length) return '';
+      return sanitizeText(certificados[0]?.document_uuid || '');
     };
     const getCertificadoFinalRenderedTextFromDom = ()=>{
       const html = String(els.certificadoFinalEditableBody?.innerHTML || '').trim();
