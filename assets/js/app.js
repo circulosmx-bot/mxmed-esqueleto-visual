@@ -49213,6 +49213,13 @@ console.info('app.js loaded :: 20251123a');
       return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(safePatientId)}/documents?${query.toString()}`;
     };
 
+    const buildScopedCanonicalDocumentCreateUrl = (patientId)=>{
+      const doctorId = resolveCanonicalDocumentsDoctorId();
+      const safePatientId = sanitizeText(patientId || '');
+      if(!doctorId || !safePatientId) return '';
+      return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(safePatientId)}/documents`;
+    };
+
     const listCanonicalConsents = async ()=>{
       const patientId = resolveActivePatientIdForConsent();
       const hasPatient = !!patientId;
@@ -50129,6 +50136,14 @@ console.info('app.js loaded :: 20251123a');
         return;
       }
       clearConsentValidationFeedback();
+      const createUrl = buildScopedCanonicalDocumentCreateUrl(prepared.patientId);
+      if(!createUrl){
+        const message = 'No se pudo resolver el médico para guardar el consentimiento informado.';
+        console.warn('[CONSENT-SAVE] missing_doctor_scope', { patient_id: prepared.patientId });
+        showNotice(message);
+        showCatalogFeedback(message, 'error');
+        return;
+      }
       state.saving = true;
       pushCiDebug(isEmit ? '[CI] emitConsent ejecutándose' : '[CI] saveDraft ejecutándose');
       if(els.save){
@@ -50217,7 +50232,7 @@ console.info('app.js loaded :: 20251123a');
           }
           prepared.body.payload = payload;
         }
-        const resp = await fetch('/api/clinical/index.php/documents', {
+        const resp = await fetch(createUrl, {
           method: 'POST',
           headers: {
             Accept: 'application/json',
