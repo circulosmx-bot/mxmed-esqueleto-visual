@@ -43294,7 +43294,13 @@ console.info('app.js loaded :: 20251123a');
       const localDraft = getLocalConsentDraft(safePatientId);
       if(localDraft) return localDraft;
       try{
-        const url = `/api/clinical/index.php/documents?patient_id=${encodeURIComponent(safePatientId)}&document_type=consentimiento_informado&limit=50`;
+        const url = buildScopedCanonicalDocumentsListUrl(safePatientId, 50, {
+          document_type: 'consentimiento_informado'
+        });
+        if(!url){
+          console.warn('[CONSENT-DRAFT-LATEST] missing_doctor_scope', { patient_id: safePatientId });
+          return null;
+        }
         const resp = await fetch(url, {
           method: 'GET',
           headers: { Accept: 'application/json' },
@@ -43303,6 +43309,11 @@ console.info('app.js loaded :: 20251123a');
         const json = await resp.json().catch(()=> null);
         const items = Array.isArray(json?.data?.items) ? json.data.items : [];
         const drafts = items
+          .filter((item)=>{
+            const clinicalDoc = (item?.clinical_document && typeof item.clinical_document === 'object') ? item.clinical_document : {};
+            const documentType = sanitizeText(clinicalDoc.document_type || item?.document_type || '').toLowerCase();
+            return documentType === 'consentimiento_informado';
+          })
           .map((item)=> extractConsentDraftRecord(item))
           .filter(Boolean)
           .filter((row)=> !isConsentDraftRefIgnored(safePatientId, row?.ref || ''))
@@ -49177,11 +49188,17 @@ console.info('app.js loaded :: 20251123a');
       );
     };
 
-    const buildScopedCanonicalDocumentsListUrl = (patientId)=>{
+    const buildScopedCanonicalDocumentsListUrl = (patientId, limit = 80, params = {})=>{
       const doctorId = resolveCanonicalDocumentsDoctorId();
       const safePatientId = sanitizeText(patientId || '');
       if(!doctorId || !safePatientId) return '';
-      return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(safePatientId)}/documents?limit=80`;
+      const safeLimit = Number.isFinite(Number(limit)) && Number(limit) > 0
+        ? Math.min(200, Math.floor(Number(limit)))
+        : 80;
+      const query = new URLSearchParams({ limit: String(safeLimit) });
+      const documentType = sanitizeText(params?.document_type || params?.documentType || '');
+      if(documentType) query.set('document_type', documentType);
+      return `/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(safePatientId)}/documents?${query.toString()}`;
     };
 
     const listCanonicalConsents = async ()=>{
