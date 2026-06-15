@@ -35402,6 +35402,10 @@ console.info('app.js loaded :: 20251123a');
           <span class="ne-rx-ch-meta" data-clinical-field="sex">--</span>
         </div>
         <div class="ne-rx-ch-reason" data-clinical-field="clinical_reason">Motivo: Sin motivo registrado</div>
+        <div class="ne-rx-ch-actions" aria-label="Acciones del expediente">
+          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="active-close">Cerrar expediente</button>
+          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="active-search">Cambiar paciente</button>
+        </div>
         <div class="mx-exp-empty-state" data-role="exp-empty-state">
           <div class="mx-exp-empty-copy">
             <div class="mx-exp-empty-title">Selecciona o registra un paciente para comenzar</div>
@@ -35431,8 +35435,6 @@ console.info('app.js loaded :: 20251123a');
 	          <span class="ne-rx-ch-value" data-clinical-field="encounter_status">Sin consulta activa</span>
 	          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="encounter">Iniciar consulta</button>
 	          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="draft-search">Buscar paciente</button>
-	          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="active-close">Cerrar expediente</button>
-	          <button type="button" class="mx-clinical-header-action d-none" data-clinical-action="active-search">Cambiar paciente</button>
 	        </div>
 	      </div>
       <div class="ne-rx-ch-item">
