@@ -3462,6 +3462,31 @@ if (!$embed) {
         console.warn('[ACTIVIDAD-CLINICA-PROCEDIMIENTO-IFRAME] scoped_create_failed', err || null);
       } catch (_) {}
     }
+    function buildHistorialScopedDocumentDetailUrl(documentToken) {
+      var doctorId = String(resolveHistorialDoctorId() || '').trim();
+      var token = String(documentToken || '').trim();
+      if (!doctorId || !token) {
+        try {
+          console.warn('[ACTIVIDAD-CLINICA-PROCEDIMIENTO-IFRAME-DETAIL] missing_doctor_scope', {
+            has_doctor_id: !!doctorId,
+            has_document_token: !!token
+          });
+        } catch (_) {}
+        var err = new Error(!doctorId
+          ? 'No se pudo resolver el médico para consultar el documento.'
+          : 'Documento no disponible.');
+        err.code = 'missing_doctor_scope';
+        throw err;
+      }
+      return apiBase + '/api/clinical/index.php/doctors/' + encodeURIComponent(doctorId)
+        + '/documents/' + encodeURIComponent(token);
+    }
+    function warnHistorialScopedDetailFailed(err) {
+      if (err && err.code === 'missing_doctor_scope') return;
+      try {
+        console.warn('[ACTIVIDAD-CLINICA-PROCEDIMIENTO-IFRAME-DETAIL] scoped_detail_failed', err || null);
+      } catch (_) {}
+    }
     var onlyActiveCaseStorageKey = 'mxmed_historial_only_active_case:' + String(patientId || '');
     var casesModalEl = document.getElementById('clinicalCasesModal');
     var casesModalList = document.getElementById('casesModalList');
@@ -5408,7 +5433,7 @@ if (!$embed) {
 
     async function openDocumentViewer(uuid, summaryHint, mode, options) {
       var key = String(uuid || '').trim();
-      if (!key || !documentViewerModalEl) return;
+      if (!documentViewerModalEl) return;
       var opts = options && typeof options === 'object' ? options : {};
       activeDocumentUrl = buildDocumentUrl(key, mode);
       openDocumentViewerModal();
@@ -5435,14 +5460,15 @@ if (!$embed) {
       }
       setDocumentViewerLoading(true);
       try {
-        var url = apiBase + '/api/clinical/index.php/documents/' + encodeURIComponent(key);
+        var url = buildHistorialScopedDocumentDetailUrl(key);
         var payload = await apiJson(url, { method: 'GET' });
         var data = payload && payload.data && typeof payload.data === 'object' ? payload.data : null;
         if (!data) {
           throw new Error('Documento no disponible');
         }
         renderDocumentViewerCard(data);
-      } catch (_) {
+      } catch (err) {
+        warnHistorialScopedDetailFailed(err);
         if (documentViewerError) documentViewerError.classList.remove('d-none');
       } finally {
         setDocumentViewerLoading(false);
