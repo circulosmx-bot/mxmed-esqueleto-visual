@@ -71,13 +71,14 @@
     return url;
   };
 
-  const buildGatewayDocumentsListUrl = (canonicalPatientId, opts = {}) => {
+  const buildGatewayDocumentsListUrl = (doctorId, canonicalPatientId, opts = {}) => {
+    const safeDoctorId = String(doctorId ?? '').trim();
     const patientId = String(canonicalPatientId ?? '').trim();
     const hospitalStayId = String(opts.hospital_stay_id ?? '');
     const documentType = String(opts.document_type ?? '');
     const limit = normalizeLimit(opts.limit, 50);
 
-    let url = `${gatewayDocumentsEndpoint}?patient_id=${enc(patientId)}&limit=${enc(String(limit))}`;
+    let url = `${mxmedApiBase()}/api/clinical/index.php/doctors/${enc(safeDoctorId)}/patients/${enc(patientId)}/documents?limit=${enc(String(limit))}`;
 
     if (documentType !== '') {
       url += `&document_type=${enc(documentType)}`;
@@ -90,6 +91,29 @@
     return url;
   };
   const getIdentityApi = () => window.mxmedIdentity || null;
+  const resolveManejoHospitalarioDoctorId = () => {
+    const candidates = [];
+    try {
+      if (typeof window.resolveDoctorId === 'function') {
+        candidates.push(window.resolveDoctorId());
+      }
+    } catch (_) {}
+    candidates.push(
+      window.mxmedStore?.doctorId,
+      window.mxmedStore?.doctor_id,
+      window.mxmedStore?.activeProfessionalContext?.doctor_id,
+      window.mxmedStore?.doctorProfile?.doctor_id,
+      window.mxmedDoctor?.doctor_id,
+      window.mxmedDoctor?.id,
+      window.mxmedContext?.doctor_id,
+      document.body?.dataset?.doctorId
+    );
+    for (const candidate of candidates) {
+      const value = String(candidate ?? '').trim();
+      if (value) return value;
+    }
+    return '';
+  };
   const getCanonicalCache = () => {
     if (!window.__mxmed_canonical_cache || typeof window.__mxmed_canonical_cache !== 'object') {
       window.__mxmed_canonical_cache = {};
@@ -106,6 +130,7 @@
   const resolveCanonicalPatientIdSafe = (legacyPatientId) => {
     const legacy = String(legacyPatientId ?? '').trim();
     if (!legacy || legacy === 'anon') return Promise.resolve(null);
+    if (legacy.indexOf('p_') === 0) return Promise.resolve(legacy);
 
     const cache = getCanonicalCache();
     if (Object.prototype.hasOwnProperty.call(cache, legacy)) {
@@ -125,6 +150,16 @@
       cache[legacy] = null;
       return null;
     });
+  };
+  const resolveManejoHospitalarioCanonicalPatientId = async (patient) => {
+    const patientObj = (patient && typeof patient === 'object')
+      ? patient
+      : { patient_id: patient, canonical_patient_id: null };
+    const explicitCanonical = String(patientObj?.canonical_patient_id ?? '').trim();
+    if (explicitCanonical) return explicitCanonical;
+    const rawPatientId = String(patientObj?.patient_id ?? '').trim();
+    if (rawPatientId.indexOf('p_') === 0) return rawPatientId;
+    return await resolveCanonicalPatientIdSafe(rawPatientId).catch(() => null);
   };
 
 const isDemo = window.location.hostname.endsWith('github.io');
@@ -148,6 +183,7 @@ const isDemo = window.location.hostname.endsWith('github.io');
     if (url.includes('clinical-documents.php?action=list')) return demoFetchJson('mock/clinical-documents-list-hosp.json');
     if (url.includes('/api/clinical/index.php/documents') && method === 'POST') return demoFetchJson('mock/clinical-documents-save-hosp.json');
     if (url.includes('/api/clinical/index.php/documents') && method === 'GET') return demoFetchJson('mock/clinical-documents-list-hosp.json');
+    if (url.includes('/api/clinical/index.php/doctors/') && url.includes('/documents') && method === 'GET') return demoFetchJson('mock/clinical-documents-list-hosp.json');
     if (url.includes('clinical-documents.php?action=get')) return demoFetchJson('mock/clinical-documents-get-hosp.json');
     if (url.includes('clinical-documents.php?action=save')) return demoFetchJson('mock/clinical-documents-save-hosp.json');
     return Promise.resolve({ ok: true });
@@ -168,27 +204,36 @@ const isDemo = window.location.hostname.endsWith('github.io');
       const patientObj = (patient && typeof patient === 'object')
         ? patient
         : { patient_id: patient, canonical_patient_id: null };
-      const legacyPatientId = String(patientObj?.patient_id ?? '');
-      const canonicalPatientId = String(patientObj?.canonical_patient_id ?? '').trim();
+      const doctorId = resolveManejoHospitalarioDoctorId();
+      const canonicalPatientId = await resolveManejoHospitalarioCanonicalPatientId(patientObj);
       const options = {
         hospital_stay_id: sid,
         limit: 50
       };
 
-      if (canonicalPatientId !== '') {
+      if (!doctorId || !canonicalPatientId) {
         try {
-          const gatewayPayload = await api.j(buildGatewayDocumentsListUrl(canonicalPatientId, options), { method: 'GET', headers: { Accept: 'application/json' } });
-          const gatewayItems = gatewayPayload?.data?.items;
-          if (gatewayPayload?.ok === true && Array.isArray(gatewayItems)) {
-            return { items: gatewayItems };
-          }
-        } catch (_) {
-          // Gateway failed; fallback to legacy for compatibility.
-        }
+          console.warn('[MANEJO-HOSPITALARIO-LIST] missing_doctor_scope', {
+            has_doctor_id: !!doctorId,
+            has_patient_id: !!canonicalPatientId
+          });
+        } catch (_) {}
+        return { items: [] };
       }
 
-      const legacyPayload = await api.j(buildLegacyDocumentsListUrl(legacyPatientId, options), { method: 'GET', headers: {} });
-      return { items: Array.isArray(legacyPayload?.items) ? legacyPayload.items : [] };
+      try {
+        const gatewayPayload = await api.j(buildGatewayDocumentsListUrl(doctorId, canonicalPatientId, options), { method: 'GET', headers: { Accept: 'application/json' } });
+        const gatewayItems = gatewayPayload?.data?.items ?? gatewayPayload?.items;
+        if (gatewayPayload?.ok === true && Array.isArray(gatewayItems)) {
+          return { items: gatewayItems };
+        }
+      } catch (err) {
+        try {
+          console.warn('[MANEJO-HOSPITALARIO-LIST] scoped_list_failed', err || null);
+        } catch (_) {}
+      }
+
+      return { items: [] };
     },
     async saveDoc(body) {
       const requestBody = (body && typeof body === 'object') ? body : {};
