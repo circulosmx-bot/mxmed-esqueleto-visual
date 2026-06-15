@@ -46,7 +46,6 @@
     return loc.origin;
   };
   const legacyDocumentsEndpoint = 'api/clinical-documents.php';
-  const gatewayDocumentsEndpoint = mxmedApiBase() + '/api/clinical/index.php/documents';
   const normalizeLimit = (value, fallback = 50) => {
     const n = Number(value);
     if (!Number.isFinite(n) || n <= 0) return fallback;
@@ -89,6 +88,11 @@
     }
 
     return url;
+  };
+  const buildManejoHospitalarioScopedDocumentCreateUrl = (doctorId, canonicalPatientId) => {
+    const safeDoctorId = String(doctorId ?? '').trim();
+    const patientId = String(canonicalPatientId ?? '').trim();
+    return `${mxmedApiBase()}/api/clinical/index.php/doctors/${enc(safeDoctorId)}/patients/${enc(patientId)}/documents`;
   };
   const getIdentityApi = () => window.mxmedIdentity || null;
   const resolveManejoHospitalarioDoctorId = () => {
@@ -183,6 +187,7 @@ const isDemo = window.location.hostname.endsWith('github.io');
     if (url.includes('clinical-documents.php?action=list')) return demoFetchJson('mock/clinical-documents-list-hosp.json');
     if (url.includes('/api/clinical/index.php/documents') && method === 'POST') return demoFetchJson('mock/clinical-documents-save-hosp.json');
     if (url.includes('/api/clinical/index.php/documents') && method === 'GET') return demoFetchJson('mock/clinical-documents-list-hosp.json');
+    if (url.includes('/api/clinical/index.php/doctors/') && url.includes('/documents') && method === 'POST') return demoFetchJson('mock/clinical-documents-save-hosp.json');
     if (url.includes('/api/clinical/index.php/doctors/') && url.includes('/documents') && method === 'GET') return demoFetchJson('mock/clinical-documents-list-hosp.json');
     if (url.includes('clinical-documents.php?action=get')) return demoFetchJson('mock/clinical-documents-get-hosp.json');
     if (url.includes('clinical-documents.php?action=save')) return demoFetchJson('mock/clinical-documents-save-hosp.json');
@@ -239,7 +244,12 @@ const isDemo = window.location.hostname.endsWith('github.io');
       const requestBody = (body && typeof body === 'object') ? body : {};
       const context = (requestBody.context && typeof requestBody.context === 'object') ? requestBody.context : {};
       const legacyPatientId = String(context.patient_id ?? '').trim();
-      const canonicalPatientId = await resolveCanonicalPatientIdSafe(legacyPatientId).catch(() => null);
+      const doctorId = resolveManejoHospitalarioDoctorId();
+      const canonicalPatientId = await resolveManejoHospitalarioCanonicalPatientId({
+        patient_id: legacyPatientId,
+        canonical_patient_id: context.canonical_patient_id
+      });
+      const documentType = String(requestBody.document_type ?? requestBody.type ?? '').trim();
 
       const normalizeSavedDocumentResponse = (payload) => {
         const document = payload?.data?.document ?? payload?.document ?? null;
@@ -249,49 +259,40 @@ const isDemo = window.location.hostname.endsWith('github.io');
         return { document };
       };
 
-      if (canonicalPatientId) {
-        const gatewayBody = {
-          ...requestBody,
-          context: {
-            ...context,
-            patient_id: canonicalPatientId,
-            legacy_patient_id: legacyPatientId || undefined
-          }
-        };
-
-        console.debug('SAVE gateway attempt', {
-          patient_id: canonicalPatientId,
-          legacy_patient_id: legacyPatientId || null,
-          source: 'manejo-hospitalario'
-        });
-
+      if (!doctorId || !canonicalPatientId) {
         try {
-          const gatewayPayload = await api.j(gatewayDocumentsEndpoint, {
-            method: 'POST',
-            headers: { Accept: 'application/json' },
-            body: JSON.stringify(gatewayBody)
+          console.warn('[MANEJO-HOSPITALARIO-CREATE] missing_doctor_scope', {
+            has_doctor_id: !!doctorId,
+            has_patient_id: !!canonicalPatientId
           });
-          const normalized = normalizeSavedDocumentResponse(gatewayPayload);
-          console.debug('SAVE gateway ok', {
-            patient_id: canonicalPatientId,
-            source: 'manejo-hospitalario'
-          });
-          return normalized;
-        } catch (_) {
-          console.debug('SAVE fallback legacy', {
-            reason: 'gateway_failed',
-            source: 'manejo-hospitalario'
-          });
-        }
-      } else {
-        console.debug('SAVE fallback legacy', {
-          reason: 'canonical_unavailable',
-          source: 'manejo-hospitalario'
-        });
+        } catch (_) {}
+        throw new Error('No se pudo resolver el medico o paciente para guardar el documento hospitalario.');
       }
 
-      const legacyPayload = await api.saveDocLegacy(requestBody);
-      return normalizeSavedDocumentResponse(legacyPayload);
+      const scopedBody = {
+        ...requestBody,
+        document_type: documentType || requestBody.document_type,
+        context: {
+          ...context,
+          patient_id: canonicalPatientId,
+          canonical_patient_id: canonicalPatientId,
+          legacy_patient_id: legacyPatientId && legacyPatientId !== canonicalPatientId ? legacyPatientId : undefined
+        }
+      };
+
+      try {
+        const scopedPayload = await api.j(buildManejoHospitalarioScopedDocumentCreateUrl(doctorId, canonicalPatientId), {
+          method: 'POST',
+          headers: { Accept: 'application/json' },
+          body: JSON.stringify(scopedBody)
+        });
+        return normalizeSavedDocumentResponse(scopedPayload);
+      } catch (err) {
+        try {
+          console.warn('[MANEJO-HOSPITALARIO-CREATE] scoped_create_failed', err || null);
+        } catch (_) {}
+        throw err;
+      }
     },
     getDoc: (id) => api.j(`api/clinical-documents.php?action=get&id=${enc(id)}`, { method: 'GET', headers: {} }),
   };
