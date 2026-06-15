@@ -702,7 +702,7 @@ $informeDoctorSignatureSourceLabel = ($isInformeDoc ? (string)($informeSignature
 
 require_once __DIR__ . '/../../_partials/clinical_embed.php';
 $embed = is_embed_request();
-$replicateUrl = ($apiIndexBase !== '' && $uuid !== '') ? ($apiIndexBase . '/documents/' . rawurlencode($uuid) . '/replicate') : '';
+$replicateUrl = ($apiIndexBase !== '' && $uuid !== '' && $doctorId !== '') ? ($apiIndexBase . '/doctors/' . rawurlencode($doctorId) . '/documents/' . rawurlencode($uuid) . '/replicate') : '';
 $replicateRedirectTemplate = '/modules/clinical/ui/document.php?' . carry_embed_params(['uuid' => '__UUID__']);
 $replicateTitleOverride = ($title !== '' && $title !== '-') ? ($title . ' (replicado)') : '';
 
