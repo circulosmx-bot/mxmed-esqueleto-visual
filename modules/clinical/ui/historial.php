@@ -3436,6 +3436,32 @@ if (!$embed) {
       return '';
     }
     window.resolveHistorialDoctorId = resolveHistorialDoctorId;
+    function buildHistorialScopedDocumentCreateUrl(rawPatientId) {
+      var doctorId = String(resolveHistorialDoctorId() || '').trim();
+      var scopedPatientId = String(rawPatientId || '').trim();
+      if (!doctorId || !scopedPatientId) {
+        try {
+          console.warn('[ACTIVIDAD-CLINICA-PROCEDIMIENTO-IFRAME] missing_doctor_scope', {
+            has_doctor_id: !!doctorId,
+            has_patient_id: !!scopedPatientId
+          });
+        } catch (_) {}
+        var err = new Error(!doctorId
+          ? 'No se pudo resolver el médico para registrar el procedimiento.'
+          : 'patient_id requerido.');
+        err.code = 'missing_doctor_scope';
+        throw err;
+      }
+      return apiBase + '/api/clinical/index.php/doctors/' + encodeURIComponent(doctorId)
+        + '/patients/' + encodeURIComponent(scopedPatientId)
+        + '/documents';
+    }
+    function warnHistorialScopedCreateFailed(err) {
+      if (err && err.code === 'missing_doctor_scope') return;
+      try {
+        console.warn('[ACTIVIDAD-CLINICA-PROCEDIMIENTO-IFRAME] scoped_create_failed', err || null);
+      } catch (_) {}
+    }
     var onlyActiveCaseStorageKey = 'mxmed_historial_only_active_case:' + String(patientId || '');
     var casesModalEl = document.getElementById('clinicalCasesModal');
     var casesModalList = document.getElementById('casesModalList');
@@ -4449,6 +4475,7 @@ if (!$embed) {
         error: '',
         request: {
           type: 'immunization',
+          document_type: 'immunization',
           actor: { user_id: currentUserId || 'qa' },
           context: { patient_id: patientId },
           title: 'Vacunación',
@@ -4505,7 +4532,7 @@ if (!$embed) {
       syncImmunizationSubmitButton();
       setImmunizationFormError('');
       try {
-        await apiJson(apiBase + '/api/clinical/index.php/documents', {
+        await apiJson(buildHistorialScopedDocumentCreateUrl(patientId), {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
@@ -4517,6 +4544,7 @@ if (!$embed) {
         closeImmunizationModal();
         window.location.reload();
       } catch (err) {
+        warnHistorialScopedCreateFailed(err);
         immunizationSubmitting = false;
         syncImmunizationSubmitButton();
         setImmunizationFormError(err && err.message ? err.message : 'No se pudo registrar la vacuna.');
@@ -4574,6 +4602,7 @@ if (!$embed) {
 
       var body = {
         type: 'wound_care',
+        document_type: 'wound_care',
         title: 'Curación',
         actor: { user_id: currentUserId || 'qa' },
         context: { patient_id: patientId },
@@ -4587,7 +4616,7 @@ if (!$embed) {
       syncWoundCareSubmitButton();
       setWoundCareFormError('');
       try {
-        await apiJson(apiBase + '/api/clinical/index.php/documents', {
+        await apiJson(buildHistorialScopedDocumentCreateUrl(patientId), {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
@@ -4599,6 +4628,7 @@ if (!$embed) {
         closeWoundCareModal();
         window.location.reload();
       } catch (err) {
+        warnHistorialScopedCreateFailed(err);
         woundCareSubmitting = false;
         syncWoundCareSubmitButton();
         setWoundCareFormError(err && err.message ? err.message : 'No se pudo registrar la curación.');
@@ -4666,7 +4696,7 @@ if (!$embed) {
         syncGenericProcedureSubmitButton();
         setGenericProcedureFormError('');
         try {
-          await apiJson(apiBase + '/api/clinical/index.php/documents', {
+          await apiJson(buildHistorialScopedDocumentCreateUrl(patientId), {
             method: 'POST',
             headers: {
               'Accept': 'application/json',
@@ -4678,6 +4708,7 @@ if (!$embed) {
           closeGenericProcedureModal();
           window.location.reload();
         } catch (err) {
+          warnHistorialScopedCreateFailed(err);
           genericProcedureSubmitting = false;
           syncGenericProcedureSubmitButton();
           setGenericProcedureFormError(err && err.message ? err.message : 'No se pudo registrar el procedimiento.');
@@ -4747,7 +4778,7 @@ if (!$embed) {
       syncGenericProcedureSubmitButton();
       setGenericProcedureFormError('');
       try {
-        await apiJson(apiBase + '/api/clinical/index.php/documents', {
+        await apiJson(buildHistorialScopedDocumentCreateUrl(patientId), {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
@@ -4755,6 +4786,7 @@ if (!$embed) {
           },
           body: JSON.stringify({
             type: requestType,
+            document_type: requestType,
             title: title,
             event_datetime: eventDatetime,
             actor: { user_id: resolveClinicalActorUserId() },
@@ -4766,6 +4798,7 @@ if (!$embed) {
         closeGenericProcedureModal();
         window.location.reload();
       } catch (err) {
+        warnHistorialScopedCreateFailed(err);
         genericProcedureSubmitting = false;
         syncGenericProcedureSubmitButton();
         setGenericProcedureFormError(err && err.message ? err.message : 'No se pudo registrar el procedimiento.');
