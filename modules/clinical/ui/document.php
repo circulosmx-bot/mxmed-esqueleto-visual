@@ -130,6 +130,18 @@ function build_clinical_document_ui_href(string $path, array $params): string {
   return $path . ($clean !== [] ? ('?' . http_build_query($clean, '', '&', PHP_QUERY_RFC3986)) : '');
 }
 
+function build_scoped_document_detail_url(string $apiIndexBase, string $doctorId, string $uuid): string {
+  $apiIndexBase = rtrim(trim($apiIndexBase), '/');
+  $doctorId = sanitize_doctor_scope_id($doctorId);
+  $uuid = trim($uuid);
+  if ($apiIndexBase === '' || $doctorId === '' || $uuid === '') {
+    return '';
+  }
+  return $apiIndexBase
+    . '/doctors/' . rawurlencode($doctorId)
+    . '/documents/' . rawurlencode($uuid);
+}
+
 function render_embed_css(bool $embed): void {
   if (!$embed) {
     return;
@@ -362,19 +374,21 @@ $apiIndexBase = ($apiBase !== '') ? ($apiBase . '/api/clinical/index.php') : '';
 if ($uuid !== '') {
   if ($apiIndexBase === '') {
     $errorMessage = 'CLINICAL_API_BASE no configurado y get_api_base() vacío.';
+  } elseif ($doctorId === '') {
+    $errorMessage = 'No se pudo resolver el médico para consultar el documento clínico.';
   } else {
-    $url = $apiIndexBase . '/documents/' . rawurlencode($uuid);
-  $decoded = http_get_json($url, 8);
+    $url = build_scoped_document_detail_url($apiIndexBase, $doctorId, $uuid);
+    $decoded = http_get_json($url, 8);
 
-  if (($decoded['ok'] ?? false) !== true) {
-    $errorMessage = (string)($decoded['message'] ?? 'Error consultando documento.');
-  } else {
-    $doc = $decoded['data']['document'] ?? null;
-    $document = is_array($doc) ? $doc : null;
-    if (!$document) {
-      $errorMessage = 'Documento no disponible.';
+    if (($decoded['ok'] ?? false) !== true) {
+      $errorMessage = (string)($decoded['message'] ?? 'Error consultando documento.');
+    } else {
+      $doc = $decoded['data']['document'] ?? null;
+      $document = is_array($doc) ? $doc : null;
+      if (!$document) {
+        $errorMessage = 'Documento no disponible.';
+      }
     }
-  }
   }
 }
 
