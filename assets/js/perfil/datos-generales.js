@@ -382,20 +382,32 @@
     let lastHydratedProfileSnapshot = '';
     let profileNullNoticeEl = null;
 
+    const ensureProfileNullNoticeHost = ()=>{
+      if(!expedienteRoot) return null;
+      const existing = expedienteRoot.querySelector('[data-pac-profile-null-notice-host]');
+      if(existing) return existing;
+      const form = expedienteRoot.querySelector('[data-exp-datos-form]');
+      if(!form?.parentElement) return null;
+      const host = document.createElement('div');
+      host.className = 'dg-context-notices d-none';
+      host.dataset.pacProfileNullNoticeHost = '1';
+      form.parentElement.insertBefore(host, form);
+      return host;
+    };
+
     const ensureProfileNullNotice = ()=>{
       if(profileNullNoticeEl?.isConnected) return profileNullNoticeEl;
-      const fields = getProfileFields();
-      const anchor = fields?.firstName?.closest('[class^="col-"], [class*=" col-"], .form-group, .mb-3') || fields?.firstName?.parentElement;
-      if(!anchor?.parentElement) return null;
+      const host = ensureProfileNullNoticeHost();
+      if(!host) return null;
       const notice = document.createElement('div');
-      notice.className = 'col-12 d-none';
+      notice.className = 'dg-context-notice d-none';
       notice.dataset.pacProfileNullNotice = '1';
       notice.innerHTML = `
         <div class="alert alert-info py-2 px-3 small mb-0" role="status" aria-live="polite">
           Este paciente aún no tiene nombre estructurado. Completa Nombre(s) y Apellidos para normalizar su expediente.
         </div>
       `;
-      anchor.parentElement.insertBefore(notice, anchor);
+      host.appendChild(notice);
       profileNullNoticeEl = notice;
       return profileNullNoticeEl;
     };
@@ -403,7 +415,9 @@
     const setProfileNullNoticeVisible = (visible)=>{
       const notice = ensureProfileNullNotice();
       if(!notice) return;
-      notice.classList.toggle('d-none', visible !== true);
+      const shouldShow = visible === true;
+      notice.classList.toggle('d-none', !shouldShow);
+      notice.closest('[data-pac-profile-null-notice-host]')?.classList.toggle('d-none', !shouldShow);
     };
 
     const shouldShowProfileNullNotice = (patient)=>{
