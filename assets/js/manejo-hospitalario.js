@@ -94,6 +94,11 @@
     const patientId = String(canonicalPatientId ?? '').trim();
     return `${mxmedApiBase()}/api/clinical/index.php/doctors/${enc(safeDoctorId)}/patients/${enc(patientId)}/documents`;
   };
+  const buildManejoHospitalarioScopedDocumentDetailUrl = (doctorId, documentToken) => {
+    const safeDoctorId = String(doctorId ?? '').trim();
+    const safeDocumentToken = String(documentToken ?? '').trim();
+    return `${mxmedApiBase()}/api/clinical/index.php/doctors/${enc(safeDoctorId)}/documents/${enc(safeDocumentToken)}`;
+  };
   const getIdentityApi = () => window.mxmedIdentity || null;
   const resolveManejoHospitalarioDoctorId = () => {
     const candidates = [];
@@ -188,6 +193,7 @@ const isDemo = window.location.hostname.endsWith('github.io');
     if (url.includes('/api/clinical/index.php/documents') && method === 'POST') return demoFetchJson('mock/clinical-documents-save-hosp.json');
     if (url.includes('/api/clinical/index.php/documents') && method === 'GET') return demoFetchJson('mock/clinical-documents-list-hosp.json');
     if (url.includes('/api/clinical/index.php/doctors/') && url.includes('/documents') && method === 'POST') return demoFetchJson('mock/clinical-documents-save-hosp.json');
+    if (/\/api\/clinical\/index\.php\/doctors\/[^/]+\/documents\/[^/?#]+/.test(url) && method === 'GET') return demoFetchJson('mock/clinical-documents-get-hosp.json');
     if (url.includes('/api/clinical/index.php/doctors/') && url.includes('/documents') && method === 'GET') return demoFetchJson('mock/clinical-documents-list-hosp.json');
     if (url.includes('clinical-documents.php?action=get')) return demoFetchJson('mock/clinical-documents-get-hosp.json');
     if (url.includes('clinical-documents.php?action=save')) return demoFetchJson('mock/clinical-documents-save-hosp.json');
@@ -294,7 +300,41 @@ const isDemo = window.location.hostname.endsWith('github.io');
         throw err;
       }
     },
-    getDoc: (id) => api.j(`api/clinical-documents.php?action=get&id=${enc(id)}`, { method: 'GET', headers: {} }),
+    async getDoc(id) {
+      const documentToken = String(id ?? '').trim();
+      const doctorId = resolveManejoHospitalarioDoctorId();
+
+      const normalizeRetrievedDocumentResponse = (payload) => {
+        const document = payload?.data?.document ?? payload?.document ?? null;
+        if (!document || typeof document !== 'object') {
+          throw new Error('invalid detail response');
+        }
+        return { document };
+      };
+
+      if (!doctorId || !documentToken) {
+        try {
+          console.warn('[MANEJO-HOSPITALARIO-DETAIL] missing_doctor_scope', {
+            has_doctor_id: !!doctorId,
+            has_document_token: !!documentToken
+          });
+        } catch (_) {}
+        throw new Error('No se pudo resolver el medico o documento hospitalario.');
+      }
+
+      try {
+        const scopedPayload = await api.j(buildManejoHospitalarioScopedDocumentDetailUrl(doctorId, documentToken), {
+          method: 'GET',
+          headers: { Accept: 'application/json' }
+        });
+        return normalizeRetrievedDocumentResponse(scopedPayload);
+      } catch (err) {
+        try {
+          console.warn('[MANEJO-HOSPITALARIO-DETAIL] scoped_detail_failed', err || null);
+        } catch (_) {}
+        throw err;
+      }
+    },
   };
 
   const getPatient = () => {
