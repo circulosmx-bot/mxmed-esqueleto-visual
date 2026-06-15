@@ -109,6 +109,27 @@ function validate_return_to(string $value): ?string {
   return $value;
 }
 
+function sanitize_doctor_scope_id(string $value): string {
+  $value = trim($value);
+  if ($value === '') {
+    return '';
+  }
+  return preg_match('/^[A-Za-z0-9._:-]{1,64}$/', $value) === 1 ? $value : '';
+}
+
+function build_clinical_document_ui_href(string $path, array $params): string {
+  $clean = [];
+  foreach ($params as $key => $value) {
+    $key = trim((string)$key);
+    $value = trim((string)$value);
+    if ($key === '' || $value === '') {
+      continue;
+    }
+    $clean[$key] = $value;
+  }
+  return $path . ($clean !== [] ? ('?' . http_build_query($clean, '', '&', PHP_QUERY_RFC3986)) : '');
+}
+
 function render_embed_css(bool $embed): void {
   if (!$embed) {
     return;
@@ -327,6 +348,7 @@ function http_get_json(string $url, int $timeoutSeconds = 8): array {
 }
 
 $uuid = trim((string)($_GET['uuid'] ?? ''));
+$doctorId = sanitize_doctor_scope_id((string)($_GET['doctor_id'] ?? ''));
 $returnTo = validate_return_to((string)($_GET['return_to'] ?? ''));
 $backHref = $returnTo ?? 'javascript:history.back()';
 $errorMessage = '';
@@ -396,9 +418,14 @@ if ($downloadCandidate === '' && is_array($payload)) {
 $downloadHref = resolve_media_href($downloadCandidate);
 $originalDownloadHref = resolve_media_href(trim((string)($originalMeta['url'] ?? $originalMeta['path'] ?? '')));
 $embedRequested = trim((string)($_GET['embed'] ?? '')) === '1';
-$documentOpenHref = '/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedRequested ? '&embed=1' : '');
-$viewerOpenHref = '/modules/clinical/ui/viewer.php?uuid=' . rawurlencode($uuid) . ($embedRequested ? '&embed=1' : '');
-$viewerFullscreenHref = $viewerOpenHref . '&mode=fullscreen';
+$baseDocumentUiParams = [
+  'uuid' => $uuid,
+  'embed' => $embedRequested ? '1' : '',
+  'doctor_id' => $doctorId,
+];
+$documentOpenHref = build_clinical_document_ui_href('/modules/clinical/ui/document.php', $baseDocumentUiParams);
+$viewerOpenHref = build_clinical_document_ui_href('/modules/clinical/ui/viewer.php', $baseDocumentUiParams);
+$viewerFullscreenHref = build_clinical_document_ui_href('/modules/clinical/ui/viewer.php', $baseDocumentUiParams + ['mode' => 'fullscreen']);
 $isImageDoc = ($renderMode === 'image' || $docTypeNorm === 'image');
 $isPdfDoc = ($renderMode === 'pdf' || $docTypeNorm === 'pdf');
 $isNoteDoc = in_array($docTypeNorm, ['note', 'nota_evolucion'], true);
@@ -1354,7 +1381,14 @@ if (!$embed) {
                 <?php elseif ((string)$att['preview_href'] !== ''): ?>
                   <img class="consent-print-identity-preview" src="<?php echo h((string)$att['preview_href']); ?>" alt="<?php echo h((string)$att['title']); ?>">
                 <?php elseif ((string)$att['document_uuid'] !== ''): ?>
-                  <div class="consent-print-text">Anexo asociado al expediente: <a class="consent-print-identity-link" target="_blank" rel="noopener" href="/modules/clinical/ui/viewer.php?uuid=<?php echo rawurlencode((string)$att['document_uuid']); ?>"><?php echo h((string)$att['document_uuid']); ?></a></div>
+                  <?php
+                    $attViewerHref = build_clinical_document_ui_href('/modules/clinical/ui/viewer.php', [
+                      'uuid' => (string)$att['document_uuid'],
+                      'embed' => $embedRequested ? '1' : '',
+                      'doctor_id' => $doctorId,
+                    ]);
+                  ?>
+                  <div class="consent-print-text">Anexo asociado al expediente: <a class="consent-print-identity-link" target="_blank" rel="noopener" href="<?php echo h($attViewerHref); ?>"><?php echo h((string)$att['document_uuid']); ?></a></div>
                 <?php elseif ((string)$att['document_id'] !== ''): ?>
                   <div class="consent-print-text">Anexo asociado (ID interno): <?php echo h((string)$att['document_id']); ?></div>
                 <?php else: ?>

@@ -5350,6 +5350,10 @@ if (!$embed) {
       if (isEmbed) {
         query.set('embed', '1');
       }
+      var doctorId = String(resolveHistorialDoctorId() || '').trim();
+      if (doctorId) {
+        query.set('doctor_id', doctorId);
+      }
       var path = (String(mode || '').trim() === 'image')
         ? '/modules/clinical/ui/viewer.php'
         : '/modules/clinical/ui/document.php';

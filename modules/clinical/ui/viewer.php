@@ -317,6 +317,24 @@ function build_viewer_self_href(array $params): string
     return '/modules/clinical/ui/viewer.php' . ($query !== [] ? ('?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986)) : '');
 }
 
+function build_document_print_href(string $uuid, string $embedFlag = '', string $doctorId = ''): string
+{
+    $query = [
+        'uuid' => $uuid,
+        'embed' => $embedFlag,
+        'doctor_id' => $doctorId,
+    ];
+    $clean = [];
+    foreach ($query as $key => $value) {
+        $stringValue = trim((string)$value);
+        if ($stringValue === '') {
+            continue;
+        }
+        $clean[$key] = $stringValue;
+    }
+    return '/modules/clinical/ui/document.php' . ($clean !== [] ? ('?' . http_build_query($clean, '', '&', PHP_QUERY_RFC3986)) : '');
+}
+
 function first_non_empty_string(array $sources, array $keys): string
 {
     foreach ($sources as $source) {
@@ -739,7 +757,7 @@ $consentRenderedText = trim((string)($payload['rendered_text'] ?? ($payload['tex
 $consentFrozenSnapshot = is_array($payload['frozen_snapshot'] ?? null) ? $payload['frozen_snapshot'] : [];
 $consentFrozenHtml = trim((string)($consentFrozenSnapshot['html'] ?? ''));
 $consentStatus = trim((string)($payload['status'] ?? ($consentBlock['status'] ?? 'draft')));
-$consentPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
+$consentPrintableHref = ($uuid !== '') ? build_document_print_href($uuid, $embedQueryFlag, $doctorId) : '';
 $consentPatientSignature = is_array($consentSignatures['patient'] ?? null) ? $consentSignatures['patient'] : [];
 $consentPatientSignatureImage = trim((string)($consentPatientSignature['image_data'] ?? ''));
 $consentPatientSignatureSignerName = trim((string)($consentPatientSignature['signer_name'] ?? ''));
@@ -838,12 +856,12 @@ $informeAddressStateContext = first_non_empty_string(
     [$informeActorSnapshot, $informeBranding, $payloadContext, $docContext, $documentUi, $payloadMeta],
     ['state', 'estado']
 );
-$informePrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
-$notaPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
-$altaPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
-$interconsultaPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
-$responsivaPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
-$certificadoPrintableHref = ($uuid !== '') ? ('/modules/clinical/ui/document.php?uuid=' . rawurlencode($uuid) . ($embedQueryFlag !== '' ? '&embed=1' : '')) : '';
+$informePrintableHref = ($uuid !== '') ? build_document_print_href($uuid, $embedQueryFlag, $doctorId) : '';
+$notaPrintableHref = ($uuid !== '') ? build_document_print_href($uuid, $embedQueryFlag, $doctorId) : '';
+$altaPrintableHref = ($uuid !== '') ? build_document_print_href($uuid, $embedQueryFlag, $doctorId) : '';
+$interconsultaPrintableHref = ($uuid !== '') ? build_document_print_href($uuid, $embedQueryFlag, $doctorId) : '';
+$responsivaPrintableHref = ($uuid !== '') ? build_document_print_href($uuid, $embedQueryFlag, $doctorId) : '';
+$certificadoPrintableHref = ($uuid !== '') ? build_document_print_href($uuid, $embedQueryFlag, $doctorId) : '';
 
 $fileMeta = is_array($payload['file'] ?? null) ? $payload['file'] : [];
 $optimizedMeta = is_array($fileMeta['optimized'] ?? null) ? $fileMeta['optimized'] : [];
@@ -899,6 +917,7 @@ if ($bundleItems !== []) {
             'uuid' => (string)($bundleItems[$prevIndex]['document_uuid'] ?? ''),
             'return_to' => $returnToClean,
             'embed' => $embedQueryFlag,
+            'doctor_id' => $doctorId,
         ]);
     }
     if ($nextIndex >= 0 && is_array($bundleItems[$nextIndex] ?? null)) {
@@ -908,6 +927,7 @@ if ($bundleItems !== []) {
             'uuid' => (string)($bundleItems[$nextIndex]['document_uuid'] ?? ''),
             'return_to' => $returnToClean,
             'embed' => $embedQueryFlag,
+            'doctor_id' => $doctorId,
         ]);
     }
 }
@@ -1605,6 +1625,7 @@ if (!$embed) {
                   'uuid' => $bundleItemUuid,
                   'return_to' => $returnToClean,
                   'embed' => $embed ? '1' : '',
+                  'doctor_id' => $doctorId,
               ]);
               ?>
               <a class="btn btn-sm <?php echo $bundleIndex === $selectedBundleIndex ? 'btn-primary' : 'btn-outline-secondary'; ?> text-start" href="<?php echo h($bundleItemHref); ?>">
@@ -1936,7 +1957,11 @@ if (!$embed) {
                   $attKind !== '' ? $attKind : '',
                   $attSourceLabel !== '' ? $attSourceLabel : '',
                 ]));
-                $attHref = $attUuid !== '' ? ('/modules/clinical/ui/viewer.php?uuid=' . rawurlencode($attUuid) . ($embed ? '&embed=1' : '')) : '';
+                $attHref = $attUuid !== '' ? build_viewer_self_href([
+                    'uuid' => $attUuid,
+                    'embed' => $embed ? '1' : '',
+                    'doctor_id' => $doctorId,
+                ]) : '';
                 ?>
                 <?php if ($attHref !== ''): ?>
                   <a class="btn btn-sm btn-outline-secondary text-start" href="<?php echo h($attHref); ?>" target="_blank" rel="noopener"><?php echo h(($index + 1) . '. ' . $attTitle); ?></a>

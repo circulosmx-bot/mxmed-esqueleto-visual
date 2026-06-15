@@ -36345,7 +36345,17 @@ console.info('app.js loaded :: 20251123a');
     event.preventDefault();
     const token = String(els.rxOpenDoc?.getAttribute('data-rx-document-token') || '').trim();
     if (!token) return;
-    const href = `/modules/clinical/ui/document.php?uuid=${encodeURIComponent(token)}`;
+    const params = new URLSearchParams({ uuid: token });
+    const doctorId = sanitizeText(
+      (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : '')
+      || window.mxmedStore?.doctorId
+      || window.mxmedStore?.doctor_id
+      || window.mxmedStore?.activeProfessionalContext?.doctor_id
+      || window.mxmedDoctor?.doctor_id
+      || ''
+    );
+    if (doctorId) params.set('doctor_id', doctorId);
+    const href = `/modules/clinical/ui/document.php?${params.toString()}`;
     try {
       window.open(href, '_blank', 'noopener');
     } catch (_) {
@@ -43745,7 +43755,17 @@ console.info('app.js loaded :: 20251123a');
     const openClinicalDocumentViewer = (documentUuid)=>{
       const uuid = sanitizeText(documentUuid);
       if(!uuid) return false;
-      const href = `/modules/clinical/ui/viewer.php?uuid=${encodeURIComponent(uuid)}&embed=1`;
+      const params = new URLSearchParams({ uuid, embed: '1' });
+      const doctorId = sanitizeText(
+        (typeof window.resolveDoctorId === 'function' ? window.resolveDoctorId() : '')
+        || window.mxmedStore?.doctorId
+        || window.mxmedStore?.doctor_id
+        || window.mxmedStore?.activeProfessionalContext?.doctor_id
+        || window.mxmedDoctor?.doctor_id
+        || ''
+      );
+      if(doctorId) params.set('doctor_id', doctorId);
+      const href = `/modules/clinical/ui/viewer.php?${params.toString()}`;
       window.open(href, '_blank', 'noopener');
       return true;
     };
@@ -49827,6 +49847,15 @@ console.info('app.js loaded :: 20251123a');
         .filter((entry)=> !!entry.title);
       const hasIdentityAttachments = identityAttachments.length > 0;
       const forceIdentityPageBreak = hasIdentityAttachments && (identityAttachments.length > 1 || identityAttachments.some((entry)=> entry.isPdf));
+      const buildClinicalDocumentViewerHref = (documentUuid, options = {})=>{
+        const safeUuid = sanitizeText(documentUuid || '');
+        if(!safeUuid) return '';
+        const params = new URLSearchParams({ uuid: safeUuid });
+        if(options?.embed !== false) params.set('embed', '1');
+        const doctorId = resolveCanonicalDocumentsDoctorId();
+        if(doctorId) params.set('doctor_id', doctorId);
+        return `/modules/clinical/ui/viewer.php?${params.toString()}`;
+      };
       const identityAttachmentsHtml = hasIdentityAttachments
         ? `
   <section style="display:grid;gap:10px;${forceIdentityPageBreak ? 'break-before:page;page-break-before:always;' : ''}">
@@ -49839,7 +49868,7 @@ console.info('app.js loaded :: 20251123a');
                </object>`
             : `<img src="${escape(entry.previewUrl)}" alt="${escape(entry.title)}" style="display:block;width:100%;max-height:420px;object-fit:contain;border:1px solid #d5dce3;border-radius:6px;background:#fff;margin:0 auto;">`)
         : (entry.documentUuid
-            ? `<div style="font-size:.86rem;color:#334155;">Anexo asociado al expediente: <a href="/modules/clinical/ui/viewer.php?uuid=${encodeURIComponent(entry.documentUuid)}" target="_blank" rel="noopener">${escape(entry.documentUuid)}</a></div>`
+            ? `<div style="font-size:.86rem;color:#334155;">Anexo asociado al expediente: <a href="${escape(buildClinicalDocumentViewerHref(entry.documentUuid, { embed: false }))}" target="_blank" rel="noopener">${escape(entry.documentUuid)}</a></div>`
             : `<div style="font-size:.86rem;color:#334155;">Anexo cargado sin vista previa disponible${entry.documentId ? ` (ID ${escape(entry.documentId)})` : ''}.</div>`);
       return `<article style="display:grid;gap:8px;padding:10px;border:1px solid #d9e0e5;border-radius:8px;background:#fff;break-inside:avoid;page-break-inside:avoid;">
         <div style="font-size:.85rem;font-weight:700;color:#111827;">${entry.index}. ${escape(entry.title)}</div>

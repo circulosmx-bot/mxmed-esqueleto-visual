@@ -11,6 +11,10 @@ function h(string $value): string
 }
 
 $patientId = trim((string)($_GET['patient_id'] ?? ''));
+$doctorId = trim((string)($_GET['doctor_id'] ?? ''));
+if ($doctorId !== '' && preg_match('/^[A-Za-z0-9._:-]{1,64}$/', $doctorId) !== 1) {
+    $doctorId = '';
+}
 $include = trim((string)($_GET['include'] ?? 'agenda,clinical'));
 $allowedIncludes = ['agenda,clinical', 'agenda', 'clinical'];
 if (!in_array($include, $allowedIncludes, true)) {
@@ -89,7 +93,14 @@ $filters = [
     <?php foreach ($filters as $filterValue => $filterLabel): ?>
       <?php
       $isActive = ($include === $filterValue);
-      $href = '?patient_id=' . urlencode($patientId) . '&include=' . urlencode($filterValue);
+      $hrefParams = [
+          'patient_id' => $patientId,
+          'include' => $filterValue,
+      ];
+      if ($doctorId !== '') {
+          $hrefParams['doctor_id'] = $doctorId;
+      }
+      $href = '?' . http_build_query($hrefParams, '', '&', PHP_QUERY_RFC3986);
       ?>
       <a class="btn <?php echo $isActive ? 'btn-primary' : 'btn-outline-primary'; ?>" href="<?php echo h($href); ?>">
         <?php echo h($filterLabel); ?>
@@ -146,7 +157,14 @@ $filters = [
               <?php $docUuid = trim((string)($links['document_uuid'] ?? '')); ?>
               <?php if ($docUuid !== ''): ?>
                 <div class="mt-2">
-                  <a class="btn btn-sm btn-outline-primary" href="/modules/clinical/ui/document.php?uuid=<?php echo urlencode($docUuid); ?>">Ver documento</a>
+                  <?php
+                    $docHrefParams = ['uuid' => $docUuid];
+                    if ($doctorId !== '') {
+                        $docHrefParams['doctor_id'] = $doctorId;
+                    }
+                    $docHref = '/modules/clinical/ui/document.php?' . http_build_query($docHrefParams, '', '&', PHP_QUERY_RFC3986);
+                  ?>
+                  <a class="btn btn-sm btn-outline-primary" href="<?php echo h($docHref); ?>">Ver documento</a>
                 </div>
               <?php endif; ?>
             <?php elseif ($itemType === 'encounter'): ?>

@@ -10569,7 +10569,14 @@
         return buildHistorialSrc(context, { view: 'cases' });
       }
       if (mode === 'document') {
-        return '/modules/clinical/ui/document.php?uuid=' + encodeURIComponent(context.documentUuid) + '&embed=1';
+        var documentParams = new URLSearchParams();
+        documentParams.set('uuid', context.documentUuid);
+        documentParams.set('embed', '1');
+        var documentDoctorId = readActiveDoctorId();
+        if (documentDoctorId) {
+          documentParams.set('doctor_id', documentDoctorId);
+        }
+        return '/modules/clinical/ui/document.php?' + documentParams.toString();
       }
       return buildHistorialSrc(context);
     }
