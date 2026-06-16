@@ -37126,8 +37126,7 @@ console.info('app.js loaded :: 20251123a');
         clinicalCompletionTargetPresets.estudios,
         clinicalCompletionTargetPresets.tratamiento,
         clinicalCompletionTargetPresets.manejo,
-        clinicalCompletionTargetPresets.documentos,
-        clinicalCompletionTargetPresets.recetas
+        clinicalCompletionTargetPresets.documentos
       ]
     },
     'historia-clinica': {
