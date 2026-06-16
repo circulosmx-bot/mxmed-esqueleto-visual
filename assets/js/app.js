@@ -35595,7 +35595,7 @@ console.info('app.js loaded :: 20251123a');
     const patientLineNode = container.querySelector('.ne-rx-ch-patient-line');
     const reasonNode = container.querySelector('.ne-rx-ch-reason');
     const bottomNode = container.querySelector('.ne-rx-ch-bottom');
-    if (isDraftPatientMode) {
+    if (!isEmptyState) {
       if (emptyStateNode) emptyStateNode.style.display = 'none';
       if (patientLineNode) patientLineNode.style.display = 'flex';
       if (reasonNode) reasonNode.style.display = '-webkit-box';
@@ -35701,14 +35701,53 @@ console.info('app.js loaded :: 20251123a');
     const normalized = normalize(String(name || ''));
     return normalized === 'medico' || normalized === 'doctor' || normalized === '';
   };
+  const isGenericRecetaPatientName = (value) => {
+    const normalized = normalize(String(value || ''));
+    return normalized === '' || normalized === 'paciente' || normalized === 'paciente activo';
+  };
+  const isEmptyRecetaPatientMeta = (value) => {
+    const normalized = normalizeRecetaText(value);
+    return normalized === '' || normalized === '--' || normalized.toLowerCase() === 'no registrado';
+  };
+  const resolveQuickRxPatientSnapshotForContext = (patientId = '') => {
+    const snapshot = window.mxmedQuickRxPatientSnapshot;
+    if (!snapshot || typeof snapshot !== 'object') return null;
+    const pid = normalizeRecetaText(patientId);
+    const snapshotPid = normalizeRecetaText(snapshot.patient_id);
+    if (!pid || !snapshotPid || pid !== snapshotPid) return null;
+    const createdAt = Number(snapshot.createdAt || 0);
+    if (!Number.isFinite(createdAt) || !createdAt || (Date.now() - createdAt) > 10 * 60 * 1000) {
+      return null;
+    }
+    return snapshot;
+  };
+  const mergeQuickRxPatientSnapshot = (patient = {}, patientId = '') => {
+    const snapshot = resolveQuickRxPatientSnapshotForContext(patientId);
+    if (!snapshot) return patient;
+    const merged = { ...(patient || {}) };
+    if (!normalizeRecetaText(merged.patient_id)) {
+      merged.patient_id = normalizeRecetaText(patientId);
+    }
+    if (isGenericRecetaPatientName(merged.nombre_completo) && normalizeRecetaText(snapshot.nombre_completo)) {
+      merged.nombre_completo = normalizeRecetaText(snapshot.nombre_completo);
+    }
+    if (isEmptyRecetaPatientMeta(merged.edad) && normalizeRecetaText(snapshot.edad)) {
+      merged.edad = normalizeRecetaText(snapshot.edad);
+    }
+    if (isEmptyRecetaPatientMeta(merged.sexo) && normalizeRecetaText(snapshot.sexo)) {
+      merged.sexo = normalizeRecetaText(snapshot.sexo);
+    }
+    return merged;
+  };
   const resolveRecetaRuntimeContext = () => {
-    const patient = getPatient();
+    const rawPatient = getPatient();
     const actor = getDoctor();
     const activePatientId = (typeof window.resolveActivePatientId === 'function')
       ? normalizeRecetaText(window.resolveActivePatientId())
       : normalizeRecetaText(window.mxmedStore?.currentPatientId || window.mxmedStore?.activePatientId);
     const hasActivePatientContext = activePatientId !== '';
-    const patientId = normalizeRecetaText(activePatientId || patient.patient_id);
+    const patientId = normalizeRecetaText(activePatientId || rawPatient.patient_id);
+    const patient = mergeQuickRxPatientSnapshot(rawPatient, patientId);
     const encounterKey = (typeof window.getActiveEncounterKey === 'function')
       ? normalizeRecetaText(window.getActiveEncounterKey())
       : '';
@@ -53954,7 +53993,117 @@ console.info('app.js loaded :: 20251123a');
     }, 0);
     return true;
   };
-	  const navigateToPatientArchive = ()=>{
+	  const QUICK_RX_PATIENT_SEARCH_INTENT = 'quick_rx_patient_search';
+	  const getQuickRxPatientSearchIntent = ()=>{
+	    const intent = window.mxmedQuickRxPatientSearchIntent;
+	    if(!intent || typeof intent !== 'object') return null;
+	    if(sanitizeText(intent.type) !== QUICK_RX_PATIENT_SEARCH_INTENT) return null;
+	    const createdAt = Number(intent.createdAt || 0);
+	    if(!Number.isFinite(createdAt) || !createdAt || (Date.now() - createdAt) > 10 * 60 * 1000){
+	      return null;
+	    }
+	    return intent;
+	  };
+	  const clearQuickRxPatientSearchIntent = ()=>{
+	    window.mxmedQuickRxPatientSearchIntent = null;
+	    document.body?.removeAttribute('data-quick-rx-return-intent');
+	  };
+	  const setQuickRxPatientSearchIntent = ()=>{
+	    window.mxmedQuickRxPatientSearchIntent = {
+	      type: QUICK_RX_PATIENT_SEARCH_INTENT,
+	      createdAt: Date.now()
+	    };
+	    document.body?.setAttribute('data-quick-rx-return-intent', '1');
+	  };
+	  const hasQuickRxPatientSearchIntent = ()=>{
+	    const hasIntent = !!getQuickRxPatientSearchIntent();
+	    if(!hasIntent) clearQuickRxPatientSearchIntent();
+	    return hasIntent;
+	  };
+	  window.mxmedHasQuickRxPatientSearchIntent = hasQuickRxPatientSearchIntent;
+	  window.mxmedConsumeQuickRxPatientSearchIntent = ()=>{
+	    const hasIntent = hasQuickRxPatientSearchIntent();
+	    clearQuickRxPatientSearchIntent();
+	    return hasIntent;
+	  };
+	  window.mxmedClearQuickRxPatientSearchIntent = clearQuickRxPatientSearchIntent;
+	  const normalizeQuickRxSnapshotSex = (entry = {})=>{
+	    const raw = sanitizeText(entry.sex || entry.gender || entry.gender_code || '');
+	    if(raw === 'F') return 'Femenino';
+	    if(raw === 'M') return 'Masculino';
+	    if(raw === 'O') return 'Otro';
+	    return raw || '';
+	  };
+	  const resolveQuickRxSnapshotAge = (entry = {})=>{
+	    const rawAgeValue = sanitizeText(entry.age ?? entry.edad ?? '');
+	    if(rawAgeValue){
+	      const rawAge = Number(rawAgeValue);
+	      if(Number.isFinite(rawAge) && rawAge >= 0){
+	        return String(Math.floor(rawAge));
+	      }
+	    }
+	    const birthdate = sanitizeText(entry.birthdate || entry.date_of_birth || entry.fecha_nacimiento || '');
+	    if(!/^\d{4}-\d{2}-\d{2}$/.test(birthdate)) return '';
+	    const birth = new Date(`${birthdate}T00:00:00`);
+	    if(Number.isNaN(birth.getTime())) return '';
+	    const today = new Date();
+	    let age = today.getFullYear() - birth.getFullYear();
+	    const monthDiff = today.getMonth() - birth.getMonth();
+	    if(monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age -= 1;
+	    return age >= 0 ? String(age) : '';
+	  };
+	  const resolveQuickRxSnapshotName = (entry = {})=>{
+	    const structuredName = [
+	      entry.first_name,
+	      entry.given_name,
+	      entry.nombre,
+	      entry.nombres,
+	      entry.last_name,
+	      entry.apellido_paterno,
+	      entry.primer_apellido,
+	      entry.second_last_name,
+	      entry.apellido_materno,
+	      entry.segundo_apellido
+	    ].map((value)=> sanitizeText(value)).filter(Boolean).join(' ').trim();
+	    const candidates = [
+	      entry.display_name,
+	      entry.nombre_completo,
+	      entry.full_name,
+	      entry.patient_name,
+	      entry.name,
+	      structuredName
+	    ].map((value)=> sanitizeText(value)).filter(Boolean);
+	    for(const label of candidates){
+	      if(!isGenericChipLabel(label, sanitizeText(entry.patient_id))){
+	        return label;
+	      }
+	    }
+	    return 'Paciente activo';
+	  };
+	  const setQuickRxPatientSnapshot = (entry = {})=>{
+	    const patientId = sanitizeText(entry.patient_id);
+	    if(!patientId) return false;
+	    const displayName = resolveQuickRxSnapshotName(entry);
+	    window.mxmedQuickRxPatientSnapshot = {
+	      patient_id: patientId,
+	      nombre_completo: displayName,
+	      edad: resolveQuickRxSnapshotAge(entry),
+	      sexo: normalizeQuickRxSnapshotSex(entry),
+	      createdAt: Date.now()
+	    };
+	    if(displayName && typeof window.mxmedRememberPatientLabel === 'function'){
+	      try{ window.mxmedRememberPatientLabel(patientId, displayName); }catch(_){}
+	    }
+	    return true;
+	  };
+	  window.mxmedSetQuickRxPatientSnapshot = setQuickRxPatientSnapshot;
+	  window.mxmedClearQuickRxPatientSnapshot = ()=>{
+	    window.mxmedQuickRxPatientSnapshot = null;
+	  };
+	  const navigateToPatientArchive = (source = '')=>{
+	    if(sanitizeText(source) !== QUICK_RX_PATIENT_SEARCH_INTENT){
+	      clearQuickRxPatientSearchIntent();
+	    }
 	    clearClinicalCompletionHub('navigate_patient_archive');
 	    if(typeof jumpTo === 'function'){
 	      return jumpTo('p-pac-archivo') !== false;
@@ -54011,6 +54160,7 @@ console.info('app.js loaded :: 20251123a');
 	    quickRxEls.feedback.classList.toggle('d-none', !safeMessage);
 	    quickRxEls.feedback.dataset.tone = safeMessage ? sanitizeText(tone || 'info') : '';
 	  };
+	  window.mxmedSetQuickRxFeedback = setQuickRxFeedback;
 	  const renderQuickRxPanel = ()=>{
 	    if(!quickRxPanel || !quickRxEls) return;
 	    const patientId = resolveQuickRxPatientId();
@@ -54042,8 +54192,10 @@ console.info('app.js loaded :: 20251123a');
 	      quickRxEls.searchLabel.textContent = hasPatient ? 'Buscar otro paciente' : 'Buscar paciente';
 	    }
 	  };
+	  window.mxmedRenderQuickRxPanel = renderQuickRxPanel;
 	  const openQuickRxForActivePatient = async ()=>{
 	    if(!quickRxPanel || !quickRxEls) return false;
+	    clearQuickRxPatientSearchIntent();
 	    const patientId = resolveQuickRxPatientId();
 	    if(!patientId){
 	      setQuickRxFeedback('Selecciona o registra un paciente antes de emitir la receta.', 'error');
@@ -54066,6 +54218,9 @@ console.info('app.js loaded :: 20251123a');
 	          return false;
 	        }
 	      }
+	      await new Promise((resolve)=>{
+	        window.requestAnimationFrame(()=> resolve());
+	      });
 	      const opened = openRecetaFromActividad();
 	      if(!opened){
 	        setQuickRxFeedback('No fue posible abrir la receta en este momento.', 'error');
@@ -54083,15 +54238,18 @@ console.info('app.js loaded :: 20251123a');
 	  };
 	  const openQuickRxPatientSearch = ()=>{
 	    if(!quickRxPanel) return false;
+	    setQuickRxPatientSearchIntent();
 	    setQuickRxFeedback('Abriendo archivo de pacientes. Selecciona un paciente y vuelve a Recetas para emitir.', 'info');
-	    const opened = navigateToPatientArchive();
+	    const opened = navigateToPatientArchive(QUICK_RX_PATIENT_SEARCH_INTENT);
 	    if(!opened){
+	      clearQuickRxPatientSearchIntent();
 	      setQuickRxFeedback('No fue posible abrir la búsqueda de pacientes.', 'error');
 	    }
 	    return opened;
 	  };
 	  const openQuickRxPatientCreate = ()=>{
 	    if(!quickRxPanel) return false;
+	    clearQuickRxPatientSearchIntent();
 	    const opened = typeof jumpTo === 'function'
 	      ? jumpTo('p-expediente') !== false
 	      : (typeof showPanel === 'function' ? (showPanel('p-expediente'), true) : false);
@@ -54134,6 +54292,15 @@ console.info('app.js loaded :: 20251123a');
 	        setQuickRxFeedback('');
 	      }, 0);
 	    });
+	    document.addEventListener('click', (event)=>{
+	      const navBtn = event.target.closest('[data-panel]');
+	      if(!navBtn) return;
+	      const targetPanel = sanitizeText(navBtn.getAttribute('data-panel'));
+	      if(!targetPanel) return;
+	      if(targetPanel !== 'p-pac-archivo' || !quickRxPanel.contains(event.target)){
+	        clearQuickRxPatientSearchIntent();
+	      }
+	    }, true);
 	    renderQuickRxPanel();
 	  }
 	  const closeActivePatientContext = (source = 'active_header_close')=>{
@@ -63829,10 +63996,15 @@ function mxResetLogoPreview(){
     const pid = String(entry.patient_id || '').trim();
     const pname = resolvePatientDisplayName(entry);
     if(!pid) return false;
-    if(typeof window.mxmedRememberPatientLabel === 'function'){
-      window.mxmedRememberPatientLabel(pid, pname);
-    }
-    let changed = true;
+    const shouldReturnToQuickRx = typeof window.mxmedHasQuickRxPatientSearchIntent === 'function'
+      && window.mxmedHasQuickRxPatientSearchIntent() === true;
+	    if(typeof window.mxmedRememberPatientLabel === 'function'){
+	      window.mxmedRememberPatientLabel(pid, pname);
+	    }
+	    if(shouldReturnToQuickRx && typeof window.mxmedSetQuickRxPatientSnapshot === 'function'){
+	      window.mxmedSetQuickRxPatientSnapshot({ ...entry, display_name: pname });
+	    }
+	    let changed = true;
     if(typeof window.setActivePatientId === 'function'){
       changed = await window.setActivePatientId(pid, { emitEvent:true, source:'search_open', suppressEncounterAutoContext:true });
     }else if(typeof window.mxmedSetActivePatientId === 'function'){
@@ -63841,19 +64013,36 @@ function mxResetLogoPreview(){
     if(changed === false){
       return false;
     }
+    if(shouldReturnToQuickRx && typeof window.mxmedConsumeQuickRxPatientSearchIntent === 'function'){
+      window.mxmedConsumeQuickRxPatientSearchIntent();
+    }
     if(archiveLookupModal){
       try{ archiveLookupModal.hide(); }catch(_){}
     }
+    const targetPanel = shouldReturnToQuickRx ? 'p-pac-recetas' : 'p-expediente';
+    const finalizeQuickRxReturn = ()=>{
+      if(!shouldReturnToQuickRx) return;
+      if(typeof window.mxmedRenderQuickRxPanel === 'function'){
+        window.mxmedRenderQuickRxPanel();
+      }
+      if(typeof window.mxmedSetQuickRxFeedback === 'function'){
+        window.mxmedSetQuickRxFeedback('Paciente seleccionado. Ya puedes emitir la receta.', 'success');
+      }
+    };
     if(typeof jumpTo === 'function'){
-      jumpTo('p-expediente');
+      jumpTo(targetPanel);
       window.requestAnimationFrame(()=>{
-        const expPane = document.getElementById('p-expediente');
-        if(!expPane || expPane.classList.contains('d-none')) return;
-        window.__mxmedHeaderSyncOrigin = 'search_open_post_jump';
+        const targetPane = document.getElementById(targetPanel);
+        if(!targetPane || targetPane.classList.contains('d-none')) return;
+        window.__mxmedHeaderSyncOrigin = shouldReturnToQuickRx ? 'quick_rx_search_return' : 'search_open_post_jump';
         window.dispatchEvent(new Event('patient:selected'));
+        finalizeQuickRxReturn();
       });
     }else if(typeof showPanel === 'function'){
-      showPanel('p-expediente');
+      showPanel(targetPanel);
+      window.__mxmedHeaderSyncOrigin = shouldReturnToQuickRx ? 'quick_rx_search_return' : 'search_open_post_jump';
+      window.dispatchEvent(new Event('patient:selected'));
+      finalizeQuickRxReturn();
     }
     const safeOrigin = String(openOrigin || 'search_general').trim().toLowerCase();
     if(safeOrigin === 'clinical_explicit'){
