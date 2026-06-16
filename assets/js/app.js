@@ -35739,6 +35739,16 @@ console.info('app.js loaded :: 20251123a');
     }
     return merged;
   };
+  const mergeCachedRecetaPatientLabel = (patient = {}, patientId = '') => {
+    const pid = normalizeRecetaText(patientId);
+    const cachedLabel = normalizeRecetaText(window.mxmedStore?.patientLabelById?.[pid]);
+    if (!pid || !cachedLabel || isGenericRecetaPatientName(cachedLabel)) return patient;
+    const merged = { ...(patient || {}) };
+    if (isGenericRecetaPatientName(merged.nombre_completo)) {
+      merged.nombre_completo = cachedLabel;
+    }
+    return merged;
+  };
   const resolveRecetaRuntimeContext = () => {
     const rawPatient = getPatient();
     const actor = getDoctor();
@@ -35747,7 +35757,10 @@ console.info('app.js loaded :: 20251123a');
       : normalizeRecetaText(window.mxmedStore?.currentPatientId || window.mxmedStore?.activePatientId);
     const hasActivePatientContext = activePatientId !== '';
     const patientId = normalizeRecetaText(activePatientId || rawPatient.patient_id);
-    const patient = mergeQuickRxPatientSnapshot(rawPatient, patientId);
+    const patient = mergeCachedRecetaPatientLabel(
+      mergeQuickRxPatientSnapshot(rawPatient, patientId),
+      patientId
+    );
     const encounterKey = (typeof window.getActiveEncounterKey === 'function')
       ? normalizeRecetaText(window.getActiveEncounterKey())
       : '';
