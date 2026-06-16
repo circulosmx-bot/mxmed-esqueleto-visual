@@ -4332,6 +4332,58 @@
                 </button>
               </div>
 
+              <form class="mx-quick-rx-create d-none" data-quick-rx-create-form novalidate>
+                <div class="mx-quick-rx-create-head">
+                  <div>
+                    <span class="mx-quick-rx-create-eyebrow">Ficha mínima</span>
+                    <h4>Crear paciente rápido</h4>
+                    <p>Captura los datos indispensables para asociar la receta a un paciente.</p>
+                  </div>
+                </div>
+                <div class="mx-quick-rx-create-grid">
+                  <label class="mx-quick-rx-create-field">
+                    <span>Nombre(s)</span>
+                    <input type="text" class="form-control" data-quick-rx-create-field="first_name" autocomplete="given-name" required>
+                  </label>
+                  <label class="mx-quick-rx-create-field">
+                    <span>Primer apellido</span>
+                    <input type="text" class="form-control" data-quick-rx-create-field="paternal_last_name" autocomplete="family-name" required>
+                  </label>
+                  <label class="mx-quick-rx-create-field">
+                    <span>Segundo apellido</span>
+                    <input type="text" class="form-control" data-quick-rx-create-field="maternal_last_name" autocomplete="additional-name">
+                  </label>
+                  <label class="mx-quick-rx-create-field">
+                    <span>Fecha de nacimiento</span>
+                    <input type="date" class="form-control" data-quick-rx-create-field="birthdate">
+                  </label>
+                  <label class="mx-quick-rx-create-field">
+                    <span>Género</span>
+                    <select class="form-select" data-quick-rx-create-field="sex">
+                      <option value="">No especificado</option>
+                      <option value="M">Hombre</option>
+                      <option value="F">Mujer</option>
+                      <option value="O">Otro</option>
+                    </select>
+                  </label>
+                  <label class="mx-quick-rx-create-field">
+                    <span>Teléfono celular</span>
+                    <input type="tel" class="form-control" data-quick-rx-create-field="phone" inputmode="tel" autocomplete="tel">
+                  </label>
+                  <label class="mx-quick-rx-create-field">
+                    <span>Correo electrónico</span>
+                    <input type="email" class="form-control" data-quick-rx-create-field="email" autocomplete="email">
+                  </label>
+                </div>
+                <div class="mx-quick-rx-create-actions">
+                  <button type="submit" class="btn btn-primary" data-quick-rx-create-submit>
+                    <span class="material-symbols-rounded" aria-hidden="true">check_circle</span>
+                    <span>Crear paciente y continuar</span>
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" data-quick-rx-create-cancel>Cancelar</button>
+                </div>
+              </form>
+
               <div class="mx-quick-rx-feedback d-none" data-quick-rx-feedback role="status" aria-live="polite"></div>
 
               <div class="mx-quick-rx-note">

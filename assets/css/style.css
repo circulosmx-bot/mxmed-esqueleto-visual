@@ -3365,6 +3365,93 @@ body{margin:0;background:var(--mm-fondo-base);}
   line-height:1;
 }
 
+#p-pac-recetas .mx-quick-rx-create{
+  padding:16px;
+  border:1px solid rgba(0, 173, 193, .24);
+  border-radius:12px;
+  background:#fff;
+  box-shadow:0 10px 24px rgba(0, 70, 101, .07);
+}
+
+#p-pac-recetas .mx-quick-rx-create-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+
+#p-pac-recetas .mx-quick-rx-create-eyebrow{
+  display:block;
+  color:#007f91;
+  font-size:.74rem;
+  font-weight:800;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+
+#p-pac-recetas .mx-quick-rx-create-head h4{
+  margin:2px 0 3px;
+  color:#003A5D;
+  font-size:1.05rem;
+  font-weight:800;
+}
+
+#p-pac-recetas .mx-quick-rx-create-head p{
+  margin:0;
+  color:#526b78;
+  font-size:.9rem;
+}
+
+#p-pac-recetas .mx-quick-rx-create-grid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:12px;
+}
+
+#p-pac-recetas .mx-quick-rx-create-field{
+  display:grid;
+  gap:5px;
+  margin:0;
+  min-width:0;
+}
+
+#p-pac-recetas .mx-quick-rx-create-field span{
+  color:#003A5D;
+  font-size:.82rem;
+  font-weight:800;
+}
+
+#p-pac-recetas .mx-quick-rx-create-field .form-control,
+#p-pac-recetas .mx-quick-rx-create-field .form-select{
+  min-height:38px;
+  border-color:rgba(0, 173, 193, .45);
+  border-radius:9px;
+  color:#003A5D;
+  font-size:.92rem;
+}
+
+#p-pac-recetas .mx-quick-rx-create-actions{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:10px;
+  margin-top:14px;
+}
+
+#p-pac-recetas .mx-quick-rx-create-actions .btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-height:38px;
+}
+
+#p-pac-recetas .mx-quick-rx-create-actions .material-symbols-rounded{
+  font-size:20px;
+  line-height:1;
+}
+
 #p-pac-recetas .mx-quick-rx-feedback{
   padding:10px 12px;
   border-radius:10px;
@@ -3426,6 +3513,23 @@ body{margin:0;background:var(--mm-fondo-base);}
   }
 
   #p-pac-recetas .mx-quick-rx-actions .btn{
+    width:100%;
+  }
+
+  #p-pac-recetas .mx-quick-rx-create{
+    padding:14px;
+  }
+
+  #p-pac-recetas .mx-quick-rx-create-grid{
+    grid-template-columns:1fr;
+  }
+
+  #p-pac-recetas .mx-quick-rx-create-actions{
+    display:grid;
+    grid-template-columns:1fr;
+  }
+
+  #p-pac-recetas .mx-quick-rx-create-actions .btn{
     width:100%;
   }
 }
