@@ -664,6 +664,7 @@ body{margin:0;background:var(--mm-fondo-base);}
 .menu-main, .menu-sub-btn, .menu-sep{ width:100%; box-sizing:border-box; }
 
 .sidebar-profile-access{
+  display:none !important;
   margin-top:auto;
   padding-top:10px;
   position:relative;
