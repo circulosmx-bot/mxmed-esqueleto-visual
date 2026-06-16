@@ -201,7 +201,7 @@
 
 </head>
 
-<body data-doctor-id="1" data-user-id="u_legacy_1" data-doctor-name="Leticia Muñoz Alfaro">
+<body class="mx-sidebar-expanded" data-doctor-id="1" data-user-id="u_legacy_1" data-doctor-name="Leticia Muñoz Alfaro">
 
 
 
@@ -217,11 +217,33 @@
       </button>
       <div class="mx-gh-account-summary" aria-label="Resumen profesional y plan actual">
         <div class="mx-gh-identity" aria-label="Identidad profesional">
-          <span class="mx-gh-identity-name">
-            <span class="mx-gh-identity-name-text">Dra. Leticia Muñoz Romo</span>
-            <span class="mx-gh-identity-badge" aria-label="Perfil verificado">✓</span>
-          </span>
-          <span class="mx-gh-identity-role">ENDOCRINÓLOGO</span>
+          <span class="mx-gh-user-avatar" aria-hidden="true"><span class="mx-gh-user-avatar-mark"></span></span>
+          <div class="mx-gh-identity-copy">
+            <span class="mx-gh-identity-name">
+              <span class="mx-gh-identity-name-text">Dra. Leticia Muñoz Romo</span>
+            </span>
+            <div class="mx-gh-identity-meta">
+              <span class="mx-gh-identity-role">ENDOCRINÓLOGO</span>
+              <div class="mx-gh-user-menu dropdown">
+                <button class="mx-gh-identity-controls mx-gh-user-menu-trigger" id="mxGhUserMenu" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-haspopup="menu" aria-label="Abrir menú de perfil y cuenta">
+                  <span class="mx-gh-identity-badge" data-profile-verification-badge hidden aria-label="Perfil verificado">✓</span>
+                  <span class="mx-gh-user-menu-chevron" aria-hidden="true">&#9662;</span>
+              </button>
+              <ul class="dropdown-menu mx-gh-user-menu-dropdown" aria-labelledby="mxGhUserMenu">
+                <li><h6 class="dropdown-header">Mi perfil profesional</h6></li>
+                <li><button class="dropdown-item" type="button" data-profile-panel="p-info"><span class="mx-prof-dd-item"><span class="mx-prof-dd-icon" aria-hidden="true"><i class="bi bi-person-badge"></i></span><span class="mx-prof-dd-copy"><span class="mx-prof-dd-label">Información</span><span class="mx-prof-dd-sub">Datos personales</span></span></span></button></li>
+                <li><button class="dropdown-item" type="button" data-profile-panel="p-consultorio"><span class="mx-prof-dd-item"><span class="mx-prof-dd-icon" aria-hidden="true"><i class="bi bi-building"></i></span><span class="mx-prof-dd-copy"><span class="mx-prof-dd-label">Consultorio</span><span class="mx-prof-dd-sub">Datos y contacto</span></span></span></button></li>
+                <li><button class="dropdown-item" type="button" data-profile-panel="p-opiniones"><span class="mx-prof-dd-item"><span class="mx-prof-dd-icon" aria-hidden="true"><i class="bi bi-chat-quote"></i></span><span class="mx-prof-dd-copy"><span class="mx-prof-dd-label">Opiniones</span><span class="mx-prof-dd-sub">Supervisión y comentarios</span></span></span></button></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">Cuenta y seguridad</h6></li>
+                <li><button class="dropdown-item" type="button" data-profile-panel="p-seguridad"><span class="mx-prof-dd-item"><span class="mx-prof-dd-icon" aria-hidden="true"><span class="material-symbols-rounded">vpn_key</span></span><span class="mx-prof-dd-copy"><span class="mx-prof-dd-label">Seguridad</span><span class="mx-prof-dd-sub">Acceso y privacidad</span></span></span></button></li>
+                <li><button class="dropdown-item" type="button" data-profile-panel="p-suscripcion"><span class="mx-prof-dd-item"><span class="mx-prof-dd-icon" aria-hidden="true"><span class="material-symbols-rounded">license</span></span><span class="mx-prof-dd-copy"><span class="mx-prof-dd-label">Suscripción</span><span class="mx-prof-dd-sub">Plan contratado</span></span></span></button></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/profiles/doctor.php?doctor_id=1" target="_blank" rel="noopener"><span class="mx-prof-dd-item"><span class="mx-prof-dd-icon" aria-hidden="true"><span class="material-symbols-rounded">open_in_new</span></span><span class="mx-prof-dd-copy"><span class="mx-prof-dd-label">Ver perfil público</span><span class="mx-prof-dd-sub">Abre en una pestaña nueva</span></span></span></a></li>
+              </ul>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="mx-gh-current-plan" aria-label="Plan actual">
           <span class="mx-gh-current-plan-main">
@@ -241,7 +263,7 @@
 
 <div class="mm-wrap">
 
-  <div class="mm-grid page">
+  <div class="mm-grid page is-sidebar-expanded">
 
 
 

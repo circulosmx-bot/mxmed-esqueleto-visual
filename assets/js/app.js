@@ -247,6 +247,76 @@ console.info('app.js loaded :: 20251123a');
   if(doctorName) window.mxmedDoctor.full_name = doctorName;
 })();
 
+// Header account verification badge: visible for paid/enhanced profile contexts only.
+(function(){
+  if(window.__mxmedHeaderVerificationBadgeApplied) return;
+  window.__mxmedHeaderVerificationBadgeApplied = true;
+
+  const TRUE_RE = /^(1|true|yes|si|sí|verified|verificado|active|activo)$/i;
+  const FALSE_RE = /^(0|false|no|free|gratis|gratuito|unverified|no_verificado|inactive|inactivo)$/i;
+  const FREE_PLAN_RE = /\b(free|gratis|gratuito)\b/i;
+  const PAID_PLAN_RE = /\b(optimo|óptimo|profesional|premium|pro|estandar|estándar|basico|básico|vigencia|contratado)\b/i;
+
+  const clean = (value)=> String(value ?? '').trim();
+  const boolFrom = (value)=>{
+    const text = clean(value);
+    if(!text) return null;
+    if(TRUE_RE.test(text)) return true;
+    if(FALSE_RE.test(text)) return false;
+    return null;
+  };
+  const firstBool = (values)=>{
+    for(const value of values){
+      const parsed = boolFrom(value);
+      if(parsed !== null) return parsed;
+    }
+    return null;
+  };
+  const resolvePlanText = ()=>{
+    const pieces = [
+      document.querySelector('.mx-gh-current-plan-name')?.textContent,
+      document.querySelector('.mx-gh-current-plan-renewal')?.textContent,
+      window.mxmedStore?.subscriptionPlan,
+      window.mxmedStore?.planCode,
+      window.mxmedStore?.plan_code,
+      window.mxmedStore?.doctorProfile?.plan_code,
+      window.mxmedDoctor?.plan_code
+    ];
+    return pieces.map(clean).filter(Boolean).join(' ');
+  };
+  const resolveVerified = ()=>{
+    const explicit = firstBool([
+      document.body?.dataset?.profileVerified,
+      document.body?.dataset?.doctorVerified,
+      window.mxmedStore?.profileVerified,
+      window.mxmedStore?.doctorVerified,
+      window.mxmedStore?.doctorProfile?.is_verified,
+      window.mxmedStore?.doctorProfile?.profile_verified,
+      window.mxmedDoctor?.is_verified,
+      window.mxmedDoctor?.profile_verified
+    ]);
+    if(explicit !== null) return explicit;
+
+    const planText = resolvePlanText();
+    if(!planText) return false;
+    if(FREE_PLAN_RE.test(planText)) return false;
+    return PAID_PLAN_RE.test(planText);
+  };
+  const syncHeaderVerificationBadge = ()=>{
+    const identity = document.querySelector('.mx-gh-identity');
+    const badge = identity?.querySelector('[data-profile-verification-badge]');
+    if(!identity || !badge) return;
+    const verified = resolveVerified();
+    identity.dataset.profileVerified = verified ? 'true' : 'false';
+    badge.hidden = !verified;
+  };
+
+  window.mxmedSyncHeaderVerificationBadge = syncHeaderVerificationBadge;
+  syncHeaderVerificationBadge();
+  document.addEventListener('DOMContentLoaded', syncHeaderVerificationBadge, { once: true });
+  window.addEventListener('load', syncHeaderVerificationBadge, { once: true });
+})();
+
 // Text assistance for human-readable Expediente fields.
 (function(){
   if(window.__mxmedTextAssistApplied) return;
