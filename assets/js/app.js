@@ -53969,6 +53969,173 @@ console.info('app.js loaded :: 20251123a');
 	    }
 	    return false;
 	  };
+	  const quickRxPanel = document.getElementById('p-pac-recetas');
+	  const quickRxEls = quickRxPanel ? {
+	    status: quickRxPanel.querySelector('[data-quick-rx-status]'),
+	    eyebrow: quickRxPanel.querySelector('[data-quick-rx-eyebrow]'),
+	    title: quickRxPanel.querySelector('[data-quick-rx-title]'),
+	    text: quickRxPanel.querySelector('[data-quick-rx-text]'),
+	    patientId: quickRxPanel.querySelector('[data-quick-rx-patient-id]'),
+	    emitBtn: quickRxPanel.querySelector('[data-quick-rx-action="emit-active"]'),
+	    searchLabel: quickRxPanel.querySelector('[data-quick-rx-search-label]'),
+	    feedback: quickRxPanel.querySelector('[data-quick-rx-feedback]')
+	  } : null;
+	  const resolveQuickRxPatientId = ()=>{
+	    if(isNewPatientEntryModeActive() && !sanitizeText(getPanePatientContextId())){
+	      return '';
+	    }
+	    return sanitizeText(getPanePatientContextId() || getActivePatientId());
+	  };
+	  const resolveQuickRxPatientName = (patientId = '')=>{
+	    const pid = sanitizeText(patientId);
+	    const cache = ensurePatientLabelCache();
+	    const structuredName = [
+	      nameInput?.value,
+	      apellidoPaternoInput?.value,
+	      apellidoMaternoInput?.value
+	    ].map((value)=> sanitizeText(value)).filter(Boolean).join(' ').trim();
+	    const candidates = [
+	      cache[pid],
+	      structuredName,
+	      expHeaderName?.textContent
+	    ].map((value)=> sanitizeText(value)).filter(Boolean);
+	    for(const label of candidates){
+	      if(!isGenericChipLabel(label, pid)) return label;
+	    }
+	    return 'Paciente activo';
+	  };
+	  const setQuickRxFeedback = (message = '', tone = 'info')=>{
+	    if(!quickRxEls?.feedback) return;
+	    const safeMessage = sanitizeText(message);
+	    quickRxEls.feedback.textContent = safeMessage;
+	    quickRxEls.feedback.classList.toggle('d-none', !safeMessage);
+	    quickRxEls.feedback.dataset.tone = safeMessage ? sanitizeText(tone || 'info') : '';
+	  };
+	  const renderQuickRxPanel = ()=>{
+	    if(!quickRxPanel || !quickRxEls) return;
+	    const patientId = resolveQuickRxPatientId();
+	    const hasPatient = !!patientId;
+	    quickRxPanel.dataset.hasActivePatient = hasPatient ? '1' : '0';
+	    quickRxEls.status?.classList.toggle('has-active-patient', hasPatient);
+	    if(quickRxEls.eyebrow){
+	      quickRxEls.eyebrow.textContent = hasPatient ? 'Paciente activo' : 'Paciente requerido';
+	    }
+	    if(quickRxEls.title){
+	      quickRxEls.title.textContent = hasPatient
+	        ? resolveQuickRxPatientName(patientId)
+	        : 'Selecciona o registra un paciente para generar una receta';
+	    }
+	    if(quickRxEls.text){
+	      quickRxEls.text.textContent = hasPatient
+	        ? 'La receta se emitirá para este paciente usando el flujo clínico existente.'
+	        : 'La receta quedará asociada al paciente y se guardará en su historial de atención.';
+	    }
+	    if(quickRxEls.patientId){
+	      quickRxEls.patientId.textContent = hasPatient ? `ID: ${patientId}` : '';
+	      quickRxEls.patientId.classList.toggle('d-none', !hasPatient);
+	    }
+	    if(quickRxEls.emitBtn){
+	      quickRxEls.emitBtn.classList.toggle('d-none', !hasPatient);
+	      quickRxEls.emitBtn.disabled = !hasPatient;
+	    }
+	    if(quickRxEls.searchLabel){
+	      quickRxEls.searchLabel.textContent = hasPatient ? 'Buscar otro paciente' : 'Buscar paciente';
+	    }
+	  };
+	  const openQuickRxForActivePatient = async ()=>{
+	    if(!quickRxPanel || !quickRxEls) return false;
+	    const patientId = resolveQuickRxPatientId();
+	    if(!patientId){
+	      setQuickRxFeedback('Selecciona o registra un paciente antes de emitir la receta.', 'error');
+	      renderQuickRxPanel();
+	      return false;
+	    }
+	    const btn = quickRxEls.emitBtn;
+	    if(btn) btn.disabled = true;
+	    setQuickRxFeedback('Preparando receta para el paciente activo...', 'info');
+	    try{
+	      if(typeof setActivePatientId === 'function'){
+	        const changed = await setActivePatientId(patientId, {
+	          emitEvent: false,
+	          skipActiveEncounterConfirm: true,
+	          applyEntryRule: false,
+	          preserveCompletionHub: true
+	        });
+	        if(changed === false){
+	          setQuickRxFeedback('No fue posible activar el paciente para emitir la receta.', 'error');
+	          return false;
+	        }
+	      }
+	      const opened = openRecetaFromActividad();
+	      if(!opened){
+	        setQuickRxFeedback('No fue posible abrir la receta en este momento.', 'error');
+	        return false;
+	      }
+	      setQuickRxFeedback('Receta abierta. El guardado seguirá asociado al paciente activo.', 'success');
+	      return true;
+	    }catch(err){
+	      setQuickRxFeedback(String(err?.message || 'No fue posible abrir la receta.'), 'error');
+	      return false;
+	    }finally{
+	      if(btn) btn.disabled = false;
+	      renderQuickRxPanel();
+	    }
+	  };
+	  const openQuickRxPatientSearch = ()=>{
+	    if(!quickRxPanel) return false;
+	    setQuickRxFeedback('Abriendo archivo de pacientes. Selecciona un paciente y vuelve a Recetas para emitir.', 'info');
+	    const opened = navigateToPatientArchive();
+	    if(!opened){
+	      setQuickRxFeedback('No fue posible abrir la búsqueda de pacientes.', 'error');
+	    }
+	    return opened;
+	  };
+	  const openQuickRxPatientCreate = ()=>{
+	    if(!quickRxPanel) return false;
+	    const opened = typeof jumpTo === 'function'
+	      ? jumpTo('p-expediente') !== false
+	      : (typeof showPanel === 'function' ? (showPanel('p-expediente'), true) : false);
+	    if(!opened){
+	      setQuickRxFeedback('No fue posible abrir el alta de paciente.', 'error');
+	      return false;
+	    }
+	    if(typeof startNewPatientEntry === 'function'){
+	      startNewPatientEntry('quick_prescription_create_patient');
+	    }
+	    setQuickRxFeedback('Completa y guarda la ficha del paciente. La creación rápida mínima queda preparada para una siguiente fase.', 'info');
+	    return true;
+	  };
+	  quickRxPanel?.addEventListener('click', (event)=>{
+	    const actionBtn = event.target.closest('[data-quick-rx-action]');
+	    if(!actionBtn || !quickRxPanel.contains(actionBtn)) return;
+	    event.preventDefault();
+	    const action = sanitizeText(actionBtn.getAttribute('data-quick-rx-action'));
+	    if(action === 'emit-active'){
+	      openQuickRxForActivePatient().catch(()=> null);
+	      return;
+	    }
+	    if(action === 'search'){
+	      openQuickRxPatientSearch();
+	      return;
+	    }
+	    if(action === 'create'){
+	      openQuickRxPatientCreate();
+	    }
+	  });
+	  if(quickRxPanel){
+	    ['patient:selected', 'expediente:patient_changed', 'expediente:patient-changed', 'mxmed:expediente-neutralize'].forEach((evtName)=>{
+	      window.addEventListener(evtName, ()=>{ window.setTimeout(renderQuickRxPanel, 0); });
+	    });
+	    document.addEventListener('click', (event)=>{
+	      const navBtn = event.target.closest('[data-panel="p-pac-recetas"]');
+	      if(!navBtn) return;
+	      window.setTimeout(()=>{
+	        renderQuickRxPanel();
+	        setQuickRxFeedback('');
+	      }, 0);
+	    });
+	    renderQuickRxPanel();
+	  }
 	  const closeActivePatientContext = (source = 'active_header_close')=>{
 	    const currentPatientId = sanitizeText(getActivePatientId());
 	    if(!currentPatientId) return false;

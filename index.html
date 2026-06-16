@@ -4287,25 +4287,58 @@
 
         </section>
 
-        <!-- PACIENTES · RECETAS (placeholder) -->
+        <!-- PACIENTES · RECETA RÁPIDA -->
 
-        <section class="mm-card d-none" id="p-pac-recetas">
+        <section class="mm-card d-none" id="p-pac-recetas" data-quick-prescription-panel>
 
           <div class="head">
             <header class="mx-panel-subheader mx-panel-subheader--simple">
               <div class="mx-panel-subheader-main">
                 <span class="mx-panel-subheader-icon material-symbols-outlined" aria-hidden="true">prescriptions</span>
                 <div class="mx-panel-subheader-copy">
-                  <h2 class="mx-panel-subheader-title">Recetas</h2>
-                  <p class="mx-panel-subheader-text">Genera recetas y consulta documentos emitidos para tus pacientes.</p>
+                  <h2 class="mx-panel-subheader-title">Receta rápida</h2>
+                  <p class="mx-panel-subheader-text">Genera una receta seleccionando un paciente existente o creando una ficha mínima.</p>
                 </div>
               </div>
             </header>
           </div>
 
           <div class="body">
+            <div class="mx-quick-rx" data-quick-rx-root>
+              <div class="mx-quick-rx-status" data-quick-rx-status>
+                <div class="mx-quick-rx-status-icon" aria-hidden="true">
+                  <span class="material-symbols-rounded">person_search</span>
+                </div>
+                <div class="mx-quick-rx-status-copy">
+                  <div class="mx-quick-rx-eyebrow" data-quick-rx-eyebrow>Paciente requerido</div>
+                  <h3 class="mx-quick-rx-title" data-quick-rx-title>Selecciona o registra un paciente para generar una receta</h3>
+                  <p class="mx-quick-rx-text" data-quick-rx-text>La receta quedará asociada al paciente y se guardará en su historial de atención.</p>
+                  <div class="mx-quick-rx-patient-id d-none" data-quick-rx-patient-id></div>
+                </div>
+              </div>
 
-            <div class="alert alert-info">Generar nueva receta o buscar recetas previas (placeholder).</div>
+              <div class="mx-quick-rx-actions" aria-label="Acciones de receta rápida">
+                <button type="button" class="btn btn-primary mx-quick-rx-primary d-none" data-quick-rx-action="emit-active">
+                  <span class="material-symbols-outlined" aria-hidden="true">prescriptions</span>
+                  <span>Emitir receta para este paciente</span>
+                </button>
+                <button type="button" class="btn btn-outline-primary" data-quick-rx-action="search">
+                  <span class="material-symbols-rounded" aria-hidden="true">person_search</span>
+                  <span data-quick-rx-search-label>Buscar paciente</span>
+                </button>
+                <button type="button" class="btn btn-outline-secondary" data-quick-rx-action="create">
+                  <span class="material-symbols-rounded" aria-hidden="true">person_add</span>
+                  <span>Crear paciente rápido</span>
+                </button>
+              </div>
+
+              <div class="mx-quick-rx-feedback d-none" data-quick-rx-feedback role="status" aria-live="polite"></div>
+
+              <div class="mx-quick-rx-note">
+                <span class="material-symbols-rounded" aria-hidden="true">verified_user</span>
+                <span>No se puede emitir una receta sin paciente. El guardado usa el flujo clínico doctor-paciente existente.</span>
+              </div>
+            </div>
 
           </div>
 

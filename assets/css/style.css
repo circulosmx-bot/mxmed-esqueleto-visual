@@ -3274,6 +3274,162 @@ body{margin:0;background:var(--mm-fondo-base);}
 
 .mm-card .body:has(.mm-tabs){ padding-top:0 }
 
+#p-pac-recetas .mx-quick-rx{
+  display:grid;
+  gap:14px;
+}
+
+#p-pac-recetas .mx-quick-rx-status{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:16px;
+  border:1px solid rgba(0, 173, 193, .28);
+  border-radius:12px;
+  background:#fff;
+  box-shadow:0 10px 24px rgba(0, 70, 101, .08);
+}
+
+#p-pac-recetas .mx-quick-rx-status.has-active-patient{
+  border-color:rgba(0, 173, 193, .55);
+  background:linear-gradient(180deg,#ffffff 0%,#ecfbfd 100%);
+}
+
+#p-pac-recetas .mx-quick-rx-status-icon{
+  flex:0 0 auto;
+  width:48px;
+  height:48px;
+  border-radius:14px;
+  display:grid;
+  place-items:center;
+  background:#e8f8fb;
+  color:#007f91;
+}
+
+#p-pac-recetas .mx-quick-rx-status-icon .material-symbols-rounded{
+  font-size:30px;
+  line-height:1;
+}
+
+#p-pac-recetas .mx-quick-rx-status-copy{
+  min-width:0;
+}
+
+#p-pac-recetas .mx-quick-rx-eyebrow{
+  color:#007f91;
+  font-size:.78rem;
+  font-weight:800;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+
+#p-pac-recetas .mx-quick-rx-title{
+  margin:2px 0 4px;
+  color:#003A5D;
+  font-size:1.22rem;
+  font-weight:800;
+  line-height:1.2;
+}
+
+#p-pac-recetas .mx-quick-rx-text{
+  margin:0;
+  color:#44606f;
+  font-size:.94rem;
+}
+
+#p-pac-recetas .mx-quick-rx-patient-id{
+  margin-top:8px;
+  color:#5d7582;
+  font-size:.82rem;
+  font-weight:700;
+}
+
+#p-pac-recetas .mx-quick-rx-actions{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:10px;
+}
+
+#p-pac-recetas .mx-quick-rx-actions .btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-height:38px;
+}
+
+#p-pac-recetas .mx-quick-rx-actions .material-symbols-rounded,
+#p-pac-recetas .mx-quick-rx-actions .material-symbols-outlined{
+  font-size:20px;
+  line-height:1;
+}
+
+#p-pac-recetas .mx-quick-rx-feedback{
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid rgba(0, 173, 193, .28);
+  background:#edf9fc;
+  color:#004465;
+  font-size:.9rem;
+  font-weight:650;
+}
+
+#p-pac-recetas .mx-quick-rx-feedback[data-tone="success"]{
+  border-color:rgba(38, 156, 99, .35);
+  background:#ebf9f1;
+  color:#12623b;
+}
+
+#p-pac-recetas .mx-quick-rx-feedback[data-tone="error"]{
+  border-color:rgba(191, 72, 72, .35);
+  background:#fff1f1;
+  color:#8d2525;
+}
+
+#p-pac-recetas .mx-quick-rx-note{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  padding:11px 12px;
+  border-radius:10px;
+  background:rgba(0, 70, 101, .06);
+  color:#335567;
+  font-size:.9rem;
+}
+
+#p-pac-recetas .mx-quick-rx-note .material-symbols-rounded{
+  color:#007f91;
+  font-size:20px;
+  line-height:1.1;
+}
+
+@media (max-width: 575.98px){
+  #p-pac-recetas .mx-quick-rx-status{
+    align-items:flex-start;
+    padding:14px;
+  }
+
+  #p-pac-recetas .mx-quick-rx-status-icon{
+    width:42px;
+    height:42px;
+    border-radius:12px;
+  }
+
+  #p-pac-recetas .mx-quick-rx-status-icon .material-symbols-rounded{
+    font-size:26px;
+  }
+
+  #p-pac-recetas .mx-quick-rx-actions{
+    display:grid;
+    grid-template-columns:1fr;
+  }
+
+  #p-pac-recetas .mx-quick-rx-actions .btn{
+    width:100%;
+  }
+}
+
 
 
 
