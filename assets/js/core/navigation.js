@@ -1,13 +1,35 @@
 ﻿/* ===== Helpers de navegación rápida ===== */
+const SIDEBAR_ACTIVE_PANEL_ALIASES = {
+  'p-pac-archivo': 'p-expediente'
+};
+
+function resolveSidebarActivePanel(panelId){
+  const safePanelId = String(panelId || '').trim();
+  return SIDEBAR_ACTIVE_PANEL_ALIASES[safePanelId] || safePanelId;
+}
+
+function syncSidebarMainActive(panelId, opts = {}){
+  const activePanel = resolveSidebarActivePanel(panelId);
+  if(!activePanel) return false;
+  const $main = $('.menu-main[data-panel="'+activePanel+'"]').first();
+  if(!$main.length){
+    if(opts.clearOnMiss === true){
+      $('.menu-main').removeClass('active');
+    }
+    return false;
+  }
+  $('.menu-main').removeClass('active');
+  $main.addClass('active');
+  return true;
+}
+
 function jumpTo(panelId){
   showPanel(panelId);
   // marca activo el subbotón correspondiente, si existe
   $('.menu-sub-btn').removeClass('active');
   $('.menu-sub-btn[data-panel="'+panelId+'"]').addClass('active');
-  // marcar activo el botón principal si es un panel directo
-  $('.menu-main').removeClass('active');
-  var $main = $('.menu-main[data-panel="'+panelId+'"]');
-  if($main.length){ $main.addClass('active'); }
+  // marcar activo el botón principal si es un panel directo o alias visual
+  syncSidebarMainActive(panelId, { clearOnMiss: true });
   localStorage.setItem('mxmed_last_panel', panelId);
 }
 const INFO_TAB_ALIASES = {
@@ -123,6 +145,7 @@ function showPanel(id){
   if(grid){
     grid.classList.toggle('is-agenda-workspace', isAgendaWorkspace);
   }
+  syncSidebarMainActive(id);
   window.dispatchEvent(new CustomEvent('mxmed:workspace-mode', {
     detail: {
       workspace: isAgendaWorkspace ? 'agenda' : 'default',
