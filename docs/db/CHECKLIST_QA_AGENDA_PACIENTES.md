@@ -6,12 +6,12 @@
 ```bash
 curl -i -X POST "http://127.0.0.1:8088/api/patients/index.php/patients" \
   -H "Content-Type: application/json" \
-  -d '{"display_name":"Paciente QA","contacts":[{"type":"phone","value":"+5215512345678","is_primary":true}]}'
+  -d '{"display_name":"María del Carmen López","contacts":[{"type":"phone","value":"+5215512345678","is_primary":true}]}'
 ```
 - Expected: HTTP 201 (o 200 si el controlador usa 200), `ok:true`, `data.patient_id` presente, `meta.visibility.contact="masked"`.
 - Notas: patient_id se usará en casos siguientes.
 
-## 2) POST /patients — invalid_params (200)
+## 2) POST /patients — invalid_params por payload vacío / nombre inválido (422)
 - Propósito: Validar rechazo de payload vacío.
 - Request:
 ```bash
@@ -19,7 +19,18 @@ curl -i -X POST "http://127.0.0.1:8088/api/patients/index.php/patients" \
   -H "Content-Type: application/json" \
   -d '{"display_name":"","contacts":[{"type":"phone","value":""}]}'
 ```
-- Expected: HTTP 200, `ok:false`, `error:"invalid_params"`, `meta.fields` con `display_name` y `contacts[0].value`, `meta.visibility.contact="masked"`.
+- Expected: HTTP 422 cuando la falla corresponde al nombre, `ok:false`, `error:"invalid_params"`, `message:"Captura un nombre de paciente válido."`, `meta.fields.display_name` presente, `meta.visibility.contact="masked"`.
+
+## 2b) POST /patients — nombre genérico inválido (422)
+- Propósito: Validar que el backend rechaza nombres basura aunque alguien llame directo al API.
+- Request:
+```bash
+curl -i -X POST "http://127.0.0.1:8088/api/patients/index.php/patients" \
+  -H "Content-Type: application/json" \
+  -d '{"display_name":"Paciente Demo","contacts":[{"type":"phone","value":"+5215512345678"}]}'
+```
+- Expected: HTTP 422, `ok:false`, `error:"invalid_params"`, `message:"Captura un nombre de paciente válido."`, `meta.fields.display_name="invalid_name"`, sin persistir paciente.
+- Otros ejemplos que deben fallar igual: `Sin nombre Prueba`, `Prueba Demo`, `Test Demo`, `xxx Demo`, `abc Demo`, `Juan123`, `12345`, `@@@@`.
 
 ## 3) POST /patients — db_not_ready (QA_MODE=not_ready)
 - Propósito: Verificar respuesta controlada sin DB.
@@ -27,7 +38,7 @@ curl -i -X POST "http://127.0.0.1:8088/api/patients/index.php/patients" \
 ```bash
 QA_MODE=not_ready curl -i -X POST "http://127.0.0.1:8088/api/patients/index.php/patients" \
   -H "Content-Type: application/json" \
-  -d '{"display_name":"Paciente QA","contacts":[{"type":"phone","value":"+5215512345678"}]}'
+  -d '{"display_name":"José Luis Álvarez","contacts":[{"type":"phone","value":"+5215512345678"}]}'
 ```
 - Expected: HTTP 200, `ok:false`, `error:"db_not_ready"`, `message:"patients db not ready"`, `meta.visibility.contact="masked"` (y `meta.qa_mode_seen` si aplica).
 
@@ -47,7 +58,7 @@ curl -i -X POST "http://127.0.0.1:8088/api/agenda/index.php/appointments" \
     "created_by_role":"system",
     "created_by_id":"qa",
     "patient":{
-      "display_name":"Paciente T",
+      "display_name":"Ana Sofía Núñez",
       "contacts":[{"type":"phone","value":"+5215512345678"}]
     }
   }'
@@ -70,7 +81,7 @@ curl -i -X POST "http://127.0.0.1:8088/api/agenda/index.php/appointments" \
     "created_by_role":"system",
     "created_by_id":"qa",
     "patient":{
-      "display_name":"Paciente Espacio",
+      "display_name":"Luz del Río",
       "contacts":[{"type":"email","value":"espacio@example.com"}]
     }
   }'
@@ -117,7 +128,7 @@ curl -i -X POST "http://127.0.0.1:8088/api/agenda/index.php/appointments" \
     "channel_origin":"panel",
     "created_by_role":"system",
     "created_by_id":"qa",
-    "display_name":"Paciente Fallback",
+    "display_name":"Ian San Martín",
     "contacts":[{"type":"phone","value":"+5215588888888"}]
   }'
 ```
@@ -139,12 +150,12 @@ curl -i -X POST "http://127.0.0.1:8088/api/agenda/index.php/appointments" \
     "created_by_role":"system",
     "created_by_id":"qa",
     "patient":{
-      "display_name":"",
+      "display_name":"Sin nombre Prueba",
       "contacts":[{"type":"phone","value":""}]
     }
   }'
 ```
-- Expected: `ok:false`, `error:"invalid_params"` (proveniente de Pacientes), `meta.visibility.contact="masked"`, la cita no se crea.
+- Expected: `ok:false`, `error:"invalid_params"` (proveniente de Pacientes), `message:"Captura un nombre de paciente válido."`, `meta.visibility.contact="masked"`, la cita no se crea.
 
 ## 9) POST /appointments — Propaga error db_not_ready de pacientes (QA_MODE=not_ready)
 - Propósito: Ver degradación controlada cuando Pacientes no está listo.
@@ -162,7 +173,7 @@ QA_MODE=not_ready curl -i -X POST "http://127.0.0.1:8088/api/agenda/index.php/ap
     "created_by_role":"system",
     "created_by_id":"qa",
     "patient":{
-      "display_name":"Paciente NR",
+      "display_name":"María-José García-López",
       "contacts":[{"type":"phone","value":"+5215577777777"}]
     }
   }'

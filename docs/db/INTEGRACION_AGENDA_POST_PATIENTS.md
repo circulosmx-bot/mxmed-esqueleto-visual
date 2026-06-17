@@ -11,6 +11,8 @@ Documentar el flujo en el que Agenda, al crear una cita, auto-crea un paciente a
   - Si el payload de cita incluye `doctor_id` y `patientInput` no lo trae → Agenda lo inyecta en `patientInput`.
 - Si viene `patient_id`, Agenda **no** crea paciente.
 
+Nota vigente: `display_name` no solo debe existir. El dominio Pacientes normaliza y valida nombres en backend; nombres genéricos, con dígitos o símbolos inválidos responden `invalid_params` y no crean paciente.
+
 ## 3) Payload preferido (recomendado) para POST /appointments
 Campos mínimos para permitir auto-creación: `doctor_id`, `consultorio_id`, `start_at`, `end_at`, `modality`, `channel_origin`, `created_by_role`, `created_by_id`, y `patient { display_name, contacts[] }`.
 `start_at`/`end_at` aceptan formatos `"YYYY-MM-DD HH:MM:SS"` y `"YYYY-MM-DDTHH:MM:SS"`.
@@ -67,7 +69,7 @@ Si no viene `patient{}`, Agenda puede leer campos en el nivel raíz (`display_na
   "channel_origin": "qa_script",
   "created_by_role": "system",
   "created_by_id": "qa",
-  "display_name": "Paciente Fallback",
+  "display_name": "Ian San Martín",
   "contacts": [
     { "type": "phone", "value": "+5215511111111" }
   ]
@@ -82,7 +84,7 @@ Si no viene `patient{}`, Agenda puede leer campos en el nivel raíz (`display_na
 Ejemplo request mínimo a `POST /patients`:
 ```json
 {
-  "display_name": "Ana Pérez",
+  "display_name": "Ana Sofía Núñez",
   "contacts": [
     { "type": "phone", "value": "+5215512345678" }
   ],
@@ -98,7 +100,7 @@ Ejemplo response OK de `POST /patients`:
   "message": "",
   "data": {
     "patient_id": "p_a1b2c3d4e5f6",
-    "display_name": "Ana Pérez",
+    "display_name": "Ana Sofía Núñez",
     "status": "active",
     "contacts": [
       { "contact_id": "c_abc123", "type": "phone", "value_masked": "+52155******78", "is_primary": true }
@@ -120,19 +122,35 @@ Ejemplo response OK de `POST /patients`:
   - Propaga `error` y `message` tal cual.
   - Conserva `meta.visibility.contact="masked"` si viene desde Pacientes.
 
-Ejemplo error `invalid_params`:
+Ejemplo error `invalid_params` por nombre inválido:
 ```json
 {
   "ok": false,
   "error": "invalid_params",
-  "message": "invalid params",
+  "message": "Captura un nombre de paciente válido.",
   "data": null,
   "meta": {
     "visibility": { "contact": "masked" },
-    "fields": { "display_name": "required" }
+    "fields": { "display_name": "invalid_name" }
   }
 }
 ```
+
+Cuando la falla corresponde a nombre inválido, Pacientes responde HTTP `422`. Agenda debe tratarlo como rechazo de creación de paciente y no debe crear la cita.
+
+Ejemplos de `display_name` inválidos:
+- `Paciente`, `Paciente Demo`, `Paciente nuevo`, `Paciente rápido`
+- `Sin nombre`, `Sin nombre Prueba`, `Sin nombre registrado`, `Sin nombre registrado Demo`
+- `No registrado`, `No registrado Demo`, `No especificado`, `No especificado Demo`
+- `Prueba`, `Prueba Demo`, `Test`, `Test Demo`
+- `xxx`, `xxx Demo`, `abc`, `abc Demo`, `Juan123`, `12345`, `@@@@`
+
+Ejemplos válidos:
+- `María del Carmen López`
+- `José Luis Álvarez`
+- `Ana Sofía Núñez`
+- `Ian San Martín`
+- `Luz del Río`
 
 Ejemplo error `db_not_ready`:
 ```json

@@ -24,7 +24,14 @@ Este documento es descriptivo (sin cambios funcionales).
 - `modules/patients/controllers/GetDoctorPatientsController.php`
   - Propósito: `GET doctor patients` con `limit` y contactos enmascarados.
 - `modules/patients/controllers/CreatePatientController.php`
-  - Propósito: alta de paciente y validaciones de payload.
+  - Propósito: alta de paciente, validación de payload y validación backend de `display_name`.
+- `modules/patients/controllers/UpsertPatientProfileController.php`
+  - Propósito: actualización del perfil administrativo; valida `first_name`, `paternal_last_name` y `maternal_last_name` cuando vienen presentes.
+
+### Validadores Pacientes
+- `modules/patients/validators/PatientNameValidator.php`
+  - Propósito: helper backend común para normalizar y validar nombres de paciente.
+  - Uso actual: `CreatePatientController.php` y `UpsertPatientProfileController.php`.
 
 ### Repositorio
 - `modules/patients/repositories/PatientsRepository.php`
@@ -45,9 +52,9 @@ Este documento es descriptivo (sin cambios funcionales).
 
 ### Consumo frontend (expediente/archivo)
 - `assets/js/perfil/datos-generales.js`
-  - Relación: guardado explícito de paciente desde Datos Generales (`POST /api/patients/index.php/patients`).
+  - Relación: guardado explícito de paciente desde Datos Generales (`POST /api/patients/index.php/patients`) y validación frontend de Nombre(s), Primer apellido y Segundo apellido vía `window.mxmedPatientNameTools`.
 - `assets/js/app.js`
-  - Relación: búsqueda en Archivo de pacientes vía API de Pacientes, apertura de expediente y cache local del índice.
+  - Relación: búsqueda en Archivo de pacientes vía API de Pacientes, apertura de expediente, cache local del índice y creación de paciente rápido desde Receta rápida usando el mismo criterio frontend de nombres.
 
 ### Documentación relacionada (evidencia)
 - `docs/db/INTEGRACION_PACIENTES_AGENDA.md`
@@ -82,17 +89,56 @@ Este documento es descriptivo (sin cambios funcionales).
 - Archivo: `api/patients/index.php` -> `CreatePatientController@handle`.
 - Propósito: crear paciente canónico.
 - Parámetros principales del payload:
-  - requerido: `display_name`.
+  - requerido: `display_name` normalizado y validado.
   - opcionales: `birthdate` (`Y-m-d`), `sex`, `contacts[]`, `doctor_id`.
   - `contacts[]`: `{ type: phone|email, value, is_primary?, preferred_contact_method? }`.
 - Respuesta:
   - `ok:true` con `data.patient_id`, `contacts masked`, `links` (si vino `doctor_id`), `audit`.
   - `ok:false`: `invalid_params`, `db_not_ready`, `db_error`.
 - Meta: `visibility.contact = masked` (+ `fields` en errores de validación).
+- Error por nombre inválido:
+  - HTTP `422`.
+  - `ok:false`, `error:"invalid_params"`, `message:"Captura un nombre de paciente válido."`.
+  - `meta.fields.display_name = "invalid_name"`.
 
-### 3.4 Rutas no implementadas en este router
+### 3.4 POST `/api/patients/index.php/patients/{patient_id}/profile`
+- Archivo: `api/patients/index.php` -> `UpsertPatientProfileController@handle`.
+- Propósito: actualizar perfil administrativo del paciente.
+- Campos de nombre cubiertos si vienen presentes:
+  - `first_name`
+  - `paternal_last_name`
+  - `maternal_last_name`
+- Regla:
+  - `maternal_last_name` vacío sigue permitido.
+  - Campos no relacionados como ocupación o estado civil no forman parte de esta validación.
+- Error por nombre inválido:
+  - HTTP `422`.
+  - `ok:false`, `error:"invalid_params"`, `message:"Captura un nombre de paciente válido."`.
+  - `meta.fields.{campo} = "invalid_name"`.
+
+### 3.5 Rutas no implementadas en este router
 - No existe `GET /api/patients/index.php/patients` (lista global) en `api/patients/index.php`.
 - En frontend existe fallback a esa ruta cuando no se resuelve `doctor_id`; en ese caso hoy devuelve `route not found`.
+
+## 3.6 Política vigente de nombres
+- La validación existe en frontend y backend.
+- Frontend:
+  - helper `window.mxmedPatientNameTools`.
+  - usado en Datos Generales y Receta rápida.
+  - bloquea antes de POST.
+- Backend:
+  - helper `modules/patients/validators/PatientNameValidator.php`.
+  - protege creación y edición de perfil aunque alguien llame directo al API.
+- Normalización:
+  - `trim`;
+  - colapso de espacios internos;
+  - sin autocapitalización;
+  - preserva acentos, `ñ`, guiones y apóstrofes.
+- Se bloquean:
+  - genéricos simples y compuestos (`Paciente`, `Paciente Demo`, `Sin nombre`, `Sin nombre Prueba`, `No registrado Demo`, `Prueba Demo`, `Test Demo`, `xxx Demo`, `abc Demo`);
+  - valores con dígitos (`Juan123`, `12345`);
+  - símbolos inválidos (`@@@@`).
+- Se permiten nombres reales complejos como `María del Carmen del Río`, `María-José García-López O'Connor`, `Ana De la Torre Núñez`, `Luz del Río`, `Ian San Martín`.
 
 ## 4) Tablas reales relacionadas
 
@@ -136,7 +182,9 @@ Este documento es descriptivo (sin cambios funcionales).
 
 1. **Alta de paciente (ruta explícita actual)**
    - UI expediente (`assets/js/perfil/datos-generales.js`) usa botón `Guardar paciente`.
+   - Normaliza y valida Nombre(s), Primer apellido y Segundo apellido antes de POST.
    - Hace `POST /api/patients/index.php/patients` con payload mínimo (`display_name`, opcionales).
+   - Backend vuelve a validar `display_name`; un nombre inválido responde HTTP `422` y no persiste.
    - Si éxito: fija `patient_id` activo (`setActivePatientId`), invalida cache de búsqueda y mantiene flujo en expediente sin iniciar consulta automática.
 
 2. **Lectura de paciente por ID**

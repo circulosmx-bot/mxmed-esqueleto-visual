@@ -24,7 +24,7 @@ Este documento es descriptivo (sin cambios funcionales).
 
 - `assets/js/perfil/datos-generales.js`
   - Propósito: captura de identidad en tab Datos Generales y guardado explícito del paciente.
-  - Relación: puerta administrativa al expediente (nuevo paciente / alta).
+  - Relación: puerta administrativa al expediente (nuevo paciente / alta) con normalización y validación frontend de Nombre(s), Primer apellido y Segundo apellido.
 
 ### Vistas clínicas embebidas dentro del Expediente
 - `modules/clinical/ui/historial.php`
@@ -81,6 +81,18 @@ Este documento es descriptivo (sin cambios funcionales).
 - `POST /api/patients/index.php/patients`
   - Uso: botón “Guardar paciente” en Datos Generales (`assets/js/perfil/datos-generales.js`).
   - Propósito: alta explícita de paciente sin iniciar consulta.
+  - Validación vigente:
+    - frontend bloquea nombres inválidos antes del POST con `window.mxmedPatientNameTools`;
+    - backend revalida `display_name` con `PatientNameValidator.php`;
+    - nombres inválidos responden HTTP `422`, `error:"invalid_params"` y mensaje `Captura un nombre de paciente válido.`.
+
+- `POST /api/patients/index.php/patients/{patient_id}/profile`
+  - Uso: edición de perfil administrativo desde Datos Generales.
+  - Propósito: actualizar campos de perfil del paciente existente.
+  - Validación vigente:
+    - se validan `first_name`, `paternal_last_name` y `maternal_last_name` si vienen presentes;
+    - `maternal_last_name` vacío sigue permitido;
+    - campos no relacionados, como ocupación o estado civil, no forman parte de esta validación de nombres.
 
 - `GET /api/patients/index.php/patients/{patient_id}`
   - Disponible en módulo Pacientes; utilizable para lectura canónica de identidad.
@@ -188,22 +200,29 @@ Este documento es descriptivo (sin cambios funcionales).
      - Exploración, Estudios, Tratamiento, Notas, Manejo, Consentimiento, Archivo.
    - Gate visual: sin paciente activo, solo se habilita contexto básico (Datos); con paciente activo, habilita tabs clínicos.
 
-4. **Historial embebido**
+4. **Datos Generales / nombres**
+   - Nombre(s), Primer apellido y Segundo apellido se normalizan con `trim` y colapso de espacios internos.
+   - Se preservan acentos, `ñ`, guiones y apóstrofes.
+   - No se autocapitaliza ni se fuerza mayúsculas/minúsculas.
+   - Se bloquean genéricos, dígitos y símbolos inválidos antes de POST.
+   - Backend aplica la misma política mínima para proteger llamadas directas.
+
+5. **Historial embebido**
    - Tab `t-historial-atencion` carga iframe con 3 modos:
      - historial (`/modules/clinical/ui/historial.php?patient_id=...&embed=1`)
      - episodio (`/modules/clinical/ui/encounter.php?encounter_key=...&embed=1`)
      - documento (`/modules/clinical/ui/document.php?uuid=...&embed=1`)
 
-5. **Consulta activa y P10**
+6. **Consulta activa y P10**
    - P10 consulta `encounters/active`.
    - Si no existe encounter activo, muestra “No hay consulta activa” + botón “Iniciar consulta”.
    - Al iniciar, crea encounter por `POST /patients/{id}/encounters` y cambia modo a episodio.
    - Al cerrar, usa `POST /encounters/{key}/finalize` y regresa a historial.
 
-6. **Expediente sin consulta activa**
+7. **Expediente sin consulta activa**
    - Sí existe y es válido: identidad del paciente visible, tabs consultables según gate, header en estado neutro.
 
-7. **Expediente con consulta activa**
+8. **Expediente con consulta activa**
    - Header muestra `CONSULTA ACTIVA`, origen/inicio si disponibles.
    - Banda de consultas activas permite alternar entre encounters/pacientes activos (modelo multi-activo).
 

@@ -15,6 +15,9 @@ Crear paciente administrativo y, opcionalmente, registrar vínculo básico con u
 
 ### Request (JSON body)
 - Obligatorio: `display_name` (string).
+- `display_name` no solo debe existir: se normaliza y valida como nombre de paciente.
+  - Normalización: `trim`, colapso de espacios internos, sin autocapitalizar, sin forzar mayúsculas/minúsculas, preservando acentos, `ñ`, guiones y apóstrofes.
+  - Se bloquean nombres genéricos simples o compuestos, dígitos y símbolos fuera de letras Unicode, espacios, guion y apóstrofe.
 - Opcional: `sex`, `birthdate` (`YYYY-MM-DD`), `contacts` (ary de `ContactInput`), `doctor_id`.
 - Prohibido: `notes_admin`, `consent_id`, `audit`, `links`, `patient_id` (el sistema asigna el ID).
 
@@ -46,20 +49,72 @@ ContactInput:
 ```
 
 ### Errores esperados
-- `invalid_params` (display_name faltante o contactos mal formados).
+- `invalid_params` (display_name faltante/inválido o contactos mal formados).
 - `forbidden` (sin permiso para crear).
 - `db_not_ready`, `db_error`.
 ```json
 {
   "ok": false,
   "error": "invalid_params",
-  "message": "display_name required",
+  "message": "Captura un nombre de paciente válido.",
   "data": null,
-  "meta": {}
+  "meta": {
+    "fields": { "display_name": "invalid_name" }
+  }
 }
 ```
 
-## Endpoint 2 — GET /patients/{patient_id}
+Cuando la falla corresponde a nombre inválido, el backend responde HTTP `422` y no persiste el paciente.
+
+Ejemplos inválidos:
+- `Paciente`, `Paciente Demo`, `Paciente nuevo`, `Paciente rápido`
+- `Sin nombre`, `Sin nombre Prueba`, `Sin nombre registrado`, `Sin nombre registrado Demo`
+- `No registrado`, `No registrado Demo`, `No especificado`, `No especificado Demo`
+- `Prueba`, `Prueba Demo`, `Test`, `Test Demo`
+- `xxx`, `xxx Demo`, `abc`, `abc Demo`, `Juan123`, `12345`, `@@@@`
+
+Ejemplos válidos:
+- `María José`, `José Luis`, `Ana Sofía`, `María del Carmen`, `Juan Pablo`
+- `Ana`, `Luz`, `Ian`
+- `De la Torre`, `del Río`, `San Martín`
+- `García-López`, `O'Connor`, `Álvarez`, `Núñez`, `Muñoz`, `Peña`
+- `Jean Pierre`, `María-José`, `María del Carmen del Río`
+- `María-José García-López O'Connor`, `Ana De la Torre Núñez`, `José Luis Álvarez`, `Núñez Muñoz Peña`
+
+## Endpoint 2 — POST /patients/{patient_id}/profile
+### Propósito
+Actualizar el perfil administrativo del paciente.
+
+### Request
+- Path: `patient_id`.
+- Campos de nombre validados si vienen presentes:
+  - `first_name`
+  - `paternal_last_name`
+  - `maternal_last_name`
+- `maternal_last_name` puede enviarse vacío.
+- Campos no relacionados, como ocupación o estado civil, no forman parte de esta validación de nombres.
+
+### Validación de nombres
+- Los valores presentes se normalizan con la misma política de `display_name`.
+- Se bloquean genéricos, dígitos y símbolos inválidos.
+- Se preservan acentos, `ñ`, guiones y apóstrofes.
+
+### Error por nombre inválido
+```json
+{
+  "ok": false,
+  "error": "invalid_params",
+  "message": "Captura un nombre de paciente válido.",
+  "data": null,
+  "meta": {
+    "fields": { "first_name": "invalid_name" }
+  }
+}
+```
+
+Cuando la falla corresponde a nombre inválido, el backend responde HTTP `422` y no persiste el perfil.
+
+## Endpoint 3 — GET /patients/{patient_id}
 ### Propósito
 Leer la ficha administrativa existente.
 
@@ -96,7 +151,7 @@ Leer la ficha administrativa existente.
 }
 ```
 
-## Endpoint 3 — GET /doctors/{doctor_id}/patients
+## Endpoint 4 — GET /doctors/{doctor_id}/patients
 ### Propósito
 Listar los pacientes activos vinculados a un doctor.
 

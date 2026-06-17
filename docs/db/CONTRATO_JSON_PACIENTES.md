@@ -14,7 +14,7 @@ Ejemplos:
 { "ok": true, "error": null, "message": "", "data": { "patient_id": "p_abc123" }, "meta": {} }
 ```
 ```json
-{ "ok": false, "error": "invalid_params", "message": "display_name required", "data": null, "meta": {} }
+{ "ok": false, "error": "invalid_params", "message": "Captura un nombre de paciente válido.", "data": null, "meta": { "fields": { "display_name": "invalid_name" } } }
 ```
 
 ## Seguridad y privacidad
@@ -52,6 +52,34 @@ Ejemplo (visibility.contact="masked"):
 }
 ```
 
+### Política canónica de nombres de paciente
+La validación de nombres existe en dos capas:
+- Frontend: `window.mxmedPatientNameTools`, usado por Datos Generales y Receta rápida antes de enviar POST.
+- Backend: `modules/patients/validators/PatientNameValidator.php`, usado por `CreatePatientController.php` y `UpsertPatientProfileController.php` para proteger llamadas directas al API.
+
+Normalización:
+- recorta espacios al inicio/final;
+- colapsa espacios internos múltiples;
+- no autocapitaliza;
+- no fuerza mayúsculas/minúsculas;
+- no elimina acentos;
+- preserva `ñ`, guiones y apóstrofes.
+
+Campos cubiertos:
+- `display_name` en `POST /patients`;
+- `first_name`, `paternal_last_name`, `maternal_last_name` en `POST /patients/{patient_id}/profile`.
+
+Se bloquean:
+- genéricos simples y compuestos: `Paciente`, `Paciente Demo`, `Paciente nuevo`, `Paciente rápido`, `Sin nombre`, `Sin nombre Prueba`, `Sin nombre registrado`, `Sin nombre registrado Demo`, `No registrado`, `No registrado Demo`, `No especificado`, `No especificado Demo`, `Prueba`, `Prueba Demo`, `Test`, `Test Demo`, `xxx`, `xxx Demo`, `abc`, `abc Demo`;
+- valores con dígitos: `Juan123`, `12345`;
+- valores formados por símbolos o con símbolos fuera de letras Unicode, espacios, guion y apóstrofe: `@@@@`.
+
+Se permiten nombres reales complejos:
+- `María José`, `José Luis`, `Ana Sofía`, `María del Carmen`, `Juan Pablo`, `Ana`, `Luz`, `Ian`;
+- `De la Torre`, `del Río`, `San Martín`, `García-López`, `O'Connor`;
+- `Álvarez`, `Núñez`, `Muñoz`, `Peña`, `Jean Pierre`, `María-José`;
+- `María del Carmen del Río`, `María-José García-López O'Connor`, `Ana De la Torre Núñez`, `José Luis Álvarez`, `Núñez Muñoz Peña`.
+
 ### Contact
 - `contact_id`, `type`, `value` (solo full), `value_masked`, `is_primary`, `preferred_contact_method`, `created_at`.
 ```json
@@ -82,9 +110,25 @@ Ejemplo error:
 { "ok": false, "error": "not_found", "message": "patient_id unknown", "data": null, "meta": {} }
 ```
 
+Ejemplo error de nombre inválido:
+```json
+{
+  "ok": false,
+  "error": "invalid_params",
+  "message": "Captura un nombre de paciente válido.",
+  "data": null,
+  "meta": {
+    "fields": { "display_name": "invalid_name" }
+  }
+}
+```
+
+Para nombres inválidos, el endpoint responde HTTP `422`.
+
 ## Endpoints propuestos (contrato)
 - `POST /patients`: request con `display_name`, `contacts?`, `doctor_id?`; response `data=Patient`.
 - `GET /patients/{patient_id}`: response `data=Patient`.
+- `POST /patients/{patient_id}/profile`: request con campos administrativos; valida `first_name`, `paternal_last_name` y `maternal_last_name` si vienen presentes.
 - `GET /doctors/{doctor_id}/patients`: response `data=[Patient,...]`.
 - FUTURO: `PATCH /patients/{id}/contact`, `POST /patients/{id}/consents`.
 
