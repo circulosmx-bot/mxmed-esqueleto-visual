@@ -94,6 +94,40 @@ function clinical_send_response($response, ?int $status = null): void
     echo $json;
 }
 
+class ClinicalDocumentsPatientWriteException extends RuntimeException
+{
+    private $statusCode;
+    private $errorCode;
+
+    public function __construct(string $errorCode, string $message, int $statusCode)
+    {
+        parent::__construct($message);
+        $this->errorCode = $errorCode;
+        $this->statusCode = $statusCode;
+    }
+
+    public function errorCode(): string
+    {
+        return $this->errorCode;
+    }
+
+    public function statusCode(): int
+    {
+        return $this->statusCode;
+    }
+}
+
+function clinical_documents_send_patient_write_error(ClinicalDocumentsPatientWriteException $e, array $meta): void
+{
+    clinical_send_response([
+        'ok' => false,
+        'error' => $e->errorCode(),
+        'message' => $e->getMessage(),
+        'data' => null,
+        'meta' => $meta,
+    ], $e->statusCode());
+}
+
 function clinical_route_segments(): array
 {
     $routeFromQuery = trim((string)($_GET['route'] ?? $_GET['path'] ?? ''), '/');
@@ -216,31 +250,35 @@ function clinical_documents_read_create_request(): array
     ];
 }
 
+function clinical_documents_collect_patient_id_candidate(array &$values, $candidate): void
+{
+    if ($candidate === null) {
+        return;
+    }
+    if (!is_scalar($candidate)) {
+        $values[] = '__invalid_patient_id__';
+        return;
+    }
+
+    $value = trim((string)$candidate);
+    if ($value !== '') {
+        $values[] = $value;
+    }
+}
+
 function clinical_documents_request_patient_id_values(array $payload): array
 {
     $values = [];
-    $topLevelPatientId = trim((string)($payload['patient_id'] ?? ''));
-    if ($topLevelPatientId !== '') {
-        $values[] = $topLevelPatientId;
-    }
+    clinical_documents_collect_patient_id_candidate($values, $payload['patient_id'] ?? null);
 
     $context = is_array($payload['context'] ?? null) ? $payload['context'] : [];
-    $contextPatientId = trim((string)($context['patient_id'] ?? ''));
-    if ($contextPatientId !== '') {
-        $values[] = $contextPatientId;
-    }
+    clinical_documents_collect_patient_id_candidate($values, $context['patient_id'] ?? null);
 
     $documentPayload = is_array($payload['payload'] ?? null) ? $payload['payload'] : [];
-    $nestedPatientId = trim((string)($documentPayload['patient_id'] ?? ''));
-    if ($nestedPatientId !== '') {
-        $values[] = $nestedPatientId;
-    }
+    clinical_documents_collect_patient_id_candidate($values, $documentPayload['patient_id'] ?? null);
 
     $nestedContext = is_array($documentPayload['context'] ?? null) ? $documentPayload['context'] : [];
-    $nestedContextPatientId = trim((string)($nestedContext['patient_id'] ?? ''));
-    if ($nestedContextPatientId !== '') {
-        $values[] = $nestedContextPatientId;
-    }
+    clinical_documents_collect_patient_id_candidate($values, $nestedContext['patient_id'] ?? null);
 
     return array_values(array_unique($values));
 }
@@ -266,7 +304,7 @@ function clinical_documents_force_request_patient_id(array $payload, string $pat
     return $payload;
 }
 
-function clinical_documents_save_create_request(PDO $pdo, array $payload, ?array $uploadFile, bool $isMultipart): array
+function clinical_documents_save_create_request(PDO $pdo, array $payload, ?array $uploadFile, bool $isMultipart, bool $requireCanonicalPatient = false): array
 {
     $looksLikeUploadDocument = $isMultipart && (
         is_array($uploadFile)
@@ -274,10 +312,10 @@ function clinical_documents_save_create_request(PDO $pdo, array $payload, ?array
     );
 
     if ($looksLikeUploadDocument) {
-        return clinical_documents_gateway_save_upload($pdo, $payload, $uploadFile);
+        return clinical_documents_gateway_save_upload($pdo, $payload, $uploadFile, $requireCanonicalPatient);
     }
 
-    return clinical_documents_save_passthrough($pdo, $payload);
+    return clinical_documents_save_passthrough($pdo, $payload, $requireCanonicalPatient);
 }
 
 function clinical_request_actor_user_id(?array $payload = null): string
@@ -490,6 +528,29 @@ function clinical_inspect_patient_id_kind(string $patientId): array
         'kind' => 'unknown',
         'notes' => ['no canonical or legacy heuristic matched'],
     ];
+}
+
+function clinical_documents_validate_canonical_patient_id_for_write(PDO $pdo, $patientId): string
+{
+    if (!is_scalar($patientId)) {
+        throw new ClinicalDocumentsPatientWriteException('invalid_params', 'patient_id must be canonical', 400);
+    }
+
+    $safePatientId = trim((string)$patientId);
+    if ($safePatientId === '') {
+        throw new ClinicalDocumentsPatientWriteException('invalid_params', 'patient_id must be canonical', 400);
+    }
+
+    $kind = clinical_inspect_patient_id_kind($safePatientId);
+    if (($kind['kind'] ?? '') !== 'canonical') {
+        throw new ClinicalDocumentsPatientWriteException('invalid_params', 'patient_id must be canonical', 400);
+    }
+
+    if (!clinical_patient_exists($pdo, $safePatientId)) {
+        throw new ClinicalDocumentsPatientWriteException('not_found', 'patient not found', 404);
+    }
+
+    return $safePatientId;
 }
 
 function clinical_identity_bridge_admin_meta(string $method, string $route): array
@@ -1668,11 +1729,20 @@ function clinical_encounter_finalize(PDO $pdo, array $encounterRow, string $clos
     }
 }
 
-function clinical_documents_save_passthrough(PDO $pdo, array $args): array
+function clinical_documents_save_passthrough(PDO $pdo, array $args, bool $requireCanonicalPatient = false): array
 {
     require_once __DIR__ . '/../_lib/clinical_documents.php';
 
     mxmed_ensure_clinical_docs_schema($pdo);
+
+    $safePatientId = null;
+    if ($requireCanonicalPatient) {
+        $context = is_array($args['context'] ?? null) ? $args['context'] : [];
+        $safePatientId = clinical_documents_validate_canonical_patient_id_for_write(
+            $pdo,
+            $context['patient_id'] ?? null
+        );
+    }
 
     $doc = mxmed_build_clinical_document($args);
     $apptId = trim((string)($doc['context']['appointment_id'] ?? ''));
@@ -1682,6 +1752,10 @@ function clinical_documents_save_passthrough(PDO $pdo, array $args): array
         $payloadContext['appointment_id'] = $apptId;
         $payload['context'] = $payloadContext;
         $doc['content']['payload'] = $payload;
+    }
+
+    if ($safePatientId !== null) {
+        $doc['context']['patient_id'] = $safePatientId;
     }
 
     if (($doc['document_type'] ?? '') === 'nota_evolucion') {
@@ -2191,7 +2265,7 @@ function clinical_store_uploaded_file(array $file, string $documentUuid): array
     ];
 }
 
-function clinical_documents_gateway_save_upload(PDO $pdo, array $payload, ?array $uploadFile): array
+function clinical_documents_gateway_save_upload(PDO $pdo, array $payload, ?array $uploadFile, bool $requireCanonicalPatient = false): array
 {
     $documentType = strtolower(trim((string)($payload['document_type'] ?? '')));
     $title = trim((string)($payload['title'] ?? ''));
@@ -2223,7 +2297,8 @@ function clinical_documents_gateway_save_upload(PDO $pdo, array $payload, ?array
 
     $context = is_array($payload['context'] ?? null) ? $payload['context'] : [];
     $encounterKey = trim((string)($payload['encounter_key'] ?? ($context['encounter_key'] ?? '')));
-    $patientId = trim((string)($payload['patient_id'] ?? ($context['patient_id'] ?? '')));
+    $patientIdRaw = $payload['patient_id'] ?? ($context['patient_id'] ?? '');
+    $patientId = is_scalar($patientIdRaw) ? trim((string)$patientIdRaw) : '';
     $appointmentId = trim((string)($payload['appointment_id'] ?? ($context['appointment_id'] ?? '')));
     $encounterId = (int)($payload['encounter_id'] ?? ($context['encounter_id'] ?? 0));
     $hospitalStayId = trim((string)($payload['hospital_stay_id'] ?? ($context['hospital_stay_id'] ?? '')));
@@ -2246,6 +2321,9 @@ function clinical_documents_gateway_save_upload(PDO $pdo, array $payload, ?array
 
     if ($patientId === '') {
         throw new InvalidArgumentException('patient_id requerido');
+    }
+    if ($requireCanonicalPatient) {
+        $patientId = clinical_documents_validate_canonical_patient_id_for_write($pdo, $patientId);
     }
 
     $renderedText = null;
@@ -7986,10 +8064,13 @@ try {
                     || trim((string)($payload['document_type'] ?? '')) !== ''
                 );
                 if ($looksLikeUploadDocument) {
-                    $document = clinical_documents_gateway_save_upload($pdo, $payload, $uploadFile);
+                    $document = clinical_documents_gateway_save_upload($pdo, $payload, $uploadFile, true);
                 } else {
-                    $document = clinical_documents_save_passthrough($pdo, $payload);
+                    $document = clinical_documents_save_passthrough($pdo, $payload, true);
                 }
+            } catch (ClinicalDocumentsPatientWriteException $e) {
+                clinical_documents_send_patient_write_error($e, $meta);
+                return;
             } catch (InvalidArgumentException $e) {
                 $msg = trim((string)$e->getMessage());
                 clinical_send_response([
@@ -8137,6 +8218,15 @@ try {
                             'route' => 'documents/{uuid}/replicate',
                         ],
                     ], 400);
+                    return;
+                }
+                try {
+                    $patientId = clinical_documents_validate_canonical_patient_id_for_write($pdo, $patientId);
+                } catch (ClinicalDocumentsPatientWriteException $e) {
+                    clinical_documents_send_patient_write_error($e, [
+                        'method' => 'POST',
+                        'route' => 'documents/{uuid}/replicate',
+                    ]);
                     return;
                 }
 
@@ -8404,7 +8494,26 @@ try {
 
                 $patientId = trim((string)($sourceRow['patient_id'] ?? ''));
                 if ($patientId === '') {
-                    throw new RuntimeException('source document without patient_id');
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'bad_request',
+                        'message' => 'source document without patient_id',
+                        'data' => null,
+                        'meta' => [
+                            'method' => 'POST',
+                            'route' => 'documents/{id_or_uuid}/replace',
+                        ],
+                    ], 400);
+                    return;
+                }
+                try {
+                    $patientId = clinical_documents_validate_canonical_patient_id_for_write($pdo, $patientId);
+                } catch (ClinicalDocumentsPatientWriteException $e) {
+                    clinical_documents_send_patient_write_error($e, [
+                        'method' => 'POST',
+                        'route' => 'documents/{id_or_uuid}/replace',
+                    ]);
+                    return;
                 }
                 $sourcePayload = json_decode((string)($sourceRow['payload_json'] ?? ''), true);
                 if (!is_array($sourcePayload)) {
@@ -8858,6 +8967,31 @@ try {
                             'source' => 'clinical_documents_pdo',
                         ],
                     ], 404);
+                    return;
+                }
+                $patientId = trim((string)($document['context']['patient_id'] ?? ''));
+                if ($patientId === '') {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'bad_request',
+                        'message' => 'source document without patient_id',
+                        'data' => null,
+                        'meta' => [
+                            'method' => 'PATCH',
+                            'route' => 'documents/{id_or_uuid}',
+                            'source' => 'clinical_documents_pdo',
+                        ],
+                    ], 400);
+                    return;
+                }
+                try {
+                    clinical_documents_validate_canonical_patient_id_for_write($pdo, $patientId);
+                } catch (ClinicalDocumentsPatientWriteException $e) {
+                    clinical_documents_send_patient_write_error($e, [
+                        'method' => 'PATCH',
+                        'route' => 'documents/{id_or_uuid}',
+                        'source' => 'clinical_documents_pdo',
+                    ]);
                     return;
                 }
                 $actorUserId = clinical_request_actor_user_id($body);
