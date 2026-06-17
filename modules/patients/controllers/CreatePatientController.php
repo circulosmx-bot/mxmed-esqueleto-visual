@@ -4,11 +4,13 @@ declare(strict_types=1);
 namespace Patients\Controllers;
 
 use Patients\Repositories\PatientsRepository;
+use Patients\Validators\PatientNameValidator;
 use Agenda\Helpers as DbHelpers;
 use PDOException;
 use RuntimeException;
 
 require_once __DIR__ . '/../repositories/PatientsRepository.php';
+require_once __DIR__ . '/../validators/PatientNameValidator.php';
 require_once __DIR__ . '/../../../api/_lib/db.php';
 require_once __DIR__ . '/../../agenda/helpers/db_helpers.php';
 
@@ -42,13 +44,20 @@ class CreatePatientController
             return $this->error('db_not_ready', 'patients db not ready', $meta);
         }
 
-        $errors = $this->validate($payload);
+        $normalizedPayload = $payload;
+        $errors = $this->validate($payload, $normalizedPayload);
         if (!empty($errors)) {
-            return $this->error('invalid_params', 'invalid params', $meta + ['fields' => $errors]);
+            $isNameError = array_key_exists('display_name', $errors);
+            return $this->error(
+                'invalid_params',
+                $isNameError ? PatientNameValidator::INVALID_MESSAGE : 'invalid params',
+                $meta + ['fields' => $errors],
+                $isNameError ? 422 : null
+            );
         }
 
         try {
-            $patient = $this->repo->createPatient($payload);
+            $patient = $this->repo->createPatient($normalizedPayload);
             return $this->success($patient, $meta);
         } catch (RuntimeException $e) {
             if ($e->getMessage() === 'patients not ready') {
@@ -60,9 +69,10 @@ class CreatePatientController
         }
     }
 
-    private function validate(array $p): array
+    private function validate(array $p, array &$normalizedPayload): array
     {
         $errors = [];
+        $normalizedPayload = $p;
         $forbidden = ['patient_id', 'notes_admin', 'audit', 'links', 'consent_id', 'created_at', 'updated_at'];
         foreach ($forbidden as $key) {
             if (array_key_exists($key, $p)) {
@@ -70,8 +80,15 @@ class CreatePatientController
             }
         }
 
-        if (!isset($p['display_name']) || trim((string)$p['display_name']) === '') {
+        if (!array_key_exists('display_name', $p)) {
             $errors['display_name'] = 'required';
+        } else {
+            $result = PatientNameValidator::validateNameValue($p['display_name'], ['required' => true]);
+            if (($result['valid'] ?? false) !== true) {
+                $errors['display_name'] = $result['code'] ?? 'invalid_name';
+            } else {
+                $normalizedPayload['display_name'] = PatientNameValidator::normalizeDisplayName($result['value']);
+            }
         }
 
         // Validate birthdate format if present
@@ -121,8 +138,12 @@ class CreatePatientController
         return ['ok' => true, 'error' => null, 'message' => '', 'data' => $data, 'meta' => empty($meta) ? (object)[] : (object)$meta];
     }
 
-    private function error(string $code, string $message, array $meta = []): array
+    private function error(string $code, string $message, array $meta = [], ?int $httpStatus = null): array
     {
-        return ['ok' => false, 'error' => $code, 'message' => $message, 'data' => null, 'meta' => empty($meta) ? (object)[] : (object)$meta];
+        $response = ['ok' => false, 'error' => $code, 'message' => $message, 'data' => null, 'meta' => empty($meta) ? (object)[] : (object)$meta];
+        if ($httpStatus !== null) {
+            $response['http_status'] = $httpStatus;
+        }
+        return $response;
     }
 }
