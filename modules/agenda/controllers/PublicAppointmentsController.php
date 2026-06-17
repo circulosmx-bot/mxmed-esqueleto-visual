@@ -864,7 +864,7 @@ public function cancel(array $payload = []): array
             ];
         }
 
-        return [
+        $payload = [
             'doctor_id' => (string)$validated['doctor_id'],
             'consultorio_id' => $consultorioId,
             'start_at' => (string)$validated['start_at'],
@@ -882,6 +882,98 @@ public function cancel(array $payload = []): array
                 'contacts' => $contacts,
             ],
         ];
+
+        $existingPatientId = $this->findExistingPatientIdForPublicReserve(
+            (string)$validated['doctor_id'],
+            (string)($patient['phone'] ?? ''),
+            (string)($patient['email'] ?? '')
+        );
+        if ($existingPatientId !== '') {
+            unset($payload['patient']);
+            $payload['patient_id'] = $existingPatientId;
+        }
+
+        return $payload;
+    }
+
+    private function findExistingPatientIdForPublicReserve(string $doctorId, string $phone, string $email): string
+    {
+        if (!$this->pdo) {
+            return '';
+        }
+
+        $phoneDigits = $this->normalizePublicContactPhone($phone);
+        $emailNormalized = $this->normalizePublicContactEmail($email);
+        if ($phoneDigits === '' && $emailNormalized === '') {
+            return '';
+        }
+
+        try {
+            $stmt = $this->pdo->prepare(
+                'SELECT
+                    p.patient_id,
+                    c.phone,
+                    c.email
+                 FROM patients_doctor_links l
+                 JOIN patients_patients p ON p.patient_id = l.patient_id
+                 JOIN patients_contacts c ON c.patient_id = p.patient_id
+                 WHERE l.doctor_id = :doctor_id
+                   AND l.status = :link_status
+                   AND l.ended_at IS NULL
+                   AND p.status = :patient_status
+                   AND ((c.phone IS NOT NULL AND c.phone <> "") OR (c.email IS NOT NULL AND c.email <> ""))
+                 ORDER BY p.created_at ASC, p.patient_id ASC, c.is_primary DESC, c.created_at ASC, c.contact_id ASC'
+            );
+            $stmt->execute([
+                'doctor_id' => $doctorId,
+                'link_status' => 'active',
+                'patient_status' => 'active',
+            ]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            return '';
+        }
+
+        if (!is_array($rows) || empty($rows)) {
+            return '';
+        }
+
+        if (strlen($phoneDigits) >= 8) {
+            foreach ($rows as $row) {
+                if ($phoneDigits === $this->normalizePublicContactPhone((string)($row['phone'] ?? ''))) {
+                    return (string)($row['patient_id'] ?? '');
+                }
+            }
+        }
+
+        if ($emailNormalized !== '') {
+            foreach ($rows as $row) {
+                if ($emailNormalized === $this->normalizePublicContactEmail((string)($row['email'] ?? ''))) {
+                    return (string)($row['patient_id'] ?? '');
+                }
+            }
+        }
+
+        return '';
+    }
+
+    private function normalizePublicContactPhone(string $value): string
+    {
+        return preg_replace('/\D+/', '', trim($value)) ?? '';
+    }
+
+    private function normalizePublicContactEmail(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+
+        if (function_exists('mb_strtolower')) {
+            return mb_strtolower($value, 'UTF-8');
+        }
+
+        return strtolower($value);
     }
 
     private function mapSlotErrorForReserve(array $slotCheck, string $doctorId, string $consultorioId, string $startAt, string $endAt): array
