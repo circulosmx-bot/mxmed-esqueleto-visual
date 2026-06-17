@@ -64,7 +64,12 @@ class PublicAppointmentsController
                 'fields' => ['doctor_id' => 'required'],
             ]);
         }
-        $consultorioId = $this->resolveConsultorioId($doctorId, $payload['consultorio_id'] ?? null);
+        $consultorioId = $this->resolveConsultorioId(
+            $doctorId,
+            $payload['consultorio_id'] ?? null,
+            (string)$validation['start_at'],
+            (string)$validation['end_at']
+        );
 
         if (!$this->isValidNumeric($consultorioId)) {
             return $this->error('invalid_params', 'consultorio_id must be numeric', [
@@ -310,7 +315,12 @@ class PublicAppointmentsController
             ]);
         }
         $validated['doctor_id'] = $doctorId;
-        $consultorioId = $this->resolveConsultorioId($doctorId, $payload['consultorio_id'] ?? null);
+        $consultorioId = $this->resolveConsultorioId(
+            $doctorId,
+            $payload['consultorio_id'] ?? null,
+            (string)$validated['start_at'],
+            (string)$validated['end_at']
+        );
         if (!$this->isValidNumeric($consultorioId)) {
             return $this->error('invalid_params', 'consultorio_id must be numeric', [
                 'route' => 'public_reserve',
@@ -1791,7 +1801,12 @@ private function updateFlowConfirmationAudit(array $flow, array $otpMeta = []): 
         }
     }
 
-    private function resolveConsultorioId(string $doctorId, $requestedConsultorioId): ?string
+    private function resolveConsultorioId(
+        string $doctorId,
+        $requestedConsultorioId,
+        string $startAt = '',
+        string $endAt = ''
+    ): ?string
     {
         if ($this->isValidNumeric($requestedConsultorioId)) {
             return (string)$requestedConsultorioId;
@@ -1801,12 +1816,21 @@ private function updateFlowConfirmationAudit(array $flow, array $otpMeta = []): 
             return null;
         }
 
-        $catalogConsultorio = $this->resolveConsultorioFromCatalog($doctorId);
-        if ($catalogConsultorio !== null) {
-            return $catalogConsultorio;
+        $scheduledConsultorios = $this->resolveConsultoriosFromSchedule($doctorId);
+        if ($startAt !== '' && $endAt !== '') {
+            foreach ($scheduledConsultorios as $candidate) {
+                $slotCheck = $this->checkSlotAvailability($doctorId, $candidate, $startAt, $endAt);
+                if (($slotCheck['ok'] ?? false) === true) {
+                    return $candidate;
+                }
+            }
         }
 
-        return $this->resolveConsultorioFromSchedule($doctorId);
+        if (!empty($scheduledConsultorios)) {
+            return $scheduledConsultorios[0];
+        }
+
+        return $this->resolveConsultorioFromCatalog($doctorId);
     }
 
     private function resolveConsultorioFromCatalog(string $doctorId): ?string
@@ -1835,10 +1859,10 @@ private function updateFlowConfirmationAudit(array $flow, array $otpMeta = []): 
         return null;
     }
 
-    private function resolveConsultorioFromSchedule(string $doctorId): ?string
+    private function resolveConsultoriosFromSchedule(string $doctorId): array
     {
         if (!$this->pdo) {
-            return null;
+            return [];
         }
 
         $candidates = [
@@ -1854,22 +1878,40 @@ private function updateFlowConfirmationAudit(array $flow, array $otpMeta = []): 
                 continue;
             }
             try {
+                $activeFilter = $this->tableColumnExists($table, 'is_active')
+                    ? ' AND is_active = 1'
+                    : '';
                 $sql = sprintf(
-                    'SELECT consultorio_id FROM %s WHERE doctor_id = :doctor_id ORDER BY consultorio_id ASC LIMIT 1',
-                    $table
+                    'SELECT consultorio_id
+                       FROM %s
+                      WHERE doctor_id = :doctor_id
+                        %s
+                      GROUP BY consultorio_id
+                      ORDER BY consultorio_id ASC',
+                    $table,
+                    $activeFilter
                 );
                 $stmt = $this->pdo->prepare($sql);
                 $stmt->execute(['doctor_id' => $doctorId]);
-                $value = $stmt->fetchColumn();
-                if ($this->isValidNumeric($value)) {
-                    return (string)$value;
+                $rows = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                if (!is_array($rows)) {
+                    continue;
+                }
+                $out = [];
+                foreach ($rows as $value) {
+                    if ($this->isValidNumeric($value)) {
+                        $out[] = (string)$value;
+                    }
+                }
+                if (!empty($out)) {
+                    return array_values(array_unique($out));
                 }
             } catch (\Throwable $e) {
                 continue;
             }
         }
 
-        return null;
+        return [];
     }
 
     private function tableExists(string $table): bool
@@ -1881,6 +1923,29 @@ private function updateFlowConfirmationAudit(array $flow, array $otpMeta = []): 
         try {
             $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = :table');
             $stmt->execute(['table' => $table]);
+            return (int)$stmt->fetchColumn() > 0;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    private function tableColumnExists(string $table, string $column): bool
+    {
+        if (!$this->pdo) {
+            return false;
+        }
+
+        try {
+            $stmt = $this->pdo->prepare(
+                'SELECT COUNT(*) FROM information_schema.columns
+                  WHERE table_schema = DATABASE()
+                    AND table_name = :table
+                    AND column_name = :column'
+            );
+            $stmt->execute([
+                'table' => $table,
+                'column' => $column,
+            ]);
             return (int)$stmt->fetchColumn() > 0;
         } catch (\Throwable $e) {
             return false;

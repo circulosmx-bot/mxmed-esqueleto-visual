@@ -367,17 +367,6 @@ class AvailabilityController
             'consultorio_id_used' => null,
         ];
 
-        $consultorioId = $this->resolvePublicConsultorioId((string)$doctorId, $requestedConsultorioId);
-        if (!$this->isValidNumeric($consultorioId)) {
-            return $this->error(
-                'invalid_params',
-                'consultorio_id must be numeric',
-                $meta
-            );
-        }
-        $consultorioId = (string)$consultorioId;
-        $meta['consultorio_id_used'] = $consultorioId;
-
         if (!in_array($mode, ['next', 'week'], true)) {
             return $this->error('invalid_params', 'mode must be next or week', $meta);
         }
@@ -423,6 +412,22 @@ class AvailabilityController
 
             $weekStart = $today->modify('monday this week')->modify('+' . $weekOffset . ' week');
             $weekEnd = $weekStart->modify('+6 day');
+            $consultorioId = $this->resolvePublicConsultorioIdForRange(
+                (string)$doctorId,
+                $requestedConsultorioId,
+                $weekStart,
+                7,
+                $slotMinutes
+            );
+            if (!$this->isValidNumeric($consultorioId)) {
+                return $this->error(
+                    'invalid_params',
+                    'consultorio_id must be numeric',
+                    $meta
+                );
+            }
+            $consultorioId = (string)$consultorioId;
+            $meta['consultorio_id_used'] = $consultorioId;
             $days = [];
 
             for ($i = 0; $i < 7; $i++) {
@@ -488,6 +493,23 @@ class AvailabilityController
             $daysRequested = 7;
         }
 
+        $consultorioId = $this->resolvePublicConsultorioIdForRange(
+            (string)$doctorId,
+            $requestedConsultorioId,
+            $today,
+            90,
+            $slotMinutes
+        );
+        if (!$this->isValidNumeric($consultorioId)) {
+            return $this->error(
+                'invalid_params',
+                'consultorio_id must be numeric',
+                $meta
+            );
+        }
+        $consultorioId = (string)$consultorioId;
+        $meta['consultorio_id_used'] = $consultorioId;
+
         $days = [];
         $maxScanDays = 90;
         for ($offset = 0; $offset < $maxScanDays && count($days) < $daysRequested; $offset++) {
@@ -538,7 +560,13 @@ class AvailabilityController
         ];
     }
 
-    private function resolvePublicConsultorioId(string $doctorId, $requestedConsultorioId): ?string
+    private function resolvePublicConsultorioIdForRange(
+        string $doctorId,
+        $requestedConsultorioId,
+        DateTimeImmutable $startDate,
+        int $scanDays,
+        int $slotMinutes
+    ): ?string
     {
         if ($this->isValidNumeric($requestedConsultorioId)) {
             return (string)$requestedConsultorioId;
@@ -550,12 +578,44 @@ class AvailabilityController
             return null;
         }
 
-        $catalogConsultorioId = $this->resolveConsultorioFromCatalog($pdo, $doctorId);
-        if ($catalogConsultorioId !== null) {
-            return $catalogConsultorioId;
+        $scheduledConsultorios = $this->resolveConsultoriosFromSchedule($pdo, $doctorId);
+        foreach ($scheduledConsultorios as $candidate) {
+            if ($this->consultorioHasPublicAvailability($doctorId, $candidate, $startDate, $scanDays, $slotMinutes)) {
+                return $candidate;
+            }
         }
 
-        return $this->resolveConsultorioFromSchedule($pdo, $doctorId);
+        if (!empty($scheduledConsultorios)) {
+            return $scheduledConsultorios[0];
+        }
+        return $this->resolveConsultorioFromCatalog($pdo, $doctorId);
+    }
+
+    private function consultorioHasPublicAvailability(
+        string $doctorId,
+        string $consultorioId,
+        DateTimeImmutable $startDate,
+        int $scanDays,
+        int $slotMinutes
+    ): bool {
+        $safeScanDays = max(1, min(90, $scanDays));
+        for ($offset = 0; $offset < $safeScanDays; $offset++) {
+            $date = $startDate->modify('+' . $offset . ' day');
+            $dayResult = $this->publicDayAvailability(
+                $doctorId,
+                $consultorioId,
+                $date->format('Y-m-d'),
+                $slotMinutes
+            );
+            if (($dayResult['ok'] ?? false) !== true) {
+                continue;
+            }
+            $slots = $dayResult['slots'] ?? [];
+            if (is_array($slots) && !empty($slots)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private function resolveConsultorioFromCatalog(PDO $pdo, string $doctorId): ?string
@@ -580,7 +640,7 @@ class AvailabilityController
         return null;
     }
 
-    private function resolveConsultorioFromSchedule(PDO $pdo, string $doctorId): ?string
+    private function resolveConsultoriosFromSchedule(PDO $pdo, string $doctorId): array
     {
         $tableCandidates = [
             'consultorio_schedule',
@@ -595,22 +655,40 @@ class AvailabilityController
                 continue;
             }
             try {
+                $activeFilter = $this->tableColumnExists($pdo, $tableName, 'is_active')
+                    ? ' AND is_active = 1'
+                    : '';
                 $sql = sprintf(
-                    'SELECT consultorio_id FROM %s WHERE doctor_id = :doctor_id ORDER BY consultorio_id ASC LIMIT 1',
-                    $tableName
+                    'SELECT consultorio_id
+                       FROM %s
+                      WHERE doctor_id = :doctor_id
+                        %s
+                      GROUP BY consultorio_id
+                      ORDER BY consultorio_id ASC',
+                    $tableName,
+                    $activeFilter
                 );
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute(['doctor_id' => $doctorId]);
-                $candidate = $stmt->fetchColumn();
+                $rows = $stmt->fetchAll(PDO::FETCH_COLUMN);
             } catch (\Throwable $e) {
                 continue;
             }
-            if ($this->isValidNumeric($candidate)) {
-                return (string)$candidate;
+            if (!is_array($rows)) {
+                continue;
+            }
+            $candidates = [];
+            foreach ($rows as $candidate) {
+                if ($this->isValidNumeric($candidate)) {
+                    $candidates[] = (string)$candidate;
+                }
+            }
+            if (!empty($candidates)) {
+                return array_values(array_unique($candidates));
             }
         }
 
-        return null;
+        return [];
     }
 
     private function tableExists(PDO $pdo, string $tableName): bool
@@ -618,6 +696,25 @@ class AvailabilityController
         try {
             $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = :table');
             $stmt->execute(['table' => $tableName]);
+            return (int)$stmt->fetchColumn() > 0;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    private function tableColumnExists(PDO $pdo, string $tableName, string $columnName): bool
+    {
+        try {
+            $stmt = $pdo->prepare(
+                'SELECT COUNT(*) FROM information_schema.columns
+                  WHERE table_schema = DATABASE()
+                    AND table_name = :table
+                    AND column_name = :column'
+            );
+            $stmt->execute([
+                'table' => $tableName,
+                'column' => $columnName,
+            ]);
             return (int)$stmt->fetchColumn() > 0;
         } catch (\Throwable $e) {
             return false;
