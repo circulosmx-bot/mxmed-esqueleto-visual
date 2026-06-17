@@ -2103,11 +2103,35 @@ console.info('app.js loaded :: 20251123a');
       || window.mxmedStore?.facilityName
       || ''
     );
+    const role = clean(
+      ctx.role
+      || ctx.actor_role
+      || window.mxmedStore?.role
+      || window.mxmedStore?.user_role
+      || window.mxmedStore?.actor_role
+      || window.mxmedStore?.currentActor?.role
+      || window.mxmedDoctor?.role
+      || document.body?.dataset?.userRole
+      || document.body?.dataset?.actorRole
+      || ''
+    );
+    const operatorSlot = clean(
+      ctx.operator_slot
+      || ctx.operatorSlot
+      || window.mxmedStore?.operator_slot
+      || window.mxmedStore?.operatorSlot
+      || window.mxmedStore?.currentActor?.operator_slot
+      || document.body?.dataset?.operatorSlot
+      || ''
+    );
     return {
       doctor_id: doctorId,
       user_id: userId,
       default_consultorio_id: defaultConsultorioId,
       default_consultorio_name: defaultConsultorioName,
+      role,
+      actor_role: role,
+      operator_slot: operatorSlot,
       consultorios: Array.isArray(ctx.consultorios) ? ctx.consultorios : []
     };
   };
@@ -2140,6 +2164,416 @@ console.info('app.js loaded :: 20251123a');
 
   window.mxmedResolveActiveProfessionalContext = resolve;
   window.mxmedUpdateActiveProfessionalConsultorios = updateConsultorios;
+})();
+
+// Dev-only RBAC role switcher.
+(function(){
+  if(window.__mxmedDevRbacRoleSwitcherApplied) return;
+  window.__mxmedDevRbacRoleSwitcherApplied = true;
+
+  const clean = (value)=> String(value ?? '').trim();
+  const host = clean(window.location?.hostname || '').toLowerCase();
+  const isLocalDev = host === 'localhost' || host === '127.0.0.1';
+  const params = new URLSearchParams(window.location?.search || '');
+  const hasExplicitRole = params.has('mxmed_role') || params.has('operator_slot') || params.get('mxmed_rbac_dev') === '1';
+  if(!isLocalDev) return;
+
+  const STORAGE_KEY = 'mxmed.dev.rbac.role';
+  const ROLE_OPTIONS = {
+    doctor: {
+      value: 'doctor',
+      label: 'Médico',
+      role: 'doctor',
+      operator_slot: '',
+      operator_id: '',
+      operator_alias: ''
+    },
+    operator_1: {
+      value: 'operator_1',
+      label: 'Operador 01',
+      role: 'operator',
+      operator_slot: '1',
+      operator_id: 'dev_operator_01',
+      operator_alias: 'Operador 01'
+    },
+    operator_2: {
+      value: 'operator_2',
+      label: 'Operador 02',
+      role: 'operator',
+      operator_slot: '2',
+      operator_id: 'dev_operator_02',
+      operator_alias: 'Operador 02'
+    }
+  };
+
+  const normalizeState = (raw = {})=>{
+    const role = clean(raw.role || raw.mxmed_role || raw.value || '').toLowerCase();
+    const slot = clean(raw.operator_slot || raw.operatorSlot || '');
+    if(role === 'operator'){
+      return slot === '2' ? ROLE_OPTIONS.operator_2 : ROLE_OPTIONS.operator_1;
+    }
+    if(role === 'operator_1') return ROLE_OPTIONS.operator_1;
+    if(role === 'operator_2') return ROLE_OPTIONS.operator_2;
+    return ROLE_OPTIONS.doctor;
+  };
+
+  const readStoredState = ()=>{
+    try{
+      const raw = window.sessionStorage?.getItem(STORAGE_KEY) || '';
+      return raw ? normalizeState(JSON.parse(raw)) : null;
+    }catch(_){
+      return null;
+    }
+  };
+
+  const readQueryState = ()=>{
+    if(!hasExplicitRole) return null;
+    return normalizeState({
+      role: params.get('mxmed_role') || '',
+      operator_slot: params.get('operator_slot') || ''
+    });
+  };
+
+  const persistState = (state)=>{
+    try{
+      window.sessionStorage?.setItem(STORAGE_KEY, JSON.stringify({
+        role: state.role,
+        operator_slot: state.operator_slot
+      }));
+    }catch(_){}
+  };
+
+  const ensureStore = ()=>{
+    if(!window.mxmedStore || typeof window.mxmedStore !== 'object'){
+      window.mxmedStore = {};
+    }
+    if(!window.mxmedStore.activeProfessionalContext || typeof window.mxmedStore.activeProfessionalContext !== 'object'){
+      window.mxmedStore.activeProfessionalContext = {};
+    }
+    if(!window.mxmedStore.currentActor || typeof window.mxmedStore.currentActor !== 'object'){
+      window.mxmedStore.currentActor = {};
+    }
+    return window.mxmedStore;
+  };
+
+  const resolveCurrentPanelId = ()=>{
+    const visiblePane = document.querySelector('.pane:not(.d-none)');
+    return clean(visiblePane?.id || window.localStorage?.getItem?.('mxmed_last_panel') || '');
+  };
+
+  const applyDevRole = (nextState, options = {})=>{
+    const state = normalizeState(nextState);
+    const store = ensureStore();
+    const ctx = store.activeProfessionalContext;
+    const currentActor = store.currentActor;
+    const isOperator = state.role === 'operator';
+
+    store.role = state.role;
+    store.user_role = state.role;
+    store.actor_role = state.role;
+    store.operator_slot = state.operator_slot;
+    store.operatorSlot = state.operator_slot;
+    ctx.role = state.role;
+    ctx.actor_role = state.role;
+    ctx.operator_slot = state.operator_slot;
+    ctx.operatorSlot = state.operator_slot;
+    currentActor.role = state.role;
+    currentActor.actor_role = state.role;
+    currentActor.operator_slot = state.operator_slot;
+    currentActor.operatorSlot = state.operator_slot;
+
+    if(isOperator){
+      ctx.operator_id = state.operator_id;
+      ctx.operator_alias = state.operator_alias;
+      currentActor.operator_id = state.operator_id;
+      currentActor.operator_alias = state.operator_alias;
+      store.channel_origin = 'operator';
+      store.created_by_role = 'operator';
+    }else{
+      delete ctx.operator_id;
+      delete ctx.operator_alias;
+      delete currentActor.operator_id;
+      delete currentActor.operator_alias;
+      delete store.channel_origin;
+      store.created_by_role = 'doctor';
+    }
+
+    if(document.body?.dataset){
+      document.body.dataset.userRole = state.role;
+      document.body.dataset.actorRole = state.role;
+      if(isOperator){
+        document.body.dataset.operatorSlot = state.operator_slot;
+      }else{
+        delete document.body.dataset.operatorSlot;
+      }
+    }
+
+    if(options.persist !== false){
+      persistState(state);
+    }
+
+    const detail = {
+      role: state.role,
+      operator_slot: state.operator_slot,
+      label: state.label,
+      source: options.source || 'dev_role_switcher'
+    };
+    window.dispatchEvent(new CustomEvent('mxmed:dev-role-changed', { detail }));
+    window.dispatchEvent(new CustomEvent('mxmed:workspace-mode', {
+      detail: { panelId: resolveCurrentPanelId(), source: 'dev_role_switcher' }
+    }));
+    if(typeof window.mxmedApplyClinicalAccessGuard === 'function'){
+      try{ window.mxmedApplyClinicalAccessGuard(); }catch(_){}
+    }
+    if(typeof window.mxmedAgendaApplyRoleGating === 'function'){
+      try{ window.mxmedAgendaApplyRoleGating(); }catch(_){}
+    }
+    return state;
+  };
+
+  const renderRoleSwitcher = (activeState)=>{
+    if(document.getElementById('mxmed_dev_role_switcher')) return;
+    const wrap = document.createElement('div');
+    wrap.id = 'mxmed_dev_role_switcher';
+    wrap.className = 'shadow bg-white border rounded-2 p-2 d-flex align-items-center gap-2';
+    wrap.style.position = 'fixed';
+    wrap.style.right = '12px';
+    wrap.style.bottom = '12px';
+    wrap.style.zIndex = '2300';
+    wrap.style.fontSize = '12px';
+
+    const label = document.createElement('label');
+    label.className = 'form-label m-0 small text-muted';
+    label.setAttribute('for', 'mxmed_dev_role_select');
+    label.textContent = 'Rol QA';
+
+    const select = document.createElement('select');
+    select.id = 'mxmed_dev_role_select';
+    select.className = 'form-select form-select-sm';
+    select.style.width = '150px';
+    Object.values(ROLE_OPTIONS).forEach((optionState)=>{
+      const option = document.createElement('option');
+      option.value = optionState.value;
+      option.textContent = optionState.label;
+      select.appendChild(option);
+    });
+    select.value = activeState.value;
+    select.addEventListener('change', ()=>{
+      const selected = ROLE_OPTIONS[select.value] || ROLE_OPTIONS.doctor;
+      applyDevRole(selected, { source: 'dev_role_switcher_select' });
+    });
+
+    wrap.appendChild(label);
+    wrap.appendChild(select);
+    document.body.appendChild(wrap);
+  };
+
+  const queryState = readQueryState();
+  const initialState = queryState || readStoredState() || ROLE_OPTIONS.doctor;
+  const appliedState = applyDevRole(initialState, {
+    persist: true,
+    source: queryState ? 'dev_role_query' : 'dev_role_initial'
+  });
+
+  window.mxmedApplyDevRole = applyDevRole;
+  window.mxmedGetDevRole = ()=> normalizeState({
+    role: window.mxmedStore?.role,
+    operator_slot: window.mxmedStore?.operator_slot
+  });
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', ()=> renderRoleSwitcher(appliedState), { once: true });
+  }else{
+    renderRoleSwitcher(appliedState);
+  }
+})();
+
+// Clinical access guard for agenda operators.
+(function(){
+  if(window.__mxmedClinicalAccessGuardApplied) return;
+  window.__mxmedClinicalAccessGuardApplied = true;
+
+  const CLINICAL_PANEL_ID = 'p-expediente';
+  const AGENDA_PANEL_ID = 'p-ag-admin';
+  const DENY_MESSAGE = 'Tu rol permite operar agenda, pero no acceder al expediente clínico.';
+  let noticeTimer = null;
+
+  const clean = (value)=> String(value ?? '').trim();
+
+  const resolveActiveRole = ()=>{
+    const ctx = (window.mxmedStore && typeof window.mxmedStore === 'object')
+      ? window.mxmedStore.activeProfessionalContext
+      : null;
+    const activeProfessional = (typeof window.mxmedResolveActiveProfessionalContext === 'function')
+      ? window.mxmedResolveActiveProfessionalContext()
+      : null;
+    return clean(
+      activeProfessional?.role
+      || activeProfessional?.actor_role
+      || ctx?.role
+      || ctx?.actor_role
+      || window.mxmedStore?.role
+      || window.mxmedStore?.user_role
+      || window.mxmedStore?.actor_role
+      || window.mxmedStore?.currentActor?.role
+      || window.mxmedDoctor?.role
+      || document.body?.dataset?.userRole
+      || document.body?.dataset?.actorRole
+      || ''
+    ).toLowerCase();
+  };
+
+  const isOperatorRole = (role = '')=>{
+    const safeRole = clean(role || resolveActiveRole()).toLowerCase();
+    return safeRole.includes('operator') || safeRole.includes('operador') || safeRole.includes('assistant');
+  };
+
+  const isClinicalTarget = (panelId = '')=> clean(panelId) === CLINICAL_PANEL_ID;
+
+  const showNotice = (message = DENY_MESSAGE)=>{
+    const safeMessage = clean(message);
+    if(!safeMessage) return;
+    let box = document.getElementById('mxmed_clinical_access_notice');
+    if(!box){
+      box = document.createElement('div');
+      box.id = 'mxmed_clinical_access_notice';
+      box.className = 'alert alert-warning shadow position-fixed top-0 start-50 translate-middle-x mt-3 d-none';
+      box.setAttribute('role', 'alert');
+      box.style.zIndex = '2200';
+      document.body.appendChild(box);
+    }
+    box.textContent = safeMessage;
+    box.classList.remove('d-none');
+    if(noticeTimer){
+      window.clearTimeout(noticeTimer);
+    }
+    noticeTimer = window.setTimeout(()=>{
+      box.classList.add('d-none');
+      noticeTimer = null;
+    }, 3200);
+  };
+
+  const navigateToAgenda = ()=>{
+    if(typeof window.openGroup === 'function'){
+      try{ window.openGroup('agenda'); }catch(_){}
+    }
+    if(typeof window.jumpTo === 'function'){
+      try{
+        const jumped = window.jumpTo(AGENDA_PANEL_ID);
+        if(jumped !== false) return;
+      }catch(_){}
+    }
+    const agendaBtn = document.querySelector(`.menu-sub-btn[data-panel="${AGENDA_PANEL_ID}"]`);
+    if(agendaBtn){
+      agendaBtn.click();
+    }
+  };
+
+  const handleClinicalAccessDenied = (options = {})=>{
+    showNotice(DENY_MESSAGE);
+    if(options.redirect !== false){
+      navigateToAgenda();
+    }
+    return false;
+  };
+
+  const canAccessClinicalPanel = ()=> !isOperatorRole();
+
+  const applyClinicalAccessRoleGating = ()=>{
+    const shouldBlock = !canAccessClinicalPanel();
+    document.querySelectorAll(`.menu-main[data-panel="${CLINICAL_PANEL_ID}"]`).forEach((btn)=>{
+      btn.classList.toggle('d-none', shouldBlock);
+      btn.toggleAttribute('disabled', shouldBlock);
+      btn.setAttribute('aria-hidden', shouldBlock ? 'true' : 'false');
+      if(shouldBlock){
+        btn.setAttribute('tabindex', '-1');
+      }else{
+        btn.removeAttribute('tabindex');
+      }
+    });
+  };
+
+  const enforceCurrentClinicalPanel = ()=>{
+    applyClinicalAccessRoleGating();
+    if(canAccessClinicalPanel()) return;
+    const panel = document.getElementById(CLINICAL_PANEL_ID);
+    if(panel && !panel.classList.contains('d-none')){
+      handleClinicalAccessDenied();
+    }
+  };
+
+  const bindClickGuard = ()=>{
+    if(window.__mxmedClinicalAccessClickGuardBound) return;
+    window.__mxmedClinicalAccessClickGuardBound = true;
+    document.addEventListener('click', (event)=>{
+      const target = event.target;
+      if(!(target instanceof Element)) return;
+      const navBtn = target.closest('.menu-main[data-panel], .menu-sub-btn[data-panel]');
+      if(!navBtn) return;
+      const panelTarget = clean(navBtn.getAttribute('data-panel') || '');
+      if(!isClinicalTarget(panelTarget) || canAccessClinicalPanel()) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if(typeof event.stopImmediatePropagation === 'function'){
+        event.stopImmediatePropagation();
+      }
+      handleClinicalAccessDenied();
+    }, true);
+  };
+
+  const wrapJumpTo = ()=>{
+    if(typeof window.jumpTo !== 'function') return;
+    const current = window.jumpTo;
+    if(current.__mxmedClinicalAccessWrapped === true) return;
+    const wrapped = function(panelId){
+      if(isClinicalTarget(panelId) && !canAccessClinicalPanel()){
+        return handleClinicalAccessDenied();
+      }
+      return current.apply(window, arguments);
+    };
+    wrapped.__mxmedClinicalAccessWrapped = true;
+    wrapped.__mxmedClinicalAccessOriginal = current;
+    window.jumpTo = wrapped;
+  };
+
+  const wrapShowPanel = ()=>{
+    if(typeof window.showPanel !== 'function') return;
+    const current = window.showPanel;
+    if(current.__mxmedClinicalAccessWrapped === true) return;
+    const wrapped = function(panelId){
+      if(isClinicalTarget(panelId) && !canAccessClinicalPanel()){
+        return handleClinicalAccessDenied();
+      }
+      return current.apply(window, arguments);
+    };
+    wrapped.__mxmedClinicalAccessWrapped = true;
+    wrapped.__mxmedClinicalAccessOriginal = current;
+    window.showPanel = wrapped;
+  };
+
+  const syncClinicalAccessGuard = ()=>{
+    applyClinicalAccessRoleGating();
+    bindClickGuard();
+    wrapJumpTo();
+    wrapShowPanel();
+    enforceCurrentClinicalPanel();
+  };
+
+  window.mxmedClinicalAccessDenyMessage = DENY_MESSAGE;
+  window.mxmedResolveActiveUserRole = resolveActiveRole;
+  window.mxmedIsOperatorRole = ()=> isOperatorRole();
+  window.mxmedCanAccessClinicalPanel = canAccessClinicalPanel;
+  window.mxmedHandleClinicalAccessDenied = handleClinicalAccessDenied;
+  window.mxmedApplyClinicalAccessGuard = syncClinicalAccessGuard;
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', syncClinicalAccessGuard, { once: true });
+  }else{
+    syncClinicalAccessGuard();
+  }
+  window.setTimeout(syncClinicalAccessGuard, 0);
+  window.setTimeout(syncClinicalAccessGuard, 250);
+  window.addEventListener('mxmed:workspace-mode', syncClinicalAccessGuard);
 })();
 
 // Agenda Frontend v1 (FullCalendar + backend appointments)
@@ -8917,15 +9351,24 @@ console.info('app.js loaded :: 20251123a');
     const patientId = sanitizeText(activeEventActionRef?.extendedProps?.patient_id || '');
     const canOpen = isCanonicalAgendaPatientId(patientId);
     const show = eventActionCurrentSection === 'detail';
+    const operatorBlocked = typeof window.mxmedIsOperatorRole === 'function' && window.mxmedIsOperatorRole();
     btn.classList.toggle('d-none', !show);
     btn.disabled = !show || !canOpen;
     btn.dataset.patientId = canOpen ? patientId : '';
-    btn.title = canOpen
-      ? 'Abrir expediente del paciente asociado a esta cita'
-      : 'Esta cita no tiene un paciente canónico asociado.';
+    if(operatorBlocked){
+      btn.title = window.mxmedClinicalAccessDenyMessage || 'Tu rol permite operar agenda, pero no acceder al expediente clínico.';
+    }else{
+      btn.title = canOpen
+        ? 'Abrir expediente del paciente asociado a esta cita'
+        : 'Esta cita no tiene un paciente canónico asociado.';
+    }
   };
   const openActiveEventPatientExpediente = async ()=>{
     setEventActionError('');
+    if(typeof window.mxmedIsOperatorRole === 'function' && window.mxmedIsOperatorRole()){
+      setEventActionError(window.mxmedClinicalAccessDenyMessage || 'Tu rol permite operar agenda, pero no acceder al expediente clínico.');
+      return false;
+    }
     const props = activeEventActionRef?.extendedProps || {};
     const patientId = sanitizeText(props.patient_id || '');
     if(!isCanonicalAgendaPatientId(patientId)){
@@ -15828,6 +16271,8 @@ console.info('app.js loaded :: 20251123a');
     if(canAccessAgendaPanel(currentPanelId)) return;
     handleAgendaUiAccessDenied();
   };
+  window.mxmedAgendaApplyRoleGating = enforceAgendaUiRbacCurrentPanel;
+  window.addEventListener('mxmed:dev-role-changed', enforceAgendaUiRbacCurrentPanel);
   const bindAgendaUiRbacClickGuard = ()=>{
     if(window.__mxmedAgendaUiRbacClickGuardBound) return;
     window.__mxmedAgendaUiRbacClickGuardBound = true;
