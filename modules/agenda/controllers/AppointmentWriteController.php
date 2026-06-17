@@ -74,6 +74,11 @@ class AppointmentWriteController
         }
         $payload = $this->normalizeActorPayload($payload);
 
+        $externalIngressError = $this->rejectExternalDirectCreate($payload);
+        if (is_array($externalIngressError)) {
+            return $externalIngressError;
+        }
+
         // Auto-create patient if missing patient_id and patient info is provided
         if (!array_key_exists('patient_id', $payload) || $this->isEmptyPatientIdInput($payload['patient_id'])) {
             $patientInput = $payload['patient'] ?? null;
@@ -955,6 +960,48 @@ class AppointmentWriteController
         $payload['created_by_role'] = $createdByRole;
         $payload['created_by_id'] = $createdById;
         return $payload;
+    }
+
+    private function rejectExternalDirectCreate(array $payload): ?array
+    {
+        $createdByRole = $this->normalizeExternalIngressRole($payload['created_by_role'] ?? '');
+        $actorRole = $this->normalizeExternalIngressRole($payload['actor_role'] ?? '');
+        $channelOrigin = $this->normalizeExternalIngressRole($payload['channel_origin'] ?? '');
+        $blocked = ['ai_operator', 'call_center'];
+
+        if (!in_array($createdByRole, $blocked, true)
+            && !in_array($actorRole, $blocked, true)
+            && !in_array($channelOrigin, $blocked, true)
+        ) {
+            return null;
+        }
+
+        return $this->error('external_ingress_not_enabled', 'canal externo pendiente de habilitación', [
+            'fields' => [
+                'created_by_role' => in_array($createdByRole, $blocked, true) ? 'external_ingress_not_enabled' : 'ok',
+                'actor_role' => in_array($actorRole, $blocked, true) ? 'external_ingress_not_enabled' : 'ok',
+                'channel_origin' => in_array($channelOrigin, $blocked, true) ? 'external_ingress_not_enabled' : 'ok',
+            ],
+        ]);
+    }
+
+    private function normalizeExternalIngressRole($value): string
+    {
+        $raw = strtolower(trim((string)$value));
+        if ($raw === '') {
+            return '';
+        }
+        $raw = str_replace([' ', '-'], '_', $raw);
+        $map = [
+            'ai' => 'ai_operator',
+            'ia' => 'ai_operator',
+            'ai_operator' => 'ai_operator',
+            'operator_ia' => 'ai_operator',
+            'operador_ia' => 'ai_operator',
+            'call_center' => 'call_center',
+            'callcenter' => 'call_center',
+        ];
+        return $map[$raw] ?? '';
     }
 
     private function normalizeActorRoleValue($value): string

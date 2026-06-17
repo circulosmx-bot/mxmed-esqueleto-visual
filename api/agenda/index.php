@@ -1393,6 +1393,7 @@ try {
     $statusMap = [
         'unauthorized' => 401,
         'forbidden' => 403,
+        'external_ingress_not_enabled' => 403,
         'invalid_params' => 400,
         'invalid_consultorio_id' => 400,
         'invalid_verification_code' => 400,
