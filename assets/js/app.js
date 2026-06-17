@@ -2327,6 +2327,7 @@ console.info('app.js loaded :: 20251123a');
     eventCancelWaitlistEmptyCloseBtn: panel.querySelector('#ag_event_cancel_waitlist_empty_close_btn'),
     eventCancelWaitlistList: panel.querySelector('#ag_event_cancel_waitlist_list'),
     eventCloseBtn: panel.querySelector('#ag_event_close_btn'),
+    eventOpenPatientBtn: panel.querySelector('#ag_event_open_patient_btn'),
     eventConfirmBtn: panel.querySelector('#ag_event_confirm_btn'),
     eventRescheduleBtn: panel.querySelector('#ag_event_reschedule_btn'),
     eventCancelBtn: panel.querySelector('#ag_event_cancel_btn'),
@@ -8886,6 +8887,95 @@ console.info('app.js loaded :: 20251123a');
     els.eventActionError.textContent = safe;
     els.eventActionError.classList.remove('d-none');
   };
+  const isCanonicalAgendaPatientId = (value = '')=>{
+    const raw = sanitizeText(value || '');
+    return /^p_[a-z0-9][a-z0-9_-]*$/i.test(raw)
+      || /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw);
+  };
+  const ensureEventOpenPatientButton = ()=>{
+    if(els.eventOpenPatientBtn) return els.eventOpenPatientBtn;
+    const footer = els.eventActionsModalEl?.querySelector?.('.modal-footer');
+    if(!footer) return null;
+    const existing = footer.querySelector('#ag_event_open_patient_btn');
+    if(existing){
+      els.eventOpenPatientBtn = existing;
+      return existing;
+    }
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'ag_event_open_patient_btn';
+    btn.className = 'btn btn-outline-primary';
+    btn.innerHTML = '<i class="bi bi-folder2-open"></i> Abrir expediente';
+    const anchor = els.eventCloseBtn && els.eventCloseBtn.parentNode === footer ? els.eventCloseBtn.nextSibling : footer.firstChild;
+    footer.insertBefore(btn, anchor || null);
+    els.eventOpenPatientBtn = btn;
+    return btn;
+  };
+  const syncEventOpenPatientButton = ()=>{
+    const btn = ensureEventOpenPatientButton();
+    if(!btn) return;
+    const patientId = sanitizeText(activeEventActionRef?.extendedProps?.patient_id || '');
+    const canOpen = isCanonicalAgendaPatientId(patientId);
+    const show = eventActionCurrentSection === 'detail';
+    btn.classList.toggle('d-none', !show);
+    btn.disabled = !show || !canOpen;
+    btn.dataset.patientId = canOpen ? patientId : '';
+    btn.title = canOpen
+      ? 'Abrir expediente del paciente asociado a esta cita'
+      : 'Esta cita no tiene un paciente canónico asociado.';
+  };
+  const openActiveEventPatientExpediente = async ()=>{
+    setEventActionError('');
+    const props = activeEventActionRef?.extendedProps || {};
+    const patientId = sanitizeText(props.patient_id || '');
+    if(!isCanonicalAgendaPatientId(patientId)){
+      setEventActionError('Esta cita no tiene un paciente válido asociado.');
+      return false;
+    }
+    const setPatient = (typeof window.setActivePatientId === 'function')
+      ? window.setActivePatientId
+      : (typeof window.mxmedSetActivePatientId === 'function' ? window.mxmedSetActivePatientId : null);
+    if(typeof setPatient !== 'function'){
+      setEventActionError('No se pudo activar el paciente desde Agenda.');
+      return false;
+    }
+    const changed = await setPatient(patientId, {
+      emitEvent: true,
+      source: 'agenda_event_open_patient',
+      skipActiveEncounterConfirm: true
+    });
+    if(changed === false){
+      setEventActionError('No se pudo abrir el expediente del paciente.');
+      return false;
+    }
+    const appointmentId = sanitizeText(activeEventActionAppointmentId || resolveEventAppointmentId(activeEventActionRef));
+    const doctorId = sanitizeText(props.doctor_id || getDoctorId() || '');
+    if(window.mxmedStore && typeof window.mxmedStore === 'object'){
+      window.mxmedStore.activeAgendaAppointmentId = appointmentId;
+      window.mxmedStore.activeAgendaAppointmentPatientId = patientId;
+      if(doctorId) window.mxmedStore.activeAgendaAppointmentDoctorId = doctorId;
+    }
+    const expPane = document.getElementById('p-expediente');
+    if(expPane && expPane.dataset){
+      expPane.dataset.agendaAppointmentId = appointmentId;
+      if(doctorId) expPane.dataset.agendaDoctorId = doctorId;
+    }
+    if(eventActionsModal){
+      try{ eventActionsModal.hide(); }catch(_){}
+    }
+    const jump = (typeof window.jumpTo === 'function')
+      ? window.jumpTo
+      : (typeof jumpTo === 'function' ? jumpTo : null);
+    const show = (typeof window.showPanel === 'function')
+      ? window.showPanel
+      : (typeof showPanel === 'function' ? showPanel : null);
+    if(typeof jump === 'function'){
+      jump('p-expediente');
+    }else if(typeof show === 'function'){
+      show('p-expediente');
+    }
+    return true;
+  };
   const setEventActionRescheduleNote = (message = '', tone = 'info')=>{
     if(!els.eventRescheduleNote) return;
     const hasMessage = !!sanitizeText(message);
@@ -10090,6 +10180,7 @@ console.info('app.js loaded :: 20251123a');
     if(els.eventCloseBtn){
       els.eventCloseBtn.classList.toggle('d-none', !isDetail);
     }
+    syncEventOpenPatientButton();
     if(els.eventCancelBackBtn){
       els.eventCancelBackBtn.classList.toggle('d-none', !isCancel);
     }
@@ -23293,6 +23384,13 @@ console.info('app.js loaded :: 20251123a');
       if(calendar && typeof calendar.unselect === 'function'){
         try{ calendar.unselect(); }catch(_){}
       }
+    });
+    ensureEventOpenPatientButton();
+    els.eventOpenPatientBtn?.addEventListener('click', (event)=>{
+      event.preventDefault();
+      openActiveEventPatientExpediente().catch(()=>{
+        setEventActionError('No se pudo abrir el expediente del paciente.');
+      });
     });
     els.eventRescheduleBtn?.addEventListener('click', (event)=>{
       event.preventDefault();
