@@ -333,6 +333,32 @@ body {
   padding: 0.9rem 0.95rem;
 }
 
+.mxpp-profile-cta {
+  margin-top: 0.85rem;
+}
+
+.mxpp-book-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0.64rem 1.08rem;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #12aeb7 0%, #0a9ea8 100%);
+  border: 1px solid #0a98a2;
+  color: #fff;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 10px 22px rgba(10, 158, 168, 0.18);
+}
+
+.mxpp-book-cta:hover,
+.mxpp-book-cta:focus {
+  color: #fff;
+  text-decoration: none;
+  background: linear-gradient(90deg, #0fa2aa 0%, #087f8a 100%);
+}
+
 .mxpp-title-row {
   display: flex;
   align-items: flex-start;

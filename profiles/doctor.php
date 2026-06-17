@@ -299,6 +299,7 @@ $acceptedInsurances = $showInsurances ? safeArray($commercialVisibility['accepte
 $renderJsonLd = is_array($jsonLd) && !empty($jsonLd);
 $planLabel = toText($plan['plan_label'] ?? null);
 $agendaEndpoint = toText($agendaPublic['availability_endpoint'] ?? null);
+$bookAppointmentUrl = '/public-book.html?doctor_id=' . rawurlencode($doctorId);
 ?>
 <!doctype html>
 <html lang="es-MX">
@@ -423,6 +424,11 @@ $agendaEndpoint = toText($agendaPublic['availability_endpoint'] ?? null);
               <p class="mxpp-plan-note">Perfil informativo · <?= h($planLabel) ?></p>
             <?php endif; ?>
             <p class="mxpp-consultas-note">Consultas recientes de este perfil no disponibles por ahora.</p>
+            <?php if ($isPublic && $agendaEndpoint !== null): ?>
+              <div class="mxpp-profile-cta">
+                <a class="mxpp-book-cta" href="<?= h($bookAppointmentUrl) ?>">Agendar cita</a>
+              </div>
+            <?php endif; ?>
           </article>
 
         </div>
