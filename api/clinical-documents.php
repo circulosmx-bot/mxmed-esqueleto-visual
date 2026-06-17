@@ -28,8 +28,76 @@ try {
     mxmed_json_response(['ok' => false, 'error' => $e->getMessage()], 500);
 }
 
+function mxmed_clinical_documents_is_uuid_v4(string $value): bool {
+    return preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $value) === 1;
+}
+
+function mxmed_clinical_documents_is_canonical_patient_id(string $value): bool {
+    if (mxmed_clinical_documents_is_uuid_v4($value)) {
+        return true;
+    }
+
+    if (preg_match('/^p_[a-f0-9]{12}$/i', $value) === 1) {
+        return true;
+    }
+
+    return preg_match('/^p_[A-Za-z0-9_-]{6,62}$/', $value) === 1;
+}
+
+function mxmed_clinical_documents_patient_exists(PDO $pdo, string $patientId): bool {
+    $stmt = $pdo->prepare("SELECT patient_id FROM patients_patients WHERE patient_id = :patient_id LIMIT 1");
+    $stmt->bindValue(':patient_id', $patientId, PDO::PARAM_STR);
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return is_array($row) && trim((string)($row['patient_id'] ?? '')) !== '';
+}
+
+function mxmed_clinical_documents_validate_save_patient_id(PDO $pdo, array $body): string {
+    $context = $body['context'] ?? null;
+    if (!is_array($context)) {
+        mxmed_json_response([
+            'ok' => false,
+            'error' => 'invalid_params',
+            'message' => 'patient_id must be canonical',
+            'data' => null,
+        ], 400);
+    }
+
+    $rawPatientId = $context['patient_id'] ?? null;
+    if (!is_scalar($rawPatientId)) {
+        mxmed_json_response([
+            'ok' => false,
+            'error' => 'invalid_params',
+            'message' => 'patient_id must be canonical',
+            'data' => null,
+        ], 400);
+    }
+
+    $patientId = trim((string)$rawPatientId);
+    if ($patientId === '' || !mxmed_clinical_documents_is_canonical_patient_id($patientId)) {
+        mxmed_json_response([
+            'ok' => false,
+            'error' => 'invalid_params',
+            'message' => 'patient_id must be canonical',
+            'data' => null,
+        ], 400);
+    }
+
+    if (!mxmed_clinical_documents_patient_exists($pdo, $patientId)) {
+        mxmed_json_response([
+            'ok' => false,
+            'error' => 'not_found',
+            'message' => 'patient not found',
+            'data' => null,
+        ], 404);
+    }
+
+    return $patientId;
+}
+
 if ($action === 'save') {
     $body = mxmed_read_json_body();
+    $body['context']['patient_id'] = mxmed_clinical_documents_validate_save_patient_id($pdo, $body);
     try {
         $doc = mxmed_build_clinical_document($body);
     } catch (Throwable $e) {
