@@ -32278,7 +32278,6 @@ console.info('app.js loaded :: 20251123a');
       return loc.origin;
     };
     const legacyEndpoint = 'api/clinical-documents.php';
-    const gatewayDocumentsEndpoint = mxmedApiBase() + '/api/clinical/index.php/documents';
     let mode = 'unknown'; // legacy compat flag (no longer driving persistence order)
 
     const resolveGatewayDocumentsDoctorId = () => {
@@ -32471,13 +32470,6 @@ console.info('app.js loaded :: 20251123a');
       });
     };
 
-    const saveClinicalDocumentLegacy = async (args) => {
-      return fetchJson(`${legacyEndpoint}?action=save`, {
-        method: 'POST',
-        body: JSON.stringify(args || {})
-      });
-    };
-
     const normalizeSavedDocumentResponse = (payload, source = '') => {
       const document = payload?.data?.document ?? payload?.document ?? null;
       if (!document || typeof document !== 'object') {
@@ -32653,33 +32645,48 @@ console.info('app.js loaded :: 20251123a');
           }
         }
 
-        console.debug('SAVE gateway attempt', {
+        const doctorId = resolveGatewayDocumentsDoctorId();
+        if (!doctorId || !canonicalPatientId) {
+          console.warn('[CLINICAL-DOCUMENTS-GATEWAY-CREATE] missing_doctor_scope', {
+            doctor_id: doctorId || null,
+            patient_id: canonicalPatientId || null
+          });
+          throw new Error('No se pudo resolver el médico o paciente para guardar el documento clínico.');
+        }
+
+        console.debug('SAVE gateway scoped document attempt', {
+          doctor_id: doctorId,
           patient_id: canonicalPatientId,
           legacy_patient_id: legacyPatientId || null,
           source: 'app'
         });
 
         try {
-          const gatewayPayload = await fetchJson(gatewayDocumentsEndpoint, {
+          const gatewayPayload = await fetchJson(`${mxmedApiBase()}/api/clinical/index.php/doctors/${encodeURIComponent(doctorId)}/patients/${encodeURIComponent(canonicalPatientId)}/documents`, {
             method: 'POST',
             headers: { Accept: 'application/json' },
             body: JSON.stringify(gatewayArgs)
           });
           const normalized = normalizeSavedDocumentResponse(gatewayPayload, 'gateway');
-          console.debug('SAVE gateway ok', {
+          console.debug('SAVE gateway scoped document ok', {
+            doctor_id: doctorId,
             patient_id: canonicalPatientId,
             source: 'app'
           });
           return normalized;
         } catch (e) {
           errors.push(e);
-          console.debug('SAVE fallback legacy', {
-            reason: 'gateway_failed',
-            source: 'app'
+          console.warn('[CLINICAL-DOCUMENTS-GATEWAY-CREATE] scoped_create_failed', {
+            doctor_id: doctorId,
+            patient_id: canonicalPatientId,
+            status: e?.status || null,
+            message: e?.message || null
           });
+          const mergedMessage = errors.map((err)=> String(err?.message || '').trim()).filter(Boolean).join(' | ');
+          throw new Error(mergedMessage || 'No se pudo guardar el documento clínico.');
         }
       } else {
-        console.debug('SAVE fallback legacy', {
+        console.debug('SAVE scoped create unavailable', {
           reason: 'canonical_unavailable',
           source: 'app'
         });
@@ -32697,17 +32704,8 @@ console.info('app.js loaded :: 20251123a');
           });
           throw new Error('No se pudo resolver el médico o paciente para guardar la receta.');
         }
+        throw new Error('No se pudo resolver el médico o paciente para guardar el documento clínico.');
       }
-
-      try {
-        const legacyPayload = await saveClinicalDocumentLegacy(requestArgs);
-        return normalizeSavedDocumentResponse(legacyPayload, 'legacy');
-      } catch (e) {
-        errors.push(e);
-      }
-
-      const mergedMessage = errors.map((e)=> String(e?.message || '').trim()).filter(Boolean).join(' | ');
-      throw new Error(mergedMessage || 'No se pudo guardar nota de evolución.');
     };
 
     const getClinicalDocument = async (id, opts = {}) => {

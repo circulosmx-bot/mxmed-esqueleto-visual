@@ -190,13 +190,17 @@ const isDemo = window.location.hostname.endsWith('github.io');
     if (url.includes('hospital-stays.php?action=start')) return demoFetchJson('mock/hospital-stays-start.json');
     if (url.includes('hospital-stays.php?action=close')) return demoFetchJson('mock/hospital-stays-close.json');
     if (url.includes('clinical-documents.php?action=list')) return demoFetchJson('mock/clinical-documents-list-hosp.json');
-    if (url.includes('/api/clinical/index.php/documents') && method === 'POST') return demoFetchJson('mock/clinical-documents-save-hosp.json');
+    if (url.includes('/api/clinical/index.php/documents') && method === 'POST') {
+      return Promise.reject(new Error('La escritura genérica de documentos clínicos está deshabilitada.'));
+    }
     if (url.includes('/api/clinical/index.php/documents') && method === 'GET') return demoFetchJson('mock/clinical-documents-list-hosp.json');
     if (url.includes('/api/clinical/index.php/doctors/') && url.includes('/documents') && method === 'POST') return demoFetchJson('mock/clinical-documents-save-hosp.json');
     if (/\/api\/clinical\/index\.php\/doctors\/[^/]+\/documents\/[^/?#]+/.test(url) && method === 'GET') return demoFetchJson('mock/clinical-documents-get-hosp.json');
     if (url.includes('/api/clinical/index.php/doctors/') && url.includes('/documents') && method === 'GET') return demoFetchJson('mock/clinical-documents-list-hosp.json');
     if (url.includes('clinical-documents.php?action=get')) return demoFetchJson('mock/clinical-documents-get-hosp.json');
-    if (url.includes('clinical-documents.php?action=save')) return demoFetchJson('mock/clinical-documents-save-hosp.json');
+    if (url.includes('clinical-documents.php?action=save')) {
+      return Promise.reject(new Error('La escritura legacy de documentos clínicos está deshabilitada.'));
+    }
     return Promise.resolve({ ok: true });
   };
   const api = {
@@ -210,7 +214,6 @@ const isDemo = window.location.hostname.endsWith('github.io');
     currentStay: (pid) => api.j(`api/hospital-stays.php?action=current&patient_id=${enc(pid)}`, { method: 'GET', headers: {} }),
     startStay: (body) => api.j('api/hospital-stays.php?action=start', { method: 'POST', body: JSON.stringify(body || {}) }),
     closeStay: (body) => api.j('api/hospital-stays.php?action=close', { method: 'POST', body: JSON.stringify(body || {}) }),
-    saveDocLegacy: (body) => api.j('api/clinical-documents.php?action=save', { method: 'POST', body: JSON.stringify(body || {}) }),
     async listDocs(patient, sid) {
       const patientObj = (patient && typeof patient === 'object')
         ? patient
