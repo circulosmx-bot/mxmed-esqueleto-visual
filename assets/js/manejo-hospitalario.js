@@ -170,6 +170,45 @@
     if (rawPatientId.indexOf('p_') === 0) return rawPatientId;
     return await resolveCanonicalPatientIdSafe(rawPatientId).catch(() => null);
   };
+  const isCanonicalPatientIdValue = (value) => {
+    const id = String(value ?? '').trim();
+    if (!id) return false;
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(id)) return true;
+    return /^p_[A-Za-z0-9_-]{6,62}$/.test(id);
+  };
+  const resolveActiveCanonicalPatientIdSync = () => {
+    const pane = document.getElementById('p-expediente');
+    const ctx = getContextSafe();
+    const candidates = [];
+    try {
+      if (typeof window.resolveActivePatientId === 'function') {
+        candidates.push(window.resolveActivePatientId());
+      }
+    } catch (_) {}
+    candidates.push(
+      ctx?.canonical_patient_id,
+      ctx?.patient_id,
+      window.mxmedStore?.currentPatientId,
+      window.mxmedStore?.activePatientId,
+      window.mxmedActivePatientId,
+      window.__MXMED_ACTIVE_PATIENT_ID,
+      pane?.dataset?.patientId,
+      pane?.getAttribute('data-patient-id'),
+      pane?.dataset?.activePatientId,
+      pane?.getAttribute('data-active-patient-id')
+    );
+    for (const candidate of candidates) {
+      const value = String(candidate ?? '').trim();
+      if (isCanonicalPatientIdValue(value)) return value;
+    }
+    return '';
+  };
+  const resolveCanonicalStayPatientId = (patient) => {
+    const explicit = String(patient?.canonical_patient_id ?? '').trim();
+    if (isCanonicalPatientIdValue(explicit)) return explicit;
+    const raw = String(patient?.patient_id ?? '').trim();
+    return isCanonicalPatientIdValue(raw) ? raw : '';
+  };
 
 const isDemo = window.location.hostname.endsWith('github.io');
   const hasHospitalStaySupport = (() => {
@@ -342,10 +381,15 @@ const isDemo = window.location.hostname.endsWith('github.io');
 
   const getPatient = () => {
     const pane = document.getElementById('p-expediente');
+    const activeCanonicalPatientId = resolveActiveCanonicalPatientIdSync();
     const n = pane?.querySelector('[data-pac-nombre]')?.value?.trim() || '';
     const ap = pane?.querySelector('[data-pac-apellido-paterno]')?.value?.trim() || '';
     const am = pane?.querySelector('[data-pac-apellido-materno]')?.value?.trim() || '';
-    const nombre = [n, ap, am].filter(Boolean).join(' ').trim() || 'Paciente';
+    const labelCache = (window.mxmedStore?.patientLabelById && typeof window.mxmedStore.patientLabelById === 'object')
+      ? window.mxmedStore.patientLabelById
+      : {};
+    const cachedName = activeCanonicalPatientId ? String(labelCache[activeCanonicalPatientId] || '').trim() : '';
+    const nombre = [n, ap, am].filter(Boolean).join(' ').trim() || cachedName || 'Paciente';
     const dd = pane?.querySelector('[data-dg-dia]')?.value || '';
     const mm = pane?.querySelector('[data-dg-mes]')?.value || '';
     const yy = pane?.querySelector('[data-dg-anio]')?.value || '';
@@ -353,6 +397,17 @@ const isDemo = window.location.hostname.endsWith('github.io');
     const edad = pane?.querySelector('[data-dg-edad]')?.textContent?.trim() || '--';
     const sexoVal = pane?.querySelector('input[name=\"pac-genero\"]:checked')?.value || '';
     const sexo = sexoVal === 'F' ? 'Femenino' : sexoVal === 'M' ? 'Masculino' : sexoVal === 'O' ? 'Otro' : '--';
+    if (activeCanonicalPatientId) {
+      const canonicalCache = getCanonicalCache();
+      canonicalCache[activeCanonicalPatientId] = activeCanonicalPatientId;
+      return {
+        patient_id: activeCanonicalPatientId,
+        canonical_patient_id: activeCanonicalPatientId,
+        nombre_completo: nombre,
+        edad,
+        sexo
+      };
+    }
     const patient_id = buildLegacyPatientId(nombre, dob, sexoVal);
     const canonicalCache = getCanonicalCache();
     const canonical_patient_id = Object.prototype.hasOwnProperty.call(canonicalCache, patient_id)
@@ -591,8 +646,17 @@ const isDemo = window.location.hostname.endsWith('github.io');
       return;
     }
     const patient = getPatient();
+    const patientId = resolveCanonicalStayPatientId(patient);
+    if (!patientId) {
+      state.stay = null;
+      renderStay();
+      syncContextFromState();
+      updateContextNotice();
+      showErr(['Selecciona un paciente activo para manejo hospitalario.']);
+      return;
+    }
     try {
-      const res = await api.currentStay(patient.patient_id);
+      const res = await api.currentStay(patientId);
       state.stay = res?.stay || null;
       renderStay();
       syncContextFromState();
@@ -741,18 +805,31 @@ const isDemo = window.location.hostname.endsWith('github.io');
       el.style.display = other ? '' : 'none'; if (!other) el.value = '';
     });
     qs('#mh_start_btn')?.addEventListener('click', () => {
+      showErr([]);
+      const patient = getPatient();
+      const patientId = resolveCanonicalStayPatientId(patient);
+      if (!patientId) {
+        showErr(['Selecciona un paciente activo para iniciar hospitalización.']);
+        return;
+      }
       const doc = getDoctor();
       const a = qs('#mh_start_attending'); if (a) a.value = doc.user_id;
+      try { bootstrap?.Modal?.getOrCreateInstance(qs('#modalMhStart'))?.show(); } catch (e) { showErr([e?.message || String(e)]); }
     });
     qs('#mh_start_save')?.addEventListener('click', async () => {
       if (!hasHospitalStaySupport) return;
       showErr([]);
       const patient = getPatient();
+      const patientId = resolveCanonicalStayPatientId(patient);
+      if (!patientId) {
+        showErr(['Selecciona un paciente activo para iniciar hospitalización.']);
+        return;
+      }
       const doc = getDoctor();
       const sel = (qs('#mh_start_service')?.value || '').trim();
       const service = sel === 'Otro' ? (qs('#mh_start_service_other')?.value || '').trim() : sel;
       const body = {
-        patient_id: patient.patient_id,
+        patient_id: patientId,
         service: service || null,
         room: (qs('#mh_start_room')?.value || '').trim() || null,
         bed: (qs('#mh_start_bed')?.value || '').trim() || null,
@@ -768,12 +845,25 @@ const isDemo = window.location.hostname.endsWith('github.io');
         try { bootstrap?.Modal?.getInstance(qs('#modalMhStart'))?.hide(); } catch (_) {}
       } catch (e) { showErr([e?.message || String(e)]); }
     });
+    qs('#mh_close_btn')?.addEventListener('click', () => {
+      showErr([]);
+      if (!state.stay?.id) {
+        showErr(['No hay episodio activo para cerrar.']);
+        return;
+      }
+      try { bootstrap?.Modal?.getOrCreateInstance(qs('#modalMhClose'))?.show(); } catch (e) { showErr([e?.message || String(e)]); }
+    });
     qs('#mh_close_confirm')?.addEventListener('click', async () => {
       if (!hasHospitalStaySupport) return;
       showErr([]);
       const patient = getPatient();
+      const patientId = resolveCanonicalStayPatientId(patient);
+      if (!patientId) {
+        showErr(['Selecciona un paciente activo para cerrar hospitalización.']);
+        return;
+      }
       try {
-        await api.closeStay({ patient_id: patient.patient_id, hospital_stay_id: state.stay?.id });
+        await api.closeStay({ patient_id: patientId, hospital_stay_id: state.stay?.id });
         state.stay = null;
         renderStay();
         await renderTimeline();
