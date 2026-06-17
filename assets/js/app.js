@@ -34598,35 +34598,6 @@ console.info('app.js loaded :: 20251123a');
       }
     };
 
-    const fallbackToLocal = () => {
-      const text = window.buildEvolutionNoteRenderedText(payload, context);
-      const patientKey = patient.patient_id || 'anon';
-      const list = loadNotes(patientKey);
-      const ambLabel = payload.ambito === 'urgencias' ? 'Urgencias' : payload.ambito === 'hospitalizacion' ? 'Hospitalización' : 'Consulta';
-      const entry = {
-        id: `ne_${Date.now()}`,
-        created_at: new Date().toISOString(),
-        ambito: payload.ambito,
-        ambito_label: ambLabel,
-        title: window.buildEvolutionNoteSummary(payload),
-        summary: window.buildEvolutionNoteSummary(payload),
-        payload,
-        document_text: text,
-        signed: false
-      };
-      list.unshift(entry);
-      saveNotes(patientKey, list);
-      renderTimeline();
-      openDocModal(text, { payload });
-      try{
-        window.mxRegisterEncounterActivity?.('nota_evolucion_guardada_local', {
-          encounterKey: context.encounter_key,
-          patientId: context.patient_id,
-          source: 'nota_evolucion_fallback_local'
-        });
-      }catch(_){}
-    };
-
     api.saveClinicalDocument(args)
       .then(({ document, source }) => {
         console.info('[P15][nota_evolucion] save source', { source: String(source || 'unknown') });
@@ -34642,9 +34613,10 @@ console.info('app.js loaded :: 20251123a');
         }catch(_){}
       })
       .catch((e) => {
-        console.info('[P15][nota_evolucion] save fallback -> local', { reason: 'gateway_legacy_failed' });
-        showErrors([`No se pudo guardar en capa canónica/legacy (${e?.message || 'error'}). Se guardó localmente.`]);
-        fallbackToLocal();
+        console.warn('[P15][nota_evolucion] save failed', {
+          reason: String(e?.message || 'error')
+        });
+        showErrors(['No se pudo guardar la nota de evolución. Verifica paciente y conexión.']);
       });
   };
 
