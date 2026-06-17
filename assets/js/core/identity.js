@@ -17,10 +17,21 @@
   }
 
   function remember(legacy, canonical) {
-    const value = clean(canonical) || null;
+    const candidate = clean(canonical);
+    const value = candidate && isCanonicalPatientId(candidate) ? candidate : null;
     cache.set(legacy, value);
     globalCache[legacy] = value;
     return value;
+  }
+
+  function warnUnresolvedPatientId(legacy, reason, detail) {
+    try {
+      console.warn('[mxmedIdentity] canonical patient_id unresolved', {
+        legacy_patient_id: legacy,
+        reason,
+        detail: detail || null
+      });
+    } catch (_) {}
   }
 
   function buildLegacyPatientId(nombreCompleto, dob, sexoVal, normalizeFn) {
@@ -75,13 +86,24 @@
       }
 
       if (res.status === 409) {
-        // Expected transition state: legacy id not mapped yet in identity bridge.
-        return remember(legacy, legacy);
+        // Transition state: legacy id not mapped yet. Do not promote legacy to patient_id.
+        warnUnresolvedPatientId(legacy, 'legacy_not_mapped', payload);
+        return remember(legacy, null);
       }
-      if (!payload || typeof payload !== 'object') return remember(legacy, null);
-      if (payload.ok === true) return remember(legacy, payload?.data?.patient_id ?? null);
+      if (!payload || typeof payload !== 'object') {
+        warnUnresolvedPatientId(legacy, 'invalid_response', { status: res.status });
+        return remember(legacy, null);
+      }
+      if (payload.ok === true) {
+        const resolved = clean(payload?.data?.patient_id ?? '');
+        if (isCanonicalPatientId(resolved)) return remember(legacy, resolved);
+        warnUnresolvedPatientId(legacy, 'missing_canonical_patient_id', payload);
+        return remember(legacy, null);
+      }
+      warnUnresolvedPatientId(legacy, 'resolver_rejected', payload);
       return remember(legacy, null);
     }).catch(() => {
+      warnUnresolvedPatientId(legacy, 'request_failed');
       return remember(legacy, null);
     }).finally(() => {
       pending.delete(legacy);
