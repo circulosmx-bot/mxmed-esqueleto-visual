@@ -229,12 +229,86 @@
       return true;
     };
 
-    const buildCreatePayload = ()=>{
+    const getPatientNameTools = ()=> window.mxmedPatientNameTools || {
+      normalizeNamePart: (value)=> String(value || '').replace(/\s+/g, ' ').trim(),
+      validateNamePart: (value, options = {})=> {
+        const normalized = String(value || '').replace(/\s+/g, ' ').trim();
+        if(options.required === true && !normalized){
+          return { valid: false, value: '', message: `Captura ${options.label || 'nombre'}.` };
+        }
+        return { valid: true, value: normalized, message: '' };
+      },
+      buildNormalizedDisplayName: (parts = [])=> parts
+        .map((value)=> String(value || '').replace(/\s+/g, ' ').trim())
+        .filter(Boolean)
+        .join(' ')
+        .trim()
+    };
+
+    const setPatientNameFieldInvalid = (field, invalid)=>{
+      if(!field) return;
+      const shouldMark = invalid === true;
+      field.classList.toggle('is-invalid', shouldMark);
+      if(shouldMark){
+        field.setAttribute('aria-invalid', 'true');
+      }else{
+        field.removeAttribute('aria-invalid');
+      }
+    };
+
+    const readValidatedPatientNameParts = ({ requirePaternal = false } = {})=>{
+      if(!expedienteRoot) return { valid: false, message: 'No se pudo leer el nombre del paciente.' };
+      const tools = getPatientNameTools();
+      const fields = {
+        firstName: expedienteRoot.querySelector('[data-pac-nombre]'),
+        paternalLastName: expedienteRoot.querySelector('[data-pac-apellido-paterno]'),
+        maternalLastName: expedienteRoot.querySelector('[data-pac-apellido-materno]')
+      };
+      Object.values(fields).forEach((field)=> setPatientNameFieldInvalid(field, false));
+      const specs = [
+        { key: 'firstName', payloadKey: 'first_name', label: 'Nombre(s)', required: requirePaternal },
+        { key: 'paternalLastName', payloadKey: 'paternal_last_name', label: 'Primer apellido', required: requirePaternal },
+        { key: 'maternalLastName', payloadKey: 'maternal_last_name', label: 'Segundo apellido', required: false }
+      ];
+      const values = {};
+      for(const spec of specs){
+        const field = fields[spec.key];
+        const result = tools.validateNamePart(field?.value || '', {
+          required: spec.required,
+          label: spec.label
+        });
+        setPatientNameFieldInvalid(field, !result.valid);
+        if(!result.valid){
+          field?.focus?.();
+          return {
+            valid: false,
+            message: result.message || 'Captura un nombre de paciente válido.',
+            field
+          };
+        }
+        values[spec.payloadKey] = result.value || '';
+        if(field && field.value !== result.value){
+          field.value = result.value || '';
+        }
+      }
+      return {
+        valid: true,
+        values,
+        displayName: tools.buildNormalizedDisplayName([
+          values.first_name,
+          values.paternal_last_name,
+          values.maternal_last_name
+        ])
+      };
+    };
+
+    const buildCreatePayload = (nameParts = null)=>{
       if(!expedienteRoot) return null;
-      const first = (expedienteRoot.querySelector('[data-pac-nombre]')?.value || '').trim();
-      const apPat = (expedienteRoot.querySelector('[data-pac-apellido-paterno]')?.value || '').trim();
-      const apMat = (expedienteRoot.querySelector('[data-pac-apellido-materno]')?.value || '').trim();
-      const displayName = [first, apPat, apMat].filter(Boolean).join(' ').trim();
+      const tools = getPatientNameTools();
+      const first = nameParts?.values?.first_name ?? tools.normalizeNamePart(expedienteRoot.querySelector('[data-pac-nombre]')?.value || '');
+      const apPat = nameParts?.values?.paternal_last_name ?? tools.normalizeNamePart(expedienteRoot.querySelector('[data-pac-apellido-paterno]')?.value || '');
+      const apMat = nameParts?.values?.maternal_last_name ?? tools.normalizeNamePart(expedienteRoot.querySelector('[data-pac-apellido-materno]')?.value || '');
+      const displayName = nameParts?.displayName || tools.buildNormalizedDisplayName([first, apPat, apMat]);
       if(!displayName) return null;
 
       const dd = (expedienteRoot.querySelector('[data-dg-dia]')?.value || '').trim();
@@ -1217,6 +1291,11 @@
         setSaveFeedback('Selecciona un paciente para guardar datos generales.', 'error');
         return Promise.resolve(null);
       }
+      const nameValidation = readValidatedPatientNameParts({ requirePaternal: false });
+      if(!nameValidation.valid){
+        setSaveFeedback(nameValidation.message || 'Captura un nombre de paciente válido.', 'error');
+        return Promise.resolve(null);
+      }
       const profile = readPatientProfileFromDom();
       const address = readPatientAddressFromDom();
       const mobilePhone = readEditableMobilePhoneForSave();
@@ -1333,7 +1412,12 @@
         setSaveFeedback('Revisa el formato de los correos electrónicos.', 'error');
         return Promise.resolve(null);
       }
-      const payload = buildCreatePayload();
+      const nameValidation = readValidatedPatientNameParts({ requirePaternal: true });
+      if(!nameValidation.valid){
+        setSaveFeedback(nameValidation.message || 'Captura un nombre de paciente válido.', 'error');
+        return Promise.resolve(null);
+      }
+      const payload = buildCreatePayload(nameValidation);
       if(!payload || !String(payload.display_name || '').trim()){
         setSaveFeedback('Captura nombre y apellidos para guardar.', 'error');
         return Promise.resolve(null);

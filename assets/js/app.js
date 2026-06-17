@@ -1,6 +1,91 @@
 ﻿// MXMed app bundle
 console.info('app.js loaded :: 20251123a');
 
+// Shared patient-name validation for patient creation surfaces.
+(function(){
+  if(window.mxmedPatientNameTools) return;
+
+  const GENERIC_NAME_PARTS = new Set([
+    'paciente',
+    'sin nombre',
+    'sin nombre registrado',
+    'no registrado',
+    'no especificado',
+    'prueba',
+    'test',
+    'xxx',
+    'abc'
+  ]);
+  const supportsUnicodeProps = (()=> {
+    try{
+      new RegExp('\\p{L}', 'u');
+      return true;
+    }catch(_){
+      return false;
+    }
+  })();
+  const letterRe = supportsUnicodeProps ? /\p{L}/u : /[A-Za-zÀ-ÖØ-öø-ÿĀ-žḀ-ỿ]/;
+  const numberRe = supportsUnicodeProps ? /\p{N}/u : /[0-9]/;
+  const allowedNameRe = supportsUnicodeProps
+    ? /^[\p{L}\p{M}]+(?:[ '\u2019-][\p{L}\p{M}]+)*$/u
+    : /^[A-Za-zÀ-ÖØ-öø-ÿĀ-žḀ-ỿ]+(?:[ '\u2019-][A-Za-zÀ-ÖØ-öø-ÿĀ-žḀ-ỿ]+)*$/;
+
+  const normalizeNamePart = (value)=> String(value ?? '').replace(/\s+/g, ' ').trim();
+  const foldNamePart = (value)=> {
+    const normalized = normalizeNamePart(value).toLowerCase();
+    try{
+      return normalized.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }catch(_){
+      return normalized;
+    }
+  };
+  const isGenericNamePart = (value)=> {
+    const folded = foldNamePart(value);
+    if(!folded) return false;
+    if(GENERIC_NAME_PARTS.has(folded)) return true;
+    return /^paciente\s*(nuevo|rapido)?$/.test(folded);
+  };
+  const hasInvalidNameChars = (value)=> {
+    const normalized = normalizeNamePart(value);
+    if(!normalized) return false;
+    if(numberRe.test(normalized)) return true;
+    if(!letterRe.test(normalized)) return true;
+    return !allowedNameRe.test(normalized);
+  };
+  const validateNamePart = (value, options = {})=> {
+    const normalized = normalizeNamePart(value);
+    const required = options.required === true;
+    const label = String(options.label || 'nombre').trim() || 'nombre';
+    if(!normalized){
+      return required
+        ? { valid: false, value: '', code: 'required', message: `Captura ${label}.` }
+        : { valid: true, value: '', code: '', message: '' };
+    }
+    if(isGenericNamePart(normalized) || hasInvalidNameChars(normalized)){
+      return {
+        valid: false,
+        value: normalized,
+        code: 'invalid_name',
+        message: 'Captura un nombre de paciente válido.'
+      };
+    }
+    return { valid: true, value: normalized, code: '', message: '' };
+  };
+  const buildNormalizedDisplayName = (parts = [])=> parts
+    .map(normalizeNamePart)
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  window.mxmedPatientNameTools = Object.freeze({
+    normalizeNamePart,
+    isGenericNamePart,
+    hasInvalidNameChars,
+    validateNamePart,
+    buildNormalizedDisplayName
+  });
+})();
+
 // Doctor profile seed (local test fixture, no backend dependency)
 (function(){
   if(window.__mxmedDoctorProfileSeedApplied) return;
@@ -54189,17 +54274,38 @@ console.info('app.js loaded :: 20251123a');
 	    if(!quickRxEls?.createForm) return null;
 	    return quickRxEls.createForm.querySelector(`[data-quick-rx-create-field="${name}"]`);
 	  };
+	  const getPatientNameTools = ()=> window.mxmedPatientNameTools || {
+	    normalizeNamePart: (value)=> sanitizeText(value).replace(/\s+/g, ' ').trim(),
+	    isGenericNamePart: (value)=>{
+	      const normalized = sanitizeText(value).replace(/\s+/g, ' ').trim().toLowerCase();
+	      return ['paciente', 'sin nombre', 'sin nombre registrado', 'no especificado', 'no registrado'].includes(normalized)
+	        || /^paciente\s*(nuevo|rapido|rápido)?$/i.test(normalized);
+	    },
+	    hasInvalidNameChars: ()=> false,
+	    validateNamePart: (value, options = {})=>{
+	      const normalized = sanitizeText(value).replace(/\s+/g, ' ').trim();
+	      if(options.required === true && !normalized){
+	        return { valid: false, value: '', message: `Captura ${options.label || 'nombre'}.` };
+	      }
+	      return { valid: true, value: normalized, message: '' };
+	    },
+	    buildNormalizedDisplayName: (parts = [])=> parts
+	      .map((value)=> sanitizeText(value).replace(/\s+/g, ' ').trim())
+	      .filter(Boolean)
+	      .join(' ')
+	      .trim()
+	  };
 	  const isUsefulQuickRxPatientName = (value)=>{
-	    const normalized = sanitizeText(value).toLowerCase();
+	    const tools = getPatientNameTools();
+	    const normalized = tools.normalizeNamePart(value);
 	    if(!normalized) return false;
-	    if(['paciente', 'sin nombre', 'sin nombre registrado', 'no especificado', 'no registrado'].includes(normalized)) return false;
-	    return !/^paciente\s*(nuevo|rapido|rápido)?$/i.test(normalized);
+	    return !tools.isGenericNamePart(normalized) && !tools.hasInvalidNameChars(normalized);
 	  };
 	  const isGenericQuickRxNamePart = (value)=>{
-	    const normalized = sanitizeText(value).toLowerCase();
+	    const tools = getPatientNameTools();
+	    const normalized = tools.normalizeNamePart(value);
 	    if(!normalized) return false;
-	    if(['paciente', 'sin nombre', 'sin nombre registrado', 'no especificado', 'no registrado'].includes(normalized)) return true;
-	    return /^paciente\s*(nuevo|rapido|rápido)?$/i.test(normalized);
+	    return tools.isGenericNamePart(normalized);
 	  };
 	  const isValidQuickRxBirthdate = (value)=>{
 	    const raw = sanitizeText(value);
@@ -54212,23 +54318,41 @@ console.info('app.js loaded :: 20251123a');
 	    return date.getTime() <= today.getTime();
 	  };
 	  const readQuickRxCreatePayload = ()=>{
-	    const firstName = sanitizeText(getQuickRxCreateField('first_name')?.value);
-	    const paternalLastName = sanitizeText(getQuickRxCreateField('paternal_last_name')?.value);
-	    const maternalLastName = sanitizeText(getQuickRxCreateField('maternal_last_name')?.value);
+	    const nameTools = getPatientNameTools();
+	    const firstNameResult = nameTools.validateNamePart(getQuickRxCreateField('first_name')?.value, {
+	      required: true,
+	      label: 'nombre(s)'
+	    });
+	    const paternalLastNameResult = nameTools.validateNamePart(getQuickRxCreateField('paternal_last_name')?.value, {
+	      required: true,
+	      label: 'primer apellido'
+	    });
+	    const maternalLastNameResult = nameTools.validateNamePart(getQuickRxCreateField('maternal_last_name')?.value, {
+	      required: false,
+	      label: 'segundo apellido'
+	    });
+	    const firstName = firstNameResult.value || '';
+	    const paternalLastName = paternalLastNameResult.value || '';
+	    const maternalLastName = maternalLastNameResult.value || '';
 	    const birthdate = sanitizeText(getQuickRxCreateField('birthdate')?.value);
 	    const sex = sanitizeText(getQuickRxCreateField('sex')?.value);
 	    const phone = sanitizeText(getQuickRxCreateField('phone')?.value);
 	    const email = sanitizeText(getQuickRxCreateField('email')?.value).toLowerCase();
-	    const displayName = [firstName, paternalLastName, maternalLastName].filter(Boolean).join(' ').trim();
-	    if(!firstName || !paternalLastName){
+	    const displayName = nameTools.buildNormalizedDisplayName([firstName, paternalLastName, maternalLastName]);
+	    if(firstNameResult.code === 'required' || paternalLastNameResult.code === 'required'){
 	      return { error: 'Captura nombre(s) y primer apellido para crear el paciente.' };
 	    }
-	    if(!isUsefulQuickRxPatientName(displayName)
-	      || isGenericQuickRxNamePart(firstName)
-	      || isGenericQuickRxNamePart(paternalLastName)
-	      || isGenericQuickRxNamePart(maternalLastName)){
+	    if(!firstNameResult.valid || !paternalLastNameResult.valid || !maternalLastNameResult.valid || !isUsefulQuickRxPatientName(displayName)){
 	      return { error: 'Captura un nombre de paciente válido.' };
 	    }
+	    [
+	      ['first_name', firstName],
+	      ['paternal_last_name', paternalLastName],
+	      ['maternal_last_name', maternalLastName]
+	    ].forEach(([fieldName, value])=>{
+	      const field = getQuickRxCreateField(fieldName);
+	      if(field && field.value !== value) field.value = value;
+	    });
 	    if(!isValidQuickRxBirthdate(birthdate)){
 	      return { error: 'Captura una fecha de nacimiento válida.' };
 	    }
