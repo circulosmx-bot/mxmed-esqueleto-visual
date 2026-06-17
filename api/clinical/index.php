@@ -4677,6 +4677,17 @@ try {
         $body = (array)$bodyResult['data'];
 
         if (array_key_exists('patient_id', $body)) {
+            if (!is_scalar($body['patient_id'])) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'invalid_params',
+                    'message' => 'patient_id must be a scalar string',
+                    'data' => null,
+                    'meta' => $resolveMeta,
+                ], 400);
+                return;
+            }
+
             $patientId = trim((string)$body['patient_id']);
             if ($patientId === '' || strlen($patientId) < 8) {
                 clinical_send_response([
@@ -4689,14 +4700,50 @@ try {
                 return;
             }
 
+            $patientInspection = clinical_inspect_patient_id_kind($patientId);
+            if (($patientInspection['kind'] ?? '') !== 'canonical') {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'invalid_params',
+                    'message' => 'patient_id must be canonical',
+                    'data' => null,
+                    'meta' => $resolveMeta,
+                ], 400);
+                return;
+            }
+
+            try {
+                $pdo = clinical_documents_pdo();
+                if (!clinical_patient_exists($pdo, $patientId)) {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'not_found',
+                        'message' => 'patient not found',
+                        'data' => null,
+                        'meta' => $resolveMeta,
+                    ], 404);
+                    return;
+                }
+            } catch (Throwable $e) {
+                $msg = trim((string)$e->getMessage());
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'server_error',
+                    'message' => ($msg !== '') ? $msg : 'server error',
+                    'data' => null,
+                    'meta' => $resolveMeta,
+                ], 500);
+                return;
+            }
+
             clinical_send_response([
                 'ok' => true,
                 'error' => null,
-                'message' => 'patient_id passthrough accepted',
+                'message' => 'patient resolved',
                 'data' => [
                     'patient_id' => $patientId,
                     'confidence' => 1.0,
-                    'strategy' => 'passthrough',
+                    'strategy' => 'already_canonical',
                 ],
                 'meta' => $resolveMeta,
             ], 200);
@@ -4716,7 +4763,18 @@ try {
                 return;
             }
 
-            $legacyPatientId = trim((string)($legacy['legacy_patient_id'] ?? ''));
+            if (!array_key_exists('legacy_patient_id', $legacy) || !is_scalar($legacy['legacy_patient_id'])) {
+                clinical_send_response([
+                    'ok' => false,
+                    'error' => 'invalid_params',
+                    'message' => 'legacy.legacy_patient_id debe ser string',
+                    'data' => null,
+                    'meta' => $resolveMeta,
+                ], 400);
+                return;
+            }
+
+            $legacyPatientId = trim((string)$legacy['legacy_patient_id']);
             if ($legacyPatientId === '') {
                 clinical_send_response([
                     'ok' => false,
@@ -4753,12 +4811,48 @@ try {
             }
 
             if (is_array($row)) {
+                $canonicalPatientId = trim((string)($row['canonical_patient_id'] ?? ''));
+                $canonicalInspection = clinical_inspect_patient_id_kind($canonicalPatientId);
+                if ($canonicalPatientId === '' || ($canonicalInspection['kind'] ?? '') !== 'canonical') {
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'invalid_bridge_mapping',
+                        'message' => 'identity bridge mapping invalid',
+                        'data' => null,
+                        'meta' => $resolveMeta,
+                    ], 409);
+                    return;
+                }
+
+                try {
+                    if (!clinical_patient_exists($pdo, $canonicalPatientId)) {
+                        clinical_send_response([
+                            'ok' => false,
+                            'error' => 'not_found',
+                            'message' => 'mapped patient not found',
+                            'data' => null,
+                            'meta' => $resolveMeta,
+                        ], 404);
+                        return;
+                    }
+                } catch (Throwable $e) {
+                    $msg = trim((string)$e->getMessage());
+                    clinical_send_response([
+                        'ok' => false,
+                        'error' => 'server_error',
+                        'message' => ($msg !== '') ? $msg : 'server error',
+                        'data' => null,
+                        'meta' => $resolveMeta,
+                    ], 500);
+                    return;
+                }
+
                 clinical_send_response([
                     'ok' => true,
                     'error' => null,
                     'message' => 'legacy mapped via identity bridge',
                     'data' => [
-                        'patient_id' => (string)$row['canonical_patient_id'],
+                        'patient_id' => $canonicalPatientId,
                         'confidence' => (float)$row['confidence'],
                         'strategy' => (string)$row['strategy'],
                         'legacy_patient_id' => $legacyPatientId,
@@ -4774,7 +4868,6 @@ try {
                 'message' => 'legacy identity not mapped yet',
                 'data' => [
                     'required_next' => 'bridge_mapping_required',
-                    'legacy_patient_id' => $legacyPatientId,
                     'received' => true,
                 ],
                 'meta' => $resolveMeta,
