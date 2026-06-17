@@ -167,27 +167,38 @@ Fuentes revisadas (principal):
   - Sin backend de `hospital-stays`, la experiencia queda incompleta fuera de modo demo/mock.
 
 ### 8) Recetas
-- Nombre (humano): Recetas (resumen en expediente + panel avanzado en docs)
+- Nombre (humano): Recetas / Receta rápida
 - Ruta/archivos relacionados:
-  - `index.html` (tab `#t-notas`, modal `#modalReceta`)
-  - `assets/js/app.js` (draft de receta para nota de evolución)
+  - `index.html` (top-level `Recetas` -> `#p-pac-recetas`)
+  - `index.html` (tab `#t-tratamiento` / Tratamientos y recetas)
+  - `index.html` (modal canónico de receta)
+  - `assets/js/app.js` (Receta rápida, activación de paciente, modal canónico y flujo de búsqueda)
   - `docs/assets/partials/recetas.html`
   - `docs/assets/js/recetas.js`
   - `docs/mock/prescription-generate.json`
 - ¿DB existe?: parcial
-  - En runtime queda embebido en `clinical_documents.payload_json.receta`
+  - La receta real se guarda como documento clínico `prescription` asociado a `patient_id`.
   - No detectada tabla dedicada `rx_*`
 - ¿API existe?: parcial
-  - No detectado `api/prescription-generate.php` (sí referenciado en UI docs)
-  - Sí hay `clinical-documents.php` para persistir receta embebida en documento
+  - No detectado `api/prescription-generate.php` (sí referenciado en UI docs históricas).
+  - El flujo canónico usa persistencia de documento clínico para receta, no receta suelta.
 - ¿UI existe?: sí
-  - Dónde: modal simple en `#t-notas` + panel avanzado en `docs/assets/js/recetas.js`
+  - Dónde:
+    - `p-pac-recetas`: panel puente de Receta rápida.
+    - `t-tratamiento`: ruta natural dentro del expediente.
+    - modal canónico de receta.
 - Campos principales detectados:
   - medicamentos: `medicamento`, `dosis`, `via`, `periodicidad`, `duracion`, `indicaciones`
   - `folio`, `consultorio`, `signature`, `qr_enabled`, `diagnosticos`, `indicaciones_generales`
 - Estado: PARTIAL
 - Notas (dependencias):
-  - Flujo avanzado de recetas depende de endpoint no presente en `api/`.
+  - Receta rápida no permite receta sin paciente.
+  - Sin paciente muestra `Paciente requerido` y ofrece `Buscar paciente` / `Crear paciente rápido`.
+  - Buscar paciente desde Receta rápida usa intención temporal Quick Rx y regresa a `p-pac-recetas` con paciente activo.
+  - Crear paciente rápido crea ficha mínima, activa paciente real y permite abrir el modal canónico.
+  - El modal muestra paciente real y no `Paciente` genérico.
+  - No hay POST automático de receta al abrir el panel ni al seleccionar/crear paciente.
+  - `docs/assets/js/recetas.js` y `docs/assets/partials/recetas.html` son referencias documentales/históricas y no sustituyen el flujo canónico del shell.
 
 ### 9) Consentimiento informado (clínico)
 - Nombre (humano): Consentimientos informados del expediente

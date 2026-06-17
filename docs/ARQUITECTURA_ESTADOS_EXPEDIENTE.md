@@ -30,7 +30,7 @@ Características:
 
 Se accede mediante:
 
-Nuevo registrar paciente
+Pacientes -> Nuevo paciente interno
 
 Características:
 
@@ -72,10 +72,21 @@ Características:
 - los datos permanecen visibles
 - no hay consulta activa
 - no aparece chip
+- aparece el hub `Paciente guardado correctamente`
+- el hub ofrece 7 acciones clínicas:
+  - Historia clínica
+  - Exploración física
+  - Historial de atención
+  - Estudios diagnósticos
+  - Tratamientos y recetas
+  - Manejo hospitalario
+  - Documentos clínicos
+- no existe tarjeta separada `Recetas`; `Tratamientos y recetas` es la ruta clínica canónica desde el hub
 
 Regla crítica:
 
 Guardar paciente NO inicia consulta.
+El hub post-guardado NO emite recetas ni crea documentos clínicos automáticamente.
 
 ---
 
@@ -119,11 +130,13 @@ Características:
 
 Sin paciente seleccionado
 ↓
-Nuevo registrar paciente
+Pacientes -> Nuevo paciente interno
 ↓
 Captura nuevo paciente
 ↓ Guardar paciente
 Paciente creado
+↓ Hub post-guardado
+Paciente guardado correctamente
 ↓ Iniciar consulta
 Consulta activa
 ↓ Cerrar consulta
@@ -139,6 +152,10 @@ Paciente sin consulta activa
 4. Salir de captura sin guardar debe advertir.
 5. Aceptar salir descarta la captura.
 6. Después de guardar paciente la navegación no debe advertir cambios sin guardar.
+7. `Pacientes` es top-level y abre `p-expediente`.
+8. `Recetas` es top-level y abre `p-pac-recetas`.
+9. `p-pac-archivo` mantiene activo visualmente `Pacientes`.
+10. Receta rápida no puede emitir receta sin `patient_id`.
 
 ---
 

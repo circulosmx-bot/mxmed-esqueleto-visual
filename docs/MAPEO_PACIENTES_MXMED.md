@@ -180,6 +180,14 @@ Este documento es descriptivo (sin cambios funcionales).
 
 ## 5) Flujo funcional real de Pacientes
 
+0. **Navegación shell actual**
+   - El sidebar tiene accesos top-level independientes:
+     - `Pacientes` -> `p-expediente`.
+     - `Recetas` -> `p-pac-recetas`.
+   - Ya no existe submenú visible de Pacientes con `Nuevo`, `Buscar` y `Recetas`.
+   - `p-pac-archivo` es un panel interno de búsqueda/archivo y mantiene visualmente activo el top-level `Pacientes`.
+   - `Nuevo paciente`, `Buscar paciente`, `Cambiar paciente` y `Cerrar expediente` viven como acciones internas del flujo, no como subitems del sidebar.
+
 1. **Alta de paciente (ruta explícita actual)**
    - UI expediente (`assets/js/perfil/datos-generales.js`) usa botón `Guardar paciente`.
    - Normaliza y valida Nombre(s), Primer apellido y Segundo apellido antes de POST.
@@ -205,6 +213,14 @@ Este documento es descriptivo (sin cambios funcionales).
 6. **Relación con Expediente/Consulta**
    - Pacientes provee `patient_id` canónico para abrir contexto de expediente.
    - Iniciar consulta (encounter) ocurre en Clinical/P14, no en alta de paciente.
+
+7. **Receta rápida desde sidebar**
+   - El acceso top-level `Recetas` abre `p-pac-recetas`.
+   - Sin paciente activo, el panel muestra `Paciente requerido`, `Buscar paciente` y `Crear paciente rápido`; no permite emitir receta suelta.
+   - Con paciente activo, muestra resumen del paciente y CTA `Emitir receta para este paciente`.
+   - `Buscar paciente` desde Receta rápida usa una intención temporal Quick Rx: abre `p-pac-archivo`, permite seleccionar paciente existente y regresa a `p-pac-recetas`.
+   - `Crear paciente rápido` captura datos mínimos, crea paciente real, lo activa y vuelve/permanece en `p-pac-recetas`.
+   - El CTA de emisión abre el modal canónico de receta con paciente real; no genera POST automático de receta.
 
 ## 6) `patient_id` como identidad canónica (estado real)
 
@@ -237,8 +253,10 @@ Este documento es descriptivo (sin cambios funcionales).
 - La integración es directa en backend (no HTTP externo): helper invoca `CreatePatientController`.
 
 ### 7.2 Expediente (shell frontend)
-- “Buscar paciente” depende del endpoint por doctor de Pacientes.
-- “Nuevo registrar paciente” usa alta explícita en Pacientes y luego abre contexto del expediente del nuevo `patient_id`.
+- `Pacientes` en el sidebar abre directamente `p-expediente`.
+- `Recetas` en el sidebar abre directamente `p-pac-recetas`.
+- “Buscar paciente” depende del endpoint por doctor de Pacientes y abre `p-pac-archivo` como flujo interno.
+- “Nuevo paciente” usa alta explícita en Pacientes y luego abre contexto del expediente del nuevo `patient_id`.
 
 ### 7.3 Encounter / Clinical
 - Clinical usa `patient_id` para:

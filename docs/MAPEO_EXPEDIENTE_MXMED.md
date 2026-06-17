@@ -183,6 +183,13 @@ Este documento es descriptivo (sin cambios funcionales).
 
 ## 5) Flujo funcional real del Expediente
 
+0. **Entrada desde sidebar**
+   - `Pacientes` es un acceso top-level y abre `p-expediente`.
+   - `Recetas` es un acceso top-level independiente y abre `p-pac-recetas`.
+   - Pacientes ya no despliega subitems `Nuevo`, `Buscar` ni `Recetas`.
+   - `p-pac-archivo` se usa como archivo/búsqueda interna y conserva activo visualmente el top-level `Pacientes`.
+   - `Buscar paciente` y `Cambiar paciente` son acciones internas; no activan Receta rápida salvo que exista intención temporal Quick Rx iniciada desde `p-pac-recetas`.
+
 1. **Apertura de expediente**
    - Desde “Archivo de pacientes”, se selecciona paciente (`data-pid`) y se ejecuta `setActivePatientId(pid)` + `jumpTo('p-expediente')`.
    - En búsqueda general (`open_origin=search_general`) NO inicia consulta automática.
@@ -207,22 +214,35 @@ Este documento es descriptivo (sin cambios funcionales).
    - Se bloquean genéricos, dígitos y símbolos inválidos antes de POST.
    - Backend aplica la misma política mínima para proteger llamadas directas.
 
-5. **Historial embebido**
+5. **Hub post-guardado**
+   - Después de guardar paciente desde Datos Generales se muestra el hub con título `Paciente guardado correctamente`.
+   - Acciones vigentes:
+     - `Historia clínica` -> `#t-historia`.
+     - `Exploración física` -> `#t-exploracion`.
+     - `Historial de atención` -> `#t-historial-atencion`.
+     - `Estudios diagnósticos` -> `#t-estudios`.
+     - `Tratamientos y recetas` -> `#t-tratamiento`.
+     - `Manejo hospitalario` -> `#t-manejo`.
+     - `Documentos clínicos` -> `#t-consent`.
+   - Ya no existe tarjeta separada `Recetas`; `Tratamientos y recetas` es la entrada canónica desde el hub.
+   - El hub solo navega a tabs clínicos y no dispara POST automático de receta ni documento clínico.
+
+6. **Historial embebido**
    - Tab `t-historial-atencion` carga iframe con 3 modos:
      - historial (`/modules/clinical/ui/historial.php?patient_id=...&embed=1`)
      - episodio (`/modules/clinical/ui/encounter.php?encounter_key=...&embed=1`)
      - documento (`/modules/clinical/ui/document.php?uuid=...&embed=1`)
 
-6. **Consulta activa y P10**
+7. **Consulta activa y P10**
    - P10 consulta `encounters/active`.
    - Si no existe encounter activo, muestra “No hay consulta activa” + botón “Iniciar consulta”.
    - Al iniciar, crea encounter por `POST /patients/{id}/encounters` y cambia modo a episodio.
    - Al cerrar, usa `POST /encounters/{key}/finalize` y regresa a historial.
 
-7. **Expediente sin consulta activa**
+8. **Expediente sin consulta activa**
    - Sí existe y es válido: identidad del paciente visible, tabs consultables según gate, header en estado neutro.
 
-8. **Expediente con consulta activa**
+9. **Expediente con consulta activa**
    - Header muestra `CONSULTA ACTIVA`, origen/inicio si disponibles.
    - Banda de consultas activas permite alternar entre encounters/pacientes activos (modelo multi-activo).
 

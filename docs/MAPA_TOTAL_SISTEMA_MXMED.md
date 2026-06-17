@@ -23,6 +23,16 @@
 - Bloqueos administrativos en shell principal siguen con persistencia frontend/localStorage (pendiente write backend dedicado para overrides desde esta UX).
 - Operadores en shell principal ya cuenta con flujo funcional frontend (wizard, archivado lógico, historial y controles sensibles con código de 6 dígitos simulado).
 
+### Adenda de estado real (2026-06-16) — Pacientes / Recetas
+- Sidebar actual:
+  - `Pacientes` -> `p-expediente`.
+  - `Recetas` -> `p-pac-recetas`.
+- Pacientes ya no tiene submenú `Nuevo / Buscar / Recetas`; esas acciones viven dentro de los flujos internos.
+- `p-pac-archivo` es búsqueda/archivo interno y mantiene activo visualmente `Pacientes`.
+- Receta rápida en `p-pac-recetas` exige paciente: permite buscar paciente existente o crear paciente rápido mínimo; luego abre el modal canónico de receta sin POST automático.
+- El hub post-guardado de Datos Generales muestra 7 acciones clínicas y ya no incluye tarjeta duplicada `Recetas`.
+- Nota documental: `docs/index.html` se conserva como snapshot visual/histórico y no es fuente canónica para el estado actual de sidebar, Receta rápida ni hub post-guardado.
+
 ## 1) Resumen arquitectónico general
 
 ### Núcleo funcional
@@ -137,13 +147,16 @@ patients_doctor_links
 - API:
 ```text
 POST /api/patients/index.php/patients
+POST /api/patients/index.php/patients/{patient_id}/profile
 GET  /api/patients/index.php/patients/{patient_id}
 GET  /api/patients/index.php/doctors/{doctor_id}/patients
 ```
 - UI:
 ```text
-index.html: paneles de pacientes y datos generales
-Integración aún parcial entre runtime raíz y API patients
+index.html: Pacientes top-level -> p-expediente
+index.html: Recetas top-level -> p-pac-recetas
+index.html: p-pac-archivo como archivo/búsqueda interna con Pacientes activo
+index.html: Datos Generales, hub post-guardado y Receta rápida conectados al contexto real de patient_id
 ```
 - Estado: `PARTIAL`
 - Dependencias:
@@ -214,6 +227,15 @@ Referenciada pero faltante en varios flujos históricos: api/hospital-stays.php,
 - Riesgos/notas:
   - Persistencia heterogénea (backend + localStorage + estado DOM).
   - Riesgo de IDs sintéticos en flujos legacy si no se fuerza `patient_id` canónico.
+  - Hub post-guardado vigente:
+    - `Historia clínica`
+    - `Exploración física`
+    - `Historial de atención`
+    - `Estudios diagnósticos`
+    - `Tratamientos y recetas`
+    - `Manejo hospitalario`
+    - `Documentos clínicos`
+    - Sin tarjeta separada `Recetas`.
 
 ### Dominio 5: modules/clinical (integrador en transición)
 - Propósito: ordenar dominio clínico estructurado y contratos API v1/v2.
@@ -345,10 +367,13 @@ index.html tab #t-archivo
 index.html panel #p-pac-archivo
 ```
 - DB/API: no detectadas completas.
-- UI: parcial/placeholder.
-- Estado: `FUTURO`
+- UI:
+  - `#t-archivo`: adjuntos del expediente, aún parcial/placeholder.
+  - `#p-pac-archivo`: archivo/búsqueda de pacientes, operativo como panel interno.
+- Estado: `PARTIAL`
 - Riesgos/notas:
-  - Falta backend de archivos y modelo de metadatos.
+  - Falta backend de archivos y modelo de metadatos para adjuntos.
+  - `p-pac-archivo` no es un top-level propio; mantiene activo visualmente `Pacientes`.
 
 ### Dominio 14: Consultorio / multisede / geolocalización
 - Propósito: datos de consultorio, sedes, CP/colonias, ubicación.

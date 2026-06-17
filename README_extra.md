@@ -49,9 +49,16 @@ Plataforma digital MXMed 2025 con perfiles profesionales del área médica (méd
   - Administrar Operadores.
   - Administración de Citas.
 
-- **Mis Pacientes**
-  - Archivo de Pacientes.
-Expediente Médico → pestañas: Datos Generales, Historia Clínica, Historial de atención (timeline), Antecedentes Ginecoobstétricos, Exploración Física, Estudios Diagnóstico, Tratamiento/Recetas, Notas de Evolución, Manejo Hospitalario, Consentimiento Informado, Archivo.
+- **Pacientes**
+  - Abre el expediente principal (`p-expediente`).
+  - Nuevo paciente, Buscar paciente, Cambiar paciente y Cerrar expediente son acciones internas del flujo.
+  - El archivo/búsqueda de pacientes (`p-pac-archivo`) mantiene el contexto visual de Pacientes.
+  - Expediente Médico → pestañas: Datos Generales, Historia Clínica, Historial de atención (timeline), Antecedentes Ginecoobstétricos, Exploración Física, Estudios Diagnóstico, Tratamiento/Recetas, Notas de Evolución, Manejo Hospitalario, Consentimiento Informado, Archivo.
+
+- **Recetas**
+  - Abre Receta rápida (`p-pac-recetas`).
+  - No permite emitir receta sin paciente.
+  - Permite buscar paciente existente o crear paciente rápido antes de abrir el modal canónico de receta.
 
 - **Facturación**
   - Crear factura / Listar facturas / Pacientes / Facturas canceladas.
