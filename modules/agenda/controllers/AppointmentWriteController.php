@@ -75,9 +75,9 @@ class AppointmentWriteController
         $payload = $this->normalizeActorPayload($payload);
 
         // Auto-create patient if missing patient_id and patient info is provided
-        if (!isset($payload['patient_id'])) {
+        if (!array_key_exists('patient_id', $payload) || $this->isEmptyPatientIdInput($payload['patient_id'])) {
             $patientInput = $payload['patient'] ?? null;
-            if (!$patientInput) {
+            if (!is_array($patientInput)) {
                 // fallback to top-level minimal fields
                 $patientInput = [
                     'display_name' => $payload['display_name'] ?? null,
@@ -102,6 +102,16 @@ class AppointmentWriteController
                 $payload['patient_id'] = $patientResp['data']['patient_id'] ?? null;
             }
         }
+
+        $patientGuard = $this->validateCreatePatientId($payload['patient_id'] ?? null);
+        if (($patientGuard['ok'] ?? false) !== true) {
+            return $this->error(
+                (string)($patientGuard['error'] ?? 'invalid_params'),
+                (string)($patientGuard['message'] ?? 'invalid patient_id'),
+                (array)($patientGuard['meta'] ?? [])
+            );
+        }
+        $payload['patient_id'] = (string)$patientGuard['patient_id'];
 
         $errors = $this->validateCreate($payload);
         if ($errors) {
@@ -652,7 +662,7 @@ class AppointmentWriteController
     private function validateCreate(array $payload): array
     {
         $errors = [];
-        foreach (['doctor_id', 'consultorio_id', 'start_at', 'end_at', 'modality', 'channel_origin', 'created_by_role', 'created_by_id'] as $field) {
+        foreach (['doctor_id', 'consultorio_id', 'patient_id', 'start_at', 'end_at', 'modality', 'channel_origin', 'created_by_role', 'created_by_id'] as $field) {
             if (!isset($payload[$field]) || trim((string)$payload[$field]) === '') {
                 $errors[$field] = $payload[$field] ?? null;
             }
@@ -665,6 +675,85 @@ class AppointmentWriteController
             $errors['end_at'] = $payload['end_at'] ?? null;
         }
         return $errors;
+    }
+
+    private function isEmptyPatientIdInput($value): bool
+    {
+        if ($value === null) {
+            return true;
+        }
+        if (is_scalar($value)) {
+            return trim((string)$value) === '';
+        }
+        return false;
+    }
+
+    private function validateCreatePatientId($value): array
+    {
+        if (!is_scalar($value)) {
+            return [
+                'ok' => false,
+                'error' => 'invalid_params',
+                'message' => 'patient_id must be canonical',
+                'meta' => ['fields' => ['patient_id' => 'invalid']],
+            ];
+        }
+
+        $patientId = trim((string)$value);
+        if ($patientId === '' || !$this->isCanonicalPatientId($patientId)) {
+            return [
+                'ok' => false,
+                'error' => 'invalid_params',
+                'message' => 'patient_id must be canonical',
+                'meta' => ['fields' => ['patient_id' => 'invalid']],
+            ];
+        }
+
+        try {
+            if (!$this->patientExists($patientId)) {
+                return [
+                    'ok' => false,
+                    'error' => 'not_found',
+                    'message' => 'patient not found',
+                    'meta' => ['fields' => ['patient_id' => 'not_found']],
+                ];
+            }
+        } catch (\Throwable $e) {
+            return [
+                'ok' => false,
+                'error' => 'db_error',
+                'message' => 'database error',
+                'meta' => $this->qaDebugMeta($e),
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'patient_id' => $patientId,
+        ];
+    }
+
+    private function isCanonicalPatientId(string $value): bool
+    {
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{12}$/i', $value) === 1) {
+            return true;
+        }
+        if (preg_match('/^p_[a-f0-9]{12}$/i', $value) === 1) {
+            return true;
+        }
+        return preg_match('/^p_[A-Za-z0-9_-]{6,62}$/', $value) === 1;
+    }
+
+    private function patientExists(string $patientId): bool
+    {
+        if (!$this->pdo) {
+            throw new RuntimeException('database error');
+        }
+        $stmt = $this->pdo->prepare('SELECT patient_id FROM patients_patients WHERE patient_id = :patient_id LIMIT 1');
+        $stmt->bindValue(':patient_id', $patientId, \PDO::PARAM_STR);
+        $stmt->execute();
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return is_array($row) && trim((string)($row['patient_id'] ?? '')) !== '';
     }
 
     private function validateReschedule(string $appointmentId, array $payload): array
