@@ -37,6 +37,35 @@ function safeArray($value): array
     return is_array($value) ? $value : [];
 }
 
+function telHref(?string $value): ?string
+{
+    if ($value === null) {
+        return null;
+    }
+    $trimmed = trim($value);
+    if ($trimmed === '') {
+        return null;
+    }
+    $startsWithPlus = str_starts_with($trimmed, '+');
+    $digits = preg_replace('/\D/', '', $trimmed);
+    if (!is_string($digits) || strlen($digits) < 7 || strlen($digits) > 16) {
+        return null;
+    }
+    return 'tel:' . ($startsWithPlus ? '+' : '') . $digits;
+}
+
+function whatsappHref(?string $value): ?string
+{
+    if ($value === null) {
+        return null;
+    }
+    $digits = preg_replace('/\D/', '', $value);
+    if (!is_string($digits) || strlen($digits) < 7 || strlen($digits) > 16) {
+        return null;
+    }
+    return 'https://wa.me/' . $digits;
+}
+
 function isLocalDevRequest(): bool
 {
     $host = trim((string)($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? ''));
@@ -355,9 +384,24 @@ $showInsurances = toBool($publicVisibility['show_accepted_insurances'] ?? false)
 
 $contactPhone = $showPhone ? toText($contact['phone'] ?? null) : null;
 $contactWhatsapp = $showWhatsapp ? toText($contact['whatsapp'] ?? null) : null;
+$contactEmail = (
+    $showContactButtons
+    && toBool($contact['has_public_email'] ?? false)
+) ? toText($contact['email'] ?? null) : null;
+$contactPhoneHref = telHref($contactPhone);
+$contactWhatsappHref = whatsappHref($contactWhatsapp);
+$contactEmailHref = $contactEmail !== null && filter_var($contactEmail, FILTER_VALIDATE_EMAIL)
+    ? 'mailto:' . $contactEmail
+    : null;
+$canRenderContactActions = (
+    $contactPhoneHref !== null
+    || $contactWhatsappHref !== null
+    || $contactEmailHref !== null
+);
 $canRenderContactSection = ($showContactButtons && (
     $contactPhone !== null
     || $contactWhatsapp !== null
+    || $contactEmail !== null
     || $showInternalInbox
 ));
 
@@ -513,9 +557,20 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
               <p class="mxpp-plan-note">Perfil informativo · <?= h($planLabel) ?></p>
             <?php endif; ?>
             <p class="mxpp-consultas-note">Consultas recientes de este perfil no disponibles por ahora.</p>
-            <?php if ($showPublicAgenda && $agendaEndpoint !== null): ?>
+            <?php if (($showPublicAgenda && $agendaEndpoint !== null) || $canRenderContactActions): ?>
               <div class="mxpp-profile-cta">
-                <a class="mxpp-book-cta" href="<?= h($bookAppointmentUrl) ?>">Agendar cita</a>
+                <?php if ($contactPhoneHref !== null): ?>
+                  <a class="mxpp-contact-cta mxpp-contact-cta--phone" href="<?= h($contactPhoneHref) ?>">Llamar</a>
+                <?php endif; ?>
+                <?php if ($contactWhatsappHref !== null): ?>
+                  <a class="mxpp-contact-cta mxpp-contact-cta--whatsapp" href="<?= h($contactWhatsappHref) ?>" target="_blank" rel="noopener">WhatsApp</a>
+                <?php endif; ?>
+                <?php if ($contactEmailHref !== null): ?>
+                  <a class="mxpp-contact-cta mxpp-contact-cta--email" href="<?= h($contactEmailHref) ?>">Email</a>
+                <?php endif; ?>
+                <?php if ($showPublicAgenda && $agendaEndpoint !== null): ?>
+                  <a class="mxpp-book-cta" href="<?= h($bookAppointmentUrl) ?>">Agendar cita</a>
+                <?php endif; ?>
               </div>
             <?php endif; ?>
           </article>
@@ -576,6 +631,9 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
           <?php endif; ?>
           <?php if ($showWhatsapp && $contactWhatsapp !== null): ?>
             <p><strong>WhatsApp:</strong> <?= h($contactWhatsapp) ?></p>
+          <?php endif; ?>
+          <?php if ($contactEmail !== null): ?>
+            <p><strong>Email:</strong> <?= h($contactEmail) ?></p>
           <?php endif; ?>
           <?php if ($showInternalInbox): ?>
             <p class="mxpp-muted">Buzón interno disponible según configuración pública vigente.</p>

@@ -335,9 +335,14 @@ body {
 
 .mxpp-profile-cta {
   margin-top: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.mxpp-book-cta {
+.mxpp-book-cta,
+.mxpp-contact-cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -352,11 +357,30 @@ body {
   box-shadow: 0 10px 22px rgba(10, 158, 168, 0.18);
 }
 
+.mxpp-contact-cta {
+  background: #fff;
+  border-color: #8fc7d3;
+  color: #0b6f83;
+  box-shadow: none;
+}
+
 .mxpp-book-cta:hover,
-.mxpp-book-cta:focus {
+.mxpp-book-cta:focus,
+.mxpp-contact-cta:hover,
+.mxpp-contact-cta:focus {
   color: #fff;
   text-decoration: none;
+}
+
+.mxpp-book-cta:hover,
+.mxpp-book-cta:focus {
   background: linear-gradient(90deg, #0fa2aa 0%, #087f8a 100%);
+}
+
+.mxpp-contact-cta:hover,
+.mxpp-contact-cta:focus {
+  background: #0d7f91;
+  border-color: #0d7f91;
 }
 
 .mxpp-title-row {
