@@ -688,6 +688,24 @@ body {
   font-weight: 800;
 }
 
+.mxpp-agenda-compact__selection {
+  margin-top: 0.72rem;
+  border: 1px solid #c9dce2;
+  border-radius: 8px;
+  background: #f7fbfc;
+  color: #58707a;
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.4;
+  padding: 0.48rem 0.62rem;
+}
+
+.mxpp-agenda-compact__selection--active {
+  border-color: #77b9c8;
+  background: #e9f8fb;
+  color: #104d64;
+}
+
 .mxpp-agenda-compact__slots {
   margin-top: 0.54rem;
   display: flex;
@@ -727,6 +745,7 @@ body {
 .mxpp-agenda-compact__slot--selected:focus {
   border-color: #0b6f83;
   background: #0b6f83;
+  box-shadow: 0 0 0 3px rgba(11, 111, 131, 0.18);
   color: #fff;
   text-decoration: none;
 }

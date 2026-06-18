@@ -656,6 +656,9 @@ if (isLocalDevRequest()) {
             <button class="mxpp-agenda-compact__nav-btn" type="button" data-mxpp-agenda-next disabled aria-label="Ver siguientes fechas disponibles">Siguiente</button>
           </div>
           <div class="mxpp-agenda-compact__days" data-mxpp-agenda-days hidden></div>
+          <div class="mxpp-agenda-compact__selection" data-mxpp-agenda-selection aria-live="polite">
+            <span class="mxpp-agenda-compact__selection-text" data-mxpp-agenda-selection-text>Selecciona un horario para continuar.</span>
+          </div>
           <div class="mxpp-agenda-compact__footer">
             <a class="mxpp-book-cta" href="<?= h($bookAppointmentUrl) ?>">Agendar cita</a>
           </div>
@@ -848,6 +851,22 @@ if (isLocalDevRequest()) {
             : [];
         }
 
+        function resetSelectionState(block, state) {
+          state.selectedSlot = null;
+          block.querySelectorAll('.mxpp-agenda-compact__slot').forEach(function (button) {
+            button.classList.remove('mxpp-agenda-compact__slot--selected');
+            button.setAttribute('aria-pressed', 'false');
+          });
+          var selection = block.querySelector('[data-mxpp-agenda-selection]');
+          var selectionText = block.querySelector('[data-mxpp-agenda-selection-text]');
+          if (selection) {
+            selection.classList.remove('mxpp-agenda-compact__selection--active');
+          }
+          if (selectionText) {
+            selectionText.textContent = 'Selecciona un horario para continuar.';
+          }
+        }
+
         function setSelectedSlot(block, state, slotData) {
           state.selectedSlot = slotData;
           block.querySelectorAll('.mxpp-agenda-compact__slot').forEach(function (button) {
@@ -856,6 +875,14 @@ if (isLocalDevRequest()) {
             button.classList.toggle('mxpp-agenda-compact__slot--selected', isSelected);
             button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
           });
+          var selection = block.querySelector('[data-mxpp-agenda-selection]');
+          var selectionText = block.querySelector('[data-mxpp-agenda-selection-text]');
+          if (selection) {
+            selection.classList.add('mxpp-agenda-compact__selection--active');
+          }
+          if (selectionText) {
+            selectionText.textContent = 'Horario seleccionado: ' + formatDate(slotData.date) + ', ' + formatTime(slotData.start_at) + '. Pulsa Agendar cita para continuar.';
+          }
         }
 
         function renderCurrentBlock(block, state) {
@@ -866,7 +893,7 @@ if (isLocalDevRequest()) {
 
           var currentBlock = state.blocks[state.currentBlockIndex] || null;
           var usefulDays = currentBlock && Array.isArray(currentBlock.days) ? currentBlock.days : [];
-          state.selectedSlot = null;
+          resetSelectionState(block, state);
           updateControls(block, state);
 
           if (usefulDays.length === 0) {
