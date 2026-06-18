@@ -33,11 +33,13 @@ final class PublicProfileRepository
         $scheduleRows = $this->fetchScheduleRows($doctorId);
         $hasAppointments = $this->doctorHasAppointments($doctorId);
         $canonicalProfile = $this->fetchCanonicalProfileRow($doctorId);
+        $publicContactPoints = $this->fetchPublicContactPointRows($doctorId);
 
         return [
             'exists' => (!empty($consultorios) || !empty($scheduleRows) || $hasAppointments || $canonicalProfile !== null),
             'consultorios' => $consultorios,
             'schedule_rows' => $scheduleRows,
+            'public_contact_points' => $publicContactPoints,
             'has_appointments' => $hasAppointments,
             'profile_source' => $this->resolveProfileSource($canonicalProfile),
             'plan_source' => $this->resolvePlanSource($canonicalProfile),
@@ -123,6 +125,86 @@ final class PublicProfileRepository
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute(['doctor_id' => $doctorId]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return is_array($rows) ? $rows : [];
+    }
+
+    private function fetchPublicContactPointRows(string $doctorId): array
+    {
+        if (!$this->tableExists('doctor_contact_points')) {
+            return [];
+        }
+
+        $columns = $this->tableColumns('doctor_contact_points');
+        $required = [
+            'doctor_id',
+            'type',
+            'value',
+            'normalized_value',
+            'scope',
+            'is_public',
+            'use_for_public_profile',
+            'use_for_security',
+            'use_for_platform_admin',
+            'status',
+            'deleted_at',
+        ];
+        foreach ($required as $column) {
+            if (!in_array($column, $columns, true)) {
+                return [];
+            }
+        }
+
+        $allowlist = [
+            'contact_point_id',
+            'type',
+            'value',
+            'normalized_value',
+            'label',
+            'scope',
+            'is_public',
+            'is_verified',
+            'verification_status',
+            'use_for_public_profile',
+            'visibility_plan_min',
+            'status',
+            'sort_order',
+            'source',
+        ];
+        $selected = [];
+        foreach ($allowlist as $column) {
+            if (in_array($column, $columns, true)) {
+                $selected[] = sprintf('`%s`', $column);
+            }
+        }
+        if (empty($selected)) {
+            return [];
+        }
+
+        $sql = sprintf(
+            'SELECT %s
+               FROM `doctor_contact_points`
+              WHERE `doctor_id` = :doctor_id
+                AND `deleted_at` IS NULL
+                AND `status` = \'active\'
+                AND `is_public` = 1
+                AND `use_for_public_profile` = 1
+                AND `use_for_security` = 0
+                AND `use_for_platform_admin` = 0
+                AND `scope` IN (\'public\', \'public_profile\')
+                AND `type` IN (\'phone\', \'whatsapp\', \'email\')
+                AND TRIM(`value`) <> \'\'
+              ORDER BY `sort_order` ASC, `contact_point_id` ASC',
+            implode(', ', $selected)
+        );
+
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute(['doctor_id' => $doctorId]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return [];
+        }
+
         return is_array($rows) ? $rows : [];
     }
 

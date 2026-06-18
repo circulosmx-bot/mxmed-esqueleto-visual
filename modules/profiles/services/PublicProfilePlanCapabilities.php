@@ -219,6 +219,13 @@ final class PublicProfilePlanCapabilities
         return self::DEFAULT_PLAN;
     }
 
+    public static function planMeetsMinimum($planCode, $minimumPlanCode): bool
+    {
+        $code = self::normalizePlanCode($planCode);
+        $minimum = self::normalizePlanCode($minimumPlanCode);
+        return self::PLAN_TIERS[$code] >= self::PLAN_TIERS[$minimum];
+    }
+
     private static function capabilitiesFor(string $planCode): array
     {
         $base = [

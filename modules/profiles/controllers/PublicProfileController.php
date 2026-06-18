@@ -38,12 +38,17 @@ final class PublicProfileController
         $profileSource = (array)($snapshot['profile_source'] ?? []);
         $planSource = (array)($snapshot['plan_source'] ?? []);
         $scheduleRows = is_array($snapshot['schedule_rows'] ?? null) ? $snapshot['schedule_rows'] : [];
+        $publicContactPoints = is_array($snapshot['public_contact_points'] ?? null) ? $snapshot['public_contact_points'] : [];
+        $publicContact = $this->buildPublicContactPayload(
+            $publicContactPoints,
+            PublicProfilePlanCapabilities::normalizePlanCode($planSource['plan_code'] ?? null)
+        );
 
         $planContext = [
             'plan_source' => $planSource['source'] ?? 'default_free',
             'has_public_profile' => false,
             'is_claimed' => false,
-            'public_contact_source_ready' => false,
+            'public_contact_source_ready' => (bool)($publicContact['has_public_contact'] ?? false),
             'claim_source_ready' => false,
             'commercial_source_ready' => false,
         ];
@@ -66,6 +71,12 @@ final class PublicProfileController
         $planContract = PublicProfilePlanCapabilities::build($planSource['plan_code'] ?? null, $planContext);
         $plan = (array)$planContract['plan'];
         $publicVisibility = (array)$planContract['public_visibility'];
+        $contact = $this->mergeContactCapabilities((array)$planContract['contact'], $publicContact, $publicVisibility);
+        $featureFlags = (array)$planContract['feature_flags'];
+        $featureFlags['has_public_contact'] = (bool)($contact['has_public_contact'] ?? false);
+        $featureFlags['has_public_phone'] = (bool)($contact['has_public_phone'] ?? false);
+        $featureFlags['has_public_whatsapp'] = (bool)($contact['has_public_whatsapp'] ?? false);
+        $featureFlags['has_public_email'] = (bool)($contact['has_public_email'] ?? false);
 
         $city = $this->firstNonEmpty($consultorios[0]['city'] ?? null);
         $displayName = $this->firstNonEmpty($identity['display_name'] ?? null);
@@ -123,7 +134,7 @@ final class PublicProfileController
             'specialties' => $this->sanitizeSpecialties($specialties),
             'consultorios' => $consultorios,
             'schedule' => $schedule,
-            'contact' => (array)$planContract['contact'],
+            'contact' => $contact,
             'agenda_public' => (array)$planContract['agenda_public'],
             'commercial_visibility' => (array)$planContract['commercial_visibility'],
             'reviews' => (array)$planContract['reviews'],
@@ -147,7 +158,7 @@ final class PublicProfileController
                 'imaging_centers' => [],
                 'pharma_partners' => [],
             ],
-            'feature_flags' => (array)$planContract['feature_flags'],
+            'feature_flags' => $featureFlags,
         ];
 
         return [
@@ -178,18 +189,6 @@ final class PublicProfileController
 
             $mapPayload = buildConsultorioPublicMapPayload($row);
             $hasConfirmedCoords = (bool)($mapPayload['public_map_has_confirmed_coords'] ?? false);
-            $phones = $this->decodeJsonArray($row['telefonos_json'] ?? null);
-            $phonePublic = null;
-            if ((bool)($publicVisibility['show_phone'] ?? false) && !empty($phones)) {
-                $phonePublic = trim((string)$phones[0]);
-                if ($phonePublic === '') {
-                    $phonePublic = null;
-                }
-            }
-            $whatsappPublic = null;
-            if ((bool)($publicVisibility['show_whatsapp'] ?? false)) {
-                $whatsappPublic = $this->firstNonEmpty($row['whatsapp'] ?? null);
-            }
 
             $title = $this->firstNonEmpty($row['titulo'] ?? null);
             if ($title === null) {
@@ -207,8 +206,8 @@ final class PublicProfileController
                 'state' => $this->firstNonEmpty($row['estado'] ?? null),
                 'municipality' => $this->firstNonEmpty($row['municipio'] ?? null),
                 'postal_code' => $this->firstNonEmpty($row['cp'] ?? null),
-                'phone_public' => $phonePublic,
-                'whatsapp_public' => $whatsappPublic,
+                'phone_public' => null,
+                'whatsapp_public' => null,
                 'lat' => $hasConfirmedCoords ? ($mapPayload['lat'] ?? null) : null,
                 'lng' => $hasConfirmedCoords ? ($mapPayload['lng'] ?? null) : null,
                 'map_embed_url' => $this->firstNonEmpty($mapPayload['public_map_iframe_url'] ?? null),
@@ -221,6 +220,114 @@ final class PublicProfileController
             ];
         }
         return $mapped;
+    }
+
+    private function buildPublicContactPayload(array $rows, string $planCode): array
+    {
+        $contact = [
+            'phone' => null,
+            'whatsapp' => null,
+            'email' => null,
+            'has_public_contact' => false,
+            'has_public_phone' => false,
+            'has_public_whatsapp' => false,
+            'has_public_email' => false,
+            'source' => 'doctor_contact_points',
+        ];
+
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $visibilityPlanMin = $this->firstNonEmpty($row['visibility_plan_min'] ?? null);
+            if ($visibilityPlanMin !== null && !PublicProfilePlanCapabilities::planMeetsMinimum($planCode, $visibilityPlanMin)) {
+                continue;
+            }
+
+            $type = strtolower(trim((string)($row['type'] ?? '')));
+            if (!in_array($type, ['phone', 'whatsapp', 'email'], true)) {
+                continue;
+            }
+            if (!$this->isPublicContactRow($row)) {
+                continue;
+            }
+
+            $value = $this->sanitizePublicContactValue($type, $row);
+            if ($value === null) {
+                continue;
+            }
+
+            if ($type === 'phone' && $contact['phone'] === null) {
+                $contact['phone'] = $value;
+                $contact['has_public_phone'] = true;
+            } elseif ($type === 'whatsapp' && $contact['whatsapp'] === null) {
+                $contact['whatsapp'] = $value;
+                $contact['has_public_whatsapp'] = true;
+            } elseif ($type === 'email' && $contact['email'] === null) {
+                $contact['email'] = $value;
+                $contact['has_public_email'] = true;
+            }
+        }
+
+        $contact['has_public_contact'] = (
+            (bool)$contact['has_public_phone']
+            || (bool)$contact['has_public_whatsapp']
+            || (bool)$contact['has_public_email']
+        );
+        return $contact;
+    }
+
+    private function mergeContactCapabilities(array $base, array $publicContact, array $publicVisibility): array
+    {
+        $showContactButtons = (bool)($publicVisibility['show_contact_buttons'] ?? false);
+        $showPhone = $showContactButtons && (bool)($publicVisibility['show_phone'] ?? false) && (bool)($publicContact['has_public_phone'] ?? false);
+        $showWhatsapp = $showContactButtons && (bool)($publicVisibility['show_whatsapp'] ?? false) && (bool)($publicContact['has_public_whatsapp'] ?? false);
+        $showEmail = $showContactButtons && (bool)($publicContact['has_public_email'] ?? false);
+        $hasPublicContact = $showPhone || $showWhatsapp || $showEmail;
+
+        $base['show_contact_buttons'] = $hasPublicContact;
+        $base['phone'] = $showPhone ? ($publicContact['phone'] ?? null) : null;
+        $base['whatsapp'] = $showWhatsapp ? ($publicContact['whatsapp'] ?? null) : null;
+        $base['email'] = $showEmail ? ($publicContact['email'] ?? null) : null;
+        $base['has_public_contact'] = $hasPublicContact;
+        $base['has_public_phone'] = $showPhone;
+        $base['has_public_whatsapp'] = $showWhatsapp;
+        $base['has_public_email'] = $showEmail;
+        $base['source'] = 'doctor_contact_points';
+        if (!$hasPublicContact && ($base['contact_restriction_reason'] ?? null) === null) {
+            $base['contact_restriction_reason'] = 'no_public_contact';
+        }
+        return $base;
+    }
+
+    private function isPublicContactRow(array $row): bool
+    {
+        $scope = strtolower(trim((string)($row['scope'] ?? '')));
+        return ((int)($row['is_public'] ?? 0) === 1)
+            && ((int)($row['use_for_public_profile'] ?? 0) === 1)
+            && ((int)($row['use_for_security'] ?? 0) === 0)
+            && ((int)($row['use_for_platform_admin'] ?? 0) === 0)
+            && strtolower(trim((string)($row['status'] ?? ''))) === 'active'
+            && in_array($scope, ['public', 'public_profile'], true);
+    }
+
+    private function sanitizePublicContactValue(string $type, array $row): ?string
+    {
+        if ($type === 'email') {
+            $email = strtolower(trim((string)($row['normalized_value'] ?? $row['value'] ?? '')));
+            return filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
+        }
+
+        $raw = trim((string)($row['normalized_value'] ?? ''));
+        if ($raw === '') {
+            $raw = trim((string)($row['value'] ?? ''));
+        }
+        $startsWithPlus = str_starts_with($raw, '+');
+        $digits = preg_replace('/\D/', '', $raw);
+        if (!is_string($digits) || strlen($digits) < 7 || strlen($digits) > 16) {
+            return null;
+        }
+        return $startsWithPlus ? '+' . $digits : $digits;
     }
 
     private function buildPublicConsultorioAddress(array $row, array $mapPayload): ?string
