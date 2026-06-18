@@ -586,6 +586,96 @@ body {
   margin: 0 0 0.5rem;
 }
 
+.mxpp-agenda-compact__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.mxpp-agenda-compact__header h2 {
+  margin-bottom: 0.24rem;
+}
+
+.mxpp-agenda-compact__header p,
+.mxpp-agenda-compact__status {
+  margin: 0;
+  color: var(--mxpp-muted);
+  line-height: 1.45;
+}
+
+.mxpp-agenda-compact__open {
+  flex: 0 0 auto;
+  color: #0b7189;
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.mxpp-agenda-compact__days {
+  margin-top: 0.76rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.62rem;
+}
+
+.mxpp-agenda-compact__day {
+  border: 1px solid #c7dfe8;
+  border-radius: 9px;
+  background: #f8fcfe;
+  padding: 0.68rem;
+}
+
+.mxpp-agenda-compact__day h3,
+.mxpp-agenda-compact__day p {
+  margin: 0;
+}
+
+.mxpp-agenda-compact__day h3 {
+  color: #104d64;
+  font-size: 0.96rem;
+}
+
+.mxpp-agenda-compact__day p {
+  margin-top: 0.12rem;
+  color: #5d747e;
+  font-size: 0.78rem;
+}
+
+.mxpp-agenda-compact__slots {
+  margin-top: 0.54rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.36rem;
+}
+
+.mxpp-agenda-compact__slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0.3rem 0.48rem;
+  border: 1px solid #8fc7d3;
+  border-radius: 8px;
+  background: #fff;
+  color: #0b6f83;
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.mxpp-agenda-compact__slot:hover,
+.mxpp-agenda-compact__slot:focus,
+.mxpp-agenda-compact__open:hover,
+.mxpp-agenda-compact__open:focus {
+  color: #0a6173;
+  text-decoration: underline;
+}
+
+.mxpp-agenda-compact__footer {
+  margin-top: 0.78rem;
+}
+
 .mxpp-bullets {
   margin: 0.35rem 0 0;
   padding-left: 1rem;
@@ -732,6 +822,10 @@ body {
   .mxpp-actions-row {
     grid-template-columns: 1fr;
   }
+
+  .mxpp-agenda-compact__days {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -760,6 +854,10 @@ body {
   .mxpp-title-row {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .mxpp-agenda-compact__header {
+    flex-direction: column;
   }
 
   .mxpp-profile-title {

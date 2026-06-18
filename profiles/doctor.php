@@ -622,13 +622,25 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
         </section>
       <?php endif; ?>
 
-      <?php if ($showPublicAgenda): ?>
-        <section class="mxpp-card mxpp-card--section">
-          <h2>Agenda pública</h2>
-          <p class="mxpp-muted">La disponibilidad se muestra según la configuración pública vigente.</p>
-          <?php if ($agendaEndpoint !== null): ?>
-            <p class="mxpp-muted">Fuente: <?= h($agendaEndpoint) ?></p>
-          <?php endif; ?>
+      <?php if ($showPublicAgenda && $agendaEndpoint !== null): ?>
+        <section
+          class="mxpp-card mxpp-card--section mxpp-agenda-compact"
+          data-mxpp-agenda-compact
+          data-doctor-id="<?= h($doctorId) ?>"
+          data-booking-url="<?= h($bookAppointmentUrl) ?>"
+        >
+          <div class="mxpp-agenda-compact__header">
+            <div>
+              <h2>Próximos horarios</h2>
+              <p>Consulta las fechas más próximas disponibles y agenda en línea.</p>
+            </div>
+            <a class="mxpp-agenda-compact__open" href="<?= h($bookAppointmentUrl) ?>">Ver agenda</a>
+          </div>
+          <p class="mxpp-agenda-compact__status" data-mxpp-agenda-status>Cargando horarios...</p>
+          <div class="mxpp-agenda-compact__days" data-mxpp-agenda-days hidden></div>
+          <div class="mxpp-agenda-compact__footer">
+            <a class="mxpp-book-cta" href="<?= h($bookAppointmentUrl) ?>">Agendar cita</a>
+          </div>
         </section>
       <?php endif; ?>
 
@@ -727,6 +739,126 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
       </select>
       <span class="mxpp-dev-plan-switcher__hint">Sólo DEV</span>
     </form>
+  <?php endif; ?>
+  <?php if ($showPublicAgenda && $agendaEndpoint !== null): ?>
+    <script>
+      (function () {
+        function escapeHtml(value) {
+          return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+        }
+
+        function formatDate(dateYmd) {
+          var date = new Date(String(dateYmd || '') + 'T00:00:00');
+          if (Number.isNaN(date.getTime())) {
+            return String(dateYmd || '');
+          }
+          return new Intl.DateTimeFormat('es-MX', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short'
+          }).format(date);
+        }
+
+        function formatTime(dateTimeValue) {
+          var value = String(dateTimeValue || '');
+          return value.length >= 16 ? value.slice(11, 16) : value;
+        }
+
+        function renderStatus(block, message) {
+          var status = block.querySelector('[data-mxpp-agenda-status]');
+          if (status) {
+            status.textContent = message;
+            status.hidden = false;
+          }
+        }
+
+        function renderDays(block, days, bookingUrl) {
+          var status = block.querySelector('[data-mxpp-agenda-status]');
+          var container = block.querySelector('[data-mxpp-agenda-days]');
+          if (!container) {
+            return;
+          }
+
+          var usefulDays = Array.isArray(days)
+            ? days.filter(function (day) {
+              return day && Array.isArray(day.slots) && day.slots.length > 0;
+            }).slice(0, 3)
+            : [];
+
+          if (usefulDays.length === 0) {
+            renderStatus(block, 'No hay horarios disponibles por ahora. Puedes revisar más opciones en la agenda.');
+            container.hidden = true;
+            container.innerHTML = '';
+            return;
+          }
+
+          if (status) {
+            status.hidden = true;
+          }
+
+          container.innerHTML = usefulDays.map(function (day) {
+            var date = String(day.date || '');
+            var slots = Array.isArray(day.slots) ? day.slots.slice(0, 3) : [];
+            var slotHtml = slots.map(function (slot) {
+              var startAt = String(slot && slot.start_at ? slot.start_at : '');
+              if (startAt === '') {
+                return '';
+              }
+              return '<a class="mxpp-agenda-compact__slot" href="' + escapeHtml(bookingUrl) + '">' + escapeHtml(formatTime(startAt)) + '</a>';
+            }).join('');
+
+            return '<article class="mxpp-agenda-compact__day">'
+              + '<h3>' + escapeHtml(formatDate(date)) + '</h3>'
+              + '<p>' + escapeHtml(date) + '</p>'
+              + '<div class="mxpp-agenda-compact__slots">' + slotHtml + '</div>'
+              + '</article>';
+          }).join('');
+          container.hidden = false;
+        }
+
+        function loadCompactAgenda(block) {
+          var doctorId = String(block.getAttribute('data-doctor-id') || '').trim();
+          var bookingUrl = String(block.getAttribute('data-booking-url') || '/public-book.html').trim();
+          if (doctorId === '') {
+            renderStatus(block, 'No pudimos cargar los horarios en este momento.');
+            return;
+          }
+
+          var params = new URLSearchParams();
+          params.set('doctor_id', doctorId);
+          params.set('mode', 'next');
+          params.set('days', '3');
+          params.set('limit_per_day', '3');
+
+          fetch('/api/agenda/index.php/public/availability?' + params.toString(), {
+            method: 'GET',
+            headers: { Accept: 'application/json' }
+          })
+            .then(function (response) {
+              return response.json().then(function (payload) {
+                if (!response.ok || !payload || payload.ok !== true) {
+                  throw new Error('availability unavailable');
+                }
+                return payload;
+              });
+            })
+            .then(function (payload) {
+              var data = payload && payload.data ? payload.data : {};
+              renderDays(block, Array.isArray(data.days) ? data.days : [], bookingUrl);
+            })
+            .catch(function () {
+              renderStatus(block, 'No pudimos cargar los horarios en este momento.');
+            });
+        }
+
+        document.querySelectorAll('[data-mxpp-agenda-compact]').forEach(loadCompactAgenda);
+      })();
+    </script>
   <?php endif; ?>
 </body>
 </html>
