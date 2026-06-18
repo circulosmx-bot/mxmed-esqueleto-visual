@@ -1089,6 +1089,21 @@
                             </div>
                             <span class="mx-dg-contact-field-badge is-muted">Opt-in requerido</span>
                           </div>
+                          <form class="mx-dg-contact-create" id="mx-dg-contact-create-form" aria-label="Agregar contacto privado">
+                            <div class="mx-dg-contact-create__head">
+                              <div class="mx-dg-contact-create__title">Agregar contacto privado</div>
+                              <div class="mx-dg-contact-create__text">Los contactos nuevos se guardan como privados. Podrás marcarlos como públicos después si deseas mostrarlos en tu perfil público y tu plan lo permite.</div>
+                            </div>
+                            <div class="mx-dg-contact-create__row">
+                              <select class="form-select form-select-sm no-check" id="mx-dg-contact-create-type" data-no-check="1" aria-label="Tipo de contacto">
+                                <option value="phone">Teléfono</option>
+                                <option value="whatsapp">WhatsApp</option>
+                                <option value="email">Email</option>
+                              </select>
+                              <input class="form-control form-control-sm no-check" id="mx-dg-contact-create-value" data-no-check="1" placeholder="Valor del contacto" autocomplete="off">
+                              <button class="btn btn-outline-primary btn-sm" id="mx-dg-contact-create-btn" type="submit">Agregar contacto</button>
+                            </div>
+                          </form>
                           <div class="mx-dg-public-contact-list" id="mx-dg-public-contact-list" aria-live="polite">
                             <div class="mx-dg-public-contact-empty">Cargando contactos configurables...</div>
                           </div>

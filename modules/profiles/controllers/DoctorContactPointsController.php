@@ -16,11 +16,6 @@ final class DoctorContactPointsController
         'type',
         'value',
         'label',
-        'scope',
-        'use_for_security',
-        'use_for_platform_admin',
-        'use_for_appointments',
-        'status',
         'sort_order',
     ];
 
@@ -43,11 +38,16 @@ final class DoctorContactPointsController
         'doctor_id',
         'contact_point_id',
         'normalized_value',
+        'scope',
         'is_public',
+        'use_for_security',
+        'use_for_platform_admin',
         'use_for_public_profile',
+        'use_for_appointments',
         'visibility_plan_min',
         'is_verified',
         'verification_status',
+        'status',
         'consultorio_id',
         'source',
         'metadata_json',
@@ -673,32 +673,17 @@ final class DoctorContactPointsController
             if ($type === 'email' && filter_var($normalizedValue, FILTER_VALIDATE_EMAIL) === false) {
                 $errors[] = 'value must be a valid email';
             }
-            if (($type === 'phone' || $type === 'whatsapp') && ($normalizedValue === '' || $normalizedValue === '+')) {
-                $errors[] = 'value must contain phone digits';
+            if ($type === 'phone' || $type === 'whatsapp') {
+                $digits = preg_replace('/\D/', '', $normalizedValue);
+                $digits = is_string($digits) ? $digits : '';
+                if (strlen($digits) < 10 || strlen($digits) > 15) {
+                    $errors[] = 'value must contain 10 to 15 phone digits';
+                }
             }
-        }
-
-        $scope = strtolower((string)$this->sanitizeText($payload['scope'] ?? 'private', 32));
-        if ($scope === '') {
-            $scope = 'private';
-        }
-        if (!in_array($scope, self::ALLOWED_SCOPES, true)) {
-            $errors[] = 'scope must be one of: private, operational, platform_admin';
-        }
-
-        $status = strtolower((string)$this->sanitizeText($payload['status'] ?? 'active', 32));
-        if ($status === '') {
-            $status = 'active';
-        }
-        if (!in_array($status, self::ALLOWED_STATUSES, true)) {
-            $errors[] = 'status must be one of: active, inactive, archived';
         }
 
         $label = $this->sanitizeText($payload['label'] ?? null, 120);
         $sortOrder = $this->parseSortOrder($payload['sort_order'] ?? 100, $errors);
-        $useForSecurity = $this->parseBoolean($payload['use_for_security'] ?? false, 'use_for_security', $errors);
-        $useForPlatformAdmin = $this->parseBoolean($payload['use_for_platform_admin'] ?? false, 'use_for_platform_admin', $errors);
-        $useForAppointments = $this->parseBoolean($payload['use_for_appointments'] ?? false, 'use_for_appointments', $errors);
 
         return [
             'contact_point' => [
@@ -706,11 +691,11 @@ final class DoctorContactPointsController
                 'value' => $value,
                 'normalized_value' => $normalizedValue,
                 'label' => $label,
-                'scope' => $scope,
-                'use_for_security' => $useForSecurity,
-                'use_for_platform_admin' => $useForPlatformAdmin,
-                'use_for_appointments' => $useForAppointments,
-                'status' => $status,
+                'scope' => 'private',
+                'use_for_security' => false,
+                'use_for_platform_admin' => false,
+                'use_for_appointments' => false,
+                'status' => 'active',
                 'sort_order' => $sortOrder,
             ],
             'blocked_fields' => array_values(array_unique($blocked)),

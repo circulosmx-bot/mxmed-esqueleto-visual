@@ -1161,7 +1161,11 @@ console.info('app.js loaded :: 20251123a');
     legacyFeedback: document.getElementById('mxpi-legacy-feedback'),
     profileLink: document.getElementById('mx-public-profile-link'),
     publicContactList: document.getElementById('mx-dg-public-contact-list'),
-    publicContactFeedback: document.getElementById('mx-dg-public-contact-feedback')
+    publicContactFeedback: document.getElementById('mx-dg-public-contact-feedback'),
+    contactCreateForm: document.getElementById('mx-dg-contact-create-form'),
+    contactCreateType: document.getElementById('mx-dg-contact-create-type'),
+    contactCreateValue: document.getElementById('mx-dg-contact-create-value'),
+    contactCreateBtn: document.getElementById('mx-dg-contact-create-btn')
   };
 
   const legacyCredentialEls = {
@@ -1684,6 +1688,75 @@ console.info('app.js loaded :: 20251123a');
     return true;
   }
 
+  function validateContactCreatePayload(){
+    const type = String(els.contactCreateType?.value || '').trim().toLowerCase();
+    const value = String(els.contactCreateValue?.value || '').trim();
+    if(!PUBLIC_CONTACT_TYPES.has(type)){
+      return { valid: false, message: 'Selecciona un tipo de contacto válido.' };
+    }
+    if(!value){
+      return { valid: false, message: 'Captura el valor del contacto.' };
+    }
+    if(type === 'email'){
+      const email = value.toLowerCase();
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+        return { valid: false, message: 'Captura un correo electrónico válido.' };
+      }
+      return { valid: true, payload: { type, value: email } };
+    }
+    const digits = value.replace(/\D+/g, '');
+    if(digits.length < 10 || digits.length > 15){
+      return { valid: false, message: 'Captura un teléfono con 10 a 15 dígitos.' };
+    }
+    return { valid: true, payload: { type, value } };
+  }
+
+  function setContactCreateBusy(isBusy){
+    if(els.contactCreateBtn){
+      els.contactCreateBtn.disabled = isBusy === true;
+      els.contactCreateBtn.textContent = isBusy === true ? 'Agregando...' : 'Agregar contacto';
+    }
+    if(els.contactCreateType) els.contactCreateType.disabled = isBusy === true;
+    if(els.contactCreateValue) els.contactCreateValue.disabled = isBusy === true;
+  }
+
+  async function createPrivateContactPoint(){
+    const checked = validateContactCreatePayload();
+    if(!checked.valid){
+      setPublicContactFeedback(checked.message, 'warning');
+      return;
+    }
+    const doctorId = sanitizeDoctorId(state.doctorId) || resolveDoctorId();
+    if(!doctorId){
+      setPublicContactFeedback('No se pudo identificar al médico para agregar el contacto.', 'danger');
+      return;
+    }
+    setContactCreateBusy(true);
+    setPublicContactFeedback('Agregando contacto privado...', 'muted');
+    try{
+      const response = await fetch(buildContactPointsEndpoint(doctorId), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(checked.payload)
+      });
+      const json = await response.json().catch(()=> null);
+      if(!response.ok || !json || json.ok !== true || !json.data || !json.data.contact_point){
+        throw new Error(String(json?.message || json?.error || 'No fue posible agregar el contacto.'));
+      }
+      if(els.contactCreateValue) els.contactCreateValue.value = '';
+      setPublicContactFeedback('Contacto privado agregado. Puedes activar opt-in público después si corresponde.', 'success');
+      await loadContactPublicOptIn();
+    }catch(err){
+      setPublicContactFeedback(String(err?.message || 'No fue posible agregar el contacto.'), 'danger');
+    }finally{
+      setContactCreateBusy(false);
+    }
+  }
+
   function renderPublicContactPoints(items){
     if(!els.publicContactList) return;
     const contacts = Array.isArray(items) ? items : [];
@@ -2107,6 +2180,10 @@ console.info('app.js loaded :: 20251123a');
     }
   }
 
+  els.contactCreateForm?.addEventListener('submit', (event)=>{
+    event.preventDefault();
+    createPrivateContactPoint();
+  });
   els.saveBtn.addEventListener('click', savePrivateIdentity);
   els.saveLegacyBtn?.addEventListener('click', (event)=>{
     event.preventDefault();
