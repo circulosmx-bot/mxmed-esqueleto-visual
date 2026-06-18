@@ -637,6 +637,10 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
             <a class="mxpp-agenda-compact__open" href="<?= h($bookAppointmentUrl) ?>">Ver agenda</a>
           </div>
           <p class="mxpp-agenda-compact__status" data-mxpp-agenda-status>Cargando horarios...</p>
+          <div class="mxpp-agenda-compact__nav" aria-label="Navegación de horarios disponibles">
+            <button class="mxpp-agenda-compact__nav-btn" type="button" data-mxpp-agenda-prev disabled aria-label="Ver fechas anteriores">Anterior</button>
+            <button class="mxpp-agenda-compact__nav-btn" type="button" data-mxpp-agenda-next disabled aria-label="Ver siguientes fechas disponibles">Siguiente</button>
+          </div>
           <div class="mxpp-agenda-compact__days" data-mxpp-agenda-days hidden></div>
           <div class="mxpp-agenda-compact__footer">
             <a class="mxpp-book-cta" href="<?= h($bookAppointmentUrl) ?>">Agendar cita</a>
@@ -769,6 +773,17 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
           return value.length >= 16 ? value.slice(11, 16) : value;
         }
 
+        function addDays(dateYmd, amount) {
+          var date = new Date(String(dateYmd || '') + 'T00:00:00');
+          if (Number.isNaN(date.getTime())) {
+            return '';
+          }
+          date.setDate(date.getDate() + amount);
+          var month = String(date.getMonth() + 1).padStart(2, '0');
+          var day = String(date.getDate()).padStart(2, '0');
+          return String(date.getFullYear()) + '-' + month + '-' + day;
+        }
+
         function renderStatus(block, message) {
           var status = block.querySelector('[data-mxpp-agenda-status]');
           if (status) {
@@ -777,18 +792,53 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
           }
         }
 
-        function renderDays(block, days, bookingUrl) {
+        function clearStatus(block) {
           var status = block.querySelector('[data-mxpp-agenda-status]');
+          if (status) {
+            status.hidden = true;
+            status.textContent = '';
+          }
+        }
+
+        function updateControls(block, state) {
+          var prevButton = block.querySelector('[data-mxpp-agenda-prev]');
+          var nextButton = block.querySelector('[data-mxpp-agenda-next]');
+          if (prevButton) {
+            prevButton.disabled = state.isLoading || state.currentBlockIndex <= 0;
+          }
+          if (nextButton) {
+            nextButton.disabled = state.isLoading || (state.hasMore === false && state.currentBlockIndex >= state.blocks.length - 1);
+          }
+        }
+
+        function buildUsefulDays(days) {
+          return Array.isArray(days)
+            ? days.filter(function (day) {
+              return day && Array.isArray(day.slots) && day.slots.length > 0;
+            }).slice(0, 3)
+            : [];
+        }
+
+        function setSelectedSlot(block, state, slotData) {
+          state.selectedSlot = slotData;
+          block.querySelectorAll('.mxpp-agenda-compact__slot').forEach(function (button) {
+            var isSelected = button.getAttribute('data-slot-date') === slotData.date
+              && button.getAttribute('data-slot-start') === slotData.start_at;
+            button.classList.toggle('mxpp-agenda-compact__slot--selected', isSelected);
+            button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+          });
+        }
+
+        function renderCurrentBlock(block, state) {
           var container = block.querySelector('[data-mxpp-agenda-days]');
           if (!container) {
             return;
           }
 
-          var usefulDays = Array.isArray(days)
-            ? days.filter(function (day) {
-              return day && Array.isArray(day.slots) && day.slots.length > 0;
-            }).slice(0, 3)
-            : [];
+          var currentBlock = state.blocks[state.currentBlockIndex] || null;
+          var usefulDays = currentBlock && Array.isArray(currentBlock.days) ? currentBlock.days : [];
+          state.selectedSlot = null;
+          updateControls(block, state);
 
           if (usefulDays.length === 0) {
             renderStatus(block, 'No hay horarios disponibles por ahora. Puedes revisar más opciones en la agenda.');
@@ -797,19 +847,23 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
             return;
           }
 
-          if (status) {
-            status.hidden = true;
-          }
+          clearStatus(block);
 
           container.innerHTML = usefulDays.map(function (day) {
             var date = String(day.date || '');
             var slots = Array.isArray(day.slots) ? day.slots : [];
             var slotHtml = slots.map(function (slot) {
               var startAt = String(slot && slot.start_at ? slot.start_at : '');
+              var endAt = String(slot && slot.end_at ? slot.end_at : '');
               if (startAt === '') {
                 return '';
               }
-              return '<a class="mxpp-agenda-compact__slot" href="' + escapeHtml(bookingUrl) + '">' + escapeHtml(formatTime(startAt)) + '</a>';
+              return '<button class="mxpp-agenda-compact__slot" type="button" aria-pressed="false"'
+                + ' data-slot-date="' + escapeHtml(date) + '"'
+                + ' data-slot-start="' + escapeHtml(startAt) + '"'
+                + ' data-slot-end="' + escapeHtml(endAt) + '">'
+                + escapeHtml(formatTime(startAt))
+                + '</button>';
             }).join('');
 
             return '<article class="mxpp-agenda-compact__day">'
@@ -819,21 +873,44 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
               + '</article>';
           }).join('');
           container.hidden = false;
+
+          container.querySelectorAll('.mxpp-agenda-compact__slot').forEach(function (slotButton) {
+            slotButton.addEventListener('click', function () {
+              setSelectedSlot(block, state, {
+                date: slotButton.getAttribute('data-slot-date') || '',
+                start_at: slotButton.getAttribute('data-slot-start') || '',
+                end_at: slotButton.getAttribute('data-slot-end') || '',
+                doctor_id: state.doctorId,
+                booking_url: state.bookingUrl
+              });
+            });
+          });
         }
 
-        function loadCompactAgenda(block) {
-          var doctorId = String(block.getAttribute('data-doctor-id') || '').trim();
-          var bookingUrl = String(block.getAttribute('data-booking-url') || '/public-book.html').trim();
-          if (doctorId === '') {
-            renderStatus(block, 'No pudimos cargar los horarios en este momento.');
+        function getNextStartDate(blockData) {
+          var days = blockData && Array.isArray(blockData.days) ? blockData.days : [];
+          if (days.length === 0) {
+            return '';
+          }
+          return addDays(String(days[days.length - 1].date || ''), 1);
+        }
+
+        function fetchAvailability(block, state, startDate) {
+          if (state.isLoading) {
             return;
           }
+          state.isLoading = true;
+          updateControls(block, state);
+          renderStatus(block, 'Cargando horarios...');
 
           var params = new URLSearchParams();
-          params.set('doctor_id', doctorId);
+          params.set('doctor_id', state.doctorId);
           params.set('mode', 'next');
           params.set('days', '3');
           params.set('limit_per_day', '0');
+          if (startDate) {
+            params.set('start_date', startDate);
+          }
 
           fetch('/api/agenda/index.php/public/availability?' + params.toString(), {
             method: 'GET',
@@ -849,14 +926,104 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
             })
             .then(function (payload) {
               var data = payload && payload.data ? payload.data : {};
-              renderDays(block, Array.isArray(data.days) ? data.days : [], bookingUrl);
+              var usefulDays = buildUsefulDays(data.days);
+              if (usefulDays.length === 0) {
+                state.hasMore = false;
+                if (state.blocks.length === 0) {
+                  state.blocks = [{
+                    startDate: startDate || null,
+                    days: [],
+                    meta: payload.meta || {},
+                    nextStartDate: ''
+                  }];
+                  state.currentBlockIndex = 0;
+                  renderCurrentBlock(block, state);
+                } else {
+                  renderStatus(block, 'No encontramos más horarios disponibles por ahora.');
+                }
+                return;
+              }
+
+              var blockData = {
+                startDate: startDate || null,
+                days: usefulDays,
+                meta: payload.meta || {},
+                nextStartDate: ''
+              };
+              blockData.nextStartDate = getNextStartDate(blockData);
+              state.blocks = state.blocks.slice(0, state.currentBlockIndex + 1);
+              state.blocks.push(blockData);
+              state.currentBlockIndex = state.blocks.length - 1;
+              state.hasMore = true;
+              renderCurrentBlock(block, state);
             })
             .catch(function () {
               renderStatus(block, 'No pudimos cargar los horarios en este momento.');
+            })
+            .finally(function () {
+              state.isLoading = false;
+              updateControls(block, state);
             });
         }
 
-        document.querySelectorAll('[data-mxpp-agenda-compact]').forEach(loadCompactAgenda);
+        function initCompactAgenda(block) {
+          var doctorId = String(block.getAttribute('data-doctor-id') || '').trim();
+          var bookingUrl = String(block.getAttribute('data-booking-url') || '/public-book.html').trim();
+          var prevButton = block.querySelector('[data-mxpp-agenda-prev]');
+          var nextButton = block.querySelector('[data-mxpp-agenda-next]');
+          var state = {
+            currentBlockIndex: -1,
+            blocks: [],
+            selectedSlot: null,
+            isLoading: false,
+            hasMore: true,
+            doctorId: doctorId,
+            bookingUrl: bookingUrl
+          };
+
+          if (doctorId === '') {
+            renderStatus(block, 'No pudimos cargar los horarios en este momento.');
+            updateControls(block, state);
+            return;
+          }
+
+          if (prevButton) {
+            prevButton.addEventListener('click', function () {
+              if (state.currentBlockIndex <= 0 || state.isLoading) {
+                return;
+              }
+              state.currentBlockIndex -= 1;
+              renderCurrentBlock(block, state);
+            });
+          }
+
+          if (nextButton) {
+            nextButton.addEventListener('click', function () {
+              if (state.isLoading) {
+                return;
+              }
+              if (state.blocks[state.currentBlockIndex + 1]) {
+                state.currentBlockIndex += 1;
+                renderCurrentBlock(block, state);
+                return;
+              }
+              var currentBlock = state.blocks[state.currentBlockIndex] || null;
+              var nextStartDate = currentBlock ? currentBlock.nextStartDate : '';
+              if (!nextStartDate) {
+                state.hasMore = false;
+                updateControls(block, state);
+                renderStatus(block, 'No encontramos más horarios disponibles por ahora.');
+                return;
+              }
+              fetchAvailability(block, state, nextStartDate);
+            });
+          }
+
+          updateControls(block, state);
+          fetchAvailability(block, state, '');
+        }
+
+        document.querySelectorAll('[data-mxpp-agenda-compact]').forEach(initCompactAgenda);
       })();
     </script>
   <?php endif; ?>

@@ -612,6 +612,31 @@ body {
   text-decoration: none;
 }
 
+.mxpp-agenda-compact__nav {
+  margin-top: 0.68rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.44rem;
+}
+
+.mxpp-agenda-compact__nav-btn {
+  min-height: 32px;
+  border: 1px solid #b9d8e0;
+  border-radius: 8px;
+  background: #fff;
+  color: #0b6f83;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 800;
+  padding: 0.28rem 0.58rem;
+  cursor: pointer;
+}
+
+.mxpp-agenda-compact__nav-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .mxpp-agenda-compact__days {
   margin-top: 0.76rem;
   display: grid;
@@ -659,6 +684,8 @@ body {
   border-radius: 8px;
   background: #fff;
   color: #0b6f83;
+  cursor: pointer;
+  font: inherit;
   font-size: 0.86rem;
   font-weight: 800;
   text-decoration: none;
@@ -666,10 +693,21 @@ body {
 
 .mxpp-agenda-compact__slot:hover,
 .mxpp-agenda-compact__slot:focus,
+.mxpp-agenda-compact__nav-btn:hover:not(:disabled),
+.mxpp-agenda-compact__nav-btn:focus:not(:disabled),
 .mxpp-agenda-compact__open:hover,
 .mxpp-agenda-compact__open:focus {
   color: #0a6173;
   text-decoration: underline;
+}
+
+.mxpp-agenda-compact__slot--selected,
+.mxpp-agenda-compact__slot--selected:hover,
+.mxpp-agenda-compact__slot--selected:focus {
+  border-color: #0b6f83;
+  background: #0b6f83;
+  color: #fff;
+  text-decoration: none;
 }
 
 .mxpp-agenda-compact__footer {
