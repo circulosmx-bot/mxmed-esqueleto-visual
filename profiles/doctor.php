@@ -670,15 +670,43 @@ if (isLocalDevRequest()) {
                 <p><strong>Hora:</strong> <span data-mxpp-booking-time>Por confirmar</span></p>
               </div>
               <form class="mxpp-booking-modal__form" data-mxpp-booking-form>
-                <label>Nombre(s)<input type="text" name="first_name" autocomplete="given-name" /></label>
-                <label>Apellido paterno<input type="text" name="last_name" autocomplete="family-name" /></label>
-                <label>Apellido materno<input type="text" name="second_last_name" autocomplete="additional-name" /></label>
-                <label>Teléfono móvil<input type="tel" name="mobile_phone" autocomplete="tel" /></label>
-                <label>Correo electrónico <span>opcional</span><input type="email" name="email" autocomplete="email" /></label>
+                <label>Nombre(s)<input type="text" name="first_name" autocomplete="given-name" required /></label>
+                <label>Apellido paterno<input type="text" name="last_name" autocomplete="family-name" required /></label>
+                <label>Apellido materno <span>opcional</span><input type="text" name="second_last_name" autocomplete="additional-name" /></label>
+                <label>Teléfono móvil<input type="tel" name="mobile_phone" autocomplete="tel" required /></label>
+                <label>Correo electrónico<input type="email" name="email" autocomplete="email" required /></label>
+                <label>Fecha de nacimiento<input type="date" name="birth_date" required /></label>
+                <label>Género
+                  <select name="gender" required>
+                    <option value="">Selecciona</option>
+                    <option value="F">Femenino</option>
+                    <option value="M">Masculino</option>
+                    <option value="No especifica">No especifica</option>
+                  </select>
+                </label>
+                <label class="mxpp-booking-modal__field--wide">Motivo de consulta <span>opcional</span><textarea name="reason" rows="3" maxlength="1000"></textarea></label>
               </form>
+              <p class="mxpp-booking-modal__message" data-mxpp-booking-message hidden></p>
               <div class="mxpp-booking-modal__actions">
                 <button class="mxpp-booking-modal__secondary" type="button" data-mxpp-booking-back>Atrás</button>
                 <button class="mxpp-booking-modal__secondary" type="button" data-mxpp-booking-close>Cerrar</button>
+                <button class="mxpp-booking-modal__primary" type="button" data-mxpp-booking-submit>Solicitar código</button>
+              </div>
+            </div>
+            <div class="mxpp-booking-modal__step" data-mxpp-booking-step="sent" hidden>
+              <p class="mxpp-booking-modal__eyebrow">Pendiente de confirmación</p>
+              <h2>Código de confirmación enviado</h2>
+              <p>Te enviamos un código para confirmar tu cita. En el siguiente paso podrás ingresarlo para completar la reserva.</p>
+              <div class="mxpp-booking-modal__summary">
+                <p><strong>Doctor:</strong> <span data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></span></p>
+                <p><strong>Fecha:</strong> <span data-mxpp-booking-date>Por confirmar</span></p>
+                <p><strong>Hora:</strong> <span data-mxpp-booking-time>Por confirmar</span></p>
+                <p><strong>Enviado a:</strong> <span data-mxpp-booking-contact>Por confirmar</span></p>
+              </div>
+              <p class="mxpp-booking-modal__message mxpp-booking-modal__message--success">Tu cita quedó reservada temporalmente mientras confirmas el código.</p>
+              <div class="mxpp-booking-modal__actions">
+                <button class="mxpp-booking-modal__secondary" type="button" data-mxpp-booking-close>Cerrar</button>
+                <button class="mxpp-booking-modal__primary" type="button" data-mxpp-booking-close>Entendido</button>
               </div>
             </div>
           </section>
@@ -907,6 +935,31 @@ if (isLocalDevRequest()) {
           }
         }
 
+        function clearBookingModalMessage(modal) {
+          if (!modal) {
+            return;
+          }
+          modal.querySelectorAll('[data-mxpp-booking-message]').forEach(function (message) {
+            message.hidden = true;
+            message.textContent = '';
+            message.classList.remove('mxpp-booking-modal__message--error', 'mxpp-booking-modal__message--success');
+          });
+        }
+
+        function showBookingModalMessage(modal, type, text) {
+          if (!modal) {
+            return;
+          }
+          var message = modal.querySelector('[data-mxpp-booking-message]');
+          if (!message) {
+            return;
+          }
+          message.textContent = text;
+          message.hidden = false;
+          message.classList.toggle('mxpp-booking-modal__message--error', type === 'error');
+          message.classList.toggle('mxpp-booking-modal__message--success', type === 'success');
+        }
+
         function getBookingModal() {
           return document.querySelector('[data-mxpp-booking-modal]');
         }
@@ -930,6 +983,7 @@ if (isLocalDevRequest()) {
           modal.hidden = true;
           modal.setAttribute('aria-hidden', 'true');
           setBookingModalStep(modal, 'confirm');
+          clearBookingModalMessage(modal);
           var form = modal.querySelector('[data-mxpp-booking-form]');
           if (form) {
             form.reset();
@@ -963,6 +1017,7 @@ if (isLocalDevRequest()) {
             return;
           }
           fillBookingModal(modal, state);
+          clearBookingModalMessage(modal);
           setBookingModalStep(modal, 'confirm');
           modal.hidden = false;
           modal.setAttribute('aria-hidden', 'false');
@@ -974,6 +1029,9 @@ if (isLocalDevRequest()) {
 
         function resetSelectionState(block, state) {
           state.selectedSlot = null;
+          state.appointmentId = null;
+          state.cancelToken = null;
+          state.otpId = null;
           block.querySelectorAll('.mxpp-agenda-compact__slot').forEach(function (button) {
             button.classList.remove('mxpp-agenda-compact__slot--selected');
             button.setAttribute('aria-pressed', 'false');
@@ -992,6 +1050,9 @@ if (isLocalDevRequest()) {
 
         function setSelectedSlot(block, state, slotData) {
           state.selectedSlot = slotData;
+          state.appointmentId = null;
+          state.cancelToken = null;
+          state.otpId = null;
           block.querySelectorAll('.mxpp-agenda-compact__slot').forEach(function (button) {
             var isSelected = button.getAttribute('data-slot-date') === slotData.date
               && button.getAttribute('data-slot-start') === slotData.start_at;
@@ -1007,6 +1068,11 @@ if (isLocalDevRequest()) {
           if (selectionText) {
             selectionText.textContent = 'Horario seleccionado: ' + formatDate(slotData.date) + ', ' + formatTime(slotData.start_at) + '. Pulsa Agendar cita para continuar.';
           }
+        }
+
+        function getConsultorioIdFromBlock(blockData) {
+          var meta = blockData && blockData.meta ? blockData.meta : {};
+          return String(meta.consultorio_id_used || '').trim();
         }
 
         function renderCurrentBlock(block, state) {
@@ -1065,6 +1131,7 @@ if (isLocalDevRequest()) {
                 date: slotButton.getAttribute('data-slot-date') || '',
                 start_at: slotButton.getAttribute('data-slot-start') || '',
                 end_at: slotButton.getAttribute('data-slot-end') || '',
+                consultorio_id: getConsultorioIdFromBlock(currentBlock),
                 doctor_id: state.doctorId,
                 booking_url: state.bookingUrl
               });
@@ -1217,6 +1284,197 @@ if (isLocalDevRequest()) {
             });
         }
 
+        function getBookingFormData(modal) {
+          var form = modal ? modal.querySelector('[data-mxpp-booking-form]') : null;
+          if (!form) {
+            return null;
+          }
+          var data = new FormData(form);
+          return {
+            first_name: String(data.get('first_name') || '').trim(),
+            last_name: String(data.get('last_name') || '').trim(),
+            second_last_name: String(data.get('second_last_name') || '').trim(),
+            mobile_phone: String(data.get('mobile_phone') || '').trim(),
+            email: String(data.get('email') || '').trim(),
+            birth_date: String(data.get('birth_date') || '').trim(),
+            gender: String(data.get('gender') || '').trim(),
+            reason: String(data.get('reason') || '').trim()
+          };
+        }
+
+        function getPatientFullName(data) {
+          return [data.first_name, data.last_name, data.second_last_name]
+            .filter(function (part) { return part !== ''; })
+            .join(' ');
+        }
+
+        function isValidInlineEmail(value) {
+          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+        }
+
+        function isValidInlineDate(value) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            return false;
+          }
+          var date = new Date(value + 'T00:00:00');
+          return !Number.isNaN(date.getTime());
+        }
+
+        function validateInlineReserveData(modal, state) {
+          var data = getBookingFormData(modal);
+          if (!state.selectedSlot) {
+            return { ok: false, message: 'Antes de continuar, selecciona una cita disponible.' };
+          }
+          if (!data) {
+            return { ok: false, message: 'No pudimos leer el formulario. Intenta de nuevo.' };
+          }
+          if (data.first_name === '' || data.last_name === '') {
+            return { ok: false, message: 'Completa nombre(s) y apellido paterno.' };
+          }
+          var phoneDigits = data.mobile_phone.replace(/\D+/g, '');
+          if (phoneDigits.length < 10) {
+            return { ok: false, message: 'Ingresa un teléfono móvil válido.' };
+          }
+          if (data.email === '' || !isValidInlineEmail(data.email)) {
+            return { ok: false, message: 'Ingresa un correo electrónico válido.' };
+          }
+          if (!isValidInlineDate(data.birth_date)) {
+            return { ok: false, message: 'Ingresa una fecha de nacimiento válida.' };
+          }
+          if (data.gender !== 'F' && data.gender !== 'M' && data.gender !== 'No especifica') {
+            return { ok: false, message: 'Selecciona un género válido.' };
+          }
+          if (data.reason.length > 1000) {
+            return { ok: false, message: 'El motivo de consulta es demasiado largo.' };
+          }
+          data.full_name = getPatientFullName(data);
+          data.phone_digits = phoneDigits;
+          return { ok: true, data: data };
+        }
+
+        function buildInlineReservePayload(state, patientData) {
+          var payload = {
+            doctor_id: state.doctorId,
+            start_at: state.selectedSlot ? state.selectedSlot.start_at : '',
+            end_at: state.selectedSlot ? state.selectedSlot.end_at : '',
+            visit_kind: 'presencial',
+            patient_type: 'first_time',
+            booker_is_patient: true,
+            payment_mode: 'none',
+            booker: {
+              name: patientData.full_name,
+              phone: patientData.mobile_phone,
+              email: patientData.email
+            },
+            patient: {
+              first_name: patientData.first_name,
+              last_name: patientData.last_name,
+              second_last_name: patientData.second_last_name,
+              name: patientData.full_name,
+              phone: patientData.mobile_phone,
+              email: patientData.email,
+              dob: patientData.birth_date,
+              gender: patientData.gender,
+              reason: patientData.reason
+            }
+          };
+          var consultorioId = state.selectedSlot ? String(state.selectedSlot.consultorio_id || '').trim() : '';
+          if (consultorioId !== '') {
+            payload.consultorio_id = consultorioId;
+          }
+          return payload;
+        }
+
+        function readInlineErrorMessage(payload, statusCode) {
+          if (payload && typeof payload.message === 'string' && payload.message.trim() !== '') {
+            return payload.message;
+          }
+          if (payload && typeof payload.error === 'string' && payload.error.trim() !== '') {
+            return payload.error;
+          }
+          return statusCode ? 'Error API (' + statusCode + ')' : 'Error de red';
+        }
+
+        function postInlineJson(path, payload) {
+          return fetch(path, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json'
+            },
+            body: JSON.stringify(payload)
+          }).then(function (response) {
+            return response.json().catch(function () {
+              return null;
+            }).then(function (json) {
+              if (!response.ok || !json || json.ok !== true) {
+                throw new Error(readInlineErrorMessage(json, response.status));
+              }
+              return json;
+            });
+          });
+        }
+
+        function setBookingSubmitState(modal, busy, label) {
+          var button = modal ? modal.querySelector('[data-mxpp-booking-submit]') : null;
+          if (!button) {
+            return;
+          }
+          button.disabled = busy;
+          button.textContent = label || 'Solicitar código';
+        }
+
+        function fillBookingSentStep(modal, state, patientData) {
+          fillBookingModal(modal, state);
+          modal.querySelectorAll('[data-mxpp-booking-contact]').forEach(function (node) {
+            node.textContent = patientData.mobile_phone;
+          });
+        }
+
+        function submitInlineReserveAndOtp(modal, state) {
+          clearBookingModalMessage(modal);
+          var valid = validateInlineReserveData(modal, state);
+          if (!valid.ok) {
+            showBookingModalMessage(modal, 'error', valid.message);
+            return;
+          }
+
+          var patientData = valid.data;
+          setBookingSubmitState(modal, true, 'Solicitando cita...');
+          var reserveRequest = state.appointmentId
+            ? Promise.resolve({ data: { appointment_id: state.appointmentId, cancel_token: state.cancelToken || '' } })
+            : postInlineJson('/api/agenda/index.php/public/appointments/reserve', buildInlineReservePayload(state, patientData));
+
+          reserveRequest
+            .then(function (reserve) {
+              state.appointmentId = reserve.data && reserve.data.appointment_id ? String(reserve.data.appointment_id) : '';
+              state.cancelToken = reserve.data && reserve.data.cancel_token ? String(reserve.data.cancel_token) : '';
+              if (state.appointmentId === '') {
+                throw new Error('No se pudo reservar el horario.');
+              }
+              setBookingSubmitState(modal, true, 'Enviando código...');
+              return postInlineJson('/api/agenda/index.php/public/otp/request', {
+                doctor_id: state.doctorId,
+                contact_type: 'sms',
+                contact_value: patientData.mobile_phone
+              });
+            })
+            .then(function (otpRequest) {
+              state.otpId = otpRequest.data && otpRequest.data.otp_id ? String(otpRequest.data.otp_id) : '';
+              if (state.otpId === '') {
+                throw new Error('No se recibió otp_id.');
+              }
+              fillBookingSentStep(modal, state, patientData);
+              setBookingModalStep(modal, 'sent');
+            })
+            .catch(function (error) {
+              showBookingModalMessage(modal, 'error', error && error.message ? error.message : 'No pudimos solicitar tu cita.');
+            })
+            .finally(function () {
+              setBookingSubmitState(modal, false, 'Solicitar código');
+            });
+        }
+
         function bindBookingModalControls(block, state) {
           document.querySelectorAll('[data-mxpp-booking-trigger]').forEach(function (trigger) {
             if (trigger.getAttribute('data-mxpp-booking-bound') === 'true') {
@@ -1257,6 +1515,13 @@ if (isLocalDevRequest()) {
           if (form) {
             form.addEventListener('submit', function (event) {
               event.preventDefault();
+              submitInlineReserveAndOtp(modal, state);
+            });
+          }
+          var submitButton = modal.querySelector('[data-mxpp-booking-submit]');
+          if (submitButton) {
+            submitButton.addEventListener('click', function () {
+              submitInlineReserveAndOtp(modal, state);
             });
           }
           document.addEventListener('keydown', function (event) {
@@ -1277,6 +1542,9 @@ if (isLocalDevRequest()) {
             currentBlockIndex: -1,
             blocks: [],
             selectedSlot: null,
+            appointmentId: null,
+            cancelToken: null,
+            otpId: null,
             isLoading: false,
             hasMore: true,
             isMock: mockMode === 'mixed',
