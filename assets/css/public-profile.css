@@ -5,8 +5,8 @@
   --mxpp-muted: #56707c;
   --mxpp-teal: #0ca7b1;
   --mxpp-teal-dark: #0b7689;
-  --mxpp-border: #cadee7;
-  --mxpp-shadow: 0 5px 14px rgba(15, 58, 78, 0.07);
+  --mxpp-border: #e0edf2;
+  --mxpp-shadow: 0 3px 10px rgba(15, 58, 78, 0.04);
 }
 
 * {
@@ -15,13 +15,13 @@
 
 body {
   margin: 0;
-  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  font-family: "Asap", "Segoe UI", Tahoma, Arial, sans-serif;
   color: var(--mxpp-ink);
   background: var(--mxpp-bg);
 }
 
 .mxpp-wrap {
-  width: min(1120px, calc(100% - 2rem));
+  width: min(960px, calc(100% - 2rem));
   margin: 0 auto;
 }
 
@@ -216,20 +216,20 @@ body {
 
 .mxpp-profile-hero {
   display: grid;
-  grid-template-columns: minmax(190px, 270px) minmax(0, 1fr);
-  gap: 1rem;
+  grid-template-columns: minmax(175px, 210px) minmax(0, 1fr);
+  gap: 1.25rem;
   align-items: center;
   background: #fff;
-  border: 1px solid var(--mxpp-border);
-  border-radius: 10px;
+  border: 1px solid rgba(12, 84, 98, 0.14);
+  border-radius: 9px;
   box-shadow: var(--mxpp-shadow);
-  padding: 0.72rem 1rem;
+  padding: 0.78rem 1rem;
 }
 
 .mxpp-card {
   background: var(--mxpp-surface);
-  border: 1px solid var(--mxpp-border);
-  border-radius: 10px;
+  border: 1px solid rgba(12, 84, 98, 0.14);
+  border-radius: 9px;
   box-shadow: var(--mxpp-shadow);
 }
 
@@ -246,11 +246,11 @@ body {
 
 .mxpp-avatar {
   width: 100%;
-  max-width: 244px;
-  aspect-ratio: 1 / 1;
+  max-width: 205px;
+  aspect-ratio: 4 / 5;
   object-fit: cover;
   border-radius: 3px;
-  border: 1px solid #d4e1e7;
+  border: 1px solid rgba(12, 84, 98, 0.12);
   background: #dee8ed;
 }
 
@@ -291,7 +291,7 @@ body {
 
 .mxpp-consultorio-name {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.98rem;
   color: #fff;
   font-weight: 700;
   text-align: left;
@@ -305,14 +305,14 @@ body {
 }
 
 .mxpp-consultorio-block {
-  margin-top: 0.62rem;
+  margin-top: 0.68rem;
   overflow: hidden;
 }
 
 .mxpp-consultorio-bar {
   width: 100%;
   background: linear-gradient(90deg, #10adba 0%, #0a99a6 100%);
-  padding: 0.44rem 0.8rem;
+  padding: 0.4rem 0.72rem;
 }
 
 .mxpp-consultorio-body {
@@ -321,8 +321,8 @@ body {
 }
 
 .mxpp-consultorio-address-col {
-  padding: 0.72rem 0.9rem;
-  border-right: 1px solid #d8e7ed;
+  padding: 0.68rem 0.82rem;
+  border-right: 1px solid rgba(12, 84, 98, 0.12);
   background: #fff;
 }
 
@@ -353,9 +353,9 @@ body {
 .mxpp-action-claim {
   text-decoration: none;
   display: inline-block;
-  border-radius: 10px;
-  padding: 0.58rem 0.72rem;
-  border: 1px solid #b7d4de;
+  border-radius: 9px;
+  padding: 0.5rem 0.68rem;
+  border: 1px solid rgba(12, 84, 98, 0.16);
 }
 
 .mxpp-action-link {
@@ -441,9 +441,10 @@ body {
 
 .mxpp-profile-title {
   margin: 0;
-  font-size: clamp(2.05rem, 3.55vw, 2.78rem);
-  line-height: 1.02;
-  letter-spacing: -0.025em;
+  font-size: clamp(1.66rem, 2.45vw, 2.12rem);
+  line-height: 1.08;
+  letter-spacing: -0.012em;
+  font-weight: 800;
 }
 
 .mxpp-profile-title--pending {
@@ -452,12 +453,12 @@ body {
 }
 
 .mxpp-badge {
-  margin-top: 0.1rem;
-  padding: 0.18rem 0.58rem;
+  margin-top: 0.06rem;
+  padding: 0.15rem 0.5rem;
   border-radius: 999px;
   background: #0c8096;
   color: #fff;
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -474,8 +475,8 @@ body {
 }
 
 .mxpp-opinions {
-  margin: 0.34rem 0 0.32rem;
-  font-size: 1rem;
+  margin: 0.28rem 0 0.28rem;
+  font-size: 0.92rem;
   color: #0ca2b0;
   font-weight: 700;
 }
@@ -487,9 +488,9 @@ body {
 }
 
 .mxpp-specialty {
-  margin: 0.2rem 0;
-  font-size: 1.72rem;
-  line-height: 1.05;
+  margin: 0.18rem 0;
+  font-size: 1.36rem;
+  line-height: 1.1;
   text-transform: uppercase;
   font-weight: 800;
 }
@@ -506,12 +507,12 @@ body {
 }
 
 .mxpp-licenses-inline {
-  margin: 0.22rem 0;
+  margin: 0.2rem 0;
   display: flex;
   flex-wrap: wrap;
   gap: 0.34rem;
   align-items: center;
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   line-height: 1.35;
 }
 
@@ -520,10 +521,10 @@ body {
 }
 
 .mxpp-bio {
-  margin: 0.46rem 0 0;
-  font-size: 0.94rem;
+  margin: 0.38rem 0 0;
+  font-size: 0.88rem;
   color: #36505c;
-  line-height: 1.36;
+  line-height: 1.34;
 }
 
 .mxpp-bio--pending {
@@ -538,15 +539,15 @@ body {
 }
 
 .mxpp-consultas-note {
-  margin: 0.42rem 0 0;
-  font-size: 0.9rem;
+  margin: 0.34rem 0 0;
+  font-size: 0.86rem;
   color: #0f7a9b;
 }
 
 .mxpp-map,
 .mxpp-map iframe {
   width: 100%;
-  min-height: 168px;
+  min-height: 158px;
   border: 0;
   display: block;
 }
@@ -593,11 +594,11 @@ body {
 
 .mxpp-card--section,
 .mxpp-review-strip {
-  margin-top: 0.62rem;
+  margin-top: 0.68rem;
 }
 
 .mxpp-card--section {
-  padding: 0.74rem;
+  padding: 0.68rem;
 }
 
 .mxpp-card--section h2 {
@@ -627,14 +628,14 @@ body {
   align-items: center;
   gap: 0.75rem;
   background: linear-gradient(90deg, #10adba 0%, #0a99a6 100%);
-  padding: 0.5rem 0.78rem;
+  padding: 0.43rem 0.72rem;
   color: #fff;
 }
 
 .mxpp-agenda-compact__header h2 {
   margin: 0 0 0.12rem;
   color: #fff;
-  font-size: 1rem;
+  font-size: 0.96rem;
   line-height: 1.1;
 }
 
@@ -661,7 +662,7 @@ body {
 
 .mxpp-agenda-compact__header p {
   color: rgba(255, 255, 255, 0.92);
-  font-size: 0.83rem;
+  font-size: 0.8rem;
   line-height: 1.25;
 }
 
@@ -689,7 +690,7 @@ body {
 
 .mxpp-agenda-compact__nav-btn {
   min-height: 32px;
-  border: 1px solid #b9d8e0;
+  border: 1px solid rgba(12, 84, 98, 0.16);
   border-radius: 8px;
   background: #fff;
   color: #0b6f83;
@@ -714,10 +715,10 @@ body {
 }
 
 .mxpp-agenda-compact__day {
-  border: 1px solid #c7dfe8;
+  border: 1px solid rgba(12, 84, 98, 0.14);
   border-radius: 9px;
   background: #fff;
-  padding: 0.58rem;
+  padding: 0.54rem;
 }
 
 .mxpp-agenda-compact__day h3,
@@ -727,7 +728,7 @@ body {
 
 .mxpp-agenda-compact__day h3 {
   color: #104d64;
-  font-size: 0.96rem;
+  font-size: 0.9rem;
 }
 
 .mxpp-agenda-compact__day p {
@@ -789,7 +790,7 @@ body {
   justify-content: center;
   min-height: 30px;
   padding: 0.28rem 0.45rem;
-  border: 1px solid #8fc7d3;
+  border: 1px solid rgba(12, 84, 98, 0.24);
   border-radius: 8px;
   background: #fff;
   color: #0b6f83;
@@ -1036,12 +1037,12 @@ body {
 }
 
 .mxpp-review-strip {
-  border: 1px solid #b5dbe3;
+  border: 1px solid rgba(12, 84, 98, 0.14);
   border-radius: 9px;
   background: #fff;
-  padding: 0.72rem 0.85rem;
+  padding: 0.62rem 0.75rem;
   color: #2f5a69;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
 }
 
 .mxpp-review-strip__header {
