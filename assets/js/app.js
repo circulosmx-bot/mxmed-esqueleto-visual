@@ -1168,6 +1168,49 @@ console.info('app.js loaded :: 20251123a');
     extraCredential: document.getElementById('esp-3'),
     classificationSuggestions: document.getElementById('mxpi-classification-suggestions')
   };
+  const readOnlyProfileFieldIds = [
+    'mxpi-prof-license',
+    'mxpi-specialty-license',
+    'mxpi-specialty-primary',
+    'mxpi-specialty-secondary',
+    'mxpi-profile-status',
+    'mxpi-public-candidate',
+    'dp-nombres',
+    'dp-apellido-paterno',
+    'dp-apellido-materno',
+    'dp-fecha-nacimiento',
+    'dp-genero',
+    'ced-prof',
+    'uni-prof',
+    'esp-1',
+    'ced-esp',
+    'uni-esp',
+    'esp-2',
+    'ced-extra',
+    'uni-extra',
+    'esp-3'
+  ];
+
+  function applyProfileContractReadOnlyState(){
+    readOnlyProfileFieldIds.forEach((id)=>{
+      const control = document.getElementById(id);
+      if(!control) return;
+      if(control.matches('select, input[type="date"], input[type="file"], button')){
+        control.disabled = true;
+      }else{
+        control.readOnly = true;
+        control.setAttribute('aria-readonly', 'true');
+      }
+      control.setAttribute('data-profile-contract', 'read-only');
+    });
+    document.querySelectorAll('#mx-dg-media-card .mf-upload').forEach((box)=>{
+      box.setAttribute('aria-disabled', 'true');
+      box.setAttribute('data-profile-contract', 'phase-later');
+    });
+    document.querySelectorAll('#mx-dg-media-card button, #mx-dg-media-card input[type="file"]').forEach((control)=>{
+      control.disabled = true;
+    });
+  }
 
   // Catálogo transicional de referencia UX (no canónico backend).
   const MXMED_PROFESSIONAL_TAXONOMY = Object.freeze({
@@ -1409,14 +1452,7 @@ console.info('app.js loaded :: 20251123a');
   function syncPublicSpecialtyFromVerified(specialtyValue){
     const verified = normalizeText(specialtyValue, 190);
     if(!verified || !els.specialtyPrimary) return;
-    const current = normalizeText(els.specialtyPrimary.value, 190);
-    if(!current || current === state.autoPublicSpecialty){
-      els.specialtyPrimary.value = verified;
-      state.autoPublicSpecialty = verified;
-      if(!state.hydratingIdentity){
-        markIdentityDirty();
-      }
-    }
+    state.autoPublicSpecialty = normalizeText(els.specialtyPrimary.value, 190) || null;
   }
 
   function buildPrivateEndpoint(doctorId){
@@ -1600,8 +1636,8 @@ console.info('app.js loaded :: 20251123a');
       els.saveBtn.textContent = state.saving ? 'Guardando...' : 'Guardar cambios del perfil público';
     }
     if(els.saveLegacyBtn){
-      els.saveLegacyBtn.disabled = state.loading || state.saving || !state.loaded;
-      els.saveLegacyBtn.textContent = state.saving ? 'Guardando...' : 'Guardar cambios del perfil público';
+      els.saveLegacyBtn.disabled = true;
+      els.saveLegacyBtn.textContent = 'Solicitud en fase posterior';
     }
   }
 
@@ -1688,23 +1724,11 @@ console.info('app.js loaded :: 20251123a');
   function buildPatchPayload(){
     const genderLabel = normalizeText(els.genderLabel?.value, 64);
     const displayFromPublicField = normalizeText(els.displayName?.value, 190);
-    let resolvedDisplayName = displayFromPublicField;
-    if(!state.displayNameTouched && state.legacyNameTouched){
-      const legacyName = readLegacyAdministrativeName();
-      const fromLegacy = buildDisplayNameFromLegacy(els.prefix?.value, legacyName);
-      if(fromLegacy){
-        resolvedDisplayName = fromLegacy;
-      }
-    }
     return {
-      display_name: resolvedDisplayName,
+      display_name: displayFromPublicField,
       prefix: normalizeText(els.prefix?.value, 32),
       gender: mapGenderValue(genderLabel),
       gender_label: genderLabel,
-      professional_license: normalizeText(els.professionalLicense?.value, 64),
-      specialty_license: normalizeText(els.specialtyLicense?.value, 64),
-      specialty_primary: normalizeText(els.specialtyPrimary?.value, 190),
-      specialty_secondary: parseSpecialtySecondary(els.specialtySecondary?.value),
       bio_short: normalizeText(els.bioShort?.value, 1500)
     };
   }
@@ -1725,18 +1749,15 @@ console.info('app.js loaded :: 20251123a');
     if(!input) return;
     const markLegacyTouched = (eventType = 'input')=>{
       if(state.hydratingIdentity) return;
-      state.legacyNameTouched = true;
-      markIdentityDirty();
-      if(eventType === 'change' || eventType === 'blur'){
-        setLegacyFeedback('Guardado local como borrador. Este cambio aún no actualiza el perfil público.', 'muted');
-      }
+      state.legacyNameTouched = false;
+      setLegacyFeedback('Dato verificado: solicita cambio para revisión.', 'muted');
     };
     input.addEventListener('input', ()=> markLegacyTouched('input'));
     input.addEventListener('change', ()=> markLegacyTouched('change'));
     input.addEventListener('blur', ()=> markLegacyTouched('blur'));
   });
 
-  ['mxpi-prefix', 'mxpi-gender-label', 'mxpi-prof-license', 'mxpi-specialty-license', 'mxpi-specialty-primary', 'mxpi-specialty-secondary', 'mxpi-bio-short'].forEach((id)=>{
+  ['mxpi-prefix', 'mxpi-gender-label', 'mxpi-bio-short'].forEach((id)=>{
     const input = document.getElementById(id);
     if(!input) return;
     input.addEventListener('input', markIdentityDirty);
@@ -1761,7 +1782,6 @@ console.info('app.js loaded :: 20251123a');
       });
     }
     applyClassificationSuggestions(specialty);
-    syncPublicSpecialtyFromVerified(specialty);
   };
 
   document.addEventListener('change', (event)=>{
@@ -1785,7 +1805,9 @@ console.info('app.js loaded :: 20251123a');
   });
 
   initializeProfessionalTaxonomy();
+  applyProfileContractReadOnlyState();
   window.setTimeout(()=>{ initializeProfessionalTaxonomy(); }, 0);
+  window.setTimeout(()=>{ applyProfileContractReadOnlyState(); }, 0);
 
   async function readPrivateIdentity(){
     state.doctorId = resolveDoctorId();
@@ -1843,7 +1865,7 @@ console.info('app.js loaded :: 20251123a');
       }
       applyIdentity(json.data.identity_public);
       setFeedback('Cambios guardados. El perfil público ya puede reflejar esta información.', 'success');
-      setLegacyFeedback('Guardado en perfil público.', 'success');
+      setLegacyFeedback('Datos verificados sin cambios.', 'muted');
     }catch(_){
       setFeedback('No se pudieron guardar los cambios. Revisa la conexión e inténtalo nuevamente.', 'danger');
       setLegacyFeedback('No se pudieron guardar los cambios.', 'danger');
@@ -1854,7 +1876,10 @@ console.info('app.js loaded :: 20251123a');
   }
 
   els.saveBtn.addEventListener('click', savePrivateIdentity);
-  els.saveLegacyBtn?.addEventListener('click', savePrivateIdentity);
+  els.saveLegacyBtn?.addEventListener('click', (event)=>{
+    event.preventDefault();
+    setLegacyFeedback('Dato verificado: solicita cambio para revisión.', 'muted');
+  });
   document.addEventListener('click', (event)=>{
     const trigger = event.target && event.target.closest
       ? event.target.closest('[data-profile-panel="p-info"], .menu-sub-btn[data-panel="p-info"]')
