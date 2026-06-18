@@ -631,8 +631,8 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
         >
           <div class="mxpp-agenda-compact__header">
             <div>
-              <h2>Próximos horarios</h2>
-              <p>Consulta las fechas más próximas disponibles y agenda en línea.</p>
+              <h2>Próximas citas disponibles</h2>
+              <p>Reserva tu cita aquí</p>
             </div>
             <a class="mxpp-agenda-compact__open" href="<?= h($bookAppointmentUrl) ?>">Ver agenda</a>
           </div>
@@ -803,7 +803,7 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
 
           container.innerHTML = usefulDays.map(function (day) {
             var date = String(day.date || '');
-            var slots = Array.isArray(day.slots) ? day.slots.slice(0, 3) : [];
+            var slots = Array.isArray(day.slots) ? day.slots : [];
             var slotHtml = slots.map(function (slot) {
               var startAt = String(slot && slot.start_at ? slot.start_at : '');
               if (startAt === '') {
@@ -833,7 +833,7 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
           params.set('doctor_id', doctorId);
           params.set('mode', 'next');
           params.set('days', '3');
-          params.set('limit_per_day', '3');
+          params.set('limit_per_day', '0');
 
           fetch('/api/agenda/index.php/public/availability?' + params.toString(), {
             method: 'GET',
