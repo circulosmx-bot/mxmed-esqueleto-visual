@@ -329,9 +329,12 @@ final class DoctorContactPointsRepository
             'normalized_value',
             'label',
             'scope',
+            'is_public',
             'use_for_security',
             'use_for_platform_admin',
+            'use_for_public_profile',
             'use_for_appointments',
+            'visibility_plan_min',
             'status',
             'sort_order',
         ];
@@ -346,7 +349,7 @@ final class DoctorContactPointsRepository
                 continue;
             }
             $assignments[] = sprintf('`%s` = :%s', $field, $field);
-            if (in_array($field, ['use_for_security', 'use_for_platform_admin', 'use_for_appointments'], true)) {
+            if (in_array($field, ['is_public', 'use_for_security', 'use_for_platform_admin', 'use_for_public_profile', 'use_for_appointments'], true)) {
                 $params[$field] = (int)((bool)$payload[$field]);
             } elseif ($field === 'sort_order') {
                 $params[$field] = (int)$payload[$field];

@@ -24,6 +24,21 @@ final class DoctorContactPointsController
         'sort_order',
     ];
 
+    private const UPDATE_ALLOWED_FIELDS = [
+        'type',
+        'value',
+        'label',
+        'scope',
+        'is_public',
+        'use_for_security',
+        'use_for_platform_admin',
+        'use_for_public_profile',
+        'use_for_appointments',
+        'visibility_plan_min',
+        'status',
+        'sort_order',
+    ];
+
     private const CREATE_BLOCKED_FIELDS = [
         'doctor_id',
         'contact_point_id',
@@ -41,8 +56,25 @@ final class DoctorContactPointsController
         'deleted_at',
     ];
 
+    private const UPDATE_BLOCKED_FIELDS = [
+        'doctor_id',
+        'contact_point_id',
+        'normalized_value',
+        'is_verified',
+        'verification_status',
+        'consultorio_id',
+        'source',
+        'metadata_json',
+        'created_at',
+        'updated_at',
+        'deleted_at',
+    ];
+
     private const ALLOWED_TYPES = ['email', 'phone', 'whatsapp'];
     private const ALLOWED_SCOPES = ['private', 'operational', 'platform_admin'];
+    private const ALLOWED_UPDATE_SCOPES = ['private', 'operational', 'platform_admin', 'public', 'public_profile'];
+    private const PUBLIC_PROFILE_SCOPES = ['public', 'public_profile'];
+    private const PUBLIC_VISIBILITY_PLANS = ['basic', 'standard', 'optimum', 'professional'];
     private const ALLOWED_STATUSES = ['active', 'inactive', 'archived'];
     private const LEGACY_IMPORT_KEYS = ['dp:dp-correo', 'dp:dp-whatsapp'];
     private const LEGACY_IMPORT_TYPE_BY_KEY = [
@@ -698,11 +730,11 @@ final class DoctorContactPointsController
             if ($field === '') {
                 continue;
             }
-            if (in_array($field, self::CREATE_BLOCKED_FIELDS, true)) {
+            if (in_array($field, self::UPDATE_BLOCKED_FIELDS, true)) {
                 $blocked[] = $field;
                 continue;
             }
-            if (!in_array($field, self::CREATE_ALLOWED_FIELDS, true)) {
+            if (!in_array($field, self::UPDATE_ALLOWED_FIELDS, true)) {
                 $unknown[] = $field;
             }
         }
@@ -748,8 +780,8 @@ final class DoctorContactPointsController
 
         if (array_key_exists('scope', $payload)) {
             $scope = strtolower((string)$this->sanitizeText($payload['scope'] ?? null, 32));
-            if ($scope === '' || !in_array($scope, self::ALLOWED_SCOPES, true)) {
-                $errors[] = 'scope must be one of: private, operational, platform_admin';
+            if ($scope === '' || !in_array($scope, self::ALLOWED_UPDATE_SCOPES, true)) {
+                $errors[] = 'scope must be one of: private, operational, platform_admin, public, public_profile';
             } else {
                 $editable['scope'] = $scope;
                 $editableFields[] = 'scope';
@@ -766,7 +798,7 @@ final class DoctorContactPointsController
             }
         }
 
-        foreach (['use_for_security', 'use_for_platform_admin', 'use_for_appointments'] as $field) {
+        foreach (['is_public', 'use_for_security', 'use_for_platform_admin', 'use_for_public_profile', 'use_for_appointments'] as $field) {
             if (!array_key_exists($field, $payload)) {
                 continue;
             }
@@ -774,10 +806,21 @@ final class DoctorContactPointsController
             $editableFields[] = $field;
         }
 
+        if (array_key_exists('visibility_plan_min', $payload)) {
+            $editable['visibility_plan_min'] = $this->parsePublicVisibilityPlan(
+                $payload['visibility_plan_min'],
+                'visibility_plan_min',
+                $errors
+            );
+            $editableFields[] = 'visibility_plan_min';
+        }
+
         if (array_key_exists('sort_order', $payload)) {
             $editable['sort_order'] = $this->parseSortOrder($payload['sort_order'], $errors);
             $editableFields[] = 'sort_order';
         }
+
+        $this->applyPublicProfileOptInRules($editable, $editableFields, $current, $payload, $errors);
 
         return [
             'contact_point' => $editable,
@@ -786,6 +829,90 @@ final class DoctorContactPointsController
             'unknown_fields' => array_values(array_unique($unknown)),
             'validation_errors' => array_values(array_unique($errors)),
         ];
+    }
+
+    private function applyPublicProfileOptInRules(
+        array &$editable,
+        array &$editableFields,
+        array $current,
+        array $payload,
+        array &$errors
+    ): void {
+        $explicitPublicProfile = array_key_exists('use_for_public_profile', $payload);
+        $explicitIsPublic = array_key_exists('is_public', $payload);
+        $explicitScope = array_key_exists('scope', $payload);
+
+        $turningOffPublic = (
+            ($explicitPublicProfile && ($editable['use_for_public_profile'] ?? false) === false)
+            || ($explicitIsPublic && ($editable['is_public'] ?? false) === false)
+        );
+
+        if ($turningOffPublic) {
+            $editable['use_for_public_profile'] = false;
+            $editable['is_public'] = false;
+            $editableFields[] = 'use_for_public_profile';
+            $editableFields[] = 'is_public';
+            $currentScope = strtolower(trim((string)($current['scope'] ?? '')));
+            if (!$explicitScope && in_array($currentScope, self::PUBLIC_PROFILE_SCOPES, true)) {
+                $editable['scope'] = 'private';
+                $editableFields[] = 'scope';
+            }
+            return;
+        }
+
+        $finalType = strtolower(trim((string)($editable['type'] ?? $current['type'] ?? '')));
+        $finalStatus = strtolower(trim((string)($editable['status'] ?? $current['status'] ?? '')));
+        $finalScope = strtolower(trim((string)($editable['scope'] ?? $current['scope'] ?? '')));
+        $finalIsPublic = (bool)($editable['is_public'] ?? $current['is_public'] ?? false);
+        $finalUsePublicProfile = (bool)($editable['use_for_public_profile'] ?? $current['use_for_public_profile'] ?? false);
+        $publishing = (
+            $finalIsPublic
+            || $finalUsePublicProfile
+            || in_array($finalScope, self::PUBLIC_PROFILE_SCOPES, true)
+        );
+
+        if (!$publishing) {
+            return;
+        }
+
+        if (!in_array($finalType, self::ALLOWED_TYPES, true)) {
+            $errors[] = 'public profile contact type must be one of: email, phone, whatsapp';
+        }
+
+        if ($finalStatus !== 'active') {
+            $errors[] = 'public profile contact must be active';
+        }
+
+        $finalValue = (string)($editable['value'] ?? $current['value'] ?? '');
+        $normalizedValue = (string)($editable['normalized_value'] ?? $current['normalized_value'] ?? '');
+        if ($normalizedValue === '' && $finalType !== '' && $finalValue !== '') {
+            $normalizedValue = $this->repository->normalizeValue($finalType, $finalValue);
+        }
+        if ($finalType === 'email' && filter_var($normalizedValue, FILTER_VALIDATE_EMAIL) === false) {
+            $errors[] = 'public profile contact email must be valid';
+        }
+        if (($finalType === 'phone' || $finalType === 'whatsapp') && ($normalizedValue === '' || $normalizedValue === '+')) {
+            $errors[] = 'public profile contact phone must contain digits';
+        }
+
+        $editable['is_public'] = true;
+        $editable['use_for_public_profile'] = true;
+        $editable['use_for_security'] = false;
+        $editable['use_for_platform_admin'] = false;
+        $editable['scope'] = 'public_profile';
+        $editableFields[] = 'is_public';
+        $editableFields[] = 'use_for_public_profile';
+        $editableFields[] = 'use_for_security';
+        $editableFields[] = 'use_for_platform_admin';
+        $editableFields[] = 'scope';
+
+        $visibilityPlan = $editable['visibility_plan_min']
+            ?? $this->parsePublicVisibilityPlan($current['visibility_plan_min'] ?? null, 'visibility_plan_min', $errors, true);
+        if ($visibilityPlan === null || $visibilityPlan === '') {
+            $visibilityPlan = 'basic';
+        }
+        $editable['visibility_plan_min'] = $visibilityPlan;
+        $editableFields[] = 'visibility_plan_min';
     }
 
     private function sanitizeText($value, int $maxLen): ?string
@@ -823,6 +950,40 @@ final class DoctorContactPointsController
         }
         $errors[] = sprintf('%s must be boolean', $field);
         return false;
+    }
+
+    private function parsePublicVisibilityPlan($value, string $field, array &$errors, bool $soft = false): ?string
+    {
+        $raw = $this->sanitizeText($value, 32);
+        if ($raw === null) {
+            return null;
+        }
+        $folded = mb_strtolower($raw, 'UTF-8');
+        $folded = strtr($folded, [
+            'á' => 'a',
+            'é' => 'e',
+            'í' => 'i',
+            'ó' => 'o',
+            'ú' => 'u',
+        ]);
+        $aliases = [
+            'basico' => 'basic',
+            'basic' => 'basic',
+            'estandar' => 'standard',
+            'standard' => 'standard',
+            'optimo' => 'optimum',
+            'optimum' => 'optimum',
+            'profesional' => 'professional',
+            'professional' => 'professional',
+        ];
+        $plan = $aliases[$folded] ?? '';
+        if ($plan === '' || !in_array($plan, self::PUBLIC_VISIBILITY_PLANS, true)) {
+            if (!$soft) {
+                $errors[] = sprintf('%s must be one of: basic, standard, optimum, professional', $field);
+            }
+            return null;
+        }
+        return $plan;
     }
 
     private function parseSortOrder($value, array &$errors): int

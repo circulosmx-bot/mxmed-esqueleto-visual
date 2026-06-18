@@ -1159,7 +1159,9 @@ console.info('app.js loaded :: 20251123a');
     saveLegacyBtn: document.getElementById('mxpi-save-btn-legacy'),
     feedback: document.getElementById('mxpi-feedback'),
     legacyFeedback: document.getElementById('mxpi-legacy-feedback'),
-    profileLink: document.getElementById('mx-public-profile-link')
+    profileLink: document.getElementById('mx-public-profile-link'),
+    publicContactList: document.getElementById('mx-dg-public-contact-list'),
+    publicContactFeedback: document.getElementById('mx-dg-public-contact-feedback')
   };
 
   const legacyCredentialEls = {
@@ -1265,6 +1267,13 @@ console.info('app.js loaded :: 20251123a');
     dirty: false,
     autoPublicSpecialty: null
   };
+  const PUBLIC_CONTACT_TYPES = new Set(['phone', 'whatsapp', 'email']);
+  const PUBLIC_PLAN_OPTIONS = [
+    ['basic', 'Básico'],
+    ['standard', 'Estándar'],
+    ['optimum', 'Óptimo'],
+    ['professional', 'Profesional']
+  ];
 
   function getLegacySelectList(id){
     return Array.from(document.querySelectorAll(`select#${id}`));
@@ -1459,6 +1468,12 @@ console.info('app.js loaded :: 20251123a');
     return '/api/profiles/private/doctor/' + encodeURIComponent(doctorId);
   }
 
+  function buildContactPointsEndpoint(doctorId, contactPointId = ''){
+    const base = buildPrivateEndpoint(doctorId) + '/contact-points';
+    const safeId = String(contactPointId || '').trim();
+    return safeId ? base + '/' + encodeURIComponent(safeId) : base;
+  }
+
   function normalizeText(value, maxLen){
     const clean = String(value || '').trim();
     if(!clean) return null;
@@ -1619,6 +1634,222 @@ console.info('app.js loaded :: 20251123a');
     };
     els.legacyFeedback.className = classes[tone] || classes.muted;
     els.legacyFeedback.textContent = msg;
+  }
+
+  function setPublicContactFeedback(message, tone){
+    if(!els.publicContactFeedback) return;
+    const msg = String(message || '').trim();
+    const classes = {
+      success: 'mx-dg-public-contact-feedback small text-success',
+      danger: 'mx-dg-public-contact-feedback small text-danger',
+      warning: 'mx-dg-public-contact-feedback small text-warning',
+      muted: 'mx-dg-public-contact-feedback small text-muted'
+    };
+    els.publicContactFeedback.className = classes[tone] || classes.muted;
+    els.publicContactFeedback.textContent = msg;
+  }
+
+  function contactTypeLabel(type){
+    const clean = String(type || '').trim().toLowerCase();
+    if(clean === 'phone') return 'Teléfono';
+    if(clean === 'whatsapp') return 'WhatsApp';
+    if(clean === 'email') return 'Correo';
+    return clean || 'Contacto';
+  }
+
+  function normalizePublicPlanOption(value){
+    const raw = String(value || '').trim().toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    const aliases = {
+      basico: 'basic',
+      basic: 'basic',
+      estandar: 'standard',
+      standard: 'standard',
+      optimo: 'optimum',
+      optimum: 'optimum',
+      profesional: 'professional',
+      professional: 'professional'
+    };
+    return aliases[raw] || 'basic';
+  }
+
+  function canContactBePublished(contact){
+    if(!contact || typeof contact !== 'object') return false;
+    const type = String(contact.type || '').trim().toLowerCase();
+    const status = String(contact.status || '').trim().toLowerCase();
+    if(!PUBLIC_CONTACT_TYPES.has(type)) return false;
+    if(status !== 'active') return false;
+    if(contact.use_for_security === true || contact.use_for_platform_admin === true) return false;
+    return true;
+  }
+
+  function renderPublicContactPoints(items){
+    if(!els.publicContactList) return;
+    const contacts = Array.isArray(items) ? items : [];
+    els.publicContactList.innerHTML = '';
+    if(!contacts.length){
+      const empty = document.createElement('div');
+      empty.className = 'mx-dg-public-contact-empty';
+      empty.textContent = 'No hay contactos activos configurables. Primero crea o importa un contacto privado seguro.';
+      els.publicContactList.appendChild(empty);
+      setPublicContactFeedback('Sin contactos publicables configurados.', 'muted');
+      return;
+    }
+
+    contacts.forEach((contact)=>{
+      const id = String(contact?.contact_point_id || '').trim();
+      const type = String(contact?.type || '').trim().toLowerCase();
+      const canPublish = canContactBePublished(contact);
+      const isPublic = contact?.is_public === true && contact?.use_for_public_profile === true;
+      const minPlan = normalizePublicPlanOption(contact?.visibility_plan_min || 'basic');
+
+      const item = document.createElement('div');
+      item.className = 'mx-dg-public-contact-item';
+      item.dataset.contactPointId = id;
+
+      const main = document.createElement('div');
+      main.className = 'mx-dg-public-contact-main';
+
+      const name = document.createElement('div');
+      name.className = 'mx-dg-public-contact-name';
+      name.textContent = contactTypeLabel(type);
+
+      const badge = document.createElement('span');
+      badge.className = 'mx-dg-contact-field-badge' + (isPublic ? '' : ' is-muted');
+      badge.textContent = isPublic ? 'Publicable' : 'Privado';
+      name.appendChild(badge);
+
+      const value = document.createElement('div');
+      value.className = 'mx-dg-public-contact-value';
+      value.textContent = String(contact?.value || contact?.normalized_value || '').trim() || 'Sin valor';
+
+      const note = document.createElement('div');
+      note.className = 'mx-dg-public-contact-note';
+      note.textContent = canPublish
+        ? 'Publica este dato sólo si tienes autorización para mostrarlo a pacientes.'
+        : 'No publicable: debe estar activo, no ser de seguridad/plataforma y ser teléfono, WhatsApp o correo.';
+
+      main.appendChild(name);
+      main.appendChild(value);
+      main.appendChild(note);
+
+      const controls = document.createElement('div');
+      controls.className = 'mx-dg-public-contact-controls';
+
+      const label = document.createElement('label');
+      label.className = 'form-check form-switch m-0';
+      const checkbox = document.createElement('input');
+      checkbox.className = 'form-check-input no-check';
+      checkbox.type = 'checkbox';
+      checkbox.checked = isPublic;
+      checkbox.disabled = !canPublish || !id;
+      checkbox.dataset.noCheck = '1';
+      checkbox.setAttribute('aria-label', 'Mostrar en perfil público');
+      const labelText = document.createElement('span');
+      labelText.className = 'form-check-label small';
+      labelText.textContent = 'Mostrar en perfil público';
+      label.appendChild(checkbox);
+      label.appendChild(labelText);
+
+      const planSelect = document.createElement('select');
+      planSelect.className = 'form-select form-select-sm no-check mx-dg-public-contact-plan';
+      planSelect.dataset.noCheck = '1';
+      planSelect.disabled = !canPublish || !id || !isPublic;
+      planSelect.setAttribute('aria-label', 'Plan mínimo para mostrar contacto');
+      PUBLIC_PLAN_OPTIONS.forEach(([value, text])=>{
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = text;
+        planSelect.appendChild(option);
+      });
+      planSelect.value = minPlan;
+
+      let lastPlanValue = planSelect.value;
+      const persist = async (previousChecked = !checkbox.checked, previousPlan = lastPlanValue)=>{
+        const enabled = checkbox.checked === true;
+        checkbox.disabled = true;
+        planSelect.disabled = true;
+        setPublicContactFeedback('Guardando preferencia de contacto público...', 'muted');
+        try{
+          const payload = enabled
+            ? {
+                is_public: true,
+                use_for_public_profile: true,
+                scope: 'public_profile',
+                visibility_plan_min: normalizePublicPlanOption(planSelect.value),
+                use_for_security: false,
+                use_for_platform_admin: false
+              }
+            : {
+                is_public: false,
+                use_for_public_profile: false,
+                scope: 'private'
+              };
+          const response = await fetch(buildContactPointsEndpoint(state.doctorId, id), {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload)
+          });
+          const json = await response.json().catch(()=> null);
+          if(!response.ok || !json || json.ok !== true || !json.data || !json.data.contact_point){
+            throw new Error(String(json?.message || json?.error || 'No fue posible actualizar el contacto.'));
+          }
+          lastPlanValue = planSelect.value;
+          setPublicContactFeedback('Preferencia de contacto público guardada.', 'success');
+          await loadContactPublicOptIn();
+        }catch(err){
+          checkbox.checked = previousChecked;
+          planSelect.value = previousPlan;
+          setPublicContactFeedback(String(err?.message || 'No fue posible actualizar el contacto público.'), 'danger');
+          checkbox.disabled = !canPublish || !id;
+          planSelect.disabled = !canPublish || !id || !checkbox.checked;
+        }
+      };
+
+      checkbox.addEventListener('change', ()=>{
+        const previousChecked = !checkbox.checked;
+        const previousPlan = lastPlanValue;
+        planSelect.disabled = !canPublish || !id || !checkbox.checked;
+        persist(previousChecked, previousPlan);
+      });
+      planSelect.addEventListener('change', ()=>{
+        const previousPlan = lastPlanValue;
+        if(checkbox.checked) persist(true, previousPlan);
+      });
+
+      controls.appendChild(label);
+      controls.appendChild(planSelect);
+      item.appendChild(main);
+      item.appendChild(controls);
+      els.publicContactList.appendChild(item);
+    });
+    setPublicContactFeedback('Contactos cargados. La publicación requiere opt-in explícito y plan mínimo Básico.', 'muted');
+  }
+
+  async function loadContactPublicOptIn(){
+    if(!els.publicContactList) return;
+    const doctorId = sanitizeDoctorId(state.doctorId) || resolveDoctorId();
+    if(!doctorId) return;
+    try{
+      const response = await fetch(buildContactPointsEndpoint(doctorId), {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+      });
+      const json = await response.json().catch(()=> null);
+      if(!response.ok || !json || json.ok !== true){
+        throw new Error(String(json?.message || json?.error || 'No fue posible cargar contactos.'));
+      }
+      renderPublicContactPoints(Array.isArray(json?.data?.items) ? json.data.items : []);
+    }catch(err){
+      els.publicContactList.innerHTML = '<div class="mx-dg-public-contact-empty">No fue posible cargar contactos configurables.</div>';
+      setPublicContactFeedback(String(err?.message || 'No fue posible cargar contactos.'), 'danger');
+    }
   }
 
   function markIdentityDirty(){
@@ -1828,6 +2059,7 @@ console.info('app.js loaded :: 20251123a');
       }
       applyIdentity(json.data.identity_public);
       state.loaded = true;
+      loadContactPublicOptIn();
       setFeedback('Identidad pública cargada.', 'muted');
       setLegacyFeedback('Sin cambios pendientes.', 'muted');
     }catch(_){
