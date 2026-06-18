@@ -395,6 +395,16 @@ class AvailabilityController
 
         $timezone = new DateTimeZone(AvailabilityRepository::TIMEZONE);
         $today = (new DateTimeImmutable('now', $timezone))->setTime(0, 0, 0);
+        $startDateRaw = isset($params['start_date']) ? trim((string)$params['start_date']) : '';
+        $hasStartDate = ($startDateRaw !== '');
+        $startDate = $today;
+        if ($hasStartDate) {
+            if (!$this->isValidDate($startDateRaw)) {
+                $meta['start_date'] = $startDateRaw;
+                return $this->error('invalid_params', 'start_date must be in YYYY-MM-DD format', $meta);
+            }
+            $startDate = (new DateTimeImmutable($startDateRaw, $timezone))->setTime(0, 0, 0);
+        }
 
         if ($mode === 'week') {
             $weekOffset = 0;
@@ -496,7 +506,7 @@ class AvailabilityController
         $consultorioId = $this->resolvePublicConsultorioIdForRange(
             (string)$doctorId,
             $requestedConsultorioId,
-            $today,
+            $startDate,
             90,
             $slotMinutes
         );
@@ -513,7 +523,7 @@ class AvailabilityController
         $days = [];
         $maxScanDays = 90;
         for ($offset = 0; $offset < $maxScanDays && count($days) < $daysRequested; $offset++) {
-            $date = $today->modify('+' . $offset . ' day');
+            $date = $startDate->modify('+' . $offset . ' day');
             $dayResult = $this->publicDayAvailability(
                 (string)$doctorId,
                 (string)$consultorioId,
@@ -524,6 +534,9 @@ class AvailabilityController
                 $response = $dayResult['response'];
                 $errorMeta = (array)($response['meta'] ?? []);
                 $errorMeta['consultorio_id_used'] = $consultorioId;
+                if ($hasStartDate) {
+                    $errorMeta['start_date_used'] = $startDate->format('Y-m-d');
+                }
                 $response['meta'] = (object)$errorMeta;
                 return $response;
             }
@@ -540,6 +553,19 @@ class AvailabilityController
             }
         }
 
+        $nextMeta = [
+            'mode' => 'next',
+            'days_requested' => $daysRequested,
+            'days_found' => count($days),
+            'slot_minutes' => $slotMinutes,
+            'limit_per_day' => $limitPerDay,
+            'consultorio_id_used' => $consultorioId,
+            'timezone' => AvailabilityRepository::TIMEZONE,
+        ];
+        if ($hasStartDate) {
+            $nextMeta['start_date_used'] = $startDate->format('Y-m-d');
+        }
+
         return [
             'ok' => true,
             'error' => null,
@@ -548,15 +574,7 @@ class AvailabilityController
                 'mode' => 'next',
                 'days' => $days,
             ],
-            'meta' => [
-                'mode' => 'next',
-                'days_requested' => $daysRequested,
-                'days_found' => count($days),
-                'slot_minutes' => $slotMinutes,
-                'limit_per_day' => $limitPerDay,
-                'consultorio_id_used' => $consultorioId,
-                'timezone' => AvailabilityRepository::TIMEZONE,
-            ],
+            'meta' => $nextMeta,
         ];
     }
 
