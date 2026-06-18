@@ -474,25 +474,6 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
         <p><?= h($inputError ?? $endpointError ?? 'No fue posible cargar el perfil en este momento.') ?></p>
       </section>
     <?php else: ?>
-      <?php if ($showDevPlanSwitcher): ?>
-        <form class="mxpp-card mxpp-dev-plan-switcher" method="get" action="/profiles/doctor.php">
-          <input type="hidden" name="doctor_id" value="<?= h($doctorId) ?>" />
-          <label for="mxpp-dev-plan-select">Plan QA</label>
-          <select id="mxpp-dev-plan-select" name="mxmed_plan" onchange="this.form.submit()">
-            <?php foreach ([
-                'free' => 'Gratuito',
-                'basic' => 'Básico',
-                'standard' => 'Estándar',
-                'optimum' => 'Óptimo',
-                'professional' => 'Profesional',
-            ] as $planCode => $label): ?>
-              <option value="<?= h($planCode) ?>" <?= ($devPlanOverride ?? toText($plan['plan_code'] ?? null)) === $planCode ? 'selected' : '' ?>><?= h($label) ?></option>
-            <?php endforeach; ?>
-          </select>
-          <span>Visible sólo en entorno local. No modifica el plan real.</span>
-        </form>
-      <?php endif; ?>
-
       <section class="mxpp-profile-hero">
         <aside class="mxpp-left-panel">
           <article class="mxpp-card mxpp-card--left-main">
@@ -729,5 +710,23 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
       </div>
     </div>
   </footer>
+  <?php if ($showDevPlanSwitcher): ?>
+    <form class="mxpp-dev-plan-switcher" method="get" action="/profiles/doctor.php" aria-label="Selector temporal QA de plan">
+      <input type="hidden" name="doctor_id" value="<?= h($doctorId) ?>" />
+      <label class="mxpp-dev-plan-switcher__label" for="mxpp-dev-plan-select">Plan QA</label>
+      <select class="mxpp-dev-plan-switcher__select" id="mxpp-dev-plan-select" name="mxmed_plan" onchange="this.form.submit()">
+        <?php foreach ([
+            'free' => 'Gratuito',
+            'basic' => 'Básico',
+            'standard' => 'Estándar',
+            'optimum' => 'Óptimo',
+            'professional' => 'Profesional',
+        ] as $planCode => $label): ?>
+          <option value="<?= h($planCode) ?>" <?= ($devPlanOverride ?? toText($plan['plan_code'] ?? null)) === $planCode ? 'selected' : '' ?>><?= h($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <span class="mxpp-dev-plan-switcher__hint">Sólo DEV</span>
+    </form>
+  <?php endif; ?>
 </body>
 </html>

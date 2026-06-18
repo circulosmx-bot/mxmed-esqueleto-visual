@@ -174,6 +174,45 @@ body {
   font-size: 1.15rem;
 }
 
+.mxpp-dev-plan-switcher {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 9999;
+  width: min(230px, calc(100vw - 2rem));
+  display: grid;
+  gap: 0.34rem;
+  padding: 0.62rem 0.68rem;
+  border: 1px solid rgba(12, 84, 98, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 14px 34px rgba(15, 58, 78, 0.18);
+}
+
+.mxpp-dev-plan-switcher__label {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #17485d;
+  text-transform: uppercase;
+}
+
+.mxpp-dev-plan-switcher__select {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid #a9ccd6;
+  border-radius: 8px;
+  background: #fff;
+  color: #173f50;
+  font: inherit;
+  font-size: 0.86rem;
+  padding: 0.3rem 0.42rem;
+}
+
+.mxpp-dev-plan-switcher__hint {
+  font-size: 0.72rem;
+  color: #5e7680;
+}
+
 .mxpp-profile-hero {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
@@ -698,6 +737,12 @@ body {
 @media (max-width: 640px) {
   .mxpp-wrap {
     width: calc(100% - 1rem);
+  }
+
+  .mxpp-dev-plan-switcher {
+    right: 0.5rem;
+    bottom: 0.5rem;
+    width: min(210px, calc(100vw - 1rem));
   }
 
   .mxpp-brand {
