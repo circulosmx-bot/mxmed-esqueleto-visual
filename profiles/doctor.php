@@ -136,7 +136,7 @@ function shouldUseLocalProfileFallback(string $apiBase): bool
     return $workers <= 1;
 }
 
-function fetchProfileViaControllerFallback(string $doctorId): ?array
+function fetchProfileViaControllerFallback(string $doctorId, ?string $planOverride = null): ?array
 {
     try {
         require_once __DIR__ . '/../api/_lib/db.php';
@@ -145,7 +145,7 @@ function fetchProfileViaControllerFallback(string $doctorId): ?array
 
         $repo = new \Profiles\Repositories\PublicProfileRepository(mxmed_pdo());
         $controller = new \Profiles\Controllers\PublicProfileController($repo);
-        $response = $controller->showByDoctorId($doctorId);
+        $response = $controller->showByDoctorId($doctorId, $planOverride);
         if (!is_array($response)) {
             return null;
         }
@@ -182,22 +182,35 @@ if ($doctorId === '') {
 $endpointStatus = null;
 $endpointError = null;
 $dto = null;
+$devPlanOverride = resolveDevPlanOverride();
 
 if ($inputError === null) {
     $apiBase = resolveProfilesApiBase();
     $endpointUrl = $apiBase . '/api/profiles/public/doctor/' . rawurlencode($doctorId);
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'timeout' => 6,
-            'ignore_errors' => true,
-            'header' => "Accept: application/json\r\n",
-        ],
-    ]);
+    $raw = false;
 
-    $raw = @file_get_contents($endpointUrl, false, $context);
-    $headers = readLastHttpHeaders();
-    $endpointStatus = parseHttpStatusCode($headers);
+    if ($devPlanOverride !== null) {
+        $fallback = fetchProfileViaControllerFallback($doctorId, $devPlanOverride);
+        if (is_array($fallback)) {
+            $endpointStatus = (int)($fallback['status'] ?? 500);
+            $raw = json_encode($fallback['payload'] ?? null, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+    }
+
+    if ($raw === false) {
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'timeout' => 6,
+                'ignore_errors' => true,
+                'header' => "Accept: application/json\r\n",
+            ],
+        ]);
+
+        $raw = @file_get_contents($endpointUrl, false, $context);
+        $headers = readLastHttpHeaders();
+        $endpointStatus = parseHttpStatusCode($headers);
+    }
 
     // Fallback solo para QA local con php -S de un solo worker.
     // Evita deadlock por autollamada HTTP al mismo proceso.
@@ -250,22 +263,6 @@ if ($inputError !== null) {
 }
 
 $data = $dto !== null ? safeArray($dto['data'] ?? []) : [];
-
-$devPlanOverride = resolveDevPlanOverride();
-if ($dto !== null && $devPlanOverride !== null) {
-    $profileForPlan = safeArray($data['profile'] ?? []);
-    $planContract = \Profiles\Services\PublicProfilePlanCapabilities::build($devPlanOverride, [
-        'plan_source' => 'dev_override',
-        'has_public_profile' => toBool($profileForPlan['is_public'] ?? false),
-        'is_claimed' => toBool($profileForPlan['is_claimed'] ?? false),
-        'public_contact_source_ready' => false,
-        'claim_source_ready' => false,
-        'commercial_source_ready' => false,
-    ]);
-    foreach (['plan', 'public_visibility', 'feature_flags', 'agenda_public', 'commercial_visibility', 'reviews', 'claim', 'contact'] as $key) {
-        $data[$key] = (array)($planContract[$key] ?? []);
-    }
-}
 
 $profile = safeArray($data['profile'] ?? []);
 $identity = safeArray($data['identity'] ?? []);

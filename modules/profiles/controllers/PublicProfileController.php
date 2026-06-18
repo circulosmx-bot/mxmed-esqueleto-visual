@@ -20,11 +20,16 @@ final class PublicProfileController
         $this->repository = $repository;
     }
 
-    public function showByDoctorId(string $doctorId): array
+    public function showByDoctorId(string $doctorId, ?string $planOverride = null): array
     {
         $doctorId = trim($doctorId);
         if (!$this->isValidDoctorId($doctorId)) {
             return $this->error('invalid_doctor_id', 'doctor_id invalid');
+        }
+
+        $effectivePlanCode = null;
+        if ($planOverride !== null) {
+            $effectivePlanCode = PublicProfilePlanCapabilities::normalizePlanCode($planOverride);
         }
 
         $snapshot = $this->repository->resolvePublicDoctorProfile($doctorId);
@@ -37,22 +42,28 @@ final class PublicProfileController
         $specialties = (array)($snapshot['specialties'] ?? []);
         $profileSource = (array)($snapshot['profile_source'] ?? []);
         $planSource = (array)($snapshot['plan_source'] ?? []);
+        if ($effectivePlanCode === null) {
+            $effectivePlanCode = PublicProfilePlanCapabilities::normalizePlanCode($planSource['plan_code'] ?? null);
+        }
+        $planSourceName = $planOverride !== null
+            ? 'dev_override'
+            : ($planSource['source'] ?? 'default_free');
         $scheduleRows = is_array($snapshot['schedule_rows'] ?? null) ? $snapshot['schedule_rows'] : [];
         $publicContactPoints = is_array($snapshot['public_contact_points'] ?? null) ? $snapshot['public_contact_points'] : [];
         $publicContact = $this->buildPublicContactPayload(
             $publicContactPoints,
-            PublicProfilePlanCapabilities::normalizePlanCode($planSource['plan_code'] ?? null)
+            $effectivePlanCode
         );
 
         $planContext = [
-            'plan_source' => $planSource['source'] ?? 'default_free',
+            'plan_source' => $planSourceName,
             'has_public_profile' => false,
             'is_claimed' => false,
             'public_contact_source_ready' => (bool)($publicContact['has_public_contact'] ?? false),
             'claim_source_ready' => false,
             'commercial_source_ready' => false,
         ];
-        $planContract = PublicProfilePlanCapabilities::build($planSource['plan_code'] ?? null, $planContext);
+        $planContract = PublicProfilePlanCapabilities::build($effectivePlanCode, $planContext);
         $publicVisibility = (array)$planContract['public_visibility'];
 
         $consultorios = $this->mapConsultorios(
@@ -68,7 +79,7 @@ final class PublicProfileController
         $isPublic = $hasMinimumPublicData && $isPublicCandidate && $sourceStatus === 'active';
         $profileStatus = $isPublic ? 'active' : 'hidden';
         $planContext['has_public_profile'] = $isPublic;
-        $planContract = PublicProfilePlanCapabilities::build($planSource['plan_code'] ?? null, $planContext);
+        $planContract = PublicProfilePlanCapabilities::build($effectivePlanCode, $planContext);
         $plan = (array)$planContract['plan'];
         $publicVisibility = (array)$planContract['public_visibility'];
         $contact = $this->mergeContactCapabilities((array)$planContract['contact'], $publicContact, $publicVisibility);
