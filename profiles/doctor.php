@@ -414,6 +414,13 @@ $planLabel = toText($plan['plan_label'] ?? null);
 $agendaEndpoint = toText($agendaPublic['availability_endpoint'] ?? null);
 $bookAppointmentUrl = '/public-book.html?doctor_id=' . rawurlencode($doctorId);
 $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
+$agendaMockMode = null;
+if (isLocalDevRequest()) {
+    $rawAgendaMockMode = toText($_GET['mxmed_agenda_mock'] ?? null);
+    if ($rawAgendaMockMode === 'mixed') {
+        $agendaMockMode = 'mixed';
+    }
+}
 ?>
 <!doctype html>
 <html lang="es-MX">
@@ -628,6 +635,10 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
           data-mxpp-agenda-compact
           data-doctor-id="<?= h($doctorId) ?>"
           data-booking-url="<?= h($bookAppointmentUrl) ?>"
+          <?php if ($agendaMockMode !== null): ?>
+            data-mock-mode="<?= h($agendaMockMode) ?>"
+            data-mock-density="16,8,2|4,16,1|8,3,16"
+          <?php endif; ?>
         >
           <div class="mxpp-agenda-compact__header">
             <div>
@@ -636,6 +647,9 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
             </div>
             <a class="mxpp-agenda-compact__open" href="<?= h($bookAppointmentUrl) ?>">Ver agenda</a>
           </div>
+          <?php if ($agendaMockMode !== null): ?>
+            <p class="mxpp-agenda-compact__qa-badge">Simulación visual</p>
+          <?php endif; ?>
           <p class="mxpp-agenda-compact__status" data-mxpp-agenda-status>Cargando horarios...</p>
           <div class="mxpp-agenda-compact__nav" aria-label="Navegación de horarios disponibles">
             <button class="mxpp-agenda-compact__nav-btn" type="button" data-mxpp-agenda-prev disabled aria-label="Ver fechas anteriores">Anterior</button>
@@ -773,15 +787,30 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
           return value.length >= 16 ? value.slice(11, 16) : value;
         }
 
+        function formatLocalDate(date) {
+          var month = String(date.getMonth() + 1).padStart(2, '0');
+          var day = String(date.getDate()).padStart(2, '0');
+          return String(date.getFullYear()) + '-' + month + '-' + day;
+        }
+
         function addDays(dateYmd, amount) {
           var date = new Date(String(dateYmd || '') + 'T00:00:00');
           if (Number.isNaN(date.getTime())) {
             return '';
           }
           date.setDate(date.getDate() + amount);
-          var month = String(date.getMonth() + 1).padStart(2, '0');
-          var day = String(date.getDate()).padStart(2, '0');
-          return String(date.getFullYear()) + '-' + month + '-' + day;
+          return formatLocalDate(date);
+        }
+
+        function addMinutesToTime(timeValue, minutesToAdd) {
+          var parts = String(timeValue || '').split(':');
+          var hours = parseInt(parts[0] || '0', 10);
+          var minutes = parseInt(parts[1] || '0', 10);
+          if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+            return timeValue;
+          }
+          var date = new Date(2000, 0, 1, hours, minutes + minutesToAdd, 0);
+          return String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
         }
 
         function renderStatus(block, message) {
@@ -895,6 +924,61 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
           return addDays(String(days[days.length - 1].date || ''), 1);
         }
 
+        function buildMockSlots(dateYmd, slotCount) {
+          var times = [
+            '09:00', '09:30', '10:00', '10:30',
+            '11:00', '11:30', '12:00', '12:30',
+            '16:00', '16:30', '17:00', '17:30',
+            '18:00', '18:30', '19:00', '19:30'
+          ].slice(0, slotCount);
+
+          return times.map(function (timeValue) {
+            return {
+              start_at: dateYmd + ' ' + timeValue + ':00',
+              end_at: dateYmd + ' ' + addMinutesToTime(timeValue, 30) + ':00'
+            };
+          });
+        }
+
+        function buildMockBlocks() {
+          var baseDate = formatLocalDate(new Date());
+          var densityBlocks = [
+            [16, 8, 2],
+            [4, 16, 1],
+            [8, 3, 16]
+          ];
+
+          return densityBlocks.map(function (densities, blockIndex) {
+            var days = densities.map(function (slotCount, dayIndex) {
+              var dateYmd = addDays(baseDate, (blockIndex * 3) + dayIndex);
+              return {
+                date: dateYmd,
+                weekday: dayIndex + 1,
+                slots: buildMockSlots(dateYmd, slotCount)
+              };
+            });
+            var blockData = {
+              startDate: days[0] ? days[0].date : null,
+              days: days,
+              meta: {
+                source: 'dev_mock',
+                density: densities.join(',')
+              },
+              nextStartDate: ''
+            };
+            blockData.nextStartDate = getNextStartDate(blockData);
+            return blockData;
+          });
+        }
+
+        function loadMockAgenda(block, state) {
+          state.blocks = buildMockBlocks();
+          state.currentBlockIndex = 0;
+          state.hasMore = false;
+          state.isLoading = false;
+          renderCurrentBlock(block, state);
+        }
+
         function fetchAvailability(block, state, startDate) {
           if (state.isLoading) {
             return;
@@ -969,6 +1053,7 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
         function initCompactAgenda(block) {
           var doctorId = String(block.getAttribute('data-doctor-id') || '').trim();
           var bookingUrl = String(block.getAttribute('data-booking-url') || '/public-book.html').trim();
+          var mockMode = String(block.getAttribute('data-mock-mode') || '').trim();
           var prevButton = block.querySelector('[data-mxpp-agenda-prev]');
           var nextButton = block.querySelector('[data-mxpp-agenda-next]');
           var state = {
@@ -977,6 +1062,7 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
             selectedSlot: null,
             isLoading: false,
             hasMore: true,
+            isMock: mockMode === 'mixed',
             doctorId: doctorId,
             bookingUrl: bookingUrl
           };
@@ -1009,6 +1095,12 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
               }
               var currentBlock = state.blocks[state.currentBlockIndex] || null;
               var nextStartDate = currentBlock ? currentBlock.nextStartDate : '';
+              if (state.isMock) {
+                state.hasMore = false;
+                updateControls(block, state);
+                renderStatus(block, 'No encontramos más horarios disponibles por ahora.');
+                return;
+              }
               if (!nextStartDate) {
                 state.hasMore = false;
                 updateControls(block, state);
@@ -1020,6 +1112,10 @@ $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
           }
 
           updateControls(block, state);
+          if (state.isMock) {
+            loadMockAgenda(block, state);
+            return;
+          }
           fetchAvailability(block, state, '');
         }
 

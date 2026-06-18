@@ -612,6 +612,19 @@ body {
   text-decoration: none;
 }
 
+.mxpp-agenda-compact__qa-badge {
+  display: inline-flex;
+  width: fit-content;
+  margin: 0.58rem 0 0;
+  border: 1px solid #c6d8de;
+  border-radius: 999px;
+  background: #f6fbfd;
+  color: #58707a;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.16rem 0.46rem;
+}
+
 .mxpp-agenda-compact__nav {
   margin-top: 0.68rem;
   display: flex;
