@@ -413,6 +413,14 @@ $renderJsonLd = is_array($jsonLd) && !empty($jsonLd);
 $planLabel = toText($plan['plan_label'] ?? null);
 $agendaEndpoint = toText($agendaPublic['availability_endpoint'] ?? null);
 $bookAppointmentUrl = '/public-book.html?doctor_id=' . rawurlencode($doctorId);
+$effectivePlanCode = \Profiles\Services\PublicProfilePlanCapabilities::normalizePlanCode($plan['plan_code'] ?? ($plan['code'] ?? null));
+$showAgendaSlot = ($showPublicAgenda && $agendaEndpoint !== null);
+$institutionalImageUrl = null;
+$showInstitutionalImageSlot = (
+    !$showAgendaSlot
+    && $effectivePlanCode === 'basic'
+    && $institutionalImageUrl !== null
+);
 $showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
 $agendaMockMode = null;
 if (isLocalDevRequest()) {
@@ -545,7 +553,7 @@ if (isLocalDevRequest()) {
               <p class="mxpp-plan-note">Perfil informativo · <?= h($planLabel) ?></p>
             <?php endif; ?>
             <p class="mxpp-consultas-note">Consultas recientes de este perfil no disponibles por ahora.</p>
-            <?php if (($showPublicAgenda && $agendaEndpoint !== null) || $canRenderContactActions): ?>
+            <?php if ($showAgendaSlot || $canRenderContactActions): ?>
               <div class="mxpp-profile-cta">
                 <?php if ($contactPhoneHref !== null): ?>
                   <a class="mxpp-contact-cta mxpp-contact-cta--phone" href="<?= h($contactPhoneHref) ?>">Llamar</a>
@@ -556,7 +564,7 @@ if (isLocalDevRequest()) {
                 <?php if ($contactEmailHref !== null): ?>
                   <a class="mxpp-contact-cta mxpp-contact-cta--email" href="<?= h($contactEmailHref) ?>">Email</a>
                 <?php endif; ?>
-                <?php if ($showPublicAgenda && $agendaEndpoint !== null): ?>
+                <?php if ($showAgendaSlot): ?>
                   <a class="mxpp-book-cta" href="<?= h($bookAppointmentUrl) ?>">Agendar cita</a>
                 <?php endif; ?>
               </div>
@@ -605,31 +613,7 @@ if (isLocalDevRequest()) {
         <?php endif; ?>
       </div>
 
-      <section class="mxpp-institutional" aria-label="Espacio institucional del consultorio">
-        <div class="mxpp-institutional__placeholder">
-          <span>Imagen institucional del consultorio</span>
-        </div>
-      </section>
-
-      <?php if ($canRenderContactSection): ?>
-        <section class="mxpp-card mxpp-card--section">
-          <h2>Contacto</h2>
-          <?php if ($showPhone && $contactPhone !== null): ?>
-            <p><strong>Teléfono:</strong> <?= h($contactPhone) ?></p>
-          <?php endif; ?>
-          <?php if ($showWhatsapp && $contactWhatsapp !== null): ?>
-            <p><strong>WhatsApp:</strong> <?= h($contactWhatsapp) ?></p>
-          <?php endif; ?>
-          <?php if ($contactEmail !== null): ?>
-            <p><strong>Email:</strong> <?= h($contactEmail) ?></p>
-          <?php endif; ?>
-          <?php if ($showInternalInbox): ?>
-            <p class="mxpp-muted">Buzón interno disponible según configuración pública vigente.</p>
-          <?php endif; ?>
-        </section>
-      <?php endif; ?>
-
-      <?php if ($showPublicAgenda && $agendaEndpoint !== null): ?>
+      <?php if ($showAgendaSlot): ?>
         <section
           class="mxpp-card mxpp-card--section mxpp-agenda-compact"
           data-mxpp-agenda-compact
@@ -662,6 +646,28 @@ if (isLocalDevRequest()) {
           <div class="mxpp-agenda-compact__footer">
             <a class="mxpp-book-cta" href="<?= h($bookAppointmentUrl) ?>">Agendar cita</a>
           </div>
+        </section>
+      <?php elseif ($showInstitutionalImageSlot): ?>
+        <section class="mxpp-institutional" aria-label="Espacio institucional del consultorio">
+          <img src="<?= h($institutionalImageUrl) ?>" alt="Imagen institucional del consultorio" loading="lazy" />
+        </section>
+      <?php endif; ?>
+
+      <?php if ($canRenderContactSection): ?>
+        <section class="mxpp-card mxpp-card--section">
+          <h2>Contacto</h2>
+          <?php if ($showPhone && $contactPhone !== null): ?>
+            <p><strong>Teléfono:</strong> <?= h($contactPhone) ?></p>
+          <?php endif; ?>
+          <?php if ($showWhatsapp && $contactWhatsapp !== null): ?>
+            <p><strong>WhatsApp:</strong> <?= h($contactWhatsapp) ?></p>
+          <?php endif; ?>
+          <?php if ($contactEmail !== null): ?>
+            <p><strong>Email:</strong> <?= h($contactEmail) ?></p>
+          <?php endif; ?>
+          <?php if ($showInternalInbox): ?>
+            <p class="mxpp-muted">Buzón interno disponible según configuración pública vigente.</p>
+          <?php endif; ?>
         </section>
       <?php endif; ?>
 
@@ -761,7 +767,7 @@ if (isLocalDevRequest()) {
       <span class="mxpp-dev-plan-switcher__hint">Sólo DEV</span>
     </form>
   <?php endif; ?>
-  <?php if ($showPublicAgenda && $agendaEndpoint !== null): ?>
+  <?php if ($showAgendaSlot): ?>
     <script>
       (function () {
         function escapeHtml(value) {

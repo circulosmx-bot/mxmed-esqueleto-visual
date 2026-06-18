@@ -573,6 +573,14 @@ body {
   padding: 0.34rem 0.62rem;
 }
 
+.mxpp-institutional img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
 .mxpp-card--section,
 .mxpp-review-strip {
   margin-top: 0.82rem;
