@@ -881,6 +881,7 @@ if (isLocalDevRequest()) {
           container.innerHTML = usefulDays.map(function (day) {
             var date = String(day.date || '');
             var slots = Array.isArray(day.slots) ? day.slots : [];
+            var mockCount = state.isMock ? slots.length : null;
             var slotHtml = slots.map(function (slot) {
               var startAt = String(slot && slot.start_at ? slot.start_at : '');
               var endAt = String(slot && slot.end_at ? slot.end_at : '');
@@ -894,10 +895,14 @@ if (isLocalDevRequest()) {
                 + escapeHtml(formatTime(startAt))
                 + '</button>';
             }).join('');
+            var mockCountHtml = mockCount !== null
+              ? '<span class="mxpp-agenda-compact__mock-count">' + escapeHtml(String(mockCount)) + ' horarios QA</span>'
+              : '';
 
-            return '<article class="mxpp-agenda-compact__day">'
+            return '<article class="mxpp-agenda-compact__day"' + (mockCount !== null ? ' data-mock-slot-count="' + escapeHtml(String(mockCount)) + '"' : '') + '>'
               + '<h3>' + escapeHtml(formatDate(date)) + '</h3>'
               + '<p>' + escapeHtml(date) + '</p>'
+              + mockCountHtml
               + '<div class="mxpp-agenda-compact__slots">' + slotHtml + '</div>'
               + '</article>';
           }).join('');
@@ -925,12 +930,23 @@ if (isLocalDevRequest()) {
         }
 
         function buildMockSlots(dateYmd, slotCount) {
-          var times = [
-            '09:00', '09:30', '10:00', '10:30',
-            '11:00', '11:30', '12:00', '12:30',
-            '16:00', '16:30', '17:00', '17:30',
-            '18:00', '18:30', '19:00', '19:30'
-          ].slice(0, slotCount);
+          var timeProfiles = {
+            16: [
+              '09:00', '09:30', '10:00', '10:30',
+              '11:00', '11:30', '12:00', '12:30',
+              '16:00', '16:30', '17:00', '17:30',
+              '18:00', '18:30', '19:00', '19:30'
+            ],
+            8: [
+              '09:00', '09:30', '10:00', '10:30',
+              '16:00', '16:30', '17:00', '17:30'
+            ],
+            4: ['09:00', '09:30', '16:00', '16:30'],
+            3: ['09:00', '16:00', '18:00'],
+            2: ['09:00', '16:00'],
+            1: ['16:00']
+          };
+          var times = timeProfiles[slotCount] || timeProfiles[2];
 
           return times.map(function (timeValue) {
             return {

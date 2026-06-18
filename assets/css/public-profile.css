@@ -680,6 +680,14 @@ body {
   font-size: 0.78rem;
 }
 
+.mxpp-agenda-compact__mock-count {
+  display: inline-flex;
+  margin-top: 0.28rem;
+  color: #6b7f87;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
 .mxpp-agenda-compact__slots {
   margin-top: 0.54rem;
   display: flex;
