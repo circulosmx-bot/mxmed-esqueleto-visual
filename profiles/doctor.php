@@ -549,26 +549,20 @@ if (isLocalDevRequest()) {
               <p class="mxpp-bio mxpp-bio--pending">Descripción profesional en actualización.</p>
             <?php endif; ?>
 
-            <?php if ($planLabel !== null): ?>
-              <p class="mxpp-plan-note">Perfil informativo · <?= h($planLabel) ?></p>
-            <?php endif; ?>
-            <p class="mxpp-consultas-note">Consultas recientes de este perfil no disponibles por ahora.</p>
-            <?php if ($showAgendaSlot || $canRenderContactActions): ?>
-              <div class="mxpp-profile-cta">
-                <?php if ($contactPhoneHref !== null): ?>
-                  <a class="mxpp-contact-cta mxpp-contact-cta--phone" href="<?= h($contactPhoneHref) ?>">Llamar</a>
-                <?php endif; ?>
-                <?php if ($contactWhatsappHref !== null): ?>
-                  <a class="mxpp-contact-cta mxpp-contact-cta--whatsapp" href="<?= h($contactWhatsappHref) ?>" target="_blank" rel="noopener">WhatsApp</a>
-                <?php endif; ?>
-                <?php if ($contactEmailHref !== null): ?>
-                  <a class="mxpp-contact-cta mxpp-contact-cta--email" href="<?= h($contactEmailHref) ?>">Email</a>
-                <?php endif; ?>
-                <?php if ($showAgendaSlot): ?>
-                  <a class="mxpp-book-cta" href="<?= h($bookAppointmentUrl) ?>">Agendar cita</a>
-                <?php endif; ?>
-              </div>
-            <?php endif; ?>
+          <p class="mxpp-consultas-note">Consultas recientes de este perfil no disponibles por ahora.</p>
+          <?php if ($canRenderContactActions): ?>
+            <div class="mxpp-profile-cta">
+              <?php if ($contactPhoneHref !== null): ?>
+                <a class="mxpp-contact-cta mxpp-contact-cta--phone" href="<?= h($contactPhoneHref) ?>">Llamar</a>
+              <?php endif; ?>
+              <?php if ($contactWhatsappHref !== null): ?>
+                <a class="mxpp-contact-cta mxpp-contact-cta--whatsapp" href="<?= h($contactWhatsappHref) ?>" target="_blank" rel="noopener">WhatsApp</a>
+              <?php endif; ?>
+              <?php if ($contactEmailHref !== null): ?>
+                <a class="mxpp-contact-cta mxpp-contact-cta--email" href="<?= h($contactEmailHref) ?>">Email</a>
+              <?php endif; ?>
+            </div>
+          <?php endif; ?>
           </article>
 
         </div>
@@ -618,6 +612,7 @@ if (isLocalDevRequest()) {
           class="mxpp-card mxpp-card--section mxpp-agenda-compact"
           data-mxpp-agenda-compact
           data-doctor-id="<?= h($doctorId) ?>"
+          data-doctor-name="<?= h($displayName ?? 'Médico') ?>"
           data-booking-url="<?= h($bookAppointmentUrl) ?>"
           <?php if ($agendaMockMode !== null): ?>
             data-mock-mode="<?= h($agendaMockMode) ?>"
@@ -629,7 +624,7 @@ if (isLocalDevRequest()) {
               <h2>Próximas citas disponibles</h2>
               <p>Reserva tu cita aquí</p>
             </div>
-            <a class="mxpp-agenda-compact__open" href="<?= h($bookAppointmentUrl) ?>">Ver agenda</a>
+            <a class="mxpp-agenda-compact__open" href="<?= h($bookAppointmentUrl) ?>" data-mxpp-booking-trigger>Ver agenda</a>
           </div>
           <?php if ($agendaMockMode !== null): ?>
             <p class="mxpp-agenda-compact__qa-badge">Simulación visual</p>
@@ -643,10 +638,51 @@ if (isLocalDevRequest()) {
           <div class="mxpp-agenda-compact__selection" data-mxpp-agenda-selection aria-live="polite">
             <span class="mxpp-agenda-compact__selection-text" data-mxpp-agenda-selection-text>Selecciona un horario para continuar.</span>
           </div>
+          <p class="mxpp-agenda-compact__alert" data-mxpp-agenda-alert hidden>Antes de continuar, selecciona una cita disponible.</p>
           <div class="mxpp-agenda-compact__footer">
-            <a class="mxpp-book-cta" href="<?= h($bookAppointmentUrl) ?>">Agendar cita</a>
+            <a class="mxpp-book-cta" href="<?= h($bookAppointmentUrl) ?>" data-mxpp-booking-trigger>Agendar cita</a>
           </div>
         </section>
+        <div class="mxpp-booking-modal" data-mxpp-booking-modal hidden aria-hidden="true">
+          <div class="mxpp-booking-modal__backdrop" data-mxpp-booking-close></div>
+          <section class="mxpp-booking-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="mxpp-booking-modal-title">
+            <button class="mxpp-booking-modal__close" type="button" data-mxpp-booking-close aria-label="Cerrar">×</button>
+            <div class="mxpp-booking-modal__step mxpp-booking-modal__step--active" data-mxpp-booking-step="confirm">
+              <p class="mxpp-booking-modal__eyebrow">Solicitud de cita</p>
+              <h2 id="mxpp-booking-modal-title">Confirma tu cita</h2>
+              <p>Estás a punto de solicitar una cita en el siguiente horario.</p>
+              <div class="mxpp-booking-modal__summary">
+                <p><strong>Doctor:</strong> <span data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></span></p>
+                <p><strong>Fecha:</strong> <span data-mxpp-booking-date>Por confirmar</span></p>
+                <p><strong>Hora:</strong> <span data-mxpp-booking-time>Por confirmar</span></p>
+              </div>
+              <div class="mxpp-booking-modal__actions">
+                <button class="mxpp-booking-modal__secondary" type="button" data-mxpp-booking-close>Cancelar</button>
+                <button class="mxpp-booking-modal__primary" type="button" data-mxpp-booking-next>Confirmar y continuar</button>
+              </div>
+            </div>
+            <div class="mxpp-booking-modal__step" data-mxpp-booking-step="patient" hidden>
+              <p class="mxpp-booking-modal__eyebrow">Datos del paciente</p>
+              <h2>Datos primarios</h2>
+              <div class="mxpp-booking-modal__summary">
+                <p><strong>Doctor:</strong> <span data-mxpp-booking-doctor><?= h($displayName ?? 'Médico') ?></span></p>
+                <p><strong>Fecha:</strong> <span data-mxpp-booking-date>Por confirmar</span></p>
+                <p><strong>Hora:</strong> <span data-mxpp-booking-time>Por confirmar</span></p>
+              </div>
+              <form class="mxpp-booking-modal__form" data-mxpp-booking-form>
+                <label>Nombre(s)<input type="text" name="first_name" autocomplete="given-name" /></label>
+                <label>Apellido paterno<input type="text" name="last_name" autocomplete="family-name" /></label>
+                <label>Apellido materno<input type="text" name="second_last_name" autocomplete="additional-name" /></label>
+                <label>Teléfono móvil<input type="tel" name="mobile_phone" autocomplete="tel" /></label>
+                <label>Correo electrónico <span>opcional</span><input type="email" name="email" autocomplete="email" /></label>
+              </form>
+              <div class="mxpp-booking-modal__actions">
+                <button class="mxpp-booking-modal__secondary" type="button" data-mxpp-booking-back>Atrás</button>
+                <button class="mxpp-booking-modal__secondary" type="button" data-mxpp-booking-close>Cerrar</button>
+              </div>
+            </div>
+          </section>
+        </div>
       <?php elseif ($showInstitutionalImageSlot): ?>
         <section class="mxpp-institutional" aria-label="Espacio institucional del consultorio">
           <img src="<?= h($institutionalImageUrl) ?>" alt="Imagen institucional del consultorio" loading="lazy" />
@@ -857,12 +893,93 @@ if (isLocalDevRequest()) {
             : [];
         }
 
+        function showSelectionAlert(block) {
+          var alert = block.querySelector('[data-mxpp-agenda-alert]');
+          if (alert) {
+            alert.hidden = false;
+          }
+        }
+
+        function hideSelectionAlert(block) {
+          var alert = block.querySelector('[data-mxpp-agenda-alert]');
+          if (alert) {
+            alert.hidden = true;
+          }
+        }
+
+        function getBookingModal() {
+          return document.querySelector('[data-mxpp-booking-modal]');
+        }
+
+        function setBookingModalStep(modal, stepName) {
+          if (!modal) {
+            return;
+          }
+          modal.querySelectorAll('[data-mxpp-booking-step]').forEach(function (step) {
+            var isActive = step.getAttribute('data-mxpp-booking-step') === stepName;
+            step.hidden = !isActive;
+            step.classList.toggle('mxpp-booking-modal__step--active', isActive);
+          });
+        }
+
+        function closeBookingModal() {
+          var modal = getBookingModal();
+          if (!modal) {
+            return;
+          }
+          modal.hidden = true;
+          modal.setAttribute('aria-hidden', 'true');
+          setBookingModalStep(modal, 'confirm');
+          var form = modal.querySelector('[data-mxpp-booking-form]');
+          if (form) {
+            form.reset();
+          }
+        }
+
+        function fillBookingModal(modal, state) {
+          if (!modal || !state.selectedSlot) {
+            return;
+          }
+          modal.querySelectorAll('[data-mxpp-booking-doctor]').forEach(function (node) {
+            node.textContent = state.doctorName || 'Médico';
+          });
+          modal.querySelectorAll('[data-mxpp-booking-date]').forEach(function (node) {
+            node.textContent = formatDate(state.selectedSlot.date);
+          });
+          modal.querySelectorAll('[data-mxpp-booking-time]').forEach(function (node) {
+            node.textContent = formatTime(state.selectedSlot.start_at);
+          });
+        }
+
+        function openBookingModal(block, state) {
+          if (!state.selectedSlot) {
+            showSelectionAlert(block);
+            block.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            return;
+          }
+          hideSelectionAlert(block);
+          var modal = getBookingModal();
+          if (!modal) {
+            return;
+          }
+          fillBookingModal(modal, state);
+          setBookingModalStep(modal, 'confirm');
+          modal.hidden = false;
+          modal.setAttribute('aria-hidden', 'false');
+          var nextButton = modal.querySelector('[data-mxpp-booking-next]');
+          if (nextButton) {
+            nextButton.focus();
+          }
+        }
+
         function resetSelectionState(block, state) {
           state.selectedSlot = null;
           block.querySelectorAll('.mxpp-agenda-compact__slot').forEach(function (button) {
             button.classList.remove('mxpp-agenda-compact__slot--selected');
             button.setAttribute('aria-pressed', 'false');
           });
+          hideSelectionAlert(block);
+          closeBookingModal();
           var selection = block.querySelector('[data-mxpp-agenda-selection]');
           var selectionText = block.querySelector('[data-mxpp-agenda-selection-text]');
           if (selection) {
@@ -886,6 +1003,7 @@ if (isLocalDevRequest()) {
           if (selection) {
             selection.classList.add('mxpp-agenda-compact__selection--active');
           }
+          hideSelectionAlert(block);
           if (selectionText) {
             selectionText.textContent = 'Horario seleccionado: ' + formatDate(slotData.date) + ', ' + formatTime(slotData.start_at) + '. Pulsa Agendar cita para continuar.';
           }
@@ -1099,8 +1217,58 @@ if (isLocalDevRequest()) {
             });
         }
 
+        function bindBookingModalControls(block, state) {
+          document.querySelectorAll('[data-mxpp-booking-trigger]').forEach(function (trigger) {
+            if (trigger.getAttribute('data-mxpp-booking-bound') === 'true') {
+              return;
+            }
+            trigger.setAttribute('data-mxpp-booking-bound', 'true');
+            trigger.addEventListener('click', function (event) {
+              event.preventDefault();
+              openBookingModal(block, state);
+            });
+          });
+
+          var modal = getBookingModal();
+          if (!modal || modal.getAttribute('data-mxpp-booking-bound') === 'true') {
+            return;
+          }
+          modal.setAttribute('data-mxpp-booking-bound', 'true');
+          modal.querySelectorAll('[data-mxpp-booking-close]').forEach(function (button) {
+            button.addEventListener('click', closeBookingModal);
+          });
+          var nextButton = modal.querySelector('[data-mxpp-booking-next]');
+          if (nextButton) {
+            nextButton.addEventListener('click', function () {
+              setBookingModalStep(modal, 'patient');
+              var firstInput = modal.querySelector('[data-mxpp-booking-step="patient"] input');
+              if (firstInput) {
+                firstInput.focus();
+              }
+            });
+          }
+          var backButton = modal.querySelector('[data-mxpp-booking-back]');
+          if (backButton) {
+            backButton.addEventListener('click', function () {
+              setBookingModalStep(modal, 'confirm');
+            });
+          }
+          var form = modal.querySelector('[data-mxpp-booking-form]');
+          if (form) {
+            form.addEventListener('submit', function (event) {
+              event.preventDefault();
+            });
+          }
+          document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && !modal.hidden) {
+              closeBookingModal();
+            }
+          });
+        }
+
         function initCompactAgenda(block) {
           var doctorId = String(block.getAttribute('data-doctor-id') || '').trim();
+          var doctorName = String(block.getAttribute('data-doctor-name') || 'Médico').trim();
           var bookingUrl = String(block.getAttribute('data-booking-url') || '/public-book.html').trim();
           var mockMode = String(block.getAttribute('data-mock-mode') || '').trim();
           var prevButton = block.querySelector('[data-mxpp-agenda-prev]');
@@ -1113,6 +1281,7 @@ if (isLocalDevRequest()) {
             hasMore: true,
             isMock: mockMode === 'mixed',
             doctorId: doctorId,
+            doctorName: doctorName,
             bookingUrl: bookingUrl
           };
 
@@ -1161,6 +1330,7 @@ if (isLocalDevRequest()) {
           }
 
           updateControls(block, state);
+          bindBookingModalControls(block, state);
           if (state.isMock) {
             loadMockAgenda(block, state);
             return;

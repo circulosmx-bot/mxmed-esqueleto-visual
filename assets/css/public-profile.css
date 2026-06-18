@@ -714,6 +714,18 @@ body {
   color: #104d64;
 }
 
+.mxpp-agenda-compact__alert {
+  margin: 0.58rem 0 0;
+  border: 1px solid #e7b35f;
+  border-radius: 8px;
+  background: #fff8eb;
+  color: #81591d;
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.4;
+  padding: 0.5rem 0.62rem;
+}
+
 .mxpp-agenda-compact__slots {
   margin-top: 0.54rem;
   display: flex;
@@ -760,6 +772,150 @@ body {
 
 .mxpp-agenda-compact__footer {
   margin-top: 0.78rem;
+}
+
+.mxpp-booking-modal[hidden] {
+  display: none;
+}
+
+.mxpp-booking-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.mxpp-booking-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 45, 58, 0.52);
+}
+
+.mxpp-booking-modal__dialog {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(760px, calc(100vh - 2rem));
+  overflow: auto;
+  border: 1px solid #b9d8e0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(16, 77, 100, 0.24);
+  padding: 1.08rem;
+}
+
+.mxpp-booking-modal__close {
+  position: absolute;
+  top: 0.64rem;
+  right: 0.64rem;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #cde0e6;
+  border-radius: 999px;
+  background: #fff;
+  color: #104d64;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.mxpp-booking-modal__step[hidden] {
+  display: none;
+}
+
+.mxpp-booking-modal__step h2 {
+  margin: 0.14rem 2.6rem 0.36rem 0;
+  color: #104d64;
+}
+
+.mxpp-booking-modal__step p {
+  margin: 0.35rem 0 0;
+  color: #405e6a;
+  line-height: 1.46;
+}
+
+.mxpp-booking-modal__eyebrow {
+  color: #0b7189 !important;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.mxpp-booking-modal__summary {
+  margin-top: 0.78rem;
+  border: 1px solid #c7dfe8;
+  border-radius: 10px;
+  background: #f7fcfd;
+  padding: 0.68rem;
+}
+
+.mxpp-booking-modal__summary p {
+  margin: 0;
+}
+
+.mxpp-booking-modal__summary p + p {
+  margin-top: 0.28rem;
+}
+
+.mxpp-booking-modal__form {
+  margin-top: 0.78rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.62rem;
+}
+
+.mxpp-booking-modal__form label {
+  color: #294f5f;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.mxpp-booking-modal__form label span {
+  color: var(--mxpp-muted);
+  font-weight: 700;
+}
+
+.mxpp-booking-modal__form input {
+  width: 100%;
+  margin-top: 0.28rem;
+  border: 1px solid #c9dce2;
+  border-radius: 8px;
+  color: #183f4f;
+  font: inherit;
+  min-height: 38px;
+  padding: 0.42rem 0.52rem;
+}
+
+.mxpp-booking-modal__actions {
+  margin-top: 0.9rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.52rem;
+  flex-wrap: wrap;
+}
+
+.mxpp-booking-modal__primary,
+.mxpp-booking-modal__secondary {
+  min-height: 38px;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+  padding: 0.44rem 0.86rem;
+}
+
+.mxpp-booking-modal__primary {
+  border: 1px solid #0b7189;
+  background: #0b7189;
+  color: #fff;
+}
+
+.mxpp-booking-modal__secondary {
+  border: 1px solid #c7dfe8;
+  background: #fff;
+  color: #104d64;
 }
 
 .mxpp-bullets {
@@ -944,6 +1100,18 @@ body {
 
   .mxpp-agenda-compact__header {
     flex-direction: column;
+  }
+
+  .mxpp-booking-modal {
+    padding: 0.62rem;
+  }
+
+  .mxpp-booking-modal__dialog {
+    padding: 0.9rem;
+  }
+
+  .mxpp-booking-modal__form {
+    grid-template-columns: 1fr;
   }
 
   .mxpp-profile-title {
