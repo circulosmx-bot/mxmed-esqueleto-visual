@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../modules/profiles/services/PublicProfilePlanCapabilities.php';
+
 function h($value): string
 {
     return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -33,6 +35,33 @@ function toBool($value): bool
 function safeArray($value): array
 {
     return is_array($value) ? $value : [];
+}
+
+function isLocalDevRequest(): bool
+{
+    $host = trim((string)($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? ''));
+    if ($host === '') {
+        return false;
+    }
+    $host = strtolower((string)preg_replace('/:\d+$/', '', $host));
+    $host = trim($host, '[]');
+    return in_array($host, ['127.0.0.1', 'localhost', '::1'], true);
+}
+
+function resolveDevPlanOverride(): ?string
+{
+    if (!isLocalDevRequest()) {
+        return null;
+    }
+
+    $raw = toText($_GET['mxmed_plan'] ?? null);
+    if ($raw === null) {
+        return null;
+    }
+
+    $normalized = \Profiles\Services\PublicProfilePlanCapabilities::normalizePlanCode($raw);
+    $allowed = ['free', 'basic', 'standard', 'optimum', 'professional'];
+    return in_array($normalized, $allowed, true) ? $normalized : null;
 }
 
 function parseHttpStatusCode(array $headers): ?int
@@ -221,6 +250,23 @@ if ($inputError !== null) {
 }
 
 $data = $dto !== null ? safeArray($dto['data'] ?? []) : [];
+
+$devPlanOverride = resolveDevPlanOverride();
+if ($dto !== null && $devPlanOverride !== null) {
+    $profileForPlan = safeArray($data['profile'] ?? []);
+    $planContract = \Profiles\Services\PublicProfilePlanCapabilities::build($devPlanOverride, [
+        'plan_source' => 'dev_override',
+        'has_public_profile' => toBool($profileForPlan['is_public'] ?? false),
+        'is_claimed' => toBool($profileForPlan['is_claimed'] ?? false),
+        'public_contact_source_ready' => false,
+        'claim_source_ready' => false,
+        'commercial_source_ready' => false,
+    ]);
+    foreach (['plan', 'public_visibility', 'feature_flags', 'agenda_public', 'commercial_visibility', 'reviews', 'claim', 'contact'] as $key) {
+        $data[$key] = (array)($planContract[$key] ?? []);
+    }
+}
+
 $profile = safeArray($data['profile'] ?? []);
 $identity = safeArray($data['identity'] ?? []);
 $professional = safeArray($data['professional'] ?? []);
@@ -231,6 +277,7 @@ $agendaPublic = safeArray($data['agenda_public'] ?? []);
 $publicVisibility = safeArray($data['public_visibility'] ?? []);
 $commercialVisibility = safeArray($data['commercial_visibility'] ?? []);
 $reviews = safeArray($data['reviews'] ?? []);
+$claim = safeArray($data['claim'] ?? []);
 $seo = safeArray($data['seo'] ?? []);
 $jsonLd = $data['json_ld'] ?? null;
 $featureFlags = safeArray($data['feature_flags'] ?? []);
@@ -285,12 +332,37 @@ $reviewsVisible = toBool($reviews['visible'] ?? false);
 $showContactButtons = toBool($publicVisibility['show_contact_buttons'] ?? false);
 $showPhone = ($showContactButtons && toBool($publicVisibility['show_phone'] ?? false));
 $showWhatsapp = ($showContactButtons && toBool($publicVisibility['show_whatsapp'] ?? false));
-$showPublicAgenda = toBool($publicVisibility['show_public_agenda'] ?? false);
+$showInternalInbox = ($showContactButtons && (
+    toBool($publicVisibility['show_internal_message'] ?? false)
+    || toBool($publicVisibility['show_internal_inbox'] ?? false)
+    || toBool($contact['internal_message_enabled'] ?? false)
+));
+$showPublicAgenda = (
+    toBool($publicVisibility['show_public_agenda'] ?? false)
+    || toBool($agendaPublic['enabled'] ?? false)
+    || toBool($featureFlags['has_public_agenda'] ?? false)
+);
+$showClickableMap = (
+    toBool($publicVisibility['show_clickable_map'] ?? false)
+    || toBool($publicVisibility['show_map_gps'] ?? false)
+    || toBool($publicVisibility['show_gps_directions'] ?? false)
+    || toBool($primaryConsultorio['map_can_open_gps'] ?? false)
+);
+$showClaimProfile = (
+    toBool($publicVisibility['show_claim_button'] ?? false)
+    || toBool($claim['show_claim_button'] ?? false)
+    || toBool($claim['claim_allowed'] ?? false)
+);
 $showFee = toBool($publicVisibility['show_consultation_fee'] ?? false);
 $showInsurances = toBool($publicVisibility['show_accepted_insurances'] ?? false);
 
 $contactPhone = $showPhone ? toText($contact['phone'] ?? null) : null;
 $contactWhatsapp = $showWhatsapp ? toText($contact['whatsapp'] ?? null) : null;
+$canRenderContactSection = ($showContactButtons && (
+    $contactPhone !== null
+    || $contactWhatsapp !== null
+    || $showInternalInbox
+));
 
 $consultationFee = $showFee ? ($commercialVisibility['consultation_fee'] ?? null) : null;
 $paymentMethods = $showFee ? safeArray($commercialVisibility['payment_methods'] ?? []) : [];
@@ -300,6 +372,7 @@ $renderJsonLd = is_array($jsonLd) && !empty($jsonLd);
 $planLabel = toText($plan['plan_label'] ?? null);
 $agendaEndpoint = toText($agendaPublic['availability_endpoint'] ?? null);
 $bookAppointmentUrl = '/public-book.html?doctor_id=' . rawurlencode($doctorId);
+$showDevPlanSwitcher = ($dto !== null && isLocalDevRequest());
 ?>
 <!doctype html>
 <html lang="es-MX">
@@ -360,6 +433,25 @@ $bookAppointmentUrl = '/public-book.html?doctor_id=' . rawurlencode($doctorId);
         <p><?= h($inputError ?? $endpointError ?? 'No fue posible cargar el perfil en este momento.') ?></p>
       </section>
     <?php else: ?>
+      <?php if ($showDevPlanSwitcher): ?>
+        <form class="mxpp-card mxpp-dev-plan-switcher" method="get" action="/profiles/doctor.php">
+          <input type="hidden" name="doctor_id" value="<?= h($doctorId) ?>" />
+          <label for="mxpp-dev-plan-select">Plan QA</label>
+          <select id="mxpp-dev-plan-select" name="mxmed_plan" onchange="this.form.submit()">
+            <?php foreach ([
+                'free' => 'Gratuito',
+                'basic' => 'Básico',
+                'standard' => 'Estándar',
+                'optimum' => 'Óptimo',
+                'professional' => 'Profesional',
+            ] as $planCode => $label): ?>
+              <option value="<?= h($planCode) ?>" <?= ($devPlanOverride ?? toText($plan['plan_code'] ?? null)) === $planCode ? 'selected' : '' ?>><?= h($label) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <span>Visible sólo en entorno local. No modifica el plan real.</span>
+        </form>
+      <?php endif; ?>
+
       <section class="mxpp-profile-hero">
         <aside class="mxpp-left-panel">
           <article class="mxpp-card mxpp-card--left-main">
@@ -424,7 +516,7 @@ $bookAppointmentUrl = '/public-book.html?doctor_id=' . rawurlencode($doctorId);
               <p class="mxpp-plan-note">Perfil informativo · <?= h($planLabel) ?></p>
             <?php endif; ?>
             <p class="mxpp-consultas-note">Consultas recientes de este perfil no disponibles por ahora.</p>
-            <?php if ($isPublic && $agendaEndpoint !== null): ?>
+            <?php if ($showPublicAgenda && $agendaEndpoint !== null): ?>
               <div class="mxpp-profile-cta">
                 <a class="mxpp-book-cta" href="<?= h($bookAppointmentUrl) ?>">Agendar cita</a>
               </div>
@@ -448,7 +540,7 @@ $bookAppointmentUrl = '/public-book.html?doctor_id=' . rawurlencode($doctorId);
             <?php if ($scheduleSummary !== null): ?>
               <p class="mxpp-consultorio-schedule"><?= h($scheduleSummary) ?></p>
             <?php endif; ?>
-            <?php if ($primaryMapUrl !== null): ?>
+            <?php if ($primaryMapUrl !== null && $showClickableMap): ?>
               <p class="mxpp-map-link">Ver en Google Maps</p>
             <?php endif; ?>
           </div>
@@ -468,7 +560,9 @@ $bookAppointmentUrl = '/public-book.html?doctor_id=' . rawurlencode($doctorId);
 
       <div class="mxpp-actions-row">
         <a class="mxpp-action-link" href="#" aria-disabled="true">Sugerir corrección</a>
-        <a class="mxpp-action-claim" href="#" aria-disabled="true">Yo soy este médico y quiero administrar mi perfil</a>
+        <?php if ($showClaimProfile): ?>
+          <a class="mxpp-action-claim" href="#" aria-disabled="true">Yo soy este médico y quiero administrar mi perfil</a>
+        <?php endif; ?>
       </div>
 
       <section class="mxpp-institutional" aria-label="Espacio institucional del consultorio">
@@ -477,7 +571,7 @@ $bookAppointmentUrl = '/public-book.html?doctor_id=' . rawurlencode($doctorId);
         </div>
       </section>
 
-      <?php if ($showContactButtons): ?>
+      <?php if ($canRenderContactSection): ?>
         <section class="mxpp-card mxpp-card--section">
           <h2>Contacto</h2>
           <?php if ($showPhone && $contactPhone !== null): ?>
@@ -486,8 +580,8 @@ $bookAppointmentUrl = '/public-book.html?doctor_id=' . rawurlencode($doctorId);
           <?php if ($showWhatsapp && $contactWhatsapp !== null): ?>
             <p><strong>WhatsApp:</strong> <?= h($contactWhatsapp) ?></p>
           <?php endif; ?>
-          <?php if ((!$showPhone || $contactPhone === null) && (!$showWhatsapp || $contactWhatsapp === null)): ?>
-            <p class="mxpp-muted">Contacto público no disponible por ahora.</p>
+          <?php if ($showInternalInbox): ?>
+            <p class="mxpp-muted">Buzón interno disponible según configuración pública vigente.</p>
           <?php endif; ?>
         </section>
       <?php endif; ?>
